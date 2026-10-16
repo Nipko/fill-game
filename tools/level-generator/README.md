@@ -310,12 +310,27 @@ Decisiones [P] de la generación (para revisar en la integración):
   generador vierte en él el tramo de la cima (1-3 dosis de un color, el tramo entero) de una cuia llena al azar
   (sub-semilla 4 del candidato): quedan dos cuias a medias, una con 1-3 dosis y otra con 1-3 dosis de un solo color (la
   del Matapi). Es un vertido legal desde el tablero de la fuente; lo demás (A*, bot, `LevelValidation`) se comprueba como
-  en cualquier candidato. La fuente es `walk`: con `deep`, ninguno de los 43 tableros del 580 que se midieron tenía
-  solución. Se usa en los hitos de 14 cuias (K = 13 + 1 vacío: holgura 4 sin el Barro, QA-HITO-14) y en los retos de
-  K = 12 + 1 vacío + la cueva de la Piraña con el Brote (592 y 646). En un hito de 14 cuias ni K ni el vacío se relajan:
-  las etapas 1-2 reparten la holgura (salvo con la Hoja o la Lluvia, que necesitan el vacío de 4 entero) y las mecánicas
-  que ocupan un vacío usan el del hito, como en la etapa 0. Ningún slot de 11-300 llega a estos casos (los packs no
-  cambian; `--self-test holgura` lo comprueba con las configuraciones de todas las etapas).
+  en cualquier candidato. La fuente es `walk`, y la configuración de la etapa la lleva (`StageConfig.Source`, la traza y
+  la nota «holgura repartida: fuente walk» dicen la que se usa): con `deep`, ninguno de los 43 tableros del 580 que se
+  midieron tenía solución. Los candidatos por etapa son los de la etapa de la que sale (30 en la etapa 0 y en el hito;
+  150 en la relajación «walk con 1 vacío»). Solo en estos casos, y solo cuando quitar el vacío deja justo 14 cuias (con 16
+  no basta y la etapa no aplica):
+  - los hitos de 14 cuias (K = 13 + 1 vacío: holgura 4 sin el Barro, QA-HITO-14). Ni K ni el vacío se relajan: con una
+    mecánica de cuias a medias reparten la holgura desde la etapa 0 (580 Ma+B2, 600 Ha+B2+Ba, 660 Br+Ha+Re y 700
+    Ma+Ha+B2); sin ella, las etapas 1-2 la reparten (680 Li+Ha+Re), salvo con la Hoja o la Lluvia, que necesitan el vacío
+    de 4 entero (620 Ln+Ll+Re: ninguna etapa; 640 Ma+Ba+Ho: no cabe). Las mecánicas que ocupan un vacío usan el del hito,
+    como en la etapa 0;
+  - los retos de K = 12 + 1 vacío + la cueva de la Piraña con el Brote (592 Pi+B2 y 646 Pi+Br+Ha), en la etapa 0 y en la
+    relajación «walk con 1 vacío» de la etapa 2, que ya es `walk` con la forma de la etapa 0. La relajación hacia `fill`
+    con 2 vacíos (03 §4.4) pasa de 14 cuias y no aplica, y el endurecimiento con `deep` sigue sin la cuia de holgura: la
+    holgura repartida nunca cambia la fuente de esas etapas.
+
+  En 561-700 (variantes a y b), solo 580, 592, 600, 646, 660, 680 y 700. Ningún slot de 11-560 llega a estos casos: los
+  packs 11-300 no cambian y 301-560 (P7b, P7c) generan como antes de P7d. `--self-test holgura` lo comprueba con las
+  configuraciones de todas las etapas, con y sin endurecimiento, y comprueba que toda etapa que reparte la holgura lleva la
+  cuia de holgura. Pendiente del dueño (pregunta de P7d): con la holgura repartida, el hito de 14 cuias no tiene ninguna
+  cuia vacía (la holgura 4 va en dos cuias a medias). 03 §1 y §11 dicen «13 llenas + 1 vacío»; QA-HITO-14 ya admite que
+  la holgura vaya repartida.
 
 Diagnóstico: con la variable de entorno `LEVELGEN_TRACE=<nivel>` el generador traza por stderr cada candidato de ese
 nivel (fuente, K, vacíos, bot_fail, motivo del rechazo y milisegundos) y un resumen del slot. No cambia la salida.
@@ -442,7 +457,12 @@ equipo de escritorio (Release, `LEVELGEN_TRACE`):
 Con el 640 cambiado a `Ma+Ba (MD; K = 13)` (solo como prueba en una copia de la especificación; no se publica), los ciclos
 561-580, 581-600 y 621-640 colocan, con sus hitos de 14 cuias del 580, el 600 y el 640; los demás siguen sin colocación. Los
 retos de K = 12 de 601-700 miden casi todos Muy difícil (03 §4.4 solo prevé relajar el reto hacia `fill` con 2 vacíos). Lo que
-falta es del dueño y del tech-lead: la celda del 640 y el K o la relajación de esos retos (y el 700).
+falta es del dueño y del tech-lead: la celda del 640, el K o la relajación de esos retos (y el 700), y si el hito de 14 cuias
+puede ir sin ninguna cuia vacía, con la holgura repartida (arriba; si se acepta, el carril de documentación ajusta 03 §1 y
+§11).
+
+Las cifras de la tabla son de antes de limitar la holgura repartida a los casos de arriba (revisión de P7d). Con el límite,
+581-600 da el mismo pack byte a byte, 561-580 sigue colocando y 641-660 sigue sin colocación (el 658 sigue con 2 opciones).
 
 ## Tinaja (M13; D-019, Q-Ti1 A; 03 §8 y §9; propuesta de la tinaja c.3)
 

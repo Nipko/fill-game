@@ -95,8 +95,12 @@ internal sealed class SlotGenerator(CampaignSpec spec)
     /// <summary>Con Aguas turbias, 120: la ruta segura solo se busca en ventana y los tableros turbios entran poco en ella [P].</summary>
     public const int MurkyCandidatesPerStage = 120;
 
+    /// <remarks>La holgura repartida (<see cref="StageConfig.SplitSlack"/>) lleva la fuente walk en la configuración, pero
+    /// conserva los candidatos de la etapa de la que sale: 30 en la etapa 0 y en las del hito de 14 cuias (mixed: deep y fill
+    /// alternos) y 150 en la relajación «walk con 1 vacío» de la etapa 2 de un reto.</remarks>
     public static int AttemptsFor(StageConfig config) =>
         config.Mechanics.Any(m => m.Code == "Tu") ? MurkyCandidatesPerStage
+        : config.SplitSlack && (config.Stage == 0 || config.K == SpecValidator.HitoK) ? CandidatesPerStage
         : config.Source == "walk" ? WalkCandidatesPerStage : CandidatesPerStage;
     public const int Stages = 3;
     public const ulong CandidateStream = 0x47454E00UL;
@@ -532,17 +536,33 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             notes.Add("relajacion del hito de 14 cuias: holgura en cuias a medias");
         }
 
-        if (total > 14 && slack && baseEmpties > 0 && mechs.Any(m => MechanicCodes.NeedsPartial(m.Code) || m.Code == "Tu"))
+        // Retos de K = 12 + 1 vacío + la cueva de la Piraña con una mecánica de cuias a medias (592 y 646): en la etapa 0 y en
+        // la relajación «walk con 1 vacío» de la etapa 2, que ya es walk con la forma de la etapa 0. Nunca en la relajación
+        // hacia fill con 2 vacíos (03 §4.4) ni en el endurecimiento con deep: la holgura repartida no cambia su fuente.
+        bool splitChallenge = plan.Role == SlotRole.Challenge && caves > 0 && k == SpecValidator.HitoK - 1 && (stage == 0 || source == "walk");
+        if (total == SpecValidator.MaxCuias + 1 && slack && baseEmpties > 0 && (hito14 || splitChallenge)
+            && mechs.Any(m => MechanicCodes.NeedsPartial(m.Code) || m.Code == "Tu"))
         {
             // Tope de 14 cuias (02 R1) con una mecánica que necesita cuias a medias (Brote, Brote de dos hojas, Aguas turbias):
             // sin la cuia de holgura no habría ninguna (la fuente deja exactamente los vacíos pedidos y llena las demás), así
-            // que la cuia de holgura sustituye a un vacío y la holgura de ese vacío va repartida en cuias a medias (P7d [P]):
-            // el hito de 14 cuias, K = 13 + 1 vacío (03 §11; d.5.1-d.5.2; QA-HITO-14: holgura 4 sin el Barro), y los retos de
-            // K = 12 + 1 vacío + la cueva de la Piraña. Ningún nivel de 11-300 llega aquí (--self-test holgura y --check).
+            // que la cuia de holgura sustituye a un vacío y la holgura de ese vacío va repartida en cuias a medias (P7d [P]).
+            // Solo en los casos declarados: el hito de 14 cuias, K = 13 + 1 vacío (03 §11; d.5.1-d.5.2; QA-HITO-14: holgura 4
+            // sin el Barro), y los retos de K = 12 + 1 vacío + la cueva de la Piraña (arriba); y solo cuando quitar ese
+            // vacío deja justo 14 cuias (con 16 no basta, y quitar después la cuia de holgura dejaría SplitSlack sin la cuia
+            // que reparte). Ningún nivel de 11-560 llega aquí (--self-test holgura).
             baseEmpties--;
             total--;
             split = true;
             notes.Add("holgura en cuias a medias: la cuia de holgura sustituye a un vacio (tope de 14 cuias, 02 R1)");
+        }
+
+        if (split)
+        {
+            // Holgura repartida (P7d [P]): con walk. Con la holgura en cuias a medias y las mecánicas encima, el tablero de deep
+            // casi nunca tiene solución (580: 0 de 43 tableros con A*) y el de walk sí en algunos; el bot ya falla mucho en un
+            // tablero tan apretado. La fuente queda en la configuración para que la traza y las notas digan la que se usa.
+            source = "walk";
+            notes.Add("holgura repartida: fuente walk");
         }
 
         if (total > 14 && slack)
@@ -660,13 +680,6 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         bool tinaja = config.Mechanics.Any(m => m.Code == "Ti");
         string source = config.Source == "mixed" ? (attempt % 2 == 0 || needsPartial ? "deep" : "fill")
             : config.Source == "fill" && needsPartial ? "deep" : config.Source;
-        if (config.SplitSlack)
-        {
-            // Holgura repartida (P7d [P]): con walk. Con la holgura en cuias a medias y las mecánicas encima, el tablero de
-            // deep casi nunca tiene solución (580: 0 de 43 tableros con A*) y el de walk sí en algunos; el bot ya falla mucho
-            // en un tablero tan apretado.
-            source = "walk";
-        }
         try
         {
             switch (source)

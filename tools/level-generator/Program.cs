@@ -74,7 +74,8 @@ const string Usage = """
       otra celda y las decisiones fuera de --levels ignoradas; la ultima columna y el estado (pendiente, aceptada y
       anotada, con cambios pedidos). "holgura" (P7d): la holgura repartida en cuias a medias del tope de 14 cuias
       (SplitSlackPour sobre un tablero fijo y las etapas de los hitos de 14 cuias de 561-700 y de los retos con la cueva
-      de la Pirana y el Brote; ningun slot de 11-300 la usa). Desde la raiz del repositorio.
+      de la Pirana y el Brote; ningun slot de 11-560 la usa y la que la usa lleva la cuia de holgura). Desde la raiz del
+      repositorio.
       Codigos: 0 = todo PASS; 1 = algun FAIL; 2 = uso o especificacion ilegible.
     --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
       niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)

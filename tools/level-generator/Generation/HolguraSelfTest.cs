@@ -13,7 +13,12 @@
 //       * con un hito de 14 cuias de Matapi + Barro (sin la Hoja), las etapas 1-2 reparten la holgura (relajación del hito);
 //       * los retos de 14 cuias con la cueva de la Piraña y el Brote (592 Pi+B2 y 646 Pi+Br+Ha; K = 12): la cuia de holgura
 //         sustituye al vacío;
-//   - un slot de 11-300 no reparte la holgura en ninguna etapa (los packs 11-300 no cambian; --check lo confirma con los packs).
+//       * las etapas 1-2 del 592 y el 646, con y sin endurecimiento: null o una configuración posible; solo la relajación
+//         «walk con 1 vacío» de la etapa 2 reparte la holgura;
+//   - un slot de 11-560 no reparte la holgura en ninguna etapa (los packs 11-300 no cambian; --check lo confirma con los packs);
+//   - en 201-700 (variantes a y b), toda etapa con la holgura repartida lleva la cuia de holgura y la fuente walk, y en 561-700
+//     solo la reparten los hitos de 14 cuias y los retos de K = 12 + la cueva en la etapa 0 y en la relajación «walk con 1
+//     vacío» de la etapa 2 (HolguraSelfTest.SplitLevels).
 // Imprime ASCII (PASS / FAIL) y sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación.
 using AF.Core.Board;
 using AF.Core.Determinism;
@@ -50,7 +55,7 @@ internal static class HolguraSelfTest
 
         SplitPour(Check);
         Stages(spec, Check);
-        Before301(v1, spec, Check);
+        Scope(v1, Check);
 
         Console.WriteLine(failures == 0 ? "self-test holgura: todo PASS" : $"self-test holgura: {failures} FAIL");
         return failures == 0 ? 0 : 1;
@@ -123,8 +128,11 @@ internal static class HolguraSelfTest
                 $"{level} ({spec.Plan(level).Cell.Literal}): la etapa 0 reparte la holgura (K = 13, 14 cuias, sin vacio de la etapa y uno de la fuente)");
         }
 
-        bool fixedShape = new[] { 580, 600, 620, 660, 680, 700 }.All(level => At(level).All(c => c is null || (c.K == SpecValidator.HitoK && Cuias(c) == SpecValidator.MaxCuias)));
-        check(fixedShape, "hitos de 14 cuias de 561-700: ninguna etapa cambia K = 13 ni pasa de 14 cuias (QA-HITO-14)");
+        // Cada hito de 14 cuias de la lista tiene al menos una etapa (el 640, sin ninguna, tiene su comprobación abajo): si todas
+        // fueran null, la forma fija no probaría nada.
+        bool fixedShape = new[] { 580, 600, 620, 660, 680, 700 }.All(level => At(level).Any(c => c is not null)
+            && At(level).All(c => c is null || (c.K == SpecValidator.HitoK && Cuias(c) == SpecValidator.MaxCuias)));
+        check(fixedShape, "hitos de 14 cuias de 561-700 (580, 600, 620, 660, 680 y 700): cada uno con al menos una etapa, y ninguna cambia K = 13 ni pasa de 14 cuias (QA-HITO-14)");
         StageConfig?[] lluvia = At(620);
         check(lluvia.All(c => c is not null && !c.SplitSlack && c.Empties == 1 && !c.Slack),
             "620 (Ln+Ll+Re): con la Lluvia, que necesita el vacio de 4, ninguna etapa reparte la holgura");
@@ -142,6 +150,24 @@ internal static class HolguraSelfTest
             StageConfig? s0 = At(level)[0];
             check(s0 is not null && s0.SplitSlack && s0.K == 12 && s0.Empties == 0 && s0.Slack && Cuias(s0) == SpecValidator.MaxCuias,
                 $"{level} ({spec.Plan(level).Cell.Literal}): K = 12 + la cueva de la Pirana + la cuia de holgura en lugar del vacio (14 cuias)");
+            // Etapas 1-2 (con y sin endurecimiento): null o una configuración posible. La relajación de 03 §4.4 hacia fill con 2
+            // vacíos pasa de 14 cuias y da null (antes quitaba la holgura y dejaba SplitSlack sin la cuia que reparte); el
+            // endurecimiento con deep queda sin la cuia de holgura; solo la relajación «walk con 1 vacío» de la etapa 2 reparte
+            // la holgura, con la forma de la etapa 0.
+            bool later = true;
+            foreach (bool harder in new[] { false, true })
+            {
+                for (int stage = 1; stage < SlotGenerator.Stages; stage++)
+                {
+                    StageConfig? c = gen.Config(spec.Plan(level), stage, dropMurky: false, harder);
+                    bool walkRelax = stage == 2 && !harder;
+                    later &= walkRelax
+                        ? c is { SplitSlack: true, Slack: true, Empties: 0, Source: "walk" } && Cuias(c) == SpecValidator.MaxCuias
+                        : c is null || (!c.SplitSlack && Cuias(c) <= SpecValidator.MaxCuias);
+                }
+            }
+
+            check(later, $"{level}: las etapas 1-2, con y sin endurecimiento, son null o una configuracion de 14 cuias como mucho; solo la relajacion walk con 1 vacio de la etapa 2 reparte la holgura (con la cuia de holgura)");
         }
     }
 
@@ -168,10 +194,31 @@ internal static class HolguraSelfTest
         }
     }
 
-    private static void Before301(CampaignSpec v1, CampaignSpec v2, Action<bool, string> check)
+    /// <summary>
+    /// Niveles de 561-700 que reparten la holgura en alguna etapa (variantes a y b): los hitos de 14 cuias con una mecánica de
+    /// cuias a medias desde la etapa 0 (580, 600, 660 y 700), los de 14 cuias sin la Hoja ni la Lluvia en sus etapas 1-2 (680,
+    /// Li+Ha+Re) y los retos de K = 12 + la cueva de la Piraña con el Brote en la etapa 0 y en la relajación «walk con 1
+    /// vacío» de la etapa 2 (592 y 646) (README, «Holgura repartida»).
+    /// </summary>
+    internal static readonly int[] SplitLevels = [580, 592, 600, 646, 660, 680, 700];
+
+    private static void Scope(CampaignSpec v1, Action<bool, string> check)
     {
+        // 11-560: ningún slot reparte la holgura (los packs 11-300 no cambian; 301-560, de P7b y P7c, generan como antes).
+        // 201-700, variantes a y b: SplitSlack ⇒ Slack (la cuia que reparte) y la fuente de la configuración es walk; en 561-700
+        // solo en los casos declarados, y en los niveles de SplitLevels.
         bool none = true;
-        foreach ((CampaignSpec spec, int from, int to) in new[] { (v1, v1.FirstLevel, v1.LastLevel), (v2, v2.FirstLevel, 300) })
+        bool coherent = true;
+        bool declared = true;
+        var found = new SortedSet<int>();
+        var specs = new List<(CampaignSpec Spec, int From, int To)> { (v1, v1.FirstLevel, v1.LastLevel) };
+        foreach (string variant in new[] { CampaignSpec.VariantA, CampaignSpec.VariantB })
+        {
+            CampaignSpec v2 = CampaignSpec.Load(SpecPath, variant);
+            specs.Add((v2, v2.FirstLevel, v2.LastLevel));
+        }
+
+        foreach ((CampaignSpec spec, int from, int to) in specs)
         {
             var gen = new SlotGenerator(spec);
             for (int level = from; level <= to; level++)
@@ -181,12 +228,27 @@ internal static class HolguraSelfTest
                 {
                     foreach (bool harder in new[] { false, true })
                     {
-                        none &= gen.Config(plan, stage, dropMurky: false, harder) is not { SplitSlack: true };
+                        StageConfig? c = gen.Config(plan, stage, dropMurky: false, harder);
+                        if (c is not { SplitSlack: true })
+                        {
+                            continue;
+                        }
+
+                        coherent &= c.Slack && c.Source == "walk";
+                        none &= level > 560;
+                        bool hito14 = plan.Role == SlotRole.Milestone && c.K == SpecValidator.HitoK;
+                        bool challenge = plan.Role == SlotRole.Challenge && c.K == SpecValidator.HitoK - 1 && c.Mechanics.Any(m => m.Code == "Pi")
+                                         && (stage == 0 || c.Notes.Contains("relajacion: walk con 1 vacio"));
+                        declared &= hito14 || challenge;
+                        found.Add(level);
                     }
                 }
             }
         }
 
-        check(none, "11-300: ningun slot reparte la holgura en ninguna etapa (los packs 11-300 no cambian)");
+        check(none, "11-560 (campaign_v1 y campaign_v2 en las variantes a y b): ningun slot reparte la holgura en ninguna etapa, con y sin endurecimiento");
+        check(coherent, "201-700, variantes a y b: toda etapa con la holgura repartida lleva la cuia de holgura (SplitSlack => Slack) y la fuente walk en la configuracion");
+        check(declared && found.SequenceEqual(SplitLevels),
+            $"561-700: la holgura repartida solo en los hitos de 14 cuias y en los retos de K = 12 + la cueva (etapa 0 y relajacion walk con 1 vacio), en {string.Join(", ", SplitLevels)} (sale en {string.Join(", ", found)})");
     }
 }
