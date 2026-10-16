@@ -290,6 +290,64 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void MapFill_CasingOutsideTheWater_AndCoreWithAGlint_AndGhostGlass()
+        {
+            // El agua llena del Mapa en dos partes (M3.4; D-003, vidrio y luz): la orla por fuera del ancho del agua (canto de
+            // vidrio de 1,5 dp opaco y filete de tinta de 1 dp al 45 %) y el agua sin borde con su reflejo de destello.
+            RiverLine tapajos = _map.Line("tapajos")!;
+            RiverRibbonGraphic casing = Ribbon(tapajos, RibbonLook.Water);
+            casing.SetPart(RibbonPart.Casing);
+            List<UIVertex> cv = Mesh(casing);
+            Assert.That(cv.Count, Is.EqualTo(6 * tapajos.PointCount), "tres bandas por sección, sin cambios de agua");
+            Assert.That(Vector2.Distance(cv[0].position, cv[5].position), Is.EqualTo(3.5f + (2f * RiverRibbonGraphic.CasingDp)).Within(1e-3f),
+                "la orla, 2,5 dp por fuera del agua a cada lado");
+            Assert.That(Vector2.Distance(cv[2].position, cv[3].position), Is.EqualTo(3.5f + (2f * RiverRibbonGraphic.CasingRimDp)).Within(1e-3f),
+                "el canto, 1,5 dp por cada lado");
+            foreach (UIVertex v in cv)
+            {
+                Assert.That(Same(v.color, Palette.GlassRim) || Same(v.color, RiverRibbonGraphic.FilletColor), Is.True, "solo canto y filete");
+            }
+
+            Assert.That(RiverRibbonGraphic.FilletColor.a, Is.EqualTo(0.45f).Within(1e-6f));
+            Assert.That(casing.LastMarkCount, Is.EqualTo(0), "la orla no lleva trama");
+
+            RiverRibbonGraphic core = Ribbon(tapajos, RibbonLook.Water);
+            core.SetPart(RibbonPart.Core);
+            List<UIVertex> wv = Mesh(core);
+            Assert.That(Vector2.Distance(wv[0].position, wv[1].position), Is.EqualTo(3.5f).Within(1e-3f), "el agua, el ancho del cauce");
+            bool glint = false;
+            foreach (UIVertex v in wv)
+            {
+                Assert.That(Same(v.color, Palette.GlassRim), Is.False, "el agua no lleva el borde: lo pone la orla");
+                glint |= Same(v.color, RiverRibbonGraphic.ReflectionColor(RiverWater.Clear));
+            }
+
+            Assert.That(glint, Is.True, "el reflejo de destello sobre el agua clara");
+
+            // El reflejo, de 1 dp (como mucho el 30 % del agua), desplazado hacia el borde de arriba.
+            float width = Vector2.Distance(wv[2].position, wv[3].position);
+            Assert.That(width, Is.EqualTo(Mathf.Min(RiverRibbonGraphic.ReflectionDp, 0.3f * 3.5f)).Within(1e-3f));
+            Vector2 mid = (wv[0].position + wv[1].position) * 0.5f;
+            Vector2 glintMid = (wv[2].position + wv[3].position) * 0.5f;
+            Assert.That(glintMid.y, Is.GreaterThanOrEqualTo(mid.y - 1e-3f), "hacia arriba (o por el eje, si el río va en vertical)");
+
+            // El vidrio fantasma: solo el cuerpo baja; el borde, no.
+            RiverRibbonGraphic glass = Ribbon(tapajos, RibbonLook.Glass);
+            glass.SetGlassBodyAlpha(0.4f);
+            bool body = false;
+            foreach (UIVertex v in Mesh(glass))
+            {
+                Color32 ghost = RiverRibbonGraphic.GlassBody;
+                ghost.a = (byte)Mathf.RoundToInt(0.4f * 255f);
+                body |= Same(v.color, ghost);
+                Assert.That(Same(v.color, ghost) || Same(v.color, Palette.GlassRim), Is.True);
+            }
+
+            Assert.That(body, Is.True);
+            Assert.That(RiverRibbonGraphic.GlassBody.a, Is.EqualTo(0.85f).Within(1e-6f), "el color base no cambia");
+        }
+
+        [Test]
         public void Ribbon_Patterns_AddATramaOnlyOnWater()
         {
             RiverLine amazonas = _map.Lines[0];

@@ -20,6 +20,31 @@ namespace AF.Presentation
     }
 
     /// <summary>
+    /// Parte de la cinta que se dibuja (propuesta del Mapa §3.5; D-003, vidrio y luz). El Mapa dibuja el agua llena en dos pasadas,
+    /// como un mapa con orla: primero las orlas de todas las líneas y luego el agua de todas, para que en una confluencia el agua
+    /// del afluente entre en la del cauce sin una costura de orla por medio.
+    /// </summary>
+    public enum RibbonPart
+    {
+        /// <summary>La cinta entera (borde, cuerpo y borde), como el vidrio.</summary>
+        Whole = 0,
+
+        /// <summary>
+        /// Solo la orla, por fuera del ancho del agua: un canto de vidrio de <see cref="RiverRibbonGraphic.CasingRimDp"/>
+        /// (<c>vidrio_borde</c>, opaco) y, por fuera, un filete de <see cref="RiverRibbonGraphic.CasingFilletDp"/> de
+        /// <see cref="Palette.UiInk"/> al <see cref="RiverRibbonGraphic.CasingFilletAlpha"/>, que lo separa de la tierra.
+        /// </summary>
+        Casing = 1,
+
+        /// <summary>
+        /// Solo el agua, sin borde (lo pone la orla), con un reflejo interior de <see cref="RiverRibbonGraphic.ReflectionDp"/> en
+        /// <see cref="Palette.Glint"/> al <see cref="RiverRibbonGraphic.ReflectionAlpha"/>, desplazado
+        /// <see cref="RiverRibbonGraphic.ReflectionOffset"/> del ancho hacia el borde de arriba.
+        /// </summary>
+        Core = 2,
+    }
+
+    /// <summary>
     /// Cinta de un río del Mapa (08 §2.2; propuesta del Mapa §3.3-§3.4, §11.1 y §11.4): <c>MaskableGraphic</c> con tiras de
     /// triángulos y color por vértice sobre el material de UI por defecto, como <see cref="WaterStripGraphic"/> y
     /// <see cref="BezierStripGraphic"/>, sin shader propio. Dibuja el intervalo [s0, s1] de una línea (<see cref="SetFill"/>), de
@@ -90,6 +115,30 @@ namespace AF.Presentation
 
         private const float RimMaxFraction = 0.35f;
 
+        /// <summary>Canto de vidrio de la orla del agua llena (dp), por fuera del ancho del agua [P].</summary>
+        public const float CasingRimDp = 1.5f;
+
+        /// <summary>Filete de la orla del agua llena (dp), por fuera del canto [P].</summary>
+        public const float CasingFilletDp = 1f;
+
+        /// <summary>Opacidad del filete de <see cref="Palette.UiInk"/> de la orla [P].</summary>
+        public const float CasingFilletAlpha = 0.45f;
+
+        /// <summary>Lo que la orla añade al agua por cada lado (dp): canto y filete.</summary>
+        public const float CasingDp = CasingRimDp + CasingFilletDp;
+
+        /// <summary>Ancho del reflejo interior del agua (dp) [P]; como mucho <see cref="ReflectionMaxFraction"/> del ancho del agua.</summary>
+        public const float ReflectionDp = 1f;
+
+        /// <summary>Tope del reflejo, en fracción del ancho del agua, para que un río fino no se quede sin agua [P].</summary>
+        public const float ReflectionMaxFraction = 0.3f;
+
+        /// <summary>Opacidad del reflejo de <see cref="Palette.Glint"/> sobre el agua [P].</summary>
+        public const float ReflectionAlpha = 0.35f;
+
+        /// <summary>Desplazamiento del reflejo desde el eje hacia el borde de arriba, en fracción del ancho del agua [P].</summary>
+        public const float ReflectionOffset = 0.25f;
+
         /// <summary>Vidrio del Mapa, azul hielo translúcido (#CFEFF3 con alfa 0,85) [P] (paleta de la muestra del Mapa).</summary>
         public static readonly Color GlassBody = new Color(0xCF / 255f, 0xEF / 255f, 0xF3 / 255f, 0.85f);
 
@@ -100,6 +149,8 @@ namespace AF.Presentation
         private PolylineCursor? _cursor;
         private MapSpace _space = new MapSpace(MapSpace.BasinWidthDp, Vector2.zero);
         private RibbonLook _look = RibbonLook.Glass;
+        private RibbonPart _part = RibbonPart.Whole;
+        private float _glassAlpha = GlassBody.a;
         private bool _patterns;
         private float _patternOpacity = Palette.PatternOpacityOn;
         private float _s0;
@@ -140,6 +191,12 @@ namespace AF.Presentation
 
         /// <summary>Aspecto.</summary>
         public RibbonLook Look => _look;
+
+        /// <summary>Parte que dibuja (<see cref="SetPart"/>).</summary>
+        public RibbonPart Part => _part;
+
+        /// <summary>Opacidad del cuerpo de vidrio (<see cref="SetGlassBodyAlpha"/>).</summary>
+        public float GlassBodyAlpha => _glassAlpha;
 
         /// <summary>Lleva la trama de Patrones de fruta.</summary>
         public bool Patterns => _patterns;
@@ -251,6 +308,30 @@ namespace AF.Presentation
             }
         }
 
+        /// <summary>Parte de la cinta que se dibuja: entera, solo la orla o solo el agua (<see cref="RibbonPart"/>).</summary>
+        public void SetPart(RibbonPart part)
+        {
+            if (part != _part)
+            {
+                _part = part;
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>
+        /// Opacidad del cuerpo de vidrio (por defecto la de <see cref="GlassBody"/>, 0,85); el borde no cambia. El Mapa la baja para
+        /// que el cauce vacío se lea como vidrio fantasma y el progreso mande.
+        /// </summary>
+        public void SetGlassBodyAlpha(float alpha)
+        {
+            alpha = Mathf.Clamp01(alpha);
+            if (alpha != _glassAlpha)
+            {
+                _glassAlpha = alpha;
+                SetVerticesDirty();
+            }
+        }
+
         /// <summary>
         /// Trama de Patrones de fruta (02 §12): solo en el aspecto de agua. <paramref name="opacity"/> es la del patrón (07 §3,
         /// regla 1): <c>ui_pattern_opacity</c> (por defecto <see cref="Palette.PatternOpacityOn"/>, 0,20) o, en Alto contraste,
@@ -329,7 +410,7 @@ namespace AF.Presentation
             float length = cursor.Length;
             float aStart = _s0 * length;
             float aEnd = _s1 * length;
-            bool water = _look == RibbonLook.Water;
+            bool water = _look == RibbonLook.Water && _part != RibbonPart.Casing;
 
             // Puntos de la línea estrictamente dentro del intervalo.
             int count = cursor.PointCount;
@@ -364,7 +445,7 @@ namespace AF.Presentation
                 }
             }
 
-            int perSection = 2 * (anySplit ? 4 : 3);
+            int perSection = 2 * BandCount(anySplit);
             if (2 * perSection > _budget)
             {
                 return; // ni las dos puntas caben
@@ -450,9 +531,24 @@ namespace AF.Presentation
         }
 
         // Vértices de una sección con el aspecto «look».
-        private static int Cost(RunLook look)
+        private int Cost(RunLook look)
         {
-            return 2 * (look.Split ? 4 : 3);
+            return 2 * BandCount(look.Split);
+        }
+
+        // Bandas de una sección: la cinta entera, borde, agua (una o dos) y borde; la orla, filete, canto y filete; el agua, una o
+        // dos y el reflejo.
+        private int BandCount(bool split)
+        {
+            switch (_part)
+            {
+                case RibbonPart.Casing:
+                    return 3;
+                case RibbonPart.Core:
+                    return split ? 3 : 2;
+                default:
+                    return split ? 4 : 3;
+            }
         }
 
         private void EnsurePlanCapacity(int sections)
@@ -561,19 +657,20 @@ namespace AF.Presentation
         // sección, o −1 si no cabe en el presupuesto.
         private int EmitSection(VertexHelper vh, Vector2 mapPoint, Vector2 offset, RunLook look, float half, float rim, int connect)
         {
-            int bands = look.Split ? 4 : 3;
+            int bands = BandCount(look.Split);
             if (vh.currentVertCount + (2 * bands) > _budget)
             {
                 return -1;
             }
 
             Vector2 center = _space.ToLocal(mapPoint);
+            float up = offset.sqrMagnitude > 1e-12f ? offset.normalized.y : 0f; // > 0: la orilla izquierda queda arriba
             offset *= half;
             float alpha = color.a;
             int start = vh.currentVertCount;
             for (int k = 0; k < bands; k++)
             {
-                Band(look, k, rim, out float u0, out float u1, out Color c);
+                Band(look, k, rim, half, up, out float u0, out float u1, out Color c);
                 c.a *= alpha;
                 Color32 c32 = c;
                 vh.AddVert(center + (offset * u0), c32, Vector4.zero);
@@ -590,9 +687,22 @@ namespace AF.Presentation
             return start;
         }
 
-        // Banda k de la sección: de u0 a u1 en medios anchos (+1 = orilla izquierda mirando río abajo) y su color.
-        private void Band(RunLook look, int k, float rim, out float u0, out float u1, out Color c)
+        // Banda k de la sección: de u0 a u1 en medios anchos (+1 = orilla izquierda mirando río abajo) y su color. «half» es el
+        // medio ancho del agua en dp y «up», la componente vertical (local, hacia arriba) de la normal izquierda.
+        private void Band(RunLook look, int k, float rim, float half, float up, out float u0, out float u1, out Color c)
         {
+            if (_part == RibbonPart.Casing)
+            {
+                CasingBand(k, half, out u0, out u1, out c);
+                return;
+            }
+
+            if (_part == RibbonPart.Core)
+            {
+                CoreBand(look, k, half, up, out u0, out u1, out c);
+                return;
+            }
+
             bool glass = _look == RibbonLook.Glass;
             if (!look.Split)
             {
@@ -607,7 +717,7 @@ namespace AF.Presentation
                     case 1:
                         u0 = -1f + rim;
                         u1 = 1f - rim;
-                        c = WaterColor(w);
+                        c = BodyColor(w);
                         return;
                     default:
                         u0 = 1f - rim;
@@ -628,12 +738,12 @@ namespace AF.Presentation
                 case 1:
                     u0 = -1f + rim;
                     u1 = 0f;
-                    c = WaterColor(look.B);
+                    c = BodyColor(look.B);
                     return;
                 case 2:
                     u0 = 0f;
                     u1 = 1f - rim;
-                    c = WaterColor(look.A);
+                    c = BodyColor(look.A);
                     return;
                 default:
                     u0 = 1f - rim;
@@ -641,6 +751,85 @@ namespace AF.Presentation
                     c = Palette.GlassRim;
                     return;
             }
+        }
+
+        // El color del cuerpo: el agua o, sin agua comprobada, el vidrio con su opacidad (SetGlassBodyAlpha).
+        private Color BodyColor(RiverWater water)
+        {
+            Color c = WaterColor(water);
+            if (water == RiverWater.None)
+            {
+                c.a = _glassAlpha;
+            }
+
+            return c;
+        }
+
+        // La orla, por fuera del agua: filete, canto de vidrio de orilla a orilla (el agua va encima: sin rendijas) y filete.
+        private static void CasingBand(int k, float half, out float u0, out float u1, out Color c)
+        {
+            float rimU = 1f + (CasingRimDp / half);
+            float outU = 1f + (CasingDp / half);
+            switch (k)
+            {
+                case 0:
+                    u0 = -outU;
+                    u1 = -rimU;
+                    c = FilletColor;
+                    return;
+                case 1:
+                    u0 = -rimU;
+                    u1 = rimU;
+                    c = Palette.GlassRim;
+                    return;
+                default:
+                    u0 = rimU;
+                    u1 = outU;
+                    c = FilletColor;
+                    return;
+            }
+        }
+
+        // El agua sin borde y su reflejo: una banda de ReflectionDp (como mucho ReflectionMaxFraction del ancho del agua) a
+        // ReflectionOffset del ancho hacia el borde de arriba; donde el río va en vertical, por el eje, para que la tira no salte de
+        // orilla. Opaco: Glint al ReflectionAlpha sobre el agua de ese lado. Sin agua comprobada, sin reflejo (banda de ancho 0).
+        private void CoreBand(RunLook look, int k, float half, float up, out float u0, out float u1, out Color c)
+        {
+            int last = look.Split ? 2 : 1;
+            if (k < last)
+            {
+                if (!look.Split)
+                {
+                    u0 = -1f;
+                    u1 = 1f;
+                    c = BodyColor(look.A);
+                    return;
+                }
+
+                u0 = k == 0 ? -1f : 0f;
+                u1 = k == 0 ? 0f : 1f;
+                c = BodyColor(k == 0 ? look.B : look.A);
+                return;
+            }
+
+            float center = 2f * ReflectionOffset * Mathf.Clamp(up / 0.5f, -1f, 1f);
+            RiverWater side = look.Split && center < 0f ? look.B : look.A;
+            float w = side == RiverWater.None ? 0f : Mathf.Min(ReflectionDp, ReflectionMaxFraction * 2f * half) / half;
+            u0 = center - (w * 0.5f);
+            u1 = center + (w * 0.5f);
+            c = ReflectionColor(side);
+        }
+
+        /// <summary>Filete de la orla: <see cref="Palette.UiInk"/> al <see cref="CasingFilletAlpha"/>.</summary>
+        public static readonly Color FilletColor = new Color(Palette.UiInk.r, Palette.UiInk.g, Palette.UiInk.b, CasingFilletAlpha);
+
+        /// <summary>Color del reflejo sobre el agua <paramref name="water"/>: <see cref="Palette.Glint"/> al <see cref="ReflectionAlpha"/> sobre ella, opaco.</summary>
+        public static Color ReflectionColor(RiverWater water)
+        {
+            Color body = WaterColor(water);
+            Color c = Color.Lerp(body, Palette.Glint, ReflectionAlpha);
+            c.a = body.a;
+            return c;
         }
 
         // Trama de Patrones de fruta (02 §12; propuesta del Mapa §11.4): una marca cada PatternStepDp, de 4 vértices, mientras

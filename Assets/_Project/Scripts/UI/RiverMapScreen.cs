@@ -160,6 +160,9 @@ namespace AF.UI
         /// <summary>Ancho de los ríos locales (clase 3) en la vista Mundo, en dp [P].</summary>
         public const float WorldWidthClass3Dp = 3f;
 
+        /// <summary>Pivote vertical de la canoa: su punto del río queda a esta fracción del alto de su imagen, desde abajo.</summary>
+        public const float CanoePivotY = 0.35f;
+
         /// <summary>Fondo de la pantalla detrás del marco (<c>fondo_a</c> de la muestra) [P].</summary>
         public static readonly Color BackgroundColor = Palette.Hex(0x0E2B23);
 
@@ -1011,7 +1014,7 @@ namespace AF.UI
                 RectTransform rt = _canoe.rectTransform;
                 rt.anchorMin = new Vector2(0f, 1f);
                 rt.anchorMax = new Vector2(0f, 1f);
-                rt.pivot = new Vector2(0.5f, 0.35f);
+                rt.pivot = new Vector2(0.5f, CanoePivotY);
                 rt.anchoredPosition = local;
                 rt.sizeDelta = new Vector2(ProceduralArt.MapCanoeWidthDp, ProceduralArt.MapCanoeHeightDp);
             }

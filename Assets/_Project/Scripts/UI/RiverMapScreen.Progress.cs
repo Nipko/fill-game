@@ -23,13 +23,18 @@ namespace AF.UI
     /// <see cref="ComputeFill"/>.</description></item>
     /// <item><description><b>Frente</b> (lienzo dinámico, detrás de la canoa): el tramo de la parada <see cref="FrontStopOf"/>(m),
     /// lleno hasta <see cref="RiverJourney.LegFill"/>(m) de su longitud real, con sus 10 boyas repartidas por esa longitud
-    /// (una por nivel; encendidas las de los niveles ganados). La boya de un nivel saltado con el Salto del Boto lleva el
-    /// icono de Rosa y el agua no se corta (04 §2.6); en los tramos ya recorridos, el nivel saltado sigue marcado con Rosa en su
+    /// (una por nivel; encendidas las de los niveles ganados). Las por ganar van encima de la canoa, que si no las tapa en la
+    /// punta del agua (son el «solo me falta uno», propuesta §4.1); en un tramo sin largo a la escala de la vista (los de «misma
+    /// vista, otra luz», de longitud 0), las 10 van en una fila corta bajo la parada (<see cref="BuoyCompactBelowDp"/>). El agua
+    /// llena lleva una orla de vidrio (canto de <c>vidrio_borde</c> y filete de tinta) y un reflejo (<see cref="RibbonPart"/>),
+    /// y el vidrio vacío baja a <see cref="MapGlassBodyAlpha"/>: el progreso es lo que se lee. La boya de un nivel saltado con el
+    /// Salto del Boto lleva el icono de Rosa y el agua no se corta (04 §2.6); en los tramos ya recorridos, el nivel saltado sigue marcado con Rosa en su
     /// boya. Rosa va encima de la canoa, con un halo de <c>vidrio_borde</c>, y su ancho baja con la distancia entre boyas
     /// (<see cref="RosaWidthDp"/>). Con <c>ui_map_mode</c> = <c>worlds</c>, sin boyas ni Rosa (08 §9; el filtro completo es de
     /// M4.3).</description></item>
-    /// <item><description><b>Afluentes:</b> al pasar su boca (las <c>leg.mouths</c> de las rutas), cada línea se llena
-    /// <c>fill_on_pass</c> desde la boca: entera la de paso y la local (con un fundido de
+    /// <item><description><b>Afluentes:</b> al pasar su boca (las <c>leg.mouths</c> de las rutas), cada línea que no remonta
+    /// ninguna ruta del catálogo (<see cref="RouteClimbs"/>; las otras se llenan por la ruta) se llena <see cref="MouthFill"/>
+    /// desde la boca: entera la de paso y la local (con un fundido de
     /// <see cref="MapConfig.PassbyFillFadeMs"/> la primera vez que se ven; el Tocantins, desde el primer Mapa) y solo la boca
     /// la de un mundo futuro. Cada mundo futuro del catálogo lleva su <b>silueta</b> en azul petróleo (<c>panel_alto</c>
     /// #234452) con <c>map_next_world</c> («Mundo 6 · Oriente · Nivel 201») en su gran parada, como la muestra del Mapa, sin
@@ -136,6 +141,35 @@ namespace AF.UI
         /// <summary>Valor de <see cref="FillFrom"/> de una línea sin nada lleno.</summary>
         public const float NoFill = 2f;
 
+        /// <summary>
+        /// Opacidad del cuerpo del vidrio vacío en el Mapa [P] (frente a los 0,85 de <see cref="RiverRibbonGraphic.GlassBody"/>):
+        /// vidrio fantasma, más o menos #6CA98E sobre la selva, para que el progreso se lea más que los ríos que faltan.
+        /// </summary>
+        public const float MapGlassBodyAlpha = 0.40f;
+
+        /// <summary>
+        /// Largo mínimo de la boca de un afluente de un mundo futuro en la Cuenca (dp) [P]: con <c>fill_on_pass</c> solo, algunas
+        /// bocas miden 2-6 dp y parecen grietas (<see cref="MouthFill"/>).
+        /// </summary>
+        public const float MouthMinBasinDp = 14f;
+
+        /// <summary>
+        /// Distancia entre boyas por debajo de la que el tramo no deja ver el avance (dp) [P]: el tramo de longitud 0 de «misma
+        /// vista, otra luz» (Leticia al atardecer, Pacaya al alba) o uno de unos metros (Itaya). Entonces las 10 boyas van en una
+        /// fila corta bajo la parada (<see cref="BuoysCompact"/>), con su radio de la vista y <see cref="BuoyCompactSpacing"/>
+        /// radios entre centros.
+        /// </summary>
+        public const float BuoyCompactBelowDp = 4f;
+
+        /// <summary>Distancia entre centros de las boyas de la fila corta, en radios [P].</summary>
+        public const float BuoyCompactSpacing = 2.2f;
+
+        /// <summary>Hueco entre la caja de la canoa (o el punto de la parada) y la fila corta de boyas (dp) [P].</summary>
+        public const float BuoyCompactGapDp = 3f;
+
+        /// <summary>Hueco que busca la placa de una silueta con el borde de las líneas de clase 1-2 (dp) [P].</summary>
+        public const float SilhouetteLineClearanceDp = 4f;
+
         /// <summary>Silueta de un mundo futuro: <c>panel_alto</c> (#234452, el azul petróleo del panel, D-004; propuesta §3.5).</summary>
         public static readonly Color SilhouetteColor = Palette.Panel.Top;
 
@@ -146,7 +180,9 @@ namespace AF.UI
         public static readonly Color BuoyUnlitColor = RiverRibbonGraphic.GlassBody;
 
         private readonly List<RiverRibbonGraphic> _fill = new List<RiverRibbonGraphic>();
+        private readonly List<RiverRibbonGraphic> _fillCasing = new List<RiverRibbonGraphic>();
         private readonly List<RiverRibbonGraphic> _front = new List<RiverRibbonGraphic>();
+        private readonly List<RiverRibbonGraphic> _frontCasing = new List<RiverRibbonGraphic>();
         private readonly List<TextMeshProUGUI> _countries = new List<TextMeshProUGUI>();
         private readonly List<Silhouette> _silhouettes = new List<Silhouette>();
         private readonly List<int> _fading = new List<int>();
@@ -159,15 +195,24 @@ namespace AF.UI
         private readonly List<Vector2> _pastRosaMap = new List<Vector2>();
         private readonly List<float> _pastRosaSpacing = new List<float>();
         private readonly List<int> _pastRosaLevel = new List<int>();
+        private readonly List<float> _pastRosaLegSpacing = new List<float>();
+        private readonly List<Vector2> _pastRosaStop = new List<Vector2>();
         private readonly List<Rect> _placed = new List<Rect>();
         private static Material? _countryMaterial;
 
         private RectTransform? _fillLayer;
+        private RectTransform? _fillCasingLayer;
+        private RectTransform? _fillCoreLayer;
         private RectTransform? _labelLayer;
         private RectTransform? _frontLayer;
+        private RectTransform? _frontCoreLayer;
+        private RectTransform? _aheadLayer;
         private RectTransform? _rosaLayer;
         private int _pastRosaCount;
         private BuoyGraphic? _buoys;
+        private BuoyGraphic? _buoysAhead;
+        private Vector2 _frontStopMap;
+        private bool _buoysCompact;
         private TextMeshProUGUI? _andesLabel;
         private TextMeshProUGUI? _atlanticLabel;
         private float[] _fillFrom = Array.Empty<float>();
@@ -275,11 +320,47 @@ namespace AF.UI
         /// <summary>Capa del lleno (lienzo estático, encima del vidrio).</summary>
         internal RectTransform? FillLayer => _fillLayer;
 
-        /// <summary>Capa del frente y las boyas (lienzo dinámico, detrás de la canoa).</summary>
+        /// <summary>Capa del frente y las boyas encendidas (lienzo dinámico, detrás de la canoa).</summary>
         internal RectTransform? FrontLayer => _frontLayer;
 
-        /// <summary>Malla de las boyas.</summary>
+        /// <summary>Capa de las orlas del lleno y del frente (lienzo estático, debajo del agua del lleno).</summary>
+        internal RectTransform? FillCasingLayer => _fillCasingLayer;
+
+        /// <summary>Malla de las boyas encendidas (detrás de la canoa).</summary>
         internal BuoyGraphic? Buoys => _buoys;
+
+        /// <summary>Malla de las boyas por ganar (encima de la canoa: no las tapa en la punta del agua).</summary>
+        internal BuoyGraphic? BuoysAhead => _buoysAhead;
+
+        /// <summary>Capa de las boyas por ganar (lienzo dinámico, encima de la canoa y debajo de Rosa).</summary>
+        internal RectTransform? BuoysAheadLayer => _aheadLayer;
+
+        /// <summary>Boyas dibujadas entre las dos mallas (sin las saltadas, que llevan a Rosa).</summary>
+        public int BuoysDrawn => (_buoys != null ? _buoys.DrawnCount : 0) + (_buoysAhead != null ? _buoysAhead.DrawnCount : 0);
+
+        /// <summary>
+        /// Las boyas del frente van en la fila corta bajo la parada (<see cref="BuoyCompactBelowDp"/>): el tramo, a la escala de la
+        /// vista, no deja distinguirlas.
+        /// </summary>
+        public bool BuoysCompact => _buoysCompact;
+
+        /// <summary>Dónde se dibuja la boya <paramref name="i"/>, en coordenadas locales del contenido (dp, y hacia arriba).</summary>
+        public Vector2 BuoyLocalPoint(int i)
+        {
+            return _buoyLocal[i];
+        }
+
+        /// <summary>Orla de la cinta del lleno de la línea <paramref name="line"/> (debajo del agua de todas las líneas).</summary>
+        internal RiverRibbonGraphic FillCasingRibbon(int line)
+        {
+            return _fillCasing[line];
+        }
+
+        /// <summary>Orla de la cinta <paramref name="i"/> del frente (en el lienzo estático, con las orlas del lleno).</summary>
+        internal RiverRibbonGraphic FrontCasingRibbon(int i)
+        {
+            return _frontCasing[i];
+        }
 
         /// <summary>
         /// s desde la que la línea <paramref name="line"/> del Mapa va llena hasta su boca en el lleno (sin el frente), o
@@ -435,7 +516,10 @@ namespace AF.UI
         /// <item>Las rutas de las paradas alcanzadas (0 … <see cref="FrontStopOf"/> − 1) llenan cada línea desde su punto más alto
         /// hasta la boca: el agua entra siempre desde el mar.</item>
         /// <item>Cada boca que pasan esas rutas (y las que ya pasó el frente, por su posición en la ruta) llena su línea
-        /// <c>fill_on_pass</c> desde la boca: entera la de paso y la local; solo la boca la de un mundo futuro.</item>
+        /// <see cref="MouthFill"/> desde la boca: entera la de paso y la local; solo la boca la de un mundo futuro. No se llenan
+        /// así las líneas que remonta alguna ruta del catálogo (<see cref="RouteClimbs"/>: el Tapajós, el Negro, el Nanay, el
+        /// Marañón…): se llenan por la ruta, para que la boca no se trague el frente de sus tramos (D-013, punto 4: cada victoria
+        /// llena una décima del tramo; propuesta §5.1: «4 hasta la parada»).</item>
         /// </list>
         /// Creciente con <paramref name="maxLevel"/>: nunca retrocede. Sin asignaciones.
         /// </summary>
@@ -475,13 +559,13 @@ namespace AF.UI
                     from[piece.Line] = Mathf.Min(from[piece.Line], Mathf.Clamp01(Mathf.Min(piece.S0, piece.S1)));
                 }
 
-                FillMouths(map, route, 1f, from);
+                FillMouths(map, routes, route, 1f, from);
             }
 
             RiverStopRoute? frontRoute = routes.At(front);
             if (frontRoute != null)
             {
-                FillMouths(map, frontRoute, RiverJourney.LegFill(max), from);
+                FillMouths(map, routes, frontRoute, RiverJourney.LegFill(max), from);
             }
         }
 
@@ -558,14 +642,9 @@ namespace AF.UI
             IReadOnlyList<RiverLine> lines = map.Lines;
             for (int i = 0; i < _fill.Count; i++)
             {
-                RiverRibbonGraphic ribbon = _fill[i];
                 bool used = i < lines.Count && _fillFrom[i] < 1f;
-                if (ribbon.gameObject.activeSelf != used)
-                {
-                    ribbon.gameObject.SetActive(used);
-                }
-
-                ribbon.SetFill(used ? _fillFrom[i] : 1f, 1f);
+                ShowRibbon(_fill[i], used, used ? _fillFrom[i] : 1f, 1f);
+                ShowRibbon(_fillCasing[i], used, used ? _fillFrom[i] : 1f, 1f);
             }
 
             BuildFront(map, routes, max);
@@ -582,22 +661,33 @@ namespace AF.UI
             {
                 _fillLayer = UiBuilder.Rect("Fill", staticLayer);
                 FillTopLeft(_fillLayer);
+                // Dos pasadas (RibbonPart): las orlas de todo el lleno (y la del frente) debajo y el agua encima, para que en una
+                // confluencia el afluente entre en el cauce sin una costura de orla.
+                _fillCasingLayer = UiBuilder.Rect("Casing", _fillLayer);
+                FillTopLeft(_fillCasingLayer);
+                _fillCoreLayer = UiBuilder.Rect("Water", _fillLayer);
+                FillTopLeft(_fillCoreLayer);
                 _labelLayer = UiBuilder.Rect("Labels", staticLayer);
                 FillTopLeft(_labelLayer);
 
                 _frontLayer = UiBuilder.Rect("Front", dynamicLayer);
                 FillTopLeft(_frontLayer);
                 _frontLayer.SetAsFirstSibling(); // detrás de la canoa y de los marcadores
-                var buoysGo = new GameObject("Buoys", typeof(RectTransform), typeof(CanvasRenderer), typeof(BuoyGraphic));
-                buoysGo.transform.SetParent(_frontLayer, false);
-                FillTopLeft((RectTransform)buoysGo.transform);
-                _buoys = buoysGo.GetComponent<BuoyGraphic>();
-                _buoys.raycastTarget = false;
+                _frontCoreLayer = UiBuilder.Rect("FrontWater", _frontLayer);
+                FillTopLeft(_frontCoreLayer);
+                _buoys = NewBuoys("Buoys", _frontLayer, false);
+
+                // Las boyas por ganar van encima de la canoa: en la punta del agua, la canoa tapa las de delante (y en la vista
+                // Mundo un tramo corto cabe entero bajo ella), y son el «solo me falta uno» (propuesta §4.1).
+                _aheadLayer = UiBuilder.Rect("BuoysAhead", dynamicLayer);
+                FillTopLeft(_aheadLayer);
+                _aheadLayer.SetSiblingIndex(_canoe.transform.GetSiblingIndex() + 1);
+                _buoysAhead = NewBuoys("Buoys", _aheadLayer, true);
 
                 // Rosa va encima de la canoa: la boya de la punta del agua cae justo debajo de ella.
                 _rosaLayer = UiBuilder.Rect("SkippedRosa", dynamicLayer);
                 FillTopLeft(_rosaLayer);
-                _rosaLayer.SetSiblingIndex(_canoe.transform.GetSiblingIndex() + 1);
+                _rosaLayer.SetSiblingIndex(_aheadLayer.GetSiblingIndex() + 1);
                 for (int i = 0; i < _rosa.Length; i++)
                 {
                     _rosa[i] = NewRosa("SkippedRosa_" + i);
@@ -613,29 +703,29 @@ namespace AF.UI
                 _atlanticLabel.transform.SetSiblingIndex(buttonIndex + 1);
             }
 
-            // Una cinta del lleno por línea (el cauce y el ramal encima, para que las bocas queden debajo del río grande).
+            // El vidrio vacío, fantasma: el progreso es lo que tiene que leerse (solo en esta pantalla; el borde no cambia).
+            for (int i = 0; i < lines.Count; i++)
+            {
+                Glass(i).SetGlassBodyAlpha(MapGlassBodyAlpha);
+            }
+
+            // Una cinta del lleno por línea, con su orla aparte (el cauce y el ramal encima, para que las bocas queden debajo del
+            // río grande).
             while (_fill.Count < lines.Count)
             {
-                var go = new GameObject("Fill_" + _fill.Count, typeof(RectTransform), typeof(CanvasRenderer), typeof(RiverRibbonGraphic));
-                go.transform.SetParent(_fillLayer, false);
-                FillTopLeft((RectTransform)go.transform);
-                RiverRibbonGraphic ribbon = go.GetComponent<RiverRibbonGraphic>();
-                ribbon.Setup();
-                _fill.Add(ribbon);
+                _fill.Add(NewRibbon("Fill_" + _fill.Count, _fillCoreLayer!, RibbonPart.Core));
+                _fillCasing.Add(NewRibbon("FillCasing_" + _fillCasing.Count, _fillCasingLayer!, RibbonPart.Casing));
             }
 
             for (int i = 0; i < _fill.Count; i++)
             {
-                RiverRibbonGraphic ribbon = _fill[i];
                 bool used = i < lines.Count;
-                ribbon.SetLine(used ? lines[i] : null);
-                ribbon.SetLook(RibbonLook.Water);
-                ribbon.SetFill(1f, 1f);
-                ribbon.canvasRenderer.SetAlpha(1f);
-                ribbon.gameObject.SetActive(false);
+                ResetFillRibbon(_fill[i], used ? lines[i] : null);
+                ResetFillRibbon(_fillCasing[i], used ? lines[i] : null);
                 if (used)
                 {
-                    ribbon.gameObject.name = "Fill_" + lines[i].Id;
+                    _fill[i].gameObject.name = "Fill_" + lines[i].Id;
+                    _fillCasing[i].gameObject.name = "FillCasing_" + lines[i].Id;
                 }
             }
 
@@ -708,19 +798,14 @@ namespace AF.UI
 
             for (int i = 0; i < _fill.Count; i++)
             {
-                RiverRibbonGraphic ribbon = _fill[i];
-                if (ribbon.Line != null)
-                {
-                    ribbon.SetSpace(space);
-                    ribbon.SetWidth(RibbonWidthDp(_view, ribbon.Line.Class));
-                }
+                FitRibbon(_fill[i], space);
+                FitRibbon(_fillCasing[i], space);
             }
 
             for (int i = 0; i < _frontCount; i++)
             {
-                RiverRibbonGraphic ribbon = _front[i];
-                ribbon.SetSpace(space);
-                ribbon.SetWidth(RibbonWidthDp(_view, ribbon.Line!.Class));
+                FitRibbon(_front[i], space);
+                FitRibbon(_frontCasing[i], space);
             }
 
             PlaceBuoys(space);
@@ -813,7 +898,9 @@ namespace AF.UI
                 bool preferLeft = p.x + SilhouetteGapDp + size.x > contentW - LabelEdgeDp;
                 Rect first = default;
                 Rect chosen = default;
+                bool any = false;
                 bool found = false;
+                float bestClearance = float.NegativeInfinity;
                 int steps = Mathf.RoundToInt(SilhouetteMaxShiftDp / LabelSearchStepDp);
                 for (int k = 0; k <= 2 * steps && !found; k++)
                 {
@@ -832,15 +919,26 @@ namespace AF.UI
                             first = box;
                         }
 
-                        found = !(hasCanoe && box.Overlaps(canoe)) && !OverlapsPlaced(box);
-                        if (found)
+                        if ((hasCanoe && box.Overlaps(canoe)) || OverlapsPlaced(box))
                         {
+                            continue;
+                        }
+
+                        // Como los países: el sitio libre más cercano que no tape el curso de los ríos (ni el frente, que va por
+                        // ellos); si ninguno llega a SilhouetteLineClearanceDp, el de más hueco.
+                        float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp);
+                        if (!any || clearance > bestClearance)
+                        {
+                            any = true;
+                            bestClearance = clearance;
                             chosen = box;
                         }
+
+                        found = clearance >= SilhouetteLineClearanceDp;
                     }
                 }
 
-                Rect plate = found ? chosen : first;
+                Rect plate = any ? chosen : first;
                 s.Root.pivot = new Vector2(0f, 0.5f);
                 s.Root.anchoredPosition = new Vector2(plate.xMin, plate.center.y);
                 _placed.Add(plate);
@@ -895,7 +993,7 @@ namespace AF.UI
                     continue;
                 }
 
-                float half = RibbonWidthDp(view, line.Class) * 0.5f;
+                float half = (RibbonWidthDp(view, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp; // con la orla del lleno
                 float reach = half + clearance;
                 Rect near = Rect.MinMaxRect(box.xMin - reach, box.yMin - reach, box.xMax + reach, box.yMax + reach);
                 Vector2 a = space.ToLocal(line.X(0), line.Y(0));
@@ -1011,6 +1109,7 @@ namespace AF.UI
             for (int i = 0; i < _fading.Count; i++)
             {
                 _fill[_fading[i]].canvasRenderer.SetAlpha(a);
+                _fillCasing[_fading[i]].canvasRenderer.SetAlpha(a);
             }
 
             if (a >= 1f)
@@ -1061,11 +1160,10 @@ namespace AF.UI
 
                     float t = Mathf.Clamp01(left / length);
                     left -= length;
-                    RiverRibbonGraphic ribbon = FrontRibbonAt(_frontCount++);
-                    ribbon.SetLine(line);
-                    ribbon.SetLook(RibbonLook.Water);
-                    ribbon.SetVertexBudget(budget);
-                    ribbon.SetFill(piece.S0, piece.S0 + ((piece.S1 - piece.S0) * t));
+                    int k = _frontCount++;
+                    float end = piece.S0 + ((piece.S1 - piece.S0) * t);
+                    SetFrontPiece(FrontRibbonAt(k), line, budget, piece.S0, end);
+                    SetFrontPiece(_frontCasing[k], line, budget, piece.S0, end);
                 }
             }
 
@@ -1076,8 +1174,14 @@ namespace AF.UI
                 {
                     _front[i].gameObject.SetActive(used);
                 }
+
+                if (_frontCasing[i].gameObject.activeSelf != used)
+                {
+                    _frontCasing[i].gameObject.SetActive(used);
+                }
             }
 
+            _frontStopMap = route != null ? PlacePoint(map, route.At) : Vector2.zero;
             for (int i = 0; i < BuoysPerLeg; i++)
             {
                 _buoyLevel[i] = route != null ? ((stop - 1) * RiverStopCatalog.LevelsPerStop) + i + 1 : 0;
@@ -1087,20 +1191,78 @@ namespace AF.UI
             RefreshBuoyStates();
         }
 
+        // La cinta i del frente (el agua, en el lienzo dinámico, debajo de las boyas) y su orla (en el estático, con las del lleno:
+        // así la orla del frente no corta el agua del lleno en una confluencia). La orla solo cambia al reconstruir el frente; si
+        // «ponerse al día» (M3.5) la anima, rehace el lienzo estático mientras dura.
         private RiverRibbonGraphic FrontRibbonAt(int i)
         {
             while (_front.Count <= i)
             {
-                var go = new GameObject("Front_" + _front.Count, typeof(RectTransform), typeof(CanvasRenderer), typeof(RiverRibbonGraphic));
-                go.transform.SetParent(_frontLayer!, false);
-                FillTopLeft((RectTransform)go.transform);
-                go.transform.SetSiblingIndex(_front.Count); // antes de las boyas
-                RiverRibbonGraphic ribbon = go.GetComponent<RiverRibbonGraphic>();
-                ribbon.Setup();
-                _front.Add(ribbon);
+                _front.Add(NewRibbon("Front_" + _front.Count, _frontCoreLayer!, RibbonPart.Core));
+                _frontCasing.Add(NewRibbon("FrontCasing_" + _frontCasing.Count, _fillCasingLayer!, RibbonPart.Casing));
             }
 
             return _front[i];
+        }
+
+        private static void SetFrontPiece(RiverRibbonGraphic ribbon, RiverLine line, int budget, float s0, float s1)
+        {
+            ribbon.SetLine(line);
+            ribbon.SetLook(RibbonLook.Water);
+            ribbon.SetVertexBudget(budget);
+            ribbon.SetFill(s0, s1);
+        }
+
+        // Una cinta del Mapa en «parent», con la parte «part» (la orla o el agua del lleno y del frente).
+        private static RiverRibbonGraphic NewRibbon(string name, RectTransform parent, RibbonPart part)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(RiverRibbonGraphic));
+            go.transform.SetParent(parent, false);
+            FillTopLeft((RectTransform)go.transform);
+            RiverRibbonGraphic ribbon = go.GetComponent<RiverRibbonGraphic>();
+            ribbon.Setup();
+            ribbon.SetPart(part);
+            return ribbon;
+        }
+
+        // Una malla de boyas en «parent»: las encendidas (detrás de la canoa) o las por ganar (encima).
+        private static BuoyGraphic NewBuoys(string name, RectTransform parent, bool ahead)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(BuoyGraphic));
+            go.transform.SetParent(parent, false);
+            FillTopLeft((RectTransform)go.transform);
+            BuoyGraphic buoys = go.GetComponent<BuoyGraphic>();
+            buoys.raycastTarget = false;
+            buoys.Ahead = ahead;
+            return buoys;
+        }
+
+        private static void ResetFillRibbon(RiverRibbonGraphic ribbon, RiverLine? line)
+        {
+            ribbon.SetLine(line);
+            ribbon.SetLook(RibbonLook.Water);
+            ribbon.SetFill(1f, 1f);
+            ribbon.canvasRenderer.SetAlpha(1f);
+            ribbon.gameObject.SetActive(false);
+        }
+
+        private static void ShowRibbon(RiverRibbonGraphic ribbon, bool on, float s0, float s1)
+        {
+            if (ribbon.gameObject.activeSelf != on)
+            {
+                ribbon.gameObject.SetActive(on);
+            }
+
+            ribbon.SetFill(s0, s1);
+        }
+
+        private void FitRibbon(RiverRibbonGraphic ribbon, MapSpace space)
+        {
+            if (ribbon.Line != null)
+            {
+                ribbon.SetSpace(space);
+                ribbon.SetWidth(RibbonWidthDp(_view, ribbon.Line.Class));
+            }
         }
 
         // Encendidas las boyas de los niveles ganados; con Rosa, las saltadas (pueden cambiar sin que cambie max_level: un test o
@@ -1185,6 +1347,17 @@ namespace AF.UI
                     spacing = Mathf.Min(spacing, Vector2.Distance(point, RoutePoint(map, route, (k + 1) / (float)per)));
                 }
 
+                // La distancia más corta entre dos boyas del tramo: si a la escala de la vista no deja verlas, Rosa va en su sitio de
+                // la fila corta bajo la parada, como las boyas del frente (PlaceBuoys).
+                float legSpacing = float.MaxValue;
+                Vector2 previous = RoutePoint(map, route, 1f / per);
+                for (int b = 2; b <= per; b++)
+                {
+                    Vector2 next = RoutePoint(map, route, b / (float)per);
+                    legSpacing = Mathf.Min(legSpacing, Vector2.Distance(previous, next));
+                    previous = next;
+                }
+
                 int i = _pastRosaCount++;
                 if (i == _pastRosa.Count)
                 {
@@ -1192,12 +1365,16 @@ namespace AF.UI
                     _pastRosaMap.Add(point);
                     _pastRosaSpacing.Add(spacing);
                     _pastRosaLevel.Add(level);
+                    _pastRosaLegSpacing.Add(legSpacing);
+                    _pastRosaStop.Add(PlacePoint(map, route.At));
                 }
                 else
                 {
                     _pastRosaMap[i] = point;
                     _pastRosaSpacing[i] = spacing;
                     _pastRosaLevel[i] = level;
+                    _pastRosaLegSpacing[i] = legSpacing;
+                    _pastRosaStop[i] = PlacePoint(map, route.At);
                 }
             }
 
@@ -1276,20 +1453,27 @@ namespace AF.UI
                 return;
             }
 
-            bool world = _view == MapView.World;
-            float radius = world ? BuoyRadiusWorldDp : BuoyRadiusBasinDp;
+            float maxRadius = _view == MapView.World ? BuoyRadiusWorldDp : BuoyRadiusBasinDp;
             float spacing = float.MaxValue;
             for (int i = 1; i < BuoysPerLeg; i++)
             {
                 spacing = Mathf.Min(spacing, Vector2.Distance(_buoyMap[i], _buoyMap[i - 1]) * space.DpPerUnit);
             }
 
-            radius = Mathf.Clamp(spacing * BuoySpacingFraction, BuoyRadiusMinDp, radius);
+            // Un tramo de longitud 0 o casi 0 (misma vista, otra luz): las 10 boyas, en la fila corta bajo la parada, con el radio
+            // de la vista, para que se siga viendo cuántos niveles faltan. Si no, por la longitud real del tramo.
+            _buoysCompact = _frontStop >= 0 && spacing < BuoyCompactBelowDp;
+            float radius = _buoysCompact ? maxRadius : Mathf.Clamp(spacing * BuoySpacingFraction, BuoyRadiusMinDp, maxRadius);
+            if (_buoysCompact)
+            {
+                spacing = BuoyCompactSpacing * maxRadius;
+            }
+
             float rosaW = RosaWidthDp(_view, spacing);
             float aspect = ProceduralArt.RosaHeightDp / ProceduralArt.RosaWidthDp;
             for (int i = 0; i < BuoysPerLeg; i++)
             {
-                _buoyLocal[i] = space.ToLocal(_buoyMap[i]);
+                _buoyLocal[i] = _buoysCompact ? CompactBuoy(space, _frontStopMap, i, maxRadius) : space.ToLocal(_buoyMap[i]);
                 if (_rosa[i] != null && _rosa[i].gameObject.activeSelf)
                 {
                     RectTransform rt = _rosa[i].rectTransform;
@@ -1300,13 +1484,33 @@ namespace AF.UI
 
             for (int i = 0; i < _pastRosaCount; i++)
             {
-                float w = RosaWidthDp(_view, _pastRosaSpacing[i] * space.DpPerUnit);
+                bool compact = _pastRosaLegSpacing[i] * space.DpPerUnit < BuoyCompactBelowDp;
+                float w = RosaWidthDp(_view, compact ? BuoyCompactSpacing * maxRadius : _pastRosaSpacing[i] * space.DpPerUnit);
                 RectTransform rt = _pastRosa[i].rectTransform;
-                rt.anchoredPosition = space.ToLocal(_pastRosaMap[i]);
+                int k = (_pastRosaLevel[i] - 1) % RiverStopCatalog.LevelsPerStop;
+                rt.anchoredPosition = compact ? CompactBuoy(space, _pastRosaStop[i], k, maxRadius) : space.ToLocal(_pastRosaMap[i]);
                 rt.sizeDelta = new Vector2(w, w * aspect);
             }
 
             _buoys.SetBuoys(_buoyLocal, _buoyState, _buoyCount, radius);
+            if (_buoysAhead != null)
+            {
+                _buoysAhead.SetBuoys(_buoyLocal, _buoyState, _buoyCount, radius);
+            }
+        }
+
+        // Boya i de la fila corta de un tramo sin largo a la escala de la vista: una fila horizontal de 10, centrada bajo la parada
+        // y por debajo de la caja de la canoa que va en ella (BuoyCompactGapDp de hueco), con BuoyCompactSpacing radios entre
+        // centros; si se saldría del mapa por un lado, se corre entera hacia dentro.
+        private Vector2 CompactBuoy(MapSpace space, Vector2 stopMap, int i, float radius)
+        {
+            Vector2 stop = space.ToLocal(stopMap);
+            float step = BuoyCompactSpacing * radius;
+            float half = step * (BuoysPerLeg - 1) * 0.5f;
+            float contentW = _map != null ? space.DpPerUnit * _map.Width : float.MaxValue;
+            float x0 = Mathf.Clamp(stop.x - half, radius + LabelEdgeDp, Mathf.Max(radius + LabelEdgeDp, contentW - radius - LabelEdgeDp - (2f * half)));
+            float below = ProceduralArt.MapCanoeHeightDp * CanoePivotY;
+            return new Vector2(x0 + (i * step), stop.y - below - BuoyCompactGapDp - radius);
         }
 
         // ============================================================================================ siluetas y rótulos
@@ -1467,6 +1671,7 @@ namespace AF.UI
             for (int i = 0; i < _fill.Count; i++)
             {
                 _fill[i].canvasRenderer.SetAlpha(1f);
+                _fillCasing[i].canvasRenderer.SetAlpha(1f);
             }
 
             RiverMap map = _map!;
@@ -1480,10 +1685,13 @@ namespace AF.UI
             for (int i = 0; i < lines.Count; i++)
             {
                 RiverLineKind kind = lines[i].Kind;
-                if ((kind == RiverLineKind.Passby || kind == RiverLineKind.Local) && _seenFrom[i] >= 1f && _fillFrom[i] < 1f)
+                // Solo los que se llenan enteros por la boca: uno que remonta una ruta (el Nanay) ya se vio crecer con el frente.
+                if ((kind == RiverLineKind.Passby || kind == RiverLineKind.Local) && _seenFrom[i] >= 1f && _fillFrom[i] < 1f
+                    && !RouteClimbs(_routes, i))
                 {
                     _fading.Add(i);
                     _fill[i].canvasRenderer.SetAlpha(0f);
+                    _fillCasing[i].canvasRenderer.SetAlpha(0f);
                 }
             }
 
@@ -1493,8 +1701,9 @@ namespace AF.UI
 
         // ============================================================================================ piezas
 
-        // Llena desde la boca, fill_on_pass, cada línea cuya boca pasa la ruta antes de la fracción «upTo».
-        private static void FillMouths(RiverMap map, RiverStopRoute route, float upTo, float[] from)
+        // Llena desde la boca (MouthFill) cada línea cuya boca pasa la ruta antes de la fracción «upTo», salvo las que remonta
+        // alguna ruta del catálogo: esas se llenan por la ruta, para que la boca no se trague el frente de sus tramos.
+        private static void FillMouths(RiverMap map, RiverRoutes routes, RiverStopRoute route, float upTo, float[] from)
         {
             IReadOnlyList<int> mouths = route.Mouths;
             for (int k = 0; k < mouths.Count; k++)
@@ -1505,12 +1714,59 @@ namespace AF.UI
                     continue;
                 }
 
-                float fill = Mathf.Clamp01(map.Lines[line].FillOnPass);
-                if (fill > 0f)
+                float fill = MouthFill(map, map.Lines[line]);
+                if (fill > 0f && !RouteClimbs(routes, line))
                 {
                     from[line] = Mathf.Min(from[line], 1f - fill);
                 }
             }
+        }
+
+        /// <summary>
+        /// Lo que se llena de la línea <paramref name="line"/> al pasar su boca (fracción de su longitud desde la boca):
+        /// <c>fill_on_pass</c> (entera la de paso y la local) o, si la boca de un mundo futuro asomaría menos de
+        /// <see cref="MouthMinBasinDp"/> en la Cuenca fuera de su río anfitrión (con su medio ancho y su orla), lo justo para llegar a
+        /// esa medida: que se lea como boca y no como una grieta.
+        /// </summary>
+        public static float MouthFill(RiverMap map, RiverLine line)
+        {
+            float fill = Mathf.Clamp01(line.FillOnPass);
+            if (fill <= 0f || fill >= 1f || line.Length <= 0f)
+            {
+                return fill;
+            }
+
+            float host = line.Mouth != null ? RiverRibbonGraphic.WidthForClass(map.Lines[line.Mouth.Value.Line].Class) * 0.5f : 0f;
+            float minDp = MouthMinBasinDp + host + RiverRibbonGraphic.CasingDp;
+            return Mathf.Clamp01(Mathf.Max(fill, minDp / (line.Length * MapSpace.BasinWidthDp)));
+        }
+
+        /// <summary>
+        /// Alguna ruta del catálogo remonta (o recorre) la línea <paramref name="line"/>: un tramo de su <c>leg.path</c> con largo.
+        /// Esas líneas no se llenan por la boca: el agua llega por la ruta, desde la boca hasta la parada alcanzada, más el frente
+        /// (D-013, punto 4: cada victoria llena una décima del tramo). Sin asignaciones.
+        /// </summary>
+        public static bool RouteClimbs(RiverRoutes routes, int line)
+        {
+            for (int n = 0; n < routes.Count; n++)
+            {
+                RiverStopRoute? route = routes.At(n);
+                if (route == null)
+                {
+                    continue;
+                }
+
+                IReadOnlyList<RiverPathPiece> path = route.Path;
+                for (int p = 0; p < path.Count; p++)
+                {
+                    if (path[p].Line == line && path[p].S0 != path[p].S1)
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            return false;
         }
 
         // Silueta de un mundo futuro: placa azul petróleo con su texto, a la derecha de su gran parada.
@@ -1535,9 +1791,11 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Las boyas del frente en una sola malla, sin textura (como <see cref="GlyphGraphic"/>): un disco por boya con su canto,
+        /// Las boyas del frente en una malla sin textura (como <see cref="GlyphGraphic"/>): un disco por boya con su canto,
         /// encendida (<see cref="BuoyLitColor"/>, canto de madera) o por ganar (<see cref="BuoyUnlitColor"/>, canto azul
-        /// petróleo); las saltadas no se dibujan aquí (llevan a Rosa). Solo se reconstruye cuando cambian; sin raycast.
+        /// petróleo). Son dos mallas con los mismos datos: la de las encendidas, detrás de la canoa, y la de las por ganar
+        /// (<see cref="Ahead"/>), encima. Las saltadas no se dibujan aquí (llevan a Rosa). Solo se reconstruye cuando cambian; sin
+        /// raycast.
         /// </summary>
         [RequireComponent(typeof(CanvasRenderer))]
         internal sealed class BuoyGraphic : MaskableGraphic
@@ -1550,8 +1808,14 @@ namespace AF.UI
             private int _count;
             private float _radius;
 
-            /// <summary>Boyas dibujadas (sin las saltadas).</summary>
+            /// <summary>Boyas dibujadas por esta malla (sin las saltadas).</summary>
             public int DrawnCount { get; private set; }
+
+            /// <summary>
+            /// Esta malla dibuja las boyas por ganar (va encima de la canoa); si no, las encendidas (detrás de ella). Se fija al
+            /// crearla.
+            /// </summary>
+            public bool Ahead { get; set; }
 
             /// <summary>Radio actual (dp).</summary>
             public float Radius => _radius;
@@ -1594,7 +1858,7 @@ namespace AF.UI
                 for (int i = 0; i < _count; i++)
                 {
                     BuoyState state = _states[i];
-                    if (state == BuoyState.Skipped)
+                    if (state == BuoyState.Skipped || (state == BuoyState.Unlit) != Ahead)
                     {
                         continue;
                     }

@@ -32,6 +32,9 @@ namespace AF.Tests.PlayMode
     /// su boca, el Tocantins lleno desde el primer Mapa, y Madeira y Napo (mundos futuros) solo en su boca;</item>
     /// <item>las siluetas de los mundos futuros con <c>map_next_world</c> en azul petróleo («Mundo 6 · Oriente · Nivel 201»);</item>
     /// <item>la boya de un nivel saltado lleva a Rosa sin cortar el agua; con <c>ui_map_mode</c> = <c>worlds</c>, sin boyas;</item>
+    /// <item>cada victoria del 1 al 200 se ve en el agua (la boca de un afluente que remonta una ruta no se traga el frente: los
+    /// tramos 2, 5, 6, 16 y 18); las boyas por ganar, encima de la canoa; en un tramo de longitud 0 (el 85, el 145, el 185), la
+    /// fila corta de boyas bajo la parada; el lleno con su orla de vidrio (≥ 3:1 con la selva) sobre el vidrio fantasma;</item>
     /// <item>nunca retrocede (nivel a nivel y tras un fallo) y solo se recalcula si cambia <c>max_level</c>; el fundido de 300 ms
     /// de los afluentes de paso; «Andes ↑» y «Océano Atlántico ↓» en Baloo 2 y los países en su región; cero asignaciones
     /// con el Mapa quieto.</item>
@@ -98,24 +101,67 @@ namespace AF.Tests.PlayMode
             Assert.That(lit, Is.EqualTo(8));
             Assert.That(Vector2.Distance(map.BuoyMapPoint(7), map.CanoeMapPoint), Is.LessThan(1e-5f), "la canoa va en la punta del agua");
             Canvas.ForceUpdateCanvases();
-            Assert.That(map.Buoys!.DrawnCount, Is.EqualTo(10));
+            Assert.That(map.BuoysDrawn, Is.EqualTo(10));
+            Assert.That(map.Buoys!.DrawnCount, Is.EqualTo(8), "las encendidas, detrás de la canoa");
+            Assert.That(map.BuoysAhead!.DrawnCount, Is.EqualTo(2), "las del 59 y el 60, encima");
             Assert.That(front.LastVertexCount, Is.InRange(1, RiverRibbonGraphic.FrontMaxVertices), "el frente, ≤ 400 vértices");
+            Assert.That(map.FrontCasingRibbon(0).LastVertexCount, Is.InRange(1, RiverRibbonGraphic.FrontMaxVertices), "su orla, ≤ 400 vértices");
         }
 
         [UnityTest]
-        public IEnumerator FrontAndBuoys_At0_10_58_80_140_And200()
+        public IEnumerator Max58_World_TheBuoysToWin_AreSeenOverTheCanoe()
+        {
+            yield return OpenApp(59); // max_level 58, vista Mundo
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Assert.That(map.View, Is.EqualTo(MapView.World));
+            Canvas.ForceUpdateCanvases();
+            Rect canoe = map.CanoeBoxLocal;
+            Assert.That(canoe.width, Is.GreaterThan(0f));
+            RectTransform ahead = map.BuoysAheadLayer!;
+            Assert.That(ahead.parent, Is.SameAs(map.Canoe.transform.parent));
+            Assert.That(ahead.GetSiblingIndex(), Is.GreaterThan(map.Canoe.transform.GetSiblingIndex()), "las por ganar, encima de la canoa");
+            Assert.That(map.BuoysAhead!.transform.parent, Is.SameAs(ahead));
+            int under = 0;
+            for (int i = 0; i < map.BuoyCount; i++)
+            {
+                if (map.BuoyStateAt(i) != RiverMapScreen.BuoyState.Unlit)
+                {
+                    continue;
+                }
+
+                // Propuesta §3.4 y §4.1: las que faltan son el «solo me falta uno»; se ven, aunque caigan bajo la canoa.
+                Vector2 p = map.BuoyLocalPoint(i);
+                bool clear = !canoe.Contains(p);
+                under += clear ? 0 : 1;
+                Assert.That(clear || ahead.GetSiblingIndex() > map.Canoe.transform.GetSiblingIndex(), Is.True, "boya del " + map.BuoyLevel(i));
+            }
+
+            Debug.Log("AF_MAP boyas por ganar bajo la caja de la canoa con max 58 en Mundo: " + under);
+            Assert.That(map.BuoysAhead.DrawnCount, Is.EqualTo(2), "el 59 y el 60, dibujadas por la malla de encima");
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator FrontAndBuoys_At0_10_58_80_85_140_145_185_And200()
         {
             yield return OpenApp(59);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
+            RiverMap data = boot.RiverMapData!;
             RiverRoutes routes = boot.RiverRoutes!;
+
+            // 85 y 185: los tramos de longitud 0 de «misma vista, otra luz» (Leticia al atardecer y Pacaya al alba); 145: el de
+            // Itaya, de unos metros.
             var cases = new (int Max, int Front, float Fraction, int Lit)[]
             {
                 (0, 1, 0f, 0),
                 (10, 1, 1f, 10),
                 (58, 6, 0.8f, 8),
                 (80, 8, 1f, 10),
+                (85, 9, 0.5f, 5),
                 (140, 14, 1f, 10),
+                (145, 15, 0.5f, 5),
+                (185, 19, 0.5f, 5),
                 (200, 20, 1f, 10),
             };
 
@@ -136,7 +182,8 @@ namespace AF.Tests.PlayMode
 
                 Assert.That(map.FrontStop, Is.EqualTo(c.Front), where);
                 Assert.That(map.FrontFraction, Is.EqualTo(c.Fraction).Within(1e-6f), where);
-                Assert.That(map.FrontPieceCount, c.Fraction > 0f ? Is.GreaterThan(0) : Is.EqualTo(0), where);
+                bool hasLength = LegLength(data, routes.At(c.Front)!) > 0f;
+                Assert.That(map.FrontPieceCount, c.Fraction > 0f && hasLength ? Is.GreaterThan(0) : Is.EqualTo(0), where);
                 Assert.That(map.BuoyCount, Is.EqualTo(10), where);
                 int lit = 0;
                 for (int i = 0; i < 10; i++)
@@ -145,8 +192,113 @@ namespace AF.Tests.PlayMode
                 }
 
                 Assert.That(lit, Is.EqualTo(c.Lit), where);
+
+                // Un tramo sin largo a la escala de la vista: las 10 boyas en la fila corta bajo la parada, con el radio de la
+                // vista, separadas y fuera de la caja de la canoa (que va en la parada).
+                bool shortLeg = c.Max == 85 || c.Max == 145 || c.Max == 185;
+                foreach (MapView v in new[] { MapView.World, MapView.Basin })
+                {
+                    map.SetView(v);
+                    Canvas.ForceUpdateCanvases();
+                    string at = where + " en " + v;
+                    if (shortLeg)
+                    {
+                        Assert.That(map.BuoysCompact, Is.True, at);
+                    }
+
+                    if (!map.BuoysCompact)
+                    {
+                        continue;
+                    }
+
+                    float radius = v == MapView.World ? RiverMapScreen.BuoyRadiusWorldDp : RiverMapScreen.BuoyRadiusBasinDp;
+                    Assert.That(map.Buoys!.Radius, Is.EqualTo(radius), at + ": el radio de la vista, no el mínimo");
+                    Rect canoe = map.CanoeBoxLocal;
+                    for (int i = 0; i < 10; i++)
+                    {
+                        Vector2 p = map.BuoyLocalPoint(i);
+                        Assert.That(canoe.Contains(p), Is.False, at + ": la canoa no tapa la boya del " + map.BuoyLevel(i));
+                        if (i > 0)
+                        {
+                            Assert.That(Vector2.Distance(p, map.BuoyLocalPoint(i - 1)), Is.GreaterThanOrEqualTo((2f * radius) - 1e-3f),
+                                at + ": boyas separadas");
+                            Assert.That(p.x, Is.GreaterThan(map.BuoyLocalPoint(i - 1).x), at + ": en orden, de izquierda a derecha");
+                        }
+                    }
+
+                    Assert.That(map.BuoysDrawn, Is.EqualTo(10), at);
+                }
+
+                map.SetView(MapView.World);
             }
 
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator EveryWin_AdvancesTheVisibleWater_InTheFrontLeg_From1To200()
+        {
+            yield return OpenApp(59);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMap data = boot.RiverMapData!;
+            RiverRoutes routes = boot.RiverRoutes!;
+            var from = new float[data.Lines.Count];
+
+            // D-013, punto 4: cada victoria llena una décima del tramo; la boca de un afluente que remonta una ruta no se traga el
+            // frente (el Tapajós en los tramos 2 y 3, el Negro en el 5 y el 6, el Nanay en el 16 y el Marañón en el 18).
+            var required = new HashSet<int> { 2, 5, 6, 16, 18 };
+            var checkedLegs = new HashSet<int>();
+            var advancing = new Dictionary<int, int>();
+            int last = Mathf.Min(200, routes.Count * RiverStopCatalog.LevelsPerStop);
+            for (int max = 1; max <= last; max++)
+            {
+                int leg = RiverMapScreen.FrontStopOf(max);
+                RiverStopRoute? route = routes.At(leg);
+                if (route == null)
+                {
+                    continue;
+                }
+
+                float now = VisibleFront(data, routes, max, from, out bool tipUpstream);
+                float before = RiverMapScreen.FrontStopOf(max - 1) == leg ? VisibleFront(data, routes, max - 1, from, out _) : 0f;
+                string where = "max_level " + max + " (tramo " + leg + ")";
+
+                // Mientras la punta remonta (un tramo de vuelta, río abajo, va por agua ya llena: ahí avanzan la canoa y las
+                // boyas), cada victoria se ve en el agua: el frente pasa del lleno.
+                if (tipUpstream)
+                {
+                    Assert.That(now, Is.GreaterThan(before), where + ": la victoria se ve en el agua (el frente pasa del lleno)");
+                    if (required.Contains(leg))
+                    {
+                        advancing[leg] = (advancing.TryGetValue(leg, out int n) ? n : 0) + 1;
+                    }
+                }
+
+                // Con el tramo entero (el 10k), todo lo que remonta por el afluente se ve: su boca llena no se lo tragó.
+                if (max % RiverStopCatalog.LevelsPerStop == 0 && required.Contains(leg))
+                {
+                    float upstream = UpstreamLength(data, route);
+                    Assert.That(upstream, Is.GreaterThan(0f), where);
+                    Assert.That(now, Is.GreaterThanOrEqualTo(upstream * 0.9999f), where + ": lo que remonta el tramo, entero a la vista");
+                    checkedLegs.Add(leg);
+                }
+            }
+
+            Assert.That(checkedLegs, Is.EquivalentTo(required));
+            foreach (int leg in required)
+            {
+                int n = advancing.TryGetValue(leg, out int k) ? k : 0;
+                Debug.Log("AF_MAP tramo " + leg + ": " + n + " de 10 victorias con el agua avanzando a la vista");
+                Assert.That(n, Is.GreaterThanOrEqualTo(8), "tramo " + leg + ": las victorias se ven en el agua");
+            }
+
+            // Entre el 11 y el 20, el Tapajós no se llena por la boca: lo remonta el tramo 2.
+            RiverMapScreen.ComputeFill(data, routes, 15, from);
+            Assert.That(from[data.LineIndexOf("tapajos")], Is.EqualTo(RiverMapScreen.NoFill));
+            RiverMapScreen.ComputeFill(data, routes, 45, from);
+            Assert.That(from[data.LineIndexOf("negro")], Is.EqualTo(RiverMapScreen.NoFill), "el Negro, entre el 41 y el 50");
+            RiverMapScreen.ComputeFill(data, routes, 155, from);
+            Assert.That(from[data.LineIndexOf("nanay")], Is.EqualTo(RiverMapScreen.NoFill), "el Nanay, hasta llegar a Allpahuayo");
             yield return null;
         }
 
@@ -182,13 +334,28 @@ namespace AF.Tests.PlayMode
                 Assert.That(map.FillRibbon(line).gameObject.activeSelf, Is.True, id);
             }
 
-            // Madeira (mundos 7 y 8) y Napo (mundo 6): solo la boca, fill_on_pass.
+            // Madeira (mundos 7 y 8) y Napo (mundo 6): solo la boca (fill_on_pass, con al menos 14 dp en la Cuenca), mientras
+            // ninguna ruta del catálogo los remonte; si alguna lo hace, se llenan por la ruta y la boca no se traga su frente.
             foreach (string id in new[] { "madeira", "napo" })
             {
                 int line = data.LineIndexOf(id);
                 RiverLine river = data.Lines[line];
                 Assert.That(river.FillOnPass, Is.InRange(0.01f, 0.5f), id);
-                Assert.That(map.FillFrom(line), Is.EqualTo(1f - river.FillOnPass).Within(1e-6f), id + ": solo la boca");
+                if (RiverMapScreen.RouteClimbs(routes, line))
+                {
+                    Assert.That(map.FillFrom(line), Is.EqualTo(RiverMapScreen.NoFill), id + ": lo remonta una ruta, sin boca");
+                    continue;
+                }
+
+                float mouth = RiverMapScreen.MouthFill(data, river);
+                Assert.That(mouth, Is.GreaterThanOrEqualTo(river.FillOnPass), id);
+                Assert.That(map.FillFrom(line), Is.EqualTo(1f - mouth).Within(1e-6f), id + ": solo la boca");
+
+                // Lo que asoma fuera del cauce anfitrión (su medio ancho y su orla), en la Cuenca.
+                float host = RiverRibbonGraphic.WidthForClass(data.Lines[river.Mouth!.Value.Line].Class) * 0.5f;
+                float outside = (mouth * river.Length * MapSpace.BasinWidthDp) - host - RiverRibbonGraphic.CasingDp;
+                Debug.Log("AF_MAP boca de " + id + ": " + outside.ToString("0.0", CultureInfo.InvariantCulture) + " dp fuera del cauce en la Cuenca");
+                Assert.That(outside, Is.GreaterThanOrEqualTo(RiverMapScreen.MouthMinBasinDp - 1e-3f), id + ": la boca, de al menos 14 dp en la Cuenca (no una grieta)");
             }
 
             // Las dos aguas de Santarém y del Encuentro van dentro del lleno del cauce (la cinta las parte a lo largo).
@@ -237,7 +404,8 @@ namespace AF.Tests.PlayMode
             RiverMapScreen.ComputeFill(data, routes, 11, from);
             Assert.That(from[data.LineIndexOf("para")], Is.EqualTo(0f), "el ramal del Pará, entero");
             Assert.That(from[data.LineIndexOf("amazonas")], Is.EqualTo(routes.At(1)!.At.S).Within(1e-6f), "el cauce hasta Santarém");
-            Assert.That(from[tapajos], Is.EqualTo(1f - data.Lines[tapajos].FillOnPass).Within(1e-6f), "el Tapajós, su boca");
+            Assert.That(RiverMapScreen.RouteClimbs(routes, tapajos), Is.True);
+            Assert.That(from[tapajos], Is.EqualTo(RiverMapScreen.NoFill), "el Tapajós no se llena por la boca: lo remonta el tramo 2, que es el frente");
             yield return null;
         }
 
@@ -349,7 +517,7 @@ namespace AF.Tests.PlayMode
 
             Assert.That(map.FrontFraction, Is.EqualTo(0.8f).Within(1e-6f), "el agua no se corta");
             Canvas.ForceUpdateCanvases();
-            Assert.That(map.Buoys!.DrawnCount, Is.EqualTo(9), "la saltada no lleva disco: lleva a Rosa");
+            Assert.That(map.BuoysDrawn, Is.EqualTo(9), "la saltada no lleva disco: lleva a Rosa");
             Assert.That(map.PastRosaCount, Is.EqualTo(0), "el 55 está en el frente");
 
             // Rosa se reconoce: entre 12 y 18 dp, como mucho 1,6 veces la distancia entre boyas (si no, tapa la vecina), con el halo
@@ -367,7 +535,11 @@ namespace AF.Tests.PlayMode
                 float cap = v == MapView.World ? RiverMapScreen.SkippedRosaWorldDp : RiverMapScreen.SkippedRosaBasinDp;
                 Assert.That(w, Is.InRange(RiverMapScreen.SkippedRosaMinDp - 1e-4f, cap + 1e-4f), v + ": ancho de Rosa");
                 Assert.That(w, Is.LessThanOrEqualTo(Mathf.Max(RiverMapScreen.SkippedRosaMinDp, RiverMapScreen.SkippedRosaSpacingFactor * spacing) + 1e-4f), v + ": no descoloca la fila de boyas");
-                Assert.That(rosa.rectTransform.anchoredPosition, Is.EqualTo(map.Space.ToLocal(map.BuoyMapPoint(4))), v.ToString());
+                Assert.That(rosa.rectTransform.anchoredPosition, Is.EqualTo(map.BuoyLocalPoint(4)), v + ": en su boya");
+                if (!map.BuoysCompact)
+                {
+                    Assert.That(map.BuoyLocalPoint(4), Is.EqualTo(map.Space.ToLocal(map.BuoyMapPoint(4))), v + ": por la longitud real del tramo");
+                }
             }
 
             Outline halo = rosa.GetComponent<Outline>();
@@ -420,7 +592,7 @@ namespace AF.Tests.PlayMode
                 Reopen(boot, new MemoryProgressStore(59, 58, 58), 59);
                 Assert.That(map.BuoyCount, Is.EqualTo(0), "ui_map_mode = worlds (08 §9): sin boyas");
                 Canvas.ForceUpdateCanvases();
-                Assert.That(map.Buoys!.DrawnCount, Is.EqualTo(0));
+                Assert.That(map.BuoysDrawn, Is.EqualTo(0));
                 Assert.That(map.FrontFraction, Is.EqualTo(0.8f).Within(1e-6f), "el río sí");
                 var later = new MemoryProgressStore(64, 63, 63);
                 later.MarkSkipped(55);
@@ -486,7 +658,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator World6_Silhouette_AtTheNapo_WhichIsFilledOnlyAtItsMouth()
+        public IEnumerator World6_Silhouette_AtTheNapo_WhoseMouthDoesNotSwallowTheFront()
         {
             yield return OpenApp(59);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -500,7 +672,8 @@ namespace AF.Tests.PlayMode
             Assert.That(map.SilhouetteCount, Is.EqualTo(1));
             Assert.That(map.SilhouetteWorld(0), Is.EqualTo(6));
             Assert.That(map.SilhouetteText(0), Is.EqualTo("Mundo 6 · Oriente · Nivel 201"));
-            Assert.That(map.FillFrom(napo), Is.EqualTo(1f - data.Lines[napo].FillOnPass).Within(1e-6f), "el Napo, solo la boca (pasada en el tramo a Iquitos)");
+            Assert.That(RiverMapScreen.RouteClimbs(routes, napo), Is.True, "con la parada 20, una ruta remonta el Napo");
+            Assert.That(map.FillFrom(napo), Is.EqualTo(RiverMapScreen.NoFill), "el Napo, sin boca: su boca se tragaría el tramo 20");
             Assert.That(map.SilhouetteMapPoint(0).x, Is.EqualTo(RiverMapScreen.PlacePoint(data, routes.At(20)!.At).x).Within(1e-6f));
 
             // La gran parada de Mazán cae junto a la canoa (en Iquitos, con max 140): la placa la deja libre, con 6 dp de hueco, y
@@ -532,7 +705,10 @@ namespace AF.Tests.PlayMode
             Assert.That(map.SilhouetteCount, Is.EqualTo(0));
             Assert.That(map.FrontStop, Is.EqualTo(20));
             Assert.That(map.FrontRibbon(map.FrontPieceCount - 1).Line!.Id, Is.EqualTo("napo"));
-            Assert.That(map.FillFrom(napo), Is.EqualTo(1f - data.Lines[napo].FillOnPass).Within(1e-6f), "en el lleno, todavía solo la boca");
+            Assert.That(map.FillFrom(napo), Is.EqualTo(RiverMapScreen.NoFill), "en el lleno, todavía nada: el Napo va en el frente");
+            RiverRibbonGraphic napoFront = map.FrontRibbon(map.FrontPieceCount - 1);
+            Assert.That(napoFront.FillStart, Is.EqualTo(0.946947f).Within(1e-5f), "el frente remonta el Napo hasta Mazán");
+            Assert.That(napoFront.FillEnd, Is.EqualTo(1f));
             map.Close();
             yield return null;
         }
@@ -697,8 +873,18 @@ namespace AF.Tests.PlayMode
             RectTransform front = map.FrontLayer!;
             Assert.That(front.parent, Is.SameAs(map.DynamicCanvas.transform), "el frente, en el lienzo dinámico");
             Assert.That(front.GetSiblingIndex(), Is.LessThan(map.Canoe.transform.GetSiblingIndex()), "detrás de la canoa");
-            Assert.That(map.RosaLayer!.GetSiblingIndex(), Is.GreaterThan(map.Canoe.transform.GetSiblingIndex()), "Rosa, encima de la canoa");
+            Assert.That(map.BuoysAheadLayer!.GetSiblingIndex(), Is.GreaterThan(map.Canoe.transform.GetSiblingIndex()), "las boyas por ganar, encima de la canoa");
+            Assert.That(map.RosaLayer!.GetSiblingIndex(), Is.GreaterThan(map.BuoysAheadLayer.GetSiblingIndex()), "Rosa, encima de todo");
             Assert.That(map.Canvas.GetComponentsInChildren<Canvas>(true).Length, Is.EqualTo(3), "sin lienzos nuevos");
+
+            // Las orlas (del lleno y del frente) en el lienzo estático, debajo del agua de todas las líneas: en una confluencia, el
+            // afluente entra en el cauce sin costura.
+            RectTransform casing = map.FillCasingLayer!;
+            Assert.That(casing.parent, Is.SameAs(fill));
+            Assert.That(casing.GetSiblingIndex(), Is.LessThan(map.FillRibbon(0).transform.parent.GetSiblingIndex()), "las orlas, debajo del agua");
+            Assert.That(map.FrontCasingRibbon(0).transform.parent, Is.SameAs(casing), "la orla del frente, con las del lleno");
+            Assert.That(map.FrontCasingRibbon(0).Part, Is.EqualTo(RibbonPart.Casing));
+            Assert.That(map.FrontRibbon(0).Part, Is.EqualTo(RibbonPart.Core));
 
             yield return SnapshotKit.Wait(0.5f);
             map.Tick(16f);
@@ -706,7 +892,122 @@ namespace AF.Tests.PlayMode
             Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(RiverMapScreen.RestRenderInterval), "en reposo");
         }
 
+        [UnityTest]
+        public IEnumerator TheFill_ReadsOverTheGhostGlass_WithItsGlassEdge()
+        {
+            yield return OpenApp(59);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            RiverMap data = boot.RiverMapData!;
+            Reopen(boot, new MemoryProgressStore(201, 200, 200), 200);
+            map.SetView(MapView.Basin);
+            Canvas.ForceUpdateCanvases();
+
+            // El vidrio vacío, fantasma (0,40 en el Mapa; el color base de 07 §2.1 y de la cinta no cambia).
+            for (int i = 0; i < data.Lines.Count; i++)
+            {
+                Assert.That(map.Glass(i).GlassBodyAlpha, Is.EqualTo(RiverMapScreen.MapGlassBodyAlpha), data.Lines[i].Id);
+            }
+
+            Assert.That(RiverRibbonGraphic.GlassBody.a, Is.EqualTo(0.85f).Within(1e-6f));
+
+            // El lleno: el agua encima y su orla debajo, con el mismo intervalo.
+            foreach (string id in new[] { "tapajos", "negro", "amazonas", "xingu" })
+            {
+                int line = data.LineIndexOf(id);
+                RiverRibbonGraphic core = map.FillRibbon(line);
+                RiverRibbonGraphic casing = map.FillCasingRibbon(line);
+                Assert.That(core.Part, Is.EqualTo(RibbonPart.Core), id);
+                Assert.That(casing.Part, Is.EqualTo(RibbonPart.Casing), id);
+                Assert.That(casing.gameObject.activeSelf, Is.EqualTo(core.gameObject.activeSelf), id);
+                Assert.That(casing.FillStart, Is.EqualTo(core.FillStart), id);
+                Assert.That(casing.FillEnd, Is.EqualTo(core.FillEnd), id);
+                Assert.That(casing.WidthDp, Is.EqualTo(core.WidthDp), id + ": la orla, por fuera del mismo ancho del agua (el del cauce)");
+                Assert.That(casing.LastVertexCount, Is.GreaterThan(0), id);
+            }
+
+            // El canto de vidrio separa el lleno de la selva con al menos 3:1 (el agua clara sola no llega a 1,5:1), y es de 1,5 dp
+            // (4,5 px a 3×): se ve.
+            foreach (Color ground in new[] { RiverMapScreen.GroundColor, LandGraphic.CanopyColor, LandGraphic.VarzeaColor })
+            {
+                float rim = ColorMath.ContrastRatio(Palette.GlassRim, ground);
+                Debug.Log("AF_MAP contraste del canto del lleno con " + ColorUtility.ToHtmlStringRGB(ground) + ": "
+                    + rim.ToString("0.00", CultureInfo.InvariantCulture) + ":1; el agua clara sola: "
+                    + ColorMath.ContrastRatio(Palette.WaterClear, ground).ToString("0.00", CultureInfo.InvariantCulture) + ":1");
+                Assert.That(rim, Is.GreaterThanOrEqualTo(3f), ColorUtility.ToHtmlStringRGB(ground));
+            }
+
+            Assert.That(RiverRibbonGraphic.CasingRimDp, Is.GreaterThanOrEqualTo(1.5f));
+            Assert.That(RiverRibbonGraphic.CasingFilletDp, Is.EqualTo(1f));
+            Assert.That(RiverRibbonGraphic.FilletColor.a, Is.EqualTo(0.45f).Within(1e-6f));
+            yield return null;
+        }
+
         // ============================================================================================ ayudas
+
+        // Largo real de la ruta de un tramo, en unidades del marco.
+        private static float LegLength(RiverMap data, RiverStopRoute route)
+        {
+            float total = 0f;
+            for (int i = 0; i < route.Path.Count; i++)
+            {
+                total += Mathf.Abs(route.Path[i].S1 - route.Path[i].S0) * data.Lines[route.Path[i].Line].Length;
+            }
+
+            return total;
+        }
+
+        // Largo de los tramos de una ruta que remontan (s baja), en unidades del marco.
+        private static float UpstreamLength(RiverMap data, RiverStopRoute route)
+        {
+            float total = 0f;
+            for (int i = 0; i < route.Path.Count; i++)
+            {
+                RiverPathPiece piece = route.Path[i];
+                if (piece.S1 < piece.S0)
+                {
+                    total += (piece.S0 - piece.S1) * data.Lines[piece.Line].Length;
+                }
+            }
+
+            return total;
+        }
+
+        // Arco del frente con max_level «max» (de 0 a LegFill de su ruta) que no queda dentro del lleno, en unidades del marco: el
+        // agua de la victoria que se ve. «tipUpstream»: la punta del agua va por un tramo con largo que remonta (s baja).
+        private static float VisibleFront(RiverMap data, RiverRoutes routes, int max, float[] from, out bool tipUpstream)
+        {
+            tipUpstream = false;
+            RiverMapScreen.ComputeFill(data, routes, max, from);
+            RiverStopRoute? route = routes.At(RiverMapScreen.FrontStopOf(max));
+            if (route == null)
+            {
+                return 0f;
+            }
+
+            float left = RiverJourney.LegFill(max) * LegLength(data, route);
+            float visible = 0f;
+            for (int i = 0; i < route.Path.Count && left > 0f; i++)
+            {
+                RiverPathPiece piece = route.Path[i];
+                float lineLength = data.Lines[piece.Line].Length;
+                float length = Mathf.Abs(piece.S1 - piece.S0) * lineLength;
+                if (length <= 0f)
+                {
+                    continue;
+                }
+
+                float t = Mathf.Clamp01(left / length);
+                left -= length;
+                float end = piece.S0 + ((piece.S1 - piece.S0) * t);
+                float lo = Mathf.Min(piece.S0, end);
+                float hi = Mathf.Max(piece.S0, end);
+                visible += Mathf.Max(0f, Mathf.Min(hi, from[piece.Line]) - lo) * lineLength; // el lleno va de from a la boca
+                tipUpstream = piece.S1 < piece.S0;
+            }
+
+            return visible;
+        }
 
         // Abre la app en el inicio con «Jugar · Nivel playLevel» (max_level = playLevel − 1, todo visto) y el Mapa desde la pestaña.
         private static IEnumerator OpenApp(int playLevel)
@@ -790,7 +1091,7 @@ namespace AF.Tests.PlayMode
                     continue;
                 }
 
-                float half = RiverMapScreen.RibbonWidthDp(view, line.Class) * 0.5f;
+                float half = (RiverMapScreen.RibbonWidthDp(view, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp; // con la orla del lleno
                 for (int i = 1; i < line.PointCount; i++)
                 {
                     Vector2 a = space.ToLocal(line.X(i - 1), line.Y(i - 1));
