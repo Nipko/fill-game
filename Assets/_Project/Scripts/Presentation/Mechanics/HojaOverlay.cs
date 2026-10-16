@@ -39,11 +39,12 @@ namespace AF.Presentation.Mechanics
     /// «hoja pequeña atada al cuello con fibra, con icono grande; nunca cae»; tarea VA1a) [P]: el mismo overlay en modo atado
     /// (<see cref="HojaOverlay(bool)"/> con true; <see cref="Type"/> = <see cref="MechanicType.HojaAtada"/>). Es un filtro
     /// persistente que sí es origen y nunca se suelta, así que no tapa la boca ni tiene paso propio: un cordel de fibra da la
-    /// vuelta al cuello (la vuelta del cuello de la Liana, <see cref="ProceduralArt.LianaCollar"/>, teñida de fibra); en su
-    /// nudo, que tapa, va el medallón en el hueco del hombro (placa de la Hoja a <see cref="TiedBadgeScale"/>, unos 24 dp), con
-    /// la llave como una muestra de la dosis (<see cref="ProceduralArt.HojaAtadaSwatch"/>: disco del tinte con su patrón y su
-    /// icono de accesibilidad, porque el medallón es el único sitio que dice qué fruta acepta), y de él cuelga junto al hombro
-    /// una hoja de palma pequeña (la de la Hoja a <see cref="TiedLeafScale"/>): nunca sobre la boca ni sobre el líquido (Q17 A),
+    /// vuelta al cuello justo bajo el borde de fibra, sin colgar sobre la boca (<see cref="ProceduralArt.HojaAtadaCord"/>, con el
+    /// nudo de la Liana; <see cref="TiedCordFrontAboveCavityU"/>); en su nudo, que tapa, va el medallón en el hueco del hombro
+    /// (placa de la Hoja a <see cref="TiedBadgeScale"/>, unos 24 dp), con la llave como una muestra de la dosis
+    /// (<see cref="ProceduralArt.HojaAtadaSwatch"/>: disco del tinte con su patrón y su icono de accesibilidad, porque el
+    /// medallón es el único sitio que dice qué fruta acepta), y de él cuelga junto al hombro una hoja de palma pequeña (la de
+    /// la Hoja a <see cref="TiedLeafScale"/>): nunca sobre la boca ni sobre el líquido (Q17 A),
     /// siempre bajo <see cref="KeyTopMaxU"/>. Va en el hombro derecho, salvo en la última columna de su fila, donde se refleja
     /// al izquierdo (<see cref="TiedSide"/>) para no acercarse al marco del tablero. Al verter, el medallón va siempre en el
     /// hombro de arriba, nunca bajo el labio por el que cae el chorro: si la cuia se inclina hacia su lado, entre
@@ -52,9 +53,10 @@ namespace AF.Presentation.Mechanics
     /// la hoja se apartan <see cref="TiedPourAwayU"/> del labio hacia el hombro. El chorro ya va delante de todo el cuerpo,
     /// cordel incluido (<c>BoardAnimator</c>, D-006). Al volver, lo deshace en orden inverso y queda en reposo exacto. Se
     /// distingue de la Hoja a primera vista: la boca abierta, el cordel y la hoja de lado. Se ve igual vacía, con dosis y
-    /// sellada (b.3: «conserva la cuerda tras sellar»), como origen y como destino; nada cambia al seleccionarla (D-002). Todo
-    /// se crea en <see cref="OnAttach"/> y se coloca en <see cref="Layout"/>: <see cref="Show"/> solo enciende o apaga piezas y
-    /// cambia la llave, y <see cref="Tick"/> solo la aparta al verter (sin asignar, 08 §5.4).</para>
+    /// sellada (b.3: «conserva la cuerda tras sellar»; sellada, el medallón baja <see cref="TiedSealDropU"/> para no tapar el
+    /// canto de la tapa), como origen y como destino; nada cambia al seleccionarla (D-002). Todo se crea en
+    /// <see cref="OnAttach"/> y se coloca en <see cref="Layout"/>: <see cref="Show"/> solo enciende o apaga piezas y cambia
+    /// la llave, y <see cref="Tick"/> solo la aparta al verter (sin asignar, 08 §5.4).</para>
     /// </remarks>
     public sealed class HojaOverlay : CuiaOverlay
     {
@@ -217,11 +219,22 @@ namespace AF.Presentation.Mechanics
         public const float TiedSwapToDeg = 26f;
 
         /// <summary>
-        /// Hoja atada: centro del cordel (el sprite de la vuelta del cuello) sobre el techo de la cavidad (u) [P]: en el cuello
-        /// (0,40-0,75 u sobre el techo; <see cref="CuiaGeometry"/>), por debajo del borde de fibra, para que no se lea como una
-        /// tapa ni se confunda con él.
+        /// Hoja atada: centro del sprite del cordel (<see cref="ProceduralArt.HojaAtadaCord"/>) sobre el techo de la cavidad (u)
+        /// [P]: su tramo delantero (<see cref="ProceduralArt.HojaCordFrontYU"/> sobre el centro) ciñe el cuello 0,02 u bajo el
+        /// borde de fibra (<see cref="TiedCordFrontAboveCavityU"/>), así no se lee como una tapa ni se confunde con él, y no
+        /// cuelga sobre la boca (revisión de VA1a, captura 54e).
         /// </summary>
-        public const float TiedCordAboveCavityU = 0.66f;
+        public const float TiedCordAboveCavityU = CuiaGeometry.ShoulderU + CuiaGeometry.NeckU - 0.02f - ProceduralArt.HojaCordFrontYU;
+
+        /// <summary>Hoja atada: tramo delantero del cordel sobre el techo de la cavidad (u): 0,02 u bajo el borde de fibra.</summary>
+        public const float TiedCordFrontAboveCavityU = TiedCordAboveCavityU + ProceduralArt.HojaCordFrontYU;
+
+        /// <summary>
+        /// Hoja atada: lo que baja el medallón (con la llave y la hoja que cuelga) con la cuia sellada (u) [P], para que no tape
+        /// el canto de la tapa de calabaza, que es la señal de «cuia completa» (revisión de VA1a, captura 54f: se solapaban unos
+        /// 6 dp). El nudo sigue bajo la placa.
+        /// </summary>
+        public const float TiedSealDropU = 0.08f;
 
         /// <summary>Hoja atada: centro de la llave desde el eje, en el hueco del hombro derecho (u) [P].</summary>
         public const float TiedKeyXU = 0.80f;
@@ -241,6 +254,7 @@ namespace AF.Presentation.Mechanics
         private float _tiedAway; // 0..1: lo apartada que está la llave del labio al verter
         private float _shownSide = 1f; // lado en que se dibuja ahora (el de arriba al verter)
         private float _shownAlpha = 1f; // opacidad de las piezas al cambiar de lado al verter
+        private bool _tiedSealed; // sellada: el medallón baja TiedSealDropU
         private Image _leaf = null!;
         private Image _cord = null!;
         private Image _cordShine = null!;
@@ -428,7 +442,7 @@ namespace AF.Presentation.Mechanics
         {
             if (_tied)
             {
-                ShowTied(cuia);
+                ShowTied(cuia, sealedNow);
                 return;
             }
 
@@ -627,8 +641,8 @@ namespace AF.Presentation.Mechanics
         private void AttachTied()
         {
             ProceduralArt art = Host.Art;
-            _cord = OverlayParts.NewImage("HojaAtadaCord", Host.BodyFront, art.LianaCollar, ProceduralArt.HojaCordTint);
-            _cordShine = OverlayParts.NewImage("HojaAtadaCordShine", Host.BodyFront, art.LianaCollarShine, ProceduralArt.HojaCordShine);
+            _cord = OverlayParts.NewImage("HojaAtadaCord", Host.BodyFront, art.HojaAtadaCord, ProceduralArt.HojaCordTint);
+            _cordShine = OverlayParts.NewImage("HojaAtadaCordShine", Host.BodyFront, art.HojaAtadaCordShine, ProceduralArt.HojaCordShine);
             _tag = OverlayParts.NewImage("HojaAtadaLeaf", Host.BodyFront, art.HojaPalm, Color.white);
             _badge = OverlayParts.NewImage("HojaAtadaBadge", Host.BodyFront, art.HojaBadge, ProceduralArt.HojaBadgeColor);
             _fruit = OverlayParts.NewImage("HojaAtadaFruit", Host.BodyFront, null, Color.white);
@@ -719,11 +733,19 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Hoja atada: el estado de la cuia manda (02 §3.2). Nunca cae, así que se ve igual vacía, con dosis o sellada.
-        private void ShowTied(Cuia cuia)
+        // Hoja atada: el estado de la cuia manda (02 §3.2). Nunca cae, así que se ve igual vacía, con dosis o sellada; sellada,
+        // el medallón baja TiedSealDropU para dejar a la vista el canto de la tapa.
+        private void ShowTied(Cuia cuia, bool sealedNow)
         {
             bool on = cuia.Mechanic == MechanicType.HojaAtada;
             Visible = on;
+            bool lowered = on && sealedNow;
+            if (lowered != _tiedSealed)
+            {
+                _tiedSealed = lowered;
+                PlaceTied();
+            }
+
             if (on && cuia.MechanicKey != _key)
             {
                 // La muestra de la llave (sprite perezoso: se genera aquí, al mostrar la llave, nunca en Tick) y lo que sube, que
@@ -742,9 +764,9 @@ namespace AF.Presentation.Mechanics
         }
 
         // Hoja atada: el cordel en el cuello (reflejado con el lado, así el nudo queda bajo la llave); en su nudo, la llave en el
-        // hueco del hombro (la muestra derecha, nunca reflejada; baja si pasaría de KeyTopMaxU) y, colgando de ella, la hoja
-        // pequeña junto al hombro. Al verter, en el hombro de arriba (TickTied), con la opacidad del cambio de lado, y la llave y
-        // la hoja apartadas TiedPourAwayU del labio.
+        // hueco del hombro (la muestra derecha, nunca reflejada; baja si pasaría de KeyTopMaxU, y TiedSealDropU con la cuia
+        // sellada) y, colgando de ella, la hoja pequeña junto al hombro. Al verter, en el hombro de arriba (TickTied), con la
+        // opacidad del cambio de lado, y la llave y la hoja apartadas TiedPourAwayU del labio.
         private void PlaceTied()
         {
             float side = _shownSide;
@@ -753,7 +775,7 @@ namespace AF.Presentation.Mechanics
             float cordY = top + TiedCordAboveCavityU;
             Pose(_cord, 0f, cordY, ProceduralArt.LianaCollarWidthU, ProceduralArt.LianaCollarHeightU, 0f, side, 1f, a * ProceduralArt.HojaCordTint.a);
             Pose(_cordShine, 0f, cordY, ProceduralArt.LianaCollarWidthU, ProceduralArt.LianaCollarHeightU, 0f, side, 1f, a * ProceduralArt.HojaCordShine.a);
-            float keyY = Mathf.Min(top + TiedKeyAboveCavityU, KeyCenterMaxU(1f, TiedBadgeScale));
+            float keyY = Mathf.Min(top + TiedKeyAboveCavityU, KeyCenterMaxU(1f, TiedBadgeScale)) - (_tiedSealed ? TiedSealDropU : 0f);
 
             // Apartada del labio: en la dirección del centro del labio a la llave (en reposo, hacia el hombro y hacia fuera).
             float awayX = TiedKeyXU;

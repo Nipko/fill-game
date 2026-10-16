@@ -720,15 +720,14 @@ namespace AF.UI
                 _bite?.Hide();
             }
 
-            // Las variantes (VA1a): la Hoja atada (283) y la Liana de cuenta (243), cada una con su propio icono [P]
-            // (LevelCardInfo.IntroIconKey).
-            string? iconKey = card.IntroIconKey;
-            Sprite? heroIcon = card.Kind == LevelCardKind.Debut && !_biteOn ? _art.CardHeroIcon(iconKey) : null;
+            // Las variantes (VA1a) llevan su propio icono [P] con su misma clave: lo elige ProceduralArt.CardHeroIcon (la Hoja
+            // atada, 283, y la Liana de cuenta, 243, con ProceduralArt.LianaCountIconKey).
+            Sprite? heroIcon = card.Kind == LevelCardKind.Debut && !_biteOn ? _art.CardHeroIcon(intro) : null;
             bool hero = heroIcon != null;
             _medallion.gameObject.SetActive(hero);
             if (hero)
             {
-                _medallion.sprite = _art.CardMedallionFor(iconKey);
+                _medallion.sprite = _art.CardMedallionFor(intro);
                 _hero.sprite = heroIcon;
             }
 

@@ -110,6 +110,20 @@ namespace AF.Tests.PlayMode
             Assert.That(atada.TiedKeyRectU.Contains(atada.TiedKnotU), Is.True, "el medallón cuelga del nudo y lo tapa: ningún ajuste de TiedKeyXU deja el nudo suelto a la vista");
             Assert.That(Piece(_rig.Views[1], "HojaAtadaCord").GetComponent<UnityEngine.UI.Image>().color, Is.EqualTo(ProceduralArt.HojaCordTint), "de fibra, no de liana");
 
+            // El cordel ciñe el cuello 0,02 u bajo el borde de fibra, del canto izquierdo del cuello al nudo, sin colgar sobre la
+            // boca (revisión de VA1a, captura 54e): todo su tramo delantero queda entre esa línea y el nudo.
+            Assert.That(Piece(_rig.Views[1], "HojaAtadaCord").GetComponent<UnityEngine.UI.Image>().sprite.name, Is.EqualTo("mech_hoja_atada_cord"));
+            Assert.That(HojaOverlay.TiedCordFrontAboveCavityU, Is.EqualTo(CuiaGeometry.ShoulderU + CuiaGeometry.NeckU - 0.02f).Within(1e-4f));
+            Vector2 cordStart = ProceduralArt.HojaAtadaCordPointU(0f);
+            Assert.That(cordStart.x, Is.EqualTo(-CuiaGeometry.NeckOuterHalfWidthU).Within(1e-4f), "desde el canto izquierdo del cuello");
+            for (int i = 0; i <= 20; i++)
+            {
+                Vector2 p = ProceduralArt.HojaAtadaCordPointU(i / 20f);
+                float y = HojaOverlay.TiedCordAboveCavityU + p.y;
+                Assert.That(y, Is.GreaterThanOrEqualTo(HojaOverlay.TiedCordFrontAboveCavityU - 1e-4f), "no cuelga sobre la boca (t = " + (i / 20f) + ")");
+                Assert.That(y, Is.LessThanOrEqualTo(HojaOverlay.TiedCordAboveCavityU + ProceduralArt.LianaCollarKnotYU + 1e-4f));
+            }
+
             // La llave va en el hombro derecho: deja libre el eje (el chorro y la boca del origen, D-006), queda sobre la cara del
             // líquido de la cuia llena (Q17 A) y no pasa del tope de la Hoja (la fila de arriba en los tableros de 3 filas).
             Rect key = atada.TiedKeyRectU;
@@ -203,11 +217,24 @@ namespace AF.Tests.PlayMode
             _rig = new MechanicTestKit.Rig(Art, three);
             atada = OverlayOf(_rig.Views[0], MechanicType.HojaAtada);
             rest = Signature(_rig.Views[0].OverlayHost.BodyFront);
+            Vector2 restKey = atada.TiedKeyU;
             BoardState sealedBoard = _rig.Pour(three, 1, 0, out _);
             Assert.That(_rig.RunUntilIdle(6000), Is.LessThan(6000));
             Assert.That(sealedBoard.IsSealed(0), Is.True);
             Assert.That(sealedBoard[0].Mechanic, Is.EqualTo(MechanicType.HojaAtada), "sellada sigue atada");
-            AssertStillTied(atada, rest, "sellada");
+            Assert.That(atada.Visible && atada.CordVisible && atada.TagVisible && atada.FruitVisible, Is.True, "sellada: atada, con su llave (b.3)");
+            Assert.That(atada.IsAnimating || atada.FallingLeafVisible || atada.ClosedLeafVisible, Is.False, "sellada");
+
+            // Sellada, el medallón baja TiedSealDropU: deja a la vista el canto de la tapa (que empieza 0,04 u bajo lo alto de la
+            // cuia) y sigue tapando el nudo (revisión de VA1a, captura 54f).
+            Assert.That(atada.TiedKeyU.x, Is.EqualTo(restKey.x).Within(1e-4f));
+            Assert.That(atada.TiedKeyU.y, Is.EqualTo(restKey.y - HojaOverlay.TiedSealDropU).Within(1e-4f));
+            Assert.That(atada.TiedKeyRectU.yMax, Is.LessThanOrEqualTo(CuiaGeometry.HeightU(4) - 0.04f), "la placa no tapa la tapa");
+            Assert.That(atada.TiedKeyRectU.Contains(atada.TiedKnotU), Is.True, "sigue colgada del nudo");
+
+            // Al deshacer el sellado (Show sin sellar), vuelve exacta a su sitio.
+            atada.Show(three[0], false);
+            AssertStillTied(atada, rest, "sin sellar otra vez");
         }
 
         [UnityTest]
@@ -250,7 +277,6 @@ namespace AF.Tests.PlayMode
             Assert.That(card.Visible, Is.True);
             Assert.That(card.Card!.Kind, Is.EqualTo(LevelCardKind.Debut));
             Assert.That(card.Card.IntroMechanic, Is.EqualTo(LevelCardInfo.HojaAtadaIntro));
-            Assert.That(card.Card.IntroIconKey, Is.EqualTo(LevelCardInfo.HojaAtadaIntro));
             Assert.That(card.TutorialText, Is.EqualTo(UiText.TutorialHojaAtada), "la regla: nunca cae, solo recibe su fruta y es origen [P]");
             Assert.That(UiText.Tutorial(LevelCardInfo.HojaAtadaIntro), Is.EqualTo(UiText.TutorialHojaAtada));
             Assert.That(card.TutorialText, Does.Contain("nunca cae").And.Contain("solo recibe su fruta").And.Contain("verter desde ella"));
@@ -292,7 +318,6 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard));
             Assert.That(card.Card!.Kind, Is.EqualTo(LevelCardKind.Debut));
             Assert.That(card.Card.IntroMechanic, Is.EqualTo(LevelCardInfo.LianaCountIntro));
-            Assert.That(card.Card.IntroIconKey, Is.EqualTo(LevelCardInfo.LianaCountIntro), "su propio icono [P]: la liana con sus cuentas");
             Assert.That(ProceduralArt.LianaCountIconKey, Is.EqualTo(LevelCardInfo.LianaCountIntro));
             Assert.That(card.TutorialText, Is.EqualTo(UiText.TutorialLianaN));
             Assert.That(card.TutorialText, Does.Contain("cuentas"));

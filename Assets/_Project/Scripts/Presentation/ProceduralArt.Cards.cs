@@ -34,15 +34,9 @@ namespace AF.Presentation
 
         /// <summary>
         /// Clave del icono grande de la Liana de cuenta (<c>intro_mechanic</c> <c>liana_n</c> del 243; VA1a) [P]: la liana con dos
-        /// cuentas perla y sin baya (<see cref="CardHeroIcon"/>).
+        /// cuentas del gris perla del tablero y sin baya (<see cref="CardHeroIcon"/>).
         /// </summary>
         public const string LianaCountIconKey = "liana_n";
-
-        /// <summary>Cuenta perla del icono de la Liana de cuenta (#F2EEE4) [P].</summary>
-        public static readonly Color LianaBeadPearl = Palette.Hex(0xF2EEE4);
-
-        /// <summary>Canto de la cuenta perla del icono de la Liana de cuenta (#6B5A44) [P].</summary>
-        public static readonly Color LianaBeadEdge = Palette.Hex(0x6B5A44);
 
         /// <summary>Lado del medallón de la tarjeta de estreno (dp), con su sombra.</summary>
         public const float CardMedallionDp = 76f;
@@ -166,9 +160,11 @@ namespace AF.Presentation
         }
 
         // Liana de cuenta (estreno del 243, VA1a) en un lienzo cuadrado de s px (k = s / 96; y hacia arriba): la liana de la Liana,
-        // con sus hojas y sin la baya (que se leía como la fruta de la Liana con fruta), y delante de ella dos cuentas perla
-        // (LianaBeadPearl con el canto LianaBeadEdge de ≈ 1 dp, cada una de ≈ 14 % del círculo de 76 dp de la tarjeta): las
-        // cuentas que dicen cuántas cuias hay que sellar (revisión de VA1a).
+        // con sus hojas y sin la baya (que se leía como la fruta de la Liana con fruta), y delante de ella dos cuentas: las
+        // cuentas que dicen cuántas cuias hay que sellar (revisión de VA1a). Son las del tablero (LianaOverlay las ensarta con
+        // CounterPip, un disco liso teñido de Pearl), para que la tarjeta y la cuia enseñen la misma pieza: el mismo disco liso
+        // gris perla, sin brillo, más grande (≈ 14 % del círculo de 76 dp de la tarjeta) y con un canto pizarra (Slate) de ≈ 1 dp
+        // que lo separa del fondo crema del medallón (en el tablero lo separa el vidrio oscuro).
         private static void DrawLianaCountGlyph(PixelCanvas pc, int s)
         {
             float k = s / 96f;
@@ -179,9 +175,8 @@ namespace AF.Presentation
             for (int i = 0; i < 2; i++)
             {
                 Vector2 p = Quad(a, c, b, i == 0 ? 0.48f : 0.74f);
-                pc.FillCircle(p.x, p.y, 11f * k, LianaBeadEdge);
-                pc.FillCircle(p.x, p.y, 9f * k, LianaBeadPearl);
-                pc.FillCircle(p.x - (3f * k), p.y + (3.2f * k), 2.6f * k, new Color(1f, 1f, 1f, 0.85f));
+                pc.FillCircle(p.x, p.y, 11f * k, Slate);
+                pc.FillCircle(p.x, p.y, 9f * k, Pearl);
             }
         }
 

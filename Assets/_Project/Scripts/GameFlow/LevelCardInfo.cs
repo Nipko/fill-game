@@ -109,12 +109,6 @@ namespace AF.GameFlow
         /// <summary><c>intro_mechanic</c> que estrena este nivel (D-007: <c>chica</c>, <c>alta</c>, <c>hoja</c>…), o null.</summary>
         public string? IntroMechanic { get; }
 
-        /// <summary>
-        /// Clave del icono grande del estreno (<see cref="IntroIconKeyOf"/>): la de <see cref="IntroMechanic"/>, también en las
-        /// variantes, que llevan icono propio. Null sin estreno.
-        /// </summary>
-        public string? IntroIconKey => IntroIconKeyOf(IntroMechanic);
-
         /// <summary>Bit <c>(int)type</c> por cada mecánica que el nivel trae al empezar (para los iconos [P] de §c.1).</summary>
         public int MechanicMask => _mechanics;
 
@@ -144,18 +138,6 @@ namespace AF.GameFlow
         public bool HasMechanic(MechanicType type)
         {
             return type != MechanicType.None && MechanicTypes.IsDefined(type) && ((_mechanics >> (int)type) & 1) != 0;
-        }
-
-        /// <summary>
-        /// Clave del icono grande de la tarjeta del estreno <paramref name="introMechanic"/> (02 §9.1 y §10): la misma clave para
-        /// las mecánicas y las capacidades (<c>hoja</c>, <c>chica</c>…), para la Hoja atada (<c>hoja_atada</c>, que es su propio
-        /// tipo, <see cref="MechanicType.HojaAtada"/>) y para la Liana de cuenta (<c>liana_n</c> [P], 243), que aunque sea la Liana
-        /// con <c>n</c> lleva su propio icono [P]: la liana con dos cuentas y sin la baya de la Liana con fruta (revisión de VA1a:
-        /// el texto enseña a leer las cuentas). Null sin estreno.
-        /// </summary>
-        public static string? IntroIconKeyOf(string? introMechanic)
-        {
-            return string.IsNullOrEmpty(introMechanic) ? null : introMechanic;
         }
 
         /// <summary>El nivel tiene tarjeta previa: Difícil o Muy difícil, o estreno de una mecánica (02 §10; §c.1).</summary>
