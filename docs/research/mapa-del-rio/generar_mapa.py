@@ -437,8 +437,9 @@ CANDIDATOS_PREGUNTA_50 = {32: ("map.stop.sandoval.dato_04",   # las cuias del Ba
 # Rosa en el mismo sitio, en el viaje del 560 (M3.7d).
 PUNTOS_DE_PASO_REQUERIDOS = {7: ("teotonio",), 9: ("teotonio",)}
 # Un punto de paso que sale en varios viajes es un solo elemento de passing[] en river_map_v1.json, con un solo fact
-# (contrato 29): en todos los viajes lleva la misma coordenada y el mismo dato (M3.7d).
-CAMPOS_DEL_PUNTO_DE_PASO = ("lat", "lon", "conf", "dato")
+# (contrato 29), con un solo nombre (map.stop.<id>.name): en todos los viajes lleva la misma coordenada, el mismo nombre y
+# el mismo dato (M3.7d).
+CAMPOS_DEL_PUNTO_DE_PASO = ("lat", "lon", "nombre", "conf", "dato")
 
 
 def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
@@ -617,7 +618,7 @@ def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
                 if c not in tiene:
                     errores.append(f"parada {s.get('id')}: falta el candidato de la pregunta 50 (a) {c} en «otros_datos»")
     # Un punto de paso con id que sale en el viaje de entrada de varios mundos (teotonio en el 300 y en el 560) es el
-    # mismo elemento de passing[]: misma coordenada, misma confianza y mismo dato en todos (M3.7d).
+    # mismo elemento de passing[]: misma coordenada, mismo nombre, misma confianza y mismo dato en todos (M3.7d).
     primero = {}
     for m in doc["paradas_201_1000"]:
         for p in m.get("puntos_de_paso_del_viaje", []):
@@ -788,7 +789,7 @@ def autoprueba_paradas_201_700(doc):
              lambda d_, i=i: [d_["paradas_201_1000"][i]["sitios"][-1].pop(c) for c in ("lat", "lon", "xy")],
              "sin coordenada o con un [NV]", f"mundo {w}:")
     # M3.7d: un punto de paso que sale en dos viajes (teotonio en el 300 y en el 560) tiene que ser igual en los dos; en
-    # la copia, el del mundo posterior cambia de longitud o de dato.
+    # la copia, el del mundo posterior cambia de longitud, de nombre o de dato.
     vistos_pp = {}
     for i, m in enumerate(doc["paradas_201_1000"]):
         for p in m.get("puntos_de_paso_del_viaje", []):
@@ -799,6 +800,7 @@ def autoprueba_paradas_201_700(doc):
                 vistos_pp[pid] = m["mundo"]
                 continue
             for nombre, cambia in (("con otra longitud", lambda q: q.update(lon=q["lon"] + 0.1)),
+                                   ("con otro nombre", lambda q: q.update(nombre=str(q.get("nombre", "")) + " (bis)")),
                                    ("con otro dato", lambda q: q.update(dato=q["dato"].replace("»", " Otra vez.»")))):
                 caso(f"el punto de paso {pid} del mundo {m['mundo']} {nombre} que en el mundo {vistos_pp[pid]}", None,
                      lambda d_, i=i, pid=pid, cambia=cambia: [cambia(q) for q in

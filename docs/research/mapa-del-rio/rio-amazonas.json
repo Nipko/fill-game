@@ -7960,7 +7960,7 @@
    "asesor": false,
    "coincidencias": [
     "hito 460 [P] (Piraña + Brote + Barro, Muy difícil; d.5.3)",
-    "Tinaja suelta 454 (variante A; d.5.4)"
+    "Tinaja suelta 454 (variante A; d.5.3, respaldo en d.5.4)"
    ],
    "notas": "Coordenada de Wikidata del pueblo (Q749372), la misma que el sitio del resumen [E wd_madidi].",
    "xy": [
@@ -8217,7 +8217,7 @@
    "coincidencias": [
     "Flor con Hoja atada 498 (d.5.2)",
     "hito 500 [P] (Matapi + Hoja atada, Muy difícil; d.5.3)",
-    "Tinaja suelta 494 (variante A; d.5.4)"
+    "Tinaja suelta 494 (variante A; d.5.3, respaldo en d.5.4)"
    ],
    "notas": "La misma coordenada que la parada 47 (Q610021) [E wd_madidi].",
    "xy": [
@@ -8494,7 +8494,7 @@
    "asesor": true,
    "coincidencias": [
     "hito 540 [P] (Piraña + Hoja atada, Muy difícil; d.5.3)",
-    "Tinaja suelta 531 (variante A; d.5.4)"
+    "Tinaja suelta 531 (variante A; d.5.3, respaldo en d.5.4)"
    ],
    "notas": "Coordenada de Wikidata de la ciudad (Q34986), a unos 10 km del Mamoré de respaldo (dentro de los 15 km del canon); antes, el sitio del resumen estaba en la boca del Ibare (Q5983734: −14,6808, −65,0156), el puerto [E wd_madidi]. Asesor: Trinidad es la puerta de los Llanos de Moxos (Casarabe y la arqueología, vetadas).",
    "xy": [
@@ -8672,18 +8672,18 @@
      "nota": "Wikipedia ES (Distrito de Jenaro Herrera): «Su nombre honra al escritor, periodista, investigador, explorador, cartógrafo, abogado y narrador moyobambino Genaro Herrera» [E eswp_jenaro_herrera: leída el 2026-10-16]. La página escribe «Genaro»; el pueblo, «Jenaro»."
     }
    ],
-   "nota_dato": "Gran parada del mundo 9 (la primera; D-013 punto 3). Responde la frase de TiTino del 560, «Dos ríos: ¿cuál nos lleva a donde nace el agua?» (propuesta §6.3; la contesta el mundo siguiente): Wikipedia EN (Ucayali River) lo llama «the main headstream of the Amazon River», que «becomes the Amazon at the confluence of the Marañón close to Nauta city» [E wp_ucayali: leída el 2026-10-16]. «De los dos ríos» no repite el dato del 170 en Nauta («Aquí el Marañón y el Ucayali forman el Amazonas»). Bandera del Perú al ganar el 560 (cruces_de_pais: el viaje de entrada del mundo 9, con vuelta): la canoa sube el Amazonas desde el Madeira, pasa la boca del Atacuari, entra otra vez en el Perú y en Nauta toma el Ucayali; sin placa de bienvenida, como el 310 y el 420. Plantea la pregunta del mundo 9, que responde la llegada del 620 a Yarinacocha (parada 62). Enlaza con el guía: Rosa vuelve en el viaje del 560, en el punto de paso teotonio, y desde aquí guía otra vez la canoa (Q18-A; P-M8). Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "nota_dato": "Gran parada del mundo 9 (la primera; D-013 punto 3). Responde la cabecera del 560, «Dos ríos: ¿cuál nos lleva a donde nace el agua?», la pregunta del arco V-VI (propuesta §6.3; la contesta el mundo siguiente): Wikipedia EN (Ucayali River) lo llama «the main headstream of the Amazon River», que «becomes the Amazon at the confluence of the Marañón close to Nauta city» [E wp_ucayali: leída el 2026-10-16]. «De los dos ríos» no repite el dato del 170 en Nauta («Aquí el Marañón y el Ucayali forman el Amazonas»). Bandera del Perú al ganar el 560 (cruces_de_pais: el viaje de entrada del mundo 9, con vuelta): la canoa sube el Amazonas desde el Madeira, pasa la boca del Atacuari, entra otra vez en el Perú y en Nauta toma el Ucayali; sin placa de bienvenida, como el 310 y el 420. Plantea la pregunta del mundo 9, que responde la llegada del 620 a Yarinacocha (parada 62). Enlaza con el guía: Rosa vuelve en el viaje del 560, en el punto de paso teotonio, y desde aquí guía otra vez la canoa (Q18-A; P-M8). Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
    "fondo": {
     "kit": "bg_kit_w09",
     "heroe": "kit:ucayali_ancho_con_islas",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: el Ucayali ancho y pardo, con islas de playa y bosque, poco antes de unirse al Marañón, de mañana (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": false,
    "coincidencias": [
     "banner 561 (viaje del 560: Madeira abajo, con Rosa de vuelta en Teotônio, y Amazonas arriba hasta Nauta)",
-    "frase de TiTino del 560, «Dos ríos: ¿cuál nos lleva a donde nace el agua?» (propuesta §6.3), que contesta este dato de llegada",
+    "cabecera del 560, «Dos ríos: ¿cuál nos lleva a donde nace el agua?», la pregunta del arco V-VI (propuesta §6.3), que contesta este dato de llegada",
     "bandera del Perú (560, vuelta)",
     "guía: Rosa otra vez, desde el viaje del 560 (Q18-A)",
     "miquito: sigue la maquisapa del mundo 8 (07 §6.4)",
@@ -8754,11 +8754,11 @@
     "heroe": "kit:boca_del_tapiche",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: la boca del Tapiche, de agua más oscura, en el Ucayali, con el pueblo lejano en la orilla alta (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": false,
    "coincidencias": [
-    "Tinaja 574 (variante A; d.5.3)",
+    "Tinaja suelta 574 (variante A; d.5.3, respaldo en d.5.4)",
     "hito 580 [P]: el primer hito de 14 cuias (K = 13 + 1 vacío), Matapi + Brote de dos hojas (d.5.2)"
    ],
    "notas": "Coordenada de Wikidata de la ciudad (Q3344103), la misma que el punto «Requena (boca del Tapiche)» del cauce y que el sitio del resumen [E wd_ucayali].",
@@ -8824,7 +8824,7 @@
     "heroe": "kit:ucayali_con_islas",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: el Ucayali partido por islas largas de playa y cañabrava, de mañana (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": false,
    "coincidencias": [
@@ -8890,11 +8890,11 @@
     "heroe": "kit:barranco_con_capas",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: un barranco alto de la orilla con capas de roca de colores, y el Ucayali al pie, de mañana (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": false,
    "coincidencias": [
-    "Tinaja 591 (variante A; d.5.3)",
+    "Tinaja suelta 591 (variante A; d.5.3, respaldo en d.5.4)",
     "hito 600 [P] (Hoja atada + Brote de dos hojas + Barro, K = 13; d.5.3)"
    ],
    "notas": "Coordenada de Wikidata de la ciudad (Q3317773), la misma que el punto «Contamana» del cauce y que el sitio del resumen [E wd_ucayali]. La Quebrada Cachiyacu, de los fósiles, está cerca de la ciudad; el resumen del artículo no da su coordenada.",
@@ -8960,7 +8960,7 @@
     "heroe": "kit:orilla_con_cerros_bajos",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: la orilla del Ucayali con cerros bajos de selva detrás y una quebrada que baja al río, de mañana (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": false,
    "coincidencias": [
@@ -9032,7 +9032,7 @@
     "heroe": "kit:puerto_con_barcos",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: el puerto de Pucallpa visto desde el río, con barcos de pasajeros de dos pisos en la orilla, de mañana (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": true,
    "coincidencias": [
@@ -9095,7 +9095,7 @@
     "heroe": "kit:laguna_en_media_luna",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: la laguna de Yarinacocha en forma de media luna, quieta, con el bosque reflejado, de mañana (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": true,
    "coincidencias": [
@@ -9162,11 +9162,11 @@
     "heroe": "kit:garzas_en_la_laguna",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: garzas blancas en la orilla de la laguna, con canoas lejanas y bruma de la mañana (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": true,
    "coincidencias": [
-    "Tinaja 631 (variante A; d.5.3)",
+    "Tinaja suelta 631 (variante A; d.5.3, respaldo en d.5.4)",
     "hito 640 [P] (Matapi + Barro + Hoja, K = 13; d.5.3)"
    ],
    "notas": "La misma coordenada que la parada 62 (Q11688197) [E wd_ucayali].",
@@ -9226,7 +9226,7 @@
     "heroe": "kit:meandro_cortado",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: una curva cerrada del Ucayali vista desde lo alto, con una laguna en U a un lado, de mañana (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": false,
    "coincidencias": [
@@ -9292,11 +9292,11 @@
     "heroe": "kit:playa_de_vaciante",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: playas anchas de arena en las aguas bajas, con el canal del Ucayali al medio, de mañana (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": false,
    "coincidencias": [
-    "Tinaja 651 (variante A; d.5.3)",
+    "Tinaja suelta 651 (variante A; d.5.3, respaldo en d.5.4)",
     "hito 660 [P] (Brote + Hoja atada + Remolino, K = 13; d.5.3)"
    ],
    "notas": "La misma coordenada que la parada 64 (Q27649307) [E wd_ucayali].",
@@ -9359,7 +9359,7 @@
     "heroe": "kit:confluencia_tambo_urubamba",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: dos ríos que se juntan en uno ancho, con los primeros cerros de los Andes al fondo, de mañana (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": true,
    "coincidencias": [
@@ -9425,7 +9425,7 @@
     "heroe": "kit:urubamba_con_cerros",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: el Urubamba bajando entre cerros verdes hacia la confluencia, con bruma de la mañana (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": true,
    "coincidencias": [
@@ -9491,7 +9491,7 @@
     "heroe": "kit:confluencia_ene_perene",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: dos ríos de montaña que se juntan entre cerros altos de selva, con nubes bajas de la mañana (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": true,
    "coincidencias": [],
@@ -9555,11 +9555,11 @@
     "heroe": "kit:tambo_con_andes_al_fondo",
     "tipo": "kit_y_rotulo",
     "hito": "Paisaje del tramo: el Tambo entre cerros, con los Andes azules al fondo y bruma de la mañana sobre el agua (piezas del kit)",
-    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor; que el vapor de la hora sea la bruma de la mañana sobre el agua es una propuesta [P] (07 §2.1 solo dice «Mañana con vapor» y 07 §2.2 da al mundo 9 el «vapor del río hirviente»): qué vapor se pinta lo deciden el asesor o el dueño mientras siga abierta la pregunta de Shanay-Timpishka; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
    },
    "asesor": true,
    "coincidencias": [
-    "Tinaja 691 (variante A; d.5.3)",
+    "Tinaja suelta 691 (variante A; d.5.3, respaldo en d.5.4)",
     "hito 700 «Yarinacocha» [P] (Matapi + Hoja atada + Brote de dos hojas, K = 13; d.5.2 y d.5.3): se juega aquí y no en Yarinacocha; el asesor puede cambiar el nombre (D-023, punto 21)",
     "fin del mundo 9 y de los 700 niveles de la 1.0"
    ],
