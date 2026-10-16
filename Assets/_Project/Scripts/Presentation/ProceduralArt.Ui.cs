@@ -221,7 +221,7 @@ namespace AF.Presentation
             CtaWater = Relief(ArtSlots.ButtonWater, "cta_water", 72f, 50f, 20f, false, Palette.FamilyWater, true, 312f);
             SlotWater = Relief(ArtSlots.SlotWater, "slot_water", 64f, 64f, 18f, false, Palette.FamilyWater, false, 64f);
             DiscWood = Relief(ArtSlots.DiscWood, "disc_wood", 40f, 40f, 20f, true, Palette.FamilyWood, false, 40f);
-            Pill = BuildPlate("pill", 60f, 16f, 8f, false, 0f);
+            Pill = BuildPlate("pill", 60f, 16f, 8f, false, 0f, 8f); // 9-slice: la píldora de Reiniciar crece si su etiqueta no cabe (L4)
             BadgePlate = ArtSlots.Find(ArtSlots.BadgePlate) ?? BuildPlate("badge_plate", 136f, 52f, 12f, true, 4f);
             ModalPanel = ArtSlots.Find(ArtSlots.ModalPanel) ?? BuildModalPanel();
 

@@ -140,10 +140,11 @@ namespace AF.UI
                 bool available = view.Rescue == StuckRescueKind.Available;
                 UiBuilder.SetEnabled(_rescue.Button, available);
                 _price.Set(view.RescuePrice, view.RescueDiscounted ? view.RescueBasePrice : 0, !available);
+
+                // La etiqueta a la izquierda del precio; si no cabe en una línea a 12 sp, en dos y el botón crece (tarea L4).
+                ModalKit.FitCtaLabel(_rescue, _rescueLabel, inner, _price.Width + 36f, -(_price.Width + 12f) * 0.5f);
                 ModalKit.Place(_rescue, 16f, y, inner);
                 _price.PlaceAt(inner - _price.Width - 12f, (ModalKit.FaceHeightOf(_rescue) - _price.Height) * 0.5f);
-                _rescueLabel.rectTransform.sizeDelta = new Vector2(-(_price.Width + 36f), _rescueLabel.rectTransform.sizeDelta.y);
-                _rescueLabel.rectTransform.anchoredPosition = new Vector2(-(_price.Width + 12f) * 0.5f, _rescueLabel.rectTransform.anchoredPosition.y);
                 y += ModalKit.HeightOf(_rescue);
                 if (!available)
                 {

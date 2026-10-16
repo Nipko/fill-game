@@ -26,7 +26,10 @@ namespace AF.UI
     /// (<c>GameScreen.Reveal.cs</c>).</description></item>
     /// </list>
     /// Antes del desbloqueo la ranura no existe y la bandeja se centra (07 §7.4): 16 + n·64 + (n − 1)·8 + 16 dp (240 con las
-    /// tres ranuras de un nivel turbio). Con 5 ranuras pasarían a 56 dp (07 §7.4), pero Morpho (12) y Pororoca (30) no están
+    /// tres ranuras de un nivel turbio). Las etiquetas de las ranuras van a 12 sp y nunca menos (02 §12; tarea L4): si la más
+    /// larga no cabe en 64 dp (otro idioma, en-XA o la fuente al 130 %), todas las ranuras se ensanchan por igual hasta que
+    /// quepa, sin pasar de <see cref="SlotMaxDp"/> ni salir de la pantalla; si ni así cabe, esa etiqueta va en dos líneas y su
+    /// glifo se encoge para dejarle sitio (<c>Slot.Place</c>). Con 5 ranuras pasarían a 56 dp (07 §7.4), pero Morpho (12) y Pororoca (30) no están
     /// en el cliente y en la 1.0 nunca hay más de 3: sus ranuras llegan con sus comodines, y entonces Revelar pasa a ser la 5.ª
     /// (04 §2.5, a la derecha de Pororoca). Se refresca cada fotograma solo si algo cambió, sin asignar memoria (08 §5.4): el
     /// video de Marea se pregunta a los anuncios como mucho cada <see cref="UndoVideoPollMs"/> (<see cref="Tick"/>).
@@ -76,17 +79,25 @@ namespace AF.UI
         /// <summary>Y vuelven a los de la burbuja en estos ms [P].</summary>
         public const float MissingColorOutMs = 200f;
 
+        /// <summary>
+        /// Ancho máximo de una ranura que se ensancha para que quepa su etiqueta (dp) [P] (tarea L4; 02 §12: los contenedores
+        /// crecen): con 3 ranuras, la bandeja mide como mucho 16 + 3 · 104 + 2 · 8 + 16 = 360 dp, y además nunca sale de la
+        /// pantalla (<see cref="TrayEdgeDp"/> a cada lado).
+        /// </summary>
+        public const float SlotMaxDp = 104f;
+
+        /// <summary>Aire mínimo entre la bandeja ensanchada y el borde de la pantalla (dp) [P].</summary>
+        public const float TrayEdgeDp = 8f;
+
         private const float SlotDp = 64f;
         private const float GapDp = 8f;
         private const float PadDp = 16f;
 
-        // «Te faltan {n}» de dos ranuras vecinas a la vez: cada aviso cabe en su paso de ranura (64 + 8) con 2 dp de aire entre
-        // los dos. A 12 sp, «Te faltan» y una cifra de 2 caben en una línea («Te faltan 70» mide 67,8 dp); con 3 (el máximo con
-        // los precios de 08 §9; 75 dp) la cifra baja a una segunda línea (Slot.PlaceMissing).
-        private const float MissingNarrowDp = SlotDp + GapDp - 2f;
-
-        // Aire entre dos burbujas «Te faltan {n}» vecinas (dp): el paso de ranura menos su ancho.
-        private const float MissingNeighborGapDp = SlotDp + GapDp - MissingNarrowDp;
+        // «Te faltan {n}» de dos ranuras vecinas a la vez: cada aviso cabe en su paso de ranura (64 + 8, o el ancho de la ranura
+        // ensanchada + 8) con 2 dp de aire entre los dos. A 12 sp, «Te faltan» y una cifra de 2 caben en una línea («Te faltan
+        // 70» mide 67,8 dp); con 3 (el máximo con los precios de 08 §9; 75 dp) la cifra baja a una segunda línea
+        // (Slot.PlaceMissing).
+        private const float MissingNeighborGapDp = 2f;
 
         private readonly ProceduralArt _art;
         private readonly Image _tray;
@@ -104,6 +115,7 @@ namespace AF.UI
         private float _canvasW = 360f;
         private float _trayTop;
         private int _slots = 1;
+        private float _slotW = SlotDp;
         private int _slotsVersion;
         private bool _visible = true;
         private bool _revealPressed;
@@ -146,7 +158,19 @@ namespace AF.UI
         public int SlotsVersion => _slotsVersion;
 
         /// <summary>Ancho de la bandeja (dp).</summary>
-        public float Width => PadDp + (_slots * SlotDp) + ((_slots - 1) * GapDp) + PadDp;
+        public float Width => PadDp + (_slots * _slotW) + ((_slots - 1) * GapDp) + PadDp;
+
+        /// <summary>Ancho de cada ranura (dp): 64, o más si una etiqueta no cabe (tarea L4; <see cref="SlotMaxDp"/>).</summary>
+        public float SlotWidth => _slotW;
+
+        /// <summary>Etiqueta de la ranura de Marea (tests de desbordes).</summary>
+        public TextMeshProUGUI UndoLabel => _undo.Label;
+
+        /// <summary>Etiqueta de la ranura de Cuia extra (tests de desbordes).</summary>
+        public TextMeshProUGUI ExtraLabel => _extra.Label;
+
+        /// <summary>Etiqueta de la ranura de Revelar (tests de desbordes).</summary>
+        public TextMeshProUGUI RevealLabel => _reveal.Label;
 
         /// <summary>Texto del badge de Marea (diagnóstico y tests).</summary>
         public string UndoBadgeText => _undo.BadgeText;
@@ -428,11 +452,15 @@ namespace AF.UI
             _reveal.SetVisible(visible);
         }
 
-        /// <summary>Coloca la bandeja: 80 dp de alto con su borde superior en <paramref name="trayTop"/>, centrada.</summary>
+        /// <summary>
+        /// Coloca la bandeja: 80 dp de alto con su borde superior en <paramref name="trayTop"/>, centrada, con las ranuras de 64
+        /// dp o, si la etiqueta más larga no cabe, más anchas (<see cref="SlotWidth"/>; tarea L4).
+        /// </summary>
         public void Layout(float canvasW, float trayTop)
         {
             _canvasW = canvasW;
             _trayTop = trayTop;
+            _slotW = SlotWidthFor(canvasW);
             float width = Width;
             _tray.sprite = _art.Tray(width);
             float trayX = (canvasW - width) / 2f;
@@ -448,20 +476,41 @@ namespace AF.UI
 
             // Orden canónico de 07 §7.4, de izquierda a derecha y sin huecos: Marea, Cuia extra y Revelar.
             float x = trayX + PadDp;
-            _undo.Place(x, trayTop + 4f);
+            _undo.Place(x, trayTop + 4f, _slotW);
             if (_extra.Active)
             {
-                x += SlotDp + GapDp;
-                _extra.Place(x, trayTop + 4f);
+                x += _slotW + GapDp;
+                _extra.Place(x, trayTop + 4f, _slotW);
             }
 
             if (_reveal.Active)
             {
-                x += SlotDp + GapDp;
-                _reveal.Place(x, trayTop + 4f);
+                x += _slotW + GapDp;
+                _reveal.Place(x, trayTop + 4f, _slotW);
             }
 
             LayoutMissing();
+        }
+
+        // Ancho de las ranuras (tarea L4; 02 §12: nada se encoge por debajo de 12 sp y los contenedores crecen): 64 dp si todas
+        // las etiquetas de las ranuras que se ven caben en una línea; si no, el que necesita la más larga, sin pasar de
+        // SlotMaxDp ni de lo que deja la pantalla (la bandeja a TrayEdgeDp de cada borde). Mide al colocar, nunca por fotograma.
+        private float SlotWidthFor(float canvasW)
+        {
+            float need = _undo.LabelNeedDp;
+            if (_extra.Active)
+            {
+                need = Mathf.Max(need, _extra.LabelNeedDp);
+            }
+
+            if (_reveal.Active)
+            {
+                need = Mathf.Max(need, _reveal.LabelNeedDp);
+            }
+
+            float room = (canvasW - (2f * TrayEdgeDp) - (2f * PadDp) - ((_slots - 1) * GapDp)) / _slots;
+            float cap = Mathf.Max(SlotDp, Mathf.Min(SlotMaxDp, Mathf.Floor(room)));
+            return Mathf.Clamp(Mathf.Ceil(need), SlotDp, cap);
         }
 
         /// <summary>
@@ -612,9 +661,10 @@ namespace AF.UI
             bool undoNarrow = undo && (extra || (!_extra.Active && reveal));
             bool extraNarrow = extra && (undo || reveal);
             bool revealNarrow = reveal && (extra || (!_extra.Active && undo));
-            _undo.PlaceMissing(undoNarrow ? MissingNarrowDp : Slot.MissingWideDp);
-            _extra.PlaceMissing(extraNarrow ? MissingNarrowDp : Slot.MissingWideDp);
-            _reveal.PlaceMissing(revealNarrow ? MissingNarrowDp : Slot.MissingWideDp);
+            float narrow = _slotW + GapDp - MissingNeighborGapDp;
+            _undo.PlaceMissing(undoNarrow ? narrow : _undo.MissingWideNowDp);
+            _extra.PlaceMissing(extraNarrow ? narrow : _extra.MissingWideNowDp);
+            _reveal.PlaceMissing(revealNarrow ? narrow : _reveal.MissingWideNowDp);
         }
 
         private string Number(int value, bool plus)
@@ -645,13 +695,31 @@ namespace AF.UI
             }
         }
 
-        // Una ranura de 64 dp (guía 3.6): botón de la familia Agua con glifo y etiqueta funcional, badge arriba a la derecha
+        // Una ranura de 64 dp (guía 3.6; más ancha si su etiqueta o la de otra no cabe: tarea L4): botón de la familia Agua con glifo y etiqueta funcional, badge arriba a la derecha
         // (cupo en blanco o «+3» con video), badge ámbar «+N» del stock arriba a la izquierda, etiqueta de precio montada sobre
         // el borde inferior (como Magic Sort, ficha §2.3) y «Te faltan {n}» encima de la ranura sin saldo.
         private sealed class Slot
         {
-            /// <summary>Ancho del aviso «Te faltan {n}» sin vecinas que también lo enseñen (dp).</summary>
+            /// <summary>Ancho del aviso «Te faltan {n}» sin vecinas que también lo enseñen, con la ranura de 64 dp (dp).</summary>
             public const float MissingWideDp = SlotDp + 40f;
+
+            // Lo que el aviso ancho sobresale de la ranura (dp): 20 por cada lado.
+            private const float MissingWideExtraDp = MissingWideDp - SlotDp;
+
+            // Etiqueta de la ranura (tarea L4): a 12 sp (12 × escala dp), en una línea de 16 dp (× escala) con su borde de abajo
+            // a 57 dp, con LabelInsetDp de aire a cada lado (la cara de la ranura es redondeada); si no cabe ni en la ranura más
+            // ancha, en dos líneas con el interlineado apretado (−0,2 em) y el mismo borde de abajo. Lo que la caja crece hacia
+            // arriba lo cede el glifo, que sube y, si hace falta, se encoge (hasta LabelMinIconDp). La etiqueta de precio nunca
+            // sube por encima de PriceBelowLabelDp sobre ese borde: al 130 % baja lo justo para no tapar la etiqueta.
+            private const float LabelTopDp = 41f;
+            private const float LabelHeightDp = 16f;
+            private const float LabelInsetDp = 4f;
+            private const float PriceBelowLabelDp = 3f;
+            private const float LabelTwoLinesSpacing = -20f;
+            private const float IconDp = 32f;
+            private const float IconTopDp = 6f;
+            private const float LabelMinIconDp = 20f;
+            private const float LabelIconGapDp = 1f;
 
             // Tamaño del aviso: 12 sp, el mínimo de 02 §12 («Texto ≥ 12 sp»), sin encogerlo nunca (revisión de la limpieza L2b:
             // el autoajuste hasta 11 sp quedaba por debajo); lo que no cabe en una línea va en dos (PlaceMissing).
@@ -682,7 +750,6 @@ namespace AF.UI
             // abajo) y, como mucho, del ancho de su paso de ranura con 2 dp de aire (70 dp). Un precio de 4 cifras (fuera de los
             // rangos de 08 §9) no cabe: la etiqueta entera se encoge hasta caber, sin que su cifra (16 sp) baje de 12 sp (02 §12).
             private const float PriceCenterDp = 72f - 3f;
-            private const float PriceMaxDp = SlotDp + GapDp - 2f;
             private const float PriceMinScale = 12f / 16f;
 
             private readonly RectTransform _badge;
@@ -709,6 +776,8 @@ namespace AF.UI
             private float _x;
             private float _y;
             private float _missingW = MissingWideDp;
+            private float _w = SlotDp;
+            private bool _labelTwoLines;
             private int _missingShown = -1;
             private float _missingLineWidth;
             private bool _missingTwoLines;
@@ -720,7 +789,8 @@ namespace AF.UI
                 Glyph = UiBuilder.Image("Icon", Parts.Face, icon, Color.white);
                 UiBuilder.Place(Glyph.rectTransform, 16f, 6f, 32f, 32f);
                 TextMeshProUGUI text = UiBuilder.Label("Label", Parts.Face, TextStyle.SlotWater, label, 12f, Palette.Cream, TextAlignmentOptions.Center);
-                UiBuilder.Place(text.rectTransform, 0f, 41f, 64f, 16f);
+                UiBuilder.Place(text.rectTransform, 0f, LabelTopDp, SlotDp, LabelHeightDp);
+                Label = text;
                 Parts.Relief.Bind(Parts.Face, Parts.Base, Parts.FaceImage, art.SlotWater, Glyph, iconDisabled, text);
 
                 _badge = UiBuilder.Rect("Badge", Parts.Button.transform);
@@ -759,6 +829,15 @@ namespace AF.UI
             public ReliefParts Parts { get; }
 
             public Image Glyph { get; }
+
+            /// <summary>Etiqueta funcional de la ranura (12 sp; tarea L4).</summary>
+            public TextMeshProUGUI Label { get; }
+
+            /// <summary>Ancho que necesita la ranura para su etiqueta en una línea (dp): la etiqueta y su aire.</summary>
+            public float LabelNeedDp => Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x + (2f * LabelInsetDp);
+
+            /// <summary>Ancho del aviso «Te faltan {n}» sin vecinas con el ancho de ahora de la ranura (dp).</summary>
+            public float MissingWideNowDp => _w + MissingWideExtraDp;
 
             public bool Active { get; private set; } = true;
 
@@ -883,14 +962,44 @@ namespace AF.UI
                 }
             }
 
-            public void Place(float x, float y)
+            public void Place(float x, float y, float w)
             {
                 _x = x;
                 _y = y;
-                UiBuilder.Place((RectTransform)Parts.Button.transform, x, y, SlotDp, 72f);
-                UiBuilder.Place(_badge, SlotDp - 16f, -8f, 24f, 24f);
+                _w = w;
+                UiBuilder.Place((RectTransform)Parts.Button.transform, x, y, w, 72f);
+                UiBuilder.Place(_badge, w - 16f, -8f, 24f, 24f);
                 UiBuilder.Place(_badgeText.rectTransform, 0f, 0f, 24f, 24f);
-                PlaceMissing(_missingW);
+                PlaceLabel();
+                if (_price.Root.gameObject.activeSelf)
+                {
+                    PlacePrice();
+                }
+
+                PlaceMissing(_missingW); // Layout las vuelve a medir enseguida (LayoutMissing)
+            }
+
+            // La etiqueta en una línea si cabe en la ranura; si no, en dos, con el glifo más pequeño encima (tarea L4).
+            private void PlaceLabel()
+            {
+                float inner = _w - (2f * LabelInsetDp);
+                bool two = Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x > inner;
+                if (two != _labelTwoLines)
+                {
+                    _labelTwoLines = two;
+                    Label.textWrappingMode = two ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+                    Label.lineSpacing = two ? LabelTwoLinesSpacing : 0f;
+                }
+
+                // El borde de abajo de la etiqueta no se mueve (la etiqueta de precio va debajo); con la escala de texto o en dos
+                // líneas, la caja crece hacia arriba y el glifo sube y, si hace falta, se encoge.
+                float bottom = LabelTopDp + LabelHeightDp;
+                float h = two ? Mathf.Ceil(Label.GetPreferredValues(Label.text, inner, float.PositiveInfinity).y) : LabelHeightDp * _scale;
+                float top = bottom - h;
+                float icon = Mathf.Clamp(top - LabelIconGapDp - 2f, LabelMinIconDp, IconDp);
+                float iconTop = Mathf.Clamp(top - LabelIconGapDp - icon, 2f, IconTopDp);
+                UiBuilder.Place(Label.rectTransform, LabelInsetDp, top, inner, h);
+                UiBuilder.Place(Glyph.rectTransform, (_w - icon) * 0.5f, iconTop, icon, icon);
             }
 
             public void ShowBadge(string? text, bool video)
@@ -905,7 +1014,7 @@ namespace AF.UI
                 _badgeText.text = text;
                 _badgeVideo.gameObject.SetActive(video);
                 float w = video ? 44f : 24f;
-                UiBuilder.Place(_badge, SlotDp - w + 8f, -8f, w, 24f);
+                UiBuilder.Place(_badge, _w - w + 8f, -8f, w, 24f);
                 _badgeDisc.type = Image.Type.Simple;
                 UiBuilder.Place(_badgeText.rectTransform, 0f, 0f, video ? 22f : 24f, 24f);
                 if (video)
@@ -934,9 +1043,7 @@ namespace AF.UI
             {
                 _price.Root.gameObject.SetActive(true);
                 _price.Set(price, 0, missing > 0);
-                float k = Mathf.Clamp(PriceMaxDp / _price.Width, PriceMinScale, 1f);
-                _price.Root.localScale = new Vector3(k, k, 1f);
-                _price.PlaceAt((SlotDp - (_price.Width * k)) * 0.5f, PriceCenterDp - (_price.Height * 0.5f * k));
+                PlacePrice();
                 _missing.gameObject.SetActive(missing > 0 && Parts.Button.gameObject.activeSelf);
                 if (missing > 0 && missing != _missingShown)
                 {
@@ -952,6 +1059,15 @@ namespace AF.UI
                 {
                     PlaceMissing(_missingW);
                 }
+            }
+
+            // La etiqueta de precio, centrada en la ranura y como mucho del ancho de su paso de ranura con 2 dp de aire.
+            private void PlacePrice()
+            {
+                float k = Mathf.Clamp((_w + GapDp - 2f) / _price.Width, PriceMinScale, 1f);
+                _price.Root.localScale = new Vector3(k, k, 1f);
+                float top = Mathf.Max(PriceCenterDp - (_price.Height * 0.5f * k), LabelTopDp + LabelHeightDp - PriceBelowLabelDp);
+                _price.PlaceAt((_w - (_price.Width * k)) * 0.5f, top);
             }
 
             public void HidePrice()
@@ -976,11 +1092,11 @@ namespace AF.UI
 
                 float h = (twoLines ? MissingTwoLinesDp : MissingOneLineDp) * _scale;
                 float gap = (twoLines ? MissingTwoLinesGapDp : MissingGapDp) * _scale;
-                UiBuilder.Place(_missing, _x + ((SlotDp - widthDp) * 0.5f), _y - gap - h, widthDp, h);
+                UiBuilder.Place(_missing, _x + ((_w - widthDp) * 0.5f), _y - gap - h, widthDp, h);
 
                 // Lo más que crece a lo ancho en el latido: con una vecina (la burbuja estrecha), sin acercarse a ella más de
                 // MissingPulseClearDp (con 2 dp de aire entre las dos, nada: solo late hacia arriba).
-                _pulseMaxScaleX = widthDp < MissingWideDp - 0.01f
+                _pulseMaxScaleX = widthDp < MissingWideNowDp - 0.01f
                     ? Mathf.Clamp(1f + (2f * (MissingNeighborGapDp - MissingPulseClearDp) / widthDp), 1f, MissingPulseScale)
                     : MissingPulseScale;
             }

@@ -317,18 +317,70 @@ namespace AF.UI
         public static ReliefParts Cta(string name, Transform parent, ReliefSprites sprites, TextStyle style, string text, float size, Action onClick, out TextMeshProUGUI label)
         {
             ReliefParts cta = UiBuilder.Relief(name, parent, sprites, onClick);
-            float scale = UiBuilder.TextScale;
-            if (scale > 1f)
-            {
-                RectTransform visual = (RectTransform)cta.Face.parent;
-                visual.sizeDelta = new Vector2(visual.sizeDelta.x, sprites.HeightDp * scale);
-            }
-
+            StretchForTextScale(cta);
             label = UiBuilder.Label("Label", cta.Face, style, text, size, Palette.Cream, TextAlignmentOptions.Center);
             UiBuilder.PlaceCtaLabel(label.rectTransform, FaceHeightOf(cta));
             UiBuilder.AutoSize(label, UiBuilder.MinTextSp, size);
             cta.Relief.Bind(cta.Face, cta.Base, cta.FaceImage, sprites, null, null, label);
             return cta;
+        }
+
+        /// <summary>
+        /// Estira a lo alto por la escala de texto (<see cref="UiBuilder.TextScale"/>) el relieve de un botón, como hace
+        /// <see cref="Cta"/> (07 §7.8: los CTA «crecen en alto con la fuente hasta el 130 %»); para los CTA que se crean con
+        /// <see cref="UiBuilder.Relief"/> y colocan su etiqueta con <see cref="FaceHeightOf"/> (Siguiente y Cosecha doble de la
+        /// victoria; tarea L4). A la escala 1, nada cambia.
+        /// </summary>
+        public static void StretchForTextScale(ReliefParts cta)
+        {
+            if (UiBuilder.TextScale > 1f)
+            {
+                StretchTo(cta, UiBuilder.TextScale);
+            }
+        }
+
+        /// <summary>
+        /// Coloca la etiqueta de un CTA de <paramref name="buttonW"/> dp de ancho con <paramref name="insetDp"/> dp ocupados a
+        /// los lados (12 + 12 de margen y, en el rescate, su etiqueta de precio) y desplazada <paramref name="shiftX"/> dp (tarea
+        /// L4; 02 §12: ningún texto baja de 12 sp ni se recorta, los contenedores crecen): en una línea, como
+        /// <see cref="UiBuilder.PlaceCtaLabel(RectTransform, float)"/>, si cabe a su tamaño mínimo; si no, en dos, con el
+        /// interlineado apretado en <see cref="CtaTwoLinesShare"/> de la cara, y el botón crece a lo alto lo que haga falta (su
+        /// relieve se estira, como con la escala de texto). Quien la llama coloca después el botón con <see cref="Place"/>, que
+        /// ya mide el alto nuevo (<see cref="HeightOf"/>). Mide al colocar, nunca por fotograma.
+        /// </summary>
+        public static void FitCtaLabel(ReliefParts cta, TextMeshProUGUI label, float buttonW, float insetDp, float shiftX)
+        {
+            float width = buttonW - insetDp;
+            label.textWrappingMode = TextWrappingModes.NoWrap;
+            label.lineSpacing = 0f;
+            bool two = UiBuilder.MinTextWidth(label) > width + 0.5f;
+            float k = Mathf.Max(1f, UiBuilder.TextScale);
+            if (two)
+            {
+                label.textWrappingMode = TextWrappingModes.Normal;
+                label.lineSpacing = CtaTwoLinesSpacing;
+                float need = Mathf.Ceil(UiBuilder.MinTextHeight(label, width)) + 2f;
+                k = Mathf.Max(k, need / (CtaTwoLinesShare * cta.Sprites.FaceHeightDp));
+            }
+
+            StretchTo(cta, k);
+            float face = FaceHeightOf(cta);
+            UiBuilder.PlaceCtaLabel(label.rectTransform, face);
+            label.rectTransform.sizeDelta = new Vector2(-insetDp, face * (two ? CtaTwoLinesShare : 0.60f));
+            label.rectTransform.anchoredPosition = new Vector2(shiftX, -(face * (two ? 0.5f : 0.56f)));
+        }
+
+        /// <summary>Parte de la cara de un CTA que ocupa su etiqueta en dos líneas (<see cref="FitCtaLabel"/>) [P].</summary>
+        public const float CtaTwoLinesShare = 0.8f;
+
+        // Interlineado de la etiqueta de un CTA en dos líneas, en centésimas de em (TextMeshPro) [P].
+        private const float CtaTwoLinesSpacing = -20f;
+
+        // Estira el relieve del botón a k veces el alto de sus sprites (1: el de siempre).
+        private static void StretchTo(ReliefParts cta, float k)
+        {
+            RectTransform visual = (RectTransform)cta.Face.parent;
+            visual.sizeDelta = new Vector2(visual.sizeDelta.x, cta.Sprites.HeightDp * Mathf.Max(1f, k));
         }
 
         /// <summary>Enlace de texto subrayado (pie de modal, 07 §7.5) con un área táctil de 48 dp de alto.</summary>

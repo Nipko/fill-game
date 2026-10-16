@@ -57,6 +57,9 @@ namespace AF.UI
         public const float MinTouchDp = 48f;
 
         private const float TopRowHeight = 48f;
+
+        // Tamaño del cronómetro de la próxima canoa (sp); su tamaño en dp dice la escala de texto con la que se creó (L4).
+        private const float CanoesTimerSp = 13f;
         private const float TabBarHeight = 64f;
         private const float PlayTouchHeight = 72f;
         private const float PlayMaxWidth = 296f;
@@ -218,7 +221,7 @@ namespace AF.UI
             _canoesInfinite = UiBuilder.Image("Infinite", _canoes.transform, art.IconInfinite, Color.white);
             _canoesInfinite.preserveAspect = true;
             _canoesCount = UiBuilder.Label("Count", _canoes.transform, TextStyle.PillWood, "5/5", 19f, Palette.Cream, TextAlignmentOptions.Center);
-            _canoesTimer = UiBuilder.Label("Timer", _canoes.transform, TextStyle.PillWood, string.Empty, 13f, Palette.Cream, TextAlignmentOptions.Center);
+            _canoesTimer = UiBuilder.Label("Timer", _canoes.transform, TextStyle.PillWood, string.Empty, CanoesTimerSp, Palette.Cream, TextAlignmentOptions.Center);
 
             // Ajustes (07 §7.6: engranaje de madera, disco de 40 dp en un área de 48): abre su pantalla (tarea L3).
             _settings = UiBuilder.Relief("SettingsButton", top, art.DiscWood, () => _onSettings());
@@ -760,7 +763,6 @@ namespace AF.UI
             UiBuilder.Place(_seedsIcon.rectTransform, -8f, 1f, 38f, 38f);
             UiBuilder.Place(_seedsText.rectTransform, 30f, 0f, 74f, 40f);
             UiBuilder.Place((RectTransform)_canoes.transform, 140f, topY, 128f, TopRowHeight);
-            UiBuilder.Place(_canoesPlate.rectTransform, 0f, 4f, 128f, 40f);
             UiBuilder.Place(_canoesIcon.rectTransform, -8f, 11f, 48f, 28f);
             LayoutCanoesContent();
             UiBuilder.Place((RectTransform)_settings.Button.transform, w - 8f - MinTouchDp, topY, MinTouchDp, MinTouchDp);
@@ -797,12 +799,20 @@ namespace AF.UI
 
         private void LayoutCanoesContent()
         {
-            // «n/5» arriba y el cronómetro debajo mientras corre; con las canoas llenas, «5/5» centrado (ficha §4.5).
+            // «n/5» arriba y el cronómetro debajo mientras corre; con las canoas llenas, «5/5» centrado (ficha §4.5). Con la
+            // escala de texto (tarea L4; 02 §12: los contenedores crecen), las dos líneas crecen con ella y la placa de 40 dp
+            // crece lo que haga falta a lo alto, por igual arriba y abajo de su centro (al 130 %, 51 dp: asoma 5,5 dp por cada
+            // lado de la fila, dentro del hueco de 8 dp hasta la ventanita de casa).
             bool timer = _canoesTimer.gameObject.activeSelf;
+            float s = Mathf.Max(1f, _canoesTimer.fontSize / CanoesTimerSp);
+            float plateH = timer ? Mathf.Max(40f, Mathf.Ceil((37f * s) + 3f)) : 40f;
+            float plateTop = 4f - ((plateH - 40f) * 0.5f);
+            UiBuilder.Place(_canoesPlate.rectTransform, 0f, plateTop, 128f, plateH);
             if (timer)
             {
-                UiBuilder.Place(_canoesCount.rectTransform, 40f, 5f, 82f, 21f);
-                UiBuilder.Place(_canoesTimer.rectTransform, 40f, 25f, 82f, 17f);
+                float countTop = plateTop + 1f;
+                UiBuilder.Place(_canoesCount.rectTransform, 40f, countTop, 82f, 21f * s);
+                UiBuilder.Place(_canoesTimer.rectTransform, 40f, countTop + (20f * s), 82f, 17f * s);
                 UiBuilder.Place(_canoesInfinite.rectTransform, 40f + ((82f - 26f) * 0.5f), 9f, 26f, 14f);
             }
             else
