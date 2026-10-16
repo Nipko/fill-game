@@ -435,7 +435,12 @@ namespace AF.UI
                 _riverMapAvailable = value;
                 if (_app != null && Visible)
                 {
+                    bool shown = MapTabShown;
                     RefreshMapTab();
+                    if (MapTabShown != shown)
+                    {
+                        EmitLayout(); // AF_LAYOUT deja de publicar (o publica) map_tab al momento, no en el siguiente cambio
+                    }
                 }
             }
         }

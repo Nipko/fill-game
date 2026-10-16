@@ -2,8 +2,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 using AF.Economy;
 using AF.GameFlow;
+using AF.IAP;
 using AF.Levels;
 using AF.Localization;
 using AF.Platform;
@@ -13,6 +15,7 @@ using AF.UI;
 using NUnit.Framework;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.Rendering;
 using UnityEngine.TestTools;
 using UnityEngine.TestTools.Constraints;
@@ -173,7 +176,7 @@ namespace AF.Tests.PlayMode
             map.ViewBasinButton.onClick.Invoke();
             Assert.That(map.View, Is.EqualTo(MapView.Basin));
             Assert.That(map.Zoom, Is.EqualTo(1f));
-            Assert.That(map.Space.DpPerUnit, Is.EqualTo(MapSpace.BasinWidthDp).Within(0.01f), "1×: 328 dp, el ancho útil de 360 dp");
+            Assert.That(map.Space.DpPerUnit, Is.EqualTo(MapSpace.BasinWidthDp).Within(0.01f), "1×: 328 dp, el ancho útil (360 − 2 × 16)");
             Assert.That(map.ViewportSize.x, Is.EqualTo(MapSpace.BasinWidthDp).Within(0.5f));
             Assert.That(map.ContentSize.y, Is.LessThanOrEqualTo(map.ViewportSize.y + 0.5f), "a 360 × 780 la cuenca entera cabe");
             Assert.That(map.CanoeInView, Is.True);
@@ -221,6 +224,212 @@ namespace AF.Tests.PlayMode
             Assert.That(map.Visible, Is.False, "el Atrás de Android cierra");
             Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Lobby));
             Assert.That(boot.CloseRiverMap(), Is.False, "cerrado no hace nada");
+        }
+
+        [UnityTest]
+        public IEnumerator BrokenGeometry_LogsTheError_HidesTheTab_AndTheMapNeverOpens()
+        {
+            // Una geometría que no valida (08 §4.5): se avisa con un error, la pestaña desaparece y el juego sigue sin el Mapa.
+            using var layout = new AfLayoutLog();
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(58)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            LobbyScreen lobby = boot.Lobby!;
+            yield return null;
+            Assert.That(boot.RiverMapAvailable, Is.True);
+            Assert.That(boot.RiverMapData, Is.Null, "la geometría se lee al abrir el Mapa por primera vez");
+            Assert.That(lobby.MapTabShown, Is.True);
+
+            boot.ConfigureRiverMap(new TextAsset("{}"));
+            layout.Clear();
+            LogAssert.Expect(LogType.Error, new Regex("El juego sigue sin el Mapa del río"));
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.False, "no abre un Mapa que no valida");
+            Assert.That(boot.RiverMapAvailable, Is.False);
+            Assert.That(boot.RiverMapData, Is.Null);
+            Assert.That(boot.RiverMapView!.Visible, Is.False);
+            Assert.That(lobby.MapTabShown, Is.False, "la pestaña desaparece al momento");
+            string? lobbyLine = layout.LastOf("lobby", 58);
+            Assert.That(lobbyLine, Is.Not.Null, "AF_LAYOUT del inicio se reescribe al quitar la pestaña");
+            Assert.That(AfLayoutLog.ButtonIds(lobbyLine!), Does.Not.Contain("map_tab"), "sin un botón que ya no está");
+
+            // Ni vuelve, ni se reintenta la lectura (un segundo error haría fallar el test).
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.False);
+            lobby.MapTabButton.onClick.Invoke();
+            Assert.That(boot.RiverMapView.Visible, Is.False);
+            yield return null;
+            yield return null;
+            Assert.That(lobby.MapTabShown, Is.False, "el refresco del inicio no la saca de nuevo");
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+        }
+
+        [UnityTest]
+        public IEnumerator OpenRiverMap_Refuses_WithSettings_OrTheStoreSheet_InFront()
+        {
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(58)));
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            yield return null;
+
+            // Con Ajustes abierta (por encima del inicio), no se abre.
+            Assert.That(boot.PressSettings(), Is.True);
+            yield return null;
+            Assert.That(boot.SettingsView!.Visible, Is.True);
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.False, "con Ajustes delante");
+            Assert.That(map.Visible, Is.False);
+            Assert.That(boot.CloseSettings(), Is.True);
+            yield return null;
+
+            // Con la hoja «Compra simulada» delante, tampoco.
+            StoreSheet sheet = boot.StoreSheetView!;
+            boot.Store!.Purchase(new PurchaseRequest(StoreCatalog.NoAds), r => { });
+            Assert.That(sheet.Visible, Is.True);
+            yield return null;
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.False, "con la hoja de compra delante");
+            Assert.That(map.Visible, Is.False);
+            sheet.CancelButton.onClick.Invoke();
+            Assert.That(sheet.Visible, Is.False);
+            yield return null;
+
+            // Sin nada delante, sí.
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+            Assert.That(map.Visible, Is.True);
+            Assert.That(boot.CloseRiverMap(), Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator OpenRiverMap_Refuses_WithTheLockedProfileNoticeInFront()
+        {
+            // Perfil en solo lectura (08 §4.4) con max_level 58 (extra de desarrollo): el aviso «Actualiza Tintalú» va delante.
+            LaunchOptions.DevMaxLevelOverride = 58;
+            yield return PlayModeHelpers.LoadApp(new ReadOnlyProfileStore(ProfileLoadStatus.TooNew));
+            GameBootstrap boot = GameBootstrap.Current!;
+            yield return null;
+            Assert.That(boot.ProfileLocked, Is.True);
+            Assert.That(boot.Profile!.Progress.MaxLevel, Is.EqualTo(58));
+            ProfileLockedNotice notice = boot.LockedNotice!;
+            Assert.That(notice.Visible, Is.True);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.False, "con el aviso del perfil bloqueado delante");
+            Assert.That(boot.RiverMapView!.Visible, Is.False);
+
+            // Cerrado el aviso con su botón, el Mapa se abre (y se cierra sin guardar: el perfil es de solo lectura).
+            notice.PlayButton.onClick.Invoke();
+            Assert.That(notice.Visible, Is.False);
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+            yield return null;
+            Assert.That(boot.CloseRiverMap(), Is.True);
+            Assert.That(boot.RiverMapView.Visible, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator LeavingTheLobbyAnotherWay_ClosesTheMapFirst()
+        {
+            // El Mapa abierto desde la pestaña vive sobre el inicio: si la app sale del inicio por otro camino (aquí, el «Jugar»
+            // del inicio sin pasar por el Mapa), se cierra antes, con su map_close y su map_seen_level.
+            yield return OpenAt(58);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Assert.That(map.Source, Is.EqualTo(MapOpenSource.Lobby));
+            Assert.That(boot.PressPlay(), Is.True);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
+            Assert.That(map.Visible, Is.False, "el Mapa no se queda encima del nivel");
+            Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(1), "el nivel pinta a 60 fps");
+            Assert.That(boot.Profile!.Progress.MapSeenLevel, Is.EqualTo(57), "se anotó lo visto al cerrarse");
+            Assert.That(boot.CloseRiverMap(), Is.False, "ya estaba cerrado");
+            yield return PlayModeHelpers.WaitFor(() => boot.Flow!.LevelNumber == 58, "el nivel 58");
+            Assert.That(map.Visible, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator PointerDrag_OnTheViewport_MovesTheMapInDp_At60fps()
+        {
+            using var layout = new AfLayoutLog();
+            yield return OpenAt(58);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            GameObject viewport = map.ViewportRect.gameObject;
+            float pixelsPerDp = (GameScreen.SimulatedScreen.HasValue ? GameScreen.SimulatedScreen.Value.x : Screen.width) / map.CanvasWidth;
+            Assert.That(pixelsPerDp, Is.EqualTo(3f).Within(0.01f), "1080 px en 360 dp");
+
+            // En reposo, a 30 fps.
+            map.Tick(RiverMapScreen.ActiveLingerMs + 1f);
+            map.Tick(16f);
+            Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(RiverMapScreen.RestRenderInterval));
+            Vector2 start = map.ContentOffset;
+
+            // El arrastre del puntero (EventSystem → DragArea), con delta en píxeles de pantalla y y hacia arriba.
+            var data = new PointerEventData(EventSystem.current) { button = PointerEventData.InputButton.Left, position = new Vector2(540f, 1200f) };
+            Assert.That(ExecuteEvents.Execute(viewport, data, ExecuteEvents.beginDragHandler), Is.True, "la zona del mapa recibe el arrastre");
+            Assert.That(map.Dragging, Is.True);
+            Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(1), "a 60 fps desde que empieza");
+            data.delta = new Vector2(-150f, 90f);
+            Assert.That(ExecuteEvents.Execute(viewport, data, ExecuteEvents.dragHandler), Is.True);
+            Assert.That(map.ContentOffset.x, Is.EqualTo(start.x + (data.delta.x / pixelsPerDp)).Within(0.01f), "−150 px = −50 dp");
+            Assert.That(map.ContentOffset.y, Is.EqualTo(start.y - (data.delta.y / pixelsPerDp)).Within(0.01f), "+90 px hacia arriba = el mapa sube 30 dp");
+            map.Tick(RiverMapScreen.ActiveLingerMs + 1f);
+            map.Tick(16f);
+            Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(1), "mientras se arrastra, aunque pase el tiempo");
+
+            // Lejos, hasta sacar la canoa de la vista; al soltar, AF_LAYOUT publica «Volver a la canoa».
+            data.delta = new Vector2(-300000f, -300000f);
+            ExecuteEvents.Execute(viewport, data, ExecuteEvents.dragHandler);
+            Assert.That(map.BackToCanoeShown, Is.True);
+            layout.Clear();
+            Assert.That(ExecuteEvents.Execute(viewport, data, ExecuteEvents.endDragHandler), Is.True);
+            Assert.That(map.Dragging, Is.False);
+            map.Tick(16f);
+            Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(1), "un momento más a 60 tras soltar");
+            map.Tick(RiverMapScreen.ActiveLingerMs + 1f);
+            map.Tick(16f);
+            Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(RiverMapScreen.RestRenderInterval), "y vuelta a 30");
+            string? line = layout.LastOf("river_map", 58);
+            Assert.That(line, Is.Not.Null, "AF_LAYOUT al soltar con «Volver a la canoa» nuevo");
+            Assert.That(AfLayoutLog.ButtonIds(line!), Does.Contain("back_to_canoe"));
+
+            // «Volver a la canoa» la quita y AF_LAYOUT deja de publicarla.
+            layout.Clear();
+            map.BackToCanoeButton.onClick.Invoke();
+            Assert.That(map.BackToCanoeShown, Is.False);
+            line = layout.LastOf("river_map", 58);
+            Assert.That(line, Is.Not.Null, "AF_LAYOUT tras «Volver a la canoa»");
+            Assert.That(AfLayoutLog.ButtonIds(line!), Does.Not.Contain("back_to_canoe"));
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator ViewSwitch_IsOneWoodCapsule_WithTheChosenTabInCream_AndNoGreen()
+        {
+            yield return OpenAt(58);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Assert.That(map.ViewSwitch.color, Is.EqualTo(RiverMapScreen.SegmentSwitchColor));
+            AssertTabs(map, MapView.World);
+            map.ViewBasinButton.onClick.Invoke();
+            AssertTabs(map, MapView.Basin);
+            yield return null;
+
+            // Las dos pestañas, dentro de la cápsula; la fila del pie es una sola banda con «Faltan…».
+            Canvas.ForceUpdateCanvases();
+            Rect capsule = CanvasRect(map.ViewSwitch.rectTransform, map.Canvas);
+            Rect remaining = CanvasRect(map.StopRemainingRect, map.Canvas);
+            foreach (Button b in new[] { map.ViewWorldButton, map.ViewBasinButton })
+            {
+                Rect r = CanvasRect((RectTransform)b.transform, map.Canvas);
+                Assert.That(r.xMin, Is.GreaterThanOrEqualTo(capsule.xMin + 3.5f), b.name);
+                Assert.That(r.xMax, Is.LessThanOrEqualTo(capsule.xMax - 3.5f), b.name);
+                Assert.That(r.yMin, Is.EqualTo(remaining.yMin).Within(0.5f), b.name + ": mismo borde de arriba que «Faltan…»");
+                Assert.That(r.yMax, Is.EqualTo(remaining.yMax).Within(0.5f), b.name + ": mismo borde de abajo");
+            }
+
+            Assert.That(capsule.yMin, Is.EqualTo(remaining.yMin).Within(0.5f));
+            Assert.That(capsule.yMax, Is.EqualTo(remaining.yMax).Within(0.5f));
+        }
+
+        [Test]
+        public void Texts_HaveAtLeast4_5To1()
+        {
+            // 07 §1.2 y §7.8: texto con contraste ≥ 4,5:1 sobre su fondo.
+            foreach ((string name, Color text, Color background) in RiverMapScreen.ContrastPairs())
+            {
+                Assert.That(ColorMath.ContrastRatio(text, background), Is.GreaterThanOrEqualTo(4.5f), name);
+            }
         }
 
         [UnityTest]
@@ -425,6 +634,15 @@ namespace AF.Tests.PlayMode
                         }
                     }
 
+                    // El ←, el título y el ✓, dentro de la placa de la cabecera; el mapa empieza por debajo de ella.
+                    Rect header = CanvasRect(map.HeaderRect, map.Canvas);
+                    for (int i = 0; i < 3; i++)
+                    {
+                        Assert.That(named[i].Value.yMax, Is.LessThanOrEqualTo(header.yMax + 0.5f), where + ": " + named[i].Key + " dentro de la cabecera");
+                    }
+
+                    Assert.That(named[3].Value.yMin, Is.GreaterThanOrEqualTo(header.yMax), where + ": el mapa bajo la cabecera");
+
                     Rect canoeButton = CanvasRect((RectTransform)map.BackToCanoeButton.transform, map.Canvas);
                     Assert.That(named[3].Value.Contains(canoeButton.min) && named[3].Value.Contains(canoeButton.max - new Vector2(0.5f, 0.5f)), Is.True, where + ": «Volver a la canoa» dentro del mapa");
                     Assert.That(canoeButton.height, Is.GreaterThanOrEqualTo(RiverMapScreen.MinTouchDp - 0.5f), where);
@@ -475,6 +693,22 @@ namespace AF.Tests.PlayMode
             boot.Lobby.MapTabButton.onClick.Invoke();
             Assert.That(boot.RiverMapView!.Visible, Is.True, "el Mapa se abre desde la pestaña");
             yield return null;
+        }
+
+        // La pestaña elegida, con su placa crema y el texto en madera oscura; la otra, sin placa y en crema sobre la cápsula. Ninguna
+        // en verde: el verde queda para «Jugar».
+        private static void AssertTabs(RiverMapScreen map, MapView chosen)
+        {
+            foreach (MapView view in new[] { MapView.World, MapView.Basin })
+            {
+                bool selected = view == chosen;
+                Image plate = map.ViewPlate(view);
+                Assert.That(plate.enabled, Is.EqualTo(selected), view + ": placa");
+                Assert.That(plate.color, Is.EqualTo(RiverMapScreen.SegmentSelectedPlate), view + ": color de la placa");
+                Assert.That(map.ViewLabel(view).color, Is.EqualTo(selected ? RiverMapScreen.SegmentSelectedText : RiverMapScreen.SegmentText), view + ": texto");
+                Assert.That(plate.color, Is.Not.EqualTo(Palette.FamilyLeaf.Deep), view + ": sin verde");
+                Assert.That(plate.color, Is.Not.EqualTo(Palette.FamilyLeaf.Base), view + ": sin verde");
+            }
         }
 
         private static Profile ProfileAt(int nextLevel)

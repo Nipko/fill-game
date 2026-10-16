@@ -791,8 +791,10 @@ namespace AF.UI
         /// <summary>
         /// Atrás de Android (Escape en el Input System) fuera del nivel: el único camino de Atrás para las hojas del inicio (FXT).
         /// Con Ajustes abierta, la cierra (<see cref="CloseSettings"/>); en «El río sigue creciendo» o Sin canoas, vuelve al inicio
-        /// como su botón Volver (<see cref="PressBack"/>). No hace nada en el nivel (02 §3; 04 §6.6: el embudo no se cierra con
-        /// Atrás), ni con la hoja «Compra simulada», un anuncio o el aviso del perfil bloqueado delante, ni en el inicio sin hoja.
+        /// como su botón Volver (<see cref="PressBack"/>). Con el Mapa del río abierto, lo cierra en cualquier pantalla, también
+        /// encima del nivel (<see cref="CloseRiverMap"/>; M3.3). Fuera de eso, no hace nada en el nivel (02 §3; 04 §6.6: el embudo
+        /// no se cierra con Atrás), ni con la hoja «Compra simulada», un anuncio o el aviso del perfil bloqueado delante (tampoco
+        /// con el Mapa abierto debajo), ni en el inicio sin hoja.
         /// </summary>
         public bool PressAndroidBack()
         {

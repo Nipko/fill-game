@@ -19,7 +19,7 @@ namespace AF.UI
         /// <summary>Mundo (por defecto): la región del mundo de «Jugar», entre <see cref="RiverMapScreen.WorldZoomMin"/>× y <see cref="RiverMapScreen.WorldZoomMax"/>×.</summary>
         World = 0,
 
-        /// <summary>Cuenca: toda la cuenca a 1× (<see cref="MapSpace.BasinWidthDp"/>: el ancho útil de 360 dp, 13,1 dp por grado).</summary>
+        /// <summary>Cuenca: toda la cuenca a 1× (<see cref="MapSpace.BasinWidthDp"/>: el ancho útil de 328 dp (360 − 2 × 16), 13,1 dp por grado).</summary>
         Basin = 1,
     }
 
@@ -108,8 +108,11 @@ namespace AF.UI
         /// <summary>Tras soltar el arrastre, el Mapa sigue a 60 fps estos milisegundos [P] antes de volver al reposo.</summary>
         public const int ActiveLingerMs = 300;
 
-        /// <summary>Alto de la cabecera bajo la zona segura (dp).</summary>
-        public const float HeaderDp = 56f;
+        /// <summary>
+        /// Alto de la cabecera bajo la zona segura (dp): dos líneas holgadas de la pregunta a 17 sp (unos 2 × 26,5 dp con la
+        /// interlínea de la familia) con 4 dp de margen arriba y abajo.
+        /// </summary>
+        public const float HeaderDp = 64f;
 
         /// <summary>Lado mínimo de un control (07 §1.2 y §7.8).</summary>
         public const float MinTouchDp = 48f;
@@ -123,14 +126,27 @@ namespace AF.UI
         /// <summary>Fondo de la pantalla detrás del marco (<c>fondo_a</c> de la muestra) [P].</summary>
         public static readonly Color BackgroundColor = Palette.Hex(0x0E2B23);
 
+        /// <summary>Cápsula del conmutador Mundo / Cuenca: la madera del marco del mapa (<see cref="Palette.Frame"/>).</summary>
+        public static readonly Color SegmentSwitchColor = Palette.Frame;
+
+        /// <summary>Placa de la pestaña elegida (crema): el verde queda para «Jugar».</summary>
+        public static readonly Color SegmentSelectedPlate = Palette.Cream;
+
+        /// <summary>Texto de la pestaña elegida (madera oscura sobre crema).</summary>
+        public static readonly Color SegmentSelectedText = Palette.WoodDark;
+
+        /// <summary>Texto de la pestaña no elegida (crema sobre la cápsula).</summary>
+        public static readonly Color SegmentText = Palette.Cream;
+
         private const float PlayDp = 72f;
         private const float PlayMaxWidth = 296f;
         private const float RowDp = 48f;
         private const float GapDp = 8f;
         private const float FrameInsetDp = 8f;
         private const float FramePadDp = 8f;
-        private const float SegmentDp = 84f;
-        private const float SegmentGapDp = 4f;
+        private const float SegmentDp = 82f;
+        private const float SwitchPadDp = 4f;
+        private const float RowPadDp = 6f;
         private const float CheckDp = 24f;
         private const float TitleSp = 17f;
         private const float TitleMinSp = 13f;
@@ -163,6 +179,7 @@ namespace AF.UI
         private readonly ReliefParts _backToCanoe;
         private readonly TextMeshProUGUI _backToCanoeLabel;
 
+        private readonly Image _viewSwitch;
         private readonly Segment _viewWorld;
         private readonly Segment _viewBasin;
         private readonly RectTransform _remaining;
@@ -267,7 +284,7 @@ namespace AF.UI
             backVisual.anchorMin = new Vector2(0.5f, 1f);
             backVisual.anchorMax = new Vector2(0.5f, 1f);
             backVisual.sizeDelta = new Vector2(art.DiscWood.Painted ? art.DiscWood.HeightDp : 40f, art.DiscWood.HeightDp);
-            backVisual.anchoredPosition = new Vector2(0f, -4f);
+            backVisual.anchoredPosition = new Vector2(0f, -Mathf.Max(0f, (MinTouchDp - art.DiscWood.HeightDp) * 0.5f)); // centrado en sus 48 dp
             GlyphGraphic arrow = GlyphGraphic.Create("Arrow", _back.Face, GlyphKind.BackArrow);
             UiBuilder.Place(arrow.rectTransform, 9f, 9f, 22f, 22f);
             _back.Relief.Bind(_back.Face, _back.Base, _back.FaceImage, art.DiscWood, null, null, null);
@@ -277,7 +294,9 @@ namespace AF.UI
             _check = GlyphGraphic.Create("AnsweredCheck", _headerPlate.transform, GlyphKind.Check);
             _check.gameObject.SetActive(false);
 
-            // ---- Pie: Mundo / Cuenca, «Faltan N», el hueco del Muestrario y «Jugar · Nivel {n}». ----
+            // ---- Pie: Mundo / Cuenca (una sola cápsula de madera: un interruptor de dos posiciones), «Faltan N», el hueco del
+            // Muestrario y «Jugar · Nivel {n}» (el único verde del pie). ----
+            _viewSwitch = UiBuilder.Sliced("ViewSwitch", _root, art.RoundedRect, Palette.Frame);
             _viewWorld = new Segment(_root, art, "ViewWorld", UiText.MapViewWorld, () => SetView(MapView.World));
             _viewBasin = new Segment(_root, art, "ViewBasin", UiText.MapViewBasin, () => SetView(MapView.Basin));
             _remaining = UiBuilder.Rect("StopRemaining", _root);
@@ -455,6 +474,21 @@ namespace AF.UI
         /// <summary>Texto de la pestaña Cuenca.</summary>
         public string ViewBasinLabel => _viewBasin.Label.text;
 
+        /// <summary>Cápsula del conmutador Mundo / Cuenca.</summary>
+        internal Image ViewSwitch => _viewSwitch;
+
+        /// <summary>Placa de la pestaña de <paramref name="view"/> (activa solo en la elegida).</summary>
+        internal Image ViewPlate(MapView view)
+        {
+            return view == MapView.World ? _viewWorld.Plate : _viewBasin.Plate;
+        }
+
+        /// <summary>Texto de la pestaña de <paramref name="view"/>.</summary>
+        internal TextMeshProUGUI ViewLabel(MapView view)
+        {
+            return view == MapView.World ? _viewWorld.Label : _viewBasin.Label;
+        }
+
         /// <summary>«Volver a la canoa».</summary>
         public Button BackToCanoeButton => _backToCanoe.Button;
 
@@ -525,16 +559,16 @@ namespace AF.UI
 
         /// <summary>
         /// Pares texto / fondo de la pantalla, para la comprobación de contraste ≥ 4,5:1 (07 §1.2 y §7.8): la cabecera y «Faltan…»
-        /// sobre madera oscura, las pestañas del conmutador (la elegida sobre hoja y la otra sobre madera), «Volver a la canoa»
-        /// sobre madera y «Jugar» sobre hoja.
+        /// sobre madera oscura, las pestañas del conmutador (la elegida, madera oscura sobre crema; la otra, crema sobre la cápsula de
+        /// madera), «Volver a la canoa» sobre madera y «Jugar» sobre hoja.
         /// </summary>
         public static (string Name, Color Text, Color Background)[] ContrastPairs()
         {
             return new[]
             {
                 ("cabecera: pregunta del mundo", (Color)Palette.Cream, (Color)Palette.WoodDark),
-                ("pestaña elegida", (Color)Palette.Cream, Palette.FamilyLeaf.Deep),
-                ("pestaña", (Color)Palette.Cream, (Color)Palette.WoodDark),
+                ("pestaña elegida", SegmentSelectedText, SegmentSelectedPlate),
+                ("pestaña", SegmentText, SegmentSwitchColor),
                 ("faltan N", (Color)Palette.Cream, (Color)Palette.WoodDark),
                 ("volver a la canoa", (Color)Palette.Cream, Palette.FamilyWood.Base),
                 ("volver a la canoa (fondo de la cara)", (Color)Palette.Cream, Palette.FamilyWood.Deep),
@@ -646,6 +680,7 @@ namespace AF.UI
             Vector2 local = _space.ToLocal(_canoeMap);
             SetOffset(new Vector2((_viewW * 0.5f) - local.x, (_viewH * 0.5f) + local.y));
             _activeMs = ActiveLingerMs;
+            EmitLayoutIfCanoeButtonChanged(); // «Volver a la canoa» se fue: AF_LAYOUT deja de publicarlo
         }
 
         /// <summary>
@@ -981,41 +1016,46 @@ namespace AF.UI
             float w = _canvasW;
             float h = _canvasH;
 
-            // Cabecera: la placa cubre también la barra de estado.
+            // Cabecera: la placa cubre también la barra de estado y acaba en la zona segura + HeaderDp. Sus hijos van en coordenadas
+            // de la placa, que empieza 8 dp por encima y a la izquierda del lienzo, así que la banda de la cabecera empieza en
+            // bandTop. El ← y el ✓ van centrados en la banda y el título deja 4 dp arriba y abajo: todo queda dentro de la placa.
             UiBuilder.Place(_headerPlate.rectTransform, -8f, -8f, w + 16f, _safeTop + HeaderDp + 8f);
-            float headerY = _safeTop + 8f; // en la placa, que empieza 8 dp por encima del borde y acaba en la zona segura + HeaderDp
-            UiBuilder.Place((RectTransform)_back.Button.transform, 16f, headerY + 4f, MinTouchDp, MinTouchDp);
+            float bandTop = _safeTop + 8f;
+            UiBuilder.Place((RectTransform)_back.Button.transform, 16f, bandTop + ((HeaderDp - MinTouchDp) * 0.5f), MinTouchDp, MinTouchDp);
             float checkSpace = _check.gameObject.activeSelf ? CheckDp + 8f : 0f;
             float titleX = 16f + MinTouchDp + 8f;
             float titleW = Mathf.Max(48f, w + 16f - titleX - 16f - checkSpace);
-            UiBuilder.Place(_title.rectTransform, titleX, headerY, titleW, HeaderDp);
-            UiBuilder.Place(_check.rectTransform, titleX + titleW + 8f, headerY + ((HeaderDp - CheckDp) * 0.5f), CheckDp, CheckDp);
+            UiBuilder.Place(_title.rectTransform, titleX, bandTop + 4f, titleW, HeaderDp - 8f);
+            UiBuilder.Place(_check.rectTransform, titleX + titleW + 8f, bandTop + ((HeaderDp - CheckDp) * 0.5f), CheckDp, CheckDp);
 
             // Pie: «Jugar» abajo y, encima, el conmutador y «Faltan…».
             float playW = Mathf.Min(PlayMaxWidth, w - 64f);
             float playTop = h - _safeBottom - GapDp - PlayDp;
             UiBuilder.Place((RectTransform)_play.Button.transform, (w - playW) * 0.5f, playTop, playW, PlayDp);
-            // «Faltan…» va en dos líneas si hace falta y, si ni así cabe a su mínimo (texto grande), su caja crece (02 §12).
-            float remainingX = 16f + (2f * SegmentDp) + SegmentGapDp + GapDp;
+            // La fila es una sola banda de alto rowH: la cápsula del conmutador (las pestañas a todo su alto, con 4 dp de relleno) y
+            // «Faltan…», que va en dos líneas si hace falta y, si ni así cabe a su mínimo (texto grande), hace crecer la fila
+            // (02 §12), con 6 dp de aire entre el texto y el filete de su placa.
+            float switchW = (2f * SegmentDp) + (2f * SwitchPadDp);
+            float remainingX = 16f + switchW + GapDp;
             float remainingW = Mathf.Max(48f, w - 16f - remainingX);
-            float labelW = remainingW - 16f;
+            float labelW = remainingW - 20f;
             float rowH = RowDp;
             if (!string.IsNullOrEmpty(_remainingLabel.text))
             {
-                rowH = Mathf.Max(RowDp, Mathf.Ceil(UiBuilder.MinTextHeight(_remainingLabel, labelW)) + 6f);
+                rowH = Mathf.Max(RowDp, Mathf.Ceil(UiBuilder.MinTextHeight(_remainingLabel, labelW)) + (2f * RowPadDp));
             }
 
             float rowTop = playTop - GapDp - rowH;
-            float segmentTop = rowTop + ((rowH - RowDp) * 0.5f);
-            _viewWorld.Place(16f, segmentTop, SegmentDp, RowDp);
-            _viewBasin.Place(16f + SegmentDp + SegmentGapDp, segmentTop, SegmentDp, RowDp);
+            UiBuilder.Place(_viewSwitch.rectTransform, 16f, rowTop, switchW, rowH);
+            _viewWorld.Place(16f + SwitchPadDp, rowTop, SegmentDp, rowH);
+            _viewBasin.Place(16f + SwitchPadDp + SegmentDp, rowTop, SegmentDp, rowH);
             UiBuilder.Place(_remaining, remainingX, rowTop, remainingW, rowH);
-            UiBuilder.Place(_remainingLabel.rectTransform, 8f, 2f, labelW, rowH - 4f);
+            UiBuilder.Place(_remainingLabel.rectTransform, 10f, RowPadDp, labelW, rowH - (2f * RowPadDp));
             UiBuilder.Place(_samplesSlot, remainingX, rowTop, remainingW, rowH);
             SamplesLayout(_samplesSlot);
 
             // Zona del mapa: entre la cabecera y el pie, en su marco.
-            float frameTop = _safeTop + HeaderDp + 6f;
+            float frameTop = _safeTop + HeaderDp + 8f;
             float frameBottom = rowTop - 6f;
             float frameW = w - (2f * FrameInsetDp);
             float frameH = Mathf.Max(2f * FramePadDp + 48f, frameBottom - frameTop);
@@ -1032,6 +1072,7 @@ namespace AF.UI
 
         private void EmitLayout()
         {
+            _layoutCanoeButton = _backToCanoe.Button.gameObject.activeSelf;
             if (!DevProbe.Enabled || !Visible)
             {
                 return;
@@ -1081,13 +1122,12 @@ namespace AF.UI
             EmitLayoutIfCanoeButtonChanged();
         }
 
-        // AF_LAYOUT solo cambia al soltar si «Volver a la canoa» apareció o desapareció (nunca por fotograma).
+        // AF_LAYOUT solo se reescribe (al soltar el arrastre o tras «Volver a la canoa») si «Volver a la canoa» apareció o
+        // desapareció desde el último que se escribió (nunca por fotograma).
         private void EmitLayoutIfCanoeButtonChanged()
         {
-            bool shown = _backToCanoe.Button.gameObject.activeSelf;
-            if (shown != _layoutCanoeButton)
+            if (_backToCanoe.Button.gameObject.activeSelf != _layoutCanoeButton)
             {
-                _layoutCanoeButton = shown;
                 EmitLayout();
             }
         }
@@ -1180,7 +1220,8 @@ namespace AF.UI
 
         // ============================================================================================ piezas
 
-        // Pestaña del conmutador Mundo / Cuenca: placa redondeada (hoja la elegida, madera la otra) con su texto; área de 48 dp.
+        // Pestaña del conmutador Mundo / Cuenca, dentro de su cápsula de madera (Palette.Frame): la elegida con su placa crema y el
+        // texto en madera oscura; la otra, sin placa, con el texto crema sobre la cápsula. El verde queda para «Jugar». Área ≥ 48 dp.
         private sealed class Segment
         {
             private readonly Image _plate;
@@ -1188,7 +1229,7 @@ namespace AF.UI
             public Segment(RectTransform parent, ProceduralArt art, string name, string text, Action onClick)
             {
                 Button = UiBuilder.BareButton(name, parent, onClick);
-                _plate = UiBuilder.Sliced("Plate", Button.transform, art.RoundedRect, Palette.WoodDark);
+                _plate = UiBuilder.Sliced("Plate", Button.transform, art.RoundedRect, Palette.Cream);
                 UiBuilder.Stretch(_plate.rectTransform);
                 _plate.rectTransform.offsetMin = new Vector2(0f, 4f);
                 _plate.rectTransform.offsetMax = new Vector2(0f, -4f);
@@ -1205,13 +1246,20 @@ namespace AF.UI
 
             public bool Selected { get; private set; }
 
+            public Image Plate => _plate;
+
             public void SetSelected(bool selected)
             {
                 Selected = selected;
-                Color color = selected ? Palette.FamilyLeaf.Deep : (Color)Palette.WoodDark;
-                if (_plate.color != color)
+                if (_plate.enabled != selected)
                 {
-                    _plate.color = color;
+                    _plate.enabled = selected;
+                }
+
+                Color text = selected ? SegmentSelectedText : SegmentText;
+                if (Label.color != text)
+                {
+                    Label.color = text;
                 }
             }
 
