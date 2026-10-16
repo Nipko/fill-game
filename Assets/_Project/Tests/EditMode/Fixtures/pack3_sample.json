@@ -1,0 +1,2308 @@
+{
+  "pack_schema": 3,
+  "schema_file": "schemas/af-level-1.schema.json",
+  "pack_id": "mundo_07_v1",
+  "kind": "campaign",
+  "generator": {
+    "tool": "level-generator",
+    "version": "1.0.0"
+  },
+  "world": 7,
+  "world_id": "w07_madre_de_dios",
+  "lap": 1,
+  "water_base": "white",
+  "pool": [
+    "guanabana",
+    "cupuacu",
+    "tapereba",
+    "aguaje",
+    "urucum",
+    "camu_camu",
+    "bacaba",
+    "acai",
+    "jenipapo",
+    "agua_tapajos",
+    "lulo",
+    "araza",
+    "cacao",
+    "agua_negro"
+  ],
+  "k_min": 8,
+  "k_max": 9,
+  "max_risk_pairs": 2,
+  "cap_default": 4,
+  "empties_default": 1,
+  "cycle20": true,
+  "levels": [
+    {
+      "schema": "af-level/1",
+      "id": "m06_v1_n0243",
+      "level": 243,
+      "world": 6,
+      "lap": 1,
+      "seed": "amazonfill:v1:m06:v1:n0243",
+      "gen": {
+        "tool": "level-generator",
+        "version": "1.0.0",
+        "source": "walk",
+        "depth": 22,
+        "candidates": 53
+      },
+      "water_base": "white",
+      "palette": [
+        "guanabana",
+        "cupuacu",
+        "tapereba",
+        "aguaje",
+        "camu_camu",
+        "bacaba",
+        "acai",
+        "agua_tapajos",
+        "lulo"
+      ],
+      "units_per_color": 4,
+      "caps": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "cuias": [
+        [],
+        [
+          11,
+          11,
+          11,
+          1
+        ],
+        [
+          1,
+          6,
+          1,
+          3
+        ],
+        [
+          7,
+          7,
+          3,
+          4
+        ],
+        [
+          3,
+          7,
+          7,
+          10
+        ],
+        [
+          10,
+          10,
+          2,
+          4
+        ],
+        [
+          8,
+          3,
+          2,
+          4
+        ],
+        [],
+        [
+          6,
+          6,
+          6,
+          1
+        ],
+        [
+          8,
+          8,
+          10,
+          2
+        ],
+        [
+          11,
+          8,
+          2,
+          4
+        ]
+      ],
+      "attrs": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "type": "liana",
+          "n": 1
+        },
+        null
+      ],
+      "murky": false,
+      "hidden": [],
+      "difficulty": {
+        "label": "normal",
+        "bot_fail": 0.175,
+        "par": 22,
+        "branching": 6.5,
+        "traps": 0.0,
+        "complexity": 56,
+        "D": -0.21,
+        "band": "comfort"
+      },
+      "risk_pairs": 2,
+      "intro_mechanic": "liana_n",
+      "skippable": false,
+      "hint_supported": true,
+      "relief": [
+        {
+          "type": "minus_color",
+          "removed": 7,
+          "caps": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "cuias": [
+            [],
+            [
+              11,
+              11,
+              11,
+              1
+            ],
+            [
+              1,
+              6,
+              1,
+              3
+            ],
+            [
+              3,
+              4
+            ],
+            [
+              3,
+              10
+            ],
+            [
+              10,
+              10,
+              2,
+              4
+            ],
+            [
+              8,
+              3,
+              2,
+              4
+            ],
+            [],
+            [
+              6,
+              6,
+              6,
+              1
+            ],
+            [
+              8,
+              8,
+              10,
+              2
+            ],
+            [
+              11,
+              8,
+              2,
+              4
+            ]
+          ],
+          "attrs": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            {
+              "type": "liana",
+              "n": 1
+            },
+            null
+          ],
+          "par": 21,
+          "bot_fail": 0.0
+        },
+        {
+          "type": "plus_empty",
+          "caps": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "cuias": [
+            [],
+            [
+              11,
+              11,
+              11,
+              1
+            ],
+            [
+              1,
+              6,
+              1,
+              3
+            ],
+            [
+              7,
+              7,
+              3,
+              4
+            ],
+            [
+              3,
+              7,
+              7,
+              10
+            ],
+            [
+              10,
+              10,
+              2,
+              4
+            ],
+            [
+              8,
+              3,
+              2,
+              4
+            ],
+            [],
+            [
+              6,
+              6,
+              6,
+              1
+            ],
+            [
+              8,
+              8,
+              10,
+              2
+            ],
+            [
+              11,
+              8,
+              2,
+              4
+            ],
+            []
+          ],
+          "attrs": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            {
+              "type": "liana",
+              "n": 1
+            },
+            null,
+            null
+          ],
+          "par": null,
+          "bot_fail": 0.075
+        }
+      ]
+    },
+    {
+      "schema": "af-level/1",
+      "id": "m06_v1_n0263",
+      "level": 263,
+      "world": 6,
+      "lap": 1,
+      "seed": "amazonfill:v1:m06:v1:n0263",
+      "gen": {
+        "tool": "level-generator",
+        "version": "1.0.0",
+        "source": "walk",
+        "depth": 20,
+        "candidates": 32
+      },
+      "water_base": "white",
+      "palette": [
+        "cupuacu",
+        "tapereba",
+        "urucum",
+        "camu_camu",
+        "bacaba",
+        "acai",
+        "jenipapo",
+        "lulo",
+        "agua_negro"
+      ],
+      "units_per_color": 4,
+      "caps": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "cuias": [
+        [
+          3,
+          5,
+          7,
+          5
+        ],
+        [
+          2,
+          2,
+          3,
+          5
+        ],
+        [
+          8,
+          8,
+          8,
+          6
+        ],
+        [
+          6,
+          6,
+          11,
+          3
+        ],
+        [
+          9,
+          9,
+          7,
+          14
+        ],
+        [
+          2,
+          2,
+          7,
+          5
+        ],
+        [
+          6,
+          9,
+          3,
+          7
+        ],
+        [],
+        [],
+        [
+          11,
+          11,
+          11,
+          8
+        ],
+        [
+          14,
+          14,
+          14,
+          9
+        ]
+      ],
+      "attrs": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "type": "hoja_atada",
+          "key": 11
+        },
+        null
+      ],
+      "murky": false,
+      "hidden": [],
+      "difficulty": {
+        "label": "normal",
+        "bot_fail": 0.075,
+        "par": 19,
+        "branching": 7.74,
+        "traps": 0.0,
+        "complexity": 52,
+        "D": -0.37,
+        "band": "comfort"
+      },
+      "risk_pairs": 2,
+      "intro_mechanic": "hoja_atada",
+      "skippable": false,
+      "hint_supported": true,
+      "relief": [
+        {
+          "type": "minus_color",
+          "removed": 14,
+          "caps": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "cuias": [
+            [
+              3,
+              5,
+              7,
+              5
+            ],
+            [
+              2,
+              2,
+              3,
+              5
+            ],
+            [
+              8,
+              8,
+              8,
+              6
+            ],
+            [
+              6,
+              6,
+              11,
+              3
+            ],
+            [
+              9,
+              9,
+              7
+            ],
+            [
+              2,
+              2,
+              7,
+              5
+            ],
+            [
+              6,
+              9,
+              3,
+              7
+            ],
+            [],
+            [],
+            [
+              11,
+              11,
+              11,
+              8
+            ],
+            [
+              9
+            ]
+          ],
+          "attrs": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            {
+              "type": "hoja_atada",
+              "key": 11
+            },
+            null
+          ],
+          "par": 18,
+          "bot_fail": 0.0
+        },
+        {
+          "type": "plus_empty",
+          "caps": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "cuias": [
+            [
+              3,
+              5,
+              7,
+              5
+            ],
+            [
+              2,
+              2,
+              3,
+              5
+            ],
+            [
+              8,
+              8,
+              8,
+              6
+            ],
+            [
+              6,
+              6,
+              11,
+              3
+            ],
+            [
+              9,
+              9,
+              7,
+              14
+            ],
+            [
+              2,
+              2,
+              7,
+              5
+            ],
+            [
+              6,
+              9,
+              3,
+              7
+            ],
+            [],
+            [],
+            [
+              11,
+              11,
+              11,
+              8
+            ],
+            [
+              14,
+              14,
+              14,
+              9
+            ],
+            []
+          ],
+          "attrs": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            {
+              "type": "hoja_atada",
+              "key": 11
+            },
+            null,
+            null
+          ],
+          "par": null,
+          "bot_fail": 0.0
+        }
+      ]
+    },
+    {
+      "schema": "af-level/1",
+      "id": "m06_v1_n0283",
+      "level": 283,
+      "world": 6,
+      "lap": 1,
+      "seed": "amazonfill:v1:m06:v1:n0283",
+      "gen": {
+        "tool": "level-generator",
+        "version": "1.0.0",
+        "source": "walk",
+        "depth": 18,
+        "candidates": 7
+      },
+      "water_base": "white",
+      "palette": [
+        "guanabana",
+        "tapereba",
+        "aguaje",
+        "camu_camu",
+        "bacaba",
+        "acai",
+        "jenipapo",
+        "agua_tapajos",
+        "agua_negro"
+      ],
+      "units_per_color": 4,
+      "caps": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "cuias": [
+        [
+          3,
+          3,
+          3,
+          14
+        ],
+        [
+          4
+        ],
+        [
+          9,
+          9,
+          9,
+          7
+        ],
+        [
+          6,
+          6,
+          7,
+          6
+        ],
+        [
+          1,
+          1,
+          7,
+          4
+        ],
+        [
+          7,
+          4,
+          6
+        ],
+        [
+          8,
+          8,
+          1,
+          9
+        ],
+        [
+          14,
+          8,
+          10,
+          8
+        ],
+        [],
+        [],
+        [
+          10,
+          10,
+          10,
+          14
+        ],
+        [
+          3,
+          14,
+          1,
+          4
+        ]
+      ],
+      "attrs": [
+        null,
+        {
+          "type": "brote",
+          "n": 2
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "murky": false,
+      "hidden": [],
+      "difficulty": {
+        "label": "normal",
+        "bot_fail": 0.0,
+        "par": 18,
+        "branching": 7.39,
+        "traps": 0.0,
+        "complexity": 54,
+        "D": -0.57,
+        "band": "comfort"
+      },
+      "risk_pairs": 2,
+      "intro_mechanic": "brote_n2",
+      "skippable": false,
+      "hint_supported": true,
+      "relief": [
+        {
+          "type": "minus_color",
+          "removed": 3,
+          "caps": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "cuias": [
+            [
+              14
+            ],
+            [
+              4
+            ],
+            [
+              9,
+              9,
+              9,
+              7
+            ],
+            [
+              6,
+              6,
+              7,
+              6
+            ],
+            [
+              1,
+              1,
+              7,
+              4
+            ],
+            [
+              7,
+              4,
+              6
+            ],
+            [
+              8,
+              8,
+              1,
+              9
+            ],
+            [
+              14,
+              8,
+              10,
+              8
+            ],
+            [],
+            [],
+            [
+              10,
+              10,
+              10,
+              14
+            ],
+            [
+              14,
+              1,
+              4
+            ]
+          ],
+          "attrs": [
+            null,
+            {
+              "type": "brote",
+              "n": 2
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "par": 17,
+          "bot_fail": 0.0
+        },
+        {
+          "type": "plus_empty",
+          "caps": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "cuias": [
+            [
+              3,
+              3,
+              3,
+              14
+            ],
+            [
+              4
+            ],
+            [
+              9,
+              9,
+              9,
+              7
+            ],
+            [
+              6,
+              6,
+              7,
+              6
+            ],
+            [
+              1,
+              1,
+              7,
+              4
+            ],
+            [
+              7,
+              4,
+              6
+            ],
+            [
+              8,
+              8,
+              1,
+              9
+            ],
+            [
+              14,
+              8,
+              10,
+              8
+            ],
+            [],
+            [],
+            [
+              10,
+              10,
+              10,
+              14
+            ],
+            [
+              3,
+              14,
+              1,
+              4
+            ],
+            []
+          ],
+          "attrs": [
+            null,
+            {
+              "type": "brote",
+              "n": 2
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "par": null,
+          "bot_fail": 0.0
+        }
+      ]
+    },
+    {
+      "schema": "af-level/1",
+      "id": "m07_v1_n0303",
+      "level": 303,
+      "world": 7,
+      "lap": 1,
+      "seed": "amazonfill:v1:m07:v1:n0303",
+      "gen": {
+        "tool": "level-generator",
+        "version": "1.0.0",
+        "source": "walk",
+        "depth": 23,
+        "candidates": 3
+      },
+      "water_base": "white",
+      "palette": [
+        "cupuacu",
+        "tapereba",
+        "aguaje",
+        "urucum",
+        "bacaba",
+        "acai",
+        "agua_tapajos",
+        "araza",
+        "cacao"
+      ],
+      "units_per_color": 4,
+      "caps": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "cuias": [
+        [
+          8,
+          8,
+          10,
+          4
+        ],
+        [
+          3,
+          5,
+          3,
+          7
+        ],
+        [
+          12,
+          4,
+          4,
+          4
+        ],
+        [
+          7,
+          12,
+          12,
+          2
+        ],
+        [],
+        [
+          13,
+          13,
+          13,
+          10
+        ],
+        [
+          5,
+          5,
+          2,
+          7
+        ],
+        [
+          8,
+          8,
+          5,
+          10
+        ],
+        [
+          2,
+          2,
+          10,
+          13
+        ],
+        [],
+        [
+          3,
+          3,
+          7,
+          12
+        ]
+      ],
+      "attrs": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "type": "flor",
+          "key": 13,
+          "key2": 5
+        }
+      ],
+      "murky": false,
+      "hidden": [],
+      "difficulty": {
+        "label": "normal",
+        "bot_fail": 0.1,
+        "par": 20,
+        "branching": 3.75,
+        "traps": 0.01,
+        "complexity": 52,
+        "D": -0.75,
+        "band": "comfort"
+      },
+      "risk_pairs": 2,
+      "intro_mechanic": "flor",
+      "skippable": false,
+      "hint_supported": true,
+      "relief": [
+        {
+          "type": "minus_color",
+          "removed": 4,
+          "caps": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "cuias": [
+            [
+              8,
+              8,
+              10
+            ],
+            [
+              3,
+              5,
+              3,
+              7
+            ],
+            [
+              12
+            ],
+            [
+              7,
+              12,
+              12,
+              2
+            ],
+            [],
+            [
+              13,
+              13,
+              13,
+              10
+            ],
+            [
+              5,
+              5,
+              2,
+              7
+            ],
+            [
+              8,
+              8,
+              5,
+              10
+            ],
+            [
+              2,
+              2,
+              10,
+              13
+            ],
+            [],
+            [
+              3,
+              3,
+              7,
+              12
+            ]
+          ],
+          "attrs": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            {
+              "type": "flor",
+              "key": 13,
+              "key2": 5
+            }
+          ],
+          "par": 18,
+          "bot_fail": 0.0
+        },
+        {
+          "type": "plus_empty",
+          "caps": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "cuias": [
+            [
+              8,
+              8,
+              10,
+              4
+            ],
+            [
+              3,
+              5,
+              3,
+              7
+            ],
+            [
+              12,
+              4,
+              4,
+              4
+            ],
+            [
+              7,
+              12,
+              12,
+              2
+            ],
+            [],
+            [
+              13,
+              13,
+              13,
+              10
+            ],
+            [
+              5,
+              5,
+              2,
+              7
+            ],
+            [
+              8,
+              8,
+              5,
+              10
+            ],
+            [
+              2,
+              2,
+              10,
+              13
+            ],
+            [],
+            [
+              3,
+              3,
+              7,
+              12
+            ],
+            []
+          ],
+          "attrs": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            {
+              "type": "flor",
+              "key": 13,
+              "key2": 5
+            },
+            null
+          ],
+          "par": null,
+          "bot_fail": 0.0
+        }
+      ]
+    },
+    {
+      "schema": "af-level/1",
+      "id": "m07_v1_n0306",
+      "level": 306,
+      "world": 7,
+      "lap": 1,
+      "seed": "amazonfill:v1:m07:v1:n0306",
+      "gen": {
+        "tool": "level-generator",
+        "version": "1.0.0",
+        "source": "deep",
+        "depth": 25,
+        "candidates": 9
+      },
+      "water_base": "white",
+      "palette": [
+        "cupuacu",
+        "tapereba",
+        "urucum",
+        "bacaba",
+        "acai",
+        "jenipapo",
+        "agua_tapajos",
+        "lulo",
+        "agua_negro"
+      ],
+      "units_per_color": 4,
+      "caps": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "cuias": [
+        [
+          14,
+          3,
+          5,
+          9
+        ],
+        [
+          3,
+          3,
+          3,
+          8
+        ],
+        [
+          2,
+          9,
+          7,
+          14
+        ],
+        [
+          8,
+          8,
+          11,
+          2
+        ],
+        [],
+        [
+          11,
+          11,
+          9
+        ],
+        [
+          10,
+          10,
+          10,
+          9
+        ],
+        [
+          5,
+          5,
+          11,
+          2
+        ],
+        [
+          2,
+          10,
+          5,
+          8
+        ],
+        [
+          14,
+          7,
+          14,
+          7
+        ],
+        [
+          7
+        ]
+      ],
+      "attrs": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "type": "flor",
+          "key": 2,
+          "key2": 14
+        },
+        null,
+        null,
+        null,
+        null,
+        {
+          "type": "brote",
+          "n": 2
+        }
+      ],
+      "murky": false,
+      "hidden": [],
+      "difficulty": {
+        "label": "hard",
+        "bot_fail": 0.75,
+        "par": 22,
+        "branching": 3.77,
+        "traps": 0.02,
+        "complexity": 58,
+        "D": 0.26,
+        "band": "challenge"
+      },
+      "risk_pairs": 2,
+      "intro_mechanic": null,
+      "skippable": true,
+      "hint_supported": true,
+      "relief": [
+        {
+          "type": "plus_empty",
+          "caps": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "cuias": [
+            [
+              14,
+              3,
+              5,
+              9
+            ],
+            [
+              3,
+              3,
+              3,
+              8
+            ],
+            [
+              2,
+              9,
+              7,
+              14
+            ],
+            [
+              8,
+              8,
+              11,
+              2
+            ],
+            [],
+            [
+              11,
+              11,
+              9
+            ],
+            [
+              10,
+              10,
+              10,
+              9
+            ],
+            [
+              5,
+              5,
+              11,
+              2
+            ],
+            [
+              2,
+              10,
+              5,
+              8
+            ],
+            [
+              14,
+              7,
+              14,
+              7
+            ],
+            [
+              7
+            ],
+            []
+          ],
+          "attrs": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            {
+              "type": "flor",
+              "key": 2,
+              "key2": 14
+            },
+            null,
+            null,
+            null,
+            null,
+            {
+              "type": "brote",
+              "n": 2
+            },
+            null
+          ],
+          "par": null,
+          "bot_fail": 0.0
+        },
+        {
+          "type": "minus_color",
+          "removed": 3,
+          "caps": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "cuias": [
+            [
+              14,
+              5,
+              9
+            ],
+            [
+              8
+            ],
+            [
+              2,
+              9,
+              7,
+              14
+            ],
+            [
+              8,
+              8,
+              11,
+              2
+            ],
+            [],
+            [
+              11,
+              11,
+              9
+            ],
+            [
+              10,
+              10,
+              10,
+              9
+            ],
+            [
+              5,
+              5,
+              11,
+              2
+            ],
+            [
+              2,
+              10,
+              5,
+              8
+            ],
+            [
+              14,
+              7,
+              14,
+              7
+            ],
+            [
+              7
+            ]
+          ],
+          "attrs": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            {
+              "type": "flor",
+              "key": 2,
+              "key2": 14
+            },
+            null,
+            null,
+            null,
+            null,
+            {
+              "type": "brote",
+              "n": 2
+            }
+          ],
+          "par": 20,
+          "bot_fail": 0.0
+        }
+      ]
+    },
+    {
+      "schema": "af-level/1",
+      "id": "m07_v1_n0323",
+      "level": 323,
+      "world": 7,
+      "lap": 1,
+      "seed": "amazonfill:v1:m07:v1:n0323",
+      "gen": {
+        "tool": "level-generator",
+        "version": "1.0.0",
+        "source": "walk",
+        "depth": 15,
+        "candidates": 2
+      },
+      "water_base": "white",
+      "palette": [
+        "urucum",
+        "camu_camu",
+        "bacaba",
+        "jenipapo",
+        "lulo",
+        "cacao"
+      ],
+      "units_per_color": 4,
+      "caps": [
+        4,
+        2,
+        5,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4
+      ],
+      "cuias": [
+        [
+          11,
+          11,
+          13
+        ],
+        [],
+        [
+          9,
+          11,
+          9
+        ],
+        [
+          7,
+          9,
+          5
+        ],
+        [
+          6,
+          6,
+          11,
+          5
+        ],
+        [
+          5,
+          7,
+          7,
+          9
+        ],
+        [
+          13,
+          13,
+          5,
+          13
+        ],
+        [],
+        [
+          6,
+          6,
+          7
+        ],
+        []
+      ],
+      "attrs": [
+        null,
+        {
+          "type": "cucharon"
+        },
+        {
+          "type": "tinaja"
+        },
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+      ],
+      "murky": true,
+      "hidden": [
+        [
+          2,
+          0
+        ],
+        [
+          2,
+          1
+        ]
+      ],
+      "difficulty": {
+        "label": "normal",
+        "bot_fail": 0.0,
+        "par": 16,
+        "branching": 5.13,
+        "traps": 0.0,
+        "complexity": 42,
+        "D": -0.46,
+        "band": "comfort"
+      },
+      "risk_pairs": 2,
+      "intro_mechanic": "tinaja",
+      "skippable": false,
+      "hint_supported": true,
+      "relief": [
+        {
+          "type": "minus_color",
+          "removed": 6,
+          "caps": [
+            4,
+            2,
+            5,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "cuias": [
+            [
+              11,
+              11,
+              13
+            ],
+            [],
+            [
+              9,
+              11,
+              9
+            ],
+            [
+              7,
+              9,
+              5
+            ],
+            [
+              11,
+              5
+            ],
+            [
+              5,
+              7,
+              7,
+              9
+            ],
+            [
+              13,
+              13,
+              5,
+              13
+            ],
+            [],
+            [
+              7
+            ],
+            []
+          ],
+          "attrs": [
+            null,
+            {
+              "type": "cucharon"
+            },
+            {
+              "type": "tinaja"
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "hidden": [
+            [
+              2,
+              0
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "par": 15,
+          "bot_fail": 0.0
+        },
+        {
+          "type": "plus_empty",
+          "caps": [
+            4,
+            2,
+            5,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4
+          ],
+          "cuias": [
+            [
+              11,
+              11,
+              13
+            ],
+            [],
+            [
+              9,
+              11,
+              9
+            ],
+            [
+              7,
+              9,
+              5
+            ],
+            [
+              6,
+              6,
+              11,
+              5
+            ],
+            [
+              5,
+              7,
+              7,
+              9
+            ],
+            [
+              13,
+              13,
+              5,
+              13
+            ],
+            [],
+            [
+              6,
+              6,
+              7
+            ],
+            [],
+            []
+          ],
+          "attrs": [
+            null,
+            {
+              "type": "cucharon"
+            },
+            {
+              "type": "tinaja"
+            },
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null
+          ],
+          "hidden": [
+            [
+              2,
+              0
+            ],
+            [
+              2,
+              1
+            ]
+          ],
+          "par": null,
+          "bot_fail": 0.0
+        }
+      ]
+    },
+    {
+      "schema": "af-level/1",
+      "id": "m07_v1_n0329",
+      "level": 329,
+      "world": 7,
+      "lap": 1,
+      "seed": "amazonfill:v1:m07:v1:n0329",
+      "gen": {
+        "tool": "level-generator",
+        "version": "1.0.0",
+        "source": "deep",
+        "depth": 19,
+        "candidates": 21
+      },
+      "water_base": "white",
+      "palette": [
+        "cupuacu",
+        "tapereba",
+        "aguaje",
+        "camu_camu",
+        "acai",
+        "jenipapo",
+        "agua_tapajos",
+        "agua_negro"
+      ],
+      "units_per_color": 4,
+      "caps": [
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        4,
+        2,
+        5,
+        4
+      ],
+      "cuias": [
+        [
+          6,
+          9
+        ],
+        [
+          8,
+          3,
+          6,
+          2
+        ],
+        [
+          8,
+          8
+        ],
+        [
+          10,
+          10,
+          10,
+          9
+        ],
+        [
+          3,
+          3,
+          3,
+          4
+        ],
+        [
+          6,
+          14,
+          9,
+          14
+        ],
+        [
+          2,
+          2,
+          6,
+          14
+        ],
+        [
+          4,
+          4,
+          4
+        ],
+        [],
+        [
+          10,
+          8,
+          2,
+          9,
+          14
+        ],
+        []
+      ],
+      "attrs": [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        {
+          "type": "cucharon"
+        },
+        {
+          "type": "tinaja"
+        },
+        null
+      ],
+      "murky": true,
+      "hidden": [
+        [
+          9,
+          0
+        ],
+        [
+          9,
+          1
+        ],
+        [
+          9,
+          2
+        ],
+        [
+          9,
+          3
+        ]
+      ],
+      "difficulty": {
+        "label": "hard",
+        "bot_fail": 0.8,
+        "par": 23,
+        "branching": 2.96,
+        "traps": 0.04,
+        "complexity": 47,
+        "D": 0.5,
+        "band": "challenge"
+      },
+      "risk_pairs": 2,
+      "intro_mechanic": null,
+      "skippable": true,
+      "hint_supported": true,
+      "relief": [
+        {
+          "type": "plus_empty",
+          "caps": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            2,
+            5,
+            4,
+            4
+          ],
+          "cuias": [
+            [
+              6,
+              9
+            ],
+            [
+              8,
+              3,
+              6,
+              2
+            ],
+            [
+              8,
+              8
+            ],
+            [
+              10,
+              10,
+              10,
+              9
+            ],
+            [
+              3,
+              3,
+              3,
+              4
+            ],
+            [
+              6,
+              14,
+              9,
+              14
+            ],
+            [
+              2,
+              2,
+              6,
+              14
+            ],
+            [
+              4,
+              4,
+              4
+            ],
+            [],
+            [
+              10,
+              8,
+              2,
+              9,
+              14
+            ],
+            [],
+            []
+          ],
+          "attrs": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            {
+              "type": "cucharon"
+            },
+            {
+              "type": "tinaja"
+            },
+            null,
+            null
+          ],
+          "hidden": [
+            [
+              9,
+              0
+            ],
+            [
+              9,
+              1
+            ],
+            [
+              9,
+              2
+            ],
+            [
+              9,
+              3
+            ]
+          ],
+          "par": null,
+          "bot_fail": 0.0
+        },
+        {
+          "type": "minus_color",
+          "removed": 3,
+          "caps": [
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            4,
+            2,
+            5,
+            4
+          ],
+          "cuias": [
+            [
+              6,
+              9
+            ],
+            [
+              8,
+              6,
+              2
+            ],
+            [
+              8,
+              8
+            ],
+            [
+              10,
+              10,
+              10,
+              9
+            ],
+            [
+              4
+            ],
+            [
+              6,
+              14,
+              9,
+              14
+            ],
+            [
+              2,
+              2,
+              6,
+              14
+            ],
+            [
+              4,
+              4,
+              4
+            ],
+            [],
+            [
+              10,
+              8,
+              2,
+              9,
+              14
+            ],
+            []
+          ],
+          "attrs": [
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            {
+              "type": "cucharon"
+            },
+            {
+              "type": "tinaja"
+            },
+            null
+          ],
+          "hidden": [
+            [
+              9,
+              0
+            ],
+            [
+              9,
+              1
+            ],
+            [
+              9,
+              2
+            ],
+            [
+              9,
+              3
+            ]
+          ],
+          "par": 22,
+          "bot_fail": 0.0
+        }
+      ]
+    }
+  ]
+}
