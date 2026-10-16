@@ -7,7 +7,8 @@
 //      de la banda de su rol (recuperación ≤ 0,10, comodidad ≤ 0,70, hito > 0,95) piden más candidatos (hasta BandRounds
 //      rondas); si un ciclo no tiene asignación, se piden más a sus slots (hasta 2 rondas);
 //   4. alivio (relief) de los niveles colocados desde el 31;
-//   5. un pack por mundo (PackWriter) y el informe (CampaignReport), o --check: comparación byte a byte con el disco.
+//   5. un pack por mundo (PackWriter) y el informe (CampaignReport) y, con --curation, el de curación para el dueño
+//      (CurationReport, P7a), o --check: comparación byte a byte con el disco.
 // D depende del pool de cada rango: un pack solo se reproduce generando los mismos --levels (rangos completos).
 // Generate() hace las fases 1-5 en memoria; la usa también tools/level-qa para comprobar la reproducibilidad (03 §17 #10).
 using System.Diagnostics;
@@ -61,7 +62,7 @@ internal static class CampaignRunner
     /// Modo --spec: genera los niveles <paramref name="levelsArg"/> (null = todos los de la especificación, first_level-last_level)
     /// con la variante <paramref name="variant"/> (null = la publicada; «b» con los respaldos de "fallback", salida B de D-019).
     /// </summary>
-    public static int Run(string specPath, string? levelsArg, string outDir, string? reportPath, bool check, string? variant = null)
+    public static int Run(string specPath, string? levelsArg, string outDir, string? reportPath, bool check, string? variant = null, string? curationPath = null)
     {
         var total = Stopwatch.StartNew();
         CampaignSpec spec;
@@ -127,6 +128,18 @@ internal static class CampaignRunner
 
             File.WriteAllBytes(reportPath, PackWriter.Bytes(CampaignReport.Build(spec, result.Levels, result.Stats, packs, levelsArg, reportPath)));
             Console.WriteLine($"informe: {reportPath.Replace('\\', '/')}");
+        }
+
+        if (curationPath is not null && !check && result.NoRelief.Count == 0)
+        {
+            string? dir = Path.GetDirectoryName(Path.GetFullPath(curationPath));
+            if (dir is not null)
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            File.WriteAllBytes(curationPath, PackWriter.Bytes(CurationReport.Build(spec, result.Levels, result.Stats, packs, levelsArg, curationPath)));
+            Console.WriteLine($"curacion: {curationPath.Replace('\\', '/')}");
         }
 
         Console.WriteLine($"tiempo total: {total.Elapsed.TotalSeconds:0.0} s");

@@ -479,7 +479,7 @@ internal static class CampaignReport
     /// el contenido) o un attr con ese código (MechanicCodes.CodeOf: la Liana de cuenta es Ln y no Li; el Brote de dos hojas, B2
     /// y no Br).
     /// </summary>
-    private static bool Has(BoardData b, string code) => code switch
+    internal static bool Has(BoardData b, string code) => code switch
     {
         "Tu" => b.Hidden.Any(h => b.Attrs[h[0]].Type != MechanicType.Tinaja),
         "Ba" => b.Cuias.Any(c => c.Contains(Cuia.MudColor)),
@@ -491,7 +491,7 @@ internal static class CampaignReport
         new(b.Attrs.Select(MechanicCodes.CodeOf).OfType<string>().Where(c => MechanicCodes.Variants.Contains(c)), StringComparer.Ordinal);
 
     /// <summary>Forma corta de un attr de variante para el informe: «liana n=2», «hoja_atada key=4», «brote n=2», «flor key=3 key2=7».</summary>
-    private static string VariantAttr(MechanicSpec a, int doses) => a.Type switch
+    internal static string VariantAttr(MechanicSpec a, int doses) => a.Type switch
     {
         MechanicType.Liana => string.Create(CultureInfo.InvariantCulture, $"liana n={a.N} ({doses} dosis)"),
         MechanicType.HojaAtada => string.Create(CultureInfo.InvariantCulture, $"hoja_atada key={a.Key} ({doses} dosis)"),
@@ -505,7 +505,7 @@ internal static class CampaignReport
     /// nivel, sus campos, los vacíos (cuias de capacidad ≥ 4 vacías, como QA-DEBUT) y el bot_fail. Las celdas con una variante
     /// que se publicaran sin ella van al final (el generador nunca quita lo que pide la celda).
     /// </summary>
-    private static void VariantsSection(CampaignSpec spec, List<GeneratedLevel> levels, Action<string> w)
+    internal static void VariantsSection(CampaignSpec spec, List<GeneratedLevel> levels, Action<string> w)
     {
         void W(string line = "") => w(line);
         string F(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
@@ -574,7 +574,7 @@ internal static class CampaignReport
         Enumerable.Range(0, b.Cuias.Length).Count(i => b.Cuias[i].Length == 0 && b.Caps[i] >= Cuia.DefaultCapacity
             && b.Attrs[i].Type is not (MechanicType.Tinaja or MechanicType.Cucharon));
 
-    private static string CycleName(CampaignSpec spec, LevelPlan p)
+    internal static string CycleName(CampaignSpec spec, LevelPlan p)
     {
         if (p.Ramp)
         {
@@ -601,7 +601,7 @@ internal static class CampaignReport
     }
 
     /// <summary><c>pack_schema</c> del pack del mundo <paramref name="world"/> (sus niveles y variantes; PackWriter.PackSchemaFor).</summary>
-    private static int PackSchemaOf(WorldInfo world, List<GeneratedLevel> levels) =>
+    internal static int PackSchemaOf(WorldInfo world, List<GeneratedLevel> levels) =>
         PackWriter.PackSchemaFor(levels.Where(l => l.Plan.World == world).Select(l => new PackLevel(l.Plan, l.Chosen!, l.Relief)).ToList());
 
     private static int NoReliefBytes(CampaignSpec spec, WorldInfo world, List<GeneratedLevel> levels)

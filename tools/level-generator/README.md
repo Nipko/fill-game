@@ -15,8 +15,8 @@ ejecuciones den los mismos bytes.
 | `--validate-spec <campaign.json>` | Comprueba la especificación de la campaña (11-200 y 201-700, esta en sus dos variantes) | Resumen ASCII por ciclo |
 | `--registry <campaign.json> --out <registro.json> [--variant a\|b] [--check]` | Registro de combinaciones publicadas (d.5.6; P4) | `tools/level-generator/specs/combinations_registry_v1.json` |
 | `--parity [--report <md>]` | Paridad de las métricas con el prototipo (03 §17-§18; 09 R26) | `tools/out/parity_report.md` |
-| `--spec <campaign.json> [--levels a-b] [--variant a\|b] --out <carpeta> [--report <md>] [--check]` | Genera la campaña (03 §2); sin `--levels`, todos los niveles de la especificación | `Assets/_Project/Data/Levels/mundo_0N_v1.json` y `tools/out/campaign_v1_report.md` |
-| `--seasons <campaign.json> [...] --out <tabla.json> [--check]` | Tabla de temporada del cliente (pregunta 32 b) | `Assets/_Project/Data/Levels/seasons_v1.json` |
+| `--spec <campaign.json> [--levels a-b] [--variant a\|b] --out <carpeta> [--report <md>] [--curation <md>] [--check]` | Genera la campaña (03 §2); sin `--levels`, todos los niveles de la especificación; `--curation`, el informe de curación para el dueño (P7a) | `Assets/_Project/Data/Levels/mundo_0N_v1.json`, `tools/out/campaign_v1_report.md` y `tools/out/curation_wNN.md` |
+| `--seasons <campaign.json> [...] --out <tabla.json> [--until <nivel>] [--check]` | Tabla de temporada del cliente (pregunta 32 b), hasta el último nivel publicado | `Assets/_Project/Data/Levels/seasons_v1.json` |
 | `--self-test [tinaja\|seasons\|variants\|registry]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
@@ -79,7 +79,8 @@ dotnet run --project tools/level-generator -c Release -- --registry tools/level-
 dotnet run --project tools/level-generator -c Release -- --self-test registry
 ```
 
-No genera packs: los mundos 6-9 los generan P7a-P7d con `--levels` por mundo (y la b con `--variant b`, en `tools/out`).
+No genera packs: los mundos 6-9 los generan P7a-P7d con `--levels` por mundo (y la b con `--variant b`, en `tools/out`); el
+mundo 6 ya está (sección «Mundo 6: 201-300», P7a).
 
 ## Registro de combinaciones publicadas (`--registry`; P4)
 
@@ -304,6 +305,45 @@ Decisiones [P] de la generación (para revisar en la integración):
 Diagnóstico: con la variable de entorno `LEVELGEN_TRACE=<nivel>` el generador traza por stderr cada candidato de ese
 nivel (fuente, K, vacíos, bot_fail, motivo del rechazo y milisegundos) y un resumen del slot. No cambia la salida.
 
+## Mundo 6: 201-300 (P7a)
+
+El primer pack de 201-700: el mundo 6 (Oriente, `w06_oriente`) con `campaign_v2.json` en la variante publicada (a; sin la
+Tinaja, que no sale antes del 323), con los estrenos de la Liana de cuenta (243-245, `liana_n`) y de la Hoja atada (283-285,
+`hoja_atada`), y `pack_schema` 3 por la Hoja atada. D depende del pool del rango de 03 §11 (201-400), así que el pack solo se
+reproduce con `--levels 201-300` (lo mismo en `--check` y en level-qa).
+
+```
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --out Assets/_Project/Data/Levels --curation tools/out/curation_w06.md
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --out Assets/_Project/Data/Levels --check
+dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_06_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 201-300
+dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json tools/level-generator/specs/campaign_v2.json --until 300 --out Assets/_Project/Data/Levels/seasons_v1.json --check
+```
+
+Unos 5 minutos cada uno (en Release, con 24 hilos en el equipo de escritorio). El `.meta` de `mundo_06_v1.json` lo genera Unity
+en C1a, que registra el pack en el cliente (se fusiona con P7a). Los packs 1-200 no cambian (`--check` de `campaign_v1.json` y
+del tutorial).
+
+### Informe de curación (`--curation`; 09 §2.1)
+
+`--curation <md>` escribe, con los mismos niveles colocados que el pack, la propuesta de curación que aprueba el dueño (09 §2.1
+y §2.2: los 30 retos e hitos de cada paquete; 03 §3: un reto por debajo de 0,75 se publica sin etiqueta y la curación decide si
+se sustituye por otro del pool del slot). `Generation/CurationReport.cs`; sin tiempos, así que dos ejecuciones dan los mismos
+bytes. Secciones:
+
+- **Resumen**: pack, `pack_schema`, bytes y SHA-256; cuántos retos e hitos miden su etiqueta objetivo; los niveles para revisar.
+- **Retos e hitos**: etiqueta medida por el bot ×40 frente a la objetivo (D-009), D y su banda (03 §7), cuántos candidatos más
+  del slot miden la objetivo («Otros del slot»: con cuáles se podría sustituir) y la propuesta [P]: «aceptar» o «revisar» (no
+  mide la objetivo, queda fuera de su ventana, `risk_adjacent` o sin turbias por T1), con notas que no piden revisar (hito con
+  D en banda de reto y el mínimo cumplido, como el aviso QA-BAND-Q; retos Difícil con D en banda de comodidad; las realidades
+  de las Aguas turbias).
+- **Hitos**, uno a uno: tablero, mecánicas (con las Aguas turbias y sus realidades), medida y notas de la generación.
+- **Tableros de estreno** (02 §9.2 regla 2) y la sección **Variantes de la 1.0** del informe de la generación.
+- **Otros niveles con avisos** y la tabla **Curación del dueño**, que nace «pendiente»: el dueño anota su decisión por nivel en
+  la última columna (la única que se edita a mano) y la repite en el PR, porque regenerar la devuelve a «pendiente». Si la
+  curación pide cambios, se regeneran el pack, el informe y la comprobación de level-qa.
+
+`tools/out/curation_w06.md` es el del mundo 6; P7b-P7d escriben `curation_w07.md` a `curation_w09.md`.
+
 ## Tinaja (M13; D-019, Q-Ti1 A; 03 §8 y §9; propuesta de la tinaja c.3)
 
 La celda de calendario `Ti` (mecánica `tinaja`, clase `source` [P]: fuente de dosis ocultas) activa el paso «Ti» de la
@@ -468,21 +508,27 @@ cliente la lee de **una tabla por ciclo, copiada del calendario versionado** (pr
 el 2026-10-13: (b), D-020; 03 §12; 08, «Preguntas abiertas» 12). Solo cambia la LUT del fondo, sin cartel (la lee SE2).
 
 ```
-dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json --out Assets/_Project/Data/Levels/seasons_v1.json
-dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json --out Assets/_Project/Data/Levels/seasons_v1.json --check
+dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json tools/level-generator/specs/campaign_v2.json --until 300 --out Assets/_Project/Data/Levels/seasons_v1.json
+dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json tools/level-generator/specs/campaign_v2.json --until 300 --out Assets/_Project/Data/Levels/seasons_v1.json --check
 dotnet run --project tools/level-generator -- --self-test seasons
 ```
+
+`--until <nivel>` (P7a): la tabla acaba en el ciclo que termina en ese nivel, el último publicado en el cliente (300 desde P7a;
+P7b, P7c y P7d lo suben a 420, 560 y 700 con sus mundos, y con él `SeasonTableWriter.PublishedUntil`). Las especificaciones se
+comprueban enteras; solo se escriben sus ciclos hasta ese nivel, y `source` lleva solo las que aportan alguno (con `--until
+200`, la tabla de `campaign_v1.json` sola, byte a byte). Un `--until` que no es el último nivel de un ciclo de las
+especificaciones sale con 1 y no escribe.
 
 Formato [P] `af-seasons/1` (`Generation/SeasonTableWriter.cs`; no es un contrato del GDD §7 todavía):
 
 ```
 {
   "format": "af-seasons/1",
-  "source": "tools/level-generator/specs/campaign_v1.json",
+  "source": "tools/level-generator/specs/campaign_v1.json, tools/level-generator/specs/campaign_v2.json",
   "cycles": [
     {"from_level": 21, "season": "B"},
     ...
-    {"from_level": 181, "season": "B"}
+    {"from_level": 281, "season": "A"}
   ]
 }
 ```
@@ -490,8 +536,9 @@ Formato [P] `af-seasons/1` (`Generation/SeasonTableWriter.cs`; no es un contrato
 - `source`: la ruta de cada especificación, relativa a la raíz del repositorio (no a la carpeta desde la que se ejecuta) y
   con `/`; con varias, separadas por «, » en el orden de sus ciclos [P].
 - `cycles`: un ciclo por línea, en orden y sin huecos; cada uno va de `from_level` a `from_level` + 19. Los niveles 1-20
-  (tutorial y rampa) no tienen temporada. Hoy: los 9 ciclos 21-181 de `campaign_v1.json`, idénticos a su `seasons`; con
-  `campaign_v2.json` (P4), 34 ciclos 21-681 (`--self-test registry` lo comprueba; la tabla del cliente la amplía P7).
+  (tutorial y rampa) no tienen temporada. Hoy (P7a): 14 ciclos 21-281, los 9 de `campaign_v1.json` (21-181, idénticos a su
+  `seasons`) y los 5 del mundo 6 de `campaign_v2.json` (201 A, 221 A, 241 B, 261 B y 281 A; d.5 punto 4). Sin `--until`, con
+  `campaign_v2.json` entera serían 34 ciclos 21-681 (`--self-test registry` lo comprueba); P7b-P7d la amplían con sus mundos.
 - UTF-8 sin BOM, LF y claves en orden fijo: la misma especificación da los mismos bytes.
 
 La herramienta copia y comprueba el formato: cada ciclo de la especificación (de `cycle.from_level` a `last_level`) con A o
@@ -500,6 +547,8 @@ B, ninguna entrada de `seasons` fuera de un inicio de ciclo y, con varias especi
 1 y no escribe. Las reglas del calendario (temporadas alternas, el ciclo de debut toma la de su mecánica) son de
 `--validate-spec` (SEASONS). `--check` no escribe y sale con 1 si la tabla del disco no coincide byte a byte (desfase con
 el calendario). `--self-test seasons` comprueba los ciclos 21-181 frente a `campaign_v1.json` (leído aparte), la temporada
-de cada nivel 21-200 frente a `CampaignSpec.SeasonOf`, el formato, el determinismo, el desfase con la tabla del disco, la
-unión de dos especificaciones y los rechazos, entre ellos el fixture `specs/tests/seasons_invalid_letter.json` (ciclo 61
-con temporada C, que también falla `--validate-spec` por SEASONS).
+de cada nivel 21-200 frente a `CampaignSpec.SeasonOf`, el formato, el determinismo, el desfase con la tabla del disco (la de
+`campaign_v1.json` + `campaign_v2.json` hasta `PublishedUntil`, con los ciclos de `campaign_v2.json` y sus temporadas), el
+corte de `--until` (hasta el 200, la tabla de `campaign_v1.json`; hasta el 60, dos ciclos), la unión de dos especificaciones y
+los rechazos (también `--until` a mitad de ciclo o fuera de las especificaciones), entre ellos el fixture
+`specs/tests/seasons_invalid_letter.json` (ciclo 61 con temporada C, que también falla `--validate-spec` por SEASONS).

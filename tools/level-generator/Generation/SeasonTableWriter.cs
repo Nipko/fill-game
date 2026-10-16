@@ -15,6 +15,9 @@
 // La herramienta solo copia y comprueba el formato (cada ciclo de la especificación con A o B, ninguna entrada fuera de un
 // inicio de ciclo, varias especificaciones contiguas y sin solaparse). Las reglas del calendario (temporadas alternas, el
 // ciclo de debut toma la de su mecánica) las comprueba --validate-spec (SEASONS).
+// --until <nivel> (P7a): la tabla acaba en el ciclo que termina en ese nivel, el último publicado (P7a: 300; P7b, P7c y
+// P7d la amplían a 420, 560 y 700 con sus mundos). Se comprueban las especificaciones enteras; solo se escriben sus ciclos
+// hasta ese nivel, y "source" lleva solo las especificaciones que aportan alguno.
 using System.Globalization;
 using System.Text;
 using System.Text.Json;
@@ -37,7 +40,14 @@ internal static class SeasonTableWriter
     public const string Format = "af-seasons/1";
     public const int CycleLength = 20;
     public const string CampaignV1 = "tools/level-generator/specs/campaign_v1.json";
+    public const string CampaignV2 = "tools/level-generator/specs/campaign_v2.json";
     public const string TableV1 = "Assets/_Project/Data/Levels/seasons_v1.json";
+
+    /// <summary>
+    /// Último nivel publicado en el cliente, hasta el que llega la tabla del disco (<c>--until</c>): 300 desde P7a (mundo 6,
+    /// 201-300); P7b, P7c y P7d lo suben a 420, 560 y 700 al publicar sus mundos.
+    /// </summary>
+    public const int PublishedUntil = 300;
     public const string InvalidLetterFixture = "tools/level-generator/specs/tests/seasons_invalid_letter.json";
 
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);
@@ -46,12 +56,12 @@ internal static class SeasonTableWriter
     /// Modo --seasons: escribe (o, con --check, compara byte a byte sin escribir) la tabla de las especificaciones.
     /// Códigos: 0 = escrita o idéntica; 1 = desfase o tabla imposible; 2 = especificación ilegible.
     /// </summary>
-    public static int Run(IReadOnlyList<string> specPaths, string outPath, bool check)
+    public static int Run(IReadOnlyList<string> specPaths, string outPath, bool check, int? until = null)
     {
         byte[] bytes;
         try
         {
-            bytes = Build(specPaths);
+            bytes = Build(specPaths, until);
         }
         catch (CampaignSpecException e)
         {
@@ -88,8 +98,11 @@ internal static class SeasonTableWriter
         return 0;
     }
 
-    /// <summary>Los bytes de la tabla de las especificaciones, en ese orden de argumentos (se ordenan por ciclo).</summary>
-    public static byte[] Build(IReadOnlyList<string> specPaths)
+    /// <summary>
+    /// Los bytes de la tabla de las especificaciones (se ordenan por ciclo), hasta el ciclo que acaba en
+    /// <paramref name="until"/> (null = todos sus ciclos).
+    /// </summary>
+    public static byte[] Build(IReadOnlyList<string> specPaths, int? until = null)
     {
         var sources = new List<SeasonSource>(specPaths.Count);
         foreach (string path in specPaths)
@@ -98,7 +111,30 @@ internal static class SeasonTableWriter
         }
 
         List<SeasonSource> ordered = Ordered(sources);
-        return Bytes(string.Join(", ", ordered.Select(s => s.Source)), CyclesInOrder(ordered));
+        List<SeasonCycle> cycles = CyclesInOrder(ordered);
+        if (until is int last)
+        {
+            cycles = Until(cycles, last);
+            ordered = ordered.Where(s => s.CycleFrom <= last).ToList();
+        }
+
+        return Bytes(string.Join(", ", ordered.Select(s => s.Source)), cycles);
+    }
+
+    /// <summary>
+    /// Los ciclos hasta el que acaba en <paramref name="until"/>, que tiene que ser el último nivel de uno de ellos (una
+    /// tabla nunca acaba a mitad de ciclo). Lanza <see cref="SeasonTableException"/> si no.
+    /// </summary>
+    public static List<SeasonCycle> Until(List<SeasonCycle> cycles, int until)
+    {
+        if (!cycles.Any(c => c.FromLevel + CycleLength - 1 == until))
+        {
+            string range = cycles.Count == 0 ? "ninguno" : $"{cycles[0].FromLevel}-{cycles[^1].FromLevel + CycleLength - 1}";
+            throw new SeasonTableException(
+                $"--until {until} no es el ultimo nivel de un ciclo de 20 de las especificaciones (ciclos {range})");
+        }
+
+        return cycles.Where(c => c.FromLevel <= until).ToList();
     }
 
     public static SeasonSource SourceOf(CampaignSpec spec, string source) =>
@@ -215,9 +251,11 @@ internal static class SeasonTableWriter
     /// <summary>
     /// --self-test seasons: la tabla de campaign_v1 (ciclos 21-181 idénticos a su "seasons", leído aparte con JsonNode, y
     /// la temporada de cada nivel 21-200 igual a CampaignSpec.SeasonOf), el formato (claves, orden, UTF-8 sin BOM, LF),
-    /// el determinismo, el desfase con la tabla del disco (--check), la unión de varias especificaciones (P4 y P7) y los
-    /// rechazos (hueco, solape, letra, ciclo sin temporada, entrada fuera de un inicio de ciclo, inicio desalineado y el
-    /// fixture specs/tests/seasons_invalid_letter.json). Desde la raíz del repositorio. Códigos: 0 / 1 / 2.
+    /// el determinismo, el desfase con la tabla del disco (--check; la del disco es la de campaign_v1 + campaign_v2 hasta
+    /// <see cref="PublishedUntil"/>), la unión de varias especificaciones (P4 y P7), el corte de --until y los rechazos
+    /// (hueco, solape, letra, ciclo sin temporada, entrada fuera de un inicio de ciclo, inicio desalineado, --until a mitad
+    /// de ciclo o fuera de las especificaciones y el fixture specs/tests/seasons_invalid_letter.json). Desde la raíz del
+    /// repositorio. Códigos: 0 / 1 / 2.
     /// </summary>
     public static int SelfTest()
     {
@@ -288,9 +326,53 @@ internal static class SeasonTableWriter
         Check(Build([CampaignV1]).AsSpan().SequenceEqual(bytes), "determinismo: dos generaciones dan los mismos bytes");
         Check(Build([Path.GetFullPath(CampaignV1)]).AsSpan().SequenceEqual(bytes), "determinismo: la ruta absoluta da los mismos bytes (source relativo a la raiz)");
 
-        // 5. Desfase con la tabla del disco (lo mismo que --check).
+        // 5. Desfase con la tabla del disco (lo mismo que --check): campaign_v1 + campaign_v2 hasta el último nivel publicado.
+        byte[] published;
+        try
+        {
+            published = Build([CampaignV1, CampaignV2], PublishedUntil);
+        }
+        catch (Exception e) when (e is CampaignSpecException or SeasonTableException)
+        {
+            Check(false, $"--until {PublishedUntil}: campaign_v1 + campaign_v2: {e.Message}");
+            published = [];
+        }
+
         byte[]? onDisk = File.Exists(TableV1) ? File.ReadAllBytes(TableV1) : null;
-        Check(onDisk is not null && onDisk.AsSpan().SequenceEqual(bytes), $"--check: {TableV1} coincide con el generado desde campaign_v1");
+        Check(onDisk is not null && onDisk.AsSpan().SequenceEqual(published),
+            $"--check: {TableV1} coincide con el generado desde campaign_v1 + campaign_v2 hasta el {PublishedUntil}");
+        if (published.Length > 0)
+        {
+            JsonObject pub = JsonNode.Parse(published)!.AsObject();
+            var pubCycles = pub["cycles"]!.AsArray()
+                .Select(c => (Level: c!["from_level"]!.GetValue<int>(), Season: c["season"]!.GetValue<string>()))
+                .ToList();
+            CampaignSpec v2 = CampaignSpec.Load(CampaignV2);
+            Check(pubCycles.Count == (PublishedUntil - 20) / CycleLength && pubCycles.Take(9).SequenceEqual(expected)
+                  && pubCycles[^1].Level == PublishedUntil - CycleLength + 1
+                  && pubCycles.Skip(9).All(c => c.Season == v2.Seasons[c.Level]),
+                $"--until {PublishedUntil}: {pubCycles.Count} ciclos 21-{PublishedUntil - CycleLength + 1}, los de campaign_v1 sin cambios y los de campaign_v2 con sus temporadas");
+            Check(pub["source"]!.GetValue<string>() == CampaignV1 + ", " + CampaignV2, "--until: source con las dos especificaciones que aportan ciclos");
+        }
+
+        // 5b. --until: hasta el 200 solo aporta campaign_v1 (los mismos bytes que sin campaign_v2); a mitad de ciclo o fuera
+        // de las especificaciones, rechazo.
+        try
+        {
+            Check(Build([CampaignV1, CampaignV2], 200).AsSpan().SequenceEqual(bytes), "--until 200: campaign_v1 + campaign_v2 da la tabla de campaign_v1 (source sin campaign_v2)");
+            Check(Build([CampaignV1], 200).AsSpan().SequenceEqual(bytes), "--until 200 con campaign_v1: la misma tabla que sin --until");
+        }
+        catch (Exception e) when (e is CampaignSpecException or SeasonTableException)
+        {
+            Check(false, "--until 200: " + e.Message);
+        }
+
+        List<SeasonCycle> all = Cycles([SourceOf(spec, CampaignV1)]);
+        List<SeasonCycle> upTo60 = Until(all, 60);
+        Check(upTo60.Count == 2 && upTo60[0] == all[0] && upTo60[1] == all[1], "--until 60: los ciclos 21 y 41");
+        RejectsUntil(Check, all, 190, "--until 190 no es el ultimo nivel de un ciclo de 20 de las especificaciones (ciclos 21-200)");
+        RejectsUntil(Check, all, 220, "--until 220 no es el ultimo nivel de un ciclo de 20 de las especificaciones (ciclos 21-200)");
+        RejectsUntil(Check, all, 20, "--until 20 no es el ultimo nivel de un ciclo de 20");
 
         // 6. Varias especificaciones (P4 y P7: 201-700 con campaign_v2): se unen en orden y sin huecos.
         var v1 = SourceOf(spec, CampaignV1);
@@ -328,6 +410,20 @@ internal static class SeasonTableWriter
 
         Console.WriteLine(failures == 0 ? "self-test seasons: todo PASS" : $"self-test seasons: {failures} FAIL");
         return failures == 0 ? 0 : 1;
+    }
+
+    /// <summary>El rechazo de --until cuenta solo si el mensaje dice el motivo esperado (<paramref name="reason"/>).</summary>
+    private static void RejectsUntil(Action<bool, string> check, List<SeasonCycle> cycles, int until, string reason)
+    {
+        try
+        {
+            Until(cycles, until);
+            check(false, $"rechazo: --until {until}");
+        }
+        catch (SeasonTableException e)
+        {
+            check(e.Message.Contains(reason, StringComparison.Ordinal), $"rechazo: --until {until} ({e.Message})");
+        }
     }
 
     /// <summary>El rechazo cuenta solo si el mensaje dice el motivo esperado (<paramref name="reason"/>), no otro.</summary>
