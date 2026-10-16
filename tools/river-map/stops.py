@@ -101,6 +101,7 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     ascii_text,
     format_csv_row,
     has_belen,
+    in_map_scope,
     iter_strings,
     final_fact_of,
     load_json,
@@ -374,6 +375,8 @@ def convert(source: dict, overrides: dict, model: "geometry.Model | None" = None
             continue
         for i, r in enumerate(items):
             if isinstance(r, dict):
+                if not in_map_scope(r):   # k = 42-69: de M4.5b (riverdata.LAST_K_IN_MAP)
+                    continue
                 records.append(r)
                 lists[id(r)] = (name, lo, hi)
             else:

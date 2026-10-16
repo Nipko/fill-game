@@ -32,6 +32,7 @@ from pathlib import Path
 HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
+import riverdata  # noqa: E402
 import stops  # noqa: E402
 from riverdata import (  # noqa: E402
     FACTS_PATH,
@@ -1232,6 +1233,19 @@ class FactsCheckTests(unittest.TestCase):
             proc = run_stops("--check", "--facts", str(Path(tmp) / "no_existe.csv"))
         self.assertEqual(1, proc.returncode)
         self.assertIn(b"falta", proc.stdout)
+
+
+class MapScopeTests(unittest.TestCase):
+    """Alcance de los datos del Mapa (riverdata.LAST_K_IN_MAP): la investigacion detalla k = 20-69 (M3.7a-M3.7d), pero
+    stops.py y geometry.py solo leen k = 0-41 (M4.5a) hasta M4.5b, y el teotonio del viaje del 560 tampoco."""
+
+    def test_stops_and_passing_points_stop_at_the_last_k_in_map(self):
+        source = load_json(SOURCE_PATH)
+        detailed = [r["k"] for r in source["paradas_1_200"] + source["paradas_201_700"]]
+        self.assertGreater(max(detailed), riverdata.LAST_K_IN_MAP)   # si deja de serlo, sobra el limite
+        self.assertEqual(list(range(riverdata.LAST_K_IN_MAP + 1)),
+                         sorted(r["k"] for r in riverdata.stop_records(source)))
+        self.assertEqual(["teotonio"], [p["id"] for p in riverdata.travel_passing_points(source)])
 
 
 if __name__ == "__main__":

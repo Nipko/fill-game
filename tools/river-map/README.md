@@ -135,6 +135,6 @@ Contrato 29 (08 §4.5, con la codificación y los extras [P] de P-M1, D-023). Mi
 - Ids únicos (puntos de paso, miradores y paradas no comparten `map.stop.<id>.name`) y ningún «Belén».
 - Las rutas de `river_stops_v1.json` son de este Mapa (ver «Validaciones de `--check`» arriba) y todas las reglas de `stops.py`.
 
-Fuera de alcance (tareas siguientes): paradas 421-700 y sus ríos (M4.5b, con M3.7c y M3.7d), la geometría de producción con Natural Earth y HydroRIVERS (M5.1), los recuadros y los textos de los datos de los puntos de paso de 1-200 y de los miradores.
+Fuera de alcance (tareas siguientes): paradas 421-700 y sus ríos (M4.5b, con M3.7c y M3.7d: la investigación ya las detalla, pero `riverdata.LAST_K_IN_MAP` = 41 hace que `stops.py` y `geometry.py` no las lean, ni el `teotonio` del viaje del 560, hasta que M4.5b lo suba a 69), la geometría de producción con Natural Earth y HydroRIVERS (M5.1), los recuadros y los textos de los datos de los puntos de paso de 1-200 y de los miradores.
 
 Notas de M4.5a: los ríos locales se llenan enteros al pasar su boca (`fill_on_pass` = 1 [P]), aunque el Aguarico (301 km), el Tambopata (243 km) y el Manu (146 km) se pasan unas paradas antes de visitarlos (220, 330 y 380); el viaje de entrada de los mundos 6 y 7 deshace camino, así que los km a casa bajan al entrar en el mundo y solo dentro de cada mundo no retroceden.
