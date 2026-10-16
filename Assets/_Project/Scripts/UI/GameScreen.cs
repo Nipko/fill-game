@@ -151,8 +151,10 @@ namespace AF.UI
         private const float RestartPillPadDp = 4f;
 
         // Aire más corto a cada lado de la etiqueta de «Reiniciar» cuando una palabra no cabe con RestartPillPadDp ni con la
-        // columna del saldo a su ancho mínimo (tarea FX5) [P].
-        private const float RestartPillTightPadDp = 2f;
+        // columna del saldo a su ancho mínimo (tarea FX5) [P]. Nunca menos: con 2 dp, en en-XA al 130 % a 360 dp, el «[» y la
+        // «r» quedaban pegados a los cantos (revisión de FX5; D-003). La etiqueta ya va a 12 sp × escala, el mínimo de 02 §12,
+        // así que no puede encoger para ganar aire.
+        internal const float RestartPillTightPadDp = 3f;
         private const float RestartPillOutDp = 4f;
         internal const float RestartPillGapDp = 4f;
 
@@ -2427,7 +2429,7 @@ namespace AF.UI
             if (wordW > maxW)
             {
                 // Lo más ancha que puede ir: hasta la columna del saldo a su ancho mínimo (y a RestartPillGapDp de ella). Si ni así
-                // cabe la palabra con su aire, el aire baja a RestartPillTightPadDp (en-XA al 130 % a 360 dp).
+                // cabe la palabra con su aire, el aire baja a RestartPillTightPadDp (en-XA al 130 % a 360 dp), y nunca más.
                 float capW = areaX + right - (walletLeft + _walletBar.CompactMinWidthDp + RestartPillGapDp);
                 if (wordW > capW)
                 {

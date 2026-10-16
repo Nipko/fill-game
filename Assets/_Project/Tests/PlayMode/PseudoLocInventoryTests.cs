@@ -279,6 +279,11 @@ namespace AF.Tests.PlayMode
             return string.Join("; ", problems);
         }
 
+        // Cortes válidos además del espacio y el guion ASCII, escritos con escapes para que se lean y ningún editor los borre:
+        private const char SoftHyphen = '\u00AD';      // U+00AD, guion blando (corte opcional, invisible si no se corta)
+        private const char Hyphen = '\u2010';          // U+2010, guion tipográfico
+        private const char ZeroWidthSpace = '\u200B';  // U+200B, espacio de anchura cero (corte sin marca visible)
+
         /// <summary>
         /// Primera línea (desde 1) de <paramref name="text"/> que acaba por dentro de una palabra, o 0 si ninguna (prueba de la
         /// ola 3 en el teléfono: «Reinici / ar» al 130 %; tarea FX5). Solo con el corte de líneas activado
@@ -304,7 +309,7 @@ namespace AF.Tests.PlayMode
 
                 char end = info.characterInfo[last].character;
                 char next = info.characterInfo[last + 1].character;
-                if (!char.IsWhiteSpace(end) && !char.IsWhiteSpace(next) && end != '-' && end != '­' && end != '‐' && end != '​')
+                if (!char.IsWhiteSpace(end) && !char.IsWhiteSpace(next) && end != '-' && end != SoftHyphen && end != Hyphen && end != ZeroWidthSpace)
                 {
                     return i + 1;
                 }

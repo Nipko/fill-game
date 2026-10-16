@@ -127,3 +127,14 @@ La fila «Mensajes de TiTino» sale en Ajustes (id `sloth_messages`, activa por 
 2. **Para el dueño: la victoria con vista enseña poco sitio.** Con el tablero fuera, la silueta queda en la banda del horizonte, a la altura del HUD. Debajo hasta el panel solo hay agua y orilla lisas (`h_vista.jpg`). Va con el hallazgo de la ola 2 (silueta invisible con 3 filas).
 3. **Para el escritorio: en en-XA, el nombre del miquito sale sin pseudolocalizar.** La tarjeta «¡Miquito a la vista!» del 5 dice «squirrel monkey», sin corchetes ni acentos; en español dice «mono ardilla». Ese texto no pasa por `Loc`, o sale de otra tabla.
 4. **El teléfono:** almacenamiento al 100 % (1,5 GB libres).
+
+## Seguimiento del escritorio (FX5, ola 4)
+
+- **Defecto 1, causa sin confirmar (hipótesis):** en el Editor, con perfil limpio, la Balsa sale en el 40 con 0 semillas al 100 % y al 130 %, en es-419 y en-XA (`Fx5Tests.Stuck40_NoSeeds_HandfulAndBalsaWithItsLine`), y el modal no depende de la escala de texto para ofrecerla. La explicación más probable es el tope diario de la Balsa (04 §6.2: `af_rescue_daily_cap` = 1, 08 §9): si la pasada del 130 % fue otro bloqueo del mismo día sin borrar los datos, la tienda ya no la ofrece. Pero no encaja del todo: con el tope, la segunda de las pasadas del 100 % y de en-XA también la habría perdido, salvo que entre ellas se hiciera `pm clear` y antes del 130 % no. Ningún logcat de esta prueba lo confirma.
+- **Qué probar en el teléfono (próxima prueba):**
+  - `adb shell pm clear com.amazonfill.dev` justo antes de la pasada del 130 %;
+  - abrir el 40 con 0 semillas y la fuente al 130 % (`--ei af_level 40 --ei af_seeds 0 --ei af_font_scale 130`) y bloquearse;
+  - leer en `AF_STATE stuck_modal` los campos `balsa_ok`, `balsa_shown_today` y `balsa_hidden`, y en `AF_LAYOUT stuck` los ids `balsa` y `balsa_note`.
+- **Cómo leerlo:**
+  - si con perfil limpio salen `balsa` y `balsa_note` (`balsa_ok: true`, `balsa_shown_today: 1`), el defecto queda resuelto, y la causa era el tope. Hay que avisar al dueño de que en el juego real la Balsa sale solo una vez al día (04 §6.2), para que no se tome por un defecto;
+  - si con perfil limpio falta la Balsa, el defecto sigue abierto: anotar la línea `AF_STATE stuck_modal` entera.

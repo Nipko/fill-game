@@ -137,6 +137,36 @@ namespace AF.Tests.PlayMode
             File.WriteAllBytes(Path.Combine(dir, name + ".png"), Capture());
         }
 
+        /// <summary>
+        /// Como <see cref="Save"/>, con solo las <paramref name="heightPx"/> filas de arriba de la captura: la pantalla simulada
+        /// entera cuando es más baja que la captura (16:9, 1080 × 1920 px: GameScreen la maqueta arriba del lienzo y lo de abajo
+        /// es solo fondo, que en ese teléfono no existe; revisión de FX5). Con <paramref name="heightPx"/> ≥ <see cref="Height"/>,
+        /// la captura entera.
+        /// </summary>
+        public static void SaveTop(string dir, string name, int heightPx)
+        {
+            int h = Mathf.Clamp(heightPx, 1, Height);
+            if (h == Height)
+            {
+                Save(dir, name);
+                return;
+            }
+
+            var full = new Texture2D(2, 2, TextureFormat.RGB24, false);
+            if (!full.LoadImage(Capture()))
+            {
+                Object.Destroy(full);
+                throw new System.InvalidOperationException("SnapshotKit.SaveTop: no se pudo leer la captura " + name);
+            }
+
+            var top = new Texture2D(full.width, h, TextureFormat.RGB24, false);
+            top.SetPixels(full.GetPixels(0, full.height - h, full.width, h)); // las filas de la textura empiezan por abajo
+            top.Apply();
+            File.WriteAllBytes(Path.Combine(dir, name + ".png"), top.EncodeToPNG());
+            Object.Destroy(full);
+            Object.Destroy(top);
+        }
+
         /// <summary>Renderiza la cámara de las capturas y devuelve el PNG.</summary>
         public static byte[] Capture()
         {

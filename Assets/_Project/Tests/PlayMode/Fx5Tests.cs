@@ -21,7 +21,9 @@ namespace AF.Tests.PlayMode
     /// …» (<c>balsa</c> y <c>balsa_note</c> en <c>AF_LAYOUT stuck</c>), sin desbordes, sin palabras partidas, sin pisarse y con
     /// el panel dentro de la pantalla. El modal no depende de la escala de texto para ofrecerla: la Balsa falta solo si la
     /// tienda no la deja ofrecer hoy (<c>af_rescue_daily_cap</c>: 1 impresión al día; 04 §6.2), y la línea <c>AF_STATE
-    /// stuck_modal</c> lo dice (<see cref="Balsa_SecondBlockTheSameDay_NotOffered_TheProbeSaysWhy"/>);</description></item>
+    /// stuck_modal</c> lo dice (<see cref="Balsa_SecondBlockTheSameDay_NotOffered_TheProbeSaysWhy"/>). Que el tope fuera la
+    /// causa en el teléfono es una hipótesis sin comprobar (ningún logcat lo confirma): la próxima prueba la confirma o la
+    /// descarta con <c>pm clear</c> antes de la pasada del 130 % (seguimiento de FX5 en el documento de la prueba);</description></item>
     /// <item><description>defecto 2: la píldora «Reiniciar» del HUD nunca parte una palabra («Reinici / ar» en el 5, el 8 y el
     /// 40 al 130 %): crece y estrecha la columna del saldo, cuyas cifras siguen cabiendo;</description></item>
     /// <item><description>observación 3: el nombre del miquito de la tarjeta «¡Miquito a la vista!» del 5 sale de la tabla de
@@ -92,10 +94,11 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// Lo que pasó en el teléfono, según la tienda (04 §6.2; <c>af_rescue_daily_cap</c> = 1 en 08 §9): la Balsa se enseña en
-        /// el primer bloqueo del día; en otro bloqueo del mismo día ya no se ofrece, con la escala que sea, y la línea
-        /// <c>AF_STATE stuck_modal</c> lo dice (<c>balsa_ok</c> false con <c>balsa_shown_today</c> 1). La misma partida al día
-        /// siguiente la vuelve a ofrecer.
+        /// Lo que pudo pasar en el teléfono (hipótesis sin comprobar allí: ningún logcat de la prueba confirma
+        /// <c>af_rescue_shown_today</c> = 1 antes de la pasada del 130 %), según la tienda (04 §6.2; <c>af_rescue_daily_cap</c>
+        /// = 1 en 08 §9): la Balsa se enseña en el primer bloqueo del día; en otro bloqueo del mismo día ya no se ofrece, con
+        /// la escala que sea, y la línea <c>AF_STATE stuck_modal</c> lo dice (<c>balsa_ok</c> false con
+        /// <c>balsa_shown_today</c> 1). La misma partida al día siguiente la vuelve a ofrecer.
         /// </summary>
         [UnityTest]
         public IEnumerator Balsa_SecondBlockTheSameDay_NotOffered_TheProbeSaysWhy()
@@ -170,6 +173,14 @@ namespace AF.Tests.PlayMode
 
             LongLabelSetup.AssertRestart(view, scale, label.textInfo.lineCount, false);
 
+            // Aire entre la tinta y los cantos de la píldora: RestartPillTightPadDp (3 dp) o más, nunca pegada (revisión de FX5:
+            // con 2 dp, en en-XA al 130 %, el «[» y la «r» tocaban los cantos; D-003).
+            Rect pillDp = LongLabelSetup.DpRect(view.RestartPillRect, view.Hud);
+            Rect inkDp = LongLabelSetup.InkRect(label, view.Hud);
+            float air = Mathf.Min(inkDp.xMin - pillDp.xMin, pillDp.xMax - inkDp.xMax);
+            Assert.That(air, Is.GreaterThanOrEqualTo(GameScreen.RestartPillTightPadDp - 0.25f), what + ": aire de " + air.ToString("0.00", CultureInfo.InvariantCulture)
+                + " dp entre «" + label.text + "» y los cantos de la píldora");
+
             // Las cifras de la columna del saldo, que la píldora puede estrechar, siguen cabiendo a 12 sp (× escala) o más.
             var inventory = new LocInventory(Loc.Locale, scale);
             int seen = 0;
@@ -194,7 +205,8 @@ namespace AF.Tests.PlayMode
 
             Assert.That(seen, Is.GreaterThan(0), what + ": la cabecera enseña las semillas");
             Debug.Log("AF_FX5 " + what + ": «" + label.text + "» en " + label.textInfo.lineCount + " líneas a " + label.fontSize.ToString("0.0", CultureInfo.InvariantCulture)
-                + " dp; píldora de " + view.RestartPillRect.rect.width.ToString("0.0", CultureInfo.InvariantCulture) + " dp"
+                + " dp; píldora de " + view.RestartPillRect.rect.width.ToString("0.0", CultureInfo.InvariantCulture) + " dp, aire de "
+                + air.ToString("0.0", CultureInfo.InvariantCulture) + " dp"
                 + (float.IsNaN(view.RestartPillLeftDp) ? string.Empty : ", estrecha la cabecera hasta x = " + view.RestartPillLeftDp.ToString("0.0", CultureInfo.InvariantCulture))
                 + "; cabecera de " + view.WalletBar.SeedsRect.rect.width.ToString("0.0", CultureInfo.InvariantCulture) + " dp");
         }
@@ -266,7 +278,10 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Attach(boot);
             yield return SnapshotKit.Wait(0.3f);
             LongLabelSetup.Log(boot.View!, name);
-            SnapshotKit.Save(dir, name);
+
+            // La pantalla simulada entera y nada más: en 16:9, las 1920 filas de arriba (revisión de FX5).
+            Vector4? sim = GameScreen.SimulatedScreen;
+            SnapshotKit.SaveTop(dir, name, sim.HasValue ? (int)sim.Value.y : SnapshotKit.Height);
         }
     }
 
