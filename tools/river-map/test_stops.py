@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""test_stops.py - pruebas de tools/river-map/stops.py (paradas af-river-stops/1 de 1-200, M1.1, y sus textos, M1.1t).
+"""test_stops.py - pruebas de tools/river-map/stops.py (paradas af-river-stops/1 de 1-200, M1.1, y de 201-420, M4.5a, y sus
+textos, M1.1t).
 
 Ejecutar desde la raiz del repositorio:
     py -3.14 -m unittest discover -s tools/river-map -p "test_*.py"
@@ -11,6 +12,8 @@ Textos (M1.1t): el bloque map.* de facts.csv (contenido, columnas, orden ordinal
 bloque intactas) y los fallos de --check (desfase, clave sin fila o sin texto, longitudes, cifras con separador y Belen).
 M2.6: facts[] con los «Otro dato», at y leg en cada parada, los nombres de los puntos de paso, de los miradores y de los
 paises de los rotulos, y los fixtures de las rutas (parada desplazada 20 km, boca fuera de su rio y candidato ausente).
+M4.5a: las paradas 201-420 (k = 20-41) de paradas_201_700, con sus kinds, banderas (EC, BO y PE), preguntas, kits w06-w07,
+rutas por el Napo y el Madeira (teotonio en el viaje del 300), y sus textos; y los fixtures de los cruces nuevos.
 Solo biblioteca estandar.
 """
 from __future__ import annotations
@@ -67,7 +70,8 @@ def parse_worldtable_cs() -> tuple[list[int], int]:
 
 
 class FieldTests(unittest.TestCase):
-    """Campos de 08 §4.5 y de P-M1 en las paradas que fija el plan (n = 0, 1, 4, 8, 9, 13, 16, 17 y 19)."""
+    """Campos de 08 §4.5 y de P-M1 en las paradas que fija el plan (n = 0, 1, 4, 8, 9, 13, 16, 17 y 19) y en las de 201-420
+    (M4.5a: n = 20, 22, 23, 25, 29, 30, 31, 32, 35 y 41)."""
 
     @classmethod
     def setUpClass(cls):
@@ -76,7 +80,7 @@ class FieldTests(unittest.TestCase):
         assert not errors, errors
         cls.doc = doc
         cls.by_n = {s["n"]: s for s in doc["stops"]}
-        cls.records = {r["k"]: r for r in cls.source["paradas_1_200"]}
+        cls.records = {r["k"]: r for r in cls.source["paradas_1_200"] + cls.source["paradas_201_700"]}
 
     def bg(self, kit, hero=None, code=None, lut=None) -> dict:
         return {"kit": kit, "hero": hero, "code": code, "lut": lut}
@@ -87,10 +91,10 @@ class FieldTests(unittest.TestCase):
             with self.subTest(n=n, field=key):
                 self.assertEqual(value, stop[key])
 
-    def test_twenty_stops_with_the_fields_of_08_4_5_in_fixed_order(self):
+    def test_forty_two_stops_with_the_fields_of_08_4_5_in_fixed_order(self):
         self.assertEqual("af-river-stops/1", self.doc["format"])
         self.assertEqual("docs/research/mapa-del-rio/rio-amazonas.json", self.doc["source"])
-        self.assertEqual(list(range(20)), [s["n"] for s in self.doc["stops"]])
+        self.assertEqual(list(range(42)), [s["n"] for s in self.doc["stops"]], "1-420: k = 0-41 (M4.5a)")
         for s in self.doc["stops"]:
             self.assertEqual(list(stops.STOP_FIELDS), list(s.keys()))
             self.assertEqual(["kit", "hero", "code", "lut"], list(s["bg"].keys()))
@@ -151,16 +155,85 @@ class FieldTests(unittest.TestCase):
                         answers_world_question=False,
                         bg=self.bg("bg_kit_w05", hero="bg_hero_pacaya_samiria", lut="dawn"))
 
+    # ---- 201-420 (M4.5a; propuesta del Mapa §5.4 bis y §5.4 ter)
+
+    def test_n20_mazan_opens_world_6_with_the_myth_of_the_source(self):
+        self.assertStop(20, levels=[201, 210], world=6, id="mazan", kind="gate", country="PE", country_name=None,
+                        km_from_sea=3635, km_home=3664, sample="white", flag_raise=None, arrival_fact="map.myth.source",
+                        facts=["map.stop.mazan.dato_01"], world_question="map.world.w06.question",
+                        answers_world_question=False, bg=self.bg("bg_kit_w06", code="kit:napo_ancho_con_lanchas"))
+        self.assertEqual("napo", self.by_n[20]["at"]["line"])
+
+    def test_n22_nuevo_rocafuerte_raises_the_flag_of_ecuador(self):
+        self.assertStop(22, levels=[221, 230], world=6, id="nuevo_rocafuerte", kind="stop", country="EC",
+                        flag_raise="EC", arrival_fact="map.country.ec.dato_01", world_question=None,
+                        bg=self.bg("bg_kit_w06", code="kit:napo_frontera"))
+
+    def test_n23_yasuni_answers_the_question_of_world_6(self):
+        self.assertStop(23, levels=[231, 240], world=6, id="yasuni", kind="stop", country="EC",
+                        arrival_fact="map.stop.yasuni.dato_01", answers_world_question=True)
+
+    def test_n25_cuyabeno_black_water_up_the_aguarico(self):
+        self.assertStop(25, levels=[251, 260], world=6, id="cuyabeno", kind="stop", country="EC", sample="black",
+                        arrival_fact="map.stop.cuyabeno.dato_01",
+                        bg=self.bg("bg_kit_w06", code="kit:laguna_negra_con_igapo"))
+        self.assertEqual({"line": "cuyabeno", "s": 0.0}, self.by_n[25]["at"], "la Laguna Grande, cabecera del Cuyabeno")
+        self.assertEqual(["napo", "aguarico", "cuyabeno"], [p["line"] for p in self.by_n[25]["leg"]["path"]])
+
+    def test_n29_misahualli_closes_world_6(self):
+        self.assertStop(29, levels=[291, 300], world=6, id="misahualli", kind="close", country="EC",
+                        arrival_fact="map.stop.misahualli.dato_01",
+                        bg=self.bg("bg_kit_w06", code="kit:piedemonte_andino"))
+
+    def test_n30_puerto_heath_raises_the_flag_of_bolivia_after_teotonio(self):
+        self.assertStop(30, levels=[301, 310], world=7, id="puerto_heath", kind="gate", country="BO",
+                        flag_raise="BO", arrival_fact="map.country.bo.dato_01", world_question="map.world.w07.question",
+                        facts=["map.stop.puerto_heath.dato_01"], bg=self.bg("bg_kit_w07", code="kit:boca_del_heath"))
+        leg = self.by_n[30]["leg"]
+        self.assertEqual(["napo", "amazonas", "madeira", "beni", "madre_de_dios"], [p["line"] for p in leg["path"]],
+                         "Napo abajo, Amazonas abajo, Madeira, Beni y Madre de Dios (viaje del 300)")
+        self.assertIn("teotonio", leg["via"], "el punto de paso teotonio en el viaje del 300 (Q18-A)")
+        self.assertEqual("teotonio", leg["via"][-1], "teotonio, el ultimo: es el unico del Madeira")
+        self.assertNotIn("teotonio", [v for s in self.doc["stops"] if s["n"] != 30 for v in s["leg"]["via"]])
+
+    def test_n31_lake_sandoval_raises_the_flag_of_peru_again(self):
+        self.assertStop(31, levels=[311, 320], world=7, id="sandoval", kind="stop", country="PE", flag_raise="PE",
+                        arrival_fact="map.stop.sandoval.dato_01")
+
+    def test_n32_aguajal_de_sandoval_carries_the_four_candidates_of_question_50(self):
+        self.assertStop(32, id="sandoval_aguajal", facts=[f"map.stop.sandoval.dato_0{i}" for i in (4, 5, 6, 7)])
+
+    def test_n35_collpa_answers_the_question_of_world_7(self):
+        self.assertStop(35, levels=[351, 360], world=7, id="collpa_tambopata", kind="stop", country="PE",
+                        arrival_fact="map.stop.collpa_tambopata.dato_01", answers_world_question=True)
+        self.assertEqual("tambopata", self.by_n[35]["at"]["line"])
+
+    def test_n41_manu_cochas_closes_world_7(self):
+        self.assertStop(41, levels=[411, 420], world=7, id="manu_cochas", kind="close", country="PE",
+                        flag_raise=None, arrival_fact="map.stop.manu.dato_03",
+                        bg=self.bg("bg_kit_w07", code="kit:cocha_con_lobos"))
+        self.assertEqual("manu", self.by_n[41]["at"]["line"])
+
+    def test_201_420_without_hero(self):
+        # Q14-A (D-013, punto 2): sin heroe en 201-700, el kit del mundo con una pieza y el rotulo.
+        for s in self.doc["stops"][20:]:
+            with self.subTest(n=s["n"]):
+                self.assertIsNone(s["bg"]["hero"])
+                self.assertIsNone(s["bg"]["lut"])
+                self.assertTrue(s["bg"]["code"].startswith("kit:"))
+                self.assertEqual(f"bg_kit_w{s['world']:02d}", s["bg"]["kit"])
+
     def test_flags_and_luts_across_all_stops(self):
         flags = {s["n"]: s["flag_raise"] for s in self.doc["stops"] if s["flag_raise"]}
-        self.assertEqual({0: "BR", 8: "CO", 14: "PE"}, flags)
+        self.assertEqual({0: "BR", 8: "CO", 14: "PE", 22: "EC", 30: "BO", 31: "PE"}, flags)
         luts = {s["n"]: s["bg"]["lut"] for s in self.doc["stops"] if s["bg"]["lut"]}
         self.assertEqual({9: "dusk", 19: "dawn"}, luts)
         questions = {s["n"]: s["world_question"] for s in self.doc["stops"] if s["world_question"]}
         self.assertEqual({1: "map.world.w02.question", 4: "map.world.w03.question", 8: "map.world.w04.question",
-                          14: "map.world.w05.question"}, questions)
+                          14: "map.world.w05.question", 20: "map.world.w06.question", 30: "map.world.w07.question"},
+                         questions)
         answers = [s["n"] for s in self.doc["stops"] if s["answers_world_question"]]
-        self.assertEqual([3, 6, 13, 17], answers)
+        self.assertEqual([3, 6, 13, 17, 23, 35], answers)
 
     def test_each_stop_comes_from_its_record(self):
         for s in self.doc["stops"]:
@@ -196,8 +269,8 @@ class FieldTests(unittest.TestCase):
             if s["country_name"] is not None:
                 assertKey(re.compile(rf"map\.stop\.{re.escape(s['id'])}\.country"), s["country_name"],
                           f"n={n} country_name")
-        self.assertEqual(19, sum(s["arrival_fact"] is not None for s in self.doc["stops"]))
-        self.assertEqual(4, sum(s["world_question"] is not None for s in self.doc["stops"]))
+        self.assertEqual(41, sum(s["arrival_fact"] is not None for s in self.doc["stops"]))
+        self.assertEqual(6, sum(s["world_question"] is not None for s in self.doc["stops"]))
         self.assertEqual(1, sum(s["country_name"] is not None for s in self.doc["stops"]))
 
 
@@ -230,11 +303,11 @@ class WorldTableSyncTests(unittest.TestCase):
                 is_last = b == self.last_of(s["world"]) and s["kind"] != "gate"
                 self.assertEqual(is_last, s["kind"] == "close")
 
-    def test_stops_cover_whole_worlds_1_to_5(self):
+    def test_stops_cover_whole_worlds_1_to_7(self):
         covered = [lvl for s in self.doc["stops"] for lvl in range(s["levels"][0], s["levels"][1] + 1)]
-        self.assertEqual(list(range(1, self.last_of(5) + 1)), covered)
+        self.assertEqual(list(range(1, self.last_of(7) + 1)), covered, "1-420 (M4.5a)")
         gates = [s["levels"][0] for s in self.doc["stops"] if s["kind"] == "gate"]
-        self.assertEqual(self.first_levels[:5], gates)
+        self.assertEqual(self.first_levels[:7], gates)
 
 
 class OutputTests(unittest.TestCase):
@@ -300,7 +373,7 @@ class OutputTests(unittest.TestCase):
 # ------------------------------------------------------------------------------ fixtures invalidos de --check
 
 def _rec(doc: dict, k: int) -> dict:
-    return next(r for r in doc["paradas_1_200"] if r["k"] == k)
+    return next(r for r in doc["paradas_1_200"] + doc["paradas_201_700"] if r["k"] == k)
 
 
 def _set_rec(k: int, field: str, value):
@@ -424,14 +497,42 @@ def _drop_override(sid: str, field: str):
 
 
 def _unknown_country(src: dict, ov: dict) -> None:
-    # Las paradas del Peru (k = 14-19) pasan a un pais «XX» sin entrada en COUNTRY_NAMES, con su bandera y su cruce de
-    # pais coherentes: validate() no se queja y falla solo el nombre del pais.
-    for r in src["paradas_1_200"]:
-        if r["k"] >= 14:
+    # Las paradas del Peru (k = 14-21 y 31-41) pasan a un pais «XX» sin entrada en COUNTRY_NAMES, con sus banderas y sus
+    # cruces de pais coherentes: validate() no se queja y falla solo el nombre del pais.
+    for r in src["paradas_1_200"] + src["paradas_201_700"]:
+        if r["pais"] == "PE":
             r["pais"] = "XX"
             if "bandera" in r:
                 r["bandera"] = "XX"
     next(c for c in src["cruces_de_pais"] if c.get("llega_en") == {"parada_1_200": 14})["pais"] = "XX"
+    next(c for c in src["cruces_de_pais"] if c.get("llega_en") == {"mundo": 7, "sitio": "Lago Sandoval"})["pais"] = "XX"
+
+
+def _crossing(pais: str, nivel: int) -> callable:
+    def find(src: dict) -> dict:
+        return next(c for c in src["cruces_de_pais"] if c.get("pais") == pais and c.get("nivel") == nivel)
+    return find
+
+
+def _set_crossing(pais: str, nivel: int, field: str, value):
+    """Fixture: cambia un campo del cruce de pais (pais, nivel) de cruces_de_pais (M4.5a)."""
+    def mutate(src: dict, ov: dict) -> None:
+        _crossing(pais, nivel)(src)[field] = value
+    return mutate
+
+
+def _drop_crossing(pais: str, nivel: int):
+    def mutate(src: dict, ov: dict) -> None:
+        c = _crossing(pais, nivel)(src)
+        src["cruces_de_pais"] = [x for x in src["cruces_de_pais"] if x is not c]
+    return mutate
+
+
+def _set_local_river(rid: str, field: str, value):
+    """Fixture: cambia un campo de un rio local de 201-700 (rios_locales_201_700; M4.5a)."""
+    def mutate(src: dict, ov: dict) -> None:
+        next(r for r in src["rios_locales_201_700"] if r["id"] == rid)[field] = value
+    return mutate
 
 
 def _drop_rotulo(name: str):
@@ -537,6 +638,22 @@ FIXTURES = [
      "map.stop.manaos.dato_02: 4 argumentos y la tabla admite 3"),
     ("args con el nombre reservado sep", _set_dato_with_args(5, "Uno {sep} dos.", {"sep": 1}),
      "args lleva el nombre 'sep', que no vale como marcador"),
+    # 201-420 (M4.5a): paradas_201_700, los cruces por sitio y por viaje de entrada, y los rios locales nuevos.
+    ("k repetida entre las dos listas", _set_rec(21, "k", 20), "k repetida (ya es 'mazan')"),
+    ("parada de 201-700 con una k fuera de 20-69", _set_rec(41, "k", 70), "paradas_201_700: k=[70] fuera de 20-69"),
+    ("sin la bandera de Bolivia en el 300", _drop_crossing("BO", 300), "bandera 'BO' y cruces_de_pais dice None"),
+    ("cruce de un sitio sin parada", _set_crossing("EC", 220, "llega_en", {"mundo": 6, "sitio": "Tena"}),
+     "llega al sitio 'Tena' del mundo 6 y ninguna parada de ese mundo esta en el"),
+    ("cruce en un nivel que no es el de su parada", _set_crossing("PE", 310, "nivel", 320),
+     "en el nivel 320 y su parada k=31 se alcanza al ganar el 310"),
+    ("gran parada del mundo 7 sin gate", _set_rec(30, "tipo", "parada"), "la primera parada del mundo 7 tiene que ser gate"),
+    ("cierre del mundo 6 sin close", _set_rec(29, "tipo", "parada"), "la ultima parada del mundo 6 tiene que ser close"),
+    ("kit del mundo 6 en el mundo 7", _set_fondo(35, "kit", "bg_kit_w06"), "bg.kit 'bg_kit_w06' y el mundo 7 pide bg_kit_w07"),
+    ("dato del 200 sin clave", _set_dato(20, "clave", None), "parada k=20 ('mazan'): sin dato_del_nivel.clave"),
+    ("rio local con otra boca que HOSTS", _set_local_river("aguarico", "boca_en", "amazonas"),
+     "rio aguarico: boca_en 'amazonas' de la investigacion y HOSTS (geometry.py) dice 'napo'"),
+    ("Otro dato de la parada 32 de 91 caracteres", _set_otro(32, 0, "texto", _TEXT_91),
+     "map.stop.sandoval.dato_04: 91 caracteres"),
 ]
 
 
@@ -570,6 +687,7 @@ class InvalidFixtureTests(unittest.TestCase):
         # el final del documento, y no escribe nada.
         src = copy.deepcopy(self.source)
         src["paradas_1_200"] = [r for r in src["paradas_1_200"] if r["k"] < 18]
+        src["paradas_201_700"] = []
         with tempfile.TemporaryDirectory() as tmp:
             src_path = Path(tmp) / "rio.json"
             out = Path(tmp) / "river_stops_v1.json"
@@ -586,7 +704,8 @@ class InvalidFixtureTests(unittest.TestCase):
         wt = WorldTable.from_cs()
         doc, errors = stops.build(copy.deepcopy(self.source), copy.deepcopy(self.overrides), wt)
         self.assertEqual([], errors)
-        for last_n, ok in ((19, True), (18, False), (14, False), (13, True), (7, True), (5, False), (0, True)):
+        for last_n, ok in ((41, True), (35, False), (30, False), (29, True), (25, False), (19, True), (18, False),
+                           (14, False), (13, True), (7, True), (5, False), (0, True)):
             with self.subTest(last_n=last_n):
                 cut = dict(doc, stops=doc["stops"][:last_n + 1])
                 ending = [e for e in stops.validate(cut, wt) if "el documento termina" in e]
@@ -639,6 +758,9 @@ class TextBlockTests(unittest.TestCase):
         cls.table = {r[0]: dict(zip(cls.header, r)) for r in cls.rows[1:]}
         cls.doc = json.loads(STOPS_PATH.read_text(encoding="utf-8"))
         cls.source = load_json(SOURCE_PATH)
+        # Lugares de las claves de 201-420 (map.stop.<lugar>.*), los unicos con cifras en args (M4.5a).
+        cls.stops_201 = {k.split(".")[2] for s in cls.doc["stops"] if s["n"] >= 20
+                         for k in [s["arrival_fact"], *s["facts"]] if k.startswith("map.stop.")}
 
     def test_header_of_l2b_utf8_without_bom_with_lf(self):
         self.assertEqual(self.HEADER, self.header)
@@ -648,7 +770,7 @@ class TextBlockTests(unittest.TestCase):
 
     def test_every_key_cited_by_the_stops_has_a_row_with_text(self):
         cited = stops.cited_keys(self.doc)
-        self.assertEqual(80, len(cited), "67 de M1.1t y 13 «Otro dato» de M2.6")
+        self.assertEqual(168, len(cited), "67 de M1.1t, 13 «Otro dato» de M2.6 y 88 de 201-420 (M4.5a)")
         for key in cited:
             with self.subTest(key=key):
                 self.assertIn(key, self.table)
@@ -657,8 +779,11 @@ class TextBlockTests(unittest.TestCase):
         river_map = json.loads(MAP_PATH.read_text(encoding="utf-8"))
         map_keys = ({f"map.stop.{p['id']}.name" for p in river_map["passing"] + river_map["viewpoints"]}
                     | {f"map.country.{lab['country'].lower()}.name" for lab in river_map["labels"]})
-        self.assertEqual(26, len(map_keys - set(cited)), "17 puntos de paso, 3 miradores y 6 paises solo de los rotulos")
-        self.assertEqual(sorted(set(cited) | map_keys), sorted(block),
+        self.assertEqual(25, len(map_keys - set(cited)), "18 puntos de paso, 3 miradores y 4 paises solo de los rotulos")
+        # Los datos de los puntos de paso con texto final en la investigacion (M4.5a: el de teotonio).
+        passing_facts = {p["fact"] for p in river_map["passing"] if p["fact"] in self.table}
+        self.assertEqual({"map.stop.teotonio.dato_01"}, passing_facts)
+        self.assertEqual(sorted(set(cited) | map_keys | passing_facts), sorted(block),
                          "el bloque tiene justo las claves que citan river_stops_v1.json y river_map_v1.json")
 
     def test_rows_are_ordinal_and_the_block_is_contiguous(self):
@@ -683,19 +808,23 @@ class TextBlockTests(unittest.TestCase):
                 if re.search(r"\[(V|E)\]", row["notes"]):
                     # 08 §4.5: cada etiqueta [V] o [E] lleva a una fuente con URL.
                     self.assertRegex(row["context"], r"https?://", "fila [V] o [E] sin URL en su contexto")
-                if not (".dato_" in key or key.startswith("map.general.")):
+                if not (".dato_" in key or key.startswith(("map.general.", "map.myth."))):
                     self.assertTrue(row["notes"].startswith("[P] "), "nombres, rios, paises y preguntas sin [V] ni [E]")
                 self.assertIn("no se edita a mano", row["notes"])
                 self.assertTrue(row["context"])
-                expected_max = ("90" if ".dato_" in key or key.startswith("map.general.") else
+                expected_max = ("90" if ".dato_" in key or key.startswith(("map.general.", "map.myth.")) else
                                 "50" if key.endswith(".question") else "32")
                 self.assertEqual(expected_max, row["max_chars"])
                 self.assertLessEqual(len(row["es-419"]), int(row["max_chars"]))
                 self.assertIsNone(stops.RE_NUMBER_SEP.search(row["es-419"]))
-                self.assertEqual("", row["args"], "1-200 no tiene cifras con separador")
+                # Cada marcador del texto con su cifra en args, y nada mas (Q8-A; 1-200 no lleva ninguna: 201-420, si).
+                names = sorted(a.split("=")[0] for a in row["args"].split(";") if a)
+                self.assertEqual(sorted(set(stops.RE_MARKER.findall(row["es-419"]))), names)
+                if not key.startswith("map.stop.") or key[len("map.stop."):].split(".")[0] not in self.stops_201:
+                    self.assertEqual("", row["args"], "1-200 no tiene cifras con separador")
 
     def test_facts_carry_their_source_url_and_mark(self):
-        records = {r["k"]: r for r in self.source["paradas_1_200"]}
+        records = {r["k"]: r for r in self.source["paradas_1_200"] + self.source["paradas_201_700"]}
         for s in self.doc["stops"]:
             if s["arrival_fact"] is None:
                 continue
@@ -732,9 +861,26 @@ class TextBlockTests(unittest.TestCase):
         self.assertEqual("Óbidos", t["map.stop.obidos.name"])
         self.assertEqual("Isla de Marajó", t["map.stop.isla_de_marajo.name"])
         self.assertEqual("¿Por qué el agua del Tapajós es clara?", t["map.world.w02.question"])
-        self.assertEqual(4, sum(k.startswith("map.world.") for k in t))
-        self.assertEqual(32, sum(".dato_" in k or k.startswith("map.general.") for k in t if k.startswith("map.")),
-                         "19 datos de llegada y 13 «Otro dato»")
+        # 201-420 (M4.5a).
+        self.assertEqual("Mazán", t["map.stop.mazan.name"])
+        self.assertEqual("Napo", t["map.stop.mazan.river"])
+        self.assertEqual("Lagunas de Cuyabeno", t["map.stop.cuyabeno.name"])
+        self.assertEqual("Cuyabeno", t["map.stop.cuyabeno.river"])
+        self.assertEqual("Boca del río Coca", t["map.stop.boca_del_coca.name"])
+        self.assertEqual("Coca y Napo", t["map.stop.boca_del_coca.river"])
+        self.assertEqual("Puerto Heath", t["map.stop.puerto_heath.name"])
+        self.assertEqual("Madre de Dios y Tambopata", t["map.stop.puerto_maldonado.river"])
+        self.assertEqual("Astilleros de Puerto Maldonado", t["map.stop.puerto_maldonado_astilleros.name"])
+        self.assertEqual("Madre de Dios", t["map.stop.puerto_maldonado_astilleros.river"],
+                         "overrides.json: con dos rios, map_arrived pasaria de 64 caracteres (M4.5a)")
+        self.assertEqual("Las cochas del Manu", t["map.stop.manu_cochas.name"])
+        self.assertEqual("¿Cuántas especies de árbol caben en una hectárea?", t["map.world.w06.question"])
+        self.assertEqual("¿Por qué los guacamayos comen arcilla?", t["map.world.w07.question"])
+        self.assertEqual("El Amazonas no tiene una sola naciente: la ciencia aún discute cuál es la más lejana.",
+                         t["map.myth.source"], "el dato de llegada del 200 (08 §4.5)")
+        self.assertEqual(6, sum(k.startswith("map.world.") for k in t))
+        self.assertEqual(72, sum(".dato_" in k or k.startswith("map.general.") for k in t if k.startswith("map.")),
+                         "40 datos de llegada (sin map.myth.source), 31 «Otro dato» y el del punto de paso teotonio")
 
     def test_rivers_are_only_the_name_of_the_river(self):
         for key, row in self.table.items():
@@ -743,6 +889,9 @@ class TextBlockTests(unittest.TestCase):
                     self.assertIsNone(stops.river_problem(row["es-419"]), row["es-419"])
         two = self.table["map.stop.pacaya_samiria.river"]["context"]
         self.assertIn("pendiente del dueño y del asesor", two, "dos rios en «rio {rio}»: pregunta abierta")
+        for sid in ("boca_del_coca", "puerto_maldonado", "boca_manu"):
+            with self.subTest(sid=sid):
+                self.assertIn("pendiente del dueño y del asesor", self.table[f"map.stop.{sid}.river"]["context"])
         self.assertNotIn("pendiente del dueño", self.table["map.stop.manaos.river"]["context"])
 
     def test_arrival_context_says_who_presents_the_fact_and_where(self):
@@ -756,13 +905,15 @@ class TextBlockTests(unittest.TestCase):
         self.assertIn("TiTino se presenta", first)
 
     def test_titino_milestones_move_the_arrival_fact_to_the_next_victory(self):
-        # D-022, punto 1 (pregunta 45 (a); T6-A): en el fin de mundo salvo el 10 (40, 80 y 140), el primer Difícil (40) y
-        # el primer Muy difícil (60) habla TiTino y el dato de llegada sale en la victoria siguiente.
+        # D-022, punto 1 (pregunta 45 (a); T6-A): en el fin de mundo salvo el 10 (40, 80, 140, 200 y 300), el primer
+        # Difícil (40) y el primer Muy difícil (60) habla TiTino y el dato de llegada sale en la victoria siguiente.
         moved = {
             "map.stop.manaos.dato_01": (40, "fin del mundo 2 y primer Difícil"),
             "map.general.dato_negra": (60, "primer Muy difícil"),
             "map.country.co.dato_01": (80, "fin del mundo 3"),
             "map.country.pe.dato_01": (140, "fin del mundo 4"),
+            "map.myth.source": (200, "fin del mundo 5"),
+            "map.country.bo.dato_01": (300, "fin del mundo 6"),
         }
         for key, (level, why) in moved.items():
             with self.subTest(key=key):
@@ -792,8 +943,11 @@ class TextBlockTests(unittest.TestCase):
                       "map.stop.rio_frontera.country)", co)
         self.assertNotIn("8-13", co)
         self.assertIn("en las paradas 0-7 del Mapa del río;", self.table["map.country.br.name"]["context"])
-        self.assertIn("en las paradas 14-19 del Mapa del río;", self.table["map.country.pe.name"]["context"])
-        for iso in ("br", "co", "pe"):
+        self.assertIn("en las paradas 14-21 y 31-41 del Mapa del río;", self.table["map.country.pe.name"]["context"])
+        self.assertIn("en las paradas 22-29 del Mapa del río;", self.table["map.country.ec.name"]["context"])
+        self.assertIn("en la parada 30 del Mapa del río;", self.table["map.country.bo.name"]["context"])
+        self.assertIn("Ninguna parada de 1-420 está en él", self.table["map.country.ve.name"]["context"])
+        for iso in ("br", "co", "pe", "ec", "bo"):
             with self.subTest(iso=iso):
                 ctx = self.table[f"map.country.{iso}.name"]["context"]
                 self.assertIn("map_country_welcome («{país} te da la bienvenida»", ctx)
@@ -803,8 +957,8 @@ class TextBlockTests(unittest.TestCase):
         self.assertEqual("1, 3 y 5-6", stops.stop_ranges([1, 3, 5, 6]))
 
     def test_stop_name_context_names_every_place(self):
-        # map_hito_preview solo en las paradas a las que llega un hito p20 desde el primer Difícil (40, 60, ... 180).
-        hito_stops = {4, 6, 8, 10, 12, 14, 16, 18}
+        # map_hito_preview solo en las paradas a las que llega un hito p20 desde el primer Difícil (40, 60, ... 400).
+        hito_stops = set(range(4, 41, 2))
         for s in self.doc["stops"]:
             with self.subTest(n=s["n"]):
                 ctx = self.table[f"map.stop.{s['id']}.name"]["context"]
@@ -821,7 +975,7 @@ class TextBlockTests(unittest.TestCase):
     def test_other_facts_of_the_cards(self):
         # «Otro dato» de la tarjeta (M2.6 con los de M2.7): texto, etiqueta, fuentes con URL y donde sale.
         t = self.table
-        self.assertEqual(13, sum(1 for k in t if "Otro dato» de la tarjeta" in t[k]["context"]))
+        self.assertEqual(31, sum(1 for k in t if "Otro dato» de la tarjeta" in t[k]["context"]), "13 de 1-200 y 18 de 201-420")
         row = t["map.stop.tefe.dato_03"]
         self.assertEqual("Cuando el agua baja, los manatíes de Mamirauá viajan a un refugio: el lago Amanã.", row["es-419"])
         self.assertTrue(row["notes"].startswith("[V] «Otro dato» del Mapa del río."))
@@ -830,6 +984,34 @@ class TextBlockTests(unittest.TestCase):
         self.assertEqual("90", row["max_chars"])
         self.assertEqual("pendiente_asesor", row["status"])
         self.assertIn("5-6 m", t["map.stop.itaya.dato_01"]["es-419"], "U+00A0 entre la cifra y la unidad")
+        # Con una cifra (M4.5a): {n} en el texto y su valor en args (Q8-A).
+        row = t["map.stop.collpa_tambopata.dato_04"]
+        self.assertEqual("La Reserva Nacional Tambopata se creó en 2000 y protege unas {n} hectáreas.", row["es-419"])
+        self.assertEqual("n=274690", row["args"])
+        self.assertIn("Marcadores: {n}", row["context"])
+        self.assertEqual([f"map.stop.sandoval.dato_0{i}" for i in (4, 5, 6, 7)],
+                         [k for k in sorted(t) if k.startswith("map.stop.sandoval.dato_0") and k > "map.stop.sandoval.dato_03"],
+                         "los cuatro candidatos de Para de la pregunta 50 (a) en la tarjeta de la parada 32")
+
+    def test_passing_point_teotonio_with_its_name_and_fact(self):
+        # M4.5a (Q18-A, P-M8): el punto de paso del viaje del 300 lleva su id, su nombre y el texto final de su dato.
+        t = self.table
+        self.assertEqual("Rápidos de Teotônio", t["map.stop.teotonio.name"]["es-419"])
+        row = t["map.stop.teotonio.dato_01"]
+        self.assertEqual("Río arriba de Teotônio vive otra población de delfines de río, aislada por los rápidos.",
+                         row["es-419"])
+        self.assertTrue(row["notes"].startswith("[E] Dato de punto de paso del Mapa del río."))
+        self.assertEqual("90", row["max_chars"])
+        self.assertIn("wp_boto [E]", row["context"])
+        self.assertIn("https://", row["context"])
+        self.assertIn("passing[]", row["context"])
+        self.assertIn("Relevo del guía: Rosa se queda aquí", row["context"])
+        self.assertIn("al ganar el 300", row["context"])
+        from riverdata import final_fact_of
+        self.assertIsNone(final_fact_of("map.stop.obidos.dato_01 [V MR-F21]: el río se aprieta a unos 2 km"),
+                          "los de 1-200 solo dan la clave y una descripcion")
+        self.assertEqual({"clave": "map.stop.x.dato_01", "etiqueta": "E", "fuente": "a, b", "texto": "Uno."},
+                         final_fact_of("map.stop.x.dato_01 [E a, b]: «Uno.»"))
 
     def test_a_source_titled_with_belen_is_cited_by_id_and_url_only(self):
         # El veto de D-013 (punto 11) vale para todas las columnas: CR-F28 es la pagina del distrito (su titulo lleva el
@@ -847,6 +1029,8 @@ class TextBlockTests(unittest.TestCase):
         self.assertIn("42\u00a0%", self.table["map.country.co.dato_01"]["es-419"])
         self.assertEqual("2 millones de hectáreas", stops.clean_text("2 millones de hectáreas"))
         self.assertEqual("{n}\u00a0km y 35\u00a0m", stops.clean_text("{n} km y 35 m"))
+        self.assertEqual("unos {n}\u00a0m³ de agua", stops.clean_text("unos {n} m³ de agua"), "M4.5a: el caudal del Napo")
+        self.assertIn("{n}\u00a0m³", self.table["map.stop.mazan.dato_01"]["es-419"])
         self.assertEqual("5 metros", stops.clean_text("5 metros"))
 
     def test_no_belen_anywhere_in_the_block(self):
@@ -954,7 +1138,7 @@ class WriteTextsTests(unittest.TestCase):
             _, errors = stops.build_texts(doc, source, overrides)
         self.assertTrue(errors)
         self.assertTrue(all("no cita ninguna fuente con URL" in e for e in errors), errors)
-        self.assertEqual(32, len(errors), "uno por dato de llegada y otro por «Otro dato»")
+        self.assertEqual(73, len(errors), "uno por dato de llegada (41), otro por «Otro dato» (31) y el de teotonio")
 
     def test_csv_helpers_round_trip(self):
         from riverdata import format_csv_row
@@ -987,7 +1171,7 @@ class FactsCheckTests(unittest.TestCase):
     def test_check_passes_on_the_committed_table(self):
         proc = self.check(FACTS_PATH.read_bytes())
         self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
-        self.assertIn(b"106 textos map.* validos", proc.stdout)
+        self.assertIn(b"194 textos map.* validos", proc.stdout)
 
     def test_edited_row_is_drift(self):
         # Solo en la fila del Mapa: desde F1F2, la linea 14 del Agua del Tapajos (fact.*, antes del bloque) tambien la nombra.
@@ -1010,7 +1194,7 @@ class FactsCheckTests(unittest.TestCase):
         self.assertFails(data, "map.world.w02.question: citada en river_stops_v1.json y sin texto es-419")
 
     def test_missing_block(self):
-        self.assertFails(without_block(FACTS_PATH.read_bytes()), "80 claves citadas", "falta el bloque map.*")
+        self.assertFails(without_block(FACTS_PATH.read_bytes()), "168 claves citadas", "falta el bloque map.*")
 
     def test_block_split_by_another_row(self):
         records = split_csv_records(FACTS_PATH.read_bytes().decode("utf-8"))

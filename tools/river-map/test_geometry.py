@@ -12,7 +12,9 @@ confluencias y el del 41 por Obidos, Parintins, Itacoatiara y la boca del Madeir
 solo las excepciones medidas pendientes del duenno, y sus avisos; y los fallos de --check: una parada desplazada 20 km
 (tambien un sitio tierra adentro y un punto de atraque, este con los 15 km del canon), una parada que retrocede (su s
 rio abajo de la anterior o su km_from_sea menor), un leg roto, una boca fuera de su rio (tambien la del Pacaya, mas alla
-de su cifra medida), un candidato de la propuesta §5.1 bis ausente y el desfase.
+de su cifra medida), un candidato de la propuesta §5.1 bis ausente y el desfase. M4.5a: los rios locales de 201-420 (el
+Aguarico y el Cuyabeno del desvio a Cuyabeno, el Tambopata y el Manu) con su anfitrion, el punto de paso teotonio del
+viaje del 300 en el Madeira y las 42 paradas de 1-420, con los km que solo bajan en los viajes de entrada.
 Solo biblioteca estandar.
 """
 from __future__ import annotations
@@ -70,7 +72,7 @@ class Base(unittest.TestCase):
         cls.lines = {line["id"]: line for line in cls.doc["lines"]}
         cls.stops = load_json(STOPS_PATH)
         cls.by_n = {s["n"]: s for s in cls.stops["stops"]}
-        cls.records = [r for r in cls.source["paradas_1_200"]]
+        cls.records = [r for r in cls.source["paradas_1_200"] + cls.source["paradas_201_700"]]
 
 
 class ProjectionTests(Base):
@@ -156,6 +158,25 @@ class LinesTests(Base):
                     with self.subTest(stop=r["k"], river=rid):
                         self.assertEqual("local", self.lines[rid]["kind"])
 
+    def test_local_rivers_of_201_420_with_their_hosts(self):
+        # M4.5a: rios_locales_201_700 de la investigacion, con el anfitrion de su boca_en (propuesta §5.4 bis y ter).
+        hosts = {"aguarico": "napo", "cuyabeno": "aguarico", "tambopata": "madre_de_dios", "manu": "madre_de_dios"}
+        ids = [line["id"] for line in self.doc["lines"]]
+        self.assertEqual(31, len(ids), "27 de 1-200 y 4 locales de 201-420")
+        self.assertEqual(list(hosts), ids[-4:], "despues de los de rios, en el orden de rios_locales_201_700")
+        for rid, host in hosts.items():
+            with self.subTest(river=rid):
+                line = self.lines[rid]
+                self.assertEqual("local", line["kind"])
+                self.assertEqual(3, line["class"])
+                self.assertEqual(host, line["mouth"]["on"])
+                self.assertEqual(1.0, line["fill_on_pass"])
+                self.assertLessEqual(geometry.haversine(self.model.lines[rid].ll[-1],
+                                                        self.model.lines[host].point_at_s(line["mouth"]["s"])),
+                                     geometry.TOLERANCE_KM)
+        self.assertEqual("black", self.lines["cuyabeno"]["water"][0]["type"], "laguna de agua negra")
+        self.assertEqual("white", self.lines["aguarico"]["water"][0]["type"])
+
     def test_passby_whole_and_madeira_and_napo_only_the_mouth(self):
         for line in self.doc["lines"]:
             if line["kind"] == "passby":
@@ -210,7 +231,10 @@ class LinesTests(Base):
         self.assertEqual(3, len(self.doc["viewpoints"]))
         self.assertTrue(all(v["reveal_on"] == 10 for v in self.doc["viewpoints"]))
         passing = {p["id"]: p for p in self.doc["passing"]}
-        self.assertEqual(17, len(passing))
+        self.assertEqual(18, len(passing), "17 de 1-200 y teotonio (M4.5a)")
+        self.assertEqual("madeira", passing["teotonio"]["line"], "el relevo del guia del viaje del 300 (Q18-A, P-M8)")
+        self.assertEqual("map.stop.teotonio.dato_01", passing["teotonio"]["fact"])
+        self.assertEqual("teotonio", self.doc["passing"][-1]["id"], "despues de los de 1-200")
         self.assertEqual("map.stop.obidos.dato_01", passing["obidos"]["fact"])
         self.assertEqual("para", passing["breves"]["line"])
         self.assertEqual("amazonas", passing["gurupa"]["line"], "Gurupa, en la bifurcacion: el cauce gana el empate")
@@ -281,8 +305,8 @@ class FileTests(Base):
 
 
 class RouteTests(Base):
-    def test_twenty_stops_with_at_and_leg(self):
-        self.assertEqual(20, len(self.stops["stops"]))
+    def test_forty_two_stops_with_at_and_leg(self):
+        self.assertEqual(42, len(self.stops["stops"]), "1-420 (M4.5a)")
         for s in self.stops["stops"]:
             self.assertIn(s["at"]["line"], self.lines)
             self.assertTrue(s["leg"]["path"])
@@ -294,6 +318,18 @@ class RouteTests(Base):
         self.assertIn("madeira", leg["mouths"])
         self.assertEqual(["trombetas", "madeira", "negro"], leg["mouths"])
         self.assertEqual(["tapajos", "amazonas"], [p["line"] for p in leg["path"]], "baja el Tapajos y sube el cauce")
+
+    def test_leg_of_300_goes_down_the_napo_and_up_the_madeira_past_teotonio(self):
+        # Viaje del 300 (propuesta §5.4 ter): Napo abajo, Amazonas abajo (repaso), Madeira, Beni y Madre de Dios.
+        leg = self.by_n[30]["leg"]
+        self.assertEqual(["napo", "amazonas", "madeira", "beni", "madre_de_dios"], [p["line"] for p in leg["path"]])
+        self.assertIn("boca_del_madeira", leg["via"])
+        self.assertEqual("teotonio", leg["via"][-1])
+        self.assertLess(leg["via"].index("boca_del_madeira"), leg["via"].index("teotonio"))
+        # El desvio a Cuyabeno es una ida y vuelta por las confluencias del Aguarico.
+        self.assertEqual(["napo", "aguarico", "cuyabeno"], [p["line"] for p in self.by_n[25]["leg"]["path"]])
+        self.assertEqual(["cuyabeno", "aguarico", "napo"], [p["line"] for p in self.by_n[27]["leg"]["path"]])
+        self.assertEqual(["tambopata", "madre_de_dios"], [p["line"] for p in self.by_n[38]["leg"]["path"]])
 
     def test_there_and_back_through_the_confluences(self):
         # Iquitos/Itaya -> Allpahuayo-Mishana: el cauce hasta la boca del Nanay y el Nanay arriba; despues, abajo y a Nauta.
@@ -321,7 +357,8 @@ class RouteTests(Base):
             pos = self.model.lines[s["at"]["line"]].point_at_s(s["at"]["s"])
             limit = geometry.PENDING_SITE_KM.get(s["id"], geometry.TOLERANCE_KM)
             self.assertLessEqual(geometry.haversine((rec["lat"], rec["lon"]), pos), limit, s["id"])
-            if prev is not None and prev["km_from_sea"] is not None:
+            # Dentro de un mundo los km no retroceden; el viaje de entrada de los mundos 6 y 7 deshace camino (§5.4 bis).
+            if prev is not None and prev["km_from_sea"] is not None and prev["world"] == s["world"]:
                 self.assertGreaterEqual(s["km_from_sea"], prev["km_from_sea"])
             prev = s
 
@@ -383,7 +420,7 @@ class CheckTests(Base):
     def test_check_passes_on_the_committed_files(self):
         code, out = self.check()
         self.assertEqual(0, code, out)
-        self.assertIn("27 lineas, 17 puntos de paso y 3 miradores", out)
+        self.assertIn("31 lineas, 18 puntos de paso y 3 miradores", out)
 
     def test_stop_moved_20_km_fails(self):
         src = copy.deepcopy(self.source)

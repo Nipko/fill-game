@@ -82,10 +82,12 @@ namespace AF.Tests.EditMode
                 StopShapes.Amacayacu, StopShapes.PuertoNarino, StopShapes.Tarapoto, StopShapes.Beacon, StopShapes.Iquitos,
                 StopShapes.Rafts, StopShapes.Allpahuayo, StopShapes.Nauta, StopShapes.PacayaSamiria, StopShapes.PacayaSamiria,
             };
-            Assert.That(Stops.Count, Is.EqualTo(expected.Length));
+            Assert.That(Stops.Count, Is.EqualTo(expected.Length + 22), "1-200 y las 22 de 201-420 (M4.5a)");
             for (int n = 0; n < Stops.Count; n++)
             {
-                Assert.That(StopShapes.ShapeOf(Stops.At(n)!.Backdrop), Is.EqualTo(expected[n]), "parada " + n);
+                // 201-420 (Q14-A): solo el kit, con piezas sin forma propia todavía: la genérica del agua de respaldo.
+                string? want = n < expected.Length ? expected[n] : StopShapes.GenericWater;
+                Assert.That(StopShapes.ShapeOf(Stops.At(n)!.Backdrop), Is.EqualTo(want), "parada " + n);
             }
 
             Assert.That(StopShapes.ShapeOf(null), Is.Null);
@@ -237,7 +239,8 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(checkedStops, Is.EqualTo(Stops.Count - 4), "todas menos las dos piezas por código y las dos del kit");
+            Assert.That(checkedStops, Is.EqualTo(Stops.Count - 4 - 22),
+                "todas menos las dos piezas por código, las dos del kit y las 22 de 201-420, solo con el kit (Q14-A)");
             Assert.That(StopReflectionFade.DepthFactor(0f, 44f), Is.EqualTo(1f));
             Assert.That(StopReflectionFade.DepthFactor(22f, 44f), Is.EqualTo(0.5f).Within(0.0001f));
             Assert.That(StopReflectionFade.DepthFactor(50f, 44f), Is.EqualTo(0f));
@@ -717,7 +720,10 @@ namespace AF.Tests.EditMode
             Assert.That(GameScreen.StopForLevel(Stops, 21, true)!.N, Is.EqualTo(2));
             Assert.That(GameScreen.StopForLevel(Stops, 20, true)!.N, Is.EqualTo(1), "el 20 aún es de Santarém");
             Assert.That(GameScreen.StopForLevel(Stops, 200, true)!.N, Is.EqualTo(19));
-            Assert.That(GameScreen.StopForLevel(Stops, 201, true), Is.Null, "del 201 en adelante, sin paradas");
+            Assert.That(GameScreen.StopForLevel(Stops, 201, true)!.N, Is.EqualTo(20), "M4.5a: Mazán");
+            Assert.That(GameScreen.StopForLevel(Stops, 420, true)!.N, Is.EqualTo(41));
+            Assert.That(GameScreen.StopForLevel(Stops, 421, true), Is.Null, "del 421 en adelante, sin paradas");
+            Assert.That(GameScreen.StopForLevel(Stops, 350, false)!.N, Is.EqualTo(30), "la gran parada del mundo 7");
             Assert.That(GameScreen.StopForLevel(null, 5, true), Is.Null, "sin catálogo");
             Assert.That(GameScreen.StopForLevel(Stops, 35, false)!.N, Is.EqualTo(1), "ui_bg_per_stop = false: la gran parada del mundo 2");
             Assert.That(GameScreen.StopForLevel(Stops, 199, false)!.N, Is.EqualTo(14), "Iquitos, la del mundo 5");
@@ -894,7 +900,7 @@ namespace AF.Tests.EditMode
                 Assert.That(inside, Is.True, "parada " + n + ": opaco al acabar el degradado del borde");
             }
 
-            Assert.That(checkedStops, Is.EqualTo(18), "las 20 paradas menos las dos líneas entre aguas");
+            Assert.That(checkedStops, Is.EqualTo(40), "las 42 paradas menos las dos líneas entre aguas");
         }
 
         [Test]

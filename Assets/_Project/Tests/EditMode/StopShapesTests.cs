@@ -98,6 +98,15 @@ namespace AF.Tests.EditMode
             for (int n = 0; n < Stops.Count; n++)
             {
                 RiverStopBackdrop b = Stops.At(n)!.Backdrop;
+                if (n >= 20)
+                {
+                    // 201-420 (M4.5a; Q14-A): solo el kit, con piezas sin forma propia todavía (la genérica del agua).
+                    Assert.That(b.Hero, Is.Null, "parada " + n);
+                    Assert.That(b.Code, Does.StartWith("kit:"), "parada " + n);
+                    Assert.That(StopShapes.ShapeOf(b), Is.EqualTo(StopShapes.GenericWater), "parada " + n);
+                    continue;
+                }
+
                 sites.Add(b.Hero ?? b.Code!);
                 if (b.Code == null)
                 {
@@ -117,7 +126,7 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(sites.Count, Is.EqualTo(18), "07 §2.1: 18 sitios");
+            Assert.That(sites.Count, Is.EqualTo(18), "07 §2.1: 18 sitios en 1-200");
             Assert.That(kit, Is.EqualTo(2), "el río frontera y Nauta");
             Assert.That(code, Is.EqualTo(2), "Santarém y el Encuentro");
             Assert.That(StopShapes.ShapeOf(new RiverStopBackdrop("bg_kit_w13", null, "kit:rio_ancho_con_baliza", null)), Is.EqualTo(StopShapes.Beacon));

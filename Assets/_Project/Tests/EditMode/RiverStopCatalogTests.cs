@@ -139,20 +139,26 @@ namespace AF.Tests.EditMode
         public void RealFile_Validates_AndAnswersTheAcceptanceLookups()
         {
             RiverStopCatalog catalog = RiverStopCatalogReader.Read(File.ReadAllText(RealPath));
-            Assert.That(catalog.Count, Is.EqualTo(20), "1-200: 20 paradas (08 §4.5)");
-            Assert.That(catalog.LastLevel, Is.EqualTo(200));
+            Assert.That(catalog.Count, Is.EqualTo(42), "1-420: 42 paradas (08 §4.5; M4.5a)");
+            Assert.That(catalog.LastLevel, Is.EqualTo(420));
             Assert.That(catalog.StopOf(58)!.Id, Is.EqualTo("manaos"), "StopOf(58) es Manaos");
             Assert.That(catalog.StopOf(58)!.N, Is.EqualTo(5));
             Assert.That(catalog.ArrivalOnWin(20)!.Id, Is.EqualTo("alter_do_chao"), "ArrivalOnWin(20) es Alter do Chão");
             Assert.That(catalog.ArrivalOnWin(21), Is.Null);
-            Assert.That(catalog.StopOf(201), Is.Null);
+            Assert.That(catalog.StopOf(201)!.Id, Is.EqualTo("mazan"), "M4.5a: la gran parada del mundo 6");
+            Assert.That(catalog.StopOf(323)!.Id, Is.EqualTo("sandoval_aguajal"), "el estreno de la Tinaja");
+            Assert.That(catalog.StopOf(421), Is.Null);
             Assert.That(catalog.StopOf(0), Is.Null);
             Assert.That(catalog.ArrivalOnWin(0), Is.Null);
             Assert.That(catalog.ArrivalOnWin(10)!.Id, Is.EqualTo("santarem"), "el 10 lleva a la parada 1 (Mapa del 10)");
-            Assert.That(catalog.ArrivalOnWin(200), Is.Null, "sin parada 20 en 1-200");
+            Assert.That(catalog.ArrivalOnWin(200)!.ArrivalFact, Is.EqualTo("map.myth.source"), "el 200 lleva a Mazán con el mito de la fuente");
+            Assert.That(catalog.ArrivalOnWin(300)!.Id, Is.EqualTo("puerto_heath"));
+            Assert.That(catalog.ArrivalOnWin(420), Is.Null, "sin parada 42 en 1-420");
             Assert.That(catalog.At(1)!.ArrivalFact, Is.EqualTo("map.stop.estuario.dato_03"), "el Dato del río 1 (06 §2.3)");
             Assert.That(catalog.FirstStopOfWorld(3)!.Id, Is.EqualTo("encontro"));
-            Assert.That(catalog.FirstStopOfWorld(6), Is.Null);
+            Assert.That(catalog.FirstStopOfWorld(6)!.Id, Is.EqualTo("mazan"));
+            Assert.That(catalog.FirstStopOfWorld(7)!.Id, Is.EqualTo("puerto_heath"));
+            Assert.That(catalog.FirstStopOfWorld(8), Is.Null);
             Assert.That(catalog.At(13)!.CountryNameKeyOrDefault, Is.EqualTo("map.stop.rio_frontera.country"), "«Colombia y Perú»");
         }
 
@@ -192,7 +198,7 @@ namespace AF.Tests.EditMode
             }
 
             Assert.That(catalog.LastLevel, Is.EqualTo(WorldTable.LastLevelOf(catalog.At(catalog.Count - 1)!.World)),
-                "la última parada termina en el último nivel de su mundo (1-200: el 200)");
+                "la última parada termina en el último nivel de su mundo (1-420: el 420)");
         }
 
         // ---------------------------------------------------------------------------------------------- sin asignaciones

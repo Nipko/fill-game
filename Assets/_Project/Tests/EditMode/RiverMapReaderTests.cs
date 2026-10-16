@@ -35,7 +35,7 @@ namespace AF.Tests.EditMode
         {
             RiverMap map = RiverMapReader.Read(File.ReadAllText(RealMapPath));
             Assert.That(map.Frame.Aspect, Is.EqualTo(1.31498).Within(1e-5), "aspecto = 33° · cos(−5°) / 25° (propuesta §3.1)");
-            Assert.That(map.Lines.Count, Is.EqualTo(27));
+            Assert.That(map.Lines.Count, Is.EqualTo(31), "27 de 1-200 y 4 ríos locales de 201-420 (M4.5a)");
 
             RiverLine amazonas = map.Lines[0];
             Assert.That(amazonas.Id, Is.EqualTo("amazonas"));
@@ -78,7 +78,12 @@ namespace AF.Tests.EditMode
             Assert.That(map.Viewpoints[0].Id, Is.EqualTo("boca_del_amazonas"));
             Assert.That(map.Viewpoints[0].RevealOn, Is.EqualTo(10));
             Assert.That(map.Viewpoints[0].Fact, Is.EqualTo("map.stop.estuario.dato_01"));
-            Assert.That(map.Passing.Count, Is.EqualTo(17));
+            Assert.That(map.Passing.Count, Is.EqualTo(18), "17 de 1-200 y teotonio (M4.5a)");
+            Assert.That(map.Passing[17].Id, Is.EqualTo("teotonio"));
+            Assert.That(map.Lines[map.Passing[17].At.Line].Id, Is.EqualTo("madeira"));
+            Assert.That(map.Passing[17].Fact, Is.EqualTo("map.stop.teotonio.dato_01"));
+            Assert.That(map.Lines[map.Line("cuyabeno")!.Mouth!.Value.Line].Id, Is.EqualTo("aguarico"));
+            Assert.That(map.Line("cuyabeno")!.WaterAt(0.5f), Is.EqualTo(RiverWater.Black));
             Assert.That(map.Passing[0].Id, Is.EqualTo("breves"));
             Assert.That(map.Lines[map.Passing[0].At.Line].Id, Is.EqualTo("para"));
             Assert.That(map.Passing[0].Fact, Is.Null);
@@ -154,7 +159,7 @@ namespace AF.Tests.EditMode
         {
             RiverMap map = RiverMapReader.Read(File.ReadAllText(RealMapPath));
             RiverRoutes routes = RiverMapReader.ReadRoutes(File.ReadAllText(RealStopsPath), map);
-            Assert.That(routes.Count, Is.EqualTo(20));
+            Assert.That(routes.Count, Is.EqualTo(42), "1-420 (M4.5a)");
 
             RiverStopRoute belem = routes.At(0)!;
             Assert.That(belem.Id, Is.EqualTo("belem"));
@@ -197,7 +202,10 @@ namespace AF.Tests.EditMode
                 Assert.That(last.S1, Is.EqualTo(route.At.S), route.Id + ": llega a la suya");
             }
 
-            Assert.That(routes.At(20), Is.Null);
+            RiverStopRoute heath = routes.At(30)!;
+            Assert.That(heath.Id, Is.EqualTo("puerto_heath"));
+            Assert.That(heath.Via[heath.Via.Count - 1], Is.EqualTo("teotonio"), "el relevo del guía en el viaje del 300 (Q18-A)");
+            Assert.That(routes.At(42), Is.Null);
         }
 
         // ---------------------------------------------------------------------------------------------- base64 (P-M1)

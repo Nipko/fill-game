@@ -31,7 +31,8 @@ Marco y codificacion (08 §4.5; P-M1):
 
 Que escribe:
 - lines: el cauce y el ramal del Para (main), los afluentes de los mundos (tributary), los de paso con el Tocantins
-  (passby) y los rios locales de las paradas 11, 13, 15, 16 y 18 (local); los dos rios de fuera de la cuenca van en los
+  (passby) y los rios locales de las paradas 11, 13, 15, 16 y 18 y, desde M4.5a, los de rios_locales_201_700 (el Aguarico,
+  el Cuyabeno, el Tambopata y el Manu de las paradas 25-26, 35-37 y 40-41; local); los dos rios de fuera de la cuenca van en los
   recuadros, que la 1.0 deja vacios (insets = []). Cada linea con su class [P] (1 el cauce y el ramal, 2 los afluentes, 3
   los locales), su agua (water, la de Sioli de la investigacion: white, black, clear y andean en la cabecera del cauce; sin
   tramos si la investigacion la da [NV]), su boca (mouth: la linea y la s donde entra) y fill_on_pass (1 en los de paso y
@@ -42,7 +43,8 @@ Que escribe:
   triangulada por orejas, con una sola zona [P] (las zonas del mosaico llegan con la mascara del artista, M5.1).
 - home: la casa de TiTino, en Belem, en la orilla de la bahia de Guajara (notas de la parada 0).
 - labels (los paises en su region, rotulos_de_pais), viewpoints (los miradores, reveal_on = 10 [P]) y passing (los puntos
-  de paso con su linea, su s y la clave de su dato, si la tiene); los nombres van por convencion en map.stop.<id>.name y
+  de paso de 1-200 y, desde M4.5a, los de los viajes de entrada que llevan id, como teotonio en el del 300, con su linea,
+  su s y la clave de su dato, si la tiene); los nombres van por convencion en map.stop.<id>.name y
   map.country.<iso2>.name, en el bloque map.* de facts.csv que escribe stops.py.
 
 --check (codigo 1 si algo falla): lo commiteado es lo que se regenera (desfase); cada punto de control de la investigacion
@@ -88,6 +90,8 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     parse_csv_record,
     place_id,
     split_csv_records,
+    stop_records,
+    travel_passing_points,
 )
 
 FORMAT = "af-river-map/1"
@@ -116,7 +120,13 @@ HOSTS = {
     "mamore": "madeira", "itenez": "mamore", "madeira": "amazonas", "tocantins": "para", "xingu": "amazonas",
     "trombetas": "amazonas", "purus": "amazonas", "jurua": "amazonas", "japura": "amazonas", "nanay": "amazonas",
     "loretoyacu": "amazonas", "atacuari": "amazonas", "itaya": "amazonas", "samiria": "maranon", "pacaya": "amazonas",
+    # Rios locales de 201-420 (rios_locales_201_700; M4.5a): el desvio a Cuyabeno (paradas 25 y 26) y los del mundo 7
+    # (la collpa del Tambopata, 35-37, y el Manu, 40 y 41), con boca_en de la investigacion.
+    "aguarico": "napo", "cuyabeno": "aguarico", "tambopata": "madre_de_dios", "manu": "madre_de_dios",
 }
+# Listas de rios de la investigacion, en este orden: los de 1-200 y los locales de 201-700 (M4.5a; propuesta §5.4 bis y
+# §5.4 ter), que la investigacion deja aparte, con boca_en, hasta que esta herramienta les da anfitrion.
+RIVER_LISTS = ("rios", "rios_locales_201_700")
 BRANCHES = {"para": "amazonas"}   # ramal: su primer punto esta sobre el cauce
 
 # Excepciones a TOLERANCE_KM PENDIENTES DEL DUENNO (pregunta abierta, propuesta como D-025; no son canon). La tolerancia es
@@ -437,6 +447,13 @@ def build_model(source: dict) -> tuple:
     rios = source.get("rios")
     if not isinstance(rios, list):
         raise GeometryError("rio-amazonas.json: falta la lista rios")
+    rios = list(rios)
+    for name in RIVER_LISTS[1:]:
+        extra = source.get(name, [])
+        if not isinstance(extra, list):
+            errors.append(f"rio-amazonas.json: {name} no es una lista")
+            continue
+        rios += extra
     for r in rios:
         if not isinstance(r, dict):
             errors.append("rios: una entrada no es un objeto")
@@ -451,6 +468,13 @@ def build_model(source: dict) -> tuple:
         if not isinstance(rid, str) or not re.fullmatch(r"[a-z0-9_]+", rid):
             errors.append(f"rio {rid!r}: id que no es [a-z0-9_]+")
             continue
+        if rid in model.lines:
+            errors.append(f"rio {rid}: id repetido en {' y '.join(RIVER_LISTS)}")
+            continue
+        boca_en = r.get("boca_en")
+        if boca_en is not None and boca_en != HOSTS.get(rid):
+            errors.append(f"rio {rid}: boca_en {boca_en!r} de la investigacion y HOSTS (geometry.py) dice "
+                          f"{HOSTS.get(rid)!r}")
         if not isinstance(pts, list) or not pts:
             errors.append(f"rio {rid}: sin puntos")
             continue
@@ -516,15 +540,23 @@ def build_model(source: dict) -> tuple:
             errors.append(str(e))
     # Puntos de paso: en la linea mas cercana (empate, a menos de TIE_KM: la primera en el orden de lineas, el cauce antes;
     # asi Gurupa, en el arranque del ramal, y las bocas de los afluentes quedan en el cauce).
-    for p in source.get("puntos_de_paso_1_200", []) or []:
+    # Los de 1-200 y, desde M4.5a, los de los viajes de entrada de 201-1.000 que llevan id (teotonio, en el del 300): su id
+    # es el de la investigacion, no el de su nombre.
+    points = [("puntos_de_paso_1_200", p) for p in source.get("puntos_de_paso_1_200", []) or []]
+    points += [("puntos_de_paso_del_viaje", p) for p in travel_passing_points(source)]
+    for field, p in points:
         if not isinstance(p, dict):
-            errors.append("puntos_de_paso_1_200: una entrada no es un objeto")
+            errors.append(f"{field}: una entrada no es un objeto")
             continue
         try:
             lat, lon = float(p["lat"]), float(p["lon"])
             name = str(p["nombre"])
         except (TypeError, KeyError, ValueError):
-            errors.append("puntos_de_paso_1_200: un punto sin lat, lon o nombre")
+            errors.append(f"{field}: un punto sin lat, lon o nombre")
+            continue
+        pid = p["id"] if isinstance(p.get("id"), str) else place_id(name)
+        if not re.fullmatch(r"[a-z0-9_]+", pid):
+            errors.append(f"{field}: el punto de paso {name!r} tiene el id {pid!r}, que no es [a-z0-9_]+")
             continue
         best = None
         for rid in model.order:
@@ -534,7 +566,7 @@ def build_model(source: dict) -> tuple:
         d, rid, i, t = best
         if d > TOLERANCE_KM:
             errors.append(f"punto de paso {name!r}: a {d:.1f} km de la linea mas cercana ({rid}; maximo {TOLERANCE_KM:g})")
-        model.passing.append({"id": place_id(name), "line": rid, "s": _round_s(model.lines[rid].s_of(i, t)),
+        model.passing.append({"id": pid, "line": rid, "s": _round_s(model.lines[rid].s_of(i, t)),
                               "fact": fact_key_of(p.get("dato")), "lat": lat, "lon": lon, "name": name})
     return model, errors
 
@@ -890,7 +922,7 @@ INITIAL_MOUTHS = ("tocantins",)
 
 
 def build_routes(model: Model, records: list) -> tuple:
-    """at y leg de cada registro de paradas_1_200, en orden de k. Devuelve ({k: (at, leg)}, errores)."""
+    """at y leg de cada registro de paradas_1_200 y paradas_201_700, en orden de k. Devuelve ({k: (at, leg)}, errores)."""
     errors: list = []
     out: dict = {}
     filled: set = set()
@@ -1019,7 +1051,7 @@ def validate_map(doc: dict, model: Model, source: dict) -> list:
         if v.get("id") in names:
             errors.append(f"viewpoints[{k}]: id {v.get('id')} repetido (tambien punto de paso o mirador)")
         names.add(v.get("id"))
-    stop_ids = {r.get("id") for r in source.get("paradas_1_200", []) if isinstance(r, dict)}
+    stop_ids = {r.get("id") for r in stop_records(source)}
     for clash in sorted(names & stop_ids):
         errors.append(f"{clash}: id de punto de paso o de mirador igual al de una parada (comparten map.stop.<id>.name)")
     for path, text in iter_strings(doc):
@@ -1230,7 +1262,7 @@ def main(argv: list | None = None) -> int:
     import stops as stops_tool   # aqui y no arriba: stops.py importa este modulo
     try:
         committed = load_json(args.stops)
-        records = [r for r in source.get("paradas_1_200", []) if isinstance(r, dict)]
+        records = stop_records(source)
         errors += validate_routes(committed, model, records)
         overrides = load_json(args.overrides)
         wt = WorldTable.from_cs(args.worldtable)

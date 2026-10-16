@@ -25,7 +25,9 @@ status_pt-BR, notes y args):
 - datos de llegada (arrival_fact, con su texto, etiqueta y fuentes con URL) y «Otro dato» de la tarjeta (facts, M2.6): 90
   caracteres; preguntas del mundo: 50;
 - nombres de los puntos de paso y de los miradores de river_map_v1.json (map.stop.<id>.name, M2.6; place_name de
-  riverdata.py) y de los paises de sus rotulos (labels), aunque ninguna parada de 1-200 este en ellos;
+  riverdata.py) y de los paises de sus rotulos (labels), aunque ninguna parada este en ellos; y, desde M4.5a, los de los
+  puntos de paso de los viajes de entrada que llevan id (teotonio) y su dato si la investigacion da su texto final entre
+  «» (map.stop.teotonio.dato_01, el fact de su passing[]; 90 caracteres);
 - en y pt-BR vacios; status pendiente_asesor; notes con la etiqueta del dato, [V] o [E] (su contexto cita cada fuente
   con su URL), y [P] en los nombres, rios, paises y preguntas (la investigacion no les da una fuente con URL; su conf es
   la de la coordenada); args con las cifras que el texto escribe como {n} (Q8-A): la fuente las da en
@@ -36,16 +38,21 @@ status_pt-BR, notes y args):
   limite, lleva una cifra con separador o decimales o cae en el veto de Belen, si un rio no es solo el nombre del rio
   (parentesis, «río» o minuscula), si una fila con [V] o [E] no cita ninguna URL o si un dato [V] no tiene fuente [V].
 
-Conversion (paradas_1_200 -> stops[n]; plan del Mapa, M1.1):
-- paradas_1_200 cubre k = 0..19 (niveles 1-200, D-013 punto 3); ademas, la validacion exige que el documento termine
-  en el ultimo nivel de un mundo, para que ninguno se quede sin su close.
+Conversion (paradas_1_200 y paradas_201_700 -> stops[n]; plan del Mapa, M1.1 y M4.5a):
+- paradas_1_200 cubre k = 0..19 (niveles 1-200, D-013 punto 3) y paradas_201_700, con el mismo registro mas sitio y
+  wikidata, sigue desde k = 20 (niveles 201-700, Q14-A; hoy k = 20-41, los mundos 6 y 7, de M3.7a y M3.7b); ninguna k se
+  repite entre las dos listas, y la validacion exige que el documento termine en el ultimo nivel de un mundo, para que
+  ninguno se quede sin su close.
 - n = k, levels = niveles, world = mundo, id = id; kind: gran_parada -> gate, parada y variante -> stop,
   castillo -> close.
 - country = pais (ISO2); si la parada tiene dos paises, overrides.json decide country y country_name (n = 13).
 - km_from_sea = km_desde_el_mar (null en n = 0) y km_home = km_casa.
 - sample (agua del sitio, sin el parentesis final): blanca -> white, negra -> black, clara -> clear,
   clara y blanca -> clear_white, negra y blanca -> black_white.
-- flag_raise: el pais de cruces_de_pais con llega_en.parada_1_200 = n (BR en 0, CO en 8 y PE en 14).
+- flag_raise: el pais del cruce de cruces_de_pais que llega a la parada n: llega_en.parada_1_200 = n (BR en 0, CO en 8 y
+  PE en 14), {mundo, sitio} en la primera parada de ese mundo y ese sitio (EC en 22, Nuevo Rocafuerte; PE en 31, el lago
+  Sandoval) o viaje_de_entrada = mundo en su primera parada (BO en 30, Puerto Heath); un cruce de un mundo sin paradas
+  todavia no iza nada. Si el cruce lleva nivel, es el de la llegada (10n).
 - arrival_fact: null en n = 0; en n = 1, la clave del dato del registro k = 0 (map.stop.estuario.dato_03, el Dato
   del rio 1 del Mapa del 10, 06 §2.3); desde n = 2, la clave de su propio dato_del_nivel.
 - facts = las claves de otros_datos de la parada, en su orden (los «Otro dato» de la tarjeta, M2.7; M2.6). Cada candidato
@@ -82,6 +89,7 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     ROOT,
     SOURCE_PATH,
     SOURCE_REL,
+    STOP_LISTS,
     STOPS_PATH,
     WORLDTABLE_PATH,
     SourceError,
@@ -90,11 +98,15 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     format_csv_row,
     has_belen,
     iter_strings,
+    final_fact_of,
     load_json,
     parse_csv_record,
     place_id,
     place_name,
     split_csv_records,
+    stop_list_of,
+    stop_records,
+    travel_passing_points,
 )
 
 FORMAT = "af-river-stops/1"
@@ -155,7 +167,7 @@ def _check_overrides(overrides: dict, source_ids: set) -> tuple[dict, list[str]]
     clean: dict = {}
     for sid, entry in stops.items():
         if sid not in source_ids:
-            errors.append(f"overrides.json: {sid!r} no es ninguna parada de paradas_1_200")
+            errors.append(f"overrides.json: {sid!r} no es ninguna parada de paradas_1_200 ni de paradas_201_700")
             continue
         if not isinstance(entry, dict):
             errors.append(f"overrides.json: la entrada de {sid!r} no es un objeto")
@@ -167,24 +179,63 @@ def _check_overrides(overrides: dict, source_ids: set) -> tuple[dict, list[str]]
     return clean, errors
 
 
-def _crossings(source: dict, ks: set) -> tuple[dict, list[str]]:
-    """Banderas izadas al llegar a una parada de 1-200 (cruces_de_pais con llega_en.parada_1_200)."""
+def _crossings(source: dict, records: list) -> tuple[dict, list[str]]:
+    """Banderas izadas al llegar a una parada (cruces_de_pais): {k: pais}. llega_en da la parada de tres formas:
+    parada_1_200 = k; {mundo, sitio}, la primera parada de ese mundo cuyo sitio empieza por ese nombre (EC en el 220,
+    Nuevo Rocafuerte; PE en el 310, el lago Sandoval); y viaje_de_entrada = mundo, la primera parada del mundo (BO en el
+    300, Puerto Heath; M4.5a). Los cruces de un mundo sin paradas detalladas todavia (el 420 y los de 561-1.000) no
+    izan nada aqui; los demas tienen que caer en una parada, y su nivel (si lo lleva) es el de su llegada, 10k."""
     flags: dict = {}
     errors: list[str] = []
     crossings = source.get("cruces_de_pais", [])
     if not isinstance(crossings, list):
         return flags, ["rio-amazonas.json: cruces_de_pais no es una lista"]
+    by_k = {r.get("k"): r for r in records if _is_int(r.get("k"))}
+
+    def world_ks(world) -> list:
+        return sorted(k for k, r in by_k.items() if r.get("mundo") == world)
+
     for c in crossings:
         if not isinstance(c, dict):
             errors.append("cruces_de_pais: una entrada no es un objeto")
             continue
         llega = c.get("llega_en")
-        if not isinstance(llega, dict) or "parada_1_200" not in llega:
+        name = c.get("nombre")
+        if not isinstance(llega, dict):
+            errors.append(f"cruces_de_pais: {name!r} sin llega_en")
             continue
-        k = llega["parada_1_200"]
-        if not _is_int(k) or k not in ks:
-            errors.append(f"cruces_de_pais: llega_en.parada_1_200 = {k!r} no es ninguna parada")
-        elif k in flags:
+        if "parada_1_200" in llega:
+            k = llega["parada_1_200"]
+            if not _is_int(k) or k not in by_k:
+                errors.append(f"cruces_de_pais: llega_en.parada_1_200 = {k!r} no es ninguna parada")
+                continue
+        elif "viaje_de_entrada" in llega:
+            ks = world_ks(llega["viaje_de_entrada"])
+            if not ks:
+                continue   # el mundo aun no tiene paradas detalladas
+            k = ks[0]
+        elif "mundo" in llega:
+            ks = world_ks(llega["mundo"])
+            if not ks:
+                continue
+            sitio = llega.get("sitio")
+            match = [k for k in ks if isinstance(sitio, str) and sitio
+                     and isinstance(by_k[k].get("sitio"), str) and by_k[k]["sitio"].startswith(sitio)]
+            if not match:
+                errors.append(f"cruces_de_pais: {name!r} llega al sitio {sitio!r} del mundo {llega['mundo']} y ninguna "
+                              "parada de ese mundo esta en el")
+                continue
+            k = match[0]
+        else:
+            errors.append(f"cruces_de_pais: {name!r} con llega_en {sorted(llega)} (parada_1_200, mundo y sitio, o "
+                          "viaje_de_entrada)")
+            continue
+        nivel = c.get("nivel")
+        expected = 10 if k == 0 else 10 * k
+        if nivel is not None and nivel != expected:
+            errors.append(f"cruces_de_pais: {name!r} en el nivel {nivel!r} y su parada k={k} se alcanza al ganar el "
+                          f"{expected}")
+        if k in flags:
             errors.append(f"cruces_de_pais: dos banderas en la parada k={k}")
         else:
             flags[k] = c.get("pais")
@@ -302,34 +353,49 @@ def _other_facts(record: dict, tag: str) -> tuple[list[str], list[str]]:
 
 
 def convert(source: dict, overrides: dict, model: "geometry.Model | None" = None) -> tuple[dict | None, list[str]]:
-    """paradas_1_200 de rio-amazonas.json -> documento af-river-stops/1 (sin validar todavia). Con el modelo de
+    """paradas_1_200 y paradas_201_700 de rio-amazonas.json -> documento af-river-stops/1 (sin validar todavia). Con el modelo de
     geometry.py, cada parada lleva at y leg; sin el, el documento sale sin rutas y validate() lo rechaza."""
-    records = source.get("paradas_1_200")
-    if not isinstance(records, list) or not records:
+    first_list = source.get("paradas_1_200")
+    if not isinstance(first_list, list) or not first_list:
         return None, ["rio-amazonas.json: falta paradas_1_200 o esta vacia"]
     errors: list[str] = []
-    good = []
-    for i, r in enumerate(records):
-        if isinstance(r, dict):
-            good.append(r)
-        else:
-            errors.append(f"paradas_1_200[{i}] no es un objeto")
-    records = good
+    records = []
+    lists = {}
+    for name, lo, hi in STOP_LISTS:
+        items = source.get(name, [])
+        if items is None:
+            items = []
+        if not isinstance(items, list):
+            errors.append(f"rio-amazonas.json: {name} no es una lista")
+            continue
+        for i, r in enumerate(items):
+            if isinstance(r, dict):
+                records.append(r)
+                lists[id(r)] = (name, lo, hi)
+            else:
+                errors.append(f"{name}[{i}] no es un objeto")
     source_ids = {r.get("id") for r in records if isinstance(r.get("id"), str)}
     over, errs = _check_overrides(overrides, source_ids)
     errors += errs
     by_k = {}
     for r in records:
-        if _is_int(r.get("k")):
-            by_k.setdefault(r.get("k"), r)
+        k = r.get("k")
+        if not _is_int(k):
+            continue
+        if k in by_k:
+            errors.append(f"{_tag_record(r)}: k repetida (ya es {by_k[k].get('id')!r})")
+            continue
+        by_k[k] = r
     missing = sorted(set(range(STOPS_1_200)) - set(by_k))
     if missing:
         errors.append(f"paradas_1_200 no cubre los niveles 1-{LAST_LEVEL_1_200} (D-013, punto 3): "
                       f"faltan las paradas k={missing}")
-    outside = sorted(k for k in by_k if not 0 <= k < STOPS_1_200)
-    if outside:
-        errors.append(f"paradas_1_200: k={outside} fuera de 0-{STOPS_1_200 - 1} (niveles 1-{LAST_LEVEL_1_200})")
-    flags, errs = _crossings(source, set(by_k))
+    for name, lo, hi in STOP_LISTS:
+        outside = sorted(r["k"] for r in records if lists[id(r)][0] == name and _is_int(r.get("k"))
+                         and not lo <= r["k"] <= hi)
+        if outside:
+            errors.append(f"{name}: k={outside} fuera de {lo}-{hi} (niveles {10 * lo + 1}-{10 * hi + 10})")
+    flags, errs = _crossings(source, records)
     errors += errs
     answer_levels, errs = _questions(records)
     errors += errs
@@ -625,7 +691,7 @@ def build(source: dict, overrides: dict, wt: WorldTable) -> tuple[dict | None, l
     doc, errs = convert(source, overrides, model)
     errors += errs
     if doc is not None:
-        records = [r for r in source.get("paradas_1_200", []) if isinstance(r, dict)]
+        records = stop_records(source)
         try:
             candidates = load_candidates()
         except SourceError as e:
@@ -660,7 +726,7 @@ RE_MARKER = re.compile(r"\{([a-z][a-z0-9_]*)\}")
 # «2 000» con espacio normal, duro o fino, «1'000»).
 RE_NUMBER_SEP = re.compile("[0-9][.,\u00A0\u202F\u2009'][0-9]|(?<![0-9])[0-9]{1,3}( [0-9]{3})+(?![0-9])")
 # Cifra (o marcador {n}) + espacio normal + unidad: el espacio pasa a U+00A0 (08 §4.7: «U+00A0 entre cifra y unidad»).
-RE_UNIT_SPACE = re.compile(r"(?<=[0-9}]) (?=(?:km²|km|m²|m|cm|mm|ha|kg|°C|%)(?![^\W_]))")
+RE_UNIT_SPACE = re.compile(r"(?<=[0-9}]) (?=(?:km²|km³|km|m²|m³|m|cm|mm|ha|kg|°C|%)(?![^\W_]))")
 RE_NUMBER_TOKEN = re.compile("[0-9]+(?:[.,\u00A0\u202F\u2009' ][0-9]+)+")
 RE_ARG_NAME = re.compile(r"[a-z][a-z0-9_]*")
 RE_ARG_VALUE = re.compile(r"-?[0-9]+(?:\.[0-9]+)?")
@@ -857,7 +923,7 @@ def _sources_text(dato: dict, fuentes: dict, key: str) -> tuple[str, list[str]]:
 def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[str]]:
     """Filas del bloque map.* de facts.csv para un documento ya valido: {clave: {columna: valor}}."""
     errors: list[str] = []
-    records = {r.get("k"): r for r in source.get("paradas_1_200", []) if isinstance(r, dict)}
+    records = {r.get("k"): r for r in stop_records(source)}
     fuentes = {f.get("id"): f for f in source.get("fuentes", []) if isinstance(f, dict)}
     rotulos = [r.get("nombre") for r in source.get("rotulos_de_pais", []) if isinstance(r, dict)]
     over = overrides.get("stops") if isinstance(overrides.get("stops"), dict) else {}
@@ -915,10 +981,10 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
             key = f"map.stop.{sid}.{field}"
             if field in ov:
                 origin = (f"tools/river-map/overrides.json ({sid}: {field}), en lugar de «{r.get(src_field)}» de "
-                          f"{SOURCE_REL}, paradas_1_200 k={n}")
+                          f"{SOURCE_REL}, {stop_list_of(n)} k={n}")
                 notes = "[P] Decisión de overrides.json (P-M1 a)."
             else:
-                origin = f"{SOURCE_REL}, paradas_1_200 k={n} ({src_field})"
+                origin = f"{SOURCE_REL}, {stop_list_of(n)} k={n} ({src_field})"
                 notes = (f"[P] {'Nombre del lugar' if field == 'name' else 'Río'} de la investigación del Mapa "
                          f"(rio-amazonas.json, {src_field}).")
             if field == "name":
@@ -971,8 +1037,9 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                    f"«A Colômbia»); y rótulo del país en el Mapa (glosario §8; 08 §4.5). Fuente: {SOURCE_REL}, "
                    f"rotulos_de_pais («{rotulo}»). {NO_CAPTURE}")
         add(key, name, NAME_MAX_CHARS, context, "[P] Nombre del país en español (glosario §8).")
-    # Paises que solo salen en los rotulos del Mapa (labels de river_map_v1.json; M2.6): ninguna parada de 1-200 esta en
-    # ellos, pero el Mapa los nombra en su region (sin fronteras en tierra; D-013, punto 5).
+    # Paises que solo salen en los rotulos del Mapa (labels de river_map_v1.json; M2.6): ninguna parada esta en ellos, pero
+    # el Mapa los nombra en su region (sin fronteras en tierra; D-013, punto 5).
+    last_level = stops[-1]["levels"][1]
     for rotulo in rotulos:
         iso = next((i for i, n in COUNTRY_NAMES.items()
                     if isinstance(rotulo, str) and (rotulo == n or rotulo.startswith(n + " ("))), None)
@@ -983,8 +1050,8 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
             continue
         key = f"map.country.{iso.lower()}.name"
         context = (f"Nombre del país {iso}: rótulo del país en su región del Mapa del río (labels de river_map_v1.json, "
-                   f"sin fronteras en tierra; D-013, punto 5; glosario §8; 08 §4.5). Ninguna parada de 1-200 está en "
-                   f"él; cuando el viaje entre en el país, también {{país}} de map_arrived, de stop_label y de "
+                   f"sin fronteras en tierra; D-013, punto 5; glosario §8; 08 §4.5). Ninguna parada de 1-{last_level} "
+                   f"está en él; cuando el viaje entre en el país, también {{país}} de map_arrived, de stop_label y de "
                    f"map_country_welcome («{{país}} te da la bienvenida»), donde otros idiomas pueden pedir artículo y "
                    f"concordancia. Fuente: {SOURCE_REL}, rotulos_de_pais («{rotulo}»). {NO_CAPTURE}")
         add(key, COUNTRY_NAMES[iso], NAME_MAX_CHARS, context, "[P] Nombre del país en español (glosario §8).")
@@ -1000,8 +1067,8 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
         text = " y ".join(COUNTRY_NAMES[i] for i in isos)
         context = (f"Países de la {where(s)}, {names[s['n']]}: {{país}} de map_arrived y de stop_label, en lugar de "
                    f"map.country.{s['country'].lower()}.name, porque la parada tiene un país en cada orilla (08 §4.5). "
-                   f"Fuente: {SOURCE_REL}, paradas_1_200 k={s['n']} (pais «{pais}»), y tools/river-map/overrides.json "
-                   f"(country_name). {NO_CAPTURE}")
+                   f"Fuente: {SOURCE_REL}, {stop_list_of(s['n'])} k={s['n']} (pais «{pais}»), y "
+                   f"tools/river-map/overrides.json (country_name). {NO_CAPTURE}")
         add(s["country_name"], text, NAME_MAX_CHARS, context, "[P] Placa de dos países (P-M1 a).")
 
     # Datos de llegada (arrival_fact; 90 caracteres), con su fuente y su URL.
@@ -1070,29 +1137,57 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                        f"(R5). {sources}{nota} {NO_CAPTURE}")
             add(key, o.get("texto"), FACT_MAX_CHARS, context, f"[{o.get('etiqueta')}] «Otro dato» del Mapa del río.", args)
 
-    # Nombres de los puntos de paso y de los miradores de river_map_v1.json (map.stop.<id>.name por convencion; M2.6).
+    # Nombres de los puntos de paso y de los miradores de river_map_v1.json (map.stop.<id>.name por convencion; M2.6) y,
+    # desde M4.5a, los de los viajes de entrada de 201-1.000 que llevan id (teotonio, en el del 300), con su id.
     stop_ids = {s["id"] for s in stops}
-    for field, kind, what in (("puntos_de_paso_1_200", "punto de paso", "sale en el río cuando la canoa lo pasa en un "
-                               "viaje y al tocarlo en el Mapa, sin fondo, Canasta ni muestra (propuesta del Mapa §5.2; "
-                               "06 §4.5)"),
-                              ("miradores_1_200", "mirador", "un «?» fuera de la ruta que el progreso revela (desde la "
-                               "victoria del 10); al tocarlo enseña su dato y da su muestra especial del Muestrario "
-                               "(propuesta del Mapa §5.2; 06 §4.5)")):
-        for r in source.get(field, []) or []:
-            nombre = r.get("nombre") if isinstance(r, dict) else None
-            if not isinstance(nombre, str):
-                errors.append(f"{field}: una entrada sin nombre")
-                continue
-            pid = place_id(nombre)
-            if pid in stop_ids:
-                errors.append(f"{field}: {nombre!r} tiene el id {pid} de una parada (comparten map.stop.<id>.name)")
-                continue
-            key = f"map.stop.{pid}.name"
-            context = (f"Nombre del {kind} {pid} del Mapa del río: {what}. Es el nombre de la investigación sin su "
-                       f"paréntesis final y con mayúscula inicial [P]. Fuente: {SOURCE_REL}, {field} («{nombre}»). "
-                       f"{NO_CAPTURE}")
-            add(key, place_name(nombre), NAME_MAX_CHARS, context,
-                f"[P] Nombre del {kind} de la investigación del Mapa (rio-amazonas.json, nombre).")
+    passing_where = ("sale en el río cuando la canoa lo pasa en un viaje y al tocarlo en el Mapa, sin fondo, Canasta ni "
+                     "muestra (propuesta del Mapa §5.2; 06 §4.5)")
+    places = [("puntos_de_paso_1_200", "punto de paso", passing_where, r)
+              for r in source.get("puntos_de_paso_1_200", []) or []]
+    places += [("miradores_1_200", "mirador", "un «?» fuera de la ruta que el progreso revela (desde la victoria del 10); "
+                "al tocarlo enseña su dato y da su muestra especial del Muestrario (propuesta del Mapa §5.2; 06 §4.5)", r)
+               for r in source.get("miradores_1_200", []) or []]
+    travel = {id(r): w for w in source.get("paradas_201_1000", []) or [] if isinstance(w, dict)
+              for r in w.get("puntos_de_paso_del_viaje", []) or []}
+    places += [("puntos_de_paso_del_viaje", "punto de paso", passing_where, r) for r in travel_passing_points(source)]
+    for field, kind, what, r in places:
+        nombre = r.get("nombre") if isinstance(r, dict) else None
+        if not isinstance(nombre, str):
+            errors.append(f"{field}: una entrada sin nombre")
+            continue
+        own_id = isinstance(r.get("id"), str)
+        pid = r["id"] if own_id else place_id(nombre)
+        if pid in stop_ids:
+            errors.append(f"{field}: {nombre!r} tiene el id {pid} de una parada (comparten map.stop.<id>.name)")
+            continue
+        key = f"map.stop.{pid}.name"
+        if own_id:
+            w = travel.get(id(r), {})
+            origin = (f"{field} del mundo {w.get('mundo')} en paradas_201_1000 (id «{pid}», nombre «{nombre}»), en el "
+                      f"viaje de entrada a la parada {(w.get('niveles') or [1])[0] // 10}, al ganar el "
+                      f"{(w.get('niveles') or [1])[0] - 1}")
+        else:
+            origin = f"{field} («{nombre}»)"
+        context = (f"Nombre del {kind} {pid} del Mapa del río: {what}. Es el nombre de la investigación sin su "
+                   f"paréntesis final y con mayúscula inicial [P]. Fuente: {SOURCE_REL}, {origin}. {NO_CAPTURE}")
+        add(key, place_name(nombre), NAME_MAX_CHARS, context,
+            f"[P] Nombre del {kind} de la investigación del Mapa (rio-amazonas.json, nombre).")
+        # El dato del punto de paso, si la investigacion ya da su texto final entre «» (teotonio; M3.7b y M4.5a): fact de
+        # passing[] en river_map_v1.json. Los demas (los de 1-200) solo dan la clave: geometry.py --check los avisa.
+        final = final_fact_of(r.get("dato"))
+        if final is None:
+            continue
+        sources, errs = _sources_text(final, fuentes, final["clave"])
+        errors.extend(errs)
+        relevo = (f" Relevo del guía: {r['relevo_del_guia']}." if isinstance(r.get("relevo_del_guia"), str)
+                  and r["relevo_del_guia"].strip() else "")
+        nota = f" Nota de la investigación: {r['nota']}" if isinstance(r.get("nota"), str) and r["nota"].strip() else ""
+        context = (f"Dato del {kind} {pid} ({place_name(nombre)}) del Mapa del río: sale al tocarlo en el Mapa, como su "
+                   f"nombre, sin fondo, Canasta ni muestra (propuesta del Mapa §5.2; 06 §4.5); es el fact de passing[] "
+                   f"en river_map_v1.json. No es un dato de llegada ni el fact_id de af_river_fact_shown.{relevo} "
+                   f"Fuente: {SOURCE_REL}, {origin} (dato). {sources}{nota} {NO_CAPTURE}")
+        add(final["clave"], final["texto"], FACT_MAX_CHARS, context,
+            f"[{final['etiqueta']}] Dato de punto de paso del Mapa del río.")
 
     # Preguntas del mundo (50 caracteres).
     for s in stops:
@@ -1118,7 +1213,7 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                         f"({answer['arrival_fact']}), {when}")
         context = (f"Pregunta del mundo {s['world']} en la cabecera del Mapa del río (map_world_question, con ✓ al "
                    f"responderse): se plantea al llegar a la {where(s)}, {names[s['n']]}, en la victoria del "
-                   f"{10 * s['n']}, y {answered} ({refs}). Fuente: {SOURCE_REL}, paradas_1_200 k={s['n']} "
+                   f"{10 * s['n']}, y {answered} ({refs}). Fuente: {SOURCE_REL}, {stop_list_of(s['n'])} k={s['n']} "
                    f"(pregunta_del_mundo). {NO_CAPTURE}")
         add(key, q.get("texto"), QUESTION_MAX_CHARS, context, "[P] Pregunta del Mapa del río (D-013).")
 

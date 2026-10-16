@@ -187,9 +187,9 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Lengths_TheTextsOfTheTwentyStopsFitTheirMaxChars()
+        public void Lengths_TheTextsOfTheStopsFitTheirMaxChars()
         {
-            Assert.That(Stops.Count, Is.EqualTo(20), "paradas 0-19 de los niveles 1-200");
+            Assert.That(Stops.Count, Is.EqualTo(42), "paradas 0-41 de los niveles 1-420 (M4.5a)");
             var over = new StringBuilder();
             for (int n = 0; n < Stops.Count; n++)
             {

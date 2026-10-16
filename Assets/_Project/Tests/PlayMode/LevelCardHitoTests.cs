@@ -71,9 +71,10 @@ namespace AF.Tests.PlayMode
                 }
             }
 
-            Assert.That(levels, Is.EqualTo(new[] { 40, 60, 80, 100, 120, 140, 160, 180 }), "el 20 no (L ≥ 40) y el 200 aún no tiene parada");
+            Assert.That(levels, Is.EqualTo(new[] { 40, 60, 80, 100, 120, 140, 160, 180, 200 }), "el 20 no (L ≥ 40); el 200 lleva a Mazán (M4.5a)");
             Assert.That(LevelCardView.HitoStopFor(40, null), Is.Null, "sin catálogo, sin fila");
-            Assert.That(LevelCardView.HitoStopFor(220, stops), Is.Null, "sin paradas de 201 en adelante, sin fila");
+            Assert.That(LevelCardView.HitoStopFor(220, stops)!.Id, Is.EqualTo("nuevo_rocafuerte"), "201-420 ya tienen paradas (M4.5a)");
+            Assert.That(LevelCardView.HitoStopFor(440, stops), Is.Null, "sin paradas de 421 en adelante, sin fila");
         }
 
         [UnityTest]

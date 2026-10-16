@@ -17,6 +17,10 @@
       "river": "Marañón y Ucayali",
       "why": "rio-amazonas.json dice «cochas entre el Marañón y el Ucayali», que no cabe en «río {río}» de map_arrived ni en 32 caracteres [P]: quedan los dos ríos que nombra la investigación, como en Nauta (n = 17). Pendiente del asesor cultural (07 §8.2)."
     },
+    "puerto_maldonado_astilleros": {
+      "river": "Madre de Dios",
+      "why": "rio-amazonas.json dice «Madre de Dios y Tambopata», y la placa map_arrived («{lugar} · {país} · río {río}», 64 caracteres) quedaría en 69 con el nombre de la parada 34: «Astilleros de Puerto Maldonado · Perú · río Madre de Dios y Tambopata» (MapTextTests, M4.5a). Queda el río de su ancla_rio y de los botes de su dato, el Madre de Dios: 57 caracteres [P]. La parada 33, Puerto Maldonado, conserva los dos ríos de su confluencia. Pendiente del asesor cultural (07 §8.2)."
+    },
     "rio_frontera": {
       "country": "CO",
       "country_name": "map.stop.rio_frontera.country",

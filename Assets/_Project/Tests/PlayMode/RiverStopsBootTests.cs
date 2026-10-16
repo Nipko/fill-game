@@ -34,7 +34,7 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.RiverStopsAsset, Is.Not.Null, "la escena lleva river_stops_v1.json (GameSceneBuilder)");
             RiverStopCatalog? stops = boot.RiverStops;
             Assert.That(stops, Is.Not.Null, "el catálogo se lee al arrancar");
-            Assert.That(stops!.Count, Is.EqualTo(20));
+            Assert.That(stops!.Count, Is.EqualTo(42), "1-420 (M4.5a)");
             Assert.That(boot.View!.RiverStops, Is.SameAs(stops), "la pantalla de nivel tiene el mismo catálogo");
             Assert.That(stops.StopOf(58)!.Id, Is.EqualTo("manaos"));
             Assert.That(stops.ArrivalOnWin(20)!.Id, Is.EqualTo("alter_do_chao"));

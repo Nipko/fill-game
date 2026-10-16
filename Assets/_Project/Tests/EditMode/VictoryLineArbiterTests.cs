@@ -59,8 +59,9 @@ namespace AF.Tests.EditMode
                 case 20: return Kind.Arrival;
                 case 40: case 60: case 80: case 140: return Kind.HitoWithStop;
                 case 41: case 61: case 81: return Kind.AfterHito;
-                case 200: case 700: return full ? Kind.HitoWithStop : Kind.HitoNoStop;
-                case 201: return full ? Kind.AfterHito : Kind.Plain;
+                case 200: return Kind.HitoWithStop;
+                case 700: return full ? Kind.HitoWithStop : Kind.HitoNoStop;
+                case 201: return Kind.AfterHito;
                 default: throw new ArgumentOutOfRangeException(nameof(level), level, "nivel fuera de la tabla");
             }
         }
@@ -83,7 +84,7 @@ namespace AF.Tests.EditMode
                                 foreach (int level in CaseLevels)
                                 {
                                     var ctx = new VictoryContext(level, map, stops, Fruit, river, hito, speak, 10, 1);
-                                    string name = (full ? "100 paradas" : "1-200") + ", " + river + ", " + hito + ", habla " + speak
+                                    string name = (full ? "100 paradas" : "1-420") + ", " + river + ", " + hito + ", habla " + speak
                                         + ", Mapa " + map + ", nivel " + level;
                                     Expect(KindOf(level, full), level, stops, river, hito == HitoLinePolicy.SlothHito && speak, map,
                                         VictoryLineArbiter.For(in ctx), name);
@@ -431,7 +432,7 @@ namespace AF.Tests.EditMode
         private static RiverStopCatalog? s_real;
         private static RiverStopCatalog? s_full;
 
-        /// <summary>Las 20 paradas reales de 1-200.</summary>
+        /// <summary>Las paradas reales: 42, de 1-420 (M4.5a).</summary>
         public static RiverStopCatalog Real =>
             s_real ??= RiverStopCatalogReader.Read(File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Map/river_stops_v1.json")));
 

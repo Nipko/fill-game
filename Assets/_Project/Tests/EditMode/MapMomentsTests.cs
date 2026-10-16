@@ -41,8 +41,10 @@ namespace AF.Tests.EditMode
                 Assert.That(MapMoments.ForVictory(1, real, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.None));
                 Assert.That(MapMoments.ForVictory(11, real, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.None));
                 Assert.That(MapMoments.ForVictory(190, real, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.Arrival));
-                Assert.That(MapMoments.ForVictory(200, real, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.None),
-                    "con las 20 paradas de 1-200 no hay parada 20");
+                Assert.That(MapMoments.ForVictory(200, real, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.Arrival),
+                    "el 200 lleva a Mazán, la parada 20 (M4.5a)");
+                Assert.That(MapMoments.ForVictory(420, real, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.None),
+                    "con las 42 paradas de 1-420 no hay parada 42");
                 Assert.That(MapMoments.ForVictory(20, null, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.None),
                     "sin catálogo no hay llegadas");
             }
@@ -62,7 +64,7 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(arrivals, Is.EqualTo(18), "20, 30 … 190: del 10 se encarga el Mapa y el 200 no tiene parada");
+            Assert.That(arrivals, Is.EqualTo(40), "20, 30 … 410: del 10 se encarga el Mapa y el 420 no tiene parada (M4.5a)");
         }
 
         [Test]
