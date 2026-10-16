@@ -7,9 +7,32 @@
 El juego necesita unos 61 efectos, el ambiente de 13 mundos (9 en la 1.0) y unas 20 piezas de música (unas 60 contando sus capas); hoy no tiene ningún sonido.
 
 - Cada fila lleva el **ID** que usará el código, **cuándo suena**, **cómo debe sonar** según el GDD y su **duración**.
-- La columna **Tu propuesta** está vacía: escribe ahí la idea, una referencia (un juego, un vídeo, un instrumento) o «ok».
+- La columna **Tu propuesta** recoge la dirección acústica aprobada: **ASMR amazónico fresco de app** (agua cristalina en vidrio, marimba de chonta y kalimba de calabaza para las notas, maracá, fibra y semillas reales), siguiendo la dinámica medida en *Magic Sort!* (gestos repetidos muy suaves y cortos a −38/−27 dBFS, sellado y premios con brillo y pegada a −17/−14 dBFS, cero barro sonoro).
 - Las marcas [P] son propuestas que aún no decidiste; [E], estimaciones.
 - Cuando haya propuestas, se convierten en sonidos provisionales para probarlos en el teléfono y en el encargo para el compositor y el diseñador de sonido.
+
+### Escala pentatónica de las 14 frutas (`sfx_select` y `sfx_tint`)
+
+Para que cualquier combinación de frutas en un nivel suene armónica y fresca sin disonancias, las 14 frutas del motor (07 §3) se afinan a **14 notas de una escala pentatónica mayor cálida (Do–Re–Mi–Sol–La)** a lo largo de casi tres octavas (C4 a A6), ordenadas de más oscura/densa a más luminosa (`L*`), con timbre híbrido de **gota de agua (resonancia de burbuja Minnaert) + lámina de marimba de chonta**:
+
+| # motor | ID | Fruta / Agua | L* | Nota pentatónica | Frecuencia (Hz) | Carácter tímbrico |
+| --- | --- | --- | --- | --- | --- | --- |
+| 9 | `jenipapo` | Huito | 22 | C4 | 261,6 Hz | Gota profunda en cuia grande + madera cálida |
+| 13 | `cacao` | Cacao | 26 | D4 | 293,7 Hz | Gota redonda con cuerpo de calabaza |
+| 8 | `acai` | Açaí | 32 | E4 | 329,6 Hz | Gota aterciopelada, resonancia media-grave |
+| 6 | `camu_camu` | Camu camu | 34 | G4 | 392,0 Hz | «Plic» jugoso con armónico dulce |
+| 5 | `urucum` | Achiote | 48 | A4 | 440,0 Hz | Toque cálido de chonta y agua |
+| 14 | `agua_negro` | Agua del Río Negro | 50 | C5 | 523,3 Hz | Gota de río cristalina en registro medio |
+| 4 | `aguaje` | Aguaje | 64 | D5 | 587,3 Hz | «Plic» brillante y redondo (par del tutorial con Açaí: octava + sexta) |
+| 11 | `lulo` | Lulo | 65 | E5 | 659,3 Hz | Gota fresca y cítrica |
+| 7 | `bacaba` | Bacaba | 70 | G5 | 784,0 Hz | Toque perlado de agua clara |
+| 10 | `agua_tapajos` | Agua del Tapajós | 70 | A5 | 880,0 Hz | Destello líquido turquesa |
+| 3 | `tapereba` | Taperebá | 78 | C6 | 1046,5 Hz | Gota dorada, clara y alegre |
+| 12 | `araza` | Arazá | 79 | D6 | 1174,7 Hz | «Plic» vivo de cristal fino |
+| 2 | `cupuacu` | Copoazú | 85 | E6 | 1318,5 Hz | Gota delicada y luminosa |
+| 1 | `guanabana` | Guanábana | 98 | G6 | 1568,0 Hz | Campana de agua cristalina en el registro más alto |
+
+---
 
 ## 1. Tablero y vertido
 
@@ -17,19 +40,19 @@ Son los sonidos que más se oyen: suenan en cada toque y cada vertido, así que 
 
 | ID | Cuándo suena | Cómo debe sonar (GDD) | Duración | Tu propuesta |
 | --- | --- | --- | --- | --- |
-| `sfx_select` | Tocar una cuia para elegirla | Toque de agua corto, afinado al color de la fruta de arriba: 14 notas de escala pentatónica, una por fruta | 0,12 s | |
-| `sfx_pour_start` | Empieza el vertido | Chorro de agua que entra en vidrio | 0,2 s | |
-| `sfx_pour_loop` | Mientras cae el chorro | Chorro continuo; sube de tono a medida que se llena la cuia | en bucle | |
-| `sfx_pour_end` | Termina el vertido | Corte del chorro, última gota | 0,2 s | |
-| `sfx_illegal` | Vertido no permitido | Madera neutra, nada que suene a error o castigo | 0,15 s | |
-| `sfx_seal` | Una cuia se completa y se tapa | Maracá (dos sacudidas) y tapa de madera que cae | 0,45 s | |
-| `sfx_river_rise` | Intro del nivel: el río crece | Oleada grave, de fondo (−10 dB) [P] | 0,4 s | |
-| `sfx_fill` | Intro: se llenan las cuias | Chorro y gorgoteo, uno por fila [P] | sin fijar | |
-| `sfx_fruit_plip` | Intro: cae cada fruta en el agua | «Plic» suave [P] | sin fijar | |
-| `sfx_tint` | Intro: el agua se tiñe | Nota afinada al color, como `sfx_select`; máximo 6 a la vez | 0,1 s | |
-| `sfx_win_toada` | Victoria | Toada corta de carimbó: percusión y coro sin letra | 1,5-3 s | |
-| `sfx_confetti` | Victoria, con el confeti de plumas | Aleteo de guacamayos | 1,0 s | |
-| `sfx_stuck` | Aguas estancadas (sin jugadas) | Zumbido grave de agua quieta, sin golpe dramático | 1,5 s | |
+| `sfx_select` | Tocar una cuia para elegirla | Toque de agua corto, afinado al color de la fruta de arriba: 14 notas de escala pentatónica, una por fruta | 0,12 s | **Gota cristalina + armónico de marimba de chonta** en la nota de la fruta superior (tabla de arriba), muy suave (−36 dBFS, como en *Magic Sort!*). Si se toca la misma cuia para bajarla, suena una variante apagada una quinta más grave (−35 dBFS). |
+| `sfx_pour_start` | Empieza el vertido | Chorro de agua que entra en vidrio | 0,2 s | **«Glup» limpio de cuello de garrafa** + primer impacto de agua fresca en vidrio (sin salpicadura ruidosa, ataque suave de 15 ms). |
+| `sfx_pour_loop` | Mientras cae el chorro | Chorro continuo; sube de tono a medida que se llena la cuia | en bucle | **Corriente ASMR de microburbujas en cavidad de vidrio** (resonancia Helmholtz que sube de 380 Hz con 1 dosis a 920 Hz con 4 dosis). En vertidos por tramo (`run`), dura exactamente lo que el chorro (0,45-0,85 s según 1-3 dosis) con ±3 % de variación orgánica para no sonar robótico. |
+| `sfx_pour_end` | Termina el vertido | Corte del chorro, última gota | 0,2 s | **Corte limpio del hilo de agua + dos gotitas finales («plic-ploc»)** que asientan el menisco en la nota de la fruta vertida. |
+| `sfx_illegal` | Vertido no permitido | Madera neutra, nada que suene a error o castigo | 0,15 s | **Doble toque seco y hueco en calabaza/madera de balsa** («tuk-tuk» grave a 180 y 150 Hz, −28 dBFS), sincronizado con la sacudida de 240 ms. Cero chicharra ni semitono descendente. |
+| `sfx_seal` | Una cuia se completa y se tapa | Maracá (dos sacudidas) y tapa de madera que cae | 0,45 s | **Dos sacudidas frescas de maracá de semillas** (0,00 s y 0,13 s) + **«plop» hueco de tapa de calabaza** (0,24 s) rematado con un acorde corto luminoso de 3 notas pentatónicas en kalimba/marimba (−17 dBFS, el premio táctil del tablero). |
+| `sfx_river_rise` | Intro del nivel: el río crece | Oleada grave, de fondo (−10 dB) [P] | 0,4 s | **Vaivén cálido de orilla de río** (filtro paso bajo sobre agua en movimiento, 120-450 Hz, sin cresta brusca para no confundir con Pororoca), fundido suave. |
+| `sfx_fill` | Intro: se llenan las cuias | Chorro y gorgoteo, uno por fila [P] | 0,40 s (1-20) / 0,25 s (21+) | **Cascada fresca de agua entrando en las cuias de la fila** (gorgoteo claro de vidrio que sube media octava, 1 voz por fila con ligero paneo estéreo). |
+| `sfx_fruit_plip` | Intro: cae cada fruta en el agua | «Plic» suave [P] | 0,08 s | **«Plic» redondo de fruta pequeña que rompe la superficie del agua** (burbuja Minnaert rápida de 600 → 1.400 Hz, muy limpia para que 10-20 caídas seguidas suenen a lluvia de frutas y no a ruido). |
+| `sfx_tint` | Intro: el agua se tiñe | Nota afinada al color, como `sfx_select`; máximo 6 a la vez | 0,1 s | **Destello de marimba de chonta + cristal** en la nota pentatónica del tinte que florece; al encadenarse de abajo arriba crea un arpegio amazónico espontáneo en cada inicio de nivel. |
+| `sfx_win_toada` | Victoria | Toada corta de carimbó: percusión y coro sin letra | 1,5-3 s | **Fanfarria festiva de 2,2 s**: redoble cálido de tambor curimbó, maracás brillantes, arpegio de guitarra/flauta de caña y acorde vocal cálido («aah/ooh» sin letra) en Do mayor pentatónico. |
+| `sfx_confetti` | Victoria, con el confeti de plumas | Aleteo de guacamayos | 1,0 s | **Despliegue de alas en abanico** (3-4 batidas sedosas de plumas grandes en estéreo + brisa de dosel, sin graznido estridente). |
+| `sfx_stuck` | Aguas estancadas (sin jugadas) | Zumbido grave de agua quieta, sin golpe dramático | 1,5 s | **Ondulación grave de remanso** (cuenco de agua + marimba baja que desciende suavemente sol→mi→do en 220-130 Hz con una última gota solitaria). Calmo, invita a pensar o usar Marea sin castigar. |
 
 En la intro, como mucho un chillido corto de mono ardilla, muy bajo (−18 dB); nunca chillidos mientras se llenan las cuias.
 
@@ -39,51 +62,51 @@ Cada comodín tiene su sonido propio, ligado a su animal o elemento; los de inte
 
 | ID | Cuándo suena | Cómo debe sonar (GDD) | Duración | Tu propuesta |
 | --- | --- | --- | --- | --- |
-| `sfx_undo` | Marea (deshacer) | Ola que retrocede, como el chorro al revés | 0,4 s | |
-| `sfx_capi_paddle` | Cuia de rescate (+1 cuia): llega Capi | Pasos en arena, remo en el agua, tintineo de vidrio y chasquido corto de capibara | 0,8 s | |
-| `sfx_hint` | Morpho (pista) | Aleteo suave y campanita de madera | 0,5 s | |
-| `sfx_shuffle` | Pororoca (mezclar) | Ola grande, remolino y 14 notas rápidas | 0,9 s | |
-| `sfx_reveal` | Luciérnaga (revelar Aguas turbias) | Campanilla cálida, chispa y burbuja que se aclara | 0,5 s | |
-| `sfx_skip` | Salto del Boto (saltar nivel) | Salto, chapuzón y exhalación de delfín | 1,2 s | |
-| `sfx_restart` | Volver a la orilla (reiniciar) | Agua que se recoge y madera | 0,5 s | |
-| `sfx_river_drop` | El río bajó (nivel aliviado tras 3 fallos) | Agua que baja y exhalación de Rosa | 1,0 s | |
-| `sfx_seeds_tick` | Contador de semillas que sube | Semillas que caen en una cesta; 1 por cada 10 semillas, máximo 20 | 0,05 s cada uno | |
-| `sfx_basket_open` | Canasta (premio) | Fibra que se abre y frutas | 0,8 s | |
-| `sfx_streak_up` | Crecida: sube la racha | Chillido de nutrias | 0,8 s | |
-| `sfx_streak_shield` | Hoja escudo protege la racha | Hoja que se despliega | 0,6 s | |
-| `sfx_canoe_lost` | Se pierde una canoa (vida) | Canoa que vuelca, suave | 0,6 s | |
-| `sfx_canoe_back` | Se recupera una canoa | Remo | 0,6 s | |
-| `sfx_ui_tap` | Cualquier botón | Madera seca | 0,08 s | |
-| `sfx_ui_back` | Atrás o cerrar | Madera más grave | 0,1 s | |
-| `sfx_ui_buy` | Compra en la tienda | Semillas en una cesta | 0,4 s | |
+| `sfx_undo` | Marea (deshacer) | Ola que retrocede, como el chorro al revés | 0,4 s | **Agua que se recoge en reversa** (envolvente invertida de burbujas que suben hacia la cuia origen + deslizamiento ascendente suave de marimba de agua). |
+| `sfx_capi_paddle` | Cuia de rescate (+1 cuia): llega Capi | Pasos en arena, remo en el agua, tintineo de vidrio y chasquido corto de capibara | 0,8 s | **Dos pasitos húmedos en orilla + palada de remo en agua clara + «clinc» de cuia de vidrio nueva** y el característico **chasquido/gorjeo corto y simpático de capibara**. |
+| `sfx_hint` | Morpho (pista) | Aleteo suave y campanita de madera | 0,5 s | **Tres batidas sedosas de alas de mariposa + destello cristalino de campanilla de bambú/chonta** (intervalo de quinta justa Sol5→Re6, mágico pero orgánico). |
+| `sfx_shuffle` | Pororoca (mezclar) | Ola grande, remolino y 14 notas rápidas | 0,9 s | **Oleada envolvente de río + giro de agua + glissando ascendente ultrarrápido de las 14 notas pentatónicas** en marimba de chonta y gotas de cristal. |
+| `sfx_reveal` | Luciérnaga (revelar Aguas turbias) | Campanilla cálida, chispa y burbuja que se aclara | 0,5 s | **Zumbido luminoso suave + chispa cálida de kalimba aguda** (Mi6→La6) + **burbuja profunda («boiada»)** que emerge y aclara el agua turbia. |
+| `sfx_skip` | Salto del Boto (saltar nivel) | Salto, chapuzón y exhalación de delfín | 1,2 s | **Impulso de agua al emerger + exhalación real de boto en el aire + chapuzón limpio y alegre** con cola de burbujas. |
+| `sfx_restart` | Volver a la orilla (reiniciar) | Agua que se recoge y madera | 0,5 s | **Barrido corto de agua que vuelve al cauce + toque firme de madera de canoa** en la orilla. |
+| `sfx_river_drop` | El río bajó (nivel aliviado tras 3 fallos) | Agua que baja y exhalación de Rosa | 1,0 s | **Nivel de agua que desciende con alivio (glissando líquido grave-medio) + soplo cercano y amable de Rosa** que transmite «ahora sí, más tranquilo». |
+| `sfx_seeds_tick` | Contador de semillas que sube | Semillas que caen en una cesta; 1 por cada 10 semillas, máximo 20 | 0,05 s cada uno | **«Tic» orgánico de semilla dura (huayruro/açaí) cayendo sobre fibra trenzada** (con microvariación de tono +1 semitono progresivo a lo largo de la cuenta para dar emoción de cosecha). |
+| `sfx_basket_open` | Canasta (premio) | Fibra que se abre y frutas | 0,8 s | **Crujido cálido de cesto de arumã al destaparse + caída jugosa de frutas y semillas** con un acorde corto de marimba y maracá. |
+| `sfx_streak_up` | Crecida: sube la racha | Chillido de nutrias | 0,8 s | **Subida de nivel de agua + gorjeo alegre y corto de nutria gigante** (su vocalización social de contacto, simpática y viva, nunca el grito áspero de alarma) con toque de marimba. |
+| `sfx_streak_shield` | Hoja escudo protege la racha | Hoja que se despliega | 0,6 s | **Despliegue amplio de hoja gigante de *Victoria amazonica* sobre el agua** («fwoosh» vegetal + apoyo grave de agua que amortigua el golpe). |
+| `sfx_canoe_lost` | Se pierde una canoa (vida) | Canoa que vuelca, suave | 0,6 s | **Madera que se inclina en el agua + chapoteo suave y nota grave de calabaza** (sin dramatismo ni sonido de rotura). |
+| `sfx_canoe_back` | Se recupera una canoa | Remo | 0,6 s | **Palada limpia de remo de madera en el río + gotas frescas** y nota ascendente cálida. |
+| `sfx_ui_tap` | Cualquier botón | Madera seca | 0,08 s | **«Toc» corto y redondo de piedra de río / madera de chonta pulida** (fundamental en 420 Hz, decaimiento en 45 ms, cero clic metálico). |
+| `sfx_ui_back` | Atrás o cerrar | Madera más grave | 0,1 s | **«Tuc» suave de calabaza/madera grave** (280 Hz, un cuarto más bajo que `sfx_ui_tap`, cálido y discreto). |
+| `sfx_ui_buy` | Compra en la tienda | Semillas en una cesta | 0,4 s | **Puñado generoso de semillas que caen en cumbuca de madera + doble toque alegre de marimba** (Do5→Sol5). |
 
 ## 3. Mecánicas y personajes
 
-Cada mecánica suena cuando se desbloquea, en el golpe de la tapa al sellar. Las que dicen «sin definir» aún no tienen sonido en el GDD: ahí la propuesta es la primera. Los ID de esta sección son [P]: se fijan al encargarlos (07 §9.5).
+Cada mecánica suena cuando se desbloquea, en el golpe de la tapa al sellar. Las que decían «sin definir» llevan aquí su primera propuesta completa alineada con 02 §9.1. Los ID de esta sección son [P]: se fijan al encargarlos (07 §9.5).
 
 | ID [P] | Cuándo suena | Cómo debe sonar (GDD) | Duración | Tu propuesta |
 | --- | --- | --- | --- | --- |
-| `sfx_mech_hoja` | Se desbloquea la Hoja | Hoja seca | 0,4-0,6 s | |
-| `sfx_mech_matapi` | Se abre el Matapi (trampa) | Crujido de fibra y tirón de cuerda | 0,8 s | |
-| `sfx_mech_liana` | Se suelta la Liana con fruta | «Ding» y rama que cruje | 0,6 s | |
-| `sfx_mech_liana_cuenta` | Baja la cuenta de la Liana de cuenta | Sin definir | corta | |
-| `sfx_mech_remolino` | El chorro pasa por el Remolino | Succión y burbujas que suben en la otra cuia | 0,5 s | |
-| `sfx_mech_barro` | Se limpia el Barro | Chapoteo | 0,5 s | |
-| `sfx_mech_lluvia` | Llueve sobre el tablero | Sin definir | — | |
-| `sfx_mech_pirana` | La Piraña muerde o se lleva fruta | Sin definir | — | |
-| `sfx_mech_brote` | Se abre el Brote (de una o dos hojas) | Sin definir | — | |
-| `sfx_mech_flor` | Se abre la Flor de vitória-régia | Sin definir | — | |
-| `sfx_mech_hoja_atada` | Se suelta la Hoja atada | Sin definir | — | |
-| `sfx_tinaja_select` | Elegir la Tinaja | «Toc» grave de barro | corta | |
-| `sfx_tinaja_scoop` | Sacar agua de la Tinaja | «Glup» de calabaza en el agua; nunca burbujas ni hervor | corta | |
-| `sfx_tinaja_reveal` | Se revela la boca de la Tinaja | Gota | corta | |
-| `sfx_tinaja_release` | Se suelta su cuia chica | Roce de fibra y «toc» hueco | 0,8 s | |
-| `sfx_sloth_nod` | TiTino asiente | «Mmm» suave y grave, sin palabras | corta | |
-| `sfx_sloth_happy` | TiTino celebra | Suspiro feliz | corta | |
-| `sfx_sloth_branch` | Entra la rama de TiTino | Roce de hojas | corta | |
-| `sfx_sloth_yawn` | TiTino se duerme | Bostezo muy suave | corta | |
-| `sfx_rosa_surface` | Rosa (delfín rosado) asoma | Exhalación real de boto | 1,0 s | |
-| `sfx_monkey_chirp` | Tropa de miquitos en la intro | Chillido corto de mono ardilla, muy bajo; uno como mucho | corta | |
+| `sfx_mech_hoja` | Se desbloquea la Hoja | Hoja seca | 0,4-0,6 s | **Roce crujiente y fresco de hoja de palma que se levanta** con un soplo de brisa (0,45 s). |
+| `sfx_mech_matapi` | Se abre el Matapi (trampa) | Crujido de fibra y tirón de cuerda | 0,8 s | **Tejido de varillas de arumã que cede («cric-crac» orgánico) + tirón corto de fibra vegetal** al cerrarse/completarse la trampa. |
+| `sfx_mech_liana` | Se suelta la Liana con fruta | «Ding» y rama que cruje | 0,6 s | **Nota cristalina de la fruta llave («ding» de marimba aguda) + latigazo elástico de bejuco/liana que se desata** y libera la cuia. |
+| `sfx_mech_liana_cuenta` | Baja la cuenta de la Liana de cuenta | Sin definir | 0,15 s [P] | **«Tac» seco de nudo de bejuco que afloja una vuelta** (madera fibrosa tensa + toque de semilla, corto para no tapar el sellado que lo dispara). |
+| `sfx_mech_remolino` | El chorro pasa por el Remolino | Succión y burbujas que suben en la otra cuia | 0,5 s | **Giro líquido de succión suave («shloop» grave-medio) + rosario de burbujas ascendentes** al emerger la dosis por el fondo de la cuia pareja. |
+| `sfx_mech_barro` | Se limpia el Barro | Chapoteo | 0,5 s | **Chorro de agua fresca que barre arcilla húmeda («splash-shhh»)** terminando en un destello limpio de vidrio despejado. |
+| `sfx_mech_lluvia` | Llueve sobre el tablero | Sin definir | 0,40 s [P] | **Ráfaga corta de lluvia amazónica sobre hojas + «plip» redondo de gota gruesa** al sumar la dosis de agua en la cuia (sin truenos). |
+| `sfx_mech_pirana` | La Piraña muerde o se lleva fruta | Sin definir | 0,40 s [P] | **Coletazo ágil en el agua + «chasquido» limpio y juguetón bajo el agua («chomp-blup»)** al llevarse la dosis a la cueva. Si el mordisco falla (cuia sellada), solo un «blup» corto al asomarse y volverse. |
+| `sfx_mech_brote` | Se abre el Brote (de una o dos hojas) | Sin definir | 0,45 s [P] | **Tallo tierno que germina con un «pop» húmedo vegetal + despliegue fresco de hojitas** (con el Brote de dos hojas, doble «pop» ligero en quinta ascendente). |
+| `sfx_mech_flor` | Se abre la Flor de vitória-régia | Sin definir | 0,65 s [P] | **Pétalos grandes que se abren sobre el agua con roce sedoso + acorde luminoso de dos notas** en kalimba/agua al liberarse la cuia. |
+| `sfx_mech_hoja_atada` | Se suelta la Hoja atada | Sin definir | 0,50 s [P] | **Amarre de fibra que se suelta («tzik» elástico) + hoja de palma que se desprende con brisa**, uniendo la textura de Liana y Hoja. |
+| `sfx_tinaja_select` | Elegir la Tinaja | «Toc» grave de barro | 0,12 s | **«Toc» profundo y mate de vasija de arcilla cocida** (resonancia hueca en 190 Hz y 520 Hz, muy distinto del cristal de la cuia). |
+| `sfx_tinaja_scoop` | Sacar agua de la Tinaja | «Glup» de calabaza en el agua; nunca burbujas ni hervor | 0,30 s | **«Glup» limpio y redondo de cazo/cuia chica que recoge agua fresca** de la boca de barro (un solo movimiento líquido laminar, cero burbujeo ni efervescencia). |
+| `sfx_tinaja_reveal` | Se revela la boca de la Tinaja | Gota | 0,14 s | **Gota única y clara que resuena dentro del cuello de barro** (con eco corto de vasija), afinada a la fruta que asoma en la boca. |
+| `sfx_tinaja_release` | Se suelta su cuia chica | Roce de fibra y «toc» hueco | 0,8 s | **Roce de cuerda/fibra en las varas del jirau + «toc» hueco de calabaza** cuando la cuia chica baja a su ranura para jugarse normal. |
+| `sfx_sloth_nod` | TiTino asiente | «Mmm» suave y grave, sin palabras | 0,35 s | **Murmullo nasal cálido y grave («mmm» tierno en 190→220 Hz, boca cerrada)**, sereno y acogedor. |
+| `sfx_sloth_happy` | TiTino celebra | Suspiro feliz | 0,45 s | **Suspiro suave y contento («aaah-hm» con aire cálido y sonrisa)** + leve roce de hojas de su embaúba; nunca silbido agudo (llamada de angustia de cría). |
+| `sfx_sloth_branch` | Entra la rama de TiTino | Roce de hojas | 0,35 s | **Balanceo flexible de rama de embaúba + roce fresco de hojas grandes**. |
+| `sfx_sloth_yawn` | TiTino se duerme | Bostezo muy suave | 0,60 s | **Bostezo chiquito de aire suave descendente** que termina en dos chasquidos lentos al acomodarse a dormir. |
+| `sfx_rosa_surface` | Rosa (delfín rosado) asoma | Exhalación real de boto | 1,0 s | **Ondulación de agua + soplo real de espiráculo de boto (*Inia geoffrensis*)**, cálido y cercano, seguido de chapoteo suave al sumergirse. |
+| `sfx_monkey_chirp` | Tropa de miquitos en la intro | Chillido corto de mono ardilla, muy bajo; uno como mucho | 0,15 s | **Trino agudo y dulce de mono ardilla (*Saimiri*), parecido a un pajarito** (3,2-4,5 kHz, muy bajo a −18 dB, solo al entrar en la rama). |
 
 Para la 1.1 quedan tres más: Aguapé (agua que se abre), Palizada (chapoteo y madera que cruje) y Cocha (agua que se corta). Ningún personaje habla: solo sonidos, para no doblar a cada idioma.
 
@@ -93,16 +116,16 @@ Estos sonidos marcan momentos de viaje y descubrimiento; salen pocas veces, así
 
 | ID [P] | Cuándo suena | Cómo debe sonar (GDD) | Duración | Tu propuesta |
 | --- | --- | --- | --- | --- |
-| `sfx_fact` | Llegada a una parada (victoria de los niveles 20, 30, 40…) | Madera y vidrio, sin papel [P] | 0,3 s | |
-| `sfx_world_banner` | Banner de mundo nuevo (41, 81, 141…) | Grito de la piha, la firma sonora del juego; **solo aquí**, nunca en bucle | 1-2 s | |
-| `sfx_map_paddle` | Capi rema en el Mapa | Remo de Capi (el mismo de `sfx_capi_paddle`) | 0,8 s | |
-| `sfx_map_sample` | Se llena una muestra en el Mapa | Acorde de vidrio | corta | |
-| `sfx_map_rosa` | Rosa en el Mapa | Exhalación de Rosa | 1,0 s | |
-| `sfx_map_pequepeque` | Opcional: barcas en el Mapa | Motor peque-peque (canoa con motor de eje largo) | — | |
-| `sfx_fruit_new` | Tarjeta «Fruta nueva» | Sin definir | — | |
-| `sfx_mech_card` | Tarjeta previa de una mecánica nueva | Sin definir | — | |
-| `sfx_morpho_idle` | Pista del Morpho por inactividad | Sin definir (¿el mismo aleteo de `sfx_hint`, más bajo?) | — | |
-| `sfx_store_open` | Se abre la tienda o el Mercado | Sin definir | — | |
+| `sfx_fact` | Llegada a una parada (victoria de los niveles 20, 30, 40…) | Madera y vidrio, sin papel [P] | 0,3 s | **Toque noble de tablilla de madera clara + armónico cristalino de vidrio** (acorde de quinta Do5-Sol5, limpio y sin roce de hojas de papel). |
+| `sfx_world_banner` | Banner de mundo nuevo (41, 81, 141…) | Grito de la piha, la firma sonora del juego; **solo aquí**, nunca en bucle | 1-2 s | **El canto real de tres sílabas de la piha gritona («qui-qui-yo»)** con reverberación natural de dosel amazónico, arropado por una brisa de río (1,6 s). |
+| `sfx_map_paddle` | Capi rema en el Mapa | Remo de Capi (el mismo de `sfx_capi_paddle`) | 0,8 s | **Dos paladas suaves de remo en agua tranquila** (reutiliza la capa de remo y agua de `sfx_capi_paddle`). |
+| `sfx_map_sample` | Se llena una muestra en el Mapa | Acorde de vidrio | 0,45 s | **Agua que colma la mini cuia del sitio + acorde luminoso de 3 copas/cuias de vidrio** (Do5-Mi5-Sol5) que confirma la parada alcanzada. |
+| `sfx_map_rosa` | Rosa en el Mapa | Exhalación de Rosa | 1,0 s | **El mismo soplo amable y chapoteo corto de `sfx_rosa_surface`**, ligeramente más suave (−3 dB) para acompañar el mapa. |
+| `sfx_map_pequepeque` | Opcional: barcas en el Mapa | Motor peque-peque (canoa con motor de eje largo) | 0,9 s [P] | **«Pec-pec-pec-pec» rítmico, redondo y lejano** (filtrado en agudos y a −22 dB con chapoteo de estela, solo al tocar una barca o pasar junto a un puerto para dar color ribereño sin ruido mecánico). |
+| `sfx_fruit_new` | Tarjeta «Fruta nueva» | Sin definir | 0,70 s [P] | **Caída jugosa de fruta en agua clara + arpegio ascendente de 3 notas en marimba de chonta y kalimba**, rematado en la nota propia de la fruta descubierta. |
+| `sfx_mech_card` | Tarjeta previa de una mecánica nueva | Sin definir | 0,35 s [P] | **Golpe suave de marco de madera + sacudida corta de semillas/maracá** (en tarjeta de Difícil/Muy difícil añade un armónico grave de tambor de agua, elegante y sin alarma). |
+| `sfx_morpho_idle` | Pista del Morpho por inactividad | Sin definir (¿el mismo aleteo de `sfx_hint`, más bajo?) | 0,35 s [P] | **Sí: el aleteo sedoso de `sfx_hint` a mitad de volumen (−10 dB) con una sola nota suave de bambú**, para sugerir sin apurar al jugador. |
+| `sfx_store_open` | Se abre la tienda o el Mercado | Sin definir | 0,55 s [P] | **Despliegue de estera/cesto de fibra + tintineo cálido de botellas de vidrio y semillas** (guiño al mercado de Ver-o-Peso, sin voces). |
 
 ## 5. Ambiente de cada mundo
 
@@ -110,19 +133,19 @@ Cada mundo tiene un fondo sonoro de 3 capas que se mezclan solas: el agua del r�
 
 | Mundo | Agua | Lluvia (niveles con lluvia) | Animales | Tu propuesta |
 | --- | --- | --- | --- | --- |
-| 1 Estuario | Río ancho y lento, marea | 20 % | Garzas, mercado lejano sin voces que se entiendan, piha ocasional | |
-| 2 Tapajós | Olas suaves de playa | 10 % | Tucanes, piha, exhalación de Rosa | |
-| 3 Manaos | Dos corrientes, una grave y una aguda | 25 % | Botos, guacamayos | |
-| 4 Trapecio | Río tras la lluvia, goteo | 50 % | Pericos al atardecer, grillos de día | |
-| 5 Loreto | Agua quieta de espejo | 30 % | Pirarucú que respira (burbuja grave), piha | |
-| 6 Oriente | Laguna negra de noche | 40 % | Ranas, grillos, búho lejano | |
-| 7 Madre de Dios | Río medio | 20 % | Guacamayos de la collpa, nutrias | |
-| 8 Madidi | Cascada lejana | 30 % | Coro de aves de altura | |
-| 9 Ucayali | Vapor que sisea y río | 20 % | Paiche, piha | |
-| 10 Alto Negro | Río negro lento | 15 % | Noche: ranas, insectos, agua | |
-| 11 Escudo de Guayana | Viento de sabana y río | 10 % | Hoatzín (graznido áspero) | |
-| 12 Invitados del Orinoco | Río rápido sobre piedra | 10 % | Guacamayos, viento de tepuy | |
-| 13 El origen | Torrente de altura, viento frío | 10 % | Viento, aves lejanas | |
+| 1 Estuario | Río ancho y lento, marea | 20 % | Garzas, mercado lejano sin voces que se entiendan, piha ocasional | **Agua amplia con vaivén de marea suave**; brisa de palmeras de açaí, vuelo de garzas y murmullo muy lejano de muelle/madera al alba (cero voces inteligibles). |
+| 2 Tapajós | Olas suaves de playa | 10 % | Tucanes, piha, exhalación de Rosa | **Olas pequeñas y cristalinas sobre arena blanca (Alter do Chão)**; canto lejano de tucán al mediodía y soplo ocasional de Rosa. |
+| 3 Manaos | Dos corrientes, una grave y una aguda | 25 % | Botos, guacamayos | **Textura binaural sutil**: corriente densa grave a un lado (Solimões) y rizo cristalino al otro (Río Negro), con botos y pareja de guacamayos cruzando alto. |
+| 4 Trapecio | Río tras la lluvia, goteo | 50 % | Pericos al atardecer, grillos de día | **Goteo fresco y espaciado de hojas de selva sobre el río**; grillos diurnos suaves y, en la parada 9 (Leticia al atardecer), algarabía lejana y cálida de pericos. |
+| 5 Loreto | Agua quieta de espejo | 30 % | Pirarucú que respira (burbuja grave), piha | **Calma de cocha/espejo de agua (Pacaya-Samiria)** con ondas mínimas; cada 30-45 s la respiración profunda y grave del pirarucú («boiada»). |
+| 6 Oriente | Laguna negra de noche | 40 % | Ranas, grillos, búho lejano | **Noche serena y envolvente en Cuyabeno**: pulso suave de grillos y ranas arborícolas (afinadas para no chocar con la música) y ulular lejano de búho. |
+| 7 Madre de Dios | Río medio | 20 % | Guacamayos de la collpa, nutrias | **Corriente viva de mañana en el Tambopata**; aleteos y llamadas lejanas en la collpa y gorjeos de familia de nutrias en el lago. |
+| 8 Madidi | Cascada lejana | 30 % | Coro de aves de altura | **Rumor sedoso y fresco de cascada lejana con bruma** + cantos cristalinos de tangaras y aves de bosque nublado. |
+| 9 Ucayali | Vapor que sisea y río | 20 % | Paiche, piha | **Meandro ancho con siseo cálido y suave de vapor (Shanay-Timpishka)** en niveles especiales + chapoteo profundo de paiche. |
+| 10 Alto Negro | Río negro lento | 15 % | Noche: ranas, insectos, agua | **Corriente negra profunda bajo cielo estrellado**: coro nocturno aterciopelado, agua contra roca granítica. |
+| 11 Escudo de Guayana | Viento de sabana y río | 10 % | Hoatzín (graznido áspero) | **Brisa abierta de sabana y tepuyes sobre el río**; llamada curiosa del hoatzín suavizada en mezcla para que aporte carácter sin raspar. |
+| 12 Invitados del Orinoco | Río rápido sobre piedra | 10 % | Guacamayos, viento de tepuy | **Agua clara y alegre corriendo sobre lecho de piedra (Caño Cristales)** + viento alto de meseta y guacamayos. |
+| 13 El origen | Torrente de altura, viento frío | 10 % | Viento, aves lejanas | **Hilo de agua pura y cristalina entre rocas andinas (Mismi/Apurímac)** con brisa fría de puna y eco limpio de altura. |
 
 Piezas que hay que grabar o comprar: unas 13 capas de agua, 2-3 lluvias (fina, media, fuerte) y unos 25 animales. La piha, el boto, la nutria, el hoatzín y las ranas necesitan grabaciones con licencia comercial.
 
@@ -132,21 +155,21 @@ La música crece con el jugador: un lecho tranquilo de 60-90 s en bucle, sin rit
 
 | Pieza | Dónde suena | Estilo e instrumentos (GDD) | Tu propuesta |
 | --- | --- | --- | --- |
-| Lecho mundo 1 Estuario | Niveles 1-10 | Carimbó: tambor curimbó y maracás | |
-| Lecho mundo 2 Tapajós | 11-40 | Carimbó de playa, más lento: maracá y guitarra [P] | |
-| Lecho mundo 3 Manaos | 41-80 | Toada amazónica propia, sin nada de Parintins | |
-| Lecho mundo 4 Trapecio | 81-140 | Guitarra acústica y flauta de caña, sin carácter ritual [P] | |
-| Lecho mundo 5 Loreto | 141-200 | Cumbia amazónica suave, tempo bajo [P] | |
-| Lecho mundo 6 Oriente | 201-300 | Percusión de semillas y cuencos de agua, nocturno [P] | |
-| Lecho mundo 7 Madre de Dios | 301-420 | Guitarra y cajón ligero [P] | |
-| Lecho mundo 8 Madidi | 421-560 | Charango suave y bombo [P] | |
-| Lecho mundo 9 Ucayali | 561-700 | Cumbia amazónica / chicha: Farfisa y guitarra con wah-wah | |
-| Lechos mundos 10-13 | 701 en adelante, después de la 1.0 | Pad nocturno y maracá · percusión de calabaza y voces sin letra · arpa y maracas llaneras · quena y zampoña (solo en el 13) | |
-| Capas de percusión (×4 por mundo) | Se suman al sellar el 25, 50, 75 y 100 % | Percusión suave del instrumento de cada mundo | |
-| Variante nocturna de cada lecho | Niveles Muy difíciles | Menos agudos, más graves | |
-| Toada de victoria | Al ganar | Percusión y coro sin letra, 2-3 s (es `sfx_win_toada`) | |
-| Tema de menú | Inicio, Mercado, pantalla de la Crecida | Cumbia amazónica ligera a 90-100 BPM: Farfisa y guitarra con wah-wah suave | |
-| Stingers | Momentos cortos (banner de mundo, llegada, comodines) | Golpes musicales de 1-2 s; lista por cerrar | |
+| Lecho mundo 1 Estuario | Niveles 1-10 | Carimbó: tambor curimbó y maracás | **Alba cálida en Belém**: armónicos suaves de guitarra de cuerdas de nylon y banjos/flauta de madera en notas largas, con pulso de curimbó grave y maracás que entran por capas al sellar. |
+| Lecho mundo 2 Tapajós | 11-40 | Carimbó de playa, más lento: maracá y guitarra [P] | **Brisa luminosa de Alter do Chão**: arpegios espaciados de guitarra acústica con armónicos naturales como gotas de sol sobre el agua clara y shaker de semillas. |
+| Lecho mundo 3 Manaos | 41-80 | Toada amazónica propia, sin nada de Parintins | **Dos corrientes musicales que dialogan**: bajo cálido y redondo (Solimões) con melodía cristalina de marimba/cuerda punteada (Río Negro); percusión amazónica original, cero citas a Garantido/Caprichoso. |
+| Lecho mundo 4 Trapecio | 81-140 | Guitarra acústica y flauta de caña, sin carácter ritual [P] | **Mañana fresca tras la lluvia en Leticia/Tarapoto**: guitarra acústica cálida en compás mecido y frases cortas y dulces de flauta de caña ribereña (puramente melódica y pastoral, nada ritual). |
+| Lecho mundo 5 Loreto | 141-200 | Cumbia amazónica suave, tempo bajo [P] | **Atardecer en la selva de espejos**: guitarra limpia con reverb de resorte suave y órgano cálido en acordes largos flotantes; el güiro de calabaza y los bongós entran muy suaves al sellar cuias. |
+| Lecho mundo 6 Oriente | 201-300 | Percusión de semillas y cuencos de agua, nocturno [P] | **Noche hipnótica y tranquila**: cuencos de agua afinados, kalimba de calabaza y cascabeles de semillas secas con pad cálido nocturno. |
+| Lecho mundo 7 Madre de Dios | 301-420 | Guitarra y cajón ligero [P] | **Amanecer peruano**: guitarra criolla/amazónica en arpegios abiertos y cajón peruano tocado con yemas de los dedos (suave y redondo, sin golpes secos fuertes). |
+| Lecho mundo 8 Madidi | 421-560 | Charango suave y bombo [P] | **Transición selva-Andes**: charango dulce arpegiado con pulgar (sin rasgueo estridente) y bombo legüero profundo y lejano como latido cálido. |
+| Lecho mundo 9 Ucayali | 561-700 | Cumbia amazónica / chicha: Farfisa y guitarra con wah-wah | **Homenaje fresco a Pucallpa**: órgano Farfisa suave y guitarra eléctrica limpia con wah-wah sedoso a tempo relajado, alegre y psicodélico-tropical sin saturar. |
+| Lechos mundos 10-13 | 701 en adelante, después de la 1.0 | Pad nocturno y maracá · percusión de calabaza y voces sin letra · arpa y maracas llaneras · quena y zampoña (solo en el 13) | **Gradiente hacia el origen**: del misterio nocturno del Alto Negro (10) y los coros suaves del Rupununi (11), al arpa cristalina como agua de Caño Cristales (12) y el aire puro de quena y zampoña al llegar al nevado Mismi (13). |
+| Capas de percusión (×4 por mundo) | Se suman al sellar el 25, 50, 75 y 100 % | Percusión suave del instrumento de cada mundo | **25 %:** semilla/shaker sutil · **50 %:** madera/cumbuca · **75 %:** tambor grave suave (curimbó/cajón/bombo) · **100 %:** brillo melódico rítmico antes de la victoria. |
+| Variante nocturna de cada lecho | Niveles Muy difíciles | Menos agudos, más graves | **Filtro paso bajo cálido (corte suave en 2,2 kHz) + octava grave en el pad/bajo**, dando atmósfera de «Noche de jaguar» concentrada y misteriosa pero nunca estresante. |
+| Toada de victoria | Al ganar | Percusión y coro sin letra, 2-3 s (es `sfx_win_toada`) | **Misma pieza que `sfx_win_toada`**, en la tonalidad del lecho (Do mayor / La menor pentatónico) para que funda sin choque armónico con cualquier mundo. |
+| Tema de menú | Inicio, Mercado, pantalla de la Crecida | Cumbia amazónica ligera a 90-100 BPM: Farfisa y guitarra con wah-wah suave | **Melodía luminosa, hospitalaria y memorable a 94 BPM**: guitarra cristalina con wah suave, bajo redondo, maracá/güiro de calabaza y órgano Farfisa cálido que invita a viajar por el río. |
+| Stingers | Momentos cortos (banner de mundo, llegada, comodines) | Golpes musicales de 1-2 s; lista por cerrar | **5 stingers cerrados [P]:** (1) *Llegada a parada (`10k`)*: acorde de guitarra + marimba de agua (1,2 s); (2) *Banner de mundo*: acorde abierto de bienvenida bajo la piha (1,8 s); (3) *Hito de la Crecida (3/6/10)*: subida festiva de carimbó/cumbia (1,2 s); (4) *El río bajó*: suspiro armónico descendente-ascendente de alivio (1,0 s); (5) *Serie de fruta completada (20/20)*: florecimiento de marimba y flauta (1,2 s). |
 
 **Prohibido en el encargo al compositor:** ícaros, flautas de Yuruparí, cantos rituales, quena o zampoña fuera del mundo 13, y melodías o colores de Garantido y Caprichoso (Parintins). Ninguna voz hablada.
 
@@ -165,6 +188,10 @@ La vibración usa los efectos estándar de Android (tick y click) y se puede apa
 **Mezcla y ajustes [P]:**
 
 - Música a −20 LUFS, lecho de ambiente a −26 LUFS y efectos con picos de −6 dBTP como máximo; la música, 6 dB por debajo de los efectos.
+- **Jerarquía dinámica de efectos (como en *Magic Sort!*):**
+  - *Gestos continuos* (`sfx_select`, `sfx_pour_*`, `sfx_tint`, `sfx_fruit_plip`, `sfx_ui_tap`): **−36 a −27 dBFS** (suaves, nunca cansan).
+  - * Mecánicas, avisos y comodines* (`sfx_mech_*`, `sfx_undo`, `sfx_hint`, `sfx_stuck`): **−24 a −18 dBFS**.
+  - *Premios y sellados* (`sfx_seal`, `sfx_win_toada`, `sfx_world_banner`, `sfx_basket_open`): **−17 a −12 dBFS** (contraste claro de recompensa).
 - El lecho baja 6 dB durante la toada y los avisos.
 - Sonido, Música y Vibración vienen encendidos y se apagan por separado en Ajustes.
 - Respeta el modo silencio del teléfono; todo se calla durante los anuncios y vuelve con un fundido de 0,5 s.
@@ -179,8 +206,8 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
 | Bloque | Cantidad 1.0 | Quién | Presupuesto del GDD |
 | --- | --- | --- | --- |
 | Efectos de tablero, comodines e interfaz (§1-2) | 30 | Diseñador de sonido, con foley propio y biblioteca comercial | 600-1.500 USD (calculado para unos 35 efectos) |
-| Efectos de mecánicas, personajes y Mapa (§3-4) | 31 (+3 en la 1.1) | Diseñador de sonido; 11 aún sin definir | dentro de la fila anterior, a revisar |
+| Efectos de mecánicas, personajes y Mapa (§3-4) | 31 (+3 en la 1.1) | Diseñador de sonido; los 11 que estaban sin definir ya tienen propuesta arriba | dentro de la fila anterior, a revisar |
 | Ambiente (§5) | 9 aguas, 2-3 lluvias, unos 25 animales | Biblioteca con licencia comercial; la piha conviene grabarla | partida «grabaciones de fauna», sin cifra propia |
-| Música (§6) | 9 lechos, 36 capas de percusión, 9 variantes nocturnas, toada, tema de menú y 5-8 stingers | Compositor, con cesión total de derechos; músicos regionales si se puede | 1.500-4.000 USD |
+| Música (§6) | 9 lechos, 36 capas de percusión, 9 variantes nocturnas, toada, tema de menú y 5 stingers | Compositor, con cesión total de derechos; músicos regionales si se puede | 1.500-4.000 USD |
 
-**Mientras tanto:** se puede crear el sistema de audio con sonidos provisionales hechos por código para oír el juego en el teléfono. Los sonidos reales sustituyen a los provisionales sin tocar el código.
+**Mientras tanto:** se puede crear el sistema de audio con sonidos provisionales hechos por código para oír el juego en el teléfono (`ProceduralAudio` en C# en tiempo real, 0 MB en el AAB, con los mismos algoritmos del laboratorio interactivo `docs/audio/laboratorio-sonidos.html`). Los sonidos reales sustituyen a los provisionales sin tocar el código.

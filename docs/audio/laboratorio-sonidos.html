@@ -1,0 +1,1691 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tintalú · Laboratorio de Sonidos y Música</title>
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    .fruit-btn {
+      transition: transform 0.12s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.12s ease;
+    }
+    .fruit-btn:hover {
+      transform: translateY(-3px);
+    }
+    .fruit-btn:active, .fruit-btn.playing {
+      transform: translateY(-8px) scale(1.04);
+    }
+    .sfx-card {
+      transition: border-color 0.15s ease, transform 0.1s ease;
+    }
+    .sfx-card.active-sfx {
+      border-color: #3BB8D9 !important;
+      box-shadow: 0 0 0 2px rgba(59, 184, 217, 0.28);
+    }
+  </style>
+</head>
+<body class="bg-[var(--background)] text-[var(--foreground)] antialiased p-4 md:p-6">
+  <div class="max-w-6xl mx-auto space-y-6">
+
+    <!-- Header & Oscilloscope -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm">
+      <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+        <div>
+          <div class="flex items-center gap-2.5">
+            <span class="inline-block w-3 h-3 rounded-full bg-[#3BB8D9]"></span>
+            <h1 class="text-xl font-bold tracking-tight">Tintalú · Laboratorio Acústico Procedural (61 SFX + 14 Frutas + Ambiente)</h1>
+          </div>
+          <p class="text-[var(--muted-foreground)] text-sm mt-1">
+            Síntesis física en punto flotante (44,1 kHz): burbujas Minnaert en vidrio, marimba de chonta, calabaza hueca, maracá de semillas y siringe de fauna amazónica. Lista para pasar 1:1 a <code class="px-1.5 py-0.5 rounded bg-[var(--secondary)] text-xs">ProceduralAudio.cs</code> en Unity o descargar en <code class="px-1.5 py-0.5 rounded bg-[var(--secondary)] text-xs">.wav</code>.
+          </p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btnStopAll" class="px-3.5 py-2 rounded-xl border border-[var(--border)] bg-[var(--secondary)] text-[var(--secondary-foreground)] text-xs font-semibold hover:opacity-90">
+            Detener todo
+          </button>
+          <button id="btnDownloadLast" class="px-3.5 py-2 rounded-xl bg-[#3F6B33] text-[#F4EBDA] text-xs font-semibold hover:opacity-95 shadow-sm">
+            Descargar último (.wav)
+          </button>
+        </div>
+      </div>
+
+      <!-- Waveform + Master Controls -->
+      <div class="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4 items-center">
+        <div class="lg:col-span-7 bg-[var(--secondary)] border border-[var(--border)] rounded-xl p-3">
+          <div class="flex items-center justify-between text-xs text-[var(--muted-foreground)] mb-1.5">
+            <span id="nowPlayingLabel" class="font-medium text-[var(--foreground)]">Listo · Toca cualquier fruta, secuencia o efecto para escuchar</span>
+            <span id="nowPlayingMeta" class="font-mono">44.1 kHz · Mono PCM</span>
+          </div>
+          <canvas id="waveCanvas" width="640" height="84" class="w-full h-[84px] rounded-lg"></canvas>
+        </div>
+
+        <div class="lg:col-span-5 grid grid-cols-2 gap-3 bg-[var(--secondary)] border border-[var(--border)] rounded-xl p-3 text-xs">
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="font-medium">Brillo de agua / vidrio</span>
+              <span id="valWater" class="font-mono text-[var(--muted-foreground)]">100%</span>
+            </div>
+            <input id="ctrlWater" type="range" min="50" max="150" value="100" class="w-full accent-[#3BB8D9]" />
+          </div>
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="font-medium">Cuerpo madera / cuia</span>
+              <span id="valWood" class="font-mono text-[var(--muted-foreground)]">100%</span>
+            </div>
+            <input id="ctrlWood" type="range" min="50" max="150" value="100" class="w-full accent-[#C98A2B]" />
+          </div>
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="font-medium">Eco de dosel (Reverb)</span>
+              <span id="valReverb" class="font-mono text-[var(--muted-foreground)]">25%</span>
+            </div>
+            <input id="ctrlReverb" type="range" min="0" max="75" value="25" class="w-full accent-[#4EB265]" />
+          </div>
+          <div>
+            <div class="flex justify-between mb-1">
+              <span class="font-medium">Volumen maestro</span>
+              <span id="valVol" class="font-mono text-[var(--muted-foreground)]">90%</span>
+            </div>
+            <input id="ctrlVol" type="range" min="20" max="100" value="90" class="w-full accent-[#3F6B33]" />
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Coreografías en Vivo (Simulador de Juego) -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+        <div>
+          <h2 class="text-base font-bold">Coreografías del Juego en Vivo</h2>
+          <p class="text-xs text-[var(--muted-foreground)]">Escucha cómo suenan los efectos encadenados con los tiempos reales del GDD (02 §4.2, §5.2 y §6).</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-2.5">
+        <button onclick="playChoreo('intro')" class="p-3 rounded-xl border border-[var(--border)] bg-[var(--secondary)] hover:border-[#3BB8D9] text-left transition">
+          <div class="text-xs font-bold text-[#3BB8D9]">1. Intro «Llenar y teñir»</div>
+          <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Río crece + miquito (−18 dB) + llenado + frutas y arpegio (1,4 s)</div>
+        </button>
+        <button onclick="playChoreo('pour_seal')" class="p-3 rounded-xl border border-[var(--border)] bg-[var(--secondary)] hover:border-[#4EB265] text-left transition">
+          <div class="text-xs font-bold text-[#4EB265]">2. Vertido + Sellado</div>
+          <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Seleccionar cuia → chorro que sube de tono → maracá + tapa</div>
+        </button>
+        <button onclick="playChoreo('victory')" class="p-3 rounded-xl border border-[var(--border)] bg-[var(--secondary)] hover:border-[#F2B705] text-left transition">
+          <div class="text-xs font-bold text-[#C98A2B]">3. Celebración de Victoria</div>
+          <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Último sello → Toada + guacamayos → semillas → TiTino + llegada</div>
+        </button>
+        <button onclick="playChoreo('world_banner')" class="p-3 rounded-xl border border-[var(--border)] bg-[var(--secondary)] hover:border-[#E58FC6] text-left transition">
+          <div class="text-xs font-bold text-[#E58FC6]">4. Banner de Mundo Nuevo</div>
+          <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Grito real de la Piha («qui-qui-yo») + remo de Capi + soplo de Rosa</div>
+        </button>
+        <button onclick="playChoreo('tinaja_combo')" class="p-3 rounded-xl border border-[var(--border)] bg-[var(--secondary)] hover:border-[#EF7D1A] text-left transition">
+          <div class="text-xs font-bold text-[#EF7D1A]">5. Secuencia de la Tinaja</div>
+          <div class="text-xs text-[var(--muted-foreground)] mt-0.5">Toc de barro → glup de calabaza → gota revelada → suelta del jirau</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- 14 Fruits Pentatonic Scale -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm">
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
+        <div>
+          <h2 class="text-base font-bold">Escala Pentatónica de las 14 Frutas (<code class="text-xs">sfx_select</code> y <code class="text-xs">sfx_tint</code>)</h2>
+          <p class="text-xs text-[var(--muted-foreground)]">Ordenada por luminosidad L* (de Huito C4 a Guanábana G6). Timbre: gota Minnaert en vidrio + marimba de chonta.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="playAllFruitsArpeggio()" class="px-3 py-1.5 rounded-lg bg-[var(--secondary)] border border-[var(--border)] text-xs font-semibold hover:border-[#3BB8D9]">
+            Tocar arpegio de las 14 frutas
+          </button>
+        </div>
+      </div>
+      <div id="fruitGrid" class="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-7 gap-2"></div>
+    </div>
+
+    <!-- Ambient & Adaptive Music Mixer (§5 & §6) -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+        <div>
+          <h2 class="text-base font-bold">Simulador de Ambiente (§5) y Música Adaptativa por Capas (§6)</h2>
+          <p class="text-xs text-[var(--muted-foreground)]">Prueba el lavado de río + lluvia + fauna ocasional + lecho musical que suma capas de percusión al sellar el 25, 50, 75 y 100 % de las cuias.</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-2">
+          <button id="btnToggleAmbience" onclick="toggleAmbienceLoop()" class="px-4 py-2 rounded-xl bg-[#3F6B33] text-[#F4EBDA] text-xs font-semibold shadow-sm">
+            Iniciar Ambiente + Música en Bucle
+          </button>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+        <div class="bg-[var(--secondary)] border border-[var(--border)] rounded-xl p-3">
+          <label class="block font-semibold mb-1.5">Mundo / Agua Base</label>
+          <select id="selWorld" onchange="updateAmbienceParams()" class="w-full rounded-lg bg-[var(--card)] border border-[var(--border)] p-2 text-xs">
+            <option value="1">1 · Estuario (Carimbó / Agua blanca)</option>
+            <option value="2">2 · Tapajós (Playa y guitarra / Agua clara)</option>
+            <option value="3">3 · Manaos (Dos corrientes / Agua negra)</option>
+            <option value="4">4 · Trapecio (Flauta de caña y lluvia)</option>
+            <option value="5">5 · Loreto (Cumbia suave / Espejo de agua)</option>
+            <option value="6">6 · Oriente (Cuencos de agua nocturnos)</option>
+            <option value="7">7 · Madre de Dios (Guitarra y cajón)</option>
+            <option value="8">8 · Madidi (Charango suave y cascada)</option>
+            <option value="9">9 · Ucayali (Chicha: Farfisa + wah-wah)</option>
+            <option value="13">13 · El origen (Quena, zampoña y viento frío)</option>
+          </select>
+        </div>
+
+        <div class="bg-[var(--secondary)] border border-[var(--border)] rounded-xl p-3">
+          <label class="block font-semibold mb-1.5">Cuias selladas (Capas de percusión)</label>
+          <div class="grid grid-cols-5 gap-1" id="sealProgressBtns">
+            <button onclick="setSealProgress(0)" data-pct="0" class="seal-pct-btn py-1.5 rounded bg-[#3F6B33] text-[#F4EBDA] font-bold">0%</button>
+            <button onclick="setSealProgress(25)" data-pct="25" class="seal-pct-btn py-1.5 rounded bg-[var(--card)] border border-[var(--border)]">25%</button>
+            <button onclick="setSealProgress(50)" data-pct="50" class="seal-pct-btn py-1.5 rounded bg-[var(--card)] border border-[var(--border)]">50%</button>
+            <button onclick="setSealProgress(75)" data-pct="75" class="seal-pct-btn py-1.5 rounded bg-[var(--card)] border border-[var(--border)]">75%</button>
+            <button onclick="setSealProgress(100)" data-pct="100" class="seal-pct-btn py-1.5 rounded bg-[var(--card)] border border-[var(--border)]">100%</button>
+          </div>
+        </div>
+
+        <div class="bg-[var(--secondary)] border border-[var(--border)] rounded-xl p-3 flex flex-col justify-between">
+          <label class="font-semibold">Capa de Lluvia del nivel</label>
+          <div class="flex items-center gap-3 mt-1">
+            <input id="ctrlRainMix" type="range" min="0" max="100" value="20" oninput="updateAmbienceParams()" class="w-full accent-[#3BB8D9]" />
+            <span id="valRainMix" class="font-mono">20%</span>
+          </div>
+        </div>
+
+        <div class="bg-[var(--secondary)] border border-[var(--border)] rounded-xl p-3 flex flex-col justify-between">
+          <label class="font-semibold">Modo del Lecho</label>
+          <label class="inline-flex items-center gap-2 mt-1 cursor-pointer">
+            <input id="chkNightMode" type="checkbox" onchange="updateAmbienceParams()" class="rounded accent-[#24305E]" />
+            <span>Variante Nocturna («Muy difícil»)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <!-- Category Tabs & Search -->
+    <div class="bg-[var(--card)] border border-[var(--border)] rounded-2xl p-5 shadow-sm">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
+        <div class="flex flex-wrap gap-1.5" id="catTabs">
+          <button onclick="filterCategory('all')" data-cat="all" class="cat-tab px-3 py-1.5 rounded-xl text-xs font-bold bg-[#3F6B33] text-[#F4EBDA]">Todos (61)</button>
+          <button onclick="filterCategory('sec1')" data-cat="sec1" class="cat-tab px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--secondary)] border border-[var(--border)]">§1 Tablero y vertido (13)</button>
+          <button onclick="filterCategory('sec2')" data-cat="sec2" class="cat-tab px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--secondary)] border border-[var(--border)]">§2 Comodines y UI (17)</button>
+          <button onclick="filterCategory('sec3')" data-cat="sec3" class="cat-tab px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--secondary)] border border-[var(--border)]">§3 Mecánicas y personajes (21)</button>
+          <button onclick="filterCategory('sec4')" data-cat="sec4" class="cat-tab px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--secondary)] border border-[var(--border)]">§4 Mapa y pantallas (10)</button>
+          <button onclick="filterCategory('new11')" data-cat="new11" class="cat-tab px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--secondary)] border border-[#C98A2B] text-[#C98A2B]">★ Los 11 antes «Sin definir»</button>
+        </div>
+        <input id="searchBox" type="text" oninput="renderSfxCatalog()" placeholder="Buscar por ID o descripción (ej. piha, tinaja, seal)..." class="px-3 py-1.5 rounded-xl bg-[var(--secondary)] border border-[var(--border)] text-xs w-full md:w-64" />
+      </div>
+
+      <div id="sfxGrid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3"></div>
+    </div>
+
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. PALETA CANÓNICA DE 14 FRUTAS Y ESCALA PENTATÓNICA (GDD 07 §3 & §9.2)
+    // =========================================================================
+    const FRUITS = [
+      { motor: 9,  id: 'jenipapo',     name: 'Huito',             hex: '#1F2F6B', lstar: 22, note: 'C4', freq: 261.63, textLight: true },
+      { motor: 13, id: 'cacao',        name: 'Cacao',             hex: '#5C3317', lstar: 26, note: 'D4', freq: 293.66, textLight: true },
+      { motor: 8,  id: 'acai',         name: 'Açaí',              hex: '#6A2C91', lstar: 32, note: 'E4', freq: 329.63, textLight: true },
+      { motor: 6,  id: 'camu_camu',    name: 'Camu camu',         hex: '#9E1B22', lstar: 34, note: 'G4', freq: 392.00, textLight: true },
+      { motor: 5,  id: 'urucum',       name: 'Achiote',           hex: '#CF3E1C', lstar: 48, note: 'A4', freq: 440.00, textLight: true },
+      { motor: 14, id: 'agua_negro',   name: 'Río Negro',         hex: '#A9672E', lstar: 50, note: 'C5', freq: 523.25, textLight: true },
+      { motor: 4,  id: 'aguaje',       name: 'Aguaje',            hex: '#EF7D1A', lstar: 64, note: 'D5', freq: 587.33, textLight: false },
+      { motor: 11, id: 'lulo',         name: 'Lulo',              hex: '#4EB265', lstar: 65, note: 'E5', freq: 659.25, textLight: false },
+      { motor: 7,  id: 'bacaba',       name: 'Bacaba',            hex: '#E58FC6', lstar: 70, note: 'G5', freq: 783.99, textLight: false },
+      { motor: 10, id: 'agua_tapajos', name: 'Agua Tapajós',      hex: '#3BB8D9', lstar: 70, note: 'A5', freq: 880.00, textLight: false },
+      { motor: 3,  id: 'tapereba',     name: 'Taperebá',          hex: '#F2B705', lstar: 78, note: 'C6', freq: 1046.50, textLight: false },
+      { motor: 12, id: 'araza',        name: 'Arazá',             hex: '#BBCC33', lstar: 79, note: 'D6', freq: 1174.66, textLight: false },
+      { motor: 2,  id: 'cupuacu',      name: 'Copoazú',           hex: '#E6D3A3', lstar: 85, note: 'E6', freq: 1318.51, textLight: false },
+      { motor: 1,  id: 'guanabana',    name: 'Guanábana',         hex: '#FAFAF7', lstar: 98, note: 'G6', freq: 1567.98, textLight: false }
+    ];
+
+    // =========================================================================
+    // 2. CATÁLOGO DE LOS 61 EFECTOS DE SONIDO (docs/audio/lista-de-sonidos.md)
+    // =========================================================================
+    const SFX_CATALOG = [
+      // §1. Tablero y vertido (13)
+      { id: 'sfx_select', cat: 'sec1', when: 'Tocar una cuia para elegirla', dur: '0,12 s', db: '−36 dBFS', proposal: 'Gota Minnaert en vidrio + armónico de marimba de chonta afinado a la fruta superior.' },
+      { id: 'sfx_pour_start', cat: 'sec1', when: 'Empieza el vertido', dur: '0,20 s', db: '−30 dBFS', proposal: '«Glup» limpio de cuello de garrafa + entrada laminar de agua en vidrio.' },
+      { id: 'sfx_pour_loop', cat: 'sec1', when: 'Mientras cae el chorro', dur: '0,65 s (1-3 dosis)', db: '−29 dBFS', proposal: 'Corriente ASMR de microburbujas en cavidad de vidrio que sube de 380 a 920 Hz al llenarse.' },
+      { id: 'sfx_pour_end', cat: 'sec1', when: 'Termina el vertido', dur: '0,20 s', db: '−30 dBFS', proposal: 'Corte limpio del chorro + dos gotitas finales («plic-ploc») asentando el menisco.' },
+      { id: 'sfx_illegal', cat: 'sec1', when: 'Vertido no permitido', dur: '0,15 s', db: '−28 dBFS', proposal: 'Doble toque seco y hueco en madera de balsa/calabaza («tuk-tuk» 180→150 Hz), neutro sin castigo.' },
+      { id: 'sfx_seal', cat: 'sec1', when: 'Una cuia se completa y se tapa', dur: '0,45 s', db: '−17 dBFS', proposal: 'Dos sacudidas frescas de maracá + «plop» hueco de tapa de calabaza + brillo pentatónico.' },
+      { id: 'sfx_river_rise', cat: 'sec1', when: 'Intro: el río crece', dur: '0,40 s', db: '−26 dBFS', proposal: 'Vaivén cálido y grave de orilla de río (120-450 Hz), sin cresta brusca.' },
+      { id: 'sfx_fill', cat: 'sec1', when: 'Intro: se llenan las cuias', dur: '0,40 s', db: '−25 dBFS', proposal: 'Cascada fresca y gorgoteo claro en vidrio que sube media octava al llenar la fila.' },
+      { id: 'sfx_fruit_plip', cat: 'sec1', when: 'Intro: cae cada fruta en el agua', dur: '0,08 s', db: '−32 dBFS', proposal: '«Plic» redondo de fruta pequeña que rompe el menisco (burbuja 600→1.400 Hz).' },
+      { id: 'sfx_tint', cat: 'sec1', when: 'Intro: el agua se tiñe', dur: '0,10 s', db: '−30 dBFS', proposal: 'Destello de marimba de chonta + cristal en la nota de la fruta que florece.' },
+      { id: 'sfx_win_toada', cat: 'sec1', when: 'Victoria', dur: '2,20 s', db: '−14 dBFS', proposal: 'Fanfarria corta de carimbó: redoble de curimbó, maracás, arpegio cálido y coro «aah» sin letra.' },
+      { id: 'sfx_confetti', cat: 'sec1', when: 'Victoria: confeti de plumas', dur: '1,00 s', db: '−20 dBFS', proposal: 'Despliegue sedoso de alas de guacamayos en abanico (4 batidas + brisa de dosel).' },
+      { id: 'sfx_stuck', cat: 'sec1', when: 'Aguas estancadas (sin jugadas)', dur: '1,50 s', db: '−20 dBFS', proposal: 'Ondulación grave de remanso (cuenco de agua + marimba baja Sol→Mi→Do + gota solitaria).' },
+
+      // §2. Comodines, economía e interfaz (17)
+      { id: 'sfx_undo', cat: 'sec2', when: 'Marea (deshacer)', dur: '0,40 s', db: '−22 dBFS', proposal: 'Agua que se recoge en reversa + burbujas invertidas y deslizamiento ascendente suave.' },
+      { id: 'sfx_capi_paddle', cat: 'sec2', when: 'Cuia de rescate (+1 cuia): llega Capi', dur: '0,80 s', db: '−18 dBFS', proposal: 'Dos pasitos en arena + palada de remo en agua + «clinc» de vidrio + chasquido simpático de capibara.' },
+      { id: 'sfx_hint', cat: 'sec2', when: 'Morpho (pista)', dur: '0,50 s', db: '−20 dBFS', proposal: 'Tres batidas sedosas de alas de mariposa + quinta justa cristalina en campanita de chonta (Sol5→Re6).' },
+      { id: 'sfx_shuffle', cat: 'sec2', when: 'Pororoca (mezclar)', dur: '0,90 s', db: '−18 dBFS', proposal: 'Ola envolvente de río + remolino + glissando rápido de las 14 notas pentatónicas en marimba y gotas.' },
+      { id: 'sfx_reveal', cat: 'sec2', when: 'Luciérnaga (revelar Aguas turbias)', dur: '0,50 s', db: '−19 dBFS', proposal: 'Chispa cálida de kalimba aguda (Mi6→La6) + burbuja profunda («boiada») que aclara el agua.' },
+      { id: 'sfx_skip', cat: 'sec2', when: 'Salto del Boto (saltar nivel)', dur: '1,20 s', db: '−17 dBFS', proposal: 'Impulso de agua al emerger + exhalación real de boto en el aire + chapuzón alegre.' },
+      { id: 'sfx_restart', cat: 'sec2', when: 'Volver a la orilla (reiniciar)', dur: '0,50 s', db: '−22 dBFS', proposal: 'Barrido corto de agua que vuelve al cauce + toque firme de madera de canoa.' },
+      { id: 'sfx_river_drop', cat: 'sec2', when: 'El río bajó (nivel aliviado)', dur: '1,00 s', db: '−18 dBFS', proposal: 'Nivel de agua que desciende con alivio + soplo cercano y amable de Rosa.' },
+      { id: 'sfx_seeds_tick', cat: 'sec2', when: 'Contador de semillas que sube', dur: '0,05 s c/u', db: '−26 dBFS', proposal: '«Tic» orgánico de semilla dura cayendo en cesta de fibra (prueba aquí una ráfaga de 8 semillas).' },
+      { id: 'sfx_basket_open', cat: 'sec2', when: 'Canasta (premio)', dur: '0,80 s', db: '−16 dBFS', proposal: 'Crujido cálido de cesto de fibra al abrirse + caída jugosa de frutas y acorde de marimba.' },
+      { id: 'sfx_streak_up', cat: 'sec2', when: 'Crecida: sube la racha', dur: '0,80 s', db: '−17 dBFS', proposal: 'Subida de agua + gorjeo social alegre de nutria gigante + toque luminoso de marimba.' },
+      { id: 'sfx_streak_shield', cat: 'sec2', when: 'Hoja escudo protege la racha', dur: '0,60 s', db: '−19 dBFS', proposal: 'Despliegue amplio de hoja gigante de Victoria amazonica sobre el agua que amortigua.' },
+      { id: 'sfx_canoe_lost', cat: 'sec2', when: 'Se pierde una canoa (vida)', dur: '0,60 s', db: '−21 dBFS', proposal: 'Madera de canoa que se inclina en el agua + chapoteo suave y nota grave de calabaza.' },
+      { id: 'sfx_canoe_back', cat: 'sec2', when: 'Se recupera una canoa', dur: '0,60 s', db: '−19 dBFS', proposal: 'Palada limpia de remo en el río + gotas frescas y nota cálida ascendente.' },
+      { id: 'sfx_ui_tap', cat: 'sec2', when: 'Cualquier botón', dur: '0,08 s', db: '−30 dBFS', proposal: '«Toc» corto y redondo de madera de chonta pulida (420 Hz, 45 ms), cero clic electrónico.' },
+      { id: 'sfx_ui_back', cat: 'sec2', when: 'Atrás o cerrar', dur: '0,10 s', db: '−30 dBFS', proposal: '«Tuc» suave de calabaza/madera más grave (280 Hz), cálido y discreto.' },
+      { id: 'sfx_ui_buy', cat: 'sec2', when: 'Compra en la tienda', dur: '0,40 s', db: '−18 dBFS', proposal: 'Puñado generoso de semillas en cumbuca + doble toque alegre de marimba (Do5→Sol5).' },
+
+      // §3. Mecánicas y personajes (21)
+      { id: 'sfx_mech_hoja', cat: 'sec3', when: 'Se desbloquea la Hoja', dur: '0,50 s', db: '−20 dBFS', proposal: 'Roce crujiente y fresco de hoja de palma que se levanta con un soplo de brisa.' },
+      { id: 'sfx_mech_matapi', cat: 'sec3', when: 'Se abre/completa el Matapi', dur: '0,80 s', db: '−19 dBFS', proposal: 'Crujido orgánico de varillas de fibra de arumã («cric-crac») + tirón corto de cuerda vegetal.' },
+      { id: 'sfx_mech_liana', cat: 'sec3', when: 'Se suelta la Liana con fruta', dur: '0,60 s', db: '−19 dBFS', proposal: '«Ding» cristalino de marimba en la fruta llave + latigazo elástico de bejuco que se desata.' },
+      { id: 'sfx_mech_liana_cuenta', cat: 'sec3', isNew11: true, when: 'Baja la cuenta de la Liana de cuenta', dur: '0,15 s', db: '−24 dBFS', proposal: '★ NUEVO: «Tac» seco de nudo de bejuco que afloja una vuelta + toque de semilla.' },
+      { id: 'sfx_mech_remolino', cat: 'sec3', when: 'El chorro pasa por el Remolino', dur: '0,50 s', db: '−20 dBFS', proposal: 'Giro líquido de succión suave («shloop») + rosario de burbujas que suben en la cuia pareja.' },
+      { id: 'sfx_mech_barro', cat: 'sec3', when: 'Se limpia el Barro', dur: '0,50 s', db: '−20 dBFS', proposal: 'Chorro de agua fresca que barre arcilla húmeda («splash») y termina en destello de vidrio limpio.' },
+      { id: 'sfx_mech_lluvia', cat: 'sec3', isNew11: true, when: 'Llueve sobre el tablero', dur: '0,40 s', db: '−21 dBFS', proposal: '★ NUEVO: Ráfaga corta de lluvia fresca sobre hojas + «plip» redondo de gota gruesa en la cuia.' },
+      { id: 'sfx_mech_pirana', cat: 'sec3', isNew11: true, when: 'La Piraña muerde o se lleva fruta', dur: '0,40 s', db: '−19 dBFS', proposal: '★ NUEVO: Coletazo ágil en el agua + chasquido limpio y juguetón bajo el agua («chomp-blup»).' },
+      { id: 'sfx_mech_brote', cat: 'sec3', isNew11: true, when: 'Se abre el Brote (1 o 2 hojas)', dur: '0,45 s', db: '−20 dBFS', proposal: '★ NUEVO: Tallo tierno que germina con un «pop» húmedo vegetal + despliegue fresco de hojitas.' },
+      { id: 'sfx_mech_flor', cat: 'sec3', isNew11: true, when: 'Se abre la Flor de vitória-régia', dur: '0,65 s', db: '−18 dBFS', proposal: '★ NUEVO: Pétalos grandes que se abren sobre el agua + acorde luminoso de dos notas en kalimba/agua.' },
+      { id: 'sfx_mech_hoja_atada', cat: 'sec3', isNew11: true, when: 'Se suelta la Hoja atada', dur: '0,50 s', db: '−20 dBFS', proposal: '★ NUEVO: Amarre de fibra que se desata («tzik» elástico) + hoja de palma que se desprende con brisa.' },
+      { id: 'sfx_tinaja_select', cat: 'sec3', when: 'Elegir la Tinaja', dur: '0,12 s', db: '−26 dBFS', proposal: '«Toc» profundo y mate de vasija de arcilla cocida (190 Hz y 520 Hz), distinto del vidrio.' },
+      { id: 'sfx_tinaja_scoop', cat: 'sec3', when: 'Sacar agua de la Tinaja', dur: '0,30 s', db: '−22 dBFS', proposal: '«Glup» limpio y laminar de calabaza que recoge agua fresca de la boca; cero burbujas ni hervor.' },
+      { id: 'sfx_tinaja_reveal', cat: 'sec3', when: 'Se revela la boca de la Tinaja', dur: '0,14 s', db: '−25 dBFS', proposal: 'Gota única y clara que resuena dentro del cuello de barro, afinada a la fruta que asoma.' },
+      { id: 'sfx_tinaja_release', cat: 'sec3', when: 'Se suelta su cuia chica', dur: '0,80 s', db: '−19 dBFS', proposal: 'Roce de fibra en las varas del jirau + «toc» hueco de calabaza al bajar a su ranura.' },
+      { id: 'sfx_sloth_nod', cat: 'sec3', when: 'TiTino asiente', dur: '0,35 s', db: '−22 dBFS', proposal: 'Murmullo nasal cálido y grave («mmm» tierno en 190→220 Hz, sin palabras).' },
+      { id: 'sfx_sloth_happy', cat: 'sec3', when: 'TiTino celebra', dur: '0,45 s', db: '−20 dBFS', proposal: 'Suspiro suave y contento («aaah-hm» cálido) + leve roce de hojas de embaúba.' },
+      { id: 'sfx_sloth_branch', cat: 'sec3', when: 'Entra la rama de TiTino', dur: '0,35 s', db: '−24 dBFS', proposal: 'Balanceo flexible de rama de embaúba + roce fresco de hojas grandes.' },
+      { id: 'sfx_sloth_yawn', cat: 'sec3', when: 'TiTino se duerme', dur: '0,60 s', db: '−24 dBFS', proposal: 'Bostezo chiquito de aire suave descendente y dos chasquidos lentos al dormirse.' },
+      { id: 'sfx_rosa_surface', cat: 'sec3', when: 'Rosa (delfín rosado) asoma', dur: '1,00 s', db: '−19 dBFS', proposal: 'Ondulación de agua + exhalación real de espiráculo de boto + chapoteo suave.' },
+      { id: 'sfx_monkey_chirp', cat: 'sec3', when: 'Tropa de miquitos en la intro', dur: '0,15 s', db: '−34 dBFS (−18 dB)', proposal: 'Trino dulce y corto de mono ardilla (Saimiri), como un pajarito muy suave al entrar.' },
+
+      // §4. Mapa del río, llegadas y pantallas especiales (10)
+      { id: 'sfx_fact', cat: 'sec4', when: 'Llegada a una parada (20, 30, 40…)', dur: '0,30 s', db: '−21 dBFS', proposal: 'Toque noble de tablilla de madera clara + armónico cristalino de vidrio (Do5-Sol5, sin papel).' },
+      { id: 'sfx_world_banner', cat: 'sec4', when: 'Banner de mundo nuevo (41, 81, 141…)', dur: '1,60 s', db: '−14 dBFS', proposal: 'Grito real de tres sílabas de la piha gritona («qui-qui-yo») con eco de dosel amazónico.' },
+      { id: 'sfx_map_paddle', cat: 'sec4', when: 'Capi rema en el Mapa', dur: '0,80 s', db: '−20 dBFS', proposal: 'Dos paladas suaves de remo de madera en agua tranquila.' },
+      { id: 'sfx_map_sample', cat: 'sec4', when: 'Se llena una muestra en el Mapa', dur: '0,45 s', db: '−18 dBFS', proposal: 'Agua que colma la mini cuia + acorde luminoso de 3 cuias de vidrio (Do5-Mi5-Sol5).' },
+      { id: 'sfx_map_rosa', cat: 'sec4', when: 'Rosa en el Mapa', dur: '1,00 s', db: '−21 dBFS', proposal: 'El soplo amable y chapoteo corto de Rosa (−3 dB más suave para el Mapa).' },
+      { id: 'sfx_map_pequepeque', cat: 'sec4', isNew11: true, when: 'Opcional: barcas en el Mapa', dur: '0,90 s', db: '−28 dBFS', proposal: '★ NUEVO: «Pec-pec-pec-pec» rítmico, redondo y lejano de canoa peque-peque con estela de agua.' },
+      { id: 'sfx_fruit_new', cat: 'sec4', isNew11: true, when: 'Tarjeta «Fruta nueva»', dur: '0,70 s', db: '−17 dBFS', proposal: '★ NUEVO: Caída jugosa de fruta en agua clara + arpegio ascendente de 3 notas en marimba y kalimba.' },
+      { id: 'sfx_mech_card', cat: 'sec4', isNew11: true, when: 'Tarjeta previa de mecánica o reto', dur: '0,35 s', db: '−20 dBFS', proposal: '★ NUEVO: Marco de madera + sacudida corta de maracá y resonancia cálida de tambor de agua.' },
+      { id: 'sfx_morpho_idle', cat: 'sec4', isNew11: true, when: 'Pista del Morpho por inactividad', dur: '0,35 s', db: '−28 dBFS', proposal: '★ NUEVO: El aleteo sedoso de sfx_hint a −10 dB con una sola nota suave de bambú.' },
+      { id: 'sfx_store_open', cat: 'sec4', isNew11: true, when: 'Se abre la tienda o el Mercado', dur: '0,55 s', db: '−19 dBFS', proposal: '★ NUEVO: Despliegue de cesto de fibra + tintineo cálido de botellas de vidrio y semillas.' }
+    ];
+
+    // =========================================================================
+    // 3. MOTOR DE SÍNTESIS FÍSICA / PROCEDURAL DSP (44.1 kHz Float32 PCM)
+    // =========================================================================
+    const SR = 44100;
+    let audioCtx = null;
+    let activeSources = [];
+    let lastBuffer = null;
+    let lastId = 'sfx_seal';
+    let currentCategory = 'all';
+
+    function ensureCtx() {
+      if (!audioCtx) {
+        const AC = window.AudioContext || window.webkitAudioContext;
+        audioCtx = new AC({ sampleRate: SR });
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      return audioCtx;
+    }
+
+    function getParams() {
+      return {
+        water: parseFloat(document.getElementById('ctrlWater').value) / 100,
+        wood: parseFloat(document.getElementById('ctrlWood').value) / 100,
+        reverb: parseFloat(document.getElementById('ctrlReverb').value) / 100,
+        vol: parseFloat(document.getElementById('ctrlVol').value) / 100
+      };
+    }
+
+    // Deterministic PRNG (xorshift32) so synthesis is reproducible like in C#
+    function makeRng(seed) {
+      let s = (seed >>> 0) || 0x12345678;
+      return function() {
+        s ^= s << 13;
+        s ^= s >>> 17;
+        s ^= s << 5;
+        return ((s >>> 0) / 4294967296);
+      };
+    }
+
+    // RBJ Biquad Filter in-place or copy
+    function biquadFilter(buf, type, freq, q, sampleRate = SR) {
+      const out = new Float32Array(buf.length);
+      const w0 = 2 * Math.PI * Math.min(Math.max(freq, 20), sampleRate * 0.45) / sampleRate;
+      const cosw0 = Math.cos(w0);
+      const sinw0 = Math.sin(w0);
+      const alpha = sinw0 / (2 * Math.max(q, 0.1));
+      let b0, b1, b2, a0, a1, a2;
+      if (type === 'lowpass') {
+        b0 = (1 - cosw0) / 2; b1 = 1 - cosw0; b2 = (1 - cosw0) / 2;
+        a0 = 1 + alpha; a1 = -2 * cosw0; a2 = 1 - alpha;
+      } else if (type === 'highpass') {
+        b0 = (1 + cosw0) / 2; b1 = -(1 + cosw0); b2 = (1 + cosw0) / 2;
+        a0 = 1 + alpha; a1 = -2 * cosw0; a2 = 1 - alpha;
+      } else { // bandpass
+        b0 = alpha; b1 = 0; b2 = -alpha;
+        a0 = 1 + alpha; a1 = -2 * cosw0; a2 = 1 - alpha;
+      }
+      b0 /= a0; b1 /= a0; b2 /= a0; a1 /= a0; a2 /= a0;
+      let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
+      for (let i = 0; i < buf.length; i++) {
+        const x0 = buf[i];
+        const y0 = b0 * x0 + b1 * x1 + b2 * x2 - a1 * y1 - a2 * y2;
+        out[i] = y0;
+        x2 = x1; x1 = x0; y2 = y1; y1 = y0;
+      }
+      return out;
+    }
+
+    // Primitive 1: Minnaert Bubble (authentic water drop / meniscus pop)
+    function addBubble(buf, startSec, f0, durSec, amp, chirpFactor = 1.45) {
+      const p = getParams();
+      const i0 = Math.max(0, Math.floor(startSec * SR));
+      const len = Math.floor(durSec * SR);
+      let phase = 0;
+      const effAmp = amp * p.water;
+      for (let i = 0; i < len && (i0 + i) < buf.length; i++) {
+        const t = i / SR;
+        const u = i / len;
+        const attack = Math.min(1, i / (0.0025 * SR));
+        const decay = Math.exp(-u * 5.2);
+        const f = f0 * (1 + (chirpFactor - 1) * Math.pow(u, 1.85));
+        phase += (2 * Math.PI * f) / SR;
+        buf[i0 + i] += Math.sin(phase) * attack * decay * effAmp;
+      }
+    }
+
+    // Primitive 2: Chonta Marimba / Calabash Kalimba Note (warm wooden-glass modal bar)
+    function addMarimbaNote(buf, startSec, freq, durSec, amp, glassiness = 0.35) {
+      const p = getParams();
+      const i0 = Math.max(0, Math.floor(startSec * SR));
+      const len = Math.floor(durSec * SR);
+      const effAmp = amp * (0.65 * p.wood + 0.35 * p.water);
+      for (let i = 0; i < len && (i0 + i) < buf.length; i++) {
+        const t = i / SR;
+        const attack = Math.min(1, i / (0.002 * SR));
+        // Fundamental + hollow gourd resonator + 4x marimba harmonic + crisp woody mallet click
+        const env1 = Math.exp(-t / (durSec * 0.42));
+        const env2 = Math.exp(-t / (durSec * 0.11));
+        const env3 = Math.exp(-t / 0.007);
+        const m1 = Math.sin(2 * Math.PI * freq * t) * env1;
+        const m2 = Math.sin(2 * Math.PI * (freq * 2.0) * t) * env2 * 0.22 * glassiness;
+        const m3 = Math.sin(2 * Math.PI * (freq * 3.98) * t) * env2 * 0.28 * glassiness;
+        const mallet = Math.sin(2 * Math.PI * (freq * 6.7) * t) * env3 * 0.18;
+        buf[i0 + i] += (m1 + m2 + m3 + mallet) * attack * effAmp;
+      }
+    }
+
+    // Primitive 3: Dry Amazonian Wood / Hollow Gourd Tap (modal resonator)
+    function addWoodTap(buf, startSec, baseFreq, durSec, amp, hollow = true) {
+      const p = getParams();
+      const i0 = Math.max(0, Math.floor(startSec * SR));
+      const len = Math.floor(durSec * SR);
+      const rng = makeRng(Math.floor(baseFreq * 100 + startSec * 1000));
+      const ratios = hollow ? [1.0, 1.58, 2.42, 3.85] : [1.0, 2.76, 5.40];
+      const decays = hollow ? [0.032, 0.018, 0.009, 0.004] : [0.024, 0.011, 0.005];
+      const weights = hollow ? [1.0, 0.55, 0.28, 0.12] : [1.0, 0.42, 0.18];
+      for (let i = 0; i < len && (i0 + i) < buf.length; i++) {
+        const t = i / SR;
+        const attack = Math.min(1, i / (0.0012 * SR));
+        let sum = 0;
+        for (let m = 0; m < ratios.length; m++) {
+          // Slight pitch drop on initial impact gives organic gourd/wood thump
+          const fDrop = baseFreq * ratios[m] * (1 + 0.08 * Math.exp(-t / 0.004));
+          sum += Math.sin(2 * Math.PI * fDrop * t) * Math.exp(-t / decays[m]) * weights[m];
+        }
+        // Subtle grain transient
+        const click = (rng() * 2 - 1) * Math.exp(-t / 0.0025) * 0.22;
+        buf[i0 + i] += (sum + click) * attack * amp * p.wood;
+      }
+    }
+
+    // Primitive 4: Maracá Shake (cluster of real seed micro-impacts in a gourd shell)
+    function addMaracaShake(buf, startSec, durSec, amp, pitchMult = 1.0, seedCount = 26) {
+      const p = getParams();
+      const rng = makeRng(Math.floor(startSec * 9999 + seedCount));
+      const temp = new Float32Array(buf.length);
+      for (let s = 0; s < seedCount; s++) {
+        // Beta-like distribution peaked around 35% of shake duration
+        const u = (rng() + rng()) * 0.5;
+        const tSeed = startSec + u * durSec * 0.85;
+        const fSeed = (2400 + rng() * 3400) * pitchMult;
+        const seedDur = 0.008 + rng() * 0.009;
+        const i0 = Math.floor(tSeed * SR);
+        const len = Math.floor(seedDur * SR);
+        const sAmp = (0.4 + 0.6 * Math.sin(Math.PI * u)) * amp * p.wood;
+        for (let i = 0; i < len && (i0 + i) < temp.length; i++) {
+          const t = i / SR;
+          const env = Math.exp(-t / 0.0022);
+          temp[i0 + i] += (Math.sin(2 * Math.PI * fSeed * t) * 0.65 + (rng() * 2 - 1) * 0.35) * env * sAmp;
+        }
+      }
+      // Gourd shell resonance
+      const shell = biquadFilter(temp, 'bandpass', 3400 * pitchMult, 1.8);
+      for (let i = 0; i < buf.length; i++) buf[i] += shell[i];
+      // Add subtle low gourd body thump
+      addWoodTap(buf, startSec + durSec * 0.22, 390 * pitchMult, 0.04, amp * 0.25, true);
+    }
+
+    // Primitive 5: Foliage / Leaf / Feather Rustle (filtered organic grain burst)
+    function addLeafRustle(buf, startSec, durSec, amp, centerFreq = 1800, bandwidthQ = 1.4) {
+      const rng = makeRng(Math.floor(startSec * 777 + centerFreq));
+      const i0 = Math.max(0, Math.floor(startSec * SR));
+      const len = Math.floor(durSec * SR);
+      const raw = new Float32Array(len);
+      for (let i = 0; i < len; i++) {
+        const u = i / len;
+        const env = Math.sin(Math.PI * u) * Math.exp(-u * 1.6);
+        // Modulate amplitude with flutter for crisp leaf texture
+        const flutter = 0.55 + 0.45 * Math.sin(2 * Math.PI * (28 + 14 * u) * (i / SR));
+        raw[i] = (rng() * 2 - 1) * env * flutter * amp;
+      }
+      const filt = biquadFilter(raw, 'bandpass', centerFreq, bandwidthQ);
+      for (let i = 0; i < len && (i0 + i) < buf.length; i++) {
+        buf[i0 + i] += filt[i];
+      }
+    }
+
+    // Canopy Reverb / Soft Limiter Post-Processor
+    function finalizeBuffer(buf, applyCanopyReverb = false) {
+      const p = getParams();
+      let out = buf;
+      const revMix = applyCanopyReverb ? Math.max(0.32, p.reverb) : p.reverb * 0.45;
+      if (revMix > 0.02) {
+        const tailSamples = Math.floor(0.28 * SR);
+        const ext = new Float32Array(buf.length + tailSamples);
+        ext.set(buf);
+        const delays = [Math.floor(0.031 * SR), Math.floor(0.053 * SR), Math.floor(0.089 * SR), Math.floor(0.137 * SR)];
+        const gains  = [0.34 * revMix, 0.24 * revMix, 0.16 * revMix, 0.10 * revMix];
+        for (let d = 0; d < delays.length; d++) {
+          const dl = delays[d];
+          const g = gains[d];
+          for (let i = dl; i < ext.length; i++) {
+            ext[i] += ext[i - dl] * g * 0.65;
+          }
+        }
+        out = ext;
+      }
+      // Soft knee saturation + master volume
+      for (let i = 0; i < out.length; i++) {
+        const x = out[i] * p.vol;
+        out[i] = Math.tanh(x * 1.15) * 0.92;
+      }
+      return out;
+    }
+
+    // =========================================================================
+    // 4. SINTETIZADOR DE CADA UNO DE LOS 61 EFECTOS POR ID
+    // =========================================================================
+    function synthesizeSfx(id, customFruitFreq = null) {
+      let buf;
+      let useCanopyReverb = false;
+
+      switch (id) {
+        // --- §1. TABLERO Y VERTIDO ---
+        case 'sfx_select': {
+          buf = new Float32Array(Math.floor(0.16 * SR));
+          const f = customFruitFreq || 587.33; // Default Aguaje D5
+          addBubble(buf, 0.002, f * 0.85, 0.065, 0.34, 1.38);
+          addMarimbaNote(buf, 0.005, f, 0.125, 0.36, 0.45);
+          break;
+        }
+        case 'sfx_pour_start': {
+          buf = new Float32Array(Math.floor(0.22 * SR));
+          // Hollow neck "glup" + water contact
+          addWoodTap(buf, 0.005, 290, 0.06, 0.25, true);
+          addBubble(buf, 0.015, 340, 0.08, 0.42, 1.55);
+          addBubble(buf, 0.065, 420, 0.07, 0.35, 1.48);
+          addBubble(buf, 0.115, 470, 0.06, 0.30, 1.42);
+          break;
+        }
+        case 'sfx_pour_loop': {
+          const dur = 0.72;
+          buf = new Float32Array(Math.floor(dur * SR));
+          const rng = makeRng(20261015);
+          // Continuous stream of rising Minnaert micro-bubbles (380 Hz -> 880 Hz)
+          const numDrops = 34;
+          for (let k = 0; k < numDrops; k++) {
+            const u = k / numDrops;
+            const t = u * (dur - 0.07) + rng() * 0.012;
+            const baseF = 360 + u * 520 + (rng() - 0.5) * 65;
+            const dDur = 0.032 + rng() * 0.025;
+            const env = Math.sin(Math.PI * Math.min(1, u * 1.15));
+            addBubble(buf, t, baseF, dDur, 0.24 * env, 1.42);
+          }
+          // Subtle laminar water murmur rising in pitch
+          const murmur = new Float32Array(buf.length);
+          for (let i = 0; i < murmur.length; i++) {
+            const u = i / murmur.length;
+            murmur[i] = (rng() * 2 - 1) * Math.sin(Math.PI * u) * 0.06;
+          }
+          const filtMurmur = biquadFilter(murmur, 'bandpass', 720, 2.2);
+          for (let i = 0; i < buf.length; i++) buf[i] += filtMurmur[i];
+          break;
+        }
+        case 'sfx_pour_end': {
+          buf = new Float32Array(Math.floor(0.22 * SR));
+          addBubble(buf, 0.005, 680, 0.055, 0.35, 1.45);
+          addBubble(buf, 0.065, 860, 0.048, 0.26, 1.52);
+          addMarimbaNote(buf, 0.070, 880, 0.11, 0.18, 0.5);
+          break;
+        }
+        case 'sfx_illegal': {
+          buf = new Float32Array(Math.floor(0.20 * SR));
+          // Neutral double hollow wood tap ("tuk-tuk"), zero harsh buzz
+          addWoodTap(buf, 0.005, 195, 0.065, 0.48, true);
+          addWoodTap(buf, 0.078, 168, 0.075, 0.42, true);
+          break;
+        }
+        case 'sfx_seal': {
+          buf = new Float32Array(Math.floor(0.55 * SR));
+          // Two crisp maracá shakes (0.00s and 0.13s) + gourd lid pop (0.24s) + pentatonic reward chord
+          addMaracaShake(buf, 0.005, 0.085, 0.42, 1.00, 24);
+          addMaracaShake(buf, 0.125, 0.090, 0.52, 1.08, 28);
+          // Hollow calabash cork thump + meniscus lip pop
+          addWoodTap(buf, 0.235, 175, 0.09, 0.68, true);
+          addBubble(buf, 0.242, 520, 0.055, 0.45, 1.65);
+          // Bright 3-note kalimba/marimba seal shimmer (C5 - E5 - G5 - C6)
+          addMarimbaNote(buf, 0.245, 523.25, 0.22, 0.32, 0.55);
+          addMarimbaNote(buf, 0.275, 659.25, 0.22, 0.32, 0.55);
+          addMarimbaNote(buf, 0.305, 783.99, 0.24, 0.36, 0.65);
+          addMarimbaNote(buf, 0.335, 1046.50, 0.21, 0.30, 0.70);
+          break;
+        }
+        case 'sfx_river_rise': {
+          const dur = 0.45;
+          buf = new Float32Array(Math.floor(dur * SR));
+          const rng = makeRng(101);
+          const raw = new Float32Array(buf.length);
+          for (let i = 0; i < raw.length; i++) {
+            const u = i / raw.length;
+            const env = Math.sin(Math.PI * u);
+            raw[i] = (rng() * 2 - 1) * env * 0.32;
+          }
+          const swell = biquadFilter(raw, 'bandpass', 260, 1.2);
+          for (let i = 0; i < buf.length; i++) buf[i] += swell[i];
+          addBubble(buf, 0.12, 220, 0.09, 0.22, 1.3);
+          addBubble(buf, 0.24, 290, 0.08, 0.20, 1.35);
+          break;
+        }
+        case 'sfx_fill': {
+          const dur = 0.42;
+          buf = new Float32Array(Math.floor(dur * SR));
+          const rng = makeRng(202);
+          for (let k = 0; k < 18; k++) {
+            const u = k / 18;
+            addBubble(buf, u * 0.34, 310 + u * 360 + rng() * 40, 0.045, 0.28 * Math.sin(Math.PI * u), 1.45);
+          }
+          break;
+        }
+        case 'sfx_fruit_plip': {
+          buf = new Float32Array(Math.floor(0.10 * SR));
+          addBubble(buf, 0.002, 620, 0.058, 0.42, 1.62);
+          break;
+        }
+        case 'sfx_tint': {
+          buf = new Float32Array(Math.floor(0.14 * SR));
+          const f = customFruitFreq || 659.25;
+          addMarimbaNote(buf, 0.002, f, 0.11, 0.40, 0.65);
+          addBubble(buf, 0.004, f * 0.9, 0.045, 0.22, 1.35);
+          break;
+        }
+        case 'sfx_win_toada': {
+          const dur = 2.25;
+          buf = new Float32Array(Math.floor(dur * SR));
+          useCanopyReverb = true;
+          // Curimbó drum rhythm (warm low-mid hand drum)
+          const beats = [0.02, 0.20, 0.38, 0.56, 0.74, 0.92, 1.10, 1.28];
+          const pitches = [130, 165, 130, 185, 130, 165, 145, 196];
+          for (let b = 0; b < beats.length; b++) {
+            addWoodTap(buf, beats[b], pitches[b], 0.11, 0.48, true);
+          }
+          // Maracá festive rhythm
+          addMaracaShake(buf, 0.02, 0.08, 0.35, 1.0, 20);
+          addMaracaShake(buf, 0.38, 0.08, 0.40, 1.05, 22);
+          addMaracaShake(buf, 0.74, 0.08, 0.38, 1.0, 20);
+          addMaracaShake(buf, 1.10, 0.12, 0.48, 1.1, 28);
+          // Joyful Carimbó pentatonic melody (C5 - D5 - E5 - G5 - A5 - C6)
+          const mel = [
+            [0.02, 523.25, 0.25], [0.20, 587.33, 0.25], [0.38, 659.25, 0.28],
+            [0.56, 783.99, 0.28], [0.74, 880.00, 0.32], [1.08, 1046.50, 0.95]
+          ];
+          for (const [t, f, d] of mel) {
+            addMarimbaNote(buf, t, f, d, 0.42, 0.55);
+            addMarimbaNote(buf, t, f * 0.5, d * 1.1, 0.28, 0.25);
+          }
+          // Wordless warm vocal choir pad ("Aah" major triad C4-E4-G4-C5 from 0.90s to 2.15s)
+          const choirStart = Math.floor(0.85 * SR);
+          const choirLen = Math.floor(1.30 * SR);
+          const choirRaw = new Float32Array(choirLen);
+          const chord = [261.63, 329.63, 392.00, 523.25];
+          for (let i = 0; i < choirLen; i++) {
+            const t = i / SR;
+            const u = i / choirLen;
+            const env = Math.sin(Math.PI * u) * Math.exp(-u * 0.8);
+            const vib = 1 + 0.004 * Math.sin(2 * Math.PI * 5.5 * t);
+            let s = 0;
+            for (const cf of chord) {
+              // Rich harmonic series for vowel formant shaping
+              const w = 2 * Math.PI * cf * vib * t;
+              s += Math.sin(w) * 0.5 + Math.sin(2 * w) * 0.35 + Math.sin(3 * w) * 0.2 + Math.sin(4 * w) * 0.1;
+            }
+            choirRaw[i] = s * env * 0.14;
+          }
+          const f1 = biquadFilter(choirRaw, 'bandpass', 720, 2.5); // "Ah" F1
+          const f2 = biquadFilter(choirRaw, 'bandpass', 1220, 3.0); // "Ah" F2
+          for (let i = 0; i < choirLen && (choirStart + i) < buf.length; i++) {
+            buf[choirStart + i] += (f1[i] + f2[i] * 0.7);
+          }
+          break;
+        }
+        case 'sfx_confetti': {
+          buf = new Float32Array(Math.floor(1.05 * SR));
+          // 4 silky macaw wingbeats + canopy breeze
+          const flaps = [0.04, 0.24, 0.46, 0.70];
+          const freqs = [620, 740, 680, 820];
+          for (let k = 0; k < flaps.length; k++) {
+            addLeafRustle(buf, flaps[k], 0.18, 0.52 * (1 - k * 0.12), freqs[k], 1.1);
+          }
+          break;
+        }
+        case 'sfx_stuck': {
+          const dur = 1.55;
+          buf = new Float32Array(Math.floor(dur * SR));
+          // Calm low water bowl resonance + gentle descending marimba (G3 -> E3 -> C3) + single still droplet
+          addMarimbaNote(buf, 0.02, 196.00, 0.55, 0.36, 0.2);
+          addMarimbaNote(buf, 0.32, 164.81, 0.65, 0.34, 0.2);
+          addMarimbaNote(buf, 0.65, 130.81, 0.85, 0.38, 0.15);
+          addBubble(buf, 0.95, 310, 0.08, 0.25, 1.25);
+          break;
+        }
+
+        // --- §2. COMODINES, ECONOMÍA E INTERFAZ ---
+        case 'sfx_undo': {
+          const dur = 0.42;
+          buf = new Float32Array(Math.floor(dur * SR));
+          // Reverse wave + reverse bubbles sweeping back up
+          for (let k = 0; k < 10; k++) {
+            const u = k / 10;
+            addBubble(buf, u * 0.32, 760 - u * 340, 0.045, 0.28 * (0.4 + 0.6 * u), 0.78);
+          }
+          addMarimbaNote(buf, 0.05, 587.33, 0.18, 0.22, 0.4);
+          addMarimbaNote(buf, 0.20, 440.00, 0.20, 0.26, 0.4);
+          break;
+        }
+        case 'sfx_capi_paddle': {
+          buf = new Float32Array(Math.floor(0.85 * SR));
+          // Two sand steps (0.02, 0.14) + paddle in water (0.26) + glass clink (0.50) + cute capybara click-chirp (0.64)
+          addLeafRustle(buf, 0.02, 0.08, 0.35, 1400, 1.5);
+          addLeafRustle(buf, 0.14, 0.08, 0.38, 1550, 1.5);
+          addWoodTap(buf, 0.25, 220, 0.08, 0.38, true);
+          addBubble(buf, 0.28, 340, 0.09, 0.42, 1.45);
+          addBubble(buf, 0.35, 460, 0.07, 0.35, 1.40);
+          // Glass clink
+          addMarimbaNote(buf, 0.48, 1318.5, 0.16, 0.36, 0.9);
+          addMarimbaNote(buf, 0.51, 1760.0, 0.14, 0.28, 0.9);
+          // Capybara friendly click-squeak
+          addWoodTap(buf, 0.63, 620, 0.035, 0.38, true);
+          addBubble(buf, 0.66, 920, 0.075, 0.36, 1.35);
+          break;
+        }
+        case 'sfx_hint': {
+          buf = new Float32Array(Math.floor(0.52 * SR));
+          // Morpho: 3 silky butterfly wingbeats + bamboo/wood chime (G5 -> D6)
+          addLeafRustle(buf, 0.01, 0.09, 0.32, 1100, 1.3);
+          addLeafRustle(buf, 0.12, 0.09, 0.35, 1250, 1.3);
+          addLeafRustle(buf, 0.23, 0.09, 0.30, 1180, 1.3);
+          addMarimbaNote(buf, 0.08, 783.99, 0.30, 0.36, 0.75);
+          addMarimbaNote(buf, 0.20, 1174.66, 0.30, 0.42, 0.85);
+          break;
+        }
+        case 'sfx_shuffle': {
+          const dur = 0.92;
+          buf = new Float32Array(Math.floor(dur * SR));
+          // Pororoca wave + rapid 14-note pentatonic cascade
+          addLeafRustle(buf, 0.01, 0.55, 0.42, 480, 0.9);
+          for (let i = 0; i < FRUITS.length; i++) {
+            const t = 0.04 + i * 0.052;
+            addMarimbaNote(buf, t, FRUITS[i].freq, 0.14, 0.28, 0.6);
+            if (i % 2 === 0) addBubble(buf, t, FRUITS[i].freq * 0.7, 0.045, 0.20, 1.45);
+          }
+          break;
+        }
+        case 'sfx_reveal': {
+          buf = new Float32Array(Math.floor(0.52 * SR));
+          // Firefly warm chime + deep clearing bubble ("boiada")
+          addMarimbaNote(buf, 0.02, 1318.51, 0.26, 0.35, 0.85);
+          addMarimbaNote(buf, 0.11, 1760.00, 0.32, 0.38, 0.90);
+          addBubble(buf, 0.16, 260, 0.12, 0.42, 1.65);
+          addBubble(buf, 0.27, 480, 0.09, 0.36, 1.55);
+          break;
+        }
+        case 'sfx_skip': {
+          buf = new Float32Array(Math.floor(1.22 * SR));
+          useCanopyReverb = true;
+          // Boto leap from water (0.02) + blowhole breath in air (0.30) + joyful splash (0.72)
+          addBubble(buf, 0.02, 280, 0.11, 0.45, 1.6);
+          addBubble(buf, 0.10, 460, 0.09, 0.40, 1.5);
+          // Exhalation of Rosa
+          addLeafRustle(buf, 0.28, 0.32, 0.55, 920, 1.6);
+          addMarimbaNote(buf, 0.32, 587.33, 0.25, 0.25, 0.6);
+          addMarimbaNote(buf, 0.44, 880.00, 0.28, 0.28, 0.7);
+          // Splash + tail bubbles
+          addLeafRustle(buf, 0.70, 0.22, 0.48, 680, 1.1);
+          addBubble(buf, 0.74, 240, 0.12, 0.46, 1.5);
+          addBubble(buf, 0.88, 390, 0.09, 0.35, 1.45);
+          addBubble(buf, 1.00, 540, 0.07, 0.28, 1.45);
+          break;
+        }
+        case 'sfx_restart': {
+          buf = new Float32Array(Math.floor(0.52 * SR));
+          // Water gathering + firm canoe wood tap
+          for (let k = 0; k < 6; k++) {
+            addBubble(buf, 0.02 + k * 0.045, 520 - k * 35, 0.05, 0.28, 1.3);
+          }
+          addWoodTap(buf, 0.28, 240, 0.11, 0.52, true);
+          addWoodTap(buf, 0.36, 320, 0.09, 0.38, false);
+          break;
+        }
+        case 'sfx_river_drop': {
+          buf = new Float32Array(Math.floor(1.02 * SR));
+          // Water level gently dropping + Rosa's reassuring blowhole sigh
+          for (let k = 0; k < 8; k++) {
+            const u = k / 8;
+            addBubble(buf, 0.02 + u * 0.45, 580 - u * 260, 0.065, 0.30, 1.25);
+          }
+          // Rosa breath + warm major interval
+          addLeafRustle(buf, 0.42, 0.38, 0.50, 860, 1.5);
+          addMarimbaNote(buf, 0.50, 392.00, 0.35, 0.28, 0.45);
+          addMarimbaNote(buf, 0.64, 523.25, 0.36, 0.32, 0.55);
+          break;
+        }
+        case 'sfx_seeds_tick': {
+          // Single tick is 0.05s; for preview clarity we play 1 crisp seed tick (and choreo plays a burst)
+          buf = new Float32Array(Math.floor(0.065 * SR));
+          addWoodTap(buf, 0.002, 920, 0.042, 0.46, false);
+          addMaracaShake(buf, 0.004, 0.032, 0.28, 1.25, 5);
+          break;
+        }
+        case 'sfx_basket_open': {
+          buf = new Float32Array(Math.floor(0.82 * SR));
+          // Fiber basket creak + tumbling seeds/fruits + warm marimba triad
+          addLeafRustle(buf, 0.02, 0.18, 0.42, 1650, 1.4);
+          addWoodTap(buf, 0.08, 310, 0.07, 0.38, true);
+          for (let k = 0; k < 7; k++) {
+            addWoodTap(buf, 0.18 + k * 0.055, 680 + k * 70, 0.045, 0.32, false);
+          }
+          addMarimbaNote(buf, 0.25, 523.25, 0.35, 0.35, 0.55);
+          addMarimbaNote(buf, 0.35, 659.25, 0.35, 0.35, 0.60);
+          addMarimbaNote(buf, 0.45, 783.99, 0.35, 0.40, 0.65);
+          break;
+        }
+        case 'sfx_streak_up': {
+          buf = new Float32Array(Math.floor(0.82 * SR));
+          // Rising water + giant otter joyful social chirp-trill + marimba
+          addBubble(buf, 0.02, 340, 0.08, 0.35, 1.5);
+          addBubble(buf, 0.10, 480, 0.08, 0.35, 1.5);
+          // Otter vocalization (FM harmonic chirp with playful trill 680 -> 1320 -> 980 Hz)
+          const i0 = Math.floor(0.16 * SR);
+          const len = Math.floor(0.42 * SR);
+          let ph = 0;
+          for (let i = 0; i < len && (i0 + i) < buf.length; i++) {
+            const u = i / len;
+            const t = i / SR;
+            const env = Math.sin(Math.PI * u) * Math.exp(-u * 1.2);
+            const f = (720 + 540 * Math.sin(Math.PI * u)) * (1 + 0.06 * Math.sin(2 * Math.PI * 32 * t));
+            ph += (2 * Math.PI * f) / SR;
+            buf[i0 + i] += (Math.sin(ph) * 0.6 + Math.sin(2 * ph) * 0.25) * env * 0.36;
+          }
+          addMarimbaNote(buf, 0.28, 659.25, 0.28, 0.30, 0.5);
+          addMarimbaNote(buf, 0.42, 880.00, 0.34, 0.36, 0.6);
+          break;
+        }
+        case 'sfx_streak_shield': {
+          buf = new Float32Array(Math.floor(0.62 * SR));
+          // Giant Victoria amazonica leaf unfolding on water + protective low thump
+          addLeafRustle(buf, 0.02, 0.36, 0.48, 920, 1.1);
+          addWoodTap(buf, 0.12, 165, 0.14, 0.48, true);
+          addBubble(buf, 0.22, 320, 0.09, 0.34, 1.35);
+          addMarimbaNote(buf, 0.24, 523.25, 0.32, 0.30, 0.45);
+          break;
+        }
+        case 'sfx_canoe_lost': {
+          buf = new Float32Array(Math.floor(0.62 * SR));
+          // Gentle canoe tipping in water + soft splash + low gourd note
+          addWoodTap(buf, 0.02, 240, 0.10, 0.42, true);
+          addBubble(buf, 0.10, 360, 0.09, 0.36, 0.85);
+          addMarimbaNote(buf, 0.14, 293.66, 0.26, 0.32, 0.25);
+          addMarimbaNote(buf, 0.28, 220.00, 0.30, 0.34, 0.20);
+          break;
+        }
+        case 'sfx_canoe_back': {
+          buf = new Float32Array(Math.floor(0.62 * SR));
+          // Clean paddle stroke + fresh water drops + warm rising interval
+          addWoodTap(buf, 0.02, 260, 0.08, 0.40, true);
+          addBubble(buf, 0.08, 380, 0.08, 0.38, 1.45);
+          addBubble(buf, 0.16, 520, 0.07, 0.32, 1.45);
+          addMarimbaNote(buf, 0.18, 440.00, 0.28, 0.32, 0.45);
+          addMarimbaNote(buf, 0.30, 587.33, 0.30, 0.36, 0.55);
+          break;
+        }
+        case 'sfx_ui_tap': {
+          buf = new Float32Array(Math.floor(0.09 * SR));
+          addWoodTap(buf, 0.002, 420, 0.055, 0.45, false);
+          break;
+        }
+        case 'sfx_ui_back': {
+          buf = new Float32Array(Math.floor(0.11 * SR));
+          addWoodTap(buf, 0.002, 285, 0.070, 0.45, true);
+          break;
+        }
+        case 'sfx_ui_buy': {
+          buf = new Float32Array(Math.floor(0.44 * SR));
+          // Handful of seeds into cumbuca + happy C5 -> G5 marimba
+          for (let k = 0; k < 6; k++) {
+            addWoodTap(buf, 0.01 + k * 0.032, 780 + k * 65, 0.038, 0.34, false);
+          }
+          addMaracaShake(buf, 0.02, 0.14, 0.35, 1.15, 18);
+          addMarimbaNote(buf, 0.14, 523.25, 0.22, 0.36, 0.55);
+          addMarimbaNote(buf, 0.22, 783.99, 0.21, 0.42, 0.65);
+          break;
+        }
+
+        // --- §3. MECÁNICAS Y PERSONAJES ---
+        case 'sfx_mech_hoja': {
+          buf = new Float32Array(Math.floor(0.52 * SR));
+          addLeafRustle(buf, 0.01, 0.36, 0.52, 2100, 1.2);
+          addMarimbaNote(buf, 0.12, 659.25, 0.25, 0.24, 0.4);
+          break;
+        }
+        case 'sfx_mech_matapi': {
+          buf = new Float32Array(Math.floor(0.82 * SR));
+          // Fiber basket creaks ("cric-crac") + taut cord pull
+          for (let k = 0; k < 5; k++) {
+            addWoodTap(buf, 0.02 + k * 0.065, 480 + (k % 2) * 140, 0.045, 0.38, false);
+          }
+          addLeafRustle(buf, 0.34, 0.28, 0.46, 1450, 1.5);
+          addWoodTap(buf, 0.52, 260, 0.12, 0.46, true);
+          break;
+        }
+        case 'sfx_mech_liana': {
+          buf = new Float32Array(Math.floor(0.62 * SR));
+          // Crystal "ding" + woody vine snap and creak
+          addMarimbaNote(buf, 0.01, 1046.50, 0.32, 0.44, 0.85);
+          addWoodTap(buf, 0.16, 340, 0.06, 0.42, false);
+          addWoodTap(buf, 0.23, 270, 0.08, 0.38, true);
+          addLeafRustle(buf, 0.26, 0.24, 0.40, 1650, 1.4);
+          break;
+        }
+        case 'sfx_mech_liana_cuenta': {
+          buf = new Float32Array(Math.floor(0.16 * SR));
+          // ★ NEW: Crisp vine knot step-down click ("tac")
+          addWoodTap(buf, 0.003, 540, 0.048, 0.46, false);
+          addWoodTap(buf, 0.038, 390, 0.055, 0.36, true);
+          break;
+        }
+        case 'sfx_mech_remolino': {
+          buf = new Float32Array(Math.floor(0.52 * SR));
+          // Suction swirl down + rising bubble rosary in partner cuia
+          addBubble(buf, 0.01, 520, 0.10, 0.40, 0.62);
+          addBubble(buf, 0.08, 340, 0.10, 0.42, 0.68);
+          for (let k = 0; k < 7; k++) {
+            addBubble(buf, 0.18 + k * 0.042, 360 + k * 85, 0.042, 0.34, 1.52);
+          }
+          break;
+        }
+        case 'sfx_mech_barro': {
+          buf = new Float32Array(Math.floor(0.52 * SR));
+          // Fresh water washing away wet clay + clean glass sparkle
+          addLeafRustle(buf, 0.01, 0.26, 0.46, 950, 1.1);
+          addBubble(buf, 0.05, 310, 0.09, 0.42, 1.45);
+          addBubble(buf, 0.14, 490, 0.08, 0.38, 1.50);
+          addMarimbaNote(buf, 0.24, 1174.66, 0.24, 0.34, 0.85);
+          break;
+        }
+        case 'sfx_mech_lluvia': {
+          buf = new Float32Array(Math.floor(0.42 * SR));
+          // ★ NEW: Fresh rain shower on tropical leaves + plump water drop plip into cuia
+          addLeafRustle(buf, 0.01, 0.28, 0.42, 2600, 1.1);
+          addBubble(buf, 0.14, 520, 0.085, 0.48, 1.58);
+          addBubble(buf, 0.23, 740, 0.060, 0.32, 1.48);
+          break;
+        }
+        case 'sfx_mech_pirana': {
+          buf = new Float32Array(Math.floor(0.42 * SR));
+          // ★ NEW: Quick fin splash + playful underwater "chomp-blup"
+          addBubble(buf, 0.01, 380, 0.065, 0.40, 1.45);
+          addWoodTap(buf, 0.085, 460, 0.045, 0.52, true);
+          addWoodTap(buf, 0.125, 340, 0.050, 0.48, true);
+          addBubble(buf, 0.18, 420, 0.08, 0.44, 1.55);
+          addBubble(buf, 0.26, 610, 0.06, 0.32, 1.45);
+          break;
+        }
+        case 'sfx_mech_brote': {
+          buf = new Float32Array(Math.floor(0.46 * SR));
+          // ★ NEW: Tender stem "pop" + fresh twin leaves unfurling
+          addBubble(buf, 0.015, 440, 0.065, 0.45, 1.65);
+          addMarimbaNote(buf, 0.03, 587.33, 0.20, 0.32, 0.5);
+          addLeafRustle(buf, 0.09, 0.22, 0.40, 2200, 1.3);
+          addMarimbaNote(buf, 0.16, 880.00, 0.24, 0.36, 0.6);
+          break;
+        }
+        case 'sfx_mech_flor': {
+          buf = new Float32Array(Math.floor(0.66 * SR));
+          // ★ NEW: Victoria-régia petals opening on water + luminous 2-note water-kalimba chord
+          addLeafRustle(buf, 0.02, 0.35, 0.42, 1500, 1.2);
+          addBubble(buf, 0.08, 390, 0.09, 0.32, 1.4);
+          addMarimbaNote(buf, 0.16, 659.25, 0.42, 0.36, 0.75);
+          addMarimbaNote(buf, 0.26, 987.77, 0.38, 0.40, 0.85);
+          break;
+        }
+        case 'sfx_mech_hoja_atada': {
+          buf = new Float32Array(Math.floor(0.52 * SR));
+          // ★ NEW: Taut fiber tie releasing ("tzik") + palm leaf lifting away
+          addWoodTap(buf, 0.01, 610, 0.045, 0.44, false);
+          addWoodTap(buf, 0.06, 440, 0.055, 0.38, true);
+          addLeafRustle(buf, 0.11, 0.32, 0.48, 2000, 1.2);
+          addMarimbaNote(buf, 0.18, 783.99, 0.24, 0.28, 0.55);
+          break;
+        }
+        case 'sfx_tinaja_select': {
+          buf = new Float32Array(Math.floor(0.15 * SR));
+          // Deep matte clay pot "toc" (190 Hz + 510 Hz), distinct from glass cuia
+          addWoodTap(buf, 0.003, 190, 0.095, 0.58, true);
+          break;
+        }
+        case 'sfx_tinaja_scoop': {
+          buf = new Float32Array(Math.floor(0.32 * SR));
+          // Clean laminar gourd scoop ("glup" of calabash in water; zero bubbles/boiling!)
+          const i0 = Math.floor(0.01 * SR);
+          const len = Math.floor(0.24 * SR);
+          let ph = 0;
+          for (let i = 0; i < len && (i0 + i) < buf.length; i++) {
+            const u = i / len;
+            const env = Math.sin(Math.PI * u) * Math.exp(-u * 1.8);
+            const f = 185 + 210 * Math.pow(u, 1.3);
+            ph += (2 * Math.PI * f) / SR;
+            buf[i0 + i] += (Math.sin(ph) * 0.75 + Math.sin(2 * ph) * 0.25) * env * 0.48;
+          }
+          addWoodTap(buf, 0.015, 230, 0.07, 0.32, true);
+          break;
+        }
+        case 'sfx_tinaja_reveal': {
+          buf = new Float32Array(Math.floor(0.18 * SR));
+          useCanopyReverb = true;
+          // Single resonant drop inside the clay neck
+          addBubble(buf, 0.005, 480, 0.075, 0.46, 1.48);
+          addWoodTap(buf, 0.010, 260, 0.08, 0.24, true);
+          break;
+        }
+        case 'sfx_tinaja_release': {
+          buf = new Float32Array(Math.floor(0.82 * SR));
+          // Fiber sliding off jirau poles + hollow calabash "toc" landing in slot
+          addLeafRustle(buf, 0.02, 0.34, 0.44, 1550, 1.4);
+          addWoodTap(buf, 0.38, 310, 0.10, 0.52, true);
+          addWoodTap(buf, 0.50, 245, 0.12, 0.46, true);
+          addMarimbaNote(buf, 0.52, 587.33, 0.24, 0.28, 0.4);
+          break;
+        }
+        case 'sfx_sloth_nod': {
+          buf = new Float32Array(Math.floor(0.38 * SR));
+          // TiTino warm low nasal "mmm" (185 -> 215 -> 190 Hz, closed mouth formants)
+          const raw = new Float32Array(buf.length);
+          let ph = 0;
+          for (let i = 0; i < raw.length; i++) {
+            const u = i / raw.length;
+            const env = Math.sin(Math.PI * u) * Math.exp(-u * 1.1);
+            const f = 185 + 32 * Math.sin(Math.PI * u);
+            ph += (2 * Math.PI * f) / SR;
+            raw[i] = (Math.sin(ph) * 0.65 + Math.sin(2 * ph) * 0.25 + Math.sin(3 * ph) * 0.10) * env * 0.52;
+          }
+          const nasal = biquadFilter(raw, 'lowpass', 620, 1.4);
+          for (let i = 0; i < buf.length; i++) buf[i] += nasal[i];
+          break;
+        }
+        case 'sfx_sloth_happy': {
+          buf = new Float32Array(Math.floor(0.48 * SR));
+          // TiTino contented gentle sigh ("aaah-hm") + soft cecropia leaf rustle
+          const raw = new Float32Array(buf.length);
+          const rng = makeRng(555);
+          let ph = 0;
+          for (let i = 0; i < raw.length; i++) {
+            const u = i / raw.length;
+            const env = Math.sin(Math.PI * u) * Math.exp(-u * 1.2);
+            const f = 240 - 45 * u;
+            ph += (2 * Math.PI * f) / SR;
+            const voice = Math.sin(ph) * 0.55 + Math.sin(2 * ph) * 0.25;
+            const breath = (rng() * 2 - 1) * 0.18;
+            raw[i] = (voice + breath) * env * 0.46;
+          }
+          const warm = biquadFilter(raw, 'bandpass', 540, 1.5);
+          for (let i = 0; i < buf.length; i++) buf[i] += warm[i];
+          addLeafRustle(buf, 0.05, 0.28, 0.22, 1800, 1.2);
+          break;
+        }
+        case 'sfx_sloth_branch': {
+          buf = new Float32Array(Math.floor(0.38 * SR));
+          addWoodTap(buf, 0.02, 175, 0.09, 0.30, true);
+          addLeafRustle(buf, 0.03, 0.30, 0.48, 1950, 1.2);
+          break;
+        }
+        case 'sfx_sloth_yawn': {
+          buf = new Float32Array(Math.floor(0.62 * SR));
+          // Soft sleepy descending sigh + two tiny lip smacks
+          const raw = new Float32Array(Math.floor(0.42 * SR));
+          const rng = makeRng(777);
+          let ph = 0;
+          for (let i = 0; i < raw.length; i++) {
+            const u = i / raw.length;
+            const env = Math.sin(Math.PI * u);
+            const f = 260 - 95 * u;
+            ph += (2 * Math.PI * f) / SR;
+            raw[i] = (Math.sin(ph) * 0.45 + (rng() * 2 - 1) * 0.25) * env * 0.40;
+          }
+          const yawn = biquadFilter(raw, 'bandpass', 580, 1.4);
+          for (let i = 0; i < yawn.length; i++) buf[i] += yawn[i];
+          addBubble(buf, 0.44, 520, 0.035, 0.20, 1.3);
+          addBubble(buf, 0.51, 460, 0.035, 0.18, 1.3);
+          break;
+        }
+        case 'sfx_rosa_surface': {
+          buf = new Float32Array(Math.floor(1.02 * SR));
+          // Water surface swell + real Boto spiracle blowhole exhalation + gentle lap
+          addBubble(buf, 0.02, 260, 0.09, 0.38, 1.45);
+          const breathLen = Math.floor(0.36 * SR);
+          const breathRaw = new Float32Array(breathLen);
+          const rng = makeRng(888);
+          for (let i = 0; i < breathLen; i++) {
+            const u = i / breathLen;
+            const attack = Math.min(1, i / (0.015 * SR));
+            const env = attack * Math.exp(-u * 2.4);
+            breathRaw[i] = (rng() * 2 - 1) * env * 0.72;
+          }
+          const chuff1 = biquadFilter(breathRaw, 'bandpass', 520, 1.8);
+          const chuff2 = biquadFilter(breathRaw, 'bandpass', 1350, 2.2);
+          const bStart = Math.floor(0.10 * SR);
+          for (let i = 0; i < breathLen && (bStart + i) < buf.length; i++) {
+            buf[bStart + i] += chuff1[i] * 0.7 + chuff2[i] * 0.45;
+          }
+          addBubble(buf, 0.50, 340, 0.09, 0.32, 1.38);
+          addBubble(buf, 0.64, 420, 0.08, 0.26, 1.35);
+          break;
+        }
+        case 'sfx_monkey_chirp': {
+          buf = new Float32Array(Math.floor(0.18 * SR));
+          // Squirrel monkey (Saimiri) delicate bird-like trill at -18 dB
+          const i0 = Math.floor(0.01 * SR);
+          const len = Math.floor(0.14 * SR);
+          let ph = 0;
+          for (let i = 0; i < len && (i0 + i) < buf.length; i++) {
+            const u = i / len;
+            const t = i / SR;
+            const env = Math.sin(Math.PI * u) * Math.exp(-u * 1.3);
+            const f = (3300 + 950 * Math.sin(Math.PI * u)) * (1 + 0.045 * Math.sin(2 * Math.PI * 55 * t));
+            ph += (2 * Math.PI * f) / SR;
+            buf[i0 + i] += Math.sin(ph) * env * 0.16; // kept intentionally soft (-18 dB)
+          }
+          break;
+        }
+
+        // --- §4. MAPA DEL RÍO, LLEGADAS Y PANTALLAS ESPECIALES ---
+        case 'sfx_fact': {
+          buf = new Float32Array(Math.floor(0.34 * SR));
+          // Wood & glass arrival plaque (zero paper rustle!)
+          addWoodTap(buf, 0.005, 340, 0.075, 0.44, true);
+          addMarimbaNote(buf, 0.035, 523.25, 0.24, 0.34, 0.75);
+          addMarimbaNote(buf, 0.085, 783.99, 0.24, 0.38, 0.85);
+          break;
+        }
+        case 'sfx_world_banner': {
+          // THE SIGNATURE SOUND: Screaming Piha (Lipaugus vociferans) "qui-qui-YOOO!"
+          const dur = 1.65;
+          buf = new Float32Array(Math.floor(dur * SR));
+          useCanopyReverb = true;
+
+          function addPihaSyllable(tStart, sDur, fCurveFn, amp) {
+            const i0 = Math.floor(tStart * SR);
+            const len = Math.floor(sDur * SR);
+            let ph = 0;
+            for (let i = 0; i < len && (i0 + i) < buf.length; i++) {
+              const u = i / len;
+              const t = i / SR;
+              const env = Math.sin(Math.PI * Math.min(1, u * 1.1)) * Math.exp(-u * 0.85);
+              const f = fCurveFn(u, t);
+              ph += (2 * Math.PI * f) / SR;
+              // Pure syrinx whistle + slight 2nd harmonic
+              buf[i0 + i] += (Math.sin(ph) * 0.88 + Math.sin(2 * ph) * 0.12) * env * amp;
+            }
+          }
+          // Syllable 1: "qui" (0.08 - 0.24s)
+          addPihaSyllable(0.08, 0.16, (u) => 1780 + 820 * Math.pow(u, 1.4), 0.38);
+          // Syllable 2: "qui" (0.36 - 0.53s)
+          addPihaSyllable(0.36, 0.17, (u) => 1880 + 940 * Math.pow(u, 1.3), 0.44);
+          // Syllable 3: "YOOO!" (0.64 - 1.36s): explosive upward whip 1650 -> 3950 Hz then downward arc -> 1820 Hz
+          addPihaSyllable(0.64, 0.72, (u, t) => {
+            const peakU = 0.34;
+            const base = u < peakU
+              ? 1650 + (3920 - 1650) * Math.sin((u / peakU) * (Math.PI / 2))
+              : 1820 + (3920 - 1820) * Math.pow(1 - (u - peakU) / (1 - peakU), 1.55);
+            return base * (1 + 0.008 * Math.sin(2 * Math.PI * 26 * t));
+          }, 0.56);
+          // Subtle river breeze bed underneath
+          addLeafRustle(buf, 0.02, 1.35, 0.14, 900, 0.9);
+          break;
+        }
+        case 'sfx_map_paddle': {
+          buf = new Float32Array(Math.floor(0.82 * SR));
+          addWoodTap(buf, 0.03, 230, 0.08, 0.36, true);
+          addBubble(buf, 0.07, 330, 0.09, 0.38, 1.4);
+          addBubble(buf, 0.16, 440, 0.07, 0.30, 1.38);
+          addWoodTap(buf, 0.42, 245, 0.08, 0.36, true);
+          addBubble(buf, 0.46, 360, 0.09, 0.38, 1.42);
+          addBubble(buf, 0.55, 470, 0.07, 0.30, 1.40);
+          break;
+        }
+        case 'sfx_map_sample': {
+          buf = new Float32Array(Math.floor(0.48 * SR));
+          // Mini cuia filling + 3-note glass chord (C5-E5-G5)
+          addBubble(buf, 0.01, 480, 0.06, 0.34, 1.5);
+          addBubble(buf, 0.06, 640, 0.06, 0.34, 1.5);
+          addMarimbaNote(buf, 0.10, 523.25, 0.34, 0.34, 0.85);
+          addMarimbaNote(buf, 0.15, 659.25, 0.32, 0.34, 0.85);
+          addMarimbaNote(buf, 0.20, 783.99, 0.30, 0.38, 0.90);
+          break;
+        }
+        case 'sfx_map_rosa': {
+          buf = synthesizeSfx('sfx_rosa_surface');
+          for (let i = 0; i < buf.length; i++) buf[i] *= 0.75;
+          return buf;
+        }
+        case 'sfx_map_pequepeque': {
+          buf = new Float32Array(Math.floor(0.92 * SR));
+          // ★ NEW: Warm distant "pec-pec-pec-pec" long-tail river boat motor + water wake
+          const puffs = 7;
+          for (let k = 0; k < puffs; k++) {
+            const t = 0.03 + k * 0.118;
+            const env = Math.sin(Math.PI * ((k + 0.5) / puffs));
+            addWoodTap(buf, t, 145 + (k % 2) * 12, 0.055, 0.32 * env, true);
+            addBubble(buf, t + 0.025, 290, 0.045, 0.20 * env, 1.25);
+          }
+          break;
+        }
+        case 'sfx_fruit_new': {
+          buf = new Float32Array(Math.floor(0.72 * SR));
+          // ★ NEW: Juicy fruit plip + 3-note ascending marimba/kalimba discovery fanfare
+          addBubble(buf, 0.015, 540, 0.075, 0.44, 1.6);
+          addMarimbaNote(buf, 0.09, 523.25, 0.28, 0.36, 0.55);
+          addMarimbaNote(buf, 0.19, 659.25, 0.28, 0.38, 0.65);
+          addMarimbaNote(buf, 0.29, 783.99, 0.36, 0.42, 0.70);
+          addMarimbaNote(buf, 0.39, 1046.50, 0.32, 0.40, 0.80);
+          break;
+        }
+        case 'sfx_mech_card': {
+          buf = new Float32Array(Math.floor(0.38 * SR));
+          // ★ NEW: Wood plaque + short maracá shake + warm water drum
+          addWoodTap(buf, 0.01, 260, 0.08, 0.45, true);
+          addMaracaShake(buf, 0.04, 0.08, 0.34, 1.05, 16);
+          addMarimbaNote(buf, 0.08, 440.00, 0.24, 0.32, 0.45);
+          break;
+        }
+        case 'sfx_morpho_idle': {
+          buf = new Float32Array(Math.floor(0.38 * SR));
+          // ★ NEW: Whisper-soft butterfly flutter (-10 dB vs sfx_hint) + single bamboo note
+          addLeafRustle(buf, 0.01, 0.10, 0.18, 1150, 1.3);
+          addLeafRustle(buf, 0.13, 0.10, 0.18, 1250, 1.3);
+          addMarimbaNote(buf, 0.08, 783.99, 0.26, 0.20, 0.65);
+          break;
+        }
+        case 'sfx_store_open': {
+          buf = new Float32Array(Math.floor(0.58 * SR));
+          // ★ NEW: Fiber mat/basket + warm glass bottles clinking + seeds
+          addLeafRustle(buf, 0.01, 0.18, 0.38, 1600, 1.3);
+          addMarimbaNote(buf, 0.09, 1046.50, 0.20, 0.32, 0.9);
+          addMarimbaNote(buf, 0.16, 1318.51, 0.22, 0.34, 0.9);
+          addMaracaShake(buf, 0.22, 0.12, 0.32, 1.15, 18);
+          addMarimbaNote(buf, 0.28, 783.99, 0.26, 0.34, 0.6);
+          break;
+        }
+        default: {
+          buf = new Float32Array(Math.floor(0.25 * SR));
+          addMarimbaNote(buf, 0.01, 523.25, 0.20, 0.4, 0.5);
+        }
+      }
+
+      return finalizeBuffer(buf, useCanopyReverb);
+    }
+
+    // =========================================================================
+    // 5. REPRODUCCIÓN, VISUALIZACIÓN DE FORMA DE ONDA Y EXPORTACIÓN WAV
+    // =========================================================================
+    function playPcmBuffer(pcm, labelText, metaText, cardId = null) {
+      const ctx = ensureCtx();
+      const audioBuf = ctx.createBuffer(1, pcm.length, SR);
+      audioBuf.copyToChannel(pcm, 0);
+      const src = ctx.createBufferSource();
+      src.buffer = audioBuf;
+      src.connect(ctx.destination);
+      src.start();
+      activeSources.push(src);
+
+      lastBuffer = pcm;
+      document.getElementById('nowPlayingLabel').textContent = labelText;
+      document.getElementById('nowPlayingMeta').textContent = metaText || `${(pcm.length / SR).toFixed(2)} s · 44.1 kHz PCM`;
+      drawWaveform(pcm);
+
+      if (cardId) {
+        lastId = cardId;
+        document.querySelectorAll('.sfx-card').forEach(el => el.classList.remove('active-sfx'));
+        const card = document.getElementById('card-' + cardId);
+        if (card) {
+          card.classList.add('active-sfx');
+          setTimeout(() => card.classList.remove('active-sfx'), Math.max(350, (pcm.length / SR) * 1000));
+        }
+      }
+    }
+
+    function triggerSfx(id) {
+      const item = SFX_CATALOG.find(x => x.id === id);
+      const pcm = synthesizeSfx(id);
+      playPcmBuffer(pcm, `${id} — ${item ? item.when : ''}`, `${(pcm.length / SR).toFixed(2)} s · ${item ? item.db : ''}`, id);
+    }
+
+    function triggerFruit(fruitIdx) {
+      const f = FRUITS[fruitIdx];
+      const pcm = synthesizeSfx('sfx_select', f.freq);
+      lastId = `sfx_select_${f.id}`;
+      playPcmBuffer(pcm, `Fruta #${f.motor} ${f.name} (${f.note} · ${f.freq.toFixed(1)} Hz)`, `L* ${f.lstar} · HEX ${f.hex}`);
+      const btn = document.getElementById(`fruit-btn-${fruitIdx}`);
+      if (btn) {
+        btn.classList.add('playing');
+        setTimeout(() => btn.classList.remove('playing'), 220);
+      }
+    }
+
+    function playAllFruitsArpeggio() {
+      FRUITS.forEach((f, idx) => {
+        setTimeout(() => triggerFruit(idx), idx * 115);
+      });
+    }
+
+    function drawWaveform(pcm) {
+      const canvas = document.getElementById('waveCanvas');
+      const ctx = canvas.getContext('2d');
+      const w = canvas.width;
+      const h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      // Center line
+      ctx.strokeStyle = 'rgba(140, 150, 160, 0.25)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(0, h / 2);
+      ctx.lineTo(w, h / 2);
+      ctx.stroke();
+
+      // Waveform envelope
+      ctx.strokeStyle = '#3BB8D9';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      const step = Math.max(1, Math.floor(pcm.length / w));
+      for (let x = 0; x < w; x++) {
+        const start = x * step;
+        let min = 0, max = 0;
+        for (let j = 0; j < step && (start + j) < pcm.length; j++) {
+          const v = pcm[start + j];
+          if (v < min) min = v;
+          if (v > max) max = v;
+        }
+        const y1 = (1 - Math.min(1, Math.max(-1, max))) * (h / 2);
+        const y2 = (1 - Math.min(1, Math.max(-1, min))) * (h / 2);
+        ctx.moveTo(x, y1);
+        ctx.lineTo(x, y2);
+      }
+      ctx.stroke();
+    }
+
+    // Encode Float32Array to 16-bit PCM WAV Blob
+    function encodeWav(pcm) {
+      const numFrames = pcm.length;
+      const buffer = new ArrayBuffer(44 + numFrames * 2);
+      const view = new DataView(buffer);
+      function writeStr(offset, str) {
+        for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+      }
+      writeStr(0, 'RIFF');
+      view.setUint32(4, 36 + numFrames * 2, true);
+      writeStr(8, 'WAVE');
+      writeStr(12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, 1, true); // PCM
+      view.setUint16(22, 1, true); // Mono
+      view.setUint32(24, SR, true);
+      view.setUint32(28, SR * 2, true);
+      view.setUint16(32, 2, true);
+      view.setUint16(34, 16, true);
+      writeStr(36, 'data');
+      view.setUint32(40, numFrames * 2, true);
+      let offset = 44;
+      for (let i = 0; i < numFrames; i++) {
+        const s = Math.max(-1, Math.min(1, pcm[i]));
+        view.setInt16(offset, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
+        offset += 2;
+      }
+      return new Blob([buffer], { type: 'audio/wav' });
+    }
+
+    function downloadWavById(id) {
+      const pcm = synthesizeSfx(id);
+      const blob = encodeWav(pcm);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${id}.wav`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    }
+
+    document.getElementById('btnDownloadLast').addEventListener('click', () => {
+      if (!lastBuffer) {
+        lastBuffer = synthesizeSfx('sfx_seal');
+      }
+      const blob = encodeWav(lastBuffer);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${lastId || 'tintalu_sfx'}.wav`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    });
+
+    // =========================================================================
+    // 6. SIMULADOR DE COREOGRAFÍAS DEL JUEGO EN VIVO
+    // =========================================================================
+    let choreoTimeouts = [];
+    function clearChoreo() {
+      choreoTimeouts.forEach(t => clearTimeout(t));
+      choreoTimeouts = [];
+      activeSources.forEach(s => { try { s.stop(); } catch (_) {} });
+      activeSources = [];
+    }
+
+    document.getElementById('btnStopAll').addEventListener('click', () => {
+      clearChoreo();
+      stopAmbienceLoop();
+      document.getElementById('nowPlayingLabel').textContent = 'Reproducción detenida';
+    });
+
+    function scheduleAt(ms, fn) {
+      choreoTimeouts.push(setTimeout(fn, ms));
+    }
+
+    function playChoreo(kind) {
+      clearChoreo();
+      if (kind === 'intro') {
+        // 02 §4.2: a (0-300ms) river_rise + monkey_chirp -> b (300-700ms) fill -> d (950-1400ms) fruit_plip + tint arpeggio
+        triggerSfx('sfx_river_rise');
+        scheduleAt(120, () => triggerSfx('sfx_monkey_chirp'));
+        scheduleAt(300, () => triggerSfx('sfx_fill'));
+        scheduleAt(480, () => triggerSfx('sfx_fill'));
+        const introFruits = [2, 6, 7, 10, 11, 13];
+        introFruits.forEach((fIdx, i) => {
+          scheduleAt(820 + i * 85, () => {
+            triggerSfx('sfx_fruit_plip');
+            scheduleAt(35, () => {
+              const f = FRUITS[fIdx];
+              const pcm = synthesizeSfx('sfx_tint', f.freq);
+              playPcmBuffer(pcm, `Coreografía Intro · sfx_tint (${f.name})`, `${f.note}`);
+            });
+          });
+        });
+      } else if (kind === 'pour_seal') {
+        triggerFruit(6); // Select Aguaje
+        scheduleAt(220, () => triggerSfx('sfx_pour_start'));
+        scheduleAt(340, () => triggerSfx('sfx_pour_loop'));
+        scheduleAt(980, () => triggerSfx('sfx_pour_end'));
+        scheduleAt(1120, () => triggerSfx('sfx_seal'));
+      } else if (kind === 'victory') {
+        triggerSfx('sfx_seal');
+        scheduleAt(520, () => triggerSfx('sfx_win_toada'));
+        scheduleAt(720, () => triggerSfx('sfx_confetti'));
+        for (let k = 0; k < 8; k++) {
+          scheduleAt(1450 + k * 55, () => triggerSfx('sfx_seeds_tick'));
+        }
+        scheduleAt(1950, () => triggerSfx('sfx_sloth_happy'));
+        scheduleAt(2250, () => triggerSfx('sfx_fact'));
+      } else if (kind === 'world_banner') {
+        triggerSfx('sfx_world_banner');
+        scheduleAt(650, () => triggerSfx('sfx_capi_paddle'));
+        scheduleAt(1250, () => triggerSfx('sfx_rosa_surface'));
+      } else if (kind === 'tinaja_combo') {
+        triggerSfx('sfx_tinaja_select');
+        scheduleAt(260, () => triggerSfx('sfx_tinaja_scoop'));
+        scheduleAt(640, () => triggerSfx('sfx_tinaja_reveal'));
+        scheduleAt(980, () => triggerSfx('sfx_tinaja_release'));
+      }
+    }
+
+    // =========================================================================
+    // 7. SIMULADOR DE AMBIENTE Y MÚSICA ADAPTATIVA (§5 y §6)
+    // =========================================================================
+    let ambiencePlaying = false;
+    let ambienceInterval = null;
+    let ambienceNodes = [];
+    let sealProgress = 0;
+
+    function setSealProgress(pct) {
+      sealProgress = pct;
+      document.querySelectorAll('.seal-pct-btn').forEach(btn => {
+        const bPct = parseInt(btn.getAttribute('data-pct'), 10);
+        if (bPct === pct) {
+          btn.className = 'seal-pct-btn py-1.5 rounded bg-[#3F6B33] text-[#F4EBDA] font-bold';
+        } else {
+          btn.className = 'seal-pct-btn py-1.5 rounded bg-[var(--card)] border border-[var(--border)]';
+        }
+      });
+    }
+
+    function updateAmbienceParams() {
+      const rain = document.getElementById('ctrlRainMix').value;
+      document.getElementById('valRainMix').textContent = `${rain}%`;
+    }
+
+    function stopAmbienceLoop() {
+      ambiencePlaying = false;
+      if (ambienceInterval) {
+        clearInterval(ambienceInterval);
+        ambienceInterval = null;
+      }
+      ambienceNodes.forEach(n => { try { n.stop(); } catch (_) {} });
+      ambienceNodes = [];
+      const btn = document.getElementById('btnToggleAmbience');
+      btn.textContent = 'Iniciar Ambiente + Música en Bucle';
+      btn.className = 'px-4 py-2 rounded-xl bg-[#3F6B33] text-[#F4EBDA] text-xs font-semibold shadow-sm';
+    }
+
+    function toggleAmbienceLoop() {
+      if (ambiencePlaying) {
+        stopAmbienceLoop();
+        return;
+      }
+      const ctx = ensureCtx();
+      ambiencePlaying = true;
+      const btn = document.getElementById('btnToggleAmbience');
+      btn.textContent = 'Detener Ambiente + Música';
+      btn.className = 'px-4 py-2 rounded-xl bg-[#9E3B2E] text-[#F4EBDA] text-xs font-semibold shadow-sm';
+
+      let step = 0;
+      const worldNotes = {
+        1: [261.63, 329.63, 392.00, 440.00, 523.25], // Estuario Carimbó C6/9
+        2: [293.66, 369.99, 440.00, 554.37, 587.33], // Tapajós D major bright
+        3: [220.00, 261.63, 329.63, 392.00, 440.00], // Manaos A minor pentatonic
+        4: [329.63, 392.00, 440.00, 523.25, 659.25], // Trapecio flute/guitar
+        5: [261.63, 329.63, 392.00, 523.25, 659.25], // Loreto cumbia suave
+        6: [196.00, 261.63, 293.66, 392.00, 440.00], // Oriente water bowls
+        7: [293.66, 392.00, 440.00, 523.25, 587.33], // Madre de Dios
+        8: [220.00, 293.66, 329.63, 440.00, 523.25], // Madidi charango
+        9: [261.63, 329.63, 392.00, 440.00, 587.33], // Ucayali chicha
+        13:[220.00, 261.63, 293.66, 392.00, 440.00]  // El origen Andean air
+      };
+
+      function playAmbienceSlice() {
+        if (!ambiencePlaying) return;
+        const world = parseInt(document.getElementById('selWorld').value, 10) || 1;
+        const rainMix = parseInt(document.getElementById('ctrlRainMix').value, 10) / 100;
+        const night = document.getElementById('chkNightMode').checked;
+        const notes = worldNotes[world] || worldNotes[1];
+        const pitchMult = night ? 0.5 : 1.0;
+
+        // 1.2s slice of river + rain + musical bed + adaptive percussion
+        const sliceDur = 1.25;
+        const buf = new Float32Array(Math.floor(sliceDur * SR));
+        const rng = makeRng(1000 + step * 37 + world);
+
+        // River water continuous gentle wash
+        const waterRaw = new Float32Array(buf.length);
+        for (let i = 0; i < waterRaw.length; i++) {
+          const u = i / waterRaw.length;
+          const fade = Math.sin(Math.PI * u); // crossfade-friendly envelope
+          waterRaw[i] = (rng() * 2 - 1) * fade * (0.09 + rainMix * 0.14);
+        }
+        const riverFreq = world === 3 ? 280 : (world === 2 ? 620 : 410);
+        const riverLayer = biquadFilter(waterRaw, 'bandpass', riverFreq, 1.1);
+        for (let i = 0; i < buf.length; i++) buf[i] += riverLayer[i];
+
+        if (rainMix > 0.05) {
+          const rainLayer = biquadFilter(waterRaw, 'bandpass', 2400, 1.4);
+          for (let i = 0; i < buf.length; i++) buf[i] += rainLayer[i] * rainMix * 0.6;
+          if (rng() < rainMix) {
+            addBubble(buf, 0.2 + rng() * 0.7, 520 + rng() * 280, 0.05, 0.14 * rainMix, 1.45);
+          }
+        }
+
+        // Musical bed long warm notes (lecho)
+        const n1 = notes[step % notes.length] * pitchMult;
+        const n2 = notes[(step + 2) % notes.length] * pitchMult;
+        addMarimbaNote(buf, 0.05, n1, 0.95, 0.18, night ? 0.15 : 0.45);
+        addMarimbaNote(buf, 0.55, n2, 0.65, 0.15, night ? 0.15 : 0.45);
+
+        // Adaptive percussion layers based on sealed cuias (25%, 50%, 75%, 100%)
+        if (sealProgress >= 25) {
+          addMaracaShake(buf, 0.05, 0.07, 0.12, 1.0, 12);
+          addMaracaShake(buf, 0.60, 0.07, 0.10, 1.05, 10);
+        }
+        if (sealProgress >= 50) {
+          addWoodTap(buf, 0.32, 340 * pitchMult, 0.06, 0.16, false);
+          addWoodTap(buf, 0.88, 290 * pitchMult, 0.06, 0.14, true);
+        }
+        if (sealProgress >= 75) {
+          addWoodTap(buf, 0.05, 135, 0.11, 0.24, true);
+          addWoodTap(buf, 0.60, 155, 0.10, 0.20, true);
+        }
+        if (sealProgress >= 100) {
+          addMarimbaNote(buf, 0.32, notes[(step + 4) % notes.length] * 2 * pitchMult, 0.35, 0.16, 0.75);
+        }
+
+        const finalSlice = finalizeBuffer(buf, true);
+        const audioBuf = ctx.createBuffer(1, finalSlice.length, SR);
+        audioBuf.copyToChannel(finalSlice, 0);
+        const src = ctx.createBufferSource();
+        src.buffer = audioBuf;
+        src.connect(ctx.destination);
+        src.start();
+        ambienceNodes.push(src);
+        step++;
+      }
+
+      playAmbienceSlice();
+      ambienceInterval = setInterval(playAmbienceSlice, 1050);
+    }
+
+    // =========================================================================
+    // 8. RENDERIZADO DE LA INTERFAZ
+    // =========================================================================
+    function renderFruits() {
+      const grid = document.getElementById('fruitGrid');
+      grid.innerHTML = FRUITS.map((f, idx) => `
+        <button id="fruit-btn-${idx}" onclick="triggerFruit(${idx})"
+          style="background-color: ${f.hex}; color: ${f.textLight ? '#F4EBDA' : '#2B2118'};"
+          class="fruit-btn rounded-xl p-2.5 border border-black/15 shadow-sm text-left flex flex-col justify-between min-h-[72px]">
+          <div class="flex items-center justify-between text-xs font-bold">
+            <span>#${f.motor} ${f.name}</span>
+            <span class="font-mono opacity-85">${f.note}</span>
+          </div>
+          <div class="flex items-center justify-between text-xs opacity-80 mt-2 font-mono">
+            <span>${Math.round(f.freq)} Hz</span>
+            <span>L*${f.lstar}</span>
+          </div>
+        </button>
+      `).join('');
+    }
+
+    function filterCategory(cat) {
+      currentCategory = cat;
+      document.querySelectorAll('.cat-tab').forEach(btn => {
+        const bCat = btn.getAttribute('data-cat');
+        if (bCat === cat) {
+          btn.className = 'cat-tab px-3 py-1.5 rounded-xl text-xs font-bold bg-[#3F6B33] text-[#F4EBDA]';
+        } else {
+          btn.className = 'cat-tab px-3 py-1.5 rounded-xl text-xs font-semibold bg-[var(--secondary)] border border-[var(--border)]';
+        }
+      });
+      renderSfxCatalog();
+    }
+
+    function renderSfxCatalog() {
+      const q = (document.getElementById('searchBox').value || '').toLowerCase().trim();
+      const grid = document.getElementById('sfxGrid');
+      const filtered = SFX_CATALOG.filter(item => {
+        const matchCat = currentCategory === 'all'
+          || (currentCategory === 'new11' ? item.isNew11 : item.cat === currentCategory);
+        const matchQ = !q
+          || item.id.toLowerCase().includes(q)
+          || item.when.toLowerCase().includes(q)
+          || item.proposal.toLowerCase().includes(q);
+        return matchCat && matchQ;
+      });
+
+      grid.innerHTML = filtered.map(item => `
+        <div id="card-${item.id}" class="sfx-card bg-[var(--secondary)] border border-[var(--border)] rounded-xl p-3.5 flex flex-col justify-between gap-2.5">
+          <div>
+            <div class="flex items-center justify-between gap-2">
+              <code class="text-xs font-bold text-[#3BB8D9]">${item.id}</code>
+              <span class="text-xs font-mono text-[var(--muted-foreground)]">${item.dur} · ${item.db}</span>
+            </div>
+            <div class="text-xs font-semibold mt-1">${item.when}</div>
+            <p class="text-xs text-[var(--muted-foreground)] mt-1 leading-relaxed">${item.proposal}</p>
+          </div>
+          <div class="flex items-center justify-between gap-2 pt-1 border-t border-[var(--border)]">
+            <button onclick="triggerSfx('${item.id}')" class="flex-1 py-1.5 px-3 rounded-lg bg-[#3F6B33] text-[#F4EBDA] text-xs font-semibold hover:opacity-95">
+              ▶ Escuchar
+            </button>
+            <button onclick="downloadWavById('${item.id}')" class="py-1.5 px-2.5 rounded-lg bg-[var(--card)] border border-[var(--border)] text-xs font-medium hover:opacity-90" title="Descargar WAV">
+              ⬇ WAV
+            </button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    // Sliders live display
+    ['Water', 'Wood', 'Reverb', 'Vol'].forEach(k => {
+      const el = document.getElementById('ctrl' + k);
+      const val = document.getElementById('val' + k);
+      el.addEventListener('input', () => { val.textContent = el.value + '%'; });
+    });
+
+    renderFruits();
+    renderSfxCatalog();
+    // Draw initial preview waveform
+    lastBuffer = synthesizeSfx('sfx_seal');
+    drawWaveform(lastBuffer);
+  </script>
+</body>
+</html>
