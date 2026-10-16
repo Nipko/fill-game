@@ -14,11 +14,19 @@ namespace AF.Levels
     /// <see cref="LevelPack"/>.
     /// </summary>
     /// <remarks>
-    /// <para>Acepta <c>pack_schema</c> 1 o 2 (<see cref="MinPackSchema"/>-<see cref="SupportedPackSchema"/>) o
-    /// <c>subset_of</c> = <c>af-level/1</c>, que se lee como <c>pack_schema</c> 1; rechaza cualquier otra versión (08 §4.4: el
-    /// cliente rechaza esquemas que no conoce). Con <c>pack_schema</c> 1 rechaza lo que el esquema solo admite en el 2 (allOf/1):
-    /// el tipo <c>matapi</c>, <c>intro_mechanic</c> <c>chica</c>, <c>alta</c>, <c>matapi</c> o <c>murky</c> y
-    /// <c>difficulty.par_approx</c>.</para>
+    /// <para>Acepta <c>pack_schema</c> 1, 2 o 3 (<see cref="MinPackSchema"/>-<see cref="SupportedPackSchema"/>) o
+    /// <c>subset_of</c> = <c>af-level/1</c>, que se lee como <c>pack_schema</c> 1; rechaza cualquier otra versión, también un
+    /// paquete 4 (08 §4.4: el cliente rechaza esquemas que no conoce). Con <c>pack_schema</c> 1 rechaza lo que el esquema solo
+    /// admite desde el 2 (allOf): el tipo <c>matapi</c>, <c>intro_mechanic</c> <c>chica</c>, <c>alta</c>, <c>matapi</c> o
+    /// <c>murky</c> y <c>difficulty.par_approx</c>. Con el 1 y el 2 rechaza lo que el esquema solo admite en el 3 (D-019,
+    /// punto 9, y D-023, punto 5; contrato 21): los tipos <c>tinaja</c>, <c>cucharon</c>, <c>hoja_atada</c> y <c>flor</c>,
+    /// <c>key2</c>, el Brote de dos hojas (<c>brote</c> con <c>n</c> = 2), <c>intro_mechanic</c> <c>tinaja</c>,
+    /// <c>liana_n</c>, <c>hoja_atada</c>, <c>brote_n2</c> o <c>flor</c> y <c>hidden</c> en una variante de
+    /// <c>relief</c>.</para>
+    /// <para>Con <c>pack_schema</c> 3 lee <c>key2</c> (la segunda llave de la Flor de vitória-régia), el <c>n</c> del Brote
+    /// (1 o 2) y la Tinaja con su cuia (M13): las ocultas de la tinaja llegan por <c>murky</c> y <c>hidden</c>, como las de
+    /// Aguas turbias, con su tope propio (<see cref="LevelValidation.TinajaMaxHiddenUnits"/>, no el de 02 T2), y una variante
+    /// de <c>relief</c> que lleva la tinaja trae su máscara en <c>hidden</c> (obligatoria y solo entonces; 08 §4.1).</para>
     /// <para>Cada tablero (el base y los de <c>relief[]</c>) se construye con <see cref="BoardBuilder"/> (mecánicas de
     /// <c>attrs</c>, dosis ocultas de <c>hidden</c> y <c>units_per_color</c>; ritmos de Lluvia y Piraña por defecto, 08 §9) y se
     /// comprueba con <see cref="LevelValidation"/>, como <c>tools/level-qa</c>. Falla cerrado: un tablero que no construye o no
@@ -31,18 +39,26 @@ namespace AF.Levels
         /// <summary>Valor de <c>subset_of</c> que admite el cliente v0.</summary>
         public const string SubsetOf = "af-level/1";
 
-        /// <summary>Última versión de <c>pack_schema</c> que admite el cliente (D-007; contrato 21).</summary>
-        public const int SupportedPackSchema = 2;
+        /// <summary>Última versión de <c>pack_schema</c> que admite el cliente (D-007, D-019 y D-023; contrato 21).</summary>
+        public const int SupportedPackSchema = 3;
 
         /// <summary>Primera versión de <c>pack_schema</c> que admite el cliente.</summary>
         public const int MinPackSchema = 1;
 
-        /// <summary>Dosis ocultas como mucho por nivel (02 T2; esquema <c>$defs/hidden</c> <c>maxItems</c>).</summary>
+        /// <summary>Dosis ocultas como mucho por nivel en Aguas turbias (02 T2; esquema <c>$defs/hidden</c> <c>maxItems</c>).</summary>
         public const int MaxHidden = 4;
 
-        // intro_mechanic de pack_schema 1 (allOf/1) y las que añade el 2 [P] (chica, alta, matapi y murky).
+        // Primera versión de pack_schema con la Tinaja y las variantes de la 1.0 (D-019, punto 9; D-023, punto 5).
+        private const int TinajaPackSchema = 3;
+
+        // n del Brote de dos hojas (02 §9.1, b.3; BroteMechanic.TwoLeaves del núcleo, que es interno).
+        private const int BroteTwoLeaves = 2;
+
+        // intro_mechanic de pack_schema 1 (allOf/1), las que añade el 2 [P] (chica, alta, matapi y murky) y las del 3 (tinaja,
+        // liana_n [P], hoja_atada, brote_n2 [P] y flor; D-019 y D-023, punto 5).
         private static readonly string[] IntroMechanics1 = { "hoja", "brote", "liana", "remolino", "barro", "lluvia", "pirana" };
         private static readonly string[] IntroMechanics2 = { "matapi", "chica", "alta", "murky" };
+        private static readonly string[] IntroMechanics3 = { "tinaja", "liana_n", "hoja_atada", "brote_n2", "flor" };
 
         private static readonly string[] Bands =
         {
@@ -106,7 +122,7 @@ namespace AF.Levels
             return a.Level.CompareTo(b.Level);
         }
 
-        // pack_schema 1-2 o subset_of = af-level/1 (que se lee como el 1). Devuelve la versión.
+        // pack_schema 1-3 o subset_of = af-level/1 (que se lee como el 1). Devuelve la versión.
         private static int CheckSchema(JsonValue root)
         {
             JsonValue? idNode = root.Get("pack_id");
@@ -119,7 +135,7 @@ namespace AF.Levels
                 {
                     throw new LevelFormatException(where + ": pack_schema " + version.ToString(CultureInfo.InvariantCulture)
                         + " no admitido (este cliente lee las versiones " + MinPackSchema.ToString(CultureInfo.InvariantCulture)
-                        + " a " + SupportedPackSchema.ToString(CultureInfo.InvariantCulture) + ", 08 §4.4).");
+                        + " a " + SupportedPackSchema.ToString(CultureInfo.InvariantCulture) + "; 08 §4.4: hace falta una versión más nueva del juego).");
                 }
 
                 return version;
@@ -131,7 +147,7 @@ namespace AF.Levels
                 return MinPackSchema;
             }
 
-            throw new LevelFormatException(where + ": el paquete no declara pack_schema (1 o 2) ni subset_of = \"" + SubsetOf + "\".");
+            throw new LevelFormatException(where + ": el paquete no declara pack_schema (1, 2 o 3) ni subset_of = \"" + SubsetOf + "\".");
         }
 
         private static LevelDefinition ReadLevel(JsonValue node, string packId, int position, int version)
@@ -156,7 +172,7 @@ namespace AF.Levels
             UnitsPerColor units = ReadUnits(node, where);
             ReadBoard(node, where, out int[] caps, out int[][] cuias);
             MechanicSpec[] attrs = ReadAttrs(node, caps.Length, version, where);
-            bool murky = ReadMurky(node, caps.Length, where, out int[][] hidden);
+            bool murky = ReadMurky(node, caps.Length, HasTinaja(attrs), where, out int[][] hidden);
 
             JsonValue? difficulty = node.Get("difficulty");
             if (difficulty == null || difficulty.Kind != JsonKind.Object)
@@ -307,8 +323,10 @@ namespace AF.Levels
         }
 
         // attrs (08 §4.1; 02 §9.1; D-007): ausente o null, ninguna mecánica; si es lista, una entrada por cuia, null o
-        // {type, key, partner, n, k}. Los campos ausentes valen key 0, partner −1, n 0 y k 0 (como Attr() de
-        // tools/level-qa/PackReader.cs); los obligatorios de cada tipo los comprueba BoardBuilder.
+        // {type, key, key2, partner, n, k}. Los campos ausentes valen key 0, key2 0, partner −1, n 0 y k 0 (como Attr() de
+        // tools/level-qa/PackReader.cs); los obligatorios de cada tipo los comprueba BoardBuilder. Lo que solo existe desde un
+        // pack_schema (matapi desde el 2; tinaja, cucharon, hoja_atada, flor, key2 y el Brote de dos hojas con el 3) se rechaza
+        // con una versión anterior.
         private static MechanicSpec[] ReadAttrs(JsonValue node, int cuiaCount, int version, string where)
         {
             var specs = new MechanicSpec[cuiaCount];
@@ -334,7 +352,7 @@ namespace AF.Levels
                 string at = where + ": attrs[" + i.ToString(CultureInfo.InvariantCulture) + "]";
                 if (entry.Kind != JsonKind.Object)
                 {
-                    throw new LevelFormatException(at + " debe ser null o un objeto {type, key, partner, n, k}.");
+                    throw new LevelFormatException(at + " debe ser null o un objeto {type, key, key2, partner, n, k}.");
                 }
 
                 JsonValue? typeNode = entry.Get("type");
@@ -349,13 +367,41 @@ namespace AF.Levels
                     throw new LevelFormatException(at + ": el tipo matapi necesita pack_schema 2 (D-007; contrato 21).");
                 }
 
+                if (version < TinajaPackSchema && IsPackSchema3Type(type))
+                {
+                    throw new LevelFormatException(at + ": el tipo " + typeKey + " necesita pack_schema 3 (D-019 y D-023, punto 5; contrato 21).");
+                }
+
+                JsonValue? key2Node = entry.Get("key2");
+                if (key2Node != null && version < TinajaPackSchema)
+                {
+                    throw new LevelFormatException(at + ": 'key2' necesita pack_schema 3 (Flor de vitória-régia; D-023, punto 5).");
+                }
+
                 int key = OptionalInt(entry, "key", 0, at);
+                int key2 = key2Node == null ? 0 : AsInt(key2Node, "key2", at);
                 int partner = OptionalInt(entry, "partner", -1, at);
-                int n = OptionalInt(entry, "n", 0, at);
+                JsonValue? nNode = entry.Get("n");
+                int n = nNode == null ? 0 : AsInt(nNode, "n", at);
                 int k = OptionalInt(entry, "k", 0, at);
+                if (type == MechanicType.Brote && nNode != null)
+                {
+                    // P2b (D-023, punto 5): con el 3, el n del Brote es 1 (el Brote normal) o 2 (el Brote de dos hojas). Con el 1 y
+                    // el 2 el esquema no lo restringe, pero el Brote de dos hojas solo existe con el 3.
+                    if (version >= TinajaPackSchema && n != 1 && n != BroteTwoLeaves)
+                    {
+                        throw new LevelFormatException(at + ": el n del Brote es 1 o 2 (Brote de dos hojas; D-023, punto 5).");
+                    }
+
+                    if (version < TinajaPackSchema && n == BroteTwoLeaves)
+                    {
+                        throw new LevelFormatException(at + ": el Brote de dos hojas (n = 2) necesita pack_schema 3 (D-023, punto 5).");
+                    }
+                }
+
                 try
                 {
-                    specs[i] = new MechanicSpec(type, key, partner, n, k);
+                    specs[i] = new MechanicSpec(type, key, partner, n, k, key2);
                 }
                 catch (ArgumentOutOfRangeException e)
                 {
@@ -366,35 +412,77 @@ namespace AF.Levels
             return specs;
         }
 
-        // murky (bool, por defecto false) y hidden (lista de [cuia, capa], como mucho 4, sin repetidos y en rango). murky = false
-        // exige hidden vacío y murky = true al menos uno (esquema $defs/level allOf/0). Que la capa sea una dosis y no la cima
-        // (R7) lo comprueba BoardBuilder.
-        private static bool ReadMurky(JsonValue node, int cuiaCount, string where, out int[][] hidden)
+        // Tipos de attrs que solo existen desde pack_schema 3: la Tinaja y su cuia (D-019, punto 9) y las variantes de la 1.0
+        // con tipo propio (D-023, punto 5). El Brote de dos hojas y la Liana de cuenta no son tipos.
+        private static bool IsPackSchema3Type(MechanicType type)
+        {
+            return type == MechanicType.Tinaja || type == MechanicType.Cucharon || type == MechanicType.HojaAtada || type == MechanicType.Flor;
+        }
+
+        private static bool HasTinaja(MechanicSpec[] attrs)
+        {
+            for (int i = 0; i < attrs.Length; i++)
+            {
+                if (attrs[i].Type == MechanicType.Tinaja)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // murky (bool, por defecto false) y hidden. murky = false exige hidden vacío y murky = true al menos uno (esquema
+        // $defs/level allOf/0). Con la Tinaja (solo pack_schema 3; M13) murky = true marca sus ocultas, no Aguas turbias, y el
+        // tope es el suyo (propuesta de la tinaja, b.2 regla 1 y c.6). Que la capa sea una dosis y no la cima (R7) lo comprueba
+        // BoardBuilder; la máscara exacta de la tinaja y que sea la única fuente de ocultas, TinajaMechanic y LevelValidation.
+        private static bool ReadMurky(JsonValue node, int cuiaCount, bool tinaja, string where, out int[][] hidden)
         {
             bool murky = ReadOptionalBool(node, "murky", false, where);
+            hidden = ReadHidden(node, cuiaCount, tinaja, where);
+            if (murky != (hidden.Length > 0))
+            {
+                throw new LevelFormatException(where + (murky
+                    ? ": murky = true necesita al menos una dosis oculta en 'hidden' (02 §11; M13)."
+                    : ": 'hidden' solo puede tener dosis ocultas con murky = true (02 §11; M13)."));
+            }
+
+            return murky;
+        }
+
+        // hidden (esquema $defs/hidden): lista de pares [cuia, capa], sin repetidos y en rango; ausente o null, vacía. Como mucho
+        // MaxHidden en Aguas turbias (02 T2) o, si el tablero lleva la tinaja, LevelValidation.TinajaMaxHiddenUnits: su tope
+        // propio [P], que no lee lvl_murky_max_hidden_units (M13 regla 1; propuesta de la tinaja, c.6). Hoy los dos valen 4.
+        private static int[][] ReadHidden(JsonValue node, int cuiaCount, bool tinaja, string where)
+        {
             JsonValue? list = node.Get("hidden");
-            int count = list == null || list.IsNull ? 0 : list.Items.Count;
-            if (list != null && !list.IsNull && list.Kind != JsonKind.Array)
+            if (list == null || list.IsNull)
+            {
+                return new int[0][];
+            }
+
+            if (list.Kind != JsonKind.Array)
             {
                 throw new LevelFormatException(where + ": 'hidden' debe ser una lista de pares [cuia, capa].");
             }
 
-            if (count > MaxHidden)
+            int count = list.Items.Count;
+            if (tinaja && count > LevelValidation.TinajaMaxHiddenUnits)
+            {
+                throw new LevelFormatException(where + ": 'hidden' tiene " + count.ToString(CultureInfo.InvariantCulture)
+                    + " dosis ocultas; la tinaja oculta como mucho " + LevelValidation.TinajaMaxHiddenUnits.ToString(CultureInfo.InvariantCulture)
+                    + " (su tope propio, M13 regla 1).");
+            }
+
+            if (!tinaja && count > MaxHidden)
             {
                 throw new LevelFormatException(where + ": 'hidden' tiene " + count.ToString(CultureInfo.InvariantCulture) + " dosis ocultas; como mucho 4 (02 T2).");
             }
 
-            if (murky != (count > 0))
-            {
-                throw new LevelFormatException(where + (murky
-                    ? ": murky = true necesita al menos una dosis oculta en 'hidden' (02 §11)."
-                    : ": 'hidden' solo puede tener dosis ocultas con murky = true (02 §11)."));
-            }
-
-            hidden = new int[count][];
+            var hidden = new int[count][];
             for (int h = 0; h < count; h++)
             {
-                JsonValue pair = list!.Items[h];
+                JsonValue pair = list.Items[h];
                 string at = where + ": hidden[" + h.ToString(CultureInfo.InvariantCulture) + "]";
                 if (pair.Kind != JsonKind.Array || pair.Items.Count != 2)
                 {
@@ -421,11 +509,12 @@ namespace AF.Levels
                 hidden[h] = new[] { cuia, layer };
             }
 
-            return murky;
+            return hidden;
         }
 
-        // relief (08 §4.1; esquema relief_board): lista de 0 a 2 tableros {type, caps, cuias, attrs?, removed?, par, bot_fail},
-        // en orden de prioridad. Cada uno se construye con sus attrs, sin ocultos y con las units_per_color del nivel, y se valida.
+        // relief (08 §4.1; esquema relief_board): lista de 0 a 2 tableros {type, caps, cuias, attrs?, hidden?, removed?, par,
+        // bot_fail}, en orden de prioridad. Cada uno se construye con sus attrs, las units_per_color del nivel y, si lleva la
+        // tinaja (solo pack_schema 3), su máscara en hidden; sin la tinaja, sin ocultos (Aguas turbias incluidas). Y se valida.
         private static ReliefBoard[] ReadRelief(JsonValue node, UnitsPerColor units, int version, string where)
         {
             JsonValue? list = node.Get("relief");
@@ -457,6 +546,7 @@ namespace AF.Levels
 
                 ReadBoard(entry, at, out int[] caps, out int[][] cuias);
                 MechanicSpec[] attrs = ReadAttrs(entry, caps.Length, version, at);
+                int[][] hidden = ReadReliefHidden(entry, caps.Length, HasTinaja(attrs), version, at);
                 JsonValue? parNode = entry.Get("par");
                 int? par = parNode == null || parNode.IsNull ? (int?)null : AsInt(parNode, "par", at);
                 if (par == null && type == ReliefBoard.TypeMinusColor)
@@ -464,11 +554,37 @@ namespace AF.Levels
                     throw new LevelFormatException(at + ": minus_color lleva siempre par (03 §13).");
                 }
 
-                BuildAndValidate(caps, cuias, attrs, null, units, at);
-                result[i] = new ReliefBoard(type, caps, cuias, attrs, units, par, at);
+                BuildAndValidate(caps, cuias, attrs, hidden.Length == 0 ? null : hidden, units, at);
+                result[i] = new ReliefBoard(type, caps, cuias, attrs, units, par, at, hidden);
             }
 
             return result;
+        }
+
+        // hidden de una variante de relief (esquema relief_board y rama del 3 en allOf; decisión del dueño del 2026-10-14, opción
+        // a de la revisión de P2a): solo con pack_schema 3 y si y solo si su attrs lleva la tinaja, y entonces no vacía. Que sea
+        // exactamente su máscara (todas sus capas menos la boca) lo comprueba TinajaMechanic al construir.
+        private static int[][] ReadReliefHidden(JsonValue entry, int cuiaCount, bool tinaja, int version, string where)
+        {
+            JsonValue? list = entry.Get("hidden");
+            bool present = list != null && !list.IsNull;
+            if (present && version < TinajaPackSchema)
+            {
+                throw new LevelFormatException(where + ": 'hidden' en una variante de relief necesita pack_schema 3 y la tinaja (08 §4.1).");
+            }
+
+            if (present && !tinaja)
+            {
+                throw new LevelFormatException(where + ": una variante de relief solo lleva 'hidden' con la tinaja (su máscara); sin ella va sin dosis ocultas (08 §4.1).");
+            }
+
+            int[][] hidden = ReadHidden(entry, cuiaCount, tinaja, where);
+            if (tinaja && hidden.Length == 0)
+            {
+                throw new LevelFormatException(where + ": una variante de relief con la tinaja lleva su máscara en 'hidden' (08 §4.1; M13).");
+            }
+
+            return hidden;
         }
 
         // difficulty.label (08 §4.1): normal, hard o very_hard; sin etiqueta (subconjunto v0) es normal.
@@ -531,8 +647,8 @@ namespace AF.Levels
             return value.AsBool();
         }
 
-        // intro_mechanic (08 §4.1; contrato 21): null o una mecánica que se estrena; chica, alta, matapi y murky solo con
-        // pack_schema 2.
+        // intro_mechanic (08 §4.1; contrato 21): null o una mecánica que se estrena; chica, alta, matapi y murky solo desde
+        // pack_schema 2, y tinaja, liana_n, hoja_atada, brote_n2 y flor solo con el 3.
         private static string? ReadIntroMechanic(JsonValue node, int version, string where)
         {
             JsonValue? value = node.Get("intro_mechanic");
@@ -558,9 +674,19 @@ namespace AF.Levels
 
                     return intro;
                 }
+
+                if (Array.IndexOf(IntroMechanics3, intro) >= 0)
+                {
+                    if (version < TinajaPackSchema)
+                    {
+                        throw new LevelFormatException(where + ": 'intro_mechanic' " + intro + " necesita pack_schema 3 (D-019 y D-023, punto 5; contrato 21).");
+                    }
+
+                    return intro;
+                }
             }
 
-            throw new LevelFormatException(where + ": 'intro_mechanic' debe ser null o hoja, brote, liana, matapi, remolino, barro, lluvia, pirana, chica, alta o murky.");
+            throw new LevelFormatException(where + ": 'intro_mechanic' debe ser null o hoja, brote, liana, matapi, remolino, barro, lluvia, pirana, chica, alta, murky, tinaja, liana_n, hoja_atada, brote_n2 o flor.");
         }
 
         private static bool ReadOptionalBool(JsonValue node, string key, bool fallback, string where)
