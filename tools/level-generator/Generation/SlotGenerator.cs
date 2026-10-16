@@ -25,7 +25,14 @@ namespace AmazonFill.Tools.LevelGenerator.Generation;
 /// <summary>Configuración del tablero base de una etapa.</summary>
 internal sealed record StageConfig(
     int Stage, int K, int Empties, string Source, int[] Chicas, int AltaCap, bool Slack,
-    IReadOnlyList<MechanicInfo> Mechanics, IReadOnlyList<string> Notes, int DeepNodes);
+    IReadOnlyList<MechanicInfo> Mechanics, IReadOnlyList<string> Notes, int DeepNodes, bool SplitSlack = false)
+{
+    /// <summary>
+    /// Vacíos que deja la fuente: los de la etapa y las Cuias chicas y, con <see cref="SplitSlack"/>, uno más, el que la
+    /// holgura repartida (<see cref="SlotGenerator.SplitSlackPour"/>) convierte después en dos cuias a medias.
+    /// </summary>
+    public int SourceEmpties => Empties + Chicas.Length + (SplitSlack ? 1 : 0);
+}
 
 internal sealed class Candidate
 {
@@ -330,6 +337,8 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         }
         int deepNodes = InverseDeep.DefaultMaxNodes;
         bool mechanicDebut = plan.DebutBoard && plan.Mechanics.Count > 0;
+        // Hito de 14 cuias (K = 13 + 1 vacío desde el 561; 03 §11; d.5.1; QA-HITO-14): ni K ni el vacío se relajan.
+        bool hito14 = plan.Role == SlotRole.Milestone && k >= SpecValidator.HitoK;
         bool debutLike = plan.Ramp || (plan.DebutBoard && plan.Role == SlotRole.Comfort);
         switch (stage)
         {
@@ -341,6 +350,10 @@ internal sealed class SlotGenerator(CampaignSpec spec)
                 source = "deep";
                 deepNodes = stage == 1 ? RowShortDeepNodes : InverseDeep.DefaultMaxNodes;
                 notes.Add(stage == 1 ? "fila de 02 sec. 13: deep corto" : "fila de 02 sec. 13: deep");
+                break;
+            case 1 or 2 when hito14:
+                // Hito de 14 cuias: K y el vacío fijos (QA-HITO-14); la etapa reparte la holgura en cuias a medias (abajo).
+                notes.Add("hito de 14 cuias: K y vacio fijos (QA-HITO-14)");
                 break;
             case 1 or 2 when harder:
                 // Demasiado fácil: barajado inverso en profundidad (03 §4.2), más largo en la segunda etapa.
@@ -469,7 +482,7 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         }
 
         int extra = mechanicDebut ? Math.Max(0, occupying - 1)
-            : (hardSlot && (stage == 0 || harder)) || (!hardSlot && harder) ? Math.Max(0, occupying - standard)
+            : (hardSlot && (stage == 0 || harder || hito14)) || (!hardSlot && harder) ? Math.Max(0, occupying - standard)
             : occupying;
         int baseEmpties = standard + extra;
         // Cuia de holgura para tener cuias a medias: el Brote (también el de dos hojas) y las Aguas turbias la necesitan
@@ -507,6 +520,31 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             notes.Add("relajacion: K - 1 (tinaja: vacios fijos)");
         }
 
+        bool split = false;
+        if (hito14 && stage > 0 && !slack && baseEmpties > 0 && total <= 14 && !mechs.Any(m => m.Code is "Ho" or "Ll"))
+        {
+            // Relajación del hito de 14 cuias (P7d [P]): el vacío pasa a dos cuias a medias (SplitSlackPour). Así el Matapi
+            // y el Barro, que necesitan una cuia con hueco además del vacío del rol, caben con K = 13. La Hoja y la Lluvia
+            // necesitan el vacío de 4 entero: con ellas las etapas 1-2 repiten la 0 con otros intentos.
+            baseEmpties--;
+            slack = true;
+            split = true;
+            notes.Add("relajacion del hito de 14 cuias: holgura en cuias a medias");
+        }
+
+        if (total > 14 && slack && baseEmpties > 0 && mechs.Any(m => MechanicCodes.NeedsPartial(m.Code) || m.Code == "Tu"))
+        {
+            // Tope de 14 cuias (02 R1) con una mecánica que necesita cuias a medias (Brote, Brote de dos hojas, Aguas turbias):
+            // sin la cuia de holgura no habría ninguna (la fuente deja exactamente los vacíos pedidos y llena las demás), así
+            // que la cuia de holgura sustituye a un vacío y la holgura de ese vacío va repartida en cuias a medias (P7d [P]):
+            // el hito de 14 cuias, K = 13 + 1 vacío (03 §11; d.5.1-d.5.2; QA-HITO-14: holgura 4 sin el Barro), y los retos de
+            // K = 12 + 1 vacío + la cueva de la Piraña. Ningún nivel de 11-300 llega aquí (--self-test holgura y --check).
+            baseEmpties--;
+            total--;
+            split = true;
+            notes.Add("holgura en cuias a medias: la cuia de holgura sustituye a un vacio (tope de 14 cuias, 02 R1)");
+        }
+
         if (total > 14 && slack)
         {
             slack = false;
@@ -519,7 +557,70 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             return null;
         }
 
-        return new StageConfig(stage, k, baseEmpties, source, [.. chicas], alta, slack, mechs, notes, deepNodes);
+        return new StageConfig(stage, k, baseEmpties, source, [.. chicas], alta, slack, mechs, notes, deepNodes, split);
+    }
+
+    /// <summary>Sub-semilla del candidato para la holgura repartida (<see cref="SplitSlackPour"/>); 1-3 son la superposición,
+    /// los tintes y el orden visual.</summary>
+    public const ulong SplitSlackStream = 4;
+
+    /// <summary>
+    /// Holgura repartida en cuias a medias (P7d [P]; <see cref="StageConfig.SplitSlack"/>): sobre el tablero de la fuente, con
+    /// un vacío de 4 de más, vierte el tramo de la cima (1-3 dosis de un color, el tramo entero, como un vertido en `run` a
+    /// una cuia vacía) de una cuia llena al azar en ese vacío. Quedan dos cuias a medias, la de origen con 1-3 dosis y la de
+    /// destino con 1-3 dosis de un solo color: las del Brote, el Brote de dos hojas, el Matapi, las Aguas turbias y el hueco
+    /// del Barro. Es un vertido legal desde el tablero de la fuente, así que no cambia sus colores ni sus U_c; la solución la
+    /// comprueban después A*, el bot y LevelValidation, como en cualquier candidato. False si ninguna cuia llena tiene un
+    /// tramo de 1-3 dosis o no queda vacío de 4.
+    /// </summary>
+    internal static bool SplitSlackPour(GenBoard b, Prng rng)
+    {
+        int target = -1;
+        for (int i = b.Count - 1; i >= 0; i--)
+        {
+            if (b.Cuias[i].Count == 0 && b.Caps[i] == Cuia.DefaultCapacity)
+            {
+                target = i;
+                break;
+            }
+        }
+
+        var sources = new List<int>();
+        for (int i = 0; i < b.Count; i++)
+        {
+            List<int> c = b.Cuias[i];
+            if (b.Caps[i] == Cuia.DefaultCapacity && c.Count == Cuia.DefaultCapacity && RunLength(c) < Cuia.DefaultCapacity)
+            {
+                sources.Add(i);
+            }
+        }
+
+        if (target < 0 || sources.Count == 0)
+        {
+            return false;
+        }
+
+        List<int> from = b.Cuias[sources[rng.NextInt(sources.Count)]];
+        int run = RunLength(from);
+        for (int n = 0; n < run; n++)
+        {
+            b.Cuias[target].Add(from[^1]);
+            from.RemoveAt(from.Count - 1);
+        }
+
+        return true;
+    }
+
+    /// <summary>Dosis del tramo de la cima (las del mismo color seguidas desde arriba).</summary>
+    private static int RunLength(List<int> c)
+    {
+        int n = 0;
+        while (n < c.Count && c[c.Count - 1 - n] == c[^1])
+        {
+            n++;
+        }
+
+        return n;
     }
 
     /// <summary>Un candidato: base, superposición, tintes, orden visual, validación y bot. Null si se rechaza.</summary>
@@ -548,7 +649,7 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             caps.Add(Cuia.DefaultCapacity);
         }
 
-        int emptyTarget = config.Empties + config.Chicas.Length;
+        int emptyTarget = config.SourceEmpties;
         BoardState? baseState;
         int depth;
         // Retos e hitos desde el 41: deep y fill alternos por intento [P] (03 §4.4 admite las dos fuentes; dan D distintos y la
@@ -559,6 +660,13 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         bool tinaja = config.Mechanics.Any(m => m.Code == "Ti");
         string source = config.Source == "mixed" ? (attempt % 2 == 0 || needsPartial ? "deep" : "fill")
             : config.Source == "fill" && needsPartial ? "deep" : config.Source;
+        if (config.SplitSlack)
+        {
+            // Holgura repartida (P7d [P]): con walk. Con la holgura en cuias a medias y las mecánicas encima, el tablero de
+            // deep casi nunca tiene solución (580: 0 de 43 tableros con A*) y el de walk sí en algunos; el bot ya falla mucho
+            // en un tablero tan apretado.
+            source = "walk";
+        }
         try
         {
             switch (source)
@@ -604,6 +712,12 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         }
 
         GenBoard board = GenBoard.From(baseState);
+        if (config.SplitSlack && !SplitSlackPour(board, new Prng(Prng.SubSeed(seed, SplitSlackStream))))
+        {
+            why = "holgura repartida: ninguna cuia llena con un tramo de 1-3 dosis en la cima";
+            return null;
+        }
+
         var ctx = new SuperpositionContext
         {
             Plan = plan,

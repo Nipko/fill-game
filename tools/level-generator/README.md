@@ -17,7 +17,7 @@ ejecuciones den los mismos bytes.
 | `--parity [--report <md>]` | Paridad de las métricas con el prototipo (03 §17-§18; 09 R26) | `tools/out/parity_report.md` |
 | `--spec <campaign.json> [--levels a-b] [--variant a\|b] --out <carpeta> [--report <md>] [--curation <md> [--decisions <json>]] [--check]` | Genera la campaña (03 §2); sin `--levels`, todos los niveles de la especificación; `--curation`, el informe de curación para el dueño (P7a), con su decisión de `--decisions` | `Assets/_Project/Data/Levels/mundo_0N_v1.json`, `tools/out/campaign_v1_report.md` y `tools/out/curation_wNN.md` |
 | `--seasons <campaign.json> [...] --out <tabla.json> [--until <nivel>] [--check]` | Tabla de temporada del cliente (pregunta 32 b), hasta el último nivel publicado | `Assets/_Project/Data/Levels/seasons_v1.json` |
-| `--self-test [tinaja\|seasons\|variants\|registry\|curation]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
+| `--self-test [tinaja\|seasons\|variants\|registry\|curation\|holgura]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
 
@@ -303,6 +303,19 @@ Decisiones [P] de la generación (para revisar en la integración):
 - Un nivel turbio pide hasta 6 rondas más de candidatos turbios (sub-semillas desde el intento 11.000) antes de publicarse
   sin turbias (respaldo de T1, registrado en el informe y aviso QA-MECH-CELL).
 - Sin `par_approx`: la Piraña deja el par exacto (C3-2).
+- **Holgura repartida en cuias a medias** (P7d; `StageConfig.SplitSlack`, `SlotGenerator.SplitSlackPour`; `--self-test
+  holgura`). Con el tope de 14 cuias (02 R1), un nivel cuya celda necesita cuias a medias (Brote, Brote de dos hojas o Aguas
+  turbias) ya no pierde la cuia de holgura (sin ella la fuente deja los vacíos pedidos y llena las demás, así que el paso
+  de la mecánica no encuentra dónde ponerse): la cuia de holgura sustituye a un vacío. La fuente deja ese vacío y el
+  generador vierte en él el tramo de la cima (1-3 dosis de un color, el tramo entero) de una cuia llena al azar
+  (sub-semilla 4 del candidato): quedan dos cuias a medias, una con 1-3 dosis y otra con 1-3 dosis de un solo color (la
+  del Matapi). Es un vertido legal desde el tablero de la fuente; lo demás (A*, bot, `LevelValidation`) se comprueba como
+  en cualquier candidato. La fuente es `walk`: con `deep`, ninguno de los 43 tableros del 580 que se midieron tenía
+  solución. Se usa en los hitos de 14 cuias (K = 13 + 1 vacío: holgura 4 sin el Barro, QA-HITO-14) y en los retos de
+  K = 12 + 1 vacío + la cueva de la Piraña con el Brote (592 y 646). En un hito de 14 cuias ni K ni el vacío se relajan:
+  las etapas 1-2 reparten la holgura (salvo con la Hoja o la Lluvia, que necesitan el vacío de 4 entero) y las mecánicas
+  que ocupan un vacío usan el del hito, como en la etapa 0. Ningún slot de 11-300 llega a estos casos (los packs no
+  cambian; `--self-test holgura` lo comprueba con las configuraciones de todas las etapas).
 
 Diagnóstico: con la variable de entorno `LEVELGEN_TRACE=<nivel>` el generador traza por stderr cada candidato de ese
 nivel (fuente, K, vacíos, bot_fail, motivo del rechazo y milisegundos) y un resumen del slot. No cambia la salida.
@@ -406,6 +419,30 @@ La anota quien recoge la decisión del dueño (tech-lead) y se regenera el infor
 cambios, se cambian la especificación o el generador y se regeneran el pack, el informe y la comprobación de level-qa.
 
 `tools/out/curation_w06.md` es el del mundo 6; P7b-P7d escriben `curation_w07.md` a `curation_w09.md`.
+
+## Mundo 9: 561-700 (P7d; sin generar)
+
+El mundo 9 (Ucayali, `w09_ucayali` [P]) se generará con los mismos comandos que el 6, con `--levels 561-700`,
+`--curation tools/out/curation_w09.md` y, con la Tinaja en 574, 591, 631, 651 y 691, también la salida B (`--variant b`).
+Trae los hitos de 14 cuias (K = 13 + 1 vacío; 03 §11; d.5.1), que el generador construye con la holgura repartida en cuias
+a medias cuando la celda la necesita (decisión [P] de la generación, arriba; `--self-test holgura`).
+
+**Aún no hay pack** (2026-10-16): con `campaign_v2.json` tal como está, 4 de los 7 ciclos no tienen colocación. Cifras del
+equipo de escritorio (Release, `LEVELGEN_TRACE`):
+
+| Nivel | Celda | Qué pasa |
+|---|---|---|
+| 640 | Ma+Ba+Ho (MD; K = 13) | Ninguna etapa cabe en 14 cuias: la Hoja necesita el vacío de 4 entero (toda la holgura de K = 13) y el Matapi (vacío o 1-3 dosis de un color) y el Barro (hueco para la dosis desplazada) necesitan más. Es la aritmética de la celda, no de la búsqueda |
+| 615 | Li+Re (D) | 0 candidatos publicables de unos 600: 536 miden Muy difícil (no se publica en un reto D), 19 en ventana agotan A* (300.000, `fill` con 2 vacíos) y 12 en ventana tienen par < 2K (`walk`) |
+| 666 | Li+Ha (D) | Igual: 437 Muy difícil y 38 en ventana con par < 2K, de 589 tableros |
+| 678 | Ha+Re (D) | Igual: 525 Muy difícil, 23 en ventana con par < 2K y 10 que agotan A*, de 588 tableros |
+| 700 | Ma+Ha+B2 (MD; K = 13) | Con la holgura repartida salen tableros, pero los 133 que entran en la ventana no tienen solución (A*); los demás no dejan sitio al Brote de dos hojas |
+| 641-660 | — | Todos los slots tienen opciones, pero el escalón de D-009 no coloca (el 658, Ha+Re (D), solo tiene 2) |
+
+Con el 640 cambiado a `Ma+Ba (MD; K = 13)` (solo como prueba en una copia de la especificación; no se publica), los ciclos
+561-580, 581-600 y 621-640 colocan, con sus hitos de 14 cuias del 580, el 600 y el 640; los demás siguen sin colocación. Los
+retos de K = 12 de 601-700 miden casi todos Muy difícil (03 §4.4 solo prevé relajar el reto hacia `fill` con 2 vacíos). Lo que
+falta es del dueño y del tech-lead: la celda del 640 y el K o la relajación de esos retos (y el 700).
 
 ## Tinaja (M13; D-019, Q-Ti1 A; 03 §8 y §9; propuesta de la tinaja c.3)
 

@@ -30,7 +30,7 @@ const string Usage = """
       dotnet run --project tools/level-generator -- --registry <campaign.json> --out <registro.json> [--variant a|b] [--check]
       dotnet run --project tools/level-generator -- --parity [--report tools/out/parity_report.md]
       dotnet run --project tools/level-generator -- --seasons <campaign.json> [<campaign.json> ...] --out <tabla.json> [--until <nivel>] [--check]
-      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation]
+      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation|holgura]
       dotnet run --project tools/level-generator -- --help
 
     --validate-spec: comprueba la especificacion de la campana (specs/campaign_v1.json, 11-200, y campaign_v2.json,
@@ -72,7 +72,9 @@ const string Usage = """
       lista, fecha, sustituir o cambiar la celda sin note y nivel repetido) y el codigo 2 de --spec con uno de ellos;
       las filas de la tabla del dueno en 201-300 (sin generar tableros); el error por un nivel sin fila, el aviso por
       otra celda y las decisiones fuera de --levels ignoradas; la ultima columna y el estado (pendiente, aceptada y
-      anotada, con cambios pedidos). Desde la raiz del repositorio.
+      anotada, con cambios pedidos). "holgura" (P7d): la holgura repartida en cuias a medias del tope de 14 cuias
+      (SplitSlackPour sobre un tablero fijo y las etapas de los hitos de 14 cuias de 561-700 y de los retos con la cueva
+      de la Pirana y el Brote; ningun slot de 11-300 la usa). Desde la raiz del repositorio.
       Codigos: 0 = todo PASS; 1 = algun FAIL; 2 = uso o especificacion ilegible.
     --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
       niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)
@@ -130,7 +132,13 @@ if (args.Length >= 1 && args[0] == "--self-test")
         int variants = VariantsSelfTest.Run();
         int registry = RegistrySelfTest.Run();
         int curationTest = CurationSelfTest.Run();
-        return Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), curationTest);
+        int holgura = HolguraSelfTest.Run();
+        return Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), Math.Max(curationTest, holgura));
+    }
+
+    if (args.Length == 2 && args[1] == "holgura")
+    {
+        return HolguraSelfTest.Run();
     }
 
     if (args.Length == 2 && args[1] == "curation")
@@ -158,7 +166,7 @@ if (args.Length >= 1 && args[0] == "--self-test")
         return SeasonTableWriter.SelfTest();
     }
 
-    return UsageError("--self-test solo admite: tinaja, seasons, variants, registry o curation.");
+    return UsageError("--self-test solo admite: tinaja, seasons, variants, registry, curation u holgura.");
 }
 
 if (args.Length >= 1 && args[0] == "--seasons")
