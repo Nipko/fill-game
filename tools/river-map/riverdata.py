@@ -265,6 +265,21 @@ def final_fact_of(dato) -> dict | None:
 
 STOP_LISTS = (("paradas_1_200", 0, 19), ("paradas_201_700", 20, 69))
 
+# Alcance de los datos del Mapa: las paradas k = 0-41 (niveles 1-420, mundos 1-7; M4.5a). La investigacion ya detalla
+# k = 42-69 (mundos 8 y 9, M3.7c y M3.7d), pero sus legs (el Beni, el Mamore por la confluencia de Villa Bella, el
+# Itenez, el Madeira y el Ucayali), sus kind, flag_raise, preguntas, fondos y muestras, y el teotonio del viaje del 560
+# en el via de su leg, son de M4.5b (propuesta del Mapa §5.4 quater y quinquies, «Para M4.5b»), que sube este limite a
+# 69. Hasta entonces stops.py y geometry.py no leen ni comprueban esas paradas ni los puntos de paso de esos viajes.
+LAST_K_IN_MAP = 41
+
+
+def in_map_scope(record: dict) -> bool:
+    """False solo para una parada que la investigacion ya detalla pero que aun no entra en los datos del Mapa
+    (LAST_K_IN_MAP < k <= 69, la ultima k de paradas_201_700). Un registro sin k entera o con una k fuera de las listas
+    se deja pasar, para que stops.py lo rechace con su mensaje."""
+    k = record.get("k")
+    return not (isinstance(k, int) and not isinstance(k, bool) and LAST_K_IN_MAP < k <= STOP_LISTS[-1][2])
+
 
 def stop_list_of(k) -> str:
     """Nombre de la lista de la investigacion donde va la parada k (para los mensajes y el contexto de los textos)."""
@@ -276,22 +291,28 @@ def stop_list_of(k) -> str:
 
 def stop_records(source: dict) -> list:
     """Registros de las paradas de la investigacion (paradas_1_200 y paradas_201_700), en el orden de las listas; solo
-    los objetos (las entradas que no lo son las rechaza stops.py)."""
+    los objetos (las entradas que no lo son las rechaza stops.py) y solo los del alcance del Mapa (LAST_K_IN_MAP)."""
     out = []
     for name, _, _ in STOP_LISTS:
         items = source.get(name)
         if isinstance(items, list):
-            out.extend(r for r in items if isinstance(r, dict))
+            out.extend(r for r in items if isinstance(r, dict) and in_map_scope(r))
     return out
 
 
 def travel_passing_points(source: dict) -> list:
     """Puntos de paso de los viajes de entrada de 201-1.000 (paradas_201_1000[].puntos_de_paso_del_viaje) que llevan id:
     los que el Mapa dibuja (passing[] de river_map_v1.json; M4.5a: teotonio, el relevo del guia del viaje del 300, Q18-A y
-    P-M8). Los que no llevan id (Villa Bella, Cachuela Esperanza, Riberalta) son notas del resumen de su mundo."""
+    P-M8). Los que no llevan id (Villa Bella, Cachuela Esperanza, Riberalta) son notas del resumen de su mundo. Solo los
+    de los mundos cuyo primer nivel cae en el alcance del Mapa (LAST_K_IN_MAP): el teotonio del viaje del 560 (mundo 9)
+    es el mismo elemento de passing[] que el del 300 y lo cruza el leg de n = 56, que es de M4.5b."""
     out = []
     for world in source.get("paradas_201_1000", []) or []:
         if not isinstance(world, dict):
+            continue
+        levels = world.get("niveles")
+        first = levels[0] if isinstance(levels, list) and levels else None
+        if isinstance(first, int) and not isinstance(first, bool) and (first - 1) // 10 > LAST_K_IN_MAP:
             continue
         for p in world.get("puntos_de_paso_del_viaje", []) or []:
             if isinstance(p, dict) and isinstance(p.get("id"), str):
