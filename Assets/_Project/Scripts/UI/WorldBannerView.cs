@@ -1,6 +1,9 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using AF.GameFlow;
+using AF.Levels;
+using AF.Localization;
 using AF.Presentation;
 using TMPro;
 using UnityEngine;
@@ -168,12 +171,47 @@ namespace AF.UI
         /// <summary>Tamaño mínimo de la línea del lugar (sp).</summary>
         public const float PlaceMinSp = 15f;
 
+        /// <summary>Ancho de la franja del viaje de mundo (dp) [P] (M3.6), centrada bajo la cabecera.</summary>
+        public const float StripWidthDp = 296f;
+
+        /// <summary>Alto de la franja del viaje de mundo (dp) [P] (M3.6).</summary>
+        public const float StripHeightDp = 112f;
+
+        /// <summary>Tamaño de la pregunta del mundo sobre la franja (sp) [P]; baja hasta 12 si no cabe en 2 líneas.</summary>
+        public const float QuestionSp = 15f;
+
+        /// <summary>Tamaño del texto de «Ver mapa» (sp) [P].</summary>
+        public const float MapButtonSp = 16f;
+
+        /// <summary>Ancho mínimo de «Ver mapa» (dp) [P].</summary>
+        public const float MapButtonMinWidthDp = 168f;
+
+        /// <summary>Lado mínimo de un control (07 §1.2 y §7.8): el alto táctil de «Ver mapa».</summary>
+        public const float MinTouchDp = 48f;
+
+        /// <summary>
+        /// El viaje empieza a los <see cref="TravelDelayMs"/> de entrar la tarjeta (ms) [P], cuando ya se ve entera y Capi empieza a
+        /// presentar.
+        /// </summary>
+        public const float TravelDelayMs = 250f;
+
+        /// <summary>
+        /// Lo que tarda la canoa en recorrer el tramo de la gran parada (ms) [P]: lo que deja el tope de
+        /// <see cref="MapConfig.WorldTravelInBannerMaxMs"/> (≤ 4 s, D-013, punto 7) tras <see cref="TravelDelayMs"/> y el izado de
+        /// <see cref="MapConfig.FlagRaiseMs"/>, así que el viaje entero cabe siempre en el tope.
+        /// </summary>
+        public const float CanoeTravelMs = MapConfig.WorldTravelInBannerMaxMs - TravelDelayMs - MapConfig.FlagRaiseMs;
+
         private const float PadDp = 16f;
         private const float HeaderDp = 40f;
         private const float TitleInsetDp = 8f;
         private const float FitSlackDp = 4f;
         private const float SceneEdgeDp = 2f;
         private const float PopFrom = 0.92f;
+        private const float QuestionGapDp = 4f;
+        private const float StripGapDp = 8f;
+        private const float MapButtonGapDp = 8f;
+        private const float MapButtonPadDp = 20f;
 
         private readonly ProceduralArt _art;
         private readonly Action _onTap;
@@ -198,6 +236,14 @@ namespace AF.UI
         private readonly RectTransform _capi;
         private readonly Image _paw;
         private readonly TextMeshProUGUI _place;
+        private readonly TextMeshProUGUI _question;
+        private readonly BannerTravelStrip _strip;
+        private readonly ReliefParts _mapButton;
+        private readonly TextMeshProUGUI _mapLabel;
+        private readonly Action? _onMap;
+        private BannerTravel? _travel;
+        private bool _travelSkipped;
+        private float _mapButtonW;
         private int _world;
         private float _fontScale = 1f;
         private float _cardW;
@@ -231,13 +277,15 @@ namespace AF.UI
         private float _rosaRise;
 
         /// <summary>
-        /// Crea el banner, oculto, bajo <paramref name="parent"/>; <paramref name="onTap"/> recibe el toque. No pide ningún arte
-        /// (las mascotas y la viñeta se generan al abrirlo, <see cref="Show"/>).
+        /// Crea el banner, oculto, bajo <paramref name="parent"/>; <paramref name="onTap"/> recibe el toque y
+        /// <paramref name="onMap"/>, «Ver mapa» del viaje de mundo (M3.6; sin él, el botón no hace nada). No pide ningún arte
+        /// (las mascotas y la viñeta se generan al abrirlo, <see cref="Show"/>) ni construye ninguna malla del viaje.
         /// </summary>
-        public WorldBannerView(Transform parent, ProceduralArt art, Action onTap)
+        public WorldBannerView(Transform parent, ProceduralArt art, Action onTap, Action? onMap = null)
         {
             _art = art;
             _onTap = onTap ?? throw new ArgumentNullException(nameof(onTap));
+            _onMap = onMap;
             _root = UiBuilder.Rect("WorldBanner", parent);
             _group = _root.gameObject.AddComponent<CanvasGroup>();
             _dim = ModalKit.Dim("Dim", _root, DimAlpha);
@@ -275,6 +323,18 @@ namespace AF.UI
 
             _place = ModalKit.Line("Place", _panel, string.Empty, PlaceSp, Palette.FamilyWood.Deep);
             _place.enableAutoSizing = false;
+
+            // El viaje de mundo (M3.6; Q4-D): la pregunta del mundo, la franja del Mapa con su tramo y «Ver mapa». Ocultos sin
+            // viaje; las mallas de la franja, solo al abrir un banner con viaje.
+            _question = ModalKit.Line("WorldQuestion", _panel, string.Empty, QuestionSp, Palette.FamilyWood.Deep);
+            _question.gameObject.SetActive(false);
+            _strip = new BannerTravelStrip(_panel, art);
+            _mapButton = UiBuilder.Relief("MapButton", _panel, art.CtaWood, OnMapPressed);
+            _mapLabel = UiBuilder.Label("Label", _mapButton.Face, TextStyle.PillWood, UiText.MapOpen, MapButtonSp, Palette.Cream, TextAlignmentOptions.Center);
+            UiBuilder.PlaceCtaLabel(_mapLabel.rectTransform, art.CtaWood);
+            UiBuilder.AutoSize(_mapLabel, UiBuilder.MinTextSp, MapButtonSp);
+            _mapButton.Relief.Bind(_mapButton.Face, _mapButton.Base, _mapButton.FaceImage, art.CtaWood, null, null, _mapLabel);
+            ShowMapButton(false);
             _root.gameObject.SetActive(false);
         }
 
@@ -423,6 +483,74 @@ namespace AF.UI
         /// <summary>Contenedor que escala la tarjeta en la entrada y en la salida (tests).</summary>
         public RectTransform Pop => _pop;
 
+        /// <summary>Viaje de mundo del banner abierto (M3.6), o null: el banner de siempre.</summary>
+        public BannerTravel? Travel => Visible ? _travel : null;
+
+        /// <summary>
+        /// Lo que dura el viaje del banner abierto desde que entra la tarjeta (ms; <c>travel_ms</c> de la sonda): la espera, la
+        /// canoa y, si se iza, la bandera (≤ <see cref="MapConfig.WorldTravelInBannerMaxMs"/>); con Reducir movimiento, el
+        /// fundido de <see cref="MapConfig.ReducedMotionFadeMs"/>; 0 sin viaje.
+        /// </summary>
+        public float TravelMs
+        {
+            get
+            {
+                if (Travel == null)
+                {
+                    return 0f;
+                }
+
+                if (_reduceMotion)
+                {
+                    return MapConfig.ReducedMotionFadeMs;
+                }
+
+                return TravelDelayMs + CanoeTravelMs + (_strip.FlagSprite != null ? MapConfig.FlagRaiseMs : 0f);
+            }
+        }
+
+        /// <summary>El viaje del banner abierto está en marcha: el próximo toque lo completa en vez de cerrar (M3.6).</summary>
+        public bool TravelRunning => Travel != null && CardShown && !_dismissing && !_travelSkipped && _ms < TravelMs;
+
+        /// <summary>El viaje del banner abierto terminó (o se completó con un toque).</summary>
+        public bool TravelDone => Travel != null && CardShown && (_travelSkipped || _ms >= TravelMs);
+
+        /// <summary>
+        /// Bandera que iza la canoa del viaje abierto (ISO2 de <c>flag_raise</c>), solo si se pinta: con su PNG oficial o, con
+        /// <see cref="MapArtRule"/>, la simplificada (<see cref="ProceduralArt.MapFlag"/>); null si no hay (o en release sin
+        /// el PNG).
+        /// </summary>
+        public string? TravelFlag => Travel != null && _strip.FlagSprite != null ? Travel.Flag : null;
+
+        /// <summary>La franja del viaje (tests: medidas, solapes y la posición de la canoa).</summary>
+        public BannerTravelStrip TravelStrip => _strip;
+
+        /// <summary>Pregunta del mundo sobre la franja (tests; inactiva sin viaje o sin pregunta).</summary>
+        public TextMeshProUGUI QuestionLabel => _question;
+
+        /// <summary>«Ver mapa» (tests; inactivo y sin recibir toques sin viaje).</summary>
+        public Button MapButton => _mapButton.Button;
+
+        /// <summary>Texto de «Ver mapa» (tests).</summary>
+        public TextMeshProUGUI MapButtonLabel => _mapLabel;
+
+        /// <summary>
+        /// Completa el viaje (el primer toque, o «Ver mapa»): la canoa en la gran parada, la bandera izada y la entrada entera,
+        /// quieto en el acto. Sin efecto sin viaje en marcha.
+        /// </summary>
+        public void CompleteTravel()
+        {
+            if (Travel == null || !CardShown || _dismissing || _travelSkipped)
+            {
+                return;
+            }
+
+            _travelSkipped = true;
+            _ms = Mathf.Max(_ms, Mathf.Max(SettleMs(), TravelMs));
+            Apply();
+            _settled = true;
+        }
+
         /// <summary>Duración de la salida (ms): la que el flujo espera antes de la tarjeta previa o la intro.</summary>
         public static float ExitDurationMs(bool reduceMotion)
         {
@@ -461,14 +589,21 @@ namespace AF.UI
         /// pantalla de <paramref name="canvasW"/> × <paramref name="canvasH"/> dp con la zona segura dada; entra con un fundido,
         /// Rosa asoma y Capi presenta (todo quieto con <paramref name="reduceMotion"/>). Aquí se pide el arte (si no se pidió
         /// antes con <see cref="Prefetch"/>) y empieza a contar su tiempo límite; si no está, sale solo el velo
-        /// (<see cref="Waiting"/>) hasta que llega o hasta el respaldo.
+        /// (<see cref="Waiting"/>) hasta que llega o hasta el respaldo. Con <paramref name="travel"/>, el viaje de mundo dentro
+        /// (M3.6; Q4-D): la pregunta, la franja del Mapa con el tramo de la gran parada y «Ver mapa»; sin él, el banner de siempre.
         /// </summary>
-        public void Show(int world, Color water, bool reduceMotion, float canvasW, float canvasH, float safeTop, float safeBottom)
+        public void Show(int world, Color water, bool reduceMotion, float canvasW, float canvasH, float safeTop, float safeBottom, BannerTravel? travel = null)
         {
             _world = world;
             _text = UiText.WorldBanner(world);
             _water = water;
             _reduceMotion = reduceMotion;
+            _travel = travel;
+            _travelSkipped = false;
+            if (travel != null)
+            {
+                SetText(_mapLabel, UiText.MapOpen); // el idioma de ahora (Ajustes puede cambiarlo entre dos banners)
+            }
             _root.gameObject.SetActive(true);
             _dismissing = false;
             _entered = false;
@@ -500,16 +635,17 @@ namespace AF.UI
         /// Pide ya, con el banner cerrado, el arte del banner del mundo <paramref name="world"/> que se abrirá en una pantalla de
         /// <paramref name="canvasW"/> dp de ancho (la victoria del nivel anterior o «Jugar» en el inicio; GameScreen): con las
         /// mismas medidas que <see cref="Show"/>, así que la petición de Show es la misma y el arte, pintado en otro hilo mientras
-        /// tanto, ya está al abrirlo. Sin efecto con el banner abierto. No crea ninguna textura (eso, al abrirlo).
+        /// tanto, ya está al abrirlo. Sin efecto con el banner abierto. No crea ninguna textura (eso, al abrirlo). Con
+        /// <paramref name="travel"/>, el del viaje que llevará (la tarjeta es más alta y la viñeta puede cambiar de alto).
         /// </summary>
-        public void Prefetch(int world, Color water, float canvasW)
+        public void Prefetch(int world, Color water, float canvasW, BannerTravel? travel = null)
         {
             if (Visible || world <= 0)
             {
                 return;
             }
 
-            Measure(world, canvasW, out float cardW, out float inner, out _, out float sceneH, out _, out float cardH);
+            Measure(world, canvasW, travel, out float cardW, out float inner, out _, out _, out float sceneH, out _, out _, out float cardH);
             _art.RequestBannerArt(inner, sceneH, water, MeetingWater(world), world, true, cardW - 16f, ModalKit.SharedSurfaceHeight(cardH - 16f));
         }
 
@@ -529,9 +665,31 @@ namespace AF.UI
             }
 
             float y = PadDp;
-            Measure(_world, canvasW, out float cardW, out float inner, out float headerH, out float sceneH, out float placeH, out float cardH);
+            Measure(_world, canvasW, _travel, out float cardW, out float inner, out float headerH, out float questionH, out float sceneH, out float placeH,
+                out float buttonH, out float cardH);
             UiBuilder.Place(_header.rectTransform, PadDp, y, inner, headerH);
             y += headerH + 8f;
+
+            // El viaje (M3.6): la pregunta del mundo encima y la franja del Mapa, bajo la cabecera y antes de la viñeta.
+            SetActive(_question.gameObject, _travel != null && questionH > 0f);
+            if (_travel != null)
+            {
+                if (questionH > 0f)
+                {
+                    UiBuilder.Place(_question.rectTransform, PadDp, y, inner, questionH);
+                    y += questionH + QuestionGapDp;
+                }
+
+                float stripW = Mathf.Min(StripWidthDp, inner);
+                _strip.Place(PadDp + ((inner - stripW) * 0.5f), y, stripW, StripHeightDp);
+                _strip.Build(_travel, _reduceMotion);
+                y += StripHeightDp + StripGapDp;
+            }
+            else
+            {
+                _strip.Hide();
+            }
+
             float sceneY = y;
             _sceneW = inner;
             _sceneH = sceneH;
@@ -553,6 +711,17 @@ namespace AF.UI
 
             y += sceneH + 10f;
             UiBuilder.Place(_place.rectTransform, PadDp, y, inner, placeH);
+            y += placeH;
+
+            // «Ver mapa», centrado bajo la línea del lugar, con su alto táctil de 48 dp y la cara del botón de madera centrada.
+            ShowMapButton(_travel != null);
+            if (_travel != null)
+            {
+                float face = _art.CtaWood.HeightDp;
+                UiBuilder.Place((RectTransform)_mapButton.Button.transform, PadDp + ((inner - _mapButtonW) * 0.5f), y + MapButtonGapDp, _mapButtonW, buttonH);
+                RectTransform visual = (RectTransform)_mapButton.Face.parent;
+                visual.anchoredPosition = new Vector2(0f, -Mathf.Max(0f, (buttonH - face) * 0.5f));
+            }
 
             // Rosa: recortada en la línea del agua; su pie (pivote) baja hasta que solo asoma RosaAbove de su alto. La espuma,
             // centrada en la línea del agua sobre el corte del lomo.
@@ -661,6 +830,11 @@ namespace AF.UI
             _cardShownFired = false;
             _veilEarly = false;
             _world = 0;
+            _travel = null;
+            _travelSkipped = false;
+            _strip.Hide();
+            SetActive(_question.gameObject, false);
+            ShowMapButton(false);
             _group.alpha = 1f;
             _popGroup.alpha = 1f;
             _pop.localScale = Vector3.one;
@@ -736,10 +910,17 @@ namespace AF.UI
             }
 
             Apply();
-            if (!_dismissing && _ms >= (_reduceMotion || _fallback != null ? FadeInMs : EnterMs))
+            if (!_dismissing && (_ms >= SettleMs() || _travelSkipped))
             {
-                _settled = true; // Apply acaba de pintar el estado final de la entrada
+                _settled = true; // Apply acaba de pintar el estado final de la entrada (y del viaje)
             }
+        }
+
+        // Desde cuándo (ms desde que entra la tarjeta) todo queda quieto: el fin de la entrada y, con viaje, el fin del viaje.
+        private float SettleMs()
+        {
+            float entry = _reduceMotion || _fallback != null ? FadeInMs : EnterMs;
+            return _travel != null ? Mathf.Max(entry, TravelMs) : entry;
         }
 
         // Si el arte pedido al abrirlo ya está (en el acto o pintado en otro hilo), lo pone y empieza la entrada desde t = 0; si
@@ -876,6 +1057,8 @@ namespace AF.UI
             {
                 _paw.sprite = _art.CapiPaw;
             }
+
+            _strip.SetGuideSprite(_rosa.sprite); // el guía de la franja, con el mismo sprite de Rosa ya pintado (sin él, sin guía)
         }
 
         // Al cerrarse: fuera las referencias y el arte del banner (cada banner sale una vez por mundo; el siguiente lo genera).
@@ -887,6 +1070,7 @@ namespace AF.UI
             _foam.sprite = null;
             _spray.sprite = null;
             _paw.sprite = null;
+            _strip.SetGuideSprite(null);
             _art.ReleaseBannerArt();
         }
 
@@ -925,6 +1109,12 @@ namespace AF.UI
             _group.alpha = veil;
             _popGroup.alpha = card;
             _pop.localScale = new Vector3(k, k, 1f);
+            if (_travel != null)
+            {
+                // El viaje (M3.6): completado, en su estado final; si no, en el instante ms (también con el respaldo).
+                _strip.Apply(_travelSkipped ? float.MaxValue : ms, _reduceMotion);
+            }
+
             if (_fallback != null)
             {
                 return; // sin Rosa ni Capi
@@ -990,7 +1180,10 @@ namespace AF.UI
         // (así el nombre del mundo nunca pesa menos que su número); parte el lugar en 1 o 2 líneas; y devuelve el ancho de la
         // tarjeta, el interior, el alto de la cabecera (crece con su título, 02 §12: «los contenedores crecen»), el de la viñeta,
         // el de la línea del lugar y el de la tarjeta.
-        private void Measure(int world, float canvasW, out float cardW, out float inner, out float headerH, out float sceneH, out float placeH, out float cardH)
+        // Con el viaje (travel, M3.6), además: la pregunta del mundo (questionH; 0 sin texto), la franja de StripHeightDp bajo ella
+        // y «Ver mapa» bajo el lugar (buttonH), y la tarjeta crece con ellos (la viñeta solo llega al alto mínimo si aún falta).
+        private void Measure(int world, float canvasW, BannerTravel? travel, out float cardW, out float inner, out float headerH, out float questionH,
+            out float sceneH, out float placeH, out float buttonH, out float cardH)
         {
             float s = _fontScale;
             cardW = Mathf.Min(LevelCardView.MaxWidthDp, canvasW - (2f * LevelCardView.SideMarginDp));
@@ -1015,9 +1208,51 @@ namespace AF.UI
             FitPlace(world, !_nameInTitle, inner - FitSlackDp, s);
             placeH = Mathf.Ceil(_place.GetPreferredValues(_place.text, inner, float.PositiveInfinity).y) + 2f;
             float sceneY = PadDp + headerH + 8f;
-            float rest = SceneDp + 10f + placeH + PadDp + 4f;
+            questionH = 0f;
+            buttonH = 0f;
+            if (travel != null)
+            {
+                questionH = FitQuestion(travel.QuestionText, inner, s);
+                sceneY += (questionH > 0f ? questionH + QuestionGapDp : 0f) + StripHeightDp + StripGapDp;
+                _mapLabel.fontSize = MapButtonSp * s;
+                _mapLabel.fontSizeMax = MapButtonSp * s;
+                float labelW = WidthOf(_mapLabel, _mapLabel.text);
+                _mapButtonW = Mathf.Min(inner, Mathf.Max(MapButtonMinWidthDp, Mathf.Ceil(labelW + (2f * MapButtonPadDp))));
+                buttonH = Mathf.Max(MinTouchDp, _art.CtaWood.HeightDp);
+            }
+
+            float tail = 10f + placeH + (buttonH > 0f ? MapButtonGapDp + buttonH : 0f) + PadDp + 4f;
+            float rest = SceneDp + tail;
             sceneH = SceneDp + Mathf.Max(0f, MinHeightDp - (sceneY + rest));
-            cardH = Mathf.Ceil(sceneY + sceneH + 10f + placeH + PadDp + 4f);
+            cardH = Mathf.Ceil(sceneY + sceneH + tail);
+        }
+
+        // La pregunta del mundo (map_world_question) sobre la franja, centrada, en 1 o 2 líneas de 15 sp por la escala, o más
+        // pequeña hasta 12 si no cabe (02 §12): devuelve su alto, o 0 sin texto. Asigna (TMP), pero solo al colocar el banner.
+        private float FitQuestion(string text, float inner, float scale)
+        {
+            if (text.Length == 0)
+            {
+                SetText(_question, string.Empty);
+                return 0f;
+            }
+
+            SetText(_question, text);
+            _question.enableAutoSizing = false;
+            float sp = QuestionSp * scale;
+            float min = Mathf.Max(UiBuilder.MinTextSp, UiBuilder.MinTextSp * scale);
+            for (; sp > min; sp -= 1f)
+            {
+                _question.fontSize = sp;
+                float oneLine = _question.GetPreferredValues("Á", float.PositiveInfinity, float.PositiveInfinity).y;
+                if (_question.GetPreferredValues(text, inner, float.PositiveInfinity).y <= (2f * oneLine) + 1f)
+                {
+                    break; // 2 líneas como mucho
+                }
+            }
+
+            _question.fontSize = Mathf.Max(sp, min);
+            return Mathf.Ceil(_question.GetPreferredValues(text, inner, float.PositiveInfinity).y) + 2f;
         }
 
         private static void SetActive(GameObject go, bool active)
@@ -1087,6 +1322,28 @@ namespace AF.UI
             }
         }
 
+        // «Ver mapa» (M3.6): solo con la tarjeta a la vista y sin salir; quien abre el Mapa (GameScreen) completa antes el viaje.
+        private void OnMapPressed()
+        {
+            if (Visible && CardShown && !_dismissing && _travel != null)
+            {
+                _onMap?.Invoke();
+            }
+        }
+
+        // «Ver mapa» a la vista y recibiendo toques, o fuera (inactivo y sin recibir toques: sin viaje, el velo es lo único que los
+        // recibe, como siempre).
+        private void ShowMapButton(bool on)
+        {
+            GameObject go = _mapButton.Button.gameObject;
+            SetActive(go, on);
+            Graphic? hit = _mapButton.Button.targetGraphic;
+            if (hit != null && hit.raycastTarget != on)
+            {
+                hit.raycastTarget = on;
+            }
+        }
+
         private static void Center(RectTransform rt, float x, float yFromTop, float w, float h)
         {
             rt.anchorMin = new Vector2(0f, 1f);
@@ -1108,6 +1365,908 @@ namespace AF.UI
         private static float WidthOf(TextMeshProUGUI t, string text)
         {
             return t.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x;
+        }
+    }
+
+    /// <summary>
+    /// Viaje de mundo dentro del banner (D-013, punto 7; Q4-D; 02 §6, fila Banner de mundo; propuesta del Mapa §4.2, §5.3 y §6.1;
+    /// tarea M3.6), ya resuelto contra los datos del Mapa: el tramo (<c>leg</c>) de la gran parada del mundo que abre el nivel,
+    /// desde la parada anterior, con su largo por agua, sus puntos de paso, la bandera que iza la canoa al llegar
+    /// (<c>flag_raise</c>), la pregunta del mundo (<c>map_world_question</c>), el guía de cada lado (<see cref="RiverJourney.GuideFor"/>)
+    /// y, si cambia, su relevo en el punto de paso <see cref="RelayPassingId"/> (P-M8 de D-023), y el agua que ya llena el Mapa
+    /// (<see cref="RiverMapScreen.ComputeFill"/> con el tramo entero). Inmutable; se construye al pedir o abrir el banner, nunca
+    /// por fotograma (<see cref="For"/>), y <see cref="PointAt"/> no asigna memoria.
+    /// </summary>
+    internal sealed class BannerTravel
+    {
+        /// <summary>Punto de paso del relevo del guía (P-M8: los rápidos de Teotônio; propuesta del Mapa §6.1, Q18-A).</summary>
+        public const string RelayPassingId = "teotonio";
+
+        private readonly float[] _pieceStart;
+        private readonly float[] _pieceLength;
+        private readonly string[] _passingIds;
+        private readonly string[] _passingNames;
+        private readonly float[] _passingFractions;
+        private readonly float[] _fillFrom;
+
+        private BannerTravel(int level, int world, RiverMap map, RiverStopRoute route, RiverStop stop, RiverStop from, float[] pieceStart,
+            float[] pieceLength, float length, string questionText, float relay, string[] passingIds, string[] passingNames, float[] passingFractions,
+            float[] fillFrom)
+        {
+            Level = level;
+            World = world;
+            Map = map;
+            Route = route;
+            Stop = stop;
+            From = from;
+            _pieceStart = pieceStart;
+            _pieceLength = pieceLength;
+            LengthUnits = length;
+            QuestionText = questionText;
+            GuideFrom = RiverJourney.GuideFor(from.World);
+            GuideTo = RiverJourney.GuideFor(stop.World);
+            RelayFraction = string.Equals(GuideFrom, GuideTo, StringComparison.Ordinal) ? -1f : relay;
+            _passingIds = passingIds;
+            _passingNames = passingNames;
+            _passingFractions = passingFractions;
+            _fillFrom = fillFrom;
+        }
+
+        /// <summary>Nivel que abre el banner (el primero del mundo).</summary>
+        public int Level { get; }
+
+        /// <summary>Mundo del banner (<see cref="WorldBanners.WorldAt"/>).</summary>
+        public int World { get; }
+
+        /// <summary>Geometría del Mapa.</summary>
+        public RiverMap Map { get; }
+
+        /// <summary>Ruta de la gran parada (su <c>leg</c>).</summary>
+        public RiverStopRoute Route { get; }
+
+        /// <summary>Gran parada a la que llega la canoa (la del nivel).</summary>
+        public RiverStop Stop { get; }
+
+        /// <summary>Parada de salida (la anterior).</summary>
+        public RiverStop From { get; }
+
+        /// <summary>Largo del tramo por agua (unidades del marco, W = 1).</summary>
+        public float LengthUnits { get; }
+
+        /// <summary>Bandera que se iza al llegar (ISO2 de <c>flag_raise</c>), o null si no cambia de país.</summary>
+        public string? Flag => Stop.FlagRaise;
+
+        /// <summary>«{mundo} · {pregunta}» (<c>map_world_question</c>), o "" si el mundo no tiene pregunta o su texto no se muestra.</summary>
+        public string QuestionText { get; }
+
+        /// <summary>Guía de la parada de salida (<see cref="RiverJourney.GuideRosa"/> o <see cref="RiverJourney.GuideBufeo"/>).</summary>
+        public string GuideFrom { get; }
+
+        /// <summary>Guía de la gran parada.</summary>
+        public string GuideTo { get; }
+
+        /// <summary>
+        /// Fracción del tramo (0-1, por largo de arco) en la que se relevan los guías: la del punto de paso
+        /// <see cref="RelayPassingId"/> si el tramo lo pasa; 0 (al salir) si cambia el guía y el tramo no lo pasa [P]; −1 si el guía
+        /// no cambia.
+        /// </summary>
+        public float RelayFraction { get; }
+
+        /// <summary>Hay relevo del guía en este tramo.</summary>
+        public bool HasRelay => RelayFraction >= 0f;
+
+        /// <summary>Puntos de paso del tramo con nombre que mostrar, en orden.</summary>
+        public int PassingCount => _passingIds.Length;
+
+        /// <summary>
+        /// Lo que ya está lleno del Mapa al abrir el banner, por línea (la s desde la que va llena hasta su boca, o
+        /// <see cref="RiverMapScreen.NoFill"/>): el lleno de <c>max_level</c> = nivel − 1 con el tramo de la gran parada entero.
+        /// No lo modifiques.
+        /// </summary>
+        public float[] FillFrom => _fillFrom;
+
+        /// <summary>
+        /// Viaje del banner del nivel <paramref name="level"/> con estos datos, o null (el banner de siempre): sin datos, si el
+        /// nivel no abre un mundo con banner desde el 2, si su parada no existe o es la primera, o si su tramo no tiene largo. No
+        /// mira <c>ui_map_autopen</c> ni el 11 (<see cref="MapMoments.TravelInBanner"/>, que aplica quien lo pide). Asigna (los
+        /// textos y las tablas), así que solo al pedir o abrir el banner.
+        /// </summary>
+        public static BannerTravel? For(int level, RiverMap? map, RiverRoutes? routes, RiverStopCatalog? stops)
+        {
+            int world = WorldBanners.WorldAt(level);
+            if (world == 0 || map == null || routes == null || stops == null)
+            {
+                return null;
+            }
+
+            RiverStop? stop = stops.StopOf(level);
+            RiverStopRoute? route = stop != null && stop.N >= 1 ? routes.At(stop.N) : null;
+            RiverStop? from = stop != null ? stops.At(stop.N - 1) : null;
+            if (stop == null || route == null || from == null)
+            {
+                return null;
+            }
+
+            IReadOnlyList<RiverPathPiece> path = route.Path;
+            var start = new float[path.Count];
+            var length = new float[path.Count];
+            float total = 0f;
+            for (int i = 0; i < path.Count; i++)
+            {
+                RiverPathPiece piece = path[i];
+                start[i] = total;
+                length[i] = Mathf.Abs(piece.S1 - piece.S0) * map.Lines[piece.Line].Length;
+                total += length[i];
+            }
+
+            if (total <= 0f)
+            {
+                return null; // sin largo, nada que recorrer
+            }
+
+            // La pregunta del mundo, solo con texto (sin el visto bueno del asesor, en release es "": sin pregunta).
+            string question = stop.WorldQuestion != null ? Loc.Fact(stop.WorldQuestion) : string.Empty;
+            string questionText = question.Length > 0 ? UiText.MapWorldQuestion(world, question) : string.Empty;
+
+            // Los puntos de paso del tramo, por su posición en él; el de Teotônio, además, para el relevo.
+            float relay = 0f;
+            var ids = new List<string>();
+            var names = new List<string>();
+            var fractions = new List<float>();
+            IReadOnlyList<string> via = route.Via;
+            for (int v = 0; v < via.Count; v++)
+            {
+                RiverPassingPoint? point = map.PassingPoint(via[v]);
+                if (point == null || !TryFraction(path, start, length, total, point.At, out float fraction))
+                {
+                    continue;
+                }
+
+                if (string.Equals(point.Id, RelayPassingId, StringComparison.Ordinal))
+                {
+                    relay = fraction;
+                }
+
+                string name = Loc.Fact(point.NameKey);
+                if (name.Length > 0)
+                {
+                    ids.Add(point.Id);
+                    names.Add(name);
+                    fractions.Add(fraction);
+                }
+            }
+
+            // El Mapa ya lleno hasta el nivel anterior (la llegada a la gran parada fue al ganarlo), con el tramo entero.
+            var fill = new float[map.Lines.Count];
+            RiverMapScreen.ComputeFill(map, routes, Mathf.Max(0, level - 1), fill);
+            for (int i = 0; i < path.Count; i++)
+            {
+                RiverPathPiece piece = path[i];
+                if (piece.S0 != piece.S1)
+                {
+                    fill[piece.Line] = Mathf.Min(fill[piece.Line], Mathf.Clamp01(Mathf.Min(piece.S0, piece.S1)));
+                }
+            }
+
+            return new BannerTravel(level, world, map, route, stop, from, start, length, total, questionText, relay, ids.ToArray(), names.ToArray(),
+                fractions.ToArray(), fill);
+        }
+
+        /// <summary>Id del punto de paso <paramref name="i"/>.</summary>
+        public string PassingId(int i)
+        {
+            return _passingIds[i];
+        }
+
+        /// <summary>Nombre (ya en el idioma) del punto de paso <paramref name="i"/>.</summary>
+        public string PassingName(int i)
+        {
+            return _passingNames[i];
+        }
+
+        /// <summary>Fracción del tramo en la que está el punto de paso <paramref name="i"/>.</summary>
+        public float PassingFraction(int i)
+        {
+            return _passingFractions[i];
+        }
+
+        /// <summary>Guía que va delante en la fracción <paramref name="fraction"/> del tramo: el de salida antes del relevo.</summary>
+        public string GuideAt(float fraction)
+        {
+            return HasRelay && fraction < RelayFraction ? GuideFrom : GuideTo;
+        }
+
+        /// <summary>
+        /// Punto del tramo a la fracción <paramref name="fraction"/> (0-1, por largo de arco), en unidades del marco, por sus
+        /// piezas en orden (también las que remontan). Sin asignaciones.
+        /// </summary>
+        public Vector2 PointAt(float fraction)
+        {
+            IReadOnlyList<RiverPathPiece> path = Route.Path;
+            float target = Mathf.Clamp01(fraction) * LengthUnits;
+            for (int i = 0; i < path.Count; i++)
+            {
+                float len = _pieceLength[i];
+                if (target <= _pieceStart[i] + len || i == path.Count - 1)
+                {
+                    RiverPathPiece piece = path[i];
+                    float t = len > 0f ? Mathf.Clamp01((target - _pieceStart[i]) / len) : 1f;
+                    Map.Lines[piece.Line].PointAt(piece.S0 + ((piece.S1 - piece.S0) * t), out float x, out float y);
+                    return new Vector2(x, y);
+                }
+            }
+
+            return RiverMapScreen.PlacePoint(Map, Route.At);
+        }
+
+        // Fracción del tramo en la que está el punto place: en la primera pieza de su línea que lo cubre (con un margen mínimo
+        // por el redondeo de los datos).
+        private static bool TryFraction(IReadOnlyList<RiverPathPiece> path, float[] start, float[] length, float total, RiverMapPlace place, out float fraction)
+        {
+            const float slack = 1e-4f;
+            for (int i = 0; i < path.Count; i++)
+            {
+                RiverPathPiece piece = path[i];
+                float lo = Mathf.Min(piece.S0, piece.S1);
+                float hi = Mathf.Max(piece.S0, piece.S1);
+                if (piece.Line != place.Line || place.S < lo - slack || place.S > hi + slack || hi <= lo)
+                {
+                    continue;
+                }
+
+                float t = Mathf.Clamp01(Mathf.Abs(place.S - piece.S0) / (hi - lo));
+                fraction = (start[i] + (t * length[i])) / total;
+                return true;
+            }
+
+            fraction = 0f;
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Franja del viaje de mundo dentro del banner (M3.6; D-013, punto 7: «la canoa cruza por agua real en una franja del
+    /// Mapa»): un trozo del Mapa de <see cref="WorldBannerView.StripWidthDp"/> × <see cref="WorldBannerView.StripHeightDp"/> dp
+    /// [P] con el norte arriba (el contenido del Mapa girado 90°, como «Norte arriba»: los Andes a la izquierda y el mar a la
+    /// derecha), encuadrado en el tramo de la gran parada, con la tierra, el vidrio de los ríos y el agua que ya llena el Mapa
+    /// (las mismas cintas que la pantalla del Mapa, <see cref="RiverRibbonGraphic"/> y <see cref="LandGraphic"/>, en la vista
+    /// Mundo). Encima, sin girar: la canoa de Capi (<see cref="ProceduralArt.MapCanoe"/>) que recorre el tramo, el guía que nada
+    /// delante (Rosa; el bufeo boliviano, el mismo sprite con otra paleta [P], en los mundos 7 y 8) con su relevo, los nombres
+    /// de paso que salen sin pararse y la bandera que se iza en la popa al llegar (<see cref="ProceduralArt.MapFlag"/>).
+    /// </summary>
+    /// <remarks>
+    /// Va en un lienzo anidado propio (guía 8, docs/art/direccion-visual-v2.md: lo que se mueve, en Canvas propios), recortado por
+    /// un <see cref="RectMask2D"/> con las esquinas de la viñeta. Las mallas se construyen solo al abrir un banner con viaje
+    /// (<see cref="Build"/>), con una cinta por línea del Mapa reutilizada (las que no entran en la franja, inactivas);
+    /// <see cref="Apply"/> solo mueve y funde, sin asignaciones.
+    /// </remarks>
+    internal sealed class BannerTravelStrip
+    {
+        /// <summary>Margen horizontal del encuadre (dp) [P]: la media canoa y algo de río.</summary>
+        public const float PadXDp = 28f;
+
+        /// <summary>Margen vertical del encuadre (dp) [P]: el mástil con la bandera sobre la canoa.</summary>
+        public const float PadYDp = 30f;
+
+        /// <summary>Ancho del guía (dp) [P]; el alto sigue el sprite de Rosa.</summary>
+        public const float GuideWidthDp = 22f;
+
+        /// <summary>El guía nada este tramo por delante de la canoa (dp) [P].</summary>
+        public const float GuideLeadDp = 26f;
+
+        /// <summary>Al llegar, el guía espera junto a la gran parada, este tanto más arriba que la canoa (dp) [P].</summary>
+        public const float GuideRestUpDp = 14f;
+
+        /// <summary>El relevo: el guía nuevo aparece y el anterior se queda mientras la canoa recorre este tramo (dp) [P].</summary>
+        public const float RelayRampDp = 24f;
+
+        /// <summary>Tamaño de los nombres de paso (sp): el mínimo de 02 §12.</summary>
+        public const float PassingSp = 12f;
+
+        /// <summary>Un nombre de paso se ve mientras la canoa está a menos de este tramo de su punto (dp) [P].</summary>
+        public const float PassingWindowDp = 36f;
+
+        /// <summary>Altura del centro del nombre de paso sobre su punto (dp) [P]: por encima de la canoa, que llega a 21 dp.</summary>
+        public const float PassingUpDp = 30f;
+
+        /// <summary>Alto del mástil de popa (dp) [P].</summary>
+        public const float MastHeightDp = 17f;
+
+        /// <summary>Paleta del bufeo boliviano sobre el sprite de Rosa (multiplica su color) [P, pendiente del asesor cultural].</summary>
+        public static readonly Color BufeoTint = new Color(0.80f, 0.86f, 0.97f, 1f);
+
+        private const float MastWidthDp = 1.6f;
+        private const float SternFraction = 0.32f;
+        private const float EdgeDp = 2f;
+        private const float VisibleMarginDp = 12f;
+        private const int FrameSamples = 64;
+
+        private readonly ProceduralArt _art;
+        private readonly Image _edge;
+        private readonly RectTransform _mask;
+        private readonly CanvasGroup _fade;
+        private readonly Canvas _canvas;
+        private readonly RectTransform _layer;
+        private readonly RectTransform _content;
+        private readonly LandGraphic _land;
+        private readonly RectTransform _glassLayer;
+        private readonly RectTransform _casingLayer;
+        private readonly RectTransform _coreLayer;
+        private readonly RectTransform _overlay;
+        private readonly Image _guideA;
+        private readonly Image _guideB;
+        private readonly Image _mast;
+        private readonly Image _flag;
+        private readonly Image _canoe;
+        private readonly RiverMapScreen.FrameCornersGraphic _corners;
+        private readonly List<RiverRibbonGraphic> _glass = new List<RiverRibbonGraphic>();
+        private readonly List<RiverRibbonGraphic> _casing = new List<RiverRibbonGraphic>();
+        private readonly List<RiverRibbonGraphic> _core = new List<RiverRibbonGraphic>();
+        private readonly List<TextMeshProUGUI> _passing = new List<TextMeshProUGUI>();
+        private float[] _passingDp = Array.Empty<float>();
+        private BannerTravel? _built;
+        private float _w;
+        private float _h;
+        private float _dpu;
+        private Vector2 _center;
+        private float _totalDp;
+        private float _relayDp = -1f;
+        private Sprite? _guideSprite;
+        private Sprite? _flagSprite;
+        private float _fraction;
+        private float _flagRaise;
+        private float _guideAAlpha;
+        private float _guideBAlpha;
+        private int _canoeFacing = -1;
+        private double _buildMs;
+
+        /// <summary>Crea la franja, oculta, en el cuerpo <paramref name="panel"/> del banner. Ninguna malla hasta <see cref="Build"/>.</summary>
+        public BannerTravelStrip(RectTransform panel, ProceduralArt art)
+        {
+            _art = art;
+            _edge = UiBuilder.Sliced("TravelEdge", panel, art.RoundedRect, Palette.FamilyWood.Outline);
+            _edge.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / (ProceduralArt.BannerSceneRadiusDp + EdgeDp);
+            _mask = UiBuilder.Rect("Travel", panel);
+            _mask.gameObject.AddComponent<RectMask2D>();
+            _fade = _mask.gameObject.AddComponent<CanvasGroup>();
+            _fade.blocksRaycasts = false;
+            _fade.interactable = false;
+
+            var go = new GameObject("TravelCanvas", typeof(RectTransform), typeof(Canvas));
+            go.transform.SetParent(_mask, false);
+            _layer = (RectTransform)go.transform;
+            Stretch(_layer);
+            _canvas = go.GetComponent<Canvas>();
+            _canvas.overrideSorting = false; // sin orden propio: el RectMask2D de la franja lo recorta
+            _canvas.additionalShaderChannels |= AdditionalCanvasShaderChannels.TexCoord1 | AdditionalCanvasShaderChannels.Normal | AdditionalCanvasShaderChannels.Tangent;
+
+            Image ground = UiBuilder.Image("Ground", _layer, null, RiverMapScreen.GroundColor);
+            Stretch(ground.rectTransform);
+
+            // El Mapa, girado 90° (norte arriba), con el origen de MapSpace en su centro.
+            _content = UiBuilder.Rect("Map", _layer);
+            CenterRect(_content);
+            _content.localEulerAngles = new Vector3(0f, 0f, 90f);
+            var landGo = new GameObject("Land", typeof(RectTransform), typeof(CanvasRenderer), typeof(LandGraphic));
+            landGo.transform.SetParent(_content, false);
+            Stretch((RectTransform)landGo.transform);
+            _land = landGo.GetComponent<LandGraphic>();
+            _land.Setup();
+            _glassLayer = Layer("Glass", _content);
+            _casingLayer = Layer("FillCasing", _content);
+            _coreLayer = Layer("Fill", _content);
+
+            // Encima, sin girar: los nombres de paso, los guías, la popa con el mástil y la bandera, y la canoa.
+            _overlay = UiBuilder.Rect("Overlay", _layer);
+            CenterRect(_overlay);
+            _guideA = Piece("GuideA", null, new Vector2(0.5f, 0.3f));
+            _guideB = Piece("GuideB", null, new Vector2(0.5f, 0.3f));
+            _mast = Piece("Mast", null, new Vector2(0.5f, 0f));
+            _mast.color = Palette.FamilyWood.Deep;
+            _flag = Piece("Flag", null, new Vector2(0f, 0.5f));
+            _canoe = Piece("Canoe", null, new Vector2(0.5f, RiverMapScreen.CanoePivotY));
+            _canoe.preserveAspect = true;
+
+            _corners = RiverMapScreen.FrameCornersGraphic.Create("TravelCorners", panel, ProceduralArt.BannerSceneRadiusDp, Palette.FamilyWood.Outline);
+            Hide();
+        }
+
+        /// <summary>Recorte de la franja (tests: medidas y solapes).</summary>
+        public RectTransform Root => _mask;
+
+        /// <summary>El Mapa girado (tests: el punto del Mapa bajo la canoa).</summary>
+        public RectTransform Content => _content;
+
+        /// <summary>Capa sin girar de la canoa, los guías, la bandera y los nombres.</summary>
+        public RectTransform Overlay => _overlay;
+
+        /// <summary>Lienzo anidado de la franja.</summary>
+        public Canvas Canvas => _canvas;
+
+        /// <summary>La franja se ve.</summary>
+        public bool Visible => _mask.gameObject.activeSelf;
+
+        /// <summary>Viaje que pinta, o null.</summary>
+        public BannerTravel? Built => Visible ? _built : null;
+
+        /// <summary>dp por unidad del marco del encuadre.</summary>
+        public float DpPerUnit => _dpu;
+
+        /// <summary>Punto del marco en el centro de la franja (unidades del marco; el origen local del Mapa girado).</summary>
+        public Vector2 MapCenter => _center;
+
+        /// <summary>Largo del tramo en la franja (dp).</summary>
+        public float TotalDp => _totalDp;
+
+        /// <summary>Lo que costó <see cref="Build"/> en el hilo principal (ms; sin la malla, que se hace al pintar el lienzo).</summary>
+        public double BuildMs => _buildMs;
+
+        /// <summary>La canoa de Capi.</summary>
+        public Image Canoe => _canoe;
+
+        /// <summary>Fracción del tramo en que va la canoa (0 al salir, 1 en la gran parada).</summary>
+        public float CanoeFraction => _fraction;
+
+        /// <summary>La canoa mira a la derecha (1) o a la izquierda (−1).</summary>
+        public int CanoeFacing => _canoeFacing;
+
+        /// <summary>Bandera de la popa (sin sprite si no hay bandera que izar o en release sin el PNG oficial).</summary>
+        public Image Flag => _flag;
+
+        /// <summary>Mástil de la popa.</summary>
+        public Image Mast => _mast;
+
+        /// <summary>Sprite de la bandera (null: sin bandera).</summary>
+        public Sprite? FlagSprite => Visible ? _flagSprite : null;
+
+        /// <summary>Cuánto se ha izado la bandera (0-1).</summary>
+        public float FlagRaise => _flagRaise;
+
+        /// <summary>Guía de la salida (antes del relevo; sin relevo, el único).</summary>
+        public Image GuideA => _guideA;
+
+        /// <summary>Guía de la llegada tras el relevo (inactivo sin relevo).</summary>
+        public Image GuideB => _guideB;
+
+        /// <summary>Opacidad del guía de la salida (0 al terminar el relevo).</summary>
+        public float GuideAAlpha => _guideAAlpha;
+
+        /// <summary>Opacidad del guía de la llegada (1 al terminar el relevo).</summary>
+        public float GuideBAlpha => _guideBAlpha;
+
+        /// <summary>Cintas de vidrio activas (las líneas que entran en la franja).</summary>
+        public int GlassCount => ActiveCount(_glass);
+
+        /// <summary>Cintas de agua activas (las líneas llenas que entran en la franja).</summary>
+        public int WaterCount => ActiveCount(_core);
+
+        /// <summary>Vértices de la tierra en la última malla.</summary>
+        public int LandVertexCount => _land.LastVertexCount;
+
+        /// <summary>Nombres de paso del viaje.</summary>
+        public int PassingCount => _built != null ? _built.PassingCount : 0;
+
+        /// <summary>Nombre de paso <paramref name="i"/>.</summary>
+        public TextMeshProUGUI Passing(int i)
+        {
+            return _passing[i];
+        }
+
+        /// <summary>Opacidad del nombre de paso <paramref name="i"/>.</summary>
+        public float PassingAlpha(int i)
+        {
+            return _passing[i].canvasRenderer.GetAlpha();
+        }
+
+        /// <summary>Punto del Mapa <paramref name="map"/> (unidades del marco) en la capa sin girar (dp, origen en el centro). Sin asignaciones.</summary>
+        public Vector2 StripPoint(Vector2 map)
+        {
+            return new Vector2((map.y - _center.y) * _dpu, (map.x - _center.x) * _dpu);
+        }
+
+        /// <summary>Coloca la franja en el cuerpo del banner (dp desde su esquina de arriba a la izquierda).</summary>
+        public void Place(float x, float y, float w, float h)
+        {
+            UiBuilder.Place(_edge.rectTransform, x - EdgeDp, y - EdgeDp, w + (2f * EdgeDp), h + (2f * EdgeDp));
+            UiBuilder.Place(_mask, x, y, w, h);
+            UiBuilder.Place(_corners.rectTransform, x, y, w, h);
+            _content.sizeDelta = new Vector2(h, w); // girado: su ancho es el alto de la franja
+            _overlay.sizeDelta = new Vector2(w, h);
+            if (w != _w || h != _h)
+            {
+                _w = w;
+                _h = h;
+                _built = null; // otro encuadre
+            }
+        }
+
+        /// <summary>
+        /// Construye el viaje <paramref name="travel"/> en la franja colocada (si cambió): el encuadre del tramo, la tierra, el
+        /// vidrio de las líneas que entran, el agua ya llena, los nombres de paso y la bandera. Asigna lo justo la primera vez;
+        /// después reutiliza las cintas de cada línea.
+        /// </summary>
+        public void Build(BannerTravel travel, bool reduceMotion)
+        {
+            SetActive(_edge.gameObject, true);
+            SetActive(_mask.gameObject, true);
+            SetActive(_corners.gameObject, true);
+            if (ReferenceEquals(travel, _built))
+            {
+                return;
+            }
+
+            long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
+            _built = travel;
+            RiverMap map = travel.Map;
+            Frame(travel);
+            var space = new MapSpace(_dpu, new Vector2(-_center.x * _dpu, _center.y * _dpu));
+            _land.SetLand(map.Land, space);
+
+            IReadOnlyList<RiverLine> lines = map.Lines;
+            while (_glass.Count < lines.Count)
+            {
+                _glass.Add(NewRibbon("Glass_" + _glass.Count, _glassLayer, RibbonPart.Whole));
+                _casing.Add(NewRibbon("FillCasing_" + _casing.Count, _casingLayer, RibbonPart.Casing));
+                _core.Add(NewRibbon("Fill_" + _core.Count, _coreLayer, RibbonPart.Core));
+            }
+
+            float[] fill = travel.FillFrom;
+            for (int i = 0; i < _glass.Count; i++)
+            {
+                RiverLine? line = i < lines.Count ? lines[i] : null;
+                bool visible = line != null && LineInView(line);
+                bool filled = visible && fill[i] < RiverMapScreen.NoFill;
+                SetupRibbon(_glass[i], visible ? line : null, RibbonLook.Glass, 0f, 1f, space);
+                SetupRibbon(_casing[i], filled ? line : null, RibbonLook.Water, filled ? fill[i] : 1f, 1f, space);
+                SetupRibbon(_core[i], filled ? line : null, RibbonLook.Water, filled ? fill[i] : 1f, 1f, space);
+                if (visible)
+                {
+                    _glass[i].SetGlassBodyAlpha(RiverMapScreen.MapGlassBodyAlpha);
+                }
+
+                if (filled && line!.Kind == RiverLineKind.Main)
+                {
+                    _core[i].transform.SetAsLastSibling(); // el cauce encima: las bocas quedan debajo del río grande
+                }
+            }
+
+            _totalDp = travel.LengthUnits * _dpu;
+            _relayDp = travel.HasRelay ? travel.RelayFraction * _totalDp : -1f;
+            BuildPassing(travel);
+
+            _canoe.sprite = _art.MapCanoe;
+            _canoe.rectTransform.sizeDelta = new Vector2(ProceduralArt.MapCanoeWidthDp, ProceduralArt.MapCanoeHeightDp);
+            float guideH = GuideWidthDp * ProceduralArt.RosaHeightDp / ProceduralArt.RosaWidthDp;
+            _guideA.rectTransform.sizeDelta = new Vector2(GuideWidthDp, guideH);
+            _guideB.rectTransform.sizeDelta = new Vector2(GuideWidthDp, guideH);
+            _guideA.color = GuideColor(travel.HasRelay ? travel.GuideFrom : travel.GuideTo);
+            _guideB.color = GuideColor(travel.GuideTo);
+            _flagSprite = travel.Flag != null ? _art.MapFlag(travel.Flag) : null;
+            _flag.sprite = _flagSprite;
+            _flag.rectTransform.sizeDelta = new Vector2(ProceduralArt.MapFlagWidthDp, ProceduralArt.MapFlagHeightDp);
+            _mast.rectTransform.sizeDelta = new Vector2(MastWidthDp, MastHeightDp);
+            SetActive(_flag.gameObject, _flagSprite != null);
+            SetActive(_mast.gameObject, _flagSprite != null);
+            ApplyGuideSprites();
+            _buildMs = (System.Diagnostics.Stopwatch.GetTimestamp() - t0) * 1000.0 / System.Diagnostics.Stopwatch.Frequency;
+            Apply(0f, reduceMotion); // el instante 0 (con Reducir movimiento, el final aún sin fundir)
+        }
+
+        /// <summary>Oculta la franja (sin viaje); las mallas y las cintas se quedan para el siguiente.</summary>
+        public void Hide()
+        {
+            SetActive(_edge.gameObject, false);
+            SetActive(_mask.gameObject, false);
+            SetActive(_corners.gameObject, false);
+            _built = null;
+            _flagSprite = null;
+            _flag.sprite = null;
+            _fraction = 0f;
+            _flagRaise = 0f;
+        }
+
+        /// <summary>
+        /// Sprite del guía (el de Rosa del banner, ya pintado con su arte; null: sin guía, como con el respaldo de D-012 o al
+        /// soltar el arte).
+        /// </summary>
+        public void SetGuideSprite(Sprite? sprite)
+        {
+            _guideSprite = sprite;
+            ApplyGuideSprites();
+        }
+
+        /// <summary>
+        /// Pinta el instante <paramref name="ms"/> del viaje (desde que entra la tarjeta; <see cref="float.MaxValue"/>: el final):
+        /// la espera de <see cref="WorldBannerView.TravelDelayMs"/>, la canoa en <see cref="WorldBannerView.CanoeTravelMs"/> con
+        /// los guías delante y los nombres de paso, y la bandera en <see cref="MapConfig.FlagRaiseMs"/>. Con Reducir movimiento,
+        /// el final con un fundido de <see cref="MapConfig.ReducedMotionFadeMs"/>. Sin asignaciones.
+        /// </summary>
+        public void Apply(float ms, bool reduceMotion)
+        {
+            BannerTravel? travel = _built;
+            if (travel == null || !Visible)
+            {
+                return;
+            }
+
+            float canoeT = reduceMotion ? 1f : Mathf.Clamp01((ms - WorldBannerView.TravelDelayMs) / WorldBannerView.CanoeTravelMs);
+            _fraction = canoeT >= 1f ? 1f : Ease.InOut(canoeT);
+            float flagT = reduceMotion ? 1f : Mathf.Clamp01((ms - WorldBannerView.TravelDelayMs - WorldBannerView.CanoeTravelMs) / MapConfig.FlagRaiseMs);
+            _flagRaise = _flagSprite != null ? flagT : 0f;
+            _fade.alpha = reduceMotion ? Mathf.Clamp01(ms / MapConfig.ReducedMotionFadeMs) : 1f;
+
+            // La canoa, en su punto del tramo, con la proa hacia donde va.
+            float arc = _fraction * _totalDp;
+            Vector2 canoe = PointAtDp(travel, arc);
+            _canoeFacing = FacingAt(travel, arc, _canoeFacing);
+            RectTransform c = _canoe.rectTransform;
+            c.anchoredPosition = canoe;
+            c.localScale = new Vector3(_canoeFacing, 1f, 1f);
+
+            // El mástil en la popa y la bandera que sube por él, ondeando hacia popa.
+            if (_flagSprite != null)
+            {
+                float stern = -_canoeFacing * ProceduralArt.MapCanoeWidthDp * SternFraction;
+                Vector2 foot = canoe + new Vector2(stern, 2f);
+                _mast.rectTransform.anchoredPosition = foot;
+                float low = foot.y + (ProceduralArt.MapFlagHeightDp * 0.5f) + 1f;
+                float high = foot.y + MastHeightDp - (ProceduralArt.MapFlagHeightDp * 0.5f);
+                RectTransform f = _flag.rectTransform;
+                f.anchoredPosition = new Vector2(foot.x, Mathf.Lerp(low, high, Ease.Out(_flagRaise)));
+                f.localScale = new Vector3(-_canoeFacing, 1f, 1f);
+                float a = Mathf.Clamp01(_flagRaise * 4f);
+                _flag.canvasRenderer.SetAlpha(a);
+                _mast.canvasRenderer.SetAlpha(a);
+            }
+
+            // Los guías: delante de la canoa por el agua; al llegar, esperan junto a la gran parada. Con relevo, el de la salida se
+            // queda en su punto y el de la llegada aparece y sigue.
+            float lead = Mathf.Min(arc + GuideLeadDp, _totalDp);
+            float rest = Mathf.Clamp01((arc + GuideLeadDp - _totalDp) / GuideLeadDp) * GuideRestUpDp;
+            if (_relayDp >= 0f)
+            {
+                float ramp = Mathf.Clamp01((arc - _relayDp) / RelayRampDp);
+                _guideAAlpha = 1f - ramp;
+                _guideBAlpha = ramp;
+                PlaceGuide(_guideA, travel, Mathf.Min(lead, _relayDp), Mathf.Min(lead, _relayDp) < lead ? 0f : rest, _guideAAlpha);
+                PlaceGuide(_guideB, travel, lead, rest, _guideBAlpha);
+            }
+            else
+            {
+                _guideAAlpha = 1f;
+                _guideBAlpha = 0f;
+                PlaceGuide(_guideA, travel, lead, rest, 1f);
+            }
+
+            // Los nombres de paso: salen al acercarse la canoa y se van al dejarlos atrás, sin pararse.
+            int n = travel.PassingCount;
+            for (int i = 0; i < n; i++)
+            {
+                float a = canoeT >= 1f ? 0f : Mathf.Clamp01(1f - (Mathf.Abs(arc - _passingDp[i]) / PassingWindowDp));
+                _passing[i].canvasRenderer.SetAlpha(a);
+            }
+        }
+
+        // El encuadre: la caja del tramo con el norte arriba (x de la franja = y del marco, el este; y de la franja = x del marco,
+        // el norte), en la franja menos sus márgenes, entre 1× y el zoom máximo de la vista Mundo.
+        private void Frame(BannerTravel travel)
+        {
+            float minE = float.MaxValue;
+            float maxE = float.MinValue;
+            float minN = float.MaxValue;
+            float maxN = float.MinValue;
+            for (int i = 0; i <= FrameSamples; i++)
+            {
+                Vector2 p = travel.PointAt(i / (float)FrameSamples);
+                minE = Mathf.Min(minE, p.y);
+                maxE = Mathf.Max(maxE, p.y);
+                minN = Mathf.Min(minN, p.x);
+                maxN = Mathf.Max(maxN, p.x);
+            }
+
+            float spanE = Mathf.Max(maxE - minE, 1e-4f);
+            float spanN = Mathf.Max(maxN - minN, 1e-4f);
+            float dpu = Mathf.Min((_w - (2f * PadXDp)) / spanE, (_h - (2f * PadYDp)) / spanN);
+            _dpu = Mathf.Clamp(dpu, MapSpace.BasinWidthDp, MapSpace.BasinWidthDp * RiverMapScreen.WorldZoomMax);
+            _center = new Vector2((minN + maxN) * 0.5f, (minE + maxE) * 0.5f);
+        }
+
+        // La línea entra en la franja (algún tramo de su polilínea toca la franja con un margen). Sin asignaciones.
+        private bool LineInView(RiverLine line)
+        {
+            float hx = (_w * 0.5f) + VisibleMarginDp;
+            float hy = (_h * 0.5f) + VisibleMarginDp;
+            int count = line.PointCount;
+            Vector2 prev = StripPoint(new Vector2(line.X(0), line.Y(0)));
+            if (count == 1)
+            {
+                return Mathf.Abs(prev.x) <= hx && Mathf.Abs(prev.y) <= hy;
+            }
+
+            for (int i = 1; i < count; i++)
+            {
+                Vector2 p = StripPoint(new Vector2(line.X(i), line.Y(i)));
+                if (Mathf.Max(prev.x, p.x) >= -hx && Mathf.Min(prev.x, p.x) <= hx && Mathf.Max(prev.y, p.y) >= -hy && Mathf.Min(prev.y, p.y) <= hy)
+                {
+                    return true;
+                }
+
+                prev = p;
+            }
+
+            return false;
+        }
+
+        // Un nombre por punto de paso con texto, ya escrito y colocado sobre su punto (dentro de la franja); se ven con SetAlpha.
+        private void BuildPassing(BannerTravel travel)
+        {
+            int n = travel.PassingCount;
+            while (_passing.Count < n)
+            {
+                TextMeshProUGUI label = UiBuilder.Label("Passing_" + _passing.Count, _overlay, TextStyle.PillWood, string.Empty, PassingSp, Palette.Cream, TextAlignmentOptions.Center);
+                label.textWrappingMode = TextWrappingModes.NoWrap;
+                RectTransform rt = label.rectTransform;
+                rt.anchorMin = new Vector2(0.5f, 0.5f);
+                rt.anchorMax = new Vector2(0.5f, 0.5f);
+                rt.pivot = new Vector2(0.5f, 0.5f);
+                label.transform.SetSiblingIndex(0); // debajo de los guías y de la canoa
+                _passing.Add(label);
+            }
+
+            if (_passingDp.Length < n)
+            {
+                _passingDp = new float[n];
+            }
+
+            for (int i = 0; i < _passing.Count; i++)
+            {
+                TextMeshProUGUI label = _passing[i];
+                bool used = i < n;
+                SetActive(label.gameObject, used);
+                if (!used)
+                {
+                    continue;
+                }
+
+                label.text = travel.PassingName(i);
+                Vector2 size = label.GetPreferredValues(label.text, float.PositiveInfinity, float.PositiveInfinity);
+                float w = Mathf.Ceil(size.x) + 2f;
+                float h = Mathf.Ceil(size.y);
+                label.rectTransform.sizeDelta = new Vector2(w, h);
+                _passingDp[i] = travel.PassingFraction(i) * _totalDp;
+                Vector2 p = StripPoint(travel.PointAt(travel.PassingFraction(i)));
+                float x = Mathf.Clamp(p.x, -(_w * 0.5f) + (w * 0.5f) + 4f, (_w * 0.5f) - (w * 0.5f) - 4f);
+                float y = p.y + PassingUpDp + (h * 0.5f) <= (_h * 0.5f) - 2f ? p.y + PassingUpDp : p.y - PassingUpDp;
+                label.rectTransform.anchoredPosition = new Vector2(x, y);
+                label.canvasRenderer.SetAlpha(0f);
+            }
+        }
+
+        // Punto de la franja a arc dp del tramo.
+        private Vector2 PointAtDp(BannerTravel travel, float arc)
+        {
+            return StripPoint(travel.PointAt(_totalDp > 0f ? arc / _totalDp : 1f));
+        }
+
+        // Hacia dónde va el tramo en arc (1 a la derecha, −1 a la izquierda); si va casi en vertical, como iba (previous).
+        private int FacingAt(BannerTravel travel, float arc, int previous)
+        {
+            const float step = 12f; // dp: una ventana larga, para que un quiebro de la polilínea junto a la parada no le dé la vuelta
+            Vector2 a = PointAtDp(travel, Mathf.Max(0f, arc - step));
+            Vector2 b = PointAtDp(travel, Mathf.Min(_totalDp, arc + step));
+            float dx = b.x - a.x;
+            return Mathf.Abs(dx) < 0.25f ? previous : (dx > 0f ? 1 : -1);
+        }
+
+        // Un guía en arc dp del tramo, rest dp más arriba, mirando hacia donde va (Rosa mira a la izquierda en su sprite).
+        private void PlaceGuide(Image guide, BannerTravel travel, float arc, float rest, float alpha)
+        {
+            RectTransform rt = guide.rectTransform;
+            rt.anchoredPosition = PointAtDp(travel, arc) + new Vector2(0f, rest);
+            int facing = FacingAt(travel, arc, _canoeFacing);
+            rt.localScale = new Vector3(-facing, 1f, 1f);
+            guide.canvasRenderer.SetAlpha(alpha);
+        }
+
+        private void ApplyGuideSprites()
+        {
+            BannerTravel? travel = _built;
+            bool any = _guideSprite != null && travel != null;
+            _guideA.sprite = _guideSprite;
+            _guideB.sprite = _guideSprite;
+            SetActive(_guideA.gameObject, any);
+            SetActive(_guideB.gameObject, any && travel!.HasRelay);
+        }
+
+        // Rosa con su color; el bufeo boliviano, el mismo sprite con otra paleta [P].
+        private static Color GuideColor(string guide)
+        {
+            return string.Equals(guide, RiverJourney.GuideBufeo, StringComparison.Ordinal) ? BufeoTint : Color.white;
+        }
+
+        private static void SetupRibbon(RiverRibbonGraphic ribbon, RiverLine? line, RibbonLook look, float s0, float s1, MapSpace space)
+        {
+            bool on = line != null;
+            SetActive(ribbon.gameObject, on);
+            if (!on)
+            {
+                return;
+            }
+
+            ribbon.SetLine(line);
+            ribbon.SetLook(look);
+            ribbon.SetFill(s0, s1);
+            ribbon.SetSpace(space);
+            ribbon.SetWidth(RiverMapScreen.RibbonWidthDp(MapView.World, line!.Class));
+        }
+
+        private static RiverRibbonGraphic NewRibbon(string name, RectTransform parent, RibbonPart part)
+        {
+            var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(RiverRibbonGraphic));
+            go.transform.SetParent(parent, false);
+            Stretch((RectTransform)go.transform);
+            RiverRibbonGraphic ribbon = go.GetComponent<RiverRibbonGraphic>();
+            ribbon.Setup();
+            ribbon.SetPart(part);
+            go.SetActive(false);
+            return ribbon;
+        }
+
+        private Image Piece(string name, Sprite? sprite, Vector2 pivot)
+        {
+            Image img = UiBuilder.Image(name, _overlay, sprite, Color.white);
+            RectTransform rt = img.rectTransform;
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = pivot;
+            return img;
+        }
+
+        private static RectTransform Layer(string name, RectTransform parent)
+        {
+            RectTransform rt = UiBuilder.Rect(name, parent);
+            Stretch(rt);
+            return rt;
+        }
+
+        private static int ActiveCount(List<RiverRibbonGraphic> ribbons)
+        {
+            int n = 0;
+            for (int i = 0; i < ribbons.Count; i++)
+            {
+                if (ribbons[i].gameObject.activeSelf)
+                {
+                    n++;
+                }
+            }
+
+            return n;
+        }
+
+        // Estira rt a su padre con el pivote en el centro: el origen local (el de MapSpace y de la capa) en el centro de la franja.
+        private static void Stretch(RectTransform rt)
+        {
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.offsetMin = Vector2.zero;
+            rt.offsetMax = Vector2.zero;
+        }
+
+        private static void CenterRect(RectTransform rt)
+        {
+            rt.anchorMin = new Vector2(0.5f, 0.5f);
+            rt.anchorMax = new Vector2(0.5f, 0.5f);
+            rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.anchoredPosition = Vector2.zero;
+        }
+
+        private static void SetActive(GameObject go, bool active)
+        {
+            if (go.activeSelf != active)
+            {
+                go.SetActive(active);
+            }
         }
     }
 }

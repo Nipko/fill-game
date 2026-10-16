@@ -90,6 +90,7 @@ namespace AF.Tests.PlayMode
             }
 
             NoStopLabelsUnlessSet();
+            NoBannerTravelUnlessSet();
         }
 
         /// <summary>
@@ -102,6 +103,19 @@ namespace AF.Tests.PlayMode
             if (GameScreen.StopLabelsOverride == null)
             {
                 GameScreen.StopLabelsOverride = false;
+            }
+        }
+
+        /// <summary>
+        /// Apaga el viaje de mundo del banner (M3.6) si el test no lo fijó (<see cref="GameScreen.BannerTravelOverride"/> = null):
+        /// los tests que no tratan de él abren el banner del 41, el 81 o el 141 como antes de que existiera (el de D-012, que un
+        /// toque cierra). Los que lo prueban (<c>WorldBannerTravelTests</c>) lo encienden y lo vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoBannerTravelUnlessSet()
+        {
+            if (GameScreen.BannerTravelOverride == null)
+            {
+                GameScreen.BannerTravelOverride = false;
             }
         }
 

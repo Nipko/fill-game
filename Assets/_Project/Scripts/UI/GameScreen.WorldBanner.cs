@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
@@ -48,6 +49,19 @@ namespace AF.UI
     /// línea <c>level_card</c>, si la hay, sale después); y, al terminar la entrada, <c>AF_LAYOUT {"screen":"world_banner",…}</c>
     /// con el id <c>world_banner</c> y el rectángulo de la tarjeta (cualquier toque la cierra). En el <c>AF_LAYOUT</c> del nivel,
     /// <c>world_banner</c> solo sale con la tarjeta a la vista (no mientras espera el arte).</para>
+    /// <para><b>Viaje de mundo</b> (D-013, punto 7; Q4-D; 02 §6, fila Banner de mundo; tarea M3.6): solo si
+    /// <see cref="MapMoments.TravelInBanner"/> (el 41, el 81 y el 141 en 1-200, y con Q14-A el 201, el 301, el 421 y el 561;
+    /// nunca el 11, que lo cuenta el Mapa del 10, ni con <c>ui_map_autopen</c> = <c>l10</c>) y si hay datos del Mapa con el
+    /// tramo de la gran parada (<see cref="BannerTravel.For"/>; sin ellos, el banner de siempre). Bajo la cabecera, la pregunta
+    /// del mundo y la franja del Mapa (<see cref="BannerTravelStrip"/>): la canoa recorre el tramo en ≤ 4 s, los nombres de
+    /// paso salen sin pararse, la bandera se iza en 800 ms si cambia de país (la simplificada solo con <c>MapArtRule</c>; en
+    /// release, solo la oficial) y el guía se releva en Teotônio si cambia (P-M8). Bajo el lugar, «Ver mapa»
+    /// (<c>map_open</c>): <see cref="IGameActions.OpenRiverMap"/> con <see cref="MapOpenSource.WorldChange"/>, encima del banner,
+    /// que sigue ahí al cerrarlo. El primer toque completa el viaje y el siguiente cierra el banner, como siempre; con Reducir
+    /// movimiento, el estado final con un fundido de 150 ms. La geometría del Mapa se lee la primera vez que hace falta
+    /// (<see cref="RiverGeometry"/>, de GameBootstrap), al pedir el arte antes si se puede. La sonda <c>world_banner</c> suma
+    /// <c>travel</c>, <c>travel_ms</c> (lo que dura el viaje desde que entra la tarjeta) y <c>flag</c> (la bandera que se iza, o
+    /// null), y el <c>AF_LAYOUT</c> del banner, el id <c>world_banner_map</c> con «Ver mapa».</para>
     /// </remarks>
     public sealed partial class GameScreen : IWorldBannerListener
     {
@@ -63,6 +77,35 @@ namespace AF.UI
         private string? _lastBannerArtProbe;
         private int _worldBannerShown;
         private int _bannerPrefetchLevel;
+        private int _bannerMapOpened;
+
+        /// <summary>
+        /// Lee (la primera vez) la geometría del Mapa del río y las rutas de las paradas; false si no hay o no valida. La pone
+        /// GameBootstrap (sus datos, leídos al abrir el Mapa o al pedir el primer viaje de mundo). Firma de <see cref="RiverGeometry"/>.
+        /// </summary>
+        internal delegate bool RiverGeometrySource(out RiverMap? map, out RiverRoutes? routes);
+
+        /// <summary>
+        /// Viaje de mundo dentro del banner (M3.6): false = nunca, el banner de siempre (tests que no tratan del viaje,
+        /// <c>PlayModeHelpers.NoBannerTravelUnlessSet</c>); null o true = la regla del juego (<see cref="MapMoments.TravelInBanner"/>
+        /// con los datos del Mapa). Los tests que lo prueban lo fijan y lo vuelven a null en su TearDown.
+        /// </summary>
+        internal static bool? BannerTravelOverride { get; set; }
+
+        /// <summary><c>ui_map_autopen</c> para el viaje del banner (tests); null = <see cref="MapConfig.UiMapAutopen"/>.</summary>
+        internal static string? BannerAutopenOverride { get; set; }
+
+        /// <summary>
+        /// Datos del Mapa para el viaje del banner (tests: un catálogo de prueba, como el del relevo en Teotônio); null = los del
+        /// juego (<see cref="RiverStops"/> y <see cref="RiverGeometry"/>).
+        /// </summary>
+        internal static BannerTravelData? BannerTravelDataOverride { get; set; }
+
+        /// <summary>Geometría del Mapa para el viaje de mundo del banner (la pone GameBootstrap; null = sin viaje).</summary>
+        internal RiverGeometrySource? RiverGeometry { get; set; }
+
+        /// <summary>Veces que «Ver mapa» del banner abrió el Mapa (tests).</summary>
+        internal int BannerMapOpened => _bannerMapOpened;
 
         /// <summary>Banner de entrada a un mundo (tests y capturas).</summary>
         internal WorldBannerView WorldBannerView => _worldBanner;
@@ -107,13 +150,14 @@ namespace AF.UI
         {
             LevelFlow flow = RequireFlow();
             HoldIntroForCard(flow); // el tablero espera detrás en el fotograma 0 de la intro, como con la tarjeta previa
+            BannerTravel? travel = TravelFor(level); // el viaje de mundo (M3.6), o null: el banner de siempre
 
             // La tarjeta previa o la intro, solo cuando el banner haya salido del todo (07 §5.1: antes de la intro, no encima).
             flow.WorldBannerExitMs = Mathf.CeilToInt(WorldBannerView.ExitDurationMs(flow.ReduceMotion));
             Color water = Palette.WaterBase(flow.Level.WaterBase);
             ApplyBannerArtHooks();
             _worldBanner.AsyncArt = LaunchOptions.BannerArtSyncOverride != true; // el arte, fuera del fotograma de la carga
-            _worldBanner.Show(world, water, flow.ReduceMotion, _canvasW, _canvasH, _safeTop, _safeBottom);
+            _worldBanner.Show(world, water, flow.ReduceMotion, _canvasW, _canvasH, _safeTop, _safeBottom, travel);
             _worldBanner.Root.SetAsLastSibling(); // por encima de todo: el toque en cualquier punto es suyo
             flow.WorldBannerWaiting = !_worldBanner.CardShown; // sin tarjeta a la vista, ningún toque lo cierra
             _worldBannerShown++;
@@ -152,13 +196,13 @@ namespace AF.UI
             }
 
             ApplyBannerArtHooks();
-            _worldBanner.Prefetch(world, Palette.WaterBase(def.WaterBase), _canvasW);
+            _worldBanner.Prefetch(world, Palette.WaterBase(def.WaterBase), _canvasW, TravelFor(level));
             return true;
         }
 
         private void BannerBuild()
         {
-            _worldBanner = new WorldBannerView(_root, _art, OnWorldBannerTapped);
+            _worldBanner = new WorldBannerView(_root, _art, OnWorldBannerTapped, OnWorldBannerMapPressed);
         }
 
         private void BannerLayout()
@@ -257,15 +301,27 @@ namespace AF.UI
             {
                 ids.Add("world_banner");
                 rects.Add(_worldBanner.Panel);
+                if (_worldBanner.Travel != null)
+                {
+                    ids.Add("world_banner_map"); // «Ver mapa» del viaje de mundo (M3.6)
+                    rects.Add((RectTransform)_worldBanner.MapButton.transform);
+                }
             }
         }
 
         // 1 toque en cualquier punto: el flujo empieza la salida (la tarjeta previa o la intro esperan a que termine) y el banner
-        // sale. Un segundo toque durante la salida la termina en el acto. Mientras espera el arte (solo el velo), nada.
+        // sale. Un segundo toque durante la salida la termina en el acto. Mientras espera el arte (solo el velo), nada. Con el viaje
+        // de mundo en marcha (M3.6), el toque lo completa y el siguiente cierra.
         private void OnWorldBannerTapped()
         {
             if (!_worldBanner.Visible || !_worldBanner.CardShown)
             {
+                return;
+            }
+
+            if (_worldBanner.TravelRunning)
+            {
+                _worldBanner.CompleteTravel();
                 return;
             }
 
@@ -278,6 +334,47 @@ namespace AF.UI
             }
 
             StartBannerExit(flow);
+        }
+
+        // «Ver mapa» del viaje (M3.6; P-M2): completa el viaje y abre el Mapa del río encima del banner (MapOpenSource.WorldChange);
+        // al cerrarlo, el banner sigue ahí, quieto, y un toque lo cierra.
+        private void OnWorldBannerMapPressed()
+        {
+            if (!_worldBanner.Visible || !_worldBanner.CardShown || _worldBanner.Dismissing || _worldBanner.Travel == null)
+            {
+                return;
+            }
+
+            _worldBanner.CompleteTravel();
+            if (_actions.OpenRiverMap(MapOpenSource.WorldChange))
+            {
+                _bannerMapOpened++;
+            }
+        }
+
+        // El viaje de mundo del banner del nivel level (M3.6), o null: el banner de siempre (apagado por el test, no toca por
+        // TravelInBanner, o sin datos del Mapa o sin el tramo de la gran parada). Lee la geometría la primera vez que hace falta.
+        private BannerTravel? TravelFor(int level)
+        {
+            if (BannerTravelOverride == false || !MapMoments.TravelInBanner(level, BannerAutopenOverride ?? MapConfig.UiMapAutopen))
+            {
+                return null;
+            }
+
+            BannerTravelData? data = BannerTravelDataOverride;
+            if (data != null)
+            {
+                return BannerTravel.For(level, data.Map, data.Routes, data.Stops);
+            }
+
+            RiverStopCatalog? stops = RiverStops;
+            RiverGeometrySource? geometry = RiverGeometry;
+            if (stops == null || geometry == null || !geometry(out RiverMap? map, out RiverRoutes? routes))
+            {
+                return null;
+            }
+
+            return BannerTravel.For(level, map, routes, stops);
         }
 
         // La salida del banner: la línea world_banner_closed antes de que el flujo siga (con lo que vendrá detrás), el flujo
@@ -373,22 +470,64 @@ namespace AF.UI
             _layoutRects.Clear();
             _layoutIds.Add("world_banner");
             _layoutRects.Add(_worldBanner.Panel);
+            if (_worldBanner.Travel != null)
+            {
+                _layoutIds.Add("world_banner_map"); // «Ver mapa» del viaje de mundo (M3.6)
+                _layoutRects.Add((RectTransform)_worldBanner.MapButton.transform);
+            }
+
             _probe.Layout("world_banner", flow.LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
         }
 
         // AF_STATE world_banner: nivel, mundo, texto (world_banner del glosario §10), lo que sale al cerrarlo (la tarjeta previa o
-        // la intro: BannerNext) y si es la versión quieta. Lo que costó su arte va aparte, cuando entra la tarjeta
+        // la intro: BannerNext), si es la versión quieta y el viaje de mundo (M3.6): travel, travel_ms (lo que dura desde que entra
+        // la tarjeta; 0 sin viaje) y flag (la bandera que se iza, o null). Lo que costó su arte va aparte, cuando entra la tarjeta
         // (world_banner_art).
         private string BannerProbeJson(int world, int level)
         {
             LevelFlow flow = RequireFlow();
-            var sb = new StringBuilder(176);
+            var sb = new StringBuilder(224);
             sb.Append("{\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"world\":").Append(world.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"text\":\"").Append(UiText.WorldBanner(world)).Append('"');
             sb.Append(",\"then\":\"").Append(BannerNext(flow)).Append('"');
-            sb.Append(",\"reduce_motion\":").Append(flow.ReduceMotion ? "true" : "false").Append('}');
+            sb.Append(",\"reduce_motion\":").Append(flow.ReduceMotion ? "true" : "false");
+            sb.Append(",\"travel\":").Append(_worldBanner.Travel != null ? "true" : "false");
+            sb.Append(",\"travel_ms\":").Append(Mathf.RoundToInt(_worldBanner.TravelMs).ToString(CultureInfo.InvariantCulture));
+            string? flag = _worldBanner.TravelFlag;
+            sb.Append(",\"flag\":");
+            if (flag != null)
+            {
+                sb.Append('"').Append(flag).Append('"');
+            }
+            else
+            {
+                sb.Append("null");
+            }
+
+            sb.Append('}');
             return sb.ToString();
         }
+    }
+
+    /// <summary>Datos del Mapa para el viaje de mundo del banner (tests: <see cref="GameScreen.BannerTravelDataOverride"/>).</summary>
+    internal sealed class BannerTravelData
+    {
+        /// <summary>Crea los datos.</summary>
+        public BannerTravelData(RiverMap map, RiverRoutes routes, RiverStopCatalog stops)
+        {
+            Map = map ?? throw new ArgumentNullException(nameof(map));
+            Routes = routes ?? throw new ArgumentNullException(nameof(routes));
+            Stops = stops ?? throw new ArgumentNullException(nameof(stops));
+        }
+
+        /// <summary>Geometría.</summary>
+        public RiverMap Map { get; }
+
+        /// <summary>Rutas de las paradas.</summary>
+        public RiverRoutes Routes { get; }
+
+        /// <summary>Paradas.</summary>
+        public RiverStopCatalog Stops { get; }
     }
 }

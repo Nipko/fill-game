@@ -926,6 +926,16 @@ namespace AF.UI
             }
         }
 
+        // La geometría del Mapa y las rutas de las paradas para el viaje de mundo del banner (M3.6; GameScreen.RiverGeometry): se
+        // leen la primera vez que hacen falta (EnsureRiverMap), como al abrir el Mapa.
+        private bool TryRiverGeometry(out RiverMap? map, out RiverRoutes? routes)
+        {
+            bool ok = EnsureRiverMap();
+            map = ok ? _riverMapData : null;
+            routes = ok ? _riverRoutes : null;
+            return ok;
+        }
+
         // Lee y decodifica la geometría del Mapa y las rutas de las paradas, una vez por arranque (08 §4.5; propuesta del Mapa §11.4:
         // las asignaciones de la carga, al abrir). Si no valida, un error con la ruta del valor y el Mapa queda sin pestaña.
         private bool EnsureRiverMap()
@@ -1309,6 +1319,7 @@ namespace AF.UI
             _screen.Fauna = Fauna; // la especie de miquito de cada intro (guion de la intro §4.3)
             RiverStops = LoadRiverStops(riverStops);
             _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013): fondo, llegada y rótulo del lugar
+            _screen.RiverGeometry = TryRiverGeometry; // la geometría del Mapa para el viaje de mundo del banner (M3.6)
             FruitFacts = LoadFruitFacts(fruitCalendar); // calendario de Frutas del río (D-017)
             _screen.FruitFacts = FruitFacts; // la línea de fruta de la victoria (F3)
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
