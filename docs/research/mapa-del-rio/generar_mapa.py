@@ -463,7 +463,8 @@ def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
         if r.get("boca_en") not in todos or r.get("boca_en") == r.get("id"):
             errores.append(f"río local {r.get('id')}: «boca_en» {r.get('boca_en')!r} no es otro río")
     vistos = {s["id"] for s in doc["paradas_1_200"]}
-    km_prev = {}
+    km_prev = {}  # mundo: (km_casa, ancla_rio) de la parada anterior
+    km_rio = {}   # (mundo, ancla_rio): km_casa de la última parada de ese río en el mundo
     for i, s in enumerate(paradas):
         donde = f"parada {s.get('id')}"
         k = 20 + i
@@ -491,12 +492,28 @@ def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
             if todos.get(rl, {}).get("tipo") != "rio_local":
                 errores.append(f"{donde}: río local {rl} sin entrada de tipo «rio_local»")
         km, casa = s.get("km_desde_el_mar"), s.get("km_casa")
+        baja = s.get("baja_por_confluencia")
+        ancla = s.get("ancla_rio")
         if not isinstance(km, int) or casa != km + KM_CASA_MAS:
             errores.append(f"{donde}: km_casa {casa} y km_desde_el_mar {km} (+{KM_CASA_MAS})")
-        elif w in km_prev and casa < km_prev[w]:
-            errores.append(f"{donde}: los km hasta casa retroceden dentro del mundo {w} ({casa} < {km_prev[w]})")
+        else:
+            # Dentro de un mundo los km no retroceden, salvo en una bajada declarada por una confluencia (M3.7c): la parada
+            # lleva «baja_por_confluencia» (por dónde baja y por dónde sube) y está en otro río que la anterior, como el
+            # «Beni abajo → Mamoré arriba» del mundo 8. Por un mismo río nunca retroceden, como en geometry.py (08 §4.5).
+            previa = km_prev.get(w)
+            if previa is not None and casa < previa[0]:
+                if not isinstance(baja, str) or not baja.strip():
+                    errores.append(f"{donde}: los km hasta casa retroceden dentro del mundo {w} ({casa} < {previa[0]})")
+                elif ancla == previa[1]:
+                    errores.append(f"{donde}: «baja_por_confluencia» sin cambiar de río ({ancla}): por un mismo río los km no retroceden")
+            elif baja is not None:
+                errores.append(f"{donde}: «baja_por_confluencia» sobrante (los km hasta casa no bajan)")
+            mismo_rio = km_rio.get((w, ancla))
+            if mismo_rio is not None and casa < mismo_rio:
+                errores.append(f"{donde}: los km hasta casa retroceden por el {ancla} dentro del mundo {w} ({casa} < {mismo_rio})")
         if isinstance(casa, int):
-            km_prev[w] = casa
+            km_prev[w] = (casa, ancla)
+            km_rio[(w, ancla)] = casa
         d = s.get("dato_del_nivel")
         if not isinstance(d, dict):
             errores.append(f"{donde}: sin dato de llegada")
@@ -616,7 +633,10 @@ def autoprueba_paradas_201_700(doc):
     también dan error un candidato de la pregunta 50 (a) que falta en k = 32, el viaje del 300 sin el punto de paso
     teotonio o con su dato sin etiqueta, sin longitud, con un texto de más de 90 caracteres o con una fuente que no está
     en 'fuentes' (Q18-A) y un sitio del resumen de un mundo detallado sin coordenada; y la bandera
-    de un viaje de entrada (BO en el 300) se exige en la primera parada de su mundo. Devuelve los fallos de la prueba."""
+    de un viaje de entrada (BO en el 300) se exige en la primera parada de su mundo. Desde M3.7c, los km que bajan dentro
+    de un mundo solo valen en una parada con «baja_por_confluencia» y en otro río que la anterior, y nunca por debajo de la
+    última parada de su río: dan error la bajada sin declarar, la declarada en el mismo río, la que baja de la última
+    parada de su río y una declaración sobrante. Devuelve los fallos de la prueba."""
     paradas = doc.get("paradas_201_700", [])
     if not paradas:
         return []
@@ -677,6 +697,26 @@ def autoprueba_paradas_201_700(doc):
         mundo = paradas[1].get("mundo")
         caso("sitios fuera de orden", segunda, lambda p: p.update(sitio=paradas[-1].get("sitio")),
              "las paradas detalladas dan", f"mundo {mundo}:")
+        caso("una «baja_por_confluencia» sobrante", segunda, lambda p: p.update(baja_por_confluencia="prueba"),
+             "sobrante", f"parada {segunda}:")
+    # M3.7c: las bajadas declaradas por una confluencia (Beni abajo → Mamoré arriba en el mundo 8). Sin la declaración, los
+    # km que bajan dan error; con ella, también si la parada sigue en el mismo río que la anterior o si baja por debajo de
+    # la última parada de su río en el mundo.
+    bajas = [s for s in paradas if s.get("baja_por_confluencia")]
+    for s in bajas[:1]:
+        anterior = paradas[por_id[s["id"]] - 1]
+        caso(f"la bajada de {s['id']} sin «baja_por_confluencia»", s["id"], lambda p: p.pop("baja_por_confluencia"),
+             "retroceden dentro del mundo", f"parada {s['id']}:")
+        caso(f"la bajada de {s['id']} por el mismo río que la parada anterior", s["id"],
+             lambda p, a=anterior.get("ancla_rio"): p.update(ancla_rio=a), "sin cambiar de río", f"parada {s['id']}:")
+    for s in bajas:
+        i = por_id[s["id"]]
+        antes = [p for p in paradas[:i] if p.get("mundo") == s.get("mundo") and p.get("ancla_rio") == s.get("ancla_rio")]
+        if antes:
+            menos = antes[-1]["km_casa"] - 100
+            caso(f"la bajada de {s['id']} por debajo de {antes[-1]['id']}, en su mismo río", s["id"],
+                 lambda p, m=menos: p.update(km_desde_el_mar=m - KM_CASA_MAS, km_casa=m),
+                 f"retroceden por el {s.get('ancla_rio')}", f"parada {s['id']}:")
     for s in con_bandera:
         cruce = next((c for c in doc["cruces_de_pais"]
                       if c.get("pais") == s["bandera"] and c.get("nivel") == s.get("llegada_al_ganar")), None)

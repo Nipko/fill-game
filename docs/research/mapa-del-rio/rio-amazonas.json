@@ -1,7 +1,7 @@
 {
  "formato": "af-rio-amazonas/0 [P]",
  "titulo": "Geografía limpia del Amazonas para el Mapa del río (Tintalú / Amazon Fill)",
- "estado": "Material de apoyo, no canon (docs/research). Lo usa generar_mapa.py para la muestra; el trazado de producción sale de Natural Earth (y de HydroRIVERS para las vistas de Mundo) con tools/river-map/ (propuesta §3.6). Nombres, datos y textos: pendientes del asesor cultural (07 §8.2). Revisado el 2026-10-13 con 41 hallazgos (propuesta, cabecera). Las paradas detalladas son las de 1-200 (mundos 1-5) en paradas_1_200 y, con Q14-A (la 1.0 son los niveles 1-700, GDD §2 #21), las de 201-700 en paradas_201_700 (fase F9: k = 20-29 desde M3.7a y k = 30-41 desde M3.7b; faltan k = 42-69). Ampliado el 2026-10-14 (M2.7) con el «Otro dato» de las tarjetas de 1-200 (otros_datos de cada parada, con sus fuentes reabiertas ese día). Ampliado el 2026-10-15 (M3.7a) con las paradas k = 20-29 del mundo 6 (paradas_201_700) y sus ríos locales (rios_locales_201_700), con sus fuentes reabiertas ese día. Ampliado el 2026-10-15 (M3.7b) con las paradas k = 30-41 del mundo 7 (paradas_201_700), sus ríos locales (Tambopata y Manu), el punto de paso teotonio del viaje del 300 (Q18-A) y los candidatos de Pará de la tinaja como «Otro dato» de la parada 32 (pregunta 50 (a)).",
+ "estado": "Material de apoyo, no canon (docs/research). Lo usa generar_mapa.py para la muestra; el trazado de producción sale de Natural Earth (y de HydroRIVERS para las vistas de Mundo) con tools/river-map/ (propuesta §3.6). Nombres, datos y textos: pendientes del asesor cultural (07 §8.2). Revisado el 2026-10-13 con 41 hallazgos (propuesta, cabecera). Las paradas detalladas son las de 1-200 (mundos 1-5) en paradas_1_200 y, con Q14-A (la 1.0 son los niveles 1-700, GDD §2 #21), las de 201-700 en paradas_201_700 (fase F9: k = 20-29 desde M3.7a, k = 30-41 desde M3.7b y k = 42-55 desde M3.7c; faltan k = 56-69). Ampliado el 2026-10-14 (M2.7) con el «Otro dato» de las tarjetas de 1-200 (otros_datos de cada parada, con sus fuentes reabiertas ese día). Ampliado el 2026-10-15 (M3.7a) con las paradas k = 20-29 del mundo 6 (paradas_201_700) y sus ríos locales (rios_locales_201_700), con sus fuentes reabiertas ese día. Ampliado el 2026-10-15 (M3.7b) con las paradas k = 30-41 del mundo 7 (paradas_201_700), sus ríos locales (Tambopata y Manu), el punto de paso teotonio del viaje del 300 (Q18-A) y los candidatos de Pará de la tinaja como «Otro dato» de la parada 32 (pregunta 50 (a)). Ampliado el 2026-10-15 (M3.7c) con las paradas k = 42-55 del mundo 8 (paradas_201_700), con dos bajadas declaradas por una confluencia (baja_por_confluencia) y sus fuentes reabiertas ese día.",
  "fecha": "2026-10-12",
  "datum": "WGS84, grados decimales (4 decimales)",
  "etiquetas": {
@@ -5752,7 +5752,7 @@
    "paradas": 14,
    "viaje_de_entrada": "Madre de Dios abajo → Riberalta → Beni arriba; después Beni abajo → Mamoré arriba",
    "banderas_de_cortesia": [
-    "BO (Riberalta)"
+    "BO en el 420 (viaje de entrada: Madre de Dios abajo por Puerto Heath; la parada 42, Riberalta, está en Bolivia): la tricolor [P], con el abogado y el asesor (propuesta §5.3)"
    ],
    "pregunta_del_mundo": "¿Cómo cabe tanta vida en un solo parque? → va de la selva a más de 5.700 m [E wp_madidi]",
    "sitios": [
@@ -5766,7 +5766,7 @@
       0.2798,
       0.42224
      ],
-     "nota": "Cachuela Esperanza, aguas abajo de Riberalta, pasa a punto de paso (viaje del 300 y Beni abajo)"
+     "nota": "Coordenada de Wikidata de la ciudad (Q941357), la de las paradas 42-44. Cachuela Esperanza, aguas abajo de Riberalta, pasa a punto de paso (viaje del 300 y Beni abajo)"
     },
     {
      "nombre": "Rurrenabaque",
@@ -5777,7 +5777,8 @@
      "xy": [
       0.14231,
       0.37793
-     ]
+     ],
+     "nota": "Coordenada de Wikidata del pueblo (Q749372), la de las paradas 45 y 46"
     },
     {
      "nombre": "Madidi",
@@ -5785,7 +5786,7 @@
      "lat": -14.5941,
      "lon": -67.5397,
      "conf": "E",
-     "nota": "Boca del Tuichi",
+     "nota": "Boca del Tuichi en el Beni: coordenada de Wikidata del río (Q610021, calificador P518), la de las paradas 47-49; la del parque (Q647206) queda a unos 90 km del Beni",
      "xy": [
       0.13624,
       0.37758
@@ -5800,33 +5801,37 @@
      "xy": [
       0.28693,
       0.44374
-     ]
+     ],
+     "nota": "Coordenada de Wikidata de la ciudad (Q1026253), la de la parada 50. La canoa llega Beni abajo y Mamoré arriba (baja_por_confluencia; propuesta §5.4 quater)"
     },
     {
      "nombre": "Iténez y Noel Kempff",
      "paradas": 2,
-     "lat": -14.5,
-     "lon": -60.8,
+     "lat": -13.5548,
+     "lon": -61.0042,
      "conf": "E",
      "xy": [
-      0.14,
-      0.58182
-     ]
+      0.17781,
+      0.57563
+     ],
+     "nota": "Coordenada de Wikidata del aeródromo de Flor de Oro (Q16891327), en la orilla del Iténez, la de las paradas 51 y 52 (antes, −14,5, −60,8 aproximada); la del parque (Q650710) queda a unos 50 km del Iténez"
     },
     {
      "nombre": "Trinidad y Llanos de Moxos",
      "paradas": 3,
-     "lat": -14.6808,
-     "lon": -65.0156,
+     "lat": -14.8333,
+     "lon": -64.9,
      "conf": "E",
-     "nota": "Casarabe solo con el asesor",
+     "nota": "Coordenada de Wikidata de la ciudad (Q34986), la de las paradas 53-55 (antes, la boca del Ibare, −14,6808, −65,0156, el puerto). Casarabe solo con el asesor",
      "xy": [
-      0.13277,
-      0.45407
+      0.12667,
+      0.45758
      ]
     }
    ],
-   "cuidado": "Bandera de cortesía: la tricolor, la bandera nacional de uso náutico [P]; la wiphala también es símbolo del Estado (Constitución de 2009, art. 6.II) [E lexivox_ds241]: la elección pasa por el abogado y el asesor. Casarabe con el asesor"
+   "cuidado": "Bandera de cortesía: la tricolor, la bandera nacional, de uso náutico [P]; el DS 0241/2009 no regula banderas en embarcaciones y llama a la wiphala «símbolo sagrado» (art. 28) [V lexivox_ds241]: la elección pasa por el abogado y el asesor. Casarabe y la arqueología de los Llanos de Moxos, con el asesor; el paiche con sus dos caras; sin la isla Suárez (en disputa); con Q18-A guía el bufeo boliviano hasta el viaje del 560; lista completa para el asesor en propuesta §5.4 quater",
+   "pregunta_se_plantea_en": 420,
+   "detalle": "paradas_201_700, k = 42-55 (M3.7c, 2026-10-15): cada parada con su dato, su «Otro dato», su fondo y sus vetos; dos bajadas declaradas por una confluencia (baja_por_confluencia: Guayaramerín y Trinidad; §5.4 quater)"
   },
   {
    "mundo": 9,
@@ -7659,6 +7664,923 @@
    "xy": [
     0.244,
     0.26162
+   ]
+  },
+  {
+   "k": 42,
+   "id": "riberalta",
+   "nombre": "Riberalta",
+   "sitio": "Riberalta y la castaña",
+   "niveles": [
+    421,
+    430
+   ],
+   "llegada_al_ganar": 420,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "gran_parada",
+   "pais": "BO",
+   "rio": "Beni y Madre de Dios",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -11.005,
+   "lon": -66.0661,
+   "conf": "E",
+   "wikidata": "Q941357",
+   "ancla_rio": "beni",
+   "km_desde_el_mar": 2544,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Riberalta, sobre el punto del Beni donde entra el Madre de Dios",
+   "km_casa": 2573,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 421-440 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.riberalta.dato_01",
+    "texto": "Riberalta está donde el río Madre de Dios se une al Beni.",
+    "etiqueta": "E",
+    "fuente": "CR-F95",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.riberalta.dato_02",
+     "texto": "El paiche llegó a Bolivia por accidente en 1976: desplaza peces nativos y se pesca mucho.",
+     "etiqueta": "E",
+     "fuente": "CR-F92",
+     "releida": "2026-10-15",
+     "origen": "§(e)",
+     "nota": "Mongabay Latam (2025-07-05): el paiche «fue introducido en Bolivia de manera accidental en 1976», está en el Madre de Dios, el Beni, el Orthon y el Mamoré, «ha desplazado a las especies nativas» como el surubí y el pacú, el Estado «aún no incluye al paiche como especie invasora» y «se motiva su pesca para potenciar la economía de comunidades rurales» [E CR-F92: reabierta el 2026-10-15]. Candidato de §(e) («el paiche contado con sus dos caras»): una cara, el pez que desplaza a los nativos; la otra, la pesca. No dice «invasor» ni «especie a proteger» (veto de §(e))."
+    }
+   ],
+   "nota_dato": "Gran parada del mundo 8 (la primera; D-013 punto 3). Wikipedia EN (Riberalta): la ciudad está «situated where the Madre de Dios River joins the Beni River», en la orilla sur del Beni [E CR-F95: reabierta el 2026-10-15]. Bandera de Bolivia al ganar el 420 (cruces_de_pais: el viaje de entrada del mundo 8, con vuelta): la canoa baja el Madre de Dios desde el Manu, pasa Puerto Heath y entra en Bolivia, y la primera parada en Bolivia es Riberalta. La tricolor, la bandera nacional, de uso náutico [P]: el DS 0241/2009, sobre los símbolos del Estado, no regula las banderas en embarcaciones, y llama a la wiphala «símbolo sagrado» (art. 28) [V lexivox_ds241: leído el 2026-10-15]; la elección la revisan el abogado y el asesor (propuesta §5.3). Sin placa de bienvenida: es una vuelta, como el 310. Plantea la pregunta del mundo 8, que responde la llegada del 470 al Madidi (parada 47). Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:confluencia_madre_de_dios_beni",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Madre de Dios entra en el Beni ancho, con la orilla alta de Riberalta lejana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "banner 421 (viaje del 420: Madre de Dios abajo, de vuelta en Bolivia)",
+    "miquito 422 (maquisapa)",
+    "Flor con Matapi 426 (d.5.2)",
+    "bandera de Bolivia (420, vuelta)",
+    "guía: el bufeo boliviano, hasta el viaje del 560 (Q18-A)"
+   ],
+   "bandera": "BO",
+   "pregunta_del_mundo": {
+    "texto": "¿Cómo cabe tanta vida en un solo parque?",
+    "se_responde_en": 470
+   },
+   "notas": "Coordenada de Wikidata de la ciudad (Q941357), la misma que el sitio del resumen [E wd_madidi]. La pregunta del mundo 8 se plantea al llegar (en el banner del 421, Q4-D). La canoa llega por el viaje del 420: Madre de Dios abajo desde el Manu, por Puerto Maldonado y Puerto Heath, todo ya lleno.",
+   "xy": [
+    0.2798,
+    0.42224
+   ]
+  },
+  {
+   "k": 43,
+   "id": "riberalta_castanos",
+   "nombre": "Los castaños de Riberalta",
+   "sitio": "Riberalta y la castaña",
+   "niveles": [
+    431,
+    440
+   ],
+   "llegada_al_ganar": 430,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "parada",
+   "pais": "BO",
+   "rio": "Beni y Madre de Dios",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -11.005,
+   "lon": -66.0661,
+   "conf": "E",
+   "wikidata": "Q941357",
+   "ancla_rio": "beni",
+   "km_desde_el_mar": 2544,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Riberalta, sobre el punto del Beni donde entra el Madre de Dios",
+   "km_casa": 2573,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 421-440 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.riberalta.dato_03",
+    "texto": "En 2017-2018, Bolivia dio el {n} % de la castaña del mundo, más que ningún país.",
+    "etiqueta": "E",
+    "fuente": "CR-F95",
+    "args": {
+     "n": 78
+    },
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.riberalta.dato_04",
+     "texto": "El castaño da cocos casi solo en la selva intacta: lo polinizan abejas grandes.",
+     "etiqueta": "E",
+     "fuente": "CR-F93",
+     "releida": "2026-10-15",
+     "origen": "§5.4 quater",
+     "nota": "Wikipedia EN (Brazil nut): «Brazil nut trees produce fruit almost exclusively in pristine forests», porque en los bosques alterados «lack the large-bodied bees» que lo polinizan [E CR-F93: reabierta el 2026-10-15]."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Riberalta): «Bolivia is the dominant producer of the nuts, in the period 2017/2018, the country accounted for 78% of production», frente al 16 % del Perú y el 2 % de Brasil [E CR-F95: reabierta el 2026-10-15]. La cifra va como {n} (Q8-A). Candidato de §(e) («Riberalta y el 78 % de la castaña mundial»): §(e) lo daba con [V] (F95); aquí va con [E], porque la fuente es Wikipedia sola (cabecera de la propuesta). Segunda parada del sitio: otro nombre [P] y otro dato. La castaña boliviana es la nuez de Brasil: el nombre cambia por país (castaña, nuez amazónica, castanha-do-pará). Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:castanos_emergentes",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: castaños altísimos que asoman sobre el dosel de la orilla del Beni, a mediodía (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "hito 440 [P] (Matapi + Hoja, Muy difícil; d.5.3)"
+   ],
+   "notas": "La misma coordenada que la parada 42 (Q941357) [E wd_madidi].",
+   "xy": [
+    0.2798,
+    0.42224
+   ]
+  },
+  {
+   "k": 44,
+   "id": "riberalta_beni",
+   "nombre": "El Beni en Riberalta",
+   "sitio": "Riberalta y la castaña",
+   "niveles": [
+    441,
+    450
+   ],
+   "llegada_al_ganar": 440,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "parada",
+   "pais": "BO",
+   "rio": "Beni y Madre de Dios",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -11.005,
+   "lon": -66.0661,
+   "conf": "E",
+   "wikidata": "Q941357",
+   "ancla_rio": "beni",
+   "km_desde_el_mar": 2544,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Riberalta, sobre el punto del Beni donde entra el Madre de Dios",
+   "km_casa": 2573,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 441-460 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.riberalta.dato_05",
+    "texto": "A Riberalta la llaman la capital amazónica de Bolivia; la castaña la hizo crecer.",
+    "etiqueta": "E",
+    "fuente": "CR-F95",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.riberalta.dato_06",
+     "texto": "Un castaño puede vivir {n} años o más.",
+     "etiqueta": "E",
+     "fuente": "CR-F93",
+     "args": {
+      "n": 500
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 quater",
+     "nota": "Wikipedia EN (Brazil nut): «It may live for 500 years or more» [E CR-F93: reabierta el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Riberalta): «the city is also called the Bolivian capital of the Amazon» y «the Brazilian nut trade sparked recent development» [E CR-F95: reabierta el 2026-10-15]. Tercera parada del sitio: otro nombre [P] y otro dato. Sin la flotilla de la Armada que la página también cuenta. Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:cocos_de_castana",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: la orilla del Beni con cocos de castaña caídos al pie de un castaño, sin personas (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Brote con Remolino 449 (d.5.2)"
+   ],
+   "notas": "La misma coordenada que la parada 42 (Q941357) [E wd_madidi].",
+   "xy": [
+    0.2798,
+    0.42224
+   ]
+  },
+  {
+   "k": 45,
+   "id": "rurrenabaque",
+   "nombre": "Rurrenabaque",
+   "sitio": "Rurrenabaque",
+   "niveles": [
+    451,
+    460
+   ],
+   "llegada_al_ganar": 450,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "parada",
+   "pais": "BO",
+   "rio": "Beni",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -14.4422,
+   "lon": -67.5283,
+   "conf": "E",
+   "wikidata": "Q749372",
+   "ancla_rio": "beni",
+   "km_desde_el_mar": 2961,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450)",
+   "km_casa": 2990,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 441-460 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.rurrenabaque.dato_01",
+    "texto": "En Rurrenabaque, el Beni sale de los pliegues de los Andes a los Llanos de Moxos.",
+    "etiqueta": "E",
+    "fuente": "wp_rurrenabaque",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [],
+   "nota_dato": "Wikipedia EN (Rurrenabaque): el pueblo está «on the east bank of the Beni River», donde el río «exits the Andean folds of western Bolivia into the Llanos de Moxos» [E wp_rurrenabaque: leída el 2026-10-15]. La canoa sube el Beni desde Riberalta (unos 420 km de poligonal, sin meandros). Sin turismo con fauna en cautiverio. Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:beni_sale_de_los_andes",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Beni ancho que sale entre las primeras serranías de los Andes, con playas de canto rodado (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "hito 460 [P] (Piraña + Brote + Barro, Muy difícil; d.5.3)",
+    "Tinaja suelta 454 (variante A; d.5.4)"
+   ],
+   "notas": "Coordenada de Wikidata del pueblo (Q749372), la misma que el sitio del resumen [E wd_madidi].",
+   "xy": [
+    0.14231,
+    0.37793
+   ]
+  },
+  {
+   "k": 46,
+   "id": "rurrenabaque_orillas",
+   "nombre": "Las dos orillas de Rurrenabaque",
+   "sitio": "Rurrenabaque",
+   "niveles": [
+    461,
+    470
+   ],
+   "llegada_al_ganar": 460,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "parada",
+   "pais": "BO",
+   "rio": "Beni",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -14.4422,
+   "lon": -67.5283,
+   "conf": "E",
+   "wikidata": "Q749372",
+   "ancla_rio": "beni",
+   "km_desde_el_mar": 2961,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450)",
+   "km_casa": 2990,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 461-480 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.rurrenabaque.dato_02",
+    "texto": "Al otro lado del Beni, frente a Rurrenabaque, San Buenaventura es la puerta del Madidi.",
+    "etiqueta": "E",
+    "fuente": "wp_madidi, wp_rurrenabaque",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [],
+   "nota_dato": "Wikipedia EN (Madidi National Park): «Madidi National Park is accessible from San Buenaventura by crossing the Beni River via passenger ferry from Rurrenabaque» [E wp_madidi: reabierta el 2026-10-15]; Wikipedia EN (Rurrenabaque): San Buenaventura está en la orilla oeste y Rurrenabaque, en la este [E wp_rurrenabaque]. Las dos páginas no coinciden en cómo se cruza (ferri o puente), y el texto no lo dice. Segunda parada del sitio: otro nombre [P] y otro dato. Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:orillas_frente_a_frente",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: las dos orillas del Beni frente a frente, con tejados lejanos entre la selva y la serranía detrás (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Liana con fruta con Brote de dos hojas 466 (d.5.2)"
+   ],
+   "notas": "La misma coordenada que la parada 45 (Q749372) [E wd_madidi].",
+   "xy": [
+    0.14231,
+    0.37793
+   ]
+  },
+  {
+   "k": 47,
+   "id": "madidi",
+   "nombre": "Madidi",
+   "sitio": "Madidi",
+   "niveles": [
+    471,
+    480
+   ],
+   "llegada_al_ganar": 470,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "parada",
+   "pais": "BO",
+   "rio": "Beni y Tuichi",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -14.5941,
+   "lon": -67.5397,
+   "conf": "E",
+   "wikidata": "Q610021",
+   "ancla_rio": "beni",
+   "km_desde_el_mar": 2978,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); la boca del Tuichi, sobre el Beni, unos 17 km río arriba de Rurrenabaque",
+   "km_casa": 3007,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 461-480 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.madidi.dato_01",
+    "texto": "Cabe tanta vida porque el Madidi va de la selva a cumbres de más de {n} metros.",
+    "etiqueta": "E",
+    "fuente": "wp_madidi",
+    "args": {
+     "n": 5700
+    },
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.madidi.dato_02",
+     "texto": "El Madidi es parque nacional desde 1995 y protege unos {n} km² de selva y montaña.",
+     "etiqueta": "E",
+     "fuente": "wp_madidi",
+     "args": {
+      "n": 18958
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 quater",
+     "nota": "Wikipedia EN (Madidi National Park): «It was established in 1995 with a total land area of 18,958 km2» [E wp_madidi: reabierta el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Responde la pregunta del mundo 8 (se plantea en el 420). Wikipedia EN (Madidi National Park): «The area under conservation ranges in elevation from 180 to 5,760 metres» y va «from the Andes Mountains to the rainforests of the Tuichi River» [E wp_madidi: reabierta el 2026-10-15]. El texto dice «más de {n}» (5.700), como el resumen, porque WCS da otra cota para la cumbre de su expedición (6.044 m en el Chaupi Orco) sin decir si está dentro del parque [V wcs2018_madidi]. No habla de glaciares. Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:selva_con_andes",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: la selva del Madidi en primer plano y los Andes nevados al fondo, como en 07 §2.1 (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "respuesta de la pregunta del mundo 8 (470)",
+    "hito 480 [P] (Liana con fruta + Brote de dos hojas + Hoja, Muy difícil; d.5.3)"
+   ],
+   "notas": "Coordenada de Wikidata de la boca del Tuichi en el Beni (Q610021, calificador P518), la misma que el sitio del resumen; la del parque (Q647206: −14,3333, −68,3333) queda a unos 90 km del Beni [E wd_madidi]. Asesor: el parque tiene comunidades y territorios indígenas, y el texto solo habla del relieve y de las especies.",
+   "xy": [
+    0.13624,
+    0.37758
+   ]
+  },
+  {
+   "k": 48,
+   "id": "tuichi",
+   "nombre": "El río Tuichi",
+   "sitio": "Madidi",
+   "niveles": [
+    481,
+    490
+   ],
+   "llegada_al_ganar": 480,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "parada",
+   "pais": "BO",
+   "rio": "Beni y Tuichi",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -14.5941,
+   "lon": -67.5397,
+   "conf": "E",
+   "wikidata": "Q610021",
+   "ancla_rio": "beni",
+   "km_desde_el_mar": 2978,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); la boca del Tuichi, sobre el Beni, unos 17 km río arriba de Rurrenabaque",
+   "km_casa": 3007,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 481-500 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.madidi.dato_03",
+    "texto": "El río Tuichi cruza la selva del Madidi y se une al Beni río arriba de Rurrenabaque.",
+    "etiqueta": "E",
+    "fuente": "wp_tuichi_river",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.madidi.dato_04",
+     "texto": "El Tuichi mide unos {n} km y nace en las laderas de los Andes.",
+     "etiqueta": "E",
+     "fuente": "eswp_rio_tuichi",
+     "args": {
+      "n": 265
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 quater",
+     "nota": "Wikipedia ES (Río Tuichi): «nace de la confluencia de muchos ríos en las estribaciones de los Andes en el departamento de La Paz» y «tiene una longitud de 265 km» [E eswp_rio_tuichi: leída el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Tuichi River): «a river in the Madidi National Park» que «flows through the rainforest and joins the Beni River upstream from the town of Rurrenabaque» [E wp_tuichi_river: leída el 2026-10-15]. Segunda parada del sitio: otro nombre [P] y otro dato. Sin los albergues de las comunidades del Tuichi. Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:acantilados_del_tuichi",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Tuichi entre paredes de roca cubiertas de selva, con su boca en el Beni (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "Matapi con Hoja atada 486 (d.5.2)"
+   ],
+   "notas": "La misma coordenada que la parada 47 (Q610021) [E wd_madidi].",
+   "xy": [
+    0.13624,
+    0.37758
+   ]
+  },
+  {
+   "k": 49,
+   "id": "madidi_selva",
+   "nombre": "La selva del Madidi",
+   "sitio": "Madidi",
+   "niveles": [
+    491,
+    500
+   ],
+   "llegada_al_ganar": 490,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "parada",
+   "pais": "BO",
+   "rio": "Beni y Tuichi",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -14.5941,
+   "lon": -67.5397,
+   "conf": "E",
+   "wikidata": "Q610021",
+   "ancla_rio": "beni",
+   "km_desde_el_mar": 2978,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); la boca del Tuichi, sobre el Beni, unos 17 km río arriba de Rurrenabaque",
+   "km_casa": 3007,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 481-500 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.madidi.dato_05",
+    "texto": "Tras un censo de 2018, el Madidi es el parque con más aves y mariposas registradas.",
+    "etiqueta": "V",
+    "fuente": "wcs2018_madidi",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.madidi.dato_06",
+     "texto": "En el censo de 2018, {n} hallazgos del Madidi podían ser especies nuevas para la ciencia.",
+     "etiqueta": "V",
+     "fuente": "wcs2018_madidi",
+     "args": {
+      "n": 124
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 quater",
+     "nota": "WCS (2018-05-22): «a whopping 124 of the new records are candidate new species for science» [V wcs2018_madidi: leída el 2026-10-15]. «Podían ser» traduce «candidate». La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "WCS, nota de prensa de la expedición Identidad Madidi (2018-05-22): las cifras «confirm Madidi as the protected area with the most recorded plant, butterfly, bird and mammal species in the world» [V wcs2018_madidi: leída el 2026-10-15]. Es la fuente primaria del recuento; Wikipedia lo cuenta como «the world's most biologically diverse national park» [E wp_madidi]. El texto no da el número de aves, porque las fuentes no coinciden (1.028 confirmadas en WCS y 1.254 en Wikipedia). Tercera parada del sitio: otro nombre [P] y otro dato. Sin el nombre científico del tití del Madidi (propuesta de fauna, regla 9). Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:mariposas_en_la_orilla",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: una playa de arena del río con mariposas de colores y guacamayos lejanos en el dosel (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "Flor con Hoja atada 498 (d.5.2)",
+    "hito 500 [P] (Matapi + Hoja atada, Muy difícil; d.5.3)",
+    "Tinaja suelta 494 (variante A; d.5.4)"
+   ],
+   "notas": "La misma coordenada que la parada 47 (Q610021) [E wd_madidi].",
+   "xy": [
+    0.13624,
+    0.37758
+   ]
+  },
+  {
+   "k": 50,
+   "id": "guayaramerin",
+   "nombre": "Guayaramerín",
+   "sitio": "Guayaramerín",
+   "niveles": [
+    501,
+    510
+   ],
+   "llegada_al_ganar": 500,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "parada",
+   "pais": "BO",
+   "rio": "Mamoré",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -10.8267,
+   "lon": -65.3567,
+   "conf": "E",
+   "wikidata": "Q1026253",
+   "ancla_rio": "mamore",
+   "km_desde_el_mar": 2489,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Mamoré río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450)",
+   "km_casa": 2518,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "baja_por_confluencia": "Beni abajo desde el Madidi (por Riberalta, Cachuela Esperanza y Villa Bella) y Mamoré arriba: del Beni al Mamoré por la confluencia de Villa Bella (resumen de 5.4: «después Beni abajo → Mamoré arriba»)",
+   "temporada": "A (aguas altas, LUT): ciclo 501-520 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.guayaramerin.dato_01",
+    "texto": "Guayaramerín, en Bolivia, mira a Guajará-Mirim, en Brasil, al otro lado del Mamoré.",
+    "etiqueta": "E",
+    "fuente": "wp_guayaramerin",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.guayaramerin.dato_02",
+     "texto": "El Mamoré mide unos {n} km; aquí hace de frontera entre Bolivia y Brasil.",
+     "etiqueta": "E",
+     "fuente": "wp_mamore_river, wp_guayaramerin",
+     "args": {
+      "n": 1930
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 quater",
+     "nota": "Wikipedia EN (Mamoré River): 1.930 km [E wp_mamore_river: leída el 2026-10-15]; Wikipedia EN (Guayaramerín): la ciudad está en la orilla oeste del Mamoré, frente a la brasileña Guajará-Mirim [E wp_guayaramerin]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Guayaramerín): «Guayaramerín is located on the west side of the Mamoré River, facing the Brazilian city of Guajará-Mirim» [E wp_guayaramerin: leída el 2026-10-15]. La canoa baja el Beni desde el Madidi, pasa Riberalta, Cachuela Esperanza y Villa Bella y sube el Mamoré hasta aquí: los km a casa bajan de ≈ 3.005 a ≈ 2.520 (baja_por_confluencia; propuesta §5.4 quater). Sin bandera de Brasil: la canoa sigue en Bolivia. La misma página cuenta la disputa por la isla Suárez, frente a la ciudad, y el texto y el fondo no la nombran ni la dibujan (abogado). Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:mamore_frontera",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Mamoré ancho como frontera, con una baliza en la orilla boliviana y la otra orilla lejana (piezas del kit)",
+    "cuidado": "Sin la isla Suárez (en disputa) ni ninguna bandera en ella. Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "ciclo 501-520 (A): Lluvia y Barro, titulares (d.5.2)"
+   ],
+   "notas": "Coordenada de Wikidata de la ciudad (Q1026253), la misma que el sitio del resumen [E wd_madidi]. Primera parada del Mamoré: el viaje de vuelta por el Beni y la subida por el Mamoré pasan por aguas ya llenas hasta Villa Bella.",
+   "xy": [
+    0.28693,
+    0.44374
+   ]
+  },
+  {
+   "k": 51,
+   "id": "noel_kempff",
+   "nombre": "Noel Kempff",
+   "sitio": "Iténez y Noel Kempff",
+   "niveles": [
+    511,
+    520
+   ],
+   "llegada_al_ganar": 510,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "parada",
+   "pais": "BO",
+   "rio": "Iténez",
+   "agua_del_sitio": "clara",
+   "agua_base_mundo": "white",
+   "lat": -13.5548,
+   "lon": -61.0042,
+   "conf": "E",
+   "wikidata": "Q16891327",
+   "ancla_rio": "itenez",
+   "km_desde_el_mar": 3108,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Mamoré hasta la boca del Iténez + Iténez río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Flor de Oro se proyecta sobre el Iténez, a unos 4 km de su poligonal",
+   "km_casa": 3137,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 501-520 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.noel_kempff.dato_01",
+    "texto": "El río Iténez es el borde del parque Noel Kempff y la frontera con Brasil.",
+    "etiqueta": "E",
+    "fuente": "wp_noel_kempff",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.noel_kempff.dato_02",
+     "texto": "El Iténez separa Bolivia de Brasil a lo largo de unos {n} km.",
+     "etiqueta": "E",
+     "fuente": "wp_guapore_river",
+     "args": {
+      "n": 920
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 quater",
+     "nota": "Wikipedia EN (Guaporé River): «920 km (570 mi) of the river forms the border between Brazil and Bolivia»; en Bolivia se llama Iténez [E wp_guapore_river: leída el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Noel Kempff Mercado National Park): «The Iténez River is its eastern and northern border separating it from the neighboring Brazil» [E wp_noel_kempff: leída el 2026-10-15]. Agua clara (rios: itenez, «clara [V]»): el único tramo claro del mundo 8, como en los hitos de 07 §2.1. La canoa sube el Mamoré desde Guayaramerín hasta la boca del Iténez y el Iténez hasta Flor de Oro. Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:itenez_agua_clara",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Iténez claro y quieto, con la selva del parque en una orilla y la otra lejana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Lluvia con la Cuia alta 514 (d.5.2)",
+    "hito 520 [P] (trío Lluvia + Barro + Hoja atada; d.5.2)"
+   ],
+   "notas": "Coordenada de Wikidata del aeródromo de Flor de Oro (Q16891327), en la orilla del Iténez, en el norte del parque; la del parque (Q650710: −14,2303, −60,8467) queda a unos 50 km del Iténez de respaldo [E wd_madidi]. Antes, el sitio del resumen tenía un punto aproximado (−14,5, −60,8).",
+   "xy": [
+    0.17781,
+    0.57563
+   ]
+  },
+  {
+   "k": 52,
+   "id": "noel_kempff_cascada",
+   "nombre": "La cascada Arcoíris",
+   "sitio": "Iténez y Noel Kempff",
+   "niveles": [
+    521,
+    530
+   ],
+   "llegada_al_ganar": 520,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "parada",
+   "pais": "BO",
+   "rio": "Iténez",
+   "agua_del_sitio": "clara",
+   "agua_base_mundo": "white",
+   "lat": -13.5548,
+   "lon": -61.0042,
+   "conf": "E",
+   "wikidata": "Q16891327",
+   "ancla_rio": "itenez",
+   "km_desde_el_mar": 3108,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Mamoré hasta la boca del Iténez + Iténez río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Flor de Oro se proyecta sobre el Iténez, a unos 4 km de su poligonal",
+   "km_casa": 3137,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 521-540 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.noel_kempff.dato_03",
+    "texto": "En el parque Noel Kempff, la cascada Arcoíris cae desde {n} metros de altura.",
+    "etiqueta": "E",
+    "fuente": "wp_noel_kempff",
+    "args": {
+     "n": 88
+    },
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.noel_kempff.dato_04",
+     "texto": "Las rocas de la meseta de Huanchaca se formaron hace unos {n} millones de años.",
+     "etiqueta": "E",
+     "fuente": "wp_noel_kempff",
+     "args": {
+      "n": 1000
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 quater",
+     "nota": "Wikipedia EN (Noel Kempff Mercado National Park): las areniscas de la meseta se depositaron «around 1 billion years ago» [E wp_noel_kempff: leída el 2026-10-15]. «Mil millones» va como {n} millones (Q8-A)."
+    },
+    {
+     "clave": "map.stop.noel_kempff.dato_05",
+     "texto": "El parque Noel Kempff es Patrimonio Natural de la Humanidad desde el año 2000.",
+     "etiqueta": "E",
+     "fuente": "wp_noel_kempff",
+     "releida": "2026-10-15",
+     "origen": "§5.4 quater",
+     "nota": "Wikipedia EN (Noel Kempff Mercado National Park): «designated a World Heritage Site by UNESCO in 2000» [E wp_noel_kempff: leída el 2026-10-15]. La ficha de la UNESCO (whc.unesco.org/en/list/967) dio 403 el 2026-10-15: por eso va con [E]."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Noel Kempff Mercado National Park): «These include the 88 metres (290 ft) Arcoiris Falls» [E wp_noel_kempff: leída el 2026-10-15]; 07 §2.1 ya la da para el mundo 8 («cascada Arcoiris de Noel Kempff (88 m)»). La cascada (Wikidata Q8342787) queda a unos 25 km de Flor de Oro: la parada no está en ella, y el fondo la pinta lejana. Segunda parada del sitio: otro nombre [P] y otro dato. Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:cascada_y_meseta",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: la cascada Arcoíris lejana, con su niebla, al pie de la pared de la meseta de Huanchaca (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Piraña con Hoja atada 526 (d.5.2)"
+   ],
+   "notas": "La misma coordenada que la parada 51 (Q16891327) [E wd_madidi].",
+   "xy": [
+    0.17781,
+    0.57563
+   ]
+  },
+  {
+   "k": 53,
+   "id": "trinidad",
+   "nombre": "Trinidad",
+   "sitio": "Trinidad y Llanos de Moxos",
+   "niveles": [
+    531,
+    540
+   ],
+   "llegada_al_ganar": 530,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "parada",
+   "pais": "BO",
+   "rio": "Mamoré",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -14.8333,
+   "lon": -64.9,
+   "conf": "E",
+   "wikidata": "Q34986",
+   "ancla_rio": "mamore",
+   "km_desde_el_mar": 2951,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Mamoré río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); la ciudad se proyecta sobre el Mamoré, a unos 10 km de su poligonal (su puerto está en el Ibare, Q5983734)",
+   "km_casa": 2980,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "baja_por_confluencia": "Iténez abajo desde Flor de Oro y Mamoré arriba: del Iténez al Mamoré por la confluencia de la boca del Iténez (resumen de 5.4: el Iténez va antes que Trinidad)",
+   "temporada": "B (aguas bajas, LUT): ciclo 521-540 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.trinidad.dato_01",
+    "texto": "En 1769, Trinidad se mudó lejos del Mamoré para escapar de sus crecidas.",
+    "etiqueta": "E",
+    "fuente": "wp_trinidad_beni",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.trinidad.dato_02",
+     "texto": "Trinidad, capital del Beni, es la capital de departamento más lluviosa de Bolivia.",
+     "etiqueta": "E",
+     "fuente": "wp_trinidad_beni",
+     "releida": "2026-10-15",
+     "origen": "§5.4 quater",
+     "nota": "Wikipedia EN (Trinidad, Beni): «Trinidad is technically Bolivia's wettest departmental capital» [E wp_trinidad_beni: leída el 2026-10-15]."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Trinidad, Beni): «The original city was on the Mamoré River, but flooding and disease forced a move» e «In 1769, the town moved to its current location, 9 miles away, due to flooding» [E wp_trinidad_beni: leída el 2026-10-15]. El texto no nombra la misión jesuita de 1686 (veto del mundo 8). La canoa baja el Iténez, sube el Mamoré y entra por el Ibare al puerto de Trinidad: los km a casa bajan de ≈ 3.135 a ≈ 2.980 (baja_por_confluencia; propuesta §5.4 quater). Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:puerto_del_ibare",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Mamoré pardo con la orilla baja y una llanura verde detrás, bajo el sol de mediodía (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 540 [P] (Piraña + Hoja atada, Muy difícil; d.5.3)",
+    "Tinaja suelta 531 (variante A; d.5.4)"
+   ],
+   "notas": "Coordenada de Wikidata de la ciudad (Q34986), a unos 10 km del Mamoré de respaldo (dentro de los 15 km del canon); antes, el sitio del resumen estaba en la boca del Ibare (Q5983734: −14,6808, −65,0156), el puerto [E wd_madidi]. Asesor: Trinidad es la puerta de los Llanos de Moxos (Casarabe y la arqueología, vetadas).",
+   "xy": [
+    0.12667,
+    0.45758
+   ]
+  },
+  {
+   "k": 54,
+   "id": "llanos_de_moxos",
+   "nombre": "Los Llanos de Moxos",
+   "sitio": "Trinidad y Llanos de Moxos",
+   "niveles": [
+    541,
+    550
+   ],
+   "llegada_al_ganar": 540,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "parada",
+   "pais": "BO",
+   "rio": "Mamoré",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -14.8333,
+   "lon": -64.9,
+   "conf": "E",
+   "wikidata": "Q34986",
+   "ancla_rio": "mamore",
+   "km_desde_el_mar": 2951,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Mamoré río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); la ciudad se proyecta sobre el Mamoré, a unos 10 km de su poligonal (su puerto está en el Ibare, Q5983734)",
+   "km_casa": 2980,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 541-560 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.llanos_de_moxos.dato_01",
+    "texto": "En las lluvias, el agua llega a cubrir hasta la mitad de los Llanos de Moxos.",
+    "etiqueta": "E",
+    "fuente": "wp_llanos_de_moxos, mongabay2013_moxos",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.llanos_de_moxos.dato_02",
+     "texto": "En 2013, los Llanos de Moxos fueron el humedal Ramsar más grande del mundo.",
+     "etiqueta": "E",
+     "fuente": "mongabay2013_moxos, wp_llanos_de_moxos",
+     "releida": "2026-10-15",
+     "origen": "§5.4 quater",
+     "nota": "Mongabay (2013-03-04): el 2 de febrero de 2013 Bolivia designó «more than 6.9 million hectares» de los Llanos de Moxos, «the largest Ramsar designation to date» [E mongabay2013_moxos: leída el 2026-10-15]; Wikipedia EN: «the largest protected area in the world at the time» [E wp_llanos_de_moxos]. En pasado: «fueron», porque la fuente habla de 2013. Prensa y Wikipedia: [E] (cabecera de la propuesta); no se buscó la ficha de Ramsar, que en M3.7a no se pudo abrir."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Llanos de Moxos): la sabana inundable de 126.100 km², donde las lluvias, de diciembre a mayo, «causes up to half the land to flood seasonally» [E wp_llanos_de_moxos: leída el 2026-10-15]; Mongabay (2013): «tropical savannas that alternate between periods of flooding and drought» [E mongabay2013_moxos]. La misma página de Wikipedia cuenta los campos elevados, las calzadas, los canales y unos 4.700 montículos precolombinos: el texto y el fondo no los nombran (Casarabe y la arqueología, al asesor). Segunda parada del sitio: otro nombre [P] y otro dato. Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:sabana_inundada",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: la sabana inundada hasta el horizonte, con islas de bosque y palmeras, en aguas altas (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [],
+   "notas": "La misma coordenada que la parada 53 (Q34986); los Llanos de Moxos (Q748368) no tienen coordenada en Wikidata [E wd_madidi].",
+   "xy": [
+    0.12667,
+    0.45758
+   ]
+  },
+  {
+   "k": 55,
+   "id": "moxos_bufeos",
+   "nombre": "Los bufeos de los Llanos",
+   "sitio": "Trinidad y Llanos de Moxos",
+   "niveles": [
+    551,
+    560
+   ],
+   "llegada_al_ganar": 550,
+   "mundo": 8,
+   "mundo_id": "w08_madidi",
+   "tipo": "castillo",
+   "pais": "BO",
+   "rio": "Mamoré",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -14.8333,
+   "lon": -64.9,
+   "conf": "E",
+   "wikidata": "Q34986",
+   "ancla_rio": "mamore",
+   "km_desde_el_mar": 2951,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Mamoré río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); la ciudad se proyecta sobre el Mamoré, a unos 10 km de su poligonal (su puerto está en el Ibare, Q5983734)",
+   "km_casa": 2980,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 541-560 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.llanos_de_moxos.dato_03",
+    "texto": "Al delfín de río de Bolivia lo llaman bufeo: tiene más dientes que el del Amazonas.",
+    "etiqueta": "E",
+    "fuente": "wp_bolivian_river_dolphin",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.llanos_de_moxos.dato_04",
+     "texto": "Los Llanos de Moxos son sabanas con islas de bosque y bosques a la orilla de los ríos.",
+     "etiqueta": "E",
+     "fuente": "wp_llanos_de_moxos",
+     "releida": "2026-10-15",
+     "origen": "§5.4 quater",
+     "nota": "Wikipedia EN (Llanos de Moxos): «a mosaic of savannas and wetlands, with islands of forest and gallery forests along rivers» [E wp_llanos_de_moxos: leída el 2026-10-15]."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Bolivian river dolphin): «Locally known as bufeos» y, frente al delfín del Amazonas, «the Bolivian river dolphin has more teeth, a smaller skull, and a longer body» [E wp_bolivian_river_dolphin: leída el 2026-10-15]; Mongabay (2013) lo cuenta entre las especies del sitio Ramsar de los Llanos de Moxos («the endangered Bolivian river dolphin») [E mongabay2013_moxos]. La página no aclara si es especie o subespecie, y el texto no lo dice. Enlaza con el guía: el bufeo boliviano guía la canoa en los mundos 7 y 8 (Q18-A; P-M8) y Rosa vuelve en el viaje del 560. Cierre del mundo 8 (el «castillo»): el Mamoré ya está lleno hasta aquí. Tercera parada del sitio: otro nombre [P] y otro dato. Vetos del mundo 8 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quater): Casarabe y toda la arqueología de los Llanos de Moxos (lomas, camellones, canales y calzadas), ni en el texto ni en el fondo; el paiche como «especie a proteger» (§(e)): se cuenta con sus dos caras; el caucho y la época de las barracas; el oro y la minería del Beni y del Madre de Dios (ni dragas ni balsas); los pueblos indígenas del Madidi, del Beni y de los Llanos de Moxos, sus comunidades y sus territorios (también el TIPNIS); la represa del Bala; la muerte de Noel Kempff Mercado, cuyo nombre lleva el parque; la isla Suárez, frente a Guayaramerín, en disputa entre Bolivia y Brasil; las misiones jesuitas; la wiphala, que el DS 0241 llama «símbolo sagrado», no va en la canoa sin el asesor y el abogado; los nombres en tacana, moxeño, esse ejja u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w08",
+    "heroe": "kit:laguna_con_bufeos",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: una laguna de la sabana con lomos rosados de bufeos y garzas en la orilla, al mediodía (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas ni balsas), sin caucho y sin restos arqueológicos (lomas, camellones ni canales de los Llanos de Moxos; Casarabe, con el asesor). Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 8, el mediodía con niebla de cascada (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 560 «Riberalta» [P] (Flor + Remolino; d.4 y d.5.2): se juega aquí y no en Riberalta; el asesor puede cambiar el nombre (D-023, punto 21)",
+    "fin del mundo 8"
+   ],
+   "notas": "La misma coordenada que la parada 53 (Q34986) [E wd_madidi].",
+   "xy": [
+    0.12667,
+    0.45758
    ]
   }
  ],
@@ -9684,8 +10606,9 @@
    "nombre": "Wikipedia EN, Madidi National Park",
    "url": "https://en.wikipedia.org/wiki/Madidi_National_Park",
    "licencia": "CC BY-SA 4.0",
-   "uso": "De 180 a 5.760 m; «from the Andes Mountains to the rainforests» (leída el 2026-10-12; no habla de glaciares)",
-   "etiqueta": "E"
+   "uso": "De 180 a 5.760 m; «from the Andes Mountains to the rainforests» (leída el 2026-10-12; no habla de glaciares). Releída el 2026-10-15 (M3.7c): de 180 a 5.760 m; parque desde 1995, con 18.958 km²; se llega desde San Buenaventura cruzando el Beni desde Rurrenabaque; «the world's most biologically diverse national park» según WCS (2018); la represa del Bala (veto)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
   },
   {
    "id": "scielo_yarinacocha",
@@ -9790,8 +10713,9 @@
    "nombre": "Bolivia, Decreto Supremo 0241 (2009), símbolos del Estado",
    "url": "https://www.lexivox.org/norms/BO-DS-N241.html",
    "licencia": "texto legal (hechos)",
-   "uso": "La wiphala está entre los símbolos del Estado (Constitución de 2009, art. 6.II) [E: no leído en esta sesión]",
-   "etiqueta": "E"
+   "uso": "Decreto Supremo 0241 (5-8-2009), símbolos del Estado: regula la Bandera Tricolor (art. 5) y la Wiphala, a la que llama «símbolo sagrado» (art. 28); no regula banderas en embarcaciones. Leído el 2026-10-15 (M3.7c); la Constitución (art. 6.II) no se leyó",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
   },
   {
    "id": "CR-F28",
@@ -10194,7 +11118,7 @@
    "nombre": "Wikipedia EN, Brazil nut (F93 de docs/research/cultura-ribera/investigacion.md)",
    "url": "https://en.wikipedia.org/wiki/Brazil_nut",
    "licencia": "CC BY-SA 4.0",
-   "uso": "El agutí (añuje) roe el coco, come semillas y entierra otras, que germinan; el fruto tarda 14 meses en madurar. Releída el 2026-10-15 (M3.7b)",
+   "uso": "El agutí (añuje) roe el coco, come semillas y entierra otras, que germinan; el fruto tarda 14 meses en madurar. Releída el 2026-10-15 (M3.7b). Releída también en M3.7c: «It may live for 500 years or more»; da fruto casi solo en bosque intacto, porque lo polinizan abejas grandes",
    "etiqueta": "E",
    "releida": "2026-10-15"
   },
@@ -10253,6 +11177,146 @@
    "licencia": "CC BY-SA 4.0",
    "uso": "El barro sin esmaltar deja pasar el agua por sus poros, que se evapora y la enfría. Releída el 2026-10-15 (M3.7b)",
    "nota_id": "Prefijo TJ- (tinaja): los T de la propuesta de la tinaja, con el mismo número que allí.",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wd_madidi",
+   "nombre": "Wikidata (P625) de las paradas y los ríos del mundo 8",
+   "url": "https://www.wikidata.org/wiki/Q941357",
+   "licencia": "CC0",
+   "uso": "Coordenadas de Riberalta (Q941357), Rurrenabaque (Q749372), el río Tuichi (Q610021, con su boca en el Beni, calificador P518), el Parque Nacional Madidi (Q647206), Guayaramerín (Q1026253), el aeródromo de Flor de Oro (Q16891327), el Parque Nacional Noel Kempff Mercado (Q650710), la catarata Arco Iris (Q8342787), Trinidad (Q34986), el río Ibare (Q5983734) y Cachuela Esperanza (Q992821); los ríos Beni (Q142604), Mamoré (Q117615) e Iténez (Q916349), con sus calificadores de boca y cabecera; los Llanos de Moxos (Q748368), sin coordenada. Consulta del 2026-10-15 (M3.7c)",
+   "url_extra": [
+    "https://www.wikidata.org/wiki/Q610021",
+    "https://www.wikidata.org/wiki/Q16891327",
+    "https://www.wikidata.org/wiki/Q34986"
+   ],
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "CR-F95",
+   "nombre": "Wikipedia EN, Riberalta (F95 de docs/research/cultura-ribera/investigacion.md)",
+   "url": "https://en.wikipedia.org/wiki/Riberalta",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "«situated where the Madre de Dios River joins the Beni River»; «the Bolivian capital of the Amazon»; «the Brazilian nut trade sparked recent development»; Bolivia, el 78 % de la castaña en 2017/2018 (el Perú, el 16 %, y Brasil, el 2 %). Releída el 2026-10-15 (M3.7c)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "CR-F92",
+   "nombre": "Mongabay Latam (2025-07-05), «Paiche invasor amenaza ríos de la Amazonía de Bolivia» (F92 de cultura-ribera)",
+   "url": "https://es.mongabay.com/2025/07/paiche-invasor-pez-gigante-amenaza-amazonia-bolivia-reportaje-fotografico/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Introducido «de manera accidental en 1976»; está en el Abuná, el Madera, el Orthon, el Madre de Dios, el Beni, el Yata, el Mamoré y el Iténez; desplaza al surubí y al pacú; el Estado aún no lo declara invasor y «se motiva su pesca». Releída el 2026-10-15 (M3.7c)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wcs2018_madidi",
+   "nombre": "WCS Newsroom (2018-05-22), «Two and a Half Year Identidad Madidi Expedition Ends After Visiting 15 Remote Sites in Bolivia's Madidi National Park»",
+   "url": "https://newsroom.wcs.org/News-Releases/articleType/ArticleView/articleId/11294/Two-and-a-Half-Year-Identidad-Madidi-Expedition-Ends-After-Visiting-15-Remote-Sites-in-Bolivias-Madidi-National-Park.aspx",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Fuente primaria de la expedición: 265 mamíferos, 1.028 aves, 105 reptiles, 109 anfibios, al menos 314 peces, 5.515 plantas y 1.544 mariposas; «the protected area with the most recorded plant, butterfly, bird and mammal species in the world»; 124 candidatas a especie nueva; la expedición terminó en el Chaupi Orco, a 6.044 m. Leída el 2026-10-15 (M3.7c)",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_rurrenabaque",
+   "nombre": "Wikipedia EN, Rurrenabaque",
+   "url": "https://en.wikipedia.org/wiki/Rurrenabaque",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "En la orilla este del Beni, frente a San Buenaventura; el río «exits the Andean folds of western Bolivia into the Llanos de Moxos»; puerta del Madidi. Leída el 2026-10-15 (M3.7c)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_tuichi_river",
+   "nombre": "Wikipedia EN, Tuichi River",
+   "url": "https://en.wikipedia.org/wiki/Tuichi_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Río del Parque Nacional Madidi que «joins the Beni River upstream from the town of Rurrenabaque». Leída el 2026-10-15 (M3.7c)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "eswp_rio_tuichi",
+   "nombre": "Wikipedia ES, Río Tuichi",
+   "url": "https://es.wikipedia.org/wiki/R%C3%ADo_Tuichi",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Nace en las estribaciones de los Andes (La Paz) y desemboca en el Beni; 265 km. Leída el 2026-10-15 (M3.7c)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_guayaramerin",
+   "nombre": "Wikipedia EN, Guayaramerín",
+   "url": "https://en.wikipedia.org/wiki/Guayaramer%C3%ADn",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "En la orilla oeste del Mamoré, frente a la brasileña Guajará-Mirim; la isla Suárez, frente a la ciudad, en disputa entre los dos países (veto). Leída el 2026-10-15 (M3.7c)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_mamore_river",
+   "nombre": "Wikipedia EN, Mamoré River",
+   "url": "https://en.wikipedia.org/wiki/Mamor%C3%A9_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "1.930 km; rápidos pocas millas antes de su unión con el Beni; «the swampy area known as the Llanos de Moxos». Leída el 2026-10-15 (M3.7c)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_guapore_river",
+   "nombre": "Wikipedia EN, Guaporé River",
+   "url": "https://en.wikipedia.org/wiki/Guapor%C3%A9_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Río Iténez en Bolivia; 1.260 km, de los que 920 son frontera Brasil-Bolivia; desemboca en el Mamoré. Leída el 2026-10-15 (M3.7c)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_noel_kempff",
+   "nombre": "Wikipedia EN, Noel Kempff Mercado National Park",
+   "url": "https://en.wikipedia.org/wiki/Noel_Kempff_Mercado_National_Park",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "El Iténez es su borde este y norte, frontera con Brasil; la cascada Arcoiris, de 88 m; la meseta de Huanchaca, de areniscas de unos 1.000 millones de años; Patrimonio de la UNESCO desde 2000; Noel Kempff Mercado murió asesinado en el parque (veto). Leída el 2026-10-15 (M3.7c)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_trinidad_beni",
+   "nombre": "Wikipedia EN, Trinidad, Beni",
+   "url": "https://en.wikipedia.org/wiki/Trinidad,_Beni",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Capital del Beni, en los Llanos de Moxos; la ciudad original estaba en el Mamoré y en 1769 se mudó «due to flooding»; «Bolivia's wettest departmental capital»; fundada en 1686 como pueblo jesuita (veto). Leída el 2026-10-15 (M3.7c)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_llanos_de_moxos",
+   "nombre": "Wikipedia EN, Llanos de Moxos",
+   "url": "https://en.wikipedia.org/wiki/Llanos_de_Moxos",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "126.100 km²; lluvias de diciembre a mayo, hasta la mitad inundada; sabanas con islas de bosque; sitio Ramsar de 2013, «the largest protected area in the world at the time»; obras de tierra precolombinas (veto). Leída el 2026-10-15 (M3.7c)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "mongabay2013_moxos",
+   "nombre": "Mongabay (2013-03-04), «Bolivia leads the way in wetland protection»",
+   "url": "https://news.mongabay.com/2013/03/bolivia-leads-the-way-in-wetland-protection/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "El 2-2-2013, más de 6,9 millones de hectáreas de los Llanos de Moxos, «the largest Ramsar designation to date»; sabanas que alternan crecidas y sequías; el bufeo boliviano entre sus especies. Leída el 2026-10-15 (M3.7c)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_bolivian_river_dolphin",
+   "nombre": "Wikipedia EN, Bolivian river dolphin",
+   "url": "https://en.wikipedia.org/wiki/Bolivian_river_dolphin",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "«Locally known as bufeos»; más dientes, cráneo más pequeño y cuerpo más largo que el delfín del Amazonas; aislado por los rápidos del Madeira; hoy se reconoce como subespecie. Leída el 2026-10-15 (M3.7c)",
    "etiqueta": "E",
    "releida": "2026-10-15"
   }
