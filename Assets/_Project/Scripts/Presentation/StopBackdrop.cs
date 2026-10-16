@@ -216,6 +216,7 @@ namespace AF.Presentation
         private float _bandBottom;
         private Rect _hole;
         private bool _laidOut;
+        private bool _warmed;
         private Rect _heroRect;
 
         /// <summary>
@@ -468,6 +469,64 @@ namespace AF.Presentation
 
             BuildWatch.Stop();
             BuildMs = BuildWatch.Elapsed.TotalMilliseconds;
+        }
+
+        /// <summary>
+        /// Lo que tardó la preparación de <see cref="Prewarm"/> (ms; 0 si no hizo falta): sonda <c>warm_ms</c>.
+        /// </summary>
+        public double WarmMs { get; private set; }
+
+        /// <summary>Ya se preparó el primer uso (<see cref="Prewarm"/>; tests).</summary>
+        public bool Warmed => _warmed;
+
+        /// <summary>
+        /// Prepara, una sola vez y fuera de <see cref="BuildMs"/>, lo que la primera composición pagaría por primer uso
+        /// (prueba de la ola 2 en el teléfono, observación 4; tarea FX4): en el Editor, el 71 en frío costaba 9,4 ms, y de ellos
+        /// 5,7 eran la primera malla de UGUI (el primer <c>Graphic.Rebuild</c>: la malla y el material compartidos), 1,3 la
+        /// primera silueta (los datos de <see cref="StopShapes"/>) y el resto, el primer uso de cada paso (la búsqueda de la
+        /// ranura del héroe, el cielo, la banda y las piezas); en caliente, la misma composición cuesta ~0,2 ms. Compone
+        /// <paramref name="stop"/> con el agua <paramref name="worldWater"/> en el juego de capas de detrás, oculto (alfa 0) y
+        /// sin dejarlo a la vista: nada cambia en pantalla. La llama la carga del nivel antes de <see cref="Apply"/>; sin
+        /// maquetación, sin parada o ya preparada, no hace nada. Su coste va en <see cref="WarmMs"/>.
+        /// </summary>
+        public void Prewarm(RiverStop? stop, string worldWater)
+        {
+            WarmMs = 0d;
+            if (_warmed || !_laidOut || stop == null)
+            {
+                return;
+            }
+
+            _warmed = true;
+            BuildWatch.Restart();
+            Layer layer = _back;
+            bool rootActive = _root.gameObject.activeSelf;
+            bool layerActive = layer.Root.gameObject.activeSelf;
+            float alpha = layer.Group.alpha;
+            string heroSource = _heroSource;
+            string? shape = _shape;
+            Sprite? heroSprite = _heroSprite;
+            Rect heroRect = _heroRect;
+
+            layer.Group.alpha = 0f;
+            layer.Root.gameObject.SetActive(true);
+            _root.gameObject.SetActive(true);
+            ResolveHero(stop);
+            layer.Compose(stop, Palette.WaterBase(worldWater ?? string.Empty), LutOf(stop), _heroSource, _shape, _heroSprite);
+            Rebuild(layer);
+            layer.BuildMeshes();
+
+            // Todo como estaba: el juego de capas de detrás, oculto y sin composición, y el héroe de la parada que se ve.
+            layer.Compose(null, Palette.WaterWhite, Color.white, HeroNone, null, null);
+            layer.Root.gameObject.SetActive(layerActive);
+            layer.Group.alpha = alpha;
+            _root.gameObject.SetActive(rootActive);
+            _heroSource = heroSource;
+            _shape = shape;
+            _heroSprite = heroSprite;
+            _heroRect = heroRect;
+            BuildWatch.Stop();
+            WarmMs = BuildWatch.Elapsed.TotalMilliseconds;
         }
 
         /// <summary>

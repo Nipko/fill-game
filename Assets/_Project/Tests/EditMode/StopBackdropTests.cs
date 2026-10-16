@@ -676,6 +676,66 @@ namespace AF.Tests.EditMode
             Assert.That(worst, Is.LessThanOrEqualTo(8d), "08 §5.4");
         }
 
+        // FX4 (observación 4 de la prueba de la ola 2 en el teléfono: el 71 en frío, 8,39 ms): el primer uso se prepara una sola
+        // vez fuera de build_ms, en el juego de capas de detrás y sin que nada cambie en pantalla.
+        [Test]
+        public void Prewarm_PaysTheFirstUseOutsideBuildMs_WithoutChangingWhatIsDrawn()
+        {
+            var refScene = new GameObject("RefScene", typeof(RectTransform));
+            refScene.transform.SetParent(_canvas.transform, false);
+            var reference = new StopBackdrop((RectTransform)refScene.transform, null);
+            reference.Layout(360f, Horizon2, PanelTop2, true, BandBottom2);
+            RiverStop tefe = Stops.At(7)!;
+
+            _b.Prewarm(tefe, "black");
+            Assert.That(_b.Warmed, Is.True);
+            Assert.That(_b.WarmMs, Is.GreaterThan(0d));
+            Assert.That(_b.Stop, Is.Null, "no compone la parada que se ve");
+            Assert.That(_b.Root.gameObject.activeSelf, Is.False, "sin parada, nada a la vista");
+            Assert.That(_b.HeroSource, Is.EqualTo(StopBackdrop.HeroNone));
+            Assert.That(_b.HeroRect.width, Is.EqualTo(0f));
+            _b.Prewarm(tefe, "black");
+            Assert.That(_b.WarmMs, Is.EqualTo(0d), "una sola vez");
+
+            _b.Apply(tefe, "black", false, 0f);
+            reference.Apply(tefe, "black", false, 0f);
+            Assert.That(reference.Warmed, Is.False);
+            AssertSameMesh(reference.SkyGraphic, _b.SkyGraphic, "cielo");
+            AssertSameMesh(reference.BandGraphic, _b.BandGraphic, "banda");
+            AssertSameMesh(reference.CodeGraphic, _b.CodeGraphic, "piezas");
+            AssertSameMesh(reference.ShapeGraphic, _b.ShapeGraphic, "silueta");
+            Assert.That(_b.HeroRect, Is.EqualTo(reference.HeroRect));
+            Assert.That(_b.HeroSource, Is.EqualTo(reference.HeroSource));
+            Assert.That(_b.LutColor, Is.EqualTo(reference.LutColor));
+            Assert.That(_b.FrontAlpha, Is.EqualTo(1f));
+            Assert.That(_b.BackAlpha, Is.EqualTo(0f), "el juego de capas de detrás, oculto");
+            Assert.That(_b.LeavingStop, Is.Null);
+
+            // Sin maquetación o sin parada no hace nada.
+            var fresh = new StopBackdrop((RectTransform)refScene.transform, null);
+            fresh.Prewarm(tefe, "black");
+            Assert.That(fresh.Warmed, Is.False, "sin maquetación");
+            fresh.Layout(360f, Horizon2, PanelTop2, true, BandBottom2);
+            fresh.Prewarm(null, "white");
+            Assert.That(fresh.Warmed, Is.False, "sin parada");
+        }
+
+        private static void AssertSameMesh(StopShapeGraphic expected, StopShapeGraphic actual, string what)
+        {
+            Assert.That(actual.VertexCount, Is.EqualTo(expected.VertexCount), what);
+            Assert.That(actual.TriangleCount, Is.EqualTo(expected.TriangleCount), what);
+            for (int i = 0; i < expected.VertexCount; i++)
+            {
+                Assert.That(actual.PositionAt(i), Is.EqualTo(expected.PositionAt(i)), what + " " + i);
+                Assert.That(actual.ColorAt(i), Is.EqualTo(expected.ColorAt(i)), what + " " + i);
+            }
+
+            for (int i = 0; i < expected.TriangleCount * 3; i++)
+            {
+                Assert.That(actual.TriangleIndexAt(i), Is.EqualTo(expected.TriangleIndexAt(i)), what + " " + i);
+            }
+        }
+
         [Test]
         public void Tick_DoesNotAllocate_DuringAFadeOrWithout()
         {

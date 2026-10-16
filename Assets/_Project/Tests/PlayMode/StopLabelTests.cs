@@ -318,6 +318,163 @@ namespace AF.Tests.PlayMode
             StringAssert.Contains("\"rows\":3", view.LastStopLabelProbe);
         }
 
+        // FX4 (observación 3 de la prueba de la ola 2 en el teléfono): con la placa a la vista nada de la fila 1 queda bajo ella,
+        // ni elevado. En el 131 y el 191 va clavada al marco sobre la fila 1 en reposo y, al elevar la cuia 0, se oculta (no cabe
+        // sobre la cuia elevada ni a 12 sp); en el 171, la Hoja de la cuia 1 asoma sobre la boca y no deja sitio ni en reposo:
+        // va sobre el muelle y sigue a la vista con la cuia 0 elevada. Los rectángulos se miden con los gráficos que se ven.
+        [UnityTest]
+        public IEnumerator Level131_ThePlateClearsTheFirstRow_AndHidesWhenCuia0Lifts()
+        {
+            yield return PlateAndFirstRow(131, "El río frontera · Colombia y Perú", false);
+        }
+
+        [UnityTest]
+        public IEnumerator Level171_TheLeafEmblemLeavesNoRoom_SoThePlateGoesOnTheDock()
+        {
+            yield return PlateAndFirstRow(171, "Nauta · Perú", true);
+        }
+
+        [UnityTest]
+        public IEnumerator Level191_ThePlateClearsTheFirstRow_AndHidesWhenCuia0Lifts()
+        {
+            yield return PlateAndFirstRow(191, "Pacaya-Samiria al alba · Perú", false);
+        }
+
+        private static IEnumerator PlateAndFirstRow(int level, string text, bool dock)
+        {
+            var probes = new List<string>();
+            Application.LogCallback capture = (message, stack, type) =>
+            {
+                if (message.Contains("\"event\":\"stop_label_off\""))
+                {
+                    probes.Add(message);
+                }
+            };
+            Application.logMessageReceived += capture;
+            try
+            {
+                yield return Load(level);
+                GameBootstrap boot = GameBootstrap.Current!;
+                GameScreen view = boot.View!;
+                StopLabel label = view.StopLabelView;
+                boot.TapAnywhere();
+                StepUntilShown(boot);
+                PlayModeHelpers.Step(boot, 400);
+                BoardLayoutResult l = view.Layout!;
+                Assert.That(l.Rows, Is.EqualTo(3), level + ": 11 cuias");
+                Assert.That(label.OnPlate, Is.True);
+                Assert.That(label.Text, Is.EqualTo(text));
+                Assert.That(view.StopLabelOnDock, Is.EqualTo(dock), level + ": " + (dock ? "sobre el muelle" : "clavada al marco"));
+                StringAssert.Contains("\"mode\":\"" + (dock ? "dock" : "plate") + "\"", view.LastStopLabelProbe);
+                Assert.That(label.Label.fontSize, Is.GreaterThanOrEqualTo(UiBuilder.MinTextSp - 0.01f), "nunca por debajo de 12 sp");
+                Assert.That(label.Label.isTextOverflowing, Is.False);
+
+                RectTransform canvas = (RectTransform)label.Root.GetComponentInParent<Canvas>().rootCanvas.transform;
+                Rect plate = label.Rect;
+                Assert.That(plate.yMin, Is.GreaterThanOrEqualTo(view.HudBottomDp - 0.01f), "bajo la fila del HUD");
+                float rowTop = float.MaxValue;
+                for (int i = 0; i < view.Views.Length; i++)
+                {
+                    if (l.RowOf[i] != 0)
+                    {
+                        continue;
+                    }
+
+                    float top = VisibleTop(view.Views[i], canvas);
+                    Assert.That(view.StopLabelRestTopOf(i), Is.EqualTo(top).Within(0.05f), level + ": lo más alto de la cuia " + i + " que mide la pantalla");
+                    rowTop = Mathf.Min(rowTop, top);
+                }
+
+                TestContext.WriteLine(level + ": placa " + plate + ", lo más alto de la fila 1 en reposo " + rowTop + " dp");
+                if (dock)
+                {
+                    float panelBottom = l.PanelBottom;
+                    Assert.That(plate.yMin, Is.GreaterThanOrEqualTo(panelBottom + GameScreen.NoticeBubbleGapDp - 0.01f), "sobre el muelle, bajo el panel");
+                    Assert.That(plate.yMax, Is.LessThanOrEqualTo(view.TrayTopDp - 8f + 0.01f), "por encima de la bandeja");
+                }
+                else
+                {
+                    Assert.That(plate.yMax + StopLabel.PlateCuiaGapDp, Is.LessThanOrEqualTo(rowTop + 0.01f), level + ": aire sobre la fila 1 en reposo, corchos incluidos");
+                }
+
+                // La cuia 0 elevada.
+                Assert.That(label.Visible, Is.True);
+                Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected), level + ": la cuia 0 se selecciona con la placa a la vista");
+                PlayModeHelpers.Step(boot, 300);
+                Assert.That(view.Views[0].IsLifted, Is.True);
+                float lifted = VisibleTop(view.Views[0], canvas);
+                Assert.That(lifted, Is.LessThan(view.StopLabelRestTopOf(0) - BoardLayout.Lift + 0.5f), "elevada");
+                if (dock)
+                {
+                    Assert.That(label.Visible, Is.True, "sobre el muelle, la elevación no la toca");
+                    Assert.That(label.Rect.yMin, Is.GreaterThan(l.PanelBottom), "ni la cuia elevada ni nada de la fila 1 queda bajo ella");
+                    Assert.That(probes.Count, Is.EqualTo(0));
+                }
+                else
+                {
+                    Assert.That(lifted, Is.LessThan(plate.yMax + StopLabel.PlateLiftAirDp), "la cuia elevada no cabe bajo la placa");
+                    Assert.That(label.Visible, Is.False, "se oculta al elevar una cuia de la fila 1");
+                    Assert.That(probes.Count, Is.EqualTo(1), string.Join("\n", probes));
+                    StringAssert.Contains("\"level\":" + level + ",\"reason\":\"lift\"", probes[0]);
+                    boot.TapCuia(0); // se baja: no vuelve
+                    PlayModeHelpers.Step(boot, 3000);
+                    Assert.That(label.Visible, Is.False, "descartada: no vuelve");
+                    Assert.That(view.NoticesQueued, Is.EqualTo(0));
+                }
+            }
+            finally
+            {
+                Application.logMessageReceived -= capture;
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Level131_NoAllocationsPerFrame_WithThePlateShown()
+        {
+            yield return Load(131);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            boot.TapAnywhere();
+            StepUntilShown(boot);
+            Assert.That(view.StopLabelView.OnPlate && !view.StopLabelOnDock, Is.True);
+            // Como NoAllocationsPerFrame_WithTheLabelShown: ya en régimen, tras los ~2,2 s del salto de la intro. El rótulo del
+            // 131 dura 3.000 ms (el mínimo de NoticeTiming): a los 2.300, quedan 700 para los 30 fotogramas medidos (480 ms),
+            // con la comprobación de la fila 1 elevada de cada fotograma (FX4).
+            PlayModeHelpers.TickExact(boot, 2300);
+            Assert.That(view.StopLabelView.Visible, Is.True);
+            Assert.That(() =>
+            {
+                for (int f = 0; f < 30; f++)
+                {
+                    view.Tick(PlayModeHelpers.FrameMs);
+                }
+            }, Is.Not.AllocatingGCMemory(), "30 fotogramas con la placa a la vista");
+            Assert.That(view.StopLabelView.Visible, Is.True, "la placa siguió a la vista durante la medida");
+        }
+
+        // Lo más alto que se ve de una cuia (dp desde arriba): sus gráficos activos con alfa, menos el área táctil.
+        internal static float VisibleTop(AF.Presentation.CuiaView cuia, RectTransform canvas)
+        {
+            Canvas.ForceUpdateCanvases();
+            float top = float.MaxValue;
+            var corners = new Vector3[4];
+            foreach (Graphic g in cuia.GetComponentsInChildren<Graphic>(false))
+            {
+                if (!g.enabled || g is AF.Presentation.HitArea || g.color.a <= 0.01f || g.canvasRenderer.GetAlpha() <= 0.01f)
+                {
+                    continue;
+                }
+
+                g.rectTransform.GetWorldCorners(corners);
+                foreach (Vector3 c in corners)
+                {
+                    top = Mathf.Min(top, canvas.rect.yMax - canvas.InverseTransformPoint(c).y);
+                }
+            }
+
+            return top;
+        }
+
         [UnityTest]
         public IEnumerator NotOnOtherLevels_NorWithTheKeyOff()
         {

@@ -755,6 +755,52 @@ class TextBlockTests(unittest.TestCase):
         self.assertIn("06 §2.3", first)
         self.assertIn("TiTino se presenta", first)
 
+    def test_each_arrival_uses_the_fact_of_its_own_stop(self):
+        # FX4 (observacion 4 de la prueba de la ola 2 en el telefono): la llegada al Encuentro de las Aguas (parada 4, la
+        # victoria del 40) usa map.stop.manaos.dato_01. No es un error de clave: en map.stop.<lugar>.dato_NN, <lugar> es el
+        # lugar del grupo de datos de la investigacion, no el id de la parada (glosario §10 y 08 §4.7 distinguen
+        # map.stop.<id>.name de map.stop.<lugar>.dato_NN), y la propuesta del Mapa (§4, fila k = 4) asigna manaos.dato_01 al
+        # Encuentro. El dato de llegada de cada parada es el dato_del_nivel de su propio registro (el de k = 0 en n = 1), su
+        # texto habla de ella («Lugar del dato» en el contexto) y ninguna clave se repite ni sale tambien como «Otro dato».
+        records = {r["k"]: r for r in self.source["paradas_1_200"]}
+        overrides = load_json(OVERRIDES_PATH)["stops"]  # el nombre de la placa, si overrides.json lo cambia (n = 13 y 17)
+        names = {r["k"]: overrides.get(r["id"], {}).get("name", r["nombre"]) for r in self.source["paradas_1_200"]}
+        seen = {}
+        for s in self.doc["stops"]:
+            key = s["arrival_fact"]
+            if s["n"] == 0:
+                self.assertIsNone(key)
+                continue
+            holder = 0 if s["n"] == 1 else s["n"]
+            with self.subTest(n=s["n"]):
+                self.assertEqual(records[holder]["dato_del_nivel"]["clave"], key, "el dato de su propio registro")
+                self.assertIn(f"Lugar del dato: {names[holder]}.", self.table[key]["context"])
+                self.assertNotIn(key, seen, f"repetida con la parada {seen.get(key)}")
+                self.assertNotIn(key, {k for t in self.doc["stops"] for k in t["facts"]}, "no es un «Otro dato»")
+                seen[key] = s["n"]
+        # Las llegadas cuyo <lugar> no es el id de su parada, una a una: una nueva tiene que mirarse y anotarse aqui.
+        lugar = {}
+        for s in self.doc["stops"]:
+            key = s["arrival_fact"]
+            if key is not None and not key.startswith(f"map.stop.{s['id']}."):
+                lugar[s["n"]] = key
+        self.assertEqual({
+            1: "map.stop.estuario.dato_03",       # el Mapa del 10 habla del estuario (06 §2.3)
+            4: "map.stop.manaos.dato_01",         # el Encuentro, en el grupo de Manaos (propuesta del Mapa §4, k = 4)
+            6: "map.general.dato_negra",          # dato general del agua negra (Anavilhanas)
+            8: "map.country.co.dato_01",          # dato de pais: Colombia
+            9: "map.stop.leticia.dato_02",        # Leticia al atardecer, en el grupo de Leticia
+            14: "map.country.pe.dato_01",         # dato de pais: Peru
+            15: "map.stop.iquitos.dato_01",       # el rio Itaya, en el grupo de Iquitos
+            16: "map.stop.allpahuayo.dato_01",    # Allpahuayo-Mishana, con el lugar abreviado
+            19: "map.stop.pacaya_samiria.dato_02",  # Pacaya-Samiria al alba, en el grupo de Pacaya-Samiria
+        }, lugar)
+        encuentro = self.table["map.stop.manaos.dato_01"]
+        self.assertIn("Lugar del dato: Encuentro de las Aguas.", encuentro["context"])
+        self.assertIn("parada 4 del Mapa del río", encuentro["context"])
+        self.assertIn("sin mezclarse", encuentro["es-419"])
+        self.assertIn("Otro dato» de la tarjeta de la parada 4", self.table["map.stop.encontro.dato_01"]["context"])
+
     def test_titino_milestones_move_the_arrival_fact_to_the_next_victory(self):
         # D-022, punto 1 (pregunta 45 (a); T6-A): en el fin de mundo salvo el 10 (40, 80 y 140), el primer Difícil (40) y
         # el primer Muy difícil (60) habla TiTino y el dato de llegada sale en la victoria siguiente.
