@@ -13,6 +13,9 @@ Solo biblioteca estandar de Python 3.14 (08 §4.5). Lo usan stops.py, geometry.p
   tocar sus bytes y escribir filas nuevas con UTF-8, LF y comillas solo donde hacen falta (como las deja L2b).
 - Puntos de paso y miradores de la investigacion (M2.6): su id (`place_id`), su nombre visible (`place_name`) y la clave de su
   dato (`fact_key_of`), los mismos en river_map_v1.json (geometry.py) y en el bloque map.* de facts.csv (stops.py).
+- Paradas de la investigacion en sus dos listas (`stop_records`: paradas_1_200 y, desde M4.5a, paradas_201_700), los
+  puntos de paso de los viajes de entrada de 201-1.000 que llevan id (`travel_passing_points`: teotonio) y el texto final
+  de un dato de punto de paso cuando la investigacion lo da entre «» (`final_fact_of`).
 """
 from __future__ import annotations
 
@@ -235,3 +238,62 @@ def fact_key_of(dato) -> str | None:
         return None
     m = _RE_FACT_KEY_PREFIX.match(dato.strip())
     return m.group(1) if m else None
+
+
+# «map.stop.teotonio.dato_01 [E wp_boto]: «Texto final.»»: la clave, la etiqueta, las fuentes y el texto final entre «».
+_RE_FINAL_FACT = re.compile(
+    r"^(map\.[a-z0-9_]+\.[a-z0-9_]+\.dato_[0-9]{2}) \[([A-Z]+) ([^\]]+)\]: «(.+)»$", re.DOTALL)
+
+
+def final_fact_of(dato) -> dict | None:
+    """Dato de un punto de paso con su texto final (M4.5a): {clave, etiqueta, fuente, texto} si el campo «dato» lo da
+    entre «» («map.stop.teotonio.dato_01 [E wp_boto]: «Río arriba de Teotônio…»»), o None si solo da la clave y una
+    descripción (los de 1-200: «map.stop.obidos.dato_01 [V MR-F21]: el río se aprieta a unos 2 km»)."""
+    if not isinstance(dato, str):
+        return None
+    m = _RE_FINAL_FACT.match(unicodedata.normalize("NFC", dato.strip()))
+    if not m:
+        return None
+    return {"clave": m.group(1), "etiqueta": m.group(2), "fuente": m.group(3).strip(), "texto": m.group(4).strip()}
+
+
+# --------------------------------------------------------------------------------------------- paradas y puntos de paso
+#
+# Las paradas detalladas de la investigacion van en dos listas con el mismo registro (propuesta del Mapa §5.1 y §5.4 bis):
+# paradas_1_200 (k = 0-19, niveles 1-200; M1.1) y paradas_201_700 (k = 20-69, niveles 201-700, fase F9: k = 20-29 desde
+# M3.7a y k = 30-41 desde M3.7b; M4.5a). Las de 201-700 llevan ademas «sitio» y «wikidata».
+
+STOP_LISTS = (("paradas_1_200", 0, 19), ("paradas_201_700", 20, 69))
+
+
+def stop_list_of(k) -> str:
+    """Nombre de la lista de la investigacion donde va la parada k (para los mensajes y el contexto de los textos)."""
+    for name, lo, hi in STOP_LISTS:
+        if isinstance(k, int) and lo <= k <= hi:
+            return name
+    return STOP_LISTS[-1][0]
+
+
+def stop_records(source: dict) -> list:
+    """Registros de las paradas de la investigacion (paradas_1_200 y paradas_201_700), en el orden de las listas; solo
+    los objetos (las entradas que no lo son las rechaza stops.py)."""
+    out = []
+    for name, _, _ in STOP_LISTS:
+        items = source.get(name)
+        if isinstance(items, list):
+            out.extend(r for r in items if isinstance(r, dict))
+    return out
+
+
+def travel_passing_points(source: dict) -> list:
+    """Puntos de paso de los viajes de entrada de 201-1.000 (paradas_201_1000[].puntos_de_paso_del_viaje) que llevan id:
+    los que el Mapa dibuja (passing[] de river_map_v1.json; M4.5a: teotonio, el relevo del guia del viaje del 300, Q18-A y
+    P-M8). Los que no llevan id (Villa Bella, Cachuela Esperanza, Riberalta) son notas del resumen de su mundo."""
+    out = []
+    for world in source.get("paradas_201_1000", []) or []:
+        if not isinstance(world, dict):
+            continue
+        for p in world.get("puntos_de_paso_del_viaje", []) or []:
+            if isinstance(p, dict) and isinstance(p.get("id"), str):
+                out.append(p)
+    return out

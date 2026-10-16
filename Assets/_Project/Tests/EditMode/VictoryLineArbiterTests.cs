@@ -15,7 +15,7 @@ namespace AF.Tests.EditMode
     /// El árbitro de la única línea de la victoria (<see cref="VictoryLineArbiter"/>; arquitectura de la tanda 4, §2; 02 §6; T6-A;
     /// pregunta 45, (a), D-022; tarea M1.3a): tabla de casos con todas las combinaciones (Canon o SingleKey × ArrivalEverywhere
     /// o SlothHito × TiTino puede hablar o no × con o sin Mapa) en 10, 11, 20, 21, 40, 41, 60, 61, 80, 81, 140, 200, 201 y 700,
-    /// con las paradas reales de 1-200 y con un catálogo sintético de 100 paradas; una sola línea por victoria; el dato
+    /// con las paradas reales de 1-420 (42, M4.5a) y con un catálogo sintético de 100 paradas; una sola línea por victoria; el dato
     /// desplazado sale una vez y solo una; las cadencias; los defaults y cero asignaciones.
     /// </summary>
     public sealed class VictoryLineArbiterTests
@@ -59,8 +59,9 @@ namespace AF.Tests.EditMode
                 case 20: return Kind.Arrival;
                 case 40: case 60: case 80: case 140: return Kind.HitoWithStop;
                 case 41: case 61: case 81: return Kind.AfterHito;
-                case 200: case 700: return full ? Kind.HitoWithStop : Kind.HitoNoStop;
-                case 201: return full ? Kind.AfterHito : Kind.Plain;
+                case 200: return Kind.HitoWithStop;
+                case 700: return full ? Kind.HitoWithStop : Kind.HitoNoStop;
+                case 201: return Kind.AfterHito;
                 default: throw new ArgumentOutOfRangeException(nameof(level), level, "nivel fuera de la tabla");
             }
         }
@@ -83,7 +84,7 @@ namespace AF.Tests.EditMode
                                 foreach (int level in CaseLevels)
                                 {
                                     var ctx = new VictoryContext(level, map, stops, Fruit, river, hito, speak, 10, 1);
-                                    string name = (full ? "100 paradas" : "1-200") + ", " + river + ", " + hito + ", habla " + speak
+                                    string name = (full ? "100 paradas" : "1-420") + ", " + river + ", " + hito + ", habla " + speak
                                         + ", Mapa " + map + ", nivel " + level;
                                     Expect(KindOf(level, full), level, stops, river, hito == HitoLinePolicy.SlothHito && speak, map,
                                         VictoryLineArbiter.For(in ctx), name);
@@ -423,15 +424,16 @@ namespace AF.Tests.EditMode
     }
 
     /// <summary>
-    /// Catálogos de paradas de las pruebas del Mapa (M1.3a): el real de 1-200 (<c>Data/Map/river_stops_v1.json</c>) y uno
-    /// sintético de 100 paradas (1-1.000) con un dato de llegada en cada una desde la 1, para los niveles de después del 200.
+    /// Catálogos de paradas de las pruebas del Mapa (M1.3a): el real de 1-420 (<c>Data/Map/river_stops_v1.json</c>; M4.5a) y
+    /// uno sintético de 100 paradas (1-1.000) con un dato de llegada en cada una desde la 1, para los niveles de después del
+    /// 420.
     /// </summary>
     internal static class MapTestCatalogs
     {
         private static RiverStopCatalog? s_real;
         private static RiverStopCatalog? s_full;
 
-        /// <summary>Las 20 paradas reales de 1-200.</summary>
+        /// <summary>Las paradas reales: 42, de 1-420 (M4.5a).</summary>
         public static RiverStopCatalog Real =>
             s_real ??= RiverStopCatalogReader.Read(File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Map/river_stops_v1.json")));
 

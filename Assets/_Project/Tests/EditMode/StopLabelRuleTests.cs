@@ -100,7 +100,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void AfterTheCatalog_ItNeedsAStop()
         {
-            Assert.That(StopLabelRule.ShowsOn(211, MapTestCatalogs.Real, true, false), NUnit.Framework.Is.False, "el 211 no tiene parada en 1-200");
+            Assert.That(StopLabelRule.ShowsOn(421, MapTestCatalogs.Real, true, false), NUnit.Framework.Is.False, "el 421 no tiene parada en 1-420");
             Assert.That(StopLabelRule.ShowsOn(211, MapTestCatalogs.Full, true, false), NUnit.Framework.Is.True, "con 100 paradas, sí");
             Assert.That(StopLabelRule.ShowsOn(201, MapTestCatalogs.Full, true, false), NUnit.Framework.Is.False, "201: banner y Fruta nueva");
             Assert.That(StopLabelRule.ShowsOn(1001, MapTestCatalogs.Full, true, false), NUnit.Framework.Is.False, "fuera de 1-1.000");

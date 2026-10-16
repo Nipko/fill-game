@@ -28,7 +28,11 @@
     {"id": "atacuari", "kind": "local", "class": 3, "src": "rio_amazonas", "pts": "H5HeSA==", "water": [], "mouth": {"on": "amazonas", "s": 0.42038}, "fill_on_pass": 1.0},
     {"id": "itaya", "kind": "local", "class": 3, "src": "rio_amazonas", "pts": "G43bLi0FoQU=", "water": [], "mouth": {"on": "amazonas", "s": 0.348846}, "fill_on_pass": 1.0},
     {"id": "samiria", "kind": "local", "class": 3, "src": "rio_amazonas", "pts": "+ofIKw==", "water": [{"s0": 0.0, "s1": 1.0, "type": "black"}], "mouth": {"on": "maranon", "s": 0.911561}, "fill_on_pass": 1.0},
-    {"id": "pacaya", "kind": "local", "class": 3, "src": "rio_amazonas", "pts": "BHa+Io0MAwk=", "water": [], "mouth": {"on": "amazonas", "s": 0.30235}, "fill_on_pass": 1.0}
+    {"id": "pacaya", "kind": "local", "class": 3, "src": "rio_amazonas", "pts": "BHa+Io0MAwk=", "water": [], "mouth": {"on": "amazonas", "s": 0.30235}, "fill_on_pass": 1.0},
+    {"id": "aguarico", "kind": "local", "class": 3, "src": "rio_amazonas", "pts": "rLpREwL7fQzz/qEBn/nNAw==", "water": [{"s0": 0.0, "s1": 1.0, "type": "white"}], "mouth": {"on": "napo", "s": 0.437164}, "fill_on_pass": 1.0},
+    {"id": "cuyabeno", "kind": "local", "class": 3, "src": "rio_amazonas", "pts": "MLilHX79KQI=", "water": [{"s0": 0.0, "s1": 1.0, "type": "black"}], "mouth": {"on": "aguarico", "s": 0.620678}, "fill_on_pass": 1.0},
+    {"id": "tambopata", "kind": "local", "class": 3, "src": "rio_amazonas", "pts": "ECO5U8QO3/x/BXID", "water": [{"s0": 0.0, "s1": 1.0, "type": "white"}], "mouth": {"on": "madre_de_dios", "s": 0.436684}, "fill_on_pass": 1.0},
+    {"id": "manu", "kind": "local", "class": 3, "src": "rio_amazonas", "pts": "+TwxPX4ByAUp/FoD", "water": [{"s0": 0.0, "s1": 1.0, "type": "white"}], "mouth": {"on": "madre_de_dios", "s": 0.119404}, "fill_on_pass": 1.0}
   ],
   "land": {"verts": "///bpff9mwNb+u0E7vwxBP/+xw3p/pUJufe+DND4hQVZ81IGsfK/Btf1xP5D+S8Ea/zsCKv++wH6/TMGpf6uAndPAAAAAJlGmQOp/HkGrfoFBJ765Az77PMQ7ff6EL34rglj/M8UVfi9CAj9LQ6S+HkEff+/HwAAXQvfAPIBIf+UGAAAogWWAsUI/wbTB9IGYQ2qBrwSHP5MBff+8gft/A==", "tris": "JwAAAAEAJwABAAIAJwACAAMAJwADAAQAJwAEAAUAJwAFAAYAJwAGAAcAJwAHAAgAJwAIAAkAJwAJAAoAJwAKAAsAJwALAAwAJwAMAA0ADQAOAA8AJwANAA8AJwAPABAAEAARABIAEAASABMAEAATABQAEAAUABUAEAAVABYAEAAWABcAEAAXABgAEAAYABkAEAAZABoAEAAaABsAEAAbABwAEAAcAB0AEAAdAB4AEAAeAB8AEAAfACAAEAAgACEAEAAhACIAEAAiACMAEAAjACQAEAAkACUAEAAlACYAEAAmACcA", "zones": [{"id": "land", "tile": "canopy", "first": 0, "count": 38}]},
   "insets": [],
@@ -66,6 +70,7 @@
     {"id": "caballococha", "line": "amazonas", "s": 0.423121, "fact": null},
     {"id": "pebas", "line": "amazonas", "s": 0.384389, "fact": null},
     {"id": "boca_del_napo", "line": "amazonas", "s": 0.362913, "fact": null},
-    {"id": "tamshiyacu", "line": "amazonas", "s": 0.341885, "fact": null}
+    {"id": "tamshiyacu", "line": "amazonas", "s": 0.341885, "fact": null},
+    {"id": "teotonio", "line": "madeira", "s": 0.230244, "fact": "map.stop.teotonio.dato_01"}
   ]
 }

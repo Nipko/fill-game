@@ -96,7 +96,7 @@ class StopsSchemaTests(unittest.TestCase):
     def test_real_file_validates(self):
         errs = self.errors(self.real)
         self.assertEqual([], [f"{list(e.absolute_path)}: {e.message}" for e in errs])
-        self.assertEqual(20, len(self.real["stops"]))
+        self.assertEqual(42, len(self.real["stops"]), "1-420 (M4.5a)")
 
     def test_every_stop_has_at_and_leg(self):
         for s in self.real["stops"]:
@@ -197,7 +197,7 @@ class MapSchemaTests(unittest.TestCase):
     def test_real_file_validates(self):
         errs = self.errors(self.real)
         self.assertEqual([], [f"{list(e.absolute_path)}: {e.message}" for e in errs])
-        self.assertEqual(27, len(self.real["lines"]))
+        self.assertEqual(31, len(self.real["lines"]), "27 de 1-200 y 4 locales de 201-420 (M4.5a)")
 
     def test_inset_of_08_validates(self):
         # La 1.0 deja insets vacio (un dato), pero el formato admite el recuadro con la forma de 08 §4.5.

@@ -24,8 +24,9 @@ namespace AF.Tests.PlayMode
     /// personaje g.2 y d.11):
     /// <list type="bullet">
     /// <item>el fondo es el de la parada de «Jugar» (en el 58, Manaos), el mismo que el del tablero de ese nivel;</item>
-    /// <item>«Faltan {n} niveles para {lugar}» bajo «Jugar», en Nunito Bold de 14 sp, correcto en el 51, el 58 y el 60, y oculto
-    /// con el fin de contenido, sin parada siguiente en el catálogo y con Sin canoas;</item>
+    /// <item>«Faltan {n} niveles para {lugar}» bajo «Jugar», en Nunito Bold de 14 sp, correcto en el 51, el 58, el 60 y el 195
+    /// (hacia Mazán, la parada 20; M4.5a), y oculto con el fin de contenido, sin parada siguiente en el catálogo (uno de prueba
+    /// que acaba en la 19) y con Sin canoas;</item>
     /// <item>la ventanita de casa: «a unos 1.480 km» en Manaos, sin píldora en Belém, oculta con Sin canoas, con la hoja de
     /// compra delante y con el anuncio simulado delante, y sin toques;</item>
     /// <item>sin catálogo, el inicio de siempre;</item>
@@ -139,11 +140,26 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator StopRemaining_HidesAtTheContentEnd_AndWithoutANextStop_AndWithoutCatalogTheLobbyIsAsBefore()
         {
-            // Del 191 al 200 la parada siguiente (la 20) no está en el catálogo de 1-200: sin «Faltan…», con la ventanita.
+            // Con las 42 paradas de 1-420 (M4.5a), del 191 al 200 la parada siguiente (la 20, Mazán) está en el catálogo y el
+            // pack de 201-300 está publicado: «Faltan…» hacia Mazán.
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(195)));
             GameBootstrap boot = GameBootstrap.Current!;
             LobbyScreen lobby = boot.Lobby!;
             yield return null;
+            RiverStopCatalog full = lobby.RiverStops!;
+            Assert.That(lobby.StopBackdrop.Stop!.N, Is.EqualTo(19));
+            Assert.That(full.At(20)!.Id, Is.EqualTo("mazan"), "premisa: la parada 20 está en el catálogo");
+            Assert.That(boot.App!.PlayLevelAvailable, Is.True, "premisa: el 195 está publicado");
+            Assert.That(lobby.StopRemainingShown, Is.True, "con la parada siguiente en el catálogo");
+            Assert.That(lobby.StopRemainingText, Is.EqualTo("Faltan 6 niveles para Mazán"));
+            Assert.That(lobby.HomeWindow.Visible, Is.True);
+
+            // Sin parada siguiente en el catálogo (uno de prueba con las paradas 0-19, que acaba en el mundo 5) y con el 195
+            // publicado, para no confundirlo con el fin de contenido: sin «Faltan…», con la ventanita.
+            lobby.RiverStops = Truncated(full, 20);
+            yield return null;
+            Assert.That(lobby.RiverStops!.At(20), Is.Null, "premisa: sin la parada 20");
+            Assert.That(boot.App.PlayLevelAvailable, Is.True, "premisa: no es el fin de contenido");
             Assert.That(lobby.StopBackdrop.Stop!.N, Is.EqualTo(19));
             Assert.That(lobby.StopRemainingShown, Is.False, "sin la parada siguiente en el catálogo");
             Assert.That(lobby.HomeWindow.Visible, Is.True);
@@ -384,6 +400,18 @@ namespace AF.Tests.PlayMode
             profile.Progress.NextLevel = nextLevel;
             profile.Progress.MaxLevel = nextLevel - 1;
             return profile;
+        }
+
+        // Catálogo de prueba con las paradas 0 … count − 1 de stops (las mismas instancias).
+        private static RiverStopCatalog Truncated(RiverStopCatalog stops, int count)
+        {
+            var kept = new RiverStop[count];
+            for (int n = 0; n < count; n++)
+            {
+                kept[n] = stops.At(n)!;
+            }
+
+            return new RiverStopCatalog(stops.Source, kept);
         }
 
         // Paquete de niveles de un solo nivel, el 1: el catálogo acaba ahí y todo lo demás es fin de contenido.
