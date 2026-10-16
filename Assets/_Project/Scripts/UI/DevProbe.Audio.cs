@@ -14,7 +14,7 @@ namespace AF.UI
     /// apagado, en silencio o con un anuncio delante no sale ninguno): su ID de la lista, su pico en dBFS y, en los afinados, la
     /// fruta (índice de motor 1-14).</item>
     /// <item><c>AF_STATE {"event":"haptic","t":…,"kind":"haptic_seal"}</c> en cada vibración (con Vibración apagada no sale).</item>
-    /// <item><c>AF_PERF {"event":"audio_build","worker_ms":…,"main_ms":…,"clips":104,"pcm_kib":…}</c> una vez, cuando los
+    /// <item><c>AF_PERF {"event":"audio_build","worker_ms":…,"main_ms":…,"clips":…,"pcm_kib":…}</c> una vez, cuando los
     /// clips quedan listos: lo que tardó el hilo de trabajo en generar el PCM, lo que pagó el hilo principal al crearlos y la
     /// memoria PCM (en float).</item>
     /// </list>

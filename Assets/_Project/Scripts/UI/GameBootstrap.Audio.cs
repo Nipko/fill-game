@@ -90,7 +90,8 @@ namespace AF.UI
         }
 
         // Atrás de Android: si cierra algo, sfx_ui_back (salvo que lo que cerró ya sonara); si no puede cerrar un aviso obligatorio
-        // (el embudo del nivel, la compra simulada, un anuncio o el aviso del perfil bloqueado), el háptico corto. Nunca suena
+        // (el embudo del nivel, la compra simulada o el aviso del perfil bloqueado), el háptico corto. Con un anuncio delante
+        // Atrás tampoco cierra, pero no vibra: todo se calla durante el anuncio (07 §9.4; AudioMix.HapticsAllowed). Nunca suena
         // ni vibra si Atrás simplemente no hace nada (el nivel en juego, el inicio sin hoja).
         private void AndroidBackWithAudio()
         {

@@ -252,7 +252,7 @@ La variante nocturna, el tema de menú y el ambiente de cada mundo (sección 5) 
 
 | ID | Pico (dBFS) | Cola | Dónde suena hoy |
 | --- | --- | --- | --- |
-| `sfx_select` | −36 | ≤ 0,2 s | Al elegir una cuia, con la nota de su fruta de arriba; al bajarla, la variante grave (−35 dBFS) [P] |
+| `sfx_select` | −36 | ≤ 0,2 s | Al elegir una cuia, con la nota de su fruta de arriba (al bajarla no suena: 02 §4.1) |
 | `sfx_pour_start` | −30 | ≤ 0,2 s | Cuando el chorro empieza a caer |
 | `sfx_pour_loop` | −29 | bucle | Mientras cae el chorro (bucle; el tono sigue al nivel del destino) |
 | `sfx_pour_end` | −30 | ≤ 0,2 s | Al cortarse el caudal |

@@ -184,6 +184,37 @@ namespace AF.Tests.EditMode
         }
 
         [TestCase(328, 281)]
+        [TestCase(328, 560)]
+        public void ModalSurfaceColorAt_MatchesTheSurfaceWithoutTheGrain(int widthDp, int heightDp)
+        {
+            // Revisión de AU1: los fundidos del visor de Ajustes toman el color de la superficie en su borde. La veta solo
+            // oscurece y ondula ±1,5 dp, así que en cada fila el píxel más claro es el de sin veta: debe ser el de la función.
+            Color32[] px = ProceduralArt.ModalSurfacePixels(widthDp, heightDp);
+            const float k = 1.5f; // px por dp de la superficie
+            int w = Mathf.RoundToInt(widthDp * k);
+            int h = Mathf.RoundToInt(heightDp * k);
+            Assert.That(px.Length, Is.EqualTo(w * h));
+            for (int y = 0; y < h; y += 7)
+            {
+                Color32 lightest = px[y * w];
+                for (int x = 1; x < w; x++)
+                {
+                    Color32 c = px[(y * w) + x];
+                    if (c.r + c.g + c.b > lightest.r + lightest.g + lightest.b)
+                    {
+                        lightest = c;
+                    }
+                }
+
+                float yd = heightDp - ((y + 0.5f) / k);
+                Color32 expected = ProceduralArt.ModalSurfaceColorAt(yd, heightDp);
+                Assert.That(Mathf.Abs(lightest.r - expected.r), Is.LessThanOrEqualTo(1), "fila " + y);
+                Assert.That(Mathf.Abs(lightest.g - expected.g), Is.LessThanOrEqualTo(1), "fila " + y);
+                Assert.That(Mathf.Abs(lightest.b - expected.b), Is.LessThanOrEqualTo(1), "fila " + y);
+            }
+        }
+
+        [TestCase(328, 281)]
         [TestCase(296, 144)]
         [TestCase(120, 90)]
         public void ModalSurface_PaintedFaster_SamePixelsAsBefore(int widthDp, int heightDp)

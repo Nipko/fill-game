@@ -75,10 +75,17 @@ namespace AF.UI
         /// <summary>El contenido no cabe y se desplaza (tests y capturas).</summary>
         public bool Scrolls => _scroll.vertical;
 
+        /// <summary>Se ve el fundido de arriba del visor: el contenido se ha desplazado (revisión de AU1; tests).</summary>
+        public bool FadeTopVisible => _fadeTop.gameObject.activeSelf;
+
+        /// <summary>Se ve el fundido de abajo del visor: queda contenido por debajo (revisión de AU1; tests).</summary>
+        public bool FadeBottomVisible => _fadeBottom.gameObject.activeSelf;
+
         /// <summary>Desplaza el contenido hasta el final (capturas: lo que queda debajo al 130 %).</summary>
         public void ScrollToEnd()
         {
             _scroll.verticalNormalizedPosition = 0f;
+            UpdateFades();
         }
 
         private void BuildAudioRows()

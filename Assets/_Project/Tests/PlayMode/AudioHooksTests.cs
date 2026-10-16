@@ -19,6 +19,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.UI;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace AF.Tests.PlayMode
 {
@@ -149,6 +150,38 @@ namespace AF.Tests.PlayMode
             Assert.That(_audio.Heard(SfxId.Illegal), Is.True, "07 §9.2: madera neutra");
             Assert.That(_audio.HapticTotal(), Is.EqualTo(0), "02 §4: nunca háptico en un rechazo");
             Assert.That(_audio.Requested(SfxId.Select), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Deselect_TappingTheLiftedCuiaAgain_PlaysNothing()
+        {
+            // 02 §4.1: «Deselección | Baja a su sitio | 100 ms | ease-in | — | —», sin audio ni háptico (revisión de AU1). Se
+            // comprueba en el juego, no solo la falta de una API: ningún gancho, con el nombre que sea, suena al bajar la cuia.
+            yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            BoardState board = boot.Flow!.Session.Current;
+            int full = -1;
+            for (int i = 0; i < board.Count; i++)
+            {
+                if (!board[i].IsEmpty)
+                {
+                    full = i;
+                    break;
+                }
+            }
+
+            Assert.That(full, Is.GreaterThanOrEqualTo(0), "el nivel 1 tiene cuias con fruta");
+            _audio.Clear();
+            Assert.That(boot.TapCuia(full).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(_audio.Heard(SfxId.Select), Is.True, "subirla suena con la nota de su fruta");
+
+            _audio.Clear();
+            Assert.That(boot.TapCuia(full).Kind, Is.EqualTo(TapKind.Deselected));
+            Assert.That(_audio.Events.Count, Is.EqualTo(0), "bajar la selección no suena ni vibra");
+            PlayModeHelpers.Step(boot, 200);
+            Assert.That(_audio.Events.Count, Is.EqualTo(0), "tampoco al terminar de bajar (100 ms)");
         }
 
         [UnityTest]
@@ -496,7 +529,61 @@ namespace AF.Tests.PlayMode
                 {
                     Assert.That(settings.Scrolls, Is.True, "en 16:9 al 130 % no cabe: se desplaza");
                 }
+
+                if (!settings.Scrolls)
+                {
+                    Assert.That(settings.FadeTopVisible || settings.FadeBottomVisible, Is.False, "sin desplazamiento, sin fundidos: " + where);
+                    continue;
+                }
+
+                // Revisión de AU1: con el contenido arriba, la última fila cortada se ve entre el 35 y el 60 % (no una franja de
+                // unos dp que parece una línea suelta), con el fundido de abajo y sin el de arriba.
+                int cut = 0;
+                float shown = 0f;
+                foreach (Button row in Rows(settings))
+                {
+                    var rc = new Vector3[4];
+                    ((RectTransform)row.transform).GetWorldCorners(rc);
+                    float rowBottom = settings.Viewport.InverseTransformPoint(rc[0]).y;
+                    float rowTop = settings.Viewport.InverseTransformPoint(rc[1]).y;
+                    float viewBottom = settings.Viewport.rect.yMin;
+                    if (rowTop > viewBottom + 0.5f && rowBottom < viewBottom - 0.5f)
+                    {
+                        cut++;
+                        shown = (rowTop - viewBottom) / (rowTop - rowBottom);
+                    }
+                }
+
+                Assert.That(cut, Is.EqualTo(1), "una fila cortada por el borde de abajo del visor: " + where);
+                Assert.That(shown, Is.InRange(SettingsScreen.CutRowMin - 0.01f, SettingsScreen.CutRowMax + 0.01f), "se ve a medias: " + where);
+                Assert.That(settings.FadeBottomVisible, Is.True, "fundido de abajo: la lista sigue");
+                Assert.That(settings.FadeTopVisible, Is.False, "arriba del todo, sin fundido de arriba");
+
+                settings.ScrollToEnd();
+                Assert.That(settings.FadeTopVisible, Is.True, "desplazada hasta el final: fundido de arriba");
+                Assert.That(settings.FadeBottomVisible, Is.False, "y sin el de abajo: no queda nada debajo");
             }
+        }
+
+        // Las filas de Ajustes, de arriba abajo: Sonido, Música y Vibración, los idiomas, los patrones y Mensajes de TiTino.
+        private static System.Collections.Generic.List<Button> Rows(SettingsScreen settings)
+        {
+            var rows = new System.Collections.Generic.List<Button>
+            {
+                settings.AudioButton(SettingsScreen.SoundId),
+                settings.AudioButton(SettingsScreen.MusicId),
+                settings.AudioButton(SettingsScreen.HapticsId),
+            };
+            foreach (string id in settings.LanguageOptions)
+            {
+                rows.Add(settings.LanguageButton(id)!);
+            }
+
+            rows.Add(settings.PatternsButton(PatternsSetting.Auto));
+            rows.Add(settings.PatternsButton(PatternsSetting.On));
+            rows.Add(settings.PatternsButton(PatternsSetting.Off));
+            rows.Add(settings.SlothMessagesButton);
+            return rows;
         }
 
         // Como LuciernagaTests: carga, salta la intro y espera a la vista quieta en juego.
