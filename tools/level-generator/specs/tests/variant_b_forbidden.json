@@ -1,0 +1,9 @@
+{
+  "extends": "../campaign_v2.json",
+  "description": "Fixture negativo de --validate-spec (P4): la variante b también se valida. El respaldo del 329 (Ti (D) en la a) pasa de Ma (D) a Ll+Pi (D), dos contadores (d.3): la variante a no cambia y está en verde, y la b falla FORBIDDEN en el 329 (solo esa regla y solo en la b; expect_variant).",
+  "expect_rule": "FORBIDDEN",
+  "expect_variant": "b",
+  "fallback": {
+    "329": "Ll+Pi (D)"
+  }
+}

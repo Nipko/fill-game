@@ -1,0 +1,11 @@
+{
+  "extends": "../campaign_v2.json",
+  "description": "Fixture de límite de --validate-spec (P4): un hueco de exactamente 60 niveles entre dos primeras veces pasa NOVELTY-60 (D-009 punto 8: nunca más de 60). Como novelty_gap_61.json, pero la primera vez nueva cae un nivel antes: se quitan las de 541-580 (560 Fl+Re -> Fl+Ho, del 432; 569 B2+Ba -> B2+Re, del 360; 580 Ma+B2 -> Ma+Ba, del 132) y el reto 586 (Pi+Ha, del 526) pasa a Re+Ch, un conjunto nunca visto: del 526 al 586 hay 60 niveles. NOVELTY-60 no falla en ninguna variante; falla FIRST-TIME en 541-560 y 561-580 (la que declara), así que sale con 1 como los demás fixtures. --self-test registry comprueba el hueco (60, 526 -> 586) y que no hay NOVELTY-60.",
+  "expect_rule": "FIRST-TIME",
+  "calendar": {
+    "560": "Fl+Ho (MD)",
+    "569": "B2+Re (D)",
+    "580": "Ma+Ba (MD; K = 13)",
+    "586": "Re+Ch (D)"
+  }
+}

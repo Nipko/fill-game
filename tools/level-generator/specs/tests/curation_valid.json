@@ -1,0 +1,12 @@
+{
+  "format": "af-curation-decisions/1",
+  "spec": "campaign_v2.json",
+  "decisions": [
+    { "level": 206, "cell": "Pi+Ba (D)", "decision": "aceptar", "date": "2026-10-16" },
+    { "level": 243, "cell": "★Ln", "decision": "aceptar", "date": "2026-10-16", "note": "estreno con un ejemplar" },
+    { "level": 246, "cell": "Ma+Re (D)", "decision": "sustituir", "date": "2026-10-16", "note": "otro del slot | mide Difícil\r\nsegunda línea" },
+    { "level": 266, "cell": "Pi+Br (D)", "decision": "cambiar la celda", "date": "2026-10-17", "note": "pasar a Pi+Ma\nsin el Brote" },
+    { "level": 280, "cell": "Pi+Ba (MD)", "decision": "aceptar", "date": "2026-10-15" },
+    { "level": 450, "cell": "Ho+Ba (D)", "decision": "aceptar", "date": "2026-10-16" }
+  ]
+}

@@ -1,0 +1,9 @@
+{
+  "extends": "../campaign_v2.json",
+  "description": "Fixture negativo de --validate-spec (P4): una celda con la Tinaja sin respaldo (d.5.4: cada celda con la Tinaja lleva el suyo en fallback). El 464 (C, comodidad pura) pasa a Ti, sin entrada en fallback. Falla FALLBACK (solo esa regla) en las dos variantes: en la a, la que se publica, porque la celda no tiene respaldo; en la b, porque se queda con la Tinaja en el 464. expect_variant pide el fallo de la a, que es el que ve --registry.",
+  "expect_rule": "FALLBACK",
+  "expect_variant": "a",
+  "calendar": {
+    "464": "Ti"
+  }
+}

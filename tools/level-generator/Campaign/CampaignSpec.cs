@@ -1,11 +1,18 @@
-// Especificación de la campaña 11-200 (tools/level-generator/specs/campaign_v1.json): datos copiados de D-009, D-007,
-// la propuesta (c.1-c.4, d.1-d.4) y el GDD vigente (02 §8, §9.2, §13; 03 §4.4, §4.5, §11, §12; glosario §8, §9, §11;
-// 08 §9). Este archivo solo lee y deriva el plan de cada nivel; las reglas del juego viven en AF.Core y AF.Solver.
+// Especificación de la campaña (tools/level-generator/specs/campaign_v1.json para 11-200 y campaign_v2.json para 201-700):
+// datos copiados de D-009, D-007, la propuesta (c.1-c.4, d.1-d.5; d.5 es la tabla de D2 para 201-700) y el GDD vigente
+// (02 §8, §9.2, §13; 03 §4.4, §4.5, §11, §12; glosario §8, §9, §11; 08 §9). Este archivo solo lee y deriva el plan de cada
+// nivel; las reglas del juego viven en AF.Core y AF.Solver. Los niveles de cada especificación salen de ella (first_level,
+// last_level, k_plan, mechanics_per_level, capacities_per_level, max_risk_pairs), no del código (P4 de la tanda 4).
+// Dos variantes (P4; propuesta d.5.4 y d.5.8; D-019): la «a» es el calendario y la «b» cambia cada celda de "fallback" por su
+// respaldo; una mecánica con "only_variant" solo existe en esa variante (la Tinaja, solo en la a). "previous" enlaza la
+// especificación anterior (campaign_v2 → campaign_v1): su calendario es la historia con la que --validate-spec cuenta los
+// huecos, las temporadas y las primeras veces (registro de combinaciones, d.5.6).
 // Lo enlazan tools/level-generator y tools/level-qa (un solo lector de la especificación).
 // Los códigos del calendario y su lectura sobre un attrs publicado (MechanicCodes) también viven aquí: con las variantes de la
 // 1.0 (P5 de la tanda 4) un tipo de AF.Core ya no basta para saber el código (liana con n es Ln; brote con n = 2, B2).
 // Una especificación puede «extender» otra (fixtures negativos de specs/tests/): "extends" apunta al archivo base y
-// "calendar" o "seasons" sustituyen solo las entradas que traen; cualquier otra clave sustituye la del base.
+// "calendar", "seasons" o "fallback" sustituyen solo las entradas que traen (null quita la del base); cualquier otra clave
+// sustituye la del base.
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -84,6 +91,25 @@ internal sealed record MechanicInfo(string Code, string Id, string Kind, int Deb
     public bool IsFilter => Kind == "filter";
 
     public bool IsCounter => Kind == "counter";
+
+    /// <summary>
+    /// Código de la mecánica base de una variante de la 1.0 (<c>variant_of</c>; propuesta b.3): Ln y Fl de la Liana con fruta,
+    /// Ha de la Hoja y B2 del Brote. Una variante puede estrenarse en cualquier temporada (d.2 regla 7), no va con su base en
+    /// el mismo nivel (d.5.1) y su estreno entra en el registro como <c>variant</c> (d.5.6). Null si no es una variante.
+    /// </summary>
+    public string? VariantOf { get; init; }
+
+    /// <summary>Códigos con los que nunca va en el mismo nivel (<c>not_with</c>; columna «Con qué no va» de d.5.1).</summary>
+    public IReadOnlyList<string> NotWith { get; init; } = Array.Empty<string>();
+
+    /// <summary>
+    /// Si no es null, las únicas mecánicas con las que puede ir (<c>only_with</c>; las capacidades no cuentan): la Tinaja, solo
+    /// con Hoja, Hoja atada, Brote, Brote de dos hojas, Matapi y Barro (d.5.1; 02 §9.1 M13).
+    /// </summary>
+    public IReadOnlyList<string>? OnlyWith { get; init; }
+
+    /// <summary>Variante de la campaña en la que existe (<c>only_variant</c>: la Tinaja, solo en la «a»), o null en las dos.</summary>
+    public string? OnlyVariant { get; init; }
 }
 
 internal sealed record CapacityInfo(string Code, string Id, int Cap, int Debut);
@@ -205,6 +231,8 @@ internal sealed class CampaignSpec
 
     private readonly Dictionary<int, CalendarCell> _calendar = new();
 
+    private readonly Dictionary<int, CalendarCell> _fallback = new();
+
     private CampaignSpec()
     {
     }
@@ -270,6 +298,131 @@ internal sealed class CampaignSpec
     public string? ExpectRule { get; init; }
 
     public IReadOnlyDictionary<int, CalendarCell> Calendar => _calendar;
+
+    /// <summary>Variante «a» (el calendario) y «b» (con los respaldos de "fallback"; salida B de D-019, d.5.4).</summary>
+    public const string VariantA = "a";
+
+    public const string VariantB = "b";
+
+    /// <summary>Valor de <c>max_risk_pairs.max</c> sin tope (03 §11: «libre» desde el 201).</summary>
+    public const string FreeRiskPairs = "libre";
+
+    /// <summary>Variante con la que se leyó la especificación (<see cref="Load(string, string?)"/>).</summary>
+    public string Variant { get; init; } = VariantA;
+
+    /// <summary>Variantes de la especificación: solo la «a», o la «a» y la «b» si trae "fallback" o mecánicas de una variante.</summary>
+    public IReadOnlyList<string> Variants { get; init; } = [VariantA];
+
+    public bool HasVariants => Variants.Count > 1;
+
+    /// <summary>
+    /// Variante que se publica (<c>published_variant</c>; «a» por defecto): la que se lee sin --variant y la que lleva el
+    /// registro de combinaciones versionado (d.5.6; la elige C1b, d.5.8).
+    /// </summary>
+    public string PublishedVariant { get; init; } = VariantA;
+
+    /// <summary>Respaldo de cada celda con una mecánica de una sola variante ("fallback"), ya interpretado.</summary>
+    public IReadOnlyDictionary<int, CalendarCell> FallbackCells => _fallback;
+
+    /// <summary>
+    /// Todas las mecánicas de la tabla, también las de la otra variante: con ellas se leen las celdas. <see cref="MechanicTable"/>
+    /// solo lleva las de <see cref="Variant"/>.
+    /// </summary>
+    public IReadOnlyList<MechanicInfo> AllMechanics { get; init; } = Array.Empty<MechanicInfo>();
+
+    /// <summary>Códigos de las variantes de la 1.0 de la tabla (<see cref="MechanicInfo.VariantOf"/>).</summary>
+    public IReadOnlySet<string> VariantCodes =>
+        AllMechanics.Where(m => m.VariantOf is not null).Select(m => m.Code).ToHashSet(StringComparer.Ordinal);
+
+    /// <summary>Especificación anterior ("previous"), leída con su variante publicada; null si no hay.</summary>
+    public CampaignSpec? Previous { get; init; }
+
+    /// <summary>
+    /// Hueco máximo entre dos primeras veces (<c>novelty_max_gap</c>; D-009 punto 8: «nunca más de 60 niveles sin algo nunca
+    /// visto» desde el 201), o null si la especificación no lo trae (campaign_v1: la regla NOVELTY-60 no se aplica).
+    /// </summary>
+    public int? NoveltyMaxGap { get; init; }
+
+    /// <summary>Tope de Cuias chicas por nivel, con la cueva de la Piraña (<c>capacities_per_level.max_chica</c>; 02 §8).</summary>
+    public int MaxChicas { get; init; } = DefaultMaxChicas;
+
+    /// <summary>Tope de Cuias altas por nivel (<c>capacities_per_level.max_alta</c>; 02 §8).</summary>
+    public int MaxAltas { get; init; } = DefaultMaxAltas;
+
+    /// <summary>Los topes de capacidades valen antes de este nivel (<c>capacities_per_level.before_level</c>; 02 §8: «antes del 200»).</summary>
+    public int CapacityLimitsBefore { get; init; } = DefaultCapacityLimitsBefore;
+
+    /// <summary>02 §8: como mucho 2 Cuias chicas y 1 Cuia alta por nivel antes del 200 (si la especificación no trae los suyos).</summary>
+    public const int DefaultMaxChicas = 2;
+
+    public const int DefaultMaxAltas = 1;
+
+    public const int DefaultCapacityLimitsBefore = 200;
+
+    /// <summary>Fuentes del informe de la generación (<c>report_sources</c>), o null para las de campaign_v1.</summary>
+    public string? ReportSources { get; init; }
+
+    /// <summary>Variante que el fixture espera ver fallar (<c>expect_variant</c>, solo specs/tests), o null en cualquiera.</summary>
+    public string? ExpectVariant { get; init; }
+
+    /// <summary>La especificación tiene rampa (11-20 en campaign_v1; "ramp" es opcional desde P4).</summary>
+    public bool HasRamp => RampFirst > 0 && RampLast >= RampFirst;
+
+    /// <summary>Ids de la cadena de especificaciones, de la más antigua a esta ("previous"): campaign_v1, campaign_v2.</summary>
+    public IReadOnlyList<string> SourceIds => [.. Previous?.SourceIds ?? [], SpecId];
+
+    /// <summary>Celdas de la especificación y de las anteriores ("previous"), por nivel: la historia de las reglas que la necesitan.</summary>
+    public List<CalendarCell> CellsWithHistory()
+    {
+        List<CalendarCell> cells = Previous?.CellsWithHistory() ?? [];
+        for (int n = FirstLevel; n <= LastLevel; n++)
+        {
+            if (_calendar.TryGetValue(n, out CalendarCell? c))
+            {
+                cells.Add(c);
+            }
+        }
+
+        return cells;
+    }
+
+    /// <summary>Inicio y temporada (null si falta) de cada ciclo completo de la cadena de especificaciones, en orden.</summary>
+    public List<(int Start, string? Season)> CycleSeasonsWithHistory()
+    {
+        List<(int Start, string? Season)> list = Previous?.CycleSeasonsWithHistory() ?? [];
+        for (int start = CycleFrom; start + 19 <= LastLevel; start += 20)
+        {
+            list.Add((start, Seasons.TryGetValue(start, out string? s) ? s : null));
+        }
+
+        return list;
+    }
+
+    /// <summary>K del k_plan para el nivel por el rol de su posición (en la rampa, el de su fila), o null si el k_plan no lo cubre.</summary>
+    public int? KAt(int level)
+    {
+        if (level >= RampFirst && level <= RampLast)
+        {
+            return RampRows.TryGetValue(level, out RampRow? row) ? row.K : RampK;
+        }
+
+        KPlanRow? kp = KPlan.FirstOrDefault(r => r.First <= level && level <= r.Last);
+        PositionRule? rule = Positions.FirstOrDefault(r => r.Positions.Contains(PositionOf(level)));
+        return kp is null || rule is null ? null : KOf(kp, rule.KKey);
+    }
+
+    /// <summary>
+    /// K de la fila del k_plan para la clave de rol de una posición (recovery, comfort, challenge o milestone), o null si la clave
+    /// no existe. Es la única lectura de esa correspondencia: la usan <see cref="KAt"/> (HITO-14) y <see cref="Plan"/> (generación).
+    /// </summary>
+    private static int? KOf(KPlanRow kp, string kKey) => kKey switch
+    {
+        "recovery" => kp.Recovery,
+        "comfort" => kp.Comfort,
+        "challenge" => kp.Challenge,
+        "milestone" => kp.Milestone,
+        _ => null,
+    };
 
     public static int PositionOf(int level) => ((level - 1) % 20) + 1;
 
@@ -369,14 +522,7 @@ internal sealed class CampaignSpec
         {
             KPlanRow kp = KPlan.FirstOrDefault(r => r.First <= level && level <= r.Last)
                 ?? throw new CampaignSpecException($"k_plan no cubre el nivel {level}");
-            k = rule!.KKey switch
-            {
-                "recovery" => kp.Recovery,
-                "comfort" => kp.Comfort,
-                "challenge" => kp.Challenge,
-                "milestone" => kp.Milestone,
-                _ => throw new CampaignSpecException($"k desconocido '{rule.KKey}'"),
-            };
+            k = KOf(kp, rule!.KKey) ?? throw new CampaignSpecException($"k desconocido '{rule.KKey}'");
             empties = rule.Empties;
             if (level <= TwoEmptiesUntil || (role == SlotRole.Challenge && level <= ChallengeTwoEmptiesUntil) || mechanicDebutBoard)
             {
@@ -520,12 +666,24 @@ internal sealed class CampaignSpec
     // Lectura
     // ---------------------------------------------------------------------------------------------------------------
 
-    public static CampaignSpec Load(string path)
+    /// <summary>
+    /// Lee la especificación con la variante <paramref name="variant"/> («a» o «b»; null = la publicada). Lanza
+    /// <see cref="CampaignSpecException"/> si no se puede leer o si no tiene esa variante.
+    /// </summary>
+    public static CampaignSpec Load(string path, string? variant = null) => Load(path, variant, 0);
+
+    private static CampaignSpec Load(string path, string? variant, int depth)
     {
+        if (depth > 3)
+        {
+            throw new CampaignSpecException($"{path}: demasiados 'previous' encadenados");
+        }
+
         JsonObject root = LoadMerged(path, 0);
+        CampaignSpec? previous = root["previous"] is JsonValue prev ? Load(prev.GetValue<string>(), null, depth + 1) : null;
         try
         {
-            return Build(path, root);
+            return Build(path, root, variant, previous);
         }
         catch (Exception e) when (e is InvalidOperationException or FormatException or NullReferenceException or KeyNotFoundException or JsonException)
         {
@@ -555,6 +713,13 @@ internal sealed class CampaignSpec
             throw new CampaignSpecException($"{path}: la especificacion debe ser un objeto JSON");
         }
 
+        // "previous" se resuelve desde el archivo que lo declara (un fixture de specs/tests/ que extiende campaign_v2.json lo hereda).
+        if (obj["previous"] is JsonValue previous)
+        {
+            obj["previous"] = System.IO.Path.GetFullPath(System.IO.Path.Combine(
+                System.IO.Path.GetDirectoryName(System.IO.Path.GetFullPath(path)) ?? ".", previous.GetValue<string>()));
+        }
+
         if (obj["extends"] is not JsonValue ext)
         {
             return obj;
@@ -569,11 +734,18 @@ internal sealed class CampaignSpec
                 continue;
             }
 
-            if ((kv.Key == "calendar" || kv.Key == "seasons") && kv.Value is JsonObject patch && merged[kv.Key] is JsonObject target)
+            if ((kv.Key == "calendar" || kv.Key == "seasons" || kv.Key == "fallback") && kv.Value is JsonObject patch && merged[kv.Key] is JsonObject target)
             {
                 foreach (KeyValuePair<string, JsonNode?> entry in patch)
                 {
-                    target[entry.Key] = entry.Value?.DeepClone();
+                    // Un null quita la entrada del base (un respaldo que ya no hace falta: el hito 340 con Br+Ba en la «a», d.5.4).
+                    if (entry.Value is null)
+                    {
+                        target.Remove(entry.Key);
+                        continue;
+                    }
+
+                    target[entry.Key] = entry.Value.DeepClone();
                 }
 
                 continue;
@@ -585,12 +757,14 @@ internal sealed class CampaignSpec
         return merged;
     }
 
-    private static CampaignSpec Build(string path, JsonObject root)
+    private static CampaignSpec Build(string path, JsonObject root, string? variant, CampaignSpec? previous)
     {
         var tints = root["tints"]!.AsArray().Select(t => new TintInfo(
             Str(t!, "id"), Int(t!, "engine"), Str(t!, "name_es"), Int(t!, "debut"))).ToList();
         var riskPairs = root["risk_pairs"]!.AsArray().Select(p => (p![0]!.GetValue<int>(), p[1]!.GetValue<int>())).ToList();
-        var maxRisk = root["max_risk_pairs"]!.AsArray().Select(r => (r!["levels"]![0]!.GetValue<int>(), r["levels"]![1]!.GetValue<int>(), Int(r, "max"))).ToList();
+        // «libre» (03 §11, desde el 201): sin tope propio; como mucho los pares de riesgo que existen (el esquema del pack admite 0-10).
+        var maxRisk = root["max_risk_pairs"]!.AsArray().Select(r => (r!["levels"]![0]!.GetValue<int>(), r["levels"]![1]!.GetValue<int>(),
+            MaxRisk(r, riskPairs.Count))).ToList();
         var worlds = root["worlds"]!.AsArray().Select(w => new WorldInfo(
             Int(w!, "world"), Str(w!, "world_id"), Str(w!, "name"), w!["levels"]![0]!.GetValue<int>(), w["levels"]![1]!.GetValue<int>(),
             Str(w, "water_base"), Str(w, "water_tint"))).ToList();
@@ -615,10 +789,16 @@ internal sealed class CampaignSpec
             p["debut_slot"]?.GetValue<bool>() ?? false)).ToList();
         var windows = cycle["windows"]!.AsObject().ToDictionary(kv => kv.Key, kv => Interval.Parse(kv.Value!.GetValue<string>()));
         JsonObject labels = cycle["labels"]!.AsObject();
-        var mechanics = root["mechanics"]!.AsArray().Select(m => new MechanicInfo(
+        var allMechanics = root["mechanics"]!.AsArray().Select(m => new MechanicInfo(
             Str(m!, "code"), Str(m!, "id"), Str(m!, "kind"), Int(m!, "debut"), Str(m!, "season"),
-            m!["debut_key"]?.GetValue<string>(), m["k"]?.GetValue<int>() ?? 0, m["cave_cap"]?.GetValue<int>() ?? 0)).ToList();
-        foreach (MechanicInfo m in mechanics.Where(m => !MechanicCodes.IsKnown(m.Code)))
+            m!["debut_key"]?.GetValue<string>(), m["k"]?.GetValue<int>() ?? 0, m["cave_cap"]?.GetValue<int>() ?? 0)
+        {
+            VariantOf = m["variant_of"]?.GetValue<string>(),
+            NotWith = m["not_with"]?.AsArray().Select(x => x!.GetValue<string>()).ToArray() ?? Array.Empty<string>(),
+            OnlyWith = m["only_with"]?.AsArray().Select(x => x!.GetValue<string>()).ToArray(),
+            OnlyVariant = m["only_variant"]?.GetValue<string>(),
+        }).ToList();
+        foreach (MechanicInfo m in allMechanics.Where(m => !MechanicCodes.IsKnown(m.Code)))
         {
             // El generador superpone y level-qa reconoce solo los códigos de MechanicCodes: otro código sería una mecánica sin
             // superposición que rechazaría todos los candidatos del slot.
@@ -627,9 +807,50 @@ internal sealed class CampaignSpec
 
         var capacities = root["capacities"]!.AsArray().Select(c => new CapacityInfo(
             Str(c!, "code"), Str(c!, "id"), Int(c!, "cap"), Int(c!, "debut"))).ToList();
+        foreach (MechanicInfo m in allMechanics)
+        {
+            foreach (string code in m.NotWith.Concat(m.OnlyWith ?? []).Append(m.VariantOf).OfType<string>())
+            {
+                if (allMechanics.All(x => x.Code != code))
+                {
+                    throw new CampaignSpecException($"{path}: {m.Code}: codigo '{code}' (variant_of, not_with u only_with) fuera de la tabla de mecanicas");
+                }
+            }
+
+            if (m.OnlyVariant is not null and not (VariantA or VariantB))
+            {
+                throw new CampaignSpecException($"{path}: {m.Code}: only_variant '{m.OnlyVariant}' (se admiten {VariantA} y {VariantB})");
+            }
+        }
+
+        // Variantes (d.5.4): con "fallback" o alguna mecánica de una sola variante, la «a» y la «b».
+        JsonObject? fallbackNode = root["fallback"] as JsonObject;
+        bool twoVariants = (fallbackNode?.Count ?? 0) > 0 || allMechanics.Any(m => m.OnlyVariant is not null);
+        string[] variants = twoVariants ? [VariantA, VariantB] : [VariantA];
+        string published = root["published_variant"]?.GetValue<string>() ?? VariantA;
+        if (!variants.Contains(published))
+        {
+            throw new CampaignSpecException($"{path}: published_variant '{published}' no es una variante de la especificacion ({string.Join(", ", variants)})");
+        }
+
+        string chosen = variant ?? published;
+        if (!variants.Contains(chosen))
+        {
+            throw new CampaignSpecException($"{path}: la especificacion no tiene la variante '{chosen}' (tiene {string.Join(", ", variants)})");
+        }
+
+        var mechanics = allMechanics.Where(m => m.OnlyVariant is null || m.OnlyVariant == chosen).ToList();
+
         var seasons = root["seasons"]!.AsObject().ToDictionary(
             kv => int.Parse(kv.Key, CultureInfo.InvariantCulture), kv => kv.Value!.GetValue<string>());
-        JsonObject rampNode = root["ramp"]!.AsObject();
+        // La rampa (11-20) solo existe en campaign_v1: sin "ramp", ningún nivel es de rampa (RampFirst = 0 y RampLast = -1).
+        JsonObject rampNode = root["ramp"]?.AsObject() ?? new JsonObject
+        {
+            ["levels"] = new JsonArray(0, -1),
+            ["k"] = 0,
+            ["empties"] = 0,
+            ["window"] = "[0.00, 1.00]",
+        };
         var rampRows = new Dictionary<int, RampRow>();
         if (rampNode["rows"] is JsonObject rows)
         {
@@ -676,6 +897,17 @@ internal sealed class CampaignSpec
             HardThreshold = labels["thresholds"]!["hard"]!.GetValue<double>(),
             VeryHardThreshold = labels["thresholds"]!["very_hard"]!.GetValue<double>(),
             ExpectRule = root["expect_rule"]?.GetValue<string>(),
+            ExpectVariant = root["expect_variant"]?.GetValue<string>(),
+            Variant = chosen,
+            Variants = variants,
+            PublishedVariant = published,
+            AllMechanics = allMechanics,
+            Previous = previous,
+            NoveltyMaxGap = root["novelty_max_gap"]?.GetValue<int>(),
+            MaxChicas = root["capacities_per_level"]?["max_chica"]?.GetValue<int>() ?? DefaultMaxChicas,
+            MaxAltas = root["capacities_per_level"]?["max_alta"]?.GetValue<int>() ?? DefaultMaxAltas,
+            CapacityLimitsBefore = root["capacities_per_level"]?["before_level"]?.GetValue<int>() ?? DefaultCapacityLimitsBefore,
+            ReportSources = root["report_sources"]?.GetValue<string>(),
             MaxMechanics = root["mechanics_per_level"]?["max"]?.GetValue<int>() ?? DefaultMaxMechanics,
             RaisedMechanicsFrom = root["mechanics_per_level"]?["raised_from_level"]?.GetValue<int>(),
             RaisedMilestoneMechanicsFrom = root["mechanics_per_level"]?["raised_milestone_from_level"]?.GetValue<int>(),
@@ -703,7 +935,44 @@ internal sealed class CampaignSpec
             spec._calendar[level] = spec.ParseCell(level, kv.Value!.GetValue<string>());
         }
 
+        if (previous is not null && previous.LastLevel + 1 != spec.FirstLevel)
+        {
+            throw new CampaignSpecException(
+                $"{path}: previous ({previous.SpecId}) acaba en el {previous.LastLevel} y esta especificacion empieza en el {spec.FirstLevel}");
+        }
+
+        // Respaldos (d.5.4): se leen siempre (las reglas los comprueban en la «a»); la «b» los pone en el calendario.
+        foreach (KeyValuePair<string, JsonNode?> kv in fallbackNode ?? [])
+        {
+            if (!int.TryParse(kv.Key, NumberStyles.None, CultureInfo.InvariantCulture, out int level) || !spec._calendar.ContainsKey(level))
+            {
+                throw new CampaignSpecException($"{path}: respaldo (fallback) de '{kv.Key}', que no es un nivel del calendario");
+            }
+
+            spec._fallback[level] = spec.ParseCell(level, kv.Value!.GetValue<string>());
+        }
+
+        if (chosen == VariantB)
+        {
+            foreach ((int level, CalendarCell cell) in spec._fallback)
+            {
+                spec._calendar[level] = cell;
+            }
+        }
+
         return spec;
+    }
+
+    private static int MaxRisk(JsonNode row, int riskPairCount)
+    {
+        if (row["max"] is JsonValue v && v.TryGetValue(out string? text))
+        {
+            return text == FreeRiskPairs
+                ? riskPairCount
+                : throw new CampaignSpecException($"max_risk_pairs: '{text}' no es un numero ni \"{FreeRiskPairs}\"");
+        }
+
+        return Int(row, "max");
     }
 
     /// <summary>
@@ -736,7 +1005,7 @@ internal sealed class CampaignSpec
                 continue;
             }
 
-            MechanicInfo? m = MechanicTable.FirstOrDefault(x => x.Code == item);
+            MechanicInfo? m = AllMechanics.FirstOrDefault(x => x.Code == item);
             if (m is not null)
             {
                 mechs.Add(m);

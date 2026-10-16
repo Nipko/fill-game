@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v2.json",
+  "description": "Fixture negativo de --validate-spec (P4): una combinación de 11-200 no cuenta como nueva (d.5.6: un conjunto que ya salió no vuelve a entrar en el registro). La única primera vez de 221-240 es Br+Ll en el 229; aquí el 229 pasa a Ll+Ba, que salió en el 158 de campaign_v1 y nunca en 201-228. Sin la historia de \"previous\" sería nueva; con ella el ciclo se queda sin primera vez y falla FIRST-TIME (solo esa regla).",
+  "expect_rule": "FIRST-TIME",
+  "calendar": {
+    "229": "Ll+Ba (D)"
+  }
+}

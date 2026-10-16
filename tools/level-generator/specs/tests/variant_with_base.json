@@ -1,0 +1,8 @@
+{
+  "extends": "../campaign_v2.json",
+  "description": "Fixture negativo de --validate-spec (P4): una variante con su base en el mismo nivel (d.5.1: la Hoja atada puede confundirse con la Hoja, b.3). El 292 pasa de Ha+Re a Ha+Ho (D); falla FORBIDDEN (variant_of) en las dos variantes.",
+  "expect_rule": "FORBIDDEN",
+  "calendar": {
+    "292": "Ha+Ho (D)"
+  }
+}

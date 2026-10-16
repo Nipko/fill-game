@@ -7,7 +7,8 @@
 //      de la banda de su rol (recuperación ≤ 0,10, comodidad ≤ 0,70, hito > 0,95) piden más candidatos (hasta BandRounds
 //      rondas); si un ciclo no tiene asignación, se piden más a sus slots (hasta 2 rondas);
 //   4. alivio (relief) de los niveles colocados desde el 31;
-//   5. un pack por mundo (PackWriter) y el informe (CampaignReport), o --check: comparación byte a byte con el disco.
+//   5. un pack por mundo (PackWriter) y el informe (CampaignReport) y, con --curation, el de curación para el dueño
+//      (CurationReport, P7a; con --decisions, la decisión del dueño de CurationDecisions), o --check: comparación byte a byte con el disco.
 // D depende del pool de cada rango: un pack solo se reproduce generando los mismos --levels (rangos completos).
 // Generate() hace las fases 1-5 en memoria; la usa también tools/level-qa para comprobar la reproducibilidad (03 §17 #10).
 using System.Diagnostics;
@@ -57,13 +58,18 @@ internal static class CampaignRunner
     /// <summary>Primer intento de las rondas turbias extra (las de la colocación usan 1000-2999).</summary>
     public const int MurkyRoundFirstAttempt = 10000;
 
-    public static int Run(string specPath, string levelsArg, string outDir, string? reportPath, bool check)
+    /// <summary>
+    /// Modo --spec: genera los niveles <paramref name="levelsArg"/> (null = todos los de la especificación, first_level-last_level)
+    /// con la variante <paramref name="variant"/> (null = la publicada; «b» con los respaldos de "fallback", salida B de D-019).
+    /// </summary>
+    public static int Run(string specPath, string? levelsArg, string outDir, string? reportPath, bool check, string? variant = null, string? curationPath = null,
+        string? decisionsPath = null)
     {
         var total = Stopwatch.StartNew();
         CampaignSpec spec;
         try
         {
-            spec = CampaignSpec.Load(specPath);
+            spec = CampaignSpec.Load(specPath, variant);
         }
         catch (CampaignSpecException e)
         {
@@ -78,6 +84,22 @@ internal static class CampaignRunner
             return 1;
         }
 
+        // Decisiones del dueño para el informe de curación (--decisions): se leen antes de generar para fallar pronto.
+        CurationDecisions? decisions = null;
+        if (decisionsPath is not null)
+        {
+            try
+            {
+                decisions = CurationDecisions.Load(decisionsPath, specPath, spec.FirstLevel, spec.LastLevel);
+            }
+            catch (CurationDecisionsException e)
+            {
+                Console.Error.WriteLine(AsciiText.Of($"level-generator: {e.Message}"));
+                return 2;
+            }
+        }
+
+        levelsArg ??= string.Create(CultureInfo.InvariantCulture, $"{spec.FirstLevel}-{spec.LastLevel}");
         if (!TryParseLevels(levelsArg, spec, out int first, out int last))
         {
             Console.Error.WriteLine($"level-generator: --levels debe ser a-b dentro de {spec.FirstLevel}-{spec.LastLevel}: {levelsArg}");
@@ -88,6 +110,26 @@ internal static class CampaignRunner
         if (result is null)
         {
             return 1;
+        }
+
+        if (decisions is not null)
+        {
+            string where = decisions.Path.Replace('\\', '/');
+            (List<string> errors, List<string> stale) = CurationReport.Check(decisions, result.Levels);
+            foreach (string msg in stale)
+            {
+                Console.WriteLine(AsciiText.Of($"aviso: {where}: {msg}"));
+            }
+
+            if (errors.Count > 0)
+            {
+                foreach (string msg in errors)
+                {
+                    Console.Error.WriteLine(AsciiText.Of($"level-generator: {where}: {msg}"));
+                }
+
+                return 2;
+            }
         }
 
         // Fase 5: packs e informe.
@@ -120,8 +162,20 @@ internal static class CampaignRunner
                 Directory.CreateDirectory(dir);
             }
 
-            File.WriteAllBytes(reportPath, PackWriter.Bytes(CampaignReport.Build(spec, result.Levels, result.Stats, packs, levelsArg)));
+            File.WriteAllBytes(reportPath, PackWriter.Bytes(CampaignReport.Build(spec, result.Levels, result.Stats, packs, levelsArg, reportPath)));
             Console.WriteLine($"informe: {reportPath.Replace('\\', '/')}");
+        }
+
+        if (curationPath is not null && !check && result.NoRelief.Count == 0)
+        {
+            string? dir = Path.GetDirectoryName(Path.GetFullPath(curationPath));
+            if (dir is not null)
+            {
+                Directory.CreateDirectory(dir);
+            }
+
+            File.WriteAllBytes(curationPath, PackWriter.Bytes(CurationReport.Build(spec, result.Levels, result.Stats, packs, levelsArg, curationPath, decisions)));
+            Console.WriteLine($"curacion: {curationPath.Replace('\\', '/')}");
         }
 
         Console.WriteLine($"tiempo total: {total.Elapsed.TotalSeconds:0.0} s");

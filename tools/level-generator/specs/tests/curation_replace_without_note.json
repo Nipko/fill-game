@@ -1,0 +1,7 @@
+{
+  "format": "af-curation-decisions/1",
+  "spec": "campaign_v2.json",
+  "decisions": [
+    { "level": 246, "cell": "Ma+Re (D)", "decision": "sustituir", "date": "2026-10-16" }
+  ]
+}
