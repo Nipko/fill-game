@@ -25,7 +25,8 @@ namespace AF.Tests.PlayMode
     /// causa en el teléfono es una hipótesis sin comprobar (ningún logcat lo confirma): la próxima prueba la confirma o la
     /// descarta con <c>pm clear</c> antes de la pasada del 130 % (seguimiento de FX5 en el documento de la prueba);</description></item>
     /// <item><description>defecto 2: la píldora «Reiniciar» del HUD nunca parte una palabra («Reinici / ar» en el 5, el 8 y el
-    /// 40 al 130 %): crece y estrecha la columna del saldo, cuyas cifras siguen cabiendo;</description></item>
+    /// 40 al 130 %): crece y estrecha la columna del saldo, cuyas cifras siguen cabiendo hasta cinco (con seis al 130 % a 360 dp,
+    /// pendiente del dueño: <see cref="RestartPill_SixDigitSeeds_130_360_KnownIssue"/>);</description></item>
     /// <item><description>observación 3: el nombre del miquito de la tarjeta «¡Miquito a la vista!» del 5 sale de la tabla de
     /// textos y en en-XA va pseudolocalizado («squirrel monkey» salía tal cual).</description></item>
     /// </list>
@@ -156,59 +157,42 @@ namespace AF.Tests.PlayMode
         public IEnumerator RestartPill_NeverBreaksAWord_TheWalletDigitsStillFit(
             [Values(5, 8, 40)] int level, [Values("es-419", "en-XA")] string locale, [Values(100, 130)] int percent, [Values(780, 640)] int screen)
         {
-            float scale = percent / 100f;
-            yield return Fx5Setup.LoadLevel(level, locale, scale, Fx5Setup.Screen(screen), 12345);
-            GameScreen view = GameBootstrap.Current!.View!;
-            TextMeshProUGUI label = view.RestartLabel;
-            string what = "Reiniciar en el " + level + " en " + locale + " al " + percent + " % (" + screen + ")";
-            Debug.Log("AF_FX5 medidas " + what + ": palabra más ancha " + UiBuilder.LongestWordWidth(label).ToString("0.0", CultureInfo.InvariantCulture)
-                + " dp, etiqueta " + UiBuilder.MinTextWidth(label).ToString("0.0", CultureInfo.InvariantCulture) + " dp, cabecera mínima "
-                + view.WalletBar.CompactMinWidthDp.ToString("0.0", CultureInfo.InvariantCulture) + " dp, lienzo " + view.CanvasWidth.ToString("0.0", CultureInfo.InvariantCulture));
-            Assert.That(LocInventory.BrokenWordLine(label), Is.EqualTo(0), what + ": «" + label.text + "» en " + label.textInfo.lineCount + " líneas");
-            Assert.That(label.textInfo.lineCount, Is.InRange(1, 2), what);
-            if (locale == LocLocale.SourceLocale)
-            {
-                Assert.That(label.textInfo.lineCount, Is.EqualTo(1), what + ": «Reiniciar» en una línea");
-            }
+            yield return Fx5Setup.AssertRestartAndWallet(level, locale, percent, screen, 12345);
+        }
 
-            LongLabelSetup.AssertRestart(view, scale, label.textInfo.lineCount, false);
+        /// <summary>
+        /// Como <see cref="RestartPill_NeverBreaksAWord_TheWalletDigitsStillFit"/>, con un saldo de seis cifras («123.456»; el
+        /// GDD no pone tope al saldo y 05 vende paquetes de hasta 36.000 semillas), al 100 %: la columna del saldo va a su ancho
+        /// de siempre y la cifra cabe. Al 130 %, <see cref="RestartPill_SixDigitSeeds_130_16x9_TheWalletDigitsStillFit"/> y
+        /// <see cref="RestartPill_SixDigitSeeds_130_360_KnownIssue"/>.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator RestartPill_SixDigitSeeds_100_TheWalletDigitsStillFit(
+            [Values(8, 40)] int level, [Values("es-419", "en-XA")] string locale, [Values(780, 640)] int screen)
+        {
+            yield return Fx5Setup.AssertRestartAndWallet(level, locale, 100, screen, 123456);
+        }
 
-            // Aire entre la tinta y los cantos de la píldora: RestartPillTightPadDp (3 dp) o más, nunca pegada (revisión de FX5:
-            // con 2 dp, en en-XA al 130 %, el «[» y la «r» tocaban los cantos; D-003).
-            Rect pillDp = LongLabelSetup.DpRect(view.RestartPillRect, view.Hud);
-            Rect inkDp = LongLabelSetup.InkRect(label, view.Hud);
-            float air = Mathf.Min(inkDp.xMin - pillDp.xMin, pillDp.xMax - inkDp.xMax);
-            Assert.That(air, Is.GreaterThanOrEqualTo(GameScreen.RestartPillTightPadDp - 0.25f), what + ": aire de " + air.ToString("0.00", CultureInfo.InvariantCulture)
-                + " dp entre «" + label.text + "» y los cantos de la píldora");
+        /// <summary>Con seis cifras al 130 % en 16:9 (1080 × 1920 px): la pantalla deja sitio y la píldora no estrecha la columna.</summary>
+        [UnityTest]
+        public IEnumerator RestartPill_SixDigitSeeds_130_16x9_TheWalletDigitsStillFit([Values(8, 40)] int level, [Values("es-419", "en-XA")] string locale)
+        {
+            yield return Fx5Setup.AssertRestartAndWallet(level, locale, 130, 640, 123456);
+        }
 
-            // Las cifras de la columna del saldo, que la píldora puede estrechar, siguen cabiendo a 12 sp (× escala) o más.
-            var inventory = new LocInventory(Loc.Locale, scale);
-            int seen = 0;
-            foreach (RectTransform pill in new[] { view.WalletBar.SeedsRect, view.WalletBar.CanoesRect })
-            {
-                if (!pill.gameObject.activeInHierarchy)
-                {
-                    continue;
-                }
-
-                foreach (TMP_Text text in pill.GetComponentsInChildren<TMP_Text>(false))
-                {
-                    if (string.IsNullOrEmpty(text.text))
-                    {
-                        continue;
-                    }
-
-                    seen++;
-                    Assert.That(inventory.ProblemsOf(text), Is.Empty, what + ": la cifra «" + text.text + "» de la cabecera");
-                }
-            }
-
-            Assert.That(seen, Is.GreaterThan(0), what + ": la cabecera enseña las semillas");
-            Debug.Log("AF_FX5 " + what + ": «" + label.text + "» en " + label.textInfo.lineCount + " líneas a " + label.fontSize.ToString("0.0", CultureInfo.InvariantCulture)
-                + " dp; píldora de " + view.RestartPillRect.rect.width.ToString("0.0", CultureInfo.InvariantCulture) + " dp, aire de "
-                + air.ToString("0.0", CultureInfo.InvariantCulture) + " dp"
-                + (float.IsNaN(view.RestartPillLeftDp) ? string.Empty : ", estrecha la cabecera hasta x = " + view.RestartPillLeftDp.ToString("0.0", CultureInfo.InvariantCulture))
-                + "; cabecera de " + view.WalletBar.SeedsRect.rect.width.ToString("0.0", CultureInfo.InvariantCulture) + " dp");
+        /// <summary>
+        /// Pendiente del dueño (revisión de FX5): al 130 % a 360 dp de ancho, «Reiniciar» (es-419) y «[Réíñíçíár» (en-XA) solo
+        /// caben enteras en una línea si la píldora estrecha la columna del saldo hasta <see cref="WalletBar.CompactMinWidthDp"/>,
+        /// que se mide con cinco cifras («99.999») [P]. Con seis, la cifra no cabe a 12 sp × escala en esa columna estrechada
+        /// (02 §12), y medir con seis cifras dejaría a la píldora sin sitio para la palabra, que se partiría otra vez (el defecto
+        /// 2 de la prueba). Las dos cosas a la vez no caben a 360 dp sin rediseño: se deja escrito (explícito: hoy falla) para
+        /// cuando el dueño decida.
+        /// </summary>
+        [UnityTest]
+        [Explicit("Pendiente del dueño (revisión de FX5): con seis cifras de semillas al 130 % a 360 dp, la cifra no cabe junto a «Reiniciar»; hoy falla.")]
+        public IEnumerator RestartPill_SixDigitSeeds_130_360_KnownIssue([Values(8, 40)] int level, [Values("es-419", "en-XA")] string locale)
+        {
+            yield return Fx5Setup.AssertRestartAndWallet(level, locale, 130, 780, 123456);
         }
 
         [UnityTest]
@@ -321,6 +305,65 @@ namespace AF.Tests.PlayMode
             boot.TapAnywhere();
             yield return PlayModeHelpers.WaitFor(() => boot.Flow!.Phase == FlowPhase.Playing && boot.View!.IsViewIdle, "el " + level + " en juego");
             yield return SnapshotKit.Wait(0.3f);
+        }
+
+        /// <summary>
+        /// El nivel <paramref name="level"/> con <paramref name="seeds"/> semillas, en <paramref name="locale"/> con la fuente al
+        /// <paramref name="percent"/> % en <paramref name="screen"/>: «Reiniciar» sin palabras partidas, en las líneas que enseñan
+        /// las capturas (es-419: una; en-XA: dos a 360 × 780 y una en 16:9, donde la píldora crece hacia la izquierda), con aire
+        /// entre la tinta y los cantos, y las cifras de la columna del saldo a 12 sp (× escala) o más, sin salirse.
+        /// </summary>
+        public static IEnumerator AssertRestartAndWallet(int level, string locale, int percent, int screen, int seeds)
+        {
+            float scale = percent / 100f;
+            yield return LoadLevel(level, locale, scale, Screen(screen), seeds);
+            GameScreen view = GameBootstrap.Current!.View!;
+            TextMeshProUGUI label = view.RestartLabel;
+            string what = "Reiniciar en el " + level + " en " + locale + " al " + percent + " % (" + screen + ") con " + seeds + " semillas";
+            int lines = locale == LocLocale.SourceLocale || screen == 640 ? 1 : 2;
+            Debug.Log("AF_FX5 medidas " + what + ": palabra más ancha " + UiBuilder.LongestWordWidth(label).ToString("0.0", CultureInfo.InvariantCulture)
+                + " dp, etiqueta " + UiBuilder.MinTextWidth(label).ToString("0.0", CultureInfo.InvariantCulture) + " dp, cabecera mínima "
+                + view.WalletBar.CompactMinWidthDp.ToString("0.0", CultureInfo.InvariantCulture) + " dp, lienzo " + view.CanvasWidth.ToString("0.0", CultureInfo.InvariantCulture));
+            Assert.That(LocInventory.BrokenWordLine(label), Is.EqualTo(0), what + ": «" + label.text + "» en " + label.textInfo.lineCount + " líneas");
+            Assert.That(label.textInfo.lineCount, Is.EqualTo(lines), what + ": «" + label.text + "» en " + lines + (lines == 1 ? " línea" : " líneas"));
+            LongLabelSetup.AssertRestart(view, scale, lines, false);
+
+            // Aire entre la tinta y los cantos de la píldora: RestartPillTightPadDp (3 dp) o más, nunca pegada (revisión de FX5:
+            // con 2 dp, en en-XA al 130 %, el «[» y la «r» tocaban los cantos; D-003).
+            Rect pillDp = LongLabelSetup.DpRect(view.RestartPillRect, view.Hud);
+            Rect inkDp = LongLabelSetup.InkRect(label, view.Hud);
+            float air = Mathf.Min(inkDp.xMin - pillDp.xMin, pillDp.xMax - inkDp.xMax);
+            Assert.That(air, Is.GreaterThanOrEqualTo(GameScreen.RestartPillTightPadDp - 0.25f), what + ": aire de " + air.ToString("0.00", CultureInfo.InvariantCulture)
+                + " dp entre «" + label.text + "» y los cantos de la píldora");
+
+            // Las cifras de la columna del saldo, que la píldora puede estrechar, siguen cabiendo a 12 sp (× escala) o más.
+            var inventory = new LocInventory(Loc.Locale, scale);
+            int seen = 0;
+            foreach (RectTransform pill in new[] { view.WalletBar.SeedsRect, view.WalletBar.CanoesRect })
+            {
+                if (!pill.gameObject.activeInHierarchy)
+                {
+                    continue;
+                }
+
+                foreach (TMP_Text text in pill.GetComponentsInChildren<TMP_Text>(false))
+                {
+                    if (string.IsNullOrEmpty(text.text))
+                    {
+                        continue;
+                    }
+
+                    seen++;
+                    Assert.That(inventory.ProblemsOf(text), Is.Empty, what + ": la cifra «" + text.text + "» de la cabecera");
+                }
+            }
+
+            Assert.That(seen, Is.GreaterThan(0), what + ": la cabecera enseña las semillas");
+            Debug.Log("AF_FX5 " + what + ": «" + label.text + "» en " + label.textInfo.lineCount + " líneas a " + label.fontSize.ToString("0.0", CultureInfo.InvariantCulture)
+                + " dp; píldora de " + view.RestartPillRect.rect.width.ToString("0.0", CultureInfo.InvariantCulture) + " dp, aire de "
+                + air.ToString("0.0", CultureInfo.InvariantCulture) + " dp"
+                + (float.IsNaN(view.RestartPillLeftDp) ? string.Empty : ", estrecha la cabecera hasta x = " + view.RestartPillLeftDp.ToString("0.0", CultureInfo.InvariantCulture))
+                + "; cabecera de " + view.WalletBar.SeedsRect.rect.width.ToString("0.0", CultureInfo.InvariantCulture) + " dp");
         }
 
         /// <summary>

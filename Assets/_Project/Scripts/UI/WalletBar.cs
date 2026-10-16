@@ -111,6 +111,13 @@ namespace AF.UI
         /// la puede estrechar la píldora «Reiniciar» cuando una palabra de su etiqueta no cabe en su área
         /// (GameScreen.LayoutRestartPill; tarea FX5). Mide una vez, al colocar: la escala de texto no cambia en la vida de la
         /// barra.
+        /// <para>
+        /// Supuesto pendiente del dueño (revisión de FX5): el saldo de la cabecera tiene cinco cifras como mucho. Ni el GDD ni el
+        /// código ponen tope al saldo (05 vende paquetes de hasta 36.000 semillas); con seis cifras («100.000» o más) y la
+        /// fuente al 130 % a 360 dp de ancho, la cifra no cabe a 12 sp × escala en la columna que deja «Reiniciar» (02 §12), y
+        /// medir aquí con seis cifras dejaría a la píldora sin sitio para su palabra, que se volvería a partir. Al 100 % y en
+        /// 16:9, seis cifras caben (Fx5Tests).
+        /// </para>
         /// </summary>
         public float CompactMinWidthDp
         {
