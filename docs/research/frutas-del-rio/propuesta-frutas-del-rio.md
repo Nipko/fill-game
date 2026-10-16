@@ -4,6 +4,8 @@
 >
 > **Actualización del 2026-10-14: las preguntas 2-7 están decididas el 2026-10-13 (A)** (**D-017** en `docs/dev/decisiones.md`), con el «Si» del dueño a aplicar las recomendadas: 20 líneas por fruta (Q2), desde el nivel 1 (Q3), ficha para releer en la 1.0 con `af_fact_page_open` (Q4), sin premio, solo un sello (Q5; en la 1.1, la C del Cuaderno), «Frutas del río» con la etiqueta «Dato del río» (Q6) y la línea bajo «Inicio» en una ranura de alto fijo (Q7). Se aprueban el formato `af-facts/1` (contrato 31) y las claves de 6.2. Lo llevó al GDD T54 (GDD.md §2 #21 y #28, §6.3 y §7.5; glosario §6.4, §10 y §11; 02 §6 y §12; 06 §4.4-§4.6; 07 §5.4, §8.2, §9.2 y §11; 08 §4.6, §8.2 y §9; 09 §1.1). Ajustes de encaje: las cifras con separador o decimales de las líneas van con marcador `{n}` (Q8-A de idiomas, D-018), no escritas por el traductor como dice 2.5; y el default de `ui_river_fact_every_n_levels` sigue en 10 mientras no se responda la pregunta 45 (10.1 pedía 1, que es su opción (b)). Choques que quedan: la pregunta 45 (sin la dependencia de Q4) y la 49 (forma de las claves y columnas de estado de `facts.csv`, frente a la regla 1 de idiomas) de `docs/GDD.md` §6.3.
 >
+> **Actualización del 2026-10-15 (tarea F1c de la tanda 4):** escritas las dos series de río de 261-300 que 3.2 y 3.5 dejaban sin redactar, «Río Napo y lagunas de Cuyabeno» y «El Amazonas, el río que llena las cuias» (sección 5.16): 40 líneas con fuente y URL reabierta, 26 [V] y 14 [E], ninguna [NV], y las cifras con separador o decimales como `{n}` con su valor (Q8-A de D-018). Proponen [P] el sujeto `rio_napo` y `rio_amazonas` con `kind` = `river`, que el contrato 31 aún no admite (08 §4.6); los carga C1a.
+>
 > **Documento de apoyo, no canon.** Manda el GDD (`docs/GDD.md` y `docs/gdd/00-09`). Nada de este archivo cambia reglas, números, claves ni nombres hasta que el dueño decida y se editen los capítulos que toque (lista en la sección 10.1). Todo lo marcado [P] es propuesta.
 >
 > **Todos los nombres, datos y textos de este documento quedan «pendientes de revisión del asesor cultural» (07 §8.2).** Ninguna línea llega a la interfaz sin esa revisión.
@@ -206,8 +208,8 @@ Con esas reglas caben **10 series en los niveles 1-200** (10 bloques para 12 tin
 | 201-220 | 10 | 6 Oriente | **Cacao** (banco, 5.15) | Cacao 201 | (1.1: Aguapé 223) | Packs 201+ aún no generados |
 | 221-240 | 11 | 6 Oriente | **Lulo** | — | — | — |
 | 241-260 | 12 | 6 Oriente | **Guanábana** | — | Liana con número 243 | — |
-| 261-280 | 13 | 6 Oriente | [P] Río Napo y lagunas de Cuyabeno (sin redactar) | — | (1.1: Palizada 263) | — |
-| 281-300 | 14 | 6 Oriente | [P] El Amazonas, el río que llena las cuias (agua blanca; sin redactar) | — | — | — |
+| 261-280 | 13 | 6 Oriente | [P] **Río Napo y lagunas de Cuyabeno** (5.16.1) | — | (1.1: Palizada 263) | — |
+| 281-300 | 14 | 6 Oriente | [P] **El Amazonas, el río que llena las cuias** (agua blanca; 5.16.2) | — | — | — |
 | 301-320 | 15 | 7 Madre de Dios | **Arazá** (banco, 5.15) | Arazá 301 | (1.1: Lancha 303) | — |
 
 En cada nivel `n` de un bloque que empieza en `s`, la línea es la `k = n − s + 1` de su serie. Las 14 series de tintes quedan completas en el nivel 320 (las dos de río de 261-300 no son tintes; ver 3.5).
@@ -252,7 +254,7 @@ Es el tramo más delicado: «Tutorial jugado, nunca leído» (02 §13) y «sin p
 
 ### 3.5 Después del 320
 
-- **261-300 (dos bloques del Oriente sin tinte nuevo):** series de río del mundo [P]: «Río Napo y lagunas de Cuyabeno» (agua negra en Ecuador) y «El Amazonas, el río que llena las cuias» (el agua blanca que entra en cada cuia en «Llenar y teñir»). Hay que investigarlas y escribirlas; no están en este documento.
+- **261-300 (dos bloques del Oriente sin tinte nuevo):** series de río del mundo [P]: «Río Napo y lagunas de Cuyabeno» (el Napo, de agua blanca, y las lagunas de agua negra de Cuyabeno, en Ecuador) y «El Amazonas, el río que llena las cuias» (el agua blanca que entra en cada cuia en «Llenar y teñir»). Escritas el 2026-10-15 en 5.16 (tarea F1c de la tanda 4), con 40 líneas y sus fuentes.
 - **321-1.000 (34 bloques):** propuesta [P] para decidir más adelante, sin bloquear la 1.0:
   - una serie de 20 sobre el río de cada mundo nuevo en su primer bloque libre: Tambopata y Madre de Dios (321), Beni y Mamoré (421), Ucayali (561), Alto Negro y Casiquiare (701), Escudo de Guayana (821), «vecinos del Orinoco» con su rótulo (921; 07 §2.2, regla 3) y El origen, el Marañón alto (961);
   - en los demás bloques, la **especie tintera del ciclo** con 10 líneas (una cada dos niveles): ≈ 27 especies × 10 = 270 líneas;
@@ -303,7 +305,7 @@ Las series de la sección 5 siguen esta plantilla, con libertad para mover una l
 
 - **k:** posición en la serie; **Nivel:** en qué victoria sale; **Car.:** caracteres en español con espacios (máximo 90; lo comprobé con un script); **Fuente:** clave de la lista que sigue a cada tabla; **Marca:** [V] o [E] según el apartado de marcas del principio.
 - **Tarjeta «Fruta nueva»:** la frase corta (≤ 40 caracteres) que 06 §4.5 pide para la tarjeta de debut. Sustituye al ejemplo provisional «Açaí: la baya violeta del Pará» [P].
-- Totales: **240 líneas, 17.468 caracteres y unas 3.312 palabras en español** (recontado el 2026-10-10), sin contar las 14 frases de «Fruta nueva» ni el banco.
+- Totales: **240 líneas, 17.468 caracteres y unas 3.312 palabras en español** (recontado el 2026-10-10), sin contar las 14 frases de «Fruta nueva» ni el banco. Las dos series de río de 261-300 (5.16, 2026-10-15) suman 40 líneas más, con sus cifras como `{n}` y una columna «Cifras (`args`)».
 
 ### 5.2 Açaí · niveles 1-20 · `acai`
 
@@ -837,6 +839,93 @@ Fuentes:
 - **Z2** Wikipedia EN, «Eugenia stipitata» — leído en esta sesión: <https://en.wikipedia.org/wiki/Eugenia_stipitata>
 - **Z3** Embrapa Mandioca e Fruticultura, folder de jalea de banana con araçá-boi: <https://www.infoteca.cnptia.embrapa.br/infoteca/bitstream/doc/919367/1/foldergeleianet.pdf>
 
+### 5.16 Las dos series de río de 261-300 (F1c, 2026-10-15)
+
+Son los bloques 13 y 14 de la tabla de 3.2, en el mundo 6 (Oriente, Ecuador), donde no debuta ningún tinte (3.5). Las escribió el carril de documentación de la tanda 4 (tarea F1c) con investigación web propia: **todas las URL se reabrieron el 2026-10-15** (riesgo R5 de la propuesta del Mapa) y cada línea dice solo lo que dice su fuente. Siguen las reglas de 4.2 y de D-017 (punto 8): ≤ 90 caracteres, una idea por línea, nada de salud ni nutrición, nada sagrado ni ritual, nada de pintura corporal, alcohol, empresas ni marcas, y los pueblos en presente. Además siguen el «cuidado» del mundo 6 en la investigación del Mapa (`docs/research/mapa-del-rio/rio-amazonas.json`, `paradas_201_1000`): sin petróleo, sin la consulta de 2023 y sin pueblos en aislamiento, y ninguna palabra kichwa (solo con un hablante). Tampoco usan términos brasileños («várzea», «igapó», «vazante»), que 07 §8.1 excluye en los mundos hispanohablantes, y nombran el sujeto cuando la serie tiene dos (el Napo y Cuyabeno), para que cada línea se lea sola en la ficha.
+
+- **Totales:** 40 líneas, todas con fuente y URL: **26 [V] y 14 [E]** (Napo y Cuyabeno, 10 y 10; Amazonas, 16 y 4); **ninguna [NV]**. Las [E] se apoyan en Wikipedia, en prensa o en una deducción, y antes de publicar conviene subirlas a una fuente primaria (sección 8). Todas quedan `pendiente_asesor` (07 §8.2).
+- **Cifras (Q8-A de D-018; D-017, «Sustituye»):** toda cifra que en español lleva separador de miles o decimales va como `{n}` en el texto, con su valor en la columna «Cifras (`args`)», que es la columna `args` de `facts.csv` (08 §4.7: pares `nombre=valor` separados por `;`, enteros o decimales con punto). Las cifras sin separador (años, «550», «12 a 47») van escritas. **Car.** cuenta el texto tal como se ve en es-CO, con la cifra ya escrita («100.520»); con `{n}` es igual o más corto. Lo comprobé con un script.
+- **Sujeto y claves [P]:** `rio_napo` (261-280) y `rio_amazonas` (281-300), con las claves de 6.2 (`fact.rio_napo.01` … `fact.rio_amazonas.20`) y el `fact_id` `rio_napo.01` en `af_river_fact_shown`. Hoy el calendario solo admite `kind` = `tint` [P] (08 §4.6: «más adelante, ríos y especies con el mismo formato»), y su validación pide que ninguna serie empiece antes del debut de su tinte: estas dos series necesitan `kind` = `river` [P], sin debut que comprobar. No tienen tarjeta «Fruta nueva» ni `tint.<id>.name`; para el nombre de la etiqueta («Dato del río · {name} k/20», `fact_progress`) propongo `fact.rio_napo.name` = «Napo y Cuyabeno» y `fact.rio_amazonas.name` = «Amazonas» [P]. Lo decide quien cargue los datos (C1a) con el contrato 31; esta sección no cambia el canon.
+- **Con el Mapa del río:** según la investigación del Mapa, el mundo 6 sube por el Napo (Napo peruano, Nuevo Rocafuerte, Yasuní, lagunas de Cuyabeno, El Coca y Napo alto), así que la serie del Napo coincide con las paradas de Cuyabeno y El Coca. Sus datos de llegada (paso F9 del Mapa) aún no están escritos: **cuando se escriban, no deben repetir estas líneas**, como pasó con el Tapajós (k14 y k19, D-013). Ninguna línea usa la respuesta de la pregunta del mundo 6 (las especies de árbol por hectárea de Yasuní), que es de la llegada a Yasuní.
+
+#### 5.16.1 Río Napo y lagunas de Cuyabeno · niveles 261-280 · `rio_napo` [P]
+
+| k | Nivel | Línea (ES-419) | Car. | Cifras (`args`) | Fuente | Marca | Nota para el asesor |
+|---|---|---|---|---|---|---|---|
+| 01 | 261 | El Napo baja de los Andes de Ecuador cargado de barro fino: es un río de agua blanca. | 85 | — | Np3 | [E] | Np3 mide su carga de sedimento, muy alta; «agua blanca» es el tipo del canon del mundo 6 (glosario §8: «Napo (blanca)»), no una frase de la fuente |
+| 02 | 262 | Nace en las laderas de volcanes andinos como el Cotopaxi. | 57 | — | Np1, Np2 | [E] | Np1 nombra el Antisana, el Sincholagua y el Cotopaxi; Np2, el Cotopaxi y los Llanganates |
+| 03 | 263 | Corre hacia el este, cruza al Perú y entra en el Amazonas río abajo de Iquitos. | 79 | — | Np1, Np2 | [E] | Unos 70 km río abajo de Iquitos (Np1) |
+| 04 | 264 | Mide unos {n} km, y unos 667 de ellos corren por el Perú. | 59 | `n=1130` | Np2 | [E] | Las longitudes no coinciden (1.075, 1.089 y 1.130 km en Np1): se usa la de Np2, que cita a la FAO (Ziesler y Ardizzone, 1979), con «unos»; los 667 km son del compendio estadístico del Perú de 2001 que cita Np2 |
+| 05 | 265 | Su cuenca ocupa cerca de {n} km², entre Ecuador y el Perú. | 62 | `n=100520` | Np3 | [V] | — |
+| 06 | 266 | Lleva en promedio unos {n} metros cúbicos de agua por segundo. | 64 | `n=6300` | Np3 | [V] | Caudal medio del estudio; Np1 da entre 6.800 y 7.000 en Mazán, según la serie de años |
+| 07 | 267 | Su carga de sedimento crece río abajo: de 12 a 47 millones de toneladas al año. | 79 | — | Np4 | [V] | 12 al salir de los Andes y 47 al llegar al Solimões |
+| 08 | 268 | Los Andes se elevan muy despacio y van empujando el cauce del Napo hacia el norte. | 82 | — | Np4, Np3 | [V] | — |
+| 09 | 269 | En el Perú su cauce mide de 1 a 2 km de ancho, y unos 3 km en la boca. | 70 | — | Np2 | [E] | — |
+| 10 | 270 | Corre entre islas de bosque y bancos de arena que cambian con las crecidas. | 75 | — | Np1 | [E] | — |
+| 11 | 271 | En su cuenca se han registrado unas 550 especies de peces de agua dulce. | 72 | — | Np5 | [V] | No es la cifra de Yasuní (458 especies, Np5), para no pisar las paradas de Yasuní del Mapa |
+| 12 | 272 | Las lagunas de Cuyabeno desaguan por el río Cuyabeno y el Aguarico hasta el Napo. | 81 | — | Np6 | [V] | — |
+| 13 | 273 | Cuyabeno tiene 14 lagunas, y la mayor se llama, justamente, Laguna Grande. | 74 | — | Np6 | [V] | Sujeto con nombre, porque la serie tiene dos (el Napo y Cuyabeno). Np6 dice además que algunos lugares, como Canangüeno, se consideran sagrados: no se nombran |
+| 14 | 274 | Las lagunas de Cuyabeno son de agua negra y las rodea un bosque que se inunda. | 78 | — | Np7, Np8 | [V] | Np7 y Np8 llaman igapó a ese bosque; la línea no usa «igapó», porque es un término brasileño y 07 §8.1 (columna No) excluye los términos brasileños en los mundos hispanohablantes (solo admite árboles de várzea o igapó genéricos en el arte). El asesor confirma cómo se dice en Ecuador |
+| 15 | 275 | En la época seca, algunas lagunas casi se vacían; las lluvias las vuelven a llenar. | 83 | — | Np8, Np9 | [E] | Ciclo natural, sin sequías ni cambio climático (07 §8.1). Las fuentes no coinciden en los meses: no se dan |
+| 16 | 276 | En las lagunas de Cuyabeno viven manatíes, delfines de río, caimanes y anacondas. | 81 | — | Np6 | [V] | Anaconda solo como animal, nunca como «madre» de nada (07 §8.1) |
+| 17 | 277 | El tití pigmeo, el mono más pequeño del mundo, vive en los bosques de Cuyabeno. | 79 | — | Np7, Np10 | [E] | Np7 lo da como especie clave de Cuyabeno [V]; «el más pequeño del mundo» es de Np10. Nombre común en Ecuador: asesor |
+| 18 | 278 | En Cuyabeno viven hoy comunidades siona, secoya, cofán, kichwa y shuar. | 71 | — | Np6, Np8, Np9 | [E] | Pueblos en presente y con su nombre (07 §8.1); el asesor confirma el nombre y la grafía que usa cada uno («secoya» y «cofán» pueden ser exónimos: sección 8, fila «pueblos nombrados»). Sin territorio, conflicto ni creencias; ningún pueblo en aislamiento. Np6 [V] nombra a los siona, secoya y cofán; los kichwa y shuar, Np8 y Np9 |
+| 19 | 279 | La reserva de Cuyabeno nació en 1979 y hoy protege unas {n} hectáreas. | 74 | `n=590112` | Np6 | [V] | Np8 da la misma superficie; otras fuentes dan 603.380 ha con otros límites |
+| 20 | 280 | Cuyabeno es parte del mayor sitio Ramsar de Ecuador. ¡Ya conoces el Napo y Cuyabeno! | 84 | — | Np11 | [E] | Cierre, con el sujeto nombrado: el 280 es un `10k`, en su victoria manda el dato de llegada (D-022) y esta línea queda en la ficha, donde se lee suelta. El sitio Ramsar (2017) es el complejo Cuyabeno-Lagartococha-Yasuní; Np11 da su superficie [V], pero «el mayor de Ecuador» lo dice la prensa. Sin el logo de Ramsar |
+
+Fuentes (todas reabiertas el 2026-10-15):
+
+- **Np1** Wikipedia EN, «Napo River»: <https://en.wikipedia.org/wiki/Napo_River>
+- **Np2** Wikipedia ES, «Río Napo» (los 1.130 km, de la FAO: Ziesler y Ardizzone, 1979, «Las aguas continentales de América Latina»; los 667 km del Perú, del «Perú: Compendio Estadístico 2001»; comprobado el 2026-10-15): <https://es.wikipedia.org/wiki/R%C3%ADo_Napo>
+- **Np3** Laraque et al. (2009), «Sediment budget of the Napo River, Amazon basin, Ecuador and Peru», *Hydrological Processes* 23(25):3509-3524 (resumen en el repositorio del IRD) [V]: <https://www.documentation.ird.fr/hor/fdi:010048460>
+- **Np4** Wittmann et al. (2011), sedimento y berilio-10 en la cuenca del Napo, *Journal of South American Earth Sciences* 31(1):45-53 (resumen en el repositorio del IRD) [V]: <https://www.documentation.ird.fr/hor/fdi:010053058>
+- **Np5** Escobar-Camacho et al. (2025), «Exceptional concentration of fish diversity in Yasuní National Park, Ecuador (Napo River Basin)», *Biodiversity Data Journal* 13:e136476, introducción [V]: <https://pmc.ncbi.nlm.nih.gov/articles/PMC11926608/>
+- **Np6** UICN (2017-09-05), «Las lagunas de Cuyabeno, mantos de la biodiversidad» [V]: <https://iucn.org/es/node/15752>
+- **Np7** Key Biodiversity Areas, ficha de la Reserva de Producción de Fauna Cuyabeno (evaluación de 2023) [V]: <https://www.keybiodiversityareas.org/site/factsheet/14559>
+- **Np8** Wikipedia EN, «Cuyabeno Wildlife Reserve»: <https://en.wikipedia.org/wiki/Cuyabeno_Wildlife_Reserve>
+- **Np9** Vistazo, «Cuyabeno, un tesoro amazónico» (Manuel Avilés; sin fecha en la página): <https://www.vistazo.com/paraisos-cronicas/cuyabeno-JF1403083>
+- **Np10** Wikipedia EN, «Pygmy marmoset»: <https://en.wikipedia.org/wiki/Pygmy_marmoset>
+- **Np11** El Oriente (2017-09-01), el complejo de humedales Cuyabeno-Lagartococha-Yasuní, nuevo sitio Ramsar [E]: <https://www.eloriente.com/articulo/complejo-de-humedales-cuyabeno-lagartococha-yasuniacute-nuevo-sitio-ramsar/8113> · Protected Planet, superficie del sitio (7.736,69 km²) [V]: <https://www.protectedplanet.net/555637343>. La ficha oficial de Ramsar (<https://rsis.ramsar.org/ris/2332>) no abrió el 2026-10-15 (error 502): antes de publicar, reabrirla para subir la línea a [V]
+
+#### 5.16.2 El Amazonas, el río que llena las cuias · niveles 281-300 · `rio_amazonas` [P]
+
+El agua blanca es la que el río sube a cada cuia en «Llenar y teñir» (3.5); las líneas hablan del río, nunca del tablero (4.2).
+
+| k | Nivel | Línea (ES-419) | Car. | Cifras (`args`) | Fuente | Marca | Nota para el asesor |
+|---|---|---|---|---|---|---|---|
+| 01 | 281 | El agua blanca del Amazonas es de color café con leche por el barro fino que arrastra. | 86 | — | Am1, Am9 | [V] | Am1: el barro le da su color «marrón lechoso»; Am9 lo compara con el café con leche |
+| 02 | 282 | Casi todo el barro del Amazonas baja de los Andes: del 85 al 90 % del que llega al mar. | 87 | — | Am1 | [V] | Sujeto con nombre, para que la línea se lea sola en la ficha (D-022) |
+| 03 | 283 | Su barro lo aportan sobre todo ríos andinos como el Marañón, el Ucayali y el Mamoré. | 84 | — | Am1 | [V] | — |
+| 04 | 284 | Cerca de la mitad de su sedimento viene del Solimões, y casi otra mitad, del Madeira. | 85 | — | Am4 | [V] | Am4: cerca del 50 % y del 48 % |
+| 05 | 285 | Su cuenca ocupa casi 6 millones de km², repartidos entre varios países. | 71 | — | Am2 | [V] | 5.956.000 km² en Am2 |
+| 06 | 286 | Al mar llegan unos {n} metros cúbicos de su agua cada segundo. | 66 | `n=206000` | Am2 | [V] | Media de 1972-2003, con un margen de ± 6 % |
+| 07 | 287 | A diferencia del agua negra, el agua blanca es casi neutra y rica en nutrientes. | 80 | — | Am3 | [V] | «Nutrientes» del agua (su química; Am9 también la llama rica en nutrientes), no nutrición de las personas: no choca con 4.2. Si un filtro por palabras la marca, la alternativa es «rica en sólidos disueltos» (Am9) |
+| 08 | 288 | Es tan turbia que la vista apenas entra de 20 a 60 cm bajo la superficie. | 73 | — | Am9 | [E] | — |
+| 09 | 289 | Lleva cerca del 17 % de toda el agua dulce que los ríos del mundo dan al mar. | 77 | — | Am2 | [V] | Am5 redondea a un 20 %: se usa la cifra del estudio |
+| 10 | 290 | Cada día lleva al Atlántico unos {n} millones de toneladas de sedimento. | 72 | `n=1.3` | Am1 | [V] | — |
+| 11 | 291 | Su boca, un laberinto de canales e islas, mide unos 270 km de ancho. | 68 | — | Am5 | [V] | — |
+| 12 | 292 | Para muchos peces de agua negra o clara, un río de agua blanca es una frontera difícil. | 87 | — | Am9 | [E] | — |
+| 13 | 293 | En la crecida, el agua blanca inunda las orillas y deja barro nuevo, fértil para sembrar. | 89 | — | Am6, Am7 | [V] | Las fuentes hablan de la várzea: las orillas de los ríos de agua barrosa que se inundan cada año y reciben barro nuevo (Am6). La línea no usa «várzea», porque es un término brasileño y 07 §8.1 (columna No) excluye los términos brasileños en los mundos hispanohablantes (solo admite árboles de várzea o igapó genéricos en el arte). El asesor confirma cómo se dice en Ecuador |
+| 14 | 294 | En el estado de Amazonas (Brasil), el agua blanca inunda unos {n} millones de hectáreas. | 89 | `n=24.8` | Am6 | [V] | Am6 (2009) da 24,8 millones de hectáreas de suelos de várzea en el estado; el dato es de Brasil (1979), citado por Cravo et al. (2002): va con «unos». Sin «várzea» en la línea, como en k13 (07 §8.1); el asesor confirma |
+| 15 | 295 | Cerca de un tercio de las tierras que inunda se cubre de praderas de hierbas que flotan. | 88 | — | Am9 | [E] | Am9: un tercio de la várzea. Sin «várzea» en la línea, como en k13 (07 §8.1); el asesor confirma |
+| 16 | 296 | Cuando el río baja, se siembra en las orillas que el agua va dejando al descubierto. | 84 | — | Am7, Am6 | [V] | Sin «várzea» ni «vazante» en la línea, como en k13: los dos son términos brasileños (07 §8.1); el asesor confirma |
+| 17 | 297 | El dorado, un gran bagre, sube del estuario a los Andes: su ciclo suma unos {n} km. | 86 | `n=11600` | Am8 | [V] | La migración de agua dulce más larga del mundo, según el estudio; sin pesca ni represas |
+| 18 | 298 | Desde los años 50, el limnólogo Harald Sioli definió las aguas blanca, negra y clara. | 85 | — | Am9 | [E] | Europeo como dato neutro de quién describió algo (4.2); el asesor decide si se cambia |
+| 19 | 299 | En Óbidos, a unos 800 km del mar, está la última estación que mide su caudal. | 77 | — | Am2 | [V] | — |
+| 20 | 300 | El agua blanca lleva un poco de los Andes hasta el mar. ¡Ya conoces el agua del Amazonas! | 89 | — | Am1 | [V] | Cierre: resume k01-k03 |
+
+Fuentes (todas reabiertas el 2026-10-15):
+
+- **Am1** NASA Earth Observatory (2020-10-02), «Mud from the Andes Carried by the Amazon» [V]: <https://science.nasa.gov/earth/earth-observatory/mud-from-the-andes-carried-by-the-amazon-147327>
+- **Am2** Callède et al. (2010), «Les apports en eau de l'Amazone à l'Océan Atlantique», *Revue des sciences de l'eau* 23(3):247-273, doi 10.7202/044688ar [V]: <https://www.erudit.org/fr/revues/rseau/2010-v23-n3-rseau3946/044688ar/>
+- **Am3** Junk, Wittmann, Schöngart y Piedade (2015), «A classification of the major habitats of Amazonian black-water river floodplains and a comparison with their white-water counterparts», *Wetlands Ecology and Management* 23(4):677-693 (resumen en AGRIS, FAO) [V]: <https://agris.fao.org/search/en/records/65df5bdc0f3e94b9e5d7bb37>
+- **Am4** Espinoza-Villar et al. (2018), «Spatio-temporal monitoring of suspended sediments in the Solimões River (2000-2014)», *Comptes Rendus Géoscience* 350(1-2):4-12 [V]: <https://comptes-rendus.academie-sciences.fr/geoscience/articles/en/10.1016/j.crte.2017.05.001/>
+- **Am5** ESA (2024-03-29), «Earth from Space: The Amazon plume» [V]: <https://www.esa.int/ESA_Multimedia/Images/2024/03/Earth_from_Space_The_Amazon_plume>
+- **Am6** Dias, Barreto y Gonçalves (2009), Embrapa Amazônia Ocidental, Documentos 67, sobre la agricultura en la várzea del Amazonas (definición de várzea, según Cravo et al., 2002, y superficie en el estado, de Brasil, 1979, citado por Cravo et al., 2002; comprobado el 2026-10-15) [V]: <https://www.infoteca.cnptia.embrapa.br/infoteca/bitstream/doc/679808/1/Doc67A5.pdf>
+- **Am7** Lima (1956), «A agricultura nas várzeas do estuário do Amazonas», Boletim Técnico do Instituto Agronômico do Norte 33 (repositorio Alice de Embrapa) [V]: <https://www.alice.cnptia.embrapa.br/alice/bitstream/doc/386337/1/AGRICULTURANASVARZEAS.pdf>
+- **Am8** Aguas Amazónicas (WCS, 2017-02-06), sobre Barthem et al. (2017), *Scientific Reports* 7:41784 [V]: <https://en.aguasamazonicas.org/scientists-confirm-dorado>
+- **Am9** Wikipedia EN, «Whitewater river (river type)»: <https://en.wikipedia.org/wiki/Whitewater_river_(river_type)>
+
 
 ---
 
@@ -955,18 +1044,18 @@ Dirección D-003, «Selva brillante premium»: vidrio, madera y luz de juego. **
 
 ## 8. Riesgos y cómo se evitan
 
-Todo queda **«pendiente del asesor cultural»** (07 §8.2): las 240 líneas, las 14 frases de «Fruta nueva», los nombres por país y las etimologías.
+Todo queda **«pendiente del asesor cultural»** (07 §8.2): las 240 líneas, las 40 de las series de río de 5.16 (14 de ellas [E]), las 14 frases de «Fruta nueva», los nombres por país y las etimologías.
 
 | Riesgo | Dónde | Cómo se evita |
 |---|---|---|
 | **Cultural:** pintura corporal | Achiote y huito, cuyo uso más conocido es ese | Las series hablan del fruto, la cocina, el color en alimentos y el agua. El huito explica su índigo con el jugo que «se va volviendo azul» con el aire, nunca «al instante» (07 §5.1). El asesor revisa estas dos series primero |
 | **Cultural:** etimologías en lenguas indígenas | Açaí, cupuaçu, urucum, cajá, *Bixa* y guanábana (taíno) y cacao (maya y náhuatl) | Solo el significado, con «se suele traducir» cuando la fuente no es un diccionario; nada de leyendas (Iaçá). Revisión del asesor; nheengatu solo con revisión pagada (07 §8.1) |
-| **Cultural:** pueblos nombrados | Tapajó (Tapajós), taíno (achiote y guanábana) | Solo como dato informativo, como permite 07 §8.1; en presente cuando el pueblo existe hoy (los tapajó son uno de los 13 pueblos del Conselho Indígena Tapajós e Arapiuns [V]) y con el nombre que usa; nunca personajes, creencias, rituales ni territorios en disputa; ningún pueblo no contactado. La regla anterior («ningún pueblo actual») no está en el GDD y dejaba a los pueblos solo en pasado: queda retirada |
+| **Cultural:** pueblos nombrados | Tapajó (Tapajós), taíno (achiote y guanábana); siona, secoya, cofán, kichwa y shuar (Napo y Cuyabeno k18) | Solo como dato informativo, como permite 07 §8.1; en presente cuando el pueblo existe hoy (los tapajó son uno de los 13 pueblos del Conselho Indígena Tapajós e Arapiuns [V]) y con el nombre que usa; nunca personajes, creencias, rituales ni territorios en disputa; ningún pueblo no contactado. La regla anterior («ningún pueblo actual») no está en el GDD y dejaba a los pueblos solo en pasado: queda retirada. Pregunta para el asesor sobre k18: «secoya» y «cofán» pueden ser exónimos; confirmar el nombre que usa cada uno de los cinco pueblos (posiblemente Siekopai y A'i, sin comprobar) y su grafía |
 | **Cultural:** mirada colonial | Orellana, Oviedo, Humboldt | Los europeos, solo como dato neutro y nunca como descubridores ni homenaje (4.2). Ya se quitaron Orellana del achiote (k19) y de la reserva del Río Negro, y Humboldt del aguaje (k19). Quedan, como dato neutro, Humboldt y Bonpland en el Casiquiare (Río Negro k06) y Oviedo en la guanábana (k18): el asesor decide si se cambian |
 | **Salud** | Camu camu (vitamina C), guanábana (mito del cáncer), açaí (Chagas), aguaje (creencias) | Ninguna línea de salud o nutrición, tampoco en la reserva: la de vitamina C pasó a excluidos (5.14); las semillas de guanábana «no se comen», sin hablar de toxicidad |
 | **Conservación** | Tala de palmeras de aguaje; botos En Peligro; minería en el Tapajós; tetra cardenal; sequías del Negro | Siempre en positivo y sin culpables: se promueve trepar y bajar el racimo; tortugas que se recuperan; turberas que guardan carbono; el Tapajós con su agua clara como carácter natural y el «río azul» en pasado, sin mercurio ni culpables; el comercio de peces, sin promoverlo; el boto, sin su leyenda |
 | **Legal y marca** | Marcas, empresas, medios, logos | Sin empresas (Nestlé, Ford, la compradora del copoazú), sin medios (The Guardian), sin el logo de la UNESCO (solo «Patrimonio Mundial»), sin «cupulate» ni disputas de registro. Las líneas son redacción propia de datos: no reproducen texto de las fuentes |
-| **Exactitud** | 72 líneas [E], muchas con Wikipedia como fuente (sobre todo las aguas y el achiote) | Antes de publicar, el asesor o un agente con web sube cada [E] a una fuente primaria (ANA o ICMBio para los ríos, FAO o Embrapa para el urucum) o la cambia por una de reserva. Las cifras van con «unos» o «cerca de» |
+| **Exactitud** | 72 líneas [E], muchas con Wikipedia como fuente (sobre todo las aguas y el achiote), y 14 más en las series de río de 5.16 | Antes de publicar, el asesor o un agente con web sube cada [E] a una fuente primaria (ANA o ICMBio para los ríos, FAO o Embrapa para el urucum) o la cambia por una de reserva. Las cifras van con «unos» o «cerca de» |
 | **Estilizaciones** | Bacaba rosa, icono de bol del açaí, lulo andino | Ninguna línea afirma la estilización; la serie del lulo va en el Oriente de Ecuador, no en el Trapecio |
 | **Primera sesión** | Una línea más en las victorias 1-10 | Sin sonido, sin animación, debajo de los botones; pregunta 3; alarma del embudo 1-10 (06 §2.4) y apagado remoto con la clave existente |
 | **Cansancio** | Una línea en cada victoria | Medir `dismissed_ms`; si nadie lee, pasar a una cada dos niveles con la clave existente (2.10) |
