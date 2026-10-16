@@ -344,6 +344,9 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         // Hito de 14 cuias (K = 13 + 1 vacío desde el 561; 03 §11; d.5.1; QA-HITO-14): ni K ni el vacío se relajan.
         bool hito14 = plan.Role == SlotRole.Milestone && k >= SpecValidator.HitoK;
         bool debutLike = plan.Ramp || (plan.DebutBoard && plan.Role == SlotRole.Comfort);
+        // Fuente deep de las etapas 1-2 del hito de 14 cuias (endurecimiento de 03 §4.2 o relajación «deep con 60.000 nodos»
+        // del hito), que no cambian K ni el vacío; se aplica abajo, solo si la etapa no reparte la holgura.
+        bool hitoDeep = false;
         switch (stage)
         {
             case 0:
@@ -356,8 +359,12 @@ internal sealed class SlotGenerator(CampaignSpec spec)
                 notes.Add(stage == 1 ? "fila de 02 sec. 13: deep corto" : "fila de 02 sec. 13: deep");
                 break;
             case 1 or 2 when hito14:
-                // Hito de 14 cuias: K y el vacío fijos (QA-HITO-14); la etapa reparte la holgura en cuias a medias (abajo).
+                // Hito de 14 cuias: K y el vacío fijos (QA-HITO-14). La etapa reparte la holgura en cuias a medias (abajo) o, si
+                // no la reparte, conserva la fuente deep del endurecimiento (03 §4.2: deep, con 60.000 nodos en la etapa 2) y la
+                // relajación del hito en la etapa 2 (deep con 60.000 nodos), que no tocan K ni el vacío; sin endurecimiento, la
+                // etapa 1 repite la 0 con otros intentos.
                 notes.Add("hito de 14 cuias: K y vacio fijos (QA-HITO-14)");
+                hitoDeep = harder || stage == 2;
                 break;
             case 1 or 2 when harder:
                 // Demasiado fácil: barajado inverso en profundidad (03 §4.2), más largo en la segunda etapa.
@@ -529,7 +536,8 @@ internal sealed class SlotGenerator(CampaignSpec spec)
         {
             // Relajación del hito de 14 cuias (P7d [P]): el vacío pasa a dos cuias a medias (SplitSlackPour). Así el Matapi
             // y el Barro, que necesitan una cuia con hueco además del vacío del rol, caben con K = 13. La Hoja y la Lluvia
-            // necesitan el vacío de 4 entero: con ellas las etapas 1-2 repiten la 0 con otros intentos.
+            // necesitan el vacío de 4 entero: con ellas las etapas 1-2 llevan la forma de la etapa 0 con deep (hitoDeep,
+            // abajo) o, en la etapa 1 sin endurecimiento, repiten la 0 con otros intentos.
             baseEmpties--;
             slack = true;
             split = true;
@@ -563,6 +571,14 @@ internal sealed class SlotGenerator(CampaignSpec spec)
             // tablero tan apretado. La fuente queda en la configuración para que la traza y las notas digan la que se usa.
             source = "walk";
             notes.Add("holgura repartida: fuente walk");
+        }
+        else if (hitoDeep)
+        {
+            // Hito de 14 cuias sin la holgura repartida (620 Ln+Ll+Re; arriba): el endurecimiento con deep (03 §4.2) o la
+            // relajación del hito, con la forma de la etapa 0 (K = 13 + 1 vacío, 14 cuias).
+            source = "deep";
+            deepNodes = harder && stage == 1 ? InverseDeep.DefaultMaxNodes : 60000;
+            notes.Add(!harder ? "relajacion: deep con 60.000 nodos" : stage == 1 ? "endurecimiento: deep" : "endurecimiento: deep con 60.000 nodos");
         }
 
         if (total > 14 && slack)

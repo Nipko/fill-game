@@ -319,7 +319,11 @@ Decisiones [P] de la generación (para revisar en la integración):
     mecánica de cuias a medias reparten la holgura desde la etapa 0 (580 Ma+B2, 600 Ha+B2+Ba, 660 Br+Ha+Re y 700
     Ma+Ha+B2); sin ella, las etapas 1-2 la reparten (680 Li+Ha+Re), salvo con la Hoja o la Lluvia, que necesitan el vacío
     de 4 entero (620 Ln+Ll+Re: ninguna etapa; 640 Ma+Ba+Ho: no cabe). Las mecánicas que ocupan un vacío usan el del hito,
-    como en la etapa 0;
+    como en la etapa 0. Un hito de 14 cuias que no reparte la holgura en las etapas 1-2 (el 620) conserva lo que no toca K
+    ni el vacío: el endurecimiento de 03 §4.2 si los candidatos miden demasiado fáciles (`deep` en la etapa 1 y `deep` con
+    60.000 nodos en la 2) y, sin endurecimiento, la relajación del hito en la etapa 2 (`deep` con 60.000 nodos; la etapa 1
+    repite la 0 con otros intentos), con K = 13, 1 vacío y 14 cuias. Si la etapa reparte la holgura, su fuente es `walk`
+    también con endurecimiento (580, 600, 660, 680 y 700);
   - los retos de K = 12 + 1 vacío + la cueva de la Piraña con el Brote (592 Pi+B2 y 646 Pi+Br+Ha), en la etapa 0 y en la
     relajación «walk con 1 vacío» de la etapa 2, que ya es `walk` con la forma de la etapa 0. La relajación hacia `fill`
     con 2 vacíos (03 §4.4) pasa de 14 cuias y no aplica, y el endurecimiento con `deep` sigue sin la cuia de holgura: la

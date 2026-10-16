@@ -7,9 +7,12 @@
 //   - la configuración de las etapas (SlotGenerator.Config) en los slots de 561-700 que lo necesitan:
 //       * hitos de 14 cuias (K = 13 + 1 vacío; 03 §11; d.5.1): el 580 (Matapi + Brote de dos hojas) y el 600 (Hoja atada +
 //         Brote de dos hojas + Barro) reparten la holgura desde la etapa 0, con 14 cuias, K = 13, sin vacío de la etapa y
-//         uno de la fuente; el 620 (con la Lluvia, que necesita el vacío de 4) no la reparte en ninguna etapa; ninguna
-//         etapa de un hito de 14 cuias cambia K ni pasa de 14 cuias; el 640 (Matapi + Barro + Hoja) no tiene ninguna etapa:
-//         la Hoja se lleva el vacío entero y el Matapi y el Barro no caben con K = 13 (pendiente del dueño y del tech-lead);
+//         uno de la fuente, y también en las etapas 1-2 con endurecimiento; el 620 (con la Lluvia, que necesita el vacío de 4)
+//         no la reparte en ninguna etapa y conserva en las etapas 1-2 la fuente deep (endurecimiento de 03 §4.2: deep y deep
+//         con 60.000 nodos; sin él, la etapa 1 repite la 0 y la 2 es deep con 60.000 nodos) con K = 13, 1 vacío y 14 cuias;
+//         ninguna etapa de un hito de 14 cuias, con y sin endurecimiento, cambia K ni pasa de 14 cuias; el 640 (Matapi +
+//         Barro + Hoja) no tiene ninguna etapa: la Hoja se lleva el vacío entero y el Matapi y el Barro no caben con K = 13
+//         (pendiente del dueño y del tech-lead);
 //       * con un hito de 14 cuias de Matapi + Barro (sin la Hoja), las etapas 1-2 reparten la holgura (relajación del hito);
 //       * los retos de 14 cuias con la cueva de la Piraña y el Brote (592 Pi+B2 y 646 Pi+Br+Ha; K = 12): la cuia de holgura
 //         sustituye al vacío;
@@ -22,6 +25,7 @@
 // Imprime ASCII (PASS / FAIL) y sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación.
 using AF.Core.Board;
 using AF.Core.Determinism;
+using AF.Solver.Generation;
 using AmazonFill.Tools.LevelGenerator.Campaign;
 
 namespace AmazonFill.Tools.LevelGenerator.Generation;
@@ -118,7 +122,8 @@ internal static class HolguraSelfTest
     private static void Stages(CampaignSpec spec, Action<bool, string> check)
     {
         var gen = new SlotGenerator(spec);
-        StageConfig?[] At(int level) => [.. Enumerable.Range(0, SlotGenerator.Stages).Select(s => gen.Config(spec.Plan(level), s, dropMurky: false))];
+        StageConfig?[] At(int level, bool harder = false) =>
+            [.. Enumerable.Range(0, SlotGenerator.Stages).Select(s => gen.Config(spec.Plan(level), s, dropMurky: false, harder))];
 
         foreach (int level in new[] { 580, 600 })
         {
@@ -130,12 +135,30 @@ internal static class HolguraSelfTest
 
         // Cada hito de 14 cuias de la lista tiene al menos una etapa (el 640, sin ninguna, tiene su comprobación abajo): si todas
         // fueran null, la forma fija no probaría nada.
-        bool fixedShape = new[] { 580, 600, 620, 660, 680, 700 }.All(level => At(level).Any(c => c is not null)
-            && At(level).All(c => c is null || (c.K == SpecValidator.HitoK && Cuias(c) == SpecValidator.MaxCuias)));
-        check(fixedShape, "hitos de 14 cuias de 561-700 (580, 600, 620, 660, 680 y 700): cada uno con al menos una etapa, y ninguna cambia K = 13 ni pasa de 14 cuias (QA-HITO-14)");
+        bool fixedShape = new[] { 580, 600, 620, 660, 680, 700 }.All(level => new[] { false, true }.All(harder =>
+            At(level, harder).Any(c => c is not null)
+            && At(level, harder).All(c => c is null || (c.K == SpecValidator.HitoK && Cuias(c) == SpecValidator.MaxCuias))));
+        check(fixedShape, "hitos de 14 cuias de 561-700 (580, 600, 620, 660, 680 y 700), con y sin endurecimiento: cada uno con al menos una etapa, y ninguna cambia K = 13 ni pasa de 14 cuias (QA-HITO-14)");
         StageConfig?[] lluvia = At(620);
-        check(lluvia.All(c => c is not null && !c.SplitSlack && c.Empties == 1 && !c.Slack),
-            "620 (Ln+Ll+Re): con la Lluvia, que necesita el vacio de 4, ninguna etapa reparte la holgura");
+        StageConfig?[] lluviaHarder = At(620, harder: true);
+        check(lluvia.All(c => c is not null && !c.SplitSlack && c.Empties == 1 && !c.Slack)
+              && lluviaHarder.All(c => c is not null && !c.SplitSlack && c.Empties == 1 && !c.Slack),
+            "620 (Ln+Ll+Re): con la Lluvia, que necesita el vacio de 4, ninguna etapa reparte la holgura, con y sin endurecimiento");
+        // Sin la holgura repartida, el hito conserva la fuente deep de las etapas 1-2 (endurecimiento de 03 sec. 4.2 y relajación
+        // «deep con 60.000 nodos» del hito), con la forma de la etapa 0: K = 13, 1 vacío y 14 cuias.
+        bool Deep(StageConfig? c, int nodes) => c is { Source: "deep", K: SpecValidator.HitoK, Empties: 1, SplitSlack: false }
+                                                && c.DeepNodes == nodes && Cuias(c) == SpecValidator.MaxCuias;
+        check(Deep(lluviaHarder[1], InverseDeep.DefaultMaxNodes) && Deep(lluviaHarder[2], 60000),
+            "620 con endurecimiento: etapa 1 deep y etapa 2 deep con 60.000 nodos (03 sec. 4.2), K = 13, 1 vacio y 14 cuias");
+        check(lluvia[1] is not null && lluvia[0] is not null && lluvia[1]!.Source == lluvia[0]!.Source && lluvia[1]!.DeepNodes == lluvia[0]!.DeepNodes
+              && Deep(lluvia[2], 60000),
+            "620 sin endurecimiento: la etapa 1 repite la fuente de la 0 y la etapa 2 es la relajacion del hito, deep con 60.000 nodos (K = 13, 1 vacio, 14 cuias)");
+        foreach (int level in new[] { 580, 600 })
+        {
+            StageConfig?[] h = At(level, harder: true);
+            check(h.Skip(1).All(c => c is { K: SpecValidator.HitoK, SplitSlack: true, Slack: true, Source: "walk" } && Cuias(c) == SpecValidator.MaxCuias),
+                $"{level} con endurecimiento: las etapas 1-2 reparten la holgura (walk), con K = 13 y 14 cuias");
+        }
         check(At(640).All(c => c is null),
             "640 (Ma+Ba+Ho): ninguna etapa (la Hoja se lleva el vacio entero; el Matapi y el Barro no caben con K = 13)");
 
