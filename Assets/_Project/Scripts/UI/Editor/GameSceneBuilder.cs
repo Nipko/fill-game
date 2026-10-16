@@ -13,7 +13,7 @@ namespace AF.UI.Editor
     /// Genera la escena <c>Assets/_Project/Scenes/Game.unity</c> del prototipo v0 (docs/dev/prototipo-v0.md c) y la
     /// deja como la única de Build Settings. La escena es casi vacía (.claude/rules/unity-assets.md): cámara, EventSystem
     /// con <see cref="InputSystemUIInputModule"/> y <see cref="GameBootstrap"/> enlazado a los paquetes de niveles
-    /// (<see cref="LevelPackPaths"/>), al catálogo de miquitos, a las paradas del Mapa del río y a las tablas de textos
+    /// (<see cref="LevelPackPaths"/>), al catálogo de miquitos, a las paradas y a la geometría del Mapa del río y a las tablas de textos
     /// (<see cref="LocTables"/>; tarea L2b); la UI se construye por código en tiempo de ejecución. Es la forma versionada de
     /// crear la escena (CLAUDE.md, regla dura 3).
     ///
@@ -49,6 +49,9 @@ namespace AF.UI.Editor
 
         /// <summary>Paradas del Mapa del río (<c>af-river-stops/1</c>; D-013; 08 §4.5; las genera <c>tools/river-map/stops.py</c>).</summary>
         public const string RiverStopsPath = "Assets/_Project/Data/Map/river_stops_v1.json";
+
+        /// <summary>Geometría del Mapa del río (<c>af-river-map/1</c>; D-013; 08 §4.5; la genera <c>tools/river-map/geometry.py</c>; tarea M3.3).</summary>
+        public const string RiverMapPath = "Assets/_Project/Data/Map/river_map_v1.json";
 
         /// <summary>Calendario de Frutas del río (<c>af-facts/1</c>; D-017; 08 §4.6; contrato 31).</summary>
         public const string FruitCalendarPath = "Assets/_Project/Data/Content/frutas_del_rio_v1.json";
@@ -141,6 +144,13 @@ namespace AF.UI.Editor
             }
 
             bootstrap.ConfigureRiverStops(stops);
+            TextAsset? riverMap = AssetDatabase.LoadAssetAtPath<TextAsset>(RiverMapPath);
+            if (riverMap == null)
+            {
+                Debug.LogWarning(LogPrefix + "no existe la geometría del Mapa del río " + RiverMapPath + ": el juego seguirá sin la pantalla del Mapa.");
+            }
+
+            bootstrap.ConfigureRiverMap(riverMap);
             TextAsset? fruits = AssetDatabase.LoadAssetAtPath<TextAsset>(FruitCalendarPath);
             if (fruits == null)
             {
