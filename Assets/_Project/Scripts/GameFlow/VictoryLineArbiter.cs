@@ -157,25 +157,20 @@ namespace AF.GameFlow
     /// </summary>
     public static class VictoryLineArbiter
     {
-        /// <summary>
-        /// <c>ui_fruit_line_every_n_levels</c> = 1 [P] (08 §9; D-022): la línea de fruta en cada victoria. Constante privada hasta
-        /// que F3 la lleve a <see cref="GameConfig"/> y exista Remote Config en el cliente; solo la usa <see cref="ContextFor"/>.
-        /// </summary>
-        private const int FruitLineEveryN = 1;
-
         // Hitos de T6-A además de los fines de mundo: el primer Difícil (40) y el primer Muy difícil (60).
         private const int FirstHardLevel = 40;
         private const int FirstVeryHardLevel = 60;
 
         /// <summary>
         /// Contexto con los defaults del cliente (<see cref="MapConfig.RiverPolicy"/>, <see cref="MapConfig.HitoPolicy"/>,
-        /// <see cref="MapConfig.UiRiverFactEveryNLevels"/> y la cadencia de fruta [P]) para la victoria del nivel
+        /// <see cref="MapConfig.UiRiverFactEveryNLevels"/> y la cadencia de fruta, <see cref="GameConfig.FruitLineEveryN"/> [P],
+        /// <c>ui_fruit_line_every_n_levels</c> de 08 §9) para la victoria del nivel
         /// <paramref name="won"/>.
         /// </summary>
         public static VictoryContext ContextFor(int won, bool mapAvailable, RiverStopCatalog? stops, string? fruitKey, bool slothCanSpeak)
         {
             return new VictoryContext(won, mapAvailable, stops, fruitKey, MapConfig.RiverPolicy, MapConfig.HitoPolicy, slothCanSpeak,
-                MapConfig.UiRiverFactEveryNLevels, FruitLineEveryN);
+                MapConfig.UiRiverFactEveryNLevels, GameConfig.FruitLineEveryN);
         }
 
         /// <summary>

@@ -60,6 +60,9 @@ namespace AF.UI
         private TextAsset? riverStops;
 
         [SerializeField]
+        private TextAsset? fruitCalendar;
+
+        [SerializeField]
         private TextAsset? stringsTable;
 
         [SerializeField]
@@ -215,6 +218,21 @@ namespace AF.UI
         public void ConfigureRiverStops(TextAsset? stops)
         {
             riverStops = stops;
+        }
+
+        /// <summary>Calendario de Frutas del río asignado (<c>frutas_del_rio_v1.json</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
+        public TextAsset? FruitCalendarAsset => fruitCalendar;
+
+        /// <summary>
+        /// Calendario de Frutas del río leído al arrancar (<c>af-facts/1</c>; D-017; 08 §4.6), con la línea de cada nivel. Null si
+        /// falta el archivo o no valida: se avisa y el juego sigue igual, sin líneas de fruta.
+        /// </summary>
+        public FactSchedule? FruitFacts { get; private set; }
+
+        /// <summary>Asigna el calendario de Frutas del río (escena generada por <c>GameSceneBuilder</c>).</summary>
+        public void ConfigureFruitCalendar(TextAsset? calendar)
+        {
+            fruitCalendar = calendar;
         }
 
         /// <summary>Tabla de textos de la UI asignada (<c>strings.csv</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
@@ -712,7 +730,8 @@ namespace AF.UI
                 return false;
             }
 
-            settings.Show(LocLocale.Offered(Loc.Catalog, Loc.ShowUnapproved), profile.Settings.Language, profile.Settings.Patterns);
+            settings.Show(LocLocale.Offered(Loc.Catalog, Loc.ShowUnapproved), profile.Settings.Language, profile.Settings.Patterns,
+                profile.Settings.SlothMessages);
             _skipNextDelta = true;
             return true;
         }
@@ -800,6 +819,30 @@ namespace AF.UI
             bool loaded = screen != null && screen.RefreshFruitPatterns();
             _settingsScreen?.Mark(profile.Settings.Language, patterns);
             _probe?.SettingsChange("patterns", DevProbe.PatternsKey(patterns), loaded ? screen!.FruitPatternsOn : (bool?)null);
+            return true;
+        }
+
+        /// <summary>
+        /// Ajustes › Mensajes de TiTino (D-016, punto 4; 02 §12; tarea TI3): guarda <paramref name="on"/> en
+        /// <c>settings.sloth_messages</c> en el acto; apagado, TiTino solo hace gestos desde su siguiente aparición
+        /// (<c>AF.GameFlow.SlothLines</c>). La sonda escribe <c>settings_change</c> con la clave <c>sloth_messages</c> (08 §8.2).
+        /// </summary>
+        public bool ChooseSlothMessages(bool on)
+        {
+            Profile? profile = _profile;
+            if (profile == null)
+            {
+                return false;
+            }
+
+            if (profile.Settings.SlothMessages != on)
+            {
+                profile.Settings.SlothMessages = on;
+                SaveSettings(profile);
+            }
+
+            _settingsScreen?.MarkSlothMessages(on);
+            _probe?.SettingsChange(SettingsScreen.SlothMessagesId, on ? "true" : "false", null);
             return true;
         }
 
@@ -985,8 +1028,10 @@ namespace AF.UI
             _screen.Fauna = Fauna; // la especie de miquito de cada intro (guion de la intro §4.3)
             RiverStops = LoadRiverStops(riverStops);
             _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013; sin uso visible todavía)
+            FruitFacts = LoadFruitFacts(fruitCalendar); // calendario de Frutas del río (D-017)
+            _screen.FruitFacts = FruitFacts; // la línea de fruta de la victoria (F3)
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
-            _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), () => CloseSettings());
+            _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
             _flow = new LevelFlow(catalog, progress, _screen, GameConfig.TapSwitchSelection, LaunchOptions.ResolvePourMode(), _wallet)
@@ -1175,6 +1220,27 @@ namespace AF.UI
             catch (LevelFormatException e)
             {
                 Debug.LogError(LogPrefix + e.Message + " El juego sigue sin el Mapa.");
+                return null;
+            }
+        }
+
+        // Calendario de Frutas del río de la escena (af-facts/1; 08 §4.6), como las paradas del Mapa: si falta el archivo, un aviso;
+        // si no valida, un error con la ruta del valor. En los dos casos, null y el juego sigue sin líneas de fruta.
+        internal static FactSchedule? LoadFruitFacts(TextAsset? calendar)
+        {
+            if (calendar == null)
+            {
+                Debug.LogWarning(LogPrefix + "falta el calendario de Frutas del río (TextAsset): el juego sigue sin líneas de fruta. Regenera la escena con AF.UI.Editor.GameSceneBuilder.CreateGameScene.");
+                return null;
+            }
+
+            try
+            {
+                return new FactSchedule(FactCatalogReader.Read(calendar.text));
+            }
+            catch (LevelFormatException e)
+            {
+                Debug.LogError(LogPrefix + e.Message + " El juego sigue sin líneas de fruta.");
                 return null;
             }
         }

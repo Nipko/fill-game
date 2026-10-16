@@ -22,6 +22,14 @@ namespace AF.UI
     /// <see cref="VictoryButtonsInMs"/> ms de la pantalla de victoria (la fila 1,40 de 07 §5.4; VA-13). La ranura no decide
     /// cuándo aparece lo de sus proveedores: la línea de fruta (F3) entra con «Siguiente»
     /// (<see cref="VictoryLineSlot.FruitLineAlpha"/>) y la llegada (M1.6) lleva su franja desde la subida del panel.</item>
+    /// <item>La línea de fruta (<see cref="FactLine"/>; tarea F3) es un proveedor más: existe en cuanto llega el calendario de
+    /// Frutas del río (<see cref="FruitFacts"/>), da la clave de cada nivel al árbitro (<see cref="FruitKeyOf"/>) y enseña la que
+    /// este decida. Su <c>fact_id</c> sale por el punto común de <c>river_fact_shown</c>, como el dato de llegada. Si el árbitro
+    /// da a la vez la placa del lugar sin dato y la línea de fruta (SingleKey, o una llegada sin dato; arquitectura de la tanda 4,
+    /// §2), van las dos, la placa arriba y la línea debajo, y la ranura reserva ese alto (<see cref="StackNeedDp"/>).</item>
+    /// <item>Las medidas de la ranura (la línea de fruta más alta del calendario, la llegada más alta y la placa con la línea) se
+    /// calientan al cargar el nivel (<see cref="WarmVictorySlot"/>), fuera de la victoria; en desarrollo, con
+    /// <c>AF_PERF slot_measure</c>.</item>
     /// <item>TiTino puede hablar si <see cref="SlothVoice"/> (<c>ui_sloth_enabled</c> ∧ <c>settings.sloth_messages</c>; lo
     /// enciende TI6a cuando TiTino exista en la victoria) y su caja mide ≥ <see cref="SlothSpeakBoxDp"/> dp. Solo cuenta con
     /// <see cref="HitoLinePolicy.SlothHito"/>, que también llega con TI6a.</item>
@@ -57,6 +65,9 @@ namespace AF.UI
         private bool _slothCanSpeak;
         private int _slothSpokeAt = -1;
         private bool _riverFactSent;
+        private FactSchedule? _fruitFacts;
+        private FactLine? _fruitLine;
+        private readonly List<StackEntry> _stackNeeds = new List<StackEntry>(4);
 
         /// <summary>La ranura del Dato del río (tests y proveedores).</summary>
         internal VictoryLineSlot VictorySlot => _slot;
@@ -77,10 +88,52 @@ namespace AF.UI
         internal bool MapAvailable { get; set; }
 
         /// <summary>
-        /// Clave de la línea de fruta del nivel (D-017; 08 §4.6), o null: la da el calendario de Frutas del río (F1F2 y F3).
-        /// Sin él, ningún nivel tiene línea de fruta.
+        /// Clave de la línea de fruta del nivel (D-017; 08 §4.6), o null: la da el calendario de Frutas del río
+        /// (<see cref="FruitFacts"/>, <see cref="FactSchedule.KeyFor"/>; los tests pueden darla a mano). Sin él, ningún nivel
+        /// tiene línea de fruta.
         /// </summary>
         internal Func<int, string?>? FruitKeyOf { get; set; }
+
+        /// <summary>
+        /// Calendario de Frutas del río (<c>af-facts/1</c>, D-017; lo pasa <see cref="GameBootstrap"/>; null = sin el archivo o
+        /// inválido: el juego sigue sin líneas de fruta). Al darlo, da también <see cref="FruitKeyOf"/> y crea la línea de fruta
+        /// (<see cref="FactLine"/>), que se registra en la ranura (salvo con <see cref="FactLineDisabledForTests"/>).
+        /// </summary>
+        public FactSchedule? FruitFacts
+        {
+            get => _fruitFacts;
+            set
+            {
+                _fruitFacts = value;
+                FruitKeyOf = value != null ? value.KeyFor : (Func<int, string?>?)null;
+                if (value != null && _fruitLine == null && !FactLineDisabledForTests)
+                {
+                    _fruitLine = new FactLine(_art, _victoryPanel, () => _fruitFacts, FruitBlockDp, PlaceAboveFruitDp);
+                    RegisterVictoryLineProvider(_fruitLine);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Sin la línea de fruta en las pantallas que reciban el calendario mientras valga true (tests de la ranura sola o de la
+        /// llegada sola; como <see cref="ArrivalDisabledForTests"/>). No se usa en el juego.
+        /// </summary>
+        internal static bool FactLineDisabledForTests { get; set; }
+
+        /// <summary>La línea de fruta (null sin calendario o con <see cref="FactLineDisabledForTests"/>).</summary>
+        internal FactLine? FruitLine => _fruitLine;
+
+        /// <summary>
+        /// Cadencia de la línea de fruta en lugar de <c>GameConfig.FruitLineEveryN</c> (tests: 0, 1 y 2); null = la del
+        /// cliente.
+        /// </summary>
+        internal int? FruitEveryNOverride { get; set; }
+
+        /// <summary>
+        /// Cadencia del dato de llegada en lugar de <see cref="MapConfig.UiRiverFactEveryNLevels"/> (tests: una llegada sin dato con
+        /// Canon); null = la del cliente.
+        /// </summary>
+        internal int? RiverFactEveryNOverride { get; set; }
 
         /// <summary>
         /// Política de los hitos de TiTino en lugar de <see cref="MapConfig.HitoPolicy"/> (tests: SlothHito antes de TI6a); null =
@@ -179,13 +232,141 @@ namespace AF.UI
 
         // Pregunta 11, (a) [P]: la llegada compactada no siempre cabe en el alto de la línea de fruta (medidas de M1.3b), así que la
         // ranura reserva lo mayor de los dos; los dos son fijos por idioma, escala y ancho, y «Siguiente» no se mueve de una
-        // victoria a otra (Q7-A).
+        // victoria a otra (Q7-A). Si alguna victoria lleva la placa del lugar y la línea de fruta juntas (StackNeedDp), también eso.
         private float SlotContentDp(string locale, float textScale)
         {
             float width = VictorySlotWidthDp;
-            float fruit = _slot.ContentHeightFor(locale, textScale, width);
+            float fruit = FruitBlockFor(locale, textScale, width);
             ArrivalStrip? arrival = _arrival;
-            return arrival != null && arrival.SlotActive ? Mathf.Max(fruit, arrival.NeedDp(textScale, width)) : fruit;
+            if (arrival == null || !arrival.SlotActive)
+            {
+                return fruit;
+            }
+
+            return Mathf.Max(Mathf.Max(fruit, arrival.NeedDp(textScale, width)), StackNeedDp(locale, textScale, width, fruit));
+        }
+
+        /// <summary>
+        /// Lo que ocupan juntas la placa del lugar y la línea de fruta (dp; 0 si no van juntas en ninguna victoria): la placa más
+        /// alta de las llegadas en las que el árbitro da la placa sin dato y además la línea de fruta (<see cref="VictoryLine.Arrival"/>
+        /// sin <see cref="VictoryLine.ArrivalFact"/> y con <see cref="VictoryLine.FruitKey"/>: con SingleKey en los <c>10k</c>, con
+        /// otra cadencia del dato de llegada o en una parada sin dato; arquitectura de la tanda 4, §2), más
+        /// <see cref="FactLine.StackGapDp"/> y el alto fijo H de la línea de fruta (<paramref name="fruitDp"/>). Pregunta al árbitro
+        /// con la política de ahora (también las de los tests), así que con los defaults y los datos de hoy es 0. En caché.
+        /// </summary>
+        internal float StackNeedDp(string locale, float textScale, float widthDp, float fruitDp)
+        {
+            ArrivalStrip? arrival = _arrival;
+            FactLine? fruitLine = _fruitLine;
+            RiverStopCatalog? stops = RiverStops;
+            if (arrival == null || !arrival.SlotActive || fruitLine == null || !fruitLine.SlotActive || stops == null)
+            {
+                return 0f;
+            }
+
+            // La política de ahora (los defaults del cliente o los de los tests), para la caché.
+            VictoryContext policy = ArbiterContext(RiverStopCatalog.LevelsPerStop, false);
+            RiverFactPolicy river = policy.River;
+            int riverEvery = policy.RiverFactEveryN;
+            int fruitEvery = policy.FruitEveryN;
+            Func<int, string?>? keyOf = FruitKeyOf;
+            for (int i = 0; i < _stackNeeds.Count; i++)
+            {
+                StackEntry e = _stackNeeds[i];
+                if (ReferenceEquals(e.Stops, stops) && ReferenceEquals(e.KeyOf, keyOf) && e.Locale == locale && e.River == river
+                    && e.RiverEvery == riverEvery && e.FruitEvery == fruitEvery && Mathf.Approximately(e.Scale, textScale)
+                    && Mathf.Approximately(e.Width, widthDp) && Mathf.Approximately(e.Fruit, fruitDp))
+                {
+                    return e.Height;
+                }
+            }
+
+            float place = 0f;
+            for (int n = 2; n < stops.Count; n++)
+            {
+                int won = n * RiverStopCatalog.LevelsPerStop;
+                RiverStop? stop = stops.At(n);
+                if (won > WorldTable.LastLevel || stop == null)
+                {
+                    continue;
+                }
+
+                // TiTino callado: el peor caso (si habla en un hito, no hay línea de fruta).
+                VictoryContext context = ArbiterContext(won, false);
+                VictoryLine line = VictoryLineArbiter.For(in context);
+                if (line.Arrival && !line.ArrivalFact && line.FruitKey != null)
+                {
+                    place = Mathf.Max(place, arrival.PlaceHeightOf(stop, textScale, widthDp));
+                }
+            }
+
+            float need = place > 0f ? Mathf.Ceil(place + FactLine.StackGapDp + fruitDp) : 0f;
+            _stackNeeds.Add(new StackEntry(stops, keyOf, locale, river, riverEvery, fruitEvery, textScale, widthDp, fruitDp, need));
+            return need;
+        }
+
+        /// <summary>
+        /// Calienta las medidas de la ranura con el idioma, la escala y el ancho de ahora (<see cref="FactLine.NeedDp"/>, la llegada
+        /// más alta y <see cref="StackNeedDp"/>), para que la primera victoria no las pague al subir el panel (07 §5.4; revisión
+        /// de F3: unos 16-23 ms en el escritorio). Lo llama la carga del nivel (GameScreen.Arrival.cs); en desarrollo escribe
+        /// <c>AF_PERF slot_measure</c> si algo no salió de la caché. Sin ranura, nada.
+        /// </summary>
+        internal void WarmVictorySlot(int level)
+        {
+            if (!_slot.Reserved)
+            {
+                return;
+            }
+
+            FactLine? fruitLine = _fruitLine;
+            int before = fruitLine != null ? fruitLine.NeedMeasureCount : 0;
+            int measures = _slot.MeasureCount;
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            _slot.Build(_victoryPanel);
+            string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
+            float content = SlotContentDp(locale, UiBuilder.TextScale);
+            double ms = watch.Elapsed.TotalMilliseconds;
+            bool fresh = (fruitLine != null && fruitLine.NeedMeasureCount != before) || _slot.MeasureCount != measures;
+            if (fresh)
+            {
+                SlotWarmMs = ms;
+                _probe.SlotMeasure(level, locale, UiBuilder.TextScale, ms, fruitLine != null ? fruitLine.NeedMs : 0d, content);
+            }
+        }
+
+        /// <summary>Milisegundos de la última vez que <see cref="WarmVictorySlot"/> midió algo (−1 si nunca; tests).</summary>
+        internal double SlotWarmMs { get; private set; } = -1d;
+
+        // El contexto del árbitro para la victoria de won con la política de ahora (los defaults del cliente o los de los tests).
+        private VictoryContext ArbiterContext(int won, bool canSpeak)
+        {
+            Func<int, string?>? fruit = FruitKeyOf;
+            VictoryContext context = VictoryLineArbiter.ContextFor(won, MapAvailable, RiverStops, fruit?.Invoke(won), canSpeak);
+            if (HitoPolicyOverride.HasValue || RiverPolicyOverride.HasValue || FruitEveryNOverride.HasValue || RiverFactEveryNOverride.HasValue)
+            {
+                context = new VictoryContext(context.Won, context.MapAvailable, context.Stops, context.FruitKey,
+                    RiverPolicyOverride ?? context.River, HitoPolicyOverride ?? context.Hito, context.SlothCanSpeak,
+                    RiverFactEveryNOverride ?? context.RiverFactEveryN, FruitEveryNOverride ?? context.FruitEveryN);
+            }
+
+            return context;
+        }
+
+        // Lo que ocupa encima de la línea de fruta la placa del lugar cuando van juntas (ArrivalStrip.Stacked), o 0.
+        private float PlaceAboveFruitDp()
+        {
+            ArrivalStrip? arrival = _arrival;
+            return arrival != null && arrival.Stacked && arrival.Kind != ArrivalKind.None ? arrival.OffsetDp + arrival.ShownHeightDp : 0f;
+        }
+
+        // Alto fijo H de la línea de fruta (Q7-A; tarea F3): el del peor caso sintético de la ranura (M1.3b) o, si es mayor, el de
+        // la línea más alta del calendario con su cabecera (FactLine.NeedDp: con el contador en dos filas, al 130 %, una línea real
+        // puede pasar del sintético). Fijo por idioma, escala y ancho; de la caché.
+        private float FruitBlockFor(string locale, float textScale, float width)
+        {
+            float fruit = _slot.ContentHeightFor(locale, textScale, width);
+            FactLine? line = _fruitLine;
+            return line != null && line.SlotActive ? Mathf.Max(fruit, line.NeedDp(textScale, width)) : fruit;
         }
 
         partial void SlotReserveBelowHome(ref float y)
@@ -224,15 +405,7 @@ namespace AF.UI
             _slothCanSpeak = false;
             if (won >= 1 && won <= WorldTable.LastLevel)
             {
-                Func<int, string?>? fruit = FruitKeyOf;
-                VictoryContext context = VictoryLineArbiter.ContextFor(won, MapAvailable, RiverStops, fruit?.Invoke(won), canSpeak);
-                if (HitoPolicyOverride.HasValue || RiverPolicyOverride.HasValue)
-                {
-                    context = new VictoryContext(context.Won, context.MapAvailable, context.Stops, context.FruitKey,
-                        RiverPolicyOverride ?? context.River, HitoPolicyOverride ?? context.Hito, context.SlothCanSpeak,
-                        context.RiverFactEveryN, context.FruitEveryN);
-                }
-
+                VictoryContext context = ArbiterContext(won, canSpeak);
                 _victoryLine = VictoryLineArbiter.For(in context);
             }
             else
@@ -246,7 +419,32 @@ namespace AF.UI
             }
 
             _riverFactSent = false;
+            if (_arrival != null)
+            {
+                // La placa del lugar sin dato va arriba solo si la línea de fruta va de verdad debajo (ArrivalStrip.Stacked): el
+                // árbitro la da y tiene sus textos en el idioma de la UI (en release, aprobados). Si no, la placa va centrada.
+                _arrival.StackFruit = _fruitLine != null && _fruitLine.CanShow(in _victoryLine);
+            }
+
             _slot.Show(flow, in _victoryLine);
+            FactLine? fruitLine = _fruitLine;
+            if (fruitLine != null && fruitLine.Shown)
+            {
+                FruitLineShownCount++;
+                _probe.FruitLine(fruitLine, _slot.ContentDp);
+            }
+        }
+
+        /// <summary>Veces que la línea de fruta salió en una victoria (la sonda <c>AF_STATE fruit_line</c>; tests).</summary>
+        internal int FruitLineShownCount { get; private set; }
+
+        // Alto fijo H de la línea de fruta en el idioma, la escala y el ancho de ahora (de la caché de la ranura): hasta ahí crece
+        // el texto de la línea, que va arriba de la ranura si esta es más alta (la reserva es máx(línea de fruta, llegada), M1.6).
+        private float FruitBlockDp()
+        {
+            _slot.Build(_victoryPanel);
+            string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
+            return FruitBlockFor(locale, UiBuilder.TextScale, VictorySlotWidthDp);
         }
 
         partial void SlotTick(float dtMs)
@@ -266,7 +464,7 @@ namespace AF.UI
         }
 
         // La victoria se cierra con Siguiente (AD_GATE) o con Inicio: aquí va el punto común de river_fact_shown
-        // {level, fact_id, dismissed_ms} de M1.6 y F3, con VictorySlot.DismissedMs.
+        // {level, fact_id, dismissed_ms} de M1.6 y F3, con VictorySlot.DismissedMs (la línea de fruta, desde que entra).
         partial void SlotAdGate(LevelFlow flow)
         {
             _slot.Dismiss();
@@ -279,9 +477,12 @@ namespace AF.UI
             SendRiverFactShown(flow);
         }
 
-        // El punto común de river_fact_shown (08 §8.2, af_river_fact_shown; propuesta del Mapa §11.5): una vez por victoria, si la
-        // ranura enseñó un dato, con su clave (fact_id) y el tiempo desde la victoria hasta cerrarla (dismissed_ms). Hoy, el dato
-        // de la llegada o el desplazado (ArrivalStrip.ShownFactKey); F3 añade aquí la clave de la línea de fruta.
+        // El punto común de river_fact_shown (08 §8.2, af_river_fact_shown; propuesta del Mapa §11.5; propuesta de Frutas §2.10):
+        // una vez por victoria, si la ranura enseñó un dato, con su clave (fact_id) y dismissed_ms: el dato de la llegada o el
+        // desplazado (ArrivalStrip.ShownFactKey), con el tiempo desde la victoria hasta cerrarla, o, si no, la línea de fruta
+        // (FactLine.ShownFactId, <tinte>.<kk>), con el tiempo desde que entra (VictoryLineSlot.FruitRevealMs) hasta cerrarla, 0 si
+        // se cerró antes (Frutas §2.10: «tiempo entre que aparece la línea y el toque en Siguiente»). El árbitro nunca da las dos
+        // en la misma victoria (una sola línea, T6-A).
         private void SendRiverFactShown(LevelFlow flow)
         {
             if (_riverFactSent || !_slot.Shown)
@@ -290,6 +491,13 @@ namespace AF.UI
             }
 
             string? factId = _arrival?.ShownFactKey;
+            float dismissedMs = _slot.DismissedMs;
+            if (factId == null && _fruitLine != null && _fruitLine.Shown)
+            {
+                factId = _fruitLine.ShownFactId;
+                dismissedMs = FruitDismissedMs(dismissedMs);
+            }
+
             if (factId == null)
             {
                 return;
@@ -298,8 +506,18 @@ namespace AF.UI
             _riverFactSent = true;
             RiverFactShownCount++;
             LastRiverFactId = factId;
-            LastRiverFactDismissedMs = _slot.DismissedMs;
-            _probe.RiverFactShown(flow.LevelNumber, factId, _slot.DismissedMs);
+            LastRiverFactDismissedMs = dismissedMs;
+            _probe.RiverFactShown(flow.LevelNumber, factId, dismissedMs);
+        }
+
+        /// <summary>
+        /// <c>dismissed_ms</c> de la línea de fruta: de <paramref name="slotDismissedMs"/> (desde que se vio la victoria,
+        /// <see cref="VictoryLineSlot.DismissedMs"/>) a desde que entra la línea (<see cref="VictoryLineSlot.FruitRevealMs"/>), y 0 si
+        /// la victoria se cerró antes (propuesta de Frutas §2.10).
+        /// </summary>
+        internal static float FruitDismissedMs(float slotDismissedMs)
+        {
+            return Mathf.Max(0f, slotDismissedMs - VictoryLineSlot.FruitRevealMs);
         }
 
         /// <summary>
@@ -352,6 +570,44 @@ namespace AF.UI
             }
 
             return highestTop;
+        }
+
+        private readonly struct StackEntry
+        {
+            public StackEntry(RiverStopCatalog stops, Func<int, string?>? keyOf, string locale, RiverFactPolicy river, int riverEvery, int fruitEvery,
+                float scale, float width, float fruit, float height)
+            {
+                Stops = stops;
+                KeyOf = keyOf;
+                Locale = locale;
+                River = river;
+                RiverEvery = riverEvery;
+                FruitEvery = fruitEvery;
+                Scale = scale;
+                Width = width;
+                Fruit = fruit;
+                Height = height;
+            }
+
+            public RiverStopCatalog Stops { get; }
+
+            public Func<int, string?>? KeyOf { get; }
+
+            public string Locale { get; }
+
+            public RiverFactPolicy River { get; }
+
+            public int RiverEvery { get; }
+
+            public int FruitEvery { get; }
+
+            public float Scale { get; }
+
+            public float Width { get; }
+
+            public float Fruit { get; }
+
+            public float Height { get; }
         }
     }
 }

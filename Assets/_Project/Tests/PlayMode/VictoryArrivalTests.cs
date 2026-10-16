@@ -43,6 +43,7 @@ namespace AF.Tests.PlayMode
         {
             FunnelSetup.Hooks();
             GameScreen.ArrivalDisabledForTests = false;
+            GameScreen.FactLineDisabledForTests = true; // la llegada sola (la línea de fruta con la llegada: FactLineTests)
             MapArtRule.ForceProvisional = true;
         }
 
@@ -50,6 +51,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             GameScreen.ArrivalDisabledForTests = false;
+            GameScreen.FactLineDisabledForTests = false;
             GameScreen.SimulatedScreen = null;
             MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();

@@ -54,12 +54,14 @@ namespace AF.Tests.PlayMode
         public void SetUp()
         {
             GameScreen.ArrivalDisabledForTests = true; // la maqueta sola (la llegada real: ArrivalSnapshotTests)
+            GameScreen.FactLineDisabledForTests = true; // ni la línea de fruta real (FactLineSnapshotTests)
         }
 
         [TearDown]
         public void TearDown()
         {
             GameScreen.ArrivalDisabledForTests = false;
+            GameScreen.FactLineDisabledForTests = false;
             LaunchOptions.Reset();
             SnapshotKit.Release();
         }

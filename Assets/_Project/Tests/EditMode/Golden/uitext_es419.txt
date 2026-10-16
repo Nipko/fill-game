@@ -157,6 +157,7 @@ UiText.RestartLong	Volver a la orilla
 UiText.Retry	Reintentar
 UiText.RevealGiftToast	+1 Luciérnaga
 UiText.RevealLabel	Revelar
+UiText.RiverFact	Dato del río
 UiText.RiverLoweredColor	El río bajó: esta vez hay un color menos
 UiText.RiverLoweredCuia	El río bajó: esta vez hay una cuia más
 UiText.Seeds	Semillas
@@ -165,6 +166,7 @@ UiText.SettingsLanguageAuto	Automático
 UiText.SettingsPatternsAuto	Automático
 UiText.SettingsPatternsOff	Nunca
 UiText.SettingsPatternsOn	Siempre
+UiText.SettingsSlothMessages	Mensajes de TiTino
 UiText.SimulatedAdClose	Cerrar
 UiText.SimulatedAdInterstitial	intersticial
 UiText.SimulatedAdRewarded	recompensado

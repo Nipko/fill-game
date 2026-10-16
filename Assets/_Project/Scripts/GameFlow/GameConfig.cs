@@ -119,6 +119,43 @@ namespace AF.GameFlow
         public const bool LevelCardOnRetry = false;
 
         /// <summary>
+        /// <c>ui_fruit_line_every_n_levels</c> = 1 [P] (08 §4.6 y §9; D-017, Q2-A; pregunta 45, (a), D-022; tarea F3): cadencia de
+        /// la línea de fruta de Frutas del río. Con 1, en cada victoria; con N &gt; 1, solo si el nivel es múltiplo de N; con 0,
+        /// nunca. La prioridad de la victoria (TiTino &gt; dato de llegada &gt; línea de fruta) la decide
+        /// <see cref="VictoryLineArbiter"/>, que es quien la lee (<see cref="VictoryLineArbiter.ContextFor"/>). Constante privada
+        /// del ensamblado, sin <c>[RemoteConfigKey]</c>, hasta que exista <c>AF.RemoteConfig</c> en el cliente (08 §9: «Hasta que
+        /// exista Remote Config en el cliente, constante de <c>GameConfig</c> [P]»).
+        /// </summary>
+        internal const int FruitLineEveryN = 1;
+
+        /// <summary>
+        /// <c>ui_sloth_enabled</c> = true (08 §9; D-016, punto 4; propuesta de TiTino d.10): interruptor general de TiTino, para
+        /// apagarlo en remoto. Con false no sale en ningún momento, ni gesto ni frase (<see cref="SlothLines"/>). Constante sin
+        /// <c>[RemoteConfigKey]</c> hasta que exista <c>AF.RemoteConfig</c> en el cliente (plan (i) de la propuesta, paso 7).
+        /// </summary>
+        public const bool UiSlothEnabled = true;
+
+        /// <summary>
+        /// <c>ui_sloth_fail_enabled</c> = true [P] (08 §9; D-016, punto 4): TiTino en Nivel fallido (gesto y, en el primer fallo de
+        /// cada nivel, frase; <see cref="SlothLines.ForFail"/>). Con false, Nivel fallido sale sin él.
+        /// </summary>
+        public const bool UiSlothFailEnabled = true;
+
+        /// <summary>
+        /// <c>ui_sloth_win_line_every_n</c> = 4 (08 §9; D-016, punto 5; propuesta de TiTino d.6, punto 2): fuera de sus tres hitos,
+        /// TiTino tiene frase en la victoria número N, 2N, 3N… (<c>stats.levels_won</c>), y solo con la ranura de la línea vacía
+        /// (T6-A). 0 o menos: nunca fuera de los hitos.
+        /// </summary>
+        public const int UiSlothWinLineEveryN = 4;
+
+        /// <summary>
+        /// <c>ui_sloth_lines_per_session_max</c> = 4 (08 §9; D-016, punto 5; propuesta de TiTino d.10): tope de frases de TiTino por
+        /// sesión, en todos los momentos (victoria, fallo, aviso de Volver a la orilla e inicio), salvo en el fin de mundo, que
+        /// habla siempre (d.6, punto 5).
+        /// </summary>
+        public const int UiSlothLinesPerSessionMax = 4;
+
+        /// <summary>
         /// <c>live_content_end_message</c> = <c>{"next_batch_eta_days":14}</c> (08 §9): días estimados hasta los próximos 100
         /// niveles, que muestra la pantalla «El río sigue creciendo» (06 §9; 08 §6.2).
         /// </summary>
