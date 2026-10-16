@@ -1325,7 +1325,8 @@ namespace AF.UI
             // La cinta se alarga si la cifra no cabe en su franja (otro idioma o en-XA; tarea L4).
             _ribbonText.fontSize = RibbonSp * s;
             Vector2 pref = ribbon ? _ribbonText.GetPreferredValues(_ribbonText.text, float.PositiveInfinity, float.PositiveInfinity) : Vector2.zero;
-            float rw = DifficultyChip.RibbonWidthFor(pref.x / s) * s;
+            float rw1 = DifficultyChip.RibbonWidthFor(pref.x / s);
+            float rw = rw1 * s;
             float rh = ProceduralArt.RibbonTagHeightDp * s;
             const float gap = 6f;
             float gapRibbon = 8f * s;
@@ -1338,13 +1339,13 @@ namespace AF.UI
             {
                 UiBuilder.Place(_ribbon.rectTransform, seed + gap + textW + gapRibbon, (rowH - rh) * 0.5f, rw, rh);
 
-                // La cifra, centrada en la franja de texto de la cinta (RibbonTagTextDp, alargada con la cinta); su caja mide al
-                // menos su línea (la línea de Baloo 2 es más alta que la franja, pero los glifos «×4» caben en ella).
-                Rect t = ProceduralArt.RibbonTagTextDp;
-                float bandW = (t.width * s) + (rw - (ProceduralArt.RibbonTagWidthDp * s));
-                float tw = Mathf.Max(bandW, Mathf.Ceil(pref.x) + 1f);
+                // La cifra, centrada en la franja de texto de la cinta (RibbonTagTextDp o, en la cinta alargada, entre el clavo y
+                // la cola: DifficultyChip.RibbonTextBandFor); su caja mide al menos su línea (la línea de Baloo 2 es más alta que
+                // la franja, pero los glifos «×4» caben en ella).
+                Rect t = DifficultyChip.RibbonTextBandFor(rw1);
+                float tw = Mathf.Max(t.width * s, Mathf.Ceil(pref.x) + 1f);
                 float th = Mathf.Max(t.height * s, Mathf.Ceil(pref.y) + 1f);
-                float cx = (t.x * s) + (bandW * 0.5f);
+                float cx = (t.x + (t.width * 0.5f)) * s;
                 float cy = (t.y + (t.height * 0.5f)) * s;
                 UiBuilder.Place(_ribbonText.rectTransform, cx - (tw * 0.5f), cy - (th * 0.5f), tw, th);
             }

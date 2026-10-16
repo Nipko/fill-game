@@ -58,7 +58,7 @@ namespace AF.UI
 
         private const float TopRowHeight = 48f;
 
-        // Tamaño del cronómetro de la próxima canoa (sp); su tamaño en dp dice la escala de texto con la que se creó (L4).
+        // Tamaño del cronómetro de la próxima canoa (sp).
         private const float CanoesTimerSp = 13f;
         private const float TabBarHeight = 64f;
         private const float PlayTouchHeight = 72f;
@@ -106,6 +106,10 @@ namespace AF.UI
         private readonly Image _canoesInfinite;
         private readonly TextMeshProUGUI _canoesCount;
         private readonly TextMeshProUGUI _canoesTimer;
+
+        // Escala de texto con la que se crearon «n/5» y el cronómetro (UiBuilder.TextScale; tarea L4): la placa de Canoas crece
+        // con ella (LayoutCanoesContent).
+        private readonly float _canoesTextScale;
         private readonly ReliefParts _settings;
 
         private readonly ReliefParts _play;
@@ -222,6 +226,7 @@ namespace AF.UI
             _canoesInfinite.preserveAspect = true;
             _canoesCount = UiBuilder.Label("Count", _canoes.transform, TextStyle.PillWood, "5/5", 19f, Palette.Cream, TextAlignmentOptions.Center);
             _canoesTimer = UiBuilder.Label("Timer", _canoes.transform, TextStyle.PillWood, string.Empty, CanoesTimerSp, Palette.Cream, TextAlignmentOptions.Center);
+            _canoesTextScale = Mathf.Max(1f, UiBuilder.TextScale);
 
             // Ajustes (07 §7.6: engranaje de madera, disco de 40 dp en un área de 48): abre su pantalla (tarea L3).
             _settings = UiBuilder.Relief("SettingsButton", top, art.DiscWood, () => _onSettings());
@@ -801,10 +806,11 @@ namespace AF.UI
         {
             // «n/5» arriba y el cronómetro debajo mientras corre; con las canoas llenas, «5/5» centrado (ficha §4.5). Con la
             // escala de texto (tarea L4; 02 §12: los contenedores crecen), las dos líneas crecen con ella y la placa de 40 dp
-            // crece lo que haga falta a lo alto, por igual arriba y abajo de su centro (al 130 %, 51 dp: asoma 5,5 dp por cada
-            // lado de la fila, dentro del hueco de 8 dp hasta la ventanita de casa).
+            // crece lo que haga falta a lo alto, por igual arriba y abajo de su centro (al 130 %, ceil(37 × 1,3 + 3) = 52 dp:
+            // crece 6 dp por cada lado y asoma 2 dp por encima y por debajo de la fila de 48, dentro del hueco de 8 dp hasta la
+            // ventanita de casa). La escala es la que se guardó al crear los textos, no se deduce de su tamaño.
             bool timer = _canoesTimer.gameObject.activeSelf;
-            float s = Mathf.Max(1f, _canoesTimer.fontSize / CanoesTimerSp);
+            float s = _canoesTextScale;
             float plateH = timer ? Mathf.Max(40f, Mathf.Ceil((37f * s) + 3f)) : 40f;
             float plateTop = 4f - ((plateH - 40f) * 0.5f);
             UiBuilder.Place(_canoesPlate.rectTransform, 0f, plateTop, 128f, plateH);

@@ -101,6 +101,17 @@ namespace AF.Tests.PlayMode
         public int Problems => _lines.Count;
 
         /// <summary>
+        /// Los problemas de un solo texto, como los apunta <see cref="Scan"/> (vacío si no tiene ninguno): para los tests que
+        /// miran una pieza concreta (tarea L4).
+        /// </summary>
+        public string ProblemsOf(TMP_Text text)
+        {
+            Canvas.ForceUpdateCanvases();
+            text.ForceMeshUpdate();
+            return Describe(text);
+        }
+
+        /// <summary>
         /// Avisos de contenido que no son desbordes (L4): el tutorial de la tarjeta previa en más de 2 líneas a 100 % (02 §12: es
         /// un límite del texto, que su caja ya acoge sin salirse; a 130 % puede pasar de 2 por diseño: <c>LevelCardView</c>).
         /// </summary>
@@ -229,8 +240,8 @@ namespace AF.Tests.PlayMode
 
         // Ancho de la franja de texto de la cinta (dp) si el texto es la cifra de una cinta «×3»/«×4» («Ribbon/Value»); 0 si no.
         // La escala sale del alto del sprite de la cinta (RibbonTagHeightDp al 100 %; 0,75 en el chip compacto, × la escala de
-        // texto en la tarjeta previa) y la franja es el ancho de la cinta menos el remache y la cola (RibbonTagWidthDp −
-        // RibbonTagTextDp.width, 11 dp al 100 %): así sigue valiendo si L4 alarga la cinta para que quepa la cifra.
+        // texto en la tarjeta previa) y la franja es la de DifficultyChip.RibbonTextBandFor: RibbonTagTextDp a su ancho de
+        // siempre y, en la cinta alargada (L4), entre el clavo y la cola, sin pisar ninguno de los dos.
         private static float RibbonBandWidth(TMP_Text text)
         {
             Transform? parent = text.transform.parent;
@@ -240,7 +251,7 @@ namespace AF.Tests.PlayMode
             }
 
             float scale = ribbon.rect.height / ProceduralArt.RibbonTagHeightDp;
-            return ribbon.rect.width - ((ProceduralArt.RibbonTagWidthDp - ProceduralArt.RibbonTagTextDp.width) * scale);
+            return DifficultyChip.RibbonTextBandFor(ribbon.rect.width / scale).width * scale;
         }
 
         private static bool Visible(TMP_Text text)

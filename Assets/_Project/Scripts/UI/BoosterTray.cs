@@ -89,6 +89,19 @@ namespace AF.UI
         /// <summary>Aire mínimo entre la bandeja ensanchada y el borde de la pantalla (dp) [P].</summary>
         public const float TrayEdgeDp = 8f;
 
+        /// <summary>
+        /// Lo más que se encoge el glifo de una ranura para dejar sitio a su etiqueta en dos líneas (dp) [P] (tarea L4; guía 3.6:
+        /// 32 dp).
+        /// </summary>
+        public const float LabelMinIconDp = 20f;
+
+        /// <summary>
+        /// Lo más que crecen las ranuras y la bandeja hacia abajo para que quepa una etiqueta en dos líneas sobre el glifo más
+        /// pequeño (dp) [P] (tarea L4; revisión de L4: al 130 % las dos líneas no caben bajo un glifo de 20 dp en la cara de 64):
+        /// la bandeja acaba a 16 dp de la zona segura inferior (02 §5), así que siempre le quedan 4.
+        /// </summary>
+        public const float MaxGrowDp = 12f;
+
         private const float SlotDp = 64f;
         private const float GapDp = 8f;
         private const float PadDp = 16f;
@@ -116,6 +129,8 @@ namespace AF.UI
         private float _trayTop;
         private int _slots = 1;
         private float _slotW = SlotDp;
+        private float _grow;
+        private float _trayX;
         private int _slotsVersion;
         private bool _visible = true;
         private bool _revealPressed;
@@ -163,6 +178,12 @@ namespace AF.UI
         /// <summary>Ancho de cada ranura (dp): 64, o más si una etiqueta no cabe (tarea L4; <see cref="SlotMaxDp"/>).</summary>
         public float SlotWidth => _slotW;
 
+        /// <summary>
+        /// Lo que crecen hacia abajo las ranuras y la bandeja (dp): 0, o hasta <see cref="MaxGrowDp"/> si una etiqueta en dos
+        /// líneas no cabe sobre el glifo más pequeño (tarea L4).
+        /// </summary>
+        public float GrowDp => _grow;
+
         /// <summary>Etiqueta de la ranura de Marea (tests de desbordes).</summary>
         public TextMeshProUGUI UndoLabel => _undo.Label;
 
@@ -171,6 +192,21 @@ namespace AF.UI
 
         /// <summary>Etiqueta de la ranura de Revelar (tests de desbordes).</summary>
         public TextMeshProUGUI RevealLabel => _reveal.Label;
+
+        /// <summary>Glifo de la ranura de Marea (tests de desbordes).</summary>
+        public Image UndoGlyph => _undo.Glyph;
+
+        /// <summary>Glifo de la ranura de Cuia extra (tests de desbordes).</summary>
+        public Image ExtraGlyph => _extra.Glyph;
+
+        /// <summary>Fondo de la bandeja (tests de desbordes), con el margen de sombra del sprite procedural.</summary>
+        public RectTransform TrayRect => _tray.rectTransform;
+
+        /// <summary>
+        /// Cuerpo de la bandeja sin su sombra (dp desde la esquina superior izquierda del HUD: x, y, ancho y alto; tests de
+        /// desbordes: no sale de la pantalla).
+        /// </summary>
+        public Rect BodyRect => new Rect(_trayX, _trayTop, Width, 80f + _grow);
 
         /// <summary>Texto del badge de Marea (diagnóstico y tests).</summary>
         public string UndoBadgeText => _undo.BadgeText;
@@ -461,32 +497,45 @@ namespace AF.UI
             _canvasW = canvasW;
             _trayTop = trayTop;
             _slotW = SlotWidthFor(canvasW);
+            _grow = _undo.GrowFor(_slotW);
+            if (_extra.Active)
+            {
+                _grow = Mathf.Max(_grow, _extra.GrowFor(_slotW));
+            }
+
+            if (_reveal.Active)
+            {
+                _grow = Mathf.Max(_grow, _reveal.GrowFor(_slotW));
+            }
+
             float width = Width;
             _tray.sprite = _art.Tray(width);
             float trayX = (canvasW - width) / 2f;
+            _trayX = trayX;
             if (_art.TrayIsPainted)
             {
                 _tray.type = Image.Type.Sliced;
-                UiBuilder.Place(_tray.rectTransform, trayX, trayTop, width, 80f);
+                UiBuilder.Place(_tray.rectTransform, trayX, trayTop, width, 80f + _grow);
             }
             else
             {
-                UiBuilder.Place(_tray.rectTransform, trayX - 8f, trayTop - 2f, width + 16f, 94f);
+                UiBuilder.Place(_tray.rectTransform, trayX - 8f, trayTop - 2f, width + 16f, 94f + _grow);
             }
 
-            // Orden canónico de 07 §7.4, de izquierda a derecha y sin huecos: Marea, Cuia extra y Revelar.
+            // Orden canónico de 07 §7.4, de izquierda a derecha y sin huecos: Marea, Cuia extra y Revelar. Todas las ranuras
+            // miden lo mismo, también a lo alto (_grow).
             float x = trayX + PadDp;
-            _undo.Place(x, trayTop + 4f, _slotW);
+            _undo.Place(x, trayTop + 4f, _slotW, _grow);
             if (_extra.Active)
             {
                 x += _slotW + GapDp;
-                _extra.Place(x, trayTop + 4f, _slotW);
+                _extra.Place(x, trayTop + 4f, _slotW, _grow);
             }
 
             if (_reveal.Active)
             {
                 x += _slotW + GapDp;
-                _reveal.Place(x, trayTop + 4f, _slotW);
+                _reveal.Place(x, trayTop + 4f, _slotW, _grow);
             }
 
             LayoutMissing();
@@ -709,7 +758,8 @@ namespace AF.UI
             // Etiqueta de la ranura (tarea L4): a 12 sp (12 × escala dp), en una línea de 16 dp (× escala) con su borde de abajo
             // a 57 dp, con LabelInsetDp de aire a cada lado (la cara de la ranura es redondeada); si no cabe ni en la ranura más
             // ancha, en dos líneas con el interlineado apretado (−0,2 em) y el mismo borde de abajo. Lo que la caja crece hacia
-            // arriba lo cede el glifo, que sube y, si hace falta, se encoge (hasta LabelMinIconDp). La etiqueta de precio nunca
+            // arriba lo cede el glifo, que sube y, si hace falta, se encoge (hasta LabelMinIconDp); si ni así cabe (al 130 %), la
+            // ranura crece hacia abajo lo que falte (GrowFor, hasta MaxGrowDp) y la etiqueta baja con su borde. La etiqueta de precio nunca
             // sube por encima de PriceBelowLabelDp sobre ese borde: al 130 % baja lo justo para no tapar la etiqueta.
             private const float LabelTopDp = 41f;
             private const float LabelHeightDp = 16f;
@@ -718,8 +768,11 @@ namespace AF.UI
             private const float LabelTwoLinesSpacing = -20f;
             private const float IconDp = 32f;
             private const float IconTopDp = 6f;
-            private const float LabelMinIconDp = 20f;
             private const float LabelIconGapDp = 1f;
+
+            // Lo más alto que puede empezar la etiqueta en dos líneas para que el glifo más pequeño quepa encima (dp): 2 de aire
+            // arriba, el glifo de LabelMinIconDp y LabelIconGapDp hasta la etiqueta.
+            private const float LabelLowestTopDp = 2f + LabelMinIconDp + LabelIconGapDp;
 
             // Tamaño del aviso: 12 sp, el mínimo de 02 §12 («Texto ≥ 12 sp»), sin encogerlo nunca (revisión de la limpieza L2b:
             // el autoajuste hasta 11 sp quedaba por debajo); lo que no cabe en una línea va en dos (PlaceMissing).
@@ -777,6 +830,7 @@ namespace AF.UI
             private float _y;
             private float _missingW = MissingWideDp;
             private float _w = SlotDp;
+            private float _grow;
             private bool _labelTwoLines;
             private int _missingShown = -1;
             private float _missingLineWidth;
@@ -962,12 +1016,33 @@ namespace AF.UI
                 }
             }
 
-            public void Place(float x, float y, float w)
+            /// <summary>
+            /// Lo que tiene que crecer hacia abajo una ranura de <paramref name="w"/> dp para que su etiqueta en dos líneas quepa
+            /// bajo el glifo más pequeño (dp; 0 si va en una línea o ya cabe; como mucho <see cref="MaxGrowDp"/>). Mide al
+            /// colocar, nunca por fotograma.
+            /// </summary>
+            public float GrowFor(float w)
+            {
+                float inner = w - (2f * LabelInsetDp);
+                if (!SetLabelLines(inner))
+                {
+                    return 0f;
+                }
+
+                float h = Mathf.Ceil(Label.GetPreferredValues(Label.text, inner, float.PositiveInfinity).y);
+                float top = LabelTopDp + LabelHeightDp - h;
+                return Mathf.Clamp(Mathf.Ceil(LabelLowestTopDp - top), 0f, MaxGrowDp);
+            }
+
+            public void Place(float x, float y, float w, float grow)
             {
                 _x = x;
                 _y = y;
                 _w = w;
-                UiBuilder.Place((RectTransform)Parts.Button.transform, x, y, w, 72f);
+                _grow = grow;
+                UiBuilder.Place((RectTransform)Parts.Button.transform, x, y, w, 72f + grow);
+                RectTransform visual = (RectTransform)Parts.Face.parent;
+                visual.sizeDelta = new Vector2(visual.sizeDelta.x, Parts.Sprites.HeightDp + grow); // la cara crece hacia abajo
                 UiBuilder.Place(_badge, w - 16f, -8f, 24f, 24f);
                 UiBuilder.Place(_badgeText.rectTransform, 0f, 0f, 24f, 24f);
                 PlaceLabel();
@@ -983,23 +1058,32 @@ namespace AF.UI
             private void PlaceLabel()
             {
                 float inner = _w - (2f * LabelInsetDp);
-                bool two = Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x > inner;
-                if (two != _labelTwoLines)
-                {
-                    _labelTwoLines = two;
-                    Label.textWrappingMode = two ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
-                    Label.lineSpacing = two ? LabelTwoLinesSpacing : 0f;
-                }
+                bool two = SetLabelLines(inner);
 
-                // El borde de abajo de la etiqueta no se mueve (la etiqueta de precio va debajo); con la escala de texto o en dos
-                // líneas, la caja crece hacia arriba y el glifo sube y, si hace falta, se encoge.
-                float bottom = LabelTopDp + LabelHeightDp;
+                // El borde de abajo de la etiqueta solo baja lo que crece la ranura (la etiqueta de precio va debajo); con la
+                // escala de texto o en dos líneas, la caja crece hacia arriba y el glifo sube y, si hace falta, se encoge.
+                float bottom = LabelTopDp + LabelHeightDp + _grow;
                 float h = two ? Mathf.Ceil(Label.GetPreferredValues(Label.text, inner, float.PositiveInfinity).y) : LabelHeightDp * _scale;
                 float top = bottom - h;
                 float icon = Mathf.Clamp(top - LabelIconGapDp - 2f, LabelMinIconDp, IconDp);
                 float iconTop = Mathf.Clamp(top - LabelIconGapDp - icon, 2f, IconTopDp);
                 UiBuilder.Place(Label.rectTransform, LabelInsetDp, top, inner, h);
                 UiBuilder.Place(Glyph.rectTransform, (_w - icon) * 0.5f, iconTop, icon, icon);
+            }
+
+            // Una línea si la etiqueta cabe en inner dp; si no, dos con el interlineado apretado. Devuelve si van dos.
+            private bool SetLabelLines(float inner)
+            {
+                Label.textWrappingMode = TextWrappingModes.NoWrap;
+                bool two = Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x > inner;
+                if (two != _labelTwoLines)
+                {
+                    _labelTwoLines = two;
+                    Label.lineSpacing = two ? LabelTwoLinesSpacing : 0f;
+                }
+
+                Label.textWrappingMode = two ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+                return two;
             }
 
             public void ShowBadge(string? text, bool video)
@@ -1066,7 +1150,7 @@ namespace AF.UI
             {
                 float k = Mathf.Clamp((_w + GapDp - 2f) / _price.Width, PriceMinScale, 1f);
                 _price.Root.localScale = new Vector3(k, k, 1f);
-                float top = Mathf.Max(PriceCenterDp - (_price.Height * 0.5f * k), LabelTopDp + LabelHeightDp - PriceBelowLabelDp);
+                float top = Mathf.Max(PriceCenterDp + _grow - (_price.Height * 0.5f * k), LabelTopDp + LabelHeightDp + _grow - PriceBelowLabelDp);
                 _price.PlaceAt((_w - (_price.Width * k)) * 0.5f, top);
             }
 

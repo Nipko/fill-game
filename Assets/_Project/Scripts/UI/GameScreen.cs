@@ -132,14 +132,25 @@ namespace AF.UI
         /// <summary>Cinta-hoja de victoria (revisión visual del 2026-10-07; la guía 5.5 decía 336 × 64 dp).</summary>
         private const float RibbonWidthDp = 344f;
 
-        // Mínimo del título de la cinta de victoria fuera del español (sp) [P] (tarea L4).
-        private const float VictoryRibbonMinSp = 16f;
+        // Título de la cinta de victoria (guía 5.5, con la revisión visual del 2026-10-07): Baloo 2 de 30 sp, mínimo 22 (× la
+        // escala de texto). Si a 22 no cabe en una línea (otro idioma, en-XA o la fuente al 130 %; tarea L4), va en dos líneas a
+        // 22 sp con el interlineado apretado [P] y la hoja crece a lo alto hasta RibbonTallDp (guía 5.5: «la hoja crece hasta
+        // 88 dp de alto. Nunca se recorta»).
+        private const float RibbonTitleSp = 30f;
+        private const float RibbonTitleMinSp = 22f;
+        private const float RibbonTitleLineSpacing = -45f;
+
+        /// <summary>Alto máximo de la cinta-hoja de victoria con el título en dos líneas (guía 5.5).</summary>
+        private const float RibbonTallDp = 88f;
+
+        // Margen de la cinta de 72 dp alrededor de la franja del título (72 − 42), que se conserva al crecer.
+        private const float RibbonTitleMarginDp = 30f;
 
         // Píldora «Reiniciar» que crece (tarea L4) [P]: aire a cada lado de su etiqueta, lo que puede salir del área de 60 dp
         // por la derecha (queda a 4 dp del borde) y el aire hasta la columna del saldo.
         private const float RestartPillPadDp = 4f;
         private const float RestartPillOutDp = 4f;
-        private const float RestartPillGapDp = 4f;
+        internal const float RestartPillGapDp = 4f;
 
         /// <summary>Alto de la cinta-hoja de victoria.</summary>
         private const float RibbonHeightDp = 72f;
@@ -227,6 +238,10 @@ namespace AF.UI
         private readonly RectTransform _victoryPanel;
         private readonly Image _victorySurface;
         private readonly Image _ribbon;
+        private readonly TextMeshProUGUI _ribbonTitle;
+        private readonly float _ribbonTitleMinDp;
+        private readonly float _ribbonTitleMaxDp;
+        private float _ribbonHeightDp = RibbonHeightDp;
         private readonly ReliefParts _next;
         private readonly CanvasGroup _nextGroup;
         private readonly ReliefParts _home;
@@ -550,12 +565,13 @@ namespace AF.UI
             _double.Button.gameObject.SetActive(false);
             _ribbon = UiBuilder.Image("Ribbon", _victoryPanel, art.Ribbon, Color.white);
             // Baloo 2 de 30 dp, mínimo 22 (revisión visual del 2026-10-07; guía 5.5), en la franja de texto de la cinta de
-            // 344 × 72 (≈ 262 × 45 dp de hoja_base → hoja_fondo). La cinta es una pieza de arte de ancho fijo: en español cabe
-            // siempre a 22 o más; en otros idiomas, en en-XA o con la fuente al 130 % puede bajar hasta 16 sp [P] en vez de
-            // salirse de la franja (tarea L4; 02 §12: nunca por debajo de 12 sp).
-            TextMeshProUGUI ribbonLabel = UiBuilder.Label("Title", _ribbon.transform, TextStyle.Ribbon, UiText.LevelComplete, 30f, Palette.Cream, TextAlignmentOptions.Center);
-            UiBuilder.Place(ribbonLabel.rectTransform, 44f, 15f, RibbonWidthDp - 88f, 42f);
-            UiBuilder.AutoSize(ribbonLabel, VictoryRibbonMinSp, 30f);
+            // 344 × 72 (≈ 262 × 45 dp de hoja_base → hoja_fondo). En español cabe siempre en una línea a 22 o más; si no cabe a
+            // 22 (× la escala de texto), dos líneas y la hoja más alta (LayoutRibbonTitle; guía 5.5; tarea L4).
+            _ribbonTitle = UiBuilder.Label("Title", _ribbon.transform, TextStyle.Ribbon, UiText.LevelComplete, RibbonTitleSp, Palette.Cream, TextAlignmentOptions.Center);
+            UiBuilder.Place(_ribbonTitle.rectTransform, 44f, 15f, RibbonWidthDp - 88f, 42f);
+            UiBuilder.AutoSize(_ribbonTitle, RibbonTitleMinSp, RibbonTitleSp);
+            _ribbonTitleMinDp = _ribbonTitle.fontSizeMin;
+            _ribbonTitleMaxDp = _ribbonTitle.fontSizeMax;
             _victoryOverlay.gameObject.SetActive(false);
 
             // Caja de TiTino en la victoria (TI6a; propuesta de TiTino d.4): lo que cree ahora queda delante de la victoria y
@@ -2270,7 +2286,7 @@ namespace AF.UI
             float rt = Mathf.Clamp01((ms - 100f) / 300f);
             float ribbon = ms < 100f ? 0.6f : Mathf.LerpUnclamped(0.6f, 1f, Ease.OutBack(rt, 2.3f));
             _ribbon.rectTransform.localScale = Vector3.one * ribbon;
-            var ribbonCenter = new Vector2(_canvasW * 0.5f, -(panelTop - RibbonRiseDp + (RibbonHeightDp * 0.5f)));
+            var ribbonCenter = new Vector2(_canvasW * 0.5f, -(panelTop - RibbonRiseDp + (_ribbonHeightDp * 0.5f)));
             _victoryVeil.color = new Color(0f, 0f, 0f, VictoryVeilAlpha * fade);
             _victoryVeil.rectTransform.anchoredPosition = ribbonCenter;
             _victoryGlow.color = new Color(1f, 0xE4 / 255f, 0xA8 / 255f, 0.5f * rt);
@@ -2396,6 +2412,21 @@ namespace AF.UI
             UiBuilder.Place(_restartPill.rectTransform, right - maxW, 32f, maxW, h);
         }
 
+        /// <summary>Píldora «Reiniciar» (tests de desbordes; tarea L4).</summary>
+        internal RectTransform RestartPillRect => _restartPill.rectTransform;
+
+        /// <summary>Etiqueta de la píldora «Reiniciar» (tests de desbordes; tarea L4).</summary>
+        internal TextMeshProUGUI RestartLabel => _restartLabel;
+
+        /// <summary>
+        /// Vuelve a colocar toda la pantalla como si hubiera cambiado su tamaño (tests: tras cambiar un texto a mano para forzar
+        /// una etiqueta larga; tarea L4).
+        /// </summary>
+        internal void RelayoutForTests()
+        {
+            ApplyScreenMetrics(false);
+        }
+
         private void SetRestartPillLines(bool two)
         {
             _restartLabel.textWrappingMode = two ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
@@ -2457,7 +2488,11 @@ namespace AF.UI
             float w = _canvasW;
             float panelW = Mathf.Min(328f, w - 32f);
             float nextW = Mathf.Min(w - 48f, Mathf.Min(312f, panelW - 16f));
-            float y = VictoryHarvestTopDp;
+
+            // Con el título en dos líneas la cinta crece hacia abajo (su borde de arriba sigue a RibbonRiseDp sobre el panel) y
+            // todo lo del panel (la Cosecha, Siguiente, Inicio y la ranura del Dato del río) baja lo mismo; el panel crece.
+            _ribbonHeightDp = LayoutRibbonTitle();
+            float y = VictoryHarvestTopDp + (_ribbonHeightDp - RibbonHeightDp);
             UiBuilder.Place(_harvestRow, 0f, y, panelW, VictoryHarvestDp);
             float mid = panelW * 0.5f;
             UiBuilder.Place(_harvestLabel.rectTransform, 16f, 0f, mid - 22f, VictoryHarvestDp);
@@ -2496,8 +2531,8 @@ namespace AF.UI
 
             _victoryPanelY = _canvasH - _safeBottom - 8f - _victoryPanelDp;
             UiBuilder.Place(_victoryPanel, (w - panelW) / 2f, _victoryPanelY, panelW, _victoryPanelDp);
-            PlaceAt(_ribbon.rectTransform, panelW / 2f, -RibbonRiseDp + (RibbonHeightDp * 0.5f), RibbonWidthDp, RibbonHeightDp, new Vector2(0.5f, 0.5f));
-            float ribbonY = _victoryPanelY - RibbonRiseDp + (RibbonHeightDp * 0.5f);
+            PlaceAt(_ribbon.rectTransform, panelW / 2f, -RibbonRiseDp + (_ribbonHeightDp * 0.5f), RibbonWidthDp, _ribbonHeightDp, new Vector2(0.5f, 0.5f));
+            float ribbonY = _victoryPanelY - RibbonRiseDp + (_ribbonHeightDp * 0.5f);
             PlaceAt(_victoryRays.rectTransform, w * 0.5f, ribbonY, 2f * VictoryRaysRadiusDp, 2f * VictoryRaysRadiusDp, new Vector2(0.5f, 0.5f));
             PlaceAt(_victoryGlow.rectTransform, w * 0.5f, ribbonY, 2f * VictoryGlowRadiusDp, 2f * VictoryGlowRadiusDp, new Vector2(0.5f, 0.5f));
             PlaceAt(_victoryVeil.rectTransform, w * 0.5f, ribbonY, 2f * ProceduralArt.VeilHoleHalfDp, 2f * ProceduralArt.VeilHoleHalfDp, new Vector2(0.5f, 0.5f));
@@ -2506,6 +2541,45 @@ namespace AF.UI
             SlotLayout();
             ArrivalLayoutVictory();
         }
+
+        // Título de la cinta de victoria (guía 5.5; tarea L4): en una línea, de 30 a 22 sp (× la escala de texto), en la franja
+        // de 256 × 42 dp de la cinta de 72; si ni a 22 cabe en una línea, en dos a 22 sp (nunca menos) con el interlineado
+        // apretado, y la cinta crece a lo alto lo que haga falta, hasta RibbonTallDp. Devuelve el alto de la cinta. Mide al
+        // colocar, nunca por fotograma.
+        private float LayoutRibbonTitle()
+        {
+            const float boxW = RibbonWidthDp - 88f;
+            TextMeshProUGUI title = _ribbonTitle;
+            title.enableAutoSizing = true;
+            title.fontSizeMin = _ribbonTitleMinDp;
+            title.fontSizeMax = _ribbonTitleMaxDp;
+            title.textWrappingMode = TextWrappingModes.NoWrap;
+            title.lineSpacing = 0f;
+            if (UiBuilder.MinTextWidth(title) <= boxW)
+            {
+                UiBuilder.Place(title.rectTransform, 44f, 15f, boxW, RibbonHeightDp - RibbonTitleMarginDp);
+                return RibbonHeightDp;
+            }
+
+            title.enableAutoSizing = false;
+            title.fontSize = _ribbonTitleMinDp;
+            title.textWrappingMode = TextWrappingModes.Normal;
+            title.lineSpacing = RibbonTitleLineSpacing;
+            float need = Mathf.Ceil(title.GetPreferredValues(title.text, boxW, float.PositiveInfinity).y) + 1f;
+            float h = Mathf.Clamp(need + RibbonTitleMarginDp, RibbonHeightDp, RibbonTallDp);
+            float boxH = Mathf.Max(h - RibbonTitleMarginDp, need);
+            UiBuilder.Place(title.rectTransform, 44f, (h - boxH) * 0.5f, boxW, boxH);
+            return h;
+        }
+
+        /// <summary>Título de la cinta de victoria (tests de desbordes; tarea L4).</summary>
+        internal TextMeshProUGUI VictoryRibbonTitle => _ribbonTitle;
+
+        /// <summary>Cinta-hoja de victoria (tests de desbordes; tarea L4).</summary>
+        internal RectTransform VictoryRibbonRect => _ribbon.rectTransform;
+
+        /// <summary>Alto de la cinta-hoja de victoria ahora (dp): 72, o hasta 88 con el título en dos líneas (guía 5.5).</summary>
+        internal float VictoryRibbonHeight => _ribbonHeightDp;
 
         private void EmitVictoryLayout()
         {
