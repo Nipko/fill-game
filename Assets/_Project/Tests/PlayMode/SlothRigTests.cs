@@ -1,0 +1,419 @@
+#nullable enable
+using System;
+using System.Collections.Generic;
+using AF.GameFlow;
+using AF.Presentation;
+using NUnit.Framework;
+using UnityEngine;
+using UnityEngine.TestTools.Constraints;
+using UnityEngine.UI;
+using Is = UnityEngine.TestTools.Constraints.Is;
+using Object = UnityEngine.Object;
+
+namespace AF.Tests.PlayMode
+{
+    /// <summary>
+    /// Rig procedural provisional del perezoso protagonista (tarea TI4; propuesta del personaje c.4-c.7 y paso 4 de (i); D-016;
+    /// 07 §6.4): las 10 poses de c.6 con sus ID neutros, funciones puras del tiempo que no se salen de su caja; las hojas de
+    /// celebrar (4 y 6) como piezas del rig; Reducir movimiento (pose quieta con el fundido de 150 ms); que nada se crea sin
+    /// pedirlo; que en un build que no es de desarrollo no aparece sin el PNG; que el PNG de
+    /// <c>fauna_bradypus_variegatus_partes</c> manda; las 10 piezas sin raycast; y que el bucle de cada fotograma no asigna.
+    /// </summary>
+    public sealed class SlothRigTests
+    {
+        private static readonly string[] ExpectedIds =
+        {
+            "sloth_idle", "sloth_wake", "sloth_wave", "sloth_present", "sloth_cheer", "sloth_cheer_big", "sloth_encourage",
+            "sloth_look", "sloth_sunbathe", "sloth_sleep",
+        };
+
+        private static readonly float[] SampleMs = { 0f, 50f, 150f, 299f, 300f, 450f, 599f, 600f, 750f, 800f, 999f, 1000f, 1400f, 1500f, 2000f, 2600f, 4380f, 4499f, 10500f, 11000f, 30000f };
+
+        private static float s_sink;
+
+        private ProceduralArt _art = null!;
+        private GameObject? _canvasGo;
+        private RectTransform _space = null!;
+        private Texture2D? _pngTexture;
+        private Sprite? _png;
+
+        [SetUp]
+        public void SetUp()
+        {
+            MapArtRule.ForceProvisional = null;
+            ArtSlots.ForceProcedural = true; // sin los PNG del equipo: lo que sale es el provisional (o nada)
+            _art = new ProceduralArt("white");
+            _canvasGo = new GameObject("SlothRigTestCanvas", typeof(RectTransform), typeof(Canvas));
+            _canvasGo.GetComponent<Canvas>().renderMode = RenderMode.ScreenSpaceOverlay;
+            var layer = new GameObject("Layer", typeof(RectTransform));
+            layer.transform.SetParent(_canvasGo.transform, false);
+            _space = (RectTransform)layer.transform;
+            _space.anchorMin = Vector2.zero;
+            _space.anchorMax = Vector2.one;
+            _space.sizeDelta = Vector2.zero;
+        }
+
+        [TearDown]
+        public void TearDown()
+        {
+            MapArtRule.ForceProvisional = null;
+            ArtSlots.ForceProcedural = false;
+            _art.Dispose();
+            if (_canvasGo != null)
+            {
+                Object.Destroy(_canvasGo);
+            }
+
+            if (_png != null)
+            {
+                Object.Destroy(_png);
+            }
+
+            if (_pngTexture != null)
+            {
+                Object.Destroy(_pngTexture);
+            }
+        }
+
+        [Test]
+        public void TheTenPoses_HaveTheNeutralIdsOfC6()
+        {
+            var poses = (SlothPoseId[])Enum.GetValues(typeof(SlothPoseId));
+            Assert.That(poses.Length, Is.EqualTo(10), "las 10 poses de la tarea (c.6 sin sloth_swim, que es opcional)");
+            for (int i = 0; i < poses.Length; i++)
+            {
+                string id = SlothRig.IdOf(poses[i]);
+                Assert.That(id, Is.EqualTo(ExpectedIds[i]));
+                Assert.That(id.IndexOf("titino", StringComparison.OrdinalIgnoreCase), Is.LessThan(0), "ningún id lleva el nombre (T4-A)");
+                Assert.That(id.IndexOf("tintalu", StringComparison.OrdinalIgnoreCase), Is.LessThan(0));
+            }
+
+            Assert.That(ProceduralArt.SlothPartsSlot, Is.EqualTo("fauna_bradypus_variegatus_partes"));
+            Assert.That(ArtSlots.IsKnown(ProceduralArt.SlothPartsSlot), Is.True);
+            Assert.That(ProceduralArt.SlothBranchSlot, Is.EqualTo("arbol_embauba"));
+            Assert.That(SlothRig.PieceCount, Is.InRange(8, 10), "rig recortable de 8-10 piezas");
+        }
+
+        [Test]
+        public void EveryPose_IsGenerated_FiniteAndInsideItsBox([Values] SlothPoseId pose, [Values(false, true)] bool reduceMotion)
+        {
+            for (int i = 0; i < SampleMs.Length; i++)
+            {
+                SlothPose p = SlothRig.Evaluate(pose, SampleMs[i], reduceMotion);
+                string at = SlothRig.IdOf(pose) + " a " + SampleMs[i] + " ms";
+                AssertInBox(p.TorsoCenter, at + ": torso");
+                AssertInBox(p.HeadCenter, at + ": cabeza");
+                AssertInBox(p.BackArmFrom, at);
+                AssertInBox(p.BackArmTo, at);
+                AssertInBox(p.FrontArmFrom, at);
+                AssertInBox(p.FrontArmTo, at);
+                AssertInBox(p.BackLegFrom, at);
+                AssertInBox(p.BackLegTo, at);
+                AssertInBox(p.FrontLegFrom, at);
+                AssertInBox(p.FrontLegTo, at);
+                Assert.That(p.TorsoSize.x, Is.InRange(0.3f, 0.7f), at);
+                Assert.That(p.TorsoSize.y, Is.InRange(0.3f, 0.7f), at);
+                Assert.That(p.BodySpin, Is.InRange(-1f, 1f), at);
+                Assert.That(p.HeadTurn, Is.InRange(0f, 1f), at);
+                Assert.That(p.Alpha, Is.InRange(0f, 1f), at);
+                Assert.That(p.Leaves, Is.EqualTo(0).Or.EqualTo(SlothRig.CheerLeaves).Or.EqualTo(SlothRig.LeafCount), at);
+            }
+        }
+
+        [Test]
+        public void ThePoses_DoWhatC6Says()
+        {
+            SlothPose rest = SlothRig.Evaluate(SlothPoseId.Idle, 0f, false);
+            Assert.That(rest.EyesClosed, Is.False);
+            Assert.That(rest.FrontArmTo.y, Is.GreaterThan(0f), "colgado de su rama: las manos en la rama");
+            Assert.That(rest.BackArmTo.y, Is.GreaterThan(0f));
+            Assert.That(rest.HeadCenter.y, Is.LessThan(0f), "y el cuerpo bajo ella");
+
+            Assert.That(SlothRig.Evaluate(SlothPoseId.Idle, SlothRig.BlinkEveryMs - 60f, false).EyesClosed, Is.True, "parpadea");
+            Assert.That(SlothRig.Evaluate(SlothPoseId.Idle, 11000f, false).HeadAngle, Is.GreaterThan(5f), "gira la cabeza muy despacio");
+
+            SlothPose waking = SlothRig.Evaluate(SlothPoseId.Wake, 0f, false);
+            Assert.That(waking.EyesClosed, Is.True, "sloth_wake empieza dormido");
+            SlothPose reach = SlothRig.Evaluate(SlothPoseId.Wake, 950f, false);
+            Assert.That(reach.EyesClosed, Is.False);
+            Assert.That(reach.FrontArmTo.y, Is.GreaterThan(0.12f), "estira un brazo hacia la rama de arriba");
+            Assert.That(SlothRig.Evaluate(SlothPoseId.Wake, 1300f, false).HeadAngle, Is.GreaterThan(5f), "aún mira a un lado");
+            Assert.That(SlothRig.Evaluate(SlothPoseId.Wake, SlothRig.WakeMs, false).HeadAngle, Is.EqualTo(0f).Within(1e-4f), "y gira la cabeza hacia ti");
+            Assert.That(SlothRig.WakeMs, Is.LessThanOrEqualTo(2500f), "≤ 2,5 s");
+
+            SlothPose wave = SlothRig.Evaluate(SlothPoseId.Wave, SlothRig.WaveMs / 2f, false);
+            Assert.That(wave.FrontArmTo.y, Is.GreaterThan(rest.FrontArmTo.y + 0.06f), "levanta una garra desde la rama");
+            Assert.That(wave.FrontArmTo.x, Is.GreaterThan(rest.FrontArmTo.x), "de lado, nunca hacia la cámara (c.5, punto 8)");
+
+            SlothPose present = SlothRig.Evaluate(SlothPoseId.Present, SlothRig.PresentMs, false);
+            Assert.That(present.HeadAngle, Is.LessThan(-5f), "ladea la cabeza hacia la instrucción");
+            Assert.That(present.FrontArmTo.x, Is.GreaterThan(0.45f), "y la señala con la garra");
+
+            SlothPose cheer = SlothRig.Evaluate(SlothPoseId.Cheer, SlothRig.CheerEntryMs, false);
+            Assert.That(cheer.FrontArmTo.y, Is.GreaterThan(rest.FrontArmTo.y), "levanta las garras por encima de la rama");
+            Assert.That(cheer.FrontArmTo.x, Is.GreaterThan(rest.FrontArmTo.x + 0.1f), "hacia fuera");
+            Assert.That(cheer.Leaves, Is.EqualTo(4), "caen 3-4 hojas");
+            Assert.That(SlothRig.Evaluate(SlothPoseId.CheerBig, 400f, false).Leaves, Is.EqualTo(6), "y 2 más en la grande");
+            Assert.That(SlothRig.Evaluate(SlothPoseId.CheerBig, SlothRig.CheerEntryMs + (SlothRig.CheerLoopMs / 2f), false).BodySpin, Is.LessThan(-0.9f), "una vuelta colgado de una mano");
+            Assert.That(SlothRig.Evaluate(SlothPoseId.Cheer, SlothRig.CheerEntryMs + (SlothRig.CheerLoopMs / 2f), false).BodySpin, Is.EqualTo(1f), "la normal no da la vuelta");
+            Assert.That(SlothRig.Evaluate(SlothPoseId.CheerBig, 2000f, false).BodySpin, Is.EqualTo(1f), "la vuelta solo en el primer bucle");
+
+            Assert.That(Mathf.Abs(SlothRig.Evaluate(SlothPoseId.Encourage, 200f, false).BodyAngle), Is.GreaterThan(2f), "se balancea en la rama");
+            Assert.That(SlothRig.Evaluate(SlothPoseId.Encourage, 200f, false).HeadCenter.y, Is.LessThan(rest.HeadCenter.y - 0.02f), "y asiente");
+
+            SlothPose look = SlothRig.Evaluate(SlothPoseId.Look, SlothRig.LookMs / 2f, false);
+            Assert.That(look.HeadAngle, Is.GreaterThan(30f), "gira la cabeza");
+            Assert.That(look.HeadTurn, Is.GreaterThan(0.5f));
+
+            SlothPose sun = SlothRig.Evaluate(SlothPoseId.Sunbathe, 0f, false);
+            Assert.That(sun.TorsoCenter.y, Is.GreaterThan(0f), "al sol sobre la rama");
+            Assert.That(Mathf.Abs(sun.TorsoAngle), Is.EqualTo(90f), "tumbado");
+            Assert.That(sun.EyesClosed, Is.True);
+            SlothPose sleep = SlothRig.Evaluate(SlothPoseId.Sleep, 0f, false);
+            Assert.That(sleep.TorsoCenter.y, Is.GreaterThan(0f), "en ovillo sobre la rama");
+            Assert.That(sleep.EyesClosed, Is.True);
+            Assert.That(sleep.TorsoBack, Is.True, "da la espalda: se ve el espéculo");
+            Assert.That(rest.TorsoBack || sun.TorsoBack, Is.False, "de frente, sin el espéculo (no es un collar: c.4)");
+            Assert.That(sleep.Leaves + sun.Leaves + rest.Leaves, Is.EqualTo(0), "solo caen hojas al celebrar");
+        }
+
+        [Test]
+        public void TheOneShots_EndInTheRest_AndNeverDelayAnything()
+        {
+            SlothPose rest = SlothRig.Evaluate(SlothPoseId.Idle, 0f, false);
+            Assert.That(SlothRig.Evaluate(SlothPoseId.Wave, SlothRig.WaveMs, false).FrontArmTo, Is.EqualTo(rest.FrontArmTo), "sloth_wave: 0,8 s");
+            Assert.That(SlothRig.Evaluate(SlothPoseId.Look, SlothRig.LookMs, false).HeadTurn, Is.EqualTo(0f), "sloth_look: 1 s");
+            Assert.That(SlothRig.Evaluate(SlothPoseId.Look, SlothRig.LookMs, false).HeadAngle, Is.EqualTo(0f));
+            Assert.That(SlothRig.Evaluate(SlothPoseId.Encourage, 5000f, false).BodyAngle, Is.EqualTo(0f), "sloth_encourage: 0,8 s y reposo");
+            Assert.That(SlothRig.Evaluate(SlothPoseId.Present, 5000f, false).FrontArmTo, Is.EqualTo(SlothRig.Evaluate(SlothPoseId.Present, SlothRig.PresentMs, false).FrontArmTo), "sloth_present: 0,6 s y reposo");
+            Assert.That(SlothRig.CheerEntryMs, Is.EqualTo(300f));
+            Assert.That(SlothRig.CheerLoopMs, Is.EqualTo(1200f));
+            Assert.That(SlothRig.IdleLoopMs, Is.EqualTo(3000f));
+            Assert.That(SlothRig.BlinkEveryMs, Is.InRange(3000f, 6000f), "parpadea cada 3-6 s");
+            Assert.That(SlothRig.IdleHeadTurnEveryMs, Is.InRange(15000f, 30000f), "gira la cabeza cada 15-30 s");
+        }
+
+        [Test]
+        public void ReduceMotion_StillRestFrame_WithA150msFade([Values] SlothPoseId pose)
+        {
+            Assert.That(SlothRig.ReducedMotionFadeMs, Is.EqualTo(150));
+            Assert.That(SlothRig.ReducedMotionFadeMs, Is.EqualTo(MapConfig.ReducedMotionFadeMs), "el mismo fundido que el Mapa");
+            Assert.That(SlothRig.Evaluate(pose, 0f, true).Alpha, Is.EqualTo(0f));
+            Assert.That(SlothRig.Evaluate(pose, 75f, true).Alpha, Is.EqualTo(0.5f).Within(1e-4f));
+            Assert.That(SlothRig.Evaluate(pose, 150f, true).Alpha, Is.EqualTo(1f));
+            SlothPose a = SlothRig.Evaluate(pose, 200f, true);
+            for (int i = 0; i < SampleMs.Length; i++)
+            {
+                SlothPose b = SlothRig.Evaluate(pose, Mathf.Max(150f, SampleMs[i]), true);
+                Assert.That(b.TorsoCenter, Is.EqualTo(a.TorsoCenter), "quieta");
+                Assert.That(b.TorsoSize, Is.EqualTo(a.TorsoSize), "sin respirar");
+                Assert.That(b.HeadCenter, Is.EqualTo(a.HeadCenter));
+                Assert.That(b.HeadAngle, Is.EqualTo(a.HeadAngle));
+                Assert.That(b.FrontArmTo, Is.EqualTo(a.FrontArmTo));
+                Assert.That(b.EyesClosed, Is.EqualTo(a.EyesClosed), "sin parpadeo");
+                Assert.That(b.BodySpin, Is.EqualTo(1f), "sin vuelta");
+                Assert.That(b.BodyAngle, Is.EqualTo(0f), "sin balanceo");
+                Assert.That(b.Leaves, Is.EqualTo(0), "sin hojas que caen");
+            }
+        }
+
+        [Test]
+        public void Leaves_ArePiecesOfTheRig_FallingFromTheBranchAndFading()
+        {
+            for (int i = 0; i < SlothRig.LeafCount; i++)
+            {
+                for (float phase = 0f; phase < 1f; phase += 0.05f)
+                {
+                    SlothRig.LeafAt(i, phase, out Vector2 at, out float angle, out float alpha);
+                    Assert.That(at.x, Is.InRange(-0.75f, 0.75f), "dentro de la rama");
+                    Assert.That(at.y, Is.InRange(-1.0f, 0.03f), "caen desde la rama");
+                    Assert.That(alpha, Is.InRange(0f, 1f));
+                    Assert.That(float.IsNaN(angle), Is.False);
+                }
+            }
+
+            SlothRig.LeafAt(0, 0f, out _, out _, out float start);
+            SlothRig.LeafAt(0, 0.999f, out _, out _, out float end);
+            Assert.That(start, Is.EqualTo(0f), "aparecen");
+            Assert.That(end, Is.LessThan(0.01f), "y se funden");
+        }
+
+        [Test]
+        public void ThePieces_AreLazy_NothingIsCreatedUntilAsked()
+        {
+            Assert.That(_art.SlothRigArtBuilt, Is.False, "el constructor no crea el rig");
+            Assert.That(_art.SlothBranchBuilt, Is.False, "ni la rama");
+            int children = _space.childCount;
+
+            SlothArt art = _art.SlothRigArtProcedural();
+            Assert.That(_art.SlothRigArtBuilt, Is.True);
+            Assert.That(_art.SlothBranchBuilt, Is.False, "pedir las piezas no crea la rama");
+            Assert.That(_art.SlothPortraitBuilt, Is.False, "ni el retrato");
+            Assert.That(_art.SlothRigArtProcedural(), Is.SameAs(art), "se crean una vez y se guardan");
+            Assert.That(_art.SlothArtMs, Is.EqualTo(0d), "de la caché");
+            Assert.That(art.Painted, Is.False);
+            Assert.That(art.Head, Is.Not.Null);
+            Assert.That(art.Torso, Is.Not.Null);
+            Assert.That(art.Limb, Is.Not.Null);
+            Assert.That(art.Eyelid, Is.Not.Null);
+            Assert.That(art.Leaf, Is.Not.Null);
+            Assert.That(art.TorsoBack, Is.Not.Null);
+            Assert.That(art.TorsoBack, Is.Not.SameAs(art.Torso));
+            Assert.That(art.Head.texture.width, Is.EqualTo(ProceduralArt.SlothAtlasPx), "un solo atlas");
+            Assert.That(_space.childCount, Is.EqualTo(children), "las piezas no crean ningún objeto en la escena");
+
+            Sprite branch = _art.SlothBranchProcedural();
+            Assert.That(_art.SlothBranchBuilt, Is.True);
+            Assert.That(branch.rect.width / branch.rect.height, Is.EqualTo(4f).Within(0.01f), "la proporción de arbol_embauba (1024 × 256)");
+
+            _art.Dispose();
+            Assert.That(_art.SlothRigArtBuilt, Is.False, "tras liberar, nada queda");
+            Assert.That(_art.SlothRigArtProcedural(), Is.Not.SameAs(art), "y se vuelven a generar al pedirlas");
+        }
+
+        [Test]
+        public void NotADevelopmentBuild_WithoutThePng_TheSlothDoesNotAppear()
+        {
+            int children = _space.childCount;
+            MapArtRule.ForceProvisional = false; // como en release
+            Assert.That(_art.SlothRigArt(), Is.Null, "release sin arte final: nada (07 §6.4)");
+            Assert.That(_art.SlothRigArt(null, null, false), Is.Null);
+            Assert.That(_art.SlothRigArtBuilt, Is.False, "y el provisional no se crea");
+            Assert.That(_art.SlothBranchBuilt, Is.False);
+            Assert.That(SlothRig.Create(_space, _art.SlothRigArt(), 72f), Is.Null, "ni el rig");
+            Assert.That(_space.childCount, Is.EqualTo(children), "ni ningún objeto");
+
+            MapArtRule.ForceProvisional = true; // como en desarrollo
+            SlothArt? dev = _art.SlothRigArt();
+            Assert.That(dev, Is.Not.Null, "en desarrollo, el provisional");
+            Assert.That(dev!.Branch, Is.Not.Null, "con su rama");
+
+            var rig = new SlothRig(_space);
+            Assert.That(rig.SetArt(null, 72f), Is.False);
+            rig.Play(SlothPoseId.Cheer, false);
+            Assert.That(rig.Visible, Is.False, "sin piezas no se muestra nunca");
+        }
+
+        [Test]
+        public void ThePartsPng_Rules_AndThenTheProvisionalIsNeverCreated()
+        {
+            Sprite png = MakePng();
+            SlothArt? painted = _art.SlothRigArt(png, null, false);
+            Assert.That(painted, Is.Not.Null, "con su PNG sale también en release");
+            Assert.That(painted!.Painted, Is.True);
+            Assert.That(painted.Head.texture, Is.SameAs(png.texture));
+            Assert.That(painted.Head.rect, Is.EqualTo(new Rect(0f, 768f, 256f, 256f)), "celda de la cabeza: arriba a la izquierda");
+            Assert.That(painted.Torso.rect, Is.EqualTo(new Rect(256f, 768f, 256f, 256f)));
+            Assert.That(painted.Limb.rect, Is.EqualTo(new Rect(512f, 768f, 64f, 256f)));
+            Assert.That(painted.Eyelid.rect, Is.EqualTo(new Rect(768f, 960f, 192f, 64f)));
+            Assert.That(painted.Leaf.rect, Is.EqualTo(new Rect(0f, 512f, 256f, 256f)));
+            Assert.That(painted.TorsoBack.rect, Is.EqualTo(new Rect(256f, 512f, 256f, 256f)));
+            Assert.That(painted.Branch, Is.Null, "release: sin PNG de la rama, sin rama provisional");
+            Assert.That(_art.SlothRigArtBuilt, Is.False, "con el PNG, las piezas provisionales no se crean");
+            Assert.That(_art.SlothBranchBuilt, Is.False);
+            Assert.That(_art.SlothRigArt(png, null, true), Is.SameAs(painted), "una vez por PNG");
+            Assert.That(painted.Branch, Is.Not.Null, "en desarrollo, la rama provisional acompaña al PNG");
+            Assert.That(_art.SlothRigArtBuilt, Is.False);
+        }
+
+        [Test]
+        public void TheRig_HasTenPieces_NoRaycast_AndPlaysEveryPose()
+        {
+            MapArtRule.ForceProvisional = true;
+            SlothRig rig = SlothRig.Create(_space, _art.SlothRigArt(), 72f)!;
+            Assert.That(rig, Is.Not.Null);
+            Assert.That(rig.Visible, Is.False, "nace oculto: sale cuando se pide una pose");
+            var graphics = new List<Graphic>();
+            rig.CollectGraphics(graphics);
+            Assert.That(graphics.Count, Is.EqualTo(SlothRig.BodyGraphics + SlothRig.LeafCount), "8 imágenes y las 6 hojas de la pieza hoja");
+            foreach (Graphic g in graphics)
+            {
+                Assert.That(g.raycastTarget, Is.False, g.name + ": nunca bloquea un toque");
+            }
+
+            var rects = new List<Rect>();
+            foreach (SlothPoseId pose in (SlothPoseId[])Enum.GetValues(typeof(SlothPoseId)))
+            {
+                rig.Place(180f, 300f);
+                rig.Play(pose, false);
+                Assert.That(rig.Visible, Is.True, SlothRig.IdOf(pose));
+                Assert.That(rig.Pose, Is.EqualTo(pose));
+                rig.Tick(400f);
+                Assert.That(rig.ClockMs, Is.EqualTo(400f));
+                int leaves = pose == SlothPoseId.Cheer ? SlothRig.CheerLeaves : (pose == SlothPoseId.CheerBig ? SlothRig.LeafCount : 0);
+                Assert.That(rig.VisibleLeaves, Is.EqualTo(leaves), SlothRig.IdOf(pose) + ": hojas");
+                rects.Clear();
+                rig.CollectRects(_space, rects);
+                Assert.That(rects.Count, Is.GreaterThanOrEqualTo(7), SlothRig.IdOf(pose));
+                foreach (Rect r in rects)
+                {
+                    Assert.That(float.IsNaN(r.x) || float.IsNaN(r.width), Is.False);
+                    Assert.That(Mathf.Abs(r.center.x - 180f), Is.LessThan(72f), SlothRig.IdOf(pose) + ": cerca de su rama");
+                    Assert.That(Mathf.Abs(r.center.y - 300f), Is.LessThan(80f), SlothRig.IdOf(pose));
+                }
+            }
+
+            rig.Play(SlothPoseId.Sleep, false);
+            Assert.That(rig.Current.EyesClosed, Is.True);
+            Assert.That(graphics[3].GetComponent<Image>().sprite, Is.SameAs(rig.Art!.TorsoBack), "en ovillo, el lomo");
+            rig.Play(SlothPoseId.Idle, false);
+            Assert.That(graphics[3].GetComponent<Image>().sprite, Is.SameAs(rig.Art!.Torso), "colgado, el vientre");
+            rig.Play(SlothPoseId.Idle, true);
+            Assert.That(rig.Alpha, Is.EqualTo(0f), "Reducir movimiento: entra con un fundido");
+            rig.Tick(SlothRig.ReducedMotionFadeMs);
+            Assert.That(rig.Alpha, Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void TheHead_IsAboutAThirdOfTheHangingHeight_AndTheBranchComesWithIt()
+        {
+            MapArtRule.ForceProvisional = true;
+            SlothRig rig = SlothRig.Create(_space, _art.SlothRigArt(), 120f)!;
+            rig.Place(180f, 200f);
+            rig.Play(SlothPoseId.Idle, false);
+            var graphics = new List<Graphic>();
+            rig.CollectGraphics(graphics);
+            Assert.That(graphics[0].name, Is.EqualTo("Branch"));
+            Assert.That(graphics[0].enabled, Is.True, "su rama entra con él (c.4)");
+            float head = rig.Art!.HeadS * (50f / 128f) * 2f; // diámetro del cráneo dibujado
+            Assert.That(head, Is.InRange(0.3f, 0.4f), "cabeza ≈ 1/3 del alto colgado (c.5, punto 1)");
+        }
+
+        [Test]
+        public void EvaluateAndTick_DoNotAllocate()
+        {
+            MapArtRule.ForceProvisional = true;
+            SlothRig rig = SlothRig.Create(_space, _art.SlothRigArt(), 72f)!;
+            rig.Place(180f, 300f);
+            rig.Play(SlothPoseId.CheerBig, false);
+            for (int i = 0; i < 300; i++)
+            {
+                rig.Tick(16f); // dos bucles enteros: las hojas ya entraron y salieron
+            }
+
+            TestDelegate evaluate = () =>
+            {
+                SlothPose p = SlothRig.Evaluate(SlothPoseId.CheerBig, 700f, false);
+                SlothRig.LeafAt(3, 0.4f, out Vector2 at, out float angle, out float alpha);
+                s_sink = p.HeadAngle + at.x + angle + alpha;
+            };
+            Assert.That(evaluate, Is.Not.AllocatingGCMemory(), "las poses no asignan");
+            TestDelegate tick = () => rig.Tick(16f);
+            Assert.That(tick, Is.Not.AllocatingGCMemory(), "el fotograma del rig no asigna");
+        }
+
+        private static void AssertInBox(Vector2 v, string what)
+        {
+            Assert.That(float.IsNaN(v.x) || float.IsNaN(v.y) || float.IsInfinity(v.x) || float.IsInfinity(v.y), Is.False, what);
+            Assert.That(v.x, Is.InRange(-0.8f, 0.8f), what + ": x");
+            Assert.That(v.y, Is.InRange(-1.0f, 0.6f), what + ": y");
+        }
+
+        private Sprite MakePng()
+        {
+            _pngTexture = new Texture2D(1024, 1024, TextureFormat.RGBA32, false);
+            _png = Sprite.Create(_pngTexture, new Rect(0, 0, 1024, 1024), new Vector2(0.5f, 0.5f), 300f);
+            return _png;
+        }
+    }
+}
