@@ -247,9 +247,10 @@ namespace AF.Tests.EditMode
             Invalid("Flor sin key2", TestPacks.Schema2Pack("[null, null, null, {\"type\": \"flor\", \"key\": 4}]", schema: 3), "dos tintes distintos"),
             Invalid("hidden en relief sin la tinaja", WithRelief(TestPacks.Schema2Pack(schema: 3), PlusEmptyRelief(", \"hidden\": [[0, 0]]")), "relief[0]: una variante de relief solo lleva 'hidden' con la tinaja"),
             Invalid("relief con la tinaja sin su máscara", WithRelief(TinajaPack(3), TinajaRelief(string.Empty)), "relief[0]: una variante de relief con la tinaja lleva su máscara en 'hidden'"),
-            Invalid("relief con la tinaja y una máscara que no es la suya", WithRelief(TinajaPack(3), TinajaRelief(", \"hidden\": [[8, 0]]")), "relief[0]"),
+            Invalid("relief con la tinaja y una máscara que no es la suya", WithRelief(TinajaPack(3), TinajaRelief(", \"hidden\": [[8, 0]]")), "relief[0]: " + TinajaMaskReason),
             Invalid("tinaja con 5 ocultas (su tope propio)", TinajaPack(3, "[[8, 0], [8, 1], [8, 2], [8, 3], [8, 4]]"), "la tinaja oculta como mucho 4 (su tope propio"),
-            Invalid("tinaja sin murky", TinajaPack(3, "[]", "false"), "m01_v1_n0001: "),
+            Invalid("tinaja sin su máscara (murky = false, hidden vacío)", TinajaPack(3, "[]", "false"), "m01_v1_n0001: " + TinajaMaskReason),
+            Invalid("tinaja con su máscara y murky = false", TinajaPack(3, murky: "false"), "'hidden' solo puede tener dosis ocultas con murky = true"),
         };
 
         [TestCaseSource(nameof(InvalidByVersion))]
@@ -268,8 +269,15 @@ namespace AF.Tests.EditMode
             Assert.That(level.IsMurky, Is.False);
             Assert.That(level.Relief[0].HiddenCount, Is.EqualTo(2));
             Assert.That(level.Relief[0].CreateBoard()[8].IsHiddenAt(1), Is.True);
+            LevelDefinition plain = LevelPackReader.Read(TinajaPack(3)).First;
+            Assert.That(plain.HasTinaja, Is.True);
+            Assert.That(plain.Relief.Count, Is.EqualTo(0));
             Assert.That(LevelPackReader.Read(TestPacks.Schema2Pack(Brote("{\"type\": \"brote\"}"), BroteCuias)).First.HasMechanic(MechanicType.Brote), Is.True);
         }
+
+        // Motivo de M13 regla 1 (TinajaMechanic.ValidateInitial, a través de LevelValidation) cuando la máscara de la tinaja
+        // (cuia 8, con 3 dosis) no es todas sus capas menos la boca.
+        private const string TinajaMaskReason = "cuia 8 (tinaja): M13 (regla 1): todas las dosis de la tinaja están ocultas salvo la boca";
 
         // Brote en la cuia 3 con 2 dosis y espacio para 2 (02 §9.1 M2: empieza con 1-3 dosis; el de dos hojas, con espacio 2).
         private const string BroteCuias = "[[8, 8, 4], [4, 4, 8], [], [8, 4]]";

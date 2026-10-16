@@ -20,9 +20,13 @@ namespace AF.Levels
     /// admite desde el 2 (allOf): el tipo <c>matapi</c>, <c>intro_mechanic</c> <c>chica</c>, <c>alta</c>, <c>matapi</c> o
     /// <c>murky</c> y <c>difficulty.par_approx</c>. Con el 1 y el 2 rechaza lo que el esquema solo admite en el 3 (D-019,
     /// punto 9, y D-023, punto 5; contrato 21): los tipos <c>tinaja</c>, <c>cucharon</c>, <c>hoja_atada</c> y <c>flor</c>,
-    /// <c>key2</c>, el Brote de dos hojas (<c>brote</c> con <c>n</c> = 2), <c>intro_mechanic</c> <c>tinaja</c>,
+    /// <c>key2</c>, el Brote de dos hojas (<c>brote</c> con <c>n</c> = 2) [P], <c>intro_mechanic</c> <c>tinaja</c>,
     /// <c>liana_n</c>, <c>hoja_atada</c>, <c>brote_n2</c> o <c>flor</c> y <c>hidden</c> en una variante de
     /// <c>relief</c>.</para>
+    /// <para>[P] El Brote de dos hojas con el 1 o el 2 es la única regla de versión que el lector no comparte con el esquema ni
+    /// con <c>tools/level-qa</c>: el esquema dice que el <c>n</c> del Brote «no se restringe con el 1 ni con el 2» y level-qa no
+    /// lo mira por versión, así que un paquete así pasa las dos y falla cerrado aquí. Hoy no lo lleva ningún paquete (1-200 y
+    /// mundo 6); falta que el dueño o el tech-lead decidan si la regla pasa también a level-qa o sale del lector.</para>
     /// <para>Con <c>pack_schema</c> 3 lee <c>key2</c> (la segunda llave de la Flor de vitória-régia), el <c>n</c> del Brote
     /// (1 o 2) y la Tinaja con su cuia (M13): las ocultas de la tinaja llegan por <c>murky</c> y <c>hidden</c>, como las de
     /// Aguas turbias, con su tope propio (<see cref="LevelValidation.TinajaMaxHiddenUnits"/>, no el de 02 T2), y una variante
@@ -387,7 +391,8 @@ namespace AF.Levels
                 if (type == MechanicType.Brote && nNode != null)
                 {
                     // P2b (D-023, punto 5): con el 3, el n del Brote es 1 (el Brote normal) o 2 (el Brote de dos hojas). Con el 1 y
-                    // el 2 el esquema no lo restringe, pero el Brote de dos hojas solo existe con el 3.
+                    // el 2 el esquema no lo restringe, pero el Brote de dos hojas solo existe con el 3 ([P]: level-qa no lo comprueba;
+                    // ver los remarks de la clase).
                     if (version >= TinajaPackSchema && n != 1 && n != BroteTwoLeaves)
                     {
                         throw new LevelFormatException(at + ": el n del Brote es 1 o 2 (Brote de dos hojas; D-023, punto 5).");
