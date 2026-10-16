@@ -2,12 +2,16 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
-using System.Text;
 using AF.Economy;
+using AF.Localization;
 
 namespace AF.IAP
 {
-    /// <summary>Precio en una moneda, con el redondeo y el formato de 05 §4.2 (p. ej. <c>COP 3.900</c>, <c>BRL 4,99</c>).</summary>
+    /// <summary>
+    /// Precio en una moneda, con el importe de 05 §4.2 y los decimales de la moneda. Se escribe con la función única de precios
+    /// (<see cref="Loc.Price"/>; D-025): código ISO 4217 e importe con los separadores de la región del teléfono, p. ej.
+    /// <c>COP 3.900</c> en es-CO y <c>COP 3,900</c> en en-US.
+    /// </summary>
     public readonly struct LocalPrice : IEquatable<LocalPrice>
     {
         /// <summary>Crea el precio.</summary>
@@ -17,6 +21,13 @@ namespace AF.IAP
             Decimals = StorePrices.DecimalsOf(currency);
             Currency = currency;
             Amount = amount;
+            decimal scale = 1m;
+            for (int i = 0; i < Decimals; i++)
+            {
+                scale *= 10m;
+            }
+
+            MinorUnits = (long)Math.Round(amount * scale, 0, MidpointRounding.AwayFromZero);
         }
 
         /// <summary>Código ISO 4217 (<c>USD</c>, <c>BRL</c>, <c>MXN</c>, <c>COP</c> o <c>PEN</c>).</summary>
@@ -25,48 +36,25 @@ namespace AF.IAP
         /// <summary>Importe.</summary>
         public decimal Amount { get; }
 
-        /// <summary>Cifras decimales con que lo escribe 05 §4.2 (0 en COP y MXN; 2 en el resto).</summary>
+        /// <summary>Cifras decimales con que se escribe (<see cref="LocPrice.DecimalsOf"/>: 0 en COP y MXN; 2 en el resto, 05 §4.2).</summary>
         public int Decimals { get; }
 
+        /// <summary>Importe en unidades menores de <see cref="Decimals"/> (BRL 4,99 → 499; COP 3.900 → 3900).</summary>
+        public long MinorUnits { get; }
+
         /// <summary>
-        /// Importe como en 05 §4.2: punto de miles y coma decimal, sin depender de la cultura del dispositivo (p. ej.
-        /// <c>1,99</c>, <c>3.900</c>, <c>19</c>).
+        /// Solo el importe, con los separadores de la región (<see cref="Loc.PriceAmount"/>; D-025), p. ej. <c>1,99</c> en es-CO y
+        /// <c>1.99</c> en en-US.
         /// </summary>
         public string FormatAmount()
         {
-            decimal rounded = Math.Round(Amount, Decimals, MidpointRounding.AwayFromZero);
-            decimal whole = decimal.Truncate(rounded);
-            string digits = ((long)whole).ToString(CultureInfo.InvariantCulture);
-            var sb = new StringBuilder();
-            for (int i = 0; i < digits.Length; i++)
-            {
-                if (i > 0 && (digits.Length - i) % 3 == 0)
-                {
-                    sb.Append('.');
-                }
-
-                sb.Append(digits[i]);
-            }
-
-            if (Decimals > 0)
-            {
-                decimal scale = 1;
-                for (int i = 0; i < Decimals; i++)
-                {
-                    scale *= 10;
-                }
-
-                long fraction = (long)((rounded - whole) * scale);
-                sb.Append(',').Append(fraction.ToString("D" + Decimals.ToString(CultureInfo.InvariantCulture), CultureInfo.InvariantCulture));
-            }
-
-            return sb.ToString();
+            return Loc.PriceAmount(Currency, MinorUnits);
         }
 
-        /// <summary>Moneda e importe, p. ej. <c>COP 3.900</c>.</summary>
+        /// <summary>Moneda e importe, con la función única de precios (<see cref="Loc.Price"/>; D-025), p. ej. <c>COP 3.900</c>.</summary>
         public override string ToString()
         {
-            return Currency + " " + FormatAmount();
+            return Loc.Price(Currency, MinorUnits);
         }
 
         /// <inheritdoc />
@@ -97,8 +85,6 @@ namespace AF.IAP
     {
         /// <summary>Monedas admitidas, en el orden de las columnas de <see cref="Tiers"/>.</summary>
         public static readonly string[] Currencies = { "USD", "BRL", "MXN", "COP", "PEN" };
-
-        private static readonly int[] Decimals = { 2, 2, 0, 0, 2 };
 
         // 05 §4.2, columnas USD · BRL · MXN · COP · PEN (CLP, EC, ARS y EUR quedan fuera del soft launch).
         private static readonly decimal[][] Tiers =
@@ -144,9 +130,11 @@ namespace AF.IAP
             throw new ArgumentException("No hay escalón de 05 §4.2 para " + usd.ToString(CultureInfo.InvariantCulture) + " USD.", nameof(usd));
         }
 
+        // Los decimales de cada moneda los fija la función única de precios (D-025): LocPrice.DecimalsOf.
         internal static int DecimalsOf(string currency)
         {
-            return Decimals[Column(currency)];
+            Column(currency);
+            return LocPrice.DecimalsOf(currency);
         }
 
         private static int Column(string currency)

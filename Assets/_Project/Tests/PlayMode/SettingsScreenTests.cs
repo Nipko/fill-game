@@ -23,7 +23,8 @@ namespace AF.Tests.PlayMode
     /// Ajustes (tarea L3; D-018 Q7-A y Q8-A; 02 §12; GDD.md §2 #5) en la escena <c>Game</c> real: el idioma con el teléfono
     /// fijado (<see cref="ManualDeviceLocale"/>): desarrollo &gt; guardado &gt; teléfono &gt; en, con el respaldo es-419 y las
     /// cifras con la región del teléfono (es-CO sin ella); la pantalla se abre desde el engranaje del inicio y vuelve con la X;
-    /// elegir un idioma lo guarda y reconstruye toda la UI volviendo al inicio (en-XA, todo entre corchetes); los Patrones de
+    /// elegir un idioma lo guarda y reconstruye toda la UI volviendo al inicio (en-XA, todo entre corchetes), con Ajustes otra
+    /// vez abierta en el idioma nuevo (FXT); los Patrones de
     /// fruta (auto, on y off) se guardan y se aplican al nivel cargado sin recargarlo; y la hoja «Compra simulada» enseña los
     /// nombres de la tabla, nunca las claves. Todo texto ≥ 12 sp y sin recortes a 360 × 640 y al 130 %.
     /// </summary>
@@ -200,23 +201,49 @@ namespace AF.Tests.PlayMode
             yield return null;
             Assert.That(GameBootstrap.Current, Is.SameAs(first));
 
-            // en-XA: se guarda, Loc cambia y la UI entera se reconstruye en el inicio.
-            first.SettingsView.LanguageButton(LocLocale.Pseudo)!.onClick.Invoke();
-            Assert.That(Loc.Locale, Is.EqualTo(LocLocale.Pseudo));
-            Assert.That(ProfileJson.Deserialize(store.Json!).Settings.Language, Is.EqualTo(LocLocale.Pseudo), "guardado antes de reconstruir");
-            yield return PlayModeHelpers.WaitFor(
-                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
-                "reconstrucción de la UI en en-XA");
-            GameBootstrap boot = GameBootstrap.Current!;
+            // en-XA: se guarda, Loc cambia y la UI entera se reconstruye en el inicio, con Ajustes otra vez abierta en el idioma
+            // nuevo y la opción elegida marcada (FXT, observación 3 de la prueba de la ola 1): sin settings_closed.
+            var lines = new List<string>();
+            Application.LogCallback onLog = (condition, stack, type) =>
+            {
+                if (condition.StartsWith("AF_STATE ", StringComparison.Ordinal))
+                {
+                    lines.Add(condition);
+                }
+            };
+            Application.logMessageReceived += onLog;
+            GameBootstrap boot;
+            try
+            {
+                first.SettingsView.LanguageButton(LocLocale.Pseudo)!.onClick.Invoke();
+                Assert.That(Loc.Locale, Is.EqualTo(LocLocale.Pseudo));
+                Assert.That(ProfileJson.Deserialize(store.Json!).Settings.Language, Is.EqualTo(LocLocale.Pseudo), "guardado antes de reconstruir");
+                yield return PlayModeHelpers.WaitFor(
+                    () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
+                    "reconstrucción de la UI en en-XA");
+                yield return null;
+                boot = GameBootstrap.Current!;
+            }
+            finally
+            {
+                Application.logMessageReceived -= onLog;
+            }
+
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby), "vuelve al inicio");
             Assert.That(boot.Locale!.Value.Locale, Is.EqualTo(LocLocale.Pseudo));
             Assert.That(boot.Locale.Value.Source, Is.EqualTo(LocSource.Saved));
             AssertBracketed(boot.Lobby!.Canvas, "inicio");
-            boot.PressSettings();
-            yield return null;
             SettingsScreen settings = boot.SettingsView!;
-            Assert.That(settings.LanguageMarked(LocLocale.Pseudo), Is.True);
+            Assert.That(settings.Visible, Is.True, "elegir un idioma no cierra Ajustes: sigue abierta sobre el inicio");
+            Assert.That(boot.Lobby.Visible, Is.True, "con el inicio debajo");
+            Assert.That(boot.PressSettings(), Is.False, "ya abierta");
+            Assert.That(settings.LanguageMarked(LocLocale.Pseudo), Is.True, "con la opción elegida marcada");
+            Assert.That(settings.PatternsMarked(PatternsSetting.Auto), Is.True);
             AssertBracketed(settings.Canvas, "Ajustes");
+            Assert.That(lines.Exists(l => l.StartsWith("AF_STATE {\"event\":\"settings_closed\"", StringComparison.Ordinal)), Is.False,
+                "no se cerró: no sale settings_closed");
+            Assert.That(lines.FindLast(l => l.StartsWith("AF_STATE {\"event\":\"settings\"", StringComparison.Ordinal)), Does.Contain("\"language\":\"en-XA\""),
+                "la sonda vuelve a escribir AF_STATE settings, en el idioma nuevo");
 
             // Automático: el teléfono no da nada → es-419 de respaldo, y otra vez se reconstruye.
             settings.LanguageButton("auto")!.onClick.Invoke();
@@ -229,6 +256,9 @@ namespace AF.Tests.PlayMode
             Assert.That(Loc.Locale, Is.EqualTo(LocLocale.SourceLocale));
             Assert.That(boot.Locale!.Value.Source, Is.EqualTo(LocSource.Fallback));
             Assert.That(boot.Lobby!.PlayLabel, Is.EqualTo("Jugar · Nivel 4"));
+            Assert.That(boot.SettingsView!.Visible && boot.SettingsView.LanguageMarked("auto"), Is.True, "Ajustes sigue abierta, con Automático");
+            Assert.That(boot.SettingsView.Title, Is.EqualTo("Ajustes"), "ya en español");
+            Assert.That(boot.CloseSettings(), Is.True, "y se cierra como siempre");
             Assert.That(boot.ChooseLanguage("en"), Is.False, "un idioma que no se ofrece no se guarda");
             Assert.That(ProfileJson.Deserialize(store.Json!).Settings.Language, Is.EqualTo(SettingsData.LanguageAuto));
         }

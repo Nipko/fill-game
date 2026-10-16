@@ -11,12 +11,15 @@ namespace AF.UI
     /// Sonda de la pantalla de Ajustes (tarea L3; docs/dev/prototipo-v0.md), solo en desarrollo:
     /// <list type="bullet">
     /// <item><c>AF_STATE {"event":"settings","t":…,"language":"auto","patterns":"auto","offered":["es-419","en-XA"]}</c> al
-    /// abrirla: lo guardado en <c>settings.language</c> y <c>settings.patterns</c> (08 §4.3) y los idiomas que ofrece.</item>
+    /// abrirla: lo guardado en <c>settings.language</c> y <c>settings.patterns</c> (08 §4.3) y los idiomas que ofrece. Elegir un
+    /// idioma que cambia el de la UI la rehace y Ajustes sigue abierta (FXT): sale otra vez esta línea, ya en el idioma nuevo, y
+    /// no sale <c>settings_closed</c>.</item>
     /// <item><c>AF_STATE {"event":"settings_change","t":…,"key":"patterns","value":"on","on":true,"opacity":0.20}</c> al elegir
     /// (las claves de <c>af_settings_change</c> de 08 §8.2: <c>language</c>, <c>patterns</c> o <c>sloth_messages</c>, este con
     /// <c>true</c> o <c>false</c>; tarea TI3); con <c>patterns</c>, el interruptor del nivel cargado y la opacidad del shader ya
     /// aplicados (<c>on</c> es null sin nivel cargado).</item>
-    /// <item><c>AF_STATE {"event":"settings_closed","t":…}</c> al cerrarla (X o Atrás de Android).</item>
+    /// <item><c>AF_STATE {"event":"settings_closed","t":…}</c> al cerrarla (X o Atrás de Android, que la cierra a la primera
+    /// también tras un arranque en frío: FXT).</item>
     /// <item><c>AF_LAYOUT</c> con <c>"screen":"settings"</c> y los ids <c>close</c>, <c>lang_&lt;idioma&gt;</c> (<c>lang_auto</c>,
     /// <c>lang_es-419</c>…), <c>patterns_&lt;auto|on|off&gt;</c> y <c>sloth_messages</c>, para tocarlos con
     /// <c>adb shell input tap</c>.</item>

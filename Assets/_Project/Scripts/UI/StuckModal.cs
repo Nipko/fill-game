@@ -37,6 +37,13 @@ namespace AF.UI
         private const float OfferLabelInsetDp = 14f;
         private const float OfferLabelFace = 0.95f;
 
+        /// <summary>
+        /// Aire mínimo arriba y abajo de la etiqueta de Puñado y Balsa con la escala de texto (dp) [P] (revisión de L4; guía 5.x:
+        /// botones con aire interior): por encima del 100 %, la cara crece a lo alto lo que necesitan las líneas de la etiqueta a
+        /// su tamaño más 2 × este aire, y la etiqueta va en la cara menos ese aire. Al 100 %, como siempre (OfferLabelFace).
+        /// </summary>
+        internal const float OfferLabelPadDp = 8f;
+
         private readonly ProceduralArt _art;
         private readonly RectTransform _panel;
         private readonly Image _surface;
@@ -127,6 +134,21 @@ namespace AF.UI
 
         /// <summary>Etiqueta de «Continuar: +1 cuia» (tests de legibilidad del estado deshabilitado).</summary>
         public TextMeshProUGUI RescueLabel => _rescueLabel;
+
+        /// <summary>Etiqueta de precio de «Continuar: +1 cuia» (tests de desbordes; tarea L4).</summary>
+        internal RectTransform RescuePriceRect => _rescuePrice.Root;
+
+        /// <summary>Alto de la cara visible de «Continuar: +1 cuia» (dp; tests de desbordes; tarea L4).</summary>
+        internal float RescueFaceDp => ModalKit.FaceHeightOf(_rescue);
+
+        /// <summary>Alto de la cara visible de Puñado y de Balsa (dp; las dos miden lo mismo; tests de desbordes; tarea L4).</summary>
+        internal float OfferFaceDp => ModalKit.FaceHeightOf(_handful);
+
+        /// <summary>Etiqueta de Puñado (tests de desbordes; tarea L4).</summary>
+        internal TextMeshProUGUI HandfulLabel => _handfulLabel;
+
+        /// <summary>Etiqueta de Balsa (tests de desbordes; tarea L4).</summary>
+        internal TextMeshProUGUI BalsaLabel => _balsaLabel;
 
         /// <summary>Puñado de semillas.</summary>
         public Button HandfulButton => _handful.Button;
@@ -254,11 +276,12 @@ namespace AF.UI
                 bool available = view.Rescue == StuckRescueKind.Available;
                 UiBuilder.SetEnabled(_rescue.Button, available);
                 _rescuePrice.Set(view.RescuePrice, view.RescueDiscounted ? view.RescueBasePrice : 0, !available);
+
+                // La etiqueta a la izquierda del precio; si no cabe en una línea a 12 sp, en dos y el botón crece (tarea L4).
+                ModalKit.FitCtaLabel(_rescue, _rescueLabel, inner, _rescuePrice.Width + 36f, -(_rescuePrice.Width + 12f) * 0.5f);
                 ModalKit.Place(_rescue, 16f, y, inner);
                 float face = ModalKit.FaceHeightOf(_rescue);
                 _rescuePrice.PlaceAt(inner - _rescuePrice.Width - 12f, (face - _rescuePrice.Height) * 0.5f);
-                _rescueLabel.rectTransform.sizeDelta = new Vector2(-(_rescuePrice.Width + 36f), _rescueLabel.rectTransform.sizeDelta.y);
-                _rescueLabel.rectTransform.anchoredPosition = new Vector2(-(_rescuePrice.Width + 12f) * 0.5f, _rescueLabel.rectTransform.anchoredPosition.y);
                 y += ModalKit.HeightOf(_rescue);
                 string? note = !available ? UiText.MissingSeeds(view.RescueMissing) : view.RescueDiscounted ? UiText.StuckRescueDiscount : null;
                 if (note != null)
@@ -296,13 +319,33 @@ namespace AF.UI
                 bool stacked = both && !(OfferFits(_handful, _handfulLabel, half) && OfferFits(_balsa, _balsaLabel, half));
                 float x = 16f;
                 float w = both && !stacked ? half : inner;
+
+                // Con la escala de texto, las dos caras crecen a lo alto hasta que sus etiquetas, a su tamaño, dejan
+                // OfferLabelPadDp de aire arriba y abajo (las dos igual de altas; revisión de L4).
+                bool roomy = UiBuilder.TextScale > 1f;
+                if (roomy)
+                {
+                    float face = 0f;
+                    if (handful)
+                    {
+                        face = Mathf.Max(face, OfferFaceFor(_handfulLabel, w));
+                    }
+
+                    if (balsa)
+                    {
+                        face = Mathf.Max(face, OfferFaceFor(_balsaLabel, w));
+                    }
+
+                    ModalKit.StretchToFace(_handful, face);
+                    ModalKit.StretchToFace(_balsa, face);
+                }
                 for (int i = 0; i < view.Offers.Count; i++)
                 {
                     ReliefParts card = view.Offers[i] == StuckOffer.Handful ? _handful : _balsa;
                     TextMeshProUGUI label = view.Offers[i] == StuckOffer.Handful ? _handfulLabel : _balsaLabel;
                     ModalKit.Place(card, x, y, w);
                     float face = ModalKit.FaceHeightOf(card);
-                    label.rectTransform.sizeDelta = new Vector2(-OfferLabelInsetDp, face * OfferLabelFace);
+                    label.rectTransform.sizeDelta = new Vector2(-OfferLabelInsetDp, roomy ? face - (2f * OfferLabelPadDp) : face * OfferLabelFace);
                     label.rectTransform.anchoredPosition = new Vector2(0f, -(face * 0.5f));
                     if (stacked && i < view.Offers.Count - 1)
                     {
@@ -351,6 +394,18 @@ namespace AF.UI
         private static bool OfferFits(ReliefParts card, TextMeshProUGUI label, float width)
         {
             return UiBuilder.MinTextHeight(label, width - OfferLabelInsetDp) <= (ModalKit.FaceHeightOf(card) * OfferLabelFace) + 0.01f;
+        }
+
+        // Alto de cara que necesita la etiqueta de una oferta en un botón de width dp, a su tamaño (TextMeshPro mide con el
+        // autoajuste a su máximo), con OfferLabelPadDp de aire arriba y abajo.
+        private static float OfferFaceFor(TextMeshProUGUI label, float width)
+        {
+            if (string.IsNullOrEmpty(label.text))
+            {
+                return 0f;
+            }
+
+            return Mathf.Ceil(label.GetPreferredValues(label.text, width - OfferLabelInsetDp, float.PositiveInfinity).y) + (2f * OfferLabelPadDp);
         }
 
         private void OnUndo(IGameActions actions)

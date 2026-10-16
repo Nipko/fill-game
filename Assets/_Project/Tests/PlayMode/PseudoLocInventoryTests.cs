@@ -5,12 +5,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
-using AF.Economy;
-using AF.GameFlow;
 using AF.Localization;
 using AF.Presentation;
-using AF.Save;
-using AF.Solver.Search;
 using AF.UI;
 using NUnit.Framework;
 using TMPro;
@@ -23,17 +19,19 @@ namespace AF.Tests.PlayMode
     /// Inventario de desbordes en en-XA (D-018, nivel 2; propuesta de idiomas §3.7 y §3.8; tarea L2b): con la
     /// pseudolocalización (el español alargado un 35 % y entre corchetes; <see cref="LocPseudo"/>), a 360 × 640 dp (la pantalla
     /// 16:9 de 02 §5, que <c>GameScreen</c> maqueta en 438,75 × 780 dp; <see cref="HudLabelTests.Screen640"/>) y con la fuente al
-    /// 100 %, recorre el inicio (con el botón Jugar de un nivel Difícil y su cinta), la tarjeta previa, el banner de mundo, la
-    /// victoria, Aguas estancadas (ramas A, B y C), ¿Seguro? y Nivel fallido, y <b>lista</b> sin fallar cada texto visible que
-    /// se sale de su caja o, en la cinta «×3»/«×4», de su franja de texto, que no cabe ni al tamaño mínimo del autoajuste, que
-    /// baja de 12 sp (02 §12) o que, en en-XA, sale sin corchetes (no viene de la tabla). Los arregla L4.
+    /// 100 %, recorre las pantallas de <see cref="PseudoLocWalk"/> (el inicio con el botón Jugar de un nivel Difícil y su cinta,
+    /// la tarjeta previa, el banner de mundo, la bandeja de comodines, la victoria, Aguas estancadas en las ramas A, B y C,
+    /// ¿Seguro? y Nivel fallido) y <b>lista</b> sin fallar cada texto visible que se sale de su caja o, en la cinta «×3»/«×4», de
+    /// su franja de texto, que no cabe ni al tamaño mínimo del autoajuste, que baja de 12 sp (02 §12) o que, en en-XA, sale sin
+    /// corchetes (no viene de la tabla). Desde L4, la compuerta que falla es <see cref="PseudoLocOverflowTests"/> (en-XA al 100 %
+    /// y al 130 %).
     /// La misma pasada en es-419 es la referencia: lo que ya pasa en español no es de la traducción.
     /// <para>Deja en <c>Logs/snapshots/&lt;idioma&gt;/</c> una captura por pantalla (<c>inv_*.png</c>) y el inventario
     /// (<c>inventory.txt</c>, una línea por texto con problemas; también en el log, <c>AF_LOC_INV</c>). Explícito: necesita
     /// gráficos, como las capturas (<c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.PseudoLocInventoryTests</c> sin <c>-nographics</c>).</para>
     /// </summary>
-    [Explicit("Inventario de desbordes en en-XA (L2b); necesita dispositivo gráfico. No falla: lo arregla L4.")]
+    [Explicit("Inventario de desbordes en en-XA (L2b); necesita dispositivo gráfico. No falla: la compuerta es PseudoLocOverflowTests (L4).")]
     public sealed class PseudoLocInventoryTests
     {
         [TearDown]
@@ -57,153 +55,19 @@ namespace AF.Tests.PlayMode
 
         private static IEnumerator Walk(string locale)
         {
-            FunnelSetup.Hooks(); // antes de Prepare: limpia los ganchos y fijaría es-419
             string dir = SnapshotKit.Prepare(locale);
-            GameScreen.SimulatedScreen = HudLabelTests.Screen640;
-            var inventory = new LocInventory(locale);
-
-            // Inicio: nivel 4 guardado con 1.240 semillas y, con af_level_offset = 30, el 31 con 3/5 canoas y su cronómetro.
-            Profile p4 = Wallet.NewProfile(FunnelSetup.Clock);
-            p4.Progress.NextLevel = 4;
-            p4.Progress.MaxLevel = 3;
-            p4.Wallet.Seeds = 1240;
-            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p4));
-            yield return Shoot(dir, inventory, "inv_inicio_l4", lobby: true);
-
-            LaunchOptions.LevelOffsetOverride = 30;
-            Profile p31 = FunnelSetup.Profile(2380, 3);
-            p31.Progress.NextLevel = 31;
-            p31.Progress.MaxLevel = 30;
-            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p31));
-            yield return Shoot(dir, inventory, "inv_inicio_l31", lobby: true);
-            LaunchOptions.LevelOffsetOverride = null;
-
-            // Inicio en el 40 (Difícil): el botón Jugar con el chip y la cinta «×3» del premio multiplicado (D-009; 07 §7.7).
-            Profile p40 = Wallet.NewProfile(FunnelSetup.Clock);
-            p40.Progress.NextLevel = 40;
-            p40.Progress.MaxLevel = 39;
-            p40.Wallet.Seeds = 1240;
-            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p40));
-            Assert.That(GameBootstrap.Current!.Lobby!.ChipRibbonText, Is.Not.Empty, "la cinta del botón Jugar en el 40");
-            yield return Shoot(dir, inventory, "inv_inicio_l40", lobby: true);
-
-            // Tarjeta previa: Difícil (40), el estreno combinado de Aguas turbias (100) y el de la Piraña (183).
-            foreach (int level in new[] { 40, 100, 183 })
-            {
-                yield return CardSetup.Load(level);
-                Assert.That(GameBootstrap.Current!.View!.LevelCard.Visible, Is.True, "tarjeta del " + level);
-                yield return Shoot(dir, inventory, "inv_tarjeta_l" + level.ToString(CultureInfo.InvariantCulture), lobby: false);
-            }
-
-            // Banner de mundo: el 41, ya quieto.
-            yield return CardSetup.Load(41);
-            GameBootstrap boot = GameBootstrap.Current!;
-            Assert.That(boot.View!.WorldBannerView.Visible, Is.True);
-            PlayModeHelpers.TickExact(boot, 1100);
-            yield return Shoot(dir, inventory, "inv_banner_l41", lobby: false);
-
-            // Victoria del 11 (tablero 1 con af_level_offset = 10): Cosecha y Cosecha doble.
-            LaunchOptions.LevelOffsetOverride = 10;
-            LaunchOptions.LevelCardsOverride = false;
-            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(1240));
-            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
-            boot = GameBootstrap.Current!;
-            yield return WinRealTime(boot);
-            yield return SnapshotKit.Wait(1.2f);
-            yield return Shoot(dir, inventory, "inv_victoria_l11", lobby: false);
-
-            // Aguas estancadas en el 31 (tablero 6 con af_level_offset = 25): rama A con 1.240 semillas, ¿Seguro? y Nivel fallido.
-            yield return LoadFunnel(31, 1240);
-            boot = GameBootstrap.Current!;
-            yield return StuckRealTime(boot);
-            yield return Shoot(dir, inventory, "inv_aguas_estancadas_l31_a", lobby: false);
-            boot.PressGiveUp();
-            yield return SnapshotKit.Wait(0.3f);
-            yield return Shoot(dir, inventory, "inv_seguro_l31", lobby: false);
-            boot.ConfirmGiveUp();
-            yield return SnapshotKit.Wait(0.3f);
-            yield return Shoot(dir, inventory, "inv_nivel_fallido_l31", lobby: false);
-
-            // Rama B (sin saldo: Puñado y Balsa) y rama C (nivel 6, antes de las canoas).
-            yield return LoadFunnel(31, 140);
-            boot = GameBootstrap.Current!;
-            yield return StuckRealTime(boot);
-            yield return Shoot(dir, inventory, "inv_aguas_estancadas_l31_b", lobby: false);
-
-            LaunchOptions.LevelOffsetOverride = null;
-            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(310));
-            yield return PlayModeHelpers.LoadGame(6, new MemoryProgressStore(6, 5));
-            boot = GameBootstrap.Current!;
-            yield return StuckRealTime(boot);
-            yield return Shoot(dir, inventory, "inv_aguas_estancadas_l6_c", lobby: false);
-
-            string report = inventory.Write(dir);
+            var inventory = new LocInventory(locale, 1f);
+            yield return PseudoLocWalk.Run(locale, 1f, dir, inventory);
+            string report = inventory.Write(dir, "inventory.txt");
             Debug.Log("AF_LOC_INV " + locale + ": " + inventory.Scanned.ToString(CultureInfo.InvariantCulture) + " textos mirados, "
                 + inventory.Problems.ToString(CultureInfo.InvariantCulture) + " con problemas; " + report);
             Assert.That(inventory.Scanned, Is.GreaterThan(50), "textos visibles mirados");
             Assert.That(File.Exists(report), Is.True);
         }
-
-        // Pinta la pantalla en la cámara de las capturas, guarda el PNG y apunta sus textos.
-        private static IEnumerator Shoot(string dir, LocInventory inventory, string name, bool lobby)
-        {
-            GameBootstrap boot = GameBootstrap.Current!;
-            if (lobby)
-            {
-                SnapshotKit.AttachLobby(boot);
-            }
-            else
-            {
-                SnapshotKit.Attach(boot);
-            }
-
-            if (boot.AdOverlayView != null)
-            {
-                SnapshotKit.AttachOverlay(boot.AdOverlayView.Canvas);
-            }
-
-            yield return SnapshotKit.Wait(0.3f);
-            SnapshotKit.Save(dir, name);
-            inventory.Scan(name);
-        }
-
-        private static IEnumerator LoadFunnel(int level, int seeds)
-        {
-            LaunchOptions.LevelOffsetOverride = 25;
-            LaunchOptions.LevelCardsOverride = false;
-            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(seeds, 3));
-            yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));
-        }
-
-        // Tablero 6: 3 → 4 deja Aguas estancadas; espera al modal y a que el panel termine de subir.
-        private static IEnumerator StuckRealTime(GameBootstrap boot)
-        {
-            boot.TapAnywhere();
-            boot.TapCuia(3);
-            boot.TapCuia(4);
-            LevelFlow flow = boot.Flow!;
-            yield return PlayModeHelpers.WaitFor(() => flow.Phase == FlowPhase.StuckModal, "modal");
-            yield return SnapshotKit.Wait(0.45f);
-        }
-
-        // Victoria con la solución del solver, en tiempo real.
-        private static IEnumerator WinRealTime(GameBootstrap boot)
-        {
-            boot.TapAnywhere();
-            LevelFlow flow = boot.Flow!;
-            SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
-            for (int i = 0; i < solution.MoveCount; i++)
-            {
-                boot.TapCuia(solution.GetMove(i).Source);
-                boot.TapCuia(solution.GetMove(i).Target);
-            }
-
-            yield return PlayModeHelpers.WaitFor(() => flow.Phase == FlowPhase.VictoryScreen, "victoria");
-        }
     }
 
     /// <summary>
-    /// Lo que apunta <see cref="PseudoLocInventoryTests"/> de cada pantalla: los textos visibles (activos, con alfa) y, de cada
+    /// Lo que apuntan <see cref="PseudoLocInventoryTests"/> y <see cref="PseudoLocOverflowTests"/> de cada pantalla: los textos visibles (activos, con alfa) y, de cada
     /// uno con problemas, qué le pasa, su ruta en la jerarquía, su tamaño de letra, su caja y su texto.
     /// </summary>
     internal sealed class LocInventory
@@ -211,16 +75,25 @@ namespace AF.Tests.PlayMode
         /// <summary>Margen en unidades del lienzo (dp) antes de contar un texto como fuera de su caja.</summary>
         public const float Tolerance = 1f;
 
-        /// <summary>Tamaño mínimo de texto (02 §12): 12 sp.</summary>
+        /// <summary>Tamaño mínimo de texto (02 §12): 12 sp, que con la escala de fuente son 12 × <see cref="Scale"/> dp.</summary>
         public const float MinSp = 12f;
 
         private readonly string _locale;
         private readonly List<string> _lines = new List<string>();
+        private readonly List<string> _notes = new List<string>();
+        private readonly List<string> _known = new List<string>();
 
-        public LocInventory(string locale)
+        public LocInventory(string locale, float scale)
         {
             _locale = locale;
+            Scale = scale;
         }
+
+        /// <summary>Escala de la fuente de la pasada (1 = 100 %; 02 §12: hasta 1,3).</summary>
+        public float Scale { get; }
+
+        /// <summary>Una línea por texto con problemas (pantalla, ruta, problemas, tamaño, caja y texto).</summary>
+        public IReadOnlyList<string> Lines => _lines;
 
         /// <summary>Textos visibles mirados.</summary>
         public int Scanned { get; private set; }
@@ -228,12 +101,42 @@ namespace AF.Tests.PlayMode
         /// <summary>Textos con algún problema.</summary>
         public int Problems => _lines.Count;
 
+        /// <summary>
+        /// Los problemas de un solo texto, como los apunta <see cref="Scan"/> (vacío si no tiene ninguno): para los tests que
+        /// miran una pieza concreta (tarea L4).
+        /// </summary>
+        public string ProblemsOf(TMP_Text text)
+        {
+            Canvas.ForceUpdateCanvases();
+            text.ForceMeshUpdate();
+            return Describe(text);
+        }
+
+        /// <summary>
+        /// Avisos de contenido que no son desbordes (L4): el tutorial de la tarjeta previa en más de 2 líneas a 100 % (02 §12: es
+        /// un límite del texto, que su caja ya acoge sin salirse; a 130 % puede pasar de 2 por diseño: <c>LevelCardView</c>).
+        /// </summary>
+        public IReadOnlyList<string> Notes => _notes;
+
+        /// <summary>
+        /// Desbordes pendientes del dueño, que no cuentan en <see cref="Lines"/> (revisión de L4): el texto de la insignia del
+        /// nivel («LevelBadge/LevelTitle») que no cabe en su placa a 20 sp (× escala), el mínimo de la guía 3.5 (D-003). Pendiente
+        /// de rediseño: la placa no puede crecer y bajar de 20 sp contradice la guía. Solo si el texto sigue a 20 sp (× escala) o
+        /// más: por debajo, es un problema como cualquier otro.
+        /// </summary>
+        public IReadOnlyList<string> KnownIssues => _known;
+
+        /// <summary>Mínimo del texto de la insignia del nivel (guía 3.5: 26 dp, mínimo 20; nunca se recorta).</summary>
+        public const float BadgeMinSp = 20f;
+
         /// <summary>Mira los textos visibles de la escena y apunta los que tienen problemas, con el nombre de la pantalla.</summary>
         public void Scan(string screen)
         {
             Canvas.ForceUpdateCanvases();
             TMP_Text[] texts = UnityEngine.Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
             var found = new List<string>();
+            var notes = new List<string>();
+            var known = new List<string>();
             for (int i = 0; i < texts.Length; i++)
             {
                 TMP_Text text = texts[i];
@@ -245,26 +148,53 @@ namespace AF.Tests.PlayMode
                 text.ForceMeshUpdate();
                 Scanned++;
                 string problems = Describe(text);
-                if (problems.Length == 0)
+                if (problems.Length > 0)
                 {
-                    continue;
+                    if (IsBadgeAtGuideMin(text))
+                    {
+                        known.Add(Line(screen, text, "pendiente del dueño (insignia a 20 sp, guía 3.5): " + problems));
+                    }
+                    else
+                    {
+                        found.Add(Line(screen, text, problems));
+                    }
                 }
 
-                Rect rect = text.rectTransform.rect;
-                found.Add(screen + "\t" + PathOf(text.transform) + "\t" + problems + "\t" + text.fontSize.ToString("0.#", CultureInfo.InvariantCulture)
-                    + " sp\t" + rect.width.ToString("0.#", CultureInfo.InvariantCulture) + " × " + rect.height.ToString("0.#", CultureInfo.InvariantCulture)
-                    + " dp\t«" + text.text.Replace("\n", "\\n") + "»");
+                if (text.name == "Tutorial" && Scale <= 1f && text.textInfo.lineCount > LevelCardView.MaxTutorialLines)
+                {
+                    notes.Add(Line(screen, text, "tutorial en " + text.textInfo.lineCount.ToString(CultureInfo.InvariantCulture) + " líneas (02 §12: ≤ 2)"));
+                }
             }
 
             found.Sort(StringComparer.Ordinal);
             _lines.AddRange(found);
+            notes.Sort(StringComparer.Ordinal);
+            _notes.AddRange(notes);
+            known.Sort(StringComparer.Ordinal);
+            _known.AddRange(known);
         }
 
-        /// <summary>Escribe <c>inventory.txt</c> en <paramref name="dir"/> y devuelve su ruta.</summary>
-        public string Write(string dir)
+        // El texto de la insignia del nivel a su mínimo de la guía 3.5 o más (KnownIssues).
+        private bool IsBadgeAtGuideMin(TMP_Text text)
+        {
+            Transform? parent = text.transform.parent;
+            return text.name == "LevelTitle" && parent != null && parent.name == "LevelBadge" && text.fontSize >= (BadgeMinSp * Scale) - 0.01f;
+        }
+
+        private static string Line(string screen, TMP_Text text, string what)
+        {
+            Rect rect = text.rectTransform.rect;
+            return screen + "\t" + PathOf(text.transform) + "\t" + what + "\t" + text.fontSize.ToString("0.#", CultureInfo.InvariantCulture)
+                + " sp\t" + rect.width.ToString("0.#", CultureInfo.InvariantCulture) + " × " + rect.height.ToString("0.#", CultureInfo.InvariantCulture)
+                + " dp\t«" + text.text.Replace("\n", "\\n") + "»";
+        }
+
+        /// <summary>Escribe el inventario en <paramref name="dir"/>/<paramref name="fileName"/> y devuelve su ruta.</summary>
+        public string Write(string dir, string fileName)
         {
             var sb = new StringBuilder();
-            sb.Append("# Inventario de textos (L2b): ").Append(_locale).Append(", 360 × 640 dp (lienzo de 438,75 × 780 dp), fuente al 100 %\n");
+            sb.Append("# Inventario de textos (L2b y L4): ").Append(_locale).Append(", 360 × 640 dp (lienzo de 438,75 × 780 dp), fuente al ")
+                .Append(Mathf.RoundToInt(Scale * 100f).ToString(CultureInfo.InvariantCulture)).Append(" %\n");
             sb.Append("# Textos visibles mirados: ").Append(Scanned.ToString(CultureInfo.InvariantCulture))
                 .Append("; con problemas: ").Append(_lines.Count.ToString(CultureInfo.InvariantCulture)).Append('\n');
             sb.Append("# pantalla\truta\tproblemas\ttamaño\tcaja\ttexto\n");
@@ -274,7 +204,19 @@ namespace AF.Tests.PlayMode
                 Debug.Log("AF_LOC_INV " + _locale + "\t" + line);
             }
 
-            string path = Path.Combine(dir, "inventory.txt");
+            sb.Append("# Pendientes del dueño (no cuentan en la compuerta): ").Append(_known.Count.ToString(CultureInfo.InvariantCulture)).Append('\n');
+            foreach (string line in _known)
+            {
+                sb.Append(line).Append('\n');
+            }
+
+            sb.Append("# Avisos de contenido (no son desbordes): ").Append(_notes.Count.ToString(CultureInfo.InvariantCulture)).Append('\n');
+            foreach (string note in _notes)
+            {
+                sb.Append(note).Append('\n');
+            }
+
+            string path = Path.Combine(dir, fileName);
             File.WriteAllText(path, sb.ToString(), new UTF8Encoding(false));
             return path;
         }
@@ -318,14 +260,9 @@ namespace AF.Tests.PlayMode
                 problems.Add("no cabe ni al mínimo del autoajuste");
             }
 
-            if (text.fontSize < MinSp - 0.01f)
+            if (text.fontSize < (MinSp * Scale) - 0.01f)
             {
                 problems.Add("menos de 12 sp");
-            }
-
-            if (text.name == "Tutorial" && text.textInfo.lineCount > LevelCardView.MaxTutorialLines)
-            {
-                problems.Add("tutorial en " + text.textInfo.lineCount.ToString(CultureInfo.InvariantCulture) + " líneas (02 §12: ≤ 2)");
             }
 
             if (_locale == LocLocale.Pseudo && HasLetters(text.text) && text.text.IndexOf('[') < 0)
@@ -338,8 +275,8 @@ namespace AF.Tests.PlayMode
 
         // Ancho de la franja de texto de la cinta (dp) si el texto es la cifra de una cinta «×3»/«×4» («Ribbon/Value»); 0 si no.
         // La escala sale del alto del sprite de la cinta (RibbonTagHeightDp al 100 %; 0,75 en el chip compacto, × la escala de
-        // texto en la tarjeta previa) y la franja es el ancho de la cinta menos el remache y la cola (RibbonTagWidthDp −
-        // RibbonTagTextDp.width, 11 dp al 100 %): así sigue valiendo si L4 alarga la cinta para que quepa la cifra.
+        // texto en la tarjeta previa) y la franja es la de DifficultyChip.RibbonTextBandFor: RibbonTagTextDp a su ancho de
+        // siempre y, en la cinta alargada (L4), entre el clavo y la cola, sin pisar ninguno de los dos.
         private static float RibbonBandWidth(TMP_Text text)
         {
             Transform? parent = text.transform.parent;
@@ -349,7 +286,7 @@ namespace AF.Tests.PlayMode
             }
 
             float scale = ribbon.rect.height / ProceduralArt.RibbonTagHeightDp;
-            return ribbon.rect.width - ((ProceduralArt.RibbonTagWidthDp - ProceduralArt.RibbonTagTextDp.width) * scale);
+            return DifficultyChip.RibbonTextBandFor(ribbon.rect.width / scale).width * scale;
         }
 
         private static bool Visible(TMP_Text text)

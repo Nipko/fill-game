@@ -36,7 +36,7 @@ namespace AF.UI
     /// respaldo es-419 [P], y las cifras con la región del teléfono (es-CO sin ella [P]). Elegir un idioma lo guarda y, si cambia
     /// el de la UI, <see cref="Loc.SetLocale"/> lanza <see cref="Loc.Changed"/> (las cachés de <see cref="UiText"/> se vacían) y
     /// la UI entera se reconstruye volviendo al inicio: la escena se recarga y el arranque siguiente la vuelve a construir en el
-    /// idioma nuevo (Q7-A). Los Patrones de fruta se guardan y se aplican al momento
+    /// idioma nuevo (Q7-A), con Ajustes otra vez abierta (FXT). Los Patrones de fruta se guardan y se aplican al momento
     /// (<see cref="GameScreen.RefreshFruitPatterns"/>).</para>
     /// </summary>
     [DisallowMultipleComponent]
@@ -100,6 +100,19 @@ namespace AF.UI
         private static Profile? s_rebuildProfile;
         private static ProfileLoadStatus s_rebuildStatus;
         private static IProfileStore? s_rebuildStore;
+
+        // Ajustes estaba abierta al elegir el idioma (FXT, observación 3 de la prueba de la ola 1): tras la reconstrucción sigue
+        // abierta, en el idioma nuevo, sobre el inicio.
+        private static bool s_rebuildReopenSettings;
+
+        // Atrás de Android (Escape en el Input System; FXT, defecto 1 de la prueba de la ola 1): una acción enlazada a
+        // <Keyboard>/escape, habilitada desde el arranque, cuenta cada pulsación en su evento. Leer
+        // Keyboard.current.escapeKey.wasPressedThisFrame la perdía en frío: en Android el teclado aparece con el primer evento de
+        // tecla, adb (y el sistema) mandan la bajada y la subida juntas, y la primera consulta de wasPressedThisFrame de un botón
+        // compara el valor de ahora (ya suelto) con el del fotograma anterior (ButtonControl, Input System 1.20): solo desde la
+        // segunda consulta sigue las pulsaciones de cada fotograma.
+        private InputAction? _backAction;
+        private int _backPresses;
 
         // Fallos del escritor de segundo plano ya registrados (T-D): lo recoja quien lo recoja, cada uno se avisa una vez.
         private int _reportedBackgroundFailures;
@@ -736,6 +749,32 @@ namespace AF.UI
             return true;
         }
 
+        /// <summary>
+        /// Atrás de Android (Escape en el Input System) fuera del nivel: el único camino de Atrás para las hojas del inicio (FXT).
+        /// Con Ajustes abierta, la cierra (<see cref="CloseSettings"/>); en «El río sigue creciendo» o Sin canoas, vuelve al inicio
+        /// como su botón Volver (<see cref="PressBack"/>). No hace nada en el nivel (02 §3; 04 §6.6: el embudo no se cierra con
+        /// Atrás), ni con la hoja «Compra simulada», un anuncio o el aviso del perfil bloqueado delante, ni en el inicio sin hoja.
+        /// </summary>
+        public bool PressAndroidBack()
+        {
+            if (_app == null || _app.Screen == AppScreen.Level || _app.Screen == AppScreen.Boot)
+            {
+                return false;
+            }
+
+            if ((_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible) || (_lockedNotice != null && _lockedNotice.Visible))
+            {
+                return false;
+            }
+
+            if (_settingsScreen != null && _settingsScreen.Visible)
+            {
+                return CloseSettings();
+            }
+
+            return PressBack();
+        }
+
         /// <summary>X de Ajustes o Atrás de Android con Ajustes abierto: vuelve al inicio tal como estaba.</summary>
         public bool CloseSettings()
         {
@@ -755,7 +794,8 @@ namespace AF.UI
         /// Ajustes › Idioma (D-018 Q7-A; tarea L3): guarda <paramref name="language"/> en <c>settings.language</c>
         /// (<see cref="SettingsData.LanguageAuto"/> o un idioma con la UI completa) y vuelve a resolver el idioma (desarrollo &gt;
         /// guardado &gt; teléfono &gt; en). Si cambia el de la UI, <see cref="Loc.SetLocale"/> lanza <see cref="Loc.Changed"/> y la UI
-        /// se reconstruye volviendo al inicio (<see cref="RebuildUi"/>). False si no es una opción.
+        /// se reconstruye volviendo al inicio (<see cref="RebuildUi"/>), con Ajustes otra vez abierta en el idioma nuevo (FXT). False
+        /// si no es una opción.
         /// </summary>
         public bool ChooseLanguage(string language)
         {
@@ -861,7 +901,8 @@ namespace AF.UI
         /// el arranque siguiente construye todas las pantallas otra vez (con <see cref="Loc"/> ya en el idioma elegido) y va al
         /// inicio con el mismo perfil en memoria (no lo vuelve a leer del disco: con el perfil en solo lectura, lo jugado en la
         /// sesión solo vive ahí), sin el nivel de desarrollo (<c>af_level</c>) ni el de los tests y sin volver a aplicar los
-        /// extras de la cartera (<c>af_seeds</c> y <c>af_canoes</c>): volver al inicio no es un arranque en frío.
+        /// extras de la cartera (<c>af_seeds</c> y <c>af_canoes</c>): volver al inicio no es un arranque en frío. Si Ajustes estaba
+        /// abierta, se vuelve a abrir sobre el inicio (FXT).
         /// </summary>
         private void RebuildUi()
         {
@@ -869,7 +910,8 @@ namespace AF.UI
             s_rebuildProfile = _profile;
             s_rebuildStatus = _profileStatus;
             s_rebuildStore = _profileStore;
-            _settingsScreen?.Hide();
+            s_rebuildReopenSettings = _profile != null && _settingsScreen != null && _settingsScreen.Visible;
+            _settingsScreen?.Hide(); // sin settings_closed: el arranque siguiente la vuelve a abrir en el idioma nuevo
             PersistNow("idioma");
             enabled = false; // nada más de este arranque: la escena se va
             Scene scene = gameObject.scene;
@@ -904,6 +946,10 @@ namespace AF.UI
 
         private bool InLevel => _app == null || _app.Screen == AppScreen.Level;
 
+        // Hay una pantalla de pago delante: la hoja «Compra simulada» o un anuncio (y lo que lo rodea; propuesta del personaje
+        // d.11). Las ofertas que vengan (Mochila de inicio, Mercado) se suman aquí. Sin asignar memoria.
+        private bool CommerceOpen => (_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible);
+
         // Lote de guardado de una acción del jugador: el perfil se escribe una vez al cerrarlo (revisión B2-5); sin lote, nada.
         private ProfileSaveScope Saves()
         {
@@ -934,6 +980,28 @@ namespace AF.UI
             Application.targetFrameRate = 60; // 08 §5.4
             DevProbe.Initialize();
             EnsureEventSystem();
+
+            // Atrás de Android, desde el arranque y aunque aún no exista el teclado (FXT): la acción se vuelve a enlazar sola
+            // cuando aparece el dispositivo y cuenta la pulsación aunque la bajada y la subida lleguen en el mismo fotograma.
+            _backAction = new InputAction("AndroidBack", InputActionType.Button, "<Keyboard>/escape");
+            _backAction.performed += OnBackPerformed;
+        }
+
+        private void OnEnable()
+        {
+            _backPresses = 0;
+            _backAction?.Enable();
+        }
+
+        private void OnDisable()
+        {
+            _backAction?.Disable();
+            _backPresses = 0;
+        }
+
+        private void OnBackPerformed(InputAction.CallbackContext context)
+        {
+            _backPresses++;
         }
 
         private void Start()
@@ -958,7 +1026,9 @@ namespace AF.UI
                 : carriedStore is LocalProfileStore local && string.Equals(local.DirectoryPath, profileDirectory, StringComparison.Ordinal));
             Profile? carried = sameStore ? s_rebuildProfile : null;
             bool rebuilt = carried != null;
+            bool reopenSettings = rebuilt && s_rebuildReopenSettings;
             ProfileLoadStatus carriedStatus = s_rebuildStatus;
+            s_rebuildReopenSettings = false;
             s_rebuildToLobby = false;
             s_rebuildProfile = null;
             s_rebuildStore = null;
@@ -1027,10 +1097,11 @@ namespace AF.UI
             Fauna = LoadFauna();
             _screen.Fauna = Fauna; // la especie de miquito de cada intro (guion de la intro §4.3)
             RiverStops = LoadRiverStops(riverStops);
-            _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013; sin uso visible todavía)
+            _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013): fondo, llegada y rótulo del lugar
             FruitFacts = LoadFruitFacts(fruitCalendar); // calendario de Frutas del río (D-017)
             _screen.FruitFacts = FruitFacts; // la línea de fruta de la victoria (F3)
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
+            _lobby.RiverStops = RiverStops; // el sitio, «Faltan N» y la ventanita de casa en el inicio (M2.1)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
@@ -1069,6 +1140,15 @@ namespace AF.UI
                 _app.Start(firstRun && !rebuilt, profile.LevelState);
             }
 
+            if (reopenSettings)
+            {
+                // Observación 3 de la prueba de la ola 1 (FXT; la [P] recomendada): elegir un idioma no cierra Ajustes. La UI se
+                // rehízo en el idioma nuevo y Ajustes se vuelve a abrir sobre el inicio con lo guardado marcado (la opción elegida);
+                // la tarjeta no tiene desplazamiento, así que se ve igual que antes. La sonda escribe otra vez AF_STATE settings y
+                // su AF_LAYOUT (los textos y las cajas cambian); settings_closed sale solo al cerrarla.
+                PressSettings();
+            }
+
             if (locked)
             {
                 // 08 §4.4: el perfil anterior se conserva intacto y esta sesión no se guarda; se avisa y no hay compras.
@@ -1094,11 +1174,17 @@ namespace AF.UI
             }
 
             _adOverlay?.Tick(Time.unscaledDeltaTime * 1000f);
+            bool back = _backPresses > 0;
+            _backPresses = 0;
+            if (back)
+            {
+                PressAndroidBack();
+            }
+
             if (_settingsScreen != null && _settingsScreen.Visible)
             {
-                // Ajustes solo vive sobre el inicio; el Atrás de Android (Escape en el Input System) la cierra.
-                Keyboard? keyboard = Keyboard.current;
-                if (_app.Screen != AppScreen.Lobby || (keyboard != null && keyboard.escapeKey.wasPressedThisFrame))
+                // Ajustes solo vive sobre el inicio (el Atrás de Android la cierra en PressAndroidBack).
+                if (_app.Screen != AppScreen.Lobby)
                 {
                     CloseSettings();
                 }
@@ -1111,6 +1197,7 @@ namespace AF.UI
             if (_app.Screen != AppScreen.Level)
             {
                 _app.RefreshNoCanoes();
+                _lobby?.SetCommerceOpen(CommerceOpen); // la ventanita de casa no sale en pantallas de pago (M2.1; D-013, punto 6)
                 _lobby?.Tick(dt);
                 return;
             }
@@ -1434,6 +1521,13 @@ namespace AF.UI
         private void OnDestroy()
         {
             PersistNow("destruir la escena");
+            if (_backAction != null)
+            {
+                _backAction.performed -= OnBackPerformed;
+                _backAction.Dispose();
+                _backAction = null;
+            }
+
             if (Current == this)
             {
                 Current = null;

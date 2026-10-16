@@ -77,6 +77,7 @@ namespace AF.Tests.PlayMode
                 yield return PlayModeHelpers.WaitFor(
                     () => GameBootstrap.Current != null && GameBootstrap.Current != boot && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AF.GameFlow.AppScreen.Boot,
                     "reconstrucción en en-XA");
+                Assert.That(GameBootstrap.Current!.CloseSettings(), Is.True, "Ajustes sigue abierta tras elegir idioma (FXT): se cierra para ver el inicio");
                 SnapshotKit.AttachLobby(GameBootstrap.Current!);
                 yield return SnapshotKit.Wait(0.3f);
                 SnapshotKit.Save(dir, "l3_04_lobby_rebuilt_en-XA");

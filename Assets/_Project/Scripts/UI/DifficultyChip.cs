@@ -119,6 +119,7 @@ namespace AF.UI
             _pill.type = Image.Type.Sliced;
             _text = UiBuilder.Label("Label", _pill.transform, TextStyle.PlainBold, string.Empty, TextDp, Palette.Ink, TextAlignmentOptions.MidlineLeft);
             _ribbon = UiBuilder.Image("Ribbon", _root, null, Color.white);
+            _ribbon.type = Image.Type.Sliced; // se alarga si la cifra no cabe en su franja (RibbonWidthFor; tarea L4)
 
             // Baloo 2 ExtraBold con el contorno y la sombra de madera de los títulos sobre placa: el contorno agua_contorno de
             // los CTA de la familia Agua dejaba un filo azul en la «×n» (revisión de T09).
@@ -395,7 +396,11 @@ namespace AF.UI
         /// dp, el cuerpo desde <see cref="ProceduralArt.RibbonTagBodyLeftDp"/>, la cola en V a la derecha y la zona de texto
         /// <see cref="ProceduralArt.RibbonTagTextDp"/>): luz arriba con un bisel de <c>ui_madera</c>, canto oscuro abajo, contorno
         /// más oscuro, sombra suave y, en la esquina superior izquierda, un remache de latón (<see cref="RivetColor"/>) que la
-        /// clava sobre el extremo de la píldora, por encima de la altura de la «x». Una sola textura legible para toda la app.
+        /// clava sobre el extremo de la píldora, por encima de la altura de la «x». Una sola textura legible para toda la app. Es
+        /// 9-slice solo a lo ancho (tarea L4): el remache y la esquina a la izquierda (<see cref="RibbonSliceLeftDp"/>) y la cola
+        /// en V a la derecha (<see cref="RibbonSliceRightDp"/>) no se estiran, así que en una imagen <c>Sliced</c> más ancha que
+        /// <see cref="ProceduralArt.RibbonTagWidthDp"/> se alarga el cuerpo y la franja de texto con él (<see cref="RibbonWidthFor"/>);
+        /// a su ancho de siempre se ve igual.
         /// </summary>
         internal static Sprite RibbonSprite()
         {
@@ -460,8 +465,74 @@ namespace AF.UI
                 }
             }
 
-            s_ribbon = ChipPaint.ToSprite(pixels, w, h, "label_ribbon_wood", Vector4.zero);
+            // Bordes del 9-slice en px (izquierda, abajo, derecha, arriba): solo a lo ancho. A lo alto no hay bordes, así que la
+            // imagen se estira como una Simple (revisión de L4: con bordes arriba y abajo, a una escala distinta de 1 la fila
+            // central sin alto se estiraba y el remache y la cola se quedaban a tamaño nativo); quien la dibuja a la escala s
+            // pone pixelsPerUnitMultiplier = 1 / s (RibbonPpuFor) para que el remache y la cola escalen con el resto.
+            var border = new Vector4(Mathf.Ceil(RibbonSliceLeftDp * k), 0f, Mathf.Ceil(RibbonSliceRightDp * k), 0f);
+            s_ribbon = ChipPaint.ToSprite(pixels, w, h, "label_ribbon_wood", border);
             return s_ribbon;
+        }
+
+        /// <summary>
+        /// <c>pixelsPerUnitMultiplier</c> de la imagen <c>Sliced</c> de la cinta dibujada a la escala <paramref name="scale"/>
+        /// (revisión de L4): los bordes del 9-slice miden su ancho nativo por la escala, así que a su ancho de siempre la cinta se
+        /// ve igual que con <c>Simple</c> a cualquier escala (el chip compacto a 0,75 o la tarjeta al 130 %).
+        /// </summary>
+        public static float RibbonPpuFor(float scale)
+        {
+            return scale > 0f ? 1f / scale : 1f;
+        }
+
+        /// <summary>Borde izquierdo de la cinta que no se estira (dp): el margen, la esquina redondeada y el remache.</summary>
+        public const float RibbonSliceLeftDp = 7f;
+
+        /// <summary>Borde derecho de la cinta que no se estira (dp): la esquina y la cola en V.</summary>
+        public const float RibbonSliceRightDp = 6f;
+
+        /// <summary>
+        /// Aire a la izquierda de la cifra en la cinta alargada (dp, a escala 1): lo que ocupan el margen, la esquina y el clavo
+        /// (revisión de L4: en en-XA el «[» tapaba el clavo).
+        /// </summary>
+        public const float RibbonTextLeftDp = 6f;
+
+        /// <summary>
+        /// Aire a la derecha de la cifra en la cinta alargada (dp, a escala 1): la esquina y la cola en V, que no llevan texto
+        /// (revisión de L4: en en-XA el «·]» se metía en la muesca).
+        /// </summary>
+        public const float RibbonTextRightDp = 10f;
+
+        /// <summary>
+        /// Ancho de la cinta (dp, a escala 1) para que una cifra de <paramref name="textWidthDp"/> dp a escala 1 quepa en su franja
+        /// de texto (tarea L4; 02 §12: los contenedores crecen): <see cref="ProceduralArt.RibbonTagWidthDp"/> si cabe en
+        /// <see cref="ProceduralArt.RibbonTagTextDp"/> (la «×3» y la «×4» de es-419 al 100 %: nada cambia); si no, la cifra más
+        /// <see cref="RibbonTextLeftDp"/> para el clavo y <see cref="RibbonTextRightDp"/> para la cola, para que la cinta conserve
+        /// su silueta de banderín (D-003) en vez de quedar llena hasta el borde.
+        /// </summary>
+        public static float RibbonWidthFor(float textWidthDp)
+        {
+            if (textWidthDp <= ProceduralArt.RibbonTagTextDp.width)
+            {
+                return ProceduralArt.RibbonTagWidthDp;
+            }
+
+            return Mathf.Max(ProceduralArt.RibbonTagWidthDp, Mathf.Ceil(textWidthDp) + RibbonTextLeftDp + RibbonTextRightDp);
+        }
+
+        /// <summary>
+        /// Franja de texto de una cinta de <paramref name="widthDp"/> dp de ancho (dp a escala 1, desde su esquina superior
+        /// izquierda): <see cref="ProceduralArt.RibbonTagTextDp"/> a su ancho de siempre; alargada (<see cref="RibbonWidthFor"/>),
+        /// de <see cref="RibbonTextLeftDp"/> a <paramref name="widthDp"/> − <see cref="RibbonTextRightDp"/>, a la misma altura.
+        /// </summary>
+        public static Rect RibbonTextBandFor(float widthDp)
+        {
+            Rect t = ProceduralArt.RibbonTagTextDp;
+            if (widthDp <= ProceduralArt.RibbonTagWidthDp + 0.01f)
+            {
+                return t;
+            }
+
+            return new Rect(RibbonTextLeftDp, t.y, widthDp - RibbonTextLeftDp - RibbonTextRightDp, t.height);
         }
 
         // Distancia con signo (dp, negativa dentro) a la cinta: rectángulo redondeado de radio 3 menos la cola en V de 4 dp a la
@@ -497,12 +568,23 @@ namespace AF.UI
             _width = pillX + pillW;
             if (ribbon)
             {
-                // El cuerpo de la cinta empieza RibbonGapDp después de la palabra y cubre el extremo redondeado de la píldora.
+                // El cuerpo de la cinta empieza RibbonGapDp después de la palabra y cubre el extremo redondeado de la píldora. Si
+                // la cifra no cabe en la franja (otro idioma, en-XA o la fuente al 130 %), la cinta se alarga con aire para el
+                // clavo y la cola (RibbonWidthFor; tarea L4) y la caja de la cifra mide al menos su línea, centrada en la franja
+                // (RibbonTextBandFor), como en la tarjeta previa.
                 float ribbonX = pillX + textX + textW + ribbonGap - (ProceduralArt.RibbonTagBodyLeftDp * rs);
-                UiBuilder.Place(_ribbon.rectTransform, ribbonX, RibbonTopDp * rs, ProceduralArt.RibbonTagWidthDp * rs, ProceduralArt.RibbonTagHeightDp * rs);
-                Rect t = ProceduralArt.RibbonTagTextDp;
-                UiBuilder.Place(_ribbonText.rectTransform, t.x * rs, t.y * rs, t.width * rs, t.height * rs);
-                _width = ribbonX + (ProceduralArt.RibbonTagWidthDp * rs);
+                Vector2 pref = _ribbonText.GetPreferredValues(_ribbonText.text, float.PositiveInfinity, float.PositiveInfinity);
+                float ribbonW1 = RibbonWidthFor(pref.x / rs);
+                float ribbonW = ribbonW1 * rs;
+                _ribbon.pixelsPerUnitMultiplier = RibbonPpuFor(rs);
+                UiBuilder.Place(_ribbon.rectTransform, ribbonX, RibbonTopDp * rs, ribbonW, ProceduralArt.RibbonTagHeightDp * rs);
+                Rect t = RibbonTextBandFor(ribbonW1);
+                float tw = Mathf.Max(t.width * rs, Mathf.Ceil(pref.x) + 1f);
+                float th = Mathf.Max(t.height * rs, Mathf.Ceil(pref.y) + 1f);
+                float cx = (t.x + (t.width * 0.5f)) * rs;
+                float cy = (t.y + (t.height * 0.5f)) * rs;
+                UiBuilder.Place(_ribbonText.rectTransform, cx - (tw * 0.5f), cy - (th * 0.5f), tw, th);
+                _width = ribbonX + ribbonW;
             }
 
             _width = Mathf.Ceil(_width);

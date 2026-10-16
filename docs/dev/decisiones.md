@@ -30,7 +30,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-022 | 2026-10-14 | Respuestas a las preguntas 45, 47-50 y 51 de `docs/GDD.md` §6.3 | Decidida por el dueño (la recomendación de la 45 y de las 47-50; la 51, «traducción con ia»: (b)). Documentación aplicada el 2026-10-14 (T58). Tareas que deja: la línea única de la victoria con su prioridad y la clave `ui_fruit_line_every_n_levels` [P] (45), la burbuja de Revelar sin aviso (48), la cabecera de las tablas de textos (49) y el «Otro dato» de la parada k = 32 (50) |
 | D-023 | 2026-10-14 | Decisiones de detalle de la tanda 4: preguntas de sus planes y [P] del plan consolidado | Decidida por el dueño (la recomendación de cada pregunta, por «Sí, aplica las recomendadas también»): las P-M1 a P-M8 del plan del Mapa del río, las preguntas del plan consolidado de la tanda 4 (textos del Mapa en `facts.csv`, firma de las variantes de `pack_schema` 3, máscara de la tinaja en `relief`, Cuia de la casa fuera de la 1.0, idioma automático y región, alto de la llegada y tabla de D2) y los detalles [P] del plan. Documentación aplicada el 2026-10-14 (D1, que absorbe M1.7). En implementación: tanda 4 |
 | D-024 | 2026-10-14 | Reglas de la Hoja atada: la capacidad de su llave y una por fruta | Decidida por el dueño (las recomendadas de la revisión de K3a, por «Sí, aplica las recomendadas también»). Documentación aplicada el 2026-10-14 (FIXD). En implementación: FIXK, en el núcleo; el generador y level-qa la heredan por `LevelValidation` |
-| D-025 | 2026-10-14 | Un solo formato de cifras, también en los precios | Decidida por el dueño («unificar formatos», tras la prueba de la tanda 4). La regla (región del teléfono, Q8-A) es [P] de este registro. Sin implementar |
+| D-025 | 2026-10-14 | Un solo formato de cifras, también en los precios | Decidida por el dueño («unificar formatos», tras la prueba de la tanda 4). La regla (región del teléfono, Q8-A) es [P] de este registro. Implementada en FXT (puntos 1 y 2; el 3, lista la función para el adaptador de Unity IAP) |
 
 ---
 
@@ -2415,7 +2415,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 ## D-025 · Un solo formato de cifras, también en los precios
 
 - **Fecha:** 2026-10-14.
-- **Estado:** decidida por el dueño («unificar formatos») tras la prueba de la ola 1 de la tanda 4 (`docs/dev/traspaso/pruebas-telefono-2026-10-14-tanda4.md`, observación 4). Que la regla sea la de la región del teléfono es la [P] de este registro, coherente con Q8-A; el dueño la puede cambiar. **Sin implementar.**
+- **Estado:** decidida por el dueño («unificar formatos») tras la prueba de la ola 1 de la tanda 4 (`docs/dev/traspaso/pruebas-telefono-2026-10-14-tanda4.md`, observación 4). Que la regla sea la de la región del teléfono es la [P] de este registro, coherente con Q8-A; el dueño la puede cambiar. **Implementada en FXT** (tanda 4, ola 3): puntos 1 y 2 con `Loc.Price` (`AF.Localization`, `LocPrice`), por la que pasan `LocalPrice`, `FakeStoreService`/`SimulatedPurchase.PriceText` y `GameServices.PriceText`; del punto 3 queda lista la función (`Loc.PriceFromMicros`) para cuando exista el adaptador de Unity IAP. Pendiente: 05 §4.2 y el glosario §10 (ver «Consecuencias»).
 
 **Contexto.**
 - Q8-A de D-018: las cifras del juego van con el formato de la región del teléfono, con una sola función (`Loc.Number`; sin región, es-CO [P]).
