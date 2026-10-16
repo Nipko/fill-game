@@ -833,6 +833,8 @@ class TextBlockTests(unittest.TestCase):
             with self.subTest(key=s["arrival_fact"]):
                 self.assertEqual(stops.clean_text(dato["texto"]), row["es-419"])
                 self.assertTrue(row["notes"].startswith(f"[{dato['etiqueta']}] "))
+                # Un texto reescrito (redaccion, M4.5a) lo dice con [P]; los demas, no.
+                self.assertEqual("redaccion" in dato, " [P] Redacción " in row["notes"])
                 self.assertIn("https://", row["context"])
                 for sid in dato["fuente"].split(","):
                     self.assertIn(sid.strip(), row["context"])
@@ -869,10 +871,17 @@ class TextBlockTests(unittest.TestCase):
         self.assertEqual("Boca del río Coca", t["map.stop.boca_del_coca.name"])
         self.assertEqual("Coca y Napo", t["map.stop.boca_del_coca.river"])
         self.assertEqual("Puerto Heath", t["map.stop.puerto_heath.name"])
-        self.assertEqual("Madre de Dios y Tambopata", t["map.stop.puerto_maldonado.river"])
-        self.assertEqual("Astilleros de Puerto Maldonado", t["map.stop.puerto_maldonado_astilleros.name"])
+        # overrides.json (revision de M4.5a): placas del lugar de 4 lineas en en-XA al 130 % a 360 dp, mas altas que las de
+        # 1-200, subian la ranura de todas las victorias (FactLineTests).
+        self.assertEqual("Madre de Dios", t["map.stop.puerto_maldonado.river"], "overrides.json: sin el Tambopata")
+        self.assertEqual("Astilleros del puerto", t["map.stop.puerto_maldonado_astilleros.name"], "overrides.json")
         self.assertEqual("Madre de Dios", t["map.stop.puerto_maldonado_astilleros.river"],
                          "overrides.json: con dos rios, map_arrived pasaria de 64 caracteres (M4.5a)")
+        self.assertEqual("El bosque inundado", t["map.stop.cuyabeno_igapo.name"], "overrides.json")
+        self.assertEqual("Guacamayos del Tambopata", t["map.stop.collpa_guacamayos.name"], "overrides.json")
+        # Datos de llegada acortados en la investigacion (redaccion [P]): las llegadas del 220 y del 300 no pasan de las de 1-200.
+        self.assertEqual("En Ecuador, la Amazonia es «el Oriente»: está al este de los Andes.", t["map.country.ec.dato_01"])
+        self.assertEqual("En 2012, Bolivia declaró por ley a su delfín de río tesoro nacional.", t["map.country.bo.dato_01"])
         self.assertEqual("Las cochas del Manu", t["map.stop.manu_cochas.name"])
         self.assertEqual("¿Cuántas especies de árbol caben en una hectárea?", t["map.world.w06.question"])
         self.assertEqual("¿Por qué los guacamayos comen arcilla?", t["map.world.w07.question"])
@@ -889,9 +898,11 @@ class TextBlockTests(unittest.TestCase):
                     self.assertIsNone(stops.river_problem(row["es-419"]), row["es-419"])
         two = self.table["map.stop.pacaya_samiria.river"]["context"]
         self.assertIn("pendiente del dueño y del asesor", two, "dos rios en «rio {rio}»: pregunta abierta")
-        for sid in ("boca_del_coca", "puerto_maldonado", "boca_manu"):
+        for sid in ("boca_del_coca", "boca_manu"):
             with self.subTest(sid=sid):
                 self.assertIn("pendiente del dueño y del asesor", self.table[f"map.stop.{sid}.river"]["context"])
+        # Puerto Maldonado (n = 33) va con un solo rio desde la revision de M4.5a (overrides.json).
+        self.assertNotIn("pendiente del dueño", self.table["map.stop.puerto_maldonado.river"]["context"])
         self.assertNotIn("pendiente del dueño", self.table["map.stop.manaos.river"]["context"])
 
     def test_arrival_context_says_who_presents_the_fact_and_where(self):

@@ -6390,7 +6390,8 @@
    "temporada": "A (aguas altas, LUT): ciclo 221-240 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.country.ec.dato_01",
-    "texto": "En Ecuador, a la Amazonia también la llaman «el Oriente»: queda al este de los Andes.",
+    "texto": "En Ecuador, la Amazonia es «el Oriente»: está al este de los Andes.",
+    "redaccion": "acortada en M4.5a (antes «En Ecuador, a la Amazonia también la llaman «el Oriente»: queda al este de los Andes.»): con la bienvenida de Ecuador y «Nuevo Rocafuerte · Ecuador» en dos líneas, la llegada del 220 era la más alta del catálogo en en-XA al 130 % a 360 dp (254 dp frente a 234 en 1-200) y subía la ranura de todas las victorias; así mide 229.",
     "etiqueta": "E",
     "fuente": "eswp_amazonia_ec",
     "releida": "2026-10-15"
@@ -6867,7 +6868,8 @@
    "temporada": "A (aguas altas, LUT): ciclo 301-320 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
    "dato_del_nivel": {
     "clave": "map.country.bo.dato_01",
-    "texto": "Bolivia declaró en 2012 a su delfín de río tesoro nacional, con una ley que lo protege.",
+    "texto": "En 2012, Bolivia declaró por ley a su delfín de río tesoro nacional.",
+    "redaccion": "acortada en M4.5a (antes «Bolivia declaró en 2012 a su delfín de río tesoro nacional, con una ley que lo protege.»): con la bienvenida de Bolivia, la llegada del 300 era la más alta del catálogo en es-419 al 100 % (155 dp frente a 139 en 1-200) y subía la ranura de todas las victorias; así mide 136.",
     "etiqueta": "E",
     "fuente": "wp_boto",
     "releida": "2026-10-15"

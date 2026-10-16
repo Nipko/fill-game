@@ -30,7 +30,8 @@ status_pt-BR, notes y args):
   «» (map.stop.teotonio.dato_01, el fact de su passing[]; 90 caracteres);
 - en y pt-BR vacios; status pendiente_asesor; notes con la etiqueta del dato, [V] o [E] (su contexto cita cada fuente
   con su URL), y [P] en los nombres, rios, paises y preguntas (la investigacion no les da una fuente con URL; su conf es
-  la de la coordenada); args con las cifras que el texto escribe como {n} (Q8-A): la fuente las da en
+  la de la coordenada), y ademas [P] en un dato cuya fuente lleva «redaccion» (texto reescrito, acortado en M4.5a para
+  que la llegada quepa en la ranura de la victoria); args con las cifras que el texto escribe como {n} (Q8-A): la fuente las da en
   dato_del_nivel.args, con las reglas de LocArgs.TryParse;
 - el contexto dice donde sale cada texto: en los hitos de TiTino (fin de mundo salvo el 10, primer Dificil 40 y primer
   Muy dificil 60; D-022, punto 1), el dato de llegada del 10k sale en la victoria siguiente;
@@ -1112,7 +1113,10 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                   + ", la cifra de la columna args con el separador de la región (D-018, Q8-A)." if args else "")
         context = (f"{shown}. Es también el fact_id de af_river_fact_shown (02 §6; 08 §4.5 y §8.2).{cifras} Lugar del "
                    f"dato: {names.get(holder)}. {sources} {NO_CAPTURE}")
-        add(key, dato.get("texto"), FACT_MAX_CHARS, context, f"[{dato.get('etiqueta')}] Dato del Mapa del río.", args)
+        # Desde M4.5a, «redaccion»: el texto de la fuente se reescribió (acortado para que quepa); la fila lo dice con [P].
+        redaccion = dato.get("redaccion")
+        rewritten = (f" [P] Redacción {redaccion.strip()}" if isinstance(redaccion, str) and redaccion.strip() else "")
+        add(key, dato.get("texto"), FACT_MAX_CHARS, context, f"[{dato.get('etiqueta')}] Dato del Mapa del río.{rewritten}", args)
 
     # «Otro dato» de la tarjeta (facts[]; M2.6 con los de M2.7): 90 caracteres, con su fuente y su URL.
     for s in stops:
