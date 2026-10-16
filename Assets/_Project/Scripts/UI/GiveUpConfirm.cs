@@ -68,6 +68,15 @@ namespace AF.UI
 
         public Button RescueButton => _rescue.Button;
 
+        /// <summary>Etiqueta de «Continuar: +1 cuia» (tests de desbordes; tarea L4).</summary>
+        internal TextMeshProUGUI RescueLabel => _rescueLabel;
+
+        /// <summary>Etiqueta de precio de «Continuar: +1 cuia» (tests de desbordes; tarea L4).</summary>
+        internal RectTransform RescuePriceRect => _price.Root;
+
+        /// <summary>Alto de la cara visible de «Continuar: +1 cuia» (dp; tests de desbordes; tarea L4).</summary>
+        internal float RescueFaceDp => ModalKit.FaceHeightOf(_rescue);
+
         public Button GiveUpButton => _giveUp;
 
         /// <summary>Línea de canoa visible (texto), o null sin canoa en juego.</summary>

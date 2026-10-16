@@ -96,6 +96,17 @@ namespace AF.UI
         public const float LabelMinIconDp = 20f;
 
         /// <summary>
+        /// Aire a cada lado de la etiqueta de una ranura ensanchada (dp) [P] (revisión de L4: con 4, al 130 % en en-XA la etiqueta
+        /// llegaba casi al contorno redondeado de la ranura): en cuanto la etiqueta no cabe en la ranura de 64 dp de la guía 3.6 (con
+        /// <see cref="LabelNarrowInsetDp"/> por lado, como siempre: en es-419 al 100 % nada cambia), la ranura se ensancha hasta su
+        /// línea más 2 × este aire y, si no basta, la etiqueta pasa a dos líneas en la caja de la ranura menos 2 × este aire.
+        /// </summary>
+        public const float LabelSideInsetDp = 6f;
+
+        /// <summary>Aire a cada lado de la etiqueta en la ranura de 64 dp de la guía 3.6 (dp) [P] (tarea L4).</summary>
+        public const float LabelNarrowInsetDp = 4f;
+
+        /// <summary>
         /// Lo más que crecen las ranuras y la bandeja hacia abajo para que quepa una etiqueta en dos líneas sobre el glifo más
         /// pequeño (dp) [P] (tarea L4; revisión de L4: al 130 % las dos líneas no caben bajo un glifo de 20 dp en la cara de 64):
         /// la bandeja acaba a 16 dp de la zona segura inferior (02 §5), así que siempre le quedan 4.
@@ -546,16 +557,25 @@ namespace AF.UI
         // SlotMaxDp ni de lo que deja la pantalla (la bandeja a TrayEdgeDp de cada borde). Mide al colocar, nunca por fotograma.
         private float SlotWidthFor(float canvasW)
         {
-            float need = _undo.LabelNeedDp;
+            float text = _undo.LabelTextDp;
             if (_extra.Active)
             {
-                need = Mathf.Max(need, _extra.LabelNeedDp);
+                text = Mathf.Max(text, _extra.LabelTextDp);
             }
 
             if (_reveal.Active)
             {
-                need = Mathf.Max(need, _reveal.LabelNeedDp);
+                text = Mathf.Max(text, _reveal.LabelTextDp);
             }
+
+            // Cabe en la ranura de 64 dp con su aire de siempre: no se ensancha (guía 3.6). Si no, su línea y LabelSideInsetDp
+            // por lado (revisión de L4).
+            if (text + (2f * LabelNarrowInsetDp) <= SlotDp)
+            {
+                return SlotDp;
+            }
+
+            float need = text + (2f * LabelSideInsetDp);
 
             float room = (canvasW - (2f * TrayEdgeDp) - (2f * PadDp) - ((_slots - 1) * GapDp)) / _slots;
             float cap = Mathf.Max(SlotDp, Mathf.Min(SlotMaxDp, Mathf.Floor(room)));
@@ -756,14 +776,13 @@ namespace AF.UI
             private const float MissingWideExtraDp = MissingWideDp - SlotDp;
 
             // Etiqueta de la ranura (tarea L4): a 12 sp (12 × escala dp), en una línea de 16 dp (× escala) con su borde de abajo
-            // a 57 dp, con LabelInsetDp de aire a cada lado (la cara de la ranura es redondeada); si no cabe ni en la ranura más
+            // a 57 dp, con LabelInsetFor de aire a cada lado (la cara de la ranura es redondeada); si no cabe ni en la ranura más
             // ancha, en dos líneas con el interlineado apretado (−0,2 em) y el mismo borde de abajo. Lo que la caja crece hacia
             // arriba lo cede el glifo, que sube y, si hace falta, se encoge (hasta LabelMinIconDp); si ni así cabe (al 130 %), la
             // ranura crece hacia abajo lo que falte (GrowFor, hasta MaxGrowDp) y la etiqueta baja con su borde. La etiqueta de precio nunca
             // sube por encima de PriceBelowLabelDp sobre ese borde: al 130 % baja lo justo para no tapar la etiqueta.
             private const float LabelTopDp = 41f;
             private const float LabelHeightDp = 16f;
-            private const float LabelInsetDp = 4f;
             private const float PriceBelowLabelDp = 3f;
             private const float LabelTwoLinesSpacing = -20f;
             private const float IconDp = 32f;
@@ -887,8 +906,17 @@ namespace AF.UI
             /// <summary>Etiqueta funcional de la ranura (12 sp; tarea L4).</summary>
             public TextMeshProUGUI Label { get; }
 
-            /// <summary>Ancho que necesita la ranura para su etiqueta en una línea (dp): la etiqueta y su aire.</summary>
-            public float LabelNeedDp => Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x + (2f * LabelInsetDp);
+            /// <summary>Ancho de la etiqueta de la ranura en una línea (dp), sin su aire.</summary>
+            public float LabelTextDp => Label.GetPreferredValues(Label.text, float.PositiveInfinity, float.PositiveInfinity).x;
+
+            /// <summary>
+            /// Aire a cada lado de la etiqueta en una ranura de <paramref name="w"/> dp: <see cref="LabelNarrowInsetDp"/> en la de
+            /// 64 dp de la guía 3.6 y <see cref="LabelSideInsetDp"/> en la ensanchada (revisión de L4).
+            /// </summary>
+            public static float LabelInsetFor(float w)
+            {
+                return w > SlotDp + 0.01f ? LabelSideInsetDp : LabelNarrowInsetDp;
+            }
 
             /// <summary>Ancho del aviso «Te faltan {n}» sin vecinas con el ancho de ahora de la ranura (dp).</summary>
             public float MissingWideNowDp => _w + MissingWideExtraDp;
@@ -1023,7 +1051,7 @@ namespace AF.UI
             /// </summary>
             public float GrowFor(float w)
             {
-                float inner = w - (2f * LabelInsetDp);
+                float inner = w - (2f * LabelInsetFor(w));
                 if (!SetLabelLines(inner))
                 {
                     return 0f;
@@ -1057,7 +1085,8 @@ namespace AF.UI
             // La etiqueta en una línea si cabe en la ranura; si no, en dos, con el glifo más pequeño encima (tarea L4).
             private void PlaceLabel()
             {
-                float inner = _w - (2f * LabelInsetDp);
+                float inset = LabelInsetFor(_w);
+                float inner = _w - (2f * inset);
                 bool two = SetLabelLines(inner);
 
                 // El borde de abajo de la etiqueta solo baja lo que crece la ranura (la etiqueta de precio va debajo); con la
@@ -1067,7 +1096,7 @@ namespace AF.UI
                 float top = bottom - h;
                 float icon = Mathf.Clamp(top - LabelIconGapDp - 2f, LabelMinIconDp, IconDp);
                 float iconTop = Mathf.Clamp(top - LabelIconGapDp - icon, 2f, IconTopDp);
-                UiBuilder.Place(Label.rectTransform, LabelInsetDp, top, inner, h);
+                UiBuilder.Place(Label.rectTransform, inset, top, inner, h);
                 UiBuilder.Place(Glyph.rectTransform, (_w - icon) * 0.5f, iconTop, icon, icon);
             }
 

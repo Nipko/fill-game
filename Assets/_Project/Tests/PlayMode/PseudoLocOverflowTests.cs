@@ -47,6 +47,11 @@ namespace AF.Tests.PlayMode
                 TestContext.WriteLine("AF_L4 aviso de contenido: " + note);
             }
 
+            foreach (string known in inventory.KnownIssues)
+            {
+                TestContext.WriteLine("AF_L4 pendiente del dueño: " + known);
+            }
+
             Assert.That(inventory.Scanned, Is.GreaterThan(80), "textos visibles mirados");
             Assert.That(inventory.Lines, Is.Empty, "textos que se salen o bajan de 12 sp en en-XA al " + percent + " %:\n" + string.Join("\n", inventory.Lines));
         }
@@ -214,7 +219,7 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        private static IEnumerator LoadFunnel(int level, int seeds)
+        internal static IEnumerator LoadFunnel(int level, int seeds)
         {
             LaunchOptions.LevelOffsetOverride = 25;
             LaunchOptions.LevelCardsOverride = false;
@@ -223,7 +228,7 @@ namespace AF.Tests.PlayMode
         }
 
         // Tablero 6: 3 → 4 deja Aguas estancadas; espera al modal y a que el panel termine de subir.
-        private static IEnumerator StuckRealTime(GameBootstrap boot)
+        internal static IEnumerator StuckRealTime(GameBootstrap boot)
         {
             boot.TapAnywhere();
             boot.TapCuia(3);
@@ -234,7 +239,7 @@ namespace AF.Tests.PlayMode
         }
 
         // Victoria con la solución del solver, en tiempo real.
-        private static IEnumerator WinRealTime(GameBootstrap boot)
+        internal static IEnumerator WinRealTime(GameBootstrap boot)
         {
             boot.TapAnywhere();
             LevelFlow flow = boot.Flow!;
@@ -312,6 +317,14 @@ namespace AF.Tests.PlayMode
         // al 100 % cabe en una línea de la píldora ensanchada (hasta unos 115 dp a 438 de ancho); al 130 %, no.
         internal const string LongUndo = "Deshacer la jugada";
         internal const string LongRestart = "Reiniciar el nivel";
+
+        // Título forzado de la victoria: a 22 sp no cabe en la franja de 256 dp, y sí en dos líneas.
+        internal const string LongVictory = "¡Nivel completado, muy bien hecho!";
+
+        // Etiquetas forzadas del rescate: a 12 sp (× escala) la primera no cabe en una línea junto al precio y sí en dos en la
+        // cara de siempre; la segunda necesita tres o más, que no caben en la cara (ModalKit.CtaTwoLinesShare) y el botón crece.
+        internal const string LongRescue = "Continuar ahora con una cuia más";
+        internal const string LongerRescue = "Continuar la partida ahora mismo con una cuia de rescate más para seguir";
 
         [TearDown]
         public void TearDown()
@@ -391,6 +404,94 @@ namespace AF.Tests.PlayMode
             GameScreen view = GameBootstrap.Current!.View!;
             Assert.That(view.Layout!.Rows, Is.EqualTo(3), "11 cuias: 3 filas a 360 × 780");
             LongLabelSetup.AssertRestart(view, scale, 2, false);
+        }
+
+        [UnityTest]
+        public IEnumerator EnXA_Victory_RibbonTitle([Values(100, 130)] int percent)
+        {
+            // La victoria del 11 en en-XA a 360 × 640 (guía 5.5; revisión de L4): «[¡Ñívél çómplétádó! ······]» cabe en una línea
+            // al 100 %; al 130 % no cabe a 22 sp × 1,3 y va en dos, con la hoja más alta (hasta 88 dp) y la Cosecha debajo.
+            float scale = percent / 100f;
+            yield return LongLabelSetup.LoadVictory11(LocLocale.Pseudo, scale);
+            LongLabelSetup.AssertRibbon(GameBootstrap.Current!.View!, scale, percent == 100 ? 1 : 2);
+        }
+
+        [UnityTest]
+        public IEnumerator Victory_LongTitle_TwoLinesTallerLeaf()
+        {
+            // Un título forzado que no cabe en una línea ni a 22 sp al 100 % (es-419): dos líneas a 22 sp, la hoja crece y el
+            // panel baja con ella (guía 5.5: «la hoja crece hasta 88 dp de alto. Nunca se recorta»).
+            yield return LongLabelSetup.LoadVictory11(LocLocale.SourceLocale, 1f);
+            GameScreen view = GameBootstrap.Current!.View!;
+            LongLabelSetup.AssertRibbon(view, 1f, 1);
+            view.VictoryRibbonTitle.text = LongVictory;
+            view.RelayoutForTests();
+            yield return null;
+            LongLabelSetup.AssertRibbon(view, 1f, 2);
+        }
+
+        [UnityTest]
+        public IEnumerator Rescue_LongLabel_TwoLinesThenTallerButton([Values(100, 130)] int percent)
+        {
+            // «Continuar: +1 cuia» de Aguas estancadas (rama A del 31) y de ¿Seguro? con una etiqueta forzada (ModalKit.FitCtaLabel;
+            // revisión de L4): en dos líneas a 12 sp (× escala) o más, sin tapar el precio; y, si sus líneas no caben en la cara
+            // (tres o más), el botón crece a lo alto.
+            float scale = percent / 100f;
+            yield return LongLabelSetup.LoadStuck(LocLocale.SourceLocale, scale, 1240);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            StuckModal stuck = view.Stuck;
+            Assert.That(stuck.RescueButton.gameObject.activeInHierarchy, Is.True, "el rescate en la rama A del 31");
+            LongLabelSetup.AssertRescue(stuck.RescueButton, stuck.RescueLabel, stuck.RescuePriceRect, stuck.RescueFaceDp, scale, 1, 0f, "Aguas estancadas");
+            float normal = ((RectTransform)stuck.RescueButton.transform).rect.height;
+
+            stuck.RescueLabel.text = LongRescue;
+            view.ShowStuckView(true);
+            yield return null;
+            LongLabelSetup.AssertRescue(stuck.RescueButton, stuck.RescueLabel, stuck.RescuePriceRect, stuck.RescueFaceDp, scale, 2, normal, "Aguas estancadas");
+
+            stuck.RescueLabel.text = LongerRescue;
+            view.ShowStuckView(true);
+            yield return null;
+            float tall = LongLabelSetup.AssertRescue(stuck.RescueButton, stuck.RescueLabel, stuck.RescuePriceRect, stuck.RescueFaceDp, scale, -3, normal, "Aguas estancadas");
+            Assert.That(tall, Is.GreaterThan(normal + 0.5f), "Aguas estancadas: el botón crece con la etiqueta en tres líneas (" + normal.ToString("0.0", CultureInfo.InvariantCulture) + " dp de siempre)");
+
+            GiveUpConfirm giveUp = view.GiveUp;
+            giveUp.RescueLabel.text = LongerRescue;
+            Assert.That(boot.PressGiveUp(), Is.True, "¿Seguro?");
+            yield return SnapshotKit.Wait(0.3f);
+            Assert.That(giveUp.Visible && giveUp.RescueButton.gameObject.activeInHierarchy, Is.True, "el rescate en ¿Seguro?");
+            float tallGiveUp = LongLabelSetup.AssertRescue(giveUp.RescueButton, giveUp.RescueLabel, giveUp.RescuePriceRect, giveUp.RescueFaceDp, scale, -3, normal, "¿Seguro?");
+            Assert.That(tallGiveUp, Is.GreaterThan(normal + 0.5f), "¿Seguro?: el botón crece con la etiqueta en tres líneas");
+        }
+
+        [UnityTest]
+        public IEnumerator Offers_AirAroundLabels_130([Values("en-XA", "es-419")] string locale)
+        {
+            // Puñado y Balsa de la rama B del 31 al 130 % (revisión de L4; guía 5.x: botones con aire interior): la cara crece a lo
+            // alto hasta que entre la tinta de la etiqueta y el canto de la cara quedan StuckModal.OfferLabelPadDp arriba y abajo
+            // (6 dp o más, con el redondeo de la tinta).
+            yield return LongLabelSetup.LoadStuck(locale, 1.3f, 140);
+            StuckModal stuck = GameBootstrap.Current!.View!.Stuck;
+            Assert.That(stuck.HandfulButton.gameObject.activeInHierarchy && stuck.BalsaButton.gameObject.activeInHierarchy, Is.True, "Puñado y Balsa en la rama B");
+            LongLabelSetup.AssertOfferAir(stuck.HandfulLabel, stuck.OfferFaceDp, 1.3f, "Puñado");
+            LongLabelSetup.AssertOfferAir(stuck.BalsaLabel, stuck.OfferFaceDp, 1.3f, "Balsa");
+        }
+
+        /// <summary>
+        /// La insignia del nivel en en-XA (revisión de L4; pendiente del dueño): «[Ñívél 100 ··]» no cabe en la placa a 20 sp, el
+        /// mínimo de la guía 3.5 (D-003), y la placa no puede crecer (la columna del saldo va pegada). Se deja escrito (explícito:
+        /// hoy falla) para cuando el dueño decida entre rediseñar la placa o bajar el mínimo de la guía en otros idiomas.
+        /// </summary>
+        [UnityTest]
+        [Explicit("Pendiente del dueño (revisión de L4): la insignia del nivel en otros idiomas necesita rediseño; hoy falla.")]
+        public IEnumerator LevelBadge_EnXA_KnownIssue([Values(100, 130)] int percent)
+        {
+            float scale = percent / 100f;
+            yield return LongLabelSetup.LoadLevel100(LocLocale.Pseudo, scale, HudLabelTests.Screen640);
+            TextMeshProUGUI title = GameBootstrap.Current!.View!.LevelTitle;
+            Assert.That(title.fontSize, Is.GreaterThanOrEqualTo((LocInventory.BadgeMinSp * scale) - 0.01f), "la insignia a 20 sp (× escala) o más");
+            Assert.That(new LocInventory(Loc.Locale, scale).ProblemsOf(title), Is.Empty, "«" + title.text + "» cabe en la placa");
         }
 
         /// <summary>
@@ -500,6 +601,153 @@ namespace AF.Tests.PlayMode
             yield return SnapshotKit.Wait(0.3f);
         }
 
+        /// <summary>
+        /// La victoria del 11 (tablero 1 con af_level_offset = 10; Cosecha y Cosecha doble) en <paramref name="locale"/>, con la
+        /// fuente a <paramref name="scale"/> y a 360 × 640 dp, como la recorre <see cref="PseudoLocWalk"/>.
+        /// </summary>
+        public static IEnumerator LoadVictory11(string locale, float scale)
+        {
+            Hooks(locale, scale, HudLabelTests.Screen640);
+            LaunchOptions.LevelOffsetOverride = 10;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(1240));
+            yield return PlayModeHelpers.LoadGame(11, new MemoryProgressStore(11, 10));
+            yield return PseudoLocWalk.WinRealTime(GameBootstrap.Current!);
+            yield return SnapshotKit.Wait(1.2f);
+        }
+
+        /// <summary>
+        /// Aguas estancadas del 31 (tablero 6 con af_level_offset = 25) con <paramref name="seeds"/> semillas (1.240: rama A; 140:
+        /// rama B, con Puñado y Balsa) en <paramref name="locale"/>, con la fuente a <paramref name="scale"/> y a 360 × 640 dp.
+        /// </summary>
+        public static IEnumerator LoadStuck(string locale, float scale, int seeds)
+        {
+            Hooks(locale, scale, HudLabelTests.Screen640);
+            yield return PseudoLocWalk.LoadFunnel(31, seeds);
+            yield return PseudoLocWalk.StuckRealTime(GameBootstrap.Current!);
+        }
+
+        // Ganchos de una carga: limpios, con el idioma, la escala de la fuente y la pantalla.
+        private static void Hooks(string locale, float scale, Vector4 screen)
+        {
+            FunnelSetup.Hooks();
+            LaunchOptions.LanguageOverride = locale == LocLocale.SourceLocale ? null : locale;
+            if (Loc.IsConfigured && Loc.Locale != locale)
+            {
+                Loc.SetLocale(locale);
+            }
+
+            LaunchOptions.FontScaleOverride = scale;
+            GameScreen.SimulatedScreen = screen;
+        }
+
+        /// <summary>
+        /// El título de la cinta de victoria (guía 5.5; revisión de L4): en <paramref name="lines"/> líneas, a 22 sp (× escala) o
+        /// más, sin desborde ni palabras partidas; la hoja de 72 dp con una línea y, con dos, más alta, sin pasar de 88; la tinta
+        /// del título dentro de la hoja; y la hoja por encima de la fila de la Cosecha, sin pisarla.
+        /// </summary>
+        public static void AssertRibbon(GameScreen view, float scale, int lines)
+        {
+            TextMeshProUGUI title = view.VictoryRibbonTitle;
+            string problems = new LocInventory(Loc.Locale, scale).ProblemsOf(title);
+            Assert.That(title.textInfo.lineCount, Is.EqualTo(lines), "cinta: líneas de «" + title.text + "»");
+            Assert.That(title.fontSize, Is.GreaterThanOrEqualTo((22f * scale) - 0.01f), "cinta: 22 sp (× escala) o más");
+            Assert.That(problems, Is.Empty, "cinta: el título no se sale de su caja");
+            AssertNoBrokenWord(title, "cinta");
+
+            float h = view.VictoryRibbonHeight;
+            if (lines == 1)
+            {
+                Assert.That(h, Is.EqualTo(72f).Within(0.01f), "cinta de 72 dp con el título en una línea");
+            }
+            else
+            {
+                Assert.That(h, Is.InRange(72f, 88f), "cinta de 72 a 88 dp con el título en dos líneas");
+            }
+
+            RectTransform ribbon = view.VictoryRibbonRect;
+            Assert.That(ribbon.rect.height, Is.EqualTo(h).Within(0.01f), "la hoja mide lo que dice VictoryRibbonHeight");
+            Rect ink = InkRect(title, ribbon);
+            Assert.That(ink.xMin, Is.GreaterThanOrEqualTo(-Tol), "cinta: la tinta empieza dentro de la hoja");
+            Assert.That(ink.xMax, Is.LessThanOrEqualTo(ribbon.rect.width + Tol), "cinta: la tinta acaba dentro de la hoja");
+            Assert.That(ink.yMin, Is.GreaterThanOrEqualTo(-Tol), "cinta: la tinta no baja de la hoja (" + Describe(ink) + " en " + h.ToString("0.0", CultureInfo.InvariantCulture) + " dp)");
+            Assert.That(ink.yMax, Is.LessThanOrEqualTo(h + Tol), "cinta: la tinta no sube de la hoja (" + Describe(ink) + " en " + h.ToString("0.0", CultureInfo.InvariantCulture) + " dp)");
+
+            var root = (RectTransform)view.Canvas.transform;
+            Rect leaf = DpRect(ribbon, root);
+            Rect harvest = DpRect(view.VictoryHarvestRect, root);
+            Assert.That(leaf.yMin, Is.GreaterThanOrEqualTo(harvest.yMax - Tol), "la hoja " + Describe(leaf) + " no pisa la fila de la Cosecha " + Describe(harvest));
+            Debug.Log("AF_L4R cinta: «" + title.text + "» en " + lines + " líneas a " + title.fontSize.ToString("0.0", CultureInfo.InvariantCulture) + " dp; hoja de "
+                + h.ToString("0.0", CultureInfo.InvariantCulture) + " dp; tinta " + Describe(ink));
+        }
+
+        /// <summary>
+        /// El rescate «Continuar: +1 cuia» (ModalKit.FitCtaLabel; revisión de L4): su etiqueta en <paramref name="lines"/> líneas (con
+        /// un número negativo, en tantas o más), a
+        /// 12 sp (× escala) o más, sin desborde ni palabras partidas, con la tinta dentro de la cara del botón y sin tocar la
+        /// etiqueta de precio; con <paramref name="normal"/> &gt; 0, el botón no baja del alto de siempre. <paramref name="faceDp"/>: el
+        /// alto de su cara visible. Devuelve su alto (dp).
+        /// </summary>
+        public static float AssertRescue(Button button, TextMeshProUGUI label, RectTransform price, float faceDp, float scale, int lines, float normal, string what)
+        {
+            string problems = new LocInventory(Loc.Locale, scale).ProblemsOf(label);
+            if (lines > 0)
+            {
+                Assert.That(label.textInfo.lineCount, Is.EqualTo(lines), what + ": líneas de «" + label.text + "»");
+            }
+            else
+            {
+                Assert.That(label.textInfo.lineCount, Is.GreaterThanOrEqualTo(-lines), what + ": líneas de «" + label.text + "»");
+            }
+
+            Assert.That(label.fontSize, Is.GreaterThanOrEqualTo((12f * scale) - 0.01f), what + ": 12 sp (× escala) o más");
+            Assert.That(problems, Is.Empty, what + ": la etiqueta no se sale de su caja");
+            AssertNoBrokenWord(label, what);
+
+            var rt = (RectTransform)button.transform;
+            float height = rt.rect.height;
+            if (normal > 0f)
+            {
+                Assert.That(height, Is.GreaterThanOrEqualTo(normal - 0.01f), what + ": el botón no baja de su alto de siempre");
+            }
+
+            // La cara visible ocupa los faceDp de arriba de la imagen de la cara (debajo van el canto y la sombra).
+            var face = (RectTransform)label.rectTransform.parent;
+            float top = face.rect.height;
+            Rect ink = InkRect(label, face);
+            Assert.That(ink.yMin, Is.GreaterThanOrEqualTo(top - faceDp - Tol), what + ": la tinta " + Describe(ink) + " no baja de la cara de " + faceDp.ToString("0.0", CultureInfo.InvariantCulture) + " dp");
+            Assert.That(ink.yMax, Is.LessThanOrEqualTo(top + Tol), what + ": la tinta no sube de la cara " + Describe(ink));
+            Assert.That(ink.xMin, Is.GreaterThanOrEqualTo(-Tol), what + ": la tinta empieza dentro de la cara");
+            Rect tag = DpRect(price, face);
+            Assert.That(ink.xMax, Is.LessThanOrEqualTo(tag.xMin + Tol), what + ": la tinta " + Describe(ink) + " no toca el precio " + Describe(tag));
+            Assert.That(ink.Overlaps(tag), Is.False, what + ": la etiqueta no se solapa con el precio");
+            Debug.Log("AF_L4R " + what + ": «" + label.text + "» en " + label.textInfo.lineCount + " líneas a " + label.fontSize.ToString("0.0", CultureInfo.InvariantCulture)
+                + " dp; botón de " + height.ToString("0.0", CultureInfo.InvariantCulture) + " dp");
+            return height;
+        }
+
+        /// <summary>
+        /// Una oferta de Aguas estancadas (Puñado o Balsa) con la escala de texto: sin desborde, a 12 sp (× escala) o más y con 6 dp o
+        /// más entre la tinta de su etiqueta y el canto de arriba y de abajo de su cara visible, de <paramref name="faceDp"/> dp
+        /// (revisión de L4).
+        /// </summary>
+        public static void AssertOfferAir(TextMeshProUGUI label, float faceDp, float scale, string what)
+        {
+            string problems = new LocInventory(Loc.Locale, scale).ProblemsOf(label);
+            Assert.That(problems, Is.Empty, what + ": la etiqueta no se sale de su caja");
+            Assert.That(label.fontSize, Is.GreaterThanOrEqualTo((12f * scale) - 0.01f), what + ": 12 sp (× escala) o más");
+            // La cara visible ocupa los faceDp de arriba de la imagen de la cara (debajo van el canto y la sombra).
+            var face = (RectTransform)label.rectTransform.parent;
+            float top = face.rect.height;
+            float h = faceDp;
+            Rect ink = InkRect(label, face);
+            float below = ink.yMin - (top - faceDp);
+            float above = top - ink.yMax;
+            Assert.That(below, Is.GreaterThanOrEqualTo(6f - Tol), what + ": aire bajo la tinta (" + below.ToString("0.0", CultureInfo.InvariantCulture) + " dp en una cara de " + h.ToString("0.0", CultureInfo.InvariantCulture) + ")");
+            Assert.That(above, Is.GreaterThanOrEqualTo(6f - Tol), what + ": aire sobre la tinta (" + above.ToString("0.0", CultureInfo.InvariantCulture) + " dp en una cara de " + h.ToString("0.0", CultureInfo.InvariantCulture) + ")");
+            Debug.Log("AF_L4R " + what + ": «" + label.text.Replace("\n", " / ") + "» a " + label.fontSize.ToString("0.0", CultureInfo.InvariantCulture) + " dp en una cara de "
+                + h.ToString("0.0", CultureInfo.InvariantCulture) + " dp; tinta " + Describe(ink));
+        }
+
         /// <summary>Ancho más grande que puede tomar cada ranura en esta pantalla (dp): el tope o lo que deja la pantalla.</summary>
         public static float SlotCap(GameScreen view)
         {
@@ -528,11 +776,17 @@ namespace AF.Tests.PlayMode
             Assert.That(glyphBottom, Is.GreaterThanOrEqualTo(inkTop - Tol), what + ": el glifo no pisa la etiqueta (" + glyphBottom.ToString("0.0", CultureInfo.InvariantCulture)
                 + " dp sobre una tinta que llega a " + inkTop.ToString("0.0", CultureInfo.InvariantCulture) + ")");
 
-            // La etiqueta dentro del ancho de su ranura.
-            Rect face = ((RectTransform)label.rectTransform.parent).rect;
-            Rect r = DpRect(label.rectTransform, (RectTransform)label.rectTransform.parent);
+            // La etiqueta dentro del ancho de su ranura, con aire a cada lado entre su tinta y el canto de la ranura (revisión de
+            // L4: la cara es redondeada): BoosterTray.LabelSideInsetDp en la ranura ensanchada; en la de 64 dp, el de siempre.
+            RectTransform faceRect = (RectTransform)label.rectTransform.parent;
+            Rect face = faceRect.rect;
+            Rect r = DpRect(label.rectTransform, faceRect);
             Assert.That(r.xMin, Is.GreaterThanOrEqualTo(-Tol), what + ": la etiqueta empieza dentro de la ranura");
             Assert.That(r.xMax, Is.LessThanOrEqualTo(face.width + Tol), what + ": la etiqueta acaba dentro de la ranura");
+            Rect ink = InkRect(label, faceRect);
+            float air = view.Tray.SlotWidth > 64.01f ? BoosterTray.LabelSideInsetDp : BoosterTray.LabelNarrowInsetDp;
+            Assert.That(ink.xMin, Is.GreaterThanOrEqualTo(air - Tol), what + ": aire a la izquierda de la tinta (" + ink.xMin.ToString("0.0", CultureInfo.InvariantCulture) + " dp)");
+            Assert.That(face.width - ink.xMax, Is.GreaterThanOrEqualTo(air - Tol), what + ": aire a la derecha de la tinta (" + (face.width - ink.xMax).ToString("0.0", CultureInfo.InvariantCulture) + " dp)");
         }
 
         /// <summary>Ninguna palabra partida por dentro: cada línea, salvo la última, acaba donde hay un espacio.</summary>
@@ -653,7 +907,7 @@ namespace AF.Tests.PlayMode
         }
 
         // Rectángulo de rt en dp en el espacio de space (x desde su borde izquierdo, y desde su borde de abajo).
-        private static Rect DpRect(RectTransform rt, RectTransform space)
+        internal static Rect DpRect(RectTransform rt, RectTransform space)
         {
             var corners = new Vector3[4];
             rt.GetWorldCorners(corners);
@@ -661,7 +915,7 @@ namespace AF.Tests.PlayMode
         }
 
         // Tinta de un texto (textBounds) en dp en el espacio de space.
-        private static Rect InkRect(TMP_Text text, RectTransform space)
+        internal static Rect InkRect(TMP_Text text, RectTransform space)
         {
             Bounds b = text.textBounds;
             var corners = new[]

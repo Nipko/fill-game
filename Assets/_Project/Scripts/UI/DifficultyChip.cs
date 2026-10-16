@@ -465,11 +465,23 @@ namespace AF.UI
                 }
             }
 
-            // Bordes del 9-slice en px (izquierda, abajo, derecha, arriba): a lo alto, todo el sprite es borde (no se estira).
-            int hb = h / 2;
-            var border = new Vector4(Mathf.Ceil(RibbonSliceLeftDp * k), hb, Mathf.Ceil(RibbonSliceRightDp * k), h - hb);
+            // Bordes del 9-slice en px (izquierda, abajo, derecha, arriba): solo a lo ancho. A lo alto no hay bordes, así que la
+            // imagen se estira como una Simple (revisión de L4: con bordes arriba y abajo, a una escala distinta de 1 la fila
+            // central sin alto se estiraba y el remache y la cola se quedaban a tamaño nativo); quien la dibuja a la escala s
+            // pone pixelsPerUnitMultiplier = 1 / s (RibbonPpuFor) para que el remache y la cola escalen con el resto.
+            var border = new Vector4(Mathf.Ceil(RibbonSliceLeftDp * k), 0f, Mathf.Ceil(RibbonSliceRightDp * k), 0f);
             s_ribbon = ChipPaint.ToSprite(pixels, w, h, "label_ribbon_wood", border);
             return s_ribbon;
+        }
+
+        /// <summary>
+        /// <c>pixelsPerUnitMultiplier</c> de la imagen <c>Sliced</c> de la cinta dibujada a la escala <paramref name="scale"/>
+        /// (revisión de L4): los bordes del 9-slice miden su ancho nativo por la escala, así que a su ancho de siempre la cinta se
+        /// ve igual que con <c>Simple</c> a cualquier escala (el chip compacto a 0,75 o la tarjeta al 130 %).
+        /// </summary>
+        public static float RibbonPpuFor(float scale)
+        {
+            return scale > 0f ? 1f / scale : 1f;
         }
 
         /// <summary>Borde izquierdo de la cinta que no se estira (dp): el margen, la esquina redondeada y el remache.</summary>
@@ -564,6 +576,7 @@ namespace AF.UI
                 Vector2 pref = _ribbonText.GetPreferredValues(_ribbonText.text, float.PositiveInfinity, float.PositiveInfinity);
                 float ribbonW1 = RibbonWidthFor(pref.x / rs);
                 float ribbonW = ribbonW1 * rs;
+                _ribbon.pixelsPerUnitMultiplier = RibbonPpuFor(rs);
                 UiBuilder.Place(_ribbon.rectTransform, ribbonX, RibbonTopDp * rs, ribbonW, ProceduralArt.RibbonTagHeightDp * rs);
                 Rect t = RibbonTextBandFor(ribbonW1);
                 float tw = Mathf.Max(t.width * rs, Mathf.Ceil(pref.x) + 1f);

@@ -455,9 +455,12 @@ namespace AF.UI
             _scrim = UiBuilder.Image("StatusScrim", _hud, art.StatusScrim, Color.white);
             _badge = UiBuilder.Image("LevelBadge", _hud, art.BadgePlate, Color.white);
             _levelText = UiBuilder.Label("LevelTitle", _badge.transform, TextStyle.Badge, UiText.Level(1), 26f, Palette.Cream, TextAlignmentOptions.Center);
-            // Guía 3.5: 26 dp, mínimo 20, nunca se recorta. En español cabe siempre a 20 o más; en otros idiomas (y en en-XA, o
-            // con la fuente al 130 %) puede bajar hasta 12 sp, el mínimo de 02 §12, en vez de salirse de la placa (tarea L4).
-            UiBuilder.AutoSize(_levelText, UiBuilder.MinTextSp, 26f);
+            // Guía 3.5: 26 dp, mínimo 20, nunca se recorta. En español cabe siempre a 20 o más. Pendiente de rediseño (revisión
+            // de L4; pregunta al dueño): en otros idiomas (en-XA, «[Ñívél 100 ··]») no cabe en la placa ni a 20 sp, y la placa no
+            // puede crecer a lo ancho (la columna del saldo va pegada) ni a lo alto (la fila del HUD); bajar el mínimo a 12 sp
+            // contradice la guía 3.5 (D-003), así que se queda en 20 hasta que el dueño decida (PseudoLocOverflowTests lo apunta
+            // aparte, sin dar la compuerta por fallida: LocInventory.KnownIssues).
+            UiBuilder.AutoSize(_levelText, 20f, 26f);
 
             // Volver a la orilla: disco de 40 dp (familia Madera) con píldora «Reiniciar» en un área de 60 × 48 (guía 3.5).
             _restart = UiBuilder.Relief("RestartButton", _hud, art.DiscWood, OnHudRestart);
@@ -2580,6 +2583,9 @@ namespace AF.UI
 
         /// <summary>Alto de la cinta-hoja de victoria ahora (dp): 72, o hasta 88 con el título en dos líneas (guía 5.5).</summary>
         internal float VictoryRibbonHeight => _ribbonHeightDp;
+
+        /// <summary>Fila de la Cosecha del panel de victoria (tests de desbordes; tarea L4).</summary>
+        internal RectTransform VictoryHarvestRect => _harvestRow;
 
         private void EmitVictoryLayout()
         {

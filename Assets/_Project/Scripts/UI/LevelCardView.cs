@@ -1337,6 +1337,7 @@ namespace AF.UI
             UiBuilder.Place(_reward.rectTransform, seed + gap, 0f, textW, rowH);
             if (ribbon)
             {
+                _ribbon.pixelsPerUnitMultiplier = DifficultyChip.RibbonPpuFor(s);
                 UiBuilder.Place(_ribbon.rectTransform, seed + gap + textW + gapRibbon, (rowH - rh) * 0.5f, rw, rh);
 
                 // La cifra, centrada en la franja de texto de la cinta (RibbonTagTextDp o, en la cinta alargada, entre el clavo y

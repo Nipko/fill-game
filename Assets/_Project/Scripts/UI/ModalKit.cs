@@ -376,6 +376,22 @@ namespace AF.UI
         // Interlineado de la etiqueta de un CTA en dos líneas, en centésimas de em (TextMeshPro) [P].
         private const float CtaTwoLinesSpacing = -20f;
 
+        /// <summary>
+        /// Estira a lo alto el relieve de un botón hasta que su cara mida <paramref name="faceDp"/> dp, y nunca menos de lo que lo
+        /// estira la escala de texto (<see cref="StretchForTextScale"/>): para los botones cuya etiqueta necesita más cara que esa
+        /// (Puñado y Balsa con la escala de texto; revisión de L4). Quien lo llama coloca después el botón con <see cref="Place"/>.
+        /// </summary>
+        public static void StretchToFace(ReliefParts cta, float faceDp)
+        {
+            float k = Mathf.Max(1f, UiBuilder.TextScale);
+            if (cta.Sprites.FaceHeightDp > 0f)
+            {
+                k = Mathf.Max(k, faceDp / cta.Sprites.FaceHeightDp);
+            }
+
+            StretchTo(cta, k);
+        }
+
         // Estira el relieve del botón a k veces el alto de sus sprites (1: el de siempre).
         private static void StretchTo(ReliefParts cta, float k)
         {
