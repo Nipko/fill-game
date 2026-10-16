@@ -130,11 +130,49 @@ namespace AF.Audio
         Normal = 2,
     }
 
+    /// <summary>Estado de la música para la sonda <c>AF_STATE music</c> (tarea AU2).</summary>
+    public readonly struct MusicReport
+    {
+        /// <summary>Crea el estado.</summary>
+        public MusicReport(int world, int layers, bool night, bool ducked, bool menu)
+        {
+            World = world;
+            Layers = layers;
+            Night = night;
+            Ducked = ducked;
+            Menu = menu;
+        }
+
+        /// <summary>Mundo del lecho (0 = ninguno: el tema de menú o silencio).</summary>
+        public int World { get; }
+
+        /// <summary>Capas de percusión pedidas.</summary>
+        public int Layers { get; }
+
+        /// <summary>Variante nocturna (Muy difícil).</summary>
+        public bool Night { get; }
+
+        /// <summary>El lecho y el ambiente bajan 6 dB (toada o modal).</summary>
+        public bool Ducked { get; }
+
+        /// <summary>Suena el tema de menú.</summary>
+        public bool Menu { get; }
+
+        /// <summary>Mismo estado.</summary>
+        public bool SameAs(in MusicReport other)
+        {
+            return World == other.World && Layers == other.Layers && Night == other.Night && Ducked == other.Ducked && Menu == other.Menu;
+        }
+    }
+
     /// <summary>
     /// Reglas de mezcla de 07 §9.4 y 02 §4, sin motor: qué suena y a qué ganancia en cada momento. Sonido y Música se apagan por
     /// separado y al momento; el modo silencio del teléfono (y el de vibración) calla los efectos y la música [P: también calla
     /// la música]; en silencio total tampoco vibra; durante un anuncio se calla todo y al terminar vuelve con un fundido de
-    /// <see cref="AdFadeMs"/>; el lecho baja <see cref="DuckDb"/> durante la toada y los modales. Sin asignaciones.
+    /// <see cref="AdFadeMs"/>; el lecho baja <see cref="DuckDb"/> durante la toada y los modales. Desde AU2 también guarda qué
+    /// música y qué ambiente se piden (<see cref="SetMusic"/>, <see cref="SetMenuMusic"/> y <see cref="SetAmbient"/>), lleva el
+    /// reloj de la fauna y dice cuándo cambia la sonda de la música (<see cref="TakeMusicReport"/>). El ambiente va con el
+    /// ajuste Música y baja con la misma atenuación [P]. Sin asignaciones.
     /// </summary>
     public sealed class AudioMix
     {
@@ -149,6 +187,9 @@ namespace AF.Audio
 
         private float _adFade = 1f;
         private float _toadaLeftMs;
+        private FaunaClock _fauna;
+        private MusicReport _reported;
+        private bool _hasReported;
 
         /// <summary>Ajustes de Ajustes.</summary>
         public SoundSettings Settings { get; set; } = SoundSettings.Defaults;
@@ -182,6 +223,103 @@ namespace AF.Audio
 
         /// <summary>Ganancia lineal de <see cref="DuckDb"/>.</summary>
         public static float DuckGain => (float)AudioAnalysis.FromDb(DuckDb);
+
+        /// <summary>Mundo del lecho pedido (0 = ninguno).</summary>
+        public int MusicWorld { get; private set; }
+
+        /// <summary>Capas de percusión pedidas (0-<see cref="AudioConfig.MusicPercussionLayersMax"/>).</summary>
+        public int MusicLayers { get; private set; }
+
+        /// <summary>Se pidió la variante nocturna del lecho (Muy difícil).</summary>
+        public bool MusicNight { get; private set; }
+
+        /// <summary>Se pidió el tema de menú (inicio).</summary>
+        public bool MusicMenu { get; private set; }
+
+        /// <summary>Mundo del ambiente pedido (0 = ninguno).</summary>
+        public int AmbientWorld { get; private set; }
+
+        /// <summary>El nivel tiene lluvia.</summary>
+        public bool AmbientRain { get; private set; }
+
+        /// <summary>El ambiente se puede oír ahora [P: va con el ajuste Música, como la música].</summary>
+        public bool AmbientAudible => MusicAudible;
+
+        /// <summary>Ganancia del ambiente (0-1): la de la música, con su fundido y su atenuación.</summary>
+        public float AmbientGain => MusicGain;
+
+        /// <summary>Ganancia de un animal sobre el pico de su efecto (<see cref="AmbientPlan.FaunaGainDb"/>).</summary>
+        public float FaunaGain => AmbientGain * (float)AudioAnalysis.FromDb(AmbientPlan.FaunaGainDb);
+
+        /// <summary>Lo que falta para el próximo animal (ms; tests).</summary>
+        public float FaunaLeftMs => _fauna.LeftMs;
+
+        /// <summary>Estado de la música de ahora para la sonda.</summary>
+        public MusicReport CurrentMusic => new MusicReport(MusicWorld, MusicLayers, MusicNight, Ducked, MusicMenu);
+
+        /// <summary>
+        /// Pide el lecho del mundo <paramref name="world"/> (0 = silencio) con <paramref name="layers"/> capas de percusión
+        /// (recortadas a 0-3) y, con <paramref name="night"/>, su variante nocturna.
+        /// </summary>
+        public void SetMusic(int world, int layers, bool night)
+        {
+            MusicWorld = Math.Max(0, world);
+            MusicLayers = MusicWorld > 0 ? Math.Max(0, Math.Min(AudioConfig.MusicPercussionLayersMax, layers)) : 0;
+            MusicNight = MusicWorld > 0 && night;
+            MusicMenu = false;
+        }
+
+        /// <summary>Pide el tema de menú.</summary>
+        public void SetMenuMusic()
+        {
+            MusicWorld = 0;
+            MusicLayers = 0;
+            MusicNight = false;
+            MusicMenu = true;
+        }
+
+        /// <summary>
+        /// Pide el ambiente del mundo <paramref name="world"/> (0 = ninguno), con o sin lluvia, y arranca el reloj de su fauna
+        /// sembrado con el nivel <paramref name="level"/>.
+        /// </summary>
+        public void SetAmbient(int world, bool rain, int level)
+        {
+            AmbientWorld = Math.Max(0, world);
+            AmbientRain = AmbientWorld > 0 && rain;
+            _fauna.Reset(AmbientWorld, level);
+        }
+
+        /// <summary>
+        /// Avanza el reloj de la fauna <paramref name="dtMs"/> ms (parado durante un anuncio y sin ambiente): true si toca un
+        /// animal (<paramref name="id"/>). Quien lo llama lo hace sonar solo si <see cref="AmbientAudible"/>.
+        /// </summary>
+        public bool AdvanceFauna(float dtMs, out SfxId id)
+        {
+            if (AdActive || AmbientWorld == 0)
+            {
+                id = default;
+                return false;
+            }
+
+            return _fauna.Advance(dtMs, out id);
+        }
+
+        /// <summary>
+        /// La sonda <c>AF_STATE music</c> cambió desde la última vez que se tomó (la primera vez, siempre): devuelve el estado
+        /// nuevo en <paramref name="report"/> y lo da por escrito.
+        /// </summary>
+        public bool TakeMusicReport(out MusicReport report)
+        {
+            report = CurrentMusic;
+            if (_hasReported && report.SameAs(_reported))
+            {
+                return false;
+            }
+
+            _reported = report;
+            _hasReported = true;
+            return true;
+        }
 
         /// <summary>Empieza o termina un anuncio: empieza callando todo; al terminar, el fundido arranca desde 0.</summary>
         public void SetAdActive(bool active)

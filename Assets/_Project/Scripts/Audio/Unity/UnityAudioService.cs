@@ -12,13 +12,14 @@ namespace AF.Audio.Unity
     /// Audio provisional por código en el juego (tarea AU1; D-026): solo el módulo de audio integrado de Unity
     /// (<c>com.unity.modules.audio</c>), sin paquetes. Al arrancar, un hilo de trabajo genera todo el PCM (<see cref="AudioBank"/>)
     /// y el hilo principal solo crea los clips (<c>AudioClip.Create</c> y <c>SetData</c>; <c>AF_PERF audio_build</c>). Suena con un
-    /// pool de <see cref="OneShotVoices"/> fuentes para los efectos (con un tope por efecto: 6 tintes a la vez, 07 §9.2), tres para
-    /// el bucle del chorro (su tono sigue al nivel del destino) y tres para el lecho del mundo y sus capas, sincronizadas. Las
-    /// reglas de mezcla (ajustes al momento, modo silencio, anuncios con fundido de 0,5 s, atenuación del lecho) son las de
-    /// <see cref="AudioMix"/>. Vive en un objeto que sobrevive a las recargas de escena (la reconstrucción por idioma) y pone un
-    /// <c>AudioListener</c> si la escena no tiene. Sin asignaciones por efecto.
+    /// pool de <see cref="OneShotVoices"/> fuentes para los efectos (con un tope por efecto: 6 tintes a la vez, 07 §9.2) y tres para
+    /// el bucle del chorro (su tono sigue al nivel del destino). La música y el ambiente (tarea AU2) van en
+    /// <c>UnityAudioService.Background.cs</c>. Las reglas de mezcla (ajustes al momento, modo silencio, anuncios con fundido de
+    /// 0,5 s, atenuación del lecho) son las de <see cref="AudioMix"/>. Vive en un objeto que sobrevive a las recargas de escena (la
+    /// reconstrucción por idioma) y pone un <c>AudioListener</c> si la escena no tiene. Sin asignaciones por efecto ni por
+    /// fotograma.
     /// </summary>
-    public sealed class UnityAudioService : MonoBehaviour, IAudioService
+    public sealed partial class UnityAudioService : MonoBehaviour, IAudioService
     {
         /// <summary>Fuentes para los efectos sueltos.</summary>
         public const int OneShotVoices = 12;
@@ -31,9 +32,6 @@ namespace AF.Audio.Unity
 
         /// <summary>Fundido de entrada y salida del chorro (ms).</summary>
         public const float PourFadeMs = 30f;
-
-        /// <summary>Fundido de las capas del lecho (ms).</summary>
-        public const float LayerFadeMs = 1000f;
 
         /// <summary>Cada cuánto se lee el modo del timbre (s).</summary>
         public const float RingerPollSeconds = 2f;
@@ -49,18 +47,10 @@ namespace AF.Audio.Unity
         private readonly float[] _pourVolume = new float[PourVoices];
         private readonly bool[] _pourStopping = new bool[PourVoices];
         private readonly float[] _pourPitch = new float[PourVoices];
-        private readonly AudioSource[] _music = new AudioSource[MusicSynth.LayerCount];
-        private readonly float[] _layerVolume = new float[MusicSynth.LayerCount];
 
         private AudioClip?[] _clips = Array.Empty<AudioClip?>();
         private AudioBank? _bank;
         private Task<AudioBank>? _bankTask;
-        private Task<float[][]>? _musicTask;
-        private int _musicTaskWorld;
-        private int _musicWorld;
-        private int _musicWanted;
-        private int _musicLayers;
-        private AudioClip?[] _musicClips = new AudioClip?[MusicSynth.LayerCount];
         private bool _adPaused;
         private float _ringerPoll;
         private IHaptics _haptics = NullHaptics.Instance;
@@ -111,12 +101,7 @@ namespace AF.Audio.Unity
                 _pourKey[i] = -1;
             }
 
-            for (int i = 0; i < MusicSynth.LayerCount; i++)
-            {
-                _music[i] = NewSource("Music" + i);
-                _music[i].loop = true;
-            }
-
+            AwakeBackground();
             _haptics = AndroidHaptics.ForPlatform();
             _ringer = AndroidRinger.ForPlatform();
             _mix.Ringer = _ringer.Read();
@@ -340,10 +325,7 @@ namespace AF.Audio.Unity
 
             if (!settings.Music)
             {
-                for (int i = 0; i < _music.Length; i++)
-                {
-                    _music[i].volume = 0f;
-                }
+                SilenceBackground(); // Música apagada: el lecho, sus capas y el ambiente se callan en el acto
             }
         }
 
@@ -354,21 +336,13 @@ namespace AF.Audio.Unity
             if (active)
             {
                 StopEffects();
-                for (int i = 0; i < _music.Length; i++)
-                {
-                    _music[i].Pause();
-                }
-
+                PauseBackground(true);
                 _adPaused = true;
             }
             else if (_adPaused)
             {
                 _adPaused = false;
-                for (int i = 0; i < _music.Length; i++)
-                {
-                    _music[i].volume = 0f;
-                    _music[i].UnPause();
-                }
+                PauseBackground(false); // vuelve desde 0 con el fundido de 0,5 s (AudioMix.MusicGain)
             }
         }
 
@@ -378,16 +352,17 @@ namespace AF.Audio.Unity
             _mix.ModalDuck = on;
         }
 
-        /// <inheritdoc />
-        public void SetMusic(int world, int layers)
-        {
-            _musicWanted = world;
-            _musicLayers = layers;
-        }
-
-        /// <inheritdoc />
+        /// <summary>
+        /// Lo de cada fotograma (lo llama <c>Update</c> con el tiempo real; los tests pueden llamarlo para medir que no asigna):
+        /// fundidos, clips que terminan de generarse, modo silencio, chorros, música, ambiente y fauna.
+        /// </summary>
         public void Tick(float dtMs)
         {
+            _mix.Tick(dtMs);
+            CompleteBank();
+            PollRinger(dtMs);
+            UpdateVoices(dtMs);
+            UpdateBackground(dtMs);
         }
 
         private void StopEffects()
@@ -407,12 +382,7 @@ namespace AF.Audio.Unity
 
         private void Update()
         {
-            float dtMs = Time.unscaledDeltaTime * 1000f;
-            _mix.Tick(dtMs);
-            CompleteBank();
-            PollRinger(dtMs);
-            UpdateVoices(dtMs);
-            UpdateMusic(dtMs);
+            Tick(Time.unscaledDeltaTime * 1000f);
         }
 
         // Los clips se crean en el hilo principal en cuanto el hilo de trabajo termina el PCM (AF_PERF audio_build).
@@ -499,73 +469,6 @@ namespace AF.Audio.Unity
                     _pourStopping[i] = false;
                 }
             }
-        }
-
-        private void UpdateMusic(float dtMs)
-        {
-            if (_musicWanted != _musicWorld && _musicTask == null && _musicWanted > 0)
-            {
-                int world = _musicWanted;
-                _musicTaskWorld = world;
-                _musicTask = Task.Run(() => MusicSynth.RenderLayers(world));
-            }
-            else if (_musicWanted == 0 && _musicWorld != 0)
-            {
-                for (int i = 0; i < _music.Length; i++)
-                {
-                    _music[i].Stop();
-                }
-
-                _musicWorld = 0;
-            }
-
-            if (_musicTask != null && _musicTask.IsCompleted)
-            {
-                Task<float[][]> task = _musicTask;
-                _musicTask = null;
-                if (!task.IsFaulted)
-                {
-                    StartMusic(_musicTaskWorld, task.Result);
-                }
-            }
-
-            if (_musicWorld == 0 || _adPaused)
-            {
-                return;
-            }
-
-            float gain = _mix.MusicGain;
-            float step = dtMs / LayerFadeMs;
-            for (int l = 0; l < MusicSynth.LayerCount; l++)
-            {
-                float target = l == 0 || l <= _musicLayers ? 1f : 0f;
-                _layerVolume[l] = target > _layerVolume[l] ? Math.Min(target, _layerVolume[l] + step) : Math.Max(target, _layerVolume[l] - step);
-                _music[l].volume = _layerVolume[l] * gain;
-            }
-        }
-
-        private void StartMusic(int world, float[][] layers)
-        {
-            double at = AudioSettings.dspTime + 0.1;
-            for (int l = 0; l < MusicSynth.LayerCount; l++)
-            {
-                AudioSource source = _music[l];
-                source.Stop();
-                AudioClip? old = _musicClips[l];
-                AudioClip clip = AudioClip.Create("music_w" + world + "_" + l, layers[l].Length, 1, MusicSynth.SampleRate, false);
-                clip.SetData(layers[l], 0);
-                _musicClips[l] = clip;
-                source.clip = clip;
-                source.volume = 0f;
-                _layerVolume[l] = 0f;
-                source.PlayScheduled(at); // las tres capas, a la vez y en el mismo punto del bucle
-                if (old != null)
-                {
-                    Destroy(old);
-                }
-            }
-
-            _musicWorld = world;
         }
     }
 }

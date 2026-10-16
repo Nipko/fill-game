@@ -34,8 +34,20 @@ namespace AF.Audio
         /// <summary>Un modal del nivel está abierto: el lecho baja 6 dB.</summary>
         void SetModalDuck(bool on);
 
-        /// <summary>El lecho del mundo <paramref name="world"/> (0 = ninguno) con <paramref name="layers"/> capas de percusión.</summary>
-        void SetMusic(int world, int layers);
+        /// <summary>
+        /// El lecho del mundo <paramref name="world"/> (0 = ninguno) con <paramref name="layers"/> capas de percusión y, con
+        /// <paramref name="night"/>, su variante nocturna (Muy difícil; tarea AU2).
+        /// </summary>
+        void SetMusic(int world, int layers, bool night);
+
+        /// <summary>El tema de menú del inicio (tarea AU2).</summary>
+        void SetMenuMusic();
+
+        /// <summary>
+        /// El ambiente del mundo <paramref name="world"/> (0 = ninguno), con o sin lluvia, y la fauna sembrada con el nivel
+        /// <paramref name="level"/> (tarea AU2; 07 §9.1).
+        /// </summary>
+        void SetAmbient(int world, bool rain, int level);
 
         /// <summary>Lo de cada fotograma (fundidos, sondeo del modo silencio).</summary>
         void Tick(float dtMs);
@@ -82,6 +94,15 @@ namespace AF.Audio
         /// memoria PCM (KiB).
         /// </summary>
         void Build(double workerMs, double mainMs, int clips, long pcmKiB);
+
+        /// <summary>
+        /// Cambió la música (<c>AF_STATE music</c>, tarea AU2): mundo del lecho (0 = ninguno), capas de percusión, variante
+        /// nocturna, atenuación de 6 dB y tema de menú.
+        /// </summary>
+        void Music(in MusicReport report);
+
+        /// <summary>Se pidió el ambiente de un nivel (<c>AF_STATE ambient</c>, tarea AU2): su mundo (0 = ninguno) y si llueve.</summary>
+        void Ambient(int world, bool rain, int level);
     }
 
     /// <summary>Servicio mudo: el de partida, antes de que el arranque instale uno (y el de los tests que no miran el audio).</summary>
@@ -135,7 +156,17 @@ namespace AF.Audio
         }
 
         /// <inheritdoc />
-        public void SetMusic(int world, int layers)
+        public void SetMusic(int world, int layers, bool night)
+        {
+        }
+
+        /// <inheritdoc />
+        public void SetMenuMusic()
+        {
+        }
+
+        /// <inheritdoc />
+        public void SetAmbient(int world, bool rain, int level)
         {
         }
 
@@ -267,10 +298,29 @@ namespace AF.Audio
             s_service.SetModalDuck(on);
         }
 
-        /// <summary>El lecho del mundo <paramref name="world"/> con sus capas de percusión.</summary>
-        public static void SetMusic(int world, int layers)
+        /// <summary>
+        /// El lecho del mundo <paramref name="world"/> con sus capas de percusión y, con <paramref name="night"/>, la variante
+        /// nocturna (Muy difícil).
+        /// </summary>
+        public static void SetMusic(int world, int layers, bool night)
         {
-            s_service.SetMusic(world, Math.Max(0, layers));
+            s_service.SetMusic(world, Math.Max(0, layers), night);
+        }
+
+        /// <summary>
+        /// El ambiente del nivel <paramref name="level"/> del mundo <paramref name="world"/> (07 §9.1): el agua del mundo, la lluvia
+        /// si le toca (<see cref="AmbientPlan.HasRain"/> con <c>audio_ambient_rain_scale</c>) y su fauna.
+        /// </summary>
+        public static void LevelAmbient(int world, int level)
+        {
+            s_service.SetAmbient(world, AmbientPlan.HasRain(level, world, AudioConfig.AmbientRainScale), level);
+        }
+
+        /// <summary>Se abre el inicio (o una pantalla fuera del nivel): el tema de menú, sin ambiente de río (tarea AU2).</summary>
+        public static void Home()
+        {
+            s_service.SetMenuMusic();
+            s_service.SetAmbient(0, false, 0);
         }
     }
 }

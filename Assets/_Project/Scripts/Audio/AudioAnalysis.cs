@@ -57,8 +57,21 @@ namespace AF.Audio
             return FractionAbove(re, im, hz);
         }
 
+        /// <summary><see cref="EnergyFractionAbove(float[], double)"/> de un búfer a <paramref name="sampleRate"/> Hz.</summary>
+        public static double EnergyFractionAbove(float[] buf, double hz, int sampleRate)
+        {
+            Spectrum(buf, out double[] re, out double[] im);
+            return FractionAbove(re, im, hz, sampleRate);
+        }
+
         /// <summary>Fracción de energía por encima de <paramref name="hz"/> de un espectro ya calculado (<see cref="Spectrum"/>).</summary>
         public static double FractionAbove(double[] re, double[] im, double hz)
+        {
+            return FractionAbove(re, im, hz, Dsp.SampleRate);
+        }
+
+        /// <summary><see cref="FractionAbove(double[], double[], double)"/> de un búfer a <paramref name="sampleRate"/> Hz.</summary>
+        public static double FractionAbove(double[] re, double[] im, double hz, int sampleRate)
         {
             int n = re.Length;
             double total = 0.0;
@@ -69,7 +82,7 @@ namespace AF.Audio
                 double w = k == 0 || k == n / 2 ? 1.0 : 2.0;
                 double p = ((re[k] * re[k]) + (im[k] * im[k])) * w;
                 total += p;
-                if (k * (double)Dsp.SampleRate / n >= hz)
+                if (k * (double)sampleRate / n >= hz)
                 {
                     above += p;
                 }
@@ -207,6 +220,78 @@ namespace AF.Audio
             }
 
             return seam / localStep;
+        }
+
+        /// <summary>
+        /// Envolvente de un bucle: el RMS de cada ventana de <paramref name="windowSec"/> s, en dB (−200 con silencio). Las
+        /// ventanas parten el bucle entero (la última, más corta si no cabe).
+        /// </summary>
+        public static double[] EnvelopeDb(float[] loop, int sampleRate, double windowSec)
+        {
+            int w = Math.Max(1, (int)Math.Round(windowSec * sampleRate));
+            int count = (loop.Length + w - 1) / w;
+            var env = new double[count];
+            for (int k = 0; k < count; k++)
+            {
+                double s = 0.0;
+                int end = Math.Min(loop.Length, (k + 1) * w);
+                for (int i = k * w; i < end; i++)
+                {
+                    s += (double)loop[i] * loop[i];
+                }
+
+                double rms = Math.Sqrt(s / Math.Max(1, end - (k * w)));
+                env[k] = rms > 0.0 ? 20.0 * Math.Log10(rms) : -200.0;
+            }
+
+            return env;
+        }
+
+        /// <summary>
+        /// «Respiración» de un bucle (dB): la desviación típica de su envolvente (<see cref="EnvelopeDb"/>, ventanas de
+        /// <paramref name="windowSec"/> s) menos su media móvil circular de <paramref name="smoothSec"/> s, es decir, lo que el
+        /// nivel sube y baja más deprisa que <paramref name="smoothSec"/>. Un ruido estacionario da poco (su propio grano); el agua
+        /// del laboratorio, que se regeneraba cada 1,05 s con una envolvente seno, mucho. El oleaje lento no cuenta.
+        /// </summary>
+        public static double FastWobbleDb(float[] loop, int sampleRate, double windowSec, double smoothSec)
+        {
+            double[] env = EnvelopeDb(loop, sampleRate, windowSec);
+            int count = env.Length;
+            int half = Math.Max(1, (int)Math.Round(smoothSec / windowSec / 2.0));
+            double sum = 0.0;
+            double sum2 = 0.0;
+            for (int k = 0; k < count; k++)
+            {
+                double avg = 0.0;
+                for (int j = -half; j <= half; j++)
+                {
+                    avg += env[((k + j) % count + count) % count];
+                }
+
+                double d = env[k] - (avg / ((2 * half) + 1));
+                sum += d;
+                sum2 += d * d;
+            }
+
+            double mean = sum / count;
+            return Math.Sqrt(Math.Max(0.0, (sum2 / count) - (mean * mean)));
+        }
+
+        /// <summary>
+        /// Mayor subida de nivel entre dos ventanas seguidas de <paramref name="windowSec"/> s (dB), con la costura incluida: un
+        /// ataque (una nota pulsada, un golpe) sube muchos dB de una ventana a la siguiente; un pad que se funde, casi nada.
+        /// </summary>
+        public static double MaxRiseDb(float[] loop, int sampleRate, double windowSec)
+        {
+            double[] env = EnvelopeDb(loop, sampleRate, windowSec);
+            double rise = 0.0;
+            for (int k = 0; k < env.Length; k++)
+            {
+                double prev = env[(k - 1 + env.Length) % env.Length];
+                rise = Math.Max(rise, env[k] - prev);
+            }
+
+            return rise;
         }
 
         /// <summary>Huella FNV-1a de 64 bits de las muestras (sus bits exactos): la misma síntesis da la misma huella.</summary>

@@ -4,7 +4,7 @@
 
 ## Cómo usar esta lista
 
-El juego necesita unos 61 efectos, el ambiente de 13 mundos (9 en la 1.0) y unas 20 piezas de música (unas 60 contando sus capas). Desde el 2026-10-16 suena con efectos y un lecho de música provisionales hechos por código (sección 9; D-026).
+El juego necesita unos 61 efectos, el ambiente de 13 mundos (9 en la 1.0) y unas 20 piezas de música (unas 60 contando sus capas). Desde el 2026-10-16 suena con efectos, música adaptativa y ambiente provisionales hechos por código (secciones 5, 6 y 9; D-026; tareas AU1 y AU2).
 
 - Cada fila lleva el **ID** que usará el código, **cuándo suena**, **cómo debe sonar** según el GDD y su **duración**.
 - La columna **Tu propuesta** recoge la dirección acústica aprobada: **ASMR amazónico fresco de app** (agua cristalina en vidrio, marimba de chonta y kalimba de calabaza para las notas, maracá, fibra y semillas reales), siguiendo la dinámica medida en *Magic Sort!* (gestos repetidos muy suaves y cortos a −38/−27 dBFS, sellado y premios con brillo y pegada a −17/−14 dBFS, cero barro sonoro).
@@ -149,6 +149,13 @@ Cada mundo tiene un fondo sonoro de 3 capas que se mezclan solas: el agua del r�
 
 Piezas que hay que grabar o comprar: unas 13 capas de agua, 2-3 lluvias (fina, media, fuerte) y unos 25 animales. La piha, el boto, la nutria, el hoatzín y las ranas necesitan grabaciones con licencia comercial.
 
+**Estado en el cliente (tarea AU2, 2026-10-16): ambiente provisional por código** (`AmbientSynth` y `AmbientPlan`, en `AF.Audio`):
+
+- **Agua:** un bucle de 20 s por mundo (1-9) con el carácter de la tabla: dos bandas de ruido filtrado (el río y su brillo), la marea del 1 (vaivén de 10 s), las olas del 2 (6,7 s), las dos corrientes del 3, el goteo del 4, el espejo del 5 con alguna onda, la laguna del 6, la cascada lejana del 8 (sin agudos) y el siseo de vapor del 9. Se cierra con un fundido cruzado de 2 s de potencia constante: sin costura y sin la «respiración» de ~1 Hz del simulador del laboratorio, que regeneraba el ruido cada 1,05 s. Los mundos 10-13 suenan como el 1 hasta tener su perfil [P].
+- **Lluvia:** un bucle de 10 s (siseo a 2,4 kHz, llovizna fina y alguna gota gruesa) que entra con un fundido de 1 s en los niveles que la tienen: un número fijo de cada nivel por debajo de la probabilidad de su mundo (la tabla de arriba) por `audio_ambient_rain_scale` (1,0; 08 §9). El mismo nivel tiene siempre la misma lluvia.
+- **Animales:** uno cada 20-45 s con los efectos provisionales que encajan, 10 dB por debajo de su pico: aleteo (`sfx_confetti`) por las garzas del 1, los pericos del 4, los guacamayos del 3 y el 7 y las aves del 8; la exhalación de Rosa (`sfx_map_rosa`) en el 2, los botos del 3, el pirarucú del 5 y el paiche del 9. Nunca la piha, que solo va en el banner. Oriente (6) no tiene ninguno hasta grabar ranas, grillos y búho [P].
+- **Nivel y mezcla [P]:** agua a −39 dBFS RMS y lluvia a −43, unos 6 dB por debajo del lecho de música (07 §9.4: −26 frente a −20 LUFS). El ambiente va con el ajuste **Música** y baja 6 dB con ella durante la toada y los modales [P]; en el inicio no hay río.
+
 ## 6. Música
 
 La música crece con el jugador: un lecho tranquilo de 60-90 s en bucle, sin ritmo marcado, y una percusión suave que gana una capa cada vez que se sella el 25 % de las cuias (sube el volumen, nunca el tempo). En los niveles Muy difíciles el lecho pasa a su versión nocturna, más grave; nunca música tensa de reloj.
@@ -170,6 +177,16 @@ La música crece con el jugador: un lecho tranquilo de 60-90 s en bucle, sin rit
 | Toada de victoria | Al ganar | Percusión y coro sin letra, 2-3 s (es `sfx_win_toada`) | **Misma pieza que `sfx_win_toada`**, en la tonalidad del lecho (Do mayor / La menor pentatónico) para que funda sin choque armónico con cualquier mundo. |
 | Tema de menú | Inicio, Mercado, pantalla de la Crecida | Cumbia amazónica ligera a 90-100 BPM: Farfisa y guitarra con wah-wah suave | **Melodía luminosa, hospitalaria y memorable a 94 BPM**: guitarra cristalina con wah suave, bajo redondo, maracá/güiro de calabaza y órgano Farfisa cálido que invita a viajar por el río. |
 | Stingers | Momentos cortos (banner de mundo, llegada, comodines) | Golpes musicales de 1-2 s; lista por cerrar | **5 stingers cerrados [P]:** (1) *Llegada a parada (`10k`)*: acorde de guitarra + marimba de agua (1,2 s); (2) *Banner de mundo*: acorde abierto de bienvenida bajo la piha (1,8 s); (3) *Hito de la Crecida (3/6/10)*: subida festiva de carimbó/cumbia (1,2 s); (4) *El río bajó*: suspiro armónico descendente-ascendente de alivio (1,0 s); (5) *Serie de fruta completada (20/20)*: florecimiento de marimba y flauta (1,2 s). |
+
+**Estado en el cliente (tarea AU2, 2026-10-16): música adaptativa provisional por código** (`MusicSynth` y `MenuThemeSynth`, en `AF.Audio`):
+
+- **Lecho de cada mundo:** un pad sostenido de 63 s en bucle, sin ataques ni pulso: seis acordes de la escala del mundo del laboratorio (la raíz y las notas dos y cuatro pasos más arriba, más el bajo), uno cada 10,5 s, que se funden en 4 s con potencia constante. Cada nota suma sus armónicos 1, 2 y 4 con un número entero de ciclos por bucle, así no hay costura ni batidos entre notas. Sustituye al lecho de AU1, que eran notas de marimba cada 1,05 s y marcaban pulso.
+- **Capas de percusión:** las del laboratorio (maracá del 25 %, madera del 50 % y tambor grave del 75 %), cada una en un bucle de 10,5 s que divide el del lecho y arranca a la vez. Entran y salen con un fundido de 1 s según las cuias selladas (la primera al sellar la primera cuia y otra cada 25 %, 07 §9.3), hasta `audio_music_percussion_layers` (2 por defecto; 08 §9 admite 0-3).
+- **Variante nocturna (Muy difícil):** el mismo pad una octava más grave y sin nada por encima de 1,3 kHz; el peso pasa al segundo armónico para que el altavoz del teléfono la siga dando. Las capas no cambian: 07 §9.3 pide la variante del lecho, y las maderas una octava más graves ya no salen por ese altavoz.
+- **Tema de menú (inicio):** un bucle de 8 compases a 94 BPM: pad Do, Sol, La menor y Fa, bajo de cumbia en el 1 y el 3, maracá en corcheas con el acento a contratiempo y una frase de marimba en la pentatónica de Do. El Mercado aún no existe en el cliente: cuando exista, usa el mismo tema.
+- **Mezcla [P]:** toda la música con un pico de −20 dBFS con todas las capas (el lecho, a unos −33 dBFS RMS). Al cambiar de pieza (inicio, otro mundo o la variante nocturna), lo que suena se funde en 0,8 s. Baja 6 dB durante la toada y los modales, se calla durante los anuncios y vuelve en 0,5 s, se calla en el modo silencio del teléfono y el ajuste Música la apaga al momento.
+- **Coste (Editor del escritorio x64):** se genera en un hilo de trabajo al pedirla por primera vez. El lecho y sus capas de un mundo tardan unos 170 ms y ocupan 5.426 KiB en float (1,39 millones de muestras); el tema de menú, unos 340 ms y 1.759 KiB; el agua de un mundo, unos 10 ms y 1.723 KiB; la lluvia, 861 KiB. Solo se guarda lo último de cada clase. En el teléfono, por medir.
+- La sonda `AF_STATE music` y `AF_STATE ambient` está en `docs/dev/prototipo-v0.md`.
 
 **Prohibido en el encargo al compositor:** ícaros, flautas de Yuruparí, cantos rituales, quena o zampoña fuera del mundo 13, y melodías o colores de Garantido y Caprichoso (Parintins). Ninguna voz hablada.
 
@@ -224,15 +241,9 @@ Desde el 2026-10-16 el juego suena con los 61 efectos del laboratorio, portados 
 - **Bajar la selección no suena:** 02 §4.1 deja la deselección sin audio («Baja a su sitio | 100 ms | ease-in | — | —») y manda el GDD. La variante grave de la sección 1 queda como propuesta para el dueño; si la aprueba, se anota en 02 §4.1 y en D-026 y vuelve con su clip.
 - **`sfx_pour_loop`:** un bucle continuo de 1,2 s, sin costura (su salto no supera el de los 5 ms de cada lado), que suena mientras cae el chorro. Su tono sigue al nivel de la cuia de destino, con la regla de la tabla: nivel = (dosis − 1) / (capacidad − 1), de 380 Hz con 1 dosis (o vacía) a 920 Hz llena (4 dosis en una cuia de 4).
 
-**Música provisional:** el lecho del simulador del laboratorio (notas largas de marimba en la escala del mundo), con dos capas de percusión (`audio_music_percussion_layers` = 2, 08 §9):
+**Música y ambiente provisionales:** desde la tarea AU2, el lecho es un pad sostenido sin pulso con hasta tres capas de percusión, variante nocturna en Muy difícil y un tema de menú en el inicio, y cada mundo tiene su agua, su lluvia por nivel y su fauna. Estado y cifras en las secciones 5 y 6.
 
-- la primera entra al sellar la primera cuia, y la segunda con el 25 % de las cuias selladas;
-- la mezcla tiene un pico de −20 dBFS [P], por debajo de los premios;
-- baja 6 dB durante la toada y con el modal.
-
-La variante nocturna, el tema de menú y el ambiente de cada mundo (sección 5) quedan para el compositor.
-
-**Coste (medido en el Editor del escritorio x64, 2026-10-16):** los 89 clips (61 efectos, más las 14 notas de `sfx_select` y de `sfx_tint`) se generan en 469,8 ms en un hilo de trabajo y su creación cuesta 2,2 ms en el hilo principal (`AF_PERF audio_build`; objetivo < 50 ms). Ocupan 6.249 KiB de PCM en float (unos 1,60 millones de muestras); el lecho de un mundo, 2.713 KiB más (3 capas de 10,5 s a 22,05 kHz), y solo se guarda el del mundo que suena. En el teléfono, por medir.
+**Coste (medido en el Editor del escritorio x64, 2026-10-16):** los 89 clips (61 efectos, más las 14 notas de `sfx_select` y de `sfx_tint`) se generan en 469,8 ms en un hilo de trabajo y su creación cuesta 2,2 ms en el hilo principal (`AF_PERF audio_build`; objetivo < 50 ms). Ocupan 6.249 KiB de PCM en float (unos 1,60 millones de muestras); la música y el ambiente, aparte (secciones 5 y 6). En el teléfono, por medir.
 
 **Reglas (07 §9.4 y 02 §4):**
 

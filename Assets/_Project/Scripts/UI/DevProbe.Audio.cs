@@ -14,6 +14,12 @@ namespace AF.UI
     /// apagado, en silencio o con un anuncio delante no sale ninguno): su ID de la lista, su pico en dBFS y, en los afinados, la
     /// fruta (índice de motor 1-14).</item>
     /// <item><c>AF_STATE {"event":"haptic","t":…,"kind":"haptic_seal"}</c> en cada vibración (con Vibración apagada no sale).</item>
+    /// <item><c>AF_STATE {"event":"music","t":…,"world":3,"layers":1,"night":false,"ducked":false,"menu":false}</c> cada vez que
+    /// cambia la música (tarea AU2): el mundo del lecho (0 en el inicio, con <c>menu</c> true), las capas de percusión pedidas, la
+    /// variante nocturna de Muy difícil y la atenuación de 6 dB (toada o modal). Como <c>sfx</c>, en el Editor solo con
+    /// <see cref="AudioLinesInEditor"/>.</item>
+    /// <item><c>AF_STATE {"event":"ambient","t":…,"world":4,"rain":true,"level":95}</c> al cargar un nivel (y con world 0 al abrir
+    /// el inicio): el agua del mundo y si el nivel tiene lluvia.</item>
     /// <item><c>AF_PERF {"event":"audio_build","worker_ms":…,"main_ms":…,"clips":…,"pcm_kib":…}</c> una vez, cuando los
     /// clips quedan listos: lo que tardó el hilo de trabajo en generar el PCM, lo que pagó el hilo principal al crearlos y la
     /// memoria PCM (en float).</item>
@@ -93,6 +99,53 @@ namespace AF.UI
             sb.Append(",\"clips\":").Append(clips.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"pcm_kib\":").Append(pcmKiB.ToString(CultureInfo.InvariantCulture)).Append('}');
             Debug.Log(sb.ToString());
+        }
+
+        /// <summary>Último <c>AF_STATE music</c> escrito (tests; null sin sonda).</summary>
+        public string? LastMusicLine { get; private set; }
+
+        /// <summary>Último <c>AF_STATE ambient</c> escrito (tests; null sin sonda).</summary>
+        public string? LastAmbientLine { get; private set; }
+
+        /// <inheritdoc />
+        public void Music(in MusicReport report)
+        {
+            // Como sfx: cambia al sellar, en el bucle de juego; en el Editor solo con AudioLinesInEditor.
+            if (!AudioLinesOn)
+            {
+                return;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"music\"");
+            AppendTime(sb);
+            sb.Append(",\"world\":").Append(report.World.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"layers\":").Append(report.Layers.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"night\":").Append(report.Night ? "true" : "false");
+            sb.Append(",\"ducked\":").Append(report.Ducked ? "true" : "false");
+            sb.Append(",\"menu\":").Append(report.Menu ? "true" : "false").Append('}');
+            LastMusicLine = sb.ToString();
+            Debug.Log(LastMusicLine);
+        }
+
+        /// <inheritdoc />
+        public void Ambient(int world, bool rain, int level)
+        {
+            if (!Enabled)
+            {
+                return;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"ambient\"");
+            AppendTime(sb);
+            sb.Append(",\"world\":").Append(world.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"rain\":").Append(rain ? "true" : "false");
+            sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture)).Append('}');
+            LastAmbientLine = sb.ToString();
+            Debug.Log(LastAmbientLine);
         }
 
         // Sonido, Música y Vibración guardados, en la línea AF_STATE settings (AU1).

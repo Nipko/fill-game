@@ -101,7 +101,7 @@ namespace AF.Tests.EditMode
             Assert.That(AudioMix.PercussionLayers(8, 8, 2), Is.EqualTo(2), "audio_music_percussion_layers = 2");
             Assert.That(AudioMix.PercussionLayers(8, 8, 3), Is.EqualTo(3));
             Assert.That(AudioMix.PercussionLayers(3, 8, 0), Is.EqualTo(0));
-            Assert.That(AudioBoard.MusicPercussionLayers, Is.EqualTo(2), "08 §9");
+            Assert.That(AudioConfig.MusicPercussionLayersDefault, Is.EqualTo(2), "audio_music_percussion_layers = 2 (08 §9)");
         }
 
         [Test]

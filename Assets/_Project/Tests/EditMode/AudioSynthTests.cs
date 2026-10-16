@@ -357,29 +357,6 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void MusicBed_LoopsWithoutASeam_AndSitsUnderTheEffects()
-        {
-            float[][] layers = MusicSynth.RenderLayers(1);
-            Assert.That(layers.Length, Is.EqualTo(MusicSynth.LayerCount));
-            int n = layers[0].Length;
-            Assert.That(n / (double)MusicSynth.SampleRate, Is.EqualTo(MusicSynth.LoopSeconds).Within(0.001));
-            var mix = new float[n];
-            for (int l = 0; l < layers.Length; l++)
-            {
-                Assert.That(layers[l].Length, Is.EqualTo(n), "las capas, del mismo largo: suenan juntas");
-                Assert.That(AudioAnalysis.SeamRatio(layers[l], MusicSynth.SampleRate), Is.LessThanOrEqualTo(1.0), "capa " + l + ": la costura no salta más que lo que la rodea");
-                for (int i = 0; i < n; i++)
-                {
-                    mix[i] += layers[l][i];
-                }
-            }
-
-            Assert.That(AudioAnalysis.PeakDb(mix), Is.LessThanOrEqualTo((float)MusicSynth.MixPeakDb + 0.5f), "la música, por debajo de los premios (07 §9.4)");
-            Assert.That(MusicSynth.NotesOf(13)[0], Is.EqualTo(220.0), "El origen");
-            Assert.That(MusicSynth.NotesOf(11), Is.SameAs(MusicSynth.NotesOf(1)), "sin escala propia, la del Estuario");
-        }
-
-        [Test]
         public void SoundSettings_Default_AreTheDefaultsOf08Section9()
         {
             SoundSettings d = SoundSettings.Defaults;

@@ -935,6 +935,7 @@ namespace AF.UI
             // La pantalla de nivel se muestra antes de cargar el nivel (AppFlow llama a Load después).
             _screen?.SetVisible(screen == AppScreen.Level);
             _lobby?.Show(screen);
+            AudioScreenChanged(screen); // AU2: el tema de menú fuera del nivel (GameBootstrap.Audio.cs)
             _skipNextDelta = true;
 
             // «Jugar» con un nivel que abre mundo (11, 41, 81 y 141, en el primer intento): el arte de su banner se pinta ya en

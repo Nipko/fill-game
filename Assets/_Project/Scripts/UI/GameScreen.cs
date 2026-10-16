@@ -943,7 +943,7 @@ namespace AF.UI
             _introDelayMs = -1f;
             BuildBoard(flow);
             _levelText.text = UiText.Level(level);
-            AudioBoard.Music(WorldTable.WorldOf(level), flow.Session.Current); // AU1: el lecho del mundo
+            AudioBoard.LevelLoaded(flow.Level, flow.Session.Current); // AU1-AU2: el lecho del mundo (nocturno en Muy difícil) y su ambiente
             _pressPreview = -1;
             _shownBoard = flow.Session.Current;
             _probe.State("load", flow, int.MinValue, null);
@@ -1068,7 +1068,7 @@ namespace AF.UI
                 case TapKind.Poured:
                     SetLift(result.PreviousSelection, false);
                     EnqueuePour(flow, result.Pour);
-                    AudioBoard.Music(WorldTable.WorldOf(flow.LevelNumber), flow.Session.Current); // AU1: capas del lecho
+                    AudioBoard.Music(flow.Level, flow.Session.Current); // AU1-AU2: una capa de percusión más al sellar
                     _probe.State("pour", flow, result.Tapped, result.Pour);
                     LabelsBoardChanged(flow);
                     RevealBoardChanged(flow);
@@ -1123,7 +1123,7 @@ namespace AF.UI
             _shownBoard = after;
             _probe.State("undo", flow, int.MinValue, undone);
             AF.Audio.AudioCues.Play(AF.Audio.SfxId.Undo); // AU1: Marea
-            AudioBoard.Music(WorldTable.WorldOf(flow.LevelNumber), after); // AU1
+            AudioBoard.Music(flow.Level, after); // AU1-AU2: la Marea puede quitar una capa
             LabelsBoardChanged(flow);
             RevealBoardChanged(flow);
         }

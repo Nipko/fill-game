@@ -78,6 +78,16 @@ namespace AF.UI
             return true;
         }
 
+        // Cambio de pantalla (tarea AU2): fuera del nivel (inicio, «El río sigue creciendo», Sin canoas) suena el tema de menú y no
+        // hay ambiente de río; al entrar en el nivel, el lecho y el ambiente los pide la carga del nivel (AudioBoard.LevelLoaded).
+        private static void AudioScreenChanged(AppScreen screen)
+        {
+            if (screen != AppScreen.Level && screen != AppScreen.Boot)
+            {
+                AudioCues.Home();
+            }
+        }
+
         // Volver desde una hoja del inicio: sfx_ui_back si de verdad se volvió.
         private static bool AudioBack(bool done)
         {
