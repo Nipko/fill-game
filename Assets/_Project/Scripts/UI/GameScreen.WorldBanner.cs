@@ -5,6 +5,7 @@ using System.Globalization;
 using System.Text;
 using AF.GameFlow;
 using AF.Levels;
+using AF.Localization;
 using AF.Presentation;
 using UnityEngine;
 
@@ -78,6 +79,18 @@ namespace AF.UI
         private int _worldBannerShown;
         private int _bannerPrefetchLevel;
         private int _bannerMapOpened;
+        private BannerTravel? _travelCache;
+        private int _travelCacheLevel;
+        private BannerTravelData? _travelCacheData;
+        private RiverStopCatalog? _travelCacheStops;
+        private RiverGeometrySource? _travelCacheGeometry;
+        private LocCatalog? _travelCacheCatalog;
+        private string? _travelCacheLocale;
+        private bool _travelCacheUnapproved;
+        private int _travelBuilds;
+
+        /// <summary>Veces que se resolvió un viaje de mundo contra los datos del Mapa (tests: el arte pedido antes no lo repite).</summary>
+        internal int BannerTravelBuilds => _travelBuilds;
 
         /// <summary>
         /// Lee (la primera vez) la geometría del Mapa del río y las rutas de las paradas; false si no hay o no valida. La pone
@@ -354,6 +367,9 @@ namespace AF.UI
 
         // El viaje de mundo del banner del nivel level (M3.6), o null: el banner de siempre (apagado por el test, no toca por
         // TravelInBanner, o sin datos del Mapa o sin el tramo de la gran parada). Lee la geometría la primera vez que hace falta.
+        // El último viaje resuelto se guarda (CachedTravel): el que construye el arte pedido antes en la celebración del 40, el 80 o
+        // el 140 (PrefetchWorldBanner) es el mismo que abre el banner del nivel siguiente, sin volver a pasar por los datos del Mapa
+        // (revisión de M3.6: se construía dos veces). Vale mientras sean los mismos datos y los mismos textos (catálogo e idioma).
         private BannerTravel? TravelFor(int level)
         {
             if (BannerTravelOverride == false || !MapMoments.TravelInBanner(level, BannerAutopenOverride ?? MapConfig.UiMapAutopen))
@@ -362,19 +378,56 @@ namespace AF.UI
             }
 
             BannerTravelData? data = BannerTravelDataOverride;
-            if (data != null)
-            {
-                return BannerTravel.For(level, data.Map, data.Routes, data.Stops);
-            }
-
             RiverStopCatalog? stops = RiverStops;
             RiverGeometrySource? geometry = RiverGeometry;
-            if (stops == null || geometry == null || !geometry(out RiverMap? map, out RiverRoutes? routes))
+            BannerTravel? cached = CachedTravel(level, data, stops, geometry);
+            if (cached != null)
+            {
+                return cached;
+            }
+
+            BannerTravel? travel;
+            if (data != null)
+            {
+                travel = BannerTravel.For(level, data.Map, data.Routes, data.Stops);
+            }
+            else if (stops == null || geometry == null || !geometry(out RiverMap? map, out RiverRoutes? routes))
+            {
+                return null;
+            }
+            else
+            {
+                travel = BannerTravel.For(level, map, routes, stops);
+            }
+
+            _travelCache = travel;
+            _travelCacheLevel = level;
+            _travelCacheData = data;
+            _travelCacheStops = stops;
+            _travelCacheGeometry = geometry;
+            _travelCacheCatalog = Loc.Catalog;
+            _travelCacheLocale = Loc.Locale;
+            _travelCacheUnapproved = Loc.ShowUnapproved;
+            _travelBuilds++;
+            return travel;
+        }
+
+        // El viaje guardado del nivel level, si se resolvió con estos mismos datos y con los textos de ahora; si no, null.
+        private BannerTravel? CachedTravel(int level, BannerTravelData? data, RiverStopCatalog? stops, RiverGeometrySource? geometry)
+        {
+            if (_travelCache == null || _travelCacheLevel != level || !ReferenceEquals(_travelCacheData, data))
             {
                 return null;
             }
 
-            return BannerTravel.For(level, map, routes, stops);
+            if (data == null && (!ReferenceEquals(_travelCacheStops, stops) || !Equals(_travelCacheGeometry, geometry)))
+            {
+                return null;
+            }
+
+            bool sameTexts = ReferenceEquals(_travelCacheCatalog, Loc.Catalog) && string.Equals(_travelCacheLocale, Loc.Locale, StringComparison.Ordinal)
+                && _travelCacheUnapproved == Loc.ShowUnapproved;
+            return sameTexts ? _travelCache : null;
         }
 
         // La salida del banner: la línea world_banner_closed antes de que el flujo siga (con lo que vendrá detrás), el flujo

@@ -38,6 +38,7 @@ namespace AF.Tests.PlayMode
             GameScreen.BannerTravelDataOverride = null;
             MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();
+            LocSetUpFixture.ConfigureEs419(); // las tablas del proyecto, sin el nombre de prueba de Teotônio
             SnapshotKit.Release();
         }
 
@@ -70,26 +71,31 @@ namespace AF.Tests.PlayMode
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.Save(dir, "69t8_travel_l141_reduced");
 
-            // El relevo del guía en «teotonio» (P-M8), con el catálogo de prueba: a mitad de la rampa (los dos guías a la vista, a
-            // menos de 150 ms de que la canoa pase por los rápidos) y al llegar, con el bufeo esperando delante de la proa.
+            // El relevo del guía en «teotonio» (P-M8), con el catálogo de prueba y su nombre («Teotônio»): a mitad del relevo (la
+            // canoa parada antes de los rápidos, los dos guías a la vista y lejos de ella) y al llegar, con el bufeo delante de la proa.
             yield return CardSetup.Load(40);
             boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             Assert.That(view.RiverGeometry!(out RiverMap? realMap, out RiverRoutes? realRoutes), Is.True);
             GameScreen.BannerTravelDataOverride = WorldBannerTravelTests.RelayData(realMap!, realRoutes!, boot.RiverStops!, out _);
+            WorldBannerTravelTests.NameTeotonio();
             boot.Flow!.Load(41);
             WorldBannerView banner = view.WorldBannerView;
             BannerTravel travel = banner.Travel!;
             Assert.That(travel.HasRelay, Is.True);
             BannerTravelStrip strip = banner.TravelStrip;
-            float atRelayMs = WorldBannerTravelTests.MsAtFraction(travel.RelayFraction);
-            float midRampMs = WorldBannerTravelTests.MsAtFraction(travel.RelayFraction + (0.5f * BannerTravelStrip.RelayRampDp / strip.TotalDp));
-            Assert.That(midRampMs - atRelayMs, Is.LessThanOrEqualTo(150f), "a mitad de la rampa, a ≤ 150 ms de los rápidos");
-            PlayModeHelpers.TickExact(boot, Mathf.RoundToInt(midRampMs));
-            Assert.That(strip.GuideAAlpha > 0f && strip.GuideBAlpha > 0f, Is.True, "los dos guías a la vista");
+
+            // A mitad del relevo: la canoa parada antes de los rápidos, el bufeo ya entero y Rosa empezando a apagarse (al 80 %).
+            int midRampMs = Mathf.RoundToInt(strip.RelayStartMs + BannerTravelStrip.RelayInMs + (0.2f * BannerTravelStrip.RelayOutMs));
+            PlayModeHelpers.TickExact(boot, midRampMs);
+            Assert.That(strip.GuideAAlpha > 0.5f && strip.GuideBAlpha >= 1f, Is.True, "los dos guías a la vista");
+            Assert.That(strip.CanoeFraction * strip.TotalDp, Is.EqualTo(strip.RelayStopDp).Within(0.01f), "la canoa, parada en el relevo");
+            Assert.That(strip.PassingAlpha(strip.RelayPassingIndex), Is.EqualTo(1f), "«Teotônio» a la vista");
             Assert.That(WorldBannerTravelTests.GuideOverlapDp(strip.GuideA, strip.GuideB), Is.LessThanOrEqualTo(4f), "sin pisarse");
             Assert.That(WorldBannerTravelTests.InStrip(strip, strip.GuideA.rectTransform, 0f), Is.True, "Rosa, que se queda, dentro de la franja");
             Assert.That(WorldBannerTravelTests.InStrip(strip, strip.GuideB.rectTransform, 0f), Is.True, "el bufeo, dentro de la franja");
+            Assert.That(WorldBannerTravelTests.BoxGapDp(strip.GuideA.rectTransform, strip.Canoe.rectTransform), Is.GreaterThanOrEqualTo(6f), "Rosa, lejos de la canoa");
+            Assert.That(WorldBannerTravelTests.BoxGapDp(strip.GuideB.rectTransform, strip.Canoe.rectTransform), Is.GreaterThanOrEqualTo(6f), "el bufeo, lejos de la canoa");
             SnapshotKit.Attach(boot);
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.Save(dir, "69t9_travel_relay_mid");
@@ -108,7 +114,12 @@ namespace AF.Tests.PlayMode
             BannerTravelStrip strip = view.WorldBannerView.TravelStrip;
             Debug.Log("AF_M36 " + name + ": canoa " + strip.CanoeFraction.ToString("0.00", CultureInfo.InvariantCulture) + ", guías "
                 + strip.GuideAAlpha.ToString("0.00", CultureInfo.InvariantCulture) + " / " + strip.GuideBAlpha.ToString("0.00", CultureInfo.InvariantCulture)
-                + ", solape " + WorldBannerTravelTests.GuideOverlapDp(strip.GuideA, strip.GuideB).ToString("0.0", CultureInfo.InvariantCulture) + " dp; "
+                + ", solape " + WorldBannerTravelTests.GuideOverlapDp(strip.GuideA, strip.GuideB).ToString("0.0", CultureInfo.InvariantCulture) + " dp"
+                + ", Rosa en " + strip.GuideA.rectTransform.anchoredPosition + ", bufeo en " + strip.GuideB.rectTransform.anchoredPosition
+                + ", canoa en " + strip.Canoe.rectTransform.anchoredPosition
+                + (strip.RelayPassingIndex >= 0 ? ", «" + strip.Passing(strip.RelayPassingIndex).text + "» en " + strip.PassingBox(strip.RelayPassingIndex).anchoredPosition
+                    + " (su punto en " + strip.StripPoint(view.WorldBannerView.Travel!.PointAt(view.WorldBannerView.Travel.PassingFraction(strip.RelayPassingIndex))) + ")" : string.Empty)
+                + "; "
                 + view.LastWorldBannerProbe);
         }
 
@@ -130,7 +141,14 @@ namespace AF.Tests.PlayMode
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.Save(dir, name);
             BannerTravelStrip strip = banner.TravelStrip;
-            Debug.Log("AF_M36 " + name + ": canoa " + strip.CanoeFraction.ToString("0.00", CultureInfo.InvariantCulture)
+            var pills = new System.Text.StringBuilder();
+            for (int i = 0; i < strip.PassingCount; i++)
+            {
+                pills.Append(", «").Append(strip.Passing(i).text).Append("» en ").Append(strip.PassingBox(i).anchoredPosition)
+                    .Append(strip.PassingCutsRiver(i) ? " (corta un río)" : string.Empty);
+            }
+
+            Debug.Log("AF_M36 " + name + pills + ": canoa " + strip.CanoeFraction.ToString("0.00", CultureInfo.InvariantCulture)
                 + ", bandera " + strip.FlagRaise.ToString("0.00", CultureInfo.InvariantCulture) + ", " + strip.DpPerUnit.ToString("0", CultureInfo.InvariantCulture)
                 + " dp/u, " + banner.Panel.rect.height.ToString("0", CultureInfo.InvariantCulture) + " dp de alto; " + view.LastWorldBannerProbe);
         }

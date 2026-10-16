@@ -38,7 +38,36 @@ namespace AF.Presentation
         /// </summary>
         public static readonly string[] SimplifiedFlags = { "BR", "CO", "PE", "EC", "BO" };
 
+        /// <summary>
+        /// Ancho al que se pinta el bufeo boliviano de la franja del viaje (dp; la franja lo pinta a 22 dp): el alto sigue las
+        /// proporciones de Rosa (<see cref="RosaWidthDp"/> × <see cref="RosaHeightDp"/>).
+        /// </summary>
+        public const float MapBufeoWidthDp = 32f;
+
+        /// <summary>Cuerpo del bufeo boliviano: gris azulado, poco saturado [P, pendiente del asesor cultural].</summary>
+        public static readonly Color BufeoBody = Palette.Hex(0x8C9DB0);
+
+        /// <summary>Dorso del bufeo boliviano, pizarra [P, pendiente del asesor cultural].</summary>
+        public static readonly Color BufeoBack = Palette.Hex(0x5E7187);
+
+        /// <summary>Vientre del bufeo boliviano, gris perla [P, pendiente del asesor cultural].</summary>
+        public static readonly Color BufeoBelly = Palette.Hex(0xCDD6DF);
+
         private readonly Sprite?[] _mapFlags = new Sprite?[5];
+        private Sprite? _mapBufeo;
+
+        /// <summary>
+        /// El bufeo boliviano que guía la canoa en los mundos 7 y 8 en la franja del viaje de mundo (D-013, Q18-A; M3.6, P-M8):
+        /// el mismo rig que Rosa (su silueta, <c>RosaSdf</c>; glosario, Rosa: «el mismo rig con otra paleta, sin nombre propio»)
+        /// con otra paleta, gris azulada y poco saturada (<see cref="BufeoBody"/>, <see cref="BufeoBack"/> y
+        /// <see cref="BufeoBelly"/>) [P, pendiente del asesor cultural], para que el relevo se lea a 22 dp junto a Rosa (revisión
+        /// de M3.6: un tinte multiplicado sobre el rosa daba un malva casi igual). Mira a la izquierda, como Rosa. Perezoso (solo
+        /// lo pide un viaje con el bufeo) y pequeño: se queda hasta <see cref="Dispose"/>, como las banderas.
+        /// </summary>
+        public Sprite MapBufeo => _mapBufeo != null ? _mapBufeo : (_mapBufeo = BuildMapBufeo());
+
+        /// <summary>Si ya se pintó el bufeo de la franja.</summary>
+        public bool MapBufeoBuilt => _mapBufeo != null;
 
         /// <summary>Si ya se creó alguna bandera simplificada.</summary>
         public bool MapFlagsBuilt
@@ -165,6 +194,68 @@ namespace AF.Presentation
             }
 
             return MakeSprite(pc, "map_flag_" + iso2.ToLowerInvariant() + "_simplified", new Vector2(0f, 0.5f), Vector4.zero, k);
+        }
+
+        // El bufeo de la franja: la silueta de Rosa (RosaSdf, en unidades del alto) a MapBufeoWidthDp, con su contorno de tinta y la
+        // paleta gris azulada (BufeoColorAt), la boca y el ojo de Rosa. Solo al pedirlo, en el hilo principal: ≈ 6.000 píxeles.
+        private Sprite BuildMapBufeo()
+        {
+            const float k = UiPxPerDp;
+            int w = Mathf.RoundToInt(MapBufeoWidthDp * k);
+            int h = Mathf.RoundToInt(MapBufeoWidthDp * RosaHeightDp / RosaWidthDp * k);
+            var pc = new PixelCanvas(w, h);
+            float inv = 1f / h;
+
+            // El contorno de Rosa (MascotOutlineDp de su sprite de RosaHeightDp) a esta escala, con un mínimo para que se lea.
+            float outline = Mathf.Max(1.5f, MascotOutlineDp * h / RosaHeightDp);
+            for (int py = 0; py < h; py++)
+            {
+                for (int px = 0; px < w; px++)
+                {
+                    float x = (px + 0.5f) * inv;
+                    float y = (py + 0.5f) * inv;
+                    float d = RosaSdf(x, y, out float side) * h;
+                    if (d > outline + 1f)
+                    {
+                        continue;
+                    }
+
+                    pc.Blend(px, py, MascotInk, PixelCanvas.Coverage(d - outline));
+                    float cov = PixelCanvas.Coverage(d);
+                    if (cov > 0f)
+                    {
+                        pc.Blend(px, py, BufeoColorAt(x, y, side), cov);
+                    }
+                }
+            }
+
+            pc.FillCapsule(0.16f * h, 0.475f * h, 0.47f * h, 0.53f * h, Mathf.Max(0.6f, 0.012f * h), new Color(MascotInk.r, MascotInk.g, MascotInk.b, 0.5f));
+            pc.FillCircle(0.545f * h, 0.60f * h, Mathf.Max(1f, 0.03f * h), Palette.Ink);
+            return MakeSprite(pc, "map_guide_bufeo", new Vector2(0.5f, 0f), Vector4.zero, k);
+        }
+
+        // La paleta del bufeo sobre la silueta de Rosa (como RosaColorAt): el dorso más oscuro por encima del lomo y el vientre claro
+        // por debajo; el hocico se aclara por debajo.
+        private static Color BufeoColorAt(float x, float y, float side)
+        {
+            Color c = BufeoBody;
+            if (side > 0.25f)
+            {
+                c = Color.Lerp(c, BufeoBack, Mathf.SmoothStep(0f, 1f, (side - 0.25f) / 0.55f));
+            }
+            else if (side < -0.2f)
+            {
+                c = Color.Lerp(c, BufeoBelly, Mathf.SmoothStep(0f, 1f, (-side - 0.2f) / 0.5f));
+            }
+
+            if (side == 0f)
+            {
+                float under = Mathf.Clamp01((0.56f - y) / 0.12f);
+                c = Color.Lerp(c, BufeoBelly, 0.55f * under * Mathf.Clamp01((0.5f - x) / 0.2f));
+            }
+
+            c.a = 1f;
+            return c;
         }
 
         // Color del paño de la bandera iso2 en el punto (xd, yd) en dp, con el origen abajo a la izquierda.

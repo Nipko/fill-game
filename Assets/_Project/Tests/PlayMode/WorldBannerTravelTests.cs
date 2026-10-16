@@ -53,6 +53,7 @@ namespace AF.Tests.PlayMode
             GameScreen.BannerTravelDataOverride = null;
             MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();
+            LocSetUpFixture.ConfigureEs419(); // por si un test nombró Teotônio (NameTeotonio)
         }
 
         [UnityTest]
@@ -326,6 +327,7 @@ namespace AF.Tests.PlayMode
             GameScreen view = boot.View!;
             Assert.That(view.RiverGeometry!(out RiverMap? realMap, out RiverRoutes? realRoutes), Is.True, "la geometría del Mapa");
             GameScreen.BannerTravelDataOverride = RelayData(realMap!, realRoutes!, boot.RiverStops!, out float relayS);
+            NameTeotonio();
             boot.Flow!.Load(41);
             WorldBannerView banner = view.WorldBannerView;
             BannerTravel travel = banner.Travel!;
@@ -335,49 +337,96 @@ namespace AF.Tests.PlayMode
             Assert.That(travel.HasRelay, Is.True);
             Assert.That(travel.RelayFraction, Is.GreaterThan(0.1f).And.LessThan(0.9f), "en Teotônio, no al salir");
             BannerTravelStrip strip = banner.TravelStrip;
+            ProceduralArt art = view.CardArt;
             Assert.That(strip.GuideA.gameObject.activeSelf && strip.GuideB.gameObject.activeSelf, Is.True, "los dos guías");
-            Assert.That(strip.GuideA.color, Is.EqualTo(Color.white), "Rosa, con su color");
-            Assert.That(strip.GuideB.color, Is.EqualTo(BannerTravelStrip.BufeoTint), "el bufeo, con otra paleta");
-            Vector2 relay = strip.StripPoint(travel.PointAt(travel.RelayFraction));
+            Assert.That(strip.GuideA.sprite, Is.SameAs(banner.Rosa.sprite), "Rosa, con su sprite");
+            Assert.That(strip.GuideB.sprite, Is.SameAs(art.MapBufeo), "el bufeo, el mismo rig con su paleta gris azulada");
+            Assert.That(strip.GuideA.color == Color.white && strip.GuideB.color == Color.white, Is.True, "sin tintes encima");
             float relayDp = travel.RelayFraction * strip.TotalDp;
+            Assert.That(relayDp, Is.GreaterThanOrEqualTo(BannerTravelStrip.RelayHoldBackDp), "el catálogo de prueba: Teotônio, lejos de la salida");
+            Assert.That(strip.RelayGuideDp, Is.EqualTo(relayDp).Within(0.01f), "Rosa se queda en Teotônio");
+            Assert.That(strip.RelayStopDp, Is.LessThanOrEqualTo(relayDp - BannerTravelStrip.RelayHoldBackDp + 0.01f), "la canoa se para antes de los rápidos");
+            Vector2 relay = strip.StripPoint(travel.PointAt(travel.RelayFraction));
+            int label = strip.RelayPassingIndex;
+            Assert.That(label, Is.GreaterThanOrEqualTo(0), "el nombre de Teotônio, entre los de paso");
+            Assert.That(strip.Passing(label).text, Is.EqualTo("Teotônio"));
+            float start = strip.RelayStartMs;
+            float end = start + BannerTravelStrip.RelayPauseMs;
+            Assert.That(end, Is.LessThan(WorldBannerView.TravelDelayMs + WorldBannerView.CanoeTravelMs), "el relevo, a mitad del viaje");
+            Assert.That(banner.TravelMs, Is.LessThanOrEqualTo((float)MapConfig.WorldTravelInBannerMaxMs), "la parada cabe en los 4 s");
 
             bool sawBefore = false;
             bool sawAfter = false;
-            bool sawRamp = false;
-            for (int ms = 0; ms < 4200; ms += PlayModeHelpers.FrameMs)
+            bool sawIn = false;
+            bool sawOut = false;
+            float minHull = float.MaxValue;
+            for (int ms = PlayModeHelpers.FrameMs; ms < 4200; ms += PlayModeHelpers.FrameMs)
             {
                 PlayModeHelpers.TickExact(boot, PlayModeHelpers.FrameMs);
                 float arc = strip.CanoeFraction * strip.TotalDp;
-                if (strip.GuideAAlpha > 0f && strip.GuideBAlpha > 0f)
-                {
-                    // A mitad del relevo, los dos guías a la vista: sin pisarse (≤ 4 dp) y dentro de la franja.
-                    sawRamp = true;
-                    Assert.That(GuideOverlapDp(strip.GuideA, strip.GuideB), Is.LessThanOrEqualTo(4f), "los dos guías, sin pisarse, a " + ms + " ms");
-                    Assert.That(InStrip(strip, strip.GuideA.rectTransform, 0f), Is.True, "Rosa, que se queda, dentro de la franja");
-                    Assert.That(InStrip(strip, strip.GuideB.rectTransform, 0f), Is.True, "el bufeo, dentro de la franja");
-                }
-
-                if (arc < relayDp - 1f)
+                if (ms < start - 0.5f)
                 {
                     sawBefore = true;
-                    Assert.That(strip.GuideAAlpha, Is.EqualTo(1f), "antes de Teotônio, Rosa delante");
+                    Assert.That(strip.GuideAAlpha, Is.EqualTo(1f), "antes del relevo, Rosa delante, a " + ms + " ms");
                     Assert.That(strip.GuideBAlpha, Is.EqualTo(0f));
+                    Assert.That(arc, Is.LessThanOrEqualTo(strip.RelayStopDp + 0.01f), "la canoa no pasa de donde se para");
                     Assert.That(travel.GuideAt(strip.CanoeFraction), Is.EqualTo(RiverJourney.GuideRosa));
                 }
-                else if (arc > relayDp + BannerTravelStrip.RelayRampDp + 1f)
+                else if (ms <= end + 0.5f)
+                {
+                    // El relevo, con la canoa parada: el bufeo entra entero con Rosa entera y después Rosa se apaga; los dos guías,
+                    // sin pisarse (≤ 4 dp), dentro de la franja y a ≥ 6 dp de la canoa; y «Teotônio» a la vista.
+                    Assert.That(arc, Is.EqualTo(strip.RelayStopDp).Within(0.01f), "la canoa, parada en el relevo, a " + ms + " ms");
+                    float since = ms - start;
+                    if (since < BannerTravelStrip.RelayInMs - 0.5f)
+                    {
+                        sawIn = true;
+                        Assert.That(strip.GuideAAlpha, Is.EqualTo(1f), "Rosa, entera mientras entra el bufeo, a " + ms + " ms");
+                        Assert.That(strip.GuideBAlpha, Is.EqualTo(since / BannerTravelStrip.RelayInMs).Within(0.01f));
+                    }
+                    else if (since > BannerTravelStrip.RelayInMs + 0.5f)
+                    {
+                        sawOut = true;
+                        Assert.That(strip.GuideBAlpha, Is.EqualTo(1f), "el bufeo, entero mientras Rosa se apaga, a " + ms + " ms");
+                        Assert.That(strip.GuideAAlpha, Is.EqualTo(1f - ((since - BannerTravelStrip.RelayInMs) / BannerTravelStrip.RelayOutMs)).Within(0.01f));
+                    }
+
+                    Assert.That(strip.PassingAlpha(label), Is.EqualTo(1f), "«Teotônio», entero durante el relevo, a " + ms + " ms");
+                    Assert.That(GuideOverlapDp(strip.GuideA, strip.GuideB), Is.LessThanOrEqualTo(4f), "los dos guías, sin pisarse, a " + ms + " ms");
+                    foreach (Image guide in new[] { strip.GuideA, strip.GuideB })
+                    {
+                        if (guide.canvasRenderer.GetAlpha() <= 0f)
+                        {
+                            continue;
+                        }
+
+                        Assert.That(InStrip(strip, guide.rectTransform, 0f), Is.True, guide.name + ", dentro de la franja, a " + ms + " ms");
+                        float gap = BoxGapDp(guide.rectTransform, strip.Canoe.rectTransform);
+                        minHull = Mathf.Min(minHull, gap);
+                        Assert.That(gap, Is.GreaterThanOrEqualTo(6f), guide.name + " a ≥ 6 dp de la canoa, a " + ms + " ms (relevo desde " + start + " ms; guía en "
+                            + guide.rectTransform.anchoredPosition + ", canoa en " + strip.Canoe.rectTransform.anchoredPosition + ", parada a " + strip.RelayStopDp
+                            + " de " + strip.TotalDp + " dp, Rosa a " + strip.RelayGuideDp + ")");
+                    }
+                }
+                else
                 {
                     sawAfter = true;
                     Assert.That(strip.GuideAAlpha, Is.EqualTo(0f), "Rosa se queda en los rápidos");
                     Assert.That(strip.GuideBAlpha, Is.EqualTo(1f), "el bufeo sigue delante");
                     Assert.That(Vector2.Distance(strip.GuideA.rectTransform.anchoredPosition, relay), Is.LessThan(0.5f), "Rosa, en Teotônio");
-                    Assert.That(travel.GuideAt(strip.CanoeFraction), Is.EqualTo(RiverJourney.GuideBufeo));
+                    if (arc > relayDp + 1f)
+                    {
+                        Assert.That(travel.GuideAt(strip.CanoeFraction), Is.EqualTo(RiverJourney.GuideBufeo));
+                    }
                 }
             }
 
-            Assert.That(sawBefore && sawAfter, Is.True, "el relevo, a mitad del viaje");
-            Assert.That(sawRamp, Is.True, "a mitad del relevo, con los dos guías");
+            Assert.That(sawBefore && sawIn && sawOut && sawAfter, Is.True, "el relevo, a mitad del viaje");
             AssertGuideWaitsClear(strip, "el bufeo, al llegar");
             Assert.That(relayS, Is.GreaterThan(0f));
+            TestContext.WriteLine("AF_M36 relay: start " + start.ToString("0", CultureInfo.InvariantCulture) + " ms, parada a "
+                + strip.RelayStopDp.ToString("0.0", CultureInfo.InvariantCulture) + " de " + strip.TotalDp.ToString("0.0", CultureInfo.InvariantCulture)
+                + " dp, guía más cerca de la canoa a " + minHull.ToString("0.0", CultureInfo.InvariantCulture) + " dp");
         }
 
         [UnityTest]
@@ -395,11 +444,25 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.View.LastWorldBannerProbe, Does.Contain("\"reduce_motion\":true,\"travel\":true,\"travel_ms\":150,\"flag\":\"PE\""));
             Assert.That(strip.CanoeFraction, Is.EqualTo(1f), "sin viaje: la canoa ya en Iquitos");
             Assert.That(strip.FlagRaise, Is.EqualTo(1f), "la bandera, ya izada");
-            Assert.That(strip.Root.GetComponent<CanvasGroup>().alpha, Is.EqualTo(0f), "la franja aún sin fundir");
+            // La tarjeta sale opaca desde t = 0 (nada se ve a través de nada: captura 69t8) y lo que se funde en 150 ms es el
+            // atenuado y la copia de la madera sobre el contenido, que aparece como una sola pieza.
+            Assert.That(banner.ReducedFadeMs, Is.EqualTo((float)MapConfig.ReducedMotionFadeMs));
+            Assert.That(banner.Alpha, Is.EqualTo(1f), "la tarjeta, opaca desde el principio");
+            Assert.That(banner.ReducedFadeCover.gameObject.activeSelf, Is.True);
+            Assert.That(banner.ReducedFadeCover.sprite, Is.SameAs(banner.Surface.sprite), "la copia, con la madera de la tarjeta");
+            Assert.That(banner.ContentAlpha, Is.EqualTo(0f), "el contenido, aún tapado");
+            Assert.That(banner.DimAlpha01, Is.EqualTo(0f), "el atenuado, aún sin fundir");
+            Assert.That(strip.Root.GetComponent<CanvasGroup>().alpha, Is.EqualTo(1f), "la franja no se funde por su cuenta");
+            Assert.That(banner.ReducedFadeCover.transform.GetSiblingIndex(), Is.GreaterThan(strip.Root.GetSiblingIndex()), "la copia, sobre la franja");
+            Assert.That(banner.ReducedFadeCover.transform.GetSiblingIndex(), Is.GreaterThan(banner.MapButton.transform.GetSiblingIndex()), "y sobre «Ver mapa»");
             PlayModeHelpers.TickExact(boot, 75);
-            Assert.That(strip.Root.GetComponent<CanvasGroup>().alpha, Is.EqualTo(0.5f).Within(0.01f), "a mitad del fundido de 150 ms");
+            Assert.That(banner.Alpha, Is.EqualTo(1f));
+            Assert.That(banner.ContentAlpha, Is.EqualTo(0.5f).Within(0.01f), "a mitad del fundido de 150 ms");
+            Assert.That(banner.DimAlpha01, Is.EqualTo(0.5f).Within(0.01f));
             PlayModeHelpers.TickExact(boot, 150);
-            Assert.That(strip.Root.GetComponent<CanvasGroup>().alpha, Is.EqualTo(1f));
+            Assert.That(banner.ContentAlpha, Is.EqualTo(1f));
+            Assert.That(banner.ReducedFadeCover.gameObject.activeSelf, Is.False, "fuera al terminar: nada de más que pintar");
+            Assert.That(banner.DimAlpha01, Is.EqualTo(1f));
             Assert.That(strip.CanoeFraction, Is.EqualTo(1f));
             Assert.That(banner.TravelDone && banner.Settled, Is.True);
 
@@ -520,9 +583,12 @@ namespace AF.Tests.PlayMode
             GameScreen view = boot.View!;
             Assert.That(view.CardArt.BannerArtPending, Is.True, "«Jugar · Nivel 81»: el arte, pedido");
             Assert.That(view.CardArt.WaitForBannerArt(30000), Is.True);
+            int builds = view.BannerTravelBuilds;
+            Assert.That(builds, Is.GreaterThanOrEqualTo(1), "el viaje, resuelto al pedir el arte");
             Assert.That(boot.PressPlay(), Is.True);
             WorldBannerView banner = view.WorldBannerView;
             Assert.That(banner.Travel, Is.Not.Null);
+            Assert.That(view.BannerTravelBuilds, Is.EqualTo(builds), "el banner usa el viaje del arte pedido antes: no lee otra vez el Mapa");
             Assert.That(banner.CardShown && banner.ArtReady, Is.True, "entra en el acto, con su arte");
             Assert.That(view.LastWorldBannerArtProbe, Does.Contain("\"level\":81").And.Contain("\"fallback\":\"none\""));
         }
@@ -665,7 +731,9 @@ namespace AF.Tests.PlayMode
                     where + ": " + name + " dentro del marco: " + r + " en " + panel);
             }
 
-            Assert.That(strip.width, Is.EqualTo(WorldBannerView.StripWidthDp).Within(0.5f), where + ": 296 dp");
+            Assert.That(strip.width, Is.GreaterThanOrEqualTo(WorldBannerView.StripWidthDp - 0.5f), where + ": ≥ 296 dp");
+            Assert.That(strip.xMin, Is.EqualTo(scene.xMin).Within(0.5f), where + ": la franja, con el margen de la viñeta");
+            Assert.That(strip.xMax, Is.EqualTo(scene.xMax).Within(0.5f), where + ": y su ancho");
             Assert.That(strip.height, Is.EqualTo(WorldBannerView.StripHeightDp).Within(0.5f), where + ": 112 dp");
             Assert.That(title.yMax, Is.LessThanOrEqualTo(question.yMin + 0.5f), where + ": la cabecera, sobre la pregunta");
             Assert.That(question.yMax, Is.LessThanOrEqualTo(strip.yMin + 0.5f), where + ": la pregunta, sobre la franja");
@@ -683,6 +751,22 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(banner.QuestionLabel.textInfo.lineCount, Is.LessThanOrEqualTo(2), where + ": la pregunta, en 2 líneas como mucho");
+
+            // Los nombres de paso también siguen la escala (02 §12, fila «Tamaño de texto»: hasta el 130 %): enteros, en su píldora
+            // y dentro de la franja.
+            BannerTravelStrip s = banner.TravelStrip;
+            Assert.That(s.FontScale, Is.EqualTo(banner.FontScale), where + ": la franja, con la escala del banner");
+            for (int i = 0; i < s.PassingCount; i++)
+            {
+                TextMeshProUGUI name = s.Passing(i);
+                name.ForceMeshUpdate(true, true);
+                RectTransform pill = s.PassingBox(i);
+                Assert.That(name.fontSize, Is.EqualTo(BannerTravelStrip.PassingSp * banner.FontScale).Within(0.01f), where + ": «" + name.text + "» a 12 sp por la escala");
+                Assert.That(name.isTextTruncated, Is.False, where + ": «" + name.text + "» sin recortes");
+                Assert.That(name.preferredWidth, Is.LessThanOrEqualTo(pill.sizeDelta.x + 0.5f), where + ": «" + name.text + "» cabe en su píldora");
+                Assert.That(name.preferredHeight, Is.LessThanOrEqualTo(pill.sizeDelta.y + 0.5f), where + ": «" + name.text + "» cabe en alto");
+                Assert.That(InStrip(s, pill, 0f), Is.True, where + ": la píldora de «" + name.text + "», dentro de la franja");
+            }
         }
 
         // Al llegar, el guía espera sin tapar a Capi en la canoa (≤ 4 dp de solape con su caja) y dentro de la franja.
@@ -704,6 +788,35 @@ namespace AF.Tests.PlayMode
         internal static float GuideOverlapDp(Image a, Image b)
         {
             return BoxOverlapDp(a.rectTransform, b.rectTransform);
+        }
+
+        // Distancia entre las cajas de dos piezas de la franja (dp; 0 si se tocan): la canoa con Capi entera cuenta como el casco.
+        internal static float BoxGapDp(RectTransform a, RectTransform b)
+        {
+            Rect ra = BoxOf(a);
+            Rect rb = BoxOf(b);
+            float x = Mathf.Max(0f, Mathf.Max(ra.xMin - rb.xMax, rb.xMin - ra.xMax));
+            float y = Mathf.Max(0f, Mathf.Max(ra.yMin - rb.yMax, rb.yMin - ra.yMax));
+            return Mathf.Sqrt((x * x) + (y * y));
+        }
+
+        /// <summary>
+        /// Da nombre al punto de paso «teotonio» del catálogo de prueba del relevo (<see cref="RelayData"/>): las tablas del proyecto
+        /// con una fila más en <c>facts.csv</c>, <c>map.stop.teotonio.name</c> = «Teotônio» (el nombre de la investigación del Mapa,
+        /// docs/research/mapa-del-rio, Q18-A). Es un dato de prueba: la fila real llega con los datos de 201-700 (M4.5b). El
+        /// TearDown vuelve a las tablas del proyecto.
+        /// </summary>
+        internal static void NameTeotonio()
+        {
+            string strings = System.IO.File.ReadAllText(LocTables.StringsAssetPath);
+            string facts = System.IO.File.ReadAllText(LocTables.FactsAssetPath);
+            if (!facts.EndsWith("\n", System.StringComparison.Ordinal))
+            {
+                facts += "\n";
+            }
+
+            facts += "map.stop.teotonio.name,Teotônio,,,Prueba del relevo del guía (WorldBannerTravelTests).,32,pendiente_asesor,,,,\n";
+            Loc.Configure(LocCatalog.Parse(strings, facts), Loc.Locale, true);
         }
 
         private static float BoxOverlapDp(RectTransform a, RectTransform b)

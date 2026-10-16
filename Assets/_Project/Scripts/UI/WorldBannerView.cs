@@ -40,7 +40,9 @@ namespace AF.UI
     /// puede pasar de 2, como el tutorial de la tarjeta previa). La viñeta, Capi y Rosa no cambian de tamaño. Si el nombre no
     /// cabe en la cabecera a la escala de ahora, abre la línea del lugar. La escala del sistema aún no llega al juego: hasta
     /// entonces vale 1 y los tests la fijan a 1,3 [P].</para>
-    /// <para>Con «Reducir movimiento» (07 §7.8): solo el fundido, con Capi ya presentando y Rosa ya fuera, sin soplo ni ondas.
+    /// <para>Con «Reducir movimiento» (07 §7.8): solo el fundido, con Capi ya presentando y Rosa ya fuera, sin soplo ni ondas; la
+    /// tarjeta sale opaca y se funden el atenuado y, sobre el contenido, una copia de la madera (<see cref="ReducedFadeCover"/>),
+    /// así que nada se ve a través de nada (revisión de M3.6, captura 69t8).
     /// Sin asignaciones por fotograma, y quieto del todo al terminar la entrada (<see cref="Settled"/>): Tick ya no toca ninguna
     /// transformada ni ningún color mientras sigue abierto, así que no obliga a rehacer los lotes del lienzo principal ni el
     /// recorte de las dos RectMask2D (guía 8, docs/art/direccion-visual-v2.md: el ambiente que se mueve va en Canvas propios).
@@ -171,7 +173,10 @@ namespace AF.UI
         /// <summary>Tamaño mínimo de la línea del lugar (sp).</summary>
         public const float PlaceMinSp = 15f;
 
-        /// <summary>Ancho de la franja del viaje de mundo (dp) [P] (M3.6), centrada bajo la cabecera.</summary>
+        /// <summary>
+        /// Ancho mínimo de diseño de la franja del viaje de mundo (dp) [P] (M3.6). La franja va tan ancha como la viñeta de debajo
+        /// (el interior de la tarjeta: 312 dp en 360 × 780), con su mismo margen y su mismo canto (revisión de M3.6).
+        /// </summary>
         public const float StripWidthDp = 296f;
 
         /// <summary>Alto de la franja del viaje de mundo (dp) [P] (M3.6).</summary>
@@ -241,6 +246,9 @@ namespace AF.UI
         private readonly ReliefParts _mapButton;
         private readonly TextMeshProUGUI _mapLabel;
         private readonly Action? _onMap;
+        private readonly Image _cover;
+        private float _coverFrom;
+        private float _dimFrom = 1f;
         private BannerTravel? _travel;
         private bool _travelSkipped;
         private float _mapButtonW;
@@ -335,6 +343,22 @@ namespace AF.UI
             UiBuilder.AutoSize(_mapLabel, UiBuilder.MinTextSp, MapButtonSp);
             _mapButton.Relief.Bind(_mapButton.Face, _mapButton.Base, _mapButton.FaceImage, art.CtaWood, null, null, _mapLabel);
             ShowMapButton(false);
+
+            // Con Reducir movimiento, la entrada no funde la tarjeta (el lienzo funde cada gráfico por separado y, a medio fundir,
+            // se veían el río a través de la canoa y las cuias a través de la tarjeta: captura 69t8): la tarjeta sale opaca desde
+            // t = 0 y encima de su contenido una copia de su superficie de madera se funde de 1 a 0 (ReducedFadeMs), así que el
+            // contenido aparece como una sola pieza. El marco va encima de la copia: sus esquinas redondeadas la recortan.
+            _cover = UiBuilder.Image("ReducedFade", _panel, null, Color.white);
+            UiBuilder.Stretch(_cover.rectTransform);
+            _cover.rectTransform.offsetMin = new Vector2(8f, 8f);
+            _cover.rectTransform.offsetMax = new Vector2(-8f, -8f);
+            _cover.gameObject.SetActive(false);
+            Transform? frame = _panel.Find("Frame");
+            if (frame != null)
+            {
+                frame.SetAsLastSibling();
+            }
+
             _root.gameObject.SetActive(false);
         }
 
@@ -473,6 +497,30 @@ namespace AF.UI
 
         /// <summary>Opacidad del velo (1 mientras espera el arte: sale en el acto).</summary>
         public float VeilAlpha => _group.alpha;
+
+        /// <summary>
+        /// Opacidad del atenuado de pantalla completa por sí solo (con Reducir movimiento se funde él, y no el grupo del banner,
+        /// para que la tarjeta salga opaca); 1 en los demás casos.
+        /// </summary>
+        public float DimAlpha01 => _dim.canvasRenderer.GetAlpha();
+
+        /// <summary>
+        /// Copia de la superficie de madera que tapa el contenido de la tarjeta en la entrada con Reducir movimiento y se funde de
+        /// 1 a 0 en <see cref="ReducedFadeMs"/> (inactiva en los demás casos; tests y capturas).
+        /// </summary>
+        public Image ReducedFadeCover => _cover;
+
+        /// <summary>
+        /// Opacidad del contenido de la tarjeta (1 − la de <see cref="ReducedFadeCover"/>): con Reducir movimiento sube de 0 a 1 en
+        /// <see cref="ReducedFadeMs"/> con la tarjeta ya opaca; 1 en los demás casos.
+        /// </summary>
+        public float ContentAlpha => _cover.gameObject.activeSelf ? 1f - _cover.canvasRenderer.GetAlpha() : 1f;
+
+        /// <summary>
+        /// El fundido de entrada con Reducir movimiento (ms): con el viaje, el de <see cref="MapConfig.ReducedMotionFadeMs"/> (M3.6);
+        /// sin él, el de siempre, <see cref="FadeInMs"/>.
+        /// </summary>
+        public float ReducedFadeMs => _travel != null ? MapConfig.ReducedMotionFadeMs : FadeInMs;
 
         /// <summary>Giro de Rosa (grados; positivo, antihorario: al sumergirse, el pico hacia el agua).</summary>
         public float RosaTilt => _rosa.rectTransform.localEulerAngles.z > 180f ? _rosa.rectTransform.localEulerAngles.z - 360f : _rosa.rectTransform.localEulerAngles.z;
@@ -620,6 +668,8 @@ namespace AF.UI
             _group.interactable = true;
             _group.alpha = 1f; // el velo: en el acto si el arte tarda; si ya está, la entrada lo funde desde 0 con la tarjeta
             _popGroup.alpha = 1f;
+            _dim.canvasRenderer.SetAlpha(1f); // con Reducir movimiento, la entrada funde el atenuado (Apply)
+            SetActive(_cover.gameObject, false);
             SetCardActive(true); // colocada aunque aún no se vea
             _requestTicks = System.Diagnostics.Stopwatch.GetTimestamp(); // desde aquí cuentan el tiempo límite y wait_ms
             Layout(canvasW, canvasH, safeTop, safeBottom); // pide el arte con las medidas de la viñeta
@@ -680,9 +730,10 @@ namespace AF.UI
                     y += questionH + QuestionGapDp;
                 }
 
-                float stripW = Mathf.Min(StripWidthDp, inner);
-                _strip.Place(PadDp + ((inner - stripW) * 0.5f), y, stripW, StripHeightDp);
-                _strip.Build(_travel, _reduceMotion);
+                // Tan ancha como la viñeta de debajo, con el mismo margen y el mismo canto (revisión de M3.6: dos marcos apilados
+                // con anchos distintos se leían como un desajuste).
+                _strip.Place(PadDp, y, inner, StripHeightDp);
+                _strip.Build(_travel, _reduceMotion, _fontScale);
                 y += StripHeightDp + StripGapDp;
             }
             else
@@ -800,6 +851,8 @@ namespace AF.UI
             _fadeFrom = _group.alpha;
             _cardFrom = _popGroup.alpha;
             _scaleFrom = _pop.localScale.x;
+            _dimFrom = _dim.canvasRenderer.GetAlpha();
+            _coverFrom = _cover.gameObject.activeSelf ? _cover.canvasRenderer.GetAlpha() : 0f;
             _exitMs = 0f;
         }
 
@@ -837,6 +890,8 @@ namespace AF.UI
             ShowMapButton(false);
             _group.alpha = 1f;
             _popGroup.alpha = 1f;
+            _dim.canvasRenderer.SetAlpha(1f);
+            SetActive(_cover.gameObject, false);
             _pop.localScale = Vector3.one;
             SetCardActive(true);
             ShowArtPieces(true);
@@ -997,6 +1052,7 @@ namespace AF.UI
         private void ApplySurface()
         {
             ModalKit.Size(_panel, _surface, _art, 0f, 0f, _cardW, _cardH, true);
+            _cover.sprite = _surface.sprite; // la misma madera: al fundirse, la superficie de debajo no cambia
         }
 
         // Milisegundos de reloj real desde que el banner pidió su arte (sin asignaciones).
@@ -1094,6 +1150,28 @@ namespace AF.UI
             float k = still ? 1f : Mathf.LerpUnclamped(PopFrom, 1f, Ease.OutBack(enter, 1.6f));
             float rise = still ? 1f : Ease.OutBack(Mathf.Clamp01((ms - RosaSurfaceStartMs) / RosaSurfaceMs), 1.2f);
             float dive = 0f;
+
+            // Con Reducir movimiento, la tarjeta entra opaca y lo que se funde es el atenuado (un solo gráfico) y la copia de la
+            // madera sobre el contenido (ReducedFadeCover), en ReducedFadeMs; al salir, se quedan como estaban.
+            float dim = 1f;
+            float cover = 0f;
+            if (still)
+            {
+                if (_dismissing)
+                {
+                    dim = _dimFrom;
+                    cover = _coverFrom;
+                }
+                else
+                {
+                    float f = Mathf.Clamp01(ms / ReducedFadeMs);
+                    dim = _veilEarly ? 1f : f;
+                    cover = 1f - f;
+                    veil = 1f;
+                    card = 1f;
+                }
+            }
+
             if (_dismissing)
             {
                 // Primero Rosa se sumerge con la tarjeta entera; después, solo en los últimos FadeTailMs, la tarjeta se funde y
@@ -1108,6 +1186,9 @@ namespace AF.UI
 
             _group.alpha = veil;
             _popGroup.alpha = card;
+            _dim.canvasRenderer.SetAlpha(dim);
+            SetActive(_cover.gameObject, cover > 0f);
+            _cover.canvasRenderer.SetAlpha(cover);
             _pop.localScale = new Vector3(k, k, 1f);
             if (_travel != null)
             {
@@ -1648,8 +1729,9 @@ namespace AF.UI
     /// derecha), encuadrado en el tramo de la gran parada, con la tierra, el vidrio de los ríos y el agua que ya llena el Mapa
     /// (las mismas cintas que la pantalla del Mapa, <see cref="RiverRibbonGraphic"/> y <see cref="LandGraphic"/>, en la vista
     /// Mundo). Encima, sin girar: la canoa de Capi (<see cref="ProceduralArt.MapCanoe"/>) que recorre el tramo, el guía que nada
-    /// delante (Rosa; el bufeo boliviano, el mismo sprite con otra paleta [P], en los mundos 7 y 8) con su relevo, los nombres
-    /// de paso que salen sin pararse y la bandera que se iza en la popa al llegar (<see cref="ProceduralArt.MapFlag"/>).
+    /// delante (Rosa; el bufeo boliviano, el mismo rig con otra paleta, <see cref="ProceduralArt.MapBufeo"/> [P], en los mundos 7
+    /// y 8) con su relevo, los nombres de paso que salen sin pararse y la bandera que se iza en la popa al llegar
+    /// (<see cref="ProceduralArt.MapFlag"/>).
     /// </summary>
     /// <remarks>
     /// Va en un lienzo anidado propio (guía 8, docs/art/direccion-visual-v2.md: lo que se mueve, en Canvas propios), recortado por
@@ -1693,10 +1775,53 @@ namespace AF.UI
         /// </summary>
         public const float GuideAboveDp = 27f;
 
-        /// <summary>El relevo: el guía nuevo aparece y el anterior se queda mientras la canoa recorre este tramo (dp) [P].</summary>
-        public const float RelayRampDp = 24f;
+        /// <summary>
+        /// El relevo (P-M8; revisión de M3.6: el fundido cruzado al 50 % con un guía bajo la canoa no se leía): la canoa se para
+        /// en los rápidos y el bufeo aparece, de 0 a 1 en estos ms, mientras Rosa sigue entera [P].
+        /// </summary>
+        public const float RelayInMs = 200f;
 
-        /// <summary>Tamaño de los nombres de paso (sp): el mínimo de 02 §12.</summary>
+        /// <summary>Después, Rosa se apaga en los rápidos en estos ms [P].</summary>
+        public const float RelayOutMs = 250f;
+
+        /// <summary>
+        /// Lo que la canoa espera parada en el relevo (ms): la entrada del bufeo y la salida de Rosa. Sale del tiempo de la canoa
+        /// (<see cref="WorldBannerView.CanoeTravelMs"/>), así que el viaje sigue cabiendo en el tope de 4 s.
+        /// </summary>
+        public const float RelayPauseMs = RelayInMs + RelayOutMs;
+
+        /// <summary>
+        /// La canoa se para este tanto antes del sitio de Rosa en los rápidos (dp de tramo) [P]: la media canoa (20), el medio
+        /// guía (11) y 13 dp de agua; si el río se curva y así los guías quedaran a menos de <see cref="RelayClearDp"/> de la canoa,
+        /// se para antes. Si Teotônio cae más cerca de la salida, Rosa se queda este tanto por delante de ella.
+        /// </summary>
+        public const float RelayHoldBackDp = 44f;
+
+        /// <summary>
+        /// Durante el relevo, los dos guías quedan al menos a esta distancia en línea recta de la caja de la canoa con Capi (dp)
+        /// [P]: los 6 dp de la revisión de M3.6 y 2 de margen.
+        /// </summary>
+        public const float RelayClearDp = 8f;
+
+        /// <summary>
+        /// Mientras la canoa recorre estos últimos dp antes de pararse, Rosa se adelanta hasta su sitio en los rápidos (su ventaja
+        /// pasa de <see cref="GuideLeadDp"/> a <see cref="RelayHoldBackDp"/>) [P].
+        /// </summary>
+        public const float RelayApproachDp = 30f;
+
+        /// <summary>El bufeo aparece este tanto más allá del sitio de Rosa (dp de tramo) [P]: el ancho de un guía y 6 dp de agua.</summary>
+        public const float RelayGapDp = 28f;
+
+        /// <summary>
+        /// El nombre del punto del relevo (Teotônio) entra en estos ms antes de que la canoa se pare y se queda entero hasta que
+        /// la canoa lo pasa [P]: el relevo enseña dónde ocurre.
+        /// </summary>
+        public const float RelayLabelFadeMs = 150f;
+
+        /// <summary>
+        /// Tamaño de los nombres de paso (sp): el mínimo de 02 §12, multiplicado por la escala de la fuente del banner (02 §12,
+        /// fila «Tamaño de texto»: hasta el 130 %; revisión de M3.6).
+        /// </summary>
         public const float PassingSp = 12f;
 
         /// <summary>Un nombre de paso se ve mientras la canoa está a menos de este tramo de su punto (dp) [P].</summary>
@@ -1739,9 +1864,6 @@ namespace AF.UI
         /// </summary>
         public const float FlagAppearMs = 80f;
 
-        /// <summary>Paleta del bufeo boliviano sobre el sprite de Rosa (multiplica su color) [P, pendiente del asesor cultural].</summary>
-        public static readonly Color BufeoTint = new Color(0.80f, 0.86f, 0.97f, 1f);
-
         /// <summary>Alto del guía (dp): el de <see cref="GuideWidthDp"/> con las proporciones del sprite de Rosa.</summary>
         public const float GuideHeightDp = GuideWidthDp * ProceduralArt.RosaHeightDp / ProceduralArt.RosaWidthDp;
 
@@ -1755,6 +1877,11 @@ namespace AF.UI
         private const float PassingPillPadXDp = 5f;
         private const float PassingPillPadYDp = 1f;
         private const float PassingPillRadiusDp = 6f;
+
+        // Aire de la píldora a cualquier río a la vista, del tramo o no (dp) [P], y radio de la búsqueda de un hueco sin ríos
+        // alrededor de su sitio cuando no lo hay subiéndola (dp) [P] (revisión de la captura 69t: «Parintins» pisaba un afluente).
+        private const float PassingRiverGapDp = 2f;
+        private const float PassingRingMaxDp = 32f;
 
         private const float MastWidthDp = 1.6f;
         private const float SternFraction = 0.32f;
@@ -1786,15 +1913,26 @@ namespace AF.UI
         private readonly List<TextMeshProUGUI> _passing = new List<TextMeshProUGUI>();
         private readonly List<Image> _passingPill = new List<Image>();
         private float[] _passingDp = Array.Empty<float>();
+        private float[] _passingFrom = Array.Empty<float>();
         private Rect[] _passingRect = Array.Empty<Rect>();
+        private bool[] _passingPlaced = Array.Empty<bool>();
+        private Vector2[] _nearA = Array.Empty<Vector2>();
+        private Vector2[] _nearB = Array.Empty<Vector2>();
+        private float[] _nearGrow = Array.Empty<float>();
+        private int[] _nearLine = Array.Empty<int>();
+        private int _nearCount;
         private bool[] _lineVisible = Array.Empty<bool>();
         private BannerTravel? _built;
+        private float _builtScale = 1f;
         private float _w;
         private float _h;
         private float _dpu;
         private Vector2 _center;
         private float _totalDp;
         private float _relayDp = -1f;
+        private float _relayStopDp;
+        private float _relayStopMs;
+        private int _relayLabel = -1;
         private Vector2 _restMap;
         private bool _hasRest;
         private Sprite? _guideSprite;
@@ -1923,6 +2061,24 @@ namespace AF.UI
         /// <summary>Opacidad del guía de la llegada (1 al terminar el relevo).</summary>
         public float GuideBAlpha => _guideBAlpha;
 
+        /// <summary>
+        /// Instante (ms desde que entra la tarjeta) en que la canoa se para para el relevo: el bufeo entra en
+        /// <see cref="RelayInMs"/> y Rosa se apaga en los <see cref="RelayOutMs"/> siguientes; −1 sin relevo.
+        /// </summary>
+        public float RelayStartMs => _relayDp >= 0f ? _relayStopMs : -1f;
+
+        /// <summary>Dónde se queda Rosa en el relevo (dp de tramo; Teotônio, o <see cref="RelayHoldBackDp"/> si cae antes); −1 sin relevo.</summary>
+        public float RelayGuideDp => _relayDp;
+
+        /// <summary>Dónde espera parada la canoa durante el relevo (dp de tramo).</summary>
+        public float RelayStopDp => _relayStopDp;
+
+        /// <summary>Nombre de paso del punto del relevo (Teotônio), o −1 si no tiene nombre o no hay relevo.</summary>
+        public int RelayPassingIndex => _relayLabel;
+
+        /// <summary>Escala de fuente con la que se construyeron los nombres de paso.</summary>
+        public float FontScale => _builtScale;
+
         /// <summary>Cintas de vidrio activas (las líneas que entran en la franja).</summary>
         public int GlassCount => ActiveCount(_glass);
 
@@ -1945,6 +2101,16 @@ namespace AF.UI
         public RectTransform PassingBox(int i)
         {
             return _passingPill[i].rectTransform;
+        }
+
+        /// <summary>
+        /// La píldora del nombre de paso <paramref name="i"/> corta algún río a la vista, del tramo o no, con su aire (tests y
+        /// capturas: solo pasa si no hay ningún sitio libre cerca de su punto).
+        /// </summary>
+        public bool PassingCutsRiver(int i)
+        {
+            Rect r = _passingRect[i];
+            return _built != null && BoxHitsRivers(_built.Map, r.center.x, r.center.y, r.width * 0.5f, r.height * 0.5f);
         }
 
         /// <summary>Opacidad del nombre de paso <paramref name="i"/>.</summary>
@@ -1977,21 +2143,23 @@ namespace AF.UI
 
         /// <summary>
         /// Construye el viaje <paramref name="travel"/> en la franja colocada (si cambió): el encuadre del tramo, la tierra, el
-        /// vidrio de las líneas que entran, el agua ya llena, los nombres de paso y la bandera. Asigna lo justo la primera vez;
-        /// después reutiliza las cintas de cada línea.
+        /// vidrio de las líneas que entran, el agua ya llena, los nombres de paso (a <see cref="PassingSp"/> por
+        /// <paramref name="fontScale"/>, la escala de la fuente del banner) y la bandera. Asigna lo justo la primera vez; después
+        /// reutiliza las cintas de cada línea.
         /// </summary>
-        public void Build(BannerTravel travel, bool reduceMotion)
+        public void Build(BannerTravel travel, bool reduceMotion, float fontScale = 1f)
         {
             SetActive(_edge.gameObject, true);
             SetActive(_mask.gameObject, true);
             SetActive(_corners.gameObject, true);
-            if (ReferenceEquals(travel, _built))
+            if (ReferenceEquals(travel, _built) && fontScale == _builtScale)
             {
                 return;
             }
 
             long t0 = System.Diagnostics.Stopwatch.GetTimestamp();
             _built = travel;
+            _builtScale = fontScale;
             RiverMap map = travel.Map;
             Frame(travel);
             FindRest(travel);
@@ -2033,16 +2201,14 @@ namespace AF.UI
             }
 
             _totalDp = travel.LengthUnits * _dpu;
-            _relayDp = travel.HasRelay ? travel.RelayFraction * _totalDp : -1f;
-            BuildPassing(travel);
+            ScheduleRelay(travel);
+            BuildPassing(travel, fontScale);
 
             _canoe.sprite = _art.MapCanoe;
             _canoe.rectTransform.sizeDelta = new Vector2(ProceduralArt.MapCanoeWidthDp, ProceduralArt.MapCanoeHeightDp);
             float guideH = GuideHeightDp;
             _guideA.rectTransform.sizeDelta = new Vector2(GuideWidthDp, guideH);
             _guideB.rectTransform.sizeDelta = new Vector2(GuideWidthDp, guideH);
-            _guideA.color = GuideColor(travel.HasRelay ? travel.GuideFrom : travel.GuideTo);
-            _guideB.color = GuideColor(travel.GuideTo);
             _flagSprite = travel.Flag != null ? _art.MapFlag(travel.Flag) : null;
             _flag.sprite = _flagSprite;
             _flag.rectTransform.sizeDelta = new Vector2(ProceduralArt.MapFlagWidthDp, ProceduralArt.MapFlagHeightDp);
@@ -2080,8 +2246,9 @@ namespace AF.UI
         /// <summary>
         /// Pinta el instante <paramref name="ms"/> del viaje (desde que entra la tarjeta; <see cref="float.MaxValue"/>: el final):
         /// la espera de <see cref="WorldBannerView.TravelDelayMs"/>, la canoa en <see cref="WorldBannerView.CanoeTravelMs"/> con
-        /// los guías delante y los nombres de paso, y la bandera en <see cref="MapConfig.FlagRaiseMs"/>. Con Reducir movimiento,
-        /// el final con un fundido de <see cref="MapConfig.ReducedMotionFadeMs"/>. Sin asignaciones.
+        /// los guías delante (con relevo, la parada de <see cref="RelayPauseMs"/> en los rápidos) y los nombres de paso, y la
+        /// bandera en <see cref="MapConfig.FlagRaiseMs"/>. Con Reducir movimiento, el final (el fundido de
+        /// <see cref="MapConfig.ReducedMotionFadeMs"/> lo hace la tarjeta entera, <see cref="WorldBannerView"/>). Sin asignaciones.
         /// </summary>
         public void Apply(float ms, bool reduceMotion)
         {
@@ -2091,14 +2258,13 @@ namespace AF.UI
                 return;
             }
 
-            float canoeT = reduceMotion ? 1f : Mathf.Clamp01((ms - WorldBannerView.TravelDelayMs) / WorldBannerView.CanoeTravelMs);
-            _fraction = canoeT >= 1f ? 1f : Ease.InOut(canoeT);
+            float arc = reduceMotion ? _totalDp : CanoeArcAt(ms);
+            _fraction = _totalDp > 0f ? Mathf.Clamp01(arc / _totalDp) : 1f;
+            bool arrived = _fraction >= 1f;
             float flagT = reduceMotion ? 1f : Mathf.Clamp01((ms - WorldBannerView.TravelDelayMs - WorldBannerView.CanoeTravelMs) / MapConfig.FlagRaiseMs);
             _flagRaise = _flagSprite != null ? flagT : 0f;
-            _fade.alpha = reduceMotion ? Mathf.Clamp01(ms / MapConfig.ReducedMotionFadeMs) : 1f;
 
             // La canoa, en su punto del tramo, con la proa hacia donde va.
-            float arc = _fraction * _totalDp;
             Vector2 canoe = PointAtDp(travel, arc);
             _canoeFacing = FacingAt(travel, arc, _canoeFacing);
             RectTransform c = _canoe.rectTransform;
@@ -2126,16 +2292,24 @@ namespace AF.UI
             }
 
             // Los guías: delante de la canoa por el agua; al llegar, esperan delante de la proa (o, sin sitio, encima de la canoa).
-            // Con relevo, el de la salida se queda en su punto y el de la llegada aparece y sigue.
+            // Con relevo (P-M8): la canoa se para RelayHoldBackDp antes del sitio de Rosa en los rápidos; Rosa llega a él y el bufeo
+            // aparece RelayGapDp más allá, de 0 a 1 en RelayInMs con Rosa entera; después Rosa se apaga en RelayOutMs y se queda en
+            // los rápidos, y la canoa sigue con el bufeo, que la espera donde apareció hasta que vuelve a ir delante.
             float lead = Mathf.Min(arc + GuideLeadDp, _totalDp);
             float rest = Mathf.Clamp01((arc + GuideLeadDp - _totalDp) / GuideLeadDp);
             if (_relayDp >= 0f)
             {
-                float ramp = Mathf.Clamp01((arc - _relayDp) / RelayRampDp);
-                _guideAAlpha = 1f - ramp;
-                _guideBAlpha = ramp;
-                PlaceGuide(_guideA, travel, Mathf.Min(lead, _relayDp), Mathf.Min(lead, _relayDp) < lead ? 0f : rest, canoe, _guideAAlpha);
-                PlaceGuide(_guideB, travel, lead, rest, canoe, _guideBAlpha);
+                float since = reduceMotion ? float.MaxValue : ms - _relayStopMs;
+                float into = Mathf.Clamp01(since / RelayInMs);
+                _guideBAlpha = into;
+                _guideAAlpha = 1f - Mathf.Clamp01((since - RelayInMs) / RelayOutMs);
+                // Rosa se adelanta a los rápidos mientras la canoa frena: en los últimos RelayApproachDp antes de pararse, su ventaja
+                // crece de GuideLeadDp a RelayHoldBackDp, así que cuando la canoa se para ya está en su sitio, lejos del casco.
+                float approach = Mathf.Clamp01((arc - (_relayStopDp - RelayApproachDp)) / RelayApproachDp);
+                float rosaArc = Mathf.Min(_relayDp, arc + Mathf.Lerp(GuideLeadDp, _relayDp - _relayStopDp, Ease.InOut(approach)));
+                PlaceGuide(_guideA, travel, rosaArc, 0f, canoe, _guideAAlpha);
+                float bufeoArc = Mathf.Max(lead, Mathf.Min(_relayDp + RelayGapDp, _totalDp));
+                PlaceGuide(_guideB, travel, bufeoArc, lead + 0.001f >= bufeoArc ? rest : 0f, canoe, _guideBAlpha);
             }
             else
             {
@@ -2144,14 +2318,89 @@ namespace AF.UI
                 PlaceGuide(_guideA, travel, lead, rest, canoe, 1f);
             }
 
-            // Los nombres de paso: salen al acercarse la canoa, se leen enteros y se van al dejarlos atrás, sin pararse.
+            // Los nombres de paso: salen al acercarse la canoa, se leen enteros y se van al dejarlos atrás, sin pararse. El del
+            // relevo (Teotônio) entra antes, cuando la canoa se para, y se queda entero hasta que la canoa lo pasa.
             int n = travel.PassingCount;
             for (int i = 0; i < n; i++)
             {
-                float a = canoeT >= 1f ? 0f : Mathf.Clamp01((PassingWindowDp - Mathf.Abs(arc - _passingDp[i])) / PassingFadeDp);
+                float a = arrived ? 0f : Mathf.Clamp01((PassingWindowDp - Mathf.Abs(arc - _passingDp[i])) / PassingFadeDp);
+                if (i == _relayLabel && !arrived && !reduceMotion && arc < _passingDp[i])
+                {
+                    a = Mathf.Max(a, Mathf.Clamp01((ms - (_relayStopMs - RelayLabelFadeMs)) / RelayLabelFadeMs));
+                }
+
                 _passing[i].canvasRenderer.SetAlpha(a);
                 _passingPill[i].canvasRenderer.SetAlpha(a);
             }
+        }
+
+        /// <summary>
+        /// Dónde va la canoa (dp de tramo) a <paramref name="ms"/> de entrar la tarjeta: tras <see cref="WorldBannerView.TravelDelayMs"/>,
+        /// el tramo en <see cref="WorldBannerView.CanoeTravelMs"/> con <c>Ease.InOut</c>; con relevo, en dos trozos con
+        /// <c>Ease.InOut</c> cada uno (llega parándose a <see cref="RelayStopDp"/> y arranca de nuevo), con la parada de
+        /// <see cref="RelayPauseMs"/> entre ellos y el tiempo de cada trozo proporcional a su largo. Sin asignaciones.
+        /// </summary>
+        public float CanoeArcAt(float ms)
+        {
+            float delay = WorldBannerView.TravelDelayMs;
+            float travelMs = WorldBannerView.CanoeTravelMs;
+            if (_relayDp < 0f)
+            {
+                float t = Mathf.Clamp01((ms - delay) / travelMs);
+                return t >= 1f ? _totalDp : Ease.InOut(t) * _totalDp;
+            }
+
+            if (ms < _relayStopMs)
+            {
+                float first = _relayStopMs - delay;
+                return first > 0f ? _relayStopDp * Ease.InOut(Mathf.Clamp01((ms - delay) / first)) : _relayStopDp;
+            }
+
+            float go = _relayStopMs + RelayPauseMs;
+            if (ms < go)
+            {
+                return _relayStopDp;
+            }
+
+            float second = delay + travelMs - go;
+            float u = second > 0f ? Mathf.Clamp01((ms - go) / second) : 1f;
+            return u >= 1f ? _totalDp : _relayStopDp + ((_totalDp - _relayStopDp) * Ease.InOut(u));
+        }
+
+        // El relevo del viaje (P-M8): el sitio de Rosa en los rápidos (Teotônio; si cae a menos de RelayHoldBackDp de la salida, a
+        // ese tanto por delante de ella [P]), dónde se para la canoa y cuándo (el tiempo que se mueve, CanoeTravelMs menos la
+        // parada, repartido por largo).
+        private void ScheduleRelay(BannerTravel travel)
+        {
+            _relayDp = -1f;
+            _relayStopDp = 0f;
+            _relayStopMs = 0f;
+            if (!travel.HasRelay)
+            {
+                return;
+            }
+
+            _relayDp = Mathf.Min(Mathf.Max(travel.RelayFraction * _totalDp, RelayHoldBackDp), _totalDp);
+
+            // La canoa se para RelayHoldBackDp de tramo antes de Rosa o, si el río se curva y así quedaría a menos de RelayClearDp
+            // (en línea recta) de Rosa o del bufeo, antes aún, en pasos de 2 dp (revisión de M3.6: los dos guías, lejos del casco).
+            Vector2 rosa = PointAtDp(travel, _relayDp);
+            Vector2 bufeo = PointAtDp(travel, Mathf.Min(_relayDp + RelayGapDp, _totalDp));
+            float stop = _relayDp - RelayHoldBackDp;
+            while (stop > 0f)
+            {
+                Vector2 canoe = PointAtDp(travel, stop);
+                if (GuideCanoeGapDp(rosa, canoe) >= RelayClearDp && GuideCanoeGapDp(bufeo, canoe) >= RelayClearDp)
+                {
+                    break;
+                }
+
+                stop -= 2f;
+            }
+
+            _relayStopDp = Mathf.Max(0f, stop);
+            float moving = WorldBannerView.CanoeTravelMs - RelayPauseMs;
+            _relayStopMs = WorldBannerView.TravelDelayMs + (_totalDp > 0f ? moving * _relayStopDp / _totalDp : 0f);
         }
 
         // El encuadre: la caja del tramo con el norte arriba (x de la franja = y del marco, el este; y de la franja = x del marco,
@@ -2212,8 +2461,9 @@ namespace AF.UI
         // contorno de madera sobre madera: se lee sobre la tierra y sobre el agua; revisión de la captura 69t) y colocado sobre su
         // punto, dentro de la franja, movido en vertical hasta PassingShiftMaxDp para que no corte ningún río ni pise otro nombre
         // (si no hay hueco, en su sitio, por encima de la línea, o corrido a lo ancho si pisa otro nombre: PlacePill); se ven con
-        // SetAlpha.
-        private void BuildPassing(BannerTravel travel)
+        // SetAlpha. A PassingSp por la escala de la fuente del banner (02 §12). El del relevo se ve también mientras la canoa espera
+        // parada (_passingFrom: desde dónde va la canoa cuando empieza a entrar).
+        private void BuildPassing(BannerTravel travel, float fontScale)
         {
             int n = travel.PassingCount;
             while (_passing.Count < n)
@@ -2236,11 +2486,33 @@ namespace AF.UI
             if (_passingDp.Length < n)
             {
                 _passingDp = new float[n];
+                _passingFrom = new float[n];
                 _passingRect = new Rect[n];
+                _passingPlaced = new bool[n];
             }
 
-            for (int i = 0; i < _passing.Count; i++)
+            // Primero dónde está cada punto y desde dónde se ve (para que las píldoras que se ven a la vez no se pisen).
+            _relayLabel = -1;
+            for (int i = 0; i < n; i++)
             {
+                _passingDp[i] = travel.PassingFraction(i) * _totalDp;
+                _passingFrom[i] = _passingDp[i] - PassingWindowDp;
+                if (_relayDp >= 0f && string.Equals(travel.PassingId(i), BannerTravel.RelayPassingId, StringComparison.Ordinal))
+                {
+                    _relayLabel = i;
+                    _passingFrom[i] = Mathf.Min(_passingFrom[i], CanoeArcAt(_relayStopMs - RelayLabelFadeMs));
+                }
+            }
+
+            // El del relevo se coloca el primero, cerca de su punto: es el que enseña dónde cambia el guía; los demás lo evitan.
+            for (int k = 0; k < _passingPlaced.Length; k++)
+            {
+                _passingPlaced[k] = false;
+            }
+
+            for (int k = 0; k < _passing.Count; k++)
+            {
+                int i = _relayLabel < 0 || k >= n ? k : (k == 0 ? _relayLabel : (k <= _relayLabel ? k - 1 : k));
                 TextMeshProUGUI label = _passing[i];
                 Image pill = _passingPill[i];
                 bool used = i < n;
@@ -2251,32 +2523,47 @@ namespace AF.UI
                 }
 
                 label.text = travel.PassingName(i);
+                label.fontSize = PassingSp * fontScale;
                 Vector2 size = label.GetPreferredValues(label.text, float.PositiveInfinity, float.PositiveInfinity);
                 float w = Mathf.Ceil(size.x) + 2f + (2f * PassingPillPadXDp);
                 float h = Mathf.Ceil(size.y) + (2f * PassingPillPadYDp);
                 pill.rectTransform.sizeDelta = new Vector2(w, h);
-                _passingDp[i] = travel.PassingFraction(i) * _totalDp;
                 Vector2 p = StripPoint(travel.PointAt(travel.PassingFraction(i)));
                 float x = Mathf.Clamp(p.x, -(_w * 0.5f) + (w * 0.5f) + 4f, (_w * 0.5f) - (w * 0.5f) - 4f);
                 float yTop = (_h * 0.5f) - (h * 0.5f) - 2f;
                 float yBottom = -(_h * 0.5f) + (h * 0.5f) + 2f;
                 bool above = p.y + PassingUpDp <= yTop;
-                float y = Mathf.Clamp(above ? p.y + PassingUpDp : p.y - PassingUpDp, yBottom, yTop);
-                Vector2 at = PlacePill(travel.Map, i, x, y, above ? 1f : -1f, p.y, w, h, yBottom, yTop);
+                float side = above ? 1f : -1f;
+                float y = Mathf.Clamp(p.y + (side * PassingUpDp), yBottom, yTop);
+                float yOther = p.y - (side * PassingUpDp);
+                bool otherFits = yOther >= yBottom && yOther <= yTop;
+                CollectNearRivers(travel.Map, x, (w * 0.5f) + PassingRingMaxDp);
+                var best = new Vector2(x, y);
+                int bestHits = int.MaxValue;
+                if (!SearchPill(i, x, y, side, p.y, w, h, yBottom, yTop, ref best, ref bestHits, out Vector2 at)
+                    && !(otherFits && SearchPill(i, x, yOther, -side, p.y, w, h, yBottom, yTop, ref best, ref bestHits, out at)))
+                {
+                    at = bestHits < int.MaxValue ? best : PlaceAnyway(i, x, y, side, p.y, w, h, yBottom, yTop);
+                }
+
                 pill.rectTransform.anchoredPosition = at;
                 _passingRect[i] = new Rect(at.x - (w * 0.5f), at.y - (h * 0.5f), w, h);
+                _passingPlaced[i] = true;
                 label.canvasRenderer.SetAlpha(0f);
                 pill.canvasRenderer.SetAlpha(0f);
             }
         }
 
-        // Dónde va la píldora index, de w × h, que querría ir en (x, y), por encima (away = 1) o por debajo (−1) de su punto, a la
-        // altura pointY: en la y más cercana que se aleja de su punto (en pasos de 2 dp, hasta PassingShiftMaxDp, dentro de
-        // [yBottom, yTop]; nunca hacia el punto, por donde pasa la canoa) en la que no corta ninguna línea del Mapa a la vista (con
-        // su medio ancho de cinta) ni pisa las píldoras que se ven a la vez que ella (Overlaps). Si no hay, en el sitio más cercano
-        // de la franja (anillos de 2 dp), no más cerca de su punto, que no pise ninguna de esas píldoras, aunque corte un río; y si
-        // tampoco, en (x, y). Solo al construir.
-        private Vector2 PlacePill(RiverMap map, int index, float x, float y, float away, float pointY, float w, float h, float yBottom, float yTop)
+        // Busca sitio para la píldora index, de w × h, que querría ir en (x, y), por encima (away = 1) o por debajo (−1) de su punto,
+        // a la altura pointY: en la y más cercana que se aleja de su punto (en pasos de 2 dp, hasta PassingShiftMaxDp, dentro de
+        // [yBottom, yTop]; nunca hacia el punto, por donde pasa la canoa) y, si no, en el sitio más cercano (anillos de 2 dp, hasta
+        // PassingRingMaxDp) no más cerca de su punto, que no pise las píldoras ya colocadas que se ven a la vez que ella (Overlaps)
+        // ni corte ninguna línea del Mapa a la vista, del tramo o no, con su medio ancho de cinta y PassingRiverGapDp de aire
+        // (CollectNearRivers). True con ese sitio; si no, deja en best el primero que corta menos líneas (bestHits). BuildPassing
+        // busca en su lado de siempre, después en el otro lado de la línea (revisión de la captura 69t: «Parintins» pisaba un
+        // afluente) y, si en ninguno hay sitio libre, se queda con el que corta menos ríos. Solo al construir.
+        private bool SearchPill(int index, float x, float y, float away, float pointY, float w, float h, float yBottom, float yTop,
+            ref Vector2 best, ref int bestHits, out Vector2 at)
         {
             float hw = w * 0.5f;
             float hh = h * 0.5f;
@@ -2288,12 +2575,73 @@ namespace AF.UI
                     break;
                 }
 
-                if (!BoxHitsPills(index, x, c, hw, hh) && !BoxHitsRivers(map, x, c, hw, hh))
+                if (TryCandidate(index, x, c, hw, hh, ref best, ref bestHits))
                 {
-                    return new Vector2(x, c);
+                    at = new Vector2(x, c);
+                    return true;
                 }
             }
 
+            float minAway = (away * (y - pointY)) - 0.01f;
+            float xMax = (_w * 0.5f) - hw - 4f;
+            for (float r = 2f; r <= PassingRingMaxDp; r += 2f)
+            {
+                for (float dy = -r; dy <= r; dy += 2f)
+                {
+                    float dx = r - Mathf.Abs(dy);
+                    for (int sign = -1; sign <= 1; sign += 2)
+                    {
+                        float cx = x + (sign * dx);
+                        float cy = y + dy;
+                        if (cx >= -xMax && cx <= xMax && cy >= yBottom && cy <= yTop && away * (cy - pointY) >= minAway
+                            && TryCandidate(index, cx, cy, hw, hh, ref best, ref bestHits))
+                        {
+                            at = new Vector2(cx, cy);
+                            return true;
+                        }
+
+                        if (dx == 0f)
+                        {
+                            break;
+                        }
+                    }
+                }
+            }
+
+            at = new Vector2(x, y);
+            return false;
+        }
+
+        // El sitio (x, y) para una píldora de medios lados hw × hh: true si no pisa píldoras ni corta ríos; si solo corta ríos, y
+        // menos que el mejor hasta ahora, pasa a ser el mejor.
+        private bool TryCandidate(int index, float x, float y, float hw, float hh, ref Vector2 best, ref int bestHits)
+        {
+            if (BoxHitsPills(index, x, y, hw, hh))
+            {
+                return false;
+            }
+
+            int hits = NearRiverHits(x, y, hw, hh);
+            if (hits == 0)
+            {
+                return true;
+            }
+
+            if (hits < bestHits)
+            {
+                bestHits = hits;
+                best = new Vector2(x, y);
+            }
+
+            return false;
+        }
+
+        // Sin sitio cerca que no pise otra píldora: el más cercano de la franja, no más cerca de su punto, que no pise esas píldoras,
+        // aunque corte un río; y si tampoco, (x, y).
+        private Vector2 PlaceAnyway(int index, float x, float y, float away, float pointY, float w, float h, float yBottom, float yTop)
+        {
+            float hw = w * 0.5f;
+            float hh = h * 0.5f;
             float minAway = (away * (y - pointY)) - 0.01f;
             float xMax = (_w * 0.5f) - hw - 4f;
             for (float r = 2f; r <= _w + _h; r += 2f)
@@ -2321,13 +2669,81 @@ namespace AF.UI
             return new Vector2(x, y);
         }
 
-        // La caja de centro (x, y) y medios lados hw × hh pisa alguna de las píldoras de nombre ya colocadas (antes de index) que se
-        // ven a la vez que la de index, con 2 dp de aire.
+        // Los tramos de las líneas a la vista que pasan a menos de reach dp (en x) de x, ya ensanchados con su medio ancho de cinta,
+        // la orla y PassingRiverGapDp, para que la búsqueda de una píldora mire solo los de cerca. Por línea, en orden.
+        private void CollectNearRivers(RiverMap map, float x, float reach)
+        {
+            _nearCount = 0;
+            IReadOnlyList<RiverLine> lines = map.Lines;
+            for (int i = 0; i < lines.Count && i < _lineVisible.Length; i++)
+            {
+                if (!_lineVisible[i])
+                {
+                    continue;
+                }
+
+                RiverLine line = lines[i];
+                float grow = (RiverMapScreen.RibbonWidthDp(MapView.World, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp + PassingRiverGapDp;
+                float x0 = x - reach - grow;
+                float x1 = x + reach + grow;
+                Vector2 prev = StripPoint(new Vector2(line.X(0), line.Y(0)));
+                for (int k = 1; k < line.PointCount; k++)
+                {
+                    Vector2 q = StripPoint(new Vector2(line.X(k), line.Y(k)));
+                    if (Mathf.Max(prev.x, q.x) >= x0 && Mathf.Min(prev.x, q.x) <= x1)
+                    {
+                        if (_nearCount == _nearA.Length)
+                        {
+                            int size = Mathf.Max(64, _nearA.Length * 2);
+                            Array.Resize(ref _nearA, size);
+                            Array.Resize(ref _nearB, size);
+                            Array.Resize(ref _nearGrow, size);
+                            Array.Resize(ref _nearLine, size);
+                        }
+
+                        _nearA[_nearCount] = prev;
+                        _nearB[_nearCount] = q;
+                        _nearGrow[_nearCount] = grow;
+                        _nearLine[_nearCount] = i;
+                        _nearCount++;
+                    }
+
+                    prev = q;
+                }
+            }
+        }
+
+        // Cuántas líneas distintas (de las de CollectNearRivers) corta la caja de centro (x, y) y medios lados hw × hh.
+        private int NearRiverHits(float x, float y, float hw, float hh)
+        {
+            int hits = 0;
+            int last = -1;
+            for (int n = 0; n < _nearCount; n++)
+            {
+                int line = _nearLine[n];
+                if (line == last)
+                {
+                    continue; // esta línea ya cuenta
+                }
+
+                float g = _nearGrow[n];
+                if (SegmentHitsBox(_nearA[n], _nearB[n], x - hw - g, y - hh - g, x + hw + g, y + hh + g))
+                {
+                    hits++;
+                    last = line;
+                }
+            }
+
+            return hits;
+        }
+
+        // La caja de centro (x, y) y medios lados hw × hh pisa alguna de las píldoras de nombre ya colocadas que se ven a la vez
+        // que la de index, con 2 dp de aire.
         private bool BoxHitsPills(int index, float x, float y, float hw, float hh)
         {
-            for (int j = 0; j < index; j++)
+            for (int j = 0; j < _passingPlaced.Length; j++)
             {
-                if (!Overlaps(index, j))
+                if (j == index || !_passingPlaced[j] || !Overlaps(index, j))
                 {
                     continue; // nunca se ven a la vez
                 }
@@ -2342,10 +2758,13 @@ namespace AF.UI
             return false;
         }
 
-        /// <summary>Los nombres de paso <paramref name="i"/> y <paramref name="j"/> llegan a verse a la vez (sus ventanas se tocan).</summary>
+        /// <summary>
+        /// Los nombres de paso <paramref name="i"/> y <paramref name="j"/> llegan a verse a la vez: los tramos de la canoa en que se
+        /// ven se tocan (cada uno, a <see cref="PassingWindowDp"/> de su punto; el del relevo, también mientras la canoa espera).
+        /// </summary>
         public bool Overlaps(int i, int j)
         {
-            return Mathf.Abs(_passingDp[i] - _passingDp[j]) < 2f * PassingWindowDp;
+            return _passingFrom[i] < _passingDp[j] + PassingWindowDp && _passingFrom[j] < _passingDp[i] + PassingWindowDp;
         }
 
         // La caja de centro (x, y) y medios lados hw × hh corta alguna línea del Mapa a la vista, ensanchada con su medio ancho de
@@ -2361,7 +2780,7 @@ namespace AF.UI
                 }
 
                 RiverLine line = lines[i];
-                float grow = (RiverMapScreen.RibbonWidthDp(MapView.World, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp;
+                float grow = (RiverMapScreen.RibbonWidthDp(MapView.World, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp + PassingRiverGapDp;
                 float x0 = x - hw - grow;
                 float x1 = x + hw + grow;
                 float y0 = y - hh - grow;
@@ -2482,6 +2901,18 @@ namespace AF.UI
             guide.canvasRenderer.SetAlpha(alpha);
         }
 
+        // Distancia en línea recta entre la caja del guía en g y la de la canoa (con Capi) en canoe (sus pivotes; dp; 0 si se tocan).
+        private static float GuideCanoeGapDp(Vector2 g, Vector2 canoe)
+        {
+            float gx0 = g.x - (GuideWidthDp * 0.5f);
+            float gy0 = g.y - (GuideHeightDp * GuidePivotY);
+            float cx0 = canoe.x - (ProceduralArt.MapCanoeWidthDp * 0.5f);
+            float cy0 = canoe.y - (ProceduralArt.MapCanoeHeightDp * RiverMapScreen.CanoePivotY);
+            float x = Mathf.Max(0f, Mathf.Max(gx0 - (cx0 + ProceduralArt.MapCanoeWidthDp), cx0 - (gx0 + GuideWidthDp)));
+            float y = Mathf.Max(0f, Mathf.Max(gy0 - (cy0 + ProceduralArt.MapCanoeHeightDp), cy0 - (gy0 + GuideHeightDp)));
+            return Mathf.Sqrt((x * x) + (y * y));
+        }
+
         // El guía en g (su pivote) tapa la canoa en canoe (su pivote) más de GuideOverlapMaxDp: el menor lado del solape de las
         // dos cajas.
         private static bool CoversCanoe(Vector2 g, Vector2 canoe)
@@ -2534,16 +2965,17 @@ namespace AF.UI
         {
             BannerTravel? travel = _built;
             bool any = _guideSprite != null && travel != null;
-            _guideA.sprite = _guideSprite;
-            _guideB.sprite = _guideSprite;
+            _guideA.sprite = any ? GuideSprite(travel!.HasRelay ? travel.GuideFrom : travel.GuideTo) : null;
+            _guideB.sprite = any && travel!.HasRelay ? GuideSprite(travel.GuideTo) : null;
             SetActive(_guideA.gameObject, any);
             SetActive(_guideB.gameObject, any && travel!.HasRelay);
         }
 
-        // Rosa con su color; el bufeo boliviano, el mismo sprite con otra paleta [P].
-        private static Color GuideColor(string guide)
+        // Rosa, con el sprite del banner; el bufeo boliviano, el mismo rig con su paleta gris azulada (ProceduralArt.MapBufeo)
+        // [P, pendiente del asesor cultural], que se pinta al pedirlo.
+        private Sprite? GuideSprite(string guide)
         {
-            return string.Equals(guide, RiverJourney.GuideBufeo, StringComparison.Ordinal) ? BufeoTint : Color.white;
+            return string.Equals(guide, RiverJourney.GuideBufeo, StringComparison.Ordinal) ? _art.MapBufeo : _guideSprite;
         }
 
         private static void SetupRibbon(RiverRibbonGraphic ribbon, RiverLine? line, RibbonLook look, float s0, float s1, MapSpace space)
