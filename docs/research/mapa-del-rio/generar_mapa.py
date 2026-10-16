@@ -208,6 +208,12 @@ def iter_points(doc):
     for key in ("paradas_1_200", "puntos_de_paso_1_200", "miradores_1_200", "cruces_de_pais", "rotulos_de_pais"):
         for p in doc[key]:
             yield p
+    # Paradas detalladas de 201-700 (fase F9, desde M3.7a) y sus ríos locales nuevos.
+    for p in doc.get("paradas_201_700", []):
+        yield p
+    for r in doc.get("rios_locales_201_700", []):
+        for p in r["puntos"]:
+            yield p
     for m in doc["paradas_201_1000"]:
         for s in m["sitios"] + m.get("puntos_de_paso_del_viaje", []):
             if "lat" in s:
@@ -235,7 +241,9 @@ def ids_citados(texto):
 # «otros_datos», forma de la clave (glosario §10: map.stop.<lugar>.dato_NN o map.country.<iso2>.dato_NN), fecha en que
 # se reabrieron sus fuentes (R5) y los candidatos de §(e) que tienen que estar.
 CAMPOS_OTRO_DATO = ("clave", "texto", "etiqueta", "fuente", "releida", "origen", "nota")
-CLAVE_DATO = re.compile(r"^map\.(stop|country)\.[a-z0-9_]+\.dato_\d{2}$")
+# La misma forma que esas dos ramas de fact_key en schemas/af-river-stops-1.schema.json (contrato 30): [0-9] y no \d,
+# que también acepta dígitos Unicode, y se aplica con fullmatch, porque «$» de Python admite un salto de línea final.
+CLAVE_DATO = re.compile(r"^map\.(stop\.[a-z0-9_]+|country\.[a-z]{2})\.dato_[0-9]{2}$")
 FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 # Q8-A (D-018): ninguna cifra con separador de miles ni decimales dentro del texto; van como {n} con su valor en «args».
 CIFRA_CON_SEPARADOR = re.compile(r"\d[.,]\d|\d[ \u00a0\u202f]\d{3}(?!\d)")
@@ -305,13 +313,17 @@ def revisar_texto(donde, texto, args, errores, medir=True):
 
 
 def revisar_otros_datos(doc, ids, etiqueta_de, errores):
+    """«Otro dato» de las tarjetas de 1-200 (M2.7) y de 201-700 (paradas_201_700, desde M3.7a): mismas reglas, y las
+    claves no se repiten entre las dos listas."""
     fuente_de = {f["id"]: f for f in doc["fuentes"]}
     claves = {}
-    for s in doc["paradas_1_200"]:
+    for s in doc["paradas_1_200"] + doc.get("paradas_201_700", []):
         d = s.get("dato_del_nivel")
-        if d:
-            claves.setdefault(d["clave"], []).append(s["id"])
-            revisar_texto(f"parada {s['id']}: dato del nivel", d["texto"], d.get("args", {}), errores, medir=False)
+        if isinstance(d, dict):
+            # Sin «clave», el error legible lo da revisar_paradas_201_700 («clave del dato None fuera de …»).
+            if d.get("clave"):
+                claves.setdefault(d["clave"], []).append(s["id"])
+            revisar_texto(f"parada {s['id']}: dato del nivel", d.get("texto", ""), d.get("args", {}), errores, medir=False)
         otros = s.get("otros_datos")
         if not isinstance(otros, list):
             errores.append(f"parada {s['id']}: sin «otros_datos» (una lista, vacía si la tarjeta no lleva «Otro dato»)")
@@ -327,8 +339,8 @@ def revisar_otros_datos(doc, ids, etiqueta_de, errores):
                 continue
             clave = o["clave"]
             claves.setdefault(clave, []).append(s["id"])
-            if not CLAVE_DATO.match(clave):
-                errores.append(f"{donde}: clave «{clave}» fuera de la forma map.stop.<lugar>.dato_NN")
+            if not CLAVE_DATO.fullmatch(clave):
+                errores.append(f"{donde}: clave «{clave}» fuera de la forma map.stop.<lugar>.dato_NN o map.country.<iso2>.dato_NN")
             if "belen" in sin_tildes(clave):
                 errores.append(f"{donde}: la clave nombra «Belén»")
             args = o.get("args", {})
@@ -399,6 +411,346 @@ def autoprueba_otros_datos():
     if resto != esperados:
         return [f"autoprueba: «otros_datos» con entradas que no son objetos da {resto} y se esperaba {esperados}"]
     return []
+
+
+# Paradas detalladas de 201-700 (fase F9 de la propuesta §13, con Q14-A; M3.7a-M3.7d): el mismo registro que las de
+# 1-200, más «sitio» (el del resumen de paradas_201_1000 que la contiene) y «wikidata» (el elemento de su coordenada).
+# Sin héroe (D-013, punto 2): el fondo es el kit del mundo con una pieza, kit:<pieza>. Sus ríos locales nuevos van en
+# rios_locales_201_700, con «boca_en» (su río anfitrión), hasta que tools/river-map/geometry.py los dé de alta (M4.5a).
+# Las mismas formas que fact_key en schemas/af-river-stops-1.schema.json (contrato 30; glosario §10; 08 §4.5), con el
+# país en iso2 de dos letras y [0-9] en lugar de \d (que acepta dígitos Unicode), y sin «belen» (el «not» del esquema):
+# también map.general.*, como el dato del agua negra de Anavilhanas (parada 6). Se aplica con fullmatch, como CLAVE_DATO.
+# La unicidad de las claves, también frente a las de 1-200, la vigila revisar_otros_datos.
+CLAVE_DATO_LLEGADA = re.compile(
+    r"^map\.(stop\.[a-z0-9_]+\.dato_[0-9]{2}|country\.[a-z]{2}\.dato_[0-9]{2}|myth\.[a-z0-9_]+|general\.[a-z0-9_]+)$")
+TIPOS_PARADA = ("gran_parada", "parada", "castillo")
+DATO_DEL_200 = "map.myth.source"  # arrival_fact de la parada 20 (08 §4.5; D-023, punto 20)
+KM_CASA_MAS = 29  # km_casa = km_desde_el_mar − 332 (Gurupá) + 361 (ramal del Pará); propuesta §2.2
+# Pregunta 50 (a) (D-022): los cuatro candidatos de Pará de la tinaja (b.2 de su propuesta) van como «Otro dato» de la
+# tarjeta de la parada del estreno (k = 32, niveles 321-330), con su lugar real (M3.7b; propuesta §5.4 ter).
+CANDIDATOS_PREGUNTA_50 = {32: ("map.stop.sandoval.dato_04",   # las cuias del Bajo Amazonas (Aritapera), T1
+                               "map.stop.sandoval.dato_05",   # el panelão de Quatipuru-Mirim, T4
+                               "map.stop.sandoval.dato_06",   # el barro que enfría el agua (dato general), T7
+                               "map.stop.sandoval.dato_07")}  # la alfarería de Icoaraci (1903), T5
+# Puntos de paso que tienen que estar en el viaje de entrada de un mundo detallado, con su dato: el relevo de Rosa por el
+# bufeo boliviano en los rápidos de Teotônio (Q18-A de D-013; D-023, punto 19, P-M8), en el viaje del 300.
+PUNTOS_DE_PASO_REQUERIDOS = {7: ("teotonio",)}
+
+
+def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
+    paradas = doc.get("paradas_201_700", [])
+    if not isinstance(paradas, list):
+        errores.append("paradas_201_700 no es una lista")
+        return
+    fuente_de = {f["id"]: f for f in doc["fuentes"]}
+    resumen = {m["mundo"]: m for m in doc["paradas_201_1000"]}
+    rios = {r["id"]: r for r in doc["rios"]}
+    locales = doc.get("rios_locales_201_700", [])
+    for r in locales:
+        donde = f"río local {r.get('id')}"
+        if r.get("id") in rios:
+            errores.append(f"{donde}: repetido en 'rios'")
+        if r.get("tipo") != "rio_local":
+            errores.append(f"{donde}: tipo {r.get('tipo')!r} y se esperaba «rio_local»")
+        if len(r.get("puntos", [])) < 2:
+            errores.append(f"{donde}: menos de 2 puntos")
+        for f in r.get("fuentes", []):
+            if f not in ids:
+                errores.append(f"{donde}: fuente {f} sin entrada en 'fuentes'")
+    todos = dict(rios)
+    todos.update({r["id"]: r for r in locales})
+    for r in locales:
+        if r.get("boca_en") not in todos or r.get("boca_en") == r.get("id"):
+            errores.append(f"río local {r.get('id')}: «boca_en» {r.get('boca_en')!r} no es otro río")
+    vistos = {s["id"] for s in doc["paradas_1_200"]}
+    km_prev = {}
+    for i, s in enumerate(paradas):
+        donde = f"parada {s.get('id')}"
+        k = 20 + i
+        if s.get("k") != k:
+            errores.append(f"{donde}: k={s.get('k')} y se esperaba {k}")
+        if s.get("id") in vistos or not re.fullmatch(r"[a-z0-9_]+", s.get("id") or "") or "belen" in (s.get("id") or ""):
+            errores.append(f"{donde}: id repetido, fuera de [a-z0-9_]+ o con «Belén»")
+        vistos.add(s.get("id"))
+        a = 10 * k + 1
+        if s.get("niveles") != [a, a + 9] or s.get("llegada_al_ganar") != a - 1:
+            errores.append(f"{donde}: niveles {s.get('niveles')} o llegada {s.get('llegada_al_ganar')} y la k da {a}-{a + 9}")
+        w = world_of(a)
+        m = resumen.get(w, {})
+        if s.get("mundo") != w or s.get("mundo_id") != m.get("mundo_id"):
+            errores.append(f"{donde}: mundo {s.get('mundo')} ({s.get('mundo_id')}) y WorldTable dice {w} ({m.get('mundo_id')})")
+        ultimo = (FIRST_LEVELS[w] - 1) if w < len(FIRST_LEVELS) else 1000
+        tipo = "gran_parada" if a == FIRST_LEVELS[w - 1] else "castillo" if a + 9 == ultimo else "parada"
+        if s.get("tipo") != tipo:
+            errores.append(f"{donde}: tipo {s.get('tipo')!r} y se esperaba {tipo!r} (primera, última u otra del mundo)")
+        if s.get("conf") not in ("V", "E") or not re.fullmatch(r"Q\d+", s.get("wikidata") or ""):
+            errores.append(f"{donde}: coordenada sin conf V o E o sin su elemento de Wikidata")
+        if s.get("ancla_rio") not in todos:
+            errores.append(f"{donde}: ancla_rio {s.get('ancla_rio')!r} sin entrada en 'rios' ni en 'rios_locales_201_700'")
+        for rl in s.get("rios_locales", []):
+            if todos.get(rl, {}).get("tipo") != "rio_local":
+                errores.append(f"{donde}: río local {rl} sin entrada de tipo «rio_local»")
+        km, casa = s.get("km_desde_el_mar"), s.get("km_casa")
+        if not isinstance(km, int) or casa != km + KM_CASA_MAS:
+            errores.append(f"{donde}: km_casa {casa} y km_desde_el_mar {km} (+{KM_CASA_MAS})")
+        elif w in km_prev and casa < km_prev[w]:
+            errores.append(f"{donde}: los km hasta casa retroceden dentro del mundo {w} ({casa} < {km_prev[w]})")
+        if isinstance(casa, int):
+            km_prev[w] = casa
+        d = s.get("dato_del_nivel")
+        if not isinstance(d, dict):
+            errores.append(f"{donde}: sin dato de llegada")
+        else:
+            clave = d.get("clave")
+            if not isinstance(clave, str) or not CLAVE_DATO_LLEGADA.fullmatch(clave):
+                errores.append(f"{donde}: clave del dato {clave!r} fuera de map.stop.<lugar>.dato_NN, map.country.<iso2>.dato_NN, map.myth.<tema> o map.general.<id>")
+            elif "belen" in clave:
+                errores.append(f"{donde}: la clave del dato {clave!r} nombra «Belén» (contrato 30)")
+            if k == 20 and d.get("clave") != DATO_DEL_200:
+                errores.append(f"{donde}: el dato de llegada del 200 tiene que ser {DATO_DEL_200} (08 §4.5)")
+            # Marcadores, cifras y «Belén» ya los mira revisar_otros_datos; aquí, solo la longitud.
+            largo = len(texto_mostrado(d.get("texto", ""), d.get("args", {})))
+            if largo > 90:
+                errores.append(f"{donde}: dato de {largo} caracteres (> 90)")
+            if d.get("etiqueta") not in ("V", "E"):
+                errores.append(f"{donde}: dato con etiqueta {d.get('etiqueta')}; solo [V] o [E]")
+            fs = re.split(r",\s*", d.get("fuente", ""))
+            for f in fs:
+                if f not in ids:
+                    errores.append(f"{donde}: fuente {f} sin entrada en 'fuentes'")
+                elif not FECHA.match(d.get("releida", "")) or fuente_de[f].get("releida", "") < d["releida"]:
+                    errores.append(f"{donde}: la fuente {f} del dato no se reabrió en su «releida» (R5)")
+            if d.get("etiqueta") == "V" and not any(etiqueta_de.get(f) == "V" for f in fs):
+                errores.append(f"{donde}: dato [V] sin ninguna fuente [V]")
+        fondo = s.get("fondo", {})
+        if (fondo.get("kit") != f"bg_kit_w{w:02d}" or not str(fondo.get("heroe", "")).startswith("kit:")
+                or fondo.get("tipo") != "kit_y_rotulo"):
+            errores.append(f"{donde}: fondo distinto de bg_kit_w{w:02d} con kit:<pieza> (sin héroe en 201-700, Q14-A)")
+        q = s.get("pregunta_del_mundo")
+        if q:
+            responde = [p for p in paradas if p.get("mundo") == w and p.get("llegada_al_ganar") == q.get("se_responde_en")]
+            if len(q.get("texto", "")) > 50 or not str(m.get("pregunta_del_mundo", "")).startswith(q.get("texto", "?")):
+                errores.append(f"{donde}: pregunta de más de 50 caracteres o distinta de la del resumen del mundo {w}")
+            if not responde or q.get("se_responde_en") <= s.get("llegada_al_ganar", 0):
+                errores.append(f"{donde}: la pregunta no se responde en una llegada posterior del mismo mundo")
+        b = s.get("bandera")
+        if b and not any(c.get("pais") == b and c.get("nivel") == s.get("llegada_al_ganar") for c in doc["cruces_de_pais"]):
+            errores.append(f"{donde}: bandera {b} sin cruce de país en el {s.get('llegada_al_ganar')}")
+        if not isinstance(s.get("asesor"), bool) or not s.get("temporada") or not isinstance(s.get("coincidencias"), list):
+            errores.append(f"{donde}: faltan asesor (true/false), temporada o coincidencias")
+        cadenas = json.dumps(s, ensure_ascii=False)
+        if "[NV]" in cadenas or "belen" in sin_tildes(cadenas):
+            errores.append(f"{donde}: lleva un [NV] o nombra «Belén» (ningún [NV] en las paradas de 201-700)")
+    # Cada mundo con paradas detalladas, entero y con los sitios de su resumen, en su orden y con sus paradas.
+    for w in sorted({s.get("mundo") for s in paradas}):
+        m = resumen.get(w)
+        if m is None:
+            continue
+        orden = []
+        for s in paradas:
+            if s.get("mundo") == w:
+                if not orden or orden[-1][0] != s.get("sitio"):
+                    orden.append([s.get("sitio"), 0])
+                orden[-1][1] += 1
+        esperado = [[x["nombre"], x["paradas"]] for x in m["sitios"]]
+        if orden != esperado:
+            errores.append(f"mundo {w}: las paradas detalladas dan {orden} y el resumen {esperado}")
+        preguntas = [s for s in paradas if s.get("mundo") == w and s.get("pregunta_del_mundo")]
+        if len(preguntas) != 1:
+            errores.append(f"mundo {w}: {len(preguntas)} paradas con la pregunta del mundo y debería ser 1")
+        # El resumen de un mundo detallado ya no deja sitios sin coordenada ni con [NV] (M3.7b).
+        for x in m["sitios"]:
+            if not all(isinstance(x.get(c), (int, float)) for c in ("lat", "lon")) or "[NV]" in json.dumps(x, ensure_ascii=False):
+                errores.append(f"mundo {w}: el sitio «{x.get('nombre')}» del resumen sin coordenada o con un [NV]")
+        # Puntos de paso obligatorios del viaje de entrada (Q18-A: teotonio en el del 300), con su coordenada y su dato.
+        pasos = {p.get("id"): p for p in m.get("puntos_de_paso_del_viaje", []) if isinstance(p, dict)}
+        for pid in PUNTOS_DE_PASO_REQUERIDOS.get(w, ()):
+            p = pasos.get(pid)
+            if p is None:
+                errores.append(f"mundo {w}: falta el punto de paso «{pid}» en el viaje de entrada (Q18-A; D-023, punto 19)")
+                continue
+            dato = str(p.get("dato", ""))
+            clave = dato.split(" ")[0]
+            citados = list(ids_citados(dato))
+            if (p.get("conf") not in ("V", "E") or not all(isinstance(p.get(c), (int, float)) for c in ("lat", "lon"))
+                    or not CLAVE_DATO.fullmatch(clave) or not citados):
+                errores.append(f"mundo {w}: el punto de paso «{pid}» sin coordenada V o E o sin dato «map.stop.<lugar>.dato_NN [V|E fuente]: …»")
+            # El dato irá a facts.csv como los de las paradas (passing[] en M4.5a): las mismas reglas de texto (≤ 90
+            # caracteres, Q8-A y «Belén») y fuentes con entrada en 'fuentes' y reabiertas (R5).
+            texto = re.search(r"«(.*)»", dato)
+            if texto is None:
+                errores.append(f"mundo {w}: el punto de paso «{pid}» sin el texto de su dato entre «»")
+            else:
+                revisar_texto(f"mundo {w}: el punto de paso «{pid}» ({clave})", texto.group(1), {}, errores)
+            for f in citados:
+                if f not in ids:
+                    errores.append(f"mundo {w}: el punto de paso «{pid}» cita la fuente {f} sin entrada en 'fuentes'")
+                elif not FECHA.match(fuente_de[f].get("releida", "")):
+                    errores.append(f"mundo {w}: el punto de paso «{pid}» cita la fuente {f} sin «releida» (R5)")
+        # Candidatos que tienen que ir en el «Otro dato» de una parada (pregunta 50 (a) en k = 32).
+        for s in paradas:
+            if s.get("mundo") != w:
+                continue
+            tiene = {o.get("clave") for o in s.get("otros_datos") or [] if isinstance(o, dict)}
+            for c in CANDIDATOS_PREGUNTA_50.get(s.get("k"), ()):
+                if c not in tiene:
+                    errores.append(f"parada {s.get('id')}: falta el candidato de la pregunta 50 (a) {c} en «otros_datos»")
+    # Las banderas que el resumen pone en un sitio de un mundo detallado tienen que estar en su primera parada, y las del
+    # viaje de entrada de un mundo detallado, en la parada a la que llega ese viaje (la primera del mundo; desde M3.7b).
+    detallados = {s.get("mundo") for s in paradas}
+    for c in doc["cruces_de_pais"]:
+        ll = c.get("llega_en", {})
+        if ll.get("mundo") in detallados or ll.get("viaje_de_entrada") in detallados:
+            hay = [s for s in paradas if s.get("bandera") == c.get("pais") and s.get("llegada_al_ganar") == c.get("nivel")]
+            if not hay:
+                errores.append(f"cruce {c['nombre']}: ninguna parada de 201-700 lleva su bandera en el {c.get('nivel')}")
+
+
+def autoprueba_paradas_201_700(doc):
+    """Casos fijos de revisar_paradas_201_700 (M3.7a). Con las paradas de verdad la revisión no da ningún error; cada
+    caso cambia una copia y tiene que dar un error nuevo (que no estaba en la base) con el texto esperado y a nombre de
+    la parada, el mundo o el cruce cambiado; el caso con un dato map.general.* no tiene que dar ninguno. Las claves de
+    llegada fuera del fact_key del contrato 30 (país de más de dos letras, dígitos Unicode, «belen», sin clave) dan
+    error, y una clave de 1-200 repetida en un «Otro dato» de 201-700 da «repetida» en revisar_otros_datos. Las reglas
+    de la bandera, los km, el orden de los sitios y la unicidad de las claves las reutilizan M3.7b-M3.7d. Desde M3.7b,
+    también dan error un candidato de la pregunta 50 (a) que falta en k = 32, el viaje del 300 sin el punto de paso
+    teotonio o con su dato sin etiqueta, sin longitud, con un texto de más de 90 caracteres o con una fuente que no está
+    en 'fuentes' (Q18-A) y un sitio del resumen de un mundo detallado sin coordenada; y la bandera
+    de un viaje de entrada (BO en el 300) se exige en la primera parada de su mundo. Devuelve los fallos de la prueba."""
+    paradas = doc.get("paradas_201_700", [])
+    if not paradas:
+        return []
+    ids = {f["id"] for f in doc["fuentes"]}
+    etiqueta_de = {f["id"]: f.get("etiqueta") for f in doc["fuentes"]}
+    base = []
+    revisar_paradas_201_700(doc, ids, etiqueta_de, base)
+    if base:
+        return [f"autoprueba: las paradas de 201-700 sin cambiar ya dan {len(base)} errores; no se pueden probar los casos"]
+    por_id = {s.get("id"): i for i, s in enumerate(paradas)}
+    con_bandera = [s for s in paradas if s.get("bandera")]
+    fallos = []
+
+    def caso(nombre, id_parada, cambia, esperado, autor):
+        """Cambia la parada id_parada de una copia (o el documento, si id_parada es None) y comprueba los errores
+        nuevos: esperado = None exige que no haya ninguno; si no, uno que contenga esperado y empiece por autor."""
+        if id_parada is not None and id_parada not in por_id:
+            return  # la parada del caso aún no existe (otra tanda de M3.7)
+        copia = json.loads(json.dumps(doc))
+        cambia(copia["paradas_201_700"][por_id[id_parada]] if id_parada is not None else copia)
+        errores = []
+        revisar_paradas_201_700(copia, ids, etiqueta_de, errores)
+        nuevos = [e for e in errores if e not in base]
+        if esperado is None:
+            if nuevos:
+                fallos.append(f"autoprueba: {nombre} da errores ({nuevos}) y no debería")
+        elif not any(esperado in e and e.startswith(autor) for e in nuevos):
+            fallos.append(f"autoprueba: {nombre} no da «{esperado}» a nombre de «{autor}» ({nuevos})")
+
+    primera = paradas[0]["id"]
+    caso("el dato del 200 con otra clave", primera,
+         lambda p: p["dato_del_nivel"].update(clave="map.stop.mazan.dato_09"),
+         "tiene que ser map.myth.source", f"parada {primera}:")
+    caso("un [NV] en una nota", primera, lambda p: p.update(notas="punto aproximado [NV]"),
+         "lleva un [NV]", f"parada {primera}:")
+    caso("un héroe pintado", primera, lambda p: p["fondo"].update(heroe="bg_hero_mazan", tipo="pintado"),
+         "sin héroe en 201-700", f"parada {primera}:")
+    if len(paradas) > 1:
+        segunda = paradas[1]["id"]
+        caso("un dato de llegada map.general.* (contrato 30)", segunda,
+             lambda p: p["dato_del_nivel"].update(clave="map.general.dato_prueba"), None, "")
+        fuera = "fuera de map.stop.<lugar>.dato_NN"
+        for nombre, clave in (("el país en tres letras", "map.country.ecu.dato_01"),
+                              ("el país con su nombre entero", "map.country.ecuador.dato_01"),
+                              ("el país con un guion bajo", "map.country.e_c.dato_01"),
+                              ("dígitos que no son ASCII", "map.stop.mazan.dato_\u0660\u0661"),
+                              ("un salto de línea al final", "map.stop.mazan.dato_01\n")):
+            caso(f"un dato de llegada con {nombre} ({clave!r})", segunda,
+                 lambda p, c=clave: p["dato_del_nivel"].update(clave=c), fuera, f"parada {segunda}:")
+        caso("un dato de llegada sin clave", segunda, lambda p: p["dato_del_nivel"].pop("clave"),
+             "clave del dato None fuera de", f"parada {segunda}:")
+        caso("un dato de llegada con «belen» en la clave", segunda,
+             lambda p: p["dato_del_nivel"].update(clave="map.stop.belen.dato_01"), "nombra «Belén» (contrato 30)",
+             f"parada {segunda}:")
+        caso("km hasta casa que retroceden", segunda,
+             lambda p: p.update(km_desde_el_mar=p["km_desde_el_mar"] - 1000, km_casa=p["km_casa"] - 1000),
+             "retroceden", f"parada {segunda}:")
+        mundo = paradas[1].get("mundo")
+        caso("sitios fuera de orden", segunda, lambda p: p.update(sitio=paradas[-1].get("sitio")),
+             "las paradas detalladas dan", f"mundo {mundo}:")
+    for s in con_bandera:
+        cruce = next((c for c in doc["cruces_de_pais"]
+                      if c.get("pais") == s["bandera"] and c.get("nivel") == s.get("llegada_al_ganar")), None)
+        if cruce is not None:
+            caso(f"sin la bandera {s['bandera']} en el {s.get('llegada_al_ganar')}", s["id"],
+                 lambda p: p.pop("bandera"), "ninguna parada de 201-700 lleva su bandera", f"cruce {cruce['nombre']}:")
+    otra = next((s for s in paradas if not s.get("bandera")), None)
+    if con_bandera and otra is not None:
+        pais = con_bandera[0]["bandera"]
+        caso(f"una bandera {pais} sobrante", otra["id"], lambda p: p.update(bandera=pais),
+             "sin cruce de país", f"parada {otra['id']}:")
+    # M3.7b: los candidatos de la pregunta 50 (a) en k = 32, el punto de paso teotonio del viaje del 300 (Q18-A) y los
+    # sitios del resumen de un mundo detallado, con coordenada y sin [NV].
+    for k, requeridas in CANDIDATOS_PREGUNTA_50.items():
+        s = next((p for p in paradas if p.get("k") == k), None)
+        if s is not None:
+            quita = requeridas[0]
+            caso(f"sin el candidato {quita} de la pregunta 50 (a)", s["id"],
+                 lambda p, q=quita: p.update(otros_datos=[o for o in p["otros_datos"] if o.get("clave") != q]),
+                 f"falta el candidato de la pregunta 50 (a) {quita}", f"parada {s['id']}:")
+    mundos_detallados = {s.get("mundo") for s in paradas}
+    for w, pids in PUNTOS_DE_PASO_REQUERIDOS.items():
+        if w not in mundos_detallados:
+            continue
+        i = next(j for j, m in enumerate(doc["paradas_201_1000"]) if m["mundo"] == w)
+        for pid in pids:
+            caso(f"el viaje del mundo {w} sin el punto de paso {pid}", None,
+                 lambda d_, i=i, pid=pid: d_["paradas_201_1000"][i].update(puntos_de_paso_del_viaje=[
+                     p for p in d_["paradas_201_1000"][i]["puntos_de_paso_del_viaje"] if p.get("id") != pid]),
+                 f"falta el punto de paso «{pid}»", f"mundo {w}:")
+            caso(f"el punto de paso {pid} sin la etiqueta de su dato", None,
+                 lambda d_, i=i, pid=pid: [p.update(dato=p["dato"].split(" [")[0]) for p in
+                                           d_["paradas_201_1000"][i]["puntos_de_paso_del_viaje"] if p.get("id") == pid],
+                 f"el punto de paso «{pid}» sin coordenada V o E o sin dato", f"mundo {w}:")
+            caso(f"el punto de paso {pid} sin longitud", None,
+                 lambda d_, i=i, pid=pid: [p.pop("lon") for p in
+                                           d_["paradas_201_1000"][i]["puntos_de_paso_del_viaje"] if p.get("id") == pid],
+                 f"el punto de paso «{pid}» sin coordenada V o E o sin dato", f"mundo {w}:")
+            caso(f"el punto de paso {pid} con un texto de más de 90 caracteres", None,
+                 lambda d_, i=i, pid=pid: [p.update(dato=p["dato"].replace("»", " Y sigue y sigue y sigue.»")) for p in
+                                           d_["paradas_201_1000"][i]["puntos_de_paso_del_viaje"] if p.get("id") == pid],
+                 "caracteres (> 90)", f"mundo {w}: el punto de paso «{pid}»")
+            caso(f"el punto de paso {pid} con una fuente sin entrada en 'fuentes'", None,
+                 lambda d_, i=i, pid=pid: [p.update(dato=p["dato"].replace("]:", ", fuente_inventada]:", 1)) for p in
+                                           d_["paradas_201_1000"][i]["puntos_de_paso_del_viaje"] if p.get("id") == pid],
+                 "cita la fuente fuente_inventada sin entrada en 'fuentes'", f"mundo {w}:")
+        caso(f"un sitio del resumen del mundo {w} sin coordenada", None,
+             lambda d_, i=i: [d_["paradas_201_1000"][i]["sitios"][-1].pop(c) for c in ("lat", "lon", "xy")],
+             "sin coordenada o con un [NV]", f"mundo {w}:")
+    # Unicidad entre 1-200 y 201-700 (revisar_otros_datos, desde M3.7a): un «Otro dato» de 1-200 copiado en la primera
+    # parada de 201-700 da «clave … repetida» con las dos paradas; y una parada sin clave en su dato de llegada no la
+    # rompe (el error legible lo da revisar_paradas_201_700, caso de arriba).
+    base_otros = []
+    revisar_otros_datos(doc, ids, etiqueta_de, base_otros)
+    otro_1_200 = next(((s["id"], o) for s in doc["paradas_1_200"] for o in (s.get("otros_datos") or [])
+                       if isinstance(o, dict) and o.get("clave")), None)
+    if otro_1_200 is not None:
+        origen, otro = otro_1_200
+        copia = json.loads(json.dumps(doc))
+        copia["paradas_201_700"][0]["otros_datos"].append(json.loads(json.dumps(otro)))
+        errores = []
+        revisar_otros_datos(copia, ids, etiqueta_de, errores)
+        nuevos = [e for e in errores if e not in base_otros]
+        esperado = f"clave {otro['clave']} repetida ("
+        if not any(e.startswith(esperado) and origen in e and primera in e for e in nuevos):
+            fallos.append(f"autoprueba: un «Otro dato» de {origen} repetido en {primera} no da «{esperado}…» ({nuevos})")
+    if len(paradas) > 1:
+        copia = json.loads(json.dumps(doc))
+        copia["paradas_201_700"][1]["dato_del_nivel"].pop("clave", None)
+        try:
+            revisar_otros_datos(copia, ids, etiqueta_de, [])
+        except Exception as e:  # la prueba tiene que fallar con un mensaje, no romper --check
+            fallos.append(f"autoprueba: un dato de llegada sin clave rompe revisar_otros_datos ({type(e).__name__}: {e})")
+    return fallos
 
 
 def primer_nivel_del_sitio(mundo, nombre):
@@ -509,8 +861,11 @@ def check(doc, pr):
                 errores.append(f"parada {s['id']}: dato [V] sin ninguna fuente [V]")
     # «Otro dato» de cada tarjeta (M2.7): campos, claves únicas, texto, etiqueta, fuentes reabiertas y candidatos.
     revisar_otros_datos(doc, ids, etiqueta_de, errores)
+    # Paradas detalladas de 201-700 (F9; M3.7a): registro completo, dato, fondo sin héroe, sitios del resumen y banderas.
+    revisar_paradas_201_700(doc, ids, etiqueta_de, errores)
     errores.extend(autoprueba_marcadores())
     errores.extend(autoprueba_otros_datos())
+    errores.extend(autoprueba_paradas_201_700(doc))
     # Toda etiqueta «[V id]» / «[E id]» de cualquier texto del JSON (datos, notas, preguntas, cuidado, miradores, puntos
     # de paso, ríos, cruces…) tiene que llevar a una entrada de «fuentes» con su URL.
     def textos(o, ruta):
@@ -1126,7 +1481,8 @@ def main(argv=None):
         n, errores = check(doc, pr)
         for e in errores:
             print("ERROR:", e)
-        print(f"{n} puntos, {len(doc['paradas_1_200'])} paradas de 1-200, {sum(m['paradas'] for m in doc['paradas_201_1000'])} de 201-1.000: "
+        print(f"{n} puntos, {len(doc['paradas_1_200'])} paradas de 1-200, {sum(m['paradas'] for m in doc['paradas_201_1000'])} de 201-1.000 "
+              f"({len(doc.get('paradas_201_700', []))} detalladas): "
               + ("todo correcto" if not errores else f"{len(errores)} errores"))
         return 1 if errores else 0
     if not args.actualizar_xy:

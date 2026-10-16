@@ -1,7 +1,7 @@
 {
  "formato": "af-rio-amazonas/0 [P]",
  "titulo": "Geografía limpia del Amazonas para el Mapa del río (Tintalú / Amazon Fill)",
- "estado": "Material de apoyo, no canon (docs/research). Lo usa generar_mapa.py para la muestra; el trazado de producción sale de Natural Earth (y de HydroRIVERS para las vistas de Mundo) con tools/river-map/ (propuesta §3.6). Nombres, datos y textos: pendientes del asesor cultural (07 §8.2). Revisado el 2026-10-13 con 41 hallazgos (propuesta, cabecera). Las paradas detalladas son las de 1-200 (mundos 1-5); si la 1.0 son los niveles 1-700, como dice el GDD (§2 #21), faltan las paradas 20-69 (pregunta Q14 de la propuesta). Ampliado el 2026-10-14 (M2.7) con el «Otro dato» de las tarjetas de 1-200 (otros_datos de cada parada, con sus fuentes reabiertas ese día).",
+ "estado": "Material de apoyo, no canon (docs/research). Lo usa generar_mapa.py para la muestra; el trazado de producción sale de Natural Earth (y de HydroRIVERS para las vistas de Mundo) con tools/river-map/ (propuesta §3.6). Nombres, datos y textos: pendientes del asesor cultural (07 §8.2). Revisado el 2026-10-13 con 41 hallazgos (propuesta, cabecera). Las paradas detalladas son las de 1-200 (mundos 1-5) en paradas_1_200 y, con Q14-A (la 1.0 son los niveles 1-700, GDD §2 #21), las de 201-700 en paradas_201_700 (fase F9: k = 20-29 desde M3.7a y k = 30-41 desde M3.7b; faltan k = 42-69). Ampliado el 2026-10-14 (M2.7) con el «Otro dato» de las tarjetas de 1-200 (otros_datos de cada parada, con sus fuentes reabiertas ese día). Ampliado el 2026-10-15 (M3.7a) con las paradas k = 20-29 del mundo 6 (paradas_201_700) y sus ríos locales (rios_locales_201_700), con sus fuentes reabiertas ese día. Ampliado el 2026-10-15 (M3.7b) con las paradas k = 30-41 del mundo 7 (paradas_201_700), sus ríos locales (Tambopata y Manu), el punto de paso teotonio del viaje del 300 (Q18-A) y los candidatos de Pará de la tinaja como «Otro dato» de la parada 32 (pregunta 50 (a)).",
  "fecha": "2026-10-12",
  "datum": "WGS84, grados decimales (4 decimales)",
  "etiquetas": {
@@ -5540,36 +5540,38 @@
     {
      "nombre": "Nuevo Rocafuerte, frontera",
      "paradas": 1,
-     "lat": -0.9317,
-     "lon": -75.3875,
+     "lat": -0.9333,
+     "lon": -75.4,
      "conf": "E",
+     "nota": "Coordenada de Wikidata de la parroquia (Q647791), la de la parada 22 (antes, −0,9317, −75,3875, el punto «Boca del Yasuní / Nuevo Rocafuerte» del Napo de respaldo)",
      "xy": [
-      0.68273,
-      0.13977
+      0.68267,
+      0.13939
      ]
     },
     {
      "nombre": "Yasuní",
      "paradas": 2,
-     "lat": -1.0,
-     "lon": -76.0,
+     "lat": -0.77,
+     "lon": -76.1,
      "conf": "E",
-     "nota": "Sin petróleo, sin la consulta de 2023 ni pueblos aislados",
+     "nota": "Sin petróleo, sin la consulta de 2023 ni pueblos aislados. Coordenada de Wikidata del parque (Q1641326; antes, −1,0, −76,0 aproximada)",
      "xy": [
-      0.68,
-      0.12121
+      0.6892,
+      0.11818
      ]
     },
     {
      "nombre": "Lagunas de Cuyabeno (desvío por el Aguarico)",
      "paradas": 2,
-     "lat": -0.1167,
-     "lon": -75.8333,
+     "lat": -0.0125,
+     "lon": -76.1787,
      "conf": "E",
      "xy": [
-      0.71533,
-      0.12626
-     ]
+      0.7195,
+      0.1158
+     ],
+     "nota": "La Laguna Grande (Wikidata Q131248042); la reserva (Q917251) está en −0,1167, −75,8333"
     },
     {
      "nombre": "El Coca",
@@ -5595,7 +5597,8 @@
     }
    ],
    "cuidado": "Sin petróleo ni pueblos en aislamiento; nombres kichwa solo con hablante",
-   "pregunta_se_plantea_en": 200
+   "pregunta_se_plantea_en": 200,
+   "detalle": "paradas_201_700, k = 20-29 (M3.7a, 2026-10-15): cada parada con su dato, su «Otro dato», su fondo y sus vetos"
   },
   {
    "mundo": 7,
@@ -5606,74 +5609,105 @@
     420
    ],
    "paradas": 12,
-   "viaje_de_entrada": "Napo abajo → Amazonas (repaso de lo ya lleno) → Madeira (rápidos de Teotônio) → Villa Bella → Beni (Cachuela Esperanza, Riberalta) → Madre de Dios → Puerto Heath",
+   "viaje_de_entrada": "Napo abajo → Amazonas (repaso de lo ya lleno) → Madeira (rápidos de Teotônio: relevo del guía, Q18-A) → Villa Bella → Beni (Cachuela Esperanza, Riberalta) → Madre de Dios → Puerto Heath",
    "banderas_de_cortesia": [
     "PE y BR de paso por el Amazonas",
     "BO en Villa Bella (300): la parada de Puerto Heath está en Bolivia",
-    "PE en Puerto Maldonado (310)"
+    "PE en el lago Sandoval (310): el primer sitio del Perú río arriba de Puerto Heath, aguas abajo de Puerto Maldonado"
    ],
    "pregunta_del_mundo": "¿Por qué los guacamayos comen arcilla? → la hipótesis más apoyada: buscan la sal que les falta [E npr2017_collpas]",
    "sitios": [
     {
      "nombre": "Madre de Dios bajo (Puerto Heath, Bolivia)",
      "paradas": 1,
-     "lat": -12.5026,
-     "lon": -68.6526,
-     "conf": "V",
+     "lat": -12.5022,
+     "lon": -68.65,
+     "conf": "E",
      "xy": [
-      0.2199,
-      0.34386
+      0.21991,
+      0.34394
      ],
      "pais": "BO",
-     "nota": "Puerto Heath está en el departamento de La Paz (Bolivia), en la boca del Heath [E wp_puerto_heath]"
-    },
-    {
-     "nombre": "Puerto Maldonado",
-     "paradas": 2,
-     "lat": -12.5971,
-     "lon": -69.1665,
-     "conf": "V",
-     "xy": [
-      0.21612,
-      0.32829
-     ],
-     "pais": "PE"
+     "nota": "Puerto Heath está en el departamento de La Paz (Bolivia), en la boca del Heath [E wp_puerto_heath]. Coordenada de Wikidata del pueblo (Q6092075), la de la parada 30 (antes, −12,5026, −68,6526, el punto de la boca del Heath en la poligonal del Madre de Dios)"
     },
     {
      "nombre": "Lago Sandoval",
      "paradas": 2,
+     "lat": -12.6055,
+     "lon": -69.0419,
+     "conf": "E",
+     "xy": [
+      0.21578,
+      0.33206
+     ],
+     "nota": "Coordenada de Wikidata del lago (Q1800405; antes, −12,6, −69,0 aproximada). Va antes que Puerto Maldonado: está aguas abajo de la ciudad y los km no retroceden (M3.7b; propuesta §5.4 ter)"
+    },
+    {
+     "nombre": "Puerto Maldonado",
+     "paradas": 2,
      "lat": -12.6,
-     "lon": -69.0,
+     "lon": -69.1833,
      "conf": "E",
      "xy": [
       0.216,
-      0.33333
-     ]
+      0.32778
+     ],
+     "pais": "PE",
+     "nota": "Coordenada de Wikidata de la ciudad (Q541435; antes, −12,5971, −69,1665, el punto de la boca del Tambopata en la poligonal del Madre de Dios)"
     },
     {
      "nombre": "Collpa del Tambopata",
      "paradas": 3,
-     "nota": "Coordenadas por fijar [NV]"
+     "lat": -13.1339,
+     "lon": -69.6108,
+     "conf": "E",
+     "xy": [
+      0.19464,
+      0.31482
+     ],
+     "nota": "La collpa Colorado, sobre el Tambopata [E npr2017_collpas]; coordenada de Wikidata del Tambopata Research Center (Q115641210), junto a la collpa, que no tiene elemento propio [E wp_macaw_society]"
     },
     {
      "nombre": "Boca Manu",
      "paradas": 2,
-     "lat": -12.2715,
-     "lon": -70.9328,
-     "conf": "V",
+     "lat": -12.2648,
+     "lon": -70.9102,
+     "conf": "E",
      "xy": [
-      0.22914,
-      0.27476
-     ]
+      0.22941,
+      0.27545
+     ],
+     "nota": "Coordenada de Wikidata del pueblo (Q27051064; antes, −12,2715, −70,9328, el punto de la boca del Manu en la poligonal del Madre de Dios)"
     },
     {
      "nombre": "Manu alto",
      "paradas": 2,
-     "nota": "Coordenadas por fijar [NV]"
+     "lat": -11.9,
+     "lon": -71.3667,
+     "conf": "E",
+     "xy": [
+      0.244,
+      0.26162
+     ],
+     "nota": "Coordenada de Wikidata de la Estación Biológica de Cocha Cashu (Q5139274), en una cocha del Manu; la del parque (Q390264) no está sobre el río"
     }
    ],
-   "cuidado": "Sin minería; el istmo de Fitzcarrald no es ruta (era del caucho); tinaja en el 323; Rosa y los rápidos de Teotônio: ver la propuesta §6.1 (Q3 y asesor)",
+   "cuidado": "Sin minería; el istmo de Fitzcarrald no es ruta (era del caucho); tinaja en el 323; con Q18-A, Rosa se queda en los rápidos de Teotônio y en los mundos 7 y 8 guía el bufeo boliviano: el relevo es el punto de paso teotonio del viaje del 300 (D-023, punto 19, P-M8; propuesta §6.1)",
    "puntos_de_paso_del_viaje": [
+    {
+     "id": "teotonio",
+     "lat": -8.85,
+     "lon": -64.0333,
+     "nombre": "Rápidos de Teotônio (Madeira; hoy bajo el embalse de Santo Antônio)",
+     "conf": "E",
+     "dato": "map.stop.teotonio.dato_01 [E wp_boto]: «Río arriba de Teotônio vive otra población de delfines de río, aislada por los rápidos.»",
+     "relevo_del_guia": "Rosa se queda aquí y desde aquí guía el bufeo boliviano (el mismo rig con otra paleta, sin nombre propio) hasta el viaje del 560 (Q18-A; D-023, punto 19, P-M8: el guía se deduce del mundo, sin campo nuevo en el contrato 30)",
+     "nota": "Coordenada de Wikidata de la Cachoeira Teotônio (Q22051335, de GeoNames 3661937), a unos 2 km del Madeira de respaldo [E wd_madre_de_dios]. Wikipedia EN (Amazon river dolphin): la subespecie boliviana vive «in the upper reaches of the Madeira River, upstream of the rapids of Teotonio», y «a series of rapids and waterfalls in the Madeira River have isolated one population» [E wp_boto: reabierta el 2026-10-15]. Wikipedia EN (Madeira River): los saltos de Teotônio y de San Antônio existían antes de 2012 y hoy los cubre el embalse de Santo Antônio [E wp_madeira: reabierta el 2026-10-15]; por eso el texto no dice «estos rápidos». La misma página cuenta un estudio genético que no halló ADN mitocondrial propio río arriba de los rápidos: el texto habla de «otra población», no de otra especie.",
+     "xy": [
+      0.366,
+      0.48384
+     ]
+    },
     {
      "lat": -10.3821,
      "lon": -65.3903,
@@ -5704,7 +5738,8 @@
       0.42224
      ]
     }
-   ]
+   ],
+   "detalle": "paradas_201_700, k = 30-41 (M3.7b, 2026-10-15): cada parada con su dato, su «Otro dato», su fondo y sus vetos; el lago Sandoval va antes que Puerto Maldonado (§5.4 ter)"
   },
   {
    "mundo": 8,
@@ -6200,6 +6235,1645 @@
    "cuidado": "Sin Choquequirao (ruinas, direccion-visual-v2 §7) y Q'eswachaka solo con el asesor (ritual). Si el dueño elige «Marañón alto», ver la nota de la propuesta §5.5. Sin «consenso» ni «aquí nace el agua»: el Amazonas no tiene una sola naciente [E wp_source]"
   }
  ],
+ "paradas_201_700": [
+  {
+   "k": 20,
+   "id": "mazan",
+   "nombre": "Mazán",
+   "sitio": "Napo peruano (Mazán, Santa Clotilde)",
+   "niveles": [
+    201,
+    210
+   ],
+   "llegada_al_ganar": 200,
+   "mundo": 6,
+   "mundo_id": "w06_oriente",
+   "tipo": "gran_parada",
+   "pais": "PE",
+   "rio": "Napo",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -3.4978,
+   "lon": -73.0891,
+   "conf": "E",
+   "wikidata": "Q6799128",
+   "ancla_rio": "napo",
+   "km_desde_el_mar": 3635,
+   "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
+   "km_casa": 3664,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 201-220 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.myth.source",
+    "texto": "El Amazonas no tiene una sola naciente: la ciencia aún discute cuál es la más lejana.",
+    "etiqueta": "E",
+    "fuente": "wp_source, natgeo2014",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.mazan.dato_01",
+     "texto": "Cerca de su boca, en Mazán, el Napo lleva de media unos {n} m³ de agua por segundo.",
+     "etiqueta": "E",
+     "fuente": "CR-F77",
+     "args": {
+      "n": 6800
+     },
+     "releida": "2026-10-15",
+     "origen": "§(e)",
+     "nota": "Wikipedia (Napo River): «The mean annual discharge at Mazán is 6,800 m3/s»; otra tabla de la misma página da 7.000 m³/s en la estación de Mazán (Bella Vista) para 1991-2023 [E CR-F77]. Es el candidato «El Napo» de §(e) del mundo 6 (allí, F77 con [V]; aquí, [E], porque es Wikipedia sola). La cifra va como {n} (Q8-A). Para [V], el observatorio SO HYBAM."
+    }
+   ],
+   "nota_dato": "Gran parada del mundo 6 (la primera; D-013 punto 3). En el 200, el dato de llegada es map.myth.source (08 §4.5; D-023 punto 20): el Amazonas no tiene una sola naciente y la ciencia aún discute cuál es la más lejana [E wp_source, natgeo2014]. El texto no dice «aquí nace» ni «consenso» (Q7-A). Se reabrieron las dos URL el 2026-10-15: «not considered to have one unique source» y «continues to cause arguments even today» [E wp_source]; «Explorers and scientists have argued over where to locate the start» [E natgeo2014]. La canoa vuelve río abajo desde Pacaya-Samiria (viaje del 200: Nauta → Iquitos → boca del Napo): los km a casa bajan, como en todo viaje de entrada que deshace camino. Vetos del mundo 6 para el asesor (§(e) y propuesta §5.4): el ritual de la guayusa; los pueblos en aislamiento (Tagaeri y Taromenane) y su zona; el petróleo, sus derrames y la consulta de 2023; el maito sin crédito; nombres en kichwa u otras lenguas solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w06",
+    "heroe": "kit:napo_ancho_con_lanchas",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Napo ancho cerca de su boca, con la orilla baja y lanchas lejanas (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 6, crepúsculo y noche temprana (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "banner 201",
+    "Cacao 201",
+    "miquito 202 (cotoncillo colorado)"
+   ],
+   "pregunta_del_mundo": {
+    "texto": "¿Cuántas especies de árbol caben en una hectárea?",
+    "se_responde_en": 230
+   },
+   "notas": "Coordenada de Wikidata del distrito de Mazán (Q6799128), cuya capital está en la orilla del Napo, a unos 40 km de su boca por el río [E wd_oriente] (la distancia, [cálculo]). La pregunta del mundo 6 se plantea al llegar (en el banner del 201, Q4-D).",
+   "xy": [
+    0.58009,
+    0.20942
+   ]
+  },
+  {
+   "k": 21,
+   "id": "santa_clotilde",
+   "nombre": "Santa Clotilde",
+   "sitio": "Napo peruano (Mazán, Santa Clotilde)",
+   "niveles": [
+    211,
+    220
+   ],
+   "llegada_al_ganar": 210,
+   "mundo": 6,
+   "mundo_id": "w06_oriente",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Napo",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -2.4876,
+   "lon": -73.6797,
+   "conf": "E",
+   "wikidata": "Q107201179",
+   "ancla_rio": "napo",
+   "km_desde_el_mar": 3765,
+   "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
+   "km_casa": 3794,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 201-220 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.santa_clotilde.dato_01",
+    "texto": "Aquí el Napo lleva casi el triple de agua que en la frontera con Ecuador.",
+    "etiqueta": "E",
+    "fuente": "CR-F77",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [],
+   "nota_dato": "[cálculo] sobre las estaciones de aforo de Wikipedia (Napo River): Santa Clotilde, 5.895 m³/s de media (2002-2011), y Nuevo Rocafuerte, en la frontera, 2.032 m³/s (2001-2009): 2,9 veces [E CR-F77]. Los periodos no son iguales; por eso «casi el triple», sin cifra. Cuenta «remontar» sin texto: río arriba, el río lleva menos agua (propuesta §2.2). Vetos del mundo 6 para el asesor (§(e) y propuesta §5.4): el ritual de la guayusa; los pueblos en aislamiento (Tagaeri y Taromenane) y su zona; el petróleo, sus derrames y la consulta de 2023; el maito sin crédito; nombres en kichwa u otras lenguas solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w06",
+    "heroe": "kit:napo_varzea_peruana",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Napo entre várzeas, con la orilla de Santa Clotilde lejana (piezas del kit)",
+    "cuidado": "Sin personas. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 6, crepúsculo y noche temprana (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "hito 220 [P]: el primer hito con Aguas turbias y otra mecánica (Barro, con una Cuia chica; d.5.2)"
+   ],
+   "notas": "Coordenada de Wikidata del pueblo de Santa Clotilde (Q107201179), capital del distrito de Napo (Loreto) [E wd_oriente].",
+   "xy": [
+    0.6205,
+    0.19152
+   ]
+  },
+  {
+   "k": 22,
+   "id": "nuevo_rocafuerte",
+   "nombre": "Nuevo Rocafuerte",
+   "sitio": "Nuevo Rocafuerte, frontera",
+   "niveles": [
+    221,
+    230
+   ],
+   "llegada_al_ganar": 220,
+   "mundo": 6,
+   "mundo_id": "w06_oriente",
+   "tipo": "parada",
+   "pais": "EC",
+   "rio": "Napo",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -0.9333,
+   "lon": -75.4,
+   "conf": "E",
+   "wikidata": "Q647791",
+   "ancla_rio": "napo",
+   "km_desde_el_mar": 4032,
+   "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
+   "km_casa": 4061,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 221-240 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.country.ec.dato_01",
+    "texto": "En Ecuador, a la Amazonia también la llaman «el Oriente»: queda al este de los Andes.",
+    "etiqueta": "E",
+    "fuente": "eswp_amazonia_ec",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [],
+   "nota_dato": "Entrada en Ecuador: placa «Ecuador te da la bienvenida» en la franja de la victoria del 220, antes de la placa del dato [P] (extensión de P-M7 al 220: D-023 punto 18 solo la fija en el 80 y el 140; la decide el dueño con M4.5a), y bandera de cortesía (Q8-A; cruces_de_pais). Wikipedia ES: la región es «conocida también como Amazonía u Oriente» y la cordillera de los Andes marca su límite occidental [E eswp_amazonia_ec]. Explica el nombre del mundo. Sin la cifra del territorio: las fuentes dan del 43 % al 48 %. Vetos del mundo 6 para el asesor (§(e) y propuesta §5.4): el ritual de la guayusa; los pueblos en aislamiento (Tagaeri y Taromenane) y su zona; el petróleo, sus derrames y la consulta de 2023; el maito sin crédito; nombres en kichwa u otras lenguas solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w06",
+    "heroe": "kit:napo_frontera",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Napo ancho en la frontera, con una baliza (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin el destacamento militar. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 6, crepúsculo y noche temprana (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Lluvia con Brote 229 (d.5.2)"
+   ],
+   "bandera": "EC",
+   "notas": "Coordenada de Wikidata de la parroquia de Nuevo Rocafuerte (Q647791), junto a la boca del Yasuní; la del Aguarico, frontera con el Perú, queda unos 20 km río abajo [E wd_oriente].",
+   "xy": [
+    0.68267,
+    0.13939
+   ]
+  },
+  {
+   "k": 23,
+   "id": "yasuni",
+   "nombre": "Yasuní",
+   "sitio": "Yasuní",
+   "niveles": [
+    231,
+    240
+   ],
+   "llegada_al_ganar": 230,
+   "mundo": 6,
+   "mundo_id": "w06_oriente",
+   "tipo": "parada",
+   "pais": "EC",
+   "rio": "Napo",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -0.77,
+   "lon": -76.1,
+   "conf": "E",
+   "wikidata": "Q1641326",
+   "ancla_rio": "napo",
+   "km_desde_el_mar": 4114,
+   "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
+   "km_casa": 4143,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 221-240 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.yasuni.dato_01",
+    "texto": "En una hectárea típica de Yasuní crecen más de {n} especies de árbol.",
+    "etiqueta": "V",
+    "fuente": "bass2010_yasuni",
+    "args": {
+     "n": 655
+    },
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.yasuni.dato_02",
+     "texto": "Yasuní es parque nacional desde 1979 y reserva de la biosfera de la UNESCO desde 1989.",
+     "etiqueta": "V",
+     "fuente": "bass2010_yasuni",
+     "releida": "2026-10-15",
+     "origen": "§5.4 bis",
+     "nota": "Bass y otros (2010): «Created in 1979» y, en 1989, Yasuní y buena parte del área vecina se designaron «a UNESCO Man and the Biosphere Reserve» [V bass2010_yasuni]. Los años no llevan {n}."
+    }
+   ],
+   "nota_dato": "Responde la pregunta del mundo 6 (se plantea en el 200): «a typical hectare of terra firme forest in Yasuní contains upwards of 655 tree species» [V bass2010_yasuni: reabierta el 2026-10-15]. «Más de» traduce «upwards of»; «típica» y la tierra firme, por la fuente. Vetos del mundo 6 para el asesor (§(e) y propuesta §5.4): el ritual de la guayusa; los pueblos en aislamiento (Tagaeri y Taromenane) y su zona; el petróleo, sus derrames y la consulta de 2023; el maito sin crédito; nombres en kichwa u otras lenguas solo con un hablante. En Yasuní, además: ningún pueblo ni comunidad nombrados, y nada de la zona intangible.",
+   "fondo": {
+    "kit": "bg_kit_w06",
+    "heroe": "kit:dosel_de_noche",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el dosel de tierra firme sobre la orilla del Napo, de noche (piezas del kit)",
+    "cuidado": "Sin plataformas ni mecheros de petróleo, sin carreteras y sin personas. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 6, crepúsculo y noche temprana (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 240 [P] (Hoja + Brote, Muy difícil; d.5.2)"
+   ],
+   "notas": "Coordenada de Wikidata del parque (Q1641326), a unos 9 km del Napo de respaldo (dentro de los 15 km del canon, sin atraque) [E wd_oriente]. Asesor: Yasuní tiene pueblos en aislamiento; el texto solo habla de árboles.",
+   "xy": [
+    0.6892,
+    0.11818
+   ]
+  },
+  {
+   "k": 24,
+   "id": "yasuni_dosel",
+   "nombre": "El dosel de Yasuní",
+   "sitio": "Yasuní",
+   "niveles": [
+    241,
+    250
+   ],
+   "llegada_al_ganar": 240,
+   "mundo": 6,
+   "mundo_id": "w06_oriente",
+   "tipo": "parada",
+   "pais": "EC",
+   "rio": "Napo",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -0.77,
+   "lon": -76.1,
+   "conf": "E",
+   "wikidata": "Q1641326",
+   "ancla_rio": "napo",
+   "km_desde_el_mar": 4114,
+   "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
+   "km_casa": 4143,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 241-260 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.yasuni.dato_03",
+    "texto": "En Yasuní se han registrado al menos {n} especies de aves.",
+    "etiqueta": "V",
+    "fuente": "bass2010_yasuni",
+    "args": {
+     "n": 596
+    },
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.yasuni.dato_04",
+     "texto": "Las {n} especies de anfibios de Yasuní son un récord mundial entre lugares parecidos.",
+     "etiqueta": "V",
+     "fuente": "bass2010_yasuni",
+     "args": {
+      "n": 150
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 bis",
+     "nota": "Bass y otros (2010): «The 150 amphibian species documented to date throughout Yasuní is a world record among comparable landscapes» [V bass2010_yasuni]. «Lugares parecidos» traduce «comparable landscapes»: sin «el lugar con más anfibios del mundo»."
+    }
+   ],
+   "nota_dato": "Bass y otros (2010): «Yasuní as a whole contains at least 596 documented bird species» [V bass2010_yasuni: reabierta el 2026-10-15]. Segunda parada del mismo sitio, sin variante de luz (en 201-700 no hay héroe que la lleve): otro nombre y otro dato. Vetos del mundo 6 para el asesor (§(e) y propuesta §5.4): el ritual de la guayusa; los pueblos en aislamiento (Tagaeri y Taromenane) y su zona; el petróleo, sus derrames y la consulta de 2023; el maito sin crédito; nombres en kichwa u otras lenguas solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w06",
+    "heroe": "kit:dosel_con_aves",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el dosel de Yasuní con siluetas de aves, de noche temprana (piezas del kit)",
+    "cuidado": "Sin plataformas ni mecheros de petróleo y sin personas. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 6, crepúsculo y noche temprana (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "estreno de la Liana de cuenta 243 (d.5.2)"
+   ],
+   "notas": "La misma coordenada que la parada 23 (Q1641326) [E wd_oriente].",
+   "xy": [
+    0.6892,
+    0.11818
+   ]
+  },
+  {
+   "k": 25,
+   "id": "cuyabeno",
+   "nombre": "Lagunas de Cuyabeno",
+   "sitio": "Lagunas de Cuyabeno (desvío por el Aguarico)",
+   "niveles": [
+    251,
+    260
+   ],
+   "llegada_al_ganar": 250,
+   "mundo": 6,
+   "mundo_id": "w06_oriente",
+   "tipo": "parada",
+   "pais": "EC",
+   "rio": "Cuyabeno",
+   "agua_del_sitio": "negra",
+   "agua_base_mundo": "white",
+   "lat": -0.0125,
+   "lon": -76.1787,
+   "conf": "E",
+   "wikidata": "Q131248042",
+   "ancla_rio": "cuyabeno",
+   "km_desde_el_mar": 4165,
+   "km_desde_el_mar_conf": "cálculo (boca del Napo + Napo hasta la boca del Aguarico + Aguarico hasta la boca del Cuyabeno + Cuyabeno hasta la Laguna Grande, todo sin meandros: valor mínimo)",
+   "km_casa": 4194,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 241-260 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.cuyabeno.dato_01",
+    "texto": "Aquí está el mayor sistema de lagunas tropicales de Ecuador: {n} unidas por canales.",
+    "etiqueta": "V",
+    "fuente": "enfoqueute2016_cuyabeno",
+    "args": {
+     "n": 14
+    },
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.cuyabeno.dato_02",
+     "texto": "Estas lagunas son parte del humedal Ramsar más grande de Ecuador, declarado en 2017.",
+     "etiqueta": "E",
+     "fuente": "iucn_ramsar_ec, eloriente_ramsar_2017",
+     "releida": "2026-10-15",
+     "origen": "§5.4 bis",
+     "nota": "UICN: el complejo Cuyabeno-Lagartococha-Yasuní es «el humedal Ramsar más grande de Ecuador» [V iucn_ramsar_ec]; la declaratoria de la Convención Ramsar fue el 24 de agosto de 2017 [E eloriente_ramsar_2017: prensa]. La ficha Ramsar (sitio 2332) no se pudo reabrir el 2026-10-15 (502 y 404): por eso el dato va con [E]. Sin hectáreas: las fuentes dan de 770.000 a 776.116."
+    }
+   ],
+   "nota_dato": "Gutiérrez Cruz y otros (2016), Enfoque UTE: la reserva «Contiene el mayor sistema lacustre tropical del Ecuador» y los ríos Cuyabeno y Aguarico «forman un sistema de 14 lagunas comunicadas entre sí por pequeños canales» [V enfoqueute2016_cuyabeno: revista académica, reabierta el 2026-10-15]. Agua negra: el Cuyabeno y el Lagartococha son afluentes de agua negra del Aguarico, que es de agua blanca [V denkinger2010_cuyabeno]; en un mundo de agua blanca, la laguna negra va en segundo plano y la mini cuia del Muestrario se llena de agua negra (propuesta §5.1, regla de coherencia del agua). Desvío por el Aguarico, como Anavilhanas por el Negro. Vetos del mundo 6 para el asesor (§(e) y propuesta §5.4): el ritual de la guayusa; los pueblos en aislamiento (Tagaeri y Taromenane) y su zona; el petróleo, sus derrames y la consulta de 2023; el maito sin crédito; nombres en kichwa u otras lenguas solo con un hablante. En Cuyabeno, además: sin nombrar las comunidades siona, secoya, cofán, kichwa ni shuar de la reserva sin el asesor, y sin las lagunas secas de 2023-2024 (riesgo R3, como la sequía de 2024 del mundo 3).",
+   "fondo": {
+    "kit": "bg_kit_w06",
+    "heroe": "kit:laguna_negra_con_igapo",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: la laguna negra como espejo, con árboles que salen del agua (piezas del kit); la laguna nocturna es el paisaje canónico del mundo 6 (07 §2.1)",
+    "cuidado": "Laguna siempre llena: sin playas al descubierto ni barro agrietado (R3). Sin canoas con turistas ni personas. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 6, crepúsculo y noche temprana (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 260 [P] (Liana de cuenta + Barro, Muy difícil; d.5.2)"
+   ],
+   "rios_locales": [
+    "aguarico",
+    "cuyabeno"
+   ],
+   "notas": "Coordenada de Wikidata de la Laguna Grande (Q131248042, de GeoNames 3658532), la mayor de la reserva; el punto de Wikidata de la reserva (Q917251: −0,1167, −75,8333) no está en las lagunas [E wd_oriente]. La canoa entra por la boca del Aguarico, sube a la del Cuyabeno y llega a la Laguna Grande (rios_locales_201_700).",
+   "xy": [
+    0.7195,
+    0.1158
+   ]
+  },
+  {
+   "k": 26,
+   "id": "cuyabeno_igapo",
+   "nombre": "Bosque inundado de Cuyabeno",
+   "sitio": "Lagunas de Cuyabeno (desvío por el Aguarico)",
+   "niveles": [
+    261,
+    270
+   ],
+   "llegada_al_ganar": 260,
+   "mundo": 6,
+   "mundo_id": "w06_oriente",
+   "tipo": "parada",
+   "pais": "EC",
+   "rio": "Cuyabeno",
+   "agua_del_sitio": "negra",
+   "agua_base_mundo": "white",
+   "lat": -0.0125,
+   "lon": -76.1787,
+   "conf": "E",
+   "wikidata": "Q131248042",
+   "ancla_rio": "cuyabeno",
+   "km_desde_el_mar": 4165,
+   "km_desde_el_mar_conf": "cálculo (boca del Napo + Napo hasta la boca del Aguarico + Aguarico hasta la boca del Cuyabeno + Cuyabeno hasta la Laguna Grande, todo sin meandros: valor mínimo)",
+   "km_casa": 4194,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 261-280 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.cuyabeno.dato_03",
+    "texto": "Las lagunas con bosque inundado parecen ser la guardería de los delfines de Cuyabeno.",
+    "etiqueta": "V",
+    "fuente": "denkinger2010_cuyabeno",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [],
+   "nota_dato": "Denkinger (2010), Avances en Ciencias e Ingenierías (USFQ): por los animales y la alta proporción de crías vistos en los herbazales y en las «lagoons with Igapó», «these habitats seem to be especially important as breeding areas» [V denkinger2010_cuyabeno: reabierta el 2026-10-15]. «Parecen ser» conserva el «seem» de la fuente. Rosa asoma con sus parientes, como en Tarapoto [P] (Q18 solo cambia los mundos 7 y 8). Vetos del mundo 6 para el asesor (§(e) y propuesta §5.4): el ritual de la guayusa; los pueblos en aislamiento (Tagaeri y Taromenane) y su zona; el petróleo, sus derrames y la consulta de 2023; el maito sin crédito; nombres en kichwa u otras lenguas solo con un hablante. Sin las lagunas secas (R3).",
+   "fondo": {
+    "kit": "bg_kit_w06",
+    "heroe": "kit:igapo_con_delfines",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el bosque inundado al borde de la laguna, con un lomo de delfín lejano (piezas del kit)",
+    "cuidado": "Laguna siempre llena (R3); sin personas. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 6, crepúsculo y noche temprana (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "Piraña con Brote 266 (d.5.2)"
+   ],
+   "rios_locales": [
+    "aguarico",
+    "cuyabeno"
+   ],
+   "notas": "La misma coordenada que la parada 25 (Q131248042) [E wd_oriente].",
+   "xy": [
+    0.7195,
+    0.1158
+   ]
+  },
+  {
+   "k": 27,
+   "id": "boca_del_coca",
+   "nombre": "Boca del río Coca",
+   "sitio": "El Coca",
+   "niveles": [
+    271,
+    280
+   ],
+   "llegada_al_ganar": 270,
+   "mundo": 6,
+   "mundo_id": "w06_oriente",
+   "tipo": "parada",
+   "pais": "EC",
+   "rio": "Coca y Napo",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -0.4694,
+   "lon": -76.9742,
+   "conf": "E",
+   "wikidata": "Q1104914",
+   "ancla_rio": "napo",
+   "km_desde_el_mar": 4216,
+   "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
+   "km_casa": 4245,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 261-280 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.boca_del_coca.dato_01",
+    "texto": "En esta ciudad, a la que también llaman El Coca, el río Coca se une al Napo.",
+    "etiqueta": "E",
+    "fuente": "wp_el_coca, wp_coca_river",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [],
+   "nota_dato": "Wikipedia: la ciudad (Puerto Francisco de Orellana) también se llama Coca o El Coca y está «at the confluence of the Coca River and the Napo River» [E wp_el_coca]; «The two rivers join in the city of Puerto Francisco de Orellana» [E wp_coca_river]. Reabiertas el 2026-10-15. Sin la cascada de San Rafael ni la erosión del Coca (2020) y sin derrames. Vetos del mundo 6 para el asesor (§(e) y propuesta §5.4): el ritual de la guayusa; los pueblos en aislamiento (Tagaeri y Taromenane) y su zona; el petróleo, sus derrames y la consulta de 2023; el maito sin crédito; nombres en kichwa u otras lenguas solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w06",
+    "heroe": "kit:confluencia_coca_napo",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Coca entra en el Napo ancho, con la ciudad lejana (piezas del kit)",
+    "cuidado": "Sin puentes ni oleoductos en primer plano; sin personas. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 6, crepúsculo y noche temprana (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 280 [P] (Piraña + Brote, Muy difícil; d.5.2)"
+   ],
+   "notas": "Coordenada de Wikidata de la boca del río Coca (Q1104914, calificador «desembocadura»), la misma que el punto «El Coca» del Napo [E wd_oriente]. Va antes que la ciudad porque está un poco más abajo en el Napo.",
+   "xy": [
+    0.70122,
+    0.09169
+   ]
+  },
+  {
+   "k": 28,
+   "id": "el_coca",
+   "nombre": "El Coca",
+   "sitio": "El Coca",
+   "niveles": [
+    281,
+    290
+   ],
+   "llegada_al_ganar": 280,
+   "mundo": 6,
+   "mundo_id": "w06_oriente",
+   "tipo": "parada",
+   "pais": "EC",
+   "rio": "Napo",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -0.4625,
+   "lon": -76.9842,
+   "conf": "E",
+   "wikidata": "Q1014564",
+   "ancla_rio": "napo",
+   "km_desde_el_mar": 4217,
+   "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
+   "km_casa": 4246,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 281-300 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.el_coca.dato_01",
+    "texto": "En el Napo, las canoas hacen de taxi: desde las cinco de la mañana van y vienen.",
+    "etiqueta": "E",
+    "fuente": "CR-F78",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [],
+   "nota_dato": "Candidato de §(e) del mundo 6, «canoas-taxi de Coca» (allí, F78 con [V]; aquí, [E], porque es prensa: cabecera de la propuesta). Expreso (2016-10-04): las canoas, «propulsadas a motor o a remo», son el principal medio de transporte por el Napo, el Payamino y el Coca, el del Napo es «el taxi fluvial» y «Desde las 05:00 están saliendo o llegando las embarcaciones» [E CR-F78: reabierta el 2026-10-15]. La hora va en letra (no es una cifra con separador). El artículo nombra a más de 80 comunidades shuar, kichwa y huaorani: el texto no las nombra (cerca están los pueblos en aislamiento). Vetos del mundo 6 para el asesor (§(e) y propuesta §5.4): el ritual de la guayusa; los pueblos en aislamiento (Tagaeri y Taromenane) y su zona; el petróleo, sus derrames y la consulta de 2023; el maito sin crédito; nombres en kichwa u otras lenguas solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w06",
+    "heroe": "kit:napo_con_canoas",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Napo ancho en El Coca con canoas largas lejanas, al crepúsculo (piezas del kit)",
+    "cuidado": "Canoas sin personas identificables; sin oleoductos ni mecheros. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 6, crepúsculo y noche temprana (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "estreno de la Hoja atada 283 (d.5.2)"
+   ],
+   "notas": "Coordenada de Wikidata de la ciudad (Q1014564) [E wd_oriente].",
+   "xy": [
+    0.7015,
+    0.09139
+   ]
+  },
+  {
+   "k": 29,
+   "id": "misahualli",
+   "nombre": "Napo alto y Misahuallí",
+   "sitio": "Napo alto y Misahuallí",
+   "niveles": [
+    291,
+    300
+   ],
+   "llegada_al_ganar": 290,
+   "mundo": 6,
+   "mundo_id": "w06_oriente",
+   "tipo": "castillo",
+   "pais": "EC",
+   "rio": "Napo",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -1.0336,
+   "lon": -77.6686,
+   "conf": "E",
+   "wikidata": "Q48796581",
+   "ancla_rio": "napo",
+   "km_desde_el_mar": 4316,
+   "km_desde_el_mar_conf": "cálculo (boca del Napo en el cauce + recorrido sin meandros por el Napo: valor mínimo; la poligonal del Napo mide 735 km frente a 1.075-1.130)",
+   "km_casa": 4345,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 281-300 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.misahualli.dato_01",
+    "texto": "El Napo nace en las laderas de volcanes de Ecuador, como el Cotopaxi y el Antisana.",
+    "etiqueta": "E",
+    "fuente": "CR-F77",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [],
+   "nota_dato": "Candidato «El Napo» de §(e) del mundo 6. Wikipedia (Napo River): «rises in Ecuador on the flanks of the east Andean volcanoes of Antisana, Sincholagua and Cotopaxi» [E CR-F77: reabierta el 2026-10-15]. Cierre del mundo 6 (el «castillo»): el Napo ya está lleno hasta aquí. Vetos del mundo 6 para el asesor (§(e) y propuesta §5.4): el ritual de la guayusa; los pueblos en aislamiento (Tagaeri y Taromenane) y su zona; el petróleo, sus derrames y la consulta de 2023; el maito sin crédito; nombres en kichwa u otras lenguas solo con un hablante. En el Napo alto, además: el ritual de la guayusa (la fuente de §(e) describe a los achuar) y el turismo con fauna en cautiverio.",
+   "fondo": {
+    "kit": "bg_kit_w06",
+    "heroe": "kit:piedemonte_andino",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Napo estrecho y de playas de piedra, con las primeras colinas de los Andes al fondo (piezas del kit)",
+    "cuidado": "Sin volcanes reconocibles en erupción, sin animales en cautiverio y sin personas. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 6, crepúsculo y noche temprana (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 300 «Cuyabeno» [P] (Hoja atada + Liana con fruta, Muy difícil; d.4 y d.5.2): se juega aquí y no en Cuyabeno; el asesor puede cambiar el nombre (D-023, punto 21)",
+    "skin Borde de Pastaza (1.1)",
+    "fin del mundo 6"
+   ],
+   "notas": "Coordenada de Wikidata de Puerto Misahuallí (Q48796581), en la boca del Misahuallí [E wd_oriente]. El Napo nace unos 15 km río arriba, cerca de Puerto Napo, donde se unen el Jatunyacu y el Anzu (punto de cabecera del Napo en rios).",
+   "xy": [
+    0.67866,
+    0.07065
+   ]
+  },
+  {
+   "k": 30,
+   "id": "puerto_heath",
+   "nombre": "Puerto Heath",
+   "sitio": "Madre de Dios bajo (Puerto Heath, Bolivia)",
+   "niveles": [
+    301,
+    310
+   ],
+   "llegada_al_ganar": 300,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "gran_parada",
+   "pais": "BO",
+   "rio": "Madre de Dios",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.5022,
+   "lon": -68.65,
+   "conf": "E",
+   "wikidata": "Q6092075",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 2874,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Puerto Heath, sobre el punto de la boca del Heath",
+   "km_casa": 2903,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 301-320 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.country.bo.dato_01",
+    "texto": "Bolivia declaró en 2012 a su delfín de río tesoro nacional, con una ley que lo protege.",
+    "etiqueta": "E",
+    "fuente": "wp_boto",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.puerto_heath.dato_01",
+     "texto": "El río Heath, que aquí llega al Madre de Dios, marca la frontera entre Bolivia y el Perú.",
+     "etiqueta": "E",
+     "fuente": "wp_heath_river, eswp_puerto_heath",
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "Wikipedia EN (Heath River): «marks the natural border between Peru and Bolivia»; Wikipedia ES (Puerto Heath): «sobre la desembocadura del río Heath en el río Madre de Dios, en la frontera con Perú» [E wp_heath_river, eswp_puerto_heath: leídas el 2026-10-15]."
+    }
+   ],
+   "nota_dato": "Gran parada del mundo 7 (la primera; D-013 punto 3), en Bolivia: la canoa llega por el viaje del 300 (Misahuallí → Napo abajo → Amazonas, repaso de lo ya lleno → Madeira, con el punto de paso teotonio → Villa Bella → Beni → Riberalta → Madre de Dios). Bandera de Bolivia al ganar el 300 (cruces_de_pais: el viaje de entrada del mundo 7; la tricolor, la bandera nacional de uso náutico [P]; la elección frente a la wiphala la revisan el abogado y el asesor, propuesta §5.3). Dato del país: Wikipedia EN (Amazon river dolphin): «In September 2012, Bolivian President Evo Morales enacted a law to protect the dolphin and declared it a national treasure» [E wp_boto: reabierta el 2026-10-15]. El texto no nombra al presidente. Enlaza con el relevo de Q18-A: desde el 300 guía el bufeo boliviano (P-M8, D-023 punto 19). La placa «Bolivia te da la bienvenida» en la victoria del 300 sería otra extensión de P-M7 [P], como la del 220: la decide el dueño con M4.5a. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:boca_del_heath",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Madre de Dios ancho en la frontera, con la boca del Heath y una baliza (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin puesto militar. Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "banner 301 (viaje del 300 con el relevo en Teotônio)",
+    "tinte Arazá 301 (paleta completa)",
+    "miquito 302 (pichico emperador)",
+    "bandera de Bolivia (300)",
+    "guía: el bufeo boliviano desde el 300; Rosa se queda en los rápidos de Teotônio (Q18-A)"
+   ],
+   "bandera": "BO",
+   "pregunta_del_mundo": {
+    "texto": "¿Por qué los guacamayos comen arcilla?",
+    "se_responde_en": 350
+   },
+   "notas": "Coordenada de Wikidata de Puerto Heath (Q6092075), en la boca del Heath, frontera con el Perú [E wd_madre_de_dios]. La pregunta del mundo 7 se plantea al llegar (en el banner del 301, Q4-D) y la responde la llegada del 350 a la collpa (parada 35).",
+   "xy": [
+    0.21991,
+    0.34394
+   ]
+  },
+  {
+   "k": 31,
+   "id": "sandoval",
+   "nombre": "Lago Sandoval",
+   "sitio": "Lago Sandoval",
+   "niveles": [
+    311,
+    320
+   ],
+   "llegada_al_ganar": 310,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Madre de Dios",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.6055,
+   "lon": -69.0419,
+   "conf": "E",
+   "wikidata": "Q1800405",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 2920,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); el lago se proyecta sobre el tramo Puerto Heath-Puerto Maldonado y se suman unos 3 km en línea recta hasta su orilla (el sendero desde el río)",
+   "km_casa": 2949,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 301-320 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.sandoval.dato_01",
+    "texto": "El lago Sandoval es una cocha: una vuelta vieja del río que quedó separada como lago.",
+    "etiqueta": "E",
+    "fuente": "wp_lake_sandoval",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.sandoval.dato_02",
+     "texto": "El lago Sandoval, de unas {n} hectáreas, es de las mayores cochas del sureste del Perú.",
+     "etiqueta": "E",
+     "fuente": "wp_lake_sandoval",
+     "args": {
+      "n": 125
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "Wikipedia EN (Lake Sandoval): «one of the largest oxbow lakes in southeastern Peru, with a surface area of about 125 ha» [E wp_lake_sandoval: leída el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Entrada en el Perú: bandera de cortesía al ganar el 310 (Q8-A; cruces_de_pais, vuelta). Wikipedia EN: «Lake Sandoval is an oxbow lake», a unos 16 km de Puerto Maldonado, con un sendero desde el Madre de Dios [E wp_lake_sandoval: leída el 2026-10-15]. «Cocha» es el nombre del lago de meandro en la Amazonía peruana (SERNANP lo usa: «lagos en forma de herradura o cochas», sernanp_manu). Sin la placa de bienvenida: es una vuelta al Perú, como el 560 y el 960 (propuesta §5.3). Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:cocha_quieta",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el lago Sandoval como un espejo, con la orilla de bosque y la neblina del amanecer (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "hito 320 [P] (primer trío: Hoja atada + Lluvia + Brote)",
+    "bandera del Perú (310, vuelta)"
+   ],
+   "bandera": "PE",
+   "notas": "Coordenada de Wikidata del lago Sandoval (Q1800405) [E wd_madre_de_dios]. Está aguas abajo de Puerto Maldonado, así que va antes que la ciudad (los km no retroceden; propuesta §5.4 ter).",
+   "xy": [
+    0.21578,
+    0.33206
+   ]
+  },
+  {
+   "k": 32,
+   "id": "sandoval_aguajal",
+   "nombre": "Aguajal de Sandoval",
+   "sitio": "Lago Sandoval",
+   "niveles": [
+    321,
+    330
+   ],
+   "llegada_al_ganar": 320,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Madre de Dios",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.6055,
+   "lon": -69.0419,
+   "conf": "E",
+   "wikidata": "Q1800405",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 2920,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); el lago se proyecta sobre el tramo Puerto Heath-Puerto Maldonado y se suman unos 3 km en línea recta hasta su orilla (el sendero desde el río)",
+   "km_casa": 2949,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 321-340 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.sandoval.dato_03",
+    "texto": "En las orillas del lago Sandoval crecen aguajes, palmeras donde viven guacamayos.",
+    "etiqueta": "E",
+    "fuente": "wp_tambopata_nr",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.sandoval.dato_04",
+     "texto": "En las várzeas del Bajo Amazonas (Pará), cada casa usa cuias sin pintar de balde y vaso.",
+     "etiqueta": "V",
+     "fuente": "TJ-T1",
+     "releida": "2026-10-15",
+     "origen": "pregunta 50 (a)",
+     "nota": "Candidato 1 de la tinaja (b.2, «Cultura»). Carvalho, Bandeira y Rocha (2020), ensayo fotográfico en la región del Aritapera (Santarém, Pará): «Nas várzeas do Baixo Amazonas, toda casa possui cuias pitingas a servirem de baldes, coiós, copos, tigelas e vasilhas» [V TJ-T1: reabierta el 2026-10-15]. Dicho con su lugar real (Pará), aunque la tarjeta sea de una parada del Perú."
+    },
+    {
+     "clave": "map.stop.sandoval.dato_05",
+     "texto": "En Quatipuru-Mirim (Pará), las fazedeiras hacen a mano vasijas de barro para la lluvia.",
+     "etiqueta": "V",
+     "fuente": "TJ-T4",
+     "releida": "2026-10-15",
+     "origen": "pregunta 50 (a)",
+     "nota": "Candidato 2 de la tinaja. Pacheco, Vieira y Costa, Revista Cocar 22 (2023): el panelão de barro de la isla de Quatipuru-Mirim (Tracuateua, Pará) cumple «a função primária de reservatório de água», porque falta agua, y lo hacen las mujeres, «as quais são chamadas de fazedeiras»; «eu comecei a fazer panelão, porque o povo mandava eu fazer para aparar água da chuva» [V TJ-T4: reabierta el 2026-10-15]. Solo agua de lluvia: ni jugos ni bebidas guardadas (propuesta de la tinaja, b.2)."
+    },
+    {
+     "clave": "map.stop.sandoval.dato_06",
+     "texto": "El barro sin esmaltar suda: el agua que se evapora por sus poros enfría la de dentro.",
+     "etiqueta": "E",
+     "fuente": "TJ-T7",
+     "releida": "2026-10-15",
+     "origen": "pregunta 50 (a)",
+     "nota": "Candidato 3 de la tinaja, el único sin lugar: un dato general (el botijo). Wikipedia EN (Botijo): «the stored water is filtered through the pores of the clay [...] it evaporates, producing a cooling» [E TJ-T7: reabierta el 2026-10-15]. La propuesta de la tinaja lo daba con [V]; aquí va con [E], porque la fuente es Wikipedia sola (cabecera de esta propuesta). No habla de Brasil ni de la Amazonía, y el texto tampoco."
+    },
+    {
+     "clave": "map.stop.sandoval.dato_07",
+     "texto": "En Icoaraci, en Pará, hay una alfarería de cerámica para el uso diario desde 1903.",
+     "etiqueta": "E",
+     "fuente": "TJ-T5",
+     "releida": "2026-10-15",
+     "origen": "pregunta 50 (a)",
+     "nota": "Candidato 4 de la tinaja. Diário do Pará (2024-06-25): «A Olaria do Espanhol foi fundada em 1903 [...]» y «trabalha a cerâmica utilitária» [E TJ-T5: reabierta el 2026-10-15]. Con [E], porque es prensa sola (la propuesta de la tinaja lo daba con [V]). El texto no nombra la ciudad a la que pertenece el distrito ni copia réplicas marajoaras o tapajônicas (veto de la tinaja, b.2)."
+    }
+   ],
+   "nota_dato": "Estreno de la Tinaja en el 323 (D-019; d.5.2). Wikipedia EN (Tambopata National Reserve): el lago Sandoval tiene «its shores covered with palm trees (maurithia) which are home to Red Bellied Macaws, blue and yellow macaws» [E wp_tambopata_nr: leída el 2026-10-15]; maurithia es el aguaje (Mauritia flexuosa). Segunda parada del mismo sitio, sin variante de luz (en 201-700 no hay héroe que la lleve): otro nombre [P] y otro dato. «Otro dato» de la tarjeta: los cuatro candidatos de Pará de la tinaja (b.2 de su propuesta), por la pregunta 50 (a) (D-022): cada uno con su lugar real y con el visto bueno del asesor, sin texto nuevo en la victoria ni en el tutorial. Para el asesor, además: el riesgo del masato (la tinaja con bebida guardada y la cuia que sirve es la escena del masato en la Amazonía peruana: propuesta de la tinaja, b.2 y Q-Ti7); ninguna bebida fermentada, ni chicha, ni el chomo shipibo, ni las tinajas kukama. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:orilla_de_aguajes",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: la orilla del lago con palmeras de aguaje y guacamayos lejanos en vuelo (piezas del kit)",
+    "cuidado": "Ninguna tinaja ni vasija en el fondo: la tinaja solo está en el tablero. Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "estreno de la Tinaja 323 (★Ti 323-325; respaldo sin la Tinaja en d.5.4)",
+    "«Otro dato»: los cuatro candidatos de Pará (pregunta 50 (a), D-022)"
+   ],
+   "notas": "La misma coordenada que la parada 31 (Q1800405) [E wd_madre_de_dios].",
+   "xy": [
+    0.21578,
+    0.33206
+   ]
+  },
+  {
+   "k": 33,
+   "id": "puerto_maldonado",
+   "nombre": "Puerto Maldonado",
+   "sitio": "Puerto Maldonado",
+   "niveles": [
+    331,
+    340
+   ],
+   "llegada_al_ganar": 330,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Madre de Dios y Tambopata",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.6,
+   "lon": -69.1833,
+   "conf": "E",
+   "wikidata": "Q541435",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 2930,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Puerto Maldonado, en la boca del Tambopata",
+   "km_casa": 2959,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 321-340 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.puerto_maldonado.dato_01",
+    "texto": "Puerto Maldonado está donde el río Tambopata se une al Madre de Dios.",
+    "etiqueta": "E",
+    "fuente": "CR-F96",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.puerto_maldonado.dato_02",
+     "texto": "El añuje abre el coco de la castaña, come semillas y entierra otras, que pueden brotar.",
+     "etiqueta": "E",
+     "fuente": "CR-F93",
+     "releida": "2026-10-15",
+     "origen": "§(e)",
+     "nota": "Candidato «la castaña y el añuje» de §(e) del mundo 7 [F93]. Wikipedia EN (Brazil nut): el agutí (en el Perú, añuje) roe el coco, «eat some of the seeds inside while burying others for later use», y «some of these are able to germinate» [E CR-F93: reabierta el 2026-10-15]. §(e) lo daba con [V]; aquí, con [E], porque es Wikipedia sola. El nombre del animal cambia por país (añuje, cutia, guatusa, picure): asesor."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Puerto Maldonado): «located at the confluence of the Tambopata and Madre de Dios rivers» [E CR-F96: reabierta el 2026-10-15]. Ningún texto habla de la minería de oro, que la misma página cuenta entre sus industrias (veto de §(e)). Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:confluencia_tambopata",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Tambopata entra en el Madre de Dios ancho, con la ciudad lejana (piezas del kit)",
+    "cuidado": "Sin el puente ni la carretera. Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "hito 340 [P] (Tinaja + Brote, Muy difícil)"
+   ],
+   "notas": "Coordenada de Wikidata de Puerto Maldonado (Q541435) [E wd_madre_de_dios]; el punto de la poligonal del Madre de Dios (la boca del Tambopata) queda a unos 2 km.",
+   "xy": [
+    0.216,
+    0.32778
+   ]
+  },
+  {
+   "k": 34,
+   "id": "puerto_maldonado_astilleros",
+   "nombre": "Astilleros de Puerto Maldonado",
+   "sitio": "Puerto Maldonado",
+   "niveles": [
+    341,
+    350
+   ],
+   "llegada_al_ganar": 340,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Madre de Dios y Tambopata",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.6,
+   "lon": -69.1833,
+   "conf": "E",
+   "wikidata": "Q541435",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 2930,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Puerto Maldonado, en la boca del Tambopata",
+   "km_casa": 2959,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 341-360 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.puerto_maldonado.dato_03",
+    "texto": "En Puerto Maldonado, el turismo y la construcción de botes dan mucho trabajo.",
+    "etiqueta": "E",
+    "fuente": "CR-F96",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.puerto_maldonado.dato_04",
+     "texto": "El coco de la castaña tarda unos {n} meses en madurar después de la flor.",
+     "etiqueta": "E",
+     "fuente": "CR-F93",
+     "args": {
+      "n": 14
+     },
+     "releida": "2026-10-15",
+     "origen": "§(e)",
+     "nota": "Wikipedia EN (Brazil nut): «The fruit takes 14 months to mature after pollination of the flowers» [E CR-F93: reabierta el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Candidato «astilleros de Puerto Maldonado» de §(e) del mundo 7 [F96]. Wikipedia EN (Puerto Maldonado): «Tourism and related boat construction are the major sources of income» [E CR-F96: reabierta el 2026-10-15]. §(e) lo daba con [V]; aquí, con [E], porque es Wikipedia sola. Segunda parada del mismo sitio, sin variante de luz: otro nombre [P] y otro dato. El texto calla la tala y la minería de la misma frase de la fuente. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:botes_en_la_orilla",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: botes de madera a medio hacer en la orilla alta del río (piezas del kit)",
+    "cuidado": "Solo botes y madera: ninguna draga ni balsa minera. Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "estreno del Brote de dos hojas 343"
+   ],
+   "notas": "La misma coordenada que la parada 33 (Q541435) [E wd_madre_de_dios].",
+   "xy": [
+    0.216,
+    0.32778
+   ]
+  },
+  {
+   "k": 35,
+   "id": "collpa_tambopata",
+   "nombre": "Collpa del Tambopata",
+   "sitio": "Collpa del Tambopata",
+   "niveles": [
+    351,
+    360
+   ],
+   "llegada_al_ganar": 350,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Tambopata",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -13.1339,
+   "lon": -69.6108,
+   "conf": "E",
+   "wikidata": "Q115641210",
+   "ancla_rio": "tambopata",
+   "km_desde_el_mar": 3007,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); desde Puerto Maldonado, el Tambopata en línea recta hasta la estación de la collpa (77 km; el río real es bastante más largo)",
+   "km_casa": 3036,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 341-360 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.collpa_tambopata.dato_01",
+    "texto": "Según la idea más apoyada, los guacamayos comen arcilla para tomar la sal que les falta.",
+    "etiqueta": "E",
+    "fuente": "npr2017_collpas",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.collpa_tambopata.dato_02",
+     "texto": "La arcilla de una collpa tiene unas {n} veces más sodio que la comida de los loros.",
+     "etiqueta": "E",
+     "fuente": "npr2017_collpas",
+     "args": {
+      "n": 40
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "NPR (2017): «Amazonian clay lick soils typically contain levels of sodium 40 times greater than the parrots' plant foods» [E npr2017_collpas: reabierta el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Respuesta del mundo 7 (la pregunta se plantea en el 300). NPR (2017), con el estudio de Brightsmith y otros en Ibis: dos hipótesis, las toxinas y los minerales; el análisis «did support the idea that clay works as a nutrient supplement», y Brightsmith: «what is driving this is sodium, not toxins»; los propios autores piden tomarlo «with a grain of salt» [E npr2017_collpas: reabierta el 2026-10-15]. Por eso el texto dice «la idea más apoyada» y no «la ciencia demostró». Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:pared_de_arcilla",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: la pared roja de la collpa sobre el Tambopata, con guacamayos posados al amanecer (piezas del kit)",
+    "cuidado": "Sin turistas ni plataformas de observación. Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "respuesta de la pregunta del mundo 7 (350)",
+    "hito 360 [P] (Brote de dos hojas + Remolino)"
+   ],
+   "rios_locales": [
+    "tambopata"
+   ],
+   "notas": "Coordenada de Wikidata del Tambopata Research Center (Q115641210), junto a la collpa Colorado, que no tiene elemento propio: la Macaw Society trabajó en el bosque alrededor de la collpa y tuvo su sede en ese centro de 1989 a 2020 [E wd_madre_de_dios, wp_macaw_society]. La canoa sube el Tambopata desde Puerto Maldonado (rios_locales_201_700).",
+   "xy": [
+    0.19464,
+    0.31482
+   ]
+  },
+  {
+   "k": 36,
+   "id": "collpa_guacamayos",
+   "nombre": "Los guacamayos del Tambopata",
+   "sitio": "Collpa del Tambopata",
+   "niveles": [
+    361,
+    370
+   ],
+   "llegada_al_ganar": 360,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Tambopata",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -13.1339,
+   "lon": -69.6108,
+   "conf": "E",
+   "wikidata": "Q115641210",
+   "ancla_rio": "tambopata",
+   "km_desde_el_mar": 3007,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); desde Puerto Maldonado, el Tambopata en línea recta hasta la estación de la collpa (77 km; el río real es bastante más largo)",
+   "km_casa": 3036,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 361-380 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.collpa_tambopata.dato_03",
+    "texto": "A la collpa Colorado llegan cada día loros de hasta {n} especies, a veces cientos.",
+    "etiqueta": "E",
+    "fuente": "npr2017_collpas",
+    "releida": "2026-10-15",
+    "args": {
+     "n": 18
+    }
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.collpa_tambopata.dato_04",
+     "texto": "La Reserva Nacional Tambopata se creó en 2000 y protege unas {n} hectáreas.",
+     "etiqueta": "V",
+     "fuente": "elperuano_rntamb_2025",
+     "args": {
+      "n": 274690
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "El Peruano (2025-10-15), resolución del SERNANP que aprueba el Plan Maestro 2025-2030: «mediante el Decreto Supremo Nº 048-2000-AG, se establece la Reserva Nacional Tambopata, sobre una superficie de 274 690 ha» [V elperuano_rntamb_2025: leída el 2026-10-15]. La cifra va como {n} (Q8-A); el año, no."
+    }
+   ],
+   "nota_dato": "NPR (2017): «At the Colorado clay lick, a cliff face rising above the Tambopata River [...] parrots — often hundreds at a time from up to 18 species — gather each day to feast on sun-hardened clay» [E npr2017_collpas: reabierta el 2026-10-15]. Segunda parada del mismo sitio: otro nombre [P] y otro dato. La cifra va como {n} (Q8-A). Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:guacamayos_en_vuelo",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: una bandada de guacamayos de colores en vuelo frente a la collpa (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "Piraña con Brote de dos hojas 366"
+   ],
+   "rios_locales": [
+    "tambopata"
+   ],
+   "notas": "La misma coordenada que la parada 35 (Q115641210) [E wd_madre_de_dios].",
+   "xy": [
+    0.19464,
+    0.31482
+   ]
+  },
+  {
+   "k": 37,
+   "id": "tambopata_nidos",
+   "nombre": "Nidos del Tambopata",
+   "sitio": "Collpa del Tambopata",
+   "niveles": [
+    371,
+    380
+   ],
+   "llegada_al_ganar": 370,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Tambopata",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -13.1339,
+   "lon": -69.6108,
+   "conf": "E",
+   "wikidata": "Q115641210",
+   "ancla_rio": "tambopata",
+   "km_desde_el_mar": 3007,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); desde Puerto Maldonado, el Tambopata en línea recta hasta la estación de la collpa (77 km; el río real es bastante más largo)",
+   "km_casa": 3036,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 361-380 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.collpa_tambopata.dato_05",
+    "texto": "Aquí, los guacamayos azul y amarillo anidan casi siempre en palmeras de aguaje muertas.",
+    "etiqueta": "E",
+    "fuente": "wp_macaw_society",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.collpa_tambopata.dato_06",
+     "texto": "En la Reserva Tambopata, la zafra de la castaña va de enero a abril.",
+     "etiqueta": "E",
+     "fuente": "CR-F94",
+     "releida": "2026-10-15",
+     "origen": "§(e)",
+     "nota": "Candidato «la zafra» de §(e) del mundo 7 [F94]. Actualidad Ambiental (2011-01-05): la zafra «se da de enero hasta el mes de abril», en el ámbito de la Reserva Nacional Tambopata y del Parque Nacional Bahuaja-Sonene [E CR-F94: reabierta el 2026-10-15]. Con [E], porque es prensa sola (§(e) lo daba con [V]). La investigación de cultura-ribera anota que otras fuentes dicen de diciembre a marzo [E]; el texto se ciñe a Tambopata. Sin personas en primer plano."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (The Macaw Society, antes Tambopata Macaw Project): junto al Tambopata Research Center, «blue-and-yellow macaws in the region almost exclusively nest in dead mauritia palms» [E wp_macaw_society: leída el 2026-10-15]. Mauritia es el aguaje. Tercera parada del mismo sitio: otro nombre [P] y otro dato. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:aguajal_con_nidos",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: palmeras de aguaje secas en un pantano, con guacamayos azul y amarillo (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 380 [P] (Piraña + Brote de dos hojas)"
+   ],
+   "rios_locales": [
+    "tambopata"
+   ],
+   "notas": "La misma coordenada que la parada 35 (Q115641210) [E wd_madre_de_dios].",
+   "xy": [
+    0.19464,
+    0.31482
+   ]
+  },
+  {
+   "k": 38,
+   "id": "boca_manu",
+   "nombre": "Boca Manu",
+   "sitio": "Boca Manu",
+   "niveles": [
+    381,
+    390
+   ],
+   "llegada_al_ganar": 380,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Madre de Dios y Manu",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.2648,
+   "lon": -70.9102,
+   "conf": "E",
+   "wikidata": "Q27051064",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 3146,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Boca Manu, proyectada sobre el tramo de la boca del Blanco a la del Manu",
+   "km_casa": 3175,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 381-400 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.boca_manu.dato_01",
+    "texto": "En Boca Manu, el río Manu se junta con el Alto Madre de Dios.",
+    "etiqueta": "E",
+    "fuente": "eswp_madre_de_dios, eswp_rio_manu",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [],
+   "nota_dato": "Wikipedia ES (Río Madre de Dios): el río «recibe por la derecha al río Manu (356 km), en la localidad homónima de Manú o Boca Manu»; Wikipedia ES (Río Manu): «desemboca en el río Madre de Dios, en la parte conocida como Alto Madre de Dios, muy próximo a la localidad de Boca Manu» [E eswp_madre_de_dios, eswp_rio_manu: leídas el 2026-10-15]. El texto no nombra el distrito, que lleva el nombre de Fitzcarrald (era del caucho). Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:confluencia_manu",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Manu entra en el Alto Madre de Dios, con playas de arena al amanecer (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "Hoja atada con Barro 389"
+   ],
+   "notas": "Coordenada de Wikidata de Boca Manu (Q27051064), unos 2 km aguas abajo de la boca del Manu (Q2749258) [E wd_madre_de_dios].",
+   "xy": [
+    0.22941,
+    0.27545
+   ]
+  },
+  {
+   "k": 39,
+   "id": "alto_madre_de_dios",
+   "nombre": "El Alto Madre de Dios",
+   "sitio": "Boca Manu",
+   "niveles": [
+    391,
+    400
+   ],
+   "llegada_al_ganar": 390,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Alto Madre de Dios",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -12.2648,
+   "lon": -70.9102,
+   "conf": "E",
+   "wikidata": "Q27051064",
+   "ancla_rio": "madre_de_dios",
+   "km_desde_el_mar": 3146,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); Boca Manu, proyectada sobre el tramo de la boca del Blanco a la del Manu",
+   "km_casa": 3175,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 381-400 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.boca_manu.dato_02",
+    "texto": "Río arriba de aquí, el Madre de Dios se llama Alto Madre de Dios y baja de los Andes.",
+    "etiqueta": "E",
+    "fuente": "eswp_madre_de_dios",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.boca_manu.dato_03",
+     "texto": "El río Manu mide unos {n} km y corre entero por la región de Madre de Dios.",
+     "etiqueta": "E",
+     "fuente": "eswp_rio_manu",
+     "args": {
+      "n": 356
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "Wikipedia ES (Río Manu): «Tiene una longitud de 356 km, todos ellos en el territorio de la región de Madre de Dios» [E eswp_rio_manu: leída el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Wikipedia ES (Río Madre de Dios): nace «en las estribaciones orientales de la cordillera de Vilcanota» y es «conocido en este primer tramo como Alto Madre de Dios» [E eswp_madre_de_dios: leída el 2026-10-15]. Segunda parada del mismo sitio: otro nombre [P] y otro dato. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:piedemonte_madre_de_dios",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Alto Madre de Dios con los primeros cerros de los Andes al fondo (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 400 [P] (Liana con fruta + Hoja atada + Barro)"
+   ],
+   "notas": "La misma coordenada que la parada 38 (Q27051064) [E wd_madre_de_dios].",
+   "xy": [
+    0.22941,
+    0.27545
+   ]
+  },
+  {
+   "k": 40,
+   "id": "manu",
+   "nombre": "Manu alto",
+   "sitio": "Manu alto",
+   "niveles": [
+    401,
+    410
+   ],
+   "llegada_al_ganar": 400,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Manu",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -11.9,
+   "lon": -71.3667,
+   "conf": "E",
+   "wikidata": "Q5139274",
+   "ancla_rio": "manu",
+   "km_desde_el_mar": 3209,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); desde la boca del Manu, el Manu en línea recta hasta Cocha Cashu (63 km)",
+   "km_casa": 3238,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 401-420 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.manu.dato_01",
+    "texto": "El Manu es parque nacional desde 1973 y Patrimonio Natural de la Humanidad desde 1987.",
+    "etiqueta": "V",
+    "fuente": "sernanp_manu",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.manu.dato_02",
+     "texto": "En el parque del Manu se han registrado más de {n} especies de aves.",
+     "etiqueta": "V",
+     "fuente": "sernanp_manu",
+     "args": {
+      "n": 1000
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "SERNANP (ficha del Parque Nacional del Manu): «más de 1,000 especies de aves (en su mayoría residentes)» [V sernanp_manu: leída el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "SERNANP: «Creación 29 de mayo de 1973» y «en 1987 fue declarado Patrimonio Natural de la Humanidad» [V sernanp_manu: leída el 2026-10-15]. Los años no llevan {n}. Para el asesor, en el Manu sobre todo: los pueblos en aislamiento (mashco piro) y las comunidades que viven en el parque (Wikipedia: yora, matsigenka, harakbut y yine); el texto solo habla del parque y su fauna. Cocha Cashu es una estación de investigación de la zona restringida: la parada no la nombra. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:selva_del_manu",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el dosel continuo del Manu sobre un río de meandros, con neblina al amanecer (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "estreno de la Flor de vitória-régia 403"
+   ],
+   "rios_locales": [
+    "manu"
+   ],
+   "notas": "Coordenada de Wikidata de la Estación Biológica de Cocha Cashu (Q5139274), en una cocha del Manu, como punto del Manu alto; la del parque (Q390264: −12,14, −71,66) no está sobre el río [E wd_madre_de_dios]. La canoa sube el Manu desde su boca (rios_locales_201_700).",
+   "xy": [
+    0.244,
+    0.26162
+   ]
+  },
+  {
+   "k": 41,
+   "id": "manu_cochas",
+   "nombre": "Las cochas del Manu",
+   "sitio": "Manu alto",
+   "niveles": [
+    411,
+    420
+   ],
+   "llegada_al_ganar": 410,
+   "mundo": 7,
+   "mundo_id": "w07_madre_de_dios",
+   "tipo": "castillo",
+   "pais": "PE",
+   "rio": "Manu",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -11.9,
+   "lon": -71.3667,
+   "conf": "E",
+   "wikidata": "Q5139274",
+   "ancla_rio": "manu",
+   "km_desde_el_mar": 3209,
+   "km_desde_el_mar_conf": "cálculo (boca del Madeira en el cauce + Madeira hasta Villa Bella + Beni hasta Riberalta + Madre de Dios río arriba, todo por sus poligonales sin meandros: valor mínimo; el Madeira de la poligonal mide 1140 km frente a unos 1.450); desde la boca del Manu, el Manu en línea recta hasta Cocha Cashu (63 km)",
+   "km_casa": 3238,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 401-420 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.manu.dato_03",
+    "texto": "En las cochas del Manu, lagos con forma de herradura, vive el lobo de río.",
+    "etiqueta": "V",
+    "fuente": "sernanp_manu",
+    "releida": "2026-10-15"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.manu.dato_04",
+     "texto": "En un solo árbol del Manu se encontraron más de {n} especies de hormigas.",
+     "etiqueta": "V",
+     "fuente": "sernanp_manu",
+     "args": {
+      "n": 40
+     },
+     "releida": "2026-10-15",
+     "origen": "§5.4 ter",
+     "nota": "SERNANP: «al menos 300 [especies] de hormigas (en un solo árbol se encontraron más de 40 especies)» [V sernanp_manu: leída el 2026-10-15]. La cifra va como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "SERNANP: «Destacan también los lagos en forma de herradura o cochas donde es posible observar especies que en otros ecosistemas han desaparecido, como el lobo de río y el lagarto negro» [V sernanp_manu: leída el 2026-10-15]. Cierre del mundo 7 (el «castillo»): el Madre de Dios ya está lleno hasta aquí. Segunda parada del mismo sitio: otro nombre [P] y otro dato. Vetos del mundo 7 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 ter): el oro y la minería (ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio); los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona; la sumaúma o lupuna, árbol sagrado; el caucho y el istmo de Fitzcarrald, que no es ruta; los petroglifos de Pusharo; los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.",
+   "fondo": {
+    "kit": "bg_kit_w07",
+    "heroe": "kit:cocha_con_lobos",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: una cocha en herradura con lobos de río asomando entre la vegetación de la orilla (piezas del kit)",
+    "cuidado": "Sin personas ni pueblos identificables; sin minería (dragas, balsas ni bateas) y sin sumaúma ni lupuna. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 7, el amanecer, la hora de la collpa (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 420 «Zafra» [P] (Flor + Brote de dos hojas; d.4 y d.5.2): no nombra un lugar (D-020, 28 a)",
+    "fin del mundo 7"
+   ],
+   "notas": "La misma coordenada que la parada 40 (Q5139274) [E wd_madre_de_dios].",
+   "xy": [
+    0.244,
+    0.26162
+   ]
+  }
+ ],
+ "rios_locales_201_700": [
+  {
+   "id": "aguarico",
+   "nombre": "Aguarico (desvío a las lagunas de Cuyabeno)",
+   "tipo": "rio_local",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca [V denkinger2010_cuyabeno: el Cuyabeno y el Lagartococha son «two blackwater tributaries» del Aguarico, «a white water river»]",
+   "paises": [
+    "EC",
+    "PE"
+   ],
+   "mundos": [
+    6
+   ],
+   "conf": "E",
+   "boca_en": "napo",
+   "fuentes": [
+    "wd_oriente",
+    "denkinger2010_cuyabeno"
+   ],
+   "nota": "Paradas 25 y 26: la canoa entra por su boca, en el Napo (frontera Ecuador-Perú), y sube hasta la boca del Cuyabeno. Puntos de Wikidata (Q397928): cabecera y boca con sus calificadores y un punto del curso; la boca del Cuyabeno (Q5197070). Los tramos entre ellos van en línea recta, de respaldo (propuesta §3.6); el trazado de producción sale de HydroRIVERS. Su anfitrión (geometry.py, HOSTS) lo añade M4.5a.",
+   "puntos": [
+    {
+     "lat": 0.23,
+     "lon": -77.51,
+     "nombre": "Cabecera del Aguarico",
+     "conf": "E",
+     "xy": [
+      0.7292,
+      0.07545
+     ]
+    },
+    {
+     "lat": -0.2575,
+     "lon": -75.9,
+     "nombre": "Boca del Cuyabeno",
+     "conf": "E",
+     "xy": [
+      0.7097,
+      0.12424
+     ]
+    },
+    {
+     "lat": -0.36,
+     "lon": -75.69,
+     "nombre": "Aguarico medio",
+     "conf": "E",
+     "xy": [
+      0.7056,
+      0.13061
+     ]
+    },
+    {
+     "lat": -0.9833,
+     "lon": -75.2,
+     "nombre": "Boca del Aguarico (frontera EC-PE)",
+     "conf": "E",
+     "xy": [
+      0.68067,
+      0.14545
+     ]
+    }
+   ]
+  },
+  {
+   "id": "cuyabeno",
+   "nombre": "Cuyabeno (lagunas de Cuyabeno)",
+   "tipo": "rio_local",
+   "orden_puntos": "de la Laguna Grande a la boca",
+   "agua": "negra [V denkinger2010_cuyabeno: «blackwater tributaries»]",
+   "paises": [
+    "EC"
+   ],
+   "mundos": [
+    6
+   ],
+   "conf": "E",
+   "boca_en": "aguarico",
+   "fuentes": [
+    "wd_oriente",
+    "denkinger2010_cuyabeno"
+   ],
+   "nota": "Paradas 25 y 26. Puntos de Wikidata: la Laguna Grande (Q131248042) y la boca del Cuyabeno en el Aguarico (Q5197070). El tramo entre ellos va en línea recta, de respaldo; el de producción sale de HydroRIVERS. Su anfitrión (el Aguarico) lo añade M4.5a.",
+   "puntos": [
+    {
+     "lat": -0.0125,
+     "lon": -76.1787,
+     "nombre": "Laguna Grande de Cuyabeno",
+     "conf": "E",
+     "xy": [
+      0.7195,
+      0.1158
+     ]
+    },
+    {
+     "lat": -0.2575,
+     "lon": -75.9,
+     "nombre": "Boca del Cuyabeno",
+     "conf": "E",
+     "xy": [
+      0.7097,
+      0.12424
+     ]
+    }
+   ]
+  },
+  {
+   "id": "tambopata",
+   "nombre": "Tambopata (hasta la collpa Colorado)",
+   "tipo": "rio_local",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca, como el Madre de Dios al que llega (rios: madre_de_dios) [P]",
+   "paises": [
+    "PE",
+    "BO"
+   ],
+   "mundos": [
+    7
+   ],
+   "conf": "E",
+   "boca_en": "madre_de_dios",
+   "fuentes": [
+    "wd_madre_de_dios",
+    "wp_tambopata_river"
+   ],
+   "nota": "Paradas 35-37. Puntos de Wikidata del río (Q6978442): la boca, en Puerto Maldonado, y la cabecera, con sus calificadores; en medio, el Tambopata Research Center (Q115641210), junto a la collpa Colorado. Wikipedia: «merges at the city of Puerto Maldonado»; su curso alto es frontera Perú-Bolivia [E wp_tambopata_river]. Los tramos van en línea recta, de respaldo (propuesta §3.6); el trazado de producción sale de HydroRIVERS. Su anfitrión (geometry.py, HOSTS) lo añade M4.5a.",
+   "puntos": [
+    {
+     "lat": -14.5757,
+     "lon": -69.2076,
+     "nombre": "Cabecera del Tambopata",
+     "conf": "E",
+     "xy": [
+      0.13697,
+      0.32704
+     ]
+    },
+    {
+     "lat": -13.1339,
+     "lon": -69.6108,
+     "nombre": "Collpa Colorado (Tambopata Research Center)",
+     "conf": "E",
+     "xy": [
+      0.19464,
+      0.31482
+     ]
+    },
+    {
+     "lat": -12.5971,
+     "lon": -69.1665,
+     "nombre": "Boca del Tambopata (Puerto Maldonado)",
+     "conf": "E",
+     "xy": [
+      0.21612,
+      0.32829
+     ]
+    }
+   ]
+  },
+  {
+   "id": "manu",
+   "nombre": "Manu (Manu alto)",
+   "tipo": "rio_local",
+   "orden_puntos": "de la cabecera a la boca",
+   "agua": "blanca, como el Madre de Dios al que llega (rios: madre_de_dios) [P]",
+   "paises": [
+    "PE"
+   ],
+   "mundos": [
+    7
+   ],
+   "conf": "E",
+   "boca_en": "madre_de_dios",
+   "fuentes": [
+    "wd_madre_de_dios",
+    "eswp_rio_manu"
+   ],
+   "nota": "Paradas 40 y 41. La boca, de Wikidata (Q2749258), en el Alto Madre de Dios junto a Boca Manu; la cabecera, de Wikipedia ES («12º02'43.40\" Sur - 72º06'42.07\" Oeste», a 1.400 m) [E eswp_rio_manu]; en medio, Cocha Cashu (Q5139274). Los tramos van en línea recta, de respaldo; el trazado de producción sale de HydroRIVERS. Su anfitrión (geometry.py, HOSTS) lo añade M4.5a.",
+   "puntos": [
+    {
+     "lat": -12.0454,
+     "lon": -72.1117,
+     "nombre": "Cabecera del Manu",
+     "conf": "E",
+     "xy": [
+      0.23818,
+      0.23904
+     ]
+    },
+    {
+     "lat": -11.9,
+     "lon": -71.3667,
+     "nombre": "Cocha Cashu (Manu alto)",
+     "conf": "E",
+     "xy": [
+      0.244,
+      0.26162
+     ]
+    },
+    {
+     "lat": -12.2747,
+     "lon": -70.9344,
+     "nombre": "Boca del Manu",
+     "conf": "E",
+     "xy": [
+      0.22901,
+      0.27472
+     ]
+    }
+   ]
+  }
+ ],
  "puntos_de_paso_1_200": [
   {
    "lat": -1.6804,
@@ -6486,19 +8160,19 @@
    ]
   },
   {
-   "lat": -12.5971,
-   "lon": -69.1665,
-   "nombre": "Entrada en el Perú (Puerto Maldonado)",
-   "conf": "V",
+   "lat": -12.6055,
+   "lon": -69.0419,
+   "nombre": "Entrada en el Perú (lago Sandoval, aguas abajo de Puerto Maldonado)",
+   "conf": "E",
    "nivel": 310,
    "pais": "PE",
    "llega_en": {
     "mundo": 7,
-    "sitio": "Puerto Maldonado"
+    "sitio": "Lago Sandoval"
    },
    "xy": [
-    0.21612,
-    0.32829
+    0.21578,
+    0.33206
    ],
    "vuelta": true
   },
@@ -7362,7 +9036,8 @@
    "url": "https://en.wikipedia.org/wiki/Source_of_the_Amazon_River",
    "licencia": "CC BY-SA 4.0",
    "uso": "Nacientes: «not considered to have one unique source»; el Mantaro es la más lejana, pero se corta varios meses al año; la Carhuasanta, «the most distant source of uninterrupted flow»; la Laguna Bohemia a 5.148 m (releída el 2026-10-13)",
-   "etiqueta": "E"
+   "etiqueta": "E",
+   "releida": "2026-10-15"
   },
   {
    "id": "wp_mismi",
@@ -7378,7 +9053,8 @@
    "url": "https://www.nationalgeographic.com/adventure/article/140213-amazon-river-length-source-maps-science",
    "licencia": "copyright (solo hechos)",
    "uso": "Nacientes",
-   "etiqueta": "E"
+   "etiqueta": "E",
+   "releida": "2026-10-15"
   },
   {
    "id": "wp_rios",
@@ -7991,15 +9667,17 @@
    "url": "https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008767",
    "licencia": "CC BY 4.0",
    "uso": "«a typical hectare of terra firme forest in Yasuní contains upwards of 655 tree species» (leída el 2026-10-12)",
-   "etiqueta": "V"
+   "etiqueta": "V",
+   "releida": "2026-10-15"
   },
   {
    "id": "npr2017_collpas",
    "nombre": "NPR (2017), Why do parrots (and people) eat clay?",
    "url": "https://www.npr.org/sections/thesalt/2017/09/07/547981850/why-do-parrots-and-people-eat-clay",
    "licencia": "copyright (solo hechos)",
-   "uso": "Hipótesis del sodio de Brightsmith: la más apoyada, sin prueba definitiva (búsqueda del 2026-10-12)",
-   "etiqueta": "E"
+   "uso": "Hipótesis del sodio de Brightsmith: la más apoyada, sin prueba definitiva (búsqueda del 2026-10-12). Releída el 2026-10-15 (M3.7b): la collpa Colorado, sobre el Tambopata, con loros de hasta 18 especies cada día; la arcilla, con 40 veces más sodio que sus plantas; el estudio de 13 años en Ibis apoya el sodio y no las toxinas, y sus autores piden prudencia",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
   },
   {
    "id": "wp_madidi",
@@ -8030,16 +9708,18 @@
    "nombre": "Wikipedia EN, Amazon river dolphin",
    "url": "https://en.wikipedia.org/wiki/Amazon_river_dolphin",
    "licencia": "CC BY-SA 4.0",
-   "uso": "Límites de su área: cascadas (Xingu, Tapajós) y agua muy baja; los rápidos del Madeira aíslan la población boliviana, río arriba de Teotônio (leída el 2026-10-12)",
-   "etiqueta": "E"
+   "uso": "Límites de su área: cascadas (Xingu, Tapajós) y agua muy baja; los rápidos del Madeira aíslan la población boliviana, río arriba de Teotônio (leída el 2026-10-12). Releída el 2026-10-15 (M3.7b): «upstream of the rapids of Teotonio, in Bolivia»; la ley boliviana de 2012 que lo declara tesoro nacional",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
   },
   {
    "id": "wp_madeira",
    "nombre": "Wikipedia EN, Madeira River",
    "url": "https://en.wikipedia.org/wiki/Madeira_River",
    "licencia": "CC BY-SA 4.0",
-   "uso": "Frontera Bolivia-Brasil desde su formación hasta la boca del Abunã; rápidos de Teotônio, hoy bajo el embalse de Santo Antônio (leída el 2026-10-12)",
-   "etiqueta": "E"
+   "uso": "Frontera Bolivia-Brasil desde su formación hasta la boca del Abunã; rápidos de Teotônio, hoy bajo el embalse de Santo Antônio (leída el 2026-10-12). Releída el 2026-10-15 (M3.7b): los saltos de Teotônio y San Antônio, cubiertos desde 2012 por el embalse de Santo Antônio",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
   },
   {
    "id": "wp_puerto_heath",
@@ -8308,6 +9988,273 @@
    "uso": "Taricayas: los grupos de manejo de las comunidades llevan los nidos a playas seminaturales; unos 3,5 millones de crías liberadas en cinco años. Releída el 2026-10-14 (M2.7).",
    "etiqueta": "V",
    "releida": "2026-10-14"
+  },
+  {
+   "id": "wd_oriente",
+   "nombre": "Wikidata (P625) de las paradas y los ríos del mundo 6",
+   "url": "https://www.wikidata.org/wiki/Q1641326",
+   "licencia": "CC0",
+   "uso": "Coordenadas de Mazán (Q6799128), Santa Clotilde (Q107201179), Nuevo Rocafuerte (Q647791), el parque Yasuní (Q1641326), la reserva Cuyabeno (Q917251), la Laguna Grande (Q131248042), El Coca (Q1014564), Puerto Misahuallí (Q48796581) y los ríos Aguarico (Q397928), Cuyabeno (Q5197070) y Coca (Q1104914), con sus calificadores de boca y cabecera. Consulta del 2026-10-15 (M3.7a)",
+   "url_extra": [
+    "https://www.wikidata.org/wiki/Q131248042",
+    "https://www.wikidata.org/wiki/Q397928"
+   ],
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "CR-F77",
+   "nombre": "Wikipedia EN, Napo River (F77 de docs/research/cultura-ribera/investigacion.md)",
+   "url": "https://en.wikipedia.org/wiki/Napo_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Nace en las laderas de los volcanes Antisana, Sincholagua y Cotopaxi; caudal medio de 6.800 m³/s en Mazán (7.000 m³/s en 1991-2023); estaciones de Santa Clotilde (5.895 m³/s, 2002-2011) y Nuevo Rocafuerte (2.032 m³/s, 2001-2009). Releída el 2026-10-15 (M3.7a)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "CR-F78",
+   "nombre": "Expreso (2016-10-04), «Las canoas son 'taxis' en comunas de Coca» (F78 de cultura-ribera)",
+   "url": "https://www.expreso.ec/actualidad/canoas-son-lsquo-taxis-rsquo-comunas-coca-53085.html",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Canoas a motor o a remo como taxi fluvial del Napo, desde las 05:00. Releída el 2026-10-15 (M3.7a)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "eswp_amazonia_ec",
+   "nombre": "Wikipedia ES, Región Amazónica del Ecuador",
+   "url": "https://es.wikipedia.org/wiki/Regi%C3%B3n_Amaz%C3%B3nica_del_Ecuador",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "«conocida también como Amazonía u Oriente»; los Andes, en su límite occidental. Leída el 2026-10-15 (M3.7a)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "enfoqueute2016_cuyabeno",
+   "nombre": "Gutiérrez Cruz, Rivera Carrión y Roldán Reascos (2016), Enfoque UTE 7(3): 57-69, efluentes de los albergues de la Reserva Cuyabeno",
+   "url": "https://www.redalyc.org/journal/5722/572261592005/html/",
+   "licencia": "revista de acceso abierto (solo hechos)",
+   "uso": "«Contiene el mayor sistema lacustre tropical del Ecuador»; los ríos Cuyabeno y Aguarico forman «un sistema de 14 lagunas comunicadas entre sí por pequeños canales»; creada en 1979. Leída el 2026-10-15 (M3.7a)",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "denkinger2010_cuyabeno",
+   "nombre": "Denkinger (2010), Avances en Ciencias e Ingenierías 2(3): B91-B97 (USFQ), delfines del Amazonas en la Reserva Cuyabeno",
+   "url": "https://revistas.usfq.edu.ec/index.php/avances/article/download/51/53/54",
+   "licencia": "copyright (solo hechos)",
+   "uso": "El Cuyabeno y el Lagartococha, «two blackwater tributaries» del Aguarico, «a white water river»; las lagunas con igapó y los herbazales «seem to be especially important as breeding areas» de los delfines. Leída el 2026-10-15 (M3.7a)",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "iucn_ramsar_ec",
+   "nombre": "UICN, Lista Verde: Cuyabeno-Lagartococha-Yasuní",
+   "url": "https://iucn.org/es/node/43308",
+   "licencia": "copyright (solo hechos)",
+   "uso": "«el humedal Ramsar más grande de Ecuador, con una extensión de 773,668 hectáreas». Leída el 2026-10-15 (M3.7a)",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "eloriente_ramsar_2017",
+   "nombre": "El Oriente (2017-09-01), Complejo de humedales Cuyabeno-Lagartococha-Yasuní, nuevo sitio Ramsar",
+   "url": "https://www.eloriente.com/articulo/complejo-de-humedales-cuyabeno-lagartococha-yasuniacute-nuevo-sitio-ramsar/8113",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Declaratoria de la Convención Ramsar el 24 de agosto de 2017. Leída el 2026-10-15 (M3.7a)",
+   "url_extra": [
+    "https://rsis.ramsar.org/ris/2332"
+   ],
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_el_coca",
+   "nombre": "Wikipedia EN, Puerto Francisco de Orellana",
+   "url": "https://en.wikipedia.org/wiki/Puerto_Francisco_de_Orellana",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "También Coca o El Coca, «at the confluence of the Coca River and the Napo River». Leída el 2026-10-15 (M3.7a)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_coca_river",
+   "nombre": "Wikipedia EN, Coca River",
+   "url": "https://en.wikipedia.org/wiki/Coca_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "«The two rivers join in the city of Puerto Francisco de Orellana». Leída el 2026-10-15 (M3.7a)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wd_madre_de_dios",
+   "nombre": "Wikidata (P625) de las paradas, los ríos y el punto de paso del mundo 7",
+   "url": "https://www.wikidata.org/wiki/Q1800405",
+   "licencia": "CC0",
+   "uso": "Coordenadas de Puerto Heath (Q6092075), el lago Sandoval (Q1800405), Puerto Maldonado (Q541435), el Tambopata Research Center (Q115641210), Boca Manu (Q27051064), la Estación Biológica de Cocha Cashu (Q5139274), el Parque Nacional del Manu (Q390264), los ríos Tambopata (Q6978442), Manu (Q2749258) y Heath (Q960348) y la Cachoeira Teotônio (Q22051335), con sus calificadores de boca y cabecera. Consulta del 2026-10-15 (M3.7b)",
+   "url_extra": [
+    "https://www.wikidata.org/wiki/Q115641210",
+    "https://www.wikidata.org/wiki/Q22051335"
+   ],
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_heath_river",
+   "nombre": "Wikipedia EN, Heath River",
+   "url": "https://en.wikipedia.org/wiki/Heath_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "«marks the natural border between Peru and Bolivia». Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "eswp_puerto_heath",
+   "nombre": "Wikipedia ES, Puerto Heath",
+   "url": "https://es.wikipedia.org/wiki/Puerto_Heath",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Localidad fronteriza de Bolivia «sobre la desembocadura del río Heath en el río Madre de Dios». Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_lake_sandoval",
+   "nombre": "Wikipedia EN, Lake Sandoval",
+   "url": "https://en.wikipedia.org/wiki/Lake_Sandoval",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "«an oxbow lake»; unos 16 km de Puerto Maldonado; unas 125 ha, «one of the largest oxbow lakes in southeastern Peru»; lobos de río y caimanes negros. Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_tambopata_nr",
+   "nombre": "Wikipedia EN, Tambopata National Reserve",
+   "url": "https://en.wikipedia.org/wiki/Tambopata_National_Reserve",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "El lago Sandoval, con «its shores covered with palm trees (maurithia)» donde viven guacamayos; reserva creada el 4-9-2000. Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_tambopata_river",
+   "nombre": "Wikipedia EN, Tambopata River",
+   "url": "https://en.wikipedia.org/wiki/Tambopata_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Afluente del Madre de Dios, «into which it merges at the city of Puerto Maldonado»; su curso alto es frontera Perú-Bolivia. Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "elperuano_rntamb_2025",
+   "nombre": "El Peruano (2025-10-15), Resolución de Presidencia Ejecutiva N.º 000084-2025-SERNANP/PE (Plan Maestro de la Reserva Nacional Tambopata 2025-2030)",
+   "url": "https://busquedas.elperuano.pe/dispositivo/NL/2447821-1",
+   "licencia": "norma oficial (solo hechos)",
+   "uso": "«mediante el Decreto Supremo Nº 048-2000-AG, se establece la Reserva Nacional Tambopata, sobre una superficie de 274 690 ha». Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "wp_macaw_society",
+   "nombre": "Wikipedia EN, The Macaw Society (antes Tambopata Macaw Project)",
+   "url": "https://en.wikipedia.org/wiki/Tambopata_Macaw_Project",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Trabaja en el bosque alrededor de la collpa Colorado, en la Reserva Nacional Tambopata; sede en el Tambopata Research Center de 1989 a 2020; los guacamayos azul y amarillo «almost exclusively nest in dead mauritia palms». Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "eswp_madre_de_dios",
+   "nombre": "Wikipedia ES, Río Madre de Dios",
+   "url": "https://es.wikipedia.org/wiki/R%C3%ADo_Madre_de_Dios",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Nace en las estribaciones de la cordillera de Vilcanota; «conocido en este primer tramo como Alto Madre de Dios»; recibe al Manu en Boca Manu, al Tambopata en Puerto Maldonado y al Heath en Puerto Heath. Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "eswp_rio_manu",
+   "nombre": "Wikipedia ES, Río Manu (Perú)",
+   "url": "https://es.wikipedia.org/wiki/R%C3%ADo_Manu_(Per%C3%BA)",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "356 km, todos en la región de Madre de Dios; coordenadas de su nacimiento; desemboca en el Alto Madre de Dios, muy cerca de Boca Manu. Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "sernanp_manu",
+   "nombre": "SERNANP (gob.pe), ficha del Parque Nacional del Manu",
+   "url": "https://www.gob.pe/institucion/sernanp/informes-publicaciones/1948163-parque-nacional-del-manu",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Creado el 29-5-1973; reserva de biosfera desde 1977 y Patrimonio Natural de la Humanidad desde 1987; más de 1.000 especies de aves; más de 40 especies de hormigas en un solo árbol; las cochas, con el lobo de río y el lagarto negro. Leída el 2026-10-15 (M3.7b)",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "CR-F93",
+   "nombre": "Wikipedia EN, Brazil nut (F93 de docs/research/cultura-ribera/investigacion.md)",
+   "url": "https://en.wikipedia.org/wiki/Brazil_nut",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "El agutí (añuje) roe el coco, come semillas y entierra otras, que germinan; el fruto tarda 14 meses en madurar. Releída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "CR-F94",
+   "nombre": "Actualidad Ambiental (2011-01-05), inicio de la zafra castañera en la Reserva Nacional Tambopata y el Parque Nacional Bahuaja-Sonene (F94 de cultura-ribera)",
+   "url": "https://www.actualidadambiental.pe/inician-zafra-castanera-2011-en-la-reserva-nacional-tambopata-y-parque-nacional-bahuaja-sonene/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "La zafra «se da de enero hasta el mes de abril»; una barrica, unos 70-75 kg. Releída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "CR-F96",
+   "nombre": "Wikipedia EN, Puerto Maldonado (F96 de cultura-ribera)",
+   "url": "https://en.wikipedia.org/wiki/Puerto_Maldonado",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "En la confluencia del Tambopata y el Madre de Dios; «Tourism and related boat construction are the major sources of income»; fundada el 10-7-1902. Releída el 2026-10-15 (M3.7b)",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "TJ-T1",
+   "nombre": "Carvalho, Bandeira y Rocha, «Cuia pitinga, natureza e cultura da várzea amazônica», Aceno 7(13), 2020 (T1 de docs/research/cultura-ribera/propuesta-tinaja.md)",
+   "url": "https://periodicoscientificos.ufmt.br/ojs/index.php/aceno/article/view/8582/7555",
+   "licencia": "revista de acceso abierto (solo hechos)",
+   "uso": "«Nas várzeas do Baixo Amazonas, toda casa possui cuias pitingas a servirem de baldes, coiós, copos, tigelas e vasilhas»; ensayo en la región del Aritapera (Santarém, Pará). Releída el 2026-10-15 (M3.7b)",
+   "nota_id": "Prefijo TJ- (tinaja): los T de la propuesta de la tinaja, con el mismo número que allí.",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "TJ-T4",
+   "nombre": "Pacheco, Vieira y Costa, «Saberes e práticas comunitárias na confecção do panelão de barro na Ilha de Quatipuru-Mirim», Revista Cocar 22, 2023 (T4 de la propuesta de la tinaja)",
+   "url": "https://periodicos.uepa.br/index.php/cocar/article/download/6824/3251/30977",
+   "licencia": "revista de acceso abierto (solo hechos)",
+   "uso": "El panelão, depósito del agua de lluvia en una isla con escasez de agua; lo hacen las fazedeiras. Releída el 2026-10-15 (M3.7b)",
+   "nota_id": "Prefijo TJ- (tinaja): los T de la propuesta de la tinaja, con el mismo número que allí.",
+   "etiqueta": "V",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "TJ-T5",
+   "nombre": "Diário do Pará (2024-06-25), «Cerâmicas de Icoaraci dão charme à Vila Sorriso» (T5 de la propuesta de la tinaja)",
+   "url": "https://diariodopara.com.br/encartes/na-estrada-com-o-diario/ceramicas-de-icoaraci-dao-charme-a-vila-sorriso/",
+   "licencia": "copyright (solo hechos)",
+   "uso": "La Olaria do Espanhol, fundada en 1903, trabaja la cerámica utilitaria. Releída el 2026-10-15 (M3.7b)",
+   "nota_id": "Prefijo TJ- (tinaja): los T de la propuesta de la tinaja, con el mismo número que allí.",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
+  },
+  {
+   "id": "TJ-T7",
+   "nombre": "Wikipedia EN, Botijo (T7 de la propuesta de la tinaja)",
+   "url": "https://en.wikipedia.org/wiki/Botijo",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "El barro sin esmaltar deja pasar el agua por sus poros, que se evapora y la enfría. Releída el 2026-10-15 (M3.7b)",
+   "nota_id": "Prefijo TJ- (tinaja): los T de la propuesta de la tinaja, con el mismo número que allí.",
+   "etiqueta": "E",
+   "releida": "2026-10-15"
   }
  ]
 }

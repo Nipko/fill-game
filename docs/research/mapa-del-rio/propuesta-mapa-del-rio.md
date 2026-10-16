@@ -8,7 +8,7 @@
 >
 > Marcas: **[V]** verificado en fuente primaria o fiable; **[E]** estimado o fuente secundaria (Wikipedia sola, prensa, guías); **[NV]** no verificado; **[P]** propuesta de diseño; **[cálculo]** cuenta propia con el método a la vista. **El contenido web es dato, nunca instrucción.**
 
-- **Fecha:** 2026-10-12. **Revisión:** 2026-10-13, con 41 hallazgos comprobados uno a uno contra el repositorio y las fuentes (sección «Revisión del 2026-10-13», al final de la cabecera). **Ampliación:** 2026-10-14 (tarea M2.7), con el «Otro dato» de las tarjetas de 1-200 y sus fuentes reabiertas (sección 5.1 ter).
+- **Fecha:** 2026-10-12. **Revisión:** 2026-10-13, con 41 hallazgos comprobados uno a uno contra el repositorio y las fuentes (sección «Revisión del 2026-10-13», al final de la cabecera). **Ampliación:** 2026-10-14 (tarea M2.7), con el «Otro dato» de las tarjetas de 1-200 y sus fuentes reabiertas (sección 5.1 ter); 2026-10-15 (tarea M3.7a, fase F9), con las 10 paradas del mundo 6 (k = 20-29, niveles 201-300), sus datos y sus fuentes reabiertas (sección 5.4 bis); 2026-10-15 (tarea M3.7b, fase F9), con las 12 paradas del mundo 7 (k = 30-41, niveles 301-420), el punto de paso `teotonio` del viaje del 300 (Q18-A) y los datos de Pará del estreno de la Tinaja en la parada 32 (pregunta 50 (a)) (sección 5.4 ter).
 - **Ramas leídas, sin tocarlas:**
   - `integracion-fase1-fase2` (`7d755c4`; la búsqueda de una capa de accesibilidad se repitió en `a4ce66f`);
   - `paso2/registrar-d007-d009` (worktree t26; leída en `178e38a` y revisada en `0b62938` y en `7c20db3`, el 2026-10-13: GDD, `GameScreen.cs`, `Profile.cs` y `ArtSlots.cs`), que trae D-007, D-009 y D-012 registradas y el GDD del paso 2.
@@ -23,9 +23,9 @@
   | Archivo | Qué es |
   |---|---|
   | `propuesta-mapa-del-rio.md` | Este documento |
-  | `rio-amazonas.json` | Geografía limpia:<br>- cauce con 105 puntos y km;<br>- ramal del Pará;<br>- 12 afluentes de los mundos, 7 de paso (con el Tocantins), 6 ríos locales de las paradas (con el Nanay) y 2 ríos de fuera de la cuenca;<br>- las 20 paradas de 1-200 (mundos 1-5) con su nivel, su dato, el «Otro dato» de su tarjeta (`otros_datos`, sección 5.1 ter) y su fondo;<br>- el resumen de 201-1.000 y los cruces de país (también las vueltas a un país ya visitado);<br>- las fuentes, cada una con su URL y su etiqueta [V] o [E];<br>- la costa del Atlántico y la del Pacífico de la muestra.<br><br>Coordenadas en grados y normalizadas 0-1 de la proyección elegida, con sus fuentes y su licencia |
+  | `rio-amazonas.json` | Geografía limpia:<br>- cauce con 105 puntos y km;<br>- ramal del Pará;<br>- 12 afluentes de los mundos, 7 de paso (con el Tocantins), 6 ríos locales de las paradas (con el Nanay) y 2 ríos de fuera de la cuenca;<br>- las 20 paradas de 1-200 (mundos 1-5) con su nivel, su dato, el «Otro dato» de su tarjeta (`otros_datos`, sección 5.1 ter) y su fondo;<br>- las paradas de 201-700 que ya están detalladas (`paradas_201_700`: k = 20-29, mundo 6, sección 5.4 bis) y sus 2 ríos locales nuevos (`rios_locales_201_700`: el Aguarico y el Cuyabeno);<br>- el resumen de 201-1.000 y los cruces de país (también las vueltas a un país ya visitado);<br>- las fuentes, cada una con su URL y su etiqueta [V] o [E];<br>- la costa del Atlántico y la del Pacífico de la muestra.<br><br>Coordenadas en grados y normalizadas 0-1 de la proyección elegida, con sus fuentes y su licencia |
   | `mapa-muestra.svg` | El Mapa al ganar el 200, con la forma real |
-  | `generar_mapa.py` | Genera el SVG a partir del JSON (Python 3.14, solo biblioteca estándar). También valida el JSON (fuentes de cada etiqueta en cualquier texto, datos [V] con fuente [V], km, cruces de país, ríos locales, afluentes de paso enteros y el «Otro dato» de cada tarjeta) y recalcula sus coordenadas |
+  | `generar_mapa.py` | Genera el SVG a partir del JSON (Python 3.14, solo biblioteca estándar). También valida el JSON (fuentes de cada etiqueta en cualquier texto, datos [V] con fuente [V], km, cruces de país, ríos locales, afluentes de paso enteros, el «Otro dato» de cada tarjeta y las paradas detalladas de 201-700) y recalcula sus coordenadas |
 
   Uso, desde la raíz del repositorio:
 
@@ -526,9 +526,9 @@ Los niveles de los cruces **se derivan de las paradas** (cada una cubre 10 nivel
 | Brasil (inicio) | 10 | Bandera de Brasil en la canoa del primer Mapa |
 | Brasil → Colombia | 80 | Se iza la de Colombia. Placa «Colombia te da la bienvenida» y dato del país |
 | Colombia → Perú | 140 | Se iza la del Perú en la boca del Atacuari; «El Perú te da la bienvenida» |
-| Perú → Ecuador | 220 (Nuevo Rocafuerte, boca del Aguarico) | Ecuador |
-| Brasil → Bolivia | 300 (viaje de entrada del mundo 7: Madeira, Villa Bella, Cachuela Esperanza y Riberalta) | Bolivia. **La parada 30 (Puerto Heath) está en Bolivia**, en el departamento de La Paz [E wp_puerto_heath] |
-| Bolivia → Perú | 310 (Puerto Maldonado) | El Perú otra vez |
+| Perú → Ecuador | 220 (Nuevo Rocafuerte, parada 22; la boca del Aguarico, la frontera, queda unos 20 km río abajo) | Ecuador. Placa «Ecuador te da la bienvenida» [P] (extensión de P-M7 al 220: D-023 punto 18 solo la fija en el 80 y el 140) y dato del país (sección 5.4 bis) |
+| Brasil → Bolivia | 300 (viaje de entrada del mundo 7: Madeira, Villa Bella, Cachuela Esperanza y Riberalta) | Bolivia. **La parada 30 (Puerto Heath) está en Bolivia**, en el departamento de La Paz [E wp_puerto_heath], y lleva la bandera (`bandera` de la parada 30; sección 5.4 ter) |
+| Bolivia → Perú | 310 (lago Sandoval, parada 31, aguas abajo de Puerto Maldonado; sección 5.4 ter) | El Perú otra vez, sin placa de bienvenida (es una vuelta) |
 | Perú → Bolivia | 420 (Madre de Dios abajo: Puerto Heath y Riberalta) | Bolivia, **con la tricolor**, que es su bandera nacional de uso náutico [P]. La wiphala también es símbolo del Estado (Constitución de 2009, art. 6.II; DS 0241/2009) [E lexivox_ds241]: la elección la revisan el abogado y el asesor |
 | Brasil → Venezuela | 780 (San Carlos de Río Negro) | Venezuela. En ese tramo el Negro también es frontera con Colombia [E]; Cucuí, la parada anterior, está en Brasil |
 | Brasil → Guyana | 850 (Bonfim y Lethem, en el Takutu) | Guyana, **con revisión del asesor y del abogado** (zona del Esequibo) |
@@ -548,8 +548,8 @@ Los niveles de los cruces **se derivan de las paradas** (cada una cubre 10 nivel
 
 | Mundo · niveles · paradas | Viaje de entrada (por agua) | Sitios, río arriba | Bandera | Pregunta del mundo | Cuidado |
 |---|---|---|---|---|---|
-| 6 Oriente · 201-300 · 10 | Pacaya-Samiria → Nauta → Iquitos → boca del Napo → Napo arriba | Napo peruano ×2; Nuevo Rocafuerte; Yasuní ×2; Cuyabeno ×2 (desvío por el Aguarico); El Coca ×2; Napo alto y Misahuallí | Ecuador (220) | Se plantea en el 200: «¿Cuántas especies de árbol caben en una hectárea?» → más de 655 en una hectárea de Yasuní («upwards of 655», Bass y otros, 2010) [V bass2010_yasuni] | Sin petróleo, sin la consulta de 2023 y sin pueblos aislados; §(e): ritual de la guayusa |
-| 7 Madre de Dios · 301-420 · 12 | Napo abajo → **repaso de lo ya lleno** → Madeira (rápidos de Teotônio) → Villa Bella → Beni (Cachuela Esperanza, Riberalta) → Madre de Dios → Puerto Heath | Puerto Heath (Bolivia); Puerto Maldonado ×2; lago Sandoval ×2; collpa del Tambopata ×3; Boca Manu ×2; Manu alto ×2 | Bolivia (300) y Perú (310) | «¿Por qué los guacamayos comen arcilla?» → la hipótesis más apoyada: buscan la sal [E npr2017_collpas] | Sin minería; el istmo de Fitzcarrald no es ruta (era del caucho); tinaja en el 323; **Rosa y los rápidos de Teotônio** (sección 6.1) |
+| 6 Oriente · 201-300 · 10 | Pacaya-Samiria → Nauta → Iquitos → boca del Napo → Napo arriba | Napo peruano ×2 (Mazán y Santa Clotilde); Nuevo Rocafuerte; Yasuní ×2; lagunas de Cuyabeno ×2 (desvío por el Aguarico); El Coca ×2 (la boca del río Coca y la ciudad); Napo alto y Misahuallí. **Detalladas en la sección 5.4 bis** | Ecuador (220) | Se plantea en el 200: «¿Cuántas especies de árbol caben en una hectárea?» → más de 655 en una hectárea de Yasuní («upwards of 655», Bass y otros, 2010) [V bass2010_yasuni]; la responde la llegada del 230 | Sin petróleo, sin la consulta de 2023 y sin pueblos aislados; §(e): ritual de la guayusa y maito sin crédito (lista completa para el asesor en 5.4 bis) |
+| 7 Madre de Dios · 301-420 · 12 | Napo abajo → **repaso de lo ya lleno** → Madeira (rápidos de Teotônio: relevo del guía, punto de paso `teotonio`) → Villa Bella → Beni (Cachuela Esperanza, Riberalta) → Madre de Dios → Puerto Heath | Puerto Heath (Bolivia); lago Sandoval ×2; Puerto Maldonado ×2; collpa del Tambopata ×3; Boca Manu ×2; Manu alto ×2. **Detalladas en la sección 5.4 ter** | Bolivia (300) y Perú (310) | Se plantea en el 300: «¿Por qué los guacamayos comen arcilla?» → la hipótesis más apoyada: buscan la sal [E npr2017_collpas]; la responde la llegada del 350 | Sin minería; el istmo de Fitzcarrald no es ruta (era del caucho); tinaja en el 323; con Q18-A, Rosa se queda en Teotônio y guía el bufeo boliviano (sección 6.1); lista completa para el asesor en 5.4 ter |
 | 8 Madidi · 421-560 · 14 | Madre de Dios abajo → Riberalta → Beni arriba; después Beni abajo (Cachuela Esperanza) → Mamoré arriba | Riberalta ×3; Rurrenabaque ×2; Madidi ×3; Guayaramerín; Iténez y Noel Kempff ×2; Trinidad y Llanos de Moxos ×3 | Bolivia (420) | «¿Cómo cabe tanta vida en un solo parque?» → va de la selva a más de 5.700 m [E wp_madidi] | Casarabe, con el asesor; la bandera (sección 5.3) |
 | 9 Ucayali · 561-700 · 14 | Mamoré → Madeira → Amazonas (repaso) → Nauta → Ucayali arriba | Jenaro Herrera; Requena ×2; Contamana ×2; Pucallpa y Yarinacocha ×3; Bolognesi ×2; Atalaya, donde nace el Ucayali, ×2; Tambo bajo ×2 | Perú (560) | Se plantea en el 560: «Dos ríos: ¿cuál nos lleva a donde nace el agua?» (la contesta el Ucayali). Del mundo: «¿Por qué el río dibuja tantas curvas?» → Yarinacocha fue una curva del Ucayali [E scielo_yarinacocha] | **Shanay-Timpishka:** el canon la pone como paisaje con vapor (glosario §8; 07 §2.1). Que sea un lugar sagrado no está comprobado [NV]: la fuente releída el 2026-10-13 cuenta que los chamanes locales atribuyen el agua hirviente a la Yacumama, que §(e) veta, y que a su orilla hay comunidades (Mayantuyacu, Santuario Huishtín) [E wp_shanay]. **Pregunta para el asesor:** ¿parada, solo vapor lejano en el fondo (la alternativa del canon) o nada? Comunidades shipibo-konibo con el asesor |
 | 10 Alto Negro · 701-820 · 12 | Ucayali → Amazonas → Encuentro → Negro arriba (Anavilhanas ya llena) | Jaú ×2; Barcelos y Mariuá ×2; Santa Isabel; São Gabriel ×2 (asesor); Cucuí; San Carlos de Río Negro ×2; el Casiquiare ×2 | Venezuela (780) | «¿Puede un río unir dos cuencas?» → el Casiquiare [E wp_casiquiare] | La Neblina solo como silueta, sin su sentido yanomami |
@@ -557,9 +557,207 @@ Los niveles de los cruces **se derivan de las paradas** (cada una cubre 10 nivel
 | 12 Invitados del Orinoco · 921-960 · 4 | Takutu → Branco → Negro → **Casiquiare** → Orinoco (recuadro) | Orinoco alto; Puerto Ayacucho; Caño Cristales (Colombia, recuadro); Salto Ángel | Venezuela; Colombia sin bandera (recuadro) | «¿Este río también es del Amazonas?» → no, es del Orinoco [E wp_orinoco] | Rótulo «vecinos del Orinoco» siempre |
 | 13 El origen · 961-1.000 · 4 | **Gran viaje** por agua ya llena: Orinoco → Casiquiare → Negro → Amazonas → Nauta → Ucayali → Tambo → Ene → Apurímac. Rosa se despide al pie de los Andes. Se plantea en el 960: «Dos ríos: ¿cuál nos lleva a donde nace el agua?» | Cañón del Apurímac (961); puna alta (971); quebradas Apacheta y Carhuasanta (981); **nevado Mismi** (991), una de las nacientes; meta en el 1.000 | Perú | «¿De dónde sale tanta agua?» → de la lluvia de toda la selva; aquí arriba solo nace un hilo [E mit_ciclo_agua, wp_source] | Sin Choquequirao (ruinas); Q'eswachaka solo con el asesor (ritual) |
 
-- **Datos escritos:** las paradas de 1-200 tienen dato. Para 201-1.000 faltan unos 20 sitios con dato verificado y coordenadas. **Con Q14-A, la parte de 201-700 es trabajo de la 1.0** (fase F9 de la sección 13); el resto, de la 1.1 en adelante.
-- **Temporadas de 201+:** hay que rehacer la tabla de D-009 (d.5), y los fondos 201+ se pintan después de fijarla.
+- **Datos escritos:** las paradas de 1-200 tienen dato, y las de 201-300 (mundo 6) y 301-420 (mundo 7) también, desde el 2026-10-15 (secciones 5.4 bis y 5.4 ter). Para 421-1.000 faltan sitios con dato verificado y coordenadas. **Con Q14-A, la parte de 201-700 es trabajo de la 1.0** (fase F9 de la sección 13: k = 20-29 hechas en M3.7a y k = 30-41 en M3.7b; k = 42-69, en M3.7c-M3.7d); el resto, de la 1.1 en adelante.
+- **Temporadas de 201+:** hay que rehacer la tabla de D-009 (d.5), y los fondos 201+ se pintan después de fijarla. *Actualización del 2026-10-14:* D2 ya la rehízo (d.5 de la propuesta de mecánicas; se aplica por D-023, punto 10); las temporadas de cada ciclo están en su punto 4 y son las mismas en las variantes A y B.
 - **Cachuela Esperanza** está en el Beni aguas abajo de Riberalta (−10,54, −65,60; Riberalta, −11,01, −66,07): ya no es parada del mundo 8 sino punto de paso del viaje del 300 y del tramo Beni abajo. Su parada pasa a Riberalta (×3).
+
+#### 5.4 bis. Paradas de 201-300: mundo 6, Oriente (2026-10-15, M3.7a)
+
+Con Q14-A (D-013, punto 2), la fase F9 detalla las paradas de 201-700. Están en `rio-amazonas.json`, lista `paradas_201_700`, con el mismo registro que las de 1-200 y dos campos más: `sitio` (el sitio del resumen de 5.4 que la contiene) y `wikidata` (el elemento de su coordenada). De ahí las toma `tools/river-map/stops.py` en M4.5a, con la conversión de M1.1. Esta es la parte 1 (k = 20-29); las partes 2-4 (k = 30-69) siguen el mismo formato. **Las coordenadas son de Wikidata y las URL de los datos se reabrieron el 2026-10-15** (R5). Todo nombre, dato y texto queda «pendiente del asesor» (07 §8.2).
+
+- **Columnas:** las de 5.1.
+  - **Temp.** es la del punto 4 de d.5 de la propuesta de mecánicas (D2, aplicada por D-023, punto 10): A en 201-240 y 281-300, B en 241-280. Es la misma en las variantes A y B.
+  - **Km a casa** es el mismo [cálculo, mínimo] de 5.1: la boca del Napo cae en el km 3.596 del cauce, y a eso se suma el recorrido sin meandros por la poligonal del Napo, que mide 735 km frente a los 1.075-1.130 reales [E CR-F77]. En Cuyabeno se suman además el Aguarico y el Cuyabeno.
+- **Coincidencias:** banner del 201, debut del Cacao (glosario §9), miquito del mundo 6 (07 §6.4) y estrenos e hitos de d.4 y d.5.2 [P].
+
+| k | Niveles | Llega | Mundo · tipo | Sitio | País · río · agua del sitio | Km a casa | Temp. | Dato de llegada | Coincidencias |
+|---|---|---|---|---|---|---|---|---|---|
+| — | Viaje 200 → 201 | | | Pacaya-Samiria → Nauta → Iquitos → boca del Napo → Mazán | Por el Perú, río abajo | | | Se llena la boca del Napo y el Napo hasta Mazán. Sin bandera nueva | Pregunta del mundo 6 |
+| 20 | 201-210 | 200 | 6 Oriente · gran parada | **Mazán** (Napo peruano) | PE · Napo · blanca | ≈ 3.665 | A | En el **200**: `map.myth.source`, «El Amazonas no tiene una sola naciente: la ciencia aún discute cuál es la más lejana.» [E wp_source, natgeo2014]. Plantea la pregunta del mundo 6 | Banner 201; Cacao 201; miquito 202 (cotoncillo colorado) |
+| 21 | 211-220 | 210 | 6 · parada | **Santa Clotilde** | PE · Napo · blanca | ≈ 3.795 | A | `santa_clotilde.dato_01`, «Aquí el Napo lleva casi el triple de agua que en la frontera con Ecuador.» [E CR-F77, con cálculo] | Hito 220 [P] (Barro con Aguas turbias y una Cuia chica) |
+| 22 | 221-230 | 220 | 6 · parada | **Nuevo Rocafuerte** | EC · Napo · blanca | ≈ 4.060 | A | `country.ec.dato_01`, «En Ecuador, a la Amazonia también la llaman “el Oriente”: queda al este de los Andes.» [E eswp_amazonia_ec]. Antes, la placa «Ecuador te da la bienvenida» [P] (extensión de P-M7 al 220). **Bandera de Ecuador** | Lluvia con Brote 229 |
+| 23 | 231-240 | 230 | 6 · parada | **Yasuní** (asesor) | EC · Napo · blanca | ≈ 4.145 | A | **Respuesta del mundo 6:** «En una hectárea típica de Yasuní crecen más de {n} especies de árbol.» (655) [V bass2010_yasuni]. Tarjeta: parque nacional desde 1979 y reserva de la biosfera desde 1989 [V] | Hito 240 [P] |
+| 24 | 241-250 | 240 | 6 · parada | **El dosel de Yasuní** (asesor) | EC · Napo · blanca | ≈ 4.145 | B | `yasuni.dato_03`, al menos 596 especies de aves [V bass2010_yasuni]. Tarjeta: sus 150 especies de anfibios, récord mundial entre lugares parecidos [V] | Estreno de la Liana de cuenta 243 |
+| 25 | 251-260 | 250 | 6 · parada | **Lagunas de Cuyabeno** (desvío por el Aguarico; asesor) | EC · Cuyabeno · **negra** | ≈ 4.195 | B | `cuyabeno.dato_01`, el mayor sistema de lagunas tropicales de Ecuador: 14 unidas por canales [V enfoqueute2016_cuyabeno]. Tarjeta: el humedal Ramsar más grande de Ecuador, declarado en 2017 [E] | Hito 260 [P] |
+| 26 | 261-270 | 260 | 6 · parada | **Bosque inundado de Cuyabeno** (asesor) | EC · Cuyabeno · **negra** | ≈ 4.195 | B | `cuyabeno.dato_03`, «Las lagunas con bosque inundado parecen ser la guardería de los delfines de Cuyabeno.» [V denkinger2010_cuyabeno] | Piraña con Brote 266; Rosa con sus parientes [P] |
+| 27 | 271-280 | 270 | 6 · parada | **Boca del río Coca** (asesor) | EC · Coca y Napo · blanca | ≈ 4.245 | B | `boca_del_coca.dato_01`, «En esta ciudad, a la que también llaman El Coca, el río Coca se une al Napo.» [E wp_el_coca, wp_coca_river] | Hito 280 [P] |
+| 28 | 281-290 | 280 | 6 · parada | **El Coca** (asesor) | EC · Napo · blanca | ≈ 4.245 | A | `el_coca.dato_01`, «En el Napo, las canoas hacen de taxi: desde las cinco de la mañana van y vienen.» [E CR-F78; candidato de §(e)] | Estreno de la Hoja atada 283 |
+| 29 | 291-300 | 290 | 6 · cierre | **Napo alto y Misahuallí** (asesor) | EC · Napo · blanca | ≈ 4.345 | A | `misahualli.dato_01`, «El Napo nace en las laderas de volcanes de Ecuador, como el Cotopaxi y el Antisana.» [E CR-F77; candidato de §(e)] | Hito 300 «Cuyabeno» [P], que se juega aquí y no en Cuyabeno (el asesor puede renombrarlo, D-023 punto 21); skin Borde de Pastaza (1.1); fin del mundo 6 |
+
+- **Recuento:**
+  - **10 paradas en 6 sitios,** los del resumen de 5.4 y en su orden, en 2 países: el Perú (201-220) y Ecuador (221-300);
+  - **1 bandera izada:** Ecuador al ganar el 220 (`bandera` de la parada 22 y su cruce en `cruces_de_pais`);
+  - **10 datos de llegada, 4 [V] y 6 [E],** y **4 «Otro dato», 2 [V] y 2 [E].** Ningún [NV]. Las cifras van como `{n}` con su valor en `args` (Q8-A); los años y la hora («las cinco») no.
+  - **Todas las paradas llevan el fondo sin héroe** de Q14-A: `bg_kit_w06` con una pieza del kit (`kit:<pieza>`, tipo `kit_y_rotulo`) y el rótulo del sitio. Las piezas son [P] y son la lista para el artista del kit: napo ancho con lanchas, várzea peruana, río frontera con baliza, dosel de noche, dosel con aves, laguna negra con igapó, igapó con delfines, confluencia del Coca, Napo con canoas y piedemonte andino.
+- **Cambios frente al resumen de 5.4** (también en `paradas_201_1000`, mundo 6):
+  - **Yasuní:** la coordenada es la de Wikidata del parque, −0,77, −76,10 (antes, −1,0, −76,0 aproximada). Queda a unos 9 km del Napo de respaldo, dentro de los 15 km del canon, sin punto de atraque.
+  - **Cuyabeno:** la parada está en la Laguna Grande (Wikidata Q131248042, que viene de GeoNames), no en el punto de Wikidata de la reserva (−0,1167, −75,8333), que no cae en las lagunas. Para llegar hacen falta **dos ríos locales nuevos**, el Aguarico y el Cuyabeno, con sus bocas de Wikidata y sus tramos en línea recta de respaldo. Van en `rios_locales_201_700`, con `boca_en` (el Napo y el Aguarico), y no en `rios`, para que `tools/river-map` siga en verde hasta que M4.5a les dé anfitrión en `geometry.py` (`HOSTS`).
+  - **El Coca ×2:** la boca del río Coca (Wikidata Q1104914) va antes que la ciudad (Q1014564), porque queda unos 300 m más abajo por el Napo. Así los km no retroceden.
+  - **Segundas paradas de un sitio:** la variante de luz de 1-200 (`variante_lut`) necesita un héroe, y en 201-700 no lo hay. Por eso «El dosel de Yasuní» y «Bosque inundado de Cuyabeno» llevan otro nombre [P], otra pieza del kit y otro dato.
+  - **Nuevo Rocafuerte:** el sitio del resumen pasa a la coordenada de Wikidata de la parroquia (Q647791), −0,9333, −75,4, la de la parada 22 (antes, −0,9317, −75,3875, el punto «Boca del Yasuní / Nuevo Rocafuerte» del Napo de respaldo).
+  - **Mazán:** Wikidata solo tiene el distrito (Q6799128), cuya capital está en la orilla del Napo, a unos 40 km de su boca por el río [cálculo].
+- **Km:** el viaje del 200 deshace camino río abajo, de Pacaya-Samiria (≈ 4.025) a la boca del Napo, así que los km a casa bajan al entrar en el mundo, como en todo viaje que vuelve sobre lo ya lleno. Dentro del mundo no retroceden. El desvío del 250 baja por el Napo desde Yasuní hasta la boca del Aguarico, unos 20 km bajo Nuevo Rocafuerte, y sube por el Aguarico y el Cuyabeno: es una ida y vuelta por las confluencias, como la de Anavilhanas (sección 2.2), y la Laguna Grande queda más lejos de casa que Yasuní.
+- **Pregunta del mundo 6:** se plantea en el 200 (`pregunta_del_mundo` de la parada 20) y la responde la llegada del 230 a Yasuní (parada 23).
+
+**«Otro dato» de las tarjetas** (`otros_datos`, con el formato de 5.1 ter; longitudes medidas con el script de `--check`, con `{n}` resuelto):
+
+| k · Parada | Clave | «Otro dato» (ES-419) | Car. | Etiqueta y fuente | Origen |
+|---|---|---|---|---|---|
+| 20 · Mazán | `map.stop.mazan.dato_01` | «Cerca de su boca, en Mazán, el Napo lleva de media unos {n} m³ de agua por segundo.» (6.800) | 85 | [E] CR-F77 | §(e) |
+| 23 · Yasuní | `map.stop.yasuni.dato_02` | «Yasuní es parque nacional desde 1979 y reserva de la biosfera de la UNESCO desde 1989.» | 86 | [V] bass2010_yasuni | §5.4 bis |
+| 24 · El dosel de Yasuní | `map.stop.yasuni.dato_04` | «Las {n} especies de anfibios de Yasuní son un récord mundial entre lugares parecidos.» (150) | 85 | [V] bass2010_yasuni | §5.4 bis |
+| 25 · Lagunas de Cuyabeno | `map.stop.cuyabeno.dato_02` | «Estas lagunas son parte del humedal Ramsar más grande de Ecuador, declarado en 2017.» | 84 | [E] iucn_ramsar_ec, eloriente_ramsar_2017 | §5.4 bis |
+
+- **Candidatos de §(e) del mundo 6** (07 §2.2, regla 6: en los mundos 6-13 son una lista para el asesor):
+  - **El Napo** [F77]: el dato de llegada del 290 (nace en las laderas del Cotopaxi y el Antisana) y el «Otro dato» de Mazán (su caudal);
+  - **las canoas-taxi de Coca** [F78]: el dato de llegada del 280;
+  - **el aguapé nativo** [F109]: no entra en el Mapa. Era el dato de su estreno en el 223, y la tabla d.5.2 ya no lo estrena en el mundo 6.
+
+  §(e) los daba con [V]; aquí van con [E], porque las fuentes son una página de Wikipedia y una noticia de prensa (cabecera de esta propuesta).
+- **Vetos del mundo 6, para el asesor** (§(e), el resumen de 5.4 y el cuidado de `paradas_201_1000`; también en `nota_dato` de cada parada):
+  - el ritual de la guayusa (la fuente de §(e) describe a los achuar: no se atribuye a otro pueblo);
+  - los pueblos en aislamiento (tagaeri y taromenane) y su zona intangible;
+  - el petróleo, sus derrames y la consulta de 2023;
+  - el maito sin crédito;
+  - los nombres en kichwa u otras lenguas, solo con un hablante.
+- **Además, para el asesor:**
+  - **Yasuní:** el texto solo habla de árboles, aves y anfibios, sin pueblos ni comunidades;
+  - **Cuyabeno:** sin nombrar las comunidades siona, secoya, cofán, kichwa y shuar de la reserva, y sin las lagunas secas de 2023-2024 (riesgo R3, como la sequía de 2024 del mundo 3): la laguna del fondo siempre está llena;
+  - **El Coca:** el artículo de las canoas nombra comunidades shuar, kichwa y huaorani, y el texto no las nombra; sin la cascada de San Rafael ni la erosión del río Coca de 2020;
+  - **Napo alto:** sin turismo con fauna en cautiverio;
+  - **los nombres nuevos** [P]: «El dosel de Yasuní», «Bosque inundado de Cuyabeno» y «Boca del río Coca»; y el hito 300, «Cuyabeno» [P], que se juega en Misahuallí;
+  - **Rosa con sus parientes en Cuyabeno** [P], como en Tarapoto. Q18 solo cambia los mundos 7 y 8.
+- **No se pudieron reabrir el 2026-10-15:** la ficha Ramsar del sitio 2332 (RSIS dio 502 y la copia del PNUMA, 404) ni la página de Ramsar de Ecuador (403). Por eso el «Otro dato» de Ramsar va con [E]: «el más grande de Ecuador» es de la UICN [V], pero el año (2017) solo sale de la prensa.
+- **`--check`** (`revisar_paradas_201_700`) falla si:
+  - la k no sigue desde el 20, si los niveles o la llegada no cuadran, si el mundo no es el de `WorldTable`, o si el tipo no es gran parada en la primera del mundo, cierre en la última y parada en las demás;
+  - falta la coordenada [V] o [E] o su elemento de Wikidata, o si `ancla_rio` o un río local no existen;
+  - `km_casa` no es `km_desde_el_mar` + 29, o si los km a casa retroceden dentro del mundo;
+  - falta el dato de llegada, si su clave no es `map.stop`/`map.country`…`dato_NN`, `map.myth.<tema>` ni `map.general.<id>` (las formas de `fact_key` del contrato 30, como el `map.general.dato_negra` de Anavilhanas), si el del 200 no es `map.myth.source` (08 §4.5), si pasa de 90 caracteres, si no es [V] o [E], si una fuente no existe o no se reabrió en su `releida`, o si un [V] no tiene fuente [V];
+  - el fondo no es `bg_kit_wNN` con `kit:<pieza>`;
+  - la pregunta del mundo pasa de 50 caracteres, si no es la del resumen o si no se responde en una llegada posterior del mismo mundo;
+  - una bandera no tiene su cruce de país en el nivel de llegada (o al revés);
+  - los sitios de un mundo detallado no son los del resumen, en su orden y con sus paradas;
+  - una parada lleva un [NV] o nombra «Belén».
+
+  El «Otro dato» de 201-700 pasa por la misma revisión que el de 1-200 (5.1 ter), con las claves sin repetir entre las dos listas. La autoprueba exige que las paradas de verdad no den ningún error y que cada caso fijo dé uno nuevo a nombre de la parada, el mundo o el cruce que cambia: el dato del 200 con otra clave, un [NV] en una nota, un héroe pintado, los km a casa que retroceden, los sitios fuera de orden, la bandera de Ecuador ausente en el 220 y una bandera sobrante; y que un dato de llegada `map.general.*` no dé ninguno.
+- **Para M4.5a** (`stops.py` y `geometry.py`):
+  - `kind`: la gran parada, la parada y el cierre, como en 1-200;
+  - `arrival_fact`: la clave del dato de cada parada (en n = 20, `map.myth.source`);
+  - `flag_raise`: EC en n = 22 (el cruce lleva `llega_en` {mundo 6, sitio «Nuevo Rocafuerte»});
+  - `world_question` en n = 20 y `answers_world_question` en n = 23;
+  - `bg.code`: `kit:<pieza>`;
+  - `HOSTS`: `aguarico` → `napo` y `cuyabeno` → `aguarico`;
+  - `sample`: black en n = 25 y 26.
+
+#### 5.4 ter. Paradas de 301-420: mundo 7, Madre de Dios (2026-10-15, M3.7b)
+
+Parte 2 de la fase F9 (k = 30-41), con el formato de 5.4 bis: las paradas están en `paradas_201_700` de `rio-amazonas.json`, con `sitio` y `wikidata`. **Las coordenadas son de Wikidata y las URL de los datos se reabrieron el 2026-10-15** (R5). Todo nombre, dato y texto queda «pendiente del asesor» (07 §8.2).
+
+- **Columnas:** las de 5.4 bis.
+  - **Temp.** es la del punto 4 de d.5 de la propuesta de mecánicas (D2, aplicada por D-023, punto 10): A en 301-320, 341-360 y 381-420; B en 321-340 y 361-380.
+  - **Km a casa** sigue el mismo [cálculo, mínimo]: la boca del Madeira cae en el km 1.298 del cauce, y se suman las poligonales del Madeira hasta Villa Bella (1.140 km, frente a unos 1.450 reales [E wp_madeira]), del Beni hasta Riberalta y del Madre de Dios río arriba. El Tambopata y el Manu van en línea recta de su boca a la parada.
+- **Coincidencias:** banner del 301, Tinte Arazá (el último, con la paleta completa), miquito del mundo 7 (pichico emperador, 07 §6.4), estrenos e hitos de d.4 y d.5.2 [P].
+
+| k | Niveles | Llega | Mundo · tipo | Sitio | País · río · agua del sitio | Km a casa | Temp. | Dato de llegada | Coincidencias |
+|---|---|---|---|---|---|---|---|---|---|
+| — | Viaje 300 → 301 | | | Misahuallí → Napo abajo → Amazonas (repaso) → Madeira → **rápidos de Teotônio** → Villa Bella → Beni → Riberalta → Madre de Dios → Puerto Heath | Por Brasil y Bolivia | | | Se llenan el Madeira, el Beni hasta Riberalta y el Madre de Dios hasta Puerto Heath. En `teotonio`, Rosa se queda y guía el bufeo boliviano (Q18-A; P-M8). **Bandera de Bolivia** | Pregunta del mundo 7 |
+| 30 | 301-310 | 300 | 7 Madre de Dios · gran parada | **Puerto Heath** (Bolivia) | BO · Madre de Dios · blanca | ≈ 2.905 | A | `country.bo.dato_01`, «Bolivia declaró en 2012 a su delfín de río tesoro nacional, con una ley que lo protege.» [E wp_boto]. Plantea la pregunta del mundo 7. **Bandera de Bolivia** | Banner 301; Tinte Arazá 301; miquito 302 |
+| 31 | 311-320 | 310 | 7 · parada | **Lago Sandoval** | PE · Madre de Dios · blanca | ≈ 2.950 | A | `sandoval.dato_01`, «El lago Sandoval es una cocha: una vuelta vieja del río que quedó separada como lago.» [E wp_lake_sandoval]. **Bandera del Perú** (vuelta) | Hito 320 [P] (primer trío: Hoja atada + Lluvia + Brote) |
+| 32 | 321-330 | 320 | 7 · parada | **Aguajal de Sandoval** | PE · Madre de Dios · blanca | ≈ 2.950 | B | `sandoval.dato_03`, «En las orillas del lago Sandoval crecen aguajes, palmeras donde viven guacamayos.» [E wp_tambopata_nr]. Tarjeta: los cuatro datos de Pará de la tinaja (pregunta 50 (a)) | **Estreno de la Tinaja 323** |
+| 33 | 331-340 | 330 | 7 · parada | **Puerto Maldonado** | PE · Madre de Dios y Tambopata · blanca | ≈ 2.960 | B | `puerto_maldonado.dato_01`, «Puerto Maldonado está donde el río Tambopata se une al Madre de Dios.» [E CR-F96] | Hito 340 [P] |
+| 34 | 341-350 | 340 | 7 · parada | **Astilleros de Puerto Maldonado** | PE · Madre de Dios y Tambopata · blanca | ≈ 2.960 | A | `puerto_maldonado.dato_03`, «En Puerto Maldonado, el turismo y la construcción de botes dan mucho trabajo.» [E CR-F96; candidato de §(e)] | Estreno del Brote de dos hojas 343 |
+| 35 | 351-360 | 350 | 7 · parada | **Collpa del Tambopata** (asesor) | PE · Tambopata · blanca | ≈ 3.035 | A | **Respuesta del mundo 7:** «Según la idea más apoyada, los guacamayos comen arcilla para tomar la sal que les falta.» [E npr2017_collpas] | Hito 360 [P] |
+| 36 | 361-370 | 360 | 7 · parada | **Los guacamayos del Tambopata** (asesor) | PE · Tambopata · blanca | ≈ 3.035 | B | `collpa_tambopata.dato_03`, «A la collpa Colorado llegan cada día loros de hasta {n} especies, a veces cientos.» (18) [E npr2017_collpas] | Piraña con Brote de dos hojas 366 |
+| 37 | 371-380 | 370 | 7 · parada | **Nidos del Tambopata** (asesor) | PE · Tambopata · blanca | ≈ 3.035 | B | `collpa_tambopata.dato_05`, «Aquí, los guacamayos azul y amarillo anidan casi siempre en palmeras de aguaje muertas.» [E wp_macaw_society] | Hito 380 [P] |
+| 38 | 381-390 | 380 | 7 · parada | **Boca Manu** (asesor) | PE · Madre de Dios y Manu · blanca | ≈ 3.175 | A | `boca_manu.dato_01`, «En Boca Manu, el río Manu se junta con el Alto Madre de Dios.» [E eswp_madre_de_dios, eswp_rio_manu] | Hoja atada con Barro 389 |
+| 39 | 391-400 | 390 | 7 · parada | **El Alto Madre de Dios** (asesor) | PE · Alto Madre de Dios · blanca | ≈ 3.175 | A | `boca_manu.dato_02`, «Río arriba de aquí, el Madre de Dios se llama Alto Madre de Dios y baja de los Andes.» [E eswp_madre_de_dios] | Hito 400 [P] |
+| 40 | 401-410 | 400 | 7 · parada | **Manu alto** (asesor) | PE · Manu · blanca | ≈ 3.240 | A | `manu.dato_01`, «El Manu es parque nacional desde 1973 y Patrimonio Natural de la Humanidad desde 1987.» [V sernanp_manu] | Estreno de la Flor de vitória-régia 403 |
+| 41 | 411-420 | 410 | 7 · cierre | **Las cochas del Manu** (asesor) | PE · Manu · blanca | ≈ 3.240 | A | `manu.dato_03`, «En las cochas del Manu, lagos con forma de herradura, vive el lobo de río.» [V sernanp_manu] | Hito 420 «Zafra» [P], que no nombra un lugar (D-020, 28 a); fin del mundo 7 |
+
+- **Recuento:**
+  - **12 paradas en 6 sitios,** los del resumen de 5.4 y en su orden, en 2 países: Bolivia (301-310) y el Perú (311-420);
+  - **2 banderas izadas:** Bolivia al ganar el 300 (`bandera` de la parada 30; el cruce llega con el viaje de entrada del mundo 7) y el Perú al ganar el 310 (`bandera` de la parada 31; cruce `llega_en` {mundo 7, sitio «Lago Sandoval»}, con `vuelta`);
+  - **12 datos de llegada, 2 [V] y 10 [E],** y **14 «Otro dato», 5 [V] y 9 [E]** (la parada 38, Boca Manu, no lleva ninguno), más el dato del punto de paso `teotonio` [E]. Ningún [NV]. Las cifras van como `{n}` con su valor en `args` (Q8-A); los años no.
+  - **Todas las paradas llevan el fondo sin héroe** de Q14-A: `bg_kit_w07` con una pieza del kit y el rótulo del sitio, a la hora del mundo 7 (el amanecer, la hora de la collpa; 07 §2.1). Las piezas [P] son la lista para el artista del kit: boca del Heath con baliza, cocha quieta, orilla de aguajes, confluencia del Tambopata, botes en la orilla, pared de arcilla, guacamayos en vuelo, aguajal con nidos, confluencia del Manu, piedemonte del Madre de Dios, selva del Manu y cocha con lobos de río.
+- **Cambios frente al resumen de 5.4** (también en `paradas_201_1000`, mundo 7):
+  - **El lago Sandoval va antes que Puerto Maldonado.** El lago está a unos 16 km de la ciudad y se llega a él por un sendero desde el Madre de Dios [E wp_lake_sandoval]; su coordenada cae aguas abajo, en el tramo hacia Puerto Heath. Con el orden anterior (Puerto Maldonado ×2 y después Sandoval ×2), los km a casa retrocedían dentro del mundo. Por eso el Perú se iza en el 310 al llegar al lago, no a la ciudad: el cruce cambia de sitio y de coordenada, pero no de nivel. La Tinaja se estrena en el 323, en la segunda parada del lago (k = 32), como pide la pregunta 50.
+  - **Coordenadas que faltaban:** la collpa Colorado no tiene elemento propio en Wikidata. Va en la del Tambopata Research Center (Q115641210), junto a la collpa, donde la Macaw Society tuvo su sede de 1989 a 2020 [E wp_macaw_society]. El Manu alto va en la Estación Biológica de Cocha Cashu (Q5139274), en una cocha del Manu, porque la coordenada del parque (Q390264) no está sobre el río. Ningún sitio del resumen queda con [NV].
+  - **Coordenadas de Wikidata** en Puerto Heath (Q6092075), el lago Sandoval (Q1800405), Puerto Maldonado (Q541435) y Boca Manu (Q27051064). Antes eran los puntos de la poligonal del Madre de Dios o un punto aproximado.
+  - **Dos ríos locales nuevos,** el Tambopata y el Manu, en `rios_locales_201_700`, con `boca_en` el Madre de Dios. Llevan sus bocas y cabeceras de Wikidata o de Wikipedia y tramos rectos de respaldo. `tools/river-map` sigue en verde hasta que M4.5a les dé anfitrión (`HOSTS`).
+  - **Segundas y terceras paradas de un sitio:** sin héroe no hay variante de luz. Por eso «Aguajal de Sandoval», «Astilleros de Puerto Maldonado», «Los guacamayos del Tambopata», «Nidos del Tambopata», «El Alto Madre de Dios» y «Las cochas del Manu» llevan otro nombre [P], otra pieza del kit y otro dato.
+- **Km:** el viaje del 300 deshace camino (Napo abajo y Amazonas abajo hasta la boca del Madeira) y después sube el Madeira. Los km a casa bajan al entrar en el mundo: de ≈ 4.345 en Misahuallí a ≈ 2.905 en Puerto Heath. Dentro del mundo no retroceden. La collpa queda río arriba de Puerto Maldonado por el Tambopata (unos 77 km en línea recta). Para llegar a Boca Manu, la canoa vuelve por el Tambopata a la ciudad y sube el Madre de Dios: es una ida y vuelta por la confluencia, como la de Cuyabeno (5.4 bis). Boca Manu sigue más lejos de casa que la collpa.
+- **Pregunta del mundo 7:** se plantea en el 300 (`pregunta_del_mundo` de la parada 30) y la responde la llegada del 350 a la collpa (parada 35). NPR cuenta las dos hipótesis, las toxinas y la sal, y el estudio de 13 años en *Ibis* apoya la del sodio; sus autores piden prudencia [E npr2017_collpas]. Por eso la respuesta dice «la idea más apoyada» y no «la ciencia demostró».
+
+**Punto de paso `teotonio` (viaje del 300; Q18-A y P-M8):**
+
+| id | Coordenada | Dato | Etiqueta y fuente | Relevo |
+|---|---|---|---|---|
+| `teotonio` | −8,85, −64,0333 (Wikidata Q22051335, la Cachoeira Teotônio; a unos 2 km del Madeira de respaldo) | `map.stop.teotonio.dato_01`, «Río arriba de Teotônio vive otra población de delfines de río, aislada por los rápidos.» (87 car.) | [E] wp_boto (reabierta el 2026-10-15) | Rosa se queda aquí y guía el bufeo boliviano en los mundos 7 y 8, sin campo nuevo en el contrato 30. Rosa vuelve en el viaje del 560 |
+
+- Los saltos de Teotônio quedaron bajo el embalse de Santo Antônio en 2012 [E wp_madeira]. Por eso el texto no dice «estos rápidos».
+- La misma página del boto cuenta un estudio genético que no halló ADN mitocondrial propio río arriba de los rápidos. Por eso el texto habla de «otra población» y no de otra especie.
+- Va en `puntos_de_paso_del_viaje` del mundo 7, con `id` y `relevo_del_guia`. De ahí lo toma `geometry.py` (`passing[]`) en M4.5a. Ese `passing[]` hoy solo lee `puntos_de_paso_1_200`.
+
+**«Otro dato» de las tarjetas** (formato de 5.1 ter; longitudes medidas con el script de `--check`, con `{n}` resuelto):
+
+| k · Parada | Clave | «Otro dato» (ES-419) | Car. | Etiqueta y fuente | Origen |
+|---|---|---|---|---|---|
+| 30 · Puerto Heath | `map.stop.puerto_heath.dato_01` | «El río Heath, que aquí llega al Madre de Dios, marca la frontera entre Bolivia y el Perú.» | 89 | [E] wp_heath_river, eswp_puerto_heath | §5.4 ter |
+| 31 · Lago Sandoval | `map.stop.sandoval.dato_02` | «El lago Sandoval, de unas {n} hectáreas, es de las mayores cochas del sureste del Perú.» (125) | 87 | [E] wp_lake_sandoval | §5.4 ter |
+| 32 · Aguajal de Sandoval | `map.stop.sandoval.dato_04` | «En las várzeas del Bajo Amazonas (Pará), cada casa usa cuias sin pintar de balde y vaso.» | 88 | [V] TJ-T1 | Pregunta 50 (a) |
+| 32 · Aguajal de Sandoval | `map.stop.sandoval.dato_05` | «En Quatipuru-Mirim (Pará), las fazedeiras hacen a mano vasijas de barro para la lluvia.» | 87 | [V] TJ-T4 | Pregunta 50 (a) |
+| 32 · Aguajal de Sandoval | `map.stop.sandoval.dato_06` | «El barro sin esmaltar suda: el agua que se evapora por sus poros enfría la de dentro.» | 85 | [E] TJ-T7 | Pregunta 50 (a) |
+| 32 · Aguajal de Sandoval | `map.stop.sandoval.dato_07` | «En Icoaraci, en Pará, hay una alfarería de cerámica para el uso diario desde 1903.» | 82 | [E] TJ-T5 | Pregunta 50 (a) |
+| 33 · Puerto Maldonado | `map.stop.puerto_maldonado.dato_02` | «El añuje abre el coco de la castaña, come semillas y entierra otras, que pueden brotar.» | 87 | [E] CR-F93 | §(e) |
+| 34 · Astilleros de Puerto Maldonado | `map.stop.puerto_maldonado.dato_04` | «El coco de la castaña tarda unos {n} meses en madurar después de la flor.» (14) | 72 | [E] CR-F93 | §(e) |
+| 35 · Collpa del Tambopata | `map.stop.collpa_tambopata.dato_02` | «La arcilla de una collpa tiene unas {n} veces más sodio que la comida de los loros.» (40) | 82 | [E] npr2017_collpas | §5.4 ter |
+| 36 · Los guacamayos del Tambopata | `map.stop.collpa_tambopata.dato_04` | «La Reserva Nacional Tambopata se creó en 2000 y protege unas {n} hectáreas.» (274.690) | 79 | [V] elperuano_rntamb_2025 | §5.4 ter |
+| 37 · Nidos del Tambopata | `map.stop.collpa_tambopata.dato_06` | «En la Reserva Tambopata, la zafra de la castaña va de enero a abril.» | 68 | [E] CR-F94 | §(e) |
+| 39 · El Alto Madre de Dios | `map.stop.boca_manu.dato_03` | «El río Manu mide unos {n} km y corre entero por la región de Madre de Dios.» (356) | 75 | [E] eswp_rio_manu | §5.4 ter |
+| 40 · Manu alto | `map.stop.manu.dato_02` | «En el parque del Manu se han registrado más de {n} especies de aves.» (1.000) | 70 | [V] sernanp_manu | §5.4 ter |
+| 41 · Las cochas del Manu | `map.stop.manu.dato_04` | «En un solo árbol del Manu se encontraron más de {n} especies de hormigas.» (40) | 72 | [V] sernanp_manu | §5.4 ter |
+
+- **El hueco de la pregunta 50, cerrado con la (a)** (D-022; GDD.md §6.3, pregunta 50): la tarjeta de la parada 32 lleva como «Otro dato» los cuatro candidatos de Pará de la tinaja (b.2 de `docs/research/cultura-ribera/propuesta-tinaja.md`). Cada uno lleva su lugar real, aunque la parada esté en el Perú, como el Matapi del 63. No añaden texto a la victoria ni al tutorial.
+  - Las cuias del Bajo Amazonas (Aritapera, Santarém) y el panelão de Quatipuru-Mirim van con [V]: son un ensayo y un artículo de revista, reabiertos el 2026-10-15.
+  - El barro que enfría el agua (el botijo, un dato general sin lugar) y la alfarería de Icoaraci de 1903 bajan a [E]: la fuente es Wikipedia sola o la prensa sola (cabecera de esta propuesta). La tinaja los daba con [V].
+  - Las fuentes van con el prefijo `TJ-` y el número de la propuesta de la tinaja.
+  - **Siguen pendientes del visto bueno del asesor** (la parada lleva `asesor` = true), con el riesgo del masato de la tinaja como punto expreso (Q-Ti7).
+- **Candidatos de §(e) del mundo 7** (07 §2.2, regla 6: en los mundos 6-13 son una lista para el asesor):
+  - **los astilleros de Puerto Maldonado** [F96]: el dato de llegada del 340 (el turismo y la construcción de botes);
+  - **la castaña y el añuje** [F93]: los «Otro dato» de Puerto Maldonado (el añuje que entierra semillas y los 14 meses del coco);
+  - **la zafra** [F94]: el «Otro dato» de los Nidos del Tambopata (de enero a abril, en la Reserva Tambopata). El hito 420 se llama «Zafra» [P] y se juega en las cochas del Manu, pero el nombre no nombra un lugar.
+
+  §(e) los daba con [V]; aquí van con [E], porque las fuentes son Wikipedia sola y la prensa.
+- **Vetos del mundo 7, para el asesor** (§(e), el resumen de 5.4 y el cuidado de `paradas_201_1000`; también en `nota_dato` de cada parada):
+  - el oro y la minería: ni dragas, ni balsas, ni bateas, ni pepitas, ni el mercurio. La página de Puerto Maldonado los cuenta en la misma frase que los botes, y el texto los calla;
+  - los pueblos en aislamiento y contacto inicial del Manu y del alto Madre de Dios (mashco piro y otros) y su zona;
+  - la sumaúma o lupuna, árbol sagrado [V F153];
+  - el caucho y el istmo de Fitzcarrald, que no es ruta. El distrito de Boca Manu lleva su nombre, y el texto no lo nombra;
+  - los petroglifos de Pusharo;
+  - los nombres en harakbut, ese eja, matsigenka, yine u otras lenguas, solo con un hablante.
+- **Además, para el asesor:**
+  - **Manu:** el texto solo habla del parque y su fauna, sin las comunidades que viven dentro (yora, matsigenka, harakbut y yine, según Wikipedia). Cocha Cashu es una estación de la zona restringida, y la parada no la nombra;
+  - **la collpa:** sin turistas ni plataformas en el fondo; la hipótesis de la sal se cuenta como «la idea más apoyada»;
+  - **el bufeo boliviano y la ley de 2012:** el dato del país no nombra al presidente que la firmó. El abogado y el asesor revisan también la bandera boliviana (sección 5.3);
+  - **la placa «Bolivia te da la bienvenida» en el 300** sería otra extensión de P-M7 [P], como la del 220: la decide el dueño con M4.5a. El 310 es una vuelta y no lleva placa;
+  - **los nombres nuevos** [P]: «Aguajal de Sandoval», «Astilleros de Puerto Maldonado», «Los guacamayos del Tambopata», «Nidos del Tambopata», «El Alto Madre de Dios» y «Las cochas del Manu»; el hito 420, «Zafra» [P];
+  - **el añuje:** su nombre cambia por país (añuje, cutia, guatusa, picure).
+- **`--check`** (`revisar_paradas_201_700`) suma, desde M3.7b, cuatro comprobaciones:
+  - que un sitio del resumen de un mundo detallado tenga coordenada y no lleve ningún [NV];
+  - que el viaje de entrada del mundo 7 lleve el punto de paso `teotonio` con coordenada [V] o [E] (`lat` y `lon`) y un dato `map.stop.<lugar>.dato_NN` con su etiqueta. Como ese dato irá a `facts.csv` (`passing[]` en M4.5a), su texto entre «» pasa las mismas reglas que el de las paradas (≤ 90 caracteres, cifras como `{n}` y sin «Belén»), y cada fuente que cita tiene que estar en `fuentes` con su `releida` (R5);
+  - que la parada 32 lleve los cuatro candidatos de la pregunta 50 (a) en `otros_datos`;
+  - que la bandera de un cruce que llega con el viaje de entrada de un mundo detallado (Bolivia en el 300) esté en la primera parada de ese mundo.
+
+  La autoprueba suma un caso por cada una: sin un candidato de la pregunta 50, sin `teotonio`, `teotonio` sin la etiqueta de su dato, sin `lon`, con un texto de más de 90 caracteres o citando una fuente que no está en `fuentes`, y un sitio del resumen sin coordenada. El caso de la bandera ausente, que ya recorría todas las paradas con bandera, ahora también da error con Bolivia en el 300.
+- **Para M4.5a** (`stops.py` y `geometry.py`):
+  - `kind`: la gran parada, la parada y el cierre, como en 1-200;
+  - `arrival_fact`: la clave del dato de cada parada (en n = 30, `map.country.bo.dato_01`);
+  - `flag_raise`: BO en n = 30 y PE en n = 31;
+  - `world_question` en n = 30 y `answers_world_question` en n = 35;
+  - `bg.code`: `kit:<pieza>`;
+  - `HOSTS`: `tambopata` → `madre_de_dios` y `manu` → `madre_de_dios`;
+  - `passing[]`: `teotonio`, en el Madeira, con `map.stop.teotonio.dato_01`. Hoy `geometry.py` solo lee `puntos_de_paso_1_200`;
+  - el guía de los mundos 7 y 8 (el bufeo boliviano), deducido del mundo (P-M8).
 
 ### 5.5 Si el dueño mantiene «Marañón alto» para El origen (Q7-B)
 
@@ -593,7 +791,7 @@ El final de 961-1.000 cambia de río y no cambia nada de 1-200:
   - **A (recomendada):** Rosa se queda en los rápidos de Teotônio y en los mundos 7 y 8 guía **un bufeo boliviano** (el mismo rig con otra paleta, sin nombre propio). Da un dato real: «Río arriba de estos rápidos vive otra población de delfines de río» [E wp_boto]. Rosa vuelve en el viaje del 560.
   - **B:** Rosa sigue en los mundos 7 y 8, y la despedida del 961 se justifica solo por el agua muy baja de los Andes. Más barato, pero el viaje cruza unos rápidos que, en la realidad, el boto no cruza.
 
-  Afecta a §5.4 (mundos 7 y 8) y a la frase del 961.
+  Afecta a §5.4 (mundos 7 y 8) y a la frase del 961. **Decidida la A** (D-013, 2026-10-13): con P-M8 (D-023, punto 19), el guía se deduce del mundo y el relevo es el punto de paso `teotonio` del viaje del 300, con su dato (sección 5.4 ter).
 
 ### 6.2 Reglas de los textos
 
@@ -863,7 +1061,7 @@ Primer plano: el agua base del mundo (W1 blanca, W2 clara, W3 negra, W4 y W5 bla
 | 12 Orinoco | `bg_kit_w12` | Caño Cristales rojo; Salto Ángel | — |
 | 13 El origen | `bg_kit_w13`, LUT fría | Cañón del Apurímac; puna; nevado Mismi | Hilo de agua (código) |
 
-- **Qué entra en la 1.0 si es la del GDD (Q14-A, 201-700, mundos 6-9):** solo el kit del mundo (`bg_kit_w06` … `bg_kit_w09`) y el rótulo del sitio, **sin héroe**. En 201-700 el fondo dice en qué mundo estás, no en qué sitio: el sitio lo dicen el rótulo, la tarjeta y el Mapa. Son 4 kits, unos 8 días de artista; la salida sin coste es el «río genérico» del canon (GDD §2 #20) con el rótulo. Los héroes de esos mundos llegan con sus packs, de la 1.1 en adelante.
+- **Qué entra en la 1.0 si es la del GDD (Q14-A, 201-700, mundos 6-9):** solo el kit del mundo (`bg_kit_w06` … `bg_kit_w09`) y el rótulo del sitio, **sin héroe**. En 201-700 el fondo dice en qué mundo estás, no en qué sitio: el sitio lo dicen el rótulo, la tarjeta y el Mapa. Son 4 kits, unos 8 días de artista; la salida sin coste es el «río genérico» del canon (GDD §2 #20) con el rótulo. Los héroes de esos mundos llegan con sus packs, de la 1.1 en adelante. Las piezas del kit de cada parada del mundo 6 y del 7 (`kit:<pieza>`) están en las secciones 5.4 bis y 5.4 ter [P].
 - **Recuento de 201-1.000:** 8 kits y **unos 40 héroes** [E] para unos 50 sitios.
 - **Variantes:** los mundos largos reutilizan un héroe para dos o tres paradas, con otra luz o con la temporada del ciclo.
 
@@ -1341,11 +1539,11 @@ Conviene contestar a la vez **T1 y T6** de TiTino (con Q3 y Q17) y la **Q1 de Fr
   - los packs `Assets/_Project/Data/Levels/*.json` (recuento de 3 filas: script propio, con 11 cuias o más).
 - **Trabajo previo del 2026-10-12:** investigación de mercado, geografía (105 puntos, de Wikidata), datos para TiTino (F01-F99, que aquí se citan como MR-F01 … MR-F99 para no chocar con los F de `docs/research/cultura-ribera/investigacion.md`; las que esta propuesta usa están en `rio-amazonas.json`, `fuentes`, con su URL y su etiqueta), inventario del repositorio y las tres variantes A, B y C.
 
-**Externas.** Las del 2026-10-12 se leyeron en el recuadro o en el resumen de la página; las marcadas «releída» se reabrieron en la revisión del 2026-10-12 o del 2026-10-13, y las de «releída el 2026-10-14», para el «Otro dato» (sección 5.1 ter; en `rio-amazonas.json`, campo `releida`). Antes de cerrar un texto, hay que reabrirlas todas (R5). La lista completa, con un ID por fuente, está en `rio-amazonas.json`, `fuentes`.
+**Externas.** Las del 2026-10-12 se leyeron en el recuadro o en el resumen de la página; las marcadas «releída» se reabrieron en la revisión del 2026-10-12 o del 2026-10-13, y las de «releída el 2026-10-14», para el «Otro dato» (sección 5.1 ter; en `rio-amazonas.json`, campo `releida`); las de «leída» o «releída el 2026-10-15», para las paradas del mundo 6 (sección 5.4 bis). Antes de cerrar un texto, hay que reabrirlas todas (R5). La lista completa, con un ID por fuente, está en `rio-amazonas.json`, `fuentes`.
 
 | Tema | Etiqueta | Fuente |
 |---|---|---|
-| Nacientes del Amazonas: no hay una sola; la Carhuasanta del Mismi es la más lejana con agua todo el año; el Mantaro, la más lejana, se corta varios meses al año (Contos y Tripcevich, 2014); el Apurímac, la aceptada desde 1971; la Laguna Bohemia, a 5.148 m (releída) | [E] | <https://en.wikipedia.org/wiki/Source_of_the_Amazon_River> · <https://www.nationalgeographic.com/adventure/article/140213-amazon-river-length-source-maps-science> |
+| Nacientes del Amazonas: no hay una sola; la Carhuasanta del Mismi es la más lejana con agua todo el año; el Mantaro, la más lejana, se corta varios meses al año (Contos y Tripcevich, 2014); el Apurímac, la aceptada desde 1971; la Laguna Bohemia, a 5.148 m (releídas; otra vez el 2026-10-15, para el dato del 200) | [E] | <https://en.wikipedia.org/wiki/Source_of_the_Amazon_River> · <https://www.nationalgeographic.com/adventure/article/140213-amazon-river-length-source-maps-science> |
 | Longitud (6.575 km desde el Mismi) y km del cauce | [E] | <https://en.wikipedia.org/wiki/Amazon_River> |
 | Coordenadas de lugares y bocas | [E/V] | Wikidata (CC0): <https://query.wikidata.org/> |
 | Tipos de agua (Sioli): el agua clara, por rocas cristalinas antiguas y suelos arenosos con poco sedimento, y de 1,5 a 4 m de visibilidad; los ríos de agua blanca (releída) | [E] Wikipedia · [V] el artículo | <https://en.wikipedia.org/wiki/Clearwater_river_(river_type)> · <https://en.wikipedia.org/wiki/Whitewater_river_(river_type)> · <https://en.wikipedia.org/wiki/Blackwater_river> · Ríos-Villamizar y otros (2014): <https://www.witpress.com/elibrary/wit-transactions-on-ecology-and-the-environment/178/25051> |
@@ -1393,12 +1591,30 @@ Conviene contestar a la vez **T1 y T6** de TiTino (con Q3 y Q17) y la **Q1 de Fr
 | Nauta: el Marañón y el Ucayali forman el Amazonas | [V] | <https://agu.confex.com/agu/fm14/webprogram/Paper31820.html> · <https://en.wikipedia.org/wiki/Nauta> [E] |
 | Pacaya-Samiria: unos 2 millones de ha y el mayor humedal de la Amazonia; «selva de los espejos» por las aguas negras del Samiria (releída) | [E] | <https://www.actualidadambiental.pe/fotos-pacaya-samiria-la-selva-de-los-espejos-cumple-medio-siglo-de-conservacion/> · <https://www.actualidadambiental.pe/?p=61457> · <https://es.mongabay.com/2020/10/pacaya-samiria-amazonia-peru-fotos/> |
 | Ciclo del agua amazónico: la lluvia entra del océano y se recicla en la selva (releída) | [E] | <https://web.mit.edu/12.000/www/m2006/teams/r6/final2/watercycle.htm> |
-| Botos: límites del área (cascadas y agua muy baja); los rápidos del Madeira aíslan la población boliviana (releída) | [E] | <https://en.wikipedia.org/wiki/Amazon_river_dolphin> · <https://seamap.env.duke.edu/species/180407/html> |
-| Madeira: frontera Bolivia-Brasil hasta la boca del Abunã; rápidos de Teotônio | [E] | <https://en.wikipedia.org/wiki/Madeira_River> |
+| Botos: límites del área (cascadas y agua muy baja); los rápidos del Madeira aíslan la población boliviana, río arriba de Teotônio; la ley boliviana de 2012 que lo declara tesoro nacional (releída el 2026-10-15) | [E] | <https://en.wikipedia.org/wiki/Amazon_river_dolphin> · <https://seamap.env.duke.edu/species/180407/html> |
+| Madeira: frontera Bolivia-Brasil hasta la boca del Abunã; los saltos de Teotônio, bajo el embalse de Santo Antônio desde 2012 (releída el 2026-10-15) | [E] | <https://en.wikipedia.org/wiki/Madeira_River> |
 | Puerto Heath, en el departamento de La Paz (Bolivia) | [E] | <https://en.wikipedia.org/wiki/Puerto_Heath_Airport> |
 | Wiphala entre los símbolos del Estado de Bolivia (Constitución de 2009, art. 6.II; DS 0241/2009) | [E] | <https://www.lexivox.org/norms/BO-DS-N241.html> |
-| Yasuní: más de 655 especies de árbol en una hectárea | [V] | <https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008767> |
-| Collpas: la hipótesis del sodio | [E] | <https://www.npr.org/sections/thesalt/2017/09/07/547981850/why-do-parrots-and-people-eat-clay> |
+| Yasuní: más de 655 especies de árbol en una hectárea típica; al menos 596 aves; 150 anfibios, récord mundial entre paisajes parecidos; parque desde 1979 y reserva de la biosfera desde 1989 (releída el 2026-10-15) | [V] | <https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0008767> |
+| Coordenadas de las paradas y los ríos del mundo 6: Mazán (Q6799128), Santa Clotilde (Q107201179), Nuevo Rocafuerte (Q647791), Yasuní (Q1641326), la reserva Cuyabeno (Q917251), la Laguna Grande (Q131248042), El Coca (Q1014564), Puerto Misahuallí (Q48796581) y los ríos Aguarico (Q397928), Cuyabeno (Q5197070) y Coca (Q1104914) (consulta del 2026-10-15) | [E] | Wikidata (CC0): <https://www.wikidata.org/wiki/Q1641326> y los demás elementos por su Q |
+| Napo: nace en las laderas del Antisana, el Sincholagua y el Cotopaxi; caudal medio en Mazán (6.800 m³/s), Santa Clotilde (5.895) y Nuevo Rocafuerte (2.032) (releída el 2026-10-15) | [E] | <https://en.wikipedia.org/wiki/Napo_River> (CR-F77) |
+| Canoas-taxi del Napo en El Coca, desde las 05:00 (Expreso, 2016; releída el 2026-10-15) | [E] | <https://www.expreso.ec/actualidad/canoas-son-lsquo-taxis-rsquo-comunas-coca-53085.html> (CR-F78) |
+| En Ecuador, la Amazonia también se llama «Oriente»; los Andes en su límite occidental (leída el 2026-10-15) | [E] | <https://es.wikipedia.org/wiki/Regi%C3%B3n_Amaz%C3%B3nica_del_Ecuador> |
+| Cuyabeno: el mayor sistema lacustre tropical de Ecuador, 14 lagunas unidas por canales (Enfoque UTE, 2016; leída el 2026-10-15) | [V] | <https://www.redalyc.org/journal/5722/572261592005/html/> |
+| Cuyabeno: el Cuyabeno y el Lagartococha, afluentes de agua negra del Aguarico, de agua blanca; las lagunas con igapó, zona de cría de los delfines (Denkinger, 2010; leída el 2026-10-15) | [V] | <https://revistas.usfq.edu.ec/index.php/avances/article/download/51/53/54> |
+| Cuyabeno-Lagartococha-Yasuní, el humedal Ramsar más grande de Ecuador (UICN), declarado el 24-8-2017 (prensa); la ficha Ramsar 2332 no abrió el 2026-10-15 | [V] la UICN · [E] la prensa | <https://iucn.org/es/node/43308> · <https://www.eloriente.com/articulo/complejo-de-humedales-cuyabeno-lagartococha-yasuniacute-nuevo-sitio-ramsar/8113> · <https://rsis.ramsar.org/ris/2332> |
+| El Coca (Puerto Francisco de Orellana), en la confluencia del Coca y el Napo (leídas el 2026-10-15) | [E] | <https://en.wikipedia.org/wiki/Puerto_Francisco_de_Orellana> · <https://en.wikipedia.org/wiki/Coca_River> |
+| Coordenadas de las paradas, los ríos y el punto de paso del mundo 7: Puerto Heath (Q6092075), el lago Sandoval (Q1800405), Puerto Maldonado (Q541435), el Tambopata Research Center (Q115641210), Boca Manu (Q27051064), Cocha Cashu (Q5139274), el parque del Manu (Q390264), los ríos Tambopata (Q6978442), Manu (Q2749258) y Heath (Q960348) y la Cachoeira Teotônio (Q22051335) (consulta del 2026-10-15) | [E] | Wikidata (CC0): <https://www.wikidata.org/wiki/Q1800405> y los demás elementos por su Q |
+| El Heath, frontera natural entre el Perú y Bolivia; Puerto Heath, en su boca (leídas el 2026-10-15) | [E] | <https://en.wikipedia.org/wiki/Heath_River> · <https://es.wikipedia.org/wiki/Puerto_Heath> |
+| Lago Sandoval: una cocha (lago de meandro) de unas 125 ha, a unos 16 km de Puerto Maldonado; orillas de aguajes con guacamayos (leídas el 2026-10-15) | [E] | <https://en.wikipedia.org/wiki/Lake_Sandoval> · <https://en.wikipedia.org/wiki/Tambopata_National_Reserve> |
+| Reserva Nacional Tambopata: DS 048-2000-AG, 274.690 ha (El Peruano, 2025; leída el 2026-10-15) | [V] | <https://busquedas.elperuano.pe/dispositivo/NL/2447821-1> |
+| Tambopata: llega al Madre de Dios en Puerto Maldonado; la Macaw Society y la collpa Colorado; los guacamayos azul y amarillo anidan en aguajes muertos (leídas el 2026-10-15) | [E] | <https://en.wikipedia.org/wiki/Tambopata_River> · <https://en.wikipedia.org/wiki/Tambopata_Macaw_Project> |
+| Puerto Maldonado: confluencia del Tambopata y el Madre de Dios; el turismo y la construcción de botes (CR-F96, releída el 2026-10-15) | [E] | <https://en.wikipedia.org/wiki/Puerto_Maldonado> |
+| Castaña: el añuje entierra semillas que germinan; el coco tarda 14 meses (CR-F93); la zafra de enero a abril en Tambopata (CR-F94) (releídas el 2026-10-15) | [E] | <https://en.wikipedia.org/wiki/Brazil_nut> · <https://www.actualidadambiental.pe/inician-zafra-castanera-2011-en-la-reserva-nacional-tambopata-y-parque-nacional-bahuaja-sonene/> |
+| Madre de Dios: el Alto Madre de Dios y la boca del Manu en Boca Manu; el Manu, 356 km en la región de Madre de Dios (leídas el 2026-10-15) | [E] | <https://es.wikipedia.org/wiki/R%C3%ADo_Madre_de_Dios> · <https://es.wikipedia.org/wiki/R%C3%ADo_Manu_(Per%C3%BA)> |
+| Parque Nacional del Manu: 1973, reserva de biosfera en 1977 y Patrimonio Natural en 1987; más de 1.000 aves; más de 40 hormigas en un árbol; las cochas con el lobo de río (SERNANP; leída el 2026-10-15) | [V] | <https://www.gob.pe/institucion/sernanp/informes-publicaciones/1948163-parque-nacional-del-manu> |
+| Datos de Pará de la tinaja (pregunta 50 (a)): las cuias pitingas del Bajo Amazonas (Aceno, 2020) y el panelão de Quatipuru-Mirim (Revista Cocar, 2023), [V]; el botijo (Wikipedia) y la Olaria do Espanhol de Icoaraci, de 1903 (Diário do Pará, 2024), [E] (releídas el 2026-10-15) | [V] / [E] | <https://periodicoscientificos.ufmt.br/ojs/index.php/aceno/article/view/8582/7555> · <https://periodicos.uepa.br/index.php/cocar/article/download/6824/3251/30977> · <https://en.wikipedia.org/wiki/Botijo> · <https://diariodopara.com.br/encartes/na-estrada-com-o-diario/ceramicas-de-icoaraci-dao-charme-a-vila-sorriso/> |
+| Collpas: la hipótesis del sodio, la más apoyada; la collpa Colorado, sobre el Tambopata, con loros de hasta 18 especies cada día; 40 veces más sodio que sus plantas (releída el 2026-10-15) | [E] | <https://www.npr.org/sections/thesalt/2017/09/07/547981850/why-do-parrots-and-people-eat-clay> |
 | Madidi: de 180 a 5.760 m | [E] | <https://en.wikipedia.org/wiki/Madidi_National_Park> |
 | Yarinacocha, antigua curva del Ucayali (resumen; reabrir) | [E] | <https://scielo.br/j/bn/a/kP34JQdCqtmbsWbS3P8zdLv/abstract/?lang=pt> |
 | Casiquiare: une el Orinoco y el Amazonas | [E] | <https://en.wikipedia.org/wiki/Casiquiare_canal> |
@@ -1437,5 +1653,6 @@ Conviene contestar a la vez **T1 y T6** de TiTino (con Q3 y Q17) y la **Q1 de Fr
   - que los afluentes de paso se llenan enteros en la muestra;
   - que el nivel de cada cruce de país sale de las paradas (o del viaje de entrada del mundo) y no está escrito a mano;
   - que cada parada tiene su lista `otros_datos` y que cada «Otro dato» es un objeto con sus campos, una clave `map.stop.<lugar>.dato_NN` sin repetir, cada marcador (también el del plural `{n:plural:…|…}`, contrato 32) con su valor en `args`, ≤ 90 caracteres con los marcadores resueltos, ninguna cifra con separador (Q8-A), ninguna «Belén», etiqueta [V] o [E] con sus fuentes reabiertas en la fecha de `releida`, y que están los candidatos de la sección 5.1 bis (sección 5.1 ter);
-  - con casos fijos (M2.7f y FIXI), que esa revisión acepta un plural con su valor en `args`, lo mide por su forma más larga con la cifra puesta y rechaza el mismo plural sin su valor o con un valor que no es una cifra (`"1200"` o `true`), y que una parada candidata cuyas entradas de `otros_datos` no son objetos (`"texto"` y `null`) da «no es un objeto» por cada una sin romper la validación.
+  - que las paradas detalladas de 201-700 (`paradas_201_700`) están completas, con su dato, su fondo sin héroe, los sitios del resumen y sus banderas, y sin ningún [NV] (sección 5.4 bis); y, desde M3.7b, que los sitios del resumen de un mundo detallado tienen coordenada y ningún [NV], que el viaje del 300 lleva el punto de paso `teotonio` con su dato, que la parada 32 lleva los cuatro candidatos de la pregunta 50 (a) y que la bandera de un viaje de entrada está en la primera parada de su mundo (sección 5.4 ter);
+  - con casos fijos (M2.7f y FIXI), que esa revisión acepta un plural con su valor en `args`, lo mide por su forma más larga con la cifra puesta y rechaza el mismo plural sin su valor o con un valor que no es una cifra (`"1200"` o `true`), y que una parada candidata cuyas entradas de `otros_datos` no son objetos (`"texto"` y `null`) da «no es un objeto» por cada una sin romper la validación; y, con casos fijos más (M3.7a), que la revisión de 201-700 no da errores con las paradas de verdad y que, a nombre de lo que cambia, rechaza el dato del 200 con otra clave, un [NV] en una nota, un héroe pintado, los km a casa que retroceden, los sitios fuera de orden y una bandera ausente o sobrante, y acepta un dato de llegada `map.general.*`; y (M3.7b) que rechaza la parada 32 sin un candidato de la pregunta 50, el viaje del 300 sin `teotonio` o con su dato sin etiqueta, un sitio del resumen sin coordenada y la parada 30 sin la bandera de Bolivia.
 - **Límites de la muestra:** la costa, el pie de los Andes, tres tramos intermedios de afluentes de paso y el trazado de los ríos locales son aproximados [NV], y el cauce no lleva todos los meandros. El arte final sale de Natural Earth y HydroRIVERS (sección 3.6).
