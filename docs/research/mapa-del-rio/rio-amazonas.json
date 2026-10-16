@@ -1,7 +1,7 @@
 {
  "formato": "af-rio-amazonas/0 [P]",
  "titulo": "Geografía limpia del Amazonas para el Mapa del río (Tintalú / Amazon Fill)",
- "estado": "Material de apoyo, no canon (docs/research). Lo usa generar_mapa.py para la muestra; el trazado de producción sale de Natural Earth (y de HydroRIVERS para las vistas de Mundo) con tools/river-map/ (propuesta §3.6). Nombres, datos y textos: pendientes del asesor cultural (07 §8.2). Revisado el 2026-10-13 con 41 hallazgos (propuesta, cabecera). Las paradas detalladas son las de 1-200 (mundos 1-5) en paradas_1_200 y, con Q14-A (la 1.0 son los niveles 1-700, GDD §2 #21), las de 201-700 en paradas_201_700 (fase F9: k = 20-29 desde M3.7a, k = 30-41 desde M3.7b y k = 42-55 desde M3.7c; faltan k = 56-69). Ampliado el 2026-10-14 (M2.7) con el «Otro dato» de las tarjetas de 1-200 (otros_datos de cada parada, con sus fuentes reabiertas ese día). Ampliado el 2026-10-15 (M3.7a) con las paradas k = 20-29 del mundo 6 (paradas_201_700) y sus ríos locales (rios_locales_201_700), con sus fuentes reabiertas ese día. Ampliado el 2026-10-15 (M3.7b) con las paradas k = 30-41 del mundo 7 (paradas_201_700), sus ríos locales (Tambopata y Manu), el punto de paso teotonio del viaje del 300 (Q18-A) y los candidatos de Pará de la tinaja como «Otro dato» de la parada 32 (pregunta 50 (a)). Ampliado el 2026-10-15 (M3.7c) con las paradas k = 42-55 del mundo 8 (paradas_201_700), con dos bajadas declaradas por una confluencia (baja_por_confluencia) y sus fuentes reabiertas ese día.",
+ "estado": "Material de apoyo, no canon (docs/research). Lo usa generar_mapa.py para la muestra; el trazado de producción sale de Natural Earth (y de HydroRIVERS para las vistas de Mundo) con tools/river-map/ (propuesta §3.6). Nombres, datos y textos: pendientes del asesor cultural (07 §8.2). Revisado el 2026-10-13 con 41 hallazgos (propuesta, cabecera). Las paradas detalladas son las de 1-200 (mundos 1-5) en paradas_1_200 y, con Q14-A (la 1.0 son los niveles 1-700, GDD §2 #21), las de 201-700 en paradas_201_700 (fase F9: k = 20-29 desde M3.7a, k = 30-41 desde M3.7b, k = 42-55 desde M3.7c y k = 56-69 desde M3.7d: completas). Ampliado el 2026-10-14 (M2.7) con el «Otro dato» de las tarjetas de 1-200 (otros_datos de cada parada, con sus fuentes reabiertas ese día). Ampliado el 2026-10-15 (M3.7a) con las paradas k = 20-29 del mundo 6 (paradas_201_700) y sus ríos locales (rios_locales_201_700), con sus fuentes reabiertas ese día. Ampliado el 2026-10-15 (M3.7b) con las paradas k = 30-41 del mundo 7 (paradas_201_700), sus ríos locales (Tambopata y Manu), el punto de paso teotonio del viaje del 300 (Q18-A) y los candidatos de Pará de la tinaja como «Otro dato» de la parada 32 (pregunta 50 (a)). Ampliado el 2026-10-15 (M3.7c) con las paradas k = 42-55 del mundo 8 (paradas_201_700), con dos bajadas declaradas por una confluencia (baja_por_confluencia) y sus fuentes reabiertas ese día. Ampliado el 2026-10-16 (M3.7d) con las paradas k = 56-69 del mundo 9 (paradas_201_700), el punto de paso teotonio también en el viaje del 560 (Rosa vuelve) y sus fuentes abiertas o reabiertas ese día.",
  "fecha": "2026-10-12",
  "datum": "WGS84, grados decimales (4 decimales)",
  "etiquetas": {
@@ -5842,11 +5842,11 @@
     700
    ],
    "paradas": 14,
-   "viaje_de_entrada": "Mamoré → Madeira → Amazonas (repaso) → Nauta → Ucayali arriba",
+   "viaje_de_entrada": "Mamoré abajo → Villa Bella → Madeira abajo (rápidos de Teotônio: vuelve Rosa, punto de paso teotonio) → Amazonas arriba (repaso de lo ya lleno) → Nauta → Ucayali arriba",
    "banderas_de_cortesia": [
-    "PE (Nauta)"
+    "PE en el 560 (viaje de entrada: Amazonas arriba por la boca del Atacuari hasta Nauta, con vuelta; la parada 56, Jenaro Herrera, está en el Perú y lleva la bandera); BR de paso por el Madeira y el Amazonas"
    ],
-   "pregunta_del_mundo": "¿Por qué el río dibuja tantas curvas? → Yarinacocha fue una curva del Ucayali [E scielo_yarinacocha]",
+   "pregunta_del_mundo": "¿Por qué el río dibuja tantas curvas? → Yarinacocha fue una curva del Ucayali [E CR-F147]",
    "sitios": [
     {
      "nombre": "Jenaro Herrera",
@@ -5857,7 +5857,8 @@
      "xy": [
       0.52377,
       0.19189
-     ]
+     ],
+     "nota": "Coordenada de Wikidata del pueblo (Q15696655), la de la parada 56"
     },
     {
      "nombre": "Requena",
@@ -5868,7 +5869,8 @@
      "xy": [
       0.51772,
       0.18632
-     ]
+     ],
+     "nota": "Coordenada de Wikidata de la ciudad (Q3344103), la de las paradas 57 y 58"
     },
     {
      "nombre": "Contamana",
@@ -5879,7 +5881,8 @@
      "xy": [
       0.42603,
       0.15125
-     ]
+     ],
+     "nota": "Coordenada de Wikidata de la ciudad (Q3317773), la de las paradas 59 y 60"
     },
     {
      "nombre": "Pucallpa y Yarinacocha",
@@ -5887,7 +5890,7 @@
      "lat": -8.3833,
      "lon": -74.55,
      "conf": "V",
-     "nota": "Comunidades shipibo-konibo: no como atracción; asesor",
+     "nota": "Coordenada de Wikidata de la ciudad (Q217071), la de la parada 61; las paradas 62 y 63 van en la laguna (Q11688197), a unos 10 km. Comunidades shipibo-konibo: no como atracción; asesor",
      "xy": [
       0.38467,
       0.16515
@@ -5902,7 +5905,8 @@
      "xy": [
       0.31742,
       0.18167
-     ]
+     ],
+     "nota": "Coordenada de Wikidata de la localidad (Q27649307, en Tahuanía), la de las paradas 64 y 65"
     },
     {
      "nombre": "Atalaya: nace el Ucayali",
@@ -5913,21 +5917,61 @@
      "xy": [
       0.29172,
       0.18907
-     ]
+     ],
+     "nota": "Coordenada de Wikidata de la boca del Tambo (Q1480564, calificador P518), la de las paradas 66 y 67; la ciudad (Q3322627) queda a unos 3 km"
     },
     {
      "nombre": "Tambo bajo (Puerto Prado)",
      "paradas": 2,
-     "lat": -11.1608,
-     "lon": -74.2467,
+     "lat": -11.1656,
+     "lon": -74.2344,
+     "conf": "E",
+     "xy": [
+      0.27338,
+      0.17472
+     ],
+     "nota": "Coordenada de Wikidata del nacimiento del Tambo (Q1480564, calificador P518), la de las paradas 68 y 69 (antes, −11,1608, −74,2467, el punto del cauce, a 1,4 km). Puerto Prado está en el nacimiento del Tambo, no en su tramo bajo: el nombre del sitio queda [P], para el asesor"
+    }
+   ],
+   "cuidado": "Shanay-Timpishka: el canon la pone como paisaje con vapor (glosario §8; 07 §2.1). La fuente reabierta el 2026-10-16 no la llama lugar sagrado; cuenta que los chamanes locales atribuyen el agua hirviente a la Yacumama, que §(e) veta, y que a su orilla hay tres comunidades (Mayantuyacu, Santuario Huishtín y el centro Shanay-timpishka) [E wp_shanay]. Es afluente del Pachitea, que entra en el Ucayali río arriba de Pucallpa: no es parada en M3.7d. Pregunta para el asesor: ¿parada, solo vapor lejano en el fondo (alternativa canónica) o nada? Comunidades shipibo-konibo con el asesor (nunca como atracción); kené, ayahuasca, «turismo chamánico» y lupuna, vetados (§(e)); el Pongo de Manseriche es del Marañón: mirador. Lista completa para el asesor en propuesta §5.4 quinquies",
+   "puntos_de_paso_del_viaje": [
+    {
+     "id": "teotonio",
+     "lat": -8.85,
+     "lon": -64.0333,
+     "nombre": "Rápidos de Teotônio (Madeira; hoy bajo el embalse de Santo Antônio)",
+     "conf": "E",
+     "dato": "map.stop.teotonio.dato_01 [E wp_boto]: «Río arriba de Teotônio vive otra población de delfines de río, aislada por los rápidos.»",
+     "relevo_del_guia": "Rosa vuelve aquí y guía otra vez la canoa desde el viaje del 560; el bufeo boliviano se queda en el Madeira, río arriba de los rápidos (Q18-A; D-023, punto 19, P-M8: el guía se deduce del mundo, sin campo nuevo en el contrato 30)",
+     "nota": "El mismo punto de paso que el del viaje del 300 (mundo 7): la misma coordenada y el mismo dato, porque en river_map_v1.json es un solo elemento de passing[] con un solo fact, y el leg del 560 lo cruza por su via (M4.5b). Wikipedia EN (Amazon river dolphin), reabierta el 2026-10-16: «upstream of the rapids of Teotonio, in Bolivia» y «A series of rapids and waterfalls in the Madeira River have isolated one population» [E wp_boto].",
+     "xy": [
+      0.366,
+      0.48384
+     ]
+    },
+    {
+     "lat": -10.3821,
+     "lon": -65.3903,
+     "nombre": "Villa Bella: Beni + Mamoré = Madeira (Bolivia)",
      "conf": "V",
      "xy": [
-      0.27357,
-      0.17434
+      0.30472,
+      0.44272
+     ]
+    },
+    {
+     "lat": -4.4454,
+     "lon": -73.4532,
+     "nombre": "Nauta: Ucayali + Marañón = río Amazonas",
+     "conf": "V",
+     "xy": [
+      0.54218,
+      0.19839
      ]
     }
    ],
-   "cuidado": "Shanay-Timpishka: el canon la pone como paisaje con vapor (glosario §8; 07 §2.1). Que sea un lugar sagrado no está comprobado [NV]: la fuente leída cuenta que los chamanes locales atribuyen el agua hirviente a la Yacumama, que §(e) veta, y que a su orilla hay comunidades (Mayantuyacu, Santuario Huishtín) [E wp_shanay]. Pregunta para el asesor: ¿parada, solo vapor lejano en el fondo (alternativa canónica) o nada? Comunidades shipibo-konibo con el asesor; el Pongo de Manseriche es del Marañón: mirador"
+   "pregunta_se_plantea_en": 560,
+   "detalle": "paradas_201_700, k = 56-69 (M3.7d, 2026-10-16): cada parada con su dato, su «Otro dato», su fondo y sus vetos; teotonio en el viaje del 560, con Rosa de vuelta (§5.4 quinquies)"
   },
   {
    "mundo": 10,
@@ -8582,6 +8626,948 @@
     0.12667,
     0.45758
    ]
+  },
+  {
+   "k": 56,
+   "id": "jenaro_herrera",
+   "nombre": "Jenaro Herrera",
+   "sitio": "Jenaro Herrera",
+   "niveles": [
+    561,
+    570
+   ],
+   "llegada_al_ganar": 560,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "gran_parada",
+   "pais": "PE",
+   "rio": "Ucayali",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -4.9058,
+   "lon": -73.6677,
+   "conf": "E",
+   "wikidata": "Q15696655",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 3952,
+   "km_desde_el_mar_conf": "E (punto «Jenaro Herrera» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200)",
+   "km_casa": 3981,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 561-580 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.jenaro_herrera.dato_01",
+    "texto": "De los dos ríos, el Ucayali es la rama principal del Amazonas: la canoa sigue por él.",
+    "etiqueta": "E",
+    "fuente": "wp_ucayali",
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.jenaro_herrera.dato_02",
+     "texto": "Jenaro Herrera lleva el nombre de un escritor y explorador nacido en Moyobamba.",
+     "etiqueta": "E",
+     "fuente": "eswp_jenaro_herrera",
+     "releida": "2026-10-16",
+     "origen": "§5.4 quinquies",
+     "nota": "Wikipedia ES (Distrito de Jenaro Herrera): «Su nombre honra al escritor, periodista, investigador, explorador, cartógrafo, abogado y narrador moyobambino Genaro Herrera» [E eswp_jenaro_herrera: leída el 2026-10-16]. La página escribe «Genaro»; el pueblo, «Jenaro»."
+    }
+   ],
+   "nota_dato": "Gran parada del mundo 9 (la primera; D-013 punto 3). Responde la frase de TiTino del 560, «Dos ríos: ¿cuál nos lleva a donde nace el agua?» (propuesta §6.3; la contesta el mundo siguiente): Wikipedia EN (Ucayali River) lo llama «the main headstream of the Amazon River», que «becomes the Amazon at the confluence of the Marañón close to Nauta city» [E wp_ucayali: leída el 2026-10-16]. «De los dos ríos» no repite el dato del 170 en Nauta («Aquí el Marañón y el Ucayali forman el Amazonas»). Bandera del Perú al ganar el 560 (cruces_de_pais: el viaje de entrada del mundo 9, con vuelta): la canoa sube el Amazonas desde el Madeira, pasa la boca del Atacuari, entra otra vez en el Perú y en Nauta toma el Ucayali; sin placa de bienvenida, como el 310 y el 420. Plantea la pregunta del mundo 9, que responde la llegada del 620 a Yarinacocha (parada 62). Enlaza con el guía: Rosa vuelve en el viaje del 560, en el punto de paso teotonio, y desde aquí guía otra vez la canoa (Q18-A; P-M8). Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:ucayali_ancho_con_islas",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Ucayali ancho y pardo, con islas de playa y bosque, poco antes de unirse al Marañón, de mañana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "banner 561 (viaje del 560: Madeira abajo, con Rosa de vuelta en Teotônio, y Amazonas arriba hasta Nauta)",
+    "frase de TiTino del 560, «Dos ríos: ¿cuál nos lleva a donde nace el agua?» (propuesta §6.3), que contesta este dato de llegada",
+    "bandera del Perú (560, vuelta)",
+    "guía: Rosa otra vez, desde el viaje del 560 (Q18-A)",
+    "miquito: sigue la maquisapa del mundo 8 (07 §6.4)",
+    "reto 566 (Matapi + Remolino; d.5.3)"
+   ],
+   "bandera": "PE",
+   "pregunta_del_mundo": {
+    "texto": "¿Por qué el río dibuja tantas curvas?",
+    "se_responde_en": 620
+   },
+   "notas": "Coordenada de Wikidata del pueblo (Q15696655), la misma que el punto «Jenaro Herrera» del cauce y que el sitio del resumen [E wd_ucayali]. La pregunta del mundo 9 se plantea al llegar (en el banner del 561, Q4-D).",
+   "xy": [
+    0.52377,
+    0.19189
+   ]
+  },
+  {
+   "k": 57,
+   "id": "requena",
+   "nombre": "Requena",
+   "sitio": "Requena",
+   "niveles": [
+    571,
+    580
+   ],
+   "llegada_al_ganar": 570,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Ucayali y Tapiche",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -5.0569,
+   "lon": -73.8515,
+   "conf": "E",
+   "wikidata": "Q3344103",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 4006,
+   "km_desde_el_mar_conf": "E (punto «Requena (boca del Tapiche)» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200)",
+   "km_casa": 4035,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 561-580 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.requena.dato_01",
+    "texto": "En Requena, el Ucayali lleva de media unos {n} m³ de agua por segundo.",
+    "etiqueta": "E",
+    "fuente": "wp_ucayali",
+    "args": {
+     "n": 13385
+    },
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.requena.dato_02",
+     "texto": "Requena se fundó en 1907 a orillas del Tapiche y del Ucayali.",
+     "etiqueta": "E",
+     "fuente": "eswp_requena",
+     "releida": "2026-10-16",
+     "origen": "§5.4 quinquies",
+     "nota": "Wikipedia ES (Requena (Perú)): la ciudad «está a la orilla del río Tapiche, el río Ucayali y una quebrada que cruza la ciudad», y la ficha da el 23 de agosto de 1907 como fecha de fundación [E eswp_requena: leída el 2026-10-16]. El texto no nombra a quien la fundó (un religioso), como no se nombran las misiones en el mundo 8."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Ucayali River): caudal medio en Requena de «13,385 m3/s» (datos de 1990-2006), con un mínimo de 3.000 y un máximo de 28.000 [E wp_ucayali: leída el 2026-10-16]. La cifra va como {n} (Q8-A). Dato del agua en las aguas bajas del ciclo 561-580 (B): es la media del año, no la de la temporada. Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:boca_del_tapiche",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: la boca del Tapiche, de agua más oscura, en el Ucayali, con el pueblo lejano en la orilla alta (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Tinaja 574 (variante A; d.5.3)",
+    "hito 580 [P]: el primer hito de 14 cuias (K = 13 + 1 vacío), Matapi + Brote de dos hojas (d.5.2)"
+   ],
+   "notas": "Coordenada de Wikidata de la ciudad (Q3344103), la misma que el punto «Requena (boca del Tapiche)» del cauce y que el sitio del resumen [E wd_ucayali].",
+   "xy": [
+    0.51772,
+    0.18632
+   ]
+  },
+  {
+   "k": 58,
+   "id": "requena_ucayali",
+   "nombre": "El Ucayali en Requena",
+   "sitio": "Requena",
+   "niveles": [
+    581,
+    590
+   ],
+   "llegada_al_ganar": 580,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Ucayali",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -5.0569,
+   "lon": -73.8515,
+   "conf": "E",
+   "wikidata": "Q3344103",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 4006,
+   "km_desde_el_mar_conf": "E (punto «Requena (boca del Tapiche)» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200)",
+   "km_casa": 4035,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 581-600 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.requena.dato_03",
+    "texto": "El Ucayali llega a medir {n} metros de ancho por la cantidad de islas que tiene.",
+    "etiqueta": "E",
+    "fuente": "wp_ucayali",
+    "args": {
+     "n": 1200
+    },
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.requena.dato_04",
+     "texto": "La cuenca del Ucayali ocupa unos {n} km² de selva y montaña.",
+     "etiqueta": "E",
+     "fuente": "wp_ucayali",
+     "args": {
+      "n": 351549
+     },
+     "releida": "2026-10-16",
+     "origen": "§5.4 quinquies",
+     "nota": "Wikipedia EN (Ucayali River): cuenca de «351,549 km2» [E wp_ucayali: leída el 2026-10-16]. La cuenca va de los Andes a la selva baja (nace a unos 110 km del lago Titicaca, según la misma página)."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Ucayali River): «The Ucayali's width varies from 400–1,200 metres (1,300–3,900 ft), due to the large number of islands» [E wp_ucayali: leída el 2026-10-16]. La cifra va como {n} (Q8-A). Segunda parada del sitio: otro nombre [P] y otro dato. Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:ucayali_con_islas",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Ucayali partido por islas largas de playa y cañabrava, de mañana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Hoja atada con Brote de dos hojas 589 (combinación nueva; d.5.2)"
+   ],
+   "notas": "La misma coordenada que la parada 57 (Q3344103) [E wd_ucayali].",
+   "xy": [
+    0.51772,
+    0.18632
+   ]
+  },
+  {
+   "k": 59,
+   "id": "contamana",
+   "nombre": "Contamana",
+   "sitio": "Contamana",
+   "niveles": [
+    591,
+    600
+   ],
+   "llegada_al_ganar": 590,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Ucayali",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -7.3493,
+   "lon": -75.0086,
+   "conf": "E",
+   "wikidata": "Q3317773",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 4662,
+   "km_desde_el_mar_conf": "E (punto «Contamana» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200)",
+   "km_casa": 4691,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 581-600 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.contamana.dato_01",
+    "texto": "Junto a Contamana, las rocas guardan unos {n} millones de años de historia de la selva.",
+    "etiqueta": "V",
+    "fuente": "antoine2016_contamana",
+    "args": {
+     "n": 60
+    },
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.contamana.dato_02",
+     "texto": "En Contamana hay aguas termales: el agua sale caliente de la tierra.",
+     "etiqueta": "E",
+     "fuente": "eswp_contamana",
+     "releida": "2026-10-16",
+     "origen": "§5.4 quinquies",
+     "nota": "Wikipedia ES (Contamana): «las saludables aguas termales», entre los lugares turísticos [E eswp_contamana: leída el 2026-10-16]. El texto no dice «saludables» (sería una afirmación de salud). No es Shanay-Timpishka, que está en la cuenca del Pachitea, río arriba de Pucallpa [E wp_shanay]."
+    }
+   ],
+   "nota_dato": "Antoine y otros (2016), Gondwana Research 31: 30-59 (doi 10.1016/j.gr.2015.11.001): los depósitos de la Quebrada Cachiyacu, cerca de Contamana, cuentan «~ 60 million years of life history in Neotropical lowlands», del Paleoceno temprano al Mioceno tardío o el Plioceno [V antoine2016_contamana: resumen leído el 2026-10-16]. La cifra va como {n} (Q8-A). Sin el origen del nombre (Wikipedia ES lo da en shipibo; veto de nombres en otras lenguas). Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:barranco_con_capas",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: un barranco alto de la orilla con capas de roca de colores, y el Ucayali al pie, de mañana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Tinaja 591 (variante A; d.5.3)",
+    "hito 600 [P] (Hoja atada + Brote de dos hojas + Barro, K = 13; d.5.3)"
+   ],
+   "notas": "Coordenada de Wikidata de la ciudad (Q3317773), la misma que el punto «Contamana» del cauce y que el sitio del resumen [E wd_ucayali]. La Quebrada Cachiyacu, de los fósiles, está cerca de la ciudad; el resumen del artículo no da su coordenada.",
+   "xy": [
+    0.42603,
+    0.15125
+   ]
+  },
+  {
+   "k": 60,
+   "id": "contamana_fosiles",
+   "nombre": "Los fósiles de Contamana",
+   "sitio": "Contamana",
+   "niveles": [
+    601,
+    610
+   ],
+   "llegada_al_ganar": 600,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Ucayali",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -7.3493,
+   "lon": -75.0086,
+   "conf": "E",
+   "wikidata": "Q3317773",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 4662,
+   "km_desde_el_mar_conf": "E (punto «Contamana» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200)",
+   "km_casa": 4691,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 601-620 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.contamana.dato_03",
+    "texto": "Cerca de Contamana se han reconocido al menos {n} especies fósiles.",
+    "etiqueta": "V",
+    "fuente": "antoine2016_contamana",
+    "args": {
+     "n": 485
+    },
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.contamana.dato_04",
+     "texto": "Los fósiles de Contamana se hallaron en {n} lugares a lo largo de una quebrada.",
+     "etiqueta": "V",
+     "fuente": "antoine2016_contamana",
+     "args": {
+      "n": 34
+     },
+     "releida": "2026-10-16",
+     "origen": "§5.4 quinquies",
+     "nota": "Antoine y otros (2016): «The 34 fossil-bearing localities identified have yielded a diversity of fossil remains», en los depósitos de la Quebrada Cachiyacu, cerca de Contamana [V antoine2016_contamana: resumen leído el 2026-10-16]."
+    }
+   ],
+   "nota_dato": "Antoine y otros (2016): «At least 485 fossil species are recognized in the Contamana area» (unas 250 «plantas», unos 212 animales y 23 foraminíferos) [V antoine2016_contamana: resumen leído el 2026-10-16]. La cifra va como {n} (Q8-A). Segunda parada del sitio: otro nombre [P] y otro dato. Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:orilla_con_cerros_bajos",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: la orilla del Ucayali con cerros bajos de selva detrás y una quebrada que baja al río, de mañana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Liana con fruta con Lluvia 609 (combinación nueva; d.5.2)"
+   ],
+   "notas": "La misma coordenada que la parada 59 (Q3317773) [E wd_ucayali].",
+   "xy": [
+    0.42603,
+    0.15125
+   ]
+  },
+  {
+   "k": 61,
+   "id": "pucallpa",
+   "nombre": "Pucallpa",
+   "sitio": "Pucallpa y Yarinacocha",
+   "niveles": [
+    611,
+    620
+   ],
+   "llegada_al_ganar": 610,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Ucayali",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -8.3833,
+   "lon": -74.55,
+   "conf": "V",
+   "wikidata": "Q217071",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 4939,
+   "km_desde_el_mar_conf": "E (punto «Pucallpa» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200)",
+   "km_casa": 4968,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 601-620 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.pucallpa.dato_01",
+    "texto": "Pucallpa es la segunda ciudad más grande de la Amazonía peruana, después de Iquitos.",
+    "etiqueta": "E",
+    "fuente": "CR-F108",
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.pucallpa.dato_02",
+     "texto": "En 1945, una carretera unió por fin Pucallpa con Lima.",
+     "etiqueta": "E",
+     "fuente": "CR-F108",
+     "releida": "2026-10-16",
+     "origen": "§(e)",
+     "nota": "Wikipedia EN (Pucallpa): «Pucallpa's isolation finally ended in 1945 with the completion of a highway to Lima through Tingo Maria» [E CR-F108: reabierta el 2026-10-16]. Candidato de §(e) («Pucallpa»)."
+    },
+    {
+     "clave": "map.stop.pucallpa.dato_03",
+     "texto": "Por el Ucayali, el puerto de Pucallpa se comunica con Iquitos.",
+     "etiqueta": "E",
+     "fuente": "CR-F108",
+     "releida": "2026-10-16",
+     "origen": "§(e)",
+     "nota": "Wikipedia EN (Pucallpa): «Pucallpa is an important river port that, through the Ucayali River, communicates with the other large city of the Peruvian Amazon, Iquitos» [E CR-F108: reabierta el 2026-10-16]."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Pucallpa): «second largest in the Peruvian Amazon after Iquitos», a orillas del Ucayali [E CR-F108: reabierta el 2026-10-16]. Candidato de §(e) («Pucallpa»): §(e) lo daba con [V] (F108); aquí va con [E], porque la fuente es Wikipedia sola (cabecera de la propuesta). El texto no da la población: la página da tres cifras distintas para 2017 (211.611, 326.040 y 341.465). La página habla también del comercio de madera y de la contaminación de Yarinacocha, que no se usan (vetos). Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:puerto_con_barcos",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el puerto de Pucallpa visto desde el río, con barcos de pasajeros de dos pisos en la orilla, de mañana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 620 [P] (Liana de cuenta + Lluvia + Remolino, K = 13; d.5.3)"
+   ],
+   "notas": "Coordenada de Wikidata de la ciudad (Q217071), la misma que el punto «Pucallpa» del cauce [V] y que el sitio del resumen [E wd_ucayali]. Asesor: Pucallpa es «alta en lo shipibo» (cultura-ribera, Pucallpa): nada de kené, ayahuasca ni «turismo chamánico».",
+   "xy": [
+    0.38467,
+    0.16515
+   ]
+  },
+  {
+   "k": 62,
+   "id": "yarinacocha",
+   "nombre": "Yarinacocha",
+   "sitio": "Pucallpa y Yarinacocha",
+   "niveles": [
+    621,
+    630
+   ],
+   "llegada_al_ganar": 620,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Ucayali y laguna de Yarinacocha",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -8.3081,
+   "lon": -74.6014,
+   "conf": "E",
+   "wikidata": "Q11688197",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 4939,
+   "km_desde_el_mar_conf": "E (punto «Pucallpa» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200); la laguna se proyecta sobre el punto de Pucallpa, a unos 10 km de ella, con los mismos km",
+   "km_casa": 4968,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 621-640 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.yarinacocha.dato_01",
+    "texto": "El Ucayali cambia de curso: Yarinacocha es una vieja curva suya que quedó como laguna.",
+    "etiqueta": "E",
+    "fuente": "CR-F147",
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.yarinacocha.dato_02",
+     "texto": "En las lluvias, la laguna de Yarinacocha se une al Ucayali por sus dos extremos.",
+     "etiqueta": "E",
+     "fuente": "CR-F147",
+     "releida": "2026-10-16",
+     "origen": "§(e)",
+     "nota": "Wikipedia ES (Laguna de Yarinacocha): «con el que se conecta en la temporada de lluvias por sus dos extremos» [E CR-F147: reabierta el 2026-10-16]. Candidato de §(e) («Yarinacocha»)."
+    }
+   ],
+   "nota_dato": "Respuesta del mundo 9 (pregunta del 560: «¿Por qué el río dibuja tantas curvas?»). Wikipedia ES (Laguna de Yarinacocha): «es un antiguo meandro o tipishca del río Ucayali» y «La laguna se formó al cambiar de curso el río Ucayali» [E CR-F147: reabierta el 2026-10-16]. El resumen citaba scielo_yarinacocha, reabierta el 2026-10-16: su resumen (Aylas y otros, 2023, peces del lago) no cuenta el origen del lago, así que la respuesta pasa a CR-F147. El texto dice «curva» y no «meandro» ni «tipishca» (palabras pendientes del asesor, 07 §8.1). Candidato de §(e) («Yarinacocha»): §(e) lo daba con [V] (F147); aquí va con [E], porque la fuente es Wikipedia sola. Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:laguna_en_media_luna",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: la laguna de Yarinacocha en forma de media luna, quieta, con el bosque reflejado, de mañana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "Lluvia con Matapi 629 (combinación nueva; d.5.2)",
+    "respuesta de la pregunta del mundo 9"
+   ],
+   "notas": "Coordenada de Wikidata de la laguna (Q11688197), a unos 10 km del punto «Pucallpa» del cauce, sobre el que se proyecta; el sitio del resumen sigue en la ciudad [E wd_ucayali].",
+   "xy": [
+    0.38768,
+    0.16359
+   ]
+  },
+  {
+   "k": 63,
+   "id": "yarinacocha_garzas",
+   "nombre": "Las garzas de Yarinacocha",
+   "sitio": "Pucallpa y Yarinacocha",
+   "niveles": [
+    631,
+    640
+   ],
+   "llegada_al_ganar": 630,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Ucayali y laguna de Yarinacocha",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -8.3081,
+   "lon": -74.6014,
+   "conf": "E",
+   "wikidata": "Q11688197",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 4939,
+   "km_desde_el_mar_conf": "E (punto «Pucallpa» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200); la laguna se proyecta sobre el punto de Pucallpa, a unos 10 km de ella, con los mismos km",
+   "km_casa": 4968,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 621-640 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.yarinacocha.dato_03",
+    "texto": "La laguna de Yarinacocha mide unos {n} km de largo.",
+    "etiqueta": "E",
+    "fuente": "CR-F147",
+    "args": {
+     "n": 20
+    },
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.yarinacocha.dato_04",
+     "texto": "En Yarinacocha abundan las garzas, los shanshos y los patos silvestres.",
+     "etiqueta": "E",
+     "fuente": "CR-F147",
+     "releida": "2026-10-16",
+     "origen": "§5.4 quinquies",
+     "nota": "Wikipedia ES (Laguna de Yarinacocha): «abundan garzas blancas, cenizas, shararas, shanshos y patos silvestres» [E CR-F147: reabierta el 2026-10-16]. «Shansho» es el nombre regional del hoacín (pendiente del asesor, 07 §8.1)."
+    }
+   ],
+   "nota_dato": "Wikipedia ES (Laguna de Yarinacocha): «con largo total de 20 km», y «El espejo de agua es de 1,340 hectáreas» [E CR-F147: reabierta el 2026-10-16]. La cifra va como {n} (Q8-A). La misma página dice que los bufeos y los lagartos se ven cada vez menos: el texto no lo usa (un dato solo negativo, cultura-ribera 3.9). Tercera parada del sitio: otro nombre [P] y otro dato. Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:garzas_en_la_laguna",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: garzas blancas en la orilla de la laguna, con canoas lejanas y bruma de la mañana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "Tinaja 631 (variante A; d.5.3)",
+    "hito 640 [P] (Matapi + Barro + Hoja, K = 13; d.5.3)"
+   ],
+   "notas": "La misma coordenada que la parada 62 (Q11688197) [E wd_ucayali].",
+   "xy": [
+    0.38768,
+    0.16359
+   ]
+  },
+  {
+   "k": 64,
+   "id": "bolognesi",
+   "nombre": "Bolognesi",
+   "sitio": "Ucayali medio (Bolognesi)",
+   "niveles": [
+    641,
+    650
+   ],
+   "llegada_al_ganar": 640,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Ucayali",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -10.0644,
+   "lon": -74.005,
+   "conf": "E",
+   "wikidata": "Q27649307",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 5346,
+   "km_desde_el_mar_conf": "E (punto «Bolognesi» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200)",
+   "km_casa": 5375,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 641-660 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.bolognesi.dato_01",
+    "texto": "Si el río rompe el cuello de una curva, la curva queda aparte como una laguna en U.",
+    "etiqueta": "E",
+    "fuente": "wp_oxbow",
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.bolognesi.dato_02",
+     "texto": "Las lagunas que dejan las curvas del Amazonas son un buen hogar para el lobo de río.",
+     "etiqueta": "E",
+     "fuente": "wp_oxbow",
+     "releida": "2026-10-16",
+     "origen": "§5.4 quinquies",
+     "nota": "Wikipedia EN (Oxbow lake): «The numerous oxbow lakes of the Amazon River are a favorable habitat for the giant river otter» [E wp_oxbow: leída el 2026-10-16]."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Oxbow lake): «An oxbow lake forms when a meandering river erodes through the neck of one of its meanders», y el cuello se corta «either by lateral erosion of the two concave banks or by the strong currents of a flood» [E wp_oxbow: leída el 2026-10-16]. Sigue el hilo de la pregunta del mundo, ya respondida en el 620. No hay datos propios de Bolognesi en una fuente abierta: la parada cuenta el río del tramo. Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:meandro_cortado",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: una curva cerrada del Ucayali vista desde lo alto, con una laguna en U a un lado, de mañana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "primer reto con tres mecánicas 646 (Piraña + Brote + Hoja atada; d.5.2)"
+   ],
+   "notas": "Coordenada de Wikidata de la localidad (Q27649307, en Tahuanía), la misma que el punto «Bolognesi» del cauce y que el sitio del resumen [E wd_ucayali].",
+   "xy": [
+    0.31742,
+    0.18167
+   ]
+  },
+  {
+   "k": 65,
+   "id": "ucayali_medio",
+   "nombre": "El Ucayali medio",
+   "sitio": "Ucayali medio (Bolognesi)",
+   "niveles": [
+    651,
+    660
+   ],
+   "llegada_al_ganar": 650,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Ucayali",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -10.0644,
+   "lon": -74.005,
+   "conf": "E",
+   "wikidata": "Q27649307",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 5346,
+   "km_desde_el_mar_conf": "E (punto «Bolognesi» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200)",
+   "km_casa": 5375,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 641-660 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.bolognesi.dato_03",
+    "texto": "Aun en aguas bajas, el Ucayali guarda un canal de al menos metro y medio de hondo.",
+    "etiqueta": "E",
+    "fuente": "wp_ucayali",
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.bolognesi.dato_04",
+     "texto": "Desde Atalaya hasta el Marañón, el Ucayali corre unos {n} km.",
+     "etiqueta": "E",
+     "fuente": "wp_ucayali",
+     "args": {
+      "n": 1600
+     },
+     "releida": "2026-10-16",
+     "origen": "§5.4 quinquies",
+     "nota": "Wikipedia EN (Ucayali River): «Ucayali River (confluence with Tambo River to confluence with the Marañón): 1,600.1 km» [E wp_ucayali: leída el 2026-10-16]; la ficha da también 1.460 (FAO) y 2.238 km. Se redondea a 1.600 como {n} (Q8-A)."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Ucayali River): «a channel from 20–50 metres (66–164 ft) wide can always be found with a minimum depth of 1.5 m (4.9 ft)» [E wp_ucayali: leída el 2026-10-16]. «Metro y medio» va en palabras, sin cifra con decimales (Q8-A). Encaja con las aguas bajas del ciclo 641-660 (B). Segunda parada del sitio: otro nombre [P] y otro dato. Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:playa_de_vaciante",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: playas anchas de arena en las aguas bajas, con el canal del Ucayali al medio, de mañana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": false,
+   "coincidencias": [
+    "Tinaja 651 (variante A; d.5.3)",
+    "hito 660 [P] (Brote + Hoja atada + Remolino, K = 13; d.5.3)"
+   ],
+   "notas": "La misma coordenada que la parada 64 (Q27649307) [E wd_ucayali].",
+   "xy": [
+    0.31742,
+    0.18167
+   ]
+  },
+  {
+   "k": 66,
+   "id": "atalaya",
+   "nombre": "Atalaya",
+   "sitio": "Atalaya: nace el Ucayali",
+   "niveles": [
+    661,
+    670
+   ],
+   "llegada_al_ganar": 660,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Ucayali, Tambo y Urubamba",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -10.7069,
+   "lon": -73.7608,
+   "conf": "V",
+   "wikidata": "Q1480564",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 5505,
+   "km_desde_el_mar_conf": "E (punto «Atalaya: Tambo + Urubamba = río Ucayali» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200)",
+   "km_casa": 5534,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 661-680 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.atalaya.dato_01",
+    "texto": "En Atalaya, el Tambo y el Urubamba se juntan y nace el río Ucayali.",
+    "etiqueta": "E",
+    "fuente": "wp_tambo_peru, eswp_atalaya",
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.atalaya.dato_02",
+     "texto": "A Atalaya se llega por río, en avioneta o por una trocha de unos {n} km.",
+     "etiqueta": "E",
+     "fuente": "eswp_atalaya",
+     "args": {
+      "n": 164
+     },
+     "releida": "2026-10-16",
+     "origen": "§5.4 quinquies",
+     "nota": "Wikipedia ES (Atalaya (Perú)): por los ríos «Ucayali, Tambo y Urubamba», por «vuelos chárter, avionetas y aviones bimotores» y por una «trocha carrozable, de 164 km aproximadamente, transitable solo en los meses de verano (abril-noviembre)» [E eswp_atalaya: leída el 2026-10-16]."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Tambo River (Peru)): «When merging with the Urubamba River at the town of Atalaya, it becomes the Ucayali River» [E wp_tambo_peru: leída el 2026-10-16]; Wikipedia ES (Atalaya (Perú)): «a orillas del río Ucayali, justo en su inicio, en la confluencia de los ríos Urubamba y Tambo» [E eswp_atalaya: leída el 2026-10-16]. Asesor: Atalaya es territorio asháninka, yine y de otros pueblos; nada de sus comunidades. Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:confluencia_tambo_urubamba",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: dos ríos que se juntan en uno ancho, con los primeros cerros de los Andes al fondo, de mañana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "Liana con fruta con Brote 669 (combinación nueva; d.5.2)"
+   ],
+   "notas": "Coordenada de Wikidata de la boca del Tambo (Q1480564, calificador P518 de la boca), la misma que el punto «Atalaya: Tambo + Urubamba = río Ucayali» del cauce [V] y que el sitio del resumen; el nacimiento del Ucayali en Wikidata (Q200952, calificador P518) queda a menos de 1 km y la ciudad (Q3322627), a unos 3 km [E wd_ucayali].",
+   "xy": [
+    0.29172,
+    0.18907
+   ]
+  },
+  {
+   "k": 67,
+   "id": "urubamba",
+   "nombre": "El Urubamba",
+   "sitio": "Atalaya: nace el Ucayali",
+   "niveles": [
+    671,
+    680
+   ],
+   "llegada_al_ganar": 670,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Ucayali, Tambo y Urubamba",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -10.7069,
+   "lon": -73.7608,
+   "conf": "V",
+   "wikidata": "Q1480564",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 5505,
+   "km_desde_el_mar_conf": "E (punto «Atalaya: Tambo + Urubamba = río Ucayali» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200)",
+   "km_casa": 5534,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "A (aguas altas, LUT): ciclo 661-680 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.atalaya.dato_03",
+    "texto": "El Urubamba corre unos {n} km desde los Andes de Puno hasta juntarse con el Tambo.",
+    "etiqueta": "E",
+    "fuente": "wp_urubamba",
+    "args": {
+     "n": 724
+    },
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.atalaya.dato_04",
+     "texto": "Atalaya se fundó en 1928, justo donde empieza el Ucayali.",
+     "etiqueta": "E",
+     "fuente": "eswp_atalaya",
+     "releida": "2026-10-16",
+     "origen": "§5.4 quinquies",
+     "nota": "Wikipedia ES (Atalaya (Perú)): «Fue fundada el 29 de mayo de 1928» [E eswp_atalaya: leída el 2026-10-16]."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Urubamba River): nace «on the slopes of Cunurana in the Puno Region, Melgar Province, near the La Raya pass» y «flows north-north-west for 724 km» hasta unirse con el Tambo y formar el Ucayali [E wp_urubamba: leída el 2026-10-16]. La cifra va como {n} (Q8-A). Sin Machu Picchu ni otras ruinas del valle (como Choquequirao en el mundo 13), y sin el Pongo de Mainique. Segunda parada del sitio: otro nombre [P] y otro dato. Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:urubamba_con_cerros",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Urubamba bajando entre cerros verdes hacia la confluencia, con bruma de la mañana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "hito 680 [P] (Liana con fruta + Hoja atada + Remolino, K = 13; d.5.3)"
+   ],
+   "notas": "La misma coordenada que la parada 66 (Q1480564) [E wd_ucayali].",
+   "xy": [
+    0.29172,
+    0.18907
+   ]
+  },
+  {
+   "k": 68,
+   "id": "puerto_prado",
+   "nombre": "Puerto Prado",
+   "sitio": "Tambo bajo (Puerto Prado)",
+   "niveles": [
+    681,
+    690
+   ],
+   "llegada_al_ganar": 680,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "parada",
+   "pais": "PE",
+   "rio": "Tambo",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -11.1656,
+   "lon": -74.2344,
+   "conf": "E",
+   "wikidata": "Q1480564",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 5660,
+   "km_desde_el_mar_conf": "E (punto «Puerto Prado: Ene + Perené = río Tambo» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200); la coordenada de Wikidata queda a 1,4 km de ese punto",
+   "km_casa": 5689,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 681-700 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.puerto_prado.dato_01",
+    "texto": "En Puerto Prado, el Ene y el Perené se juntan y forman el río Tambo.",
+    "etiqueta": "E",
+    "fuente": "wp_tambo_peru",
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.puerto_prado.dato_02",
+     "texto": "El Perené mide unos {n} km y baja de las laderas orientales de los Andes.",
+     "etiqueta": "E",
+     "fuente": "wp_perene",
+     "args": {
+      "n": 165
+     },
+     "releida": "2026-10-16",
+     "origen": "§5.4 quinquies",
+     "nota": "Wikipedia EN (Perené River): «The 165 km (103 mi) river flows in a south-easterly direction», en las «eastern slopes of the South American Andes» [E wp_perene: leída el 2026-10-16]. La página es un esbozo y sitúa la unión con el Ene «10 km below the community of Puerto Ocopa», sin nombrar Puerto Prado."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Tambo River (Peru)): «It starts at the confluence of the Ene and Perené Rivers at the town of Puerto Prado» [E wp_tambo_peru: leída el 2026-10-16]. Sin el origen del nombre Tambo (del quechua, según la página; veto de nombres en otras lenguas). Asesor: el Tambo, el Ene y el Perené son territorio asháninka; nada de sus comunidades ni de la violencia del valle del Ene. Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:confluencia_ene_perene",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: dos ríos de montaña que se juntan entre cerros altos de selva, con nubes bajas de la mañana (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [],
+   "notas": "Coordenada de Wikidata del nacimiento del Tambo (Q1480564, calificador P518 del nacimiento), a 1,4 km del punto «Puerto Prado: Ene + Perené = río Tambo» del cauce (antes, el sitio del resumen, −11,1608, −74,2467) [E wd_ucayali]. Puerto Prado no tiene elemento en Wikidata.",
+   "xy": [
+    0.27338,
+    0.17472
+   ]
+  },
+  {
+   "k": 69,
+   "id": "tambo",
+   "nombre": "El Tambo",
+   "sitio": "Tambo bajo (Puerto Prado)",
+   "niveles": [
+    691,
+    700
+   ],
+   "llegada_al_ganar": 690,
+   "mundo": 9,
+   "mundo_id": "w09_ucayali",
+   "tipo": "castillo",
+   "pais": "PE",
+   "rio": "Tambo",
+   "agua_del_sitio": "blanca",
+   "agua_base_mundo": "white",
+   "lat": -11.1656,
+   "lon": -74.2344,
+   "conf": "E",
+   "wikidata": "Q1480564",
+   "ancla_rio": "amazonas",
+   "km_desde_el_mar": 5660,
+   "km_desde_el_mar_conf": "E (punto «Puerto Prado: Ene + Perené = río Tambo» del cauce: km desde el mar sobre los 6.575 km desde el Mismi, como las paradas del cauce de 1-200); la coordenada de Wikidata queda a 1,4 km de ese punto",
+   "km_casa": 5689,
+   "km_casa_conf": "cálculo, mínimo (km_desde_el_mar − Gurupá + ramal del Pará en tramos rectos)",
+   "temporada": "B (aguas bajas, LUT): ciclo 681-700 de d.5, punto 4, de la propuesta de mecánicas (D2, 2026-10-14; D-023, punto 10)",
+   "dato_del_nivel": {
+    "clave": "map.stop.puerto_prado.dato_03",
+    "texto": "El Tambo mide unos {n} km y es parte de las cabeceras del Amazonas.",
+    "etiqueta": "E",
+    "fuente": "wp_tambo_peru",
+    "args": {
+     "n": 159
+    },
+    "releida": "2026-10-16"
+   },
+   "otros_datos": [
+    {
+     "clave": "map.stop.puerto_prado.dato_04",
+     "texto": "Río arriba quedan el Ene y el Apurímac, que nace en el nevado Mismi.",
+     "etiqueta": "E",
+     "fuente": "wp_ucayali",
+     "releida": "2026-10-16",
+     "origen": "§5.4 quinquies",
+     "nota": "Wikipedia EN (Ucayali River): mide la cabecera «from the source of the Apurímac at Nevado Mismi» y da el Apurímac (730,7 km), el Ene (180,6 km) y el Tambo (158,5 km) [E wp_ucayali: leída el 2026-10-16]. Anuncia el mundo 13 (El origen) sin decir que es la naciente más lejana, que la ciencia aún discute (dato del 200)."
+    }
+   ],
+   "nota_dato": "Wikipedia EN (Tambo River (Peru)): «about 159 km (99 mi) long» y «The Tambo is part of the headwaters of the Amazon River» [E wp_tambo_peru: leída el 2026-10-16]. La cifra va como {n} (Q8-A). Cierre del mundo 9 (el «castillo») y de la 1.0: el cauce queda lleno desde el mar hasta Puerto Prado. Segunda parada del sitio: otro nombre [P] y otro dato. Vetos del mundo 9 para el asesor (§(e) de la propuesta de D-007, el resumen de 5.4 y propuesta §5.4 quinquies): Shanay-Timpishka, el río hirviente, no es parada ni sale en el fondo sin el asesor (¿parada, solo vapor lejano o nada?): los chamanes locales atribuyen su agua a la Yacumama, que §(e) veta, y a su orilla hay tres comunidades; las comunidades shipibo-konibo, nunca como atracción, ni nombradas ni dibujadas; el kené y cualquier diseño shipibo, la ayahuasca y el «turismo chamánico»; la sumaúma o lupuna, árbol sagrado; la Yacumama y los seres del agua; los asháninka y los demás pueblos del Tambo, del Ene, del Perené y del Urubamba, sus comunidades y sus territorios, y la violencia armada y la coca del valle del Ene; la tala y el transporte de troncos; la contaminación de la laguna de Yarinacocha; los nombres en shipibo, asháninka, quechua u otras lenguas (también el origen de los nombres de Contamana, Pucallpa y Tambo), solo con un hablante; el Pongo de Manseriche, que es del Marañón (solo mirador).",
+   "fondo": {
+    "kit": "bg_kit_w09",
+    "heroe": "kit:tambo_con_andes_al_fondo",
+    "tipo": "kit_y_rotulo",
+    "hito": "Paisaje del tramo: el Tambo entre cerros, con los Andes azules al fondo y bruma de la mañana sobre el agua (piezas del kit)",
+    "cuidado": "Ninguna bandera en tierra, en islas ni en el agua: solo la de la canoa (Q8-A). Sin personas ni pueblos identificables (ni comunidades shipibo-konibo ni asháninka); sin kené ni diseños shipibo, sin ayahuasca y sin lupuna; sin el río hirviente ni su vapor mientras no responda el asesor: el vapor de la hora es la bruma de la mañana sobre el agua; sin tala ni balsas de troncos. Sin héroe en 201-700 (Q14-A, D-013 punto 2): kit del mundo con el rótulo; hora del mundo 9, la mañana con vapor (07 §2.1)."
+   },
+   "asesor": true,
+   "coincidencias": [
+    "Tinaja 691 (variante A; d.5.3)",
+    "hito 700 «Yarinacocha» [P] (Matapi + Hoja atada + Brote de dos hojas, K = 13; d.5.2 y d.5.3): se juega aquí y no en Yarinacocha; el asesor puede cambiar el nombre (D-023, punto 21)",
+    "fin del mundo 9 y de los 700 niveles de la 1.0"
+   ],
+   "notas": "La misma coordenada que la parada 68 (Q1480564) [E wd_ucayali].",
+   "xy": [
+    0.27338,
+    0.17472
+   ]
   }
  ],
  "rios_locales_201_700": [
@@ -10615,8 +11601,9 @@
    "nombre": "Biota Neotropica (SciELO), laguna de Yarinacocha",
    "url": "https://scielo.br/j/bn/a/kP34JQdCqtmbsWbS3P8zdLv/abstract/?lang=pt",
    "licencia": "CC BY (solo hechos)",
-   "uso": "Origen meándrico, por la erosión de las orillas del Ucayali (resumen visto en el buscador el 2026-10-12: reabrir)",
-   "etiqueta": "E"
+   "uso": "Origen meándrico, por la erosión de las orillas del Ucayali (resumen visto en el buscador el 2026-10-12: reabrir). Reabierta el 2026-10-16 (M3.7d): es el resumen de Aylas y otros (2023), «Fishes from Yarinacocha lake», que llama al lago «ecossistema emblemático» y no cuenta su origen; la respuesta del mundo 9 pasa a CR-F147",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
   },
   {
    "id": "wp_casiquiare",
@@ -10631,9 +11618,9 @@
    "nombre": "Wikipedia EN, Amazon river dolphin",
    "url": "https://en.wikipedia.org/wiki/Amazon_river_dolphin",
    "licencia": "CC BY-SA 4.0",
-   "uso": "Límites de su área: cascadas (Xingu, Tapajós) y agua muy baja; los rápidos del Madeira aíslan la población boliviana, río arriba de Teotônio (leída el 2026-10-12). Releída el 2026-10-15 (M3.7b): «upstream of the rapids of Teotonio, in Bolivia»; la ley boliviana de 2012 que lo declara tesoro nacional",
+   "uso": "Límites de su área: cascadas (Xingu, Tapajós) y agua muy baja; los rápidos del Madeira aíslan la población boliviana, río arriba de Teotônio (leída el 2026-10-12). Releída el 2026-10-15 (M3.7b): «upstream of the rapids of Teotonio, in Bolivia»; la ley boliviana de 2012 que lo declara tesoro nacional. Releída el 2026-10-16 (M3.7d): las mismas dos frases, para el punto de paso teotonio del viaje del 560",
    "etiqueta": "E",
-   "releida": "2026-10-15"
+   "releida": "2026-10-16"
   },
   {
    "id": "wp_madeira",
@@ -10739,8 +11726,9 @@
    "nombre": "Wikipedia EN, Shanay-timpishka",
    "url": "https://en.wikipedia.org/wiki/Shanay-Timpishka",
    "licencia": "CC BY-SA 4.0",
-   "uso": "Chamanes locales atribuyen el agua hirviente a la Yacumama; a su orilla, Mayantuyacu y el Santuario Huishtín. No la llama lugar sagrado (leída el 2026-10-13)",
-   "etiqueta": "E"
+   "uso": "Chamanes locales atribuyen el agua hirviente a la Yacumama; a su orilla, Mayantuyacu y el Santuario Huishtín. No la llama lugar sagrado (leída el 2026-10-13). Releída el 2026-10-16 (M3.7d): afluente del Pachitea, que va al Ucayali; casi 95 °C de media en el tramo más caliente; tres comunidades a su orilla (Mayantuyacu, Santuario Huishtín y el centro Shanay-timpishka); sigue sin llamarla lugar sagrado",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
   },
   {
    "id": "CR-F35",
@@ -11319,6 +12307,127 @@
    "uso": "«Locally known as bufeos»; más dientes, cráneo más pequeño y cuerpo más largo que el delfín del Amazonas; aislado por los rápidos del Madeira; hoy se reconoce como subespecie de Inia geoffrensis («currently recognized as a subspecies»), aunque la página dice que no hay consenso. Leída el 2026-10-15 (M3.7c)",
    "etiqueta": "E",
    "releida": "2026-10-15"
+  },
+  {
+   "id": "wd_ucayali",
+   "nombre": "Wikidata (P625) de las paradas, los ríos y los sitios del mundo 9",
+   "url": "https://www.wikidata.org/wiki/Q200952",
+   "licencia": "CC0",
+   "uso": "Coordenadas de Jenaro Herrera (Q15696655), Requena (Q3344103), Contamana (Q3317773), Pucallpa (Q217071), la laguna de Yarinacocha (Q11688197), Bolognesi (Q27649307), Atalaya (Q3322627) y los ríos Ucayali (Q200952) y Tambo (Q1480564), con sus calificadores de boca y nacimiento (P518); Puerto Prado no tiene elemento. Consulta del 2026-10-16 (M3.7d)",
+   "url_extra": [
+    "https://www.wikidata.org/wiki/Q1480564",
+    "https://www.wikidata.org/wiki/Q11688197"
+   ],
+   "etiqueta": "E",
+   "releida": "2026-10-16"
+  },
+  {
+   "id": "wp_ucayali",
+   "nombre": "Wikipedia EN, Ucayali River",
+   "url": "https://en.wikipedia.org/wiki/Ucayali_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "«the main headstream of the Amazon River», que se vuelve Amazonas en la confluencia con el Marañón cerca de Nauta; de 400 a 1.200 m de ancho por sus islas; un canal de 20-50 m con al menos 1,5 m de hondo; caudal medio en Requena, 13.385 m³/s (1990-2006); cuenca de 351.549 km²; 1.600,1 km del Tambo al Marañón; la cabecera desde el Apurímac en el nevado Mismi. Leída el 2026-10-16 (M3.7d)",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
+  },
+  {
+   "id": "CR-F108",
+   "nombre": "Wikipedia EN, Pucallpa (F108 de docs/research/cultura-ribera/investigacion.md)",
+   "url": "https://en.wikipedia.org/wiki/Pucallpa",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "A orillas del Ucayali; «second largest in the Peruvian Amazon after Iquitos»; puerto que se comunica con Iquitos por el Ucayali; carretera a Lima desde 1945; tres cifras de población para 2017; la contaminación de Yarinacocha (veto). Releída el 2026-10-16 (M3.7d)",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
+  },
+  {
+   "id": "CR-F147",
+   "nombre": "Wikipedia ES, Laguna de Yarinacocha (F147 de docs/research/cultura-ribera/investigacion.md)",
+   "url": "https://es.wikipedia.org/wiki/Laguna_de_Yarinacocha",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "«antiguo meandro o tipishca del río Ucayali»; «se formó al cambiar de curso el río Ucayali»; 1.340 ha y 20 km de largo; se une al Ucayali por sus dos extremos en las lluvias; garzas, shanshos y patos silvestres. Releída el 2026-10-16 (M3.7d)",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
+  },
+  {
+   "id": "eswp_jenaro_herrera",
+   "nombre": "Wikipedia ES, Distrito de Jenaro Herrera",
+   "url": "https://es.wikipedia.org/wiki/Distrito_de_Jenaro_Herrera",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Distrito de la provincia de Requena (Loreto); su nombre honra al escritor y explorador moyobambino Genaro Herrera. Leída el 2026-10-16 (M3.7d)",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
+  },
+  {
+   "id": "eswp_requena",
+   "nombre": "Wikipedia ES, Requena (Perú)",
+   "url": "https://es.wikipedia.org/wiki/Requena_(Per%C3%BA)",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "A orillas del Tapiche y del Ucayali; fundada el 23 de agosto de 1907. Leída el 2026-10-16 (M3.7d)",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
+  },
+  {
+   "id": "eswp_contamana",
+   "nombre": "Wikipedia ES, Contamana",
+   "url": "https://es.wikipedia.org/wiki/Contamana",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Capital de la provincia de Ucayali (Loreto); aguas termales entre sus lugares turísticos; el origen del nombre, en shipibo (veto). Leída el 2026-10-16 (M3.7d)",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
+  },
+  {
+   "id": "antoine2016_contamana",
+   "nombre": "Antoine y otros (2016), «A 60-million-year Cenozoic history of western Amazonian ecosystems in Contamana, eastern Peru», Gondwana Research 31: 30-59, doi 10.1016/j.gr.2015.11.001 (resumen en el repositorio de Caltech)",
+   "url": "https://authors.library.caltech.edu/records/vq65m-an176",
+   "licencia": "copyright (solo hechos)",
+   "uso": "Artículo con revisión por pares: 34 localidades fósiles en la Quebrada Cachiyacu, cerca de Contamana; al menos 485 especies fósiles; unos 60 millones de años, del Paleoceno temprano al Mioceno tardío o el Plioceno. Resumen leído el 2026-10-16 (M3.7d)",
+   "etiqueta": "V",
+   "releida": "2026-10-16"
+  },
+  {
+   "id": "wp_oxbow",
+   "nombre": "Wikipedia EN, Oxbow lake",
+   "url": "https://en.wikipedia.org/wiki/Oxbow_lake",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Cómo una curva cortada se vuelve laguna en U (por la erosión de las orillas o por una crecida); las lagunas del Amazonas, buen hábitat del lobo de río. Leída el 2026-10-16 (M3.7d)",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
+  },
+  {
+   "id": "eswp_atalaya",
+   "nombre": "Wikipedia ES, Atalaya (Perú)",
+   "url": "https://es.wikipedia.org/wiki/Atalaya_(Per%C3%BA)",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "A orillas del Ucayali, «justo en su inicio», en la confluencia del Urubamba y el Tambo; fundada el 29 de mayo de 1928; acceso por río, avioneta o una trocha de unos 164 km solo de abril a noviembre. Leída el 2026-10-16 (M3.7d)",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
+  },
+  {
+   "id": "wp_tambo_peru",
+   "nombre": "Wikipedia EN, Tambo River (Peru)",
+   "url": "https://en.wikipedia.org/wiki/Tambo_River_(Peru)",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Nace en Puerto Prado (Ene + Perené); unos 159 km; con el Urubamba, en Atalaya, forma el Ucayali; «part of the headwaters of the Amazon River»; el nombre, del quechua (veto). Leída el 2026-10-16 (M3.7d)",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
+  },
+  {
+   "id": "wp_urubamba",
+   "nombre": "Wikipedia EN, Urubamba River",
+   "url": "https://en.wikipedia.org/wiki/Urubamba_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "Nace cerca del paso de La Raya (Puno) y corre 724 km hasta formar el Ucayali con el Tambo. Leída el 2026-10-16 (M3.7d)",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
+  },
+  {
+   "id": "wp_perene",
+   "nombre": "Wikipedia EN, Perené River",
+   "url": "https://en.wikipedia.org/wiki/Peren%C3%A9_River",
+   "licencia": "CC BY-SA 4.0",
+   "uso": "165 km en las laderas orientales de los Andes; se une al Ene río abajo de Puerto Ocopa y forma el Tambo (esbozo, sin nombrar Puerto Prado). Leída el 2026-10-16 (M3.7d)",
+   "etiqueta": "E",
+   "releida": "2026-10-16"
   }
  ]
 }

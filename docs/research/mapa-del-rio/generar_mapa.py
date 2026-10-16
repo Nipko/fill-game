@@ -433,8 +433,12 @@ CANDIDATOS_PREGUNTA_50 = {32: ("map.stop.sandoval.dato_04",   # las cuias del Ba
                                "map.stop.sandoval.dato_06",   # el barro que enfría el agua (dato general), T7
                                "map.stop.sandoval.dato_07")}  # la alfarería de Icoaraci (1903), T5
 # Puntos de paso que tienen que estar en el viaje de entrada de un mundo detallado, con su dato: el relevo de Rosa por el
-# bufeo boliviano en los rápidos de Teotônio (Q18-A de D-013; D-023, punto 19, P-M8), en el viaje del 300.
-PUNTOS_DE_PASO_REQUERIDOS = {7: ("teotonio",)}
+# bufeo boliviano en los rápidos de Teotônio (Q18-A de D-013; D-023, punto 19, P-M8), en el viaje del 300, y la vuelta de
+# Rosa en el mismo sitio, en el viaje del 560 (M3.7d).
+PUNTOS_DE_PASO_REQUERIDOS = {7: ("teotonio",), 9: ("teotonio",)}
+# Un punto de paso que sale en varios viajes es un solo elemento de passing[] en river_map_v1.json, con un solo fact
+# (contrato 29): en todos los viajes lleva la misma coordenada y el mismo dato (M3.7d).
+CAMPOS_DEL_PUNTO_DE_PASO = ("lat", "lon", "conf", "dato")
 
 
 def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
@@ -612,6 +616,21 @@ def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
             for c in CANDIDATOS_PREGUNTA_50.get(s.get("k"), ()):
                 if c not in tiene:
                     errores.append(f"parada {s.get('id')}: falta el candidato de la pregunta 50 (a) {c} en «otros_datos»")
+    # Un punto de paso con id que sale en el viaje de entrada de varios mundos (teotonio en el 300 y en el 560) es el
+    # mismo elemento de passing[]: misma coordenada, misma confianza y mismo dato en todos (M3.7d).
+    primero = {}
+    for m in doc["paradas_201_1000"]:
+        for p in m.get("puntos_de_paso_del_viaje", []):
+            if not isinstance(p, dict) or not p.get("id"):
+                continue
+            if p["id"] not in primero:
+                primero[p["id"]] = (m["mundo"], p)
+                continue
+            w0, p0 = primero[p["id"]]
+            distintos = [c for c in CAMPOS_DEL_PUNTO_DE_PASO if p.get(c) != p0.get(c)]
+            if distintos:
+                errores.append(f"mundo {m['mundo']}: el punto de paso «{p['id']}» no es igual que en el mundo {w0} "
+                               f"({', '.join(distintos)} distintos): es un solo elemento de passing[]")
     # Las banderas que el resumen pone en un sitio de un mundo detallado tienen que estar en su primera parada, y las del
     # viaje de entrada de un mundo detallado, en la parada a la que llega ese viaje (la primera del mundo; desde M3.7b).
     detallados = {s.get("mundo") for s in paradas}
@@ -636,7 +655,9 @@ def autoprueba_paradas_201_700(doc):
     de un viaje de entrada (BO en el 300) se exige en la primera parada de su mundo. Desde M3.7c, los km que bajan dentro
     de un mundo solo valen en una parada con «baja_por_confluencia» y en otro río que la anterior, y nunca por debajo de la
     última parada de su río: dan error la bajada sin declarar, la declarada en el mismo río, la que baja de la última
-    parada de su río y una declaración sobrante. Devuelve los fallos de la prueba."""
+    parada de su río y una declaración sobrante. Desde M3.7d, teotonio también tiene que estar en el viaje del 560 (los
+    casos del punto de paso se repiten para el mundo 9), y un punto de paso que sale en dos viajes da error si en el
+    segundo cambia la longitud o el dato. Devuelve los fallos de la prueba."""
     paradas = doc.get("paradas_201_700", [])
     if not paradas:
         return []
@@ -766,6 +787,24 @@ def autoprueba_paradas_201_700(doc):
         caso(f"un sitio del resumen del mundo {w} sin coordenada", None,
              lambda d_, i=i: [d_["paradas_201_1000"][i]["sitios"][-1].pop(c) for c in ("lat", "lon", "xy")],
              "sin coordenada o con un [NV]", f"mundo {w}:")
+    # M3.7d: un punto de paso que sale en dos viajes (teotonio en el 300 y en el 560) tiene que ser igual en los dos; en
+    # la copia, el del mundo posterior cambia de longitud o de dato.
+    vistos_pp = {}
+    for i, m in enumerate(doc["paradas_201_1000"]):
+        for p in m.get("puntos_de_paso_del_viaje", []):
+            pid = p.get("id") if isinstance(p, dict) else None
+            if not pid:
+                continue
+            if pid not in vistos_pp:
+                vistos_pp[pid] = m["mundo"]
+                continue
+            for nombre, cambia in (("con otra longitud", lambda q: q.update(lon=q["lon"] + 0.1)),
+                                   ("con otro dato", lambda q: q.update(dato=q["dato"].replace("»", " Otra vez.»")))):
+                caso(f"el punto de paso {pid} del mundo {m['mundo']} {nombre} que en el mundo {vistos_pp[pid]}", None,
+                     lambda d_, i=i, pid=pid, cambia=cambia: [cambia(q) for q in
+                                                              d_["paradas_201_1000"][i]["puntos_de_paso_del_viaje"]
+                                                              if q.get("id") == pid],
+                     f"no es igual que en el mundo {vistos_pp[pid]}", f"mundo {m['mundo']}:")
     # Unicidad entre 1-200 y 201-700 (revisar_otros_datos, desde M3.7a): un «Otro dato» de 1-200 copiado en la primera
     # parada de 201-700 da «clave … repetida» con las dos paradas; y una parada sin clave en su dato de llegada no la
     # rompe (el error legible lo da revisar_paradas_201_700, caso de arriba).
