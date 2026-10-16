@@ -433,8 +433,13 @@ CANDIDATOS_PREGUNTA_50 = {32: ("map.stop.sandoval.dato_04",   # las cuias del Ba
                                "map.stop.sandoval.dato_06",   # el barro que enfría el agua (dato general), T7
                                "map.stop.sandoval.dato_07")}  # la alfarería de Icoaraci (1903), T5
 # Puntos de paso que tienen que estar en el viaje de entrada de un mundo detallado, con su dato: el relevo de Rosa por el
-# bufeo boliviano en los rápidos de Teotônio (Q18-A de D-013; D-023, punto 19, P-M8), en el viaje del 300.
-PUNTOS_DE_PASO_REQUERIDOS = {7: ("teotonio",)}
+# bufeo boliviano en los rápidos de Teotônio (Q18-A de D-013; D-023, punto 19, P-M8), en el viaje del 300, y la vuelta de
+# Rosa en el mismo sitio, en el viaje del 560 (M3.7d).
+PUNTOS_DE_PASO_REQUERIDOS = {7: ("teotonio",), 9: ("teotonio",)}
+# Un punto de paso que sale en varios viajes es un solo elemento de passing[] en river_map_v1.json, con un solo fact
+# (contrato 29), con un solo nombre (map.stop.<id>.name): en todos los viajes lleva la misma coordenada, el mismo nombre y
+# el mismo dato (M3.7d).
+CAMPOS_DEL_PUNTO_DE_PASO = ("lat", "lon", "nombre", "conf", "dato")
 
 
 def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
@@ -463,7 +468,8 @@ def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
         if r.get("boca_en") not in todos or r.get("boca_en") == r.get("id"):
             errores.append(f"río local {r.get('id')}: «boca_en» {r.get('boca_en')!r} no es otro río")
     vistos = {s["id"] for s in doc["paradas_1_200"]}
-    km_prev = {}
+    km_prev = {}  # mundo: (km_casa, ancla_rio) de la parada anterior
+    km_rio = {}   # (mundo, ancla_rio): km_casa de la última parada de ese río en el mundo
     for i, s in enumerate(paradas):
         donde = f"parada {s.get('id')}"
         k = 20 + i
@@ -491,12 +497,28 @@ def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
             if todos.get(rl, {}).get("tipo") != "rio_local":
                 errores.append(f"{donde}: río local {rl} sin entrada de tipo «rio_local»")
         km, casa = s.get("km_desde_el_mar"), s.get("km_casa")
+        baja = s.get("baja_por_confluencia")
+        ancla = s.get("ancla_rio")
         if not isinstance(km, int) or casa != km + KM_CASA_MAS:
             errores.append(f"{donde}: km_casa {casa} y km_desde_el_mar {km} (+{KM_CASA_MAS})")
-        elif w in km_prev and casa < km_prev[w]:
-            errores.append(f"{donde}: los km hasta casa retroceden dentro del mundo {w} ({casa} < {km_prev[w]})")
+        else:
+            # Dentro de un mundo los km no retroceden, salvo en una bajada declarada por una confluencia (M3.7c): la parada
+            # lleva «baja_por_confluencia» (por dónde baja y por dónde sube) y está en otro río que la anterior, como el
+            # «Beni abajo → Mamoré arriba» del mundo 8. Por un mismo río nunca retroceden, como en geometry.py (08 §4.5).
+            previa = km_prev.get(w)
+            if previa is not None and casa < previa[0]:
+                if not isinstance(baja, str) or not baja.strip():
+                    errores.append(f"{donde}: los km hasta casa retroceden dentro del mundo {w} ({casa} < {previa[0]})")
+                elif ancla == previa[1]:
+                    errores.append(f"{donde}: «baja_por_confluencia» sin cambiar de río ({ancla}): por un mismo río los km no retroceden")
+            elif baja is not None:
+                errores.append(f"{donde}: «baja_por_confluencia» sobrante (los km hasta casa no bajan)")
+            mismo_rio = km_rio.get((w, ancla))
+            if mismo_rio is not None and casa < mismo_rio:
+                errores.append(f"{donde}: los km hasta casa retroceden por el {ancla} dentro del mundo {w} ({casa} < {mismo_rio})")
         if isinstance(casa, int):
-            km_prev[w] = casa
+            km_prev[w] = (casa, ancla)
+            km_rio[(w, ancla)] = casa
         d = s.get("dato_del_nivel")
         if not isinstance(d, dict):
             errores.append(f"{donde}: sin dato de llegada")
@@ -595,6 +617,21 @@ def revisar_paradas_201_700(doc, ids, etiqueta_de, errores):
             for c in CANDIDATOS_PREGUNTA_50.get(s.get("k"), ()):
                 if c not in tiene:
                     errores.append(f"parada {s.get('id')}: falta el candidato de la pregunta 50 (a) {c} en «otros_datos»")
+    # Un punto de paso con id que sale en el viaje de entrada de varios mundos (teotonio en el 300 y en el 560) es el
+    # mismo elemento de passing[]: misma coordenada, mismo nombre, misma confianza y mismo dato en todos (M3.7d).
+    primero = {}
+    for m in doc["paradas_201_1000"]:
+        for p in m.get("puntos_de_paso_del_viaje", []):
+            if not isinstance(p, dict) or not p.get("id"):
+                continue
+            if p["id"] not in primero:
+                primero[p["id"]] = (m["mundo"], p)
+                continue
+            w0, p0 = primero[p["id"]]
+            distintos = [c for c in CAMPOS_DEL_PUNTO_DE_PASO if p.get(c) != p0.get(c)]
+            if distintos:
+                errores.append(f"mundo {m['mundo']}: el punto de paso «{p['id']}» no es igual que en el mundo {w0} "
+                               f"({', '.join(distintos)} distintos): es un solo elemento de passing[]")
     # Las banderas que el resumen pone en un sitio de un mundo detallado tienen que estar en su primera parada, y las del
     # viaje de entrada de un mundo detallado, en la parada a la que llega ese viaje (la primera del mundo; desde M3.7b).
     detallados = {s.get("mundo") for s in paradas}
@@ -616,7 +653,12 @@ def autoprueba_paradas_201_700(doc):
     también dan error un candidato de la pregunta 50 (a) que falta en k = 32, el viaje del 300 sin el punto de paso
     teotonio o con su dato sin etiqueta, sin longitud, con un texto de más de 90 caracteres o con una fuente que no está
     en 'fuentes' (Q18-A) y un sitio del resumen de un mundo detallado sin coordenada; y la bandera
-    de un viaje de entrada (BO en el 300) se exige en la primera parada de su mundo. Devuelve los fallos de la prueba."""
+    de un viaje de entrada (BO en el 300) se exige en la primera parada de su mundo. Desde M3.7c, los km que bajan dentro
+    de un mundo solo valen en una parada con «baja_por_confluencia» y en otro río que la anterior, y nunca por debajo de la
+    última parada de su río: dan error la bajada sin declarar, la declarada en el mismo río, la que baja de la última
+    parada de su río y una declaración sobrante. Desde M3.7d, teotonio también tiene que estar en el viaje del 560 (los
+    casos del punto de paso se repiten para el mundo 9), y un punto de paso que sale en dos viajes da error si en el
+    segundo cambia la longitud o el dato. Devuelve los fallos de la prueba."""
     paradas = doc.get("paradas_201_700", [])
     if not paradas:
         return []
@@ -677,6 +719,26 @@ def autoprueba_paradas_201_700(doc):
         mundo = paradas[1].get("mundo")
         caso("sitios fuera de orden", segunda, lambda p: p.update(sitio=paradas[-1].get("sitio")),
              "las paradas detalladas dan", f"mundo {mundo}:")
+        caso("una «baja_por_confluencia» sobrante", segunda, lambda p: p.update(baja_por_confluencia="prueba"),
+             "sobrante", f"parada {segunda}:")
+    # M3.7c: las bajadas declaradas por una confluencia (Beni abajo → Mamoré arriba en el mundo 8). Sin la declaración, los
+    # km que bajan dan error; con ella, también si la parada sigue en el mismo río que la anterior o si baja por debajo de
+    # la última parada de su río en el mundo.
+    bajas = [s for s in paradas if s.get("baja_por_confluencia")]
+    for s in bajas[:1]:
+        anterior = paradas[por_id[s["id"]] - 1]
+        caso(f"la bajada de {s['id']} sin «baja_por_confluencia»", s["id"], lambda p: p.pop("baja_por_confluencia"),
+             "retroceden dentro del mundo", f"parada {s['id']}:")
+        caso(f"la bajada de {s['id']} por el mismo río que la parada anterior", s["id"],
+             lambda p, a=anterior.get("ancla_rio"): p.update(ancla_rio=a), "sin cambiar de río", f"parada {s['id']}:")
+    for s in bajas:
+        i = por_id[s["id"]]
+        antes = [p for p in paradas[:i] if p.get("mundo") == s.get("mundo") and p.get("ancla_rio") == s.get("ancla_rio")]
+        if antes:
+            menos = antes[-1]["km_casa"] - 100
+            caso(f"la bajada de {s['id']} por debajo de {antes[-1]['id']}, en su mismo río", s["id"],
+                 lambda p, m=menos: p.update(km_desde_el_mar=m - KM_CASA_MAS, km_casa=m),
+                 f"retroceden por el {s.get('ancla_rio')}", f"parada {s['id']}:")
     for s in con_bandera:
         cruce = next((c for c in doc["cruces_de_pais"]
                       if c.get("pais") == s["bandera"] and c.get("nivel") == s.get("llegada_al_ganar")), None)
@@ -726,6 +788,25 @@ def autoprueba_paradas_201_700(doc):
         caso(f"un sitio del resumen del mundo {w} sin coordenada", None,
              lambda d_, i=i: [d_["paradas_201_1000"][i]["sitios"][-1].pop(c) for c in ("lat", "lon", "xy")],
              "sin coordenada o con un [NV]", f"mundo {w}:")
+    # M3.7d: un punto de paso que sale en dos viajes (teotonio en el 300 y en el 560) tiene que ser igual en los dos; en
+    # la copia, el del mundo posterior cambia de longitud, de nombre o de dato.
+    vistos_pp = {}
+    for i, m in enumerate(doc["paradas_201_1000"]):
+        for p in m.get("puntos_de_paso_del_viaje", []):
+            pid = p.get("id") if isinstance(p, dict) else None
+            if not pid:
+                continue
+            if pid not in vistos_pp:
+                vistos_pp[pid] = m["mundo"]
+                continue
+            for nombre, cambia in (("con otra longitud", lambda q: q.update(lon=q["lon"] + 0.1)),
+                                   ("con otro nombre", lambda q: q.update(nombre=str(q.get("nombre", "")) + " (bis)")),
+                                   ("con otro dato", lambda q: q.update(dato=q["dato"].replace("»", " Otra vez.»")))):
+                caso(f"el punto de paso {pid} del mundo {m['mundo']} {nombre} que en el mundo {vistos_pp[pid]}", None,
+                     lambda d_, i=i, pid=pid, cambia=cambia: [cambia(q) for q in
+                                                              d_["paradas_201_1000"][i]["puntos_de_paso_del_viaje"]
+                                                              if q.get("id") == pid],
+                     f"no es igual que en el mundo {vistos_pp[pid]}", f"mundo {m['mundo']}:")
     # Unicidad entre 1-200 y 201-700 (revisar_otros_datos, desde M3.7a): un «Otro dato» de 1-200 copiado en la primera
     # parada de 201-700 da «clave … repetida» con las dos paradas; y una parada sin clave en su dato de llegada no la
     # rompe (el error legible lo da revisar_paradas_201_700, caso de arriba).
