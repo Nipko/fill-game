@@ -127,7 +127,16 @@ namespace AF.Tests.PlayMode
             Assert.That(rest.EyesClosed, Is.False);
             Assert.That(rest.FrontArmTo.y, Is.GreaterThan(0f), "colgado de su rama: las manos en la rama");
             Assert.That(rest.BackArmTo.y, Is.GreaterThan(0f));
+            Assert.That(rest.FrontLegTo.y, Is.GreaterThan(0f), "abrazado a ella: también los pies en la rama (c.5, punto 7)");
+            Assert.That(rest.BackLegTo.y, Is.GreaterThan(0f));
+            Assert.That(Mathf.Abs(rest.FrontLegTo.y - rest.FrontArmTo.y), Is.LessThan(0.01f), "a la misma altura que las manos");
             Assert.That(rest.HeadCenter.y, Is.LessThan(0f), "y el cuerpo bajo ella");
+            Assert.That(rest.TorsoCenter.y, Is.LessThan(rest.HeadCenter.y), "boca abajo, colgado: nunca de pie");
+            foreach (SlothPoseId hanging in new[] { SlothPoseId.Idle, SlothPoseId.Wake, SlothPoseId.Wave, SlothPoseId.Present, SlothPoseId.Cheer, SlothPoseId.Encourage, SlothPoseId.Look })
+            {
+                SlothPose h = SlothRig.Evaluate(hanging, 0f, true);
+                Assert.That(h.FrontLegTo.y > 0f && h.BackLegTo.y > 0f, Is.True, SlothRig.IdOf(hanging) + ": los pies, agarrados a la rama");
+            }
 
             Assert.That(SlothRig.Evaluate(SlothPoseId.Idle, SlothRig.BlinkEveryMs - 60f, false).EyesClosed, Is.True, "parpadea");
             Assert.That(SlothRig.Evaluate(SlothPoseId.Idle, 11000f, false).HeadAngle, Is.GreaterThan(5f), "gira la cabeza muy despacio");
@@ -142,19 +151,33 @@ namespace AF.Tests.PlayMode
             Assert.That(SlothRig.WakeMs, Is.LessThanOrEqualTo(2500f), "≤ 2,5 s");
 
             SlothPose wave = SlothRig.Evaluate(SlothPoseId.Wave, SlothRig.WaveMs / 2f, false);
-            Assert.That(wave.FrontArmTo.y, Is.GreaterThan(rest.FrontArmTo.y + 0.06f), "levanta una garra desde la rama");
-            Assert.That(wave.FrontArmTo.x, Is.GreaterThan(rest.FrontArmTo.x), "de lado, nunca hacia la cámara (c.5, punto 8)");
+            Assert.That(wave.FrontArmTo.y, Is.InRange(rest.FrontArmTo.y + 0.06f, rest.FrontArmTo.y + 0.10f), "suelta despacio una garra de la rama, sin levantar el brazo (c.5, punto 8)");
+            Assert.That(wave.FrontArmTo.x, Is.GreaterThan(rest.FrontArmTo.x), "de lado, nunca hacia la cámara");
+            Assert.That(wave.HeadTurn, Is.EqualTo(0f), "y te mira de frente");
+            Assert.That(wave.HeadAngle, Is.EqualTo(0f));
 
             SlothPose present = SlothRig.Evaluate(SlothPoseId.Present, SlothRig.PresentMs, false);
             Assert.That(present.HeadAngle, Is.LessThan(-5f), "ladea la cabeza hacia la instrucción");
             Assert.That(present.FrontArmTo.x, Is.GreaterThan(0.45f), "y la señala con la garra");
 
             SlothPose cheer = SlothRig.Evaluate(SlothPoseId.Cheer, SlothRig.CheerEntryMs, false);
-            Assert.That(cheer.FrontArmTo.y, Is.GreaterThan(rest.FrontArmTo.y), "levanta las garras por encima de la rama");
-            Assert.That(cheer.FrontArmTo.x, Is.GreaterThan(rest.FrontArmTo.x + 0.1f), "hacia fuera");
+            Assert.That(cheer.FrontArmTo.y, Is.GreaterThan(wave.FrontArmTo.y + 0.08f), "levanta la garra bien alta: no se confunde con el saludo");
+            Assert.That(Vector2.Distance(cheer.FrontArmTo, wave.FrontArmTo), Is.GreaterThan(0.15f));
+            SlothPose stretching = SlothRig.Evaluate(SlothPoseId.Wake, 950f, false);
+            Assert.That(Vector2.Distance(cheer.FrontArmTo, stretching.FrontArmTo), Is.GreaterThan(0.15f), "ni con el despertar");
+            float tilt = 0f;
+            for (float ms = SlothRig.CheerEntryMs; ms < SlothRig.CheerEntryMs + SlothRig.CheerLoopMs; ms += 50f)
+            {
+                tilt = Mathf.Max(tilt, Mathf.Abs(SlothRig.Evaluate(SlothPoseId.Cheer, ms, false).HeadAngle));
+            }
+
+            Assert.That(tilt, Is.GreaterThan(7f), "con la cabeza ladeada ±8°");
             Assert.That(cheer.Leaves, Is.EqualTo(4), "caen 3-4 hojas");
             Assert.That(SlothRig.Evaluate(SlothPoseId.CheerBig, 400f, false).Leaves, Is.EqualTo(6), "y 2 más en la grande");
-            Assert.That(SlothRig.Evaluate(SlothPoseId.CheerBig, SlothRig.CheerEntryMs + (SlothRig.CheerLoopMs / 2f), false).BodySpin, Is.LessThan(-0.9f), "una vuelta colgado de una mano");
+            SlothPose turn = SlothRig.Evaluate(SlothPoseId.CheerBig, SlothRig.CheerEntryMs + (SlothRig.CheerLoopMs / 2f), false);
+            Assert.That(turn.BodySpin, Is.LessThan(-0.9f), "una vuelta colgado de una mano");
+            Assert.That(turn.TorsoBack, Is.True, "a media vuelta, de espaldas: el lomo con el espéculo (c.5, punto 9)");
+            Assert.That(turn.FrontLegTo.y, Is.LessThan(-0.5f), "colgado de una mano: suelta los pies");
             Assert.That(SlothRig.Evaluate(SlothPoseId.Cheer, SlothRig.CheerEntryMs + (SlothRig.CheerLoopMs / 2f), false).BodySpin, Is.EqualTo(1f), "la normal no da la vuelta");
             Assert.That(SlothRig.Evaluate(SlothPoseId.CheerBig, 2000f, false).BodySpin, Is.EqualTo(1f), "la vuelta solo en el primer bucle");
 
@@ -169,10 +192,19 @@ namespace AF.Tests.PlayMode
             Assert.That(sun.TorsoCenter.y, Is.GreaterThan(0f), "al sol sobre la rama");
             Assert.That(Mathf.Abs(sun.TorsoAngle), Is.EqualTo(90f), "tumbado");
             Assert.That(sun.EyesClosed, Is.True);
+            float claw = 0.06f; // la garra pasa media anchura de la extremidad más allá de la mano o el pie
+            foreach (Vector2[] limb in new[] { new[] { sun.FrontArmFrom, sun.FrontArmTo }, new[] { sun.FrontLegFrom, sun.FrontLegTo } })
+            {
+                Vector2 tip = limb[1] + ((limb[1] - limb[0]).normalized * claw);
+                Assert.That(tip.x, Is.InRange(sun.TorsoCenter.x - (0.5f * sun.TorsoSize.y), sun.TorsoCenter.x + (0.5f * sun.TorsoSize.y)), "sobre la barriga: dentro del torso");
+                Assert.That(tip.y, Is.InRange(sun.TorsoCenter.y - (0.5f * sun.TorsoSize.x), sun.TorsoCenter.y + (0.5f * sun.TorsoSize.x) - 0.04f), "sin sobresalir por encima del torso");
+            }
+
+            Assert.That(sun.HeadAngle, Is.GreaterThanOrEqualTo(40f), "la cabeza, apoyada en la rama");
             SlothPose sleep = SlothRig.Evaluate(SlothPoseId.Sleep, 0f, false);
             Assert.That(sleep.TorsoCenter.y, Is.GreaterThan(0f), "en ovillo sobre la rama");
             Assert.That(sleep.EyesClosed, Is.True);
-            Assert.That(sleep.TorsoBack, Is.True, "da la espalda: se ve el espéculo");
+            Assert.That(sleep.TorsoBack, Is.True, "da la espalda (que el espéculo se vea lo mide TheSpeculum_IsInSight_WhenTheBackShows)");
             Assert.That(rest.TorsoBack || sun.TorsoBack, Is.False, "de frente, sin el espéculo (no es un collar: c.4)");
             Assert.That(sleep.Leaves + sun.Leaves + rest.Leaves, Is.EqualTo(0), "solo caen hojas al celebrar");
         }
@@ -243,7 +275,7 @@ namespace AF.Tests.PlayMode
         {
             Assert.That(_art.SlothRigArtBuilt, Is.False, "el constructor no crea el rig");
             Assert.That(_art.SlothBranchBuilt, Is.False, "ni la rama");
-            int children = _space.childCount;
+            int objects = SceneRectTransforms();
 
             SlothArt art = _art.SlothRigArtProcedural();
             Assert.That(_art.SlothRigArtBuilt, Is.True);
@@ -260,7 +292,12 @@ namespace AF.Tests.PlayMode
             Assert.That(art.TorsoBack, Is.Not.Null);
             Assert.That(art.TorsoBack, Is.Not.SameAs(art.Torso));
             Assert.That(art.Head.texture.width, Is.EqualTo(ProceduralArt.SlothAtlasPx), "un solo atlas");
-            Assert.That(_space.childCount, Is.EqualTo(children), "las piezas no crean ningún objeto en la escena");
+            MapArtRule.ForceProvisional = true;
+            Assert.That(_art.SlothBranchProcedural(), Is.Not.Null);
+            Assert.That(_art.SlothRigArt(), Is.Not.Null);
+            Assert.That(SceneRectTransforms(), Is.EqualTo(objects), "las piezas y la rama no crean ningún objeto en la escena: solo el rig, cuando se pide");
+            SlothRig.Create(_space, _art.SlothRigArt(), 72f);
+            Assert.That(SceneRectTransforms(), Is.GreaterThan(objects), "(el contador sí ve los objetos del rig)");
 
             Sprite branch = _art.SlothBranchProcedural();
             Assert.That(_art.SlothBranchBuilt, Is.True);
@@ -311,8 +348,15 @@ namespace AF.Tests.PlayMode
             Assert.That(painted.Branch, Is.Null, "release: sin PNG de la rama, sin rama provisional");
             Assert.That(_art.SlothRigArtBuilt, Is.False, "con el PNG, las piezas provisionales no se crean");
             Assert.That(_art.SlothBranchBuilt, Is.False);
-            Assert.That(_art.SlothRigArt(png, null, true), Is.SameAs(painted), "una vez por PNG");
-            Assert.That(painted.Branch, Is.Not.Null, "en desarrollo, la rama provisional acompaña al PNG");
+            Assert.That(_art.SlothArtMs, Is.EqualTo(0d), "del PNG: sin tiempo de generación");
+            SlothArt? dev = _art.SlothRigArt(png, null, true);
+            Assert.That(dev, Is.Not.Null);
+            Assert.That(dev!.Head, Is.SameAs(painted.Head), "una vez por PNG: las mismas piezas");
+            Assert.That(dev.Branch, Is.Not.Null, "en desarrollo, la rama provisional acompaña al PNG");
+            Assert.That(painted.Branch, Is.Null, "sin cambiar lo que ya recibió la otra compuerta (estado compartido)");
+            Assert.That(_art.SlothRigArt(png, null, false), Is.SameAs(painted), "y cada compuerta recibe siempre el mismo");
+            Assert.That(_art.SlothRigArt(png, null, true), Is.SameAs(dev));
+            Assert.That(dev.Branch, Is.Not.Null);
             Assert.That(_art.SlothRigArtBuilt, Is.False);
         }
 
@@ -375,8 +419,60 @@ namespace AF.Tests.PlayMode
             rig.CollectGraphics(graphics);
             Assert.That(graphics[0].name, Is.EqualTo("Branch"));
             Assert.That(graphics[0].enabled, Is.True, "su rama entra con él (c.4)");
-            float head = rig.Art!.HeadS * (50f / 128f) * 2f; // diámetro del cráneo dibujado
-            Assert.That(head, Is.InRange(0.3f, 0.4f), "cabeza ≈ 1/3 del alto colgado (c.5, punto 1)");
+
+            // Medido en el rig: las cajas de la rama, las 4 extremidades, el torso y la cabeza (el párpado y las hojas, ocultos).
+            var rects = new List<Rect>();
+            rig.CollectRects(_space, rects);
+            Assert.That(rects.Count, Is.EqualTo(7), "rama, 4 extremidades, torso y cabeza");
+            float top = float.MaxValue;
+            float bottom = float.MinValue;
+            for (int i = 1; i < rects.Count; i++)
+            {
+                top = Mathf.Min(top, rects[i].yMin);
+                bottom = Mathf.Max(bottom, rects[i].yMax);
+            }
+
+            float hanging = bottom - top; // de las garras en la rama al fondo del cuerpo
+            Assert.That(hanging, Is.InRange(0.85f * rig.Size, 1.1f * rig.Size), "S es el alto colgado");
+            Rect head = rects[6];
+            Assert.That(head.height, Is.EqualTo(rig.Art!.HeadS * rig.Size).Within(0.5f), "la caja de la cabeza");
+            float skull = head.height * ProceduralArt.SlothSkullFraction; // el cráneo dibujado, sin los mechones
+            Assert.That(skull / hanging, Is.InRange(0.3f, 0.4f), "cabeza ≈ 1/3 del alto colgado (c.5, punto 1)");
+        }
+
+        [Test]
+        public void TheSpeculum_IsInSight_WhenTheBackShows([Values(false, true)] bool reduceMotion)
+        {
+            // c.5, puntos 6 y 9: en ovillo (de espaldas) el espéculo del macho no lo tapa la cabeza ni las extremidades de
+            // delante, que se pintan encima del torso; en la media vuelta de sloth_cheer_big, su centro queda a la vista.
+            MapArtRule.ForceProvisional = true;
+            SlothArt art = _art.SlothRigArt()!;
+            float headR = art.HeadS * ProceduralArt.SlothSkullFraction * 0.5f * 1.12f; // con los mechones y el contorno
+            float limbR = art.LimbWidthS * 0.5f;
+            for (float ms = 0f; ms <= 4000f; ms += 500f)
+            {
+                SlothPose sleep = SlothRig.Evaluate(SlothPoseId.Sleep, ms, reduceMotion);
+                Assert.That(sleep.TorsoBack, Is.True);
+                Rect spec = SpeculumBox(sleep);
+                string at = "sloth_sleep a " + ms + " ms";
+                Assert.That(DistanceTo(spec, sleep.HeadCenter), Is.GreaterThan(headR), at + ": la cabeza no tapa el espéculo");
+                Assert.That(SegmentDistance(spec, sleep.FrontArmFrom, sleep.FrontArmTo), Is.GreaterThan(limbR), at + ": ni el brazo de delante");
+                Assert.That(SegmentDistance(spec, sleep.FrontLegFrom, sleep.FrontLegTo), Is.GreaterThan(limbR), at + ": ni la pierna de delante");
+            }
+
+            if (!reduceMotion)
+            {
+                SlothPose turn = SlothRig.Evaluate(SlothPoseId.CheerBig, 900f, false);
+                Assert.That(turn.TorsoBack, Is.True, "sloth_cheer_big a 900 ms: de espaldas");
+                Assert.That(Vector2.Distance(SpeculumBox(turn).center, turn.HeadCenter), Is.GreaterThan(headR), "con el espéculo a la vista");
+            }
+
+            // Y el rig pinta el lomo en esa pose.
+            SlothRig rig = SlothRig.Create(_space, art, 96f)!;
+            rig.Play(SlothPoseId.Sleep, reduceMotion);
+            var graphics = new List<Graphic>();
+            rig.CollectGraphics(graphics);
+            Assert.That(((Image)graphics[3]).sprite, Is.SameAs(art.TorsoBack));
         }
 
         [Test]
@@ -407,6 +503,44 @@ namespace AF.Tests.PlayMode
             Assert.That(float.IsNaN(v.x) || float.IsNaN(v.y) || float.IsInfinity(v.x) || float.IsInfinity(v.y), Is.False, what);
             Assert.That(v.x, Is.InRange(-0.8f, 0.8f), what + ": x");
             Assert.That(v.y, Is.InRange(-1.0f, 0.6f), what + ": y");
+        }
+
+        // Caja del espéculo en S (alineada a los ejes, la del rectángulo girado con el torso): el centro del torso más el desfase
+        // de ProceduralArt.SlothSpeculumCenterUv escalado al torso.
+        private static Rect SpeculumBox(in SlothPose p)
+        {
+            Vector2 uv = ProceduralArt.SlothSpeculumCenterUv;
+            Vector2 half = Vector2.Scale(ProceduralArt.SlothSpeculumSizeUv, p.TorsoSize) * 0.5f;
+            Quaternion r = Quaternion.Euler(0f, 0f, p.TorsoAngle);
+            Vector2 offset = r * new Vector2((uv.x - 0.5f) * p.TorsoSize.x, (uv.y - 0.5f) * p.TorsoSize.y);
+            float a = p.TorsoAngle * Mathf.Deg2Rad;
+            float hx = (half.x * Mathf.Abs(Mathf.Cos(a))) + (half.y * Mathf.Abs(Mathf.Sin(a)));
+            float hy = (half.x * Mathf.Abs(Mathf.Sin(a))) + (half.y * Mathf.Abs(Mathf.Cos(a)));
+            Vector2 c = p.TorsoCenter + offset;
+            return Rect.MinMaxRect(c.x - hx, c.y - hy, c.x + hx, c.y + hy);
+        }
+
+        private static float DistanceTo(Rect box, Vector2 point)
+        {
+            var nearest = new Vector2(Mathf.Clamp(point.x, box.xMin, box.xMax), Mathf.Clamp(point.y, box.yMin, box.yMax));
+            return Vector2.Distance(nearest, point);
+        }
+
+        // Distancia de la caja al eje de una extremidad (de la articulación a la garra), muestreado.
+        private static float SegmentDistance(Rect box, Vector2 from, Vector2 to)
+        {
+            float best = float.MaxValue;
+            for (int i = 0; i <= 20; i++)
+            {
+                best = Mathf.Min(best, DistanceTo(box, Vector2.Lerp(from, to, i / 20f)));
+            }
+
+            return best;
+        }
+
+        private static int SceneRectTransforms()
+        {
+            return Object.FindObjectsByType<RectTransform>(FindObjectsInactive.Include, FindObjectsSortMode.None).Length;
         }
 
         private Sprite MakePng()

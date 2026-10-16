@@ -91,7 +91,7 @@ namespace AF.Presentation
         /// <summary>Pie de la pierna de delante.</summary>
         public Vector2 FrontLegTo;
 
-        /// <summary>El torso da la espalda (la pieza del lomo con el espéculo): en ovillo.</summary>
+        /// <summary>El torso da la espalda (la pieza del lomo con el espéculo): en ovillo y a media vuelta de <c>sloth_cheer_big</c>.</summary>
         public bool TorsoBack;
 
         /// <summary>Ojos cerrados (parpadeo de 120 ms, sueño, sol).</summary>
@@ -120,9 +120,9 @@ namespace AF.Presentation
     /// Rig recortable provisional del perezoso protagonista en uGUI (tarea TI4; propuesta del personaje c.4-c.7 y paso 4 de (i);
     /// D-016), con el método de <see cref="MonkeyRig"/>: 10 piezas (rama, pierna y brazo de detrás, torso de frente o de
     /// espaldas, pierna y brazo de delante, cabeza con su párpado y la hoja, de la que salen las 6 que caen al celebrar) de <see cref="SlothArt"/> y las 10
-    /// poses de c.6 por código (<see cref="Evaluate"/>), funciones puras del tiempo. Postura de perezoso: colgado de su rama o
-    /// tumbado y en ovillo sobre ella; nunca de pie, nunca aplaude ni estira el brazo hacia la cámara (c.5, puntos 7 y 8). Sin
-    /// raycast: nunca bloquea un toque.
+    /// poses de c.6 por código (<see cref="Evaluate"/>), funciones puras del tiempo. Postura de perezoso: colgado boca abajo de su
+    /// rama y abrazado a ella con manos y pies, o tumbado y en ovillo sobre ella; nunca de pie, nunca aplaude ni estira el brazo
+    /// hacia la cámara (c.5, puntos 7 y 8). Sin raycast: nunca bloquea un toque.
     /// </summary>
     /// <remarks>
     /// <para>Solo en desarrollo: sin el PNG de <see cref="ProceduralArt.SlothPartsSlot"/>, <see cref="ProceduralArt.SlothRigArt()"/>
@@ -194,9 +194,20 @@ namespace AF.Presentation
             "sloth_look", "sloth_sunbathe", "sloth_sleep",
         };
 
-        // Manos en la rama (S): colgado de las dos.
-        private static readonly Vector2 BackGrip = new Vector2(-0.24f, 0.02f);
-        private static readonly Vector2 FrontGrip = new Vector2(0.24f, 0.02f);
+        // Manos y pies en la rama (S): colgado boca abajo y abrazado a ella con los cuatro (c.5, punto 7), los brazos por dentro
+        // y las piernas por fuera.
+        private static readonly Vector2 BackGrip = new Vector2(-0.22f, 0.02f);
+        private static readonly Vector2 FrontGrip = new Vector2(0.22f, 0.02f);
+        private static readonly Vector2 BackFoot = new Vector2(-0.44f, 0.02f);
+        private static readonly Vector2 FrontFoot = new Vector2(0.44f, 0.02f);
+
+        // Centro de la rama: el punto fijo del balanceo de sloth_encourage y del vaivén de sloth_cheer.
+        private static readonly Vector2 BranchCenter = new Vector2(0f, 0.02f);
+
+        // La garra que saluda (apenas suelta la rama, 0,08 S por encima del agarre) y la que celebra (bien alta, sobre la cabeza
+        // y la rama): siluetas distintas para gestos distintos.
+        private static readonly Vector2 WaveHand = new Vector2(0.30f, 0.10f);
+        private static readonly Vector2 CheerHand = new Vector2(0.10f, 0.22f);
 
         // Columnas de las hojas a lo largo de la rama (S), sus desfases en el bucle: las 4 de sloth_cheer, por fuera del cuerpo,
         // y las 2 de más de sloth_cheer_big.
@@ -644,23 +655,24 @@ namespace AF.Presentation
             }
         }
 
-        // Colgado de las dos manos, de frente: la cabeza entre los brazos, el torso debajo y las piernas recogidas. Respira con
+        // Colgado boca abajo bajo su rama y abrazado a ella (c.5, punto 7): las dos manos y los dos pies agarrados a la rama, el
+        // cuerpo debajo, de frente, con la cabeza entre los brazos; los brazos por dentro y las piernas por fuera. Respira con
         // breathe (1,00 ↔ 1,02).
         private static SlothPose Hang(float breathe)
         {
             return new SlothPose
             {
-                TorsoCenter = new Vector2(0f, -0.62f),
+                TorsoCenter = new Vector2(0f, -0.60f),
                 TorsoSize = new Vector2(0.50f, 0.56f * breathe),
-                HeadCenter = new Vector2(0f, -0.30f + ((breathe - 1f) * 0.3f)),
+                HeadCenter = new Vector2(0f, -0.28f + ((breathe - 1f) * 0.3f)),
                 BackArmFrom = new Vector2(-0.15f, -0.40f),
                 BackArmTo = BackGrip,
                 FrontArmFrom = new Vector2(0.15f, -0.40f),
                 FrontArmTo = FrontGrip,
-                BackLegFrom = new Vector2(-0.11f, -0.76f),
-                BackLegTo = new Vector2(-0.25f, -0.90f),
-                FrontLegFrom = new Vector2(0.11f, -0.76f),
-                FrontLegTo = new Vector2(0.25f, -0.90f),
+                BackLegFrom = new Vector2(-0.20f, -0.72f),
+                BackLegTo = BackFoot,
+                FrontLegFrom = new Vector2(0.20f, -0.72f),
+                FrontLegTo = FrontFoot,
                 BodySpin = 1f,
                 BodyPivot = BackGrip,
                 Alpha = 1f,
@@ -703,13 +715,16 @@ namespace AF.Presentation
             return p;
         }
 
-        // sloth_wave (0,8 s): la garra de delante sube despacio desde la rama, de lado y hacia arriba, y vuelve.
+        // sloth_wave (0,8 s): la garra de delante se suelta despacio de la rama, apenas 0,08 S por encima del agarre y nunca
+        // hacia la cámara (c.5, punto 8), y vuelve; la cabeza te mira de frente.
         private static SlothPose Wave(float ms)
         {
             SlothPose p = Hang(Breath(ms, IdleLoopMs));
+            p.HeadAngle = 0f;
+            p.HeadTurn = 0f;
             if (ms < WaveMs)
             {
-                p.FrontArmTo = Vector2.Lerp(FrontGrip, new Vector2(0.40f, 0.10f), Mathf.Sin(Mathf.PI * ms / WaveMs));
+                p.FrontArmTo = Vector2.Lerp(FrontGrip, WaveHand, Mathf.Sin(Mathf.PI * ms / WaveMs));
             }
 
             return p;
@@ -725,39 +740,49 @@ namespace AF.Presentation
             return p;
         }
 
-        // El brazo de celebrar: sube de la rama a lo alto (e = 0..1), con un vaivén de bob (−1..1).
+        // El brazo de celebrar: sube de la rama a lo alto, por encima de la cabeza y de la rama (e = 0..1), con un vaivén de bob
+        // (−1..1) y la cabeza ladeada ±8°. Bien distinto del saludo (que apenas se suelta) y del despertar (hacia fuera).
         private static SlothPose CheerArm(SlothPose p, float e, float bob)
         {
-            p.FrontArmTo = Vector2.Lerp(FrontGrip, new Vector2(0.40f, 0.06f + (0.03f * bob)), e);
-            p.HeadAngle = 4f * bob;
+            p.FrontArmTo = Vector2.Lerp(FrontGrip, new Vector2(CheerHand.x + (0.03f * bob), CheerHand.y), e);
+            p.HeadAngle = 8f * bob;
             return p;
         }
 
         // sloth_cheer / sloth_cheer_big: entrada de 0,3 s (la garra sube) y bucle de 1,2 s (vaivén, balanceo y hojas que caen);
-        // la grande da una vuelta colgado de la mano de detrás en el primer bucle y suelta 6 hojas.
+        // la grande da una vuelta colgado de la mano de detrás en el primer bucle (suelta los pies, que cuelgan, y a media vuelta
+        // enseña el lomo con el espéculo; la cabeza te sigue mirando, como el giro real de c.6) y suelta 6 hojas.
         private static SlothPose Cheer(float ms, bool big)
         {
             float loop = ms < CheerEntryMs ? 0f : Mod(ms - CheerEntryMs, CheerLoopMs) / CheerLoopMs;
             float bob = ms < CheerEntryMs ? 0f : Mathf.Sin(2f * Mathf.PI * loop);
             SlothPose p = CheerArm(Hang(Breath(ms, IdleLoopMs)), Ease(ms / CheerEntryMs), bob);
             p.BodyAngle = 2f * bob;
+            p.BodyPivot = BranchCenter;
             p.Leaves = big ? LeafCount : CheerLeaves;
             p.LeafPhase = Mod(ms, CheerLoopMs) / CheerLoopMs;
             if (big && ms >= CheerEntryMs && ms < CheerEntryMs + CheerLoopMs)
             {
-                p.BodySpin = Mathf.Cos(2f * Mathf.PI * Ease((ms - CheerEntryMs) / CheerLoopMs));
+                float turn = Ease((ms - CheerEntryMs) / CheerLoopMs);
+                p.BodySpin = Mathf.Cos(2f * Mathf.PI * turn);
                 p.BodyAngle = 0f;
+                p.BodyPivot = BackGrip;
+                p.TorsoBack = p.BodySpin < 0f;
+                float drop = Mathf.Sin(Mathf.PI * turn);
+                p.BackLegTo = Vector2.Lerp(BackFoot, new Vector2(-0.25f, -0.92f), drop);
+                p.FrontLegTo = Vector2.Lerp(FrontFoot, new Vector2(0.25f, -0.92f), drop);
             }
 
             return p;
         }
 
-        // sloth_encourage (0,8 s): se balancea suave colgado (±5°, que se apaga) y asiente dos veces, mirándote; después, en reposo
-        // con la cabeza ladeada.
+        // sloth_encourage (0,8 s): se balancea suave en la rama (±5° alrededor de su centro, que se apaga) y asiente dos veces,
+        // mirándote; después, en reposo con la cabeza ladeada.
         private static SlothPose Encourage(float ms)
         {
             SlothPose p = Hang(Breath(ms, IdleLoopMs));
             p.HeadAngle = 6f * Ease(ms / 200f);
+            p.BodyPivot = BranchCenter;
             if (ms < EncourageMs)
             {
                 float u = ms / EncourageMs;
@@ -782,8 +807,10 @@ namespace AF.Presentation
             return p;
         }
 
-        // sloth_sunbathe: tumbado boca arriba sobre la rama, la cabeza apoyada a un lado y los ojos cerrados; un brazo y una
-        // pierna cuelgan por delante de la rama y los otros descansan sobre la barriga.
+        // sloth_sunbathe: tumbado boca arriba sobre la rama, la cabeza inclinada y apoyada en ella, y los ojos cerrados; un brazo
+        // y una pierna cuelgan por delante de la rama y los otros descansan sobre la barriga, dentro del contorno del torso (x de
+        // −0,24 a 0,32 e y de 0 a 0,50), con las garras incluidas: el brazo cruzado en la mitad baja y la pierna recogida en la
+        // alta, hacia el pecho. Nada sobresale por encima.
         private static SlothPose Sunbathe(float breathe)
         {
             return new SlothPose
@@ -791,44 +818,45 @@ namespace AF.Presentation
                 TorsoCenter = new Vector2(0.04f, 0.25f),
                 TorsoSize = new Vector2(0.50f * breathe, 0.56f),
                 TorsoAngle = 90f,
-                HeadCenter = new Vector2(-0.34f, 0.24f),
-                HeadAngle = 25f,
+                HeadCenter = new Vector2(-0.36f, 0.20f),
+                HeadAngle = 45f,
                 EyesClosed = true,
                 BackArmFrom = new Vector2(-0.16f, 0.20f),
                 BackArmTo = new Vector2(-0.22f, -0.22f),
-                FrontArmFrom = new Vector2(-0.12f, 0.32f),
-                FrontArmTo = new Vector2(0.10f, 0.42f),
+                FrontArmFrom = new Vector2(-0.14f, 0.24f),
+                FrontArmTo = new Vector2(0.10f, 0.22f),
                 BackLegFrom = new Vector2(0.22f, 0.18f),
                 BackLegTo = new Vector2(0.30f, -0.20f),
-                FrontLegFrom = new Vector2(0.24f, 0.30f),
-                FrontLegTo = new Vector2(0.48f, 0.34f),
+                FrontLegFrom = new Vector2(0.22f, 0.32f),
+                FrontLegTo = new Vector2(0.06f, 0.38f),
                 BodySpin = 1f,
                 BodyPivot = Vector2.zero,
                 Alpha = 1f,
             };
         }
 
-        // sloth_sleep: hecho un ovillo sobre la rama, la cabeza metida y los ojos cerrados, abrazado a sí mismo y con los pies
-        // agarrados a la rama.
+        // sloth_sleep: hecho un ovillo sobre la rama, de espaldas (el lomo con el espéculo a la vista, arriba a la izquierda), con
+        // la cabeza metida abajo a la derecha, apoyada en la rama, y los ojos cerrados. El brazo de detrás va bajo el torso hasta
+        // la rama (solo asoma la garra) y el de delante, detrás de la cabeza; los pies, agarrados a la rama.
         private static SlothPose Sleep(float breathe)
         {
             return new SlothPose
             {
-                TorsoCenter = new Vector2(0f, 0.27f),
+                TorsoCenter = new Vector2(-0.06f, 0.28f),
                 TorsoSize = new Vector2(0.56f, 0.52f * breathe),
                 TorsoAngle = -10f,
                 TorsoBack = true,
-                HeadCenter = new Vector2(0.10f, 0.24f),
+                HeadCenter = new Vector2(0.20f, 0.13f),
                 HeadAngle = -30f,
                 EyesClosed = true,
-                BackArmFrom = new Vector2(-0.10f, 0.40f),
-                BackArmTo = new Vector2(0.20f, 0.12f),
-                FrontArmFrom = new Vector2(-0.14f, 0.36f),
-                FrontArmTo = new Vector2(0.06f, 0.08f),
-                BackLegFrom = new Vector2(-0.12f, 0.12f),
-                BackLegTo = new Vector2(-0.20f, -0.04f),
-                FrontLegFrom = new Vector2(0.14f, 0.12f),
-                FrontLegTo = new Vector2(0.22f, -0.04f),
+                BackArmFrom = new Vector2(-0.18f, 0.30f),
+                BackArmTo = new Vector2(0.02f, 0.06f),
+                FrontArmFrom = new Vector2(0.10f, 0.22f),
+                FrontArmTo = new Vector2(0.16f, 0.04f),
+                BackLegFrom = new Vector2(-0.20f, 0.14f),
+                BackLegTo = new Vector2(-0.28f, -0.02f),
+                FrontLegFrom = new Vector2(-0.04f, 0.12f),
+                FrontLegTo = new Vector2(-0.08f, -0.03f),
                 BodySpin = 1f,
                 BodyPivot = Vector2.zero,
                 Alpha = 1f,

@@ -17,7 +17,8 @@ namespace AF.Tests.PlayMode
     /// filas: idle y wake; wave y present; cheer y cheer_big; encourage y look; sunbathe y sleep), en un instante que las
     /// caracteriza, la columna izquierda sobre la selva clara y la derecha sobre el panel azul petróleo (D-004; c.5, punto 9);</item>
     /// <item><c>ti4_sizes_&lt;alto&gt;</c>: <c>sloth_idle</c> a los tamaños de c.4 (180, 140, 120, 96, 72, 64 y 48 dp), en filas alternas sobre la
-    /// selva clara y sobre el panel azul petróleo.</item>
+    /// selva clara y sobre el panel azul petróleo; a 780 dp, una quinta fila con 72, 64 y 48 dp sobre la selva clara (el peor
+    /// contraste).</item>
     /// </list>
     /// Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.SlothRigSnapshotTests</c> sin
     /// <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/es-419/</c>. Sin textos: el nombre de la pose va en el del archivo.
@@ -28,15 +29,19 @@ namespace AF.Tests.PlayMode
         private const float PxPerDp = 3f;
         private const float WidthDp = 360f;
 
-        // Instante de cada pose en la captura (ms): idle en reposo, wake estirando el brazo, wave arriba, present señalando,
-        // cheer con sus 4 hojas, cheer_big tras su vuelta con las 6, encourage asintiendo, look girando la cabeza, y los dos
-        // bucles en su inicio.
-        private static readonly float[] PoseMs = { 0f, 950f, 400f, 600f, 700f, 1700f, 200f, 500f, 0f, 0f };
+        // Instante de cada pose en la captura (ms), en el que se ve su rasgo propio: idle en reposo; wake aún dormido (ojos
+        // cerrados y la cabeza caída 14°); wave con la garra suelta; present señalando; cheer con la garra alta y sus 4 hojas;
+        // cheer_big a media vuelta (BodySpin = −1: de espaldas, con el espéculo) y sus 6 hojas; encourage en lo más hondo del
+        // balanceo y la cabezada; look girando la cabeza; y los dos bucles en su inicio.
+        private static readonly float[] PoseMs = { 0f, 300f, 400f, 600f, 700f, 900f, 600f, 500f, 0f, 0f };
 
-        private static readonly float[] SizesDp = { 180f, 140f, 120f, 96f, 72f, 64f, 48f };
+        // Los tamaños de c.4; los pequeños (72, 64 y 48 dp: Mapa del río, victoria y Nivel fallido) dos veces, sobre el panel y
+        // sobre la selva clara, el peor contraste del pelaje.
+        private static readonly float[] SizesDp = { 180f, 140f, 120f, 96f, 72f, 64f, 48f, 72f, 64f, 48f };
 
-        // Tamaños por fila (cada uno con el ancho de su rama, 1,5 S, en 360 dp): 180; 140; 120 y 96; 72, 64 y 48.
-        private static readonly int[] SizesPerRow = { 1, 1, 2, 3 };
+        // Tamaños por fila (cada uno con el ancho de su rama, 1,5 S, en 360 dp): 180; 140; 120 y 96; 72, 64 y 48 (panel); 72,
+        // 64 y 48 (selva clara). A 640 dp no cabe la quinta fila: solo las cuatro primeras.
+        private static readonly int[] SizesPerRow = { 1, 1, 2, 3, 3 };
 
         private Camera? _camera;
         private RenderTexture? _target;
@@ -108,6 +113,11 @@ namespace AF.Tests.PlayMode
             for (int row = 0; row < SizesPerRow.Length; row++)
             {
                 float rowH = (1.12f * SizesDp[next]) + 8f;
+                if (rowTop + rowH > heightDp)
+                {
+                    break;
+                }
+
                 Background(layer, 0f, rowTop, WidthDp, rowH, row % 2 == 0 ? Palette.JungleLight : Palette.Panel.Top);
                 float x = 0f;
                 for (int k = 0; k < SizesPerRow[row]; k++, next++)

@@ -35,7 +35,7 @@ namespace AF.Presentation
         /// <summary>Párpado: los dos ojos cerrados sobre su antifaz (parpadeo, <c>sloth_sleep</c> y <c>sloth_sunbathe</c>).</summary>
         public Sprite Eyelid { get; internal set; } = null!;
 
-        /// <summary>Hoja de embaúba que cae al celebrar.</summary>
+        /// <summary>Hoja de embaúba que cae al celebrar (pendiente del asesor cultural: ver <see cref="ProceduralArt.SlothBranchSlot"/>).</summary>
         public Sprite Leaf { get; internal set; } = null!;
 
         /// <summary>
@@ -64,6 +64,46 @@ namespace AF.Presentation
 
         /// <summary>Las piezas salen del PNG del artista (<see cref="ProceduralArt.SlothPartsSlot"/>).</summary>
         public bool Painted { get; internal set; }
+
+        // Las mismas piezas con otra rama (una por juego de piezas, se guarda): cada compuerta recibe su propio SlothArt y
+        // ninguna llamada cambia el que ya se entregó a otro consumidor.
+        private SlothArt? _withBranch;
+
+        /// <summary>
+        /// Estas piezas con la rama <paramref name="branch"/>: este mismo objeto si ya la lleva; si no, una copia (guardada para
+        /// la próxima vez). Nunca cambia este objeto.
+        /// </summary>
+        internal SlothArt WithBranch(Sprite? branch)
+        {
+            if (Branch == branch)
+            {
+                return this;
+            }
+
+            if (_withBranch != null && _withBranch.Branch == branch)
+            {
+                return _withBranch;
+            }
+
+            _withBranch = new SlothArt
+            {
+                Head = Head,
+                Torso = Torso,
+                TorsoBack = TorsoBack,
+                Limb = Limb,
+                Eyelid = Eyelid,
+                Leaf = Leaf,
+                Branch = branch,
+                HeadS = HeadS,
+                LimbWidthS = LimbWidthS,
+                LeafS = LeafS,
+                BranchWidthS = BranchWidthS,
+                EyelidOffsetS = EyelidOffsetS,
+                EyelidSizeS = EyelidSizeS,
+                Painted = Painted,
+            };
+            return _withBranch;
+        }
     }
 
     /// <remarks>
@@ -73,7 +113,14 @@ namespace AF.Presentation
     /// de espaldas. Sin PNG,
     /// el provisional solo sale con <see cref="MapArtRule.ShowProvisional"/> (Editor y desarrollo; 07 §6.4, como los
     /// miquitos): en release, nada.</para>
-    /// <para>La rama es otra ranura, <see cref="SlothBranchSlot"/> (1024 × 256, c.7), con su propio provisional.</para>
+    /// <para>La rama es otra ranura, <see cref="SlothBranchSlot"/> (1024 × 256, c.7), con su propio provisional. Cada llamada a
+    /// <see cref="SlothRigArt(Sprite, Sprite, bool)"/> entrega su propio <see cref="SlothArt"/> con su rama: las piezas se
+    /// comparten, pero la rama de una compuerta nunca cambia la de otra.</para>
+    /// <para><b>La embaúba (la hoja que cae al celebrar y la rama) está pendiente del asesor cultural</b> (propuesta de TiTino
+    /// g.2, punto 1, y c.4: la ceniza de sus hojas va en el mambe, de uso ceremonial; encargo, recuadro de la sección 0,
+    /// condición 1). Si la desaconseja, la alternativa prevista es una rama genérica sin especie reconocible (o la que proponga
+    /// el asesor), como en la ventanita de casa de M1.5 (ProceduralArt.Home.cs): solo cambian <c>DrawSlothLeafCell</c>,
+    /// <c>DrawEmbaubaBranch</c> y la ranura de la rama, no el rig. Nada de hojas quemadas ni ceniza.</para>
     /// <para>Perezoso: el atlas de 512 × 512 y la rama se crean la primera vez que se piden (<see cref="SlothRigArtBuilt"/>,
     /// <see cref="SlothBranchBuilt"/>), nunca al construir <see cref="ProceduralArt"/>; tras <see cref="Dispose"/> se vuelven
     /// a generar.</para>
@@ -86,7 +133,10 @@ namespace AF.Presentation
         /// <summary>Ranura de las piezas del rig (glosario §11: <c>fauna_&lt;id&gt;_partes</c> de <i>Bradypus variegatus</i>).</summary>
         public const string SlothPartsSlot = ArtSlots.FaunaPrefix + "bradypus_variegatus" + ArtSlots.FaunaPartsSuffix;
 
-        /// <summary>Ranura de la rama de embaúba (glosario §11; c.7): no usa el patrón <c>rama_&lt;mundo&gt;</c>.</summary>
+        /// <summary>
+        /// Ranura de la rama de embaúba (glosario §11; c.7): no usa el patrón <c>rama_&lt;mundo&gt;</c>. La embaúba está pendiente
+        /// del asesor cultural (g.2, punto 1); la alternativa prevista es una rama genérica.
+        /// </summary>
         public const string SlothBranchSlot = "arbol_embauba";
 
         /// <summary>Lado del atlas provisional de las piezas (px): celdas de 128 px.</summary>
@@ -97,6 +147,21 @@ namespace AF.Presentation
         private const float SlothHeadRadiusPx = 50f;
         private const float SlothInkPx = 3f; // ≈ 2 px en pantalla a los tamaños de victoria e inicio (c.4)
         private const float SlothLimbBorderPx = 28f;
+
+        /// <summary>
+        /// Diámetro del cráneo dibujado respecto al lado de la pieza de la cabeza (el radio de 50 px de la celda de 128; sin los
+        /// mechones ni el contorno). El PNG del artista sigue la misma plantilla [P].
+        /// </summary>
+        public const float SlothSkullFraction = 2f * SlothHeadRadiusPx / SlothCellPx;
+
+        /// <summary>
+        /// Centro del espéculo del macho en la pieza del lomo (<see cref="SlothArt.TorsoBack"/>), en fracción de la pieza (0..1,
+        /// y hacia arriba): en la mitad alta del lomo, sobre la columna.
+        /// </summary>
+        public static readonly Vector2 SlothSpeculumCenterUv = new Vector2(0.5f, 78f / SlothCellPx);
+
+        /// <summary>Ancho y alto del espéculo en la pieza del lomo, en fracción de la pieza.</summary>
+        public static readonly Vector2 SlothSpeculumSizeUv = new Vector2(18f / SlothCellPx, 34f / SlothCellPx);
 
         // Espéculo del macho (c.4) y garras de hueso claro (c.4).
         private static readonly Color SlothSpeculum = Palette.Hex(0xE39A3B);
@@ -136,6 +201,7 @@ namespace AF.Presentation
             if (partsPng != null)
             {
                 art = SlothPaintedArt(partsPng);
+                SlothArtMs = 0;
             }
             else if (showProvisional)
             {
@@ -146,8 +212,7 @@ namespace AF.Presentation
                 return null;
             }
 
-            art.Branch = branchPng != null ? branchPng : (showProvisional ? SlothBranchProcedural() : null);
-            return art;
+            return art.WithBranch(branchPng != null ? branchPng : (showProvisional ? SlothBranchProcedural() : null));
         }
 
         /// <summary>
@@ -349,6 +414,8 @@ namespace AF.Presentation
             float cy = oy + 64f;
             Color furLight = ColorMath.Lighten(SlothFur, 0.14f);
             Color furDark = ColorMath.Darken(SlothFur, 0.24f);
+            float specX = ox + (SlothSpeculumCenterUv.x * SlothCellPx);
+            float specY = oy + (SlothSpeculumCenterUv.y * SlothCellPx);
             for (int y = oy; y < oy + SlothCellPx; y++)
             {
                 for (int x = ox; x < ox + SlothCellPx; x++)
@@ -387,7 +454,7 @@ namespace AF.Presentation
                         continue;
                     }
 
-                    float spec = EllipseDp(px, py, cx, cy + 14f, 9f, 17f);
+                    float spec = EllipseDp(px, py, specX, specY, SlothSpeculumSizeUv.x * SlothCellPx * 0.5f, SlothSpeculumSizeUv.y * SlothCellPx * 0.5f);
                     float specCov = PixelCanvas.Coverage(spec);
                     if (specCov > 0f)
                     {
@@ -399,7 +466,7 @@ namespace AF.Presentation
             // La raya negra del espéculo, a lo largo de la columna.
             if (back)
             {
-                pc.FillCapsule(cx, cy + 3f, cx, cy + 25f, 1.8f, SlothInk);
+                pc.FillCapsule(specX, specY - 11f, specX, specY + 11f, 1.8f, SlothInk);
             }
         }
 
@@ -427,7 +494,9 @@ namespace AF.Presentation
             }
         }
 
-        // Hoja de embaúba (Cecropia): lámina palmeada de 7 lóbulos con los nervios claros del envés y su peciolo.
+        // Hoja de embaúba (Cecropia): lámina palmeada de 7 lóbulos con los nervios claros del envés y su peciolo. Pendiente del
+        // asesor cultural (propuesta de TiTino g.2, punto 1, y c.4); si la desaconseja, la alternativa prevista es una hoja
+        // genérica sin especie reconocible, como la rama (ProceduralArt.Home.cs, M1.5). Nunca quemada ni con ceniza.
         private static void DrawSlothLeafCell(PixelCanvas pc, int ox, int oy)
         {
             float cx = ox + 64f;
@@ -458,7 +527,9 @@ namespace AF.Presentation
         }
 
         // Rama de embaúba: corteza lisa y pálida con los anillos de las cicatrices de las hojas, un poco arqueada, con su luz
-        // arriba y el contorno de tinta; los extremos redondeados.
+        // arriba y el contorno de tinta; los extremos redondeados. Pendiente del asesor cultural (propuesta de TiTino g.2, punto
+        // 1, y c.4); si la desaconseja, la alternativa prevista es una rama genérica sin especie reconocible (o la que proponga
+        // el asesor), como en ProceduralArt.Home.cs (M1.5).
         private static void DrawEmbaubaBranch(PixelCanvas pc)
         {
             int w = pc.Width;
