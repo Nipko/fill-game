@@ -176,7 +176,7 @@ internal static class CurationReport
 
         // Tinaja (P7b): dónde va y su respaldo de la salida B, y los filtros de cada nivel con tinaja (la sección del informe de
         // la generación). En la variante b, las celdas que en la a llevan la tinaja.
-        if (levels.Any(l => l.Plan.Cell.Has("Ti") || spec.FallbackCells.ContainsKey(l.Plan.Level)))
+        if (ShowsTinaja(spec, levels.Select(l => l.Plan)))
         {
             TinajaPlacement(spec, levels, W);
             if (levels.Any(l => l.Chosen!.IsTinaja))
@@ -244,7 +244,6 @@ internal static class CurationReport
         void W(string line = "") => w(line);
         string F(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
         CampaignSpec a = spec.Variant == CampaignSpec.VariantA ? spec : CampaignSpec.Load(spec.Path, CampaignSpec.VariantA);
-        List<GeneratedLevel> cells = levels.Where(l => a.Calendar.TryGetValue(l.Plan.Level, out CalendarCell? c) && c.Has("Ti")).ToList();
         W();
         W(F($"## Dónde va la Tinaja (variante {spec.Variant})"));
         W();
@@ -257,13 +256,15 @@ internal static class CurationReport
         W();
         W("| Nivel | p | Rol | Celda en la a | Respaldo en la b | Publicado en este pack | Dosis (ocultas) | K | Cuias |");
         W("|---|---|---|---|---|---|---|---|---|");
-        foreach (GeneratedLevel l in cells)
+        static TinajaLevel Published(GeneratedLevel l)
         {
             Candidate c = l.Chosen!;
-            string fallback = spec.FallbackCells.TryGetValue(l.Plan.Level, out CalendarCell? fb) ? fb.Literal : "—";
-            string doses = c.TinajaCheck is TinajaCheckResult t ? F($"{t.Doses} ({t.Doses - 1})") : "—";
-            string published = c.IsTinaja ? "con la Tinaja" : "sin la Tinaja";
-            W(F($"| {l.Plan.Level} | {l.Plan.Position} | {RoleText(l.Plan)} | {a.Calendar[l.Plan.Level].Literal} | {fallback} | {l.Plan.Cell.Literal}: {published} | {doses} | {c.K} | {c.Board.Caps.Length} |"));
+            return new TinajaLevel(l.Plan, c.IsTinaja, c.TinajaCheck?.Doses, c.K, c.Board.Caps.Length);
+        }
+
+        foreach (string row in TinajaRows(spec, a, levels.Select(Published).ToList()))
+        {
+            W(row);
         }
 
         List<string> checks = TinajaChecks(spec, a, levels.Select(l => (l.Plan, l.Chosen!.IsTinaja)).ToList());
@@ -274,6 +275,46 @@ internal static class CurationReport
         {
             W(bullet);
         }
+    }
+
+    /// <summary>
+    /// Lo que mira de cada nivel la tabla de «Dónde va la Tinaja»: su plan, si se publica con la tinaja, sus dosis (las de
+    /// <see cref="TinajaCheckResult.Doses"/>; null si no se midió) y su tamaño (K y número de cuias).
+    /// </summary>
+    internal readonly record struct TinajaLevel(LevelPlan Plan, bool Tinaja, int? Doses, int K, int Cuias);
+
+    /// <summary>
+    /// Si el informe lleva «Dónde va la Tinaja» (P7b; lo prueba --self-test curation): algún nivel generado tiene la tinaja en
+    /// su celda (la de la variante que se genera) o tiene respaldo de la b (en la b, las celdas que la llevan en la a).
+    /// </summary>
+    internal static bool ShowsTinaja(CampaignSpec spec, IEnumerable<LevelPlan> plans) =>
+        plans.Any(p => p.Cell.Has("Ti") || spec.FallbackCells.ContainsKey(p.Level));
+
+    /// <summary>
+    /// Filas de la tabla de «Dónde va la Tinaja» (P7b; lo prueba --self-test curation con niveles sintéticos): una por cada nivel
+    /// cuya celda lleva la tinaja en la variante «a» (<paramref name="a"/>), en el orden de <paramref name="levels"/>, con su
+    /// respaldo de la «b», la celda publicada en la variante que se genera y si lleva la tinaja, y las dosis con las ocultas
+    /// entre paréntesis: la máscara de la tinaja tapa todas sus capas menos la boca (NOTAS-T4, máscara de la Tinaja en relief),
+    /// así que son las dosis − 1.
+    /// </summary>
+    internal static List<string> TinajaRows(CampaignSpec spec, CampaignSpec a, List<TinajaLevel> levels)
+    {
+        string F(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
+        var rows = new List<string>();
+        foreach (TinajaLevel l in levels)
+        {
+            if (!a.Calendar.TryGetValue(l.Plan.Level, out CalendarCell? cell) || !cell.Has("Ti"))
+            {
+                continue;
+            }
+
+            string fallback = spec.FallbackCells.TryGetValue(l.Plan.Level, out CalendarCell? fb) ? fb.Literal : "—";
+            string doses = l.Doses is int d ? F($"{d} ({d - 1})") : "—";
+            string published = l.Tinaja ? "con la Tinaja" : "sin la Tinaja";
+            rows.Add(F($"| {l.Plan.Level} | {l.Plan.Position} | {RoleText(l.Plan)} | {cell.Literal} | {fallback} | {l.Plan.Cell.Literal}: {published} | {doses} | {l.K} | {l.Cuias} |"));
+        }
+
+        return rows;
     }
 
     /// <summary>

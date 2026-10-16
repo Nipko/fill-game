@@ -18,7 +18,10 @@
 //     decididos)», «aceptada (m de m niveles)» y «anotada, con cambios pedidos en …».
 //   - «Dónde va la Tinaja» (P7b; CurationReport.TinajaChecks) con 321-340 sintéticos en las dos variantes: en sus 8 celdas
 //     («sí», «ninguno», 8 de 8), en p1, p2 o p19 (aviso en negrita), 9 en el ciclo de estreno («pasa del tope») y en la b
-//     («la salida B no la lleva» sin ninguna, «debería ser 0» con una); el ciclo de estreno sale del plan del 323.
+//     («la salida B no la lleva» sin ninguna, «debería ser 0» con una); el ciclo de estreno sale del plan del 323;
+//   - cuándo sale esa sección (CurationReport.ShowsTinaja: con 321-340 en las dos variantes, no con 201-300 ni 301-320) y las
+//     filas de su tabla (CurationReport.TinajaRows): las 8 celdas de la a en orden, y las del 323 y el 340 con la celda de la a,
+//     el respaldo de la b (Ma y Br+Ba (MD)), la celda publicada con o sin la Tinaja y las dosis «n (n − 1)» o la raya.
 // Imprime ASCII (PASS / FAIL) y sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación. Desde la raíz
 // del repositorio.
 using System.Globalization;
@@ -214,6 +217,57 @@ internal static class CurationSelfTest
             "Tinaja (b): con una en el 323 (Ma en la b), fuera del calendario y debería ser 0");
         Expect(a, [], ["Apariciones por ciclo (calendario de la a): ninguna.", Only, NonePure],
             "Tinaja (a) con 301-320 generados: sin apariciones ni línea del ciclo de estreno", first: 301, last: 320);
+
+        TinajaTable(check, a, b);
+    }
+
+    /// <summary>
+    /// Cuándo sale «Dónde va la Tinaja» (CurationReport.ShowsTinaja) y sus filas (CurationReport.TinajaRows), con 321-340
+    /// sintéticos en las dos variantes de campaign_v2.json: la sección sale con 321-340 en la a y en la b, y no con 201-300 ni
+    /// con 301-320; hay una fila por cada una de las 8 celdas con la Tinaja de la a, en su orden; la fila del 323 y la del 340
+    /// dicen la celda de la a (★Ti y Ti+Br (MD)), el respaldo de la b (Ma y Br+Ba (MD)), la celda publicada con o sin la Tinaja y
+    /// las dosis «n (n − 1)» (la máscara tapa todas las capas menos la boca) o «—» sin medir.
+    /// </summary>
+    private static void TinajaTable(Action<bool, string> check, CampaignSpec a, CampaignSpec b)
+    {
+        static int K(int level) => level == 340 ? 6 : 3;
+        static int Cuias(int level) => level == 340 ? 9 : 5;
+        List<CurationReport.TinajaLevel> Levels(CampaignSpec s, int first, int last, Func<int, bool> tinaja, Func<int, int?> doses) =>
+            Enumerable.Range(first, last - first + 1).Select(n => new CurationReport.TinajaLevel(s.Plan(n), tinaja(n), doses(n), K(n), Cuias(n))).ToList();
+        IEnumerable<LevelPlan> Plans(CampaignSpec s, int first, int last) => Enumerable.Range(first, last - first + 1).Select(s.Plan);
+        string Level(string row) => row.Split('|')[1].Trim();
+        string Show(List<string> rows) => string.Join(" / ", rows);
+
+        check(CurationReport.ShowsTinaja(a, Plans(a, 321, 340)) && CurationReport.ShowsTinaja(b, Plans(b, 321, 340)),
+            "Tinaja: la sección sale con 321-340 en la a (celdas con Ti) y en la b (celdas con respaldo)");
+        check(!CurationReport.ShowsTinaja(a, Plans(a, 201, 300)) && !CurationReport.ShowsTinaja(b, Plans(b, 201, 300))
+              && !CurationReport.ShowsTinaja(a, Plans(a, 301, 320)) && !CurationReport.ShowsTinaja(b, Plans(b, 301, 320)),
+            "Tinaja: la sección no sale con 201-300 ni con 301-320, en ninguna de las dos variantes");
+
+        // a: todas las celdas con la tinaja, con 3 dosis en el estreno y 5 en el hito.
+        int? DosesA(int n) => n switch { 323 => 3, 340 => 5, _ => 4 };
+        List<string> rowsA = CurationReport.TinajaRows(a, a, Levels(a, 321, 340, n => TinajaCellsW07.Contains(n), DosesA));
+        check(rowsA.Select(Level).SequenceEqual(TinajaCellsW07.Select(n => n.ToString(CultureInfo.InvariantCulture))),
+            "Tinaja (a): una fila por cada una de las 8 celdas de 321-340, en orden (" + Show(rowsA) + ")");
+        check(rowsA.Count == 8 && rowsA[0] == "| 323 | 3 | estreno | ★Ti | Ma | ★Ti: con la Tinaja | 3 (2) | 3 | 5 |",
+            "Tinaja (a): fila del 323, celda ★Ti, respaldo Ma, publicado con la Tinaja y 3 dosis (2 ocultas)");
+        check(rowsA.Count == 8 && rowsA[7] == "| 340 | 20 | hito | Ti+Br (MD) | Br+Ba (MD) | Ti+Br (MD): con la Tinaja | 5 (4) | 6 | 9 |",
+            "Tinaja (a): fila del 340, celda Ti+Br (MD), respaldo Br+Ba (MD), con la Tinaja y 5 dosis (4 ocultas)");
+        List<string> rowsA340 = CurationReport.TinajaRows(a, a, Levels(a, 340, 340, _ => false, _ => null));
+        check(rowsA340.SequenceEqual(["| 340 | 20 | hito | Ti+Br (MD) | Br+Ba (MD) | Ti+Br (MD): sin la Tinaja | — | 6 | 9 |"]),
+            "Tinaja (a): el 340 publicado sin la Tinaja y sin medir dice «sin la Tinaja» y la raya en las dosis (" + Show(rowsA340) + ")");
+
+        // b: las mismas 8 filas, con la celda del respaldo publicada sin la tinaja y sin dosis.
+        List<string> rowsB = CurationReport.TinajaRows(b, a, Levels(b, 321, 340, _ => false, _ => null));
+        check(rowsB.Select(Level).SequenceEqual(TinajaCellsW07.Select(n => n.ToString(CultureInfo.InvariantCulture))),
+            "Tinaja (b): las mismas 8 filas, las celdas con la Tinaja de la a (" + Show(rowsB) + ")");
+        check(rowsB.Count == 8 && rowsB[0] == "| 323 | 3 | comodidad | ★Ti | Ma | Ma: sin la Tinaja | — | 3 | 5 |",
+            "Tinaja (b): fila del 323 (comodidad en la b, sin el estreno), celda ★Ti de la a y Ma publicada sin la Tinaja");
+        check(rowsB.Count == 8 && rowsB[7] == "| 340 | 20 | hito | Ti+Br (MD) | Br+Ba (MD) | Br+Ba (MD): sin la Tinaja | — | 6 | 9 |",
+            "Tinaja (b): fila del 340, celda Ti+Br (MD) de la a y Br+Ba (MD) publicada sin la Tinaja");
+        check(CurationReport.TinajaRows(a, a, Levels(a, 201, 300, _ => false, _ => null)).Count == 0
+              && CurationReport.TinajaRows(b, a, Levels(b, 201, 300, _ => false, _ => null)).Count == 0,
+            "Tinaja: sin filas con 201-300 en las dos variantes");
     }
 
     /// <summary>El rechazo cuenta solo si el mensaje dice el motivo esperado (<paramref name="reason"/>), no otro.</summary>

@@ -393,6 +393,11 @@ dotnet run --project tools/level-generator -c Release -- --self-test curation
   calendario»); 9 en el ciclo de estreno, «pasa del tope»; en la b, sin ninguna, «la salida B no la lleva», y con una (el 323,
   que en la b es Ma), «debería ser 0». El ciclo de estreno sale del plan del nivel de estreno (`Level - Position + 1` del 323),
   no de una aritmética de ciclos; con 301-320 generados no hay línea del ciclo de estreno.
+- Cuándo sale esa sección (`CurationReport.ShowsTinaja`: con 321-340 en la a y en la b; no con 201-300 ni con 301-320) y las
+  filas de su tabla (`CurationReport.TinajaRows`): una por cada una de las 8 celdas con la Tinaja de la a, en orden; la del 323
+  (★Ti, respaldo Ma) y la del 340 (Ti+Br (MD), respaldo Br+Ba (MD)) dicen la celda publicada con o sin la Tinaja (en la b,
+  la del respaldo) y las dosis «n (n − 1)», con las ocultas entre paréntesis (la máscara tapa todas las capas menos la boca), o
+  «—» sin medir.
 
 Con una especificación de dos variantes, las dos líneas de comando del informe (la de «Generado por» y la de level-qa) llevan
 `--variant` explícito, también con la publicada.

@@ -47,11 +47,18 @@ internal static class VariantOptionSelfTest
             Check(a.Plan(323).Cell.Has("Ti") && a.Plan(327).Cell.Has("Ti") && b.Plan(323).Cell.Literal == "Ma" && b.Plan(327).Cell.Literal == "C"
                   && a.PublishedVariant == CampaignSpec.VariantA,
                 "campaign_v2: el 323 y el 327 llevan la Tinaja en la a; en la b, Ma y C; la publicada es la a");
+            string json = BuildPack();
             Directory.CreateDirectory(dir);
-            File.WriteAllText(pack, BuildPack());
+            File.WriteAllText(pack, json);
         }
         catch (Exception e) when (e is IOException or UnauthorizedAccessException or System.Text.Json.JsonException or CampaignSpecException or InvalidOperationException)
         {
+            // Sin dejar la carpeta temporal en %TEMP% si falla al escribir el pack.
+            if (Directory.Exists(dir))
+            {
+                Directory.Delete(dir, recursive: true);
+            }
+
             Console.Error.WriteLine(AsciiText.Of("level-qa --self-test variante: " + e.Message + " (ejecuta desde la raiz del repositorio)"));
             return 2;
         }
