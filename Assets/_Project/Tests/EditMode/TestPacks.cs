@@ -15,8 +15,9 @@ namespace AF.Tests.EditMode
         public static string TutorialPath => Path.Combine(Application.dataPath, "_Project/Data/Levels/tutorial_v0.json");
 
         /// <summary>
-        /// Rutas de los 5 paquetes de la escena, en el orden de <c>GameSceneBuilder.LevelPackPaths</c>: el tutorial (1-10) y la
-        /// campaña 11-200 de <c>pack_schema</c> 2 (traspaso §6 pasos 1.1-1.2).
+        /// Rutas de los 6 paquetes de la escena, en el orden de <c>GameSceneBuilder.LevelPackPaths</c>: el tutorial (1-10), la
+        /// campaña 11-200 de <c>pack_schema</c> 2 (traspaso §6 pasos 1.1-1.2) y el mundo 6 (201-300, <c>pack_schema</c> 3; tarea
+        /// C1a).
         /// </summary>
         public static string[] CampaignPaths => new[]
         {
@@ -25,6 +26,7 @@ namespace AF.Tests.EditMode
             Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_03_v1.json"),
             Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_04_v1.json"),
             Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_05_v1.json"),
+            Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_06_v1.json"),
         };
 
         private static LevelPack? _tutorial;
@@ -33,7 +35,7 @@ namespace AF.Tests.EditMode
         /// <summary>Paquete <c>tutorial_v0</c> leído del disco (una vez).</summary>
         public static LevelPack Tutorial => _tutorial ??= LevelPackReader.Read(File.ReadAllText(TutorialPath));
 
-        /// <summary>Los 5 paquetes de <see cref="CampaignPaths"/> leídos del disco (una vez).</summary>
+        /// <summary>Los 6 paquetes de <see cref="CampaignPaths"/> leídos del disco (una vez).</summary>
         public static IReadOnlyList<LevelPack> Campaign
         {
             get

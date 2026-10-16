@@ -10,10 +10,11 @@ using NUnit.Framework;
 namespace AF.Tests.EditMode
 {
     /// <summary>
-    /// Los 5 paquetes de la escena (tutorial_v0 y mundo_02..05_v1, <c>pack_schema</c> 2; traspaso §6 pasos 1.1-1.2; 08 §4.1 y
-    /// §4.4; contrato 21): cubren los niveles 1-200 sin huecos, cada tablero (base y relief) construye con las mecánicas del
-    /// núcleo, pasa <see cref="LevelValidation"/> y arranca una sesión jugable, y los estrenos de D-007 (02 §9.1 y §11; 02 §8)
-    /// están donde dice el calendario.
+    /// Los 6 paquetes de la escena (tutorial_v0 y mundo_02..05_v1, <c>pack_schema</c> 2; traspaso §6 pasos 1.1-1.2; y
+    /// mundo_06_v1, <c>pack_schema</c> 3, desde la tarea C1a; 08 §4.1 y §4.4; contrato 21): cubren los niveles 1-300 sin huecos,
+    /// cada tablero (base y relief) construye con las mecánicas del núcleo, pasa <see cref="LevelValidation"/> y arranca una
+    /// sesión jugable, los estrenos de D-007 (02 §9.1 y §11; 02 §8) están donde dice el calendario y los del mundo 6, la Liana
+    /// de cuenta en el 243 y la Hoja atada en el 283 (03 §11; D-023, punto 5), también.
     /// </summary>
     public sealed class CampaignPackTests
     {
@@ -24,18 +25,19 @@ namespace AF.Tests.EditMode
         private static readonly string[] DebutIntros = { "chica", "alta", "hoja", "matapi", "liana", "murky", "remolino", "barro", "lluvia", "brote", "pirana" };
 
         [Test]
-        public void Packs_LoadAndCover1To200()
+        public void Packs_LoadAndCover1To300()
         {
             IReadOnlyList<LevelPack> packs = TestPacks.Campaign;
-            Assert.That(packs.Count, Is.EqualTo(5));
+            Assert.That(packs.Count, Is.EqualTo(6));
             LevelCatalog catalog = LevelCatalog.Create(packs);
             Assert.That(catalog.FirstLevel, Is.EqualTo(1));
-            Assert.That(catalog.LastLevel, Is.EqualTo(200));
-            Assert.That(catalog.Count, Is.EqualTo(200));
+            Assert.That(catalog.LastLevel, Is.EqualTo(300));
+            Assert.That(catalog.Count, Is.EqualTo(300));
             Assert.That(catalog.IsContiguous, Is.True, catalog.DescribeGaps());
-            Assert.That(catalog.NextLevelAfter(200), Is.Null, "tras el 200, «El río sigue creciendo»");
+            Assert.That(catalog.NextLevelAfter(200), Is.EqualTo(201), "el 200 ya no es el fin de contenido");
+            Assert.That(catalog.NextLevelAfter(300), Is.Null, "tras el 300, «El río sigue creciendo» (06 §9)");
 
-            for (int level = 1; level <= 200; level++)
+            for (int level = 1; level <= 300; level++)
             {
                 LevelDefinition def = catalog.Find(level)!;
                 Assert.That(def.Level, Is.EqualTo(level));
@@ -46,14 +48,18 @@ namespace AF.Tests.EditMode
             Assert.That(packs[1].PackId, Is.EqualTo("mundo_02_v1"));
             Assert.That(packs[1].First.Level, Is.EqualTo(11));
             Assert.That(packs[4].PackId, Is.EqualTo("mundo_05_v1"));
+            Assert.That(packs[5].PackId, Is.EqualTo("mundo_06_v1"));
+            Assert.That(packs[5].First.Level, Is.EqualTo(201));
+            Assert.That(packs[5].World, Is.EqualTo(6), "glosario §8: Oriente");
+            Assert.That(catalog.PackOf(300), Is.SameAs(packs[5]));
         }
 
         [Test]
-        public void Boards_BuildAndValidate_All190()
+        public void Boards_BuildAndValidate_All290()
         {
             LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
             int checkedLevels = 0;
-            for (int level = 11; level <= 200; level++)
+            for (int level = 11; level <= 300; level++)
             {
                 LevelDefinition def = catalog.Find(level)!;
                 BoardState board = def.CreateBoard();
@@ -70,15 +76,15 @@ namespace AF.Tests.EditMode
                 checkedLevels++;
             }
 
-            Assert.That(checkedLevels, Is.EqualTo(190));
+            Assert.That(checkedLevels, Is.EqualTo(290));
         }
 
         [Test]
-        public void Relief_BuildAndValidate_All334()
+        public void Relief_BuildAndValidate_All532()
         {
             LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
             int variants = 0;
-            for (int level = 1; level <= 200; level++)
+            for (int level = 1; level <= 300; level++)
             {
                 LevelDefinition def = catalog.Find(level)!;
                 if (level >= 31)
@@ -112,7 +118,7 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(variants, Is.EqualTo(334));
+            Assert.That(variants, Is.EqualTo(334 + 198), "334 en 1-200 y 198 en el mundo 6 (100 de un color menos y 98 de una vacía más)");
         }
 
         [Test]
@@ -189,6 +195,54 @@ namespace AF.Tests.EditMode
             {
                 Assert.That(catalog.Find(level)!.HasMud, Is.False, "Barro antes del 123: " + level);
             }
+        }
+
+        [Test]
+        public void World6Debuts_CountLiana243_AndTiedLeaf283()
+        {
+            // 03 §11 y SightingRule.VariantDebutLevels (VA1a): en 201-300 solo estrenan la Liana de cuenta (243, intro_mechanic
+            // liana_n [P]) y la Hoja atada (283, hoja_atada; D-023, punto 5); son los únicos niveles no saltables del mundo 6.
+            LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
+            Assert.That(AF.GameFlow.SightingRule.VariantDebutLevels, Is.EqualTo(new[] { 243, 283 }));
+            for (int level = 201; level <= 300; level++)
+            {
+                LevelDefinition def = catalog.Find(level)!;
+                string? intro = level == 243 ? AF.GameFlow.LevelCardInfo.LianaCountIntro
+                    : level == 283 ? AF.GameFlow.LevelCardInfo.HojaAtadaIntro : null;
+                Assert.That(def.IntroMechanic, Is.EqualTo(intro), "intro_mechanic del " + level);
+                Assert.That(def.Skippable, Is.EqualTo(intro == null), "skippable es false justo en los estrenos (" + level + ")");
+                Assert.That(def.World, Is.EqualTo(6));
+                Assert.That(def.HasMechanic(MechanicType.Tinaja), Is.False, "la Tinaja estrena en el 323 (D-019)");
+                if (level < 243)
+                {
+                    Assert.That(CountLiana(def), Is.LessThan(0), "Liana de cuenta antes del 243: " + level);
+                }
+
+                if (level < 283)
+                {
+                    Assert.That(def.HasMechanic(MechanicType.HojaAtada), Is.False, "Hoja atada antes del 283: " + level);
+                }
+            }
+
+            LevelDefinition l243 = catalog.Find(243)!;
+            int liana = CountLiana(l243);
+            Assert.That(liana, Is.GreaterThanOrEqualTo(0), "el 243 lleva su Liana de cuenta");
+            Assert.That(l243.Attrs[liana].N, Is.EqualTo(1), "n = 1 (mundo_06_v1.json)");
+            Assert.That(catalog.Find(283)!.HasMechanic(MechanicType.HojaAtada), Is.True);
+        }
+
+        // Índice de la primera Liana de cuenta (n > 0) del nivel, o -1.
+        private static int CountLiana(LevelDefinition def)
+        {
+            for (int i = 0; i < def.CuiaCount; i++)
+            {
+                if (def.Attrs[i].Type == MechanicType.Liana && def.Attrs[i].N > 0)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
         }
 
         [Test]

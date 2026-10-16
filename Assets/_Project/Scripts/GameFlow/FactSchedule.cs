@@ -48,7 +48,7 @@ namespace AF.GameFlow
         /// <summary><c>fact_id</c> de <c>af_river_fact_shown</c> (<c>&lt;tinte&gt;.&lt;kk&gt;</c>), o null.</summary>
         public string? FactId => Series?.FactIdAt(K);
 
-        /// <summary>Clave del nombre visible del tinte (<c>tint.&lt;tinte&gt;.name</c>), o null.</summary>
+        /// <summary>Clave del nombre visible del sujeto (<c>tint.&lt;tinte&gt;.name</c>, o <c>fact.&lt;río&gt;.name</c> en las series de río [P]), o null.</summary>
         public string? NameKey => Series?.NameKey;
     }
 
@@ -102,7 +102,7 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Clave de texto de la línea del nivel <paramref name="level"/> (<c>fact.&lt;tinte&gt;.&lt;kk&gt;</c>, pregunta 49 (a)), o
-        /// null si el nivel no lleva línea (fuera de toda serie, como 261-300 hasta C1a, o entre dos líneas con step &gt; 1). Sin
+        /// null si el nivel no lleva línea (fuera de toda serie, como 321-1.000 en la versión 1, o entre dos líneas con step &gt; 1). Sin
         /// asignaciones.
         /// </summary>
         public string? KeyFor(int level)

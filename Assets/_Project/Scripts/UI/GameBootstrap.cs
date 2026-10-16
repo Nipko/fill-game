@@ -325,8 +325,8 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Asigna los paquetes de niveles (08 §2.2: índice nivel → paquete; hoy <c>tutorial_v0</c>, en la integración también
-        /// <c>mundo_02</c> … <c>mundo_05</c>). El primero va en <c>levelPack</c> y el resto en <c>extraLevelPacks</c>.
+        /// Asigna los paquetes de niveles (08 §2.2: índice nivel → paquete; <c>tutorial_v0</c> y <c>mundo_02</c> … <c>mundo_06</c>,
+        /// 1-300 desde C1a). El primero va en <c>levelPack</c> y el resto en <c>extraLevelPacks</c>.
         /// </summary>
         public void Configure(IReadOnlyList<TextAsset> packs)
         {

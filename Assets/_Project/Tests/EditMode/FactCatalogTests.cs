@@ -18,16 +18,18 @@ namespace AF.Tests.EditMode
     /// Calendario de Frutas del río <c>af-facts/1</c> (D-017; 08 §4.6; contrato 31; tarea F1F2) y sus filas de <c>facts.csv</c>,
     /// con la validación de la propuesta de Frutas §6.6:
     /// <list type="bullet">
-    /// <item>El archivo real valida: 14 series de 20 líneas, una por nivel, que cubren 1-260 y 301-320 sin huecos ni solapes
-    /// (261-300 llegan con C1a), y ninguna empieza antes del debut de su tinte (glosario §9).</item>
+    /// <item>El archivo real valida: 16 series de 20 líneas, una por nivel, que cubren 1-320 sin huecos ni solapes: 14 de tintes,
+    /// ninguna antes del debut de su tinte (glosario §9), y las 2 de río de 261-300 (<c>kind</c> = <c>river</c> [P]; propuesta de
+    /// Frutas §5.16, tarea F1c; cargadas en C1a), sin debut que comprobar.</item>
     /// <item>Cada clave del calendario existe en <c>facts.csv</c> con texto es-419 de ≤ 90 caracteres ya formateado, y cada
     /// traducción, de ≤ 117; salvo las cuatro últimas del cacao y del arazá, que el banco de §5.15 aún no tiene
     /// (<see cref="PendingWriting"/>).</item>
     /// <item>Cada línea cita en <c>context</c> al menos una fuente del catálogo, con su URL; lleva su marca [V] o [E] en
     /// <c>notes</c> (ninguna [NV]) y un estado; ningún idioma tiene estado si el español no está aprobado; y todas las fuentes del
     /// catálogo se citan.</item>
-    /// <item>Frase de «Fruta nueva» (≤ 40) y nombre visible del tinte de cada serie (el de <c>glossary.csv</c> lo comprueba
-    /// <c>GlossaryTableTests</c>). Los caracteres, contra el atlas: <c>FontCoverageTests</c>.</item>
+    /// <item>Frase de «Fruta nueva» (≤ 40) y nombre visible del tinte de cada serie de tinte (el de <c>glossary.csv</c> lo
+    /// comprueba <c>GlossaryTableTests</c>); las de río, sin frase y con su nombre <c>fact.&lt;río&gt;.name</c> [P]. Los
+    /// caracteres, contra el atlas: <c>FontCoverageTests</c>.</item>
     /// <item>Cifras (D-018, Q8-A): los marcadores de cada línea son los de su columna <c>args</c> y <c>Loc.Fact</c> da «5.200» con
     /// es-CO y «5,200» con es-MX. En release no sale ninguna línea sin aprobar.</item>
     /// <item>El lector rechaza cada valor fuera del formato con la ruta del valor.</item>
@@ -87,30 +89,38 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void RealCalendar_Validates_FourteenSeriesOfTwenty_Covering1To260And301To320()
+        public void RealCalendar_Validates_SixteenSeriesOfTwenty_Covering1To320()
         {
             FactCatalog catalog = Real;
             Assert.That(catalog.Version, Is.EqualTo(1));
             Assert.That(catalog.MaxCharsEs, Is.EqualTo(90), "≤ 90 caracteres en español (D-017; 08 §4.6)");
-            Assert.That(catalog.Series.Count, Is.EqualTo(14), "las 12 series de 1-200 y 221-260 y el banco del cacao y del arazá");
-            string[] order = { "acai", "agua_tapajos", "urucum", "agua_negro", "cupuacu", "aguaje", "bacaba", "jenipapo", "camu_camu", "tapereba", "cacao", "lulo", "guanabana", "araza" };
+            Assert.That(catalog.Series.Count, Is.EqualTo(16), "las 12 series de 1-200 y 221-260, las 2 de río de 261-300 y el banco del cacao y del arazá");
+            string[] order =
+            {
+                "acai", "agua_tapajos", "urucum", "agua_negro", "cupuacu", "aguaje", "bacaba", "jenipapo", "camu_camu", "tapereba", "cacao",
+                "lulo", "guanabana", "rio_napo", "rio_amazonas", "araza",
+            };
             for (int i = 0; i < order.Length; i++)
             {
                 FactSeries s = catalog.Series[i];
                 Assert.That(s.Subject, Is.EqualTo(order[i]), "orden de la propuesta de Frutas §3.2");
-                Assert.That(s.Kind, Is.EqualTo(FactSeriesKind.Tint));
-                Assert.That(s.Lines, Is.EqualTo(20), s.Subject + ": 20 líneas por fruta (D-017, Q2-A)");
+                bool river = s.Subject.StartsWith("rio_", StringComparison.Ordinal);
+                Assert.That(s.Kind, Is.EqualTo(river ? FactSeriesKind.River : FactSeriesKind.Tint), s.Subject + ": las de río, kind river [P] (§5.16)");
+                Assert.That(s.Lines, Is.EqualTo(20), s.Subject + ": 20 líneas por serie (D-017, Q2-A)");
                 Assert.That(s.Step, Is.EqualTo(1), s.Subject + ": una por nivel");
-                Assert.That(s.FromLevel, Is.EqualTo(i < 13 ? 1 + (20 * i) : 301), s.Subject);
+                Assert.That(s.FromLevel, Is.EqualTo(1 + (20 * i)), s.Subject);
             }
 
             var schedule = new FactSchedule(catalog);
             for (int level = 1; level <= 340; level++)
             {
-                bool covered = level <= 260 || (level >= 301 && level <= 320);
+                bool covered = level <= 320;
                 Assert.That(schedule.KeyFor(level) != null, Is.EqualTo(covered), "nivel " + level.ToString(CultureInfo.InvariantCulture)
-                    + (covered ? " sin línea" : " con línea: 261-300 llegan con C1a y la versión 1 acaba en el 320"));
+                    + (covered ? " sin línea" : " con línea: la versión 1 acaba en el 320"));
             }
+
+            Assert.That(schedule.KeyFor(261), Is.EqualTo("fact.rio_napo.01"), "propuesta de Frutas §5.16.1");
+            Assert.That(schedule.KeyFor(300), Is.EqualTo("fact.rio_amazonas.20"), "propuesta de Frutas §5.16.2");
         }
 
         [Test]
@@ -118,12 +128,22 @@ namespace AF.Tests.EditMode
         {
             Dictionary<string, int> debut = TintDebuts();
             Assert.That(debut.Count, Is.EqualTo(14), "K_paleta = 14 (glosario §9)");
+            int rivers = 0;
             foreach (FactSeries s in Real.Series)
             {
+                if (s.Kind == FactSeriesKind.River)
+                {
+                    // Las series de río no son tintes: no tienen debut que comprobar (propuesta de Frutas §5.16).
+                    Assert.That(debut.ContainsKey(s.Subject), Is.False, s.Subject + " no es un tinte del glosario §9");
+                    rivers++;
+                    continue;
+                }
+
                 Assert.That(debut.ContainsKey(s.Subject), Is.True, s.Subject + " es un tinte del glosario §9");
                 Assert.That(s.FromLevel, Is.GreaterThanOrEqualTo(debut[s.Subject]), s.Subject + ": nunca antes del debut (propuesta §3.1, regla 1)");
             }
 
+            Assert.That(rivers, Is.EqualTo(2), "rio_napo y rio_amazonas");
             Assert.That(Real.SeriesOf("lulo")!.FromLevel, Is.EqualTo(221), "el lulo debuta en el 111 y su serie va en el Oriente (regla 3)");
         }
 
@@ -173,7 +193,7 @@ namespace AF.Tests.EditMode
             }
 
             Assert.That(problems.ToString(), Is.Empty);
-            Assert.That(lines, Is.EqualTo(240 + 16 + 16), "las 240 líneas de las 12 series y los 16 datos del banco del cacao y del arazá");
+            Assert.That(lines, Is.EqualTo(240 + 16 + 16 + 40), "las 240 líneas de las 12 series, los 16 datos del banco del cacao y del arazá y las 40 de río de 261-300");
         }
 
         [Test]
@@ -215,8 +235,11 @@ namespace AF.Tests.EditMode
                     Assert.That(serie.Success, Is.True, key + ": context «línea k/n de la serie <tinte> (<Nombre>; <nombre científico>), en la victoria del nivel N,»");
                     string scientific = serie.Groups[1].Value;
                     bool water = s.Subject.StartsWith("agua_", StringComparison.Ordinal);
-                    Assert.That(Regex.IsMatch(scientific, water ? @"^río [A-Z]\p{L}+ \(agua [a-z]+\)$" : "^[A-Z][a-z]+ [a-z]+$"), Is.True,
-                        key + ": nombre científico «" + scientific + "» (en las aguas, el río y su tipo de agua)");
+                    bool river = s.Kind == FactSeriesKind.River;
+                    string pattern = river ? @"^río [A-Z]\p{L}+ \(agua [a-z]+\)( y .+ \(agua [a-z]+\))?$"
+                        : water ? @"^río [A-Z]\p{L}+ \(agua [a-z]+\)$" : "^[A-Z][a-z]+ [a-z]+$";
+                    Assert.That(Regex.IsMatch(scientific, pattern), Is.True,
+                        key + ": nombre científico «" + scientific + "» (en las aguas y los ríos, el río y su tipo de agua)");
 
                     LocStatus status = facts.StatusAt(row, LocLocale.SourceLocale);
                     bool draft = Array.IndexOf(DraftLines, key) >= 0;
@@ -249,9 +272,22 @@ namespace AF.Tests.EditMode
             LocTable facts = LocSetUpFixture.Catalog.Facts;
             foreach (FactSeries s in Real.Series)
             {
+                if (s.Kind == FactSeriesKind.River)
+                {
+                    // Las de río [P] no tienen tarjeta «Fruta nueva» (no debuta ningún tinte) y su nombre es fact.<río>.name (§5.16).
+                    Assert.That(s.TagKey, Is.Null, s.Subject);
+                    Assert.That(facts.IndexOf("fact." + s.Subject + ".tag"), Is.EqualTo(-1), s.Subject + ": sin frase de «Fruta nueva»");
+                    Assert.That(s.NameKey, Is.EqualTo("fact." + s.Subject + ".name"));
+                    int riverName = facts.IndexOf(s.NameKey);
+                    Assert.That(riverName, Is.GreaterThanOrEqualTo(0), s.NameKey);
+                    Assert.That(facts.MaxCharsAt(riverName), Is.EqualTo(24), s.NameKey + ": como los nombres de tinte");
+                    Assert.That(facts.StatusAt(riverName, LocLocale.SourceLocale), Is.EqualTo(LocStatus.PendingAdvisor), s.NameKey);
+                    continue;
+                }
+
                 Assert.That(s.TagKey, Is.EqualTo("fact." + s.Subject + ".tag"));
                 Assert.That(s.NameKey, Is.EqualTo("tint." + s.Subject + ".name"));
-                int tag = facts.IndexOf(s.TagKey);
+                int tag = facts.IndexOf(s.TagKey!);
                 Assert.That(tag, Is.GreaterThanOrEqualTo(0), s.TagKey);
                 Assert.That(facts.MaxCharsAt(tag), Is.EqualTo(40), s.TagKey + ": ≤ 40 caracteres (propuesta §5.1)");
                 Assert.That(facts.TextAt(tag, LocLocale.SourceLocale).Length, Is.LessThanOrEqualTo(40), s.TagKey);
@@ -265,6 +301,8 @@ namespace AF.Tests.EditMode
 
             Assert.That(Loc.Fact("fact.acai.tag"), Is.EqualTo("Açaí: la crema morada del Pará"));
             Assert.That(Loc.Fact("tint.urucum.name"), Is.EqualTo("Achiote"));
+            Assert.That(Loc.Fact("fact.rio_napo.name"), Is.EqualTo("Napo y Cuyabeno"), "propuesta de Frutas §5.16 [P]");
+            Assert.That(Loc.Fact("fact.rio_amazonas.name"), Is.EqualTo("Amazonas"));
         }
 
         [Test]
@@ -296,11 +334,13 @@ namespace AF.Tests.EditMode
                 withArgs += args.Count > 0 ? 1 : 0;
             }
 
-            Assert.That(withArgs, Is.EqualTo(17), "las líneas con cifras con separador o decimales (propuesta §5, Q8-A)");
+            Assert.That(withArgs, Is.EqualTo(17 + 8), "las líneas con cifras con separador o decimales (propuesta §5, Q8-A): 17 de fruta y 8 de río (§5.16)");
 
             Assert.That(Loc.Fact("fact.acai.17"), Is.EqualTo("Una prima del açaí es el árbol más común de la Amazonia: hay unos 5.200 millones."), "es-419 sin región: es-CO [P]");
             Assert.That(Loc.Fact("fact.cupuacu.11"), Does.EndWith("puede llegar a 4,5 kg."), "decimal y espacio duro antes de la unidad (08 §4.7)");
             Assert.That(Loc.Fact("fact.camu_camu.11"), Does.EndWith("va de 2,3 a 3,5."));
+            Assert.That(Loc.Fact("fact.rio_napo.05"), Is.EqualTo("Su cuenca ocupa cerca de 100.520\u00A0km², entre Ecuador y el Perú."), "§5.16.1, k05");
+            Assert.That(Loc.Fact("fact.rio_amazonas.10"), Does.Contain("unos 1,3 millones de toneladas"), "decimal (§5.16.2, k10)");
 
             Loc.Configure(LocSetUpFixture.Catalog, LocLocale.SourceLocale, true, "es-CO");
             Assert.That(Loc.Fact("fact.acai.17"), Does.Contain("unos 5.200 millones"), "es-CO");
@@ -356,7 +396,12 @@ namespace AF.Tests.EditMode
                     Assert.That(Loc.Fact(s.KeyAt(k)), Is.Empty, s.KeyAt(k) + ": sin aprobar, no sale en release (08 §4.7)");
                 }
 
-                Assert.That(Loc.Fact(s.TagKey), Is.Empty, s.TagKey);
+                if (s.TagKey != null)
+                {
+                    Assert.That(Loc.Fact(s.TagKey), Is.Empty, s.TagKey);
+                }
+
+                Assert.That(Loc.Fact(s.NameKey), Is.Empty, s.NameKey);
             }
         }
 
@@ -446,7 +491,8 @@ namespace AF.Tests.EditMode
         [TestCase("\"max_chars_es\": 90", "\"max_chars_es\": 90.5", "max_chars_es")]
         [TestCase("\"subject\": \"acai\"", "\"subject\": \"Acai\"", "series[0].subject")]
         [TestCase("\"subject\": \"urucum\"", "\"subject\": \"acai\"", "series[1].subject")]
-        [TestCase("\"kind\": \"tint\", \"from_level\": 1", "\"kind\": \"river\", \"from_level\": 1", "series[0].kind")]
+        [TestCase("\"kind\": \"tint\", \"from_level\": 1", "\"kind\": \"especie\", \"from_level\": 1", "series[0].kind")]
+        [TestCase("\"kind\": \"tint\", \"from_level\": 1", "\"kind\": \"River\", \"from_level\": 1", "series[0].kind")]
         [TestCase("\"from_level\": 1,", "\"from_level\": 0,", "series[0].from_level")]
         [TestCase("\"lines\": 20", "\"lines\": 0", "series[0].lines")]
         [TestCase("\"lines\": 20", "\"lines\": 100", "series[0].lines")]
@@ -466,6 +512,20 @@ namespace AF.Tests.EditMode
             string json = ReplaceFirst(Valid, from, to);
             var e = Assert.Throws<LevelFormatException>(() => FactCatalogReader.Read(json));
             Assert.That(e!.Message, Does.Contain(path + ":"), e.Message);
+        }
+
+        [Test]
+        public void Reader_ReadsARiverSeries_WithItsNameAndWithoutTag()
+        {
+            // kind river [P] (propuesta de Frutas §5.16; tarea C1a): el nombre es fact.<río>.name y no hay frase de «Fruta nueva».
+            FactCatalog c = FactCatalogReader.Read(ReplaceFirst(Valid, "\"subject\": \"urucum\", \"kind\": \"tint\"", "\"subject\": \"rio_napo\", \"kind\": \"river\""));
+            FactSeries napo = c.SeriesOf("rio_napo")!;
+            Assert.That(napo.Kind, Is.EqualTo(FactSeriesKind.River));
+            Assert.That(napo.KeyAt(1), Is.EqualTo("fact.rio_napo.01"));
+            Assert.That(napo.FactIdAt(1), Is.EqualTo("rio_napo.01"), "fact_id de af_river_fact_shown (08 §8.2)");
+            Assert.That(napo.NameKey, Is.EqualTo("fact.rio_napo.name"));
+            Assert.That(napo.TagKey, Is.Null);
+            Assert.That(c.SeriesOf("acai")!.Kind, Is.EqualTo(FactSeriesKind.Tint));
         }
 
         [Test]

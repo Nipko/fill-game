@@ -8,8 +8,15 @@ namespace AF.Levels
     /// <summary>Tipo de sujeto de una serie de Frutas del río (08 §4.6, campo <c>kind</c>) [P].</summary>
     public enum FactSeriesKind
     {
-        /// <summary><c>tint</c>: un tinte de la paleta (glosario §9), fruta o agua. Más adelante, ríos y especies.</summary>
+        /// <summary><c>tint</c>: un tinte de la paleta (glosario §9), fruta o agua. Más adelante, especies.</summary>
         Tint = 0,
+
+        /// <summary>
+        /// <c>river</c> [P]: el río de un mundo, en los bloques sin tinte nuevo (propuesta de Frutas §3.5 y §5.16; tarea F1c, decidido
+        /// en C1a con el contrato 31): <c>rio_napo</c> (261-280) y <c>rio_amazonas</c> (281-300). Sin debut que comprobar ni tarjeta
+        /// «Fruta nueva»; su nombre visible es <c>fact.&lt;sujeto&gt;.name</c>, porque no es un tinte del glosario §9.
+        /// </summary>
+        River = 1,
     }
 
     /// <summary>Una fuente del catálogo del calendario (<c>sources</c>): el id que citan las filas de <c>facts.csv</c>. Inmutable.</summary>
@@ -37,7 +44,8 @@ namespace AF.Levels
     /// Una serie de Frutas del río (<c>af-facts/1</c>; 08 §4.6; contrato 31): <see cref="Lines"/> líneas del sujeto
     /// <see cref="Subject"/> desde el nivel <see cref="FromLevel"/>, una cada <see cref="Step"/> niveles. Las claves de texto se
     /// derivan del sujeto (pregunta 49 (a), D-022; 08 §4.7): <c>fact.&lt;sujeto&gt;.&lt;kk&gt;</c> para la línea k,
-    /// <c>fact.&lt;sujeto&gt;.tag</c> para la frase de «Fruta nueva» y <c>tint.&lt;sujeto&gt;.name</c> para el nombre visible; el
+    /// <c>fact.&lt;sujeto&gt;.tag</c> para la frase de «Fruta nueva» (solo los tintes) y <c>tint.&lt;sujeto&gt;.name</c> para el nombre
+    /// visible (en las series de río [P], <c>fact.&lt;sujeto&gt;.name</c>: no son tintes del glosario §9); el
     /// <c>fact_id</c> de <c>af_river_fact_shown</c> es <c>&lt;sujeto&gt;.&lt;kk&gt;</c> (08 §8.2). Todas se preparan al crearla,
     /// para que consultarlas no asigne memoria. Inmutable.
     /// </summary>
@@ -82,8 +90,9 @@ namespace AF.Levels
             FromLevel = fromLevel;
             Lines = lines;
             Step = step;
-            TagKey = FactCatalog.KeyPrefix + subject + ".tag";
-            NameKey = FactCatalog.NamePrefix + subject + ".name";
+            bool tint = kind == FactSeriesKind.Tint;
+            TagKey = tint ? FactCatalog.KeyPrefix + subject + ".tag" : null;
+            NameKey = (tint ? FactCatalog.NamePrefix : FactCatalog.KeyPrefix) + subject + ".name";
             _keys = new string[lines];
             _factIds = new string[lines];
             for (int k = 1; k <= lines; k++)
@@ -115,10 +124,16 @@ namespace AF.Levels
         /// <summary>Primer nivel después del bloque de la serie (<c>from_level + lines × step</c>, 08 §4.6).</summary>
         public int EndLevel => FromLevel + (Lines * Step);
 
-        /// <summary>Clave de la frase de la tarjeta «Fruta nueva» (<c>fact.&lt;sujeto&gt;.tag</c>).</summary>
-        public string TagKey { get; }
+        /// <summary>
+        /// Clave de la frase de la tarjeta «Fruta nueva» (<c>fact.&lt;sujeto&gt;.tag</c>), o null en las series de río [P], que no
+        /// tienen tarjeta: no debuta ningún tinte.
+        /// </summary>
+        public string? TagKey { get; }
 
-        /// <summary>Clave del nombre visible del tinte (<c>tint.&lt;sujeto&gt;.name</c>).</summary>
+        /// <summary>
+        /// Clave del nombre visible del sujeto, el <c>{name}</c> de <c>fact_progress</c>: <c>tint.&lt;sujeto&gt;.name</c> en los tintes y
+        /// <c>fact.&lt;sujeto&gt;.name</c> en las series de río [P] («Napo y Cuyabeno», «Amazonas»; propuesta de Frutas §5.16).
+        /// </summary>
         public string NameKey { get; }
 
         /// <summary>Clave de texto de la línea <paramref name="k"/> (1..<see cref="Lines"/>): <c>fact.&lt;sujeto&gt;.&lt;kk&gt;</c>.</summary>

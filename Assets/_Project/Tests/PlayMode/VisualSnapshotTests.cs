@@ -520,7 +520,7 @@ namespace AF.Tests.PlayMode
         /// Sort (ficha §7.1; <c>Logs/device/magicsort/analisis/det_ms/d_000070.jpg</c> y <c>d_011780.jpg</c>):
         /// <c>10_lobby</c> (nivel 4 guardado, 1.240 semillas, sin canoas antes del 31), <c>10b_lobby_l31</c> (con
         /// <c>af_level_offset</c> = 30: canoas 3/5 con cronómetro), <c>10c_content_end</c> («El río sigue creciendo» tras el
-        /// 200, el último nivel del catálogo), <c>10d_no_canoes</c> (Sin canoas en el 31, con el cronómetro) y
+        /// 300, el último nivel del catálogo desde C1a), <c>10d_no_canoes</c> (Sin canoas en el 31, con el cronómetro) y
         /// <c>10e_victory_home</c> (victoria con «Inicio»).
         /// </summary>
         [UnityTest]
@@ -564,11 +564,11 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Save(dir, "10d_no_canoes");
 
             LaunchOptions.LevelOffsetOverride = null;
-            Profile p201 = Wallet.NewProfile(clock);
-            p201.Progress.NextLevel = 201;
-            p201.Progress.MaxLevel = 200;
-            p201.Wallet.Seeds = 300;
-            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p201));
+            Profile p301 = Wallet.NewProfile(clock);
+            p301.Progress.NextLevel = 301;
+            p301.Progress.MaxLevel = 300;
+            p301.Wallet.Seeds = 300;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(p301));
             boot = GameBootstrap.Current!;
             SnapshotKit.AttachLobby(boot);
             Assert.That(boot.PressPlay(), Is.True);

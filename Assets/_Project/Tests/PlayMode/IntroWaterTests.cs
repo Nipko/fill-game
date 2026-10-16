@@ -63,14 +63,14 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Intro_World3_RealCatalog_UsesBlackWater()
         {
-            // Nota de la ola 1 (T04 → T06): con el catálogo real de la escena (5 paquetes, niveles 1-200) el agua del paquete
+            // Nota de la ola 1 (T04 → T06): con el catálogo real de la escena (6 paquetes, niveles 1-300) el agua del paquete
             // del catálogo (la del tutorial, blanca) y la del nivel 41 (mundo 3, Manaos, negra) son distintas, así que este caso
             // sí distingue si la intro toma la del nivel; el de arriba, con un solo paquete, solo lo simula.
             yield return PlayModeHelpers.LoadGame(41, new MemoryProgressStore(41, 40));
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
             LevelFlow flow = boot.Flow!;
-            Assert.That(flow.Catalog.Packs.Count, Is.EqualTo(5), "el catálogo real de la escena");
+            Assert.That(flow.Catalog.Packs.Count, Is.EqualTo(6), "el catálogo real de la escena (con el mundo 6 desde C1a)");
             Assert.That(flow.Catalog.WaterBase, Is.EqualTo("white"), "el agua del primer paquete (tutorial)");
             Assert.That(flow.Level.World, Is.EqualTo(3));
             Assert.That(flow.Level.WaterBase, Is.EqualTo("black"));

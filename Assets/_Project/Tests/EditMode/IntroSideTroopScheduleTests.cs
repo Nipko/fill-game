@@ -67,7 +67,7 @@ namespace AF.Tests.EditMode
             LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
             FaunaCatalog fauna = Fauna();
             Assert.That(catalog.FirstLevel, Is.EqualTo(1));
-            Assert.That(catalog.LastLevel, Is.EqualTo(200));
+            Assert.That(catalog.LastLevel, Is.EqualTo(300), "la escena llega al 300 desde C1a; la medida de D-021 es la de 86-200");
 
             var side = new List<int>();
             var canopy = new List<int>();
@@ -160,7 +160,7 @@ namespace AF.Tests.EditMode
             LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
             FaunaCatalog fauna = Fauna();
             Assert.That(GameScreen.ThreeRowOrdinal(catalog, fauna, 7, Width, BoardTop, BoardBottom780), Is.EqualTo(-1), "nivel 7: 2 filas");
-            Assert.That(GameScreen.ThreeRowOrdinal(catalog, fauna, 201, Width, BoardTop, BoardBottom780), Is.EqualTo(-1), "fuera del catálogo");
+            Assert.That(GameScreen.ThreeRowOrdinal(catalog, fauna, 301, Width, BoardTop, BoardBottom780), Is.EqualTo(-1), "fuera del catálogo (acaba en el 300)");
             Assert.That(GameScreen.ThreeRowOrdinal(catalog, null, 86, Width, BoardTop, BoardBottom780), Is.EqualTo(0), "sin catálogo de fauna, por mundo");
             Assert.That(GameScreen.ThreeRowOrdinal(catalog, fauna, 95, Width, BoardTop, BoardBottom780), Is.EqualTo(3));
         }

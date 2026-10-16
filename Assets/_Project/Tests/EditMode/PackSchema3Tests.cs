@@ -225,6 +225,11 @@ namespace AF.Tests.EditMode
             int levels = 0;
             for (int p = 0; p < campaign.Count; p++)
             {
+                if (campaign[p].First.Level > 200)
+                {
+                    continue; // mundo_06_v1 (pack_schema 3) también está en la escena desde C1a: World6_LoadsAsPackSchema3_201To300
+                }
+
                 for (int i = 0; i < campaign[p].Count; i++)
                 {
                     LevelDefinition level = campaign[p].Levels[i];

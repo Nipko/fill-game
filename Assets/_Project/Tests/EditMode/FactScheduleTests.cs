@@ -40,15 +40,16 @@ namespace AF.Tests.EditMode
             FactSchedule s = Real;
             Assert.That(s.KeyFor(3), Is.EqualTo("fact.acai.03"), "el açaí abre el juego (D-017, Q3-A)");
             Assert.That(s.KeyFor(21), Is.EqualTo("fact.agua_tapajos.01"), "en el 21 empieza el Agua del Tapajós (propuesta §3.1, regla 2)");
-            Assert.That(s.KeyFor(261), Is.Null, "261-300 llegan con C1a (F1c)");
-            Assert.That(s.KeyFor(300), Is.Null);
+            Assert.That(s.KeyFor(261), Is.EqualTo("fact.rio_napo.01"), "261-300: las series de río de F1c, cargadas en C1a");
+            Assert.That(s.KeyFor(300), Is.EqualTo("fact.rio_amazonas.20"));
             Assert.That(s.KeyFor(0), Is.Null);
             Assert.That(s.KeyFor(-5), Is.Null);
             Assert.That(s.KeyFor(321), Is.Null, "la versión 1 acaba en el 320");
             Assert.That(s.KeyFor(1000), Is.Null);
             Assert.That(s.KeyFor(int.MaxValue), Is.Null);
             Assert.That(s.FactIdFor(3), Is.EqualTo("acai.03"), "fact_id de af_river_fact_shown (08 §8.2)");
-            Assert.That(s.FactIdFor(261), Is.Null);
+            Assert.That(s.FactIdFor(261), Is.EqualTo("rio_napo.01"));
+            Assert.That(s.FactIdFor(321), Is.Null);
         }
 
         [TestCase(1, "fact.acai.01")]
@@ -65,6 +66,10 @@ namespace AF.Tests.EditMode
         [TestCase(220, "fact.cacao.20")]
         [TestCase(221, "fact.lulo.01")]
         [TestCase(260, "fact.guanabana.20")]
+        [TestCase(261, "fact.rio_napo.01")]
+        [TestCase(280, "fact.rio_napo.20")]
+        [TestCase(281, "fact.rio_amazonas.01")]
+        [TestCase(300, "fact.rio_amazonas.20")]
         [TestCase(301, "fact.araza.01")]
         [TestCase(320, "fact.araza.20")]
         public void BlockBorders_GiveTheFirstAndLastLine(int level, string key)
@@ -91,7 +96,12 @@ namespace AF.Tests.EditMode
             Assert.That(last.K, Is.EqualTo(20));
             Assert.That(last.IsLast, Is.True, "la línea 20: el contador pasa a sello (D-017, Q5-A)");
 
-            FactPosition none = Real.Progress(280);
+            FactPosition river = Real.Progress(280);
+            Assert.That(river.Series!.Subject, Is.EqualTo("rio_napo"), "261-280: la serie de río del Napo y Cuyabeno (C1a)");
+            Assert.That(river.IsLast, Is.True);
+            Assert.That(river.NameKey, Is.EqualTo("fact.rio_napo.name"), "las de río, con su nombre fact.<río>.name [P]");
+
+            FactPosition none = Real.Progress(321);
             Assert.That(none.IsValid, Is.False);
             Assert.That(none.K, Is.EqualTo(0));
             Assert.That(none.Lines, Is.EqualTo(0));
