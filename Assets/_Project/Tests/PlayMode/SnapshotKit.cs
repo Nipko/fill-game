@@ -137,6 +137,26 @@ namespace AF.Tests.PlayMode
             File.WriteAllBytes(Path.Combine(dir, name + ".png"), Capture());
         }
 
+        /// <summary>
+        /// Escribe la captura <c>&lt;dir&gt;/&lt;name&gt;.png</c> y devuelve sus píxeles (comparaciones de capturas; revisión de
+        /// FX4).
+        /// </summary>
+        public static Color32[] SavePixels(string dir, string name)
+        {
+            Canvas.ForceUpdateCanvases();
+            s_camera!.Render();
+            RenderTexture previous = RenderTexture.active;
+            RenderTexture.active = s_target;
+            var tex = new Texture2D(Width, Height, TextureFormat.RGB24, false);
+            tex.ReadPixels(new Rect(0, 0, Width, Height), 0, 0);
+            tex.Apply();
+            RenderTexture.active = previous;
+            Color32[] pixels = tex.GetPixels32();
+            File.WriteAllBytes(Path.Combine(dir, name + ".png"), tex.EncodeToPNG());
+            Object.Destroy(tex);
+            return pixels;
+        }
+
         /// <summary>Renderiza la cámara de las capturas y devuelve el PNG.</summary>
         public static byte[] Capture()
         {

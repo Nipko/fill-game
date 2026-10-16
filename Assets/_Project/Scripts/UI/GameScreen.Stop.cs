@@ -199,6 +199,12 @@ namespace AF.UI
             _stopBackdrop.Layout(_canvasW, _stopHorizon, _stopPanelTop, _stopHasBoard, StopBandBottom(), hole);
         }
 
+        /// <summary>
+        /// Solo tests: false salta <see cref="StopBackdrop.Prewarm"/> al cargar el nivel (la comparación de capturas del 71 con y
+        /// sin ella; revisión de FX4). En el juego, siempre true.
+        /// </summary>
+        internal static bool StopPrewarmEnabled { get; set; } = true;
+
         partial void StopLevelLoaded(LevelFlow flow)
         {
             EndVictoryView();
@@ -211,7 +217,11 @@ namespace AF.UI
                 || (ReferenceEquals(before, stop) && string.Equals(_stopBackdrop.Water, water, System.StringComparison.Ordinal));
             bool fade = _stopLoadedOnce && !flow.ReduceMotion && !same;
             _stopLoadedOnce = true;
-            _stopBackdrop.Prewarm(stop, water); // el primer uso, fuera de build_ms (FX4; sonda warm_ms)
+            if (StopPrewarmEnabled)
+            {
+                _stopBackdrop.Prewarm(stop, water); // el primer uso, fuera de build_ms (FX4; sonda warm_ms)
+            }
+
             _stopBackdrop.Apply(stop, water, fade, MapConfig.StopCrossfadeMs);
             _lastStopChange = same ? StopChangeSame : (_stopBackdrop.Fading ? StopChangeFade : StopChangeCut);
             ApplyStopLut();

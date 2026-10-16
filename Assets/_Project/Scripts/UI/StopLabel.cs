@@ -30,9 +30,11 @@ namespace AF.UI
     /// <b>Arreglos de la prueba de la ola 2 en el teléfono (observación 3; tarea FX4)</b> [P]: con la placa a la vista, nada de
     /// la fila 1 puede quedar bajo ella. Entre la placa clavada al marco y la cuia elevada no caben ni 12 sp (en 360 × 780 dp
     /// quedan ~12 dp, y la placa de una línea a 12 sp mide 17 + <see cref="PlateLiftAirDp"/> de aire), así que al elevar una
-    /// cuia de la fila 1 la placa se oculta en el acto y se descarta, como el aviso ante un modal (GameScreen.Notices.cs). Y si
-    /// ni en reposo cabe a 12 sp (la Hoja en la fila 1, como en el 171: su medallón sube 0,70 u sobre la boca), va sobre el
-    /// muelle, bajo el panel y por encima de la bandeja, como la tarjeta del miquito; si tampoco cabe ahí, no sale (nunca
+    /// cuia de la fila 1 que quede bajo la placa, esta se oculta en el acto y se descarta, como el aviso ante un modal
+    /// (GameScreen.Notices.cs). Si ni en reposo cabe a 12 sp sobre toda la fila 1 (la Hoja en la fila 1, como en el 171: su
+    /// medallón sube 0,70 u sobre la boca), va a la misma altura pero de lado, centrada en el tramo libre más ancho de la fila 1
+    /// (con <see cref="PlateSideAirDp"/> dp a cada lado de lo que asoma); si en ningún tramo cabe en una línea a 12 sp, va sobre
+    /// el muelle, bajo el panel y por encima de la bandeja, como la tarjeta del miquito; si tampoco cabe ahí, no sale (nunca
     /// se recorta el texto).</description></item>
     /// </list>
     /// El texto se mide al enseñarlo y al cambiar de sitio, nunca por fotograma (sin asignaciones en <see cref="Tick"/>).
@@ -77,6 +79,12 @@ namespace AF.UI
         /// FX4, observación 3 de la prueba de la ola 2) [P]: si una cuia de la fila 1 se eleva y llega a menos, la placa se oculta.
         /// </summary>
         public const float PlateLiftAirDp = 4f;
+
+        /// <summary>
+        /// Aire mínimo a cada lado entre la placa de lado y lo que asoma de la fila 1 sin dejarle sitio encima (dp; revisión de
+        /// FX4) [P]: la placa se centra en el tramo libre de la fila 1 con este aire a los lados.
+        /// </summary>
+        public const float PlateSideAirDp = 4f;
 
         /// <summary>
         /// Lo que sube como mucho una cuia al elevarse (dp): <see cref="BoardLayout.Lift"/> con el rebote de la curva de la
@@ -215,29 +223,32 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Enseña <paramref name="text"/> durante <paramref name="ms"/> ms como placa bajo el HUD, ajustada a su texto y centrada en
-        /// un lienzo de <paramref name="canvasW"/> dp, con su borde de arriba en <paramref name="top"/> y, si cabe, el de abajo no
-        /// más abajo de <paramref name="maxBottom"/> (lo más alto de la fila 1 en reposo − <see cref="PlateCuiaGapDp"/>, o el
-        /// límite del muelle); si no cabe, el
-        /// texto se encoge hasta 12 sp y, si ni así, la placa pasa de ahí (nunca se recorta el texto). Devuelve si cabe (ver
-        /// <see cref="PlaceAsPlate"/>): si no, quien la enseña la lleva a otro sitio o la oculta.
+        /// Empieza a enseñar <paramref name="text"/> durante <paramref name="ms"/> ms como placa bajo el HUD, sin colocarla: quien
+        /// la enseña la coloca después con <see cref="PlaceAsPlate"/> en el primer sitio donde quepa (clavada al marco, de lado o
+        /// sobre el muelle; GameScreen.Notices.cs) o, si no cabe en ninguno, la oculta.
         /// </summary>
-        public bool ShowAsPlate(string text, float ms, float canvasW, float top, float maxBottom)
+        public void BeginPlate(string text, float ms)
         {
             Begin(text, ms, true);
-            return PlaceAsPlate(canvasW, top, maxBottom);
         }
 
         /// <summary>
-        /// Vuelve a colocar la placa (cambio de lienzo o de tablero con el rótulo a la vista). El tamaño del texto es el mayor,
-        /// hasta <see cref="PlateTextSp"/> sp, con el que la placa de una línea (<see cref="PlateHeightEm"/> veces el texto) cabe
-        /// entre <paramref name="top"/> y <paramref name="maxBottom"/> y a lo ancho del lienzo, nunca menos de 12 sp. Si ni a 12
-        /// sp cabe en una línea, va a lo ancho del lienzo en varias, con la caja de línea entera. Devuelve si la placa cabe: su
-        /// borde de abajo no pasa de <paramref name="maxBottom"/> (tarea FX4).
+        /// Alto de la placa de una línea con el texto más pequeño (12 sp con la escala de texto; dp): lo menos que necesita.
         /// </summary>
-        public bool PlaceAsPlate(float canvasW, float top, float maxBottom)
+        public float MinPlateHeight => Mathf.Ceil((_plateMinSize * PlateHeightEm) - 0.01f);
+
+        /// <summary>
+        /// Coloca la placa (al enseñarla, o al cambiar de lienzo o de tablero con el rótulo a la vista) en el tramo de
+        /// <paramref name="left"/> a <paramref name="right"/> (dp desde la izquierda del lienzo), centrada en él. El tamaño del
+        /// texto es el mayor, hasta <see cref="PlateTextSp"/> sp, con el que la placa de una línea (<see cref="PlateHeightEm"/>
+        /// veces el texto) cabe entre <paramref name="top"/> y <paramref name="maxBottom"/> y a lo ancho del tramo, nunca menos de
+        /// 12 sp. Si ni a 12 sp cabe en una línea: con <paramref name="wrap"/>, va a lo ancho del tramo en varias, con la caja de
+        /// línea entera; sin él, no se coloca y devuelve false. Devuelve si la placa cabe: su borde de abajo no pasa de
+        /// <paramref name="maxBottom"/> (tarea FX4).
+        /// </summary>
+        public bool PlaceAsPlate(float left, float right, float top, float maxBottom, bool wrap)
         {
-            float maxWidth = Mathf.Max(0f, canvasW - (2f * SideDp));
+            float maxWidth = Mathf.Max(0f, right - left);
             float inner = Mathf.Max(0f, maxWidth - (2f * PlatePadXDp));
             string text = _plateText.text;
             float size = Mathf.Clamp(Mathf.Floor(maxBottom - top) / PlateHeightEm, _plateMinSize, _plateMaxSize);
@@ -258,14 +269,18 @@ namespace AF.UI
                 width = Mathf.Ceil(line) + (2f * PlatePadXDp);
                 height = Mathf.Ceil((size * PlateHeightEm) - 0.01f);
             }
-            else
+            else if (wrap)
             {
                 _plateText.textWrappingMode = TextWrappingModes.Normal;
                 width = maxWidth;
                 height = Mathf.Ceil(_plateText.GetPreferredValues(text, inner, float.PositiveInfinity).y);
             }
+            else
+            {
+                return false; // de lado, solo en una línea
+            }
 
-            SetRect((canvasW - width) * 0.5f, top, width, height);
+            SetRect(left + ((maxWidth - width) * 0.5f), top, width, height);
 
             // La caja del texto sobresale de la placa arriba y abajo (cabe la caja de línea entera, más alta que la placa) y la
             // tinta se centra por su geometría (Midline), no por la caja de línea.
@@ -274,6 +289,15 @@ namespace AF.UI
             rt.offsetMin = new Vector2(PlatePadXDp, -size);
             rt.offsetMax = new Vector2(-PlatePadXDp, size);
             return _rect.yMax <= maxBottom + 0.01f;
+        }
+
+        /// <summary>
+        /// Baja la placa ya colocada hasta <paramref name="top"/> (dp desde arriba), sin medir otra vez el texto: centrarla en el
+        /// hueco del muelle (tarea FX4).
+        /// </summary>
+        public void MovePlateTo(float top)
+        {
+            SetRect(_rect.x, top, _rect.width, _rect.height);
         }
 
         public void Hide()

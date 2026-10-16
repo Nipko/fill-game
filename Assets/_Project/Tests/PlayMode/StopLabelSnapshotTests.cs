@@ -16,9 +16,11 @@ namespace AF.Tests.PlayMode
     /// provisional de la parada) y <c>18b_stop_label_3filas</c> (el 131, 11 cuias en 3 filas: «El río frontera · Colombia y
     /// Perú» como placa bajo el HUD, con aire sobre las cuias de la fila 1), con el rótulo ya entrado; y, de la tarea FX4
     /// (observación 3 de la prueba de la ola 2 en el teléfono: la placa y la cuia elevada se rozaban),
-    /// <c>18c_stop_label_l171_muelle</c> (el 171: la Hoja de la cuia 1 no deja sitio sobre la fila 1, así que la placa va sobre
-    /// el muelle), <c>18d_stop_label_l171_elevada</c> (lo mismo con la cuia 0 elevada) y <c>18e_stop_label_l191</c> (el 191,
-    /// clavada al marco sobre la fila 1 en reposo, corchos incluidos). Sirven para mirar la
+    /// <c>18c_stop_label_l171</c> (el 171: la Hoja de la cuia 1 no deja sitio sobre toda la fila 1, así que la placa va a la
+    /// misma altura, de lado, sobre las cuias 2 y 3; revisión de FX4), <c>18d_stop_label_l171_elevada</c> (lo mismo con la cuia 0
+    /// elevada, que no está bajo la placa), <c>18e_stop_label_l191</c> (el 191, clavada al marco sobre la fila 1 en reposo,
+    /// corchos incluidos) y <c>18f_stop_label_l171_muelle</c> (el 171 solo con el muelle, la placa centrada en su hueco: el sitio
+    /// de reserva cuando ni de lado cabe). Sirven para mirar la
     /// legibilidad (crema con contorno, ≥ 4,5:1), los solapes con el HUD, el héroe y las cuias, y la línea de D-003. Cada captura
     /// escribe en el log su línea <c>AF_STOP_LABEL</c> con la sonda. Explícito: necesita gráficos (<c>unity test &lt;repo&gt;
     /// --mode PlayMode --filter AF.Tests.PlayMode.StopLabelSnapshotTests</c> sin <c>-nographics</c>); los PNG quedan en
@@ -38,6 +40,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             GameScreen.StopLabelsOverride = null;
+            GameScreen.StopLabelSpotsOverride = GameScreen.StopLabelSpot.All;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             SnapshotKit.Release();
@@ -47,16 +50,18 @@ namespace AF.Tests.PlayMode
         public IEnumerator CaptureStopLabels()
         {
             string dir = SnapshotKit.Prepare();
-            yield return Capture(dir, 31, "18_stop_label_l31", false);
-            yield return Capture(dir, 131, "18b_stop_label_3filas", true);
+            yield return Capture(dir, 31, "18_stop_label_l31", "horizon");
+            yield return Capture(dir, 131, "18b_stop_label_3filas", "plate");
             Assert.That(File.Exists(Path.Combine(dir, "18b_stop_label_3filas.png")), Is.True);
-            yield return Capture(dir, 171, "18c_stop_label_l171_muelle", true);
-            yield return Capture(dir, 171, "18d_stop_label_l171_elevada", true, true);
-            yield return Capture(dir, 191, "18e_stop_label_l191", true);
-            Assert.That(File.Exists(Path.Combine(dir, "18e_stop_label_l191.png")), Is.True);
+            yield return Capture(dir, 171, "18c_stop_label_l171", "plate_side");
+            yield return Capture(dir, 171, "18d_stop_label_l171_elevada", "plate_side", true);
+            yield return Capture(dir, 191, "18e_stop_label_l191", "plate");
+            GameScreen.StopLabelSpotsOverride = GameScreen.StopLabelSpot.Dock;
+            yield return Capture(dir, 171, "18f_stop_label_l171_muelle", "dock");
+            Assert.That(File.Exists(Path.Combine(dir, "18f_stop_label_l171_muelle.png")), Is.True);
         }
 
-        private static IEnumerator Capture(string dir, int level, string name, bool plate, bool liftCuia0 = false)
+        private static IEnumerator Capture(string dir, int level, string name, string mode, bool liftCuia0 = false)
         {
             GameScreen.SimulatedScreen = new Vector4(SnapshotKit.Width, SnapshotKit.Height, 96f, 48f);
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1240));
@@ -72,7 +77,7 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(view.StopLabelView.Visible, Is.True, name);
-            Assert.That(view.StopLabelView.OnPlate, Is.EqualTo(plate), name);
+            Assert.That(view.StopLabelMode, Is.EqualTo(mode), name);
             PlayModeHelpers.Step(boot, 400); // la entrada de 150 ms y las etiquetas del HUD ya apartadas
             Assert.That(view.StopLabelView.Alpha, Is.EqualTo(1f), name);
             if (liftCuia0)
@@ -80,7 +85,7 @@ namespace AF.Tests.PlayMode
                 boot.TapCuia(0);
                 PlayModeHelpers.Step(boot, 300);
                 Assert.That(view.Views[0].IsLifted, Is.True, name);
-                Assert.That(view.StopLabelView.Visible, Is.True, name + ": sobre el muelle sigue a la vista");
+                Assert.That(view.StopLabelView.Visible, Is.True, name + ": la cuia 0 no está bajo la placa: sigue a la vista");
             }
 
             yield return SnapshotKit.Wait(0.2f);
