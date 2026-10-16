@@ -42,7 +42,28 @@ namespace AF.Tests.EditMode
                 Throws.TypeOf<LevelFormatException>()
                     .With.Message.Contains("t: pack_schema 4 no admitido")
                     .And.Message.Contains("versiones 1 a 3")
-                    .And.Message.Contains("08 §4.4"));
+                    .And.Message.Contains("08 §4.4: hace falta una versión más nueva del juego"));
+        }
+
+        [TestCase(0)]
+        [TestCase(-1)]
+        public void Reader_RejectsPackSchemaBelow1_WithoutAskingForANewerGame(int schema)
+        {
+            // Un pack_schema menor que 1 es un paquete mal formado, no uno demasiado nuevo: el mensaje no pide actualizar el juego.
+            string? message = null;
+            try
+            {
+                LevelPackReader.Read(TestPacks.MinimalPack(null, "\"pack_schema\": " + schema.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            }
+            catch (LevelFormatException e)
+            {
+                message = e.Message;
+            }
+
+            Assert.That(message, Is.Not.Null);
+            Assert.That(message, Does.Contain("t: pack_schema " + schema.ToString(System.Globalization.CultureInfo.InvariantCulture) + " no admitido"));
+            Assert.That(message, Does.Contain("versiones 1 a 3"));
+            Assert.That(message, Does.Not.Contain("más nueva"));
         }
 
         [Test]

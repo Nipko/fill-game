@@ -137,9 +137,11 @@ namespace AF.Levels
                 int version = AsInt(schema, "pack_schema", where);
                 if (version < MinPackSchema || version > SupportedPackSchema)
                 {
+                    // Solo un pack_schema mayor pide un juego más nuevo (08 §4.4); uno menor que 1 es un paquete mal formado.
+                    string tail = version > SupportedPackSchema ? "; 08 §4.4: hace falta una versión más nueva del juego)." : ").";
                     throw new LevelFormatException(where + ": pack_schema " + version.ToString(CultureInfo.InvariantCulture)
                         + " no admitido (este cliente lee las versiones " + MinPackSchema.ToString(CultureInfo.InvariantCulture)
-                        + " a " + SupportedPackSchema.ToString(CultureInfo.InvariantCulture) + "; 08 §4.4: hace falta una versión más nueva del juego).");
+                        + " a " + SupportedPackSchema.ToString(CultureInfo.InvariantCulture) + tail);
                 }
 
                 return version;
