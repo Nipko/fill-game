@@ -6,7 +6,6 @@ using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.GameFlow;
 using AF.Levels;
-using AF.Localization;
 using AF.Presentation;
 using AF.Presentation.Mechanics;
 using UnityEngine;
@@ -628,8 +627,9 @@ namespace AF.UI
                 return;
             }
 
-            // El nombre en el idioma de la UI (D-018; tarea L1): el catálogo trae es, pt y en, y cae al español si falta.
-            string name = species.NameIn(UiText.FaunaLanguage(Loc.Locale));
+            // El nombre en el idioma de la UI, de la tabla de textos largos (D-018; tarea FX5: antes salía del catálogo tal cual
+            // y en en-XA no se pseudolocalizaba).
+            string name = UiText.FaunaName(species.NameKey);
             string fact = UiText.FaunaFact(species.FactKey);
             float height = _sighting.Measure(_canvasW, name, fact);
             float band = l.PanelY - BoardTop;

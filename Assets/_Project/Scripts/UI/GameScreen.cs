@@ -149,6 +149,10 @@ namespace AF.UI
         // Píldora «Reiniciar» que crece (tarea L4) [P]: aire a cada lado de su etiqueta, lo que puede salir del área de 60 dp
         // por la derecha (queda a 4 dp del borde) y el aire hasta la columna del saldo.
         private const float RestartPillPadDp = 4f;
+
+        // Aire más corto a cada lado de la etiqueta de «Reiniciar» cuando una palabra no cabe con RestartPillPadDp ni con la
+        // columna del saldo a su ancho mínimo (tarea FX5) [P].
+        private const float RestartPillTightPadDp = 2f;
         private const float RestartPillOutDp = 4f;
         internal const float RestartPillGapDp = 4f;
 
@@ -206,6 +210,7 @@ namespace AF.UI
         private readonly ReliefParts _restart;
         private readonly Image _restartPill;
         private readonly TextMeshProUGUI _restartLabel;
+        private float _restartPillLeft = float.NaN; // LayoutRestartPill (tarea FX5)
         private readonly BoosterTray _tray;
         private readonly RectTransform _liftFront;
         private readonly RectTransform _ambientNearParent;
@@ -1293,7 +1298,7 @@ namespace AF.UI
             _stuckAnim = 0f;
             ApplyStuckAnim(0f);
             SyncChrome();
-            _probe.Funnel("stuck_modal", RequireFlow());
+            _probe.Funnel("stuck_modal", RequireFlow(), _services?.StoreLedger, _stuckBalsaOk);
         }
 
         /// <inheritdoc />
@@ -1727,7 +1732,7 @@ namespace AF.UI
             if (_walletBar.Compact)
             {
                 float left = HudBadgeRight + 4f;
-                float right = _canvasW - 8f - 60f - 4f;
+                float right = RestartLimitDp;
                 float pill = WalletBar.CompactPillDp;
                 float gap = WalletBar.CompactGapDp;
                 float columnTop = TopRowY + 1f;
@@ -2386,9 +2391,15 @@ namespace AF.UI
         // Píldora «Reiniciar» al pie del disco (guía 3.5: 60 × 16 dp). Si su etiqueta (12 sp, el mínimo de 02 §12) no cabe en
         // una línea (otro idioma, en-XA o la fuente al 130 %; tarea L4), la píldora crece hacia la izquierda, sin pasar de la
         // columna del saldo (a RestartPillGapDp), y hasta RestartPillOutDp más allá del área por la derecha; si ni así cabe, la
-        // etiqueta va en dos líneas y la píldora crece hacia abajo, bajo la fila del HUD. Mide al colocar.
+        // etiqueta va en dos líneas y la píldora crece hacia abajo, bajo la fila del HUD. Nunca parte una palabra (prueba de la
+        // ola 3 en el teléfono: «Reinici / ar» al 130 %; tarea FX5): si una palabra de la etiqueta no cabe ni en ese ancho, la
+        // píldora crece hacia la izquierda lo que le falte a esa palabra y la columna del saldo se estrecha otro tanto
+        // (_restartPillLeft; LayoutWalletBar), sin bajar de WalletBar.CompactMinWidthDp, y si ni así cabe, con menos aire
+        // (RestartPillTightPadDp); la etiqueta, en una línea si así cabe entera y, si no, en dos, cortadas entre palabras. Si
+        // una palabra no cupiera ni así, se partiría: no pasa con es-419 ni con en-XA (Fx5Tests). Mide al colocar.
         private void LayoutRestartPill(float w)
         {
+            _restartPillLeft = float.NaN;
             float labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_restartLabel)) + (2f * RestartPillPadDp);
             if (labelW <= 60f)
             {
@@ -2409,11 +2420,49 @@ namespace AF.UI
                 return;
             }
 
-            SetRestartPillLines(true);
-            float inner = maxW - (2f * RestartPillPadDp);
+            float width = maxW;
+            float pad = RestartPillPadDp;
+            float wordInk = Mathf.Ceil(UiBuilder.LongestWordWidth(_restartLabel));
+            float wordW = wordInk + (2f * pad);
+            if (wordW > maxW)
+            {
+                // Lo más ancha que puede ir: hasta la columna del saldo a su ancho mínimo (y a RestartPillGapDp de ella). Si ni así
+                // cabe la palabra con su aire, el aire baja a RestartPillTightPadDp (en-XA al 130 % a 360 dp).
+                float capW = areaX + right - (walletLeft + _walletBar.CompactMinWidthDp + RestartPillGapDp);
+                if (wordW > capW)
+                {
+                    pad = RestartPillTightPadDp;
+                    wordW = wordInk + (2f * pad);
+                    labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_restartLabel)) + (2f * pad);
+                }
+
+                width = Mathf.Max(maxW, Mathf.Min(wordW, capW));
+                _restartPillLeft = areaX + right - Mathf.Min(width, labelW);
+                if (labelW <= width)
+                {
+                    SetRestartPillLines(false, pad);
+                    UiBuilder.Place(_restartPill.rectTransform, right - labelW, 32f, labelW, 16f);
+                    return;
+                }
+            }
+
+            SetRestartPillLines(true, pad);
+            float inner = width - (2f * pad);
             float h = Mathf.Max(16f, Mathf.Ceil(_restartLabel.GetPreferredValues(_restartLabel.text, inner, float.PositiveInfinity).y) + 1f);
-            UiBuilder.Place(_restartPill.rectTransform, right - maxW, 32f, maxW, h);
+            UiBuilder.Place(_restartPill.rectTransform, right - width, 32f, width, h);
         }
+
+        /// <summary>
+        /// Borde izquierdo de la píldora «Reiniciar» (dp desde la izquierda del lienzo) cuando estrecha la columna del saldo
+        /// (una palabra de su etiqueta no cabe en su área; tarea FX5); NaN si la columna va a su ancho de siempre.
+        /// </summary>
+        internal float RestartPillLeftDp => _restartPillLeft;
+
+        // Hasta dónde llega lo de la fila del HUD a la izquierda de Reiniciar (dp desde la izquierda del lienzo): 4 dp antes de
+        // su área (x = W − 68) o, si la píldora la estrecha, RestartPillGapDp antes de la píldora (tarea FX5).
+        private float RestartLimitDp => float.IsNaN(_restartPillLeft)
+            ? _canvasW - 8f - 60f - 4f
+            : Mathf.Min(_canvasW - 8f - 60f - 4f, _restartPillLeft - RestartPillGapDp);
 
         /// <summary>Píldora «Reiniciar» (tests de desbordes; tarea L4).</summary>
         internal RectTransform RestartPillRect => _restartPill.rectTransform;
@@ -2430,12 +2479,12 @@ namespace AF.UI
             ApplyScreenMetrics(false);
         }
 
-        private void SetRestartPillLines(bool two)
+        private void SetRestartPillLines(bool two, float pad = RestartPillPadDp)
         {
             _restartLabel.textWrappingMode = two ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
             _restartLabel.lineSpacing = two ? -20f : 0f;
-            _restartLabel.rectTransform.offsetMin = new Vector2(two ? RestartPillPadDp : 0f, 1f);
-            _restartLabel.rectTransform.offsetMax = new Vector2(two ? -RestartPillPadDp : 0f, 0f);
+            _restartLabel.rectTransform.offsetMin = new Vector2(two ? pad : 0f, 1f);
+            _restartLabel.rectTransform.offsetMax = new Vector2(two ? -pad : 0f, 0f);
         }
 
         private float BoardBottom => TrayTop - 40f;

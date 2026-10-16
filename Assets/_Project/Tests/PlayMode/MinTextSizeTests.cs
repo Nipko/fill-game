@@ -352,7 +352,7 @@ namespace AF.Tests.PlayMode
             int grown = 0;
             foreach (FaunaSpecies species in boot.Fauna!.Species)
             {
-                string name = species.NameIn("es");
+                string name = UiText.FaunaName(species.NameKey);
                 string fact = UiText.FaunaFact(species.FactKey);
                 float height = card.Measure(view.CanvasWidth, name, fact);
                 Assert.That(height, Is.GreaterThanOrEqualTo(SightingCard.HeightDp * scale - 0.05f), species.Id);

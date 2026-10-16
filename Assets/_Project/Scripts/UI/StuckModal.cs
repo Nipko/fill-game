@@ -150,6 +150,9 @@ namespace AF.UI
         /// <summary>Etiqueta de Balsa (tests de desbordes; tarea L4).</summary>
         internal TextMeshProUGUI BalsaLabel => _balsaLabel;
 
+        /// <summary>Línea «Todo para seguir: semillas, una cuia y canoas infinitas» bajo la Balsa (tests; tarea FX5).</summary>
+        internal TextMeshProUGUI BalsaNote => _balsaNote;
+
         /// <summary>Puñado de semillas.</summary>
         public Button HandfulButton => _handful.Button;
 
@@ -171,7 +174,11 @@ namespace AF.UI
         /// <summary>Precio que muestra el rescate (0 si no hay rescate).</summary>
         public int RescuePriceShown => _rescue.Button.gameObject.activeSelf ? _rescuePrice.Value : 0;
 
-        /// <summary>Botones visibles con su id para <c>AF_LAYOUT</c>.</summary>
+        /// <summary>
+        /// Botones visibles con su id para <c>AF_LAYOUT</c> y, tras <c>balsa</c>, la línea «Todo para seguir: …» de la Balsa
+        /// (<c>balsa_note</c>: un texto, no se toca), para comprobar en el teléfono que la Balsa sale con su contenido (prueba de la
+        /// ola 3: al 130 % faltaban las dos; tarea FX5).
+        /// </summary>
         public void VisibleButtons(List<string> ids, List<RectTransform> rects)
         {
             Add(ids, rects, "undo_modal", _undo.Button);
@@ -180,6 +187,12 @@ namespace AF.UI
             Add(ids, rects, "rescue", _rescue.Button);
             Add(ids, rects, "handful", _handful.Button);
             Add(ids, rects, "balsa", _balsa.Button);
+            if (_balsaNote.gameObject.activeInHierarchy)
+            {
+                ids.Add("balsa_note");
+                rects.Add(_balsaNote.rectTransform);
+            }
+
             Add(ids, rects, "restart_modal", _restart.Button);
             Add(ids, rects, "give_up", _giveUp);
         }

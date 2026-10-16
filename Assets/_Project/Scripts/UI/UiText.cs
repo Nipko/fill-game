@@ -465,18 +465,15 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Idioma del catálogo de fauna (<c>nombres</c> de <c>miquitos_v0.json</c>: <c>es</c>, <c>pt</c> o <c>en</c>) para el
-        /// idioma de la UI <paramref name="locale"/> (<see cref="Loc.Locale"/>): es-* → es, pt-* → pt y el resto (en, en-XA),
-        /// en. <c>FaunaSpecies.NameIn</c> cae al español si falta.
+        /// Nombre local de la especie de la tarjeta «¡Miquito a la vista!» para su clave <c>fauna.&lt;id&gt;.name</c>
+        /// (<c>FaunaSpecies.NameKey</c>), de la tabla de textos largos (<c>facts.csv</c>; <see cref="Loc.Fact(string)"/>; tarea
+        /// FX5): en el idioma de la UI y, en en-XA, pseudolocalizado como todo texto de las tablas. Cadena vacía si no hay, si
+        /// falta en el idioma o si no está aprobado en un build de release, como <see cref="FaunaFact"/>. Pendientes del asesor
+        /// cultural (07 §8.2). Sin asignaciones.
         /// </summary>
-        public static string FaunaLanguage(string locale)
+        public static string FaunaName(string key)
         {
-            if (LocLocale.HasLanguage(locale, "es"))
-            {
-                return "es";
-            }
-
-            return LocLocale.HasLanguage(locale, "pt") ? "pt" : "en";
+            return key == null ? string.Empty : Loc.Fact(key);
         }
 
         /// <summary>

@@ -447,11 +447,15 @@ namespace AF.UI
         /// <c>giveup_confirm</c>, <c>level_failed</c>, <c>no_canoes</c>, <c>rescue</c>, <c>rescue_check</c>, <c>extra_cuia</c>,
         /// <c>extra_cuia_gift</c>, <c>fail_hard</c>, <c>fail_hard_canoe</c>, <c>fail_soft</c> y <c>river_lowered</c>, siempre con
         /// semillas y canoas, <c>fails_level</c>, cuias añadidas, el resultado de «la compra cumple», el precio congelado y el
-        /// cupo y el stock de Marea.
+        /// cupo y el stock de Marea. Con <paramref name="ledger"/> (en <c>stuck_modal</c>), también si el modal ofrece la Balsa
+        /// de rescate (<c>balsa_ok</c>: <paramref name="balsaOk"/>, <c>balsa_ok</c> de 04 §6.2, congelado al abrir), sus
+        /// impresiones de hoy ya contada la de este modal (<c>balsa_shown_today</c>, contra <c>af_rescue_daily_cap</c>) y si está
+        /// oculta por rechazos (<c>balsa_hidden</c>): por qué falta la Balsa en el modal (prueba de la ola 3 en el teléfono; tarea
+        /// FX5).
         /// </summary>
-        public void Funnel(string evt, LevelFlow flow)
+        public void Funnel(string evt, LevelFlow flow, AF.IAP.StoreLedger? ledger = null, bool balsaOk = false)
         {
-            string? line = FormatFunnel(evt, flow);
+            string? line = FormatFunnel(evt, flow, ledger, balsaOk);
             if (line != null)
             {
                 Debug.Log(line);
@@ -459,7 +463,7 @@ namespace AF.UI
         }
 
         /// <summary>Texto de la línea de <see cref="Funnel"/>; null si la sonda no escribe o no hay nivel.</summary>
-        public string? FormatFunnel(string evt, LevelFlow flow)
+        public string? FormatFunnel(string evt, LevelFlow flow, AF.IAP.StoreLedger? ledger = null, bool balsaOk = false)
         {
             if (!Enabled || !flow.HasLevel)
             {
@@ -490,6 +494,13 @@ namespace AF.UI
             sb.Append(",\"undo_free\":").Append(undo.FreeLeft.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"undo_stock\":").Append(undo.Stock.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"extra_cuia_stock\":").Append((wallet?.Stock.Get(AF.Economy.BoosterKind.ExtraCuia) ?? 0).ToString(CultureInfo.InvariantCulture));
+            if (ledger != null)
+            {
+                sb.Append(",\"balsa_ok\":").Append(balsaOk ? "true" : "false");
+                sb.Append(",\"balsa_shown_today\":").Append(ledger.BalsaShownToday.ToString(CultureInfo.InvariantCulture));
+                sb.Append(",\"balsa_hidden\":").Append(ledger.BalsaHiddenUntil.HasValue ? "true" : "false");
+            }
+
             sb.Append('}');
             return sb.ToString();
         }

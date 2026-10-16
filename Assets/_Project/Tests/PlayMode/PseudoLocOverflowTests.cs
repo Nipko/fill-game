@@ -377,8 +377,8 @@ namespace AF.Tests.PlayMode
             BoosterTray tray = view.Tray;
             Assert.That(view.CanvasWidth, Is.EqualTo(360f).Within(0.5f), "lienzo de 360 dp de ancho");
 
-            // A 360 dp la palabra larga de «[Réíñíçíár ···]» no cabe en la píldora y se parte: pendiente del dueño
-            // (RestartPill_360_KnownIssues); aquí, lo demás.
+            // Al 130 %, «[Réíñíçíár» no cabe en el área: la píldora crece y estrecha la columna del saldo, sin partir la palabra
+            // (tarea FX5). Lo que sube la cuia al seleccionarla, aparte (RestartPill_360_KnownIssues).
             LongLabelSetup.AssertRestart(view, scale, 2, false);
             bool two = percent == 130;
             LongLabelSetup.AssertSlot(view, tray.UndoLabel, tray.UndoGlyph, scale, two ? 2 : 1, "Marea");
@@ -496,13 +496,13 @@ namespace AF.Tests.PlayMode
 
         /// <summary>
         /// Lo que la píldora «Reiniciar» no resuelve a 360 dp de ancho sin rediseño (revisión de L4; pendiente del dueño, ver la
-        /// entrega de L4): la columna del saldo llega hasta el área de Reiniciar, la píldora no puede crecer hacia la izquierda y
-        /// una palabra que no cabe en 56 dp se parte por dentro («[Réíñíçí / ár ···]» en en-XA; «Reiniciar» en es-419 al 130 %,
-        /// unos 64 dp); y en los tableros de 3 filas la píldora en dos líneas baja hasta el sitio al que sube la cuia de arriba a
-        /// la derecha al seleccionarla. Se deja escrito (explícito: hoy falla) para cuando el dueño decida.
+        /// entrega de L4): en los tableros de 3 filas la píldora en dos líneas («[Réíñíçíár ···]» en en-XA) baja hasta el sitio
+        /// al que sube la cuia de arriba a la derecha al seleccionarla. Las palabras partidas («Reinici / ar» en es-419 al 130 %)
+        /// ya no pasan: la píldora crece y estrecha la columna del saldo (tarea FX5); con el 100 (2 filas) y en es-419, este test
+        /// pasa. Se deja escrito (explícito: con en-XA en el 200, hoy falla) para cuando el dueño decida.
         /// </summary>
         [UnityTest]
-        [Explicit("Pendiente del dueño (revisión de L4): la píldora Reiniciar a 360 dp de ancho necesita rediseño; hoy falla.")]
+        [Explicit("Pendiente del dueño (revisión de L4): la píldora Reiniciar en dos líneas a 360 dp en 3 filas; hoy falla con en-XA en el 200.")]
         public IEnumerator RestartPill_360_KnownIssues([Values("en-XA", "es-419")] string locale, [Values(100, 200)] int level)
         {
             yield return LongLabelSetup.LoadLevel(level, locale, 1.3f, HudLabelTests.Screen780);
@@ -792,19 +792,8 @@ namespace AF.Tests.PlayMode
         /// <summary>Ninguna palabra partida por dentro: cada línea, salvo la última, acaba donde hay un espacio.</summary>
         public static void AssertNoBrokenWord(TMP_Text label, string what)
         {
-            TMP_TextInfo info = label.textInfo;
-            for (int i = 0; i < info.lineCount - 1; i++)
-            {
-                int last = info.lineInfo[i].lastCharacterIndex;
-                if (last < 0 || last + 1 >= info.characterCount)
-                {
-                    continue;
-                }
-
-                char end = info.characterInfo[last].character;
-                char next = info.characterInfo[last + 1].character;
-                Assert.That(char.IsWhiteSpace(end) || char.IsWhiteSpace(next), Is.True, what + ": «" + label.text + "» se parte por dentro de una palabra en la línea " + (i + 1));
-            }
+            int line = LocInventory.BrokenWordLine(label);
+            Assert.That(line, Is.EqualTo(0), what + ": «" + label.text + "» se parte por dentro de una palabra en la línea " + line);
         }
 
         /// <summary>La bandeja dentro de la pantalla, a <see cref="BoosterTray.TrayEdgeDp"/> de cada borde.</summary>
@@ -816,8 +805,9 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// La píldora «Reiniciar»: líneas, tamaño y etiqueta sin desborde; dentro de la pantalla; a <see cref="GameScreen.RestartPillGapDp"/>
-        /// o más de la columna del saldo; sin tapar las cuias (ni su sitio al subir) ni otros textos.
+        /// La píldora «Reiniciar»: líneas, tamaño y etiqueta sin desborde ni palabras partidas (tarea FX5); dentro de la pantalla; a
+        /// <see cref="GameScreen.RestartPillGapDp"/> o más de la columna del saldo; sin tapar las cuias (con <paramref name="strict"/>,
+        /// tampoco su sitio al subir) ni otros textos.
         /// </summary>
         public static void AssertRestart(GameScreen view, float scale, int lines, bool strict = true)
         {
@@ -826,10 +816,7 @@ namespace AF.Tests.PlayMode
             Assert.That(label.textInfo.lineCount, Is.EqualTo(lines), "Reiniciar: líneas de «" + label.text + "»");
             Assert.That(label.fontSize, Is.GreaterThanOrEqualTo((12f * scale) - 0.01f), "Reiniciar: 12 sp (× escala) o más");
             Assert.That(problems, Is.Empty, "Reiniciar: la etiqueta no se sale");
-            if (strict)
-            {
-                AssertNoBrokenWord(label, "Reiniciar");
-            }
+            AssertNoBrokenWord(label, "Reiniciar"); // nunca, tampoco sin strict (tarea FX5)
 
             Rect pill = DpRect(view.RestartPillRect, view.Hud);
             Rect ink = InkRect(label, view.Hud);

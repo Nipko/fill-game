@@ -270,7 +270,47 @@ namespace AF.Tests.PlayMode
                 problems.Add("sin corchetes (no viene de la tabla)");
             }
 
+            int broken = BrokenWordLine(text);
+            if (broken > 0)
+            {
+                problems.Add("se parte a media palabra en la línea " + broken.ToString(CultureInfo.InvariantCulture));
+            }
+
             return string.Join("; ", problems);
+        }
+
+        /// <summary>
+        /// Primera línea (desde 1) de <paramref name="text"/> que acaba por dentro de una palabra, o 0 si ninguna (prueba de la
+        /// ola 3 en el teléfono: «Reinici / ar» al 130 %; tarea FX5). Solo con el corte de líneas activado
+        /// (<see cref="TextWrappingModes.Normal"/> o <see cref="TextWrappingModes.PreserveWhitespace"/>): cada línea, salvo la
+        /// última, acaba en un espacio o un salto, o justo antes de uno, o tras un guion (los compuestos como
+        /// «sauim-de-coleira» se pueden cortar ahí). Lee <c>textInfo</c> tal como está: quien llama fuerza antes la malla.
+        /// </summary>
+        public static int BrokenWordLine(TMP_Text text)
+        {
+            if (text.textWrappingMode != TextWrappingModes.Normal && text.textWrappingMode != TextWrappingModes.PreserveWhitespace)
+            {
+                return 0;
+            }
+
+            TMP_TextInfo info = text.textInfo;
+            for (int i = 0; i < info.lineCount - 1; i++)
+            {
+                int last = info.lineInfo[i].lastCharacterIndex;
+                if (last < 0 || last + 1 >= info.characterCount)
+                {
+                    continue;
+                }
+
+                char end = info.characterInfo[last].character;
+                char next = info.characterInfo[last + 1].character;
+                if (!char.IsWhiteSpace(end) && !char.IsWhiteSpace(next) && end != '-' && end != '­' && end != '‐' && end != '​')
+                {
+                    return i + 1;
+                }
+            }
+
+            return 0;
         }
 
         // Ancho de la franja de texto de la cinta (dp) si el texto es la cifra de una cinta «×3»/«×4» («Ribbon/Value»); 0 si no.
