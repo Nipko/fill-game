@@ -26,12 +26,33 @@ namespace AF.GameFlow
         public static readonly int[] MechanicDebutLevels = { 14, 27, 43, 63, 83, 100, 103, 123, 143, 163, 183 };
 
         /// <summary>
-        /// Hitos con su propia presentación (02 §13: Marea 3, Reto del río 7, Cuia extra 8, Mercado 10, contador de Marea y
-        /// Cosecha doble 11, Morpho 12, Cántaro 20, animación corta 21, Pororoca 30, Canoas y Cuia de rescate 31) y todos los
-        /// estrenos de <see cref="MechanicDebutLevels"/> (D-007 y 04 §2.5: 14, 27, 43, 63, 83, 100, 103, 123, 143, 163 y 183),
-        /// en orden y sin repetidos. Se arma con <see cref="MechanicDebutLevels"/>: un estreno nuevo no puede quedarse fuera.
+        /// Estrenos de las variantes de la 1.0 con su tarjeta de estreno (02 §9.1, «Variantes» y lista única de estrenos; D-007,
+        /// propuesta de D-007 b.3; firma de <c>pack_schema</c> 3), en orden: Liana de cuenta 243 (<c>intro_mechanic</c>
+        /// <c>liana_n</c> [P]) y Hoja atada 283 (<c>hoja_atada</c>). El Brote de dos hojas (343) y la Flor (403) entran con su
+        /// cliente (tarea VA1b). Van aparte de <see cref="MechanicDebutLevels"/>, que sigue siendo la copia de los 11 estrenos de
+        /// 1-200 que usan los tests de los paquetes y de las capturas, pero cuentan igual como hitos (<see cref="MilestoneLevels"/>):
+        /// el nivel lleva su tarjeta de estreno y no comparte la de «¡Miquito a la vista!». La compara con
+        /// <c>tools/level-generator/specs/campaign_v2.json</c> un test (SightingRuleTests).
         /// </summary>
-        public static readonly int[] MilestoneLevels = SortedUnion(new[] { 3, 7, 8, 10, 11, 12, 20, 21, 30, 31 }, MechanicDebutLevels);
+        public static readonly int[] VariantDebutLevels = { 243, 283 };
+
+        /// <summary>
+        /// Hitos con su propia presentación (02 §13: Marea 3, Reto del río 7, Cuia extra 8, Mercado 10, contador de Marea y
+        /// Cosecha doble 11, Morpho 12, Cántaro 20, animación corta 21, Pororoca 30, Canoas y Cuia de rescate 31), todos los
+        /// estrenos de <see cref="MechanicDebutLevels"/> (D-007 y 04 §2.5: 14, 27, 43, 63, 83, 100, 103, 123, 143, 163 y 183) y
+        /// los de las variantes (<see cref="VariantDebutLevels"/>: 243 y 283), en orden y sin repetidos. Se arma con las dos
+        /// listas: un estreno nuevo no puede quedarse fuera.
+        /// </summary>
+        public static readonly int[] MilestoneLevels = SortedUnion(SortedUnion(new[] { 3, 7, 8, 10, 11, 12, 20, 21, 30, 31 }, MechanicDebutLevels), VariantDebutLevels);
+
+        /// <summary>
+        /// <paramref name="level"/> estrena una mecánica o una variante con su tarjeta de estreno (<see cref="MechanicDebutLevels"/>
+        /// o <see cref="VariantDebutLevels"/>).
+        /// </summary>
+        public static bool IsDebut(int level)
+        {
+            return Array.IndexOf(MechanicDebutLevels, level) >= 0 || Array.IndexOf(VariantDebutLevels, level) >= 0;
+        }
 
         /// <summary>El nivel ya tiene banner de mundo (<see cref="WorldBanners.ShowsOn"/>), Fruta nueva o un hito propio.</summary>
         public static bool IsBusy(int level)

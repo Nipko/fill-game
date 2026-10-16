@@ -1,7 +1,10 @@
 #nullable enable
+using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using AF.GameFlow;
 using AF.Levels;
+using AF.Levels.Json;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -13,6 +16,14 @@ namespace AF.Tests.EditMode
     /// </summary>
     public sealed class SightingRuleTests
     {
+        // Estrenos de variantes de campaign_v2 que el cliente aún no tiene: el Brote de dos hojas (343) y la Flor (403), de VA1b.
+        private static readonly int[] PendingVariantDebuts = { 343, 403 };
+
+        // Estreno de la Tinaja (D-019), que entra con TJ4 y C1b.
+        private const int PendingTinajaDebut = 323;
+
+        private static string CampaignV2Path => Path.Combine(Application.dataPath, "..", "tools", "level-generator", "specs", "campaign_v2.json");
+
         [Test]
         public void BusyLevels_AreTheCanonicalBannersDebutsAndMilestones()
         {
@@ -57,6 +68,124 @@ namespace AF.Tests.EditMode
 
             Assert.That(SightingRule.IsBusy(101), Is.False);
             Assert.That(SightingRule.IsBusy(164), Is.False);
+        }
+
+        /// <summary>
+        /// La lista de estrenos del cliente (VA1a) coincide con la especificación de la campaña 201-700
+        /// (<c>tools/level-generator/specs/campaign_v2.json</c>: <c>mechanics</c> con <c>variant_of</c> y su celda ★ del
+        /// calendario; 02 §9.1, lista única y «Variantes»): 243 Liana de cuenta (<c>liana_n</c>) y 283 Hoja atada
+        /// (<c>hoja_atada</c>) ya están en <see cref="SightingRule.VariantDebutLevels"/>; 343 y 403 entran con VA1b. Cada estreno
+        /// de variante es un hito: no lleva la tarjeta del miquito.
+        /// </summary>
+        [Test]
+        public void VariantDebuts_MatchCampaignV2()
+        {
+            JsonValue spec = JsonParser.Parse(File.ReadAllText(CampaignV2Path));
+            var variants = new SortedDictionary<int, string>();
+            var codes = new Dictionary<int, string>();
+            foreach (JsonValue m in spec.Get("mechanics")!.Items)
+            {
+                if (m.Has("variant_of"))
+                {
+                    int debut = m.Get("debut")!.AsInt();
+                    variants.Add(debut, m.Get("id")!.AsString());
+                    codes.Add(debut, m.Get("code")!.AsString());
+                }
+            }
+
+            var client = new SortedSet<int>(SightingRule.VariantDebutLevels);
+            Assert.That(client.Count, Is.EqualTo(SightingRule.VariantDebutLevels.Length), "sin repetidos");
+            Assert.That(SightingRule.VariantDebutLevels, Is.Ordered, "en orden");
+            foreach (int pending in PendingVariantDebuts)
+            {
+                Assert.That(client.Add(pending), Is.True, "el " + pending + " aún no está en el cliente (VA1b)");
+            }
+
+            Assert.That(client, Is.EqualTo(variants.Keys), "las variantes de campaign_v2 y las del cliente (más las de VA1b)");
+            Assert.That(variants[243], Is.EqualTo(LevelCardInfo.LianaCountIntro), "243: Liana de cuenta");
+            Assert.That(variants[283], Is.EqualTo(LevelCardInfo.HojaAtadaIntro), "283: Hoja atada");
+
+            JsonValue calendar = spec.Get("calendar")!;
+            foreach (int debut in SightingRule.VariantDebutLevels)
+            {
+                string cell = calendar.Get(debut.ToString(CultureInfo.InvariantCulture))!.AsString();
+                Assert.That(cell, Does.StartWith("★" + codes[debut]), "celda del calendario del " + debut + " (★ = estreno)");
+                Assert.That(SightingRule.IsDebut(debut), Is.True, "estreno del " + debut);
+                Assert.That(SightingRule.MilestoneLevels, Does.Contain(debut), "estreno del " + debut + " entre los hitos");
+                Assert.That(SightingRule.IsBusy(debut), Is.True, "el " + debut + " no lleva la tarjeta del miquito");
+                Assert.That(SightingRule.FirstFreeLevel(debut), Is.EqualTo(debut + 1), "la tarjeta del miquito pasa al " + (debut + 1));
+                Assert.That(SightingRule.MechanicDebutLevels, Has.No.Member(debut), "las variantes van en su lista");
+            }
+
+            Assert.That(SightingRule.IsDebut(244), Is.False);
+            Assert.That(SightingRule.IsBusy(284), Is.False);
+        }
+
+        /// <summary>
+        /// Los estrenos de mecánicas y capacidades del cliente (<see cref="SightingRule.MechanicDebutLevels"/>) son los de
+        /// <c>campaign_v2.json</c> (<c>mechanics</c> sin <c>variant_of</c> y el primero de cada capacidad, <c>chica</c> y
+        /// <c>alta</c>), salvo la Tinaja (323), que entra con TJ4 y C1b.
+        /// </summary>
+        [Test]
+        public void MechanicDebuts_MatchCampaignV2_WithTheTinajaPending()
+        {
+            JsonValue spec = JsonParser.Parse(File.ReadAllText(CampaignV2Path));
+            var expected = new SortedSet<int>();
+            foreach (JsonValue m in spec.Get("mechanics")!.Items)
+            {
+                if (!m.Has("variant_of"))
+                {
+                    expected.Add(m.Get("debut")!.AsInt());
+                }
+            }
+
+            var firstOfCapacity = new Dictionary<string, int>();
+            foreach (JsonValue c in spec.Get("capacities")!.Items)
+            {
+                string id = c.Get("id")!.AsString();
+                int debut = c.Get("debut")!.AsInt();
+                firstOfCapacity[id] = firstOfCapacity.TryGetValue(id, out int seen) ? System.Math.Min(seen, debut) : debut;
+            }
+
+            foreach (int debut in firstOfCapacity.Values)
+            {
+                expected.Add(debut);
+            }
+
+            var client = new SortedSet<int>(SightingRule.MechanicDebutLevels) { PendingTinajaDebut };
+            Assert.That(client, Is.EqualTo(expected), "estrenos de campaign_v2 (más la Tinaja, pendiente)");
+        }
+
+        /// <summary>
+        /// En el mundo 6 (201-300, <c>mundo_06_v1.json</c>, <c>pack_schema</c> 3) los niveles con <c>intro_mechanic</c> son
+        /// exactamente los estrenos de variantes de ese tramo, con su id, tienen tarjeta de estreno (02 §10) y no se saltan
+        /// (<c>skippable</c> = false: 04 §2.6, los estrenos no admiten el Salto del Boto).
+        /// </summary>
+        [Test]
+        public void World6Pack_DebutsAreTheVariantList_AndCannotBeSkipped()
+        {
+            LevelPack pack = LevelPackReader.Read(File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_06_v1.json")));
+            var debuts = new SortedDictionary<int, string>();
+            foreach (LevelDefinition level in pack.Levels)
+            {
+                if (level.IntroMechanic != null)
+                {
+                    debuts.Add(level.Level, level.IntroMechanic);
+                    Assert.That(level.Skippable, Is.False, "el estreno del " + level.Level + " no se salta");
+                    Assert.That(LevelCardInfo.Shows(level), Is.True, "el " + level.Level + " tiene tarjeta de estreno");
+                }
+            }
+
+            var expected = new SortedDictionary<int, string>
+            {
+                { 243, LevelCardInfo.LianaCountIntro },
+                { 283, LevelCardInfo.HojaAtadaIntro },
+            };
+            Assert.That(debuts, Is.EqualTo(expected), "estrenos del mundo 6");
+            foreach (int level in debuts.Keys)
+            {
+                Assert.That(SightingRule.VariantDebutLevels, Does.Contain(level));
+            }
         }
 
         [Test]

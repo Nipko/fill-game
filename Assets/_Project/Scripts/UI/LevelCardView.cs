@@ -27,7 +27,9 @@ namespace AF.UI
     /// del nivel, del Barro y de las Cuias chica y alta, cada uno en su ranura de madera clara (el del Matapi, en una de agua
     /// oscura, como en el tablero: <c>ProceduralArt.CardIconOnWater</c>).</description></item>
     /// <item><description>Estreno: el icono grande de la mecánica en su medallón (de agua oscura para el Matapi) y el texto del
-    /// tutorial.</description></item>
+    /// tutorial. También en los estrenos de las variantes de la 1.0 (<c>SightingRule.VariantDebutLevels</c>): la Liana de cuenta
+    /// (243), con la liana y sus cuentas, y la Hoja atada (283), con el cordel, el medallón y la hoja, cada una con su icono [P]
+    /// (VA1a).</description></item>
     /// <item><description>Las dos cosas (nivel 100): la de dificultad con el tutorial de Aguas turbias, que lleva la línea T4
     /// obligatoria, y la línea de la Luciérnaga (04 §2.5) con «+1 Luciérnaga».</description></item>
     /// </list>
@@ -718,6 +720,8 @@ namespace AF.UI
                 _bite?.Hide();
             }
 
+            // Las variantes (VA1a) llevan su propio icono [P] con su misma clave: lo elige ProceduralArt.CardHeroIcon (la Hoja
+            // atada, 283, y la Liana de cuenta, 243, con ProceduralArt.LianaCountIconKey).
             Sprite? heroIcon = card.Kind == LevelCardKind.Debut && !_biteOn ? _art.CardHeroIcon(intro) : null;
             bool hero = heroIcon != null;
             _medallion.gameObject.SetActive(hero);
