@@ -1,0 +1,8 @@
+{
+  "format": "af-curation-decisions/1",
+  "spec": "campaign_v2.json",
+  "decisions": [
+    { "level": 201, "cell": "R", "decision": "aceptar", "date": "2026-10-16" },
+    { "level": 244, "cell": "★Ln", "decision": "aceptar", "date": "2026-10-16" }
+  ]
+}

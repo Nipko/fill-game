@@ -30,7 +30,7 @@ const string Usage = """
       dotnet run --project tools/level-generator -- --registry <campaign.json> --out <registro.json> [--variant a|b] [--check]
       dotnet run --project tools/level-generator -- --parity [--report tools/out/parity_report.md]
       dotnet run --project tools/level-generator -- --seasons <campaign.json> [<campaign.json> ...] --out <tabla.json> [--until <nivel>] [--check]
-      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry]
+      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation]
       dotnet run --project tools/level-generator -- --help
 
     --validate-spec: comprueba la especificacion de la campana (specs/campaign_v1.json, 11-200, y campaign_v2.json,
@@ -66,7 +66,13 @@ const string Usage = """
       cambia las 19 celdas con la Tinaja), --validate-spec en verde en las dos y en campaign_v1, el registro de
       combinaciones (102 entradas en la a y 96 en la b, el versionado identico al regenerado), el hueco maximo de 34
       entre primeras veces, max_risk_pairs "libre", K = 13 en los hitos de 561-700, --seasons de v1 + v2 y los fixtures
-      negativos de P4. Desde la raiz del repositorio.
+      negativos de P4. "curation" (P7a): el archivo de decisiones del dueno (--decisions) y su uso en el informe de
+      curacion, con specs/curation_v2.json y los fixtures specs/tests/curation_*.json: los rechazos de la lectura (clave
+      desconocida, format, otra spec, cell, level no entero, <= 0 o fuera de la especificacion, decision fuera de la
+      lista, fecha, sustituir o cambiar la celda sin note y nivel repetido) y el codigo 2 de --spec con uno de ellos;
+      las filas de la tabla del dueno en 201-300 (sin generar tableros); el error por un nivel sin fila, el aviso por
+      otra celda y las decisiones fuera de --levels ignoradas; la ultima columna y el estado (pendiente, aceptada y
+      anotada, con cambios pedidos). Desde la raiz del repositorio.
       Codigos: 0 = todo PASS; 1 = algun FAIL; 2 = uso o especificacion ilegible.
     --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
       niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)
@@ -88,12 +94,13 @@ const string Usage = """
       del pool de cada rango de 03 sec. 11, asi que --check debe usar los mismos --levels. --variant: la variante de una
       especificacion con respaldos (por defecto la publicada; b = la salida B de D-019, sin la Tinaja). Con --check no escribe nada y compara
       byte a byte con los packs del disco. Los tiempos salen por consola; el informe no lleva tiempos. --curation
-      (P7a): informe de curacion para el dueno (09 sec. 2.1; tools/out/curation_wNN.md) con los retos e hitos, su
+      (P7a): informe de curacion para el dueno (09 sec. 0.1 y 0.3; tools/out/curation_wNN.md) con los retos e hitos, su
       etiqueta medida frente a la objetivo, los hitos uno a uno, los estrenos y la decision del dueno. --decisions
       (solo con --curation): archivo versionado de decisiones del dueno (formato [P] af-curation-decisions/1, p. ej.
       specs/curation_v2.json; {level, cell, decision, date, note}) que el informe copia en su ultima columna; sin el o
-      sin entrada para el nivel (o con otra celda), "pendiente". Codigo 2 si esta mal formado o decide un nivel del
-      rango que no es reto, hito ni primer tablero de estreno.
+      sin entrada para el nivel (o con otra celda), "pendiente". Codigo 2 si esta mal formado, decide un nivel fuera de
+      la especificacion o decide un nivel del rango que no es reto, hito ni primer tablero de estreno; las decisiones de
+      la especificacion fuera de --levels se ignoran (--self-test curation).
     Codigos de salida: 0 = correcto o ayuda; 1 = la generacion o las comprobaciones fallaron;
     2 = uso incorrecto (sin argumentos, faltan opciones, u opcion desconocida o repetida).
     """;
@@ -122,7 +129,13 @@ if (args.Length >= 1 && args[0] == "--self-test")
         int seasons = SeasonTableWriter.SelfTest();
         int variants = VariantsSelfTest.Run();
         int registry = RegistrySelfTest.Run();
-        return Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry));
+        int curationTest = CurationSelfTest.Run();
+        return Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), curationTest);
+    }
+
+    if (args.Length == 2 && args[1] == "curation")
+    {
+        return CurationSelfTest.Run();
     }
 
     if (args.Length == 2 && args[1] == "registry")
@@ -145,7 +158,7 @@ if (args.Length >= 1 && args[0] == "--self-test")
         return SeasonTableWriter.SelfTest();
     }
 
-    return UsageError("--self-test solo admite: tinaja, seasons, variants o registry.");
+    return UsageError("--self-test solo admite: tinaja, seasons, variants, registry o curation.");
 }
 
 if (args.Length >= 1 && args[0] == "--seasons")

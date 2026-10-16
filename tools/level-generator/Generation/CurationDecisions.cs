@@ -1,5 +1,6 @@
-// Decisiones del dueño sobre la curación de retos, hitos y estrenos (09 §2.1: «el dueño aprueba la curación de retos e hitos
-// de cada paquete»). Viven en un archivo versionado que no se genera (formato [P] af-curation-decisions/1, por ejemplo
+// Decisiones del dueño sobre la curación de retos, hitos y estrenos (09 §0.1, tabla de roles, fila de level-pipeline-dev: «El
+// dueño aprueba la curación de retos e hitos de cada paquete»; 09 §0.3, ritmo de trabajo: «propuesta de curación de los 30 retos
+// e hitos que aprueba el dueño»). Viven en un archivo versionado que no se genera (formato [P] af-curation-decisions/1, por ejemplo
 // specs/curation_v2.json para campaign_v2.json) y CurationReport las copia en la última columna del informe: así la decisión
 // sobrevive a cada regeneración de tools/out/curation_wNN.md, que no se edita a mano (.claude/rules/data-json.md).
 //
@@ -8,7 +9,9 @@
 //
 // "cell" es el literal de la celda del calendario que vio el dueño: si la celda cambia (otra variante o «cambiar la celda»),
 // la decisión deja de valer y el informe vuelve a «pendiente» con un aviso. «sustituir» y «cambiar la celda» llevan "note"
-// (el motivo). Un archivo cubre toda la especificación: las decisiones fuera de los --levels generados se ignoran.
+// (el motivo). Un archivo cubre toda la especificación: un nivel fuera de ella (su first_level-last_level) es un error, y las
+// decisiones de la especificación fuera de los --levels generados se ignoran. Lo prueba --self-test curation (CurationSelfTest,
+// con los fixtures specs/tests/curation_*.json).
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -34,8 +37,11 @@ internal sealed class CurationDecisions
 
     public required IReadOnlyDictionary<int, CurationDecision> ByLevel { get; init; }
 
-    /// <summary>Lee y valida el archivo; el nombre de "spec" debe coincidir con el de la especificación que se genera.</summary>
-    public static CurationDecisions Load(string path, string specPath)
+    /// <summary>
+    /// Lee y valida el archivo; el nombre de "spec" debe coincidir con el de la especificación que se genera y cada "level" debe
+    /// caer dentro de ella (<paramref name="firstLevel"/>-<paramref name="lastLevel"/>: su first_level-last_level).
+    /// </summary>
+    public static CurationDecisions Load(string path, string specPath, int firstLevel, int lastLevel)
     {
         JsonNode? node;
         try
@@ -96,6 +102,12 @@ internal sealed class CurationDecisions
             if (e["level"] is not JsonValue lv || !lv.TryGetValue(out int level) || level < 1)
             {
                 throw new CurationDecisionsException($"{where}: \"level\" debe ser un entero positivo");
+            }
+
+            if (level < firstLevel || level > lastLevel)
+            {
+                throw new CurationDecisionsException(string.Create(CultureInfo.InvariantCulture,
+                    $"{where}: nivel {level} fuera de la especificacion ({firstLevel}-{lastLevel})"));
             }
 
             string? cell = Text(e["cell"]);

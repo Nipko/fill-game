@@ -90,7 +90,7 @@ internal static class CampaignRunner
         {
             try
             {
-                decisions = CurationDecisions.Load(decisionsPath, specPath);
+                decisions = CurationDecisions.Load(decisionsPath, specPath, spec.FirstLevel, spec.LastLevel);
             }
             catch (CurationDecisionsException e)
             {

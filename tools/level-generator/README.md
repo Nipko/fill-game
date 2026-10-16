@@ -17,7 +17,7 @@ ejecuciones den los mismos bytes.
 | `--parity [--report <md>]` | Paridad de las métricas con el prototipo (03 §17-§18; 09 R26) | `tools/out/parity_report.md` |
 | `--spec <campaign.json> [--levels a-b] [--variant a\|b] --out <carpeta> [--report <md>] [--curation <md> [--decisions <json>]] [--check]` | Genera la campaña (03 §2); sin `--levels`, todos los niveles de la especificación; `--curation`, el informe de curación para el dueño (P7a), con su decisión de `--decisions` | `Assets/_Project/Data/Levels/mundo_0N_v1.json`, `tools/out/campaign_v1_report.md` y `tools/out/curation_wNN.md` |
 | `--seasons <campaign.json> [...] --out <tabla.json> [--until <nivel>] [--check]` | Tabla de temporada del cliente (pregunta 32 b), hasta el último nivel publicado | `Assets/_Project/Data/Levels/seasons_v1.json` |
-| `--self-test [tinaja\|seasons\|variants\|registry]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
+| `--self-test [tinaja\|seasons\|variants\|registry\|curation]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
 
@@ -323,11 +323,12 @@ Unos 5 minutos cada uno (en Release, con 24 hilos en el equipo de escritorio). E
 en C1a, que registra el pack en el cliente (se fusiona con P7a). Los packs 1-200 no cambian (`--check` de `campaign_v1.json` y
 del tutorial).
 
-### Informe de curación (`--curation`; 09 §2.1)
+### Informe de curación (`--curation`; 09 §0.1 y §0.3)
 
-`--curation <md>` escribe, con los mismos niveles colocados que el pack, la propuesta de curación que aprueba el dueño (09 §2.1
-y §2.2: los 30 retos e hitos de cada paquete; 03 §7: un reto por debajo de 0,75 se publica sin etiqueta y la curación decide si
-se sustituye por otro del pool del slot). `Generation/CurationReport.cs`; sin tiempos, así que dos ejecuciones dan los mismos
+`--curation <md>` escribe, con los mismos niveles colocados que el pack, la propuesta de curación que aprueba el dueño (09 §0.1,
+tabla de roles, fila de level-pipeline-dev: «El dueño aprueba la curación de retos e hitos de cada paquete»; 09 §0.3, ritmo de
+trabajo: «propuesta de curación de los 30 retos e hitos que aprueba el dueño»; 03 §7: un reto por debajo de 0,75 se publica sin
+etiqueta y la curación decide si se sustituye por otro del pool del slot). `Generation/CurationReport.cs`; sin tiempos, así que dos ejecuciones dan los mismos
 bytes. Secciones:
 
 - **Resumen**: pack, `pack_schema`, bytes y SHA-256; cuántos retos e hitos miden su etiqueta objetivo; los niveles para revisar.
@@ -353,8 +354,34 @@ versionado que no se genera, `specs/curation_v2.json` para `campaign_v2.json` (f
   `note` con el motivo.
 - `cell`: el literal de la celda del calendario que vio el dueño. Si la celda cambia (otra variante o «cambiar la celda»), la
   decisión deja de valer: el generador avisa por consola y el nivel vuelve a «pendiente».
-- Un archivo cubre toda la especificación (201-700): las entradas fuera de `--levels` se ignoran; una entrada de un nivel del
-  rango que no es reto, hito ni primer tablero de estreno, o un archivo mal formado, sale con código 2 antes de escribir nada.
+- Un archivo cubre toda la especificación (201-700): las entradas de la especificación fuera de `--levels` se ignoran; una
+  entrada de un nivel fuera de la especificación (por ejemplo el 200 o el 701 en `campaign_v2.json`), una de un nivel del rango
+  que no es reto, hito ni primer tablero de estreno, o un archivo mal formado, sale con código 2 antes de escribir nada.
+
+`--self-test curation` lo prueba sin generar tableros (`Generation/CurationSelfTest.cs`, con los niveles 201-300 de
+`campaign_v2.json` sintéticos: el plan de cada nivel con un slot vacío):
+
+```
+dotnet run --project tools/level-generator -c Release -- --self-test curation
+```
+
+- Rechazos de la lectura, cada uno con su mensaje y con un fixture en `specs/tests/`: clave desconocida en la raíz
+  (`curation_unknown_root_key.json`) y en una entrada (`curation_unknown_entry_key.json`), `format` erróneo
+  (`curation_bad_format.json`), otra `spec` (`curation_other_spec.json`), entrada sin `cell` (`curation_no_cell.json`), `level`
+  que no es entero o es ≤ 0 (`curation_level_string.json`, `curation_level_fraction.json` y `curation_level_zero.json`), fuera
+  de la especificación (`curation_level_below_spec.json`, 200, y `curation_level_above_spec.json`, 701), `decision` fuera de la
+  lista (`curation_bad_decision.json`), fecha inválida (`curation_bad_date.json`), «sustituir» y «cambiar la celda» sin `note`
+  (`curation_replace_without_note.json` y `curation_change_cell_without_note.json`) y nivel repetido
+  (`curation_repeated_level.json`); con el del nivel 200, `--spec ... --curation ... --decisions` sale con código 2 antes de
+  generar.
+- `specs/curation_v2.json` y `curation_valid.json` se leen; las filas de la tabla del dueño en 201-300 son los 30 retos e hitos
+  y los estrenos 243 y 283.
+- `CurationReport.Check`: error con un nivel del rango sin fila (`curation_not_a_row.json`: el 201, recuperación, y el 244,
+  segundo tablero del estreno), aviso con una decisión para otra celda (el 280 de `curation_valid.json`) y nada con un nivel
+  de la especificación fuera de los generados (su 450, o los del 201 y el 244 si se generan 301-320).
+- La última columna («aceptar (fecha)», «sustituir (fecha): nota» con «|» escapada y los saltos de línea aplanados, «pendiente»
+  y «pendiente (la decisión del … era para «…»)») y el estado: «pendiente (n de m niveles decididos)», «aceptada (m de m
+  niveles)» y «anotada, con cambios pedidos en …».
 
 La anota quien recoge la decisión del dueño (tech-lead) y se regenera el informe con el comando de arriba. Si la curación pide
 cambios, se cambian la especificación o el generador y se regeneran el pack, el informe y la comprobación de level-qa.

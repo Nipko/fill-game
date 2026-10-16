@@ -1,7 +1,8 @@
 // Informe de curación de un pack (P7a de la tanda 4; tools/out/curation_wNN.md): la propuesta de curación de los retos y los
-// hitos que aprueba el dueño (09 §2.1, fila de level-pipeline-dev: «el dueño aprueba la curación de retos e hitos de cada
-// paquete»; 09 §2.2: «propuesta de curación de los 30 retos e hitos que aprueba el dueño»; 03 §7: «un nivel en slot de reto
-// cuyo bot_fail quede por debajo de 0,75 se publica sin etiqueta y la curación decide si se sustituye por otro del pool»).
+// hitos que aprueba el dueño (09 §0.1, tabla de roles, fila de level-pipeline-dev: «El dueño aprueba la curación de retos e
+// hitos de cada paquete»; 09 §0.3, ritmo de trabajo: «propuesta de curación de los 30 retos e hitos que aprueba el dueño»;
+// 03 §7: «un nivel en slot de reto cuyo bot_fail quede por debajo de 0,75 se publica sin etiqueta y la curación decide si se
+// sustituye por otro del pool»). Lo prueba --self-test curation (CurationSelfTest).
 // Lo escribe --spec con --curation, con los mismos niveles colocados que el pack: retos e hitos con su etiqueta medida por
 // el bot ×40 frente a la objetivo (D-009), los hitos uno a uno, los tableros de estreno (02 §9.2 regla 2), las variantes de
 // la 1.0 (la sección de CampaignReport) y la tabla de la decisión del dueño. La decisión no se escribe en el informe (que es
@@ -21,7 +22,7 @@ namespace AmazonFill.Tools.LevelGenerator.Generation;
 
 internal static class CurationReport
 {
-    /// <summary>Decisión del dueño en un informe recién generado (09 §2.1).</summary>
+    /// <summary>Decisión del dueño en un informe recién generado (09 §0.1 y §0.3).</summary>
     public const string Pending = "pendiente";
 
     public static string Build(
@@ -51,9 +52,9 @@ internal static class CurationReport
             + (decisionsPath is null ? "`--decisions`, que aquí no se pasó" : "`" + decisionsPath + "`") + "). "
             + "Niveles del " + worlds + ".");
         W();
-        W("Fuentes: 09 §2.1 y §2.2 (el dueño aprueba la curación de los retos e hitos de cada paquete; propuesta de curación de los 30 "
-          + "retos e hitos), 03 §7 (un reto por debajo de 0,75 se publica sin etiqueta y la curación decide si se sustituye por otro del "
-          + "pool del slot; banda por el cuantil q de D en el pool del rango), D-009 (etiqueta por el bot ×40 con la semilla del nivel: "
+        W("Fuentes: 09 §0.1 (fila de level-pipeline-dev: el dueño aprueba la curación de retos e hitos de cada paquete) y §0.3 "
+          + "(propuesta de curación de los 30 retos e hitos que aprueba el dueño), 03 §7 (un reto por debajo de 0,75 se publica sin "
+          + "etiqueta y la curación decide si se sustituye por otro del pool del slot; banda por el cuantil q de D en el pool del rango), D-009 (etiqueta por el bot ×40 con la semilla del nivel: "
           + "Difícil ≥ 0,75 y Muy difícil ≥ 0,90; retos en p6, p9, p12, p15 y p18 e hito en p20; c.2: un reto o el hito fuera de su "
           + "ventana se publica con la etiqueta que mide), 03 §11-§12, 02 §9.2 regla 2 (estrenos) y la tabla de novedades de D2 "
           + "(d.5.3; D-023 punto 10). La columna «Propuesta» es [P]: la decide el dueño.");
@@ -192,14 +193,7 @@ internal static class CurationReport
         W("## Curación del dueño");
         W();
         List<GeneratedLevel> rows = Rows(levels);
-        List<GeneratedLevel> decided = rows.Where(l => Decision(l, decisions) is not null).ToList();
-        List<GeneratedLevel> changes = decided.Where(l => Decision(l, decisions)!.Decision != CurationDecisions.Accept).ToList();
-        string state = decided.Count < rows.Count
-            ? F($"**{Pending}** ({decided.Count} de {rows.Count} niveles decididos)")
-            : changes.Count == 0
-                ? F($"**aceptada** ({rows.Count} de {rows.Count} niveles)")
-                : "**anotada, con cambios pedidos** en " + string.Join(", ", changes.Select(l => l.Plan.Level.ToString(CultureInfo.InvariantCulture)));
-        W("Estado: " + state + " (09 §2.1). La decisión por nivel es «aceptar», «sustituir» (otro candidato del slot o del pool, 03 §7) o "
+        W("Estado: " + StateText(rows, decisions) + " (09 §0.1 y §0.3). La decisión por nivel es «aceptar», «sustituir» (otro candidato del slot o del pool, 03 §7) o "
             + "«cambiar la celda», con el motivo en los dos últimos casos. No se escribe en este informe, que es generado: va en "
             + (decisionsPath is null ? "el archivo de `--decisions` (formato [P] `" + CurationDecisions.Format + "`)" : "`" + decisionsPath + "`")
             + ", una entrada por nivel con el literal de la celda que vio el dueño, y la última columna la copia de ahí; si la celda cambia, "
@@ -228,7 +222,9 @@ internal static class CurationReport
 
     /// <summary>
     /// Decisiones de <paramref name="decisions"/> para niveles de <paramref name="levels"/> que no tienen fila en la tabla del dueño
-    /// (errores) y decisiones tomadas para otra celda (avisos: el nivel vuelve a «pendiente»). Mensajes en ASCII para la consola.
+    /// (errores) y decisiones tomadas para otra celda (avisos: el nivel vuelve a «pendiente»). Las de la especificación fuera de
+    /// los niveles generados se ignoran (las de fuera de la especificación ya las rechaza CurationDecisions.Load). Mensajes en
+    /// ASCII para la consola.
     /// </summary>
     public static (List<string> Errors, List<string> Stale) Check(CurationDecisions decisions, List<GeneratedLevel> levels)
     {
@@ -257,11 +253,27 @@ internal static class CurationReport
         return (errors, stale);
     }
 
+    /// <summary>
+    /// Estado de la curación del paquete sobre las filas de la tabla del dueño (<see cref="Rows"/>): «pendiente (n de m niveles
+    /// decididos)» mientras falte alguna decisión vigente, «aceptada» si todas aceptan y, si no, «anotada, con cambios pedidos en …».
+    /// </summary>
+    internal static string StateText(List<GeneratedLevel> rows, CurationDecisions? decisions)
+    {
+        List<GeneratedLevel> decided = rows.Where(l => Decision(l, decisions) is not null).ToList();
+        List<GeneratedLevel> changes = decided.Where(l => Decision(l, decisions)!.Decision != CurationDecisions.Accept).ToList();
+        return decided.Count < rows.Count
+            ? string.Create(CultureInfo.InvariantCulture, $"**{Pending}** ({decided.Count} de {rows.Count} niveles decididos)")
+            : changes.Count == 0
+                ? string.Create(CultureInfo.InvariantCulture, $"**aceptada** ({rows.Count} de {rows.Count} niveles)")
+                : "**anotada, con cambios pedidos** en " + string.Join(", ", changes.Select(l => l.Plan.Level.ToString(CultureInfo.InvariantCulture)));
+    }
+
     /// <summary>Decisión vigente del nivel: la del archivo, si existe y es para la celda actual.</summary>
     private static CurationDecision? Decision(GeneratedLevel l, CurationDecisions? decisions) =>
         decisions is not null && decisions.ByLevel.TryGetValue(l.Plan.Level, out CurationDecision? d) && d.Cell == l.Plan.Cell.Literal ? d : null;
 
-    private static string DecisionText(GeneratedLevel l, CurationDecisions? decisions)
+    /// <summary>Última columna de la tabla del dueño: la decisión vigente del nivel o «pendiente» (con la celda de la caducada).</summary>
+    internal static string DecisionText(GeneratedLevel l, CurationDecisions? decisions)
     {
         if (Decision(l, decisions) is CurationDecision d)
         {
