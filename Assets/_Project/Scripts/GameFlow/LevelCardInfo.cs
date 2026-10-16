@@ -27,6 +27,12 @@ namespace AF.GameFlow
     /// </summary>
     public sealed class LevelCardInfo
     {
+        /// <summary><c>intro_mechanic</c> del estreno de la Liana de cuenta (243; firma de <c>pack_schema</c> 3) [P].</summary>
+        public const string LianaCountIntro = "liana_n";
+
+        /// <summary><c>intro_mechanic</c> del estreno de la Hoja atada (283; firma de <c>pack_schema</c> 3).</summary>
+        public const string HojaAtadaIntro = "hoja_atada";
+
         private readonly int _mechanics;
 
         /// <summary>Crea la tarjeta (en el juego, <see cref="For"/>).</summary>
@@ -103,6 +109,12 @@ namespace AF.GameFlow
         /// <summary><c>intro_mechanic</c> que estrena este nivel (D-007: <c>chica</c>, <c>alta</c>, <c>hoja</c>…), o null.</summary>
         public string? IntroMechanic { get; }
 
+        /// <summary>
+        /// Clave del icono grande del estreno (<see cref="IntroIconKeyOf"/>): la de <see cref="IntroMechanic"/>, salvo en la Liana de
+        /// cuenta, que no es un tipo propio y lleva el de la Liana. Null sin estreno.
+        /// </summary>
+        public string? IntroIconKey => IntroIconKeyOf(IntroMechanic);
+
         /// <summary>Bit <c>(int)type</c> por cada mecánica que el nivel trae al empezar (para los iconos [P] de §c.1).</summary>
         public int MechanicMask => _mechanics;
 
@@ -132,6 +144,22 @@ namespace AF.GameFlow
         public bool HasMechanic(MechanicType type)
         {
             return type != MechanicType.None && MechanicTypes.IsDefined(type) && ((_mechanics >> (int)type) & 1) != 0;
+        }
+
+        /// <summary>
+        /// Clave del icono grande de la tarjeta del estreno <paramref name="introMechanic"/> (02 §9.1 y §10): la misma clave para
+        /// las mecánicas y las capacidades (<c>hoja</c>, <c>chica</c>…) y para la Hoja atada (<c>hoja_atada</c>, que es su propio
+        /// tipo, <see cref="MechanicType.HojaAtada"/>, con su propio icono); la Liana de cuenta (<c>liana_n</c> [P], 243) es la
+        /// Liana con <c>n</c>, así que lleva el icono de la Liana [P] y la distingue su texto. Null sin estreno.
+        /// </summary>
+        public static string? IntroIconKeyOf(string? introMechanic)
+        {
+            if (string.IsNullOrEmpty(introMechanic))
+            {
+                return null;
+            }
+
+            return string.Equals(introMechanic, LianaCountIntro, StringComparison.Ordinal) ? MechanicTypes.ToKey(MechanicType.Liana) : introMechanic;
         }
 
         /// <summary>El nivel tiene tarjeta previa: Difícil o Muy difícil, o estreno de una mecánica (02 §10; §c.1).</summary>
