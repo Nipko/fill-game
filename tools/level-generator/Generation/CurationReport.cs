@@ -1,10 +1,12 @@
 // Informe de curación de un pack (P7a de la tanda 4; tools/out/curation_wNN.md): la propuesta de curación de los retos y los
 // hitos que aprueba el dueño (09 §2.1, fila de level-pipeline-dev: «el dueño aprueba la curación de retos e hitos de cada
-// paquete»; 09 §2.2: «propuesta de curación de los 30 retos e hitos que aprueba el dueño»; 03 §3: «un nivel en slot de reto
+// paquete»; 09 §2.2: «propuesta de curación de los 30 retos e hitos que aprueba el dueño»; 03 §7: «un nivel en slot de reto
 // cuyo bot_fail quede por debajo de 0,75 se publica sin etiqueta y la curación decide si se sustituye por otro del pool»).
 // Lo escribe --spec con --curation, con los mismos niveles colocados que el pack: retos e hitos con su etiqueta medida por
 // el bot ×40 frente a la objetivo (D-009), los hitos uno a uno, los tableros de estreno (02 §9.2 regla 2), las variantes de
-// la 1.0 (la sección de CampaignReport) y la tabla de la decisión del dueño, que nace «pendiente».
+// la 1.0 (la sección de CampaignReport) y la tabla de la decisión del dueño. La decisión no se escribe en el informe (que es
+// generado): sale del archivo versionado de --decisions (CurationDecisions; p. ej. specs/curation_v2.json) y, sin él o sin
+// entrada para el nivel, es «pendiente».
 // Sin tiempos ni rutas absolutas (si se pasan relativas): dos ejecuciones dan los mismos bytes. La propuesta es [P]: la
 // decide el dueño.
 using System.Globalization;
@@ -24,7 +26,8 @@ internal static class CurationReport
 
     public static string Build(
         CampaignSpec spec, List<GeneratedLevel> levels, Dictionary<RangeInfo, RangeStats> stats,
-        List<(WorldInfo World, string Path, byte[] Bytes, int Levels)> packs, string levelsArg, string curationPath)
+        List<(WorldInfo World, string Path, byte[] Bytes, int Levels)> packs, string levelsArg, string curationPath,
+        CurationDecisions? decisions = null)
     {
         var sb = new StringBuilder();
         void W(string line = "") => sb.Append(line).Append('\n');
@@ -34,6 +37,8 @@ internal static class CurationReport
         string outDir = packs.Count == 0 ? "." : (Path.GetDirectoryName(packs[0].Path) ?? ".").Replace('\\', '/');
         string variantArg = spec.HasVariants ? F($" --variant {spec.Variant}") : "";
         string variantTitle = spec.HasVariants ? F($" (variante {spec.Variant})") : "";
+        string? decisionsPath = decisions?.Path.Replace('\\', '/');
+        string decisionsArg = decisionsPath is null ? "" : " --decisions " + decisionsPath;
         int first = levels.Min(l => l.Plan.Level);
         int last = levels.Max(l => l.Plan.Level);
         string worlds = string.Join(", ", levels.Select(l => l.Plan.World).Distinct().Select(w => F($"mundo {w.World} ({w.Name}, {w.First}-{w.Last})")));
@@ -41,15 +46,16 @@ internal static class CurationReport
 
         W(F($"# Curación de {first}-{last}{variantTitle}: retos, hitos y estrenos para el dueño"));
         W();
-        W(F($"Generado por `dotnet run --project tools/level-generator -c Release -- --spec {specPath} --levels {levelsArg}{variantArg} --out {outDir} --curation {curationPath.Replace('\\', '/')}` ")
-            + "con los mismos niveles colocados que el pack: no se edita a mano (salvo la columna del dueño, abajo) y no lleva tiempos. "
+        W(F($"Generado por `dotnet run --project tools/level-generator -c Release -- --spec {specPath} --levels {levelsArg}{variantArg} --out {outDir} --curation {curationPath.Replace('\\', '/')}{decisionsArg}` ")
+            + "con los mismos niveles colocados que el pack: no se edita a mano y no lleva tiempos (la decisión del dueño sale de "
+            + (decisionsPath is null ? "`--decisions`, que aquí no se pasó" : "`" + decisionsPath + "`") + "). "
             + "Niveles del " + worlds + ".");
         W();
         W("Fuentes: 09 §2.1 y §2.2 (el dueño aprueba la curación de los retos e hitos de cada paquete; propuesta de curación de los 30 "
-          + "retos e hitos), 03 §3 (un reto por debajo de 0,75 se publica sin etiqueta y la curación decide si se sustituye por otro del "
-          + "pool del slot), D-009 (etiqueta por el bot ×40 con la semilla del nivel: Difícil ≥ 0,75 y Muy difícil ≥ 0,90; retos en p6, "
-          + "p9, p12, p15 y p18 e hito en p20; c.2: un reto o el hito fuera de su ventana se publica con la etiqueta que mide), 03 §7 "
-          + "(banda por el cuantil q de D en el pool del rango), 03 §11-§12, 02 §9.2 regla 2 (estrenos) y la tabla de novedades de D2 "
+          + "retos e hitos), 03 §7 (un reto por debajo de 0,75 se publica sin etiqueta y la curación decide si se sustituye por otro del "
+          + "pool del slot; banda por el cuantil q de D en el pool del rango), D-009 (etiqueta por el bot ×40 con la semilla del nivel: "
+          + "Difícil ≥ 0,75 y Muy difícil ≥ 0,90; retos en p6, p9, p12, p15 y p18 e hito en p20; c.2: un reto o el hito fuera de su "
+          + "ventana se publica con la etiqueta que mide), 03 §11-§12, 02 §9.2 regla 2 (estrenos) y la tabla de novedades de D2 "
           + "(d.5.3; D-023 punto 10). La columna «Propuesta» es [P]: la decide el dueño.");
         W();
         W("Compuerta automática (verde antes de pedir la curación): `dotnet run --project tools/level-qa -c Release -- "
@@ -80,7 +86,7 @@ internal static class CurationReport
         List<GeneratedLevel> debuts = levels.Where(l => l.Plan.DebutBoard).ToList();
         if (debuts.Count > 0)
         {
-            W("- Estrenos: " + string.Join("; ", debuts.GroupBy(l => l.Plan.Cell.Short).Select(g => F($"{g.Key} en {string.Join(", ", g.Select(l => l.Plan.Level))}")))
+            W("- Estrenos: " + string.Join("; ", debuts.GroupBy(l => l.Plan.Cell.Literal).Select(g => F($"{g.Key} en {string.Join(", ", g.Select(l => l.Plan.Level))}")))
               + F($" ({debuts.Count(l => CampaignReport.DebutOk(l.Chosen!))} de {debuts.Count} con un ejemplar, 2 vacíos y bot_fail < 0,20)."));
         }
 
@@ -90,7 +96,7 @@ internal static class CurationReport
         W();
         W("Etiqueta = la que mide el bot ×40 y se publica (D-009); Objetivo = la de la celda (D) o (MD). q = cuantil de D en el pool del rango "
           + "(banda: recuperación ≤ 0,10, comodidad ≤ 0,70, reto ≤ 0,95, hito > 0,95). «Otros del slot» = candidatos medidos del mismo slot, "
-          + "sin rechazo, que miden la etiqueta objetivo o más: con ellos se puede sustituir el nivel al regenerar (03 §3), si la escalera del "
+          + "sin rechazo, que miden la etiqueta objetivo o más: con ellos se puede sustituir el nivel al regenerar (03 §7), si la escalera del "
           + "ciclo lo admite.");
         W();
         W("| Nivel | p | Rol | Calendario | K | Cuias | Vacíos (libres) | Par | bot_fail | Ventana | Etiqueta | Objetivo | D | q (banda) | Otros del slot | Propuesta [P] |");
@@ -100,7 +106,7 @@ internal static class CurationReport
             Candidate c = l.Chosen!;
             LevelPlan p = l.Plan;
             int band = Pool.BandIndex(c.Quantile);
-            W(F($"| {p.Level} | {p.Position} | {p.RoleName} | {p.Cell.Literal} | {c.K} | {c.Board.Caps.Length} | {c.Empties} ({c.FreeEmpties}) | {c.Par} | {c.Bot:0.000} | {p.Window} | {LabelName(c.MeasuredLabel)} | {LabelName(p.TargetLabel)} | {c.D:0.00} | {c.Quantile:0.000} ({Pool.BandName(band)}) | {Alternatives(l)} | {Proposal(l, stats)} |"));
+            W(F($"| {p.Level} | {p.Position} | {p.RoleName} | {p.Cell.Literal} | {c.K} | {c.Board.Caps.Length} | {c.Empties} ({c.FreeEmpties}) | {c.Par} | {c.Bot:0.000} | {p.Window} | {LabelName(c.MeasuredLabel)} | {LabelName(p.TargetLabel)} | {c.D:0.00} | {c.Quantile:0.000} ({BandText(band)}) | {Alternatives(l)} | {Proposal(l, stats)} |"));
         }
 
         // Hitos, uno a uno.
@@ -121,7 +127,7 @@ internal static class CurationReport
             W();
             W(F($"- Tablero: K {c.K}, {c.Board.Caps.Length} cuias ({CapsText(c.Board)}), {c.Empties} vacío(s) ({c.FreeEmpties} libre(s)); fuente `{c.Source}`."));
             W("- Mecánicas: " + MechanicsText(c) + ".");
-            W(F($"- Medida: par {c.Par} (2K = {2 * c.K}; par − 2K = {c.Par - (2 * c.K)}, media del pool {mean:0.0}), bot_fail {c.Bot:0.000} → {LabelName(c.MeasuredLabel)} (objetivo {LabelName(p.TargetLabel)}), D {c.D:0.00}, q {c.Quantile:0.000} (banda {Pool.BandName(band)}), ramificación {c.Branching:0.00}, trampas tempranas {c.EarlyTraps}."));
+            W(F($"- Medida: par {c.Par} (2K = {2 * c.K}; par − 2K = {c.Par - (2 * c.K)}, media del pool {mean:0.0}), bot_fail {c.Bot:0.000} → {LabelName(c.MeasuredLabel)} (objetivo {LabelName(p.TargetLabel)}), D {c.D:0.00}, q {c.Quantile:0.000} (banda {BandText(band)}), ramificación {c.Branching:0.00}, trampas tempranas {c.EarlyTraps}."));
             List<string> notes = Notes(l);
             if (notes.Count > 0)
             {
@@ -152,14 +158,14 @@ internal static class CurationReport
                         ? CampaignReport.VariantAttr(b.Attrs[i], b.Cuias[i].Length)
                         : AttrText(b.Attrs[i])));
                 string intro = l.Plan.Intro is null ? "—" : "`" + l.Plan.Intro + "`";
-                W(F($"| {l.Plan.Level} | {l.Plan.Position} | {l.Plan.Cell.Literal} | {intro} | {(attrs.Length == 0 ? "—" : attrs)} | {CampaignReport.Instances(b)} | {CampaignReport.Empties(b)} | {c.Par} | {c.Bot:0.000} | {c.D:0.00} | {c.Quantile:0.000} ({Pool.BandName(Pool.BandIndex(c.Quantile))}) | {(CampaignReport.DebutOk(c) ? "cumple" : "**no cumple**")} |"));
+                W(F($"| {l.Plan.Level} | {l.Plan.Position} | {l.Plan.Cell.Literal} | {intro} | {(attrs.Length == 0 ? "—" : attrs)} | {CampaignReport.Instances(b)} | {CampaignReport.Empties(b)} | {c.Par} | {c.Bot:0.000} | {c.D:0.00} | {c.Quantile:0.000} ({BandText(Pool.BandIndex(c.Quantile))}) | {(CampaignReport.DebutOk(c) ? "cumple" : "**no cumple**")} |"));
             }
         }
 
         // Variantes de la 1.0 (la misma sección que el informe de la generación).
         if (levels.Any(l => l.Plan.Mechanics.Any(m => MechanicCodes.Variants.Contains(m.Code))))
         {
-            CampaignReport.VariantsSection(spec, levels, W);
+            CampaignReport.VariantsSection(spec, levels, W, cell => cell.Literal);
         }
 
         // Otros niveles con notas.
@@ -177,7 +183,7 @@ internal static class CurationReport
             W("|---|---|---|---|");
             foreach (GeneratedLevel l in others)
             {
-                W(F($"| {l.Plan.Level} | {l.Plan.RoleName} | {l.Plan.Cell.Literal} | {string.Join("; ", Flags(l))} |"));
+                W(F($"| {l.Plan.Level} | {RoleText(l.Plan)} | {l.Plan.Cell.Literal} | {string.Join("; ", Flags(l))} |"));
             }
         }
 
@@ -185,25 +191,96 @@ internal static class CurationReport
         W();
         W("## Curación del dueño");
         W();
-        W("Estado: **" + Pending + "** (09 §2.1). El dueño anota en la última columna su decisión por nivel: «aceptar», «sustituir» (otro candidato "
-            + "del slot o del pool, 03 §3) o «cambiar la celda» (con el motivo). Esta columna es la única que se edita a mano y la decisión se "
-            + "repite en el PR, porque regenerar el informe la devuelve a «pendiente». Si la curación pide cambios, se cambian la especificación o "
-            + "el generador y se regeneran el pack, este informe y la comprobación de `level-qa`.");
+        List<GeneratedLevel> rows = Rows(levels);
+        List<GeneratedLevel> decided = rows.Where(l => Decision(l, decisions) is not null).ToList();
+        List<GeneratedLevel> changes = decided.Where(l => Decision(l, decisions)!.Decision != CurationDecisions.Accept).ToList();
+        string state = decided.Count < rows.Count
+            ? F($"**{Pending}** ({decided.Count} de {rows.Count} niveles decididos)")
+            : changes.Count == 0
+                ? F($"**aceptada** ({rows.Count} de {rows.Count} niveles)")
+                : "**anotada, con cambios pedidos** en " + string.Join(", ", changes.Select(l => l.Plan.Level.ToString(CultureInfo.InvariantCulture)));
+        W("Estado: " + state + " (09 §2.1). La decisión por nivel es «aceptar», «sustituir» (otro candidato del slot o del pool, 03 §7) o "
+            + "«cambiar la celda», con el motivo en los dos últimos casos. No se escribe en este informe, que es generado: va en "
+            + (decisionsPath is null ? "el archivo de `--decisions` (formato [P] `" + CurationDecisions.Format + "`)" : "`" + decisionsPath + "`")
+            + ", una entrada por nivel con el literal de la celda que vio el dueño, y la última columna la copia de ahí; si la celda cambia, "
+            + "la decisión deja de valer y el nivel vuelve a «pendiente». Si la curación pide cambios, se cambian la especificación o el "
+            + "generador y se regeneran el pack, este informe y la comprobación de `level-qa`.");
         W();
         W("| Nivel | Rol | Calendario | Etiqueta / objetivo | Propuesta [P] | Decisión del dueño |");
         W("|---|---|---|---|---|---|");
-        foreach (GeneratedLevel l in picks)
+        foreach (GeneratedLevel l in rows)
         {
-            W(F($"| {l.Plan.Level} | {l.Plan.RoleName} | {l.Plan.Cell.Literal} | {LabelName(l.Chosen!.MeasuredLabel)} / {LabelName(l.Plan.TargetLabel)} | {ShortProposal(l, stats)} | {Pending} |"));
-        }
-
-        foreach (GeneratedLevel l in debuts.Where(l => l.Plan.Intro is not null))
-        {
-            W(F($"| {l.Plan.Level} | estreno | {l.Plan.Cell.Literal} | {LabelName(l.Chosen!.MeasuredLabel)} / — | {(CampaignReport.DebutOk(l.Chosen!) ? "aceptar" : "revisar")} | {Pending} |"));
+            bool pick = l.Plan.Role is SlotRole.Challenge or SlotRole.Milestone;
+            string role = pick ? RoleText(l.Plan) : "estreno";
+            string target = pick ? LabelName(l.Plan.TargetLabel) : "—";
+            string proposal = pick ? ShortProposal(l, stats) : CampaignReport.DebutOk(l.Chosen!) ? "aceptar" : "revisar";
+            W(F($"| {l.Plan.Level} | {role} | {l.Plan.Cell.Literal} | {LabelName(l.Chosen!.MeasuredLabel)} / {target} | {proposal} | {DecisionText(l, decisions)} |"));
         }
 
         return sb.ToString();
     }
+
+    /// <summary>Filas de la tabla del dueño: retos e hitos y, después, el primer tablero de cada estreno (el que lleva intro_mechanic).</summary>
+    public static List<GeneratedLevel> Rows(List<GeneratedLevel> levels) =>
+        levels.Where(l => l.Plan.Role is SlotRole.Challenge or SlotRole.Milestone)
+            .Concat(levels.Where(l => l.Plan.DebutBoard && l.Plan.Intro is not null))
+            .ToList();
+
+    /// <summary>
+    /// Decisiones de <paramref name="decisions"/> para niveles de <paramref name="levels"/> que no tienen fila en la tabla del dueño
+    /// (errores) y decisiones tomadas para otra celda (avisos: el nivel vuelve a «pendiente»). Mensajes en ASCII para la consola.
+    /// </summary>
+    public static (List<string> Errors, List<string> Stale) Check(CurationDecisions decisions, List<GeneratedLevel> levels)
+    {
+        var errors = new List<string>();
+        var stale = new List<string>();
+        Dictionary<int, GeneratedLevel> rows = Rows(levels).ToDictionary(l => l.Plan.Level);
+        int first = levels.Min(l => l.Plan.Level);
+        int last = levels.Max(l => l.Plan.Level);
+        foreach (CurationDecision d in decisions.ByLevel.Values.OrderBy(d => d.Level))
+        {
+            if (d.Level < first || d.Level > last)
+            {
+                continue;
+            }
+
+            if (!rows.TryGetValue(d.Level, out GeneratedLevel? l))
+            {
+                errors.Add(string.Create(CultureInfo.InvariantCulture, $"decision del nivel {d.Level}, que no es reto, hito ni primer tablero de estreno"));
+            }
+            else if (d.Cell != l.Plan.Cell.Literal)
+            {
+                stale.Add(string.Create(CultureInfo.InvariantCulture, $"decision del nivel {d.Level} ({d.Date}) para la celda '{d.Cell}', que ahora es '{l.Plan.Cell.Literal}': vuelve a pendiente"));
+            }
+        }
+
+        return (errors, stale);
+    }
+
+    /// <summary>Decisión vigente del nivel: la del archivo, si existe y es para la celda actual.</summary>
+    private static CurationDecision? Decision(GeneratedLevel l, CurationDecisions? decisions) =>
+        decisions is not null && decisions.ByLevel.TryGetValue(l.Plan.Level, out CurationDecision? d) && d.Cell == l.Plan.Cell.Literal ? d : null;
+
+    private static string DecisionText(GeneratedLevel l, CurationDecisions? decisions)
+    {
+        if (Decision(l, decisions) is CurationDecision d)
+        {
+            return d.Decision + " (" + d.Date + ")" + (d.Note is null ? "" : ": " + MdCell(d.Note));
+        }
+
+        return decisions is not null && decisions.ByLevel.TryGetValue(l.Plan.Level, out CurationDecision? old)
+            ? Pending + " (la decisión del " + old.Date + " era para «" + MdCell(old.Cell) + "»)"
+            : Pending;
+    }
+
+    /// <summary>Texto libre dentro de una celda de tabla Markdown: sin saltos de línea y con «|» escapada.</summary>
+    private static string MdCell(string text) => text.Replace("\r", "").Replace('\n', ' ').Replace("|", "\\|");
+
+    /// <summary>Banda de D con tilde (el informe es UTF-8; Pool.BandName es ASCII para la consola y level-qa).</summary>
+    private static string BandText(int band) => band == 0 ? "recuperación" : Pool.BandName(band);
+
+    /// <summary>Rol con tilde (LevelPlan.RoleName es ASCII).</summary>
+    private static string RoleText(LevelPlan p) => p.RoleName == "recuperacion" ? "recuperación" : p.RoleName;
 
     /// <summary>Motivos de la propuesta: los que piden revisar y los que solo se anotan.</summary>
     private static (List<string> Review, List<string> Info) Reasons(GeneratedLevel l, Dictionary<RangeInfo, RangeStats> stats)
@@ -215,7 +292,7 @@ internal static class CurationReport
         var info = new List<string>();
         if (CampaignSpec.LabelRank(c.MeasuredLabel) < CampaignSpec.LabelRank(p.TargetLabel))
         {
-            review.Add(F($"mide {LabelName(c.MeasuredLabel)} (bot_fail {c.Bot:0.000}) y apunta a {LabelName(p.TargetLabel)}: se publica con la etiqueta que mide (c.2; 03 §3); aceptar así o sustituir"));
+            review.Add(F($"mide {LabelName(c.MeasuredLabel)} (bot_fail {c.Bot:0.000}) y apunta a {LabelName(p.TargetLabel)}: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir"));
             if (Alternatives(l) == "0")
             {
                 review.Add("ningún otro candidato del slot mide la etiqueta objetivo: sustituirlo pide más candidatos (otra ronda del generador) o cambiar la celda");
@@ -239,11 +316,11 @@ internal static class CurationReport
         int band = Pool.BandIndex(c.Quantile);
         if (p.Role == SlotRole.Milestone && band < 3 && CampaignSpec.LabelRank(c.MeasuredLabel) >= CampaignSpec.LabelRank(p.TargetLabel))
         {
-            info.Add(F($"D en banda {Pool.BandName(band)} (q {c.Quantile:0.000}), con el mínimo del hito cumplido: par − 2K = {c.Par - (2 * c.K)} ≥ {stats[p.Range].ParExcess.Mean:0.0} (aviso QA-BAND-Q)"));
+            info.Add(F($"D en banda {BandText(band)} (q {c.Quantile:0.000}), con el mínimo del hito cumplido: par − 2K = {c.Par - (2 * c.K)} ≥ {stats[p.Range].ParExcess.Mean:0.0} (aviso QA-BAND-Q)"));
         }
         else if (p.Role == SlotRole.Challenge && band < 2 && CampaignSpec.LabelRank(c.MeasuredLabel) >= CampaignSpec.LabelRank(p.TargetLabel))
         {
-            info.Add(F($"Difícil por el bot, con D en banda {Pool.BandName(band)} (q {c.Quantile:0.000})"));
+            info.Add(F($"Difícil por el bot, con D en banda {BandText(band)} (q {c.Quantile:0.000})"));
         }
 
         if (c.Murky)

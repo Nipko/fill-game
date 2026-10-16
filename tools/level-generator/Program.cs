@@ -25,7 +25,7 @@ const string Usage = """
 
     Uso:
       dotnet run --project tools/level-generator -- --handmade <spec.json> --out <carpeta> --report <informe.md> [--pour-mode run|single] [--check]
-      dotnet run --project tools/level-generator -c Release -- --spec <campaign.json> [--levels a-b] [--variant a|b] --out <carpeta> [--report <informe.md>] [--curation <informe.md>] [--check]
+      dotnet run --project tools/level-generator -c Release -- --spec <campaign.json> [--levels a-b] [--variant a|b] --out <carpeta> [--report <informe.md>] [--curation <informe.md> [--decisions <decisiones.json>]] [--check]
       dotnet run --project tools/level-generator -- --validate-spec <campaign.json>
       dotnet run --project tools/level-generator -- --registry <campaign.json> --out <registro.json> [--variant a|b] [--check]
       dotnet run --project tools/level-generator -- --parity [--report tools/out/parity_report.md]
@@ -89,7 +89,11 @@ const string Usage = """
       especificacion con respaldos (por defecto la publicada; b = la salida B de D-019, sin la Tinaja). Con --check no escribe nada y compara
       byte a byte con los packs del disco. Los tiempos salen por consola; el informe no lleva tiempos. --curation
       (P7a): informe de curacion para el dueno (09 sec. 2.1; tools/out/curation_wNN.md) con los retos e hitos, su
-      etiqueta medida frente a la objetivo, los hitos uno a uno, los estrenos y la decision del dueno ("pendiente").
+      etiqueta medida frente a la objetivo, los hitos uno a uno, los estrenos y la decision del dueno. --decisions
+      (solo con --curation): archivo versionado de decisiones del dueno (formato [P] af-curation-decisions/1, p. ej.
+      specs/curation_v2.json; {level, cell, decision, date, note}) que el informe copia en su ultima columna; sin el o
+      sin entrada para el nivel (o con otra celda), "pendiente". Codigo 2 si esta mal formado o decide un nivel del
+      rango que no es reto, hito ni primer tablero de estreno.
     Codigos de salida: 0 = correcto o ayuda; 1 = la generacion o las comprobaciones fallaron;
     2 = uso incorrecto (sin argumentos, faltan opciones, u opcion desconocida o repetida).
     """;
@@ -247,6 +251,7 @@ string? handmade = null;
 string? outDir = null;
 string? report = null;
 string? curation = null;
+string? decisionsArg = null;
 string? pourModeKey = null;
 string? levelsArg = null;
 string? variantArg = null;
@@ -273,6 +278,10 @@ for (int i = 0; i < args.Length; i++)
     else if (arg == "--curation" && i + 1 < args.Length && curation is null)
     {
         curation = args[++i];
+    }
+    else if (arg == "--decisions" && i + 1 < args.Length && decisionsArg is null)
+    {
+        decisionsArg = args[++i];
     }
     else if (arg == "--pour-mode" && i + 1 < args.Length && pourModeKey is null)
     {
@@ -303,9 +312,9 @@ if (handmade is not null)
         return UsageError("--handmade y --spec no se combinan.");
     }
 
-    if (variantArg is not null || levelsArg is not null || curation is not null)
+    if (variantArg is not null || levelsArg is not null || curation is not null || decisionsArg is not null)
     {
-        return UsageError("--variant, --levels y --curation solo valen con --spec.");
+        return UsageError("--variant, --levels, --curation y --decisions solo valen con --spec.");
     }
 
     if (outDir is null || report is null)
@@ -332,6 +341,11 @@ if (variantArg is not null && spec is null)
     return UsageError("--variant solo vale con --spec o --registry.");
 }
 
+if (decisionsArg is not null && curation is null)
+{
+    return UsageError("--decisions solo vale con --curation.");
+}
+
 if (pourModeKey is not null)
 {
     return UsageError("--pour-mode solo vale con --handmade (la campana se genera en run, D-005).");
@@ -342,7 +356,7 @@ if (spec is null || outDir is null)
     return UsageError(spec is null ? "falta --spec (o --handmade)." : "falta --out.");
 }
 
-return CampaignRunner.Run(spec, levelsArg, outDir, report, check, variantArg, curation);
+return CampaignRunner.Run(spec, levelsArg, outDir, report, check, variantArg, curation, decisionsArg);
 
 static int UsageError(string message)
 {

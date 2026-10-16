@@ -15,7 +15,7 @@ ejecuciones den los mismos bytes.
 | `--validate-spec <campaign.json>` | Comprueba la especificación de la campaña (11-200 y 201-700, esta en sus dos variantes) | Resumen ASCII por ciclo |
 | `--registry <campaign.json> --out <registro.json> [--variant a\|b] [--check]` | Registro de combinaciones publicadas (d.5.6; P4) | `tools/level-generator/specs/combinations_registry_v1.json` |
 | `--parity [--report <md>]` | Paridad de las métricas con el prototipo (03 §17-§18; 09 R26) | `tools/out/parity_report.md` |
-| `--spec <campaign.json> [--levels a-b] [--variant a\|b] --out <carpeta> [--report <md>] [--curation <md>] [--check]` | Genera la campaña (03 §2); sin `--levels`, todos los niveles de la especificación; `--curation`, el informe de curación para el dueño (P7a) | `Assets/_Project/Data/Levels/mundo_0N_v1.json`, `tools/out/campaign_v1_report.md` y `tools/out/curation_wNN.md` |
+| `--spec <campaign.json> [--levels a-b] [--variant a\|b] --out <carpeta> [--report <md>] [--curation <md> [--decisions <json>]] [--check]` | Genera la campaña (03 §2); sin `--levels`, todos los niveles de la especificación; `--curation`, el informe de curación para el dueño (P7a), con su decisión de `--decisions` | `Assets/_Project/Data/Levels/mundo_0N_v1.json`, `tools/out/campaign_v1_report.md` y `tools/out/curation_wNN.md` |
 | `--seasons <campaign.json> [...] --out <tabla.json> [--until <nivel>] [--check]` | Tabla de temporada del cliente (pregunta 32 b), hasta el último nivel publicado | `Assets/_Project/Data/Levels/seasons_v1.json` |
 | `--self-test [tinaja\|seasons\|variants\|registry]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
@@ -313,7 +313,7 @@ Tinaja, que no sale antes del 323), con los estrenos de la Liana de cuenta (243-
 reproduce con `--levels 201-300` (lo mismo en `--check` y en level-qa).
 
 ```
-dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --out Assets/_Project/Data/Levels --curation tools/out/curation_w06.md
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --out Assets/_Project/Data/Levels --curation tools/out/curation_w06.md --decisions tools/level-generator/specs/curation_v2.json
 dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 201-300 --out Assets/_Project/Data/Levels --check
 dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_06_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 201-300
 dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json tools/level-generator/specs/campaign_v2.json --until 300 --out Assets/_Project/Data/Levels/seasons_v1.json --check
@@ -326,7 +326,7 @@ del tutorial).
 ### Informe de curación (`--curation`; 09 §2.1)
 
 `--curation <md>` escribe, con los mismos niveles colocados que el pack, la propuesta de curación que aprueba el dueño (09 §2.1
-y §2.2: los 30 retos e hitos de cada paquete; 03 §3: un reto por debajo de 0,75 se publica sin etiqueta y la curación decide si
+y §2.2: los 30 retos e hitos de cada paquete; 03 §7: un reto por debajo de 0,75 se publica sin etiqueta y la curación decide si
 se sustituye por otro del pool del slot). `Generation/CurationReport.cs`; sin tiempos, así que dos ejecuciones dan los mismos
 bytes. Secciones:
 
@@ -338,9 +338,26 @@ bytes. Secciones:
   de las Aguas turbias).
 - **Hitos**, uno a uno: tablero, mecánicas (con las Aguas turbias y sus realidades), medida y notas de la generación.
 - **Tableros de estreno** (02 §9.2 regla 2) y la sección **Variantes de la 1.0** del informe de la generación.
-- **Otros niveles con avisos** y la tabla **Curación del dueño**, que nace «pendiente»: el dueño anota su decisión por nivel en
-  la última columna (la única que se edita a mano) y la repite en el PR, porque regenerar la devuelve a «pendiente». Si la
-  curación pide cambios, se regeneran el pack, el informe y la comprobación de level-qa.
+- **Otros niveles con avisos** y la tabla **Curación del dueño** (retos, hitos y el primer tablero de cada estreno), con la
+  decisión de cada nivel copiada de `--decisions` y su estado (pendiente, aceptada o con cambios pedidos).
+
+El informe es generado y no se edita a mano (ni siquiera la columna del dueño). La decisión del dueño vive en un archivo
+versionado que no se genera, `specs/curation_v2.json` para `campaign_v2.json` (formato [P] `af-curation-decisions/1`;
+`Generation/CurationDecisions.cs`), con una entrada por nivel decidido:
+
+```json
+{ "level": 246, "cell": "Ma+Re (D)", "decision": "aceptar", "date": "2026-10-16" }
+```
+
+- `decision`: «aceptar», «sustituir» (otro candidato del slot o del pool, 03 §7) o «cambiar la celda»; las dos últimas llevan
+  `note` con el motivo.
+- `cell`: el literal de la celda del calendario que vio el dueño. Si la celda cambia (otra variante o «cambiar la celda»), la
+  decisión deja de valer: el generador avisa por consola y el nivel vuelve a «pendiente».
+- Un archivo cubre toda la especificación (201-700): las entradas fuera de `--levels` se ignoran; una entrada de un nivel del
+  rango que no es reto, hito ni primer tablero de estreno, o un archivo mal formado, sale con código 2 antes de escribir nada.
+
+La anota quien recoge la decisión del dueño (tech-lead) y se regenera el informe con el comando de arriba. Si la curación pide
+cambios, se cambian la especificación o el generador y se regeneran el pack, el informe y la comprobación de level-qa.
 
 `tools/out/curation_w06.md` es el del mundo 6; P7b-P7d escriben `curation_w07.md` a `curation_w09.md`.
 

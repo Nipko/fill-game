@@ -504,11 +504,13 @@ internal static class CampaignReport
     /// Sección de las variantes de la 1.0 (P5; 02 §9.1; b.3): cuántos niveles y ejemplares lleva cada una, sus estrenos y, por
     /// nivel, sus campos, los vacíos (cuias de capacidad ≥ 4 vacías, como QA-DEBUT) y el bot_fail. Las celdas con una variante
     /// que se publicaran sin ella van al final (el generador nunca quita lo que pide la celda).
+    /// <paramref name="cellText"/>: cómo se escribe la celda (por defecto CalendarCell.Short; el informe de curación usa el literal).
     /// </summary>
-    internal static void VariantsSection(CampaignSpec spec, List<GeneratedLevel> levels, Action<string> w)
+    internal static void VariantsSection(CampaignSpec spec, List<GeneratedLevel> levels, Action<string> w, Func<CalendarCell, string>? cellText = null)
     {
         void W(string line = "") => w(line);
         string F(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
+        Func<CalendarCell, string> cellOf = cellText ?? (cell => cell.Short);
         W();
         W("## Variantes de la 1.0");
         W();
@@ -544,7 +546,7 @@ internal static class CampaignReport
             string attrs = string.Join("; ", Enumerable.Range(0, b.Attrs.Length)
                 .Where(i => MechanicCodes.CodeOf(b.Attrs[i]) is string c && MechanicCodes.Variants.Contains(c))
                 .Select(i => VariantAttr(b.Attrs[i], b.Cuias[i].Length)));
-            W(F($"| {l.Plan.Level} | {l.Plan.Position} | {l.Plan.RoleName} | {l.Plan.Cell.Short} | {attrs} | {Instances(b)} | {Empties(b)} | {l.Chosen!.Bot:0.000} |"));
+            W(F($"| {l.Plan.Level} | {l.Plan.Position} | {l.Plan.RoleName} | {cellOf(l.Plan.Cell)} | {attrs} | {Instances(b)} | {Empties(b)} | {l.Chosen!.Bot:0.000} |"));
         }
 
         List<GeneratedLevel> dropped = levels.Where(l => l.Plan.Mechanics.Any(m => MechanicCodes.Variants.Contains(m.Code))
