@@ -479,7 +479,7 @@ internal static class CampaignReport
     /// el contenido) o un attr con ese código (MechanicCodes.CodeOf: la Liana de cuenta es Ln y no Li; el Brote de dos hojas, B2
     /// y no Br).
     /// </summary>
-    internal static bool Has(BoardData b, string code) => code switch
+    private static bool Has(BoardData b, string code) => code switch
     {
         "Tu" => b.Hidden.Any(h => b.Attrs[h[0]].Type != MechanicType.Tinaja),
         "Ba" => b.Cuias.Any(c => c.Contains(Cuia.MudColor)),
@@ -576,7 +576,7 @@ internal static class CampaignReport
         Enumerable.Range(0, b.Cuias.Length).Count(i => b.Cuias[i].Length == 0 && b.Caps[i] >= Cuia.DefaultCapacity
             && b.Attrs[i].Type is not (MechanicType.Tinaja or MechanicType.Cucharon));
 
-    internal static string CycleName(CampaignSpec spec, LevelPlan p)
+    private static string CycleName(CampaignSpec spec, LevelPlan p)
     {
         if (p.Ramp)
         {

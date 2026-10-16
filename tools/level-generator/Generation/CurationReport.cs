@@ -61,7 +61,11 @@ internal static class CurationReport
         W();
         W("Compuerta automática (verde antes de pedir la curación): `dotnet run --project tools/level-qa -c Release -- "
           + string.Join(" ", packs.Select(p => p.Path.Replace('\\', '/')))
-          + F($" --spec {specPath} --levels {levelsArg}`. Sus avisos QA-WINDOW (fuera de la ventana del slot) y QA-BAND-Q (fuera de la banda del rol) son los niveles con «revisar» o con nota de banda de este informe."));
+          + F($" --spec {specPath} --levels {levelsArg}`. ")
+          + "Cada reto o hito con aviso QA-WINDOW (bot_fail fuera de la ventana del slot) sale aquí como «revisar», y cada "
+          + "hito con aviso QA-BAND-Q (fuera de la banda de hito con el mínimo cumplido), como «revisar» o con nota de banda; los avisos "
+          + "QA-BAND-Q de las recuperaciones no entran en este informe. QA-BAND-Q no mira los retos y level-qa no mira risk_adjacent: las notas "
+          + "de banda de los retos y los «revisar» por risk_adjacent salen solo de este informe.");
         W();
 
         // Resumen.
@@ -114,8 +118,9 @@ internal static class CurationReport
         W();
         W("## Hitos");
         W();
-        W("p20 de cada ciclo («Pico» de c.3): Muy difícil por el bot (≥ 0,90) y, por D, en banda de hito o, como mínimo, con par − 2K ≥ la "
-          + "media del pool del rango (03 §7; QA-BAND-Q). Los nombres de hito de la celda son [P] y pasan por el asesor (D-023 punto 21): no van "
+        W("p20 de cada ciclo («Pico» de c.3): Muy difícil por el bot (≥ 0,90; D-009) y, por D, en banda de hito (q > 0,95; 03 §7) o, como "
+          + "mínimo, con par − 2K ≥ la media del pool del rango (criterio [P] del generador y de level-qa, revisión del 2026-10-09; README "
+          + "del generador; QA-BAND-Q). Los nombres de hito de la celda son [P] y pasan por el asesor (D-023 punto 21): no van "
           + "al pack.");
         foreach (GeneratedLevel l in picks.Where(l => l.Plan.Role == SlotRole.Milestone))
         {
