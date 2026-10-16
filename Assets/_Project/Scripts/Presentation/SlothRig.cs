@@ -17,7 +17,7 @@ namespace AF.Presentation
         /// <summary><c>sloth_wake</c>: abre los ojos, estira un brazo hacia la rama de arriba y gira la cabeza hacia ti (2 s).</summary>
         Wake = 1,
 
-        /// <summary><c>sloth_wave</c>: levanta despacio una garra desde la rama, nunca hacia la cámara (0,8 s).</summary>
+        /// <summary><c>sloth_wave</c>: levanta despacio una garra desde la rama, hacia fuera y nunca hacia la cámara (0,8 s).</summary>
         Wave = 2,
 
         /// <summary><c>sloth_present</c>: ladea la cabeza hacia la instrucción y la señala con la garra (0,6 s y reposo).</summary>
@@ -106,7 +106,7 @@ namespace AF.Presentation
         /// <summary>Punto fijo del balanceo y de la vuelta: la mano que agarra la rama.</summary>
         public Vector2 BodyPivot;
 
-        /// <summary>Hojas que caen (0, 4 o 6).</summary>
+        /// <summary>Hojas que caen (0, 4 o 6; con 6 se apartan del torso: <c>SlothRig.LeafAt(pose, …)</c>).</summary>
         public int Leaves;
 
         /// <summary>Fase de la caída de las hojas (0..1, un bucle).</summary>
@@ -125,7 +125,8 @@ namespace AF.Presentation
     /// hacia la cámara (c.5, puntos 7 y 8). Sin raycast: nunca bloquea un toque.
     /// </summary>
     /// <remarks>
-    /// <para>Solo en desarrollo: sin el PNG de <see cref="ProceduralArt.SlothPartsSlot"/>, <see cref="ProceduralArt.SlothRigArt()"/>
+    /// <para>Solo en desarrollo: sin el PNG de <see cref="ProceduralArt.SlothPartsSlot"/> o sin el de su rama
+    /// (<see cref="ProceduralArt.SlothBranchSlot"/>: nunca cuelga de nada, c.4), <see cref="ProceduralArt.SlothRigArt()"/>
     /// devuelve null fuera del Editor y de los builds de desarrollo (<see cref="MapArtRule"/>; 07 §6.4) y <see cref="Create"/> no
     /// crea nada. Perezoso: nada existe hasta que alguien lo pide.</para>
     /// <para>Con Reducir movimiento (07 §7.8; c.6), cada pose se sustituye por su fotograma de reposo, quieto, con un fundido de
@@ -188,6 +189,13 @@ namespace AF.Presentation
         /// <summary>Respiración lenta de <c>sloth_sunbathe</c> y <c>sloth_sleep</c>: 4 s [P].</summary>
         public const float RestLoopMs = 4000f;
 
+        /// <summary>
+        /// En <c>sloth_cheer_big</c>, distancia mínima (S) entre el centro de cada hoja y el eje del torso, también a media
+        /// vuelta: la media cabeza (ladeada hasta 10°) más la media hoja girada (√2 · 0,1) y un margen. Las hojas enmarcan al
+        /// perezoso y nunca le tapan la cara ni el espéculo [P].
+        /// </summary>
+        public const float LeafClearanceS = 0.44f;
+
         private static readonly string[] s_ids =
         {
             "sloth_idle", "sloth_wake", "sloth_wave", "sloth_present", "sloth_cheer", "sloth_cheer_big", "sloth_encourage",
@@ -204,14 +212,28 @@ namespace AF.Presentation
         // Centro de la rama: el punto fijo del balanceo de sloth_encourage y del vaivén de sloth_cheer.
         private static readonly Vector2 BranchCenter = new Vector2(0f, 0.02f);
 
-        // La garra que saluda (apenas suelta la rama, 0,08 S por encima del agarre) y la que celebra (bien alta, sobre la cabeza
-        // y la rama): siluetas distintas para gestos distintos.
-        private static readonly Vector2 WaveHand = new Vector2(0.30f, 0.10f);
+        // La garra que saluda (hacia fuera: 0,18 S de lado y 0,14 S por encima del agarre), la que celebra (bien alta, sobre la
+        // cabeza y la rama) y la que presenta (abajo y de lado): hacia fuera, arriba y abajo, siluetas distintas para gestos
+        // distintos.
+        private static readonly Vector2 WaveHand = new Vector2(0.40f, 0.16f);
         private static readonly Vector2 CheerHand = new Vector2(0.10f, 0.22f);
+        private static readonly Vector2 PresentHand = new Vector2(0.52f, -0.30f);
+
+        // Giro lento de la garra al saludar: ±10° alrededor del hombro, dos medios ciclos en los 0,8 s (primero hacia fuera).
+        private const float WaveWristDeg = 10f;
+
+        // sloth_encourage: balanceo de ±8° que se apaga como (1 − u)^0,5, cabezada de 0,07 S con 6° más de ladeo en cada una, y
+        // en reposo la cabeza ladeada 12° y 0,03 S más baja (lo mismo con Reducir movimiento).
+        private const float EncourageSwingDeg = 8f;
+        private const float EncourageNodS = 0.07f;
+        private const float EncourageNodDeg = 6f;
+        private const float EncourageTiltDeg = 12f;
+        private const float EncourageDropS = 0.03f;
 
         // Columnas de las hojas a lo largo de la rama (S), sus desfases en el bucle: las 4 de sloth_cheer, por fuera del cuerpo,
-        // y las 2 de más de sloth_cheer_big.
-        private static readonly float[] s_leafX = { -0.46f, 0.42f, -0.62f, 0.58f, -0.34f, 0.30f };
+        // y las 2 de más de sloth_cheer_big, también por fuera. En la grande, además, se apartan del eje del torso
+        // (LeafClearanceS), que se mueve con la vuelta.
+        private static readonly float[] s_leafX = { -0.46f, 0.42f, -0.62f, 0.58f, -0.54f, 0.66f };
         private static readonly float[] s_leafOffset = { 0f, 0.35f, 0.6f, 0.15f, 0.8f, 0.45f };
 
         private readonly RectTransform _root;
@@ -500,7 +522,7 @@ namespace AF.Presentation
                 float leafAlpha = 0f;
                 if (on)
                 {
-                    LeafAt(i, pose.LeafPhase, out Vector2 at, out float angle, out leafAlpha);
+                    LeafAt(pose, i, out Vector2 at, out float angle, out leafAlpha);
                     Set(leaf.rectTransform, at * s, leaf.rectTransform.sizeDelta, angle);
                     on = leafAlpha > 0.001f;
                 }
@@ -598,6 +620,39 @@ namespace AF.Presentation
             alpha = Mathf.Clamp01(p / 0.1f) * Mathf.Clamp01((1f - p) / 0.25f);
         }
 
+        /// <summary>
+        /// Hoja <paramref name="index"/> de <paramref name="pose"/> en la raíz del rig (S): la de
+        /// <see cref="LeafAt(int, float, out Vector2, out float, out float)"/> en su fase y, en <c>sloth_cheer_big</c>
+        /// (<see cref="LeafCount"/> hojas), apartada del eje del torso al menos <see cref="LeafClearanceS"/>, cada una por su lado
+        /// de la rama: a media vuelta el cuerpo se va a la izquierda y las hojas de ese lado se apartan con él, sin taparle la
+        /// cara ni el espéculo. Sin asignaciones.
+        /// </summary>
+        public static void LeafAt(in SlothPose pose, int index, out Vector2 position, out float angle, out float alpha)
+        {
+            LeafAt(index, pose.LeafPhase, out position, out angle, out alpha);
+            if (pose.Leaves < LeafCount)
+            {
+                return; // sloth_cheer: las 4 de siempre
+            }
+
+            float axis = BodyToRoot(pose, pose.TorsoCenter).x;
+            position.x = s_leafX[index] < 0f ? Mathf.Min(position.x, axis - LeafClearanceS) : Mathf.Max(position.x, axis + LeafClearanceS);
+        }
+
+        /// <summary>
+        /// Un punto del cuerpo de <paramref name="pose"/> (S) en la raíz del rig: T(p) = P + R · E · (p − P), con el giro
+        /// <see cref="SlothPose.BodyAngle"/> y la escala <see cref="SlothPose.BodySpin"/> alrededor de <see cref="SlothPose.BodyPivot"/>.
+        /// </summary>
+        public static Vector2 BodyToRoot(in SlothPose pose, Vector2 local)
+        {
+            Vector2 d = local - pose.BodyPivot;
+            d.x *= pose.BodySpin;
+            float a = pose.BodyAngle * Mathf.Deg2Rad;
+            float c = Mathf.Cos(a);
+            float s = Mathf.Sin(a);
+            return pose.BodyPivot + new Vector2((c * d.x) - (s * d.y), (s * d.x) + (c * d.y));
+        }
+
         // Fotograma de reposo de cada pose (Reducir movimiento): lo que dice la pose sin moverse.
         private static SlothPose Still(SlothPoseId pose)
         {
@@ -611,7 +666,8 @@ namespace AF.Presentation
                 case SlothPoseId.Encourage:
                 {
                     SlothPose p = Hang(1f);
-                    p.HeadAngle = 6f; // te mira con la cabeza ladeada
+                    p.HeadAngle = EncourageTiltDeg; // te mira con la cabeza ladeada, como en el reposo de la pose
+                    p.HeadCenter.y -= EncourageDropS;
                     return p;
                 }
 
@@ -715,8 +771,9 @@ namespace AF.Presentation
             return p;
         }
 
-        // sloth_wave (0,8 s): la garra de delante se suelta despacio de la rama, apenas 0,08 S por encima del agarre y nunca
-        // hacia la cámara (c.5, punto 8), y vuelve; la cabeza te mira de frente.
+        // sloth_wave (0,8 s): la garra de delante se suelta despacio de la rama hacia fuera (0,18 S de lado y 0,14 S por encima
+        // del agarre en lo más alto, a 0,4 s) y nunca hacia la cámara (c.5, punto 8), con un giro lento de ±10° alrededor del
+        // hombro (hacia fuera al subir, hacia dentro al volver), y vuelve; la cabeza te mira de frente.
         private static SlothPose Wave(float ms)
         {
             SlothPose p = Hang(Breath(ms, IdleLoopMs));
@@ -724,7 +781,12 @@ namespace AF.Presentation
             p.HeadTurn = 0f;
             if (ms < WaveMs)
             {
-                p.FrontArmTo = Vector2.Lerp(FrontGrip, WaveHand, Mathf.Sin(Mathf.PI * ms / WaveMs));
+                float u = ms / WaveMs;
+                Vector2 hand = Vector2.Lerp(FrontGrip, WaveHand, Mathf.Sin(Mathf.PI * u)) - p.FrontArmFrom;
+                float a = -WaveWristDeg * Mathf.Sin(2f * Mathf.PI * u) * Mathf.Deg2Rad;
+                float c = Mathf.Cos(a);
+                float s = Mathf.Sin(a);
+                p.FrontArmTo = p.FrontArmFrom + new Vector2((c * hand.x) - (s * hand.y), (s * hand.x) + (c * hand.y));
             }
 
             return p;
@@ -736,7 +798,7 @@ namespace AF.Presentation
         {
             SlothPose p = Hang(breathe);
             p.HeadAngle = -12f * e;
-            p.FrontArmTo = Vector2.Lerp(FrontGrip, new Vector2(0.52f, -0.30f), e);
+            p.FrontArmTo = Vector2.Lerp(FrontGrip, PresentHand, e);
             return p;
         }
 
@@ -751,7 +813,8 @@ namespace AF.Presentation
 
         // sloth_cheer / sloth_cheer_big: entrada de 0,3 s (la garra sube) y bucle de 1,2 s (vaivén, balanceo y hojas que caen);
         // la grande da una vuelta colgado de la mano de detrás en el primer bucle (suelta los pies, que cuelgan, y a media vuelta
-        // enseña el lomo con el espéculo; la cabeza te sigue mirando, como el giro real de c.6) y suelta 6 hojas.
+        // enseña el lomo con el espéculo; la cabeza te sigue mirando, como el giro real de c.6) y suelta 6 hojas, que se
+        // apartan del eje del torso mientras gira (LeafAt con la pose): lo enmarcan, nunca le tapan la cara ni el espéculo.
         private static SlothPose Cheer(float ms, bool big)
         {
             float loop = ms < CheerEntryMs ? 0f : Mod(ms - CheerEntryMs, CheerLoopMs) / CheerLoopMs;
@@ -776,32 +839,38 @@ namespace AF.Presentation
             return p;
         }
 
-        // sloth_encourage (0,8 s): se balancea suave en la rama (±5° alrededor de su centro, que se apaga) y asiente dos veces,
-        // mirándote; después, en reposo con la cabeza ladeada.
+        // sloth_encourage (0,8 s): se balancea en la rama (±8° alrededor de su centro, que se apaga como (1 − u)^0,5: ≈ 7° a
+        // 0,2 s) y asiente dos veces (0,07 S y 6° más de ladeo en cada cabezada), mirándote; después, en reposo con la cabeza
+        // ladeada 12° y 0,03 S más baja.
         private static SlothPose Encourage(float ms)
         {
             SlothPose p = Hang(Breath(ms, IdleLoopMs));
-            p.HeadAngle = 6f * Ease(ms / 200f);
+            float settle = Ease(ms / 200f);
+            p.HeadAngle = EncourageTiltDeg * settle;
+            p.HeadCenter.y -= EncourageDropS * settle;
             p.BodyPivot = BranchCenter;
             if (ms < EncourageMs)
             {
                 float u = ms / EncourageMs;
-                p.BodyAngle = 5f * Mathf.Sin(2f * Mathf.PI * u) * (1f - u);
-                p.HeadCenter.y -= 0.035f * Mathf.Abs(Mathf.Sin(2f * Mathf.PI * u));
+                float nod = Mathf.Abs(Mathf.Sin(2f * Mathf.PI * u));
+                p.BodyAngle = EncourageSwingDeg * Mathf.Sin(2f * Mathf.PI * u) * Mathf.Sqrt(1f - u);
+                p.HeadCenter.y -= EncourageNodS * nod;
+                p.HeadAngle += EncourageNodDeg * nod;
             }
 
             return p;
         }
 
-        // sloth_look (1 s): la cabeza gira casi tres cuartos de vuelta hacia un lado (giro de 40° y la pieza estrechada) y vuelve.
+        // sloth_look (1 s): la cabeza gira casi tres cuartos de vuelta hacia un lado (la pieza estrechada hasta el 68 % y solo
+        // 20° de ladeo, para que se lea como un giro y no como una inclinación) y vuelve.
         private static SlothPose Look(float ms)
         {
             SlothPose p = Hang(Breath(ms, IdleLoopMs));
             if (ms < LookMs)
             {
                 float b = Ease(Mathf.Sin(Mathf.PI * ms / LookMs));
-                p.HeadAngle = 40f * b;
-                p.HeadTurn = 0.6f * b;
+                p.HeadAngle = 20f * b;
+                p.HeadTurn = 0.8f * b;
             }
 
             return p;

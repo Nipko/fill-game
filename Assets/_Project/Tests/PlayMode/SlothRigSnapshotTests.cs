@@ -30,10 +30,11 @@ namespace AF.Tests.PlayMode
         private const float WidthDp = 360f;
 
         // Instante de cada pose en la captura (ms), en el que se ve su rasgo propio: idle en reposo; wake aún dormido (ojos
-        // cerrados y la cabeza caída 14°); wave con la garra suelta; present señalando; cheer con la garra alta y sus 4 hojas;
-        // cheer_big a media vuelta (BodySpin = −1: de espaldas, con el espéculo) y sus 6 hojas; encourage en lo más hondo del
-        // balanceo y la cabezada; look girando la cabeza; y los dos bucles en su inicio.
-        private static readonly float[] PoseMs = { 0f, 300f, 400f, 600f, 700f, 900f, 600f, 500f, 0f, 0f };
+        // cerrados y la cabeza caída 14°); wave con la garra en lo más alto, hacia fuera; present señalando; cheer con la garra
+        // alta y sus 4 hojas; cheer_big a media vuelta (BodySpin = −1: de espaldas, con el espéculo) y sus 6 hojas, que lo
+        // enmarcan; encourage en lo más hondo del balanceo y de la primera cabezada (u = 0,25); look girando la cabeza; y los
+        // dos bucles en su inicio.
+        private static readonly float[] PoseMs = { 0f, 300f, 400f, 600f, 700f, 900f, 200f, 500f, 0f, 0f };
 
         // Los tamaños de c.4; los pequeños (72, 64 y 48 dp: Mapa del río, victoria y Nivel fallido) dos veces, sobre el panel y
         // sobre la selva clara, el peor contraste del pelaje.

@@ -25,7 +25,8 @@ namespace AF.Presentation
 
         /// <summary>
         /// Torso de espaldas, el lomo con el velo de algas y el espéculo del macho (c.4 y c.5, punto 6): las poses que dan la
-        /// espalda (<c>sloth_sleep</c>, en ovillo).
+        /// espalda (<c>sloth_sleep</c>, en ovillo, y <c>sloth_cheer_big</c>, a media vuelta). Celda [P]: segunda fila, segunda
+        /// columna.
         /// </summary>
         public Sprite TorsoBack { get; internal set; } = null!;
 
@@ -39,8 +40,8 @@ namespace AF.Presentation
         public Sprite Leaf { get; internal set; } = null!;
 
         /// <summary>
-        /// La rama (<c>arbol_embauba</c> o la provisional); null si no hay ni PNG ni provisional permitido: entonces el rig no
-        /// pinta la rama.
+        /// La rama (<c>arbol_embauba</c> o la provisional). Lo que entrega <see cref="ProceduralArt.SlothRigArt()"/> siempre la
+        /// lleva: sin rama no hay perezoso (c.4: su rama entra con él, nunca cuelga de un botón, de una cuia ni de una tarjeta).
         /// </summary>
         public Sprite? Branch { get; internal set; }
 
@@ -65,13 +66,14 @@ namespace AF.Presentation
         /// <summary>Las piezas salen del PNG del artista (<see cref="ProceduralArt.SlothPartsSlot"/>).</summary>
         public bool Painted { get; internal set; }
 
-        // Las mismas piezas con otra rama (una por juego de piezas, se guarda): cada compuerta recibe su propio SlothArt y
-        // ninguna llamada cambia el que ya se entregó a otro consumidor.
+        // Las mismas piezas con otra rama (dos por juego de piezas, la del PNG y la provisional; se guardan): cada compuerta
+        // recibe su propio SlothArt y ninguna llamada cambia el que ya se entregó a otro consumidor.
         private SlothArt? _withBranch;
+        private SlothArt? _withBranch2;
 
         /// <summary>
-        /// Estas piezas con la rama <paramref name="branch"/>: este mismo objeto si ya la lleva; si no, una copia (guardada para
-        /// la próxima vez). Nunca cambia este objeto.
+        /// Estas piezas con la rama <paramref name="branch"/>: este mismo objeto si ya la lleva; si no, una copia (se guardan
+        /// las dos últimas para la próxima vez). Nunca cambia este objeto.
         /// </summary>
         internal SlothArt WithBranch(Sprite? branch)
         {
@@ -85,6 +87,12 @@ namespace AF.Presentation
                 return _withBranch;
             }
 
+            if (_withBranch2 != null && _withBranch2.Branch == branch)
+            {
+                return _withBranch2;
+            }
+
+            _withBranch2 = _withBranch;
             _withBranch = new SlothArt
             {
                 Head = Head,
@@ -108,12 +116,14 @@ namespace AF.Presentation
 
     /// <remarks>
     /// <para>Rig del perezoso (TI4). La ranura <see cref="SlothPartsSlot"/> (1024 × 1024, rejilla de 4 × 4 celdas; c.7) manda:
-    /// con su PNG no se crea nada provisional. Celdas [P] de esta tarea, por fila desde arriba: cabeza, torso, extremidad (un
-    /// cuarto de ancho) y párpado (tres cuartos de ancho por un cuarto de alto, arriba); en la segunda fila, la hoja y el torso
-    /// de espaldas. Sin PNG,
-    /// el provisional solo sale con <see cref="MapArtRule.ShowProvisional"/> (Editor y desarrollo; 07 §6.4, como los
-    /// miquitos): en release, nada.</para>
-    /// <para>La rama es otra ranura, <see cref="SlothBranchSlot"/> (1024 × 256, c.7), con su propio provisional. Cada llamada a
+    /// con su PNG no se crea nada provisional. Celdas [P] de esta tarea, por fila desde arriba: cabeza, torso de frente,
+    /// extremidad (un cuarto de ancho) y párpado (tres cuartos de ancho por un cuarto de alto, arriba); en la segunda fila, la
+    /// hoja y el torso de espaldas (el lomo con el espéculo). La garganta parda va en lo alto del torso de frente, bajo la
+    /// barbilla, y no en la cabeza: así no gira con ella. Sin PNG, el provisional solo sale con
+    /// <see cref="MapArtRule.ShowProvisional"/> (Editor y desarrollo; 07 §6.4, como los miquitos): en release, nada.</para>
+    /// <para>La rama es otra ranura, <see cref="SlothBranchSlot"/> (1024 × 256, c.7), con su propio provisional, y la regla vale
+    /// para el conjunto (c.4: su rama entra con él; nunca cuelga de un botón, de una cuia ni de una tarjeta): en release, el
+    /// perezoso solo sale con los dos PNG, el de las piezas y el de la rama. Cada llamada a
     /// <see cref="SlothRigArt(Sprite, Sprite, bool)"/> entrega su propio <see cref="SlothArt"/> con su rama: las piezas se
     /// comparten, pero la rama de una compuerta nunca cambia la de otra.</para>
     /// <para><b>La embaúba (la hoja que cae al celebrar y la rama) está pendiente del asesor cultural</b> (propuesta de TiTino
@@ -182,8 +192,10 @@ namespace AF.Presentation
         public double SlothArtMs { get; private set; }
 
         /// <summary>
-        /// Las piezas del rig que se pintan: las del PNG de <see cref="SlothPartsSlot"/> si existe; si no, las provisionales con
-        /// <see cref="MapArtRule.ShowProvisional"/>; si no (release sin arte final), null: el perezoso no aparece.
+        /// Las piezas del rig que se pintan, con su rama: las del PNG de <see cref="SlothPartsSlot"/> si existe; si no, las
+        /// provisionales con <see cref="MapArtRule.ShowProvisional"/>; y la rama de <see cref="SlothBranchSlot"/> o, con la
+        /// compuerta abierta, la provisional. Si falta cualquiera de las dos en release (sin arte final), null: el perezoso no
+        /// aparece.
         /// </summary>
         public SlothArt? SlothRigArt()
         {
@@ -192,27 +204,29 @@ namespace AF.Presentation
 
         /// <summary>
         /// La regla de <see cref="SlothRigArt()"/> con los PNG (<paramref name="partsPng"/>, <paramref name="branchPng"/>) y la
-        /// compuerta (<paramref name="showProvisional"/>) explícitos. El PNG de las piezas manda y, con él, el atlas provisional
-        /// no se crea; la rama sale de su PNG o, con la compuerta abierta, de la provisional (si no, sin rama).
+        /// compuerta (<paramref name="showProvisional"/>) explícitos. Vale para el conjunto: con la compuerta cerrada, sin
+        /// cualquiera de los dos PNG, null (y no se crea nada). El PNG de las piezas manda y, con él, el atlas provisional no se
+        /// crea; la rama sale de su PNG o, con la compuerta abierta, de la provisional. Nunca devuelve un perezoso sin rama.
         /// </summary>
         public SlothArt? SlothRigArt(Sprite? partsPng, Sprite? branchPng, bool showProvisional)
         {
-            SlothArt? art;
+            if (!showProvisional && (partsPng == null || branchPng == null))
+            {
+                return null; // release sin el arte final de las piezas o de la rama: ni piezas ni rama (07 §6.4; c.4)
+            }
+
+            SlothArt art;
             if (partsPng != null)
             {
                 art = SlothPaintedArt(partsPng);
                 SlothArtMs = 0;
             }
-            else if (showProvisional)
+            else
             {
                 art = SlothRigArtProcedural();
             }
-            else
-            {
-                return null;
-            }
 
-            return art.WithBranch(branchPng != null ? branchPng : (showProvisional ? SlothBranchProcedural() : null));
+            return art.WithBranch(branchPng != null ? branchPng : SlothBranchProcedural());
         }
 
         /// <summary>
@@ -278,7 +292,8 @@ namespace AF.Presentation
             return art;
         }
 
-        // Celdas (desde arriba): cabeza, torso, extremidad (¼ de ancho) y párpado (¾ × ¼, arriba); en la segunda fila, la hoja.
+        // Celdas (desde arriba): cabeza, torso de frente, extremidad (¼ de ancho) y párpado (¾ × ¼, arriba); en la segunda fila,
+        // la hoja (primera columna) y el torso de espaldas (segunda columna).
         private void AssignSlothCells(SlothArt art, Texture2D tex)
         {
             float cell = tex.width / 4f;
@@ -297,13 +312,18 @@ namespace AF.Presentation
             art.EyelidSizeS = new Vector2(SlothCellPx * 0.75f, SlothCellPx / 4f) * s;
         }
 
+        // Garganta parda en el torso de frente (px de la celda de 128, sobre el centro del torso): bajo la barbilla de la cabeza
+        // colgada (Hang: la cabeza tapa el torso por encima de ≈ +28 px), de modo que asoma su mitad baja.
+        private const float SlothThroatDyPx = 26f;
+
         // Ojos respecto al centro de la cabeza (px de la celda de 128): a ±14,7 y 0,5 por encima (la geometría del retrato de
         // M1.5 escalada a una cabeza de 50 px de radio). El párpado se centra a esa altura.
         private const float SlothEyeDxPx = 14.7f;
         private const float SlothEyeDyPx = 0.5f;
 
-        // Cabeza de frente: borde de pelo en mechones, velo de algas en la coronilla, garganta parda, cara clara con el hocico
-        // corto, antifaz, ojos pequeños con brillo, nariz ancha y la línea natural de la boca. Sin orejas redondas.
+        // Cabeza de frente: borde de pelo en mechones, velo de algas en la coronilla, cara clara con el hocico corto, antifaz,
+        // ojos pequeños con brillo, nariz ancha y la línea natural de la boca. Sin orejas redondas. La garganta parda no va aquí,
+        // sino en lo alto del torso de frente (DrawSlothTorso): así no gira con la cabeza en sloth_look ni en sloth_present.
         private static void DrawSlothHead(PixelCanvas pc, int ox, int oy)
         {
             float cx = ox + 64f;
@@ -338,7 +358,6 @@ namespace AF.Presentation
                     col = Color.Lerp(col, SlothAlgae, Mathf.Clamp01((dy - 18f) / 22f) * 0.3f);
                     float strand = ArtNoise.Value2(px * 0.3f, py * 0.12f, 17) - 0.5f;
                     col = strand > 0f ? Color.Lerp(col, furLight, strand * 0.35f) : Color.Lerp(col, furDark, -strand * 0.35f);
-                    col = Color.Lerp(col, SlothThroat, PixelCanvas.SoftCoverage(EllipseDp(px, py, cx, cy - 43f, 22f, 12f), 6f));
                     col.a = 1f;
                     pc.Blend(x, y, col, cov);
 
@@ -406,8 +425,9 @@ namespace AF.Presentation
         }
 
         // Torso: óvalo vertical de pelo largo y áspero con mechones en el borde y el velo de algas en los hombros (20-30 %). De
-        // frente, el vientre algo más claro; de espaldas (back), más algas en el lomo y el espéculo del macho (parche naranja con
-        // su raya negra) en el centro de la espalda: de frente no se ve (con él en el pecho se leía como un collar, c.4).
+        // frente, el vientre algo más claro y la garganta parda arriba, justo bajo la barbilla (la cabeza tapa su mitad alta);
+        // de espaldas (back), más algas en el lomo y el espéculo del macho (parche naranja con su raya negra) en el centro de la
+        // espalda: de frente no se ve (con él en el pecho se leía como un collar, c.4).
         private static void DrawSlothTorso(PixelCanvas pc, int ox, int oy, bool back)
         {
             float cx = ox + 64f;
@@ -445,6 +465,7 @@ namespace AF.Presentation
                     if (!back)
                     {
                         col = Color.Lerp(col, ColorMath.Lighten(SlothFur, 0.1f), PixelCanvas.SoftCoverage(EllipseDp(px, py, cx + 4f, cy - 14f, 26f, 32f), 10f) * 0.5f);
+                        col = Color.Lerp(col, SlothThroat, PixelCanvas.SoftCoverage(EllipseDp(px, py, cx, cy + SlothThroatDyPx, 16f, 9f), 4f));
                     }
 
                     col.a = 1f;
