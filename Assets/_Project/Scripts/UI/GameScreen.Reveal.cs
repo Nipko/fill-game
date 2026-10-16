@@ -135,6 +135,7 @@ namespace AF.UI
                 return;
             }
 
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.Reveal); // AU1: Luciérnaga
             // La cuia elegida deja de moverse antes de que llegue la luciérnaga; la vista ya cuenta con lo revelado (el
             // siguiente vertido parte de ahí y no lo vuelve a revelar).
             if (!_animator.IsIdle)

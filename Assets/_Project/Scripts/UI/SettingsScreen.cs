@@ -25,15 +25,19 @@ namespace AF.UI
     /// <item><b>Mensajes de TiTino</b> (tarea TI3; D-016, punto 4; 02 §12): una fila que se marca o se desmarca
     /// (<c>settings.sloth_messages</c>, activada por defecto; apagada, TiTino solo hace gestos), en
     /// <see cref="SlothMessagesSlot"/>.</item>
+    /// <item><b>Sonido, Música y Vibración</b> (tarea AU1; 07 §9.4; D-026), arriba del todo: tres filas que se marcan o se
+    /// desmarcan (<c>settings.sound</c>, <c>music</c> y <c>haptics</c>, activadas por defecto) y se aplican al momento, en
+    /// <see cref="AudioSlot"/> (<c>SettingsScreen.Audio.cs</c>). Con ellas la tarjeta no cabe en un teléfono 16:9 al 130 %: lo de
+    /// debajo de la cabecera va en un visor que se desplaza cuando hace falta.</item>
     /// </list>
-    /// Sin sonido, música, vibración ni Eliminar cuenta: no existen (D-008: lo que no existe se oculta). Los huecos de la pista
+    /// Sin Eliminar cuenta: no existe (D-008: lo que no existe se oculta). Los huecos de la pista
     /// por inactividad (MO3) y «Sobre la Amazonía» (F4) están creados y ocultos (<see cref="IdleHintSlot"/> y
     /// <see cref="AboutSlot"/>): esas tareas los llenan y <see cref="Layout"/> los coloca cuando se activan. Elegir llama a quien
     /// la abre (<c>GameBootstrap</c>), que guarda el perfil y aplica: el idioma reconstruye la UI volviendo al inicio, con esta
     /// pantalla otra vez abierta (FXT); los patrones, al momento; los mensajes de TiTino, desde su siguiente aparición. Escala de la fuente
     /// <see cref="FontScale"/> hasta el 130 % sin recortes (02 §12), con todo texto ≥ 12 sp.
     /// </summary>
-    internal sealed class SettingsScreen
+    internal sealed partial class SettingsScreen
     {
         /// <summary>Ancho máximo de la tarjeta (dp).</summary>
         public const float PanelMaxWidth = 344f;
@@ -76,6 +80,9 @@ namespace AF.UI
         private readonly Image _header;
         private readonly TextMeshProUGUI _title;
         private readonly ReliefParts _close;
+        private readonly RectTransform _viewport;
+        private readonly RectTransform _content;
+        private readonly ScrollRect _scroll;
         private readonly TextMeshProUGUI _languageTitle;
         private readonly TextMeshProUGUI _patternsTitle;
         private readonly RectTransform _languageGroup;
@@ -107,18 +114,32 @@ namespace AF.UI
             _title = ModalKit.Header(_panel, art, UiText.Settings, out _header);
             _close = ModalKit.Close("CloseButton", _panel, art, onClose);
 
+            // Contenido bajo la cabecera, en un visor que se desplaza si no cabe (AU1: con Sonido, Música y Vibración, la tarjeta
+            // pasa del alto de un teléfono 16:9 al 130 %); la cabecera y el cierre quedan fijos.
+            _viewport = UiBuilder.Rect("Viewport", _panel);
+            _viewport.gameObject.AddComponent<RectMask2D>();
+            _viewport.gameObject.AddComponent<HitArea>().raycastTarget = true; // el arrastre en los huecos también desplaza
+            _content = UiBuilder.Rect("Content", _viewport);
+            _scroll = _viewport.gameObject.AddComponent<ScrollRect>();
+            _scroll.viewport = _viewport;
+            _scroll.content = _content;
+            _scroll.horizontal = false;
+            _scroll.vertical = true;
+            _scroll.movementType = ScrollRect.MovementType.Clamped;
+            BuildAudioRows(); // Sonido, Música y Vibración (AU1; SettingsScreen.Audio.cs)
+
             _languageTitle = SectionTitle("LanguageTitle", UiText.Language);
-            _languageGroup = UiBuilder.Rect("LanguageOptions", _panel);
+            _languageGroup = UiBuilder.Rect("LanguageOptions", _content);
             _patternsTitle = SectionTitle("PatternsTitle", UiText.PatternsToggle);
             for (int i = 0; i < PatternOrder.Length; i++)
             {
                 PatternsSetting value = PatternOrder[i];
-                _patternRows[i] = new OptionRow(_panel, art, "Patterns_" + DevProbe.PatternsKey(value), "patterns_" + DevProbe.PatternsKey(value),
+                _patternRows[i] = new OptionRow(_content, art, "Patterns_" + DevProbe.PatternsKey(value), "patterns_" + DevProbe.PatternsKey(value),
                     PatternLabel(value), () => _onPatterns(value));
             }
 
             // Mensajes de TiTino (TI3): una fila que se marca o se desmarca, en su hueco.
-            SlothMessagesSlot = UiBuilder.Rect("SlothMessagesSlot", _panel);
+            SlothMessagesSlot = UiBuilder.Rect("SlothMessagesSlot", _content);
             _slothRow = new OptionRow(SlothMessagesSlot, art, "SlothMessages", SlothMessagesId, UiText.SettingsSlothMessages,
                 () => _onSlothMessages(!_slothMessages));
 
@@ -287,6 +308,10 @@ namespace AF.UI
             }
 
             yield return _slothRow.Label;
+            foreach (TextMeshProUGUI label in AudioTexts())
+            {
+                yield return label;
+            }
         }
 
         /// <summary>
@@ -411,6 +436,11 @@ namespace AF.UI
             UiBuilder.Place((RectTransform)_close.Button.transform, w - 16f - ModalKit.CloseDp, y, ModalKit.CloseDp, ModalKit.CloseDp);
             y += Mathf.Max(48f, headerH) + SectionGapDp;
 
+            // Lo de debajo de la cabecera va en el contenido desplazable (AU1), desde su borde de arriba; primero Sonido, Música y
+            // Vibración (SettingsScreen.Audio.cs).
+            float headerBottom = y;
+            y = LayoutAudio(0f, inner, rowH, s);
+
             // Idioma.
             PlaceTitle(_languageTitle, 16f, y, inner, titleH, s);
             y += titleH + RowGapDp;
@@ -441,7 +471,15 @@ namespace AF.UI
             // Huecos de MO3 y F4: aún ocultos (no ocupan sitio).
             y += 16f - RowGapDp;
 
-            float h = y;
+            // La tarjeta crece con el contenido hasta el alto libre entre las zonas seguras; si no cabe, el contenido se desplaza
+            // (empieza arriba cada vez que se coloca).
+            float contentH = y;
+            float maxH = Mathf.Max(headerBottom + MinRowDp, ch - safeTop - safeBottom - 16f);
+            float h = Mathf.Min(headerBottom + contentH, maxH);
+            UiBuilder.Place(_viewport, 0f, headerBottom, w, h - headerBottom);
+            UiBuilder.Place(_content, 0f, 0f, w, contentH);
+            _scroll.vertical = contentH > h - headerBottom + 0.5f;
+            _scroll.velocity = Vector2.zero;
             float top = Mathf.Round((ch - h) * 0.5f);
             top = Mathf.Min(top, ch - safeBottom - 8f - h);
             top = Mathf.Max(top, safeTop + 8f);
@@ -462,7 +500,7 @@ namespace AF.UI
                 return;
             }
 
-            int n = 2 + _offered.Count + _patternRows.Length;
+            int n = 2 + _offered.Count + _patternRows.Length + AudioRowCount;
             var ids = new string[n];
             var rects = new RectTransform[n];
             ids[0] = "close";
@@ -482,20 +520,21 @@ namespace AF.UI
 
             ids[k] = _slothRow.Id;
             rects[k] = _slothRow.Root;
+            AudioLayoutIds(ids, rects, k + 1); // sound, music y haptics (AU1)
 
             _probe.Layout("settings", 0, null, ids, rects);
         }
 
         private TextMeshProUGUI SectionTitle(string name, string text)
         {
-            TextMeshProUGUI title = UiBuilder.Label(name, _panel, TextStyle.PlainBold, text, SectionSp, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
+            TextMeshProUGUI title = UiBuilder.Label(name, _content, TextStyle.PlainBold, text, SectionSp, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
             UiBuilder.AutoSize(title, MinTextSp, SectionSp);
             return title;
         }
 
         private RectTransform HiddenSlot(string name)
         {
-            RectTransform slot = UiBuilder.Rect(name, _panel);
+            RectTransform slot = UiBuilder.Rect(name, _content);
             slot.gameObject.SetActive(false);
             return slot;
         }

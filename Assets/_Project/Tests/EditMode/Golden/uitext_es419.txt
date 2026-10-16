@@ -119,6 +119,7 @@ UiText.FireflyLine	Una luciérnaga ilumina las de una cuia
 UiText.GiveUpConfirmCanoe	Perderás 1 canoa
 UiText.GiveUpConfirmLastCanoe	Perderás tu última canoa
 UiText.GiveUpConfirmTitle	¿Seguro?
+UiText.Haptics	Vibración
 UiText.Harvest	Cosecha
 UiText.Home	Inicio
 UiText.KeepPlaying	Seguir jugando
@@ -135,6 +136,7 @@ UiText.MapNorthUp	Norte arriba
 UiText.MapOpen	Ver mapa
 UiText.MapViewBasin	Cuenca
 UiText.MapViewWorld	Mundo
+UiText.Music	Música
 UiText.Next	Siguiente
 UiText.NoCanoesNext	Tu próxima canoa vuelve en
 UiText.NoCanoesTitle	Sin canoas
@@ -172,6 +174,7 @@ UiText.SimulatedAdInterstitial	intersticial
 UiText.SimulatedAdRewarded	recompensado
 UiText.SimulatedAdTitle	Anuncio simulado
 UiText.SimulatedPurchaseTitle	Compra simulada
+UiText.Sound	Sonido
 UiText.StuckBalsaContent	Todo para seguir: semillas, una cuia y canoas infinitas
 UiText.StuckCanoeLost	Travesía perdida: –1 canoa
 UiText.StuckCanoeLostLast	Travesía perdida: tu última canoa

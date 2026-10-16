@@ -301,6 +301,7 @@ namespace AF.UI
         private float _boardShiftTarget;
         private float _boardShiftAnim = -1f;
         private float _confettiDelay = -1f;
+        private AF.Audio.SeedTicker _seedTicker; // AU1: sfx_seeds_tick de la Cosecha
         private bool _restartProbePending;
         private float _horizonY = 118f;
         private PourTimings _timings;
@@ -889,6 +890,7 @@ namespace AF.UI
                     _confettiDelay = -1f;
                     // Tras el estallido, ≤ 12 hojas y pétalos caen despacio hasta el CTA de la victoria.
                     _confetti.Play(GameConfig.AnimConfettiMaxParticles, PanelRect(), _canvasW, _victoryPanelY + _victoryCtaTopDp);
+                    AF.Audio.AudioCues.Play(AF.Audio.SfxId.Confetti); // AU1
                 }
             }
 
@@ -941,6 +943,7 @@ namespace AF.UI
             _introDelayMs = -1f;
             BuildBoard(flow);
             _levelText.text = UiText.Level(level);
+            AudioBoard.Music(WorldTable.WorldOf(level), flow.Session.Current); // AU1: el lecho del mundo
             _pressPreview = -1;
             _shownBoard = flow.Session.Current;
             _probe.State("load", flow, int.MinValue, null);
@@ -1042,11 +1045,13 @@ namespace AF.UI
                 case TapKind.Selected:
                     SetLift(result.PreviousSelection, false);
                     SetLift(result.Selection, true); // solo el origen sube: ningún destino se resalta (D-002; 02 §3.1 C1)
+                    AudioBoard.Select(flow.Session.Current, result.Selection); // AU1: la nota de la fruta de arriba
                     _probe.State("select", flow, result.Tapped, null);
                     break;
 
                 case TapKind.Deselected:
                     SetLift(result.PreviousSelection, false);
+                    AudioBoard.Deselect(flow.Session.Current, result.PreviousSelection); // AU1
                     _probe.State("deselect", flow, result.Tapped, null);
                     break;
 
@@ -1057,12 +1062,14 @@ namespace AF.UI
                         _views[result.Tapped].Shake();
                     }
 
+                    AF.Audio.AudioCues.Play(AF.Audio.SfxId.Illegal); // AU1: madera neutra, nunca háptico en un rechazo (02 §4)
                     _probe.State("reject", flow, result.Tapped, null);
                     break;
 
                 case TapKind.Poured:
                     SetLift(result.PreviousSelection, false);
                     EnqueuePour(flow, result.Pour);
+                    AudioBoard.Music(WorldTable.WorldOf(flow.LevelNumber), flow.Session.Current); // AU1: capas del lecho
                     _probe.State("pour", flow, result.Tapped, result.Pour);
                     LabelsBoardChanged(flow);
                     RevealBoardChanged(flow);
@@ -1116,6 +1123,8 @@ namespace AF.UI
 
             _shownBoard = after;
             _probe.State("undo", flow, int.MinValue, undone);
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.Undo); // AU1: Marea
+            AudioBoard.Music(WorldTable.WorldOf(flow.LevelNumber), after); // AU1
             LabelsBoardChanged(flow);
             RevealBoardChanged(flow);
         }
@@ -1129,6 +1138,7 @@ namespace AF.UI
             ClearNotices(); // otro intento: los avisos del anterior ya no valen
             _shownBoard = RequireFlow().Session.Current;
             _restartProbePending = true;
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.Restart); // AU1: Volver a la orilla
         }
 
         /// <inheritdoc />
@@ -1161,6 +1171,8 @@ namespace AF.UI
 
             _ambient.SetSuspended(true);
             _confettiDelay = 500f;
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.WinToada); // AU1: la toada y el háptico medio de la victoria
+            AF.Audio.AudioCues.Haptic(AF.Audio.HapticKind.Win);
             _skipCatcher.gameObject.SetActive(true);
             // Ningún aviso encima de la celebración ni de la victoria (D-011, punto 2): fuera el que se vea (el regalo de Capi
             // dura 5,5 s; la tarjeta del miquito, unos 5) y lo que esperaba turno (GameScreen.Notices.cs).
@@ -1286,6 +1298,8 @@ namespace AF.UI
         {
             HideNoticesForModal(); // pregunta 42 (b): el aviso que se veía se oculta y no vuelve (GameScreen.Notices.cs)
             _animator.SnapAll();
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.Stuck); // AU1: Aguas estancadas, con el lecho atenuado
+            AF.Audio.AudioCues.SetModalDuck(true);
             _ambient.SetSuspended(true);
             _stuckOverlay.gameObject.SetActive(true);
             _stuck.Panel.gameObject.SetActive(true);
@@ -1314,6 +1328,8 @@ namespace AF.UI
             }
 
             AddCuiaView(flow, index);
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.CapiPaddle); // AU1: llega Capi con la cuia (extra o de rescate)
+            AF.Audio.AudioCues.Haptic(AF.Audio.HapticKind.Capi);
             SyncChrome();
             _probe.Funnel(kind == AddedCuiaKind.Rescue ? "rescue" : "extra_cuia", flow);
             LabelsBoardChanged(flow);
@@ -1382,6 +1398,11 @@ namespace AF.UI
         /// <inheritdoc />
         public void OnFailResolved(FailOutcome outcome)
         {
+            if (outcome.CanoeLost)
+            {
+                AF.Audio.AudioCues.Play(AF.Audio.SfxId.CanoeLost); // AU1
+            }
+
             _probe.Funnel(outcome.Kind == FailKind.Hard ? (outcome.CanoeLost ? "fail_hard_canoe" : "fail_hard") : "fail_soft", RequireFlow());
         }
 
@@ -1390,6 +1411,7 @@ namespace AF.UI
         {
             _introDelayMs = bannerMs;
             _attemptBanner = false;
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.RiverDrop); // AU1: El río bajó
             _banner.Place(_canvasW, TopRowY + 64f);
             _banner.Show(reliefType == AF.Levels.ReliefBoard.TypeMinusColor ? UiText.RiverLoweredColor : UiText.RiverLoweredCuia, bannerMs);
             _probe.Funnel("river_lowered", RequireFlow());
@@ -1618,6 +1640,7 @@ namespace AF.UI
         {
             ShiftBoard(0f, animateBoard);
             _stuckOverlay.gameObject.SetActive(false);
+            AF.Audio.AudioCues.SetModalDuck(false); // AU1: sin modal, el lecho vuelve a su nivel
             _victoryOverlay.gameObject.SetActive(false);
             _giveUp.Hide();
             _failed.Hide();
@@ -2664,6 +2687,7 @@ namespace AF.UI
             _harvestTo = Mathf.Max(0, to);
             _harvestCountMs = -delayMs;
             _harvestCounting = true;
+            _seedTicker.Begin(_harvestFrom, _harvestTo); // AU1
             _harvestShown = -1;
             WriteHarvest(_harvestFrom);
         }
@@ -2692,6 +2716,11 @@ namespace AF.UI
             }
 
             _harvestShown = value;
+            if (_seedTicker.Advance(value) > 0)
+            {
+                AF.Audio.AudioCues.Play(AF.Audio.SfxId.SeedsTick); // AU1: una semilla cada 10 (máx. 20)
+            }
+
             _harvestBuf[0] = '+';
             int n = UiText.WriteNumber(_harvestBuf, 1, value, true);
             _harvestValue.SetCharArray(_harvestBuf, 0, n);

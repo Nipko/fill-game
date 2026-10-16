@@ -40,7 +40,7 @@ namespace AF.UI
     /// (<see cref="GameScreen.RefreshFruitPatterns"/>).</para>
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class GameBootstrap : MonoBehaviour, IAppFlowListener, IGameActions
+    public sealed partial class GameBootstrap : MonoBehaviour, IAppFlowListener, IGameActions
     {
         /// <summary>Tope del paso de tiempo por fotograma (evita saltos tras un tirón).</summary>
         private const float MaxDeltaMs = 100f;
@@ -727,7 +727,7 @@ namespace AF.UI
         /// <summary>Volver desde «El río sigue creciendo» o Sin canoas.</summary>
         public bool PressBack()
         {
-            return _app != null && _app.CloseOverlay();
+            return AudioBack(_app != null && _app.CloseOverlay()); // AU1: sfx_ui_back al volver
         }
 
         /// <summary>
@@ -745,6 +745,7 @@ namespace AF.UI
 
             settings.Show(LocLocale.Offered(Loc.Catalog, Loc.ShowUnapproved), profile.Settings.Language, profile.Settings.Patterns,
                 profile.Settings.SlothMessages);
+            settings.MarkAudio(profile.Settings.Sound, profile.Settings.Music, profile.Settings.Haptics); // AU1
             _skipNextDelta = true;
             return true;
         }
@@ -1072,6 +1073,7 @@ namespace AF.UI
 
             _art = SharedArt(catalog.WaterBase);
             _probe = new DevProbe { Settings = profile.Settings };
+            InstallAudio(profile.Settings); // AU1: audio provisional por código y hápticos (GameBootstrap.Audio.cs)
             _probe.LocaleState(locale, _deviceLocale, _deviceTag);
 
             // Anuncios y compras simulados (D-008 puntos 4 y 5; sin SDK, red ni identificadores): sus pantallas van en lienzos
@@ -1103,6 +1105,7 @@ namespace AF.UI
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
             _lobby.RiverStops = RiverStops; // el sitio, «Faltan N» y la ventanita de casa en el inicio (M2.1)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
+            _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
             _flow = new LevelFlow(catalog, progress, _screen, GameConfig.TapSwitchSelection, LaunchOptions.ResolvePourMode(), _wallet)
@@ -1178,7 +1181,7 @@ namespace AF.UI
             _backPresses = 0;
             if (back)
             {
-                PressAndroidBack();
+                AndroidBackWithAudio(); // AU1: PressAndroidBack con sfx_ui_back, o el háptico de Atrás bloqueado
             }
 
             if (_settingsScreen != null && _settingsScreen.Visible)

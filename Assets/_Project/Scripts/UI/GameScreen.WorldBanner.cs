@@ -320,6 +320,7 @@ namespace AF.UI
         // ProceduralArt.RequestBannerArt) y si entró sin él (fallback).
         private void EmitBannerArt(LevelFlow flow)
         {
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.WorldBanner); // AU1: la piha, solo aquí, al entrar la tarjeta del banner (07 §9.2)
             if (!DevProbe.Enabled || !flow.HasLevel)
             {
                 return;

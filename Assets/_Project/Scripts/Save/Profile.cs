@@ -325,8 +325,8 @@ namespace AF.Save
     }
 
     /// <summary>
-    /// <c>settings</c> (08 §4.3): solo los ajustes que ya existen en el juego. <c>sound</c>, <c>music</c>, <c>haptics</c> y
-    /// <c>push</c> llegan con su sistema. Un valor que falta o no es válido en el archivo toma el default (los ajustes nunca
+    /// <c>settings</c> (08 §4.3): solo los ajustes que ya existen en el juego (<c>sound</c>, <c>music</c> y <c>haptics</c> desde
+    /// AU1); <c>push</c> llega con su sistema. Un valor que falta o no es válido en el archivo toma el default (los ajustes nunca
     /// hacen corrupto un perfil).
     /// </summary>
     public sealed class SettingsData
@@ -372,6 +372,20 @@ namespace AF.Save
             set => _language = NormalizeLanguage(value)
                 ?? throw new ArgumentException("Idioma no admitido en settings.language: '" + value + "'.", nameof(value));
         }
+
+        /// <summary>
+        /// <c>sound</c> (08 §4.3; 07 §9.4; tarea AU1): el ajuste Sonido (los efectos). Default true, el de
+        /// <c>audio_sfx_default_on</c> (08 §9).
+        /// </summary>
+        public bool Sound { get; set; } = true;
+
+        /// <summary><c>music</c> (08 §4.3; 07 §9.4): el ajuste Música. Default true, el de <c>audio_music_default_on</c> (08 §9).</summary>
+        public bool Music { get; set; } = true;
+
+        /// <summary>
+        /// <c>haptics</c> (08 §4.3; 02 §4): el ajuste Vibración. Default true, el de <c>ui_haptics_default_on</c> (08 §9).
+        /// </summary>
+        public bool Haptics { get; set; } = true;
 
         /// <summary><c>sloth_messages</c> (D-016 punto 4): el ajuste «Mensajes de TiTino»; apagado, solo gestos. Default true.</summary>
         public bool SlothMessages { get; set; } = true;

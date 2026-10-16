@@ -13,6 +13,8 @@
     "AF.Ads",
     "AF.IAP",
     "AF.Localization",
+    "AF.Audio",
+    "AF.Audio.Unity",
     "UnityEngine.UI",
     "Unity.InputSystem",
     "Unity.TextMeshPro"

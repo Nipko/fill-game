@@ -1,10 +1,10 @@
 # Tintalú: lista de sonidos y música
 
-2026-10-15 · Copia de trabajo para el dueño y los proveedores de audio (compositor y diseñador de sonido). Fuente: GDD 07 §9 y las mecánicas, personajes y pantallas de los demás capítulos. Si esta lista y el GDD no coinciden, manda el GDD hasta que se edite.
+2026-10-15 (actualizada el 2026-10-16 con el audio provisional por código, sección 9) · Copia de trabajo para el dueño y los proveedores de audio (compositor y diseñador de sonido). Fuente: GDD 07 §9 y las mecánicas, personajes y pantallas de los demás capítulos. Si esta lista y el GDD no coinciden, manda el GDD hasta que se edite.
 
 ## Cómo usar esta lista
 
-El juego necesita unos 61 efectos, el ambiente de 13 mundos (9 en la 1.0) y unas 20 piezas de música (unas 60 contando sus capas); hoy no tiene ningún sonido.
+El juego necesita unos 61 efectos, el ambiente de 13 mundos (9 en la 1.0) y unas 20 piezas de música (unas 60 contando sus capas). Desde el 2026-10-16 suena con efectos y un lecho de música provisionales hechos por código (sección 9; D-026).
 
 - Cada fila lleva el **ID** que usará el código, **cuándo suena**, **cómo debe sonar** según el GDD y su **duración**.
 - La columna **Tu propuesta** recoge la dirección acústica aprobada: **ASMR amazónico fresco de app** (agua cristalina en vidrio, marimba de chonta y kalimba de calabaza para las notas, maracá, fibra y semillas reales), siguiendo la dinámica medida en *Magic Sort!* (gestos repetidos muy suaves y cortos a −38/−27 dBFS, sellado y premios con brillo y pegada a −17/−14 dBFS, cero barro sonoro).
@@ -23,7 +23,7 @@ Para que cualquier combinación de frutas en un nivel suene armónica y fresca s
 | 6 | `camu_camu` | Camu camu | 34 | G4 | 392,0 Hz | «Plic» jugoso con armónico dulce |
 | 5 | `urucum` | Achiote | 48 | A4 | 440,0 Hz | Toque cálido de chonta y agua |
 | 14 | `agua_negro` | Agua del Río Negro | 50 | C5 | 523,3 Hz | Gota de río cristalina en registro medio |
-| 4 | `aguaje` | Aguaje | 64 | D5 | 587,3 Hz | «Plic» brillante y redondo (par del tutorial con Açaí: octava + sexta) |
+| 4 | `aguaje` | Aguaje | 64 | D5 | 587,3 Hz | «Plic» brillante y redondo (par del tutorial con Açaí: E4 → D5, una séptima menor; sigue siendo pentatónica) |
 | 11 | `lulo` | Lulo | 65 | E5 | 659,3 Hz | Gota fresca y cítrica |
 | 7 | `bacaba` | Bacaba | 70 | G5 | 784,0 Hz | Toque perlado de agua clara |
 | 10 | `agua_tapajos` | Agua del Tapajós | 70 | A5 | 880,0 Hz | Destello líquido turquesa |
@@ -67,7 +67,7 @@ Cada comodín tiene su sonido propio, ligado a su animal o elemento; los de inte
 | `sfx_hint` | Morpho (pista) | Aleteo suave y campanita de madera | 0,5 s | **Tres batidas sedosas de alas de mariposa + destello cristalino de campanilla de bambú/chonta** (intervalo de quinta justa Sol5→Re6, mágico pero orgánico). |
 | `sfx_shuffle` | Pororoca (mezclar) | Ola grande, remolino y 14 notas rápidas | 0,9 s | **Oleada envolvente de río + giro de agua + glissando ascendente ultrarrápido de las 14 notas pentatónicas** en marimba de chonta y gotas de cristal. |
 | `sfx_reveal` | Luciérnaga (revelar Aguas turbias) | Campanilla cálida, chispa y burbuja que se aclara | 0,5 s | **Zumbido luminoso suave + chispa cálida de kalimba aguda** (Mi6→La6) + **burbuja profunda («boiada»)** que emerge y aclara el agua turbia. |
-| `sfx_skip` | Salto del Boto (saltar nivel) | Salto, chapuzón y exhalación de delfín | 1,2 s | **Impulso de agua al emerger + exhalación real de boto en el aire + chapuzón limpio y alegre** con cola de burbujas. |
+| `sfx_skip` | Salto del Boto (saltar nivel) | Salto, chapuzón y exhalación de delfín | 1,2 s | **Impulso de agua al emerger + exhalación de boto en el aire (grabación con licencia, 07 §9.5; hoy, provisional por código) + chapuzón limpio y alegre** con cola de burbujas. |
 | `sfx_restart` | Volver a la orilla (reiniciar) | Agua que se recoge y madera | 0,5 s | **Barrido corto de agua que vuelve al cauce + toque firme de madera de canoa** en la orilla. |
 | `sfx_river_drop` | El río bajó (nivel aliviado tras 3 fallos) | Agua que baja y exhalación de Rosa | 1,0 s | **Nivel de agua que desciende con alivio (glissando líquido grave-medio) + soplo cercano y amable de Rosa** que transmite «ahora sí, más tranquilo». |
 | `sfx_seeds_tick` | Contador de semillas que sube | Semillas que caen en una cesta; 1 por cada 10 semillas, máximo 20 | 0,05 s cada uno | **«Tic» orgánico de semilla dura (huayruro/açaí) cayendo sobre fibra trenzada** (con microvariación de tono +1 semitono progresivo a lo largo de la cuenta para dar emoción de cosecha). |
@@ -105,7 +105,7 @@ Cada mecánica suena cuando se desbloquea, en el golpe de la tapa al sellar. Las
 | `sfx_sloth_happy` | TiTino celebra | Suspiro feliz | 0,45 s | **Suspiro suave y contento («aaah-hm» con aire cálido y sonrisa)** + leve roce de hojas de su embaúba; nunca silbido agudo (llamada de angustia de cría). |
 | `sfx_sloth_branch` | Entra la rama de TiTino | Roce de hojas | 0,35 s | **Balanceo flexible de rama de embaúba + roce fresco de hojas grandes**. |
 | `sfx_sloth_yawn` | TiTino se duerme | Bostezo muy suave | 0,60 s | **Bostezo chiquito de aire suave descendente** que termina en dos chasquidos lentos al acomodarse a dormir. |
-| `sfx_rosa_surface` | Rosa (delfín rosado) asoma | Exhalación real de boto | 1,0 s | **Ondulación de agua + soplo real de espiráculo de boto (*Inia geoffrensis*)**, cálido y cercano, seguido de chapoteo suave al sumergirse. |
+| `sfx_rosa_surface` | Rosa (delfín rosado) asoma | Exhalación real de boto | 1,0 s | **Ondulación de agua + soplo de espiráculo de boto (*Inia geoffrensis*; grabación con licencia, 07 §9.5; hoy, provisional por código)**, cálido y cercano, seguido de chapoteo suave al sumergirse. |
 | `sfx_monkey_chirp` | Tropa de miquitos en la intro | Chillido corto de mono ardilla, muy bajo; uno como mucho | 0,15 s | **Trino agudo y dulce de mono ardilla (*Saimiri*), parecido a un pajarito** (3,2-4,5 kHz, muy bajo a −18 dB, solo al entrar en la rama). |
 
 Para la 1.1 quedan tres más: Aguapé (agua que se abre), Palizada (chapoteo y madera que cruje) y Cocha (agua que se corta). Ningún personaje habla: solo sonidos, para no doblar a cada idioma.
@@ -117,7 +117,7 @@ Estos sonidos marcan momentos de viaje y descubrimiento; salen pocas veces, así
 | ID [P] | Cuándo suena | Cómo debe sonar (GDD) | Duración | Tu propuesta |
 | --- | --- | --- | --- | --- |
 | `sfx_fact` | Llegada a una parada (victoria de los niveles 20, 30, 40…) | Madera y vidrio, sin papel [P] | 0,3 s | **Toque noble de tablilla de madera clara + armónico cristalino de vidrio** (acorde de quinta Do5-Sol5, limpio y sin roce de hojas de papel). |
-| `sfx_world_banner` | Banner de mundo nuevo (41, 81, 141…) | Grito de la piha, la firma sonora del juego; **solo aquí**, nunca en bucle | 1-2 s | **El canto real de tres sílabas de la piha gritona («qui-qui-yo»)** con reverberación natural de dosel amazónico, arropado por una brisa de río (1,6 s). |
+| `sfx_world_banner` | Banner de mundo nuevo (41, 81, 141…) | Grito de la piha, la firma sonora del juego; **solo aquí**, nunca en bucle | 1-2 s | **El canto de tres sílabas de la piha gritona («qui-qui-yo»; grabación con licencia, 07 §9.5; hoy, provisional por código)** con reverberación natural de dosel amazónico, arropado por una brisa de río (1,6 s). |
 | `sfx_map_paddle` | Capi rema en el Mapa | Remo de Capi (el mismo de `sfx_capi_paddle`) | 0,8 s | **Dos paladas suaves de remo en agua tranquila** (reutiliza la capa de remo y agua de `sfx_capi_paddle`). |
 | `sfx_map_sample` | Se llena una muestra en el Mapa | Acorde de vidrio | 0,45 s | **Agua que colma la mini cuia del sitio + acorde luminoso de 3 copas/cuias de vidrio** (Do5-Mi5-Sol5) que confirma la parada alcanzada. |
 | `sfx_map_rosa` | Rosa en el Mapa | Exhalación de Rosa | 1,0 s | **El mismo soplo amable y chapoteo corto de `sfx_rosa_surface`**, ligeramente más suave (−3 dB) para acompañar el mapa. |
@@ -210,4 +210,105 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
 | Ambiente (§5) | 9 aguas, 2-3 lluvias, unos 25 animales | Biblioteca con licencia comercial; la piha conviene grabarla | partida «grabaciones de fauna», sin cifra propia |
 | Música (§6) | 9 lechos, 36 capas de percusión, 9 variantes nocturnas, toada, tema de menú y 5 stingers | Compositor, con cesión total de derechos; músicos regionales si se puede | 1.500-4.000 USD |
 
-**Mientras tanto:** se puede crear el sistema de audio con sonidos provisionales hechos por código para oír el juego en el teléfono (`ProceduralAudio` en C# en tiempo real, 0 MB en el AAB, con los mismos algoritmos del laboratorio interactivo `docs/audio/laboratorio-sonidos.html`). Los sonidos reales sustituyen a los provisionales sin tocar el código.
+**Mientras tanto:** desde el 2026-10-16 (D-026, tarea AU1) el juego ya suena con sonidos provisionales hechos por código, con los mismos algoritmos del laboratorio interactivo `docs/audio/laboratorio-sonidos.html` y los arreglos de su revisión (sección 9). Los sonidos definitivos sustituyen a los provisionales sin tocar los ganchos del código.
+
+## 9. Estado en el cliente: audio provisional por código (D-026, tarea AU1)
+
+Desde el 2026-10-16 el juego suena con los 61 efectos del laboratorio, portados 1:1 a C# (`AF.Audio`, sin motor) y generados al arrancar en un hilo de trabajo (0 MB en el AAB). Todos son **provisionales por código**, también la piha y el boto, que el laboratorio llamaba «reales»: las grabaciones con licencia llegan después (07 §9.5) y los sustituyen sin tocar los ganchos.
+
+**Arreglos de la revisión del laboratorio (2026-10-16), aplicados al portarlos:**
+
+- **Niveles:** cada efecto sale a su pico de la tabla de abajo (±1,5 dB), sin el `tanh` global que los igualaba (en el laboratorio, `sfx_select` salía a −7 dBFS y la jerarquía quedaba en unos 4 dB; `sfx_confetti`, unos 20 dB por debajo de su objetivo). Solo queda un limitador suave por encima de −1 dBFS, que con estos picos no actúa (07 §9.4: picos ≤ −6 dBTP).
+- **Graves:** al menos el 50 % de la energía de cada efecto por encima de 300 Hz, lo que reproduce el altavoz de un teléfono. Se consigue subiendo los armónicos 2.º y 3.º del propio sonido y, en el remanso de `sfx_stuck` y la calabaza de `sfx_canoe_lost`, con sus notas también una octava más arriba. Huito y Cacao (C4 y D4) se arreglan igual.
+- **Colas:** la reverberación de dosel solo va en `sfx_win_toada`, `sfx_skip`, `sfx_tinaja_reveal` y `sfx_world_banner`. Los gestos repetidos terminan en ≤ 0,2 s: `select`, `tint`, `plip`, `ui_tap`, `ui_back`, `seeds_tick`, `pour_start` y `pour_end`. `sfx_ui_buy` conserva sus 0,4 s: es una compra, no un gesto repetido.
+- **`sfx_pour_loop`:** un bucle continuo de 1,2 s, sin costura, que suena mientras cae el chorro. Su tono sigue al nivel de la cuia de destino, de 380 Hz vacía a 920 Hz llena.
+
+**Música provisional:** el lecho del simulador del laboratorio (notas largas de marimba en la escala del mundo), con dos capas de percusión (`audio_music_percussion_layers` = 2, 08 §9):
+
+- la primera entra al sellar la primera cuia, y la segunda con el 25 % de las cuias selladas;
+- la mezcla tiene un pico de −20 dBFS [P], por debajo de los premios;
+- baja 6 dB durante la toada y con el modal.
+
+La variante nocturna, el tema de menú y el ambiente de cada mundo (sección 5) quedan para el compositor.
+
+**Coste (medido en el Editor del escritorio x64, 2026-10-16):** los 104 clips (61 efectos, más las 14 notas de `sfx_select` y de `sfx_tint` y las 15 de bajar la selección) se generan en 492,8 ms en un hilo de trabajo y su creación cuesta 3,0 ms en el hilo principal (`AF_PERF audio_build`; objetivo < 50 ms). Ocupan 6.601 KiB de PCM en float (unos 1,69 millones de muestras); el lecho de un mundo, 2.713 KiB más (3 capas de 10,5 s a 22,05 kHz), y solo se guarda el del mundo que suena. En el teléfono, por medir.
+
+**Reglas (07 §9.4 y 02 §4):**
+
+- Sonido, Música y Vibración vienen encendidos y se apagan por separado y al momento, en Ajustes.
+- Se respeta el modo silencio del teléfono: en el de vibración no suena nada y en el de silencio tampoco vibra [P].
+- Durante un anuncio se calla todo, y al terminar vuelve con un fundido de 0,5 s.
+- Nunca vibra en un rechazo.
+- La información nunca va solo por audio.
+
+**Hápticos:** los efectos predefinidos de Android con el permiso `VIBRATE`, aprobado en D-026:
+
+- `EFFECT_TICK` en `haptic_seal` y `haptic_back_blocked`;
+- `EFFECT_CLICK` en `haptic_win`, `haptic_capi` y `haptic_boto`;
+- con API 26-28, un pulso de 20, 15 o 40 ms.
+
+**IDs finales, niveles y ganchos:**
+
+| ID | Pico (dBFS) | Cola | Dónde suena hoy |
+| --- | --- | --- | --- |
+| `sfx_select` | −36 | ≤ 0,2 s | Al elegir una cuia, con la nota de su fruta de arriba; al bajarla, la variante grave (−35 dBFS) [P] |
+| `sfx_pour_start` | −30 | ≤ 0,2 s | Cuando el chorro empieza a caer |
+| `sfx_pour_loop` | −29 | bucle | Mientras cae el chorro (bucle; el tono sigue al nivel del destino) |
+| `sfx_pour_end` | −30 | ≤ 0,2 s | Al cortarse el caudal |
+| `sfx_illegal` | −28 | sin cola añadida | En cada rechazo (sin háptico) |
+| `sfx_seal` | −17 | sin cola añadida | Al empezar la tapa de cada sellado, con `haptic_seal` |
+| `sfx_river_rise` | −26 | sin cola añadida | Intro: al empezar |
+| `sfx_fill` | −25 | sin cola añadida | Intro: una por fila |
+| `sfx_fruit_plip` | −32 | ≤ 0,2 s | Intro: en cada impacto |
+| `sfx_tint` | −30 | ≤ 0,2 s | Intro: en cada racha que florece (máx. 6 a la vez) |
+| `sfx_win_toada` | −14 | dosel | Al empezar la celebración, con `haptic_win` |
+| `sfx_confetti` | −20 | sin cola añadida | Con el confeti (0,5 s después) |
+| `sfx_stuck` | −20 | sin cola añadida | Al abrirse Aguas estancadas |
+| `sfx_undo` | −22 | sin cola añadida | Marea |
+| `sfx_capi_paddle` | −18 | sin cola añadida | Cuia extra y de rescate, con `haptic_capi` |
+| `sfx_hint` | −20 | sin cola añadida | Sin gancho todavía: Morpho (MO1-MO3) |
+| `sfx_shuffle` | −18 | sin cola añadida | Sin gancho todavía: Pororoca (tanda siguiente) |
+| `sfx_reveal` | −19 | sin cola añadida | Luciérnaga |
+| `sfx_skip` | −17 | dosel | Sin gancho todavía: Salto del Boto, que aún no está en el cliente (con `haptic_boto`) |
+| `sfx_restart` | −22 | sin cola añadida | Volver a la orilla y Reintentar |
+| `sfx_river_drop` | −18 | sin cola añadida | El río bajó |
+| `sfx_seeds_tick` | −26 | ≤ 0,2 s | Cosecha de la victoria: 1 por 10 semillas, máx. 20 |
+| `sfx_basket_open` | −16 | sin cola añadida | Sin gancho todavía: Canasta |
+| `sfx_streak_up` | −17 | sin cola añadida | Sin gancho todavía: Crecida |
+| `sfx_streak_shield` | −19 | sin cola añadida | Sin gancho todavía: Hoja escudo |
+| `sfx_canoe_lost` | −21 | sin cola añadida | Fallo con canoa perdida |
+| `sfx_canoe_back` | −19 | sin cola añadida | El inicio, al volver una canoa |
+| `sfx_ui_tap` | −30 | ≤ 0,2 s | Cualquier botón cuya acción no tiene sonido propio |
+| `sfx_ui_back` | −30 | ≤ 0,2 s | Cerrar (X), Volver y Atrás de Android |
+| `sfx_ui_buy` | −18 | sin cola añadida | Compra confirmada en la hoja de compra |
+| `sfx_mech_hoja` | −20 | sin cola añadida | Paso «se abre» de la Hoja |
+| `sfx_mech_matapi` | −19 | sin cola añadida | Sellado del Matapi |
+| `sfx_mech_liana` | −19 | sin cola añadida | Paso «se suelta» de la Liana |
+| `sfx_mech_liana_cuenta` | −24 | sin cola añadida | Sin gancho todavía: Liana de cuenta: su cuenta aún no es un paso de mecánica |
+| `sfx_mech_remolino` | −20 | sin cola añadida | La pareja recibe por el fondo |
+| `sfx_mech_barro` | −20 | sin cola añadida | Se lava el Barro |
+| `sfx_mech_lluvia` | −21 | sin cola añadida | Cada gota de la Lluvia |
+| `sfx_mech_pirana` | −19 | sin cola añadida | Mordisco de la Piraña |
+| `sfx_mech_brote` | −20 | sin cola añadida | Paso «se abre» del Brote |
+| `sfx_mech_flor` | −18 | sin cola añadida | Sin gancho todavía: Flor: listo en `AudioBoard.Step`; suena cuando exista su vista |
+| `sfx_mech_hoja_atada` | −20 | sin cola añadida | Sin gancho todavía: Hoja atada: listo en `AudioBoard.Step`; suena cuando exista su vista |
+| `sfx_tinaja_select` | −26 | sin cola añadida | Al elegir la Tinaja (en lugar de `sfx_select`) |
+| `sfx_tinaja_scoop` | −22 | sin cola añadida | Sin gancho todavía: Tinaja (TJ3-TJ4) |
+| `sfx_tinaja_reveal` | −25 | dosel | Sin gancho todavía: Tinaja (TJ3-TJ4) |
+| `sfx_tinaja_release` | −19 | sin cola añadida | Sin gancho todavía: Tinaja (TJ3-TJ4) |
+| `sfx_sloth_nod` | −22 | sin cola añadida | Sin gancho todavía: Gestos de TiTino (TI6a y siguientes) |
+| `sfx_sloth_happy` | −20 | sin cola añadida | Sin gancho todavía: Gestos de TiTino |
+| `sfx_sloth_branch` | −24 | sin cola añadida | Sin gancho todavía: Gestos de TiTino |
+| `sfx_sloth_yawn` | −24 | sin cola añadida | Sin gancho todavía: Gestos de TiTino |
+| `sfx_rosa_surface` | −19 | sin cola añadida | Sin gancho todavía: Rosa |
+| `sfx_monkey_chirp` | −34 | sin cola añadida | Intro: uno como mucho, al entrar la tropa y nunca durante el llenado |
+| `sfx_fact` | −21 | sin cola añadida | Llegada a la parada (la línea de fruta, sin sonido; D-017) |
+| `sfx_world_banner` | −14 | dosel | Al entrar la tarjeta del banner de mundo (solo ahí) |
+| `sfx_map_paddle` | −20 | sin cola añadida | Sin gancho todavía: Mapa del río |
+| `sfx_map_sample` | −18 | sin cola añadida | Sin gancho todavía: Mapa del río |
+| `sfx_map_rosa` | −21 | sin cola añadida | Sin gancho todavía: Mapa del río |
+| `sfx_map_pequepeque` | −28 | sin cola añadida | Sin gancho todavía: Mapa del río (opcional) |
+| `sfx_fruit_new` | −17 | sin cola añadida | Sin gancho todavía: Tarjeta «Fruta nueva» (F5) |
+| `sfx_mech_card` | −20 | sin cola añadida | Tarjeta previa |
+| `sfx_morpho_idle` | −28 | sin cola añadida | Sin gancho todavía: Morpho por inactividad (MO3) |
+| `sfx_store_open` | −19 | sin cola añadida | Al abrirse la hoja de compra |

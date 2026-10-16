@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using AF.Audio;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Presentation.Mechanics;
@@ -575,6 +576,7 @@ namespace AF.Presentation
             if (_sealElapsed < 0f || ms < _sealElapsed)
             {
                 _sealDropsDone = false;
+                AudioCues.Seal(); // AU1: maracá y tapa (la tapa cae a los 100-250 ms, con el «plop» del sonido) y su háptico ligero
             }
 
             _sealed = true;

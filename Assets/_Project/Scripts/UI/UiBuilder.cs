@@ -368,7 +368,12 @@ namespace AF.UI
             button.targetGraphic = hit;
             button.transition = Selectable.Transition.None;
             button.navigation = new Navigation { mode = Navigation.Mode.None };
-            button.onClick.AddListener(() => onClick());
+            button.onClick.AddListener(() =>
+            {
+                int cue = AF.Audio.AudioCues.Serial; // AU1: sfx_ui_tap si la acción no pidió su propio sonido (cerrar, comprar…)
+                onClick();
+                AF.Audio.AudioCues.TapIfQuiet(cue);
+            });
             return button;
         }
 

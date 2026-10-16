@@ -99,6 +99,7 @@ namespace AF.UI
                 _safeTop, _safeBottom);
             RestoreBoardUnit();
             _levelCard.Root.SetAsLastSibling(); // por encima de todo: el toque en cualquier punto es suyo
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.MechCard); // AU1: tarjeta previa
             _lastCardProbe = DevProbe.Enabled ? CardProbeJson(card) : null;
             if (_lastCardProbe != null)
             {

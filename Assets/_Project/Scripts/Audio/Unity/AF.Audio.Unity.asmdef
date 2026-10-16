@@ -1,0 +1,16 @@
+{
+  "name": "AF.Audio.Unity",
+  "rootNamespace": "AF.Audio.Unity",
+  "references": [
+    "AF.Audio"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

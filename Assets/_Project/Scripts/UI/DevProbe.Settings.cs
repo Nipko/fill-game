@@ -52,6 +52,7 @@ namespace AF.UI
             AppendTime(sb);
             sb.Append(",\"language\":\"").Append(language).Append('"');
             sb.Append(",\"patterns\":\"").Append(PatternsKey(patterns)).Append('"');
+            AppendAudioSettings(sb); // AU1: sound, music y haptics
             sb.Append(",\"offered\":[");
             for (int i = 0; i < offered.Count; i++)
             {

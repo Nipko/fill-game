@@ -31,6 +31,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-023 | 2026-10-14 | Decisiones de detalle de la tanda 4: preguntas de sus planes y [P] del plan consolidado | Decidida por el dueño (la recomendación de cada pregunta, por «Sí, aplica las recomendadas también»): las P-M1 a P-M8 del plan del Mapa del río, las preguntas del plan consolidado de la tanda 4 (textos del Mapa en `facts.csv`, firma de las variantes de `pack_schema` 3, máscara de la tinaja en `relief`, Cuia de la casa fuera de la 1.0, idioma automático y región, alto de la llegada y tabla de D2) y los detalles [P] del plan. Documentación aplicada el 2026-10-14 (D1, que absorbe M1.7). En implementación: tanda 4 |
 | D-024 | 2026-10-14 | Reglas de la Hoja atada: la capacidad de su llave y una por fruta | Decidida por el dueño (las recomendadas de la revisión de K3a, por «Sí, aplica las recomendadas también»). Documentación aplicada el 2026-10-14 (FIXD). En implementación: FIXK, en el núcleo; el generador y level-qa la heredan por `LevelValidation` |
 | D-025 | 2026-10-14 | Un solo formato de cifras, también en los precios | Decidida por el dueño («unificar formatos», tras la prueba de la tanda 4). La regla (región del teléfono, Q8-A) es [P] de este registro. Implementada en FXT (puntos 1 y 2; el 3, lista la función para el adaptador de Unity IAP) |
+| D-026 | 2026-10-16 | Audio provisional por código y permiso `VIBRATE` | Decidida por el dueño («lanza ya AU1 en paralelo a la ola 4, con los arreglos de niveles y graves, y apruebo el permiso VIBRATE para el háptico del sellado»). Implementada en AU1 (tanda 4, ola 4, carril de audio): `AF.Audio` y `AF.Audio.Unity`, los 61 efectos con su nivel, Ajustes de Sonido, Música y Vibración, los hápticos y el permiso en el manifiesto. Pendiente: la prueba en el teléfono y los encargos al compositor y al diseñador de sonido (07 §9.5) |
 
 ---
 
@@ -2440,3 +2441,46 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 **Cómo revertir.** Volver al formato fijo por moneda de 05 §4.2, siempre con una decisión nueva que sustituya a D-025.
 
+## D-026 · Audio provisional por código y permiso `VIBRATE`
+
+- **Fecha:** 2026-10-16.
+- **Estado:** decidida por el dueño en el chat: «lanza ya AU1 en paralelo a la ola 4, con los arreglos de niveles y graves, y apruebo el permiso VIBRATE para el háptico del sellado». **Implementada en AU1** (tanda 4, ola 4, carril de audio). Pendiente: la prueba en el teléfono (las sondas `AF_STATE sfx` y `haptic` de `docs/dev/prototipo-v0.md`) y los encargos al compositor y al diseñador de sonido (07 §9.5), que sustituyen estos sonidos sin tocar los ganchos.
+
+**Contexto.**
+- El cliente no tenía ningún sonido (07 §9.2: «hoy el cliente no tiene audio») y Ajustes ocultaba Sonido, Música y Vibración (D-008: lo que no existe se oculta).
+- El 2026-10-15 se añadieron la lista de sonidos (`docs/audio/lista-de-sonidos.md`, con la dirección «ASMR amazónico fresco» y la jerarquía de niveles de Magic Sort) y el laboratorio procedural (`docs/audio/laboratorio-sonidos.html`), con la síntesis de los 61 efectos.
+- La revisión del laboratorio del 2026-10-16, renderizando sus 61 efectos, encontró:
+  - un `tanh` final que igualaba los volúmenes: `sfx_select` salía a −7 dBFS en lugar de −36, la jerarquía quedaba en unos 4 dB y `sfx_confetti`, unos 20 dB por debajo de su objetivo;
+  - siete efectos (`sfx_illegal`, `sfx_stuck`, `sfx_canoe_lost`, `sfx_tinaja_select`, `sfx_ui_back`, `sfx_map_pequepeque` y `sfx_sloth_nod`) y dos notas de fruta (Huito y Cacao) con el 78-99 % de la energía por debajo de 300 Hz, que el altavoz de un teléfono no reproduce;
+  - la reverberación de dosel añadida a todo (un toque de 0,12 s duraba 0,44 s);
+  - un `sfx_pour_loop` que era un sonido de 0,72 s y no un bucle.
+- Los hápticos de 02 §4 y 07 §9.2 necesitan el permiso Android `VIBRATE`, y la regla dura 4 de `CLAUDE.md` exige su aprobación.
+
+**Decisión.**
+1. **Audio provisional por código ya,** con los algoritmos del laboratorio portados 1:1 a C# 9 sin motor (`AF.Audio`) y generados al arrancar en un hilo de trabajo (0 MB en el AAB), hasta que lleguen el compositor y el diseñador de sonido. Solo el módulo de audio integrado de Unity (`com.unity.modules.audio`, ya en el manifest): sin paquetes nuevos.
+2. **Con los arreglos de la revisión:**
+   - cada efecto a su pico objetivo (la columna dBFS del laboratorio), sin el `tanh` global;
+   - al menos el 50 % de la energía por encima de 300 Hz, con armónicos o una octava;
+   - la cola de dosel solo en los efectos que la llevan;
+   - los gestos repetidos en ≤ 0,2 s;
+   - el chorro como bucle continuo cuyo tono sigue al nivel de la cuia de destino.
+3. **Se aprueba el permiso Android `VIBRATE`** para los hápticos de 02 §4 y 07 §9.2 (sellado, victoria, Capi, Boto y Atrás bloqueado), por un mecanismo versionado: un gancho de Editor que completa el manifiesto que genera Unity (`AF.Audio.Editor.AndroidVibratePermission`). Ningún otro permiso nuevo.
+4. **Sonido, Música y Vibración vuelven a Ajustes,** activados por defecto (`audio_sfx_default_on`, `audio_music_default_on` y `ui_haptics_default_on`, 08 §9) y guardados en `settings.sound`, `music` y `haptics` (08 §4.3).
+5. Los sonidos son **provisionales por código**, también los que el laboratorio llamaba «reales» (la piha y el boto): las grabaciones con licencia llegan después (07 §9.5).
+
+**Consecuencias.**
+- **Código:**
+  - `AF.Audio` (sin motor): síntesis, catálogo de los 61 IDs con su nivel, mezcla, reglas y la fachada `AudioCues`;
+  - `AF.Audio.Unity`: el servicio con su pool de `AudioSource`, el lecho de música provisional y los hápticos y el modo silencio por JNI;
+  - los ganchos de una línea en la vista y en la UI;
+  - las filas de Ajustes, las sondas `AF_STATE sfx` y `haptic` y `AF_PERF audio_build`.
+- **Datos:** las claves `sound`, `music` y `haptics` de `strings.csv` (glosario §10).
+- **GDD:** 07 §9 (el estado: audio provisional por código en el cliente).
+- **Lista de sonidos:** los IDs finales con su nivel.
+
+**Alternativas descartadas.**
+- **Esperar a las grabaciones:** el dueño quiere oír el juego en el teléfono ya.
+- **Exportar WAV del laboratorio al AAB:** pesan y no se arreglan sin volver a exportarlos.
+- **Hápticos con `Handheld.Vibrate`:** solo da una duración fija, sin los efectos predefinidos de Android.
+
+**Cómo revertir.** Instalar el servicio mudo (`AudioCues.Install(null)`) y ocultar otra vez las tres filas de Ajustes; quitar el gancho del manifiesto retira `VIBRATE`. Siempre con una decisión nueva que sustituya a D-026.
