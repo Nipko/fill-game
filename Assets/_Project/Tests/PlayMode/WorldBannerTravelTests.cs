@@ -78,11 +78,13 @@ namespace AF.Tests.PlayMode
                 Assert.That(banner.TravelMs, Is.LessThanOrEqualTo(MapConfig.WorldTravelInBannerMaxMs), where + ": ≤ 4 s");
                 Assert.That(banner.TravelMs, Is.EqualTo(WorldBannerView.TravelDelayMs + WorldBannerView.CanoeTravelMs + (flag != null ? MapConfig.FlagRaiseMs : 0f)), where);
 
-                // La pregunta del mundo encima de la franja (map_world_question).
+                // La pregunta del mundo, sola, bajo la cabecera y encima de la franja: sin la plantilla de la cabecera del Mapa
+                // (map_world_question), que repetía el nombre del mundo que ya dice la cabecera del banner.
                 string question = Loc.Fact(gate.WorldQuestion!);
                 Assert.That(question, Is.Not.Empty, where);
                 Assert.That(banner.QuestionLabel.gameObject.activeInHierarchy, Is.True, where);
-                Assert.That(banner.QuestionLabel.text, Is.EqualTo(UiText.MapWorldQuestion(world, question)), where);
+                Assert.That(banner.QuestionLabel.text, Is.EqualTo(question), where);
+                Assert.That(banner.QuestionLabel.text, Does.Not.Contain(UiText.WorldName(world)), where + ": el nombre del mundo, solo en la cabecera");
                 Assert.That(banner.MapButtonLabel.text, Is.EqualTo(UiText.MapOpen), where + ": «Ver mapa»");
                 Assert.That(banner.RaycastTargets(), Is.EqualTo(new Graphic[] { banner.Dim, banner.MapButton.targetGraphic }), where + ": el velo y «Ver mapa»");
 
@@ -116,6 +118,24 @@ namespace AF.Tests.PlayMode
                 }
 
                 Assert.That(steps, Is.GreaterThanOrEqualTo(Mathf.FloorToInt((WorldBannerView.CanoeTravelMs - 300f) / 160f)), where + ": no llega antes");
+                if (flag != null)
+                {
+                    // El izado se ve: la bandera sale del pie del mástil y sube 17 dp por él, a mitad de recorrido a mitad de tiempo.
+                    float raise0 = strip.FlagRaise;
+                    float lift0 = strip.FlagLiftDp;
+                    Assert.That(raise0, Is.LessThan(0.25f), where + ": el izado, recién empezado");
+                    PlayModeHelpers.TickExact(boot, Mathf.RoundToInt((0.5f - raise0) * MapConfig.FlagRaiseMs));
+                    float liftMid = strip.FlagLiftDp;
+                    Assert.That(strip.FlagRaise, Is.EqualTo(0.5f).Within(0.03f), where + ": a 400 ms");
+                    PlayModeHelpers.TickExact(boot, Mathf.CeilToInt(0.5f * MapConfig.FlagRaiseMs) + 40);
+                    float liftEnd = strip.FlagLiftDp;
+                    Assert.That(liftEnd - lift0, Is.GreaterThanOrEqualTo(12f), where + ": sube por el mástil (" + lift0 + " → " + liftEnd + " dp)");
+                    float half = ProceduralArt.MapFlagHeightDp * 0.5f;
+                    Assert.That(liftEnd, Is.EqualTo(BannerTravelStrip.MastHeightDp - half).Within(0.1f), where + ": en lo alto del mástil");
+                    Assert.That(liftMid, Is.EqualTo((half + liftEnd) * 0.5f).Within(1.5f), where + ": a mitad del mástil a mitad del izado");
+                    Assert.That(strip.Flag.rectTransform.localEulerAngles.z, Is.EqualTo(0f).Within(1e-3f), where + ": acaba quieta, sin ondear");
+                }
+
                 PlayModeHelpers.TickExact(boot, Mathf.CeilToInt(banner.TravelMs - WorldBannerView.TravelDelayMs - WorldBannerView.CanoeTravelMs) + 40);
                 Assert.That(strip.CanoeFraction, Is.EqualTo(1f), where + ": en la gran parada");
                 Assert.That(strip.FlagRaise, Is.EqualTo(flag != null ? 1f : 0f), where + ": izada en 800 ms");
@@ -124,9 +144,21 @@ namespace AF.Tests.PlayMode
                 Assert.That(banner.TravelDone, Is.True, where);
                 Assert.That(banner.Settled, Is.True, where + ": quieto al terminar (guía 8)");
                 AssertCanoeAtTheStop(boot, banner, where);
+                AssertGuideWaitsClear(strip, where);
                 for (int i = 0; i < strip.PassingCount; i++)
                 {
                     Assert.That(strip.PassingAlpha(i), Is.EqualTo(0f), where + ": los nombres de paso, ya atrás");
+                    Assert.That(InStrip(strip, strip.PassingBox(i), 0f), Is.True, where + ": «" + strip.Passing(i).text + "», dentro de la franja");
+                    for (int j = 0; j < i; j++)
+                    {
+                        if (!strip.Overlaps(i, j))
+                        {
+                            continue; // nunca se ven a la vez
+                        }
+
+                        Assert.That(BoxOverlapDp(strip.PassingBox(i), strip.PassingBox(j)), Is.EqualTo(0f), where + ": «" + strip.Passing(i).text + "» y «"
+                            + strip.Passing(j).text + "», sin pisarse");
+                    }
                 }
 
                 // El banner sigue sin cerrarse solo; un toque lo cierra como siempre.
@@ -139,6 +171,53 @@ namespace AF.Tests.PlayMode
                 Assert.That(banner.Visible, Is.False, where);
                 Assert.That(strip.Visible, Is.False, where + ": la franja, fuera con el banner");
             }
+        }
+
+        [UnityTest]
+        public IEnumerator Travel_FitsTheSafeArea_At100And130_In780_16x9_AndTheCutout()
+        {
+            // El viaje es un caso más de la regla del banner: la fuente hasta el 130 % sin desbordes ni recortes (02 §12; D-015,
+            // pregunta 43; T52) en 360 × 780 dp, en 16:9 (02 §5; GameScreen lo maqueta en 438,75 × 780 dp) y con el recorte de 48 dp
+            // arriba. La tarjeta con viaje crece (la pregunta, la franja de 112 dp y «Ver mapa»): dentro de la zona segura, sin
+            // solapes, a ≥ 12 sp y con los textos enteros, en el 41, el 81 y el 141.
+            var report = new System.Text.StringBuilder();
+            float worst = float.MaxValue;
+            string worstWhere = string.Empty;
+            foreach ((string name, Vector4 screen) in new[] { ("360 × 780", HudLabelTests.Screen780), ("16:9", HudLabelTests.Screen640), ("recorte de 48 dp", HudLabelTests.Screen780Cutout) })
+            {
+                GameScreen.SimulatedScreen = screen;
+                foreach (int level in new[] { 41, 81, 141 })
+                {
+                    yield return CardSetup.Load(level);
+                    GameScreen view = GameBootstrap.Current!.View!;
+                    WorldBannerView banner = view.WorldBannerView;
+                    Assert.That(banner.Travel, Is.Not.Null, "nivel " + level + " en " + name + ": con el viaje");
+                    RectTransform root = (RectTransform)view.Canvas.transform;
+                    foreach (float scale in new[] { 1f, 1.3f })
+                    {
+                        string where = "nivel " + level + " al " + (scale * 100f).ToString("0", CultureInfo.InvariantCulture) + " % en " + name;
+                        view.BannerFontScale = scale;
+                        Assert.That(banner.FontScale, Is.EqualTo(scale), where);
+                        Assert.That(banner.TitleLabel.fontSize, Is.EqualTo(WorldBannerView.TitleSp * scale).Within(0.01f), where + ": la escala, aplicada");
+                        AssertTravelLaidOut(view, where);
+                        Canvas.ForceUpdateCanvases();
+                        Rect panel = VictorySetup.CanvasRect(banner.Panel, root);
+                        float slack = Mathf.Min(panel.yMin - view.SafeTopDp, view.CardCanvasHeight - view.CardSafeBottom - panel.yMax);
+                        report.Append(where).Append(": ").Append(panel.height.ToString("0", CultureInfo.InvariantCulture)).Append(" dp de alto, ")
+                            .Append(slack.ToString("0", CultureInfo.InvariantCulture)).Append(" dp de aire; ");
+                        if (slack < worst)
+                        {
+                            worst = slack;
+                            worstWhere = where;
+                        }
+                    }
+
+                    view.BannerFontScale = 1f;
+                }
+            }
+
+            Assert.That(worst, Is.GreaterThanOrEqualTo(8f), "8 dp de aire con la zona segura como mínimo (" + worstWhere + "): " + report);
+            TestContext.WriteLine("AF_M36 travel_fit " + report);
         }
 
         [UnityTest]
@@ -264,10 +343,20 @@ namespace AF.Tests.PlayMode
 
             bool sawBefore = false;
             bool sawAfter = false;
+            bool sawRamp = false;
             for (int ms = 0; ms < 4200; ms += PlayModeHelpers.FrameMs)
             {
                 PlayModeHelpers.TickExact(boot, PlayModeHelpers.FrameMs);
                 float arc = strip.CanoeFraction * strip.TotalDp;
+                if (strip.GuideAAlpha > 0f && strip.GuideBAlpha > 0f)
+                {
+                    // A mitad del relevo, los dos guías a la vista: sin pisarse (≤ 4 dp) y dentro de la franja.
+                    sawRamp = true;
+                    Assert.That(GuideOverlapDp(strip.GuideA, strip.GuideB), Is.LessThanOrEqualTo(4f), "los dos guías, sin pisarse, a " + ms + " ms");
+                    Assert.That(InStrip(strip, strip.GuideA.rectTransform, 0f), Is.True, "Rosa, que se queda, dentro de la franja");
+                    Assert.That(InStrip(strip, strip.GuideB.rectTransform, 0f), Is.True, "el bufeo, dentro de la franja");
+                }
+
                 if (arc < relayDp - 1f)
                 {
                     sawBefore = true;
@@ -286,6 +375,8 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(sawBefore && sawAfter, Is.True, "el relevo, a mitad del viaje");
+            Assert.That(sawRamp, Is.True, "a mitad del relevo, con los dos guías");
+            AssertGuideWaitsClear(strip, "el bufeo, al llegar");
             Assert.That(relayS, Is.GreaterThan(0f));
         }
 
@@ -586,11 +677,81 @@ namespace AF.Tests.PlayMode
             {
                 t.ForceMeshUpdate(true, true);
                 Assert.That(t.fontSize, Is.GreaterThanOrEqualTo(12f), where + ": «" + t.text + "» ≥ 12 sp");
-                Assert.That(t.textInfo.characterCount, Is.EqualTo(t.text.Length), where + ": «" + t.text + "» entero");
+                Assert.That(t.textInfo.characterCount, Is.EqualTo(t.GetParsedText().Length), where + ": «" + t.text + "» entero");
+                Assert.That(t.isTextTruncated, Is.False, where + ": «" + t.text + "» sin recortes");
                 Assert.That(t.preferredHeight, Is.LessThanOrEqualTo(t.rectTransform.rect.height + 0.5f), where + ": «" + t.text + "» cabe en alto");
             }
 
             Assert.That(banner.QuestionLabel.textInfo.lineCount, Is.LessThanOrEqualTo(2), where + ": la pregunta, en 2 líneas como mucho");
+        }
+
+        // Al llegar, el guía espera sin tapar a Capi en la canoa (≤ 4 dp de solape con su caja) y dentro de la franja.
+        private static void AssertGuideWaitsClear(BannerTravelStrip strip, string where)
+        {
+            Image guide = strip.GuideB.gameObject.activeSelf && strip.GuideBAlpha > 0f ? strip.GuideB : strip.GuideA;
+            if (!guide.gameObject.activeSelf)
+            {
+                return; // sin arte, sin guía
+            }
+
+            float overlap = GuideOverlapDp(guide, strip.Canoe);
+            Assert.That(overlap, Is.LessThanOrEqualTo(4f), where + ": el guía (" + guide.rectTransform.anchoredPosition + ") no tapa a Capi en la canoa ("
+                + strip.Canoe.rectTransform.anchoredPosition + ")");
+            Assert.That(InStrip(strip, guide.rectTransform, 0f), Is.True, where + ": el guía, dentro de la franja");
+        }
+
+        // Solape de las cajas de dos piezas de la franja (dp: el menor de los dos lados del solape; 0 si no se tocan).
+        internal static float GuideOverlapDp(Image a, Image b)
+        {
+            return BoxOverlapDp(a.rectTransform, b.rectTransform);
+        }
+
+        private static float BoxOverlapDp(RectTransform a, RectTransform b)
+        {
+            Rect ra = BoxOf(a);
+            Rect rb = BoxOf(b);
+            float x = Mathf.Min(ra.xMax, rb.xMax) - Mathf.Max(ra.xMin, rb.xMin);
+            float y = Mathf.Min(ra.yMax, rb.yMax) - Mathf.Max(ra.yMin, rb.yMin);
+            return x > 0f && y > 0f ? Mathf.Min(x, y) : 0f;
+        }
+
+        // La caja de rt (en la capa sin girar de la franja, origen en el centro) cabe en la franja con margin dp.
+        internal static bool InStrip(BannerTravelStrip strip, RectTransform rt, float margin)
+        {
+            Rect box = BoxOf(rt);
+            Rect r = strip.Root.rect;
+            float hx = (r.width * 0.5f) - margin + 0.01f;
+            float hy = (r.height * 0.5f) - margin + 0.01f;
+            return box.xMin >= -hx && box.xMax <= hx && box.yMin >= -hy && box.yMax <= hy;
+        }
+
+        // La caja de una pieza de la capa sin girar (anclada en el centro), con su pivote y su escala.
+        private static Rect BoxOf(RectTransform rt)
+        {
+            var size = new Vector2(rt.sizeDelta.x * Mathf.Abs(rt.localScale.x), rt.sizeDelta.y * Mathf.Abs(rt.localScale.y));
+            Vector2 p = rt.anchoredPosition;
+            return new Rect(p.x - (rt.pivot.x * size.x), p.y - (rt.pivot.y * size.y), size.x, size.y);
+        }
+
+        // Ms desde que entra la tarjeta en que la canoa llega a la fracción fraction del tramo (la inversa de Ease.InOut).
+        internal static float MsAtFraction(float fraction)
+        {
+            float lo = 0f;
+            float hi = 1f;
+            for (int i = 0; i < 40; i++)
+            {
+                float mid = (lo + hi) * 0.5f;
+                if (Ease.InOut(mid) < fraction)
+                {
+                    lo = mid;
+                }
+                else
+                {
+                    hi = mid;
+                }
+            }
+
+            return WorldBannerView.TravelDelayMs + (lo * WorldBannerView.CanoeTravelMs);
         }
 
         // «Ver mapa» con un dedo, por el EventSystem: el primer impacto en el centro del botón es el botón (no el velo).
@@ -638,7 +799,7 @@ namespace AF.Tests.PlayMode
 
         // Datos de prueba del relevo: las paradas reales con la 3 en el mundo 6 y la 4 en el 7, y el tramo de la 4 con «teotonio»
         // (un punto de paso nuevo en el Mapa, a mitad de su pieza del Amazonas). relayS: la s de «teotonio».
-        private static BannerTravelData RelayData(RiverMap real, RiverRoutes routes, RiverStopCatalog stops, out float relayS)
+        internal static BannerTravelData RelayData(RiverMap real, RiverRoutes routes, RiverStopCatalog stops, out float relayS)
         {
             RiverStopRoute leg = routes.At(4)!;
             RiverPathPiece amazon = default;
