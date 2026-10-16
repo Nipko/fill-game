@@ -122,6 +122,86 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Viewport_Ground_IsLandOutsideTheBasin_NotSea()
+        {
+            yield return OpenAt(58);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Image ground = map.Ground;
+            Assert.That(ground.transform.parent, Is.SameAs(map.ViewportRect), "el fondo del visor");
+            Assert.That(ground.transform.GetSiblingIndex(), Is.EqualTo(0), "detrás del contenido");
+            Assert.That(ground.raycastTarget, Is.True, "recibe el arrastre fuera de la cuenca");
+            Assert.That(ground.color, Is.EqualTo(RiverMapScreen.GroundColor), "tierra, no mar: la cuenca no es una isla (D-003)");
+            Assert.That(RiverMapScreen.GroundColor, Is.Not.EqualTo(RiverMapScreen.SeaColor));
+            foreach (Image image in map.ViewportRect.GetComponentsInChildren<Image>(true))
+            {
+                Assert.That(image.color, Is.Not.EqualTo(RiverMapScreen.SeaColor), image.name + ": sin polígono del mar en los datos, no se pinta mar");
+            }
+
+            map.ViewBasinButton.onClick.Invoke();
+            yield return null;
+            Assert.That(ground.color, Is.EqualTo(RiverMapScreen.GroundColor), "también en Cuenca");
+        }
+
+        [UnityTest]
+        public IEnumerator Glass_InTheWorldView_IsWiderPerClass_ThanInTheBasin()
+        {
+            Assert.That(RiverMapScreen.RibbonWidthDp(MapView.World, 1), Is.EqualTo(8f));
+            Assert.That(RiverMapScreen.RibbonWidthDp(MapView.World, 2), Is.EqualTo(5f));
+            Assert.That(RiverMapScreen.RibbonWidthDp(MapView.World, 3), Is.EqualTo(3f));
+            for (int c = 1; c <= 3; c++)
+            {
+                Assert.That(RiverMapScreen.RibbonWidthDp(MapView.Basin, c), Is.EqualTo(RiverRibbonGraphic.WidthForClass(c)), "en Cuenca, el de la cinta");
+                Assert.That(RiverMapScreen.RibbonWidthDp(MapView.World, c), Is.GreaterThan(RiverRibbonGraphic.WidthForClass(c)), "en Mundo, más ancho");
+            }
+
+            yield return OpenAt(58);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Assert.That(map.GlassCount, Is.GreaterThan(0));
+            var classes = new HashSet<int>();
+            for (int i = 0; i < map.GlassCount; i++)
+            {
+                RiverRibbonGraphic ribbon = map.Glass(i);
+                classes.Add(ribbon.Line!.Class);
+                Assert.That(ribbon.WidthDp, Is.EqualTo(RiverMapScreen.RibbonWidthDp(MapView.World, ribbon.Line.Class)), ribbon.name + " en Mundo");
+            }
+
+            Assert.That(classes, Is.SupersetOf(new[] { 1, 2 }), "el cauce y los afluentes");
+
+            map.ViewBasinButton.onClick.Invoke();
+            yield return null;
+            for (int i = 0; i < map.GlassCount; i++)
+            {
+                RiverRibbonGraphic ribbon = map.Glass(i);
+                Assert.That(ribbon.WidthDp, Is.EqualTo(RiverRibbonGraphic.WidthForClass(ribbon.Line!.Class)), ribbon.name + " en Cuenca");
+            }
+
+            map.ViewWorldButton.onClick.Invoke();
+            yield return null;
+            Assert.That(map.Glass(0).WidthDp, Is.EqualTo(RiverMapScreen.RibbonWidthDp(MapView.World, map.Glass(0).Line!.Class)), "de vuelta a Mundo");
+        }
+
+        [UnityTest]
+        public IEnumerator StopRemaining_KeepsItsAirFromTheFillet_InTwoLines()
+        {
+            yield return OpenAt(58);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Canvas.ForceUpdateCanvases();
+            TextMeshProUGUI label = map.StopRemainingLabel;
+            label.ForceMeshUpdate();
+            Rect plate = map.StopRemainingRect.rect;
+            Rect box = label.rectTransform.rect;
+            Assert.That(label.textInfo.lineCount, Is.EqualTo(2), "«Faltan 3 niveles para Anavilhanas» va en dos líneas");
+            Assert.That(plate.height, Is.EqualTo(56f).Within(0.5f), "fila de 56 dp con el texto en dos líneas");
+            Assert.That(box.width, Is.EqualTo(plate.width - 28f).Within(0.5f), "14 dp de aire a cada lado, desde el filete");
+            Assert.That(box.height, Is.EqualTo(plate.height - 20f).Within(0.5f), "10 dp arriba y abajo");
+            Assert.That(label.rectTransform.anchoredPosition.x, Is.EqualTo(14f).Within(0.5f));
+            Assert.That(label.fontSize, Is.GreaterThanOrEqualTo(13f * UiBuilder.TextScale - 0.01f), "no se encoge más de un punto");
+            Rect ink = new Rect(label.textBounds.min, label.textBounds.size);
+            Assert.That(ink.xMin, Is.GreaterThanOrEqualTo(box.xMin - 0.5f), "el texto no se sale de su caja");
+            Assert.That(ink.xMax, Is.LessThanOrEqualTo(box.xMax + 0.5f));
+        }
+
+        [UnityTest]
         public IEnumerator Open_InAnAnsweredWorld_ShowsTheProceduralCheck()
         {
             yield return OpenAt(61);

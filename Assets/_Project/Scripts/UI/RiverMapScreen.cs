@@ -120,8 +120,28 @@ namespace AF.UI
         /// <summary>Margen que deja la canoa con el borde de la vista antes de ofrecer «Volver a la canoa» (dp) [P].</summary>
         public const float CanoeMarginDp = 24f;
 
-        /// <summary>Mar del Mapa (<c>mar_a</c> de la muestra, <c>generar_mapa.py</c>) [P].</summary>
+        /// <summary>
+        /// Mar del Mapa (<c>mar_a</c> de la muestra, <c>generar_mapa.py</c>) [P]: solo para el polígono del mar o la esquina
+        /// atlántica. <c>river_map_v1.json</c> aún no los trae, así que hoy no se pinta en ningún sitio (hasta M3.4): fuera de la
+        /// cuenca no hay mar, sino tierra (<see cref="GroundColor"/>).
+        /// </summary>
         public static readonly Color SeaColor = Palette.Hex(0x0F6275);
+
+        /// <summary>
+        /// Tierra fuera de la cuenca: el fondo del visor, la imagen que recibe el arrastre (la mezcla de la selva #2A7A4B [P], a un
+        /// paso del dosel #2C7A4B de <see cref="LandGraphic.CanopyColor"/>), para que el borde de los datos no se lea como una
+        /// costa: la cuenca no es una isla y al sur y al oeste no hay mar (D-003).
+        /// </summary>
+        public static readonly Color GroundColor = Palette.Hex(0x2A7A4B);
+
+        /// <summary>Ancho del cauce y del ramal del Pará (clase 1) en la vista Mundo, en dp [P] (en Cuenca, el de la cinta).</summary>
+        public const float WorldWidthClass1Dp = 8f;
+
+        /// <summary>Ancho de los afluentes (clase 2) en la vista Mundo, en dp [P].</summary>
+        public const float WorldWidthClass2Dp = 5f;
+
+        /// <summary>Ancho de los ríos locales (clase 3) en la vista Mundo, en dp [P].</summary>
+        public const float WorldWidthClass3Dp = 3f;
 
         /// <summary>Fondo de la pantalla detrás del marco (<c>fondo_a</c> de la muestra) [P].</summary>
         public static readonly Color BackgroundColor = Palette.Hex(0x0E2B23);
@@ -146,7 +166,9 @@ namespace AF.UI
         private const float FramePadDp = 8f;
         private const float SegmentDp = 82f;
         private const float SwitchPadDp = 4f;
-        private const float RowPadDp = 6f;
+        private const float RowPadDp = 10f;
+        private const float TwoLineRowDp = 56f;
+        private const float RemainingLabelXDp = 14f;
         private const float CheckDp = 24f;
         private const float TitleSp = 17f;
         private const float TitleMinSp = 13f;
@@ -166,6 +188,7 @@ namespace AF.UI
         private readonly GlyphGraphic _check;
 
         private readonly Image _frame;
+        private readonly Image _ground;
         private readonly RectTransform _viewport;
         private readonly RectTransform _content;
         private readonly Canvas _staticCanvas;
@@ -246,13 +269,13 @@ namespace AF.UI
             _background = UiBuilder.Image("Background", _root, null, BackgroundColor, true);
             UiBuilder.Stretch(_background.rectTransform);
 
-            // ---- Zona del mapa: marco de madera, máscara, mar, contenido (dos lienzos anidados) y «Volver a la canoa». ----
+            // ---- Zona del mapa: marco de madera, máscara, tierra de fondo, contenido (dos lienzos anidados) y «Volver a la canoa». ----
             _frame = UiBuilder.Sliced("Frame", _root, art.RoundedRect, Palette.Frame);
             _viewport = UiBuilder.Rect("Viewport", _frame.transform);
             _viewport.gameObject.AddComponent<RectMask2D>();
             _viewport.gameObject.AddComponent<DragArea>().Owner = this;
-            Image sea = UiBuilder.Image("Sea", _viewport, null, SeaColor, true); // recibe el arrastre en el mar
-            UiBuilder.Stretch(sea.rectTransform);
+            _ground = UiBuilder.Image("Ground", _viewport, null, GroundColor, true); // recibe el arrastre fuera de la cuenca
+            UiBuilder.Stretch(_ground.rectTransform);
             _content = UiBuilder.Rect("Content", _viewport);
             UiBuilder.Place(_content, 0f, 0f, MapSpace.BasinWidthDp, MapSpace.BasinWidthDp);
 
@@ -370,6 +393,9 @@ namespace AF.UI
 
         /// <summary>Tierra.</summary>
         public LandGraphic Land => _land;
+
+        /// <summary>Fondo del visor: la tierra fuera de la cuenca (<see cref="GroundColor"/>), que recibe el arrastre.</summary>
+        public Image Ground => _ground;
 
         /// <summary>Cintas de vidrio activas, una por línea del Mapa.</summary>
         public int GlassCount
@@ -506,6 +532,9 @@ namespace AF.UI
 
         /// <summary>Caja de «Faltan…».</summary>
         public RectTransform StopRemainingRect => _remaining;
+
+        /// <summary>Texto de «Faltan…» (en coordenadas de su placa, <see cref="StopRemainingRect"/>).</summary>
+        public TextMeshProUGUI StopRemainingLabel => _remainingLabel;
 
         /// <summary>Hueco del Muestrario (M4.1), oculto hasta que exista.</summary>
         public RectTransform SamplesSlot => _samplesSlot;
@@ -879,6 +908,30 @@ namespace AF.UI
             MarkersBuild(_dynamicLayer);
         }
 
+        /// <summary>
+        /// Ancho de la cinta de una línea de clase <paramref name="lineClass"/> en la vista <paramref name="view"/>: en Mundo, a
+        /// 4×-15×, el río es el protagonista y la jerarquía cauce / afluente / río local tiene que leerse a tamaño de teléfono
+        /// (<see cref="WorldWidthClass1Dp"/>, <see cref="WorldWidthClass2Dp"/> y <see cref="WorldWidthClass3Dp"/>); en Cuenca, a
+        /// 1×, el de la clase (<see cref="RiverRibbonGraphic.WidthForClass"/>).
+        /// </summary>
+        public static float RibbonWidthDp(MapView view, int lineClass)
+        {
+            if (view != MapView.World)
+            {
+                return RiverRibbonGraphic.WidthForClass(lineClass);
+            }
+
+            switch (lineClass)
+            {
+                case 1:
+                    return WorldWidthClass1Dp;
+                case 2:
+                    return WorldWidthClass2Dp;
+                default:
+                    return WorldWidthClass3Dp;
+            }
+        }
+
         // La vista: escala, mallas a esa escala (solo si cambia), la canoa y el encuadre.
         private void ApplyView(MapView view)
         {
@@ -910,9 +963,11 @@ namespace AF.UI
             _land.SetLand(map.Land, space);
             for (int i = 0; i < _glass.Count; i++)
             {
-                if (_glass[i].gameObject.activeSelf)
+                RiverRibbonGraphic ribbon = _glass[i];
+                if (ribbon.gameObject.activeSelf && ribbon.Line != null)
                 {
-                    _glass[i].SetSpace(space);
+                    ribbon.SetSpace(space);
+                    ribbon.SetWidth(RibbonWidthDp(view, ribbon.Line.Class));
                 }
             }
 
@@ -1033,16 +1088,22 @@ namespace AF.UI
             float playTop = h - _safeBottom - GapDp - PlayDp;
             UiBuilder.Place((RectTransform)_play.Button.transform, (w - playW) * 0.5f, playTop, playW, PlayDp);
             // La fila es una sola banda de alto rowH: la cápsula del conmutador (las pestañas a todo su alto, con 4 dp de relleno) y
-            // «Faltan…», que va en dos líneas si hace falta y, si ni así cabe a su mínimo (texto grande), hace crecer la fila
-            // (02 §12), con 6 dp de aire entre el texto y el filete de su placa.
+            // «Faltan…», que va en dos líneas si hace falta (y entonces la fila mide TwoLineRowDp) y, si ni así cabe a su mínimo
+            // (texto grande), hace crecer la fila (02 §12). El aire se mide desde el filete de la placa, no desde su borde:
+            // RemainingLabelXDp a cada lado y RowPadDp arriba y abajo.
             float switchW = (2f * SegmentDp) + (2f * SwitchPadDp);
             float remainingX = 16f + switchW + GapDp;
             float remainingW = Mathf.Max(48f, w - 16f - remainingX);
-            float labelW = remainingW - 20f;
+            float labelW = Mathf.Max(24f, remainingW - (2f * RemainingLabelXDp));
             float rowH = RowDp;
             if (!string.IsNullOrEmpty(_remainingLabel.text))
             {
-                rowH = Mathf.Max(RowDp, Mathf.Ceil(UiBuilder.MinTextHeight(_remainingLabel, labelW)) + (2f * RowPadDp));
+                if (_remainingLabel.GetPreferredValues(_remainingLabel.text, float.PositiveInfinity, float.PositiveInfinity).x > labelW)
+                {
+                    rowH = TwoLineRowDp; // a su tamaño de siempre no cabe en una línea: va en dos
+                }
+
+                rowH = Mathf.Max(rowH, Mathf.Ceil(UiBuilder.MinTextHeight(_remainingLabel, labelW)) + (2f * RowPadDp));
             }
 
             float rowTop = playTop - GapDp - rowH;
@@ -1050,7 +1111,7 @@ namespace AF.UI
             _viewWorld.Place(16f + SwitchPadDp, rowTop, SegmentDp, rowH);
             _viewBasin.Place(16f + SwitchPadDp + SegmentDp, rowTop, SegmentDp, rowH);
             UiBuilder.Place(_remaining, remainingX, rowTop, remainingW, rowH);
-            UiBuilder.Place(_remainingLabel.rectTransform, 10f, RowPadDp, labelW, rowH - (2f * RowPadDp));
+            UiBuilder.Place(_remainingLabel.rectTransform, RemainingLabelXDp, RowPadDp, labelW, rowH - (2f * RowPadDp));
             UiBuilder.Place(_samplesSlot, remainingX, rowTop, remainingW, rowH);
             SamplesLayout(_samplesSlot);
 
