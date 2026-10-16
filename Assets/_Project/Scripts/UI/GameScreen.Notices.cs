@@ -190,6 +190,8 @@ namespace AF.UI
         private readonly float[] _stopLabelRestRight = new float[BoardState.MaxCuias];
         private readonly float[] _stopLabelBlockLeft = new float[BoardState.MaxCuias]; // tramos que no deja la fila 1 (de lado)
         private readonly float[] _stopLabelBlockRight = new float[BoardState.MaxCuias];
+        private float _stopLabelSideLeft = float.NaN; // tramo libre donde se centró la placa de lado (dp; NaN si no va de lado)
+        private float _stopLabelSideRight = float.NaN;
         private readonly List<Graphic> _stopLabelGraphics = new List<Graphic>(64);
         private readonly Vector3[] _stopLabelCorners = new Vector3[4];
 
@@ -856,6 +858,8 @@ namespace AF.UI
             StopLabelSpot spots = StopLabelSpotsOverride;
             float top = StopLabelPlateTop(l);
             float rowTop = StopLabelRowOneTop(l); // mide la fila 1 (también para la elevación y para ir de lado)
+            _stopLabelSideLeft = float.NaN;
+            _stopLabelSideRight = float.NaN;
             _stopLabelSpot = StopLabelSpot.Frame;
             if ((spots & StopLabelSpot.Frame) != 0
                 && _stopLabel.PlaceAsPlate(StopLabel.SideDp, _canvasW - StopLabel.SideDp, top, rowTop - StopLabel.PlateCuiaGapDp, true))
@@ -941,7 +945,14 @@ namespace AF.UI
                 }
             }
 
-            return bestRight > bestLeft && _stopLabel.PlaceAsPlate(bestLeft, bestRight, top, maxBottom, false);
+            if (bestRight <= bestLeft || !_stopLabel.PlaceAsPlate(bestLeft, bestRight, top, maxBottom, false))
+            {
+                return false;
+            }
+
+            _stopLabelSideLeft = bestLeft;
+            _stopLabelSideRight = bestRight;
+            return true;
         }
 
         // Sobre el muelle: del canto de abajo del panel (con NoticeBubbleGapDp) a StopLabelDockLimit, centrada en ese hueco si le
@@ -994,7 +1005,8 @@ namespace AF.UI
         /// Lo más alto de la fila 1 en reposo (dp desde arriba, con el desplazamiento del tablero; tarea FX4): de cada cuia de la
         /// fila 1, su boca (lo alto de la cuia, con el corcho) o, si algo visible asoma por encima (la tapa del sellado o una
         /// pieza de su mecánica, como el medallón de la Hoja), lo más alto de ello. Mide los gráficos visibles del cuerpo y de
-        /// las anclas de overlay de la ranura, relativos a su boca (así una cuia ya elevada cuenta en reposo), y deja cada cuia
+        /// las anclas de overlay de la ranura, relativos a su boca (así una cuia ya elevada cuenta en reposo; una que vierte, con
+        /// el corcho o la tapa de reposo de su cuerpo y, a lo ancho, con toda su ranura), y deja cada cuia
         /// en <c>_stopLabelRestTop</c>, con lo que ocupa a lo ancho lo que se ve de la cuia en <c>_stopLabelRestLeft</c> y
         /// <c>_stopLabelRestRight</c>. Solo al colocar la placa (nunca por fotograma).
         /// </summary>
@@ -1017,7 +1029,12 @@ namespace AF.UI
                 CuiaView v = _views[i];
                 float mouth = l.FootY[i] - (v.HeightU * v.Unit) - _boardShift;
                 float crown = 0f;
-                if (!v.BodyInFront && VisibleBox(v.Body, out _, out float bodyGraphicsTop, out _))
+                if (v.BodyInFront)
+                {
+                    // Vertiendo (el cuerpo, girado, delante de todo): su corcho o su tapa como en reposo, medidos en su marco.
+                    crown = BodyCrownAtRest(v.Body);
+                }
+                else if (VisibleBox(v.Body, out _, out float bodyGraphicsTop, out _))
                 {
                     CanvasRectDp(v.Body, out _, out float bodyTop, out _, out _);
                     crown = Mathf.Max(crown, bodyTop - bodyGraphicsTop);
@@ -1036,11 +1053,12 @@ namespace AF.UI
                     crown = Mathf.Max(crown, slotMouth - frontTop);
                 }
 
-                // A lo ancho, lo que se ve de la cuia (la ranura, Root, es más ancha que ella); si nada, la ranura entera.
+                // A lo ancho, lo que se ve de la cuia (la ranura, Root, es más ancha que ella); si nada, la ranura entera. Con el
+                // cuerpo vertiendo fuera de la ranura, la ranura entera y lo que se ve en ella (de más, nunca de menos).
                 if (VisibleBox(v.Root, out float seenLeft, out _, out float seenRight))
                 {
-                    left = seenLeft;
-                    right = seenRight;
+                    left = v.BodyInFront ? Mathf.Min(left, seenLeft) : seenLeft;
+                    right = v.BodyInFront ? Mathf.Max(right, seenRight) : seenRight;
                 }
 
                 _stopLabelRestTop[i] = mouth - crown;
@@ -1077,6 +1095,40 @@ namespace AF.UI
 
             graphics.Clear();
             return left <= right;
+        }
+
+        // Lo que asoma lo visible del cuerpo por encima de su canto de arriba (dp; 0 si nada), medido en el marco del propio
+        // cuerpo: sale lo mismo en reposo, elevado o girado vertiendo (revisión de FX4: a mitad de un vertido, la corona de
+        // reposo y no 0). Solo al colocar la placa.
+        private float BodyCrownAtRest(RectTransform body)
+        {
+            float top = float.MinValue;
+            List<Graphic> graphics = _stopLabelGraphics;
+            body.GetComponentsInChildren(false, graphics);
+            for (int k = 0; k < graphics.Count; k++)
+            {
+                Graphic g = graphics[k];
+                if (!g.enabled || g is HitArea || g.color.a <= 0.01f || g.canvasRenderer.GetAlpha() <= 0.01f)
+                {
+                    continue;
+                }
+
+                g.rectTransform.GetWorldCorners(_stopLabelCorners);
+                for (int c = 0; c < 4; c++)
+                {
+                    top = Mathf.Max(top, body.InverseTransformPoint(_stopLabelCorners[c]).y);
+                }
+            }
+
+            graphics.Clear();
+            if (top == float.MinValue)
+            {
+                return 0f;
+            }
+
+            // Del marco del cuerpo a dp del lienzo (el cuerpo solo gira: la escala es la misma en reposo y vertiendo).
+            float dpPerUnit = ((Vector2)_root.InverseTransformVector(body.TransformVector(Vector3.up))).magnitude;
+            return Mathf.Max(0f, (top - body.rect.yMax) * dpPerUnit);
         }
 
         // La caja de rt en dp del lienzo (x desde la izquierda, y desde arriba; con giros, la que abarca sus cuatro esquinas).
@@ -1150,6 +1202,12 @@ namespace AF.UI
                 ? new Vector2(_stopLabelRestLeft[index], _stopLabelRestRight[index])
                 : new Vector2(float.NaN, float.NaN);
         }
+
+        /// <summary>
+        /// Tramo libre de la fila 1 en el que se centró la placa de lado (x: izquierda, y: derecha, dp; NaN si no va de lado;
+        /// tests y capturas).
+        /// </summary>
+        internal Vector2 StopLabelSideSpan => new Vector2(_stopLabelSideLeft, _stopLabelSideRight);
 
         /// <summary>Lo más alto de cada cuia de la fila 1 en reposo al colocar la placa (NaN fuera de la fila 1; tests).</summary>
         internal float StopLabelRestTopOf(int index)

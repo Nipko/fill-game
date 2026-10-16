@@ -29,7 +29,8 @@ namespace AF.Tests.PlayMode
     /// reanudar no sale; en el 131 (3 filas) va como placa bajo el HUD, con aire sobre las cuias de la
     /// fila 1; en el 32 y con <c>ui_stop_label</c> apagada no sale; y sin asignaciones por fotograma con el rótulo a la vista.
     /// De FX4 y su revisión: la placa y la fila 1 (clavada al marco, de lado o sobre el muelle), la elevación, la burbuja, el
-    /// «no sale» y su sonda <c>stop_label_off</c>.
+    /// «no sale» y su sonda <c>stop_label_off</c>; de su revisión final, volver a colocarla con «+1 cuia» (o <c>no_room</c>), el
+    /// rótulo del horizonte con «+1 cuia», <c>board</c> al cambiar la pantalla y la medida de la fila 1 a mitad de un vertido.
     /// </summary>
     public sealed class StopLabelTests
     {
@@ -374,53 +375,7 @@ namespace AF.Tests.PlayMode
 
                 RectTransform canvas = CanvasOf(label);
                 Rect plate = label.Rect;
-                float frameInner = l.PanelY + view.PanelFrameDp;
-                Assert.That(plate.yMin, Is.EqualTo(Mathf.Max(view.HudBottomDp, frameInner - StopLabel.PlateOverFrameDp)).Within(0.01f), level + ": clavada al marco");
-                Assert.That(plate.yMin, Is.GreaterThanOrEqualTo(view.HudBottomDp - 0.01f), "bajo la fila del HUD");
-                Assert.That(plate.xMin, Is.GreaterThanOrEqualTo(StopLabel.SideDp - 0.01f));
-                Assert.That(plate.xMax, Is.LessThanOrEqualTo(view.CanvasWidth - StopLabel.SideDp + 0.01f));
-                int beside = 0;
-                int under = -1;
-                for (int i = 0; i < view.Views.Length; i++)
-                {
-                    if (l.RowOf[i] != 0)
-                    {
-                        continue;
-                    }
-
-                    Rect box = VisibleBox(view.Views[i], canvas);
-                    Assert.That(view.StopLabelRestTopOf(i), Is.EqualTo(box.yMin).Within(0.05f), level + ": lo más alto de la cuia " + i + " que mide la pantalla");
-                    Vector2 span = view.StopLabelRestSpanOf(i);
-                    Assert.That(span.x, Is.EqualTo(box.xMin).Within(0.05f), level + ": lo que ocupa a lo ancho la cuia " + i);
-                    Assert.That(span.y, Is.EqualTo(box.xMax).Within(0.05f), level + ": lo que ocupa a lo ancho la cuia " + i);
-                    bool below = box.xMax + StopLabel.PlateSideAirDp > plate.xMin && box.xMin - StopLabel.PlateSideAirDp < plate.xMax;
-                    TestContext.WriteLine(level + ": cuia " + i + " " + box + (below ? " bajo la placa" : " al lado"));
-                    if (below)
-                    {
-                        Assert.That(plate.yMax + StopLabel.PlateCuiaGapDp, Is.LessThanOrEqualTo(box.yMin + 0.01f), level + ": aire sobre la cuia " + i + " en reposo, corcho y mecánica incluidos");
-                        if (under < 0 && !boot.Flow!.Session.Current[i].IsEmpty)
-                        {
-                            under = i;
-                        }
-                    }
-                    else if (box.yMin < plate.yMax + StopLabel.PlateCuiaGapDp)
-                    {
-                        beside++; // no le deja sitio encima: queda al lado, con su aire a los lados
-                    }
-                }
-
-                TestContext.WriteLine(level + ": placa " + plate + " (" + mode + ")");
-                if (side)
-                {
-                    Assert.That(beside, Is.GreaterThan(0), level + ": alguna cuia de la fila 1 no le deja sitio encima (la Hoja)");
-                    Rect leaf = VisibleBox(view.Views[1], canvas);
-                    Assert.That(plate.xMin - leaf.xMax, Is.GreaterThanOrEqualTo(StopLabel.PlateSideAirDp - 0.01f), "a la derecha de la Hoja, con su aire");
-                }
-                else
-                {
-                    Assert.That(beside, Is.EqualTo(0), level + ": cabe sobre toda la fila 1");
-                    Assert.That(plate.center.x, Is.EqualTo(view.CanvasWidth * 0.5f).Within(0.01f), "centrada");
-                }
+                int under = AssertPlateClearsRowOne(boot, level, side, "");
 
                 // La cuia 0 elevada.
                 Assert.That(label.Visible, Is.True);
@@ -458,6 +413,375 @@ namespace AF.Tests.PlayMode
             {
                 Application.logMessageReceived -= capture;
             }
+        }
+
+        // Revisión final de FX4, (1): con la placa a la vista, «+1 cuia» cambia el tablero (11 a 12 cuias) y la placa se vuelve a
+        // colocar: se mide otra vez la fila 1 (la cuia nueva va a la fila de abajo: la fila 1 no cambia), en el mismo sitio y
+        // sin roce, al empezar el re-layout y al acabar; sin stop_label_off. En el 131, la cuia 0 elevada la oculta después
+        // igual (lift), con la medida nueva; en el 171 sigue de lado.
+        [UnityTest]
+        public IEnumerator Level131_ExtraCuiaWithThePlateShown_PlacesItAgainClearOfTheFirstRow()
+        {
+            yield return PlateAfterExtraCuia(131, false);
+        }
+
+        [UnityTest]
+        public IEnumerator Level171_ExtraCuiaWithThePlateBeside_PlacesItAgainBeside()
+        {
+            yield return PlateAfterExtraCuia(171, true);
+        }
+
+        private static IEnumerator PlateAfterExtraCuia(int level, bool side)
+        {
+            var probes = new List<string>();
+            Application.LogCallback capture = CaptureProbes(probes, "stop_label_off");
+            Application.logMessageReceived += capture;
+            try
+            {
+                yield return Load(level);
+                GameBootstrap boot = GameBootstrap.Current!;
+                GameScreen view = boot.View!;
+                StopLabel label = view.StopLabelView;
+                boot.TapAnywhere();
+                StepUntilShown(boot);
+                PlayModeHelpers.Step(boot, 400);
+                string mode = side ? "plate_side" : "plate";
+                Assert.That(view.StopLabelMode, Is.EqualTo(mode), level + ": condición del test");
+                AssertPlateClearsRowOne(boot, level, side, " antes de «+1 cuia»");
+                BoardLayoutResult before = view.Layout!;
+                Rect plateBefore = label.Rect;
+                int cuias = view.Views.Length;
+                Assert.That(cuias, Is.EqualTo(11), "condición del test");
+
+                Assert.That(boot.PressExtraCuia(), Is.True, level + ": «+1 cuia» con la placa a la vista");
+                Assert.That(view.Views.Length, Is.EqualTo(cuias + 1));
+                Assert.That(view.Layout, Is.Not.SameAs(before), "otro tablero");
+                Assert.That(view.Layout!.Rows, Is.EqualTo(3), "las filas no cambian a mitad de nivel (D-006)");
+                Assert.That(view.Layout.RowOf[cuias], Is.EqualTo(2), "la cuia nueva, en la fila de abajo");
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                Assert.That(view.Relayouting, Is.True, "condición del test: a mitad del re-layout");
+                Assert.That(label.Visible, Is.True, level + ": se vuelve a colocar, no se oculta");
+                Assert.That(view.StopLabelMode, Is.EqualTo(mode), level + ": en el mismo sitio");
+                AssertPlateClearsRowOne(boot, level, side, " al empezar el re-layout");
+
+                PlayModeHelpers.Step(boot, 700);
+                Assert.That(view.Relayouting, Is.False);
+                Assert.That(label.Visible, Is.True, level + ": sigue a la vista tras el re-layout");
+                Assert.That(view.StopLabelMode, Is.EqualTo(mode));
+                AssertPlateClearsRowOne(boot, level, side, " tras «+1 cuia»");
+                Assert.That(label.Rect.yMin, Is.EqualTo(plateBefore.yMin).Within(0.01f), level + ": a la misma altura");
+                Assert.That(probes.Count, Is.EqualTo(0), string.Join("\n", probes));
+
+                if (!side)
+                {
+                    Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
+                    PlayModeHelpers.Step(boot, 300);
+                    Assert.That(label.Visible, Is.False, level + ": la cuia 0 elevada la oculta con la medida nueva");
+                    Assert.That(probes.Count, Is.EqualTo(1), string.Join("\n", probes));
+                    StringAssert.Contains("\"level\":" + level + ",\"reason\":\"lift\"", probes[0]);
+                }
+
+                PlayModeHelpers.Step(boot, 3000);
+                Assert.That(label.Visible, Is.False, "se va o se descarta: no vuelve");
+            }
+            finally
+            {
+                Application.logMessageReceived -= capture;
+            }
+        }
+
+        // Revisión final de FX4, (1): si al volver a colocarla con el tablero nuevo no cabe en ningún sitio (aquí, sin ningún
+        // sitio permitido), se oculta con stop_label_off y no_room y no vuelve.
+        [UnityTest]
+        public IEnumerator Level131_ExtraCuia_NoRoomLeft_HidesItWithNoRoom()
+        {
+            var probes = new List<string>();
+            Application.LogCallback capture = CaptureProbes(probes, "stop_label_off");
+            Application.logMessageReceived += capture;
+            try
+            {
+                yield return Load(131);
+                GameBootstrap boot = GameBootstrap.Current!;
+                GameScreen view = boot.View!;
+                StopLabel label = view.StopLabelView;
+                boot.TapAnywhere();
+                StepUntilShown(boot);
+                Assert.That(view.StopLabelMode, Is.EqualTo("plate"), "condición del test");
+                GameScreen.StopLabelSpotsOverride = GameScreen.StopLabelSpot.None;
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                Assert.That(label.Visible, Is.True, "con el mismo tablero no se vuelve a colocar");
+                Assert.That(boot.PressExtraCuia(), Is.True);
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                Assert.That(label.Visible, Is.False, "con el tablero nuevo no cabe: se oculta en el acto");
+                Assert.That(probes.Count, Is.EqualTo(1), string.Join("\n", probes));
+                StringAssert.Contains("\"level\":131,\"reason\":\"no_room\"", probes[0]);
+                GameScreen.StopLabelSpotsOverride = GameScreen.StopLabelSpot.All;
+                PlayModeHelpers.Step(boot, 3000);
+                Assert.That(label.Visible, Is.False, "descartada: no vuelve");
+                Assert.That(view.NoticesQueued, Is.EqualTo(0));
+                Assert.That(probes.Count, Is.EqualTo(1));
+            }
+            finally
+            {
+                Application.logMessageReceived -= capture;
+            }
+        }
+
+        // Revisión final de FX4, (1): «+1 cuia» en un nivel de 10 cuias con el rótulo sobre el horizonte (el 121) no cambia el
+        // número de filas (D-006: 5/6, siguen 2), así que el rótulo se vuelve a colocar sobre el horizonte, sin bajar al panel
+        // nuevo, y sigue a la vista (no sale board).
+        [UnityTest]
+        public IEnumerator Level121_ExtraCuiaOverTheHorizon_TheRowsStay_ItStaysOverTheHorizon()
+        {
+            var probes = new List<string>();
+            Application.LogCallback capture = CaptureProbes(probes, "stop_label_off");
+            Application.logMessageReceived += capture;
+            try
+            {
+                yield return Load(121);
+                GameBootstrap boot = GameBootstrap.Current!;
+                GameScreen view = boot.View!;
+                StopLabel label = view.StopLabelView;
+                boot.TapAnywhere();
+                StepUntilShown(boot);
+                Assert.That(view.Views.Length, Is.EqualTo(10), "condición del test");
+                Assert.That(view.Layout!.Rows, Is.EqualTo(2), "condición del test");
+                Assert.That(view.StopLabelMode, Is.EqualTo("horizon"));
+                Assert.That(boot.PressExtraCuia(), Is.True);
+                PlayModeHelpers.Step(boot, 700);
+                BoardLayoutResult l = view.Layout!;
+                Assert.That(view.Views.Length, Is.EqualTo(11));
+                Assert.That(l.Rows, Is.EqualTo(2), "de 10 a 11 cuias las filas no cambian (D-006)");
+                Assert.That(label.Visible, Is.True, "sigue a la vista");
+                Assert.That(label.OnPlate, Is.False);
+                Rect r = label.Rect;
+                Assert.That(r.yMin, Is.EqualTo(Mathf.Max(view.HorizonY - StopLabel.AboveHorizonDp, view.HudBottomDp + StopLabel.HudGapDp)).Within(0.01f));
+                Assert.That(r.yMax, Is.LessThanOrEqualTo(l.PanelY + 0.01f), "no baja al panel nuevo");
+                Assert.That(probes.Count, Is.EqualTo(0), string.Join("\n", probes));
+            }
+            finally
+            {
+                Application.logMessageReceived -= capture;
+            }
+        }
+
+        // Revisión final de FX4, (1): board. El número de filas solo cambia a mitad de nivel si cambia la pantalla (con 11-14
+        // cuias, 2 o 3 filas según el ancho del lienzo; D-006); «+1 cuia» no lo cambia. En el 131, de 360 a 600 dp de ancho
+        // pasa de 3 filas a 2 con la placa a la vista, y al revés, de 2 a 3 con el rótulo sobre el horizonte: en los dos casos
+        // se oculta con stop_label_off y board, y no vuelve.
+        [UnityTest]
+        public IEnumerator Level131_TheScreenChangesTheRows_HidesItWithBoard()
+        {
+            var narrow = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp
+            var wide = new Vector4(1800f, 2340f, 96f, 48f); // 600 × 780 dp
+            var probes = new List<string>();
+            Application.LogCallback capture = CaptureProbes(probes, "stop_label_off");
+            Application.logMessageReceived += capture;
+            try
+            {
+                // De placa (3 filas) a 2 filas.
+                yield return Load(131);
+                GameBootstrap boot = GameBootstrap.Current!;
+                GameScreen view = boot.View!;
+                StopLabel label = view.StopLabelView;
+                boot.TapAnywhere();
+                StepUntilShown(boot);
+                Assert.That(view.StopLabelMode, Is.EqualTo("plate"), "condición del test");
+                GameScreen.SimulatedScreen = wide;
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                Assert.That(view.CanvasWidth, Is.EqualTo(600f).Within(0.01f), "condición del test");
+                Assert.That(view.Layout!.Rows, Is.EqualTo(2), "condición del test: 600 dp de ancho, 2 filas");
+                Assert.That(label.Visible, Is.False, "otro número de filas: se oculta en el acto");
+                Assert.That(probes.Count, Is.EqualTo(1), string.Join("\n", probes));
+                StringAssert.Contains("\"level\":131,\"reason\":\"board\"", probes[0]);
+                PlayModeHelpers.Step(boot, 3000);
+                Assert.That(label.Visible, Is.False, "descartado: no vuelve");
+                Assert.That(probes.Count, Is.EqualTo(1));
+
+                // Del horizonte (2 filas) a 3 filas.
+                probes.Clear();
+                yield return Load(131);
+                boot = GameBootstrap.Current!;
+                view = boot.View!;
+                label = view.StopLabelView;
+                GameScreen.SimulatedScreen = wide;
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                boot.TapAnywhere();
+                StepUntilShown(boot);
+                Assert.That(view.Layout!.Rows, Is.EqualTo(2), "condición del test");
+                Assert.That(view.StopLabelMode, Is.EqualTo("horizon"), "condición del test");
+                GameScreen.SimulatedScreen = narrow;
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                Assert.That(view.Layout!.Rows, Is.EqualTo(3), "condición del test: 360 dp de ancho, 3 filas");
+                Assert.That(label.Visible, Is.False, "otro número de filas: se oculta en el acto");
+                Assert.That(probes.Count, Is.EqualTo(1), string.Join("\n", probes));
+                StringAssert.Contains("\"level\":131,\"reason\":\"board\"", probes[0]);
+                PlayModeHelpers.Step(boot, 3000);
+                Assert.That(label.Visible, Is.False, "descartado: no vuelve");
+                Assert.That(probes.Count, Is.EqualTo(1));
+            }
+            finally
+            {
+                Application.logMessageReceived -= capture;
+            }
+        }
+
+        // Revisión final de FX4, (3): a mitad de un vertido el cuerpo de la cuia va girado y delante de todo; la medida de la
+        // fila 1 (por si la placa se coloca entonces) cuenta lo que asoma el cuerpo sobre la boca como en reposo, no 0, y a lo
+        // ancho al menos lo de reposo. En el 131, un vertido de verdad desde la fila 1 (el cuerpo de una cuia corriente no asoma:
+        // su corcho cabe en su alto). Las cuias cuyo cuerpo asoma (el corcho del Brote, la Liana) no pueden verter al empezar
+        // (en 89-178 ninguna), así que en el 178 se pone el cuerpo de la cuia 0 (Brote) como al verter: delante y girado.
+        [UnityTest]
+        public IEnumerator ACuiaPouring_CountsWithItsRestCrown()
+        {
+            GameScreen.StopLabelsOverride = false; // solo la medida
+            yield return Load(131);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 3000);
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Playing));
+            BoardLayoutResult l = view.Layout!;
+            BoardState board = boot.Flow.Session.Current;
+            int source = -1;
+            int target = -1;
+            for (int i = 0; i < board.Count && source < 0; i++)
+            {
+                for (int j = 0; j < board.Count && l.RowOf[i] == 0; j++)
+                {
+                    if (j != i && AF.Core.Rules.PourRules.IsLegal(board, i, j))
+                    {
+                        source = i;
+                        target = j;
+                        break;
+                    }
+                }
+            }
+
+            Assert.That(source, Is.GreaterThanOrEqualTo(0), "condición del test: un vertido desde la fila 1");
+            view.StopLabelRowOneTop(l);
+            float restTop = view.StopLabelRestTopOf(source);
+            Vector2 restSpan = view.StopLabelRestSpanOf(source);
+            Rect box = VisibleBox(view.Views[source], CanvasOf(view.StopLabelView));
+            Assert.That(restTop, Is.EqualTo(box.yMin).Within(0.05f), "en reposo, lo que se ve");
+            Assert.That(boot.TapCuia(source).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(target).Kind, Is.EqualTo(TapKind.Poured));
+            float angle = 0f;
+            for (int t = 0; t < 3000 && !(view.Views[source].BodyInFront && Mathf.Abs(angle) >= 30f); t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                angle = Mathf.DeltaAngle(0f, view.Views[source].Body.localEulerAngles.z);
+            }
+
+            Assert.That(view.Views[source].BodyInFront, Is.True, "condición del test: vertiendo, delante de todo");
+            Assert.That(Mathf.Abs(angle), Is.GreaterThanOrEqualTo(30f), "condición del test: girada");
+            view.StopLabelRowOneTop(view.Layout!);
+            TestContext.WriteLine("131: cuia " + source + " a " + angle + "°: " + view.StopLabelRestTopOf(source) + " dp (reposo " + restTop + ")");
+            Assert.That(view.StopLabelRestTopOf(source), Is.EqualTo(restTop).Within(0.05f), "vertiendo, como en reposo");
+            Vector2 span = view.StopLabelRestSpanOf(source);
+            Assert.That(span.x, Is.LessThanOrEqualTo(restSpan.x + 0.05f), "a lo ancho, al menos lo de reposo");
+            Assert.That(span.y, Is.GreaterThanOrEqualTo(restSpan.y - 0.05f), "a lo ancho, al menos lo de reposo");
+
+            // El 178: la cuia 0, con el corcho del Brote en el cuerpo.
+            yield return Load(178);
+            boot = GameBootstrap.Current!;
+            view = boot.View!;
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 3000);
+            l = view.Layout!;
+            AF.Presentation.CuiaView brote = view.Views[0];
+            Assert.That(l.Rows, Is.EqualTo(3), "condición del test");
+            Assert.That(l.RowOf[0], Is.EqualTo(0), "condición del test");
+            view.StopLabelRowOneTop(l);
+            restTop = view.StopLabelRestTopOf(0);
+            restSpan = view.StopLabelRestSpanOf(0);
+            float mouth = l.FootY[0] - (brote.HeightU * brote.Unit);
+            Assert.That(VisibleBox(brote, CanvasOf(view.StopLabelView)).yMin, Is.EqualTo(restTop).Within(0.05f), "178: en reposo, lo que se ve");
+            Assert.That(restTop, Is.LessThan(mouth - 1f), "condición del test: el Brote asoma sobre la boca");
+            try
+            {
+                brote.MoveBodyTo((RectTransform)brote.Root.parent);
+                brote.SetPose(new Vector2(-8f, 30f), -60f);
+                Assert.That(brote.BodyInFront, Is.True);
+                view.StopLabelRowOneTop(l);
+                TestContext.WriteLine("178: cuia 0 delante y girada: " + view.StopLabelRestTopOf(0) + " dp (reposo " + restTop + ", boca " + mouth + ")");
+                Assert.That(view.StopLabelRestTopOf(0), Is.EqualTo(restTop).Within(0.05f), "178: delante y girada, lo que asoma en reposo (no la boca)");
+                span = view.StopLabelRestSpanOf(0);
+                Assert.That(span.x, Is.LessThanOrEqualTo(restSpan.x + 0.05f), "178: a lo ancho, al menos lo de reposo");
+                Assert.That(span.y, Is.GreaterThanOrEqualTo(restSpan.y - 0.05f), "178: a lo ancho, al menos lo de reposo");
+            }
+            finally
+            {
+                brote.SetPose(Vector2.zero, 0f);
+                brote.ReturnBody();
+            }
+        }
+
+        // La placa a la vista y la fila 1 en reposo (FX4): clavada al marco, bajo la fila del HUD y dentro de los márgenes; lo
+        // que mide la pantalla de cada cuia de la fila 1 es lo que se ve; ninguna cuia bajo ella le queda a menos de
+        // PlateCuiaGapDp; de lado, a la derecha de la Hoja de la cuia 1, con su aire; y, si no, centrada sobre toda la fila.
+        // Devuelve la primera cuia con fruta bajo la placa (-1 si ninguna).
+        private static int AssertPlateClearsRowOne(GameBootstrap boot, int level, bool side, string when)
+        {
+            GameScreen view = boot.View!;
+            StopLabel label = view.StopLabelView;
+            BoardLayoutResult l = view.Layout!;
+            RectTransform canvas = CanvasOf(label);
+            Rect plate = label.Rect;
+            string at = level + when;
+            float frameInner = l.PanelY + view.PanelFrameDp;
+            Assert.That(plate.yMin, Is.EqualTo(Mathf.Max(view.HudBottomDp, frameInner - StopLabel.PlateOverFrameDp)).Within(0.01f), at + ": clavada al marco");
+            Assert.That(plate.yMin, Is.GreaterThanOrEqualTo(view.HudBottomDp - 0.01f), at + ": bajo la fila del HUD");
+            Assert.That(plate.xMin, Is.GreaterThanOrEqualTo(StopLabel.SideDp - 0.01f), at);
+            Assert.That(plate.xMax, Is.LessThanOrEqualTo(view.CanvasWidth - StopLabel.SideDp + 0.01f), at);
+            int beside = 0;
+            int under = -1;
+            for (int i = 0; i < view.Views.Length; i++)
+            {
+                if (l.RowOf[i] != 0)
+                {
+                    continue;
+                }
+
+                Rect box = VisibleBox(view.Views[i], canvas);
+                Assert.That(view.StopLabelRestTopOf(i), Is.EqualTo(box.yMin).Within(0.05f), at + ": lo más alto de la cuia " + i + " que mide la pantalla");
+                Vector2 span = view.StopLabelRestSpanOf(i);
+                Assert.That(span.x, Is.EqualTo(box.xMin).Within(0.05f), at + ": lo que ocupa a lo ancho la cuia " + i);
+                Assert.That(span.y, Is.EqualTo(box.xMax).Within(0.05f), at + ": lo que ocupa a lo ancho la cuia " + i);
+                bool below = box.xMax + StopLabel.PlateSideAirDp > plate.xMin && box.xMin - StopLabel.PlateSideAirDp < plate.xMax;
+                TestContext.WriteLine(at + ": cuia " + i + " " + box + (below ? " bajo la placa" : " al lado"));
+                if (below)
+                {
+                    Assert.That(plate.yMax + StopLabel.PlateCuiaGapDp, Is.LessThanOrEqualTo(box.yMin + 0.01f), at + ": aire sobre la cuia " + i + " en reposo, corcho y mecánica incluidos");
+                    if (under < 0 && !boot.Flow!.Session.Current[i].IsEmpty)
+                    {
+                        under = i;
+                    }
+                }
+                else if (box.yMin < plate.yMax + StopLabel.PlateCuiaGapDp)
+                {
+                    beside++; // no le deja sitio encima: queda al lado, con su aire a los lados
+                }
+            }
+
+            TestContext.WriteLine(at + ": placa " + plate + " (" + view.StopLabelMode + ")");
+            if (side)
+            {
+                Assert.That(beside, Is.GreaterThan(0), at + ": alguna cuia de la fila 1 no le deja sitio encima (la Hoja)");
+                Rect leaf = VisibleBox(view.Views[1], canvas);
+                Assert.That(plate.xMin - leaf.xMax, Is.GreaterThanOrEqualTo(StopLabel.PlateSideAirDp - 0.01f), at + ": a la derecha de la Hoja, con su aire");
+                Vector2 free = view.StopLabelSideSpan;
+                Assert.That(plate.xMin, Is.GreaterThanOrEqualTo(free.x - 0.01f), at + ": dentro del tramo libre");
+                Assert.That(plate.xMax, Is.LessThanOrEqualTo(free.y + 0.01f), at + ": dentro del tramo libre");
+            }
+            else
+            {
+                Assert.That(beside, Is.EqualTo(0), at + ": cabe sobre toda la fila 1");
+                Assert.That(plate.center.x, Is.EqualTo(view.CanvasWidth * 0.5f).Within(0.01f), at + ": centrada");
+                Assert.That(float.IsNaN(view.StopLabelSideSpan.x), Is.True, at + ": no va de lado");
+            }
+
+            return under;
         }
 
         // Revisión de FX4, (b): una cuia de la fila 1 bajo la placa ya elevada cuando le llega el turno al rótulo (espera detrás
