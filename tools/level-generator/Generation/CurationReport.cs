@@ -61,7 +61,7 @@ internal static class CurationReport
         W();
         W("Compuerta automática (verde antes de pedir la curación): `dotnet run --project tools/level-qa -c Release -- "
           + string.Join(" ", packs.Select(p => p.Path.Replace('\\', '/')))
-          + F($" --spec {specPath} --levels {levelsArg}`. ")
+          + F($" --spec {specPath} --levels {levelsArg}{variantArg}`. ")
           + "Cada reto o hito con aviso QA-WINDOW (bot_fail fuera de la ventana del slot) sale aquí como «revisar», y cada "
           + "hito con aviso QA-BAND-Q (fuera de la banda de hito con el mínimo cumplido), como «revisar» o con nota de banda; los avisos "
           + "QA-BAND-Q de las recuperaciones no entran en este informe. QA-BAND-Q no mira los retos y level-qa no mira risk_adjacent: las notas "
@@ -174,6 +174,17 @@ internal static class CurationReport
             CampaignReport.VariantsSection(spec, levels, W, cell => cell.Literal);
         }
 
+        // Tinaja (P7b): dónde va y su respaldo de la salida B, y los filtros de cada nivel con tinaja (la sección del informe de
+        // la generación). En la variante b, las celdas que en la a llevan la tinaja.
+        if (ShowsTinaja(spec, levels.Select(l => l.Plan)))
+        {
+            TinajaPlacement(spec, levels, W);
+            if (levels.Any(l => l.Chosen!.IsTinaja))
+            {
+                CampaignReport.TinajaSection(levels, W);
+            }
+        }
+
         // Otros niveles con notas.
         List<GeneratedLevel> others = levels.Where(l => l.Plan.Role is not (SlotRole.Challenge or SlotRole.Milestone) && Flags(l).Count > 0).ToList();
         W();
@@ -217,6 +228,139 @@ internal static class CurationReport
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>Apariciones como mucho de la tinaja en su ciclo de estreno, 321-340 (propuesta de la tinaja d.3, «C0»; D-019).</summary>
+    public const int TinajaDebutCycleMax = 8;
+
+    /// <summary>
+    /// Dónde va la tinaja (P7b; D-019 Q-Ti1 A y Q-Ti3 A; propuesta de la tinaja d.3; tabla de D2, d.5.3 y d.5.4): cada nivel de
+    /// los generados cuya celda la lleva en la variante «a», con su respaldo de la «b» y lo que se publica en este pack; las
+    /// apariciones por ciclo (como mucho <see cref="TinajaDebutCycleMax"/> en el de su estreno) y las tres comprobaciones del
+    /// encargo: tinaja solo donde la pone el calendario de D2, nunca en p1, p2 ni p19, y la variante b sin ninguna.
+    /// </summary>
+    private static void TinajaPlacement(CampaignSpec spec, List<GeneratedLevel> levels, Action<string> w)
+    {
+        void W(string line = "") => w(line);
+        string F(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
+        CampaignSpec a = spec.Variant == CampaignSpec.VariantA ? spec : CampaignSpec.Load(spec.Path, CampaignSpec.VariantA);
+        W();
+        W(F($"## Dónde va la Tinaja (variante {spec.Variant})"));
+        W();
+        W("D-019 (Q-Ti1 A: nunca en recuperación, p1-p2, ni en remanso, p19; Q-Ti3 A: estreno en el 323, en la 1.0 si pasa sus pruebas "
+          + "y si Morpho con corte por tiempo y la Luciérnaga están listos en el cliente; si no, la salida B), la tabla de D2 (d.5.3, "
+          + "con el respaldo de cada celda en d.5.4; D-023 punto 10) y la propuesta de la tinaja d.3 (ciclo de estreno 321-340, «C0»: "
+          + F($"como mucho {TinajaDebutCycleMax} apariciones). La variante a es la del dueño; la b, la salida B, se guarda aparte. ")
+          + F($"Las 5 dosis de los retos y el hito dependen de la compuerta de coste de Morpho, con el factor {TinajaWalks.MorphoDeviceFactor}× [P] ")
+          + "del teléfono hasta medirlo en PF1 (pregunta 13): si PF1 lo cambia, este pack se regenera antes de integrarlo en el cliente (C1b).");
+        W();
+        W("| Nivel | p | Rol | Celda en la a | Respaldo en la b | Publicado en este pack | Dosis (ocultas) | K | Cuias |");
+        W("|---|---|---|---|---|---|---|---|---|");
+        static TinajaLevel Published(GeneratedLevel l)
+        {
+            Candidate c = l.Chosen!;
+            return new TinajaLevel(l.Plan, c.IsTinaja, c.TinajaCheck?.Doses, c.K, c.Board.Caps.Length);
+        }
+
+        foreach (string row in TinajaRows(spec, a, levels.Select(Published).ToList()))
+        {
+            W(row);
+        }
+
+        List<string> checks = TinajaChecks(spec, a, levels.Select(l => (l.Plan, l.Chosen!.IsTinaja)).ToList());
+        W();
+        W(checks[0]);
+        W();
+        foreach (string bullet in checks.Skip(1))
+        {
+            W(bullet);
+        }
+    }
+
+    /// <summary>
+    /// Lo que mira de cada nivel la tabla de «Dónde va la Tinaja»: su plan, si se publica con la tinaja, sus dosis (las de
+    /// <see cref="TinajaCheckResult.Doses"/>; null si no se midió) y su tamaño (K y número de cuias).
+    /// </summary>
+    internal readonly record struct TinajaLevel(LevelPlan Plan, bool Tinaja, int? Doses, int K, int Cuias);
+
+    /// <summary>
+    /// Si el informe lleva «Dónde va la Tinaja» (P7b; lo prueba --self-test curation): algún nivel generado tiene la tinaja en
+    /// su celda (la de la variante que se genera) o tiene respaldo de la b (en la b, las celdas que la llevan en la a).
+    /// </summary>
+    internal static bool ShowsTinaja(CampaignSpec spec, IEnumerable<LevelPlan> plans) =>
+        plans.Any(p => p.Cell.Has("Ti") || spec.FallbackCells.ContainsKey(p.Level));
+
+    /// <summary>
+    /// Filas de la tabla de «Dónde va la Tinaja» (P7b; lo prueba --self-test curation con niveles sintéticos): una por cada nivel
+    /// cuya celda lleva la tinaja en la variante «a» (<paramref name="a"/>), en el orden de <paramref name="levels"/>, con su
+    /// respaldo de la «b», la celda publicada en la variante que se genera y si lleva la tinaja, y las dosis con las ocultas
+    /// entre paréntesis: la máscara de la tinaja tapa todas sus capas menos la boca (NOTAS-T4, máscara de la Tinaja en relief),
+    /// así que son las dosis − 1.
+    /// </summary>
+    internal static List<string> TinajaRows(CampaignSpec spec, CampaignSpec a, List<TinajaLevel> levels)
+    {
+        string F(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
+        var rows = new List<string>();
+        foreach (TinajaLevel l in levels)
+        {
+            if (!a.Calendar.TryGetValue(l.Plan.Level, out CalendarCell? cell) || !cell.Has("Ti"))
+            {
+                continue;
+            }
+
+            string fallback = spec.FallbackCells.TryGetValue(l.Plan.Level, out CalendarCell? fb) ? fb.Literal : "—";
+            string doses = l.Doses is int d ? F($"{d} ({d - 1})") : "—";
+            string published = l.Tinaja ? "con la Tinaja" : "sin la Tinaja";
+            rows.Add(F($"| {l.Plan.Level} | {l.Plan.Position} | {RoleText(l.Plan)} | {cell.Literal} | {fallback} | {l.Plan.Cell.Literal}: {published} | {doses} | {l.K} | {l.Cuias} |"));
+        }
+
+        return rows;
+    }
+
+    /// <summary>
+    /// Las líneas de comprobación de «Dónde va la Tinaja» (P7b; lo prueba --self-test curation con niveles sintéticos): las
+    /// apariciones por ciclo con el calendario de la a, y las viñetas «solo donde la pone el calendario» (la celda publicada,
+    /// <c>Plan.Cell</c>, de la variante que se genera), «nunca en p1, p2 ni p19» (D-019 Q-Ti1 A), el tope de
+    /// <see cref="TinajaDebutCycleMax"/> en el ciclo de estreno (si su primer nivel se generó) y, fuera de la a, «ninguna». El
+    /// ciclo de estreno sale del plan del nivel de estreno (<c>Level - Position + 1</c>), no de una aritmética de ciclos.
+    /// La primera línea es la de las apariciones; las siguientes, las viñetas (una por línea, en un solo párrafo).
+    /// </summary>
+    internal static List<string> TinajaChecks(CampaignSpec spec, CampaignSpec a, List<(LevelPlan Plan, bool Tinaja)> levels)
+    {
+        string F(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);
+        string Count(int n) => F($"{n} {(n == 1 ? "nivel" : "niveles")}");
+        string Levels(IEnumerable<(LevelPlan Plan, bool Tinaja)> ls) => string.Join(", ", ls.Select(l => l.Plan.Level.ToString(CultureInfo.InvariantCulture)));
+        var cells = levels.Where(l => a.Calendar.TryGetValue(l.Plan.Level, out CalendarCell? c) && c.Has("Ti")).ToList();
+        var byCycle = cells.GroupBy(l => l.Plan.Level - l.Plan.Position + 1).OrderBy(g => g.Key).ToList();
+        string appearances = "Apariciones por ciclo (calendario de la a): " + (byCycle.Count == 0 ? "ninguna" : string.Join("; ", byCycle.Select(g =>
+            F($"{g.Key}-{g.Key + 19}: {g.Count()} ({Levels(g)})")))) + ".";
+        var withTinaja = levels.Where(l => l.Tinaja).ToList();
+        var outside = withTinaja.Where(l => !l.Plan.Cell.Has("Ti")).ToList();
+        var pure = withTinaja.Where(l => l.Plan.Position is 1 or 2 or 19).ToList();
+        var bullets = new List<string>
+        {
+            "- Tinaja solo donde la pone el calendario: " + (outside.Count == 0 ? "sí." : "**no**: " + Levels(outside) + "."),
+            "- Nunca en p1, p2 ni p19: " + (pure.Count == 0 ? "ninguno." : "**" + Levels(pure) + "**."),
+        };
+
+        if (a.MechanicTable.FirstOrDefault(m => m.Code == "Ti") is MechanicInfo ti && ti.Debut >= a.FirstLevel && ti.Debut <= a.LastLevel
+            && a.Plan(ti.Debut) is LevelPlan debut && !debut.Ramp)
+        {
+            int debutCycle = debut.Level - debut.Position + 1;
+            if (levels.Any(l => l.Plan.Level == debutCycle))
+            {
+                int inDebutCycle = withTinaja.Count(l => l.Plan.Level >= debutCycle && l.Plan.Level < debutCycle + 20);
+                bullets.Add(F($"- Ciclo de estreno {debutCycle}-{debutCycle + 19}: {inDebutCycle} {(inDebutCycle == 1 ? "nivel publicado" : "niveles publicados")} con la Tinaja (como mucho {TinajaDebutCycleMax})")
+                  + (inDebutCycle > TinajaDebutCycleMax ? ": **pasa del tope**." : "."));
+            }
+        }
+
+        if (spec.Variant != CampaignSpec.VariantA)
+        {
+            bullets.Add(F($"- Variante {spec.Variant}: {Count(withTinaja.Count)} con la Tinaja") + (withTinaja.Count == 0 ? " (la salida B no la lleva)." : ": **debería ser 0**."));
+        }
+
+        return [appearances, .. bullets];
     }
 
     /// <summary>Filas de la tabla del dueño: retos e hitos y, después, el primer tablero de cada estreno (el que lleva intro_mechanic).</summary>

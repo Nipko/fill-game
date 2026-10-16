@@ -66,8 +66,19 @@ dotnet run --project tools/level-qa -c Release -- tools/out/sample_tinaja/mundo_
 
 Opciones: `--report <informe.md>` (Markdown UTF-8 con cada comprobación y sus fallos), `--spec <campaign.json>` (por
 defecto `tools/level-generator/specs/campaign_v1.json`; se ejecuta desde la raíz del repositorio), `--levels a-b` (rango
-que se regenera; por defecto el de la especificación, el mismo que el `--levels` por defecto del generador) y
-`--no-reproduce`.
+que se regenera; por defecto el de la especificación, el mismo que el `--levels` por defecto del generador), `--variant a|b`
+(P7b: la variante de una especificación con respaldos, como el `--variant` del generador; por defecto la publicada,
+`published_variant`; con `b`, la salida B de D-019 de `campaign_v2.json`, sin la Tinaja: el calendario de las comprobaciones y
+la regeneración de QA-REPRO y QA-BAND-Q salen de ella; una especificación sin variantes solo admite `a`) y `--no-reproduce`.
+El informe de `--report` copia en su línea de origen `--spec`, `--levels` y `--variant` si se pasan.
+
+Mundos 7-9 (P7b-P7d), en sus dos variantes: la publicada (a, con la Tinaja) y la salida B (b, sin ella), que se guarda en
+`tools/out/salida_b/` (forma prevista; el mundo 7 aún no está generado):
+
+```
+dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420
+dotnet run --project tools/level-qa -c Release -- tools/out/salida_b/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b
+```
 
 Códigos de salida: 0 = todo cumple (los avisos no fallan); 1 = algún nivel no cumple, el esquema falla, el pack no se
 reproduce o falta Python; 2 = uso incorrecto, sin paquetes o un archivo ilegible. Sin argumentos sale con 2 (un glob vacío
@@ -113,6 +124,28 @@ prueba y sobre las especificaciones de muestra:
   de ninguna), con un caso que pasa y otro que falla para cada una, y la fruta de U_c = 5 cuya única cuia de 5 es la Flor.
 
 Sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra las especificaciones; tarda menos de un segundo.
+
+### `--self-test variante` (P7b de la tanda 4)
+
+```
+dotnet run --project tools/level-qa -c Release -- --self-test variante
+```
+
+Prueba la opción `--variant` por la línea de comandos (`Checks/VariantOptionSelfTest.cs`): lanza este mismo level-qa en un
+proceso hijo, con `--no-reproduce` y `--spec tools/level-generator/specs/campaign_v2.json`, sobre un pack temporal con dos
+niveles del pack de muestra de la tinaja (`tools/out/sample_tinaja/mundo_07_v1.json`): su 323 tal cual (estreno de la tinaja;
+la celda es ★Ti en la a y Ma, su respaldo de d.5.4, en la b) y su 328, una comodidad pura, con el número 327 (Ti en la a y C en
+la b). Solo mira las comprobaciones de las mecánicas del calendario, QA-MECH-SPEC y QA-MECH-CELL (las demás fallan por ser
+dos niveles sueltos):
+
+- con `--variant a`, y sin `--variant` (la publicada de `campaign_v2.json` es la a): el 323 pasa y el 327 da QA-MECH-CELL
+  (la tinaja de su celda no está en el nivel);
+- con `--variant b`, al revés: el 327 pasa y el 323 da QA-MECH-SPEC (Ti fuera de la celda Ma) y QA-MECH-CELL (falta el
+  Matapi). Si `--variant` dejara de llegar a la especificación, la b daría lo mismo que la a y fallaría aquí;
+- `--variant c` con `campaign_v2.json` y `--variant b` con `campaign_v1.json` (sin variantes) salen con 2 y su motivo.
+
+Sale con 0 si todo pasa, 1 si algo falla y 2 si falta el pack de muestra o la especificación; tarda alrededor de un minuto
+(tres pasadas de la compuerta sin reproducción, con el bot y los filtros de la tinaja del 323).
 
 Packs de muestra de las variantes (P5; `pack_schema` 3, niveles 241-320), con su especificación (P6: pasan con 0 fallos):
 

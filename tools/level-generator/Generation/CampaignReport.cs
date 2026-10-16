@@ -394,7 +394,7 @@ internal static class CampaignReport
     /// Sección de la tinaja (propuesta de la tinaja c.3 puntos 3 y 6; c.8): por nivel con tinaja, sus filtros y los candidatos
     /// rechazados por causa («sin vertido seguro» frente a «presupuesto agotado»); y los niveles en los que no puede ir.
     /// </summary>
-    private static void TinajaSection(List<GeneratedLevel> levels, Action<string> w)
+    internal static void TinajaSection(List<GeneratedLevel> levels, Action<string> w)
     {
         void W(string line = "") => w(line);
         string F(FormattableString s) => s.ToString(CultureInfo.InvariantCulture);

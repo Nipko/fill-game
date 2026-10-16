@@ -17,7 +17,7 @@ ejecuciones den los mismos bytes.
 | `--parity [--report <md>]` | Paridad de las métricas con el prototipo (03 §17-§18; 09 R26) | `tools/out/parity_report.md` |
 | `--spec <campaign.json> [--levels a-b] [--variant a\|b] --out <carpeta> [--report <md>] [--curation <md> [--decisions <json>]] [--check]` | Genera la campaña (03 §2); sin `--levels`, todos los niveles de la especificación; `--curation`, el informe de curación para el dueño (P7a), con su decisión de `--decisions` | `Assets/_Project/Data/Levels/mundo_0N_v1.json`, `tools/out/campaign_v1_report.md` y `tools/out/curation_wNN.md` |
 | `--seasons <campaign.json> [...] --out <tabla.json> [--until <nivel>] [--check]` | Tabla de temporada del cliente (pregunta 32 b), hasta el último nivel publicado | `Assets/_Project/Data/Levels/seasons_v1.json` |
-| `--self-test [tinaja\|seasons\|variants\|registry\|curation]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
+| `--self-test [tinaja\|seasons\|variants\|registry\|curation\|holgura]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
 
@@ -266,7 +266,9 @@ Fases (los tiempos salen por la consola; el informe no lleva tiempos):
    recuperación, comodidad, estreno, remanso y rampa no se usa ningún candidato fuera de ella (03 §17 #3). Antes de colocar
    cada bloque, los slots sin ningún candidato de la banda de su rol piden más candidatos (rondas de banda, hasta 6, con
    sub-semillas desde el intento 20.000 y los estadísticos del pool ya congelados). Si un ciclo no tiene colocación, se
-   piden más candidatos a sus retos, hito, siguientes y recuperaciones (hasta 2 rondas); un reto o hito que quede fuera de
+   piden más candidatos a sus retos, hito, siguientes y recuperaciones (hasta 2 rondas) y se prueba el último recurso (la
+   bajada de banda tras una etiqueta pasa a penalización); si tampoco coloca, sale con 1 y vuelca por stderr las opciones de
+   cada slot del ciclo (etiqueta medida, D, q y si está fuera de su ventana). Un reto o hito que quede fuera de
    su ventana se publica con la etiqueta que mide (c.2: sin etiqueta si mide menos del 75 %) y el informe lo registra.
 4. **Alivio** (`Metrics/Relief.cs`) desde el nivel 31.
 5. **Packs** (`PackWriter`): `pack_schema` 2, o 3 si algún nivel del pack lleva la tinaja (D-019) o una variante de la 1.0
@@ -301,6 +303,38 @@ Decisiones [P] de la generación (para revisar en la integración):
 - Un nivel turbio pide hasta 6 rondas más de candidatos turbios (sub-semillas desde el intento 11.000) antes de publicarse
   sin turbias (respaldo de T1, registrado en el informe y aviso QA-MECH-CELL).
 - Sin `par_approx`: la Piraña deja el par exacto (C3-2).
+- **Holgura repartida en cuias a medias** (P7d; `StageConfig.SplitSlack`, `SlotGenerator.SplitSlackPour`; `--self-test
+  holgura`). Con el tope de 14 cuias (02 R1), un nivel cuya celda necesita cuias a medias (Brote, Brote de dos hojas o Aguas
+  turbias) ya no pierde la cuia de holgura (sin ella la fuente deja los vacíos pedidos y llena las demás, así que el paso
+  de la mecánica no encuentra dónde ponerse): la cuia de holgura sustituye a un vacío. La fuente deja ese vacío y el
+  generador vierte en él el tramo de la cima (1-3 dosis de un color, el tramo entero) de una cuia llena al azar
+  (sub-semilla 4 del candidato): quedan dos cuias a medias, una con 1-3 dosis y otra con 1-3 dosis de un solo color (la
+  del Matapi). Es un vertido legal desde el tablero de la fuente; lo demás (A*, bot, `LevelValidation`) se comprueba como
+  en cualquier candidato. La fuente es `walk`, y la configuración de la etapa la lleva (`StageConfig.Source`, la traza y
+  la nota «holgura repartida: fuente walk» dicen la que se usa): con `deep`, ninguno de los 43 tableros del 580 que se
+  midieron tenía solución. Los candidatos por etapa son los de la etapa de la que sale (30 en la etapa 0 y en el hito;
+  150 en la relajación «walk con 1 vacío»). Solo en estos casos, y solo cuando quitar el vacío deja justo 14 cuias (con 16
+  no basta y la etapa no aplica):
+  - los hitos de 14 cuias (K = 13 + 1 vacío: holgura 4 sin el Barro, QA-HITO-14). Ni K ni el vacío se relajan: con una
+    mecánica de cuias a medias reparten la holgura desde la etapa 0 (580 Ma+B2, 600 Ha+B2+Ba, 660 Br+Ha+Re y 700
+    Ma+Ha+B2); sin ella, las etapas 1-2 la reparten (680 Li+Ha+Re), salvo con la Hoja o la Lluvia, que necesitan el vacío
+    de 4 entero (620 Ln+Ll+Re: ninguna etapa; 640 Ma+Ba+Ho: no cabe). Las mecánicas que ocupan un vacío usan el del hito,
+    como en la etapa 0. Un hito de 14 cuias que no reparte la holgura en las etapas 1-2 (el 620) conserva lo que no toca K
+    ni el vacío: el endurecimiento de 03 §4.2 si los candidatos miden demasiado fáciles (`deep` en la etapa 1 y `deep` con
+    60.000 nodos en la 2) y, sin endurecimiento, la relajación del hito en la etapa 2 (`deep` con 60.000 nodos; la etapa 1
+    repite la 0 con otros intentos), con K = 13, 1 vacío y 14 cuias. Si la etapa reparte la holgura, su fuente es `walk`
+    también con endurecimiento (580, 600, 660, 680 y 700);
+  - los retos de K = 12 + 1 vacío + la cueva de la Piraña con el Brote (592 Pi+B2 y 646 Pi+Br+Ha), en la etapa 0 y en la
+    relajación «walk con 1 vacío» de la etapa 2, que ya es `walk` con la forma de la etapa 0. La relajación hacia `fill`
+    con 2 vacíos (03 §4.4) pasa de 14 cuias y no aplica, y el endurecimiento con `deep` sigue sin la cuia de holgura: la
+    holgura repartida nunca cambia la fuente de esas etapas.
+
+  En 561-700 (variantes a y b), solo 580, 592, 600, 646, 660, 680 y 700. Ningún slot de 11-560 llega a estos casos: los
+  packs 11-300 no cambian y 301-560 (P7b, P7c) generan como antes de P7d. `--self-test holgura` lo comprueba con las
+  configuraciones de todas las etapas, con y sin endurecimiento, y comprueba que toda etapa que reparte la holgura lleva la
+  cuia de holgura. Pendiente del dueño (pregunta de P7d): con la holgura repartida, el hito de 14 cuias no tiene ninguna
+  cuia vacía (la holgura 4 va en dos cuias a medias). 03 §1 y §11 dicen «13 llenas + 1 vacío»; QA-HITO-14 ya admite que
+  la holgura vaya repartida.
 
 Diagnóstico: con la variable de entorno `LEVELGEN_TRACE=<nivel>` el generador traza por stderr cada candidato de ese
 nivel (fuente, K, vacíos, bot_fail, motivo del rechazo y milisegundos) y un resumen del slot. No cambia la salida.
@@ -339,6 +373,10 @@ bytes. Secciones:
   de las Aguas turbias).
 - **Hitos**, uno a uno: tablero, mecánicas (con las Aguas turbias y sus realidades), medida y notas de la generación.
 - **Tableros de estreno** (02 §9.2 regla 2) y la sección **Variantes de la 1.0** del informe de la generación.
+- **Dónde va la Tinaja** (P7b; solo si algún nivel generado la lleva en la variante a o tiene respaldo en la b): cada celda con la
+  Tinaja de la a, su respaldo de la b (d.5.4) y lo que se publica, con las dosis, K y cuias; las apariciones por ciclo (como
+  mucho 8 en el de su estreno, propuesta de la tinaja d.3) y las comprobaciones «solo donde la pone el calendario», «nunca en
+  p1, p2 ni p19» y, en la b, «ninguna»; después, la sección **Tinaja** del informe de la generación (filtros por nivel).
 - **Otros niveles con avisos** y la tabla **Curación del dueño** (retos, hitos y el primer tablero de cada estreno), con la
   decisión de cada nivel copiada de `--decisions` y su estado (pendiente, aceptada o con cambios pedidos).
 
@@ -382,11 +420,53 @@ dotnet run --project tools/level-generator -c Release -- --self-test curation
 - La última columna («aceptar (fecha)», «sustituir (fecha): nota» con «|» escapada y los saltos de línea aplanados, «pendiente»
   y «pendiente (la decisión del … era para «…»)») y el estado: «pendiente (n de m niveles decididos)», «aceptada (m de m
   niveles)» y «anotada, con cambios pedidos en …».
+- «Dónde va la Tinaja» (P7b; `CurationReport.TinajaChecks`), con 321-340 sintéticos en las dos variantes: la Tinaja en sus 8
+  celdas da «sí», «ninguno» y 8 de 8; en p1, p2 o p19, el aviso en negrita (y «**no**» en «solo donde la pone el
+  calendario»); 9 en el ciclo de estreno, «pasa del tope»; en la b, sin ninguna, «la salida B no la lleva», y con una (el 323,
+  que en la b es Ma), «debería ser 0». El ciclo de estreno sale del plan del nivel de estreno (`Level - Position + 1` del 323),
+  no de una aritmética de ciclos; con 301-320 generados no hay línea del ciclo de estreno.
+- Cuándo sale esa sección (`CurationReport.ShowsTinaja`: con 321-340 en la a y en la b; no con 201-300 ni con 301-320) y las
+  filas de su tabla (`CurationReport.TinajaRows`): una por cada una de las 8 celdas con la Tinaja de la a, en orden; la del 323
+  (★Ti, respaldo Ma) y la del 340 (Ti+Br (MD), respaldo Br+Ba (MD)) dicen la celda publicada con o sin la Tinaja (en la b,
+  la del respaldo) y las dosis «n (n − 1)», con las ocultas entre paréntesis (la máscara tapa todas las capas menos la boca), o
+  «—» sin medir.
+
+Con una especificación de dos variantes, las dos líneas de comando del informe (la de «Generado por» y la de level-qa) llevan
+`--variant` explícito, también con la publicada.
 
 La anota quien recoge la decisión del dueño (tech-lead) y se regenera el informe con el comando de arriba. Si la curación pide
 cambios, se cambian la especificación o el generador y se regeneran el pack, el informe y la comprobación de level-qa.
 
 `tools/out/curation_w06.md` es el del mundo 6; P7b-P7d escriben `curation_w07.md` a `curation_w09.md`.
+
+## Mundo 9: 561-700 (P7d; sin generar)
+
+El mundo 9 (Ucayali, `w09_ucayali` [P]) se generará con los mismos comandos que el 6, con `--levels 561-700`,
+`--curation tools/out/curation_w09.md` y, con la Tinaja en 574, 591, 631, 651 y 691, también la salida B (`--variant b`).
+Trae los hitos de 14 cuias (K = 13 + 1 vacío; 03 §11; d.5.1), que el generador construye con la holgura repartida en cuias
+a medias cuando la celda la necesita (decisión [P] de la generación, arriba; `--self-test holgura`).
+
+**Aún no hay pack** (2026-10-16): con `campaign_v2.json` tal como está, 4 de los 7 ciclos no tienen colocación. Cifras del
+equipo de escritorio (Release, `LEVELGEN_TRACE`):
+
+| Nivel | Celda | Qué pasa |
+|---|---|---|
+| 640 | Ma+Ba+Ho (MD; K = 13) | Ninguna etapa cabe en 14 cuias: la Hoja necesita el vacío de 4 entero (toda la holgura de K = 13) y el Matapi (vacío o 1-3 dosis de un color) y el Barro (hueco para la dosis desplazada) necesitan más. Es la aritmética de la celda, no de la búsqueda |
+| 615 | Li+Re (D) | 0 candidatos publicables de unos 600: 536 miden Muy difícil (no se publica en un reto D), 19 en ventana agotan A* (300.000, `fill` con 2 vacíos) y 12 en ventana tienen par < 2K (`walk`) |
+| 666 | Li+Ha (D) | Igual: 437 Muy difícil y 38 en ventana con par < 2K, de 589 tableros |
+| 678 | Ha+Re (D) | Igual: 525 Muy difícil, 23 en ventana con par < 2K y 10 que agotan A*, de 588 tableros |
+| 700 | Ma+Ha+B2 (MD; K = 13) | Con la holgura repartida salen tableros, pero los 133 que entran en la ventana no tienen solución (A*); los demás no dejan sitio al Brote de dos hojas |
+| 641-660 | — | Todos los slots tienen opciones, pero el escalón de D-009 no coloca (el 658, Ha+Re (D), solo tiene 2) |
+
+Con el 640 cambiado a `Ma+Ba (MD; K = 13)` (solo como prueba en una copia de la especificación; no se publica), los ciclos
+561-580, 581-600 y 621-640 colocan, con sus hitos de 14 cuias del 580, el 600 y el 640; los demás siguen sin colocación. Los
+retos de K = 12 de 601-700 miden casi todos Muy difícil (03 §4.4 solo prevé relajar el reto hacia `fill` con 2 vacíos). Lo que
+falta es del dueño y del tech-lead: la celda del 640, el K o la relajación de esos retos (y el 700), y si el hito de 14 cuias
+puede ir sin ninguna cuia vacía, con la holgura repartida (arriba; si se acepta, el carril de documentación ajusta 03 §1 y
+§11).
+
+Las cifras de la tabla son de antes de limitar la holgura repartida a los casos de arriba (revisión de P7d). Con el límite,
+581-600 da el mismo pack byte a byte, 561-580 sigue colocando y 641-660 sigue sin colocación (el 658 sigue con 2 opciones).
 
 ## Tinaja (M13; D-019, Q-Ti1 A; 03 §8 y §9; propuesta de la tinaja c.3)
 
