@@ -40,9 +40,9 @@ status_pt-BR, notes y args):
   limite, lleva una cifra con separador o decimales o cae en el veto de Belen, si un rio no es solo el nombre del rio
   (parentesis, «río» o minuscula), si una fila con [V] o [E] no cita ninguna URL o si un dato [V] no tiene fuente [V].
 
-Conversion (paradas_1_200 y paradas_201_700 -> stops[n]; plan del Mapa, M1.1 y M4.5a):
+Conversion (paradas_1_200 y paradas_201_700 -> stops[n]; plan del Mapa, M1.1, M4.5a y M4.5b):
 - paradas_1_200 cubre k = 0..19 (niveles 1-200, D-013 punto 3) y paradas_201_700, con el mismo registro mas sitio y
-  wikidata, sigue desde k = 20 (niveles 201-700, Q14-A; hoy k = 20-41, los mundos 6 y 7, de M3.7a y M3.7b); ninguna k se
+  wikidata, sigue desde k = 20 (niveles 201-700, Q14-A; desde M4.5b, k = 20-69, los mundos 6-9 de M3.7a-M3.7d); ninguna k se
   repite entre las dos listas, y la validacion exige que el documento termine en el ultimo nivel de un mundo, para que
   ninguno se quede sin su close.
 - n = k, levels = niveles, world = mundo, id = id; kind: gran_parada -> gate, parada y variante -> stop,
@@ -101,7 +101,6 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     ascii_text,
     format_csv_row,
     has_belen,
-    in_map_scope,
     iter_strings,
     final_fact_of,
     load_json,
@@ -111,6 +110,7 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     split_csv_records,
     stop_list_of,
     stop_records,
+    travel_passing_occurrences,
     travel_passing_points,
 )
 
@@ -188,8 +188,9 @@ def _crossings(source: dict, records: list) -> tuple[dict, list[str]]:
     """Banderas izadas al llegar a una parada (cruces_de_pais): {k: pais}. llega_en da la parada de tres formas:
     parada_1_200 = k; {mundo, sitio}, la primera parada de ese mundo cuyo sitio empieza por ese nombre (EC en el 220,
     Nuevo Rocafuerte; PE en el 310, el lago Sandoval); y viaje_de_entrada = mundo, la primera parada del mundo (BO en el
-    300, Puerto Heath; M4.5a). Los cruces de un mundo sin paradas detalladas todavia (el 420 y los de 561-1.000) no
-    izan nada aqui; los demas tienen que caer en una parada, y su nivel (si lo lleva) es el de su llegada, 10k."""
+    300, Puerto Heath; M4.5a; BO en el 420, Riberalta, y PE en el 560, Jenaro Herrera; M4.5b). Los cruces de un mundo
+    sin paradas detalladas (los de 701-1.000, fuera de la 1.0) no izan nada aqui; los demas tienen que caer en una
+    parada, y su nivel (si lo lleva) es el de su llegada, 10k."""
     flags: dict = {}
     errors: list[str] = []
     crossings = source.get("cruces_de_pais", [])
@@ -375,8 +376,6 @@ def convert(source: dict, overrides: dict, model: "geometry.Model | None" = None
             continue
         for i, r in enumerate(items):
             if isinstance(r, dict):
-                if not in_map_scope(r):   # k = 42-69: de M4.5b (riverdata.LAST_K_IN_MAP)
-                    continue
                 records.append(r)
                 lists[id(r)] = (name, lo, hi)
             else:
@@ -1167,8 +1166,11 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
     places += [("miradores_1_200", "mirador", "un «?» fuera de la ruta que el progreso revela (desde la victoria del 10); "
                 "al tocarlo enseña su dato y da su muestra especial del Muestrario (propuesta del Mapa §5.2; 06 §4.5)", r)
                for r in source.get("miradores_1_200", []) or []]
-    travel = {id(r): w for w in source.get("paradas_201_1000", []) or [] if isinstance(w, dict)
-              for r in w.get("puntos_de_paso_del_viaje", []) or []}
+    # Cada punto de paso con id, una sola fila aunque salga en varios viajes (M4.5b: teotonio, en el del 300 y en el del
+    # 560); su contexto cita todos los viajes, con el relevo del guia y la nota de cada uno.
+    travel: dict = {}
+    for w, r in travel_passing_occurrences(source):
+        travel.setdefault(r["id"], []).append((w, r))
     places += [("puntos_de_paso_del_viaje", "punto de paso", passing_where, r) for r in travel_passing_points(source)]
     for field, kind, what, r in places:
         nombre = r.get("nombre") if isinstance(r, dict) else None
@@ -1181,11 +1183,14 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
             errors.append(f"{field}: {nombre!r} tiene el id {pid} de una parada (comparten map.stop.<id>.name)")
             continue
         key = f"map.stop.{pid}.name"
+        voyages = travel.get(pid, []) if own_id else []
         if own_id:
-            w = travel.get(id(r), {})
-            origin = (f"{field} del mundo {w.get('mundo')} en paradas_201_1000 (id «{pid}», nombre «{nombre}»), en el "
-                      f"viaje de entrada a la parada {(w.get('niveles') or [1])[0] // 10}, al ganar el "
-                      f"{(w.get('niveles') or [1])[0] - 1}")
+            def voyage(w: dict) -> str:
+                first = (w.get("niveles") or [1])[0]
+                return (f"del mundo {w.get('mundo')}, en el viaje de entrada a la parada {first // 10}, al ganar el "
+                        f"{first - 1}")
+            where_ = ", y ".join(voyage(w) for w, _ in voyages)
+            origin = f"{field} en paradas_201_1000 (id «{pid}», nombre «{nombre}»): {where_}"
         else:
             origin = f"{field} («{nombre}»)"
         context = (f"Nombre del {kind} {pid} del Mapa del río: {what}. Es el nombre de la investigación sin su "
@@ -1199,9 +1204,15 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
             continue
         sources, errs = _sources_text(final, fuentes, final["clave"])
         errors.extend(errs)
-        relevo = (f" Relevo del guía: {r['relevo_del_guia']}." if isinstance(r.get("relevo_del_guia"), str)
-                  and r["relevo_del_guia"].strip() else "")
-        nota = f" Nota de la investigación: {r['nota']}" if isinstance(r.get("nota"), str) and r["nota"].strip() else ""
+        def voyage_text(field_: str, label: str, sep: str) -> str:
+            parts = [(w, v[field_].strip()) for w, v in (voyages or [({}, r)])
+                     if isinstance(v.get(field_), str) and v[field_].strip()]
+            if len(voyages) <= 1:
+                return "".join(f" {label}: {x}{sep}" for _, x in parts)
+            return "".join(f" {label} (viaje del {(w.get('niveles') or [1])[0] - 1}): {x}{sep}" for w, x in parts)
+
+        relevo = voyage_text("relevo_del_guia", "Relevo del guía", ".")
+        nota = voyage_text("nota", "Nota de la investigación", "")
         context = (f"Dato del {kind} {pid} ({place_name(nombre)}) del Mapa del río: sale al tocarlo en el Mapa, como su "
                    f"nombre, sin fondo, Canasta ni muestra (propuesta del Mapa §5.2; 06 §4.5); es el fact de passing[] "
                    f"en river_map_v1.json. No es un dato de llegada ni el fact_id de af_river_fact_shown.{relevo} "

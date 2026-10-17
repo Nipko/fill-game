@@ -100,7 +100,7 @@ namespace AF.Tests.EditMode
                 RiverStopBackdrop b = Stops.At(n)!.Backdrop;
                 if (n >= 20)
                 {
-                    // 201-420 (M4.5a; Q14-A): solo el kit, con piezas sin forma propia todavía (la genérica del agua).
+                    // 201-700 (M4.5a y M4.5b; Q14-A): solo el kit, con piezas sin forma propia todavía (la genérica del agua).
                     Assert.That(b.Hero, Is.Null, "parada " + n);
                     Assert.That(b.Code, Does.StartWith("kit:"), "parada " + n);
                     Assert.That(StopShapes.ShapeOf(b), Is.EqualTo(StopShapes.GenericWater), "parada " + n);

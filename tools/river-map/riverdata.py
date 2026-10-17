@@ -14,7 +14,8 @@ Solo biblioteca estandar de Python 3.14 (08 §4.5). Lo usan stops.py, geometry.p
 - Puntos de paso y miradores de la investigacion (M2.6): su id (`place_id`), su nombre visible (`place_name`) y la clave de su
   dato (`fact_key_of`), los mismos en river_map_v1.json (geometry.py) y en el bloque map.* de facts.csv (stops.py).
 - Paradas de la investigacion en sus dos listas (`stop_records`: paradas_1_200 y, desde M4.5a, paradas_201_700), los
-  puntos de paso de los viajes de entrada de 201-1.000 que llevan id (`travel_passing_points`: teotonio) y el texto final
+  puntos de paso de los viajes de entrada de 201-1.000 que llevan id (`travel_passing_points`: teotonio, una vez aunque
+  salga en los viajes del 300 y del 560; `travel_passing_occurrences` y `travel_passing_mismatches`, M4.5b) y el texto final
   de un dato de punto de paso cuando la investigacion lo da entre «» (`final_fact_of`).
 """
 from __future__ import annotations
@@ -261,24 +262,10 @@ def final_fact_of(dato) -> dict | None:
 #
 # Las paradas detalladas de la investigacion van en dos listas con el mismo registro (propuesta del Mapa §5.1 y §5.4 bis):
 # paradas_1_200 (k = 0-19, niveles 1-200; M1.1) y paradas_201_700 (k = 20-69, niveles 201-700, fase F9: k = 20-29 desde
-# M3.7a y k = 30-41 desde M3.7b; M4.5a). Las de 201-700 llevan ademas «sitio» y «wikidata».
+# M3.7a, k = 30-41 desde M3.7b, k = 42-55 desde M3.7c y k = 56-69 desde M3.7d; M4.5a y M4.5b). Las de 201-700 llevan
+# ademas «sitio» y «wikidata».
 
 STOP_LISTS = (("paradas_1_200", 0, 19), ("paradas_201_700", 20, 69))
-
-# Alcance de los datos del Mapa: las paradas k = 0-41 (niveles 1-420, mundos 1-7; M4.5a). La investigacion ya detalla
-# k = 42-69 (mundos 8 y 9, M3.7c y M3.7d), pero sus legs (el Beni, el Mamore por la confluencia de Villa Bella, el
-# Itenez, el Madeira y el Ucayali), sus kind, flag_raise, preguntas, fondos y muestras, y el teotonio del viaje del 560
-# en el via de su leg, son de M4.5b (propuesta del Mapa §5.4 quater y quinquies, «Para M4.5b»), que sube este limite a
-# 69. Hasta entonces stops.py y geometry.py no leen ni comprueban esas paradas ni los puntos de paso de esos viajes.
-LAST_K_IN_MAP = 41
-
-
-def in_map_scope(record: dict) -> bool:
-    """False solo para una parada que la investigacion ya detalla pero que aun no entra en los datos del Mapa
-    (LAST_K_IN_MAP < k <= 69, la ultima k de paradas_201_700). Un registro sin k entera o con una k fuera de las listas
-    se deja pasar, para que stops.py lo rechace con su mensaje."""
-    k = record.get("k")
-    return not (isinstance(k, int) and not isinstance(k, bool) and LAST_K_IN_MAP < k <= STOP_LISTS[-1][2])
 
 
 def stop_list_of(k) -> str:
@@ -291,30 +278,63 @@ def stop_list_of(k) -> str:
 
 def stop_records(source: dict) -> list:
     """Registros de las paradas de la investigacion (paradas_1_200 y paradas_201_700), en el orden de las listas; solo
-    los objetos (las entradas que no lo son las rechaza stops.py) y solo los del alcance del Mapa (LAST_K_IN_MAP)."""
+    los objetos (las entradas que no lo son las rechaza stops.py). Desde M4.5b, todas: k = 0-69, niveles 1-700."""
     out = []
     for name, _, _ in STOP_LISTS:
         items = source.get(name)
         if isinstance(items, list):
-            out.extend(r for r in items if isinstance(r, dict) and in_map_scope(r))
+            out.extend(r for r in items if isinstance(r, dict))
     return out
 
 
-def travel_passing_points(source: dict) -> list:
-    """Puntos de paso de los viajes de entrada de 201-1.000 (paradas_201_1000[].puntos_de_paso_del_viaje) que llevan id:
-    los que el Mapa dibuja (passing[] de river_map_v1.json; M4.5a: teotonio, el relevo del guia del viaje del 300, Q18-A y
-    P-M8). Los que no llevan id (Villa Bella, Cachuela Esperanza, Riberalta) son notas del resumen de su mundo. Solo los
-    de los mundos cuyo primer nivel cae en el alcance del Mapa (LAST_K_IN_MAP): el teotonio del viaje del 560 (mundo 9)
-    es el mismo elemento de passing[] que el del 300 y lo cruza el leg de n = 56, que es de M4.5b."""
+# Campos que tienen que coincidir en todas las apariciones de un punto de paso con id (M4.5b): es un solo elemento de
+# passing[] en river_map_v1.json, con una sola coordenada y un solo fact (contrato 29; propuesta del Mapa §5.4 quinquies).
+# El relevo del guia y la nota pueden cambiar de un viaje a otro (en el 300 Rosa se queda; en el 560 vuelve).
+TRAVEL_POINT_SHARED_FIELDS = ("lat", "lon", "nombre", "conf", "dato")
+
+
+def travel_passing_occurrences(source: dict) -> list:
+    """(mundo, punto) de cada punto de paso con id de los viajes de entrada de 201-1.000
+    (paradas_201_1000[].puntos_de_paso_del_viaje), en el orden de los mundos: el mismo id puede salir en varios viajes
+    (teotonio, en el del 300 y en el del 560). Los que no llevan id (Villa Bella, Cachuela Esperanza, Riberalta, la
+    confluencia de Nauta) son notas del resumen de su mundo."""
     out = []
     for world in source.get("paradas_201_1000", []) or []:
         if not isinstance(world, dict):
             continue
-        levels = world.get("niveles")
-        first = levels[0] if isinstance(levels, list) and levels else None
-        if isinstance(first, int) and not isinstance(first, bool) and (first - 1) // 10 > LAST_K_IN_MAP:
-            continue
         for p in world.get("puntos_de_paso_del_viaje", []) or []:
             if isinstance(p, dict) and isinstance(p.get("id"), str):
-                out.append(p)
+                out.append((world, p))
     return out
+
+
+def travel_passing_points(source: dict) -> list:
+    """Puntos de paso de los viajes de entrada de 201-1.000 que llevan id: los que el Mapa dibuja (passing[] de
+    river_map_v1.json; M4.5a: teotonio, el relevo del guia del viaje del 300, Q18-A y P-M8). Cada id una sola vez, con su
+    primera aparicion (M4.5b: el teotonio del viaje del 560 es el mismo elemento que el del 300, y el leg de n = 56 lo
+    cruza en su via); travel_passing_mismatches dice si las demas apariciones no son iguales."""
+    out, seen = [], set()
+    for _, p in travel_passing_occurrences(source):
+        if p["id"] not in seen:
+            seen.add(p["id"])
+            out.append(p)
+    return out
+
+
+def travel_passing_mismatches(source: dict) -> list[str]:
+    """Mensajes (ASCII) de los puntos de paso con id que salen en varios viajes con otra coordenada, otro nombre, otra
+    confianza u otro dato que en el primero (TRAVEL_POINT_SHARED_FIELDS): passing[] solo puede llevar uno."""
+    first: dict = {}
+    errors = []
+    for world, p in travel_passing_occurrences(source):
+        pid = p["id"]
+        if pid not in first:
+            first[pid] = (world, p)
+            continue
+        w0, p0 = first[pid]
+        for field in TRAVEL_POINT_SHARED_FIELDS:
+            if p.get(field) != p0.get(field):
+                errors.append(ascii_text(
+                    f"puntos_de_paso_del_viaje: {pid} del mundo {world.get('mundo')} tiene otro {field} que el del mundo "
+                    f"{w0.get('mundo')} (es un solo elemento de passing[]; contrato 29)"))
+    return errors
