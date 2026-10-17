@@ -3,6 +3,7 @@
   "rootNamespace": "AF.UI",
   "references": [
     "AF.Core",
+    "AF.Solver",
     "AF.Levels",
     "AF.GameFlow",
     "AF.Presentation",
