@@ -24,7 +24,8 @@ namespace AF.UI
     /// se ve con el inicio delante (<see cref="AppScreen.Lobby"/>; con «El río sigue creciendo» abierto, espera a que se cierre
     /// para no gastar el saludo del día detrás del modal); en cada visita se apunta <c>sloth.last_seen_date</c> y se guarda el
     /// perfil si algo cambió. Durante <c>sloth_wave</c>, el rig baja hasta <see cref="WaveDropDp"/> dp para que el marco no
-    /// corte la garra que saluda.</item>
+    /// corte la garra que saluda. Colgado, se agarra a la rama pintada de la embaúba de la ventanita y la rama del rig no se
+    /// pinta (si no, se verían dos ramas y una bajaría con él); tumbado o en ovillo, sobre la rama del rig, más abajo.</item>
     /// <item><b>Toque</b> (<see cref="Tap"/>): <c>sloth_look</c> y, como mucho una vez por sesión, un «Dato del perezoso»
     /// (<see cref="UiText.SlothFact"/>: en release, solo los aprobados por el asesor). Tocarlo no lo cuida ni da premios (d.7).
     /// El dato sale en su <b>tarjeta</b>, nunca en el bocadillo (D-013, punto 6: «su bocadillo (≤ 50 caracteres) queda para sus
@@ -42,7 +43,8 @@ namespace AF.UI
     /// <para>Lo que necesita del juego (el reloj, la sesión de TiTino, el <c>sloth</c> del perfil y su guardado, los ajustes, el
     /// nivel de «Jugar» y Reducir movimiento) lo toma del <see cref="GameBootstrap"/> del que cuelga el inicio la primera vez que
     /// se ve (<see cref="Bind"/> lo fija a mano). El reloj es el del juego (<see cref="LaunchOptions.ClockOverride"/> en los tests).
-    /// Avanza solo con el inicio a la vista (un componente en el lienzo del inicio); nada asigna memoria por fotograma.</para>
+    /// Avanza solo con el inicio a la vista (un componente en el lienzo del inicio); nada asigna memoria por fotograma, tampoco
+    /// mientras el arranque del juego aún no ha terminado (solo al enlazarse, una vez).</para>
     /// </summary>
     internal sealed class HomeSloth
     {
@@ -65,7 +67,8 @@ namespace AF.UI
         public const float PoseCheckMs = 1000f;
 
         /// <summary>
-        /// Línea de la rama de TiTino colgado, desde arriba del marco (dp) [P]: sobre la rama pintada de la embaúba de la ventanita.
+        /// Línea de la rama de TiTino colgado, desde arriba del marco (dp) [P]: sobre la rama pintada de la embaúba de la ventanita,
+        /// de la que se agarra (la rama del rig no se pinta mientras cuelga).
         /// </summary>
         public const float HangBranchDp = 12f;
 
@@ -94,8 +97,11 @@ namespace AF.UI
         /// <summary>Sombra del pico del bocadillo (dp) [P]: 1 dp de #000 al 15 %, que lo separa de lo blanco del decorado.</summary>
         public const float TailShadowDp = 1f;
 
-        /// <summary>Hueco entre el canto de abajo del marco y la tarjeta del Dato del perezoso (dp) [P].</summary>
-        public const float FactCardGapDp = 6f;
+        /// <summary>
+        /// Hueco entre el canto de abajo del marco y la tarjeta del Dato del perezoso (dp) [P]: corto, para que la tarjeta tape lo
+        /// que el decorado pone justo debajo del marco (la garza de la orilla, a 360 × 640 dp) y no asome suelto entre los dos.
+        /// </summary>
+        public const float FactCardGapDp = 2f;
 
         /// <summary>Texto de la tarjeta del dato (sp): el de la placa del Dato del río (<see cref="VictoryLineSlot.TextSp"/>).</summary>
         public const float FactCardTextSp = VictoryLineSlot.TextSp;
@@ -150,7 +156,11 @@ namespace AF.UI
         private readonly Driver _driver;
 
         private SlothRig? _rig;
+        private Image? _rigBranch;
+        private bool _rigBranchArt;
         private bool _rigMissing;
+        private GameBootstrap? _boot;
+        private bool _bootLooked;
         private bool _shown;
         private bool _visitPending;
         private bool _bound;
@@ -551,14 +561,17 @@ namespace AF.UI
             {
                 _rig?.Tick(dtMs);
                 _poseCheckMs += dtMs;
-                if (_poseCheckMs >= PoseCheckMs && Resolve())
+                if (_poseCheckMs >= PoseCheckMs)
                 {
-                    _poseCheckMs = 0f;
-                    SlothPoseId pose = BasePoseFor(_clock!.LocalNow().Hour);
-                    if (pose != _basePose)
+                    _poseCheckMs = 0f; // también si el juego aún arranca: se vuelve a mirar al cabo de PoseCheckMs
+                    if (Resolve())
                     {
-                        _basePose = pose;
-                        ApplyBasePose();
+                        SlothPoseId pose = BasePoseFor(_clock!.LocalNow().Hour);
+                        if (pose != _basePose)
+                        {
+                            _basePose = pose;
+                            ApplyBasePose();
+                        }
                     }
                 }
             }
@@ -633,31 +646,51 @@ namespace AF.UI
             return _bound || BindFromGame();
         }
 
-        // Aparte de Resolve: las lambdas capturan variables de este método y el compilador crea su clase de cierre al entrar en
-        // él; en Resolve, eso asignaría memoria en cada fotograma aunque ya estuviera todo fijado.
+        // Mientras el arranque no termina se llama en cada fotograma: sin lambdas ni búsquedas repetidas (el GameBootstrap se
+        // busca una vez), nada asigna memoria. Los cierres se crean solo al enlazar, una vez (BindToGame, BindOwn).
         private bool BindFromGame()
         {
-            GameBootstrap? boot = _driver != null ? _driver.GetComponentInParent<GameBootstrap>(true) : null;
-            if (boot != null && (boot.Profile == null || boot.App == null || boot.View == null))
+            if (!_bootLooked)
             {
-                return false; // el arranque aún no terminó
+                _boot = _driver != null ? _driver.GetComponentInParent<GameBootstrap>(true) : null;
+                _bootLooked = true;
             }
 
-            IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
-            if (boot == null)
+            GameBootstrap? boot = _boot;
+            if (ReferenceEquals(boot, null))
             {
-                var own = new SlothData();
-                Bind(clock, new SlothSession(own, true), own, null, () => true, () => 0, () => false, () => true);
+                BindOwn();
                 return true;
             }
 
+            if (boot == null || boot.Profile == null || boot.App == null || boot.View == null)
+            {
+                return false; // el arranque aún no terminó (o el juego se está cerrando)
+            }
+
+            BindToGame(boot);
+            return true;
+        }
+
+        // Sin juego del que colgar: un sloth propio sin guardar, la sesión por defecto y el reloj del juego.
+        private void BindOwn()
+        {
+            var own = new SlothData();
+            Bind(LaunchOptions.ClockOverride ?? SystemClock.Instance, new SlothSession(own, true), own, null, () => true, () => 0,
+                () => false, () => true);
+        }
+
+        // Aparte de BindFromGame: las lambdas capturan boot y el compilador crea su clase de cierre al entrar en el método; allí,
+        // eso asignaría memoria en cada fotograma mientras el arranque no termina.
+        private void BindToGame(GameBootstrap boot)
+        {
             Profile profile = boot.Profile!;
             AppFlow app = boot.App!;
             // Solo con el inicio delante: con «El río sigue creciendo» (ContentEnd), el velo y el modal tapan la ventanita y el
             // saludo del día (como mucho 1; D-016, punto 5) se gastaría sin verse. Se decide al cerrarlo, en la misma visita.
-            Bind(clock, boot.View!.SlothSession, profile.Sloth, () => SaveProfile(boot), () => profile.Settings.SlothMessages,
-                () => app.PlayLevel, () => boot.Flow != null && boot.Flow.ReduceMotion, () => app.Screen == AppScreen.Lobby);
-            return true;
+            Bind(LaunchOptions.ClockOverride ?? SystemClock.Instance, boot.View!.SlothSession, profile.Sloth, () => SaveProfile(boot),
+                () => profile.Settings.SlothMessages, () => app.PlayLevel, () => boot.Flow != null && boot.Flow.ReduceMotion,
+                () => app.Screen == AppScreen.Lobby);
         }
 
         // Guarda el perfil por el lote del juego (en segundo plano con el perfil en disco). Con el perfil en solo lectura (08 §4.4),
@@ -683,7 +716,20 @@ namespace AF.UI
             SlothArt? art = _art.SlothRigArt();
             _rig = art != null ? SlothRig.Create(_hole, art, RigSizeDp) : null;
             _rigMissing = _rig == null;
+            if (_rig != null)
+            {
+                // La rama del rig (su pieza «Branch»): solo se pinta con TiTino tumbado o en ovillo (PlaceRig).
+                Transform branch = _rig.Root.Find("Branch");
+                _rigBranch = branch != null ? branch.GetComponent<Image>() : null;
+                _rigBranchArt = _rigBranch != null && _rigBranch.enabled;
+            }
         }
+
+        /// <summary>
+        /// La rama del rig se pinta: solo con TiTino tumbado o en ovillo (<c>sloth_sunbathe</c>, <c>sloth_sleep</c>), sobre la
+        /// rama de abajo; colgado, se agarra a la rama pintada de la ventanita. false sin rig.
+        /// </summary>
+        public bool RigBranchShown => _rigBranch != null && _rigBranch.enabled;
 
         private bool ReduceMotionNow => _reduceMotion != null && _reduceMotion();
 
@@ -716,12 +762,20 @@ namespace AF.UI
             _rig.Play(pose, ReduceMotionNow);
         }
 
-        // Colgado, la rama sobre la pintada de la embaúba; tumbado o en ovillo, una rama más baja: entero dentro del hueco. Durante
-        // sloth_wave, el rig baja con la garra (WaveDrop) para que el marco no la corte.
+        // Colgado, de la rama pintada de la embaúba, sin pintar la del rig (si no, se verían dos ramas, y durante sloth_wave una
+        // bajaría con él); tumbado o en ovillo, sobre la rama del rig, más baja: entero dentro del hueco. Durante sloth_wave, el
+        // rig baja con la garra (WaveDrop) para que el marco no la corte; las otras garras siguen agarradas a la rama pintada
+        // (gruesa y más baja hacia la izquierda), como mucho por su canto de abajo.
         private void PlaceRig(SlothPoseId pose)
         {
             float border = ProceduralArt.HomeWindowBorderDp;
             bool lying = pose == SlothPoseId.Sunbathe || pose == SlothPoseId.Sleep;
+            bool branchOn = lying && _rigBranchArt;
+            if (_rigBranch != null && _rigBranch.enabled != branchOn)
+            {
+                _rigBranch.enabled = branchOn;
+            }
+
             float y = (lying ? LieBranchDp : HangBranchDp) - border;
             if (pose == SlothPoseId.Wave && _gestureMs >= 0f && !_rig!.ReduceMotion)
             {

@@ -15,7 +15,8 @@ namespace AF.Tests.EditMode
     /// Ventanita de casa de TiTino en el inicio (tarea M2.1; D-013, punto 6, Q17-A; propuesta del Mapa §2.2 y §6.1; P-M5): los km
     /// de la píldora redondeados a la decena [P] («a unos 1.480 km» en Manaos) con el separador de la región y el espacio duro
     /// antes de «km», sin píldora en Belém (n = 0) [P], la regla del arte provisional (el PNG manda; sin él, solo en el Editor y
-    /// en desarrollo), la ventanita procedural perezosa de 56 × 56 dp, y que nada de la ventanita recibe toques.
+    /// en desarrollo), la ventanita procedural perezosa de 56 × 56 dp, y que nada de la ventanita recibe toques salvo el área de
+    /// TiTino (TI6c).
     /// </summary>
     public sealed class HomeWindowTests
     {

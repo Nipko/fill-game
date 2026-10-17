@@ -34,7 +34,9 @@ namespace AF.Tests.PlayMode
     /// nada;</item>
     /// <item>oculto con Sin canoas y con la hoja de compra; el bocadillo, la tarjeta y el área táctil no tapan «Jugar», los saldos
     /// ni Ajustes a 360 × 640 ni a 360 × 780 dp, al 100 % ni al 130 %;</item>
-    /// <item>sin asignaciones por fotograma.</item>
+    /// <item>colgado, de la rama pintada de la ventanita (la rama del rig no se pinta ni baja con él al saludar); tumbado o en
+    /// ovillo, sobre la rama del rig;</item>
+    /// <item>sin asignaciones por fotograma, tampoco mientras el juego arranca.</item>
     /// </list>
     /// </summary>
     public sealed class HomeSlothTests
@@ -83,16 +85,19 @@ namespace AF.Tests.PlayMode
             Assert.That(home.PortraitImage.enabled, NUnit.Framework.Is.False, "con el rig, el retrato no se pinta");
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Sleep), "22:00: duerme");
             Assert.That(sloth.Rig.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Sleep));
+            Assert.That(sloth.RigBranchShown, NUnit.Framework.Is.True, "en ovillo, sobre la rama del rig");
             Assert.That(sloth.LastGreeting.Greeting, NUnit.Framework.Is.False, "de noche y sin días fuera: sin saludo");
 
             clock.Set(Day0.AddDays(1).AddHours(12));
             Step(sloth, 1100);
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Sunbathe), "12:00 con el inicio abierto: al sol");
             Assert.That(sloth.Rig.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Sunbathe));
+            Assert.That(sloth.RigBranchShown, NUnit.Framework.Is.True, "tumbado, sobre la rama del rig");
 
             clock.Set(Day0.AddDays(1).AddHours(17));
             Step(sloth, 1100);
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Idle), "17:00: en reposo");
+            Assert.That(sloth.RigBranchShown, NUnit.Framework.Is.False, "colgado, de la rama pintada: la del rig no se pinta");
             Assert.That(sloth.GreetingDecisions, NUnit.Framework.Is.EqualTo(1), "el saludo se decide una vez por visita");
 
             // Hora local, no UTC: las 14:00 UTC son las 09:00 con un desfase de −5 h (Colombia, Perú).
@@ -448,6 +453,7 @@ namespace AF.Tests.PlayMode
             HomeSloth sloth = lobby.HomeWindow.Sloth!;
             sloth.Tick(16f);
             Assert.That(sloth.Pose, NUnit.Framework.Is.EqualTo(SlothPoseId.Wave));
+            Assert.That(sloth.RigBranchShown, NUnit.Framework.Is.False, "colgado, de la rama pintada: la del rig no baja con él");
             Rect window = CanvasRect(lobby.HomeWindow.Root, lobby);
             float holeTop = window.yMin + ProceduralArt.HomeWindowBorderDp;
             float closest = float.MaxValue;
@@ -457,11 +463,12 @@ namespace AF.Tests.PlayMode
                 Canvas.ForceUpdateCanvases();
                 foreach (Image piece in sloth.Rig!.Root.GetComponentsInChildren<Image>(false))
                 {
-                    if (!piece.enabled || piece.name == "Branch" || piece.name.StartsWith("Leaf", StringComparison.Ordinal))
+                    if (!piece.enabled || piece.name.StartsWith("Leaf", StringComparison.Ordinal))
                     {
-                        continue; // el cuerpo de TiTino: la rama va con él (baja con la garra) y las hojas no salen al saludar
+                        continue; // el cuerpo de TiTino (las hojas no salen al saludar)
                     }
 
+                    Assert.That(piece.name, NUnit.Framework.Is.Not.EqualTo("Branch"), t + " ms: colgado, sin la rama del rig");
                     float gap = CanvasRect(piece.rectTransform, lobby).yMin - holeTop;
                     if (gap < closest)
                     {
@@ -668,6 +675,45 @@ namespace AF.Tests.PlayMode
             Assert.That(sloth.Gesturing, NUnit.Framework.Is.True);
             Assert.That(Run80, Is.Not.AllocatingGCMemory(), "80 fotogramas con sloth_look, su final y la vuelta a la pose");
             Assert.That(sloth.Gesturing, NUnit.Framework.Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Tick_DoesNotAllocate_WhileTheGameIsStillStarting()
+        {
+            LaunchOptions.ClockOverride = At(0, 8);
+            var host = new GameObject("BootStillStarting");
+            host.SetActive(false); // sin Awake ni Start: un GameBootstrap sin perfil, como mientras el juego arranca
+            host.AddComponent<GameBootstrap>();
+            var canvas = new GameObject("Canvas", typeof(RectTransform));
+            canvas.transform.SetParent(host.transform, false);
+            var art = new ProceduralArt("white");
+            try
+            {
+                var home = new HomeWindow(canvas.transform, art);
+                HomeSloth sloth = home.Sloth!;
+                sloth.SetShown(true);
+                sloth.BeginVisit();
+                Step(sloth, 2100); // la visita pendiente en cada fotograma y dos miradas a la hora, sin el juego listo
+
+                void Run80()
+                {
+                    for (int i = 0; i < 80; i++)
+                    {
+                        sloth.Tick(16f);
+                    }
+                }
+
+                Assert.That(Run80, Is.Not.AllocatingGCMemory(), "80 fotogramas con el arranque sin terminar (y una mirada a la hora)");
+                Assert.That(sloth.GreetingDecisions, NUnit.Framework.Is.EqualTo(0), "sin el juego listo, el saludo espera");
+                Assert.That(sloth.Shown, NUnit.Framework.Is.True);
+            }
+            finally
+            {
+                UnityEngine.Object.Destroy(host);
+                art.Dispose();
+            }
+
+            yield return null;
         }
 
         private static void AssertHidden(LobbyScreen lobby, string what)
