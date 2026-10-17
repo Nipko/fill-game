@@ -1,4 +1,5 @@
 #nullable enable
+using System;
 using AF.Levels;
 using AF.Presentation;
 using TMPro;
@@ -17,8 +18,10 @@ namespace AF.UI
     /// <see cref="AF.Localization.Loc"/>.
     /// <list type="bullet">
     /// <item>En la parada 0 (Belém, niveles 1-10) está en casa: sin píldora [P] (<see cref="HasPill"/>).</item>
-    /// <item>Sin nombre, sin texto en el marco y sin toques: todo con <c>raycastTarget</c> = false hasta M3.3, que la hará abrir
-    /// el Mapa.</item>
+    /// <item>Sin nombre ni texto en el marco. En el inicio, sin toques (todo con <c>raycastTarget</c> = false). En el Mapa del
+    /// río (M3.5) se crea con una acción de toque (<see cref="HomeWindow(Transform, ProceduralArt, Action)"/>): un área táctil
+    /// de ≥ 48 dp sobre el marco y la píldora (<see cref="TapButton"/>) que lleva la vista a la casa, en Guajará; y el retrato
+    /// cierra los ojos cuando TiTino dormita (<see cref="SetAsleep"/>, <c>sloth_sleep</c> a los 30 s sin toques).</item>
     /// <item>Arte provisional de P-M5 (<see cref="MapArtRule"/>): sin los PNG de <c>map_home_window</c> y del retrato, solo sale
     /// en el Editor y en desarrollo (<see cref="CanShow"/>); en release, nada hasta que exista su arte.</item>
     /// <item>La embaúba está pendiente del asesor cultural (propuesta de TiTino g.2, punto 1; encargo del Mapa, fila 11): si la
@@ -55,12 +58,16 @@ namespace AF.UI
         /// <summary>Los km de la píldora se redondean a esta decena [P]: «a unos» (propuesta del Mapa §2.2: «≈ 1.480»).</summary>
         public const int KmStep = 10;
 
+        /// <summary>Lado mínimo del área táctil de la ventanita que se toca (07 §1.2 y §7.8).</summary>
+        public const float MinTapDp = 48f;
+
         private readonly ProceduralArt _art;
         private readonly RectTransform _root;
         private readonly Image _window;
         private readonly Image _portrait;
         private readonly RectTransform _pill;
         private readonly TextMeshProUGUI _label;
+        private readonly Button? _tap;
 
         private RiverStop? _stop;
         private bool _hasStop;
@@ -68,9 +75,21 @@ namespace AF.UI
         private float _x;
         private float _y;
         private float _maxRight = LobbyScreen.ReferenceWidth;
+        private bool _asleep;
+        private Sprite? _portraitPng;
+        private bool _provisional;
 
-        /// <summary>Crea la ventanita (oculta) bajo <paramref name="parent"/>.</summary>
+        /// <summary>Crea la ventanita (oculta) bajo <paramref name="parent"/>, sin toques (la del inicio).</summary>
         public HomeWindow(Transform parent, ProceduralArt art)
+            : this(parent, art, null)
+        {
+        }
+
+        /// <summary>
+        /// Crea la ventanita (oculta) bajo <paramref name="parent"/>; con <paramref name="onTap"/>, el marco y la píldora se tocan
+        /// (un área táctil invisible encima de los dos, de ≥ 48 dp de alto; la del Mapa del río, M3.5).
+        /// </summary>
+        public HomeWindow(Transform parent, ProceduralArt art, Action? onTap)
         {
             _art = art;
             _root = UiBuilder.Rect("HomeWindow", parent);
@@ -87,6 +106,12 @@ namespace AF.UI
             _label = UiBuilder.Label("Label", _pill, TextStyle.PlainBold, string.Empty, LabelSp, Palette.Cream, TextAlignmentOptions.Center);
             UiBuilder.Stretch(_label.rectTransform);
 
+            if (onTap != null)
+            {
+                _tap = UiBuilder.BareButton("HomeTap", parent, onTap);
+                _tap.gameObject.SetActive(false);
+            }
+
             _root.gameObject.SetActive(false);
             _pill.gameObject.SetActive(false);
         }
@@ -102,6 +127,15 @@ namespace AF.UI
 
         /// <summary>La píldora de la distancia se ve.</summary>
         public bool PillShown => _pill.gameObject.activeSelf;
+
+        /// <summary>Área táctil del marco y la píldora (null en la ventanita sin toques del inicio).</summary>
+        public Button? TapButton => _tap;
+
+        /// <summary>Caja del área táctil (null sin toques).</summary>
+        public RectTransform? TapRect => _tap != null ? (RectTransform)_tap.transform : null;
+
+        /// <summary>El retrato tiene los ojos cerrados: TiTino dormita (<see cref="SetAsleep"/>).</summary>
+        public bool Asleep => _asleep;
 
         /// <summary>Texto de la píldora (vacío en casa o sin parada).</summary>
         public string DistanceText => _label.text;
@@ -168,6 +202,29 @@ namespace AF.UI
             {
                 _pill.gameObject.SetActive(pill);
             }
+
+            if (_tap != null && _tap.gameObject.activeSelf != on)
+            {
+                _tap.gameObject.SetActive(on);
+            }
+        }
+
+        /// <summary>
+        /// Abre o cierra los ojos del retrato (<c>sloth_sleep</c> en el Mapa, M3.5): el retrato de M1.5 con los ojos cerrados. Solo
+        /// cambia el sprite si cambia el estado; los dos retratos se crean una vez y se guardan, así que no asigna memoria después.
+        /// </summary>
+        public void SetAsleep(bool asleep)
+        {
+            if (_asleep == asleep)
+            {
+                return;
+            }
+
+            _asleep = asleep;
+            if (_artReady)
+            {
+                _portrait.sprite = _art.SlothPortrait(asleep, _portraitPng, _provisional);
+            }
         }
 
         /// <summary>
@@ -199,11 +256,13 @@ namespace AF.UI
             Sprite? windowPng = ArtSlots.Find(ProceduralArt.HomeWindowSlot);
             Sprite? portraitPng = ArtSlots.Find(ProceduralArt.SlothPortraitSlot);
             bool provisional = MapArtRule.ShowProvisional;
+            _portraitPng = portraitPng;
+            _provisional = provisional;
             _artReady = CanShow(provisional, windowPng != null, portraitPng != null);
             if (_artReady)
             {
                 _window.sprite = _art.HomeWindowFor(windowPng, provisional);
-                _portrait.sprite = _art.SlothPortrait(false, portraitPng, provisional);
+                _portrait.sprite = _art.SlothPortrait(_asleep, portraitPng, provisional);
                 _artReady = _window.sprite != null && _portrait.sprite != null;
             }
 
@@ -217,6 +276,13 @@ namespace AF.UI
             float width = string.IsNullOrEmpty(_label.text) ? 0f : Mathf.Ceil(UiBuilder.MinTextWidth(_label)) + (2f * PillPadDp);
             width = Mathf.Max(0f, Mathf.Min(width, _maxRight - left));
             UiBuilder.Place(_pill, left, _y + ((SizeDp - PillHeightDp) * 0.5f), width, PillHeightDp);
+            if (_tap != null)
+            {
+                // El área táctil cubre el marco y la píldora, con el alto mínimo de un control (07 §1.2 y §7.8).
+                float tapH = Mathf.Max(SizeDp, MinTapDp);
+                float tapW = SizeDp + (width > 0f ? PillGapDp + width : 0f);
+                UiBuilder.Place((RectTransform)_tap.transform, _x, _y + ((SizeDp - tapH) * 0.5f), Mathf.Max(tapW, MinTapDp), tapH);
+            }
         }
     }
 }

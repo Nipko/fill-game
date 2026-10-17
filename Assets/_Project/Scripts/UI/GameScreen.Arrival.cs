@@ -18,6 +18,10 @@ namespace AF.UI
     /// <c>level</c>, <c>view</c> = <c>victory</c> y <c>skipped</c>), una vez por llegada;</item>
     /// <item><c>AF_LAYOUT arrival</c> cuando empieza la franja, con el área táctil <c>arrival</c> (un toque la completa).</item>
     /// </list>
+    /// Al acabar la franja de una llegada (por tiempo, con un toque o porque la victoria se cierra antes), el jugador ya vio el
+    /// Mapa hasta ese nivel: <c>progress.map_seen_level</c> pasa al <c>10k</c> (<see cref="IGameActions.MarkMapSeen"/>; propuesta
+    /// del Mapa §4.2; M3.5), así que al abrir el Mapa no se repite esa llegada al ponerse al día y la pestaña del inicio no lleva
+    /// el punto. El dato desplazado no es una llegada y no anota nada.
     /// <c>river_fact_shown</c> sale del punto común de la ranura (GameScreen.Victory.cs), compartido con la línea de fruta (F3).
     /// </summary>
     public sealed partial class GameScreen
@@ -118,7 +122,11 @@ namespace AF.UI
             SendStopArrive(strip);
         }
 
+        /// <summary>Veces que la franja anotó lo visto del Mapa (tests).</summary>
+        internal int ArrivalMapSeenCount { get; private set; }
+
         // af_stop_arrive (propuesta del Mapa §11.5), una vez por llegada: solo con parada (el dato desplazado no es una llegada).
+        // Con ella, map_seen_level hasta el 10k de la franja (M3.5: «MarkMapSeen al acabar la franja de la victoria»).
         private void SendStopArrive(ArrivalStrip strip)
         {
             RiverStop? stop = strip.Stop;
@@ -131,6 +139,8 @@ namespace AF.UI
             StopArriveCount++;
             LastStopArriveSkipped = strip.Skipped;
             _probe.StopArrive(strip.Level, stop, strip.Skipped);
+            ArrivalMapSeenCount++;
+            _actions.MarkMapSeen(strip.Level);
         }
     }
 }

@@ -911,7 +911,10 @@ namespace AF.Tests.PlayMode
                 GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f); // un teléfono de 360 × 780 dp
             }
 
-            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(playLevel)));
+            // Lo visto, hasta max_level: sin «ponerse al día» (M3.5), que tiene sus propias pruebas (MapCatchUpTests).
+            Profile profile = ProfileAt(playLevel);
+            profile.Progress.MapSeenLevel = playLevel - 1;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
             GameBootstrap boot = GameBootstrap.Current!;
             yield return null;
             Assert.That(boot.Lobby!.MapTabShown, Is.True, "pestaña del Mapa con Jugar · Nivel " + playLevel);

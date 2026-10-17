@@ -41,6 +41,7 @@ namespace AF.Tests.PlayMode
             Profile profile = Wallet.NewProfile(new ManualClock(T0));
             profile.Progress.NextLevel = 58;
             profile.Progress.MaxLevel = 57;
+            profile.Progress.MapSeenLevel = 57; // sin «ponerse al día» (M3.5: sus capturas, MapCatchUpSnapshotTests)
             profile.Wallet.Seeds = 1250;
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
             GameBootstrap boot = GameBootstrap.Current!;
