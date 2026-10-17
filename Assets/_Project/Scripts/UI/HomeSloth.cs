@@ -21,12 +21,20 @@ namespace AF.UI
     /// <item><b>Saludos</b> (<see cref="SlothLines.ForHome"/>): al volver tras ≥ 3 días, el de regreso; en la primera apertura del
     /// día entre las 06:00 y las 12:00, el de la mañana; como mucho uno al día entre los dos (<c>sloth.last_greeting_date</c>),
     /// con <c>sloth_wave</c> y, si hay voz, su frase en el bocadillo. Se decide una vez por visita al inicio, cuando la ventanita
-    /// se ve; en cada visita se apunta <c>sloth.last_seen_date</c> y se guarda el perfil si algo cambió.</item>
+    /// se ve con el inicio delante (<see cref="AppScreen.Lobby"/>; con «El río sigue creciendo» abierto, espera a que se cierre
+    /// para no gastar el saludo del día detrás del modal); en cada visita se apunta <c>sloth.last_seen_date</c> y se guarda el
+    /// perfil si algo cambió. Durante <c>sloth_wave</c>, el rig baja hasta <see cref="WaveDropDp"/> dp para que el marco no
+    /// corte la garra que saluda.</item>
     /// <item><b>Toque</b> (<see cref="Tap"/>): <c>sloth_look</c> y, como mucho una vez por sesión, un «Dato del perezoso»
-    /// (<see cref="UiText.SlothFact"/>: en release, solo los aprobados por el asesor). Tocarlo no lo cuida ni da premios (d.7).</item>
+    /// (<see cref="UiText.SlothFact"/>: en release, solo los aprobados por el asesor). Tocarlo no lo cuida ni da premios (d.7).
+    /// El dato sale en su <b>tarjeta</b>, nunca en el bocadillo (D-013, punto 6: «su bocadillo (≤ 50 caracteres) queda para sus
+    /// frases propias»; propuesta de TiTino g.3: la tarjeta que sale al tocarlo en el inicio, con datos de ≤ 90 caracteres):
+    /// una placa de la familia de la del Dato del río (<see cref="ArrivalStrip"/>: esquinas de 10 dp, borde de 1 dp #E3D3B0 y
+    /// fondo claro) con el retrato de TiTino a la izquierda y el dato a 14 sp.</item>
     /// <item><b>Nunca</b> con Sin canoas, la hoja de compra ni una oferta (lo oculta <see cref="HomeWindow.Apply"/>): el rig, el
-    /// área táctil y el bocadillo se van con la ventanita. El bocadillo sale debajo del marco, con el pico hacia TiTino: por
-    /// debajo de los saldos, de Ajustes y de la píldora de la distancia, y muy por encima de «Jugar» y de su chip.</item>
+    /// área táctil, el bocadillo y la tarjeta se van con la ventanita. Los dos salen debajo del marco (el bocadillo con el pico
+    /// hacia TiTino y una sombra de 1 dp que lo separa del decorado): por debajo de los saldos, de Ajustes y de la píldora de
+    /// la distancia, y por encima de «Jugar» y de su chip.</item>
     /// </list>
     /// <para>Con <c>settings.sloth_messages</c> apagado, solo gestos (sin frase ni dato); con <c>ui_sloth_enabled</c> apagado, nada:
     /// la ventanita queda con su retrato quieto. Sin el arte del rig (<see cref="ProceduralArt.SlothRigArt()"/>; release sin el PNG
@@ -64,8 +72,33 @@ namespace AF.UI
         /// <summary>Línea de la rama de TiTino tumbado o en ovillo, desde arriba del marco (dp) [P]: una rama más baja.</summary>
         public const float LieBranchDp = 40f;
 
-        /// <summary>Hueco entre el canto de abajo del marco y el pico del bocadillo (dp) [P].</summary>
+        /// <summary>
+        /// Lo que baja el rig, como mucho, durante <c>sloth_wave</c> (dp) [P]: la rama efectiva a 16 dp, para que la garra levantada
+        /// quede ≥ 3 dp por debajo del canto de arriba del hueco (con 12 dp, el marco la cortaba). Entra y sale con el gesto
+        /// (<see cref="WaveDrop"/>); con Reducir movimiento (pose quieta, sin la garra levantada), nada.
+        /// </summary>
+        public const float WaveDropDp = 4f;
+
+        /// <summary>
+        /// Hueco entre el canto de abajo del marco y el pico del bocadillo (dp) [P]: corto, para que el pico salga del marco y no
+        /// de lo que el decorado ponga debajo (la garza de la orilla, a 360 × 640 dp).
+        /// </summary>
         public const float BubbleGapDp = 6f;
+
+        /// <summary>
+        /// Centro del pico, desde el canto izquierdo del marco (dp) [P]: bajo la garra de delante de TiTino (la que saluda), a la
+        /// derecha del centro, lejos de la garza del decorado, que a 360 × 640 dp queda bajo la mitad izquierda del marco.
+        /// </summary>
+        public const float TailXDp = 40f;
+
+        /// <summary>Sombra del pico del bocadillo (dp) [P]: 1 dp de #000 al 15 %, que lo separa de lo blanco del decorado.</summary>
+        public const float TailShadowDp = 1f;
+
+        /// <summary>Hueco entre el canto de abajo del marco y la tarjeta del Dato del perezoso (dp) [P].</summary>
+        public const float FactCardGapDp = 6f;
+
+        /// <summary>Texto de la tarjeta del dato (sp): el de la placa del Dato del río (<see cref="VictoryLineSlot.TextSp"/>).</summary>
+        public const float FactCardTextSp = VictoryLineSlot.TextSp;
 
         /// <summary>Ancho máximo del bocadillo (dp) [P]; como mucho, hasta el margen derecho que da <see cref="HomeWindow.Place"/>.</summary>
         public const float BubbleMaxWidthDp = 260f;
@@ -98,6 +131,7 @@ namespace AF.UI
         // Vidrio esmerilado casi opaco y madera clara (D-003), como el bocadillo de la victoria (SlothVictory).
         private static readonly Color GlassColor = new Color(0xEA / 255f, 0xF7 / 255f, 0xF3 / 255f, 0.96f);
         private static readonly Color RimColor = Palette.FrameBevel;
+        private static readonly Color TailShadowColor = new Color(0f, 0f, 0f, 0.15f);
 
         private readonly HomeWindow _home;
         private readonly ProceduralArt _art;
@@ -105,9 +139,14 @@ namespace AF.UI
         private readonly Button _tap;
         private readonly RectTransform _bubble;
         private readonly CanvasGroup _bubbleGroup;
+        private readonly Image _tailShadow;
         private readonly Image _tailRim;
         private readonly Image _tailPlate;
         private readonly TextMeshProUGUI _label;
+        private readonly RectTransform _card;
+        private readonly CanvasGroup _cardGroup;
+        private readonly Image _cardPortrait;
+        private readonly TextMeshProUGUI _cardLabel;
         private readonly Driver _driver;
 
         private SlothRig? _rig;
@@ -130,10 +169,10 @@ namespace AF.UI
         private float _gestureEndMs;
         private float _poseCheckMs;
 
-        private BubbleKind _bubbleKind;
-        private float _bubbleMs = -1f;
-        private float _bubbleOutMs;
-        private bool _bubbleReduceMotion;
+        private NoteKind _noteKind;
+        private float _noteMs = -1f;
+        private float _noteOutMs;
+        private bool _noteReduceMotion;
         private float _x;
         private float _y;
         private float _maxRight = LobbyScreen.ReferenceWidth;
@@ -160,6 +199,7 @@ namespace AF.UI
             _bubbleGroup = _bubble.gameObject.AddComponent<CanvasGroup>();
             _bubbleGroup.blocksRaycasts = false;
             _bubbleGroup.interactable = false;
+            _tailShadow = UiBuilder.Image("TailShadow", _bubble, null, TailShadowColor);
             _tailRim = UiBuilder.Image("TailRim", _bubble, null, RimColor);
             Image rim = UiBuilder.Sliced("Rim", _bubble, art.RoundedRect, RimColor);
             rim.pixelsPerUnitMultiplier = 24f / 14f;
@@ -178,6 +218,26 @@ namespace AF.UI
             _label.rectTransform.offsetMax = new Vector2(-BubblePadXDp, -BubblePadYDp);
             _bubble.gameObject.SetActive(false);
 
+            // La tarjeta del Dato del perezoso: la placa del Dato del río (ArrivalStrip), con el retrato y el dato.
+            _card = UiBuilder.Rect("HomeSlothFactCard", parent);
+            _cardGroup = _card.gameObject.AddComponent<CanvasGroup>();
+            _cardGroup.blocksRaycasts = false;
+            _cardGroup.interactable = false;
+            Image edge = UiBuilder.Sliced("Edge", _card, art.RoundedRect, ArrivalStrip.PlateEdge);
+            edge.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / ArrivalStrip.PlateRadiusDp;
+            UiBuilder.Stretch(edge.rectTransform);
+            Image back = UiBuilder.Sliced("Back", _card, art.RoundedRect, Palette.PanelLight);
+            back.pixelsPerUnitMultiplier = ProceduralArt.RoundedRectRadiusPx / (ArrivalStrip.PlateRadiusDp - 1f);
+            UiBuilder.Stretch(back.rectTransform);
+            back.rectTransform.offsetMin = new Vector2(1f, 1f);
+            back.rectTransform.offsetMax = new Vector2(-1f, -1f);
+            _cardPortrait = UiBuilder.Image("Portrait", _card, null, Color.white);
+            _cardPortrait.preserveAspect = true;
+            _cardLabel = UiBuilder.Label("Fact", _card, TextStyle.Body, string.Empty, FactCardTextSp, Palette.UiInk, TextAlignmentOptions.TopLeft);
+            _cardLabel.textWrappingMode = TextWrappingModes.Normal;
+            _cardLabel.enableAutoSizing = false;
+            _card.gameObject.SetActive(false);
+
             // El reloj del inicio: avanza mientras el lienzo del inicio está activo; activarlo abre una visita.
             var driverGo = new GameObject("HomeSloth", typeof(RectTransform));
             driverGo.transform.SetParent(parent, false);
@@ -189,7 +249,8 @@ namespace AF.UI
             }
         }
 
-        private enum BubbleKind : byte
+        // Lo que dice TiTino ahora: el saludo, en el bocadillo; el Dato del perezoso, en su tarjeta. Nunca los dos a la vez.
+        private enum NoteKind : byte
         {
             None = 0,
             Greeting = 1,
@@ -226,14 +287,11 @@ namespace AF.UI
         /// <summary>Caja del área táctil.</summary>
         public RectTransform TapRect => (RectTransform)_tap.transform;
 
-        /// <summary>El bocadillo está a la vista (con alfa &gt; 0 o a punto de entrar).</summary>
-        public bool BubbleShown => _bubbleMs >= 0f;
+        /// <summary>El bocadillo (solo el saludo del día) está a la vista (con alfa &gt; 0 o a punto de entrar).</summary>
+        public bool BubbleShown => _noteMs >= 0f && _noteKind == NoteKind.Greeting;
 
-        /// <summary>El bocadillo lleva el saludo del día.</summary>
-        public bool BubbleIsGreeting => BubbleShown && _bubbleKind == BubbleKind.Greeting;
-
-        /// <summary>El bocadillo lleva el Dato del perezoso.</summary>
-        public bool BubbleIsFact => BubbleShown && _bubbleKind == BubbleKind.Fact;
+        /// <summary>El bocadillo lleva el saludo del día: el bocadillo solo lleva sus frases (D-013, punto 6).</summary>
+        public bool BubbleIsGreeting => BubbleShown;
 
         /// <summary>Texto del bocadillo («» sin bocadillo).</summary>
         public string BubbleText => BubbleShown ? _label.text : string.Empty;
@@ -248,7 +306,28 @@ namespace AF.UI
         public TextMeshProUGUI BubbleLabel => _label;
 
         /// <summary>Milisegundos que dura el bocadillo de ahora (<see cref="NoticeTiming.ReadMs(string)"/>).</summary>
-        public float BubbleDurationMs => BubbleShown ? _bubbleOutMs : 0f;
+        public float BubbleDurationMs => BubbleShown ? _noteOutMs : 0f;
+
+        /// <summary>La tarjeta del Dato del perezoso está a la vista (con alfa &gt; 0 o a punto de entrar).</summary>
+        public bool FactCardShown => _noteMs >= 0f && _noteKind == NoteKind.Fact;
+
+        /// <summary>Texto de la tarjeta («» sin tarjeta).</summary>
+        public string FactCardText => FactCardShown ? _cardLabel.text : string.Empty;
+
+        /// <summary>Opacidad de la tarjeta.</summary>
+        public float FactCardAlpha => FactCardShown ? _cardGroup.alpha : 0f;
+
+        /// <summary>Caja de la tarjeta, con su borde.</summary>
+        public RectTransform FactCardRect => _card;
+
+        /// <summary>Texto de la tarjeta (tests de desbordes).</summary>
+        public TextMeshProUGUI FactCardLabel => _cardLabel;
+
+        /// <summary>Retrato de TiTino de la tarjeta.</summary>
+        public Image FactCardPortrait => _cardPortrait;
+
+        /// <summary>Milisegundos que dura la tarjeta de ahora (<see cref="NoticeTiming.ReadMs(string)"/>).</summary>
+        public float FactCardDurationMs => FactCardShown ? _noteOutMs : 0f;
 
         /// <summary>Lo que se decidió en el último saludo del inicio (default antes del primero).</summary>
         public SlothLine LastGreeting { get; private set; }
@@ -328,7 +407,7 @@ namespace AF.UI
 
         /// <summary>
         /// Coloca el área táctil sobre el marco (con su esquina en <paramref name="x"/>, <paramref name="yTop"/> dp) y el bocadillo
-        /// debajo, sin pasar de <paramref name="maxRight"/>.
+        /// o la tarjeta debajo, sin pasar de <paramref name="maxRight"/>.
         /// </summary>
         public void Layout(float x, float yTop, float maxRight)
         {
@@ -342,11 +421,15 @@ namespace AF.UI
             {
                 PlaceBubble();
             }
+            else if (FactCardShown)
+            {
+                PlaceCard();
+            }
         }
 
         /// <summary>
         /// La ventanita se ve (<paramref name="on"/>) o se oculta (Sin canoas, una pantalla de pago, sin parada o sin arte): con
-        /// ella, el rig, el área táctil y el bocadillo, que se pierde si estaba a la vista.
+        /// ella, el rig, el área táctil y el bocadillo o la tarjeta, que se pierden si estaban a la vista.
         /// </summary>
         public void SetShown(bool on)
         {
@@ -364,7 +447,7 @@ namespace AF.UI
 
             if (!on)
             {
-                HideBubble();
+                HideNote();
                 _rig?.SetVisible(false);
                 return;
             }
@@ -391,16 +474,16 @@ namespace AF.UI
             _visitPending = true;
         }
 
-        /// <summary>Acaba la visita al inicio (se va a un nivel): el bocadillo se pierde.</summary>
+        /// <summary>Acaba la visita al inicio (se va a un nivel): el bocadillo o la tarjeta se pierden.</summary>
         public void EndVisit()
         {
             _visitPending = false;
-            HideBubble();
+            HideNote();
         }
 
         /// <summary>
-        /// Toque en TiTino (d.7): <c>sloth_look</c> y, si aún no salió en esta sesión y hay voz, el Dato del perezoso de hoy. false si
-        /// TiTino no se ve o está apagado.
+        /// Toque en TiTino (d.7): <c>sloth_look</c> y, si aún no salió en esta sesión y hay voz, el Dato del perezoso de hoy en su
+        /// tarjeta con el retrato (nunca en el bocadillo: D-013, punto 6). false si TiTino no se ve o está apagado.
         /// </summary>
         public bool Tap()
         {
@@ -419,14 +502,16 @@ namespace AF.UI
             string today = _clock!.LocalDateKey();
             SlothLines.TryDayNumber(today, out int day);
             string text = FactFor(day, out string? key);
-            if (text.Length == 0)
+            Sprite? portrait = text.Length > 0 ? _art.SlothPortrait(false) : null;
+            if (portrait == null)
             {
-                return true; // en release, sin datos aprobados: solo el gesto
+                return true; // en release, sin datos aprobados (o sin el retrato final): solo el gesto
             }
 
             FactShownThisSession = true;
             FactKey = key;
-            ShowBubble(text, BubbleKind.Fact);
+            _cardPortrait.sprite = portrait;
+            ShowNote(text, NoteKind.Fact);
             return true;
         }
 
@@ -457,6 +542,10 @@ namespace AF.UI
                     _gestureMs = -1f;
                     ApplyBasePose();
                 }
+                else if (_gesture == SlothPoseId.Wave && _rig != null)
+                {
+                    PlaceRig(SlothPoseId.Wave); // la bajada del saludo sigue a la garra
+                }
             }
             else
             {
@@ -474,7 +563,7 @@ namespace AF.UI
                 }
             }
 
-            TickBubble(dtMs);
+            TickNote(dtMs);
         }
 
         // El saludo de la visita (d.7; SlothLines.ForHome): una vez por visita, con lo guardado en sloth. La frase solo se dice si
@@ -533,7 +622,7 @@ namespace AF.UI
 
             if (speaks)
             {
-                ShowBubble(text, BubbleKind.Greeting);
+                ShowNote(text, NoteKind.Greeting);
             }
         }
 
@@ -564,9 +653,10 @@ namespace AF.UI
 
             Profile profile = boot.Profile!;
             AppFlow app = boot.App!;
+            // Solo con el inicio delante: con «El río sigue creciendo» (ContentEnd), el velo y el modal tapan la ventanita y el
+            // saludo del día (como mucho 1; D-016, punto 5) se gastaría sin verse. Se decide al cerrarlo, en la misma visita.
             Bind(clock, boot.View!.SlothSession, profile.Sloth, () => SaveProfile(boot), () => profile.Settings.SlothMessages,
-                () => app.PlayLevel, () => boot.Flow != null && boot.Flow.ReduceMotion,
-                () => app.Screen == AppScreen.Lobby || app.Screen == AppScreen.ContentEnd);
+                () => app.PlayLevel, () => boot.Flow != null && boot.Flow.ReduceMotion, () => app.Screen == AppScreen.Lobby);
             return true;
         }
 
@@ -626,115 +716,173 @@ namespace AF.UI
             _rig.Play(pose, ReduceMotionNow);
         }
 
-        // Colgado, la rama sobre la pintada de la embaúba; tumbado o en ovillo, una rama más baja: entero dentro del hueco.
+        // Colgado, la rama sobre la pintada de la embaúba; tumbado o en ovillo, una rama más baja: entero dentro del hueco. Durante
+        // sloth_wave, el rig baja con la garra (WaveDrop) para que el marco no la corte.
         private void PlaceRig(SlothPoseId pose)
         {
             float border = ProceduralArt.HomeWindowBorderDp;
             bool lying = pose == SlothPoseId.Sunbathe || pose == SlothPoseId.Sleep;
             float y = (lying ? LieBranchDp : HangBranchDp) - border;
+            if (pose == SlothPoseId.Wave && _gestureMs >= 0f && !_rig!.ReduceMotion)
+            {
+                y += WaveDrop(_gestureMs);
+            }
+
             _rig!.Place((HomeWindow.SizeDp * 0.5f) - border, y);
         }
 
-        private void ShowBubble(string text, BubbleKind kind)
+        /// <summary>
+        /// Lo que baja el rig a los <paramref name="ms"/> ms de <c>sloth_wave</c> (dp): baja con la garra, se queda en
+        /// <see cref="WaveDropDp"/> mientras está levantada y vuelve con ella (<c>min(1; 1,6 · sen(π · t / 0,8 s))</c>); 0 fuera
+        /// del gesto.
+        /// </summary>
+        public static float WaveDrop(float ms)
         {
-            _bubbleKind = kind;
-            _label.text = text;
-            _bubbleMs = 0f;
-            _bubbleOutMs = NoticeTiming.ReadMs(text);
-            _bubbleReduceMotion = ReduceMotionNow;
-            _bubbleGroup.alpha = _bubbleReduceMotion ? 1f : 0f;
-            _bubble.gameObject.SetActive(true);
-            PlaceBubble();
+            if (ms <= 0f || ms >= SlothRig.WaveMs)
+            {
+                return 0f;
+            }
+
+            return WaveDropDp * Mathf.Clamp01(1.6f * Mathf.Sin(Mathf.PI * ms / SlothRig.WaveMs));
         }
 
-        private void HideBubble()
+        // El saludo, en el bocadillo; el dato, en su tarjeta: uno solo a la vista, con su tiempo de lectura (D-011).
+        private void ShowNote(string text, NoteKind kind)
         {
-            if (_bubbleMs < 0f && !_bubble.gameObject.activeSelf)
+            HideNote();
+            _noteKind = kind;
+            _noteMs = 0f;
+            _noteOutMs = NoticeTiming.ReadMs(text);
+            _noteReduceMotion = ReduceMotionNow;
+            float alpha = _noteReduceMotion ? 1f : 0f;
+            if (kind == NoteKind.Fact)
+            {
+                _cardLabel.text = text;
+                _cardGroup.alpha = alpha;
+                _card.gameObject.SetActive(true);
+                PlaceCard();
+            }
+            else
+            {
+                _label.text = text;
+                _bubbleGroup.alpha = alpha;
+                _bubble.gameObject.SetActive(true);
+                PlaceBubble();
+            }
+        }
+
+        private void HideNote()
+        {
+            if (_noteMs < 0f && !_bubble.gameObject.activeSelf && !_card.gameObject.activeSelf)
             {
                 return;
             }
 
-            _bubbleMs = -1f;
-            _bubbleKind = BubbleKind.None;
+            _noteMs = -1f;
+            _noteKind = NoteKind.None;
             _bubble.gameObject.SetActive(false);
+            _card.gameObject.SetActive(false);
         }
 
-        private void TickBubble(float dtMs)
+        private void TickNote(float dtMs)
         {
-            if (_bubbleMs < 0f)
+            if (_noteMs < 0f)
             {
                 return;
             }
 
-            _bubbleMs += dtMs;
-            if (_bubbleMs >= _bubbleOutMs + (_bubbleReduceMotion ? 0f : BubbleFadeMs))
+            _noteMs += dtMs;
+            if (_noteMs >= _noteOutMs + (_noteReduceMotion ? 0f : BubbleFadeMs))
             {
-                HideBubble();
+                HideNote();
                 return;
             }
 
             float alpha = 1f;
-            if (!_bubbleReduceMotion)
+            if (!_noteReduceMotion)
             {
-                float fadeIn = Mathf.Clamp01(_bubbleMs / BubbleFadeMs);
-                float fadeOut = 1f - Mathf.Clamp01((_bubbleMs - _bubbleOutMs) / BubbleFadeMs);
+                float fadeIn = Mathf.Clamp01(_noteMs / BubbleFadeMs);
+                float fadeOut = 1f - Mathf.Clamp01((_noteMs - _noteOutMs) / BubbleFadeMs);
                 alpha = Mathf.Min(fadeIn, fadeOut);
             }
 
-            if (!Mathf.Approximately(_bubbleGroup.alpha, alpha))
+            CanvasGroup group = _noteKind == NoteKind.Fact ? _cardGroup : _bubbleGroup;
+            if (!Mathf.Approximately(group.alpha, alpha))
             {
-                _bubbleGroup.alpha = alpha;
+                group.alpha = alpha;
             }
         }
 
-        // Debajo del marco, alineado a su izquierda, con el pico arriba hacia TiTino: el texto a 14 sp con la escala de texto,
-        // ajustado al texto si cabe en una línea y, si no, con las líneas equilibradas; crece hacia abajo (02 §12). Solo al enseñarlo o al
-        // recolocar el inicio, nunca por fotograma.
+        // Ancho y alto del texto de label en como mucho inner dp: ajustado al texto si cabe en una línea y, si no, el ancho más
+        // estrecho con las mismas líneas (quedan parejas y sin una palabra sola en la última, como el bocadillo de la victoria). El
+        // salto lo decide el ancho, nunca un salto añadido. Solo al colocar, nunca por fotograma.
+        private static void FitText(TextMeshProUGUI label, float inner, out float textWidth, out float textHeight)
+        {
+            string text = label.text;
+            float single = label.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x;
+            if (single + FitSlackDp <= inner)
+            {
+                textWidth = single + FitSlackDp;
+                textHeight = label.GetPreferredValues(text, textWidth, float.PositiveInfinity).y;
+                return;
+            }
+
+            textHeight = label.GetPreferredValues(text, inner, float.PositiveInfinity).y;
+            float lo = Mathf.Max(1f, Mathf.Min(inner, single * 0.5f));
+            float hi = inner;
+            for (int i = 0; i < 12 && hi - lo > 0.5f; i++)
+            {
+                float mid = 0.5f * (lo + hi);
+                if (label.GetPreferredValues(text, mid, float.PositiveInfinity).y <= textHeight + 0.5f)
+                {
+                    hi = mid;
+                }
+                else
+                {
+                    lo = mid;
+                }
+            }
+
+            textWidth = Mathf.Min(inner, hi + FitSlackDp);
+        }
+
+        // Debajo del marco, alineado a su izquierda, con el pico arriba hacia TiTino (y su sombra de 1 dp): el texto a 14 sp con la
+        // escala de texto, ajustado (FitText); crece hacia abajo (02 §12). Solo al enseñarlo o al recolocar el inicio.
         private void PlaceBubble()
         {
             float left = _x;
             float top = _y + HomeWindow.SizeDp + BubbleGapDp + TailOutDp;
             float maxWidth = Mathf.Max((2f * BubblePadXDp) + 24f, Mathf.Min(BubbleMaxWidthDp, _maxRight - BubbleRimDp - left));
-            float inner = maxWidth - (2f * BubblePadXDp);
-            string text = _label.text;
-            float single = _label.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x;
-            float textWidth;
-            float textHeight;
-            if (single + FitSlackDp <= inner)
-            {
-                textWidth = single + FitSlackDp;
-                textHeight = _label.GetPreferredValues(text, textWidth, float.PositiveInfinity).y;
-            }
-            else
-            {
-                // En varias líneas, el ancho más estrecho con las mismas líneas: quedan parejas y sin una palabra sola en la
-                // última (como el bocadillo de la victoria). El salto lo decide el ancho, nunca un salto añadido.
-                textHeight = _label.GetPreferredValues(text, inner, float.PositiveInfinity).y;
-                float lo = Mathf.Max(1f, Mathf.Min(inner, single * 0.5f));
-                float hi = inner;
-                for (int i = 0; i < 12 && hi - lo > 0.5f; i++)
-                {
-                    float mid = 0.5f * (lo + hi);
-                    if (_label.GetPreferredValues(text, mid, float.PositiveInfinity).y <= textHeight + 0.5f)
-                    {
-                        hi = mid;
-                    }
-                    else
-                    {
-                        lo = mid;
-                    }
-                }
-
-                textWidth = Mathf.Min(inner, hi + FitSlackDp);
-            }
-
+            FitText(_label, maxWidth - (2f * BubblePadXDp), out float textWidth, out float textHeight);
             float width = Mathf.Ceil(textWidth + (2f * BubblePadXDp));
             float height = Mathf.Ceil(textHeight + (2f * BubblePadYDp));
             width = Mathf.Max(width, HomeWindow.SizeDp);
             UiBuilder.Place(_bubble, left, top, width, height);
-            float tailX = HomeWindow.SizeDp * 0.5f; // bajo el centro del marco
+            float tailX = TailXDp; // bajo la garra de delante, a la derecha del centro del marco
+            PlaceTail(_tailShadow.rectTransform, tailX, TailDp + (2f * BubbleRimDp) + (2f * TailShadowDp));
             PlaceTail(_tailRim.rectTransform, tailX, TailDp + (2f * BubbleRimDp));
             PlaceTail(_tailPlate.rectTransform, tailX, TailDp);
+        }
+
+        // La tarjeta del dato, debajo del marco, alineada a su izquierda y como mucho hasta el margen derecho: el retrato arriba a la
+        // izquierda con el relleno de la placa del Dato del río, y el texto a su derecha (FitText), centrado en el alto del
+        // retrato si es más bajo. Crece hacia abajo con el texto (02 §12). Solo al enseñarla o al recolocar el inicio.
+        private void PlaceCard()
+        {
+            const float pad = ArrivalStrip.PlatePadDp;
+            const float portrait = ArrivalStrip.PortraitDp;
+            const float chrome = pad + portrait + ArrivalStrip.PortraitGapDp + ArrivalStrip.PlateRightPadDp;
+            float left = _x;
+            float top = _y + HomeWindow.SizeDp + FactCardGapDp;
+            float inner = Mathf.Max(24f, _maxRight - left - chrome);
+            FitText(_cardLabel, inner, out float textWidth, out float textHeight);
+            textWidth = Mathf.Min(inner, Mathf.Ceil(textWidth));
+            textHeight = Mathf.Ceil(textHeight);
+            float contentH = Mathf.Max(portrait, textHeight);
+            UiBuilder.Place(_card, left, top, chrome + textWidth, contentH + (2f * pad));
+            UiBuilder.Place(_cardPortrait.rectTransform, pad, pad, portrait, portrait);
+            float textTop = pad + Mathf.Floor((contentH - textHeight) * 0.5f);
+            UiBuilder.Place(_cardLabel.rectTransform, pad + portrait + ArrivalStrip.PortraitGapDp, textTop, textWidth, textHeight);
         }
 
         private static void PlaceTail(RectTransform rt, float x, float size)
