@@ -220,6 +220,12 @@ namespace AF.Tests.PlayMode
                 }
             }
 
+            // Cada placa sigue señalando su sitio (revisión de M4.4): a ≤ NorthUpPlateMaxDistDp de su punto en pantalla, sin
+            // taparlo, y con el punto pintado.
+            AssertPlatesNearTheirPoint(map, "max 58");
+            Assert.That(map.NorthUpPinCount, Is.EqualTo(map.SilhouetteCount), "un punto por placa");
+            Assert.That(map.NorthUpPinAlpha, Is.EqualTo(1f), "los puntos, con el norte arriba");
+
             Assert.That(map.OrientationLabelsAlpha, Is.EqualTo(0f), "con el norte arriba, «Andes ↑» mentiría");
             Assert.That(map.AtlanticLabel!.GetComponent<CanvasGroup>().alpha, Is.EqualTo(0f));
 
@@ -227,11 +233,80 @@ namespace AF.Tests.PlayMode
             map.Tick(MapConfig.NorthUpRotateMs);
             Assert.That(map.OrientationLabelsAlpha, Is.EqualTo(1f), "vuelven con la vista de siempre");
             Assert.That(map.AtlanticLabel.GetComponent<CanvasGroup>().alpha, Is.EqualTo(1f));
+            Assert.That(map.NorthUpPinAlpha, Is.EqualTo(0f), "sin los puntos de las placas");
             Assert.That(map.AndesLabel!.gameObject.activeSelf && map.AtlanticLabel.gameObject.activeSelf, Is.True);
             foreach (TextMeshProUGUI country in map.CountryLabels())
             {
                 Assert.That(country.rectTransform.localRotation, Is.EqualTo(Quaternion.identity), country.name);
             }
+        }
+
+        [UnityTest]
+        public IEnumerator Plates_StayNearTheirPoint_WithMoreFutureWorlds()
+        {
+            // Con max 10 (todos los mundos futuros con placa) y con max 120 y 200: las placas, derechas, sin pisarse ni pisar los
+            // países y a ≤ NorthUpPlateMaxDistDp de su punto; los países se apartan antes.
+            yield return MapMarkersTests.OpenApp(11);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            foreach (int max in new[] { 10, 120, 200 })
+            {
+                if (max != 10)
+                {
+                    MapMarkersTests.Reopen(boot, new MemoryProgressStore(max + 1, max, max), max + 1);
+                }
+
+                map.SetView(MapView.Basin);
+                map.Tick(16f);
+                Assert.That(map.SilhouetteCount, Is.GreaterThan(0), "max " + max);
+                map.NorthUpButton.onClick.Invoke();
+                map.Tick(MapConfig.NorthUpRotateMs);
+                Assert.That(map.NorthUpTurning, Is.False);
+                Canvas.ForceUpdateCanvases();
+                AssertPlatesNearTheirPoint(map, "max " + max);
+                AssertNoLabelOverlaps(map, "max " + max);
+                Assert.That(map.NorthUpPinCount, Is.EqualTo(map.SilhouetteCount));
+                map.SetView(MapView.World);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Button_ShowsWhetherItIsOn()
+        {
+            yield return MapMarkersTests.OpenApp(59);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            map.SetView(MapView.Basin);
+            map.Tick(16f);
+            ReliefButton relief = map.NorthUpButton.GetComponent<ReliefButton>();
+            TextMeshProUGUI label = map.NorthUpLabelText!;
+            Assert.That(map.NorthUpLatched, Is.False, "apagado: la madera de siempre");
+            Assert.That(label.color, Is.EqualTo(Palette.Cream));
+            Material wood = label.fontSharedMaterial;
+
+            map.NorthUpButton.onClick.Invoke();
+            relief.Step(200f);
+            Assert.That(map.NorthUpLatched, Is.True, "activo: cara crema y hundido");
+            Assert.That(label.color, Is.EqualTo(RiverMapScreen.SegmentSelectedText), "el texto en la madera oscura del «Cuenca» elegido");
+            Assert.That(relief.FaceOffsetDp, Is.GreaterThanOrEqualTo(3f - 0.01f), "el relieve, hundido");
+            Assert.That(label.text, Is.EqualTo(UiText.MapNorthUp), "sin texto nuevo");
+
+            // Un dedo que se va del botón lo suelta: sigue hundido mientras el norte está arriba.
+            relief.Press(false);
+            map.Tick(16f);
+            Assert.That(map.NorthUpLatched, Is.True);
+
+            map.NorthUpButton.onClick.Invoke();
+            relief.Step(400f);
+            Assert.That(map.NorthUpLatched, Is.False, "otro toque lo devuelve");
+            Assert.That(label.color, Is.EqualTo(Palette.Cream));
+            Assert.That(label.fontSharedMaterial, Is.SameAs(wood));
+            Assert.That(relief.FaceOffsetDp, Is.LessThan(0.01f));
+
+            // Salir de la Cuenca lo apaga.
+            map.NorthUpButton.onClick.Invoke();
+            map.SetView(MapView.World);
+            Assert.That(map.NorthUpLatched, Is.False);
+            Assert.That(label.color, Is.EqualTo(Palette.Cream));
         }
 
         [UnityTest]
@@ -367,6 +442,8 @@ namespace AF.Tests.PlayMode
                     Assert.That(map.GuideId, Is.EqualTo(RiverJourney.GuideRosa));
                     Assert.That(map.GuideImage!.gameObject.activeSelf, Is.False, "una sola Rosa: la que guía es la que salta");
                     Assert.That(map.RosaJumper!.gameObject.activeInHierarchy, Is.True);
+                    RectTransform layer = map.RosaJumpLayer!;
+                    Assert.That(layer.GetSiblingIndex(), Is.EqualTo(layer.parent.childCount - 1), "el salto, encima de las líneas de las mini cuias");
                     sawBoth |= map.RosaRelativesShown == RiverMapScreen.RosaJumpRelatives;
                 }
             }
@@ -384,6 +461,80 @@ namespace AF.Tests.PlayMode
             float dpu = map.Space.DpPerUnit;
             Assert.That(Vector2.Distance(map.RosaJumpMapPoint, tarapoto) * dpu, Is.LessThanOrEqualTo(RiverMapScreen.RosaJumpNearDp + 0.01f),
                 "salta en Tarapoto: donde nadaba la Rosa que guía, junto a la parada");
+            AssertRelativesReadable(map);
+        }
+
+        [UnityTest]
+        public IEnumerator RosaDoesNotJump_WithTheBufeoGuiding_OrBeforeTarapoto()
+        {
+            yield return MapMarkersTests.OpenApp(121);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+
+            // Mundo 7 (max 305): guía el bufeo y Rosa está en los rápidos de Teotônio (D-013, punto 6).
+            MapMarkersTests.Reopen(boot, new MemoryProgressStore(306, 305, 305), 306);
+            map.Tick(16f);
+            Assert.That(map.GuideId, Is.EqualTo(RiverJourney.GuideBufeo));
+            Assert.That(map.TapStop(RiverMapScreen.RosaJumpStop), Is.True, "la mini cuia de Tarapoto se puede tocar en el mundo 7");
+            Assert.That(map.CardOpen, Is.True, "el toque abre su tarjeta");
+            Assert.That(map.RosaJumpPending, Is.False, "sin salto: no guía Rosa");
+            map.Card!.CloseButton.onClick.Invoke();
+            map.Tick(16f);
+            Assert.That(map.RosaJumpPlaying, Is.False);
+            Assert.That(map.RosaJumpCount, Is.EqualTo(0));
+            Assert.That(map.GuideImage!.gameObject.activeSelf, Is.True, "el bufeo sigue guiando");
+
+            // Mundo 4 antes de ganar el 120: Tarapoto aún no se alcanzó.
+            MapMarkersTests.Reopen(boot, new MemoryProgressStore(115, 114, 114), 115);
+            map.Tick(16f);
+            Assert.That(map.GuideId, Is.EqualTo(RiverJourney.GuideRosa));
+            Assert.That(map.TapStop(RiverMapScreen.RosaJumpStop), Is.True, "la parada futura se puede tocar");
+            Assert.That(map.RosaJumpPending, Is.False, "sin salto antes del 120");
+            map.Card!.CloseButton.onClick.Invoke();
+            map.Tick(16f);
+            Assert.That(map.RosaJumpPlaying, Is.False);
+            Assert.That(map.RosaJumpCount, Is.EqualTo(0));
+            Assert.That(map.GuideImage!.gameObject.activeSelf, Is.True, "la Rosa que guía sigue delante de la canoa");
+        }
+
+        [UnityTest]
+        public IEnumerator RosaJump_StaysUpright_WhenTheNorthGoesUp()
+        {
+            yield return MapMarkersTests.OpenApp(121);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            map.Tick(16f);
+            Assert.That(map.TapStop(RiverMapScreen.RosaJumpStop), Is.True);
+            map.Card!.CloseButton.onClick.Invoke();
+            map.Tick(16f);
+            Assert.That(map.RosaJumpPlaying, Is.True);
+
+            map.SetView(MapView.Basin);
+            map.NorthUpButton.onClick.Invoke();
+            map.Tick(MapConfig.NorthUpRotateMs);
+            Assert.That(map.NorthUpTurning, Is.False);
+            Assert.That(map.RosaJumpPlaying, Is.True, "el salto sigue: 900 ms");
+            Canvas.ForceUpdateCanvases();
+
+            float p = map.RosaJumpElapsedMs / RiverMapScreen.RosaJumpMs;
+            float k = RiverMapScreen.GuideBasinDp / RiverMapScreen.GuideWorldDp;
+            RectTransform rosa = map.RosaJumper!.rectTransform;
+            float dir = -Mathf.Sign(rosa.localScale.x);
+            float pitch = dir * Mathf.Lerp(RiverMapScreen.RosaJumpPitchDeg, -RiverMapScreen.RosaJumpPitchDeg, p);
+            Assert.That(Mathf.Abs(Mathf.DeltaAngle(rosa.eulerAngles.z, pitch)), Is.LessThan(0.5f), "el cabeceo, en pantalla: Rosa no salta de lado");
+
+            RectTransform layer = map.RosaJumpLayer!;
+            Vector2 local = map.Space.ToLocal(map.RosaJumpMapPoint);
+            Rect r = layer.rect;
+            Vector3 point = layer.TransformPoint(new Vector3(r.xMin + local.x, r.yMax + local.y, 0f));
+            Vector2 at = map.ViewportRect.InverseTransformPoint(rosa.position);
+            Vector2 from = map.ViewportRect.InverseTransformPoint(point);
+            float s = MapConfig.NorthUpScale;
+            Assert.That(at.y - from.y, Is.EqualTo(4f * RiverMapScreen.RosaJumpHeightDp * k * p * (1f - p) * s).Within(0.5f), "el arco, hacia arriba en pantalla");
+            Assert.That(at.x - from.x, Is.EqualTo(dir * RiverMapScreen.RosaJumpSpanDp * k * (p - 0.5f) * s).Within(0.5f), "y hacia donde mira la canoa");
+            for (int i = 0; i < RiverMapScreen.RosaJumpRelatives; i++)
+            {
+                Assert.That(Mathf.Abs(Mathf.DeltaAngle(map.RosaRelative(i)!.eulerAngles.z, 0f)), Is.LessThan(0.5f), "el lomo " + i + ", derecho");
+            }
         }
 
         [UnityTest]
@@ -457,6 +608,78 @@ namespace AF.Tests.PlayMode
         }
 
         // ============================================================================================ ayudas
+
+        // Con el norte arriba, cada placa a ≤ NorthUpPlateMaxDistDp de su punto en pantalla (del punto a su borde más cercano) y sin
+        // taparlo.
+        private static void AssertPlatesNearTheirPoint(RiverMapScreen map, string at)
+        {
+            for (int i = 0; i < map.SilhouetteCount; i++)
+            {
+                RectTransform plate = map.SilhouettePlate(i).rectTransform; // estirada a su silueta
+                Rect box = InViewport(plate, map.ViewportRect);
+                Vector2 point = map.ViewportRect.InverseTransformPoint(map.SilhouettePivotWorld(i));
+                float dx = Mathf.Max(0f, Mathf.Max(box.xMin - point.x, point.x - box.xMax));
+                float dy = Mathf.Max(0f, Mathf.Max(box.yMin - point.y, point.y - box.yMax));
+                float dist = Mathf.Sqrt((dx * dx) + (dy * dy));
+                Assert.That(dist, Is.LessThanOrEqualTo(RiverMapScreen.NorthUpPlateMaxDistDp + 0.5f),
+                    at + ": " + plate.parent.name + " " + box + " lejos de su punto " + point);
+                Assert.That(dist, Is.GreaterThan(RiverMapScreen.NorthUpPinDotDp * 0.5f), at + ": " + plate.parent.name + " no tapa su punto");
+            }
+        }
+
+        // Con el norte arriba, ningún rótulo (países y placas) pisa a otro y todos quedan dentro de la zona a lo ancho.
+        private static void AssertNoLabelOverlaps(RiverMapScreen map, string at)
+        {
+            var boxes = new System.Collections.Generic.List<(string Name, Rect Box)>();
+            foreach (TextMeshProUGUI country in map.CountryLabels())
+            {
+                boxes.Add((country.name, InViewport(country.rectTransform, map.ViewportRect)));
+            }
+
+            foreach (RectTransform plate in map.SilhouettePlates())
+            {
+                boxes.Add((plate.name, InViewport(plate, map.ViewportRect)));
+            }
+
+            Rect zone = map.ViewportRect.rect;
+            for (int a = 0; a < boxes.Count; a++)
+            {
+                Assert.That(boxes[a].Box.xMin >= zone.xMin - 0.5f && boxes[a].Box.xMax <= zone.xMax + 0.5f, Is.True,
+                    at + ": " + boxes[a].Name + " " + boxes[a].Box + ": dentro de la zona a lo ancho");
+                for (int b = a + 1; b < boxes.Count; b++)
+                {
+                    Rect x = boxes[a].Box;
+                    Rect y = boxes[b].Box;
+                    bool overlap = x.xMin < y.xMax - 0.5f && x.xMax > y.xMin + 0.5f && x.yMin < y.yMax - 0.5f && x.yMax > y.yMin + 0.5f;
+                    Assert.That(overlap, Is.False, at + ": " + boxes[a].Name + " " + x + " pisa " + boxes[b].Name + " " + y);
+                }
+            }
+        }
+
+        // Los lomos de los parientes se leen como delfines (≥ 24 × 10 dp, con su chapoteo de 12 × 4) y asoman por el río cerca de
+        // Rosa, a ≥ RosaRelativeClearDp de la canoa con sus banderas y sin pisarse.
+        private static void AssertRelativesReadable(RiverMapScreen map)
+        {
+            Rect gear = map.CanoeGearBoxLocal;
+            float g = RiverMapScreen.RosaRelativeClearDp;
+            var clear = Rect.MinMaxRect(gear.xMin - g, gear.yMin - g, gear.xMax + g, gear.yMax + g);
+            Vector2 rosa = map.Space.ToLocal(map.RosaJumpMapPoint);
+            var boxes = new Rect[RiverMapScreen.RosaJumpRelatives];
+            for (int i = 0; i < RiverMapScreen.RosaJumpRelatives; i++)
+            {
+                Vector2 size = map.RosaRelativeBack(i)!.rectTransform.sizeDelta;
+                Assert.That(size.x, Is.GreaterThanOrEqualTo(24f), "el lomo " + i + ", ≥ 24 dp de ancho");
+                Assert.That(size.y, Is.GreaterThanOrEqualTo(10f), "y ≥ 10 dp de alto");
+                Vector2 at = map.Space.ToLocal(map.RosaRelativeMapPoint(i));
+                float w = Mathf.Max(RiverMapScreen.RosaBackWidthDp, RiverMapScreen.RosaSplashWidthDp);
+                boxes[i] = new Rect(at.x - (w * 0.5f), at.y - RiverMapScreen.RosaSplashHeightDp, w, RiverMapScreen.RosaBackHeightDp + RiverMapScreen.RosaSplashHeightDp);
+                Assert.That(gear.width, Is.GreaterThan(0f));
+                Assert.That(boxes[i].Overlaps(clear), Is.False, "el lomo " + i + " " + boxes[i] + " lejos de la canoa y sus banderas " + gear);
+                Assert.That(Vector2.Distance(at, rosa), Is.InRange(1f, 80f), "el lomo " + i + ", cerca de Rosa");
+            }
+
+            Assert.That(boxes[0].Overlaps(boxes[1]), Is.False, "los dos lomos no se pisan");
+        }
 
         // Caja de rt en coordenadas del marco (dp, y hacia abajo).
         internal static Rect FrameRect(RectTransform rt, RectTransform frame)

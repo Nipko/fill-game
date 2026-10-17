@@ -48,9 +48,13 @@ namespace AF.UI
     /// propuesta del Mapa §2.1: «120: Rosa salta con sus parientes en Tarapoto», y §6.1): al llegar la canoa a la parada
     /// <see cref="RosaJumpStop"/> (los lagos de Tarapoto) al ponerse al día, o al tocar su mini cuia (al cerrarse su tarjeta, que
     /// si no la taparía), Rosa salta en su punto real con <see cref="RosaJumpRelatives"/> lomos de parientes que asoman y se
-    /// sumergen [P], en <see cref="RosaJumpMs"/> ms (≤ 1 s), una vez por apertura. Mientras salta, la Rosa que guía no se pinta
-    /// (es ella la que salta). Con Reducir movimiento, sin salto [P]. Las piezas se crean una vez; el salto solo mueve
-    /// transformaciones: sin asignaciones.</description></item>
+    /// sumergen [P], en <see cref="RosaJumpMs"/> ms (≤ 1 s), una vez por apertura. Solo cuando guía ella (no en los mundos 7 y 8,
+    /// donde guía el bufeo y Rosa se queda en Teotônio: D-013, punto 6) y con la parada alcanzada (max_level ≥ 120); si no, el
+    /// toque solo abre la tarjeta. Los lomos (joroba y aleta dorsal con su borde, y un chapoteo debajo) asoman por el río, a
+    /// <see cref="RosaRelativeAlongDp"/> de Rosa por el agua, lejos de la canoa y sus banderas; el salto va encima de todo lo del
+    /// mapa y, con «Norte arriba», derecho en pantalla. Mientras salta, la Rosa que guía no se pinta (es ella la que salta). Con
+    /// Reducir movimiento, sin salto [P]. Las piezas se crean una vez; el salto solo mueve transformaciones: sin
+    /// asignaciones.</description></item>
     /// </list>
     /// <para>Las piezas se crean una vez (al construir la geometría y, las mini cuias, al crecer la reserva al abrir); al cambiar de
     /// vista solo se recolocan; con el Mapa quieto, <see cref="MarkersTick"/> no asigna memoria (el reloj del perezoso y la
@@ -125,16 +129,41 @@ namespace AF.UI
         /// <summary>Cabeceo de Rosa al salir y al entrar en el agua (grados) [P]: el hocico arriba al salir y abajo al entrar.</summary>
         public const float RosaJumpPitchDeg = 40f;
 
-        /// <summary>Ancho de un lomo de pariente frente al de Rosa [P].</summary>
-        public const float RosaRelativeScale = 0.75f;
+        /// <summary>Ancho del lomo de un pariente (dp) [P] (revisión de M4.4: ≥ 24 × 10 dp para que se lea como un delfín).</summary>
+        public const float RosaBackWidthDp = 26f;
+
+        /// <summary>Alto del lomo de un pariente con su aleta dorsal (dp) [P].</summary>
+        public const float RosaBackHeightDp = 12f;
+
+        /// <summary>Borde del lomo (dp), en <see cref="RosaBackRim"/>.</summary>
+        public const float RosaBackRimDp = 1.5f;
+
+        /// <summary>Borde del lomo de los parientes: #B0566E.</summary>
+        public static readonly Color RosaBackRim = Palette.Hex(0xB0566E);
+
+        /// <summary>Ancho del chapoteo bajo cada lomo (dp) [P].</summary>
+        public const float RosaSplashWidthDp = 12f;
+
+        /// <summary>Alto del chapoteo bajo cada lomo (dp) [P].</summary>
+        public const float RosaSplashHeightDp = 4f;
+
+        /// <summary>
+        /// Los lomos asoman por el río a este tanto de Rosa por el agua (dp en la vista Mundo) [P]: uno río abajo y otro río arriba;
+        /// si ahí pisarían la canoa o sus banderas (con <see cref="RosaRelativeClearDp"/>), más lejos, de 8 en 8 dp, o al otro lado.
+        /// </summary>
+        public const float RosaRelativeAlongDp = 20f;
+
+        /// <summary>Hueco mínimo entre un lomo (con su chapoteo) y la caja de la canoa con su mástil y sus banderas (dp) [P].</summary>
+        public const float RosaRelativeClearDp = 8f;
 
         /// <summary>Fracción del salto en que Rosa aparece (al principio) y desaparece (al final) con un fundido [P].</summary>
         public const float RosaJumpFadeFraction = 0.12f;
 
-        // Los lomos de los parientes [P]: dónde asoman respecto del punto de Tarapoto (dp en la vista Mundo; x hacia donde mira la
-        // canoa, y hacia arriba) y en qué tramo del salto (fracciones de RosaJumpMs): uno detrás de Rosa al empezar y otro delante
-        // al acabar.
-        private static readonly Vector2[] RosaRelativeOffsetDp = { new Vector2(-6f, -10f), new Vector2(17f, -4f) };
+        // Los lomos de los parientes [P]: en qué tramo del salto asoman (fracciones de RosaJumpMs) y hacia qué lado del río respecto
+        // de Rosa (−1 río abajo, +1 río arriba): uno detrás de Rosa al empezar y otro delante al acabar.
+        private static readonly float[] RosaRelativeSide = { -1f, 1f };
+        private const float RosaRelativeStepDp = 8f;
+        private const int RosaRelativeTries = 7;
         private static readonly float[] RosaRelativeFrom = { 0f, 0.4f };
         private static readonly float[] RosaRelativeTo = { 0.6f, 1f };
 
@@ -318,7 +347,8 @@ namespace AF.UI
         private float _fillingMs;
         private RectTransform? _rosaJumpLayer;
         private Image? _rosaJumper;
-        private readonly Image?[] _rosaRelatives = new Image?[RosaJumpRelatives];
+        private readonly RosaRelativeParts?[] _rosaRelatives = new RosaRelativeParts?[RosaJumpRelatives];
+        private readonly Vector2[] _rosaRelativeMap = new Vector2[RosaJumpRelatives];
         private Vector2 _rosaJumpMap;
         private Vector2 _rosaJumpStopMap;
         private float _rosaJumpDir = 1f;
@@ -600,8 +630,8 @@ namespace AF.UI
                 int n = 0;
                 for (int i = 0; i < _rosaRelatives.Length; i++)
                 {
-                    Image? relative = _rosaRelatives[i];
-                    n += relative != null && relative.gameObject.activeInHierarchy && relative.rectTransform.localScale.y > 0f ? 1 : 0;
+                    RosaRelativeParts? relative = _rosaRelatives[i];
+                    n += relative != null && relative.Root.gameObject.activeInHierarchy && relative.Back.rectTransform.localScale.y > 0f ? 1 : 0;
                 }
 
                 return n;
@@ -611,11 +641,26 @@ namespace AF.UI
         /// <summary>La Rosa que salta (null antes de construir los marcadores).</summary>
         internal Image? RosaJumper => _rosaJumper;
 
-        /// <summary>El lomo del pariente <paramref name="i"/> (0 … <see cref="RosaJumpRelatives"/> − 1).</summary>
-        internal Image? RosaRelative(int i)
+        /// <summary>El lomo del pariente <paramref name="i"/> (0 … <see cref="RosaJumpRelatives"/> − 1): su sitio en el agua.</summary>
+        internal RectTransform? RosaRelative(int i)
         {
-            return _rosaRelatives[i];
+            return _rosaRelatives[i]?.Root;
         }
+
+        /// <summary>El lomo del pariente <paramref name="i"/> (su joroba con la aleta; su alto es lo que asoma).</summary>
+        internal Graphic? RosaRelativeBack(int i)
+        {
+            return _rosaRelatives[i]?.Back;
+        }
+
+        /// <summary>Dónde asoma el pariente <paramref name="i"/>, en unidades del marco (en el río).</summary>
+        internal Vector2 RosaRelativeMapPoint(int i)
+        {
+            return _rosaRelativeMap[i];
+        }
+
+        /// <summary>La capa del salto de Rosa (encima de todo lo del mapa mientras salta).</summary>
+        internal RectTransform? RosaJumpLayer => _rosaJumpLayer;
 
         // ============================================================================================ reglas puras
 
@@ -856,11 +901,7 @@ namespace AF.UI
                 _rosaJumpLayer.SetSiblingIndex(_canoeGear.GetSiblingIndex() + 1);
                 for (int i = 0; i < _rosaRelatives.Length; i++)
                 {
-                    Image relative = Piece("Relative" + i, _rosaJumpLayer, new Vector2(0.5f, 0.3f));
-                    relative.preserveAspect = true;
-                    relative.gameObject.SetActive(true); // se esconde con su alto a 0, sin activar ni desactivar durante el salto
-                    relative.rectTransform.localScale = new Vector3(1f, 0f, 1f);
-                    _rosaRelatives[i] = relative;
+                    _rosaRelatives[i] = RosaRelativeParts.Create("Relative" + i, _rosaJumpLayer);
                 }
 
                 _rosaJumper = Piece("Rosa", _rosaJumpLayer, new Vector2(0.5f, 0.3f));
@@ -2797,6 +2838,15 @@ namespace AF.UI
                 return;
             }
 
+            // Solo si guía Rosa (en los mundos 7 y 8 guía el bufeo y Rosa se queda en los rápidos de Teotônio: D-013, punto 6, Q18-A;
+            // 07 §6.2) y con Tarapoto alcanzada («120: Rosa salta con sus parientes en Tarapoto», propuesta del Mapa §2.1): si no, el
+            // toque solo abre la tarjeta.
+            if (!string.Equals(_guideId, RiverJourney.GuideRosa, StringComparison.Ordinal) || _progress == null
+                || _progress.MaxLevel < RosaJumpStop * RiverStopCatalog.LevelsPerStop)
+            {
+                return;
+            }
+
             RiverStopRoute? route = _routes?.At(RosaJumpStop);
             if (_map == null || route == null)
             {
@@ -2819,27 +2869,24 @@ namespace AF.UI
 
             // Si la Rosa que guía nada cerca de Tarapoto (la canoa acaba de llegar o va por sus lagos), salta donde está, por
             // delante de la canoa y sin taparla; si no, en el punto de Tarapoto.
-            float near = RosaJumpNearDp * (_view == MapView.World ? 1f : GuideBasinDp / GuideWorldDp);
+            float k = _view == MapView.World ? 1f : GuideBasinDp / GuideWorldDp;
+            float near = RosaJumpNearDp * k;
             bool rosaGuides = _guideShown && string.Equals(_guideId, RiverJourney.GuideRosa, StringComparison.Ordinal);
-            _rosaJumpMap = rosaGuides && Vector2.Distance(_space.ToLocal(_guideMap), _space.ToLocal(_rosaJumpStopMap)) <= near
-                ? _guideMap
-                : _rosaJumpStopMap;
+            bool atGuide = rosaGuides && Vector2.Distance(_space.ToLocal(_guideMap), _space.ToLocal(_rosaJumpStopMap)) <= near;
+            _rosaJumpMap = atGuide ? _guideMap : _rosaJumpStopMap;
+            int route = atGuide && _guideRoute >= 0 ? _guideRoute : RosaJumpStop;
+            float fraction = atGuide && _guideRoute >= 0 ? _guideFraction : 1f;
             Sprite rosa = _art.Rosa;
             if (_rosaJumper!.sprite != rosa)
             {
                 _rosaJumper.sprite = rosa;
             }
 
-            for (int i = 0; i < _rosaRelatives.Length; i++)
-            {
-                Image relative = _rosaRelatives[i]!;
-                if (relative.sprite != rosa)
-                {
-                    relative.sprite = rosa;
-                }
-            }
+            PlaceRosaRelatives(route, fraction, k);
 
-            _rosaJumpLayer!.gameObject.SetActive(true);
+            // Encima de todo lo del mapa (las líneas de las mini cuias, la canoa y sus banderas): el salto no se cruza con nada.
+            _rosaJumpLayer!.SetAsLastSibling();
+            _rosaJumpLayer.gameObject.SetActive(true);
             ApplyRosaJump();
             PlaceCanoeGear(_space); // la Rosa que guía deja de pintarse mientras salta
         }
@@ -2875,24 +2922,360 @@ namespace AF.UI
             float dir = _rosaJumpDir;
             Vector2 o = _space.ToLocal(_rosaJumpMap);
 
+            // El arco y el cabeceo, en pantalla (x hacia donde mira la canoa, y hacia arriba): con «Norte arriba» el contenido gira y
+            // Rosa no se tumba, como las demás figuras (Turn y _figureAngle).
             RectTransform r = _rosaJumper.rectTransform;
             r.sizeDelta = new Vector2(gw, gh);
-            r.anchoredPosition = new Vector2(o.x + (dir * RosaJumpSpanDp * k * (p - 0.5f)), o.y + (4f * RosaJumpHeightDp * k * p * (1f - p)));
-            r.localRotation = Quaternion.Euler(0f, 0f, dir * Mathf.Lerp(RosaJumpPitchDeg, -RosaJumpPitchDeg, p));
+            var arc = new Vector2(dir * RosaJumpSpanDp * k * (p - 0.5f), 4f * RosaJumpHeightDp * k * p * (1f - p));
+            r.anchoredPosition = o + Turn(arc, _figureAngle);
+            r.localRotation = Quaternion.Euler(0f, 0f, _figureAngle + (dir * Mathf.Lerp(RosaJumpPitchDeg, -RosaJumpPitchDeg, p)));
             r.localScale = new Vector3(-dir, 1f, 1f); // Rosa mira a la izquierda en su dibujo
             float fade = Mathf.Clamp01(Mathf.Min(p, 1f - p) / RosaJumpFadeFraction);
             _rosaJumper.canvasRenderer.SetAlpha(fade);
 
+            Quaternion upright = Quaternion.Euler(0f, 0f, _figureAngle);
             for (int i = 0; i < _rosaRelatives.Length; i++)
             {
-                Image relative = _rosaRelatives[i]!;
+                RosaRelativeParts relative = _rosaRelatives[i]!;
                 float q = (p - RosaRelativeFrom[i]) / (RosaRelativeTo[i] - RosaRelativeFrom[i]);
-                float rise = q > 0f && q < 1f ? Mathf.Sin(Mathf.PI * q) : 0f; // fuera de su tramo, bajo el agua (alto 0)
-                RectTransform rt = relative.rectTransform;
-                rt.sizeDelta = new Vector2(gw * RosaRelativeScale, gh * RosaRelativeScale);
-                Vector2 offset = RosaRelativeOffsetDp[i];
-                rt.anchoredPosition = new Vector2(o.x + (dir * offset.x * k), o.y + (offset.y * k));
-                rt.localScale = new Vector3(-dir, rise, 1f);
+                float rise = q > 0f && q < 1f ? Mathf.Clamp01(2.2f * Mathf.Sin(Mathf.PI * q)) : 0f; // asoma, se queda arriba y se sumerge; fuera de su tramo, bajo el agua
+                RectTransform rt = relative.Root;
+                rt.anchoredPosition = _space.ToLocal(_rosaRelativeMap[i]);
+                rt.localRotation = upright;
+                rt.localScale = new Vector3(dir, 1f, 1f); // la aleta, inclinada hacia la cola
+                relative.Back.rectTransform.localScale = new Vector3(1f, rise, 1f);
+                relative.Splash.canvasRenderer.SetAlpha(rise);
+            }
+        }
+
+        // Dónde asoman los lomos (M4.4, revisión): por el río, a RosaRelativeAlongDp × k de Rosa por el agua (k, la escala del guía
+        // en la vista), uno río abajo y otro río arriba; si ahí el lomo con su chapoteo pisaría la canoa con su mástil y sus
+        // banderas (con RosaRelativeClearDp de hueco), el arco de Rosa o el otro lomo, de RosaRelativeStepDp en RosaRelativeStepDp
+        // más lejos. Primero cada uno por su lado; el que no cabe, después, por el otro. Si ninguno queda libre, el primero.
+        // (route, fraction) es el sitio de Rosa en su ruta. Sin asignaciones.
+        private void PlaceRosaRelatives(int route, float fraction, float k)
+        {
+            float gw = GuideWorldDp * k;
+            float gh = gw * ProceduralArt.RosaHeightDp / ProceduralArt.RosaWidthDp;
+            Vector2 o = _space.ToLocal(_rosaJumpMap);
+            float half = (RosaJumpSpanDp * k * 0.5f) + (gw * 0.5f);
+            Rect arc = Rect.MinMaxRect(o.x - half, o.y - (gh * 0.3f), o.x + half, o.y + (RosaJumpHeightDp * k) + (gh * 0.7f));
+            int placed = 0; // un bit por lomo ya colocado
+            for (int pass = 0; pass < 2; pass++)
+            {
+                for (int i = 0; i < _rosaRelatives.Length; i++)
+                {
+                    if ((placed & (1 << i)) != 0)
+                    {
+                        continue;
+                    }
+
+                    float sign = pass == 0 ? RosaRelativeSide[i] : -RosaRelativeSide[i];
+                    if (TryPlaceRosaRelative(i, route, fraction, sign, k, arc, placed, out Vector2 at))
+                    {
+                        _rosaRelativeMap[i] = at;
+                        placed |= 1 << i;
+                    }
+                }
+            }
+
+            for (int i = 0; i < _rosaRelatives.Length; i++)
+            {
+                if ((placed & (1 << i)) == 0)
+                {
+                    // Ningún sitio libre: el primero de su lado (o el punto de Rosa si se acaba el río).
+                    _rosaRelativeMap[i] = AlongRoutes(route, fraction, RosaRelativeSide[i] * RosaRelativeAlongDp * k / Mathf.Max(1e-4f, _space.DpPerUnit), out Vector2 first)
+                        ? first
+                        : _rosaJumpMap;
+                }
+            }
+        }
+
+        // El primer sitio libre del lomo i hacia sign (río arriba o abajo): sin pisar la canoa con su equipo, el arco de Rosa ni los
+        // lomos ya colocados (placed, un bit por lomo). Sin asignaciones.
+        private bool TryPlaceRosaRelative(int i, int route, float fraction, float sign, float k, Rect arc, int placed, out Vector2 at)
+        {
+            float perUnit = Mathf.Max(1e-4f, _space.DpPerUnit);
+            Rect gear = _gearBox.width > 0f ? Grow(_gearBox, RosaRelativeClearDp) : default;
+            for (int t = 0; t < RosaRelativeTries; t++)
+            {
+                float along = (RosaRelativeAlongDp + (t * RosaRelativeStepDp)) * k;
+                if (!AlongRoutes(route, fraction, sign * along / perUnit, out at))
+                {
+                    continue;
+                }
+
+                Rect box = RosaRelativeBox(_space.ToLocal(at));
+                if ((gear.width > 0f && box.Overlaps(gear)) || box.Overlaps(arc))
+                {
+                    continue;
+                }
+
+                bool clash = false;
+                for (int j = 0; j < _rosaRelatives.Length; j++)
+                {
+                    clash |= j != i && (placed & (1 << j)) != 0 && box.Overlaps(RosaRelativeBox(_space.ToLocal(_rosaRelativeMap[j])));
+                }
+
+                if (!clash)
+                {
+                    return true;
+                }
+            }
+
+            at = default;
+            return false;
+        }
+
+        // Caja de un lomo con su chapoteo, con su línea de nado en at (local): el lomo encima y el chapoteo debajo.
+        private static Rect RosaRelativeBox(Vector2 at)
+        {
+            float w = Mathf.Max(RosaBackWidthDp, RosaSplashWidthDp);
+            return new Rect(at.x - (w * 0.5f), at.y - RosaSplashHeightDp, w, RosaBackHeightDp + RosaSplashHeightDp);
+        }
+
+        // Punto a delta unidades del marco por el agua desde la fracción fraction de la ruta route (delta > 0, hacia su parada, río
+        // arriba; < 0, hacia la anterior), pasando a la ruta siguiente o a la anterior si hace falta. False si se acaba el
+        // catálogo. Sin asignaciones.
+        private bool AlongRoutes(int route, float fraction, float delta, out Vector2 point)
+        {
+            RiverMap? map = _map;
+            RiverRoutes? routes = _routes;
+            int s = route;
+            float f = fraction;
+            for (int guard = 0; map != null && routes != null && guard < 8; guard++)
+            {
+                RiverStopRoute? leg = routes.At(s);
+                if (leg == null)
+                {
+                    break;
+                }
+
+                float total = RouteLength(map, leg);
+                if (total <= 0f)
+                {
+                    s += delta >= 0f ? 1 : -1; // misma vista, otra luz: sin agua
+                    f = delta >= 0f ? 0f : 1f;
+                    continue;
+                }
+
+                float at = (f * total) + delta;
+                if (at >= 0f && at <= total)
+                {
+                    point = RoutePoint(map, leg, at / total);
+                    return true;
+                }
+
+                if (at > total)
+                {
+                    delta = at - total;
+                    s++;
+                    f = 0f;
+                }
+                else
+                {
+                    delta = at;
+                    s--;
+                    f = 1f;
+                }
+            }
+
+            point = default;
+            return false;
+        }
+
+        // Un pariente de Rosa en Tarapoto: su sitio en el agua (Root, con el pivote en la línea de nado), el lomo encima (su alto es
+        // lo que asoma) y el chapoteo debajo (con la misma opacidad).
+        private sealed class RosaRelativeParts
+        {
+            private RosaRelativeParts(RectTransform root, DolphinBackGraphic back, DolphinBackGraphic splash)
+            {
+                Root = root;
+                Back = back;
+                Splash = splash;
+            }
+
+            public RectTransform Root { get; }
+
+            public DolphinBackGraphic Back { get; }
+
+            public DolphinBackGraphic Splash { get; }
+
+            public static RosaRelativeParts Create(string name, RectTransform parent)
+            {
+                RectTransform root = UiBuilder.Rect(name, parent);
+                root.anchorMin = new Vector2(0f, 1f);
+                root.anchorMax = new Vector2(0f, 1f);
+                root.pivot = new Vector2(0.5f, 0f);
+                root.sizeDelta = new Vector2(RosaBackWidthDp, RosaBackHeightDp);
+                DolphinBackGraphic back = DolphinBackGraphic.Create("Back", root, false);
+                back.rectTransform.pivot = new Vector2(0.5f, 0f);
+                back.rectTransform.sizeDelta = new Vector2(RosaBackWidthDp, RosaBackHeightDp);
+                back.rectTransform.localScale = new Vector3(1f, 0f, 1f); // se esconde con su alto a 0, sin activar ni desactivar
+                DolphinBackGraphic splash = DolphinBackGraphic.Create("Splash", root, true);
+                splash.rectTransform.pivot = new Vector2(0.5f, 1f);
+                splash.rectTransform.sizeDelta = new Vector2(RosaSplashWidthDp, RosaSplashHeightDp);
+                splash.canvasRenderer.SetAlpha(0f);
+                splash.transform.SetAsFirstSibling();
+                return new RosaRelativeParts(root, back, splash);
+            }
+        }
+
+        /// <summary>
+        /// El lomo de un pariente de Rosa (joroba con la aleta dorsal inclinada hacia la cola, en el rosa de Rosa con borde
+        /// <see cref="RosaBackRim"/>; la cabeza hacia +x) o su chapoteo (una media lente blanca bajo la línea de nado), en una malla sin
+        /// textura a la medida de su caja. Se construye una vez; sin raycast.
+        /// </summary>
+        [RequireComponent(typeof(CanvasRenderer))]
+        internal sealed class DolphinBackGraphic : MaskableGraphic
+        {
+            private const int HumpSegments = 14;
+            private bool _splash;
+
+            /// <summary>Es el chapoteo (si no, el lomo).</summary>
+            public bool IsSplash => _splash;
+
+            public static DolphinBackGraphic Create(string name, RectTransform parent, bool splash)
+            {
+                var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(DolphinBackGraphic));
+                go.transform.SetParent(parent, false);
+                DolphinBackGraphic g = go.GetComponent<DolphinBackGraphic>();
+                RectTransform rt = g.rectTransform;
+                rt.anchorMin = new Vector2(0.5f, 0f);
+                rt.anchorMax = new Vector2(0.5f, 0f);
+                rt.anchoredPosition = Vector2.zero;
+                g._splash = splash;
+                g.raycastTarget = false;
+                g.SetVerticesDirty();
+                return g;
+            }
+
+            /// <inheritdoc />
+            protected override void OnPopulateMesh(VertexHelper vh)
+            {
+                vh.Clear();
+                Rect r = rectTransform.rect;
+                if (_splash)
+                {
+                    PopulateSplash(vh, r);
+                }
+                else
+                {
+                    PopulateBack(vh, r);
+                }
+            }
+
+            // La media lente del chapoteo: de la línea de nado (arriba de la caja) a una parábola abajo.
+            private void PopulateSplash(VertexHelper vh, Rect r)
+            {
+                Color32 c = new Color(Palette.Cream.r, Palette.Cream.g, Palette.Cream.b, 0.95f) * color;
+                const int segments = 10;
+                int start = vh.currentVertCount;
+                for (int k = 0; k <= segments; k++)
+                {
+                    float t = k / (float)segments;
+                    float x = Mathf.Lerp(r.xMin, r.xMax, t);
+                    float u = (2f * t) - 1f;
+                    vh.AddVert(new Vector3(x, r.yMax), c, Vector2.zero);
+                    vh.AddVert(new Vector3(x, r.yMax - (r.height * (1f - (u * u)))), c, Vector2.zero);
+                }
+
+                for (int k = 0; k < segments; k++)
+                {
+                    int i = start + (2 * k);
+                    vh.AddTriangle(i, i + 1, i + 3);
+                    vh.AddTriangle(i, i + 3, i + 2);
+                }
+            }
+
+            // El lomo: una joroba (el 60 % del alto) con la aleta dorsal, de base en el tercio de la cola e inclinada hacia
+            // ella, hasta lo alto de la caja; relleno del rosa de Rosa y su borde encima (sin borde en la línea de nado: sale del
+            // agua).
+            private void PopulateBack(VertexHelper vh, Rect r)
+            {
+                float w = r.width;
+                float h = r.height;
+                float hump = h * 0.6f;
+                float finFrom = -0.3f;
+                float finTo = 0.05f;
+                Vector2 tip = new Vector2(r.center.x - (w * 0.3f), r.yMin + h);
+                Color32 fill = ProceduralArt.RosaPink * color;
+                Color32 rim = RosaBackRim * color;
+
+                // El perfil de cola (−x) a cabeza (+x), con la aleta en medio.
+                int start = vh.currentVertCount;
+                Vector2 c = new Vector2(r.center.x, r.yMin + (hump * 0.35f));
+                vh.AddVert(c, fill, Vector2.zero);
+                int points = 0;
+                for (int k = 0; k <= HumpSegments; k++)
+                {
+                    float u = ((2f * k) / HumpSegments) - 1f;
+                    if (u < finFrom)
+                    {
+                        vh.AddVert(HumpPoint(r, u, hump), fill, Vector2.zero);
+                        points++;
+                    }
+                }
+
+                vh.AddVert(HumpPoint(r, finFrom, hump), fill, Vector2.zero);
+                vh.AddVert(tip, fill, Vector2.zero);
+                vh.AddVert(HumpPoint(r, finTo, hump), fill, Vector2.zero);
+                points += 3;
+                for (int k = 0; k <= HumpSegments; k++)
+                {
+                    float u = ((2f * k) / HumpSegments) - 1f;
+                    if (u > finTo)
+                    {
+                        vh.AddVert(HumpPoint(r, u, hump), fill, Vector2.zero);
+                        points++;
+                    }
+                }
+
+                for (int k = 0; k < points - 1; k++)
+                {
+                    vh.AddTriangle(start, start + 1 + k, start + 2 + k);
+                }
+
+                vh.AddTriangle(start, start + points, start + 1); // la franja de abajo, hasta la línea de nado
+
+                // El borde, por el mismo perfil.
+                float half = Mathf.Max(0.5f, RosaBackRimDp * 0.5f);
+                for (int k = 0; k < points - 1; k++)
+                {
+                    UIVertex a = default;
+                    UIVertex b = default;
+                    vh.PopulateUIVertex(ref a, start + 1 + k);
+                    vh.PopulateUIVertex(ref b, start + 2 + k);
+                    Segment(vh, a.position, b.position, half, rim);
+                }
+            }
+
+            // Punto de la joroba en u ∈ [−1, 1] (−1 la cola, +1 la cabeza), con su alto máximo hump.
+            private static Vector2 HumpPoint(Rect r, float u, float hump)
+            {
+                float y = hump * Mathf.Sqrt(Mathf.Max(0f, 1f - (u * u)));
+                return new Vector2(r.center.x + (u * r.width * 0.5f), r.yMin + y);
+            }
+
+            private static void Segment(VertexHelper vh, Vector2 a, Vector2 b, float half, Color32 c)
+            {
+                Vector2 dir = b - a;
+                float length = dir.magnitude;
+                if (length <= 0f)
+                {
+                    return;
+                }
+
+                dir /= length;
+                Vector2 n = new Vector2(-dir.y, dir.x) * half;
+                Vector2 e = dir * half; // se alarga medio grosor por cada punta: sin huecos en las esquinas
+                int i = vh.currentVertCount;
+                vh.AddVert(a - n - e, c, Vector2.zero);
+                vh.AddVert(a + n - e, c, Vector2.zero);
+                vh.AddVert(b + n + e, c, Vector2.zero);
+                vh.AddVert(b - n + e, c, Vector2.zero);
+                vh.AddTriangle(i, i + 1, i + 2);
+                vh.AddTriangle(i, i + 2, i + 3);
             }
         }
 
