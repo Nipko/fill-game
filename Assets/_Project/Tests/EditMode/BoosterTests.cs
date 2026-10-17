@@ -73,7 +73,7 @@ namespace AF.Tests.EditMode
                 checkedKeys++;
             }
 
-            Assert.That(checkedKeys, Is.EqualTo(15));
+            Assert.That(checkedKeys, Is.EqualTo(17)); // MO1: hint_timeout_ms y hint_unlock_level
         }
 
         [Test]

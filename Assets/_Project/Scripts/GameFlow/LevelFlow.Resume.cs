@@ -155,6 +155,7 @@ namespace AF.GameFlow
 
             // 02 §14: al reanudar no hay tarjeta previa (LEVEL_CARD) ni intro; la Luciérnaga no sigue eligiendo cuia.
             EndRevealSelection();
+            ResetHint();
             ResetLevelCard();
             Phase = FlowPhase.Loading;
             _level = def;

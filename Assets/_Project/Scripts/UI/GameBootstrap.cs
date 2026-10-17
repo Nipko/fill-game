@@ -1402,6 +1402,8 @@ namespace AF.UI
                 AdGate = new InterstitialGate(_ads, _probe, _wallet), // AD_GATE tras «Siguiente» (B2-4)
                 StateStore = new ProfileLevelStateStore(profile, batch), // nivel en curso tras cada vertido (B2-5)
                 SaveBatch = batch, // una escritura del perfil por acción del jugador
+                Clock = clock, // Morpho (MO1): hint_timeout_ms y el enfriamiento, con el mismo reloj que la cartera
+                HintProbe = _probe, // AF_PERF morpho de cada respuesta (MO1)
 
                 // Tarjeta previa (LEVEL_CARD, 02 §10): LaunchOptions.LevelCardsOverride ?? GameConfig.LevelCardsEnabledDefault,
                 // apagada hasta que exista su vista (T13).

@@ -237,6 +237,7 @@ namespace AF.GameFlow
                 LevelDefinition def = _catalog.Serve(number)!; // con el kill switch (KS1): el override o el publicado con aviso
                 bool firstEntry = _attempt.Level != number; // se entra en el nivel (no se vuelve a entrar en él): el banner de mundo
                 EndRevealSelection();
+                ResetHint();
                 ResetLevelCard();
                 Phase = FlowPhase.Loading;
                 _level = def;
@@ -317,6 +318,8 @@ namespace AF.GameFlow
 
                     break;
             }
+
+            TickHint(); // Morpho (MO1): respuesta del hilo de trabajo, corte por hint_timeout_ms y pista que se apaga
         }
 
         /// <summary>
