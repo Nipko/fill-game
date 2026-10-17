@@ -1,6 +1,10 @@
 {
   "note": "Decisiones [P] de P-M1 (a) que rio-amazonas.json no lleva en sus campos. Las aplica tools/river-map/stops.py, y su --check falla si una entrada no corresponde a ninguna parada o lleva un campo desconocido (campos admitidos: arrival_text, country, country_name, name, river y why). name y river sustituyen al nombre y al río de la investigación en las filas map.stop.<id>.name y map.stop.<id>.river de facts.csv (M1.1t): el río va en {río} de map_arrived («{lugar} · {país} · río {río}», glosario §10), así que es solo el nombre del río, sin «río» ni descripciones (--check falla si el río lleva paréntesis, empieza por «río» o por minúscula). arrival_text (M4.5a) sustituye al texto es-419 del dato de llegada de la parada (su arrival_fact) en su fila de facts.csv, con la misma clave, la misma etiqueta y las mismas fuentes, sin tocar rio-amazonas.json: la fila lo marca con [P] y su contexto cita el texto de la investigación (--check falla si la parada no tiene dato de llegada).",
   "stops": {
+    "atalaya": {
+      "river": "Ucayali",
+      "why": "rio-amazonas.json dice «Ucayali, Tambo y Urubamba», y la placa del lugar («Atalaya · Perú · río Ucayali, Tambo y Urubamba») ocupa 4 líneas, 130 dp, y sube la ranura de todas las victorias (M4.5b: placa del lugar con SingleKey en en-XA al 130 % a 360 × 640; la más alta de 1-420 mide 110 dp). Queda el río de su ancla_rio y de su dato de llegada («En Atalaya, el Tambo y el Urubamba se juntan y nace el río Ucayali»), el Ucayali [P]. Pendiente del asesor cultural (07 §8.2)."
+    },
     "belem": {
       "river": "Pará",
       "why": "rio-amazonas.json dice «Pará (estuario)», y la descripción entre paréntesis no va en «río {río}» de map_arrived (quedaría «Belém · Brasil · río Pará (estuario)»): queda el nombre del río, el Pará (su ancla_rio). Pendiente del asesor cultural (07 §8.2)."
@@ -48,6 +52,10 @@
       "name": "El río frontera",
       "why": "La parada 13 (El río frontera, boca del Atacuari) tiene a Colombia en una orilla y al Perú en la otra: rio-amazonas.json dice «CO/PE». P-M1 (a): country = CO, el país del mundo 4 (la bandera del Perú se iza al llegar a Iquitos, n = 14), y la placa nombra los dos países con la clave country_name («Colombia y Perú», que stops.py escribe en facts.csv desde «CO/PE») [P]. El nombre es el de 07 §2.1 (rótulo «El río frontera · Colombia y Perú»): «El río frontera (boca del Atacuari)» de la investigación pasa de 32 caracteres [P]."
     },
+    "rurrenabaque_orillas": {
+      "name": "Orillas de Rurrenabaque",
+      "why": "rio-amazonas.json dice «Las dos orillas de Rurrenabaque», y la placa del lugar («Las dos orillas de Rurrenabaque · Bolivia · río Beni») ocupa 4 líneas, 130 dp, y sube la ranura de todas las victorias (M4.5b: placa del lugar con SingleKey en en-XA al 130 % a 360 × 640; la más alta de 1-420 mide 110 dp); con su dato, la llegada del 460 mide 231 dp en es-419 al 130 %, frente a 212 en 1-420. Sin el artículo ni «dos» [P], como «Guacamayos del Tambopata» (parada 36). Pendiente del asesor cultural (07 §8.2)."
+    },
     "tarapoto": {
       "river": "Amazonas",
       "why": "rio-amazonas.json dice «lagos de la várzea del Amazonas», que no es un río para «río {río}» de map_arrived: queda el río de esos lagos, el Amazonas (su ancla_rio). Pendiente del asesor cultural (07 §8.2)."
@@ -55,6 +63,18 @@
     "tefe": {
       "river": "Tefé",
       "why": "rio-amazonas.json dice «lago de Tefé (río Tefé, junto al Solimões)», que no cabe en «río {río}» de map_arrived ni en 32 caracteres [P]: queda el río que nombra la propia investigación, el Tefé (su dato de llegada: «El río Tefé es de agua negra…»). Pendiente del asesor cultural (07 §8.2)."
+    },
+    "urubamba": {
+      "river": "Urubamba",
+      "why": "rio-amazonas.json dice «Ucayali, Tambo y Urubamba», y la placa del lugar («El Urubamba · Perú · río Ucayali, Tambo y Urubamba») ocupa 4 líneas, 130 dp, y sube la ranura de todas las victorias (M4.5b: placa del lugar con SingleKey en en-XA al 130 % a 360 × 640; la más alta de 1-420 mide 110 dp). Queda el río del que habla su dato de llegada («El Urubamba corre unos {n} km…»), que se junta con el Tambo en Atalaya, el sitio de la parada [P]. Pendiente del asesor cultural (07 §8.2)."
+    },
+    "yarinacocha": {
+      "river": "Ucayali",
+      "why": "rio-amazonas.json dice «Ucayali y laguna de Yarinacocha», y la laguna no es un río para «río {río}» de map_arrived («Yarinacocha · Perú · río Ucayali y laguna de Yarinacocha»): queda el río de su ancla_rio y de su dato de llegada («El Ucayali cambia de curso: Yarinacocha es una vieja curva suya…»), el Ucayali [P], como en la parada 63 (M4.5b). Pendiente del asesor cultural (07 §8.2)."
+    },
+    "yarinacocha_garzas": {
+      "river": "Ucayali",
+      "why": "rio-amazonas.json dice «Ucayali y laguna de Yarinacocha», y la placa map_arrived («{lugar} · {país} · río {río}», 64 caracteres) quedaría en 70 con el nombre de la parada 63: «Las garzas de Yarinacocha · Perú · río Ucayali y laguna de Yarinacocha» (MapTextTests, M4.5b). Queda el río de su ancla_rio, el Ucayali [P], como en la parada 62; la laguna ya va en el nombre. Pendiente del asesor cultural (07 §8.2)."
     }
   }
 }

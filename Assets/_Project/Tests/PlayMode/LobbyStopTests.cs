@@ -140,7 +140,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator StopRemaining_HidesAtTheContentEnd_AndWithoutANextStop_AndWithoutCatalogTheLobbyIsAsBefore()
         {
-            // Con las 42 paradas de 1-420 (M4.5a), del 191 al 200 la parada siguiente (la 20, Mazán) está en el catálogo y el
+            // Con las 70 paradas de 1-700 (M4.5b), del 191 al 200 la parada siguiente (la 20, Mazán) está en el catálogo y el
             // pack de 201-300 está publicado: «Faltan…» hacia Mazán.
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(195)));
             GameBootstrap boot = GameBootstrap.Current!;

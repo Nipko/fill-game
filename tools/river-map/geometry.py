@@ -91,6 +91,7 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     place_id,
     split_csv_records,
     stop_records,
+    travel_passing_mismatches,
     travel_passing_points,
 )
 
@@ -544,6 +545,7 @@ def build_model(source: dict) -> tuple:
     # es el de la investigacion, no el de su nombre.
     points = [("puntos_de_paso_1_200", p) for p in source.get("puntos_de_paso_1_200", []) or []]
     points += [("puntos_de_paso_del_viaje", p) for p in travel_passing_points(source)]
+    errors.extend(travel_passing_mismatches(source))   # M4.5b: teotonio en los viajes del 300 y del 560, uno solo
     for field, p in points:
         if not isinstance(p, dict):
             errors.append(f"{field}: una entrada no es un objeto")
@@ -1061,15 +1063,19 @@ def validate_map(doc: dict, model: Model, source: dict) -> list:
 
 
 def same_place(model: Model, a: tuple, b: tuple) -> bool:
-    """Dos posiciones (linea, s) son el mismo punto del agua: iguales, o la boca (o el arranque) de una linea y su s sobre
-    el anfitrion. Es lo unico que une dos tramos de un leg: cualquier otro salto cruza tierra."""
+    """Dos posiciones (linea, s) son el mismo punto del agua: iguales, la boca (o el arranque) de una linea y su s sobre
+    el anfitrion, o (M4.5b) las bocas de dos lineas que entran en el mismo anfitrion en la misma s (el Beni y el Mamore,
+    que forman el Madeira en Villa Bella: el leg del 500 baja uno y sube el otro sin tramo de longitud cero en el
+    Madeira). Es lo unico que une dos tramos de un leg: cualquier otro salto cruza tierra."""
     if a == b:
         return True
     for x, y in ((a, b), (b, a)):
         line = model.lines.get(x[0])
         if line is not None and line.host == y[0] and line.own_s == x[1] and line.host_s == y[1]:
             return True
-    return False
+    la, lb = model.lines.get(a[0]), model.lines.get(b[0])
+    return (la is not None and lb is not None and la.host is not None and la.host == lb.host
+            and la.own_s == a[1] and lb.own_s == b[1] and la.host_s == lb.host_s)
 
 
 def _limit_note(pending: bool) -> str:
@@ -1125,6 +1131,8 @@ def validate_routes(stops_doc: dict, model: Model, records: list) -> list:
     errors: list = []
     by_k = {r.get("k"): r for r in records if isinstance(r, dict)}
     prev = None
+    last_on_line: dict = {}   # (mundo, linea) -> la ultima parada del mundo en esa linea (M4.5b)
+    prev_home = None          # (mundo, km_home, linea) de la parada anterior
     for s in stops_doc.get("stops", []):
         n, sid = s.get("n"), s.get("id")
         tag = f"parada n={n!r} ({sid!r})"
@@ -1157,6 +1165,36 @@ def validate_routes(stops_doc: dict, model: Model, records: list) -> list:
                 errors.append(f"{tag}: retrocede rio abajo por {at['line']} desde la parada {prev['n']} (los km no retroceden)")
             if km_value is not None and prev.get("km") is not None and km_value < prev["km"]:
                 errors.append(f"{tag}: km_from_sea {km_value} menor que el de la parada {prev['n']} ({prev['km']}) en el mismo rio")
+        # M4.5b (propuesta del Mapa §5.4 quater): dentro de un mundo, ninguna parada queda rio abajo de la ultima del mismo
+        # mundo en su misma linea, aunque entre las dos la canoa haya ido por otro rio (Trinidad, en el Mamore, por encima
+        # de Guayaramerin).
+        world = s.get("world")
+        here_line = last_on_line.get((world, at["line"]))
+        if here_line is not None and (prev is None or here_line["n"] != prev["n"]):
+            if at["s"] > here_line["s"] + 1e-9:
+                errors.append(f"{tag}: queda rio abajo por {at['line']} de la parada {here_line['n']}, del mismo mundo "
+                              "(dentro de un mundo los km no retroceden)")
+            if km_value is not None and here_line["km"] is not None and km_value < here_line["km"]:
+                errors.append(f"{tag}: km_from_sea {km_value} menor que el de la parada {here_line['n']} "
+                              f"({here_line['km']}), del mismo mundo y en el mismo rio")
+        last_on_line[(world, at["line"])] = {"n": n, "s": at["s"], "km": km_value}
+        # Los km a casa solo bajan dentro de un mundo en una parada con baja_por_confluencia [P] (la canoa baja un rio y
+        # sube otro por una confluencia: Guayaramerin y Trinidad, pregunta abierta del mundo 8) y en otra linea que la
+        # parada anterior; un baja_por_confluencia en una parada cuyos km no bajan sobra.
+        km_home = s.get("km_home")
+        declared = rec.get("baja_por_confluencia")
+        declared = isinstance(declared, str) and bool(declared.strip())
+        drops = (prev_home is not None and prev_home[0] == world and isinstance(km_home, int)
+                 and isinstance(prev_home[1], int) and km_home < prev_home[1])
+        if drops and not declared:
+            errors.append(f"{tag}: km_home {km_home} baja dentro del mundo {world} (la parada anterior, {prev_home[1]}) "
+                          "sin baja_por_confluencia en la investigacion")
+        elif drops and prev_home[2] == at["line"]:
+            errors.append(f"{tag}: km_home baja con baja_por_confluencia, pero en la misma linea ({at['line']}) que la "
+                          "parada anterior: no hay confluencia")
+        elif declared and not drops:
+            errors.append(f"{tag}: baja_por_confluencia en una parada cuyos km a casa no bajan dentro de su mundo: sobra")
+        prev_home = (world, km_home, at["line"])
         # leg
         if not isinstance(leg, dict) or not isinstance(leg.get("path"), list) or not leg["path"]:
             errors.append(f"{tag}: sin leg.path")

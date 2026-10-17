@@ -10,9 +10,9 @@ namespace AF.Tests.EditMode
 {
     /// <summary>
     /// Qué toca del Mapa del río en cada momento (<see cref="MapMoments"/>; 08 §2.2; D-013, puntos 3, 7 y 8; 02 §6; 06 §2.3;
-    /// tarea M1.3a): la victoria con y sin Mapa (el 10 lo cuenta el Mapa; 20 llega; 21 nada; 200 llega a Mazán y 420 nada con
-    /// las 42 paradas de 1-420, M4.5a), el dato de la llegada con las dos políticas de los hitos (sin fijar ninguna como
-    /// canon), el viaje de mundo dentro del banner según <c>ui_map_autopen</c> y sin asignaciones. También las claves de 08 §9
+    /// tarea M1.3a): la victoria con y sin Mapa (el 10 lo cuenta el Mapa; 20 llega; 21 nada; 200 llega a Mazán, 420 a
+    /// Riberalta y 700 nada con las 70 paradas de 1-700, M4.5b), el dato de la llegada con las dos políticas de los hitos
+    /// (sin fijar ninguna como canon), el viaje de mundo dentro del banner según <c>ui_map_autopen</c> y sin asignaciones. También las claves de 08 §9
     /// de <see cref="MapConfig"/>.
     /// </summary>
     public sealed class MapMomentsTests
@@ -44,8 +44,10 @@ namespace AF.Tests.EditMode
                 Assert.That(MapMoments.ForVictory(190, real, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.Arrival));
                 Assert.That(MapMoments.ForVictory(200, real, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.Arrival),
                     "el 200 lleva a Mazán, la parada 20 (M4.5a)");
-                Assert.That(MapMoments.ForVictory(420, real, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.None),
-                    "con las 42 paradas de 1-420 no hay parada 42");
+                Assert.That(MapMoments.ForVictory(420, real, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.Arrival),
+                    "el 420 lleva a Riberalta, la parada 42 (M4.5b)");
+                Assert.That(MapMoments.ForVictory(700, real, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.None),
+                    "con las 70 paradas de 1-700 no hay parada 70");
                 Assert.That(MapMoments.ForVictory(20, null, map, MapConfig.UiMapAutopen), Is.EqualTo(VictoryMoment.None),
                     "sin catálogo no hay llegadas");
             }
@@ -65,7 +67,7 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(arrivals, Is.EqualTo(40), "20, 30 … 410: del 10 se encarga el Mapa y el 420 no tiene parada (M4.5a)");
+            Assert.That(arrivals, Is.EqualTo(68), "20, 30 … 690: del 10 se encarga el Mapa y el 700 no tiene parada (M4.5b)");
         }
 
         [Test]

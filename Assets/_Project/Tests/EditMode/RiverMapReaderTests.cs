@@ -159,7 +159,7 @@ namespace AF.Tests.EditMode
         {
             RiverMap map = RiverMapReader.Read(File.ReadAllText(RealMapPath));
             RiverRoutes routes = RiverMapReader.ReadRoutes(File.ReadAllText(RealStopsPath), map);
-            Assert.That(routes.Count, Is.EqualTo(42), "1-420 (M4.5a)");
+            Assert.That(routes.Count, Is.EqualTo(70), "1-700 (M4.5b)");
 
             RiverStopRoute belem = routes.At(0)!;
             Assert.That(belem.Id, Is.EqualTo("belem"));
@@ -205,7 +205,18 @@ namespace AF.Tests.EditMode
             RiverStopRoute heath = routes.At(30)!;
             Assert.That(heath.Id, Is.EqualTo("puerto_heath"));
             Assert.That(heath.Via[heath.Via.Count - 1], Is.EqualTo("teotonio"), "el relevo del guía en el viaje del 300 (Q18-A)");
-            Assert.That(routes.At(42), Is.Null);
+            // M4.5b: el 500 baja el Beni y sube el Mamoré por Villa Bella (las dos bocas, el mismo punto del Madeira), y el
+            // viaje del 560 vuelve a pasar por Teotônio, Madeira abajo.
+            RiverStopRoute guayaramerin = routes.At(50)!;
+            Assert.That(guayaramerin.Id, Is.EqualTo("guayaramerin"));
+            Assert.That(guayaramerin.Path.Count, Is.EqualTo(2));
+            Assert.That(map.Lines[guayaramerin.Path[0].Line].Id, Is.EqualTo("beni"));
+            Assert.That(map.Lines[guayaramerin.Path[1].Line].Id, Is.EqualTo("mamore"));
+            RiverStopRoute jenaro = routes.At(56)!;
+            Assert.That(jenaro.Id, Is.EqualTo("jenaro_herrera"));
+            Assert.That(jenaro.Via[0], Is.EqualTo("teotonio"), "Rosa vuelve en el viaje del 560 (Q18-A)");
+            Assert.That(routes.At(69)!.Id, Is.EqualTo("tambo"));
+            Assert.That(routes.At(70), Is.Null);
         }
 
         // ---------------------------------------------------------------------------------------------- base64 (P-M1)

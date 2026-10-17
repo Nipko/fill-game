@@ -305,8 +305,8 @@ class FileTests(Base):
 
 
 class RouteTests(Base):
-    def test_forty_two_stops_with_at_and_leg(self):
-        self.assertEqual(42, len(self.stops["stops"]), "1-420 (M4.5a)")
+    def test_seventy_stops_with_at_and_leg(self):
+        self.assertEqual(70, len(self.stops["stops"]), "1-700 (M4.5b)")
         for s in self.stops["stops"]:
             self.assertIn(s["at"]["line"], self.lines)
             self.assertTrue(s["leg"]["path"])
@@ -330,6 +330,25 @@ class RouteTests(Base):
         self.assertEqual(["napo", "aguarico", "cuyabeno"], [p["line"] for p in self.by_n[25]["leg"]["path"]])
         self.assertEqual(["cuyabeno", "aguarico", "napo"], [p["line"] for p in self.by_n[27]["leg"]["path"]])
         self.assertEqual(["tambopata", "madre_de_dios"], [p["line"] for p in self.by_n[38]["leg"]["path"]])
+
+    def test_legs_of_421_700_down_one_river_and_up_another(self):
+        # Propuesta del Mapa §5.4 quater y quinquies (M4.5b): el Beni, el Beni abajo y el Mamore arriba por Villa Bella
+        # (500), el Mamore y el Itenez (510), el Itenez abajo y el Mamore (530), y el viaje del 560 por el Madeira y el
+        # cauce hasta el Ucayali.
+        lines = {n: [p["line"] for p in self.by_n[n]["leg"]["path"]] for n in range(42, 70)}
+        self.assertEqual(["manu", "madre_de_dios", "beni"], lines[42])
+        self.assertEqual(["beni", "mamore"], lines[50], "Beni abajo y Mamore arriba, sin tramo en el Madeira")
+        self.assertEqual(["mamore", "itenez"], lines[51])
+        self.assertEqual(["itenez", "mamore"], lines[53])
+        self.assertEqual(["mamore", "madeira", "amazonas"], lines[56])
+        leg56 = self.by_n[56]["leg"]
+        self.assertEqual("teotonio", leg56["via"][0], "Madeira abajo: los rapidos de Teotonio, antes que su boca")
+        self.assertLess(leg56["via"].index("boca_del_madeira"), leg56["via"].index("tamshiyacu"))
+        self.assertEqual({"line": "madeira", "s0": 0.0, "s1": 1.0}, self.by_n[56]["leg"]["path"][1], "el Madeira entero")
+        # El Beni y el Mamore entran en el Madeira en el mismo punto (Villa Bella): las dos bocas son el mismo sitio.
+        beni, mamore = self.lines["beni"]["mouth"], self.lines["mamore"]["mouth"]
+        self.assertEqual(("madeira", "madeira"), (beni["on"], mamore["on"]))
+        self.assertEqual(beni["s"], mamore["s"])
 
     def test_there_and_back_through_the_confluences(self):
         # Iquitos/Itaya -> Allpahuayo-Mishana: el cauce hasta la boca del Nanay y el Nanay arriba; despues, abajo y a Nauta.
@@ -357,10 +376,20 @@ class RouteTests(Base):
             pos = self.model.lines[s["at"]["line"]].point_at_s(s["at"]["s"])
             limit = geometry.PENDING_SITE_KM.get(s["id"], geometry.TOLERANCE_KM)
             self.assertLessEqual(geometry.haversine((rec["lat"], rec["lon"]), pos), limit, s["id"])
-            # Dentro de un mundo los km no retroceden; el viaje de entrada de los mundos 6 y 7 deshace camino (§5.4 bis).
+            # Dentro de un mundo los km no retroceden; el viaje de entrada de los mundos 6 a 9 deshace camino (§5.4 bis). En
+            # el mundo 8 bajan dos veces, por una confluencia y a otro rio, en las paradas con baja_por_confluencia [P]
+            # (Guayaramerin y Trinidad; propuesta §5.4 quater, pregunta abierta del duenno).
             if prev is not None and prev["km_from_sea"] is not None and prev["world"] == s["world"]:
-                self.assertGreaterEqual(s["km_from_sea"], prev["km_from_sea"])
+                if "baja_por_confluencia" in rec:
+                    self.assertLess(s["km_home"], prev["km_home"], s["id"])
+                    self.assertNotEqual(prev["at"]["line"], s["at"]["line"], s["id"])
+                else:
+                    self.assertGreaterEqual(s["km_from_sea"], prev["km_from_sea"], s["id"])
+                    self.assertGreaterEqual(s["km_home"], prev["km_home"], s["id"])
             prev = s
+        self.assertEqual(["guayaramerin", "trinidad"],
+                         [s["id"] for s in self.stops["stops"]
+                          if "baja_por_confluencia" in next(r for r in self.records if r["k"] == s["n"])])
 
     def test_tolerance_is_the_canon_and_exceptions_are_only_the_pending_ones(self):
         # 08 §4.5 y D-023, punto 20: <= 2 dp de su vista, <= 15 km en la Cuenca. Las excepciones son las medidas que esperan
@@ -383,6 +412,48 @@ class RouteTests(Base):
         self.assertTrue(geometry.same_place(self.model, ("amazonas", tapajos), ("tapajos", 1.0)))
         self.assertFalse(geometry.same_place(self.model, ("tapajos", 0.5), ("amazonas", tapajos)))
         self.assertFalse(geometry.same_place(self.model, ("negro", 1.0), ("amazonas", tapajos)))
+        # M4.5b: dos bocas en el mismo punto del mismo anfitrion (el Beni y el Mamore forman el Madeira en Villa Bella).
+        self.assertTrue(geometry.same_place(self.model, ("beni", 1.0), ("mamore", 1.0)))
+        self.assertTrue(geometry.same_place(self.model, ("mamore", 1.0), ("beni", 1.0)))
+        self.assertFalse(geometry.same_place(self.model, ("beni", 0.9), ("mamore", 1.0)))
+        self.assertFalse(geometry.same_place(self.model, ("itenez", 1.0), ("beni", 1.0)), "el Itenez entra en el Mamore")
+        self.assertFalse(geometry.same_place(self.model, ("negro", 1.0), ("tapajos", 1.0)), "bocas en otro punto del cauce")
+
+    def test_in_world_rules_of_the_confluence_drops(self):
+        # Propuesta §5.4 quater (M4.5b): los km a casa solo bajan dentro de un mundo con baja_por_confluencia y a otro rio;
+        # nunca rio abajo de la ultima parada del mundo en el mismo rio.
+        records = copy.deepcopy(self.records)
+        by_k = {r["k"]: r for r in records}
+        del by_k[50]["baja_por_confluencia"]
+        errors = geometry.validate_routes(self.stops, self.model, records)
+        self.assertEqual(["parada n=50 ('guayaramerin'): km_home 2518 baja dentro del mundo 8 (la parada anterior, 3007) "
+                          "sin baja_por_confluencia en la investigacion"], errors)
+        records = copy.deepcopy(self.records)
+        next(r for r in records if r["k"] == 51)["baja_por_confluencia"] = "Mamore arriba"
+        errors = geometry.validate_routes(self.stops, self.model, records)
+        self.assertEqual(["parada n=51 ('noel_kempff'): baja_por_confluencia en una parada cuyos km a casa no bajan dentro "
+                          "de su mundo: sobra"], errors)
+        # La misma bajada en el rio de la parada anterior (la 54, en el Mamore como la 53): no hay confluencia.
+        records = copy.deepcopy(self.records)
+        next(r for r in records if r["k"] == 54)["baja_por_confluencia"] = "Mamore abajo"
+        doc = copy.deepcopy(self.stops)
+        doc["stops"][54]["km_home"] -= 100
+        doc["stops"][55]["km_home"] -= 100
+        errors = geometry.validate_routes(doc, self.model, records)
+        self.assertEqual(["parada n=54 ('llanos_de_moxos'): km_home baja con baja_por_confluencia, pero en la misma linea "
+                          "(mamore) que la parada anterior: no hay confluencia"], errors)
+        # Trinidad (53) rio abajo de Guayaramerin (50), las dos en el Mamore: falla aunque entre medias vaya por el Itenez.
+        doc = copy.deepcopy(self.stops)
+        s = round(doc["stops"][50]["at"]["s"] + 0.01, 6)
+        for n in (53, 54, 55):
+            doc["stops"][n]["at"]["s"] = s
+            doc["stops"][n]["leg"]["path"][-1]["s1"] = s
+            if n > 53:
+                doc["stops"][n]["leg"]["path"][0]["s0"] = s
+        doc["stops"][56]["leg"]["path"][0]["s0"] = s
+        errors = geometry.validate_routes(doc, self.model, self.records)
+        self.assertIn("parada n=53 ('trinidad'): queda rio abajo por mamore de la parada 50, del mismo mundo (dentro de un "
+                      "mundo los km no retroceden)", errors)
 
     def test_broken_leg_is_reported(self):
         doc = copy.deepcopy(self.stops)
@@ -508,6 +579,13 @@ class CheckTests(Base):
         rec = next(r for r in src["paradas_1_200"] if r["id"] == "pacaya_samiria")
         rec["otros_datos"] = []
         self.assertFails("falta el candidato de la propuesta sec. 5.1 bis map.stop.pacaya_samiria.dato_03", source=src)
+
+    def test_teotonio_with_another_coordinate_in_the_voyage_of_560_fails(self):
+        # M4.5b: el teotonio de los viajes del 300 y del 560 es un solo elemento de passing[] (contrato 29).
+        src = copy.deepcopy(self.source)
+        world9 = next(w for w in src["paradas_201_1000"] if w.get("mundo") == 9)
+        next(p for p in world9["puntos_de_paso_del_viaje"] if p.get("id") == "teotonio")["lon"] = -64.2
+        self.assertFails("puntos_de_paso_del_viaje: teotonio del mundo 9 tiene otro lon que el del mundo 7", source=src)
 
     def test_drift_fails(self):
         data = MAP_PATH.read_bytes().replace(b'"reveal_on": 10', b'"reveal_on": 20', 1)

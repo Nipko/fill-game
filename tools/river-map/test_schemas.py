@@ -96,7 +96,7 @@ class StopsSchemaTests(unittest.TestCase):
     def test_real_file_validates(self):
         errs = self.errors(self.real)
         self.assertEqual([], [f"{list(e.absolute_path)}: {e.message}" for e in errs])
-        self.assertEqual(42, len(self.real["stops"]), "1-420 (M4.5a)")
+        self.assertEqual(70, len(self.real["stops"]), "1-700 (M4.5b)")
 
     def test_every_stop_has_at_and_leg(self):
         for s in self.real["stops"]:
