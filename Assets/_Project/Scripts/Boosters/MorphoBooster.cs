@@ -192,7 +192,7 @@ namespace AF.Boosters
     /// haya abandonado, siga en el hilo), así que hay una instancia de solver por hilo que busca. Los <see cref="BoardState"/>
     /// son inmutables; la <see cref="SolverCancellation"/> (una por consulta) es lo único que toca el otro hilo.</description></item>
     /// <item><description><b>Corte por tiempo:</b> el hilo principal, al sondear (<see cref="Poll"/>), marca la bandera cuando
-    /// el <see cref="IClock"/> pasa <c>hint_timeout_ms</c> desde <see cref="Start"/>; el núcleo para en como mucho
+    /// el <see cref="IClock"/> pasa <c>hint_timeout_ms</c> desde <see cref="Start"/> (o va hacia atrás); el núcleo para en como mucho
     /// <see cref="SolverCancellation.PollInterval"/> expansiones y la respuesta es <see cref="HintAnswer.NotFound"/>. Si la
     /// búsqueda terminó antes de ver la bandera, su respuesta es completa y vale.</description></item>
     /// <item><description><b>Cobro:</b> esta clase nunca toca la cartera. Cobra el flujo (<c>LevelFlow.Hint</c>) con
@@ -445,7 +445,8 @@ namespace AF.Boosters
 
         /// <summary>
         /// Sondeo del hilo principal (cada fotograma mientras haya consulta): si terminó, <see cref="MorphoPoll.Done"/> con la
-        /// respuesta en <paramref name="result"/>; si no, y el reloj pasó <c>hint_timeout_ms</c> desde <see cref="Start"/>, marca
+        /// respuesta en <paramref name="result"/>; si no, y el reloj pasó <c>hint_timeout_ms</c> desde <see cref="Start"/> (o fue
+        /// hacia atrás), marca
         /// el corte (la respuesta llegará como <see cref="HintAnswer.NotFound"/>) y devuelve <see cref="MorphoPoll.Running"/>.
         /// Nunca espera al hilo de trabajo.
         /// </summary>
@@ -476,7 +477,7 @@ namespace AF.Boosters
             }
 
             SolverCancellation cancellation = _cancellation!;
-            if (!cancellation.IsRequested && ElapsedMs() >= _config.HintTimeoutMs)
+            if (!cancellation.IsRequested && TimedOut(ElapsedMs()))
             {
                 cancellation.Request();
                 TimeoutRequested = true;
@@ -604,6 +605,13 @@ namespace AF.Boosters
         private double ElapsedMs()
         {
             return (_clock.UtcNow - _startedUtc).TotalMilliseconds;
+        }
+
+        // Con el reloj del dispositivo hacia atrás desde Start, el tiempo sale negativo y no llegaría a hint_timeout_ms hasta
+        // que el reloj lo alcanzara (la búsqueda solo pararía al agotar el presupuesto): se corta enseguida.
+        private bool TimedOut(double elapsedMs)
+        {
+            return elapsedMs < 0 || elapsedMs >= _config.HintTimeoutMs;
         }
     }
 }

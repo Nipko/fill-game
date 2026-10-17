@@ -304,6 +304,27 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Worker_ClockGoesBack_CutsAtOnce()
+        {
+            using (var gate = new ManualResetEventSlim(false))
+            {
+                var clock = new ManualClock(T0);
+                var morpho = new MorphoBooster(BoosterConfig.Defaults, clock, () => gate.Wait(WaitLimitMs));
+                Assert.That(morpho.Start(TinajaDebutS0(), null, PourMode.Run, true, 1), Is.True);
+                Assert.That(morpho.Poll(out _), Is.EqualTo(MorphoPoll.Running));
+                Assert.That(morpho.TimeoutRequested, Is.False);
+                clock.Advance(TimeSpan.FromHours(-1));
+                Assert.That(morpho.Poll(out _), Is.EqualTo(MorphoPoll.Running));
+                Assert.That(morpho.TimeoutRequested, Is.True, "con el reloj hacia atrás no espera a que vuelva a alcanzar hint_timeout_ms");
+                gate.Set();
+                HintResult r = WaitDone(morpho);
+                Assert.That(r.Answer, Is.EqualTo(HintAnswer.NotFound));
+                Assert.That(r.Cancelled, Is.True);
+                Assert.That(r.Charged, Is.False);
+            }
+        }
+
+        [Test]
         public void Worker_Abandoned_DiscardsTheAnswer_AndTheNextQueryRuns()
         {
             using (var gate = new ManualResetEventSlim(false))
