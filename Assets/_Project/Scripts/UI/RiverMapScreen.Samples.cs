@@ -21,11 +21,13 @@ namespace AF.UI
     /// k son las muestras ganadas (las paradas alcanzadas y los miradores revelados) y n, las que hay en el catálogo.</description></item>
     /// <item><description><b>Muestrario</b> (<see cref="OpenSamples"/>): una hoja que tapa el Mapa con su ←, el título, el contador
     /// <c>map_facts_count</c> («Datos del río · {k}/{n}»: los datos con texto de las paradas alcanzadas y de los miradores
-    /// revelados, de todos los que hay [P]) y <b>una fila por mundo</b> del catálogo, con su nombre y sus mini cuias de pie en la
-    /// repisa del tablero (<see cref="ProceduralArt.Shelf"/>; «parece un tablero en pequeño», propuesta §7), como mucho
-    /// <see cref="SamplesPerShelf"/> por repisa: llenas del agua del sitio las alcanzadas, de vidrio con su canto crema las que
-    /// faltan; detrás de las del mundo, la muestra especial de cada mirador (con su «?»), vacía y sin toque hasta que el progreso
-    /// lo revela. Cada muestra se toca (≥ 48 dp) y abre su tarjeta. Si no cabe, se desplaza.</description></item>
+    /// revelados, de todos los que hay [P]) y <b>una fila por mundo</b> del catálogo, con su nombre y sus mini cuias de pie en su
+    /// repisa (<see cref="ProceduralArt.MapRack"/>: la ranura <c>map_rack</c> o, sin su PNG, la repisa del tablero; «parece un
+    /// tablero en pequeño», propuesta §7), como mucho <see cref="SamplesPerShelf"/> por repisa: llenas del agua del sitio las
+    /// alcanzadas, de vidrio oscuro las que faltan (la misma silueta y el mismo tamaño, todas con el pie en la misma línea de la
+    /// repisa: lo ganado manda); detrás de las del mundo, la muestra especial de cada mirador (con su «?»), vacía y sin toque
+    /// hasta que el progreso lo revela. Cada muestra se toca (≥ 48 dp) y abre su tarjeta. Si no cabe, se desplaza, con un velo
+    /// abajo que dice que hay más.</description></item>
     /// <item><description><b>Tarjeta de la parada</b> (<see cref="StopCard"/>), al tocar una mini cuia del Mapa o una muestra:
     /// entera si se alcanzó y, si no, solo la silueta y «Nivel n».</description></item>
     /// <item><description><b>Miradores</b> (<c>viewpoints[]</c> de <c>river_map_v1.json</c>): el «?»
@@ -56,6 +58,18 @@ namespace AF.UI
         /// <summary>Alto de la repisa del tablero (dp; guía 4.5).</summary>
         public const float ShelfDp = 26f;
 
+        /// <summary>
+        /// Lo que el canto de arriba de la repisa queda por encima del pie de las muestras (dp): el de las cuias del tablero
+        /// (<c>ShelfTopAboveFootDp</c>), así todas, llenas o vacías, se apoyan en la misma línea de su cara de arriba.
+        /// </summary>
+        public const float ShelfTopAboveFootDp = 3f;
+
+        /// <summary>Alto del velo del final del Muestrario cuando se desplaza (dp; revisión de M4.1).</summary>
+        public const float SamplesFadeDp = 24f;
+
+        /// <summary>Margen de los miradores con el borde de la zona del mapa al encuadrarlos (<see cref="FrameViewpoints"/>; dp).</summary>
+        public const float ViewpointFrameMarginDp = 32f;
+
         /// <summary>Lado del «?» de la muestra especial de un mirador en el Muestrario (dp) [P].</summary>
         public const float SampleBadgeDp = 18f;
 
@@ -82,6 +96,8 @@ namespace AF.UI
         private RectTransform? _samplesViewport;
         private RectTransform? _samplesContent;
         private ScrollRect? _samplesScroll;
+        private Image? _samplesFade;
+        private bool _frameViewpoints;
         private StopCard? _card;
         private RectTransform? _viewpointLayer;
         private int _samplesEarned;
@@ -201,6 +217,24 @@ namespace AF.UI
 
         /// <summary>Repisas del Muestrario abierto.</summary>
         public int SampleShelfCount => _shelfCount;
+
+        /// <summary>La repisa <paramref name="i"/> del Muestrario abierto (tests: su sprite y su línea).</summary>
+        public Image SampleShelfImage(int i)
+        {
+            return _shelves[i];
+        }
+
+        /// <summary>El velo del final del Muestrario se ve (el contenido no cabe en su visor).</summary>
+        public bool SamplesFadeShown => _samplesFade != null && _samplesFade.gameObject.activeSelf;
+
+        /// <summary>El velo del final del Muestrario.</summary>
+        public Image? SamplesFade => _samplesFade;
+
+        /// <summary>«?» del mirador <paramref name="i"/> en el Mapa (tests: su sprite y su caja).</summary>
+        public Image ViewpointGlyph(int i)
+        {
+            return _viewpoints[i].Glyph;
+        }
 
         /// <summary>La tarjeta de la parada (null hasta la primera vez que se abre).</summary>
         public StopCard? Card => _card;
@@ -547,6 +581,129 @@ namespace AF.UI
             }
         }
 
+        partial void SamplesFrame(ref float zoom, ref Vector2 center)
+        {
+            if (!_frameViewpoints || _map == null || _progress == null)
+            {
+                return;
+            }
+
+            // La caja de los miradores revelados (unidades del marco) y el zoom con que cabe en la parte libre de la zona del mapa
+            // (ViewpointFreeArea) con ViewpointFrameMarginDp por cada lado (sin pasar del de la vista Mundo).
+            if (!RevealedViewpointBox(out float x0, out float y0, out float x1, out float y1))
+            {
+                return;
+            }
+
+            Rect free = ViewpointFreeArea();
+            float availW = Mathf.Max(1f, free.width - (2f * ViewpointFrameMarginDp));
+            float availH = Mathf.Max(1f, free.height - (2f * ViewpointFrameMarginDp));
+            float fit = Mathf.Min(availW / Mathf.Max(1e-5f, (x1 - x0) * MapSpace.BasinWidthDp), availH / Mathf.Max(1e-5f, (y1 - y0) * MapSpace.BasinWidthDp));
+            zoom = Mathf.Max(1f, Mathf.Min(zoom, fit));
+            center = new Vector2((x0 + x1) * 0.5f, (y0 + y1) * 0.5f);
+        }
+
+        /// <summary>
+        /// Encuadra en la vista Mundo los miradores revelados (capturas y tests): el zoom de la vista, o menos si hace falta,
+        /// para que su caja quepa con <see cref="ViewpointFrameMarginDp"/> por cada lado, y la vista centrada en ella. False sin
+        /// miradores revelados. Un cambio de vista posterior vuelve al encuadre de siempre.
+        /// </summary>
+        internal bool FrameViewpoints()
+        {
+            if (!Visible || _map == null || _progress == null)
+            {
+                return false;
+            }
+
+            if (!RevealedViewpointBox(out float x0, out float y0, out float x1, out float y1))
+            {
+                return false;
+            }
+
+            _frameViewpoints = true;
+            try
+            {
+                ApplyView(MapView.World);
+            }
+            finally
+            {
+                _frameViewpoints = false;
+            }
+
+            // ApplyView corre la vista para las mini cuias (MarkersFrame): aquí, la caja justo en el centro de la parte libre.
+            Rect free = ViewpointFreeArea();
+            Vector2 c = _space.ToLocal(new Vector2((x0 + x1) * 0.5f, (y0 + y1) * 0.5f));
+            SetOffset(new Vector2(free.center.x - c.x, free.center.y + c.y));
+            EmitLayout();
+            return true;
+        }
+
+        /// <summary>
+        /// La parte de la zona del mapa (dp, y hacia abajo) que no tapa lo que queda fijo en el marco, como en el encuadre de las
+        /// mini cuias (M3.5): la franja entre lo de arriba («Andes ↑») y lo de abajo («Océano Atlántico ↓», «Volver a la canoa»,
+        /// salga o no, y la ventanita de casa, si tiene arte), a todo el ancho. Si no deja sitio, la zona entera.
+        /// </summary>
+        internal Rect ViewpointFreeArea()
+        {
+            float top = 0f;
+            float bottom = _viewH;
+            Narrow(AndesLabelViewRect, ref top, ref bottom);
+            Narrow(AtlanticLabelViewRect, ref top, ref bottom);
+            Narrow(BackToCanoeViewRect, ref top, ref bottom);
+            if (_homeWindow != null && _homeWindow.Ready)
+            {
+                Narrow(HomeWindowInView(), ref top, ref bottom);
+            }
+
+            return bottom - top >= (2f * ViewpointFrameMarginDp) + 1f ? Rect.MinMaxRect(0f, top, _viewW, bottom) : Rect.MinMaxRect(0f, 0f, _viewW, _viewH);
+        }
+
+        // Lo que tapa r: si está en la mitad de arriba, baja el techo; si está en la de abajo, sube el suelo.
+        private void Narrow(Rect r, ref float top, ref float bottom)
+        {
+            if (r.width <= 0f || r.height <= 0f)
+            {
+                return;
+            }
+
+            if (r.center.y < _viewH * 0.5f)
+            {
+                top = Mathf.Max(top, r.yMax);
+            }
+            else
+            {
+                bottom = Mathf.Min(bottom, r.yMin);
+            }
+        }
+
+        // La caja (unidades del marco) de los miradores revelados con el max_level del Mapa abierto. False si no hay ninguno.
+        private bool RevealedViewpointBox(out float x0, out float y0, out float x1, out float y1)
+        {
+            x0 = float.MaxValue;
+            y0 = float.MaxValue;
+            x1 = float.MinValue;
+            y1 = float.MinValue;
+            if (_map == null || _progress == null)
+            {
+                return false;
+            }
+
+            int max = Mathf.Clamp(_progress.MaxLevel, 0, WorldTable.LastLevel);
+            for (int i = 0; i < _map.Viewpoints.Count; i++)
+            {
+                RiverViewpoint v = _map.Viewpoints[i];
+                if (ViewpointRevealed(v, max))
+                {
+                    x0 = Mathf.Min(x0, v.X);
+                    y0 = Mathf.Min(y0, v.Y);
+                    x1 = Mathf.Max(x1, v.X);
+                    y1 = Mathf.Max(y1, v.Y);
+                }
+            }
+
+            return x0 <= x1;
+        }
+
         partial void SamplesLayout(RectTransform slot)
         {
             if (_samplesTab != null)
@@ -726,6 +883,8 @@ namespace AF.UI
             _samplesScroll.horizontal = false;
             _samplesScroll.vertical = true;
             _samplesScroll.movementType = ScrollRect.MovementType.Clamped;
+            _samplesFade = UiBuilder.Image("FadeBottom", _samplesViewport, _art.ScrollFade(false), BackgroundColor); // sin toques
+            _samplesFade.gameObject.SetActive(false);
             _samplesSheet.gameObject.SetActive(false);
         }
 
@@ -892,7 +1051,7 @@ namespace AF.UI
                 g.anchorMax = new Vector2(0.5f, 0.5f);
                 g.pivot = new Vector2(0.5f, 0.5f);
                 g.sizeDelta = new Vector2(ProceduralArt.MapViewpointDp, ProceduralArt.MapViewpointDp);
-                _viewpoints.Add(new ViewpointMarker(root, button));
+                _viewpoints.Add(new ViewpointMarker(root, button, glyph));
             }
 
             _viewpointCount = count;
@@ -961,10 +1120,12 @@ namespace AF.UI
                         s.Place(cx, y);
                     }
 
+                    // La repisa, con el canto de su cara de arriba ShelfTopAboveFootDp sobre el pie de las muestras (el de las
+                    // cajas de las mini cuias, llenas o vacías: la misma línea para todas).
                     Image board = ShelfAt(shelves++);
-                    UiBuilder.Place(board.rectTransform, 8f, y + SampleTouchDp - 4f, w - 16f, ShelfDp);
+                    UiBuilder.Place(board.rectTransform, 8f, y + SampleTouchDp - ShelfTopAboveFootDp, w - 16f, ShelfDp);
                     board.rectTransform.SetAsFirstSibling(); // las repisas detrás de las muestras
-                    y += SampleTouchDp + ShelfDp - 4f + 6f;
+                    y += SampleTouchDp + ShelfDp - ShelfTopAboveFootDp + 6f;
                     shelf++;
                 }
 
@@ -983,7 +1144,15 @@ namespace AF.UI
 
             _worldLabelCount = labels;
             _shelfCount = shelves;
-            UiBuilder.Place(_samplesContent!, 0f, 0f, w, Mathf.Max(viewH, y + 8f));
+
+            // Si no cabe, un velo abajo (el fondo que se funde) dice que hay más; el contenido lleva su alto de más, así la última
+            // repisa queda libre al llegar al final.
+            bool scrolls = y + 8f > viewH;
+            float contentH = scrolls ? y + SamplesFadeDp : viewH;
+            UiBuilder.Place(_samplesContent!, 0f, 0f, w, contentH);
+            UiBuilder.Place(_samplesFade!.rectTransform, 0f, viewH - SamplesFadeDp, w, SamplesFadeDp);
+            _samplesFade.gameObject.SetActive(scrolls);
+            _samplesFade.rectTransform.SetAsLastSibling();
         }
 
         private TextMeshProUGUI WorldLabelAt(int i)
@@ -1003,7 +1172,7 @@ namespace AF.UI
         {
             while (_shelves.Count <= i)
             {
-                _shelves.Add(UiBuilder.Sliced("Shelf_" + _shelves.Count, _samplesContent!, _art.Shelf, Color.white));
+                _shelves.Add(UiBuilder.Sliced("Shelf_" + _shelves.Count, _samplesContent!, _art.MapRack, Color.white)); // map_rack o la del tablero
             }
 
             _shelves[i].gameObject.SetActive(true);
@@ -1080,14 +1249,17 @@ namespace AF.UI
         // El «?» de un mirador en el Mapa: su área táctil de 48 dp con el dibujo de 28 en medio.
         private sealed class ViewpointMarker
         {
-            public ViewpointMarker(RectTransform root, Button button)
+            public ViewpointMarker(RectTransform root, Button button, Image glyph)
             {
                 Root = root;
                 Button = button;
+                Glyph = glyph;
                 Data = null!;
             }
 
             public RectTransform Root { get; }
+
+            public Image Glyph { get; }
 
             public Button Button { get; }
 

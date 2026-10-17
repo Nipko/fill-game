@@ -17,9 +17,11 @@ namespace AF.Tests.PlayMode
     /// <c>12j_muestrario_l58</c> (una fila por mundo con sus mini cuias en la repisa: de Belém a Manaos llenas, los tres miradores
     /// con su «?», las demás vacías), <c>12k_card_manaos</c> (la tarjeta de Manaos: agua negra, «Manaos · Brasil · río Negro», el
     /// fondo de la parada, el dato de llegada, «Otro dato» y el miquito), <c>12l_card_manaos_otro_dato</c> (tras «Otro dato»),
-    /// <c>12m_card_tefe_futura</c> (el lago de Tefé, futuro: la silueta y «Nivel 71»), <c>12n_card_belem</c> (Belém con sus cinco
-    /// frutas), <c>12o_map_miradores_l10</c> (max 10, la vista en el estuario: los tres «?») y <c>12p_card_mirador</c> (la tarjeta de
-    /// la isla de Marajó). Cada captura escribe su línea <c>AF_MAP</c>.
+    /// <c>12m_card_tefe_futura</c> (el lago de Tefé, futuro: la silueta con su filo de luz bajo el velo y «Nivel 71» en la
+    /// cabecera), <c>12n_card_belem</c> (Belém con sus cinco frutas), <c>12o_map_miradores_l10</c> (max 10, la vista Mundo
+    /// encuadrada en los tres «?» del estuario, con zoom: antes de guardar comprueba que los tres, con su área táctil de 48 dp,
+    /// quedan dentro de la zona del mapa a ≥ 8 dp del marco) y <c>12p_card_mirador</c> (la tarjeta de la isla de Marajó). Cada
+    /// captura escribe su línea <c>AF_MAP</c>.
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.SamplesSnapshotTests</c>
     /// sin <c>-nographics</c>); los PNG quedan en <c>Logs/snapshots/es-419/</c>.
     /// </summary>
@@ -57,7 +59,7 @@ namespace AF.Tests.PlayMode
             });
             yield return Shot(dir, 59, "12m_card_tefe_futura", m => m.OpenStopCard(7));
             yield return Shot(dir, 59, "12n_card_belem", m => m.OpenStopCard(0));
-            yield return Shot(dir, 11, "12o_map_miradores_l10", CenterOnViewpoints);
+            yield return Shot(dir, 11, "12o_map_miradores_l10", m => Assert.That(m.FrameViewpoints(), Is.True), AssertViewpointsInView);
             yield return Shot(dir, 11, "12p_card_mirador", m =>
             {
                 for (int i = 0; i < m.ViewpointCount; i++)
@@ -70,21 +72,33 @@ namespace AF.Tests.PlayMode
             });
         }
 
-        // Lleva la vista al centro de los miradores (los tres del estuario).
-        private static void CenterOnViewpoints(RiverMapScreen map)
+        // Los tres «?» del estuario, enteros y con su área táctil dentro de la zona del mapa, a ≥ 8 dp del marco y sin que los
+        // tape nada de lo fijo en el marco (rótulos, «Volver a la canoa» y la ventanita de casa: su parte libre, también a ≥ 8 dp).
+        internal static void AssertViewpointsInView(RiverMapScreen map)
         {
-            Vector2 sum = Vector2.zero;
+            Canvas.ForceUpdateCanvases();
+            Assert.That(map.ViewpointCount, Is.EqualTo(3));
+            Rect view = StopCardTests.CanvasRect(map.ViewportRect, map.Canvas);
+            Rect free = map.ViewpointFreeArea();
+            Rect inner = Rect.MinMaxRect(view.xMin + free.xMin + 8f, view.yMin + free.yMin + 8f, view.xMin + free.xMax - 8f, view.yMin + free.yMax - 8f);
+            Assert.That(free.height, Is.LessThan(map.ViewportSize.y), "lo fijo en el marco cuenta");
             for (int i = 0; i < map.ViewpointCount; i++)
             {
-                sum += map.ViewpointLocal(i);
+                string id = map.ViewpointAt(i).Id;
+                Assert.That(map.ViewpointShown(i), Is.True, id);
+                foreach (Rect r in new[]
+                {
+                    StopCardTests.CanvasRect(map.ViewpointGlyph(i).rectTransform, map.Canvas),
+                    StopCardTests.CanvasRect((RectTransform)map.ViewpointButton(i).transform, map.Canvas),
+                })
+                {
+                    Assert.That(r.xMin >= inner.xMin - 0.5f && r.yMin >= inner.yMin - 0.5f && r.xMax <= inner.xMax + 0.5f && r.yMax <= inner.yMax + 0.5f,
+                        Is.True, id + ": " + r + " dentro de " + inner);
+                }
             }
-
-            Vector2 c = sum / Mathf.Max(1, map.ViewpointCount);
-            Vector2 p = new Vector2(map.ContentOffset.x + c.x, map.ContentOffset.y - c.y);
-            map.Drag(new Vector2((map.ViewportSize.x * 0.5f) - p.x, p.y - (map.ViewportSize.y * 0.5f)));
         }
 
-        private static IEnumerator Shot(string dir, int playLevel, string name, Action<RiverMapScreen>? before)
+        private static IEnumerator Shot(string dir, int playLevel, string name, Action<RiverMapScreen>? before, Action<RiverMapScreen>? check = null)
         {
             yield return MapMarkersTests.OpenApp(playLevel);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -94,6 +108,7 @@ namespace AF.Tests.PlayMode
             before?.Invoke(map);
             map.Tick(16f);
             yield return SnapshotKit.Wait(0.2f);
+            check?.Invoke(map);
             SnapshotKit.Save(dir, name);
             StopCard? card = map.Card;
             Debug.Log("AF_MAP " + name + ": muestras " + map.SamplesEarned.ToString(CultureInfo.InvariantCulture) + "/"

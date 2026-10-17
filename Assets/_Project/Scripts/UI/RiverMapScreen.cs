@@ -1011,6 +1011,7 @@ namespace AF.UI
             if (view == MapView.World)
             {
                 _zoom = WorldZoom(map, _routes, _stops, _world, _hasCanoe, _canoeMap, _viewW, _viewH, out center);
+                SamplesFrame(ref _zoom, ref center);
             }
             else
             {
@@ -1398,6 +1399,9 @@ namespace AF.UI
 
         /// <summary>M4.1: la vista cambió de escala (los miradores).</summary>
         partial void SamplesSpace(MapSpace space);
+
+        /// <summary>M4.1: el encuadre de los miradores revelados (capturas y tests), si se pidió; si no, no toca nada.</summary>
+        partial void SamplesFrame(ref float zoom, ref Vector2 center);
 
         /// <summary>M4.1: al cerrar, la tarjeta de la parada y el Muestrario.</summary>
         partial void SamplesClose();

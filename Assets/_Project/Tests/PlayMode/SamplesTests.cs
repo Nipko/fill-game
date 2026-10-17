@@ -18,8 +18,10 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// El Muestrario del río (tarea M4.1; D-013, punto 10: Q9-A; 06 §4.5; propuesta del Mapa §7), en la escena <c>Game</c> real:
     /// con <c>max_level</c> 58, la pestaña «Muestrario · 9/n» (las 6 paradas alcanzadas, de Belém a Manaos, y los 3 miradores del
-    /// estuario), una fila por mundo del catálogo con sus mini cuias en repisas de 6 como mucho (llenas del agua del sitio las
-    /// alcanzadas, vacías las demás y, detrás, las muestras especiales de los miradores), el contador «Datos del río · k/n»; una
+    /// estuario), una fila por mundo del catálogo con sus mini cuias en repisas de 6 como mucho (la ranura <c>map_rack</c> o la
+    /// repisa del tablero; llenas del agua del sitio las alcanzadas, de vidrio oscuro las demás, con la misma caja y el pie en la
+    /// misma línea, y, detrás, las muestras especiales de los miradores), el velo del final si se desplaza, el contador «Datos del
+    /// río · k/n»; las ranuras <c>map_mirador</c> y <c>map_rack</c> mandan sobre el provisional (y entonces no se crea); una
     /// muestra abre su tarjeta; Atrás cierra la tarjeta, luego el Muestrario y luego el Mapa; la pestaña tiene su fila sin pisar
     /// nada; controles ≥ 48 dp, textos ≥ 12 sp y ningún precio.
     /// </summary>
@@ -158,6 +160,119 @@ namespace AF.Tests.PlayMode
                 {
                     Assert.That(map.SampleWorld(i), Is.EqualTo(map.SampleWorld(i + 1)), "una repisa no mezcla mundos");
                 }
+            }
+
+            // La repisa es la ranura map_rack (o, sin su PNG, la del tablero), y las muestras que faltan, de vidrio oscuro con la
+            // misma caja que las llenas y el pie en la misma línea, ShelfTopAboveFootDp bajo el canto de la repisa.
+            Canvas.ForceUpdateCanvases();
+            for (int b = 0; b < map.SampleShelfCount; b++)
+            {
+                Assert.That(map.SampleShelfImage(b).sprite, Is.SameAs(map.Art.MapRack), "repisa " + b);
+            }
+
+            Rect? filledGlass = null;
+            for (int i = 0; i < map.SampleCount; i++)
+            {
+                SampleCuia cuia = map.SampleCuiaAt(i);
+                Assert.That(cuia.DarkEmpty, Is.EqualTo(!map.SampleEarned(i)), "muestra " + i + ": vidrio oscuro solo si falta");
+                Rect glass = StopCardTests.CanvasRect(cuia.Glass.rectTransform, map.Canvas);
+                Rect shelf = StopCardTests.CanvasRect(map.SampleShelfImage(map.SampleShelf(i)).rectTransform, map.Canvas);
+                Assert.That(glass.yMax, Is.EqualTo(shelf.yMin + RiverMapScreen.ShelfTopAboveFootDp).Within(0.5f), "muestra " + i + ": el pie en la línea de la repisa");
+                if (filledGlass == null)
+                {
+                    filledGlass = glass;
+                }
+
+                Assert.That(glass.width, Is.EqualTo(filledGlass.Value.width).Within(0.5f), "muestra " + i + ": el mismo ancho");
+                Assert.That(glass.height, Is.EqualTo(filledGlass.Value.height).Within(0.5f), "muestra " + i + ": el mismo alto");
+                Assert.That(glass.width, Is.EqualTo(ProceduralArt.MiniCuiaWidthDp * RiverMapScreen.SampleScale).Within(0.5f), "30 × 48 dp");
+                Assert.That(glass.height, Is.EqualTo(ProceduralArt.MiniCuiaHeightDp * RiverMapScreen.SampleScale).Within(0.5f));
+                if (!map.SampleEarned(i))
+                {
+                    Assert.That(cuia.Glass.sprite, Is.SameAs(map.Art.MapMiniCuiaEmpty));
+                    Assert.That(cuia.Filled, Is.False);
+                }
+            }
+
+            // Si no cabe, el velo del final dice que hay más, en el borde de abajo del visor y sin toques.
+            RectTransform content = (RectTransform)map.SamplesSheet!.Find("Viewport/Content");
+            RectTransform viewportRt = (RectTransform)map.SamplesSheet.Find("Viewport");
+            bool scrolls = content.rect.height > viewportRt.rect.height + 0.5f;
+            Assert.That(map.SamplesFadeShown, Is.EqualTo(scrolls));
+            if (scrolls)
+            {
+                Rect fade = StopCardTests.CanvasRect(map.SamplesFade!.rectTransform, map.Canvas);
+                Rect view = StopCardTests.CanvasRect(viewportRt, map.Canvas);
+                Assert.That(fade.yMax, Is.EqualTo(view.yMax).Within(0.5f));
+                Assert.That(fade.height, Is.EqualTo(RiverMapScreen.SamplesFadeDp).Within(0.5f));
+                Assert.That(map.SamplesFade.raycastTarget, Is.False);
+                Assert.That(map.SamplesFade.color, Is.EqualTo(RiverMapScreen.BackgroundColor));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Slots_MiradorAndRack_ThePngRules_OtherwiseTheProvisional()
+        {
+            var art = new ProceduralArt("white");
+            var tex = new Texture2D(8, 8);
+            Sprite png = Sprite.Create(tex, new Rect(0f, 0f, 8f, 8f), new Vector2(0.5f, 0.5f));
+            try
+            {
+                // Las ranuras son las del glosario §11 (y del encargo del Mapa).
+                Assert.That(ProceduralArt.MapViewpointSlot, Is.EqualTo("map_mirador"));
+                Assert.That(ProceduralArt.MapRackSlot, Is.EqualTo("map_rack"));
+                Assert.That(ArtSlots.IsKnown(ProceduralArt.MapViewpointSlot), Is.True);
+                Assert.That(ArtSlots.IsKnown(ProceduralArt.MapRackSlot), Is.True);
+
+                // Perezosas: el constructor no crea nada; con el PNG de la ranura, el provisional no se crea nunca.
+                Assert.That(art.SamplesArtBuilt, Is.False, "el constructor no crea el mirador ni el vidrio oscuro");
+                Assert.That(art.MapViewpointFor(png), Is.SameAs(png), "con su PNG, map_mirador manda");
+                Assert.That(art.MapRackFor(png), Is.SameAs(png), "con su PNG, map_rack manda");
+                Assert.That(art.SamplesArtBuilt, Is.False, "con el PNG, el provisional no se crea");
+
+                // Sin PNG: el mirador provisional (una vez) y la repisa del tablero.
+                Sprite viewpoint = art.MapViewpointFor(null);
+                Assert.That(viewpoint, Is.Not.Null);
+                Assert.That(art.SamplesArtBuilt, Is.True);
+                Assert.That(art.MapViewpointFor(null), Is.SameAs(viewpoint), "se crea una vez y se guarda");
+                Assert.That(art.MapRackFor(null), Is.SameAs(art.Shelf), "sin map_rack, la repisa del tablero");
+                Assert.That(art.MapViewpoint, Is.SameAs(ArtSlots.Find(ProceduralArt.MapViewpointSlot) ?? viewpoint), "lee su ranura");
+                Assert.That(art.MapRack, Is.SameAs(ArtSlots.Find(ProceduralArt.MapRackSlot) ?? art.Shelf), "lee su ranura");
+                Assert.That(viewpoint.rect.width / (viewpoint.pixelsPerUnit / 100f), Is.EqualTo(ProceduralArt.MapViewpointDp).Within(0.6f), "28 dp");
+
+                // El vidrio oscuro: la caja de la mini cuia (20 × 32 dp), perezoso.
+                art.Dispose();
+                yield return null; // en Play Mode, Destroy libera al final del fotograma
+                Assert.That(art.SamplesArtBuilt, Is.False, "tras liberar, nada queda");
+                Sprite empty = art.MapMiniCuiaEmpty;
+                Assert.That(art.SamplesArtBuilt, Is.True);
+                Assert.That(art.MapMiniCuiaEmpty, Is.SameAs(empty));
+                Sprite glass = art.MapMiniCuiaFor(null);
+                Assert.That(empty.rect.width, Is.EqualTo(glass.rect.width), "la misma caja que el vidrio");
+                Assert.That(empty.rect.height, Is.EqualTo(glass.rect.height));
+                Assert.That(empty.pivot, Is.EqualTo(glass.pivot));
+                art.Dispose();
+                yield return null;
+                Assert.That(art.SamplesArtBuilt, Is.False);
+                Assert.That(art.MapViewpointFor(null), Is.Not.Null, "y se vuelve a generar al pedirlo");
+            }
+            finally
+            {
+                art.Dispose();
+                Object.DestroyImmediate(png);
+                Object.DestroyImmediate(tex);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator TheViewpointMarkers_UseTheMiradorSlot()
+        {
+            yield return MapMarkersTests.OpenApp(11);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Assert.That(map.ViewpointCount, Is.EqualTo(3));
+            for (int i = 0; i < map.ViewpointCount; i++)
+            {
+                Assert.That(map.ViewpointGlyph(i).sprite, Is.SameAs(map.Art.MapViewpoint), map.ViewpointAt(i).Id);
             }
         }
 

@@ -23,7 +23,10 @@ namespace AF.Tests.PlayMode
     /// <item>la tarjeta de Manaos con <c>max_level</c> 58, completa: la mini cuia de agua negra, «Manaos · Brasil · río Negro», el
     /// fondo de la parada en pequeño, el dato de llegada y sus dos «Otro dato» en ciclo, la fuente solo si tiene fila y el miquito
     /// del tramo; Belém con sus cinco frutas y el Encuentro con el achiote;</item>
-    /// <item>una parada futura: solo la silueta y «Nivel 71»;</item>
+    /// <item>la fuente del dato («Fuente: …», <c>map_card_source</c>) con su fila en un catálogo de prueba: dentro de la placa,
+    /// bajo el dato, ≥ 12 sp y con contraste; con los datos reales de Manaos, pendiente (el contrato de la etiqueta de la fuente no
+    /// está fijado y <c>stops.py</c> no la genera: el test queda en Ignore con el motivo);</item>
+    /// <item>una parada futura: solo la silueta con su filo de luz bajo el velo y «Nivel 71» en la cabecera;</item>
     /// <item>los tres miradores del estuario desde el 10 (ninguno con 9), solo en la vista Mundo, y su tarjeta;</item>
     /// <item>su ←, el velo y el Atrás de Android la cierran sin cerrar el Mapa;</item>
     /// <item>ningún precio ni semilla, contraste ≥ 4,5:1, controles ≥ 48 dp y textos ≥ 12 sp sin recortes.</item>
@@ -97,9 +100,9 @@ namespace AF.Tests.PlayMode
             card.OtherFactButton.onClick.Invoke();
             Assert.That(card.FactKey, Is.EqualTo("map.stop.manaos.dato_02"), "vuelve al de llegada");
 
-            // La fuente: solo con su fila <clave>.source (hoy ninguna: el bloque map.* es de stops.py).
-            Assert.That(card.SourceText, Is.EqualTo(Loc.Has("map.stop.manaos.dato_02" + StopCard.SourceSuffix)
-                ? UiText.MapCardSource(Loc.Fact("map.stop.manaos.dato_02" + StopCard.SourceSuffix)) : string.Empty));
+            // La fuente del dato: ManaosCard_ShowsTheSourceOfItsFact (pendiente) y Source_WithItsRow_IsShownInsideThePlate.
+            Assert.That(card.FutureToneOn, Is.False, "una parada alcanzada, a todo color");
+            Assert.That(card.HeroTone.enabled || card.ShapeTone.enabled, Is.False, "sin silueta");
 
             // El miquito del tramo (51-60, mundo 3) y ninguna fruta (el achiote debuta en el 41, el agua del Negro en el 61).
             FaunaSpecies? species = StopCard.SpeciesOf(boot.Fauna, manaos);
@@ -111,6 +114,78 @@ namespace AF.Tests.PlayMode
             Assert.That(card.FaunaName, Is.Not.Empty);
             Assert.That(card.FruitCount, Is.EqualTo(0));
             Assert.That(card.FutureLevelText, Is.Empty);
+        }
+
+        [UnityTest]
+        [Ignore("Pendiente [P] de M4.1: 06 §4.5 y la propuesta del Mapa §7 piden «el dato con su fuente», pero ni 08 §4.7 ni el glosario fijan dónde va la etiqueta corta de la fuente (fila <clave del dato>.source de facts.csv, otra forma o un campo de river_stops_v1.json derivado de fuente/fuentes) y tools/river-map/stops.py no la genera; lo decide el dueño y lo genera el carril del Mapa.")]
+        public IEnumerator ManaosCard_ShowsTheSourceOfItsFact()
+        {
+            yield return MapMarkersTests.OpenApp(59);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Assert.That(map.OpenStopCard(5), Is.True);
+            StopCard card = map.Card!;
+            Assert.That(card.FactKey, Is.EqualTo("map.stop.manaos.dato_02"));
+            Assert.That(card.SourceText, Is.Not.Empty, "el dato de llegada de Manaos, con su fuente");
+            Assert.That(card.SourceText, Is.EqualTo(UiText.MapCardSource(StopCard.SourceOf("map.stop.manaos.dato_02"))));
+        }
+
+        [UnityTest]
+        public IEnumerator Source_WithItsRow_IsShownInsideThePlate()
+        {
+            const string factKey = "map.stop.manaos.dato_02";
+            const string source = "Fuente de prueba";
+            foreach (float textScale in new[] { 1f, UiBuilder.MaxTextScale })
+            {
+                LaunchOptions.FontScaleOverride = textScale;
+                yield return MapMarkersTests.OpenApp(59);
+                RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+                string where = "al " + Mathf.RoundToInt(textScale * 100f) + " %";
+
+                // Un catálogo de prueba: las tablas del proyecto y la fila de la fuente del dato de llegada de Manaos.
+#if UNITY_EDITOR
+                string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
+                string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile);
+#else
+                Assert.Ignore("Lee las tablas del proyecto: solo en el Editor.");
+                string strings = string.Empty;
+                string facts = string.Empty;
+#endif
+                string row = factKey + StopCard.SourceSuffix + "," + source + ",,,Prueba de M4.1: fuente corta del dato.,30,aprobado_es,,,,\n";
+                Loc.Configure(LocCatalog.Parse(strings, facts + row), LocLocale.SourceLocale, true);
+                try
+                {
+                    Assert.That(StopCard.SourceOf(factKey), Is.EqualTo(source));
+                    Assert.That(map.OpenStopCard(5), Is.True);
+                    Canvas.ForceUpdateCanvases();
+                    StopCard card = map.Card!;
+                    Assert.That(card.FactKey, Is.EqualTo(factKey));
+                    Assert.That(card.SourceText, Is.EqualTo(UiText.MapCardSource(source)), where);
+                    Assert.That(card.SourceText, Does.Contain(source));
+                    Assert.That(card.SourceLabel.gameObject.activeInHierarchy, Is.True, where);
+                    Assert.That(new List<TextMeshProUGUI>(card.Texts()), Does.Contain(card.SourceLabel), where);
+
+                    // Dentro de la placa, bajo el dato, ≥ 12 sp, sin recortes y con contraste ≥ 4,5:1 sobre la madera oscura.
+                    Rect panel = CanvasRect(card.PanelRect, map.Canvas);
+                    Rect text = CanvasRect(card.SourceLabel.rectTransform, map.Canvas);
+                    Rect fact = CanvasRect(card.FactLabel.rectTransform, map.Canvas);
+                    Assert.That(panel.Contains(text.min + new Vector2(0.5f, 0.5f)) && panel.Contains(text.max - new Vector2(0.5f, 0.5f)), Is.True, where + ": dentro de la placa");
+                    Assert.That(text.yMin, Is.GreaterThanOrEqualTo(fact.yMax - 0.5f), where + ": bajo el dato");
+                    Assert.That(card.SourceLabel.fontSize, Is.GreaterThanOrEqualTo((UiBuilder.MinTextSp * textScale) - 0.01f), where);
+                    Assert.That(new LocInventory(LocLocale.SourceLocale, textScale).ProblemsOf(card.SourceLabel), Is.Empty, where);
+                    Assert.That(card.SourceLabel.color, Is.EqualTo(StopCard.SourceColor));
+                    Assert.That(ColorMath.ContrastRatio(StopCard.SourceColor, Palette.WoodDark), Is.GreaterThanOrEqualTo(4.5f));
+
+                    // Con «Otro dato», el siguiente no tiene fuente: la línea se va.
+                    card.OtherFact();
+                    Assert.That(card.SourceText, Is.Empty);
+                    Assert.That(card.SourceLabel.gameObject.activeSelf, Is.False);
+                }
+                finally
+                {
+                    LocSetUpFixture.ConfigureEs419();
+                    LaunchOptions.Reset();
+                }
+            }
         }
 
         [UnityTest]
@@ -160,15 +235,120 @@ namespace AF.Tests.PlayMode
             Assert.That(card.FruitCount, Is.EqualTo(0));
             Assert.That(card.SampleShown, Is.False);
             Assert.That(card.SceneShown, Is.True, "la silueta del sitio sobre su fondo");
-            Assert.That(card.Backdrop.ShapeGraphic.canvasRenderer.GetColor(), Is.EqualTo(StopCard.SilhouetteColor));
-            Assert.That(card.Backdrop.HeroImage.canvasRenderer.GetColor(), Is.EqualTo(StopCard.SilhouetteColor));
+
+            // El fondo entero bajo el velo de madera oscura, con el cielo y los montes apagados, y el héroe en silueta con su
+            // filo de luz de 1 dp (revisión de M4.1: el misterio se lee a tamaño de teléfono).
+            Canvas.ForceUpdateCanvases();
+            Assert.That(card.FutureToneOn, Is.True);
+            Assert.That(card.FutureVeil.color, Is.EqualTo(StopCard.FutureVeilColor));
+            Rect veil = CanvasRect(card.FutureVeil.rectTransform, map.Canvas);
+            Rect window = CanvasRect(card.SceneRect, map.Canvas);
+            Assert.That(veil.xMin <= window.xMin + 1.5f && veil.yMin <= window.yMin + 1.5f && veil.xMax >= window.xMax - 1.5f && veil.yMax >= window.yMax - 1.5f,
+                Is.True, "el velo cubre la ventana entera: " + veil + " frente a " + window);
+            Assert.That(card.MuteTones.Count, Is.EqualTo(6));
+            foreach (StopCard.ToneEffect tone in card.MuteTones)
+            {
+                Assert.That(tone.enabled, Is.True, tone.name);
+                Assert.That(tone.Kind, Is.EqualTo(StopCard.ToneKind.Mute));
+            }
+
+            Assert.That(card.HeroTone.enabled && card.ShapeTone.enabled, Is.True, "el héroe, en PNG o provisional, en silueta");
+            Assert.That(card.ShapeTone.Kind, Is.EqualTo(StopCard.ToneKind.Silhouette));
+            float scale = card.SceneRect.rect.width / StopCard.SceneWorldWidthDp;
+            Assert.That(card.ShapeTone.RimDistance * scale, Is.EqualTo(StopCard.RimLightDp).Within(0.05f), "1 dp en pantalla");
+            Assert.That(card.Backdrop.ShapeGraphic.canvasRenderer.GetColor(), Is.EqualTo(Color.white), "el tono va en la malla");
             Assert.That(card.Backdrop.HeroReflection.canvasRenderer.GetAlpha(), Is.EqualTo(0f), "sin reflejo");
+
+            // «Nivel 71» en la fila de la cabecera, a la derecha del ←, centrado con él en vertical; nada debajo del fondo.
             var texts = new List<TextMeshProUGUI>(card.Texts());
             Assert.That(texts.Count, Is.EqualTo(1), "solo «Nivel 71»");
+            Rect level = CanvasRect(card.FutureLevelRect, map.Canvas);
+            Rect close = CanvasRect((RectTransform)card.CloseButton.transform, map.Canvas);
+            Rect panel = CanvasRect(card.PanelRect, map.Canvas);
+            Assert.That(level.xMin, Is.GreaterThanOrEqualTo(close.xMax), "a la derecha del ←");
+            Assert.That(level.center.y, Is.EqualTo(close.center.y).Within(1f), "centrado con el ← en vertical");
+            Assert.That(level.yMax, Is.LessThanOrEqualTo(window.yMin), "encima del fondo");
+            Assert.That(panel.yMax - window.yMax, Is.LessThanOrEqualTo(StopCard.PadDp + 4f), "sin fila debajo del fondo");
+            Assert.That(texts[0].fontSize, Is.GreaterThanOrEqualTo(UiBuilder.MinTextSp - 0.01f));
 
-            // Al volver a una alcanzada, el héroe ya no va en silueta.
+            // Al volver a una alcanzada, el héroe ya no va en silueta y el fondo, a todo color.
             Assert.That(map.OpenStopCard(5), Is.True);
-            Assert.That(card.Backdrop.ShapeGraphic.canvasRenderer.GetColor(), Is.EqualTo(Color.white));
+            Assert.That(card.FutureToneOn, Is.False);
+            Assert.That(card.ShapeTone.enabled || card.HeroTone.enabled, Is.False);
+            foreach (StopCard.ToneEffect tone in card.MuteTones)
+            {
+                Assert.That(tone.enabled, Is.False, tone.name);
+            }
+
+            Assert.That(card.Backdrop.HeroReflection.canvasRenderer.GetAlpha(), Is.EqualTo(1f));
+        }
+
+        [Test]
+        public void ToneEffect_PaintsTheSilhouetteWithItsRimLight_AndMutesTheBackground()
+        {
+            var go = new GameObject("ToneTest", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            try
+            {
+                StopCard.ToneEffect tone = go.AddComponent<StopCard.ToneEffect>().Silhouette(2f);
+                var color = new Color32(200, 120, 40, 128);
+                VertexHelper vh = Triangle(color);
+                tone.ModifyMesh(vh);
+                var verts = new List<UIVertex>();
+                vh.GetUIVertexStream(verts);
+                Assert.That(verts.Count, Is.EqualTo(15), "cuatro copias del filo y la silueta");
+                for (int i = 0; i < 12; i++)
+                {
+                    Color c = verts[i].color;
+                    Assert.That(c.r, Is.EqualTo(StopCard.RimLightColor.r).Within(0.01f));
+                    Assert.That(c.a, Is.EqualTo(StopCard.RimLightColor.a * (128f / 255f)).Within(0.01f), "el alfa del vértice cuenta");
+                }
+
+                Assert.That(verts[0].position.x - verts[12].position.x, Is.EqualTo(2f).Within(0.001f), "desplazadas RimDistance");
+                Assert.That(verts[3].position.x - verts[12].position.x, Is.EqualTo(-2f).Within(0.001f));
+                Assert.That(verts[6].position.y - verts[12].position.y, Is.EqualTo(2f).Within(0.001f));
+                Assert.That(verts[9].position.y - verts[12].position.y, Is.EqualTo(-2f).Within(0.001f));
+                for (int i = 12; i < 15; i++)
+                {
+                    Color c = verts[i].color;
+                    Assert.That(c.g, Is.EqualTo(StopCard.SilhouetteColor.g).Within(0.01f), "la silueta, encima");
+                    Assert.That(c.a, Is.EqualTo(StopCard.SilhouetteColor.a * (128f / 255f)).Within(0.01f));
+                }
+
+                tone.Mute(StopCard.FutureSaturation, StopCard.FutureMultiply, StopCard.FutureVeilAlpha);
+                vh = Triangle(color);
+                tone.ModifyMesh(vh);
+                verts.Clear();
+                vh.GetUIVertexStream(verts);
+                Assert.That(verts.Count, Is.EqualTo(3));
+                Color expected = StopCard.FutureTone(color, StopCard.FutureSaturation, StopCard.FutureMultiply, StopCard.FutureVeilAlpha);
+                Assert.That(((Color)verts[0].color).r, Is.EqualTo(expected.r).Within(0.01f));
+                Assert.That(((Color)verts[0].color).a, Is.EqualTo(128f / 255f).Within(0.01f), "conserva el alfa");
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+
+            // El tono: un gris queda gris, la saturación baja a 0,2 y el velo lleva a la madera oscura.
+            Color gray = StopCard.FutureTone(new Color(0.5f, 0.5f, 0.5f, 1f), 0.2f, 1f, 0f);
+            Assert.That(gray.r, Is.EqualTo(0.5f).Within(0.001f));
+            Color green = new Color(0.2f, 0.7f, 0.3f, 1f);
+            Color muted = StopCard.FutureTone(green, 0.2f, 1f, 0f);
+            Assert.That(muted.g - muted.r, Is.EqualTo((green.g - green.r) * 0.2f).Within(0.001f));
+            Color dark = StopCard.FutureTone(green, 1f, 0.45f, 0f);
+            Assert.That(dark.g, Is.EqualTo(green.g * 0.45f).Within(0.001f));
+            Color veiled = StopCard.FutureTone(green, 1f, 1f, 1f);
+            Assert.That(veiled.r, Is.EqualTo(Palette.WoodDark.r).Within(0.001f));
+        }
+
+        private static VertexHelper Triangle(Color32 color)
+        {
+            var vh = new VertexHelper();
+            vh.AddVert(new Vector3(0f, 0f, 0f), color, Vector4.zero);
+            vh.AddVert(new Vector3(10f, 0f, 0f), color, Vector4.zero);
+            vh.AddVert(new Vector3(0f, 10f, 0f), color, Vector4.zero);
+            vh.AddTriangle(0, 1, 2);
+            return vh;
         }
 
         [UnityTest]
@@ -192,6 +372,16 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(ids, Is.EquivalentTo(new[] { "boca_del_amazonas", "macapa_y_la_linea_del_ecuador", "isla_de_marajo" }));
+
+            // Encuadrados (capturas), los tres caben enteros con su área táctil, a ≥ 8 dp del marco; un cambio de vista vuelve
+            // al encuadre de siempre.
+            float zoom = map.Zoom;
+            Assert.That(map.FrameViewpoints(), Is.True);
+            Assert.That(map.Zoom, Is.LessThanOrEqualTo(zoom));
+            SamplesSnapshotTests.AssertViewpointsInView(map);
+            map.SetView(MapView.Basin);
+            map.SetView(MapView.World);
+            Assert.That(map.Zoom, Is.EqualTo(zoom).Within(0.001f));
 
             // En la Cuenca, como las mini cuias, no se pintan.
             map.SetView(MapView.Basin);
@@ -323,6 +513,20 @@ namespace AF.Tests.PlayMode
 
             Assert.That(tints.Count, Is.EqualTo(14), "los 14 tintes de la paleta (glosario §9)");
             Assert.That(levels, Is.EqualTo(SightingRule.FruitDebutLevels), "los mismos niveles que las tarjetas «Fruta nueva»");
+
+            // Los 14 pares (nivel, tinte) de la columna «Debut» del glosario §9, fijados aquí: un cambio en la tabla se detecta.
+            var expected = new[]
+            {
+                "1 aguaje", "1 acai", "2 tapereba", "4 guanabana", "7 bacaba", "11 agua_tapajos", "21 camu_camu", "41 urucum",
+                "61 agua_negro", "81 cupuacu", "111 lulo", "141 jenipapo", "201 cacao", "301 araza",
+            };
+            var actual = new List<string>();
+            for (int i = 0; i < StopCard.TintDebuts.GetLength(0); i++)
+            {
+                actual.Add(StopCard.TintDebuts[i, 0] + " " + ProceduralArt.TintIds[StopCard.TintDebuts[i, 1]]);
+            }
+
+            Assert.That(actual, Is.EqualTo(expected));
             Assert.That(StopCard.TintNameKey(0), Is.Null);
             Assert.That(StopCard.TintNameKey(15), Is.Null);
         }

@@ -32,12 +32,16 @@ namespace AF.UI
     /// (<c>sample</c>) y la placa <c>map_arrived</c> («{lugar} · {país} · río {río}», con sus cortes <c>{sep}</c> donde la línea se
     /// parte); el fondo del tablero de la parada en pequeño (el panorama con <see cref="StopBackdrop"/>: cielo, banda de agua del
     /// mundo, piezas por código y héroe, a la escala de la tarjeta); el dato (el de llegada y, con «Otro dato»
-    /// (<c>map_card_other_fact</c>), los demás de la parada, uno cada vez) con su fuente (<c>map_card_source</c>, solo si la fila
-    /// <c>&lt;clave del dato&gt;.source</c> [P] tiene texto: hoy ninguna lo tiene, ver <see cref="SourceSuffix"/>); el miquito del
-    /// tramo (su retrato y su nombre, <c>fauna.&lt;id&gt;.name</c>, solo con su arte de tarjeta) y la fruta que debutó en sus
-    /// niveles (icono y nombre, <c>tint.&lt;id&gt;.name</c>; <see cref="TintDebuts"/>).</description></item>
-    /// <item><description><b>Parada futura</b> (<see cref="StopCardMode.Future"/>): solo el fondo con el héroe en silueta y «Nivel
-    /// n» (<c>level_n</c>, su primer nivel): ni nombre, ni datos, ni la Canasta.</description></item>
+    /// (<c>map_card_other_fact</c>), los demás de la parada, uno cada vez) con su fuente (<c>map_card_source</c>, «Fuente: …»,
+    /// bajo el dato, si la fila <c>&lt;clave del dato&gt;.source</c> [P] tiene texto; ver <see cref="SourceSuffix"/>: el contrato
+    /// de esa etiqueta está pendiente y hoy ningún dato la tiene); el miquito del tramo (su retrato y su nombre,
+    /// <c>fauna.&lt;id&gt;.name</c>, solo con su arte de tarjeta) y la fruta que debutó en sus niveles (icono y nombre,
+    /// <c>tint.&lt;id&gt;.name</c>; <see cref="TintDebuts"/>).</description></item>
+    /// <item><description><b>Parada futura</b> (<see cref="StopCardMode.Future"/>): solo la silueta del sitio y «Nivel n»
+    /// (<c>level_n</c>, su primer nivel, en la fila de la cabecera, a la derecha del ←): ni nombre, ni datos, ni la Canasta. El
+    /// fondo entero va bajo un velo de madera oscura (<see cref="FutureVeilColor"/>) con el cielo y los montes desaturados
+    /// (<see cref="FutureTone"/>), y el héroe en <see cref="SilhouetteColor"/> con un filo de luz de <see cref="RimLightDp"/> dp
+    /// (<see cref="RimLightColor"/>) para que la silueta se lea (revisión de M4.1).</description></item>
     /// <item><description><b>Mirador</b> (<see cref="StopCardMode.Viewpoint"/>): su «?», su nombre (<c>map.stop.&lt;id&gt;.name</c>)
     /// y su dato, si tiene texto.</description></item>
     /// </list>
@@ -102,8 +106,13 @@ namespace AF.UI
 
         /// <summary>
         /// Final de la clave de la fuente de un dato [P]: la fila <c>&lt;clave del dato&gt;.source</c> de <c>facts.csv</c> con el
-        /// nombre corto de la fuente tal cual («Ramsar», «SINCHI»; <c>map_card_source</c>). <c>tools/river-map/stops.py</c> aún no
-        /// genera esas filas (el bloque <c>map.*</c> es solo suyo), así que hoy la línea de la fuente no sale.
+        /// nombre corto de la fuente tal cual («Ramsar», «SINCHI»; <c>map_card_source</c>, 06 §4.5 y propuesta del Mapa §7: «el
+        /// dato con su fuente»). <b>Pendiente</b>: ni 08 §4.7 ni el glosario §10-§11 fijan dónde va esa etiqueta (una fila de
+        /// <c>facts.csv</c> con esta u otra forma, o un campo de <c>river_stops_v1.json</c> derivado de <c>fuente</c> /
+        /// <c>fuentes</c> de los datos de origen), y el bloque <c>map.*</c> de <c>facts.csv</c> es solo de
+        /// <c>tools/river-map/stops.py</c>, que aún no la genera: hasta que el dueño fije el contrato y el carril del Mapa la genere,
+        /// ningún dato tiene fuente y la línea no sale (la tarjeta la enseña en cuanto exista la fila; lo prueba
+        /// <c>StopCardTests</c> con un catálogo de prueba).
         /// </summary>
         public const string SourceSuffix = ".source";
 
@@ -115,6 +124,24 @@ namespace AF.UI
 
         /// <summary>Tinte del héroe de una parada futura: una silueta de madera oscura [P].</summary>
         public static readonly Color SilhouetteColor = new Color(0.16f, 0.12f, 0.10f, 0.92f);
+
+        /// <summary>Filo de luz de la silueta de una parada futura (revisión de M4.1): crema al 35 %.</summary>
+        public static readonly Color RimLightColor = new Color(Palette.Cream.r, Palette.Cream.g, Palette.Cream.b, 0.35f);
+
+        /// <summary>Velo sobre el fondo entero de una parada futura (revisión de M4.1): madera oscura al 55 %.</summary>
+        public static readonly Color FutureVeilColor = new Color(Palette.WoodDark.r, Palette.WoodDark.g, Palette.WoodDark.b, FutureVeilAlpha);
+
+        /// <summary>Ancho del filo de luz de la silueta de una parada futura (dp en pantalla).</summary>
+        public const float RimLightDp = 1f;
+
+        /// <summary>Saturación del cielo y los montes de una parada futura (revisión de M4.1).</summary>
+        public const float FutureSaturation = 0.2f;
+
+        /// <summary>Factor que oscurece el cielo y los montes de una parada futura (revisión de M4.1).</summary>
+        public const float FutureMultiply = 0.45f;
+
+        /// <summary>Opacidad del velo de madera oscura de una parada futura (revisión de M4.1).</summary>
+        public const float FutureVeilAlpha = 0.55f;
 
         /// <summary>
         /// Debut de cada tinte (glosario §9, columna «Debut»; 07 §3; 06 §4.5): pares (nivel, índice de motor) en orden de nivel. El
@@ -140,7 +167,11 @@ namespace AF.UI
         private readonly RectTransform _sceneWorld;
         private readonly Image _sceneSky;
         private readonly Image _panorama;
+        private readonly Image _sceneVeil;
         private readonly StopBackdrop _backdrop;
+        private readonly List<ToneEffect> _mutes = new List<ToneEffect>();
+        private readonly ToneEffect _heroTone;
+        private readonly ToneEffect _shapeTone;
         private readonly TextMeshProUGUI _futureLevel;
         private readonly TextMeshProUGUI _fact;
         private readonly TextMeshProUGUI _source;
@@ -218,9 +249,24 @@ namespace AF.UI
             UiBuilder.Stretch(_sceneSky.rectTransform);
             _panorama = UiBuilder.Image("Panorama", panoramaClip, art.Panorama, Color.white);
             UiBuilder.Place(_panorama.rectTransform, 0f, SceneSkyDp - SceneHorizonDp, SceneWorldWidthDp, SceneWorldWidthDp * (ProceduralArt.PanoramaHeightDp / 360f));
+            _sceneVeil = UiBuilder.Image("FutureVeil", panoramaClip, null, FutureVeilColor); // sobre el panorama, bajo el fondo
+            UiBuilder.Stretch(_sceneVeil.rectTransform);
+            _sceneVeil.gameObject.SetActive(false);
             _backdrop = new StopBackdrop(_sceneWorld, art);
 
-            _futureLevel = UiBuilder.Label("FutureLevel", _panel.transform, TextStyle.ModalTitle, string.Empty, FutureLevelSp, Palette.Cream, TextAlignmentOptions.Center);
+            // El tono de una parada futura (revisión de M4.1), apagado hasta que se pide: cielo y montes desaturados bajo el velo;
+            // el cielo, la banda y las piezas del fondo de la parada con el mismo velo hecho en sus vértices (van encima de la
+            // capa del velo); y el héroe en silueta con su filo de luz, por encima de todo.
+            _mutes.Add(AddTone(baseFill).Mute(FutureSaturation, FutureMultiply, 0f));
+            _mutes.Add(AddTone(_sceneSky).Mute(FutureSaturation, FutureMultiply, 0f));
+            _mutes.Add(AddTone(_panorama).Mute(FutureSaturation, FutureMultiply, 0f));
+            _mutes.Add(AddTone(_backdrop.SkyGraphic).Mute(FutureSaturation, FutureMultiply, FutureVeilAlpha));
+            _mutes.Add(AddTone(_backdrop.BandGraphic).Mute(1f, 1f, FutureVeilAlpha));
+            _mutes.Add(AddTone(_backdrop.CodeGraphic).Mute(1f, 1f, FutureVeilAlpha));
+            _heroTone = AddTone(_backdrop.HeroImage).Silhouette(RimLightDp);
+            _shapeTone = AddTone(_backdrop.ShapeGraphic).Silhouette(RimLightDp);
+
+            _futureLevel = UiBuilder.Label("FutureLevel", _panel.transform, TextStyle.ModalTitle, string.Empty, FutureLevelSp, Palette.Cream, TextAlignmentOptions.Left);
             UiBuilder.AutoSize(_futureLevel, UiBuilder.MinTextSp, FutureLevelSp);
 
             _fact = UiBuilder.Label("Fact", _panel.transform, TextStyle.Body, string.Empty, FactSp, Palette.Cream, TextAlignmentOptions.TopLeft);
@@ -288,6 +334,30 @@ namespace AF.UI
 
         /// <summary>«Nivel n» de una parada futura (vacío en las demás).</summary>
         public string FutureLevelText => _futureLevel.gameObject.activeSelf ? _futureLevel.text : string.Empty;
+
+        /// <summary>«Nivel n» de una parada futura (tests: en la fila de la cabecera).</summary>
+        public RectTransform FutureLevelRect => _futureLevel.rectTransform;
+
+        /// <summary>«Fuente: …» (tests: dentro de la placa, ≥ 12 sp).</summary>
+        internal TextMeshProUGUI SourceLabel => _source;
+
+        /// <summary>El dato (tests: la fuente va debajo).</summary>
+        internal TextMeshProUGUI FactLabel => _fact;
+
+        /// <summary>El fondo va con el tono de una parada futura: el velo, el cielo y los montes apagados y el héroe en silueta.</summary>
+        public bool FutureToneOn => _sceneVeil.gameObject.activeSelf;
+
+        /// <summary>Velo de madera oscura sobre el fondo de una parada futura.</summary>
+        public Image FutureVeil => _sceneVeil;
+
+        /// <summary>Tono del héroe en PNG (la silueta con su filo de luz en una parada futura).</summary>
+        public ToneEffect HeroTone => _heroTone;
+
+        /// <summary>Tono de la silueta provisional del héroe.</summary>
+        public ToneEffect ShapeTone => _shapeTone;
+
+        /// <summary>Tonos que apagan el fondo de una parada futura (cielo, montes, banda y piezas).</summary>
+        public IReadOnlyList<ToneEffect> MuteTones => _mutes;
 
         /// <summary>Se ve el fondo de la parada en pequeño.</summary>
         public bool SceneShown => _sceneWindow.gameObject.activeSelf;
@@ -519,7 +589,7 @@ namespace AF.UI
             _futureLevel.text = reached ? string.Empty : UiText.Level(stop.FirstLevel);
             _factIndex = 0;
             ApplyContent();
-            ApplySilhouette(!reached); // tras maquetar: el fondo ya compuso su héroe con la luz de la parada
+            ApplyFutureTone(!reached); // tras maquetar: el fondo ya compuso su héroe con la luz de la parada
         }
 
         /// <summary>Abre la tarjeta del mirador <paramref name="viewpoint"/> (ya revelado): su «?», su nombre y su dato.</summary>
@@ -669,13 +739,174 @@ namespace AF.UI
             _otherFact.Button.gameObject.SetActive(_factKeys.Count > 1);
         }
 
-        // En una parada futura, el héroe (su PNG o la silueta provisional) va en una sola tinta oscura y sin reflejo.
-        private void ApplySilhouette(bool on)
+        // En una parada futura, el fondo bajo el velo con el cielo y los montes apagados, y el héroe (su PNG o la silueta
+        // provisional) en una sola tinta oscura con su filo de luz y sin reflejo. Los tonos rehacen la malla una vez (al abrir).
+        private void ApplyFutureTone(bool on)
         {
-            Color hero = on ? SilhouetteColor : Color.white;
-            _backdrop.HeroImage.canvasRenderer.SetColor(hero);
-            _backdrop.ShapeGraphic.canvasRenderer.SetColor(hero);
+            _sceneVeil.gameObject.SetActive(on);
+            for (int i = 0; i < _mutes.Count; i++)
+            {
+                _mutes[i].enabled = on;
+            }
+
+            _heroTone.enabled = on;
+            _shapeTone.enabled = on;
+            _backdrop.HeroImage.canvasRenderer.SetColor(Color.white);
+            _backdrop.ShapeGraphic.canvasRenderer.SetColor(Color.white);
             _backdrop.HeroReflection.canvasRenderer.SetAlpha(on ? 0f : 1f);
+        }
+
+        private static ToneEffect AddTone(Graphic graphic)
+        {
+            ToneEffect tone = graphic.gameObject.AddComponent<ToneEffect>();
+            tone.enabled = false;
+            return tone;
+        }
+
+        // ============================================================================================ tono de una parada futura
+
+        /// <summary>
+        /// El color <paramref name="c"/> con el tono de una parada futura: su saturación a <paramref name="saturation"/> (sobre la
+        /// luminancia Rec. 601), por <paramref name="multiply"/> y bajo un velo de <see cref="Palette.WoodDark"/> de opacidad
+        /// <paramref name="veil"/> (el velo de <see cref="FutureVeilColor"/> hecho en el color). Conserva el alfa.
+        /// </summary>
+        public static Color FutureTone(Color c, float saturation, float multiply, float veil)
+        {
+            float lum = (0.299f * c.r) + (0.587f * c.g) + (0.114f * c.b);
+            float r = (lum + ((c.r - lum) * saturation)) * multiply;
+            float g = (lum + ((c.g - lum) * saturation)) * multiply;
+            float b = (lum + ((c.b - lum) * saturation)) * multiply;
+            Color wood = Palette.WoodDark;
+            return new Color(
+                Mathf.Clamp01(Mathf.Lerp(r, wood.r, veil)),
+                Mathf.Clamp01(Mathf.Lerp(g, wood.g, veil)),
+                Mathf.Clamp01(Mathf.Lerp(b, wood.b, veil)),
+                c.a);
+        }
+
+        /// <summary>Qué hace un <see cref="ToneEffect"/>.</summary>
+        public enum ToneKind
+        {
+            /// <summary>Apaga los colores (<see cref="FutureTone"/>).</summary>
+            Mute = 0,
+
+            /// <summary>Silueta de <see cref="SilhouetteColor"/> con un filo de luz de <see cref="RimLightColor"/>.</summary>
+            Silhouette = 1,
+        }
+
+        /// <summary>
+        /// Efecto de malla del tono de una parada futura (revisión de M4.1) sobre un gráfico del fondo de la tarjeta: con
+        /// <see cref="ToneKind.Mute"/>, cambia el color de cada vértice por su <see cref="FutureTone"/> (en los gráficos con color
+        /// por vértice, el cielo y la banda, el cambio es exacto; en el panorama, que lleva la textura, solo oscurece, y el velo
+        /// hace el resto); con <see cref="ToneKind.Silhouette"/>, pinta la malla en <see cref="SilhouetteColor"/> y, detrás, cuatro
+        /// copias desplazadas <see cref="RimDistance"/> en <see cref="RimLightColor"/>: el filo de luz. Sin textura ni shader
+        /// propio; solo trabaja al rehacer la malla (al abrir la tarjeta), con sus listas reservadas.
+        /// </summary>
+        public sealed class ToneEffect : BaseMeshEffect
+        {
+            private readonly List<UIVertex> _in = new List<UIVertex>();
+            private readonly List<UIVertex> _out = new List<UIVertex>();
+
+            /// <summary>Qué hace.</summary>
+            public ToneKind Kind { get; private set; }
+
+            /// <summary>Saturación (con <see cref="ToneKind.Mute"/>).</summary>
+            public float Saturation { get; private set; } = 1f;
+
+            /// <summary>Factor de oscurecido (con <see cref="ToneKind.Mute"/>).</summary>
+            public float Multiply { get; private set; } = 1f;
+
+            /// <summary>Opacidad del velo de madera oscura hecho en el color (con <see cref="ToneKind.Mute"/>).</summary>
+            public float Veil { get; private set; }
+
+            /// <summary>Desplazamiento del filo de luz, en unidades locales del gráfico (con <see cref="ToneKind.Silhouette"/>).</summary>
+            public float RimDistance { get; private set; } = 1f;
+
+            /// <summary>Lo configura para apagar los colores; se devuelve a sí mismo.</summary>
+            public ToneEffect Mute(float saturation, float multiply, float veil)
+            {
+                Kind = ToneKind.Mute;
+                Saturation = saturation;
+                Multiply = multiply;
+                Veil = veil;
+                Dirty();
+                return this;
+            }
+
+            /// <summary>Lo configura como silueta con filo de luz a <paramref name="rimDistance"/>; se devuelve a sí mismo.</summary>
+            public ToneEffect Silhouette(float rimDistance)
+            {
+                Kind = ToneKind.Silhouette;
+                if (!Mathf.Approximately(RimDistance, rimDistance))
+                {
+                    RimDistance = rimDistance;
+                    Dirty();
+                }
+
+                return this;
+            }
+
+            /// <inheritdoc />
+            public override void ModifyMesh(VertexHelper vh)
+            {
+                if (!IsActive())
+                {
+                    return;
+                }
+
+                _in.Clear();
+                vh.GetUIVertexStream(_in);
+                _out.Clear();
+                int n = _in.Count;
+                if (Kind == ToneKind.Silhouette)
+                {
+                    float d = RimDistance;
+                    for (int copy = 0; copy < 4; copy++)
+                    {
+                        var offset = new Vector3(copy == 0 ? d : copy == 1 ? -d : 0f, copy == 2 ? d : copy == 3 ? -d : 0f, 0f);
+                        for (int i = 0; i < n; i++)
+                        {
+                            UIVertex v = _in[i];
+                            v.position += offset;
+                            v.color = WithAlpha(RimLightColor, v.color.a);
+                            _out.Add(v);
+                        }
+                    }
+
+                    for (int i = 0; i < n; i++)
+                    {
+                        UIVertex v = _in[i];
+                        v.color = WithAlpha(SilhouetteColor, v.color.a);
+                        _out.Add(v);
+                    }
+                }
+                else
+                {
+                    for (int i = 0; i < n; i++)
+                    {
+                        UIVertex v = _in[i];
+                        v.color = FutureTone(v.color, Saturation, Multiply, Veil);
+                        _out.Add(v);
+                    }
+                }
+
+                vh.Clear();
+                vh.AddUIVertexTriangleStream(_out);
+            }
+
+            // c con su alfa multiplicada por la del vértice (0-255).
+            private static Color32 WithAlpha(Color c, byte vertexAlpha)
+            {
+                return new Color(c.r, c.g, c.b, c.a * (vertexAlpha / 255f));
+            }
+
+            private void Dirty()
+            {
+                if (graphic != null)
+                {
+                    graphic.SetVerticesDirty();
+                }
+            }
         }
 
         private void EnsureFruit(int i)
@@ -736,19 +967,13 @@ namespace AF.UI
 
             float titleW = Mathf.Max(48f, panelW - PadDp - x);
             UiBuilder.Place(_title.rectTransform, x, y, titleW, headH);
+            UiBuilder.Place(_futureLevel.rectTransform, x, y, titleW, headH); // «Nivel n», en la cabecera, centrado en vertical
             y += headH + GapDp;
 
             if (_sceneWindow.gameObject.activeSelf)
             {
                 PlaceScene(PadDp, y, inner, scene);
                 y += scene + GapDp;
-            }
-
-            if (_futureLevel.gameObject.activeSelf)
-            {
-                float h = Mathf.Max(32f, Mathf.Ceil(UiBuilder.MinTextHeight(_futureLevel, inner)));
-                UiBuilder.Place(_futureLevel.rectTransform, PadDp, y, inner, h);
-                y += h + GapDp;
             }
 
             if (_fact.gameObject.activeSelf)
@@ -807,11 +1032,6 @@ namespace AF.UI
                 h += scene + GapDp;
             }
 
-            if (_futureLevel.gameObject.activeSelf)
-            {
-                h += Mathf.Max(32f, Mathf.Ceil(UiBuilder.MinTextHeight(_futureLevel, inner))) + GapDp;
-            }
-
             if (_fact.gameObject.activeSelf)
             {
                 h += Mathf.Ceil(UiBuilder.MinTextHeight(_fact, inner)) + 2f + 4f;
@@ -854,7 +1074,7 @@ namespace AF.UI
             return Mathf.Ceil(h + PadDp - GapDp);
         }
 
-        // Alto de la cabecera: el ← de 48 dp o la placa del lugar, si en dos líneas es más alta.
+        // Alto de la cabecera: el ← de 48 dp o la placa del lugar (o «Nivel n»), si en dos líneas es más alta.
         private float HeaderHeight(float inner)
         {
             float h = MinTouchDp;
@@ -864,14 +1084,21 @@ namespace AF.UI
                 h = Mathf.Max(h, Mathf.Ceil(UiBuilder.MinTextHeight(_title, titleW)) + 4f);
             }
 
+            if (_futureLevel.gameObject.activeSelf)
+            {
+                h = Mathf.Max(h, Mathf.Ceil(UiBuilder.MinTextHeight(_futureLevel, TitleWidth(_canvasW))) + 4f);
+            }
+
             return h;
         }
 
-        // Ancho de la placa del lugar en un lienzo de canvasW dp: la placa menos el ←, la mini cuia y sus huecos.
+        // Ancho de la placa del lugar en un lienzo de canvasW dp: la placa menos el ←, la mini cuia (o el «?»; nada en una parada
+        // futura) y sus huecos.
         private float TitleWidth(float canvasW)
         {
             float panelW = canvasW - (2f * SideDp);
-            float used = PadDp - 4f + MinTouchDp + 8f + (_mode == StopCardMode.Viewpoint ? ProceduralArt.MapViewpointDp : _sample.WidthDp) + 8f;
+            float icon = _mode == StopCardMode.Viewpoint ? ProceduralArt.MapViewpointDp + 8f : _mode == StopCardMode.Future ? 0f : _sample.WidthDp + 8f;
+            float used = PadDp - 4f + MinTouchDp + 8f + icon;
             return Mathf.Max(48f, panelW - PadDp - used);
         }
 
@@ -887,6 +1114,8 @@ namespace AF.UI
             UiBuilder.Place(_sceneFrame.rectTransform, x - 3f, y - 3f, w + 6f, h + 6f);
             UiBuilder.Place(_sceneWindow, x - ClipPadDp, y - ClipPadDp, w + (2f * ClipPadDp), h + (2f * ClipPadDp));
             float s = w / SceneWorldWidthDp;
+            _heroTone.Silhouette(RimLightDp / Mathf.Max(0.01f, s)); // el filo de luz mide RimLightDp en pantalla
+            _shapeTone.Silhouette(RimLightDp / Mathf.Max(0.01f, s));
             float worldH = h / Mathf.Max(0.01f, s);
             float horizon = Mathf.Min(SceneSkyDp, worldH - 24f);
             RectTransform world = _sceneWorld;
@@ -902,13 +1131,15 @@ namespace AF.UI
     }
 
     /// <summary>
-    /// Mini cuia de vidrio con el agua de un sitio (la del Mapa, <see cref="ProceduralArt.MapMiniCuia"/>, a una escala): canto crema
-    /// si falta, vidrio, el agua del sitio y, en las de dos aguas (<c>clear_white</c>, <c>black_white</c>), la segunda en la mitad
-    /// de abajo (como las mini cuias del Mapa, M3.5). La usan la tarjeta de la parada y el Muestrario (M4.1).
+    /// Mini cuia de vidrio con el agua de un sitio (la del Mapa, <see cref="ProceduralArt.MapMiniCuia"/>, a una escala): vidrio, el
+    /// agua del sitio y, en las de dos aguas (<c>clear_white</c>, <c>black_white</c>), la segunda en la mitad de abajo (como las
+    /// mini cuias del Mapa, M3.5). Vacía, en el Muestrario, es de vidrio oscuro (<see cref="ProceduralArt.MapMiniCuiaEmpty"/>: la
+    /// misma silueta y la misma caja, así todas se apoyan en la misma línea y lo ganado manda; revisión de M4.1). La usan la
+    /// tarjeta de la parada y el Muestrario (M4.1).
     /// </summary>
     internal sealed class SampleCuia
     {
-        private readonly Image _rim;
+        private readonly ProceduralArt _art;
         private readonly Image _glass;
         private readonly Image _waterA;
         private readonly Image _waterB;
@@ -916,14 +1147,13 @@ namespace AF.UI
 
         public SampleCuia(string name, Transform parent, ProceduralArt art, float scale)
         {
+            _art = art;
             _scale = scale;
             Root = UiBuilder.Rect(name, parent);
             Root.anchorMin = new Vector2(0f, 1f);
             Root.anchorMax = new Vector2(0f, 1f);
             Root.pivot = new Vector2(0f, 1f);
             Root.sizeDelta = new Vector2(WidthDp, HeightDp);
-            _rim = Piece("Rim", art.MapMiniCuiaRim, ProceduralArt.MiniCuiaWidthDp + (2f * ProceduralArt.MiniCuiaRimPadDp), ProceduralArt.MiniCuiaHeightDp + (2f * ProceduralArt.MiniCuiaRimPadDp));
-            _rim.color = RiverMapScreen.UnreachedRimColor;
             _glass = Piece("Glass", art.MapMiniCuia, ProceduralArt.MiniCuiaWidthDp, ProceduralArt.MiniCuiaHeightDp);
             _waterA = Piece("Water", art.MapMiniCuiaWater, ProceduralArt.MiniCuiaWidthDp, ProceduralArt.MiniCuiaHeightDp);
             _waterB = Piece("WaterMeet", art.MapMiniCuiaWater, ProceduralArt.MiniCuiaWidthDp, ProceduralArt.MiniCuiaHeightDp);
@@ -950,14 +1180,18 @@ namespace AF.UI
         /// <summary>Color del agua (la del sitio).</summary>
         public Color WaterColor => _waterA.color;
 
-        /// <summary>Lleva el canto crema de lo que falta.</summary>
-        public bool RimShown => _rim.gameObject.activeSelf;
+        /// <summary>Va de vidrio oscuro (vacía, en el Muestrario, sin el PNG de <c>map_minicuia</c>).</summary>
+        public bool DarkEmpty => !Filled && _glass.sprite == _art.MapMiniCuiaEmpty;
+
+        /// <summary>El vidrio (tests: la misma caja llena o vacía).</summary>
+        public Image Glass => _glass;
 
         /// <summary>
         /// Llena la mini cuia con el agua de <paramref name="sample"/> (<c>white</c>, <c>black</c>, <c>clear</c>, <c>clear_white</c>
-        /// o <c>black_white</c>) si <paramref name="filled"/>; si no, vidrio vacío con <paramref name="rim"/> (el canto crema).
+        /// o <c>black_white</c>) si <paramref name="filled"/>; si no, vidrio vacío: de vidrio oscuro con <paramref name="darkEmpty"/>
+        /// (el Muestrario) o, con el PNG de <c>map_minicuia</c> (que no da la silueta), ese vidrio translúcido.
         /// </summary>
-        public void Set(string sample, bool filled, bool rim)
+        public void Set(string sample, bool filled, bool darkEmpty)
         {
             Color a = ArrivalStrip.SampleWater(sample ?? string.Empty, out Color? b);
             _waterA.color = a;
@@ -966,8 +1200,9 @@ namespace AF.UI
             _waterB.gameObject.SetActive(filled && b.HasValue);
             _waterA.fillAmount = 1f;
             _waterB.fillAmount = 0.5f;
-            _glass.color = filled ? Color.white : new Color(1f, 1f, 1f, RiverMapScreen.UnreachedGlassAlpha);
-            _rim.gameObject.SetActive(!filled && rim && ArtSlots.Find(ProceduralArt.MiniCuiaSlot) == null);
+            bool dark = !filled && darkEmpty && ArtSlots.Find(ProceduralArt.MiniCuiaSlot) == null;
+            _glass.sprite = dark ? _art.MapMiniCuiaEmpty : _art.MapMiniCuia;
+            _glass.color = filled || dark ? Color.white : new Color(1f, 1f, 1f, RiverMapScreen.UnreachedGlassAlpha);
         }
 
         /// <summary>Coloca la mini cuia con su esquina de arriba a la izquierda en (x, y) dp del padre (y hacia abajo).</summary>
