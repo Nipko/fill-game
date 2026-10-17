@@ -42,7 +42,15 @@ namespace AF.UI
     /// El encuadre se corre lo justo para que no quede a menos de <see cref="HomeWindowCuiaGapDp"/> dp de una mini cuia, ni una mini
     /// cuia a menos de <see cref="FixedOverlayGapDp"/> dp de los rótulos de orientación o de «Volver a la canoa»; una placa de
     /// mundo futuro que ni así queda libre se pone al otro lado del punto de su mundo (<see cref="ResolvePlates"/>). Arte
-    /// provisional de P-M5: en release, sin su PNG, ni casa ni ventanita.</description></item>
+    /// provisional de P-M5: en release, sin su PNG, ni casa ni ventanita. Con «Norte arriba» (M4.4) la cuenca entera se ve: sin
+    /// ventanita.</description></item>
+    /// <item><description><b>Rosa salta con sus parientes en Tarapoto</b> (tarea M4.4; D-013, punto 6; 06 §4.5 y 07 §6.2;
+    /// propuesta del Mapa §2.1: «120: Rosa salta con sus parientes en Tarapoto», y §6.1): al llegar la canoa a la parada
+    /// <see cref="RosaJumpStop"/> (los lagos de Tarapoto) al ponerse al día, o al tocar su mini cuia (al cerrarse su tarjeta, que
+    /// si no la taparía), Rosa salta en su punto real con <see cref="RosaJumpRelatives"/> lomos de parientes que asoman y se
+    /// sumergen [P], en <see cref="RosaJumpMs"/> ms (≤ 1 s), una vez por apertura. Mientras salta, la Rosa que guía no se pinta
+    /// (es ella la que salta). Con Reducir movimiento, sin salto [P]. Las piezas se crean una vez; el salto solo mueve
+    /// transformaciones: sin asignaciones.</description></item>
     /// </list>
     /// <para>Las piezas se crean una vez (al construir la geometría y, las mini cuias, al crecer la reserva al abrir); al cambiar de
     /// vista solo se recolocan; con el Mapa quieto, <see cref="MarkersTick"/> no asigna memoria (el reloj del perezoso y la
@@ -89,6 +97,46 @@ namespace AF.UI
 
         /// <summary>Sin agua por delante (el final del catálogo), el guía espera encima de la canoa, este tanto más arriba (dp) [P].</summary>
         public const float GuideAboveDp = 27f;
+
+        /// <summary>
+        /// Parada en que Rosa salta con sus parientes: la 12, los lagos de Tarapoto, niveles 121-130 (D-013, punto 6; propuesta
+        /// del Mapa §2.1 y §6.1).
+        /// </summary>
+        public const int RosaJumpStop = 12;
+
+        /// <summary>Lo que dura el salto de Rosa en Tarapoto (ms) [P]: ≤ 1 s (plan del Mapa, M4.4).</summary>
+        public const int RosaJumpMs = 900;
+
+        /// <summary>
+        /// Si la Rosa que guía nada a menos de este tanto del punto de Tarapoto (dp en la vista Mundo) [P], salta donde está (por
+        /// delante de la canoa, sin taparla); si no, en el punto de Tarapoto.
+        /// </summary>
+        public const float RosaJumpNearDp = 60f;
+
+        /// <summary>Lomos de parientes que asoman con Rosa en Tarapoto [P] (plan del Mapa, M4.4: «2 lomos más»).</summary>
+        public const int RosaJumpRelatives = 2;
+
+        /// <summary>Altura del salto de Rosa en la vista Mundo (dp) [P]; en la Cuenca, a la escala del guía.</summary>
+        public const float RosaJumpHeightDp = 14f;
+
+        /// <summary>Lo que avanza Rosa en el salto en la vista Mundo (dp) [P], hacia donde mira la canoa.</summary>
+        public const float RosaJumpSpanDp = 22f;
+
+        /// <summary>Cabeceo de Rosa al salir y al entrar en el agua (grados) [P]: el hocico arriba al salir y abajo al entrar.</summary>
+        public const float RosaJumpPitchDeg = 40f;
+
+        /// <summary>Ancho de un lomo de pariente frente al de Rosa [P].</summary>
+        public const float RosaRelativeScale = 0.75f;
+
+        /// <summary>Fracción del salto en que Rosa aparece (al principio) y desaparece (al final) con un fundido [P].</summary>
+        public const float RosaJumpFadeFraction = 0.12f;
+
+        // Los lomos de los parientes [P]: dónde asoman respecto del punto de Tarapoto (dp en la vista Mundo; x hacia donde mira la
+        // canoa, y hacia arriba) y en qué tramo del salto (fracciones de RosaJumpMs): uno detrás de Rosa al empezar y otro delante
+        // al acabar.
+        private static readonly Vector2[] RosaRelativeOffsetDp = { new Vector2(-6f, -10f), new Vector2(17f, -4f) };
+        private static readonly float[] RosaRelativeFrom = { 0f, 0.4f };
+        private static readonly float[] RosaRelativeTo = { 0.6f, 1f };
 
         /// <summary>Distancia entre los centros de dos mini cuias de un abanico (dp) [P]: los 48 dp del toque y 4 de aire.</summary>
         public const float FanGapDp = 52f;
@@ -268,6 +316,17 @@ namespace AF.UI
         private int _lastTappedStop = -1;
         private int _fillingMarker = -1;
         private float _fillingMs;
+        private RectTransform? _rosaJumpLayer;
+        private Image? _rosaJumper;
+        private readonly Image?[] _rosaRelatives = new Image?[RosaJumpRelatives];
+        private Vector2 _rosaJumpMap;
+        private Vector2 _rosaJumpStopMap;
+        private float _rosaJumpDir = 1f;
+        private float _rosaJumpMs;
+        private bool _rosaJumpPending;
+        private bool _rosaJumpPlaying;
+        private bool _rosaJumpDone;
+        private int _rosaJumpCount;
 
         // ============================================================================================ API (tests y sondas)
 
@@ -512,6 +571,52 @@ namespace AF.UI
         /// <summary>Milisegundos sin toques con el Mapa abierto.</summary>
         public float IdleMs => _idleMs;
 
+        /// <summary>Rosa salta con sus parientes en Tarapoto (M4.4).</summary>
+        public bool RosaJumpPlaying => _rosaJumpPlaying;
+
+        /// <summary>El salto de Rosa espera a que se cierre la tarjeta de la parada (o el Muestrario).</summary>
+        public bool RosaJumpPending => _rosaJumpPending;
+
+        /// <summary>Saltos de Rosa en Tarapoto en esta apertura (0 o 1: una vez por apertura).</summary>
+        public int RosaJumpCount => _rosaJumpCount;
+
+        /// <summary>Milisegundos del salto en curso.</summary>
+        public float RosaJumpElapsedMs => _rosaJumpMs;
+
+        /// <summary>
+        /// Dónde salta Rosa, en unidades del marco: donde nada la Rosa que guía si está a menos de <see cref="RosaJumpNearDp"/> de
+        /// Tarapoto; si no, el punto de Tarapoto (<see cref="RosaJumpStopMapPoint"/>).
+        /// </summary>
+        public Vector2 RosaJumpMapPoint => _rosaJumpMap;
+
+        /// <summary>El punto de la parada de Tarapoto (<see cref="RosaJumpStop"/>), en unidades del marco.</summary>
+        public Vector2 RosaJumpStopMapPoint => _rosaJumpStopMap;
+
+        /// <summary>Lomos de parientes que se ven ahora.</summary>
+        public int RosaRelativesShown
+        {
+            get
+            {
+                int n = 0;
+                for (int i = 0; i < _rosaRelatives.Length; i++)
+                {
+                    Image? relative = _rosaRelatives[i];
+                    n += relative != null && relative.gameObject.activeInHierarchy && relative.rectTransform.localScale.y > 0f ? 1 : 0;
+                }
+
+                return n;
+            }
+        }
+
+        /// <summary>La Rosa que salta (null antes de construir los marcadores).</summary>
+        internal Image? RosaJumper => _rosaJumper;
+
+        /// <summary>El lomo del pariente <paramref name="i"/> (0 … <see cref="RosaJumpRelatives"/> − 1).</summary>
+        internal Image? RosaRelative(int i)
+        {
+            return _rosaRelatives[i];
+        }
+
         // ============================================================================================ reglas puras
 
         /// <summary>
@@ -745,6 +850,24 @@ namespace AF.UI
                 _guide = Piece("Guide", _canoeGear, new Vector2(0.5f, 0.3f));
                 _guide.preserveAspect = true;
 
+                // El salto de Rosa en Tarapoto (M4.4), delante de la canoa con su equipo: los lomos de los parientes y Rosa encima.
+                _rosaJumpLayer = UiBuilder.Rect("RosaJump", dynamicLayer);
+                FillTopLeft(_rosaJumpLayer);
+                _rosaJumpLayer.SetSiblingIndex(_canoeGear.GetSiblingIndex() + 1);
+                for (int i = 0; i < _rosaRelatives.Length; i++)
+                {
+                    Image relative = Piece("Relative" + i, _rosaJumpLayer, new Vector2(0.5f, 0.3f));
+                    relative.preserveAspect = true;
+                    relative.gameObject.SetActive(true); // se esconde con su alto a 0, sin activar ni desactivar durante el salto
+                    relative.rectTransform.localScale = new Vector3(1f, 0f, 1f);
+                    _rosaRelatives[i] = relative;
+                }
+
+                _rosaJumper = Piece("Rosa", _rosaJumpLayer, new Vector2(0.5f, 0.3f));
+                _rosaJumper.preserveAspect = true;
+                _rosaJumper.gameObject.SetActive(true);
+                _rosaJumpLayer.gameObject.SetActive(false);
+
                 // La ventanita de casa, en el marco: encima del mapa y debajo de «Volver a la canoa».
                 _homeWindow = new HomeWindow(_frame.transform, _art, GoHome);
                 _homeWindow.PillBelow = true; // la píldora bajo el retrato: no cruza la zona de juego del Mapa
@@ -772,6 +895,9 @@ namespace AF.UI
             _touchViewChanges = _viewChanges;
             _lastTappedStop = -1;
             _fillingMarker = -1;
+            EndRosaJump();
+            _rosaJumpDone = false; // una vez por apertura
+            _rosaJumpCount = 0;
             if (!_markersReady)
             {
                 return;
@@ -815,6 +941,10 @@ namespace AF.UI
             PlaceHouse(space);
             PlaceHomeWindow();
             UpdateHomeWindow();
+            if (_rosaJumpPlaying)
+            {
+                ApplyRosaJump(); // a la escala de la vista nueva
+            }
         }
 
         partial void MarkersTick(float dtMs, ref bool animating)
@@ -865,6 +995,26 @@ namespace AF.UI
                 }
 
                 animating = true;
+            }
+
+            // El salto de Rosa en Tarapoto: empieza en cuanto no lo tapa la tarjeta de la parada ni el Muestrario.
+            if (_rosaJumpPending && !CardOpen && !SamplesSheetOpen)
+            {
+                StartRosaJump();
+                animating = true;
+            }
+            else if (_rosaJumpPlaying)
+            {
+                _rosaJumpMs += dtMs;
+                if (_rosaJumpMs >= RosaJumpMs)
+                {
+                    EndRosaJump();
+                }
+                else
+                {
+                    ApplyRosaJump();
+                    animating = true;
+                }
             }
 
             bool window = UpdateHomeWindow();
@@ -1410,6 +1560,10 @@ namespace AF.UI
             _fillingMarker = i;
             _fillingMs = 0f;
             SetMarkerFill(_markers[i], 0f);
+            if (n == RosaJumpStop)
+            {
+                RequestRosaJump(); // la canoa llega a Tarapoto: Rosa salta con sus parientes (M4.4)
+            }
         }
 
         /// <summary>Termina en el acto el llenado de la mini cuia que se estuviera llenando.</summary>
@@ -2243,7 +2397,6 @@ namespace AF.UI
             }
 
             RectTransform tree = _houseTree!.rectTransform;
-            tree.anchoredPosition = _homeLocal;
             tree.sizeDelta = new Vector2(ProceduralArt.MapHomeWidthDp * scale, _homeHeight);
             float size = HomeSlothWorldDp * scale;
             SlothRig rig = _houseSloth!;
@@ -2253,7 +2406,39 @@ namespace AF.UI
                 rig.Seek(rig.ClockMs);
             }
 
-            rig.Place(_homeLocal.x, -(_homeLocal.y + (_homeHeight * ProceduralArt.MapHomeBranchFraction)));
+            PlaceHouseFigure();
+        }
+
+        // El árbol con el pie en _homeLocal y el perezoso en su rama; con «Norte arriba» (M4.4), derechos en pantalla: el árbol
+        // gira al revés que el contenido sobre su pie y la rama va donde queda arriba en pantalla. Sin asignaciones.
+        private void PlaceHouseFigure()
+        {
+            if (!_houseShown || _houseTree == null || _houseSloth == null)
+            {
+                return;
+            }
+
+            Quaternion upright = Quaternion.Euler(0f, 0f, _figureAngle);
+            RectTransform tree = _houseTree.rectTransform;
+            tree.anchoredPosition = _homeLocal;
+            tree.localRotation = upright;
+            Vector2 branch = _homeLocal + Turn(new Vector2(0f, _homeHeight * ProceduralArt.MapHomeBranchFraction), _figureAngle);
+            _houseSloth.Place(branch.x, -branch.y);
+            _houseSloth.Root.localRotation = upright;
+        }
+
+        // v girado deg grados (antihorario, y hacia arriba). Sin asignaciones.
+        private static Vector2 Turn(Vector2 v, float deg)
+        {
+            if (deg == 0f)
+            {
+                return v;
+            }
+
+            float r = deg * Mathf.Deg2Rad;
+            float c = Mathf.Cos(r);
+            float sn = Mathf.Sin(r);
+            return new Vector2((v.x * c) - (v.y * sn), (v.x * sn) + (v.y * c));
         }
 
         // A qué lado de Guajará va el pie de la casa (dp con signo; negativo, a la izquierda): el primero, de HomeSideDp a
@@ -2335,6 +2520,11 @@ namespace AF.UI
                 _canoe.rectTransform.localScale = scale;
             }
 
+            // Con «Norte arriba» (M4.4), las figuras van derechas en pantalla: giran al revés que el contenido, cada una sobre su
+            // punto (la canoa sobre el río; el mástil y las banderas, con su sitio respecto de la canoa también girado).
+            Quaternion upright = Quaternion.Euler(0f, 0f, _figureAngle);
+            _canoe.rectTransform.localRotation = upright; // sin comparar: el == de Quaternion tolera unas décimas de grado
+
             Image guide = _guide!;
             Sprite sprite = string.Equals(_guideId, RiverJourney.GuideBufeo, StringComparison.Ordinal) ? _art.MapBufeo : _art.Rosa;
             if (guide.sprite != sprite)
@@ -2342,9 +2532,11 @@ namespace AF.UI
                 guide.sprite = sprite;
             }
 
-            if (!guide.gameObject.activeSelf)
+            // Mientras Rosa salta en Tarapoto (M4.4), la que guía no se pinta: es ella la que salta.
+            bool guideOn = !(_rosaJumpPlaying && string.Equals(_guideId, RiverJourney.GuideRosa, StringComparison.Ordinal));
+            if (guide.gameObject.activeSelf != guideOn)
             {
-                guide.gameObject.SetActive(true);
+                guide.gameObject.SetActive(guideOn);
             }
 
             float gw = _view == MapView.World ? GuideWorldDp : GuideBasinDp;
@@ -2352,6 +2544,7 @@ namespace AF.UI
             g.sizeDelta = new Vector2(gw, gw * ProceduralArt.RosaHeightDp / ProceduralArt.RosaWidthDp);
             g.anchoredPosition = guideLocal;
             g.localScale = new Vector3(-_canoeFacing, 1f, 1f); // Rosa y el bufeo miran a la izquierda en su dibujo
+            g.localRotation = upright;
 
             // El mástil en la popa y las banderas, de la más reciente (arriba) a la primera (abajo), ondeando hacia popa.
             if (_flagCount > 0)
@@ -2360,14 +2553,17 @@ namespace AF.UI
                 float fh = ProceduralArt.MapFlagHeightDp * CanoeFlagScale;
                 RectTransform mast = _mast!.rectTransform;
                 mast.sizeDelta = new Vector2(MastWidthDp, mastH);
-                mast.anchoredPosition = foot;
+                mast.anchoredPosition = canoe + Turn(foot - canoe, _figureAngle);
+                mast.localRotation = upright;
                 for (int i = 0; i < _flagCount; i++)
                 {
                     int fromTop = _flagCount - 1 - i;
                     RectTransform f = _flagImages[i]!.rectTransform;
                     f.sizeDelta = new Vector2(fw, fh);
-                    f.anchoredPosition = new Vector2(foot.x, foot.y + mastH - MastPadDp - (fh * 0.5f) - (fromTop * (fh + CanoeFlagGapDp)));
+                    var at = new Vector2(foot.x, foot.y + mastH - MastPadDp - (fh * 0.5f) - (fromTop * (fh + CanoeFlagGapDp)));
+                    f.anchoredPosition = canoe + Turn(at - canoe, _figureAngle);
                     f.localScale = new Vector3(-_canoeFacing, 1f, 1f);
+                    f.localRotation = upright;
                 }
             }
         }
@@ -2394,6 +2590,12 @@ namespace AF.UI
             }
 
             float dx = guideLocal.x - canoe.x;
+            if (_figureAngle != 0f)
+            {
+                // Con «Norte arriba» (M4.4), la proa mira hacia el guía en pantalla: el contenido gira −_figureAngle.
+                dx = Turn(guideLocal - canoe, -_figureAngle).x;
+            }
+
             if (Mathf.Abs(dx) > 2f)
             {
                 facing = dx > 0f ? 1f : -1f;
@@ -2493,7 +2695,7 @@ namespace AF.UI
                 return false;
             }
 
-            _homeInView = HomeInViewAt(_offset);
+            _homeInView = _northUpOn || HomeInViewAt(_offset); // con «Norte arriba» (M4.4) la cuenca entera, y la casa, se ven
             _homeWindow.Apply(_homeStop, _homeInView || !Visible);
             return _homeWindow.Visible;
         }
@@ -2533,6 +2735,11 @@ namespace AF.UI
             NoteTouch();
             _stopsTapped++;
             _lastTappedStop = marker.N;
+            if (marker.N == RosaJumpStop)
+            {
+                RequestRosaJump(); // Tarapoto: Rosa salta con sus parientes al cerrarse su tarjeta (M4.4)
+            }
+
             MarkersStopTapped(marker.N);
         }
 
@@ -2578,6 +2785,116 @@ namespace AF.UI
         }
 
         // ============================================================================================ piezas
+
+        // ============================================================================================ Rosa en Tarapoto (M4.4)
+
+        // Pide el salto de Rosa en Tarapoto (la canoa llega a la parada RosaJumpStop o se toca su mini cuia): una vez por apertura;
+        // empieza en MarkersTick en cuanto no lo tapa la tarjeta ni el Muestrario. Con Reducir movimiento, sin salto [P].
+        private void RequestRosaJump()
+        {
+            if (_rosaJumpDone || _rosaJumpPending || _rosaJumpPlaying || _rosaJumper == null || ProgressReduceMotion)
+            {
+                return;
+            }
+
+            RiverStopRoute? route = _routes?.At(RosaJumpStop);
+            if (_map == null || route == null)
+            {
+                return;
+            }
+
+            _rosaJumpStopMap = PlacePoint(_map, route.At);
+            _rosaJumpMap = _rosaJumpStopMap;
+            _rosaJumpPending = true;
+        }
+
+        private void StartRosaJump()
+        {
+            _rosaJumpPending = false;
+            _rosaJumpPlaying = true;
+            _rosaJumpDone = true;
+            _rosaJumpCount++;
+            _rosaJumpMs = 0f;
+            _rosaJumpDir = _canoeFacing >= 0f ? 1f : -1f; // salta hacia donde mira la canoa, río arriba
+
+            // Si la Rosa que guía nada cerca de Tarapoto (la canoa acaba de llegar o va por sus lagos), salta donde está, por
+            // delante de la canoa y sin taparla; si no, en el punto de Tarapoto.
+            float near = RosaJumpNearDp * (_view == MapView.World ? 1f : GuideBasinDp / GuideWorldDp);
+            bool rosaGuides = _guideShown && string.Equals(_guideId, RiverJourney.GuideRosa, StringComparison.Ordinal);
+            _rosaJumpMap = rosaGuides && Vector2.Distance(_space.ToLocal(_guideMap), _space.ToLocal(_rosaJumpStopMap)) <= near
+                ? _guideMap
+                : _rosaJumpStopMap;
+            Sprite rosa = _art.Rosa;
+            if (_rosaJumper!.sprite != rosa)
+            {
+                _rosaJumper.sprite = rosa;
+            }
+
+            for (int i = 0; i < _rosaRelatives.Length; i++)
+            {
+                Image relative = _rosaRelatives[i]!;
+                if (relative.sprite != rosa)
+                {
+                    relative.sprite = rosa;
+                }
+            }
+
+            _rosaJumpLayer!.gameObject.SetActive(true);
+            ApplyRosaJump();
+            PlaceCanoeGear(_space); // la Rosa que guía deja de pintarse mientras salta
+        }
+
+        // El salto acaba (por tiempo, al volver a abrir o al cerrar el Mapa): sin piezas y la Rosa que guía, otra vez en su sitio.
+        private void EndRosaJump()
+        {
+            _rosaJumpPending = false;
+            if (!_rosaJumpPlaying)
+            {
+                return;
+            }
+
+            _rosaJumpPlaying = false;
+            _rosaJumpLayer?.gameObject.SetActive(false);
+            PlaceCanoeGear(_space);
+        }
+
+        // El salto en _rosaJumpMs: Rosa en un arco por encima del punto de Tarapoto (sale con el hocico arriba y entra con él abajo,
+        // con un fundido al principio y al final) y los lomos de los parientes, que asoman y se sumergen cada uno en su tramo (su
+        // alto, de 0 a 1 y a 0, desde su línea de nado). En la Cuenca, a la escala del guía. Sin asignaciones.
+        private void ApplyRosaJump()
+        {
+            if (_rosaJumper == null)
+            {
+                return;
+            }
+
+            float p = Mathf.Clamp01(_rosaJumpMs / RosaJumpMs);
+            float k = _view == MapView.World ? 1f : GuideBasinDp / GuideWorldDp;
+            float gw = GuideWorldDp * k;
+            float gh = gw * ProceduralArt.RosaHeightDp / ProceduralArt.RosaWidthDp;
+            float dir = _rosaJumpDir;
+            Vector2 o = _space.ToLocal(_rosaJumpMap);
+
+            RectTransform r = _rosaJumper.rectTransform;
+            r.sizeDelta = new Vector2(gw, gh);
+            r.anchoredPosition = new Vector2(o.x + (dir * RosaJumpSpanDp * k * (p - 0.5f)), o.y + (4f * RosaJumpHeightDp * k * p * (1f - p)));
+            r.localRotation = Quaternion.Euler(0f, 0f, dir * Mathf.Lerp(RosaJumpPitchDeg, -RosaJumpPitchDeg, p));
+            r.localScale = new Vector3(-dir, 1f, 1f); // Rosa mira a la izquierda en su dibujo
+            float fade = Mathf.Clamp01(Mathf.Min(p, 1f - p) / RosaJumpFadeFraction);
+            _rosaJumper.canvasRenderer.SetAlpha(fade);
+
+            for (int i = 0; i < _rosaRelatives.Length; i++)
+            {
+                Image relative = _rosaRelatives[i]!;
+                float q = (p - RosaRelativeFrom[i]) / (RosaRelativeTo[i] - RosaRelativeFrom[i]);
+                float rise = q > 0f && q < 1f ? Mathf.Sin(Mathf.PI * q) : 0f; // fuera de su tramo, bajo el agua (alto 0)
+                RectTransform rt = relative.rectTransform;
+                rt.sizeDelta = new Vector2(gw * RosaRelativeScale, gh * RosaRelativeScale);
+                Vector2 offset = RosaRelativeOffsetDp[i];
+                rt.anchoredPosition = new Vector2(o.x + (dir * offset.x * k), o.y + (offset.y * k));
+                rt.localScale = new Vector3(-dir, rise, 1f);
+            }
+        }
 
         // Una mini cuia del Mapa: su área táctil, el vidrio, el agua (dos en las mezclas) y la baliza de los cierres de mundo.
         private sealed class StopMarker
