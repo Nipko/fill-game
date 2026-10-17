@@ -2,6 +2,8 @@
 
 2026-10-15 (actualizada el 2026-10-16 con el audio provisional por código, sección 9) · Copia de trabajo para el dueño y los proveedores de audio (compositor y diseñador de sonido). Fuente: GDD 07 §9 y las mecánicas, personajes y pantallas de los demás capítulos. Si esta lista y el GDD no coinciden, manda el GDD hasta que se edite.
 
+**Para producir el audio definitivo** (2026-10-17): el encargo completo está en `docs/audio/encargo-sonidos.md`, con la ficha de cada pieza en `docs/audio/especificacion-sonidos.json` y el comprobador `tools/audio-check/check_audio.py`.
+
 ## Cómo usar esta lista
 
 El juego necesita unos 61 efectos, el ambiente de 13 mundos (9 en la 1.0) y unas 20 piezas de música (unas 60 contando sus capas). Desde el 2026-10-16 suena con efectos, música adaptativa y ambiente provisionales hechos por código (secciones 5, 6 y 9; D-026; tareas AU1 y AU2).
