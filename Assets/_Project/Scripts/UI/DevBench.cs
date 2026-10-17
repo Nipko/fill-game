@@ -41,12 +41,15 @@ namespace AF.UI
     /// "outcome":…}</c> (<see cref="FormatMorpho"/>: la mediana de <see cref="TimedRuns"/> consultas tras una en frío,
     /// <c>cold_ms</c>); al final, <c>AF_PERF {"event":"morpho_summary",…}</c> (<see cref="FormatSummary"/>) con los nodos por
     /// milisegundo de las consultas pesadas (≥ <see cref="HeavyNodes"/> nodos) y el factor frente al PC del generador:
-    /// <c>factor</c> = <see cref="PcNodesPerMs"/> ÷ nodos por ms del teléfono, el número que sustituye a
-    /// <c>MorphoDeviceFactor</c> (8× [P]).</description></item>
+    /// <c>factor</c> = <see cref="PcNodesPerMs"/> ÷ nodos por ms del teléfono. Solo el de un teléfono de clase A (Mali-G52 o
+    /// Adreno 610, 08 §5.4; pregunta 13, D-015) sustituye a <c>MorphoDeviceFactor</c> (8× [P]); el del Editor o de otro
+    /// teléfono no.</description></item>
     /// <item><description><b>Fotogramas</b> (el shader en los niveles de 3 filas): mientras se juega un nivel,
     /// <c>AF_PERF {"event":"frames","level":…,"rows":…,…}</c> (media, p95 y máximo del tiempo de fotograma, fps y tardíos de más
     /// de <see cref="FrameStats.LateMs"/>) cada <see cref="DevBenchSettings.FrameWindow"/> fotogramas y al
-    /// cambiar de nivel (<see cref="FormatFrames"/>).</description></item>
+    /// cambiar de nivel (<see cref="FormatFrames"/>), con <c>morpho_running</c>: si el hilo de Morpho corrió en algún fotograma
+    /// de la ventana. El shader se lee en las ventanas con <c>false</c> (con el hilo ocupando un núcleo, el tiempo de fotograma
+    /// no es solo del shader, y el render ensucia los nodos por ms de Morpho).</description></item>
     /// <item><description><b>Tableros:</b> los del catálogo del juego y los paquetes de la carpeta <see cref="BenchFolder"/>
     /// de <c>Application.persistentDataPath</c> (en el teléfono, <c>adb push</c> de la muestra de TJ1,
     /// <c>Tests/EditMode/Fixtures/pack3_sample.json</c>, y de la del generador, <c>tools/out/sample_tinaja/mundo_07_v1.json</c>,
@@ -171,22 +174,32 @@ namespace AF.UI
         /// <summary>
         /// La medida de un nivel: una consulta en frío y <paramref name="runs"/> más; devuelve la mediana por tiempo con el
         /// tiempo en frío en <see cref="MorphoSample.ColdMs"/> y cuántas se cortaron en <see cref="MorphoSample.CutRuns"/>.
+        /// <paramref name="onQuery"/>, si no es nulo, recibe la bandera de cada consulta antes de lanzarla: así quien llama puede
+        /// cortar la que está en curso (<see cref="DevBenchRunner"/> al destruirse).
         /// </summary>
-        public static MorphoSample MeasureLevel(LevelDefinition def, SafeMoves safe, SolverOptions options, int timeoutMs, int runs)
+        public static MorphoSample MeasureLevel(LevelDefinition def, SafeMoves safe, SolverOptions options, int timeoutMs, int runs,
+            Action<SolverCancellation>? onQuery = null)
         {
             BoardState board = def.CreateBoard();
-            MorphoSample cold = Measure(def, board, safe, options, timeoutMs, new SolverCancellation());
+            MorphoSample cold = Measure(def, board, safe, options, timeoutMs, NewQuery(onQuery));
             int count = Math.Max(1, runs);
             var samples = new MorphoSample[count];
             int cut = cold.Cancelled ? 1 : 0;
             for (int i = 0; i < count; i++)
             {
-                samples[i] = Measure(def, board, safe, options, timeoutMs, new SolverCancellation());
+                samples[i] = Measure(def, board, safe, options, timeoutMs, NewQuery(onQuery));
                 cut += samples[i].Cancelled ? 1 : 0;
             }
 
             Array.Sort(samples, (a, b) => a.Ms.CompareTo(b.Ms));
             return samples[count / 2].WithRuns(cold.Ms, count, cut);
+        }
+
+        private static SolverCancellation NewQuery(Action<SolverCancellation>? onQuery)
+        {
+            var cancellation = new SolverCancellation();
+            onQuery?.Invoke(cancellation);
+            return cancellation;
         }
 
         /// <summary>Dosis de la tinaja del nivel (0 si no la lleva).</summary>
@@ -228,7 +241,7 @@ namespace AF.UI
         {
             var sb = new StringBuilder(256);
             sb.Append("AF_PERF {\"event\":\"morpho\",\"level\":").Append(I(s.Level))
-                .Append(",\"id\":\"").Append(s.Id).Append('"')
+                .Append(",\"id\":\"").Append(Escape(s.Id)).Append('"')
                 .Append(",\"realities\":").Append(I(s.Realities))
                 .Append(",\"nodes\":").Append(s.Nodes.ToString(CultureInfo.InvariantCulture))
                 .Append(",\"ms\":").Append(F(s.Ms))
@@ -325,8 +338,12 @@ namespace AF.UI
             return new FrameStats(count, (float)(sum / count), scratch[p95], max, slow);
         }
 
-        /// <summary>Línea <c>AF_PERF frames</c> de una ventana de fotogramas de un nivel.</summary>
-        public static string FormatFrames(int level, int rows, int cuias, in FrameStats stats)
+        /// <summary>
+        /// Línea <c>AF_PERF frames</c> de una ventana de fotogramas de un nivel. <paramref name="morphoRunning"/>: el hilo de
+        /// Morpho del bench corrió durante algún fotograma de la ventana (ocupa un núcleo entero y puede inflar el tiempo de
+        /// fotograma); el shader se lee en las ventanas con <c>false</c>.
+        /// </summary>
+        public static string FormatFrames(int level, int rows, int cuias, in FrameStats stats, bool morphoRunning)
         {
             var sb = new StringBuilder(200);
             sb.Append("AF_PERF {\"event\":\"frames\",\"level\":").Append(I(level))
@@ -338,6 +355,7 @@ namespace AF.UI
                 .Append(",\"max_ms\":").Append(F(stats.MaxMs))
                 .Append(",\"fps\":").Append(stats.AvgMs > 0f ? F(1000.0 / stats.AvgMs) : "0.00")
                 .Append(",\"late\":").Append(I(stats.Slow))
+                .Append(",\"morpho_running\":").Append(morphoRunning ? "true" : "false")
                 .Append('}');
             return sb.ToString();
         }
@@ -553,6 +571,7 @@ namespace AF.UI
         private bool _morphoStarted;
         private volatile bool _morphoDone;
         private volatile bool _abort;
+        private SolverCancellation? _query; // la consulta de Morpho en curso (Interlocked: la escribe el hilo del bench)
         private Thread? _thread;
         private float[] _frames = new float[600];
         private float[] _scratch = new float[600];
@@ -560,6 +579,7 @@ namespace AF.UI
         private int _frameLevel;
         private int _frameRows;
         private int _frameCuias;
+        private bool _frameMorphoRunning;
         private bool _skipFrame;
 
         /// <summary>Líneas escritas hasta ahora (también van al log), para los tests.</summary>
@@ -661,7 +681,7 @@ namespace AF.UI
                 var samples = new List<MorphoSample>(boards.Count);
                 for (int i = 0; i < boards.Count && !_abort; i++)
                 {
-                    MorphoSample sample = DevBench.MeasureLevel(boards[i], safe, options, timeoutMs, runs);
+                    MorphoSample sample = DevBench.MeasureLevel(boards[i], safe, options, timeoutMs, runs, TrackQuery);
                     samples.Add(sample);
                     Emit(DevBench.FormatMorpho(sample, timeoutMs), false);
                 }
@@ -675,6 +695,17 @@ namespace AF.UI
             finally
             {
                 _morphoDone = true;
+            }
+        }
+
+        // La bandera de la consulta que va a empezar: la guarda para OnDestroy y, si ya se pidió parar, la marca (OnDestroy pudo
+        // leer la anterior justo antes de que esta se guardara).
+        private void TrackQuery(SolverCancellation cancellation)
+        {
+            Interlocked.Exchange(ref _query, cancellation);
+            if (_abort)
+            {
+                cancellation.Request();
             }
         }
 
@@ -710,6 +741,7 @@ namespace AF.UI
             }
 
             _frames[_frameCount++] = Time.unscaledDeltaTime * 1000f;
+            _frameMorphoRunning |= _morphoStarted && !_morphoDone;
             if (_frameCount == _frames.Length)
             {
                 FlushFrames(1);
@@ -721,10 +753,11 @@ namespace AF.UI
             if (_frameLevel > 0 && _frameCount >= minFrames)
             {
                 FrameStats stats = DevBench.ComputeFrames(_frames, _frameCount, _scratch);
-                Emit(DevBench.FormatFrames(_frameLevel, _frameRows, _frameCuias, stats), false);
+                Emit(DevBench.FormatFrames(_frameLevel, _frameRows, _frameCuias, stats, _frameMorphoRunning), false);
             }
 
             _frameCount = 0;
+            _frameMorphoRunning = false;
         }
 
         private void Emit(string line, bool warning)
@@ -743,6 +776,8 @@ namespace AF.UI
         private void OnDestroy()
         {
             _abort = true;
+            // Corta también la consulta en curso para que el hilo salga enseguida, sin terminar el nivel que mide.
+            Interlocked.CompareExchange(ref _query, null, null)?.Request();
             if (_settings.SampleFrames)
             {
                 FlushFrames(_settings.MinFrames);

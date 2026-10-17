@@ -31,7 +31,7 @@ namespace AF.Tests.PlayMode
             "^AF_PERF \\{\"event\":\"morpho_summary\",\"levels\":(\\d+),\"heavy\":(\\d+),\"nodes_per_ms\":\\d+\\.\\d\\d,\"pc_nodes_per_ms\":1000,\"factor\":(\\d+\\.\\d\\d|null),\"assumed_factor\":8,.*\\}$");
 
         private static readonly Regex FramesLine = new Regex(
-            "^AF_PERF \\{\"event\":\"frames\",\"level\":(\\d+),\"rows\":(\\d+),\"cuias\":(\\d+),\"frames\":(\\d+),\"avg_ms\":\\d+\\.\\d\\d,\"p95_ms\":\\d+\\.\\d\\d,\"max_ms\":\\d+\\.\\d\\d,\"fps\":\\d+\\.\\d\\d,\"late\":\\d+\\}$");
+            "^AF_PERF \\{\"event\":\"frames\",\"level\":(\\d+),\"rows\":(\\d+),\"cuias\":(\\d+),\"frames\":(\\d+),\"avg_ms\":\\d+\\.\\d\\d,\"p95_ms\":\\d+\\.\\d\\d,\"max_ms\":\\d+\\.\\d\\d,\"fps\":\\d+\\.\\d\\d,\"late\":\\d+,\"morpho_running\":(true|false)\\}$");
 
         private DevBenchRunner? _runner;
 
@@ -132,6 +132,25 @@ namespace AF.Tests.PlayMode
         }
 
         [Test]
+        public void MeasureLevel_OnQueryGetsEachFlag_CuttingItCutsEveryRun()
+        {
+            LevelDefinition def = Fixture(329);
+            var flags = new List<SolverCancellation>();
+
+            MorphoSample sample = DevBench.MeasureLevel(def, new SafeMoves(), DevBench.MorphoOptions(), 0, 3, c =>
+            {
+                flags.Add(c);
+                c.Request(); // como OnDestroy del runner: corta la consulta en curso
+            });
+
+            Assert.That(flags.Count, Is.EqualTo(4), "la de en frío y las 3 medidas");
+            Assert.That(flags.Distinct().Count(), Is.EqualTo(4), "una bandera por consulta");
+            Assert.That(sample.Cancelled, Is.True);
+            Assert.That(sample.CutRuns, Is.EqualTo(4));
+            Assert.That(sample.Nodes, Is.EqualTo(0));
+        }
+
+        [Test]
         public void FormatMorpho_AndSummary_CarryTheFields()
         {
             var heavy = new MorphoSample(329, "m07_v1_n0329", 11, 8, 5, 4, 24, 8000, 40.0, SafeMovesOutcome.Found, false, 10, 55.5, 3, 0);
@@ -146,6 +165,8 @@ namespace AF.Tests.PlayMode
             Assert.That(m.Groups[4].Value, Is.EqualTo("found"));
             Assert.That(line, Does.Contain("\"ms\":40.00").And.Contain("\"tinaja_doses\":5").And.Contain("\"cold_ms\":55.50").And.Contain("\"timeout_ms\":150"));
             Assert.That(DevBench.FormatMorpho(light, 150), Does.Contain("\"outcome\":\"budget_exceeded\",\"cancelled\":true").And.Contain("\"cut_runs\":1"));
+            var odd = new MorphoSample(1, "a\"b\\c", 4, 2, 0, 0, 1, 0, 0.0, SafeMovesOutcome.Found, false, 0);
+            Assert.That(DevBench.FormatMorpho(odd, 150), Does.Contain("\"id\":\"a\\\"b\\\\c\""), "el id va escapado, como los campos de SystemInfo");
 
             // Solo la consulta pesada cuenta: 8.000 nodos en 40 ms = 200 nodos/ms; 1.000 / 200 = factor 5.
             string summary = DevBench.FormatSummary(new[] { heavy, light }, 150, "SM-S938B", "ARM64 \"x8\"", "Adreno");
@@ -174,9 +195,10 @@ namespace AF.Tests.PlayMode
             Assert.That(stats.MaxMs, Is.EqualTo(20f));
             Assert.That(stats.Slow, Is.EqualTo(0), "ninguno pasa de 20 ms");
             Assert.That(ms[0], Is.EqualTo(20f), "no reordena la entrada");
-            string line = DevBench.FormatFrames(106, 3, 11, stats);
+            string line = DevBench.FormatFrames(106, 3, 11, stats, false);
             Assert.That(line, Does.Match(FramesLine.ToString()));
-            Assert.That(line, Does.Contain("\"avg_ms\":10.50,\"p95_ms\":19.00,\"max_ms\":20.00,\"fps\":95.24,\"late\":0"));
+            Assert.That(line, Does.Contain("\"avg_ms\":10.50,\"p95_ms\":19.00,\"max_ms\":20.00,\"fps\":95.24,\"late\":0,\"morpho_running\":false}"));
+            Assert.That(DevBench.FormatFrames(106, 3, 11, stats, true), Does.EndWith(",\"morpho_running\":true}"));
             ms[20] = 20.5f; // uno tardío
             Assert.That(DevBench.ComputeFrames(ms, 21, new float[25]).Slow, Is.EqualTo(1));
         }
@@ -236,7 +258,8 @@ namespace AF.Tests.PlayMode
                 FrameWindow = 20,
                 MinFrames = 5,
             });
-            yield return WaitUntil(() => _runner.MorphoDone && _runner.Lines.Any(l => l.Contains("\"event\":\"frames\"")), 120f, "el bench de Morpho y una ventana de fotogramas");
+            // Una ventana entera tras Morpho: la que lee el shader (morpho_running = false).
+            yield return WaitUntil(() => _runner.MorphoDone && _runner.Lines.Any(l => l.Contains("\"morpho_running\":false")), 120f, "el bench de Morpho y una ventana de fotogramas sin él");
 
             string[] lines = _runner.Lines.ToArray();
             string[] morpho = lines.Where(l => l.Contains("\"event\":\"morpho\"")).ToArray();
@@ -253,7 +276,7 @@ namespace AF.Tests.PlayMode
             Assert.That(summary.Groups[1].Value, Is.EqualTo("2"));
             Assert.That(summary.Groups[2].Value, Is.EqualTo("1"), "solo el 329 es una consulta pesada");
 
-            Match frames = lines.Select(l => FramesLine.Match(l)).First(x => x.Success);
+            Match frames = lines.Select(l => FramesLine.Match(l)).First(x => x.Success && x.Groups[5].Value == "false");
             Assert.That(frames.Groups[1].Value, Is.EqualTo("1"));
             Assert.That(frames.Groups[2].Value, Is.EqualTo("3"), "nivel de 3 filas");
             Assert.That(frames.Groups[3].Value, Is.EqualTo("13"));
