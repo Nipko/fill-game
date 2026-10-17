@@ -42,7 +42,7 @@ namespace AF.UI
         /// <summary>Milisegundos de reloj real con el Mapa abierto.</summary>
         public int DwellMs { get; }
 
-        /// <summary>Paradas tocadas (las mini cuias llegan con M3.5 y M4.1: hoy, 0).</summary>
+        /// <summary>Paradas tocadas: mini cuias del Mapa (M3.5), muestras del Muestrario y miradores (M4.1).</summary>
         public int StopsTapped { get; }
 
         /// <summary>Cambios de vista (Mundo ↔ Cuenca).</summary>
@@ -69,7 +69,8 @@ namespace AF.UI
     /// en vidrio (una cinta por línea; <see cref="RiverRibbonGraphic"/>), la canoa y «Volver a la canoa»
     /// (<c>map_back_to_canoe</c>) cuando la canoa queda fuera de la vista.</description></item>
     /// <item><description><b>Pie</b>: el conmutador Mundo / Cuenca (<c>map_view_world</c> y <c>map_view_basin</c>), «Faltan N»
-    /// (<c>map_stop_remaining</c>) y «Jugar · Nivel {n}», siempre a la vista; el hueco del Muestrario (M4.1), oculto.</description></item>
+    /// (<c>map_stop_remaining</c>) y «Jugar · Nivel {n}», siempre a la vista; encima, la fila de la pestaña del Muestrario
+    /// (M4.1, <c>RiverMapScreen.Samples.cs</c>).</description></item>
     /// </list>
     /// <para><b>Vistas</b> (<see cref="MapView"/>): Mundo, la caja de las paradas del mundo de «Jugar» y la canoa al
     /// <see cref="WorldFill"/> de la zona, entre <see cref="WorldZoomMin"/>× y <see cref="WorldZoomMax"/>× [P] (propuesta del
@@ -565,7 +566,7 @@ namespace AF.UI
         /// <summary>Texto de «Faltan…» (en coordenadas de su placa, <see cref="StopRemainingRect"/>).</summary>
         public TextMeshProUGUI StopRemainingLabel => _remainingLabel;
 
-        /// <summary>Hueco del Muestrario (M4.1), oculto hasta que exista.</summary>
+        /// <summary>Fila de la pestaña del Muestrario (M4.1), sobre la del pie; oculta sin catálogo de paradas.</summary>
         public RectTransform SamplesSlot => _samplesSlot;
 
         /// <summary>Ancho del lienzo en dp.</summary>
@@ -613,6 +614,10 @@ namespace AF.UI
             }
 
             yield return _playLabel;
+            foreach (TextMeshProUGUI text in SamplesTexts())
+            {
+                yield return text; // la pestaña del Muestrario, el Muestrario y la tarjeta de la parada (M4.1)
+            }
         }
 
         /// <summary>
@@ -670,6 +675,7 @@ namespace AF.UI
             ProgressOpen(progress);
             MarkersOpen(progress);
             CatchUpOpen(progress);
+            SamplesOpen(progress);
             ApplyScreenMetrics();
             ApplyView(view);
             EmitLayout();
@@ -691,6 +697,7 @@ namespace AF.UI
                 CatchUpClose(_progress);
             }
 
+            SamplesClose();
             SequenceClose();
             NorthUpClose();
 
@@ -1040,6 +1047,7 @@ namespace AF.UI
 
             ProgressSpace(space);
             MarkersSpace(space);
+            SamplesSpace(space);
             SequenceSpace(space);
             NorthUpSpace(space);
             Vector2 c = space.ToLocal(center);
@@ -1188,12 +1196,23 @@ namespace AF.UI
             _viewBasin.Place(16f + SwitchPadDp + SegmentDp, rowTop, SegmentDp, rowH);
             UiBuilder.Place(_remaining, remainingX, rowTop, remainingW, rowH);
             UiBuilder.Place(_remainingLabel.rectTransform, RemainingLabelXDp, RowPadDp, labelW, rowH - (2f * RowPadDp));
-            UiBuilder.Place(_samplesSlot, remainingX, rowTop, remainingW, rowH);
+
+            // La pestaña del Muestrario (M4.1), en su fila sobre la del pie, a la derecha (junto a «Faltan…» no cabe), con
+            // SamplesRowGapDp por arriba y por abajo: la fila cuesta 52 dp y a 360 × 780 la cuenca entera sigue cabiendo a 1×.
+            float samplesTop = rowTop;
+            float frameGap = 6f;
+            if (_samplesSlot.gameObject.activeSelf)
+            {
+                samplesTop = rowTop - SamplesRowGapDp - SamplesRowDp;
+                frameGap = SamplesRowGapDp;
+            }
+
+            UiBuilder.Place(_samplesSlot, 16f, samplesTop, w - 32f, SamplesRowDp);
             SamplesLayout(_samplesSlot);
 
-            // Zona del mapa: entre la cabecera y el pie, en su marco.
+            // Zona del mapa: entre la cabecera y el pie (y la fila del Muestrario), en su marco.
             float frameTop = _safeTop + HeaderDp + 8f;
-            float frameBottom = rowTop - 6f;
+            float frameBottom = samplesTop - frameGap;
             float frameW = w - (2f * FrameInsetDp);
             float frameH = Mathf.Max(2f * FramePadDp + 48f, frameBottom - frameTop);
             UiBuilder.Place(_frame.rectTransform, FrameInsetDp, frameTop, frameW, frameH);
@@ -1373,6 +1392,18 @@ namespace AF.UI
 
         /// <summary>M4.1: el Muestrario en <c>AF_LAYOUT</c>.</summary>
         partial void SamplesLayoutIds(List<string> ids, List<RectTransform> rects);
+
+        /// <summary>M4.1: al abrir, las cuentas del Muestrario, su pestaña y los miradores (antes de maquetar).</summary>
+        partial void SamplesOpen(IMapProgress progress);
+
+        /// <summary>M4.1: la vista cambió de escala (los miradores).</summary>
+        partial void SamplesSpace(MapSpace space);
+
+        /// <summary>M4.1: al cerrar, la tarjeta de la parada y el Muestrario.</summary>
+        partial void SamplesClose();
+
+        /// <summary>M4.1: los textos de la pestaña del Muestrario, del Muestrario y de la tarjeta que se ven.</summary>
+        private partial IEnumerable<TextMeshProUGUI> SamplesTexts();
 
         /// <summary>M4.3: la entrada (pausa, victoria, fin de contenido) y el modo <c>ui_map_mode</c> al abrir.</summary>
         partial void ModesOpen(MapOpenSource source);
