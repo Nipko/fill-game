@@ -18,7 +18,9 @@ namespace AF.UI
     /// <see cref="AF.Localization.Loc"/>.
     /// <list type="bullet">
     /// <item>En la parada 0 (Belém, niveles 1-10) está en casa: sin píldora [P] (<see cref="HasPill"/>).</item>
-    /// <item>Sin nombre ni texto en el marco. En el inicio, sin toques (todo con <c>raycastTarget</c> = false). En el Mapa del
+    /// <item>Sin nombre ni texto en el marco. En el inicio, TiTino vive dentro del marco (<see cref="HomeSloth"/>, tarea TI6c): su
+    /// pose según la hora local, el saludo del día, y un área táctil sobre el marco con <c>sloth_look</c> y, como mucho una vez por
+    /// sesión, el Dato del perezoso; lo demás, sin toques (<c>raycastTarget</c> = false). En el Mapa del
     /// río (M3.5) se crea con una acción de toque (<see cref="HomeWindow(Transform, ProceduralArt, Action)"/>): un área táctil
     /// de ≥ 48 dp sobre el marco y la píldora (<see cref="TapButton"/>) que lleva la vista a la casa, en Guajará; el retrato
     /// cierra los ojos cuando TiTino dormita (<see cref="SetAsleep"/>, <c>sloth_sleep</c> a los 30 s sin toques); y la píldora
@@ -83,6 +85,7 @@ namespace AF.UI
         private readonly RectTransform _pill;
         private readonly TextMeshProUGUI _label;
         private readonly Button? _tap;
+        private readonly HomeSloth? _sloth;
 
         private RiverStop? _stop;
         private bool _hasStop;
@@ -96,10 +99,14 @@ namespace AF.UI
         private bool _pillBelow;
         private Rect _bounds;
 
-        /// <summary>Crea la ventanita (oculta) bajo <paramref name="parent"/>, sin toques (la del inicio).</summary>
+        /// <summary>
+        /// Crea la ventanita (oculta) bajo <paramref name="parent"/> con TiTino dentro (la del inicio; <see cref="HomeSloth"/>, TI6c):
+        /// sin más toque que el suyo.
+        /// </summary>
         public HomeWindow(Transform parent, ProceduralArt art)
             : this(parent, art, null)
         {
+            _sloth = new HomeSloth(this, parent, art);
         }
 
         /// <summary>
@@ -145,7 +152,15 @@ namespace AF.UI
         /// <summary>La píldora de la distancia se ve.</summary>
         public bool PillShown => _pill.gameObject.activeSelf;
 
-        /// <summary>Área táctil del marco y la píldora (null en la ventanita sin toques del inicio).</summary>
+        /// <summary>
+        /// TiTino en la ventanita del inicio (TI6c): pose por la hora, saludos, toque y Dato del perezoso. Null en la del Mapa del río.
+        /// </summary>
+        public HomeSloth? Sloth => _sloth;
+
+        /// <summary>El retrato del marco (TiTino sin rig; con el rig de <see cref="HomeSloth"/>, oculto).</summary>
+        internal Image PortraitImage => _portrait;
+
+        /// <summary>Área táctil del marco y la píldora del Mapa del río (null en la del inicio, en la que toca TiTino).</summary>
         public Button? TapButton => _tap;
 
         /// <summary>Caja del área táctil (null sin toques).</summary>
@@ -251,6 +266,8 @@ namespace AF.UI
             {
                 _tap.gameObject.SetActive(on);
             }
+
+            _sloth?.SetShown(on);
         }
 
         /// <summary>
@@ -287,6 +304,7 @@ namespace AF.UI
             // El retrato cuelga bajo la rama de la embaúba: apoyado en el borde de abajo del hueco.
             UiBuilder.Place(_portrait.rectTransform, inset, SizeDp - ProceduralArt.HomeWindowBorderDp - PortraitDp, PortraitDp, PortraitDp);
             PlacePill();
+            _sloth?.Layout(x, yTop, maxRight);
         }
 
         private void Build(RiverStop? stop)

@@ -156,7 +156,12 @@ namespace AF.Tests.EditMode
 
             foreach (Graphic g in _host.GetComponentsInChildren<Graphic>(true))
             {
-                Assert.That(g.raycastTarget, Is.False, g.name + ": la ventanita no recibe toques (hasta M3.3)");
+                if (home.Sloth != null && g.gameObject == home.Sloth.TapButton.gameObject)
+                {
+                    continue; // el único toque del inicio: TiTino (TI6c)
+                }
+
+                Assert.That(g.raycastTarget, Is.False, g.name + ": la ventanita no recibe más toque que el de TiTino (TI6c)");
             }
 
             home.Apply(manaos, true);
