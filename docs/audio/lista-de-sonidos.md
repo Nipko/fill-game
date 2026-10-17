@@ -261,7 +261,7 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
   - fuera del nivel, `mus_menu`: en el inicio con sus hojas (también la de compra), «El río sigue creciendo» y Sin canoas. La Crecida aún no tiene pantalla;
   - la atenuación y el silencio en los anuncios no cambian.
 - **Remates:**
-  - con gancho: `sting_world_banner` (con la piha del banner de mundo), `sting_arrival` (con `sfx_fact`, en la llegada a la parada), `sting_mech_card` (con la tarjeta previa de un estreno, sola o junto a la dificultad como en el 100; las tarjetas que solo anuncian la dificultad, como el 60 o el 80, suenan con `sfx_mech_card` y sin remate) `sting_level_failed` (en la transición a Nivel fallido; no al volver de Sin canoas ni al reanudar con la pantalla ya abierta) y `sting_fruit_new` (con `sfx_fruit_new`, al salir la tarjeta «Fruta nueva», F5; gancho desde FX6);
+  - con gancho: `sting_world_banner` (con la piha del banner de mundo), `sting_arrival` (con `sfx_fact`, en la llegada a la parada), `sting_mech_card` (con la tarjeta previa de un estreno, sola o junto a la dificultad como en el 100; las tarjetas que solo anuncian la dificultad, como el 60 o el 80, suenan con `sfx_mech_card` y sin remate), `sting_level_failed` (en la transición a Nivel fallido; no al volver de Sin canoas ni al reanudar con la pantalla ya abierta) y `sting_fruit_new` (con `sfx_fruit_new`, al salir la tarjeta «Fruta nueva», F5; gancho desde FX6);
   - suenan a −8 dB de su pico, hacia −24 dBFS, por debajo del efecto al que acompañan [P];
   - van con el ajuste Música [P];
   - si suena la toada, esperan a que termine: la llegada a la parada nunca se solapa con ella.
@@ -374,7 +374,7 @@ Las columnas «Tu propuesta» de las secciones 1-7 siguen siendo el encargo para
 | `sfx_morpho_idle` | −28 | sin cola añadida | Sin gancho todavía: Morpho por inactividad (MO3) |
 | `sfx_store_open` | −19 | sin cola añadida | Al abrirse la hoja de compra |
 
-**Ganchos de los remates (AU3):** junto a `sfx_world_banner` (`sting_world_banner`), `sfx_fact` (`sting_arrival`), `sfx_mech_card` en la tarjeta previa de un estreno (`sting_mech_card`; no en las que solo anuncian la dificultad) en la transición a Nivel fallido (`sting_level_failed`; no al reanudar con la pantalla abierta) y junto a `sfx_fruit_new` en la tarjeta «Fruta nueva» (`sting_fruit_new`; desde FX6).
+**Ganchos de los remates (AU3):** junto a `sfx_world_banner` (`sting_world_banner`), `sfx_fact` (`sting_arrival`), `sfx_mech_card` en la tarjeta previa de un estreno (`sting_mech_card`; no en las que solo anuncian la dificultad), en la transición a Nivel fallido (`sting_level_failed`; no al reanudar con la pantalla abierta) y junto a `sfx_fruit_new` en la tarjeta «Fruta nueva» (`sting_fruit_new`; desde FX6).
 
 ### Peso del audio (AU3, 2026-10-17)
 
