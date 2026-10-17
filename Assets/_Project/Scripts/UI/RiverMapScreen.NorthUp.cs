@@ -35,7 +35,10 @@ namespace AF.UI
     /// placa, lo más cerca de su punto, a un lado u otro, encima o debajo, a ≤ <see cref="NorthUpPlateMaxDistDp"/> de él en
     /// pantalla (si no hay sitio para todas, hasta <see cref="NorthUpPlateFarDistDp"/>), con un punto crema en su sitio y una
     /// línea guía si se apartó más de <see cref="NorthUpPinLineFromDp"/>, sin que esa línea cruce ni roce otra placa ni pase por
-    /// otro punto (con dos puntos casi juntos, la placa del más al norte encima y la otra debajo); cada país, en su región (D-013, punto 5: «cada país lleva su nombre en su región»; el mapa
+    /// otro punto (con dos puntos casi juntos, la placa del más al norte encima y la otra debajo). Solo salen las placas de los
+    /// <see cref="MapConfig.NorthUpFutureWorldPlates"/> mundos futuros siguientes (decisión del dueño del 2026-10-17, opción A):
+    /// las de los más lejanos, sin punto ni sitio, se funden con el giro y vuelven con la vista de siempre
+    /// (<see cref="NorthUpPlateHidden"/>). Cada país, en su región (D-013, punto 5: «cada país lleva su nombre en su región»; el mapa
     /// enseña la geografía real): a ≤ <see cref="NorthUpCountryReachDp"/> de su punto de <c>labels</c> en pantalla y, si ahí no
     /// cabe, no sale mientras el norte está arriba [P]. «Andes ↑» y «Océano Atlántico ↓», fijos en el
     /// marco, tampoco giran, pero con el norte arriba sus flechas mentirían (los Andes quedan a la izquierda y el Atlántico a la
@@ -257,7 +260,7 @@ namespace AF.UI
         /// </summary>
         internal bool NorthUpCountryHidden(int i)
         {
-            return _northUpT > 0f && i < _labelHidden.Length && _labelHidden[i];
+            return i < _countries.Count && NorthUpLabelHidden(i);
         }
 
         /// <summary>
@@ -280,16 +283,68 @@ namespace AF.UI
         /// <summary>Capa de los rótulos del contenido (países, placas y sus puntos).</summary>
         internal RectTransform? LabelLayer => _labelLayer;
 
-        /// <summary>Placas de los mundos futuros que se ven (tests: que se leen derechas).</summary>
+        /// <summary>
+        /// Placas de los mundos futuros que se ven (tests: que se leen derechas), sin las que no salen con el norte arriba
+        /// (<see cref="NorthUpPlateHidden"/>).
+        /// </summary>
         internal IEnumerable<RectTransform> SilhouettePlates()
         {
+            int countries = _countries.Count;
             for (int i = 0; i < _silhouettes.Count; i++)
             {
-                if (_silhouettes[i].Root.gameObject.activeSelf)
+                if (_silhouettes[i].Root.gameObject.activeSelf && !NorthUpLabelHidden(countries + i))
                 {
                     yield return _silhouettes[i].Root;
                 }
             }
+        }
+
+        /// <summary>
+        /// La placa de la silueta <paramref name="i"/> a la vista (en el orden de <see cref="SilhouetteCount"/>) no sale con el
+        /// norte arriba: su mundo no es uno de los <see cref="MapConfig.NorthUpFutureWorldPlates"/> mundos futuros siguientes
+        /// (decisión del dueño del 2026-10-17, opción A). Se funde con el giro y vuelve con la vista de siempre.
+        /// </summary>
+        internal bool NorthUpPlateHidden(int i)
+        {
+            int seen = 0;
+            for (int k = 0; k < _silhouettes.Count; k++)
+            {
+                if (_silhouettes[k].Root.gameObject.activeSelf && seen++ == i)
+                {
+                    return NorthUpLabelHidden(_countries.Count + k);
+                }
+            }
+
+            throw new ArgumentOutOfRangeException(nameof(i), i, "No hay tantas siluetas a la vista.");
+        }
+
+        /// <summary>
+        /// Placas de mundos futuros que salen: con el norte arriba (o mientras gira), las de los
+        /// <see cref="MapConfig.NorthUpFutureWorldPlates"/> mundos futuros siguientes, que son las primeras de
+        /// <see cref="SilhouetteCount"/> (van en orden de mundo); en la vista de siempre, todas.
+        /// </summary>
+        internal int NorthUpPlateCount
+        {
+            get
+            {
+                int n = 0;
+                int countries = _countries.Count;
+                for (int i = 0; i < _silhouettes.Count; i++)
+                {
+                    if (_silhouettes[i].Root.gameObject.activeSelf && !NorthUpLabelHidden(countries + i))
+                    {
+                        n++;
+                    }
+                }
+
+                return n;
+            }
+        }
+
+        // El rótulo i (países y luego placas, como _labelHidden) no sale mientras el norte está arriba o gira.
+        private bool NorthUpLabelHidden(int i)
+        {
+            return _northUpT > 0f && i < _labelHidden.Length && _labelHidden[i];
         }
 
         /// <summary>
@@ -570,14 +625,18 @@ namespace AF.UI
                 RectTransform rt = i < countries ? _countries[i].rectTransform : _silhouettes[i - countries].Root;
                 rt.localRotation = upright;
                 rt.localScale = counter;
+                float alpha = i < _labelHidden.Length && _labelHidden[i] ? 1f - u : 1f;
                 if (i < countries)
                 {
-                    float alpha = i < _labelHidden.Length && _labelHidden[i] ? 1f - u : 1f;
-                    CanvasRenderer cr = _countries[i].canvasRenderer;
-                    if (cr.GetAlpha() != alpha)
-                    {
-                        cr.SetAlpha(alpha);
-                    }
+                    SetLabelAlpha(_countries[i].canvasRenderer, alpha);
+                }
+                else
+                {
+                    // Una placa de un mundo futuro más lejano que los NorthUpFutureWorldPlates siguientes (decisión del dueño del
+                    // 2026-10-17, opción A): se funde con el giro, su placa y su texto.
+                    Silhouette s = _silhouettes[i - countries];
+                    SetLabelAlpha(s.Plate.canvasRenderer, alpha);
+                    SetLabelAlpha(s.Label.canvasRenderer, alpha);
                 }
 
                 if (i >= _labelBase.Length)
@@ -683,9 +742,13 @@ namespace AF.UI
             IReadOnlyList<RiverMapLabel>? data = _map?.Labels;
 
             // Cajas en pantalla con el norte arriba, en el marco del contenido girado: S(v) = (−v.y, v.x). Los países, centrados en
-            // su punto; las placas, a la derecha de su pivote (como en la vista de siempre). Primero las placas.
+            // su punto; las placas, a la derecha de su pivote (como en la vista de siempre). Primero las placas, y solo las de los
+            // MapConfig.NorthUpFutureWorldPlates mundos futuros siguientes (decisión del dueño del 2026-10-17, opción A): las
+            // siluetas a la vista son las de los mundos futuros con ruta, en orden de mundo (BuildSilhouettes), así que son las
+            // primeras; las demás no salen con el norte arriba (_labelHidden), sin punto ni sitio.
             int count = 0;
             int plates = 0;
+            int future = 0;
             for (int pass = 0; pass < 2; pass++)
             {
                 for (int i = 0; i < n; i++)
@@ -709,6 +772,12 @@ namespace AF.UI
                     _plateSide[i] = 0;
                     if (!rt.gameObject.activeSelf)
                     {
+                        continue;
+                    }
+
+                    if (plate && future++ >= MapConfig.NorthUpFutureWorldPlates)
+                    {
+                        _labelHidden[i] = true; // un mundo futuro más lejano: su placa no sale con el norte arriba
                         continue;
                     }
 
@@ -1146,6 +1215,15 @@ namespace AF.UI
             }
 
             _pins.Commit();
+        }
+
+        // Opacidad de un rótulo del contenido (un país o una placa con su texto), solo si cambia. Sin asignaciones.
+        private static void SetLabelAlpha(CanvasRenderer cr, float alpha)
+        {
+            if (cr.GetAlpha() != alpha)
+            {
+                cr.SetAlpha(alpha);
+            }
         }
 
         private static void FadeOrientationLabel(CanvasGroup? fade, float alpha)
