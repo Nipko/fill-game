@@ -22,8 +22,9 @@ namespace AF.UI
     /// con su centro al 60 % del alto (06 §4.7), con la etiqueta de D-009 encima cuando el nivel la lleva (propuesta §c.1;
     /// 07 §7.7; <see cref="DifficultyChip"/>): Difícil, chip ámbar con la rana dardo y la cinta «×3»; Muy difícil, chip índigo
     /// con el jaguar, «×4» y el botón en variante nocturna [P];</description></item>
-    /// <item><description>abajo, la barra de pestañas con «Inicio» [P]: Mercado, Mapa del río, Reto del río y Bitácora quedan
-    /// ocultos hasta que existan (D-008).</description></item>
+    /// <item><description>abajo, la barra de pestañas con «Inicio» [P] y, desde <c>max_level</c> ≥ 10, el icono del Mapa del
+    /// río a su derecha (06 §4.7; D-008; tarea M3.3), con un punto si hay una llegada sin ver (<c>map_seen_level</c>); Mercado,
+    /// Reto del río y Bitácora quedan ocultos hasta que existan (D-008).</description></item>
     /// </list>
     /// Encima, cuando toca, «El río sigue creciendo» (06 §9) o Sin canoas (04 §7.3, con sus opciones desde B2-3:
     /// <see cref="NoCanoesPanel"/>). Lienzo de 360 dp de ancho y al menos 640 de alto. Los contadores se actualizan solo al cambiar
@@ -65,6 +66,9 @@ namespace AF.UI
         private const float PlayMaxWidth = 296f;
         private const float ChipGapDp = 6f;
         private const float HomeTabWidth = 120f;
+        private const float MapTabWidth = 64f;
+        private const float MapTabGapDp = 12f;
+        private const float MapTabDotDp = 14f;
         private const float OverlayPanelHeight = 236f;
         private const float MaxHorizonDp = 200f;
         private const float RiverPropsMinBandDp = 56f;
@@ -120,6 +124,11 @@ namespace AF.UI
         private readonly Image _tabBar;
         private readonly RectTransform _homeTab;
         private readonly TextMeshProUGUI _homeTabLabel;
+        private readonly ReliefParts _mapTab;
+        private readonly RectTransform _mapTabDot;
+        private bool _riverMapAvailable;
+        private int _mapTabShown = -1;
+        private int _mapDotShown = -1;
 
         private readonly RectTransform _overlay;
         private readonly RectTransform _overlayPanel;
@@ -256,6 +265,25 @@ namespace AF.UI
             UiBuilder.Stretch(tabFace.rectTransform);
             _homeTabLabel = UiBuilder.Label("Label", tabFace.transform, TextStyle.PillWood, UiText.Home, 17f, Palette.Cream, TextAlignmentOptions.Center);
             UiBuilder.PlaceCtaLabel(_homeTabLabel.rectTransform, art.CtaWood);
+
+            // Icono del Mapa del río (06 §4.7: los iconos Mercado / Mapa del río, sin texto; tarea M3.3): la canoa de Capi sobre la
+            // madera de la pestaña y, si hay una llegada sin ver, un punto de heliconia con canto crema. Desde max_level ≥ 10.
+            _mapTab = UiBuilder.Relief("MapTab", _root, art.CtaWood, () => actions.OpenRiverMap(MapOpenSource.Lobby));
+            Image mapIcon = UiBuilder.Image("Icon", _mapTab.Face, art.MapCanoe, Color.white);
+            mapIcon.preserveAspect = true;
+            UiBuilder.Stretch(mapIcon.rectTransform);
+            mapIcon.rectTransform.offsetMin = new Vector2(10f, 5f);
+            mapIcon.rectTransform.offsetMax = new Vector2(-10f, -5f);
+            _mapTab.Relief.Bind(_mapTab.Face, _mapTab.Base, _mapTab.FaceImage, art.CtaWood, null, null, null);
+            _mapTabDot = UiBuilder.Rect("UnseenDot", _mapTab.Face);
+            Image dotRim = UiBuilder.Image("Rim", _mapTabDot, art.Disc, Palette.Cream);
+            UiBuilder.Stretch(dotRim.rectTransform);
+            Image dot = UiBuilder.Image("Dot", _mapTabDot, art.Disc, Palette.Heliconia);
+            UiBuilder.Stretch(dot.rectTransform);
+            dot.rectTransform.offsetMin = new Vector2(2f, 2f);
+            dot.rectTransform.offsetMax = new Vector2(-2f, -2f);
+            _mapTabDot.gameObject.SetActive(false);
+            _mapTab.Button.gameObject.SetActive(false);
 
             // ---- Botón central «Jugar · Nivel {n}» (familia Hoja, el primario de 07 §7.2; nocturno en Muy difícil) y el chip de
             // la etiqueta de D-009 encima (propuesta §c.1). ----
@@ -394,6 +422,40 @@ namespace AF.UI
 
         /// <summary>Pestaña «Inicio».</summary>
         public RectTransform HomeTabRect => _homeTab;
+
+        /// <summary>
+        /// La escena trae el Mapa del río (su geometría y las paradas; tarea M3.3): sin él, la pestaña del Mapa no sale nunca. Lo
+        /// fija <see cref="GameBootstrap"/>.
+        /// </summary>
+        public bool RiverMapAvailable
+        {
+            get => _riverMapAvailable;
+            set
+            {
+                _riverMapAvailable = value;
+                if (_app != null && Visible)
+                {
+                    bool shown = MapTabShown;
+                    RefreshMapTab();
+                    if (MapTabShown != shown)
+                    {
+                        EmitLayout(); // AF_LAYOUT deja de publicar (o publica) map_tab al momento, no en el siguiente cambio
+                    }
+                }
+            }
+        }
+
+        /// <summary>Pestaña del Mapa del río (abre el Mapa en la vista Mundo).</summary>
+        public Button MapTabButton => _mapTab.Button;
+
+        /// <summary>Caja de la pestaña del Mapa del río.</summary>
+        public RectTransform MapTabRect => (RectTransform)_mapTab.Button.transform;
+
+        /// <summary>La pestaña del Mapa del río se ve (desde <c>max_level</c> ≥ 10, con el Mapa en la escena).</summary>
+        public bool MapTabShown => _mapTab.Button.gameObject.activeSelf;
+
+        /// <summary>La pestaña del Mapa lleva el punto: hay una llegada a parada sin ver (<see cref="RiverJourney.HasUnseenArrival"/>).</summary>
+        public bool MapTabDotShown => _mapTabDot.gameObject.activeSelf;
 
         /// <summary>Chip de dificultad entero (sello, píldora y cinta).</summary>
         public RectTransform ChipRect => _chip.Root;
@@ -599,9 +661,33 @@ namespace AF.UI
             }
 
             RefreshCanoes(app);
+            RefreshMapTab();
             if (_shown == AppScreen.NoCanoes)
             {
                 _noCanoes.Refresh(_services);
+            }
+        }
+
+        // Pestaña del Mapa del río (M3.3): solo en el inicio sin superposición, con el Mapa en la escena y desde max_level ≥ 10; el
+        // punto, si hay una llegada sin ver. Enteros del progreso, sin asignar memoria; solo cambia la UI cuando cambia algo.
+        private void RefreshMapTab()
+        {
+            IMapProgress? progress = _services?.MapProgress;
+            int max = progress != null ? Mathf.Clamp(progress.MaxLevel, 0, WorldTable.LastLevel) : 0;
+            bool show = _riverMapAvailable && progress != null && _shown == AppScreen.Lobby && max >= RiverMapScreen.TabFromMaxLevel;
+            bool dot = show && RiverJourney.HasUnseenArrival(Mathf.Max(0, progress!.MapSeenLevel), max);
+            int showFlag = show ? 1 : 0;
+            if (showFlag != _mapTabShown)
+            {
+                _mapTabShown = showFlag;
+                _mapTab.Button.gameObject.SetActive(show);
+            }
+
+            int dotFlag = dot ? 1 : 0;
+            if (dotFlag != _mapDotShown)
+            {
+                _mapDotShown = dotFlag;
+                _mapTabDot.gameObject.SetActive(dot);
             }
         }
 
@@ -785,6 +871,11 @@ namespace AF.UI
             UiBuilder.Place(_tabBar.rectTransform, -8f, tabTop, w + 16f, h - tabTop + 12f);
             UiBuilder.Place(_homeTab, (w - HomeTabWidth) * 0.5f, tabTop - 12f, HomeTabWidth, _art.CtaWood.HeightDp);
 
+            // El icono del Mapa, a la derecha de «Inicio», a su altura; su área táctil baja hasta tener 48 dp (M3.3).
+            float mapTabX = ((w + HomeTabWidth) * 0.5f) + MapTabGapDp;
+            UiBuilder.Place(MapTabRect, mapTabX, tabTop - 12f, MapTabWidth, Mathf.Max(MinTouchDp, _art.CtaWood.HeightDp));
+            UiBuilder.Place(_mapTabDot, MapTabWidth - MapTabDotDp + 2f, -4f, MapTabDotDp, MapTabDotDp);
+
             // Superposición: tarjeta centrada en vertical, que tapa el botón Jugar atenuado (Magic Sort cubre lo de detrás con
             // la tarjeta y un fondo oscurecido, ficha §4.4 y §4.8), con su botón en la mitad inferior.
             float panelW = Mathf.Min(328f, w - 32f);
@@ -936,6 +1027,12 @@ namespace AF.UI
 
                 ids.Add("settings");
                 rects.Add((RectTransform)_settings.Button.transform);
+                if (_mapTab.Button.gameObject.activeSelf)
+                {
+                    ids.Add("map_tab");
+                    rects.Add(MapTabRect);
+                }
+
                 if (_remaining.gameObject.activeSelf)
                 {
                     ids.Add("stop_remaining");

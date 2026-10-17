@@ -16,6 +16,8 @@
     { "subject": "cacao", "kind": "tint", "from_level": 201, "lines": 20, "step": 1 },
     { "subject": "lulo", "kind": "tint", "from_level": 221, "lines": 20, "step": 1 },
     { "subject": "guanabana", "kind": "tint", "from_level": 241, "lines": 20, "step": 1 },
+    { "subject": "rio_napo", "kind": "river", "from_level": 261, "lines": 20, "step": 1 },
+    { "subject": "rio_amazonas", "kind": "river", "from_level": 281, "lines": 20, "step": 1 },
     { "subject": "araza", "kind": "tint", "from_level": 301, "lines": 20, "step": 1 }
   ],
   "sources": {
@@ -107,6 +109,26 @@
     "Cc2": { "title": "Wikipedia EN, «Theobroma cacao»", "url": "https://en.wikipedia.org/wiki/Theobroma_cacao" },
     "Z1": { "title": "Hernández, Barrera y Carrillo (2006), Arazá, Instituto SINCHI (Colombia)", "url": "https://sinchi.org.co/files/publicaciones/publicaciones/pdf/araza_2web.pdf" },
     "Z2": { "title": "Wikipedia EN, «Eugenia stipitata»", "url": "https://en.wikipedia.org/wiki/Eugenia_stipitata" },
-    "Z3": { "title": "Embrapa Mandioca e Fruticultura, folder de jalea de banana con araçá-boi", "url": "https://www.infoteca.cnptia.embrapa.br/infoteca/bitstream/doc/919367/1/foldergeleianet.pdf" }
+    "Z3": { "title": "Embrapa Mandioca e Fruticultura, folder de jalea de banana con araçá-boi", "url": "https://www.infoteca.cnptia.embrapa.br/infoteca/bitstream/doc/919367/1/foldergeleianet.pdf" },
+    "Np1": { "title": "Wikipedia EN, «Napo River»", "url": "https://en.wikipedia.org/wiki/Napo_River" },
+    "Np2": { "title": "Wikipedia ES, «Río Napo» (cita a la FAO: Ziesler y Ardizzone, 1979; y el Compendio Estadístico del Perú, 2001)", "url": "https://es.wikipedia.org/wiki/R%C3%ADo_Napo" },
+    "Np3": { "title": "Laraque et al. (2009), «Sediment budget of the Napo River, Amazon basin, Ecuador and Peru», Hydrological Processes 23(25):3509-3524 (resumen en el repositorio del IRD)", "url": "https://www.documentation.ird.fr/hor/fdi:010048460" },
+    "Np4": { "title": "Wittmann et al. (2011), sedimento y berilio-10 en la cuenca del Napo, Journal of South American Earth Sciences 31(1):45-53 (resumen en el repositorio del IRD)", "url": "https://www.documentation.ird.fr/hor/fdi:010053058" },
+    "Np5": { "title": "Escobar-Camacho et al. (2025), «Exceptional concentration of fish diversity in Yasuní National Park, Ecuador (Napo River Basin)», Biodiversity Data Journal 13:e136476, introducción", "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11926608/" },
+    "Np6": { "title": "UICN (2017-09-05), «Las lagunas de Cuyabeno, mantos de la biodiversidad»", "url": "https://iucn.org/es/node/15752" },
+    "Np7": { "title": "Key Biodiversity Areas, ficha de la Reserva de Producción de Fauna Cuyabeno (evaluación de 2023)", "url": "https://www.keybiodiversityareas.org/site/factsheet/14559" },
+    "Np8": { "title": "Wikipedia EN, «Cuyabeno Wildlife Reserve»", "url": "https://en.wikipedia.org/wiki/Cuyabeno_Wildlife_Reserve" },
+    "Np9": { "title": "Vistazo, «Cuyabeno, un tesoro amazónico» (Manuel Avilés; sin fecha en la página)", "url": "https://www.vistazo.com/paraisos-cronicas/cuyabeno-JF1403083" },
+    "Np10": { "title": "Wikipedia EN, «Pygmy marmoset»", "url": "https://en.wikipedia.org/wiki/Pygmy_marmoset" },
+    "Np11": { "title": "El Oriente (2017-09-01), el complejo de humedales Cuyabeno-Lagartococha-Yasuní, nuevo sitio Ramsar", "url": "https://www.eloriente.com/articulo/complejo-de-humedales-cuyabeno-lagartococha-yasuniacute-nuevo-sitio-ramsar/8113" },
+    "Am1": { "title": "NASA Earth Observatory (2020-10-02), «Mud from the Andes Carried by the Amazon»", "url": "https://science.nasa.gov/earth/earth-observatory/mud-from-the-andes-carried-by-the-amazon-147327" },
+    "Am2": { "title": "Callède et al. (2010), «Les apports en eau de l'Amazone à l'Océan Atlantique», Revue des sciences de l'eau 23(3):247-273, doi 10.7202/044688ar", "url": "https://www.erudit.org/fr/revues/rseau/2010-v23-n3-rseau3946/044688ar/" },
+    "Am3": { "title": "Junk, Wittmann, Schöngart y Piedade (2015), «A classification of the major habitats of Amazonian black-water river floodplains and a comparison with their white-water counterparts», Wetlands Ecology and Management 23(4):677-693 (resumen en AGRIS, FAO)", "url": "https://agris.fao.org/search/en/records/65df5bdc0f3e94b9e5d7bb37" },
+    "Am4": { "title": "Espinoza-Villar et al. (2018), «Spatio-temporal monitoring of suspended sediments in the Solimões River (2000-2014)», Comptes Rendus Géoscience 350(1-2):4-12", "url": "https://comptes-rendus.academie-sciences.fr/geoscience/articles/en/10.1016/j.crte.2017.05.001/" },
+    "Am5": { "title": "ESA (2024-03-29), «Earth from Space: The Amazon plume»", "url": "https://www.esa.int/ESA_Multimedia/Images/2024/03/Earth_from_Space_The_Amazon_plume" },
+    "Am6": { "title": "Dias, Barreto y Gonçalves (2009), Embrapa Amazônia Ocidental, Documentos 67 (cita a Cravo et al., 2002, y a Brasil, 1979)", "url": "https://www.infoteca.cnptia.embrapa.br/infoteca/bitstream/doc/679808/1/Doc67A5.pdf" },
+    "Am7": { "title": "Lima (1956), «A agricultura nas várzeas do estuário do Amazonas», Boletim Técnico do Instituto Agronômico do Norte 33 (repositorio Alice de Embrapa)", "url": "https://www.alice.cnptia.embrapa.br/alice/bitstream/doc/386337/1/AGRICULTURANASVARZEAS.pdf" },
+    "Am8": { "title": "Aguas Amazónicas (WCS, 2017-02-06), sobre Barthem et al. (2017), Scientific Reports 7:41784", "url": "https://en.aguasamazonicas.org/scientists-confirm-dorado" },
+    "Am9": { "title": "Wikipedia EN, «Whitewater river (river type)»", "url": "https://en.wikipedia.org/wiki/Whitewater_river_(river_type)" }
   }
 }

@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
 using AF.Core.Board;
@@ -10,6 +11,7 @@ using AF.Localization;
 using AF.Presentation;
 using AF.Presentation.Mechanics;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace AF.UI
 {
@@ -46,6 +48,29 @@ namespace AF.UI
     /// sale cuando la tropa se ha ido de la rama, y mientras se ve aparta las etiquetas del HUD. Con 1-2 filas va sobre el
     /// horizonte; con 3, como placa bajo el HUD. Lo ocultan y lo descartan lo mismo que al aviso: un modal del embudo, otro
     /// intento, otro nivel y la celebración. Sonda <c>AF_STATE stop_label</c>.</para>
+    /// <para><b>La placa y la fila 1</b> (observación 3 de la prueba de la ola 2 en el teléfono; tarea FX4) [P]: con la placa a
+    /// la vista, nada de la fila 1 queda bajo ella, ni elevado. Al enseñarla se mide lo más alto de cada cuia de la fila 1 en
+    /// reposo, con su corcho y lo que su mecánica asoma sobre la boca, y lo que ocupa a lo ancho (los gráficos visibles de su
+    /// cuerpo y de sus anclas de overlay, <see cref="StopLabelRowOneTop"/>), y la placa va en el primero de estos sitios donde
+    /// cabe en una línea a 12 sp o más:
+    /// <list type="number">
+    /// <item><description>clavada al marco y centrada, <see cref="StopLabel.PlateCuiaGapDp"/> por encima de toda la fila 1
+    /// (sonda <c>mode</c> = <c>plate</c>);</description></item>
+    /// <item><description>a la misma altura, de lado: centrada en el tramo libre más ancho entre las cuias de la fila 1 que no
+    /// le dejan sitio encima, con <see cref="StopLabel.PlateSideAirDp"/> a cada lado (la Hoja en la fila 1: en el 171 su
+    /// medallón llega a 0,70 u sobre la boca y la placa va sobre las cuias 2 y 3; <c>mode</c> = <c>plate_side</c>; revisión
+    /// de FX4);</description></item>
+    /// <item><description>sobre el muelle, bajo el panel y por encima de la bandeja y de sus burbujas, como la tarjeta del
+    /// miquito, centrada en ese hueco (<c>mode</c> = <c>dock</c>).</description></item>
+    /// </list>
+    /// Si no cabe en ninguno, no sale (sonda <c>stop_label_off</c> con <c>reason</c> = <c>no_room</c>). Clavada al marco no
+    /// cabe nunca sobre una cuia elevada (en 360 × 780 dp quedan ~12 dp entre su borde de arriba y la cuia elevada), así que al
+    /// elevarse una cuia de la fila 1 que queda bajo la placa (a lo ancho, con <see cref="StopLabel.PlateSideAirDp"/>) hasta
+    /// menos de <see cref="StopLabel.PlateLiftAirDp"/> de ella (contando el rebote de la elevación,
+    /// <see cref="StopLabel.LiftReachDp"/>), la placa se oculta en el acto y se descarta, como el aviso ante un modal
+    /// (<c>reason</c> = <c>lift</c>; también si ya estaba elevada al llegarle el turno). Sobre el muelle, si después sale debajo
+    /// una burbuja «Te faltan {n}», se oculta igual (<c>reason</c> = <c>bubble</c>); y con el rótulo a la vista, si cambia el
+    /// tablero y ya no cabe, <c>no_room</c>, o si cambia el número de filas, <c>board</c>.</para>
     /// <para>Fuera de la cola, con su propia duración: el cartel (<c>_banner</c>) con «El río bajó» (04 §2.7) y el rótulo del
     /// intento. La cola se vacía al cargar un nivel, al empezar otro intento (<c>OnRestart</c>) y al empezar la celebración
     /// (<c>OnCelebrationStarted</c>); al volver de segundo plano (<c>SnapToModel</c>) no se toca: un aviso no es una animación
@@ -159,6 +184,16 @@ namespace AF.UI
         private float _stopLabelCanvasW;
         private float _stopLabelHorizon;
         private float _stopLabelShift;
+        private StopLabelSpot _stopLabelSpot; // dónde va la placa (3 filas)
+        private readonly float[] _stopLabelRestTop = new float[BoardState.MaxCuias]; // lo más alto de cada cuia de la fila 1
+        private readonly float[] _stopLabelRestLeft = new float[BoardState.MaxCuias]; // y lo que ocupa a lo ancho (dp)
+        private readonly float[] _stopLabelRestRight = new float[BoardState.MaxCuias];
+        private readonly float[] _stopLabelBlockLeft = new float[BoardState.MaxCuias]; // tramos que no deja la fila 1 (de lado)
+        private readonly float[] _stopLabelBlockRight = new float[BoardState.MaxCuias];
+        private float _stopLabelSideLeft = float.NaN; // tramo libre donde se centró la placa de lado (dp; NaN si no va de lado)
+        private float _stopLabelSideRight = float.NaN;
+        private readonly List<Graphic> _stopLabelGraphics = new List<Graphic>(64);
+        private readonly Vector3[] _stopLabelCorners = new Vector3[4];
 
         /// <summary>Avisos que esperan turno (sin contar el que se ve; tests).</summary>
         internal int NoticesQueued => _noticeCount;
@@ -704,6 +739,25 @@ namespace AF.UI
         /// </summary>
         internal static bool? StopLabelsOverride { get; set; }
 
+        /// <summary>
+        /// Dónde puede ir la placa del rótulo (3 filas), por orden: clavada al marco, de lado y sobre el muelle (tarea FX4).
+        /// </summary>
+        [Flags]
+        internal enum StopLabelSpot
+        {
+            None = 0,
+            Frame = 1,
+            Side = 2,
+            Dock = 4,
+            All = Frame | Side | Dock,
+        }
+
+        /// <summary>
+        /// Solo tests: los sitios que puede probar la placa (<see cref="StopLabelSpot.All"/> en el juego); así se prueba el
+        /// muelle en un tablero en el que cabría de lado (revisión de FX4).
+        /// </summary>
+        internal static StopLabelSpot StopLabelSpotsOverride { get; set; } = StopLabelSpot.All;
+
         /// <summary>El rótulo del lugar (tests).</summary>
         internal StopLabel StopLabelView => _stopLabel;
 
@@ -774,9 +828,15 @@ namespace AF.UI
             }
 
             int ms = NoticeTiming.ReadMs(text);
+            _stopLabelSpot = StopLabelSpot.None;
             if (l.Rows >= 3)
             {
-                _stopLabel.ShowAsPlate(text, ms, _canvasW, StopLabelPlateTop(l), StopLabelPlateLimit(l));
+                _stopLabel.BeginPlate(text, ms);
+                if (!PlaceStopLabelPlate(l))
+                {
+                    HideStopLabelFor("no_room"); // ni bajo el HUD (centrada o de lado) ni sobre el muelle: no sale y pasa el siguiente
+                    return;
+                }
             }
             else
             {
@@ -785,6 +845,134 @@ namespace AF.UI
 
             RememberStopLabelPlace(l);
             EmitStopLabelProbe(stop, text, ms, l.Rows);
+            if (StopLabelRowOneLifted())
+            {
+                HideStopLabelFor("lift"); // ya había una cuia de la fila 1 elevada al llegarle el turno
+            }
+        }
+
+        // La placa (3 filas), en el primer sitio donde cabe: clavada al marco y centrada, por encima de lo más alto de la fila 1
+        // en reposo; a esa altura, de lado; o sobre el muelle. Devuelve false si no cabe en ninguno.
+        private bool PlaceStopLabelPlate(BoardLayoutResult l)
+        {
+            StopLabelSpot spots = StopLabelSpotsOverride;
+            float top = StopLabelPlateTop(l);
+            float rowTop = StopLabelRowOneTop(l); // mide la fila 1 (también para la elevación y para ir de lado)
+            _stopLabelSideLeft = float.NaN;
+            _stopLabelSideRight = float.NaN;
+            _stopLabelSpot = StopLabelSpot.Frame;
+            if ((spots & StopLabelSpot.Frame) != 0
+                && _stopLabel.PlaceAsPlate(StopLabel.SideDp, _canvasW - StopLabel.SideDp, top, rowTop - StopLabel.PlateCuiaGapDp, true))
+            {
+                return true;
+            }
+
+            _stopLabelSpot = StopLabelSpot.Side;
+            if ((spots & StopLabelSpot.Side) != 0 && PlaceStopLabelSide(top))
+            {
+                return true;
+            }
+
+            _stopLabelSpot = StopLabelSpot.Dock;
+            return (spots & StopLabelSpot.Dock) != 0 && PlaceStopLabelDock(l);
+        }
+
+        // De lado (revisión de FX4): a la altura de la placa clavada al marco, centrada en el tramo libre más ancho que dejan las
+        // cuias de la fila 1 que no le dejan sitio encima ni a 12 sp, con PlateSideAirDp a cada lado de lo que ocupan, y por
+        // encima de las demás con su aire. Solo en una línea. Sin asignaciones (huecos preasignados), aunque no va por fotograma.
+        private bool PlaceStopLabelSide(float top)
+        {
+            float minBottom = top + _stopLabel.MinPlateHeight;
+            float maxBottom = float.MaxValue;
+            int blocks = 0;
+            for (int i = 0; i < _stopLabelRestTop.Length; i++)
+            {
+                float rest = _stopLabelRestTop[i];
+                if (float.IsNaN(rest))
+                {
+                    continue;
+                }
+
+                if (rest - StopLabel.PlateCuiaGapDp < minBottom)
+                {
+                    // Inserción ordenada por el borde izquierdo (como mucho una fila de cuias).
+                    float left = _stopLabelRestLeft[i] - StopLabel.PlateSideAirDp;
+                    float right = _stopLabelRestRight[i] + StopLabel.PlateSideAirDp;
+                    int k = blocks++;
+                    while (k > 0 && _stopLabelBlockLeft[k - 1] > left)
+                    {
+                        _stopLabelBlockLeft[k] = _stopLabelBlockLeft[k - 1];
+                        _stopLabelBlockRight[k] = _stopLabelBlockRight[k - 1];
+                        k--;
+                    }
+
+                    _stopLabelBlockLeft[k] = left;
+                    _stopLabelBlockRight[k] = right;
+                }
+                else
+                {
+                    maxBottom = Mathf.Min(maxBottom, rest - StopLabel.PlateCuiaGapDp);
+                }
+            }
+
+            if (blocks == 0)
+            {
+                return false; // nada de la fila 1 se lo impide encima: si no cupo centrada, de lado tampoco
+            }
+
+            if (maxBottom == float.MaxValue)
+            {
+                maxBottom = top + (2f * StopLabel.PlateTextSp * StopLabel.PlateHeightEm); // ninguna otra cuia debajo: sin límite útil
+            }
+
+            // El tramo libre más ancho entre los márgenes del lienzo y los tramos que no deja la fila 1.
+            float bestLeft = 0f;
+            float bestRight = 0f;
+            float cursor = StopLabel.SideDp;
+            float end = _canvasW - StopLabel.SideDp;
+            for (int k = 0; k <= blocks; k++)
+            {
+                float spanRight = k < blocks ? Mathf.Min(_stopLabelBlockLeft[k], end) : end;
+                if (spanRight - cursor > bestRight - bestLeft)
+                {
+                    bestLeft = cursor;
+                    bestRight = spanRight;
+                }
+
+                if (k < blocks)
+                {
+                    cursor = Mathf.Max(cursor, _stopLabelBlockRight[k]);
+                }
+            }
+
+            if (bestRight <= bestLeft || !_stopLabel.PlaceAsPlate(bestLeft, bestRight, top, maxBottom, false))
+            {
+                return false;
+            }
+
+            _stopLabelSideLeft = bestLeft;
+            _stopLabelSideRight = bestRight;
+            return true;
+        }
+
+        // Sobre el muelle: del canto de abajo del panel (con NoticeBubbleGapDp) a StopLabelDockLimit, centrada en ese hueco si le
+        // sobra alto (revisión de FX4: pegada al riel se leía como parte de él).
+        private bool PlaceStopLabelDock(BoardLayoutResult l)
+        {
+            float top = StopLabelDockTop(l);
+            float limit = StopLabelDockLimit();
+            if (!_stopLabel.PlaceAsPlate(StopLabel.SideDp, _canvasW - StopLabel.SideDp, top, limit, true))
+            {
+                return false;
+            }
+
+            float slack = limit - _stopLabel.Rect.yMax;
+            if (slack >= 1f)
+            {
+                _stopLabel.MovePlateTo(top + Mathf.Floor(slack * 0.5f));
+            }
+
+            return true;
         }
 
         // Lo más alto de la placa (3 filas): clavada al marco, PlateOverFrameDp sobre el canto interior de su barra de arriba (tal
@@ -794,10 +982,253 @@ namespace AF.UI
             return Mathf.Max(BoardTop, l.PanelY - _boardShift + PanelFrameDp - StopLabel.PlateOverFrameDp);
         }
 
-        // Lo más bajo de la placa (3 filas): las cuias de la fila 1 en reposo (el bloque empieza en la elevada), con su aire.
-        private float StopLabelPlateLimit(BoardLayoutResult l)
+        // La placa sobre el muelle: NoticeBubbleGapDp bajo el panel, como la tarjeta del miquito.
+        private float StopLabelDockTop(BoardLayoutResult l)
         {
-            return l.BlockTop + BoardLayout.Lift - _boardShift - StopLabel.PlateCuiaGapDp;
+            return l.PanelBottom - _boardShift + NoticeBubbleGapDp;
+        }
+
+        // Lo más bajo de la placa sobre el muelle: 8 dp sobre la bandeja y, con una burbuja «Te faltan {n}» a la vista, su aire
+        // por encima de la más alta (como SightingDockLimit).
+        private float StopLabelDockLimit()
+        {
+            float limit = TrayTop - NoticeAboveTrayDp;
+            if (_tray.TryGetMissingTop(out float bubbleTop))
+            {
+                limit = Mathf.Min(limit, bubbleTop - NoticeBubbleGapDp);
+            }
+
+            return limit;
+        }
+
+        /// <summary>
+        /// Lo más alto de la fila 1 en reposo (dp desde arriba, con el desplazamiento del tablero; tarea FX4): de cada cuia de la
+        /// fila 1, su boca (lo alto de la cuia, con el corcho) o, si algo visible asoma por encima (la tapa del sellado o una
+        /// pieza de su mecánica, como el medallón de la Hoja), lo más alto de ello. Mide los gráficos visibles del cuerpo y de
+        /// las anclas de overlay de la ranura, relativos a su boca (así una cuia ya elevada cuenta en reposo; una que vierte, con
+        /// el corcho o la tapa de reposo de su cuerpo y, a lo ancho, con toda su ranura), y deja cada cuia
+        /// en <c>_stopLabelRestTop</c>, con lo que ocupa a lo ancho lo que se ve de la cuia en <c>_stopLabelRestLeft</c> y
+        /// <c>_stopLabelRestRight</c>. Solo al colocar la placa (nunca por fotograma).
+        /// </summary>
+        internal float StopLabelRowOneTop(BoardLayoutResult l)
+        {
+            float top = float.MaxValue;
+            int n = Mathf.Min(_views.Length, Mathf.Min(l.RowOf.Length, _stopLabelRestTop.Length));
+            for (int i = 0; i < _stopLabelRestTop.Length; i++)
+            {
+                _stopLabelRestTop[i] = float.NaN;
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                if (l.RowOf[i] != 0)
+                {
+                    continue;
+                }
+
+                CuiaView v = _views[i];
+                float mouth = l.FootY[i] - (v.HeightU * v.Unit) - _boardShift;
+                float crown = 0f;
+                if (v.BodyInFront)
+                {
+                    // Vertiendo (el cuerpo, girado, delante de todo): su corcho o su tapa como en reposo, medidos en su marco.
+                    crown = BodyCrownAtRest(v.Body);
+                }
+                else if (VisibleBox(v.Body, out _, out float bodyGraphicsTop, out _))
+                {
+                    CanvasRectDp(v.Body, out _, out float bodyTop, out _, out _);
+                    crown = Mathf.Max(crown, bodyTop - bodyGraphicsTop);
+                }
+
+                CuiaOverlayHost host = v.OverlayHost;
+                CanvasRectDp(v.Root, out float left, out _, out float right, out float rootBottom);
+                float slotMouth = rootBottom - (v.HeightU * v.Unit);
+                if (VisibleBox(host.SlotBack, out _, out float backTop, out _))
+                {
+                    crown = Mathf.Max(crown, slotMouth - backTop);
+                }
+
+                if (VisibleBox(host.SlotFront, out _, out float frontTop, out _))
+                {
+                    crown = Mathf.Max(crown, slotMouth - frontTop);
+                }
+
+                // A lo ancho, lo que se ve de la cuia (la ranura, Root, es más ancha que ella); si nada, la ranura entera. Con el
+                // cuerpo vertiendo fuera de la ranura, la ranura entera y lo que se ve en ella (de más, nunca de menos).
+                if (VisibleBox(v.Root, out float seenLeft, out _, out float seenRight))
+                {
+                    left = v.BodyInFront ? Mathf.Min(left, seenLeft) : seenLeft;
+                    right = v.BodyInFront ? Mathf.Max(right, seenRight) : seenRight;
+                }
+
+                _stopLabelRestTop[i] = mouth - crown;
+                _stopLabelRestLeft[i] = left;
+                _stopLabelRestRight[i] = right;
+                top = Mathf.Min(top, _stopLabelRestTop[i]);
+            }
+
+            return top == float.MaxValue ? l.BlockTop + BoardLayout.Lift - _boardShift : top;
+        }
+
+        // La caja de lo visible bajo root (los gráficos activos, con alfa y que se pintan; no el área táctil), en dp del lienzo
+        // (x desde la izquierda, y desde arriba). False si no se ve nada.
+        private bool VisibleBox(RectTransform root, out float left, out float top, out float right)
+        {
+            left = float.MaxValue;
+            top = float.MaxValue;
+            right = float.MinValue;
+            List<Graphic> graphics = _stopLabelGraphics;
+            root.GetComponentsInChildren(false, graphics);
+            for (int k = 0; k < graphics.Count; k++)
+            {
+                Graphic g = graphics[k];
+                if (!g.enabled || g is HitArea || g.color.a <= 0.01f || g.canvasRenderer.GetAlpha() <= 0.01f)
+                {
+                    continue;
+                }
+
+                CanvasRectDp(g.rectTransform, out float gLeft, out float gTop, out float gRight, out _);
+                left = Mathf.Min(left, gLeft);
+                top = Mathf.Min(top, gTop);
+                right = Mathf.Max(right, gRight);
+            }
+
+            graphics.Clear();
+            return left <= right;
+        }
+
+        // Lo que asoma lo visible del cuerpo por encima de su canto de arriba (dp; 0 si nada), medido en el marco del propio
+        // cuerpo: sale lo mismo en reposo, elevado o girado vertiendo (revisión de FX4: a mitad de un vertido, la corona de
+        // reposo y no 0). Solo al colocar la placa.
+        private float BodyCrownAtRest(RectTransform body)
+        {
+            float top = float.MinValue;
+            List<Graphic> graphics = _stopLabelGraphics;
+            body.GetComponentsInChildren(false, graphics);
+            for (int k = 0; k < graphics.Count; k++)
+            {
+                Graphic g = graphics[k];
+                if (!g.enabled || g is HitArea || g.color.a <= 0.01f || g.canvasRenderer.GetAlpha() <= 0.01f)
+                {
+                    continue;
+                }
+
+                g.rectTransform.GetWorldCorners(_stopLabelCorners);
+                for (int c = 0; c < 4; c++)
+                {
+                    top = Mathf.Max(top, body.InverseTransformPoint(_stopLabelCorners[c]).y);
+                }
+            }
+
+            graphics.Clear();
+            if (top == float.MinValue)
+            {
+                return 0f;
+            }
+
+            // Del marco del cuerpo a dp del lienzo (el cuerpo solo gira: la escala es la misma en reposo y vertiendo).
+            float dpPerUnit = ((Vector2)_root.InverseTransformVector(body.TransformVector(Vector3.up))).magnitude;
+            return Mathf.Max(0f, (top - body.rect.yMax) * dpPerUnit);
+        }
+
+        // La caja de rt en dp del lienzo (x desde la izquierda, y desde arriba; con giros, la que abarca sus cuatro esquinas).
+        private void CanvasRectDp(RectTransform rt, out float left, out float top, out float right, out float bottom)
+        {
+            rt.GetWorldCorners(_stopLabelCorners);
+            left = float.MaxValue;
+            top = float.MaxValue;
+            right = float.MinValue;
+            bottom = float.MinValue;
+            Rect canvas = _root.rect;
+            for (int c = 0; c < 4; c++)
+            {
+                Vector3 p = _root.InverseTransformPoint(_stopLabelCorners[c]);
+                float x = p.x - canvas.xMin;
+                float y = canvas.yMax - p.y;
+                left = Mathf.Min(left, x);
+                right = Mathf.Max(right, x);
+                top = Mathf.Min(top, y);
+                bottom = Mathf.Max(bottom, y);
+            }
+        }
+
+        /// <summary>
+        /// Una cuia de la fila 1 que queda bajo la placa a la vista (a lo ancho, con <see cref="StopLabel.PlateSideAirDp"/>) está
+        /// elevada y, con el rebote de la elevación (<see cref="StopLabel.LiftReachDp"/>), llega a menos de
+        /// <see cref="StopLabel.PlateLiftAirDp"/> de ella (clavada al marco, centrada o de lado; sobre el muelle, nunca). Cada
+        /// fotograma con la placa a la vista: sin asignaciones.
+        /// </summary>
+        internal bool StopLabelRowOneLifted()
+        {
+            if (!_stopLabel.Visible || !_stopLabel.OnPlate || _stopLabelSpot == StopLabelSpot.Dock)
+            {
+                return false;
+            }
+
+            Rect plate = _stopLabel.Rect;
+            float limit = plate.yMax + StopLabel.PlateLiftAirDp;
+            int n = Mathf.Min(_views.Length, _stopLabelRestTop.Length);
+            for (int i = 0; i < n; i++)
+            {
+                float rest = _stopLabelRestTop[i];
+                if (!float.IsNaN(rest) && _views[i].IsLifted && rest - StopLabel.LiftReachDp < limit
+                    && _stopLabelRestRight[i] + StopLabel.PlateSideAirDp > plate.xMin
+                    && _stopLabelRestLeft[i] - StopLabel.PlateSideAirDp < plate.xMax)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>Borde de arriba de la bandeja de comodines (dp desde arriba; tests de la placa sobre el muelle).</summary>
+        internal float TrayTopDp => TrayTop;
+
+        /// <summary>La placa del rótulo va sobre el muelle (tests).</summary>
+        internal bool StopLabelOnDock => _stopLabel.Visible && _stopLabel.OnPlate && _stopLabelSpot == StopLabelSpot.Dock;
+
+        /// <summary>
+        /// Sitio del rótulo, como lo cuenta la sonda <c>stop_label</c>: <c>horizon</c>, <c>plate</c> (clavada al marco y
+        /// centrada), <c>plate_side</c> (clavada al marco, de lado) o <c>dock</c> (sobre el muelle; tests).
+        /// </summary>
+        internal string StopLabelMode => !_stopLabel.OnPlate ? "horizon"
+            : _stopLabelSpot == StopLabelSpot.Side ? "plate_side" : _stopLabelSpot == StopLabelSpot.Dock ? "dock" : "plate";
+
+        /// <summary>Lo que ocupa a lo ancho cada cuia de la fila 1 al colocar la placa (x: izquierda, y: derecha, dp; tests).</summary>
+        internal Vector2 StopLabelRestSpanOf(int index)
+        {
+            return index >= 0 && index < _stopLabelRestLeft.Length
+                ? new Vector2(_stopLabelRestLeft[index], _stopLabelRestRight[index])
+                : new Vector2(float.NaN, float.NaN);
+        }
+
+        /// <summary>
+        /// Tramo libre de la fila 1 en el que se centró la placa de lado (x: izquierda, y: derecha, dp; NaN si no va de lado;
+        /// tests y capturas).
+        /// </summary>
+        internal Vector2 StopLabelSideSpan => new Vector2(_stopLabelSideLeft, _stopLabelSideRight);
+
+        /// <summary>Lo más alto de cada cuia de la fila 1 en reposo al colocar la placa (NaN fuera de la fila 1; tests).</summary>
+        internal float StopLabelRestTopOf(int index)
+        {
+            return index >= 0 && index < _stopLabelRestTop.Length ? _stopLabelRestTop[index] : float.NaN;
+        }
+
+        // Oculta el rótulo en el acto y lo descarta (no vuelve), con su sonda stop_label_off.
+        private void HideStopLabelFor(string reason)
+        {
+            _stopLabel.Hide();
+            if (!DevProbe.Enabled)
+            {
+                return;
+            }
+
+            StringBuilder sb = _stopLabelProbeSb;
+            sb.Clear();
+            sb.Append("\"level\":").Append((_flow?.LevelNumber ?? 0).ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "reason", reason);
+            _probe.Event("stop_label_off", sb.ToString());
         }
 
         // Lo más bajo del rótulo sobre el horizonte (1-2 filas): el canto de arriba del panel, con su aire.
@@ -824,6 +1255,19 @@ namespace AF.UI
                 return;
             }
 
+            // FX4: una cuia de la fila 1 que se eleva hasta la placa la oculta; sobre el muelle, una burbuja que sale debajo.
+            if (StopLabelRowOneLifted())
+            {
+                HideStopLabelFor("lift");
+                return;
+            }
+
+            if (_stopLabelSpot == StopLabelSpot.Dock && _stopLabel.OnPlate && _stopLabel.Rect.yMax > StopLabelDockLimit() + 0.01f)
+            {
+                HideStopLabelFor("bubble");
+                return;
+            }
+
             if (ReferenceEquals(l, _stopLabelLayout) && _stopLabelCanvasW == _canvasW && _stopLabelHorizon == _horizonY
                 && _stopLabelShift == _boardShift)
             {
@@ -832,7 +1276,11 @@ namespace AF.UI
 
             if (l.Rows >= 3 && _stopLabel.OnPlate)
             {
-                _stopLabel.PlaceAsPlate(_canvasW, StopLabelPlateTop(l), StopLabelPlateLimit(l));
+                if (!PlaceStopLabelPlate(l))
+                {
+                    HideStopLabelFor("no_room"); // con el tablero nuevo no cabe en ningún sitio
+                    return;
+                }
             }
             else if (l.Rows < 3 && !_stopLabel.OnPlate)
             {
@@ -840,7 +1288,8 @@ namespace AF.UI
             }
             else
             {
-                _stopLabel.Hide(); // otro número de filas con el rótulo a la vista (otro tablero): no se cambia de forma a medias
+                HideStopLabelFor("board"); // otro número de filas con el rótulo a la vista (otro tablero): no se cambia de forma a medias
+                return;
             }
 
             RememberStopLabelPlace(l);
@@ -864,7 +1313,7 @@ namespace AF.UI
             AppendJsonString(sb, "id", stop.Id);
             AppendJsonString(sb, "text", text);
             sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
-            AppendJsonString(sb, "mode", _stopLabel.OnPlate ? "plate" : "horizon");
+            AppendJsonString(sb, "mode", StopLabelMode);
             sb.Append(",\"rows\":").Append(rows.ToString(CultureInfo.InvariantCulture));
             _lastStopLabelProbe = sb.ToString();
             _probe.Event("stop_label", _lastStopLabelProbe);

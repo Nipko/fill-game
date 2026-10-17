@@ -32,10 +32,11 @@ namespace AF.Levels
 
     /// <summary>
     /// Catálogo de niveles de campaña: el índice nivel → paquete de GDD 08 §2.2 (<c>AF.Levels</c>) sobre uno o varios
-    /// <see cref="LevelPack"/> (hoy <c>tutorial_v0</c>; en la integración, también <c>mundo_02</c> … <c>mundo_05</c>). Resuelve
+    /// <see cref="LevelPack"/> (en la escena, <c>tutorial_v0</c> y <c>mundo_02</c> … <c>mundo_06</c>: 1-300 desde C1a). Resuelve
     /// cada número de nivel con su definición y su paquete, dice cuál es el siguiente disponible y detecta huecos y
     /// repetidos. Si un nivel no está en el catálogo (después del último o en un hueco), quien juega ve «El río sigue
-    /// creciendo» (08 §6.2; 06 §9).
+    /// creciendo» (08 §6.2; 06 §9): el fin de contenido es dinámico, el último nivel publicado (<see cref="LastLevel"/>; el 300
+    /// con el mundo 6), y no hay ningún número fijo que cambiar al publicar otro paquete.
     /// </summary>
     /// <remarks>
     /// <para><see cref="LevelOffset"/> (solo builds de desarrollo, extra <c>af_level_offset</c> [P], tarea B1-5) desplaza el

@@ -15,8 +15,8 @@ using UnityEngine.TestTools;
 namespace AF.Tests.PlayMode
 {
     /// <summary>
-    /// La campaña 11-200 en la escena <c>Game</c> real (traspaso §6 pasos 1.1-1.2; 08 §4.1 y §4.4): la escena enlaza los 5
-    /// paquetes, cada nivel de muestra arranca con el tablero de <see cref="LevelDefinition.CreateBoard"/> y llega a jugarse, y
+    /// La campaña 11-300 en la escena <c>Game</c> real (traspaso §6 pasos 1.1-1.2; 08 §4.1 y §4.4; tarea C1a): la escena enlaza
+    /// los 6 paquetes, cada nivel de muestra arranca con el tablero de <see cref="LevelDefinition.CreateBoard"/> y llega a jugarse, y
     /// las reglas del núcleo de tres estrenos de D-007 se ven a través de <see cref="LevelFlow.TapCuia"/>: la Hoja del 43
     /// cae con su fruta (02 §9.1 M1), el Remolino del 103 mete la racha por el fondo de la pareja (M4) y las dosis turbias del
     /// 100 siguen ocultas hasta llegar a la cima (02 §11, R7).
@@ -31,13 +31,13 @@ namespace AF.Tests.PlayMode
 
         [UnityTest]
         public IEnumerator LoadGame_StartsWithTheCatalogBoard_AndReachesPlaying(
-            [Values(11, 41, 43, 81, 100, 103, 141, 183, 200)] int level)
+            [Values(11, 41, 43, 81, 100, 103, 141, 183, 200, 201, 300)] int level)
         {
             yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));
             GameBootstrap boot = GameBootstrap.Current!;
             LevelFlow flow = boot.Flow!;
             Assert.That(flow.Catalog.FirstLevel, Is.EqualTo(1));
-            Assert.That(flow.Catalog.LastLevel, Is.EqualTo(200), "la escena enlaza tutorial_v0 y mundo_02..05_v1");
+            Assert.That(flow.Catalog.LastLevel, Is.EqualTo(300), "la escena enlaza tutorial_v0 y mundo_02..06_v1 (C1a)");
             Assert.That(flow.LevelNumber, Is.EqualTo(level));
             Assert.That(flow.Level.Level, Is.EqualTo(level));
             Assert.That(flow.Level.World, Is.EqualTo(WorldTable.WorldOf(level)), "glosario §8");

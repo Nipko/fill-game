@@ -38,6 +38,11 @@ namespace AF.UI
     /// la UI entera se reconstruye volviendo al inicio: la escena se recarga y el arranque siguiente la vuelve a construir en el
     /// idioma nuevo (Q7-A), con Ajustes otra vez abierta (FXT). Los Patrones de fruta se guardan y se aplican al momento
     /// (<see cref="GameScreen.RefreshFruitPatterns"/>).</para>
+    /// <para>Mapa del río (D-013; tarea M3.3; <see cref="RiverMapScreen"/>): con la geometría (<c>river_map_v1.json</c>) y las
+    /// paradas en la escena, la pestaña del inicio sale desde <c>max_level</c> ≥ 10 y lo abre en la vista Mundo
+    /// (<see cref="OpenRiverMap"/>); el ← de su cabecera y el Atrás de Android lo cierran (<see cref="CloseRiverMap"/>, que anota
+    /// lo visto en <c>map_seen_level</c>) y su «Jugar» cierra y abre el nivel. La geometría se lee y se decodifica la primera vez
+    /// que se abre (una sola vez por arranque); si no valida, se avisa y la pestaña desaparece.</para>
     /// </summary>
     [DisallowMultipleComponent]
     public sealed class GameBootstrap : MonoBehaviour, IAppFlowListener, IGameActions
@@ -58,6 +63,9 @@ namespace AF.UI
 
         [SerializeField]
         private TextAsset? riverStops;
+
+        [SerializeField]
+        private TextAsset? riverMap;
 
         [SerializeField]
         private TextAsset? fruitCalendar;
@@ -89,6 +97,11 @@ namespace AF.UI
         private IDeviceLocale? _deviceLocale;
         private string _deviceTag = string.Empty;
         private SettingsScreen? _settingsScreen;
+        private RiverMapScreen? _mapScreen;
+        private IProgressStore? _progress;
+        private RiverMap? _riverMapData;
+        private RiverRoutes? _riverRoutes;
+        private bool _riverMapFailed;
 
         // Reconstrucción de la UI tras elegir idioma (tarea L3): la escena se recarga y el arranque siguiente va al inicio con el
         // mismo perfil en memoria (ajustes, cartera y progreso de la sesión), aunque no se haya podido guardar (perfil en solo
@@ -233,6 +246,32 @@ namespace AF.UI
             riverStops = stops;
         }
 
+        /// <summary>Geometría del Mapa del río asignada (<c>river_map_v1.json</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
+        public TextAsset? RiverMapAsset => riverMap;
+
+        /// <summary>Asigna la geometría del Mapa del río (escena generada por <c>GameSceneBuilder</c>).</summary>
+        public void ConfigureRiverMap(TextAsset? map)
+        {
+            riverMap = map;
+        }
+
+        /// <summary>
+        /// Geometría del Mapa del río (<c>af-river-map/1</c>; 08 §4.5), leída y decodificada la primera vez que se abre el Mapa
+        /// (null hasta entonces, o si falta o no valida).
+        /// </summary>
+        public RiverMap? RiverMapData => _riverMapData;
+
+        /// <summary>Rutas de la canoa entre paradas (los campos <c>at</c> y <c>leg</c> de las paradas), leídas con la geometría.</summary>
+        public RiverRoutes? RiverRoutes => _riverRoutes;
+
+        /// <summary>
+        /// El Mapa del río se puede abrir: la escena trae su geometría y las paradas (válidas) y la geometría no falló al leerse.
+        /// </summary>
+        public bool RiverMapAvailable => riverMap != null && RiverStops != null && !_riverMapFailed;
+
+        /// <summary>Pantalla del Mapa del río (null hasta <c>Start</c>).</summary>
+        public RiverMapScreen? RiverMapView => _mapScreen;
+
         /// <summary>Calendario de Frutas del río asignado (<c>frutas_del_rio_v1.json</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
         public TextAsset? FruitCalendarAsset => fruitCalendar;
 
@@ -286,8 +325,8 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Asigna los paquetes de niveles (08 §2.2: índice nivel → paquete; hoy <c>tutorial_v0</c>, en la integración también
-        /// <c>mundo_02</c> … <c>mundo_05</c>). El primero va en <c>levelPack</c> y el resto en <c>extraLevelPacks</c>.
+        /// Asigna los paquetes de niveles (08 §2.2: índice nivel → paquete; <c>tutorial_v0</c> y <c>mundo_02</c> … <c>mundo_06</c>,
+        /// 1-300 desde C1a). El primero va en <c>levelPack</c> y el resto en <c>extraLevelPacks</c>.
         /// </summary>
         public void Configure(IReadOnlyList<TextAsset> packs)
         {
@@ -752,17 +791,30 @@ namespace AF.UI
         /// <summary>
         /// Atrás de Android (Escape en el Input System) fuera del nivel: el único camino de Atrás para las hojas del inicio (FXT).
         /// Con Ajustes abierta, la cierra (<see cref="CloseSettings"/>); en «El río sigue creciendo» o Sin canoas, vuelve al inicio
-        /// como su botón Volver (<see cref="PressBack"/>). No hace nada en el nivel (02 §3; 04 §6.6: el embudo no se cierra con
-        /// Atrás), ni con la hoja «Compra simulada», un anuncio o el aviso del perfil bloqueado delante, ni en el inicio sin hoja.
+        /// como su botón Volver (<see cref="PressBack"/>). Con el Mapa del río abierto, lo cierra en cualquier pantalla, también
+        /// encima del nivel (<see cref="CloseRiverMap"/>; M3.3). Fuera de eso, no hace nada en el nivel (02 §3; 04 §6.6: el embudo
+        /// no se cierra con Atrás), ni con la hoja «Compra simulada», un anuncio o el aviso del perfil bloqueado delante (tampoco
+        /// con el Mapa abierto debajo), ni en el inicio sin hoja.
         /// </summary>
         public bool PressAndroidBack()
         {
-            if (_app == null || _app.Screen == AppScreen.Level || _app.Screen == AppScreen.Boot)
+            if (_app == null || _app.Screen == AppScreen.Boot)
             {
                 return false;
             }
 
             if ((_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible) || (_lockedNotice != null && _lockedNotice.Visible))
+            {
+                return false;
+            }
+
+            // El Mapa del río se cierra con Atrás, como con su ← (M3.3), también abierto encima del nivel (pausa, victoria).
+            if (_mapScreen != null && _mapScreen.Visible)
+            {
+                return CloseRiverMap();
+            }
+
+            if (_app.Screen == AppScreen.Level)
             {
                 return false;
             }
@@ -773,6 +825,162 @@ namespace AF.UI
             }
 
             return PressBack();
+        }
+
+        /// <inheritdoc />
+        /// <remarks>
+        /// La pestaña del inicio (<see cref="MapOpenSource.Lobby"/>) solo con el inicio a la vista y desde <c>max_level</c> ≥
+        /// <see cref="RiverMapScreen.TabFromMaxLevel"/>; las demás entradas las piden sus tareas (pausa, victoria, banner, Mapa del
+        /// 10, fin de contenido) y se abren encima de lo que haya. La primera vez lee y decodifica la geometría. Escribe
+        /// <c>AF_STATE map_open</c>.
+        /// </remarks>
+        public bool OpenRiverMap(MapOpenSource source)
+        {
+            RiverMapScreen? map = _mapScreen;
+            AppFlow? app = _app;
+            IProgressStore? progress = _progress;
+            RiverStopCatalog? stops = RiverStops;
+            if (map == null || app == null || progress == null || stops == null || map.Visible || app.Screen == AppScreen.Boot)
+            {
+                return false;
+            }
+
+            if (CommerceOpen || (_lockedNotice != null && _lockedNotice.Visible) || (_settingsScreen != null && _settingsScreen.Visible))
+            {
+                return false;
+            }
+
+            if (source == MapOpenSource.Lobby && (app.Screen != AppScreen.Lobby || progress.MaxLevel < RiverMapScreen.TabFromMaxLevel))
+            {
+                return false;
+            }
+
+            if (!EnsureRiverMap())
+            {
+                return false;
+            }
+
+            int play = app.PlayLevel;
+            map.Open(source, _riverMapData!, _riverRoutes!, stops, progress, play, app.PlayLevelAvailable);
+            int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
+            _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
+            _skipNextDelta = true;
+            return true;
+        }
+
+        /// <inheritdoc />
+        /// <remarks>Escribe <c>AF_STATE map_close</c> con lo que se hizo en el Mapa y el <c>map_seen_level</c> que queda.</remarks>
+        public bool CloseRiverMap()
+        {
+            RiverMapScreen? map = _mapScreen;
+            if (map == null || !map.Visible)
+            {
+                return false;
+            }
+
+            MapCloseStats stats = map.Close();
+            IProgressStore? progress = _progress;
+            if (progress != null)
+            {
+                MarkMapSeen(progress.MaxLevel);
+            }
+
+            _probe?.MapClose(stats, progress?.MapSeenLevel ?? 0);
+            _skipNextDelta = true;
+            return true;
+        }
+
+        /// <inheritdoc />
+        public bool MarkMapSeen(int level)
+        {
+            IProgressStore? progress = _progress;
+            if (progress == null || level < 0)
+            {
+                return false;
+            }
+
+            int before = progress.MapSeenLevel;
+            using (Saves())
+            {
+                progress.SaveMapSeenLevel(level);
+            }
+
+            return progress.MapSeenLevel != before;
+        }
+
+        // «Jugar» del Mapa: desde la pestaña del inicio, cierra y abre el nivel (o Sin canoas, como el «Jugar» del inicio); abierto
+        // encima de otra pantalla (pausa, victoria, banner), solo cierra y se vuelve a ella (sus tareas cambian el texto).
+        private void PressMapPlay()
+        {
+            RiverMapScreen? map = _mapScreen;
+            if (map == null || !map.Visible)
+            {
+                return;
+            }
+
+            bool fromLobby = map.Source == MapOpenSource.Lobby;
+            CloseRiverMap();
+            if (fromLobby && _app != null && _app.Screen == AppScreen.Lobby)
+            {
+                PressPlay();
+            }
+        }
+
+        // La geometría del Mapa y las rutas de las paradas para el viaje de mundo del banner (M3.6; GameScreen.RiverGeometry): se
+        // leen la primera vez que hacen falta (EnsureRiverMap), como al abrir el Mapa.
+        private bool TryRiverGeometry(out RiverMap? map, out RiverRoutes? routes)
+        {
+            bool ok = EnsureRiverMap();
+            map = ok ? _riverMapData : null;
+            routes = ok ? _riverRoutes : null;
+            return ok;
+        }
+
+        // Lee y decodifica la geometría del Mapa y las rutas de las paradas, una vez por arranque (08 §4.5; propuesta del Mapa §11.4:
+        // las asignaciones de la carga, al abrir). Si no valida, un error con la ruta del valor y el Mapa queda sin pestaña.
+        private bool EnsureRiverMap()
+        {
+            if (_riverMapData != null && _riverRoutes != null)
+            {
+                return true;
+            }
+
+            if (_riverMapFailed || riverMap == null || riverStops == null)
+            {
+                return false;
+            }
+
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            RiverMap data;
+            RiverRoutes routes;
+            try
+            {
+                data = RiverMapReader.Read(riverMap.text);
+                routes = RiverMapReader.ReadRoutes(riverStops.text, data);
+            }
+            catch (LevelFormatException e)
+            {
+                Debug.LogError(LogPrefix + e.Message + " El juego sigue sin el Mapa del río.");
+                _riverMapFailed = true;
+                if (_lobby != null)
+                {
+                    _lobby.RiverMapAvailable = false;
+                }
+
+                return false;
+            }
+
+            _riverMapData = data;
+            _riverRoutes = routes;
+            watch.Stop();
+            if (DevProbe.Enabled)
+            {
+                Debug.Log("AF_PERF {\"event\":\"map_load\",\"lines\":" + data.Lines.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    + ",\"routes\":" + routes.Count.ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    + ",\"ms\":" + watch.ElapsedMilliseconds.ToString(System.Globalization.CultureInfo.InvariantCulture) + "}");
+            }
+
+            return true;
         }
 
         /// <summary>X de Ajustes o Atrás de Android con Ajustes abierto: vuelve al inicio tal como estaba.</summary>
@@ -931,6 +1139,12 @@ namespace AF.UI
         /// <inheritdoc />
         public void OnAppScreenChanged(AppScreen screen)
         {
+            // El Mapa abierto desde la pestaña vive sobre el inicio: si la app deja el inicio por otro camino, se cierra antes.
+            if (screen != AppScreen.Lobby && _mapScreen != null && _mapScreen.Visible && _mapScreen.Source == MapOpenSource.Lobby)
+            {
+                CloseRiverMap();
+            }
+
             // La pantalla de nivel se muestra antes de cargar el nivel (AppFlow llama a Load después).
             _screen?.SetVisible(screen == AppScreen.Level);
             _lobby?.Show(screen);
@@ -1049,6 +1263,11 @@ namespace AF.UI
                 {
                     store.TrySave(profile); // extras af_seeds y af_canoes de los builds de desarrollo [P] (B2-6)
                 }
+
+                if (LaunchOptions.ApplyDevProgress(profile))
+                {
+                    store.TrySave(profile); // extra af_max_level de los builds de desarrollo [P] (M3.3)
+                }
             }
 
             bool locked = IsLocked(_profileStatus);
@@ -1069,6 +1288,7 @@ namespace AF.UI
             _saveBatch = batch;
             _wallet = new Wallet(profile, batch.Durable, clock);
             IProgressStore progress = LaunchOptions.ProgressStoreOverride ?? new ProfileProgressStore(profile, batch);
+            _progress = progress;
 
             _art = SharedArt(catalog.WaterBase);
             _probe = new DevProbe { Settings = profile.Settings };
@@ -1090,7 +1310,8 @@ namespace AF.UI
             _ads = AdController.Create(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()), profile, batch, clock, firstRun);
             _storeLedger = new StoreLedger(profile, _wallet, batch, clock);
             _store = new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency);
-            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings);
+            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
+                mapProgress: progress);
 
             _screen = new GameScreen(transform, _art, _probe, this);
             _screen.SetVisible(false);
@@ -1098,10 +1319,13 @@ namespace AF.UI
             _screen.Fauna = Fauna; // la especie de miquito de cada intro (guion de la intro §4.3)
             RiverStops = LoadRiverStops(riverStops);
             _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013): fondo, llegada y rótulo del lugar
+            _screen.RiverGeometry = TryRiverGeometry; // la geometría del Mapa para el viaje de mundo del banner (M3.6)
             FruitFacts = LoadFruitFacts(fruitCalendar); // calendario de Frutas del río (D-017)
             _screen.FruitFacts = FruitFacts; // la línea de fruta de la victoria (F3)
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
             _lobby.RiverStops = RiverStops; // el sitio, «Faltan N» y la ventanita de casa en el inicio (M2.1)
+            _lobby.RiverMapAvailable = RiverMapAvailable; // la pestaña del Mapa del río, desde max_level ≥ 10 (M3.3)
+            _mapScreen = new RiverMapScreen(transform, _art, _probe, () => CloseRiverMap(), () => PressMapPlay());
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
@@ -1179,6 +1403,12 @@ namespace AF.UI
             if (back)
             {
                 PressAndroidBack();
+            }
+
+            // El Mapa del río, encima de lo que haya (M3.3): sin asignaciones con el Mapa quieto.
+            if (_mapScreen != null && _mapScreen.Visible)
+            {
+                _mapScreen.Tick(dt);
             }
 
             if (_settingsScreen != null && _settingsScreen.Visible)
@@ -1521,6 +1751,11 @@ namespace AF.UI
         private void OnDestroy()
         {
             PersistNow("destruir la escena");
+
+            // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
+            // y se quedaría en el de reposo del Mapa (30 fps) para el nivel siguiente. Sin tocar la pantalla, que puede estar ya
+            // destruida en este punto.
+            RiverMapScreen.RestoreFullRenderRate();
             if (_backAction != null)
             {
                 _backAction.performed -= OnBackPerformed;

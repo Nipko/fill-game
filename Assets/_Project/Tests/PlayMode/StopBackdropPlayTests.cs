@@ -246,6 +246,7 @@ namespace AF.Tests.PlayMode
             // Los campos de docs/dev/prototipo-v0.md, en su orden, y después los añadidos por M1.4.
             StringAssert.Contains("\"stop\":9,\"id\":\"leticia_atardecer\",\"world\":4,\"hero\":\"bg_hero_leticia\"", line);
             StringAssert.Contains("\"lut\":\"dusk\",\"water\":\"white\",\"fade\":false,\"build_ms\":", line);
+            StringAssert.IsMatch("\"build_ms\":[0-9.]+,\"warm_ms\":[0-9.]+,\"hero_src\"", line); // FX4
             StringAssert.Contains("\"hero_src\":\"shape\",\"shape\":\"leticia\",\"code\":null,\"change\":\"cut\"}", line);
             Match m = Regex.Match(line, "\"build_ms\":([0-9.]+)");
             Assert.That(m.Success, Is.True, line);

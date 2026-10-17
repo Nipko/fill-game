@@ -30,8 +30,9 @@ namespace AF.UI
         /// <param name="purchasesBlocked">No se ofrecen compras (perfil en solo lectura; ver <see cref="PurchasesBlocked"/>).</param>
         /// <param name="deviceLocale">Idioma del teléfono (null = <see cref="SystemDeviceLocale"/>).</param>
         /// <param name="settings">Ajustes del perfil (null = los de por defecto, sin perfil: tests).</param>
+        /// <param name="mapProgress">Lo que lee el Mapa del río del progreso (null = sin Mapa: tests; tarea M3.3).</param>
         public GameServices(Wallet wallet, AdController ads, IStoreService store, StoreLedger storeLedger, GeoTier geo, bool purchasesBlocked = false,
-            IDeviceLocale? deviceLocale = null, SettingsData? settings = null)
+            IDeviceLocale? deviceLocale = null, SettingsData? settings = null, IMapProgress? mapProgress = null)
         {
             Wallet = wallet ?? throw new ArgumentNullException(nameof(wallet));
             Ads = ads ?? throw new ArgumentNullException(nameof(ads));
@@ -41,7 +42,16 @@ namespace AF.UI
             PurchasesBlocked = purchasesBlocked;
             DeviceLocale = deviceLocale ?? SystemDeviceLocale.Instance;
             Settings = settings ?? new SettingsData();
+            MapProgress = mapProgress;
         }
+
+        /// <summary>
+        /// Lo que lee el Mapa del río del progreso (D-013; 08 §2.2 y §4.3; tarea M3.3): <c>max_level</c>, <c>next_level</c>,
+        /// <c>map_seen_level</c> y los niveles saltados, sin asignaciones (<see cref="IMapProgress"/>, el mismo
+        /// <see cref="IProgressStore"/> de la partida). Lo consultan la pestaña del inicio (visible desde <c>max_level</c> ≥ 10,
+        /// con su punto si hay una llegada sin ver) y la pantalla del Mapa. Null sin progreso (tests sin partida).
+        /// </summary>
+        public IMapProgress? MapProgress { get; }
 
         /// <summary>
         /// Idioma del teléfono (D-018, Q7-A y Q8-A; tarea L3): el tercer paso de la resolución del idioma y la región de las
@@ -128,6 +138,32 @@ namespace AF.UI
                 default: return Palette.PatternsOnFor(level);
             }
         }
+    }
+
+    /// <summary>
+    /// Desde dónde se abre el Mapa del río (<c>af_map_open.source</c>, 08 §8.2; D-013, punto 7; propuesta del Mapa §8.1 y
+    /// §11.5). En la tarea M3.3 solo existe la pestaña del inicio (<see cref="Lobby"/>); los demás los abren sus tareas: la
+    /// pausa y la victoria (M4.3), el banner de mundo (M3.6), el Mapa del 10 (M4.2) y el fin de contenido (M4.3).
+    /// </summary>
+    public enum MapOpenSource
+    {
+        /// <summary>Pestaña del Mapa en el inicio (<c>lobby</c>).</summary>
+        Lobby = 0,
+
+        /// <summary>Pausa del nivel (<c>pause</c>): encima del nivel, sin salir de él (D-013, punto 7).</summary>
+        Pause = 1,
+
+        /// <summary>«Ver mapa» de la victoria del <c>10k</c> (<c>victory</c>).</summary>
+        Victory = 2,
+
+        /// <summary>«Ver mapa» del banner de mundo (<c>world_change</c>).</summary>
+        WorldChange = 3,
+
+        /// <summary>El Mapa del 10, que sale solo (<c>l10</c>; 06 §2.3).</summary>
+        L10 = 4,
+
+        /// <summary>Al acabarse el contenido (<c>content_end</c>; 06 §9).</summary>
+        ContentEnd = 5,
     }
 
     /// <summary>
@@ -223,5 +259,25 @@ namespace AF.UI
 
         /// <summary>Pausa › «Salir», ya confirmado desde el 31.</summary>
         bool PressQuit();
+
+        /// <summary>
+        /// Abre el Mapa del río (D-013; 06 §4.7; tarea M3.3) desde <paramref name="source"/>, en la vista Mundo. False si no hay
+        /// Mapa (faltan sus datos), si ya está abierto, si delante hay una pantalla de pago o el aviso del perfil bloqueado, o si
+        /// esa entrada no está disponible ahora (la pestaña del inicio, desde <c>max_level</c> ≥ 10).
+        /// </summary>
+        bool OpenRiverMap(MapOpenSource source);
+
+        /// <summary>
+        /// Cierra el Mapa del río (← de la cabecera o el Atrás de Android) y vuelve a donde se abrió; anota lo visto
+        /// (<see cref="MarkMapSeen"/>) hasta <c>max_level</c>. False si no estaba abierto.
+        /// </summary>
+        bool CloseRiverMap();
+
+        /// <summary>
+        /// El jugador vio el estado del Mapa hasta el nivel <paramref name="level"/> (<c>progress.map_seen_level</c>; 08 §4.3):
+        /// monotónico, recortado a <c>max_level</c> (<see cref="IProgressStore.SaveMapSeenLevel"/>). Quita el punto de la pestaña
+        /// del inicio cuando ya no hay llegadas sin ver. False si no cambió nada o no hay progreso.
+        /// </summary>
+        bool MarkMapSeen(int level);
     }
 }

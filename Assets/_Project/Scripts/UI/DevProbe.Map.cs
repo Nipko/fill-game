@@ -19,7 +19,12 @@ namespace AF.UI
     /// <item><c>stop_arrive</c> (<c>af_stop_arrive</c>, 08 §8.2): <c>stop_id</c> (el id de parada <c>s{nn}</c>, glosario §11),
     /// <c>stop</c> (la k), <c>world</c>, <c>level</c>, <c>view</c> = <c>victory</c> y <c>skipped</c>;</item>
     /// <item><c>river_fact_shown</c> (<c>af_river_fact_shown</c>, 08 §8.2): <c>level</c>, <c>fact_id</c> (la clave del dato) y
-    /// <c>dismissed_ms</c>, desde el punto común de la ranura (lo comparte la línea de fruta, F3).</item>
+    /// <c>dismissed_ms</c>, desde el punto común de la ranura (lo comparte la línea de fruta, F3);</item>
+    /// <item><c>map_open</c> (<c>af_map_open</c>, 08 §8.2; tarea M3.3): <c>source</c> (<c>lobby</c>, <c>pause</c>, <c>victory</c>,
+    /// <c>world_change</c>, <c>l10</c> o <c>content_end</c>), <c>level</c> (el de «Jugar»), <c>stop</c> (la k de su parada; −1 sin
+    /// ella), <c>stop_id</c>, <c>world</c>, <c>view</c> y <c>zoom</c>;</item>
+    /// <item><c>map_close</c> (<c>af_map_close</c>, 08 §8.2; tarea M3.3): <c>source</c>, <c>dwell_ms</c>, <c>stops_tapped</c>,
+    /// <c>view_changes</c>, <c>north_up</c> y <c>map_seen_level</c> tras cerrar.</item>
     /// </list>
     /// Solo claves e identificadores, nunca texto visible (regla de localización).
     /// </summary>
@@ -131,6 +136,86 @@ namespace AF.UI
             sb.Append(",\"dismissed_ms\":").Append(Mathf.RoundToInt(Mathf.Max(-1f, dismissedMs)).ToString(CultureInfo.InvariantCulture));
             sb.Append('}');
             return sb.ToString();
+        }
+
+        /// <summary>Línea <c>AF_STATE map_open</c> (<c>af_map_open</c> de 08 §8.2).</summary>
+        public void MapOpen(MapOpenSource source, int level, RiverStop? stop, int world, MapView view, float zoom)
+        {
+            string? line = FormatMapOpen(source, level, stop, world, view, zoom);
+            if (line != null)
+            {
+                Debug.Log(line);
+            }
+        }
+
+        /// <summary>Texto de la línea <c>AF_STATE map_open</c>; null si la sonda no escribe.</summary>
+        public string? FormatMapOpen(MapOpenSource source, int level, RiverStop? stop, int world, MapView view, float zoom)
+        {
+            if (!Enabled)
+            {
+                return null;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"map_open\"");
+            AppendTime(sb);
+            sb.Append(",\"source\":\"").Append(MapSourceName(source)).Append('"');
+            sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"stop\":").Append((stop?.N ?? -1).ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"stop_id\":");
+            AppendKey(sb, stop != null ? StopId(stop) : null);
+            sb.Append(",\"world\":").Append(world.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"view\":\"").Append(view == MapView.Basin ? "basin" : "world").Append('"');
+            sb.Append(",\"zoom\":").Append(zoom.ToString("0.00", CultureInfo.InvariantCulture));
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        /// <summary>Línea <c>AF_STATE map_close</c> (<c>af_map_close</c> de 08 §8.2).</summary>
+        public void MapClose(in MapCloseStats stats, int mapSeenLevel)
+        {
+            string? line = FormatMapClose(stats, mapSeenLevel);
+            if (line != null)
+            {
+                Debug.Log(line);
+            }
+        }
+
+        /// <summary>Texto de la línea <c>AF_STATE map_close</c>; null si la sonda no escribe.</summary>
+        public string? FormatMapClose(in MapCloseStats stats, int mapSeenLevel)
+        {
+            if (!Enabled)
+            {
+                return null;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"map_close\"");
+            AppendTime(sb);
+            sb.Append(",\"source\":\"").Append(MapSourceName(stats.Source)).Append('"');
+            sb.Append(",\"dwell_ms\":").Append(stats.DwellMs.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"stops_tapped\":").Append(stats.StopsTapped.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"view_changes\":").Append(stats.ViewChanges.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"north_up\":").Append(stats.NorthUp ? "true" : "false");
+            sb.Append(",\"map_seen_level\":").Append(mapSeenLevel.ToString(CultureInfo.InvariantCulture));
+            sb.Append('}');
+            return sb.ToString();
+        }
+
+        /// <summary>Valor de <c>source</c> de <c>af_map_open</c> (08 §8.2) para <paramref name="source"/>.</summary>
+        public static string MapSourceName(MapOpenSource source)
+        {
+            switch (source)
+            {
+                case MapOpenSource.Pause: return "pause";
+                case MapOpenSource.Victory: return "victory";
+                case MapOpenSource.WorldChange: return "world_change";
+                case MapOpenSource.L10: return "l10";
+                case MapOpenSource.ContentEnd: return "content_end";
+                default: return "lobby";
+            }
         }
 
         /// <summary>Id de parada <c>s{nn}</c> de <paramref name="stop"/> (glosario §11; 08 §4.5): <c>s02</c> en el 20, <c>s08</c> en el 80.</summary>

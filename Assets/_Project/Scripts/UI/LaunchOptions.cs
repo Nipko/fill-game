@@ -19,7 +19,7 @@ namespace AF.UI
     /// tableros del tutorial, tarea B1-5; para probar el embudo y los anuncios en el teléfono [P], tarea B2-6:
     /// <c>af_seeds</c>, <c>af_canoes</c> y <c>af_ads_fill</c>; <c>af_font_scale</c> [P], la escala de texto, tarea A1; y el
     /// idioma de desarrollo <c>af_lang</c>, tarea L2b; <c>af_mech_off</c>, el kill switch de mecánicas, tarea KS1; y
-    /// <c>af_bench_morpho</c>, el bench de Morpho y de fotogramas, tarea PF1) y los ganchos de los tests PlayMode (nivel de arranque, modo de vertido,
+    /// <c>af_bench_morpho</c>, el bench de Morpho y de fotogramas, tarea PF1; <c>af_max_level</c>, el progreso para ver el Mapa del río, tarea M3.3) y los ganchos de los tests PlayMode (nivel de arranque, modo de vertido,
     /// progreso, perfil y reloj en memoria, desplazamiento, paquete de niveles, escala de texto, idioma y tablas de textos).
     /// <see cref="GameBootstrap"/> los lee al arrancar (la escala, al crear los textos: <see cref="UiBuilder.TextScale"/>); los
     /// tests los quitan con <see cref="Reset"/>.
@@ -102,6 +102,20 @@ namespace AF.UI
         /// tests; fuera de desarrollo no cuenta (<see cref="ResolveBenchMorpho"/>).
         /// </summary>
         public static bool? BenchMorphoOverride { get; set; }
+
+        /// <summary>
+        /// Extra de intent (int) de los builds de desarrollo [P] (tarea M3.3): fija <c>progress.max_level</c> del perfil al
+        /// arrancar y deja «Jugar» en el siguiente (<c>--ei af_max_level 58</c>: la pestaña del Mapa del río, con su punto, y el
+        /// Mapa con la canoa a 8/10 del tramo de Manaos a Anavilhanas), para probar el Mapa en el teléfono sin jugar los niveles.
+        /// Escribe esos números en el perfil del dispositivo de pruebas. Nunca se lee en un build de release.
+        /// </summary>
+        public const string IntentExtraMaxLevel = "af_max_level";
+
+        /// <summary>
+        /// <c>af_max_level</c> simulado por un test (−1 = no tocar); null = el del intent. Solo tests: ningún extra de intent lo
+        /// rellena.
+        /// </summary>
+        public static int? DevMaxLevelOverride { get; set; }
 
         /// <summary>
         /// Lista de mecánicas apagadas forzada por un test (el valor de <c>af_mech_off</c>: <c>"hoja,matapi"</c>); null = la del
@@ -266,6 +280,7 @@ namespace AF.UI
             MechOffOverride = null;
             LevelOverridesJsonOverride = null;
             BenchMorphoOverride = null;
+            DevMaxLevelOverride = null;
         }
 
         /// <summary>
@@ -486,6 +501,48 @@ namespace AF.UI
             }
 
             return changed;
+        }
+
+        /// <summary>
+        /// Extra <c>af_max_level</c> de los builds de desarrollo [P] (tarea M3.3): lo aplica al perfil antes de crear el progreso.
+        /// Devuelve si cambió algo (quien llama guarda el perfil). Fuera de un build de desarrollo en Android no hace nada, salvo
+        /// con <see cref="DevMaxLevelOverride"/> (tests).
+        /// </summary>
+        public static bool ApplyDevProgress(Profile profile)
+        {
+            int maxLevel = DevMaxLevelOverride ?? ReadIntentInt(IntentExtraMaxLevel, -1);
+            return ApplyDevProgress(profile, maxLevel);
+        }
+
+        /// <summary>
+        /// Pone <c>progress.max_level</c> = <paramref name="maxLevel"/> (recortado a 1.000; −1 = no tocar) y
+        /// <c>progress.next_level</c> en el siguiente (como mucho el 1.000). Un nivel en curso guardado de otro nivel se quita, para
+        /// que el arranque vaya al inicio con «Jugar» en ese nivel. <c>map_seen_level</c> no cambia (se lee recortado a
+        /// <c>max_level</c>): con un perfil limpio, la pestaña sale con su punto. Devuelve si cambió algo.
+        /// </summary>
+        public static bool ApplyDevProgress(Profile profile, int maxLevel)
+        {
+            if (profile == null)
+            {
+                throw new ArgumentNullException(nameof(profile));
+            }
+
+            if (maxLevel < 0)
+            {
+                return false;
+            }
+
+            int max = Math.Min(maxLevel, WorldTable.LastLevel);
+            ProgressData progress = profile.Progress;
+            progress.MaxLevel = max;
+            progress.NextLevel = Math.Min(max + 1, WorldTable.LastLevel);
+            if (profile.LevelState != null && profile.LevelState.Level != progress.NextLevel)
+            {
+                profile.LevelState = null;
+            }
+
+            Debug.LogWarning("[AF.LaunchOptions] perfil de desarrollo: " + IntentExtraMaxLevel + " = " + max + " (siguiente nivel " + progress.NextLevel + ").");
+            return true;
         }
 
         /// <summary>

@@ -22,8 +22,10 @@ namespace AF.UI
     /// <para>En desarrollo, al cargar cada nivel, <c>AF_STATE {"event":"stop",…}</c> con los campos de docs/dev/prototipo-v0.md:
     /// <c>level</c>, <c>stop</c> (k o null), <c>id</c>, <c>world</c>, <c>hero</c> (la ranura o la pieza del kit que se pinta, o
     /// null; <see cref="StopBackdrop.HeroId"/>), <c>lut</c>, <c>water</c>, <c>fade</c> (true si hubo fundido) y <c>build_ms</c> (lo
-    /// que costó componerlo con sus mallas; ≤ 8 ms, 08 §5.4); y además <c>hero_src</c> (<c>png</c>, <c>shape</c> o <c>none</c>),
-    /// <c>shape</c>, <c>code</c> y <c>change</c> (<c>cut</c>, <c>fade</c> o <c>same</c>).</para>
+    /// que costó componerlo con sus mallas; ≤ 8 ms, 08 §5.4); y además <c>warm_ms</c> (lo que costó, antes y fuera de
+    /// <c>build_ms</c>, preparar el primer uso en la primera carga con parada, <see cref="StopBackdrop.Prewarm"/>; 0 en las
+    /// demás; tarea FX4), <c>hero_src</c> (<c>png</c>, <c>shape</c> o <c>none</c>), <c>shape</c>, <c>code</c> y <c>change</c>
+    /// (<c>cut</c>, <c>fade</c> o <c>same</c>).</para>
     /// <para>La banda de agua no se pinta bajo el relleno opaco del panel (<see cref="StopBackdrop.PanelHoleInsetDp"/>), y el
     /// hueco sigue al tablero cuando sube con la victoria o un modal.</para>
     /// <para><b>Victoria con vista</b> (D-013, punto 8, Q6-A; 02 §6; 07 §5.4; <c>ui_victory_view</c>, 08 §9; tarea M2.2): al abrirse
@@ -197,6 +199,12 @@ namespace AF.UI
             _stopBackdrop.Layout(_canvasW, _stopHorizon, _stopPanelTop, _stopHasBoard, StopBandBottom(), hole);
         }
 
+        /// <summary>
+        /// Solo tests: false salta <see cref="StopBackdrop.Prewarm"/> al cargar el nivel (la comparación de capturas del 71 con y
+        /// sin ella; revisión de FX4). En el juego, siempre true.
+        /// </summary>
+        internal static bool StopPrewarmEnabled { get; set; } = true;
+
         partial void StopLevelLoaded(LevelFlow flow)
         {
             EndVictoryView();
@@ -209,6 +217,11 @@ namespace AF.UI
                 || (ReferenceEquals(before, stop) && string.Equals(_stopBackdrop.Water, water, System.StringComparison.Ordinal));
             bool fade = _stopLoadedOnce && !flow.ReduceMotion && !same;
             _stopLoadedOnce = true;
+            if (StopPrewarmEnabled)
+            {
+                _stopBackdrop.Prewarm(stop, water); // el primer uso, fuera de build_ms (FX4; sonda warm_ms)
+            }
+
             _stopBackdrop.Apply(stop, water, fade, MapConfig.StopCrossfadeMs);
             _lastStopChange = same ? StopChangeSame : (_stopBackdrop.Fading ? StopChangeFade : StopChangeCut);
             ApplyStopLut();
@@ -386,6 +399,7 @@ namespace AF.UI
             AppendJsonString(sb, "water", b.Water);
             sb.Append(",\"fade\":").Append(_lastStopChange == StopChangeFade ? "true" : "false");
             sb.Append(",\"build_ms\":").Append(b.BuildMs.ToString("0.###", CultureInfo.InvariantCulture));
+            sb.Append(",\"warm_ms\":").Append(b.WarmMs.ToString("0.###", CultureInfo.InvariantCulture));
             AppendJsonString(sb, "hero_src", b.HeroSource);
             AppendJsonString(sb, "shape", b.Shape);
             AppendJsonString(sb, "code", b.Code);

@@ -12,7 +12,9 @@ namespace AF.Levels
     /// <list type="bullet">
     /// <item><description><c>format</c> = <see cref="FactCatalog.Format"/>, <c>version</c> ≥ 1 y <c>max_chars_es</c> ≥ 1;</description></item>
     /// <item><description><c>series</c>, una lista no vacía de <c>{subject, kind, from_level, lines, step}</c>: <c>subject</c>
-    /// <c>[a-z][a-z0-9_]*</c> y sin repetir (las claves de texto salen de él); <c>kind</c> = <c>tint</c>; <c>from_level</c> ≥ 1;
+    /// <c>[a-z][a-z0-9_]*</c> y sin repetir (las claves de texto salen de él): el id del tinte (glosario §9) o, en las series de
+    /// río [P], el del río (<c>rio_napo</c>); <c>kind</c> = <c>tint</c> o <c>river</c> [P] (las series de río de 261-300, propuesta de
+    /// Frutas §5.16; tarea C1a; pendiente de registrar en 08 §4.6, 08 §4.7 y glosario §10-§11); <c>from_level</c> ≥ 1;
     /// <c>lines</c> de 1 a <see cref="FactCatalog.MaxLines"/>; <c>step</c> de 1 a <see cref="WorldTable.LastLevel"/>; en orden de <c>from_level</c>, sin solaparse
     /// (cada bloque <c>[from_level, from_level + lines × step)</c> empieza donde acaba el anterior o después) y dentro de la
     /// primera vuelta (<see cref="WorldTable.LastLevel"/>);</description></item>
@@ -27,6 +29,7 @@ namespace AF.Levels
     public static class FactCatalogReader
     {
         private const string TintKind = "tint";
+        private const string RiverKind = "river";
 
         /// <summary>Lee y valida el calendario.</summary>
         /// <exception cref="LevelFormatException">El JSON no es válido o no cumple el formato; el mensaje lleva la ruta.</exception>
@@ -124,13 +127,22 @@ namespace AF.Levels
             string subject = RequireString(node, "subject", at);
             if (!IsSubject(subject))
             {
-                throw Fail(at + ".subject", "'" + subject + "' no es [a-z][a-z0-9_]* (el id del tinte, glosario §9)");
+                throw Fail(at + ".subject", "'" + subject + "' no es [a-z][a-z0-9_]* (el id del tinte, glosario §9, o del río, rio_<río> [P])");
             }
 
-            string kind = RequireString(node, "kind", at);
-            if (!string.Equals(kind, TintKind, StringComparison.Ordinal))
+            string kindText = RequireString(node, "kind", at);
+            FactSeriesKind kind;
+            if (string.Equals(kindText, TintKind, StringComparison.Ordinal))
             {
-                throw Fail(at + ".kind", "'" + kind + "' no admitido (este cliente lee " + TintKind + ")");
+                kind = FactSeriesKind.Tint;
+            }
+            else if (string.Equals(kindText, RiverKind, StringComparison.Ordinal))
+            {
+                kind = FactSeriesKind.River;
+            }
+            else
+            {
+                throw Fail(at + ".kind", "'" + kindText + "' no admitido (este cliente lee " + TintKind + " y " + RiverKind + ")");
             }
 
             int from = RequireInt(node, "from_level", at);
@@ -160,7 +172,7 @@ namespace AF.Levels
                     + " y la primera vuelta acaba en el " + Num(WorldTable.LastLevel));
             }
 
-            return new FactSeries(subject, FactSeriesKind.Tint, from, lines, step);
+            return new FactSeries(subject, kind, from, lines, step);
         }
 
         private static List<FactSource> ReadSources(JsonValue root)
