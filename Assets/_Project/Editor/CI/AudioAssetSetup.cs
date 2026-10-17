@@ -99,7 +99,7 @@ namespace AF.EditorTools
             int code;
             try
             {
-                code = Run();
+                code = Run(out _, out _);
             }
             catch (Exception e)
             {
@@ -169,8 +169,15 @@ namespace AF.EditorTools
             return problems;
         }
 
-        private static int Run()
+        /// <summary>
+        /// Una pasada de <see cref="Apply"/> sin salir del Editor (tests de idempotencia): devuelve el código de salida, cuántos
+        /// importadores cambió (<paramref name="changedImporters"/>) y si creó o puso al día el registro
+        /// (<paramref name="registryChanged"/>). Con todo ya aplicado: 0, 0 y false.
+        /// </summary>
+        public static int Run(out int changedImporters, out bool registryChanged)
         {
+            changedImporters = 0;
+            registryChanged = false;
             AssetDatabase.Refresh();
             var missing = new List<string>();
             int changed = 0;
@@ -204,6 +211,7 @@ namespace AF.EditorTools
                 return ExitMissing;
             }
 
+            changedImporters = changed;
             Debug.Log(LogPrefix + "ajustes de importación cambiados en " + changed + " de " + AudioClipIds.Count + " WAV.");
             var ids = new string[AudioClipIds.Count];
             var clips = new AudioClip[AudioClipIds.Count];
@@ -225,12 +233,14 @@ namespace AF.EditorTools
             {
                 registry = AudioClipRegistry.Create(ids, clips);
                 AssetDatabase.CreateAsset(registry, AudioClipRegistry.AssetPath);
+                registryChanged = true;
                 Debug.Log(LogPrefix + "registro creado: " + AudioClipRegistry.AssetPath + " (" + ids.Length + " clips).");
             }
             else if (!SameContent(registry, ids, clips))
             {
                 registry.Assign(ids, clips);
                 EditorUtility.SetDirty(registry);
+                registryChanged = true;
                 Debug.Log(LogPrefix + "registro puesto al día: " + AudioClipRegistry.AssetPath + " (" + ids.Length + " clips).");
             }
             else
@@ -494,31 +504,50 @@ namespace AF.EditorTools
         // Peso empaquetado del audio por carpeta de la entrega (Build Report, packedAssets), frente al total empaquetado y al AAB.
         private static void WriteSizeReport(BuildReport report, long aabBytes)
         {
+            var contents = new List<PackedEntry>();
+            foreach (PackedAssets packed in report.packedAssets)
+            {
+                foreach (PackedAssetInfo info in packed.contents)
+                {
+                    contents.Add(new PackedEntry(info.sourceAssetPath ?? string.Empty, info.type, (long)info.packedSize));
+                }
+            }
+
+            string text = SizeReport(contents, aabBytes);
+            Directory.CreateDirectory(Path.GetDirectoryName(SizeReportPath)!);
+            File.WriteAllText(SizeReportPath, text, new UTF8Encoding(false));
+            Debug.Log(LogPrefix + "peso del audio:\n" + text);
+        }
+
+        /// <summary>
+        /// Tabla del peso del audio por carpeta a partir del contenido empaquetado del Build Report: un clip cuenta una vez por
+        /// ruta aunque salga en varias entradas (el objeto y sus datos) y sus bytes se suman todos. Pública para los tests.
+        /// </summary>
+        public static string SizeReport(IReadOnlyList<PackedEntry> contents, long aabBytes)
+        {
             var byFolder = new SortedDictionary<string, long>(StringComparer.Ordinal);
             var countByFolder = new SortedDictionary<string, int>(StringComparer.Ordinal);
             var counted = new HashSet<string>(StringComparer.Ordinal); // cada clip sale dos veces: el objeto y sus datos
             long audio = 0;
             long all = 0;
-            foreach (PackedAssets packed in report.packedAssets)
+            for (int i = 0; i < contents.Count; i++)
             {
-                foreach (PackedAssetInfo info in packed.contents)
+                PackedEntry info = contents[i];
+                all += info.PackedSize;
+                string path = info.SourcePath;
+                if (!path.StartsWith(AudioClipIds.Folder, StringComparison.Ordinal) || info.Type != typeof(AudioClip))
                 {
-                    all += (long)info.packedSize;
-                    string path = info.sourceAssetPath ?? string.Empty;
-                    if (!path.StartsWith(AudioClipIds.Folder, StringComparison.Ordinal) || info.type != typeof(AudioClip))
-                    {
-                        continue;
-                    }
-
-                    string rel = path.Substring(AudioClipIds.Folder.Length);
-                    int slash = rel.LastIndexOf('/');
-                    string folder = slash < 0 ? "." : rel.Substring(0, slash);
-                    byFolder.TryGetValue(folder, out long sum);
-                    byFolder[folder] = sum + (long)info.packedSize;
-                    countByFolder.TryGetValue(folder, out int n);
-                    countByFolder[folder] = counted.Add(path) ? n + 1 : n;
-                    audio += (long)info.packedSize;
+                    continue;
                 }
+
+                string rel = path.Substring(AudioClipIds.Folder.Length);
+                int slash = rel.LastIndexOf('/');
+                string folder = slash < 0 ? "." : rel.Substring(0, slash);
+                byFolder.TryGetValue(folder, out long sum);
+                byFolder[folder] = sum + info.PackedSize;
+                countByFolder.TryGetValue(folder, out int n);
+                countByFolder[folder] = counted.Add(path) ? n + 1 : n;
+                audio += info.PackedSize;
             }
 
             var sb = new StringBuilder();
@@ -533,10 +562,29 @@ namespace AF.EditorTools
             sb.Append("| **Audio** | | **").Append((audio / 1000000.0).ToString("0.00", CultureInfo.InvariantCulture)).Append("** |\n\n");
             sb.Append("Datos empaquetados en total: ").Append((all / 1000000.0).ToString("0.00", CultureInfo.InvariantCulture))
                 .Append(" MB. AAB: ").Append((aabBytes / 1000000.0).ToString("0.00", CultureInfo.InvariantCulture)).Append(" MB (1 MB = 1.000.000 bytes).\n");
-            Directory.CreateDirectory(Path.GetDirectoryName(SizeReportPath)!);
-            File.WriteAllText(SizeReportPath, sb.ToString(), new UTF8Encoding(false));
-            Debug.Log(LogPrefix + "peso del audio:\n" + sb);
+            return sb.ToString();
         }
+    }
+
+    /// <summary>Una entrada del contenido empaquetado del Build Report (<see cref="AudioAssetSetup.SizeReport"/>).</summary>
+    public readonly struct PackedEntry
+    {
+        /// <summary>Crea la entrada.</summary>
+        public PackedEntry(string sourcePath, Type? type, long packedSize)
+        {
+            SourcePath = sourcePath;
+            Type = type;
+            PackedSize = packedSize;
+        }
+
+        /// <summary>Ruta del asset de origen.</summary>
+        public string SourcePath { get; }
+
+        /// <summary>Tipo del objeto empaquetado.</summary>
+        public Type? Type { get; }
+
+        /// <summary>Bytes empaquetados.</summary>
+        public long PackedSize { get; }
     }
 
     /// <summary>Ajustes de importación esperados de una clase de clips (<see cref="AudioAssetSetup.Expected"/>).</summary>

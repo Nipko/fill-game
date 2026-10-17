@@ -286,5 +286,57 @@ namespace AF.Tests.EditMode
                 UnityEngine.Object.DestroyImmediate(clip);
             }
         }
+
+        [Test]
+        public void Apply_OnTheAppliedState_ChangesNoImporter_AndLeavesTheRegistryAsItWas()
+        {
+            // AU3 §1: el método de Editor es idempotente. Con el estado commiteado (el que deja Apply), otra pasada no cambia
+            // ningún importador ni el registro, y los .meta y el .asset quedan byte a byte iguales.
+            string root = Path.Combine(Application.dataPath, "..");
+            var before = new Dictionary<string, byte[]>(StringComparer.Ordinal);
+            before[AudioClipRegistry.AssetPath] = File.ReadAllBytes(Path.Combine(root, AudioClipRegistry.AssetPath));
+            for (int slot = 0; slot < AudioClipIds.Count; slot++)
+            {
+                string meta = AudioClipIds.AssetPath(slot) + ".meta";
+                before[meta] = File.ReadAllBytes(Path.Combine(root, meta));
+            }
+
+            int code = AudioAssetSetup.Run(out int changed, out bool registryChanged);
+
+            Assert.That(code, Is.EqualTo(0), "Apply: OK");
+            Assert.That(changed, Is.EqualTo(0), "ningún importador cambiado");
+            Assert.That(registryChanged, Is.False, "el registro ya estaba al día");
+            foreach (KeyValuePair<string, byte[]> pair in before)
+            {
+                Assert.That(File.ReadAllBytes(Path.Combine(root, pair.Key)), Is.EqualTo(pair.Value), pair.Key + ": sin cambios");
+            }
+        }
+
+        [Test]
+        public void SizeReport_CountsEachClipOnce_AndAddsAllItsBytes()
+        {
+            // Revisión de AU3: el Build Report trae cada clip en dos entradas (el objeto y sus datos); la columna Clips cuenta
+            // rutas, no entradas, y los MB suman las dos. Lo que no es un AudioClip de la carpeta del audio solo cuenta en el total.
+            const string F = AudioClipIds.Folder;
+            var contents = new List<PackedEntry>
+            {
+                new PackedEntry(F + "sfx/sfx_seal.wav", typeof(AudioClip), 100000),
+                new PackedEntry(F + "sfx/sfx_seal.wav", typeof(AudioClip), 400000),
+                new PackedEntry(F + "sfx/sfx_select.wav", typeof(AudioClip), 250000),
+                new PackedEntry(F + "sfx/sfx_select.wav", typeof(AudioClip), 250000),
+                new PackedEntry(F + "amb/fauna/w01_fauna_01.wav", typeof(AudioClip), 1000000),
+                new PackedEntry(F + "amb/fauna/w01_fauna_01.wav", typeof(AudioClip), 1000000),
+                new PackedEntry(F + "audio_manifest.json", typeof(TextAsset), 5000000),
+                new PackedEntry("Assets/_Project/Scenes/Game.unity", typeof(GameObject), 2000000),
+            };
+
+            string report = AudioAssetSetup.SizeReport(contents, 30000000);
+
+            Assert.That(report, Does.Contain("| `amb/fauna` | 1 | 2.00 |"));
+            Assert.That(report, Does.Contain("| `sfx` | 2 | 1.00 |"));
+            Assert.That(report, Does.Contain("| **Audio** | | **3.00** |"));
+            Assert.That(report, Does.Contain("Datos empaquetados en total: 10.00 MB. AAB: 30.00 MB"));
+            Assert.That(report, Does.Not.Contain("audio_manifest"));
+        }
     }
 }

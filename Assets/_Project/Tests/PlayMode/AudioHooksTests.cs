@@ -403,6 +403,36 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator LevelFailed_Resumed_DoesNotPlayItsStingerAgain()
+        {
+            // Revisión de AU3: el remate suena en la transición real a Nivel fallido, no al reabrir la pantalla desde el estado
+            // guardado (en el teléfono la reanudación llega desde el inicio: sonaría el remate de algo que no acaba de pasar).
+            FunnelSetup.Hooks();
+            var store = new MemoryProfileStore(FunnelSetup.Profile(500));
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = store;
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            FunnelSetup.GetStuck(boot);
+            boot.View!.Stuck.GiveUpButton.onClick.Invoke();
+            boot.View.GiveUp.GiveUpButton.onClick.Invoke();
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelFailed));
+            Assert.That(_audio.StingerCount(StingerId.LevelFailed, true), Is.EqualTo(1), "la transición real: su remate");
+
+            _audio.Clear();
+            yield return PlayModeHelpers.LoadApp(store);
+            GameBootstrap again = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(again);
+            PlayModeHelpers.Step(again, 300);
+            Assert.That(again.Flow!.Phase, Is.EqualTo(FlowPhase.LevelFailed));
+            Assert.That(again.View!.Failed.Visible, Is.True, "Nivel fallido reaparece");
+            Assert.That(_audio.StingerCount(StingerId.LevelFailed, false), Is.EqualTo(0), "al reanudar, sin el remate");
+        }
+
+        [UnityTest]
         public IEnumerator Lobby_ACanoeComesBack_WithItsSound_Once()
         {
             var clock = new ManualClock(LobbyT0, TimeSpan.FromHours(-5));
@@ -458,6 +488,19 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.TapAnywhere(), Is.True, "un toque la cierra");
             PlayModeHelpers.Step(boot, 500);
             Assert.That(_audio.Count(SfxId.MechCard, false), Is.EqualTo(1), "una vez");
+        }
+
+        [UnityTest]
+        public IEnumerator LevelCard_Level60_DifficultyOnly_PlaysTheCardWithoutTheMechanicStinger()
+        {
+            // Revisión de AU3: la tarjeta que solo anuncia la dificultad (el 60, Muy difícil sin intro_mechanic) no presenta
+            // ninguna mecánica: suena sfx_mech_card (AU1), pero no sting_mech_card, que es de los estrenos.
+            yield return CardSetup.Load(60);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            Assert.That(boot.View!.LevelCard.Card!.Kind, Is.EqualTo(LevelCardKind.Difficulty), "el 60 no estrena nada");
+            Assert.That(_audio.Count(SfxId.MechCard, true), Is.EqualTo(1), "07 §9.2: la tarjeta previa");
+            Assert.That(_audio.StingerCount(StingerId.MechCard, false), Is.EqualTo(0), "sin el remate de mecánica");
         }
 
         [UnityTest]

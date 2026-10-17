@@ -253,7 +253,7 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
 - **Ambiente:**
   - el agua del mundo, en bucle;
   - la lluvia, con la probabilidad del mundo por `audio_ambient_rain_scale`. Su intensidad es fija para cada nivel [P]: `rain_light` en el 50 % de los niveles con lluvia, `rain_medium` en el 35 % y `rain_heavy` en el 15 %. Sale de otro número fijo del nivel, independiente del que decide si llueve, así que subir la escala hace llover en más niveles sin cambiar la intensidad de los que ya llovían;
-  - un animal grabado del mundo cada 20-45 s, a −10 dB bajo su pico. El mundo 6 ya tiene los suyos: ranas, grillos y búho.
+  - un animal grabado del mundo cada 20-45 s, a −10 dB bajo su pico. El mundo 6 ya tiene los suyos: ranas, grillos y búho (pendientes del asesor, como casi toda la fauna: ver «Pendiente del asesor cultural»).
 - **Música:**
   - el lecho del mundo y sus 3 capas se programan con `PlayScheduled` en el mismo `dspTime`. Miden lo mismo muestra a muestra (lo comprueba un test) y se cargan antes de arrancar;
   - las capas entran según las cuias selladas, con `audio_music_percussion_layers`;
@@ -261,11 +261,12 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
   - fuera del nivel, `mus_menu`: en el inicio con sus hojas (también la de compra), «El río sigue creciendo» y Sin canoas. La Crecida aún no tiene pantalla;
   - la atenuación y el silencio en los anuncios no cambian.
 - **Remates:**
-  - con gancho: `sting_world_banner` (con la piha del banner de mundo), `sting_arrival` (con `sfx_fact`, en la llegada a la parada), `sting_mech_card` (con la tarjeta previa) y `sting_level_failed` (al abrirse Nivel fallido, no al volver de Sin canoas);
+  - con gancho: `sting_world_banner` (con la piha del banner de mundo), `sting_arrival` (con `sfx_fact`, en la llegada a la parada), `sting_mech_card` (con la tarjeta previa de un estreno, sola o junto a la dificultad como en el 100; las tarjetas que solo anuncian la dificultad, como el 60 o el 80, suenan con `sfx_mech_card` y sin remate) y `sting_level_failed` (en la transición a Nivel fallido; no al volver de Sin canoas ni al reanudar con la pantalla ya abierta);
   - suenan a −8 dB de su pico, hacia −24 dBFS, por debajo del efecto al que acompañan [P];
   - van con el ajuste Música [P];
   - si suena la toada, esperan a que termine: la llegada a la parada nunca se solapa con ella;
   - `sting_fruit_new` está en el registro sin gancho, porque el cliente aún no tiene la tarjeta «Fruta nueva» (F5).
+- **Pendiente del asesor cultural** (`advisor_review` del manifiesto, revisión antes de la 1.0): 24 piezas son grabaciones reales con licencia CC0, pero su especie o su lugar está pendiente de su visto bueno. Son 16 de las 17 de `amb/fauna/` (todas menos `amb_w02_fauna_01`, los tucanes) y 8 efectos: `sfx_skip`, `sfx_river_drop`, `sfx_streak_up`, `sfx_mech_pirana`, `sfx_rosa_surface`, `sfx_monkey_chirp`, `sfx_world_banner` (la piha) y `sfx_map_rosa`. 16 de ellas usan una especie o región sustituta, no amazónica: nutrias de Florida y Maine, grillos de Cerdeña y de las Landas, delfines del Pacífico en lugar del boto, peces grabados en Alabama, aves de California o de la mata atlántica… La fauna por mundo, el boto y la piha que suenan hoy no son, por tanto, la elección cultural definitiva. Cualquiera se cambia sin tocar código: se sustituye el WAV en su ruta, con el mismo nombre, y se vuelve a ejecutar `AF.EditorTools.AudioAssetSetup.Apply` (y `check_audio.py`). `amb_w01_fauna_02` incluye además un murmullo de calle de Río (Félix Blume): hay que comprobar de oído, en la prueba del teléfono, que no se entiende ninguna voz (07 §9.1).
 - **Peso en el build:** ver «Peso del audio» al final de esta sección.
 
 **Respaldo por código (AU1, desde el 2026-10-16).** El juego sonaba con los 61 efectos del laboratorio, portados 1:1 a C# (`AF.Audio`, sin motor) y generados al arrancar en un hilo de trabajo (0 MB en el AAB). Todos son **provisionales por código**, también la piha y el boto, que el laboratorio llamaba «reales»: las grabaciones con licencia llegan después (07 §9.5) y los sustituyen sin tocar los ganchos.
@@ -362,7 +363,7 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
 | `sfx_morpho_idle` | −28 | sin cola añadida | Sin gancho todavía: Morpho por inactividad (MO3) |
 | `sfx_store_open` | −19 | sin cola añadida | Al abrirse la hoja de compra |
 
-**Ganchos de los remates (AU3):** junto a `sfx_world_banner` (`sting_world_banner`), `sfx_fact` (`sting_arrival`), `sfx_mech_card` (`sting_mech_card`) y al abrirse Nivel fallido (`sting_level_failed`). `sting_fruit_new` aún no tiene gancho.
+**Ganchos de los remates (AU3):** junto a `sfx_world_banner` (`sting_world_banner`), `sfx_fact` (`sting_arrival`), `sfx_mech_card` en la tarjeta previa de un estreno (`sting_mech_card`; no en las que solo anuncian la dificultad) y en la transición a Nivel fallido (`sting_level_failed`; no al reanudar con la pantalla abierta). `sting_fruit_new` aún no tiene gancho.
 
 ### Peso del audio (AU3, 2026-10-17)
 
