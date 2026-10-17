@@ -91,6 +91,20 @@ namespace AF.Tests.PlayMode
 
             NoStopLabelsUnlessSet();
             NoBannerTravelUnlessSet();
+            NoFruitNewUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga la tarjeta «Fruta nueva» (F5) si el test no la fijó (<see cref="GameScreen.FruitNewOverride"/> = null): los tests
+        /// que no tratan de ella juegan el 2, 4, 7, 11, 21, 41… con sus avisos, sus etiquetas del HUD y sus capturas como antes de
+        /// que existiera. Los que la prueban (<c>FruitNewCardTests</c>) la encienden y la vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoFruitNewUnlessSet()
+        {
+            if (GameScreen.FruitNewOverride == null)
+            {
+                GameScreen.FruitNewOverride = false;
+            }
         }
 
         /// <summary>

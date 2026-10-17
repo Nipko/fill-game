@@ -17,9 +17,16 @@ namespace AF.UI
     /// <summary>
     /// Avisos legibles del tablero (D-011, punto 2; prueba en el teléfono del 2026-10-11, §P2 y §P3): el aviso (<c>_toast</c>:
     /// regalo de Capi, «¡Una cuia más!» y «+1 Luciérnaga»), la tarjeta «¡Miquito a la vista!»
-    /// (<c>_sighting</c>) y el rótulo del lugar (<c>_stopLabel</c>, tarea M2.3) salen de uno en uno, por orden de llegada, y cada
-    /// uno dura lo que se tarda en leerlo (<see cref="NoticeTiming"/>: 1.000 ms + 55 ms por carácter, entre 3 y 7 s). La cola va
-    /// por tipos (<see cref="NoticeKind"/>: Text, Species y StopLabel; F5, TI6b y TU1a añaden los suyos).
+    /// (<c>_sighting</c>), la tarjeta «Fruta nueva» (<c>_fruitNew</c>, tarea F5) y el rótulo del lugar (<c>_stopLabel</c>, tarea
+    /// M2.3) salen de uno en uno, por orden de llegada, y cada uno dura lo que se tarda en leerlo (<see cref="NoticeTiming"/>:
+    /// 1.000 ms + 55 ms por carácter, entre 3 y 7 s). La cola va por tipos (<see cref="NoticeKind"/>: Text, Species, StopLabel y
+    /// FruitNew; TI6b y TU1a añaden los suyos). <b>La tarjeta «Fruta nueva»</b> (<see cref="FruitNewCard"/>; 06 §4.5) entra en la
+    /// cola al habilitarse el toque en el estreno de un tinte (<see cref="SightingRule.FruitNewAt"/>: 2, 4, 7, 11, 21, 41, 61, 81,
+    /// 111, 141 y 201), solo en el primer intento; como la del miquito, espera a que la tropa se vaya, va en su mismo sitio, aparta
+    /// las etiquetas del HUD mientras se ve y la ocultan lo mismo (un modal del embudo, otro intento, otro nivel, la celebración
+    /// o, sobre el muelle, una burbuja que sale debajo). Con 3 filas (el 111 y el 201), donde no cabe ni en la franja ni sobre el
+    /// muelle, va como placa de una línea clavada al marco, como el rótulo del lugar, y se va si una cuia de la fila 1 que queda
+    /// debajo se eleva hasta ella o si cambia el tablero [P]. Sonda <c>AF_STATE fruit_new</c> (<c>mode</c>: band, dock o plate).
     /// </summary>
     /// <remarks>
     /// <para><b>Cuándo</b>: solo en PLAYING y sin victoria ni bloqueo pendientes (<c>NoticesHeld</c>). Ninguno durante LOADING,
@@ -175,6 +182,14 @@ namespace AF.UI
         private int _noticeCount;
         private FaunaSpecies? _sightingPending;
         private float _sightingDockBottom = float.NaN; // borde de abajo de la placa de la tarjeta sobre el muelle; NaN si no
+        private readonly FruitNewCard _fruitNew; // «Fruta nueva» (tarea F5); la crea el constructor de GameScreen
+        private float _fruitNewDockBottom = float.NaN; // como _sightingDockBottom, para la tarjeta «Fruta nueva»
+        private int _fruitNewLevel; // nivel cuya tarjeta «Fruta nueva» ya entró en la cola en esta visita (0: ninguno)
+        private readonly StringBuilder _fruitNewProbeSb = new StringBuilder(128);
+        private string? _lastFruitNewProbe;
+        private BoardLayoutResult? _fruitNewPlateLayout; // tablero con el que se colocó la placa de «Fruta nueva» (3 filas)
+        private float _fruitNewPlateShift;
+        private float _fruitNewPlateCanvasW;
         private readonly StopLabel _stopLabel;
         private readonly StringBuilder _stopLabelProbeSb = new StringBuilder(256);
         private string? _lastStopLabelProbe;
@@ -508,6 +523,7 @@ namespace AF.UI
         {
             _toast.Hide();
             _sighting.Hide();
+            _fruitNew.Hide();
             _stopLabel.Hide();
         }
 
@@ -518,9 +534,9 @@ namespace AF.UI
                 || phase == FlowPhase.NoCanoes;
         }
 
-        // Un aviso del tipo kind al final de la cola: el texto (Text y StopLabel), la especie (Species) y la parada (StopLabel).
-        // Con la cola llena, se descarta.
-        private void EnqueueNotice(NoticeKind kind, string? text, FaunaSpecies? species, RiverStop? stop)
+        // Un aviso del tipo kind al final de la cola: el texto (Text y StopLabel), la especie (Species), la parada (StopLabel) y el
+        // tinte de «Fruta nueva» (FruitNew: índice en SightingRule.FruitDebutTints). Con la cola llena, se descarta.
+        private void EnqueueNotice(NoticeKind kind, string? text, FaunaSpecies? species, RiverStop? stop, int fruit = -1)
         {
             if (_noticeCount >= NoticeSlots)
             {
@@ -532,21 +548,25 @@ namespace AF.UI
             _notices[slot].Text = text;
             _notices[slot].Species = species;
             _notices[slot].Stop = stop;
+            _notices[slot].Fruit = fruit;
             _noticeCount++;
         }
 
-        /// <summary>Hay un aviso de la cola a la vista: el aviso, la tarjeta del miquito o el rótulo del lugar.</summary>
-        internal bool NoticeShowing => _toast.Visible || _sighting.Visible || _stopLabel.Visible;
+        /// <summary>
+        /// Hay un aviso de la cola a la vista: el aviso, la tarjeta del miquito, la de «Fruta nueva» o el rótulo del lugar.
+        /// </summary>
+        internal bool NoticeShowing => _toast.Visible || _sighting.Visible || _fruitNew.Visible || _stopLabel.Visible;
 
         // Saca de la cola el siguiente aviso si no hay ninguno a la vista y la fase lo permite (cada fotograma, al encolar y al
-        // habilitarse el toque). El rótulo del lugar espera además a que la tropa se vaya de la rama, como la tarjeta del
-        // miquito (va en la franja del panorama o bajo el HUD, donde se sienta): mientras espera, los que van detrás también.
+        // habilitarse el toque). El rótulo del lugar y la tarjeta «Fruta nueva» esperan además a que la tropa se vaya de la rama,
+        // como la tarjeta del miquito (van en la franja del panorama o bajo el HUD, donde se sienta): mientras esperan, los que
+        // van detrás también.
         private void PumpNotices()
         {
             while (_noticeCount > 0 && !NoticeShowing && !NoticesHeld(_flow))
             {
                 ref Notice head = ref _notices[_noticeHead];
-                if (head.Kind == NoticeKind.StopLabel && _intro.TroopVisible)
+                if ((head.Kind == NoticeKind.StopLabel || head.Kind == NoticeKind.FruitNew) && _intro.TroopVisible)
                 {
                     return;
                 }
@@ -555,6 +575,7 @@ namespace AF.UI
                 string? text = head.Text;
                 FaunaSpecies? species = head.Species;
                 RiverStop? stop = head.Stop;
+                int fruit = head.Fruit;
                 head = default;
                 _noticeHead = (_noticeHead + 1) % NoticeSlots;
                 _noticeCount--;
@@ -583,6 +604,14 @@ namespace AF.UI
                         }
 
                         break;
+
+                    case NoticeKind.FruitNew:
+                        if (fruit >= 0)
+                        {
+                            ShowFruitNewNow(fruit); // sin textos o si no cabe, no sale y pasa el siguiente
+                        }
+
+                        break;
                 }
             }
         }
@@ -606,6 +635,7 @@ namespace AF.UI
 
             PumpNotices();
             KeepStopLabelPlaced();
+            KeepFruitNewPlateClear();
         }
 
         // Fuera todo: el aviso y la tarjeta a la vista, la cola y la tarjeta pendiente (otro nivel, otro intento o la celebración).
@@ -621,6 +651,7 @@ namespace AF.UI
             _sightingPending = null;
             _toast.Hide();
             _sighting.Hide();
+            _fruitNew.Hide();
             _stopLabel.Hide();
         }
 
@@ -721,6 +752,12 @@ namespace AF.UI
         // ante un modal. Cada fotograma, con la bandeja ya repintada (desde PlaceToast); sin asignaciones.
         private void KeepSightingClearOfBubbles()
         {
+            if (!float.IsNaN(_fruitNewDockBottom) && _fruitNew.Visible && _fruitNewDockBottom > SightingDockLimit() + 0.01f)
+            {
+                _fruitNew.Hide(); // «Fruta nueva» sobre el muelle, igual (F5)
+                _fruitNewDockBottom = float.NaN;
+            }
+
             if (float.IsNaN(_sightingDockBottom) || !_sighting.Visible)
             {
                 return;
@@ -731,6 +768,176 @@ namespace AF.UI
                 _sighting.Hide();
                 _sightingDockBottom = float.NaN;
             }
+        }
+
+        /// <summary>
+        /// Solo tests: enciende o apaga la tarjeta «Fruta nueva» (null = encendida, como en el juego). Los tests PlayMode que no
+        /// tratan de ella la apagan (<c>PlayModeHelpers</c>), para que sus avisos y sus capturas del 2, 4, 7, 11, 21, 41… salgan
+        /// como antes de F5.
+        /// </summary>
+        internal static bool? FruitNewOverride { get; set; }
+
+        /// <summary>La tarjeta «Fruta nueva» (tests).</summary>
+        internal FruitNewCard FruitNewView => _fruitNew;
+
+        /// <summary>La tarjeta «Fruta nueva» va sobre el muelle (no en la franja del panorama; tests).</summary>
+        internal bool FruitNewOnDock => _fruitNew.Visible && !float.IsNaN(_fruitNewDockBottom);
+
+        /// <summary>Campos de la última sonda <c>AF_STATE fruit_new</c> (null si no salió ninguna o sin sonda; tests).</summary>
+        internal string? LastFruitNewProbe => _lastFruitNewProbe;
+
+        // «Fruta nueva» (06 §4.5; tarea F5): al habilitarse el toque (OnIntroFinished), antes que la tarjeta del miquito y que el
+        // rótulo (prioridad tutorial > Fruta nueva > miquito > rótulo; en estos niveles ninguno de los dos sale: SightingRule.IsBusy
+        // y StopLabelRule.IsTaken), entra en la cola si lo dice SightingRule.FruitNewAt: en el estreno de un tinte desde el 2, en
+        // el primer intento (ni la intro corta del reintento ni un nivel con fallos) y una sola vez por visita al nivel. Al
+        // reanudar no pasa por aquí (OnResumed: sin intro). Sale cuando la tropa se ha ido (PumpNotices).
+        private void MaybeShowFruitNew(LevelFlow flow)
+        {
+            if (!flow.HasLevel || !(FruitNewOverride ?? true))
+            {
+                return;
+            }
+
+            int level = flow.LevelNumber;
+            bool firstAttempt = !_introRetry && flow.Attempt.FailsLevel == 0 && _fruitNewLevel != level;
+            int fruit = SightingRule.FruitNewAt(level, firstAttempt);
+            if (fruit < 0)
+            {
+                return;
+            }
+
+            _fruitNewLevel = level;
+            EnqueueNotice(NoticeKind.FruitNew, null, null, null, fruit);
+        }
+
+        // La tarjeta «Fruta nueva» del tinte fruit, en el sitio de la del miquito (ShowSightingNow): sobre la franja del panorama
+        // si cabe; si no, sobre el muelle, por encima de la bandeja y de sus burbujas; si tampoco (3 filas), como placa de una
+        // línea clavada al marco; y si ni así, no sale. Sin el nombre o la frase en el idioma de la UI, tampoco
+        // (FruitNewCard.TryTexts). Suena sfx_fruit_new afinado a la fruta (AU1) y deja su sonda AF_STATE fruit_new.
+        private void ShowFruitNewNow(int fruit)
+        {
+            BoardLayoutResult? l = _layout;
+            _fruitNewDockBottom = float.NaN;
+            if (l == null || !FruitNewCard.TryTexts(fruit, out string name, out string tag))
+            {
+                return;
+            }
+
+            float height = _fruitNew.Measure(_canvasW, name, tag);
+            float band = l.PanelY - BoardTop;
+            _fruitNewPlateLayout = null;
+            if (band >= Mathf.Max(SightingBandDp, height + SightingBandAirDp))
+            {
+                _fruitNew.Place(_canvasW, BoardTop + ((band - height) * 0.5f));
+            }
+            else if (l.PanelBottom + 4f + height <= SightingDockLimit())
+            {
+                _fruitNew.Place(_canvasW, l.PanelBottom + 4f);
+                _fruitNewDockBottom = l.PanelBottom + 4f + height;
+            }
+            else
+            {
+                // Ni en la franja ni sobre el muelle (3 filas: el 111 y el 201): como placa de una línea clavada al marco, por
+                // encima de lo más alto de la fila 1 en reposo con su aire, como la del rótulo del lugar (FX4) [P]. Si ni así cabe
+                // (o una cuia de la fila 1 ya está elevada bajo ella), no sale.
+                float plateTop = StopLabelPlateTop(l);
+                float rowTop = StopLabelRowOneTop(l);
+                if (!_fruitNew.PlaceAsPlate(_canvasW, name, tag, plateTop, rowTop - StopLabel.PlateCuiaGapDp))
+                {
+                    return;
+                }
+
+                _fruitNewPlateLayout = l;
+                _fruitNewPlateShift = _boardShift;
+                _fruitNewPlateCanvasW = _canvasW;
+                if (FruitNewPlateRowOneLifted())
+                {
+                    _fruitNewPlateLayout = null;
+                    return;
+                }
+            }
+
+            int tint = FactLine.TintOf(SightingRule.FruitDebutTints[fruit]);
+            _fruitNew.Show(tint, tint > 0 ? _art.FruitFlight(tint) : null, tint > 0 ? _art.TintSwatch(tint) : null);
+            AF.Audio.AudioCues.PlayFruit(AF.Audio.SfxId.FruitNew, tint); // AU1: tarjeta «Fruta nueva»
+            EmitFruitNewProbe(fruit, (int)_fruitNew.DurationMs);
+        }
+
+        /// <summary>
+        /// La tarjeta «Fruta nueva» del tinte <paramref name="fruit"/> (índice en <see cref="SightingRule.FruitDebutTints"/>) en
+        /// el acto, por su camino de colocación (tests y capturas: la franja o el muelle sin esperar a su nivel). Devuelve si sale.
+        /// </summary>
+        internal bool ShowFruitNew(int fruit)
+        {
+            _fruitNew.Hide();
+            ShowFruitNewNow(fruit);
+            return _fruitNew.Visible;
+        }
+
+        // AF_STATE fruit_new: nivel, tinte, duración y sitio (FruitNewMode: band, dock o plate). Solo con la sonda; al enseñarla,
+        // nunca por fotograma.
+        private void EmitFruitNewProbe(int fruit, int ms)
+        {
+            if (!DevProbe.Enabled)
+            {
+                _lastFruitNewProbe = null;
+                return;
+            }
+
+            StringBuilder sb = _fruitNewProbeSb;
+            sb.Clear();
+            sb.Append("\"level\":").Append((_flow?.LevelNumber ?? 0).ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "tint", SightingRule.FruitDebutTints[fruit]);
+            sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "mode", FruitNewMode);
+            _lastFruitNewProbe = sb.ToString();
+            _probe.Event("fruit_new", _lastFruitNewProbe);
+        }
+
+        /// <summary>
+        /// Sitio de la tarjeta «Fruta nueva», como lo cuenta la sonda <c>fruit_new</c>: <c>band</c> (sobre la franja del
+        /// panorama), <c>dock</c> (sobre el muelle) o <c>plate</c> (placa de una línea clavada al marco; tests).
+        /// </summary>
+        internal string FruitNewMode => _fruitNew.OnPlate ? "plate" : float.IsNaN(_fruitNewDockBottom) ? "band" : "dock";
+
+        // Con la tarjeta «Fruta nueva» como placa a la vista: si una cuia de la fila 1 que queda bajo ella se eleva hasta ella, o
+        // si cambian el tablero, el lienzo o su desplazamiento, se oculta en el acto y no vuelve (como el rótulo, FX4; sin volver
+        // a colocarla). Cada fotograma, desde TickNotices; sin asignaciones.
+        private void KeepFruitNewPlateClear()
+        {
+            if (!_fruitNew.Visible || !_fruitNew.OnPlate)
+            {
+                return;
+            }
+
+            if (!ReferenceEquals(_layout, _fruitNewPlateLayout) || _fruitNewPlateShift != _boardShift || _fruitNewPlateCanvasW != _canvasW
+                || FruitNewPlateRowOneLifted())
+            {
+                _fruitNew.Hide();
+                _fruitNewPlateLayout = null;
+            }
+        }
+
+        // Como StopLabelRowOneLifted, para la placa de «Fruta nueva»: una cuia de la fila 1 que queda bajo ella (a lo ancho, con
+        // PlateSideAirDp) está elevada y, con el rebote, llega a menos de PlateLiftAirDp de su borde de abajo. Usa lo que midió
+        // StopLabelRowOneTop al colocarla (el rótulo no sale en los niveles de Fruta nueva: StopLabelRule.IsTaken).
+        private bool FruitNewPlateRowOneLifted()
+        {
+            Rect plate = _fruitNew.Rect;
+            float limit = plate.yMax + StopLabel.PlateEdgeDp + StopLabel.PlateLiftAirDp;
+            int n = Mathf.Min(_views.Length, _stopLabelRestTop.Length);
+            for (int i = 0; i < n; i++)
+            {
+                float rest = _stopLabelRestTop[i];
+                if (!float.IsNaN(rest) && _views[i].IsLifted && rest - StopLabel.LiftReachDp < limit
+                    && _stopLabelRestRight[i] + StopLabel.PlateSideAirDp > plate.xMin
+                    && _stopLabelRestLeft[i] - StopLabel.PlateSideAirDp < plate.xMax)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -815,6 +1022,11 @@ namespace AF.UI
             if (_stopLabelLevel != level)
             {
                 _stopLabelLevel = 0;
+            }
+
+            if (_fruitNewLevel != level)
+            {
+                _fruitNewLevel = 0; // lo mismo para la tarjeta «Fruta nueva» (F5)
             }
         }
 
@@ -1320,9 +1532,9 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Los avisos de la cola de los avisos de juego, por tipos (arquitectura de la tanda 4, §3). F5 (Fruta nueva), TI6b
-        /// (TiTino) y TU1a (tutorial) añaden los suyos; la prioridad entre tarjetas la deciden las reglas al encolar (tutorial &gt;
-        /// Fruta nueva &gt; miquito &gt; rótulo, como mucho una por nivel), no la cola, que va por orden de llegada.
+        /// Los avisos de la cola de los avisos de juego, por tipos (arquitectura de la tanda 4, §3). F5 añade la Fruta nueva;
+        /// TI6b (TiTino) y TU1a (tutorial) añaden los suyos; la prioridad entre tarjetas la deciden las reglas al encolar (tutorial
+        /// &gt; Fruta nueva &gt; miquito &gt; rótulo, como mucho una por nivel), no la cola, que va por orden de llegada.
         /// </summary>
         internal enum NoticeKind
         {
@@ -1334,6 +1546,9 @@ namespace AF.UI
 
             /// <summary>El rótulo del lugar, «{lugar} · {país}» (<see cref="StopLabel"/>; tarea M2.3).</summary>
             StopLabel = 2,
+
+            /// <summary>La tarjeta «Fruta nueva» del estreno de un tinte (<see cref="FruitNewCard"/>; tarea F5).</summary>
+            FruitNew = 3,
         }
 
         private struct Notice
@@ -1348,6 +1563,9 @@ namespace AF.UI
 
             // Parada del rótulo (StopLabel).
             public RiverStop? Stop;
+
+            // Tinte de la tarjeta «Fruta nueva» (FruitNew): índice en SightingRule.FruitDebutTints; −1 en los demás.
+            public int Fruit;
         }
     }
 }

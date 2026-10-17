@@ -612,6 +612,7 @@ namespace AF.UI
             _banner = new Toast("RiverLowered", _root, art, 18f);
             _toast = new Toast("Toast", _noticeLayer, art, 15f);
             _sighting = new SightingCard(_noticeLayer, art); // «¡Miquito a la vista!» (guion de la intro §4.5)
+            _fruitNew = new FruitNewCard(_noticeLayer, art); // «Fruta nueva» (06 §4.5; F5; GameScreen.Notices.cs)
             _stopLabel = new StopLabel(_noticeLayer, art); // rótulo del lugar (M2.3; GameScreen.Notices.cs)
 
             // Captura de toques para saltar Sumergir y teñir o la celebración (02 §4.2, §2): por encima de todo.
@@ -909,6 +910,7 @@ namespace AF.UI
             _banner.Tick(dtMs);
             _toast.Tick(dtMs);
             _sighting.Tick(dtMs);
+            _fruitNew.Tick(dtMs);
             _stopLabel.Tick(dtMs);
             TickNotices(); // el siguiente aviso, si el anterior se acaba de ocultar (GameScreen.Notices.cs)
             TickHarvest(dtMs);
@@ -1033,6 +1035,7 @@ namespace AF.UI
             // Con el toque habilitado salen los avisos que esperaban (D-011, punto 2): el regalo de Capi, «+1 Luciérnaga»…; la
             // tarjeta del miquito queda pendiente hasta que la tropa se vaya (GameScreen.Notices.cs).
             LevelFlow ready = RequireFlow();
+            MaybeShowFruitNew(ready); // «Fruta nueva» en el estreno de un tinte (F5), antes que el miquito y el rótulo
             MaybeShowSighting(ready);
             ShowRevealGiftIfReady(ready);
             MaybeShowStopLabel(ready); // el rótulo del lugar, si el nivel no trae otra tarjeta (M2.3)

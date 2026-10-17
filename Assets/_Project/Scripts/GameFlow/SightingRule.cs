@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using AF.Levels;
 
 namespace AF.GameFlow
 {
@@ -10,12 +11,45 @@ namespace AF.GameFlow
     /// con banner salen de la única regla que los decide, <see cref="WorldBanners"/> (11, 41, 81, 141…; el 1 no lo lleva por
     /// decisión del dueño, pero ya está ocupado por la Fruta nueva y el tutorial). Regla pura y determinista: no guarda nada
     /// (persistir los avistamientos y emitir <c>af_fauna_sighted</c> exige migrar el perfil y la aprobación del dueño, Q11; PR
-    /// aparte). Solo en el primer intento del nivel: los reintentos ya la vieron.
+    /// aparte). Solo en el primer intento del nivel: los reintentos ya la vieron. Decide también en qué niveles sale la tarjeta
+    /// «Fruta nueva» y de qué tinte (<see cref="FruitNewAt"/>; 06 §4.5; tarea F5). Los niveles ocupados por estrenos salen de la
+    /// especificación de la campaña (<see cref="OccupiedDebutLevels"/>, con las variantes de capacidad 18, 22 y 160) más los
+    /// hitos de 02 §13 (propuesta de Frutas §3.3).
     /// </summary>
     public static class SightingRule
     {
-        /// <summary>Debut de cada tinte: lleva la tarjeta «Fruta nueva» (07 §3, columna «Debut»; 06 §4.5).</summary>
-        public static readonly int[] FruitDebutLevels = { 1, 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201, 301 };
+        /// <summary>
+        /// Nivel del primer contacto (07 §6.4: «Sin tarjeta en el nivel 1: el primer contacto es el tutorial»; 02 §13, dedo guía
+        /// del nivel 1): estrena el açaí y el aguaje, pero no lleva la tarjeta «Fruta nueva» (tutorial &gt; Fruta nueva).
+        /// </summary>
+        public const int FirstContactLevel = 1;
+
+        /// <summary>
+        /// Los 14 tintes por orden de estreno (glosario §9, columna «Debut»; 07 §3; 06 §4.5; 02 §13 para 1-12), con el id de código
+        /// del glosario §9 (el sujeto de su serie de Frutas del río y de sus claves, 08 §4.7). Paralela a
+        /// <see cref="FruitDebutTintLevels"/>. Coinciden con el primer nivel de los packs en que sale cada tinte (lo comprueba
+        /// OccupiedLevelsTests).
+        /// </summary>
+        public static readonly string[] FruitDebutTints =
+        {
+            "acai", "aguaje", "tapereba", "guanabana", "bacaba", "agua_tapajos", "camu_camu", "urucum", "agua_negro", "cupuacu",
+            "lulo", "jenipapo", "cacao", "araza",
+        };
+
+        /// <summary>Nivel de estreno de cada tinte de <see cref="FruitDebutTints"/> (glosario §9).</summary>
+        public static readonly int[] FruitDebutTintLevels = { 1, 1, 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201, 301 };
+
+        /// <summary>
+        /// Debut de cada tinte: lleva la tarjeta «Fruta nueva» (07 §3, columna «Debut»; 06 §4.5), salvo el
+        /// <see cref="FirstContactLevel"/>. Sale de <see cref="FruitDebutTintLevels"/>, en orden y sin repetidos: 1, 2, 4, 7, 11,
+        /// 21, 41, 61, 81, 111, 141, 201 y 301.
+        /// </summary>
+        public static readonly int[] FruitDebutLevels = SortedUnion(FruitDebutTintLevels, Array.Empty<int>());
+
+        // Claves de la frase de «Fruta nueva» (fact.<tinte>.tag) y del nombre visible (tint.<tinte>.name) de cada tinte de
+        // FruitDebutTints (08 §4.7; pregunta 49 (a), D-022), preparadas una vez para que consultarlas no asigne memoria.
+        private static readonly string[] s_fruitTagKeys = FruitKeys(FactCatalog.KeyPrefix, ".tag");
+        private static readonly string[] s_fruitNameKeys = FruitKeys(FactCatalog.NamePrefix, ".name");
 
         /// <summary>
         /// Estrenos con su tutorial de una pantalla (D-007; 02 §9.1 y §11; 04 §2.5), en orden: Cuia chica 14, Cuia alta 27, Hoja
@@ -46,6 +80,23 @@ namespace AF.GameFlow
         public static readonly int[] MilestoneLevels = SortedUnion(SortedUnion(new[] { 3, 7, 8, 10, 11, 12, 20, 21, 30, 31 }, MechanicDebutLevels), VariantDebutLevels);
 
         /// <summary>
+        /// Estrenos de las variantes de capacidad sin tarjeta propia (02 §8 y 03 §9; <c>capacities[].debut</c> de
+        /// <c>campaign_v1.json</c> y <c>campaign_v2.json</c>): Cuia chica de 1 en el 18 y de 3 en el 22, y Cuia alta de 6 en el 160
+        /// (la primera, en un hito desde el 141). No llevan <c>intro_mechanic</c> en los packs, pero son novedad del tablero: el
+        /// nivel queda ocupado y la tarjeta del miquito pasa al siguiente libre (propuesta de Frutas §3.3, paso F5). Las primeras
+        /// de cada capacidad (14 y 27) ya están en <see cref="MechanicDebutLevels"/>.
+        /// </summary>
+        public static readonly int[] CapacityVariantLevels = { 18, 22, 160 };
+
+        /// <summary>
+        /// Todos los estrenos de la campaña que ocupan su nivel (<c>mechanics[].debut</c> ∪ <c>capacities[].debut</c> de las
+        /// especificaciones): <see cref="MechanicDebutLevels"/>, <see cref="VariantDebutLevels"/> y
+        /// <see cref="CapacityVariantLevels"/>, en orden y sin repetidos. Lo compara con <c>campaign_v1.json</c> y
+        /// <c>campaign_v2.json</c> OccupiedLevelsTests.
+        /// </summary>
+        public static readonly int[] OccupiedDebutLevels = SortedUnion(SortedUnion(MechanicDebutLevels, VariantDebutLevels), CapacityVariantLevels);
+
+        /// <summary>
         /// <paramref name="level"/> estrena una mecánica o una variante con su tarjeta de estreno (<see cref="MechanicDebutLevels"/>
         /// o <see cref="VariantDebutLevels"/>).
         /// </summary>
@@ -54,11 +105,52 @@ namespace AF.GameFlow
             return Array.IndexOf(MechanicDebutLevels, level) >= 0 || Array.IndexOf(VariantDebutLevels, level) >= 0;
         }
 
-        /// <summary>El nivel ya tiene banner de mundo (<see cref="WorldBanners.ShowsOn"/>), Fruta nueva o un hito propio.</summary>
+        /// <summary>
+        /// El nivel ya tiene banner de mundo (<see cref="WorldBanners.ShowsOn"/>), Fruta nueva, un hito propio o el estreno de una
+        /// variante de capacidad (<see cref="CapacityVariantLevels"/>).
+        /// </summary>
         public static bool IsBusy(int level)
         {
             return WorldBanners.ShowsOn(level) || Array.IndexOf(FruitDebutLevels, level) >= 0
-                || Array.IndexOf(MilestoneLevels, level) >= 0;
+                || Array.IndexOf(MilestoneLevels, level) >= 0 || Array.IndexOf(CapacityVariantLevels, level) >= 0;
+        }
+
+        /// <summary>
+        /// La tarjeta «Fruta nueva» de <paramref name="level"/> (06 §4.5; tarea F5): el índice en <see cref="FruitDebutTints"/> del
+        /// tinte que se estrena en él, o −1 si no lleva. Solo en el primer intento (<paramref name="firstAttempt"/>; como el banner
+        /// de mundo, ni al reintentar ni al reanudar), nunca en el <see cref="FirstContactLevel"/> (lo ocupa el tutorial) y como
+        /// mucho una por nivel: en 1-300 sale en el 2, 4, 7, 11, 21, 41, 61, 81, 111, 141 y 201 (y en el 301 cuando haya
+        /// niveles). Gana a la tarjeta del miquito y al rótulo del lugar, que no salen en esos niveles (<see cref="IsBusy"/> y
+        /// <see cref="StopLabelRule"/>). Sin asignaciones.
+        /// </summary>
+        public static int FruitNewAt(int level, bool firstAttempt)
+        {
+            if (!firstAttempt || level <= FirstContactLevel)
+            {
+                return -1;
+            }
+
+            for (int i = 0; i < FruitDebutTintLevels.Length; i++)
+            {
+                if (FruitDebutTintLevels[i] == level)
+                {
+                    return i; // desde el 2, un solo tinte se estrena en cada nivel
+                }
+            }
+
+            return -1;
+        }
+
+        /// <summary>Clave de la frase de «Fruta nueva» del tinte <paramref name="fruit"/> (<c>fact.&lt;tinte&gt;.tag</c>; 06 §4.5).</summary>
+        public static string FruitTagKey(int fruit)
+        {
+            return s_fruitTagKeys[fruit];
+        }
+
+        /// <summary>Clave del nombre visible del tinte <paramref name="fruit"/> (<c>tint.&lt;tinte&gt;.name</c>; glosario §9).</summary>
+        public static string FruitNameKey(int fruit)
+        {
+            return s_fruitNameKeys[fruit];
         }
 
         /// <summary>
@@ -86,6 +178,18 @@ namespace AF.GameFlow
         public static bool ShowsCard(int level, int cardLevel, bool firstAttempt, Func<int, bool>? tutorialPending = null)
         {
             return firstAttempt && level >= cardLevel && level == FirstFreeLevel(cardLevel, tutorialPending);
+        }
+
+        // Las claves de texto de los tintes de FruitDebutTints (una vez, al iniciar el tipo).
+        private static string[] FruitKeys(string prefix, string suffix)
+        {
+            var keys = new string[FruitDebutTints.Length];
+            for (int i = 0; i < keys.Length; i++)
+            {
+                keys[i] = prefix + FruitDebutTints[i] + suffix;
+            }
+
+            return keys;
         }
 
         // Unión ordenada y sin repetidos de dos listas (una vez, al iniciar el tipo).
