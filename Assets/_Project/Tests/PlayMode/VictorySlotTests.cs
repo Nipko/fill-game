@@ -374,8 +374,17 @@ namespace AF.Tests.PlayMode
             TestContext.WriteLine("caja de TiTino en el 40: " + view.SlothBandTopDp + " → " + view.SlothBandBottomDp + " dp (" + view.SlothBoxDp + ")");
             Assert.That(view.SlothBandTopDp, Is.GreaterThan(0f));
             Assert.That(view.SlothBandBottomDp, Is.EqualTo(Mathf.Max(view.SlothBandTopDp, highest)).Within(0.5f), "la cima de las cuias con el tablero ya desplazado");
-            Assert.That(view.SlothCouldSpeak, Is.EqualTo(view.SlothBoxDp >= GameScreen.SlothSpeakBoxDp), "el 40 es un hito: habla si su caja mide ≥ 104 dp");
-            Assert.That(view.CurrentVictoryLine.SlothSpeaks, Is.False, "con ArrivalEverywhere (hasta TI6a) los hitos son victorias normales");
+            if (view.SlothBoxDp < GameScreen.SlothSpeakBoxDp)
+            {
+                Assert.That(view.SlothCouldSpeak, Is.False, "el 40 es un hito: con la caja de menos de 104 dp no habla");
+            }
+
+            if (view.SlothCouldSpeak)
+            {
+                Assert.That(view.SlothBoxDp, Is.GreaterThanOrEqualTo(GameScreen.SlothSpeakBoxDp), "habla solo si su caja mide ≥ 104 dp");
+            }
+
+            Assert.That(view.CurrentVictoryLine.SlothSpeaks, Is.EqualTo(view.SlothCouldSpeak), "con SlothHito (desde TI6a) la línea es suya si puede hablar");
             Assert.That(view.CurrentVictoryLine.SlothBig, Is.True, "el 40 es un hito");
         }
 

@@ -18,7 +18,8 @@ namespace AF.UI
     /// <c>--ei af_level_offset 30</c>, que desplaza los números de nivel para probar las compuertas de 11, 22 y 31 con los
     /// tableros del tutorial, tarea B1-5; para probar el embudo y los anuncios en el teléfono [P], tarea B2-6:
     /// <c>af_seeds</c>, <c>af_canoes</c> y <c>af_ads_fill</c>; <c>af_font_scale</c> [P], la escala de texto, tarea A1; y el
-    /// idioma de desarrollo <c>af_lang</c>, tarea L2b; y <c>af_mech_off</c>, el kill switch de mecánicas, tarea KS1) y los ganchos de los tests PlayMode (nivel de arranque, modo de vertido,
+    /// idioma de desarrollo <c>af_lang</c>, tarea L2b; <c>af_mech_off</c>, el kill switch de mecánicas, tarea KS1; y
+    /// <c>af_bench_morpho</c>, el bench de Morpho y de fotogramas, tarea PF1) y los ganchos de los tests PlayMode (nivel de arranque, modo de vertido,
     /// progreso, perfil y reloj en memoria, desplazamiento, paquete de niveles, escala de texto, idioma y tablas de textos).
     /// <see cref="GameBootstrap"/> los lee al arrancar (la escala, al crear los textos: <see cref="UiBuilder.TextScale"/>); los
     /// tests los quitan con <see cref="Reset"/>.
@@ -87,6 +88,20 @@ namespace AF.UI
         /// desconocido se ignora y se avisa en el log. Nunca se lee en un build de release.
         /// </summary>
         public const string IntentExtraMechOff = "af_mech_off";
+
+        /// <summary>
+        /// Extra de intent (int) de los builds de desarrollo (tarea PF1; 03 §8, 08 §5.4, D-015 y pregunta 44 a): con
+        /// <c>--ei af_bench_morpho 1</c>, <c>DevBenchRunner</c> (solo en desarrollo) mide Morpho (<c>SafeMoves</c> con el corte de
+        /// <c>hint_timeout_ms</c>) en los tableros con tinaja y en los de Aguas turbias del 100 en adelante, y los fotogramas de
+        /// los niveles que se juegan (líneas <c>AF_PERF morpho</c>, <c>morpho_summary</c> y <c>frames</c>). Nunca en release.
+        /// </summary>
+        public const string IntentExtraBenchMorpho = "af_bench_morpho";
+
+        /// <summary>
+        /// Bench de Morpho (<c>af_bench_morpho</c>) forzado por un test: true lo enciende y false lo apaga; null = el extra. Solo
+        /// tests; fuera de desarrollo no cuenta (<see cref="ResolveBenchMorpho"/>).
+        /// </summary>
+        public static bool? BenchMorphoOverride { get; set; }
 
         /// <summary>
         /// Lista de mecánicas apagadas forzada por un test (el valor de <c>af_mech_off</c>: <c>"hoja,matapi"</c>); null = la del
@@ -250,6 +265,21 @@ namespace AF.UI
             DevWalletOverride = null;
             MechOffOverride = null;
             LevelOverridesJsonOverride = null;
+            BenchMorphoOverride = null;
+        }
+
+        /// <summary>
+        /// El bench de Morpho y de fotogramas (tarea PF1) arranca: el del test (<see cref="BenchMorphoOverride"/>) o, si no, el
+        /// extra <c>af_bench_morpho</c> = 1 (solo builds de desarrollo en Android). Fuera de desarrollo, siempre false.
+        /// </summary>
+        public static bool ResolveBenchMorpho()
+        {
+            if (!Debug.isDebugBuild)
+            {
+                return false;
+            }
+
+            return BenchMorphoOverride ?? ReadIntentInt(IntentExtraBenchMorpho) == 1;
         }
 
         /// <summary>

@@ -32,6 +32,12 @@ namespace AF.Presentation
         /// <summary>Lado del icono grande del estreno dentro del medallón (dp).</summary>
         public const float CardHeroIconDp = 48f;
 
+        /// <summary>
+        /// Clave del icono grande de la Liana de cuenta (<c>intro_mechanic</c> <c>liana_n</c> del 243; VA1a) [P]: la liana con dos
+        /// cuentas del gris perla del tablero y sin baya (<see cref="CardHeroIcon"/>).
+        /// </summary>
+        public const string LianaCountIconKey = "liana_n";
+
         /// <summary>Lado del medallón de la tarjeta de estreno (dp), con su sombra.</summary>
         public const float CardMedallionDp = 76f;
 
@@ -104,7 +110,8 @@ namespace AF.Presentation
         /// <summary>
         /// Icono grande (<see cref="CardHeroIconDp"/>) del estreno <paramref name="introMechanic"/> (<c>intro_mechanic</c> de
         /// D-007: <c>chica</c>, <c>alta</c>, <c>hoja</c>, <c>matapi</c>, <c>liana</c>, <c>remolino</c>, <c>barro</c>,
-        /// <c>lluvia</c>, <c>brote</c> o <c>pirana</c>), o null si no es ninguno. <c>murky</c> no tiene: su estreno, el 100, es la
+        /// <c>lluvia</c>, <c>brote</c> o <c>pirana</c>; y las variantes de la 1.0, <c>hoja_atada</c> y <c>liana_n</c>,
+        /// <see cref="LianaCountIconKey"/>), o null si no es ninguno. <c>murky</c> no tiene: su estreno, el 100, es la
         /// tarjeta combinada, que lleva el chip «?» y no el medallón.
         /// </summary>
         public Sprite? CardHeroIcon(string? introMechanic)
@@ -140,6 +147,8 @@ namespace AF.Presentation
                     return BuildCuiaSizeIcon(5, CardHeroIconDp, name);
                 case "barro":
                     return BuildHeroPixels(name, DrawMudGlyph);
+                case LianaCountIconKey:
+                    return BuildHeroPixels(name, DrawLianaCountGlyph);
                 default:
                     if (!MechanicTypes.TryParse(key, out MechanicType type) || type == MechanicType.None)
                     {
@@ -147,6 +156,27 @@ namespace AF.Presentation
                     }
 
                     return BuildHeroPixels(name, (pc, s) => DrawMechanicGlyph(pc, type, s));
+            }
+        }
+
+        // Liana de cuenta (estreno del 243, VA1a) en un lienzo cuadrado de s px (k = s / 96; y hacia arriba): la liana de la Liana,
+        // con sus hojas y sin la baya (que se leía como la fruta de la Liana con fruta), y delante de ella dos cuentas: las
+        // cuentas que dicen cuántas cuias hay que sellar (revisión de VA1a). Son las del tablero (LianaOverlay las ensarta con
+        // CounterPip, un disco liso teñido de Pearl), para que la tarjeta y la cuia enseñen la misma pieza: el mismo disco liso
+        // gris perla, sin brillo, más grande (≈ 14 % del círculo de 76 dp de la tarjeta) y con un canto pizarra (Slate) de ≈ 1 dp
+        // que lo separa del fondo crema del medallón (en el tablero lo separa el vidrio oscuro).
+        private static void DrawLianaCountGlyph(PixelCanvas pc, int s)
+        {
+            float k = s / 96f;
+            var a = new Vector2(8f * k, 14f * k);
+            var c = new Vector2(60f * k, 30f * k);
+            var b = new Vector2(88f * k, 84f * k);
+            DrawVine(pc, a, c, b, 6f * k, 0.8f * k, true);
+            for (int i = 0; i < 2; i++)
+            {
+                Vector2 p = Quad(a, c, b, i == 0 ? 0.48f : 0.74f);
+                pc.FillCircle(p.x, p.y, 11f * k, Slate);
+                pc.FillCircle(p.x, p.y, 9f * k, Pearl);
             }
         }
 

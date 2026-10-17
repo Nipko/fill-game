@@ -26,7 +26,7 @@ namespace AF.GameFlow
     /// <summary>Qué pasa con la línea en los hitos de TiTino (T6-A de D-013 y D-016; P-M3 del plan del Mapa).</summary>
     public enum HitoLinePolicy
     {
-        /// <summary>Los hitos son victorias normales: TiTino no habla en la ranura. Default hasta TI6a [P].</summary>
+        /// <summary>Los hitos son victorias normales: TiTino no habla en la ranura. Era el default antes de TI6a.</summary>
         ArrivalEverywhere = 0,
 
         /// <summary>

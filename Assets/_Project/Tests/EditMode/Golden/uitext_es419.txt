@@ -93,7 +93,9 @@ Tutorial(barro)	El barro acepta cualquier fruta; el primer vertido lo lava… y 
 Tutorial(brote)	El brote está cerrado: vierte más camu camu encima para que germine.
 Tutorial(chica)	Esta cuia chica solo guarda dos dosis: úsala para apartar, no para terminar
 Tutorial(hoja)	Esta hoja solo deja pasar aguaje. Vierte aguaje para abrirla.
+Tutorial(hoja_atada)	La hoja atada nunca cae: solo recibe su fruta, pero también puedes verter desde ella.
 Tutorial(liana)	La liana se suelta cuando selles una cuia de taperebá.
+Tutorial(liana_n)	Las cuentas de la liana dicen cuántas cuias debes sellar para que se suelte.
 Tutorial(lluvia)	La lluvia llena esta cuia cada tres vertidos: deja arriba el agua o saca la fruta antes de que la tape.
 Tutorial(matapi)	Lo que entra al matapi no sale. Llénalo con una sola fruta.
 Tutorial(murky)	El agua turbia esconde frutas. Debajo nunca se repite la fruta de encima.
@@ -189,7 +191,9 @@ UiText.TutorialBarro	El barro acepta cualquier fruta; el primer vertido lo lava�
 UiText.TutorialBrote	El brote está cerrado: vierte más camu camu encima para que germine.
 UiText.TutorialChica	Esta cuia chica solo guarda dos dosis: úsala para apartar, no para terminar
 UiText.TutorialHoja	Esta hoja solo deja pasar aguaje. Vierte aguaje para abrirla.
+UiText.TutorialHojaAtada	La hoja atada nunca cae: solo recibe su fruta, pero también puedes verter desde ella.
 UiText.TutorialLiana	La liana se suelta cuando selles una cuia de taperebá.
+UiText.TutorialLianaN	Las cuentas de la liana dicen cuántas cuias debes sellar para que se suelte.
 UiText.TutorialLluvia	La lluvia llena esta cuia cada tres vertidos: deja arriba el agua o saca la fruta antes de que la tape.
 UiText.TutorialMatapi	Lo que entra al matapi no sale. Llénalo con una sola fruta.
 UiText.TutorialMurky	El agua turbia esconde frutas. Debajo nunca se repite la fruta de encima.

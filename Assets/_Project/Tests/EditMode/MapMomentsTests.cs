@@ -124,7 +124,7 @@ namespace AF.Tests.EditMode
             Assert.That(MapConfig.UiMapQuiz, Is.EqualTo("off"));
             Assert.That(MapConfig.UiRiverFactEveryNLevels, Is.EqualTo(10));
             Assert.That(MapConfig.RiverPolicy, Is.EqualTo(RiverFactPolicy.Canon), "pregunta 45, (a): el canon de hoy");
-            Assert.That(MapConfig.HitoPolicy, Is.EqualTo(HitoLinePolicy.ArrivalEverywhere), "hasta TI6a");
+            Assert.That(MapConfig.HitoPolicy, Is.EqualTo(HitoLinePolicy.SlothHito), "T6-A, desde TI6a");
             Assert.That(MapConfig.ArrivalStripMs, Is.EqualTo(1200));
             Assert.That(MapConfig.WorldTravelInBannerMaxMs, Is.LessThanOrEqualTo(4000));
         }

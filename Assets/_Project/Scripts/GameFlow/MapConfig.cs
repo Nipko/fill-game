@@ -67,10 +67,13 @@ namespace AF.GameFlow
         public const RiverFactPolicy RiverPolicy = RiverFactPolicy.Canon;
 
         /// <summary>
-        /// Política de la línea en los hitos de TiTino [P] (P-M3 del plan del Mapa; T6-A): <see cref="HitoLinePolicy.ArrivalEverywhere"/>
-        /// hasta que TI6a pinte a TiTino en la victoria y la pase a <see cref="HitoLinePolicy.SlothHito"/>. No es una clave de 08 §9.
+        /// Política de la línea en los hitos de TiTino (T6-A, decidida: D-013 y D-016; pregunta 45, (a), D-022):
+        /// <see cref="HitoLinePolicy.SlothHito"/> desde TI6a, que pinta a TiTino en la victoria: en sus hitos habla él si puede y
+        /// el dato de llegada pasa a la victoria siguiente; si no puede, el hito es una victoria normal.
+        /// <see cref="HitoLinePolicy.ArrivalEverywhere"/> era la de antes de TI6a (P-M3 solo valía sin frases). No es una clave de
+        /// 08 §9.
         /// </summary>
-        public const HitoLinePolicy HitoPolicy = HitoLinePolicy.ArrivalEverywhere;
+        public const HitoLinePolicy HitoPolicy = HitoLinePolicy.SlothHito;
 
         /// <summary>Franja de llegada de la victoria del <c>10k</c>: 1.200 ms (D-013, punto 8; 02 §6, fila Llegada) [P].</summary>
         public const int ArrivalStripMs = 1200;

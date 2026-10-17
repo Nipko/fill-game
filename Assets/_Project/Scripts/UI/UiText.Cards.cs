@@ -30,6 +30,13 @@ namespace AF.UI
         /// </summary>
         public static string TutorialHoja => Loc.T(Keys.TutorialHoja);
 
+        /// <summary>
+        /// Hoja atada [P] (variante de la Hoja, 02 §9.1 «Variantes» y §1.2; propuesta de D-007 b.3; estreno en el 283, VA1a):
+        /// la regla entera en una frase, sin nombrar la fruta (la lleva la hoja): nunca cae, solo recibe su fruta y también es
+        /// origen. Pendiente de revisión del asesor cultural (el nombre «Hoja atada» también, glosario §6.5).
+        /// </summary>
+        public static string TutorialHojaAtada => Loc.T(Keys.TutorialHojaAtada);
+
         /// <summary>Matapi [P] (§b.2 M10; estreno en el 63). Pendiente de revisión del asesor cultural.</summary>
         public static string TutorialMatapi => Loc.T(Keys.TutorialMatapi);
 
@@ -38,6 +45,12 @@ namespace AF.UI
         /// cultural.
         /// </summary>
         public static string TutorialLiana => Loc.T(Keys.TutorialLiana);
+
+        /// <summary>
+        /// Liana de cuenta [P] (variante de la Liana, 02 §9.1 M3; propuesta de D-007 b.3; estreno en el 243, VA1a): se suelta al
+        /// sellar n cuias, que se leen en sus cuentas perla (<c>LianaOverlay</c>). Pendiente de revisión del asesor cultural.
+        /// </summary>
+        public static string TutorialLianaN => Loc.T(Keys.TutorialLianaN);
 
         /// <summary>
         /// Regla T4 de Aguas turbias (02 §11 T4: «se comunica al jugador en el tutorial del debut de Aguas turbias»): obligatoria
@@ -88,7 +101,7 @@ namespace AF.UI
 
         /// <summary>
         /// Tutorial de una pantalla del estreno <paramref name="introMechanic"/> (<c>intro_mechanic</c> de D-007), o null si no es
-        /// ninguno de los 11 de la 1.0.
+        /// ninguno de los 11 de 1-200 ni de las variantes con cliente (Liana de cuenta y Hoja atada, VA1a).
         /// </summary>
         public static string? Tutorial(string? introMechanic)
         {
@@ -97,8 +110,10 @@ namespace AF.UI
                 case "chica": return TutorialChica;
                 case "alta": return TutorialAlta;
                 case "hoja": return TutorialHoja;
+                case LevelCardInfo.HojaAtadaIntro: return TutorialHojaAtada;
                 case "matapi": return TutorialMatapi;
                 case "liana": return TutorialLiana;
+                case LevelCardInfo.LianaCountIntro: return TutorialLianaN;
                 case LevelFlow.MurkyIntroMechanic: return TutorialMurky;
                 case "remolino": return TutorialRemolino;
                 case "barro": return TutorialBarro;

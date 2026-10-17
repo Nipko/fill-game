@@ -828,6 +828,11 @@ namespace AF.UI
             {
                 _canvas.gameObject.SetActive(visible);
             }
+
+            if (!visible)
+            {
+                SlothLeave(); // Inicio o «El río sigue creciendo»: TiTino no se queda colgado de una victoria que ya no se ve
+            }
         }
 
         /// <summary>
@@ -1631,6 +1636,7 @@ namespace AF.UI
             _doubleShown = false;
             _autoNextMs = -1f;
             _ambient.SetSuspended(false);
+            SlothLeave();
         }
 
         private void RefreshHud()
@@ -3197,5 +3203,9 @@ namespace AF.UI
 
         // TiTino: en cada Tick, tras SlotTick.
         partial void SlothTick(float dtMs);
+
+        // TiTino: al cerrar la victoria por cualquier camino (HideOverlays: carga de otro nivel, intro, reinicio; y la pantalla
+        // de nivel que se oculta: Inicio o «El río sigue creciendo» tras AD_GATE), TiTino y su bocadillo se van.
+        partial void SlothLeave();
     }
 }

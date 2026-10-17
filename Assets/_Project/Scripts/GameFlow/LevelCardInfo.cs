@@ -27,6 +27,12 @@ namespace AF.GameFlow
     /// </summary>
     public sealed class LevelCardInfo
     {
+        /// <summary><c>intro_mechanic</c> del estreno de la Liana de cuenta (243; firma de <c>pack_schema</c> 3) [P].</summary>
+        public const string LianaCountIntro = "liana_n";
+
+        /// <summary><c>intro_mechanic</c> del estreno de la Hoja atada (283; firma de <c>pack_schema</c> 3).</summary>
+        public const string HojaAtadaIntro = "hoja_atada";
+
         private readonly int _mechanics;
 
         /// <summary>Crea la tarjeta (en el juego, <see cref="For"/>).</summary>

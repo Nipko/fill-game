@@ -232,8 +232,8 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Policies_CanonAndArrivalEverywhere_GiveTheFact_SingleKeyOnlyThePlace()
         {
-            // Canon y ArrivalEverywhere (los defaults): el 40 es una victoria normal con su dato.
-            yield return Win(40);
+            // Canon y ArrivalEverywhere (la política de antes de TI6a): el 40 es una victoria normal con su dato.
+            yield return Win(40, v => v.HitoPolicyOverride = HitoLinePolicy.ArrivalEverywhere);
             GameScreen view = GameBootstrap.Current!.View!;
             Assert.That(view.CurrentVictoryLine.SlothSpeaks, Is.False);
             Assert.That(view.Arrival!.Kind, Is.EqualTo(ArrivalKind.Arrival));

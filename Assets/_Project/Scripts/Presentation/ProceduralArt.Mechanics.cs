@@ -272,7 +272,8 @@ namespace AF.Presentation
 
         /// <summary>
         /// Icono de 32 dp de la mecánica <paramref name="type"/> (tarjeta previa y HUD): hoja de palma, capullo, liana, matapi,
-        /// remolino, nube o piraña, sin tintes de fruta (07 §3, regla 6). Null para <see cref="MechanicType.None"/>.
+        /// remolino, nube, piraña u hoja atada de un lazo de fibra (VA1a), sin tintes de fruta (07 §3, regla 6). Null para
+        /// <see cref="MechanicType.None"/>; transparente para las que aún no tienen dibujo (la Tinaja, su cuia y la Flor).
         /// </summary>
         public Sprite? MechanicIcon(MechanicType type)
         {
@@ -548,6 +549,9 @@ namespace AF.Presentation
                     break;
                 case MechanicType.Pirana:
                     DrawPiranha(pc, 48f * k, 48f * k, 88f * k, k);
+                    break;
+                case MechanicType.HojaAtada:
+                    DrawHojaAtadaGlyph(pc, s); // ProceduralArt.HojaAtada.cs (VA1a)
                     break;
             }
         }

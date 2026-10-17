@@ -29,6 +29,8 @@ namespace AF.Presentation.Mechanics
                     return new LluviaOverlay();
                 case MechanicType.Pirana:
                     return new PiranaOverlay();
+                case MechanicType.HojaAtada:
+                    return new HojaOverlay(true); // la variante atada de la Hoja (VA1a), en el mismo archivo
                 default:
                     return null;
             }

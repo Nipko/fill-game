@@ -794,8 +794,14 @@ namespace AF.UI
             /// <summary><c>tutorial_hoja</c> [P].</summary>
             public const string TutorialHoja = "tutorial_hoja";
 
+            /// <summary><c>tutorial_hoja_atada</c> [P] (VA1a).</summary>
+            public const string TutorialHojaAtada = "tutorial_hoja_atada";
+
             /// <summary><c>tutorial_liana</c> [P].</summary>
             public const string TutorialLiana = "tutorial_liana";
+
+            /// <summary><c>tutorial_liana_n</c> [P] (VA1a).</summary>
+            public const string TutorialLianaN = "tutorial_liana_n";
 
             /// <summary><c>tutorial_lluvia</c> [P].</summary>
             public const string TutorialLluvia = "tutorial_lluvia";
