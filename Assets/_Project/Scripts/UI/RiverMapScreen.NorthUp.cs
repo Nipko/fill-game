@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using AF.GameFlow;
+using AF.Levels;
 using AF.Presentation;
 using TMPro;
 using UnityEngine;
@@ -18,7 +19,8 @@ namespace AF.UI
     /// derecha de la zona del mapa y solo en la vista Cuenca; activo, con la cara crema, el texto en la madera oscura del «Cuenca»
     /// elegido y el relieve hundido, para que se vea que el mapa está girado y que otro toque lo devuelve. Un toque gira el contenido del mapa (tierra, vidrio, agua, canoa,
     /// casa…) con el norte arriba en <see cref="MapConfig.NorthUpRotateMs"/> ms, con la escala
-    /// <see cref="MapConfig.NorthUpScale"/> (328 / 431: la cuenca con el norte arriba mide 431 dp de ancho y solo hay 328) y
+    /// <see cref="MapConfig.NorthUpScale"/> (328 / 431: la cuenca con el norte arriba mide 431 dp de ancho y solo hay 328) o, en
+    /// una zona más pequeña, la mayor que deja entera la cuenca girada (<see cref="NorthUpTargetScale"/>, revisión de M4.4), y
     /// centrado en la zona; otro toque lo devuelve. Salir de la Cuenca, abrir o cerrar el Mapa lo dejan sin giro, en el acto.</description></item>
     /// <item><description><b>El giro</b>, el «−90°» de la propuesta en sus coordenadas con y hacia abajo (X = y; Y = 1 − x: el
     /// norte, a la derecha en la vista de siempre, queda arriba y el oeste a la izquierda), es en Unity (y hacia arriba) un giro
@@ -26,17 +28,23 @@ namespace AF.UI
     /// (<see cref="NorthUpPivot"/>), con su pivote en el centro de la zona: el contenido no cambia, así que el arrastre, el
     /// encuadre y los marcadores siguen con sus cuentas de siempre. Es barato: una rotación del contenedor, sin rehacer ninguna
     /// malla.</description></item>
-    /// <item><description><b>Los rótulos no giran:</b> los nombres de los países y las placas de los mundos futuros giran al
-    /// revés lo mismo que el contenido y se leen derechos durante todo el giro; como derechos ocupan otra caja, con el norte arriba
-    /// se recolocan para no pisarse (<see cref="NorthUpLabelGapDp"/>): cada placa, en el sitio más cercano al suyo a un lado u otro
-    /// de su punto, encima o debajo, a ≤ <see cref="NorthUpPlateMaxDistDp"/> de él en pantalla, con un punto crema en su sitio y una
-    /// línea guía si se apartó más de <see cref="NorthUpPinLineFromDp"/> (D-013, punto 5: el mapa enseña la geografía real); los
-    /// países se apartan antes que una placa. «Andes ↑» y «Océano Atlántico ↓», fijos en el
+    /// <item><description><b>Los rótulos no giran ni encogen:</b> los nombres de los países y las placas de los mundos futuros
+    /// giran al revés lo mismo que el contenido y se escalan al revés de él (se leen derechos y a su tamaño, ≥ 12 sp, durante
+    /// todo el giro); como derechos ocupan otra caja, con el norte arriba se recolocan para no pisarse
+    /// (<see cref="NorthUpLabelGapDp"/>) ni pisar la canoa con su mástil y sus banderas, el guía o la fila corta de boyas: cada
+    /// placa, lo más cerca de su punto, a un lado u otro, encima o debajo, a ≤ <see cref="NorthUpPlateMaxDistDp"/> de él en
+    /// pantalla (si no hay sitio para todas, hasta <see cref="NorthUpPlateFarDistDp"/>), con un punto crema en su sitio y una
+    /// línea guía si se apartó más de <see cref="NorthUpPinLineFromDp"/>, sin que esa línea cruce ni roce otra placa ni pase por
+    /// otro punto (con dos puntos casi juntos, la placa del más al norte encima y la otra debajo); cada país, en su región (D-013, punto 5: «cada país lleva su nombre en su región»; el mapa
+    /// enseña la geografía real): a ≤ <see cref="NorthUpCountryReachDp"/> de su punto de <c>labels</c> en pantalla y, si ahí no
+    /// cabe, no sale mientras el norte está arriba [P]. «Andes ↑» y «Océano Atlántico ↓», fijos en el
     /// marco, tampoco giran, pero con el norte arriba sus flechas mentirían (los Andes quedan a la izquierda y el Atlántico a la
     /// derecha): se funden con el giro (un <see cref="CanvasGroup"/> en cada uno, que se crea al primer toque) y no se ven
     /// mientras el norte está arriba [P]. Siguen activos: el giro no activa ni desactiva nada.</description></item>
     /// <item><description><b>Las figuras tampoco se tumban</b> [P]: la canoa con su mástil, sus banderas y el guía, la casa de
-    /// TiTino y las Rosas de las boyas saltadas giran al revés sobre su punto, y la proa mira hacia el guía en pantalla.</description></item>
+    /// TiTino y las Rosas de las boyas saltadas giran al revés sobre su punto, y la proa mira hacia el guía en pantalla. La fila
+    /// corta de boyas sigue en horizontal bajo la canoa, como en la vista de siempre, y la casa, con el pie a un lado de Guajará
+    /// en pantalla (a la izquierda o a la derecha, en tierra).</description></item>
     /// <item><description>Con el norte arriba la cuenca entera cabe en la zona: no se arrastra, ni salen «Volver a la canoa» ni la
     /// ventanita de casa (la casa se ve).</description></item>
     /// <item><description><b>Reducir movimiento</b> (07 §7.8): corte, sin giro animado.</description></item>
@@ -61,16 +69,27 @@ namespace AF.UI
         public const float NorthUpInsetDp = OrientationInsetDp;
 
         /// <summary>
-        /// Con el norte arriba, una placa de mundo futuro queda como mucho a este tanto de su punto en pantalla (dp, del punto al
-        /// borde más cercano de la placa) [P]: si no cabe en ningún sitio tan cerca, se apartan antes los países.
+        /// Con el norte arriba, una placa de mundo futuro queda, si hay sitio, como mucho a este tanto de su punto en pantalla (dp,
+        /// del punto al borde más cercano de la placa) [P]; si no, hasta <see cref="NorthUpPlateFarDistDp"/> antes que pisar otra
+        /// placa o el sitio de un país.
         /// </summary>
         public const float NorthUpPlateMaxDistDp = 24f;
+
+        /// <summary>
+        /// Si no hay sitio para todas las placas a ≤ <see cref="NorthUpPlateMaxDistDp"/> de su punto sin pisar a otra ni el sitio
+        /// de un país (varias con el punto casi en el mismo sitio y la canoa al lado), una placa puede quedar hasta a este tanto
+        /// (dp en pantalla) [P], con su línea guía.
+        /// </summary>
+        public const float NorthUpPlateFarDistDp = 40f;
 
         /// <summary>Diámetro del punto que marca, con el norte arriba, el sitio de cada placa de mundo futuro (dp en pantalla).</summary>
         public const float NorthUpPinDotDp = 6f;
 
         /// <summary>Borde del punto de la placa (dp en pantalla), en <see cref="NorthUpPinRim"/>.</summary>
         public const float NorthUpPinRimDp = 1.5f;
+
+        /// <summary>Hueco de una línea guía con cualquier otra placa (dp en pantalla) [P]: ni la cruza ni la roza.</summary>
+        public const float NorthUpLineClearDp = 4f;
 
         /// <summary>Grosor de la línea guía del punto a su placa (dp en pantalla).</summary>
         public const float NorthUpPinLineDp = 1.5f;
@@ -81,10 +100,22 @@ namespace AF.UI
         /// <summary>Borde del punto y de la línea guía de las placas: verde selva oscuro #1F4A3A.</summary>
         public static readonly Color NorthUpPinRim = Palette.Hex(0x1F4A3A);
 
-        // Pasos de la búsqueda de sitio con el norte arriba (dp del contenido) y hasta dónde se aparta un país de su sitio.
-        private const float NorthUpPlateStepDp = 2f;
-        private const float NorthUpCountryStepDp = 3f;
-        private const float NorthUpCountryReachDp = 96f;
+        /// <summary>
+        /// Con el norte arriba, el centro del nombre de un país queda como mucho a este tanto de su punto de <c>labels</c> en
+        /// pantalla (dp) [P], para que siga en su región (D-013, punto 5); si ahí no cabe, no sale mientras el norte está arriba.
+        /// </summary>
+        public const float NorthUpCountryReachDp = 12f;
+
+        // Pasos de la búsqueda de sitio con el norte arriba (dp del contenido).
+        private const float NorthUpPlateStepDp = 4f;
+        private const float NorthUpCountryStepDp = 1.5f;
+
+        // Peso de lo que no se puede pisar (otro rótulo, un punto, una línea guía, la canoa, el guía, la fila de boyas) frente a
+        // lo que una placa prefiere no pisar (el sitio de un país): una placa solo pisa el sitio de un país si no tiene otro.
+        private const int NorthUpHardHit = 64;
+
+        // Rondas de reparación de las placas que pisan algo (NorthUpLabelShifts).
+        private const int NorthUpRepairRounds = 4;
 
         private RectTransform? _northUpPivot;
         private ReliefParts _northUpButton;
@@ -103,6 +134,16 @@ namespace AF.UI
         private Vector2[] _labelOrigin = Array.Empty<Vector2>();
         private int[] _labelOrder = Array.Empty<int>();
         private Rect[] _labelBox = Array.Empty<Rect>();
+        private Rect[] _labelIdeal = Array.Empty<Rect>();
+        private Vector2[] _labelLineEnd = Array.Empty<Vector2>();
+        private bool[] _labelLine = Array.Empty<bool>();
+        private bool[] _labelHidden = Array.Empty<bool>();
+        private int[] _plateSide = Array.Empty<int>();
+        private readonly Rect[] _northUpObstacles = new Rect[3];
+        private int _northUpObstacleCount;
+        private float _northUpShiftScale = float.NaN;
+        private float _northUpLineScale = 1f;
+        private float _rowShift;
         private bool _northUpBuilt;
         private bool _northUpOn;
         private float _northUpT;
@@ -137,8 +178,29 @@ namespace AF.UI
         /// <summary>Giro actual del contenido (grados de Unity, antihorario): de 0 a <see cref="NorthUpAngleDeg"/>.</summary>
         public float NorthUpAngle => NorthUpAngleDeg * NorthUpEase(_northUpT);
 
-        /// <summary>Escala actual del contenido: de 1 a <see cref="MapConfig.NorthUpScale"/>.</summary>
-        public float NorthUpCurrentScale => Mathf.Lerp(1f, MapConfig.NorthUpScale, NorthUpEase(_northUpT));
+        /// <summary>Escala actual del contenido: de 1 a <see cref="NorthUpTargetScale"/>.</summary>
+        public float NorthUpCurrentScale => Mathf.Lerp(1f, NorthUpTargetScale(), NorthUpEase(_northUpT));
+
+        /// <summary>
+        /// Escala del contenido con el norte arriba: <see cref="MapConfig.NorthUpScale"/> (≈ 0,76; D-013, punto 5) o, si la cuenca
+        /// girada no cabría entera en la zona del mapa (una zona más estrecha o más baja), la mayor que la deja entera (revisión de
+        /// M4.4: con el norte arriba no se arrastra).
+        /// </summary>
+        public float NorthUpTargetScale()
+        {
+            float scale = MapConfig.NorthUpScale;
+            if (_contentH > 0f)
+            {
+                scale = Mathf.Min(scale, _viewW / _contentH); // girada, el alto del contenido va a lo ancho
+            }
+
+            if (_contentW > 0f)
+            {
+                scale = Mathf.Min(scale, _viewH / _contentW);
+            }
+
+            return Mathf.Max(0.01f, scale);
+        }
 
         /// <summary>Se puede arrastrar el mapa (no con el norte arriba).</summary>
         public bool DragEnabled => _dragArea == null || _dragArea.enabled;
@@ -174,17 +236,49 @@ namespace AF.UI
             return layer.TransformPoint(new Vector3(r.xMin + local.x, r.yMax + local.y, 0f));
         }
 
-        /// <summary>Rótulos de país que se ven (tests: que se leen derechos).</summary>
+        /// <summary>
+        /// Rótulos de país que se ven (tests: que se leen derechos), sin los que no caben en su región con el norte arriba
+        /// (<see cref="NorthUpCountryHidden"/>).
+        /// </summary>
         internal IEnumerable<TextMeshProUGUI> CountryLabels()
         {
             for (int i = 0; i < _countries.Count; i++)
             {
-                if (_countries[i].gameObject.activeSelf)
+                if (_countries[i].gameObject.activeSelf && !NorthUpCountryHidden(i))
                 {
                     yield return _countries[i];
                 }
             }
         }
+
+        /// <summary>
+        /// El país <paramref name="i"/> (en el orden de <c>labels</c>) no sale con el norte arriba: no cabe a ≤
+        /// <see cref="NorthUpCountryReachDp"/> de su punto sin pisar otro rótulo, una línea guía o una figura.
+        /// </summary>
+        internal bool NorthUpCountryHidden(int i)
+        {
+            return _northUpT > 0f && i < _labelHidden.Length && _labelHidden[i];
+        }
+
+        /// <summary>
+        /// La línea guía de la placa <paramref name="k"/> de las que tienen punto (en el orden en que se pintan), en coordenadas
+        /// locales del contenido (dp, y hacia arriba): de su punto (<paramref name="from"/>) al borde más cercano de la placa
+        /// (<paramref name="to"/>). False si esa placa no lleva línea.
+        /// </summary>
+        internal bool NorthUpPinLine(int k, out Vector2 from, out Vector2 to)
+        {
+            if (_pins == null || k >= _pins.DotCount)
+            {
+                from = default;
+                to = default;
+                return false;
+            }
+
+            return _pins.Line(k, out from, out to);
+        }
+
+        /// <summary>Capa de los rótulos del contenido (países, placas y sus puntos).</summary>
+        internal RectTransform? LabelLayer => _labelLayer;
 
         /// <summary>Placas de los mundos futuros que se ven (tests: que se leen derechas).</summary>
         internal IEnumerable<RectTransform> SilhouettePlates()
@@ -444,9 +538,15 @@ namespace AF.UI
             _northUpAppliedContent = content;
             _northUpAppliedView = view;
 
+            float target = NorthUpTargetScale();
+            if (_northUpOn && target != _northUpShiftScale)
+            {
+                NorthUpLabelShifts(); // otra zona (otra escala): los rótulos se recolocan a su tamaño en pantalla
+            }
+
             float u = NorthUpEase(_northUpT);
             float angle = NorthUpAngleDeg * u;
-            float scale = Mathf.Lerp(1f, MapConfig.NorthUpScale, u);
+            float scale = Mathf.Lerp(1f, target, u);
 
             // Centro del contenido en coordenadas del contenedor (origen en el centro de la zona, y hacia arriba).
             var d = new Vector2((-_viewW * 0.5f) + _offset.x + (_contentW * 0.5f), (_viewH * 0.5f) - _offset.y - (_contentH * 0.5f));
@@ -459,13 +559,27 @@ namespace AF.UI
             pivot.localScale = new Vector3(scale, scale, 1f);
             pivot.anchoredPosition = -u * turned;
 
-            // Los rótulos del contenido, derechos y, con el norte arriba, sin pisarse (NorthUpLabelShifts).
+            // Los rótulos del contenido, derechos, a su tamaño en pantalla (la escala, al revés: 12 sp siguen siendo 12 sp) y, con
+            // el norte arriba, sin pisarse (NorthUpLabelShifts); un país que no cabe en su región se funde con el giro.
             Quaternion upright = Quaternion.Euler(0f, 0f, -angle);
+            float inv = 1f / scale;
+            var counter = new Vector3(inv, inv, 1f);
             int countries = _countries.Count;
             for (int i = 0; i < countries + _silhouettes.Count; i++)
             {
                 RectTransform rt = i < countries ? _countries[i].rectTransform : _silhouettes[i - countries].Root;
                 rt.localRotation = upright;
+                rt.localScale = counter;
+                if (i < countries)
+                {
+                    float alpha = i < _labelHidden.Length && _labelHidden[i] ? 1f - u : 1f;
+                    CanvasRenderer cr = _countries[i].canvasRenderer;
+                    if (cr.GetAlpha() != alpha)
+                    {
+                        cr.SetAlpha(alpha);
+                    }
+                }
+
                 if (i >= _labelBase.Length)
                 {
                     continue; // un rótulo nuevo, aún sin sitio de partida: sin corrimiento
@@ -514,23 +628,30 @@ namespace AF.UI
                 }
             }
 
+            UprightCompactRow(u, -angle);
+
             // «Andes ↑» y «Océano Atlántico ↓»: se funden con el giro (con el norte arriba, sus flechas no dirían la verdad).
             FadeOrientationLabel(_andesFade, 1f - u);
             FadeOrientationLabel(_atlanticFade, 1f - u);
         }
 
         // Con el norte arriba, los rótulos derechos ocupan otra caja que en la vista de siempre (donde M3.4 los separa) y pueden
-        // pisarse o salirse por los lados. Se calcula, para el giro completo y en pantalla (sin la escala, que es la misma en
-        // todos), dónde queda cada uno, y se pasa a un corrimiento en el contenido que el giro aplica en proporción (revisión de
-        // M4.4: antes se bajaban en cascada y una placa podía acabar en otro país):
-        // - primero las placas de los mundos futuros, que señalan un sitio: de los sitios a su alrededor (a un lado o al otro de
-        //   su punto, encima o debajo) que no se salen del mapa a lo ancho y quedan a menos de NorthUpPlateMaxDistDp de su punto en
-        //   pantalla, el que menos la mueve de su sitio de siempre sin pisar otra placa ni el punto de otra; si ninguno queda
-        //   libre, el que menos pisa;
-        // - después los países, que se apartan antes que una placa: el sitio libre más cercano al suyo (hasta
-        //   NorthUpCountryReachDp), sin pisar las placas, sus puntos ni los países ya colocados.
+        // pisarse o salirse por los lados. Se calcula, para el giro completo y en pantalla, dónde queda cada uno, y se pasa a un
+        // corrimiento en el contenido que el giro aplica en proporción. Todo va en unidades del contenido (dp de la vista de
+        // siempre) en el marco girado; los rótulos, escalados al revés que el contenido (ApplyNorthUp), miden ahí su tamaño entre
+        // la escala, y los topes en pantalla también van entre la escala (revisión de M4.4):
+        // - las placas de los mundos futuros, que señalan un sitio: de los sitios a su alrededor (a un lado o al otro de su punto,
+        //   encima o debajo) que no se salen del mapa a lo ancho y quedan a ≤ NorthUpPlateMaxDistDp de su punto en pantalla (o, si
+        //   no hay sitio, a ≤ NorthUpPlateFarDistDp), el más cercano a su punto sin pisar otra placa, el punto o la línea guía de
+        //   otra, la canoa con su mástil y sus banderas, el guía ni la fila corta de boyas (NorthUpObstacles), sin que su propia
+        //   línea guía cruce o roce otra placa o pase por otro punto y, si puede, sin pisar el sitio de un país; con dos puntos a
+        //   menos de 2 × NorthUpPinDotDp, la placa del más al norte va encima de él y la otra debajo del suyo; si ningún sitio
+        //   queda libre, el que menos pisa;
+        // - los países, que no salen de su región (D-013, punto 5): el sitio libre más cercano a su punto de labels, con el centro
+        //   a ≤ NorthUpCountryReachDp de él en pantalla, sin pisar nada de lo anterior ni los otros países; si no hay ninguno, el
+        //   país no sale mientras el norte está arriba (_labelHidden) [P].
         // Prepara además el punto de cada placa y su línea guía (PlatePinsGraphic). Asigna solo si crece la lista o al crear los
-        // puntos (al tocar el botón o al cambiar de vista, nunca durante el giro).
+        // puntos (al tocar el botón, al cambiar de vista o de zona; nunca durante el giro).
         private void NorthUpLabelShifts()
         {
             int countries = _countries.Count;
@@ -548,7 +669,18 @@ namespace AF.UI
                 _labelOrder = new int[n];
                 _labelBox = new Rect[n];
                 _labelPin = new Vector2[n];
+                _labelIdeal = new Rect[n];
+                _labelLineEnd = new Vector2[n];
+                _labelLine = new bool[n];
+                _labelHidden = new bool[n];
+                _plateSide = new int[n];
             }
+
+            float scale = NorthUpTargetScale();
+            _northUpShiftScale = scale;
+            _northUpLineScale = scale;
+            float inv = 1f / scale;
+            IReadOnlyList<RiverMapLabel>? data = _map?.Labels;
 
             // Cajas en pantalla con el norte arriba, en el marco del contenido girado: S(v) = (−v.y, v.x). Los países, centrados en
             // su punto; las placas, a la derecha de su pivote (como en la vista de siempre). Primero las placas.
@@ -572,93 +704,108 @@ namespace AF.UI
                     }
 
                     _labelShift[i] = Vector2.zero;
+                    _labelHidden[i] = false;
+                    _labelLine[i] = false;
+                    _plateSide[i] = 0;
                     if (!rt.gameObject.activeSelf)
                     {
                         continue;
                     }
 
-                    Vector2 q = new Vector2(-_labelBase[i].y, _labelBase[i].x);
-                    Vector2 size = rt.sizeDelta;
+                    Vector2 q = NorthUpScreen(_labelBase[i]);
+                    Vector2 size = rt.sizeDelta * inv;
                     _labelOrigin[i] = new Vector2(plate ? q.x : q.x - (size.x * 0.5f), q.y - (size.y * 0.5f));
                     if (plate)
                     {
-                        Vector2 point = _space.ToLocal(_silhouettes[i - countries].MapPoint);
-                        _labelPin[i] = new Vector2(-point.y, point.x);
+                        _labelPin[i] = NorthUpScreen(_space.ToLocal(_silhouettes[i - countries].MapPoint));
                         plates++;
+                    }
+                    else
+                    {
+                        // Su punto de labels (su región), y la caja centrada en él dentro del mapa a lo ancho: el sitio que una
+                        // placa prefiere no pisar.
+                        _labelPin[i] = data != null && i < data.Count ? NorthUpScreen(_space.ToLocal(data[i].X, data[i].Y)) : q;
+                        float maxX = Mathf.Max(LabelEdgeDp, _contentH - LabelEdgeDp - size.x);
+                        _labelIdeal[i] = new Rect(Mathf.Clamp(_labelPin[i].x - (size.x * 0.5f), LabelEdgeDp, maxX), _labelPin[i].y - (size.y * 0.5f), size.x, size.y);
                     }
 
                     _labelOrder[count++] = i;
                 }
             }
 
-            float scale = Mathf.Max(0.01f, MapConfig.NorthUpScale);
-            float cap = NorthUpPlateMaxDistDp / scale;
-            float pinReach = ((NorthUpPinDotDp * 0.5f) + NorthUpPinRimDp + 1f) / scale; // nada pisa el punto de una placa
-            for (int a = 0; a < count; a++)
-            {
-                int i = _labelOrder[a];
-                RectTransform rt = i >= countries ? _silhouettes[i - countries].Root : _countries[i].rectTransform;
-                Vector2 size = rt.sizeDelta;
-                Vector2 origin = _labelOrigin[i] + (size * 0.5f);
-                bool plate = a < plates;
-                Vector2 p = _labelPin[i];
-                float x0 = plate ? p.x - cap - size.x : origin.x - (size.x * 0.5f) - NorthUpCountryReachDp;
-                float x1 = plate ? p.x + cap : origin.x - (size.x * 0.5f) + NorthUpCountryReachDp;
-                float y0 = plate ? p.y - cap - size.y : origin.y - (size.y * 0.5f) - NorthUpCountryReachDp;
-                float y1 = plate ? p.y + cap : origin.y - (size.y * 0.5f) + NorthUpCountryReachDp;
-                float step = plate ? NorthUpPlateStepDp : NorthUpCountryStepDp;
-                int nx = Mathf.CeilToInt((x1 - x0) / step);
-                int ny = Mathf.CeilToInt((y1 - y0) / step);
-                float maxX = Mathf.Max(LabelEdgeDp, _contentH - LabelEdgeDp - size.x); // a lo ancho en pantalla: el alto del contenido
-                float maxY = Mathf.Max(LabelEdgeDp, _contentW - LabelEdgeDp - size.y);
+            NorthUpObstacles(scale);
 
-                // Sin ningún sitio que cumpla: el de siempre, dentro del mapa a lo ancho.
-                Rect best = new Rect(Mathf.Clamp(origin.x - (size.x * 0.5f), LabelEdgeDp, maxX), origin.y - (size.y * 0.5f), size.x, size.y);
-                int bestHits = int.MaxValue;
-                float bestCost = float.PositiveInfinity;
-                for (int iy = 0; iy <= ny; iy++)
+            // Dos puntos casi juntos (menos de 2 × NorthUpPinDotDp en pantalla): la placa del más al norte (arriba en pantalla),
+            // encima de su punto, y la otra, debajo del suyo; así cada una queda junto al suyo y ninguna línea cruza la otra.
+            float close = 2f * NorthUpPinDotDp * inv;
+            for (int a = 0; a < plates; a++)
+            {
+                for (int b = a + 1; b < plates; b++)
                 {
-                    float y = y0 + (iy * step);
-                    if (y < LabelEdgeDp || y > maxY)
+                    int i = _labelOrder[a];
+                    int k = _labelOrder[b];
+                    if ((_labelPin[i] - _labelPin[k]).sqrMagnitude < close * close)
                     {
-                        continue;
+                        bool iNorth = _labelPin[i].y >= _labelPin[k].y;
+                        _plateSide[i] = iNorth ? 1 : -1;
+                        _plateSide[k] = iNorth ? -1 : 1;
+                    }
+                }
+            }
+
+            float reach = NorthUpCountryReachDp * inv;
+            float pinReach = ((NorthUpPinDotDp * 0.5f) + NorthUpPinRimDp + 1f) * inv; // nada pisa el punto de una placa
+            float cap = NorthUpPlateFarDistDp * inv;
+
+            // Las placas y los países se colocan juntos, uno tras otro (primero las placas, luego los países en el orden de labels),
+            // cada uno frente a los ya colocados; si alguno pisa algo, se reparan por rondas (hasta NorthUpRepairRounds): cada uno
+            // que pisa otra cosa busca el sitio que menos pisa frente a todos los demás (con varias placas con el punto casi en el
+            // mismo sitio, la primera que se coloca puede quitarle a otra el único sitio que le queda; un país se aparta dentro de
+            // su región y una placa, hasta NorthUpPlateFarDistDp). Si así no caben todos, se vuelve a probar solo con las placas, y
+            // los países se colocan después, cada uno en el sitio libre que le quede en su región, o no salen con el norte arriba
+            // (D-013, punto 5: antes que fuera de su región) [P]. Como mucho dos intentos: unos milisegundos, solo al tocar.
+            int hard = 0;
+            int joint = count;
+            for (int attempt = 0; attempt < 2; attempt++)
+            {
+                joint = attempt == 0 ? count : plates;
+                hard = 0;
+                for (int a = 0; a < joint; a++)
+                {
+                    hard += PlaceNorthUpLabel(a, a, plates, count, scale, cap, reach, pinReach) / NorthUpHardHit;
+                }
+
+                for (int round = 0; hard > 0 && round < NorthUpRepairRounds; round++)
+                {
+                    for (int a = 0; a < joint; a++)
+                    {
+                        int i = _labelOrder[a];
+                        if (NorthUpLabelHits(_labelBox[i], joint, plates, i, pinReach, a < plates, _labelPin[i], count) >= NorthUpHardHit)
+                        {
+                            PlaceNorthUpLabel(a, joint, plates, count, scale, cap, reach, pinReach);
+                        }
                     }
 
-                    for (int ix = 0; ix <= nx; ix++)
+                    hard = 0;
+                    for (int a = 0; a < joint; a++)
                     {
-                        float x = x0 + (ix * step);
-                        if (x < LabelEdgeDp || x > maxX)
-                        {
-                            continue;
-                        }
-
-                        var box = new Rect(x, y, size.x, size.y);
-                        if (plate)
-                        {
-                            float dist = DistanceToBox(box, p);
-                            if (dist > cap || dist < pinReach)
-                            {
-                                continue; // lejos de su punto, o encima de él
-                            }
-                        }
-
-                        float cost = (box.center - origin).sqrMagnitude;
-                        if (bestHits == 0 && cost >= bestCost)
-                        {
-                            continue;
-                        }
-
-                        int hits = NorthUpLabelHits(box, a, plates, i, pinReach);
-                        if (hits < bestHits || (hits == bestHits && cost < bestCost))
-                        {
-                            bestHits = hits;
-                            bestCost = cost;
-                            best = box;
-                        }
+                        int i = _labelOrder[a];
+                        hard += NorthUpLabelHits(_labelBox[i], joint, plates, i, pinReach, a < plates, _labelPin[i], count) / NorthUpHardHit;
                     }
                 }
 
-                _labelBox[i] = best;
+                if (hard == 0)
+                {
+                    break;
+                }
+            }
+
+            // Los países que no entraron en la colocación conjunta, cada uno en el sitio libre que le quede en su región; el que
+            // no cabe no sale con el norte arriba.
+            for (int a = joint; a < count; a++)
+            {
+                int hits = PlaceNorthUpLabel(a, a, plates, count, scale, cap, reach, pinReach);
+                _labelHidden[_labelOrder[a]] = hits >= NorthUpHardHit;
             }
 
             // Del corrimiento en pantalla (dx, dy) al del contenido: S(v) = (−v.y, v.x), así que (dy, −dx).
@@ -672,18 +819,178 @@ namespace AF.UI
             NorthUpPins(plates, scale);
         }
 
-        // Cuántas cosas pisa la caja del rótulo a (en pantalla), con NorthUpLabelGapDp de hueco: los rótulos ya colocados (las
-        // placas antes que los países) y los puntos de todas las placas menos el suyo. Sin asignaciones.
-        private int NorthUpLabelHits(Rect box, int a, int plates, int self, float pinReach)
+        // Coloca el rótulo a de _labelOrder (una placa si a < plates; si no, un país) en el sitio que menos pisa frente a los
+        // upto primeros de _labelOrder (NorthUpLabelHits) y, a igualdad, el más cercano: una placa, a ≤ cap de su punto y sin
+        // taparlo, cerca de su sitio de siempre; un país, con el centro a ≤ reach de su punto de labels. Devuelve lo que pisa (sin
+        // ningún sitio posible, 16 × NorthUpHardHit: entonces queda en su sitio de siempre o en su punto). Sin asignaciones.
+        private int PlaceNorthUpLabel(int a, int upto, int plates, int count, float scale, float cap, float reach, float pinReach)
+        {
+            int countries = _countries.Count;
+            int i = _labelOrder[a];
+            RectTransform rt = i >= countries ? _silhouettes[i - countries].Root : _countries[i].rectTransform;
+            Vector2 size = rt.sizeDelta / scale;
+            Vector2 origin = _labelOrigin[i] + (size * 0.5f);
+            bool plate = a < plates;
+            Vector2 p = _labelPin[i];
+            float x0 = plate ? p.x - cap - size.x : p.x - reach - (size.x * 0.5f);
+            float x1 = plate ? p.x + cap : p.x + reach - (size.x * 0.5f);
+            float y0 = plate ? p.y - cap - size.y : p.y - reach - (size.y * 0.5f);
+            float y1 = plate ? p.y + cap : p.y + reach - (size.y * 0.5f);
+            float step = plate ? NorthUpPlateStepDp : NorthUpCountryStepDp;
+            int nx = Mathf.CeilToInt((x1 - x0) / step);
+            int ny = Mathf.CeilToInt((y1 - y0) / step);
+            float maxX = Mathf.Max(LabelEdgeDp, _contentH - LabelEdgeDp - size.x); // a lo ancho en pantalla: el alto del contenido
+            float maxY = Mathf.Max(LabelEdgeDp, _contentW - LabelEdgeDp - size.y);
+
+            // Sin ningún sitio que cumpla: el de siempre (una placa) o su punto (un país, que entonces no sale), dentro del mapa a
+            // lo ancho.
+            Vector2 from = plate ? origin : p;
+            Rect best = new Rect(Mathf.Clamp(from.x - (size.x * 0.5f), LabelEdgeDp, maxX), from.y - (size.y * 0.5f), size.x, size.y);
+            int bestHits = int.MaxValue;
+            float bestCost = float.PositiveInfinity;
+            for (int iy = 0; iy <= ny; iy++)
+            {
+                float y = y0 + (iy * step);
+                if (y < LabelEdgeDp || y > maxY)
+                {
+                    continue;
+                }
+
+                for (int ix = 0; ix <= nx; ix++)
+                {
+                    float x = x0 + (ix * step);
+                    if (x < LabelEdgeDp || x > maxX)
+                    {
+                        continue;
+                    }
+
+                    var box = new Rect(x, y, size.x, size.y);
+                    float c;
+                    if (plate)
+                    {
+                        float dist = DistanceToBox(box, p);
+                        if (dist > cap || dist < pinReach)
+                        {
+                            continue; // lejos de su punto, o encima de él
+                        }
+
+                        // Junto a su punto (y, a igualdad, cerca de su sitio de siempre); más allá de NorthUpPlateMaxDistDp, solo si
+                        // pisa menos.
+                        float near = NorthUpPlateMaxDistDp / scale;
+                        c = (dist * dist) + (0.01f * (box.center - origin).sqrMagnitude) + (dist > near ? 1e6f : 0f);
+                    }
+                    else
+                    {
+                        c = (box.center - p).sqrMagnitude;
+                        if (c > reach * reach)
+                        {
+                            continue; // fuera de su región
+                        }
+                    }
+
+                    if (bestHits == 0 && c >= bestCost)
+                    {
+                        continue;
+                    }
+
+                    int hits = NorthUpLabelHits(box, upto, plates, i, pinReach, plate, p, count);
+                    if (hits < bestHits || (hits == bestHits && c < bestCost))
+                    {
+                        bestHits = hits;
+                        bestCost = c;
+                        best = box;
+                    }
+                }
+            }
+
+            _labelBox[i] = best;
+            if (plate)
+            {
+                Vector2 near = new Vector2(Mathf.Clamp(p.x, best.xMin, best.xMax), Mathf.Clamp(p.y, best.yMin, best.yMax));
+                _labelLineEnd[i] = near;
+                _labelLine[i] = Vector2.Distance(near, p) * scale > NorthUpPinLineFromDp;
+            }
+
+            return bestHits == int.MaxValue ? NorthUpHardHit * 16 : bestHits;
+        }
+
+        // Lo que ningún rótulo pisa con el norte arriba, en pantalla (el marco girado, unidades del contenido) y con
+        // MarkerObstacleGapDp de hueco en pantalla: la canoa con su mástil y sus banderas (con la proa a un lado o al otro, que
+        // depende del guía), el guía y la fila corta de boyas, que con el norte arriba sigue en horizontal bajo la canoa
+        // (UprightCompactRow; aquí se fija también lo que se corre a lo ancho para no salirse). Las figuras van derechas en
+        // pantalla, así que su caja es la de la vista de siempre alrededor de su punto girado. Sin asignaciones.
+        private void NorthUpObstacles(float scale)
+        {
+            _northUpObstacleCount = 0;
+            float g = MarkerObstacleGapDp / scale;
+            if (_markersReady && _hasCanoe && _map != null && _routes != null && _stops != null)
+            {
+                float facing = _canoeFacing;
+                GearPose(_space, _canoeX, _canoeShown, _flagCount, ref facing, out Vector2 canoe, out Vector2 guide, out _, out _, out _,
+                    out _, out float mastH);
+                Rect gear = default;
+                for (int s = 0; s < 2; s++)
+                {
+                    float f = s == 0 ? -1f : 1f;
+                    var foot = canoe + new Vector2(-f * ProceduralArt.MapCanoeWidthDp * SternFraction, 2f);
+                    Rect box = GearBox(canoe, foot, mastH, f);
+                    gear = s == 0 ? box : Rect.MinMaxRect(Mathf.Min(gear.xMin, box.xMin), Mathf.Min(gear.yMin, box.yMin),
+                        Mathf.Max(gear.xMax, box.xMax), Mathf.Max(gear.yMax, box.yMax));
+                }
+
+                _northUpObstacles[_northUpObstacleCount++] = Grow(UprightBox(gear, canoe), g);
+                _northUpObstacles[_northUpObstacleCount++] = Grow(UprightBox(GuideBox(guide), guide), g);
+            }
+
+            _rowShift = 0f;
+            if (_buoysCompact && _buoyCount > 0)
+            {
+                Vector2 stop = _space.ToLocal(_frontStopMap);
+                float r = BuoyRadiusBasinDp;
+                float x0 = Mathf.Min(_buoyLocal[0].x, _buoyLocal[BuoysPerLeg - 1].x) - r;
+                float x1 = Mathf.Max(_buoyLocal[0].x, _buoyLocal[BuoysPerLeg - 1].x) + r;
+                Rect row = UprightBox(Rect.MinMaxRect(x0, _buoyLocal[0].y - r, x1, _buoyLocal[0].y + r), stop);
+                float lo = LabelEdgeDp;
+                float hi = _contentH - LabelEdgeDp;
+                _rowShift = row.xMin < lo ? lo - row.xMin : (row.xMax > hi ? Mathf.Max(lo - row.xMin, hi - row.xMax) : 0f);
+                row.x += _rowShift;
+                _northUpObstacles[_northUpObstacleCount++] = Grow(row, g);
+            }
+        }
+
+        // La caja box de una figura derecha en pantalla con su punto en at (coordenadas del contenido), en el marco girado: la
+        // misma caja alrededor del punto girado.
+        private static Rect UprightBox(Rect box, Vector2 at)
+        {
+            Vector2 s = NorthUpScreen(at);
+            return new Rect(s.x + (box.xMin - at.x), s.y + (box.yMin - at.y), box.width, box.height);
+        }
+
+        // Del contenido (dp, y hacia arriba) al marco girado con el norte arriba (sin la escala): S(v) = (−v.y, v.x).
+        private static Vector2 NorthUpScreen(Vector2 v)
+        {
+            return new Vector2(-v.y, v.x);
+        }
+
+        // Cuánto pisa la caja del rótulo self en pantalla frente a los upto primeros de _labelOrder (los ya colocados), con
+        // NorthUpLabelGapDp de hueco. Pisar algo que no se puede pisar cuenta NorthUpHardHit: otro rótulo colocado (no un país que
+        // no sale), el punto de otra placa, la línea guía de otra placa colocada, la canoa, el guía o la fila corta de boyas
+        // (NorthUpObstacles) y, en una placa, que su propia línea guía cruce otra placa colocada o que quede del lado que no le
+        // toca de su punto (_plateSide). Una placa suma además, por cada sitio de un país aún sin colocar (_labelIdeal) que pisa,
+        // más cuanto antes va ese país en labels (Brasil el primero). Sin asignaciones.
+        private int NorthUpLabelHits(Rect box, int upto, int plates, int self, float pinReach, bool plate, Vector2 pin, int count)
         {
             float g = NorthUpLabelGapDp;
             Rect grown = Rect.MinMaxRect(box.xMin - g, box.yMin - g, box.xMax + g, box.yMax + g);
-            int hits = 0;
-            for (int b = 0; b < a; b++)
+            float lineGap = NorthUpLineClearDp / _northUpLineScale;
+            Rect lineClear = Grow(box, lineGap);
+            int hard = 0;
+            for (int b = 0; b < upto; b++)
             {
-                if (grown.Overlaps(_labelBox[_labelOrder[b]]))
+                int k = _labelOrder[b];
+                if (k != self && !_labelHidden[k] && grown.Overlaps(_labelBox[k]))
                 {
-                    hits++;
+                    hard++;
                 }
             }
 
@@ -692,11 +999,108 @@ namespace AF.UI
                 int k = _labelOrder[b];
                 if (k != self && DistanceToBox(box, _labelPin[k]) < pinReach)
                 {
-                    hits++;
+                    hard++;
+                }
+
+                if (b < upto && k != self && _labelLine[k] && SegmentHitsBox(_labelPin[k], _labelLineEnd[k], lineClear))
+                {
+                    hard++; // pisaría (o rozaría) la línea guía de otra placa
                 }
             }
 
-            return hits;
+            for (int o = 0; o < _northUpObstacleCount; o++)
+            {
+                if (grown.Overlaps(_northUpObstacles[o]))
+                {
+                    hard++;
+                }
+            }
+
+            if (!plate)
+            {
+                return hard * NorthUpHardHit;
+            }
+
+            int side = _plateSide[self];
+            if ((side > 0 && box.yMin < pin.y) || (side < 0 && box.yMax > pin.y))
+            {
+                hard++; // con otro punto casi junto: la del norte encima y la otra debajo
+            }
+
+            var near = new Vector2(Mathf.Clamp(pin.x, box.xMin, box.xMax), Mathf.Clamp(pin.y, box.yMin, box.yMax));
+            if (Vector2.Distance(near, pin) * _northUpLineScale > NorthUpPinLineFromDp)
+            {
+                // Su línea guía no cruza ni roza otra placa colocada ni pasa por el punto de otra (salvo el que está casi junto al
+                // suyo, que comparte sitio): así se sabe de qué punto sale cada placa.
+                float close = 2f * NorthUpPinDotDp / _northUpLineScale;
+                for (int b = 0; b < plates; b++)
+                {
+                    int k = _labelOrder[b];
+                    if (k == self)
+                    {
+                        continue;
+                    }
+
+                    if (b < upto && SegmentHitsBox(pin, near, Grow(_labelBox[k], lineGap)))
+                    {
+                        hard++;
+                    }
+
+                    if ((_labelPin[k] - pin).sqrMagnitude >= close * close && PointSegmentDistance(_labelPin[k], pin, near) < pinReach)
+                    {
+                        hard++;
+                    }
+                }
+            }
+
+            int soft = 0;
+            for (int b = Mathf.Max(upto, plates); b < count; b++)
+            {
+                if (grown.Overlaps(_labelIdeal[_labelOrder[b]]))
+                {
+                    soft += count - b; // el sitio de un país aún sin colocar: los primeros de labels (Brasil, Perú…) pesan más
+                }
+            }
+
+            return (hard * NorthUpHardHit) + Mathf.Min(soft, NorthUpHardHit - 1);
+        }
+
+        // Con el norte arriba, la fila corta de boyas (un tramo sin largo a esta escala: el «me faltan 3», M3.4) sigue en
+        // horizontal bajo la canoa en pantalla, como en la vista de siempre: sus dos mallas (y las Rosas de sus boyas saltadas)
+        // giran al revés que el contenido alrededor del punto de la parada, corridas _rowShift a lo ancho si se saldrían
+        // (NorthUpObstacles). Sin la fila corta, o sin giro, como siempre. Sin asignaciones.
+        private void UprightCompactRow(float u, float figureAngle)
+        {
+            bool turn = figureAngle != 0f && _buoysCompact && _buoyCount > 0;
+            Vector2 stop = turn ? _space.ToLocal(_frontStopMap) : Vector2.zero;
+            var d = new Vector2(u * _rowShift, 0f);
+            Vector2 shift = turn ? stop + Turn(d - stop, figureAngle) : Vector2.zero;
+            Quaternion rotation = Quaternion.Euler(0f, 0f, turn ? figureAngle : 0f);
+            PlaceRowMesh(_buoys, rotation, shift);
+            PlaceRowMesh(_buoysAhead, rotation, shift);
+            for (int i = 0; i < _rosa.Length; i++)
+            {
+                Image rosa = _rosa[i];
+                if (rosa != null && rosa.gameObject.activeSelf)
+                {
+                    rosa.rectTransform.anchoredPosition = turn ? stop + Turn(_buoyLocal[i] - stop + d, figureAngle) : _buoyLocal[i];
+                }
+            }
+        }
+
+        private static void PlaceRowMesh(Graphic? mesh, Quaternion rotation, Vector2 shift)
+        {
+            if (mesh == null)
+            {
+                return;
+            }
+
+            RectTransform rt = mesh.rectTransform;
+            rt.localRotation = rotation;
+            if (rt.anchoredPosition != shift)
+            {
+                rt.anchoredPosition = shift;
+            }
         }
 
         // Distancia de p a la caja (0 si está dentro).
@@ -890,6 +1294,14 @@ namespace AF.UI
                     _line[_count] = line;
                     _count++;
                 }
+            }
+
+            /// <summary>El punto <paramref name="i"/> y el final de su línea guía; false si no la lleva.</summary>
+            public bool Line(int i, out Vector2 dot, out Vector2 end)
+            {
+                dot = _dot[i];
+                end = _end[i];
+                return _line[i];
             }
 
             /// <summary>Vuelve a dibujar.</summary>

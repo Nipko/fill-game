@@ -242,14 +242,15 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Plates_StayNearTheirPoint_WithMoreFutureWorlds()
+        public IEnumerator Plates_StayNearTheirPoint_AndCountriesInTheirRegion_WithMoreFutureWorlds()
         {
-            // Con max 10 (todos los mundos futuros con placa) y con max 120 y 200: las placas, derechas, sin pisarse ni pisar los
-            // países y a ≤ NorthUpPlateMaxDistDp de su punto; los países se apartan antes.
+            // Con max 10 (todos los mundos futuros con placa) y con max 58, 120 y 200: las placas, derechas, sin pisarse ni pisar
+            // los países, a ≤ NorthUpPlateMaxDistDp de su punto, sin pisar la canoa ni el guía y sin que una línea guía cruce otra
+            // placa; los países, en su región (D-013, punto 5), y todos a ≥ 12 sp en pantalla (revisión de M4.4).
             yield return MapMarkersTests.OpenApp(11);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
-            foreach (int max in new[] { 10, 120, 200 })
+            foreach (int max in new[] { 10, 58, 120, 200 })
             {
                 if (max != 10)
                 {
@@ -265,9 +266,151 @@ namespace AF.Tests.PlayMode
                 Canvas.ForceUpdateCanvases();
                 AssertPlatesNearTheirPoint(map, "max " + max);
                 AssertNoLabelOverlaps(map, "max " + max);
+                AssertPlatesClearOfFiguresAndLines(map, "max " + max);
+                AssertCountriesInTheirRegion(map, boot.RiverMapData!, "max " + max);
+                AssertLabelsReadable(map, "max " + max);
                 Assert.That(map.NorthUpPinCount, Is.EqualTo(map.SilhouetteCount));
                 map.SetView(MapView.World);
             }
+        }
+
+        [UnityTest]
+        public IEnumerator Labels_AreReadable_At12sp_DuringTheTurn()
+        {
+            // La zona del mapa encoge el contenido a ≈ 0,76; los rótulos, no: escalados al revés, siguen a ≥ 12 sp en pantalla
+            // durante todo el giro (UiBuilder.MinTextSp; 07 §1.2).
+            yield return MapMarkersTests.OpenApp(59);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            map.SetView(MapView.Basin);
+            map.Tick(16f);
+            map.NorthUpButton.onClick.Invoke();
+            for (int step = 1; step <= 3; step++)
+            {
+                map.Tick(MapConfig.NorthUpRotateMs / 3f);
+                Canvas.ForceUpdateCanvases();
+                AssertLabelsReadable(map, "paso " + step);
+            }
+
+            Assert.That(map.NorthUpTurning, Is.False);
+            map.NorthUpButton.onClick.Invoke();
+            map.Tick(MapConfig.NorthUpRotateMs);
+            foreach (TextMeshProUGUI country in map.CountryLabels())
+            {
+                Assert.That(country.rectTransform.localScale, Is.EqualTo(Vector3.one), country.name + ": en la vista de siempre, a su escala");
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Turn_FitsTheZone_OnOtherScreens()
+        {
+            // Con el norte arriba no se arrastra: en cualquier zona la cuenca girada cabe entera (la escala es 0,76 o la mayor que
+            // la deja entera) y centrada.
+            foreach (Vector4 screen in new[] { HudLabelTests.Screen640, IntroSideTroopTests.Screen720, new Vector4(1536f, 2048f, 48f, 0f) })
+            {
+                GameScreen.SimulatedScreen = screen;
+                yield return MapMarkersTests.OpenApp(59);
+                RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+                map.SetView(MapView.Basin);
+                map.Tick(16f);
+                map.NorthUpButton.onClick.Invoke();
+                map.Tick(MapConfig.NorthUpRotateMs);
+                Canvas.ForceUpdateCanvases();
+                string at = "pantalla " + screen;
+                Vector2 view = map.ViewportSize;
+                Vector2 size = map.ContentSize;
+                float fit = Mathf.Min(MapConfig.NorthUpScale, Mathf.Min(view.x / size.y, view.y / size.x));
+                Debug.Log("AF_MAP norte arriba en " + at + ": zona " + view + ", contenido " + size + ", escala " + fit.ToString("0.0000", CultureInfo.InvariantCulture));
+                Assert.That(map.NorthUpCurrentScale, Is.EqualTo(fit).Within(1e-4f), at);
+                Assert.That(map.NorthUpPivot!.localScale.x, Is.EqualTo(fit).Within(1e-4f), at);
+                Rect content = InViewport(map.ContentRect, map.ViewportRect);
+                Rect zone = map.ViewportRect.rect;
+                Assert.That(Inside(content, zone, 1f), Is.True, at + ": la cuenca cabe entera: " + content + " en " + zone);
+                Assert.That(Vector2.Distance(content.center, zone.center), Is.LessThan(0.5f), at + ": centrada");
+                AssertNoLabelOverlaps(map, at);
+                AssertLabelsReadable(map, at);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator CompactBuoyRow_StaysLevelUnderTheCanoe()
+        {
+            // max 57, la captura 13b: «Faltan 3 niveles para Anavilhanas» va con la fila corta de 10 boyas bajo la canoa en Manaos.
+            // Con el norte arriba sigue en horizontal bajo la canoa, y ningún rótulo la pisa.
+            yield return MapMarkersTests.OpenApp(58);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            map.SetView(MapView.Basin);
+            map.Tick(16f);
+            Assert.That(map.BuoysCompact, Is.True, "un tramo sin largo en la Cuenca: la fila corta");
+            map.NorthUpButton.onClick.Invoke();
+            map.Tick(MapConfig.NorthUpRotateMs);
+            Assert.That(map.NorthUpTurning, Is.False);
+            Canvas.ForceUpdateCanvases();
+
+            Vector2[] at = BuoysInView(map, map.Buoys!.rectTransform);
+            Vector2[] ahead = BuoysInView(map, map.BuoysAhead!.rectTransform);
+            for (int i = 0; i < at.Length; i++)
+            {
+                Assert.That(Vector2.Distance(at[i], ahead[i]), Is.LessThan(0.01f), "las dos mallas, juntas");
+                Assert.That(at[i].y, Is.EqualTo(at[0].y).Within(0.5f), "la boya " + i + ", en la fila horizontal");
+                if (i > 0)
+                {
+                    Assert.That(at[i].x - at[i - 1].x, Is.GreaterThan(1f), "de izquierda a derecha, como en la vista de siempre");
+                }
+            }
+
+            Vector2 canoe = map.ViewportRect.InverseTransformPoint(map.Canoe.rectTransform.position);
+            Assert.That(at[0].y, Is.LessThan(canoe.y), "bajo la canoa");
+            float r = RiverMapScreen.BuoyRadiusBasinDp * map.NorthUpCurrentScale;
+            var row = Rect.MinMaxRect(at[0].x - r, at[0].y - r, at[at.Length - 1].x + r, at[0].y + r);
+            Rect zone = map.ViewportRect.rect;
+            Assert.That(Inside(row, zone, 0.5f), Is.True, "dentro de la zona: " + row);
+            float g = (RiverMapScreen.MarkerObstacleGapDp * map.NorthUpCurrentScale) - 0.5f;
+            var clear = Rect.MinMaxRect(row.xMin - g, row.yMin - g, row.xMax + g, row.yMax + g);
+            foreach (RectTransform label in AllLabels(map))
+            {
+                Assert.That(InViewport(label, map.ViewportRect).Overlaps(clear), Is.False, label.name + " pisa la fila de boyas " + row);
+            }
+
+            // Y vuelve a su sitio con la vista de siempre.
+            map.NorthUpButton.onClick.Invoke();
+            map.Tick(MapConfig.NorthUpRotateMs);
+            Assert.That(map.Buoys!.rectTransform.localRotation, Is.EqualTo(Quaternion.identity));
+            Assert.That(map.Buoys.rectTransform.anchoredPosition.magnitude, Is.LessThan(1e-3f));
+        }
+
+        [UnityTest]
+        public IEnumerator House_StandsBesideGuajara_OnScreen()
+        {
+            // Con el norte arriba, el pie de la casa queda a un lado de Guajará en pantalla (a su altura), lejos del borde de la
+            // zona, y no por encima de la bahía; también durante el giro.
+            yield return MapMarkersTests.OpenApp(59);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            map.SetView(MapView.Basin);
+            map.Tick(16f);
+            Assert.That(map.HomeShown, Is.True);
+            map.NorthUpButton.onClick.Invoke();
+            map.Tick(MapConfig.NorthUpRotateMs);
+            Canvas.ForceUpdateCanvases();
+            Vector2 home = ContentToView(map, map.Space.ToLocal(map.HomeMapPoint));
+            RectTransform tree = map.HomeTree!.rectTransform;
+            Vector2 foot = map.ViewportRect.InverseTransformPoint(tree.position);
+            float s = map.NorthUpCurrentScale;
+            Assert.That(foot.y, Is.EqualTo(home.y).Within(0.5f), "el pie, a la altura de Guajará en pantalla: " + foot + " frente a " + home);
+            Assert.That(Mathf.Abs(foot.x - home.x), Is.GreaterThanOrEqualTo((RiverMapScreen.HomeSideDp * RiverMapScreen.HomeBasinScale * s) - 0.5f),
+                "a un lado");
+            Rect box = InViewport(tree, map.ViewportRect);
+            Rect zone = map.ViewportRect.rect;
+            Assert.That(box.xMin, Is.GreaterThanOrEqualTo(zone.xMin + RiverMapScreen.LabelEdgeDp - 0.5f), "lejos del borde: " + box);
+            Assert.That(box.xMax, Is.LessThanOrEqualTo(zone.xMax - RiverMapScreen.LabelEdgeDp + 0.5f), "lejos del borde: " + box);
+            Assert.That(Mathf.Abs(Mathf.DeltaAngle(tree.eulerAngles.z, 0f)), Is.LessThan(0.01f), "derecha");
+
+            // A mitad del giro de vuelta, el pie sigue a la altura de Guajará en pantalla.
+            map.NorthUpButton.onClick.Invoke();
+            map.Tick(MapConfig.NorthUpRotateMs * 0.5f);
+            Canvas.ForceUpdateCanvases();
+            home = ContentToView(map, map.Space.ToLocal(map.HomeMapPoint));
+            foot = map.ViewportRect.InverseTransformPoint(tree.position);
+            Assert.That(foot.y, Is.EqualTo(home.y).Within(0.5f), "durante el giro, a un lado en horizontal");
         }
 
         [UnityTest]
@@ -322,6 +465,21 @@ namespace AF.Tests.PlayMode
             Assert.That(map.BackToCanoeShown, Is.False, "la canoa se ve");
             Assert.That(map.HomeInView, Is.True);
             Assert.That(map.HomeWindowShown, Is.False, "la casa se ve: sin ventanita");
+
+            // Al quitarlo, la ventanita no sale mientras el contenido vuelve (aún girado y a escala); al acabar, se decide de nuevo.
+            map.NorthUpButton.onClick.Invoke();
+            for (int t = 16; t < MapConfig.NorthUpRotateMs; t += 16)
+            {
+                map.Tick(16f);
+                Assert.That(map.HomeWindowShown, Is.False, "a los " + t + " ms del giro de vuelta");
+            }
+
+            map.Tick(32f);
+            map.Tick(16f);
+            Assert.That(map.NorthUpTurning, Is.False);
+            Assert.That(map.HomeWindowShown, Is.EqualTo(!map.HomeInView), "acabado el giro, la ventanita según el encuadre");
+            map.NorthUpButton.onClick.Invoke();
+            map.Tick(MapConfig.NorthUpRotateMs);
 
             // Aunque algo mueva el encuadre por debajo, la cuenca sigue centrada.
             map.Drag(new Vector2(0f, 120f));
@@ -609,8 +767,8 @@ namespace AF.Tests.PlayMode
 
         // ============================================================================================ ayudas
 
-        // Con el norte arriba, cada placa a ≤ NorthUpPlateMaxDistDp de su punto en pantalla (del punto a su borde más cercano) y sin
-        // taparlo.
+        // Con el norte arriba, cada placa a ≤ NorthUpPlateFarDistDp de su punto en pantalla (del punto a su borde más cercano; a ≤
+        // NorthUpPlateMaxDistDp si hay sitio para todas) y sin taparlo.
         private static void AssertPlatesNearTheirPoint(RiverMapScreen map, string at)
         {
             for (int i = 0; i < map.SilhouetteCount; i++)
@@ -621,10 +779,234 @@ namespace AF.Tests.PlayMode
                 float dx = Mathf.Max(0f, Mathf.Max(box.xMin - point.x, point.x - box.xMax));
                 float dy = Mathf.Max(0f, Mathf.Max(box.yMin - point.y, point.y - box.yMax));
                 float dist = Mathf.Sqrt((dx * dx) + (dy * dy));
-                Assert.That(dist, Is.LessThanOrEqualTo(RiverMapScreen.NorthUpPlateMaxDistDp + 0.5f),
+                Assert.That(dist, Is.LessThanOrEqualTo(RiverMapScreen.NorthUpPlateFarDistDp + 0.5f),
                     at + ": " + plate.parent.name + " " + box + " lejos de su punto " + point);
                 Assert.That(dist, Is.GreaterThan(RiverMapScreen.NorthUpPinDotDp * 0.5f), at + ": " + plate.parent.name + " no tapa su punto");
             }
+        }
+
+        // Con el norte arriba, ninguna placa pisa la canoa (con su mástil y sus banderas) ni el guía, la línea guía de una placa
+        // no cruza otra placa y, con dos puntos casi juntos, la placa del más al norte va encima y la otra debajo (revisión de M4.4).
+        private static void AssertPlatesClearOfFiguresAndLines(RiverMapScreen map, string at)
+        {
+            int n = map.SilhouetteCount;
+            var boxes = new Rect[n];
+            for (int i = 0; i < n; i++)
+            {
+                boxes[i] = InViewport(map.SilhouettePlate(i).rectTransform, map.ViewportRect);
+            }
+
+            var figures = new System.Collections.Generic.List<(string Name, Rect Box)>();
+            if (map.HasCanoe)
+            {
+                figures.Add(("la canoa", InViewport(map.Canoe.rectTransform, map.ViewportRect)));
+                if (map.Mast != null && map.Mast.gameObject.activeInHierarchy)
+                {
+                    figures.Add(("el mástil", InViewport(map.Mast.rectTransform, map.ViewportRect)));
+                }
+
+                for (int f = 0; f < map.CanoeFlagCount; f++)
+                {
+                    figures.Add(("la bandera " + f, InViewport(map.CanoeFlagImage(f).rectTransform, map.ViewportRect)));
+                }
+
+                if (map.GuideImage != null && map.GuideImage.gameObject.activeInHierarchy)
+                {
+                    figures.Add(("el guía", InViewport(map.GuideImage.rectTransform, map.ViewportRect)));
+                }
+            }
+
+            for (int i = 0; i < n; i++)
+            {
+                Rect plate = Shrink(boxes[i], 0.5f);
+                foreach ((string name, Rect box) in figures)
+                {
+                    Assert.That(plate.Overlaps(box), Is.False, at + ": la placa " + i + " " + boxes[i] + " pisa " + name + " " + box);
+                }
+            }
+
+            Assert.That(map.NorthUpPinCount, Is.EqualTo(n));
+            var dots = new Vector2[n];
+            for (int k = 0; k < n; k++)
+            {
+                bool line = map.NorthUpPinLine(k, out Vector2 from, out Vector2 to);
+                dots[k] = LabelLayerToView(map, from);
+                if (!line)
+                {
+                    continue;
+                }
+
+                Vector2 end = LabelLayerToView(map, to);
+                for (int j = 0; j < n; j++)
+                {
+                    if (j == k)
+                    {
+                        continue;
+                    }
+
+                    Rect other = Shrink(boxes[j], 0.5f);
+                    for (int t = 1; t < 64; t++)
+                    {
+                        Vector2 p = Vector2.Lerp(dots[k], end, t / 64f);
+                        Assert.That(other.Contains(p), Is.False, at + ": la línea guía de la placa " + k + " cruza la placa " + j);
+                    }
+
+                    // Ni pasa por el punto de otra placa (salvo el que está casi junto al suyo).
+                    Vector2 dot = LabelLayerToView(map, PinDot(map, j));
+                    if (Vector2.Distance(dot, dots[k]) >= 2f * RiverMapScreen.NorthUpPinDotDp)
+                    {
+                        Vector2 ab = end - dots[k];
+                        float along = Mathf.Clamp01(Vector2.Dot(dot - dots[k], ab) / Mathf.Max(1e-6f, ab.sqrMagnitude));
+                        Assert.That(Vector2.Distance(dot, dots[k] + (ab * along)), Is.GreaterThan(RiverMapScreen.NorthUpPinDotDp * 0.5f),
+                            at + ": la línea guía de la placa " + k + " pasa por el punto de la placa " + j);
+                    }
+                }
+            }
+
+            for (int a = 0; a < n; a++)
+            {
+                for (int b = a + 1; b < n; b++)
+                {
+                    if (Vector2.Distance(dots[a], dots[b]) >= 2f * RiverMapScreen.NorthUpPinDotDp)
+                    {
+                        continue;
+                    }
+
+                    int north = dots[a].y >= dots[b].y ? a : b;
+                    int south = north == a ? b : a;
+                    Assert.That(boxes[north].yMin, Is.GreaterThanOrEqualTo(dots[north].y - 0.5f), at + ": la placa " + north + ", encima de su punto");
+                    Assert.That(boxes[south].yMax, Is.LessThanOrEqualTo(dots[south].y + 0.5f), at + ": la placa " + south + ", debajo del suyo");
+                }
+            }
+        }
+
+        // Con el norte arriba, cada país que sale queda en su región (D-013, punto 5): el centro de su nombre a ≤
+        // NorthUpCountryReachDp de su punto de labels en pantalla y, deshecho el giro a latitud y longitud, Bolivia al sur de
+        // −10,5° y Ecuador al sur de +0,5°. El que no cabe en su región no se ve; salen la mayoría.
+        private static void AssertCountriesInTheirRegion(RiverMapScreen map, RiverMap data, string at)
+        {
+            RiverMapFrame frame = data.Frame;
+            float dpu = map.Space.DpPerUnit;
+            RectTransform content = map.ContentRect;
+            Rect r = content.rect;
+            int shown = 0;
+            int hidden = 0;
+            for (int i = 0; i < data.Labels.Count; i++)
+            {
+                TextMeshProUGUI label = map.CountryLabel(i);
+                if (!label.gameObject.activeSelf)
+                {
+                    continue;
+                }
+
+                if (map.NorthUpCountryHidden(i))
+                {
+                    hidden++;
+                    Assert.That(label.canvasRenderer.GetAlpha(), Is.EqualTo(0f), at + ": " + label.name + " no se ve");
+                    continue;
+                }
+
+                shown++;
+                RectTransform rt = label.rectTransform;
+                Vector3 world = rt.TransformPoint(rt.rect.center);
+                Vector2 center = map.ViewportRect.InverseTransformPoint(world);
+                Vector2 point = ContentToView(map, map.Space.ToLocal(data.Labels[i].X, data.Labels[i].Y));
+                Assert.That(Vector2.Distance(center, point), Is.LessThanOrEqualTo(RiverMapScreen.NorthUpCountryReachDp + 0.5f),
+                    at + ": " + label.name + " " + center + " lejos de su punto " + point);
+
+                Vector3 local = content.InverseTransformPoint(world);
+                double x = (local.x - r.xMin) / dpu;
+                double y = (r.yMax - local.y) / dpu;
+                double lat = frame.LatMin + (x * (frame.LatMax - frame.LatMin));
+                double lon = frame.LonMin + (y / frame.Aspect * (frame.LonMax - frame.LonMin));
+                string where = at + ": " + label.name + " en " + lat.ToString("0.0", CultureInfo.InvariantCulture) + "°, "
+                    + lon.ToString("0.0", CultureInfo.InvariantCulture) + "°";
+                if (data.Labels[i].Country == "BO")
+                {
+                    Assert.That(lat, Is.LessThan(-10.5), where + ": Bolivia, en Bolivia");
+                }
+                else if (data.Labels[i].Country == "EC")
+                {
+                    Assert.That(lat, Is.LessThan(0.5), where + ": Ecuador, al sur de Colombia");
+                }
+            }
+
+            Debug.Log("AF_MAP norte arriba, " + at + ": países que salen " + shown + ", sin sitio en su región " + hidden);
+            Assert.That(shown, Is.GreaterThan(hidden), at + ": la mayoría salen (" + shown + "; sin sitio en su región, " + hidden + ")");
+        }
+
+        // Los rótulos del contenido (países y placas) miden en pantalla ≥ 12 sp (UiBuilder.MinTextSp), giren o no.
+        private static void AssertLabelsReadable(RiverMapScreen map, string at)
+        {
+            float min = (UiBuilder.MinTextSp * UiBuilder.TextScale) - 0.01f;
+            float unit = map.ViewportRect.lossyScale.y;
+            foreach (TextMeshProUGUI country in map.CountryLabels())
+            {
+                country.ForceMeshUpdate();
+                Assert.That(country.fontSize * country.rectTransform.lossyScale.y / unit, Is.GreaterThanOrEqualTo(min), at + ": " + country.name);
+            }
+
+            for (int i = 0; i < map.SilhouetteCount; i++)
+            {
+                TextMeshProUGUI label = map.SilhouetteLabel(i);
+                label.ForceMeshUpdate();
+                Assert.That(label.fontSize * label.rectTransform.lossyScale.y / unit, Is.GreaterThanOrEqualTo(min), at + ": " + label.text);
+            }
+        }
+
+        // Países que se ven y placas.
+        private static System.Collections.Generic.IEnumerable<RectTransform> AllLabels(RiverMapScreen map)
+        {
+            foreach (TextMeshProUGUI country in map.CountryLabels())
+            {
+                yield return country.rectTransform;
+            }
+
+            foreach (RectTransform plate in map.SilhouettePlates())
+            {
+                yield return plate;
+            }
+        }
+
+        // Las 10 boyas de una malla en coordenadas de la zona visible.
+        private static Vector2[] BuoysInView(RiverMapScreen map, RectTransform mesh)
+        {
+            var at = new Vector2[RiverMapScreen.BuoysPerLeg];
+            for (int i = 0; i < at.Length; i++)
+            {
+                Vector2 local = map.BuoyLocalPoint(i);
+                at[i] = map.ViewportRect.InverseTransformPoint(mesh.TransformPoint(new Vector3(local.x, local.y, 0f)));
+            }
+
+            return at;
+        }
+
+        // Un punto del contenido (dp, origen arriba a la izquierda, y hacia arriba) en coordenadas de la zona visible.
+        private static Vector2 ContentToView(RiverMapScreen map, Vector2 local)
+        {
+            RectTransform content = map.ContentRect;
+            Rect r = content.rect;
+            return map.ViewportRect.InverseTransformPoint(content.TransformPoint(new Vector3(r.xMin + local.x, r.yMax + local.y, 0f)));
+        }
+
+        // Un punto de la capa de los rótulos (dp, origen arriba a la izquierda) en coordenadas de la zona visible.
+        private static Vector2 LabelLayerToView(RiverMapScreen map, Vector2 local)
+        {
+            RectTransform layer = map.LabelLayer!;
+            Rect r = layer.rect;
+            return map.ViewportRect.InverseTransformPoint(layer.TransformPoint(new Vector3(r.xMin + local.x, r.yMax + local.y, 0f)));
+        }
+
+        // El punto de la placa k (en la capa de los rótulos).
+        private static Vector2 PinDot(RiverMapScreen map, int k)
+        {
+            map.NorthUpPinLine(k, out Vector2 from, out _);
+            return from;
+        }
+
+        private static Rect Shrink(Rect r, float by)
+        {
+            return Rect.MinMaxRect(r.xMin + by, r.yMin + by, r.xMax - by, r.yMax - by);
         }
 
         // Con el norte arriba, ningún rótulo (países y placas) pisa a otro y todos quedan dentro de la zona a lo ancho.

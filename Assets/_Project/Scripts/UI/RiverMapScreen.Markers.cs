@@ -335,6 +335,9 @@ namespace AF.UI
         private string _guideId = RiverJourney.GuideRosa;
         private Vector2 _homeMap;
         private Vector2 _homeLocal;
+        private Vector2 _homeAt;
+        private float _homeSide;
+        private float _homeSideNorth;
         private float _homeHeight;
         private bool _homeInView = true;
         private bool _layoutHomeWindow;
@@ -594,6 +597,9 @@ namespace AF.UI
 
         /// <summary>El rig del perezoso de la casa (null sin arte).</summary>
         internal SlothRig? HomeSloth => _houseSloth;
+
+        /// <summary>El árbol de la casa, con el pivote en su pie (null sin arte).</summary>
+        internal Image? HomeTree => _houseTree;
 
         /// <summary>TiTino dormita (<c>sloth_sleep</c>): pasaron <see cref="MapConfig.MapIdleSleepMs"/> ms sin toques.</summary>
         public bool HomeSlothAsleep => _asleep;
@@ -2431,7 +2437,10 @@ namespace AF.UI
             float scale = _view == MapView.World ? 1f : HomeBasinScale;
             _homeHeight = ProceduralArt.MapHomeHeightDp * scale;
             Vector2 home = space.ToLocal(_homeMap);
-            _homeLocal = home + new Vector2(HomeSide(space, home, scale), 0f);
+            _homeAt = home;
+            _homeSide = HomeSide(space, home, scale);
+            _homeSideNorth = _view == MapView.Basin ? HomeSideNorthUp(space, home, scale) : _homeSide;
+            _homeLocal = HomeFoot();
             if (!_houseShown)
             {
                 return;
@@ -2454,6 +2463,7 @@ namespace AF.UI
         // gira al revés que el contenido sobre su pie y la rama va donde queda arriba en pantalla. Sin asignaciones.
         private void PlaceHouseFigure()
         {
+            _homeLocal = HomeFoot();
             if (!_houseShown || _houseTree == null || _houseSloth == null)
             {
                 return;
@@ -2466,6 +2476,17 @@ namespace AF.UI
             Vector2 branch = _homeLocal + Turn(new Vector2(0f, _homeHeight * ProceduralArt.MapHomeBranchFraction), _figureAngle);
             _houseSloth.Place(branch.x, -branch.y);
             _houseSloth.Root.localRotation = upright;
+        }
+
+        // El pie de la casa: a un lado de Guajará en pantalla, a la izquierda o a la derecha (revisión de M4.4: con «Norte arriba»
+        // el apartado de la vista de siempre, en el marco del contenido, quedaba en vertical y la casa flotaba al norte de la
+        // bahía). Con el giro, el apartado va de _homeSide (vista de siempre) a _homeSideNorth (norte arriba) y siempre en
+        // horizontal en pantalla: el contenido gira −_figureAngle, así que en el contenido es (lado, 0) girado _figureAngle.
+        // Sin asignaciones.
+        private Vector2 HomeFoot()
+        {
+            float u = Mathf.Clamp01(-_figureAngle / NorthUpAngleDeg);
+            return _homeAt + Turn(new Vector2(Mathf.Lerp(_homeSide, _homeSideNorth, u), 0f), _figureAngle);
         }
 
         // v girado deg grados (antihorario, y hacia arriba). Sin asignaciones.
@@ -2501,6 +2522,42 @@ namespace AF.UI
                     if (LineClearance(_map, space, _view, box, HomeLineClearanceDp) >= HomeLineClearanceDp && !OverlapsShownMarker(box))
                     {
                         return s == 0 ? -d : d;
+                    }
+                }
+            }
+
+            return -HomeSideDp * scale;
+        }
+
+        // HomeSide con «Norte arriba» (M4.4, revisión): el lado en pantalla (dp con signo; negativo, a la izquierda, el oeste),
+        // con los mismos pasos y la misma holgura con el río, pero con el giro completo: el apartado, horizontal en pantalla, es en
+        // el contenido (0, −lado), y el tronco sube en pantalla, que en el contenido es +x. El árbol entero queda además a
+        // ≥ LabelEdgeDp en pantalla de los bordes de la zona a lo ancho (la cuenca girada la llena). Sin asignaciones.
+        private float HomeSideNorthUp(MapSpace space, Vector2 home, float scale)
+        {
+            float half = HomeTrunkHalfDp * scale;
+            float h = _homeHeight * 0.7f;
+            float contentScale = NorthUpTargetScale();
+            float edge = LabelEdgeDp / contentScale;
+            float treeHalf = ProceduralArt.MapHomeWidthDp * scale * 0.5f;
+            int steps = Mathf.RoundToInt((HomeSideMaxDp - HomeSideDp) / MarkerShiftStepDp);
+            for (int k = 0; k <= steps && _map != null; k++)
+            {
+                float d = (HomeSideDp + (k * MarkerShiftStepDp)) * scale;
+                for (int s = 0; s < 2; s++)
+                {
+                    float side = s == 0 ? -d : d;
+                    Vector2 foot = home + Turn(new Vector2(side, 0f), -NorthUpAngleDeg);
+                    float across = -foot.y; // a lo ancho en pantalla, del borde izquierdo de la zona (los Andes)
+                    if (across - treeHalf < edge || across + treeHalf > _contentH - edge)
+                    {
+                        continue;
+                    }
+
+                    var box = new Rect(foot.x, foot.y - half, h, 2f * half);
+                    if (LineClearance(_map, space, _view, box, HomeLineClearanceDp) >= HomeLineClearanceDp)
+                    {
+                        return side;
                     }
                 }
             }
@@ -2736,7 +2793,9 @@ namespace AF.UI
                 return false;
             }
 
-            _homeInView = _northUpOn || HomeInViewAt(_offset); // con «Norte arriba» (M4.4) la cuenca entera, y la casa, se ven
+            // Con «Norte arriba» (M4.4) la cuenca entera, y la casa, se ven; también mientras el giro vuelve (el contenido aún va
+            // girado y a escala): la ventanita se decide de nuevo cuando acaba.
+            _homeInView = _northUpOn || _northUpT > 0f || HomeInViewAt(_offset);
             _homeWindow.Apply(_homeStop, _homeInView || !Visible);
             return _homeWindow.Visible;
         }
