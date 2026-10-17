@@ -18,9 +18,11 @@ namespace AF.Tests.PlayMode
     /// <list type="bullet">
     /// <item>carga: la escena enlaza <c>mundo_06_v1.json</c> (<c>pack_schema</c> 3, de P7a) tras los 5 paquetes de 1-200; el
     /// catálogo cubre 1-300 sin huecos y los niveles de muestra del mundo 6 arrancan con su tablero y llegan a jugarse, con el
-    /// fondo de hoy (sin paradas del Mapa de 201 en adelante hasta M4.5a);</item>
+    /// fondo que dan los datos del Mapa (la parada del nivel si el catálogo de paradas llega al mundo 6, M4.5a; si no, el de
+    /// hoy);</item>
     /// <item>banner: el 201 abre el del mundo 6 («Mundo 6: Oriente · Ecuador · Napo + lagunas negras de Cuyabeno», de
-    /// <c>strings.csv</c>) antes de la intro, y un toque lo cierra; sin datos del Mapa para el mundo 6, sin viaje (M3.6);</item>
+    /// <c>strings.csv</c>) antes de la intro, y un toque lo cierra; con la regla del juego, el viaje de mundo (M3.6) sale si y
+    /// solo si el catálogo de paradas tiene la gran parada del mundo 6;</item>
     /// <item>estrenos: la tarjeta de la Liana de cuenta en el 243 y la de la Hoja atada en el 283 (VA1a), con el catálogo real;</item>
     /// <item>fin de contenido: tras ganar el 300, «Siguiente» abre «El río sigue creciendo» (06 §9): el último nivel publicado,
     /// sin ningún número fijo;</item>
@@ -58,6 +60,7 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.LoadGame(201, new MemoryProgressStore(201, 200));
             GameBootstrap boot = GameBootstrap.Current!;
             LevelFlow flow = boot.Flow!;
+            GameScreen view = boot.View!;
             LevelCatalog catalog = flow.Catalog;
             Assert.That(catalog.Packs.Count, Is.EqualTo(6), "tutorial_v0, mundo_02_v1 a mundo_05_v1 y mundo_06_v1");
             Assert.That(catalog.FirstLevel, Is.EqualTo(1));
@@ -76,8 +79,20 @@ namespace AF.Tests.PlayMode
                 Assert.That(flow.Level.World, Is.EqualTo(6), "glosario §8: el Oriente es 201-300");
                 Assert.That(flow.Session.Current, Is.EqualTo(flow.Level.CreateBoard()), "el tablero del paquete, nivel " + level);
                 Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Playing), "nivel " + level);
-                Assert.That(GameScreen.StopForLevel(boot.RiverStops, level, MapConfig.UiBgPerStop), Is.Null,
-                    "sin parada del Mapa de 201 en adelante: el fondo de hoy hasta M4.5a (nivel " + level + ")");
+                RiverStop? expected = boot.RiverStops?.StopOf(level);
+                if (expected != null && !MapConfig.UiBgPerStop)
+                {
+                    expected = boot.RiverStops!.FirstStopOfWorld(expected.World) ?? expected;
+                }
+
+                Assert.That(GameScreen.StopForLevel(boot.RiverStops, level, MapConfig.UiBgPerStop), Is.SameAs(expected),
+                    "la parada de los datos del Mapa, o ninguna si el catálogo no llega al nivel " + level);
+                Assert.That(view.StopBackdrop.Stop, Is.SameAs(expected), "el fondo del nivel " + level + ": el de su parada, o el de hoy sin ella");
+                if (expected != null)
+                {
+                    Assert.That(expected.World, Is.EqualTo(6), "la parada del nivel " + level + ", del mundo 6");
+                }
+
                 boot.TapAnywhere();
                 yield return PlayModeHelpers.WaitFor(() => flow.Phase == FlowPhase.Playing, "fase Playing del nivel " + level);
                 Assert.That(flow.AcceptsBoardInput, Is.True, "nivel " + level);
@@ -88,7 +103,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator Banner_Level201_IsWorld6_BeforeTheIntro_OneTapClosesIt()
         {
             GameScreen.SimulatedScreen = HudLabelTests.Screen780;
-            GameScreen.BannerTravelOverride = true; // la regla del juego: sin paradas del mundo 6, el banner de siempre
+            GameScreen.BannerTravelOverride = false; // el banner de D-012; el viaje de mundo, en Banner_Level201_TravelsOnlyWithTheGateOfWorld6
             yield return CardSetup.Load(201);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -100,7 +115,7 @@ namespace AF.Tests.PlayMode
             Assert.That(banner.Visible, Is.True);
             Assert.That(banner.Text, Is.EqualTo(UiText.WorldBanner(6)));
             Assert.That(banner.Text, Is.EqualTo("Mundo 6: Oriente · Ecuador · Napo + lagunas negras de Cuyabeno"), "strings.csv (glosario §8)");
-            Assert.That(banner.Travel, Is.Null, "sin datos del Mapa del mundo 6 (M4.5b), sin viaje");
+            Assert.That(banner.Travel, Is.Null, "viaje apagado por el test: el banner de siempre");
             Assert.That(view.LastWorldBannerProbe, Does.Contain("\"level\":201").And.Contain("\"world\":6"));
             yield return WorldBannerSetup.CloseThenTheIntro(boot, 201, 6);
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
@@ -109,6 +124,45 @@ namespace AF.Tests.PlayMode
             flow.Load(202);
             PlayModeHelpers.Step(boot, 300);
             Assert.That(flow.WorldBanner, Is.EqualTo(0), "el 202 no lo lleva");
+            Assert.That(banner.Visible, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Banner_Level201_TravelsOnlyWithTheGateOfWorld6()
+        {
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
+            GameScreen.BannerTravelOverride = true; // la regla del juego (MapMoments.TravelInBanner con los datos del Mapa)
+            yield return CardSetup.Load(201);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            WorldBannerView banner = view.WorldBannerView;
+            Assert.That(MapMoments.TravelInBanner(201, MapConfig.UiMapAutopen), Is.True, "el 201 abre mundo con banner (D-013, punto 7)");
+            Assert.That(flow.WorldBanner, Is.EqualTo(6));
+            Assert.That(banner.Visible, Is.True);
+            RiverStop? gate = boot.RiverStops?.FirstStopOfWorld(6);
+            if (gate == null)
+            {
+                Assert.That(banner.Travel, Is.Null, "sin la gran parada del mundo 6 en el catálogo de paradas, el banner de siempre");
+                yield return WorldBannerSetup.CloseThenTheIntro(boot, 201, 6);
+                yield break;
+            }
+
+            Assert.That(boot.RiverStops!.StopOf(201), Is.SameAs(gate), "el 201 abre la gran parada del mundo 6 (" + gate.Id + ")");
+            Assert.That(banner.Travel, Is.Not.Null, "con la gran parada del mundo 6 (" + gate.Id + "), el viaje de mundo (M3.6)");
+            Assert.That(banner.TravelMs, Is.LessThanOrEqualTo((float)MapConfig.WorldTravelInBannerMaxMs), "≤ 4 s");
+            for (int elapsed = 0; elapsed < 8000 && !banner.TravelDone; elapsed += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(banner.TravelDone, Is.True, "la canoa llega a " + gate.Id);
+            PlayModeHelpers.Step(boot, 1000);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard), "el banner no se cierra solo");
+            yield return null;
+            WorldBannerSetup.Tap(banner);
+            Assert.That(flow.WorldBannerClosing && banner.Dismissing, Is.True, "con el viaje terminado, un toque cierra");
+            PlayModeHelpers.Step(boot, 400);
             Assert.That(banner.Visible, Is.False);
         }
 
@@ -226,7 +280,8 @@ namespace AF.Tests.PlayMode
                 line.Hide();
                 TestContext.WriteLine(locale + ": " + shown + " líneas de río; sin línea: " + string.Join(", ", without));
                 Assert.That(shown + without.Count, Is.EqualTo(40));
-                Assert.That(shown, Is.GreaterThanOrEqualTo(36), "casi todas: sin paradas del Mapa de 201 en adelante no hay llegada que las desplace");
+                Assert.That(shown, Is.GreaterThanOrEqualTo(36),
+                    "casi todas: como mucho las desplazan las llegadas de 270, 280, 290 y 300 (si hay paradas del mundo 6) y los hitos de TiTino");
 
                 GameScreen.SimulatedScreen = null;
                 LaunchOptions.Reset();

@@ -13,8 +13,9 @@ namespace AF.Levels
 
         /// <summary>
         /// <c>river</c> [P]: el río de un mundo, en los bloques sin tinte nuevo (propuesta de Frutas §3.5 y §5.16; tarea F1c, decidido
-        /// en C1a con el contrato 31): <c>rio_napo</c> (261-280) y <c>rio_amazonas</c> (281-300). Sin debut que comprobar ni tarjeta
-        /// «Fruta nueva»; su nombre visible es <c>fact.&lt;sujeto&gt;.name</c>, porque no es un tinte del glosario §9.
+        /// en C1a con el contrato 31; pendiente de registrar en 08 §4.6, 08 §4.7 y glosario §10-§11): <c>rio_napo</c> (261-280) y
+        /// <c>rio_amazonas</c> (281-300). Sin debut que comprobar ni tarjeta «Fruta nueva»; su nombre visible es
+        /// <c>fact.&lt;sujeto&gt;.name</c>, porque no es un tinte del glosario §9.
         /// </summary>
         River = 1,
     }
@@ -103,7 +104,10 @@ namespace AF.Levels
             }
         }
 
-        /// <summary>Id del sujeto: el del tinte en el glosario §9 (<c>acai</c>, <c>urucum</c>, <c>agua_negro</c>…).</summary>
+        /// <summary>
+        /// Id del sujeto: el del tinte en el glosario §9 (<c>acai</c>, <c>urucum</c>, <c>agua_negro</c>…) o, en las series de río [P],
+        /// el del río (<c>rio_napo</c>, <c>rio_amazonas</c>; pendiente de registrar en glosario §11).
+        /// </summary>
         public string Subject { get; }
 
         /// <summary>Tipo de sujeto.</summary>

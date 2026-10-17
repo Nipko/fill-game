@@ -12,8 +12,9 @@ namespace AF.Levels
     /// <list type="bullet">
     /// <item><description><c>format</c> = <see cref="FactCatalog.Format"/>, <c>version</c> ≥ 1 y <c>max_chars_es</c> ≥ 1;</description></item>
     /// <item><description><c>series</c>, una lista no vacía de <c>{subject, kind, from_level, lines, step}</c>: <c>subject</c>
-    /// <c>[a-z][a-z0-9_]*</c> y sin repetir (las claves de texto salen de él); <c>kind</c> = <c>tint</c> o <c>river</c> [P] (las series
-    /// de río de 261-300, propuesta de Frutas §5.16; tarea C1a); <c>from_level</c> ≥ 1;
+    /// <c>[a-z][a-z0-9_]*</c> y sin repetir (las claves de texto salen de él): el id del tinte (glosario §9) o, en las series de
+    /// río [P], el del río (<c>rio_napo</c>); <c>kind</c> = <c>tint</c> o <c>river</c> [P] (las series de río de 261-300, propuesta de
+    /// Frutas §5.16; tarea C1a; pendiente de registrar en 08 §4.6, 08 §4.7 y glosario §10-§11); <c>from_level</c> ≥ 1;
     /// <c>lines</c> de 1 a <see cref="FactCatalog.MaxLines"/>; <c>step</c> de 1 a <see cref="WorldTable.LastLevel"/>; en orden de <c>from_level</c>, sin solaparse
     /// (cada bloque <c>[from_level, from_level + lines × step)</c> empieza donde acaba el anterior o después) y dentro de la
     /// primera vuelta (<see cref="WorldTable.LastLevel"/>);</description></item>
@@ -126,7 +127,7 @@ namespace AF.Levels
             string subject = RequireString(node, "subject", at);
             if (!IsSubject(subject))
             {
-                throw Fail(at + ".subject", "'" + subject + "' no es [a-z][a-z0-9_]* (el id del tinte, glosario §9)");
+                throw Fail(at + ".subject", "'" + subject + "' no es [a-z][a-z0-9_]* (el id del tinte, glosario §9, o del río, rio_<río> [P])");
             }
 
             string kindText = RequireString(node, "kind", at);
