@@ -47,7 +47,8 @@ namespace AF.GameFlow
         public static readonly int[] FruitDebutLevels = SortedUnion(FruitDebutTintLevels, Array.Empty<int>());
 
         // Claves de la frase de «Fruta nueva» (fact.<tinte>.tag) y del nombre visible (tint.<tinte>.name) de cada tinte de
-        // FruitDebutTints (08 §4.7; pregunta 49 (a), D-022), preparadas una vez para que consultarlas no asigne memoria.
+        // FruitDebutTints (08 §4.7; pregunta 49 (a), D-022), preparadas una vez para que consultarlas no asigne memoria. Son las
+        // mismas que FactSeries.TagKey y NameKey de la serie del tinte: OccupiedLevelsTests las compara.
         private static readonly string[] s_fruitTagKeys = FruitKeys(FactCatalog.KeyPrefix, ".tag");
         private static readonly string[] s_fruitNameKeys = FruitKeys(FactCatalog.NamePrefix, ".name");
 

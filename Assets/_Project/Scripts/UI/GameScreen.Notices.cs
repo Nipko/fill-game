@@ -191,6 +191,7 @@ namespace AF.UI
         private BoardLayoutResult? _fruitNewPlateLayout; // tablero con el que se colocó la placa de «Fruta nueva» (3 filas)
         private float _fruitNewPlateShift;
         private float _fruitNewPlateCanvasW;
+        private bool _fruitNewCoversPost; // la tarjeta «Fruta nueva» va sobre el muelle y tapa el poste: el poste se funde con ella
         private readonly StopLabel _stopLabel;
         private readonly StringBuilder _stopLabelProbeSb = new StringBuilder(256);
         private string? _lastStopLabelProbe;
@@ -637,6 +638,7 @@ namespace AF.UI
             PumpNotices();
             KeepStopLabelPlaced();
             KeepFruitNewPlateClear();
+            KeepPostUnderFruitNew();
         }
 
         // Fuera todo: el aviso y la tarjeta a la vista, la cola y la tarjeta pendiente (otro nivel, otro intento o la celebración).
@@ -819,6 +821,7 @@ namespace AF.UI
         {
             BoardLayoutResult? l = _layout;
             _fruitNewDockBottom = float.NaN;
+            _fruitNewCoversPost = false;
             if (l == null || !FruitNewCard.TryTexts(fruit, out string name, out string tag))
             {
                 return;
@@ -835,16 +838,19 @@ namespace AF.UI
             {
                 _fruitNew.Place(_canvasW, l.PanelBottom + 4f);
                 _fruitNewDockBottom = l.PanelBottom + 4f + height;
+                _fruitNewCoversPost = FruitNewOverPost();
             }
             else
             {
                 // Ni en la franja ni sobre el muelle (3 filas, como el 111 y el 201, o la escala de texto grande): como placa de
-                // una línea clavada al marco, por encima de lo más alto de la fila 1 en reposo con su aire, como la del rótulo del
-                // lugar (FX4) [P]. Si ni así cabe (o una cuia de la fila 1 ya está elevada bajo ella), no sale, y la sonda lo cuenta
-                // (mode "none"): así se ve en el teléfono quién la pierde (p. ej. con la escala de texto grande).
-                float plateTop = StopLabelPlateTop(l);
+                // una línea clavada al marco, como la del rótulo del lugar (FX4) [P], entre el pie del HUD (FruitNewPlateHudBottom)
+                // y lo más alto de la fila 1 en reposo, con FruitNewCard.PlateClearDp de aire a cada lado y centrada en ese hueco
+                // (revisión de F5: pegada a la pausa se leía como parte del HUD). Si ni así cabe (o una cuia de la fila 1 ya está
+                // elevada bajo ella), no sale, y la sonda lo cuenta (mode "none"): así se ve en el teléfono quién la pierde (p. ej.
+                // con la escala de texto grande).
+                float plateTop = Mathf.Max(StopLabelPlateTop(l), FruitNewPlateHudBottom() + FruitNewCard.PlateClearDp);
                 float rowTop = StopLabelRowOneTop(l);
-                if (!_fruitNew.PlaceAsPlate(_canvasW, name, tag, plateTop, rowTop - StopLabel.PlateCuiaGapDp))
+                if (!_fruitNew.PlaceAsPlate(_canvasW, name, tag, plateTop, rowTop - FruitNewCard.PlateClearDp))
                 {
                     EmitFruitNewProbe(fruit, 0, FruitNewNone);
                     return;
@@ -924,6 +930,36 @@ namespace AF.UI
             {
                 _fruitNew.Hide();
                 _fruitNewPlateLayout = null;
+            }
+        }
+
+        // La tarjeta «Fruta nueva» recién colocada sobre el muelle tapa el poste del muelle (su caja con el canto se cruza con la
+        // del poste, si se ve): solo al colocarla.
+        private bool FruitNewOverPost()
+        {
+            RectTransform post = _post.rectTransform;
+            if (!post.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            CanvasRectDp(post, out float pl, out float pt, out float pr, out float pb);
+            CanvasRectDp(_fruitNew.Root, out float cl, out float ct, out float cr, out float cb);
+            cb += FruitNewCard.EdgeDp;
+            return cl < pr && cr > pl && ct < pb && cb > pt;
+        }
+
+        // Revisión de F5: un poste cortado que asoma bajo la tarjeta parecía un error de recorte. Mientras la tarjeta «Fruta
+        // nueva» lo tapa sobre el muelle, el poste se funde a la vez que ella (1 − su opacidad: su mismo fundido de 200 ms) y
+        // vuelve en cuanto se va, la oculte lo que la oculte. Cada fotograma, desde TickNotices; sin asignaciones y sin tocar el
+        // poste si no cambia.
+        private void KeepPostUnderFruitNew()
+        {
+            float alpha = _fruitNewCoversPost && FruitNewOnDock ? 1f - _fruitNew.Alpha : 1f;
+            CanvasRenderer post = _post.canvasRenderer;
+            if (post.GetAlpha() != alpha)
+            {
+                post.SetAlpha(alpha);
             }
         }
 
@@ -1289,6 +1325,55 @@ namespace AF.UI
             }
 
             return top == float.MaxValue ? l.BlockTop + BoardLayout.Lift - _boardShift : top;
+        }
+
+        /// <summary>
+        /// Pie del HUD de arriba para la placa de «Fruta nueva» (dp desde arriba): el de su fila (<see cref="HudBottomDp"/>) o, si
+        /// bajan más, el canto de madera de los discos de la pausa y de Reiniciar (su cara de
+        /// <see cref="ReliefSprites.FaceHeightDp"/> más <see cref="ProceduralArt.ButtonEdgeDp"/>, desde lo alto del disco: la pausa
+        /// baja 4 dp y su canto pasa 2 dp del pie de la fila), la etiqueta de Reiniciar (en dos líneas con la escala de texto) y las
+        /// píldoras del saldo. Son los bordes que se ven, no las cajas de los sprites, que llevan aire transparente y la sombra
+        /// difusa (a alfa 0,3) alrededor. Las etiquetas del HUD no cuentan: se apartan mientras se ve un aviso. Solo al colocar la
+        /// placa (nunca por fotograma).
+        /// </summary>
+        internal float FruitNewPlateHudBottom()
+        {
+            float bottom = BoardTop;
+            float disc = _art.DiscWood.FaceHeightDp + ProceduralArt.ButtonEdgeDp;
+            if (_pauseButton.Button.gameObject.activeInHierarchy)
+            {
+                CanvasRectDp((RectTransform)_pauseButton.Face.parent, out _, out float pauseTop, out _, out _);
+                bottom = Mathf.Max(bottom, pauseTop + disc);
+            }
+
+            if (_restart.Button.gameObject.activeInHierarchy)
+            {
+                CanvasRectDp((RectTransform)_restart.Face.parent, out _, out float restartTop, out _, out _);
+                bottom = Mathf.Max(bottom, restartTop + disc);
+            }
+
+            if (_restartPill.gameObject.activeInHierarchy)
+            {
+                CanvasRectDp(_restartPill.rectTransform, out _, out _, out _, out float pill);
+                bottom = Mathf.Max(bottom, pill);
+            }
+
+            if (_walletBar.Visible && _walletBar.Compact && _walletBar.Root.gameObject.activeInHierarchy)
+            {
+                if (_walletBar.SeedsRect.gameObject.activeInHierarchy)
+                {
+                    CanvasRectDp(_walletBar.SeedsRect, out _, out _, out _, out float seeds);
+                    bottom = Mathf.Max(bottom, seeds);
+                }
+
+                if (_walletBar.CanoesRect.gameObject.activeInHierarchy)
+                {
+                    CanvasRectDp(_walletBar.CanoesRect, out _, out _, out _, out float canoes);
+                    bottom = Mathf.Max(bottom, canoes);
+                }
+            }
+
+            return bottom;
         }
 
         // La caja de lo visible bajo root (los gráficos activos, con alfa y que se pintan; no el área táctil), en dp del lienzo

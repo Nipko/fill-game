@@ -21,22 +21,26 @@ namespace AF.UI
     /// cabe; si no, sobre el muelle, por encima de la bandeja y de sus burbujas) y la misma cola de avisos (GameScreen.Notices.cs:
     /// tipo FruitNew, con la prioridad tutorial &gt; Fruta nueva &gt; miquito &gt; rótulo, como mucho una tarjeta por nivel). En los
     /// tableros de 3 filas, donde no cabe en ninguno de los dos (el 111 y el 201 a 360 × 780 dp; con la escala de texto, también
-    /// alguno de 2 filas), va como placa de una línea clavada al marco bajo el HUD, como el rótulo del lugar
-    /// (<see cref="PlaceAsPlate"/>) [P]; si ni así cabe a 12 sp (el 111 y el 201 a 360 × 780 dp al 130 %), no sale y la sonda
-    /// <c>AF_STATE fruit_new</c> lo cuenta con <c>mode</c> none [P].
+    /// alguno de 2 filas), va como placa de una línea clavada al marco, entre el HUD y la fila 1 con
+    /// <see cref="PlateClearDp"/> de aire a cada lado (<see cref="PlaceAsPlate"/>) [P]; si ni así cabe a 12 sp (el 111 y el 201
+    /// a 360 × 780 dp al 130 %), no sale y la sonda <c>AF_STATE fruit_new</c> lo cuenta con <c>mode</c> none [P].
     /// <list type="bullet">
     /// <item><b>Duración:</b> la de lectura de D-011 (<see cref="NoticeTiming.ReadMs(string, string, string)"/> con el nombre y la
     /// frase, 3-7 s) [P], en lugar de los 2 s de 06 §4.5, como los demás avisos del tablero; fundido de entrada y salida.</item>
     /// <item><b>Texto:</b> ninguno baja de 12 sp (02 §12; pregunta 36 (a), D-020; A1): el nombre a 15 sp (se encoge hasta 12 si no
     /// cabe con su muestra) y la frase a 13 sp, que pasa a una segunda línea si no cabe, y la tarjeta crece (<see cref="Measure"/>);
-    /// con la escala de texto (<see cref="UiBuilder.TextScale"/>) crecen las filas.</item>
-    /// <item><b>Icono:</b> sobre un disco propio a la resolución de la UI (<see cref="ProceduralArt.FruitNewDisc"/>) del color que
-    /// le da contraste (<see cref="DiscFor"/>: la crema de <see cref="FactLine.IconBack"/> para los iconos oscuros, como el açaí o
-    /// la hoja del Río Negro, y la madera de <see cref="Palette.FamilyWood"/> para los claros, como la guanábana, el copoazú o el
-    /// huito; con los iconos procedurales, todos a ≥ 3:1), con un contorno de 1,5 dp de tinta
-    /// #2B2118 a alfa 0,45 (D-003, principio 3: contraste local) [P].</item>
-    /// <item><b>Frase:</b> sin una palabra sola en la última línea: si queda viuda, el último espacio se muestra como espacio
-    /// duro (U+00A0) y la palabra baja con su compañera (<see cref="ShownTag"/>; la tabla de textos no cambia) [P].</item>
+    /// con la escala de texto (<see cref="UiBuilder.TextScale"/>) crecen las filas. La tarjeta se encoge al ancho de su línea más
+    /// ancha, también con la frase en dos líneas.</item>
+    /// <item><b>Icono:</b> sobre un disco propio a la resolución de la UI (<see cref="ProceduralArt.FruitNewDisc"/>), también en
+    /// la placa, del color que le da contraste a su silueta (<see cref="DiscFor"/> con
+    /// <see cref="ProceduralArt.FruitIconEdgeLuminance"/>: la crema de <see cref="FactLine.IconBack"/> para las siluetas oscuras,
+    /// como las púas del achiote, y la madera de <see cref="Palette.FamilyWood"/> para las claras; con los iconos procedurales,
+    /// todos a ≥ 3:1), con un contorno de 1,5 dp de tinta #2B2118 a alfa 0,45 (D-003, principio 3: contraste local) [P].</item>
+    /// <item><b>Frase:</b> tal como está en la tabla de textos, sin tocarla (<c>.claude/rules/localizacion.md</c>): para no dejar
+    /// una palabra sola en la última línea, la frase de <c>facts.csv</c> lleva un espacio duro (U+00A0) entre sus dos últimas
+    /// palabras; en cada idioma lo decide el traductor.</item>
+    /// <item><b>Muelle:</b> si la tarjeta tapa el poste del muelle, el poste se funde a la vez que ella entra y vuelve cuando se va
+    /// (GameScreen.Notices.cs).</item>
     /// <item><b>Toques:</b> ninguno (<c>raycastTarget</c> = false y <see cref="CanvasGroup.blocksRaycasts"/> = false); no tapa cuias
     /// ni botones.</item>
     /// <item><b>Textos:</b> si falta el nombre o la frase en el idioma de la UI (o, en release, sin aprobar del asesor), no sale:
@@ -76,6 +80,16 @@ namespace AF.UI
         /// <summary>Entre el icono, la frase y la muestra en la placa (dp) [P].</summary>
         public const float PlateGapDp = 6f;
 
+        /// <summary>
+        /// Aire mínimo de la placa (con su canto) con lo que dibuja el HUD encima (la pausa, la insignia, Reiniciar con su etiqueta
+        /// y las píldoras, con sus sombras) y con las tapas de la fila 1 en reposo debajo (dp) [P]; si sobra alto, la placa va
+        /// centrada en ese hueco (revisión de F5: pegada a la pausa se leía como parte del HUD).
+        /// </summary>
+        public const float PlateClearDp = 4f;
+
+        /// <summary>Aire del icono dentro de su disco en la placa, a cada lado (dp) [P].</summary>
+        public const float PlateIconInsetDp = 1.5f;
+
         /// <summary>Contraste mínimo del icono con su disco (iconos ≥ 3:1; direccion-visual-v2 §2.4) [P].</summary>
         public const float IconDiscContrastMin = 3f;
 
@@ -90,9 +104,6 @@ namespace AF.UI
         /// fruta de la victoria (<see cref="FactLine.IconBack"/>), <c>madera_base</c> y <c>madera_oscura</c> de la familia Madera.
         /// </summary>
         public static readonly Color[] DiscColors = { FactLine.IconBack, Palette.FamilyWood.Base, Palette.FamilyWood.Deep };
-
-        // Espacio duro con el que la última palabra de la frase baja acompañada.
-        private const char NoBreakSpace = '\u00A0';
 
         private const float FadeMs = 200f;
 
@@ -117,7 +128,6 @@ namespace AF.UI
         private readonly TextMeshProUGUI _tag;
         private readonly ProceduralArt _art;
         private readonly float _scale;
-        private string _tagSource = string.Empty; // la frase de la tabla (la que se muestra puede llevar un espacio duro)
         private float _leftMs = -1f;
         private float _totalMs;
         private float _height = HeightDp;
@@ -165,20 +175,29 @@ namespace AF.UI
         /// <summary>Nombre del tinte que muestra.</summary>
         public string Name => _name.text;
 
-        /// <summary>Frase de «Fruta nueva» que muestra, como está en la tabla de textos.</summary>
-        public string Tag => _tagSource;
-
-        /// <summary>La frase tal como se ve: con un espacio duro (U+00A0) si evitó una palabra sola en la última línea.</summary>
-        public string ShownTag => _tag.text;
+        /// <summary>Frase de «Fruta nueva» que muestra, tal como está en la tabla de textos (sin tocarla).</summary>
+        public string Tag => _tag.text;
 
         /// <summary>Color del disco bajo el icono (<see cref="DiscFor"/>; tests).</summary>
         public Color DiscColor => _iconBack.color;
 
-        /// <summary>Contraste del icono que muestra con su disco (luminancia media del icono; tests y capturas).</summary>
+        /// <summary>El disco bajo el icono está a la vista (en la tarjeta y en la placa; tests).</summary>
+        public bool DiscShown => _iconBack.enabled && _iconBack.gameObject.activeInHierarchy;
+
+        /// <summary>El disco bajo el icono (tests de colocación).</summary>
+        public RectTransform Disc => _iconBack.rectTransform;
+
+        /// <summary>Contraste de la silueta del icono que muestra con su disco (<see cref="IconLuminance"/>; tests y capturas).</summary>
         public float IconDiscContrast { get; private set; }
 
-        /// <summary>Luminancia relativa media del icono que muestra (<see cref="ProceduralArt.FruitIconLuminance"/>; tests).</summary>
+        /// <summary>
+        /// Luminancia relativa de la silueta del icono que muestra (<see cref="ProceduralArt.FruitIconEdgeLuminance"/>), con la que
+        /// elige su disco (tests).
+        /// </summary>
         public float IconLuminance { get; private set; }
+
+        /// <summary>Luminancia relativa media del icono que muestra (<see cref="ProceduralArt.FruitIconLuminance"/>; tests).</summary>
+        public float IconMeanLuminance { get; private set; }
 
         /// <summary>Índice de motor del tinte que muestra (glosario §9; 0 si ninguno).</summary>
         public int Tint { get; private set; }
@@ -226,15 +245,16 @@ namespace AF.UI
         /// <summary>
         /// Pone el nombre y la frase que va a mostrar y devuelve el alto de la tarjeta en un lienzo de <paramref name="canvasW"/>
         /// dp (<see cref="Height"/>): la fila del nombre y la de la frase por la escala de texto, la de la frase con las líneas que
-        /// necesite a 13 sp, y su aire; al menos <see cref="HeightDp"/> por la escala. Si la frase cabe en una línea, la tarjeta se
-        /// encoge al ancho de su texto (o del nombre con su muestra) más <see cref="ShrunkRightPadDp"/> y va centrada, como la del
-        /// miquito con el dato equilibrado (A1). Se llama antes de decidir dónde va (GameScreen.Notices.cs) y de
-        /// <see cref="Place"/>; mide una vez por tarjeta, nunca por fotograma.
+        /// necesite a 13 sp, y su aire; al menos <see cref="HeightDp"/> por la escala. La tarjeta se encoge al ancho de su texto
+        /// (la frase en una línea o, si va en varias, su línea más ancha tal como la corta TextMeshPro; o el nombre con su muestra,
+        /// si es más ancho) más <see cref="ShrunkRightPadDp"/> y va centrada, como la del miquito con el dato equilibrado (A1;
+        /// revisión de F5: con la frase en dos líneas quedaba crema vacía a la derecha). Encogida, la columna de la frase sigue
+        /// siendo al menos tan ancha como esa línea, así que corta igual. Se llama antes de decidir dónde va (GameScreen.Notices.cs)
+        /// y de <see cref="Place"/>; mide una vez por tarjeta, nunca por fotograma.
         /// </summary>
         public float Measure(float canvasW, string name, string tag)
         {
             _name.text = name;
-            _tagSource = tag;
             _tag.text = tag;
             CardMode();
             float s = _scale;
@@ -243,23 +263,9 @@ namespace AF.UI
             _nameWidth = Mathf.Min(PreferredWidth(_name), Mathf.Max(0f, column - swatch));
             Vector2 oneLine = _tag.GetPreferredValues(tag, float.PositiveInfinity, float.PositiveInfinity);
             float tagHeight = _tag.GetPreferredValues(tag, column, float.PositiveInfinity).y;
-            if (oneLine.x > column)
-            {
-                string shown = WithoutWidow(tag, column, tagHeight);
-                if (!ReferenceEquals(shown, tag))
-                {
-                    _tag.text = shown;
-                    tagHeight = _tag.GetPreferredValues(shown, column, float.PositiveInfinity).y;
-                }
-            }
-
-            _cardWidth = -1f;
-            if (oneLine.x <= column)
-            {
-                float content = Mathf.Max(oneLine.x, _nameWidth + swatch);
-                _cardWidth = Mathf.Ceil(TextX + content + ShrunkRightPadDp);
-            }
-
+            float lines = oneLine.x <= column ? oneLine.x : WidestLine(column);
+            float content = Mathf.Max(lines, _nameWidth + swatch);
+            _cardWidth = Mathf.Ceil(TextX + content + ShrunkRightPadDp);
             _tagHeight = Mathf.Max(17f * s, Mathf.Ceil(tagHeight));
             _height = Mathf.Max(HeightDp * s, Block() + (2f * PadDp * s));
             return _height;
@@ -296,20 +302,19 @@ namespace AF.UI
         /// La tarjeta como placa de una línea (<see cref="OnPlate"/>) [P], para los tableros en que no cabe ni en la franja del
         /// panorama ni sobre el muelle (los de 3 filas, como el 111 y el 201: a 360 × 780 dp la franja mide −8 dp y el muelle 19,5):
         /// clavada al marco bajo el HUD, como la placa del rótulo del lugar (<see cref="StopLabel"/>; FX4), con el icono de la
-        /// fruta, la frase (que ya empieza por el nombre del tinte, 06 §4.5; el nombre suelto no va) y la muestra del tinte en una
-        /// línea, de <see cref="PlateTagSp"/> sp que se encogen hasta 12 sp (por la escala) para caber entre
-        /// <paramref name="top"/> y <paramref name="maxBottom"/> (dp desde arriba, sin contar el canto) y entre los márgenes del
-        /// lienzo (<see cref="StopLabel.SideDp"/>). Devuelve false si ni a 12 sp cabe: entonces no sale. Mide al colocar, nunca
-        /// por fotograma.
+        /// fruta sobre su disco, la frase (que ya empieza por el nombre del tinte, 06 §4.5; el nombre suelto no va) y la muestra del
+        /// tinte en una línea, de <see cref="PlateTagSp"/> sp que se encogen hasta 12 sp (por la escala) para caber entre
+        /// <paramref name="top"/> y <paramref name="maxBottom"/> (dp desde arriba; <paramref name="maxBottom"/> cuenta el canto) y
+        /// entre los márgenes del lienzo (<see cref="StopLabel.SideDp"/>); si sobra alto, centrada entre los dos. Devuelve false
+        /// si ni a 12 sp cabe: entonces no sale. Mide al colocar, nunca por fotograma.
         /// </summary>
         public bool PlaceAsPlate(float canvasW, string name, string tag, float top, float maxBottom)
         {
             _name.text = name;
-            _tagSource = tag;
             _tag.text = tag;
             OnPlate = true;
             _name.gameObject.SetActive(false);
-            _iconBack.gameObject.SetActive(false);
+            _iconBack.gameObject.SetActive(true); // el disco también en la placa: el icono, a ≥ 3:1 con él (revisión de F5)
             _edge.rectTransform.offsetMin = new Vector2(0f, -StopLabel.PlateEdgeDp);
             _edge.rectTransform.offsetMax = new Vector2(0f, -StopLabel.PlateEdgeDp);
             _tag.textWrappingMode = TextWrappingModes.NoWrap;
@@ -335,10 +340,17 @@ namespace AF.UI
             }
 
             _height = h;
+            float slack = maxBottom - StopLabel.PlateEdgeDp - top - h;
+            if (slack >= 1f)
+            {
+                top += Mathf.Floor(slack * 0.5f); // centrada en el hueco que le dejan el HUD y la fila 1
+            }
+
             float left = Mathf.Round((canvasW - width) * 0.5f);
             UiBuilder.Place(_root, left, top, width, h);
             float x = StopLabel.PlatePadXDp;
-            UiBuilder.Place(_icon.rectTransform, x, 0f, h, h);
+            UiBuilder.Place(_iconBack.rectTransform, x, 0f, h, h);
+            UiBuilder.Place(_icon.rectTransform, x + PlateIconInsetDp, PlateIconInsetDp, h - (2f * PlateIconInsetDp), h - (2f * PlateIconInsetDp));
             x += h + PlateGapDp;
             UiBuilder.Place(_tag.rectTransform, x, -size, line, h + (2f * size)); // la caja de línea sobresale; la tinta, centrada
             x += line + PlateGapDp;
@@ -350,22 +362,25 @@ namespace AF.UI
         /// <summary>
         /// Muestra la tarjeta del tinte <paramref name="tint"/> (índice de motor) el tiempo de leerla:
         /// <see cref="NoticeTiming.ReadMs(string, string, string)"/> con el nombre y la frase (D-011, punto 2; en la placa, solo
-        /// la frase, que es lo que se lee). Sin el icono o la muestra (null), su sitio queda vacío. El disco toma el color que da
-        /// más contraste al icono del tinte (<see cref="DiscFor"/> con <see cref="ProceduralArt.FruitIconLuminance"/>).
+        /// la frase, que es lo que se lee). Sin el icono o la muestra (null), su sitio queda vacío. El disco, en la tarjeta y en la
+        /// placa, toma el color que da contraste a la silueta del icono del tinte (<see cref="DiscFor"/> con
+        /// <see cref="ProceduralArt.FruitIconEdgeLuminance"/>).
         /// </summary>
         public void Show(int tint, Sprite? icon, Sprite? swatch)
         {
-            int ms = NoticeTiming.ReadMs(OnPlate ? null : _name.text, _tagSource, null);
+            int ms = NoticeTiming.ReadMs(OnPlate ? null : _name.text, _tag.text, null);
             Tint = tint;
             _icon.sprite = icon;
             _icon.enabled = icon != null;
-            _iconBack.enabled = icon != null && !OnPlate;
+            _iconBack.enabled = icon != null;
             IconDiscContrast = 0f;
             IconLuminance = 0f;
+            IconMeanLuminance = 0f;
             if (icon != null && tint > 0)
             {
-                float lum = _art.FruitIconLuminance(tint);
+                float lum = _art.FruitIconEdgeLuminance(tint);
                 IconLuminance = lum;
+                IconMeanLuminance = _art.FruitIconLuminance(tint);
                 Color disc = DiscFor(lum);
                 _iconBack.color = disc;
                 IconDiscContrast = Contrast(lum, ColorMath.RelativeLuminance(disc));
@@ -403,9 +418,9 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Color del disco para un icono de luminancia relativa media <paramref name="iconLuminance"/>: el primero de
-        /// <see cref="DiscColors"/> que llega a <see cref="IconDiscContrastMin"/> con él (la crema, salvo las frutas claras) o, si
-        /// ninguno llega (iconos de tono medio, que se separan con su contorno), el de más contraste.
+        /// Color del disco para un icono cuya silueta tiene la luminancia relativa <paramref name="iconLuminance"/>: el primero de
+        /// <see cref="DiscColors"/> que llega a <see cref="IconDiscContrastMin"/> con él (la crema, salvo las siluetas claras) o, si
+        /// ninguno llega (siluetas de tono medio, que se separan con su contorno), el de más contraste.
         /// </summary>
         public static Color DiscFor(float iconLuminance)
         {
@@ -447,27 +462,6 @@ namespace AF.UI
             graphics.Add(_tag);
         }
 
-        // La frase sin una palabra sola en su última línea (con el ancho column y el alto height que ya midió): si sin su última
-        // palabra ocupa una línea menos, esa palabra iba sola; entonces el último espacio pasa a espacio duro y baja con la
-        // anterior, siempre que el alto no crezca. Con menos de tres palabras, o si no mejora, la deja como está (la misma cadena).
-        private string WithoutWidow(string tag, float column, float height)
-        {
-            int last = tag.LastIndexOf(' ');
-            if (last <= 0 || last >= tag.Length - 1 || tag.LastIndexOf(' ', last - 1) <= 0)
-            {
-                return tag;
-            }
-
-            string head = tag.Substring(0, last);
-            if (_tag.GetPreferredValues(head, column, float.PositiveInfinity).y >= height - 0.5f)
-            {
-                return tag; // la última palabra no va sola
-            }
-
-            string kept = head + NoBreakSpace + tag.Substring(last + 1);
-            return _tag.GetPreferredValues(kept, column, float.PositiveInfinity).y <= height + 0.5f ? kept : tag;
-        }
-
         // Alto del bloque de texto: la fila del nombre, el aire y la frase.
         private float Block()
         {
@@ -502,6 +496,31 @@ namespace AF.UI
         private static float PreferredWidth(TextMeshProUGUI text)
         {
             return string.IsNullOrEmpty(text.text) ? 0f : Mathf.Ceil(text.GetPreferredValues(text.text, float.PositiveInfinity, float.PositiveInfinity).x);
+        }
+
+        // Ancho de la línea más ancha de la frase cortada en la columna de column dp, como la corta TextMeshPro (del principio de
+        // su primer carácter visible al avance tras el último), con 1 dp de holgura del redondeo. Pone la caja de la frase a ese
+        // ancho para cortarla; Place la vuelve a colocar. Solo al medir, nunca por fotograma.
+        private float WidestLine(float column)
+        {
+            RectTransform rt = _tag.rectTransform;
+            rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Horizontal, column);
+            rt.SetSizeWithCurrentAnchors(RectTransform.Axis.Vertical, 1000f);
+            TMP_TextInfo info = _tag.GetTextInfo(_tag.text); // con la tarjeta oculta: ForceMeshUpdate no genera sin lienzo activo
+            float widest = 0f;
+            for (int i = 0; i < info.lineCount; i++)
+            {
+                TMP_LineInfo line = info.lineInfo[i];
+                if (line.visibleCharacterCount <= 0)
+                {
+                    continue;
+                }
+
+                float w = info.characterInfo[line.lastVisibleCharacterIndex].xAdvance - info.characterInfo[line.firstVisibleCharacterIndex].origin;
+                widest = Mathf.Max(widest, w);
+            }
+
+            return widest > 0f ? Mathf.Min(column, Mathf.Ceil(widest) + 1f) : column;
         }
 
         private static float TextWidth(float canvasW)

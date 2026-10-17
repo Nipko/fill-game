@@ -273,12 +273,18 @@ namespace AF.Tests.EditMode
                 string tint = SightingRule.FruitDebutTints[i];
                 Assert.That(SightingRule.FruitTagKey(i), Is.EqualTo("fact." + tint + ".tag"), "08 §4.7");
                 Assert.That(SightingRule.FruitNameKey(i), Is.EqualTo("tint." + tint + ".name"), "08 §4.7");
+
+                // Las mismas claves que arma FactCatalog para la serie del tinte (TagKey y NameKey): si cambia su forma allí, este
+                // test lo dice (revisión de F5: SightingRule las prepara aparte para no asignar memoria al consultarlas).
+                var series = new FactSeries(tint, FactSeriesKind.Tint, 1, 1, 1);
+                Assert.That(SightingRule.FruitTagKey(i), Is.EqualTo(series.TagKey), tint + ": FactSeries.TagKey");
+                Assert.That(SightingRule.FruitNameKey(i), Is.EqualTo(series.NameKey), tint + ": FactSeries.NameKey");
                 Assert.That(Loc.Has(SightingRule.FruitTagKey(i)), Is.True, tint + ": frase de «Fruta nueva» en facts.csv");
                 Assert.That(Loc.Has(SightingRule.FruitNameKey(i)), Is.True, tint + ": nombre visible en facts.csv");
                 Assert.That(Loc.Fact(SightingRule.FruitTagKey(i)), Is.Not.Empty, tint);
             }
 
-            Assert.That(Loc.Fact(SightingRule.FruitTagKey(SightingRule.FruitNewAt(2, true))), Is.EqualTo("Taperebá: la ciruela de los tapires"));
+            Assert.That(Loc.Fact(SightingRule.FruitTagKey(SightingRule.FruitNewAt(2, true))), Is.EqualTo("Taperebá: la ciruela de los\u00A0tapires"), "con su espacio duro (facts.csv)");
             Assert.That(Loc.Fact(SightingRule.FruitNameKey(SightingRule.FruitNewAt(2, true))), Is.EqualTo("Taperebá"));
         }
 

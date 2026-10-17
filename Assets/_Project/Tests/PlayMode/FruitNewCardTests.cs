@@ -23,10 +23,12 @@ namespace AF.Tests.PlayMode
     /// capturar toques, apartando las etiquetas del HUD y con su sonda <c>AF_STATE fruit_new</c>; sale en el estreno de cada
     /// tinte de 1-300 (2, 4, 7, 11, 21, 41, 61, 81, 111, 141 y 201) con su tinte y como mucho una tarjeta por nivel (ni el
     /// miquito ni el rótulo); no sale en el 1 (tutorial), en el 3, al reintentar ni apagada; ningún texto de las dos tarjetas de
-    /// la familia («Fruta nueva» y «¡Miquito a la vista!») baja de 12 sp, al 100 y al 130 %; la frase nunca deja una palabra
-    /// sola en su última línea; el icono, sobre un disco con el que llega a 3:1 si alguno de los de la tarjeta llega; en los
-    /// tableros de 3 filas (111 y 201) a 780 y 640 dp, al 100 y al 130 %, la placa sale a ≥ 12 sp o, si no cabe, su sonda lo dice
-    /// (<c>mode</c> none); no tapa cuias, bandeja ni burbujas; y sin asignaciones por fotograma con la tarjeta a la vista.
+    /// la familia («Fruta nueva» y «¡Miquito a la vista!») baja de 12 sp, al 100 y al 130 %; la frase, tal como está en la tabla,
+    /// nunca deja una palabra sola en su última línea; la tarjeta se encoge a su texto (también con la frase en dos líneas); la
+    /// silueta del icono, sobre un disco con el que llega a 3:1 si alguno de los de la tarjeta llega, también en la placa; en los
+    /// tableros de 3 filas (111 y 201) a 780 y 640 dp, al 100 y al 130 %, la placa sale a ≥ 12 sp, con 4 dp de aire con el HUD y
+    /// con la fila 1, o, si no cabe, su sonda lo dice (<c>mode</c> none); sobre el muelle, el poste que tapa se funde con ella; no
+    /// tapa cuias, bandeja ni burbujas; y sin asignaciones por fotograma con la tarjeta a la vista.
     /// </summary>
     public sealed class FruitNewCardTests
     {
@@ -73,7 +75,7 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
             StepUntilShown(boot);
             Assert.That(card.Name, Is.EqualTo("Taperebá"), "tint.tapereba.name");
-            Assert.That(card.Tag, Is.EqualTo("Taperebá: la ciruela de los tapires"), "fact.tapereba.tag (06 §4.5)");
+            Assert.That(card.Tag, Is.EqualTo("Taperebá: la ciruela de los\u00A0tapires"), "fact.tapereba.tag (06 §4.5), con su espacio duro");
             Assert.That(card.Tint, Is.EqualTo(FactLine.TintOf("tapereba")));
             Assert.That(card.Icon.enabled && card.Icon.sprite != null, Is.True, "el icono de la fruta");
             Assert.That(card.Swatch.enabled && card.Swatch.sprite != null, Is.True, "la muestra del tinte con su patrón");
@@ -170,10 +172,12 @@ namespace AF.Tests.PlayMode
             Assert.That(card.OnPlate, Is.True, "3 filas: como placa");
             Assert.That(view.FruitNewMode, Is.EqualTo("plate"));
             StringAssert.Contains("\"mode\":\"plate\"", view.LastFruitNewProbe);
-            Assert.That(card.Tag, Is.EqualTo("Lulo: el naranja peludo de pulpa verde"));
+            Assert.That(card.Tag, Is.EqualTo("Lulo: el naranja peludo de pulpa\u00A0verde"));
             Assert.That(card.DurationMs, Is.EqualTo((float)NoticeTiming.ReadMs(null, card.Tag, null)), "en la placa se lee la frase");
             PlayModeHelpers.Step(boot, 250);
             AssertPlacement(view, "el 111");
+            AssertIconContrast(card, "el 111");
+            Assert.That(card.IconDiscContrast, Is.GreaterThanOrEqualTo(FruitNewCard.IconDiscContrastMin), "el lulo en la placa, sobre su disco a ≥ 3:1");
 
             // Una cuia de la fila 1 bajo la placa.
             BoardLayoutResult l = view.Layout;
@@ -267,11 +271,11 @@ namespace AF.Tests.PlayMode
                 AssertPlacement(view, where);
                 int lines = AssertNoWidow(card, where);
                 AssertIconContrast(card, where);
+                AssertShrunkToItsText(card, where);
                 TestContext.WriteLine(where + ": " + card.Height.ToString("0.0") + " × " + card.Root.rect.width.ToString("0.0") + " dp, "
                     + view.FruitNewMode + ", frase a " + card.Texts[1].fontSize.ToString("0.0") + " dp en " + lines + " línea(s)"
-                    + (card.ShownTag != card.Tag ? " (con espacio duro: «" + card.ShownTag.Replace('\u00A0', '~') + "»)" : string.Empty)
-                    + ", icono Y = " + card.IconLuminance.ToString("0.000") + ", disco " + DiscName(card.DiscColor) + " a "
-                    + card.IconDiscContrast.ToString("0.00") + ":1.");
+                    + ", silueta del icono Y = " + card.IconLuminance.ToString("0.000") + " (media " + card.IconMeanLuminance.ToString("0.000")
+                    + "), disco " + DiscName(card.DiscColor) + " a " + card.IconDiscContrast.ToString("0.00") + ":1.");
                 card.Hide();
             }
 
@@ -341,6 +345,8 @@ namespace AF.Tests.PlayMode
 
                 StringAssert.Contains("\"mode\":\"" + view.FruitNewMode + "\"", probe);
                 AssertPlacement(view, at);
+                AssertIconContrast(card, at);
+                Assert.That(card.IconDiscContrast, Is.GreaterThanOrEqualTo(FruitNewCard.IconDiscContrastMin), at + ": icono/disco ≥ 3:1");
                 foreach (TextMeshProUGUI t in card.Texts)
                 {
                     if (t.gameObject.activeInHierarchy)
@@ -370,6 +376,43 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator OnTheDock_TheRopePostItCovers_FadesWithTheCard()
+        {
+            // El 4 al 130 % a 360 × 780 dp (f5_12): la frase en dos líneas no cabe en la franja y la tarjeta va sobre el muelle,
+            // encima del poste. Revisión de F5: el poste cortado que asomaba bajo el canto parecía un error de recorte; ahora se
+            // funde con la entrada de la tarjeta, no se ve mientras ella está y vuelve cuando se va.
+            Use(2340, 130);
+            yield return Load(4, false);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            ReachPlaying(boot, 4);
+            RectTransform post = view.DecorRects[0];
+            CanvasRenderer postAlpha = post.GetComponent<Image>().canvasRenderer;
+            Assert.That(post.gameObject.activeInHierarchy, Is.True, "condición del test: el poste en el muelle");
+            Assert.That(postAlpha.GetAlpha(), Is.EqualTo(1f), "antes de la tarjeta");
+            StepUntilShown(boot, 4);
+            Assert.That(view.FruitNewOnDock, Is.True, "condición del test: sobre el muelle");
+            Canvas.ForceUpdateCanvases();
+            RectTransform root = (RectTransform)view.Canvas.transform;
+            Rect card = VictorySetup.CanvasRect(view.FruitNewView.Root, root);
+            card.yMax += FruitNewCard.EdgeDp;
+            Assert.That(card.Overlaps(VictorySetup.CanvasRect(post, root)), Is.True, "condición del test: la tarjeta tapa el poste");
+            PlayModeHelpers.Step(boot, 100);
+            Assert.That(postAlpha.GetAlpha(), Is.EqualTo(1f - view.FruitNewView.Alpha).Within(1e-4f), "a mitad de la entrada, con ella");
+            Assert.That(postAlpha.GetAlpha(), Is.InRange(0.01f, 0.99f));
+            PlayModeHelpers.Step(boot, 300);
+            Assert.That(postAlpha.GetAlpha(), Is.EqualTo(0f), "con la tarjeta a la vista, el poste no se ve");
+            for (int t = 0; t < 8000 && view.FruitNewView.Visible; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(view.FruitNewView.Visible, Is.False);
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(postAlpha.GetAlpha(), Is.EqualTo(1f), "vuelve cuando la tarjeta se va");
+        }
+
+        [UnityTest]
         public IEnumerator NoAllocationsPerFrame_WithTheCardShown()
         {
             yield return Load(7);
@@ -391,7 +434,8 @@ namespace AF.Tests.PlayMode
 
         // ---- Utilidades ----
 
-        // La frase de la tarjeta, sin una palabra sola en su última línea (en la placa va en una). Devuelve sus líneas.
+        // La frase de la tarjeta, tal como está en la tabla (con su espacio duro), sin una palabra sola en su última línea (en la
+        // placa va en una). Devuelve sus líneas.
         private static int AssertNoWidow(FruitNewCard card, string where)
         {
             TextMeshProUGUI tag = card.Texts[1];
@@ -417,27 +461,30 @@ namespace AF.Tests.PlayMode
                 inWord = !gap;
             }
 
-            Assert.That(words, Is.GreaterThanOrEqualTo(2), where + ": la última línea de «" + card.ShownTag + "» no es una palabra sola");
-            Assert.That(card.ShownTag.Replace('\u00A0', ' '), Is.EqualTo(card.Tag), where + ": solo cambia un espacio por uno duro");
+            Assert.That(words, Is.GreaterThanOrEqualTo(2), where + ": la última línea de «" + card.Tag + "» no es una palabra sola");
             return info.lineCount;
         }
 
-        // El icono sobre su disco: si alguno de los discos de la tarjeta llega a 3:1 con él, el elegido llega; si no, es el de más
-        // contraste. Las frutas claras (guanábana, copoazú y huito), siempre a ≥ 3:1. En la placa no hay disco.
+        // La silueta del icono sobre su disco, en la tarjeta y en la placa: si alguno de los discos de la tarjeta llega a 3:1 con
+        // ella, el elegido llega; si no, es el de más contraste. Las frutas claras (guanábana, copoazú y huito), siempre a ≥ 3:1.
+        // El disco, a la vista, detrás del icono y con él dentro.
         private static void AssertIconContrast(FruitNewCard card, string where)
         {
-            if (card.OnPlate)
-            {
-                return;
-            }
-
+            Assert.That(card.DiscShown, Is.True, where + ": el disco bajo el icono" + (card.OnPlate ? ", también en la placa" : string.Empty));
+            Assert.That(card.Disc.GetSiblingIndex(), Is.LessThan(card.Icon.rectTransform.GetSiblingIndex()), where + ": el disco, detrás del icono");
+            Canvas.ForceUpdateCanvases();
+            Rect discBox = VictorySetup.CanvasRect(card.Disc, card.Root);
+            Rect icon = VictorySetup.CanvasRect(card.Icon.rectTransform, card.Root);
+            Assert.That(icon.xMin >= discBox.xMin - 0.05f && icon.xMax <= discBox.xMax + 0.05f && icon.yMin >= discBox.yMin - 0.05f
+                && icon.yMax <= discBox.yMax + 0.05f, Is.True, where + ": el icono " + icon + " dentro de su disco " + discBox);
             float best = 0f;
             foreach (Color disc in FruitNewCard.DiscColors)
             {
                 best = Mathf.Max(best, FruitNewCard.Contrast(card.IconLuminance, ColorMath.RelativeLuminance(disc)));
             }
 
-            Assert.That(card.IconLuminance, Is.GreaterThan(0f).And.LessThanOrEqualTo(1f), where + ": luminancia media del icono");
+            Assert.That(card.IconLuminance, Is.GreaterThan(0f).And.LessThanOrEqualTo(1f), where + ": luminancia de la silueta del icono");
+            Assert.That(card.IconMeanLuminance, Is.GreaterThan(0f).And.LessThanOrEqualTo(1f), where + ": luminancia media del icono");
             Assert.That(card.IconDiscContrast, Is.EqualTo(FruitNewCard.Contrast(card.IconLuminance, ColorMath.RelativeLuminance(card.DiscColor))).Within(1e-4f));
             if (best >= FruitNewCard.IconDiscContrastMin)
             {
@@ -451,6 +498,80 @@ namespace AF.Tests.PlayMode
             if (System.Array.IndexOf(LightFruits, ProceduralArt.TintIds[card.Tint]) >= 0)
             {
                 Assert.That(card.IconDiscContrast, Is.GreaterThanOrEqualTo(FruitNewCard.IconDiscContrastMin), where + ": fruta clara, ≥ 3:1");
+            }
+        }
+
+        // Pie del HUD de arriba (dp desde arriba), medido aparte del juego con los bordes que se ven: el pie de la fila del HUD,
+        // el canto de madera de los discos de la pausa y de Reiniciar (40 dp de cara más el canto de 6 dp, desde lo alto del
+        // disco), la etiqueta de Reiniciar y las píldoras del saldo. Las cajas de los sprites llevan aire transparente y la sombra
+        // difusa alrededor, y no cuentan.
+        private static float HudBottom(GameScreen view, RectTransform root)
+        {
+            float bottom = view.HudBottomDp;
+            foreach (Button disc in new[] { view.PauseButton, view.RestartButton })
+            {
+                if (disc.gameObject.activeInHierarchy)
+                {
+                    Rect visual = VictorySetup.CanvasRect((RectTransform)disc.transform.Find("Visual"), root);
+                    bottom = Mathf.Max(bottom, visual.yMin + 40f + ProceduralArt.ButtonEdgeDp);
+                }
+            }
+
+            if (view.RestartPillRect.gameObject.activeInHierarchy)
+            {
+                bottom = Mathf.Max(bottom, VictorySetup.CanvasRect(view.RestartPillRect, root).yMax);
+            }
+
+            if (view.WalletBar.Visible && view.WalletBar.Compact)
+            {
+                foreach (RectTransform pill in new[] { view.WalletBar.SeedsRect, view.WalletBar.CanoesRect })
+                {
+                    if (pill.gameObject.activeInHierarchy)
+                    {
+                        bottom = Mathf.Max(bottom, VictorySetup.CanvasRect(pill, root).yMax);
+                    }
+                }
+            }
+
+            Assert.That(view.FruitNewPlateHudBottom(), Is.EqualTo(bottom).Within(0.05f), "el pie del HUD que usa el juego");
+            return bottom;
+        }
+
+        // La tarjeta, encogida a su texto (A1; revisión de F5, también con la frase en varias líneas): de su borde derecho a lo
+        // más a la derecha de su texto (la línea más ancha de la frase, o el nombre con su muestra) no hay más que
+        // ShrunkRightPadDp (y la holgura del redondeo), salvo que vaya ya a su ancho máximo. En la placa, no aplica.
+        private static void AssertShrunkToItsText(FruitNewCard card, string where)
+        {
+            if (card.OnPlate)
+            {
+                return;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            TextMeshProUGUI tag = card.Texts[1];
+            tag.ForceMeshUpdate(true, true);
+            TMP_TextInfo info = tag.textInfo;
+            float widest = 0f;
+            for (int i = 0; i < info.lineCount; i++)
+            {
+                TMP_LineInfo line = info.lineInfo[i];
+                if (line.visibleCharacterCount > 0)
+                {
+                    widest = Mathf.Max(widest, info.characterInfo[line.lastVisibleCharacterIndex].xAdvance
+                        - info.characterInfo[line.firstVisibleCharacterIndex].origin);
+                }
+            }
+
+            Rect tagBox = VictorySetup.CanvasRect(tag.rectTransform, card.Root);
+            Rect swatch = VictorySetup.CanvasRect(card.Swatch.rectTransform, card.Root);
+            float textRight = Mathf.Max(tagBox.xMin + widest, swatch.xMax);
+            float width = card.Root.rect.width;
+            float air = width - textRight;
+            Assert.That(air, Is.GreaterThanOrEqualTo(FruitNewCard.ShrunkRightPadDp - 4f - 0.05f), where + ": aire a la derecha del texto");
+            if (width < 320f - 0.5f)
+            {
+                Assert.That(air, Is.LessThanOrEqualTo(FruitNewCard.ShrunkRightPadDp + 2f), where + ": la tarjeta de " + width.ToString("0.0")
+                    + " dp se encoge a su texto (" + info.lineCount + " línea(s), la más ancha de " + widest.ToString("0.0") + " dp)");
             }
         }
 
@@ -553,7 +674,8 @@ namespace AF.Tests.PlayMode
             if (fruit.OnPlate)
             {
                 // La placa (3 filas o, con la escala de texto, donde la tarjeta no cabe), clavada al marco: sobre lo más alto de la
-                // fila 1 en reposo con su aire (como el rótulo, FX4).
+                // fila 1 en reposo (con la tapa: la de la boca, medida aparte) y bajo lo que dibuja el HUD (con sus sombras), con
+                // 4 dp de aire con cada uno (revisión de F5: pegada a la pausa se leía como parte del HUD).
                 float rowOne = float.MaxValue;
                 for (int i = 0; i < view.Views.Length; i++)
                 {
@@ -563,8 +685,14 @@ namespace AF.Tests.PlayMode
                     }
                 }
 
-                Assert.That(card.yMax, Is.LessThanOrEqualTo(rowOne - StopLabel.PlateCuiaGapDp + 0.05f), where + ": la placa " + card
+                rowOne = Mathf.Min(rowOne, view.StopLabelRowOneTop(l));
+                Assert.That(card.yMax, Is.LessThanOrEqualTo(rowOne - FruitNewCard.PlateClearDp + 0.05f), where + ": la placa " + card
                     + " no llega a la fila 1 (" + rowOne.ToString("0.0") + " dp)");
+                float hud = HudBottom(view, root);
+                Assert.That(card.yMin, Is.GreaterThanOrEqualTo(hud + FruitNewCard.PlateClearDp - 0.05f), where + ": la placa " + card
+                    + " deja 4 dp con el HUD (" + hud.ToString("0.0") + " dp)");
+                TestContext.WriteLine(where + ": placa de " + card.yMin.ToString("0.0") + " a " + card.yMax.ToString("0.0") + " dp, HUD hasta "
+                    + hud.ToString("0.0") + " dp y fila 1 desde " + rowOne.ToString("0.0") + " dp.");
             }
             else
             {
