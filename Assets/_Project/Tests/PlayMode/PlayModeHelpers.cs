@@ -120,12 +120,20 @@ namespace AF.Tests.PlayMode
         }
 
         // Sin idioma del teléfono fijado por el test, uno vacío (ManualDeviceLocale): los textos y las cifras no dependen de la
-        // cultura del equipo (tarea L3; el idioma automático da es-419 y las cifras, es-CO).
+        // cultura del equipo (tarea L3; el idioma automático da es-419 y las cifras, es-CO). Sin pantalla de arranque (TI6d)
+        // salvo que el test la encienda (BootSplash.EnabledOverride = true; BootSplashTests la vuelve a null en su TearDown):
+        // los tests que no tratan de ella arrancan como antes de que existiera, todo en el Start, sin fotogramas de más ni el
+        // segundo de sloth_wake de la primera apertura.
         private static IEnumerator LoadScene()
         {
             if (LaunchOptions.DeviceLocaleOverride == null)
             {
                 LaunchOptions.DeviceLocaleOverride = new AF.Platform.ManualDeviceLocale(string.Empty);
+            }
+
+            if (BootSplash.EnabledOverride == null)
+            {
+                BootSplash.EnabledOverride = false;
             }
 
 #if UNITY_EDITOR
