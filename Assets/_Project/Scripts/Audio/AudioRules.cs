@@ -185,6 +185,13 @@ namespace AF.Audio
         /// <summary>Lo que dura la atenuación por la toada (ms): su largo (2,25 s).</summary>
         public const float ToadaDuckMs = 2250f;
 
+        /// <summary>
+        /// Ganancia de un remate sobre su pico de −16 dBFS (dB; tarea AU3) [P]: queda hacia −24 dBFS, por debajo de los efectos que
+        /// acompaña (la piha a −14, la llegada a −21, la tarjeta previa a −20 y la canoa perdida a −21; encargo de sonidos §8:
+        /// «siempre bajo los efectos»).
+        /// </summary>
+        public const float StingerGainDb = -8f;
+
         private float _adFade = 1f;
         private float _toadaLeftMs;
         private FaunaClock _fauna;
@@ -217,6 +224,15 @@ namespace AF.Audio
 
         /// <summary>Ganancia de la música (0-1), con la atenuación de la toada y de los modales.</summary>
         public float MusicGain => MusicAudible ? _adFade * (Ducked ? DuckGain : 1f) : 0f;
+
+        /// <summary>
+        /// Ganancia de un remate (0-1; tarea AU3): va con el ajuste Música [P], con el fundido tras un anuncio y sin la atenuación
+        /// del lecho, a <see cref="StingerGainDb"/>.
+        /// </summary>
+        public float StingerGain => MusicAudible ? _adFade * (float)AudioAnalysis.FromDb(StingerGainDb) : 0f;
+
+        /// <summary>Lo que le queda a la toada de la victoria (ms; 0 si no suena): los remates esperan a que termine (tarea AU3).</summary>
+        public float ToadaLeftMs => _toadaLeftMs;
 
         /// <summary>El lecho está atenuado.</summary>
         public bool Ducked => ModalDuck || _toadaLeftMs > 0f;
@@ -302,6 +318,21 @@ namespace AF.Audio
             }
 
             return _fauna.Advance(dtMs, out id);
+        }
+
+        /// <summary>
+        /// Como <see cref="AdvanceFauna(float, out SfxId)"/>, eligiendo entre los <paramref name="choices"/> animales grabados del
+        /// mundo (tarea AU3): true si toca uno (<paramref name="pick"/>).
+        /// </summary>
+        public bool AdvanceFauna(float dtMs, int choices, out int pick)
+        {
+            if (AdActive || AmbientWorld == 0)
+            {
+                pick = 0;
+                return false;
+            }
+
+            return _fauna.Advance(dtMs, choices, out pick);
         }
 
         /// <summary>

@@ -20,6 +20,9 @@ namespace AF.Audio
 
         /// <summary>Un animal del ambiente (<see cref="AudioEvent.Sfx"/>; tarea AU2).</summary>
         Fauna = 4,
+
+        /// <summary>Un remate musical (<see cref="AudioEvent.Stinger"/>; tarea AU3).</summary>
+        Stinger = 5,
     }
 
     /// <summary>Un evento de <see cref="FakeAudioService"/>: qué se pidió y si se habría oído (o sentido) con los ajustes de ese momento.</summary>
@@ -33,6 +36,18 @@ namespace AF.Audio
             Tint = tint;
             Haptic = haptic;
             Audible = audible;
+            Stinger = default;
+        }
+
+        /// <summary>Crea el evento de un remate (tarea AU3).</summary>
+        public AudioEvent(StingerId stinger, bool audible)
+        {
+            Kind = AudioEventKind.Stinger;
+            Sfx = default;
+            Tint = 0;
+            Haptic = default;
+            Audible = audible;
+            Stinger = stinger;
         }
 
         /// <summary>Tipo.</summary>
@@ -50,12 +65,16 @@ namespace AF.Audio
         /// <summary>Se habría oído (efecto o chorro) o sentido (háptico).</summary>
         public bool Audible { get; }
 
+        /// <summary>El remate (con <see cref="AudioEventKind.Stinger"/>).</summary>
+        public StingerId Stinger { get; }
+
         /// <inheritdoc />
         public override string ToString()
         {
             string what = Kind == AudioEventKind.Haptic ? Haptics.Name(Haptic)
                 : Kind == AudioEventKind.Sfx ? SfxCatalog.Name(Sfx)
-                : Kind == AudioEventKind.Fauna ? "fauna:" + SfxCatalog.Name(Sfx) : Kind.ToString();
+                : Kind == AudioEventKind.Fauna ? "fauna:" + SfxCatalog.Name(Sfx)
+                : Kind == AudioEventKind.Stinger ? "sting:" + Stinger : Kind.ToString();
             return what + (Tint != 0 ? "#" + Tint : string.Empty) + (Audible ? string.Empty : " (mudo)");
         }
     }
@@ -150,6 +169,22 @@ namespace AF.Audio
             {
                 AudioEvent e = _events[i];
                 if (e.Kind == AudioEventKind.Sfx && e.Sfx == id && (!audibleOnly || e.Audible))
+                {
+                    n++;
+                }
+            }
+
+            return n;
+        }
+
+        /// <summary>Veces que se pidió (o, con <paramref name="audibleOnly"/>, que se habría oído) el remate <paramref name="id"/>.</summary>
+        public int StingerCount(StingerId id, bool audibleOnly)
+        {
+            int n = 0;
+            for (int i = 0; i < _events.Count; i++)
+            {
+                AudioEvent e = _events[i];
+                if (e.Kind == AudioEventKind.Stinger && e.Stinger == id && (!audibleOnly || e.Audible))
                 {
                     n++;
                 }
@@ -266,7 +301,13 @@ namespace AF.Audio
             Mix.SetAmbient(world, rain, level);
             AmbientLevel = level;
             AmbientRequests++;
-            Probe?.Ambient(Mix.AmbientWorld, Mix.AmbientRain, level);
+            Probe?.Ambient(Mix.AmbientWorld, Mix.AmbientRain, level, string.Empty, string.Empty);
+        }
+
+        /// <inheritdoc />
+        public void PlayStinger(StingerId id)
+        {
+            _events.Add(new AudioEvent(id, Mix.MusicAudible));
         }
 
         /// <inheritdoc />
@@ -285,7 +326,7 @@ namespace AF.Audio
         {
             if (Probe != null && Mix.TakeMusicReport(out MusicReport report))
             {
-                Probe.Music(report);
+                Probe.Music(report, string.Empty);
             }
         }
     }

@@ -181,6 +181,7 @@ namespace AF.Tests.PlayMode
         {
             AudioCues.Override = null;
             _real = UnityAudioService.Ensure();
+            _real.UseClips(null); // el respaldo por código de AU2 (el servicio pudo quedar de un test con la escena y sus clips)
             _real.Probe = null;
             _real.Configure(SoundSettings.Defaults);
             _real.SetModalDuck(false);
@@ -246,6 +247,7 @@ namespace AF.Tests.PlayMode
         {
             AudioCues.Override = null;
             _real = UnityAudioService.Ensure();
+            _real.UseClips(null); // el respaldo por código de AU2 (el servicio pudo quedar de un test con la escena y sus clips)
             _real.Probe = null;
             _real.Configure(SoundSettings.Defaults);
             _real.SetModalDuck(false);
@@ -295,6 +297,7 @@ namespace AF.Tests.PlayMode
         {
             AudioCues.Override = null;
             _real = UnityAudioService.Ensure();
+            _real.UseClips(null); // el respaldo por código de AU2 (el servicio pudo quedar de un test con la escena y sus clips)
             _real.Probe = null;
             _real.Configure(SoundSettings.Defaults);
             _real.SetModalDuck(false);
@@ -410,7 +413,7 @@ namespace AF.Tests.PlayMode
 
             public int LastAmbientWorld { get; private set; } = -1;
 
-            public void Sfx(string id, float gainDb, int tint)
+            public void Sfx(string id, float gainDb, int tint, bool clip)
             {
             }
 
@@ -422,12 +425,12 @@ namespace AF.Tests.PlayMode
             {
             }
 
-            void IAudioProbe.Music(in MusicReport report)
+            void IAudioProbe.Music(in MusicReport report, string clip)
             {
                 Music.Add(report);
             }
 
-            public void Ambient(int world, bool rain, int level)
+            public void Ambient(int world, bool rain, int level, string waterClip, string rainClip)
             {
                 LastAmbientWorld = world;
             }

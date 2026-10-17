@@ -4,7 +4,9 @@
   "references": [
     "Unity.TextMeshPro",
     "AF.Presentation",
-    "AF.Localization"
+    "AF.Localization",
+    "AF.Audio",
+    "AF.Audio.Unity"
   ],
   "includePlatforms": [
     "Editor"

@@ -99,6 +99,7 @@ namespace AF.UI
             if (strip.Stop != null)
             {
                 AF.Audio.AudioCues.Play(AF.Audio.SfxId.Fact); // AU1: llegada a la parada (la línea de fruta va sin sonido, D-017)
+                AF.Audio.AudioCues.Stinger(AF.Audio.StingerId.Arrival); // AU3: su remate, después de la toada
             }
 
             _probe.Arrival("start", strip, _slot.ContentDp);

@@ -1370,6 +1370,11 @@ namespace AF.UI
                     break;
 
                 case FlowPhase.LevelFailed:
+                    if (!_failed.Visible && !_noCanoes.Visible)
+                    {
+                        AF.Audio.AudioCues.Stinger(AF.Audio.StingerId.LevelFailed); // AU3: el remate, una vez al abrirse (no al volver de Sin canoas)
+                    }
+
                     ShowFunnelBackdrop();
                     _giveUp.Hide();
                     _noCanoes.Hide();

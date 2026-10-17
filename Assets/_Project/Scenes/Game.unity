@@ -119,7 +119,7 @@ NavMeshSettings:
     debug:
       m_Flags: 0
   m_NavMeshData: {fileID: 0}
---- !u!1 &452997416
+--- !u!1 &382563484
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -127,65 +127,8 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 452997418}
-  - component: {fileID: 452997417}
-  m_Layer: 0
-  m_Name: GameBootstrap
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &452997417
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 452997416}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 17ad91b0fbf16ef46b38de9ac0465128, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: AF.UI::AF.UI.GameBootstrap
-  levelPack: {fileID: 4900000, guid: 961393508034dd0418fafcb0d5cc7453, type: 3}
-  extraLevelPacks:
-  - {fileID: 4900000, guid: 622bd2353a0c56949880dbf47acca73b, type: 3}
-  - {fileID: 4900000, guid: 6ee7c9c35ddf677449606a5295f0b149, type: 3}
-  - {fileID: 4900000, guid: fe265eae8d67ea84faea79f1d307d7d1, type: 3}
-  - {fileID: 4900000, guid: 5e91e2b2b94330c4db56113ee08eb16a, type: 3}
-  - {fileID: 4900000, guid: 1c32e22baffd712489a01e9797eacfe3, type: 3}
-  faunaCatalog: {fileID: 4900000, guid: 7e15ada5e25632a4290d02540eba6ca8, type: 3}
-  riverStops: {fileID: 4900000, guid: 0ebf91910d3ca6542ab0eaed663d8157, type: 3}
-  riverMap: {fileID: 4900000, guid: 041db32ff8dcc6449aaf6c6504019ada, type: 3}
-  fruitCalendar: {fileID: 4900000, guid: b10da2e1eecda2a4184a2d50bb094916, type: 3}
-  stringsTable: {fileID: 4900000, guid: 6f5a537a7f41abb4097ddc5c05466eda, type: 3}
-  factsTable: {fileID: 4900000, guid: cd2bff306e218e4409459aa2f540e853, type: 3}
---- !u!4 &452997418
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 452997416}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &532760064
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 532760066}
-  - component: {fileID: 532760065}
+  - component: {fileID: 382563486}
+  - component: {fileID: 382563485}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -193,13 +136,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!20 &532760065
+--- !u!20 &382563485
 Camera:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 532760064}
+  m_GameObject: {fileID: 382563484}
   m_Enabled: 1
   serializedVersion: 2
   m_ClearFlags: 2
@@ -244,13 +187,13 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!4 &532760066
+--- !u!4 &382563486
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 532760064}
+  m_GameObject: {fileID: 382563484}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: -10}
@@ -259,7 +202,7 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &888452396
+--- !u!1 &468942381
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -267,9 +210,67 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 888452399}
-  - component: {fileID: 888452398}
-  - component: {fileID: 888452397}
+  - component: {fileID: 468942383}
+  - component: {fileID: 468942382}
+  m_Layer: 0
+  m_Name: GameBootstrap
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &468942382
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 468942381}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 17ad91b0fbf16ef46b38de9ac0465128, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: AF.UI::AF.UI.GameBootstrap
+  audioClips: {fileID: 11400000, guid: c7b83b6fb310014418b00a3385faa35d, type: 2}
+  levelPack: {fileID: 4900000, guid: 961393508034dd0418fafcb0d5cc7453, type: 3}
+  extraLevelPacks:
+  - {fileID: 4900000, guid: 622bd2353a0c56949880dbf47acca73b, type: 3}
+  - {fileID: 4900000, guid: 6ee7c9c35ddf677449606a5295f0b149, type: 3}
+  - {fileID: 4900000, guid: fe265eae8d67ea84faea79f1d307d7d1, type: 3}
+  - {fileID: 4900000, guid: 5e91e2b2b94330c4db56113ee08eb16a, type: 3}
+  - {fileID: 4900000, guid: 1c32e22baffd712489a01e9797eacfe3, type: 3}
+  faunaCatalog: {fileID: 4900000, guid: 7e15ada5e25632a4290d02540eba6ca8, type: 3}
+  riverStops: {fileID: 4900000, guid: 0ebf91910d3ca6542ab0eaed663d8157, type: 3}
+  riverMap: {fileID: 4900000, guid: 041db32ff8dcc6449aaf6c6504019ada, type: 3}
+  fruitCalendar: {fileID: 4900000, guid: b10da2e1eecda2a4184a2d50bb094916, type: 3}
+  stringsTable: {fileID: 4900000, guid: 6f5a537a7f41abb4097ddc5c05466eda, type: 3}
+  factsTable: {fileID: 4900000, guid: cd2bff306e218e4409459aa2f540e853, type: 3}
+--- !u!4 &468942383
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 468942381}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2058010484
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2058010487}
+  - component: {fileID: 2058010486}
+  - component: {fileID: 2058010485}
   m_Layer: 0
   m_Name: EventSystem
   m_TagString: Untagged
@@ -277,13 +278,13 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &888452397
+--- !u!114 &2058010485
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 888452396}
+  m_GameObject: {fileID: 2058010484}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 01614664b831546d2ae94a42149d80ac, type: 3}
@@ -308,13 +309,13 @@ MonoBehaviour:
   m_PointerBehavior: 0
   m_CursorLockBehavior: 0
   m_ScrollDeltaPerTick: 6
---- !u!114 &888452398
+--- !u!114 &2058010486
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 888452396}
+  m_GameObject: {fileID: 2058010484}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
@@ -323,13 +324,13 @@ MonoBehaviour:
   m_FirstSelected: {fileID: 0}
   m_sendNavigationEvents: 1
   m_DragThreshold: 10
---- !u!4 &888452399
+--- !u!4 &2058010487
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 888452396}
+  m_GameObject: {fileID: 2058010484}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
@@ -342,6 +343,6 @@ Transform:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
-  - {fileID: 532760066}
-  - {fileID: 888452399}
-  - {fileID: 452997418}
+  - {fileID: 382563486}
+  - {fileID: 2058010487}
+  - {fileID: 468942383}

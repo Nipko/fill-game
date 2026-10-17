@@ -323,13 +323,14 @@ namespace AF.Tests.EditMode
         public void Probe_WritesSfxAndHapticLines_OnlyOutsideTheEditorUnlessAsked()
         {
             var probe = new AF.UI.DevProbe();
-            probe.Sfx("sfx_select", -36f, 4);
+            probe.Sfx("sfx_select", -36f, 4, true);
             Assert.That(probe.LastSfxLine, Is.Null, "en el Editor no escribe una línea por efecto (sin asignaciones en el bucle)");
             try
             {
                 AF.UI.DevProbe.AudioLinesInEditor = true;
-                probe.Sfx("sfx_select", -36f, 4);
-                probe.Sfx("sfx_seal", -17f, 0);
+                probe.Sfx("sfx_select", -36f, 4, true);
+                StringAssert.EndsWith(",\"tint\":4,\"src\":\"clip\"}", probe.LastSfxLine, "AU3: de dónde sale el sonido");
+                probe.Sfx("sfx_seal", -17f, 0, false);
                 probe.Haptic("haptic_seal");
             }
             finally
@@ -338,7 +339,7 @@ namespace AF.Tests.EditMode
             }
 
             StringAssert.StartsWith("AF_STATE {\"event\":\"sfx\",\"t\":", probe.LastSfxLine);
-            StringAssert.EndsWith(",\"id\":\"sfx_seal\",\"gain_db\":-17.0}", probe.LastSfxLine, "sin fruta, sin tint");
+            StringAssert.EndsWith(",\"id\":\"sfx_seal\",\"gain_db\":-17.0,\"src\":\"synth\"}", probe.LastSfxLine, "sin fruta, sin tint; del respaldo por código");
             StringAssert.StartsWith("AF_STATE {\"event\":\"haptic\",\"t\":", probe.LastHapticLine);
             StringAssert.EndsWith(",\"kind\":\"haptic_seal\"}", probe.LastHapticLine);
         }

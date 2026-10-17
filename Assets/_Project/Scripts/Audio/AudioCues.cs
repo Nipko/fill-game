@@ -49,6 +49,12 @@ namespace AF.Audio
         /// </summary>
         void SetAmbient(int world, bool rain, int level);
 
+        /// <summary>
+        /// Suena el remate <paramref name="id"/> (tarea AU3): bajo los efectos, con el ajuste Música y nunca encima de la toada
+        /// (si suena, espera a que termine). Sin clip grabado, no suena nada.
+        /// </summary>
+        void PlayStinger(StingerId id);
+
         /// <summary>Lo de cada fotograma (fundidos, sondeo del modo silencio).</summary>
         void Tick(float dtMs);
     }
@@ -83,8 +89,11 @@ namespace AF.Audio
     /// <summary>Sonda de desarrollo del audio (la implementa <c>AF.UI.DevProbe</c>): <c>AF_STATE sfx</c> y <c>AF_STATE haptic</c>.</summary>
     public interface IAudioProbe
     {
-        /// <summary>Sonó <paramref name="id"/> con un pico de <paramref name="gainDb"/> dBFS (afinado a <paramref name="tint"/>).</summary>
-        void Sfx(string id, float gainDb, int tint);
+        /// <summary>
+        /// Sonó <paramref name="id"/> con un pico de <paramref name="gainDb"/> dBFS (afinado a <paramref name="tint"/>), desde el clip
+        /// grabado (<paramref name="clip"/>; tarea AU3) o desde el audio por código de respaldo.
+        /// </summary>
+        void Sfx(string id, float gainDb, int tint, bool clip);
 
         /// <summary>Vibró <paramref name="kind"/> (<c>haptic_seal</c>…).</summary>
         void Haptic(string kind);
@@ -97,12 +106,18 @@ namespace AF.Audio
 
         /// <summary>
         /// Cambió la música (<c>AF_STATE music</c>, tarea AU2): mundo del lecho (0 = ninguno), capas de percusión, variante
-        /// nocturna, atenuación de 6 dB y tema de menú.
+        /// nocturna, atenuación de 6 dB y tema de menú; y, desde AU3, el id del clip del lecho o del tema de menú que suena
+        /// (<paramref name="clip"/>: <c>mus_w03_bed</c>, <c>mus_menu</c>…, <see cref="AudioProbeIds.Synth"/> con el respaldo por
+        /// código y vacío sin música).
         /// </summary>
-        void Music(in MusicReport report);
+        void Music(in MusicReport report, string clip);
 
-        /// <summary>Se pidió el ambiente de un nivel (<c>AF_STATE ambient</c>, tarea AU2): su mundo (0 = ninguno) y si llueve.</summary>
-        void Ambient(int world, bool rain, int level);
+        /// <summary>
+        /// Se pidió el ambiente de un nivel (<c>AF_STATE ambient</c>, tarea AU2): su mundo (0 = ninguno) y si llueve; desde AU3,
+        /// el id del clip del agua (<paramref name="waterClip"/>) y de la lluvia (<paramref name="rainClip"/>), con
+        /// <see cref="AudioProbeIds.Synth"/> para el respaldo por código y vacío si no hay.
+        /// </summary>
+        void Ambient(int world, bool rain, int level, string waterClip, string rainClip);
     }
 
     /// <summary>Servicio mudo: el de partida, antes de que el arranque instale uno (y el de los tests que no miran el audio).</summary>
@@ -171,9 +186,21 @@ namespace AF.Audio
         }
 
         /// <inheritdoc />
+        public void PlayStinger(StingerId id)
+        {
+        }
+
+        /// <inheritdoc />
         public void Tick(float dtMs)
         {
         }
+    }
+
+    /// <summary>Valores fijos de la sonda del audio (tarea AU3), sin asignar.</summary>
+    public static class AudioProbeIds
+    {
+        /// <summary>El clip del campo <c>clip</c> sale del audio por código de respaldo (no hay WAV para él).</summary>
+        public const string Synth = "synth";
     }
 
     /// <summary>
@@ -314,6 +341,16 @@ namespace AF.Audio
         public static void LevelAmbient(int world, int level)
         {
             s_service.SetAmbient(world, AmbientPlan.HasRain(level, world, AudioConfig.AmbientRainScale), level);
+        }
+
+        /// <summary>
+        /// Remate musical <paramref name="id"/> (tarea AU3; encargo de sonidos §8): una línea junto al efecto del mismo momento
+        /// (banner de mundo, llegada a la parada, tarjeta previa, Nivel fallido). Suena bajo los efectos y nunca encima de la
+        /// toada; no cuenta en <see cref="Serial"/> (no sustituye al sonido de un botón).
+        /// </summary>
+        public static void Stinger(StingerId id)
+        {
+            s_service.PlayStinger(id);
         }
 
         /// <summary>Se abre el inicio (o una pantalla fuera del nivel): el tema de menú, sin ambiente de río (tarea AU2).</summary>

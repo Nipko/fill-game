@@ -232,9 +232,43 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
 
 **Mientras tanto:** desde el 2026-10-16 (D-026, tarea AU1) el juego ya suena con sonidos provisionales hechos por código, con los mismos algoritmos del laboratorio interactivo `docs/audio/laboratorio-sonidos.html` y los arreglos de su revisión (sección 9). Los sonidos definitivos sustituyen a los provisionales sin tocar los ganchos del código.
 
-## 9. Estado en el cliente: audio provisional por código (D-026, tarea AU1)
+## 9. Estado en el cliente: audio definitivo de la entrega 1 (tarea AU3) con el audio por código de respaldo (D-026, AU1-AU2)
 
-Desde el 2026-10-16 el juego suena con los 61 efectos del laboratorio, portados 1:1 a C# (`AF.Audio`, sin motor) y generados al arrancar en un hilo de trabajo (0 MB en el AAB). Todos son **provisionales por código**, también la piha y el boto, que el laboratorio llamaba «reales»: las grabaciones con licencia llegan después (07 §9.5) y los sustituyen sin tocar los ganchos.
+**Desde el 2026-10-17 (tarea AU3), el juego suena con los 173 WAV de la entrega 1** (`Assets/_Project/Audio/`, con su `audio_manifest.json`; encargo de sonidos §3 y §11). El audio por código de AU1 y AU2 queda solo como respaldo de un id sin clip.
+
+- **Registro de clips:** `Assets/_Project/Audio/AudioClipRegistry.asset`, con los 173 ids de `especificacion-sonidos.json` y su clip. Lo genera el método de Editor `AF.EditorTools.AudioAssetSetup.Apply` (nunca se edita a mano), lo cuelga de la escena `GameSceneBuilder` (en `GameBootstrap`) y no pasa por `Resources`. Cada id tiene una ranura fija (`AF.Audio.AudioClipIds`): los efectos y las notas de fruta usan la misma que el audio por código, así que un id se busca igual en los dos.
+- **Prioridad:** el clip grabado, si existe; si no, el del audio por código. El respaldo solo se genera si falta algún efecto, bucle del chorro o animal grabado (o en los tests sin escena): con la entrega completa no se genera nada y no sale la línea `AF_PERF audio_build`. Los mundos 10-13 no tienen WAV: suenan con el agua y el lecho por código y sin fauna, como en AU2.
+- **Importación** (08 §6; todo con «Load In Background», sin «Normalize» y sin ajustes por plataforma):
+
+  | Clase | Carpetas | Carga | Compresión | Por qué |
+  | --- | --- | --- | --- | --- |
+  | Efectos, notas, bucles del chorro y fauna | `sfx/`, `sfx/fruit/`, `sfx/pour/` y `amb/fauna/` | «Decompress On Load», mono y precargados | Vorbis, calidad 0,8 | ADPCM comprime fijo a unos 3,5:1, con 4 bits por muestra, y su ruido se oye como un siseo sobre los tonos puros que se apagan (las notas de fruta a −36 y −30 dBFS). Vorbis de calidad alta no deja artefactos audibles y pesa menos. Al descomprimirse al cargar, sonar no cuesta CPU |
+  | Agua, lluvia y tema de menú | `amb/` y `music/menu.wav` | «Streaming» | Vorbis, calidad 0,4 | Una sola fuente cada uno, sin sincronía con otras |
+  | Lecho, capas y variante nocturna | `music/wNN_*` | «Compressed In Memory», sin precarga: se cargan al pedir el mundo y se descargan al soltarlo | Vorbis, calidad 0,4 | No van en streaming: las 4 piezas se programan en el mismo instante y tienen que repetirse juntas a la muestra, y el streaming no lo garantiza (cada flujo arranca cuando se llena su búfer y la vuelta del bucle relee del disco) |
+  | Remates | `music/stingers/` | «Compressed In Memory», precargados | Vorbis, calidad 0,4 | Son cortos y suenan sin espera |
+
+  «Normalize» se apaga a propósito: con «Force To Mono», Unity llevaría cada efecto a 0 dBFS y se perdería la mezcla de la entrega (`sfx_select` va a −36 dBFS).
+- **Vertido:** los 4 bucles `sfx_pour_loop_l1..l4` se funden según el nivel de la cuia de destino (`PourLoopSynth.LevelForDoses`: `l1` con 1 dosis … `l4` llena; posición = nivel × 3). Suenan como mucho dos vecinos, con un fundido de potencia constante, y cada uno se afina como mucho ± 2 semitonos alrededor de su punto, así que el tono sube sin escalones. Ya no se acelera hasta 2,4 veces. `sfx_pour_start` y `sfx_pour_end`, como antes.
+- **Notas de fruta:** `sfx_select` y `sfx_tint` suenan con `sfx_select_<fruta>` y `sfx_tint_<fruta>` (14 cada uno) según la fruta de arriba, sin cambio de tono por código. Sin fruta (agua, Barro o una dosis oculta), con el `sfx_select` o `sfx_tint` genérico.
+- **Ambiente:**
+  - el agua del mundo, en bucle;
+  - la lluvia, con la probabilidad del mundo por `audio_ambient_rain_scale`. Su intensidad es fija para cada nivel [P]: `rain_light` en el 50 % de los niveles con lluvia, `rain_medium` en el 35 % y `rain_heavy` en el 15 %. Sale de otro número fijo del nivel, independiente del que decide si llueve, así que subir la escala hace llover en más niveles sin cambiar la intensidad de los que ya llovían;
+  - un animal grabado del mundo cada 20-45 s, a −10 dB bajo su pico. El mundo 6 ya tiene los suyos: ranas, grillos y búho.
+- **Música:**
+  - el lecho del mundo y sus 3 capas se programan con `PlayScheduled` en el mismo `dspTime`. Miden lo mismo muestra a muestra (lo comprueba un test) y se cargan antes de arrancar;
+  - las capas entran según las cuias selladas, con `audio_music_percussion_layers`;
+  - en Muy difícil, la variante nocturna sustituye al lecho, con las mismas capas;
+  - fuera del nivel, `mus_menu`: en el inicio con sus hojas (también la de compra), «El río sigue creciendo» y Sin canoas. La Crecida aún no tiene pantalla;
+  - la atenuación y el silencio en los anuncios no cambian.
+- **Remates:**
+  - con gancho: `sting_world_banner` (con la piha del banner de mundo), `sting_arrival` (con `sfx_fact`, en la llegada a la parada), `sting_mech_card` (con la tarjeta previa) y `sting_level_failed` (al abrirse Nivel fallido, no al volver de Sin canoas);
+  - suenan a −8 dB de su pico, hacia −24 dBFS, por debajo del efecto al que acompañan [P];
+  - van con el ajuste Música [P];
+  - si suena la toada, esperan a que termine: la llegada a la parada nunca se solapa con ella;
+  - `sting_fruit_new` está en el registro sin gancho, porque el cliente aún no tiene la tarjeta «Fruta nueva» (F5).
+- **Peso en el build:** ver «Peso del audio» al final de esta sección.
+
+**Respaldo por código (AU1, desde el 2026-10-16).** El juego sonaba con los 61 efectos del laboratorio, portados 1:1 a C# (`AF.Audio`, sin motor) y generados al arrancar en un hilo de trabajo (0 MB en el AAB). Todos son **provisionales por código**, también la piha y el boto, que el laboratorio llamaba «reales»: las grabaciones con licencia llegan después (07 §9.5) y los sustituyen sin tocar los ganchos.
 
 **Arreglos de la revisión del laboratorio (2026-10-16), aplicados al portarlos:**
 
@@ -268,7 +302,7 @@ Desde el 2026-10-16 el juego suena con los 61 efectos del laboratorio, portados 
 | --- | --- | --- | --- |
 | `sfx_select` | −36 | ≤ 0,2 s | Al elegir una cuia, con la nota de su fruta de arriba (al bajarla no suena: 02 §4.1) |
 | `sfx_pour_start` | −30 | ≤ 0,2 s | Cuando el chorro empieza a caer |
-| `sfx_pour_loop` | −29 | bucle | Mientras cae el chorro (bucle; el tono sigue al nivel del destino) |
+| `sfx_pour_loop` | −29 | bucle | Solo de respaldo (AU3): mientras cae el chorro suenan los 4 bucles grabados `sfx_pour_loop_l1..l4`, fundidos por el nivel del destino |
 | `sfx_pour_end` | −30 | ≤ 0,2 s | Al cortarse el caudal |
 | `sfx_illegal` | −28 | sin cola añadida | En cada rechazo (sin háptico) |
 | `sfx_seal` | −17 | sin cola añadida | Al empezar la tapa de cada sellado, con `haptic_seal` |
@@ -327,3 +361,25 @@ Desde el 2026-10-16 el juego suena con los 61 efectos del laboratorio, portados 
 | `sfx_mech_card` | −20 | sin cola añadida | Tarjeta previa |
 | `sfx_morpho_idle` | −28 | sin cola añadida | Sin gancho todavía: Morpho por inactividad (MO3) |
 | `sfx_store_open` | −19 | sin cola añadida | Al abrirse la hoja de compra |
+
+**Ganchos de los remates (AU3):** junto a `sfx_world_banner` (`sting_world_banner`), `sfx_fact` (`sting_arrival`), `sfx_mech_card` (`sting_mech_card`) y al abrirse Nivel fallido (`sting_level_failed`). `sting_fruit_new` aún no tiene gancho.
+
+### Peso del audio (AU3, 2026-10-17)
+
+Medido con `AF.EditorTools.AudioAssetSetup.BuildGameAab`: un AAB de release con la escena del juego, en el escritorio x64. El AAB de humo (`BuildSmoke`) no sirve para esto, porque usa una escena mínima y no lleva el audio. Peso empaquetado de los 173 clips según el Build Report:
+
+| Carpeta | Clips | MB |
+| --- | ---: | ---: |
+| `amb/` (agua y lluvia) | 12 | 4,71 |
+| `amb/fauna/` | 17 | 0,20 |
+| `music/` | 46 | 11,54 |
+| `music/stingers/` | 5 | 0,05 |
+| `sfx/` | 61 | 0,31 |
+| `sfx/fruit/` | 28 | 0,04 |
+| `sfx/pour/` | 4 | 0,06 |
+| **Total** | **173** | **16,91** |
+
+- El AAB del juego pesa 51,51 MB y pasa `ci/size-gate.ps1`, que solo mide el archivo porque no hay bundletool en este equipo. La compuerta es de 80 MB.
+- Los datos empaquetados suman 34,61 MB en total.
+- 1 MB = 1.000.000 bytes.
+- El audio supera los ≈ 7 MB que 08 §6 estimaba para «4 loops + ambientes + SFX». La entrega trae 9 lechos con 3 capas y su variante nocturna cada uno (unos 50 min de música en mono). Aun así cabe holgadamente en la compuerta.

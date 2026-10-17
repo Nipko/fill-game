@@ -166,3 +166,24 @@ Mide formato, duración, pico, continua, silencio inicial, fundido final, energ�
 **Escucha en el teléfono:** el dueño instala cada entrega en el teléfono de pruebas y juega al menos 20 minutos con el volumen a la mitad. Una pieza se rechaza si cansa, molesta, se oye por encima de lo que debe o no se oye.
 
 **Integración (la hacemos nosotros, tarea AU3):** el juego carga los WAV de `Assets/_Project/Audio/` como clips (comprimidos al construir el APK: música en Vorbis por streaming y efectos en mono), con los 4 bucles del vertido fundidos por nivel, y conserva el audio por código solo como respaldo de lo que falte. Quien entrega no toca código ni archivos de Unity.
+
+**Cómo quedó la integración (AU3, 2026-10-17):**
+
+- **Registro de clips:** `AudioClipRegistry.asset` tiene los 173 ids y su clip. Lo generan `AF.EditorTools.AudioAssetSetup.Apply`, que fija también los ajustes de importación, y la escena. Una entrega nueva con los mismos nombres de archivo solo pide volver a ejecutar ese método.
+- **Importación** (detalle y motivos en `lista-de-sonidos.md`, sección 9):
+  - efectos, notas, bucles del chorro y fauna: mono, «Decompress On Load» y Vorbis de calidad 0,8;
+  - agua, lluvia y tema de menú: streaming, con Vorbis 0,4;
+  - el lecho, sus capas y la variante nocturna: «Compressed In Memory», con Vorbis 0,4, para que suenen juntos a la muestra;
+  - los remates: «Compressed In Memory», precargados.
+
+  «Normalize» va apagado: así se respeta el pico de cada ficha.
+- **Qué suena:**
+  - los 4 bucles del chorro, fundidos por el nivel del destino, con ± 2 semitonos como mucho;
+  - las 28 notas de fruta, sin cambio de tono;
+  - el agua, la lluvia y la fauna de cada mundo, con la lluvia ligera, media o fuerte según el nivel [P];
+  - el lecho, sus 3 capas y la variante nocturna, programados en el mismo instante;
+  - el tema de menú;
+  - 4 de los 5 remates, que esperan a que termine la toada.
+- **Lo que no tiene WAV:** los mundos 10-13 suenan con el audio por código.
+- **Comprobación:** `check_audio.py` sigue en 0 fallos (los WAV no se tocan). Las líneas `AF_STATE` de desarrollo dicen en el teléfono si cada sonido sale del clip o del respaldo (`docs/dev/prototipo-v0.md`).
+- **Peso en el AAB:** ver `lista-de-sonidos.md`, sección 9, «Peso del audio».
