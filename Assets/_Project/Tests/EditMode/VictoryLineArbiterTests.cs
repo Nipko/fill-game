@@ -203,11 +203,24 @@ namespace AF.Tests.EditMode
             Assert.That(l41Mute.DeferredFact, Is.False);
             Assert.That(l41Mute.FruitKey, Is.EqualTo(Fruit));
 
-            // 80 (fin del mundo 3): la bienvenida a Colombia con su dato en el canon de hoy.
+            // 80 (fin del mundo 3) con los defaults (SlothHito desde TI6a, T6-A): si TiTino puede hablar, habla él y la
+            // bienvenida a Colombia va sin dato, que pasa al 81; si no puede, la llegada lleva su dato en el canon de hoy.
             VictoryLine l80 = For(80, true, real, MapConfig.RiverPolicy, MapConfig.HitoPolicy, true);
-            Assert.That(l80.ArrivalFactKey, Is.EqualTo("map.country.co.dato_01"));
-            Assert.That(l80.SlothSpeaks, Is.False, "ArrivalEverywhere hasta TI6a");
+            Assert.That(l80.SlothSpeaks, Is.True, "SlothHito por defecto desde TI6a");
             Assert.That(l80.SlothBig, Is.True);
+            Assert.That(l80.Arrival, Is.True);
+            Assert.That(l80.ArrivalFact, Is.False);
+            Assert.That(l80.ArrivalFactKey, Is.Null);
+            VictoryLine l81 = For(81, true, real, MapConfig.RiverPolicy, MapConfig.HitoPolicy, true);
+            Assert.That(l81.DeferredFact, Is.True);
+            Assert.That(l81.ArrivalFactKey, Is.EqualTo("map.country.co.dato_01"));
+            VictoryLine l80Mute = For(80, true, real, MapConfig.RiverPolicy, MapConfig.HitoPolicy, false);
+            Assert.That(l80Mute.ArrivalFactKey, Is.EqualTo("map.country.co.dato_01"), "TiTino no puede hablar: la llegada con su dato");
+            Assert.That(l80Mute.SlothSpeaks, Is.False);
+            Assert.That(l80Mute.SlothBig, Is.True);
+            VictoryLine l80Before = For(80, true, real, MapConfig.RiverPolicy, HitoLinePolicy.ArrivalEverywhere, true);
+            Assert.That(l80Before.SlothSpeaks, Is.False, "ArrivalEverywhere, la de antes de TI6a");
+            Assert.That(l80Before.ArrivalFactKey, Is.EqualTo("map.country.co.dato_01"));
 
             // Sin catálogo no hay llegadas ni datos desplazados.
             VictoryLine noStops = For(41, true, null, RiverFactPolicy.Canon, HitoLinePolicy.SlothHito, true);
