@@ -2,6 +2,8 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
+using AF.Ads;
+using AF.Economy;
 using AF.GameFlow;
 using AF.Localization;
 using AF.Presentation;
@@ -25,11 +27,13 @@ namespace AF.Tests.PlayMode
     /// <item>nunca en Aguas estancadas, ¿Seguro? ni Sin canoas;</item>
     /// <item>ninguna intersección de TiTino ni de su frase con la tarjeta (cabecera, X, franja, cesta, premio y Reintentar) a
     /// 360 × 640 y 360 × 780, al 100 % y al 130 %, en todos los fotogramas de su gesto, ni de la tarjeta con el pie del HUD ni
-    /// con <c>safeBottom</c> cuando lleva la frase; la frase, a 12 sp o más y en ≤ 2 líneas;</item>
+    /// con el <c>safeBottom</c> real cuando lleva la frase; la frase, a 12 sp o más y en ≤ 2 líneas; si al 130 % la tarjeta con
+    /// la frase no cabe sobre <c>safeBottom</c> (un recorte inferior grande), solo el gesto, sin apuntar frase en la sesión;</item>
     /// <item>el aviso tras Volver a la orilla: en 1-30, en el primer reinicio del nivel (desde la cabecera o desde el pie de Aguas
     /// estancadas), sin instrucción del tutorial, por la cola, con su retrato de 40 dp y su frase <c>sloth_line_restart_*</c>,
     /// cuando la tropa ya se fue y durante <see cref="NoticeTiming.ReadMs(string)"/>; nunca con el modal abierto, ni en el
-    /// segundo reinicio, ni en los niveles del tutorial (1, 2, 3, 6, 8 y 12), ni desde el 31; sin tapar cuias, bandeja ni HUD;</item>
+    /// segundo reinicio, ni en los niveles del tutorial (1, 2, 3, 6, 8 y 12), ni desde el 31; sin tapar cuias, bandeja ni HUD;
+    /// sobre el muelle, se oculta si sale debajo una burbuja «Te faltan {n}»;</item>
     /// <item>su rama sale de detrás del marco: el rig, bajo el marco de la tarjeta, y la rama, con el remate dentro del canto y en
     /// corteza (la provisional, teñida);</item>
     /// <item>sin toques: ningún gráfico de TiTino es <c>raycastTarget</c>.</item>
@@ -187,6 +191,69 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator At130_ThePhraseOnlyIfTheCardFitsOverTheRealSafeBottom_IfNotOnlyTheGesture([Values(40, 220)] int safeBottomDp)
+        {
+            // 360 × 780 dp al 130 % con un recorte inferior de safeBottomDp dp (3 px/dp). Con 40 dp la tarjeta con la frase cabe
+            // sobre ese safeBottom real (no sobre el mínimo de 24 dp). Con 220 dp no cabe (d.5: «si al 130 % no cabe sobre
+            // safeBottom, solo el gesto»): sale TiTino sin frase, no se apunta ninguna en la sesión y «Reintentar» sigue a la
+            // vista y activo.
+            GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, safeBottomDp * 3f);
+            LaunchOptions.FontScaleOverride = 1.3f;
+            yield return LoadLevel31(5);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            string at = "360 × 780 al 130 % con safeBottom de " + safeBottomDp + " dp";
+            Assert.That(view.CardSafeBottom, Is.EqualTo((float)safeBottomDp).Within(0.01f), at + ": condición del test");
+            int linesBefore = view.SlothSession.LinesThisSession;
+
+            // La frase que toca en este primer fallo del 31 con la sesión de ahora (la misma decisión que GameScreen.Funnel.cs):
+            // así se ve que la razón de no decirla es el sitio, y no los topes, los mensajes o el texto.
+            var context = view.SlothSession.Context.WithFail(new SlothFailFacts(true, false, 0, true));
+            SlothLine wanted = SlothLines.ForFail(31, in context);
+            Assert.That(wanted.Key, Is.Not.Null, at + ": condición del test, en el 31 toca frase");
+            string wantedText = Loc.T(wanted.Key!);
+            FailToLevelFailed(boot, true);
+            LevelFailedScreen failed = view.Failed;
+            TestContext.WriteLine("AF_SLOTH_FAIL " + at + ": frase " + (failed.PhraseShown ? failed.PhraseLines + " líneas a " + F(failed.PhraseFontDp) + " dp" : "no")
+                + ", tarjeta de " + F(failed.Panel.sizeDelta.y) + " dp desde " + F(-failed.Panel.anchoredPosition.y) + ", límites " + F(failed.TopLimitDp)
+                + "-" + F(failed.BottomLimitDp));
+            Assert.That(failed.SlothVisible, Is.True, at + ": TiTino sale");
+            Assert.That(failed.Sloth!.Pose, Is.EqualTo(SlothPoseId.Encourage), at + ": sloth_encourage");
+            Assert.That(failed.RetryButton.gameObject.activeInHierarchy, Is.True, at + ": Reintentar a la vista");
+            Assert.That(failed.RetryButton.interactable, Is.True, at + ": y activo");
+            Assert.That(failed.BottomLimitDp, Is.EqualTo(view.CardCanvasHeight - safeBottomDp).Within(0.01f), at + ": el límite es el safeBottom real");
+            for (int t = 0; t <= 1600; t += PlayModeHelpers.FrameMs)
+            {
+                AssertFailedClear(view, at + " a los " + t + " ms");
+                PlayModeHelpers.TickExact(boot, PlayModeHelpers.FrameMs);
+            }
+
+            if (safeBottomDp == 40)
+            {
+                Assert.That(failed.PhraseShown, Is.True, at + ": la tarjeta con la frase cabe");
+                Assert.That(view.LastSlothFailLine.Key, Is.EqualTo(wanted.Key), at + ": la frase que tocaba");
+                Assert.That(failed.PhraseText, Is.EqualTo(wantedText));
+                Assert.That(view.SlothSession.LinesThisSession, Is.EqualTo(linesBefore + 1));
+                Assert.That(view.SlothSession.PreviousScreenSpoke, Is.True);
+                Assert.That(-failed.Panel.anchoredPosition.y + failed.Panel.sizeDelta.y, Is.GreaterThan(view.CardCanvasHeight - 220f),
+                    at + ": condición del test, con la frase la tarjeta pasaría del safeBottom de 220 dp");
+            }
+            else
+            {
+                Assert.That(failed.PhraseShown, Is.False, at + ": sin sitio sobre safeBottom, solo el gesto");
+                Assert.That(failed.PhraseText, Is.Empty);
+                Assert.That(view.LastSlothFailLine.Speaks, Is.False, at + ": no se apunta frase");
+                Assert.That(view.LastSlothFailLine.Gesture, Is.EqualTo(SlothGesture.Encourage), at + ": el gesto sí");
+                Assert.That(view.SlothSession.LinesThisSession, Is.EqualTo(linesBefore), at + ": la sesión no cuenta ninguna frase");
+                Assert.That(view.SlothSession.PreviousScreenSpoke, Is.False, at + ": esta pantalla no habló");
+            }
+
+            // La frase que tocaba cabe con 40 dp y no con 220 (al final: PhraseFits recoloca la tarjeta para medir).
+            Assert.That(failed.PhraseFits(wantedText, view.CanvasWidth, view.CardCanvasHeight), Is.EqualTo(safeBottomDp == 40),
+                at + ": la frase «" + wantedText + "» " + (safeBottomDp == 40 ? "cabe" : "no cabe") + " sobre safeBottom");
+        }
+
+        [UnityTest]
         public IEnumerator NeverCapturesTouches()
         {
             yield return LoadLevel31(5);
@@ -313,7 +380,48 @@ namespace AF.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator RestartNotice_OnTheDock_HidesWhenAMissingBubbleAppearsUnderIt()
+        {
+            // Como la tarjeta del miquito (MinTextSizeTests): con el aviso de TiTino sobre el muelle (130 %), una burbuja «Te
+            // faltan {n}» que sale después debajo (tras gastar las semillas que quedaban) se taparía; el aviso no puede subir sin
+            // tapar las cuias y se oculta en el acto (GameScreen.Notices.cs, KeepSightingClearOfBubbles).
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
+            LaunchOptions.FontScaleOverride = 1.3f;
+            yield return LoadDockBoard(150);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            Assert.That(view.Tray.TryGetMissingTop(out _), Is.False, "condición del test: con 150 semillas, ninguna burbuja");
+            Assert.That(view.ShowSlothNotice(Loc.T("sloth_line_restart_02")), Is.True, "sin burbujas, el aviso sale");
+            PlayModeHelpers.Step(boot, 250);
+            Assert.That(view.SlothNoticeOnDock, Is.True, "condición del test: el aviso, sobre el muelle");
+            Assert.That(view.SlothNoticeVisible, Is.True, "sin burbujas, sigue");
+            AssertNoticeClear(view, "el aviso sin burbujas");
+            Assert.That(boot.Wallet!.Apply(Transaction.Buy(SeedSink.ExtraCuia)).IsApplied, Is.True, "gasta las 150 semillas");
+            PlayModeHelpers.Step(boot, 2 * PlayModeHelpers.FrameMs);
+            Assert.That(view.Tray.TryGetMissingTop(out _), Is.True, "salen las burbujas «Te faltan {n}»");
+            Assert.That(view.SlothNoticeVisible, Is.False, "se oculta antes que tapar la burbuja");
+            Assert.That(view.SlothNoticeOnDock, Is.False);
+        }
+
         // ------------------------------------------------------------------------------------------- utilidades
+
+        // El tablero 5 del tutorial como nivel 46 (2 filas; la tarjeta del miquito, sobre el muelle al 130 %), sin video y con
+        // seeds semillas, en juego con la vista quieta (como MinTextSizeTests.LoadDockBoard).
+        private static IEnumerator LoadDockBoard(int seeds)
+        {
+            LaunchOptions.LevelOffsetOverride = 41;
+            LaunchOptions.AdFillOverride = FakeAdFill.NoFill;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(seeds));
+            yield return PlayModeHelpers.LoadGame(46, new MemoryProgressStore(46, 45));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            Assert.That(boot.TapAnywhere(), Is.True, "salta la intro");
+            PlayModeHelpers.Step(boot, 1500);
+            PlayModeHelpers.StepUntilIdle(boot, 4000);
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(boot.View!.SlothNoticeVisible, Is.False, "condición del test: sin aviso propio");
+        }
 
         /// <summary>El 31 con el tablero 6 del tutorial (3 → 4 bloquea), <paramref name="canoes"/> canoas, sin reloj y jugando.</summary>
         internal static IEnumerator LoadLevel31(int canoes)
@@ -443,8 +551,13 @@ namespace AF.Tests.PlayMode
 
             if (hasPhrase)
             {
+                // Con los límites que usa la tarjeta (SetBounds), que son el pie del HUD y el safeBottom real de la pantalla (no el
+                // mínimo de 24 dp): con un recorte inferior mayor, la tarjeta tampoco lo invade.
+                float safeBottom = view.CardCanvasHeight - view.CardSafeBottom;
+                Assert.That(failed.TopLimitDp, Is.EqualTo(view.HudBottomDp).Within(0.01f), at + ": límite de arriba, el pie del HUD");
+                Assert.That(failed.BottomLimitDp, Is.EqualTo(safeBottom).Within(0.01f), at + ": límite de abajo, el safeBottom real");
                 Assert.That(panel.yMin, Is.GreaterThanOrEqualTo(view.HudBottomDp - 0.5f), at + ": con la frase, bajo el pie del HUD");
-                Assert.That(panel.yMax, Is.LessThanOrEqualTo(view.CardCanvasHeight - GameScreen.MinSafeBottom + 0.5f), at + ": y sobre safeBottom");
+                Assert.That(panel.yMax, Is.LessThanOrEqualTo(safeBottom + 0.5f), at + ": y sobre safeBottom (" + F(view.CardSafeBottom) + " dp)");
             }
         }
 

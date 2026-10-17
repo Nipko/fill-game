@@ -233,6 +233,12 @@ namespace AF.UI
             _bottomLimit = bottomDp;
         }
 
+        /// <summary>Lo más arriba que puede empezar la tarjeta con la frase (dp desde arriba; <see cref="SetBounds"/>; tests).</summary>
+        public float TopLimitDp => _topLimit;
+
+        /// <summary>Lo más abajo que puede acabar la tarjeta con la frase: <c>safeBottom</c> (dp desde arriba; <see cref="SetBounds"/>; tests).</summary>
+        public float BottomLimitDp => _bottomLimit;
+
         /// <summary>
         /// Crea el rig de TiTino la primera vez que hace falta, con la regla del arte (sin arte final en release, nunca: false).
         /// </summary>
