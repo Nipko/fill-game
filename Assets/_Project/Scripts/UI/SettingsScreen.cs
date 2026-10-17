@@ -29,10 +29,11 @@ namespace AF.UI
     /// desmarcan (<c>settings.sound</c>, <c>music</c> y <c>haptics</c>, activadas por defecto) y se aplican al momento, en
     /// <see cref="AudioSlot"/> (<c>SettingsScreen.Audio.cs</c>). Con ellas la tarjeta no cabe en un teléfono 16:9 al 130 %: lo de
     /// debajo de la cabecera va en un visor que se desplaza cuando hace falta.</item>
+    /// <item><b>Sobre la Amazonía</b> (tarea F4; D-017 Q4-A; 07 §8.2), al final: «Frutas del río» con una ficha por serie del
+    /// calendario, que abre su ficha (<see cref="FruitSheet"/>), en <see cref="AboutSlot"/> (<c>SettingsScreen.About.cs</c>).</item>
     /// </list>
-    /// Sin Eliminar cuenta: no existe (D-008: lo que no existe se oculta). Los huecos de la pista
-    /// por inactividad (MO3) y «Sobre la Amazonía» (F4) están creados y ocultos (<see cref="IdleHintSlot"/> y
-    /// <see cref="AboutSlot"/>): esas tareas los llenan y <see cref="Layout"/> los coloca cuando se activan. Elegir llama a quien
+    /// Sin Eliminar cuenta: no existe (D-008: lo que no existe se oculta). El hueco de la pista por inactividad (MO3) está
+    /// creado y oculto (<see cref="IdleHintSlot"/>): esa tarea lo llena y <see cref="Layout"/> lo coloca cuando se active. Elegir llama a quien
     /// la abre (<c>GameBootstrap</c>), que guarda el perfil y aplica: el idioma reconstruye la UI volviendo al inicio, con esta
     /// pantalla otra vez abierta (FXT); los patrones, al momento; los mensajes de TiTino, desde su siguiente aparición. Escala de la fuente
     /// <see cref="FontScale"/> hasta el 130 % sin recortes (02 §12), con todo texto ≥ 12 sp.
@@ -107,6 +108,7 @@ namespace AF.UI
         private readonly Image _fadeTop;
         private readonly Image _fadeBottom;
         private readonly List<float> _rowTops = new List<float>();
+        private readonly List<float> _rowHeights = new List<float>(); // alto de cada fila de _rowTops (las frutas de F4 crecen)
         private readonly TextMeshProUGUI _languageTitle;
         private readonly TextMeshProUGUI _patternsTitle;
         private readonly RectTransform _languageGroup;
@@ -167,9 +169,11 @@ namespace AF.UI
             _slothRow = new OptionRow(SlothMessagesSlot, art, "SlothMessages", SlothMessagesId, UiText.SettingsSlothMessages,
                 () => _onSlothMessages(!_slothMessages));
 
-            // Huecos de las tareas siguientes, ocultos hasta que existan (D-008).
+            // Hueco de la pista por inactividad (MO3), oculto hasta que exista (D-008); «Sobre la Amazonía» (F4), oculto hasta que
+            // haya algo que enseñar (SettingsScreen.About.cs).
             IdleHintSlot = HiddenSlot("IdleHintSlot");
             AboutSlot = HiddenSlot("AboutSlot");
+            BuildAbout();
 
             // Fundidos de los bordes del visor (revisión de AU1), encima del contenido y sin recibir toques: abajo mientras quede
             // lista por debajo y arriba en cuanto se ha desplazado, para que el corte no parezca un fallo (D-003).
@@ -234,7 +238,7 @@ namespace AF.UI
         /// <summary>Hueco de la pista por inactividad (MO3), oculto.</summary>
         public RectTransform IdleHintSlot { get; }
 
-        /// <summary>Hueco de «Sobre la Amazonía» (F4), oculto.</summary>
+        /// <summary>Hueco de «Sobre la Amazonía» (F4): visible con alguna fruta que enseñar.</summary>
         public RectTransform AboutSlot { get; }
 
         /// <summary>
@@ -342,6 +346,11 @@ namespace AF.UI
             {
                 yield return label;
             }
+
+            foreach (TextMeshProUGUI label in AboutTexts())
+            {
+                yield return label;
+            }
         }
 
         /// <summary>
@@ -383,6 +392,7 @@ namespace AF.UI
             _canvas.Canvas.gameObject.SetActive(true);
             Mark(language, patterns);
             MarkSlothMessages(slothMessages);
+            RefreshAbout(); // Sobre la Amazonía (F4): las frutas con el progreso de ahora
             ReadScreen();
             Layout();
             _probe.SettingsOpened(_language, _patterns, offered);
@@ -470,9 +480,11 @@ namespace AF.UI
             // Vibración (SettingsScreen.Audio.cs).
             float headerBottom = y;
             _rowTops.Clear();
+            _rowHeights.Clear();
             for (int i = 0; i < AudioRowCount; i++)
             {
                 _rowTops.Add(i * (rowH + RowGapDp));
+                _rowHeights.Add(rowH);
             }
 
             y = LayoutAudio(0f, inner, rowH, s);
@@ -485,6 +497,7 @@ namespace AF.UI
             {
                 _languageRows[i].Place(16f, y, inner, rowH, s);
                 _rowTops.Add(y);
+                _rowHeights.Add(rowH);
                 y += rowH + RowGapDp;
             }
 
@@ -497,6 +510,7 @@ namespace AF.UI
             {
                 _patternRows[i].Place(16f, y, inner, rowH, s);
                 _rowTops.Add(y);
+                _rowHeights.Add(rowH);
                 y += rowH + RowGapDp;
             }
 
@@ -505,10 +519,16 @@ namespace AF.UI
             UiBuilder.Place(SlothMessagesSlot, 16f, y, inner, rowH);
             _slothRow.Place(0f, 0f, inner, rowH, s);
             _rowTops.Add(y);
+            _rowHeights.Add(rowH);
             y += rowH + RowGapDp;
 
-            // Huecos de MO3 y F4: aún ocultos (no ocupan sitio). El contenido acaba en la última fila.
+            // Sobre la Amazonía (F4), si hay frutas que enseñar; el hueco de MO3, aún oculto (no ocupa sitio). El contenido acaba en
+            // la última fila.
             y -= RowGapDp;
+            if (AboutShown)
+            {
+                y = LayoutAbout(y + SectionGapDp, w, inner, rowH, titleH, s);
+            }
 
             // La tarjeta crece con el contenido hasta el alto libre entre las zonas seguras; si no cabe, el contenido se desplaza
             // (empieza arriba cada vez que se coloca). El visor deja abajo el mismo margen interior de 16 dp que la cabecera arriba:
@@ -522,7 +542,7 @@ namespace AF.UI
             {
                 // Si se desplaza, el visor acaba a media fila (revisión de AU1): una franja de unos dp en el borde no se lee como
                 // una fila más, y el jugador podría no encontrar nunca las de abajo.
-                viewH = CutAtRow(viewH, rowH);
+                viewH = CutAtRow(viewH);
                 h = headerBottom + viewH + PanelInsetDp;
             }
 
@@ -539,14 +559,17 @@ namespace AF.UI
         /// <summary>
         /// Alto del visor (dp) para que, con el contenido arriba, la última fila cortada se vea entre el
         /// <see cref="CutRowMin"/> y el <see cref="CutRowMax"/> de su alto: si ya es así, <paramref name="viewH"/>; si no, el
-        /// visor acaba en la mitad de la última fila que se ve al menos a medias (nunca de la primera).
+        /// visor acaba en la mitad de la última fila que se ve al menos a medias (nunca de la primera). Cada fila con su alto: las
+        /// frutas de «Sobre la Amazonía» (F4) crecen con su nombre.
         /// </summary>
-        private float CutAtRow(float viewH, float rowH)
+        private float CutAtRow(float viewH)
         {
             float last = -1f;
+            float lastH = 0f;
             for (int i = 0; i < _rowTops.Count; i++)
             {
                 float top = _rowTops[i];
+                float rowH = _rowHeights[i];
                 float shown = (viewH - top) / rowH;
                 if (shown >= CutRowMin && shown <= CutRowMax)
                 {
@@ -556,10 +579,11 @@ namespace AF.UI
                 if (shown >= 0.5f && top > last)
                 {
                     last = top;
+                    lastH = rowH;
                 }
             }
 
-            return last > 0f ? last + Mathf.Round(rowH * 0.5f) : viewH;
+            return last > 0f ? last + Mathf.Round(lastH * 0.5f) : viewH;
         }
 
         // Los fundidos de arriba y abajo del visor, del color de la superficie en cada borde (sin la veta), sobre el ancho de las
@@ -605,7 +629,7 @@ namespace AF.UI
                 return;
             }
 
-            int n = 2 + _offered.Count + _patternRows.Length + AudioRowCount;
+            int n = 2 + _offered.Count + _patternRows.Length + AudioRowCount + AboutLayoutCount;
             var ids = new string[n];
             var rects = new RectTransform[n];
             ids[0] = "close";
@@ -626,6 +650,7 @@ namespace AF.UI
             ids[k] = _slothRow.Id;
             rects[k] = _slothRow.Root;
             AudioLayoutIds(ids, rects, k + 1); // sound, music y haptics (AU1)
+            AboutLayoutIds(ids, rects, k + 1 + AudioRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
 
             _probe.Layout("settings", 0, null, ids, rects);
         }

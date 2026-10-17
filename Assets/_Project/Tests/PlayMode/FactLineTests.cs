@@ -20,7 +20,7 @@ namespace AF.Tests.PlayMode
     /// calendario real (<c>frutas_del_rio_v1.json</c>), las paradas reales y los textos de <c>facts.csv</c>:
     /// <list type="bullet">
     /// <item>tiempo: entra con «Siguiente» (a los 600 ms de la pantalla de victoria, la fila 1,40 s) con un fundido de 200 ms, sin
-    /// él con Reducir movimiento, y no recibe toques (raycastTarget false hasta F4);</item>
+    /// él con Reducir movimiento, y desde entonces toda la línea es un botón (F4: abre la ficha; FruitSheetTests);</item>
     /// <item>la línea del 3 («Dato del río», el punto medio, «Açaí · 3/20» y su texto, arriba de la ranura) y el sello de la
     /// última línea de una serie;</item>
     /// <item>ranura fija: «Siguiente» en el mismo sitio con la línea más corta y la más larga de 1-200 de cada idioma y la más
@@ -81,6 +81,7 @@ namespace AF.Tests.PlayMode
 
                 PlayModeHelpers.TickExact(boot, (int)VictoryLineSlot.FruitRevealMs);
                 Assert.That(line.Alpha, Is.EqualTo(0f), "nada antes de Siguiente (fila 1,40 s de 07 §5.4)");
+                Assert.That(line.Touchable, Is.False, "invisible: sin toques (F4)");
                 Assert.That(view.NextAlpha, Is.EqualTo(0f));
                 PlayModeHelpers.TickExact(boot, 100);
                 Assert.That(view.NextAlpha, Is.GreaterThan(0f), "Siguiente entra a la vez");
@@ -95,19 +96,20 @@ namespace AF.Tests.PlayMode
                     Assert.That(line.Alpha, Is.EqualTo(1f));
                 }
 
-                // No es un botón hasta F4: no bloquea ni recibe toques, y Siguiente funciona.
+                // Desde F4 toda la línea es un botón (abre la ficha; FruitSheetTests): solo su área táctil recibe toques, desde que
+                // se ve, y Siguiente funciona.
                 Assert.That(view.NextButton.interactable, Is.True);
                 foreach (Graphic g in line.Root!.GetComponentsInChildren<Graphic>(true))
                 {
-                    Assert.That(g.raycastTarget, Is.False, g.name + ": sin toques hasta F4");
+                    Assert.That(g.raycastTarget, Is.EqualTo(g.transform == line.TapArea), g.name + ": solo el área táctil (F4)");
                 }
 
-                Assert.That(line.Root.GetComponent<CanvasGroup>().blocksRaycasts, Is.False, "su CanvasGroup no bloquea");
+                Assert.That(line.Root.GetComponent<CanvasGroup>().blocksRaycasts, Is.True, "a la vista, recibe toques (F4)");
 
                 var ids = new List<string>();
                 var rects = new List<RectTransform>();
                 line.LayoutIds(ids, rects);
-                Assert.That(ids, Is.Empty, "no entra en AF_LAYOUT victory");
+                Assert.That(ids, Is.EqualTo(new[] { FactLine.TapId }), "entra en AF_LAYOUT victory (F4)");
                 PlayModeHelpers.Step(boot, 2000);
                 Assert.That(line.Alpha, Is.EqualTo(1f), "se queda hasta cerrar la victoria");
             }

@@ -845,6 +845,12 @@ namespace AF.UI
                 return false;
             }
 
+            // La ficha de una fruta (F4), encima de la victoria o de Ajustes: Atrás la cierra y deja lo de debajo como estaba.
+            if (FruitSheetOpen)
+            {
+                return CloseFruitSheet();
+            }
+
             // El Mapa del río se cierra con Atrás, como con su ← (M3.3), también abierto encima del nivel (pausa, victoria).
             if (_mapScreen != null && _mapScreen.Visible)
             {
@@ -882,7 +888,7 @@ namespace AF.UI
                 return false;
             }
 
-            if (CommerceOpen || (_lockedNotice != null && _lockedNotice.Visible) || (_settingsScreen != null && _settingsScreen.Visible))
+            if (CommerceOpen || (_lockedNotice != null && _lockedNotice.Visible) || (_settingsScreen != null && _settingsScreen.Visible) || FruitSheetOpen)
             {
                 return false;
             }
@@ -1176,6 +1182,12 @@ namespace AF.UI
         /// <inheritdoc />
         public void OnAppScreenChanged(AppScreen screen)
         {
+            // La ficha de una fruta vive sobre la victoria o sobre Ajustes: si la app cambia de pantalla por otro camino, se cierra.
+            if (FruitSheetOpen)
+            {
+                CloseFruitSheet();
+            }
+
             // El Mapa abierto desde la pestaña vive sobre el inicio: si la app deja el inicio por otro camino, se cierra antes.
             if (screen != AppScreen.Lobby && _mapScreen != null && _mapScreen.Visible && _mapScreen.Source == MapOpenSource.Lobby)
             {
@@ -1395,6 +1407,7 @@ namespace AF.UI
             _mapScreen.LevelWater = level => _app?.Catalog.Find(level)?.WaterBase; // el agua del fondo de la tarjeta (M4.1)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
+            BuildFruitSheet(); // F4: la ficha de una fruta, desde la línea de la victoria y desde Ajustes (GameBootstrap.Fruit.cs)
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
             _flow = new LevelFlow(catalog, progress, _screen, LaunchOptions.ResolveTapSwitchSelection(), LaunchOptions.ResolvePourMode(), _wallet)
@@ -1501,6 +1514,13 @@ namespace AF.UI
                 {
                     _settingsScreen.Tick();
                 }
+            }
+
+            // La ficha de una fruta (F4): encima de la victoria, la congela (ni la vista ni el flujo avanzan: ni la línea, ni el
+            // avance tras la Cosecha doble, ni AD_GATE) hasta cerrarla, y al cerrarla se vuelve a la victoria tal como estaba.
+            if (TickFruitSheet())
+            {
+                return;
             }
 
             if (_app.Screen != AppScreen.Level)

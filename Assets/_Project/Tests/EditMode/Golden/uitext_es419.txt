@@ -115,6 +115,8 @@ UiText.DifficultyVeryHard	Muy difícil
 UiText.DoubleHarvest	Cosecha doble: x2 por video
 UiText.ExtraCuia	+1 cuia
 UiText.ExtraCuiaGift	Capi te trae una cuia más para este nivel. La próxima la encuentras en tu Canasta
+UiText.FactSheetTitle	Frutas del río
+UiText.FactSources	Fuentes
 UiText.FaunaSightedCard	¡Miquito a la vista!
 UiText.FireflyGift	+1 Luciérnaga
 UiText.FireflyLine	Una luciérnaga ilumina las de una cuia
@@ -166,6 +168,7 @@ UiText.RiverLoweredColor	El río bajó: esta vez hay un color menos
 UiText.RiverLoweredCuia	El río bajó: esta vez hay una cuia más
 UiText.Seeds	Semillas
 UiText.Settings	Ajustes
+UiText.SettingsAboutAmazon	Sobre la Amazonía
 UiText.SettingsLanguageAuto	Automático
 UiText.SettingsPatternsAuto	Automático
 UiText.SettingsPatternsOff	Nunca

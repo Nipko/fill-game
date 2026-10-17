@@ -36,8 +36,11 @@ namespace AF.UI
     /// victoria (la fila 1,40 s de 07 §5.4), con un fundido de <see cref="VictoryLineSlot.FruitFadeMs"/> ms; con Reducir
     /// movimiento, sin fundido (<see cref="VictoryLineSlot.FruitLineAlpha"/>). Sin sonido ni confeti; no bloquea, no pide toques y
     /// no es un takeover.</item>
-    /// <item><b>Toques:</b> ninguno hasta F4 (la ficha): todos sus gráficos van con <c>raycastTarget</c> false y su CanvasGroup no
-    /// bloquea, así que no entra en <c>AF_LAYOUT victory</c>.</item>
+    /// <item><b>Toques</b> (tarea F4; D-017 Q4-A; propuesta de Frutas §2.2, regla 4): toda la línea es un botón de
+    /// <see cref="VictoryLineSlot.MinContentDp"/> dp de alto como mínimo (<see cref="TapArea"/>) que abre la ficha de su fruta
+    /// (<see cref="FruitSheet"/>; lo hace quien da <see cref="Tapped"/>, <c>GameBootstrap</c>). Recibe toques en cuanto se ve (con
+    /// «Siguiente», a los <see cref="VictoryLineSlot.FruitRevealMs"/> ms), nunca antes, y entra en <c>AF_LAYOUT victory</c> como
+    /// <see cref="TapId"/>. Sus gráficos no reciben toques: solo el área táctil.</item>
     /// <item><b>Textos:</b> solo si están todos en el idioma de la UI (<see cref="UiText.TryFruitLine"/>): nunca mezcla idiomas y,
     /// en release, nunca enseña nada sin aprobar.</item>
     /// <item><b>Sitio:</b> arriba de la ranura, a <see cref="TopAirDp"/> dp como mucho bajo su borde, con el sobrante de la ranura
@@ -86,6 +89,9 @@ namespace AF.UI
         /// <summary>Del nombre al sello [P].</summary>
         public const float SealGapDp = 4f;
 
+        /// <summary>Id del área táctil de la línea en <c>AF_LAYOUT victory</c> (F4).</summary>
+        public const string TapId = "fruit_line";
+
         /// <summary>Paso con el que baja el texto si una línea real no cabe en H [P].</summary>
         public const float ShrinkStepSp = 0.5f;
 
@@ -120,6 +126,7 @@ namespace AF.UI
         private Image? _sealFace;
         private Image? _sealIcon;
         private TextMeshProUGUI? _textLabel;
+        private Button? _tap;
         private float _width;
         private float _height;
         private bool _reduceMotion;
@@ -142,6 +149,21 @@ namespace AF.UI
             _measureBody.textWrappingMode = TextWrappingModes.Normal;
             measure.gameObject.SetActive(false);
         }
+
+        /// <summary>
+        /// Lo que hace un toque en la línea a la vista (F4: abrir la ficha de su fruta; lo da <c>GameBootstrap</c>). Sin él, la línea
+        /// no recibe toques ni entra en <c>AF_LAYOUT victory</c>.
+        /// </summary>
+        public Action? Tapped { get; set; }
+
+        /// <summary>
+        /// La línea recibe toques ahora: se ve (con «Siguiente», tras <see cref="VictoryLineSlot.FruitRevealMs"/> ms) y alguien la
+        /// escucha (<see cref="Tapped"/>).
+        /// </summary>
+        public bool Touchable => _group != null && _group.blocksRaycasts;
+
+        /// <summary>Área táctil de la línea (≥ <see cref="VictoryLineSlot.MinContentDp"/> dp de alto; null hasta la primera colocación).</summary>
+        public RectTransform? TapArea => _tap != null ? (RectTransform)_tap.transform : null;
 
         /// <summary>La línea existe en esta partida (false: tests de la ranura sola). Cuenta desde la siguiente maquetación.</summary>
         public bool Enabled { get; set; } = true;
@@ -363,6 +385,7 @@ namespace AF.UI
             Shown = true;
             _root.gameObject.SetActive(true);
             _group!.alpha = 0f;
+            SetTouchable(false); // hasta que entre, con «Siguiente» (Tick)
             Arrange();
             return true;
         }
@@ -413,12 +436,15 @@ namespace AF.UI
             {
                 _group.alpha = a;
             }
+
+            SetTouchable(a > 0f && Tapped != null);
         }
 
         /// <inheritdoc />
         public void Hide()
         {
             Shown = false;
+            SetTouchable(false);
             if (_root != null && _root.gameObject.activeSelf)
             {
                 _root.gameObject.SetActive(false);
@@ -428,7 +454,31 @@ namespace AF.UI
         /// <inheritdoc />
         public void LayoutIds(List<string> ids, List<RectTransform> rects)
         {
-            // Sin toques hasta F4 (la ficha): no hay área táctil que anunciar.
+            // La victoria publica su AF_LAYOUT al terminar de subir el panel, antes de que entre la línea: el área táctil se anuncia
+            // en cuanto la línea se enseña y alguien la escucha (recibe toques desde que entra, con «Siguiente»).
+            if (Shown && Tapped != null && _tap != null)
+            {
+                ids.Add(TapId);
+                rects.Add((RectTransform)_tap.transform);
+            }
+        }
+
+        // Un toque en el área de la línea: solo si se ve (el CanvasGroup no deja pasar toques antes) y alguien escucha.
+        private void OnTap()
+        {
+            if (Shown && Touchable)
+            {
+                Tapped?.Invoke();
+            }
+        }
+
+        private void SetTouchable(bool on)
+        {
+            if (_group != null && _group.blocksRaycasts != on)
+            {
+                _group.blocksRaycasts = on;
+                _group.interactable = on;
+            }
         }
 
         private void ResetState()
@@ -449,8 +499,8 @@ namespace AF.UI
             TextSizeDp = 0f;
         }
 
-        // Crea la línea bajo el contenido de la ranura (una vez): la raíz con su CanvasGroup, el icono, la cabecera, el sello y el
-        // texto. Ningún gráfico recibe toques (raycastTarget false hasta F4).
+        // Crea la línea bajo el contenido de la ranura (una vez): la raíz con su CanvasGroup, el área táctil (F4), el icono, la
+        // cabecera, el sello y el texto. Solo el área táctil recibe toques; el CanvasGroup no los deja pasar mientras no se ve.
         private void Build(RectTransform content)
         {
             if (_root != null)
@@ -469,6 +519,7 @@ namespace AF.UI
             _group.alpha = 0f;
             _group.blocksRaycasts = false;
             _group.interactable = false;
+            _tap = UiBuilder.BareButton("Tap", root, OnTap); // detrás de todo: los gráficos no reciben toques
             _iconBack = UiBuilder.Image("FruitIconBack", root, _art.Disc, IconBack);
             _iconBack.raycastTarget = false;
             _icon = UiBuilder.Image("FruitIcon", root, null, Color.white);
@@ -566,6 +617,10 @@ namespace AF.UI
             TextSizeDp = size;
             SetLabel(_textLabel!, BodyText, size, 0f, top, w, Mathf.Max(h, 1f));
             ShownHeightDp = HeaderHeightDp + h + VictoryLineSlot.BottomDp;
+
+            // Toda la línea es un botón de 48 dp como mínimo (02 §6; propuesta de Frutas §2.2, regla 4), dentro de la ranura.
+            float tapH = Mathf.Max(VictoryLineSlot.MinContentDp, ShownHeightDp);
+            UiBuilder.Place((RectTransform)_tap!.transform, 0f, Mathf.Max(0f, Mathf.Min(off, _height - tapH)), w, tapH);
         }
 
         // El sello de la última línea (Q5-A): un aro verde, una cara clara y el icono de la fruta, sin animación.
