@@ -213,6 +213,7 @@ namespace AF.UI
         private BuoyGraphic? _buoysAhead;
         private Vector2 _frontStopMap;
         private bool _buoysCompact;
+        private float _compactDropDp;
         private TextMeshProUGUI? _andesLabel;
         private TextMeshProUGUI? _atlanticLabel;
         private float[] _fillFrom = Array.Empty<float>();
@@ -1510,7 +1511,25 @@ namespace AF.UI
             float contentW = _map != null ? space.DpPerUnit * _map.Width : float.MaxValue;
             float x0 = Mathf.Clamp(stop.x - half, radius + LabelEdgeDp, Mathf.Max(radius + LabelEdgeDp, contentW - radius - LabelEdgeDp - (2f * half)));
             float below = ProceduralArt.MapCanoeHeightDp * CanoePivotY;
-            return new Vector2(x0 + (i * step), stop.y - below - BuoyCompactGapDp - radius);
+            return new Vector2(x0 + (i * step), stop.y - below - BuoyCompactGapDp - radius - _compactDropDp);
+        }
+
+        /// <summary>
+        /// Lo que baja la fila corta de boyas (dp) para que no pise el punto real de una mini cuia (M3.5, revisión: el punto del
+        /// abanico caía encima de una boya). Lo fija la colocación de las mini cuias; 0 en la Cuenca y sin racimos.
+        /// </summary>
+        internal float CompactRowDropDp => _compactDropDp;
+
+        // Baja la fila corta de boyas dropDp y vuelve a colocar las boyas (solo si cambia).
+        private void SetCompactRowDrop(MapSpace space, float dropDp)
+        {
+            if (Mathf.Abs(dropDp - _compactDropDp) < 0.01f)
+            {
+                return;
+            }
+
+            _compactDropDp = dropDp;
+            PlaceBuoys(space);
         }
 
         // ============================================================================================ siluetas y rótulos

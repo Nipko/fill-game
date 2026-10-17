@@ -21,7 +21,7 @@ namespace AF.Tests.PlayMode
     {
         private const string Prefix = "AF_LAYOUT ";
 
-        private static readonly Regex ButtonRx = new Regex("\\{\"id\":\"([a-z_]+)\",\"x\":(-?\\d+),\"y\":(-?\\d+),\"w\":(-?\\d+),\"h\":(-?\\d+)\\}");
+        private static readonly Regex ButtonRx = new Regex("\\{\"id\":\"([a-z0-9_]+)\",\"x\":(-?\\d+),\"y\":(-?\\d+),\"w\":(-?\\d+),\"h\":(-?\\d+)\\}");
         private static readonly Regex CuiaRx = new Regex("\\{\"i\":(\\d+),\"x\":(-?\\d+),\"y\":(-?\\d+),\"w\":(-?\\d+),\"h\":(-?\\d+)\\}");
 
         private readonly List<string> _lines = new List<string>();

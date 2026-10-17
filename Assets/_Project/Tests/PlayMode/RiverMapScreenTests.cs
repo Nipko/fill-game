@@ -240,9 +240,12 @@ namespace AF.Tests.PlayMode
 
             map.BackToCanoeButton.onClick.Invoke();
             Assert.That(map.CanoeInView, Is.True);
+            // La canoa, en el centro; si la ventanita de casa pisaría una mini cuia, el encuadre se corre lo justo (M3.5).
             Vector2 canoe = map.CanoeInViewport;
-            Assert.That(canoe.x, Is.EqualTo(view.x * 0.5f).Within(1f), "la canoa, en el centro");
-            Assert.That(canoe.y, Is.EqualTo(view.y * 0.5f).Within(1f));
+            Vector2 shift = map.FrameShiftDp;
+            Assert.That(canoe.x, Is.EqualTo((view.x * 0.5f) + shift.x).Within(1f), "la canoa, en el centro");
+            Assert.That(canoe.y, Is.EqualTo((view.y * 0.5f) + shift.y).Within(1f));
+            Assert.That(Mathf.Abs(shift.x) <= view.x * 0.3f + 0.5f && Mathf.Abs(shift.y) <= view.y * 0.3f + 0.5f, Is.True, "corrida poco");
             Assert.That(map.BackToCanoeShown, Is.False);
             yield return null;
         }
@@ -911,7 +914,10 @@ namespace AF.Tests.PlayMode
                 GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f); // un teléfono de 360 × 780 dp
             }
 
-            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(playLevel)));
+            // Lo visto, hasta max_level: sin «ponerse al día» (M3.5), que tiene sus propias pruebas (MapCatchUpTests).
+            Profile profile = ProfileAt(playLevel);
+            profile.Progress.MapSeenLevel = playLevel - 1;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
             GameBootstrap boot = GameBootstrap.Current!;
             yield return null;
             Assert.That(boot.Lobby!.MapTabShown, Is.True, "pestaña del Mapa con Jugar · Nivel " + playLevel);

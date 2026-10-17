@@ -828,9 +828,9 @@ namespace AF.UI
         /// <summary>
         /// Atrás de Android (Escape en el Input System) fuera del nivel: el único camino de Atrás para las hojas del inicio (FXT).
         /// Con Ajustes abierta, la cierra (<see cref="CloseSettings"/>); en «El río sigue creciendo» o Sin canoas, vuelve al inicio
-        /// como su botón Volver (<see cref="PressBack"/>). Con el Mapa del río abierto, lo cierra en cualquier pantalla, también
-        /// encima del nivel (<see cref="CloseRiverMap"/>; M3.3). Fuera de eso, no hace nada en el nivel (02 §3; 04 §6.6: el embudo
-        /// no se cierra con Atrás), ni con la hoja «Compra simulada», un anuncio o el aviso del perfil bloqueado delante (tampoco
+        /// como su botón Volver (<see cref="PressBack"/>). Con el Mapa del río abierto, cierra su tarjeta de la parada o su Muestrario
+        /// (M4.1) y, si no hay, el Mapa, en cualquier pantalla, también encima del nivel (<see cref="CloseRiverMap"/>; M3.3). Fuera
+        /// de eso, no hace nada en el nivel (02 §3; 04 §6.6: el embudo no se cierra con Atrás), ni con la hoja «Compra simulada», un anuncio o el aviso del perfil bloqueado delante (tampoco
         /// con el Mapa abierto debajo), ni en el inicio sin hoja.
         /// </summary>
         public bool PressAndroidBack()
@@ -848,7 +848,7 @@ namespace AF.UI
             // El Mapa del río se cierra con Atrás, como con su ← (M3.3), también abierto encima del nivel (pausa, victoria).
             if (_mapScreen != null && _mapScreen.Visible)
             {
-                return CloseRiverMap();
+                return _mapScreen.CloseTopSheet() || CloseRiverMap(); // primero la tarjeta de la parada y el Muestrario (M4.1)
             }
 
             if (_app.Screen == AppScreen.Level)
@@ -1390,6 +1390,9 @@ namespace AF.UI
             _lobby.RiverStops = RiverStops; // el sitio, «Faltan N» y la ventanita de casa en el inicio (M2.1)
             _lobby.RiverMapAvailable = RiverMapAvailable; // la pestaña del Mapa del río, desde max_level ≥ 10 (M3.3)
             _mapScreen = new RiverMapScreen(transform, _art, _probe, () => CloseRiverMap(), () => PressMapPlay());
+            _mapScreen.Fauna = Fauna; // el miquito del tramo en la tarjeta de la parada (M4.1)
+            _mapScreen.FruitSeries = FruitFacts?.Catalog; // la fruta de la serie en la tarjeta de la parada (D-022; M4.1)
+            _mapScreen.LevelWater = level => _app?.Catalog.Find(level)?.WaterBase; // el agua del fondo de la tarjeta (M4.1)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
 

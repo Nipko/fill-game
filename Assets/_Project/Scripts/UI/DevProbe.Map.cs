@@ -17,7 +17,8 @@ namespace AF.UI
     /// <c>by</c>, <c>kind</c> (<c>arrival</c>, <c>place</c> o <c>deferred</c>), <c>world</c>, <c>reduce_motion</c>, el alto de lo
     /// que se ve (<c>shown_dp</c>) y el de la ranura (<c>slot_dp</c>);</item>
     /// <item><c>stop_arrive</c> (<c>af_stop_arrive</c>, 08 §8.2): <c>stop_id</c> (el id de parada <c>s{nn}</c>, glosario §11),
-    /// <c>stop</c> (la k), <c>world</c>, <c>level</c>, <c>view</c> = <c>victory</c> y <c>skipped</c>;</item>
+    /// <c>stop</c> (la k), <c>world</c>, <c>level</c>, <c>view</c> (<c>victory</c> en la franja de la victoria; <c>map</c> al
+    /// ponerse al día en el Mapa, M3.5) y <c>skipped</c>;</item>
     /// <item><c>river_fact_shown</c> (<c>af_river_fact_shown</c>, 08 §8.2): <c>level</c>, <c>fact_id</c> (la clave del dato) y
     /// <c>dismissed_ms</c>, desde el punto común de la ranura (lo comparte la línea de fruta, F3);</item>
     /// <item><c>map_open</c> (<c>af_map_open</c>, 08 §8.2; tarea M3.3): <c>source</c> (<c>lobby</c>, <c>pause</c>, <c>victory</c>,
@@ -73,10 +74,14 @@ namespace AF.UI
             return sb.ToString();
         }
 
-        /// <summary>Línea <c>AF_STATE stop_arrive</c> (<c>af_stop_arrive</c> de la propuesta del Mapa §11.5).</summary>
-        public void StopArrive(int level, RiverStop stop, bool skipped)
+        /// <summary>
+        /// Línea <c>AF_STATE stop_arrive</c> (<c>af_stop_arrive</c> de la propuesta del Mapa §11.5): en la franja de la victoria
+        /// (<c>view</c> = <c>victory</c>) o, con <paramref name="inMap"/>, la llegada sin ver que recorre la canoa al ponerse al
+        /// día en el Mapa (<c>view</c> = <c>map</c>; 08 §8.2; M3.5).
+        /// </summary>
+        public void StopArrive(int level, RiverStop stop, bool skipped, bool inMap = false)
         {
-            string? line = FormatStopArrive(level, stop, skipped);
+            string? line = FormatStopArrive(level, stop, skipped, inMap);
             if (line != null)
             {
                 Debug.Log(line);
@@ -84,7 +89,7 @@ namespace AF.UI
         }
 
         /// <summary>Texto de la línea <c>AF_STATE stop_arrive</c>; null si la sonda no escribe.</summary>
-        public string? FormatStopArrive(int level, RiverStop stop, bool skipped)
+        public string? FormatStopArrive(int level, RiverStop stop, bool skipped, bool inMap = false)
         {
             if (!Enabled)
             {
@@ -99,7 +104,7 @@ namespace AF.UI
             sb.Append(",\"stop\":").Append(stop.N.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"world\":").Append(stop.World.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
-            sb.Append(",\"view\":\"victory\"");
+            sb.Append(",\"view\":\"").Append(inMap ? "map" : "victory").Append('"');
             sb.Append(",\"skipped\":").Append(skipped ? "true" : "false");
             sb.Append('}');
             return sb.ToString();
