@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using AF.GameFlow;
 using AF.Levels;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace AF.UI
 {
@@ -21,7 +22,10 @@ namespace AF.UI
     /// ms), se iza su bandera y se enciende la baliza si cierra el mundo; cada llegada escribe <c>AF_STATE stop_arrive</c> con
     /// <c>view</c> = <c>map</c> (<c>af_stop_arrive</c>, 08 §8.2);</item>
     /// <item>un toque en cualquier sitio del Mapa lo completa en el acto (las llegadas que faltaban, con <c>skipped</c>); cerrarlo
-    /// a medias, también. Con Reducir movimiento (07 §7.8), sin animación: el estado final directamente;</item>
+    /// a medias, también. Con Reducir movimiento (07 §7.8; propuesta del Mapa §4.2), sin viaje ni llenado animado: el estado final
+    /// aparece con un fundido de <see cref="MapConfig.ReducedMotionFadeMs"/> ms en lo que cambió desde lo visto (el frente del
+    /// río con sus boyas, las banderas izadas, el agua de las mini cuias de las llegadas y las balizas encendidas); el tramo que
+    /// ya pasó al lleno del cauce no tiene malla propia y aparece sin fundido [P];</item>
     /// <item>lo visto se anota al cerrar el Mapa (<c>MarkMapSeen</c> en <see cref="GameBootstrap.CloseRiverMap"/>, con la sonda
     /// <c>map_close</c>) y al acabar la franja de llegada de la victoria (GameScreen.Arrival.cs).</item>
     /// </list>
@@ -40,6 +44,8 @@ namespace AF.UI
         private int _lastCatchArrivalLevel;
         private bool _catchCompletedByTouch;
         private bool[] _hadFill = Array.Empty<bool>();
+        private readonly List<Graphic> _reducedFade = new List<Graphic>();
+        private float _reducedFadeMs = -1f;
 
         /// <summary>«Ponerse al día» está en marcha.</summary>
         public bool CatchingUp => _catchUp;
@@ -71,8 +77,27 @@ namespace AF.UI
         /// <summary>El último «ponerse al día» lo completó un toque (o el cierre) antes de acabar.</summary>
         public bool CatchUpCompletedByTouch => _catchCompletedByTouch;
 
+        /// <summary>Con Reducir movimiento, lo nuevo desde lo visto está entrando con su fundido.</summary>
+        public bool CatchUpFading => _reducedFadeMs >= 0f;
+
+        /// <summary>Piezas que entran con el fundido de Reducir movimiento (tests).</summary>
+        internal int CatchUpFadeCount => _reducedFade.Count;
+
+        /// <summary>Opacidad de la pieza <paramref name="i"/> del fundido de Reducir movimiento (tests).</summary>
+        internal float CatchUpFadeAlpha(int i)
+        {
+            return _reducedFade[i].canvasRenderer.GetAlpha();
+        }
+
+        /// <summary>La pieza <paramref name="g"/> entra con el fundido de Reducir movimiento (tests).</summary>
+        internal bool CatchUpFades(Graphic g)
+        {
+            return _reducedFade.Contains(g);
+        }
+
         partial void CatchUpOpen(IMapProgress progress)
         {
+            EndReducedFade();
             _catchUp = false;
             _catchMs = 0f;
             _catchArrivals = 0;
@@ -99,9 +124,10 @@ namespace AF.UI
             _catchFrom = from;
             if (ProgressReduceMotion)
             {
-                // Sin viaje ni llenado animado: el estado final ya está pintado (el fundido de los afluentes es de M3.4), pero las
-                // llegadas sin ver se cuentan como vistas.
+                // Sin viaje ni llenado animado: el estado final ya está pintado y lo que cambió desde «from» entra con un fundido
+                // (el de los afluentes es de M3.4); las llegadas sin ver se cuentan como vistas.
                 SendCatchUpArrivals(from, max, false);
+                StartReducedFade(from, max);
                 return;
             }
 
@@ -115,6 +141,18 @@ namespace AF.UI
 
         partial void CatchUpTick(float dtMs, ref bool animating)
         {
+            if (_reducedFadeMs >= 0f)
+            {
+                animating = true;
+                _reducedFadeMs += dtMs;
+                float a = Mathf.Clamp01(_reducedFadeMs / MapConfig.ReducedMotionFadeMs);
+                SetReducedFadeAlpha(a);
+                if (a >= 1f)
+                {
+                    EndReducedFade();
+                }
+            }
+
             if (!_catchUp)
             {
                 return;
@@ -140,6 +178,7 @@ namespace AF.UI
 
         partial void CatchUpClose(IMapProgress progress)
         {
+            EndReducedFade();
             if (_catchUp)
             {
                 FinishCatchUp(true); // cerrado a medias: lo que faltaba, como saltado
@@ -148,10 +187,12 @@ namespace AF.UI
 
         /// <summary>
         /// Un toque durante «ponerse al día»: lo completa en el acto (las llegadas que faltaban, con <c>skipped</c>). True si había
-        /// algo que completar (el toque no hace nada más). Lo llaman el toque del mapa, el de una mini cuia y el de la ventanita.
+        /// algo que completar (el toque no hace nada más). Lo llaman el toque del mapa, el de una mini cuia, el de la ventanita, los
+        /// de Mundo y Cuenca y «Volver a la canoa». Con Reducir movimiento, termina el fundido (y el toque sigue su curso).
         /// </summary>
         internal bool CatchUpTouch()
         {
+            EndReducedFade();
             if (!_catchUp)
             {
                 return false;
@@ -207,6 +248,94 @@ namespace AF.UI
             }
 
             MoveCanoe(_catchTo);
+        }
+
+        // Reducir movimiento: lo que cambió de «from» a «to» y ya está pintado entra de 0 a 1 en ReducedMotionFadeMs: el frente del
+        // río con sus boyas (el tramo en curso; el que pasó al lleno del cauce no tiene malla propia), las banderas que no llevaba
+        // la canoa con «from», el agua de las mini cuias alcanzadas en (from, to] y las balizas encendidas por el camino. Solo
+        // asigna si crece la lista.
+        private void StartReducedFade(int from, int to)
+        {
+            _reducedFade.Clear();
+            for (int i = 0; i < _frontCount; i++)
+            {
+                AddReducedFade(_front[i]);
+                AddReducedFade(_frontCasing[i]);
+            }
+
+            AddReducedFade(_buoys);
+            AddReducedFade(_buoysAhead);
+            if (_markersReady)
+            {
+                int before = _stops != null ? CanoeFlags(_stops, from, _flagScratch) : 0;
+                for (int i = 0; i < _flagCount; i++)
+                {
+                    bool had = false;
+                    for (int k = 0; k < before && !had; k++)
+                    {
+                        had = string.Equals(_flagScratch[k], _flagIso[i], StringComparison.Ordinal);
+                    }
+
+                    if (!had)
+                    {
+                        AddReducedFade(_flagImages[i]);
+                    }
+                }
+
+                for (int i = 0; i < _markerCount; i++)
+                {
+                    StopMarker m = _markers[i];
+                    int level = m.N * RiverStopCatalog.LevelsPerStop;
+                    if (level > from && level <= to)
+                    {
+                        AddReducedFade(m.WaterA);
+                        AddReducedFade(m.WaterB);
+                    }
+
+                    if (m.BeaconLit && !BeaconLit(m.Stop, from))
+                    {
+                        AddReducedFade(m.Beacon);
+                        AddReducedFade(m.Halo);
+                    }
+                }
+            }
+
+            if (_reducedFade.Count == 0)
+            {
+                return;
+            }
+
+            _reducedFadeMs = 0f;
+            SetReducedFadeAlpha(0f);
+        }
+
+        private void AddReducedFade(Graphic? g)
+        {
+            if (g != null && g.gameObject.activeSelf)
+            {
+                _reducedFade.Add(g);
+            }
+        }
+
+        private void SetReducedFadeAlpha(float a)
+        {
+            for (int i = 0; i < _reducedFade.Count; i++)
+            {
+                _reducedFade[i].canvasRenderer.SetAlpha(a);
+            }
+        }
+
+        // El fundido de Reducir movimiento acaba (por tiempo, con un toque, al cerrar o al volver a abrir): todo a 1.
+        private void EndReducedFade()
+        {
+            if (_reducedFadeMs < 0f)
+            {
+                return;
+            }
+
+            SetReducedFadeAlpha(1f);
+            _reducedFade.Clear();
+            _reducedFadeMs = -1f;
         }
 
         // Qué líneas tienen ya agua (antes de encender una boya). Asigna solo la primera vez o con otro Mapa.

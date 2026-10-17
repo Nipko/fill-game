@@ -12,6 +12,7 @@ using NUnit.Framework;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.TestTools;
+using UnityEngine.UI;
 
 namespace AF.Tests.PlayMode
 {
@@ -24,7 +25,8 @@ namespace AF.Tests.PlayMode
     /// <item>una llegada sin ver (el 50 con seen 45) la recorre la canoa: llega a Manaos, se llena su mini cuia y escribe
     /// <c>stop_arrive</c> con <c>view</c> = <c>map</c>; el punto de la pestaña desaparece al cerrar;</item>
     /// <item>un toque lo completa (la llegada que faltaba, saltada); cerrarlo a medias, también; con Reducir movimiento, el estado
-    /// final sin animación;</item>
+    /// final sin viaje ni llenado animado, con un fundido de 150 ms en lo nuevo; un toque en Mundo, Cuenca o «Volver a la canoa»
+    /// también lo completa;</item>
     /// <item>la franja de llegada de la victoria del 20 anota lo visto hasta el 20 (y la del 21, que no es llegada, nada).</item>
     /// </list>
     /// </summary>
@@ -205,7 +207,29 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator ReduceMotion_TheFinalStateAtOnce()
+        public IEnumerator ATouchOnTheViewSwitchOrBackToCanoe_CompletesIt()
+        {
+            yield return MapMarkersTests.OpenApp(53, 45);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            map.Tick(150f);
+            Assert.That(map.CatchingUp, Is.True);
+            map.ViewBasinButton.onClick.Invoke(); // SetView(Basin) a los 150 ms
+            Assert.That(map.CatchingUp, Is.False, "el toque en Cuenca lo completa");
+            Assert.That(map.CatchUpCompletedByTouch, Is.True);
+            Assert.That(map.ProgressLevel, Is.EqualTo(52));
+            Assert.That(map.View, Is.EqualTo(MapView.Basin), "y cambia de vista");
+
+            yield return MapMarkersTests.OpenApp(53, 45);
+            map = GameBootstrap.Current!.RiverMapView!;
+            map.Tick(150f);
+            Assert.That(map.CatchingUp, Is.True);
+            map.BackToCanoe();
+            Assert.That(map.CatchingUp, Is.False, "«Volver a la canoa» también");
+            Assert.That(map.CanoeShownMapPoint, Is.EqualTo(map.CanoeMapPoint));
+        }
+
+        [UnityTest]
+        public IEnumerator ReduceMotion_TheFinalStateAtOnce_WithA150msFade()
         {
             yield return MapMarkersTests.OpenApp(53, 53 - 1);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -217,6 +241,39 @@ namespace AF.Tests.PlayMode
             Assert.That(map.CanoeShownMapPoint, Is.EqualTo(map.CanoeMapPoint));
             Assert.That(map.CatchUpArrivals, Is.EqualTo(1));
             Assert.That(map.LastCatchUpArrivalSkipped, Is.False);
+
+            // El estado final aparece con un fundido de 150 ms (propuesta del Mapa §4.2): el frente con sus boyas y el agua de Manaos.
+            int manaos = map.StopMarkerIndexOf(5);
+            Assert.That(map.StopMarkerFill(manaos), Is.EqualTo(1f), "llena, sin llenado animado");
+            Assert.That(map.CatchUpFading, Is.True);
+            Assert.That(map.CatchUpFades(map.StopMarkerWater(manaos)), Is.True, "el agua de la llegada");
+            Assert.That(map.CatchUpFades(map.Buoys!), Is.True, "las boyas del frente");
+            Assert.That(map.CatchUpFades(map.StopMarkerWater(map.StopMarkerIndexOf(4))), Is.False, "lo ya visto, no");
+            Assert.That(map.CatchUpFades(map.CanoeFlagImage(0)), Is.False, "la bandera de Brasil ya iba en el mástil");
+            for (int i = 0; i < map.CatchUpFadeCount; i++)
+            {
+                Assert.That(map.CatchUpFadeAlpha(i), Is.EqualTo(0f));
+            }
+
+            map.Tick(MapConfig.ReducedMotionFadeMs * 0.5f);
+            Assert.That(map.CatchUpFadeAlpha(0), Is.EqualTo(0.5f).Within(0.01f), "a mitad");
+            Assert.That(OnDemandRendering.renderFrameInterval, Is.EqualTo(1), "a 60 fps mientras dura");
+            Image water = map.StopMarkerWater(manaos);
+            map.Tick(MapConfig.ReducedMotionFadeMs * 0.5f);
+            Assert.That(map.CatchUpFading, Is.False, "150 ms: hecho");
+            Assert.That(water.canvasRenderer.GetAlpha(), Is.EqualTo(1f));
+            Assert.That(map.Buoys!.canvasRenderer.GetAlpha(), Is.EqualTo(1f));
+
+            // Al pasar del 79 al 80 se iza la de Colombia y se enciende la baliza de Tefé: entran con el fundido.
+            MapMarkersTests.Reopen(boot, new MemoryProgressStore(81, 80, 79), 81);
+            Assert.That(map.CatchUpFading, Is.True);
+            Assert.That(map.CanoeFlag(1), Is.EqualTo("CO"));
+            Assert.That(map.CatchUpFades(map.CanoeFlagImage(1)), Is.True, "la de Colombia, nueva");
+            Assert.That(map.CatchUpFades(map.CanoeFlagImage(0)), Is.False);
+            // Cerrar a medias deja todo a la vista.
+            map.Close();
+            Assert.That(map.CatchUpFading, Is.False);
+            Assert.That(map.CanoeFlagImage(1).canvasRenderer.GetAlpha(), Is.EqualTo(1f));
             map.ProgressReduceMotion = false;
         }
 

@@ -704,11 +704,18 @@ namespace AF.UI
 
         /// <summary>
         /// Cambia a la vista <paramref name="view"/> (las pestañas del pie): reconstruye las mallas a la escala nueva y centra en
-        /// la región del mundo (Mundo) o en la cuenca (Cuenca). Cuenta el cambio para <c>map_close</c>. Sin efecto si ya está.
+        /// la región del mundo (Mundo) o en la cuenca (Cuenca). Cuenta el cambio para <c>map_close</c>. Sin efecto si ya está, salvo
+        /// que el toque completa «ponerse al día» si está en marcha (M3.5).
         /// </summary>
         public void SetView(MapView view)
         {
-            if (!Visible || view == _view)
+            if (!Visible)
+            {
+                return;
+            }
+
+            CatchUpTouch(); // un toque en un control del Mapa completa «ponerse al día» (M3.5)
+            if (view == _view)
             {
                 return;
             }
@@ -733,10 +740,20 @@ namespace AF.UI
             _activeMs = ActiveLingerMs;
         }
 
-        /// <summary>«Volver a la canoa»: centra la vista en la canoa, sin cambiar de vista.</summary>
+        /// <summary>
+        /// «Volver a la canoa»: centra la vista en la canoa, corrida lo justo (≤ 30 % de la vista en cada eje; M3.5) para que la
+        /// ventanita de casa, los rótulos de orientación y «Volver a la canoa» no pisen una mini cuia, sin cambiar de vista. El toque
+        /// completa «ponerse al día» si está en marcha (M3.5).
+        /// </summary>
         public void BackToCanoe()
         {
-            if (!Visible || !_hasCanoe)
+            if (!Visible)
+            {
+                return;
+            }
+
+            CatchUpTouch(); // un toque en un control del Mapa completa «ponerse al día» (M3.5)
+            if (!_hasCanoe)
             {
                 return;
             }
@@ -1331,7 +1348,8 @@ namespace AF.UI
 
         /// <summary>
         /// M3.5: el encuadre (<paramref name="offset"/>, la esquina del contenido) que van a fijar el cambio de vista y «Volver a la
-        /// canoa»: la ventanita de casa no debe quedar pegada a una mini cuia.
+        /// canoa»: ni la ventanita de casa, ni los rótulos de orientación, ni «Volver a la canoa» deben quedar pegados a una mini
+        /// cuia; si lo estarían, se corre lo justo (≤ 30 % de la vista en cada eje).
         /// </summary>
         partial void MarkersFrame(ref Vector2 offset);
 

@@ -66,8 +66,10 @@ namespace AF.UI
         public const float PillStackGapDp = 4f;
 
         /// <summary>
-        /// Con la píldora debajo del marco, su ancho máximo (dp) [P]; si el texto no cabe con su margen, el margen se estrecha hasta
-        /// <see cref="PillMinPadDp"/> antes que cortar el texto.
+        /// Con la píldora debajo del marco (<see cref="PillBelow"/>), su ancho preferido como mucho (dp) [P]: si el texto no cabe
+        /// con su margen, el margen se estrecha hasta <see cref="PillMinPadDp"/>; y si ni así cabe (un idioma largo como en-XA o el
+        /// texto grande de 02 §12), la píldora crece lo que pide el texto, hasta el borde derecho que se pasa a <see cref="Place"/>:
+        /// el texto, a su cuerpo mínimo de 12 sp, nunca se corta ni se encoge.
         /// </summary>
         public const float PillMaxWidthDp = 150f;
 
@@ -150,8 +152,9 @@ namespace AF.UI
         public RectTransform? TapRect => _tap != null ? (RectTransform)_tap.transform : null;
 
         /// <summary>
-        /// La píldora va debajo del marco, alineada a su izquierda, con <see cref="PillStackGapDp"/> de hueco y como mucho
-        /// <see cref="PillMaxWidthDp"/> de ancho (la ventanita del Mapa, M3.5); si no, a la derecha del marco (la del inicio).
+        /// La píldora va debajo del marco, alineada a su izquierda, con <see cref="PillStackGapDp"/> de hueco y, si el texto cabe,
+        /// como mucho <see cref="PillMaxWidthDp"/> de ancho (la ventanita del Mapa, M3.5); si no, a la derecha del marco (la del
+        /// inicio).
         /// </summary>
         public bool PillBelow
         {
@@ -269,8 +272,9 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Coloca el marco con su esquina superior izquierda en (<paramref name="x"/>, <paramref name="yTop"/>) dp y la píldora a
-        /// su derecha, centrada en el alto del marco y sin pasar de <paramref name="maxRight"/>.
+        /// Coloca el marco con su esquina superior izquierda en (<paramref name="x"/>, <paramref name="yTop"/>) dp y la píldora sin
+        /// pasar de <paramref name="maxRight"/>: con <see cref="PillBelow"/>, debajo del marco y alineada a su izquierda (con el
+        /// ancho de <see cref="PillMaxWidthDp"/>); si no, a su derecha, centrada en el alto del marco.
         /// </summary>
         public void Place(float x, float yTop, float maxRight)
         {
@@ -316,7 +320,8 @@ namespace AF.UI
             float text = string.IsNullOrEmpty(_label.text) ? 0f : Mathf.Ceil(UiBuilder.MinTextWidth(_label));
             if (_pillBelow)
             {
-                // Debajo del marco, alineada a su izquierda: lo más estrecha que deja el texto, hasta PillMaxWidthDp.
+                // Debajo del marco, alineada a su izquierda: el texto con su margen, hasta PillMaxWidthDp estrechando el margen hasta
+                // PillMinPadDp; un texto más largo hace crecer la píldora (nunca se corta), sin pasar de _maxRight.
                 float w = text <= 0f ? 0f : Mathf.Min(text + (2f * PillPadDp), Mathf.Max(PillMaxWidthDp, text + (2f * PillMinPadDp)));
                 w = Mathf.Max(0f, Mathf.Min(w, _maxRight - _x));
                 float top = _y + SizeDp + PillStackGapDp;

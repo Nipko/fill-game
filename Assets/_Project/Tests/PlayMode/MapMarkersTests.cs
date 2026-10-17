@@ -339,6 +339,7 @@ namespace AF.Tests.PlayMode
                 RiverMapScreen map = CurrentMap();
                 Assert.That(map.HomeWindowShown, Is.True, "nivel " + level);
                 AssertWindowClearOfMiniCuias(map, level.ToString(CultureInfo.InvariantCulture));
+                AssertPlatesClearOfWindow(map, level.ToString(CultureInfo.InvariantCulture));
             }
 
             yield return OpenApp(59);
@@ -346,6 +347,50 @@ namespace AF.Tests.PlayMode
             Reopen(boot, new MemoryProgressStore(306, 305, 305), 306);
             Assert.That(boot.RiverMapView!.HomeWindowShown, Is.True, "306");
             AssertWindowClearOfMiniCuias(boot.RiverMapView!, "306");
+            AssertPlatesClearOfWindow(boot.RiverMapView!, "306");
+        }
+
+        [UnityTest]
+        public IEnumerator FixedLabelsAndBackToCanoe_LeaveEveryMiniCuia8dpClear_AndTheFramingIsCheap()
+        {
+            // El encuadre de apertura (12c: la mini cuia de Tefé contra «Andes ↑»).
+            foreach (int level in new[] { 59, 121, 141 })
+            {
+                yield return OpenApp(level);
+                AssertFixedOverlaysClear(CurrentMap(), level + " al abrir");
+            }
+
+            // 12h: max 140 con la vista en la mini cuia del río frontera, con «Volver a la canoa» a la vista.
+            RiverMapScreen map = CurrentMap();
+            Assert.That(map.CenterOnStopMarker(13), Is.True);
+            AssertFixedOverlaysClear(map, "141 en el río frontera");
+            Vector2 view = map.ViewportSize;
+            int fine = ((2 * Mathf.FloorToInt(view.x * 0.3f / RiverMapScreen.FrameStepDp)) + 1)
+                * ((2 * Mathf.FloorToInt(view.y * 0.3f / RiverMapScreen.FrameStepDp)) + 1);
+            Assert.That(map.FrameEvaluations, Is.LessThanOrEqualTo(fine / 5), "sin recorrer la rejilla fina entera (" + fine + ")");
+
+            // Lo que cuesta encuadrar (cada «Volver a la canoa» o cambio de vista), en el Editor.
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            int worst = 0;
+            for (int i = 0; i < 20; i++)
+            {
+                map.CenterOnStopMarker(13);
+                worst = Mathf.Max(worst, map.FrameEvaluations);
+                map.Drag(new Vector2(-100000f, -100000f));
+                map.BackToCanoe();
+                worst = Mathf.Max(worst, map.FrameEvaluations);
+            }
+
+            watch.Stop();
+            Debug.Log("AF_PERF encuadre del Mapa en el 141: " + (watch.Elapsed.TotalMilliseconds / 40.0).ToString("0.000", CultureInfo.InvariantCulture)
+                + " ms por encuadre (con su AF_LAYOUT), como mucho " + worst + " encuadres probados de " + fine);
+            Assert.That(worst, Is.LessThanOrEqualTo(fine / 5));
+            AssertFixedOverlaysClear(map, "141 tras «Volver a la canoa»");
+
+            yield return OpenApp(59);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Reopen(boot, new MemoryProgressStore(306, 305, 305), 306);
+            AssertFixedOverlaysClear(boot.RiverMapView!, "306 al abrir");
         }
 
         [UnityTest]
@@ -472,6 +517,84 @@ namespace AF.Tests.PlayMode
                     ProceduralArt.MiniCuiaWidthDp, ProceduralArt.MiniCuiaHeightDp);
                 Assert.That(box.Overlaps(win), Is.False, label + ": la mini cuia de la parada " + map.StopMarkerStop(i) + " a menos de 8 dp de la ventanita");
             }
+        }
+
+        // Ninguna mini cuia que se ve (aunque sea en parte) queda a menos de FixedOverlayGapDp de «Andes ↑», de «Océano Atlántico ↓»
+        // ni, si sale, de «Volver a la canoa».
+        private static void AssertFixedOverlaysClear(RiverMapScreen map, string label)
+        {
+            Assert.That(map.StopMarkersShown, Is.True, label);
+            float gap = RiverMapScreen.FixedOverlayGapDp - 0.01f;
+            Assert.That(map.AndesLabelViewRect.width, Is.GreaterThan(0f), label);
+            Assert.That(map.AtlanticLabelViewRect.width, Is.GreaterThan(0f), label);
+            Rect andes = Grow(map.AndesLabelViewRect, gap);
+            Rect atlantic = Grow(map.AtlanticLabelViewRect, gap);
+            Rect button = Grow(map.BackToCanoeViewRect, gap);
+            Vector2 size = map.ViewportSize;
+            var view = new Rect(0f, 0f, size.x, size.y);
+            int seen = 0;
+            for (int i = 0; i < map.StopMarkerCount; i++)
+            {
+                Vector2 v = map.StopMarkerViewPoint(i);
+                Rect box = CuiaBox(new Vector2(v.x, v.y));
+                if (!box.Overlaps(view))
+                {
+                    continue;
+                }
+
+                seen++;
+                int n = map.StopMarkerStop(i);
+                Assert.That(box.Overlaps(andes), Is.False, label + ": la mini cuia de la parada " + n + " pegada a «Andes ↑»");
+                Assert.That(box.Overlaps(atlantic), Is.False, label + ": la mini cuia de la parada " + n + " pegada a «Océano Atlántico ↓»");
+                if (map.BackToCanoeShown)
+                {
+                    Assert.That(box.Overlaps(button), Is.False, label + ": la mini cuia de la parada " + n + " pegada a «Volver a la canoa»");
+                }
+            }
+
+            Debug.Log("AF_MAP rótulos y botón en el " + label + ": " + seen + " mini cuias a la vista, «Volver a la canoa» " + map.BackToCanoeShown
+                + ", encuadre corrido (" + map.FrameShiftDp.x.ToString("0", CultureInfo.InvariantCulture) + ", "
+                + map.FrameShiftDp.y.ToString("0", CultureInfo.InvariantCulture) + ") dp, coste " + map.FrameCost);
+        }
+
+        // Ninguna placa de mundo futuro que se ve queda a menos de HomeWindowCuiaGapDp de la ventanita de casa (marco y píldora).
+        private static void AssertPlatesClearOfWindow(RiverMapScreen map, string label)
+        {
+            if (!map.HomeWindowShown)
+            {
+                return;
+            }
+
+            RectTransform frame = (RectTransform)map.ViewportRect.parent;
+            Rect win = FrameRect(map.MapHomeWindow!.Root, frame);
+            if (map.MapHomeWindow.PillShown)
+            {
+                Rect pill = FrameRect(map.MapHomeWindow.PillRect, frame);
+                win = Rect.MinMaxRect(Mathf.Min(win.xMin, pill.xMin), Mathf.Min(win.yMin, pill.yMin), Mathf.Max(win.xMax, pill.xMax), Mathf.Max(win.yMax, pill.yMax));
+            }
+
+            win = Grow(win, RiverMapScreen.HomeWindowCuiaGapDp - 0.01f);
+            Rect viewport = FrameRect(map.ViewportRect, frame);
+            for (int i = 0; i < map.SilhouetteCount; i++)
+            {
+                Rect plate = FrameRect(map.SilhouettePlate(i).rectTransform, frame);
+                if (plate.Overlaps(viewport))
+                {
+                    Vector2 point = map.Space.ToLocal(map.SilhouetteMapPoint(i));
+                    Vector2 inFrame = new Vector2(viewport.xMin + map.ContentOffset.x + point.x, viewport.yMin + map.ContentOffset.y - point.y);
+                    float far = Mathf.Sqrt(Mathf.Pow(Mathf.Max(0f, Mathf.Max(plate.xMin - inFrame.x, inFrame.x - plate.xMax)), 2f)
+                        + Mathf.Pow(Mathf.Max(0f, Mathf.Max(plate.yMin - inFrame.y, inFrame.y - plate.yMax)), 2f));
+                    Debug.Log("AF_MAP placa «" + map.SilhouetteText(i) + "» en el " + label + ": " + plate + ", a "
+                        + far.ToString("0", CultureInfo.InvariantCulture) + " dp de su punto " + inFrame);
+                    Assert.That(plate.Overlaps(win), Is.False, label + ": la placa «" + map.SilhouetteText(i) + "» " + plate + " pegada a la ventanita de casa "
+                        + win + " (encuadre corrido " + map.FrameShiftDp + ", coste " + map.FrameCost + ")");
+                }
+            }
+        }
+
+        private static Rect Grow(Rect r, float by)
+        {
+            return Rect.MinMaxRect(r.xMin - by, r.yMin - by, r.xMax + by, r.yMax + by);
         }
 
         private static Rect CuiaBox(Vector2 c)

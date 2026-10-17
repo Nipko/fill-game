@@ -39,7 +39,9 @@ namespace AF.UI
     /// con el siguiente (<c>sloth_wake</c>). Cuando la casa queda fuera de la vista, la <b>ventanita de casa</b>
     /// (<see cref="HomeWindow"/>, abajo a la izquierda de la zona del mapa, con la píldora debajo del retrato) con «Casa · a unos
     /// {km} km» (<c>map_home_distance</c>, los km de la parada de «Jugar»); tocarla lleva la vista a la casa (<see cref="GoHome"/>).
-    /// El encuadre se corre lo justo para que no quede a menos de <see cref="HomeWindowCuiaGapDp"/> dp de una mini cuia. Arte
+    /// El encuadre se corre lo justo para que no quede a menos de <see cref="HomeWindowCuiaGapDp"/> dp de una mini cuia, ni una mini
+    /// cuia a menos de <see cref="FixedOverlayGapDp"/> dp de los rótulos de orientación o de «Volver a la canoa»; una placa de
+    /// mundo futuro que ni así queda libre se pone al otro lado del punto de su mundo (<see cref="ResolvePlates"/>). Arte
     /// provisional de P-M5: en release, sin su PNG, ni casa ni ventanita.</description></item>
     /// </list>
     /// <para>Las piezas se crean una vez (al construir la geometría y, las mini cuias, al crecer la reserva al abrir); al cambiar de
@@ -170,6 +172,18 @@ namespace AF.UI
         /// <summary>Paso con que se busca el encuadre más cercano que deja libre la ventanita de casa (dp) [P].</summary>
         public const float FrameStepDp = 4f;
 
+        /// <summary>
+        /// Al encuadrar, ninguna mini cuia queda a menos de este tanto de los rótulos «Andes ↑» y «Océano Atlántico ↓» ni de «Volver a
+        /// la canoa» cuando sale (dp) [P]: lo fijo del marco no tapa una mini cuia tocable (<see cref="MarkersFrame"/>).
+        /// </summary>
+        public const float FixedOverlayGapDp = 8f;
+
+        /// <summary>Anillos de <see cref="FrameStepDp"/> alrededor del encuadre pedido que se prueban antes que la rejilla gruesa [P].</summary>
+        public const int FrameNearRings = 6;
+
+        /// <summary>Paso de la rejilla gruesa con que se busca encuadre si cerca no sale uno limpio (dp) [P]; luego se afina.</summary>
+        public const float FrameCoarseStepDp = 16f;
+
         /// <summary>Canto de la mini cuia de una parada que falta: crema casi opaco, como el canto de las boyas.</summary>
         public static readonly Color UnreachedRimColor = new Color(Palette.Cream.r, Palette.Cream.g, Palette.Cream.b, 0.85f);
 
@@ -208,6 +222,16 @@ namespace AF.UI
         private float _gearFacing = 1f;
         private bool _hasRim;
         private Vector2 _frameShift;
+        private Vector2 _frameStart;
+        private Vector2 _frameBest;
+        private float _frameBestMag;
+        private int _frameBestHits;
+        private int _frameEvaluations;
+        private bool _frameWindow;
+        private Rect _frameWin;
+        private Rect _frameAndes;
+        private Rect _frameAtlantic;
+        private Rect _frameButton;
 
         private RectTransform? _markerLayer;
         private LeaderLinesGraphic? _leaders;
@@ -393,13 +417,35 @@ namespace AF.UI
         public Rect GuideBoxLocal => _guideBox;
 
         /// <summary>
-        /// Lo que el último encuadre (cambio de vista o «Volver a la canoa») se corrió para que la ventanita de casa no pisara una
-        /// mini cuia (dp, la esquina del contenido; y hacia abajo); cero si no hizo falta.
+        /// Lo que el último encuadre (cambio de vista o «Volver a la canoa») se corrió para que la ventanita de casa, los rótulos de
+        /// orientación o «Volver a la canoa» no pisaran una mini cuia (dp, la esquina del contenido; y hacia abajo); cero si no hizo
+        /// falta.
         /// </summary>
         public Vector2 FrameShiftDp => _frameShift;
 
+        /// <summary>Encuadres que probó el último <see cref="MarkersFrame"/> (cada uno recorre las mini cuias y las placas).</summary>
+        internal int FrameEvaluations => _frameEvaluations;
+
+        /// <summary>Lo que cuesta el encuadre que eligió el último <see cref="MarkersFrame"/> (0: nada pegado ni cortado).</summary>
+        internal int FrameCost => _frameBestHits;
+
         /// <summary>Caja de la ventanita de casa con su píldora en coordenadas de la zona visible del mapa (dp, y hacia abajo).</summary>
         public Rect HomeWindowViewRect => _homeWindow != null ? HomeWindowInView() : default;
+
+        /// <summary>Caja del rótulo «Andes ↑» en coordenadas de la zona visible del mapa (dp, y hacia abajo); vacía sin texto.</summary>
+        internal Rect AndesLabelViewRect => FixedViewRect(AndesLabel);
+
+        /// <summary>Caja del rótulo «Océano Atlántico ↓» en coordenadas de la zona visible del mapa (dp, y hacia abajo).</summary>
+        internal Rect AtlanticLabelViewRect => FixedViewRect(AtlanticLabel);
+
+        /// <summary>Caja de «Volver a la canoa» en coordenadas de la zona visible del mapa (dp, y hacia abajo), salga o no.</summary>
+        internal Rect BackToCanoeViewRect => FixedViewRect((RectTransform)_backToCanoe.Button.transform);
+
+        /// <summary>Agua de la mini cuia <paramref name="i"/> (tests: el fundido de Reducir movimiento).</summary>
+        internal Image StopMarkerWater(int i)
+        {
+            return _markers[i].WaterA;
+        }
 
         /// <summary>Área táctil de la mini cuia <paramref name="i"/>.</summary>
         internal Button StopMarkerButton(int i)
@@ -832,70 +878,244 @@ namespace AF.UI
         partial void MarkersFrame(ref Vector2 offset)
         {
             _frameShift = Vector2.zero;
-            if (!_markersReady || _homeWindow == null || _view != MapView.World || !_homeWindow.Ready || _markerCount == 0)
+            _frameEvaluations = 0;
+            _frameBestHits = 0;
+            if (!_markersReady || _view != MapView.World || _markerCount == 0)
             {
                 return;
             }
 
-            // La ventanita (marco y píldora) con su hueco: ninguna mini cuia (ni placa de mundo futuro) a menos de HomeWindowCuiaGapDp.
-            // Si alguna lo pisaría, el encuadre se corre lo menos posible: se prueban los corrimientos de FrameStepDp en FrameStepDp,
-            // hasta un 30 % de la vista en cada eje, que el borde del mapa deja tal cual, y gana el que no deja ningún choque (o el
-            // que menos deja) y, entre ellos, el más corto. Cuenta también como choque sacar del todo o en parte de la vista algo que
-            // se veía entero (la canoa con su equipo, una mini cuia o una placa). Solo al cambiar de vista o de encuadre; sin
-            // asignaciones.
-            Rect win = HomeWindowInView();
+            // Lo que queda fijo en el marco encima del mapa, con su hueco: la ventanita de casa (marco y píldora; solo si tiene
+            // arte), los rótulos «Andes ↑» y «Océano Atlántico ↓» y «Volver a la canoa» (solo con los encuadres que lo enseñan).
+            // Ninguna mini cuia ni placa de mundo futuro debe quedar debajo ni pegada. Si alguna lo estaría, el encuadre se corre lo
+            // menos posible, hasta un 30 % de la vista en cada eje y sin que el borde del mapa lo recorte, y gana el que no deja
+            // ningún choque (o el que menos cuesta) y, entre ellos, el más corto (FrameHits). Cuenta también como choque sacar del
+            // todo o en parte de la vista algo que se veía entero (la canoa con su equipo, una mini cuia o una placa). Se busca en
+            // tres pasos para no recorrer los miles de corrimientos de la rejilla fina: primero por anillos de FrameStepDp alrededor
+            // del encuadre pedido (hasta FrameNearRings, y se para en cuanto ningún corrimiento del anillo puede ser más corto que uno
+            // limpio ya hallado); si ahí no sale limpio, en una rejilla gruesa de FrameCoarseStepDp por todo el margen; y después se
+            // afina con FrameStepDp alrededor de la mejor. Solo al cambiar de vista o de encuadre; sin asignaciones.
+            _frameWindow = _homeWindow != null && _homeWindow.Ready;
+            _frameWin = _frameWindow ? HomeWindowInView() : default;
+            _frameAndes = FixedViewRect(AndesLabel);
+            _frameAtlantic = FixedViewRect(AtlanticLabel);
+            _frameButton = FixedViewRect((RectTransform)_backToCanoe.Button.transform);
             Vector2 start = new Vector2(ClampAxis(offset.x, _contentW, _viewW), ClampAxis(offset.y, _contentH, _viewH));
-            int bestHits = WindowHits(start, start, win);
-            if (bestHits == 0)
+            _frameStart = start;
+            _frameBest = start;
+            _frameBestMag = 0f;
+            _frameBestHits = FrameHits(start);
+            _frameEvaluations = 1;
+            if (_frameBestHits == 0)
             {
                 return;
             }
 
-            Vector2 best = start;
-            float bestMag = 0f;
             int nx = Mathf.FloorToInt(_viewW * 0.3f / FrameStepDp);
             int ny = Mathf.FloorToInt(_viewH * 0.3f / FrameStepDp);
-            for (int iy = -ny; iy <= ny; iy++)
+            int nearRings = Mathf.Min(FrameNearRings, Mathf.Max(nx, ny));
+            for (int r = 1; r <= nearRings; r++)
             {
-                for (int ix = -nx; ix <= nx; ix++)
+                float ring = r * FrameStepDp;
+                if (_frameBestHits == 0 && ring * ring >= _frameBestMag)
                 {
-                    Vector2 d = new Vector2(ix * FrameStepDp, iy * FrameStepDp);
-                    float mag = d.sqrMagnitude;
-                    if (bestHits == 0 && mag >= bestMag)
-                    {
-                        continue;
-                    }
+                    break; // ningún corrimiento de este anillo es más corto que el limpio ya hallado
+                }
 
-                    Vector2 want = start + d;
-                    Vector2 got = new Vector2(ClampAxis(want.x, _contentW, _viewW), ClampAxis(want.y, _contentH, _viewH));
-                    if ((got - want).sqrMagnitude > 0.25f)
+                for (int iy = -r; iy <= r; iy++)
+                {
+                    for (int ix = -r; ix <= r; ix++)
                     {
-                        continue; // el borde del mapa no deja
-                    }
-
-                    int hits = WindowHits(got, start, win);
-                    if (hits < bestHits || (hits == bestHits && mag < bestMag))
-                    {
-                        bestHits = hits;
-                        bestMag = mag;
-                        best = got;
+                        if ((ix == -r || ix == r || iy == -r || iy == r) && Mathf.Abs(ix) <= nx && Mathf.Abs(iy) <= ny)
+                        {
+                            TryFrame(ix, iy);
+                        }
                     }
                 }
             }
 
-            offset = best;
-            _frameShift = best - start;
+            if (_frameBestHits > 0)
+            {
+                int k = Mathf.Max(1, Mathf.RoundToInt(FrameCoarseStepDp / FrameStepDp));
+                for (int iy = -(ny / k) * k; iy <= ny; iy += k)
+                {
+                    for (int ix = -(nx / k) * k; ix <= nx; ix += k)
+                    {
+                        if (Mathf.Max(Mathf.Abs(ix), Mathf.Abs(iy)) > nearRings)
+                        {
+                            TryFrame(ix, iy); // los de los anillos cercanos ya se probaron
+                        }
+                    }
+                }
+
+                Vector2 d = (_frameBest - start) / FrameStepDp;
+                int cx = Mathf.RoundToInt(d.x);
+                int cy = Mathf.RoundToInt(d.y);
+                for (int iy = cy - k + 1; iy <= cy + k - 1; iy++)
+                {
+                    for (int ix = cx - k + 1; ix <= cx + k - 1; ix++)
+                    {
+                        if (Mathf.Abs(ix) <= nx && Mathf.Abs(iy) <= ny)
+                        {
+                            TryFrame(ix, iy);
+                        }
+                    }
+                }
+            }
+
+            offset = _frameBest;
+            _frameShift = _frameBest - start;
+            if (_frameBestHits > 0)
+            {
+                ResolvePlates(_frameBest);
+                _frameBestHits = FrameHits(_frameBest); // lo que queda
+            }
         }
 
-        // Lo que cuesta el encuadre con el contenido en o: 100 por mini cuia a menos de HomeWindowCuiaGapDp de win (la ventanita,
-        // en coordenadas de la zona visible; nada si con ese encuadre la casa se ve, porque no hay ventanita) y 10 por placa de
-        // mundo futuro (M3.4) que la pisa; y, por lo que se veía entero con el contenido en start y ya no, 100 la canoa con su
-        // equipo, 20 una mini cuia y 10 una placa. Lo primero es que ninguna mini cuia toque la ventanita. Sin asignaciones.
-        private int WindowHits(Vector2 o, Vector2 start, Rect win)
+        // Si con el encuadre elegido una placa de mundo futuro (M3.4) sigue pegada a la ventanita, a un rótulo de orientación o a
+        // «Volver a la canoa» (con el mismo hueco que en FrameHits), se coloca al otro lado del punto de su mundo: encima, a
+        // FixedOverlayGapDp, o a su derecha o su izquierda como la pone M3.4; y si no, debajo; subiendo o bajando de
+        // LabelSearchStepDp en LabelSearchStepDp hasta SilhouetteMaxShiftDp, como M3.4. Gana el primero que queda entero a la vista,
+        // dentro del mapa, libre de todo eso y sin pisar la canoa con su equipo, el guía, una mini cuia ni otra placa; si ninguno,
+        // la placa se queda donde estaba. El cambio de vista la vuelve a colocar (M3.4). Sin asignaciones.
+        private void ResolvePlates(Vector2 o)
         {
-            bool window = !HomeInViewAt(o);
-            float gap = HomeWindowCuiaGapDp;
-            Rect near = Rect.MinMaxRect(win.xMin - gap, win.yMin - gap, win.xMax + gap, win.yMax + gap);
+            bool window = _frameWindow && !HomeInViewAt(o);
+            bool button = CanoeButtonAt(o);
+            var view = new Rect(0f, 0f, _viewW, _viewH);
+            for (int i = 0; i < _silhouettes.Count; i++)
+            {
+                RectTransform root = _silhouettes[i].Root;
+                if (!root.gameObject.activeSelf || !FixedHit(InView(PlateBox(root), o), window, button))
+                {
+                    continue;
+                }
+
+                Vector2 size = root.sizeDelta;
+                Vector2 p = _space.ToLocal(_silhouettes[i].MapPoint);
+                int steps = Mathf.RoundToInt(SilhouetteMaxShiftDp / LabelSearchStepDp);
+                bool done = false;
+                for (int k = 0; k <= steps && !done; k++)
+                {
+                    float dy = k * LabelSearchStepDp;
+                    for (int c = 0; c < 6 && !done; c++)
+                    {
+                        // Encima del punto, a su derecha y a su izquierda subiendo dy; y lo mismo por debajo, bajando dy (como M3.4,
+                        // como mucho SilhouetteMaxShiftDp en vertical).
+                        float up = c < 3 ? dy : -dy;
+                        float x = (c % 3) == 0 ? p.x - (size.x * 0.5f) : (c % 3) == 1 ? p.x + SilhouetteGapDp : p.x - SilhouetteGapDp - size.x;
+                        float y = (c % 3) != 0 ? p.y + up - (size.y * 0.5f) : c == 0 ? p.y + FixedOverlayGapDp + dy : p.y - FixedOverlayGapDp - dy - size.y;
+                        x = Mathf.Clamp(x, LabelEdgeDp, Mathf.Max(LabelEdgeDp, _contentW - LabelEdgeDp - size.x));
+                        var box = new Rect(x, y, size.x, size.y);
+                        if (box.yMax > -LabelEdgeDp || box.yMin < -_contentH + LabelEdgeDp)
+                        {
+                            continue;
+                        }
+
+                        Rect seen = InView(box, o);
+                        if (!Inside(seen, view) || FixedHit(seen, window, button) || PlateBlocked(i, box))
+                        {
+                            continue;
+                        }
+
+                        root.anchoredPosition = new Vector2(box.xMin, box.center.y);
+                        done = true;
+                    }
+                }
+            }
+        }
+
+        // Caja de la placa de una silueta en coordenadas locales del contenido (y hacia arriba): su pivote va a la izquierda y en
+        // medio del alto.
+        private static Rect PlateBox(RectTransform root)
+        {
+            Vector2 size = root.sizeDelta;
+            return new Rect(root.anchoredPosition.x, root.anchoredPosition.y - (size.y * 0.5f), size.x, size.y);
+        }
+
+        // La caja (en la zona visible) queda a menos de su hueco de la ventanita, de un rótulo de orientación o de «Volver a la
+        // canoa» (estas dos, solo si salen con ese encuadre).
+        private bool FixedHit(Rect seen, bool window, bool button)
+        {
+            return (window && seen.Overlaps(Grow(_frameWin, HomeWindowCuiaGapDp)))
+                || (button && seen.Overlaps(Grow(_frameButton, FixedOverlayGapDp)))
+                || (_frameAndes.width > 0f && seen.Overlaps(Grow(_frameAndes, FixedOverlayGapDp)))
+                || (_frameAtlantic.width > 0f && seen.Overlaps(Grow(_frameAtlantic, FixedOverlayGapDp)));
+        }
+
+        // Una placa en box (local) pisaría la canoa con su equipo, el guía, una mini cuia u otra placa.
+        private bool PlateBlocked(int self, Rect box)
+        {
+            if ((_gearBox.width > 0f && box.Overlaps(Grow(_gearBox, SilhouetteCanoeClearanceDp))) || (_guideBox.width > 0f && box.Overlaps(_guideBox)))
+            {
+                return true;
+            }
+
+            for (int k = 0; k < _markerCount; k++)
+            {
+                if (box.Overlaps(Grow(CuiaBox(_markers[k].Shown), MarkerObstacleGapDp)))
+                {
+                    return true;
+                }
+            }
+
+            for (int k = 0; k < _silhouettes.Count; k++)
+            {
+                RectTransform other = _silhouettes[k].Root;
+                if (k != self && other.gameObject.activeSelf && box.Overlaps(PlateBox(other)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Prueba el corrimiento (ix, iy) × FrameStepDp del encuadre pedido y se queda con él si cuesta menos (o lo mismo y es más
+        // corto). Sin asignaciones.
+        private void TryFrame(int ix, int iy)
+        {
+            Vector2 d = new Vector2(ix * FrameStepDp, iy * FrameStepDp);
+            float mag = d.sqrMagnitude;
+            if (_frameBestHits == 0 && mag >= _frameBestMag)
+            {
+                return;
+            }
+
+            Vector2 want = _frameStart + d;
+            Vector2 got = new Vector2(ClampAxis(want.x, _contentW, _viewW), ClampAxis(want.y, _contentH, _viewH));
+            if ((got - want).sqrMagnitude > 0.25f)
+            {
+                return; // el borde del mapa no deja
+            }
+
+            _frameEvaluations++;
+            int hits = FrameHits(got);
+            if (hits < _frameBestHits || (hits == _frameBestHits && mag < _frameBestMag))
+            {
+                _frameBestHits = hits;
+                _frameBestMag = mag;
+                _frameBest = got;
+            }
+        }
+
+        // Lo que cuesta el encuadre con el contenido en o (lo fijo, en coordenadas de la zona visible):
+        // - por mini cuia: 100 si queda a menos de HomeWindowCuiaGapDp de la ventanita (si con ese encuadre la casa se ve, no hay
+        //   ventanita), 50 si queda a menos de FixedOverlayGapDp de «Volver a la canoa» (si con ese encuadre sale: el toque se lo
+        //   llevaría el botón) y 30 por cada rótulo de orientación al que quede a menos de FixedOverlayGapDp;
+        // - por placa de mundo futuro (M3.4): 10 por cada una de esas tres cosas que pise con el mismo hueco;
+        // - por lo que se veía entero con el contenido en el encuadre pedido y ya no: 100 la canoa con su equipo, 20 una mini cuia
+        //   y 10 una placa.
+        // Lo primero es que ninguna mini cuia toque la ventanita. Sin asignaciones.
+        private int FrameHits(Vector2 o)
+        {
+            Vector2 start = _frameStart;
+            bool window = _frameWindow && !HomeInViewAt(o);
+            bool button = CanoeButtonAt(o);
+            Rect nearWin = Grow(_frameWin, HomeWindowCuiaGapDp);
+            Rect nearAndes = Grow(_frameAndes, FixedOverlayGapDp);
+            Rect nearAtlantic = Grow(_frameAtlantic, FixedOverlayGapDp);
+            Rect nearButton = Grow(_frameButton, FixedOverlayGapDp);
             var view = new Rect(0f, 0f, _viewW, _viewH);
             int hits = 0;
             if (_gearBox.width > 0f && Cut(_gearBox, o, start, view))
@@ -918,14 +1138,29 @@ namespace AF.UI
                         continue;
                     }
 
-                    Vector2 size = plate.sizeDelta;
-                    local = new Rect(plate.anchoredPosition.x, plate.anchoredPosition.y - (size.y * 0.5f), size.x, size.y);
+                    local = PlateBox(plate);
                 }
 
                 bool cuia = i < _markerCount;
-                if (window && InView(local, o).Overlaps(cuia ? near : win))
+                Rect seen = InView(local, o);
+                if (window && seen.Overlaps(nearWin))
                 {
                     hits += cuia ? 100 : 10;
+                }
+
+                if (button && seen.Overlaps(nearButton))
+                {
+                    hits += cuia ? 50 : 10;
+                }
+
+                if (_frameAndes.width > 0f && seen.Overlaps(nearAndes))
+                {
+                    hits += cuia ? 30 : 10;
+                }
+
+                if (_frameAtlantic.width > 0f && seen.Overlaps(nearAtlantic))
+                {
+                    hits += cuia ? 30 : 10;
                 }
 
                 if (Cut(local, o, start, view))
@@ -935,6 +1170,46 @@ namespace AF.UI
             }
 
             return hits;
+        }
+
+        // «Volver a la canoa» sale con el contenido en o: la canoa queda fuera de la vista (con su margen) y el botón movería la
+        // vista (lo mismo que decide SetOffset). Sin asignaciones.
+        private bool CanoeButtonAt(Vector2 o)
+        {
+            if (!_hasCanoe)
+            {
+                return false;
+            }
+
+            Vector2 local = _space.ToLocal(_canoeMap);
+            float px = o.x + local.x;
+            float py = o.y - local.y;
+            if (px >= CanoeMarginDp && px <= _viewW - CanoeMarginDp && py >= CanoeMarginDp && py <= _viewH - CanoeMarginDp)
+            {
+                return false;
+            }
+
+            Vector2 target = CanoeCenteredOffset();
+            return Mathf.Abs(target.x - o.x) > 0.5f || Mathf.Abs(target.y - o.y) > 0.5f;
+        }
+
+        // Caja de algo fijo del marco (un rótulo, el botón) en coordenadas de la zona visible (dp, y hacia abajo); vacía si no hay
+        // nada que pintar (un rótulo sin texto).
+        private Rect FixedViewRect(TMPro.TextMeshProUGUI? label)
+        {
+            if (label == null || !label.gameObject.activeSelf || string.IsNullOrEmpty(label.text))
+            {
+                return default;
+            }
+
+            return FixedViewRect(label.rectTransform);
+        }
+
+        private static Rect FixedViewRect(RectTransform rt)
+        {
+            Vector2 p = rt.anchoredPosition;
+            Vector2 size = rt.sizeDelta;
+            return new Rect(p.x - FramePadDp, -p.y - FramePadDp, size.x, size.y);
         }
 
         // Caja local (y hacia arriba) en coordenadas de la zona visible (y hacia abajo) con el contenido en o.
