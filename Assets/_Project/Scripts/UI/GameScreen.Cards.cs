@@ -49,12 +49,17 @@ namespace AF.UI
     /// estos niveles no sale) con su retrato de 40 dp y <c>sloth_present</c>, sobre la franja del panorama si mide ≥ 64 dp y si
     /// no sobre el muelle, sin capturar toques, sin tapar cuias, bandeja ni HUD, durante su tiempo de lectura (D-011) y sin
     /// quedarse fija. La ocultan lo mismo que al aviso de TiTino (un modal del embudo, otro intento, otro nivel, la celebración o,
-    /// sobre el muelle, una burbuja «Te faltan {n}» que sale debajo). En el 3 es el tooltip de Marea, «Marea · Deshacer: toca para
-    /// devolver el agua» (04 §2.1); en 1-10 Marea es ilimitada, así que su primer uso no descuenta. Sin TiTino
-    /// (<c>ui_sloth_enabled</c> apagado o, en release, sin su arte) o si la tarjeta no cabe, la instrucción sale como aviso de
-    /// texto (<c>_toast</c>): el tutorial no se pierde [P]. El ajuste «Mensajes de TiTino» no la quita: es la instrucción del
+    /// sobre el muelle, una burbuja «Te faltan {n}» que sale debajo). Sobre el muelle va a ≥ 8 dp del marco del tablero y a ≥ 12
+    /// dp del marco de Marea, y si tapa el poste, el poste se funde con ella. En el 3 es el tooltip de Marea, «Marea · Deshacer:
+    /// toca para devolver el agua» (04 §2.1), que no sale tras la intro sino tras el primer vertido del intento (04 §2.1, «tras
+    /// ejecutarlo»; 02 §13 pide el primer vertido que aleja de la solución, con el solver, y si no ocurre el inicio del 5: se
+    /// simplifica [P]) y con TiTino señalando el botón: sobre el muelle, pegada a la bandeja si cabe, y con el retrato encima del
+    /// botón de Marea hasta donde deja el margen de 16 dp (a 360 dp, con la frase en una tarjeta ancha al 130 %, no llega); en
+    /// 1-10 Marea es ilimitada, así que su primer uso no descuenta. Sin TiTino (<c>ui_sloth_enabled</c> apagado o, en release,
+    /// sin su arte) o si la tarjeta no cabe, la instrucción sale como aviso de texto (<c>_toast</c>): el tutorial no se pierde [P]. El ajuste «Mensajes de TiTino» no la quita: es la instrucción del
     /// tutorial, no una frase de su banco [P]. El 8 sigue siendo de Capi (su aviso de la Cuia extra) y el 12, de TU1b. Sonda
-    /// <c>AF_STATE tutorial</c> con el nivel, la clave, la duración y el sitio (<c>band</c>, <c>dock</c> o <c>toast</c>).</para>
+    /// <c>AF_STATE tutorial</c> con el nivel, la clave, la duración, el sitio (<c>band</c>, <c>dock</c> o <c>toast</c>), si es el
+    /// tooltip de Marea (<c>undo</c>) y si el retrato quedó sobre su botón (<c>over_undo</c>).</para>
     /// </remarks>
     public sealed partial class GameScreen : ILevelCardListener
     {
@@ -188,6 +193,8 @@ namespace AF.UI
                 return;
             }
 
+            TickTutorialAfterPour(); // el tooltip de Marea del 3, tras el primer vertido (TU1a)
+
             LevelFlow? flow = _flow;
             bool inCard = flow != null && flow.HasLevel && flow.Phase == FlowPhase.LevelCard;
             if (_levelCard.Visible && !_levelCard.Dismissing && !inCard)
@@ -233,6 +240,7 @@ namespace AF.UI
             // OnLevelCard llega justo después.
             _introHeld = false;
             _cardLayoutSent = false;
+            _tutorialAfterPour = null; // el tooltip de Marea que esperaba un vertido era del nivel anterior (TU1a)
             _levelCard.HideNow();
             BannerLevelLoaded();
         }
@@ -383,10 +391,41 @@ namespace AF.UI
 
         // ------------------------------------------------------------------ Instrucción del tutorial con TiTino (TU1a)
 
+        /// <summary>
+        /// Aire mínimo (dp) entre el marco del tablero y la instrucción del tutorial cuando va sobre el muelle (revisión de TU1a: la
+        /// tarjeta del miquito y el aviso de TI6b van a 4 dp).
+        /// </summary>
+        internal const float TutorialDockBoardAirDp = 8f;
+
+        /// <summary>
+        /// Aire mínimo (dp) entre el canto de la instrucción del tutorial sobre el muelle y el marco del botón de Marea, por debajo
+        /// (revisión de TU1a). Se suma a lo que ya pide la bandeja con sus burbujas (SightingDockLimit).
+        /// </summary>
+        internal const float TutorialDockUndoAirDp = 12f;
+
         // La tarjeta de TiTino a la vista lleva la instrucción del tutorial (no el aviso tras Volver a la orilla).
         private bool _slothNoticeTutorial;
         private string? _lastTutorialProbe;
         private int _tutorialShown;
+
+        // El tooltip de Marea del 3 espera al primer vertido del intento (04 §2.1: «tras ejecutarlo») [P]: su texto, o null.
+        private string? _tutorialAfterPour;
+
+        // La última instrucción se colocó con el retrato sobre el botón de Marea (tests y sonda).
+        private bool _tutorialOverUndo;
+
+        /// <summary>
+        /// Solo tests y capturas: el alto (dp) que la instrucción del tutorial toma como franja del panorama (null = el de verdad,
+        /// <c>PanelY − BoardTop</c>). Por debajo de <see cref="SightingBandDp"/> fuerza el sitio sobre el muelle, que en los
+        /// tableros de 1, 2, 3 y 6 no sale solo (sus franjas miden más de 64 dp a 640 y 780 dp, también al 130 %).
+        /// </summary>
+        internal static float? TutorialBandOverrideDp { get; set; }
+
+        /// <summary>El tooltip de Marea del 3 espera aún al primer vertido del intento (tests).</summary>
+        internal bool TutorialWaitsForPour => _tutorialAfterPour != null;
+
+        /// <summary>La instrucción a la vista tiene el retrato de TiTino sobre el botón de Marea (el 3; 04 §2.1; tests).</summary>
+        internal bool TutorialPointsAtUndo => TutorialSlothVisible && _tutorialOverUndo;
 
         /// <summary>
         /// Solo tests: enciende o apaga la instrucción del tutorial con TiTino (null = encendida, como en el juego). Los tests
@@ -410,8 +449,10 @@ namespace AF.UI
 
         // Al habilitarse el toque tras la intro (OnIntroFinished), la instrucción del nivel (TutorialInstruction.KeyFor) entra la
         // primera en la cola de avisos; sale cuando la tropa se ha ido y sin el rótulo del intento (PumpNotices).
+        // En el 3, el tooltip de Marea no entra aún: espera al primer vertido del intento (TickTutorialAfterPour).
         private void MaybeShowTutorial(LevelFlow flow)
         {
+            _tutorialAfterPour = null;
             if (!flow.HasLevel || !(TutorialSlothOverride ?? true))
             {
                 return;
@@ -429,23 +470,48 @@ namespace AF.UI
                 return; // sin texto en este idioma no hay instrucción (nunca otro idioma; D-018)
             }
 
+            if (TutorialInstruction.PointsAtUndo(flow.LevelNumber))
+            {
+                _tutorialAfterPour = text; // 04 §2.1: tras el vertido (el tentador del tablero del 3) [P]
+                return;
+            }
+
             EnqueueNoticeFirst(NoticeKind.Tutorial, text);
         }
 
-        // La instrucción en la tarjeta de TiTino, en su sitio (PlaceSlothCard: la franja del panorama o el muelle), con
-        // sloth_present; sin TiTino (apagado o sin su arte) o sin sitio, como aviso de texto, que nunca tapa las cuias.
+        // El tooltip de Marea del 3 (04 §2.1): en cuanto el intento tiene un vertido aplicado y la vista lo terminó de animar, en
+        // juego y sin bloqueo ni victoria pendientes, entra el primero en la cola (sale cuando la tropa se ha ido; PumpNotices). Si
+        // el vertido se deshace antes, espera al siguiente. Cada fotograma, sin asignaciones.
+        private void TickTutorialAfterPour()
+        {
+            string? text = _tutorialAfterPour;
+            LevelFlow? flow = _flow;
+            if (text == null || NoticesHeld(flow) || flow!.Session.AppliedPours == 0 || !IsViewIdle)
+            {
+                return;
+            }
+
+            _tutorialAfterPour = null;
+            EnqueueNoticeFirst(NoticeKind.Tutorial, text);
+            PumpNotices();
+        }
+
+        // La instrucción en la tarjeta de TiTino, en su sitio (PlaceTutorialCard: la franja del panorama o el muelle; el tooltip
+        // de Marea, junto a su botón), con sloth_present; sin TiTino (apagado o sin su arte) o sin sitio, como aviso de texto, que
+        // nunca tapa las cuias.
         private void ShowTutorialNow(string text)
         {
             BoardLayoutResult? l = _layout;
             _slothNoticeDockBottom = float.NaN;
             _slothNoticeTutorial = false;
+            _tutorialOverUndo = false;
             LevelFlow? flow = _flow;
             SlothArt? art = SlothEnabled ? _art.SlothRigArt() : null;
             if (l != null && art != null)
             {
                 _slothNotice ??= new SlothNoticeCard(_noticeLayer, _art);
                 float height = _slothNotice.Measure(_canvasW, text);
-                if (height > 0f && PlaceSlothCard(l, height))
+                if (height > 0f && PlaceTutorialCard(l, height, flow != null && TutorialInstruction.PointsAtUndo(flow.LevelNumber)))
                 {
                     _slothNoticeTutorial = true;
                     _slothNotice.Show(art.Head, flow != null && flow.ReduceMotion, SlothPoseId.Present);
@@ -456,9 +522,84 @@ namespace AF.UI
             }
 
             _slothNoticeDockBottom = float.NaN;
+            _slothCoversPost = false;
+            _tutorialOverUndo = false;
             ShowToastNow(text);
             _tutorialShown++;
             EmitTutorialProbe(NoticeTiming.ReadMs(text), "toast");
+        }
+
+        // La instrucción ya medida (height) en su sitio, como la tarjeta del miquito: sobre la franja del panorama si mide al menos
+        // SightingBandDp (y su alto + SightingBandAirDp); si no, sobre el muelle, con TutorialDockBoardAirDp bajo el marco del
+        // tablero y TutorialDockUndoAirDp sobre el marco de Marea (y por encima de la bandeja y de sus burbujas). El tooltip de
+        // Marea del 3 (pointsAtUndo; 04 §2.1: TiTino señala el botón con su retrato) va sobre el muelle si cabe, pegado a la bandeja,
+        // y con el retrato hacia el botón de Marea, encima de él si el margen de 16 dp lo deja. Sobre el muelle, si tapa el
+        // poste, el poste se funde con ella (como con «Fruta nueva»). False si no cabe en ningún sitio.
+        private bool PlaceTutorialCard(BoardLayoutResult l, float height, bool pointsAtUndo)
+        {
+            _slothNoticeDockBottom = float.NaN;
+            _slothCoversPost = false;
+            float realBand = l.PanelY - BoardTop;
+            float band = TutorialBandOverrideDp ?? realBand;
+            bool bandFits = band >= Mathf.Max(SightingBandDp, height + SightingBandAirDp);
+            float dockTop = l.PanelBottom + TutorialDockBoardAirDp;
+            float dockBottom = TutorialDockLimit(out float undoX, out float undoHalf);
+            bool dockFits = dockTop + height <= dockBottom;
+            float top;
+            bool dock;
+            if (pointsAtUndo && dockFits)
+            {
+                top = dockBottom - height;
+                dock = true;
+            }
+            else if (bandFits)
+            {
+                top = BoardTop + ((realBand - height) * 0.5f);
+                dock = false;
+            }
+            else if (dockFits)
+            {
+                top = dockTop;
+                dock = true;
+            }
+            else
+            {
+                return false;
+            }
+
+            bool aim = pointsAtUndo && !float.IsNaN(undoX);
+            _slothNotice!.Place(_canvasW, top, aim ? undoX : float.NaN);
+
+            // Con una tarjeta ancha en un lienzo estrecho (360 dp al 130 %) el margen de 16 dp no deja llevar el retrato hasta
+            // encima del botón: la tarjeta queda igual pegada a la bandeja, pero la sonda no dice over_undo.
+            _tutorialOverUndo = aim && Mathf.Abs(_slothNotice.PortraitCenterXDp - undoX) <= undoHalf;
+            if (dock)
+            {
+                _slothNoticeDockBottom = top + height;
+                _slothCoversPost = CardOverPost(_slothNotice.Root, SlothNoticeCard.EdgeDp);
+            }
+
+            return true;
+        }
+
+        // Lo más bajo que puede llegar la instrucción sobre el muelle (dp desde arriba): lo de la tarjeta del miquito
+        // (SightingDockLimit: la bandeja y sus burbujas) y, con su canto, TutorialDockUndoAirDp sobre el marco del botón de Marea.
+        // undoX y undoHalf: el centro del botón y la mitad de su ancho (NaN si no se ve).
+        private float TutorialDockLimit(out float undoX, out float undoHalf)
+        {
+            float limit = SightingDockLimit();
+            undoX = float.NaN;
+            undoHalf = float.NaN;
+            RectTransform undo = (RectTransform)_tray.UndoButton.transform;
+            if (undo.gameObject.activeInHierarchy)
+            {
+                CanvasRectDp(undo, out float left, out float top, out float right, out _);
+                undoX = (left + right) * 0.5f;
+                undoHalf = (right - left) * 0.5f;
+                limit = Mathf.Min(limit, top - TutorialDockUndoAirDp - SlothNoticeCard.EdgeDp);
+            }
+
+            return limit;
         }
 
         // AF_STATE tutorial: nivel, clave de la instrucción, duración y sitio (band, dock o toast). Solo con la sonda; al
@@ -477,6 +618,7 @@ namespace AF.UI
             sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
             AppendJsonString(sb, "mode", mode);
             sb.Append(",\"undo\":").Append(TutorialInstruction.PointsAtUndo(level) ? "true" : "false");
+            sb.Append(",\"over_undo\":").Append(mode != "toast" && _tutorialOverUndo ? "true" : "false");
             _lastTutorialProbe = sb.ToString();
             _probe.Event("tutorial", _lastTutorialProbe);
         }

@@ -11,8 +11,8 @@ namespace AF.UI
 {
     /// <summary>
     /// Tarjeta «Fruta nueva» (06 §4.5; propuesta de Frutas §5.1 y paso F5 de §10; tarea F5): en el estreno de cada tinte
-    /// (<see cref="SightingRule.FruitNewAt"/>: 2, 4, 7, 11, 21, 41, 61, 81, 111, 141 y 201 en 1-300), después de la intro y cuando la
-    /// tropa se ha ido de la rama, lleva lo que pide 06 §4.5: el icono de la fruta (la fruta en vuelo del tinte,
+    /// (<see cref="SightingRule.FruitNewAt"/>: 4, 7, 11, 21, 41, 61, 81, 111, 141 y 201 en 1-300; el 2 es del tutorial, TU1a),
+    /// después de la intro y cuando la tropa se ha ido de la rama, lleva lo que pide 06 §4.5: el icono de la fruta (la fruta en vuelo del tinte,
     /// <see cref="ProceduralArt.FruitFlight"/>, con su PNG <c>fruta_&lt;tinte&gt;</c> si existe) sobre un disco, el nombre en el
     /// idioma del jugador (<c>tint.&lt;tinte&gt;.name</c>), la muestra de color con el patrón y el icono de accesibilidad
     /// (<see cref="ProceduralArt.TintSwatch"/>) y una línea, la frase de su serie de Frutas del río (<c>fact.&lt;tinte&gt;.tag</c>,

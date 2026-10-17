@@ -43,6 +43,7 @@ namespace AF.UI
 
         private const float FadeMs = 200f;
         private const float TextX = 11f + PortraitDp + 10f;
+        private const float PortraitCenterDp = 11f + (PortraitDp * 0.5f); // centro del retrato desde el borde izquierdo
         private const float TextRightPadDp = 14f;
         private const float PadYDp = 9f;
         private const float FitSlackDp = 2f;
@@ -64,6 +65,7 @@ namespace AF.UI
         private float _textHeight;
         private float _textWidth;
         private float _cardWidth;
+        private float _left;
         private int _lines;
 
         public SlothNoticeCard(Transform parent, ProceduralArt art)
@@ -119,6 +121,9 @@ namespace AF.UI
         /// <summary>Retrato (tests).</summary>
         public Image Portrait => _portrait;
 
+        /// <summary>Centro del retrato a lo ancho (dp desde la izquierda del lienzo) con el último <c>Place</c>.</summary>
+        public float PortraitCenterXDp => _left + PortraitCenterDp;
+
         /// <summary>Gesto del retrato: <c>sloth_encourage</c> en el aviso del reinicio, <c>sloth_present</c> en el tutorial.</summary>
         public SlothPoseId Pose => _pose;
 
@@ -170,8 +175,25 @@ namespace AF.UI
         /// </summary>
         public void Place(float canvasW, float top)
         {
+            Place(canvasW, top, float.NaN);
+        }
+
+        /// <summary>
+        /// Como <see cref="Place(float, float)"/>, pero, si <paramref name="portraitX"/> no es NaN, desplazada a lo ancho para que
+        /// el centro del retrato quede en <paramref name="portraitX"/> (dp desde la izquierda), sin salir de los 16 dp de cada
+        /// lado: el tooltip de Marea, con TiTino señalando su botón (tarea TU1a; 04 §2.1).
+        /// </summary>
+        public void Place(float canvasW, float top, float portraitX)
+        {
             float w = Mathf.Min(Mathf.Min(MaxWidthDp, canvasW - 32f), _cardWidth);
-            UiBuilder.Place(_root, (canvasW - w) * 0.5f, top, w, _height);
+            float left = (canvasW - w) * 0.5f;
+            if (!float.IsNaN(portraitX))
+            {
+                left = Mathf.Clamp(portraitX - PortraitCenterDp, 16f, Mathf.Max(16f, canvasW - 16f - w));
+            }
+
+            _left = left;
+            UiBuilder.Place(_root, left, top, w, _height);
             float face = (_height - PortraitDp) * 0.5f;
             UiBuilder.Place(_halo.rectTransform, 9f, face - 2f, PortraitDp + 4f, PortraitDp + 4f);
             RectTransform portrait = _portrait.rectTransform;

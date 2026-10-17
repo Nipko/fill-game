@@ -38,8 +38,9 @@ namespace AF.Tests.EditMode
 
         /// <summary>
         /// La instrucción del tutorial con TiTino (TU1a; 02 §13; guion de la intro §14) ocupa el 1, el 2, el 3 y el 6: ninguna
-        /// tarjeta del miquito en ellos (tutorial &gt; Fruta nueva &gt; miquito). En el 2, «Fruta nueva» sigue, después de la
-        /// instrucción (06 §2.2) [P]; el 8 es de Capi y no lleva instrucción de TiTino.
+        /// tarjeta del miquito ni «Fruta nueva» en ellos (tutorial &gt; Fruta nueva &gt; miquito, una tarjeta por nivel como mucho:
+        /// D-023, punto 39; 02 §4.2; guion §14), tampoco en el 2, aunque 06 §2.2 la liste; el 8 es de Capi y no lleva instrucción de
+        /// TiTino.
         /// </summary>
         [Test]
         public void TutorialLevels_AreBusy_AndKeepTheirOrder()
@@ -57,8 +58,13 @@ namespace AF.Tests.EditMode
             Assert.That(TutorialInstruction.KeyFor(TutorialInstruction.UndoLevel), Is.EqualTo(TutorialInstruction.UndoKey), "el 3, Marea");
             Assert.That(TutorialInstruction.PointsAtUndo(3), Is.True);
             Assert.That(TutorialInstruction.PointsAtUndo(6), Is.False);
-            Assert.That(SightingRule.FruitNewAt(2, true), Is.GreaterThanOrEqualTo(0), "en el 2, Fruta nueva tras la instrucción (06 §2.2)");
-            Assert.That(SightingRule.FruitNewAt(1, true), Is.EqualTo(-1));
+            foreach (int level in TutorialInstruction.Levels)
+            {
+                Assert.That(SightingRule.FruitNewAt(level, true), Is.EqualTo(-1),
+                    "el " + level + ": sin «Fruta nueva», una tarjeta por nivel como mucho (D-023, punto 39; 02 §4.2)");
+            }
+
+            Assert.That(SightingRule.FruitNewAt(4, true), Is.GreaterThanOrEqualTo(0), "el 4 sí: no tiene instrucción");
         }
 
         /// <summary>

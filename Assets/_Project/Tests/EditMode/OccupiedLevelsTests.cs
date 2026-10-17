@@ -32,8 +32,12 @@ namespace AF.Tests.EditMode
         // D-019; el Brote de dos hojas en el 343 y la Flor en el 403): ocupados ya, sin esperar a su tarjeta.
         private static readonly int[] NamedOccupied = { 100, 163, 18, 22, 160, 243, 283, 323, 343, 403 };
 
-        // Niveles de la tarjeta «Fruta nueva» en 1-320 (criterio de aceptación de F5, más el 301 del arazá).
-        private static readonly int[] FruitNewLevels = { 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201, 301 };
+        // Niveles de la tarjeta «Fruta nueva» en 1-320 (criterio de aceptación de F5, más el 301 del arazá), sin el 2: lo ocupa la
+        // instrucción del tutorial con TiTino y sale como mucho una tarjeta por nivel (TU1a; D-023, punto 39; 02 §4.2).
+        private static readonly int[] FruitNewLevels = { 4, 7, 11, 21, 41, 61, 81, 111, 141, 201, 301 };
+
+        // Índice del taperebá en SightingRule.FruitDebutTints (estreno en el 2, sin tarjeta: sus claves siguen en las tablas).
+        private static readonly int Tapereba = System.Array.IndexOf(SightingRule.FruitDebutTints, "tapereba");
 
         private static readonly string[] Packs = { "tutorial_v0", "mundo_02_v1", "mundo_03_v1", "mundo_04_v1", "mundo_05_v1", "mundo_06_v1" };
 
@@ -230,7 +234,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void FruitNew_ShowsOnTheDebutsFromLevel2_FirstAttemptOnly()
+        public void FruitNew_ShowsOnTheDebutsWithoutTutorial_FirstAttemptOnly()
         {
             var shown = new List<int>();
             for (int level = 1; level <= 1000; level++)
@@ -246,9 +250,9 @@ namespace AF.Tests.EditMode
                 Assert.That(SightingRule.FruitDebutTintLevels[fruit], Is.EqualTo(level), "el tinte que se estrena en el " + level);
             }
 
-            Assert.That(shown, Is.EqualTo(FruitNewLevels), "una por nivel: 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201 (y 301)");
+            Assert.That(shown, Is.EqualTo(FruitNewLevels), "una por nivel: 4, 7, 11, 21, 41, 61, 81, 111, 141, 201 (y 301)");
             Assert.That(SightingRule.FruitNewAt(SightingRule.FirstContactLevel, true), Is.EqualTo(-1), "el 1 es del tutorial (07 §6.4)");
-            Assert.That(SightingRule.FruitDebutTints[SightingRule.FruitNewAt(2, true)], Is.EqualTo("tapereba"));
+            Assert.That(SightingRule.FruitNewAt(2, true), Is.EqualTo(-1), "el 2 es de la instrucción del tutorial (TU1a; D-023, punto 39)");
             Assert.That(SightingRule.FruitDebutTints[SightingRule.FruitNewAt(4, true)], Is.EqualTo("guanabana"));
             Assert.That(SightingRule.FruitDebutTints[SightingRule.FruitNewAt(7, true)], Is.EqualTo("bacaba"));
             Assert.That(SightingRule.FruitDebutTints[SightingRule.FruitNewAt(11, true)], Is.EqualTo("agua_tapajos"));
@@ -284,8 +288,8 @@ namespace AF.Tests.EditMode
                 Assert.That(Loc.Fact(SightingRule.FruitTagKey(i)), Is.Not.Empty, tint);
             }
 
-            Assert.That(Loc.Fact(SightingRule.FruitTagKey(SightingRule.FruitNewAt(2, true))), Is.EqualTo("Taperebá: la ciruela de los\u00A0tapires"), "con su espacio duro (facts.csv)");
-            Assert.That(Loc.Fact(SightingRule.FruitNameKey(SightingRule.FruitNewAt(2, true))), Is.EqualTo("Taperebá"));
+            Assert.That(Loc.Fact(SightingRule.FruitTagKey(Tapereba)), Is.EqualTo("Taperebá: la ciruela de los\u00A0tapires"), "con su espacio duro (facts.csv)");
+            Assert.That(Loc.Fact(SightingRule.FruitNameKey(Tapereba)), Is.EqualTo("Taperebá"));
         }
 
         [Test]

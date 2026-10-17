@@ -19,8 +19,13 @@ namespace AF.GameFlow
     /// </list>
     /// Prioridad tras la intro (02 §4.2; 07 §6.4; guion de la intro §14): tutorial &gt; Fruta nueva &gt; miquito &gt; rótulo. La
     /// instrucción entra la primera en la cola de avisos; la tarjeta del miquito y el rótulo no salen en estos niveles
-    /// (<see cref="SightingRule.IsBusy"/>; <c>StopLabelRule</c>). En el 2, «Fruta nueva: Taperebá» sale después de la instrucción,
-    /// como lista 06 §2.2 para ese nivel [P] (02 §4.2 dice «como mucho una tarjeta por nivel»: pregunta abierta).
+    /// (<see cref="SightingRule.IsBusy"/>; <c>StopLabelRule</c>). Como mucho una tarjeta por nivel (D-023, punto 39; 02 §4.2;
+    /// guion de la intro §14): en el 2 no sale «Fruta nueva: Taperebá» (<see cref="SightingRule.FruitNewAt"/> devuelve −1, como en
+    /// el 1), aunque la fila del 2 de 06 §2.2 la liste (contradicción registrada para el dueño en la entrega de TU1a).
+    /// <para>El tooltip de Marea del 3 no sale tras la intro sino tras el primer vertido del intento (04 §2.1: «tras ejecutarlo»
+    /// el vertido tentador; 02 §13 pide la primera vez que un vertido aleja de la solución, con el solver, o al inicio del 5: se
+    /// simplifica al primer vertido [P]), y TiTino señala el botón: la tarjeta va sobre el muelle, junto a la bandeja, con el
+    /// retrato sobre el botón de Marea (GameScreen.Cards.cs).</para>
     /// </summary>
     public static class TutorialInstruction
     {
@@ -68,7 +73,10 @@ namespace AF.GameFlow
             return i < 0 ? null : s_keys[i];
         }
 
-        /// <summary>La instrucción de <paramref name="level"/> señala el botón de Marea (el tutorial del 3; 04 §2.1).</summary>
+        /// <summary>
+        /// La instrucción de <paramref name="level"/> es el tooltip de Marea (el tutorial del 3; 04 §2.1): sale tras el primer
+        /// vertido del intento [P] y TiTino señala el botón con su retrato.
+        /// </summary>
         public static bool PointsAtUndo(int level)
         {
             return level == UndoLevel;

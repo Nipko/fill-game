@@ -20,11 +20,14 @@ namespace AF.Tests.PlayMode
     /// <list type="bullet">
     /// <item>la instrucción del nivel (<see cref="TutorialInstruction"/>) sale tras la intro y cuando la tropa ya se fue, nunca
     /// antes (el orden de la intro, intacto), en la tarjeta de TiTino con su retrato y <c>sloth_present</c>, por la cola y la
-    /// primera, durante su tiempo de lectura; sobre la franja del panorama si mide ≥ 64 dp y si no sobre el muelle;</item>
+    /// primera, durante su tiempo de lectura; sobre la franja del panorama si mide ≥ 64 dp y si no sobre el muelle (con la franja
+    /// forzada por debajo de 64 dp: a ≥ 8 dp del marco del tablero y a ≥ 12 dp del marco de Marea, y el poste que tape se funde
+    /// con ella);</item>
     /// <item>ninguna intersección con cuias (con su elevación), bandeja ni HUD, a 360 × 640 y 360 × 780, al 100 % y al 130 %; la
     /// frase, a 12 sp o más y en ≤ 2 líneas; sin toques (ningún gráfico es <c>raycastTarget</c>);</item>
-    /// <item>en el 3, el tooltip de Marea, cuyo primer uso no descuenta (Marea ilimitada en 1-10);</item>
-    /// <item>en el 2, «Fruta nueva: Taperebá» sale después de la instrucción (06 §2.2) [P];</item>
+    /// <item>en el 3, el tooltip de Marea no sale tras la intro sino tras el primer vertido (04 §2.1) [P], con el retrato de TiTino
+    /// encima del botón de Marea; su primer uso no descuenta (Marea ilimitada en 1-10);</item>
+    /// <item>en el 2, solo la instrucción: ninguna «Fruta nueva» (una tarjeta por nivel como mucho; D-023, punto 39; 02 §4.2);</item>
     /// <item>el 8 sigue con Capi (su aviso de la Cuia extra) y sin TiTino; los demás niveles, sin instrucción;</item>
     /// <item>tras Volver a la orilla en el 6, la instrucción otra vez y ningún aviso de TiTino del reinicio; un modal del embudo la
     /// oculta; sin TiTino, sale como aviso de texto.</item>
@@ -42,6 +45,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             GameScreen.TutorialSlothOverride = null;
+            GameScreen.TutorialBandOverrideDp = null;
             GameScreen.SlothRestartNoticeOverride = null;
             GameScreen.FruitNewOverride = null;
             GameScreen.SimulatedScreen = null;
@@ -55,6 +59,7 @@ namespace AF.Tests.PlayMode
             yield return Load(level);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
+            PourIfUndoLevel(boot, level);
             SlothNoticeCard card = WaitForInstruction(boot, "el " + level);
             string? key = TutorialInstruction.KeyFor(level);
             Assert.That(key, Is.Not.Null);
@@ -107,22 +112,50 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Level3_UndoTooltip_FirstUseDoesNotCount()
+        public IEnumerator Level3_UndoTooltip_AfterTheFirstPour_PointingAtTheButton_FirstUseDoesNotCount()
         {
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780; // 360 × 780 dp, al 100 %
             yield return Load(3);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
-            SlothNoticeCard card = WaitForInstruction(boot, "el 3");
-            Assert.That(card.Text, Is.EqualTo(Loc.T(TutorialInstruction.UndoKey)), "el tooltip de Marea (04 §2.1)");
-            Assert.That(view.LastTutorialProbe, Does.Contain("\"undo\":true"));
+
+            // Tras la intro, con la tropa ya ida, nada: el tooltip espera al vertido (04 §2.1: «tras ejecutarlo») [P].
+            for (int t = 0; t < 6000; t += PlayModeHelpers.FrameMs)
+            {
+                Assert.That(view.SlothNoticeVisible, Is.False, "sin vertido, sin tooltip (a los " + t + " ms)");
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(view.IntroTroopVisible, Is.False, "condición del test: la tropa ya se fue");
+            Assert.That(view.TutorialWaitsForPour, Is.True, "el tooltip de Marea espera al primer vertido");
+            Assert.That(view.TutorialShownCount, Is.EqualTo(0));
             LevelFlow flow = boot.Flow!;
             UndoStatus before = flow.UndoStatus;
             Assert.That(before.Unlimited, Is.True, "Marea ilimitada en 1-10");
 
-            // Un vertido (la cuia 0 a la vacía 3) y Marea: el primer uso no descuenta.
-            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
-            Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured));
-            PlayModeHelpers.StepUntilIdle(boot, 4000);
+            // El vertido (la cuia 0 a la vacía 3): en cuanto termina, TiTino señala Marea.
+            PourIfUndoLevel(boot, 3);
+            SlothNoticeCard card = WaitForInstruction(boot, "el 3 tras el vertido");
+            Assert.That(view.TutorialWaitsForPour, Is.False);
+            Assert.That(card.Text, Is.EqualTo(Loc.T(TutorialInstruction.UndoKey)), "el tooltip de Marea (04 §2.1)");
+            Assert.That(card.Pose, Is.EqualTo(SlothPoseId.Present));
+            Assert.That(view.LastTutorialProbe, Does.Contain("\"undo\":true"));
+            Assert.That(view.LastTutorialProbe, Does.Contain("\"over_undo\":true"));
+            Assert.That(view.TutorialPointsAtUndo, Is.True, "TiTino señala el botón con su retrato (04 §2.1)");
+            RectTransform space = view.NoticeLayer;
+            Rect portrait = VictorySetup.CanvasRect(card.Portrait.rectTransform, space);
+            Rect undo = VictorySetup.CanvasRect((RectTransform)view.Tray.UndoButton.transform, space);
+            TestContext.WriteLine("AF_TUTORIAL el 3: " + (view.TutorialSlothOnDock ? "muelle" : "panorama") + ", retrato x = "
+                + SlothFailTests.F(portrait.center.x) + " dp, Marea x = " + SlothFailTests.F(undo.xMin) + "-" + SlothFailTests.F(undo.xMax)
+                + " dp, " + view.LastTutorialProbe);
+            Assert.That(portrait.center.x, Is.InRange(undo.xMin, undo.xMax), "el retrato, encima del botón de Marea");
+            Assert.That(portrait.center.x, Is.EqualTo(card.PortraitCenterXDp).Within(1f), "PortraitCenterXDp es el del retrato");
+            Assert.That(portrait.yMax, Is.LessThan(undo.yMin), "por encima del botón");
+            Assert.That(view.TutorialSlothOnDock, Is.True, "junto a la bandeja: sobre el muelle, si cabe (cabe en el 3 a 780 dp)");
+            AssertDockAir(view, "el 3");
+            AssertClear(view, "el 3");
+
+            // Marea con el tooltip a la vista: el primer uso no descuenta.
             Assert.That(boot.PressUndo(), Is.True, "Marea con la instrucción a la vista: no captura toques");
             PlayModeHelpers.StepUntilIdle(boot, 4000);
             UndoStatus after = flow.UndoStatus;
@@ -133,24 +166,98 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Level2_TheInstructionFirst_ThenFruitNew()
+        public IEnumerator Level2_OnlyTheInstruction_NoFruitNew()
         {
+            // Como mucho una tarjeta por nivel tras la intro (D-023, punto 39; 02 §4.2; guion §14): en el 2 la instrucción gana
+            // a «Fruta nueva: Taperebá», que no sale ni antes ni después (06 §2.2 la lista: contradicción registrada).
             GameScreen.FruitNewOverride = true;
             yield return Load(2);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             SlothNoticeCard card = WaitForInstruction(boot, "el 2");
-            Assert.That(view.FruitNewView.Visible, Is.False, "una cada vez: primero el tutorial");
-            int t = 0;
-            for (; t < 9000 && !view.FruitNewView.Visible; t += PlayModeHelpers.FrameMs)
+            Assert.That(card.Text, Is.EqualTo(Loc.T(TutorialInstruction.KeepOneEmptyKey)));
+            for (int t = 0; t < 12000; t += PlayModeHelpers.FrameMs)
             {
-                Assert.That(view.FruitNewView.Visible && view.TutorialSlothVisible, Is.False, "nunca las dos a la vez");
+                Assert.That(view.FruitNewView.Visible, Is.False, "sin «Fruta nueva» en el 2 (a los " + t + " ms)");
+                Assert.That(view.Sighting.Visible || view.SightingPending, Is.False, "ni la del miquito");
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
             }
 
             Assert.That(view.TutorialSlothVisible, Is.False, "la instrucción ya se fue");
-            Assert.That(view.FruitNewView.Visible, Is.True, "«Fruta nueva: Taperebá» después (06 §2.2)");
-            Assert.That(t, Is.GreaterThanOrEqualTo((int)card.DurationMs - 400), "tras la instrucción");
+            Assert.That(view.LastFruitNewProbe, Is.Null, "ninguna sonda fruit_new");
+            Assert.That(view.NoticesQueued, Is.EqualTo(0));
+            Assert.That(view.TutorialShownCount, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator Instruction_OnTheDock_WhenTheBandIsUnder64dp_WithItsAir()
+        {
+            // En 1, 2, 3 y 6 la franja del panorama mide más de 64 dp en las pantallas de prueba: se fuerza por debajo
+            // (TutorialBandOverrideDp) para probar el otro sitio de TU1a, sobre el muelle, a 640 y 780 dp, al 100 y al 130 %.
+            foreach (bool small in new[] { false, true })
+            {
+                foreach (float scale in new[] { 1f, 1.3f })
+                {
+                    string at = "el 6 a " + (small ? "640" : "780") + " al " + (scale > 1.01f ? "130" : "100") + " % con la franja a 40 dp";
+                    GameScreen.SimulatedScreen = small ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
+                    LaunchOptions.FontScaleOverride = scale;
+                    GameScreen.TutorialBandOverrideDp = 40f;
+                    yield return Load(6);
+                    GameBootstrap boot = GameBootstrap.Current!;
+                    GameScreen view = boot.View!;
+                    SlothNoticeCard card = WaitForInstruction(boot, at);
+                    Assert.That(view.TutorialSlothOnDock, Is.True, at + ": franja < 64 dp, sobre el muelle");
+                    Assert.That(view.LastTutorialProbe, Does.Contain("\"mode\":\"dock\""), at);
+                    Assert.That(view.TutorialPointsAtUndo, Is.False, at + ": solo el tooltip del 3 señala Marea");
+                    AssertDockAir(view, at);
+                    AssertPostUnder(view, at);
+                    TestContext.WriteLine("AF_TUTORIAL " + at + ": muelle, " + card.Lines + " líneas, " + SlothFailTests.F(card.Height) + " dp");
+                    for (int t = 0; t < 1000; t += PlayModeHelpers.FrameMs)
+                    {
+                        AssertClear(view, at + " a los " + t + " ms");
+                        PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                    }
+
+                    LaunchOptions.Reset();
+                    Hooks();
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Instruction_BandOf64dpOrMore_GoesOverThePanorama([Values(1, 6)] int level)
+        {
+            // El criterio de TU1a, con la franja medida: ≥ 64 dp (y su alto + aire) → sobre el panorama, centrada en la franja.
+            yield return Load(level);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            SlothNoticeCard card = WaitForInstruction(boot, "el " + level);
+            float band = view.Layout!.PanelY - view.HudBottomDp;
+            Assert.That(band, Is.GreaterThanOrEqualTo(GameScreen.SightingBandDp), "condición del test: franja de " + SlothFailTests.F(band) + " dp");
+            Assert.That(view.TutorialSlothOnDock, Is.False, "sobre el panorama");
+            Assert.That(view.LastTutorialProbe, Does.Contain("\"mode\":\"band\""));
+            Rect r = VictorySetup.CanvasRect(card.Root, view.NoticeLayer);
+            Assert.That(r.yMin, Is.GreaterThanOrEqualTo(view.HudBottomDp - 0.5f));
+            Assert.That(r.yMax, Is.LessThanOrEqualTo(view.Layout.PanelY + 0.5f), "dentro de la franja, sobre el marco del tablero");
+        }
+
+        [UnityTest]
+        public IEnumerator Instruction_OnTheDock_TheFunnelModalHidesIt()
+        {
+            // En 1-6 no puede salir ninguna burbuja «Te faltan {n}» (Marea ilimitada hasta el 10, Cuia extra desde el 8 y la
+            // Luciérnaga solo con ocultos): la instrucción sobre el muelle comparte el guardián de la tarjeta del miquito y del
+            // aviso de TiTino (KeepSightingClearOfBubbles, con _slothNoticeDockBottom), que prueba TI6b con una burbuja de verdad
+            // (SlothFailTests.RestartNotice_OnTheDock_HidesWhenAMissingBubbleAppearsUnderIt). Aquí: el modal del embudo y Volver a la
+            // orilla también la quitan sobre el muelle.
+            GameScreen.TutorialBandOverrideDp = 40f;
+            yield return Load(6);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            WaitForInstruction(boot, "el 6 sobre el muelle");
+            Assert.That(view.TutorialSlothOnDock, Is.True, "condición del test: sobre el muelle");
+            FunnelSetup.GetStuck(boot);
+            Assert.That(view.SlothNoticeVisible, Is.False, "nunca sobre Aguas estancadas");
+            Assert.That(view.TutorialSlothOnDock, Is.False);
         }
 
         [UnityTest]
@@ -249,7 +356,13 @@ namespace AF.Tests.PlayMode
                     yield return Load(level);
                     GameBootstrap boot = GameBootstrap.Current!;
                     GameScreen view = boot.View!;
+                    PourIfUndoLevel(boot, level);
                     SlothNoticeCard card = WaitForInstruction(boot, at);
+                    if (view.TutorialSlothOnDock)
+                    {
+                        AssertDockAir(view, at);
+                    }
+
                     TestContext.WriteLine("AF_TUTORIAL " + at + ": " + (view.TutorialSlothOnDock ? "muelle" : "panorama") + ", " + card.Lines
                         + " líneas, " + SlothFailTests.F(card.Height) + " dp, " + SlothFailTests.F(card.Label.fontSize) + " dp de texto");
                     Assert.That(card.Label.fontSize, Is.GreaterThanOrEqualTo((UiBuilder.MinTextSp * scale) - 0.01f), at + ": nunca menos de 12 sp");
@@ -315,6 +428,63 @@ namespace AF.Tests.PlayMode
         internal static void AssertClear(GameScreen view, string at)
         {
             SlothFailTests.AssertNoticeClear(view, at);
+        }
+
+        /// <summary>
+        /// En el 3 (el tooltip de Marea), el vertido que lo dispara: la cuia 0 a la vacía 3, hasta que la vista lo termina
+        /// (04 §2.1). En los demás niveles, nada.
+        /// </summary>
+        internal static void PourIfUndoLevel(GameBootstrap boot, int level)
+        {
+            if (!TutorialInstruction.PointsAtUndo(level))
+            {
+                return;
+            }
+
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected), "el 3: selecciona la cuia 0");
+            Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured), "el 3: vierte en la vacía 3");
+            PlayModeHelpers.StepUntilIdle(boot, 4000);
+        }
+
+        /// <summary>
+        /// Sobre el muelle, la instrucción queda a ≥ <see cref="GameScreen.TutorialDockBoardAirDp"/> dp bajo el marco del tablero
+        /// y, con su canto, a ≥ <see cref="GameScreen.TutorialDockUndoAirDp"/> dp sobre el marco del botón de Marea.
+        /// </summary>
+        internal static void AssertDockAir(GameScreen view, string at)
+        {
+            Assert.That(view.TutorialSlothOnDock, Is.True, at + ": sobre el muelle");
+            RectTransform space = view.NoticeLayer;
+            Rect r = VictorySetup.CanvasRect(view.SlothNoticeView!.Root, space);
+            float panelBottom = view.Layout!.PanelBottom - view.BoardContainer.anchoredPosition.y;
+            Rect undo = VictorySetup.CanvasRect((RectTransform)view.Tray.UndoButton.transform, space);
+            float boardAir = r.yMin - panelBottom;
+            float undoAir = undo.yMin - (r.yMax + SlothNoticeCard.EdgeDp);
+            TestContext.WriteLine("AF_TUTORIAL " + at + ": muelle, " + SlothFailTests.F(boardAir) + " dp bajo el marco del tablero y "
+                + SlothFailTests.F(undoAir) + " dp sobre el marco de Marea");
+            Assert.That(boardAir, Is.GreaterThanOrEqualTo(GameScreen.TutorialDockBoardAirDp - 0.5f), at + ": aire con el marco del tablero");
+            Assert.That(undoAir, Is.GreaterThanOrEqualTo(GameScreen.TutorialDockUndoAirDp - 0.5f), at + ": aire con el marco de Marea");
+        }
+
+        /// <summary>
+        /// El poste del muelle (si se ve): si la instrucción lo tapa, se funde con ella (como con «Fruta nueva»); si no, se queda.
+        /// </summary>
+        internal static void AssertPostUnder(GameScreen view, string at)
+        {
+            RectTransform post = view.DecorRects[0];
+            if (!post.gameObject.activeInHierarchy)
+            {
+                TestContext.WriteLine("AF_TUTORIAL " + at + ": sin poste en el muelle");
+                return;
+            }
+
+            Canvas.ForceUpdateCanvases();
+            RectTransform root = (RectTransform)view.Canvas.transform;
+            Rect card = VictorySetup.CanvasRect(view.SlothNoticeView!.Root, root);
+            card.yMax += SlothNoticeCard.EdgeDp;
+            bool covers = card.Overlaps(VictorySetup.CanvasRect(post, root));
+            float alpha = post.GetComponent<Image>().canvasRenderer.GetAlpha();
+            TestContext.WriteLine("AF_TUTORIAL " + at + ": " + (covers ? "tapa el poste" : "no tapa el poste") + ", poste a " + SlothFailTests.F(alpha));
+            Assert.That(alpha, Is.EqualTo(covers ? 0f : 1f).Within(1e-3f), at + (covers ? ": el poste tapado se funde con ella" : ": el poste se queda"));
         }
     }
 }

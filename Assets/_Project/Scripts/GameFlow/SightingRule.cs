@@ -40,10 +40,9 @@ namespace AF.GameFlow
         /// <summary>Nivel de estreno de cada tinte de <see cref="FruitDebutTints"/> (glosario §9).</summary>
         public static readonly int[] FruitDebutTintLevels = { 1, 1, 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201, 301 };
 
-        /// <summary>
-        /// Debut de cada tinte: lleva la tarjeta «Fruta nueva» (07 §3, columna «Debut»; 06 §4.5), salvo el
-        /// <see cref="FirstContactLevel"/>. Sale de <see cref="FruitDebutTintLevels"/>, en orden y sin repetidos: 1, 2, 4, 7, 11,
-        /// 21, 41, 61, 81, 111, 141, 201 y 301.
+        /// Debut de cada tinte: lleva la tarjeta «Fruta nueva» (07 §3, columna «Debut»; 06 §4.5), salvo en los niveles con
+        /// instrucción del tutorial (el <see cref="FirstContactLevel"/> y el 2; <see cref="FruitNewAt"/>), que ocupan su nivel igual.
+        /// Sale de <see cref="FruitDebutTintLevels"/>, en orden y sin repetidos: 1, 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201 y 301.
         /// </summary>
         public static readonly int[] FruitDebutLevels = SortedUnion(FruitDebutTintLevels, Array.Empty<int>());
 
@@ -135,16 +134,19 @@ namespace AF.GameFlow
         /// La tarjeta «Fruta nueva» de <paramref name="level"/> (06 §4.5; tarea F5): el índice en <see cref="FruitDebutTints"/> del
         /// tinte que se estrena en él, o −1 si no lleva. Solo en el primer intento (<paramref name="firstAttempt"/>; como el banner
         /// de mundo, ni al reintentar ni al reanudar), nunca en el <see cref="FirstContactLevel"/> (lo ocupa el tutorial) y como
-        /// mucho una por nivel: en 1-300 sale en el 2, 4, 7, 11, 21, 41, 61, 81, 111, 141 y 201 (y en el 301 cuando haya
-        /// niveles). Gana a la tarjeta del miquito y al rótulo del lugar, que no salen en esos niveles (<see cref="IsBusy"/> y
-        /// <see cref="StopLabelRule"/>). <b>Orden con el tutorial</b> (tarea TU1a): en el 2, la instrucción de TiTino
-        /// (<see cref="TutorialInstruction"/>) va la primera en la cola y «Fruta nueva: Taperebá» sale después, como pide 06 §2.2
-        /// para ese nivel [P] (02 §4.2 y el guion de la intro §14 dicen «como mucho una tarjeta por nivel»: pregunta abierta). Sin
-        /// asignaciones.
+        /// mucho una por nivel: en 1-300 sale en el 4, 7, 11, 21, 41, 61, 81, 111, 141 y 201 (y en el 301 cuando haya niveles).
+        /// Gana a la tarjeta del miquito y al rótulo del lugar, que no salen en esos niveles (<see cref="IsBusy"/> y
+        /// <see cref="StopLabelRule"/>). <b>Con el tutorial</b> (tarea TU1a): nunca en un nivel con instrucción del tutorial con
+        /// TiTino (<see cref="TutorialInstruction.Has"/>: 1, 2, 3 y 6). Tras la intro sale como mucho una tarjeta por nivel, con
+        /// prioridad tutorial &gt; Fruta nueva &gt; miquito &gt; rótulo (D-023, punto 39; 02 §4.2; 07 §6.4; guion de la intro
+        /// §14), así que en el 2 sale solo la instrucción y el taperebá se queda sin tarjeta, como el açaí y el aguaje en el 1. La
+        /// fila del 2 de 06 §2.2 («Tarjeta "Fruta nueva: Taperebá"») y la lista de 06 §4.5 (que empieza en el 1) chocan con esa
+        /// regla: contradicción registrada para el dueño en la entrega de TU1a, pendiente de que el carril de documentación alinee
+        /// 06. Sin asignaciones.
         /// </summary>
         public static int FruitNewAt(int level, bool firstAttempt)
         {
-            if (!firstAttempt || level <= FirstContactLevel)
+            if (!firstAttempt || level <= FirstContactLevel || TutorialInstruction.Has(level))
             {
                 return -1;
             }

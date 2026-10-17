@@ -23,9 +23,9 @@ namespace AF.UI
     /// 1.000 ms + 55 ms por carácter, entre 3 y 7 s). La cola va por tipos (<see cref="NoticeKind"/>: Text, Species, StopLabel,
     /// FruitNew, Sloth y Tutorial). <b>La instrucción del tutorial con TiTino</b> (tipo Tutorial, tarea TU1a; GameScreen.Cards.cs)
     /// entra la primera de la cola en los niveles 1, 2, 3 y 6. <b>La tarjeta «Fruta nueva»</b> (<see cref="FruitNewCard"/>; 06
-    /// §4.5) entra en la cola al habilitarse el toque en el estreno de un tinte (<see cref="SightingRule.FruitNewAt"/>: 2, 4, 7, 11, 21, 41, 61, 81,
-    /// 111, 141 y 201), solo en el primer intento; como la del miquito, espera a que la tropa se vaya, va en su mismo sitio, aparta
-    /// las etiquetas del HUD mientras se ve y la ocultan lo mismo (un modal del embudo, otro intento, otro nivel, la celebración
+    /// §4.5) entra en la cola al habilitarse el toque en el estreno de un tinte (<see cref="SightingRule.FruitNewAt"/>: 4, 7, 11,
+    /// 21, 41, 61, 81, 111, 141 y 201; nunca con instrucción del tutorial), solo en el primer intento; como la del miquito,
+    /// espera a que la tropa se vaya, va en su mismo sitio, aparta las etiquetas del HUD mientras se ve y la ocultan lo mismo (un modal del embudo, otro intento, otro nivel, la celebración
     /// o, sobre el muelle, una burbuja que sale debajo). Con 3 filas (el 111 y el 201), donde no cabe ni en la franja ni sobre el
     /// muelle, va como placa de una línea clavada al marco, como el rótulo del lugar, y se va si una cuia de la fila 1 que queda
     /// debajo se eleva hasta ella o si cambia el tablero [P]. Sonda <c>AF_STATE fruit_new</c> (<c>mode</c>: band, dock o plate; none,
@@ -224,6 +224,7 @@ namespace AF.UI
         private readonly List<Graphic> _stopLabelGraphics = new List<Graphic>(64);
         private SlothNoticeCard? _slothNotice; // aviso de TiTino tras Volver a la orilla (TI6b): perezoso, lo crea el primero
         private float _slothNoticeDockBottom = float.NaN; // como _sightingDockBottom, para el aviso de TiTino
+        private bool _slothCoversPost; // la tarjeta de TiTino va sobre el muelle y tapa el poste: el poste se funde con ella
         private int _slothRestartLevel; // nivel cuyos reinicios se cuentan (0: ninguno)
         private int _slothRestarts; // reinicios de ese nivel en esta sesión
         private readonly Vector3[] _stopLabelCorners = new Vector3[4];
@@ -728,6 +729,7 @@ namespace AF.UI
             _noticeHead = 0;
             _noticeCount = 0;
             _sightingPending = null;
+            _tutorialAfterPour = null; // el tooltip de Marea que esperaba un vertido (TU1a; GameScreen.Cards.cs)
             _toast.Hide();
             _sighting.Hide();
             _fruitNew.Hide();
@@ -988,6 +990,7 @@ namespace AF.UI
             }
 
             _slothNotice!.Place(_canvasW, top);
+            _slothCoversPost = !float.IsNaN(_slothNoticeDockBottom) && CardOverPost(_slothNotice.Root, SlothNoticeCard.EdgeDp);
             return true;
         }
 
@@ -1038,8 +1041,8 @@ namespace AF.UI
 
         // «Fruta nueva» (06 §4.5; tarea F5): al habilitarse el toque (OnIntroFinished), antes que la tarjeta del miquito y que el
         // rótulo (prioridad tutorial > Fruta nueva > miquito > rótulo; en estos niveles ninguno de los dos sale: SightingRule.IsBusy
-        // y StopLabelRule.IsTaken), entra en la cola si lo dice SightingRule.FruitNewAt: en el estreno de un tinte desde el 2, en
-        // el primer intento (ni la intro corta del reintento ni un nivel con fallos) y una sola vez por visita al nivel. Al
+        // y StopLabelRule.IsTaken), entra en la cola si lo dice SightingRule.FruitNewAt: en el estreno de un tinte sin tutorial
+        // (desde el 4), en el primer intento (ni la intro corta del reintento ni un nivel con fallos) y una sola vez por visita al nivel. Al
         // reanudar no pasa por aquí (OnResumed: sin intro). Sale cuando la tropa se ha ido (PumpNotices).
         private void MaybeShowFruitNew(LevelFlow flow)
         {
@@ -1184,6 +1187,12 @@ namespace AF.UI
         // del poste, si se ve): solo al colocarla.
         private bool FruitNewOverPost()
         {
+            return CardOverPost(_fruitNew.Root, FruitNewCard.EdgeDp);
+        }
+
+        // Una tarjeta recién colocada (card, con su canto de edgeDp por debajo) se cruza con el poste del muelle, si se ve.
+        private bool CardOverPost(RectTransform card, float edgeDp)
+        {
             RectTransform post = _post.rectTransform;
             if (!post.gameObject.activeInHierarchy)
             {
@@ -1191,8 +1200,8 @@ namespace AF.UI
             }
 
             CanvasRectDp(post, out float pl, out float pt, out float pr, out float pb);
-            CanvasRectDp(_fruitNew.Root, out float cl, out float ct, out float cr, out float cb);
-            cb += FruitNewCard.EdgeDp;
+            CanvasRectDp(card, out float cl, out float ct, out float cr, out float cb);
+            cb += edgeDp;
             return cl < pr && cr > pl && ct < pb && cb > pt;
         }
 
@@ -1200,9 +1209,11 @@ namespace AF.UI
         // nueva» lo tapa sobre el muelle, el poste se funde a la vez que ella (1 − su opacidad: su mismo fundido de 200 ms) y
         // vuelve en cuanto se va, la oculte lo que la oculte. Cada fotograma, desde TickNotices; sin asignaciones y sin tocar el
         // poste si no cambia.
+        // Igual con la tarjeta de TiTino sobre el muelle (la instrucción del tutorial, TU1a, y el aviso tras Volver a la orilla).
         private void KeepPostUnderFruitNew()
         {
-            float alpha = _fruitNewCoversPost && FruitNewOnDock ? 1f - _fruitNew.Alpha : 1f;
+            float alpha = _fruitNewCoversPost && FruitNewOnDock ? 1f - _fruitNew.Alpha
+                : _slothCoversPost && SlothNoticeOnDock ? 1f - _slothNotice!.Alpha : 1f;
             CanvasRenderer post = _post.canvasRenderer;
             if (post.GetAlpha() != alpha)
             {

@@ -16,8 +16,10 @@ namespace AF.Tests.PlayMode
     /// <list type="bullet">
     /// <item><c>tu1a_l{1|2|3|6}_780_100</c>: la instrucción de cada nivel a la vista, con el retrato y <c>sloth_present</c>;</item>
     /// <item><c>tu1a_l{3|6}_640_{100|130}</c> y <c>tu1a_l{3|6}_780_130</c>: la pantalla pequeña y la escala de texto;</item>
-    /// <item><c>tu1a_l2_fruta_780_100</c>: «Fruta nueva: Taperebá» después de la instrucción del 2 (06 §2.2) [P].</item>
+    /// <item><c>tu1a_l6_dock_640_130</c>: la instrucción sobre el muelle, con la franja del panorama forzada por debajo de 64 dp.</item>
     /// </list>
+    /// En el 3, el tooltip de Marea sale tras el primer vertido, con el retrato de TiTino sobre el botón de Marea (04 §2.1). En
+    /// el 2 ya no hay captura de «Fruta nueva»: una tarjeta por nivel como mucho (D-023, punto 39).
     /// Cada captura comprueba los solapes (<see cref="TutorialSlothTests.AssertClear"/>) y escribe una línea <c>AF_TUTORIAL</c>.
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.TutorialSlothSnapshotTests</c>
     /// sin <c>-nographics</c>).
@@ -36,6 +38,7 @@ namespace AF.Tests.PlayMode
         {
             SnapshotKit.Release();
             GameScreen.TutorialSlothOverride = null;
+            GameScreen.TutorialBandOverrideDp = null;
             GameScreen.FruitNewOverride = null;
             GameScreen.SimulatedScreen = null;
             MapArtRule.ForceProvisional = null;
@@ -79,39 +82,38 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator CaptureFruitNewAfterTheInstructionOfLevel2()
+        public IEnumerator CaptureTheDockWithTheBandUnder64dp()
         {
-            string dir = Prepare(false, 1f);
-            GameScreen.FruitNewOverride = true;
-            yield return TutorialSlothTests.Load(2);
+            // La otra rama de TU1a: con la franja del panorama por debajo de 64 dp (forzada: en 1, 2, 3 y 6 mide más), sobre el
+            // muelle, a ≥ 8 dp del marco del tablero y a ≥ 12 dp del marco de Marea; el poste que tape se funde con ella.
+            string dir = Prepare(true, 1.3f);
+            GameScreen.TutorialBandOverrideDp = 40f;
+            yield return TutorialSlothTests.Load(6);
             GameBootstrap boot = GameBootstrap.Current!;
-            GameScreen view = boot.View!;
-            SlothNoticeCard card = TutorialSlothTests.WaitForInstruction(boot, "el 2");
-            for (int t = 0; t < 9000 && !view.FruitNewView.Visible; t += PlayModeHelpers.FrameMs)
-            {
-                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
-            }
-
-            Assert.That(view.FruitNewView.Visible, Is.True, "«Fruta nueva» después de la instrucción");
-            Assert.That(card.Visible, Is.False);
-            SnapshotKit.Attach(boot);
-            PlayModeHelpers.Step(boot, 600);
-            yield return SnapshotKit.Wait(0.2f);
-            SnapshotKit.Save(dir, "tu1a_l2_fruta_780_100");
+            yield return Capture(boot, dir, "tu1a_l6_dock_640_130");
+            Assert.That(boot.View!.TutorialSlothOnDock, Is.True, "sobre el muelle");
             Release();
         }
 
         private static IEnumerator Capture(GameBootstrap boot, string dir, string name)
         {
             GameScreen view = boot.View!;
+            TutorialSlothTests.PourIfUndoLevel(boot, boot.Flow!.LevelNumber); // el tooltip de Marea del 3 sale tras el vertido
             SlothNoticeCard card = TutorialSlothTests.WaitForInstruction(boot, name);
             SnapshotKit.Attach(boot);
             PlayModeHelpers.Step(boot, 600); // el gesto sloth_present termina de entrar (0,6 s)
             Assert.That(view.TutorialSlothVisible, Is.True, name + ": la instrucción, a la vista");
             TutorialSlothTests.AssertClear(view, name);
+            if (view.TutorialSlothOnDock)
+            {
+                TutorialSlothTests.AssertDockAir(view, name);
+                TutorialSlothTests.AssertPostUnder(view, name);
+            }
+
             Debug.Log("AF_TUTORIAL " + name + ": «" + card.Text + "» en " + card.Lines + " líneas a " + SlothFailTests.F(card.Label.fontSize)
                 + " dp, " + (view.TutorialSlothOnDock ? "sobre el muelle" : "sobre el panorama") + ", " + SlothFailTests.F(card.Height) + " dp, "
-                + SlothFailTests.F(card.DurationMs) + " ms");
+                + SlothFailTests.F(card.DurationMs) + " ms" + (view.TutorialPointsAtUndo ? ", con el retrato sobre Marea" : string.Empty)
+                + ", " + view.LastTutorialProbe);
             yield return SnapshotKit.Wait(0.2f);
             SnapshotKit.Save(dir, name);
         }

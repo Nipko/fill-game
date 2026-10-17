@@ -17,13 +17,13 @@ using Is = UnityEngine.TestTools.Constraints.Is;
 namespace AF.Tests.PlayMode
 {
     /// <summary>
-    /// Tarjeta «Fruta nueva» en la escena real (tarea F5; 06 §4.5; 07 §6.4; guion de la intro §14; 02 §13): en el 2 no sale
-    /// durante la intro, entra en la cola al habilitarse el toque y sale cuando la tropa se ha ido, con el nombre «Taperebá», la
-    /// frase de su serie (<c>fact.tapereba.tag</c>), el icono y la muestra del tinte, durante su tiempo de lectura (D-011), sin
+    /// Tarjeta «Fruta nueva» en la escena real (tarea F5; 06 §4.5; 07 §6.4; guion de la intro §14; 02 §13): en el 4 no sale
+    /// durante la intro, entra en la cola al habilitarse el toque y sale cuando la tropa se ha ido, con el nombre «Guanábana», la
+    /// frase de su serie (<c>fact.guanabana.tag</c>), el icono y la muestra del tinte, durante su tiempo de lectura (D-011), sin
     /// capturar toques, apartando las etiquetas del HUD y con su sonda <c>AF_STATE fruit_new</c>; sale en el estreno de cada
-    /// tinte de 1-300 (2, 4, 7, 11, 21, 41, 61, 81, 111, 141 y 201) con su tinte y como mucho una tarjeta por nivel (ni el
-    /// miquito ni el rótulo); no sale en el 1 (tutorial), en el 3, al reintentar ni apagada; ningún texto de las dos tarjetas de
-    /// la familia («Fruta nueva» y «¡Miquito a la vista!») baja de 12 sp, al 100 y al 130 %; la frase, tal como está en la tabla,
+    /// tinte de 1-300 sin tutorial (4, 7, 11, 21, 41, 61, 81, 111, 141 y 201) con su tinte y como mucho una tarjeta por nivel
+    /// (ni el miquito ni el rótulo); no sale en el 1 ni en el 2 (instrucción del tutorial, TU1a; D-023, punto 39), en el 3, al
+    /// reintentar ni apagada; ningún texto de las dos tarjetas de la familia («Fruta nueva» y «¡Miquito a la vista!») baja de 12 sp, al 100 y al 130 %; la frase, tal como está en la tabla,
     /// nunca deja una palabra sola en su última línea; la tarjeta se encoge a su texto (también con la frase en dos líneas); la
     /// silueta del icono, sobre un disco con el que llega a 3:1 si alguno de los de la tarjeta llega, también en la placa; en los
     /// tableros de 3 filas (111 y 201) a 780 y 640 dp, al 100 y al 130 %, la placa sale a ≥ 12 sp, con 4 dp de aire con el HUD y
@@ -32,7 +32,7 @@ namespace AF.Tests.PlayMode
     /// </summary>
     public sealed class FruitNewCardTests
     {
-        private static readonly int[] FruitNewLevels = { 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201 };
+        private static readonly int[] FruitNewLevels = { 4, 7, 11, 21, 41, 61, 81, 111, 141, 201 };
 
         // Frutas de icono claro (guanábana, copoazú y huito): su disco tiene que llegar a 3:1 (D-003, principio 3).
         private static readonly string[] LightFruits = { "guanabana", "cupuacu", "jenipapo" };
@@ -50,14 +50,15 @@ namespace AF.Tests.PlayMode
         {
             GameScreen.FruitNewOverride = null;
             GameScreen.StopLabelsOverride = null;
+            GameScreen.TutorialSlothOverride = null;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
 
         [UnityTest]
-        public IEnumerator Level2_AfterTheIntro_ShowsTapereba_ForItsReadingTime()
+        public IEnumerator Level4_AfterTheIntro_ShowsGuanabana_ForItsReadingTime()
         {
-            yield return Load(2);
+            yield return Load(4);
             GameBootstrap boot = GameBootstrap.Current!;
             LevelFlow flow = boot.Flow!;
             GameScreen view = boot.View!;
@@ -74,9 +75,9 @@ namespace AF.Tests.PlayMode
 
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
             StepUntilShown(boot);
-            Assert.That(card.Name, Is.EqualTo("Taperebá"), "tint.tapereba.name");
-            Assert.That(card.Tag, Is.EqualTo("Taperebá: la ciruela de los\u00A0tapires"), "fact.tapereba.tag (06 §4.5), con su espacio duro");
-            Assert.That(card.Tint, Is.EqualTo(FactLine.TintOf("tapereba")));
+            Assert.That(card.Name, Is.EqualTo("Guanábana"), "tint.guanabana.name");
+            Assert.That(card.Tag, Is.EqualTo("Guanábana: espinas blandas, pulpa\u00A0blanca"), "fact.guanabana.tag (06 §4.5), con su espacio duro");
+            Assert.That(card.Tint, Is.EqualTo(FactLine.TintOf("guanabana")));
             Assert.That(card.Icon.enabled && card.Icon.sprite != null, Is.True, "el icono de la fruta");
             Assert.That(card.Swatch.enabled && card.Swatch.sprite != null, Is.True, "la muestra del tinte con su patrón");
             Assert.That(card.DurationMs, Is.EqualTo((float)NoticeTiming.ReadMs(card.Name, card.Tag, null)), "D-011");
@@ -94,15 +95,15 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 400);
             Assert.That(card.Alpha, Is.EqualTo(1f), "tras la entrada de 200 ms");
             Assert.That(view.HudLabelsAlpha, Is.EqualTo(0f), "las etiquetas del HUD se apartan");
-            AssertPlacement(view, "el 2");
+            AssertPlacement(view, "el 4");
             Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected), "se juega con la tarjeta a la vista");
             boot.TapCuia(0);
 
             // La sonda.
             string? probe = view.LastFruitNewProbe;
             Assert.That(probe, Is.Not.Null);
-            StringAssert.Contains("\"level\":2", probe);
-            StringAssert.Contains("\"tint\":\"tapereba\"", probe);
+            StringAssert.Contains("\"level\":4", probe);
+            StringAssert.Contains("\"tint\":\"guanabana\"", probe);
             StringAssert.Contains("\"ms\":" + (int)card.DurationMs, probe);
             StringAssert.Contains("\"mode\":\"" + view.FruitNewMode + "\"", probe);
 
@@ -202,14 +203,18 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator NotOnLevel1_NorLevel3_NorWithTheOverrideOff()
+        public IEnumerator NotOnLevel1_Nor2_NorLevel3_NorWithTheOverrideOff()
         {
             yield return Load(1);
             StepWithoutIt(GameBootstrap.Current!, "en el 1 (el tutorial es el primer contacto; 07 §6.4)");
+            GameScreen.TutorialSlothOverride = true;
+            yield return Load(2);
+            StepWithoutIt(GameBootstrap.Current!, "en el 2 (la instrucción del tutorial; una tarjeta por nivel, D-023, punto 39)");
+            GameScreen.TutorialSlothOverride = false;
             yield return Load(3);
             StepWithoutIt(GameBootstrap.Current!, "en el 3 (no estrena tinte)");
             GameScreen.FruitNewOverride = false;
-            yield return Load(2);
+            yield return Load(4);
             StepWithoutIt(GameBootstrap.Current!, "apagada");
         }
 
@@ -248,7 +253,7 @@ namespace AF.Tests.PlayMode
             GameScreen view = boot.View!;
             ReachPlaying(boot, 2);
             PlayModeHelpers.Step(boot, 2500);
-            view.FruitNewView.Hide();
+            view.FruitNewView.Hide(); // el tablero del 2 solo como sitio: desde TU1a el 2 ya no saca la tarjeta por sí solo
             var lost = new List<string>();
             for (int fruit = 0; fruit < SightingRule.FruitDebutTints.Length; fruit++)
             {
@@ -617,7 +622,7 @@ namespace AF.Tests.PlayMode
         }
 
         // Hasta que la tarjeta esté a la vista: tras la intro y cuando la tropa se ha ido de la rama.
-        private static void StepUntilShown(GameBootstrap boot, int level = 2)
+        private static void StepUntilShown(GameBootstrap boot, int level = 4)
         {
             for (int t = 0; t < 8000 && !boot.View!.FruitNewView.Visible; t += PlayModeHelpers.FrameMs)
             {
