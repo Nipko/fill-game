@@ -231,6 +231,7 @@ namespace AF.Tests.PlayMode
             Assert.That(_watcher.SawSplashBeforeLoad, Is.True, "el río y el logotipo salen antes de que exista la app");
             Assert.That(_watcher.SawWake, Is.True, "primera apertura: sloth_wake");
             Assert.That(_watcher.AppStartedUnderSplash, Is.False, "la app arranca al cortarse la pantalla: la intro no corre detrás");
+            Assert.That(_watcher.FramesAfterLoad, Is.GreaterThanOrEqualTo(1), "primera apertura: la pantalla sigue tras la carga, por el segundo de sloth_wake");
             Assert.That(boot.Splash, Is.Null, "cortada");
 
             BootReport report = boot.BootInfo!;
@@ -280,6 +281,7 @@ namespace AF.Tests.PlayMode
             Assert.That(_watcher!.SawSplash, Is.True);
             Assert.That(_watcher.SawWake, Is.False, "las demás aperturas: sloth_idle");
             Assert.That(_watcher.AppStartedUnderSplash, Is.False);
+            Assert.That(_watcher.FramesAfterLoad, Is.EqualTo(0), "las siguientes no añaden espera: ni un fotograma de la pantalla tras la carga");
             BootReport report = boot.BootInfo!;
             Assert.That(report.FirstOpen, Is.False);
             Assert.That(report.SlothPose, Is.EqualTo("sloth_idle"));
@@ -306,6 +308,7 @@ namespace AF.Tests.PlayMode
 
             Assert.That(_watcher!.SawSplash, Is.True, "el río y el logotipo salen también en release");
             Assert.That(_watcher.SawAnySloth, Is.False, "MapArtRule: sin arte final, sin TiTino");
+            Assert.That(_watcher.FramesAfterLoad, Is.EqualTo(0), "sin TiTino, ni un fotograma de la pantalla tras la carga");
             BootReport report = boot.BootInfo!;
             Assert.That(report.FirstOpen, Is.True);
             Assert.That(report.SlothPose, Is.Null);
@@ -327,6 +330,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
 
             Assert.That(_watcher!.SawWake, Is.True, "primera apertura: sloth_wake, aunque no se espere");
+            Assert.That(_watcher.FramesAfterLoad, Is.EqualTo(0), "no cabe: ni un fotograma de la pantalla tras la carga");
             BootReport report = boot.BootInfo!;
             Assert.That(report.FirstOpen, Is.True);
             Assert.That(report.SlothPose, Is.EqualTo("sloth_wake"));
@@ -334,11 +338,13 @@ namespace AF.Tests.PlayMode
             Assert.That(report.SplashMs, Is.EqualTo(report.LoadMs));
             Assert.That(report.SplashEndMs, Is.GreaterThanOrEqualTo(15000L));
 
-            // Sin espera, el gesto que se vio es el de la carga: si no llegó a su segundo, no cupo y se anota para el dueño.
-            Assert.That(report.WakeFits, Is.EqualTo(report.SlothMs >= BootSplashTiming.WakeMinVisibleMs), "wake_fits = false si hacía falta esperar");
+            // Sin espera, el gesto que se vio es el de la carga, que no llega a su segundo (entre ShowSloth y el fin de la carga
+            // solo corren uno o dos Update, con un delta de como mucho MaxDeltaMs = 100 ms): no cupo y se anota para el dueño.
+            Assert.That(report.SlothMs, Is.LessThan(BootSplashTiming.WakeMinVisibleMs), "el gesto no llegó a su segundo");
+            Assert.That(report.WakeFits, Is.False, "wake_fits = false: hacía falta esperar y no cabía");
             string line = new DevProbe().FormatBoot(report)!;
             StringAssert.Contains("\"hold_ms\":0", line);
-            StringAssert.Contains("\"wake_fits\":" + (report.WakeFits ? "true" : "false"), line);
+            StringAssert.Contains("\"wake_fits\":false", line);
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
 
             boot.TapAnywhere();
@@ -358,6 +364,7 @@ namespace AF.Tests.PlayMode
 
             Assert.That(_watcher!.SawSplash, Is.True, "el río y el logotipo salen igual");
             Assert.That(_watcher.SawAnySloth, Is.False, "interruptor apagado: sin TiTino");
+            Assert.That(_watcher.FramesAfterLoad, Is.EqualTo(0), "sin TiTino, ni un fotograma de la pantalla tras la carga");
             Assert.That(_watcher.SawSlothComposition, Is.False, "compuesta sin TiTino desde el primer fotograma: el logotipo no salta");
             BootReport report = boot.BootInfo!;
             Assert.That(report.SlothPose, Is.Null);
@@ -432,6 +439,12 @@ namespace AF.Tests.PlayMode
 
             public bool SawSlothComposition { get; private set; }
 
+            /// <summary>
+            /// Fotogramas en que la pantalla seguía a la vista con la app ya construida (la carga terminó): la espera medida, no la
+            /// que deduce el informe.
+            /// </summary>
+            public int FramesAfterLoad { get; private set; }
+
             private void Update()
             {
                 GameBootstrap? boot = GameBootstrap.Current;
@@ -447,9 +460,17 @@ namespace AF.Tests.PlayMode
                 {
                     SawSplashBeforeLoad = true;
                 }
-                else if (boot.App.Screen != AppScreen.Boot)
+                else
                 {
-                    AppStartedUnderSplash = true;
+                    if (splash.Visible)
+                    {
+                        FramesAfterLoad++;
+                    }
+
+                    if (boot.App.Screen != AppScreen.Boot)
+                    {
+                        AppStartedUnderSplash = true;
+                    }
                 }
 
                 if (splash.SlothVisible)

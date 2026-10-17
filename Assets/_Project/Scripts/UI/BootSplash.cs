@@ -139,7 +139,7 @@ namespace AF.UI
         // El agua [P]: la orilla (alto en dp), el reflejo de la selva (alto en dp) y el del sol (ancho y alto en dp).
         private const float ShoreDp = 3f;
         private const float TreeReflectionDp = 70f;
-        private const float SunPathWidthDp = 40f;
+        private const float SunPathWidthDp = 56f;
         private const float SunPathHeightDp = 160f;
 
         // Los tres brillos del agua: bajo el horizonte (dp), centro (fracción del ancho), ancho y alto (dp) [P].
@@ -154,6 +154,10 @@ namespace AF.UI
         private static readonly Color BowlLight = Palette.Hex(0xD8B07A);
         private static readonly Color BowlDeep = Palette.Hex(0x8A5A32);
         private static readonly Color BowlRim = Palette.Hex(0xEFD2A0);
+        private static readonly Color BowlInk = Palette.Hex(0x5A3820);
+
+        // El contorno de la cuia (px de su imagen de 256 px; ≈ 2 dp a 150 dp, el mismo trazo que el de la gota) [P].
+        private const float BowlOutlinePx = 3.5f;
 
         private readonly OverlayCanvas _canvas;
         private readonly Texture2D?[] _textures = new Texture2D?[8];
@@ -238,11 +242,12 @@ namespace AF.UI
             _nearTrees.rectTransform.localScale = new Vector3(-1f, 1f, 1f); // la misma silueta al revés: otra línea de copas
             _river = UiBuilder.Image("River", root, river, Color.white);
 
-            // La selva reflejada en el agua, oscura y apagada hacia abajo; el reflejo del sol bajo el halo del logotipo; los
-            // brillos; y la línea clara de la orilla. Juntos dicen «agua» (D-003: luz de juego), con la paleta del río del juego.
-            Color mirrored = Color.Lerp(Palette.JungleMid, Palette.RiverDeep, 0.45f);
-            _treeReflection = UiBuilder.Image("TreeReflection", root, reflection, new Color(mirrored.r, mirrored.g, mirrored.b, 0.45f));
-            _sunPath = UiBuilder.Image("SunPath", root, glow, new Color(Palette.Sun.r, Palette.Sun.g, Palette.Sun.b, 0.25f));
+            // La selva reflejada en el agua, verde y apagada hacia abajo; el reflejo del sol bajo el halo del logotipo; los
+            // brillos; y la línea clara de la orilla. Juntos dicen «agua» con una ojeada (D-003: luz de juego), con la paleta del
+            // río del juego.
+            Color mirrored = Color.Lerp(Palette.JungleMid, Palette.RiverDeep, 0.25f);
+            _treeReflection = UiBuilder.Image("TreeReflection", root, reflection, new Color(mirrored.r, mirrored.g, mirrored.b, 0.65f));
+            _sunPath = UiBuilder.Image("SunPath", root, glow, new Color(Palette.Sun.r, Palette.Sun.g, Palette.Sun.b, 0.40f));
             for (int i = 0; i < _glints.Length; i++)
             {
                 _glints[i] = UiBuilder.Image("Glint" + i, root, glint, new Color(Palette.WaterLine.r, Palette.WaterLine.g, Palette.WaterLine.b, 0.75f));
@@ -640,7 +645,8 @@ namespace AF.UI
             return tex;
         }
 
-        // La cuia: media elipse de madera con su borde claro y la superficie de açaí arriba. Suavizado con 2 × 2 muestras.
+        // La cuia: media elipse de madera con su borde claro y la superficie de açaí arriba, con un contorno oscuro como el de la
+        // gota (BowlOutlinePx). Suavizado con 2 × 2 muestras.
         private static Texture2D Bowl(int w, int h)
         {
             Texture2D tex = NewTexture(w, h, "AF_BootBowl");
@@ -679,6 +685,16 @@ namespace AF.UI
                             continue;
                         }
 
+                        // Distancia al borde de fuera (px; > 0 dentro): la mayor de la del borde y la de la mitad de abajo del cuerpo.
+                        float dx = (u - 0.5f) * w;
+                        float dy = (v - lip) * h;
+                        float inRim = EllipseInsidePx(dx, dy, 0.49f * w, 0.19f * h);
+                        float inBody = v <= lip ? EllipseInsidePx(dx, dy, 0.49f * w, 0.78f * h) : -1f;
+                        if (Mathf.Max(inRim, inBody) < BowlOutlinePx)
+                        {
+                            col = Color.Lerp(col, BowlInk, 0.85f);
+                        }
+
                         sum += new Color(col.r, col.g, col.b, 1f);
                     }
 
@@ -689,6 +705,20 @@ namespace AF.UI
             tex.SetPixels32(px);
             tex.Apply(false, true);
             return tex;
+        }
+
+        // Distancia aproximada (px; > 0 dentro) de (dx, dy) al borde de la elipse de semiejes a y b centrada en el origen, por el
+        // gradiente: (1 − F) / |∇F| con F = √((dx/a)² + (dy/b)²). Lejos del borde (F < 0,5) da un valor grande.
+        private static float EllipseInsidePx(float dx, float dy, float a, float b)
+        {
+            float f = Mathf.Sqrt(Sq(dx / a) + Sq(dy / b));
+            if (f < 0.5f)
+            {
+                return float.MaxValue;
+            }
+
+            float g = Mathf.Sqrt(Sq(dx / (a * a)) + Sq(dy / (b * b)));
+            return (1f - f) * f / g;
         }
 
         // La media de las muestras viene premultiplicada: se divide el color por la cobertura.
