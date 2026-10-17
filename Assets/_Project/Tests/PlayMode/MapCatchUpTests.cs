@@ -291,7 +291,8 @@ namespace AF.Tests.PlayMode
     /// canoa con la bandera de Brasil, Rosa delante, las mini cuias de los mundos 1-3, las balizas y la ventanita de casa),
     /// <c>12d_map_trapecio_abanico</c> (max 120: las mini cuias del Trapecio en abanico), <c>12e_map_casa</c> (tras tocar la
     /// ventanita: la casa de TiTino en Guajará), <c>12f_map_l140_banderas</c> (BR, CO y PE en el mástil y la baliza del río
-    /// frontera) y <c>12g_map_bufeo_l305</c> (el bufeo boliviano en el mundo 7). Cada captura escribe su línea <c>AF_MAP</c>.
+    /// frontera), <c>12g_map_bufeo_l305</c> (el bufeo boliviano en el mundo 7) y <c>12h_map_l140_baliza</c> (max 140, la vista en la
+    /// mini cuia del río frontera: su baliza encendida, con el halo ámbar). Cada captura escribe su línea <c>AF_MAP</c>.
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.MapCatchUpSnapshotTests</c>
     /// sin <c>-nographics</c>); los PNG quedan en <c>Logs/snapshots/es-419/</c>.
     /// </summary>
@@ -334,6 +335,7 @@ namespace AF.Tests.PlayMode
             yield return Shot(dir, 121, "12d_map_trapecio_abanico", null);
             yield return Shot(dir, 59, "12e_map_casa", m => m.GoHome());
             yield return Shot(dir, 141, "12f_map_l140_banderas", null);
+            yield return Shot(dir, 141, "12h_map_l140_baliza", m => m.CenterOnStopMarker(13));
 
             yield return MapMarkersTests.OpenApp(59);
             boot = GameBootstrap.Current!;

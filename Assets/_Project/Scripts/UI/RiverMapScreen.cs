@@ -741,7 +741,9 @@ namespace AF.UI
                 return;
             }
 
-            SetOffset(CanoeCenteredOffset());
+            Vector2 offset = CanoeCenteredOffset();
+            MarkersFrame(ref offset);
+            SetOffset(offset);
             _activeMs = ActiveLingerMs;
             EmitLayoutIfCanoeButtonChanged(); // «Volver a la canoa» se fue: AF_LAYOUT deja de publicarlo
         }
@@ -1024,7 +1026,9 @@ namespace AF.UI
             SequenceSpace(space);
             NorthUpSpace(space);
             Vector2 c = space.ToLocal(center);
-            SetOffset(new Vector2((_viewW * 0.5f) - c.x, (_viewH * 0.5f) + c.y));
+            Vector2 offset = new Vector2((_viewW * 0.5f) - c.x, (_viewH * 0.5f) + c.y);
+            MarkersFrame(ref offset);
+            SetOffset(offset);
         }
 
         // Coloca el contenido con su esquina en offset (dp, y hacia abajo), sin salirse del mapa, y decide «Volver a la canoa»: en
@@ -1324,6 +1328,12 @@ namespace AF.UI
 
         /// <summary>M3.5: cada fotograma con el Mapa abierto.</summary>
         partial void MarkersTick(float dtMs, ref bool animating);
+
+        /// <summary>
+        /// M3.5: el encuadre (<paramref name="offset"/>, la esquina del contenido) que van a fijar el cambio de vista y «Volver a la
+        /// canoa»: la ventanita de casa no debe quedar pegada a una mini cuia.
+        /// </summary>
+        partial void MarkersFrame(ref Vector2 offset);
 
         /// <summary>M3.5: los marcadores tocables en <c>AF_LAYOUT</c>.</summary>
         partial void MarkersLayoutIds(List<string> ids, List<RectTransform> rects);

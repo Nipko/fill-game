@@ -9,7 +9,11 @@ namespace AF.Presentation
     /// <list type="bullet">
     /// <item><see cref="MapBeacon"/>: la <b>baliza</b> del cierre de mundo (el «castillo» de la propuesta §4.1), un poste de
     /// madera con su farol de vidrio de <see cref="MapBeaconWidthDp"/> × <see cref="MapBeaconHeightDp"/> dp: apagada, el vidrio
-    /// azul hielo del Mapa; encendida, la llama cálida con su halo de <c>destello</c> (#FFF4D2). Pivote al pie.</item>
+    /// gris azulado opaco (<see cref="BeaconUnlitGlass"/>, que no se confunde con una luz); encendida, la llama ámbar
+    /// (<see cref="BeaconFlame"/>). El halo de la encendida es otra pieza (<see cref="MapBeaconHalo"/>), detrás, que quien la
+    /// pinta tiñe de ámbar. Pivote al pie.</item>
+    /// <item><see cref="MapMiniCuiaRim"/>: el <b>canto</b> de la mini cuia de una parada que falta, la silueta de
+    /// <see cref="MapMiniCuia"/> con <see cref="MiniCuiaRimDp"/> dp más por fuera, en blanco (se tiñe de crema).</item>
     /// <item><see cref="MapHome"/>: la <b>casa de TiTino</b> a escala de Mapa, su embaúba en la orilla de la bahía de Guajará
     /// (propuesta §3.3, punto 7; c.3 de la propuesta del personaje: no viaja), de <see cref="MapHomeWidthDp"/> ×
     /// <see cref="MapHomeHeightDp"/> dp, con el tronco claro anillado, tres ramas en candelabro con sus hojas palmeadas de envés
@@ -37,17 +41,38 @@ namespace AF.Presentation
         /// <summary>Ranura de la casa de TiTino a escala de Mapa (glosario §11).</summary>
         public const string MapHomeSlot = "map_home";
 
-        /// <summary>Ancho de la baliza (dp) [P].</summary>
-        public const float MapBeaconWidthDp = 12f;
+        /// <summary>Ancho de la baliza (dp) [P]: el dibujo de 12 × 20 dp a 1,2× (revisión de M3.5: a tamaño de teléfono no se leía).</summary>
+        public const float MapBeaconWidthDp = 14f;
 
         /// <summary>Alto de la baliza (dp) [P].</summary>
-        public const float MapBeaconHeightDp = 20f;
+        public const float MapBeaconHeightDp = 24f;
 
-        /// <summary>Ancho de la casa de TiTino en el Mapa (dp) [P].</summary>
-        public const float MapHomeWidthDp = 40f;
+        /// <summary>Altura del centro del farol de la baliza sobre su pie (dp): donde va el halo de la encendida.</summary>
+        public const float MapBeaconLanternDp = 13.8f * BeaconArtScale;
+
+        /// <summary>Lado del halo de la baliza encendida (dp) [P]: el farol más unos 6 dp de luz a cada lado.</summary>
+        public const float MapBeaconHaloDp = 20f;
+
+        /// <summary>Alfa del halo ámbar de la baliza encendida (con <see cref="BeaconFlame"/>) [P].</summary>
+        public const float BeaconHaloAlpha = 0.35f;
+
+        /// <summary>
+        /// Ancho de la casa de TiTino en el Mapa (dp) [P]: el dibujo de 40 × 52 dp a 1,4× (revisión de M3.5: la casa es el ancla
+        /// emocional del Mapa y a 40 dp no se reconocía a TiTino).
+        /// </summary>
+        public const float MapHomeWidthDp = 40f * HomeArtScale;
 
         /// <summary>Alto de la casa de TiTino en el Mapa (dp) [P].</summary>
-        public const float MapHomeHeightDp = 52f;
+        public const float MapHomeHeightDp = 52f * HomeArtScale;
+
+        /// <summary>Lo que el canto de la mini cuia de una parada que falta sale de su silueta (dp) [P].</summary>
+        public const float MiniCuiaRimDp = 1.5f;
+
+        /// <summary>Lo que la pieza del canto suma a la caja de la mini cuia por cada lado (dp): el canto y su borde suave.</summary>
+        public const float MiniCuiaRimPadDp = 2f;
+
+        private const float BeaconArtScale = 1.2f;
+        private const float HomeArtScale = 1.4f;
 
         /// <summary>
         /// Altura de la rama de la que cuelga el perezoso, en fracción del alto de la casa desde el pie [P]: bajo la copa, para que
@@ -61,15 +86,34 @@ namespace AF.Presentation
         /// <summary>Llama de la baliza encendida, ámbar cálido [P].</summary>
         public static readonly Color BeaconFlame = Palette.Hex(0xFFB84A);
 
+        /// <summary>Vidrio de la baliza apagada: gris azulado opaco [P] (el azul hielo de antes se leía como una luz encendida).</summary>
+        public static readonly Color BeaconUnlitGlass = Palette.Hex(0x8A9AA0);
+
         private static readonly Color BeaconPost = Palette.Hex(0x5B3A28);
         private static readonly Color HomeBank = Palette.Hex(0x3E7A3C);
 
         private Sprite? _beaconLit;
         private Sprite? _beaconUnlit;
         private Sprite? _mapHome;
+        private Sprite? _beaconHalo;
+        private Sprite? _miniCuiaRim;
 
         /// <summary>Si ya se creó alguna de las piezas de este archivo.</summary>
-        public bool MapMarkersBuilt => _beaconLit != null || _beaconUnlit != null || _mapHome != null;
+        public bool MapMarkersBuilt => _beaconLit != null || _beaconUnlit != null || _mapHome != null || _beaconHalo != null || _miniCuiaRim != null;
+
+        /// <summary>
+        /// El halo de la baliza encendida: un disco blanco de <see cref="MapBeaconHaloDp"/> dp, lleno hasta el canto del farol y
+        /// que se apaga hacia fuera (quien lo pinta lo tiñe con <see cref="BeaconFlame"/> y <see cref="BeaconHaloAlpha"/>). Siempre
+        /// por código, también con el PNG de la baliza.
+        /// </summary>
+        public Sprite MapBeaconHalo => _beaconHalo != null ? _beaconHalo : (_beaconHalo = BuildBeaconHalo());
+
+        /// <summary>
+        /// El canto de la mini cuia de una parada que falta: su silueta (<see cref="CuiaGeometry"/>, con el contorno del vidrio) y
+        /// <see cref="MiniCuiaRimDp"/> dp más, en blanco, en una caja <see cref="MiniCuiaRimPadDp"/> dp más grande por cada lado con el
+        /// mismo centro. Va detrás del vidrio provisional (con el PNG de la mini cuia no se pinta).
+        /// </summary>
+        public Sprite MapMiniCuiaRim => _miniCuiaRim != null ? _miniCuiaRim : (_miniCuiaRim = BuildMiniCuiaRim());
 
         /// <summary>La baliza encendida o apagada: el PNG de <see cref="MapBeaconSlot"/> si existe; si no, la provisional.</summary>
         public Sprite MapBeacon(bool lit)
@@ -119,36 +163,17 @@ namespace AF.Presentation
         /// <summary>La casa provisional por código, creada la primera vez que se pide. No mira la ranura ni la compuerta.</summary>
         public Sprite MapHomeProcedural => _mapHome != null ? _mapHome : (_mapHome = BuildMapHome());
 
-        // La baliza en dp (origen abajo a la izquierda, eje en x = 6): el poste de madera con su pie, el farol de vidrio con el
-        // tejadillo y, encendida, la llama y un halo cálido alrededor del farol.
+        // La baliza, dibujada en un lienzo de 12 × 20 dp de diseño (eje en x ≈ 6) a BeaconArtScale: el poste de madera con su pie,
+        // el farol con el tejadillo y, encendida, la llama con un brillo cálido; apagada, el vidrio gris azulado opaco. El halo va
+        // aparte (BuildBeaconHalo), para que salga de la caja de la baliza.
         private Sprite BuildMapBeacon(bool lit)
         {
-            const float k = UiPxPerDp;
-            const float w = MapBeaconWidthDp;
-            const float h = MapBeaconHeightDp;
-            const float axis = w * 0.5f;
-            int pw = Mathf.RoundToInt(w * k);
-            int ph = Mathf.RoundToInt(h * k);
+            const float px = UiPxPerDp;
+            const float k = UiPxPerDp * BeaconArtScale; // px por dp de diseño
+            const float axis = MapBeaconWidthDp * 0.5f / BeaconArtScale;
+            int pw = Mathf.RoundToInt(MapBeaconWidthDp * px);
+            int ph = Mathf.RoundToInt(MapBeaconHeightDp * px);
             var pc = new PixelCanvas(pw, ph);
-
-            if (lit)
-            {
-                // Halo: la luz de juego que dice «aquí se cierra el mundo» sin texto.
-                for (int y = 0; y < ph; y++)
-                {
-                    for (int x = 0; x < pw; x++)
-                    {
-                        float dx = ((x + 0.5f) / k) - axis;
-                        float dy = ((y + 0.5f) / k) - 14.5f;
-                        float d = Mathf.Sqrt((dx * dx) + (dy * dy));
-                        float glow = Mathf.Clamp01(1f - (d / 6f));
-                        if (glow > 0f)
-                        {
-                            pc.Blend(x, y, new Color(Palette.Glint.r, Palette.Glint.g, Palette.Glint.b, 0.55f), glow * glow);
-                        }
-                    }
-                }
-            }
 
             // Pie y poste.
             pc.FillRoundedRect((axis - 3.2f) * k, 0.4f * k, (axis + 3.2f) * k, 2.2f * k, 0.8f * k, Palette.Groove);
@@ -159,7 +184,7 @@ namespace AF.Presentation
 
             // Farol: canto oscuro, cuerpo de vidrio (o la llama) y brillo a la izquierda.
             pc.FillRoundedRect((axis - 3.4f) * k, 10.2f * k, (axis + 3.4f) * k, 17.4f * k, 1.4f * k, Palette.Groove);
-            Color body = lit ? BeaconFlame : new Color(0.81f, 0.94f, 0.95f, 1f);
+            Color body = lit ? BeaconFlame : BeaconUnlitGlass;
             pc.FillRoundedRect((axis - 2.6f) * k, 11f * k, (axis + 2.6f) * k, 16.6f * k, 1f * k, body);
             if (lit)
             {
@@ -167,26 +192,88 @@ namespace AF.Presentation
             }
             else
             {
-                pc.FillCapsule((axis - 1.6f) * k, 12f * k, (axis - 1.6f) * k, 15.6f * k, 0.35f * k, new Color(1f, 1f, 1f, 0.8f));
+                // Un filo apagado, sin brillo blanco: el vidrio sin luz.
+                pc.FillCapsule((axis - 1.6f) * k, 12f * k, (axis - 1.6f) * k, 15.6f * k, 0.35f * k, new Color(1f, 1f, 1f, 0.22f));
             }
 
             // Tejadillo de madera con su perilla.
             pc.FillTriangle(new Vector2((axis - 4.2f) * k, 17.1f * k), new Vector2((axis + 4.2f) * k, 17.1f * k), new Vector2(axis * k, 19.3f * k), Palette.Groove);
             pc.FillTriangle(new Vector2((axis - 3.4f) * k, 17.5f * k), new Vector2((axis + 3.4f) * k, 17.5f * k), new Vector2(axis * k, 18.8f * k), Palette.Frame);
             pc.FillCircle(axis * k, 19.2f * k, 0.6f * k, Palette.Groove);
-            return MakeSprite(pc, lit ? "map_beacon_lit" : "map_beacon_unlit", new Vector2(0.5f, 0f), Vector4.zero, k);
+            return MakeSprite(pc, lit ? "map_beacon_lit" : "map_beacon_unlit", new Vector2(0.5f, 0f), Vector4.zero, px);
         }
 
-        // La casa en dp (origen abajo a la izquierda, tronco en x = 20): la orilla, el tronco claro con sus anillos, tres ramas en
-        // candelabro y en la punta de cada una una hoja palmeada que cuelga, con los lóbulos de fuera del envés plateado.
-        private Sprite BuildMapHome()
+        // El halo: un disco blanco opaco hasta el canto del farol (unos 4 dp del centro) que se apaga hasta el borde de la pieza.
+        private Sprite BuildBeaconHalo()
         {
             const float k = UiPxPerDp;
-            const float w = MapHomeWidthDp;
-            const float h = MapHomeHeightDp;
-            const float axis = w * 0.5f;
-            int pw = Mathf.RoundToInt(w * k);
-            int ph = Mathf.RoundToInt(h * k);
+            const float size = MapBeaconHaloDp;
+            const float inner = 4f;
+            int pw = Mathf.RoundToInt(size * k);
+            var pc = new PixelCanvas(pw, pw);
+            const float c = size * 0.5f;
+            for (int y = 0; y < pw; y++)
+            {
+                for (int x = 0; x < pw; x++)
+                {
+                    float dx = ((x + 0.5f) / k) - c;
+                    float dy = ((y + 0.5f) / k) - c;
+                    float d = Mathf.Sqrt((dx * dx) + (dy * dy));
+                    float a = Mathf.Clamp01(1f - ((d - inner) / (c - inner)));
+                    if (a > 0f)
+                    {
+                        pc.Blend(x, y, Color.white, a * a);
+                    }
+                }
+            }
+
+            return MakeSprite(pc, "map_beacon_halo", new Vector2(0.5f, 0.5f), Vector4.zero, k);
+        }
+
+        // El canto: la silueta de la mini cuia (la de BuildMiniCuia, con su contorno) MiniCuiaRimDp más ancha, en blanco, con el
+        // mismo centro que el vidrio en una caja MiniCuiaRimPadDp más grande por cada lado.
+        private Sprite BuildMiniCuiaRim()
+        {
+            const float k = UiPxPerDp;
+            const float u = MiniCuiaUnitDp;
+            const float pad = MiniCuiaRimPadDp;
+            const float axis = (MiniCuiaWidthDp * 0.5f) + pad;
+            const float baseY = 0.5f + pad;
+            const int cap = MiniCuiaCapacity;
+            const float reach = 0.9f + MiniCuiaRimDp; // el contorno del vidrio (0,9 dp) y el canto
+            int w = Mathf.RoundToInt((MiniCuiaWidthDp + (2f * pad)) * k);
+            int h = Mathf.RoundToInt((MiniCuiaHeightDp + (2f * pad)) * k);
+            var pc = new PixelCanvas(w, h);
+            float height = CuiaGeometry.HeightU(cap);
+            for (int y = 0; y < h; y++)
+            {
+                float yu = (((y + 0.5f) / k) - baseY) / u;
+                for (int x = 0; x < w; x++)
+                {
+                    float xu = (((x + 0.5f) / k) - axis) / u;
+                    float half = CuiaGeometry.OuterHalfWidth(Mathf.Clamp(yu, 0f, height), cap);
+                    float d = Mathf.Max((Mathf.Abs(xu) - half) * u, Mathf.Max(-yu * u, (yu - height) * u)); // dp, negativa dentro
+                    float cov = PixelCanvas.Coverage((d - reach) * k);
+                    if (cov > 0f)
+                    {
+                        pc.Blend(x, y, Color.white, cov);
+                    }
+                }
+            }
+
+            return MakeSprite(pc, "map_minicuia_rim", new Vector2(0.5f, 0.5f), Vector4.zero, k);
+        }
+
+        // La casa, dibujada en un lienzo de 40 × 52 dp de diseño (origen abajo a la izquierda, tronco en x = 20) a HomeArtScale: la
+        // orilla, el tronco claro con sus anillos, tres ramas en candelabro y en la punta de cada una una hoja palmeada que cuelga,
+        // con los lóbulos de fuera del envés plateado.
+        private Sprite BuildMapHome()
+        {
+            const float px = UiPxPerDp;
+            const float k = UiPxPerDp * HomeArtScale; // px por dp de diseño
+            const float axis = 20f;
+            int pw = Mathf.RoundToInt(MapHomeWidthDp * px);
+            int ph = Mathf.RoundToInt(MapHomeHeightDp * px);
             var pc = new PixelCanvas(pw, ph);
 
             // Orilla: un montículo verde con su canto oscuro.
@@ -221,7 +308,7 @@ namespace AF.Presentation
             DrawEmbaubaLeaf(pc, tips[0].x * k, tips[0].y * k, -0.35f, 11f * k, k, 801);
             DrawEmbaubaLeaf(pc, tips[2].x * k, tips[2].y * k, 0.35f, 11f * k, k, 803);
             DrawEmbaubaLeaf(pc, tips[1].x * k, tips[1].y * k, 0f, 10f * k, k, 802);
-            return MakeSprite(pc, "map_home", new Vector2(0.5f, 0f), Vector4.zero, k);
+            return MakeSprite(pc, "map_home", new Vector2(0.5f, 0f), Vector4.zero, px);
         }
     }
 }

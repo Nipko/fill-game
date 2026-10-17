@@ -240,9 +240,12 @@ namespace AF.Tests.PlayMode
 
             map.BackToCanoeButton.onClick.Invoke();
             Assert.That(map.CanoeInView, Is.True);
+            // La canoa, en el centro; si la ventanita de casa pisaría una mini cuia, el encuadre se corre lo justo (M3.5).
             Vector2 canoe = map.CanoeInViewport;
-            Assert.That(canoe.x, Is.EqualTo(view.x * 0.5f).Within(1f), "la canoa, en el centro");
-            Assert.That(canoe.y, Is.EqualTo(view.y * 0.5f).Within(1f));
+            Vector2 shift = map.FrameShiftDp;
+            Assert.That(canoe.x, Is.EqualTo((view.x * 0.5f) + shift.x).Within(1f), "la canoa, en el centro");
+            Assert.That(canoe.y, Is.EqualTo((view.y * 0.5f) + shift.y).Within(1f));
+            Assert.That(Mathf.Abs(shift.x) <= view.x * 0.3f + 0.5f && Mathf.Abs(shift.y) <= view.y * 0.3f + 0.5f, Is.True, "corrida poco");
             Assert.That(map.BackToCanoeShown, Is.False);
             yield return null;
         }

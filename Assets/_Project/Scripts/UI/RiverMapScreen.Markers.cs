@@ -22,21 +22,25 @@ namespace AF.UI
     /// <item><description><b>El guía</b> (<see cref="RiverJourney.GuideFor"/>; P-M8): Rosa nada <see cref="GuideLeadDp"/> dp por
     /// delante de la canoa por la ruta (y, en la parada, por la ruta siguiente); en los mundos 7 y 8, el bufeo boliviano
     /// (<see cref="ProceduralArt.MapBufeo"/>), con el relevo en los rápidos de Teotônio (<see cref="GuideAt"/>).</description></item>
-    /// <item><description><b>Las mini cuias</b> de las paradas de los mundos ya abiertos (hasta el de «Jugar»), en la orilla de su
-    /// punto real (<see cref="MarkerSideDp"/>): llenas del agua del sitio las alcanzadas, de vidrio las que faltan. Se tocan con un
-    /// área de ≥ 48 dp (<see cref="MinTouchDp"/>); si dos quedan a menos de <see cref="MapConfig.ClusterMinDp"/> dp, el racimo se
-    /// abre en <b>abanico</b> con una línea fina hasta cada punto real (propuesta §3.2: la geometría nunca se deforma). Solo en la
-    /// vista Mundo: en la Cuenca, a 1×, no caben.</description></item>
+    /// <item><description><b>Las mini cuias</b> de las paradas de los mundos ya abiertos (hasta el de «Jugar»), sobre el río en su
+    /// punto real (propuesta §7: «es el marcador de la parada»): llenas del agua del sitio las alcanzadas, de vidrio con su canto
+    /// crema las que faltan. Se tocan con un área de ≥ 48 dp (<see cref="MinTouchDp"/>) y nunca quedan a menos de
+    /// <see cref="MapConfig.ClusterMinDp"/> dp entre centros: si dos puntos reales están más cerca, el racimo se abre en
+    /// <b>abanico</b> (centros a ≥ <see cref="FanGapDp"/> dp, fuera del río) con una línea fina hasta cada punto real (propuesta
+    /// §3.2: la geometría nunca se deforma); y si lo que se pinta choca después, se unen los racimos y se vuelve a colocar. Ninguna
+    /// pisa la canoa con su mástil y su guía ni la fila corta de boyas: la que caería encima se aparta lo justo, con su línea al
+    /// punto real (<see cref="PlaceStopMarkers"/>). Solo en la vista Mundo: en la Cuenca, a 1×, no caben.</description></item>
     /// <item><description><b>La baliza</b> de los cierres de mundo (<c>kind</c> = <c>close</c>; propuesta §4.1), junto a su mini
-    /// cuia: encendida al cerrar el mundo, es decir, al ganar el último nivel de esa parada (40, 80 y 140 en 1-200;
-    /// <see cref="BeaconLit"/>). Sin «Premio del mundo».</description></item>
+    /// cuia (del lado que no tape la canoa ni otra mini cuia): encendida, con su halo ámbar, al cerrar el mundo, es decir, al
+    /// ganar el último nivel de esa parada (40, 80 y 140 en 1-200; <see cref="BeaconLit"/>). Sin «Premio del mundo».</description></item>
     /// <item><description><b>La casa de TiTino</b> fija en Guajará (<see cref="RiverMap.Home"/>; c.3: no viaja): su embaúba
     /// (<see cref="ProceduralArt.MapHome"/>) con el perezoso colgado (<see cref="SlothRig"/>, <c>sloth_idle</c>), que dormita a los
     /// <see cref="MapConfig.MapIdleSleepMs"/> ms sin toques (<c>sloth_sleep</c>, que sustituye a <c>capi_sleep</c>) y despierta
     /// con el siguiente (<c>sloth_wake</c>). Cuando la casa queda fuera de la vista, la <b>ventanita de casa</b>
-    /// (<see cref="HomeWindow"/>, abajo a la izquierda de la zona del mapa) con «Casa · a unos {km} km» (<c>map_home_distance</c>,
-    /// los km de la parada de «Jugar»); tocarla lleva la vista a la casa (<see cref="GoHome"/>). Arte provisional de P-M5: en
-    /// release, sin su PNG, ni casa ni ventanita.</description></item>
+    /// (<see cref="HomeWindow"/>, abajo a la izquierda de la zona del mapa, con la píldora debajo del retrato) con «Casa · a unos
+    /// {km} km» (<c>map_home_distance</c>, los km de la parada de «Jugar»); tocarla lleva la vista a la casa (<see cref="GoHome"/>).
+    /// El encuadre se corre lo justo para que no quede a menos de <see cref="HomeWindowCuiaGapDp"/> dp de una mini cuia. Arte
+    /// provisional de P-M5: en release, sin su PNG, ni casa ni ventanita.</description></item>
     /// </list>
     /// <para>Las piezas se crean una vez (al construir la geometría y, las mini cuias, al crecer la reserva al abrir); al cambiar de
     /// vista solo se recolocan; con el Mapa quieto, <see cref="MarkersTick"/> no asigna memoria (el reloj del perezoso y la
@@ -47,8 +51,11 @@ namespace AF.UI
         /// <summary>Banderas que caben en el mástil (las de la 1.0 son 5: BR, CO, PE, EC y BO; propuesta §12, pieza 12).</summary>
         public const int MaxCanoeFlags = 8;
 
-        /// <summary>Escala de las banderas en el mástil de la canoa del Mapa (las del banner miden 16 × 11 dp) [P].</summary>
-        public const float CanoeFlagScale = 0.75f;
+        /// <summary>
+        /// Escala de las banderas en el mástil de la canoa del Mapa [P]: 1, las 16 × 11 dp del banner (revisión de M3.5: a 0,75 el
+        /// escudo de Ecuador no se distinguía en el teléfono).
+        /// </summary>
+        public const float CanoeFlagScale = 1f;
 
         /// <summary>Hueco entre dos banderas del mástil (dp) [P].</summary>
         public const float CanoeFlagGapDp = 1f;
@@ -81,35 +88,69 @@ namespace AF.UI
         /// <summary>Sin agua por delante (el final del catálogo), el guía espera encima de la canoa, este tanto más arriba (dp) [P].</summary>
         public const float GuideAboveDp = 27f;
 
-        /// <summary>La mini cuia va en la orilla, este tanto a un lado de su punto real (dp) [P]: fuera del casco de la canoa.</summary>
-        public const float MarkerSideDp = 26f;
+        /// <summary>Distancia entre los centros de dos mini cuias de un abanico (dp) [P]: los 48 dp del toque y 4 de aire.</summary>
+        public const float FanGapDp = 52f;
 
-        /// <summary>Y este tanto más arriba (dp) [P].</summary>
-        public const float MarkerUpDp = 6f;
-
-        /// <summary>Arco del abanico de un racimo de mini cuias (grados, de arriba abajo del lado de la orilla) [P].</summary>
+        /// <summary>Arco del abanico de un racimo de mini cuias (grados) [P].</summary>
         public const float FanSpanDeg = 140f;
 
-        /// <summary>Ancho de la línea fina del abanico hasta el punto real (dp) [P].</summary>
-        public const float LeaderWidthDp = 1.2f;
+        /// <summary>Arco del abanico cuando con <see cref="FanSpanDeg"/> no cabe (grados) [P]: el radio baja.</summary>
+        public const float FanSpanWideDeg = 200f;
+
+        /// <summary>Lo que crece el radio del abanico en cada intento si no cabe (dp) [P].</summary>
+        public const float FanRadiusStepDp = 12f;
+
+        /// <summary>
+        /// Radio más grande de un abanico en arco (dp) [P]: un racimo que no cabe en un arco así (más de 6 paradas, como las del
+        /// relevo de Bolivia en el 306, o un arco que pisaría la canoa) se reparte alrededor de sus puntos reales, cada mini cuia en
+        /// el sitio libre más cercano al suyo (<see cref="FanPackMaxDp"/>).
+        /// </summary>
+        public const float FanMaxRadiusDp = 80f;
+
+        /// <summary>Lo más lejos de su punto real que se busca sitio para una mini cuia de un racimo repartido (dp) [P].</summary>
+        public const float FanPackMaxDp = 160f;
+
+        /// <summary>Hueco que deja una mini cuia apartada o en abanico con el borde del trazo del río (dp) [P].</summary>
+        public const float MarkerLineClearanceDp = 6f;
+
+        /// <summary>Hueco entre una mini cuia y la caja de la canoa con su equipo, la del guía y la fila corta de boyas (dp) [P].</summary>
+        public const float MarkerObstacleGapDp = 4f;
+
+        /// <summary>Paso con que se busca sitio para una mini cuia que pisaría la canoa (dp) [P].</summary>
+        public const float MarkerShiftStepDp = 8f;
+
+        /// <summary>Lo más que se aparta de su punto real una mini cuia suelta que pisaría la canoa (dp) [P].</summary>
+        public const float MarkerMaxShiftDp = 96f;
+
+        /// <summary>Ancho de la línea fina hasta el punto real (dp) [P], sin su canto oscuro (0,6 dp por lado).</summary>
+        public const float LeaderWidthDp = 2f;
 
         /// <summary>Radio del punto real de una mini cuia abierta en abanico (dp) [P].</summary>
         public const float LeaderDotDp = 2.2f;
 
         /// <summary>
-        /// La casa va en la orilla de enfrente de la mini cuia de Belém, este tanto a la izquierda de su punto (dp, a la escala de
-        /// la vista) [P]: el tronco en tierra, no en el agua de la bahía.
+        /// La casa va a un lado de Guajará, al menos este tanto (dp, a la escala de la vista) [P]: primero a la izquierda y, si el
+        /// tronco cae en el agua, más lejos o al otro lado (<see cref="HomeLineClearanceDp"/>).
         /// </summary>
-        public const float HomeSideDp = 24f;
+        public const float HomeSideDp = 40f;
+
+        /// <summary>Lo más lejos de Guajará que se busca tierra para la casa (dp, a la escala de la vista) [P].</summary>
+        public const float HomeSideMaxDp = 120f;
+
+        /// <summary>Hueco del tronco de la casa (y su pie de orilla) con el borde del trazo del río (dp) [P]: el tronco en tierra.</summary>
+        public const float HomeLineClearanceDp = 6f;
+
+        /// <summary>Medio ancho del tronco de la casa con su pie de orilla, para buscarle tierra (dp, a 1×) [P].</summary>
+        public const float HomeTrunkHalfDp = 10f;
 
         /// <summary>
-        /// Opacidad del vidrio de la mini cuia de una parada que falta [P]: el vidrio provisional tiene el interior oscuro y, entero,
-        /// se leía como agua negra; así se lee vacía, como el vidrio fantasma del río (<see cref="MapGlassBodyAlpha"/>).
+        /// Opacidad del vidrio de la mini cuia de una parada que falta [P] (revisión de M3.5: a 0,55 casi desaparecía sobre el verde
+        /// del mapa); con su canto crema (<see cref="UnreachedRimColor"/>) se lee como vidrio vacío y tocable.
         /// </summary>
-        public const float UnreachedGlassAlpha = 0.55f;
+        public const float UnreachedGlassAlpha = 0.8f;
 
         /// <summary>Lado del perezoso de la casa en la vista Mundo (dp) [P].</summary>
-        public const float HomeSlothWorldDp = 22f;
+        public const float HomeSlothWorldDp = 30f;
 
         /// <summary>Escala de la casa (y de su perezoso) en la vista Cuenca, a 1× [P].</summary>
         public const float HomeBasinScale = 0.7f;
@@ -119,6 +160,28 @@ namespace AF.UI
 
         /// <summary>Hueco entre la ventanita de casa y lo que tiene debajo (el rótulo del Atlántico, «Volver a la canoa») (dp) [P].</summary>
         public const float HomeWindowGapDp = 6f;
+
+        /// <summary>
+        /// La ventanita de casa (marco y píldora) nunca queda a menos de este tanto de una mini cuia (dp) [P]: si pasaría, el
+        /// encuadre se corre (<see cref="MarkersFrame"/>).
+        /// </summary>
+        public const float HomeWindowCuiaGapDp = 8f;
+
+        /// <summary>Paso con que se busca el encuadre más cercano que deja libre la ventanita de casa (dp) [P].</summary>
+        public const float FrameStepDp = 4f;
+
+        /// <summary>Canto de la mini cuia de una parada que falta: crema casi opaco, como el canto de las boyas.</summary>
+        public static readonly Color UnreachedRimColor = new Color(Palette.Cream.r, Palette.Cream.g, Palette.Cream.b, 0.85f);
+
+        /// <summary>Halo de la baliza encendida: el ámbar de la llama, translúcido.</summary>
+        public static readonly Color BeaconHaloColor = new Color(ProceduralArt.BeaconFlame.r, ProceduralArt.BeaconFlame.g, ProceduralArt.BeaconFlame.b, ProceduralArt.BeaconHaloAlpha);
+
+        // Las ocho direcciones en que se busca sitio (primero las del eje).
+        private static readonly Vector2[] Dirs8 =
+        {
+            new Vector2(1f, 0f), new Vector2(-1f, 0f), new Vector2(0f, 1f), new Vector2(0f, -1f),
+            new Vector2(0.7071f, 0.7071f), new Vector2(-0.7071f, 0.7071f), new Vector2(0.7071f, -0.7071f), new Vector2(-0.7071f, -0.7071f),
+        };
 
         /// <summary>Línea del abanico: crema casi opaca, como el canto de las boyas.</summary>
         public static readonly Color LeaderColor = new Color(Palette.Cream.r, Palette.Cream.g, Palette.Cream.b, 0.9f);
@@ -132,6 +195,19 @@ namespace AF.UI
         private readonly string?[] _flagScratch = new string?[MaxCanoeFlags];
         private int[] _clusterParent = Array.Empty<int>();
         private int[] _clusterMembers = Array.Empty<int>();
+        private int[] _placedIdx = Array.Empty<int>();
+        private int[] _fanOrder = Array.Empty<int>();
+        private int[] _bestOrder = Array.Empty<int>();
+        private Vector2[] _fanPos = Array.Empty<Vector2>();
+        private Vector2[] _bestPos = Array.Empty<Vector2>();
+        private readonly Rect[] _obstacles = new Rect[3];
+        private int _obstacleCount;
+        private int _placedCount;
+        private Rect _gearBox;
+        private Rect _guideBox;
+        private float _gearFacing = 1f;
+        private bool _hasRim;
+        private Vector2 _frameShift;
 
         private RectTransform? _markerLayer;
         private LeaderLinesGraphic? _leaders;
@@ -261,6 +337,69 @@ namespace AF.UI
         {
             return _markers[i].Real;
         }
+
+        /// <summary>
+        /// La mini cuia <paramref name="i"/> no va en su punto real (en abanico o apartada de la canoa): lleva su línea fina hasta él.
+        /// </summary>
+        public bool StopMarkerHasLeader(int i)
+        {
+            return _markers[i].HasLeader;
+        }
+
+        /// <summary>El centro de la mini cuia <paramref name="i"/> cae dentro de la zona visible del mapa (vista Mundo).</summary>
+        public bool StopMarkerInView(int i)
+        {
+            if (!StopMarkersShown)
+            {
+                return false;
+            }
+
+            Vector2 p = StopMarkerViewPoint(i);
+            return p.x >= 0f && p.x <= _viewW && p.y >= 0f && p.y <= _viewH;
+        }
+
+        /// <summary>Centro de la mini cuia <paramref name="i"/> en coordenadas de la zona visible del mapa (dp, y hacia abajo).</summary>
+        public Vector2 StopMarkerViewPoint(int i)
+        {
+            return new Vector2(_offset.x + _markers[i].Shown.x, _offset.y - _markers[i].Shown.y);
+        }
+
+        /// <summary>La mini cuia <paramref name="i"/> lleva el canto crema de las paradas que faltan.</summary>
+        public bool StopMarkerRimShown(int i)
+        {
+            return _markers[i].Rim.gameObject.activeSelf;
+        }
+
+        /// <summary>La baliza de la mini cuia <paramref name="i"/> lleva su halo ámbar (encendida).</summary>
+        public bool StopMarkerBeaconHaloShown(int i)
+        {
+            return _markers[i].Halo.gameObject.activeSelf;
+        }
+
+        /// <summary>Caja de la baliza de la mini cuia <paramref name="i"/> en coordenadas locales del contenido (dp, y hacia arriba).</summary>
+        public Rect StopMarkerBeaconLocal(int i)
+        {
+            StopMarker m = _markers[i];
+            return BeaconBox(m.Shown, m.BeaconLeft);
+        }
+
+        /// <summary>
+        /// Caja de la canoa con su mástil y sus banderas tal como queda con <c>max_level</c> (coordenadas locales del contenido): lo
+        /// que ninguna mini cuia pisa.
+        /// </summary>
+        public Rect CanoeGearBoxLocal => _gearBox;
+
+        /// <summary>Caja del guía tal como queda con <c>max_level</c> (coordenadas locales del contenido).</summary>
+        public Rect GuideBoxLocal => _guideBox;
+
+        /// <summary>
+        /// Lo que el último encuadre (cambio de vista o «Volver a la canoa») se corrió para que la ventanita de casa no pisara una
+        /// mini cuia (dp, la esquina del contenido; y hacia abajo); cero si no hizo falta.
+        /// </summary>
+        public Vector2 FrameShiftDp => _frameShift;
+
+        /// <summary>Caja de la ventanita de casa con su píldora en coordenadas de la zona visible del mapa (dp, y hacia abajo).</summary>
+        public Rect HomeWindowViewRect => _homeWindow != null ? HomeWindowInView() : default;
 
         /// <summary>Área táctil de la mini cuia <paramref name="i"/>.</summary>
         internal Button StopMarkerButton(int i)
@@ -562,6 +701,7 @@ namespace AF.UI
 
                 // La ventanita de casa, en el marco: encima del mapa y debajo de «Volver a la canoa».
                 _homeWindow = new HomeWindow(_frame.transform, _art, GoHome);
+                _homeWindow.PillBelow = true; // la píldora bajo el retrato: no cruza la zona de juego del Mapa
                 int button = _backToCanoe.Button.transform.GetSiblingIndex();
                 _homeWindow.Root.SetSiblingIndex(button);
                 _homeWindow.PillRect.SetSiblingIndex(button + 1);
@@ -616,13 +756,17 @@ namespace AF.UI
                 _markerLayer.gameObject.SetActive(world);
             }
 
+            PlaceCanoeGear(space);
             if (world)
             {
                 PlaceStopMarkers(space);
             }
+            else
+            {
+                SetCompactRowDrop(space, 0f);
+            }
 
             PlaceHouse(space);
-            PlaceCanoeGear(space);
             PlaceHomeWindow();
             UpdateHomeWindow();
         }
@@ -683,6 +827,151 @@ namespace AF.UI
                 _layoutHomeWindow = window;
                 EmitLayout(); // la ventanita apareció o se fue: AF_LAYOUT la publica o deja de publicarla (nunca por fotograma)
             }
+        }
+
+        partial void MarkersFrame(ref Vector2 offset)
+        {
+            _frameShift = Vector2.zero;
+            if (!_markersReady || _homeWindow == null || _view != MapView.World || !_homeWindow.Ready || _markerCount == 0)
+            {
+                return;
+            }
+
+            // La ventanita (marco y píldora) con su hueco: ninguna mini cuia (ni placa de mundo futuro) a menos de HomeWindowCuiaGapDp.
+            // Si alguna lo pisaría, el encuadre se corre lo menos posible: se prueban los corrimientos de FrameStepDp en FrameStepDp,
+            // hasta un 30 % de la vista en cada eje, que el borde del mapa deja tal cual, y gana el que no deja ningún choque (o el
+            // que menos deja) y, entre ellos, el más corto. Cuenta también como choque sacar del todo o en parte de la vista algo que
+            // se veía entero (la canoa con su equipo, una mini cuia o una placa). Solo al cambiar de vista o de encuadre; sin
+            // asignaciones.
+            Rect win = HomeWindowInView();
+            Vector2 start = new Vector2(ClampAxis(offset.x, _contentW, _viewW), ClampAxis(offset.y, _contentH, _viewH));
+            int bestHits = WindowHits(start, start, win);
+            if (bestHits == 0)
+            {
+                return;
+            }
+
+            Vector2 best = start;
+            float bestMag = 0f;
+            int nx = Mathf.FloorToInt(_viewW * 0.3f / FrameStepDp);
+            int ny = Mathf.FloorToInt(_viewH * 0.3f / FrameStepDp);
+            for (int iy = -ny; iy <= ny; iy++)
+            {
+                for (int ix = -nx; ix <= nx; ix++)
+                {
+                    Vector2 d = new Vector2(ix * FrameStepDp, iy * FrameStepDp);
+                    float mag = d.sqrMagnitude;
+                    if (bestHits == 0 && mag >= bestMag)
+                    {
+                        continue;
+                    }
+
+                    Vector2 want = start + d;
+                    Vector2 got = new Vector2(ClampAxis(want.x, _contentW, _viewW), ClampAxis(want.y, _contentH, _viewH));
+                    if ((got - want).sqrMagnitude > 0.25f)
+                    {
+                        continue; // el borde del mapa no deja
+                    }
+
+                    int hits = WindowHits(got, start, win);
+                    if (hits < bestHits || (hits == bestHits && mag < bestMag))
+                    {
+                        bestHits = hits;
+                        bestMag = mag;
+                        best = got;
+                    }
+                }
+            }
+
+            offset = best;
+            _frameShift = best - start;
+        }
+
+        // Lo que cuesta el encuadre con el contenido en o: 100 por mini cuia a menos de HomeWindowCuiaGapDp de win (la ventanita,
+        // en coordenadas de la zona visible; nada si con ese encuadre la casa se ve, porque no hay ventanita) y 10 por placa de
+        // mundo futuro (M3.4) que la pisa; y, por lo que se veía entero con el contenido en start y ya no, 100 la canoa con su
+        // equipo, 20 una mini cuia y 10 una placa. Lo primero es que ninguna mini cuia toque la ventanita. Sin asignaciones.
+        private int WindowHits(Vector2 o, Vector2 start, Rect win)
+        {
+            bool window = !HomeInViewAt(o);
+            float gap = HomeWindowCuiaGapDp;
+            Rect near = Rect.MinMaxRect(win.xMin - gap, win.yMin - gap, win.xMax + gap, win.yMax + gap);
+            var view = new Rect(0f, 0f, _viewW, _viewH);
+            int hits = 0;
+            if (_gearBox.width > 0f && Cut(_gearBox, o, start, view))
+            {
+                hits += 100;
+            }
+
+            for (int i = 0; i < _markerCount + _silhouettes.Count; i++)
+            {
+                Rect local;
+                if (i < _markerCount)
+                {
+                    local = CuiaBox(_markers[i].Shown);
+                }
+                else
+                {
+                    RectTransform plate = _silhouettes[i - _markerCount].Root;
+                    if (!plate.gameObject.activeSelf)
+                    {
+                        continue;
+                    }
+
+                    Vector2 size = plate.sizeDelta;
+                    local = new Rect(plate.anchoredPosition.x, plate.anchoredPosition.y - (size.y * 0.5f), size.x, size.y);
+                }
+
+                bool cuia = i < _markerCount;
+                if (window && InView(local, o).Overlaps(cuia ? near : win))
+                {
+                    hits += cuia ? 100 : 10;
+                }
+
+                if (Cut(local, o, start, view))
+                {
+                    hits += cuia ? 20 : 10;
+                }
+            }
+
+            return hits;
+        }
+
+        // Caja local (y hacia arriba) en coordenadas de la zona visible (y hacia abajo) con el contenido en o.
+        private static Rect InView(Rect local, Vector2 o)
+        {
+            return Rect.MinMaxRect(o.x + local.xMin, o.y - local.yMax, o.x + local.xMax, o.y - local.yMin);
+        }
+
+        // La caja se veía entera con el contenido en start y con el contenido en o ya no.
+        private static bool Cut(Rect local, Vector2 o, Vector2 start, Rect view)
+        {
+            return Inside(InView(local, start), view) && !Inside(InView(local, o), view);
+        }
+
+        private static bool Inside(Rect r, Rect view)
+        {
+            return r.xMin >= view.xMin && r.yMin >= view.yMin && r.xMax <= view.xMax && r.yMax <= view.yMax;
+        }
+
+        /// <summary>
+        /// Lleva la vista a la mini cuia de la parada <paramref name="n"/>, centrada (capturas y <c>adb</c>), sin cambiar de vista.
+        /// </summary>
+        internal bool CenterOnStopMarker(int n)
+        {
+            int i = StopMarkerIndexOf(n);
+            if (!Visible || i < 0 || !StopMarkersShown)
+            {
+                return false;
+            }
+
+            Vector2 local = _markers[i].Shown;
+            Vector2 offset = new Vector2((_viewW * 0.5f) - local.x, (_viewH * 0.5f) + local.y);
+            MarkersFrame(ref offset);
+            SetOffset(offset);
+            UpdateHomeWindow();
+            EmitLayout();
+            return true;
         }
 
         partial void MarkersLayoutIds(List<string> ids, List<RectTransform> rects)
@@ -783,6 +1072,12 @@ namespace AF.UI
                 {
                     m.Reached = reached;
                     m.Glass.color = reached ? Color.white : new Color(1f, 1f, 1f, UnreachedGlassAlpha);
+                    bool rim = !reached && _hasRim;
+                    if (m.Rim.gameObject.activeSelf != rim)
+                    {
+                        m.Rim.gameObject.SetActive(rim);
+                    }
+
                     if (i == _fillingMarker)
                     {
                         _fillingMarker = -1;
@@ -797,6 +1092,7 @@ namespace AF.UI
                     m.BeaconLit = lit;
                     m.Beacon.sprite = _art.MapBeacon(lit);
                     m.Beacon.color = !lit && ArtSlots.Find(ProceduralArt.MapBeaconSlot) != null ? ProceduralArt.BeaconUnlitTint : Color.white;
+                    m.Halo.gameObject.SetActive(lit);
                 }
             }
 
@@ -891,6 +1187,7 @@ namespace AF.UI
         // M3.4). Solo asigna al crecer la reserva; el agua y la baliza se fijan aquí, al abrir.
         private void BuildStopMarkers(RiverMap map, RiverRoutes routes, RiverStopCatalog stops)
         {
+            _hasRim = ArtSlots.Find(ProceduralArt.MiniCuiaSlot) == null; // el canto es de la silueta provisional
             int count = 0;
             for (int n = 0; n < stops.Count && n < routes.Count; n++)
             {
@@ -908,7 +1205,13 @@ namespace AF.UI
                 m.MapPoint = PlacePoint(map, route.At);
                 m.Reached = false;
                 m.Glass.color = new Color(1f, 1f, 1f, UnreachedGlassAlpha);
+                if (m.Rim.gameObject.activeSelf != _hasRim)
+                {
+                    m.Rim.gameObject.SetActive(_hasRim);
+                }
+
                 m.BeaconLit = false;
+                m.Halo.gameObject.SetActive(false);
                 m.Root.gameObject.name = "Stop_" + stop.Id;
                 Color a = ArrivalStrip.SampleWater(stop.Sample, out Color? b);
                 m.Mixed = b.HasValue;
@@ -940,8 +1243,14 @@ namespace AF.UI
 
             if (_clusterParent.Length < _markers.Count)
             {
-                _clusterParent = new int[_markers.Count];
-                _clusterMembers = new int[_markers.Count];
+                int size = _markers.Count;
+                _clusterParent = new int[size];
+                _clusterMembers = new int[size];
+                _placedIdx = new int[size];
+                _fanOrder = new int[size];
+                _bestOrder = new int[size];
+                _fanPos = new Vector2[size];
+                _bestPos = new Vector2[size];
             }
 
             _leaders!.Reserve(_markers.Count);
@@ -963,7 +1272,13 @@ namespace AF.UI
             root.pivot = new Vector2(0.5f, 0.5f);
             root.sizeDelta = new Vector2(MinTouchDp, MinTouchDp);
 
-            // El agua va encima del vidrio, como en la franja de llegada (el vidrio provisional tiene el interior casi opaco).
+            // Detrás de todo, el canto crema de las que faltan; el agua va encima del vidrio, como en la franja de llegada (el
+            // vidrio provisional tiene el interior casi opaco).
+            Image rim = MarkerPiece("Rim", root, _art.MapMiniCuiaRim);
+            rim.rectTransform.sizeDelta = new Vector2(ProceduralArt.MiniCuiaWidthDp + (2f * ProceduralArt.MiniCuiaRimPadDp),
+                ProceduralArt.MiniCuiaHeightDp + (2f * ProceduralArt.MiniCuiaRimPadDp));
+            rim.color = UnreachedRimColor;
+            rim.raycastTarget = false;
             Image glass = MarkerPiece("MiniCuia", root, _art.MapMiniCuia);
             Image waterA = MarkerPiece("Water", root, _art.MapMiniCuiaWater);
             Image waterB = MarkerPiece("WaterMeet", root, _art.MapMiniCuiaWater);
@@ -974,6 +1289,15 @@ namespace AF.UI
                 water.fillOrigin = (int)Image.OriginVertical.Bottom;
             }
 
+            // La baliza con su halo detrás; su lado lo decide la colocación (PlaceBeacon).
+            Image halo = UiBuilder.Image("BeaconHalo", root, _art.MapBeaconHalo, BeaconHaloColor);
+            halo.raycastTarget = false;
+            RectTransform h = halo.rectTransform;
+            h.anchorMin = new Vector2(0.5f, 0.5f);
+            h.anchorMax = new Vector2(0.5f, 0.5f);
+            h.pivot = new Vector2(0.5f, 0.5f);
+            h.sizeDelta = new Vector2(ProceduralArt.MapBeaconHaloDp, ProceduralArt.MapBeaconHaloDp);
+            halo.gameObject.SetActive(false);
             Image beacon = UiBuilder.Image("Beacon", root, null, Color.white);
             beacon.preserveAspect = true;
             RectTransform b = beacon.rectTransform;
@@ -981,11 +1305,10 @@ namespace AF.UI
             b.anchorMax = new Vector2(0.5f, 0.5f);
             b.pivot = new Vector2(0.5f, 0f);
             b.sizeDelta = new Vector2(ProceduralArt.MapBeaconWidthDp, ProceduralArt.MapBeaconHeightDp);
-            b.anchoredPosition = new Vector2((ProceduralArt.MiniCuiaWidthDp * 0.5f) + 1f + (ProceduralArt.MapBeaconWidthDp * 0.5f),
-                -ProceduralArt.MiniCuiaHeightDp * 0.5f);
             beacon.gameObject.SetActive(false);
 
-            marker = new StopMarker(root, button, glass, waterA, waterB, beacon);
+            marker = new StopMarker(root, button, rim, glass, waterA, waterB, beacon, halo);
+            SetBeaconSide(marker, false);
             _markers.Add(marker);
             return marker;
         }
@@ -1072,17 +1395,21 @@ namespace AF.UI
 
         // ============================================================================================ colocación
 
-        // Las mini cuias en la orilla de su punto real o, en un racimo (a menos de ClusterMinDp), en abanico con su línea al punto.
-        // Solo al cambiar de vista; sin asignaciones.
+        // Las mini cuias, solo al cambiar de vista; sin asignaciones (las reservas crecen al abrir). Cada una va sobre el río en su
+        // punto real (propuesta §7: es el marcador de la parada); los racimos (puntos a menos de ClusterMinDp), en abanico con su
+        // línea fina al punto real (§3.2). Lo que se pinta se comprueba después contra todo lo demás: si dos mini cuias quedan a
+        // menos de ClusterMinDp entre centros (un abanico contra una suelta o contra otro abanico), se unen sus racimos y se vuelve
+        // a colocar, hasta que no queda ningún choque. Ninguna pisa la canoa con su mástil y su guía (como quedan con max_level:
+        // al ponerse al día la canoa acaba ahí) ni la fila corta de boyas: la suelta que caería encima se aparta lo justo, fuera
+        // del río, con su línea al punto real.
         private void PlaceStopMarkers(MapSpace space)
         {
-            float contentW = _contentW;
-            float contentH = _contentH;
             int n = _markerCount;
             for (int i = 0; i < n; i++)
             {
                 StopMarker m = _markers[i];
                 m.Real = space.ToLocal(m.MapPoint);
+                m.Shown = m.Real;
                 m.Fanned = false;
                 _clusterParent[i] = i;
             }
@@ -1099,73 +1426,505 @@ namespace AF.UI
                 }
             }
 
-            _leaders!.Clear();
-            for (int i = 0; i < n; i++)
+            AvoidCompactRow(space);
+            CollectObstacles(space);
+            for (int pass = 0; pass <= n; pass++)
             {
-                if (Find(i) != i)
+                _placedCount = 0;
+                for (int i = 0; i < n; i++)
                 {
-                    continue; // cada racimo se coloca una vez, desde su raíz
-                }
-
-                int size = 0;
-                Vector2 centroid = Vector2.zero;
-                for (int j = 0; j < n; j++)
-                {
-                    if (Find(j) == i)
+                    if (Find(i) != i)
                     {
-                        _clusterMembers[size++] = j;
-                        centroid += _markers[j].Real;
+                        continue; // cada racimo se coloca una vez, desde su raíz
+                    }
+
+                    int size = 0;
+                    for (int j = 0; j < n; j++)
+                    {
+                        if (Find(j) == i)
+                        {
+                            _clusterMembers[size++] = j;
+                        }
+                    }
+
+                    if (size == 1)
+                    {
+                        PlaceSingle(space, _clusterMembers[0]);
+                    }
+                    else
+                    {
+                        PlaceFan(space, size);
                     }
                 }
 
-                centroid /= size;
-                float side = centroid.x + MarkerSideDp + MinTouchDp > contentW ? -1f : 1f;
-                if (size == 1)
+                // Contra lo que de verdad se pinta: dos mini cuias de racimos distintos a menos de ClusterMinDp van juntas.
+                bool merged = false;
+                for (int i = 0; i < n; i++)
                 {
-                    StopMarker m = _markers[_clusterMembers[0]];
-                    m.Shown = ClampMarker(m.Real + new Vector2(side * MarkerSideDp, MarkerUpDp), contentW, contentH);
-                    continue;
-                }
-
-                // De arriba abajo (y mayor primero): las líneas no se cruzan.
-                for (int a = 1; a < size; a++)
-                {
-                    int v = _clusterMembers[a];
-                    int b = a - 1;
-                    while (b >= 0 && _markers[_clusterMembers[b]].Real.y < _markers[v].Real.y)
+                    for (int j = i + 1; j < n; j++)
                     {
-                        _clusterMembers[b + 1] = _clusterMembers[b];
-                        b--;
+                        if (Find(i) != Find(j) && Vector2.Distance(_markers[i].Shown, _markers[j].Shown) < min)
+                        {
+                            Union(i, j);
+                            merged = true;
+                        }
                     }
-
-                    _clusterMembers[b + 1] = v;
                 }
 
-                float step = FanSpanDeg / (size - 1) * Mathf.Deg2Rad;
-                float radius = Mathf.Max(min, min / (2f * Mathf.Sin(step * 0.5f)));
-                float start = FanSpanDeg * 0.5f * Mathf.Deg2Rad;
-                for (int a = 0; a < size; a++)
+                if (!merged)
                 {
-                    StopMarker m = _markers[_clusterMembers[a]];
-                    float angle = start - (a * step);
-                    Vector2 at = centroid + new Vector2(side * Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius);
-                    m.Shown = ClampMarker(at, contentW, contentH);
-                    m.Fanned = true;
-                    Vector2 foot = m.Shown + new Vector2(-side * ProceduralArt.MiniCuiaWidthDp * 0.5f, -ProceduralArt.MiniCuiaHeightDp * 0.25f);
-                    _leaders.Add(foot, m.Real);
+                    break;
                 }
             }
 
+            _leaders!.Clear();
             for (int i = 0; i < n; i++)
             {
                 StopMarker m = _markers[i];
+                m.HasLeader = (m.Shown - m.Real).sqrMagnitude > 0.25f;
+                if (m.HasLeader && LeaderFoot(m.Shown, m.Real, out Vector2 foot))
+                {
+                    _leaders.Add(foot, m.Real);
+                }
+
                 if (m.Root.anchoredPosition != m.Shown)
                 {
                     m.Root.anchoredPosition = m.Shown;
                 }
             }
 
+            for (int i = 0; i < n; i++)
+            {
+                PlaceBeacon(i);
+            }
+
             _leaders.Commit();
+        }
+
+        // Una mini cuia suelta: en su punto real si no pisa nada; si no, en el sitio libre más cercano (anillos de MarkerShiftStepDp
+        // en las ocho direcciones, hasta MarkerMaxShiftDp), mejor fuera del río. Sin asignaciones.
+        private void PlaceSingle(MapSpace space, int index)
+        {
+            StopMarker m = _markers[index];
+            Vector2 real = m.Real;
+            Vector2 at = ClampMarker(real, _contentW, _contentH);
+            float best = Moved(at, real) + Penalty(space, at, 0, false, false, float.MaxValue);
+            Vector2 bestAt = at;
+            int rings = Mathf.RoundToInt(MarkerMaxShiftDp / MarkerShiftStepDp);
+            for (int ring = 1; ring <= rings && best > 0f; ring++)
+            {
+                for (int d = 0; d < Dirs8.Length && best > 0f; d++)
+                {
+                    Vector2 p = real + (Dirs8[d] * (ring * MarkerShiftStepDp));
+                    Vector2 c = ClampMarker(p, _contentW, _contentH);
+                    float pen = Moved(c, p);
+                    if (pen >= best)
+                    {
+                        continue;
+                    }
+
+                    pen += Penalty(space, c, 0, false, true, best - pen);
+                    if (pen < best)
+                    {
+                        best = pen;
+                        bestAt = c;
+                    }
+                }
+            }
+
+            m.Shown = bestAt;
+            _placedIdx[_placedCount++] = index;
+        }
+
+        // Un racimo de size mini cuias (_clusterMembers) en abanico alrededor del centro de sus puntos reales: arco de FanSpanDeg
+        // y, si no cabe, de FanSpanWideDeg; radio para FanGapDp entre centros (al menos ClusterMinDp) y, si no cabe, más grande,
+        // hasta FanMaxRadiusDp; y ocho direcciones, primero hacia la proa de la canoa si está cerca (el mástil va a popa) o hacia
+        // dentro del mapa. Gana el primero sin choques ni río debajo. Los miembros van de un extremo al otro del arco en el orden de
+        // su punto real, así las líneas no se cruzan. Si ningún arco sale limpio (o el racimo es tan grande que el arco no cabe en
+        // FanMaxRadiusDp), el racimo se reparte (PackCluster) y gana lo que menos cuesta. Sin asignaciones.
+        private void PlaceFan(MapSpace space, int size)
+        {
+            Vector2 centroid = Vector2.zero;
+            for (int a = 0; a < size; a++)
+            {
+                centroid += _markers[_clusterMembers[a]].Real;
+            }
+
+            centroid /= size;
+            bool nearCanoe = _gearBox.width > 0f && RectDistance(_gearBox, centroid) < FanGapDp * 2.5f;
+            float pref = nearCanoe ? _gearFacing : (centroid.x + FanGapDp + MinTouchDp > _contentW ? -1f : 1f);
+            float best = float.MaxValue;
+            for (int s = 0; s < 2 && best > 0f; s++)
+            {
+                float span = (s == 0 ? FanSpanDeg : FanSpanWideDeg) * Mathf.Deg2Rad;
+                float step = span / (size - 1);
+                float r0 = Mathf.Max(MapConfig.ClusterMinDp, FanGapDp / (2f * Mathf.Sin(step * 0.5f)));
+                for (int r = 0; r < 3 && best > 0f && r0 + (r * FanRadiusStepDp) <= FanMaxRadiusDp; r++)
+                {
+                    float radius = r0 + (r * FanRadiusStepDp);
+                    for (int d = 0; d < Dirs8.Length && best > 0f; d++)
+                    {
+                        Vector2 axis = new Vector2(Dirs8[d].x * pref, Dirs8[d].y);
+                        float phi = Mathf.Atan2(axis.y, axis.x);
+                        OrderAlong(size, new Vector2(-axis.y, axis.x));
+                        float pen = 0f;
+                        for (int a = 0; a < size && pen < best; a++)
+                        {
+                            float angle = phi + (span * 0.5f) - (a * step);
+                            Vector2 p = centroid + new Vector2(Mathf.Cos(angle) * radius, Mathf.Sin(angle) * radius);
+                            Vector2 c = ClampMarker(p, _contentW, _contentH);
+                            pen += Moved(c, p);
+                            pen += Penalty(space, c, a, true, true, best - pen);
+                            _fanPos[a] = c;
+                        }
+
+                        if (pen < best)
+                        {
+                            best = pen;
+                            for (int a = 0; a < size; a++)
+                            {
+                                _bestPos[a] = _fanPos[a];
+                                _bestOrder[a] = _fanOrder[a];
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (best > 0f)
+            {
+                // Sin arco limpio: el racimo repartido, si cuesta menos (los miembros, en el orden del racimo).
+                float packed = PackCluster(space, size, pref, best);
+                if (packed < best)
+                {
+                    best = packed;
+                    for (int a = 0; a < size; a++)
+                    {
+                        _bestPos[a] = _fanPos[a];
+                        _bestOrder[a] = _clusterMembers[a];
+                    }
+                }
+            }
+
+            for (int a = 0; a < size; a++)
+            {
+                int index = _bestOrder[a];
+                StopMarker m = _markers[index];
+                m.Shown = _bestPos[a];
+                m.Fanned = true;
+                _placedIdx[_placedCount++] = index;
+            }
+        }
+
+        // El racimo repartido: cada miembro (en el orden del racimo) en el sitio libre más cercano a su punto real, en anillos de
+        // MarkerShiftStepDp desde FanGapDp / 2 hasta FanPackMaxDp y dieciséis direcciones (primero hacia pref): sin pisar la canoa,
+        // el guía ni la fila corta, a ≥ FanGapDp de las demás y fuera del río; si en ningún sitio sale limpio, el que menos cuesta.
+        // Deja los sitios en _fanPos y devuelve lo que cuesta todo (para en cuanto pasa de budget). Sin asignaciones.
+        private float PackCluster(MapSpace space, int size, float pref, float budget)
+        {
+            float total = 0f;
+            int rings = Mathf.RoundToInt((FanPackMaxDp - (FanGapDp * 0.5f)) / MarkerShiftStepDp);
+            for (int a = 0; a < size && total < budget; a++)
+            {
+                Vector2 real = _markers[_clusterMembers[a]].Real;
+                float best = float.MaxValue;
+                Vector2 bestAt = ClampMarker(real, _contentW, _contentH);
+                for (int ring = 0; ring <= rings && best > 0f; ring++)
+                {
+                    float d = (FanGapDp * 0.5f) + (ring * MarkerShiftStepDp);
+                    for (int k = 0; k < 16 && best > 0f; k++)
+                    {
+                        float angle = k * (Mathf.PI / 8f);
+                        Vector2 p = real + new Vector2(pref * Mathf.Cos(angle) * d, Mathf.Sin(angle) * d);
+                        Vector2 c = ClampMarker(p, _contentW, _contentH);
+                        float pen = Moved(c, p);
+                        if (pen >= best)
+                        {
+                            continue;
+                        }
+
+                        pen += Penalty(space, c, a, true, true, best - pen);
+                        if (pen < best)
+                        {
+                            best = pen;
+                            bestAt = c;
+                        }
+                    }
+                }
+
+                _fanPos[a] = bestAt;
+                total += best;
+            }
+
+            return total;
+        }
+
+        // _fanOrder: los miembros del racimo de mayor a menor proyección de su punto real sobre normal (los iguales, en su orden).
+        private void OrderAlong(int size, Vector2 normal)
+        {
+            for (int a = 0; a < size; a++)
+            {
+                int v = _clusterMembers[a];
+                float key = Vector2.Dot(_markers[v].Real, normal);
+                int b = a - 1;
+                while (b >= 0 && Vector2.Dot(_markers[_fanOrder[b]].Real, normal) < key - 1e-4f)
+                {
+                    _fanOrder[b + 1] = _fanOrder[b];
+                    b--;
+                }
+
+                _fanOrder[b + 1] = v;
+            }
+        }
+
+        // Lo que cuesta poner una mini cuia con su centro en c: 1000 por pisar la canoa, el guía o la fila corta (con su hueco) o
+        // por quedar a menos de ClusterMinDp de otra ya puesta (o de las fanCount primeras de _fanPos); en un abanico (fan), 50 si
+        // queda a menos de FanGapDp; y, con river, 10 si queda a menos de MarkerLineClearanceDp del borde del río (solo si aún puede
+        // ganar a budget). Sin asignaciones.
+        private float Penalty(MapSpace space, Vector2 c, int fanCount, bool fan, bool river, float budget)
+        {
+            Rect box = CuiaBox(c);
+            float pen = 0f;
+            for (int k = 0; k < _obstacleCount; k++)
+            {
+                if (box.Overlaps(_obstacles[k]))
+                {
+                    pen += 1000f;
+                }
+            }
+
+            for (int k = 0; k < _placedCount; k++)
+            {
+                pen += Crowding(c, _markers[_placedIdx[k]].Shown, fan);
+            }
+
+            for (int k = 0; k < fanCount; k++)
+            {
+                pen += Crowding(c, _fanPos[k], fan);
+            }
+
+            if (river && pen < budget && LineClearance(_map!, space, _view, box, MarkerLineClearanceDp) < MarkerLineClearanceDp)
+            {
+                pen += 10f;
+            }
+
+            return pen;
+        }
+
+        private static float Crowding(Vector2 a, Vector2 b, bool fan)
+        {
+            float d = Vector2.Distance(a, b);
+            if (d < MapConfig.ClusterMinDp)
+            {
+                return 1000f;
+            }
+
+            return fan && d < FanGapDp ? 50f : 0f;
+        }
+
+        // 100 si el borde del mapa movió el sitio pedido.
+        private static float Moved(Vector2 at, Vector2 wanted)
+        {
+            return (at - wanted).sqrMagnitude > 0.01f ? 100f : 0f;
+        }
+
+        // Caja de la mini cuia (20 × 32 dp) con su centro en c, en coordenadas locales del contenido.
+        private static Rect CuiaBox(Vector2 c)
+        {
+            float w = ProceduralArt.MiniCuiaWidthDp;
+            float h = ProceduralArt.MiniCuiaHeightDp;
+            return new Rect(c.x - (w * 0.5f), c.y - (h * 0.5f), w, h);
+        }
+
+        private static Rect Grow(Rect r, float by)
+        {
+            return Rect.MinMaxRect(r.xMin - by, r.yMin - by, r.xMax + by, r.yMax + by);
+        }
+
+        private static float RectDistance(Rect r, Vector2 p)
+        {
+            float dx = Mathf.Max(0f, Mathf.Max(r.xMin - p.x, p.x - r.xMax));
+            float dy = Mathf.Max(0f, Mathf.Max(r.yMin - p.y, p.y - r.yMax));
+            return Mathf.Sqrt((dx * dx) + (dy * dy));
+        }
+
+        // Dónde sale la línea fina de la mini cuia en shown hacia su punto real: el borde de su caja en esa dirección. False si el
+        // punto real cae dentro de la caja (no hace falta línea).
+        private static bool LeaderFoot(Vector2 shown, Vector2 real, out Vector2 foot)
+        {
+            Vector2 d = real - shown;
+            float hw = ProceduralArt.MiniCuiaWidthDp * 0.5f;
+            float hh = ProceduralArt.MiniCuiaHeightDp * 0.5f;
+            float tx = Mathf.Abs(d.x) > 1e-4f ? hw / Mathf.Abs(d.x) : float.MaxValue;
+            float ty = Mathf.Abs(d.y) > 1e-4f ? hh / Mathf.Abs(d.y) : float.MaxValue;
+            float t = Mathf.Min(tx, ty);
+            foot = shown + (d * Mathf.Min(t, 1f));
+            return t < 1f;
+        }
+
+        // Lo que ninguna mini cuia pisa, con MarkerObstacleGapDp de hueco: la canoa con su mástil y sus banderas, y el guía, como
+        // quedan con max_level (al ponerse al día la canoa acaba ahí); y la fila corta de boyas, si la hay. Sin asignaciones.
+        private void CollectObstacles(MapSpace space)
+        {
+            _obstacleCount = 0;
+            _gearBox = default;
+            _guideBox = default;
+            if (_hasCanoe && _progress != null)
+            {
+                int max = Mathf.Clamp(_progress.MaxLevel, 0, WorldTable.LastLevel);
+                float facing = _canoeFacing;
+                GearPose(space, max, _canoeMap, FinalFlagCount(max), ref facing, out Vector2 canoe, out Vector2 guide, out _, out _, out _,
+                    out Vector2 foot, out float mastH);
+                _gearFacing = facing;
+                _gearBox = GearBox(canoe, foot, mastH, facing);
+                _guideBox = GuideBox(guide);
+                _obstacles[_obstacleCount++] = Grow(_gearBox, MarkerObstacleGapDp);
+                _obstacles[_obstacleCount++] = Grow(_guideBox, MarkerObstacleGapDp);
+            }
+
+            if (_buoysCompact && _buoyCount > 0)
+            {
+                float r = BuoyRadiusWorldDp;
+                Vector2 a = _buoyLocal[0];
+                Vector2 b = _buoyLocal[BuoysPerLeg - 1];
+                _obstacles[_obstacleCount++] = Grow(Rect.MinMaxRect(Mathf.Min(a.x, b.x) - r, a.y - r, Mathf.Max(a.x, b.x) + r, a.y + r), MarkerObstacleGapDp);
+            }
+        }
+
+        // Banderas con dibujo que lleva la canoa con max niveles ganados (las que se izan al acabar «ponerse al día»).
+        private int FinalFlagCount(int max)
+        {
+            int raw = CanoeFlags(_stops!, max, _flagScratch);
+            int count = 0;
+            for (int i = 0; i < raw; i++)
+            {
+                if (_art.MapFlag(_flagScratch[i]!) != null)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        // Caja de la canoa (su imagen, con su pivote) con el mástil y las banderas, que ondean hacia popa.
+        private static Rect GearBox(Vector2 canoe, Vector2 foot, float mastH, float facing)
+        {
+            float w = ProceduralArt.MapCanoeWidthDp;
+            float h = ProceduralArt.MapCanoeHeightDp;
+            var box = new Rect(canoe.x - (w * 0.5f), canoe.y - (h * CanoePivotY), w, h);
+            if (mastH > 0f)
+            {
+                float flagEnd = foot.x - (facing * ProceduralArt.MapFlagWidthDp * CanoeFlagScale);
+                box = Rect.MinMaxRect(Mathf.Min(box.xMin, Mathf.Min(foot.x - MastWidthDp, flagEnd)), box.yMin,
+                    Mathf.Max(box.xMax, Mathf.Max(foot.x + MastWidthDp, flagEnd)), Mathf.Max(box.yMax, foot.y + mastH));
+            }
+
+            return box;
+        }
+
+        // Caja del guía con su centro de nado en guide (su pivote, a 0,3 del alto).
+        private Rect GuideBox(Vector2 guide)
+        {
+            float gw = _view == MapView.World ? GuideWorldDp : GuideBasinDp;
+            float gh = gw * ProceduralArt.RosaHeightDp / ProceduralArt.RosaWidthDp;
+            return new Rect(guide.x - (gw * 0.5f), guide.y - (gh * 0.3f), gw, gh);
+        }
+
+        // La fila corta de boyas (un tramo sin largo a esta escala) no pisa el punto real de ninguna mini cuia (el punto del
+        // abanico caía encima de una boya): si alguno queda a menos de su radio + MarkerObstacleGapDp + el punto, la fila baja hasta
+        // dejarlo encima. Sin asignaciones.
+        private void AvoidCompactRow(MapSpace space)
+        {
+            float drop = 0f;
+            if (_buoysCompact && _buoyCount > 0)
+            {
+                float reach = BuoyRadiusWorldDp + MarkerObstacleGapDp + LeaderDotDp + 0.8f;
+                float baseY = _buoyLocal[0].y + _compactDropDp;
+                float x0 = Mathf.Min(_buoyLocal[0].x, _buoyLocal[BuoysPerLeg - 1].x) - reach;
+                float x1 = Mathf.Max(_buoyLocal[0].x, _buoyLocal[BuoysPerLeg - 1].x) + reach;
+                for (int iter = 0; iter <= _markerCount; iter++)
+                {
+                    bool moved = false;
+                    float y = baseY - drop;
+                    for (int i = 0; i < _markerCount; i++)
+                    {
+                        Vector2 p = _markers[i].Real;
+                        if (p.x >= x0 && p.x <= x1 && Mathf.Abs(p.y - y) < reach)
+                        {
+                            drop = baseY - (p.y - reach);
+                            moved = true;
+                            break;
+                        }
+                    }
+
+                    if (!moved)
+                    {
+                        break;
+                    }
+                }
+            }
+
+            SetCompactRowDrop(space, drop);
+        }
+
+        // La baliza al lado de su mini cuia que no pise la canoa, el guía ni otra mini cuia: a la derecha y, si no, a la izquierda.
+        private void PlaceBeacon(int index)
+        {
+            StopMarker m = _markers[index];
+            if (!m.Beacon.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            bool left = BeaconBlocked(index, BeaconBox(m.Shown, false)) && !BeaconBlocked(index, BeaconBox(m.Shown, true));
+            if (left != m.BeaconLeft)
+            {
+                SetBeaconSide(m, left);
+            }
+        }
+
+        private bool BeaconBlocked(int self, Rect box)
+        {
+            for (int k = 0; k < _obstacleCount; k++)
+            {
+                if (box.Overlaps(_obstacles[k]))
+                {
+                    return true;
+                }
+            }
+
+            for (int k = 0; k < _markerCount; k++)
+            {
+                if (k != self && box.Overlaps(CuiaBox(_markers[k].Shown)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Caja de la baliza de la mini cuia en shown (a su derecha o, con left, a su izquierda), con el pie al pie de la mini cuia.
+        private static Rect BeaconBox(Vector2 shown, bool left)
+        {
+            float x = shown.x + BeaconOffsetX(left);
+            float foot = shown.y - (ProceduralArt.MiniCuiaHeightDp * 0.5f);
+            return new Rect(x - (ProceduralArt.MapBeaconWidthDp * 0.5f), foot, ProceduralArt.MapBeaconWidthDp, ProceduralArt.MapBeaconHeightDp);
+        }
+
+        private static float BeaconOffsetX(bool left)
+        {
+            return (left ? -1f : 1f) * ((ProceduralArt.MiniCuiaWidthDp * 0.5f) + 1f + (ProceduralArt.MapBeaconWidthDp * 0.5f));
+        }
+
+        private static void SetBeaconSide(StopMarker m, bool left)
+        {
+            m.BeaconLeft = left;
+            float x = BeaconOffsetX(left);
+            float foot = -ProceduralArt.MiniCuiaHeightDp * 0.5f;
+            m.Beacon.rectTransform.anchoredPosition = new Vector2(x, foot);
+            m.Halo.rectTransform.anchoredPosition = new Vector2(x, foot + ProceduralArt.MapBeaconLanternDp);
         }
 
         private static Vector2 ClampMarker(Vector2 p, float contentW, float contentH)
@@ -1195,12 +1954,14 @@ namespace AF.UI
             }
         }
 
-        // La casa en Guajará: el árbol con el pie en su punto y el perezoso colgado de la rama (más pequeños en la Cuenca).
+        // La casa en Guajará: el árbol con el pie en tierra a un lado de su punto (HomeSide) y el perezoso colgado de la rama (más
+        // pequeños en la Cuenca).
         private void PlaceHouse(MapSpace space)
         {
             float scale = _view == MapView.World ? 1f : HomeBasinScale;
-            _homeLocal = space.ToLocal(_homeMap) + new Vector2(-HomeSideDp * scale, 0f);
             _homeHeight = ProceduralArt.MapHomeHeightDp * scale;
+            Vector2 home = space.ToLocal(_homeMap);
+            _homeLocal = home + new Vector2(HomeSide(space, home, scale), 0f);
             if (!_houseShown)
             {
                 return;
@@ -1218,6 +1979,50 @@ namespace AF.UI
             }
 
             rig.Place(_homeLocal.x, -(_homeLocal.y + (_homeHeight * ProceduralArt.MapHomeBranchFraction)));
+        }
+
+        // A qué lado de Guajará va el pie de la casa (dp con signo; negativo, a la izquierda): el primero, de HomeSideDp a
+        // HomeSideMaxDp en pasos de MarkerShiftStepDp y la izquierda antes que la derecha, en que el tronco con su pie de orilla
+        // queda a ≥ HomeLineClearanceDp del borde del río y no pisa una mini cuia; si no hay ninguno, HomeSideDp a la izquierda.
+        // Sin asignaciones.
+        private float HomeSide(MapSpace space, Vector2 home, float scale)
+        {
+            float half = HomeTrunkHalfDp * scale;
+            float h = _homeHeight * 0.7f;
+            int steps = Mathf.RoundToInt((HomeSideMaxDp - HomeSideDp) / MarkerShiftStepDp);
+            for (int k = 0; k <= steps && _map != null; k++)
+            {
+                float d = (HomeSideDp + (k * MarkerShiftStepDp)) * scale;
+                for (int s = 0; s < 2; s++)
+                {
+                    float x = home.x + (s == 0 ? -d : d);
+                    var box = new Rect(x - half, home.y, 2f * half, h);
+                    if (LineClearance(_map, space, _view, box, HomeLineClearanceDp) >= HomeLineClearanceDp && !OverlapsShownMarker(box))
+                    {
+                        return s == 0 ? -d : d;
+                    }
+                }
+            }
+
+            return -HomeSideDp * scale;
+        }
+
+        private bool OverlapsShownMarker(Rect box)
+        {
+            if (_view != MapView.World)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < _markerCount; i++)
+            {
+                if (box.Overlaps(CuiaBox(_markers[i].Shown)))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // La canoa (en su punto de ahora: al ponerse al día, va por el agua), con la proa hacia donde va; el mástil de popa con las
@@ -1241,34 +2046,13 @@ namespace AF.UI
                 return;
             }
 
-            RiverMap map = _map!;
-            RiverRoutes routes = _routes!;
-            Vector2 canoe = space.ToLocal(_canoeShown);
+            float facing = _canoeFacing;
+            GearPose(space, _canoeX, _canoeShown, _flagCount, ref facing, out Vector2 canoe, out Vector2 guideLocal, out _guideMap,
+                out _guideRoute, out _guideFraction, out Vector2 foot, out float mastH);
+            _canoeFacing = facing;
             _canoe.rectTransform.anchoredPosition = canoe;
-
-            // El guía: GuideLeadDp por delante por el agua; sin agua por delante, encima de la canoa.
-            float dpu = Mathf.Max(1e-4f, space.DpPerUnit);
             _guideShown = true;
-            _guideId = GuideAt(map, routes, _stops!, _canoeX);
-            Vector2 guideLocal;
-            if (GuidePoint(map, routes, _canoeX, GuideLeadDp / dpu, GuideMinAheadDp / dpu, out Vector2 ahead, out _guideRoute, out _guideFraction))
-            {
-                _guideMap = ahead;
-                guideLocal = space.ToLocal(ahead);
-            }
-            else
-            {
-                _guideRoute = -1;
-                _guideFraction = 0f;
-                guideLocal = canoe + new Vector2(0f, GuideAboveDp);
-                _guideMap = new Vector2(_canoeShown.x, _canoeShown.y - (GuideAboveDp / Mathf.Max(1e-4f, space.DpPerUnit)));
-            }
-
-            float dx = guideLocal.x - canoe.x;
-            if (Mathf.Abs(dx) > 2f)
-            {
-                _canoeFacing = dx > 0f ? 1f : -1f;
-            }
+            _guideId = GuideAt(_map!, _routes!, _stops!, _canoeX);
 
             var scale = new Vector3(_canoeFacing, 1f, 1f);
             if (_canoe.rectTransform.localScale != scale)
@@ -1299,8 +2083,6 @@ namespace AF.UI
             {
                 float fw = ProceduralArt.MapFlagWidthDp * CanoeFlagScale;
                 float fh = ProceduralArt.MapFlagHeightDp * CanoeFlagScale;
-                float mastH = (2f * MastPadDp) + (_flagCount * (fh + CanoeFlagGapDp));
-                Vector2 foot = canoe + new Vector2(-_canoeFacing * ProceduralArt.MapCanoeWidthDp * SternFraction, 2f);
                 RectTransform mast = _mast!.rectTransform;
                 mast.sizeDelta = new Vector2(MastWidthDp, mastH);
                 mast.anchoredPosition = foot;
@@ -1313,6 +2095,38 @@ namespace AF.UI
                     f.localScale = new Vector3(-_canoeFacing, 1f, 1f);
                 }
             }
+        }
+
+        // La canoa en canoeMap con level niveles ganados (fraccionario) y flags banderas: dónde se pinta, dónde nada el guía
+        // (GuideLeadDp por delante por el agua; sin agua por delante, GuideAboveDp encima de la canoa), hacia dónde mira la proa
+        // (facing: solo cambia si el guía queda a más de 2 dp a un lado) y el pie y el alto del mástil de popa. Sin asignaciones.
+        private void GearPose(MapSpace space, float level, Vector2 canoeMap, int flags, ref float facing, out Vector2 canoe,
+            out Vector2 guideLocal, out Vector2 guideMap, out int route, out float fraction, out Vector2 mastFoot, out float mastH)
+        {
+            canoe = space.ToLocal(canoeMap);
+            float dpu = Mathf.Max(1e-4f, space.DpPerUnit);
+            if (GuidePoint(_map!, _routes!, level, GuideLeadDp / dpu, GuideMinAheadDp / dpu, out Vector2 ahead, out route, out fraction))
+            {
+                guideMap = ahead;
+                guideLocal = space.ToLocal(ahead);
+            }
+            else
+            {
+                route = -1;
+                fraction = 0f;
+                guideLocal = canoe + new Vector2(0f, GuideAboveDp);
+                guideMap = new Vector2(canoeMap.x, canoeMap.y - (GuideAboveDp / dpu));
+            }
+
+            float dx = guideLocal.x - canoe.x;
+            if (Mathf.Abs(dx) > 2f)
+            {
+                facing = dx > 0f ? 1f : -1f;
+            }
+
+            float fh = ProceduralArt.MapFlagHeightDp * CanoeFlagScale;
+            mastH = flags > 0 ? (2f * MastPadDp) + (flags * (fh + CanoeFlagGapDp)) : 0f;
+            mastFoot = canoe + new Vector2(-facing * ProceduralArt.MapCanoeWidthDp * SternFraction, 2f);
         }
 
         /// <summary>
@@ -1375,8 +2189,8 @@ namespace AF.UI
             return false;
         }
 
-        // La ventanita, abajo a la izquierda de la zona del mapa: encima del rótulo del Atlántico y de la fila de «Volver a la
-        // canoa», con la píldora a su derecha sin salirse de la zona.
+        // La ventanita, abajo a la izquierda de la zona del mapa, con la píldora debajo del retrato (revisión de M3.5: a su derecha
+        // cruzaba la zona de juego): encima del rótulo del Atlántico y de la fila de «Volver a la canoa», sin salirse de la zona.
         private void PlaceHomeWindow()
         {
             if (_homeWindow == null)
@@ -1391,7 +2205,7 @@ namespace AF.UI
                 bottom = Mathf.Min(bottom, -atlantic.rectTransform.anchoredPosition.y);
             }
 
-            float top = Mathf.Max(FramePadDp + OrientationInsetDp, bottom - HomeWindowGapDp - HomeWindow.SizeDp);
+            float top = Mathf.Max(FramePadDp + OrientationInsetDp, bottom - HomeWindowGapDp - _homeWindow.HeightDp);
             _homeWindow.Place(FramePadDp + OrientationInsetDp, top, FramePadDp + _viewW - OrientationInsetDp);
         }
 
@@ -1404,12 +2218,26 @@ namespace AF.UI
                 return false;
             }
 
-            float vx = _offset.x + _homeLocal.x;
-            float vy = _offset.y - (_homeLocal.y + (_homeHeight * 0.5f));
-            float m = HomeInViewMarginDp;
-            _homeInView = vx >= m && vx <= _viewW - m && vy >= m && vy <= _viewH - m;
+            _homeInView = HomeInViewAt(_offset);
             _homeWindow.Apply(_homeStop, _homeInView || !Visible);
             return _homeWindow.Visible;
+        }
+
+        // La casa queda dentro de la zona visible con el contenido en offset (con HomeInViewMarginDp de margen).
+        private bool HomeInViewAt(Vector2 offset)
+        {
+            float vx = offset.x + _homeLocal.x;
+            float vy = offset.y - (_homeLocal.y + (_homeHeight * 0.5f));
+            float m = HomeInViewMarginDp;
+            return vx >= m && vx <= _viewW - m && vy >= m && vy <= _viewH - m;
+        }
+
+        // La ventanita con su píldora en coordenadas de la zona visible (dp, y hacia abajo): la zona empieza FramePadDp dentro del
+        // marco.
+        private Rect HomeWindowInView()
+        {
+            Rect b = _homeWindow!.Bounds;
+            return new Rect(b.x - FramePadDp, b.y - FramePadDp, b.width, b.height);
         }
 
         // ============================================================================================ toques y sueño
@@ -1479,20 +2307,30 @@ namespace AF.UI
         // Una mini cuia del Mapa: su área táctil, el vidrio, el agua (dos en las mezclas) y la baliza de los cierres de mundo.
         private sealed class StopMarker
         {
-            public StopMarker(RectTransform root, Button button, Image glass, Image waterA, Image waterB, Image beacon)
+            public StopMarker(RectTransform root, Button button, Image rim, Image glass, Image waterA, Image waterB, Image beacon, Image halo)
             {
                 Root = root;
                 Button = button;
+                Rim = rim;
                 Glass = glass;
                 WaterA = waterA;
                 WaterB = waterB;
                 Beacon = beacon;
+                Halo = halo;
                 Stop = null!;
             }
 
             public RectTransform Root { get; }
 
             public Button Button { get; }
+
+            public Image Rim { get; }
+
+            public Image Halo { get; }
+
+            public bool HasLeader { get; set; }
+
+            public bool BeaconLeft { get; set; }
 
             public Image Glass { get; }
 

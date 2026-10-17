@@ -20,8 +20,9 @@ namespace AF.UI
     /// <item>En la parada 0 (Belém, niveles 1-10) está en casa: sin píldora [P] (<see cref="HasPill"/>).</item>
     /// <item>Sin nombre ni texto en el marco. En el inicio, sin toques (todo con <c>raycastTarget</c> = false). En el Mapa del
     /// río (M3.5) se crea con una acción de toque (<see cref="HomeWindow(Transform, ProceduralArt, Action)"/>): un área táctil
-    /// de ≥ 48 dp sobre el marco y la píldora (<see cref="TapButton"/>) que lleva la vista a la casa, en Guajará; y el retrato
-    /// cierra los ojos cuando TiTino dormita (<see cref="SetAsleep"/>, <c>sloth_sleep</c> a los 30 s sin toques).</item>
+    /// de ≥ 48 dp sobre el marco y la píldora (<see cref="TapButton"/>) que lleva la vista a la casa, en Guajará; el retrato
+    /// cierra los ojos cuando TiTino dormita (<see cref="SetAsleep"/>, <c>sloth_sleep</c> a los 30 s sin toques); y la píldora
+    /// va debajo del marco, alineada a la izquierda (<see cref="PillBelow"/>), para no cruzar la zona de juego del Mapa.</item>
     /// <item>Arte provisional de P-M5 (<see cref="MapArtRule"/>): sin los PNG de <c>map_home_window</c> y del retrato, solo sale
     /// en el Editor y en desarrollo (<see cref="CanShow"/>); en release, nada hasta que exista su arte.</item>
     /// <item>La embaúba está pendiente del asesor cultural (propuesta de TiTino g.2, punto 1; encargo del Mapa, fila 11): si la
@@ -61,6 +62,18 @@ namespace AF.UI
         /// <summary>Lado mínimo del área táctil de la ventanita que se toca (07 §1.2 y §7.8).</summary>
         public const float MinTapDp = 48f;
 
+        /// <summary>Con la píldora debajo del marco (<see cref="PillBelow"/>), el hueco entre los dos (dp) [P].</summary>
+        public const float PillStackGapDp = 4f;
+
+        /// <summary>
+        /// Con la píldora debajo del marco, su ancho máximo (dp) [P]; si el texto no cabe con su margen, el margen se estrecha hasta
+        /// <see cref="PillMinPadDp"/> antes que cortar el texto.
+        /// </summary>
+        public const float PillMaxWidthDp = 150f;
+
+        /// <summary>Margen mínimo del texto dentro de la píldora (dp).</summary>
+        public const float PillMinPadDp = 6f;
+
         private readonly ProceduralArt _art;
         private readonly RectTransform _root;
         private readonly Image _window;
@@ -78,6 +91,8 @@ namespace AF.UI
         private bool _asleep;
         private Sprite? _portraitPng;
         private bool _provisional;
+        private bool _pillBelow;
+        private Rect _bounds;
 
         /// <summary>Crea la ventanita (oculta) bajo <paramref name="parent"/>, sin toques (la del inicio).</summary>
         public HomeWindow(Transform parent, ProceduralArt art)
@@ -134,11 +149,37 @@ namespace AF.UI
         /// <summary>Caja del área táctil (null sin toques).</summary>
         public RectTransform? TapRect => _tap != null ? (RectTransform)_tap.transform : null;
 
+        /// <summary>
+        /// La píldora va debajo del marco, alineada a su izquierda, con <see cref="PillStackGapDp"/> de hueco y como mucho
+        /// <see cref="PillMaxWidthDp"/> de ancho (la ventanita del Mapa, M3.5); si no, a la derecha del marco (la del inicio).
+        /// </summary>
+        public bool PillBelow
+        {
+            get => _pillBelow;
+            set
+            {
+                if (_pillBelow != value)
+                {
+                    _pillBelow = value;
+                    PlacePill();
+                }
+            }
+        }
+
+        /// <summary>Alto de la ventanita con su píldora (dp): el marco y, con <see cref="PillBelow"/> y píldora, el hueco y la píldora.</summary>
+        public float HeightDp => _pillBelow && _label.text.Length > 0 ? SizeDp + PillStackGapDp + PillHeightDp : SizeDp;
+
+        /// <summary>Caja del marco y la píldora juntos, en coordenadas del padre (dp, y hacia abajo), tal como se colocaron.</summary>
+        public Rect Bounds => _bounds;
+
         /// <summary>El retrato tiene los ojos cerrados: TiTino dormita (<see cref="SetAsleep"/>).</summary>
         public bool Asleep => _asleep;
 
         /// <summary>Texto de la píldora (vacío en casa o sin parada).</summary>
         public string DistanceText => _label.text;
+
+        /// <summary>La ventanita puede verse: tiene parada y arte (lo que <see cref="Apply"/> no oculte).</summary>
+        public bool Ready => _stop != null && _artReady;
 
         /// <summary>Parada que enseña (null sin parada).</summary>
         public RiverStop? Stop => _stop;
@@ -272,10 +313,31 @@ namespace AF.UI
 
         private void PlacePill()
         {
+            float text = string.IsNullOrEmpty(_label.text) ? 0f : Mathf.Ceil(UiBuilder.MinTextWidth(_label));
+            if (_pillBelow)
+            {
+                // Debajo del marco, alineada a su izquierda: lo más estrecha que deja el texto, hasta PillMaxWidthDp.
+                float w = text <= 0f ? 0f : Mathf.Min(text + (2f * PillPadDp), Mathf.Max(PillMaxWidthDp, text + (2f * PillMinPadDp)));
+                w = Mathf.Max(0f, Mathf.Min(w, _maxRight - _x));
+                float top = _y + SizeDp + PillStackGapDp;
+                UiBuilder.Place(_pill, _x, top, w, PillHeightDp);
+                float h = w > 0f ? SizeDp + PillStackGapDp + PillHeightDp : SizeDp;
+                _bounds = new Rect(_x, _y, Mathf.Max(SizeDp, w), h);
+                if (_tap != null)
+                {
+                    float tapW = Mathf.Max(_bounds.width, MinTapDp);
+                    float tapH = Mathf.Max(h, MinTapDp);
+                    UiBuilder.Place((RectTransform)_tap.transform, _x, _y + ((h - tapH) * 0.5f), tapW, tapH);
+                }
+
+                return;
+            }
+
             float left = _x + SizeDp + PillGapDp;
-            float width = string.IsNullOrEmpty(_label.text) ? 0f : Mathf.Ceil(UiBuilder.MinTextWidth(_label)) + (2f * PillPadDp);
+            float width = text <= 0f ? 0f : text + (2f * PillPadDp);
             width = Mathf.Max(0f, Mathf.Min(width, _maxRight - left));
             UiBuilder.Place(_pill, left, _y + ((SizeDp - PillHeightDp) * 0.5f), width, PillHeightDp);
+            _bounds = new Rect(_x, _y, SizeDp + (width > 0f ? PillGapDp + width : 0f), SizeDp);
             if (_tap != null)
             {
                 // El área táctil cubre el marco y la píldora, con el alto mínimo de un control (07 §1.2 y §7.8).

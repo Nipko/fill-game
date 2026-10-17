@@ -27,10 +27,13 @@ namespace AF.Tests.PlayMode
     /// <item>la canoa de Capi con las banderas izadas según <c>max_level</c>: BR, luego CO (80) y PE (140), la más reciente
     /// arriba del mástil;</item>
     /// <item>Rosa nada delante de la canoa por el agua; en los mundos 7 y 8, el bufeo boliviano, con el relevo en Teotônio;</item>
-    /// <item>las mini cuias de las paradas, tocables a ≥ 48 dp, llenas del agua del sitio las alcanzadas y en abanico en el
-    /// Trapecio; la baliza de los cierres de mundo, encendida en el 40, el 80 y el 140; sin «Premio del mundo»;</item>
-    /// <item>la casa de TiTino en Guajará y, fuera de la vista, la ventanita con «Casa · a unos 1.480 km» en el mundo 3, que lleva
-    /// a la casa; <c>sloth_sleep</c> a los 30 s sin toques; cero asignaciones con el Mapa quieto.</item>
+    /// <item>las mini cuias de las paradas, tocables a ≥ 48 dp, llenas del agua del sitio las alcanzadas (con canto crema las que
+    /// faltan) y en abanico en el Trapecio; todas las que se ven, a ≥ 48 dp entre centros y sin pisar la canoa con su mástil ni el
+    /// guía (en el 121, el 141 y el 306); la baliza de los cierres de mundo, encendida y con su halo en el 40, el 80 y el 140, sin
+    /// que la tape la canoa; sin «Premio del mundo»;</item>
+    /// <item>la casa de TiTino en Guajará y, fuera de la vista, la ventanita con «Casa · a unos 1.480 km» en el mundo 3 (la píldora
+    /// bajo el retrato, a ≥ 8 dp de toda mini cuia), que lleva a la casa; <c>sloth_sleep</c> a los 30 s sin toques; cero
+    /// asignaciones con el Mapa quieto.</item>
     /// </list>
     /// </summary>
     public sealed class MapMarkersTests
@@ -144,6 +147,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(n, Is.EqualTo(i));
                 Assert.That(map.StopMarkerReached(i), Is.EqualTo(n <= 5), "parada " + n);
                 Assert.That(map.StopMarkerFill(i), Is.EqualTo(n <= 5 ? 1f : 0f), "parada " + n);
+                Assert.That(map.StopMarkerRimShown(i), Is.EqualTo(n > 5), "el canto crema, solo en las que faltan: parada " + n);
                 RectTransform tap = (RectTransform)map.StopMarkerButton(i).transform;
                 Assert.That(tap.rect.width, Is.GreaterThanOrEqualTo(RiverMapScreen.MinTouchDp), "≥ 48 dp");
                 Assert.That(tap.rect.height, Is.GreaterThanOrEqualTo(RiverMapScreen.MinTouchDp), "≥ 48 dp");
@@ -151,7 +155,9 @@ namespace AF.Tests.PlayMode
 
             // La baliza de Flona Tapajós (cierre del mundo 2), encendida; la de Tefé (cierre del 3), apagada.
             Assert.That(map.StopMarkerHasBeacon(3) && map.StopMarkerBeaconLit(3), Is.True, "flona_tapajos, con 58 ≥ 40");
+            Assert.That(map.StopMarkerBeaconHaloShown(3), Is.True, "la encendida, con su halo ámbar");
             Assert.That(map.StopMarkerHasBeacon(7) && !map.StopMarkerBeaconLit(7), Is.True, "tefe, con 58 < 80");
+            Assert.That(map.StopMarkerBeaconHaloShown(7), Is.False, "la apagada, sin halo");
             Assert.That(map.StopMarkerHasBeacon(5), Is.False, "Manaos no cierra el mundo");
 
             // Sin «Premio del mundo» (ni ningún otro texto nuevo en el Mapa).
@@ -168,6 +174,29 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Max52_RosaSwims35dpAheadByTheWater_OnTheRouteToAnavilhanas()
+        {
+            yield return OpenApp(53); // max 52: la canoa va a 2/10 del tramo de Manaos a Anavilhanas
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            RiverMap data = boot.RiverMapData!;
+            RiverRoutes routes = boot.RiverRoutes!;
+            Assert.That(map.CanoeShownLevel, Is.EqualTo(52f));
+            float legDp = RiverMapScreen.RouteLength(data, routes.At(6)!) * map.Space.DpPerUnit;
+            Assert.That(legDp * 0.8f, Is.GreaterThan(RiverMapScreen.GuideLeadDp), "a la canoa le quedan más de 35 dp hasta Anavilhanas");
+
+            Assert.That(map.GuideShown, Is.True);
+            Assert.That(map.GuideRoute, Is.EqualTo(6), "Rosa nada por la ruta de Anavilhanas, delante de la canoa");
+            Vector2 expected = RiverMapScreen.RoutePoint(data, routes.At(6)!, map.GuideRouteFraction);
+            Assert.That(Vector2.Distance(map.GuideMapPoint, expected), Is.LessThan(1e-5f), "sobre la ruta");
+            float swumDp = (map.GuideRouteFraction - 0.2f) * legDp;
+            Debug.Log("AF_MAP guía con max 52: ruta " + map.GuideRoute + " a " + map.GuideRouteFraction.ToString("0.00", CultureInfo.InvariantCulture)
+                + ", " + swumDp.ToString("0.0", CultureInfo.InvariantCulture) + " dp por el agua; tramo de " + legDp.ToString("0", CultureInfo.InvariantCulture) + " dp");
+            Assert.That(swumDp, Is.EqualTo(RiverMapScreen.GuideLeadDp).Within(0.5f), "a unos 35 dp por el agua");
+            Assert.That(map.CanoeFacing * (map.GuideMapPoint.x - map.CanoeMapPoint.x), Is.GreaterThanOrEqualTo(0f), "la proa mira hacia Rosa");
+        }
+
+        [UnityTest]
         public IEnumerator Flags_At80And140_AddCOAndPE_TheNewestOnTop()
         {
             yield return OpenApp(81);
@@ -180,7 +209,12 @@ namespace AF.Tests.PlayMode
             map = GameBootstrap.Current!.RiverMapView!;
             Assert.That(map.CanoeFlagCount, Is.EqualTo(3));
             Assert.That(map.CanoeFlag(0) + map.CanoeFlag(1) + map.CanoeFlag(2), Is.EqualTo("BRCOPE"));
-            Assert.That(map.StopMarkerBeaconLit(map.StopMarkerIndexOf(13)), Is.True, "el río frontera cierra el mundo 4 en el 140");
+            int frontier = map.StopMarkerIndexOf(13);
+            Assert.That(map.StopMarkerBeaconLit(frontier), Is.True, "el río frontera cierra el mundo 4 en el 140");
+            Assert.That(map.StopMarkerBeaconHaloShown(frontier), Is.True);
+            Rect beacon = map.StopMarkerBeaconLocal(frontier);
+            Assert.That(beacon.Overlaps(map.CanoeGearBoxLocal), Is.False, "la canoa, el mástil y las banderas no tapan la baliza");
+            Assert.That(beacon.Overlaps(map.GuideBoxLocal), Is.False, "ni el guía");
             float br = map.CanoeFlagImage(0).rectTransform.anchoredPosition.y;
             float co = map.CanoeFlagImage(1).rectTransform.anchoredPosition.y;
             float pe = map.CanoeFlagImage(2).rectTransform.anchoredPosition.y;
@@ -221,41 +255,33 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Trapecio_TheClusteredMiniCuiasOpenInAFan_TappableAt48dp()
+        public IEnumerator MiniCuiasThatShow_AreAtLeast48dpApart_OffTheCanoe_In121_141And306()
         {
             yield return OpenApp(121); // mundo 4: las 6 paradas del Trapecio, Leticia y su atardecer en el mismo punto
-            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
             Assert.That(map.View, Is.EqualTo(MapView.World));
             int leticia = map.StopMarkerIndexOf(8);
             int dusk = map.StopMarkerIndexOf(9);
             Assert.That(leticia >= 0 && dusk >= 0, Is.True);
             Assert.That(map.StopMarkerRealLocal(leticia), Is.EqualTo(map.StopMarkerRealLocal(dusk)), "misma vista, otra luz: el mismo punto");
             Assert.That(map.StopMarkerFanned(leticia) && map.StopMarkerFanned(dusk), Is.True, "en abanico");
-
-            float min = float.MaxValue;
-            int fanned = 0;
-            for (int i = 0; i < map.StopMarkerCount; i++)
-            {
-                fanned += map.StopMarkerFanned(i) ? 1 : 0;
-                for (int j = i + 1; j < map.StopMarkerCount; j++)
-                {
-                    if (map.StopMarkerFanned(i) && map.StopMarkerFanned(j))
-                    {
-                        min = Mathf.Min(min, Vector2.Distance(map.StopMarkerLocal(i), map.StopMarkerLocal(j)));
-                    }
-                }
-            }
-
-            Debug.Log("AF_MAP abanico del Trapecio: " + fanned + " mini cuias, la menor distancia entre dos, "
-                + min.ToString("0.0", CultureInfo.InvariantCulture) + " dp, zoom " + map.Zoom.ToString("0.00", CultureInfo.InvariantCulture));
-            Assert.That(fanned, Is.GreaterThanOrEqualTo(2));
-            Assert.That(min, Is.GreaterThanOrEqualTo(MapConfig.ClusterMinDp - 0.5f), "en el abanico, las áreas táctiles no se pisan");
+            Assert.That(map.StopMarkerHasLeader(leticia) && map.StopMarkerHasLeader(dusk), Is.True, "con su línea al punto real");
+            AssertMiniCuiasClear(map, "121");
 
             // Tocar una mini cuia cuenta para map_close (stops_tapped) y la deja para la tarjeta de la parada (M4.1).
             map.StopMarkerButton(dusk).onClick.Invoke();
             Assert.That(map.LastTappedStop, Is.EqualTo(9));
             MapCloseStats stats = map.Close();
             Assert.That(stats.StopsTapped, Is.EqualTo(1));
+
+            yield return OpenApp(141);
+            AssertMiniCuiasClear(CurrentMap(), "141");
+
+            yield return OpenApp(59);
+            boot = GameBootstrap.Current!;
+            Reopen(boot, new MemoryProgressStore(306, 305, 305), 306);
+            AssertMiniCuiasClear(boot.RiverMapView!, "306");
         }
 
         [UnityTest]
@@ -286,6 +312,11 @@ namespace AF.Tests.PlayMode
             Assert.That(pill.xMax, Is.LessThanOrEqualTo(viewport.xMax + 0.01f));
             Rect canoeRow = FrameRect((RectTransform)map.BackToCanoeButton.transform, frame);
             Assert.That(window.yMax, Is.LessThanOrEqualTo(canoeRow.yMin + 0.01f), "por encima de la fila de «Volver a la canoa»");
+            Assert.That(pill.yMin, Is.GreaterThanOrEqualTo(window.yMax - 0.01f), "la píldora, debajo del retrato");
+            Assert.That(pill.xMin, Is.EqualTo(window.xMin).Within(0.01f), "alineada a su izquierda");
+            Assert.That(pill.width, Is.LessThanOrEqualTo(HomeWindow.PillMaxWidthDp + 0.01f));
+            Assert.That(pill.yMax, Is.LessThanOrEqualTo(canoeRow.yMin + 0.01f), "y también por encima de «Volver a la canoa»");
+            AssertWindowClearOfMiniCuias(map, "59");
 
             map.HomeWindowButton.onClick.Invoke();
             Assert.That(map.HomeInView, Is.True, "tocarla lleva la vista a Guajará");
@@ -297,6 +328,24 @@ namespace AF.Tests.PlayMode
             map.BackToCanoe();
             map.Tick(16f);
             Assert.That(map.HomeWindowShown, Is.True, "de vuelta a la canoa, otra vez la ventanita");
+        }
+
+        [UnityTest]
+        public IEnumerator HomeWindow_StaysAtLeast8dpFromEveryMiniCuia_In121_141And306()
+        {
+            foreach (int level in new[] { 121, 141 })
+            {
+                yield return OpenApp(level);
+                RiverMapScreen map = CurrentMap();
+                Assert.That(map.HomeWindowShown, Is.True, "nivel " + level);
+                AssertWindowClearOfMiniCuias(map, level.ToString(CultureInfo.InvariantCulture));
+            }
+
+            yield return OpenApp(59);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Reopen(boot, new MemoryProgressStore(306, 305, 305), 306);
+            Assert.That(boot.RiverMapView!.HomeWindowShown, Is.True, "306");
+            AssertWindowClearOfMiniCuias(boot.RiverMapView!, "306");
         }
 
         [UnityTest]
@@ -356,6 +405,80 @@ namespace AF.Tests.PlayMode
         }
 
         // ============================================================================================ ayudas
+
+        private static RiverMapScreen CurrentMap()
+        {
+            return GameBootstrap.Current!.RiverMapView!;
+        }
+
+        // Todas las mini cuias que se ven (o que tocan a una que se ve) quedan a ≥ ClusterMinDp entre centros (sus áreas táctiles
+        // de 48 dp no se pisan) y ninguna pisa la canoa con su mástil y sus banderas ni el guía.
+        private static void AssertMiniCuiasClear(RiverMapScreen map, string label)
+        {
+            Assert.That(map.StopMarkersShown, Is.True, label);
+            Rect gear = map.CanoeGearBoxLocal;
+            Rect guide = map.GuideBoxLocal;
+            Assert.That(gear.width, Is.GreaterThan(0f), label + ": la caja de la canoa");
+            Assert.That(gear.Contains(map.CanoeBoxLocal.center), Is.True, label + ": la caja con el equipo contiene la canoa que se pinta");
+            float min = float.MaxValue;
+            int shown = 0;
+            int fanned = 0;
+            int leaders = 0;
+            for (int i = 0; i < map.StopMarkerCount; i++)
+            {
+                if (!map.StopMarkerInView(i))
+                {
+                    continue;
+                }
+
+                shown++;
+                fanned += map.StopMarkerFanned(i) ? 1 : 0;
+                leaders += map.StopMarkerHasLeader(i) ? 1 : 0;
+                Rect box = CuiaBox(map.StopMarkerLocal(i));
+                int n = map.StopMarkerStop(i);
+                Assert.That(box.Overlaps(gear), Is.False, label + ": la mini cuia de la parada " + n + " pisa la canoa");
+                Assert.That(box.Overlaps(guide), Is.False, label + ": la mini cuia de la parada " + n + " pisa el guía");
+                for (int j = 0; j < map.StopMarkerCount; j++)
+                {
+                    if (j != i)
+                    {
+                        min = Mathf.Min(min, Vector2.Distance(map.StopMarkerLocal(i), map.StopMarkerLocal(j)));
+                    }
+                }
+            }
+
+            Debug.Log("AF_MAP mini cuias en el " + label + ": " + shown + " a la vista (" + fanned + " en abanico, " + leaders
+                + " con línea), la menor distancia entre centros " + min.ToString("0.0", CultureInfo.InvariantCulture) + " dp, zoom "
+                + map.Zoom.ToString("0.00", CultureInfo.InvariantCulture));
+            Assert.That(shown, Is.GreaterThanOrEqualTo(2), label);
+            Assert.That(min, Is.GreaterThanOrEqualTo((float)MapConfig.ClusterMinDp), label + ": las áreas táctiles de 48 dp no se pisan");
+        }
+
+        // La ventanita de casa (marco y píldora) queda a ≥ HomeWindowCuiaGapDp de toda mini cuia que se ve.
+        private static void AssertWindowClearOfMiniCuias(RiverMapScreen map, string label)
+        {
+            Rect win = map.HomeWindowViewRect;
+            float gap = RiverMapScreen.HomeWindowCuiaGapDp - 0.01f;
+            win = Rect.MinMaxRect(win.xMin - gap, win.yMin - gap, win.xMax + gap, win.yMax + gap);
+            for (int i = 0; i < map.StopMarkerCount; i++)
+            {
+                if (!map.StopMarkerInView(i))
+                {
+                    continue;
+                }
+
+                Vector2 v = map.StopMarkerViewPoint(i);
+                var box = new Rect(v.x - (ProceduralArt.MiniCuiaWidthDp * 0.5f), v.y - (ProceduralArt.MiniCuiaHeightDp * 0.5f),
+                    ProceduralArt.MiniCuiaWidthDp, ProceduralArt.MiniCuiaHeightDp);
+                Assert.That(box.Overlaps(win), Is.False, label + ": la mini cuia de la parada " + map.StopMarkerStop(i) + " a menos de 8 dp de la ventanita");
+            }
+        }
+
+        private static Rect CuiaBox(Vector2 c)
+        {
+            return new Rect(c.x - (ProceduralArt.MiniCuiaWidthDp * 0.5f), c.y - (ProceduralArt.MiniCuiaHeightDp * 0.5f),
+                ProceduralArt.MiniCuiaWidthDp, ProceduralArt.MiniCuiaHeightDp);
+        }
 
         private static void AssertFlags(RiverStopCatalog stops, int max, string?[] into, params string[] expected)
         {
