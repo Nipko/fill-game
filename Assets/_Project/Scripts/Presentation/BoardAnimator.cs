@@ -215,6 +215,14 @@ namespace AF.Presentation
         public float Clock { get; private set; }
 
         /// <summary>
+        /// Ms de <see cref="Tick"/> desde el último <see cref="EnqueuePour"/> (el último vertido tocado, también si se encadenó):
+        /// el reloj del presupuesto de los pasos de mecánica (<see cref="MechanicStepQueue.BudgetFromTapMs"/>; FX6). El tope de
+        /// la espera antes de la celebración o del modal cuenta desde el toque que gana o atasca, después del cual no se vierte
+        /// más, así que ningún corte llega antes de 3.000 ms desde este instante.
+        /// </summary>
+        public float SinceLastPourMs { get; private set; }
+
+        /// <summary>
         /// Eventos sueltos de desarrollo, con la firma de <c>DevProbe.Event(evento, campos JSON)</c>: <c>step_budget</c>, cuando
         /// las últimas etapas de un plan saltan por el presupuesto desde el toque, y <c>step</c>, al terminar cada paso de
         /// mecánica (<c>kind</c>, <c>stage</c>, <c>index</c>, <c>other</c>, <c>owner</c>, <c>ms</c>, <c>speed</c>,
@@ -606,6 +614,7 @@ namespace AF.Presentation
         /// </summary>
         public void EnqueuePour(in PourVisual v)
         {
+            SinceLastPourMs = 0f; // FX6: el presupuesto de los pasos cuenta desde aquí (MechanicStepQueue.BudgetFromTapMs)
             BoardState before = v.Before;
             BoardState after = v.After;
             int source = v.Source;
@@ -773,6 +782,7 @@ namespace AF.Presentation
         public void Tick(float dtMs)
         {
             Clock += dtMs;
+            SinceLastPourMs += dtMs;
             for (int i = 0; i < _count; i++)
             {
                 _jobs[i].Age += dtMs;
@@ -1259,7 +1269,9 @@ namespace AF.Presentation
                 {
                     job.PlanBegun = true;
                     float over = Mathf.Min(dtMs, time - job.ExtraStart);
-                    _steps.Begin(job.Plan, job.Age - over, job.SrcDone ? 0f : job.SrcEnd - job.ExtraStart);
+                    // El presupuesto cuenta desde el último vertido tocado, no desde el de este trabajo (FX6): si el jugador
+                    // vertió después, el corte de la celebración o del modal, si llega, cuenta desde ese toque más reciente.
+                    _steps.Begin(job.Plan, job.Age - over, Mathf.Max(0f, SinceLastPourMs - over), job.SrcDone ? 0f : job.SrcEnd - job.ExtraStart);
                     step = over;
                 }
 
@@ -1611,7 +1623,9 @@ namespace AF.Presentation
 
         // step_budget por DevEvent (DevProbe.Event, cuando la pantalla lo una): las últimas etapas de un plan saltaron. Sin
         // sonda no escribe nada (la línea AF_STATE es de DevProbe, con su "t" y su compuerta). Solo asigna cuando ocurre.
-        internal void RaiseStepBudget(float ageMs, float plannedMs, float leftMs, float speed, int skipFrom)
+        // age_ms cuenta desde el toque del vertido del plan y since_tap_ms, desde el último vertido tocado (el reloj del
+        // presupuesto, FX6; con un solo vertido en la cola, los dos coinciden).
+        internal void RaiseStepBudget(float ageMs, float sinceTapMs, float plannedMs, float leftMs, float speed, int skipFrom)
         {
             Action<string, string>? devEvent = DevEvent;
             if (devEvent == null)
@@ -1620,6 +1634,7 @@ namespace AF.Presentation
             }
 
             string fields = "\"age_ms\":" + Mathf.RoundToInt(ageMs).ToString(CultureInfo.InvariantCulture)
+                + ",\"since_tap_ms\":" + Mathf.RoundToInt(sinceTapMs).ToString(CultureInfo.InvariantCulture)
                 + ",\"planned_ms\":" + Mathf.RoundToInt(plannedMs).ToString(CultureInfo.InvariantCulture)
                 + ",\"left_ms\":" + Mathf.RoundToInt(leftMs).ToString(CultureInfo.InvariantCulture)
                 + ",\"speed\":" + speed.ToString("0.00", CultureInfo.InvariantCulture)

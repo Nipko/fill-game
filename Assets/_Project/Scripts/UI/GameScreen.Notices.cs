@@ -1066,7 +1066,8 @@ namespace AF.UI
         // La tarjeta «Fruta nueva» del tinte fruit, en el sitio de la del miquito (ShowSightingNow): sobre la franja del panorama
         // si cabe; si no, sobre el muelle, por encima de la bandeja y de sus burbujas; si tampoco (3 filas), como placa de una
         // línea clavada al marco; y si ni así, no sale. Sin el nombre o la frase en el idioma de la UI, tampoco
-        // (FruitNewCard.TryTexts). Suena sfx_fruit_new afinado a la fruta (AU1) y deja su sonda AF_STATE fruit_new.
+        // (FruitNewCard.TryTexts). Suena sfx_fruit_new afinado a la fruta (AU1) con su remate sting_fruit_new (AU3) y deja su
+        // sonda AF_STATE fruit_new.
         private void ShowFruitNewNow(int fruit)
         {
             BoardLayoutResult? l = _layout;
@@ -1120,6 +1121,7 @@ namespace AF.UI
             int tint = FactLine.TintOf(SightingRule.FruitDebutTints[fruit]);
             _fruitNew.Show(tint, tint > 0 ? _art.FruitFlight(tint) : null, tint > 0 ? _art.TintSwatch(tint) : null);
             AF.Audio.AudioCues.PlayFruit(AF.Audio.SfxId.FruitNew, tint); // AU1: tarjeta «Fruta nueva»
+            AF.Audio.AudioCues.Stinger(AF.Audio.StingerId.FruitNew); // AU3: su remate, como los otros (tras la toada, con Música, −8 dB)
             EmitFruitNewProbe(fruit, (int)_fruitNew.DurationMs, FruitNewMode);
         }
 

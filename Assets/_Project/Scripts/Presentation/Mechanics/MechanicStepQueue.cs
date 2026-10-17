@@ -91,9 +91,16 @@ namespace AF.Presentation.Mechanics
     /// alinean en el paso 2); Seal, <c>SealAnimationAt</c> en 450 ms
     /// (07 §5.3); RainDrop y RainEnd, la gota sube como una dosis en <c>anim_pour_dose_ms</c> (280 ms); Bite, la víctima pierde
     /// la dosis de arriba en 280 ms y después la cueva la recibe en 280 ms, en un solo paso; MudWash, 0; los demás, salto.</para>
-    /// <para><b>Presupuesto desde el toque.</b> Del toque a la vista quieta, como mucho <see cref="BudgetFromTapMs"/> =
-    /// <c>MaxViewDrainWaitMs</c> − 200 = 2.800 ms (3.000 es el tope [P] del tech-lead de <c>GameConfig</c>, que no cambia; un
-    /// test EditMode ata las dos cifras). Al llegar a (a) se calcula <c>restante</c> = 2.800 − ms desde el toque, y el fin
+    /// <para><b>Presupuesto desde el último toque.</b> Del último toque a la vista quieta, como mucho
+    /// <see cref="BudgetFromTapMs"/> = <c>MaxViewDrainWaitMs</c> − 200 = 2.800 ms (3.000 es el tope [P] del tech-lead de
+    /// <c>GameConfig</c>, que no cambia; un test EditMode ata las dos cifras). Ese tope cuenta desde el toque que gana o deja el
+    /// tablero en Aguas estancadas (<c>LevelFlow.BeginPending</c>), y después ya no se acepta ningún toque: así que ninguna
+    /// celebración ni modal corta la vista antes de 3.000 ms desde el último vertido tocado, y ese es el reloj del presupuesto
+    /// (FX6). Un vertido encolado detrás de otros que comparten sus cuias empieza tarde, pero si el jugador ha vertido después,
+    /// el corte, si llega, es 3.000 ms después de ese vertido más reciente; contar desde su propio toque saltaba pasos que nada
+    /// iba a cortar (el <c>step_budget</c> de la victoria del 280, a un vertido cada 0,5 s). Con un solo vertido en la cola, el
+    /// último toque es el suyo y nada cambia. Al llegar a (a) se calcula <c>restante</c> = 2.800 − ms desde el último toque
+    /// (<c>BoardAnimator.SinceLastPourMs</c>), y el fin
     /// previsto del plan con la espera <c>w</c> hasta que vuelva el origen, que no se acelera: con el factor <c>f</c>,
     /// <c>max(f · Σ A, w + f · B)</c>, donde <c>A</c> es el paso más largo de cada etapa (<c>StepDurationMs</c>) y <c>B</c>, el
     /// camino más largo que empieza en un paso que espera al origen (ese paso y las etapas siguientes). Si no cabe, el factor
@@ -101,9 +108,8 @@ namespace AF.Presentation.Mechanics
     /// (<see cref="BudgetSlackMs"/>) absorbe el redondeo de coma flotante, así que el plan acelerado acaba antes del
     /// presupuesto y nunca después. Si aun así no cabe, saltan las etapas que acabarían después de <c>restante</c> (sus pasos
     /// terminan en el acto), se cuenta en <see cref="BudgetOverruns"/> y se avisa con <c>step_budget</c> por
-    /// <c>BoardAnimator.DevEvent</c>. Ese enlace está PENDIENTE: lo une a <c>DevProbe.Event</c> un gancho en el constructor de
-    /// <c>GameScreen</c> (<c>_animator.DevEvent = _probe.Event;</c>) que añade la sesión principal entre olas (arquitectura
-    /// del paso 1, §7); hasta entonces, sin sonda, no se escribe nada. Los pasos que esperan al origen empiezan en el instante
+    /// <c>BoardAnimator.DevEvent</c>, que el constructor de <c>GameScreen</c> une a <c>DevProbe.Event</c> (sin sonda no se
+    /// escribe nada). Los pasos que esperan al origen empiezan en el instante
     /// previsto de su vuelta (o en el del fotograma que la nota, si fuera antes), así que el plan sigue el reloj previsto; la
     /// vista nota el final en el primer fotograma que llega a él, y ese menos de un fotograma lo absorben los 200 ms de margen
     /// hasta el tope de 3.000.</para>
@@ -114,8 +120,8 @@ namespace AF.Presentation.Mechanics
         public const int MaxPlans = 16;
 
         /// <summary>
-        /// Del toque a la vista quieta: <c>MaxViewDrainWaitMs</c> (3.000, [P] del tech-lead) − 200 ms de margen para que la
-        /// celebración o el modal nunca corten un paso.
+        /// Del último toque a la vista quieta: <c>MaxViewDrainWaitMs</c> (3.000, [P] del tech-lead) − 200 ms de margen para que
+        /// la celebración o el modal nunca corten un paso (el tope cuenta desde el toque que gana o atasca, que es el último).
         /// </summary>
         public const float BudgetFromTapMs = 2800f;
 
@@ -195,7 +201,7 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        /// <summary>Planes cuyas últimas etapas saltaron porque no cabían en el presupuesto desde el toque.</summary>
+        /// <summary>Planes cuyas últimas etapas saltaron porque no cabían en el presupuesto desde el último toque.</summary>
         public int BudgetOverruns { get; private set; }
 
         /// <summary>Planes que hubo que acelerar (factor &lt; 1) para caber en el presupuesto.</summary>
@@ -365,9 +371,10 @@ namespace AF.Presentation.Mechanics
         }
 
         // Empieza el plan al terminar el caudal (etapa (a)): estados de cada paso, overlays, duraciones nominales y
-        // presupuesto. ageMs: ms desde el toque; sourceBackInMs: lo que falta para que el origen vuelva a su ranura (la espera
-        // de los pasos que lo pintan, que cuenta en el presupuesto).
-        internal void Begin(int slot, float ageMs, float sourceBackInMs)
+        // presupuesto. ageMs: ms desde el toque del vertido (diagnóstico, age_ms de step_budget); sinceTapMs: ms desde el
+        // último toque, el reloj del presupuesto (FX6; nunca más que ageMs); sourceBackInMs: lo que falta para que el origen
+        // vuelva a su ranura (la espera de los pasos que lo pintan, que cuenta en el presupuesto).
+        internal void Begin(int slot, float ageMs, float sinceTapMs, float sourceBackInMs)
         {
             Plan p = _plans[slot];
             p.Begun = true;
@@ -411,10 +418,10 @@ namespace AF.Presentation.Mechanics
                 }
             }
 
-            // Presupuesto desde el toque. Con el factor f, el plan acaba en max(f · ΣA, w + f · B) (ver la clase): PlannedEnd
+            // Presupuesto desde el último toque (FX6). Con el factor f, el plan acaba en max(f · ΣA, w + f · B) (ver la clase): PlannedEnd
             // lo calcula etapa a etapa igual que el recorrido de los saltos de abajo, así que un plan que cabe sin acelerar da
             // allí los mismos valores y nunca salta por redondeo.
-            float remaining = BudgetFromTapMs - ageMs;
+            float remaining = BudgetFromTapMs - Mathf.Min(ageMs, sinceTapMs);
             float wait = waits ? p.SrcBackAt : 0f;
             float planned = PlannedEnd(p, speed, wait, MechanicStepPlan.StageCount);
             if (planned > remaining)
@@ -469,7 +476,7 @@ namespace AF.Presentation.Mechanics
             if (p.SkipFrom < MechanicStepPlan.StageCount)
             {
                 BudgetOverruns++;
-                _board.RaiseStepBudget(ageMs, planned, remaining, speed, p.SkipFrom);
+                _board.RaiseStepBudget(ageMs, Mathf.Min(ageMs, sinceTapMs), planned, remaining, speed, p.SkipFrom);
             }
         }
 

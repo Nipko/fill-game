@@ -149,3 +149,18 @@ Notas:
    - dos arrastres por adb (`input swipe`) no movieron la vista Cuenca. Puede ser que esa vista no se arrastre porque cabe entera; el arrastre real lo prueban los tests de M3.3.
 4. **Para el escritorio: el rechazo no se puede provocar con adb**, porque un destino inválido cambia la selección. Si hace falta comprobar el sonido de madera, haría falta un extra de desarrollo o un caso en el que el rechazo exista.
 5. **El teléfono:** 6 GB libres (antes, 1,5) y batería al 67 % al empezar.
+
+## Respuesta del escritorio (FX6)
+
+- **Observación 2, `step_budget` en la victoria del 280:** no es un tirón de fotogramas ni el trabajo de la victoria (TiTino, la línea de fruta, la llegada o el banner), sino el reloj del presupuesto de los pasos de mecánica.
+  - **Reproducción en el Editor** (360 × 780 dp; ahí el tablero sale en 3 filas, D-006, y las filas no influyen): la solución A* del 280, con un vertido cada 0,5 s como el guion del teléfono. Esperando a la vista quieta entre vertidos no sale.
+  - **Qué se agotaba:** la solución acaba con cuatro vertidos encadenados por sus cuias: 1 → 12, 1 → 10, 0 → 1 y 0 → 6. Cada uno espera a que el anterior suelte una cuia que comparten. El penúltimo, 0 → 6, sella la 6 y cuenta en la Piraña (Seal y BiteLost, 850 ms de pasos). Llegaba a su caudal 2.630 ms después de su propio toque, y el presupuesto de 2,8 s contaba desde ese toque: le quedaban 170 ms, ni a × 0,35 cabía y saltaba la etapa (e). Por eso sale en la victoria, y no en el resto de la prueba: solo ahí cuatro vertidos seguidos comparten cuias y el último trae pasos.
+  - **Línea de antes:** `{"event":"step_budget","age_ms":2630,"planned_ms":850,"left_ms":170,"speed":0.35,"skip_from":"E"}`.
+- **Arreglo (FX6):** el presupuesto mide bien su plazo; solo estaba mal el reloj.
+  - Sus 2,8 s protegen del corte de la celebración o del modal, que llega como mucho 3.000 ms después del toque que gana o atasca (`MaxViewDrainWaitMs`). Después de ese toque ya no se acepta ninguno, así que es siempre el último.
+  - Por eso ahora cuenta desde el último vertido tocado (`BoardAnimator.SinceLastPourMs`) y no desde el propio. Con un solo vertido en la cola, los dos coinciden y nada cambia.
+  - En el 280, el plan de 0 → 6 cabe a × 0,80 y se ve entero, sin `step_budget`.
+  - La línea `step_budget` lleva ahora también `since_tap_ms`, el reloj del presupuesto (`docs/dev/prototipo-v0.md`).
+  - Lo prueba `StepBudgetVictoryTests` (PlayMode): gana el 280 a 0,5 s por vertido y esperando a la vista quieta. Falla si sale `step_budget`, si salta alguna etapa o si algún paso que no saltó por la cola acaba más de 2,8 s después del último toque.
+- **Lo que queda, sin aviso:** al ritmo del guion, el vertido que gana (5 → 12) espera detrás de esa cadena, y la celebración lo lleva a su final a los 3 s del último toque (`MaxViewDrainWaitMs`, el tope [P] del tech-lead). Pasaba igual antes de FX6, y ni ese salto ni los de `queue_max_lag_pours` escriben línea. A un ritmo de persona, esperando a la vista quieta, la vista acaba 1,28 s después del último toque y no salta nada.
+- **Para probar en el teléfono:** `af_level 280` con la solución A* a 0,5 s por vertido. Debe dar 0 `step_budget`, y en la victoria, `step` del Seal de la 6 y del BiteLost de la Piraña con `"snapped":false`.
