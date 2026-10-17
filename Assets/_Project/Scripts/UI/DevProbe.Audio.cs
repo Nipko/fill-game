@@ -7,19 +7,22 @@ using UnityEngine;
 namespace AF.UI
 {
     /// <summary>
-    /// Sonda del audio provisional (tarea AU1; docs/dev/prototipo-v0.md), solo en desarrollo, para probar en el teléfono por
-    /// logcat lo que no se puede oír desde el ordenador:
+    /// Sonda del audio (tareas AU1-AU3; docs/dev/prototipo-v0.md), solo en desarrollo, para probar en el teléfono por logcat lo
+    /// que no se puede oír desde el ordenador:
     /// <list type="bullet">
-    /// <item><c>AF_STATE {"event":"sfx","t":…,"id":"sfx_select","gain_db":-36.0,"tint":4}</c> en cada efecto que suena (con Sonido
-    /// apagado, en silencio o con un anuncio delante no sale ninguno): su ID de la lista, su pico en dBFS y, en los afinados, la
-    /// fruta (índice de motor 1-14).</item>
+    /// <item><c>AF_STATE {"event":"sfx","t":…,"id":"sfx_select","gain_db":-36.0,"tint":4,"src":"clip"}</c> en cada efecto que
+    /// suena (con Sonido apagado, en silencio o con un anuncio delante no sale ninguno): su ID de la lista, su pico en dBFS, en
+    /// los afinados la fruta (índice de motor 1-14) y, desde AU3, de dónde sale: <c>clip</c> (el WAV de la entrega) o
+    /// <c>synth</c> (el audio por código de respaldo). Los remates salen igual, con su id (<c>sting_arrival</c>…).</item>
     /// <item><c>AF_STATE {"event":"haptic","t":…,"kind":"haptic_seal"}</c> en cada vibración (con Vibración apagada no sale).</item>
-    /// <item><c>AF_STATE {"event":"music","t":…,"world":3,"layers":1,"night":false,"ducked":false,"menu":false}</c> cada vez que
-    /// cambia la música (tarea AU2): el mundo del lecho (0 en el inicio, con <c>menu</c> true), las capas de percusión pedidas, la
-    /// variante nocturna de Muy difícil y la atenuación de 6 dB (toada o modal). Como <c>sfx</c>, en el Editor solo con
-    /// <see cref="AudioLinesInEditor"/>.</item>
-    /// <item><c>AF_STATE {"event":"ambient","t":…,"world":4,"rain":true,"level":95}</c> al cargar un nivel (y con world 0 al abrir
-    /// el inicio): el agua del mundo y si el nivel tiene lluvia.</item>
+    /// <item><c>AF_STATE {"event":"music","t":…,"world":3,"layers":1,"night":false,"ducked":false,"menu":false,"clip":"mus_w03_bed"}</c>
+    /// cada vez que cambia la música (tarea AU2): el mundo del lecho (0 en el inicio, con <c>menu</c> true), las capas de
+    /// percusión pedidas, la variante nocturna de Muy difícil, la atenuación de 6 dB (toada o modal) y, desde AU3, el clip del
+    /// lecho o del tema de menú (<c>synth</c> con el respaldo por código; vacío sin música). Como <c>sfx</c>, en el Editor solo
+    /// con <see cref="AudioLinesInEditor"/>.</item>
+    /// <item><c>AF_STATE {"event":"ambient","t":…,"world":4,"rain":true,"level":95,"clip":"amb_w04_water","rain_clip":"amb_rain_light"}</c>
+    /// al cargar un nivel (y con world 0 al abrir el inicio): el agua del mundo, si el nivel tiene lluvia y, desde AU3, sus clips
+    /// (<c>synth</c> con el respaldo por código; <c>rain_clip</c> solo si llueve).</item>
     /// <item><c>AF_PERF {"event":"audio_build","worker_ms":…,"main_ms":…,"clips":…,"pcm_kib":…}</c> una vez, cuando los
     /// clips quedan listos: lo que tardó el hilo de trabajo en generar el PCM, lo que pagó el hilo principal al crearlos y la
     /// memoria PCM (en float).</item>
@@ -43,7 +46,7 @@ namespace AF.UI
         public string? LastHapticLine { get; private set; }
 
         /// <inheritdoc />
-        public void Sfx(string id, float gainDb, int tint)
+        public void Sfx(string id, float gainDb, int tint, bool clip)
         {
             if (!AudioLinesOn)
             {
@@ -61,7 +64,7 @@ namespace AF.UI
                 sb.Append(",\"tint\":").Append(tint.ToString(CultureInfo.InvariantCulture));
             }
 
-            sb.Append('}');
+            sb.Append(",\"src\":\"").Append(clip ? "clip" : AudioProbeIds.Synth).Append("\"}");
             LastSfxLine = sb.ToString();
             Debug.Log(LastSfxLine);
         }
@@ -108,7 +111,7 @@ namespace AF.UI
         public string? LastAmbientLine { get; private set; }
 
         /// <inheritdoc />
-        public void Music(in MusicReport report)
+        public void Music(in MusicReport report, string clip)
         {
             // Como sfx: cambia al sellar, en el bucle de juego; en el Editor solo con AudioLinesInEditor.
             if (!AudioLinesOn)
@@ -124,13 +127,14 @@ namespace AF.UI
             sb.Append(",\"layers\":").Append(report.Layers.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"night\":").Append(report.Night ? "true" : "false");
             sb.Append(",\"ducked\":").Append(report.Ducked ? "true" : "false");
-            sb.Append(",\"menu\":").Append(report.Menu ? "true" : "false").Append('}');
+            sb.Append(",\"menu\":").Append(report.Menu ? "true" : "false");
+            sb.Append(",\"clip\":\"").Append(clip).Append("\"}");
             LastMusicLine = sb.ToString();
             Debug.Log(LastMusicLine);
         }
 
         /// <inheritdoc />
-        public void Ambient(int world, bool rain, int level)
+        public void Ambient(int world, bool rain, int level, string waterClip, string rainClip)
         {
             if (!Enabled)
             {
@@ -143,7 +147,14 @@ namespace AF.UI
             AppendTime(sb);
             sb.Append(",\"world\":").Append(world.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"rain\":").Append(rain ? "true" : "false");
-            sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture)).Append('}');
+            sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"clip\":\"").Append(waterClip).Append('"');
+            if (rain)
+            {
+                sb.Append(",\"rain_clip\":\"").Append(rainClip).Append('"');
+            }
+
+            sb.Append('}');
             LastAmbientLine = sb.ToString();
             Debug.Log(LastAmbientLine);
         }

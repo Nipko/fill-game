@@ -471,6 +471,7 @@ namespace AF.UI
         private void EmitBannerArt(LevelFlow flow)
         {
             AF.Audio.AudioCues.Play(AF.Audio.SfxId.WorldBanner); // AU1: la piha, solo aquí, al entrar la tarjeta del banner (07 §9.2)
+            AF.Audio.AudioCues.Stinger(AF.Audio.StingerId.WorldBanner); // AU3: su remate, bajo la piha
             if (!DevProbe.Enabled || !flow.HasLevel)
             {
                 return;

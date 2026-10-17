@@ -153,6 +153,43 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator DevReject_AnInvalidDestination_IsARejection_WithTheWoodAndNoHaptic()
+        {
+            // Observación 4 de la prueba de la ola 4 (tarea AU3): sin el extra, un destino que no puede recibir el vertido pero
+            // puede ser origen cambia la selección (C5); con af_dev_reject (DevRejectOverride en el test) es un rechazo.
+            LaunchOptions.DevRejectOverride = true;
+            yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            BoardState board = boot.Flow!.Session.Current;
+            int source = -1;
+            int target = -1;
+            for (int i = 0; i < board.Count && target < 0; i++)
+            {
+                for (int j = 0; j < board.Count && PourRules.CanBeSource(board, i); j++)
+                {
+                    if (j != i && PourRules.CanBeSource(board, j) && !PourRules.IsLegal(board, i, j))
+                    {
+                        source = i;
+                        target = j;
+                        break;
+                    }
+                }
+            }
+
+            Assert.That(target, Is.GreaterThanOrEqualTo(0), "el nivel 1 tiene un destino que no recibe y puede ser origen");
+            Assert.That(boot.TapCuia(source).Kind, Is.EqualTo(TapKind.Selected));
+            _audio.Clear();
+            Assert.That(boot.TapCuia(target).Kind, Is.EqualTo(TapKind.Rejected), "C5 con tap_switch_selection = false: rechazo");
+            Assert.That(_audio.Heard(SfxId.Illegal), Is.True, "se oye sfx_illegal");
+            Assert.That(_audio.HapticTotal(), Is.EqualTo(0), "02 §4: nunca háptico en un rechazo");
+            Assert.That(LaunchOptions.ResolveTapSwitchSelection(), Is.False);
+            LaunchOptions.DevRejectOverride = null;
+            Assert.That(LaunchOptions.ResolveTapSwitchSelection(), Is.EqualTo(GameConfig.TapSwitchSelection), "sin el extra, el de GameConfig");
+        }
+
+        [UnityTest]
         public IEnumerator Deselect_TappingTheLiftedCuiaAgain_PlaysNothing()
         {
             // 02 §4.1: «Deselección | Baja a su sitio | 100 ms | ease-in | — | —», sin audio ni háptico (revisión de AU1). Se
@@ -360,8 +397,39 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed));
             Assert.That(boot.Wallet!.Canoes.Count, Is.EqualTo(4), "se pierde una canoa");
             Assert.That(_audio.Count(SfxId.CanoeLost, true), Is.EqualTo(1), "07 §9.2: la canoa que vuelca");
+            Assert.That(_audio.StingerCount(StingerId.LevelFailed, true), Is.EqualTo(1), "AU3: el remate de Nivel fallido, al abrirse");
             Assert.That(_audio.Count(SfxId.UiTap, false), Is.EqualTo(0), "el botón suena con lo que hace, sin el toque encima");
             Assert.That(_audio.HapticTotal(), Is.EqualTo(0), "sin háptico");
+        }
+
+        [UnityTest]
+        public IEnumerator LevelFailed_Resumed_DoesNotPlayItsStingerAgain()
+        {
+            // Revisión de AU3: el remate suena en la transición real a Nivel fallido, no al reabrir la pantalla desde el estado
+            // guardado (en el teléfono la reanudación llega desde el inicio: sonaría el remate de algo que no acaba de pasar).
+            FunnelSetup.Hooks();
+            var store = new MemoryProfileStore(FunnelSetup.Profile(500));
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = store;
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.Step(boot, 50);
+            FunnelSetup.GetStuck(boot);
+            boot.View!.Stuck.GiveUpButton.onClick.Invoke();
+            boot.View.GiveUp.GiveUpButton.onClick.Invoke();
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelFailed));
+            Assert.That(_audio.StingerCount(StingerId.LevelFailed, true), Is.EqualTo(1), "la transición real: su remate");
+
+            _audio.Clear();
+            yield return PlayModeHelpers.LoadApp(store);
+            GameBootstrap again = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(again);
+            PlayModeHelpers.Step(again, 300);
+            Assert.That(again.Flow!.Phase, Is.EqualTo(FlowPhase.LevelFailed));
+            Assert.That(again.View!.Failed.Visible, Is.True, "Nivel fallido reaparece");
+            Assert.That(_audio.StingerCount(StingerId.LevelFailed, false), Is.EqualTo(0), "al reanudar, sin el remate");
         }
 
         [UnityTest]
@@ -395,6 +463,7 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.WorldBanner, Is.EqualTo(3));
             Assert.That(boot.View!.WorldBannerView.Visible, Is.True);
             Assert.That(_audio.Count(SfxId.WorldBanner, true), Is.EqualTo(1), "07 §9.2: la piha, al entrar la tarjeta del banner");
+            Assert.That(_audio.StingerCount(StingerId.WorldBanner, true), Is.EqualTo(1), "AU3: su remate, con la piha");
             Assert.That(_audio.Requested(SfxId.MechCard), Is.False, "el 41 no tiene tarjeta previa");
             PlayModeHelpers.Step(boot, 3000);
             Assert.That(_audio.Count(SfxId.WorldBanner, false), Is.EqualTo(1), "mientras espera el toque, no se repite");
@@ -402,6 +471,7 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 2000);
             Assert.That(flow.Phase, Is.Not.EqualTo(FlowPhase.LevelCard), "cerrado: la intro");
             Assert.That(_audio.Count(SfxId.WorldBanner, false), Is.EqualTo(1), "una sola vez, también al cerrarse");
+            Assert.That(_audio.StingerCount(StingerId.WorldBanner, false), Is.EqualTo(1), "y su remate, una vez");
         }
 
         [UnityTest]
@@ -412,10 +482,25 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelCard));
             Assert.That(boot.Flow.LevelCard, Is.Not.Null, "el estreno de la Hoja");
             Assert.That(_audio.Count(SfxId.MechCard, true), Is.EqualTo(1), "07 §9.2: la tarjeta previa");
+            Assert.That(_audio.StingerCount(StingerId.MechCard, true), Is.EqualTo(1), "AU3: su remate");
+            Assert.That(_audio.StingerCount(StingerId.WorldBanner, false), Is.EqualTo(0), "sin el remate del banner");
             Assert.That(_audio.Requested(SfxId.WorldBanner), Is.False, "sin banner de mundo");
             Assert.That(boot.TapAnywhere(), Is.True, "un toque la cierra");
             PlayModeHelpers.Step(boot, 500);
             Assert.That(_audio.Count(SfxId.MechCard, false), Is.EqualTo(1), "una vez");
+        }
+
+        [UnityTest]
+        public IEnumerator LevelCard_Level60_DifficultyOnly_PlaysTheCardWithoutTheMechanicStinger()
+        {
+            // Revisión de AU3: la tarjeta que solo anuncia la dificultad (el 60, Muy difícil sin intro_mechanic) no presenta
+            // ninguna mecánica: suena sfx_mech_card (AU1), pero no sting_mech_card, que es de los estrenos.
+            yield return CardSetup.Load(60);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            Assert.That(boot.View!.LevelCard.Card!.Kind, Is.EqualTo(LevelCardKind.Difficulty), "el 60 no estrena nada");
+            Assert.That(_audio.Count(SfxId.MechCard, true), Is.EqualTo(1), "07 §9.2: la tarjeta previa");
+            Assert.That(_audio.StingerCount(StingerId.MechCard, false), Is.EqualTo(0), "sin el remate de mecánica");
         }
 
         [UnityTest]
@@ -449,6 +534,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Arrival!.Stop, Is.Not.Null, "el 20 llega a Alter do Chão");
             Assert.That(view.Arrival.Started, Is.True);
             Assert.That(_audio.Count(SfxId.Fact, true), Is.EqualTo(1), "07 §9.2: la llegada a la parada");
+            Assert.That(_audio.StingerCount(StingerId.Arrival, true), Is.EqualTo(1), "AU3: el remate de la llegada (el servicio lo deja para después de la toada)");
         }
 
         [UnityTest]

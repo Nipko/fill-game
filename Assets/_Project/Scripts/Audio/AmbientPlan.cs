@@ -59,6 +59,24 @@ namespace AF.Audio
             return p > 0.0 && LevelUnit(level) < p;
         }
 
+        /// <summary>Parte de los niveles con lluvia que la tienen ligera [P] (tarea AU3).</summary>
+        public const double RainLightShare = 0.5;
+
+        /// <summary>Parte de los niveles con lluvia que la tienen ligera o media [P]; el resto, fuerte (tarea AU3).</summary>
+        public const double RainMediumShare = 0.85;
+
+        /// <summary>
+        /// Intensidad de la lluvia del nivel <paramref name="level"/> (tarea AU3) [P]: <c>rain_light</c>, <c>rain_medium</c> o
+        /// <c>rain_heavy</c> en proporción 50/35/15, con otro número fijo del nivel (<see cref="LevelUnit"/> de un número derivado),
+        /// independiente del que decide si llueve: subir <c>audio_ambient_rain_scale</c> hace llover en más niveles, pero un nivel
+        /// que ya llovía conserva su intensidad. Siempre igual para el mismo nivel.
+        /// </summary>
+        public static RainIntensity RainIntensityOf(int level)
+        {
+            double u = LevelUnit(unchecked((level * 31) + 0x5EED));
+            return u < RainLightShare ? RainIntensity.Light : u < RainMediumShare ? RainIntensity.Medium : RainIntensity.Heavy;
+        }
+
         /// <summary>Número fijo del nivel en [0, 1): el finalizador de splitmix32 sobre el número del nivel.</summary>
         public static double LevelUnit(int level)
         {
@@ -110,7 +128,23 @@ namespace AF.Audio
         {
             id = default;
             SfxId[] fauna = AmbientPlan.FaunaOf(_world);
-            if (fauna.Length == 0 || dtMs <= 0f)
+            if (!Advance(dtMs, fauna.Length, out int pick))
+            {
+                return false;
+            }
+
+            id = fauna[pick];
+            return true;
+        }
+
+        /// <summary>
+        /// Como <see cref="Advance(float, out SfxId)"/>, pero eligiendo entre <paramref name="choices"/> animales (los grabados
+        /// del mundo, tarea AU3): true si toca uno (<paramref name="pick"/>, 0 … <paramref name="choices"/> − 1). Con 0, nunca.
+        /// </summary>
+        public bool Advance(float dtMs, int choices, out int pick)
+        {
+            pick = 0;
+            if (choices <= 0 || dtMs <= 0f || _world == 0)
             {
                 return false;
             }
@@ -121,8 +155,7 @@ namespace AF.Audio
                 return false;
             }
 
-            int pick = Math.Min(fauna.Length - 1, (int)(_rng.Next() * fauna.Length));
-            id = fauna[pick];
+            pick = Math.Min(choices - 1, (int)(_rng.Next() * choices));
             _leftMs = NextDelay();
             return true;
         }

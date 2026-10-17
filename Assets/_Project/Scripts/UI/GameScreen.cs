@@ -1290,7 +1290,7 @@ namespace AF.UI
             }
             else if (phase == FlowPhase.LevelFailed)
             {
-                OnFunnelPhase(FlowPhase.LevelFailed); // también publica su AF_LAYOUT
+                ShowFunnelPhase(FlowPhase.LevelFailed, true); // también publica su AF_LAYOUT; sin el remate (no acaba de pasar)
             }
 
             SyncChrome();
@@ -1358,6 +1358,13 @@ namespace AF.UI
         /// <inheritdoc />
         public void OnFunnelPhase(FlowPhase phase)
         {
+            ShowFunnelPhase(phase, false);
+        }
+
+        // resumed: la pantalla se reabre desde el estado guardado (OnResumed), sin el remate de Nivel fallido, que solo suena
+        // en la transición real (lista-de-sonidos §9: una vez al abrirse).
+        private void ShowFunnelPhase(FlowPhase phase, bool resumed)
+        {
             LevelFlow flow = RequireFlow();
             _pause.Hide();
             _confirm.Hide();
@@ -1377,6 +1384,11 @@ namespace AF.UI
                     break;
 
                 case FlowPhase.LevelFailed:
+                    if (!resumed && !_failed.Visible && !_noCanoes.Visible)
+                    {
+                        AF.Audio.AudioCues.Stinger(AF.Audio.StingerId.LevelFailed); // AU3: el remate, una vez al abrirse (no al volver de Sin canoas)
+                    }
+
                     ShowFunnelBackdrop();
                     _giveUp.Hide();
                     _noCanoes.Hide();

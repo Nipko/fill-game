@@ -127,6 +127,11 @@ namespace AF.UI
             RestoreBoardUnit();
             _levelCard.Root.SetAsLastSibling(); // por encima de todo: el toque en cualquier punto es suyo
             AF.Audio.AudioCues.Play(AF.Audio.SfxId.MechCard); // AU1: tarjeta previa
+            if (card.Kind != LevelCardKind.Difficulty)
+            {
+                AF.Audio.AudioCues.Stinger(AF.Audio.StingerId.MechCard); // AU3: su remate, solo con un estreno (Debut o Combined)
+            }
+
             _lastCardProbe = DevProbe.Enabled ? CardProbeJson(card) : null;
             if (_lastCardProbe != null)
             {

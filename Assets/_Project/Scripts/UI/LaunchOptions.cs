@@ -19,7 +19,8 @@ namespace AF.UI
     /// tableros del tutorial, tarea B1-5; para probar el embudo y los anuncios en el teléfono [P], tarea B2-6:
     /// <c>af_seeds</c>, <c>af_canoes</c> y <c>af_ads_fill</c>; <c>af_font_scale</c> [P], la escala de texto, tarea A1; y el
     /// idioma de desarrollo <c>af_lang</c>, tarea L2b; <c>af_mech_off</c>, el kill switch de mecánicas, tarea KS1; y
-    /// <c>af_bench_morpho</c>, el bench de Morpho y de fotogramas, tarea PF1; <c>af_max_level</c>, el progreso para ver el Mapa del río, tarea M3.3) y los ganchos de los tests PlayMode (nivel de arranque, modo de vertido,
+    /// <c>af_bench_morpho</c>, el bench de Morpho y de fotogramas, tarea PF1; <c>af_max_level</c>, el progreso para ver el Mapa del río, tarea M3.3;
+    /// <c>af_dev_reject</c>, el rechazo comprobable, tarea AU3) y los ganchos de los tests PlayMode (nivel de arranque, modo de vertido,
     /// progreso, perfil y reloj en memoria, desplazamiento, paquete de niveles, escala de texto, idioma y tablas de textos).
     /// <see cref="GameBootstrap"/> los lee al arrancar (la escala, al crear los textos: <see cref="UiBuilder.TextScale"/>); los
     /// tests los quitan con <see cref="Reset"/>.
@@ -110,6 +111,20 @@ namespace AF.UI
         /// Escribe esos números en el perfil del dispositivo de pruebas. Nunca se lee en un build de release.
         /// </summary>
         public const string IntentExtraMaxLevel = "af_max_level";
+
+        /// <summary>
+        /// Extra de intent (int) de los builds de desarrollo (tarea AU3; observación 4 de la prueba de la ola 4): con
+        /// <c>--ei af_dev_reject 1</c>, <c>tap_switch_selection</c> vale false (02 §3.1, C5), así que tocar como destino una cuia
+        /// que no puede recibir el vertido es un rechazo (sacudida y <c>sfx_illegal</c>, sin háptico) en lugar de cambiar la
+        /// selección, y se puede provocar con <c>adb shell input tap</c>. Nunca se lee en un build de release.
+        /// </summary>
+        public const string IntentExtraDevReject = "af_dev_reject";
+
+        /// <summary>
+        /// <c>af_dev_reject</c> forzado por un test (true = rechazo en lugar de cambiar la selección); null = el extra. Solo tests;
+        /// fuera de desarrollo no cuenta (<see cref="ResolveTapSwitchSelection"/>).
+        /// </summary>
+        public static bool? DevRejectOverride { get; set; }
 
         /// <summary>
         /// <c>af_max_level</c> simulado por un test (−1 = no tocar); null = el del intent. Solo tests: ningún extra de intent lo
@@ -281,6 +296,23 @@ namespace AF.UI
             LevelOverridesJsonOverride = null;
             BenchMorphoOverride = null;
             DevMaxLevelOverride = null;
+            DevRejectOverride = null;
+        }
+
+        /// <summary>
+        /// <c>tap_switch_selection</c> de la partida (02 §3.1, C5): el de <see cref="GameConfig.TapSwitchSelection"/> salvo en
+        /// desarrollo con <c>af_dev_reject</c> = 1 (o <see cref="DevRejectOverride"/> en un test), que lo pone a false para poder
+        /// provocar un rechazo (tarea AU3). Fuera de desarrollo, siempre el de <see cref="GameConfig"/>.
+        /// </summary>
+        public static bool ResolveTapSwitchSelection()
+        {
+            if (!Debug.isDebugBuild)
+            {
+                return GameConfig.TapSwitchSelection;
+            }
+
+            bool reject = DevRejectOverride ?? ReadIntentInt(IntentExtraDevReject) == 1;
+            return reject ? false : GameConfig.TapSwitchSelection;
         }
 
         /// <summary>

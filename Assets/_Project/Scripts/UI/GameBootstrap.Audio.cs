@@ -3,19 +3,38 @@ using AF.Audio;
 using AF.Audio.Unity;
 using AF.GameFlow;
 using AF.Save;
+using UnityEngine;
 
 namespace AF.UI
 {
     /// <summary>
-    /// Audio del arranque y de Ajustes (tarea AU1; D-026): parcial de <see cref="GameBootstrap"/> para que sus ganchos sean líneas
-    /// sueltas. Instala el servicio de audio (el de Unity, con sus clips generados por código, o el de los tests,
+    /// Audio del arranque y de Ajustes (tareas AU1 y AU3; D-026): parcial de <see cref="GameBootstrap"/> para que sus ganchos sean
+    /// líneas sueltas. Instala el servicio de audio (el de Unity, con los clips grabados de la escena y el audio por código de
+    /// respaldo, o el de los tests,
     /// <see cref="AudioCues.Override"/>) con los ajustes del perfil; guarda y aplica en el acto Sonido, Música y Vibración; y pone
     /// el sonido de Atrás (<c>sfx_ui_back</c>) y el háptico corto de Atrás bloqueado (la lista, §7: «Atrás no puede cerrar un aviso
     /// obligatorio»).
     /// </summary>
     public sealed partial class GameBootstrap
     {
-        // El servicio de audio de la sesión, con Sonido, Música y Vibración del perfil (08 §4.3; defaults de 08 §9).
+        // Los clips grabados de la entrega 1 (tarea AU3): los cuelga de la escena GameSceneBuilder, sin Resources.
+        [SerializeField]
+        private AudioClipRegistry? audioClips;
+
+        /// <summary>Registro de clips grabados asignado (<c>AudioClipRegistry.asset</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
+        public AudioClipRegistry? AudioClipsAsset => audioClips;
+
+        /// <summary>
+        /// Asigna el registro de clips grabados (tarea AU3; escena generada por <c>GameSceneBuilder</c>). Sin él, el juego suena
+        /// con el audio por código de AU1 y AU2.
+        /// </summary>
+        public void ConfigureAudio(AudioClipRegistry? registry)
+        {
+            audioClips = registry;
+        }
+
+        // El servicio de audio de la sesión, con Sonido, Música y Vibración del perfil (08 §4.3; defaults de 08 §9) y, desde AU3,
+        // con los clips grabados de la escena (el audio por código queda de respaldo).
         private void InstallAudio(SettingsData settings)
         {
             IAudioService service;
@@ -26,6 +45,7 @@ namespace AF.UI
             else
             {
                 UnityAudioService unity = UnityAudioService.Ensure();
+                unity.UseClips(audioClips);
                 unity.Probe = _probe;
                 service = unity;
             }

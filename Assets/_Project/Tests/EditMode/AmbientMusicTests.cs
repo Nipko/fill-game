@@ -403,12 +403,12 @@ namespace AF.Tests.EditMode
         public void Probe_WritesTheMusicLineOnlyOutsideTheEditorUnlessAsked_AndTheAmbientLine()
         {
             var probe = new AF.UI.DevProbe();
-            probe.Music(new MusicReport(3, 1, true, false, false));
+            probe.Music(new MusicReport(3, 1, true, false, false), "mus_w03_bed_night");
             Assert.That(probe.LastMusicLine, Is.Null, "como sfx: en el Editor no escribe al sellar (sin asignaciones en el bucle)");
             try
             {
                 AF.UI.DevProbe.AudioLinesInEditor = true;
-                probe.Music(new MusicReport(3, 1, true, true, false));
+                probe.Music(new MusicReport(3, 1, true, true, false), "mus_w03_bed_night");
             }
             finally
             {
@@ -416,11 +416,15 @@ namespace AF.Tests.EditMode
             }
 
             StringAssert.StartsWith("AF_STATE {\"event\":\"music\",\"t\":", probe.LastMusicLine);
-            StringAssert.EndsWith(",\"world\":3,\"layers\":1,\"night\":true,\"ducked\":true,\"menu\":false}", probe.LastMusicLine);
+            StringAssert.EndsWith(",\"world\":3,\"layers\":1,\"night\":true,\"ducked\":true,\"menu\":false,\"clip\":\"mus_w03_bed_night\"}", probe.LastMusicLine,
+                "AU3: con el clip del lecho que suena");
 
-            probe.Ambient(4, true, 95);
+            probe.Ambient(4, true, 95, "amb_w04_water", "amb_rain_light");
             StringAssert.StartsWith("AF_STATE {\"event\":\"ambient\",\"t\":", probe.LastAmbientLine);
-            StringAssert.EndsWith(",\"world\":4,\"rain\":true,\"level\":95}", probe.LastAmbientLine, "al cargar el nivel, también en el Editor");
+            StringAssert.EndsWith(",\"world\":4,\"rain\":true,\"level\":95,\"clip\":\"amb_w04_water\",\"rain_clip\":\"amb_rain_light\"}", probe.LastAmbientLine,
+                "al cargar el nivel, también en el Editor, con sus clips (AU3)");
+            probe.Ambient(11, false, 650, AudioProbeIds.Synth, string.Empty);
+            StringAssert.EndsWith(",\"world\":11,\"rain\":false,\"level\":650,\"clip\":\"synth\"}", probe.LastAmbientLine, "sin lluvia, sin rain_clip; el mundo 11, de respaldo");
         }
 
         [Test]
@@ -498,7 +502,7 @@ namespace AF.Tests.EditMode
 
             public MusicReport LastMusic { get; private set; }
 
-            public void Sfx(string id, float gainDb, int tint)
+            public void Sfx(string id, float gainDb, int tint, bool clip)
             {
             }
 
@@ -510,12 +514,12 @@ namespace AF.Tests.EditMode
             {
             }
 
-            public void Music(in MusicReport report)
+            public void Music(in MusicReport report, string clip)
             {
                 LastMusic = report;
             }
 
-            public void Ambient(int world, bool rain, int level)
+            public void Ambient(int world, bool rain, int level, string waterClip, string rainClip)
             {
                 Ambients++;
             }

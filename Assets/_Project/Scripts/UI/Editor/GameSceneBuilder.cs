@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using AF.Audio.Unity;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -13,8 +14,9 @@ namespace AF.UI.Editor
     /// Genera la escena <c>Assets/_Project/Scenes/Game.unity</c> del prototipo v0 (docs/dev/prototipo-v0.md c) y la
     /// deja como la única de Build Settings. La escena es casi vacía (.claude/rules/unity-assets.md): cámara, EventSystem
     /// con <see cref="InputSystemUIInputModule"/> y <see cref="GameBootstrap"/> enlazado a los paquetes de niveles
-    /// (<see cref="LevelPackPaths"/>), al catálogo de miquitos, a las paradas y a la geometría del Mapa del río y a las tablas de textos
-    /// (<see cref="LocTables"/>; tarea L2b); la UI se construye por código en tiempo de ejecución. Es la forma versionada de
+    /// (<see cref="LevelPackPaths"/>), al catálogo de miquitos, a las paradas y a la geometría del Mapa del río, a las tablas de textos
+    /// (<see cref="LocTables"/>; tarea L2b) y al registro de clips grabados (<see cref="AudioClipRegistry"/>; tarea AU3: lo genera
+    /// antes <c>AF.EditorTools.AudioAssetSetup.Apply</c>); la UI se construye por código en tiempo de ejecución. Es la forma versionada de
     /// crear la escena (CLAUDE.md, regla dura 3).
     ///
     /// Uso en batchmode (sin ningún Editor abierto en la carpeta; <c>x86_64</c> en un equipo x64):
@@ -171,6 +173,15 @@ namespace AF.UI.Editor
             }
 
             bootstrap.ConfigureLocalization(strings, facts);
+
+            // Clips grabados de la entrega 1 (tarea AU3): sin el registro el juego suena con el audio por código de respaldo.
+            AudioClipRegistry? audio = AssetDatabase.LoadAssetAtPath<AudioClipRegistry>(AudioClipRegistry.AssetPath);
+            if (audio == null)
+            {
+                Debug.LogWarning(LogPrefix + "no existe el registro de clips " + AudioClipRegistry.AssetPath + " (AF.EditorTools.AudioAssetSetup.Apply): el juego sonará con el audio por código.");
+            }
+
+            bootstrap.ConfigureAudio(audio);
             EditorUtility.SetDirty(bootstrap);
 
             if (!EditorSceneManager.SaveScene(scene, ScenePath))
