@@ -26,8 +26,9 @@ namespace AF.Audio
         public const double FadeSeconds = 2.0;
 
         /// <summary>
-        /// RMS del agua (dBFS) [P]: unos 6 dB por debajo del lecho de música (07 §9.4: música a −20 LUFS y lecho de ambiente a
-        /// −26 LUFS; el lecho provisional queda en <see cref="MusicSynth.BedRmsDb"/>).
+        /// RMS del agua (dBFS) [P], propuesta propia: unos 6 dB por debajo del lecho de música (el lecho provisional ronda los
+        /// −33 dBFS RMS, <see cref="MusicSynth.BedRmsDb"/> como mucho). No sale de 07 §9.4: su «lecho ambiental» a −26 LUFS es la
+        /// capa 1 de la música (07 §9.3), no el agua ni la lluvia del paisaje sonoro de 07 §9.1.
         /// </summary>
         public const double WaterRmsDb = -39.0;
 

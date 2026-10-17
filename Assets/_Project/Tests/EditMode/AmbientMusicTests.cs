@@ -48,7 +48,8 @@ namespace AF.Tests.EditMode
             Assert.That(AudioAnalysis.Hash(AmbientSynth.RenderWater(3)), Is.EqualTo(AudioAnalysis.Hash(AmbientSynth.RenderWater(3))), "determinista");
             Assert.That(AudioAnalysis.Hash(AmbientSynth.RenderWater(12)), Is.EqualTo(AudioAnalysis.Hash(AmbientSynth.RenderWater(1))), "sin perfil propio, el del Estuario");
 
-            // 07 §9.4: el lecho de ambiente, unos 6 dB por debajo de la música (−26 frente a −20 LUFS).
+            // [P] propio, no de 07 §9.4 (su «lecho ambiental» es la capa 1 de la música, 07 §9.3): el agua, unos 6 dB por
+            // debajo del lecho de música.
             MusicLoops music = MusicSynth.Render(1, false);
             double bedRms = AudioAnalysis.ToDb(LoopDsp.Rms(music.Bed));
             Assert.That(AmbientSynth.WaterRmsDb, Is.LessThanOrEqualTo(bedRms - 5.0), "el agua, por debajo del lecho de música");

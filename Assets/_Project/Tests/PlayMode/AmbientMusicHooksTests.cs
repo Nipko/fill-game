@@ -25,7 +25,8 @@ namespace AF.Tests.PlayMode
     /// difícil) y su ambiente con la lluvia que le toca; las capas siguen a las cuias selladas hasta
     /// <c>audio_music_percussion_layers</c>; la toada y el modal atenúan; el anuncio calla y vuelve en 0,5 s. Con el servicio
     /// real: el ajuste Música apaga lecho, capas y ambiente en el acto, y su fotograma no asigna memoria; el inicio para el lecho y
-    /// el agua sin soltarlos (volver al mismo mundo no genera nada), otro mundo los suelta y con Música apagada no se genera nada.
+    /// el agua sin soltarlos (volver al mismo mundo no genera nada), otro mundo los suelta y con Música apagada no se genera nada;
+    /// un anuncio con el lecho y el agua guardados o generándose los deja callados y arrancan al terminar.
     /// </summary>
     public sealed class AmbientMusicHooksTests
     {
@@ -287,6 +288,86 @@ namespace AF.Tests.PlayMode
             yield return WaitLong(() => s.WorldBedKey == 4 && s.WaterWorld == 2 && s.MusicVolume(0) > 0.5f, "al encenderla, el lecho y el agua del mundo 2", 30f);
             Assert.That(s.WorldBedRenders, Is.EqualTo(beds + 1));
             Assert.That(s.WaterRenders, Is.EqualTo(waters + 1));
+        }
+
+        [UnityTest]
+        public IEnumerator RealService_AdWhileBedAndWaterAreStoredOrGenerating_StaysSilent_AndTheyStartWhenItEnds()
+        {
+            AudioCues.Override = null;
+            _real = UnityAudioService.Ensure();
+            _real.Probe = null;
+            _real.Configure(SoundSettings.Defaults);
+            _real.SetModalDuck(false);
+            _real.SetAdActive(false);
+            UnityAudioService s = _real;
+            s.SetMusic(1, 0, false);
+            s.SetAmbient(1, false, 1);
+            yield return WaitLong(() => s.WorldBedKey == 2 && s.WaterWorld == 1 && s.MusicVolume(0) > 0.5f && s.WaterVolume > 0.5f, "lecho y agua del Estuario", 30f);
+            s.SetMenuMusic();
+            s.SetAmbient(0, false, 0);
+            yield return WaitLong(() => s.MenuReady && s.MenuVolume > 0.3f && s.MusicVolume(0) == 0f && s.WaterVolume == 0f, "tema de menú", 30f);
+            Assert.That(s.WorldBedKey == 2 && s.WaterWorld == 1, Is.True, "el lecho y el agua del mundo 1, guardados en el inicio");
+            int beds = s.WorldBedRenders;
+            int waters = s.WaterRenders;
+
+            // Un anuncio y, mientras dura, la vuelta al mismo mundo: el lecho y el agua guardados no arrancan.
+            s.SetAdActive(true);
+            s.SetMusic(1, 0, false);
+            s.SetAmbient(1, false, 2);
+            float start = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - start < 1.5f)
+            {
+                yield return null;
+                AssertSilent(s, "anuncio con el lecho y el agua guardados");
+            }
+
+            s.SetAdActive(false);
+            yield return WaitLong(() => s.MusicVolume(0) > 0.5f && s.WaterVolume > 0.5f, "al terminar el anuncio, el lecho y el agua guardados", 5f);
+            Assert.That(s.WorldBedKey == 2 && s.WaterWorld == 1, Is.True, "los mismos clips");
+            Assert.That(s.WorldBedRenders == beds && s.WaterRenders == waters, Is.True, "sin generar nada");
+
+            // Otro anuncio y, mientras dura, otro mundo: el lecho y el agua del 2 terminan de generarse con el anuncio y no arrancan.
+            s.SetAdActive(true);
+            s.SetMusic(2, 0, false);
+            s.SetAmbient(2, false, 101);
+            start = Time.realtimeSinceStartup;
+            while (s.WorldBedKey != 4 || s.WaterWorld != 2)
+            {
+                if (Time.realtimeSinceStartup - start > 30f)
+                {
+                    Assert.Fail("Tiempo agotado esperando: el lecho y el agua del mundo 2 durante el anuncio");
+                }
+
+                yield return null;
+                AssertSilent(s, "anuncio mientras se generan el lecho y el agua del mundo 2");
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                yield return null;
+                AssertSilent(s, "anuncio con el lecho y el agua del mundo 2 ya generados");
+            }
+
+            Assert.That(s.WorldBedRenders == beds + 1 && s.WaterRenders == waters + 1, Is.True, "se generaron una vez");
+            s.SetAdActive(false);
+            yield return WaitLong(() => s.MusicVolume(0) > 0.5f && s.WaterVolume > 0.5f, "al terminar el anuncio, el lecho y el agua del mundo 2", 5f);
+            Assert.That(s.WorldBedRenders == beds + 1 && s.WaterRenders == waters + 1, Is.True, "sin generarlos otra vez");
+        }
+
+        // Durante un anuncio no suena nada (07 §9.4): ni el lecho, sus capas y el agua (a 0) ni ninguna fuente del servicio.
+        private static void AssertSilent(UnityAudioService s, string what)
+        {
+            for (int v = 0; v < UnityAudioService.MusicVoices; v++)
+            {
+                Assert.That(s.MusicVolume(v), Is.EqualTo(0f), what + ": fuente " + v + " del lecho");
+            }
+
+            Assert.That(s.MenuVolume + s.WaterVolume + s.RainVolume, Is.EqualTo(0f), what + ": tema de menú y ambiente");
+            AudioSource[] sources = s.GetComponentsInChildren<AudioSource>();
+            for (int i = 0; i < sources.Length; i++)
+            {
+                Assert.That(sources[i].isPlaying, Is.False, what + ": " + sources[i].name + " no suena");
+            }
         }
 
         // Como PlayModeHelpers.WaitFor, con un tope propio: generar un lecho o el agua lleva un hilo de trabajo.
