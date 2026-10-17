@@ -117,6 +117,12 @@ namespace AF.UI
         public FaunaCatalog? Fauna { get; set; }
 
         /// <summary>
+        /// Calendario de Frutas del río (<c>frutas_del_rio_v1.json</c>; lo pone <see cref="GameBootstrap"/>) para la fruta de la serie
+        /// de cada parada en su tarjeta (D-022; 02 §6; 06 §4.4); null = solo las frutas que debutaron en la parada.
+        /// </summary>
+        public FactCatalog? FruitSeries { get; set; }
+
+        /// <summary>
         /// <c>water_base</c> del nivel (<c>white</c>, <c>black</c> o <c>clear</c>) para la banda del primer plano del fondo de la
         /// tarjeta (lo pone <see cref="GameBootstrap"/> con el catálogo de niveles). Null o sin respuesta: el agua del sitio de la
         /// gran parada del mundo, que es la del mundo en 1-700 (<see cref="WorldWaterOf"/>).
@@ -463,7 +469,7 @@ namespace AF.UI
 
             StopCard card = EnsureCard();
             card.Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
-            card.ShowStop(stop, StopReached(stop, _progress.MaxLevel), StopWater(stop), Fauna);
+            card.ShowStop(stop, StopReached(stop, _progress.MaxLevel), StopWater(stop), Fauna, FruitSeries);
             EmitLayout();
             return true;
         }

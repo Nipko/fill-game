@@ -16,9 +16,10 @@ namespace AF.Tests.PlayMode
     /// provisional: <c>12i_map_muestrario_tab_l58</c> (el Mapa con max 58 y la pestaña «Muestrario · 9/n» en su fila),
     /// <c>12j_muestrario_l58</c> (una fila por mundo con sus mini cuias en la repisa: de Belém a Manaos llenas, los tres miradores
     /// con su «?», las demás vacías), <c>12k_card_manaos</c> (la tarjeta de Manaos: agua negra, «Manaos · Brasil · río Negro», el
-    /// fondo de la parada, el dato de llegada, «Otro dato» y el miquito), <c>12l_card_manaos_otro_dato</c> (tras «Otro dato»),
-    /// <c>12m_card_tefe_futura</c> (el lago de Tefé, futuro: la silueta con su filo de luz bajo el velo y «Nivel 71» en la
-    /// cabecera), <c>12n_card_belem</c> (Belém con sus cinco frutas), <c>12o_map_miradores_l10</c> (max 10, la vista Mundo
+    /// fondo de la parada, el dato de llegada, «Otro dato», el miquito y el achiote, la fruta de la serie de 41-60),
+    /// <c>12l_card_manaos_otro_dato</c> (tras «Otro dato»), <c>12m_card_tefe_futura</c> (el lago de Tefé, futuro: la silueta con
+    /// su filo de luz bajo el velo, sin reflejo bajo la línea del agua, y «Nivel 71» en la cabecera), <c>12n_card_belem</c> (Belém
+    /// con sus cinco frutas: el açaí de la serie y las que debutaron allí), <c>12o_map_miradores_l10</c> (max 10, la vista Mundo
     /// encuadrada en los tres «?» del estuario, con zoom: antes de guardar comprueba que los tres, con su área táctil de 48 dp,
     /// quedan dentro de la zona del mapa a ≥ 8 dp del marco) y <c>12p_card_mirador</c> (la tarjeta de la isla de Marajó). Cada
     /// captura escribe su línea <c>AF_MAP</c>.

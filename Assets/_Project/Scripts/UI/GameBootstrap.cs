@@ -1330,6 +1330,7 @@ namespace AF.UI
             _lobby.RiverMapAvailable = RiverMapAvailable; // la pestaña del Mapa del río, desde max_level ≥ 10 (M3.3)
             _mapScreen = new RiverMapScreen(transform, _art, _probe, () => CloseRiverMap(), () => PressMapPlay());
             _mapScreen.Fauna = Fauna; // el miquito del tramo en la tarjeta de la parada (M4.1)
+            _mapScreen.FruitSeries = FruitFacts?.Catalog; // la fruta de la serie en la tarjeta de la parada (D-022; M4.1)
             _mapScreen.LevelWater = level => _app?.Catalog.Find(level)?.WaterBase; // el agua del fondo de la tarjeta (M4.1)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración

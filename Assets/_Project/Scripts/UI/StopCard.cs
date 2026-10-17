@@ -35,13 +35,17 @@ namespace AF.UI
     /// (<c>map_card_other_fact</c>), los demás de la parada, uno cada vez) con su fuente (<c>map_card_source</c>, «Fuente: …»,
     /// bajo el dato, si la fila <c>&lt;clave del dato&gt;.source</c> [P] tiene texto; ver <see cref="SourceSuffix"/>: el contrato
     /// de esa etiqueta está pendiente y hoy ningún dato la tiene); el miquito del tramo (su retrato y su nombre,
-    /// <c>fauna.&lt;id&gt;.name</c>, solo con su arte de tarjeta) y la fruta que debutó en sus niveles (icono y nombre,
-    /// <c>tint.&lt;id&gt;.name</c>; <see cref="TintDebuts"/>).</description></item>
+    /// <c>fauna.&lt;id&gt;.name</c>, solo con su arte de tarjeta) y sus frutas (icono y nombre, <c>tint.&lt;id&gt;.name</c>;
+    /// <see cref="CardTints"/>): primero la de la serie de Frutas del río que corre en sus niveles (D-022; 02 §6, fila «Dato del
+    /// río»; 06 §4.4: ahí queda a la vista la línea de fruta que el dato de llegada desplaza en el <c>10k</c>; calendario
+    /// <c>frutas_del_rio_v1.json</c>) y después las que debutaron en ellos (06 §4.5; <see cref="TintDebuts"/>).</description></item>
     /// <item><description><b>Parada futura</b> (<see cref="StopCardMode.Future"/>): solo la silueta del sitio y «Nivel n»
     /// (<c>level_n</c>, su primer nivel, en la fila de la cabecera, a la derecha del ←): ni nombre, ni datos, ni la Canasta. El
     /// fondo entero va bajo un velo de madera oscura (<see cref="FutureVeilColor"/>) con el cielo y los montes desaturados
     /// (<see cref="FutureTone"/>), y el héroe en <see cref="SilhouetteColor"/> con un filo de luz de <see cref="RimLightDp"/> dp
-    /// (<see cref="RimLightColor"/>) para que la silueta se lea (revisión de M4.1).</description></item>
+    /// (<see cref="RimLightColor"/>) para que la silueta se lea (revisión de M4.1). Sin reflejo: el del PNG se oculta y la silueta
+    /// provisional, que pinta el suyo en su propia malla, se recorta en la línea del agua (<see cref="ToneEffect.ClipBelow"/>), así
+    /// que la silueta y su filo de luz son solo lo de encima del agua.</description></item>
     /// <item><description><b>Mirador</b> (<see cref="StopCardMode.Viewpoint"/>): su «?», su nombre (<c>map.stop.&lt;id&gt;.name</c>)
     /// y su dato, si tiene texto.</description></item>
     /// </list>
@@ -122,8 +126,12 @@ namespace AF.UI
         /// <summary>Velo detrás de la tarjeta.</summary>
         public static readonly Color ScrimColor = new Color(Palette.Scrim.r, Palette.Scrim.g, Palette.Scrim.b, 0.78f);
 
-        /// <summary>Tinte del héroe de una parada futura: una silueta de madera oscura [P].</summary>
-        public static readonly Color SilhouetteColor = new Color(0.16f, 0.12f, 0.10f, 0.92f);
+        /// <summary>
+        /// Tinte del héroe de una parada futura: una silueta de madera oscura [P], opaca. Va encima de las copias del filo de luz,
+        /// que quedan debajo de toda la forma: con algo de transparencia (era 0,92), el crema de debajo se veía a través (el lienzo
+        /// mezcla en lineal) y las paredes salían claras con las ventanas oscuras, no una sola tinta.
+        /// </summary>
+        public static readonly Color SilhouetteColor = new Color(0.16f, 0.12f, 0.10f, 1f);
 
         /// <summary>Filo de luz de la silueta de una parada futura (revisión de M4.1): crema al 35 %.</summary>
         public static readonly Color RimLightColor = new Color(Palette.Cream.r, Palette.Cream.g, Palette.Cream.b, 0.35f);
@@ -386,7 +394,7 @@ namespace AF.UI
         /// <summary>Nombre del miquito (vacío sin fila).</summary>
         public string FaunaName => FaunaShown ? _faunaName.text : string.Empty;
 
-        /// <summary>Frutas que se ven (las que debutaron en la parada).</summary>
+        /// <summary>Frutas que se ven (la de la serie de la parada y las que debutaron en ella; <see cref="CardTints"/>).</summary>
         public int FruitCount => _fruitCount;
 
         /// <summary>Tinte (índice de motor) de la fruta <paramref name="i"/>.</summary>
@@ -473,6 +481,95 @@ namespace AF.UI
             return into.Count;
         }
 
+        /// <summary>
+        /// Tintes (índices de motor) de las series de Frutas del río de <paramref name="fruits"/> que tienen alguna línea en los
+        /// niveles de <paramref name="stop"/> (<c>10k+1</c> … <c>10k+10</c>), en orden de nivel, en <paramref name="into"/> (que
+        /// vacía antes): la fruta de la serie que la tarjeta enseña (D-022; 02 §6; 06 §4.4). Solo las series de tinte: las de río
+        /// [P] (<c>rio_napo</c>, <c>rio_amazonas</c>) no son una fruta. Sin calendario, ninguna.
+        /// </summary>
+        public static int SeriesTints(RiverStop stop, FactCatalog? fruits, List<int> into)
+        {
+            if (stop == null || into == null)
+            {
+                throw new ArgumentNullException(stop == null ? nameof(stop) : nameof(into));
+            }
+
+            into.Clear();
+            if (fruits == null)
+            {
+                return 0;
+            }
+
+            IReadOnlyList<FactSeries> series = fruits.Series;
+            for (int i = 0; i < series.Count; i++)
+            {
+                FactSeries s = series[i];
+                if (s.Kind != FactSeriesKind.Tint || !HasLineIn(s, stop.FirstLevel, stop.LastLevel))
+                {
+                    continue;
+                }
+
+                int tint = TintOf(s.Subject);
+                if (tint > 0 && !into.Contains(tint))
+                {
+                    into.Add(tint);
+                }
+            }
+
+            return into.Count;
+        }
+
+        /// <summary>
+        /// Frutas de la tarjeta de <paramref name="stop"/> en <paramref name="into"/> (que vacía antes): la de la serie que corre en
+        /// sus niveles (<see cref="SeriesTints"/>; D-022, 02 §6 y 06 §4.4) y, después, las que debutaron en ellos y no estén ya
+        /// (<see cref="DebutTints"/>; 06 §4.5). Las dos lecturas del canon, sin repetir ninguna fruta.
+        /// </summary>
+        public static int CardTints(RiverStop stop, FactCatalog? fruits, List<int> into)
+        {
+            SeriesTints(stop, fruits, into);
+            for (int i = 0; i < TintDebuts.GetLength(0); i++)
+            {
+                int level = TintDebuts[i, 0];
+                int tint = TintDebuts[i, 1];
+                if (level >= stop.FirstLevel && level <= stop.LastLevel && !into.Contains(tint))
+                {
+                    into.Add(tint);
+                }
+            }
+
+            return into.Count;
+        }
+
+        /// <summary>Índice de motor del tinte de id <paramref name="id"/> (glosario §9), o 0 si no es un tinte.</summary>
+        public static int TintOf(string id)
+        {
+            string[] ids = ProceduralArt.TintIds;
+            for (int i = 1; i < ids.Length; i++)
+            {
+                if (string.Equals(ids[i], id, StringComparison.Ordinal))
+                {
+                    return i;
+                }
+            }
+
+            return 0;
+        }
+
+        // La serie s tiene alguna línea en los niveles first … last.
+        private static bool HasLineIn(FactSeries s, int first, int last)
+        {
+            int from = Math.Max(first, s.FromLevel);
+            int to = Math.Min(last, s.LastLevel);
+            if (from > to)
+            {
+                return false;
+            }
+
+            int rest = (from - s.FromLevel) % s.Step;
+            int level = rest == 0 ? from : from + (s.Step - rest);
+            return level <= to;
+        }
+
         /// <summary>Clave del nombre visible del tinte <paramref name="tint"/> (<c>tint.&lt;id&gt;.name</c>), o null fuera de 1-14.</summary>
         public static string? TintNameKey(int tint)
         {
@@ -548,9 +645,10 @@ namespace AF.UI
         /// <summary>
         /// Abre la tarjeta de <paramref name="stop"/>: entera si se alcanzó (<paramref name="reached"/>), o solo la silueta y «Nivel
         /// n» si es futura. <paramref name="worldWater"/> es el <c>water_base</c> del mundo de la parada (la banda del primer plano);
-        /// <paramref name="fauna"/>, el catálogo de miquitos (null = sin fila del miquito).
+        /// <paramref name="fauna"/>, el catálogo de miquitos (null = sin fila del miquito); <paramref name="fruits"/>, el calendario de
+        /// Frutas del río (null = solo las frutas que debutaron en la parada).
         /// </summary>
-        public void ShowStop(RiverStop stop, bool reached, string worldWater, FaunaCatalog? fauna)
+        public void ShowStop(RiverStop stop, bool reached, string worldWater, FaunaCatalog? fauna, FactCatalog? fruits = null)
         {
             _stop = stop ?? throw new ArgumentNullException(nameof(stop));
             _viewpoint = null;
@@ -576,7 +674,7 @@ namespace AF.UI
                     _species = null;
                 }
 
-                DebutTints(stop, _tints);
+                CardTints(stop, fruits, _tints);
             }
             else
             {
@@ -612,6 +710,7 @@ namespace AF.UI
             _futureLevel.text = string.Empty;
             _factIndex = 0;
             ApplyContent();
+            ApplyFutureTone(false); // si antes se abrió una parada futura, su tono no se queda puesto
         }
 
         /// <summary>Cierra la tarjeta (su ←, el velo o el Atrás de Android). Sin efecto si no se ve.</summary>
@@ -740,7 +839,9 @@ namespace AF.UI
         }
 
         // En una parada futura, el fondo bajo el velo con el cielo y los montes apagados, y el héroe (su PNG o la silueta
-        // provisional) en una sola tinta oscura con su filo de luz y sin reflejo. Los tonos rehacen la malla una vez (al abrir).
+        // provisional) en una sola tinta oscura con su filo de luz y sin reflejo: el reflejo del PNG, oculto; el de la silueta
+        // provisional, que va en su misma malla, recortado en la línea del agua por su ToneEffect (ClipBelow, en PlaceScene).
+        // Los tonos rehacen la malla una vez (al abrir); al apagarlos, la malla vuelve a ser la de siempre, con su reflejo.
         private void ApplyFutureTone(bool on)
         {
             _sceneVeil.gameObject.SetActive(on);
@@ -799,13 +900,18 @@ namespace AF.UI
         /// <see cref="ToneKind.Mute"/>, cambia el color de cada vértice por su <see cref="FutureTone"/> (en los gráficos con color
         /// por vértice, el cielo y la banda, el cambio es exacto; en el panorama, que lleva la textura, solo oscurece, y el velo
         /// hace el resto); con <see cref="ToneKind.Silhouette"/>, pinta la malla en <see cref="SilhouetteColor"/> y, detrás, cuatro
-        /// copias desplazadas <see cref="RimDistance"/> en <see cref="RimLightColor"/>: el filo de luz. Sin textura ni shader
-        /// propio; solo trabaja al rehacer la malla (al abrir la tarjeta), con sus listas reservadas.
+        /// copias desplazadas <see cref="RimDistance"/> en <see cref="RimLightColor"/>: el filo de luz. Con una línea del agua
+        /// (<see cref="ClipBelow"/>), la silueta y su filo son solo lo de encima de ella: los triángulos que no suben de la línea
+        /// (el reflejo de la silueta provisional, que va en la misma malla) se descartan y los demás, con sus copias, se recortan
+        /// en ella. Sin textura ni shader propio; solo trabaja al rehacer la malla (al abrir la tarjeta), con sus listas y su
+        /// polígono reservados.
         /// </summary>
         public sealed class ToneEffect : BaseMeshEffect
         {
             private readonly List<UIVertex> _in = new List<UIVertex>();
             private readonly List<UIVertex> _out = new List<UIVertex>();
+            private readonly UIVertex[] _tri = new UIVertex[3];
+            private readonly UIVertex[] _poly = new UIVertex[4];
 
             /// <summary>Qué hace.</summary>
             public ToneKind Kind { get; private set; }
@@ -821,6 +927,28 @@ namespace AF.UI
 
             /// <summary>Desplazamiento del filo de luz, en unidades locales del gráfico (con <see cref="ToneKind.Silhouette"/>).</summary>
             public float RimDistance { get; private set; } = 1f;
+
+            /// <summary>
+            /// Línea del agua en y local del gráfico (con <see cref="ToneKind.Silhouette"/>): nada de la silueta ni de su filo baja
+            /// de ella. NaN = sin recorte.
+            /// </summary>
+            public float WaterLineY { get; private set; } = float.NaN;
+
+            /// <summary>
+            /// Recorta la silueta en la línea del agua <paramref name="localY"/> (y local del gráfico, hacia arriba; NaN = sin
+            /// recorte); se devuelve a sí mismo.
+            /// </summary>
+            public ToneEffect ClipBelow(float localY)
+            {
+                bool same = float.IsNaN(localY) ? float.IsNaN(WaterLineY) : Mathf.Approximately(WaterLineY, localY);
+                if (!same)
+                {
+                    WaterLineY = localY;
+                    Dirty();
+                }
+
+                return this;
+            }
 
             /// <summary>Lo configura para apagar los colores; se devuelve a sí mismo.</summary>
             public ToneEffect Mute(float saturation, float multiply, float veil)
@@ -860,24 +988,24 @@ namespace AF.UI
                 int n = _in.Count;
                 if (Kind == ToneKind.Silhouette)
                 {
+                    // Las cuatro copias del filo (todos sus triángulos) y, encima, la silueta.
                     float d = RimDistance;
-                    for (int copy = 0; copy < 4; copy++)
+                    for (int copy = 0; copy < 5; copy++)
                     {
                         var offset = new Vector3(copy == 0 ? d : copy == 1 ? -d : 0f, copy == 2 ? d : copy == 3 ? -d : 0f, 0f);
-                        for (int i = 0; i < n; i++)
+                        Color tint = copy < 4 ? RimLightColor : SilhouetteColor;
+                        for (int t = 0; t + 2 < n; t += 3)
                         {
-                            UIVertex v = _in[i];
-                            v.position += offset;
-                            v.color = WithAlpha(RimLightColor, v.color.a);
-                            _out.Add(v);
-                        }
-                    }
+                            for (int j = 0; j < 3; j++)
+                            {
+                                UIVertex v = _in[t + j];
+                                v.position += offset;
+                                v.color = WithAlpha(tint, v.color.a);
+                                _tri[j] = v;
+                            }
 
-                    for (int i = 0; i < n; i++)
-                    {
-                        UIVertex v = _in[i];
-                        v.color = WithAlpha(SilhouetteColor, v.color.a);
-                        _out.Add(v);
+                            EmitAboveWater(t);
+                        }
                     }
                 }
                 else
@@ -892,6 +1020,58 @@ namespace AF.UI
 
                 vh.Clear();
                 vh.AddUIVertexTriangleStream(_out);
+            }
+
+            // El triángulo _tri (el t de la malla, ya desplazado y teñido): tal cual sin línea del agua; con ella, nada si el
+            // triángulo de la malla no sube de la línea (el reflejo) y, si no, su parte de encima (Sutherland-Hodgman contra
+            // y ≥ línea: como mucho un cuadrilátero, en abanico).
+            private void EmitAboveWater(int t)
+            {
+                float line = WaterLineY;
+                if (float.IsNaN(line))
+                {
+                    _out.Add(_tri[0]);
+                    _out.Add(_tri[1]);
+                    _out.Add(_tri[2]);
+                    return;
+                }
+
+                const float eps = 0.001f;
+                if (_in[t].position.y <= line + eps && _in[t + 1].position.y <= line + eps && _in[t + 2].position.y <= line + eps)
+                {
+                    return; // bajo el agua o en su línea: el reflejo
+                }
+
+                int count = 0;
+                for (int j = 0; j < 3; j++)
+                {
+                    UIVertex a = _tri[j];
+                    UIVertex b = _tri[(j + 1) % 3];
+                    bool aIn = a.position.y >= line;
+                    bool bIn = b.position.y >= line;
+                    if (aIn)
+                    {
+                        _poly[count++] = a;
+                    }
+
+                    if (aIn != bIn)
+                    {
+                        float f = (line - a.position.y) / (b.position.y - a.position.y);
+                        UIVertex c = a;
+                        c.position = Vector3.Lerp(a.position, b.position, f);
+                        c.position.y = line;
+                        c.color = Color32.Lerp(a.color, b.color, f);
+                        c.uv0 = Vector4.Lerp(a.uv0, b.uv0, f);
+                        _poly[count++] = c;
+                    }
+                }
+
+                for (int k = 1; k + 1 < count; k++)
+                {
+                    _out.Add(_poly[0]);
+                    _out.Add(_poly[k]);
+                    _out.Add(_poly[k + 1]);
+                }
             }
 
             // c con su alfa multiplicada por la del vértice (0-255).
@@ -1118,6 +1298,9 @@ namespace AF.UI
             _shapeTone.Silhouette(RimLightDp / Mathf.Max(0.01f, s));
             float worldH = h / Mathf.Max(0.01f, s);
             float horizon = Mathf.Min(SceneSkyDp, worldH - 24f);
+            // La silueta provisional pinta su reflejo en su misma malla (dp desde arriba del fondo, en y local −y): en una parada
+            // futura se recorta en la línea del agua, sin reflejo (revisión de M4.1). Solo actúa con el tono puesto.
+            _shapeTone.ClipBelow(-horizon);
             RectTransform world = _sceneWorld;
             world.anchorMin = new Vector2(0f, 1f);
             world.anchorMax = new Vector2(0f, 1f);

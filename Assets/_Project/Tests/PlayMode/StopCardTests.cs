@@ -22,14 +22,18 @@ namespace AF.Tests.PlayMode
     /// <list type="bullet">
     /// <item>la tarjeta de Manaos con <c>max_level</c> 58, completa: la mini cuia de agua negra, «Manaos · Brasil · río Negro», el
     /// fondo de la parada en pequeño, el dato de llegada y sus dos «Otro dato» en ciclo, la fuente solo si tiene fila y el miquito
-    /// del tramo; Belém con sus cinco frutas y el Encuentro con el achiote;</item>
+    /// del tramo y el achiote, la fruta de la serie de 41-60 (D-022); Belém con sus cinco frutas (el açaí de la serie primero),
+    /// Alter do Chão con el agua del Tapajós de la serie y el camu camu que debuta en el 21, y el Encuentro con el achiote;</item>
     /// <item>la fuente del dato («Fuente: …», <c>map_card_source</c>) con su fila en un catálogo de prueba: dentro de la placa,
     /// bajo el dato, ≥ 12 sp y con contraste; con los datos reales de Manaos, pendiente (el contrato de la etiqueta de la fuente no
     /// está fijado y <c>stops.py</c> no la genera: el test queda en Ignore con el motivo);</item>
-    /// <item>una parada futura: solo la silueta con su filo de luz bajo el velo y «Nivel 71» en la cabecera;</item>
-    /// <item>los tres miradores del estuario desde el 10 (ninguno con 9), solo en la vista Mundo, y su tarjeta;</item>
+    /// <item>una parada futura: solo la silueta con su filo de luz bajo el velo, sin reflejo (ni el del PNG ni el de la silueta
+    /// provisional: su malla, con el tono, no baja de la línea del agua) y «Nivel 71» en la cabecera;</item>
+    /// <item>los tres miradores del estuario desde el 10 (ninguno con 9), solo en la vista Mundo, y su tarjeta, sin el tono de
+    /// una parada futura abierta antes;</item>
     /// <item>su ←, el velo y el Atrás de Android la cierran sin cerrar el Mapa;</item>
-    /// <item>ningún precio ni semilla, contraste ≥ 4,5:1, controles ≥ 48 dp y textos ≥ 12 sp sin recortes.</item>
+    /// <item>ningún precio ni semilla, contraste ≥ 4,5:1, controles ≥ 48 dp y textos ≥ 12 sp sin recortes, en las tarjetas de
+    /// parada y en la de un mirador.</item>
     /// </list>
     /// </summary>
     public sealed class StopCardTests
@@ -104,7 +108,7 @@ namespace AF.Tests.PlayMode
             Assert.That(card.FutureToneOn, Is.False, "una parada alcanzada, a todo color");
             Assert.That(card.HeroTone.enabled || card.ShapeTone.enabled, Is.False, "sin silueta");
 
-            // El miquito del tramo (51-60, mundo 3) y ninguna fruta (el achiote debuta en el 41, el agua del Negro en el 61).
+            // El miquito del tramo (51-60, mundo 3).
             FaunaSpecies? species = StopCard.SpeciesOf(boot.Fauna, manaos);
             Assert.That(species, Is.Not.Null);
             Assert.That(species!.LivesIn(3), Is.True);
@@ -112,7 +116,18 @@ namespace AF.Tests.PlayMode
             Assert.That(card.FaunaShown, Is.True);
             Assert.That(card.FaunaName, Is.EqualTo(UiText.FaunaName(species.NameKey)));
             Assert.That(card.FaunaName, Is.Not.Empty);
-            Assert.That(card.FruitCount, Is.EqualTo(0));
+
+            // La fruta de la serie que corre en 51-60 (D-022; 02 §6; 06 §4.4): el urucum (achiote, 41-60 en el calendario), cuya
+            // línea del 60 desplaza el dato de llegada. Ninguna debuta aquí (el achiote debuta en el 41, el agua del Negro en el 61).
+            FactCatalog fruits = boot.FruitFacts!.Catalog;
+            Assert.That(map.FruitSeries, Is.SameAs(fruits), "el calendario de Frutas del río llega al Mapa");
+            FactSeries urucum = fruits.SeriesOf("urucum")!;
+            Assert.That(urucum.FromLevel <= manaos.FirstLevel && urucum.LastLevel >= manaos.LastLevel, Is.True, "la serie del urucum cubre 51-60");
+            Assert.That(StopCard.DebutTints(manaos, new List<int>()), Is.EqualTo(0));
+            Assert.That(card.FruitCount, Is.EqualTo(1));
+            Assert.That(card.FruitTint(0), Is.EqualTo(StopCard.TintOf("urucum")));
+            Assert.That(card.FruitName(0), Is.EqualTo(Loc.Fact("tint.urucum.name")));
+            Assert.That(card.FruitName(0), Is.EqualTo("Achiote"));
             Assert.That(card.FutureLevelText, Is.Empty);
         }
 
@@ -189,14 +204,14 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Belem_HasItsFiveDebutFruits_AndTheEncuentroItsAchiote()
+        public IEnumerator Fruits_TheSeriesFruitFirst_ThenTheDebuts()
         {
             yield return MapMarkersTests.OpenApp(59);
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             Assert.That(map.OpenStopCard(0), Is.True);
             StopCard card = map.Card!;
             Assert.That(card.Mode, Is.EqualTo(StopCardMode.Stop), "Belém, siempre alcanzada");
-            Assert.That(card.FruitCount, Is.EqualTo(5), "aguaje y açaí en el 1, taperebá en el 2, guanábana en el 4 y bacaba en el 7");
+            Assert.That(card.FruitCount, Is.EqualTo(5), "el açaí de la serie (1-20) y, de los debuts, aguaje en el 1, taperebá en el 2, guanábana en el 4 y bacaba en el 7");
             var names = new List<string>();
             for (int i = 0; i < card.FruitCount; i++)
             {
@@ -204,13 +219,20 @@ namespace AF.Tests.PlayMode
                 Assert.That(card.FruitName(i), Is.EqualTo(Loc.Fact(StopCard.TintNameKey(card.FruitTint(i))!)));
             }
 
-            Assert.That(names, Is.EqualTo(new[] { "Aguaje", "Açaí", "Taperebá", "Guanábana", "Bacaba" }));
+            Assert.That(names, Is.EqualTo(new[] { "Açaí", "Aguaje", "Taperebá", "Guanábana", "Bacaba" }), "la de la serie primero, sin repetir el açaí");
             Assert.That(card.FactKeys, Is.EqualTo(new[] { "map.stop.belem.dato_01", "map.stop.belem.dato_02" }), "sin dato de llegada: sus dos «Otro dato»");
             Assert.That(card.OtherFactShown, Is.True);
 
+            // Alter do Chão (21-30): el agua del Tapajós de la serie de 21-40 y el camu camu, que debuta en el 21.
+            Assert.That(map.OpenStopCard(2), Is.True);
+            Assert.That(card.FruitCount, Is.EqualTo(2), card.Stop!.Id);
+            Assert.That(card.FruitTint(0), Is.EqualTo(StopCard.TintOf("agua_tapajos")), "la fruta de la serie primero");
+            Assert.That(card.FruitTint(1), Is.EqualTo(StopCard.TintOf("camu_camu")));
+            Assert.That(card.FruitName(0), Is.EqualTo(Loc.Fact("tint.agua_tapajos.name")));
+
             Assert.That(map.OpenStopCard(4), Is.True);
             Assert.That(card.Stop!.Id, Is.EqualTo("encontro"));
-            Assert.That(card.FruitCount, Is.EqualTo(1));
+            Assert.That(card.FruitCount, Is.EqualTo(1), "el urucum es la fruta de la serie y la que debuta en el 41");
             Assert.That(card.FruitName(0), Is.EqualTo("Achiote"));
             Assert.That(card.FactKeys[0], Is.EqualTo("map.stop.manaos.dato_01"));
             Assert.That(card.Sample.Filled, Is.True);
@@ -257,7 +279,30 @@ namespace AF.Tests.PlayMode
             float scale = card.SceneRect.rect.width / StopCard.SceneWorldWidthDp;
             Assert.That(card.ShapeTone.RimDistance * scale, Is.EqualTo(StopCard.RimLightDp).Within(0.05f), "1 dp en pantalla");
             Assert.That(card.Backdrop.ShapeGraphic.canvasRenderer.GetColor(), Is.EqualTo(Color.white), "el tono va en la malla");
-            Assert.That(card.Backdrop.HeroReflection.canvasRenderer.GetAlpha(), Is.EqualTo(0f), "sin reflejo");
+            Assert.That(card.Backdrop.HeroReflection.canvasRenderer.GetAlpha(), Is.EqualTo(0f), "sin el reflejo del PNG");
+            Assert.That(card.HeroTone.WaterLineY, Is.NaN, "el PNG, sin recorte: su reflejo es otra imagen");
+
+            // Sin reflejo tampoco en la silueta provisional (la que se ve hoy), que lo pinta en su misma malla: con el tono, nada
+            // de la malla baja de la línea del agua, ni el reflejo ni el filo de luz.
+            StopShapeGraphic shape = card.Backdrop.ShapeGraphic;
+            Assert.That(card.Backdrop.Shape, Is.EqualTo(StopShapes.LagoTefe), "la silueta provisional del lago de Tefé");
+            Assert.That(shape.IsEmpty, Is.False);
+            float horizon = card.Backdrop.HeroRect.y + StopBackdrop.HeroAboveDp; // k = 1: el fondo va a 360 dp de diseño
+            Assert.That(card.ShapeTone.WaterLineY, Is.EqualTo(-horizon).Within(0.01f), "la línea del agua, en y local de la malla");
+            Assert.That(shape.MaxY, Is.GreaterThan(horizon + 1f), "sin el tono, la malla lleva su reflejo bajo el horizonte");
+            List<UIVertex> toned = TonedMesh(shape, card.ShapeTone);
+            Assert.That(toned.Count, Is.GreaterThan(0));
+            bool rim = false;
+            bool body = false;
+            foreach (UIVertex v in toned)
+            {
+                Assert.That(v.position.y, Is.GreaterThanOrEqualTo(-horizon - 0.01f), "nada bajo la línea del agua: ni el reflejo ni su filo de luz");
+                Color c = v.color;
+                rim |= Mathf.Abs(c.r - StopCard.RimLightColor.r) < 0.01f && Mathf.Abs(c.g - StopCard.RimLightColor.g) < 0.01f;
+                body |= Mathf.Abs(c.r - StopCard.SilhouetteColor.r) < 0.01f && Mathf.Abs(c.g - StopCard.SilhouetteColor.g) < 0.01f;
+            }
+
+            Assert.That(rim && body, Is.True, "la silueta con su filo de luz, encima del agua");
 
             // «Nivel 71» en la fila de la cabecera, a la derecha del ←, centrado con él en vertical; nada debajo del fondo.
             var texts = new List<TextMeshProUGUI>(card.Texts());
@@ -341,6 +386,78 @@ namespace AF.Tests.PlayMode
             Assert.That(veiled.r, Is.EqualTo(Palette.WoodDark.r).Within(0.001f));
         }
 
+        [Test]
+        public void ToneEffect_WithAWaterLine_KeepsOnlyWhatIsAboveIt()
+        {
+            var go = new GameObject("ToneClipTest", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
+            try
+            {
+                StopCard.ToneEffect tone = go.AddComponent<StopCard.ToneEffect>().Silhouette(1f).ClipBelow(0f);
+                Assert.That(tone.WaterLineY, Is.EqualTo(0f));
+                var color = new Color32(200, 120, 40, 255);
+                var vh = new VertexHelper();
+                // Un triángulo que cruza la línea (de y −10 a 10) y otro entero bajo ella o en ella (el reflejo).
+                vh.AddVert(new Vector3(0f, -10f, 0f), color, Vector4.zero);
+                vh.AddVert(new Vector3(10f, -10f, 0f), color, Vector4.zero);
+                vh.AddVert(new Vector3(0f, 10f, 0f), color, Vector4.zero);
+                vh.AddVert(new Vector3(0f, 0f, 0f), color, Vector4.zero);
+                vh.AddVert(new Vector3(10f, 0f, 0f), color, Vector4.zero);
+                vh.AddVert(new Vector3(0f, -10f, 0f), color, Vector4.zero);
+                vh.AddTriangle(0, 1, 2);
+                vh.AddTriangle(3, 4, 5);
+                tone.ModifyMesh(vh);
+                var verts = new List<UIVertex>();
+                vh.GetUIVertexStream(verts);
+                Assert.That(verts.Count, Is.EqualTo(5 * 3), "de cada copia, solo la parte de encima del primero (un triángulo)");
+                foreach (UIVertex v in verts)
+                {
+                    Assert.That(v.position.y, Is.GreaterThanOrEqualTo(-0.0001f), "nada bajo la línea, tampoco la copia del filo que baja");
+                }
+
+                // La silueta (la última copia): el vértice de arriba y el corte en la línea, a media altura del lado inclinado.
+                Assert.That(verts[12].position.y, Is.EqualTo(0f).Within(0.0001f));
+                Assert.That(verts[12].position.x, Is.EqualTo(5f).Within(0.0001f));
+                Assert.That(verts[13].position, Is.EqualTo(new Vector3(0f, 10f, 0f)));
+                Assert.That(verts[14].position, Is.EqualTo(new Vector3(0f, 0f, 0f)));
+                vh.Dispose();
+
+                // Sin línea (NaN), como antes: todo.
+                tone.ClipBelow(float.NaN);
+                vh = Triangle(color);
+                tone.ModifyMesh(vh);
+                verts.Clear();
+                vh.GetUIVertexStream(verts);
+                Assert.That(verts.Count, Is.EqualTo(15));
+                vh.Dispose();
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        // La malla de shape (dp desde arriba → y local −y) tras el efecto tone.
+        private static List<UIVertex> TonedMesh(StopShapeGraphic shape, StopCard.ToneEffect tone)
+        {
+            var vh = new VertexHelper();
+            for (int i = 0; i < shape.VertexCount; i++)
+            {
+                Vector2 p = shape.PositionAt(i);
+                vh.AddVert(new Vector3(p.x, -p.y, 0f), shape.ColorAt(i), Vector4.zero);
+            }
+
+            for (int i = 0; i + 2 < shape.TriangleCount * 3; i += 3)
+            {
+                vh.AddTriangle(shape.TriangleIndexAt(i), shape.TriangleIndexAt(i + 1), shape.TriangleIndexAt(i + 2));
+            }
+
+            tone.ModifyMesh(vh);
+            var verts = new List<UIVertex>();
+            vh.GetUIVertexStream(verts);
+            vh.Dispose();
+            return verts;
+        }
+
         private static VertexHelper Triangle(Color32 color)
         {
             var vh = new VertexHelper();
@@ -389,12 +506,27 @@ namespace AF.Tests.PlayMode
             map.SetView(MapView.World);
             Assert.That(map.ViewpointShown(0), Is.True);
 
-            // Al tocarlo, su tarjeta: el «?», su nombre y su dato (si tiene texto).
+            // Antes, una parada futura (Tefé, con max 10), con su tono: cerrar su tarjeta no lo quita.
+            Assert.That(map.OpenStopCard(7), Is.True);
+            StopCard card = map.Card!;
+            Assert.That(card.Mode, Is.EqualTo(StopCardMode.Future));
+            Assert.That(card.FutureToneOn, Is.True);
+            card.CloseButton.onClick.Invoke();
+
+            // Al tocarlo, su tarjeta: el «?», su nombre y su dato (si tiene texto), sin el tono de la parada futura.
             int marajo = ids.IndexOf("isla_de_marajo");
             Assert.That(map.TapViewpoint(marajo), Is.True);
-            StopCard card = map.Card!;
+            Assert.That(map.Card, Is.SameAs(card));
             Assert.That(card.Visible, Is.True);
             Assert.That(card.Mode, Is.EqualTo(StopCardMode.Viewpoint));
+            Assert.That(card.FutureToneOn, Is.False, "el tono de la parada futura no se queda puesto");
+            Assert.That(card.FutureVeil.gameObject.activeSelf, Is.False);
+            Assert.That(card.HeroTone.enabled || card.ShapeTone.enabled, Is.False);
+            foreach (StopCard.ToneEffect tone in card.MuteTones)
+            {
+                Assert.That(tone.enabled, Is.False, tone.name);
+            }
+
             Assert.That(card.ViewpointBadgeShown, Is.True);
             Assert.That(card.TitleText, Is.EqualTo("Isla de Marajó"));
             Assert.That(card.FactText, Is.EqualTo(Loc.Fact(map.ViewpointAt(marajo).Fact ?? "-")));
@@ -464,13 +596,31 @@ namespace AF.Tests.PlayMode
                 GameBootstrap boot = GameBootstrap.Current!;
                 RiverMapScreen map = boot.RiverMapView!;
                 var inventory = new LocInventory(LocLocale.SourceLocale, scale);
-                foreach (int n in new[] { 0, 4, 5, 7 })
+                int marajo = -1;
+                for (int i = 0; i < map.ViewpointCount; i++)
                 {
-                    Assert.That(map.OpenStopCard(n), Is.True);
+                    marajo = map.ViewpointAt(i).Id == "isla_de_marajo" ? i : marajo;
+                }
+
+                Assert.That(marajo, Is.GreaterThanOrEqualTo(0));
+
+                // Las paradas 0, 4, 5 y 7 (la futura) y, con -1, la tarjeta del mirador de Marajó (revelado desde el 10), que tiene
+                // su propia cabecera con el «?».
+                foreach (int n in new[] { 0, 4, 5, 7, -1 })
+                {
+                    Assert.That(n >= 0 ? map.OpenStopCard(n) : map.OpenViewpointCard(marajo), Is.True);
                     yield return null;
                     Canvas.ForceUpdateCanvases();
                     StopCard card = map.Card!;
-                    string where = "parada " + n + " al " + Mathf.RoundToInt(scale * 100f) + " %";
+                    string where = (n >= 0 ? "parada " + n : "mirador de Marajó") + " al " + Mathf.RoundToInt(scale * 100f) + " %";
+                    if (n < 0)
+                    {
+                        Assert.That(card.Mode, Is.EqualTo(StopCardMode.Viewpoint));
+                        Assert.That(card.ViewpointBadgeShown, Is.True);
+                        Assert.That(card.TitleText, Is.EqualTo("Isla de Marajó"), where);
+                        Assert.That(new List<TextMeshProUGUI>(card.Texts()), Is.Not.Empty, where + ": su nombre (y su dato, si tiene texto)");
+                    }
+
                     AssertNoPrices(card.Root, map.Art, where);
                     foreach (Button b in card.Buttons())
                     {
