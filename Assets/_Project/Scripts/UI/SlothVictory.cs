@@ -38,7 +38,8 @@ namespace AF.UI
     /// fase VICTORY_SCREEN; la cinta y la ranura), que fija lo que sube el tablero con ShiftToClear. Desfase de 200 ms
     /// pendiente del dueño (TI6a).</item>
     /// <item><b>Bocadillo</b>: a los <see cref="BubbleInMs"/> ms de la pantalla de victoria (la fila 1,10), vidrio esmerilado
-    /// con borde de madera clara (D-003), ancho de <see cref="BubbleMaxWidthDp"/> dp como mucho, texto a
+    /// con borde de madera clara (D-003), ancho de <see cref="BubbleMaxWidthDp"/> dp como mucho (con dos líneas, el más estrecho
+    /// que las deja equilibradas), texto a
     /// <see cref="BubbleTextSp"/> sp en ≤ <see cref="BubbleMaxLines"/> líneas, que baja hasta 12 sp antes de pasar a otra
     /// línea y nunca de ahí (02 §12; al 130 %, la caja crece hacia arriba). Se desvanece a los <see cref="BubbleOutMs"/> ms (la
     /// fila 4,00) o con «Siguiente» (<see cref="DismissBubble"/>).</item>
@@ -639,7 +640,8 @@ namespace AF.UI
 
         // Mide el bocadillo con text en maxWidth dp (con su aire): de 14 sp hacia abajo, el primer tamaño en el que cabe en 2
         // líneas, nunca por debajo de 12 sp; si ni así cabe, 12 sp y las líneas que hagan falta (crece hacia arriba). Ancho
-        // ajustado al texto si va en una línea. En caché por texto, ancho y escala.
+        // ajustado al texto si va en una línea y, si va en varias, el más estrecho con las mismas líneas (BalancedWidth). En caché
+        // por texto, ancho y escala.
         private void Measure(string text, float maxWidth)
         {
             if (ReferenceEquals(text, _measuredText) && Mathf.Approximately(maxWidth, _measuredMaxWidth) && Mathf.Approximately(_scale, _measuredScale))
@@ -669,7 +671,7 @@ namespace AF.UI
             }
 
             float single = label.GetPreferredValues(text, float.PositiveInfinity, float.PositiveInfinity).x;
-            float textWidth = lines <= 1 ? Mathf.Min(inner, single + FitSlackDp) : inner;
+            float textWidth = lines <= 1 ? Mathf.Min(inner, single + FitSlackDp) : Mathf.Min(inner, BalancedWidth(label, text, inner, single, lines, block.y) + FitSlackDp);
             _measuredText = text;
             _measuredMaxWidth = maxWidth;
             _measuredScale = _scale;
@@ -686,6 +688,30 @@ namespace AF.UI
             {
                 _label.fontSize = _measuredSize;
             }
+        }
+
+        // Ancho de texto más estrecho (dp) en el que text sigue ocupando sus lines líneas (alto height) con el tamaño de ahora:
+        // las líneas quedan lo más parejas posible y no queda una palabra sola en la última (revisión de TI6a; con dos frases
+        // que caben cada una en su línea, el corte cae entre las dos si así quedan más parejas). El texto no se toca (el salto de línea lo decide el ancho, nunca un \n añadido: regla de
+        // localización). Búsqueda binaria entre el ancho medio de una línea y inner, que cabe; solo al medir, nunca por fotograma.
+        private static float BalancedWidth(TextMeshProUGUI label, string text, float inner, float single, int lines, float height)
+        {
+            float lo = Mathf.Min(inner, Mathf.Max(1f, (single / lines) - 1f));
+            float hi = inner;
+            for (int i = 0; i < 12 && hi - lo > 0.5f; i++)
+            {
+                float mid = 0.5f * (lo + hi);
+                if (label.GetPreferredValues(text, mid, float.PositiveInfinity).y <= height + 0.5f)
+                {
+                    hi = mid;
+                }
+                else
+                {
+                    lo = mid;
+                }
+            }
+
+            return hi;
         }
 
         // Líneas que ocupa un bloque de height dp con el tamaño de ahora: el alto de una línea y el avance entre dos.

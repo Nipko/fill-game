@@ -14,12 +14,15 @@ namespace AF.Tests.PlayMode
     /// Capturas de TiTino en la victoria (tarea TI6a; propuesta de TiTino d.4 y paso 6a de (i): «hay que medirlo con las
     /// capturas del paso 6a»), en <c>Logs/snapshots/es-419/</c>:
     /// <list type="bullet">
-    /// <item><c>ti6a_l40_1fila_{780|640}_{100|130}</c>: el hito del 40 con un tablero de una fila a los 1,60 s de la victoria
-    /// (la fila 2,40): con el bocadillo si la caja mide ≥ 104 dp y la frase cabe; con 56-103 dp (640 al 130 %), solo el
-    /// gesto;</item>
-    /// <item><c>ti6a_l40_entrada_780_100</c>: la rama a mitad de su entrada (150 ms de la victoria);</item>
+    /// <item><c>ti6a_l40_1fila_{780|640}_{100|130}</c>: el hito del 40 con un tablero de una fila a los 1,60 s de abrirse la
+    /// pantalla de victoria (la fila 0,80 + 1,60 s = la 2,40): con el bocadillo si la caja mide ≥ 104 dp y la frase cabe; con
+    /// 56-103 dp (640 al 130 %), solo el gesto; la garza del fondo ya fundida;</item>
+    /// <item><c>ti6a_l40_entrada_780_100</c>: la rama a mitad de su entrada, a los 150 ms de abrirse la pantalla de victoria
+    /// (la fila 0,80 + 0,15 s = la 0,95), con el panel ya arriba;</item>
     /// <item><c>ti6a_l40_2filas_780_100</c> y <c>ti6a_l39_1fila_780_100</c>: un tablero de dos filas en el hito y una victoria
     /// que no es hito (solo el gesto);</item>
+    /// <item><c>ti6a_l44_sinfruta_780_100</c>: una victoria que no es hito y va sin línea de fruta (como 261-300 y 321-700), en
+    /// la que le toca la frase de 1 de cada 4 (D-016, punto 5);</item>
     /// <item><c>ti6a_l40_3filas_{780|640}_100</c>: con 3 filas no sale y el hito lleva su dato;</item>
     /// <item><c>ti6a_real_l{40|60|80|140}_{780|640}_100</c>: los hitos del catálogo real tal como los ve el juego (con la ranura
     /// del Dato del río), con su caja medida; y <c>ti6a_real_l…_sinranura</c>, los mismos sin la ranura.</item>
@@ -90,6 +93,9 @@ namespace AF.Tests.PlayMode
             Release();
             yield return Capture("ti6a_l39_1fila_780_100", SlothVictoryTests.OneRowPack(39), 39, false, 1f, 1600);
             Release();
+            yield return Capture("ti6a_l44_sinfruta_780_100", SlothVictoryTests.OneRowPack(44), 44, false, 1f, 1600, v => v.FruitKeyOf = null);
+            Assert.That(GameBootstrap.Current!.View!.SlothView.BubbleShown, Is.True, "sin línea de fruta, el 44 le toca: habla");
+            Release();
             foreach (bool small in new[] { false, true })
             {
                 string name = "ti6a_l40_3filas_" + (small ? "640" : "780") + "_100";
@@ -120,7 +126,8 @@ namespace AF.Tests.PlayMode
         }
 
         // Carga (con el paquete json o el catálogo real), gana, avanza ms desde la victoria, comprueba los solapes y captura.
-        private static IEnumerator Capture(string name, string? json, int level, bool small, float scale, int ms)
+        private static IEnumerator Capture(string name, string? json, int level, bool small, float scale, int ms,
+            System.Action<GameScreen>? before = null)
         {
             FunnelSetup.Hooks();
             MapArtRule.ForceProvisional = true;
@@ -133,7 +140,7 @@ namespace AF.Tests.PlayMode
             LaunchOptions.FontScaleOverride = scale;
             if (json != null)
             {
-                yield return SlothVictoryTests.WinPack(json, level);
+                yield return SlothVictoryTests.WinPack(json, level, before);
             }
             else
             {

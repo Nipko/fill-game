@@ -35,7 +35,9 @@ namespace AF.UI
     /// (<c>SlothCanSpeak</c>, que se calcula antes de que el árbitro decida) si <see cref="SlothVoice"/> (<c>ui_sloth_enabled</c>
     /// ∧ <c>settings.sloth_messages</c>), su caja mide ≥ <see cref="SlothSpeakBoxDp"/> dp, está en pantalla, los topes de la
     /// sesión lo dejan (<see cref="SlothLines.HitoVoice"/>) y su frase tiene texto que se pueda enseñar y cabe en el bocadillo.
-    /// Con <see cref="HitoLinePolicy.SlothHito"/> (el default desde TI6a, T6-A) la línea es entonces suya.</item>
+    /// Con <see cref="HitoLinePolicy.SlothHito"/> (el default desde TI6a, T6-A) la línea es entonces suya. Fuera de sus hitos
+    /// habla en 1 de cada <c>ui_sloth_win_line_every_n</c> victorias si la ranura va vacía (D-016, punto 5;
+    /// <see cref="SlothFactsFor"/>); mientras TiTino está a la vista, la garza del fondo se funde (<see cref="HeronFadeMs"/>).</item>
     /// </list>
     /// </summary>
     public sealed partial class GameScreen
@@ -627,7 +629,7 @@ namespace AF.UI
                 return;
             }
 
-            SlothContext context = SlothVictoryContext(won, bottom - top);
+            SlothContext context = SlothVictoryContext(flow, bottom - top);
             if (!SlothLines.HitoVoice(won, in context))
             {
                 return;
@@ -648,17 +650,65 @@ namespace AF.UI
         // Filas de cuias del nivel (con 3, TiTino no sale: 07 §5.1).
         private int SlothRows => _layout?.Rows ?? 1;
 
-        // Contexto de SlothLines para la victoria de won con una caja de boxDp: la sesión (con el ajuste de ahora) y los datos de
-        // la victoria. La cadencia de 1 de cada N necesita stats.levels_won, que la pantalla no tiene: con 0, fuera de sus hitos
-        // TiTino solo hace el gesto, que es lo que pasa de todos modos con la línea de fruta en cada victoria (02 §6, fila
-        // TiTino; D-017) [P].
-        private SlothContext SlothVictoryContext(int won, float boxDp)
+        // Contexto de SlothLines para la victoria de flow con una caja de boxDp: la sesión (con el ajuste de ahora) y los datos de
+        // la victoria (SlothFactsFor).
+        private SlothContext SlothVictoryContext(LevelFlow flow, float boxDp)
         {
             SlothSession session = SlothSession;
             session.Messages = _slothVoiceOverride ?? SlothMessagesSetting;
-            var facts = new SlothVictoryFacts(0, false, SlothDebut.None, 0, false, false, false, boxDp >= SlothSpeakBoxDp,
-                UiText.SlothColorFactApproved);
+            LevelDefinition level = flow.Level;
+            SlothVictoryFacts facts = SlothFactsFor(flow.LevelNumber, level.DifficultyLabel, level.IntroMechanic, flow.Attempt.Rescues > 0,
+                boxDp >= SlothSpeakBoxDp, UiText.SlothColorFactApproved);
             return session.Context.WithVictory(in facts);
+        }
+
+        /// <summary>
+        /// Lo que TiTino sabe de la victoria del nivel <paramref name="won"/> (D-016, punto 5; propuesta de TiTino d.6, punto 2): fuera
+        /// de sus hitos, frase en 1 de cada <c>ui_sloth_win_line_every_n</c> victorias si la ranura va vacía (sin línea de fruta, sin
+        /// llegada ni dato desplazado; hoy, en 261-300 y 321-700, que no tienen serie de fruta), del banco más específico
+        /// (<see cref="SlothLines.ForVictory"/>):
+        /// <list type="bullet">
+        /// <item>la cadencia cuenta con el número del nivel ganado [P]: <c>stats.levels_won</c> no lo actualiza nadie en el cliente
+        /// (ninguna victoria lo suma) y el perfil no llega a la pantalla (GameBootstrap, de M3.3 en la ola 4). En el juego lineal, el nivel es 1 de
+        /// cada N victorias seguidas; cuando se cuente <c>stats.levels_won</c>, se pasa aquí;</item>
+        /// <item>Difícil o Muy difícil, por <c>difficulty.label</c> (<paramref name="difficultyLabel"/>);</item>
+        /// <item>el estreno (<see cref="SlothDebutOf"/>);</item>
+        /// <item>la Crecida (<c>streak.wins</c>) y su hito: 0 y no, porque el cliente aún no tiene la Crecida;</item>
+        /// <item>la Cuia de rescate en este nivel (<paramref name="usedRescue"/>) y Morpho: no, porque el cliente aún no lo tiene.</item>
+        /// </list>
+        /// </summary>
+        internal static SlothVictoryFacts SlothFactsFor(int won, string? difficultyLabel, string? introMechanic, bool usedRescue, bool speakBox,
+            bool colorFactApproved)
+        {
+            bool hard = string.Equals(difficultyLabel, LevelDefinition.LabelHard, StringComparison.Ordinal)
+                || string.Equals(difficultyLabel, LevelDefinition.LabelVeryHard, StringComparison.Ordinal);
+            return new SlothVictoryFacts(Math.Max(0, won), hard, SlothDebutOf(won, introMechanic), 0, false, usedRescue, false, speakBox,
+                colorFactApproved);
+        }
+
+        /// <summary>
+        /// Estreno del nivel <paramref name="won"/> para el banco <c>debut</c> (propuesta de TiTino e.4, frases 26-28), en el orden
+        /// de sus frases [P]: una mecánica (<c>intro_mechanic</c>, 02 §9.1), una fruta (la tarjeta «Fruta nueva»,
+        /// <see cref="SightingRule.FruitDebutLevels"/>) o el primer nivel de un mundo (salvo el 1).
+        /// </summary>
+        internal static SlothDebut SlothDebutOf(int won, string? introMechanic)
+        {
+            if (!string.IsNullOrEmpty(introMechanic))
+            {
+                return SlothDebut.Mechanic;
+            }
+
+            if (Array.IndexOf(SightingRule.FruitDebutLevels, won) >= 0)
+            {
+                return SlothDebut.Fruit;
+            }
+
+            if (won > 1 && won <= WorldTable.LastLevel && WorldTable.FirstLevel(WorldTable.WorldOf(won)) == won)
+            {
+                return SlothDebut.World;
+            }
+
+            return SlothDebut.None;
         }
 
         // TiTino en la victoria de flow con la línea que dio el árbitro (al final de SlotVictoryShown): el gesto y, si la línea
@@ -682,7 +732,7 @@ namespace AF.UI
             }
 
             float box = _slothBandBottom - _slothBandTop;
-            SlothContext context = SlothVictoryContext(won, box);
+            SlothContext context = SlothVictoryContext(flow, box);
             SlothLine line = SlothLines.ForVictory(won, in _victoryLine, in context);
             string? text = null;
             if (line.Speaks)
@@ -710,8 +760,14 @@ namespace AF.UI
         partial void SlothTick(float dtMs)
         {
             SlothVictory? sloth = _sloth;
-            if (sloth == null || sloth.ClockMs < 0f)
+            if (sloth == null)
             {
+                return;
+            }
+
+            if (sloth.ClockMs < 0f)
+            {
+                FadeHeron(false, dtMs); // TiTino se fue a mitad de la victoria (la caja ya no le da): la garza vuelve
                 return;
             }
 
@@ -721,6 +777,7 @@ namespace AF.UI
                 || (flow.Phase != FlowPhase.VictoryScreen && flow.Phase != FlowPhase.AdGate))
             {
                 sloth.Hide();
+                SetHeronAlpha(1f);
                 return;
             }
 
@@ -731,12 +788,49 @@ namespace AF.UI
             _slothBandBottom = bottom;
             sloth.Relayout(top, bottom, SlothRows, _canvasW);
             sloth.Tick(dtMs);
+            FadeHeron(sloth.Visible, dtMs);
         }
 
-        // La victoria se cierra por cualquier camino (HideOverlays o la pantalla de nivel que se oculta): TiTino se va.
+        // La victoria se cierra por cualquier camino (HideOverlays o la pantalla de nivel que se oculta): TiTino se va y la garza
+        // vuelve a su sitio.
         partial void SlothLeave()
         {
             _sloth?.Hide();
+            SetHeronAlpha(1f);
+        }
+
+        /// <summary>
+        /// Fundido de la garza blanca del fondo mientras TiTino está a la vista en la victoria (ms) [P; revisión de TI6a]: la garza
+        /// de la orilla izquierda cae detrás de TiTino o bajo sus pies y, con el mismo valor claro, las dos siluetas se funden.
+        /// Se va a alfa 0 en este tiempo desde que TiTino sale y vuelve cuando se va (de golpe al cerrarse la victoria).
+        /// </summary>
+        internal const float HeronFadeMs = 200f;
+
+        /// <summary>Opacidad de la garza del fondo (tests).</summary>
+        internal float HeronAlpha => _heron.color.a;
+
+        // La garza hacia alfa 0 (away) o 1 en HeronFadeMs. Sin asignaciones.
+        private void FadeHeron(bool away, float dtMs)
+        {
+            float target = away ? 0f : 1f;
+            Color c = _heron.color;
+            if (c.a == target)
+            {
+                return;
+            }
+
+            c.a = Mathf.MoveTowards(c.a, target, Mathf.Max(0f, dtMs) / HeronFadeMs);
+            _heron.color = c;
+        }
+
+        private void SetHeronAlpha(float alpha)
+        {
+            Color c = _heron.color;
+            if (c.a != alpha)
+            {
+                c.a = alpha;
+                _heron.color = c;
+            }
         }
 
         // Caja de TiTino en la victoria (propuesta de TiTino d.4; gancho SlothVictoryShown, que OnVictoryScreen llama con esta

@@ -11,6 +11,7 @@ using AF.Presentation;
 using AF.Save;
 using AF.UI;
 using NUnit.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -259,6 +260,7 @@ namespace AF.Tests.PlayMode
             Assert.That(sloth.BubbleLines, Is.LessThanOrEqualTo(SlothVictory.BubbleMaxLines), "≤ 2 líneas");
             Assert.That(sloth.BubbleFontDp, Is.InRange(UiBuilder.MinTextSp, SlothVictory.BubbleTextSp), "14 sp, nunca menos de 12");
             Assert.That(sloth.BubbleRect.width, Is.LessThanOrEqualTo(SlothVictory.BubbleMaxWidthDp + 20f), "ancho máximo (con su borde y su pico)");
+            AssertBalancedLines(sloth, "40");
             Assert.That(view.SlothSession.LinesThisSession, Is.EqualTo(1), "la frase cuenta para el tope de la sesión");
             AssertNoIntersection(view, "40");
 
@@ -284,6 +286,107 @@ namespace AF.Tests.PlayMode
             {
                 Assert.That(sloth.Pose, Is.EqualTo(SlothPoseId.Cheer), "fuera de sus hitos, sloth_cheer");
             }
+        }
+
+        [UnityTest]
+        public IEnumerator Heron_FadesWhileTheSlothIsShown_AndComesBackWhenItLeaves()
+        {
+            // Revisión de TI6a: la garza blanca del fondo cae detrás de TiTino o bajo sus pies y las dos siluetas se funden.
+            yield return WinPack(OneRowPack(40, 2), 40);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            SlothVictory sloth = view.SlothView;
+            Assert.That(sloth.Visible, Is.True);
+            Assert.That(sloth.ClockMs, Is.EqualTo(0f));
+            Assert.That(view.HeronAlpha, Is.EqualTo(1f), "al abrirse la victoria, aún entera");
+            PlayModeHelpers.TickExact(boot, (int)(GameScreen.HeronFadeMs / 2f));
+            Assert.That(view.HeronAlpha, Is.InRange(0.3f, 0.7f), "a mitad del fundido");
+            PlayModeHelpers.TickExact(boot, (int)GameScreen.HeronFadeMs);
+            Assert.That(view.HeronAlpha, Is.EqualTo(0f), "con TiTino a la vista, la garza no está");
+            PlayModeHelpers.Step(boot, 1600);
+            Assert.That(view.HeronAlpha, Is.EqualTo(0f));
+
+            view.NextButton.onClick.Invoke();
+            for (int t = 0; t < 5000 && !(boot.Flow!.LevelNumber == 41 && VictorySetup.InNewLevel(boot.Flow.Phase)); t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(41));
+            Assert.That(sloth.Visible, Is.False);
+            Assert.That(view.HeronAlpha, Is.EqualTo(1f), "TiTino se fue: la garza vuelve");
+        }
+
+        [Test]
+        public void Facts_AreTheVictorysOwn()
+        {
+            // D-016, punto 5: la cadencia (el nivel ganado [P]: stats.levels_won no lo escribe nadie), Difícil o Muy difícil, el
+            // estreno y la Cuia de rescate. La Crecida y Morpho aún no existen en el cliente.
+            SlothVictoryFacts f = GameScreen.SlothFactsFor(264, LevelDefinition.LabelHard, null, true, true, false);
+            Assert.That(f.WinCount, Is.EqualTo(264));
+            Assert.That(f.Hard, Is.True);
+            Assert.That(f.UsedRescue, Is.True);
+            Assert.That(f.SpeakBox, Is.True);
+            Assert.That(f.Streak, Is.EqualTo(0));
+            Assert.That(f.StreakMilestone, Is.False);
+            Assert.That(f.UsedHint, Is.False);
+            Assert.That(GameScreen.SlothFactsFor(264, LevelDefinition.LabelVeryHard, null, false, true, false).Hard, Is.True);
+            Assert.That(GameScreen.SlothFactsFor(264, LevelDefinition.LabelNormal, null, false, true, false).Hard, Is.False);
+            Assert.That(GameScreen.SlothFactsFor(264, null, null, false, true, false).Hard, Is.False);
+
+            Assert.That(GameScreen.SlothDebutOf(283, "hoja_atada"), Is.EqualTo(SlothDebut.Mechanic));
+            Assert.That(GameScreen.SlothDebutOf(201, "liana"), Is.EqualTo(SlothDebut.Mechanic), "la mecánica, primero");
+            Assert.That(GameScreen.SlothDebutOf(201, null), Is.EqualTo(SlothDebut.Fruit), "Fruta nueva en el 201");
+            Assert.That(GameScreen.SlothDebutOf(421, null), Is.EqualTo(SlothDebut.World), "primer nivel del mundo 8");
+            Assert.That(GameScreen.SlothDebutOf(561, string.Empty), Is.EqualTo(SlothDebut.World));
+            Assert.That(GameScreen.SlothDebutOf(264, null), Is.EqualTo(SlothDebut.None));
+
+            // Con la ranura vacía (sin fruta ni llegada), 1 de cada 4 y del banco más específico.
+            SlothContext c = new SlothSession(new SlothData(), true, true, true, 4, 4).Context;
+            SlothLine hard = SlothLines.ForVictory(264, default(VictoryLine), c.WithVictory(in f));
+            Assert.That(hard.Speaks, Is.True, "264: le toca y es Difícil");
+            Assert.That(hard.Moment, Is.EqualTo(SlothMoment.Hard));
+            SlothVictoryFacts normal = GameScreen.SlothFactsFor(265, LevelDefinition.LabelNormal, null, false, true, false);
+            Assert.That(SlothLines.ForVictory(265, default(VictoryLine), c.WithVictory(in normal)).Speaks, Is.False, "265: no le toca");
+            SlothVictoryFacts debut = GameScreen.SlothFactsFor(324, LevelDefinition.LabelNormal, "tinaja", false, true, false);
+            Assert.That(SlothLines.ForVictory(324, default(VictoryLine), c.WithVictory(in debut)).Moment, Is.EqualTo(SlothMoment.Debut));
+        }
+
+        [UnityTest]
+        public IEnumerator NonHito_WithoutFruitLine_SpeaksOneInFour()
+        {
+            // D-016, punto 5 (y 02 §6, fila TiTino): fuera de sus hitos, frase en 1 de cada 4 victorias si la victoria no lleva otra
+            // línea. Hoy pasa en 261-300 y 321-700, sin serie de fruta; aquí, el 44 y el 45 sin la línea de fruta.
+            yield return WinPack(OneRowPack(44), 44, v => v.FruitKeyOf = null);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            PlayModeHelpers.Step(boot, 1600);
+            SlothVictory sloth = view.SlothView;
+            Assert.That(view.CurrentVictoryLine.FruitKey, Is.Null);
+            Assert.That(view.CurrentVictoryLine.SlothSpeaks, Is.False, "no es su hito: la línea no es del árbitro");
+            Assert.That(view.LastSlothLine.Speaks, Is.True, "el 44 le toca: habla");
+            Assert.That(view.LastSlothLine.Moment, Is.EqualTo(SlothMoment.Win));
+            Assert.That(sloth.Pose, Is.EqualTo(SlothPoseId.Cheer));
+            Assert.That(sloth.BubbleShown, Is.True);
+            Assert.That(sloth.BubbleText, Is.EqualTo(Loc.T(view.LastSlothLine.Key!)));
+            Assert.That(view.SlothSession.LinesThisSession, Is.EqualTo(1));
+            AssertBalancedLines(sloth, "44");
+            AssertNoIntersection(view, "44");
+
+            yield return WinPack(OneRowPack(45), 45, v => v.FruitKeyOf = null);
+            view = GameBootstrap.Current!.View!;
+            PlayModeHelpers.Step(GameBootstrap.Current, 1600);
+            Assert.That(view.SlothView.Visible, Is.True);
+            Assert.That(view.LastSlothLine.Speaks, Is.False, "el 45 no le toca: solo el gesto");
+            Assert.That(view.SlothView.HasBubble, Is.False);
+
+            // Con la línea de fruta, el 44 es solo el gesto (una sola línea por victoria).
+            yield return WinPack(OneRowPack(44), 44);
+            view = GameBootstrap.Current!.View!;
+            PlayModeHelpers.Step(GameBootstrap.Current, 1600);
+            Assert.That(view.CurrentVictoryLine.FruitKey, Is.Not.Null);
+            Assert.That(view.LastSlothLine.Speaks, Is.False, "con la línea de fruta, solo el gesto");
+            Assert.That(view.SlothView.HasBubble, Is.False);
         }
 
         [UnityTest]
@@ -591,6 +694,27 @@ namespace AF.Tests.PlayMode
                 {
                     Assert.That(Overlaps(m, r), Is.False, at + ": TiTino " + m + " se cruza con " + name + " " + r);
                 }
+            }
+        }
+
+        // Con dos líneas, el bocadillo las equilibra (revisión de TI6a): nunca una palabra sola en la última.
+        private static void AssertBalancedLines(SlothVictory sloth, string at)
+        {
+            TextMeshProUGUI label = sloth.BubbleLabel!;
+            label.ForceMeshUpdate();
+            TMP_TextInfo info = label.textInfo;
+            var lines = new System.Text.StringBuilder();
+            for (int i = 0; i < info.lineCount; i++)
+            {
+                TMP_LineInfo line = info.lineInfo[i];
+                lines.Append(i == 0 ? string.Empty : " / ").Append(label.text, line.firstCharacterIndex, line.lastCharacterIndex - line.firstCharacterIndex + 1);
+            }
+
+            TestContext.WriteLine("AF_SLOTH_LINES " + at + ": " + lines + " (bocadillo de " + F(sloth.BubbleRect.width) + " dp)");
+            Assert.That(info.lineCount, Is.EqualTo(sloth.BubbleLines), at + ": las líneas medidas son las que se ven");
+            if (info.lineCount >= 2)
+            {
+                Assert.That(info.lineInfo[info.lineCount - 1].wordCount, Is.GreaterThan(1), at + ": sin una palabra sola en la última línea");
             }
         }
 
