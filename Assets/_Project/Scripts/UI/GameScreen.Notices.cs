@@ -831,12 +831,12 @@ namespace AF.UI
         internal static bool? SlothRestartNoticeOverride { get; set; }
 
         /// <summary>
-        /// Niveles de 1-30 con instrucción del tutorial (02 §13): el dedo guía de 1 y 2, el tutorial de Marea del 3 y la frase del
-        /// 6, con el retrato de TiTino (D-016, T2-A), y el 8, el de Capi con la Cuia extra y «Reiniciar es gratis…» [P]. En ellos
-        /// no hay aviso de TiTino tras Volver a la orilla (guion de la intro §14: manda la instrucción). TU1a, dueña del tutorial
-        /// con TiTino, puede cambiar la lista.
+        /// Niveles de 1-30 con instrucción del tutorial (02 §13): el dedo guía de 1 y 2, el tutorial de Marea del 3, la frase del
+        /// 6 y la presentación de Morpho del 12, con el retrato de TiTino (D-016, T2-A), y el 8, el de Capi con la Cuia extra y
+        /// «Reiniciar es gratis…» [P]. En ellos no hay aviso de TiTino tras Volver a la orilla (guion de la intro §14: manda la
+        /// instrucción, y TiTino sale como mucho una vez). TU1a, dueña del tutorial con TiTino, puede cambiar la lista.
         /// </summary>
-        internal static readonly int[] SlothTutorialLevels = { 1, 2, 3, 6, 8 };
+        internal static readonly int[] SlothTutorialLevels = { 1, 2, 3, 6, 8, 12 };
 
         /// <summary>El nivel <paramref name="level"/> tiene instrucción del tutorial (<see cref="SlothTutorialLevels"/>).</summary>
         internal static bool HasTutorialInstruction(int level)

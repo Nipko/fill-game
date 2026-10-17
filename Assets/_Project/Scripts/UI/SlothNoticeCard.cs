@@ -32,7 +32,7 @@ namespace AF.UI
         /// <summary>Texto de la frase (como el bocadillo de la victoria: 14 sp).</summary>
         public const float TextSp = 14f;
 
-        /// <summary>Líneas de la frase como mucho a su tamaño (02 §6 y d.5: ≤ 2); si no caben ni a 12 sp, crece.</summary>
+        /// <summary>Líneas de la frase como mucho a su tamaño (02 §6 y d.5: ≤ 2); si no caben ni a 12 sp, el aviso no sale.</summary>
         public const int MaxLines = 2;
 
         /// <summary>Ancho máximo de la tarjeta (dp), como la del miquito.</summary>

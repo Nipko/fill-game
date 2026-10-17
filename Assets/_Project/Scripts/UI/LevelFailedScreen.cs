@@ -26,7 +26,10 @@ namespace AF.UI
     /// <see cref="SlothSizeDp"/> dp como mucho, con todo lo que mueve su gesto (medido con las piezas del rig) dentro del hueco
     /// entre la franja «Nivel fallido» y la línea de abajo, y sin tocar la cesta (<see cref="SlothBasketGapDp"/>). Su rama
     /// entra por el marco izquierdo de la tarjeta [P]: con la rama de 1,5 S, 64 dp no caben dentro del hueco de 88 dp de d.5;
-    /// si ni así cabe (un lienzo estrecho), se encoge, y por debajo de <see cref="SlothMinSizeDp"/> no sale;</item>
+    /// si ni así cabe (un lienzo estrecho), se encoge, y por debajo de <see cref="SlothMinSizeDp"/> no sale. El rig se pinta
+    /// sobre la superficie y bajo el marco, y la rama empieza dentro del canto (<see cref="SlothBranchTuckDp"/>): su remate
+    /// queda tapado y sale de detrás del borde interior. La rama provisional, casi blanca, se tiñe de corteza
+    /// (<see cref="SlothBranchBark"/>) solo en esta tarjeta, para que contraste con el crema (D-003: madera);</item>
     /// <item>la frase, solo en el primer fallo del nivel, va como línea de la propia tarjeta bajo la cesta: el ancho útil de 296
     /// dp, <see cref="PhraseSp"/> sp en ≤ <see cref="PhraseMaxLines"/> líneas, nunca menos de 12 sp (02 §12), con las dos líneas
     /// equilibradas; la tarjeta crece en alto. Si con la escala de texto ya no cabe entre el pie del HUD y
@@ -49,6 +52,25 @@ namespace AF.UI
 
         /// <summary>Aire de TiTino con la franja «Nivel fallido» (dp) [P].</summary>
         public const float SlothStripGapDp = 4f;
+
+        /// <summary>Canto del marco de la tarjeta (dp): la superficie entra 8 dp (<c>UiBuilder.ModalBody</c>).</summary>
+        public const float CardFrameDp = 8f;
+
+        /// <summary>
+        /// La rama empieza como mucho a estos dp del borde exterior de la tarjeta, dentro del canto del marco
+        /// (<see cref="CardFrameDp"/>), para que su remate quede bajo el marco [P].
+        /// </summary>
+        public const float SlothBranchTuckDp = 4f;
+
+        /// <summary>
+        /// Corteza de la rama en esta tarjeta (#7A5A3A, ≈ 5,9:1 sobre el crema): la provisional (corteza #D9D3C3,
+        /// <c>ProceduralArt.EmbaubaBark</c>) se tiñe con <see cref="SlothBranchTint"/> para llegar a ella. La del PNG del
+        /// artista no se tiñe.
+        /// </summary>
+        public static readonly Color SlothBranchBark = new Color(0x7A / 255f, 0x5A / 255f, 0x3A / 255f, 1f);
+
+        /// <summary>Tinte de la rama provisional (multiplica): su corteza #D9D3C3 queda en <see cref="SlothBranchBark"/>.</summary>
+        public static readonly Color SlothBranchTint = new Color(0x7A / (float)0xD9, 0x5A / (float)0xD3, 0x3A / (float)0xC3, 1f);
 
         /// <summary>Texto de la frase (d.5: 14 sp; nunca menos de <see cref="UiBuilder.MinTextSp"/>).</summary>
         public const float PhraseSp = 14f;
@@ -234,7 +256,19 @@ namespace AF.UI
             }
 
             _sloth = SlothRig.Create(_panel, _slothArt, SlothSizeDp);
-            return _sloth != null;
+            if (_sloth == null)
+            {
+                return false;
+            }
+
+            // Sobre la superficie y bajo el marco (y bajo lo demás de la tarjeta): la rama sale de detrás del borde interior.
+            _sloth.Root.SetSiblingIndex(_surface.transform.GetSiblingIndex() + 1);
+            if (ArtSlots.Find(ProceduralArt.SlothBranchSlot) == null)
+            {
+                _sloth.BranchImage.color = SlothBranchTint; // la provisional, casi blanca, en corteza sobre el crema
+            }
+
+            return true;
         }
 
         /// <summary>
@@ -389,7 +423,8 @@ namespace AF.UI
         }
 
         // TiTino en el hueco izquierdo de la cesta (d.5): con todo lo que mueve sloth_encourage dentro del hueco entre la franja
-        // y la línea de abajo, de la izquierda de la tarjeta (su rama entra por el marco) a SlothBasketGapDp de la cesta. A
+        // y la línea de abajo, de la izquierda de la tarjeta (su rama entra por el marco: empieza a SlothBranchTuckDp como mucho,
+        // bajo el canto) a SlothBasketGapDp de la cesta. A
         // SlothSizeDp como mucho; false si no cabe ni a SlothMinSizeDp o sin arte.
         private bool PlaceSloth(float basketLeft, float basketTop)
         {
@@ -418,6 +453,12 @@ namespace AF.UI
             }
 
             float x = left - (_envLeft * s) + (((right - left) - (spanX * s)) * 0.5f);
+            float branchLeft = x - (0.5f * _slothArt!.BranchWidthS * s);
+            if (branchLeft > SlothBranchTuckDp)
+            {
+                x -= branchLeft - SlothBranchTuckDp; // el remate de la rama, bajo el canto del marco
+            }
+
             float yDown = top - (_envTop * s) + (((bottom - top) - (spanY * s)) * 0.5f);
             rig.Place(x, yDown);
             return true;

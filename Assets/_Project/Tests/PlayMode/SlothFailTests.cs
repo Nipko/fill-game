@@ -29,7 +29,9 @@ namespace AF.Tests.PlayMode
     /// <item>el aviso tras Volver a la orilla: en 1-30, en el primer reinicio del nivel (desde la cabecera o desde el pie de Aguas
     /// estancadas), sin instrucción del tutorial, por la cola, con su retrato de 40 dp y su frase <c>sloth_line_restart_*</c>,
     /// cuando la tropa ya se fue y durante <see cref="NoticeTiming.ReadMs(string)"/>; nunca con el modal abierto, ni en el
-    /// segundo reinicio, ni en los niveles del tutorial (1, 2, 3, 6 y 8), ni desde el 31; sin tapar cuias, bandeja ni HUD;</item>
+    /// segundo reinicio, ni en los niveles del tutorial (1, 2, 3, 6, 8 y 12), ni desde el 31; sin tapar cuias, bandeja ni HUD;</item>
+    /// <item>su rama sale de detrás del marco: el rig, bajo el marco de la tarjeta, y la rama, con el remate dentro del canto y en
+    /// corteza (la provisional, teñida);</item>
     /// <item>sin toques: ningún gráfico de TiTino es <c>raycastTarget</c>.</item>
     /// </list>
     /// </summary>
@@ -256,7 +258,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Restart_NoNotice_InTutorialLevels_From31_OrWithoutMessages([Values(3, 6, 8, 31, 0)] int level)
+        public IEnumerator Restart_NoNotice_InTutorialLevels_From31_OrWithoutMessages([Values(3, 6, 8, 12, 31, 0)] int level)
         {
             // 0: el 5 con los mensajes de TiTino apagados (sin frase, no hay aviso).
             int played = level == 0 ? 5 : level;
@@ -423,6 +425,20 @@ namespace AF.Tests.PlayMode
                     Assert.That(m.xMin >= panel.xMin - 0.01f && m.xMax <= panel.xMax + 0.01f && m.yMin >= panel.yMin - 0.01f
                         && m.yMax <= panel.yMax + 0.01f, Is.True, at + ": TiTino " + m + " dentro de la tarjeta " + panel);
                 }
+            }
+
+            if (failed.SlothVisible)
+            {
+                // La rama sale de detrás del marco: el rig va bajo el marco y la rama empieza dentro del canto, en corteza.
+                Transform frame = failed.Panel.Find("Frame");
+                Assert.That(frame, Is.Not.Null);
+                SlothRig rig = failed.Sloth!;
+                Assert.That(rig.Root.GetSiblingIndex(), Is.LessThan(frame.GetSiblingIndex()), at + ": TiTino bajo el marco");
+                Rect branch = VictorySetup.CanvasRect(rig.BranchImage.rectTransform, space);
+                Assert.That(branch.xMin, Is.InRange(panel.xMin - 0.01f, panel.xMin + LevelFailedScreen.SlothBranchTuckDp + 0.01f),
+                    at + ": el remate de la rama " + branch + ", bajo el canto del marco de " + panel);
+                Assert.That(branch.xMax, Is.GreaterThan(panel.xMin + LevelFailedScreen.CardFrameDp), at + ": la rama asoma");
+                Assert.That(rig.BranchImage.color, Is.EqualTo(LevelFailedScreen.SlothBranchTint), at + ": rama provisional en corteza");
             }
 
             if (hasPhrase)
