@@ -48,7 +48,7 @@ Se puede entregar por partes, en este orden de prioridad (§10): primero lo que 
 
 | Regla | Valor |
 | --- | --- |
-| Formato | WAV PCM, **48.000 Hz, 24 bits**, sin compresión |
+| Formato | WAV PCM, **48.000 Hz, 16 bits**, sin compresión (se pueden producir a 24 bits; en el repositorio se guardan a 16 con `tools/audio-check/to16bit.py`, decisión del dueño del 2026-10-17, para no llenar la cuota de Git LFS) |
 | Canales | **Mono** en efectos, notas de fruta y fauna; estéreo permitido en agua, lluvia y música |
 | Pico máximo absoluto | −1 dBFS en cualquier pieza (sin recortes ni saturación) |
 | Pico de cada efecto | El de su ficha (`peak_dbfs`), ± 1,5 dB: es la mezcla del juego (§5) |

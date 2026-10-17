@@ -1,0 +1,1586 @@
+{
+  "version": 1,
+  "files": [
+    {
+      "id": "sfx_select",
+      "file": "sfx/sfx_select.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_C4, VSCO-2-CE CC0) afinada en Do5 (523,25 Hz)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint",
+      "file": "sfx/sfx_tint.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba y arpa (marimba_C4+harp_C5, VSCO-2-CE CC0) en Do5 (523,25 Hz)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_jenipapo",
+      "file": "sfx/fruit/sfx_select_jenipapo.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_B2, VSCO-2-CE CC0) afinada a C4 (261.63 Hz, Huito)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_jenipapo",
+      "file": "sfx/fruit/sfx_tint_jenipapo.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_B2+harp_D4, VSCO-2-CE CC0) afinada a C4 (261.63 Hz, Huito)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_cacao",
+      "file": "sfx/fruit/sfx_select_cacao.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_F3, VSCO-2-CE CC0) afinada a D4 (293.66 Hz, Cacao)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_cacao",
+      "file": "sfx/fruit/sfx_tint_cacao.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_F3+harp_D4, VSCO-2-CE CC0) afinada a D4 (293.66 Hz, Cacao)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_acai",
+      "file": "sfx/fruit/sfx_select_acai.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_F3, VSCO-2-CE CC0) afinada a E4 (329.63 Hz, Açaí)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_acai",
+      "file": "sfx/fruit/sfx_tint_acai.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_F3+harp_D4, VSCO-2-CE CC0) afinada a E4 (329.63 Hz, Açaí)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_camu_camu",
+      "file": "sfx/fruit/sfx_select_camu_camu.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_F3, VSCO-2-CE CC0) afinada a G4 (392.00 Hz, Camu camu)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_camu_camu",
+      "file": "sfx/fruit/sfx_tint_camu_camu.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_F3+harp_A4, VSCO-2-CE CC0) afinada a G4 (392.00 Hz, Camu camu)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_urucum",
+      "file": "sfx/fruit/sfx_select_urucum.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_C4, VSCO-2-CE CC0) afinada a A4 (440.00 Hz, Achiote)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_urucum",
+      "file": "sfx/fruit/sfx_tint_urucum.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_C4+harp_A4, VSCO-2-CE CC0) afinada a A4 (440.00 Hz, Achiote)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_agua_negro",
+      "file": "sfx/fruit/sfx_select_agua_negro.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_C4, VSCO-2-CE CC0) afinada a C5 (523.25 Hz, Agua del Río Negro)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_agua_negro",
+      "file": "sfx/fruit/sfx_tint_agua_negro.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_C4+harp_C5, VSCO-2-CE CC0) afinada a C5 (523.25 Hz, Agua del Río Negro)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_aguaje",
+      "file": "sfx/fruit/sfx_select_aguaje.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_C4, VSCO-2-CE CC0) afinada a D5 (587.33 Hz, Aguaje)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_aguaje",
+      "file": "sfx/fruit/sfx_tint_aguaje.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_C4+harp_E5, VSCO-2-CE CC0) afinada a D5 (587.33 Hz, Aguaje)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_lulo",
+      "file": "sfx/fruit/sfx_select_lulo.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_G4, VSCO-2-CE CC0) afinada a E5 (659.25 Hz, Lulo)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_lulo",
+      "file": "sfx/fruit/sfx_tint_lulo.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_G4+harp_E5, VSCO-2-CE CC0) afinada a E5 (659.25 Hz, Lulo)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_bacaba",
+      "file": "sfx/fruit/sfx_select_bacaba.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_G4, VSCO-2-CE CC0) afinada a G5 (783.99 Hz, Bacaba)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_bacaba",
+      "file": "sfx/fruit/sfx_tint_bacaba.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_G4+harp_G5, VSCO-2-CE CC0) afinada a G5 (783.99 Hz, Bacaba)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_agua_tapajos",
+      "file": "sfx/fruit/sfx_select_agua_tapajos.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_B4, VSCO-2-CE CC0) afinada a A5 (880.00 Hz, Agua del Tapajós)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_agua_tapajos",
+      "file": "sfx/fruit/sfx_tint_agua_tapajos.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_B4+harp_G5, VSCO-2-CE CC0) afinada a A5 (880.00 Hz, Agua del Tapajós)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_tapereba",
+      "file": "sfx/fruit/sfx_select_tapereba.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_B4, VSCO-2-CE CC0) afinada a C6 (1046.50 Hz, Taperebá)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_tapereba",
+      "file": "sfx/fruit/sfx_tint_tapereba.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_B4+harp_D6, VSCO-2-CE CC0) afinada a C6 (1046.50 Hz, Taperebá)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_araza",
+      "file": "sfx/fruit/sfx_select_araza.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_F5, VSCO-2-CE CC0) afinada a D6 (1174.66 Hz, Arazá)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_araza",
+      "file": "sfx/fruit/sfx_tint_araza.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_F5+harp_D6, VSCO-2-CE CC0) afinada a D6 (1174.66 Hz, Arazá)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_cupuacu",
+      "file": "sfx/fruit/sfx_select_cupuacu.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_F5, VSCO-2-CE CC0) afinada a E6 (1318.51 Hz, Copoazú)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_cupuacu",
+      "file": "sfx/fruit/sfx_tint_cupuacu.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_F5+harp_D6, VSCO-2-CE CC0) afinada a E6 (1318.51 Hz, Copoazú)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_select_guanabana",
+      "file": "sfx/fruit/sfx_select_guanabana.wav",
+      "license": "cc0",
+      "source": "Gota en vidrio (Wikimedia PD) + marimba de chonta (marimba_F5, VSCO-2-CE CC0) afinada a G6 (1567.98 Hz, Guanábana)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tint_guanabana",
+      "file": "sfx/fruit/sfx_tint_guanabana.wav",
+      "license": "cc0",
+      "source": "Brillo de agua (Wikimedia PD) + marimba/arpa (marimba_F5+harp_D6, VSCO-2-CE CC0) afinada a G6 (1567.98 Hz, Guanábana)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_pour_start",
+      "file": "sfx/sfx_pour_start.wav",
+      "license": "cc0",
+      "source": "Glug de cuello de vidrio y primera gota real (Pouring_water_bottles.ogg + Pouring_wine.ogg, PD)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Pouring_wine.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_pour_loop_l1",
+      "file": "sfx/pour/sfx_pour_loop_l1.wav",
+      "license": "cc0",
+      "source": "Grabación real de chorro de agua en vidrio (Pouring_wine.ogg + 363120_water-trickle.wav, CC0/PD), nivel 1 (25 %, cavidad hueca ~380 Hz)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Pouring_wine.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_pour_loop_l2",
+      "file": "sfx/pour/sfx_pour_loop_l2.wav",
+      "license": "cc0",
+      "source": "Grabación real de chorro de agua en vidrio (Pouring_wine.ogg + 363120_water-trickle.wav, CC0/PD), nivel 2 (50 %, cavidad media-baja ~510 Hz)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Pouring_wine.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_pour_loop_l3",
+      "file": "sfx/pour/sfx_pour_loop_l3.wav",
+      "license": "cc0",
+      "source": "Grabación real de chorro de agua en vidrio (Pouring_wine.ogg + 363120_water-trickle.wav, CC0/PD), nivel 3 (75 %, cavidad media-alta ~685 Hz)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Pouring_wine.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_pour_loop_l4",
+      "file": "sfx/pour/sfx_pour_loop_l4.wav",
+      "license": "cc0",
+      "source": "Grabación real de chorro de agua en vidrio (Pouring_wine.ogg + 363120_water-trickle.wav, CC0/PD), nivel 4 (95 %, cavidad alta cerca del borde ~920 Hz)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Pouring_wine.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_pour_loop",
+      "file": "sfx/sfx_pour_loop.wav",
+      "license": "cc0",
+      "source": "Grabación real de chorro de agua en vidrio (Pouring_wine.ogg + 363120_water-trickle.wav, CC0/PD), bucle de respaldo (nivel medio ~580 Hz)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Pouring_wine.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_pour_end",
+      "file": "sfx/sfx_pour_end.wav",
+      "license": "cc0",
+      "source": "Última gota en vidrio y asentamiento del menisco (Pouring_wine.ogg PD) + armónico Do5-Sol5 (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Pouring_wine.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_illegal",
+      "file": "sfx/sfx_illegal.wav",
+      "license": "cc0",
+      "source": "Doble toque neutro y seco en madera hueca (slitdrum1/2 + claves_pp, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_stuck",
+      "file": "sfx/sfx_stuck.wav",
+      "license": "cc0",
+      "source": "Dos toques suaves descendentes de madera grave como remo en canoa (logdrum_hi/lo + slitdrum, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_seal",
+      "file": "sfx/sfx_seal.wav",
+      "license": "cc0",
+      "source": "Doble sacudida de maracá de semillas + plop hueco de tapa de calabaza con rebote a 150 ms + acorde Do5-Mi5-Sol5-Do6 (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_river_rise",
+      "file": "sfx/sfx_river_rise.wav",
+      "license": "cc0",
+      "source": "Onda ascendente de agua real (363120_water-trickle.wav CC0) + brisa suave en hojas y arpa (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:363120_fractalstudios_water-trickle.wav",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_fill",
+      "file": "sfx/sfx_fill.wav",
+      "license": "cc0",
+      "source": "Burbujeo ascendente cristalino en cuia de vidrio (Water_bubbles_chortling.ogg + Pouring_wine.ogg, PD)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Water_bubbles_chortling.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_fruit_plip",
+      "file": "sfx/sfx_fruit_plip.wav",
+      "license": "cc0",
+      "source": "Gota diminuta de jugo en agua (Water_bubbles_chortling.ogg PD) + micro-grano de semillas (shaker1, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Water_bubbles_chortling.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_win_toada",
+      "file": "sfx/sfx_win_toada.wav",
+      "license": "cc0",
+      "source": "Frase alegre de toada/carimbó en Do mayor pentatónico: curimbó (tumba/conga/quinto), maracás, marimba/arpa y coro sin letra (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_confetti",
+      "file": "sfx/sfx_confetti.wav",
+      "license": "cc0",
+      "source": "Aleteo suave de plumas y hojas al aire con destellos de semillas y marimba aguda (shaker3/cabasa/marimba, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_seeds_tick",
+      "file": "sfx/sfx_seeds_tick.wav",
+      "license": "cc0",
+      "source": "Tic individual de semilla seca cayendo en cuenco de calabaza (wood_click_pp1 + shaker1 + slitdrum3, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_ui_tap",
+      "file": "sfx/sfx_ui_tap.wav",
+      "license": "cc0",
+      "source": "Toque corto de madera pulida con micro-gota de agua (wood_click_pp1 + marimba + gota, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_ui_back",
+      "file": "sfx/sfx_ui_back.wav",
+      "license": "cc0",
+      "source": "Toque de madera cálido y cerrado en intervalo descendente Sol4->Do4 (marimba_G4/C4 + slitdrum1, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_ui_buy",
+      "file": "sfx/sfx_ui_buy.wav",
+      "license": "cc0",
+      "source": "Puñado de semillas cayendo en cesta de fibra + dos notas alegres de marimba Do5->Sol5 (maraca_shake + shaker + marimba, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "amb_w01_water",
+      "file": "amb/w01_water.wav",
+      "license": "cc0",
+      "source": "Agua de río ancho con marea suave (Ocean_Waves_on_a_Tropical_Beach.ogg + 433589_stream-river-water.wav, CC0)",
+      "author": "Tintalú Sound Design / Wikimedia Commons & Félix Blume (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:Ocean_Waves_on_a_Tropical_Beach.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM sin zumbidos ni siseo"
+    },
+    {
+      "id": "amb_w02_water",
+      "file": "amb/w02_water.wav",
+      "license": "cc0",
+      "source": "Olas suaves del Tapajós sobre arena (Ocean_Waves_on_a_Tropical_Beach.ogg + On_a_pebble_beach.ogg, CC0/PD)",
+      "author": "Tintalú Sound Design / Wikimedia Commons & Félix Blume (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:On_a_pebble_beach.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM sin zumbidos ni siseo"
+    },
+    {
+      "id": "amb_w03_water",
+      "file": "amb/w03_water.wav",
+      "license": "cc0",
+      "source": "Dos corrientes que se rozan en Manaos (433589_stream-river-water.wav + Shallow_small_river.ogg, CC0/PD)",
+      "author": "Tintalú Sound Design / Wikimedia Commons & Félix Blume (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:433589_jackthemurray_stream-river-water-up-close.wav",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM sin zumbidos ni siseo"
+    },
+    {
+      "id": "amb_w04_water",
+      "file": "amb/w04_water.wav",
+      "license": "cc0",
+      "source": "Río en calma tras la lluvia con goteo de hojas (433589_stream-river-water.wav + 363120_water-trickle.wav, CC0)",
+      "author": "Tintalú Sound Design / Wikimedia Commons & Félix Blume (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:363120_fractalstudios_water-trickle.wav",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM sin zumbidos ni siseo"
+    },
+    {
+      "id": "amb_w05_water",
+      "file": "amb/w05_water.wav",
+      "license": "cc0",
+      "source": "Agua quieta de espejo en Loreto (433589_stream-river-water.wav + Ocean_Waves_on_a_Tropical_Beach.ogg, CC0)",
+      "author": "Tintalú Sound Design / Wikimedia Commons & Félix Blume (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:433589_jackthemurray_stream-river-water-up-close.wav",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM sin zumbidos ni siseo"
+    },
+    {
+      "id": "amb_rain_light",
+      "file": "amb/rain_light.wav",
+      "license": "cc0",
+      "source": "Lluvia ligera real sobre hojas y agua (Rain_(1).ogg + 363120_water-trickle.wav, PD/CC0, -40 LUFS)",
+      "author": "Tintalú Sound Design / Wikimedia Commons & Félix Blume (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:Rain_(1).ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM sin zumbidos ni siseo"
+    },
+    {
+      "id": "amb_rain_medium",
+      "file": "amb/rain_medium.wav",
+      "license": "cc0",
+      "source": "Lluvia media real sobre follaje y río (Rain_(1).ogg + Water_flowing_pouring_trickling.ogg, PD, -37 LUFS)",
+      "author": "Tintalú Sound Design / Wikimedia Commons & Félix Blume (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:Rain_(1).ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM sin zumbidos ni siseo"
+    },
+    {
+      "id": "amb_rain_heavy",
+      "file": "amb/rain_heavy.wav",
+      "license": "cc0",
+      "source": "Lluvia intensa cálida sin trueno sobre dosel y río (Rain_(1).ogg + Shallow_small_river.ogg, PD, -34 LUFS)",
+      "author": "Tintalú Sound Design / Wikimedia Commons & Félix Blume (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:Rain_(1).ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM sin zumbidos ni siseo"
+    },
+    {
+      "id": "amb_w01_fauna_01",
+      "file": "amb/fauna/w01_fauna_01.wav",
+      "license": "cc0",
+      "source": "Garza nocturna (Nycticorax nycticorax, savacu) y garza real (Ardea, Ardeidae), grabaciones de campo CC0",
+      "author": "gendgrr & bastian6709 (iNaturalist CC0) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/395716765",
+      "notes": "Grabación real de garzas (Ardeidae: Nycticorax nycticorax obs 395716765 + Ardea obs 404257825, CC0), masterizada a 48 kHz / 24 bits PCM mono",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: Nycticorax nycticorax (Edmonton, Canadá) (iNaturalist 395716765, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w01_fauna_02",
+      "file": "amb/fauna/w01_fauna_02.wav",
+      "license": "cc0",
+      "source": "Murmullo lejano de mercado ribereño brasileño sin voces inteligibles (grabación callejera en Brasil de Félix Blume CC0 difuminada <680 Hz + cestas de madera y agua de puerto)",
+      "author": "Félix Blume (Wikimedia Commons CC0) & VSCO-2-CE (CC0) / Tintalú Sound Design",
+      "url": "https://commons.wikimedia.org/wiki/File:410435_felix-blume_two-people-singing-in-the-street-in-a-favela-rio-de-janeiro.ogg",
+      "notes": "Murmullo humano lejano de ribera en Brasil con filtrado paso bajo y difusión para garantizar cero palabras inteligibles",
+      "advisor_review": "pendiente: Incluye la grabación de dos personas cantando en una favela de Río (Félix Blume, CC0): comprobar de oído que no se entiende ninguna voz (07 §9.1). Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w01_fauna_03",
+      "file": "amb/fauna/w01_fauna_03.wav",
+      "license": "cc0",
+      "source": "Piha / ave suboscina de dosel muy lejana (Schiffornis, Tityridae/Cotingoidea en bosque de Ecuador, CC0, sin el grito de 3 sílabas del banner)",
+      "author": "carlosmosquera (iNaturalist CC0) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/234714937",
+      "notes": "Silbido único y lejano de dosel neotropical (Schiffornis obs 234714937, CC0), nunca el grito del banner",
+      "advisor_review": "pendiente: Grabación de referencia: Schiffornis (Ecuador) (iNaturalist 234714937, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w02_fauna_01",
+      "file": "amb/fauna/w02_fauna_01.wav",
+      "license": "cc0",
+      "source": "Tucanes cantando en la Amazonía brasileña (Félix Blume CC0 + Ramphastos dicolorus en Brasil por aleosha CC0)",
+      "author": "Félix Blume (Wikimedia CC0) & aleosha (iNaturalist CC0) / Tintalú Sound Design",
+      "url": "https://commons.wikimedia.org/wiki/File:404114_felix-blume_toucans-singing-in-the-amazonian-rainforest-brazil.ogg",
+      "notes": "Grabación real de tucanes en Brasil (Ramphastidae, CC0 y obs 408330665), masterizada a 48 kHz / 24 bits PCM mono"
+    },
+    {
+      "id": "amb_w02_fauna_02",
+      "file": "amb/fauna/w02_fauna_02.wav",
+      "license": "cc0",
+      "source": "Exhalación de espiráculo de delfín en superficie y ondulación de río (Aethalodelphis obliquidens, Delphinidae CC0 + agua de río CC0/PD)",
+      "author": "davidbroadland (iNaturalist CC0) & Wikimedia Commons (CC0/PD) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/397290245",
+      "notes": "Grabación real de respiración de delfín en superficie (Delphinidae obs 397290245, CC0) y agua de río para Rosa",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: delfín del Pacífico Aethalodelphis obliquidens (Columbia Británica, Canadá) (iNaturalist 397290245, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w03_fauna_01",
+      "file": "amb/fauna/w03_fauna_01.wav",
+      "license": "cc0",
+      "source": "Botos (delfines) emergiendo, respirando y vocalizando en la confluencia (Lissodelphis borealis + Aethalodelphis obliquidens + delfín subacuático Félix Blume, CC0)",
+      "author": "russnamitz & davidbroadland (iNaturalist CC0) & Félix Blume (Wikimedia CC0)",
+      "url": "https://www.inaturalist.org/observations/402089342",
+      "notes": "Especie: botos (corregido orden de Mundo 3 según especificacion-sonidos.json). Grabaciones reales de delfines (Delphinidae obs 402089342 y 397290245 + Wikimedia 161691, CC0)",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: delfín liso del norte Lissodelphis borealis (Pacífico Norte) (iNaturalist 402089342, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w03_fauna_02",
+      "file": "amb/fauna/w03_fauna_02.wav",
+      "license": "cc0",
+      "source": "Guacamayos amazónicos/brasileños en vuelo (Diopsittaca nobilis, maracanã-nobre grabado en Brasil, CC0)",
+      "author": "gabrielfialho (iNaturalist CC0) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/367450567",
+      "notes": "Especie: guacamayos (corregido orden de Mundo 3 según especificacion-sonidos.json). Grabación real de guacamayo en Brasil (Diopsittaca nobilis obs 367450567, CC0)",
+      "advisor_review": "pendiente: Grabación de referencia: Diopsittaca nobilis (Salvador, Brasil) (iNaturalist 367450567, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w04_fauna_01",
+      "file": "amb/fauna/w04_fauna_01.wav",
+      "license": "cc0",
+      "source": "Bandada de pericos neotropicales al atardecer (Brotogeris tirica grabado en Brasil, Psittacidae CC0)",
+      "author": "gabrielfialho (iNaturalist CC0) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/404591346",
+      "notes": "Grabación real de pericos del género Brotogeris en Brasil (obs 404591346 y 391013809, CC0)",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: Brotogeris tirica (Salvador, Brasil; mata atlántica) (iNaturalist 404591346, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w04_fauna_02",
+      "file": "amb/fauna/w04_fauna_02.wav",
+      "license": "cc0",
+      "source": "Grillos diurnos suaves del sotobosque húmedo (Gryllidae CC0 + Walk_in_the_rainforest.ogg PD)",
+      "author": "crebassa (iNaturalist CC0) & Wikimedia Commons (PD) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/313524483",
+      "notes": "Grabación real de grillos (Gryllidae obs 313524483, CC0) y sotobosque tropical",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: grillo Gryllidae de Cerdeña (Italia) (iNaturalist 313524483, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w05_fauna_01",
+      "file": "amb/fauna/w05_fauna_01.wav",
+      "license": "cc0",
+      "source": "Pirarucú que sale a respirar con burbuja grave (pez Actinopterygii en superficie CC0 + Water_bubbles_chortling.ogg PD + agua natural PD)",
+      "author": "kzoebel (iNaturalist CC0) & Wikimedia Commons (PD) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/114428505",
+      "notes": "Grabación real de pez Actinopterygii en agua (obs 114428505, CC0) con burbuja profunda y chapoteo natural de río",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: pez Actinopterygii grabado en Alabama (EE. UU.) (iNaturalist 114428505, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "sfx_undo",
+      "file": "sfx/sfx_undo.wav",
+      "license": "cc0",
+      "source": "Agua en reversa (Water_bubbles_chortling.ogg + Pouring_wine.ogg PD) + marimba ascendente Do5-Mi5-Sol5 (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_capi_paddle",
+      "file": "sfx/sfx_capi_paddle.wav",
+      "license": "cc0",
+      "source": "Pasos en orilla (Walk_in_the_rainforest.ogg PD) + palada de remo en agua natural (Ducks_landing_in_water.ogg PD) + clinc de vidrio + gorjeo corto de ribera (Lontra CC0 + VSCO-2-CE CC0)",
+      "author": "Wikimedia Commons (PD), ritaclare (iNaturalist CC0) & VSCO-2-CE (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Ducks_landing_in_water.ogg",
+      "notes": "Agua natural exterior y grabación de fauna ribereña CC0/PD, sin grabaciones domésticas"
+    },
+    {
+      "id": "sfx_hint",
+      "file": "sfx/sfx_hint.wav",
+      "license": "cc0",
+      "source": "Tres batidas sedosas de alas de mariposa Morpho + campanilla de chonta/arpa Sol5->Re6 (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_shuffle",
+      "file": "sfx/sfx_shuffle.wav",
+      "license": "cc0",
+      "source": "Oleada de río (Ocean_Waves_on_a_Tropical_Beach.ogg CC0 + Shallow_small_river.ogg PD) + glissando ascendente de las 14 notas pentatónicas en marimba de chonta (VSCO-2-CE CC0)",
+      "author": "Wikimedia Commons (CC0/PD) & VSCO-2-CE (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Shallow_small_river_with_stony_riverbed.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_reveal",
+      "file": "sfx/sfx_reveal.wav",
+      "license": "cc0",
+      "source": "Chispa cálida de kalimba/arpa aguda Mi6->La6 + burbuja ascendente boiada (VSCO-2-CE CC0 + Wikimedia PD)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_skip",
+      "file": "sfx/sfx_skip.wav",
+      "license": "cc0",
+      "source": "Impulso de agua exterior al emerger + exhalación real de delfín (Aethalodelphis obliquidens CC0) + chapuzón alegre con burbujas y marimba (Wikimedia PD + VSCO-2-CE CC0)",
+      "author": "davidbroadland (iNaturalist CC0), Wikimedia Commons (PD) & VSCO-2-CE (CC0)",
+      "url": "https://www.inaturalist.org/observations/397290245",
+      "notes": "Grabación real de delfín y agua natural exterior, masterizado a 48 kHz / 24 bits PCM mono",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: delfín del Pacífico Aethalodelphis obliquidens (Columbia Británica, Canadá) (iNaturalist 397290245, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "sfx_restart",
+      "file": "sfx/sfx_restart.wav",
+      "license": "cc0",
+      "source": "Barrido corto de agua que vuelve al cauce + toque firme de madera de canoa (363120_water-trickle.wav CC0 + slitdrum/logdrum VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_river_drop",
+      "file": "sfx/sfx_river_drop.wav",
+      "license": "cc0",
+      "source": "Agua de río que desciende en marimba líquida Sol5->Do5 + soplo cercano y amable de delfín Rosa (Aethalodelphis obliquidens CC0 + 433589_stream-river-water.wav CC0 + VSCO-2-CE CC0)",
+      "author": "davidbroadland (iNaturalist CC0), Wikimedia Commons (CC0/PD) & VSCO-2-CE (CC0)",
+      "url": "https://www.inaturalist.org/observations/397290245",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: delfín del Pacífico Aethalodelphis obliquidens (Columbia Británica, Canadá) (iNaturalist 397290245, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "sfx_basket_open",
+      "file": "sfx/sfx_basket_open.wav",
+      "license": "cc0",
+      "source": "Crujido cálido de cesto de arumã + caída de frutas y semillas con acorde de marimba y maracá (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_streak_up",
+      "file": "sfx/sfx_streak_up.wav",
+      "license": "cc0",
+      "source": "Subida de agua + gorjeo social alegre de nutria de río (Lontra, Lutrinae CC0) con toque de marimba Sol5->Do6 (VSCO-2-CE CC0)",
+      "author": "jilldevito & ritaclare (iNaturalist CC0) & VSCO-2-CE (CC0)",
+      "url": "https://www.inaturalist.org/observations/346867530",
+      "notes": "Grabación real de vocalización de nutria de río (Lontra obs 346867530 y 402547958, CC0) + agua y marimba",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: nutria norteamericana Lontra canadensis (Florida, EE. UU.) (iNaturalist 346867530, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "sfx_streak_shield",
+      "file": "sfx/sfx_streak_shield.wav",
+      "license": "cc0",
+      "source": "Despliegue amplio de hoja de Victoria amazonica sobre agua natural de río (Walk_in_the_rainforest.ogg PD + Ducks_landing_in_water.ogg PD + cabasa/slitdrum VSCO-2-CE CC0)",
+      "author": "Wikimedia Commons (PD) & VSCO-2-CE (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Walk_in_the_rainforest.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_canoe_lost",
+      "file": "sfx/sfx_canoe_lost.wav",
+      "license": "cc0",
+      "source": "Madera que se inclina suavemente en el río + chapoteo natural exterior y nota grave de calabaza (Ducks_landing_in_water.ogg PD + logdrum/slitdrum VSCO-2-CE CC0)",
+      "author": "Wikimedia Commons (PD) & VSCO-2-CE (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Ducks_landing_in_water.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_canoe_back",
+      "file": "sfx/sfx_canoe_back.wav",
+      "license": "cc0",
+      "source": "Palada limpia de remo en agua natural exterior + nota cálida ascendente Do5->Sol5 (Ducks_landing_in_water.ogg PD + VSCO-2-CE CC0)",
+      "author": "Wikimedia Commons (PD) & VSCO-2-CE (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:Ducks_landing_in_water.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_mech_hoja",
+      "file": "sfx/sfx_mech_hoja.wav",
+      "license": "cc0",
+      "source": "Roce crujiente y fresco de hoja de palma que se levanta con brisa (Walk_in_the_rainforest.ogg PD + shaker/cabasa VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_mech_matapi",
+      "file": "sfx/sfx_mech_matapi.wav",
+      "license": "cc0",
+      "source": "Tejido de varillas de arumã cric-crac + tirón corto de fibra vegetal (guiro/wood_click/cabasa/slitdrum VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_mech_liana",
+      "file": "sfx/sfx_mech_liana.wav",
+      "license": "cc0",
+      "source": "Nota cristalina de marimba aguda + desate elástico de bejuco/liana (marimba/xylo/guiro/slitdrum VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_mech_liana_cuenta",
+      "file": "sfx/sfx_mech_liana_cuenta.wav",
+      "license": "cc0",
+      "source": "Tac seco de nudo de bejuco que afloja una vuelta con toque de semilla (wood_click/claves/shaker VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_mech_remolino",
+      "file": "sfx/sfx_mech_remolino.wav",
+      "license": "cc0",
+      "source": "Giro líquido de succión suave + rosario de burbujas ascendentes (Pouring_water_bottles.ogg + Water_bubbles_chortling.ogg PD)",
+      "author": "Tintalú Sound Design / Wikimedia Commons (PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:Water_bubbles_chortling.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_mech_barro",
+      "file": "sfx/sfx_mech_barro.wav",
+      "license": "cc0",
+      "source": "Chorro de agua fresca de río que lava arcilla + destello limpio de vidrio despejado (Ducks_landing_in_water.ogg PD + 363120_water-trickle.wav CC0 + VSCO-2-CE CC0)",
+      "author": "Wikimedia Commons (CC0/PD) & VSCO-2-CE (CC0)",
+      "url": "https://commons.wikimedia.org/wiki/File:363120_fractalstudios_water-trickle.wav",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_mech_lluvia",
+      "file": "sfx/sfx_mech_lluvia.wav",
+      "license": "cc0",
+      "source": "Ráfaga corta de lluvia amazónica sobre hojas + plip redondo de gota gruesa (Rain_(1).ogg + Pouring_wine.ogg PD)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:Rain_(1).ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_mech_pirana",
+      "file": "sfx/sfx_mech_pirana.wav",
+      "license": "cc0",
+      "source": "Coletazo ágil de pez real en agua (Actinopterygii CC0) + chasquido juguetón bajo el agua chomp-blup (Water_bubbles_chortling.ogg PD + wood_click/slitdrum VSCO-2-CE CC0)",
+      "author": "kzoebel (iNaturalist CC0), Wikimedia Commons (PD) & VSCO-2-CE (CC0)",
+      "url": "https://www.inaturalist.org/observations/169455569",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: pez Actinopterygii grabado en Alabama (EE. UU.) (iNaturalist 169455569, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "sfx_mech_brote",
+      "file": "sfx/sfx_mech_brote.wav",
+      "license": "cc0",
+      "source": "Pop húmedo vegetal de tallo que germina + despliegue de hojitas en quinta Do5->Sol5 (Water_bubbles_chortling.ogg PD + VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_mech_flor",
+      "file": "sfx/sfx_mech_flor.wav",
+      "license": "cc0",
+      "source": "Pétalos de vitória-régia que se abren sobre el agua + acorde luminoso Mi5-Si5 en arpa y marimba (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_mech_hoja_atada",
+      "file": "sfx/sfx_mech_hoja_atada.wav",
+      "license": "cc0",
+      "source": "Amarre de fibra que se suelta + hoja de palma que se desprende con brisa (guiro/wood_click/shaker VSCO-2-CE CC0 + Wikimedia PD)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tinaja_select",
+      "file": "sfx/sfx_tinaja_select.wav",
+      "license": "cc0",
+      "source": "Toc profundo y mate de vasija de arcilla cocida con resonancia en 190 y 520 Hz (tumba/conga/slitdrum VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tinaja_scoop",
+      "file": "sfx/sfx_tinaja_scoop.wav",
+      "license": "cc0",
+      "source": "Glup redondo y laminar de cazo que recoge agua fresca de la Tinaja sin burbujeo (Pouring_water_bottles.ogg PD + slitdrum VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tinaja_reveal",
+      "file": "sfx/sfx_tinaja_reveal.wav",
+      "license": "cc0",
+      "source": "Gota clara que resuena dentro del cuello de barro con eco corto de vasija (Pouring_wine.ogg PD + marimba/slitdrum VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_tinaja_release",
+      "file": "sfx/sfx_tinaja_release.wav",
+      "license": "cc0",
+      "source": "Roce de fibra en las varas del jirau + toc hueco de calabaza (guiro_long/cabasa/slitdrum/logdrum VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_sloth_nod",
+      "file": "sfx/sfx_sloth_nod.wav",
+      "license": "cc0",
+      "source": "Murmullo nasal cálido y tierno mmm con boca cerrada 190->220 Hz articulado con muestras reales de flauta de madera y arpa graves a través de formantes acústicos (VSCO-2-CE CC0, sin síntesis sinusoidal)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "100 % basado en muestras acústicas reales filtradas por formantes vocales, sin osciladores sintéticos"
+    },
+    {
+      "id": "sfx_sloth_happy",
+      "file": "sfx/sfx_sloth_happy.wav",
+      "license": "cc0",
+      "source": "Suspiro suave y contento de TiTino + leve roce de hojas de embaúba (flauta/shaker VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_sloth_branch",
+      "file": "sfx/sfx_sloth_branch.wav",
+      "license": "cc0",
+      "source": "Balanceo flexible de rama de embaúba + roce fresco de hojas grandes (guiro/slitdrum/shaker VSCO-2-CE CC0 + Wikimedia PD)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_sloth_yawn",
+      "file": "sfx/sfx_sloth_yawn.wav",
+      "license": "cc0",
+      "source": "Bostezo chiquito de aire suave descendente + dos chasquidos lentos al acomodarse (flauta/wood_click_pp VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_rosa_surface",
+      "file": "sfx/sfx_rosa_surface.wav",
+      "license": "cc0",
+      "source": "Ondulación de agua de río + soplo cercano de espiráculo de delfín (Aethalodelphis obliquidens, Delphinidae CC0) + chapoteo natural al sumergirse (Wikimedia PD)",
+      "author": "davidbroadland (iNaturalist CC0) & Wikimedia Commons (PD)",
+      "url": "https://www.inaturalist.org/observations/397290245",
+      "notes": "Grabación real de espiráculo de delfín (obs 397290245, CC0) y agua natural exterior",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: delfín del Pacífico Aethalodelphis obliquidens (Columbia Británica, Canadá) (iNaturalist 397290245, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "sfx_monkey_chirp",
+      "file": "sfx/sfx_monkey_chirp.wav",
+      "license": "cc0",
+      "source": "Trino agudo y dulce de primate neotropical a -34 dBFS (Callithrix jacchus en Brasil + Cebus imitator, Cebidae/Platyrrhini CC0)",
+      "author": "gabrielfialho & caseyhh (iNaturalist CC0) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/399384929",
+      "notes": "Grabación real de vocalización de monos neotropicales (Platyrrhini obs 399384929 y Cebidae obs 407671752, CC0)",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: tití común Callithrix jacchus (Salvador, Brasil; mata atlántica) (iNaturalist 399384929, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "sfx_fact",
+      "file": "sfx/sfx_fact.wav",
+      "license": "cc0",
+      "source": "Toque noble de tablilla de madera clara + armónico de vidrio Do5-Sol5 sin papel (claves/slitdrum/marimba/arpa VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_world_banner",
+      "file": "sfx/sfx_world_banner.wav",
+      "license": "cc0",
+      "source": "Canto de tres sílabas ('pi-pi-YO') articulado al 100 % con grabaciones reales de siringe de Cotingidae/Tityridae neotropicales (Schiffornis en Ecuador + Procnias nudicollis en Brasil + Pitangus en Brasil, CC0) con reverberación de dosel y brisa de río",
+      "author": "carlosmosquera, paularomano & gabrielfialho (iNaturalist CC0) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/234714945",
+      "notes": "100 % orgánico a partir de grabaciones reales de Cotingoidea/Tyranni (obs 234714945, 288721638 y 407508668, CC0), sin síntesis de onda sinusoidal",
+      "advisor_review": "pendiente: Grabación de referencia: Schiffornis (Ecuador) (iNaturalist 234714945, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "sfx_map_paddle",
+      "file": "sfx/sfx_map_paddle.wav",
+      "license": "cc0",
+      "source": "Dos paladas suaves de remo en agua tranquila exterior (Ducks_landing_in_water.ogg PD + 363120_water-trickle.wav CC0)",
+      "author": "Wikimedia Commons (CC0/PD) / Tintalú Sound Design",
+      "url": "https://commons.wikimedia.org/wiki/File:Ducks_landing_in_water.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_map_sample",
+      "file": "sfx/sfx_map_sample.wav",
+      "license": "cc0",
+      "source": "Agua que colma la mini cuia + acorde luminoso de 3 copas Do5-Mi5-Sol5 (Pouring_wine.ogg PD + VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_map_rosa",
+      "file": "sfx/sfx_map_rosa.wav",
+      "license": "cc0",
+      "source": "Soplo amable de espiráculo de delfín (Aethalodelphis obliquidens CC0) y chapoteo corto de Rosa en el Mapa a -21 dBFS",
+      "author": "davidbroadland (iNaturalist CC0) & Wikimedia Commons (PD)",
+      "url": "https://www.inaturalist.org/observations/397290245",
+      "notes": "Grabación real de espiráculo de delfín (obs 397290245, CC0) y agua natural exterior",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: delfín del Pacífico Aethalodelphis obliquidens (Columbia Británica, Canadá) (iNaturalist 397290245, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "sfx_map_pequepeque",
+      "file": "sfx/sfx_map_pequepeque.wav",
+      "license": "cc0",
+      "source": "Pec-pec-pec-pec rítmico, redondo y lejano con estela de río real a -28 dBFS (slitdrum/tumba VSCO-2-CE CC0 + Shallow_small_river.ogg PD)",
+      "author": "VSCO-2-CE (CC0) & Wikimedia Commons (PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:Shallow_small_river_with_stony_riverbed.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_fruit_new",
+      "file": "sfx/sfx_fruit_new.wav",
+      "license": "cc0",
+      "source": "Caída jugosa de fruta en agua natural exterior (Ducks_landing_in_water.ogg + Water_bubbles_chortling.ogg PD) + arpegio ascendente Do5-Mi5-Sol5-Do6 en marimba de chonta y arpa (VSCO-2-CE CC0)",
+      "author": "Wikimedia Commons (PD) & VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_mech_card",
+      "file": "sfx/sfx_mech_card.wav",
+      "license": "cc0",
+      "source": "Golpe suave de marco de madera + sacudida corta de semillas/maracá + armónico de marimba (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_morpho_idle",
+      "file": "sfx/sfx_morpho_idle.wav",
+      "license": "cc0",
+      "source": "Aleteo sedoso de Morpho a mitad de volumen (-28 dBFS) con una sola nota suave de bambú/chonta Sol5 (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "sfx_store_open",
+      "file": "sfx/sfx_store_open.wav",
+      "license": "cc0",
+      "source": "Despliegue de estera de fibra + tintineo cálido de botellas de vidrio y semillas (cabasa/guiro/maraca/glock/marimba VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM mono para altavoz móvil"
+    },
+    {
+      "id": "mus_w01_bed",
+      "file": "music/w01_bed.wav",
+      "license": "cc0",
+      "source": "Carimbó del Estuario: arpegios de marimba de chonta, arpa y flauta con 3 capas de curimbó y maracás en Do mayor pentatónico — lecho armónico sin pulso marcado (-26 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w01_perc1",
+      "file": "music/w01_perc1.wav",
+      "license": "cc0",
+      "source": "Carimbó del Estuario: arpegios de marimba de chonta, arpa y flauta con 3 capas de curimbó y maracás en Do mayor pentatónico — capa 1 de percusión (maracá y semillas, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w01_perc2",
+      "file": "music/w01_perc2.wav",
+      "license": "cc0",
+      "source": "Carimbó del Estuario: arpegios de marimba de chonta, arpa y flauta con 3 capas de curimbó y maracás en Do mayor pentatónico — capa 2 de percusión (madera, claves y güiro, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w01_perc3",
+      "file": "music/w01_perc3.wav",
+      "license": "cc0",
+      "source": "Carimbó del Estuario: arpegios de marimba de chonta, arpa y flauta con 3 capas de curimbó y maracás en Do mayor pentatónico — capa 3 de percusión (tambores curimbó/conga y marimba grave, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w01_bed_night",
+      "file": "music/w01_bed_night.wav",
+      "license": "cc0",
+      "source": "Carimbó del Estuario: arpegios de marimba de chonta, arpa y flauta con 3 capas de curimbó y maracás en Do mayor pentatónico — variante nocturna grave y cálida (-27 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w02_bed",
+      "file": "music/w02_bed.wav",
+      "license": "cc0",
+      "source": "Carimbó de playa del Tapajós: guitarra/arpa cálida, flauta suave y maracás en Do mayor / La menor pentatónico — lecho armónico sin pulso marcado (-26 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w02_perc1",
+      "file": "music/w02_perc1.wav",
+      "license": "cc0",
+      "source": "Carimbó de playa del Tapajós: guitarra/arpa cálida, flauta suave y maracás en Do mayor / La menor pentatónico — capa 1 de percusión (maracá y semillas, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w02_perc2",
+      "file": "music/w02_perc2.wav",
+      "license": "cc0",
+      "source": "Carimbó de playa del Tapajós: guitarra/arpa cálida, flauta suave y maracás en Do mayor / La menor pentatónico — capa 2 de percusión (madera, claves y güiro, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w02_perc3",
+      "file": "music/w02_perc3.wav",
+      "license": "cc0",
+      "source": "Carimbó de playa del Tapajós: guitarra/arpa cálida, flauta suave y maracás en Do mayor / La menor pentatónico — capa 3 de percusión (tambores curimbó/conga y marimba grave, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w02_bed_night",
+      "file": "music/w02_bed_night.wav",
+      "license": "cc0",
+      "source": "Carimbó de playa del Tapajós: guitarra/arpa cálida, flauta suave y maracás en Do mayor / La menor pentatónico — variante nocturna grave y cálida (-27 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w03_bed",
+      "file": "music/w03_bed.wav",
+      "license": "cc0",
+      "source": "Toada amazónica propia de Manaos (sin elementos de Parintins): marimba, arpa, flauta y tambores de madera/cuero — lecho armónico sin pulso marcado (-26 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w03_perc1",
+      "file": "music/w03_perc1.wav",
+      "license": "cc0",
+      "source": "Toada amazónica propia de Manaos (sin elementos de Parintins): marimba, arpa, flauta y tambores de madera/cuero — capa 1 de percusión (maracá y semillas, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w03_perc2",
+      "file": "music/w03_perc2.wav",
+      "license": "cc0",
+      "source": "Toada amazónica propia de Manaos (sin elementos de Parintins): marimba, arpa, flauta y tambores de madera/cuero — capa 2 de percusión (madera, claves y güiro, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w03_perc3",
+      "file": "music/w03_perc3.wav",
+      "license": "cc0",
+      "source": "Toada amazónica propia de Manaos (sin elementos de Parintins): marimba, arpa, flauta y tambores de madera/cuero — capa 3 de percusión (tambores curimbó/conga y marimba grave, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w03_bed_night",
+      "file": "music/w03_bed_night.wav",
+      "license": "cc0",
+      "source": "Toada amazónica propia de Manaos (sin elementos de Parintins): marimba, arpa, flauta y tambores de madera/cuero — variante nocturna grave y cálida (-27 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w04_bed",
+      "file": "music/w04_bed.wav",
+      "license": "cc0",
+      "source": "Trapecio Amazónico: guitarra acústica/arpa y flauta de caña cálida sin carácter ritual en Do mayor pentatónico — lecho armónico sin pulso marcado (-26 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w04_perc1",
+      "file": "music/w04_perc1.wav",
+      "license": "cc0",
+      "source": "Trapecio Amazónico: guitarra acústica/arpa y flauta de caña cálida sin carácter ritual en Do mayor pentatónico — capa 1 de percusión (maracá y semillas, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w04_perc2",
+      "file": "music/w04_perc2.wav",
+      "license": "cc0",
+      "source": "Trapecio Amazónico: guitarra acústica/arpa y flauta de caña cálida sin carácter ritual en Do mayor pentatónico — capa 2 de percusión (madera, claves y güiro, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w04_perc3",
+      "file": "music/w04_perc3.wav",
+      "license": "cc0",
+      "source": "Trapecio Amazónico: guitarra acústica/arpa y flauta de caña cálida sin carácter ritual en Do mayor pentatónico — capa 3 de percusión (tambores curimbó/conga y marimba grave, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w04_bed_night",
+      "file": "music/w04_bed_night.wav",
+      "license": "cc0",
+      "source": "Trapecio Amazónico: guitarra acústica/arpa y flauta de caña cálida sin carácter ritual en Do mayor pentatónico — variante nocturna grave y cálida (-27 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w05_bed",
+      "file": "music/w05_bed.wav",
+      "license": "cc0",
+      "source": "Cumbia amazónica suave de Loreto a tempo pausado en Do mayor pentatónico — lecho armónico sin pulso marcado (-26 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w05_perc1",
+      "file": "music/w05_perc1.wav",
+      "license": "cc0",
+      "source": "Cumbia amazónica suave de Loreto a tempo pausado en Do mayor pentatónico — capa 1 de percusión (maracá y semillas, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w05_perc2",
+      "file": "music/w05_perc2.wav",
+      "license": "cc0",
+      "source": "Cumbia amazónica suave de Loreto a tempo pausado en Do mayor pentatónico — capa 2 de percusión (madera, claves y güiro, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w05_perc3",
+      "file": "music/w05_perc3.wav",
+      "license": "cc0",
+      "source": "Cumbia amazónica suave de Loreto a tempo pausado en Do mayor pentatónico — capa 3 de percusión (tambores curimbó/conga y marimba grave, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w05_bed_night",
+      "file": "music/w05_bed_night.wav",
+      "license": "cc0",
+      "source": "Cumbia amazónica suave de Loreto a tempo pausado en Do mayor pentatónico — variante nocturna grave y cálida (-27 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_menu",
+      "file": "music/menu.wav",
+      "license": "cc0",
+      "source": "Tema de menú: cumbia amazónica ligera a 96 BPM con órgano de caña, arpa/guitarra con wah-wah suave, marimba y percusión (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "sting_world_banner",
+      "file": "music/stingers/sting_world_banner.wav",
+      "license": "cc0",
+      "source": "Remate musical de banner de mundo nuevo bajo la piha en Do mayor pentatónico (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "sting_arrival",
+      "file": "music/stingers/sting_arrival.wav",
+      "license": "cc0",
+      "source": "Remate musical de llegada a una parada en el Mapa en Do mayor pentatónico (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "sting_fruit_new",
+      "file": "music/stingers/sting_fruit_new.wav",
+      "license": "cc0",
+      "source": "Remate musical de descubrimiento de Fruta nueva en escala pentatónica (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "sting_mech_card",
+      "file": "music/stingers/sting_mech_card.wav",
+      "license": "cc0",
+      "source": "Remate musical de tarjeta previa de mecánica nueva en marimba, arpa y percusión (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "sting_level_failed",
+      "file": "music/stingers/sting_level_failed.wav",
+      "license": "cc0",
+      "source": "Remate musical sereno y sin dramatismo al fallar un nivel: descenso suave Sol-Mi-Do en arpa y marimba (VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE (CC0)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "amb_w06_water",
+      "file": "amb/w06_water.wav",
+      "license": "cc0",
+      "source": "Agua nocturna tranquila del Oriente (433589_stream-river-water.wav + 363120_water-trickle.wav, CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:433589_jackthemurray_stream-river-water-up-close.wav",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM sin zumbidos ni siseo"
+    },
+    {
+      "id": "amb_w07_water",
+      "file": "amb/w07_water.wav",
+      "license": "cc0",
+      "source": "Río medio de Madre de Dios sobre canto rodado (Shallow_small_river.ogg + On_a_pebble_beach.ogg, PD)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:Shallow_small_river_with_stony_riverbed.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM sin zumbidos ni siseo"
+    },
+    {
+      "id": "amb_w08_water",
+      "file": "amb/w08_water.wav",
+      "license": "cc0",
+      "source": "Cascada lejana y arroyo de montaña de Madidi (Shallow_small_river.ogg + Ocean_Waves_on_a_Tropical_Beach.ogg, CC0/PD)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:Shallow_small_river_with_stony_riverbed.ogg",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM sin zumbidos ni siseo"
+    },
+    {
+      "id": "amb_w09_water",
+      "file": "amb/w09_water.wav",
+      "license": "cc0",
+      "source": "Río térmico del Ucayali y murmullo cálido de vapor sin siseo (433589_stream-river-water.wav + 363120_water-trickle.wav, CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://commons.wikimedia.org/wiki/File:433589_jackthemurray_stream-river-water-up-close.wav",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM sin zumbidos ni siseo"
+    },
+    {
+      "id": "amb_w06_fauna_01",
+      "file": "amb/fauna/w06_fauna_01.wav",
+      "license": "cc0",
+      "source": "Ranas arborícolas nocturnas del Oriente ecuatoriano (Dendropsophus carnifex grabado en Ecuador + Boana pulchella, Hylidae CC0)",
+      "author": "loarie & celimilia (iNaturalist CC0) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/246468305",
+      "notes": "Grabación real de ranas arborícolas sudamericanas (Hylidae: Dendropsophus carnifex en Ecuador obs 246468305 + Boana pulchella obs 407395985, CC0)",
+      "advisor_review": "pendiente: Grabación de referencia: Dendropsophus carnifex (Quito, Ecuador) (iNaturalist 246468305, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w06_fauna_02",
+      "file": "amb/fauna/w06_fauna_02.wav",
+      "license": "cc0",
+      "source": "Grillos nocturnos suaves del Oriente (grillo arborícola Oecanthus, Gryllidae CC0)",
+      "author": "crebassa (iNaturalist CC0) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/405295820",
+      "notes": "Grabación real de grillo arborícola nocturno (Oecanthus obs 405295820, CC0)",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: grillo Oecanthus pellucens (Landas, Francia) (iNaturalist 405295820, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w06_fauna_03",
+      "file": "amb/fauna/w06_fauna_03.wav",
+      "license": "cc0",
+      "source": "Búho amazónico/sudamericano lejano (caburé Glaucidium brasilianum + curucucú Megascops, Strigidae CC0)",
+      "author": "ferferrari & squidtk (iNaturalist CC0) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/398455943",
+      "notes": "Grabación real de búhos neotropicales (Glaucidium brasilianum en Sudamérica obs 398455943 + Megascops obs 404341369, CC0)",
+      "advisor_review": "pendiente: Grabación de referencia: Glaucidium brasilianum (La Pampa, Argentina) (iNaturalist 398455943, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w07_fauna_01",
+      "file": "amb/fauna/w07_fauna_01.wav",
+      "license": "cc0",
+      "source": "Guacamayos de la collpa en Madre de Dios (grupo social de guacamayos Diopsittaca nobilis en Brasil, Psittacidae CC0)",
+      "author": "gabrielfialho (iNaturalist CC0) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/346194395",
+      "notes": "Grabación real de grupo de guacamayos brasileños (Diopsittaca nobilis obs 346194395 y 367450567, CC0)",
+      "advisor_review": "pendiente: Grabación de referencia: Diopsittaca nobilis (Salvador, Brasil) (iNaturalist 346194395, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w07_fauna_02",
+      "file": "amb/fauna/w07_fauna_02.wav",
+      "license": "cc0",
+      "source": "Vocalización social y movimiento en río de nutrias (Lontra, Lutrinae CC0)",
+      "author": "ritaclare & jilldevito (iNaturalist CC0) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/402547958",
+      "notes": "Grabación real de nutrias de río (Lutrinae: Lontra obs 402547958 y 346867530, CC0)",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: nutria norteamericana Lontra canadensis (Maine, EE. UU.) (iNaturalist 402547958, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w08_fauna_01",
+      "file": "amb/fauna/w08_fauna_01.wav",
+      "license": "cc0",
+      "source": "Coro de aves de altura en el bosque de niebla (solitario de montaña Myadestes + tangara sudamericana Thraupis sayaca + Saltator grandis, CC0)",
+      "author": "morganstickrod, gabrielfialho & ritaclare (iNaturalist CC0)",
+      "url": "https://www.inaturalist.org/observations/403651669",
+      "notes": "Grabación real de solitario de montaña (Myadestes obs 403651669) y tangaras neotropicales (Thraupis sayaca obs 401996047 y Saltator grandis obs 404247818, CC0)",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: Myadestes townsendi (California, EE. UU.) (iNaturalist 403651669, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "amb_w09_fauna_01",
+      "file": "amb/fauna/w09_fauna_01.wav",
+      "license": "cc0",
+      "source": "Giro y coletazo profundo de paiche en el Ucayali (pez Actinopterygii en río CC0 + Shallow_small_river.ogg PD + agua natural PD)",
+      "author": "kzoebel (iNaturalist CC0) & Wikimedia Commons (PD) / Tintalú Sound Design",
+      "url": "https://www.inaturalist.org/observations/169455569",
+      "notes": "Grabación real de pez Actinopterygii en agua (obs 169455569, CC0) y corriente de río sobre lecho natural",
+      "advisor_review": "pendiente: especie o región sustituta, no amazónica; Grabación de referencia: pez Actinopterygii grabado en Alabama (EE. UU.) (iNaturalist 169455569, CC0) Revisión del asesor cultural antes de la 1.0 (anotado por el escritorio el 2026-10-17)."
+    },
+    {
+      "id": "mus_w06_bed",
+      "file": "music/w06_bed.wav",
+      "license": "cc0",
+      "source": "Oriente nocturno: percusión de semillas y cuencos de agua/marimba en La menor / Do mayor pentatónico — lecho armónico sin pulso marcado (-26 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w06_perc1",
+      "file": "music/w06_perc1.wav",
+      "license": "cc0",
+      "source": "Oriente nocturno: percusión de semillas y cuencos de agua/marimba en La menor / Do mayor pentatónico — capa 1 de percusión (maracá y semillas, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w06_perc2",
+      "file": "music/w06_perc2.wav",
+      "license": "cc0",
+      "source": "Oriente nocturno: percusión de semillas y cuencos de agua/marimba en La menor / Do mayor pentatónico — capa 2 de percusión (madera, cajón/claves y güiro, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w06_perc3",
+      "file": "music/w06_perc3.wav",
+      "license": "cc0",
+      "source": "Oriente nocturno: percusión de semillas y cuencos de agua/marimba en La menor / Do mayor pentatónico — capa 3 de percusión (tambores graves y marimba, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w06_bed_night",
+      "file": "music/w06_bed_night.wav",
+      "license": "cc0",
+      "source": "Oriente nocturno: percusión de semillas y cuencos de agua/marimba en La menor / Do mayor pentatónico — variante nocturna grave y cálida (-27 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w07_bed",
+      "file": "music/w07_bed.wav",
+      "license": "cc0",
+      "source": "Madre de Dios: guitarra/arpa cálida y cajón peruano ligero en Do mayor pentatónico — lecho armónico sin pulso marcado (-26 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w07_perc1",
+      "file": "music/w07_perc1.wav",
+      "license": "cc0",
+      "source": "Madre de Dios: guitarra/arpa cálida y cajón peruano ligero en Do mayor pentatónico — capa 1 de percusión (maracá y semillas, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w07_perc2",
+      "file": "music/w07_perc2.wav",
+      "license": "cc0",
+      "source": "Madre de Dios: guitarra/arpa cálida y cajón peruano ligero en Do mayor pentatónico — capa 2 de percusión (madera, cajón/claves y güiro, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w07_perc3",
+      "file": "music/w07_perc3.wav",
+      "license": "cc0",
+      "source": "Madre de Dios: guitarra/arpa cálida y cajón peruano ligero en Do mayor pentatónico — capa 3 de percusión (tambores graves y marimba, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w07_bed_night",
+      "file": "music/w07_bed_night.wav",
+      "license": "cc0",
+      "source": "Madre de Dios: guitarra/arpa cálida y cajón peruano ligero en Do mayor pentatónico — variante nocturna grave y cálida (-27 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w08_bed",
+      "file": "music/w08_bed.wav",
+      "license": "cc0",
+      "source": "Madidi: charango/arpa punteada suave y bombo cálido (sin quena ni zampoña) en Do mayor / La menor pentatónico — lecho armónico sin pulso marcado (-26 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w08_perc1",
+      "file": "music/w08_perc1.wav",
+      "license": "cc0",
+      "source": "Madidi: charango/arpa punteada suave y bombo cálido (sin quena ni zampoña) en Do mayor / La menor pentatónico — capa 1 de percusión (maracá y semillas, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w08_perc2",
+      "file": "music/w08_perc2.wav",
+      "license": "cc0",
+      "source": "Madidi: charango/arpa punteada suave y bombo cálido (sin quena ni zampoña) en Do mayor / La menor pentatónico — capa 2 de percusión (madera, cajón/claves y güiro, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w08_perc3",
+      "file": "music/w08_perc3.wav",
+      "license": "cc0",
+      "source": "Madidi: charango/arpa punteada suave y bombo cálido (sin quena ni zampoña) en Do mayor / La menor pentatónico — capa 3 de percusión (tambores graves y marimba, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w08_bed_night",
+      "file": "music/w08_bed_night.wav",
+      "license": "cc0",
+      "source": "Madidi: charango/arpa punteada suave y bombo cálido (sin quena ni zampoña) en Do mayor / La menor pentatónico — variante nocturna grave y cálida (-27 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w09_bed",
+      "file": "music/w09_bed.wav",
+      "license": "cc0",
+      "source": "Ucayali: cumbia amazónica / chicha suave con órgano Farfisa y guitarra/arpa con wah-wah en Do mayor pentatónico — lecho armónico sin pulso marcado (-26 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w09_perc1",
+      "file": "music/w09_perc1.wav",
+      "license": "cc0",
+      "source": "Ucayali: cumbia amazónica / chicha suave con órgano Farfisa y guitarra/arpa con wah-wah en Do mayor pentatónico — capa 1 de percusión (maracá y semillas, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w09_perc2",
+      "file": "music/w09_perc2.wav",
+      "license": "cc0",
+      "source": "Ucayali: cumbia amazónica / chicha suave con órgano Farfisa y guitarra/arpa con wah-wah en Do mayor pentatónico — capa 2 de percusión (madera, cajón/claves y güiro, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w09_perc3",
+      "file": "music/w09_perc3.wav",
+      "license": "cc0",
+      "source": "Ucayali: cumbia amazónica / chicha suave con órgano Farfisa y guitarra/arpa con wah-wah en Do mayor pentatónico — capa 3 de percusión (tambores graves y marimba, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    },
+    {
+      "id": "mus_w09_bed_night",
+      "file": "music/w09_bed_night.wav",
+      "license": "cc0",
+      "source": "Ucayali: cumbia amazónica / chicha suave con órgano Farfisa y guitarra/arpa con wah-wah en Do mayor pentatónico — variante nocturna grave y cálida (-27 LUFS, VSCO-2-CE CC0)",
+      "author": "Tintalú Sound Design / VSCO-2-CE & Wikimedia Commons (CC0/PD)",
+      "url": "https://github.com/sgossner/VSCO-2-CE",
+      "notes": "Masterizado a 48 kHz / 24 bits PCM en Do mayor / La menor pentatónico"
+    }
+  ]
+}

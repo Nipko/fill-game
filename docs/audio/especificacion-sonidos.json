@@ -3,7 +3,7 @@
  "date": "2026-10-17",
  "format": {
   "sample_rate": 48000,
-  "bit_depth": 24,
+  "bit_depth": 16,
   "container": "WAV PCM"
  },
  "global": {
