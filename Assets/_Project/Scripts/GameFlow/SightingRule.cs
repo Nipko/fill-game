@@ -13,8 +13,8 @@ namespace AF.GameFlow
     /// (persistir los avistamientos y emitir <c>af_fauna_sighted</c> exige migrar el perfil y la aprobación del dueño, Q11; PR
     /// aparte). Solo en el primer intento del nivel: los reintentos ya la vieron. Decide también en qué niveles sale la tarjeta
     /// «Fruta nueva» y de qué tinte (<see cref="FruitNewAt"/>; 06 §4.5; tarea F5). Los niveles ocupados por estrenos salen de la
-    /// especificación de la campaña (<see cref="OccupiedDebutLevels"/>, con las variantes de capacidad 18, 22 y 160) más los
-    /// hitos de 02 §13 (propuesta de Frutas §3.3).
+    /// especificación de la campaña (<see cref="OccupiedDebutLevels"/>, con las variantes de capacidad 18, 22 y 160 y los estrenos
+    /// aún sin tarjeta 323, 343 y 403) más los hitos de 02 §13 (propuesta de Frutas §3.3).
     /// </summary>
     public static class SightingRule
     {
@@ -89,12 +89,24 @@ namespace AF.GameFlow
         public static readonly int[] CapacityVariantLevels = { 18, 22, 160 };
 
         /// <summary>
+        /// Estrenos de <c>campaign_v2.json</c> (<c>mechanics[].debut</c>) cuya tarjeta de estreno aún no tiene el cliente: la
+        /// Tinaja en el 323 (D-019; 06 y 07, lista única de estrenos), el Brote de dos hojas en el 343 y la Flor en el 403 (02 §9.1,
+        /// «Variantes»). Ocupan ya su nivel (<see cref="IsBusy"/> y <see cref="OccupiedDebutLevels"/>): la tarjeta del miquito
+        /// nunca cae en un estreno (07 §6.4; 02 §13), aunque sus packs lleguen antes que su tarjeta. No cuentan en
+        /// <see cref="IsDebut"/> ni en <see cref="MilestoneLevels"/>, que siguen siendo los estrenos con tarjeta. Cuando un estreno
+        /// tenga la suya (el 343 y el 403 con VA1b, en <see cref="VariantDebutLevels"/>; la Tinaja, con la tarea que le dé
+        /// tarjeta, en <see cref="MechanicDebutLevels"/>), sale de aquí; mientras siga, la unión no lo repite.
+        /// </summary>
+        public static readonly int[] DebutsWithoutCardLevels = { 323, 343, 403 };
+
+        /// <summary>
         /// Todos los estrenos de la campaña que ocupan su nivel (<c>mechanics[].debut</c> ∪ <c>capacities[].debut</c> de las
         /// especificaciones): <see cref="MechanicDebutLevels"/>, <see cref="VariantDebutLevels"/> y
-        /// <see cref="CapacityVariantLevels"/>, en orden y sin repetidos. Lo compara con <c>campaign_v1.json</c> y
-        /// <c>campaign_v2.json</c> OccupiedLevelsTests.
+        /// <see cref="CapacityVariantLevels"/> y <see cref="DebutsWithoutCardLevels"/>, en orden y sin repetidos. Lo compara con
+        /// <c>campaign_v1.json</c> y <c>campaign_v2.json</c>, sin excepciones, OccupiedLevelsTests.
         /// </summary>
-        public static readonly int[] OccupiedDebutLevels = SortedUnion(SortedUnion(MechanicDebutLevels, VariantDebutLevels), CapacityVariantLevels);
+        public static readonly int[] OccupiedDebutLevels = SortedUnion(
+            SortedUnion(SortedUnion(MechanicDebutLevels, VariantDebutLevels), CapacityVariantLevels), DebutsWithoutCardLevels);
 
         /// <summary>
         /// <paramref name="level"/> estrena una mecánica o una variante con su tarjeta de estreno (<see cref="MechanicDebutLevels"/>
@@ -106,13 +118,13 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// El nivel ya tiene banner de mundo (<see cref="WorldBanners.ShowsOn"/>), Fruta nueva, un hito propio o el estreno de una
-        /// variante de capacidad (<see cref="CapacityVariantLevels"/>).
+        /// El nivel ya tiene banner de mundo (<see cref="WorldBanners.ShowsOn"/>), Fruta nueva, un hito propio o un estreno de la
+        /// campaña sin tarjeta propia (<see cref="CapacityVariantLevels"/> y <see cref="DebutsWithoutCardLevels"/>).
         /// </summary>
         public static bool IsBusy(int level)
         {
             return WorldBanners.ShowsOn(level) || Array.IndexOf(FruitDebutLevels, level) >= 0
-                || Array.IndexOf(MilestoneLevels, level) >= 0 || Array.IndexOf(CapacityVariantLevels, level) >= 0;
+                || Array.IndexOf(MilestoneLevels, level) >= 0 || Array.IndexOf(OccupiedDebutLevels, level) >= 0;
         }
 
         /// <summary>

@@ -20,14 +20,23 @@ namespace AF.UI
     /// <see cref="SightingCard"/>): la misma placa de madera clara con su canto, el mismo sitio (sobre la franja del panorama si
     /// cabe; si no, sobre el muelle, por encima de la bandeja y de sus burbujas) y la misma cola de avisos (GameScreen.Notices.cs:
     /// tipo FruitNew, con la prioridad tutorial &gt; Fruta nueva &gt; miquito &gt; rótulo, como mucho una tarjeta por nivel). En los
-    /// tableros de 3 filas, donde no cabe en ninguno de los dos (el 111 y el 201), va como placa de una línea clavada al marco
-    /// bajo el HUD, como el rótulo del lugar (<see cref="PlaceAsPlate"/>) [P].
+    /// tableros de 3 filas, donde no cabe en ninguno de los dos (el 111 y el 201 a 360 × 780 dp; con la escala de texto, también
+    /// alguno de 2 filas), va como placa de una línea clavada al marco bajo el HUD, como el rótulo del lugar
+    /// (<see cref="PlaceAsPlate"/>) [P]; si ni así cabe a 12 sp (el 111 y el 201 a 360 × 780 dp al 130 %), no sale y la sonda
+    /// <c>AF_STATE fruit_new</c> lo cuenta con <c>mode</c> none [P].
     /// <list type="bullet">
     /// <item><b>Duración:</b> la de lectura de D-011 (<see cref="NoticeTiming.ReadMs(string, string, string)"/> con el nombre y la
     /// frase, 3-7 s) [P], en lugar de los 2 s de 06 §4.5, como los demás avisos del tablero; fundido de entrada y salida.</item>
     /// <item><b>Texto:</b> ninguno baja de 12 sp (02 §12; pregunta 36 (a), D-020; A1): el nombre a 15 sp (se encoge hasta 12 si no
     /// cabe con su muestra) y la frase a 13 sp, que pasa a una segunda línea si no cabe, y la tarjeta crece (<see cref="Measure"/>);
     /// con la escala de texto (<see cref="UiBuilder.TextScale"/>) crecen las filas.</item>
+    /// <item><b>Icono:</b> sobre un disco propio a la resolución de la UI (<see cref="ProceduralArt.FruitNewDisc"/>) del color que
+    /// le da contraste (<see cref="DiscFor"/>: la crema de <see cref="FactLine.IconBack"/> para los iconos oscuros, como el açaí o
+    /// la hoja del Río Negro, y la madera de <see cref="Palette.FamilyWood"/> para los claros, como la guanábana, el copoazú o el
+    /// huito; con los iconos procedurales, todos a ≥ 3:1), con un contorno de 1,5 dp de tinta
+    /// #2B2118 a alfa 0,45 (D-003, principio 3: contraste local) [P].</item>
+    /// <item><b>Frase:</b> sin una palabra sola en la última línea: si queda viuda, el último espacio se muestra como espacio
+    /// duro (U+00A0) y la palabra baja con su compañera (<see cref="ShownTag"/>; la tabla de textos no cambia) [P].</item>
     /// <item><b>Toques:</b> ninguno (<c>raycastTarget</c> = false y <see cref="CanvasGroup.blocksRaycasts"/> = false); no tapa cuias
     /// ni botones.</item>
     /// <item><b>Textos:</b> si falta el nombre o la frase en el idioma de la UI (o, en release, sin aprobar del asesor), no sale:
@@ -67,6 +76,24 @@ namespace AF.UI
         /// <summary>Entre el icono, la frase y la muestra en la placa (dp) [P].</summary>
         public const float PlateGapDp = 6f;
 
+        /// <summary>Contraste mínimo del icono con su disco (iconos ≥ 3:1; direccion-visual-v2 §2.4) [P].</summary>
+        public const float IconDiscContrastMin = 3f;
+
+        /// <summary>Contorno del icono de la fruta (dp) [P].</summary>
+        public const float IconOutlineDp = 1.5f;
+
+        /// <summary>Tinta del contorno del icono: #2B2118 a alfa 0,45 [P].</summary>
+        public static readonly Color IconOutline = new Color(0x2B / 255f, 0x21 / 255f, 0x18 / 255f, 0.45f);
+
+        /// <summary>
+        /// Colores del disco bajo el icono, por orden de preferencia (<see cref="DiscFor"/>): la crema oscurecida de la línea de
+        /// fruta de la victoria (<see cref="FactLine.IconBack"/>), <c>madera_base</c> y <c>madera_oscura</c> de la familia Madera.
+        /// </summary>
+        public static readonly Color[] DiscColors = { FactLine.IconBack, Palette.FamilyWood.Base, Palette.FamilyWood.Deep };
+
+        // Espacio duro con el que la última palabra de la frase baja acompañada.
+        private const char NoBreakSpace = '\u00A0';
+
         private const float FadeMs = 200f;
 
         // Fila del nombre, aire entre filas y aire de arriba y de abajo del bloque de texto (dp, por la escala).
@@ -88,7 +115,9 @@ namespace AF.UI
         private readonly Image _swatch;
         private readonly TextMeshProUGUI _name;
         private readonly TextMeshProUGUI _tag;
+        private readonly ProceduralArt _art;
         private readonly float _scale;
+        private string _tagSource = string.Empty; // la frase de la tabla (la que se muestra puede llevar un espacio duro)
         private float _leftMs = -1f;
         private float _totalMs;
         private float _height = HeightDp;
@@ -99,6 +128,7 @@ namespace AF.UI
         public FruitNewCard(Transform parent, ProceduralArt art)
         {
             _scale = UiBuilder.TextScale;
+            _art = art;
             _root = UiBuilder.Rect("FruitNewCard", parent);
             _group = _root.gameObject.AddComponent<CanvasGroup>();
             _group.blocksRaycasts = false;
@@ -111,11 +141,15 @@ namespace AF.UI
             _plate = UiBuilder.Sliced("Plate", _root, art.RoundedRect, Palette.PanelLight);
             _plate.pixelsPerUnitMultiplier = 24f / 14f;
             UiBuilder.Stretch(_plate.rectTransform);
-            // El disco bajo la fruta, el de la línea de fruta de la victoria (FactLine): las frutas claras (copoazú, guanábana)
-            // se distinguen sobre la crema de la placa.
-            _iconBack = UiBuilder.Image("FruitBack", _root, art.Disc, FactLine.IconBack);
+            // El disco bajo la fruta, a la resolución de la UI, del color que le da contraste al icono (DiscFor, en Show), y el
+            // contorno del icono, que lo separa también de la placa cuando va sin disco.
+            _iconBack = UiBuilder.Image("FruitBack", _root, art.FruitNewDisc, FactLine.IconBack);
             _icon = UiBuilder.Image("Fruit", _root, null, Color.white);
             _icon.preserveAspect = true;
+            Outline outline = _icon.gameObject.AddComponent<Outline>();
+            outline.effectColor = IconOutline;
+            outline.effectDistance = new Vector2(IconOutlineDp, -IconOutlineDp);
+            outline.useGraphicAlpha = true;
             _swatch = UiBuilder.Image("Swatch", _root, null, Color.white);
             _swatch.preserveAspect = true;
             _name = UiBuilder.Label("Name", _root, TextStyle.PlainBold, string.Empty, NameSp, Palette.FamilyWood.Base, TextAlignmentOptions.Left);
@@ -131,8 +165,20 @@ namespace AF.UI
         /// <summary>Nombre del tinte que muestra.</summary>
         public string Name => _name.text;
 
-        /// <summary>Frase de «Fruta nueva» que muestra.</summary>
-        public string Tag => _tag.text;
+        /// <summary>Frase de «Fruta nueva» que muestra, como está en la tabla de textos.</summary>
+        public string Tag => _tagSource;
+
+        /// <summary>La frase tal como se ve: con un espacio duro (U+00A0) si evitó una palabra sola en la última línea.</summary>
+        public string ShownTag => _tag.text;
+
+        /// <summary>Color del disco bajo el icono (<see cref="DiscFor"/>; tests).</summary>
+        public Color DiscColor => _iconBack.color;
+
+        /// <summary>Contraste del icono que muestra con su disco (luminancia media del icono; tests y capturas).</summary>
+        public float IconDiscContrast { get; private set; }
+
+        /// <summary>Luminancia relativa media del icono que muestra (<see cref="ProceduralArt.FruitIconLuminance"/>; tests).</summary>
+        public float IconLuminance { get; private set; }
 
         /// <summary>Índice de motor del tinte que muestra (glosario §9; 0 si ninguno).</summary>
         public int Tint { get; private set; }
@@ -188,6 +234,7 @@ namespace AF.UI
         public float Measure(float canvasW, string name, string tag)
         {
             _name.text = name;
+            _tagSource = tag;
             _tag.text = tag;
             CardMode();
             float s = _scale;
@@ -196,6 +243,16 @@ namespace AF.UI
             _nameWidth = Mathf.Min(PreferredWidth(_name), Mathf.Max(0f, column - swatch));
             Vector2 oneLine = _tag.GetPreferredValues(tag, float.PositiveInfinity, float.PositiveInfinity);
             float tagHeight = _tag.GetPreferredValues(tag, column, float.PositiveInfinity).y;
+            if (oneLine.x > column)
+            {
+                string shown = WithoutWidow(tag, column, tagHeight);
+                if (!ReferenceEquals(shown, tag))
+                {
+                    _tag.text = shown;
+                    tagHeight = _tag.GetPreferredValues(shown, column, float.PositiveInfinity).y;
+                }
+            }
+
             _cardWidth = -1f;
             if (oneLine.x <= column)
             {
@@ -248,6 +305,7 @@ namespace AF.UI
         public bool PlaceAsPlate(float canvasW, string name, string tag, float top, float maxBottom)
         {
             _name.text = name;
+            _tagSource = tag;
             _tag.text = tag;
             OnPlate = true;
             _name.gameObject.SetActive(false);
@@ -292,15 +350,27 @@ namespace AF.UI
         /// <summary>
         /// Muestra la tarjeta del tinte <paramref name="tint"/> (índice de motor) el tiempo de leerla:
         /// <see cref="NoticeTiming.ReadMs(string, string, string)"/> con el nombre y la frase (D-011, punto 2; en la placa, solo
-        /// la frase, que es lo que se lee). Sin el icono o la muestra (null), su sitio queda vacío.
+        /// la frase, que es lo que se lee). Sin el icono o la muestra (null), su sitio queda vacío. El disco toma el color que da
+        /// más contraste al icono del tinte (<see cref="DiscFor"/> con <see cref="ProceduralArt.FruitIconLuminance"/>).
         /// </summary>
         public void Show(int tint, Sprite? icon, Sprite? swatch)
         {
-            int ms = NoticeTiming.ReadMs(OnPlate ? null : _name.text, _tag.text, null);
+            int ms = NoticeTiming.ReadMs(OnPlate ? null : _name.text, _tagSource, null);
             Tint = tint;
             _icon.sprite = icon;
             _icon.enabled = icon != null;
             _iconBack.enabled = icon != null && !OnPlate;
+            IconDiscContrast = 0f;
+            IconLuminance = 0f;
+            if (icon != null && tint > 0)
+            {
+                float lum = _art.FruitIconLuminance(tint);
+                IconLuminance = lum;
+                Color disc = DiscFor(lum);
+                _iconBack.color = disc;
+                IconDiscContrast = Contrast(lum, ColorMath.RelativeLuminance(disc));
+            }
+
             _swatch.sprite = swatch;
             _swatch.enabled = swatch != null;
             _leftMs = ms;
@@ -332,6 +402,39 @@ namespace AF.UI
             }
         }
 
+        /// <summary>
+        /// Color del disco para un icono de luminancia relativa media <paramref name="iconLuminance"/>: el primero de
+        /// <see cref="DiscColors"/> que llega a <see cref="IconDiscContrastMin"/> con él (la crema, salvo las frutas claras) o, si
+        /// ninguno llega (iconos de tono medio, que se separan con su contorno), el de más contraste.
+        /// </summary>
+        public static Color DiscFor(float iconLuminance)
+        {
+            Color best = DiscColors[0];
+            float bestContrast = 0f;
+            for (int i = 0; i < DiscColors.Length; i++)
+            {
+                float c = Contrast(iconLuminance, ColorMath.RelativeLuminance(DiscColors[i]));
+                if (c >= IconDiscContrastMin)
+                {
+                    return DiscColors[i];
+                }
+
+                if (c > bestContrast)
+                {
+                    bestContrast = c;
+                    best = DiscColors[i];
+                }
+            }
+
+            return best;
+        }
+
+        /// <summary>Contraste WCAG entre dos luminancias relativas (1 a 21).</summary>
+        public static float Contrast(float a, float b)
+        {
+            return (Mathf.Max(a, b) + 0.05f) / (Mathf.Min(a, b) + 0.05f);
+        }
+
         /// <summary>Añade los gráficos de la tarjeta (tests de raycast).</summary>
         public void CollectGraphics(List<Graphic> graphics)
         {
@@ -342,6 +445,27 @@ namespace AF.UI
             graphics.Add(_swatch);
             graphics.Add(_name);
             graphics.Add(_tag);
+        }
+
+        // La frase sin una palabra sola en su última línea (con el ancho column y el alto height que ya midió): si sin su última
+        // palabra ocupa una línea menos, esa palabra iba sola; entonces el último espacio pasa a espacio duro y baja con la
+        // anterior, siempre que el alto no crezca. Con menos de tres palabras, o si no mejora, la deja como está (la misma cadena).
+        private string WithoutWidow(string tag, float column, float height)
+        {
+            int last = tag.LastIndexOf(' ');
+            if (last <= 0 || last >= tag.Length - 1 || tag.LastIndexOf(' ', last - 1) <= 0)
+            {
+                return tag;
+            }
+
+            string head = tag.Substring(0, last);
+            if (_tag.GetPreferredValues(head, column, float.PositiveInfinity).y >= height - 0.5f)
+            {
+                return tag; // la última palabra no va sola
+            }
+
+            string kept = head + NoBreakSpace + tag.Substring(last + 1);
+            return _tag.GetPreferredValues(kept, column, float.PositiveInfinity).y <= height + 0.5f ? kept : tag;
         }
 
         // Alto del bloque de texto: la fila del nombre, el aire y la frase.

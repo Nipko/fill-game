@@ -19,7 +19,8 @@ namespace AF.Tests.EditMode
     /// <c>tools/level-generator/specs/campaign_v1.json</c> y <c>campaign_v2.json</c>) más los hitos de 02 §13 quedan ocupados para
     /// la tarjeta del miquito, incluidos 100, 163, 18, 22, 160, 243 y 283. Y la tarjeta «Fruta nueva» (06 §4.5): sus tintes y sus
     /// niveles son los del glosario §9 y los de los packs (el primer nivel en que sale cada tinte), sale en 2, 4, 7, 11, 21, 41, 61,
-    /// 81, 111, 141 y 201 (y en el 301), nunca en el 1 ni fuera del primer intento, y sus textos están en la tabla.
+    /// 81, 111, 141 y 201 (y en el 301), nunca en el 1 ni fuera del primer intento, y sus textos están en la tabla. Los tintes y sus
+    /// estrenos son también los de <c>tints[]</c> de <c>campaign_v2.json</c>.
     /// </summary>
     public sealed class OccupiedLevelsTests
     {
@@ -27,12 +28,9 @@ namespace AF.Tests.EditMode
         // Cosecha doble 11, Morpho 12, Cántaro 20, animación corta 21, Pororoca 30, Canoas y Cuia de rescate 31).
         private static readonly int[] Section13Milestones = { 3, 7, 8, 10, 11, 12, 20, 21, 30, 31 };
 
-        // Estrenos de campaign_v2 que el cliente aún no tiene: la Tinaja (323, D-019; TJ4 y C1b), y el Brote de dos hojas (343) y
-        // la Flor (403), de VA1b. Sus tareas los añaden a SightingRule y los quitan de aquí.
-        private static readonly int[] PendingDebuts = { 323, 343, 403 };
-
-        // Los niveles que nombra la tarea F5.
-        private static readonly int[] NamedOccupied = { 100, 163, 18, 22, 160, 243, 283 };
+        // Los niveles que nombra la tarea F5, más los estrenos de campaign_v2 aún sin tarjeta en el cliente (la Tinaja en el 323,
+        // D-019; el Brote de dos hojas en el 343 y la Flor en el 403): ocupados ya, sin esperar a su tarjeta.
+        private static readonly int[] NamedOccupied = { 100, 163, 18, 22, 160, 243, 283, 323, 343, 403 };
 
         // Niveles de la tarjeta «Fruta nueva» en 1-320 (criterio de aceptación de F5, más el 301 del arazá).
         private static readonly int[] FruitNewLevels = { 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201, 301 };
@@ -67,10 +65,9 @@ namespace AF.Tests.EditMode
             Assert.That(v1.IsSubsetOf(v2), Is.True, "campaign_v2 conserva los estrenos de 1-200 de campaign_v1");
             var expected = new SortedSet<int>(v1);
             expected.UnionWith(v2);
-            foreach (int pending in PendingDebuts)
+            foreach (int debut in new[] { 323, 343, 403 })
             {
-                Assert.That(expected.Remove(pending), Is.True, "el " + pending + " es un estreno de campaign_v2");
-                Assert.That(SightingRule.OccupiedDebutLevels, Has.No.Member(pending), "el " + pending + " entra con su tarea");
+                Assert.That(expected, Does.Contain(debut), "Tinaja, Brote de dos hojas y Flor (campaign_v2): " + debut);
             }
 
             Assert.That(SightingRule.OccupiedDebutLevels, Is.Ordered, "en orden");
@@ -79,6 +76,14 @@ namespace AF.Tests.EditMode
             foreach (int debut in expected)
             {
                 Assert.That(SightingRule.IsBusy(debut), Is.True, "estreno del " + debut + ": sin tarjeta del miquito");
+            }
+
+            // Los estrenos aún sin tarjeta ocupan su nivel, pero no son estrenos con tarjeta ni hitos (IsDebut y MilestoneLevels).
+            foreach (int debut in SightingRule.DebutsWithoutCardLevels)
+            {
+                Assert.That(v2, Does.Contain(debut), "el " + debut + " es un estreno de campaign_v2");
+                Assert.That(SightingRule.IsDebut(debut), Is.False, "el " + debut + " aún no tiene tarjeta de estreno en el cliente");
+                Assert.That(SightingRule.MilestoneLevels, Has.No.Member(debut), "el " + debut);
             }
         }
 
@@ -142,6 +147,9 @@ namespace AF.Tests.EditMode
             Assert.That(SightingRule.IsBusy(19), Is.False);
             Assert.That(SightingRule.IsBusy(23), Is.False);
             Assert.That(SightingRule.IsBusy(161), Is.False);
+            Assert.That(SightingRule.IsBusy(324), Is.False);
+            Assert.That(SightingRule.IsBusy(344), Is.False);
+            Assert.That(SightingRule.IsBusy(404), Is.False);
         }
 
         [Test]
@@ -160,6 +168,29 @@ namespace AF.Tests.EditMode
 
             Assert.That(new SortedSet<string>(tints), Is.EqualTo(engine), "los 14 tintes del glosario §9, una vez cada uno");
             Assert.That(SightingRule.FruitDebutLevels, Is.EqualTo(new[] { 1, 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201, 301 }), "07 §3 y 06 §4.5");
+        }
+
+        [Test]
+        public void FruitDebutTints_AreTheTintsOfCampaignV2()
+        {
+            // tints[] (id, debut) de campaign_v2.json: los 14 estrenos, también los de 201-700 que aún no salen en los packs del
+            // cliente (cacao en el 201 y arazá en el 301; glosario §9).
+            JsonValue spec = JsonParser.Parse(File.ReadAllText(SpecPath("campaign_v2.json")));
+            var expected = new SortedDictionary<string, int>();
+            foreach (JsonValue t in spec.Get("tints")!.Items)
+            {
+                expected.Add(t.Get("id")!.AsString(), t.Get("debut")!.AsInt());
+            }
+
+            var client = new SortedDictionary<string, int>();
+            for (int i = 0; i < SightingRule.FruitDebutTints.Length; i++)
+            {
+                client.Add(SightingRule.FruitDebutTints[i], SightingRule.FruitDebutTintLevels[i]);
+            }
+
+            Assert.That(client, Is.EqualTo(expected), "FruitDebutTints y FruitDebutTintLevels = tints[] (id, debut) de campaign_v2");
+            Assert.That(client["cacao"], Is.EqualTo(201));
+            Assert.That(client["araza"], Is.EqualTo(301));
         }
 
         [Test]

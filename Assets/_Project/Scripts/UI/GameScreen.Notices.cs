@@ -26,7 +26,8 @@ namespace AF.UI
     /// las etiquetas del HUD mientras se ve y la ocultan lo mismo (un modal del embudo, otro intento, otro nivel, la celebración
     /// o, sobre el muelle, una burbuja que sale debajo). Con 3 filas (el 111 y el 201), donde no cabe ni en la franja ni sobre el
     /// muelle, va como placa de una línea clavada al marco, como el rótulo del lugar, y se va si una cuia de la fila 1 que queda
-    /// debajo se eleva hasta ella o si cambia el tablero [P]. Sonda <c>AF_STATE fruit_new</c> (<c>mode</c>: band, dock o plate).
+    /// debajo se eleva hasta ella o si cambia el tablero [P]. Sonda <c>AF_STATE fruit_new</c> (<c>mode</c>: band, dock o plate; none,
+    /// con <c>ms</c> 0, si no cabe en ninguno y no sale).
     /// </summary>
     /// <remarks>
     /// <para><b>Cuándo</b>: solo en PLAYING y sin victoria ni bloqueo pendientes (<c>NoticesHeld</c>). Ninguno durante LOADING,
@@ -837,13 +838,15 @@ namespace AF.UI
             }
             else
             {
-                // Ni en la franja ni sobre el muelle (3 filas: el 111 y el 201): como placa de una línea clavada al marco, por
-                // encima de lo más alto de la fila 1 en reposo con su aire, como la del rótulo del lugar (FX4) [P]. Si ni así cabe
-                // (o una cuia de la fila 1 ya está elevada bajo ella), no sale.
+                // Ni en la franja ni sobre el muelle (3 filas, como el 111 y el 201, o la escala de texto grande): como placa de
+                // una línea clavada al marco, por encima de lo más alto de la fila 1 en reposo con su aire, como la del rótulo del
+                // lugar (FX4) [P]. Si ni así cabe (o una cuia de la fila 1 ya está elevada bajo ella), no sale, y la sonda lo cuenta
+                // (mode "none"): así se ve en el teléfono quién la pierde (p. ej. con la escala de texto grande).
                 float plateTop = StopLabelPlateTop(l);
                 float rowTop = StopLabelRowOneTop(l);
                 if (!_fruitNew.PlaceAsPlate(_canvasW, name, tag, plateTop, rowTop - StopLabel.PlateCuiaGapDp))
                 {
+                    EmitFruitNewProbe(fruit, 0, FruitNewNone);
                     return;
                 }
 
@@ -853,6 +856,7 @@ namespace AF.UI
                 if (FruitNewPlateRowOneLifted())
                 {
                     _fruitNewPlateLayout = null;
+                    EmitFruitNewProbe(fruit, 0, FruitNewNone);
                     return;
                 }
             }
@@ -860,7 +864,7 @@ namespace AF.UI
             int tint = FactLine.TintOf(SightingRule.FruitDebutTints[fruit]);
             _fruitNew.Show(tint, tint > 0 ? _art.FruitFlight(tint) : null, tint > 0 ? _art.TintSwatch(tint) : null);
             AF.Audio.AudioCues.PlayFruit(AF.Audio.SfxId.FruitNew, tint); // AU1: tarjeta «Fruta nueva»
-            EmitFruitNewProbe(fruit, (int)_fruitNew.DurationMs);
+            EmitFruitNewProbe(fruit, (int)_fruitNew.DurationMs, FruitNewMode);
         }
 
         /// <summary>
@@ -874,9 +878,12 @@ namespace AF.UI
             return _fruitNew.Visible;
         }
 
-        // AF_STATE fruit_new: nivel, tinte, duración y sitio (FruitNewMode: band, dock o plate). Solo con la sonda; al enseñarla,
-        // nunca por fotograma.
-        private void EmitFruitNewProbe(int fruit, int ms)
+        // Sitio de la sonda fruit_new cuando la tarjeta no cabe en ninguno y no sale (ms 0).
+        private const string FruitNewNone = "none";
+
+        // AF_STATE fruit_new: nivel, tinte, duración y sitio (mode: band, dock, plate o, si no cabe y no sale, none). Solo con la
+        // sonda; al enseñarla o al perderla, nunca por fotograma.
+        private void EmitFruitNewProbe(int fruit, int ms, string mode)
         {
             if (!DevProbe.Enabled)
             {
@@ -889,16 +896,18 @@ namespace AF.UI
             sb.Append("\"level\":").Append((_flow?.LevelNumber ?? 0).ToString(CultureInfo.InvariantCulture));
             AppendJsonString(sb, "tint", SightingRule.FruitDebutTints[fruit]);
             sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
-            AppendJsonString(sb, "mode", FruitNewMode);
+            AppendJsonString(sb, "mode", mode);
             _lastFruitNewProbe = sb.ToString();
             _probe.Event("fruit_new", _lastFruitNewProbe);
         }
 
         /// <summary>
         /// Sitio de la tarjeta «Fruta nueva», como lo cuenta la sonda <c>fruit_new</c>: <c>band</c> (sobre la franja del
-        /// panorama), <c>dock</c> (sobre el muelle) o <c>plate</c> (placa de una línea clavada al marco; tests).
+        /// panorama), <c>dock</c> (sobre el muelle) o <c>plate</c> (placa de una línea clavada al marco), y <c>none</c> si no está
+        /// a la vista (tests).
         /// </summary>
-        internal string FruitNewMode => _fruitNew.OnPlate ? "plate" : float.IsNaN(_fruitNewDockBottom) ? "band" : "dock";
+        internal string FruitNewMode => !_fruitNew.Visible ? FruitNewNone
+            : _fruitNew.OnPlate ? "plate" : float.IsNaN(_fruitNewDockBottom) ? "band" : "dock";
 
         // Con la tarjeta «Fruta nueva» como placa a la vista: si una cuia de la fila 1 que queda bajo ella se eleva hasta ella, o
         // si cambian el tablero, el lienzo o su desplazamiento, se oculta en el acto y no vuelve (como el rótulo, FX4; sin volver
