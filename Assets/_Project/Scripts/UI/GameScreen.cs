@@ -1037,6 +1037,7 @@ namespace AF.UI
             // Con el toque habilitado salen los avisos que esperaban (D-011, punto 2): el regalo de Capi, «+1 Luciérnaga»…; la
             // tarjeta del miquito queda pendiente hasta que la tropa se vaya (GameScreen.Notices.cs).
             LevelFlow ready = RequireFlow();
+            MaybeShowTutorial(ready); // la instrucción del tutorial con TiTino en 1, 2, 3 y 6 (TU1a), la primera de la cola
             MaybeShowFruitNew(ready); // «Fruta nueva» en el estreno de un tinte (F5), antes que el miquito y el rótulo
             MaybeShowSighting(ready);
             ShowRevealGiftIfReady(ready);

@@ -93,6 +93,20 @@ namespace AF.Tests.PlayMode
             NoBannerTravelUnlessSet();
             NoFruitNewUnlessSet();
             NoSlothRestartNoticeUnlessSet();
+            NoTutorialSlothUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga la instrucción del tutorial con TiTino (TU1a) si el test no la fijó (<see cref="GameScreen.TutorialSlothOverride"/>
+        /// = null): los tests que no tratan de ella juegan el 1, 2, 3 y 6 con sus avisos, sus etiquetas del HUD y sus capturas como
+        /// antes de que existiera. Los que la prueban (<c>TutorialSlothTests</c>) la encienden y la vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoTutorialSlothUnlessSet()
+        {
+            if (GameScreen.TutorialSlothOverride == null)
+            {
+                GameScreen.TutorialSlothOverride = false;
+            }
         }
 
         /// <summary>

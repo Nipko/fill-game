@@ -17,6 +17,9 @@ namespace AF.UI
     /// 12 sp: la tarjeta crece en alto. Dura lo que se tarda en leerla (<see cref="NoticeTiming.ReadMs(string)"/>, D-011), con
     /// fundido de entrada y salida; no captura toques (<c>raycastTarget</c> = false y <see cref="CanvasGroup.blocksRaycasts"/>
     /// = false). Dónde va y cuándo sale lo decide la cola de avisos (GameScreen.Notices.cs). Perezosa: la crea el primer aviso.
+    /// <para>La misma tarjeta lleva la instrucción del tutorial de 1, 2, 3 y 6 (tarea TU1a; 02 §13), con el gesto
+    /// <c>sloth_present</c> (<see cref="Show(Sprite, bool, SlothPoseId)"/>): el retrato ladea la cabeza hacia la instrucción. Las
+    /// dos nunca coinciden: en esos niveles no hay aviso tras Volver a la orilla.</para>
     /// </summary>
     internal sealed class SlothNoticeCard
     {
@@ -56,6 +59,7 @@ namespace AF.UI
         private float _totalMs;
         private float _clockMs;
         private bool _reduceMotion;
+        private SlothPoseId _pose = SlothPoseId.Encourage;
         private float _height = HeightDp;
         private float _textHeight;
         private float _textWidth;
@@ -114,6 +118,9 @@ namespace AF.UI
 
         /// <summary>Retrato (tests).</summary>
         public Image Portrait => _portrait;
+
+        /// <summary>Gesto del retrato: <c>sloth_encourage</c> en el aviso del reinicio, <c>sloth_present</c> en el tutorial.</summary>
+        public SlothPoseId Pose => _pose;
 
         /// <summary>
         /// Pone la frase y devuelve el alto de la tarjeta en un lienzo de <paramref name="canvasW"/> dp, o −1 si la frase no cabe
@@ -182,8 +189,18 @@ namespace AF.UI
         /// </summary>
         public void Show(Sprite portrait, bool reduceMotion)
         {
+            Show(portrait, reduceMotion, SlothPoseId.Encourage);
+        }
+
+        /// <summary>
+        /// Como <see cref="Show(Sprite, bool)"/>, con el gesto <paramref name="pose"/> del retrato (<c>sloth_present</c> en la
+        /// instrucción del tutorial, TU1a).
+        /// </summary>
+        public void Show(Sprite portrait, bool reduceMotion, SlothPoseId pose)
+        {
             int ms = NoticeTiming.ReadMs(_text.text);
             _portrait.sprite = portrait;
+            _pose = pose;
             _reduceMotion = reduceMotion;
             _clockMs = 0f;
             _leftMs = ms;
@@ -229,11 +246,11 @@ namespace AF.UI
             graphics.Add(_text);
         }
 
-        // El retrato asiente con sloth_encourage: el ladeo y la cabezada de la cabeza del rig (SlothRig.Evaluate, sin
-        // asignaciones); con Reducir movimiento, su reposo.
+        // El retrato asiente con sloth_encourage (o ladea la cabeza hacia la instrucción con sloth_present): el ladeo de la cabeza
+        // del rig (SlothRig.Evaluate, sin asignaciones); con Reducir movimiento, su reposo.
         private void ApplyGesture()
         {
-            SlothPose pose = SlothRig.Evaluate(SlothPoseId.Encourage, _clockMs, _reduceMotion);
+            SlothPose pose = SlothRig.Evaluate(_pose, _clockMs, _reduceMotion);
             Quaternion tilt = Quaternion.Euler(0f, 0f, pose.HeadAngle);
             if (_portrait.rectTransform.localRotation != tilt)
             {

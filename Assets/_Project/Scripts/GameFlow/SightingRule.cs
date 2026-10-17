@@ -7,7 +7,8 @@ namespace AF.GameFlow
     /// <summary>
     /// En qué nivel sale la tarjeta «¡Miquito a la vista!» (guion de la intro §4.5 y §14): en el primer nivel ≥
     /// <c>nivel_tarjeta</c> que esté libre, sin banner de mundo, sin Fruta nueva, sin debut de mecánica o de comodín y sin
-    /// tutorial pendiente al empezar, con una sola tarjeta por nivel (prioridad tutorial → Fruta nueva → miquito). Los niveles
+    /// tutorial pendiente al empezar, con una sola tarjeta por nivel (prioridad tutorial → Fruta nueva → miquito; la instrucción
+    /// del tutorial con TiTino de 1, 2, 3 y 6 ocupa su nivel, <see cref="TutorialInstruction"/>, tarea TU1a). Los niveles
     /// con banner salen de la única regla que los decide, <see cref="WorldBanners"/> (11, 41, 81, 141…; el 1 no lo lleva por
     /// decisión del dueño, pero ya está ocupado por la Fruta nueva y el tutorial). Regla pura y determinista: no guarda nada
     /// (persistir los avistamientos y emitir <c>af_fauna_sighted</c> exige migrar el perfil y la aprobación del dueño, Q11; PR
@@ -119,12 +120,14 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// El nivel ya tiene banner de mundo (<see cref="WorldBanners.ShowsOn"/>), Fruta nueva, un hito propio o un estreno de la
-        /// campaña sin tarjeta propia (<see cref="CapacityVariantLevels"/> y <see cref="DebutsWithoutCardLevels"/>).
+        /// El nivel ya tiene banner de mundo (<see cref="WorldBanners.ShowsOn"/>), Fruta nueva, un hito propio, un estreno de la
+        /// campaña sin tarjeta propia (<see cref="CapacityVariantLevels"/> y <see cref="DebutsWithoutCardLevels"/>) o la
+        /// instrucción del tutorial con TiTino (<see cref="TutorialInstruction.Has"/>: 1, 2, 3 y 6; tarea TU1a), que va la
+        /// primera (tutorial &gt; Fruta nueva &gt; miquito &gt; rótulo).
         /// </summary>
         public static bool IsBusy(int level)
         {
-            return WorldBanners.ShowsOn(level) || Array.IndexOf(FruitDebutLevels, level) >= 0
+            return TutorialInstruction.Has(level) || WorldBanners.ShowsOn(level) || Array.IndexOf(FruitDebutLevels, level) >= 0
                 || Array.IndexOf(MilestoneLevels, level) >= 0 || Array.IndexOf(OccupiedDebutLevels, level) >= 0;
         }
 
@@ -134,7 +137,10 @@ namespace AF.GameFlow
         /// de mundo, ni al reintentar ni al reanudar), nunca en el <see cref="FirstContactLevel"/> (lo ocupa el tutorial) y como
         /// mucho una por nivel: en 1-300 sale en el 2, 4, 7, 11, 21, 41, 61, 81, 111, 141 y 201 (y en el 301 cuando haya
         /// niveles). Gana a la tarjeta del miquito y al rótulo del lugar, que no salen en esos niveles (<see cref="IsBusy"/> y
-        /// <see cref="StopLabelRule"/>). Sin asignaciones.
+        /// <see cref="StopLabelRule"/>). <b>Orden con el tutorial</b> (tarea TU1a): en el 2, la instrucción de TiTino
+        /// (<see cref="TutorialInstruction"/>) va la primera en la cola y «Fruta nueva: Taperebá» sale después, como pide 06 §2.2
+        /// para ese nivel [P] (02 §4.2 y el guion de la intro §14 dicen «como mucho una tarjeta por nivel»: pregunta abierta). Sin
+        /// asignaciones.
         /// </summary>
         public static int FruitNewAt(int level, bool firstAttempt)
         {

@@ -41,6 +41,20 @@ namespace AF.UI
     /// el agua de los niveles de esa parada). <c>AF_STATE level_card</c> la anota con <c>"hito"</c> (el id de la parada o
     /// null), <c>"hito_silhouette"</c> (<c>png</c>, <c>shape</c>, <c>code</c> o <c>none</c>) y <c>"hito_omitted"</c>, y
     /// <c>AF_LAYOUT</c>, con el rectángulo <c>level_card_hito</c>.</para>
+    /// <para><b>Instrucción del tutorial con TiTino</b> (tarea TU1a; D-016, T2-A y T5-B; 02 §13; 04 §2.1; 06 §2.2; guion de la
+    /// intro §14; propuesta de TiTino d.3 y paso 6e de (i)): en los niveles 1, 2, 3 y 6 (<see cref="TutorialInstruction"/>), al
+    /// habilitarse el toque tras la intro de cada intento (el primero y tras Volver a la orilla; nunca al reanudar, que va sin
+    /// intro), la instrucción entra la primera en la cola de avisos (tipo Tutorial) y sale cuando la tropa ya se fue y sin el
+    /// rótulo del intento: en la tarjeta de TiTino (<see cref="SlothNoticeCard"/>, la del aviso tras Volver a la orilla, que en
+    /// estos niveles no sale) con su retrato de 40 dp y <c>sloth_present</c>, sobre la franja del panorama si mide ≥ 64 dp y si
+    /// no sobre el muelle, sin capturar toques, sin tapar cuias, bandeja ni HUD, durante su tiempo de lectura (D-011) y sin
+    /// quedarse fija. La ocultan lo mismo que al aviso de TiTino (un modal del embudo, otro intento, otro nivel, la celebración o,
+    /// sobre el muelle, una burbuja «Te faltan {n}» que sale debajo). En el 3 es el tooltip de Marea, «Marea · Deshacer: toca para
+    /// devolver el agua» (04 §2.1); en 1-10 Marea es ilimitada, así que su primer uso no descuenta. Sin TiTino
+    /// (<c>ui_sloth_enabled</c> apagado o, en release, sin su arte) o si la tarjeta no cabe, la instrucción sale como aviso de
+    /// texto (<c>_toast</c>): el tutorial no se pierde [P]. El ajuste «Mensajes de TiTino» no la quita: es la instrucción del
+    /// tutorial, no una frase de su banco [P]. El 8 sigue siendo de Capi (su aviso de la Cuia extra) y el 12, de TU1b. Sonda
+    /// <c>AF_STATE tutorial</c> con el nivel, la clave, la duración y el sitio (<c>band</c>, <c>dock</c> o <c>toast</c>).</para>
     /// </remarks>
     public sealed partial class GameScreen : ILevelCardListener
     {
@@ -365,6 +379,106 @@ namespace AF.UI
                 case LevelCardKind.Combined: return "combined";
                 default: return "difficulty";
             }
+        }
+
+        // ------------------------------------------------------------------ Instrucción del tutorial con TiTino (TU1a)
+
+        // La tarjeta de TiTino a la vista lleva la instrucción del tutorial (no el aviso tras Volver a la orilla).
+        private bool _slothNoticeTutorial;
+        private string? _lastTutorialProbe;
+        private int _tutorialShown;
+
+        /// <summary>
+        /// Solo tests: enciende o apaga la instrucción del tutorial con TiTino (null = encendida, como en el juego). Los tests
+        /// PlayMode que no tratan de ella la apagan (<c>PlayModeHelpers</c>), para que sus niveles 1, 2, 3 y 6 sigan con sus
+        /// avisos, sus etiquetas del HUD y sus capturas como antes de TU1a; los que la prueban (<c>TutorialSlothTests</c>) la
+        /// encienden y la vuelven a null en su TearDown.
+        /// </summary>
+        internal static bool? TutorialSlothOverride { get; set; }
+
+        /// <summary>La instrucción del tutorial está a la vista en la tarjeta de TiTino (tests).</summary>
+        internal bool TutorialSlothVisible => _slothNoticeTutorial && SlothNoticeVisible;
+
+        /// <summary>La instrucción del tutorial va sobre el muelle (no en la franja del panorama; tests).</summary>
+        internal bool TutorialSlothOnDock => TutorialSlothVisible && !float.IsNaN(_slothNoticeDockBottom);
+
+        /// <summary>Veces que se enseñó la instrucción del tutorial (en la tarjeta o como aviso de texto) desde que se creó la pantalla (tests).</summary>
+        internal int TutorialShownCount => _tutorialShown;
+
+        /// <summary>Campos de la última sonda <c>AF_STATE tutorial</c> (null si no salió ninguna o sin sonda; tests).</summary>
+        internal string? LastTutorialProbe => _lastTutorialProbe;
+
+        // Al habilitarse el toque tras la intro (OnIntroFinished), la instrucción del nivel (TutorialInstruction.KeyFor) entra la
+        // primera en la cola de avisos; sale cuando la tropa se ha ido y sin el rótulo del intento (PumpNotices).
+        private void MaybeShowTutorial(LevelFlow flow)
+        {
+            if (!flow.HasLevel || !(TutorialSlothOverride ?? true))
+            {
+                return;
+            }
+
+            string? key = TutorialInstruction.KeyFor(flow.LevelNumber);
+            if (key == null)
+            {
+                return;
+            }
+
+            string text = UiText.TutorialInstructionText(key);
+            if (text.Length == 0)
+            {
+                return; // sin texto en este idioma no hay instrucción (nunca otro idioma; D-018)
+            }
+
+            EnqueueNoticeFirst(NoticeKind.Tutorial, text);
+        }
+
+        // La instrucción en la tarjeta de TiTino, en su sitio (PlaceSlothCard: la franja del panorama o el muelle), con
+        // sloth_present; sin TiTino (apagado o sin su arte) o sin sitio, como aviso de texto, que nunca tapa las cuias.
+        private void ShowTutorialNow(string text)
+        {
+            BoardLayoutResult? l = _layout;
+            _slothNoticeDockBottom = float.NaN;
+            _slothNoticeTutorial = false;
+            LevelFlow? flow = _flow;
+            SlothArt? art = SlothEnabled ? _art.SlothRigArt() : null;
+            if (l != null && art != null)
+            {
+                _slothNotice ??= new SlothNoticeCard(_noticeLayer, _art);
+                float height = _slothNotice.Measure(_canvasW, text);
+                if (height > 0f && PlaceSlothCard(l, height))
+                {
+                    _slothNoticeTutorial = true;
+                    _slothNotice.Show(art.Head, flow != null && flow.ReduceMotion, SlothPoseId.Present);
+                    _tutorialShown++;
+                    EmitTutorialProbe((int)_slothNotice.DurationMs, float.IsNaN(_slothNoticeDockBottom) ? "band" : "dock");
+                    return;
+                }
+            }
+
+            _slothNoticeDockBottom = float.NaN;
+            ShowToastNow(text);
+            _tutorialShown++;
+            EmitTutorialProbe(NoticeTiming.ReadMs(text), "toast");
+        }
+
+        // AF_STATE tutorial: nivel, clave de la instrucción, duración y sitio (band, dock o toast). Solo con la sonda; al
+        // enseñarla, nunca por fotograma.
+        private void EmitTutorialProbe(int ms, string mode)
+        {
+            if (!DevProbe.Enabled)
+            {
+                return;
+            }
+
+            int level = _flow?.LevelNumber ?? 0;
+            var sb = new StringBuilder(128);
+            sb.Append("\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "key", TutorialInstruction.KeyFor(level));
+            sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "mode", mode);
+            sb.Append(",\"undo\":").Append(TutorialInstruction.PointsAtUndo(level) ? "true" : "false");
+            _lastTutorialProbe = sb.ToString();
+            _probe.Event("tutorial", _lastTutorialProbe);
         }
     }
 }
