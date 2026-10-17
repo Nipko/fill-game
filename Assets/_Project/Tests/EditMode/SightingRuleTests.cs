@@ -37,6 +37,37 @@ namespace AF.Tests.EditMode
         }
 
         /// <summary>
+        /// La instrucción del tutorial con TiTino (TU1a; 02 §13; guion de la intro §14) ocupa el 1, el 2, el 3 y el 6: ninguna
+        /// tarjeta del miquito ni «Fruta nueva» en ellos (tutorial &gt; Fruta nueva &gt; miquito, una tarjeta por nivel como mucho:
+        /// D-023, punto 39; 02 §4.2; guion §14), tampoco en el 2, aunque 06 §2.2 la liste; el 8 es de Capi y no lleva instrucción de
+        /// TiTino.
+        /// </summary>
+        [Test]
+        public void TutorialLevels_AreBusy_AndKeepTheirOrder()
+        {
+            Assert.That(TutorialInstruction.Levels, Is.EqualTo(new[] { 1, 2, 3, 6 }));
+            foreach (int level in TutorialInstruction.Levels)
+            {
+                Assert.That(SightingRule.IsBusy(level), Is.True, "el " + level + " lleva la instrucción del tutorial");
+                Assert.That(TutorialInstruction.KeyFor(level), Is.Not.Null.And.StartsWith("tutorial_"), "nivel " + level);
+            }
+
+            Assert.That(TutorialInstruction.Has(8), Is.False, "el 8 es de Capi");
+            Assert.That(TutorialInstruction.Has(12), Is.False, "el 12 es de TU1b");
+            Assert.That(TutorialInstruction.KeyFor(4), Is.Null);
+            Assert.That(TutorialInstruction.KeyFor(TutorialInstruction.UndoLevel), Is.EqualTo(TutorialInstruction.UndoKey), "el 3, Marea");
+            Assert.That(TutorialInstruction.PointsAtUndo(3), Is.True);
+            Assert.That(TutorialInstruction.PointsAtUndo(6), Is.False);
+            foreach (int level in TutorialInstruction.Levels)
+            {
+                Assert.That(SightingRule.FruitNewAt(level, true), Is.EqualTo(-1),
+                    "el " + level + ": sin «Fruta nueva», una tarjeta por nivel como mucho (D-023, punto 39; 02 §4.2)");
+            }
+
+            Assert.That(SightingRule.FruitNewAt(4, true), Is.GreaterThanOrEqualTo(0), "el 4 sí: no tiene instrucción");
+        }
+
+        /// <summary>
         /// T-F (prueba del 2026-10-09): Aguas turbias con la Luciérnaga regalada (100, 04 §2.5) y el Brote (163, D-007) también
         /// tienen su tarjeta de estreno, así que no comparten nivel con la del miquito; la lista de estrenos es una sola.
         /// </summary>
@@ -205,8 +236,11 @@ namespace AF.Tests.EditMode
             Assert.That(SightingRule.ShowsCard(5, 5, false), Is.False, "los reintentos ya la vieron");
             Assert.That(SightingRule.ShowsCard(4, 5, true), Is.False);
             Assert.That(SightingRule.ShowsCard(6, 5, true), Is.False, "una sola vez");
-            Assert.That(SightingRule.FirstFreeLevel(5, l => l == 5), Is.EqualTo(6), "con el tutorial de Marea pendiente en el 5");
-            Assert.That(SightingRule.ShowsCard(6, 5, true, l => l == 5), Is.True);
+            // Con el tutorial de Marea pendiente en el 5, la tarjeta pasa al 9: el 6 lleva la instrucción de TiTino (TU1a), el 7
+            // Fruta nueva y el Reto del río y el 8 la Cuia extra de Capi.
+            Assert.That(SightingRule.FirstFreeLevel(5, l => l == 5), Is.EqualTo(9), "con el tutorial de Marea pendiente en el 5");
+            Assert.That(SightingRule.ShowsCard(9, 5, true, l => l == 5), Is.True);
+            Assert.That(SightingRule.ShowsCard(6, 5, true, l => l == 5), Is.False, "el 6 es del tutorial con TiTino");
             Assert.That(SightingRule.FirstFreeLevel(11), Is.EqualTo(13), "11 banner y 12 Morpho");
         }
     }

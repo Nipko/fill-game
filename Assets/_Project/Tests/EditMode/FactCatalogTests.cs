@@ -299,7 +299,7 @@ namespace AF.Tests.EditMode
                     s.TagKey + ": «Nombre: frase»");
             }
 
-            Assert.That(Loc.Fact("fact.acai.tag"), Is.EqualTo("Açaí: la crema morada del Pará"));
+            Assert.That(Loc.Fact("fact.acai.tag"), Is.EqualTo("Açaí: la crema morada del\u00A0Pará"), "con su espacio duro: la última palabra no queda sola (F5)");
             Assert.That(Loc.Fact("tint.urucum.name"), Is.EqualTo("Achiote"));
             Assert.That(Loc.Fact("fact.rio_napo.name"), Is.EqualTo("Napo y Cuyabeno"), "propuesta de Frutas §5.16 [P]");
             Assert.That(Loc.Fact("fact.rio_amazonas.name"), Is.EqualTo("Amazonas"));

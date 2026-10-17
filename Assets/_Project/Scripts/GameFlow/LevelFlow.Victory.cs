@@ -36,6 +36,12 @@ namespace AF.GameFlow
         /// <summary>La Cosecha ya se dobló en esta victoria.</summary>
         public bool HarvestDoubled => _harvestDoubled;
 
+        /// <summary>
+        /// Victorias de campaña (<c>stats.levels_won</c>; <see cref="IProgressStore.LevelsWon"/>), contando la de ahora desde su
+        /// instante lógico: la cadencia de las frases de TiTino en la victoria (D-016, punto 5).
+        /// </summary>
+        public int LevelsWon => _progress.LevelsWon;
+
         /// <summary>Nivel desde el que hay Cosecha doble (<c>ads_rv_double_harvest_from_level</c>, 11).</summary>
         public int DoubleHarvestFromLevel => _wallet?.Config.AdsRvDoubleHarvestFromLevel ?? EconomyConfig.Defaults.AdsRvDoubleHarvestFromLevel;
 

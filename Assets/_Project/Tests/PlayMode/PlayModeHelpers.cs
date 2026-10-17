@@ -91,6 +91,48 @@ namespace AF.Tests.PlayMode
 
             NoStopLabelsUnlessSet();
             NoBannerTravelUnlessSet();
+            NoFruitNewUnlessSet();
+            NoSlothRestartNoticeUnlessSet();
+            NoTutorialSlothUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga la instrucción del tutorial con TiTino (TU1a) si el test no la fijó (<see cref="GameScreen.TutorialSlothOverride"/>
+        /// = null): los tests que no tratan de ella juegan el 1, 2, 3 y 6 con sus avisos, sus etiquetas del HUD y sus capturas como
+        /// antes de que existiera. Los que la prueban (<c>TutorialSlothTests</c>) la encienden y la vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoTutorialSlothUnlessSet()
+        {
+            if (GameScreen.TutorialSlothOverride == null)
+            {
+                GameScreen.TutorialSlothOverride = false;
+            }
+        }
+
+        /// <summary>
+        /// Apaga el aviso de TiTino tras Volver a la orilla (TI6b) si el test no lo fijó (<see cref="GameScreen.SlothRestartNoticeOverride"/>
+        /// = null): los tests que no tratan de él reinician en 1-30 con sus avisos, sus etiquetas del HUD y sus capturas como antes
+        /// de que existiera. Los que lo prueban (<c>SlothFailTests</c>) lo encienden y lo vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoSlothRestartNoticeUnlessSet()
+        {
+            if (GameScreen.SlothRestartNoticeOverride == null)
+            {
+                GameScreen.SlothRestartNoticeOverride = false;
+            }
+        }
+
+        /// <summary>
+        /// Apaga la tarjeta «Fruta nueva» (F5) si el test no la fijó (<see cref="GameScreen.FruitNewOverride"/> = null): los tests
+        /// que no tratan de ella juegan el 2, 4, 7, 11, 21, 41… con sus avisos, sus etiquetas del HUD y sus capturas como antes de
+        /// que existiera. Los que la prueban (<c>FruitNewCardTests</c>) la encienden y la vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoFruitNewUnlessSet()
+        {
+            if (GameScreen.FruitNewOverride == null)
+            {
+                GameScreen.FruitNewOverride = false;
+            }
         }
 
         /// <summary>
@@ -120,12 +162,20 @@ namespace AF.Tests.PlayMode
         }
 
         // Sin idioma del teléfono fijado por el test, uno vacío (ManualDeviceLocale): los textos y las cifras no dependen de la
-        // cultura del equipo (tarea L3; el idioma automático da es-419 y las cifras, es-CO).
+        // cultura del equipo (tarea L3; el idioma automático da es-419 y las cifras, es-CO). Sin pantalla de arranque (TI6d)
+        // salvo que el test la encienda (BootSplash.EnabledOverride = true; BootSplashTests la vuelve a null en su TearDown):
+        // los tests que no tratan de ella arrancan como antes de que existiera, todo en el Start, sin fotogramas de más ni el
+        // segundo de sloth_wake de la primera apertura.
         private static IEnumerator LoadScene()
         {
             if (LaunchOptions.DeviceLocaleOverride == null)
             {
                 LaunchOptions.DeviceLocaleOverride = new AF.Platform.ManualDeviceLocale(string.Empty);
+            }
+
+            if (BootSplash.EnabledOverride == null)
+            {
+                BootSplash.EnabledOverride = false;
             }
 
 #if UNITY_EDITOR

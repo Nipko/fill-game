@@ -325,6 +325,12 @@ namespace AF.Presentation
         /// <summary>Raíz del rig (la rama, en la línea donde agarra).</summary>
         public RectTransform Root => _root;
 
+        /// <summary>
+        /// La imagen de la rama (para teñirla con <see cref="Graphic.color"/> en una pantalla concreta: el rig nunca toca su color;
+        /// la opacidad va aparte, por el <see cref="CanvasRenderer"/>).
+        /// </summary>
+        public Image BranchImage => _branch;
+
         /// <summary>Tamaño S en dp (el alto colgado).</summary>
         public float Size => _s;
 

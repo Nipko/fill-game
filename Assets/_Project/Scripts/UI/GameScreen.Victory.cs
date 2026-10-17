@@ -657,8 +657,8 @@ namespace AF.UI
             SlothSession session = SlothSession;
             session.Messages = _slothVoiceOverride ?? SlothMessagesSetting;
             LevelDefinition level = flow.Level;
-            SlothVictoryFacts facts = SlothFactsFor(flow.LevelNumber, level.DifficultyLabel, level.IntroMechanic, flow.Attempt.Rescues > 0,
-                boxDp >= SlothSpeakBoxDp, UiText.SlothColorFactApproved);
+            SlothVictoryFacts facts = SlothFactsFor(flow.LevelNumber, flow.LevelsWon, level.DifficultyLabel, level.IntroMechanic,
+                flow.Attempt.Rescues > 0, boxDp >= SlothSpeakBoxDp, UiText.SlothColorFactApproved);
             return session.Context.WithVictory(in facts);
         }
 
@@ -668,21 +668,21 @@ namespace AF.UI
         /// llegada ni dato desplazado; hoy, en 261-300 y 321-700, que no tienen serie de fruta), del banco más específico
         /// (<see cref="SlothLines.ForVictory"/>):
         /// <list type="bullet">
-        /// <item>la cadencia cuenta con el número del nivel ganado [P]: <c>stats.levels_won</c> no lo actualiza nadie en el cliente
-        /// (ninguna victoria lo suma) y el perfil no llega a la pantalla (GameBootstrap, de M3.3 en la ola 4). En el juego lineal, el nivel es 1 de
-        /// cada N victorias seguidas; cuando se cuente <c>stats.levels_won</c>, se pasa aquí;</item>
+        /// <item>la cadencia cuenta con <paramref name="winCount"/>, <c>stats.levels_won</c> con esta victoria (desde TI6b lo suma
+        /// cada victoria en su instante lógico: <see cref="LevelFlow.LevelsWon"/>), «la victoria número N, 2N, 3N…» (d.6, punto
+        /// 2); <paramref name="won"/> es el nivel ganado (el estreno);</item>
         /// <item>Difícil o Muy difícil, por <c>difficulty.label</c> (<paramref name="difficultyLabel"/>);</item>
         /// <item>el estreno (<see cref="SlothDebutOf"/>);</item>
         /// <item>la Crecida (<c>streak.wins</c>) y su hito: 0 y no, porque el cliente aún no tiene la Crecida;</item>
         /// <item>la Cuia de rescate en este nivel (<paramref name="usedRescue"/>) y Morpho: no, porque el cliente aún no lo tiene.</item>
         /// </list>
         /// </summary>
-        internal static SlothVictoryFacts SlothFactsFor(int won, string? difficultyLabel, string? introMechanic, bool usedRescue, bool speakBox,
-            bool colorFactApproved)
+        internal static SlothVictoryFacts SlothFactsFor(int won, int winCount, string? difficultyLabel, string? introMechanic, bool usedRescue,
+            bool speakBox, bool colorFactApproved)
         {
             bool hard = string.Equals(difficultyLabel, LevelDefinition.LabelHard, StringComparison.Ordinal)
                 || string.Equals(difficultyLabel, LevelDefinition.LabelVeryHard, StringComparison.Ordinal);
-            return new SlothVictoryFacts(Math.Max(0, won), hard, SlothDebutOf(won, introMechanic), 0, false, usedRescue, false, speakBox,
+            return new SlothVictoryFacts(Math.Max(0, winCount), hard, SlothDebutOf(won, introMechanic), 0, false, usedRescue, false, speakBox,
                 colorFactApproved);
         }
 

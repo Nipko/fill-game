@@ -9,7 +9,10 @@ namespace AF.GameFlow
     /// <summary>Pantalla de la app que gobierna <see cref="AppFlow"/> (08 §2.2 <c>AF.GameFlow</c>).</summary>
     public enum AppScreen
     {
-        /// <summary>Arranque: aún no se ha decidido la primera pantalla.</summary>
+        /// <summary>
+        /// Arranque: aún no se ha decidido la primera pantalla (también mientras se ve la pantalla de arranque, 06 §2.2; ver
+        /// <see cref="BootSplashTiming"/>).
+        /// </summary>
         Boot = 0,
 
         /// <summary>Pantalla de inicio (Lobby, 06 §4.7).</summary>
@@ -40,6 +43,73 @@ namespace AF.GameFlow
                 case AppScreen.NoCanoes: return "no_canoes";
                 default: return "unknown";
             }
+        }
+    }
+
+    /// <summary>
+    /// Cuánto se sostiene la pantalla de arranque (06 §2.2; D-016, T2-A; propuesta de TiTino d.3 y paso 6d; tarea TI6d), sin
+    /// motor. La pantalla (río y logotipo, sin texto: 06 §2.1, regla 3) se ve mientras carga el juego y se corta cuando termina
+    /// la carga, con una sola excepción: en la primera apertura, si TiTino está a la vista con <c>sloth_wake</c>, la pantalla
+    /// espera a que su gesto lleve <see cref="WakeMinVisibleMs"/> ms a la vista, siempre que el primer toque en el nivel 1 siga
+    /// cabiendo en <see cref="FirstTouchTargetMs"/> (09 §6). En las demás aperturas (<c>sloth_idle</c>), y sin TiTino (release
+    /// sin su arte final: <c>MapArtRule</c>), no se añade ninguna espera.
+    /// <para>El primer toque llega, como pronto, cuando se corta la pantalla: la espera cabe si el tiempo desde el arranque, más
+    /// la espera, más <see cref="PlayerReserveMs"/> (la intro del nivel 1 y unos segundos para que el jugador toque) no pasa de
+    /// <see cref="FirstTouchTargetMs"/>. Si no cabe, TiTino puede no verse entero: se anota para el dueño (sonda
+    /// <c>AF_STATE boot</c>, <c>wake_fits</c>).</para>
+    /// </summary>
+    public static class BootSplashTiming
+    {
+        /// <summary>Lo mínimo que <c>sloth_wake</c> está a la vista en la primera apertura (06 §2.2; D-016, T2-A) [P].</summary>
+        public const int WakeMinVisibleMs = 1000;
+
+        /// <summary>Objetivo del primer toque en el nivel 1 desde el arranque en frío (09 §6: «Tiempo a primera interacción»).</summary>
+        public const int FirstTouchTargetMs = 20000;
+
+        /// <summary>
+        /// Lo que se reserva tras la pantalla de arranque hasta el primer toque: la intro del nivel 1 (1,4 s,
+        /// <c>anim_tint_duration_ms_early</c>) y unos segundos para que el jugador mire y toque [P].
+        /// <para>No cuenta la pantalla de edad y consentimiento (06 §2.1, regla 3, y §2.2: entre el splash y el nivel 1, ≤ 10 s),
+        /// que aún no existe: cuando entre, esta reserva (o el instante en que se evalúa <see cref="Fits"/>) tiene que contarla, o
+        /// la espera de <c>sloth_wake</c> puede romper los 20 s. Lo decide el dueño con la medida del primer toque en el teléfono
+        /// (tarea TI6d).</para>
+        /// </summary>
+        public const int PlayerReserveMs = 5000;
+
+        /// <summary>
+        /// Espera que se añade al terminar la carga (ms; 0 = cortar ya): solo con <paramref name="firstOpen"/> y TiTino a la vista
+        /// con <c>sloth_wake</c> (<paramref name="wakeShown"/>), lo que le falte a <paramref name="wakeShownMs"/> (lo que su gesto
+        /// lleva a la vista) para llegar a <see cref="WakeMinVisibleMs"/>, si cabe (<see cref="Fits"/>) a los
+        /// <paramref name="sinceStartupMs"/> ms del arranque.
+        /// </summary>
+        public static int HoldMs(bool firstOpen, bool wakeShown, long sinceStartupMs, long wakeShownMs)
+        {
+            long need = NeedMs(firstOpen, wakeShown, wakeShownMs);
+            return need > 0 && Fits(sinceStartupMs, need) ? (int)need : 0;
+        }
+
+        /// <summary>
+        /// Lo que le falta al gesto para llegar a <see cref="WakeMinVisibleMs"/> (ms; 0 si no aplica: no es la primera apertura,
+        /// TiTino no está a la vista o ya lo cumplió).
+        /// </summary>
+        public static long NeedMs(bool firstOpen, bool wakeShown, long wakeShownMs)
+        {
+            if (!firstOpen || !wakeShown)
+            {
+                return 0;
+            }
+
+            long need = WakeMinVisibleMs - (wakeShownMs < 0 ? 0 : wakeShownMs);
+            return need > 0 ? need : 0;
+        }
+
+        /// <summary>
+        /// La espera de <paramref name="holdMs"/> ms a los <paramref name="sinceStartupMs"/> ms del arranque deja el primer toque
+        /// por debajo de <see cref="FirstTouchTargetMs"/> con <see cref="PlayerReserveMs"/> de margen.
+        /// </summary>
+        public static bool Fits(long sinceStartupMs, long holdMs)
+        {
+            return sinceStartupMs + holdMs + PlayerReserveMs <= FirstTouchTargetMs;
         }
     }
 

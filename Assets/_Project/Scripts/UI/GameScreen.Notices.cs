@@ -9,6 +9,7 @@ using AF.GameFlow;
 using AF.Levels;
 using AF.Presentation;
 using AF.Presentation.Mechanics;
+using AF.Save;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,9 +18,29 @@ namespace AF.UI
     /// <summary>
     /// Avisos legibles del tablero (D-011, punto 2; prueba en el teléfono del 2026-10-11, §P2 y §P3): el aviso (<c>_toast</c>:
     /// regalo de Capi, «¡Una cuia más!» y «+1 Luciérnaga»), la tarjeta «¡Miquito a la vista!»
-    /// (<c>_sighting</c>) y el rótulo del lugar (<c>_stopLabel</c>, tarea M2.3) salen de uno en uno, por orden de llegada, y cada
-    /// uno dura lo que se tarda en leerlo (<see cref="NoticeTiming"/>: 1.000 ms + 55 ms por carácter, entre 3 y 7 s). La cola va
-    /// por tipos (<see cref="NoticeKind"/>: Text, Species y StopLabel; F5, TI6b y TU1a añaden los suyos).
+    /// (<c>_sighting</c>), la tarjeta «Fruta nueva» (<c>_fruitNew</c>, tarea F5) y el rótulo del lugar (<c>_stopLabel</c>, tarea
+    /// M2.3) salen de uno en uno, por orden de llegada, y cada uno dura lo que se tarda en leerlo (<see cref="NoticeTiming"/>:
+    /// 1.000 ms + 55 ms por carácter, entre 3 y 7 s). La cola va por tipos (<see cref="NoticeKind"/>: Text, Species, StopLabel,
+    /// FruitNew, Sloth y Tutorial). <b>La instrucción del tutorial con TiTino</b> (tipo Tutorial, tarea TU1a; GameScreen.Cards.cs)
+    /// entra la primera de la cola en los niveles 1, 2, 3 y 6. <b>La tarjeta «Fruta nueva»</b> (<see cref="FruitNewCard"/>; 06
+    /// §4.5) entra en la cola al habilitarse el toque en el estreno de un tinte (<see cref="SightingRule.FruitNewAt"/>: 4, 7, 11,
+    /// 21, 41, 61, 81, 111, 141 y 201; nunca con instrucción del tutorial), solo en el primer intento; como la del miquito,
+    /// espera a que la tropa se vaya, va en su mismo sitio, aparta las etiquetas del HUD mientras se ve y la ocultan lo mismo (un modal del embudo, otro intento, otro nivel, la celebración
+    /// o, sobre el muelle, una burbuja que sale debajo). Con 3 filas (el 111 y el 201), donde no cabe ni en la franja ni sobre el
+    /// muelle, va como placa de una línea clavada al marco, como el rótulo del lugar, y se va si una cuia de la fila 1 que queda
+    /// debajo se eleva hasta ella o si cambia el tablero [P]. Sonda <c>AF_STATE fruit_new</c> (<c>mode</c>: band, dock o plate; none,
+    /// con <c>ms</c> 0, si no cabe en ninguno y no sale).
+    /// <para><b>El aviso de TiTino tras Volver a la orilla</b> (<see cref="SlothNoticeCard"/>; tarea TI6b; D-016, T5-B; 04 §2.7;
+    /// propuesta de TiTino d.5; guion de la intro §14): en los niveles 1-30, al habilitarse el toque tras la intro corta del
+    /// reinicio, solo en el primer reinicio del nivel (en esta sesión [P]) y solo si el nivel no tiene instrucción del tutorial
+    /// (<see cref="HasTutorialInstruction"/>: TiTino ya está en ella), con su retrato de 40 dp y su frase
+    /// (<c>sloth_line_restart_*</c>; la n.º 21 si el reinicio rompió la Crecida, que aún no existe en el cliente [P]) por
+    /// <see cref="SlothLines.ForRestartNotice"/>, con los topes de la sesión de TiTino. Sin frase que enseñar (mensajes apagados,
+    /// topes, sin texto aprobado en release o sin su arte) no hay aviso [P]: el retrato solo no dice nada. Es una tarjeta de la
+    /// familia del miquito: entra en la cola (tipo Sloth), espera a que la tropa se vaya, va sobre la franja del panorama si mide
+    /// ≥ 64 dp y si no sobre el muelle (si tampoco cabe, no sale), aparta las etiquetas del HUD mientras se ve, la ocultan lo
+    /// mismo que a la del miquito y dura por lectura (D-011). Como mucho una tarjeta por nivel: tras un reinicio no sale ninguna
+    /// de las otras (solo van en el primer intento). Sonda <c>AF_STATE sloth_restart</c>.</para>
     /// </summary>
     /// <remarks>
     /// <para><b>Cuándo</b>: solo en PLAYING y sin victoria ni bloqueo pendientes (<c>NoticesHeld</c>). Ninguno durante LOADING,
@@ -175,6 +196,15 @@ namespace AF.UI
         private int _noticeCount;
         private FaunaSpecies? _sightingPending;
         private float _sightingDockBottom = float.NaN; // borde de abajo de la placa de la tarjeta sobre el muelle; NaN si no
+        private readonly FruitNewCard _fruitNew; // «Fruta nueva» (tarea F5); la crea el constructor de GameScreen
+        private float _fruitNewDockBottom = float.NaN; // como _sightingDockBottom, para la tarjeta «Fruta nueva»
+        private int _fruitNewLevel; // nivel cuya tarjeta «Fruta nueva» ya entró en la cola en esta visita (0: ninguno)
+        private readonly StringBuilder _fruitNewProbeSb = new StringBuilder(128);
+        private string? _lastFruitNewProbe;
+        private BoardLayoutResult? _fruitNewPlateLayout; // tablero con el que se colocó la placa de «Fruta nueva» (3 filas)
+        private float _fruitNewPlateShift;
+        private float _fruitNewPlateCanvasW;
+        private bool _fruitNewCoversPost; // la tarjeta «Fruta nueva» va sobre el muelle y tapa el poste: el poste se funde con ella
         private readonly StopLabel _stopLabel;
         private readonly StringBuilder _stopLabelProbeSb = new StringBuilder(256);
         private string? _lastStopLabelProbe;
@@ -192,6 +222,11 @@ namespace AF.UI
         private float _stopLabelSideLeft = float.NaN; // tramo libre donde se centró la placa de lado (dp; NaN si no va de lado)
         private float _stopLabelSideRight = float.NaN;
         private readonly List<Graphic> _stopLabelGraphics = new List<Graphic>(64);
+        private SlothNoticeCard? _slothNotice; // aviso de TiTino tras Volver a la orilla (TI6b): perezoso, lo crea el primero
+        private float _slothNoticeDockBottom = float.NaN; // como _sightingDockBottom, para el aviso de TiTino
+        private bool _slothCoversPost; // la tarjeta de TiTino va sobre el muelle y tapa el poste: el poste se funde con ella
+        private int _slothRestartLevel; // nivel cuyos reinicios se cuentan (0: ninguno)
+        private int _slothRestarts; // reinicios de ese nivel en esta sesión
         private readonly Vector3[] _stopLabelCorners = new Vector3[4];
 
         /// <summary>Avisos que esperan turno (sin contar el que se ve; tests).</summary>
@@ -508,7 +543,9 @@ namespace AF.UI
         {
             _toast.Hide();
             _sighting.Hide();
+            _fruitNew.Hide();
             _stopLabel.Hide();
+            _slothNotice?.Hide();
         }
 
         // Aguas estancadas, ¿Seguro?, Nivel fallido y Sin canoas.
@@ -518,9 +555,15 @@ namespace AF.UI
                 || phase == FlowPhase.NoCanoes;
         }
 
-        // Un aviso del tipo kind al final de la cola: el texto (Text y StopLabel), la especie (Species) y la parada (StopLabel).
-        // Con la cola llena, se descarta.
-        private void EnqueueNotice(NoticeKind kind, string? text, FaunaSpecies? species, RiverStop? stop)
+        // Un aviso del tipo kind al final de la cola: el texto (Text y StopLabel), la especie (Species), la parada (StopLabel) y el
+        // tinte de «Fruta nueva» (FruitNew: índice en SightingRule.FruitDebutTints). Con la cola llena, se descarta.
+        private void EnqueueNotice(NoticeKind kind, string? text, FaunaSpecies? species, RiverStop? stop, int fruit = -1)
+        {
+            EnqueueNotice(kind, text, species, stop, fruit, default);
+        }
+
+        // Como el de arriba, con lo que decidió SlothLines para el aviso de TiTino (Sloth: se apunta en la sesión al enseñarlo).
+        private void EnqueueNotice(NoticeKind kind, string? text, FaunaSpecies? species, RiverStop? stop, int fruit, in SlothLine sloth)
         {
             if (_noticeCount >= NoticeSlots)
             {
@@ -532,22 +575,61 @@ namespace AF.UI
             _notices[slot].Text = text;
             _notices[slot].Species = species;
             _notices[slot].Stop = stop;
+            _notices[slot].Fruit = fruit;
+            _notices[slot].Sloth = sloth;
             _noticeCount++;
         }
 
-        /// <summary>Hay un aviso de la cola a la vista: el aviso, la tarjeta del miquito o el rótulo del lugar.</summary>
-        internal bool NoticeShowing => _toast.Visible || _sighting.Visible || _stopLabel.Visible;
+        // Un aviso al principio de la cola (la instrucción del tutorial, la primera en prioridad: TU1a). Con la cola llena, se
+        // descarta el último que espera, para que la instrucción no se pierda.
+        private void EnqueueNoticeFirst(NoticeKind kind, string text)
+        {
+            if (_noticeCount >= NoticeSlots)
+            {
+                _notices[(_noticeHead + _noticeCount - 1) % NoticeSlots] = default;
+                _noticeCount--;
+            }
+
+            _noticeHead = (_noticeHead + NoticeSlots - 1) % NoticeSlots;
+            _notices[_noticeHead] = default;
+            _notices[_noticeHead].Kind = kind;
+            _notices[_noticeHead].Text = text;
+            _notices[_noticeHead].Fruit = -1;
+            _noticeCount++;
+        }
+
+        /// <summary>
+        /// Hay un aviso de la cola a la vista: el aviso, la tarjeta del miquito, la de «Fruta nueva», el rótulo del lugar o la
+        /// tarjeta de TiTino (el aviso tras Volver a la orilla, TI6b, o la instrucción del tutorial, TU1a).
+        /// </summary>
+        internal bool NoticeShowing => _toast.Visible || _sighting.Visible || _fruitNew.Visible || _stopLabel.Visible || SlothNoticeVisible;
+
+        /// <summary>
+        /// La tarjeta de TiTino está a la vista: el aviso tras Volver a la orilla (TI6b) o la instrucción del tutorial (TU1a, que
+        /// usa la misma tarjeta: <see cref="TutorialSlothVisible"/>).
+        /// </summary>
+        internal bool SlothNoticeVisible => _slothNotice != null && _slothNotice.Visible;
 
         // Saca de la cola el siguiente aviso si no hay ninguno a la vista y la fase lo permite (cada fotograma, al encolar y al
-        // habilitarse el toque). El rótulo del lugar espera además a que la tropa se vaya de la rama, como la tarjeta del
-        // miquito (va en la franja del panorama o bajo el HUD, donde se sienta): mientras espera, los que van detrás también.
+        // habilitarse el toque). El rótulo del lugar, la tarjeta «Fruta nueva» y el aviso de TiTino (este, también al rótulo del
+        // intento) esperan además a que la tropa se vaya de la rama,
+        // como la tarjeta del miquito (van en la franja del panorama o bajo el HUD, donde se sienta): mientras esperan, los que
+        // van detrás también.
         private void PumpNotices()
         {
             while (_noticeCount > 0 && !NoticeShowing && !NoticesHeld(_flow))
             {
                 ref Notice head = ref _notices[_noticeHead];
-                if (head.Kind == NoticeKind.StopLabel && _intro.TroopVisible)
+                bool slothCard = head.Kind == NoticeKind.Sloth || head.Kind == NoticeKind.Tutorial;
+                if ((head.Kind == NoticeKind.StopLabel || head.Kind == NoticeKind.FruitNew || slothCard) && _intro.TroopVisible)
                 {
+                    return;
+                }
+
+                if (slothCard && _banner.Visible)
+                {
+                    // La tarjeta de TiTino (el aviso y la instrucción del tutorial) va tras la intro corta y su rótulo «Nivel N ·
+                    // intento k», que ocupa su franja (TI6b y TU1a).
                     return;
                 }
 
@@ -555,6 +637,8 @@ namespace AF.UI
                 string? text = head.Text;
                 FaunaSpecies? species = head.Species;
                 RiverStop? stop = head.Stop;
+                int fruit = head.Fruit;
+                SlothLine sloth = head.Sloth;
                 head = default;
                 _noticeHead = (_noticeHead + 1) % NoticeSlots;
                 _noticeCount--;
@@ -583,6 +667,30 @@ namespace AF.UI
                         }
 
                         break;
+
+                    case NoticeKind.FruitNew:
+                        if (fruit >= 0)
+                        {
+                            ShowFruitNewNow(fruit); // sin textos o si no cabe, no sale y pasa el siguiente
+                        }
+
+                        break;
+
+                    case NoticeKind.Sloth:
+                        if (text != null)
+                        {
+                            ShowSlothNoticeNow(text, in sloth); // si no cabe, no sale y pasa el siguiente
+                        }
+
+                        break;
+
+                    case NoticeKind.Tutorial:
+                        if (text != null)
+                        {
+                            ShowTutorialNow(text); // sin TiTino o sin sitio, como aviso de texto: la instrucción no se pierde
+                        }
+
+                        break;
                 }
             }
         }
@@ -606,6 +714,8 @@ namespace AF.UI
 
             PumpNotices();
             KeepStopLabelPlaced();
+            KeepFruitNewPlateClear();
+            KeepPostUnderFruitNew();
         }
 
         // Fuera todo: el aviso y la tarjeta a la vista, la cola y la tarjeta pendiente (otro nivel, otro intento o la celebración).
@@ -619,9 +729,12 @@ namespace AF.UI
             _noticeHead = 0;
             _noticeCount = 0;
             _sightingPending = null;
+            _tutorialAfterPour = null; // el tooltip de Marea que esperaba un vertido (TU1a; GameScreen.Cards.cs)
             _toast.Hide();
             _sighting.Hide();
+            _fruitNew.Hide();
             _stopLabel.Hide();
+            _slothNotice?.Hide();
         }
 
         // «¡Miquito a la vista!» (guion de la intro §4.5 y §14): al habilitarse el input tras la intro, en el primer intento del
@@ -721,6 +834,18 @@ namespace AF.UI
         // ante un modal. Cada fotograma, con la bandeja ya repintada (desde PlaceToast); sin asignaciones.
         private void KeepSightingClearOfBubbles()
         {
+            if (!float.IsNaN(_slothNoticeDockBottom) && SlothNoticeVisible && _slothNoticeDockBottom > SightingDockLimit() + 0.01f)
+            {
+                _slothNotice!.Hide(); // el aviso de TiTino sobre el muelle, igual (TI6b)
+                _slothNoticeDockBottom = float.NaN;
+            }
+
+            if (!float.IsNaN(_fruitNewDockBottom) && _fruitNew.Visible && _fruitNewDockBottom > SightingDockLimit() + 0.01f)
+            {
+                _fruitNew.Hide(); // «Fruta nueva» sobre el muelle, igual (F5)
+                _fruitNewDockBottom = float.NaN;
+            }
+
             if (float.IsNaN(_sightingDockBottom) || !_sighting.Visible)
             {
                 return;
@@ -731,6 +856,391 @@ namespace AF.UI
                 _sighting.Hide();
                 _sightingDockBottom = float.NaN;
             }
+        }
+
+        /// <summary>
+        /// Solo tests: enciende o apaga el aviso de TiTino tras Volver a la orilla (null = encendido, como en el juego). Los tests
+        /// PlayMode que no tratan de él lo apagan (<c>PlayModeHelpers</c>), para que sus reinicios en 1-30 sigan como antes de
+        /// TI6b; los que lo prueban (<c>SlothFailTests</c>) lo encienden y lo vuelven a null en su TearDown.
+        /// </summary>
+        internal static bool? SlothRestartNoticeOverride { get; set; }
+
+        /// <summary>
+        /// Niveles de 1-30 con instrucción del tutorial (02 §13): el dedo guía de 1 y 2, el tutorial de Marea del 3, la frase del
+        /// 6 y la presentación de Morpho del 12, con el retrato de TiTino (D-016, T2-A), y el 8, el de Capi con la Cuia extra y
+        /// «Reiniciar es gratis…» [P]. En ellos no hay aviso de TiTino tras Volver a la orilla (guion de la intro §14: manda la
+        /// instrucción, y TiTino sale como mucho una vez). Los de TiTino que ya se pintan son los de
+        /// <see cref="TutorialInstruction.Levels"/> (1, 2, 3 y 6, TU1a; GameScreen.Cards.cs); el 12 llega con TU1b.
+        /// </summary>
+        internal static readonly int[] SlothTutorialLevels = { 1, 2, 3, 6, 8, 12 };
+
+        /// <summary>El nivel <paramref name="level"/> tiene instrucción del tutorial (<see cref="SlothTutorialLevels"/>).</summary>
+        internal static bool HasTutorialInstruction(int level)
+        {
+            return Array.IndexOf(SlothTutorialLevels, level) >= 0;
+        }
+
+        /// <summary>El aviso de TiTino (null hasta el primero; tests).</summary>
+        internal SlothNoticeCard? SlothNoticeView => _slothNotice;
+
+        /// <summary>El aviso de TiTino va sobre el muelle (no en la franja del panorama; tests).</summary>
+        internal bool SlothNoticeOnDock => SlothNoticeVisible && !float.IsNaN(_slothNoticeDockBottom);
+
+        /// <summary>Lo que decidió TiTino en el último reinicio de 1-30 (default antes del primero; tests).</summary>
+        internal SlothLine LastSlothRestartLine { get; private set; }
+
+        // Aviso de TiTino tras Volver a la orilla (ver la clase): al habilitarse el toque (OnIntroFinished) tras la intro corta de
+        // un reinicio en 1-30 (Volver a la orilla desde la cabecera, la pausa o el pie del modal; en 1-30 no hay Nivel fallido),
+        // cuenta el reinicio y, si es el primero del nivel y no tiene instrucción del tutorial, pide la frase a SlothLines y la
+        // pone en la cola. Al reanudar no pasa por aquí (OnResumed: sin intro).
+        private void MaybeShowSlothRestart(LevelFlow flow)
+        {
+            if (!_introRetry || !flow.HasLevel)
+            {
+                return;
+            }
+
+            int level = flow.LevelNumber;
+            if (level < 1 || level > SlothLines.RestartNoticeLastLevel)
+            {
+                return;
+            }
+
+            if (_slothRestartLevel != level)
+            {
+                _slothRestartLevel = level;
+                _slothRestarts = 0;
+            }
+
+            _slothRestarts++;
+            LastSlothRestartLine = default;
+            if (!(SlothRestartNoticeOverride ?? true) || !SlothEnabled)
+            {
+                return;
+            }
+
+            SlothSession session = SlothSession;
+            session.Messages = _slothVoiceOverride ?? SlothMessagesSetting;
+            SlothContext context = session.Context.WithRestart(new SlothRestartFacts(_slothRestarts == 1, HasTutorialInstruction(level), false));
+            SlothLine line = SlothLines.ForRestartNotice(level, in context);
+            LastSlothRestartLine = line;
+            if (!line.Speaks || !UiText.TrySlothLine(in line, out string text))
+            {
+                return; // sin frase no hay aviso [P]: ni se enseña ni se apunta
+            }
+
+            EnqueueNotice(NoticeKind.Sloth, text, null, null, -1, in line);
+        }
+
+        // El aviso de TiTino, en el sitio de la tarjeta del miquito (ShowSightingNow): sobre la franja del panorama si mide al
+        // menos SightingBandDp (y su alto + SightingBandAirDp); si no, sobre el muelle, por encima de la bandeja y de sus burbujas;
+        // si tampoco cabe, o sin el arte de TiTino, no sale. Al enseñarlo, la frase se apunta en la sesión de TiTino.
+        private void ShowSlothNoticeNow(string text, in SlothLine line)
+        {
+            BoardLayoutResult? l = _layout;
+            _slothNoticeDockBottom = float.NaN;
+            SlothArt? art = _art.SlothRigArt();
+            if (l == null || art == null)
+            {
+                return;
+            }
+
+            _slothNotice ??= new SlothNoticeCard(_noticeLayer, _art);
+            float height = _slothNotice.Measure(_canvasW, text);
+            if (height <= 0f)
+            {
+                return;
+            }
+
+            if (!PlaceSlothCard(l, height))
+            {
+                EmitSlothRestartProbe(line, 0, "none");
+                return;
+            }
+
+            LevelFlow? flow = _flow;
+            _slothNoticeTutorial = false;
+            _slothNotice.Show(art.Head, flow != null && flow.ReduceMotion);
+            SlothSession session = SlothSession;
+            session.Record(in line, session.Context);
+            EmitSlothRestartProbe(line, (int)_slothNotice.DurationMs, float.IsNaN(_slothNoticeDockBottom) ? "band" : "dock");
+        }
+
+        // La tarjeta de TiTino ya medida (height), en el sitio de la tarjeta del miquito (ShowSightingNow): sobre la franja del
+        // panorama si mide al menos SightingBandDp (y su alto + SightingBandAirDp); si no, sobre el muelle, por encima de la
+        // bandeja y de sus burbujas (y entonces apunta su borde de abajo en _slothNoticeDockBottom). False si tampoco cabe ahí.
+        // La usan el aviso tras Volver a la orilla (TI6b) y la instrucción del tutorial (TU1a).
+        private bool PlaceSlothCard(BoardLayoutResult l, float height)
+        {
+            float band = l.PanelY - BoardTop;
+            float top;
+            if (band >= Mathf.Max(SightingBandDp, height + SightingBandAirDp))
+            {
+                top = BoardTop + ((band - height) * 0.5f);
+            }
+            else
+            {
+                top = l.PanelBottom + 4f;
+                if (top + height > SightingDockLimit())
+                {
+                    return false;
+                }
+
+                _slothNoticeDockBottom = top + height;
+            }
+
+            _slothNotice!.Place(_canvasW, top);
+            _slothCoversPost = !float.IsNaN(_slothNoticeDockBottom) && CardOverPost(_slothNotice.Root, SlothNoticeCard.EdgeDp);
+            return true;
+        }
+
+        /// <summary>
+        /// El aviso de TiTino con <paramref name="text"/> en el acto, por su camino de colocación (tests y capturas: el muelle con
+        /// una burbuja «Te faltan {n}» a la vista, sin pasar por un reinicio). No se apunta en la sesión. Devuelve si sale.
+        /// </summary>
+        internal bool ShowSlothNotice(string text)
+        {
+            _slothNotice?.Hide();
+            var line = new SlothLine(SlothScreen.Restart, SlothGesture.Encourage, SlothMoment.Restart, SlothData.NoLine, null, 0, false);
+            ShowSlothNoticeNow(text, in line);
+            return SlothNoticeVisible;
+        }
+
+        // AF_STATE sloth_restart: nivel, clave de la frase, duración y sitio (band, dock o, si no cabe y no sale, none). Solo con
+        // la sonda; al enseñarlo, nunca por fotograma.
+        private void EmitSlothRestartProbe(in SlothLine line, int ms, string mode)
+        {
+            if (!DevProbe.Enabled)
+            {
+                return;
+            }
+
+            var sb = new StringBuilder(128);
+            sb.Append("\"level\":").Append((_flow?.LevelNumber ?? 0).ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "line", line.Key);
+            sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "mode", mode);
+            _probe.Event("sloth_restart", sb.ToString());
+        }
+
+        /// <summary>
+        /// Solo tests: enciende o apaga la tarjeta «Fruta nueva» (null = encendida, como en el juego). Los tests PlayMode que no
+        /// tratan de ella la apagan (<c>PlayModeHelpers</c>), para que sus avisos y sus capturas del 2, 4, 7, 11, 21, 41… salgan
+        /// como antes de F5.
+        /// </summary>
+        internal static bool? FruitNewOverride { get; set; }
+
+        /// <summary>La tarjeta «Fruta nueva» (tests).</summary>
+        internal FruitNewCard FruitNewView => _fruitNew;
+
+        /// <summary>La tarjeta «Fruta nueva» va sobre el muelle (no en la franja del panorama; tests).</summary>
+        internal bool FruitNewOnDock => _fruitNew.Visible && !float.IsNaN(_fruitNewDockBottom);
+
+        /// <summary>Campos de la última sonda <c>AF_STATE fruit_new</c> (null si no salió ninguna o sin sonda; tests).</summary>
+        internal string? LastFruitNewProbe => _lastFruitNewProbe;
+
+        // «Fruta nueva» (06 §4.5; tarea F5): al habilitarse el toque (OnIntroFinished), antes que la tarjeta del miquito y que el
+        // rótulo (prioridad tutorial > Fruta nueva > miquito > rótulo; en estos niveles ninguno de los dos sale: SightingRule.IsBusy
+        // y StopLabelRule.IsTaken), entra en la cola si lo dice SightingRule.FruitNewAt: en el estreno de un tinte sin tutorial
+        // (desde el 4), en el primer intento (ni la intro corta del reintento ni un nivel con fallos) y una sola vez por visita al nivel. Al
+        // reanudar no pasa por aquí (OnResumed: sin intro). Sale cuando la tropa se ha ido (PumpNotices).
+        private void MaybeShowFruitNew(LevelFlow flow)
+        {
+            if (!flow.HasLevel || !(FruitNewOverride ?? true))
+            {
+                return;
+            }
+
+            int level = flow.LevelNumber;
+            bool firstAttempt = !_introRetry && flow.Attempt.FailsLevel == 0 && _fruitNewLevel != level;
+            int fruit = SightingRule.FruitNewAt(level, firstAttempt);
+            if (fruit < 0)
+            {
+                return;
+            }
+
+            _fruitNewLevel = level;
+            EnqueueNotice(NoticeKind.FruitNew, null, null, null, fruit);
+        }
+
+        // La tarjeta «Fruta nueva» del tinte fruit, en el sitio de la del miquito (ShowSightingNow): sobre la franja del panorama
+        // si cabe; si no, sobre el muelle, por encima de la bandeja y de sus burbujas; si tampoco (3 filas), como placa de una
+        // línea clavada al marco; y si ni así, no sale. Sin el nombre o la frase en el idioma de la UI, tampoco
+        // (FruitNewCard.TryTexts). Suena sfx_fruit_new afinado a la fruta (AU1) y deja su sonda AF_STATE fruit_new.
+        private void ShowFruitNewNow(int fruit)
+        {
+            BoardLayoutResult? l = _layout;
+            _fruitNewDockBottom = float.NaN;
+            _fruitNewCoversPost = false;
+            if (l == null || !FruitNewCard.TryTexts(fruit, out string name, out string tag))
+            {
+                return;
+            }
+
+            float height = _fruitNew.Measure(_canvasW, name, tag);
+            float band = l.PanelY - BoardTop;
+            _fruitNewPlateLayout = null;
+            if (band >= Mathf.Max(SightingBandDp, height + SightingBandAirDp))
+            {
+                _fruitNew.Place(_canvasW, BoardTop + ((band - height) * 0.5f));
+            }
+            else if (l.PanelBottom + 4f + height <= SightingDockLimit())
+            {
+                _fruitNew.Place(_canvasW, l.PanelBottom + 4f);
+                _fruitNewDockBottom = l.PanelBottom + 4f + height;
+                _fruitNewCoversPost = FruitNewOverPost();
+            }
+            else
+            {
+                // Ni en la franja ni sobre el muelle (3 filas, como el 111 y el 201, o la escala de texto grande): como placa de
+                // una línea clavada al marco, como la del rótulo del lugar (FX4) [P], entre el pie del HUD (FruitNewPlateHudBottom)
+                // y lo más alto de la fila 1 en reposo, con FruitNewCard.PlateClearDp de aire a cada lado y centrada en ese hueco
+                // (revisión de F5: pegada a la pausa se leía como parte del HUD). Si ni así cabe (o una cuia de la fila 1 ya está
+                // elevada bajo ella), no sale, y la sonda lo cuenta (mode "none"): así se ve en el teléfono quién la pierde (p. ej.
+                // con la escala de texto grande).
+                float plateTop = Mathf.Max(StopLabelPlateTop(l), FruitNewPlateHudBottom() + FruitNewCard.PlateClearDp);
+                float rowTop = StopLabelRowOneTop(l);
+                if (!_fruitNew.PlaceAsPlate(_canvasW, name, tag, plateTop, rowTop - FruitNewCard.PlateClearDp))
+                {
+                    EmitFruitNewProbe(fruit, 0, FruitNewNone);
+                    return;
+                }
+
+                _fruitNewPlateLayout = l;
+                _fruitNewPlateShift = _boardShift;
+                _fruitNewPlateCanvasW = _canvasW;
+                if (FruitNewPlateRowOneLifted())
+                {
+                    _fruitNewPlateLayout = null;
+                    EmitFruitNewProbe(fruit, 0, FruitNewNone);
+                    return;
+                }
+            }
+
+            int tint = FactLine.TintOf(SightingRule.FruitDebutTints[fruit]);
+            _fruitNew.Show(tint, tint > 0 ? _art.FruitFlight(tint) : null, tint > 0 ? _art.TintSwatch(tint) : null);
+            AF.Audio.AudioCues.PlayFruit(AF.Audio.SfxId.FruitNew, tint); // AU1: tarjeta «Fruta nueva»
+            EmitFruitNewProbe(fruit, (int)_fruitNew.DurationMs, FruitNewMode);
+        }
+
+        /// <summary>
+        /// La tarjeta «Fruta nueva» del tinte <paramref name="fruit"/> (índice en <see cref="SightingRule.FruitDebutTints"/>) en
+        /// el acto, por su camino de colocación (tests y capturas: la franja o el muelle sin esperar a su nivel). Devuelve si sale.
+        /// </summary>
+        internal bool ShowFruitNew(int fruit)
+        {
+            _fruitNew.Hide();
+            ShowFruitNewNow(fruit);
+            return _fruitNew.Visible;
+        }
+
+        // Sitio de la sonda fruit_new cuando la tarjeta no cabe en ninguno y no sale (ms 0).
+        private const string FruitNewNone = "none";
+
+        // AF_STATE fruit_new: nivel, tinte, duración y sitio (mode: band, dock, plate o, si no cabe y no sale, none). Solo con la
+        // sonda; al enseñarla o al perderla, nunca por fotograma.
+        private void EmitFruitNewProbe(int fruit, int ms, string mode)
+        {
+            if (!DevProbe.Enabled)
+            {
+                _lastFruitNewProbe = null;
+                return;
+            }
+
+            StringBuilder sb = _fruitNewProbeSb;
+            sb.Clear();
+            sb.Append("\"level\":").Append((_flow?.LevelNumber ?? 0).ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "tint", SightingRule.FruitDebutTints[fruit]);
+            sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "mode", mode);
+            _lastFruitNewProbe = sb.ToString();
+            _probe.Event("fruit_new", _lastFruitNewProbe);
+        }
+
+        /// <summary>
+        /// Sitio de la tarjeta «Fruta nueva», como lo cuenta la sonda <c>fruit_new</c>: <c>band</c> (sobre la franja del
+        /// panorama), <c>dock</c> (sobre el muelle) o <c>plate</c> (placa de una línea clavada al marco), y <c>none</c> si no está
+        /// a la vista (tests).
+        /// </summary>
+        internal string FruitNewMode => !_fruitNew.Visible ? FruitNewNone
+            : _fruitNew.OnPlate ? "plate" : float.IsNaN(_fruitNewDockBottom) ? "band" : "dock";
+
+        // Con la tarjeta «Fruta nueva» como placa a la vista: si una cuia de la fila 1 que queda bajo ella se eleva hasta ella, o
+        // si cambian el tablero, el lienzo o su desplazamiento, se oculta en el acto y no vuelve (como el rótulo, FX4; sin volver
+        // a colocarla). Cada fotograma, desde TickNotices; sin asignaciones.
+        private void KeepFruitNewPlateClear()
+        {
+            if (!_fruitNew.Visible || !_fruitNew.OnPlate)
+            {
+                return;
+            }
+
+            if (!ReferenceEquals(_layout, _fruitNewPlateLayout) || _fruitNewPlateShift != _boardShift || _fruitNewPlateCanvasW != _canvasW
+                || FruitNewPlateRowOneLifted())
+            {
+                _fruitNew.Hide();
+                _fruitNewPlateLayout = null;
+            }
+        }
+
+        // La tarjeta «Fruta nueva» recién colocada sobre el muelle tapa el poste del muelle (su caja con el canto se cruza con la
+        // del poste, si se ve): solo al colocarla.
+        private bool FruitNewOverPost()
+        {
+            return CardOverPost(_fruitNew.Root, FruitNewCard.EdgeDp);
+        }
+
+        // Una tarjeta recién colocada (card, con su canto de edgeDp por debajo) se cruza con el poste del muelle, si se ve.
+        private bool CardOverPost(RectTransform card, float edgeDp)
+        {
+            RectTransform post = _post.rectTransform;
+            if (!post.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            CanvasRectDp(post, out float pl, out float pt, out float pr, out float pb);
+            CanvasRectDp(card, out float cl, out float ct, out float cr, out float cb);
+            cb += edgeDp;
+            return cl < pr && cr > pl && ct < pb && cb > pt;
+        }
+
+        // Revisión de F5: un poste cortado que asoma bajo la tarjeta parecía un error de recorte. Mientras la tarjeta «Fruta
+        // nueva» lo tapa sobre el muelle, el poste se funde a la vez que ella (1 − su opacidad: su mismo fundido de 200 ms) y
+        // vuelve en cuanto se va, la oculte lo que la oculte. Cada fotograma, desde TickNotices; sin asignaciones y sin tocar el
+        // poste si no cambia.
+        // Igual con la tarjeta de TiTino sobre el muelle (la instrucción del tutorial, TU1a, y el aviso tras Volver a la orilla).
+        private void KeepPostUnderFruitNew()
+        {
+            float alpha = _fruitNewCoversPost && FruitNewOnDock ? 1f - _fruitNew.Alpha
+                : _slothCoversPost && SlothNoticeOnDock ? 1f - _slothNotice!.Alpha : 1f;
+            CanvasRenderer post = _post.canvasRenderer;
+            if (post.GetAlpha() != alpha)
+            {
+                post.SetAlpha(alpha);
+            }
+        }
+
+        // Como StopLabelRowOneLifted, para la placa de «Fruta nueva»: una cuia de la fila 1 que queda bajo ella (a lo ancho, con
+        // PlateSideAirDp) está elevada y, con el rebote, llega a menos de PlateLiftAirDp de su borde de abajo. Usa lo que midió
+        // StopLabelRowOneTop al colocarla (el rótulo no sale en los niveles de Fruta nueva: StopLabelRule.IsTaken).
+        private bool FruitNewPlateRowOneLifted()
+        {
+            Rect plate = _fruitNew.Rect;
+            float limit = plate.yMax + StopLabel.PlateEdgeDp + StopLabel.PlateLiftAirDp;
+            int n = Mathf.Min(_views.Length, _stopLabelRestTop.Length);
+            for (int i = 0; i < n; i++)
+            {
+                float rest = _stopLabelRestTop[i];
+                if (!float.IsNaN(rest) && _views[i].IsLifted && rest - StopLabel.LiftReachDp < limit
+                    && _stopLabelRestRight[i] + StopLabel.PlateSideAirDp > plate.xMin
+                    && _stopLabelRestLeft[i] - StopLabel.PlateSideAirDp < plate.xMax)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>
@@ -815,6 +1325,11 @@ namespace AF.UI
             if (_stopLabelLevel != level)
             {
                 _stopLabelLevel = 0;
+            }
+
+            if (_fruitNewLevel != level)
+            {
+                _fruitNewLevel = 0; // lo mismo para la tarjeta «Fruta nueva» (F5)
             }
         }
 
@@ -1070,6 +1585,55 @@ namespace AF.UI
             return top == float.MaxValue ? l.BlockTop + BoardLayout.Lift - _boardShift : top;
         }
 
+        /// <summary>
+        /// Pie del HUD de arriba para la placa de «Fruta nueva» (dp desde arriba): el de su fila (<see cref="HudBottomDp"/>) o, si
+        /// bajan más, el canto de madera de los discos de la pausa y de Reiniciar (su cara de
+        /// <see cref="ReliefSprites.FaceHeightDp"/> más <see cref="ProceduralArt.ButtonEdgeDp"/>, desde lo alto del disco: la pausa
+        /// baja 4 dp y su canto pasa 2 dp del pie de la fila), la etiqueta de Reiniciar (en dos líneas con la escala de texto) y las
+        /// píldoras del saldo. Son los bordes que se ven, no las cajas de los sprites, que llevan aire transparente y la sombra
+        /// difusa (a alfa 0,3) alrededor. Las etiquetas del HUD no cuentan: se apartan mientras se ve un aviso. Solo al colocar la
+        /// placa (nunca por fotograma).
+        /// </summary>
+        internal float FruitNewPlateHudBottom()
+        {
+            float bottom = BoardTop;
+            float disc = _art.DiscWood.FaceHeightDp + ProceduralArt.ButtonEdgeDp;
+            if (_pauseButton.Button.gameObject.activeInHierarchy)
+            {
+                CanvasRectDp((RectTransform)_pauseButton.Face.parent, out _, out float pauseTop, out _, out _);
+                bottom = Mathf.Max(bottom, pauseTop + disc);
+            }
+
+            if (_restart.Button.gameObject.activeInHierarchy)
+            {
+                CanvasRectDp((RectTransform)_restart.Face.parent, out _, out float restartTop, out _, out _);
+                bottom = Mathf.Max(bottom, restartTop + disc);
+            }
+
+            if (_restartPill.gameObject.activeInHierarchy)
+            {
+                CanvasRectDp(_restartPill.rectTransform, out _, out _, out _, out float pill);
+                bottom = Mathf.Max(bottom, pill);
+            }
+
+            if (_walletBar.Visible && _walletBar.Compact && _walletBar.Root.gameObject.activeInHierarchy)
+            {
+                if (_walletBar.SeedsRect.gameObject.activeInHierarchy)
+                {
+                    CanvasRectDp(_walletBar.SeedsRect, out _, out _, out _, out float seeds);
+                    bottom = Mathf.Max(bottom, seeds);
+                }
+
+                if (_walletBar.CanoesRect.gameObject.activeInHierarchy)
+                {
+                    CanvasRectDp(_walletBar.CanoesRect, out _, out _, out _, out float canoes);
+                    bottom = Mathf.Max(bottom, canoes);
+                }
+            }
+
+            return bottom;
+        }
+
         // La caja de lo visible bajo root (los gráficos activos, con alfa y que se pintan; no el área táctil), en dp del lienzo
         // (x desde la izquierda, y desde arriba). False si no se ve nada.
         private bool VisibleBox(RectTransform root, out float left, out float top, out float right)
@@ -1320,9 +1884,10 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Los avisos de la cola de los avisos de juego, por tipos (arquitectura de la tanda 4, §3). F5 (Fruta nueva), TI6b
-        /// (TiTino) y TU1a (tutorial) añaden los suyos; la prioridad entre tarjetas la deciden las reglas al encolar (tutorial &gt;
-        /// Fruta nueva &gt; miquito &gt; rótulo, como mucho una por nivel), no la cola, que va por orden de llegada.
+        /// Los avisos de la cola de los avisos de juego, por tipos (arquitectura de la tanda 4, §3). F5 añade la Fruta nueva;
+        /// TI6b (TiTino) y TU1a (tutorial) añaden los suyos; la prioridad entre tarjetas la deciden las reglas al encolar (tutorial
+        /// &gt; Fruta nueva &gt; miquito &gt; rótulo, como mucho una por nivel), no la cola, que va por orden de llegada; salvo la
+        /// instrucción del tutorial, que entra al principio (TU1a).
         /// </summary>
         internal enum NoticeKind
         {
@@ -1334,13 +1899,26 @@ namespace AF.UI
 
             /// <summary>El rótulo del lugar, «{lugar} · {país}» (<see cref="StopLabel"/>; tarea M2.3).</summary>
             StopLabel = 2,
+
+            /// <summary>La tarjeta «Fruta nueva» del estreno de un tinte (<see cref="FruitNewCard"/>; tarea F5).</summary>
+            FruitNew = 3,
+
+            /// <summary>El aviso de TiTino tras Volver a la orilla en 1-30 (<see cref="SlothNoticeCard"/>; tarea TI6b).</summary>
+            Sloth = 4,
+
+            /// <summary>
+            /// La instrucción del tutorial con el retrato de TiTino en 1, 2, 3 y 6 (la misma <see cref="SlothNoticeCard"/>, con
+            /// <c>sloth_present</c>; tarea TU1a): entra la primera de la cola (tutorial &gt; Fruta nueva &gt; miquito &gt; rótulo).
+            /// </summary>
+            Tutorial = 5,
         }
 
         private struct Notice
         {
             public NoticeKind Kind;
 
-            // Texto del aviso (Text) o del rótulo ya formateado (StopLabel; se formatea al encolar, nunca por fotograma).
+            // Texto del aviso (Text), de la instrucción del tutorial (Tutorial) o del rótulo ya formateado (StopLabel; se formatea
+            // al encolar, nunca por fotograma).
             public string? Text;
 
             // Especie de la tarjeta del miquito (Species).
@@ -1348,6 +1926,12 @@ namespace AF.UI
 
             // Parada del rótulo (StopLabel).
             public RiverStop? Stop;
+
+            // Tinte de la tarjeta «Fruta nueva» (FruitNew): índice en SightingRule.FruitDebutTints; −1 en los demás.
+            public int Fruit;
+
+            // Lo que decidió SlothLines para el aviso de TiTino (Sloth; Text lleva su frase ya formateada).
+            public SlothLine Sloth;
         }
     }
 }

@@ -49,8 +49,18 @@ namespace AF.GameFlow
         void SaveNextLevel(int level);
 
         /// <summary>
-        /// Victoria del nivel <paramref name="level"/>: <c>max_level</c> = máx(<c>max_level</c>, <paramref name="level"/>) y
-        /// <c>next_level</c> = <paramref name="nextLevel"/>, en un solo guardado persistido.
+        /// Victorias de campaña (<c>stats.levels_won</c>, 08 §4.3): suma una en cada <see cref="SaveWin"/>, el instante lógico de
+        /// la victoria, que pasa una vez por nivel ganado: reanudar el nivel guardado no pasa por él, la Cosecha doble tampoco y
+        /// el Salto del Boto no es una victoria (no está en el cliente). Es la cadencia de 1 de cada
+        /// <c>ui_sloth_win_line_every_n</c> de TiTino (D-016, punto 5; propuesta de TiTino d.6, punto 2: «la victoria número N,
+        /// 2N, 3N…»). Sin asignaciones.
+        /// </summary>
+        int LevelsWon { get; }
+
+        /// <summary>
+        /// Victoria del nivel <paramref name="level"/>: <c>max_level</c> = máx(<c>max_level</c>, <paramref name="level"/>),
+        /// <c>next_level</c> = <paramref name="nextLevel"/> y una victoria más en <see cref="LevelsWon"/>
+        /// (<c>stats.levels_won</c>), en un solo guardado persistido.
         /// </summary>
         void SaveWin(int level, int nextLevel);
 
@@ -78,13 +88,15 @@ namespace AF.GameFlow
         /// <summary>
         /// Crea el almacén con un valor inicial (0 = sin progreso); <paramref name="mapSeenLevel"/> se recorta a
         /// [0, <paramref name="maxLevel"/>] al crearlo, como hace el perfil al cargarlo: un valor inicial por encima de
-        /// max_level no reaparece cuando <see cref="SaveWin"/> sube max_level.
+        /// max_level no reaparece cuando <see cref="SaveWin"/> sube max_level. <paramref name="levelsWon"/> es
+        /// <c>stats.levels_won</c> antes de la primera victoria (negativo = 0).
         /// </summary>
-        public MemoryProgressStore(int nextLevel = 0, int maxLevel = 0, int mapSeenLevel = 0)
+        public MemoryProgressStore(int nextLevel = 0, int maxLevel = 0, int mapSeenLevel = 0, int levelsWon = 0)
         {
             NextLevel = nextLevel;
             MaxLevel = maxLevel;
             _mapSeenLevel = ClampSeen(mapSeenLevel, maxLevel);
+            LevelsWon = Math.Max(0, levelsWon);
         }
 
         /// <summary>Siguiente nivel guardado.</summary>
@@ -95,6 +107,9 @@ namespace AF.GameFlow
 
         /// <inheritdoc />
         public int MapSeenLevel => ClampSeen(_mapSeenLevel, MaxLevel);
+
+        /// <inheritdoc />
+        public int LevelsWon { get; private set; }
 
         /// <summary>Veces que se ha guardado.</summary>
         public int SaveCount { get; private set; }
@@ -138,6 +153,7 @@ namespace AF.GameFlow
         {
             MaxLevel = Math.Max(MaxLevel, level);
             NextLevel = nextLevel;
+            LevelsWon = ProgressRules.AddWin(LevelsWon);
             SaveCount++;
         }
 
@@ -172,6 +188,15 @@ namespace AF.GameFlow
     /// </summary>
     internal static class ProgressRules
     {
+        /// <summary>
+        /// <c>stats.levels_won</c> con una victoria más: nunca baja de 1 ni pasa de <see cref="int.MaxValue"/> (un perfil editado
+        /// a mano con un valor negativo o en el tope no da la vuelta).
+        /// </summary>
+        public static int AddWin(int levelsWon)
+        {
+            return levelsWon < 0 ? 1 : levelsWon == int.MaxValue ? int.MaxValue : levelsWon + 1;
+        }
+
         /// <summary><paramref name="list"/> contiene <paramref name="level"/>; recorre por índice, sin enumerador.</summary>
         public static bool Contains(List<int> list, int level)
         {

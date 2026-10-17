@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using AF.Ads;
 using AF.Boosters;
@@ -43,6 +44,12 @@ namespace AF.UI
     /// (<see cref="OpenRiverMap"/>); el ← de su cabecera y el Atrás de Android lo cierran (<see cref="CloseRiverMap"/>, que anota
     /// lo visto en <c>map_seen_level</c>) y su «Jugar» cierra y abre el nivel. La geometría se lee y se decodifica la primera vez
     /// que se abre (una sola vez por arranque); si no valida, se avisa y la pestaña desaparece.</para>
+    /// <para>Pantalla de arranque (06 §2.2; D-016, T2-A; tarea TI6d; <see cref="BootSplash"/>): en cada arranque en frío, el río y
+    /// el logotipo salen en el primer fotograma, antes de cargar nada, y TiTino entra en su embaúba en cuanto hay perfil y arte
+    /// (<c>sloth_wake</c> en la primera apertura, <c>sloth_idle</c> en las demás; sin su arte final, en release, no sale). Al
+    /// terminar la carga se corta y arranca <see cref="AppFlow"/>; solo en la primera apertura con TiTino se espera a que su
+    /// gesto lleve 1,0 s a la vista, si cabe en el objetivo de 20 s del primer toque (<see cref="BootSplashTiming"/>). La sonda
+    /// <c>AF_STATE boot</c> (<see cref="BootInfo"/>) lo mide, con el primer toque del jugador.</para>
     /// </summary>
     [DisallowMultipleComponent]
     public sealed partial class GameBootstrap : MonoBehaviour, IAppFlowListener, IGameActions
@@ -130,6 +137,9 @@ namespace AF.UI
         // Fallos del escritor de segundo plano ya registrados (T-D): lo recoja quien lo recoja, cada uno se avisa una vez.
         private int _reportedBackgroundFailures;
         private DevProbe? _probe;
+        private BootSplash? _splash;
+        private BootReport? _bootReport;
+        private double _bootOrigin;
         private ProfileLockedNotice? _lockedNotice;
         private ProfileLoadStatus _profileStatus = ProfileLoadStatus.NotFound;
         private float _msCarry;
@@ -137,6 +147,18 @@ namespace AF.UI
 
         /// <summary>Instancia activa (una por escena).</summary>
         public static GameBootstrap? Current { get; private set; }
+
+        /// <summary>
+        /// Pantalla de arranque (06 §2.2; tarea TI6d) mientras se ve: null antes de crearla, después de cortarla y en los
+        /// arranques sin ella (<see cref="BootSplash.EnabledOverride"/>, reconstrucción por idioma).
+        /// </summary>
+        public BootSplash? Splash => _splash;
+
+        /// <summary>
+        /// Lo que pasó en el arranque con la pantalla de arranque (sonda <c>AF_STATE boot</c>; tarea TI6d): null hasta cortarla
+        /// y en los arranques sin ella.
+        /// </summary>
+        public BootReport? BootInfo => _bootReport;
 
         /// <summary>Flujo del nivel (null hasta <c>Start</c>).</summary>
         public LevelFlow? Flow => _flow;
@@ -358,6 +380,7 @@ namespace AF.UI
                 return TapResult.Ignored(index, -1);
             }
 
+            NoteFirstTouch(AppScreen.Level);
             ProfileSaveBatch? saves = _saveBatch;
             int writes = saves?.WriteCount ?? 0;
             TapResult result = _flow.TapCuia(index);
@@ -378,16 +401,23 @@ namespace AF.UI
         /// <summary>Toque en el fondo (C7).</summary>
         public void TapBackground()
         {
-            if (InLevel)
+            if (InLevel && _flow != null)
             {
-                _flow?.TapBackground();
+                NoteFirstTouch(AppScreen.Level);
+                _flow.TapBackground();
             }
         }
 
         /// <summary>Toque en cualquier punto durante la intro o la celebración.</summary>
         public bool TapAnywhere()
         {
-            return _flow != null && InLevel && _flow.TapAnywhere();
+            if (_flow == null || !InLevel)
+            {
+                return false;
+            }
+
+            NoteFirstTouch(AppScreen.Level);
+            return _flow.TapAnywhere();
         }
 
         /// <summary>
@@ -754,7 +784,13 @@ namespace AF.UI
         /// <summary>«Jugar · Nivel {n}» (pantalla de inicio).</summary>
         public bool PressPlay()
         {
-            return _app != null && _app.PressPlay();
+            if (_app == null || _app.Screen != AppScreen.Lobby)
+            {
+                return false;
+            }
+
+            NoteFirstTouch(AppScreen.Lobby);
+            return _app.PressPlay();
         }
 
         /// <summary>Contador de canoas de la pantalla de inicio (con 0/5 abre Sin canoas).</summary>
@@ -1193,6 +1229,7 @@ namespace AF.UI
         private void Awake()
         {
             Current = this;
+            _bootOrigin = Application.isEditor ? Time.realtimeSinceStartupAsDouble : 0.0; // origen del arranque (TI6d): ver SinceStartupMs
             Application.targetFrameRate = 60; // 08 §5.4
             DevProbe.Initialize();
             EnsureEventSystem();
@@ -1220,13 +1257,26 @@ namespace AF.UI
             _backPresses++;
         }
 
-        private void Start()
+        // Arranque en frío (08 §2.3) con la pantalla de arranque delante (06 §2.2; tarea TI6d): se crea y se pinta un fotograma
+        // antes de cargar nada; con el perfil y el arte leídos, TiTino entra en ella (sloth_wake la primera vez, sloth_idle las
+        // demás) y se pinta otro fotograma; después se construye todo y, al terminar la carga, se corta (con el segundo de
+        // sloth_wake de la primera apertura, si cabe: BootSplashTiming) y solo entonces arranca AppFlow, para que la intro del
+        // nivel 1 no corra detrás. Sin la pantalla (tras la reconstrucción por idioma, que no es un arranque en frío, o apagada
+        // por los tests: BootSplash.EnabledOverride) no hay ningún yield: todo ocurre en esta llamada, como antes.
+        private IEnumerator Start()
         {
+            if (!s_rebuildToLobby && BootSplash.Enabled)
+            {
+                _splash = new BootSplash(transform, BootSplash.SlothExpected); // ya compuesta con o sin TiTino: el logotipo no salta
+                yield return null; // el río y el logotipo, a la vista antes de cargar
+            }
+
             LevelCatalog? catalog = LoadCatalog();
             if (catalog == null)
             {
+                CutSplash();
                 enabled = false;
-                return;
+                yield break;
             }
 
             IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
@@ -1294,6 +1344,17 @@ namespace AF.UI
 
             _art = SharedArt(catalog.WaterBase);
             _probe = new DevProbe { Settings = profile.Settings };
+            if (_splash != null)
+            {
+                // TiTino en su embaúba (D-016, T2-A): con ui_sloth_enabled apagado (08 §9; el interruptor de cada gancho, como el
+                // de la victoria) o sin su arte final (release), no sale y no hay espera. Reducir movimiento aún no es un ajuste
+                // del jugador (07 §7.8): la pose se anima.
+                if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), firstRun, reduceMotion: false))
+                {
+                    yield return null; // TiTino, a la vista mientras se construye el resto
+                }
+            }
+
             InstallAudio(profile.Settings); // AU1: audio provisional por código y hápticos (GameBootstrap.Audio.cs)
             _probe.LocaleState(locale, _deviceLocale, _deviceTag);
 
@@ -1357,6 +1418,11 @@ namespace AF.UI
                 requested = LaunchOptions.ReadIntentLevel();
             }
 
+            if (_splash != null)
+            {
+                yield return FinishSplash(firstRun); // fin de la carga: se corta, con el segundo de sloth_wake si toca y cabe
+            }
+
             if (requested > 0)
             {
                 _app.StartAtLevel(requested);
@@ -1389,8 +1455,14 @@ namespace AF.UI
 
         private void Update()
         {
-            if (_flow == null || _screen == null || _app == null)
+            if (_splash != null)
             {
+                _splash.Tick(Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs)); // TiTino en la pantalla de arranque
+            }
+
+            if (_flow == null || _screen == null || _app == null || _app.Screen == AppScreen.Boot)
+            {
+                _backPresses = 0; // Atrás durante el arranque: aún no hay nada que cerrar
                 return;
             }
 
@@ -1752,8 +1824,84 @@ namespace AF.UI
             Debug.LogWarning(LogPrefix + "falló la escritura del perfil en segundo plano (fallos nuevos: " + missed + "); sigue en memoria y sale con el siguiente guardado: " + saves.LastBackgroundError);
         }
 
+        // Fin de la carga con la pantalla de arranque delante (tarea TI6d): en la primera apertura con TiTino a la vista
+        // (sloth_wake), se espera a que su gesto lleve BootSplashTiming.WakeMinVisibleMs a la vista si cabe en el objetivo de
+        // 20 s; en las demás, y sin TiTino, se corta ya (no se añade espera). Deja el informe y la sonda AF_STATE boot.
+        private IEnumerator FinishSplash(bool firstOpen)
+        {
+            BootSplash splash = _splash!;
+            long loadMs = splash.AgeMs;
+            long sinceStartup = SinceStartupMs();
+            bool wake = splash.SlothVisible && splash.Sloth!.Pose == SlothPoseId.Wake;
+            long need = BootSplashTiming.NeedMs(firstOpen, wake, (long)splash.SlothClockMs);
+            int hold = BootSplashTiming.HoldMs(firstOpen, wake, sinceStartup, (long)splash.SlothClockMs);
+            if (hold > 0)
+            {
+                // Hasta que el gesto lleve su segundo a la vista (reloj de la pose, el que ve el jugador), con un tope de tiempo
+                // real por si los fotogramas van lentos.
+                double until = Time.realtimeSinceStartupAsDouble + ((hold + HoldGuardMs) / 1000.0);
+                while (_splash != null && splash.SlothClockMs < BootSplashTiming.WakeMinVisibleMs && Time.realtimeSinceStartupAsDouble < until)
+                {
+                    yield return null;
+                }
+            }
+
+            // El reloj se lee una sola vez al cortar. Sin espera, el corte es el fin de la carga: hold_ms = 0 y splash_ms = load_ms
+            // por construcción, aunque el reloj real haya pasado de milisegundo entre dos lecturas.
+            long endMs = hold > 0 ? splash.AgeMs : loadMs;
+            long endSinceStartup = hold > 0 ? SinceStartupMs() : sinceStartup;
+            _bootReport = new BootReport
+            {
+                FirstOpen = firstOpen,
+                SlothPose = splash.SlothVisible ? SlothRig.IdOf(splash.Sloth!.Pose) : null,
+                LoadMs = loadMs,
+                SplashMs = endMs,
+                SlothMs = (long)splash.SlothClockMs,
+                HoldMs = endMs - loadMs,
+                WakeFits = need <= 0 || hold > 0,
+                SplashEndMs = endSinceStartup,
+            };
+            CutSplash();
+            _probe?.Boot(_bootReport);
+        }
+
+        // Tope de tiempo real por encima de la espera calculada (fotogramas lentos) [P].
+        private const int HoldGuardMs = 250;
+
+        private void CutSplash()
+        {
+            _splash?.Dispose();
+            _splash = null;
+        }
+
+        // Desde el arranque (ms): en el teléfono, desde que arranca Unity (realtimeSinceStartup), sin el lanzamiento del proceso
+        // ni el de la Activity, que van antes; en el Editor, que cuenta desde que se abrió el Editor, desde el Awake de esta escena
+        // (_bootOrigin). Para el arranque en frío de 09 §6.1 (< 20 s) hay que sumarle lo que mide el sistema hasta Unity
+        // (adb shell am start -W, TotalTime). Los tests le suman BootSplash.TestStartupOffsetMs (0 fuera de ellos).
+        private long SinceStartupMs()
+        {
+            return (long)((Time.realtimeSinceStartupAsDouble - _bootOrigin) * 1000.0) + BootSplash.TestStartupOffsetMs;
+        }
+
+        // Primer toque del jugador tras la pantalla de arranque (sonda AF_STATE boot, first_touch_ms; 09 §6): una cuia, el fondo
+        // o la intro del nivel, o «Jugar» en el inicio. Solo el primero, y solo en los arranques con la pantalla.
+        private void NoteFirstTouch(AppScreen screen)
+        {
+            BootReport? report = _bootReport;
+            if (report == null || report.FirstTouchMs >= 0)
+            {
+                return;
+            }
+
+            report.FirstTouchMs = SinceStartupMs();
+            report.FirstTouchScreen = screen == AppScreen.Level ? "level" : "lobby";
+            report.FirstTouchLevel = screen == AppScreen.Level && _flow != null && _flow.HasLevel ? _flow.LevelNumber : (_app?.PlayLevel ?? 0);
+            _probe?.Boot(report);
+        }
+
         private void OnDestroy()
         {
+            CutSplash();
             PersistNow("destruir la escena");
 
             // Si la escena se va con el Mapa abierto (una recarga, RebuildUi), su Close no llega: el intervalo de pintado es global
