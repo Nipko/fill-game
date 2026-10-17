@@ -224,10 +224,10 @@ namespace AF.Presentation
 
         /// <summary>
         /// Eventos sueltos de desarrollo, con la firma de <c>DevProbe.Event(evento, campos JSON)</c>: <c>step_budget</c>, cuando
-        /// las últimas etapas de un plan saltan por el presupuesto desde el toque, y <c>step</c>, al terminar cada paso de
-        /// mecánica (<c>kind</c>, <c>stage</c>, <c>index</c>, <c>other</c>, <c>owner</c>, <c>ms</c>, <c>speed</c>,
-        /// <c>used_default</c> y <c>snapped</c>; solo con <c>Debug.isDebugBuild</c>). Null = sin sonda: no se escribe nada y el
-        /// salto solo se cuenta en <see cref="MechanicStepQueue.BudgetOverruns"/>.
+        /// las últimas etapas de un plan saltan por el presupuesto desde el último vertido tocado (FX6), y <c>step</c>, al
+        /// terminar cada paso de mecánica (<c>kind</c>, <c>stage</c>, <c>index</c>, <c>other</c>, <c>owner</c>, <c>ms</c>,
+        /// <c>speed</c>, <c>used_default</c> y <c>snapped</c>; solo con <c>Debug.isDebugBuild</c>). Null = sin sonda: no se
+        /// escribe nada y el salto solo se cuenta en <see cref="MechanicStepQueue.BudgetOverruns"/>.
         /// </summary>
         /// <remarks>
         /// Lo asigna el constructor de <c>GameScreen</c> (<c>DevEvent = _probe.Event</c>): en builds de desarrollo,

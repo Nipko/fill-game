@@ -671,6 +671,11 @@ namespace AF.Tests.PlayMode
                     Assert.That(lastEvent, Is.EqualTo("step_budget"));
                     Assert.That(lastFields, Does.Contain("\"skip_from\":\"D\""), "salta desde la etapa (d)");
                     Assert.That(lastFields, Does.StartWith("\"age_ms\":"), "miembros JSON sin llaves, como pide DevProbe.Event");
+                    Assert.That(lastFields, Does.Contain("\"since_tap_ms\":"), "el reloj del presupuesto (FX6)");
+                    Assert.That(
+                        FieldInt(lastFields!, "since_tap_ms"),
+                        Is.EqualTo(FieldInt(lastFields!, "age_ms")),
+                        "con un solo vertido en la cola, since_tap_ms coincide con age_ms (FX6)");
                 }
 
                 for (int i = 0; i < after.Count; i++)
@@ -845,6 +850,14 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(condition(), Is.True, "condición del banco");
+        }
+
+        // Valor entero de un miembro JSON sin llaves ("clave":123,...), como los que escribe step_budget.
+        private static int FieldInt(string fields, string key)
+        {
+            System.Text.RegularExpressions.Match m = System.Text.RegularExpressions.Regex.Match(fields, "\"" + key + "\":(-?\\d+)");
+            Assert.That(m.Success, Is.True, key + " en " + fields);
+            return int.Parse(m.Groups[1].Value, System.Globalization.CultureInfo.InvariantCulture);
         }
 
         private static BoardState Board(int[][] cuias, MechanicSpec[]? attrs)
