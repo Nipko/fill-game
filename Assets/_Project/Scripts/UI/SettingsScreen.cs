@@ -25,15 +25,19 @@ namespace AF.UI
     /// <item><b>Mensajes de TiTino</b> (tarea TI3; D-016, punto 4; 02 §12): una fila que se marca o se desmarca
     /// (<c>settings.sloth_messages</c>, activada por defecto; apagada, TiTino solo hace gestos), en
     /// <see cref="SlothMessagesSlot"/>.</item>
+    /// <item><b>Sonido, Música y Vibración</b> (tarea AU1; 07 §9.4; D-026), arriba del todo: tres filas que se marcan o se
+    /// desmarcan (<c>settings.sound</c>, <c>music</c> y <c>haptics</c>, activadas por defecto) y se aplican al momento, en
+    /// <see cref="AudioSlot"/> (<c>SettingsScreen.Audio.cs</c>). Con ellas la tarjeta no cabe en un teléfono 16:9 al 130 %: lo de
+    /// debajo de la cabecera va en un visor que se desplaza cuando hace falta.</item>
     /// </list>
-    /// Sin sonido, música, vibración ni Eliminar cuenta: no existen (D-008: lo que no existe se oculta). Los huecos de la pista
+    /// Sin Eliminar cuenta: no existe (D-008: lo que no existe se oculta). Los huecos de la pista
     /// por inactividad (MO3) y «Sobre la Amazonía» (F4) están creados y ocultos (<see cref="IdleHintSlot"/> y
     /// <see cref="AboutSlot"/>): esas tareas los llenan y <see cref="Layout"/> los coloca cuando se activan. Elegir llama a quien
     /// la abre (<c>GameBootstrap</c>), que guarda el perfil y aplica: el idioma reconstruye la UI volviendo al inicio, con esta
     /// pantalla otra vez abierta (FXT); los patrones, al momento; los mensajes de TiTino, desde su siguiente aparición. Escala de la fuente
     /// <see cref="FontScale"/> hasta el 130 % sin recortes (02 §12), con todo texto ≥ 12 sp.
     /// </summary>
-    internal sealed class SettingsScreen
+    internal sealed partial class SettingsScreen
     {
         /// <summary>Ancho máximo de la tarjeta (dp).</summary>
         public const float PanelMaxWidth = 344f;
@@ -59,6 +63,27 @@ namespace AF.UI
         /// </summary>
         public const string SlothMessagesId = "sloth_messages";
 
+        /// <summary>Margen interior de la tarjeta (dp): el de la cabecera arriba y el del visor abajo, dentro del marco.</summary>
+        public const float PanelInsetDp = 16f;
+
+        /// <summary>
+        /// Alto del fundido de abajo del visor (dp; revisión de AU1): sale mientras quede contenido por debajo, para que se
+        /// entienda que la lista sigue.
+        /// </summary>
+        public const float FadeBottomDp = 24f;
+
+        /// <summary>Alto del fundido de arriba del visor (dp): sale en cuanto el contenido se ha desplazado.</summary>
+        public const float FadeTopDp = 18f;
+
+        /// <summary>
+        /// Lo que se ve de la última fila cortada por el visor, en fracción de su alto, cuando el contenido se desplaza (revisión
+        /// de AU1): entre <see cref="CutRowMin"/> y <see cref="CutRowMax"/>; si no, el visor se acorta hasta media fila.
+        /// </summary>
+        public const float CutRowMin = 0.35f;
+
+        /// <summary>Fracción máxima de la última fila cortada que se ve (ver <see cref="CutRowMin"/>).</summary>
+        public const float CutRowMax = 0.6f;
+
         private const float RowGapDp = 6f;
         private const float SectionGapDp = 12f;
         private const float RadioDp = 20f;
@@ -76,6 +101,12 @@ namespace AF.UI
         private readonly Image _header;
         private readonly TextMeshProUGUI _title;
         private readonly ReliefParts _close;
+        private readonly RectTransform _viewport;
+        private readonly RectTransform _content;
+        private readonly ScrollRect _scroll;
+        private readonly Image _fadeTop;
+        private readonly Image _fadeBottom;
+        private readonly List<float> _rowTops = new List<float>();
         private readonly TextMeshProUGUI _languageTitle;
         private readonly TextMeshProUGUI _patternsTitle;
         private readonly RectTransform _languageGroup;
@@ -107,24 +138,44 @@ namespace AF.UI
             _title = ModalKit.Header(_panel, art, UiText.Settings, out _header);
             _close = ModalKit.Close("CloseButton", _panel, art, onClose);
 
+            // Contenido bajo la cabecera, en un visor que se desplaza si no cabe (AU1: con Sonido, Música y Vibración, la tarjeta
+            // pasa del alto de un teléfono 16:9 al 130 %); la cabecera y el cierre quedan fijos.
+            _viewport = UiBuilder.Rect("Viewport", _panel);
+            _viewport.gameObject.AddComponent<RectMask2D>();
+            _viewport.gameObject.AddComponent<HitArea>().raycastTarget = true; // el arrastre en los huecos también desplaza
+            _content = UiBuilder.Rect("Content", _viewport);
+            _scroll = _viewport.gameObject.AddComponent<ScrollRect>();
+            _scroll.viewport = _viewport;
+            _scroll.content = _content;
+            _scroll.horizontal = false;
+            _scroll.vertical = true;
+            _scroll.movementType = ScrollRect.MovementType.Clamped;
+            BuildAudioRows(); // Sonido, Música y Vibración (AU1; SettingsScreen.Audio.cs)
+
             _languageTitle = SectionTitle("LanguageTitle", UiText.Language);
-            _languageGroup = UiBuilder.Rect("LanguageOptions", _panel);
+            _languageGroup = UiBuilder.Rect("LanguageOptions", _content);
             _patternsTitle = SectionTitle("PatternsTitle", UiText.PatternsToggle);
             for (int i = 0; i < PatternOrder.Length; i++)
             {
                 PatternsSetting value = PatternOrder[i];
-                _patternRows[i] = new OptionRow(_panel, art, "Patterns_" + DevProbe.PatternsKey(value), "patterns_" + DevProbe.PatternsKey(value),
+                _patternRows[i] = new OptionRow(_content, art, "Patterns_" + DevProbe.PatternsKey(value), "patterns_" + DevProbe.PatternsKey(value),
                     PatternLabel(value), () => _onPatterns(value));
             }
 
             // Mensajes de TiTino (TI3): una fila que se marca o se desmarca, en su hueco.
-            SlothMessagesSlot = UiBuilder.Rect("SlothMessagesSlot", _panel);
+            SlothMessagesSlot = UiBuilder.Rect("SlothMessagesSlot", _content);
             _slothRow = new OptionRow(SlothMessagesSlot, art, "SlothMessages", SlothMessagesId, UiText.SettingsSlothMessages,
                 () => _onSlothMessages(!_slothMessages));
 
             // Huecos de las tareas siguientes, ocultos hasta que existan (D-008).
             IdleHintSlot = HiddenSlot("IdleHintSlot");
             AboutSlot = HiddenSlot("AboutSlot");
+
+            // Fundidos de los bordes del visor (revisión de AU1), encima del contenido y sin recibir toques: abajo mientras quede
+            // lista por debajo y arriba en cuanto se ha desplazado, para que el corte no parezca un fallo (D-003).
+            _fadeTop = UiBuilder.Image("FadeTop", _viewport, art.ScrollFade(true), Color.white);
+            _fadeBottom = UiBuilder.Image("FadeBottom", _viewport, art.ScrollFade(false), Color.white);
+            _scroll.onValueChanged.AddListener(_ => UpdateFades());
 
             _canvas.Canvas.gameObject.SetActive(false);
         }
@@ -287,6 +338,10 @@ namespace AF.UI
             }
 
             yield return _slothRow.Label;
+            foreach (TextMeshProUGUI label in AudioTexts())
+            {
+                yield return label;
+            }
         }
 
         /// <summary>
@@ -411,6 +466,17 @@ namespace AF.UI
             UiBuilder.Place((RectTransform)_close.Button.transform, w - 16f - ModalKit.CloseDp, y, ModalKit.CloseDp, ModalKit.CloseDp);
             y += Mathf.Max(48f, headerH) + SectionGapDp;
 
+            // Lo de debajo de la cabecera va en el contenido desplazable (AU1), desde su borde de arriba; primero Sonido, Música y
+            // Vibración (SettingsScreen.Audio.cs).
+            float headerBottom = y;
+            _rowTops.Clear();
+            for (int i = 0; i < AudioRowCount; i++)
+            {
+                _rowTops.Add(i * (rowH + RowGapDp));
+            }
+
+            y = LayoutAudio(0f, inner, rowH, s);
+
             // Idioma.
             PlaceTitle(_languageTitle, 16f, y, inner, titleH, s);
             y += titleH + RowGapDp;
@@ -418,6 +484,7 @@ namespace AF.UI
             for (int i = 0; i < _offered.Count; i++)
             {
                 _languageRows[i].Place(16f, y, inner, rowH, s);
+                _rowTops.Add(y);
                 y += rowH + RowGapDp;
             }
 
@@ -429,6 +496,7 @@ namespace AF.UI
             for (int i = 0; i < _patternRows.Length; i++)
             {
                 _patternRows[i].Place(16f, y, inner, rowH, s);
+                _rowTops.Add(y);
                 y += rowH + RowGapDp;
             }
 
@@ -436,16 +504,91 @@ namespace AF.UI
             y += SectionGapDp - RowGapDp;
             UiBuilder.Place(SlothMessagesSlot, 16f, y, inner, rowH);
             _slothRow.Place(0f, 0f, inner, rowH, s);
+            _rowTops.Add(y);
             y += rowH + RowGapDp;
 
-            // Huecos de MO3 y F4: aún ocultos (no ocupan sitio).
-            y += 16f - RowGapDp;
+            // Huecos de MO3 y F4: aún ocultos (no ocupan sitio). El contenido acaba en la última fila.
+            y -= RowGapDp;
 
-            float h = y;
+            // La tarjeta crece con el contenido hasta el alto libre entre las zonas seguras; si no cabe, el contenido se desplaza
+            // (empieza arriba cada vez que se coloca). El visor deja abajo el mismo margen interior de 16 dp que la cabecera arriba:
+            // lo que se corta, se corta dentro de la crema y nunca pisa el marco de madera (revisión de AU1; D-003).
+            float contentH = y;
+            float maxH = Mathf.Max(headerBottom + MinRowDp + PanelInsetDp, ch - safeTop - safeBottom - 16f);
+            float h = Mathf.Min(headerBottom + contentH + PanelInsetDp, maxH);
+            float viewH = h - headerBottom - PanelInsetDp;
+            _scroll.vertical = contentH > viewH + 0.5f;
+            if (_scroll.vertical)
+            {
+                // Si se desplaza, el visor acaba a media fila (revisión de AU1): una franja de unos dp en el borde no se lee como
+                // una fila más, y el jugador podría no encontrar nunca las de abajo.
+                viewH = CutAtRow(viewH, rowH);
+                h = headerBottom + viewH + PanelInsetDp;
+            }
+
+            UiBuilder.Place(_viewport, 0f, headerBottom, w, viewH);
+            UiBuilder.Place(_content, 0f, 0f, w, contentH);
+            _scroll.velocity = Vector2.zero;
+            PlaceFades(headerBottom, w, h, viewH);
             float top = Mathf.Round((ch - h) * 0.5f);
             top = Mathf.Min(top, ch - safeBottom - 8f - h);
             top = Mathf.Max(top, safeTop + 8f);
             ModalKit.Size(_panel, _surface, _art, Mathf.Round((cw - w) * 0.5f), top, w, h, true);
+        }
+
+        /// <summary>
+        /// Alto del visor (dp) para que, con el contenido arriba, la última fila cortada se vea entre el
+        /// <see cref="CutRowMin"/> y el <see cref="CutRowMax"/> de su alto: si ya es así, <paramref name="viewH"/>; si no, el
+        /// visor acaba en la mitad de la última fila que se ve al menos a medias (nunca de la primera).
+        /// </summary>
+        private float CutAtRow(float viewH, float rowH)
+        {
+            float last = -1f;
+            for (int i = 0; i < _rowTops.Count; i++)
+            {
+                float top = _rowTops[i];
+                float shown = (viewH - top) / rowH;
+                if (shown >= CutRowMin && shown <= CutRowMax)
+                {
+                    return viewH;
+                }
+
+                if (shown >= 0.5f && top > last)
+                {
+                    last = top;
+                }
+            }
+
+            return last > 0f ? last + Mathf.Round(rowH * 0.5f) : viewH;
+        }
+
+        // Los fundidos de arriba y abajo del visor, del color de la superficie en cada borde (sin la veta), sobre el ancho de las
+        // filas con 2 dp de aire (dentro de la crema: nunca pisan el marco).
+        private void PlaceFades(float headerBottom, float w, float h, float viewH)
+        {
+            float surfaceH = h - 16f; // la superficie va 8 dp dentro de la tarjeta por cada lado (UiBuilder.ModalBody)
+            _fadeTop.color = ProceduralArt.ModalSurfaceColorAt(headerBottom - 8f, surfaceH);
+            _fadeBottom.color = ProceduralArt.ModalSurfaceColorAt(headerBottom + viewH - 8f, surfaceH);
+            UiBuilder.Place(_fadeTop.rectTransform, 14f, 0f, w - 28f, FadeTopDp);
+            UiBuilder.Place(_fadeBottom.rectTransform, 14f, viewH - FadeBottomDp, w - 28f, FadeBottomDp);
+            UpdateFades();
+        }
+
+        // Cada fundido sale solo si queda contenido por ese lado (verticalNormalizedPosition: 1 arriba, 0 abajo).
+        private void UpdateFades()
+        {
+            bool scrolls = _scroll.vertical;
+            float pos = scrolls ? _scroll.verticalNormalizedPosition : 1f;
+            SetActive(_fadeTop.gameObject, scrolls && pos < 0.99f);
+            SetActive(_fadeBottom.gameObject, scrolls && pos > 0.01f);
+        }
+
+        private static void SetActive(GameObject go, bool active)
+        {
+            if (go.activeSelf != active)
+            {
+                go.SetActive(active);
+            }
         }
 
         private static void PlaceTitle(TextMeshProUGUI text, float x, float y, float w, float h, float s)
@@ -462,7 +605,7 @@ namespace AF.UI
                 return;
             }
 
-            int n = 2 + _offered.Count + _patternRows.Length;
+            int n = 2 + _offered.Count + _patternRows.Length + AudioRowCount;
             var ids = new string[n];
             var rects = new RectTransform[n];
             ids[0] = "close";
@@ -482,20 +625,21 @@ namespace AF.UI
 
             ids[k] = _slothRow.Id;
             rects[k] = _slothRow.Root;
+            AudioLayoutIds(ids, rects, k + 1); // sound, music y haptics (AU1)
 
             _probe.Layout("settings", 0, null, ids, rects);
         }
 
         private TextMeshProUGUI SectionTitle(string name, string text)
         {
-            TextMeshProUGUI title = UiBuilder.Label(name, _panel, TextStyle.PlainBold, text, SectionSp, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
+            TextMeshProUGUI title = UiBuilder.Label(name, _content, TextStyle.PlainBold, text, SectionSp, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
             UiBuilder.AutoSize(title, MinTextSp, SectionSp);
             return title;
         }
 
         private RectTransform HiddenSlot(string name)
         {
-            RectTransform slot = UiBuilder.Rect(name, _panel);
+            RectTransform slot = UiBuilder.Rect(name, _content);
             slot.gameObject.SetActive(false);
             return slot;
         }

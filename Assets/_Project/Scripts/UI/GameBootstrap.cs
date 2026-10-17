@@ -45,7 +45,7 @@ namespace AF.UI
     /// que se abre (una sola vez por arranque); si no valida, se avisa y la pestaña desaparece.</para>
     /// </summary>
     [DisallowMultipleComponent]
-    public sealed class GameBootstrap : MonoBehaviour, IAppFlowListener, IGameActions
+    public sealed partial class GameBootstrap : MonoBehaviour, IAppFlowListener, IGameActions
     {
         /// <summary>Tope del paso de tiempo por fotograma (evita saltos tras un tirón).</summary>
         private const float MaxDeltaMs = 100f;
@@ -766,7 +766,7 @@ namespace AF.UI
         /// <summary>Volver desde «El río sigue creciendo» o Sin canoas.</summary>
         public bool PressBack()
         {
-            return _app != null && _app.CloseOverlay();
+            return AudioBack(_app != null && _app.CloseOverlay()); // AU1: sfx_ui_back al volver
         }
 
         /// <summary>
@@ -784,6 +784,7 @@ namespace AF.UI
 
             settings.Show(LocLocale.Offered(Loc.Catalog, Loc.ShowUnapproved), profile.Settings.Language, profile.Settings.Patterns,
                 profile.Settings.SlothMessages);
+            settings.MarkAudio(profile.Settings.Sound, profile.Settings.Music, profile.Settings.Haptics); // AU1
             _skipNextDelta = true;
             return true;
         }
@@ -1148,6 +1149,7 @@ namespace AF.UI
             // La pantalla de nivel se muestra antes de cargar el nivel (AppFlow llama a Load después).
             _screen?.SetVisible(screen == AppScreen.Level);
             _lobby?.Show(screen);
+            AudioScreenChanged(screen); // AU2: el tema de menú fuera del nivel (GameBootstrap.Audio.cs)
             _skipNextDelta = true;
 
             // «Jugar» con un nivel que abre mundo (11, 41, 81 y 141, en el primer intento): el arte de su banner se pinta ya en
@@ -1292,6 +1294,7 @@ namespace AF.UI
 
             _art = SharedArt(catalog.WaterBase);
             _probe = new DevProbe { Settings = profile.Settings };
+            InstallAudio(profile.Settings); // AU1: audio provisional por código y hápticos (GameBootstrap.Audio.cs)
             _probe.LocaleState(locale, _deviceLocale, _deviceTag);
 
             // Anuncios y compras simulados (D-008 puntos 4 y 5; sin SDK, red ni identificadores): sus pantallas van en lienzos
@@ -1327,6 +1330,7 @@ namespace AF.UI
             _lobby.RiverMapAvailable = RiverMapAvailable; // la pestaña del Mapa del río, desde max_level ≥ 10 (M3.3)
             _mapScreen = new RiverMapScreen(transform, _art, _probe, () => CloseRiverMap(), () => PressMapPlay());
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
+            _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
             _flow = new LevelFlow(catalog, progress, _screen, GameConfig.TapSwitchSelection, LaunchOptions.ResolvePourMode(), _wallet)
@@ -1402,7 +1406,7 @@ namespace AF.UI
             _backPresses = 0;
             if (back)
             {
-                PressAndroidBack();
+                AndroidBackWithAudio(); // AU1: PressAndroidBack con sfx_ui_back, o el háptico de Atrás bloqueado
             }
 
             // El Mapa del río, encima de lo que haya (M3.3): sin asignaciones con el Mapa quieto.

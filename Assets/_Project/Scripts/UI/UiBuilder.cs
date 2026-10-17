@@ -211,6 +211,47 @@ namespace AF.UI
         }
 
         /// <summary>
+        /// Ancho de la palabra más ancha del texto de ahora de <paramref name="text"/> a su tamaño más pequeño (dp; palabras
+        /// separadas por espacios o saltos de línea), como <see cref="MinTextWidth(TextMeshProUGUI)"/>: lo menos que necesita su
+        /// caja para cortar solo entre palabras, nunca por dentro de una (tarea FX5). Mide con TextMeshPro al colocar (una medida
+        /// por palabra), nunca por fotograma; 0 sin texto.
+        /// </summary>
+        public static float LongestWordWidth(TextMeshProUGUI text)
+        {
+            string value = text.text;
+            if (string.IsNullOrEmpty(value))
+            {
+                return 0f;
+            }
+
+            float widest = 0f;
+            int n = value.Length;
+            int i = 0;
+            while (i < n)
+            {
+                while (i < n && (value[i] == ' ' || value[i] == '\n'))
+                {
+                    i++;
+                }
+
+                int j = i;
+                while (j < n && value[j] != ' ' && value[j] != '\n')
+                {
+                    j++;
+                }
+
+                if (j > i)
+                {
+                    widest = Mathf.Max(widest, MinTextWidth(text, value.Substring(i, j - i)));
+                }
+
+                i = j;
+            }
+
+            return widest;
+        }
+
+        /// <summary>
         /// Corte voraz por espacios del texto de ahora de <paramref name="text"/> en líneas de <paramref name="width"/> dp a su
         /// tamaño más pequeño (como corta TextMeshPro: en cada línea, tantas palabras como quepan; una palabra que no cabe sola
         /// va sola). Devuelve cuántas líneas salen (0 sin texto o con saltos de línea propios, que no se miden) y, de ellas, el
@@ -327,7 +368,12 @@ namespace AF.UI
             button.targetGraphic = hit;
             button.transition = Selectable.Transition.None;
             button.navigation = new Navigation { mode = Navigation.Mode.None };
-            button.onClick.AddListener(() => onClick());
+            button.onClick.AddListener(() =>
+            {
+                int cue = AF.Audio.AudioCues.Serial; // AU1: sfx_ui_tap si la acción no pidió su propio sonido (cerrar, comprar…)
+                onClick();
+                AF.Audio.AudioCues.TapIfQuiet(cue);
+            });
             return button;
         }
 

@@ -703,6 +703,11 @@ namespace AF.Presentation.Mechanics
                 }
             }
 
+            if (!skip)
+            {
+                AudioBoard.Step(se.Kind, owner); // AU1: el sonido de la mecánica, en el golpe que la dispara
+            }
+
             p.Start[e] = start;
             p.Dur[e] = Mathf.Max(0f, ms);
             p.State[e] = Running;

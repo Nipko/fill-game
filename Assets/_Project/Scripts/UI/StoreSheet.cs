@@ -124,6 +124,7 @@ namespace AF.UI
         /// <inheritdoc />
         public void Present(SimulatedPurchase purchase, Action<bool> onClosed)
         {
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.StoreOpen); // AU1
             _onClosed = onClosed;
             _canvas.Canvas.gameObject.SetActive(true);
             _canvas.Measure();
@@ -148,6 +149,7 @@ namespace AF.UI
         /// <summary>Cierra la hoja: compra (true) o cancela.</summary>
         public void Close(bool confirmed)
         {
+            AF.Audio.AudioCues.Play(confirmed ? AF.Audio.SfxId.UiBuy : AF.Audio.SfxId.UiBack); // AU1
             Action<bool>? done = _onClosed;
             _onClosed = null;
             _canvas.Canvas.gameObject.SetActive(false);

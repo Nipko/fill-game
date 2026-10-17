@@ -133,6 +133,9 @@ namespace AF.Save
             root.Set("entitlements", entitlements);
 
             JsonNode settings = JsonNode.NewObject();
+            settings.Set("sound", JsonNode.FromBool(p.Settings.Sound));
+            settings.Set("music", JsonNode.FromBool(p.Settings.Music));
+            settings.Set("haptics", JsonNode.FromBool(p.Settings.Haptics));
             settings.Set("patterns", JsonNode.FromString(SettingsData.PatternsText(p.Settings.Patterns)));
             settings.Set("language", JsonNode.FromString(p.Settings.Language));
             settings.Set("sloth_messages", JsonNode.FromBool(p.Settings.SlothMessages));
@@ -324,6 +327,9 @@ namespace AF.Save
                 s.Language = language;
             }
 
+            s.Sound = TolerantBool(node, "sound", s.Sound);
+            s.Music = TolerantBool(node, "music", s.Music);
+            s.Haptics = TolerantBool(node, "haptics", s.Haptics);
             s.SlothMessages = TolerantBool(node, "sloth_messages", s.SlothMessages);
             s.IdleHint = TolerantBool(node, "idle_hint", s.IdleHint);
         }

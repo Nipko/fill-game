@@ -714,6 +714,11 @@ namespace AF.UI
             bool layoutChanged = mode != _canoesModeShown || (seconds < 0) != (_timerShown < 0) || _timerShown == long.MinValue;
             if (mode != _canoesModeShown || canoes.Count != _canoesCountShown || canoes.Max != _canoesMaxShown)
             {
+                if (mode != 2 && _canoesModeShown != 2 && _canoesCountShown >= 0 && canoes.Count > _canoesCountShown)
+                {
+                    AF.Audio.AudioCues.Play(AF.Audio.SfxId.CanoeBack); // AU1: se recupera una canoa
+                }
+
                 _canoesModeShown = mode;
                 _canoesCountShown = canoes.Count;
                 _canoesMaxShown = canoes.Max;

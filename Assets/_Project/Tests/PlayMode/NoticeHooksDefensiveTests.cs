@@ -273,7 +273,7 @@ namespace AF.Tests.PlayMode
             GameScreen view = boot.View!;
             FaunaSpecies? species = boot.Fauna?.ForLevel(boot.Flow!.LevelNumber);
             Assert.That(species, Is.Not.Null, "condición del test: una especie para el tramo del nivel");
-            view.Sighting.Show(view.CardArt.MonkeyArtFor(species!).Portrait, species!.NameIn("es"), UiText.FaunaFact(species.FactKey));
+            view.Sighting.Show(view.CardArt.MonkeyArtFor(species!).Portrait, UiText.FaunaName(species!.NameKey), UiText.FaunaFact(species.FactKey));
             string text = UiText.ExtraCuiaGift; // un aviso real, distinto de los que encolan los tests (el rescate y «+1 Luciérnaga»)
             view.NoticeToast.Show(text, NoticeTiming.ReadMs(text));
             Assert.That(view.ToastText, Is.EqualTo(text), "condición del test: el aviso, a la vista");

@@ -55,7 +55,7 @@ namespace AF.Save.Tests
             Assert.That(p.Progress.MaxLevel, Is.EqualTo(12));
             string json = ProfileJson.Serialize(p);
             StringAssert.Contains("\"profile_schema\": 1,", json);
-            StringAssert.Contains("\"settings\": {\n    \"patterns\": \"auto\",\n    \"language\": \"auto\",\n    \"sloth_messages\": true,\n    \"idle_hint\": true\n  }", json);
+            StringAssert.Contains("\"settings\": {\n    \"sound\": true,\n    \"music\": true,\n    \"haptics\": true,\n    \"patterns\": \"auto\",\n    \"language\": \"auto\",\n    \"sloth_messages\": true,\n    \"idle_hint\": true\n  }", json);
             StringAssert.Contains("\"last_line\": [-1, -1, -1, -1, -1, -1, -1, -1]", json);
             StringAssert.Contains("\"map_seen_level\": 0", json);
         }
@@ -89,6 +89,9 @@ namespace AF.Save.Tests
             p.Settings.Patterns = PatternsSetting.On;
             p.Settings.Language = "en-XA";
             p.Settings.SlothMessages = false;
+            p.Settings.Sound = false;
+            p.Settings.Music = false;
+            p.Settings.Haptics = false;
             p.Settings.IdleHint = false;
             p.Sloth.LastLine[0] = 7;
             p.Sloth.LastLine[7] = 1;
@@ -101,6 +104,9 @@ namespace AF.Save.Tests
             Assert.That(copy.Settings.Language, Is.EqualTo("en-XA"));
             Assert.That(copy.Settings.SlothMessages, Is.False);
             Assert.That(copy.Settings.IdleHint, Is.False);
+            Assert.That(copy.Settings.Sound, Is.False, "AU1");
+            Assert.That(copy.Settings.Music, Is.False);
+            Assert.That(copy.Settings.Haptics, Is.False);
             Assert.That(copy.Sloth.LastLine, Is.EqualTo(new[] { 7, -1, -1, -1, -1, -1, -1, 1 }));
             Assert.That(copy.Sloth.LastGreetingDate, Is.EqualTo("2026-02-28"));
             Assert.That(copy.Sloth.LastSeenDate, Is.EqualTo("2024-02-29"));
@@ -143,8 +149,8 @@ namespace AF.Save.Tests
         [TestCase("{\"profile_schema\": 1, \"settings\": 5, \"sloth\": \"x\"}")]
         [TestCase("{\"profile_schema\": 1, \"settings\": [], \"sloth\": []}")]
         [TestCase("{\"profile_schema\": 1, \"settings\": null, \"sloth\": null}")]
-        [TestCase("{\"profile_schema\": 1, \"settings\": {\"patterns\": 1, \"language\": 5, \"sloth_messages\": \"no\", \"idle_hint\": 0}}")]
-        [TestCase("{\"profile_schema\": 1, \"settings\": {\"patterns\": null, \"language\": null, \"sloth_messages\": null, \"idle_hint\": null}}")]
+        [TestCase("{\"profile_schema\": 1, \"settings\": {\"patterns\": 1, \"language\": 5, \"sloth_messages\": \"no\", \"idle_hint\": 0, \"sound\": \"off\", \"music\": 0, \"haptics\": []}}")]
+        [TestCase("{\"profile_schema\": 1, \"settings\": {\"patterns\": null, \"language\": null, \"sloth_messages\": null, \"idle_hint\": null, \"sound\": null, \"music\": null, \"haptics\": null}}")]
         [TestCase("{\"profile_schema\": 1, \"sloth\": {\"last_line\": 3, \"last_greeting_date\": 20261005, \"last_seen_date\": true}}")]
         [TestCase("{\"profile_schema\": 1, \"sloth\": {\"last_line\": null, \"last_greeting_date\": \"ayer\", \"last_seen_date\": \"2026-02-30\"}}")]
         [TestCase("{\"profile_schema\": 1, \"sloth\": {\"last_line\": [\"1\", 1.5, -2, null, true, 3000000000, [], {}], \"last_seen_date\": \"2026-10-5\"}}")]
@@ -232,6 +238,9 @@ namespace AF.Save.Tests
             Assert.That(p.ProfileSchema, Is.EqualTo(1));
             Assert.That(p.Settings.Patterns, Is.EqualTo(PatternsSetting.Auto));
             Assert.That(p.Settings.Language, Is.EqualTo("auto"));
+            Assert.That(p.Settings.Sound, Is.True, "AU1: audio_sfx_default_on = true (08 §9)");
+            Assert.That(p.Settings.Music, Is.True, "AU1: audio_music_default_on = true (08 §9)");
+            Assert.That(p.Settings.Haptics, Is.True, "AU1: ui_haptics_default_on = true (08 §9)");
             Assert.That(p.Settings.SlothMessages, Is.True, "D-016 punto 4: activado por defecto");
             Assert.That(p.Settings.IdleHint, Is.True);
             Assert.That(p.Sloth.LastLine, Is.EqualTo(NoLines));

@@ -278,14 +278,33 @@ namespace AF.Tests.EditMode
             }
         }
 
-        [TestCase("es-419", "es")]
-        [TestCase("es-MX", "es")]
-        [TestCase("pt-BR", "pt")]
-        [TestCase("en", "en")]
-        [TestCase("en-XA", "en")]
-        public void FaunaName_FollowsTheLanguageOfLoc(string locale, string language)
+        /// <summary>
+        /// El nombre del miquito de la tarjeta sale de la tabla de textos largos por su clave <c>fauna.&lt;id&gt;.name</c>, en el
+        /// idioma de <see cref="Loc"/> y, en en-XA, pseudolocalizado (observación 3 de la prueba de la ola 3 en el teléfono: decía
+        /// «squirrel monkey» sin corchetes; tarea FX5). Sin asignaciones.
+        /// </summary>
+        [TestCase("es-419", "mono ardilla")]
+        [TestCase("en", "squirrel monkey")]
+        [TestCase("pt-BR", "macaco-de-cheiro")]
+        public void FaunaName_IsATableByKey_InTheLanguageOfLoc_WithoutAllocating(string locale, string expected)
         {
-            Assert.That(UiText.FaunaLanguage(locale), Is.EqualTo(language));
+            Loc.SetLocale(locale);
+            string name = string.Empty;
+            TestDelegate read = () => { name = UiText.FaunaName("fauna.saimiri_collinsi.name"); };
+            read();
+            Assert.That(read, Is.Not.AllocatingGCMemory());
+            Assert.That(name, Is.EqualTo(expected));
+            Assert.That(UiText.FaunaName("fauna.otro.name"), Is.Empty);
+            Assert.That(UiText.FaunaName(null!), Is.Empty);
+        }
+
+        [Test]
+        public void FaunaName_InEnXA_IsPseudolocalized()
+        {
+            Loc.SetLocale(LocLocale.Pseudo);
+            string name = UiText.FaunaName("fauna.saimiri_collinsi.name");
+            Assert.That(name, Does.StartWith("[").And.EndWith("]"), "en-XA pone el nombre entre corchetes, como todo texto de las tablas");
+            Assert.That(name, Does.Not.Contain("squirrel monkey").And.Not.Contain("mono ardilla"), "acentuado y alargado: «" + name + "»");
         }
 
         /// <summary>

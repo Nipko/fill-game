@@ -58,6 +58,7 @@ namespace AF.UI
         private float _left = 64f;
         private float _top = 40f;
         private float _width = 92f;
+        private float _compactMinWidth = -1f;
         private float _columnPill = CompactPillDp;
         private float _columnGap = CompactGapDp;
         private float _columnTop = 41f;
@@ -102,6 +103,44 @@ namespace AF.UI
 
         /// <summary>Se ve el cronómetro de la próxima canoa (nunca en la cabecera de partida).</summary>
         public bool TimerShown => _canoes.gameObject.activeSelf && _timer.gameObject.activeSelf;
+
+        /// <summary>
+        /// Lo más estrecha que puede ir la columna de la cabecera de partida (dp) [P]: la cifra de Semillas de cinco dígitos con
+        /// su separador de miles («99.999», con el de la región: <see cref="UiText.WriteNumber"/>) cabe junto a su icono a 12 sp
+        /// (× la escala de texto), el mínimo de 02 §12, en su caja (tras el icono y con 6 dp de aire a la derecha). Hasta aquí
+        /// la puede estrechar la píldora «Reiniciar» cuando una palabra de su etiqueta no cabe en su área
+        /// (GameScreen.LayoutRestartPill; tarea FX5). Mide una vez, al colocar: la escala de texto no cambia en la vida de la
+        /// barra.
+        /// <para>
+        /// Supuesto pendiente del dueño (revisión de FX5): el saldo de la cabecera tiene cinco cifras como mucho. Ni el GDD ni el
+        /// código ponen tope al saldo (05 vende paquetes de hasta 36.000 semillas); con seis cifras («100.000» o más) y la
+        /// fuente al 130 % a 360 dp de ancho, la cifra no cabe a 12 sp × escala en la columna que deja «Reiniciar» (02 §12), y
+        /// medir aquí con seis cifras dejaría a la píldora sin sitio para su palabra, que se volvería a partir. Al 100 % y en
+        /// 16:9, seis cifras caben (Fx5Tests).
+        /// </para>
+        /// </summary>
+        public float CompactMinWidthDp
+        {
+            get
+            {
+                if (_compactMinWidth < 0f)
+                {
+                    int n = UiText.WriteNumber(_buf, 0, 99999, true);
+                    string sample = new string(_buf, 0, n);
+                    float min = UiBuilder.MinTextSp * UiBuilder.TextScale;
+                    float at = _seedsText.enableAutoSizing ? _seedsText.fontSizeMin : _seedsText.fontSize;
+                    float width = UiBuilder.MinTextWidth(_seedsText, sample) * (at > 0f ? min / at : 1f);
+                    _compactMinWidth = Mathf.Ceil(CompactSeedsTextInsetDp + width);
+                    _seedsShown = -1; // _buf se reutiliza: la cifra se vuelve a escribir en el próximo Refresh
+                }
+
+                return _compactMinWidth;
+            }
+        }
+
+        // Lo que la píldora de Semillas de la cabecera deja a los lados de su cifra: 22 dp del icono y 6 a la derecha
+        // (ArrangeChildren).
+        private const float CompactSeedsTextInsetDp = 22f + 6f;
 
         /// <summary>Rectángulo de la píldora o placa de Semillas (tests de layout).</summary>
         public RectTransform SeedsRect => _seeds;

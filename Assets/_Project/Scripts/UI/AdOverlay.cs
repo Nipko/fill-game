@@ -58,6 +58,7 @@ namespace AF.UI
         {
             _ad = ad;
             _onClosed = onClosed;
+            AF.Audio.AudioCues.SetAdActive(true); // AU1: todo se calla durante el anuncio (07 §9.4)
             _elapsedMs = 0f;
             _secondsShown = -1;
             _canvas.Canvas.gameObject.SetActive(true);
@@ -110,6 +111,7 @@ namespace AF.UI
             _ad = null;
             _onClosed = null;
             _canvas.Canvas.gameObject.SetActive(false);
+            AF.Audio.AudioCues.SetAdActive(false); // AU1: vuelve con un fundido de 0,5 s
             done?.Invoke(SimulatedAdClose.Completed);
         }
     }

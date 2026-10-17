@@ -131,7 +131,7 @@ namespace AF.Tests.PlayMode
                 GameScreen view = boot.View;
                 SightingCard card = view.Sighting;
                 Rect was = VictorySetup.CanvasRect(card.Root, (RectTransform)view.Canvas.transform);
-                string name = longest!.NameIn("es");
+                string name = UiText.FaunaName(longest!.NameKey);
                 string fact = UiText.FaunaFact(longest.FactKey);
                 card.Hide();
                 card.Measure(view.CanvasWidth, name, fact);

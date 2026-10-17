@@ -85,7 +85,7 @@ namespace AF.Presentation
     /// une cada vista al tablero y a las capas (<see cref="CuiaView.BindBoard"/>), <see cref="BoardLaidOut"/> sube
     /// <see cref="LayoutVersion"/> y avisa a los overlays, y las posiciones van en el espacio de las capas.</para>
     /// </remarks>
-    public sealed class BoardAnimator : ICuiaBoard
+    public sealed partial class BoardAnimator : ICuiaBoard
     {
         /// <summary>
         /// Inclinación de Magic Sort al llegar a la boca del destino, 300 ms después de salir: 38° (ficha §2.6, 3.100 ms;
@@ -1135,6 +1135,7 @@ namespace AF.Presentation
                     float head = Mathf.Clamp01((time - job.StreamStart) / StreamGrowMs);
                     float tail = time > job.FlowEnd ? Mathf.Clamp01((time - job.FlowEnd) / Mathf.Max(1f, _timings.TailMs)) : 0f;
                     stream.Draw(lip, control, surface, tail, head, color, StreamWidthStartU * s.Unit, StreamWidthEndU * u);
+                    PourAudio(ref job, t, pt, time); // AU1: inicio, bucle con el nivel del destino y fin del chorro
                     if (!job.SrcDone)
                     {
                         s.SetTongue(head * (1f - tail), color, job.Tint); // lengua por la pared inferior hasta el labio
@@ -2007,6 +2008,7 @@ namespace AF.Presentation
                 return;
             }
 
+            PourAudioCut(ref job); // AU1: un chorro que se corta antes de tiempo (salto) se calla sin más
             _streams[job.Stream].Hide();
             _streams[job.Stream].MoveTo(_streamLayer);
             _streams[job.Stream].InUse = false;
@@ -2072,6 +2074,9 @@ namespace AF.Presentation
             public int Before;
             public int Stream;
             public int Splashes;
+            public bool PourSounding; // AU1: el bucle del chorro suena (voz PourVoice)
+            public bool PourEnded;
+            public int PourVoice;
         }
     }
 }

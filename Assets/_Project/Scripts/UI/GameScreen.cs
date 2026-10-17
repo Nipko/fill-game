@@ -149,6 +149,12 @@ namespace AF.UI
         // Píldora «Reiniciar» que crece (tarea L4) [P]: aire a cada lado de su etiqueta, lo que puede salir del área de 60 dp
         // por la derecha (queda a 4 dp del borde) y el aire hasta la columna del saldo.
         private const float RestartPillPadDp = 4f;
+
+        // Aire más corto a cada lado de la etiqueta de «Reiniciar» cuando una palabra no cabe con RestartPillPadDp ni con la
+        // columna del saldo a su ancho mínimo (tarea FX5) [P]. Nunca menos: con 2 dp, en en-XA al 130 % a 360 dp, el «[» y la
+        // «r» quedaban pegados a los cantos (revisión de FX5; D-003). La etiqueta ya va a 12 sp × escala, el mínimo de 02 §12,
+        // así que no puede encoger para ganar aire.
+        internal const float RestartPillTightPadDp = 3f;
         private const float RestartPillOutDp = 4f;
         internal const float RestartPillGapDp = 4f;
 
@@ -206,6 +212,7 @@ namespace AF.UI
         private readonly ReliefParts _restart;
         private readonly Image _restartPill;
         private readonly TextMeshProUGUI _restartLabel;
+        private float _restartPillLeft = float.NaN; // LayoutRestartPill (tarea FX5)
         private readonly BoosterTray _tray;
         private readonly RectTransform _liftFront;
         private readonly RectTransform _ambientNearParent;
@@ -294,6 +301,7 @@ namespace AF.UI
         private float _boardShiftTarget;
         private float _boardShiftAnim = -1f;
         private float _confettiDelay = -1f;
+        private AF.Audio.SeedTicker _seedTicker; // AU1: sfx_seeds_tick de la Cosecha
         private bool _restartProbePending;
         private float _horizonY = 118f;
         private PourTimings _timings;
@@ -887,6 +895,7 @@ namespace AF.UI
                     _confettiDelay = -1f;
                     // Tras el estallido, ≤ 12 hojas y pétalos caen despacio hasta el CTA de la victoria.
                     _confetti.Play(GameConfig.AnimConfettiMaxParticles, PanelRect(), _canvasW, _victoryPanelY + _victoryCtaTopDp);
+                    AF.Audio.AudioCues.Play(AF.Audio.SfxId.Confetti); // AU1
                 }
             }
 
@@ -939,6 +948,7 @@ namespace AF.UI
             _introDelayMs = -1f;
             BuildBoard(flow);
             _levelText.text = UiText.Level(level);
+            AudioBoard.LevelLoaded(flow.Level, flow.Session.Current); // AU1-AU2: el lecho del mundo (nocturno en Muy difícil) y su ambiente
             _pressPreview = -1;
             _shownBoard = flow.Session.Current;
             _probe.State("load", flow, int.MinValue, null);
@@ -1040,6 +1050,7 @@ namespace AF.UI
                 case TapKind.Selected:
                     SetLift(result.PreviousSelection, false);
                     SetLift(result.Selection, true); // solo el origen sube: ningún destino se resalta (D-002; 02 §3.1 C1)
+                    AudioBoard.Select(flow.Session.Current, result.Selection); // AU1: la nota de la fruta de arriba
                     _probe.State("select", flow, result.Tapped, null);
                     break;
 
@@ -1055,12 +1066,14 @@ namespace AF.UI
                         _views[result.Tapped].Shake();
                     }
 
+                    AF.Audio.AudioCues.Play(AF.Audio.SfxId.Illegal); // AU1: madera neutra, nunca háptico en un rechazo (02 §4)
                     _probe.State("reject", flow, result.Tapped, null);
                     break;
 
                 case TapKind.Poured:
                     SetLift(result.PreviousSelection, false);
                     EnqueuePour(flow, result.Pour);
+                    AudioBoard.Music(flow.Level, flow.Session.Current); // AU1-AU2: una capa de percusión más al sellar
                     _probe.State("pour", flow, result.Tapped, result.Pour);
                     LabelsBoardChanged(flow);
                     RevealBoardChanged(flow);
@@ -1114,6 +1127,8 @@ namespace AF.UI
 
             _shownBoard = after;
             _probe.State("undo", flow, int.MinValue, undone);
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.Undo); // AU1: Marea
+            AudioBoard.Music(flow.Level, after); // AU1-AU2: la Marea puede quitar una capa
             LabelsBoardChanged(flow);
             RevealBoardChanged(flow);
         }
@@ -1127,6 +1142,7 @@ namespace AF.UI
             ClearNotices(); // otro intento: los avisos del anterior ya no valen
             _shownBoard = RequireFlow().Session.Current;
             _restartProbePending = true;
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.Restart); // AU1: Volver a la orilla
         }
 
         /// <inheritdoc />
@@ -1159,6 +1175,8 @@ namespace AF.UI
 
             _ambient.SetSuspended(true);
             _confettiDelay = 500f;
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.WinToada); // AU1: la toada y el háptico medio de la victoria
+            AF.Audio.AudioCues.Haptic(AF.Audio.HapticKind.Win);
             _skipCatcher.gameObject.SetActive(true);
             // Ningún aviso encima de la celebración ni de la victoria (D-011, punto 2): fuera el que se vea (el regalo de Capi
             // dura 5,5 s; la tarjeta del miquito, unos 5) y lo que esperaba turno (GameScreen.Notices.cs).
@@ -1284,6 +1302,8 @@ namespace AF.UI
         {
             HideNoticesForModal(); // pregunta 42 (b): el aviso que se veía se oculta y no vuelve (GameScreen.Notices.cs)
             _animator.SnapAll();
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.Stuck); // AU1: Aguas estancadas, con el lecho atenuado
+            AF.Audio.AudioCues.SetModalDuck(true);
             _ambient.SetSuspended(true);
             _stuckOverlay.gameObject.SetActive(true);
             _stuck.Panel.gameObject.SetActive(true);
@@ -1298,7 +1318,7 @@ namespace AF.UI
             _stuckAnim = 0f;
             ApplyStuckAnim(0f);
             SyncChrome();
-            _probe.Funnel("stuck_modal", RequireFlow());
+            _probe.Funnel("stuck_modal", RequireFlow(), _services?.StoreLedger, _stuckBalsaOk);
         }
 
         /// <inheritdoc />
@@ -1312,6 +1332,8 @@ namespace AF.UI
             }
 
             AddCuiaView(flow, index);
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.CapiPaddle); // AU1: llega Capi con la cuia (extra o de rescate)
+            AF.Audio.AudioCues.Haptic(AF.Audio.HapticKind.Capi);
             SyncChrome();
             _probe.Funnel(kind == AddedCuiaKind.Rescue ? "rescue" : "extra_cuia", flow);
             LabelsBoardChanged(flow);
@@ -1380,6 +1402,11 @@ namespace AF.UI
         /// <inheritdoc />
         public void OnFailResolved(FailOutcome outcome)
         {
+            if (outcome.CanoeLost)
+            {
+                AF.Audio.AudioCues.Play(AF.Audio.SfxId.CanoeLost); // AU1
+            }
+
             _probe.Funnel(outcome.Kind == FailKind.Hard ? (outcome.CanoeLost ? "fail_hard_canoe" : "fail_hard") : "fail_soft", RequireFlow());
         }
 
@@ -1388,6 +1415,7 @@ namespace AF.UI
         {
             _introDelayMs = bannerMs;
             _attemptBanner = false;
+            AF.Audio.AudioCues.Play(AF.Audio.SfxId.RiverDrop); // AU1: El río bajó
             _banner.Place(_canvasW, TopRowY + 64f);
             _banner.Show(reliefType == AF.Levels.ReliefBoard.TypeMinusColor ? UiText.RiverLoweredColor : UiText.RiverLoweredCuia, bannerMs);
             _probe.Funnel("river_lowered", RequireFlow());
@@ -1616,6 +1644,7 @@ namespace AF.UI
         {
             ShiftBoard(0f, animateBoard);
             _stuckOverlay.gameObject.SetActive(false);
+            AF.Audio.AudioCues.SetModalDuck(false); // AU1: sin modal, el lecho vuelve a su nivel
             _victoryOverlay.gameObject.SetActive(false);
             _giveUp.Hide();
             _failed.Hide();
@@ -1733,7 +1762,7 @@ namespace AF.UI
             if (_walletBar.Compact)
             {
                 float left = HudBadgeRight + 4f;
-                float right = _canvasW - 8f - 60f - 4f;
+                float right = RestartLimitDp;
                 float pill = WalletBar.CompactPillDp;
                 float gap = WalletBar.CompactGapDp;
                 float columnTop = TopRowY + 1f;
@@ -2392,9 +2421,15 @@ namespace AF.UI
         // Píldora «Reiniciar» al pie del disco (guía 3.5: 60 × 16 dp). Si su etiqueta (12 sp, el mínimo de 02 §12) no cabe en
         // una línea (otro idioma, en-XA o la fuente al 130 %; tarea L4), la píldora crece hacia la izquierda, sin pasar de la
         // columna del saldo (a RestartPillGapDp), y hasta RestartPillOutDp más allá del área por la derecha; si ni así cabe, la
-        // etiqueta va en dos líneas y la píldora crece hacia abajo, bajo la fila del HUD. Mide al colocar.
+        // etiqueta va en dos líneas y la píldora crece hacia abajo, bajo la fila del HUD. Nunca parte una palabra (prueba de la
+        // ola 3 en el teléfono: «Reinici / ar» al 130 %; tarea FX5): si una palabra de la etiqueta no cabe ni en ese ancho, la
+        // píldora crece hacia la izquierda lo que le falte a esa palabra y la columna del saldo se estrecha otro tanto
+        // (_restartPillLeft; LayoutWalletBar), sin bajar de WalletBar.CompactMinWidthDp, y si ni así cabe, con menos aire
+        // (RestartPillTightPadDp); la etiqueta, en una línea si así cabe entera y, si no, en dos, cortadas entre palabras. Si
+        // una palabra no cupiera ni así, se partiría: no pasa con es-419 ni con en-XA (Fx5Tests). Mide al colocar.
         private void LayoutRestartPill(float w)
         {
+            _restartPillLeft = float.NaN;
             float labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_restartLabel)) + (2f * RestartPillPadDp);
             if (labelW <= 60f)
             {
@@ -2415,11 +2450,49 @@ namespace AF.UI
                 return;
             }
 
-            SetRestartPillLines(true);
-            float inner = maxW - (2f * RestartPillPadDp);
+            float width = maxW;
+            float pad = RestartPillPadDp;
+            float wordInk = Mathf.Ceil(UiBuilder.LongestWordWidth(_restartLabel));
+            float wordW = wordInk + (2f * pad);
+            if (wordW > maxW)
+            {
+                // Lo más ancha que puede ir: hasta la columna del saldo a su ancho mínimo (y a RestartPillGapDp de ella). Si ni así
+                // cabe la palabra con su aire, el aire baja a RestartPillTightPadDp (en-XA al 130 % a 360 dp), y nunca más.
+                float capW = areaX + right - (walletLeft + _walletBar.CompactMinWidthDp + RestartPillGapDp);
+                if (wordW > capW)
+                {
+                    pad = RestartPillTightPadDp;
+                    wordW = wordInk + (2f * pad);
+                    labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_restartLabel)) + (2f * pad);
+                }
+
+                width = Mathf.Max(maxW, Mathf.Min(wordW, capW));
+                _restartPillLeft = areaX + right - Mathf.Min(width, labelW);
+                if (labelW <= width)
+                {
+                    SetRestartPillLines(false, pad);
+                    UiBuilder.Place(_restartPill.rectTransform, right - labelW, 32f, labelW, 16f);
+                    return;
+                }
+            }
+
+            SetRestartPillLines(true, pad);
+            float inner = width - (2f * pad);
             float h = Mathf.Max(16f, Mathf.Ceil(_restartLabel.GetPreferredValues(_restartLabel.text, inner, float.PositiveInfinity).y) + 1f);
-            UiBuilder.Place(_restartPill.rectTransform, right - maxW, 32f, maxW, h);
+            UiBuilder.Place(_restartPill.rectTransform, right - width, 32f, width, h);
         }
+
+        /// <summary>
+        /// Borde izquierdo de la píldora «Reiniciar» (dp desde la izquierda del lienzo) cuando estrecha la columna del saldo
+        /// (una palabra de su etiqueta no cabe en su área; tarea FX5); NaN si la columna va a su ancho de siempre.
+        /// </summary>
+        internal float RestartPillLeftDp => _restartPillLeft;
+
+        // Hasta dónde llega lo de la fila del HUD a la izquierda de Reiniciar (dp desde la izquierda del lienzo): 4 dp antes de
+        // su área (x = W − 68) o, si la píldora la estrecha, RestartPillGapDp antes de la píldora (tarea FX5).
+        private float RestartLimitDp => float.IsNaN(_restartPillLeft)
+            ? _canvasW - 8f - 60f - 4f
+            : Mathf.Min(_canvasW - 8f - 60f - 4f, _restartPillLeft - RestartPillGapDp);
 
         /// <summary>Píldora «Reiniciar» (tests de desbordes; tarea L4).</summary>
         internal RectTransform RestartPillRect => _restartPill.rectTransform;
@@ -2436,12 +2509,12 @@ namespace AF.UI
             ApplyScreenMetrics(false);
         }
 
-        private void SetRestartPillLines(bool two)
+        private void SetRestartPillLines(bool two, float pad = RestartPillPadDp)
         {
             _restartLabel.textWrappingMode = two ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
             _restartLabel.lineSpacing = two ? -20f : 0f;
-            _restartLabel.rectTransform.offsetMin = new Vector2(two ? RestartPillPadDp : 0f, 1f);
-            _restartLabel.rectTransform.offsetMax = new Vector2(two ? -RestartPillPadDp : 0f, 0f);
+            _restartLabel.rectTransform.offsetMin = new Vector2(two ? pad : 0f, 1f);
+            _restartLabel.rectTransform.offsetMax = new Vector2(two ? -pad : 0f, 0f);
         }
 
         private float BoardBottom => TrayTop - 40f;
@@ -2619,6 +2692,7 @@ namespace AF.UI
             _harvestTo = Mathf.Max(0, to);
             _harvestCountMs = -delayMs;
             _harvestCounting = true;
+            _seedTicker.Begin(_harvestFrom, _harvestTo); // AU1
             _harvestShown = -1;
             WriteHarvest(_harvestFrom);
         }
@@ -2647,6 +2721,11 @@ namespace AF.UI
             }
 
             _harvestShown = value;
+            if (_seedTicker.Advance(value) > 0)
+            {
+                AF.Audio.AudioCues.Play(AF.Audio.SfxId.SeedsTick); // AU1: una semilla cada 10 (máx. 20)
+            }
+
             _harvestBuf[0] = '+';
             int n = UiText.WriteNumber(_harvestBuf, 1, value, true);
             _harvestValue.SetCharArray(_harvestBuf, 0, n);

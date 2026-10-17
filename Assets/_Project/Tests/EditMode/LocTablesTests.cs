@@ -156,6 +156,40 @@ namespace AF.Tests.EditMode
             Assert.That(new List<string>(UiText.FaunaFactKeys).Count, Is.EqualTo(fauna.Species.Count));
         }
 
+        /// <summary>
+        /// Los nombres de la tarjeta «¡Miquito a la vista!» (tarea FX5): cada especie del catálogo tiene su fila
+        /// <c>fauna.&lt;id&gt;.name</c> en <c>facts.csv</c> con los <c>nombres</c> del catálogo (es → es-419, en → en y pt → pt-BR),
+        /// y toda fila <c>fauna.*.name</c> es de una especie del catálogo: las dos copias no se separan.
+        /// </summary>
+        [Test]
+        public void FaunaNames_AreTheCatalogNames()
+        {
+            FaunaCatalog fauna = FaunaCatalogReader.Read(File.ReadAllText(LocTables.ProjectPath("Assets/_Project/Data/Fauna/miquitos_v0.json"), Encoding.UTF8));
+            LocTable facts = LocSetUpFixture.Catalog.Facts;
+            var keys = new List<string>();
+            for (int i = 0; i < fauna.Species.Count; i++)
+            {
+                FaunaSpecies species = fauna.Species[i];
+                string key = species.NameKey;
+                Assert.That(key, Is.EqualTo("fauna." + species.Id + ".name"));
+                keys.Add(key);
+                int row = facts.IndexOf(key);
+                Assert.That(row, Is.GreaterThanOrEqualTo(0), key + " (nombre de " + species.Id + ")");
+                Assert.That(facts.TextAt(row, LocLocale.SourceLocale), Is.EqualTo(species.Names["es"]), key + " (es-419)");
+                Assert.That(facts.TextAt(row, "en"), Is.EqualTo(species.Names.TryGetValue("en", out string? en) ? en : string.Empty), key + " (en)");
+                Assert.That(facts.TextAt(row, "pt-BR"), Is.EqualTo(species.Names.TryGetValue("pt", out string? pt) ? pt : string.Empty), key + " (pt-BR)");
+            }
+
+            for (int r = 0; r < facts.Count; r++)
+            {
+                string key = facts.KeyAt(r);
+                if (key.StartsWith(FaunaSpecies.NameKeyPrefix, StringComparison.Ordinal) && key.EndsWith(FaunaSpecies.NameKeySuffix, StringComparison.Ordinal))
+                {
+                    Assert.That(keys, Does.Contain(key), "nombre de fauna sin especie en el catálogo");
+                }
+            }
+        }
+
         [Test]
         public void EveryRow_HasEs419_Context_MaxChars_AndAStatusPerText()
         {

@@ -787,7 +787,7 @@ namespace AF.UI
             }
 
             float lo = Mathf.Max(HudBadgeRight + 4f, Mathf.Round(gx) + groupW + HudCounterGapDp);
-            float hi = _canvasW - 8f - 60f - 4f; // a la izquierda de Reiniciar (x = W − 68)
+            float hi = RestartLimitDp; // a la izquierda de Reiniciar (x = W − 68) y de su píldora si crece (tarea FX5)
             if (!FitSpan(counterW, hi - counterW, lo, hi, skyTop < y + h, skyLeft, skyRight, out float cx))
             {
                 return false;

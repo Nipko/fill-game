@@ -96,6 +96,11 @@ namespace AF.UI
 
         private void OnArrivalStarted(ArrivalStrip strip)
         {
+            if (strip.Stop != null)
+            {
+                AF.Audio.AudioCues.Play(AF.Audio.SfxId.Fact); // AU1: llegada a la parada (la línea de fruta va sin sonido, D-017)
+            }
+
             _probe.Arrival("start", strip, _slot.ContentDp);
             ArrivalLayoutCount++;
             _arrivalIds.Clear();

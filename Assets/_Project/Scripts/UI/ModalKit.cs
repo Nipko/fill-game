@@ -294,7 +294,11 @@ namespace AF.UI
         /// <summary>Cierre: disco de madera de 40 dp con la X en crema, en un área de 48 dp.</summary>
         public static ReliefParts Close(string name, Transform parent, ProceduralArt art, Action onClick)
         {
-            ReliefParts close = UiBuilder.Relief(name, parent, art.DiscWood, onClick);
+            ReliefParts close = UiBuilder.Relief(name, parent, art.DiscWood, () =>
+            {
+                AF.Audio.AudioCues.Play(AF.Audio.SfxId.UiBack); // AU1: cerrar suena a madera grave
+                onClick();
+            });
             RectTransform visual = (RectTransform)close.Face.parent;
             visual.anchorMin = new Vector2(0.5f, 1f);
             visual.anchorMax = new Vector2(0.5f, 1f);

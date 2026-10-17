@@ -129,6 +129,7 @@ namespace AF.Presentation
 
         private readonly IntroChoreography _plan = new IntroChoreography();
         private readonly IntroInput _input = new IntroInput();
+        private readonly IntroAudioCues _audio = new IntroAudioCues(); // AU1: los sonidos de Llenar y teñir
         private readonly ProceduralArt _art;
         private readonly RectTransform _layer;
         private readonly WaterStripGraphic _sheet;
@@ -481,6 +482,7 @@ namespace AF.Presentation
             _tail = false;
             _fadeLeft = -1f;
             Running = true;
+            _audio.Begin(_plan, _input, ReduceMotion); // AU1
             if (!_layer.gameObject.activeSelf)
             {
                 _layer.gameObject.SetActive(true);
@@ -517,6 +519,7 @@ namespace AF.Presentation
             }
 
             _t += dtMs;
+            _audio.Tick(_t); // AU1
             if (Running && _t >= _input.TotalMs)
             {
                 FinishNatural();
@@ -670,6 +673,7 @@ namespace AF.Presentation
         private void FinishNatural()
         {
             Running = false;
+            _audio.Stop(); // AU1: lo que faltaba de la intro ya no suena
             Ambient?.SetPollenPaused(false); // el polen vuelve con el input
             int n = Mathf.Min(_views.Length, _input.Count);
             for (int i = 0; i < n; i++)

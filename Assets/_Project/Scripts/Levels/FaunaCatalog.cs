@@ -147,6 +147,7 @@ namespace AF.Levels
             Iucn = iucn;
             Threatened = threatened;
             FactKey = factKey;
+            NameKey = NameKeyPrefix + id + NameKeySuffix;
             PartsSlot = partsSlot;
             PortraitSlot = portraitSlot;
             Review = review;
@@ -215,6 +216,20 @@ namespace AF.Levels
 
         /// <summary><c>dato_tarjeta</c>: clave de localización de la línea de la tarjeta.</summary>
         public string FactKey { get; }
+
+        /// <summary>Comienzo de <see cref="NameKey"/> (familia de contenido con puntos; pregunta 49 (a)).</summary>
+        public const string NameKeyPrefix = "fauna.";
+
+        /// <summary>Final de <see cref="NameKey"/>.</summary>
+        public const string NameKeySuffix = ".name";
+
+        /// <summary>
+        /// Clave del nombre local que enseña la tarjeta «¡Miquito a la vista!», por convención y sin campo en el catálogo
+        /// (<c>fauna.&lt;id&gt;.name</c>, como <c>tint.&lt;tinte&gt;.name</c>), en la tabla de textos largos (<c>facts.csv</c>;
+        /// D-018, tarea FX5): la UI nunca enseña <see cref="Names"/> tal cual. Sus textos en es-419, en y pt-BR son los de
+        /// <c>nombres</c> (LocTablesTests lo comprueba), pendientes del asesor cultural (07 §8.2).
+        /// </summary>
+        public string NameKey { get; }
 
         /// <summary>Ranura <c>fauna_&lt;id&gt;_partes</c>.</summary>
         public string PartsSlot { get; }

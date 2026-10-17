@@ -4,6 +4,7 @@
   "references": [
     "AF.Core",
     "AF.Levels",
+    "AF.Audio",
     "UnityEngine.UI"
   ],
   "includePlatforms": [],

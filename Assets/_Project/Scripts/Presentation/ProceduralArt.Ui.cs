@@ -127,6 +127,43 @@ namespace AF.Presentation
             return sprite;
         }
 
+        private Sprite? _scrollFadeTop;
+        private Sprite? _scrollFadeBottom;
+
+        /// <summary>
+        /// Fundido del borde de un visor desplazable (Ajustes; revisión de AU1): blanco que pasa de opaco en el borde
+        /// (<paramref name="top"/>: arriba; si no, abajo) a transparente hacia dentro, con un suavizado en S. El color de la
+        /// superficie lo pone <c>Image.color</c>; se estira al alto que se pida. Perezoso.
+        /// </summary>
+        public Sprite ScrollFade(bool top)
+        {
+            if (top)
+            {
+                return _scrollFadeTop != null ? _scrollFadeTop : (_scrollFadeTop = BuildScrollFade(true));
+            }
+
+            return _scrollFadeBottom != null ? _scrollFadeBottom : (_scrollFadeBottom = BuildScrollFade(false));
+        }
+
+        private Sprite BuildScrollFade(bool top)
+        {
+            const int w = 4;
+            const int h = 64;
+            var pc = new PixelCanvas(w, h);
+            for (int y = 0; y < h; y++)
+            {
+                // y = 0 es la fila de abajo: alfa 1 en el borde del visor y 0 hacia dentro.
+                float t = y / (float)(h - 1);
+                float alpha = Mathf.SmoothStep(0f, 1f, top ? t : 1f - t);
+                for (int x = 0; x < w; x++)
+                {
+                    pc.Set(x, y, new Color(1f, 1f, 1f, alpha));
+                }
+            }
+
+            return MakeSprite(pc, top ? "scroll_fade_top" : "scroll_fade_bottom", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
         /// <summary>
         /// La superficie de <see cref="ModalSurfaceFor"/> de esas medidas ya está generada (no costará nada pedirla; tests del
         /// banner de mundo, que la pinta en otro hilo con su arte: <see cref="RequestBannerArt"/>).
@@ -557,6 +594,21 @@ namespace AF.Presentation
         public static Color32[] ModalSurfacePixels(int widthDp, int heightDp)
         {
             return PaintModalSurface(widthDp, heightDp).ToColor32();
+        }
+
+        /// <summary>
+        /// Color de la superficie de <see cref="ModalSurfaceFor"/> a <paramref name="ydDp"/> dp de su borde de arriba, en una de
+        /// <paramref name="heightDp"/> dp de alto, sin la veta (que solo oscurece un 4-6 % en sus líneas): el degradado
+        /// <c>panel_claro</c> → <c>panel_claro_fondo</c> con el lustre de arriba. Para lo que se funde con la superficie (los
+        /// fundidos del visor de Ajustes).
+        /// </summary>
+        public static Color ModalSurfaceColorAt(float ydDp, float heightDp)
+        {
+            float t = Mathf.Clamp01(ydDp / heightDp);
+            Color baseC = Color.Lerp(Palette.PanelLight, Palette.PanelLightLow, t);
+            Color c = new Color(baseC.r, baseC.g, baseC.b, 1f);
+            float lustre = Mathf.Clamp01(1f - (ydDp / Mathf.Max(12f, heightDp * 0.3f)));
+            return Color.Lerp(c, Color.white, 0.08f * lustre);
         }
 
         // Los píxeles de la superficie (ver ModalSurfaceFor): solo cuentas con Color, Mathf y ArtNoise sobre un PixelCanvas

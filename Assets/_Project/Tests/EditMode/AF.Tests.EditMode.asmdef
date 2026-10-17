@@ -17,7 +17,10 @@
     "AF.Ads",
     "AF.IAP",
     "AF.EditorTools",
-    "AF.Localization"
+    "AF.Localization",
+    "AF.Audio",
+    "AF.Audio.Unity",
+    "AF.Audio.Editor"
   ],
   "includePlatforms": [
     "Editor"

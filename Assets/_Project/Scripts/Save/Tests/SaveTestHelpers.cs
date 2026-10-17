@@ -152,6 +152,8 @@ namespace AF.Save.Tests
             p.Entitlements.Skins.Add("af_skin_m04");
             p.Settings.Patterns = PatternsSetting.Off;
             p.Settings.Language = "pt-BR";
+            p.Settings.Sound = false;
+            p.Settings.Haptics = false;
             p.Settings.SlothMessages = false;
             p.Settings.IdleHint = false;
             for (int i = 0; i < SlothData.MomentCount; i++)
@@ -223,7 +225,8 @@ namespace AF.Save.Tests
                 "progress=" + p.Progress.MaxLevel + "," + p.Progress.NextLevel + "," + p.Progress.SinceLastSkip + ",["
                     + string.Join(",", p.Progress.SkippedLevels) + "]," + p.Progress.ContentVersion + "," + p.Progress.MapSeenLevel,
                 "entitlements=" + p.Entitlements.NoAds + "," + p.Entitlements.StarterBought + ",[" + string.Join(",", p.Entitlements.Skins) + "]",
-                "settings=" + p.Settings.Patterns + "," + p.Settings.Language + "," + p.Settings.SlothMessages + "," + p.Settings.IdleHint,
+                "settings=" + p.Settings.Patterns + "," + p.Settings.Language + "," + p.Settings.SlothMessages + "," + p.Settings.IdleHint
+                    + "," + p.Settings.Sound + "," + p.Settings.Music + "," + p.Settings.Haptics,
                 "sloth=[" + string.Join(",", p.Sloth.LastLine) + "]," + p.Sloth.LastGreetingDate + "," + p.Sloth.LastSeenDate,
                 "ads=" + p.Ads.LastIap?.Ticks + "/" + p.Ads.LastIap?.Kind + "," + p.Ads.LevelsSinceInterstitial,
                 "stats=" + p.Stats.LevelsWon + "," + p.Stats.FailsHard + "," + p.Stats.Rescues + "," + p.Stats.RvWatched + "," + p.Stats.Sessions,
