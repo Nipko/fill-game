@@ -56,13 +56,13 @@ namespace AF.Tests.PlayMode
 
             Assert.That(flow.PressHint(), Is.True);
             Assert.That(flow.HintThinking, Is.True);
-            int frames = 0;
+            Assert.That(flow.LastHint, Is.Null, "PressHint no espera: la respuesta llega en un fotograma posterior");
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(Seeds), "pedirla no cobra");
             float start = Time.realtimeSinceStartup;
             while (flow.HintThinking)
             {
                 Assert.That(Time.realtimeSinceStartup - start, Is.LessThan(PlayModeHelpers.TimeoutSeconds), "Morpho no respondió");
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
-                frames++;
                 yield return null;
             }
 
@@ -72,7 +72,6 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Wallet!.Seeds, Is.EqualTo(Seeds - 100), "100 semillas al dar el vertido");
             Assert.That(flow.HasActiveHint, Is.True);
             Assert.That(PourRules.IsLegal(flow.Session.Current, r.Move.Source, r.Move.Target), Is.True);
-            Assert.That(frames, Is.GreaterThanOrEqualTo(1), "la respuesta llega en un fotograma posterior: PressHint no espera");
             Assert.That(HasLine("\"event\":\"morpho\",\"source\":\"hint\",\"level\":15,\"answer\":\"pour\""), Is.True, "AF_PERF morpho");
             Assert.That(HasLine("\"charged\":true"), Is.True);
             Assert.That(HasLine("\"timeout_ms\":150"), Is.True);

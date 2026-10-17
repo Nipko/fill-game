@@ -24,7 +24,7 @@ namespace AF.Tests.EditMode
     /// cuatro respuestas en su orden con tableros de prueba (también los de la Tinaja de la propuesta b.2), la consulta en el hilo
     /// de trabajo sin bloquear el hilo principal, el corte a los 150 ms del <see cref="ManualClock"/>, y en el flujo las reglas de
     /// uso, el cobro (stock primero, 100 semillas; nunca sin vertido), el enfriamiento de 5 s [P], <c>hint_supported</c>, la
-    /// pista que se apaga al verter y el recálculo tras la Cuia extra.
+    /// pista que se apaga al verter y el recálculo tras la Cuia extra o la de rescate.
     /// </summary>
     public sealed class MorphoBoosterTests
     {
@@ -60,10 +60,33 @@ namespace AF.Tests.EditMode
             return new BoardState(new[] { C(4, 3, 3, 3), C(4, 1, 2, 1, 1), C(4, 2, 2, 2), T(0x1, 3, 1), Ch() });
         }
 
+        /// <summary>
+        /// Segundo tablero perdido de b.2, el vaivén tras la suelta (<c>TinajaSolverTests.SwingAfterTheRelease</c>):
+        /// N[c,c,c,c] N[a,b,a,a] N[b,b,b] T[] (inerte) ch[a] (ya una Cuia chica normal). Una realidad, sin salida.
+        /// </summary>
+        private static BoardState TinajaSwingAfterTheRelease()
+        {
+            return new BoardState(new[] { C(4, 3, 3, 3, 3), C(4, 1, 2, 1, 1), C(4, 2, 2, 2), Cuia.Empty(LevelValidation.TinajaCapacity).WithMechanic(MechanicType.Tinaja), C(2, 1) });
+        }
+
         /// <summary>Aguas turbias de MurkyTests: dos realidades, la verdadera con solución, y ningún vertido seguro en las dos.</summary>
         private static BoardState MurkyNoSafePour()
         {
             return new BoardState(new[] { Cuia.Create(3, new[] { 3, 3, 1 }, 0x2), Cuia.Create(3, new[] { 2, 1 }, 0x1), C(3, 3, 2, 2), C(3, 1) });
+        }
+
+        /// <summary>
+        /// <see cref="MurkyNoSafePour"/> con una tinaja vacía e inerte al lado (no vierte ni recibe): un tablero con tinaja y
+        /// R = 2 en el que alguna realidad tiene solución y ningún vertido es seguro en todas (respuesta 3, «… la tinaja»). No es
+        /// un nivel de campaña (<see cref="LevelValidation"/> lo rechaza: la tinaja es la única fuente de ocultas de su nivel).
+        /// </summary>
+        private static BoardState TinajaNoSafePour()
+        {
+            return new BoardState(new[]
+            {
+                Cuia.Create(3, new[] { 3, 3, 1 }, 0x2), Cuia.Create(3, new[] { 2, 1 }, 0x1), C(3, 3, 2, 2), C(3, 1),
+                Cuia.Empty(LevelValidation.TinajaCapacity).WithMechanic(MechanicType.Tinaja),
+            });
         }
 
         /// <summary>Sin ocultas y con solución: A*.</summary>
@@ -138,6 +161,17 @@ namespace AF.Tests.EditMode
             Assert.That(lost.Realities, Is.EqualTo(1));
             Assert.That(lost.Tinaja, Is.True);
             Assert.That(lost.Answer, Is.Not.EqualTo(HintAnswer.NoSafePour), "nunca la luciérnaga con R = 1");
+            Assert.That(lost.Charged, Is.False);
+
+            // El segundo tablero perdido de b.2: tras la suelta, con la tinaja inerte (sigue buscando con SafeMoves).
+            HintResult swing = morpho.Compute(TinajaSwingAfterTheRelease(), null, PourMode.Run, true);
+            Assert.That(swing.Answer, Is.EqualTo(HintAnswer.NoExit), "b.2: el vaivén tras la suelta, sin salida");
+            Assert.That(swing.Solver, Is.EqualTo(HintSolver.SafeMoves), "una tinaja, también vacía, busca con SafeMoves (M13)");
+            Assert.That(swing.Realities, Is.EqualTo(1));
+            Assert.That(swing.Tinaja, Is.True);
+            Assert.That(swing.Answer, Is.Not.EqualTo(HintAnswer.NoSafePour), "nunca la luciérnaga con R = 1");
+            Assert.That(swing.HasMove, Is.False);
+            Assert.That(swing.Charged, Is.False);
         }
 
         [Test]
@@ -149,6 +183,33 @@ namespace AF.Tests.EditMode
             Assert.That(r.Realities, Is.EqualTo(2));
             Assert.That(r.Tinaja, Is.False, "sin tinaja: «… una cuia»");
             Assert.That(r.HasMove, Is.False);
+            Assert.That(r.Charged, Is.False);
+        }
+
+        [Test]
+        public void Answer3_NoSafePour_WithTheTinaja_SaysTheTinaja_AndNeverCharges()
+        {
+            // D-019 y 04 §2.3 a: «No veo un vertido seguro: … la tinaja» en un tablero con tinaja. Con la tinaja como única
+            // fuente de ocultas (lo que admite LevelValidation) no se encontró ningún estado así: una búsqueda de más de dos
+            // millones de estados alcanzables desde tableros con tinaja de 3-5 frutas solo dio «vertido» o «sin salida» (la
+            // resolubilidad no cambió entre realidades). El tablero de prueba junta las dos realidades de Aguas turbias con una
+            // tinaja inerte, así que no vale como nivel de campaña y el flujo no se puede probar con él.
+            BoardState board = TinajaNoSafePour();
+            Assert.That(LevelValidation.Validate(board), Is.Not.Null, "no es un nivel de campaña");
+
+            var safe = new SafeMoves();
+            Assert.That(safe.Find(board, NewMorpho().OptionsFor(board, PourMode.Run, true), board), Is.EqualTo(RealityStatus.Ok));
+            Assert.That(safe.RealityCount, Is.EqualTo(2));
+            Assert.That(safe.Count, Is.EqualTo(0), "ningún vertido seguro en las dos realidades");
+            Assert.That(safe.Outcome, Is.EqualTo(SafeMovesOutcome.SomeRealitySolvable), "alguna realidad tiene solución");
+
+            HintResult r = NewMorpho().Compute(board, null, PourMode.Run, true);
+            Assert.That(r.Answer, Is.EqualTo(HintAnswer.NoSafePour), "«No veo un vertido seguro: la luciérnaga ilumina la tinaja»");
+            Assert.That(r.Tinaja, Is.True, "con tinaja: «… la tinaja»");
+            Assert.That(r.Solver, Is.EqualTo(HintSolver.SafeMoves));
+            Assert.That(r.Realities, Is.EqualTo(2), "nunca con R = 1");
+            Assert.That(r.HasMove, Is.False);
+            Assert.That(r.Charged, Is.False, "no cobra");
         }
 
         [Test]
@@ -191,14 +252,19 @@ namespace AF.Tests.EditMode
         public void Worker_SameAnswerAsOnTheCallingThread()
         {
             MorphoBooster morpho = NewMorpho();
-            foreach (BoardState board in new[] { PlainSolvable(), PlainNoExit(), TinajaDebutS0(), TinajaLost(), MurkyNoSafePour() })
+            BoardState[] boards = { PlainSolvable(), PlainNoExit(), TinajaDebutS0(), TinajaLost(), TinajaSwingAfterTheRelease(), MurkyNoSafePour(), TinajaNoSafePour() };
+            HintAnswer[] expected = { HintAnswer.Pour, HintAnswer.NoExit, HintAnswer.Pour, HintAnswer.NoExit, HintAnswer.NoExit, HintAnswer.NoSafePour, HintAnswer.NoSafePour };
+            for (int i = 0; i < boards.Length; i++)
             {
+                BoardState board = boards[i];
                 HintResult direct = NewMorpho().Compute(board, null, PourMode.Run, true);
+                Assert.That(direct.Answer, Is.EqualTo(expected[i]), board.ToString());
                 Assert.That(morpho.Start(board, null, PourMode.Run, true, 1), Is.True);
                 HintResult threaded = WaitDone(morpho);
                 Assert.That(threaded.Answer, Is.EqualTo(direct.Answer), board.ToString());
                 Assert.That(threaded.Move, Is.EqualTo(direct.Move), board.ToString());
                 Assert.That(threaded.Realities, Is.EqualTo(direct.Realities));
+                Assert.That(threaded.Tinaja, Is.EqualTo(direct.Tinaja), board.ToString());
                 Assert.That(morpho.LastError, Is.Null);
             }
         }
@@ -449,6 +515,46 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Flow_AfterTheRescueCuia_TheHintIsCalculatedWithTheAddedCuia_AndChargesOnlyWithAPour()
+        {
+            // 04 §2.3 c: «Tras Cuia extra o Cuia de rescate la pista se calcula con la cuia añadida». Nivel 36 = tablero 6 del
+            // tutorial (FunnelFixture): 3 → 4 deja Aguas estancadas y la compra cumple (04 §6.4).
+            Rig rig = NewRig(1000, offset: 30, maxLevel: 35, pack: TestPacks.Tutorial);
+            rig.Start(36);
+            Assert.That(rig.Flow.Hint.State, Is.EqualTo(HintState.Ready));
+            Assert.That(rig.Flow.TapCuia(3).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(rig.Flow.TapCuia(4).Kind, Is.EqualTo(TapKind.Poured));
+            Assert.That(rig.Flow.Session.Status, Is.EqualTo(LevelStatus.Stuck));
+            rig.Flow.Tick(16, true);
+            rig.Flow.Tick(GameConfig.StuckModalDelayMs, true);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.StuckModal));
+            Assert.That(rig.Flow.Hint.State, Is.EqualTo(HintState.Disabled), "en Aguas estancadas Morpho no está (04 §2.3)");
+            Assert.That(rig.Flow.PressHint(), Is.False);
+
+            int cuias = rig.Flow.Session.Current.Count;
+            Assert.That(rig.Flow.BuyRescue()!.IsApplied, Is.True);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Playing), "la partida sigue");
+            Assert.That(rig.Flow.Session.Status, Is.EqualTo(LevelStatus.Playing));
+            BoardState rescued = rig.Flow.Session.Current;
+            Assert.That(rescued.Count, Is.EqualTo(cuias + 1));
+            int seeds = rig.Economy.Wallet.Seeds;
+            Assert.That(seeds, Is.EqualTo(700), "solo la Cuia de rescate (300)");
+
+            Assert.That(rig.Flow.Hint.State, Is.EqualTo(HintState.Ready));
+            Assert.That(rig.Flow.PressHint(), Is.True);
+            Assert.That(rig.Economy.Wallet.Seeds, Is.EqualTo(seeds), "pedirla no cobra");
+            HintResult r = WaitAnswer(rig);
+            Assert.That(rig.Flow.Session.Current.Equals(rescued), Is.True, "la consulta fue sobre el tablero con la cuia de rescate");
+            Assert.That(r.Answer, Is.EqualTo(HintAnswer.Pour), "04 §2.3 c: con la cuia añadida");
+            Assert.That(PourRules.IsLegal(rescued, r.Move.Source, r.Move.Target), Is.True);
+            BoardState after = PourRules.Apply(rescued, r.Move.Source, r.Move.Target, PourMode.Run);
+            Assert.That(new AStarSolver().Solve(after, SolverOptions.ForPipeline(PourMode.Run, after)).Status, Is.EqualTo(SolveStatus.Solved),
+                "el vertido propuesto deja resoluble el tablero con la cuia añadida");
+            Assert.That(r.Charged, Is.True, "cobra solo al dar el vertido");
+            Assert.That(rig.Economy.Wallet.Seeds, Is.EqualTo(seeds - 100));
+        }
+
+        [Test]
         public void Flow_HintSupportedFalse_IsUnsupported()
         {
             Rig rig = NewRig(500, null, LevelPackReader.Read(PlainPack(false)));
@@ -514,9 +620,9 @@ namespace AF.Tests.EditMode
             return default;
         }
 
-        private static Rig NewRig(int seeds, BoosterConfig? config = null, LevelPack? pack = null)
+        private static Rig NewRig(int seeds, BoosterConfig? config = null, LevelPack? pack = null, int offset = 0, int maxLevel = 0)
         {
-            return new Rig(seeds, config, pack);
+            return new Rig(seeds, config, pack, offset, maxLevel);
         }
 
         // Nivel 15 de Aguas turbias válido en campaña (U_c = 4, T3: la turbia con 3 dosis y la de arriba a la vista): dos
@@ -544,13 +650,13 @@ namespace AF.Tests.EditMode
 
         private sealed class Rig
         {
-            public Rig(int seeds, BoosterConfig? config, LevelPack? pack)
+            public Rig(int seeds, BoosterConfig? config, LevelPack? pack, int offset, int maxLevel)
             {
                 Economy = new EconomyFixture(seeds);
                 Hints = new HintRecorder();
                 Probe = new ProbeRecorder();
                 IReadOnlyList<LevelPack> packs = pack == null ? TestPacks.Campaign : new[] { pack };
-                Flow = new LevelFlow(LevelCatalog.Create(packs), new MemoryProgressStore(), Hints, GameConfig.TapSwitchSelection, PourModes.Default, Economy.Wallet, config)
+                Flow = new LevelFlow(LevelCatalog.Create(packs, offset), new MemoryProgressStore(0, maxLevel), Hints, GameConfig.TapSwitchSelection, PourModes.Default, Economy.Wallet, config)
                 {
                     Clock = Economy.Clock,
                     HintProbe = Probe,
