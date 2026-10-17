@@ -935,9 +935,11 @@ class TextBlockTests(unittest.TestCase):
         # map.stop.<id>.name de map.stop.<lugar>.dato_NN), y la propuesta del Mapa (§4, fila k = 4) asigna manaos.dato_01 al
         # Encuentro. El dato de llegada de cada parada es el dato_del_nivel de su propio registro (el de k = 0 en n = 1), su
         # texto habla de ella («Lugar del dato» en el contexto) y ninguna clave se repite ni sale tambien como «Otro dato».
-        records = {r["k"]: r for r in self.source["paradas_1_200"]}
+        # M4.5a: las llegadas 20-41 (paradas 201-420) vienen de paradas_201_700, con el mismo registro.
+        detailed = self.source["paradas_1_200"] + self.source["paradas_201_700"]
+        records = {r["k"]: r for r in detailed}
         overrides = load_json(OVERRIDES_PATH)["stops"]  # el nombre de la placa, si overrides.json lo cambia (n = 13 y 17)
-        names = {r["k"]: overrides.get(r["id"], {}).get("name", r["nombre"]) for r in self.source["paradas_1_200"]}
+        names = {r["k"]: overrides.get(r["id"], {}).get("name", r["nombre"]) for r in detailed}
         seen = {}
         for s in self.doc["stops"]:
             key = s["arrival_fact"]
@@ -946,6 +948,7 @@ class TextBlockTests(unittest.TestCase):
                 continue
             holder = 0 if s["n"] == 1 else s["n"]
             with self.subTest(n=s["n"]):
+                self.assertIn(holder, records, "cada parada con llegada tiene su registro")
                 self.assertEqual(records[holder]["dato_del_nivel"]["clave"], key, "el dato de su propio registro")
                 self.assertIn(f"Lugar del dato: {names[holder]}.", self.table[key]["context"])
                 self.assertNotIn(key, seen, f"repetida con la parada {seen.get(key)}")
@@ -967,6 +970,18 @@ class TextBlockTests(unittest.TestCase):
             15: "map.stop.iquitos.dato_01",       # el rio Itaya, en el grupo de Iquitos
             16: "map.stop.allpahuayo.dato_01",    # Allpahuayo-Mishana, con el lugar abreviado
             19: "map.stop.pacaya_samiria.dato_02",  # Pacaya-Samiria al alba, en el grupo de Pacaya-Samiria
+            # 201-420 (M4.5a, paradas_201_700):
+            20: "map.myth.source",                # el mito del nacimiento del rio, en Mazan (hito de TiTino del 200)
+            22: "map.country.ec.dato_01",         # dato de pais: Ecuador (Nuevo Rocafuerte)
+            24: "map.stop.yasuni.dato_03",        # el dosel de Yasuni, en el grupo de Yasuni
+            26: "map.stop.cuyabeno.dato_03",      # el bosque inundado, en el grupo de Cuyabeno
+            30: "map.country.bo.dato_01",         # dato de pais: Bolivia (Puerto Heath, hito de TiTino del 300)
+            32: "map.stop.sandoval.dato_03",      # el aguajal, en el grupo de Sandoval
+            34: "map.stop.puerto_maldonado.dato_03",  # los astilleros, en el grupo de Puerto Maldonado
+            36: "map.stop.collpa_tambopata.dato_03",  # los guacamayos, en el grupo de la collpa del Tambopata
+            37: "map.stop.collpa_tambopata.dato_05",  # los nidos, en el grupo de la collpa del Tambopata
+            39: "map.stop.boca_manu.dato_02",     # el Alto Madre de Dios, en el grupo de Boca Manu
+            41: "map.stop.manu.dato_03",          # las cochas, en el grupo del Manu
         }, lugar)
         encuentro = self.table["map.stop.manaos.dato_01"]
         self.assertIn("Lugar del dato: Encuentro de las Aguas.", encuentro["context"])

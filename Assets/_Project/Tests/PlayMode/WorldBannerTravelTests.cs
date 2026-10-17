@@ -53,7 +53,7 @@ namespace AF.Tests.PlayMode
             GameScreen.BannerTravelDataOverride = null;
             MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();
-            LocSetUpFixture.ConfigureEs419(); // por si un test nombró Teotônio (NameTeotonio)
+            LocSetUpFixture.ConfigureEs419();
         }
 
         [UnityTest]
@@ -321,13 +321,13 @@ namespace AF.Tests.PlayMode
         {
             // P-M8 (D-023, punto 19): el guía se deduce del mundo (el bufeo boliviano en los mundos 7 y 8) y el relevo es el punto de
             // paso «teotonio» del tramo. Catálogo de prueba: el 41 llega a una gran parada del mundo 7 desde una del 6, y su tramo pasa
-            // por «teotonio» (a mitad del Amazonas del tramo real).
+            // por «teotonio» (el punto de paso real de los datos del Mapa, M4.5a, movido a mitad del Amazonas del tramo real), con su
+            // nombre real de facts.csv.
             yield return CardSetup.Load(40);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             Assert.That(view.RiverGeometry!(out RiverMap? realMap, out RiverRoutes? realRoutes), Is.True, "la geometría del Mapa");
             GameScreen.BannerTravelDataOverride = RelayData(realMap!, realRoutes!, boot.RiverStops!, out float relayS);
-            NameTeotonio();
             boot.Flow!.Load(41);
             WorldBannerView banner = view.WorldBannerView;
             BannerTravel travel = banner.Travel!;
@@ -349,7 +349,7 @@ namespace AF.Tests.PlayMode
             Vector2 relay = strip.StripPoint(travel.PointAt(travel.RelayFraction));
             int label = strip.RelayPassingIndex;
             Assert.That(label, Is.GreaterThanOrEqualTo(0), "el nombre de Teotônio, entre los de paso");
-            Assert.That(strip.Passing(label).text, Is.EqualTo("Teotônio"));
+            Assert.That(strip.Passing(label).text, Is.EqualTo("Rápidos de Teotônio"), "el nombre real (map.stop.teotonio.name)");
             float start = strip.RelayStartMs;
             float end = start + BannerTravelStrip.RelayPauseMs;
             Assert.That(end, Is.LessThan(WorldBannerView.TravelDelayMs + WorldBannerView.CanoeTravelMs), "el relevo, a mitad del viaje");
@@ -800,25 +800,6 @@ namespace AF.Tests.PlayMode
             return Mathf.Sqrt((x * x) + (y * y));
         }
 
-        /// <summary>
-        /// Da nombre al punto de paso «teotonio» del catálogo de prueba del relevo (<see cref="RelayData"/>): las tablas del proyecto
-        /// con una fila más en <c>facts.csv</c>, <c>map.stop.teotonio.name</c> = «Teotônio» (el nombre de la investigación del Mapa,
-        /// docs/research/mapa-del-rio, Q18-A). Es un dato de prueba: la fila real llega con los datos de 201-700 (M4.5b). El
-        /// TearDown vuelve a las tablas del proyecto.
-        /// </summary>
-        internal static void NameTeotonio()
-        {
-            string strings = System.IO.File.ReadAllText(LocTables.StringsAssetPath);
-            string facts = System.IO.File.ReadAllText(LocTables.FactsAssetPath);
-            if (!facts.EndsWith("\n", System.StringComparison.Ordinal))
-            {
-                facts += "\n";
-            }
-
-            facts += "map.stop.teotonio.name,Teotônio,,,Prueba del relevo del guía (WorldBannerTravelTests).,32,pendiente_asesor,,,,\n";
-            Loc.Configure(LocCatalog.Parse(strings, facts), Loc.Locale, true);
-        }
-
         private static float BoxOverlapDp(RectTransform a, RectTransform b)
         {
             Rect ra = BoxOf(a);
@@ -911,7 +892,9 @@ namespace AF.Tests.PlayMode
         }
 
         // Datos de prueba del relevo: las paradas reales con la 3 en el mundo 6 y la 4 en el 7, y el tramo de la 4 con «teotonio»
-        // (un punto de paso nuevo en el Mapa, a mitad de su pieza del Amazonas). relayS: la s de «teotonio».
+        // (el punto de paso real de los datos del Mapa, en el Madeira desde M4.5a, movido a mitad de la pieza del Amazonas de ese
+        // tramo, con su dato y su nombre reales; se sustituye y no se añade otro, porque PassingPoint devuelve el primero con su id).
+        // relayS: la s de «teotonio».
         internal static BannerTravelData RelayData(RiverMap real, RiverRoutes routes, RiverStopCatalog stops, out float relayS)
         {
             RiverStopRoute leg = routes.At(4)!;
@@ -925,7 +908,17 @@ namespace AF.Tests.PlayMode
             }
 
             relayS = (amazon.S0 + amazon.S1) * 0.5f;
-            var passing = new List<RiverPassingPoint>(real.Passing) { new RiverPassingPoint(BannerTravel.RelayPassingId, new RiverMapPlace(amazon.Line, relayS), null) };
+            RiverPassingPoint? teotonio = real.PassingPoint(BannerTravel.RelayPassingId);
+            Assert.That(teotonio, Is.Not.Null, "«teotonio», un punto de paso de los datos del Mapa (M4.5a)");
+            var passing = new List<RiverPassingPoint>();
+            for (int i = 0; i < real.Passing.Count; i++)
+            {
+                RiverPassingPoint p = real.Passing[i];
+                passing.Add(string.Equals(p.Id, BannerTravel.RelayPassingId, System.StringComparison.Ordinal)
+                    ? new RiverPassingPoint(p.Id, new RiverMapPlace(amazon.Line, relayS), p.Fact)
+                    : p);
+            }
+
             var lines = new List<RiverLine>(real.Lines);
             var map = new RiverMap(real.Frame, lines.ToArray(), real.Land, new List<RiverInset>(real.Insets).ToArray(), real.Home,
                 new List<RiverMapLabel>(real.Labels).ToArray(), new List<RiverViewpoint>(real.Viewpoints).ToArray(), passing.ToArray());

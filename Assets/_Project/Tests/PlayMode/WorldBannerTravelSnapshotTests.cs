@@ -38,7 +38,7 @@ namespace AF.Tests.PlayMode
             GameScreen.BannerTravelDataOverride = null;
             MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();
-            LocSetUpFixture.ConfigureEs419(); // las tablas del proyecto, sin el nombre de prueba de Teotônio
+            LocSetUpFixture.ConfigureEs419();
             SnapshotKit.Release();
         }
 
@@ -71,14 +71,14 @@ namespace AF.Tests.PlayMode
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.Save(dir, "69t8_travel_l141_reduced");
 
-            // El relevo del guía en «teotonio» (P-M8), con el catálogo de prueba y su nombre («Teotônio»): a mitad del relevo (la
-            // canoa parada antes de los rápidos, los dos guías a la vista y lejos de ella) y al llegar, con el bufeo delante de la proa.
+            // El relevo del guía en «teotonio» (P-M8), con el catálogo de prueba y su nombre real («Rápidos de Teotônio»): a mitad
+            // del relevo (la canoa parada antes de los rápidos, los dos guías a la vista y lejos de ella) y al llegar, con el bufeo
+            // delante de la proa.
             yield return CardSetup.Load(40);
             boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             Assert.That(view.RiverGeometry!(out RiverMap? realMap, out RiverRoutes? realRoutes), Is.True);
             GameScreen.BannerTravelDataOverride = WorldBannerTravelTests.RelayData(realMap!, realRoutes!, boot.RiverStops!, out _);
-            WorldBannerTravelTests.NameTeotonio();
             boot.Flow!.Load(41);
             WorldBannerView banner = view.WorldBannerView;
             BannerTravel travel = banner.Travel!;
