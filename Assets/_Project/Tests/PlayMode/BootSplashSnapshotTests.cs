@@ -16,7 +16,8 @@ namespace AF.Tests.PlayMode
     /// <item><c>ti6d_01_wake_0ms</c>, <c>ti6d_02_wake_1000ms</c> y <c>ti6d_03_wake_2000ms</c>: la primera apertura, con TiTino
     /// dormido (ojos cerrados y la cabeza caída), estirando el brazo y ya mirándote (<c>sloth_wake</c>);</item>
     /// <item><c>ti6d_04_idle</c>: las demás aperturas (<c>sloth_idle</c>);</item>
-    /// <item><c>ti6d_05_release</c>: release sin el arte final (MapArtRule): el río y el logotipo, sin TiTino.</item>
+    /// <item><c>ti6d_05_release</c>: release sin el arte final (MapArtRule): el río y el logotipo, sin TiTino, con el logotipo
+    /// en el centro óptico del cielo y su halo mayor (lo mismo que con <c>ui_sloth_enabled</c> apagado).</item>
     /// </list>
     /// Sin textos: el estado va en el nombre del archivo. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.BootSplashSnapshotTests</c> sin <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/es-419/</c>.

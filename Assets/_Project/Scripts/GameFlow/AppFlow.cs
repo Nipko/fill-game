@@ -69,6 +69,10 @@ namespace AF.GameFlow
         /// <summary>
         /// Lo que se reserva tras la pantalla de arranque hasta el primer toque: la intro del nivel 1 (1,4 s,
         /// <c>anim_tint_duration_ms_early</c>) y unos segundos para que el jugador mire y toque [P].
+        /// <para>No cuenta la pantalla de edad y consentimiento (06 §2.1, regla 3, y §2.2: entre el splash y el nivel 1, ≤ 10 s),
+        /// que aún no existe: cuando entre, esta reserva (o el instante en que se evalúa <see cref="Fits"/>) tiene que contarla, o
+        /// la espera de <c>sloth_wake</c> puede romper los 20 s. Lo decide el dueño con la medida del primer toque en el teléfono
+        /// (tarea TI6d).</para>
         /// </summary>
         public const int PlayerReserveMs = 5000;
 

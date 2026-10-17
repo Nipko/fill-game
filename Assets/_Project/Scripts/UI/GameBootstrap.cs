@@ -1229,7 +1229,7 @@ namespace AF.UI
         private void Awake()
         {
             Current = this;
-            _bootOrigin = Application.isEditor ? Time.realtimeSinceStartupAsDouble : 0.0; // origen del arranque en frío (TI6d)
+            _bootOrigin = Application.isEditor ? Time.realtimeSinceStartupAsDouble : 0.0; // origen del arranque (TI6d): ver SinceStartupMs
             Application.targetFrameRate = 60; // 08 §5.4
             DevProbe.Initialize();
             EnsureEventSystem();
@@ -1267,7 +1267,7 @@ namespace AF.UI
         {
             if (!s_rebuildToLobby && BootSplash.Enabled)
             {
-                _splash = new BootSplash(transform);
+                _splash = new BootSplash(transform, BootSplash.SlothExpected); // ya compuesta con o sin TiTino: el logotipo no salta
                 yield return null; // el río y el logotipo, a la vista antes de cargar
             }
 
@@ -1346,9 +1346,10 @@ namespace AF.UI
             _probe = new DevProbe { Settings = profile.Settings };
             if (_splash != null)
             {
-                // TiTino en su embaúba (D-016, T2-A): sin su arte final (release), no sale. Reducir movimiento aún no es un ajuste
+                // TiTino en su embaúba (D-016, T2-A): con ui_sloth_enabled apagado (08 §9; el interruptor de cada gancho, como el
+                // de la victoria) o sin su arte final (release), no sale y no hay espera. Reducir movimiento aún no es un ajuste
                 // del jugador (07 §7.8): la pose se anima.
-                if (_splash.ShowSloth(_art.SlothRigArt(), firstRun, reduceMotion: false))
+                if (BootSplash.SlothEnabled && _splash.ShowSloth(_art.SlothRigArt(), firstRun, reduceMotion: false))
                 {
                     yield return null; // TiTino, a la vista mientras se construye el resto
                 }
@@ -1830,8 +1831,8 @@ namespace AF.UI
         {
             BootSplash splash = _splash!;
             long loadMs = splash.AgeMs;
-            bool wake = splash.SlothVisible && splash.Sloth!.Pose == SlothPoseId.Wake;
             long sinceStartup = SinceStartupMs();
+            bool wake = splash.SlothVisible && splash.Sloth!.Pose == SlothPoseId.Wake;
             long need = BootSplashTiming.NeedMs(firstOpen, wake, (long)splash.SlothClockMs);
             int hold = BootSplashTiming.HoldMs(firstOpen, wake, sinceStartup, (long)splash.SlothClockMs);
             if (hold > 0)
@@ -1845,16 +1846,20 @@ namespace AF.UI
                 }
             }
 
+            // El reloj se lee una sola vez al cortar. Sin espera, el corte es el fin de la carga: hold_ms = 0 y splash_ms = load_ms
+            // por construcción, aunque el reloj real haya pasado de milisegundo entre dos lecturas.
+            long endMs = hold > 0 ? splash.AgeMs : loadMs;
+            long endSinceStartup = hold > 0 ? SinceStartupMs() : sinceStartup;
             _bootReport = new BootReport
             {
                 FirstOpen = firstOpen,
                 SlothPose = splash.SlothVisible ? SlothRig.IdOf(splash.Sloth!.Pose) : null,
                 LoadMs = loadMs,
-                SplashMs = splash.AgeMs,
+                SplashMs = endMs,
                 SlothMs = (long)splash.SlothClockMs,
-                HoldMs = splash.AgeMs - loadMs,
+                HoldMs = endMs - loadMs,
                 WakeFits = need <= 0 || hold > 0,
-                SplashEndMs = SinceStartupMs(),
+                SplashEndMs = endSinceStartup,
             };
             CutSplash();
             _probe?.Boot(_bootReport);
@@ -1869,11 +1874,13 @@ namespace AF.UI
             _splash = null;
         }
 
-        // Desde el arranque en frío (ms): en el teléfono, desde que arrancó el proceso (realtimeSinceStartup); en el Editor, que
-        // cuenta desde que se abrió el Editor, desde el Awake de esta escena (_bootOrigin).
+        // Desde el arranque (ms): en el teléfono, desde que arranca Unity (realtimeSinceStartup), sin el lanzamiento del proceso
+        // ni el de la Activity, que van antes; en el Editor, que cuenta desde que se abrió el Editor, desde el Awake de esta escena
+        // (_bootOrigin). Para el arranque en frío de 09 §6.1 (< 20 s) hay que sumarle lo que mide el sistema hasta Unity
+        // (adb shell am start -W, TotalTime). Los tests le suman BootSplash.TestStartupOffsetMs (0 fuera de ellos).
         private long SinceStartupMs()
         {
-            return (long)((Time.realtimeSinceStartupAsDouble - _bootOrigin) * 1000.0);
+            return (long)((Time.realtimeSinceStartupAsDouble - _bootOrigin) * 1000.0) + BootSplash.TestStartupOffsetMs;
         }
 
         // Primer toque del jugador tras la pantalla de arranque (sonda AF_STATE boot, first_touch_ms; 09 §6): una cuia, el fondo

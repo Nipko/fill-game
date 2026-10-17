@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using AF.Economy;
 using AF.GameFlow;
 using AF.Localization;
@@ -27,7 +28,10 @@ namespace AF.Tests.PlayMode
     /// (la intro del nivel 1 no corre detrás) y después entra en el nivel 1; las demás aperturas, <c>sloth_idle</c>, sin espera
     /// añadida; sin el arte, ni TiTino ni espera; la reconstrucción por idioma no la vuelve a enseñar;</item>
     /// <item>la sonda <c>AF_STATE boot</c> con <c>first_open</c>, <c>splash_ms</c> y <c>first_touch_ms</c>, que se rellena con
-    /// el primer toque en el nivel 1.</item>
+    /// el primer toque en el nivel 1; si el segundo de <c>sloth_wake</c> no cabe en los 20 s, se corta sin esperar y la sonda lo
+    /// anota (<c>"wake_fits":false</c>); con <c>ui_sloth_enabled</c> apagado, ni TiTino ni espera;</item>
+    /// <item>la composición: TiTino nunca se monta sobre la selva (16:9 y 19,5:9) y, sin él, el logotipo baja al centro del cielo
+    /// con un halo que no toca la copa de la selva.</item>
     /// </list>
     /// </summary>
     public sealed class BootSplashTests
@@ -42,6 +46,8 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             BootSplash.EnabledOverride = null;
+            BootSplash.SlothEnabledOverride = null;
+            BootSplash.TestStartupOffsetMs = 0;
             GameScreen.SimulatedScreen = null;
             MapArtRule.ForceProvisional = null;
             ArtSlots.ForceProcedural = false;
@@ -149,6 +155,70 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Composition_TheSlothNeverRidesTheJungle([Values(780, 640)] int screen)
+        {
+            MapArtRule.ForceProvisional = true;
+            ArtSlots.ForceProcedural = true;
+            GameScreen.SimulatedScreen = screen == 640 ? HudLabelTests.Screen640 : HudLabelTests.Screen780; // 16:9 y 19,5:9
+            foreach (bool firstOpen in new[] { true, false })
+            {
+                BootSplash splash = NewSplash();
+                Assert.That(splash.ShowSloth(_art!.SlothRigArt(), firstOpen, false), Is.True);
+                Assert.That(splash.ComposedForSloth, Is.True);
+                Assert.That(splash.ShortScreen, Is.EqualTo(screen == 640));
+                Assert.That(splash.Sloth!.Size, Is.InRange(140f, BootSplash.SlothSizeDp), "propuesta de TiTino c.4: 140-180 dp en el arranque");
+                Assert.That(splash.Sloth.Size, Is.EqualTo(splash.SlothFitDp).Within(0.01f));
+
+                // Todo el gesto (sloth_wake y su reposo, o sloth_idle con un giro de cabeza): el fondo de TiTino, por encima de la
+                // copa de la selva cercana con aire, y la rama, por debajo de la cuia del logotipo.
+                float canopy = splash.HorizonDp - BootSplash.NearCanopyDp;
+                var rects = new List<Rect>();
+                float lowest = float.MinValue;
+                for (float ms = 0f; ms <= 12000f; ms += 100f)
+                {
+                    splash.Seek(ms);
+                    rects.Clear();
+                    splash.Sloth.CollectRects(splash.Root, rects);
+                    Assert.That(rects, Is.Not.Empty);
+                    foreach (Rect r in rects)
+                    {
+                        lowest = Mathf.Max(lowest, r.yMax);
+                    }
+                }
+
+                Assert.That(lowest, Is.LessThanOrEqualTo(canopy - 12f), "TiTino cuelga sobre la selva, sin montarse en ella (" + screen + ", " + (firstOpen ? "wake" : "idle") + ")");
+                Assert.That(splash.BranchAnchor.y, Is.GreaterThan(splash.LogoCenterDp + 89f), "la rama, por debajo de la cuia del logotipo");
+                splash.Dispose();
+            }
+
+            yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Composition_WithoutSloth_TheLogoTakesTheSky([Values(780, 640)] int screen)
+        {
+            MapArtRule.ForceProvisional = false; // release sin el arte final
+            ArtSlots.ForceProcedural = true;
+            GameScreen.SimulatedScreen = screen == 640 ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
+            BootSplash splash = NewSplash();
+            Assert.That(splash.ComposedForSloth, Is.True, "compuesta para TiTino hasta saber si sale");
+            Assert.That(splash.ShowSloth(_art!.SlothRigArt(), true, false), Is.False);
+            Assert.That(splash.ComposedForSloth, Is.False, "sin TiTino se recompone: el logotipo, solo");
+            float h = screen == 640 ? 640f : 780f;
+            Assert.That(splash.LogoCenterDp, Is.EqualTo((screen == 640 ? 0.34f : 0.36f) * h).Within(0.01f), "el centro óptico del cielo");
+            Assert.That(splash.GlowSizeDp, Is.EqualTo(300f));
+            Assert.That(splash.LogoCenterDp + (splash.GlowSizeDp * 0.5f), Is.LessThan(splash.HorizonDp - BootSplash.FarCanopyDp), "el halo no toca la copa de la selva");
+            splash.Dispose();
+
+            // Ya sin TiTino desde el principio (lo que hace GameBootstrap con BootSplash.SlothExpected = false): lo mismo.
+            var alone = new BootSplash(_host!.transform, withSloth: false);
+            Assert.That(alone.ComposedForSloth, Is.False);
+            Assert.That(alone.LogoCenterDp, Is.EqualTo((screen == 640 ? 0.34f : 0.36f) * h).Within(0.01f));
+            alone.Dispose();
+            yield return null;
+        }
+
+        [UnityTest]
         public IEnumerator FirstOpen_ShowsWakeAtLeastOneSecond_WhileTheAppWaits_ThenLevelOne()
         {
             BootSplash.EnabledOverride = true;
@@ -247,6 +317,56 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator FirstOpen_WakeDoesNotFitInTwentySeconds_CutsWithoutWaiting_AndNotesIt()
+        {
+            BootSplash.EnabledOverride = true;
+            MapArtRule.ForceProvisional = true;
+            BootSplash.TestStartupOffsetMs = 15000; // la carga termina pasados los 15 s: el segundo ya no cabe (09 §6)
+            Watch();
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+
+            Assert.That(_watcher!.SawWake, Is.True, "primera apertura: sloth_wake, aunque no se espere");
+            BootReport report = boot.BootInfo!;
+            Assert.That(report.FirstOpen, Is.True);
+            Assert.That(report.SlothPose, Is.EqualTo("sloth_wake"));
+            Assert.That(report.HoldMs, Is.EqualTo(0L), "no cabe: se corta al terminar la carga");
+            Assert.That(report.SplashMs, Is.EqualTo(report.LoadMs));
+            Assert.That(report.SplashEndMs, Is.GreaterThanOrEqualTo(15000L));
+
+            // Sin espera, el gesto que se vio es el de la carga: si no llegó a su segundo, no cupo y se anota para el dueño.
+            Assert.That(report.WakeFits, Is.EqualTo(report.SlothMs >= BootSplashTiming.WakeMinVisibleMs), "wake_fits = false si hacía falta esperar");
+            string line = new DevProbe().FormatBoot(report)!;
+            StringAssert.Contains("\"hold_ms\":0", line);
+            StringAssert.Contains("\"wake_fits\":" + (report.WakeFits ? "true" : "false"), line);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
+
+            boot.TapAnywhere();
+            Assert.That(report.FirstTouchMs, Is.GreaterThanOrEqualTo(report.SplashEndMs), "first_touch_ms, con el mismo origen");
+        }
+
+        [UnityTest]
+        public IEnumerator SlothSwitchedOff_FirstOpen_NoSloth_NoWait()
+        {
+            BootSplash.EnabledOverride = true;
+            BootSplash.SlothEnabledOverride = false; // ui_sloth_enabled apagado en remoto (08 §9; D-016)
+            MapArtRule.ForceProvisional = true; // aunque haya arte
+            Assert.That(BootSplash.SlothExpected, Is.False);
+            Watch();
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore());
+            GameBootstrap boot = GameBootstrap.Current!;
+
+            Assert.That(_watcher!.SawSplash, Is.True, "el río y el logotipo salen igual");
+            Assert.That(_watcher.SawAnySloth, Is.False, "interruptor apagado: sin TiTino");
+            Assert.That(_watcher.SawSlothComposition, Is.False, "compuesta sin TiTino desde el primer fotograma: el logotipo no salta");
+            BootReport report = boot.BootInfo!;
+            Assert.That(report.SlothPose, Is.Null);
+            Assert.That(report.HoldMs, Is.EqualTo(0L), "sin TiTino no hay nada que esperar");
+            Assert.That(report.WakeFits, Is.True);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
+        }
+
+        [UnityTest]
         public IEnumerator RebuildByLanguage_IsNotAColdStart_NoSplash()
         {
             BootSplash.EnabledOverride = true;
@@ -310,6 +430,8 @@ namespace AF.Tests.PlayMode
 
             public bool AppStartedUnderSplash { get; private set; }
 
+            public bool SawSlothComposition { get; private set; }
+
             private void Update()
             {
                 GameBootstrap? boot = GameBootstrap.Current;
@@ -320,6 +442,7 @@ namespace AF.Tests.PlayMode
                 }
 
                 SawSplash = true;
+                SawSlothComposition |= splash.ComposedForSloth;
                 if (boot.App == null)
                 {
                     SawSplashBeforeLoad = true;

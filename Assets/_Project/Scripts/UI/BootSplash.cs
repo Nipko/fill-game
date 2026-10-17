@@ -38,14 +38,17 @@ namespace AF.UI
         public bool WakeFits { get; internal set; } = true;
 
         /// <summary>
-        /// Desde el arranque en frío hasta el corte de la pantalla (ms; <c>splash_end_ms</c>): en el teléfono, desde que arrancó el
-        /// proceso (<see cref="Time.realtimeSinceStartupAsDouble"/>); en el Editor, desde el Awake de la escena.
+        /// Desde el arranque hasta el corte de la pantalla (ms; <c>splash_end_ms</c>): en el teléfono, desde que arranca Unity
+        /// (<see cref="Time.realtimeSinceStartupAsDouble"/>), sin el lanzamiento del proceso ni el de la Activity, que van antes
+        /// (para el arranque en frío de 09 §6.1 se suma el <c>TotalTime</c> de <c>adb shell am start -W</c>); en el Editor, desde el
+        /// Awake de la escena.
         /// </summary>
         public long SplashEndMs { get; internal set; }
 
         /// <summary>
-        /// Desde el arranque en frío hasta el primer toque del jugador en el juego (ms; <c>first_touch_ms</c>), o −1 si aún no ha
-        /// tocado. Cuenta el primer toque en una cuia, en el fondo del nivel o durante la intro, o «Jugar» en el inicio.
+        /// Desde el arranque hasta el primer toque del jugador en el juego (ms; <c>first_touch_ms</c>; el mismo origen que
+        /// <see cref="SplashEndMs"/>: desde que arranca Unity), o −1 si aún no ha tocado. Cuenta el primer toque en una cuia, en el
+        /// fondo del nivel o durante la intro, o «Jugar» en el inicio.
         /// </summary>
         public long FirstTouchMs { get; internal set; } = -1;
 
@@ -61,14 +64,19 @@ namespace AF.UI
     /// propuesta de TiTino d.3 y paso 6d; tarea TI6d), construida por código en su propio lienzo, por encima de todo, y
     /// <b>sin texto</b> (06 §2.1, regla 3: ni un componente de texto).
     /// <list type="bullet">
-    /// <item>El río al alba (cielo, dos líneas de selva y el agua blanca del estuario con sus brillos) y, arriba, el logotipo
-    /// provisional: una gota de tinte de açaí que cae en una cuia (07 §10: «una gota o pincelada de tinte»), sin letras. Con el
-    /// PNG de la ranura <see cref="LogoSlot"/> (el logotipo del artista, que trae su nombre como dibujo), ese PNG sustituye a la
-    /// gota y a la cuia.</item>
-    /// <item>TiTino (<see cref="SlothRig"/>, <see cref="SlothSizeDp"/> dp; propuesta c.4: 140-180 dp en el arranque) colgado de
-    /// su rama, que entra desde el borde derecho bajo el logotipo: <c>sloth_wake</c> en la primera apertura y <c>sloth_idle</c>
-    /// en las demás (<see cref="ShowSloth"/>). Sin el arte final, solo en el Editor y en desarrollo (<see cref="MapArtRule"/>):
-    /// en release, la pantalla sale sin TiTino.</item>
+    /// <item>El río al alba (cielo, dos líneas de selva y el agua blanca del estuario, con el reflejo de la selva, la orilla, el
+    /// reflejo del sol y sus brillos) y, arriba, el logotipo provisional: una gota de tinte de açaí que cae en una cuia (07 §10:
+    /// «una gota o pincelada de tinte»), sin letras. Con el PNG de la ranura <see cref="LogoSlot"/> (el logotipo del artista, que
+    /// trae su nombre como dibujo), ese PNG sustituye a la gota y a la cuia.</item>
+    /// <item>TiTino (<see cref="SlothRig"/>; propuesta c.4: 140-180 dp en el arranque) colgado de su rama, que entra desde el
+    /// borde derecho bajo el logotipo: <c>sloth_wake</c> en la primera apertura y <c>sloth_idle</c> en las demás
+    /// (<see cref="ShowSloth"/>). Su tamaño sale del aire que queda entre la rama y la copa de la selva
+    /// (<see cref="SlothFitDp"/>: hasta <see cref="SlothSizeDp"/>), para que nunca se monte sobre la selva ni toque el río. Sin el
+    /// arte final, solo en el Editor y en desarrollo (<see cref="MapArtRule"/>), y nunca con <c>ui_sloth_enabled</c> apagado
+    /// (<see cref="SlothEnabled"/>): entonces la pantalla sale sin TiTino y el logotipo baja al centro óptico del cielo, con un
+    /// halo mayor.</item>
+    /// <item>En las pantallas bajas (alto &lt; <see cref="TallAspect"/> × ancho, como 16:9) la composición se aprieta: el
+    /// logotipo sube y el horizonte baja.</item>
     /// <item>Cuánto dura lo decide <see cref="BootSplashTiming"/> (GameBootstrap): se corta al terminar la carga, salvo el
     /// segundo de <c>sloth_wake</c> de la primera apertura si cabe en el objetivo de 20 s.</item>
     /// </list>
@@ -81,27 +89,61 @@ namespace AF.UI
         /// <summary>Orden del lienzo: por encima de todos los demás (Ajustes 40, tienda 50, anuncio 60, aviso del perfil 70).</summary>
         public const int SortingOrder = 90;
 
-        /// <summary>Tamaño S de TiTino en el arranque (propuesta de TiTino c.4: 140-180 dp) [P].</summary>
+        /// <summary>Tamaño S máximo de TiTino en el arranque (propuesta de TiTino c.4: 140-180 dp) [P].</summary>
         public const float SlothSizeDp = 160f;
+
+        /// <summary>Tamaño S mínimo de TiTino, aunque no quepa entero sobre la selva (pantallas muy bajas) [P].</summary>
+        public const float SlothMinDp = 120f;
+
+        /// <summary>
+        /// Caída del cuerpo bajo la rama (S): el borde inferior de la caja del torso colgado (0,60 + 0,56 × 1,02 / 2 ≈ 0,886 S en
+        /// lo más hondo de la respiración, <c>SlothRig.Hang</c>), con un poco de margen [P].
+        /// </summary>
+        public const float SlothDropS = 0.90f;
+
+        /// <summary>Aire mínimo entre el fondo de TiTino y la copa de la selva cercana (dp) [P].</summary>
+        public const float SlothClearDp = 16f;
+
+        /// <summary>Proporción alto/ancho por debajo de la cual la pantalla es baja (16:9 = 1,78; 20:9 = 2,22) [P].</summary>
+        public const float TallAspect = 2.0f;
+
+        /// <summary>Copa de la selva lejana por encima del horizonte (dp).</summary>
+        public const float FarCanopyDp = 58f;
+
+        /// <summary>Copa de la selva cercana por encima del horizonte (dp).</summary>
+        public const float NearCanopyDp = 36f;
 
         /// <summary>Ranura del logotipo final (sin el nombre de la marca en el identificador; CLAUDE.md, glosario §11) [P].</summary>
         public const string LogoSlot = "ui_logo";
 
-        // Proporciones de la composición (del alto del lienzo) [P]: el centro del logotipo y la línea del horizonte.
+        // Proporciones de la composición (del alto del lienzo) [P]: el centro del logotipo con TiTino debajo y sin él (el centro
+        // óptico del cielo), y la línea del horizonte; en las pantallas bajas, *Short.
         private const float LogoCenterY = 0.25f;
+        private const float LogoCenterYShort = 0.22f;
+        private const float LogoAloneY = 0.36f;
+        private const float LogoAloneYShort = 0.34f;
         private const float HorizonY = 0.64f;
+        private const float HorizonYShort = 0.68f;
 
-        // Medidas en dp [P]: la gota, la cuia, el halo y el logotipo final.
+        // Medidas en dp [P]: la gota, la cuia, el halo (con TiTino y sin él) y el logotipo final.
         private const float DropDp = 112f;
         private const float BowlWidthDp = 150f;
         private const float BowlHeightDp = 75f;
         private const float GlowDp = 236f;
+        private const float GlowAloneDp = 300f;
         private const float LogoPngWidthDp = 280f;
 
         // La rama de TiTino, por debajo del centro del logotipo.
         private const float BranchBelowLogoDp = 116f;
 
-        // Los tres brillos del agua: bajo el horizonte (dp), centro (fracción del ancho) y ancho (dp) [P].
+        // El agua [P]: la orilla (alto en dp), el reflejo de la selva (alto en dp) y el del sol (ancho y alto en dp).
+        private const float ShoreDp = 3f;
+        private const float TreeReflectionDp = 70f;
+        private const float SunPathWidthDp = 40f;
+        private const float SunPathHeightDp = 160f;
+
+        // Los tres brillos del agua: bajo el horizonte (dp), centro (fracción del ancho), ancho y alto (dp) [P].
+        private const float GlintHeightDp = 5f;
         private static readonly float[] GlintY = { 34f, 82f, 146f };
         private static readonly float[] GlintX = { 0.18f, 0.52f, 0.30f };
         private static readonly float[] GlintW = { 96f, 150f, 70f };
@@ -114,12 +156,15 @@ namespace AF.UI
         private static readonly Color BowlRim = Palette.Hex(0xEFD2A0);
 
         private readonly OverlayCanvas _canvas;
-        private readonly Texture2D?[] _textures = new Texture2D?[7];
-        private readonly Sprite?[] _sprites = new Sprite?[7];
+        private readonly Texture2D?[] _textures = new Texture2D?[8];
+        private readonly Sprite?[] _sprites = new Sprite?[8];
         private readonly Image _sky;
         private readonly Image _farTrees;
         private readonly Image _nearTrees;
         private readonly Image _river;
+        private readonly Image _treeReflection;
+        private readonly Image _sunPath;
+        private readonly Image _shore;
         private readonly Image[] _glints = new Image[3];
         private readonly Image _glow;
         private readonly Image _drop;
@@ -127,6 +172,7 @@ namespace AF.UI
         private readonly Image? _logoPng;
         private readonly double _createdAt;
         private SlothRig? _sloth;
+        private bool _withSloth;
         private bool _disposed;
 
         /// <summary>
@@ -139,18 +185,51 @@ namespace AF.UI
         /// <summary>La pantalla de arranque sale en los arranques en frío (<see cref="EnabledOverride"/> o, sin él, siempre).</summary>
         public static bool Enabled => EnabledOverride ?? true;
 
-        /// <summary>Crea la pantalla, ya a la vista, en un lienzo propio dentro de <paramref name="host"/>.</summary>
-        public BootSplash(Transform host)
+        /// <summary>Interruptor de los tests para TiTino en el arranque (null = <see cref="GameConfig.UiSlothEnabled"/>).</summary>
+        public static bool? SlothEnabledOverride { get; set; }
+
+        /// <summary>
+        /// TiTino sale en la pantalla de arranque: <c>ui_sloth_enabled</c> (08 §9; D-016: el interruptor de cada gancho, como el de
+        /// la victoria), salvo que un test lo fuerce (<see cref="SlothEnabledOverride"/>).
+        /// </summary>
+        public static bool SlothEnabled => SlothEnabledOverride ?? GameConfig.UiSlothEnabled;
+
+        /// <summary>
+        /// Se espera a TiTino en la pantalla (<see cref="SlothEnabled"/> y su arte: el provisional, en el Editor y en desarrollo, o
+        /// los dos PNG finales, las piezas y la rama; la regla de <see cref="ProceduralArt.SlothRigArt()"/>). Con esto la pantalla
+        /// nace ya compuesta con o sin él y el logotipo no salta cuando TiTino entra.
+        /// </summary>
+        public static bool SlothExpected =>
+            SlothEnabled
+            && (MapArtRule.ShowProvisional
+                || (ArtSlots.Find(ProceduralArt.SlothPartsSlot) != null && ArtSlots.Find(ProceduralArt.SlothBranchSlot) != null));
+
+        /// <summary>
+        /// Solo para los tests: ms que se suman al reloj del arranque (<c>GameBootstrap.SinceStartupMs</c>), para recorrer el caso
+        /// «el segundo de <c>sloth_wake</c> no cabe en los 20 s». Siempre 0 fuera de ellos (y lo vuelven a 0 en su TearDown).
+        /// </summary>
+        public static long TestStartupOffsetMs { get; set; }
+
+        /// <summary>
+        /// Crea la pantalla, ya a la vista, en un lienzo propio dentro de <paramref name="host"/>, compuesta para TiTino
+        /// (<paramref name="withSloth"/>: el logotipo arriba y su rama debajo) o sin él (el logotipo en el centro óptico del cielo).
+        /// Si <see cref="ShowSloth"/> no puede ponerlo, se recompone sin él.
+        /// </summary>
+        public BootSplash(Transform host, bool withSloth = true)
         {
             _createdAt = Time.realtimeSinceStartupAsDouble;
+            _withSloth = withSloth;
             _canvas = new OverlayCanvas("BootSplashCanvas", host, SortingOrder);
             RectTransform root = _canvas.Root;
 
+            // El río arranca más oscuro que su reflejo puro para no confundirse con el cielo del alba justo encima.
+            Color riverTop = Color.Lerp(Palette.RiverReflect, Palette.RiverBase, 0.35f);
             Sprite sky = Own(0, VerticalGradient(128, Palette.SkyHorizon, Palette.SkyMid, Palette.SkyTop));
             Sprite trees = Own(1, Treeline(256, 128));
-            Sprite river = Own(2, VerticalGradient(64, Palette.RiverDeep, Palette.RiverBase, Palette.RiverReflect));
+            Sprite river = Own(2, VerticalGradient(64, Palette.RiverDeep, Palette.RiverBase, riverTop));
             Sprite glint = Own(3, SoftCapsule(64, 8));
             Sprite glow = Own(4, SoftDisc(128));
+            Sprite reflection = Own(7, TreelineReflection(256, 128, FarCanopyDp + 6f, TreeReflectionDp));
 
             UiBuilder.Stretch(UiBuilder.Image("TouchBlocker", root, null, Color.clear, raycast: true).rectTransform); // traga los toques: aún no hay nada que tocar
             _sky = UiBuilder.Image("Sky", root, sky, Color.white);
@@ -158,10 +237,18 @@ namespace AF.UI
             _nearTrees = UiBuilder.Image("NearTrees", root, trees, Palette.JungleMid);
             _nearTrees.rectTransform.localScale = new Vector3(-1f, 1f, 1f); // la misma silueta al revés: otra línea de copas
             _river = UiBuilder.Image("River", root, river, Color.white);
+
+            // La selva reflejada en el agua, oscura y apagada hacia abajo; el reflejo del sol bajo el halo del logotipo; los
+            // brillos; y la línea clara de la orilla. Juntos dicen «agua» (D-003: luz de juego), con la paleta del río del juego.
+            Color mirrored = Color.Lerp(Palette.JungleMid, Palette.RiverDeep, 0.45f);
+            _treeReflection = UiBuilder.Image("TreeReflection", root, reflection, new Color(mirrored.r, mirrored.g, mirrored.b, 0.45f));
+            _sunPath = UiBuilder.Image("SunPath", root, glow, new Color(Palette.Sun.r, Palette.Sun.g, Palette.Sun.b, 0.25f));
             for (int i = 0; i < _glints.Length; i++)
             {
-                _glints[i] = UiBuilder.Image("Glint" + i, root, glint, new Color(Palette.WaterLine.r, Palette.WaterLine.g, Palette.WaterLine.b, 0.55f));
+                _glints[i] = UiBuilder.Image("Glint" + i, root, glint, new Color(Palette.WaterLine.r, Palette.WaterLine.g, Palette.WaterLine.b, 0.75f));
             }
+
+            _shore = UiBuilder.Image("Shore", root, null, new Color(Palette.WaterLine.r, Palette.WaterLine.g, Palette.WaterLine.b, 0.8f));
 
             _glow = UiBuilder.Image("Glow", root, glow, new Color(Palette.Sun.r, Palette.Sun.g, Palette.Sun.b, 0.6f));
             Sprite? logoPng = ArtSlots.Find(LogoSlot);
@@ -196,23 +283,55 @@ namespace AF.UI
         /// <summary>Desde que se creó la pantalla (ms de tiempo real).</summary>
         public long AgeMs => (long)((Time.realtimeSinceStartupAsDouble - _createdAt) * 1000.0);
 
+        /// <summary>La composición deja sitio a TiTino (el logotipo arriba); false: el logotipo solo, en el centro del cielo.</summary>
+        public bool ComposedForSloth => _withSloth;
+
+        /// <summary>La pantalla es baja (alto &lt; <see cref="TallAspect"/> × ancho, como 16:9).</summary>
+        public bool ShortScreen => _canvas.Height < TallAspect * _canvas.Width;
+
+        /// <summary>Línea del horizonte, entre la selva y el río (dp desde arriba).</summary>
+        public float HorizonDp => Mathf.Round((ShortScreen ? HorizonYShort : HorizonY) * _canvas.Height);
+
+        /// <summary>Centro del logotipo (dp desde arriba).</summary>
+        public float LogoCenterDp =>
+            (_withSloth ? (ShortScreen ? LogoCenterYShort : LogoCenterY) : (ShortScreen ? LogoAloneYShort : LogoAloneY)) * _canvas.Height;
+
+        /// <summary>Lado del halo del logotipo (dp): mayor sin TiTino, para llenar el cielo.</summary>
+        public float GlowSizeDp => _withSloth ? GlowDp : GlowAloneDp;
+
+        /// <summary>
+        /// Tamaño S de TiTino en esta pantalla (dp): el que deja <see cref="SlothClearDp"/> de aire entre su fondo
+        /// (<see cref="SlothDropS"/> bajo la rama) y la copa de la selva cercana, entre <see cref="SlothMinDp"/> y
+        /// <see cref="SlothSizeDp"/>.
+        /// </summary>
+        public float SlothFitDp
+        {
+            get
+            {
+                float room = HorizonDp - NearCanopyDp - SlothClearDp - BranchLineDp;
+                return Mathf.Clamp(room / SlothDropS, SlothMinDp, SlothSizeDp);
+            }
+        }
+
         /// <summary>Línea de la rama de TiTino en el lienzo (dp, x desde la izquierda e y desde arriba).</summary>
         public Vector2 BranchAnchor
         {
             get
             {
-                float s = _sloth?.Size ?? SlothSizeDp;
-                return new Vector2(_canvas.Width - (0.75f * s), (LogoCenterY * _canvas.Height) + BranchBelowLogoDp);
+                float s = _sloth?.Size ?? SlothFitDp;
+                return new Vector2(_canvas.Width - (0.75f * s), BranchLineDp);
             }
         }
 
         /// <summary>Todo lo que se pinta (tests: ningún componente de texto, ningún raycast salvo el fondo).</summary>
         public RectTransform Root => _canvas.Root;
 
+        private float BranchLineDp => LogoCenterDp + BranchBelowLogoDp;
+
         /// <summary>
-        /// Pone a TiTino colgado de su rama con <c>sloth_wake</c> (<paramref name="firstOpen"/>) o <c>sloth_idle</c>. Sin piezas
-        /// (<paramref name="art"/> null: release sin el arte final, <see cref="ProceduralArt.SlothRigArt()"/>) no crea nada y
-        /// devuelve false.
+        /// Pone a TiTino colgado de su rama con <c>sloth_wake</c> (<paramref name="firstOpen"/>) o <c>sloth_idle</c>, al tamaño que
+        /// cabe (<see cref="SlothFitDp"/>). Sin piezas (<paramref name="art"/> null: release sin el arte final,
+        /// <see cref="ProceduralArt.SlothRigArt()"/>) no crea nada, recompone la pantalla sin él y devuelve false.
         /// </summary>
         public bool ShowSloth(SlothArt? art, bool firstOpen, bool reduceMotion)
         {
@@ -221,14 +340,16 @@ namespace AF.UI
                 return _sloth != null;
             }
 
-            _sloth = SlothRig.Create(_canvas.Root, art, SlothSizeDp);
+            _withSloth = true;
+            _sloth = SlothRig.Create(_canvas.Root, art, SlothFitDp);
             if (_sloth == null)
             {
+                _withSloth = false;
+                Layout();
                 return false;
             }
 
-            Vector2 anchor = BranchAnchor;
-            _sloth.Place(anchor.x, anchor.y);
+            Layout();
             _sloth.Play(firstOpen ? SlothPoseId.Wake : SlothPoseId.Idle, reduceMotion);
             return true;
         }
@@ -286,27 +407,34 @@ namespace AF.UI
             }
         }
 
-        // Composición en dp (origen arriba a la izquierda): cielo y río a sangre, la selva sobre el horizonte, el logotipo
-        // arriba con su halo y TiTino colgado bajo él, con la rama desde el borde derecho.
+        // Composición en dp (origen arriba a la izquierda): cielo y río a sangre, la selva sobre el horizonte y su reflejo bajo
+        // la orilla, el reflejo del sol bajo el logotipo, el logotipo con su halo y TiTino colgado bajo él, con la rama desde el
+        // borde derecho y a su tamaño (SlothFitDp).
         private void Layout()
         {
             float w = _canvas.Width;
             float h = _canvas.Height;
-            float horizon = Mathf.Round(HorizonY * h);
+            float horizon = HorizonDp;
+            float shoreY = horizon + 6f;
             UiBuilder.Place(_sky.rectTransform, 0f, 0f, w, horizon + 2f);
-            UiBuilder.Place(_farTrees.rectTransform, 0f, horizon - 58f, w, 64f);
-            UiBuilder.Place(_nearTrees.rectTransform, 0f, horizon - 36f, w, 44f);
+            UiBuilder.Place(_farTrees.rectTransform, 0f, horizon - FarCanopyDp, w, FarCanopyDp + 6f);
+            UiBuilder.Place(_nearTrees.rectTransform, 0f, horizon - NearCanopyDp, w, NearCanopyDp + 8f);
             _nearTrees.rectTransform.pivot = new Vector2(0.5f, 1f);
-            _nearTrees.rectTransform.anchoredPosition = new Vector2(w * 0.5f, -(horizon - 36f));
-            UiBuilder.Place(_river.rectTransform, 0f, horizon + 6f, w, h - horizon - 6f);
+            _nearTrees.rectTransform.anchoredPosition = new Vector2(w * 0.5f, -(horizon - NearCanopyDp));
+            UiBuilder.Place(_river.rectTransform, 0f, shoreY, w, h - shoreY);
+            UiBuilder.Place(_treeReflection.rectTransform, 0f, shoreY, w, TreeReflectionDp);
             for (int i = 0; i < _glints.Length; i++)
             {
-                UiBuilder.Place(_glints[i].rectTransform, (GlintX[i] * w) - (GlintW[i] * 0.5f) + 40f, horizon + GlintY[i], GlintW[i], 7f);
+                UiBuilder.Place(_glints[i].rectTransform, (GlintX[i] * w) - (GlintW[i] * 0.5f) + 40f, horizon + GlintY[i], GlintW[i], GlintHeightDp);
             }
 
+            UiBuilder.Place(_shore.rectTransform, 0f, shoreY, w, ShoreDp);
+
             float cx = w * 0.5f;
-            float cy = LogoCenterY * h;
-            UiBuilder.Place(_glow.rectTransform, cx - (GlowDp * 0.5f), cy - (GlowDp * 0.5f), GlowDp, GlowDp);
+            float cy = LogoCenterDp;
+            float glow = GlowSizeDp;
+            UiBuilder.Place(_sunPath.rectTransform, cx - (SunPathWidthDp * 0.5f), shoreY, SunPathWidthDp, SunPathHeightDp);
+            UiBuilder.Place(_glow.rectTransform, cx - (glow * 0.5f), cy - (glow * 0.5f), glow, glow);
             UiBuilder.Place(_drop.rectTransform, cx - (DropDp * 0.5f), cy - 80f, DropDp, DropDp);
             UiBuilder.Place(_bowl.rectTransform, cx - (BowlWidthDp * 0.5f), cy + 14f, BowlWidthDp, BowlHeightDp);
             if (_logoPng != null)
@@ -316,6 +444,13 @@ namespace AF.UI
 
             if (_sloth != null)
             {
+                float s = SlothFitDp;
+                if (Mathf.Abs(_sloth.Size - s) > 0.01f)
+                {
+                    _sloth.SetArt(_sloth.Art, s); // otra pantalla, otro aire: el mismo gesto a otro tamaño
+                    _sloth.Seek(_sloth.ClockMs);
+                }
+
                 Vector2 anchor = BranchAnchor;
                 _sloth.Place(anchor.x, anchor.y);
             }
@@ -357,21 +492,51 @@ namespace AF.UI
             return tex;
         }
 
-        // Línea de copas (blanca, se tiñe con el color de la Image): copas redondeadas (|sen|) de dos tamaños, con 1 px de
-        // suavizado en el borde.
+        // Línea de copas (blanca, se tiñe con el color de la Image; TreeTop), con 1 px de suavizado en el borde.
         private static Texture2D Treeline(int w, int h)
         {
             Texture2D tex = NewTexture(w, h, "AF_BootTreeline");
             var px = new Color32[w * h];
             for (int x = 0; x < w; x++)
             {
-                float u = x;
-                float top = 0.50f + (0.22f * Mathf.Abs(Mathf.Sin(u * 0.045f))) + (0.12f * Mathf.Abs(Mathf.Sin((u * 0.11f) + 0.7f)));
-                float edge = Mathf.Clamp01(top) * (h - 1);
+                float edge = TreeTop(x) * (h - 1);
                 for (int y = 0; y < h; y++)
                 {
                     float a = Mathf.Clamp01(edge - y + 0.5f);
                     px[(y * w) + x] = new Color32(255, 255, 255, (byte)(a * 255f));
+                }
+            }
+
+            tex.SetPixels32(px);
+            tex.Apply(false, true);
+            return tex;
+        }
+
+        // Alto de la línea de copas en la columna x (fracción del alto de la imagen, desde abajo): copas redondeadas (|sen|) de
+        // dos tamaños.
+        private static float TreeTop(int x)
+        {
+            float u = x;
+            return Mathf.Clamp01(0.50f + (0.22f * Mathf.Abs(Mathf.Sin(u * 0.045f))) + (0.12f * Mathf.Abs(Mathf.Sin((u * 0.11f) + 0.7f))));
+        }
+
+        // La selva lejana reflejada en el agua (blanca, se tiñe con el color de la Image): la línea de copas de Treeline boca abajo
+        // desde el borde de arriba (la orilla), a la escala de la selva (silhouetteDp de alto en su imagen, heightDp en la del
+        // reflejo), que se apaga hacia abajo como (1 − d)².
+        private static Texture2D TreelineReflection(int w, int h, float silhouetteDp, float heightDp)
+        {
+            Texture2D tex = NewTexture(w, h, "AF_BootTreeReflection");
+            var px = new Color32[w * h];
+            float scale = silhouetteDp / heightDp;
+            for (int x = 0; x < w; x++)
+            {
+                float edge = TreeTop(x) * scale * (h - 1);
+                for (int y = 0; y < h; y++)
+                {
+                    float d = h - 1 - y; // desde la orilla, hacia abajo
+                    float a = Mathf.Clamp01(edge - d + 0.5f);
+                    float fade = 1f - (d / (h - 1));
+                    px[(y * w) + x] = new Color32(255, 255, 255, (byte)(a * fade * fade * 255f));
                 }
             }
 
