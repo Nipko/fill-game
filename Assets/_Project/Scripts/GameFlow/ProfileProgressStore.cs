@@ -5,8 +5,8 @@ using AF.Save;
 namespace AF.GameFlow
 {
     /// <summary>
-    /// Progreso guardado en el perfil (GDD 08 §4.3 <c>progress.max_level</c>, <c>progress.next_level</c> y, desde M3.1b,
-    /// <c>progress.map_seen_level</c>; tarea B1-5): lee y escribe <see cref="Profile.Progress"/> y guarda el perfil entero con
+    /// Progreso guardado en el perfil (GDD 08 §4.3 <c>progress.max_level</c>, <c>progress.next_level</c>, desde M3.1b,
+    /// <c>progress.map_seen_level</c> y, desde TI6b, <c>stats.levels_won</c>; tarea B1-5): lee y escribe <see cref="Profile.Progress"/> y guarda el perfil entero con
     /// el <see cref="IProfileStore"/>, el mismo que usa <c>AF.Economy.Wallet</c> sobre el mismo <see cref="Profile"/> (en el
     /// juego, el lote <see cref="ProfileSaveBatch"/>). Si la escritura falla, el cambio sigue en memoria
     /// (<see cref="PendingSave"/>) y sale con el siguiente guardado del perfil. Es también la vista del Mapa
@@ -35,6 +35,9 @@ namespace AF.GameFlow
 
         /// <inheritdoc />
         public int MapSeenLevel => _profile.Progress.ClampedMapSeenLevel;
+
+        /// <inheritdoc />
+        public int LevelsWon => Math.Max(0, _profile.Stats.LevelsWon);
 
         /// <inheritdoc />
         public bool IsSkipped(int level)
@@ -77,6 +80,7 @@ namespace AF.GameFlow
             ProgressData progress = _profile.Progress;
             progress.MaxLevel = Math.Max(progress.MaxLevel, level);
             progress.NextLevel = nextLevel;
+            _profile.Stats.LevelsWon = ProgressRules.AddWin(_profile.Stats.LevelsWon); // stats.levels_won, en el mismo guardado
             Persist();
         }
 

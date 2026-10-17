@@ -9,6 +9,7 @@ using AF.GameFlow;
 using AF.Levels;
 using AF.Presentation;
 using AF.Presentation.Mechanics;
+using AF.Save;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,8 +20,8 @@ namespace AF.UI
     /// regalo de Capi, «¡Una cuia más!» y «+1 Luciérnaga»), la tarjeta «¡Miquito a la vista!»
     /// (<c>_sighting</c>), la tarjeta «Fruta nueva» (<c>_fruitNew</c>, tarea F5) y el rótulo del lugar (<c>_stopLabel</c>, tarea
     /// M2.3) salen de uno en uno, por orden de llegada, y cada uno dura lo que se tarda en leerlo (<see cref="NoticeTiming"/>:
-    /// 1.000 ms + 55 ms por carácter, entre 3 y 7 s). La cola va por tipos (<see cref="NoticeKind"/>: Text, Species, StopLabel y
-    /// FruitNew; TI6b y TU1a añaden los suyos). <b>La tarjeta «Fruta nueva»</b> (<see cref="FruitNewCard"/>; 06 §4.5) entra en la
+    /// 1.000 ms + 55 ms por carácter, entre 3 y 7 s). La cola va por tipos (<see cref="NoticeKind"/>: Text, Species, StopLabel,
+    /// FruitNew y Sloth; TU1a añade el suyo). <b>La tarjeta «Fruta nueva»</b> (<see cref="FruitNewCard"/>; 06 §4.5) entra en la
     /// cola al habilitarse el toque en el estreno de un tinte (<see cref="SightingRule.FruitNewAt"/>: 2, 4, 7, 11, 21, 41, 61, 81,
     /// 111, 141 y 201), solo en el primer intento; como la del miquito, espera a que la tropa se vaya, va en su mismo sitio, aparta
     /// las etiquetas del HUD mientras se ve y la ocultan lo mismo (un modal del embudo, otro intento, otro nivel, la celebración
@@ -28,6 +29,17 @@ namespace AF.UI
     /// muelle, va como placa de una línea clavada al marco, como el rótulo del lugar, y se va si una cuia de la fila 1 que queda
     /// debajo se eleva hasta ella o si cambia el tablero [P]. Sonda <c>AF_STATE fruit_new</c> (<c>mode</c>: band, dock o plate; none,
     /// con <c>ms</c> 0, si no cabe en ninguno y no sale).
+    /// <para><b>El aviso de TiTino tras Volver a la orilla</b> (<see cref="SlothNoticeCard"/>; tarea TI6b; D-016, T5-B; 04 §2.7;
+    /// propuesta de TiTino d.5; guion de la intro §14): en los niveles 1-30, al habilitarse el toque tras la intro corta del
+    /// reinicio, solo en el primer reinicio del nivel (en esta sesión [P]) y solo si el nivel no tiene instrucción del tutorial
+    /// (<see cref="HasTutorialInstruction"/>: TiTino ya está en ella), con su retrato de 40 dp y su frase
+    /// (<c>sloth_line_restart_*</c>; la n.º 21 si el reinicio rompió la Crecida, que aún no existe en el cliente [P]) por
+    /// <see cref="SlothLines.ForRestartNotice"/>, con los topes de la sesión de TiTino. Sin frase que enseñar (mensajes apagados,
+    /// topes, sin texto aprobado en release o sin su arte) no hay aviso [P]: el retrato solo no dice nada. Es una tarjeta de la
+    /// familia del miquito: entra en la cola (tipo Sloth), espera a que la tropa se vaya, va sobre la franja del panorama si mide
+    /// ≥ 64 dp y si no sobre el muelle (si tampoco cabe, no sale), aparta las etiquetas del HUD mientras se ve, la ocultan lo
+    /// mismo que a la del miquito y dura por lectura (D-011). Como mucho una tarjeta por nivel: tras un reinicio no sale ninguna
+    /// de las otras (solo van en el primer intento). Sonda <c>AF_STATE sloth_restart</c>.</para>
     /// </summary>
     /// <remarks>
     /// <para><b>Cuándo</b>: solo en PLAYING y sin victoria ni bloqueo pendientes (<c>NoticesHeld</c>). Ninguno durante LOADING,
@@ -209,6 +221,10 @@ namespace AF.UI
         private float _stopLabelSideLeft = float.NaN; // tramo libre donde se centró la placa de lado (dp; NaN si no va de lado)
         private float _stopLabelSideRight = float.NaN;
         private readonly List<Graphic> _stopLabelGraphics = new List<Graphic>(64);
+        private SlothNoticeCard? _slothNotice; // aviso de TiTino tras Volver a la orilla (TI6b): perezoso, lo crea el primero
+        private float _slothNoticeDockBottom = float.NaN; // como _sightingDockBottom, para el aviso de TiTino
+        private int _slothRestartLevel; // nivel cuyos reinicios se cuentan (0: ninguno)
+        private int _slothRestarts; // reinicios de ese nivel en esta sesión
         private readonly Vector3[] _stopLabelCorners = new Vector3[4];
 
         /// <summary>Avisos que esperan turno (sin contar el que se ve; tests).</summary>
@@ -527,6 +543,7 @@ namespace AF.UI
             _sighting.Hide();
             _fruitNew.Hide();
             _stopLabel.Hide();
+            _slothNotice?.Hide();
         }
 
         // Aguas estancadas, ¿Seguro?, Nivel fallido y Sin canoas.
@@ -540,6 +557,12 @@ namespace AF.UI
         // tinte de «Fruta nueva» (FruitNew: índice en SightingRule.FruitDebutTints). Con la cola llena, se descarta.
         private void EnqueueNotice(NoticeKind kind, string? text, FaunaSpecies? species, RiverStop? stop, int fruit = -1)
         {
+            EnqueueNotice(kind, text, species, stop, fruit, default);
+        }
+
+        // Como el de arriba, con lo que decidió SlothLines para el aviso de TiTino (Sloth: se apunta en la sesión al enseñarlo).
+        private void EnqueueNotice(NoticeKind kind, string? text, FaunaSpecies? species, RiverStop? stop, int fruit, in SlothLine sloth)
+        {
             if (_noticeCount >= NoticeSlots)
             {
                 return;
@@ -551,16 +574,22 @@ namespace AF.UI
             _notices[slot].Species = species;
             _notices[slot].Stop = stop;
             _notices[slot].Fruit = fruit;
+            _notices[slot].Sloth = sloth;
             _noticeCount++;
         }
 
         /// <summary>
-        /// Hay un aviso de la cola a la vista: el aviso, la tarjeta del miquito, la de «Fruta nueva» o el rótulo del lugar.
+        /// Hay un aviso de la cola a la vista: el aviso, la tarjeta del miquito, la de «Fruta nueva», el rótulo del lugar o el aviso de
+        /// TiTino (TI6b).
         /// </summary>
-        internal bool NoticeShowing => _toast.Visible || _sighting.Visible || _fruitNew.Visible || _stopLabel.Visible;
+        internal bool NoticeShowing => _toast.Visible || _sighting.Visible || _fruitNew.Visible || _stopLabel.Visible || SlothNoticeVisible;
+
+        /// <summary>El aviso de TiTino tras Volver a la orilla está a la vista (TI6b).</summary>
+        internal bool SlothNoticeVisible => _slothNotice != null && _slothNotice.Visible;
 
         // Saca de la cola el siguiente aviso si no hay ninguno a la vista y la fase lo permite (cada fotograma, al encolar y al
-        // habilitarse el toque). El rótulo del lugar y la tarjeta «Fruta nueva» esperan además a que la tropa se vaya de la rama,
+        // habilitarse el toque). El rótulo del lugar, la tarjeta «Fruta nueva» y el aviso de TiTino (este, también al rótulo del
+        // intento) esperan además a que la tropa se vaya de la rama,
         // como la tarjeta del miquito (van en la franja del panorama o bajo el HUD, donde se sienta): mientras esperan, los que
         // van detrás también.
         private void PumpNotices()
@@ -568,9 +597,14 @@ namespace AF.UI
             while (_noticeCount > 0 && !NoticeShowing && !NoticesHeld(_flow))
             {
                 ref Notice head = ref _notices[_noticeHead];
-                if ((head.Kind == NoticeKind.StopLabel || head.Kind == NoticeKind.FruitNew) && _intro.TroopVisible)
+                if ((head.Kind == NoticeKind.StopLabel || head.Kind == NoticeKind.FruitNew || head.Kind == NoticeKind.Sloth) && _intro.TroopVisible)
                 {
                     return;
+                }
+
+                if (head.Kind == NoticeKind.Sloth && _banner.Visible)
+                {
+                    return; // el aviso de TiTino va tras la intro corta y su rótulo «Nivel N · intento k», que ocupa su franja (TI6b)
                 }
 
                 NoticeKind kind = head.Kind;
@@ -578,6 +612,7 @@ namespace AF.UI
                 FaunaSpecies? species = head.Species;
                 RiverStop? stop = head.Stop;
                 int fruit = head.Fruit;
+                SlothLine sloth = head.Sloth;
                 head = default;
                 _noticeHead = (_noticeHead + 1) % NoticeSlots;
                 _noticeCount--;
@@ -611,6 +646,14 @@ namespace AF.UI
                         if (fruit >= 0)
                         {
                             ShowFruitNewNow(fruit); // sin textos o si no cabe, no sale y pasa el siguiente
+                        }
+
+                        break;
+
+                    case NoticeKind.Sloth:
+                        if (text != null)
+                        {
+                            ShowSlothNoticeNow(text, in sloth); // si no cabe, no sale y pasa el siguiente
                         }
 
                         break;
@@ -656,6 +699,7 @@ namespace AF.UI
             _sighting.Hide();
             _fruitNew.Hide();
             _stopLabel.Hide();
+            _slothNotice?.Hide();
         }
 
         // «¡Miquito a la vista!» (guion de la intro §4.5 y §14): al habilitarse el input tras la intro, en el primer intento del
@@ -755,6 +799,12 @@ namespace AF.UI
         // ante un modal. Cada fotograma, con la bandeja ya repintada (desde PlaceToast); sin asignaciones.
         private void KeepSightingClearOfBubbles()
         {
+            if (!float.IsNaN(_slothNoticeDockBottom) && SlothNoticeVisible && _slothNoticeDockBottom > SightingDockLimit() + 0.01f)
+            {
+                _slothNotice!.Hide(); // el aviso de TiTino sobre el muelle, igual (TI6b)
+                _slothNoticeDockBottom = float.NaN;
+            }
+
             if (!float.IsNaN(_fruitNewDockBottom) && _fruitNew.Visible && _fruitNewDockBottom > SightingDockLimit() + 0.01f)
             {
                 _fruitNew.Hide(); // «Fruta nueva» sobre el muelle, igual (F5)
@@ -771,6 +821,154 @@ namespace AF.UI
                 _sighting.Hide();
                 _sightingDockBottom = float.NaN;
             }
+        }
+
+        /// <summary>
+        /// Solo tests: enciende o apaga el aviso de TiTino tras Volver a la orilla (null = encendido, como en el juego). Los tests
+        /// PlayMode que no tratan de él lo apagan (<c>PlayModeHelpers</c>), para que sus reinicios en 1-30 sigan como antes de
+        /// TI6b; los que lo prueban (<c>SlothFailTests</c>) lo encienden y lo vuelven a null en su TearDown.
+        /// </summary>
+        internal static bool? SlothRestartNoticeOverride { get; set; }
+
+        /// <summary>
+        /// Niveles de 1-30 con instrucción del tutorial (02 §13): el dedo guía de 1 y 2, el tutorial de Marea del 3 y la frase del
+        /// 6, con el retrato de TiTino (D-016, T2-A), y el 8, el de Capi con la Cuia extra y «Reiniciar es gratis…» [P]. En ellos
+        /// no hay aviso de TiTino tras Volver a la orilla (guion de la intro §14: manda la instrucción). TU1a, dueña del tutorial
+        /// con TiTino, puede cambiar la lista.
+        /// </summary>
+        internal static readonly int[] SlothTutorialLevels = { 1, 2, 3, 6, 8 };
+
+        /// <summary>El nivel <paramref name="level"/> tiene instrucción del tutorial (<see cref="SlothTutorialLevels"/>).</summary>
+        internal static bool HasTutorialInstruction(int level)
+        {
+            return Array.IndexOf(SlothTutorialLevels, level) >= 0;
+        }
+
+        /// <summary>El aviso de TiTino (null hasta el primero; tests).</summary>
+        internal SlothNoticeCard? SlothNoticeView => _slothNotice;
+
+        /// <summary>El aviso de TiTino va sobre el muelle (no en la franja del panorama; tests).</summary>
+        internal bool SlothNoticeOnDock => SlothNoticeVisible && !float.IsNaN(_slothNoticeDockBottom);
+
+        /// <summary>Lo que decidió TiTino en el último reinicio de 1-30 (default antes del primero; tests).</summary>
+        internal SlothLine LastSlothRestartLine { get; private set; }
+
+        // Aviso de TiTino tras Volver a la orilla (ver la clase): al habilitarse el toque (OnIntroFinished) tras la intro corta de
+        // un reinicio en 1-30 (Volver a la orilla desde la cabecera, la pausa o el pie del modal; en 1-30 no hay Nivel fallido),
+        // cuenta el reinicio y, si es el primero del nivel y no tiene instrucción del tutorial, pide la frase a SlothLines y la
+        // pone en la cola. Al reanudar no pasa por aquí (OnResumed: sin intro).
+        private void MaybeShowSlothRestart(LevelFlow flow)
+        {
+            if (!_introRetry || !flow.HasLevel)
+            {
+                return;
+            }
+
+            int level = flow.LevelNumber;
+            if (level < 1 || level > SlothLines.RestartNoticeLastLevel)
+            {
+                return;
+            }
+
+            if (_slothRestartLevel != level)
+            {
+                _slothRestartLevel = level;
+                _slothRestarts = 0;
+            }
+
+            _slothRestarts++;
+            LastSlothRestartLine = default;
+            if (!(SlothRestartNoticeOverride ?? true) || !SlothEnabled)
+            {
+                return;
+            }
+
+            SlothSession session = SlothSession;
+            session.Messages = _slothVoiceOverride ?? SlothMessagesSetting;
+            SlothContext context = session.Context.WithRestart(new SlothRestartFacts(_slothRestarts == 1, HasTutorialInstruction(level), false));
+            SlothLine line = SlothLines.ForRestartNotice(level, in context);
+            LastSlothRestartLine = line;
+            if (!line.Speaks || !UiText.TrySlothLine(in line, out string text))
+            {
+                return; // sin frase no hay aviso [P]: ni se enseña ni se apunta
+            }
+
+            EnqueueNotice(NoticeKind.Sloth, text, null, null, -1, in line);
+        }
+
+        // El aviso de TiTino, en el sitio de la tarjeta del miquito (ShowSightingNow): sobre la franja del panorama si mide al
+        // menos SightingBandDp (y su alto + SightingBandAirDp); si no, sobre el muelle, por encima de la bandeja y de sus burbujas;
+        // si tampoco cabe, o sin el arte de TiTino, no sale. Al enseñarlo, la frase se apunta en la sesión de TiTino.
+        private void ShowSlothNoticeNow(string text, in SlothLine line)
+        {
+            BoardLayoutResult? l = _layout;
+            _slothNoticeDockBottom = float.NaN;
+            SlothArt? art = _art.SlothRigArt();
+            if (l == null || art == null)
+            {
+                return;
+            }
+
+            _slothNotice ??= new SlothNoticeCard(_noticeLayer, _art);
+            float height = _slothNotice.Measure(_canvasW, text);
+            if (height <= 0f)
+            {
+                return;
+            }
+
+            float band = l.PanelY - BoardTop;
+            float top;
+            if (band >= Mathf.Max(SightingBandDp, height + SightingBandAirDp))
+            {
+                top = BoardTop + ((band - height) * 0.5f);
+            }
+            else
+            {
+                top = l.PanelBottom + 4f;
+                if (top + height > SightingDockLimit())
+                {
+                    EmitSlothRestartProbe(line, 0, "none");
+                    return;
+                }
+
+                _slothNoticeDockBottom = top + height;
+            }
+
+            _slothNotice.Place(_canvasW, top);
+            LevelFlow? flow = _flow;
+            _slothNotice.Show(art.Head, flow != null && flow.ReduceMotion);
+            SlothSession session = SlothSession;
+            session.Record(in line, session.Context);
+            EmitSlothRestartProbe(line, (int)_slothNotice.DurationMs, float.IsNaN(_slothNoticeDockBottom) ? "band" : "dock");
+        }
+
+        /// <summary>
+        /// El aviso de TiTino con <paramref name="text"/> en el acto, por su camino de colocación (tests y capturas: el muelle con
+        /// una burbuja «Te faltan {n}» a la vista, sin pasar por un reinicio). No se apunta en la sesión. Devuelve si sale.
+        /// </summary>
+        internal bool ShowSlothNotice(string text)
+        {
+            _slothNotice?.Hide();
+            var line = new SlothLine(SlothScreen.Restart, SlothGesture.Encourage, SlothMoment.Restart, SlothData.NoLine, null, 0, false);
+            ShowSlothNoticeNow(text, in line);
+            return SlothNoticeVisible;
+        }
+
+        // AF_STATE sloth_restart: nivel, clave de la frase, duración y sitio (band, dock o, si no cabe y no sale, none). Solo con
+        // la sonda; al enseñarlo, nunca por fotograma.
+        private void EmitSlothRestartProbe(in SlothLine line, int ms, string mode)
+        {
+            if (!DevProbe.Enabled)
+            {
+                return;
+            }
+
+            var sb = new StringBuilder(128);
+            sb.Append("\"level\":").Append((_flow?.LevelNumber ?? 0).ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "line", line.Key);
+            sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
+            AppendJsonString(sb, "mode", mode);
+            _probe.Event("sloth_restart", sb.ToString());
         }
 
         /// <summary>
@@ -1643,6 +1841,9 @@ namespace AF.UI
 
             /// <summary>La tarjeta «Fruta nueva» del estreno de un tinte (<see cref="FruitNewCard"/>; tarea F5).</summary>
             FruitNew = 3,
+
+            /// <summary>El aviso de TiTino tras Volver a la orilla en 1-30 (<see cref="SlothNoticeCard"/>; tarea TI6b).</summary>
+            Sloth = 4,
         }
 
         private struct Notice
@@ -1660,6 +1861,9 @@ namespace AF.UI
 
             // Tinte de la tarjeta «Fruta nueva» (FruitNew): índice en SightingRule.FruitDebutTints; −1 en los demás.
             public int Fruit;
+
+            // Lo que decidió SlothLines para el aviso de TiTino (Sloth; Text lleva su frase ya formateada).
+            public SlothLine Sloth;
         }
     }
 }

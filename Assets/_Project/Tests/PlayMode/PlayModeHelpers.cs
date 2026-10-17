@@ -92,6 +92,20 @@ namespace AF.Tests.PlayMode
             NoStopLabelsUnlessSet();
             NoBannerTravelUnlessSet();
             NoFruitNewUnlessSet();
+            NoSlothRestartNoticeUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga el aviso de TiTino tras Volver a la orilla (TI6b) si el test no lo fijó (<see cref="GameScreen.SlothRestartNoticeOverride"/>
+        /// = null): los tests que no tratan de él reinician en 1-30 con sus avisos, sus etiquetas del HUD y sus capturas como antes
+        /// de que existiera. Los que lo prueban (<c>SlothFailTests</c>) lo encienden y lo vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoSlothRestartNoticeUnlessSet()
+        {
+            if (GameScreen.SlothRestartNoticeOverride == null)
+            {
+                GameScreen.SlothRestartNoticeOverride = false;
+            }
         }
 
         /// <summary>

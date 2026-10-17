@@ -912,6 +912,8 @@ namespace AF.UI
             _sighting.Tick(dtMs);
             _fruitNew.Tick(dtMs);
             _stopLabel.Tick(dtMs);
+            _slothNotice?.Tick(dtMs); // aviso de TiTino tras Volver a la orilla (TI6b; GameScreen.Notices.cs)
+            _failed.Tick(dtMs); // TiTino en Nivel fallido (TI6b)
             TickNotices(); // el siguiente aviso, si el anterior se acaba de ocultar (GameScreen.Notices.cs)
             TickHarvest(dtMs);
             TickAutoNext(dtMs);
@@ -1039,6 +1041,7 @@ namespace AF.UI
             MaybeShowSighting(ready);
             ShowRevealGiftIfReady(ready);
             MaybeShowStopLabel(ready); // el rótulo del lugar, si el nivel no trae otra tarjeta (M2.3)
+            MaybeShowSlothRestart(ready); // tras Volver a la orilla en 1-30, el aviso de TiTino (TI6b)
             PumpNotices();
             _skipCatcher.gameObject.SetActive(false);
             _probe.State("ready", RequireFlow(), int.MinValue, null);

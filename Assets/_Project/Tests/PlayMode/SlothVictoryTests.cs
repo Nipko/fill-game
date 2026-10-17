@@ -320,19 +320,23 @@ namespace AF.Tests.PlayMode
         [Test]
         public void Facts_AreTheVictorysOwn()
         {
-            // D-016, punto 5: la cadencia (el nivel ganado [P]: stats.levels_won no lo escribe nadie), Difícil o Muy difícil, el
+            // D-016, punto 5: la cadencia (stats.levels_won con esta victoria; TI6b), Difícil o Muy difícil, el
             // estreno y la Cuia de rescate. La Crecida y Morpho aún no existen en el cliente.
-            SlothVictoryFacts f = GameScreen.SlothFactsFor(264, LevelDefinition.LabelHard, null, true, true, false);
+            SlothVictoryFacts f = GameScreen.SlothFactsFor(264, 264, LevelDefinition.LabelHard, null, true, true, false);
             Assert.That(f.WinCount, Is.EqualTo(264));
+            SlothVictoryFacts counted = GameScreen.SlothFactsFor(264, 7, LevelDefinition.LabelNormal, null, false, true, false);
+            Assert.That(counted.WinCount, Is.EqualTo(7), "la cadencia es stats.levels_won, no el nivel ganado (TI6b)");
+            Assert.That(GameScreen.SlothFactsFor(201, 3, null, null, false, true, false).Debut, Is.EqualTo(SlothDebut.Fruit),
+                "el estreno sí es del nivel ganado");
             Assert.That(f.Hard, Is.True);
             Assert.That(f.UsedRescue, Is.True);
             Assert.That(f.SpeakBox, Is.True);
             Assert.That(f.Streak, Is.EqualTo(0));
             Assert.That(f.StreakMilestone, Is.False);
             Assert.That(f.UsedHint, Is.False);
-            Assert.That(GameScreen.SlothFactsFor(264, LevelDefinition.LabelVeryHard, null, false, true, false).Hard, Is.True);
-            Assert.That(GameScreen.SlothFactsFor(264, LevelDefinition.LabelNormal, null, false, true, false).Hard, Is.False);
-            Assert.That(GameScreen.SlothFactsFor(264, null, null, false, true, false).Hard, Is.False);
+            Assert.That(GameScreen.SlothFactsFor(264, 264, LevelDefinition.LabelVeryHard, null, false, true, false).Hard, Is.True);
+            Assert.That(GameScreen.SlothFactsFor(264, 264, LevelDefinition.LabelNormal, null, false, true, false).Hard, Is.False);
+            Assert.That(GameScreen.SlothFactsFor(264, 264, null, null, false, true, false).Hard, Is.False);
 
             Assert.That(GameScreen.SlothDebutOf(283, "hoja_atada"), Is.EqualTo(SlothDebut.Mechanic));
             Assert.That(GameScreen.SlothDebutOf(201, "liana"), Is.EqualTo(SlothDebut.Mechanic), "la mecánica, primero");
@@ -346,9 +350,9 @@ namespace AF.Tests.PlayMode
             SlothLine hard = SlothLines.ForVictory(264, default(VictoryLine), c.WithVictory(in f));
             Assert.That(hard.Speaks, Is.True, "264: le toca y es Difícil");
             Assert.That(hard.Moment, Is.EqualTo(SlothMoment.Hard));
-            SlothVictoryFacts normal = GameScreen.SlothFactsFor(265, LevelDefinition.LabelNormal, null, false, true, false);
+            SlothVictoryFacts normal = GameScreen.SlothFactsFor(265, 265, LevelDefinition.LabelNormal, null, false, true, false);
             Assert.That(SlothLines.ForVictory(265, default(VictoryLine), c.WithVictory(in normal)).Speaks, Is.False, "265: no le toca");
-            SlothVictoryFacts debut = GameScreen.SlothFactsFor(324, LevelDefinition.LabelNormal, "tinaja", false, true, false);
+            SlothVictoryFacts debut = GameScreen.SlothFactsFor(324, 324, LevelDefinition.LabelNormal, "tinaja", false, true, false);
             Assert.That(SlothLines.ForVictory(324, default(VictoryLine), c.WithVictory(in debut)).Moment, Is.EqualTo(SlothMoment.Debut));
         }
 
@@ -386,6 +390,28 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(GameBootstrap.Current, 1600);
             Assert.That(view.CurrentVictoryLine.FruitKey, Is.Not.Null);
             Assert.That(view.LastSlothLine.Speaks, Is.False, "con la línea de fruta, solo el gesto");
+            Assert.That(view.SlothView.HasBubble, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator NonHito_TheCadenceCountsLevelsWon_NotTheLevel()
+        {
+            // Pendiente de TI6a (TI6b): la cadencia de 1 de cada 4 cuenta las victorias (stats.levels_won, que suma cada victoria),
+            // no el número del nivel. El 45 con 43 victorias antes es la victoria 44: le toca; el 44 con 44 antes (la 45), no.
+            yield return WinPack(OneRowPack(45), 45, v => v.FruitKeyOf = null, 43);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            PlayModeHelpers.Step(boot, 1600);
+            Assert.That(boot.Flow!.LevelsWon, Is.EqualTo(44), "la victoria del 45 sumó una");
+            Assert.That(view.LastSlothLine.Speaks, Is.True, "victoria número 44: le toca");
+            Assert.That(view.SlothView.BubbleShown, Is.True);
+
+            yield return WinPack(OneRowPack(44), 44, v => v.FruitKeyOf = null, 44);
+            boot = GameBootstrap.Current!;
+            view = boot.View!;
+            PlayModeHelpers.Step(boot, 1600);
+            Assert.That(boot.Flow!.LevelsWon, Is.EqualTo(45));
+            Assert.That(view.LastSlothLine.Speaks, Is.False, "victoria número 45: no le toca, aunque el nivel sea el 44");
             Assert.That(view.SlothView.HasBubble, Is.False);
         }
 
@@ -741,11 +767,16 @@ namespace AF.Tests.PlayMode
             GameScreen.FactLineDisabledForTests = on;
         }
 
-        /// <summary>Carga el paquete <paramref name="json"/> en el nivel <paramref name="level"/>, quita el reloj y gana hasta la victoria.</summary>
-        internal static IEnumerator WinPack(string json, int level, System.Action<GameScreen>? before = null)
+        /// <summary>
+        /// Carga el paquete <paramref name="json"/> en el nivel <paramref name="level"/>, quita el reloj y gana hasta la victoria.
+        /// Antes de ganarlo, <c>stats.levels_won</c> vale <paramref name="levelsWonBefore"/> o, si es negativo, el del juego lineal
+        /// (<paramref name="level"/> − 1): la victoria es entonces la número <paramref name="level"/> (cadencia de TiTino, TI6b).
+        /// </summary>
+        internal static IEnumerator WinPack(string json, int level, System.Action<GameScreen>? before = null, int levelsWonBefore = -1)
         {
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(1240));
-            yield return PlayModeHelpers.LoadGameWithPack(json, level, new MemoryProgressStore(level, level - 1));
+            int won = levelsWonBefore >= 0 ? levelsWonBefore : level - 1;
+            yield return PlayModeHelpers.LoadGameWithPack(json, level, new MemoryProgressStore(level, level - 1, levelsWon: won));
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
             before?.Invoke(boot.View!);
