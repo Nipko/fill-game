@@ -31,7 +31,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-023 | 2026-10-14 | Decisiones de detalle de la tanda 4: preguntas de sus planes y [P] del plan consolidado | Decidida por el dueño (la recomendación de cada pregunta, por «Sí, aplica las recomendadas también»): las P-M1 a P-M8 del plan del Mapa del río, las preguntas del plan consolidado de la tanda 4 (textos del Mapa en `facts.csv`, firma de las variantes de `pack_schema` 3, máscara de la tinaja en `relief`, Cuia de la casa fuera de la 1.0, idioma automático y región, alto de la llegada y tabla de D2) y los detalles [P] del plan. Documentación aplicada el 2026-10-14 (D1, que absorbe M1.7). En implementación: tanda 4 |
 | D-024 | 2026-10-14 | Reglas de la Hoja atada: la capacidad de su llave y una por fruta | Decidida por el dueño (las recomendadas de la revisión de K3a, por «Sí, aplica las recomendadas también»). Documentación aplicada el 2026-10-14 (FIXD). En implementación: FIXK, en el núcleo; el generador y level-qa la heredan por `LevelValidation` |
 | D-025 | 2026-10-14 | Un solo formato de cifras, también en los precios | Decidida por el dueño («unificar formatos», tras la prueba de la tanda 4). La regla (región del teléfono, Q8-A) es [P] de este registro. Implementada en FXT (puntos 1 y 2; el 3, lista la función para el adaptador de Unity IAP) |
-| D-026 | 2026-10-16 | Audio provisional por código y permiso `VIBRATE` | Decidida por el dueño («lanza ya AU1 en paralelo a la ola 4, con los arreglos de niveles y graves, y apruebo el permiso VIBRATE para el háptico del sellado»). Implementada en AU1 (tanda 4, ola 4, carril de audio): `AF.Audio` y `AF.Audio.Unity`, los 61 efectos con su nivel, Ajustes de Sonido, Música y Vibración, los hápticos y el permiso en el manifiesto. Pendiente: la prueba en el teléfono y los encargos al compositor y al diseñador de sonido (07 §9.5) |
+| D-026 | 2026-10-16 | Audio provisional por código y permiso `VIBRATE` | Decidida por el dueño («lanza ya AU1 en paralelo a la ola 4, con los arreglos de niveles y graves, y apruebo el permiso VIBRATE para el háptico del sellado»). Implementada en AU1 (tanda 4, ola 4, carril de audio): `AF.Audio` y `AF.Audio.Unity`, los 61 efectos con su nivel, Ajustes de Sonido, Música y Vibración, los hápticos y el permiso en el manifiesto; AU2 (la misma ola) añadió el ambiente por mundo y la música adaptativa provisionales, también por código y detrás del ajuste Música [P]. Integrada en `bd649ac` y llevada a 07 §9 (FXD2, 2026-10-16). Pendiente: la prueba en el teléfono y los encargos al compositor y al diseñador de sonido (07 §9.5) |
 
 ---
 
@@ -2444,7 +2444,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 ## D-026 · Audio provisional por código y permiso `VIBRATE`
 
 - **Fecha:** 2026-10-16.
-- **Estado:** decidida por el dueño en el chat: «lanza ya AU1 en paralelo a la ola 4, con los arreglos de niveles y graves, y apruebo el permiso VIBRATE para el háptico del sellado». **Implementada en AU1** (tanda 4, ola 4, carril de audio). Pendiente: la prueba en el teléfono (las sondas `AF_STATE sfx` y `haptic` de `docs/dev/prototipo-v0.md`) y los encargos al compositor y al diseñador de sonido (07 §9.5), que sustituyen estos sonidos sin tocar los ganchos.
+- **Estado:** decidida por el dueño en el chat: «lanza ya AU1 en paralelo a la ola 4, con los arreglos de niveles y graves, y apruebo el permiso VIBRATE para el háptico del sellado». **Implementada en AU1** (tanda 4, ola 4, carril de audio), con el ambiente por mundo y la música adaptativa provisionales de AU2, en la misma ola y con el mismo criterio (por código, sin paquetes ni peso en el AAB); integradas en `integracion-fase1-fase2` en `bd649ac`. Pendiente: la prueba en el teléfono (las sondas `AF_STATE sfx` y `haptic` de `docs/dev/prototipo-v0.md`) y los encargos al compositor y al diseñador de sonido (07 §9.5), que sustituyen estos sonidos sin tocar los ganchos.
 
 **Contexto.**
 - El cliente no tenía ningún sonido (07 §9.2: «hoy el cliente no tiene audio») y Ajustes ocultaba Sonido, Música y Vibración (D-008: lo que no existe se oculta).
@@ -2476,7 +2476,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - las filas de Ajustes, las sondas `AF_STATE sfx` y `haptic` y `AF_PERF audio_build`.
 - **Sin sonido al bajar la selección** (revisión de AU1): 02 §4.1 la deja sin audio y la variante grave de la lista de sonidos no la decidió el dueño, así que no se aplica. Queda como propuesta: si se aprueba, se anota aquí y en 02 §4.1.
 - **Datos:** las claves `sound`, `music` y `haptics` de `strings.csv` (glosario §10).
-- **GDD:** 07 §9 (el estado: audio provisional por código en el cliente).
+- **GDD:** 07 §9 (el estado: audio provisional por código en el cliente). Completado tras la ola 4 (FXD2, 2026-10-16): la entrada de 07 §9 (la carpeta del código, los niveles, la regla de energía por encima de 300 Hz y el permiso), §9.1 y §9.3 (el ambiente y la música de AU2) y §9.4 (el ambiente va con el ajuste Música y baja con ella en el ducking [P]); y `docs/GDD.md` §9, paso 19 (`VIBRATE`, el único permiso nuevo de la tanda 4).
 - **Lista de sonidos:** los IDs finales con su nivel.
 
 **Alternativas descartadas.**

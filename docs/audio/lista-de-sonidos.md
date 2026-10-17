@@ -1,6 +1,6 @@
 # Tintalú: lista de sonidos y música
 
-2026-10-15 (actualizada el 2026-10-16 con el audio provisional por código, sección 9) · Copia de trabajo para el dueño y los proveedores de audio (compositor y diseñador de sonido). Fuente: GDD 07 §9 y las mecánicas, personajes y pantallas de los demás capítulos. Si esta lista y el GDD no coinciden, manda el GDD hasta que se edite.
+2026-10-15 (actualizada el 2026-10-16 con el audio provisional por código, sección 9, y, tras la ola 4, con el resumen de lo que ya suena en el juego y lo que falta, al principio de la sección 9) · Copia de trabajo para el dueño y los proveedores de audio (compositor y diseñador de sonido). Fuente: GDD 07 §9 y las mecánicas, personajes y pantallas de los demás capítulos. Si esta lista y el GDD no coinciden, manda el GDD hasta que se edite.
 
 **Para producir el audio definitivo** (2026-10-17): el encargo completo está en `docs/audio/encargo-sonidos.md`, con la ficha de cada pieza en `docs/audio/especificacion-sonidos.json` y el comprobador `tools/audio-check/check_audio.py`.
 
@@ -234,7 +234,19 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
 
 ## 9. Estado en el cliente: audio provisional por código (D-026, tarea AU1)
 
-Desde el 2026-10-16 el juego suena con los 61 efectos del laboratorio, portados 1:1 a C# (`AF.Audio`, sin motor) y generados al arrancar en un hilo de trabajo (0 MB en el AAB). Todos son **provisionales por código**, también la piha y el boto, que el laboratorio llamaba «reales»: las grabaciones con licencia llegan después (07 §9.5) y los sustituyen sin tocar los ganchos.
+**Qué está ya en el juego y qué es provisional** (2026-10-16, ola 4 de la tanda 4 integrada; código en `Assets/_Project/Scripts/Audio/`):
+
+| Bloque | Ya suena en el juego | Aún no suena | Provisional o definitivo |
+| --- | --- | --- | --- |
+| Efectos (§1-§4) | 37 de los 61, con su gancho: el tablero y el vertido, la intro, la victoria, Aguas estancadas, Marea, Capi, la Luciérnaga, Volver a la orilla, El río bajó, las canoas, la interfaz, la tienda, la tarjeta previa, la llegada a la parada, el banner de mundo y las mecánicas de 1-200. Tres más tienen el gancho listo pero están por oír: la Hoja atada (gancho en `AudioBoard.Step` y vista desde VA1a, ola 4; sale en el mundo 6, pero ningún test comprueba aún que suene), la Flor (gancho en `AudioBoard.Step`, al abrirse y al soltar, pero ningún nivel del cliente lleva Flor y aún no tiene vista) y la Tinaja al elegirla (gancho en `AudioBoard`, pero ningún nivel del cliente lleva Tinaja hasta C1b, y su vista llega con TJ3-TJ4) | 21: Morpho y su versión por inactividad, Pororoca, el Salto del Boto, la Canasta, la Crecida y la Hoja escudo, la Liana de cuenta, la Tinaja al sacar, revelar y soltar, los gestos de TiTino, Rosa, el Mapa del río y la tarjeta «Fruta nueva». Su clip existe; falta la pantalla, la mecánica o la llamada (columna «Dónde suena hoy»). El recuento es por el gancho propio de cada efecto: el clip de `sfx_map_rosa` ya se oye como fauna del ambiente en los mundos 2, 3, 5 y 9 (AU2; sección 5), aunque su gancho del Mapa del río aún falta | Todos provisionales por código, también la piha y el boto |
+| Vibración (§7) | `haptic_seal`, `haptic_win`, `haptic_capi` y `haptic_back_blocked`, con el permiso `VIBRATE` aprobado por el dueño (D-026) | `haptic_boto`, con el Salto del Boto | Los efectos predefinidos de Android; se pueden quedar |
+| Ambiente (§5) | Agua de los mundos 1-9, lluvia por nivel y animales con efectos provisionales (AU2) | Animales de Oriente (6) y perfiles propios de los mundos 10-13 (suenan como el 1) | Provisional por código, hasta las grabaciones con licencia |
+| Música (§6) | Lecho de cada mundo 1-9, capas de percusión, variante nocturna y tema de menú (AU2) | Los 5 stingers, la pantalla de la Crecida y el Mercado (aún no existen) | Provisional por código, hasta el encargo al compositor |
+| Ajustes | Sonido, Música y Vibración, encendidos por defecto; el ambiente va con Música [P] | — | Definitivo (07 §9.4) |
+
+Las columnas «Tu propuesta» de las secciones 1-7 siguen siendo el encargo para el compositor y el diseñador de sonido: el audio provisional no las sustituye.
+
+Desde el 2026-10-16 el juego tiene los 61 efectos del laboratorio, portados 1:1 a C# (`AF.Audio`, sin motor) y generados al arrancar en un hilo de trabajo (0 MB en el AAB); hoy suenan 37; los otros 24 están por oír o esperan a su pantalla, su nivel o su llamada (tabla del principio de esta sección). Todos son **provisionales por código**, también la piha y el boto, que el laboratorio llamaba «reales»: las grabaciones con licencia llegan después (07 §9.5) y los sustituyen sin tocar los ganchos.
 
 **Arreglos de la revisión del laboratorio (2026-10-16), aplicados al portarlos:**
 
@@ -305,9 +317,9 @@ Desde el 2026-10-16 el juego suena con los 61 efectos del laboratorio, portados 
 | `sfx_mech_lluvia` | −21 | sin cola añadida | Cada gota de la Lluvia |
 | `sfx_mech_pirana` | −19 | sin cola añadida | Mordisco de la Piraña |
 | `sfx_mech_brote` | −20 | sin cola añadida | Paso «se abre» del Brote |
-| `sfx_mech_flor` | −18 | sin cola añadida | Sin gancho todavía: Flor: listo en `AudioBoard.Step`; suena cuando exista su vista |
-| `sfx_mech_hoja_atada` | −20 | sin cola añadida | Sin gancho todavía: Hoja atada: listo en `AudioBoard.Step`; suena cuando exista su vista |
-| `sfx_tinaja_select` | −26 | sin cola añadida | Al elegir la Tinaja (en lugar de `sfx_select`) |
+| `sfx_mech_flor` | −18 | sin cola añadida | Pasos «se abre» y «suelta» de la Flor: el gancho está en `AudioBoard.Step`, pero no suena hasta que un nivel del cliente lleve Flor y exista su vista |
+| `sfx_mech_hoja_atada` | −20 | sin cola añadida | Paso «se abre» de la Hoja atada: el gancho está en `AudioBoard.Step` y la vista existe desde VA1a (ola 4); por comprobar en el juego, porque ningún test de audio lo prueba todavía |
+| `sfx_tinaja_select` | −26 | sin cola añadida | Al elegir la Tinaja (en lugar de `sfx_select`): el gancho está en `AudioBoard`, pero no suena hasta que un nivel del cliente lleve Tinaja (C1b) y exista su vista (TJ3-TJ4) |
 | `sfx_tinaja_scoop` | −22 | sin cola añadida | Sin gancho todavía: Tinaja (TJ3-TJ4) |
 | `sfx_tinaja_reveal` | −25 | dosel | Sin gancho todavía: Tinaja (TJ3-TJ4) |
 | `sfx_tinaja_release` | −19 | sin cola añadida | Sin gancho todavía: Tinaja (TJ3-TJ4) |
@@ -321,7 +333,7 @@ Desde el 2026-10-16 el juego suena con los 61 efectos del laboratorio, portados 
 | `sfx_world_banner` | −14 | dosel | Al entrar la tarjeta del banner de mundo (solo ahí) |
 | `sfx_map_paddle` | −20 | sin cola añadida | Sin gancho todavía: Mapa del río |
 | `sfx_map_sample` | −18 | sin cola añadida | Sin gancho todavía: Mapa del río |
-| `sfx_map_rosa` | −21 | sin cola añadida | Sin gancho todavía: Mapa del río |
+| `sfx_map_rosa` | −21 | sin cola añadida | Sin gancho todavía: Mapa del río. Su clip ya suena como fauna del ambiente en los mundos 2, 3, 5 y 9 (AU2; sección 5) |
 | `sfx_map_pequepeque` | −28 | sin cola añadida | Sin gancho todavía: Mapa del río (opcional) |
 | `sfx_fruit_new` | −17 | sin cola añadida | Sin gancho todavía: Tarjeta «Fruta nueva» (F5) |
 | `sfx_mech_card` | −20 | sin cola añadida | Tarjeta previa |
