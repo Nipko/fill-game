@@ -22,10 +22,13 @@ namespace AF.GameFlow
     /// (<see cref="SightingRule.IsBusy"/>; <c>StopLabelRule</c>). Como mucho una tarjeta por nivel (D-023, punto 39; 02 §4.2;
     /// guion de la intro §14): en el 2 no sale «Fruta nueva: Taperebá» (<see cref="SightingRule.FruitNewAt"/> devuelve −1, como en
     /// el 1), aunque la fila del 2 de 06 §2.2 la liste (contradicción registrada para el dueño en la entrega de TU1a).
-    /// <para>El tooltip de Marea del 3 no sale tras la intro sino tras el primer vertido del intento (04 §2.1: «tras ejecutarlo»
-    /// el vertido tentador; 02 §13 pide la primera vez que un vertido aleja de la solución, con el solver, o al inicio del 5: se
-    /// simplifica al primer vertido [P]), y TiTino señala el botón: la tarjeta va sobre el muelle, junto a la bandeja, con el
-    /// retrato sobre el botón de Marea (GameScreen.Cards.cs).</para>
+    /// <para>El tooltip de Marea del 3 no sale tras la intro sino tras el primer vertido que no acerca a la solución, medido con
+    /// el solver (02 §13 y 06 §2.2: «la primera vez que un vertido aleja de la solución (distancia del solver +2)»; 04 §2.1: «tras
+    /// ejecutarlo» el vertido tentador). Lectura débil [P]: en el tablero del 3 ningún vertido útil sube la distancia
+    /// (tools/out/tutorial_v0_report.md), así que vale «no la baja», la de la comprobación del nivel 3. Sale una vez por sesión
+    /// de juego, nunca en los reintentos [P]; el respaldo «al inicio del nivel 5 si no ocurrió» y «la primera vez» entre
+    /// sesiones necesitan guardarlo en el perfil (pregunta para el dueño). TiTino señala el botón: la tarjeta va sobre el muelle,
+    /// junto a la bandeja, con una cola que señala el botón de Marea (GameScreen.Cards.cs).</para>
     /// </summary>
     public static class TutorialInstruction
     {
@@ -65,7 +68,8 @@ namespace AF.GameFlow
         /// <summary>
         /// Clave de la instrucción de <paramref name="level"/> o null si no tiene. Sin asignaciones. Sale en cada intento con su
         /// intro (el primero y tras Volver a la orilla: en estos niveles no hay aviso de TiTino tras el reinicio, porque la
-        /// instrucción ya lo lleva; guion §14), nunca al reanudar, que va sin intro (02 §14).
+        /// instrucción ya lo lleva; guion §14), nunca al reanudar, que va sin intro (02 §14); salvo el tooltip de Marea del 3, que
+        /// sale una sola vez (<see cref="PointsAtUndo"/>).
         /// </summary>
         public static string? KeyFor(int level)
         {
@@ -75,7 +79,7 @@ namespace AF.GameFlow
 
         /// <summary>
         /// La instrucción de <paramref name="level"/> es el tooltip de Marea (el tutorial del 3; 04 §2.1): sale tras el primer
-        /// vertido del intento [P] y TiTino señala el botón con su retrato.
+        /// vertido que no acerca a la solución [P] y TiTino señala el botón.
         /// </summary>
         public static bool PointsAtUndo(int level)
         {

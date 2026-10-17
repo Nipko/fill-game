@@ -18,8 +18,9 @@ namespace AF.Tests.PlayMode
     /// <item><c>tu1a_l{3|6}_640_{100|130}</c> y <c>tu1a_l{3|6}_780_130</c>: la pantalla pequeña y la escala de texto;</item>
     /// <item><c>tu1a_l6_dock_640_130</c>: la instrucción sobre el muelle, con la franja del panorama forzada por debajo de 64 dp.</item>
     /// </list>
-    /// En el 3, el tooltip de Marea sale tras el primer vertido, con el retrato de TiTino sobre el botón de Marea (04 §2.1). En
-    /// el 2 ya no hay captura de «Fruta nueva»: una tarjeta por nivel como mucho (D-023, punto 39).
+    /// En el 3, el tooltip de Marea sale tras el vertido tentador (que no acerca a la solución), con la cola de la tarjeta de
+    /// TiTino señalando el botón de Marea (04 §2.1). En el 2 ya no hay captura de «Fruta nueva»: una tarjeta por nivel como mucho
+    /// (D-023, punto 39).
     /// Cada captura comprueba los solapes (<see cref="TutorialSlothTests.AssertClear"/>) y escribe una línea <c>AF_TUTORIAL</c>.
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.TutorialSlothSnapshotTests</c>
     /// sin <c>-nographics</c>).
@@ -104,6 +105,12 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 600); // el gesto sloth_present termina de entrar (0,6 s)
             Assert.That(view.TutorialSlothVisible, Is.True, name + ": la instrucción, a la vista");
             TutorialSlothTests.AssertClear(view, name);
+            if (TutorialInstruction.PointsAtUndo(boot.Flow!.LevelNumber))
+            {
+                Assert.That(view.TutorialPointsAtUndo, Is.True, name + ": la cola señala Marea (04 §2.1)");
+                TutorialSlothTests.AssertTail(view, name);
+            }
+
             if (view.TutorialSlothOnDock)
             {
                 TutorialSlothTests.AssertDockAir(view, name);
@@ -112,7 +119,7 @@ namespace AF.Tests.PlayMode
 
             Debug.Log("AF_TUTORIAL " + name + ": «" + card.Text + "» en " + card.Lines + " líneas a " + SlothFailTests.F(card.Label.fontSize)
                 + " dp, " + (view.TutorialSlothOnDock ? "sobre el muelle" : "sobre el panorama") + ", " + SlothFailTests.F(card.Height) + " dp, "
-                + SlothFailTests.F(card.DurationMs) + " ms" + (view.TutorialPointsAtUndo ? ", con el retrato sobre Marea" : string.Empty)
+                + SlothFailTests.F(card.DurationMs) + " ms" + (view.TutorialPointsAtUndo ? ", con la cola sobre Marea" : string.Empty)
                 + ", " + view.LastTutorialProbe);
             yield return SnapshotKit.Wait(0.2f);
             SnapshotKit.Save(dir, name);

@@ -40,6 +40,7 @@ namespace AF.GameFlow
         /// <summary>Nivel de estreno de cada tinte de <see cref="FruitDebutTints"/> (glosario §9).</summary>
         public static readonly int[] FruitDebutTintLevels = { 1, 1, 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201, 301 };
 
+        /// <summary>
         /// Debut de cada tinte: lleva la tarjeta «Fruta nueva» (07 §3, columna «Debut»; 06 §4.5), salvo en los niveles con
         /// instrucción del tutorial (el <see cref="FirstContactLevel"/> y el 2; <see cref="FruitNewAt"/>), que ocupan su nivel igual.
         /// Sale de <see cref="FruitDebutTintLevels"/>, en orden y sin repetidos: 1, 2, 4, 7, 11, 21, 41, 61, 81, 111, 141, 201 y 301.

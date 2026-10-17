@@ -19,7 +19,10 @@ namespace AF.UI
     /// = false). Dónde va y cuándo sale lo decide la cola de avisos (GameScreen.Notices.cs). Perezosa: la crea el primer aviso.
     /// <para>La misma tarjeta lleva la instrucción del tutorial de 1, 2, 3 y 6 (tarea TU1a; 02 §13), con el gesto
     /// <c>sloth_present</c> (<see cref="Show(Sprite, bool, SlothPoseId)"/>): el retrato ladea la cabeza hacia la instrucción. Las
-    /// dos nunca coinciden: en esos niveles no hay aviso tras Volver a la orilla.</para>
+    /// dos nunca coinciden: en esos niveles no hay aviso tras Volver a la orilla. En el tooltip de Marea del 3 (04 §2.1: TiTino
+    /// señala el botón), la tarjeta lleva además una cola de <see cref="TailWidthDp"/> × <see cref="TailHeightDp"/> dp en su borde
+    /// de abajo, del relleno de la placa y con su canto, con la punta sobre el eje del botón
+    /// (<see cref="Place(float, float, float)"/>): señala el botón sea cual sea el ancho de la tarjeta (revisión de TU1a).</para>
     /// </summary>
     internal sealed class SlothNoticeCard
     {
@@ -41,6 +44,21 @@ namespace AF.UI
         /// <summary>Ancho máximo de la tarjeta (dp), como la del miquito.</summary>
         public const float MaxWidthDp = 320f;
 
+        /// <summary>Ancho de la base de la cola que señala el botón de Marea (dp; revisión de TU1a) [P].</summary>
+        public const float TailWidthDp = 16f;
+
+        /// <summary>Alto de la cola bajo la placa, sin su canto (dp; revisión de TU1a) [P].</summary>
+        public const float TailHeightDp = 10f;
+
+        /// <summary>Lo que baja la punta de la cola, con su canto, por debajo de la placa (dp).</summary>
+        public const float TailReachDp = TailHeightDp + EdgeDp;
+
+        /// <summary>
+        /// El eje de la cola queda, como mucho, a este aire de cada lado de la tarjeta (dp; revisión de TU1a) [P]: lejos de las
+        /// esquinas redondeadas.
+        /// </summary>
+        public const float TailInsetDp = 20f;
+
         private const float FadeMs = 200f;
         private const float TextX = 11f + PortraitDp + 10f;
         private const float PortraitCenterDp = 11f + (PortraitDp * 0.5f); // centro del retrato desde el borde izquierdo
@@ -52,6 +70,9 @@ namespace AF.UI
         private readonly CanvasGroup _group;
         private readonly Image _plate;
         private readonly Image _edge;
+        private readonly RectTransform _tail;
+        private readonly PointerTailGraphic _tailEdge;
+        private readonly PointerTailGraphic _tailPlate;
         private readonly Image _halo;
         private readonly Image _portrait;
         private readonly TextMeshProUGUI _text;
@@ -66,6 +87,7 @@ namespace AF.UI
         private float _textWidth;
         private float _cardWidth;
         private float _left;
+        private float _tailX = float.NaN;
         private int _lines;
 
         public SlothNoticeCard(Transform parent, ProceduralArt art)
@@ -83,6 +105,15 @@ namespace AF.UI
             _plate = UiBuilder.Sliced("Plate", _root, art.RoundedRect, Palette.PanelLight);
             _plate.pixelsPerUnitMultiplier = 24f / 14f;
             UiBuilder.Stretch(_plate.rectTransform);
+
+            // La cola del tooltip de Marea: su canto (la misma madera que el de la placa, EdgeDp más abajo) y su relleno, encima;
+            // oculta salvo que Place la pida.
+            _tail = UiBuilder.Rect("Tail", _root);
+            _tailEdge = TailPart("TailEdge", _tail, Palette.FamilyWood.Base);
+            _tailEdge.rectTransform.offsetMin = new Vector2(0f, -EdgeDp);
+            _tailEdge.rectTransform.offsetMax = new Vector2(0f, -EdgeDp);
+            _tailPlate = TailPart("TailPlate", _tail, Palette.PanelLight);
+            _tail.gameObject.SetActive(false);
             _halo = UiBuilder.Image("PortraitBack", _root, art.Disc, Palette.PanelLightLow);
             _portrait = UiBuilder.Image("Portrait", _root, null, Color.white);
             _portrait.preserveAspect = true;
@@ -123,6 +154,15 @@ namespace AF.UI
 
         /// <summary>Centro del retrato a lo ancho (dp desde la izquierda del lienzo) con el último <c>Place</c>.</summary>
         public float PortraitCenterXDp => _left + PortraitCenterDp;
+
+        /// <summary>La tarjeta lleva la cola que señala un botón (el tooltip de Marea del 3).</summary>
+        public bool TailVisible => _tail.gameObject.activeSelf;
+
+        /// <summary>Eje de la punta de la cola (dp desde la izquierda del lienzo) con el último <c>Place</c>; NaN sin cola.</summary>
+        public float TailCenterXDp => TailVisible ? _tailX : float.NaN;
+
+        /// <summary>Rectángulo de la cola, sin su canto (tests y el poste del muelle).</summary>
+        public RectTransform Tail => _tail;
 
         /// <summary>Gesto del retrato: <c>sloth_encourage</c> en el aviso del reinicio, <c>sloth_present</c> en el tutorial.</summary>
         public SlothPoseId Pose => _pose;
@@ -179,21 +219,38 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Como <see cref="Place(float, float)"/>, pero, si <paramref name="portraitX"/> no es NaN, desplazada a lo ancho para que
-        /// el centro del retrato quede en <paramref name="portraitX"/> (dp desde la izquierda), sin salir de los 16 dp de cada
-        /// lado: el tooltip de Marea, con TiTino señalando su botón (tarea TU1a; 04 §2.1).
+        /// Como <see cref="Place(float, float)"/>, pero, si <paramref name="pointX"/> no es NaN, señalando el punto
+        /// <paramref name="pointX"/> (dp desde la izquierda) que queda debajo: el tooltip de Marea, con TiTino señalando su botón
+        /// (tarea TU1a; 04 §2.1). La tarjeta se desplaza a lo ancho para acercar el retrato a <paramref name="pointX"/>, sin salir
+        /// de los 16 dp de cada lado, y lleva la cola en su borde de abajo con la punta en <paramref name="pointX"/> (a
+        /// <see cref="TailInsetDp"/> dp de cada lado como mucho): así señala el botón aunque el margen no deje llevar el retrato
+        /// encima (una tarjeta ancha en un lienzo estrecho; revisión de TU1a).
         /// </summary>
-        public void Place(float canvasW, float top, float portraitX)
+        public void Place(float canvasW, float top, float pointX)
         {
             float w = Mathf.Min(Mathf.Min(MaxWidthDp, canvasW - 32f), _cardWidth);
             float left = (canvasW - w) * 0.5f;
-            if (!float.IsNaN(portraitX))
+            bool tail = !float.IsNaN(pointX);
+            if (tail)
             {
-                left = Mathf.Clamp(portraitX - PortraitCenterDp, 16f, Mathf.Max(16f, canvasW - 16f - w));
+                left = Mathf.Clamp(pointX - PortraitCenterDp, 16f, Mathf.Max(16f, canvasW - 16f - w));
             }
 
             _left = left;
             UiBuilder.Place(_root, left, top, w, _height);
+            _tailX = float.NaN;
+            if (tail)
+            {
+                // La base entra 1 dp en la placa (sin costura) y la punta queda TailHeightDp por debajo de ella.
+                _tailX = Mathf.Clamp(pointX, left + TailInsetDp, left + Mathf.Max(TailInsetDp, w - TailInsetDp));
+                UiBuilder.Place(_tail, _tailX - left - (TailWidthDp * 0.5f), _height - 1f, TailWidthDp, TailHeightDp + 1f);
+            }
+
+            if (_tail.gameObject.activeSelf != tail)
+            {
+                _tail.gameObject.SetActive(tail);
+            }
+
             float face = (_height - PortraitDp) * 0.5f;
             UiBuilder.Place(_halo.rectTransform, 9f, face - 2f, PortraitDp + 4f, PortraitDp + 4f);
             RectTransform portrait = _portrait.rectTransform;
@@ -263,6 +320,8 @@ namespace AF.UI
         {
             graphics.Add(_plate);
             graphics.Add(_edge);
+            graphics.Add(_tailEdge);
+            graphics.Add(_tailPlate);
             graphics.Add(_halo);
             graphics.Add(_portrait);
             graphics.Add(_text);
@@ -278,6 +337,16 @@ namespace AF.UI
             {
                 _portrait.rectTransform.localRotation = tilt;
             }
+        }
+
+        // Un triángulo de la cola (sin raycast), estirado a su rectángulo.
+        private static PointerTailGraphic TailPart(string name, RectTransform parent, Color color)
+        {
+            RectTransform rt = UiBuilder.Rect(name, parent);
+            PointerTailGraphic g = rt.gameObject.AddComponent<PointerTailGraphic>();
+            g.color = color;
+            g.raycastTarget = false;
+            return g;
         }
 
         private static float BalancedWidth(TextMeshProUGUI label, string text, float inner, float single, int lines, float height)
