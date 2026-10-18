@@ -1117,6 +1117,7 @@ namespace AF.Presentation
                 // ease-in (6.2). La Tinaja sube 8 dp y, arriba, se asienta con un balanceo de ±2° que se apaga (07 §4.3).
                 float y = LiftAmountDp * (_liftTarget ? Ease.OutBack(_liftValue) : Ease.In(_liftValue));
                 y += HopOffset(dtMs);
+                y += _host.BodyNudgeDp; // un paso del overlay (TJ3: su cuia de la Tinaja se asienta al soltarse)
                 WritePose(new Vector2(x, y), SwayAngle(dtMs));
             }
             else

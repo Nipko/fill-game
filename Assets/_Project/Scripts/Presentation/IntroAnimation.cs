@@ -945,8 +945,11 @@ namespace AF.Presentation
             }
         }
 
-        /// <summary>Boca de la Tinaja seca (D-010; TJ3): el fondo de barro oscuro, el mismo de la boca sin fruta del overlay.</summary>
-        public static readonly Color DryMouth = Opaque(Palette.WoodDark);
+        /// <summary>
+        /// Boca de la Tinaja seca (D-010; TJ3): el fondo seco del overlay (<see cref="TinajaOverlay.DryMouthRim"/>, con su centro
+        /// claro y sin brillo), el mismo de la tinaja vacía que espera su vuelco.
+        /// </summary>
+        public static readonly Color DryMouth = TinajaOverlay.DryMouthRim;
 
         private static Color Opaque(Color c)
         {

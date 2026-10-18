@@ -248,6 +248,7 @@ namespace AF.Presentation
         private Sprite? _tinajaJirau;
         private Sprite? _tinajaPost;
         private Sprite? _tinajaAsa;
+        private Sprite? _tinajaDryMouthCenter;
         private readonly Sprite?[] _tinajaGlyphs = new Sprite?[Cuia.MaxTintColor + 1];
 
         /// <summary>Cuerpo de la tinaja (<see cref="TinajaBodyWidthU"/> × <see cref="TinajaBodyHeightU"/> u, pivote al centro).</summary>
@@ -258,6 +259,13 @@ namespace AF.Presentation
 
         /// <summary>Sombra del labio sobre el agua de la boca (arriba) y un brillo (arriba a la izquierda), encima del agua.</summary>
         internal Sprite TinajaMouthGloss => _tinajaMouthGloss != null ? _tinajaMouthGloss : (_tinajaMouthGloss = BuildTinajaMouthGloss());
+
+        /// <summary>
+        /// Centro más claro del fondo seco de la boca (TJ3): elipse blanca del tamaño de la boca con el alfa que cae del centro al
+        /// borde. El overlay la tiñe de <c>TinajaOverlay.DryMouthCenter</c> sobre el disco de <c>DryMouthRim</c>: un fondo de barro
+        /// seco, mate y sin brillo, que no se confunde con el agua ni con la boca oscura del revelado.
+        /// </summary>
+        internal Sprite TinajaDryMouthCenter => _tinajaDryMouthCenter != null ? _tinajaDryMouthCenter : (_tinajaDryMouthCenter = BuildTinajaDryMouthCenter());
 
         /// <summary>Relleno de una banda, blanco opaco de canto nítido: lo tiñe el overlay con el HEX del tinte de la capa revelada.</summary>
         internal Sprite TinajaBand => _tinajaBand != null ? _tinajaBand : (_tinajaBand = BuildTinajaBand());
@@ -433,6 +441,33 @@ namespace AF.Presentation
             var pc = new PixelCanvas(w, h);
             pc.FillEllipseSoft(w * 0.5f, h * 0.5f, (w * 0.5f) - 2f, (h * 0.5f) - 2f, 1f, Color.white);
             return MakeSprite(pc, "mech_tinaja_mouth", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        // Centro del fondo seco: el alfa cae de 1 en el centro a 0 a 0,85 del radio (suave, sin canto).
+        private Sprite BuildTinajaDryMouthCenter()
+        {
+            const float px = MechanicPxPerU;
+            int w = Mathf.RoundToInt(TinajaMouthWidthU * px) + 4;
+            int h = Mathf.RoundToInt(TinajaMouthHeightU * px) + 4;
+            var pc = new PixelCanvas(w, h);
+            float rx = (w * 0.5f) - 2f;
+            float ry = (h * 0.5f) - 2f;
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float ex = ((x + 0.5f) - (w * 0.5f)) / rx;
+                    float ey = ((y + 0.5f) - (h * 0.5f)) / ry;
+                    float r = Mathf.Sqrt((ex * ex) + (ey * ey)) / 0.85f;
+                    if (r < 1f)
+                    {
+                        float a = 1f - Mathf.SmoothStep(0f, 1f, r);
+                        pc.Set(x, y, new Color(1f, 1f, 1f, a));
+                    }
+                }
+            }
+
+            return MakeSprite(pc, "mech_tinaja_dry_mouth", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
 
         // Sobre el agua de la boca: la sombra del labio en el canto de atrás (arriba) y un brillo arriba a la izquierda.

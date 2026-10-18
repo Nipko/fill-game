@@ -46,6 +46,37 @@ namespace AF.Presentation.Mechanics
         /// <summary>Suelta: lo que sube el asa al salir del gancho antes de apagarse (u) [P].</summary>
         public const float UnhookLiftU = 0.30f;
 
+        /// <summary>
+        /// Suelta: su cuia se descuelga (sube 3 dp con el asa, que sale del gancho, en el primer 30 % del paso), baja a su ranura
+        /// (hasta el 80 %) y se asienta con un rebote de <see cref="UnhookSettleDp"/> por debajo del pie (dp) [P] (revisión de TJ3;
+        /// 02 §4.1 y b.2: «su cuia se descuelga del jirau y se asienta en su ranura»).
+        /// </summary>
+        public const float UnhookRiseDp = 3f;
+
+        /// <summary>Suelta: lo que su cuia se hunde al asentarse antes de quedar en su pie (dp) [P].</summary>
+        public const float UnhookSettleDp = 1f;
+
+        /// <summary>Desplazamiento vertical de su cuia en la suelta en el instante <paramref name="q"/> (0..1 del paso; dp).</summary>
+        public static float UnhookNudgeDp(float q)
+        {
+            if (q <= 0f || q >= 1f)
+            {
+                return 0f;
+            }
+
+            if (q < 0.3f)
+            {
+                return UnhookRiseDp * Ease.Out(q / 0.3f);
+            }
+
+            if (q < 0.8f)
+            {
+                return Mathf.Lerp(UnhookRiseDp, -UnhookSettleDp, Ease.In((q - 0.3f) / 0.5f));
+            }
+
+            return -UnhookSettleDp * (1f - Ease.Out((q - 0.8f) / 0.2f));
+        }
+
         /// <inheritdoc />
         public override MechanicType Type => MechanicType.Cucharon;
 
@@ -66,7 +97,8 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>
         /// La suelta (<see cref="MechanicStepKind.Unhook"/>, etapa f de R10; TJ3): el asa sube y sale del gancho y, con el poste,
-        /// se apaga mientras su cuia se asienta en su ranura como una Cuia chica normal. Sin el arte provisional no hay asa ni
+        /// se apaga mientras su cuia se descuelga (sube un poco), baja y se asienta en su ranura como una Cuia chica normal
+        /// (<see cref="UnhookNudgeDp"/>, con <see cref="CuiaOverlayHost.BodyNudgeDp"/>). Sin el arte provisional no hay asa ni
         /// poste: 0 (salto). Con Reducir movimiento, solo el fundido. Sin asignaciones.
         /// </summary>
         public override float PlayStep(in MechanicStepContext ctx)
@@ -93,6 +125,7 @@ namespace AF.Presentation.Mechanics
             }
 
             _stepping = false;
+            Host.BodyNudgeDp = 0f;
             OverlayParts.SetColor(_asa, Color.white);
             OverlayParts.SetColor(_post, Color.white);
             Place();
@@ -108,10 +141,12 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Fotograma de la suelta: el asa sube (ease-out) y se apaga en la segunda mitad; el poste, a la vez.
+        // Fotograma de la suelta: el asa sube (ease-out) y se apaga en la segunda mitad; el poste, a la vez; y su cuia se descuelga,
+        // baja a su ranura y se asienta (UnhookNudgeDp; con Reducir movimiento, quieta).
         private void Apply()
         {
             float q = Mathf.Clamp01(_stepT / (UnhookMs * _stepSpeed));
+            Host.BodyNudgeDp = _stepReduce ? 0f : UnhookNudgeDp(q);
             float fade = 1f - Mathf.Clamp01((q - 0.4f) / 0.6f);
             float lift = _stepReduce ? 0f : Ease.Out(Mathf.Clamp01(q / 0.6f)) * UnhookLiftU;
             Rect asa = ProceduralArt.TinajaAsaRectU;

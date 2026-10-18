@@ -2947,6 +2947,7 @@ namespace AF.UI
 
             LayoutBackdrop(py, l.PanelBottom, true);
             _animator.BoardWidth = w; // lado del cuerpo al verter (D-006): el lienzo del layout
+            UpdateScoopCeiling();
             _ambient.SetLayout(new Vector2(w, _canvasH), PanelRect(), new Rect(0f, _horizonY + 4f, w, Mathf.Max(0f, py - _horizonY - 8f)));
         }
 
@@ -3093,7 +3094,18 @@ namespace AF.UI
             _board.anchoredPosition = new Vector2(0f, shift);
             _pourFront.anchoredPosition = new Vector2(0f, shift); // la capa de vertido sigue al tablero
             _liftFront.anchoredPosition = new Vector2(0f, shift); // y la de la cuia elevada
+            UpdateScoopCeiling();
         }
+
+        // Techo del arco de sacar de la Tinaja (TJ3): su cuia no sube hasta la cabecera (Nivel, canoas), 8 dp bajo lo más bajo
+        // del HUD, en coordenadas del contenedor del tablero (y hacia arriba; sigue al desplazamiento del tablero).
+        private void UpdateScoopCeiling()
+        {
+            _animator.ScoopCeilingY = -(HudBadgeBottom + ScoopHudGapDp + _boardShift);
+        }
+
+        /// <summary>Hueco entre el HUD y lo más alto que sube la cuia de la Tinaja al sacar (dp) [P] (TJ3).</summary>
+        internal const float ScoopHudGapDp = 8f;
 
         // Pie de la insignia «Nivel {n}» (placa de 52 dp desde TopRowY − 2; guía 3.5): lo más bajo del HUD sobre el tablero.
         private float HudBadgeBottom => TopRowY + 50f;

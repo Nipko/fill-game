@@ -172,16 +172,35 @@ namespace AF.Presentation
         public const float ScoopTiltDeg = 20f;
 
         /// <summary>
-        /// Sacar: el pie de su cuia queda en el eje de la tinaja, 0,30 u bajo el centro de su boca (<c>TinajaMouthCenterU</c>),
-        /// detrás del labio, que tapa su base [P].
+        /// Sacar: el pie de su cuia queda en el eje de la tinaja, 0,65 u bajo el centro de su boca (<c>TinajaMouthCenterU</c>):
+        /// el labio y el cuello tapan su tercio de abajo, así se lee que se sumerge para recoger agua, y el agua que recoge (una
+        /// dosis) queda justo por encima del labio, donde se ve llenarse [P] (revisión de TJ3).
         /// </summary>
-        public const float ScoopFootBelowMouthU = 0.30f;
+        public const float ScoopFootBelowMouthU = 0.65f;
 
-        /// <summary>Sacar: el arco del viaje cruza 1,5 u por encima del pie más alto (el de la boca), sobre el labio [P].</summary>
+        /// <summary>
+        /// Sacar: el arco del viaje cruza 1,5 u por encima del pie más alto (el de la boca), sobre el labio [P], sin que su cuia
+        /// pase del techo del arco (<see cref="ScoopCeilingY"/>).
+        /// </summary>
         public const float ScoopArcU = 1.5f;
 
-        /// <summary>Sacar: mientras se llena, su cuia baja y sube 0,10 u en la boca (recoger el agua) [P].</summary>
-        public const float ScoopBobU = 0.10f;
+        /// <summary>Sacar: mientras se llena, su cuia baja y sube 0,15 u en la boca (recoger el agua) [P].</summary>
+        public const float ScoopBobU = 0.15f;
+
+        /// <summary>
+        /// Sacar: holgura que se suma a lo alto de su cuia al limitar el arco por <see cref="ScoopCeilingY"/>, para su esquina de
+        /// arriba inclinada <see cref="ScoopTiltDeg"/> (u) [P].
+        /// </summary>
+        public const float ScoopCeilingMarginU = 0.35f;
+
+        /// <summary>Sacar: gotas que su cuia deja caer en la boca al volver (02 §4.1 y 07 §5.6: «vuelve con 2-3 gotas») [P].</summary>
+        public const int ScoopDripCount = 3;
+
+        /// <summary>Sacar: la primera gota cae a los 30 ms de la vuelta (sale de la boca) [P].</summary>
+        public const float ScoopDripStartMs = 30f;
+
+        /// <summary>Sacar: una gota cada 50 ms, todas dentro de los primeros 150 ms de la vuelta [P].</summary>
+        public const float ScoopDripEveryMs = 50f;
 
         private const int SilhouetteRows = 24;
         private const int SilhouetteCols = 6;
@@ -234,6 +253,24 @@ namespace AF.Presentation
         /// <summary>La cola está vacía, sin trabajos ni pasos de mecánica (la vista ya muestra el modelo).</summary>
         public bool IsIdle => _count == 0 && _steps.ActiveCount == 0;
 
+        /// <summary>Chorros en uso ahora mismo (diagnóstico y tests: sacar de la Tinaja no usa ninguno, TJ3).</summary>
+        public int ActiveStreams
+        {
+            get
+            {
+                int n = 0;
+                for (int i = 0; i < _streams.Length; i++)
+                {
+                    if (_streams[i].InUse)
+                    {
+                        n++;
+                    }
+                }
+
+                return n;
+            }
+        }
+
         /// <summary>Cola de pasos de mecánica (diagnóstico y tests: registro, pasos en curso y presupuesto).</summary>
         public MechanicStepQueue Steps => _steps;
 
@@ -280,6 +317,14 @@ namespace AF.Presentation
         public float BoardWidth { get; set; }
 
         private float Width => BoardWidth > 0f ? BoardWidth : _streamLayer.rect.width;
+
+        /// <summary>
+        /// Techo del arco de sacar (TJ3), en coordenadas del contenedor del tablero (y hacia arriba; la de <c>FootPosition</c>):
+        /// lo más alto que puede llegar su cuia en el viaje y la vuelta, para que no invada la cabecera (Nivel, canoas) en los
+        /// tableros de 3 filas. Lo fija <c>GameScreen</c> bajo el HUD; el arco nunca baja de la boca (si su cuia ya pasa del techo
+        /// dentro de la boca, el arco no sube más). Infinito (por defecto): sin techo.
+        /// </summary>
+        public float ScoopCeilingY { get; set; } = float.PositiveInfinity;
 
         /// <summary>
         /// Capa del tablero detrás de las cuias (arquitectura del paso 1, §6): lo que une cuias o ronda el tablero (el canal
@@ -1947,9 +1992,10 @@ namespace AF.Presentation
         }
 
         // Pose de la tinaja y de su cuia en el instante time del gesto de sacar. La tinaja se asienta en el viaje. Su cuia: viaje en
-        // arco por encima de la vasija (una cúbica que sube en su columna, cruza a ScoopArcU sobre la boca y baja en el eje),
-        // inclinándose a ScoopTiltDeg; en la boca, se llena con un leve vaivén; vuelta por el mismo arco al revés con el rebote
-        // de 07 §5.2 y, al salir, 2-3 gotas que caen en la boca. Sin asignaciones.
+        // arco por encima de la vasija (una cúbica que sube en su columna, cruza a ScoopArcU sobre la boca, bajo el techo
+        // ScoopCeilingY, y baja en el eje), inclinándose a ScoopTiltDeg; al llegar a la boca suena sfx_tinaja_scoop; en la boca,
+        // se llena con un leve vaivén; vuelta por el mismo arco al revés con el rebote de 07 §5.2 y, en sus primeros 150 ms,
+        // ScoopDripCount gotas que caen de su pie a la boca (las dibuja la tinaja, delante: TinajaOverlay.Drip). Sin asignaciones.
         private void ScoopPose(ref Job job, float time, Color color)
         {
             CuiaView s = _views[job.Source];
@@ -1969,7 +2015,14 @@ namespace AF.Presentation
             float u = t.Unit;
             Vector2 rest = t.FootPosition;
             Vector2 dip = job.MouthTarget;
-            float top = Mathf.Max(rest.y, dip.y) + (ScoopArcU * u);
+            float top = ScoopArcTop(rest.y, dip.y, t.HeightU, u, ScoopCeilingY);
+            if (time >= job.StreamStart && job.Splashes == 0)
+            {
+                job.Splashes = 1;
+                t.Ripple(); // el agua entra en su cuia
+                ScoopAudio(ref job); // el «glup» al llegar a la boca (02 §4.1)
+            }
+
             Vector2 foot;
             float angle;
             if (time < job.StreamStart)
@@ -1984,11 +2037,6 @@ namespace AF.Presentation
                 float q = Mathf.Clamp01((time - job.StreamStart) / Mathf.Max(1f, job.FlowEnd - job.StreamStart));
                 foot = dip - new Vector2(0f, Mathf.Sin(Mathf.PI * q) * ScoopBobU * u);
                 angle = job.PourAngle;
-                if (job.Splashes == 0)
-                {
-                    job.Splashes = 1;
-                    t.Ripple(); // el agua entra en su cuia
-                }
             }
             else
             {
@@ -1996,14 +2044,33 @@ namespace AF.Presentation
                 foot = Cubic(dip, new Vector2(dip.x, top), new Vector2(rest.x, top), rest, r);
                 foot.y += Mathf.Sin(Mathf.PI * r) * ReturnBounceU * u;
                 angle = job.PourAngle * (1f - r);
-                if (!job.ScoopDrops)
-                {
-                    job.ScoopDrops = true;
-                    Fx?.Splash(s.FootPosition + new Vector2(0f, ProceduralArt.TinajaMouthCenterU * s.Unit), color, s.Unit);
-                }
             }
 
             t.SetPose(foot - rest, angle);
+
+            // Las gotas de la vuelta (02 §4.1; 07 §5.6; b.2): caen desde el pie de su cuia, una cada ScoopDripEveryMs, con el tinte
+            // de lo que sacó. Las dibuja la tinaja, que va delante de su cuia: así se ven caer en la boca. Reducir movimiento: no.
+            while (job.ScoopDrops < ScoopDripCount && time >= job.ReturnStart + ScoopDripStartMs + (job.ScoopDrops * ScoopDripEveryMs))
+            {
+                job.ScoopDrops++;
+                if (!ReduceMotion)
+                {
+                    TinajaAt(job.Source)?.Drip(foot - (s.FootPosition + s.BodyOffset), color);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Altura (y del contenedor) de los puntos de control del arco de sacar: <see cref="ScoopArcU"/> sobre el pie más alto (el
+        /// de la boca, <paramref name="dipY"/>), bajada lo justo para que su cuia (de <paramref name="cuiaHeightU"/> u, con
+        /// <see cref="ScoopCeilingMarginU"/> de holgura) no pase de <paramref name="ceilingY"/>, y nunca por debajo de la boca. La
+        /// cúbica no sale de sus puntos de control, así que su pie nunca pasa de ella.
+        /// </summary>
+        public static float ScoopArcTop(float restY, float dipY, float cuiaHeightU, float unit, float ceilingY)
+        {
+            float top = Mathf.Max(restY, dipY) + (ScoopArcU * unit);
+            float cap = ceilingY - ((cuiaHeightU + ScoopCeilingMarginU) * unit);
+            return Mathf.Max(dipY, Mathf.Min(top, cap));
         }
 
         private static Vector2 Cubic(Vector2 a, Vector2 b, Vector2 c, Vector2 d, float e)
@@ -2278,7 +2345,8 @@ namespace AF.Presentation
             public bool Scoop; // sacar de la Tinaja (TJ3): se mueve su cuia (la tocada), no el origen
             public bool JarFront; // la tinaja está en la capa de vertido, sobre su cuia
             public bool JarHold; // la tinaja vacía espera boca arriba a su paso Upend
-            public bool ScoopDrops; // ya cayeron las gotas al salir su cuia de la boca
+            public int ScoopDrops; // gotas que ya cayeron al salir su cuia de la boca (hasta ScoopDripCount)
+            public bool ScoopSounded; // ya sonó sfx_tinaja_scoop (una vez por trabajo)
             public Vector2 JarStartOffset;
             public float JarStartAngle;
             public bool Through;

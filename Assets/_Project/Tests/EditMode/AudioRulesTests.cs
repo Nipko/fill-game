@@ -164,9 +164,11 @@ namespace AF.Tests.EditMode
         [Test]
         public void Haptics_HaveTheirAndroidEffects_AndNoneIsForARejection()
         {
-            Assert.That(Enum.GetNames(typeof(HapticKind)), Is.EqualTo(new[] { "Seal", "Win", "Capi", "Boto", "BackBlocked" }), "02 §4: nunca háptico en rechazo");
+            Assert.That(Enum.GetNames(typeof(HapticKind)), Is.EqualTo(new[] { "Seal", "Win", "Capi", "Boto", "BackBlocked", "TinajaRelease" }), "02 §4: nunca háptico en rechazo");
             Assert.That(Haptics.Name(HapticKind.Seal), Is.EqualTo("haptic_seal"));
             Assert.That(Haptics.Name(HapticKind.BackBlocked), Is.EqualTo("haptic_back_blocked"));
+            Assert.That(Haptics.Name(HapticKind.TinajaRelease), Is.EqualTo("haptic_tinaja_release"));
+            Assert.That(Haptics.StrengthOf(HapticKind.TinajaRelease), Is.EqualTo(HapticStrength.Light), "02 §4.1: la suelta de la Tinaja, ligero");
             Assert.That(Haptics.StrengthOf(HapticKind.Seal), Is.EqualTo(HapticStrength.Light));
             Assert.That(Haptics.FallbackMs(HapticStrength.Light), Is.EqualTo(20), "07 §9.2: sellado de 20 ms");
             Assert.That(Haptics.PredefinedEffect(HapticStrength.Light), Is.EqualTo(Haptics.EffectTick));

@@ -100,6 +100,9 @@ namespace AF.Presentation
         /// <summary>
         /// Empieza un paso de mecánica (<see cref="MechanicStepQueue"/>): su sonido de la lista (§3), en el golpe que lo dispara.
         /// La Liana de cuenta, el sellado (lo pone la tapa, <c>CuiaView</c>), la espera de la Lluvia y el mordisco perdido no suenan.
+        /// La Tinaja (TJ3): el revelado de su boca suena <c>sfx_tinaja_reveal</c> (el de Aguas turbias no tiene sonido de paso) y la
+        /// suelta, <c>sfx_tinaja_release</c> con <c>haptic_tinaja_release</c> en el paso de su cuia (Unhook); sacar suena en la
+        /// cola (<c>BoardAnimator</c>).
         /// </summary>
         public static void Step(MechanicStepKind kind, MechanicType owner)
         {
@@ -131,6 +134,19 @@ namespace AF.Presentation
                         AudioCues.Play(SfxId.MechMatapi);
                     }
 
+                    break;
+                case MechanicStepKind.Reveal:
+                    if (owner == MechanicType.Tinaja)
+                    {
+                        AudioCues.Play(SfxId.TinajaReveal); // la gota del revelado de la boca (02 §4.1; TJ3)
+                    }
+
+                    break;
+                case MechanicStepKind.Unhook:
+                    // La suelta (02 §4.1): roce de fibra y «toc» hueco con su háptico ligero, una vez; el vuelco de la tinaja (Upend),
+                    // que va a la vez, no suena aparte.
+                    AudioCues.Play(SfxId.TinajaRelease);
+                    AudioCues.Haptic(HapticKind.TinajaRelease);
                     break;
             }
         }
