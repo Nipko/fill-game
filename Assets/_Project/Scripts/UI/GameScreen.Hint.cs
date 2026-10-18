@@ -22,6 +22,8 @@ namespace AF.UI
     /// tarjeta o la mariposa de Morpho, o un aviso en pantalla (tutorial de TiTino, miquito, Fruta nueva, rótulo).</description></item>
     /// <item><description><b>Ajustes:</b> «Pista por inactividad» (<c>settings.idle_hint</c>, 02 §12) se lee en cada fotograma:
     /// apagarla equivale a <c>hint_idle_delay_s</c> = 0 en el dispositivo.</description></item>
+    /// <item><description><b>Segundo plano:</b> al volver a la app la cuenta empieza de cero (<see cref="IdleHintBackFromBackground"/>):
+    /// el tiempo fuera no es inactividad en el tablero.</description></item>
     /// <item><description><b>Pulso:</b> solo la escala del cuerpo de la cuia (pivote en el pie), sin asignaciones por fotograma;
     /// si la cuia sale a verter, el pulso se corta y su escala vuelve a 1.</description></item>
     /// </list>
@@ -59,6 +61,16 @@ namespace AF.UI
 
         /// <summary>Solo tests: un toque en la pantalla que no pasa por el flujo (el fondo, un botón inactivo).</summary>
         internal void IdleHintTouch()
+        {
+            _idleTouched = true;
+        }
+
+        /// <summary>
+        /// Vuelta de segundo plano (<c>GameBootstrap.OnApplicationPause(false)</c>): el tiempo fuera de la app no cuenta como
+        /// inactividad en el tablero, así que en el siguiente fotograma la cuenta empieza de cero, como tras un toque (abandona la
+        /// consulta en curso y apaga el pulso, si lo hay).
+        /// </summary>
+        internal void IdleHintBackFromBackground()
         {
             _idleTouched = true;
         }

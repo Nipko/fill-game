@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections;
+using System.Reflection;
 using System.Threading;
 using AF.Boosters;
 using AF.Core.Board;
@@ -227,6 +228,98 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator BackFromBackground_IsNotIdleness_TheCountRestartsFromZero()
+        {
+            yield return LoadPlaying(3, FunnelSetup.Profile(Seeds));
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            ArmIdle(boot);
+            Assert.That(boot.Flow!.Selected, Is.LessThan(0), "sin selección: volver no cambia nada del flujo");
+
+            // 11 s quieto y la app pasa un minuto en segundo plano: al volver no pulsa en el primer fotograma.
+            FunnelSetup.Clock.Advance(TimeSpan.FromSeconds(11));
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.IdleHint.QueryCount, Is.EqualTo(0));
+            ApplicationPause(boot, true);
+            FunnelSetup.Clock.Advance(TimeSpan.FromSeconds(60));
+            ApplicationPause(boot, false);
+            PlayModeHelpers.Step(boot, 5 * PlayModeHelpers.FrameMs);
+            Assert.That(view.IdleHint.QueryCount, Is.EqualTo(0), "el tiempo fuera de la app no es inactividad en el tablero");
+            Assert.That(view.IdlePulses, Is.EqualTo(0));
+            Assert.That(view.IdleHint.Armed, Is.True, "la cuenta corre de nuevo desde la vuelta");
+
+            // La cuenta empezó al volver: 12 s desde entonces.
+            FunnelSetup.Clock.Advance(TimeSpan.FromMilliseconds(11900));
+            PlayModeHelpers.Step(boot, 5 * PlayModeHelpers.FrameMs);
+            Assert.That(view.IdleHint.QueryCount, Is.EqualTo(0), "la cuenta empezó al volver de segundo plano");
+            FunnelSetup.Clock.Advance(TimeSpan.FromMilliseconds(100));
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.IdleHint.QueryCount, Is.EqualTo(1), "12 s desde la vuelta");
+            yield return WaitAnswer(boot);
+            Assert.That(view.IdlePulses, Is.EqualTo(1));
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(Seeds));
+        }
+
+        [UnityTest]
+        public IEnumerator TouchDuringTheQuery_AbandonsItWithoutWaiting_AndTheNextStretchAsksAgain()
+        {
+            yield return LoadPlaying(3, FunnelSetup.Profile(Seeds));
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            var gate = new ManualResetEventSlim(false);
+            try
+            {
+                MorphoBooster morpho = new MorphoBooster(flow.Boosters, flow.Clock, () => gate.Wait(20000));
+                view.IdleHint.UseMorpho(morpho);
+                ArmIdle(boot);
+                FunnelSetup.Clock.Advance(TimeSpan.FromSeconds(12));
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                Assert.That(view.IdleHint.Querying, Is.True, "a los 12 s pregunta");
+                Assert.That(view.IdleHint.QueryCount, Is.EqualTo(1));
+
+                // Un toque con el hilo de trabajo retenido: la consulta se abandona sin esperarlo y la cuenta vuelve a empezar.
+                view.IdleHintTouch();
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                Assert.That(view.IdleHint.Querying, Is.False, "el toque abandona la consulta");
+                Assert.That(view.IdleHint.Armed, Is.True);
+                Assert.That(morpho.IsBusy, Is.True, "el hilo de trabajo sigue retenido: el principal no lo esperó");
+
+                // Otros 12 s con el hilo aún retenido: Morpho no admite otra consulta y la pista lo reintenta cada fotograma.
+                FunnelSetup.Clock.Advance(TimeSpan.FromSeconds(12));
+                for (int i = 0; i < 5; i++)
+                {
+                    PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                    yield return null;
+                }
+
+                Assert.That(view.IdleHint.QueryCount, Is.EqualTo(1), "la consulta abandonada aún no ha parado");
+                Assert.That(view.IdleHint.Querying, Is.False);
+                Assert.That(view.IdlePulses, Is.EqualTo(0), "la respuesta abandonada nunca pulsa");
+
+                // Se suelta el hilo: en cuanto para, el tramo siguiente vuelve a preguntar y pulsa.
+                gate.Set();
+                float start = Time.realtimeSinceStartup;
+                while (view.IdleHint.QueryCount < 2)
+                {
+                    Assert.That(Time.realtimeSinceStartup - start, Is.LessThan(PlayModeHelpers.TimeoutSeconds), "la pista no volvió a preguntar");
+                    PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                    yield return null;
+                }
+
+                yield return WaitAnswer(boot);
+            }
+            finally
+            {
+                gate.Set();
+            }
+
+            Assert.That(view.IdleHint.QueryCount, Is.EqualTo(2));
+            Assert.That(view.IdleHint.LastAnswer, Is.EqualTo(HintAnswer.Pour));
+            Assert.That(view.IdlePulses, Is.EqualTo(1), "la pista no quedó muerta el resto del nivel");
+        }
+
+        [UnityTest]
         public IEnumerator LevelWithoutHintSupported_NeverPulses()
         {
             // El tablero del nivel 7 con hint_supported = false (04 §2.3 b; el de MorphoUiTests.Unsupported_GreySlot_TooltipOnTap):
@@ -422,6 +515,14 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 3 * PlayModeHelpers.FrameMs);
             Assert.That(boot.View!.IdleHint.Armed, Is.True, "la cuenta corre en juego");
             Assert.That(boot.View.IdleHint.Querying, Is.False);
+        }
+
+        // El mensaje de Unity de ir o volver de segundo plano (GameBootstrap.OnApplicationPause, privado).
+        private static void ApplicationPause(GameBootstrap boot, bool paused)
+        {
+            MethodInfo? method = typeof(GameBootstrap).GetMethod("OnApplicationPause", BindingFlags.Instance | BindingFlags.NonPublic);
+            Assert.That(method, Is.Not.Null, "GameBootstrap.OnApplicationPause(bool)");
+            method!.Invoke(boot, new object[] { paused });
         }
 
         // Fotogramas hasta que la consulta del hilo de trabajo responde (la vista y el flujo siguen).

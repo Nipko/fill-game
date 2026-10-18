@@ -1545,6 +1545,10 @@ namespace AF.UI
                 _screen.SettleReveal();
                 _flow.ClearSelection();
             }
+
+            // MO3 (02 §3.4; 04 §2.3): el tiempo fuera de la app no es inactividad en el tablero; la cuenta de la pista por
+            // inactividad empieza de cero, como tras un toque.
+            _screen?.IdleHintBackFromBackground();
         }
 
         // Tablas de textos de la escena (o las del test, LaunchOptions.LocTablesOverride) → Loc (D-018; 08 §4.7). Si faltan o no
