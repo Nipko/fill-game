@@ -10,7 +10,8 @@ namespace AF.UI
     /// Textos del sistema del Mapa del río (D-013; glosario §10; propuesta del Mapa §6.4; P-M2 de D-023; tarea M1.5), de
     /// <c>strings.csv</c>: las 11 claves del glosario (<c>map_stop_remaining</c>, <c>map_arrived</c>, <c>map_home_distance</c>,
     /// <c>map_country_welcome</c>, <c>map_world_question</c>, <c>map_next_world</c>, <c>map_samples</c>, <c>map_north_up</c>,
-    /// <c>map_back_to_canoe</c>, <c>map_hito_preview</c> y <c>stop_label</c>) y las 10 de P-M2. Parcial de <see cref="UiText"/>.
+    /// <c>map_back_to_canoe</c>, <c>map_hito_preview</c> y <c>stop_label</c>), las 10 de P-M2 y el término <c>river_map</c> del
+    /// glosario §7.1 (el botón de la pausa, M4.3). Parcial de <see cref="UiText"/>.
     /// <list type="bullet">
     /// <item>Los nombres de las paradas, de los países y de los ríos son textos largos de <c>facts.csv</c> (claves por convención
     /// de <see cref="RiverStop"/>, 08 §4.5; su bloque lo genera <c>tools/river-map/stops.py</c>) y salen por
@@ -57,6 +58,12 @@ namespace AF.UI
 
         /// <summary><c>map_open</c> [P] (P-M2): «Ver mapa» en la victoria del <c>10k</c> y en el banner.</summary>
         public static string MapOpen => Loc.T(Keys.MapOpen);
+
+        /// <summary>
+        /// <c>river_map</c> (glosario §7.1): «Mapa del río», el botón del menú de pausa que abre el Mapa encima del nivel (02 §5;
+        /// D-013, punto 7; 04 §5.2; tarea M4.3).
+        /// </summary>
+        public static string RiverMap => Loc.T(Keys.RiverMap);
 
         /// <summary><c>map_card_other_fact</c> [P] (P-M2): «Otro dato» en la tarjeta de la parada.</summary>
         public static string MapCardOtherFact => Loc.T(Keys.MapCardOtherFact);
@@ -355,6 +362,9 @@ namespace AF.UI
 
             /// <summary><c>map_world_question</c> [P] (glosario §10).</summary>
             public const string MapWorldQuestion = "map_world_question";
+
+            /// <summary><c>river_map</c> (glosario §7.1): el botón «Mapa del río» de la pausa (M4.3).</summary>
+            public const string RiverMap = "river_map";
 
             /// <summary><c>stop_label</c> [P] (glosario §10).</summary>
             public const string StopLabel = "stop_label";

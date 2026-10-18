@@ -183,6 +183,11 @@ namespace AF.GameFlow
     /// disponible (<see cref="L10MapAvailable"/>), «Siguiente» en la victoria del 10 pasa por AD_GATE y va al inicio en lugar de
     /// cargar el 11; al entrar al inicio, <see cref="L10MapDue"/> dice a la vista que abra encima la secuencia (también tras Inicio
     /// en esa victoria o tras cerrar la app). Su «Jugar» abre el 11.</description></item>
+    /// <item><description>Fin de contenido con el Mapa (06 §9; D-013, punto 7; tarea M4.3): con el Mapa disponible
+    /// (<see cref="ContentEndMapAvailable"/>), «Siguiente» en la victoria del último nivel publicado pasa por AD_GATE y abre «El río
+    /// sigue creciendo» como siempre, pero antes el Mapa del río: <see cref="ContentEndMapDue"/> dice a la vista que lo abra encima
+    /// (con el viaje hasta el último tramo publicado), y al cerrarlo queda la pantalla de siempre, con su texto y su ETA. Solo por
+    /// ese camino (el de ganar el último nivel), no al pulsar «Jugar» en el inicio con el contenido ya acabado.</description></item>
     /// </list>
     /// No es seguro entre hilos.
     /// </summary>
@@ -193,6 +198,7 @@ namespace AF.GameFlow
         private readonly IProgressStore _progress;
         private readonly Wallet _wallet;
         private readonly IAppFlowListener _listener;
+        private bool _contentEndFromWin;
 
         /// <summary>Crea la navegación; no muestra nada hasta <see cref="Start"/> o <see cref="StartAtLevel"/>.</summary>
         public AppFlow(LevelFlow level, IProgressStore progress, Wallet wallet, IAppFlowListener listener)
@@ -267,6 +273,20 @@ namespace AF.GameFlow
             && L10SequenceRule.OnLobby(_progress.LoadMaxLevel(), _progress.LoadMapSeenLevel(), L10MapAvailable);
 
         /// <summary>
+        /// El Mapa del río se puede abrir al acabarse el contenido (geometría y paradas en la escena; lo fija la vista al arrancar):
+        /// sin él, «El río sigue creciendo» sale sola, como antes (tarea M4.3). False por defecto.
+        /// </summary>
+        public bool ContentEndMapAvailable { get; set; }
+
+        /// <summary>
+        /// Con «El río sigue creciendo» a la vista, toca abrir encima, antes que ella, el Mapa del río (06 §9; D-013, punto 7; tarea
+        /// M4.3): el Mapa está disponible y se llegó ganando el último nivel publicado («Siguiente» en su victoria, tras AD_GATE). La
+        /// vista lo mira al entrar en la pantalla (<see cref="IAppFlowListener.OnAppScreenChanged"/>); deja de cumplirse al salir de
+        /// ella. «Jugar» en el inicio con el contenido ya acabado abre la pantalla sola.
+        /// </summary>
+        public bool ContentEndMapDue => Screen == AppScreen.ContentEnd && _contentEndFromWin && ContentEndMapAvailable;
+
+        /// <summary>
         /// Primera pantalla (08 §2.3): con un nivel en curso guardado (<paramref name="saved"/>, <c>level_state</c>), ese nivel
         /// reabierto tal cual, sin intro y sin cobrar nada (02 §14; tarea B2-5); la primera vez (<paramref name="firstRun"/>: no
         /// había perfil), directamente el nivel 1; si no, el inicio. Un estado guardado que ya no sirve se descarta.
@@ -335,7 +355,8 @@ namespace AF.GameFlow
         /// anuncio que mostrar, el nivel siguiente se carga en esta misma llamada. Fuera de VICTORY_SCREEN (una segunda llamada,
         /// ya en AD_GATE) devuelve false y no hace nada. En la victoria del 10, con la secuencia del Mapa del 10 pendiente
         /// (<see cref="L10SequenceRule.AfterNext"/>), después de AD_GATE va al inicio, que la abre encima (<see cref="L10MapDue"/>;
-        /// 06 §2.3, tarea M4.2).
+        /// 06 §2.3, tarea M4.2). En la del último nivel publicado, a «El río sigue creciendo» con el Mapa encima
+        /// (<see cref="ContentEndMapDue"/>; tarea M4.3).
         /// </summary>
         public bool PressNext()
         {
@@ -360,7 +381,7 @@ namespace AF.GameFlow
                 }
                 else
                 {
-                    Enter(next);
+                    Enter(next, true); // tras el último nivel publicado, el Mapa y «El río sigue creciendo» (M4.3)
                 }
             });
         }
@@ -441,11 +462,13 @@ namespace AF.GameFlow
             return true;
         }
 
-        private bool Enter(int level)
+        // fromWin: se entra con «Siguiente» desde la victoria del nivel anterior (el Mapa sale antes del fin de contenido, M4.3).
+        private bool Enter(int level, bool fromWin = false)
         {
             if (!_catalog.Contains(level))
             {
                 OverlayLevel = level;
+                _contentEndFromWin = fromWin;
                 Go(AppScreen.ContentEnd);
                 return true;
             }
@@ -465,6 +488,11 @@ namespace AF.GameFlow
 
         private void Go(AppScreen screen)
         {
+            if (screen != AppScreen.ContentEnd)
+            {
+                _contentEndFromWin = false; // ContentEndMapDue solo vale mientras se ve la pantalla a la que se llegó ganando
+            }
+
             Screen = screen;
             _listener.OnAppScreenChanged(screen);
         }

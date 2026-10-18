@@ -166,6 +166,7 @@ UiText.RevealLabel	Revelar
 UiText.RiverFact	Dato del río
 UiText.RiverLoweredColor	El río bajó: esta vez hay un color menos
 UiText.RiverLoweredCuia	El río bajó: esta vez hay una cuia más
+UiText.RiverMap	Mapa del río
 UiText.Seeds	Semillas
 UiText.Settings	Ajustes
 UiText.SettingsAboutAmazon	Sobre la Amazonía

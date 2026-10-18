@@ -115,7 +115,7 @@ namespace AF.UI
                 return;
             }
 
-            int from = RiverJourney.CatchUpFrom(seen, max);
+            int from = RiverJourney.CatchUpFrom(ModesCatchUpSeen(seen), max); // el viaje del fin de contenido, desde su tramo (M4.3)
             if (from >= max)
             {
                 return;
@@ -219,6 +219,10 @@ namespace AF.UI
             {
                 FillStopMarker(level / RiverStopCatalog.LevelsPerStop);
                 SendCatchUpArrival(level, false);
+            }
+            else if (ModesReplaysArrival(level))
+            {
+                FillStopMarker(level / RiverStopCatalog.LevelsPerStop); // el viaje del fin de contenido repite la llegada vista (M4.3)
             }
         }
 

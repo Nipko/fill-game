@@ -95,6 +95,7 @@ namespace AF.Tests.PlayMode
             NoSlothRestartNoticeUnlessSet();
             NoTutorialSlothUnlessSet();
             NoL10SequenceUnlessSet();
+            NoContentEndMapUnlessSet();
         }
 
         /// <summary>
@@ -108,6 +109,19 @@ namespace AF.Tests.PlayMode
             if (GameBootstrap.L10SequenceOverride == null)
             {
                 GameBootstrap.L10SequenceOverride = false;
+            }
+        }
+
+        /// <summary>
+        /// Apaga el Mapa del fin de contenido (M4.3) si el test no lo fijó (<see cref="GameBootstrap.ContentEndMapOverride"/> = null):
+        /// los tests que no tratan de él ganan el último nivel publicado y ven «El río sigue creciendo» sola, como antes de que
+        /// existiera. Los que lo prueban (<c>ContentEndMapTests</c>) lo encienden y lo vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoContentEndMapUnlessSet()
+        {
+            if (GameBootstrap.ContentEndMapOverride == null)
+            {
+                GameBootstrap.ContentEndMapOverride = false;
             }
         }
 
