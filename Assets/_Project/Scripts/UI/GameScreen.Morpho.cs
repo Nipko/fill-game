@@ -58,7 +58,7 @@ namespace AF.UI
             if (result.HasMove)
             {
                 AF.Audio.AudioCues.Play(AF.Audio.SfxId.Hint); // aleteo y campanilla (04 §2.3)
-                _morphoFx.Play(HintButtonPoint(), result.Move.Source, result.Move.Target, _views, flow.ReduceMotion);
+                _morphoFx.Play(HintButtonPoint(), result.Move.Source, result.Move.Target, _views, flow.ReduceMotion, HintCeilingY());
                 HintProbe("pour", flow, result);
                 return;
             }
@@ -116,7 +116,7 @@ namespace AF.UI
         partial void HintBuild()
         {
             _tray.SetHintAction(() => _actions.PressHint());
-            _morphoFx = new MorphoFx(_mechanicFrontLayer, _art);
+            _morphoFx = new MorphoFx(_mechanicFrontLayer, _mechanicBackLayer, _art); // la estela, detrás de las cuias
             _hintCard = new HintAnswerCard(_root, _art, OnHintCardUndo, OnHintCardRestart, OnHintCardClose);
         }
 
@@ -184,6 +184,12 @@ namespace AF.UI
             var rt = (RectTransform)_tray.HintButton.transform;
             Rect r = rt.rect;
             return BoardPoint(rt.TransformPoint(new Vector3(r.center.x, r.yMax - 10f, 0f)));
+        }
+
+        // El canto de arriba del marco del tablero (y hacia arriba, coordenadas del contenedor): el salto de la mariposa no lo pasa.
+        private float HintCeilingY()
+        {
+            return _layout != null ? -_layout.PanelY : float.PositiveInfinity;
         }
 
         private void HintProbe(string phase, LevelFlow flow, in HintResult result)

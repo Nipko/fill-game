@@ -21,20 +21,24 @@ namespace AF.UI
     /// La mariposa se sigue con la vista (revisión de MO2; D-003, luz de juego): despega con la envergadura del glifo de la ranura
     /// (<see cref="TakeoffSpanDp"/>) y baja a <see cref="PerchSpanDp"/> al posarse, nunca por debajo de <see cref="MinSpanDp"/>;
     /// lleva un halo claro de 2 dp (<see cref="ProceduralArt.MorphoHalo"/>) y alas de azul iridiscente
-    /// (<see cref="ProceduralArt.MorphoFlightBlue"/>), y deja en el vuelo y en el salto una estela azul de
-    /// <see cref="TrailCount"/> puntos de <see cref="TrailDotDp"/> dp, uno cada <see cref="TrailEveryMs"/>, que se apagan de
-    /// <see cref="TrailAlpha"/> a 0.
+    /// (<see cref="ProceduralArt.MorphoFlightBlue"/>), y deja en el vuelo y en el salto una estela azul: un punto cada
+    /// <see cref="TrailEveryDp"/> dp recorridos (no por tiempo, para que se lea como trazo a cualquier velocidad), como mucho
+    /// <see cref="TrailCount"/> a la vez, que en <see cref="TrailLifeMs"/> menguan de <see cref="TrailDotDp"/> a
+    /// <see cref="TrailDotEndDp"/> dp y se apagan de <see cref="TrailAlpha"/> a 0. La estela va por debajo de las cuias (en la
+    /// capa de mecánicas trasera): nunca se confunde con su contenido. El salto no sale del tablero: su arco no sube la mariposa
+    /// por encima del canto de arriba del marco (<see cref="HopHalfExtentDp"/> y <see cref="HopCeilingGapDp"/>).
     /// Se apaga antes (<see cref="Clear"/>) en cuanto el flujo apaga la pista (<c>IHintListener.OnHintCleared</c>: un vertido,
     /// Marea, Volver a la orilla, otra cuia o fuera de PLAYING). Con Reducir movimiento (07 §7.8) no vuela: la mariposa aparece
-    /// posada en el destino con un fundido corto, los dos anillos se encienden a la vez y no laten (alfa fijo), y no hay estela.
+    /// posada en el destino con un fundido corto (de <see cref="ReducedStartAlpha"/> a 1 en <see cref="ReducedFadeMs"/>), los dos
+    /// anillos se encienden a la vez y no laten (alfa fijo), y no hay estela.
     /// </summary>
     /// <remarks>
-    /// Las imágenes (dos anillos, la estela y la mariposa: halo, alas y cuerpo) se crean una vez, en un Canvas anidado propio de
-    /// la capa de mecánicas delantera (moverlas no reconstruye el lienzo principal); los sprites de la mariposa se generan en
-    /// <see cref="Prewarm"/> (al cargar un nivel con la ranura Pista) o, si no, en el primer <see cref="Play"/>. Cada fotograma
-    /// solo coloca y tiñe: sin asignaciones (08 §5.4). Las posiciones y los tamaños van en las coordenadas del contenedor del
-    /// tablero, que no se escala (dp; las de <c>CuiaView.FootPosition</c>: origen arriba a la izquierda, y hacia arriba), y
-    /// siguen a las cuias si se elevan.
+    /// Las imágenes (dos anillos y la mariposa: halo, alas y cuerpo) se crean una vez, en un Canvas anidado propio de la capa de
+    /// mecánicas delantera, y la estela en otro de la trasera (moverlas no reconstruye el lienzo principal); los sprites de la
+    /// mariposa se generan en <see cref="Prewarm"/> (al cargar un nivel con la ranura Pista) o, si no, en el primer
+    /// <see cref="Play"/>. Cada fotograma solo coloca y tiñe: sin asignaciones (08 §5.4). Las posiciones y los tamaños van en las
+    /// coordenadas del contenedor del tablero, que no se escala (dp; las de <c>CuiaView.FootPosition</c>: origen arriba a la
+    /// izquierda, y hacia arriba), y siguen a las cuias si se elevan.
     /// </remarks>
     internal sealed class MorphoFx
     {
@@ -58,8 +62,14 @@ namespace AF.UI
         /// <summary>Fundido de salida de los anillos y de la mariposa (ms) [P].</summary>
         public const float FadeMs = 260f;
 
-        /// <summary>Aparición de la mariposa posada con Reducir movimiento (ms) [P].</summary>
+        /// <summary>Aparición de la mariposa posada con Reducir movimiento (ms) [P]: corta, para que no se lea como humo.</summary>
         public const float ReducedFadeMs = 120f;
+
+        /// <summary>
+        /// Alfa de la mariposa en el primer fotograma con Reducir movimiento [P] (revisión de MO2): sin vuelo es la única señal
+        /// del destino, así que aparece ya casi opaca y llega a 1 en <see cref="ReducedFadeMs"/>.
+        /// </summary>
+        public const float ReducedStartAlpha = 0.6f;
 
         /// <summary>Periodo del latido de los anillos (ms) [P], el del pulso de la Luciérnaga.</summary>
         public const float RingPeriodMs = 900f;
@@ -103,20 +113,40 @@ namespace AF.UI
         /// <summary>Aleteo posada (Hz) [P].</summary>
         public const float PerchedWingHz = 1.4f;
 
-        /// <summary>Un punto de la estela cada tantos ms de vuelo o de salto [P] (revisión de MO2).</summary>
-        public const float TrailEveryMs = 40f;
+        /// <summary>
+        /// Un punto de la estela cada tantos dp recorridos en el vuelo o el salto [P] (revisión de MO2): por distancia y no por
+        /// tiempo, para que el vuelo rápido deje un trazo y no motas sueltas.
+        /// </summary>
+        public const float TrailEveryDp = 8f;
 
-        /// <summary>Puntos de la estela [P]: los que caben a la vez (cada uno vive <see cref="TrailLifeMs"/>).</summary>
-        public const int TrailCount = 8;
+        /// <summary>
+        /// Puntos de la estela que se ven a la vez, como mucho [P]: cuando se reutiliza el más viejo ya casi no se ve, porque cada
+        /// punto se apaga también según su puesto (el n.º k desde el más nuevo va por k / <see cref="TrailCount"/> de su vida).
+        /// </summary>
+        public const int TrailCount = 14;
 
-        /// <summary>Vida de cada punto de la estela (ms) [P]: con uno cada 40 ms, se ven 7 u 8 a la vez.</summary>
-        public const float TrailLifeMs = 300f;
+        /// <summary>Vida de cada punto de la estela (ms) [P].</summary>
+        public const float TrailLifeMs = 240f;
 
-        /// <summary>Lado de cada punto de la estela (dp) [P].</summary>
+        /// <summary>Lado de un punto de la estela al nacer (dp) [P].</summary>
         public const float TrailDotDp = 4f;
+
+        /// <summary>Lado de un punto de la estela al final de su vida (dp) [P].</summary>
+        public const float TrailDotEndDp = 2f;
 
         /// <summary>Alfa de un punto de la estela al nacer; baja hasta 0 en <see cref="TrailLifeMs"/> [P].</summary>
         public const float TrailAlpha = 0.8f;
+
+        /// <summary>
+        /// Lo que la mariposa sobresale por encima de su centro en lo alto del salto (dp) [P] (revisión de MO2): media envergadura
+        /// (con el giro hacia la dirección del salto, las alas suben casi eso) y el halo de 2 dp. El arco del salto se limita para
+        /// que su centro no pase del canto de arriba del marco menos esto y <see cref="HopCeilingGapDp"/>: la mariposa no sale del
+        /// tablero por arriba.
+        /// </summary>
+        public const float HopHalfExtentDp = (0.5f * (PerchSpanDp + HopLiftSpanDp)) + 2f;
+
+        /// <summary>Aire entre lo más alto de la mariposa en el salto y el canto de arriba del marco del tablero (dp) [P].</summary>
+        public const float HopCeilingGapDp = 3f;
 
         /// <summary>Giro máximo hacia la dirección del vuelo (grados) [P].</summary>
         public const float MaxBankDeg = 40f;
@@ -140,13 +170,16 @@ namespace AF.UI
         private readonly Image _body;
         private readonly Image _sourceRing;
         private readonly Image _targetRing;
+        private readonly RectTransform _trailRoot;
         private readonly Image[] _trail = new Image[TrailCount];
         private readonly float[] _trailAge = new float[TrailCount];
         private readonly bool[] _trailOn = new bool[TrailCount];
         private Phase _phase;
         private float _t;
-        private float _trailMs;
+        private float _trailCarry;
+        private Vector2 _trailPrev;
         private int _trailNext;
+        private float _ceilingY = float.PositiveInfinity;
         private float _u = 24f;
         private float _span = TakeoffSpanDp;
         private bool _reduceMotion;
@@ -162,8 +195,11 @@ namespace AF.UI
         private float _angle;
         private float _wingOpen = 1f;
 
-        /// <summary>Crea las imágenes (ocultas) en <paramref name="layer"/>.</summary>
-        public MorphoFx(RectTransform layer, ProceduralArt art)
+        /// <summary>
+        /// Crea las imágenes (ocultas): la mariposa y los anillos en <paramref name="layer"/> (delante de las cuias) y la estela en
+        /// <paramref name="trailLayer"/> (detrás de ellas). Las dos capas cubren el contenedor del tablero.
+        /// </summary>
+        public MorphoFx(RectTransform layer, RectTransform trailLayer, ProceduralArt art)
         {
             _art = art;
             var go = new GameObject("MorphoFx", typeof(RectTransform), typeof(Canvas));
@@ -176,9 +212,17 @@ namespace AF.UI
             _root.sizeDelta = Vector2.zero;
             _sourceRing = NewRing("MorphoRingSource"); // no «TargetRing»: ese nombre es el resaltado de destino que D-002 prohíbe al seleccionar
             _targetRing = NewRing("MorphoRingTarget");
+            var trailGo = new GameObject("MorphoTrail", typeof(RectTransform), typeof(Canvas));
+            trailGo.transform.SetParent(trailLayer, false);
+            _trailRoot = (RectTransform)trailGo.transform;
+            _trailRoot.anchorMin = new Vector2(0f, 1f);
+            _trailRoot.anchorMax = new Vector2(0f, 1f);
+            _trailRoot.pivot = new Vector2(0f, 1f);
+            _trailRoot.anchoredPosition = Vector2.zero;
+            _trailRoot.sizeDelta = Vector2.zero;
             for (int i = 0; i < TrailCount; i++)
             {
-                Image dot = UiBuilder.Image("Trail", _root, art.Disc, Color.clear);
+                Image dot = UiBuilder.Image("Trail", _trailRoot, art.Disc, Color.clear);
                 RectTransform rt = dot.rectTransform;
                 rt.anchorMin = new Vector2(0f, 1f);
                 rt.anchorMax = new Vector2(0f, 1f);
@@ -202,6 +246,7 @@ namespace AF.UI
             CenterOnParent(_wings.rectTransform);
             CenterOnParent(_body.rectTransform);
             go.SetActive(false);
+            trailGo.SetActive(false);
         }
 
         private enum Phase
@@ -256,6 +301,12 @@ namespace AF.UI
         /// <summary>Raíz del efecto (tests de orden de capas y capturas).</summary>
         public RectTransform Root => _root;
 
+        /// <summary>Raíz de la estela, en la capa de mecánicas trasera (tests de orden de capas).</summary>
+        public RectTransform TrailRoot => _trailRoot;
+
+        /// <summary>Alfa de ahora de la mariposa (tests).</summary>
+        public float ButterflyAlpha => _wings.color.a;
+
         /// <summary>La mariposa (capturas).</summary>
         public RectTransform Butterfly => _butterfly;
 
@@ -283,6 +334,29 @@ namespace AF.UI
                 }
 
                 return n;
+            }
+        }
+
+        /// <summary>
+        /// La mayor distancia entre dos puntos seguidos de la estela que se ven (dp; 0 con menos de dos; tests): la estela es un
+        /// trazo, no motas sueltas.
+        /// </summary>
+        public float TrailLargestStepDp
+        {
+            get
+            {
+                float best = 0f;
+                for (int k = 0; k < TrailCount - 1; k++)
+                {
+                    int a = (_trailNext - 1 - k + (2 * TrailCount)) % TrailCount;
+                    int b = (a - 1 + TrailCount) % TrailCount;
+                    if (_trailOn[a] && _trailOn[b])
+                    {
+                        best = Mathf.Max(best, (_trail[a].rectTransform.anchoredPosition - _trail[b].rectTransform.anchoredPosition).magnitude);
+                    }
+                }
+
+                return best;
             }
         }
 
@@ -336,9 +410,11 @@ namespace AF.UI
 
         /// <summary>
         /// Arranca la pista: la mariposa sale de <paramref name="from"/> (el botón) hacia la cuia <paramref name="source"/> y
-        /// salta a <paramref name="target"/> de <paramref name="views"/>. Una pista en curso se sustituye.
+        /// salta a <paramref name="target"/> de <paramref name="views"/>, sin que el arco del salto la saque por encima de
+        /// <paramref name="ceilingY"/> (el canto de arriba del marco del tablero, en las mismas coordenadas; infinito si no hay).
+        /// Una pista en curso se sustituye.
         /// </summary>
-        public void Play(Vector2 from, int source, int target, CuiaView[] views, bool reduceMotion)
+        public void Play(Vector2 from, int source, int target, CuiaView[] views, bool reduceMotion, float ceilingY)
         {
             if ((uint)source >= (uint)views.Length || (uint)target >= (uint)views.Length)
             {
@@ -354,13 +430,17 @@ namespace AF.UI
             _t = 0f;
             _ringT = 0f;
             _waveT = 0f;
-            _trailMs = 0f;
+            _trailCarry = 0f;
+            _trailPrev = from;
+            _ceilingY = ceilingY;
             _fade = 1f;
             _angle = 0f;
             SparklesRequested = 0;
             HideTrail();
             _root.gameObject.SetActive(true);
             _root.SetAsLastSibling();
+            _trailRoot.gameObject.SetActive(!reduceMotion);
+            _trailRoot.SetAsLastSibling();
             _butterfly.gameObject.SetActive(true);
             Follow(views);
             _pos = from;
@@ -400,6 +480,7 @@ namespace AF.UI
             }
 
             float dt = Mathf.Max(0f, dtMs);
+            bool moving = _phase == Phase.Flight || _phase == Phase.Hop;
             _t += dt;
             Follow(views);
             switch (_phase)
@@ -462,7 +543,7 @@ namespace AF.UI
             }
 
             Apply();
-            TickTrail(dt);
+            TickTrail(dt, moving || _phase == Phase.Flight || _phase == Phase.Hop);
         }
 
         /// <summary>
@@ -491,6 +572,7 @@ namespace AF.UI
             Target = -1;
             HideTrail();
             _root.gameObject.SetActive(false);
+            _trailRoot.gameObject.SetActive(false);
         }
 
         // Vuelve a medir dónde se posa y dónde van los anillos (las cuias se elevan al seleccionarlas).
@@ -566,6 +648,7 @@ namespace AF.UI
                     float p = Mathf.Clamp01(_t / HopMs);
                     float e = Ease.InOutSine(p);
                     Vector2 mid = ((_sourcePerch + _targetPerch) * 0.5f) + new Vector2(0f, (0.9f * _u) + (0.12f * Mathf.Abs(_targetPerch.x - _sourcePerch.x)));
+                    mid.y = HopControlY(_sourcePerch.y, _targetPerch.y, mid.y, _ceilingY - HopHalfExtentDp - HopCeilingGapDp);
                     Vector2 at = Bezier(_sourcePerch, mid, _targetPerch, e);
                     Vector2 ahead = Bezier(_sourcePerch, mid, _targetPerch, Mathf.Min(1f, e + 0.03f));
                     _pos = at;
@@ -579,7 +662,7 @@ namespace AF.UI
                     _pos = _targetPerch;
                     if (_reduceMotion && _phase == Phase.Rings)
                     {
-                        alpha = Mathf.Clamp01(_ringT / ReducedFadeMs);
+                        alpha = Mathf.Lerp(ReducedStartAlpha, 1f, Mathf.Clamp01(_ringT / ReducedFadeMs));
                     }
 
                     break;
@@ -641,9 +724,11 @@ namespace AF.UI
             ring.rectTransform.localScale = new Vector3(scale, scale, 1f);
         }
 
-        // Estela del vuelo y del salto (revisión de MO2): un punto cada TrailEveryMs donde está la mariposa, que se apaga de
-        // TrailAlpha a 0 en TrailLifeMs; los puntos se reutilizan en rueda. Sin estela con Reducir movimiento.
-        private void TickTrail(float dtMs)
+        // Estela del vuelo y del salto (revisión de MO2): un punto cada TrailEveryDp dp del camino que recorrió la mariposa en el
+        // fotograma (los del medio, con la edad de cuando pasó por ahí), como mucho TrailCount; cada uno mengua y se apaga en
+        // TrailLifeMs, y también según su puesto desde el más nuevo, así que el más viejo, cuando se reutiliza, ya casi no se
+        // ve. Sin estela con Reducir movimiento. Sin asignaciones.
+        private void TickTrail(float dtMs, bool moving)
         {
             for (int i = 0; i < TrailCount; i++)
             {
@@ -657,35 +742,72 @@ namespace AF.UI
                 {
                     _trailOn[i] = false;
                     _trail[i].color = Color.clear;
-                    continue;
                 }
-
-                SetTrailAlpha(_trail[i], _trailAge[i]);
             }
 
-            if (_reduceMotion || (_phase != Phase.Flight && _phase != Phase.Hop))
+            if (!_reduceMotion && moving)
             {
-                return;
+                Vector2 a = _trailPrev;
+                Vector2 d = _pos - a;
+                float seg = d.magnitude;
+                if (seg > 1e-4f)
+                {
+                    float s = TrailEveryDp - _trailCarry;
+                    while (s <= seg)
+                    {
+                        float k = s / seg;
+                        Emit(a + (d * k), dtMs * (1f - k));
+                        s += TrailEveryDp;
+                    }
+
+                    _trailCarry = seg - (s - TrailEveryDp);
+                }
+            }
+            else
+            {
+                _trailCarry = 0f;
             }
 
-            _trailMs += dtMs;
-            while (_trailMs >= TrailEveryMs)
+            _trailPrev = _pos;
+            for (int i = 0; i < TrailCount; i++)
             {
-                _trailMs -= TrailEveryMs;
-                Image dot = _trail[_trailNext];
-                _trailAge[_trailNext] = 0f;
-                _trailOn[_trailNext] = true;
-                _trailNext = (_trailNext + 1) % TrailCount;
-                dot.rectTransform.anchoredPosition = _pos;
-                SetTrailAlpha(dot, 0f);
-                SparklesRequested++;
+                if (_trailOn[i])
+                {
+                    PaintTrailDot(i);
+                }
             }
         }
 
-        private void SetTrailAlpha(Image dot, float ageMs)
+        private void Emit(Vector2 at, float ageMs)
         {
+            int i = _trailNext;
+            _trailNext = (_trailNext + 1) % TrailCount;
+            _trailAge[i] = Mathf.Max(0f, ageMs);
+            _trailOn[i] = true;
+            _trail[i].rectTransform.anchoredPosition = at;
+            SparklesRequested++;
+        }
+
+        // Tamaño y alfa de un punto: lo que lleva vivido o su puesto desde el más nuevo, lo que vaya más avanzado.
+        private void PaintTrailDot(int i)
+        {
+            int rank = (_trailNext - 1 - i + TrailCount) % TrailCount;
+            float f = Mathf.Max(Mathf.Clamp01(_trailAge[i] / TrailLifeMs), (float)rank / TrailCount);
+            float side = Mathf.Lerp(TrailDotDp, TrailDotEndDp, f);
+            Image dot = _trail[i];
+            dot.rectTransform.sizeDelta = new Vector2(side, side);
             Color c = ProceduralArt.MorphoFlightLight;
-            dot.color = new Color(c.r, c.g, c.b, TrailAlpha * (1f - Mathf.Clamp01(ageMs / TrailLifeMs)) * _fade);
+            dot.color = new Color(c.r, c.g, c.b, TrailAlpha * (1f - f) * _fade);
+        }
+
+        // Altura del punto de control del salto: la pedida (desired), salvo que el arco subiera el centro de la mariposa por
+        // encima de limit. La cumbre de la curva cuadrática de a a b con control c > max(a, b) es (ab − c²) / (a + b − 2c), y vale
+        // limit con c = limit + √((limit − a)(limit − b)). Si las bocas ya están a la altura de limit, el salto no sube más.
+        private static float HopControlY(float a, float b, float desired, float limit)
+        {
+            float top = Mathf.Max(a, b);
+            float cap = limit > top ? limit + Mathf.Sqrt((limit - a) * (limit - b)) : top;
+            return Mathf.Min(desired, cap);
         }
 
         private void HideTrail()

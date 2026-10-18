@@ -143,10 +143,11 @@ namespace AF.Presentation
                 FillEllipseRotated(pc, 48f + (s * 18f), 70f, 8f, 4.6f, 90f - (s * 60f), MorphoLight);
             }
 
-            // Destello de marfil (cruz de cuatro puntas) sobre el ala derecha.
-            pc.FillCapsule(80f, 78f, 80f, 92f, 1.6f, Palette.UiPaper);
-            pc.FillCapsule(73f, 85f, 87f, 85f, 1.6f, Palette.UiPaper);
-            pc.FillCircle(80f, 85f, 2.6f, Palette.UiPaper);
+            // Destello de marfil (cruz de cuatro puntas) sobre el ala derecha, por debajo de las antenas (revisión de MO2: en lo
+            // alto del lienzo cruzaba el canto de la ranura en la bandeja apretada).
+            pc.FillCapsule(80f, 75f, 80f, 87f, 1.6f, Palette.UiPaper);
+            pc.FillCapsule(74f, 81f, 86f, 81f, 1.6f, Palette.UiPaper);
+            pc.FillCircle(80f, 81f, 2.6f, Palette.UiPaper);
             return MakeSprite(pc, "icon_morpho", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
         }
 

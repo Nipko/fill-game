@@ -18,9 +18,11 @@ namespace AF.Tests.PlayMode
     /// <c>mo2_01_tray_l15</c> (3 ranuras: Marea, Cuia extra y Pista con su precio), <c>mo2_02_tray_l100</c> (4 ranuras, Revelar
     /// la última), <c>mo2_02b_tray_l100_130</c> (las 4 ranuras con la fuente al 130 % a 360 dp: la bandeja apretada),
     /// <c>mo2_03_tray_missing_l106</c> (tres «Te faltan {n}» a la vez, sin pisarse), <c>mo2_04_slot48</c> (la ranura a 48 dp: el
-    /// glifo a 24 dp), <c>mo2_05_flight_l15</c> (la mariposa a mitad del vuelo al origen), <c>mo2_06_hop_l15</c> (el salto al
-    /// destino con la estela), <c>mo2_07_rings_l15</c> (las dos cuias con su anillo), <c>mo2_07b_rings_reduced_motion_l15</c>
-    /// (con Reducir movimiento, el primer fotograma tras la respuesta: la mariposa ya posada y los dos anillos),
+    /// glifo a 24 dp), <c>mo2_05b_flight_trail_l15</c> (a 0,3 del vuelo, sobre el muelle, con la estela),
+    /// <c>mo2_05_flight_l15</c> (la mariposa a mitad del vuelo al origen; la estela, detrás de las cuias), <c>mo2_06_hop_l15</c>
+    /// (el salto al destino con la estela), <c>mo2_07_rings_l15</c> (las dos cuias con su anillo), <c>mo2_07b_rings_reduced_motion_l15</c>
+    /// (con Reducir movimiento, el primer fotograma tras la respuesta: la mariposa ya posada, casi opaca, y los dos anillos),
+    /// <c>mo2_07c_rings_reduced_motion_settled_l15</c> (lo mismo a los 300 ms: la mariposa opaca y los dos anillos fijos),
     /// <c>mo2_08_card_*</c> (las cuatro respuestas sin vertido tras un vertido, con Deshacer habilitado, también al 130 %, y
     /// <c>mo2_08_card_no_exit_disabled_100</c> sin vertidos: Deshacer gris) y <c>mo2_09_unsupported_l15</c> (el globo de la ranura
     /// gris). Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.MorphoSnapshotTests</c>
@@ -98,7 +100,10 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(fx.Flying, Is.True);
-            PlayModeHelpers.TickExact(boot, (int)(MorphoFx.FlightMs * 0.5f));
+            PlayModeHelpers.TickExact(boot, (int)(MorphoFx.FlightMs * 0.3f));
+            SnapshotKit.Save(dir, "mo2_05b_flight_trail_l15"); // sobre el muelle: la estela como trazo (revisión de MO2)
+            SaveCrop(dir, "mo2_05b_flight_trail_l15_zoom", fx.Butterfly, 60f, 80f);
+            PlayModeHelpers.TickExact(boot, (int)(MorphoFx.FlightMs * 0.2f));
             SnapshotKit.Save(dir, "mo2_05_flight_l15");
             SaveCrop(dir, "mo2_05_flight_l15_zoom", fx.Butterfly, 60f, 60f);
 
@@ -118,7 +123,8 @@ namespace AF.Tests.PlayMode
         public IEnumerator CaptureReducedMotion()
         {
             // Con Reducir movimiento (07 §7.8), el primer fotograma tras la respuesta: sin vuelo, la mariposa aparece posada en el
-            // destino con un fundido corto y los dos anillos se encienden a la vez, sin latir.
+            // destino con un fundido corto (de 0,6 a 1 en 120 ms) y los dos anillos se encienden a la vez, sin latir. Después, a
+            // los 300 ms, el estado asentado: la mariposa opaca y los dos anillos fijos.
             string dir = SnapshotKit.Prepare();
             yield return Load(15, FunnelSetup.Profile(500));
             GameBootstrap boot = GameBootstrap.Current!;
@@ -136,6 +142,12 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.TickExact(boot, PlayModeHelpers.FrameMs);
             SnapshotKit.Save(dir, "mo2_07b_rings_reduced_motion_l15");
             SaveCrop(dir, "mo2_07b_rings_reduced_motion_l15_zoom", fx.TargetRing.rectTransform, 80f, 30f);
+
+            PlayModeHelpers.TickExact(boot, 300 - PlayModeHelpers.FrameMs);
+            Assert.That(fx.ButterflyAlpha, Is.EqualTo(1f).Within(0.001f), "opaca");
+            Assert.That(fx.SourceRinging && fx.TargetRinging, Is.True);
+            SnapshotKit.Save(dir, "mo2_07c_rings_reduced_motion_settled_l15");
+            SaveCrop(dir, "mo2_07c_rings_reduced_motion_settled_l15_zoom", fx.TargetRing.rectTransform, 80f, 30f);
         }
 
         [UnityTest]
@@ -191,7 +203,7 @@ namespace AF.Tests.PlayMode
             tray.HintButton.onClick.Invoke();
             Assert.That(tray.HintTooltipVisible, Is.True);
             SnapshotKit.Save(dir, "mo2_09_unsupported_l15");
-            SaveCrop(dir, "mo2_09_unsupported_l15_zoom", tray.TrayRect, 20f, 70f);
+            SaveCrop(dir, "mo2_09_unsupported_l15_zoom", tray.TrayRect, tray.HintTooltipRect, 20f, 20f); // el globo entero
         }
 
         // Carga el nivel con el perfil, une la cámara de las capturas y avanza hasta Playing con la vista quieta.
@@ -219,17 +231,29 @@ namespace AF.Tests.PlayMode
         // Recorte a tamaño real (3 px/dp) alrededor de target, con marginX y marginY dp de margen.
         private static void SaveCrop(string dir, string name, RectTransform target, float marginX, float marginY)
         {
+            SaveCrop(dir, name, target, target, marginX, marginY);
+        }
+
+        // Recorte a tamaño real (3 px/dp) alrededor de target y also a la vez, con marginX y marginY dp de margen.
+        private static void SaveCrop(string dir, string name, RectTransform target, RectTransform also, float marginX, float marginY)
+        {
             Camera cam = SnapshotKit.CaptureCamera!;
             Canvas.ForceUpdateCanvases();
             cam.Render();
             RenderTexture rt = cam.targetTexture;
-            var corners = new Vector3[4];
-            target.GetWorldCorners(corners);
+            var first = new Vector3[4];
+            var second = new Vector3[4];
+            target.GetWorldCorners(first);
+            also.GetWorldCorners(second);
+            var corners = new Vector3[8];
+            first.CopyTo(corners, 0);
+            second.CopyTo(corners, 4);
+
             float xMin = float.MaxValue;
             float yMin = float.MaxValue;
             float xMax = float.MinValue;
             float yMax = float.MinValue;
-            for (int i = 0; i < 4; i++)
+            for (int i = 0; i < corners.Length; i++)
             {
                 Vector3 p = cam.WorldToScreenPoint(corners[i]);
                 xMin = Mathf.Min(xMin, p.x);

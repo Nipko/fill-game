@@ -163,7 +163,8 @@ namespace AF.Tests.PlayMode
             Assert.That(fx.WingsHalo.color.a, Is.GreaterThan(0.5f), "halo claro");
             Assert.That(fx.ButterflySpanDp, Is.InRange(MorphoFx.PerchSpanDp, MorphoFx.TakeoffSpanDp), "baja de 28 a 24 dp en el vuelo");
 
-            // 0,4 s: se posa en el origen, que late con su anillo; la estela del vuelo se ve aún (6-8 puntos que se apagan).
+            // 0,4 s: se posa en el origen, que late con su anillo; la estela del vuelo se ve aún (hasta 14 puntos que se apagan),
+            // como un trazo (revisión de MO2: un punto cada ≤ 8 dp recorridos, no motas sueltas) y detrás de las cuias.
             PlayModeHelpers.TickExact(boot, (int)MorphoFx.FlightMs - 100 + 4);
             Assert.That(fx.Flying, Is.False);
             Assert.That(fx.SourceRinging, Is.True, "el origen late");
@@ -171,11 +172,16 @@ namespace AF.Tests.PlayMode
             Assert.That(fx.ButterflySpanDp, Is.EqualTo(MorphoFx.PerchSpanDp).Within(0.01f), "posada, 24 dp");
             Assert.That(fx.TrailVisible, Is.InRange(6, MorphoFx.TrailCount), "la estela del vuelo");
             Assert.That(fx.TrailNewestAlpha, Is.InRange(0.5f, MorphoFx.TrailAlpha + 0.001f), "el punto más nuevo, casi a 0,8");
+            Assert.That(fx.TrailLargestStepDp, Is.InRange(0.01f, MorphoFx.TrailEveryDp + 0.01f), "un punto cada ≤ 8 dp");
+            Assert.That(fx.TrailRoot.parent, Is.SameAs(view.MechanicBackLayer), "la estela, en la capa de mecánicas trasera");
+            Assert.That(view.MechanicBackLayer.GetSiblingIndex(), Is.LessThan(view.Views[0].Root.GetSiblingIndex()), "detrás de las cuias");
+            Assert.That(fx.Root.parent, Is.SameAs(view.MechanicFrontLayer), "la mariposa, delante");
 
             // Salta al destino con su estela; las dos cuias laten. La mariposa nunca baja de 22 dp.
             PlayModeHelpers.TickExact(boot, (int)(MorphoFx.PerchMs + (MorphoFx.HopMs * 0.9f)));
             Assert.That(fx.Hopping, Is.True);
             Assert.That(fx.TrailVisible, Is.InRange(6, MorphoFx.TrailCount), "la estela del salto");
+            Assert.That(fx.TrailLargestStepDp, Is.LessThanOrEqualTo(MorphoFx.TrailEveryDp + 0.01f), "un punto cada ≤ 8 dp");
             Assert.That(fx.ButterflySpanDp, Is.GreaterThanOrEqualTo(MorphoFx.MinSpanDp));
             PlayModeHelpers.TickExact(boot, (int)(MorphoFx.HopMs * 0.1f) + 8);
             Assert.That(fx.OnTarget && fx.SourceRinging && fx.TargetRinging, Is.True, "las dos laten");
@@ -260,6 +266,53 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Hop_InTheTopRow_StaysInsideTheBoardFrame()
+        {
+            // Revisión de MO2: el salto más largo de la fila de arriba (de la primera a la última cuia) sube en arco, pero la
+            // mariposa (con media envergadura y el halo: HopHalfExtentDp) no pasa del canto de arriba del marco del tablero.
+            yield return LoadPlaying(Level, FunnelSetup.Profile(500));
+            GameScreen view = GameBootstrap.Current!.View!;
+            MorphoFx fx = view.MorphoFx;
+            CuiaView[] views = view.Views;
+            float topRow = float.MinValue;
+            for (int i = 0; i < views.Length; i++)
+            {
+                topRow = Mathf.Max(topRow, views[i].FootPosition.y);
+            }
+
+            int first = -1;
+            int last = -1;
+            for (int i = 0; i < views.Length; i++)
+            {
+                if (Mathf.Abs(views[i].FootPosition.y - topRow) < 0.5f)
+                {
+                    first = first < 0 ? i : first;
+                    last = i;
+                }
+            }
+
+            Assert.That(last, Is.GreaterThan(first), "dos cuias en la fila de arriba");
+            float ceiling = -view.Layout!.PanelY;
+            fx.Play(new Vector2(view.CanvasWidth * 0.5f, ceiling - 600f), first, last, views, false, ceiling);
+            PlayModeHelpers.TickExact(GameBootstrap.Current!, (int)(MorphoFx.FlightMs + MorphoFx.PerchMs) + 4);
+            Assert.That(fx.PerchedOnSource || fx.Hopping, Is.True);
+            float perchY = fx.ButterflyPosition.y;
+            float highest = float.MinValue;
+            for (int t = 0; t < MorphoFx.HopMs + 40; t += 4)
+            {
+                fx.Tick(4f, views);
+                if (fx.Hopping)
+                {
+                    highest = Mathf.Max(highest, fx.ButterflyPosition.y);
+                }
+            }
+
+            Assert.That(fx.OnTarget, Is.True);
+            Assert.That(highest + MorphoFx.HopHalfExtentDp + MorphoFx.HopCeilingGapDp, Is.LessThanOrEqualTo(ceiling + 0.5f), "dentro del marco por arriba");
+            Assert.That(highest, Is.GreaterThan(perchY + 4f), "sigue siendo un salto en arco");
+        }
+
+        [UnityTest]
         public IEnumerator Pour_RingsLast3s_ThenGoOff()
         {
             yield return LoadPlaying(Level, FunnelSetup.Profile(500));
@@ -286,6 +339,9 @@ namespace AF.Tests.PlayMode
             Assert.That(fx.Flying || fx.Hopping, Is.False, "sin vuelo (07 §7.8)");
             Assert.That(fx.SourceRinging && fx.TargetRinging, Is.True, "los dos anillos a la vez");
             Assert.That(fx.SparklesRequested, Is.EqualTo(0), "sin estela");
+            Assert.That(fx.ButterflyAlpha, Is.InRange(MorphoFx.ReducedStartAlpha - 0.001f, 0.75f), "aparece ya casi opaca (revisión de MO2)");
+            PlayModeHelpers.TickExact(boot, (int)MorphoFx.ReducedFadeMs + 4);
+            Assert.That(fx.ButterflyAlpha, Is.EqualTo(1f).Within(0.001f), "opaca a los 120 ms");
             float alpha = fx.SourceRing.color.a;
             PlayModeHelpers.TickExact(boot, 450);
             Assert.That(fx.SourceRing.color.a, Is.EqualTo(alpha).Within(0.001f), "no laten: alfa fijo");
@@ -445,10 +501,20 @@ namespace AF.Tests.PlayMode
             tray.HintTooltipLabel.ForceMeshUpdate(true, true);
             Assert.That(tray.HintTooltipLabel.fontSize, Is.GreaterThanOrEqualTo(12f), "≥ 12 sp");
             Assert.That(new LocInventory(Loc.Locale, 1f).ProblemsOf(tray.HintTooltipLabel), Is.Empty, "el texto cabe en el globo");
+
+            // Revisión de MO2: dos líneas parejas, nunca una palabra sola en la segunda («La morpho no conoce / este tramo
+            // todavía»), y el globo centrado sobre su ranura si cabe en la pantalla.
+            TMP_TextInfo info = tray.HintTooltipLabel.textInfo;
+            Assert.That(info.lineCount, Is.EqualTo(2), "en dos líneas");
+            int a = info.lineInfo[0].characterCount;
+            int b = info.lineInfo[1].characterCount;
+            Assert.That(Mathf.Min(a, b), Is.GreaterThanOrEqualTo((int)(0.6f * Mathf.Max(a, b))), "líneas parejas: " + a + " y " + b + " caracteres");
             RectTransform root = (RectTransform)boot.View.Canvas.transform;
             Rect tip = VictorySetup.CanvasRect(tray.HintTooltipRect, root);
             Rect slot = VictorySetup.CanvasRect((RectTransform)tray.HintButton.transform, root);
             Assert.That(tip.xMin >= BoosterTray.TrayEdgeDp - 0.5f && tip.xMax <= boot.View.CanvasWidth - BoosterTray.TrayEdgeDp + 0.5f, Is.True, "dentro de la pantalla " + tip);
+            bool clamped = tip.xMax >= boot.View.CanvasWidth - BoosterTray.TrayEdgeDp - 0.5f || tip.xMin <= BoosterTray.TrayEdgeDp + 0.5f;
+            Assert.That(clamped || Mathf.Abs(tip.center.x - slot.center.x) <= 0.5f, Is.True, "centrado sobre la ranura " + tip + " / " + slot);
             Assert.That(tip.yMax, Is.LessThanOrEqualTo(slot.yMin + 0.5f), "encima de la ranura");
             Assert.That(tip.Overlaps(VictorySetup.CanvasRect((RectTransform)tray.ExtraCuiaButton.transform, root)), Is.False, "sin tapar la vecina");
 

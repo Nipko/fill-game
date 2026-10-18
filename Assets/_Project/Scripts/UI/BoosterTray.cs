@@ -160,6 +160,15 @@ namespace AF.UI
         public const float HintTooltipSp = 13f;
 
         /// <summary>
+        /// Lo más alto que empieza el glifo de Pista en su ranura (dp desde el canto de arriba) [P] (revisión de MO2): la tinta de
+        /// la mariposa (antenas y alas) llega a 1 dp del borde de arriba de su lienzo, y la de los otros glifos deja unos 4. Con
+        /// la etiqueta al 130 % los glifos suben hasta 2 dp del canto y la mariposa lo tocaba; así se encoge desde arriba (a unos
+        /// 29 dp en la bandeja apretada, sin bajar de <see cref="LabelMinIconDp"/>) y deja ≥ 4 dp de aire, como +1 cuia. Al 100 %
+        /// baja 0,5 dp.
+        /// </summary>
+        public const float HintGlyphMinTopDp = 6.5f;
+
+        /// <summary>
         /// Separación entre ranuras de la bandeja apretada (dp) [P] (tarea MO2, con la 4.ª ranura; L4): cuando la palabra más
         /// larga de una etiqueta no cabe entera en la ranura más ancha que deja la pantalla con la separación de siempre (8 dp),
         /// la bandeja aprieta sus separaciones antes que partir una palabra (02 §12: nada se recorta; D-020, pregunta 36 (a): la
@@ -239,6 +248,7 @@ namespace AF.UI
             _extra = new Slot("ExtraCuiaButton", hud, art, art.IconCuiaPlus, art.IconCuiaPlusDisabled, UiText.ExtraCuia, onExtraCuia);
             _extra.SetActive(false);
             _hint = new Slot("HintButton", hud, art, art.IconMorpho, art.IconMorphoDisabled, UiText.HintLabel, () => _onHint?.Invoke());
+            _hint.GlyphMinTopDp = HintGlyphMinTopDp;
             _hint.SetActive(false);
             _reveal = new Slot("RevealButton", hud, art, art.IconFirefly, art.IconFireflyDisabled, UiText.RevealLabel, () => _onReveal?.Invoke());
             _reveal.SetActive(false);
@@ -662,7 +672,8 @@ namespace AF.UI
             }
         }
 
-        // El globo de Pista sobre su ranura: ancho de su línea (o HintTooltipMaxDp y dos líneas), centrado y dentro de la pantalla.
+        // El globo de Pista sobre su ranura: ancho de su línea (o, si no cabe en HintTooltipMaxDp, dos líneas parejas con
+        // BalancedWidth), centrado y dentro de la pantalla.
         // Mide al enseñarlo y al recolocar la bandeja, nunca por fotograma.
         private void PlaceHintTooltip()
         {
@@ -678,7 +689,7 @@ namespace AF.UI
             float line = Mathf.Ceil(_tipText.GetPreferredValues(_tipText.text, float.PositiveInfinity, float.PositiveInfinity).x);
             bool wrap = line > inner;
             _tipText.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
-            float textW = wrap ? inner : line;
+            float textW = wrap ? BalancedWidth(_tipText, inner, line) : line;
             float textH = Mathf.Ceil(_tipText.GetPreferredValues(_tipText.text, textW, float.PositiveInfinity).y);
             float w = textW + (2f * TooltipPadXDp);
             float h = textH + (2f * TooltipPadYDp);
@@ -700,6 +711,32 @@ namespace AF.UI
             }
 
             UiBuilder.Place(_tip, x, bottom - h, w, h);
+        }
+
+        // El ancho más estrecho (dp, hasta inner) en que el texto ocupa las mismas líneas que en inner (revisión de MO2): las
+        // líneas salen parejas en lugar de dejar una palabra sola en la última («La morpho no conoce / este tramo todavía», no
+        // «… este tramo / todavía»), sin partir nada que la tabla no parta, en cualquier idioma. Búsqueda binaria sobre la
+        // altura medida; solo al enseñar el globo o recolocar la bandeja.
+        private static float BalancedWidth(TextMeshProUGUI text, float inner, float line)
+        {
+            float height = text.GetPreferredValues(text.text, inner, float.PositiveInfinity).y;
+            float lo = Mathf.Min(inner, Mathf.Floor(line * 0.5f));
+            float hi = inner;
+            for (int i = 0; i < 12 && hi - lo > 0.5f; i++)
+            {
+                float mid = 0.5f * (lo + hi);
+                if (text.GetPreferredValues(text.text, mid, float.PositiveInfinity).y <= height + 0.5f)
+                {
+                    hi = mid;
+                }
+                else
+                {
+                    lo = mid;
+                }
+            }
+
+            // 1 dp de holgura para que el lienzo corte por el mismo sitio que la medida.
+            return Mathf.Min(inner, Mathf.Ceil(hi) + 1f);
         }
 
         /// <summary>
@@ -1389,6 +1426,9 @@ namespace AF.UI
 
             public Image Glyph { get; }
 
+            /// <summary>Lo más alto que empieza el glifo (dp desde el canto de arriba; 2 salvo Pista: <see cref="HintGlyphMinTopDp"/>).</summary>
+            public float GlyphMinTopDp { get; set; } = 2f;
+
             /// <summary>Etiqueta funcional de la ranura (12 sp; tarea L4).</summary>
             public TextMeshProUGUI Label { get; }
 
@@ -1590,8 +1630,10 @@ namespace AF.UI
                 float bottom = LabelTopDp + LabelHeightDp + _grow;
                 float h = two ? Mathf.Ceil(Label.GetPreferredValues(Label.text, inner, float.PositiveInfinity).y) : LabelHeightDp * _scale;
                 float top = bottom - h;
-                float icon = Mathf.Clamp(top - LabelIconGapDp - 2f, LabelMinIconDp, IconDp);
-                float iconTop = Mathf.Clamp(top - LabelIconGapDp - icon, 2f, IconTopDp);
+                // El glifo empieza como muy arriba en GlyphMinTopDp (Pista: HintGlyphMinTopDp) y se encoge desde arriba; si ni
+                // con LabelMinIconDp cabe, sube hasta 2 dp antes que pisar la etiqueta.
+                float icon = Mathf.Clamp(top - LabelIconGapDp - GlyphMinTopDp, LabelMinIconDp, IconDp);
+                float iconTop = Mathf.Clamp(top - LabelIconGapDp - icon, 2f, Mathf.Max(IconTopDp, GlyphMinTopDp));
                 UiBuilder.Place(Label.rectTransform, inset, top, inner, h);
                 UiBuilder.Place(Glyph.rectTransform, (_w - icon) * 0.5f, iconTop, icon, icon);
             }
