@@ -108,6 +108,14 @@ namespace AF.GameFlow
         /// <summary>Escala de la vista Norte arriba: 0,76 (propuesta del Mapa §3.1) [P].</summary>
         public const float NorthUpScale = 0.76f;
 
+        /// <summary>
+        /// Con el norte arriba solo salen las placas («Mundo {n} · Nivel {m}») de los 3 mundos futuros siguientes al actual (los
+        /// 3 primeros con número mayor que el del jugador que estén en los datos; menos si no quedan tantos); las de los mundos
+        /// más lejanos se funden con el giro (decisión del dueño del 2026-10-17, opción A; D-013, punto 5). No es una clave de
+        /// 08 §9.
+        /// </summary>
+        public const int NorthUpFutureWorldPlates = 3;
+
         /// <summary>Fundido del llenado de un afluente al pasar su boca: 300 ms (propuesta del Mapa §3.4) [P].</summary>
         public const int PassbyFillFadeMs = 300;
 

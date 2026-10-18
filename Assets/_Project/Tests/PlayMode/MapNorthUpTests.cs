@@ -223,7 +223,9 @@ namespace AF.Tests.PlayMode
             // Cada placa sigue señalando su sitio (revisión de M4.4): a ≤ NorthUpPlateMaxDistDp de su punto en pantalla, sin
             // taparlo, y con el punto pintado.
             AssertPlatesNearTheirPoint(map, "max 58");
-            Assert.That(map.NorthUpPinCount, Is.EqualTo(map.SilhouetteCount), "un punto por placa");
+            Assert.That(map.NorthUpPlateCount, Is.EqualTo(Mathf.Min(map.SilhouetteCount, MapConfig.NorthUpFutureWorldPlates)),
+                "solo las placas de los 3 mundos futuros siguientes");
+            Assert.That(map.NorthUpPinCount, Is.EqualTo(map.NorthUpPlateCount), "un punto por placa que sale");
             Assert.That(map.NorthUpPinAlpha, Is.EqualTo(1f), "los puntos, con el norte arriba");
 
             Assert.That(map.OrientationLabelsAlpha, Is.EqualTo(0f), "con el norte arriba, «Andes ↑» mentiría");
@@ -244,7 +246,8 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Plates_StayNearTheirPoint_AndCountriesInTheirRegion_WithMoreFutureWorlds()
         {
-            // Con max 10 (todos los mundos futuros con placa) y con max 58, 120 y 200: las placas, derechas, sin pisarse ni pisar
+            // Con max 10 (todos los mundos futuros con silueta) y con max 58, 120 y 200: las placas que salen con el norte arriba
+            // (las de los 3 mundos futuros siguientes; decisión del dueño del 2026-10-17, opción A), derechas, sin pisarse ni pisar
             // los países, a ≤ NorthUpPlateMaxDistDp de su punto, sin pisar la canoa ni el guía y sin que una línea guía cruce otra
             // placa; los países, en su región (D-013, punto 5), y todos a ≥ 12 sp en pantalla (revisión de M4.4).
             yield return MapMarkersTests.OpenApp(11);
@@ -269,7 +272,120 @@ namespace AF.Tests.PlayMode
                 AssertPlatesClearOfFiguresAndLines(map, "max " + max);
                 AssertCountriesInTheirRegion(map, boot.RiverMapData!, "max " + max);
                 AssertLabelsReadable(map, "max " + max);
-                Assert.That(map.NorthUpPinCount, Is.EqualTo(map.SilhouetteCount));
+                Assert.That(map.NorthUpPinCount, Is.EqualTo(map.NorthUpPlateCount));
+                map.SetView(MapView.World);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator NorthUp_ShowsOnlyTheNextThreeFutureWorldPlates_AndTheRestComeBack()
+        {
+            // Decisión del dueño del 2026-10-17 (opción A): con el norte arriba solo salen las placas de los 3 mundos futuros
+            // siguientes al del jugador (los 3 primeros con número mayor que el actual que estén en los datos), o menos si no
+            // quedan tantos; las demás se funden con el giro, sin punto, y vuelven, en su sitio, con la vista de siempre. Con los
+            // datos de 1-700 (mundos 1-9): max 10 (mundo 2) → 3, 4 y 5; max 58 (mundo 3) → 4, 5 y 6; max 300 (mundo 7) → 8 y 9;
+            // max 560 (mundo 9) → ninguna.
+            yield return MapMarkersTests.OpenApp(11);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            RiverStopCatalog stops = boot.RiverStops!;
+            RiverRoutes routes = boot.RiverRoutes!;
+            Assert.That(MapConfig.NorthUpFutureWorldPlates, Is.EqualTo(3));
+            foreach ((int max, int shown) in new[] { (10, 3), (58, 3), (300, 2), (560, 0) })
+            {
+                if (max != 10)
+                {
+                    MapMarkersTests.Reopen(boot, new MemoryProgressStore(max + 1, max, max), max + 1);
+                }
+
+                string at = "max " + max;
+                int current = WorldTable.WorldOf(max + 1);
+                var next = new System.Collections.Generic.List<int>();
+                for (int w = current + 1; w <= WorldTable.WorldCount && next.Count < MapConfig.NorthUpFutureWorldPlates; w++)
+                {
+                    RiverStop? gate = stops.FirstStopOfWorld(w);
+                    if (gate != null && routes.At(gate.N) != null)
+                    {
+                        next.Add(w);
+                    }
+                }
+
+                Assert.That(next.Count, Is.EqualTo(shown), at + ": mundos futuros siguientes en los datos de 1-700");
+                map.SetView(MapView.Basin);
+                map.Tick(16f);
+                int all = map.SilhouetteCount;
+                Assert.That(all, Is.GreaterThanOrEqualTo(shown), at);
+                Assert.That(map.NorthUpPlateCount, Is.EqualTo(all), at + ": en la vista de siempre, todas");
+                var before = new Vector2[all];
+                for (int i = 0; i < all; i++)
+                {
+                    before[i] = ((RectTransform)map.SilhouettePlate(i).transform.parent).anchoredPosition;
+                    Assert.That(map.NorthUpPlateHidden(i), Is.False, at);
+                }
+
+                map.NorthUpButton.onClick.Invoke();
+                map.Tick(MapConfig.NorthUpRotateMs * 0.5f);
+                for (int i = shown; i < all; i++)
+                {
+                    float alpha = map.SilhouettePlate(i).canvasRenderer.GetAlpha();
+                    Assert.That(alpha, Is.GreaterThan(0f).And.LessThan(1f), at + ": la placa del mundo " + map.SilhouetteWorld(i) + " se funde con el giro");
+                }
+
+                map.Tick(MapConfig.NorthUpRotateMs * 0.5f);
+                Assert.That(map.NorthUpTurning, Is.False, at);
+                Assert.That(map.SilhouetteCount, Is.EqualTo(all), at + ": las siluetas siguen como están");
+                Assert.That(map.NorthUpPlateCount, Is.EqualTo(shown), at + ": las placas que salen");
+                Assert.That(map.NorthUpPinCount, Is.EqualTo(shown), at + ": un punto por placa que sale");
+                int seen = 0;
+                foreach (RectTransform plate in map.SilhouettePlates())
+                {
+                    Assert.That(plate.name, Is.EqualTo("Silhouette_w" + next[seen].ToString("00", CultureInfo.InvariantCulture)), at);
+                    seen++;
+                }
+
+                Assert.That(seen, Is.EqualTo(shown), at);
+                for (int i = 0; i < all; i++)
+                {
+                    bool hidden = i >= shown;
+                    string which = at + ": el mundo " + map.SilhouetteWorld(i);
+                    if (!hidden)
+                    {
+                        Assert.That(map.SilhouetteWorld(i), Is.EqualTo(next[i]), which);
+                        Assert.That(map.SilhouetteWorld(i), Is.GreaterThan(current), which + ", futuro");
+                    }
+
+                    Assert.That(map.NorthUpPlateHidden(i), Is.EqualTo(hidden), which);
+                    float alpha = hidden ? 0f : 1f;
+                    Assert.That(map.SilhouettePlate(i).canvasRenderer.GetAlpha(), Is.EqualTo(alpha), which + ": su placa");
+                    Assert.That(map.SilhouetteLabel(i).canvasRenderer.GetAlpha(), Is.EqualTo(alpha), which + ": su texto");
+                }
+
+                // Al volver a la vista de siempre, todas salen otra vez, en su sitio de antes.
+                map.NorthUpButton.onClick.Invoke();
+                map.Tick(MapConfig.NorthUpRotateMs);
+                Assert.That(map.NorthUpTurning, Is.False, at);
+                Assert.That(map.SilhouetteCount, Is.EqualTo(all), at);
+                Assert.That(map.NorthUpPlateCount, Is.EqualTo(all), at + ": de vuelta, todas");
+                Assert.That(map.NorthUpPinAlpha, Is.EqualTo(0f), at);
+                int back = 0;
+                foreach (RectTransform plate in map.SilhouettePlates())
+                {
+                    Assert.That(plate.gameObject.activeSelf, Is.True, at);
+                    back++;
+                }
+
+                Assert.That(back, Is.EqualTo(all), at);
+                for (int i = 0; i < all; i++)
+                {
+                    string which = at + ": el mundo " + map.SilhouetteWorld(i);
+                    Assert.That(map.NorthUpPlateHidden(i), Is.False, which);
+                    Assert.That(map.SilhouettePlate(i).canvasRenderer.GetAlpha(), Is.EqualTo(1f), which + ": su placa, de vuelta");
+                    Assert.That(map.SilhouetteLabel(i).canvasRenderer.GetAlpha(), Is.EqualTo(1f), which + ": su texto, de vuelta");
+                    RectTransform root = (RectTransform)map.SilhouettePlate(i).transform.parent;
+                    Assert.That(Vector2.Distance(root.anchoredPosition, before[i]), Is.LessThan(1e-3f), which + ": en su sitio de antes");
+                    Assert.That(root.localRotation, Is.EqualTo(Quaternion.identity), which);
+                }
+
                 map.SetView(MapView.World);
             }
         }
@@ -767,11 +883,11 @@ namespace AF.Tests.PlayMode
 
         // ============================================================================================ ayudas
 
-        // Con el norte arriba, cada placa a ≤ NorthUpPlateFarDistDp de su punto en pantalla (del punto a su borde más cercano; a ≤
-        // NorthUpPlateMaxDistDp si hay sitio para todas) y sin taparlo.
+        // Con el norte arriba, cada placa que sale (NorthUpPlateCount) a ≤ NorthUpPlateFarDistDp de su punto en pantalla (del
+        // punto a su borde más cercano; a ≤ NorthUpPlateMaxDistDp si hay sitio para todas) y sin taparlo.
         private static void AssertPlatesNearTheirPoint(RiverMapScreen map, string at)
         {
-            for (int i = 0; i < map.SilhouetteCount; i++)
+            for (int i = 0; i < map.NorthUpPlateCount; i++)
             {
                 RectTransform plate = map.SilhouettePlate(i).rectTransform; // estirada a su silueta
                 Rect box = InViewport(plate, map.ViewportRect);
@@ -789,7 +905,7 @@ namespace AF.Tests.PlayMode
         // no cruza otra placa y, con dos puntos casi juntos, la placa del más al norte va encima y la otra debajo (revisión de M4.4).
         private static void AssertPlatesClearOfFiguresAndLines(RiverMapScreen map, string at)
         {
-            int n = map.SilhouetteCount;
+            int n = map.NorthUpPlateCount;
             var boxes = new Rect[n];
             for (int i = 0; i < n; i++)
             {
@@ -946,7 +1062,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(country.fontSize * country.rectTransform.lossyScale.y / unit, Is.GreaterThanOrEqualTo(min), at + ": " + country.name);
             }
 
-            for (int i = 0; i < map.SilhouetteCount; i++)
+            for (int i = 0; i < map.NorthUpPlateCount; i++)
             {
                 TextMeshProUGUI label = map.SilhouetteLabel(i);
                 label.ForceMeshUpdate();

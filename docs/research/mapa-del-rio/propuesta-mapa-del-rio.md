@@ -281,6 +281,7 @@ Cumple la idea original del dueño («desde donde nace… y el final será la de
   - rótulos fijos en el marco: «Andes ↑» y «Océano Atlántico ↓».
 - **Botón «Norte arriba»** [P], solo en la vista Cuenca: un toque gira el contenido −90° en 300 ms (X = y; Y = 1 − x) y aparece **la forma real de la cuenca con el norte arriba**. Otro toque lo devuelve. Los rótulos no giran. Es barato (una rotación del contenedor).
   - **Hay que escalarla al girar:** con el norte arriba la cuenca mide 431 dp de ancho y solo hay 328, así que el contenido se reduce a ≈ 0,76 (328 / 431) [cálculo].
+  - *Decidido el 2026-10-17 (dueño, opción A; D-013, punto 5):* con el norte arriba solo salen las placas de los 3 mundos futuros siguientes; las de los más lejanos se funden con el giro y vuelven con la vista de siempre.
   - **La forma «de mapa» solo se ve aquí:** la vista por defecto va girada 90°, como pide 06 §4.5 y como encaja en un teléfono en vertical. Como el dueño pidió verla «al real», la orientación por defecto es una pregunta cerrada (Q15).
 
 ### 3.2 Dos vistas
