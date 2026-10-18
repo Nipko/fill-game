@@ -51,6 +51,8 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             GameScreen.SimulatedScreen = null;
+            GameScreen.SeasonLutEnabled = true;
+            GameScreen.SeasonOverride = null;
             MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();
         }
@@ -147,6 +149,62 @@ namespace AF.Tests.PlayMode
             Assert.That(view.LevelCard.HitoWindowRect, Is.Null, "oculta, sin ventanita");
             Assert.That(view.LevelCard.HitoSilhouette, Is.EqualTo(LevelCardView.HitoSilhouetteNone), "oculta, sin silueta");
             Assert.That(view.LevelCard.HitoLines, Is.EqualTo(0), "oculta, sin líneas");
+        }
+
+        /// <summary>
+        /// La ventanita del hito lleva la luz de la temporada del nivel que se va a jugar, como el fondo del tablero (07 §2.1; tarea
+        /// FX8): el 40 (ciclo 21-40, B) hacia el Encuentro, con su pieza por código, y el 60 (ciclo 41-60, A) hacia Anavilhanas, con
+        /// su silueta provisional. Sin la LUT de temporada (o sin tabla), la de la parada sola, como antes.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator HitoWindow_CarriesTheSeasonOfTheLevelToPlay([Values(40, 60)] int level)
+        {
+            Season expected = level == 40 ? Season.LowWater : Season.HighWater;
+            GameScreen.SeasonLutEnabled = false;
+            yield return CardSetup.Load(level);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Seasons, Is.Not.Null, "premisa: la escena lleva la tabla de temporada");
+            Assert.That(boot.Seasons!.SeasonOf(level), Is.EqualTo(expected), "premisa: el ciclo del " + level);
+            LevelCardView card = boot.View!.LevelCard;
+            RiverStop stop = card.HitoStop!;
+            Assert.That(stop, Is.Not.Null);
+            Assert.That(card.HitoScene.IsEmpty, Is.False);
+            Assert.That(card.HitoSeason, Is.EqualTo(Season.None), "sin la LUT de temporada");
+            Assert.That(card.HitoLut, Is.EqualTo(StopBackdrop.LutOf(stop)));
+            Color32 offSky = card.HitoScene.ColorAt(0);
+            Assert.That(offSky, Is.EqualTo(SkyTop(stop, StopBackdrop.LutOf(stop))), "el cielo de la ventanita, con la luz de la parada");
+
+            GameScreen.SeasonLutEnabled = true;
+            yield return CardSetup.Load(level);
+            card = GameBootstrap.Current!.View!.LevelCard;
+            Assert.That(card.HitoStop!.Id, Is.EqualTo(stop.Id));
+            stop = card.HitoStop; // la escena se recargó con su catálogo
+            Assert.That(card.HitoSeason, Is.EqualTo(expected), "la temporada del nivel que se va a jugar");
+            Color lut = StopBackdrop.LutOf(stop, expected);
+            Assert.That(card.HitoLut, Is.EqualTo(lut), "la luz de la parada por la de la temporada, como el fondo");
+            Assert.That(card.HitoLut, Is.Not.EqualTo(StopBackdrop.LutOf(stop)));
+            Color32 onSky = card.HitoScene.ColorAt(0);
+            Assert.That(onSky, Is.EqualTo(SkyTop(stop, lut)), "el cielo de la ventanita, con la temporada");
+            Assert.That(onSky, Is.Not.EqualTo(offSky), "la temporada se ve en la ventanita");
+
+            // La otra temporada forzada (como las capturas de SE2): otra luz.
+            GameScreen.SeasonOverride = expected == Season.HighWater ? Season.LowWater : Season.HighWater;
+            yield return CardSetup.Load(level);
+            card = GameBootstrap.Current!.View!.LevelCard;
+            stop = card.HitoStop!;
+            Assert.That(card.HitoSeason, Is.EqualTo(GameScreen.SeasonOverride.Value));
+            Assert.That(card.HitoLut, Is.EqualTo(StopBackdrop.LutOf(stop, GameScreen.SeasonOverride.Value)));
+            Assert.That((Color32)card.HitoScene.ColorAt(0), Is.Not.EqualTo(onSky));
+        }
+
+        // El color de arriba del cielo de la ventanita del hito (su primer vértice) con la luz lut: el del panorama con el tinte del
+        // cielo de la parada, como en LevelCardView.BuildHitoScene.
+        private static Color32 SkyTop(RiverStop stop, Color lut)
+        {
+            StopBackdrop.SkyOf(stop, out Color tintTop, out _, out float alphaTop, out _);
+            Color sky = Color.Lerp(Palette.SkyTop, tintTop, alphaTop) * lut;
+            sky.a = 1f;
+            return sky;
         }
 
         [UnityTest]

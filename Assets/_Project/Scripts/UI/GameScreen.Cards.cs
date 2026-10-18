@@ -42,7 +42,8 @@ namespace AF.UI
     /// <c>AF_LAYOUT level_card</c>, con los rectángulos nuevos.</para>
     /// <para><b>Hito p20</b> (M2.5; 02 §10; D-013, punto 8): en el 40, el 60… la tarjeta lleva la fila «Si lo superas, llegas a
     /// {lugar}» con la silueta del sitio (<see cref="LevelCardView.HitoStopFor"/> con <see cref="RiverStops"/>; la ventanita, con
-    /// el agua de los niveles de esa parada). <c>AF_STATE level_card</c> la anota con <c>"hito"</c> (el id de la parada o
+    /// el agua de los niveles de esa parada y la luz de la temporada del nivel que se va a jugar, como el fondo: 07 §2.1, FX8).
+    /// <c>AF_STATE level_card</c> la anota con <c>"hito"</c> (el id de la parada o
     /// null), <c>"hito_silhouette"</c> (<c>png</c>, <c>shape</c>, <c>code</c> o <c>none</c>) y <c>"hito_omitted"</c>, y
     /// <c>AF_LAYOUT</c>, con el rectángulo <c>level_card_hito</c>.</para>
     /// <para><b>Instrucción del tutorial con TiTino</b> (tarea TU1a; D-016, T2-A y T5-B; 02 §13; 04 §2.1; 06 §2.2; guion de la
@@ -129,7 +130,8 @@ namespace AF.UI
             _cardLayoutSent = false;
             RiverStop? hito = LevelCardView.HitoStopFor(card.Level, RiverStops);
             UpdateDebutClearance(card);
-            _levelCard.Show(card, hito, hito != null ? HitoWater(flow, hito) : string.Empty, flow.ReduceMotion, _canvasW, _canvasH,
+            Season season = hito != null ? SeasonFor(Seasons, card.Level) : Season.None; // la del nivel que se va a jugar (FX8)
+            _levelCard.Show(card, hito, hito != null ? HitoWater(flow, hito) : string.Empty, season, flow.ReduceMotion, _canvasW, _canvasH,
                 _safeTop, _safeBottom);
             RestoreBoardUnit();
             _levelCard.Root.SetAsLastSibling(); // por encima de todo: el toque en cualquier punto es suyo
