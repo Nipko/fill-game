@@ -19,12 +19,14 @@ namespace AF.Tests.PlayMode
     /// <item><c>f4_01_sheet_from_victory</c>: la ficha del açaí abierta con un toque en la línea de la victoria del 3, encima de la
     /// victoria; <c>f4_02_victory_after_sheet</c>: la victoria al cerrarla, igual que antes;</item>
     /// <item><c>f4_03_sheet_boto</c>: el agua del Tapajós con 21-24 superados y el 27 saltado con el Salto del Boto (revelado,
-    /// numerado) y el resto en silueta con «Nivel {n}»;</item>
+    /// numerado) y el resto en silueta con «Nivel {n}»; <c>f4_03b_sheet_boto_scrolled</c>, desplazada hasta la línea 5 para que se
+    /// vean las siluetas 5-6, la 7 revelada y la 8 (revisión de F4: en el peor caso, la 7 quedaba fuera del encuadre);</item>
     /// <item><c>f4_04_sheet_sealed</c> y <c>f4_05_sheet_sealed_sources</c>: el açaí completo (sello y nombre científico) y, al final
     /// del desplazamiento, «Fuentes»;</item>
     /// <item><c>f4_06_sheet_unstarted</c>: el achiote sin empezar (su frase de «Fruta nueva» y «Su serie empieza en el nivel 41»);</item>
-    /// <item><c>f4_07_settings_about</c>: Ajustes desplazada hasta «Sobre la Amazonía» con las frutas (en silueta las que no
-    /// empezaron) y <c>f4_08_settings_sheet</c>: la ficha abierta desde ahí, encima de Ajustes.</item>
+    /// <item><c>f4_07_settings_about</c>: Ajustes desplazada hasta el final de «Sobre la Amazonía» con las frutas (en silueta las
+    /// que no empezaron); <c>f4_07b_settings_about_top</c>: desplazada hasta la cabecera de la sección, con las frutas reveladas
+    /// (revisión de F4); y <c>f4_08_settings_sheet</c>: la ficha abierta desde ahí, encima de Ajustes.</item>
     /// </list>
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.FruitSheetSnapshotTests</c>
     /// sin <c>-nographics</c>). Falla si un texto de la ficha baja de 12 sp por la escala o se recorta
@@ -98,6 +100,7 @@ namespace AF.Tests.PlayMode
             var boto = new MemoryProgressStore(28, 24);
             boto.MarkSkipped(27);
             yield return Sheet(dir, sheet, catalog.SeriesOf("agua_tapajos")!, catalog, boto, "f4_03_sheet_boto" + suffix, false);
+            yield return Sheet(dir, sheet, catalog.SeriesOf("agua_tapajos")!, catalog, boto, "f4_03b_sheet_boto_scrolled" + suffix, false, 4);
             var done = new MemoryProgressStore(25, 24);
             yield return Sheet(dir, sheet, catalog.SeriesOf("acai")!, catalog, done, "f4_04_sheet_sealed" + suffix, false);
             yield return Sheet(dir, sheet, catalog.SeriesOf("acai")!, catalog, done, "f4_05_sheet_sealed_sources" + suffix, true);
@@ -117,6 +120,9 @@ namespace AF.Tests.PlayMode
             yield return SnapshotKit.Wait(0.3f);
             SettingsScreenTests.AssertFits(settings, "Ajustes con Sobre la Amazonía" + suffix);
             SnapshotKit.Save(dir, "f4_07_settings_about" + suffix);
+            settings.ScrollToAbout();
+            yield return SnapshotKit.Wait(0.3f);
+            SnapshotKit.Save(dir, "f4_07b_settings_about_top" + suffix);
             settings.FruitButton("agua_tapajos")!.onClick.Invoke();
             sheet = boot.FruitSheetView!;
             Assert.That(sheet.Visible, Is.True);
@@ -125,10 +131,10 @@ namespace AF.Tests.PlayMode
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.Save(dir, "f4_08_settings_sheet" + suffix);
             Debug.Log("AF_F4 {\"locale\":\"" + locale + "\",\"scale\":" + scale.ToString(System.Globalization.CultureInfo.InvariantCulture)
-                + ",\"settings_fruits\":" + settings.FruitCount + ",\"settings_scrolls\":" + (settings.Scrolls ? "true" : "false") + "}");
+                + ",\"settings_fruits\":" + settings.FruitCount + ",\"settings_columns\":" + settings.FruitColumns + ",\"settings_scrolls\":" + (settings.Scrolls ? "true" : "false") + "}");
         }
 
-        private static IEnumerator Sheet(string dir, FruitSheet sheet, FactSeries series, FactCatalog catalog, MemoryProgressStore progress, string name, bool end)
+        private static IEnumerator Sheet(string dir, FruitSheet sheet, FactSeries series, FactCatalog catalog, MemoryProgressStore progress, string name, bool end, int row = -1)
         {
             sheet.Hide();
             Assert.That(sheet.Show(series, catalog, progress, FruitSheetSource.Settings), Is.True, name);
@@ -137,6 +143,15 @@ namespace AF.Tests.PlayMode
             {
                 yield return null;
                 sheet.ScrollToEnd();
+            }
+            else if (row >= 0)
+            {
+                yield return null;
+                sheet.ScrollToRow(row);
+            }
+            else if (sheet.Scrolls)
+            {
+                FruitSheetTests.AssertCutAtARow(sheet, name);
             }
 
             yield return SnapshotKit.Wait(0.3f);

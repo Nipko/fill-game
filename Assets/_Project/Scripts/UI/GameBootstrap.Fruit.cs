@@ -11,7 +11,8 @@ namespace AF.UI
     /// Ajustes › «Sobre la Amazonía» (<see cref="SettingsScreen.FruitChosen"/>); se cierra con su X, el velo o el Atrás de
     /// Android. Lo revelado sale del progreso (<c>progress.max_level</c> y <c>progress.skipped_levels</c>; sin estado nuevo).
     /// Mientras se ve encima de la victoria, ni la vista ni el flujo avanzan (Update no los llama): al cerrarla, la victoria
-    /// sigue tal como estaba (la línea, «Siguiente», la Cosecha doble y su espera, AD_GATE). Cada apertura escribe la sonda
+    /// sigue tal como estaba (la línea, «Siguiente», la Cosecha doble y su espera, AD_GATE). El tiempo con la ficha abierta sí
+    /// cuenta en el <c>dismissed_ms</c> de la línea (revisión de F4: es tiempo de lectura hasta «Siguiente», 08 §8.2). Cada apertura escribe la sonda
     /// <c>af_fact_page_open</c> {tint_id, unlocked} (08 §8.2; DevProbe.Fruit.cs).
     /// </summary>
     public sealed partial class GameBootstrap
@@ -124,8 +125,10 @@ namespace AF.UI
         }
 
         // Con la ficha abierta, la recoloca si cambió la pantalla y devuelve true si Update debe parar aquí: encima del nivel (la
-        // victoria), nada de debajo avanza. Encima de Ajustes, el inicio sigue como siempre.
-        private bool TickFruitSheet()
+        // victoria), nada de debajo avanza. Encima de Ajustes, el inicio sigue como siempre. Encima de la victoria, los dtMs ms
+        // del fotograma cuentan en el dismissed_ms de la línea (revisión de F4; 08 §8.2: tiempo hasta el toque en «Siguiente»),
+        // aunque la vista no avance (VictoryLineSlot.AddSheetMs). Internal: los tests lo llaman con un dt exacto.
+        internal bool TickFruitSheet(float dtMs)
         {
             FruitSheet? sheet = _fruitSheet;
             if (sheet == null || !sheet.Visible)
@@ -134,7 +137,13 @@ namespace AF.UI
             }
 
             sheet.Tick();
-            return _app != null && _app.Screen == AppScreen.Level;
+            if (_app == null || _app.Screen != AppScreen.Level)
+            {
+                return false;
+            }
+
+            _screen?.VictorySlot.AddSheetMs(dtMs);
+            return true;
         }
     }
 }

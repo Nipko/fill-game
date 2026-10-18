@@ -177,7 +177,24 @@ namespace AF.Tests.PlayMode
             CollectionAssert.AllItemsAreUnique(sheet.Sources);
             foreach (TextMeshProUGUI t in sheet.Texts())
             {
-                Assert.That(t.text, Does.Not.Contain("http").Or.StartWith("http"), "título y dirección, cada uno en su etiqueta");
+                Assert.That(t.text, Does.Not.Contain("://"), "revisión de F4: el dominio, nunca la dirección entera: " + t.name);
+            }
+
+            // Las siluetas (revisión de F4): las barras empiezan todas en la misma x, tenga «Nivel {n}» las cifras que tenga, y son
+            // dos, la segunda al 62 % de la primera.
+            float barLeft = -1f;
+            for (int i = 0; i < 20; i++)
+            {
+                if (sheet.RowRevealed(i))
+                {
+                    continue;
+                }
+
+                (float left, float first, float second) = sheet.RowBars(i);
+                barLeft = barLeft < 0f ? left : barLeft;
+                Assert.That(left, Is.EqualTo(barLeft).Within(0.01f), "línea " + (i + 1) + ": la columna «Nivel {n}» es fija");
+                Assert.That(first, Is.GreaterThan(FruitSheet.BarDp));
+                Assert.That(second, Is.EqualTo(Mathf.Round(first * FruitSheet.SecondBarFraction)).Within(0.01f), "dos barras, la segunda más corta");
             }
 
             // Sin el Salto del Boto, el 27 vuelve a la silueta.
@@ -276,6 +293,7 @@ namespace AF.Tests.PlayMode
             Assert.That(settings.AboutTitle, Is.EqualTo("Sobre la Amazonía"));
             Assert.That(settings.FruitsTitle, Is.EqualTo("Frutas del río"));
             Assert.That(settings.FruitCount, Is.EqualTo(catalog.Series.Count), "una ficha por serie del calendario");
+            Assert.That(settings.FruitColumns, Is.EqualTo(2), "al 100 %, en dos columnas (ningún nombre pide más de dos líneas)");
             for (int i = 0; i < settings.FruitCount; i++)
             {
                 FactSeries s = catalog.Series[i];
@@ -286,6 +304,7 @@ namespace AF.Tests.PlayMode
                     started ? "su nombre" : "en silueta, con el nivel de su primera línea");
                 Assert.That(settings.FruitIcon(i).color, Is.EqualTo(started ? Color.white : FruitSheet.SilhouetteColor).Or.EqualTo(FruitSheet.RiverDrop), s.Subject);
                 Assert.That(((RectTransform)settings.FruitButton(i).transform).rect.height, Is.GreaterThanOrEqualTo(48f), "≥ 48 dp");
+                Assert.That(settings.FruitTileHeight(i), Is.EqualTo(settings.FruitTileHeight(0)).Within(0.01f), "revisión de F4: todas las fichas del mismo alto");
             }
 
             SettingsScreenTests.AssertFits(settings, "Ajustes con Sobre la Amazonía");
@@ -316,27 +335,123 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator At130Percent_In16x9_TextsAtLeast12sp_NothingCut_AndTheSheetScrolls()
+        public IEnumerator At100And130Percent_In640And780_TextsAtLeast12sp_NothingCut_AndTheSheetScrollsCutAtARow()
         {
-            foreach (float scale in new[] { 1f, 1.3f })
+            foreach (bool small in new[] { true, false })
             {
-                yield return FactLineTests.Win(3, scale: scale, small: true);
-                GameBootstrap boot = GameBootstrap.Current!;
-                FruitSheet sheet = boot.FruitSheetView!;
-                FactCatalog catalog = boot.FruitFacts!.Catalog;
-                foreach (string subject in new[] { "acai", "agua_tapajos", "cupuacu", "rio_amazonas" })
+                foreach (float scale in new[] { 1f, 1.3f })
                 {
-                    var progress = new MemoryProgressStore(301, 300);
-                    Assert.That(sheet.Show(catalog.SeriesOf(subject)!, catalog, progress, FruitSheetSource.Settings), Is.True, subject);
-                    yield return null;
-                    AssertFits(sheet, subject + " al " + Mathf.RoundToInt(scale * 100f) + " %");
-                    Assert.That(sheet.Scrolls, Is.True, "20 líneas en 16:9: se desplaza");
-                    Assert.That(sheet.FadeBottomVisible && !sheet.FadeTopVisible, Is.True, "arriba del todo: solo el fundido de abajo");
-                    sheet.ScrollToEnd();
-                    Assert.That(sheet.FadeTopVisible && !sheet.FadeBottomVisible, Is.True, "al final: solo el fundido de arriba");
-                    sheet.Hide();
+                    GameScreen.SimulatedScreen = small ? null : HudLabelTests.Screen780;
+                    yield return FactLineTests.Win(3, scale: scale, small: small);
+                    GameBootstrap boot = GameBootstrap.Current!;
+                    FruitSheet sheet = boot.FruitSheetView!;
+                    FactCatalog catalog = boot.FruitFacts!.Catalog;
+                    var boto = new MemoryProgressStore(28, 24);
+                    boto.MarkSkipped(27);
+                    foreach ((string subject, IMapProgress progress) in new (string, IMapProgress)[]
+                    {
+                        ("acai", new MemoryProgressStore(301, 300)), ("agua_tapajos", boto), ("cupuacu", new MemoryProgressStore(301, 300)),
+                        ("rio_amazonas", new MemoryProgressStore(301, 300)),
+                    })
+                    {
+                        string where = subject + " a " + (small ? 640 : 780) + " dp y al " + Mathf.RoundToInt(scale * 100f) + " %";
+                        Assert.That(sheet.Show(catalog.SeriesOf(subject)!, catalog, progress, FruitSheetSource.Settings), Is.True, where);
+                        yield return null;
+                        AssertFits(sheet, where);
+                        Assert.That(sheet.Scrolls, Is.True, "20 líneas: se desplaza: " + where);
+                        Assert.That(sheet.FadeBottomVisible && !sheet.FadeTopVisible, Is.True, "arriba del todo: solo el fundido de abajo: " + where);
+                        AssertCutAtARow(sheet, where);
+                        sheet.ScrollToEnd();
+                        Assert.That(sheet.FadeTopVisible && !sheet.FadeBottomVisible, Is.True, "al final: solo el fundido de arriba: " + where);
+                        sheet.Hide();
+                    }
                 }
             }
+        }
+
+        [UnityTest]
+        public IEnumerator DismissedMs_CountsTheTimeWithTheSheetOpen_WhileTheVictoryStaysFrozen()
+        {
+            // Revisión de F4: el dismissed_ms de la línea es el tiempo hasta el toque en «Siguiente» (08 §8.2), también el que el
+            // jugador pasa leyendo la ficha, aunque la vista de la victoria no avance mientras tanto.
+            yield return FactLineTests.Win(3);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            PlayModeHelpers.TickExact(boot, (int)VictoryLineSlot.FruitRevealMs + (int)VictoryLineSlot.FruitFadeMs + 100);
+            float since = view.VictorySlot.SinceShownMs;
+            Assert.That(boot.OpenFruitSheet("acai", FruitSheetSource.Victory), Is.True);
+            for (int i = 0; i < 50; i++)
+            {
+                Assert.That(boot.TickFruitSheet(100f), Is.True, "encima de la victoria, Update para aquí");
+            }
+
+            Assert.That(view.VictorySlot.SinceShownMs, Is.EqualTo(since), "la vista, congelada");
+            Assert.That(view.VictorySlot.SheetMs, Is.EqualTo(5000f).Within(0.01f), "5 s con la ficha abierta");
+            Assert.That(boot.CloseFruitSheet(), Is.True);
+            Assert.That(boot.TickFruitSheet(100f), Is.False, "cerrada: no cuenta");
+            PlayModeHelpers.TickExact(boot, 200);
+            view.NextButton.onClick.Invoke();
+            Assert.That(view.VictorySlot.DismissedMs, Is.EqualTo(since + 200f + 5000f).Within(0.01f), "con los 5 s de la ficha");
+            Assert.That(view.LastRiverFactDismissedMs, Is.EqualTo(GameScreen.FruitDismissedMs(since + 200f + 5000f)).Within(0.01f),
+                "el dismissed_ms de af_river_fact_shown, desde que entra la línea");
+            view.VictorySlot.AddSheetMs(1000f);
+            Assert.That(view.VictorySlot.SheetMs, Is.EqualTo(5000f).Within(0.01f), "cerrada la victoria, ya no suma");
+        }
+
+        [UnityTest]
+        public IEnumerator InRelease_AnApprovedLineWithADraftSheetTitle_IsNotATouchTarget()
+        {
+            // Revisión de F4: la línea y la ficha tienen estados independientes. Con la línea aprobada y fact_sheet_title en borrador,
+            // la línea se ve, pero no recibe toques ni entra en AF_LAYOUT victory, porque la ficha no se abriría.
+            const string head = "key,es-419,en,pt-BR,context,max_chars,status,status_en,status_pt-BR,notes,args\n";
+            string strings = head
+                + "fact_progress,{name} · {k}/{n},,,c,28,aprobado_es,,,,\n"
+                + "fact_sheet_title,Frutas del río,,,c,24,borrador,,,,\n"
+                + "river_fact,Dato del río,,,c,16,aprobado_es,,,,\n";
+            string facts = head
+                + "fact.acai.03,Tres,,,c,90,aprobado_es,,,,\n"
+                + "tint.acai.name,Açaí,,,c,24,aprobado_es,,,,\n";
+            LocCatalog catalog = LocCatalog.Parse(strings, facts);
+            using var log = new AfLayoutLog();
+            try
+            {
+                yield return FactLineTests.Win(3, v => Loc.Configure(catalog, LocLocale.SpanishLatinAmerica, false));
+                GameBootstrap boot = GameBootstrap.Current!;
+                FactLine line = boot.View!.FruitLine!;
+                PlayModeHelpers.TickExact(boot, (int)VictoryLineSlot.FruitRevealMs + (int)VictoryLineSlot.FruitFadeMs + 100);
+                Assert.That(UiText.FruitSheetVisible, Is.False, "fact_sheet_title, en borrador");
+                Assert.That(line.Shown && line.Alpha == 1f, Is.True, "la línea aprobada se ve");
+                Assert.That(line.BodyText, Is.EqualTo("Tres"));
+                Assert.That(line.Tapped, Is.Not.Null);
+                Assert.That(line.Opens, Is.False, "la ficha no se abriría");
+                Assert.That(line.Touchable, Is.False, "no recibe toques (ni suena)");
+                string victory = log.RequireLast("victory", 3, "AF_LAYOUT victory");
+                Assert.That(AfLayoutLog.ButtonIds(victory), Does.Not.Contain(FactLine.TapId), "no se anuncia en AF_LAYOUT victory");
+                var ids = new List<string>();
+                var rects = new List<RectTransform>();
+                line.LayoutIds(ids, rects);
+                Assert.That(ids, Is.Empty);
+                Assert.That(boot.OpenFruitSheet("acai", FruitSheetSource.Victory), Is.False);
+            }
+            finally
+            {
+                LocSetUpFixture.ConfigureEs419();
+            }
+        }
+
+        [Test]
+        public void SourceDomain_WithoutSchemeWwwOrPath()
+        {
+            Assert.That(FruitSheet.SourceDomain("https://www.infoteca.cnptia.embrapa.br/infoteca/bitstream/doc/1144331/1/x.pdf"), Is.EqualTo("infoteca.cnptia.embrapa.br"));
+            Assert.That(FruitSheet.SourceDomain("https://www2.camara.leg.br/legin/fed/lei/2026/x.html"), Is.EqualTo("camara.leg.br"));
+            Assert.That(FruitSheet.SourceDomain("https://www.gov.br/x"), Is.EqualTo("gov.br"));
+            Assert.That(FruitSheet.SourceDomain("https://es.mongabay.com/2023/03/x/"), Is.EqualTo("es.mongabay.com"));
+            Assert.That(FruitSheet.SourceDomain("http://doi.org:443/10.1/x?y=1#z"), Is.EqualTo("doi.org"));
+            Assert.That(FruitSheet.SourceDomain("https://www.dicio.com.br/acai"), Is.EqualTo("dicio.com.br"));
+            Assert.That(FruitSheet.SourceDomain("https://www.esa.int"), Is.EqualTo("esa.int"));
+            Assert.That(FruitSheet.SourceDomain("https://wwwfoo.org/x"), Is.EqualTo("wwwfoo.org"), "solo «www» con cifras");
+            Assert.That(FruitSheet.SourceDomain("https://www.com/x"), Is.EqualTo("www.com"), "sin dominio detrás, se queda");
+            Assert.That(FruitSheet.SourceDomain("sin dirección"), Is.EqualTo("sin dirección"));
         }
 
         [Test]
@@ -401,6 +516,32 @@ namespace AF.Tests.PlayMode
             {
                 LocSetUpFixture.ConfigureEs419();
             }
+        }
+
+        /// <summary>
+        /// Arriba del todo, una fila del contenido queda cortada por el borde de abajo del visor y se ve entre el
+        /// <see cref="SettingsScreen.CutRowMin"/> y el <see cref="SettingsScreen.CutRowMax"/> de su alto (revisión de F4, como
+        /// Ajustes en la de AU1): ni una fila entera con una franja vacía debajo ni una franja de unos dp.
+        /// </summary>
+        internal static void AssertCutAtARow(FruitSheet sheet, string where)
+        {
+            Canvas.ForceUpdateCanvases();
+            float viewH = sheet.Viewport.rect.height;
+            Assert.That(viewH, Is.EqualTo(sheet.ViewportHeight).Within(0.5f), where);
+            int cut = 0;
+            float shown = 0f;
+            for (int i = 0; i < sheet.BoxCount; i++)
+            {
+                (float top, float height) = sheet.Box(i);
+                if (top < viewH - 0.5f && top + height > viewH + 0.5f)
+                {
+                    cut++;
+                    shown = (viewH - top) / height;
+                }
+            }
+
+            Assert.That(cut, Is.EqualTo(1), "una fila cortada por el borde de abajo del visor: " + where);
+            Assert.That(shown, Is.InRange(SettingsScreen.CutRowMin - 0.01f, SettingsScreen.CutRowMax + 0.01f), "se ve a medias: " + where);
         }
 
         /// <summary>

@@ -40,7 +40,8 @@ namespace AF.UI
     /// <see cref="VictoryLineSlot.MinContentDp"/> dp de alto como mínimo (<see cref="TapArea"/>) que abre la ficha de su fruta
     /// (<see cref="FruitSheet"/>; lo hace quien da <see cref="Tapped"/>, <c>GameBootstrap</c>). Recibe toques en cuanto se ve (con
     /// «Siguiente», a los <see cref="VictoryLineSlot.FruitRevealMs"/> ms), nunca antes, y entra en <c>AF_LAYOUT victory</c> como
-    /// <see cref="TapId"/>. Sus gráficos no reciben toques: solo el área táctil.</item>
+    /// <see cref="TapId"/>, solo si la ficha se puede abrir (<see cref="Opens"/>: en release, con su título y su contador
+    /// aprobados). Sus gráficos no reciben toques: solo el área táctil.</item>
     /// <item><b>Textos:</b> solo si están todos en el idioma de la UI (<see cref="UiText.TryFruitLine"/>): nunca mezcla idiomas y,
     /// en release, nunca enseña nada sin aprobar.</item>
     /// <item><b>Sitio:</b> arriba de la ranura, a <see cref="TopAirDp"/> dp como mucho bajo su borde, con el sobrante de la ranura
@@ -130,6 +131,7 @@ namespace AF.UI
         private float _width;
         private float _height;
         private bool _reduceMotion;
+        private bool _opens;
 
         /// <summary>
         /// Crea la línea. <paramref name="measureParent"/> aloja las etiquetas de medir (ocultas); <paramref name="schedule"/> da el
@@ -157,10 +159,18 @@ namespace AF.UI
         public Action? Tapped { get; set; }
 
         /// <summary>
-        /// La línea recibe toques ahora: se ve (con «Siguiente», tras <see cref="VictoryLineSlot.FruitRevealMs"/> ms) y alguien la
-        /// escucha (<see cref="Tapped"/>).
+        /// La línea recibe toques ahora: se ve (con «Siguiente», tras <see cref="VictoryLineSlot.FruitRevealMs"/> ms) y abre la ficha
+        /// (<see cref="Opens"/>).
         /// </summary>
         public bool Touchable => _group != null && _group.blocksRaycasts;
+
+        /// <summary>
+        /// Un toque en la línea de ahora abriría la ficha (revisión de F4): alguien escucha (<see cref="Tapped"/>) y la ficha se puede
+        /// enseñar en el idioma de la UI (<see cref="UiText.FruitSheetVisible"/>; su título y su contador tienen texto y, en release,
+        /// están aprobados, con estados independientes de los de la línea). Si no, la línea se ve pero no recibe toques, no suena ni
+        /// entra en <c>AF_LAYOUT victory</c>. Se decide al enseñarla (el idioma no cambia durante la victoria).
+        /// </summary>
+        public bool Opens => _opens && Tapped != null;
 
         /// <summary>Área táctil de la línea (≥ <see cref="VictoryLineSlot.MinContentDp"/> dp de alto; null hasta la primera colocación).</summary>
         public RectTransform? TapArea => _tap != null ? (RectTransform)_tap.transform : null;
@@ -383,6 +393,7 @@ namespace AF.UI
             BodyText = text;
             Sealed = @sealed;
             Shown = true;
+            _opens = UiText.FruitSheetVisible;
             _root.gameObject.SetActive(true);
             _group!.alpha = 0f;
             SetTouchable(false); // hasta que entre, con «Siguiente» (Tick)
@@ -437,7 +448,7 @@ namespace AF.UI
                 _group.alpha = a;
             }
 
-            SetTouchable(a > 0f && Tapped != null);
+            SetTouchable(a > 0f && Opens);
         }
 
         /// <inheritdoc />
@@ -455,8 +466,8 @@ namespace AF.UI
         public void LayoutIds(List<string> ids, List<RectTransform> rects)
         {
             // La victoria publica su AF_LAYOUT al terminar de subir el panel, antes de que entre la línea: el área táctil se anuncia
-            // en cuanto la línea se enseña y alguien la escucha (recibe toques desde que entra, con «Siguiente»).
-            if (Shown && Tapped != null && _tap != null)
+            // en cuanto la línea se enseña y abre la ficha (Opens) (recibe toques desde que entra, con «Siguiente»).
+            if (Shown && Opens && _tap != null)
             {
                 ids.Add(TapId);
                 rects.Add((RectTransform)_tap.transform);
@@ -488,6 +499,7 @@ namespace AF.UI
             Position = default;
             Key = null;
             ShownFactId = null;
+            _opens = false;
             HeaderText = string.Empty;
             ProgressText = string.Empty;
             BodyText = string.Empty;

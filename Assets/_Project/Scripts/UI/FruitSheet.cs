@@ -31,9 +31,11 @@ namespace AF.UI
     /// el idioma de la UI (o, en release, sin aprobar) también va en silueta (propuesta §6.4, punto 5). Si la serie no empezó
     /// (ninguna revelada), en su lugar su frase de «Fruta nueva» (<c>fact.&lt;tinte&gt;.tag</c>, si tiene texto) y «Su serie empieza
     /// en el nivel {n}» (<c>fact_starts_at</c>).</item>
-    /// <item><b>Fuentes</b> (<c>fact_sources</c>), al pie: el título y la dirección de cada fuente que citan las líneas que se leen
-    /// (<see cref="SourcesOf"/>), como texto, sin abrir el navegador (propuesta §2.3; 07 §8.2) [P: solo las de las líneas a la
-    /// vista].</item>
+    /// <item><b>Fuentes</b> (<c>fact_sources</c>), al pie: el título y el dominio de la dirección (<see cref="SourceDomain"/>) de
+    /// cada fuente que citan las líneas que se leen (<see cref="SourcesOf"/>), como texto en gris neutro, sin abrir el navegador
+    /// (propuesta §2.3; 07 §8.2) [P: solo las de las líneas a la vista; el dominio y no la dirección entera, revisión de F4].</item>
+    /// <item><b>Desplazamiento:</b> si no cabe, el visor acaba a media fila (<see cref="CutAtRow"/>, como Ajustes), con el fundido
+    /// de abajo, para que se vea que la ficha sigue.</item>
     /// </list>
     /// Todo texto sale de las tablas (<see cref="UiText"/> y <see cref="Loc.Fact(string)"/>) salvo los datos bibliográficos de las
     /// fuentes, que son del calendario (contrato 31). Textos ≥ 12 sp a cualquier escala hasta el 130 %, sin recortes (lo que no
@@ -84,11 +86,32 @@ namespace AF.UI
         /// <summary>«Fuentes» (sp).</summary>
         public const float SourcesTitleSp = 14f;
 
-        /// <summary>Título y dirección de una fuente (sp): el mínimo de 02 §12.</summary>
-        public const float SourceSp = UiBuilder.MinTextSp;
+        /// <summary>Título y dominio de una fuente (sp; revisión de F4): Nunito Regular, por encima del mínimo de 02 §12.</summary>
+        public const float SourceSp = 13f;
 
-        /// <summary>Alto de la barra que dibuja el texto en silueta (dp).</summary>
-        public const float BarDp = 10f;
+        /// <summary>Interlineado del título y del dominio de una fuente, en veces el tamaño del texto (revisión de F4).</summary>
+        public const float SourceLineHeight = 1.25f;
+
+        /// <summary>
+        /// Alto de cada una de las dos barras que dibujan el texto en silueta (dp; revisión de F4): dos por línea, como un dato de
+        /// dos renglones, y no una sola barra que parezca el esqueleto de carga de una web.
+        /// </summary>
+        public const float BarDp = 8f;
+
+        /// <summary>Hueco entre las dos barras de una línea en silueta (dp).</summary>
+        public const float BarGapDp = 6f;
+
+        /// <summary>Largo de la segunda barra de una línea en silueta, en fracción de la primera (revisión de F4).</summary>
+        public const float SecondBarFraction = 0.62f;
+
+        /// <summary>
+        /// Nivel con el que se mide el ancho fijo de la columna «Nivel {n}» (revisión de F4): tres cifras anchas, para que las barras
+        /// de todas las siluetas empiecen en la misma x tenga el nivel las cifras que tenga.
+        /// </summary>
+        public const int LockedColumnLevel = 888;
+
+        /// <summary>Alto mínimo del fundido de abajo del visor (dp; ver <see cref="BottomFadeDp"/>).</summary>
+        public const float MinFadeBottomDp = 10f;
 
         /// <summary>Hueco entre dos líneas (dp).</summary>
         public const float RowGapDp = 10f;
@@ -102,8 +125,14 @@ namespace AF.UI
         /// <summary>Tinta de los textos: la madera oscura sobre la madera clara (como las secciones de Ajustes).</summary>
         public static readonly Color Ink = Palette.FamilyWood.Deep;
 
-        /// <summary>Tinta secundaria (nombre científico, «Nivel {n}», direcciones): la madera base (≥ 4,5:1 sobre la crema).</summary>
+        /// <summary>Tinta secundaria (nombre científico y «Nivel {n}»): la madera base (≥ 4,5:1 sobre la crema).</summary>
         public static readonly Color SoftInk = Palette.FamilyWood.Base;
+
+        /// <summary>
+        /// Tinta de las fuentes del pie [P] (revisión de F4): un gris cálido neutro (#5E5850, ≥ 4,5:1 sobre las dos cremas) y no el
+        /// marrón de la madera, para que el dominio no parezca un enlace que se pueda tocar (no lo es: no se abre el navegador).
+        /// </summary>
+        public static readonly Color SourceInk = new Color32(0x5E, 0x58, 0x50, 0xFF);
 
         /// <summary>Disco del número de una línea revelada: la hoja de la opción elegida de Ajustes, con el número en crema.</summary>
         public static readonly Color NumberBack = Palette.FamilyLeaf.Deep;
@@ -152,6 +181,12 @@ namespace AF.UI
         private readonly List<SourceRow> _sourceRows = new List<SourceRow>(8);
         private readonly List<FactSource> _sources = new List<FactSource>(8);
         private readonly List<string> _shownKeys = new List<string>(20);
+
+        // Filas del contenido desplazable (dp, desde su borde de arriba), para cortar el visor a media fila (CutAtRow).
+        private readonly List<float> _boxTops = new List<float>(40);
+        private readonly List<float> _boxHeights = new List<float>(40);
+        private float _contentH;
+        private float _viewH;
 
         private FactSeries? _series;
         private int _screenW;
@@ -242,6 +277,33 @@ namespace AF.UI
         /// <summary>Se ve el fundido de arriba del visor: el contenido se ha desplazado.</summary>
         public bool FadeTopVisible => _fadeTop.gameObject.activeSelf;
 
+        /// <summary>Alto del visor (dp).</summary>
+        public float ViewportHeight => _viewH;
+
+        /// <summary>Filas del contenido desplazable: la fruta, cada línea, las frases de una serie sin empezar, «Fuentes» y cada fuente.</summary>
+        public int BoxCount => _boxTops.Count;
+
+        /// <summary>Borde de arriba (dp, desde el del contenido) y alto de la fila <paramref name="i"/> del contenido.</summary>
+        public (float Top, float Height) Box(int i)
+        {
+            return (_boxTops[i], _boxHeights[i]);
+        }
+
+        /// <summary>Borde de arriba (dp, desde el del contenido) de la línea <paramref name="i"/> (0..<see cref="RowCount"/> − 1).</summary>
+        public float RowTop(int i)
+        {
+            return Row(i).Top;
+        }
+
+        /// <summary>
+        /// Las dos barras de la línea <paramref name="i"/> en silueta: su x común (dp, desde el borde de la hoja) y el largo de cada
+        /// una (dp). Ceros en una línea revelada.
+        /// </summary>
+        public (float Left, float First, float Second) RowBars(int i)
+        {
+            return Row(i).Bars;
+        }
+
         /// <summary>Desde dónde se abrió la última vez.</summary>
         public FruitSheetSource Source { get; private set; }
 
@@ -331,7 +393,7 @@ namespace AF.UI
             for (int i = 0; i < _sources.Count; i++)
             {
                 yield return _sourceRows[i].Title;
-                yield return _sourceRows[i].Url;
+                yield return _sourceRows[i].Domain;
             }
         }
 
@@ -349,6 +411,8 @@ namespace AF.UI
                 ("científico, nivel y fuente sobre la madera clara baja", SoftInk, (Color)Palette.PanelLightLow),
                 ("número de una línea revelada", (Color)Palette.Cream, NumberBack),
                 ("número de una línea en silueta", Ink, LockedBack),
+                ("fuente sobre la madera clara", SourceInk, (Color)Palette.PanelLight),
+                ("fuente sobre la madera clara baja", SourceInk, (Color)Palette.PanelLightLow),
             };
         }
 
@@ -526,6 +590,23 @@ namespace AF.UI
             UpdateFades();
         }
 
+        /// <summary>
+        /// Desplaza el contenido hasta que la línea <paramref name="i"/> quede arriba del visor, con <paramref name="airDp"/> dp por
+        /// encima (tests y capturas: la línea que reveló el Salto del Boto entre sus siluetas). Sin desplazamiento, no hace nada.
+        /// </summary>
+        public void ScrollToRow(int i, float airDp = 8f)
+        {
+            float range = _contentH - _viewH;
+            if (!_scroll.vertical || range <= 0f)
+            {
+                return;
+            }
+
+            float top = Mathf.Clamp(Row(i).Top - airDp, 0f, range);
+            _scroll.verticalNormalizedPosition = 1f - (top / range);
+            UpdateFades();
+        }
+
         // Los textos y las imágenes de la serie (al abrirla; nunca por fotograma).
         private void Compose(FactSeries series, FactCatalog catalog, IMapProgress progress, string name)
         {
@@ -617,7 +698,7 @@ namespace AF.UI
             float ch = _canvas.Height;
             float px = _screenW > 0 ? _screenW / Mathf.Max(1f, cw) : 1f;
             float safeTop = Mathf.Max(GameScreen.MinSafeTop, _screenH > 0 ? (_screenH - _safeArea.yMax) / px : 0f);
-            float safeBottom = Mathf.Max(GameScreen.MinSafeBottom, _screenH > 0 ? _safeArea.yMin / px : 0f);
+            float safeBottom = _screenH > 0 ? Mathf.Max(0f, _safeArea.yMin / px) : 0f;
             float w = Mathf.Min(MaxWidthDp, cw);
             float inner = w - (2f * InsetDp);
 
@@ -633,12 +714,24 @@ namespace AF.UI
             float contentH = LayoutContent(w, s);
 
             // La hoja crece con el contenido hasta dejar TopGapDp libres bajo la zona segura; si no cabe, el contenido se
-            // desplaza. Va pegada abajo (8 dp de marco quedan fuera de la pantalla) y su relleno de abajo salva la zona de gestos.
+            // desplaza. Va pegada abajo (8 dp de marco quedan fuera de la pantalla); bajo el visor quedan 16 dp más la zona segura
+            // de abajo (revisión de F4: no el mínimo de GameScreen.MinSafeBottom, que dejaba una franja vacía; la hoja no tiene
+            // nada que tocar abajo, solo texto que se desplaza).
             float bottomPad = InsetDp + safeBottom;
             float maxH = Mathf.Max(headerBottom + 48f + bottomPad, ch - safeTop - TopGapDp + 8f);
             float h = Mathf.Min(headerBottom + contentH + bottomPad + 8f, maxH);
             float viewH = h - headerBottom - bottomPad - 8f;
             _scroll.vertical = contentH > viewH + 0.5f;
+            if (_scroll.vertical)
+            {
+                // Si se desplaza, el visor acaba a media fila (revisión de F4, como Ajustes en la de AU1; D-003): con una fila entera
+                // y una franja vacía debajo, el jugador podría no encontrar nunca las de abajo. La hoja baja lo que se acorta.
+                viewH = CutAtRow(viewH);
+                h = headerBottom + viewH + bottomPad + 8f;
+            }
+
+            _contentH = contentH;
+            _viewH = viewH;
             UiBuilder.Place(_viewport, 0f, headerBottom, w, viewH);
             UiBuilder.Place(_content, 0f, 0f, w, contentH);
             _scroll.velocity = Vector2.zero;
@@ -649,8 +742,63 @@ namespace AF.UI
             _fadeTop.color = ProceduralArt.ModalSurfaceColorAt(headerBottom - 8f, surfaceH);
             _fadeBottom.color = ProceduralArt.ModalSurfaceColorAt(headerBottom + viewH - 8f, surfaceH);
             UiBuilder.Place(_fadeTop.rectTransform, 14f, 0f, w - 28f, SettingsScreen.FadeTopDp);
-            UiBuilder.Place(_fadeBottom.rectTransform, 14f, viewH - SettingsScreen.FadeBottomDp, w - 28f, SettingsScreen.FadeBottomDp);
+            float fadeH = BottomFadeDp(viewH);
+            UiBuilder.Place(_fadeBottom.rectTransform, 14f, viewH - fadeH, w - 28f, fadeH);
             UpdateFades();
+        }
+
+        /// <summary>
+        /// Alto del fundido de abajo del visor (dp): el de Ajustes (<see cref="SettingsScreen.FadeBottomDp"/>) o, si la fila cortada
+        /// asoma menos, las tres cuartas partes de lo que asoma (como poco <see cref="MinFadeBottomDp"/>), para que el fundido no la
+        /// borre: una silueta cortada por la mitad asoma 12 dp y debe seguir viéndose (revisión de F4).
+        /// </summary>
+        private float BottomFadeDp(float viewH)
+        {
+            for (int i = 0; i < _boxTops.Count; i++)
+            {
+                float top = _boxTops[i];
+                if (top < viewH - 0.5f && top + _boxHeights[i] > viewH + 0.5f)
+                {
+                    return Mathf.Clamp(Mathf.Round((viewH - top) * 0.75f), MinFadeBottomDp, SettingsScreen.FadeBottomDp);
+                }
+            }
+
+            return SettingsScreen.FadeBottomDp;
+        }
+
+        /// <summary>
+        /// Alto del visor (dp) para que, con el contenido arriba, la fila que corta su borde de abajo se vea entre el
+        /// <see cref="SettingsScreen.CutRowMin"/> y el <see cref="SettingsScreen.CutRowMax"/> de su alto: si ya es así,
+        /// <paramref name="viewH"/>; si no, el visor acaba en la mitad de la última fila que se ve al menos a medias (nunca la de la
+        /// fruta, la primera). La misma regla que Ajustes (revisión de AU1), con el alto de cada fila.
+        /// </summary>
+        private float CutAtRow(float viewH)
+        {
+            float last = -1f;
+            float lastH = 0f;
+            for (int i = 0; i < _boxTops.Count; i++)
+            {
+                float top = _boxTops[i];
+                float rowH = _boxHeights[i];
+                if (rowH <= 0f)
+                {
+                    continue;
+                }
+
+                float shown = (viewH - top) / rowH;
+                if (shown >= SettingsScreen.CutRowMin && shown <= SettingsScreen.CutRowMax)
+                {
+                    return viewH;
+                }
+
+                if (shown >= 0.5f && top > last)
+                {
+                    last = top;
+                    lastH = rowH;
+                }
+            }
+
+            return last > 0f ? last + Mathf.Round(lastH * 0.5f) : viewH;
         }
 
         // Cada fundido sale solo si queda contenido por ese lado (verticalNormalizedPosition: 1 arriba, 0 abajo).
@@ -668,6 +816,8 @@ namespace AF.UI
             float x = InsetDp;
             float right = w - InsetDp;
             float y = 0f;
+            _boxTops.Clear();
+            _boxHeights.Clear();
 
             // La fruta: icono, «Açaí · 3/20» y el nombre científico, centrados a lo alto con el icono.
             float textX = x + IconDp + 12f;
@@ -688,15 +838,20 @@ namespace AF.UI
             float face = SealDp - (2f * SealRingDp);
             UiBuilder.Place(_sealFace.rectTransform, sx + SealRingDp, sy + SealRingDp, face, face);
             UiBuilder.Place(_sealIcon.rectTransform, sx + SealRingDp + 1f, sy + SealRingDp + 1f, face - 2f, face - 2f);
+            AddBox(y, block);
             y += block + 14f;
 
-            // Las líneas: el número en su disco y el texto, o «Nivel {n}» y la barra en silueta.
+            // Las líneas: el número en su disco y el texto, o «Nivel {n}» y las barras en silueta. «Nivel {n}» va en una columna de
+            // ancho fijo (revisión de F4): el de la más ancha y, como poco, el de un nivel de tres cifras anchas.
             float disc = Mathf.Max(24f, Mathf.Round((NumberSp * s) + 10f));
             float tx = x + disc + 10f;
             float tw = right - tx;
+            float lockedW = LockedColumnWidth(s);
             for (int i = 0; i < RowCount; i++)
             {
-                y += _rows[i].Place(x, y, disc, tx, tw, s) + RowGapDp;
+                float rowH = _rows[i].Place(x, y, disc, tx, tw, lockedW, s);
+                AddBox(y, rowH);
+                y += rowH + RowGapDp;
             }
 
             // Una serie sin empezar: su frase de «Fruta nueva» y el nivel en que empieza.
@@ -704,6 +859,7 @@ namespace AF.UI
             {
                 float h = Measure(_tag, StartSp * s, right - x);
                 UiBuilder.Place(_tag.rectTransform, x, y, right - x, h);
+                AddBox(y, h);
                 y += h + 8f;
             }
 
@@ -711,23 +867,119 @@ namespace AF.UI
             {
                 float h = Measure(_startsAt, StartSp * s, right - x);
                 UiBuilder.Place(_startsAt.rectTransform, x, y, right - x, h);
+                AddBox(y, h);
                 y += h + RowGapDp;
             }
 
-            // Fuentes, al pie: el título y la dirección de cada una, como texto.
+            // Fuentes, al pie: el título y el dominio de cada una, como texto, con 8 dp entre fuentes.
             if (_sourcesTitle.gameObject.activeSelf)
             {
                 y += 8f;
                 float h = Measure(_sourcesTitle, SourcesTitleSp * s, right - x);
                 UiBuilder.Place(_sourcesTitle.rectTransform, x, y, right - x, h);
+                AddBox(y, h);
                 y += h + 6f;
                 for (int i = 0; i < _sources.Count; i++)
                 {
-                    y += _sourceRows[i].Place(x, y, right - x, s) + 8f;
+                    float sh = _sourceRows[i].Place(x, y, right - x, s);
+                    AddBox(y, sh);
+                    y += sh + 8f;
                 }
             }
 
             return Mathf.Ceil(Mathf.Max(0f, y - RowGapDp + 4f));
+        }
+
+        private void AddBox(float top, float height)
+        {
+            _boxTops.Add(top);
+            _boxHeights.Add(height);
+        }
+
+        // Ancho de la columna «Nivel {n}» de las siluetas a la escala s: el de «Nivel 888» (fact_locked) y el de la más ancha de
+        // la ficha. 0 sin siluetas. Solo al colocar la ficha (asigna la cadena de la plantilla).
+        private float LockedColumnWidth(float s)
+        {
+            float w = 0f;
+            int first = -1;
+            for (int i = 0; i < RowCount; i++)
+            {
+                if (!_rows[i].Revealed)
+                {
+                    first = first < 0 ? i : first;
+                    w = Mathf.Max(w, MeasureWidth(_rows[i].Locked, LockedSp * s));
+                }
+            }
+
+            if (first < 0)
+            {
+                return 0f;
+            }
+
+            // Una silueta mide la plantilla y vuelve a su texto.
+            TextMeshProUGUI label = _rows[first].Locked;
+            string own = label.text;
+            label.text = UiText.FactLocked(LockedColumnLevel);
+            w = Mathf.Max(w, MeasureWidth(label, LockedSp * s));
+            label.text = own;
+            return w;
+        }
+
+        /// <summary>
+        /// Dominio de la dirección <paramref name="url"/> de una fuente, para el pie de la ficha (revisión de F4): sin el esquema
+        /// («https://»), sin «www.» (ni «www2.»…), sin puerto y sin la ruta: <c>infoteca.cnptia.embrapa.br</c>. Es un dato
+        /// bibliográfico del calendario (contrato 31), no un texto de la UI. Sin host, la dirección tal cual.
+        /// </summary>
+        public static string SourceDomain(string url)
+        {
+            if (url == null)
+            {
+                throw new ArgumentNullException(nameof(url));
+            }
+
+            int scheme = url.IndexOf("://", StringComparison.Ordinal);
+            int start = scheme < 0 ? 0 : scheme + 3;
+            int end = start;
+            while (end < url.Length && url[end] != '/' && url[end] != '?' && url[end] != '#' && url[end] != ':')
+            {
+                end++;
+            }
+
+            if (end <= start)
+            {
+                return url;
+            }
+
+            // «www», «www2»…: la primera etiqueta, si es una de esas y detrás quedan al menos dos.
+            int dot = url.IndexOf('.', start, end - start);
+            if (dot - start >= 3 && string.CompareOrdinal(url, start, "www", 0, 3) == 0 && url.IndexOf('.', dot + 1, end - dot - 1) > 0)
+            {
+                bool www = true;
+                for (int i = start + 3; i < dot; i++)
+                {
+                    www &= url[i] >= '0' && url[i] <= '9';
+                }
+
+                if (www)
+                {
+                    start = dot + 1;
+                }
+            }
+
+            return url.Substring(start, end - start);
+        }
+
+        // Interlineado de TMP (centésimas del tamaño) para que cada línea de label mida lineHeight veces su tamaño con su fuente.
+        private static float LineSpacingFor(TextMeshProUGUI label, float lineHeight)
+        {
+            TMP_FontAsset? font = label.font;
+            if (font == null || font.faceInfo.pointSize <= 0f)
+            {
+                return 0f;
+            }
+
+            float natural = font.faceInfo.lineHeight / font.faceInfo.pointSize;
+            return (lineHeight - natural) * 100f;
         }
 
         private TextMeshProUGUI WrappedLabel(string name, TextStyle style, float sp, Color color)
@@ -785,11 +1037,12 @@ namespace AF.UI
             _probe.Layout("fruit_sheet", 0, null, new[] { "close" }, new[] { (RectTransform)_close.Button.transform });
         }
 
-        // Una línea de la ficha: el número en su disco y el texto (revelada) o «Nivel {n}» con la barra (en silueta).
+        // Una línea de la ficha: el número en su disco y el texto (revelada) o «Nivel {n}» con dos barras (en silueta).
         private sealed class LineRow
         {
             private readonly Image _disc;
             private readonly Image _bar;
+            private readonly Image _bar2;
 
             public LineRow(Transform parent, ProceduralArt art, int index)
             {
@@ -800,6 +1053,8 @@ namespace AF.UI
                 Locked = UiBuilder.Label(name + "Locked", parent, TextStyle.PlainBold, string.Empty, LockedSp, SoftInk, TextAlignmentOptions.MidlineLeft);
                 _bar = UiBuilder.Sliced(name + "Bar", parent, art.RoundedRect, LockedBack);
                 _bar.pixelsPerUnitMultiplier = 24f / (BarDp * 0.5f);
+                _bar2 = UiBuilder.Sliced(name + "Bar2", parent, art.RoundedRect, LockedBack);
+                _bar2.pixelsPerUnitMultiplier = 24f / (BarDp * 0.5f);
             }
 
             public TextMeshProUGUI Number { get; }
@@ -809,6 +1064,14 @@ namespace AF.UI
             public TextMeshProUGUI Locked { get; }
 
             public bool Revealed { get; private set; }
+
+            /// <summary>Borde de arriba de la línea en el contenido (dp), de la última colocación.</summary>
+            public float Top { get; private set; }
+
+            /// <summary>x de las barras y largo de cada una (dp); ceros si va revelada.</summary>
+            public (float Left, float First, float Second) Bars => Revealed
+                ? (0f, 0f, 0f)
+                : (_bar.rectTransform.anchoredPosition.x, _bar.rectTransform.sizeDelta.x, _bar2.rectTransform.sizeDelta.x);
 
             public void Bind(string number, string text, string locked)
             {
@@ -821,6 +1084,7 @@ namespace AF.UI
                 FruitSheet.SetActive(Text, Revealed);
                 FruitSheet.SetActive(Locked, !Revealed);
                 FruitSheet.SetActive(_bar, !Revealed);
+                FruitSheet.SetActive(_bar2, !Revealed);
             }
 
             public void SetActive(bool on)
@@ -830,11 +1094,14 @@ namespace AF.UI
                 FruitSheet.SetActive(Text, on && Revealed);
                 FruitSheet.SetActive(Locked, on && !Revealed);
                 FruitSheet.SetActive(_bar, on && !Revealed);
+                FruitSheet.SetActive(_bar2, on && !Revealed);
             }
 
-            // Coloca la línea en y y devuelve su alto: el disco centrado en la primera línea del texto.
-            public float Place(float x, float y, float disc, float tx, float tw, float s)
+            // Coloca la línea en y y devuelve su alto: el disco centrado en la primera línea del texto. En silueta, «Nivel {n}» en
+            // su columna de lockedW dp y, desde ahí, dos barras: la primera hasta el borde y la segunda al 62 %.
+            public float Place(float x, float y, float disc, float tx, float tw, float lockedW, float s)
             {
+                Top = y;
                 float numberH = Measure(Number, NumberSp * s, disc);
                 float rowH;
                 if (Revealed)
@@ -853,49 +1120,57 @@ namespace AF.UI
                 {
                     float lw = MeasureWidth(Locked, LockedSp * s);
                     float lh = Measure(Locked, LockedSp * s, float.PositiveInfinity);
-                    rowH = Mathf.Max(disc, lh);
+                    float bars = (2f * BarDp) + BarGapDp;
+                    rowH = Mathf.Max(Mathf.Max(disc, lh), bars);
                     UiBuilder.Place(_disc.rectTransform, x, y + Mathf.Round((rowH - disc) * 0.5f), disc, disc);
                     UiBuilder.Place(Number.rectTransform, x, y + Mathf.Round((rowH - numberH) * 0.5f), disc, numberH);
                     UiBuilder.Place(Locked.rectTransform, tx, y + Mathf.Round((rowH - lh) * 0.5f), lw + 1f, lh);
-                    float bx = tx + lw + 12f;
-                    UiBuilder.Place(_bar.rectTransform, bx, y + Mathf.Round((rowH - BarDp) * 0.5f), Mathf.Max(BarDp, tx + tw - bx), BarDp);
+                    float bx = tx + Mathf.Max(lw, lockedW) + 12f;
+                    float bw = Mathf.Max(BarDp, tx + tw - bx);
+                    float by = y + Mathf.Round((rowH - bars) * 0.5f);
+                    UiBuilder.Place(_bar.rectTransform, bx, by, bw, BarDp);
+                    UiBuilder.Place(_bar2.rectTransform, bx, by + BarDp + BarGapDp, Mathf.Max(BarDp, Mathf.Round(bw * SecondBarFraction)), BarDp);
                 }
 
                 return rowH;
             }
         }
 
-        // Una fuente del pie: su título y su dirección, cada uno en su etiqueta (nunca pegados en una cadena).
+        // Una fuente del pie: su título y su dominio (revisión de F4: no la dirección entera, que se partía a media palabra), cada
+        // uno en su etiqueta (nunca pegados en una cadena), en Nunito Regular de 13 sp con interlineado de 1,25, en gris neutro.
         private sealed class SourceRow
         {
             public SourceRow(Transform parent, int index)
             {
-                Title = Wrapped("Source" + (index + 1) + "Title", parent, TextStyle.Body, SourceSp, Ink);
-                Url = Wrapped("Source" + (index + 1) + "Url", parent, TextStyle.Body, SourceSp, SoftInk);
+                Title = Wrapped("Source" + (index + 1) + "Title", parent, TextStyle.Body, SourceSp, SourceInk);
+                Domain = Wrapped("Source" + (index + 1) + "Domain", parent, TextStyle.Body, SourceSp, SourceInk);
+                Title.lineSpacing = LineSpacingFor(Title, SourceLineHeight);
+                Domain.lineSpacing = LineSpacingFor(Domain, SourceLineHeight);
             }
 
             public TextMeshProUGUI Title { get; }
 
-            public TextMeshProUGUI Url { get; }
+            /// <summary>El dominio de la dirección (<see cref="SourceDomain"/>).</summary>
+            public TextMeshProUGUI Domain { get; }
 
             public void Bind(FactSource source)
             {
                 Title.text = source.Title;
-                Url.text = source.Url;
+                Domain.text = SourceDomain(source.Url);
             }
 
             public void SetActive(bool on)
             {
                 FruitSheet.SetActive(Title, on);
-                FruitSheet.SetActive(Url, on);
+                FruitSheet.SetActive(Domain, on);
             }
 
             public float Place(float x, float y, float w, float s)
             {
                 float th = Measure(Title, SourceSp * s, w);
                 UiBuilder.Place(Title.rectTransform, x, y, w, th);
-                float uh = Measure(Url, SourceSp * s, w);
-                UiBuilder.Place(Url.rectTransform, x, y + th + 2f, w, uh);
+                float uh = Measure(Domain, SourceSp * s, w);
+                UiBuilder.Place(Domain.rectTransform, x, y + th + 2f, w, uh);
                 return th + 2f + uh;
             }
         }

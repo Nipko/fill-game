@@ -1517,8 +1517,9 @@ namespace AF.UI
             }
 
             // La ficha de una fruta (F4): encima de la victoria, la congela (ni la vista ni el flujo avanzan: ni la línea, ni el
-            // avance tras la Cosecha doble, ni AD_GATE) hasta cerrarla, y al cerrarla se vuelve a la victoria tal como estaba.
-            if (TickFruitSheet())
+            // avance tras la Cosecha doble, ni AD_GATE) hasta cerrarla, y al cerrarla se vuelve a la victoria tal como estaba. El
+            // tiempo con la ficha abierta sí cuenta en el dismissed_ms de la línea (revisión de F4).
+            if (TickFruitSheet(dt))
             {
                 return;
             }

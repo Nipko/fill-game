@@ -30,8 +30,14 @@ namespace AF.UI
         /// <summary>Nombre (o «Nivel {n}») de una ficha de la lista (sp).</summary>
         public const float FruitTileSp = 14f;
 
-        /// <summary>«Frutas del río» bajo la cabecera de la sección (sp).</summary>
-        public const float FruitsTitleSp = 15f;
+        /// <summary>«Frutas del río», subtítulo bajo la cabecera de la sección (sp; revisión de F4): más pequeño y en tinta secundaria.</summary>
+        public const float FruitsTitleSp = 14f;
+
+        /// <summary>Hueco entre la cabecera «Sobre la Amazonía» y su subtítulo «Frutas del río» (dp; revisión de F4).</summary>
+        public const float FruitsTitleGapDp = 4f;
+
+        /// <summary>Líneas que puede pedir el nombre de una ficha en dos columnas; si alguna pide más, la lista va en una columna.</summary>
+        public const int MaxTileLines = 2;
 
         /// <summary>Prefijo del id de una ficha de la lista en <c>AF_LAYOUT settings</c> (<c>fruit_acai</c>…).</summary>
         public const string FruitIdPrefix = "fruit_";
@@ -58,6 +64,9 @@ namespace AF.UI
 
         /// <summary>«Frutas del río» bajo la cabecera.</summary>
         public string FruitsTitle => _fruitsTitle.text;
+
+        /// <summary>Columnas de la lista: 2, o 1 si en dos algún nombre pidiera más de <see cref="MaxTileLines"/> líneas.</summary>
+        public int FruitColumns { get; private set; } = 2;
 
         /// <summary>Fichas de la lista a la vista, en el orden del calendario.</summary>
         public int FruitCount => _fruitCount;
@@ -111,7 +120,7 @@ namespace AF.UI
         {
             _aboutTitle = UiBuilder.Label("AboutTitle", AboutSlot, TextStyle.PlainBold, UiText.SettingsAboutAmazon, SectionSp, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
             UiBuilder.AutoSize(_aboutTitle, MinTextSp, SectionSp);
-            _fruitsTitle = UiBuilder.Label("FruitsTitle", AboutSlot, TextStyle.PlainBold, UiText.FactSheetTitle, FruitsTitleSp, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
+            _fruitsTitle = UiBuilder.Label("FruitsTitle", AboutSlot, TextStyle.Body, UiText.FactSheetTitle, FruitsTitleSp, FruitSheet.SoftInk, TextAlignmentOptions.MidlineLeft);
             UiBuilder.AutoSize(_fruitsTitle, MinTextSp, FruitsTitleSp);
         }
 
@@ -163,25 +172,38 @@ namespace AF.UI
             float top = y;
             float local = 0f;
             PlaceTitle(_aboutTitle, 16f, local, inner, titleH, s);
-            local += titleH + RowGapDp;
+            local += titleH + FruitsTitleGapDp;
             float subH = Mathf.Round((FruitsTitleSp * s) + 8f);
             _fruitsTitle.fontSizeMax = FruitsTitleSp * s;
             _fruitsTitle.fontSizeMin = MinTextSp;
             UiBuilder.Place(_fruitsTitle.rectTransform, 16f, local, inner, subH);
             local += subH + RowGapDp;
 
-            // Dos columnas; cada fila de fichas, del alto de la más alta (el nombre crece en líneas, nunca encoge).
+            // Dos columnas, todas las fichas del mismo alto (revisión de F4): el de la que más pide (el nombre crece en líneas,
+            // nunca encoge), con el nombre centrado a lo alto. Si en dos columnas algún nombre pidiera más de MaxTileLines líneas
+            // (la escala de texto alta, los idiomas largos), una sola columna [P]: ninguna ficha de tres líneas ni un «]» huérfano.
             float colW = Mathf.Floor((inner - RowGapDp) * 0.5f);
-            for (int i = 0; i < _fruitCount; i += 2)
+            FruitColumns = 2;
+            for (int i = 0; i < _fruitCount; i++)
             {
-                float h = Mathf.Max(rowH, _fruitTiles[i].NeedDp(colW, s));
-                if (i + 1 < _fruitCount)
+                if (_fruitTiles[i].Lines(colW, s) > MaxTileLines)
                 {
-                    h = Mathf.Max(h, _fruitTiles[i + 1].NeedDp(colW, s));
+                    FruitColumns = 1;
+                    colW = inner;
+                    break;
                 }
+            }
 
+            float h = rowH;
+            for (int i = 0; i < _fruitCount; i++)
+            {
+                h = Mathf.Max(h, _fruitTiles[i].NeedDp(colW, s));
+            }
+
+            for (int i = 0; i < _fruitCount; i += FruitColumns)
+            {
                 _fruitTiles[i].Place(16f, local, colW, h, s);
-                if (i + 1 < _fruitCount)
+                if (FruitColumns == 2 && i + 1 < _fruitCount)
                 {
                     _fruitTiles[i + 1].Place(16f + inner - colW, local, colW, h, s);
                 }
@@ -194,6 +216,26 @@ namespace AF.UI
             local -= RowGapDp;
             UiBuilder.Place(AboutSlot, 0f, top, w, local);
             return top + local;
+        }
+
+        /// <summary>Desplaza Ajustes hasta que la cabecera «Sobre la Amazonía» quede arriba del visor (capturas). Sin la sección o sin desplazamiento, nada.</summary>
+        public void ScrollToAbout()
+        {
+            float range = _content.rect.height - _viewport.rect.height;
+            if (!AboutShown || !_scroll.vertical || range <= 0f)
+            {
+                return;
+            }
+
+            float top = Mathf.Clamp(-AboutSlot.anchoredPosition.y - 8f, 0f, range);
+            _scroll.verticalNormalizedPosition = 1f - (top / range);
+            UpdateFades();
+        }
+
+        /// <summary>Alto de la ficha <paramref name="i"/> de la lista (dp): todas iguales.</summary>
+        public float FruitTileHeight(int i)
+        {
+            return ((RectTransform)Tile(i).Button.transform).rect.height;
         }
 
         private IEnumerable<TextMeshProUGUI> AboutTexts()
@@ -280,6 +322,17 @@ namespace AF.UI
                 Icon.color = !started ? FruitSheet.SilhouetteColor : fruit != null ? Color.white : FruitSheet.RiverDrop;
                 Icon.gameObject.SetActive(Icon.sprite != null);
                 _iconBack.gameObject.SetActive(Icon.sprite != null);
+            }
+
+            // Líneas que pide el nombre en una columna de colW dp, a 14 sp por la escala.
+            public int Lines(float colW, float s)
+            {
+                Label.enableAutoSizing = false;
+                Label.fontSize = FruitTileSp * s;
+                float lw = LabelWidth(colW);
+                float all = Label.GetPreferredValues(Label.text, lw, float.PositiveInfinity).y;
+                float one = Label.GetPreferredValues("Ág", float.PositiveInfinity, float.PositiveInfinity).y;
+                return one > 0f ? Mathf.Max(1, Mathf.RoundToInt(all / one)) : 1;
             }
 
             // Alto que pide el nombre en una columna de colW dp (más el relleno), a 14 sp por la escala.
