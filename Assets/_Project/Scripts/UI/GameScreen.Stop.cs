@@ -185,12 +185,29 @@ namespace AF.UI
         internal static bool SeasonLutEnabled { get; set; } = true;
 
         /// <summary>
+        /// Solo capturas: fuerza la temporada (A o B) en el tablero y en el inicio, con o sin tabla, para comparar las dos en la
+        /// misma parada (SE2). Null, la de la tabla; en el juego, siempre null.
+        /// </summary>
+        internal static Season? SeasonOverride { get; set; }
+
+        /// <summary>
         /// Temporada del nivel <paramref name="level"/> con la tabla <paramref name="seasons"/> (<see cref="Season.None"/> sin
-        /// tabla, fuera de ella o con <see cref="SeasonLutEnabled"/> apagado). Sin asignaciones.
+        /// tabla, fuera de ella o con <see cref="SeasonLutEnabled"/> apagado; <see cref="SeasonOverride"/> si está puesta). Sin
+        /// asignaciones.
         /// </summary>
         internal static Season SeasonFor(SeasonTable? seasons, int level)
         {
-            return SeasonLutEnabled && seasons != null ? seasons.SeasonOf(level) : Season.None;
+            if (!SeasonLutEnabled)
+            {
+                return Season.None;
+            }
+
+            if (SeasonOverride.HasValue)
+            {
+                return SeasonOverride.Value;
+            }
+
+            return seasons != null ? seasons.SeasonOf(level) : Season.None;
         }
 
         partial void StopBuild(RectTransform scene)

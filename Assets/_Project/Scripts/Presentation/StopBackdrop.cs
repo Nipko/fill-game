@@ -145,16 +145,19 @@ namespace AF.Presentation
         public static readonly Color DawnLut = new Color(0.86f, 0.84f, 0.97f, 1f);
 
         /// <summary>
-        /// LUT de la temporada A, aguas altas (07 §2.1; D-009, punto 6) [P]: luz fresca de la crecida, un punto más fría y verde
-        /// que la de hoy; el canal azul entero, así que el cielo no pierde brillo (VA-03). Se multiplica con la de la parada.
+        /// LUT de la temporada A, aguas altas (07 §2.1; D-009, punto 6) [P]: luz fresca y verdosa de la crecida; el canal verde
+        /// entero y el azul casi, así que el cielo no pierde brillo y los tonos cálidos del panorama no bajan de S 0,30 (VA-03).
+        /// Es la única señal de la temporada (sin cartel), así que se nota a tamaño de teléfono: en la franja del panorama del
+        /// tablero, ΔE00 medio ≥ 5 frente al fondo sin temporada y ≥ 8 frente a B en la misma parada (revisión de SE2, medido
+        /// en <c>SeasonLutSnapshotTests</c>). Se multiplica con la de la parada.
         /// </summary>
-        public static readonly Color HighWaterLut = new Color(0.9f, 0.97f, 1f, 1f);
+        public static readonly Color HighWaterLut = new Color(0.76f, 1f, 0.9f, 1f);
 
         /// <summary>
-        /// LUT de la temporada B, aguas bajas (07 §2.1; D-009, punto 6) [P]: luz cálida y seca de la vaciante, más dorada; el
-        /// canal rojo entero (VA-03). Se multiplica con la de la parada.
+        /// LUT de la temporada B, aguas bajas (07 §2.1; D-009, punto 6) [P]: luz dorada y seca de la vaciante; el canal rojo
+        /// entero (VA-03). Con la misma regla de visibilidad que <see cref="HighWaterLut"/>. Se multiplica con la de la parada.
         /// </summary>
-        public static readonly Color LowWaterLut = new Color(1f, 0.95f, 0.84f, 1f);
+        public static readonly Color LowWaterLut = new Color(1f, 0.88f, 0.7f, 1f);
 
         // Cielo por mundo (07 §2.1, columna «Hora del día» [P]): arriba, en el horizonte, y su opacidad arriba y abajo.
         private static readonly Color NoonTop = Palette.Hex(0x3FA7E0);

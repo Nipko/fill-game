@@ -46,6 +46,7 @@ namespace AF.Tests.EditMode
         public void TearDown()
         {
             GameScreen.SeasonLutEnabled = true;
+            GameScreen.SeasonOverride = null;
             StopBackdrop.HeroSpriteOverride = null;
             if (_canvas != null)
             {
@@ -155,6 +156,19 @@ namespace AF.Tests.EditMode
             Assert.That(GameScreen.SeasonFor(Real, 41), Is.EqualTo(Season.HighWater));
             GameScreen.SeasonLutEnabled = false;
             Assert.That(GameScreen.SeasonFor(Real, 41), Is.EqualTo(Season.None));
+        }
+
+        [Test]
+        public void SeasonFor_WithTheCaptureOverride_IsTheForcedSeason_UnlessSwitchedOff()
+        {
+            GameScreen.SeasonOverride = Season.LowWater;
+            Assert.That(GameScreen.SeasonFor(Real, 41), Is.EqualTo(Season.LowWater), "la B en una parada de ciclo A (capturas)");
+            Assert.That(GameScreen.SeasonFor(null, 41), Is.EqualTo(Season.LowWater), "también sin tabla");
+            GameScreen.SeasonLutEnabled = false;
+            Assert.That(GameScreen.SeasonFor(Real, 41), Is.EqualTo(Season.None), "apagada manda");
+            GameScreen.SeasonLutEnabled = true;
+            GameScreen.SeasonOverride = null;
+            Assert.That(GameScreen.SeasonFor(Real, 41), Is.EqualTo(Season.HighWater), "sin forzar, la de la tabla");
         }
 
         /// <summary>
