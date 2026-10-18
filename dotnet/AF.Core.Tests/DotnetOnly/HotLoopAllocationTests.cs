@@ -13,9 +13,10 @@ namespace AF.Core.Tests.DotnetOnly
 {
     /// <summary>
     /// Bucle caliente sin asignaciones (CLAUDE.md, regla dura 2; .claude/rules/core.md): detección de vertidos
-    /// útiles y bloqueo, y el solver una vez calentado. Solo dotnet: usa
-    /// <see cref="GC.GetAllocatedBytesForCurrentThread"/>, que no existe en el perfil de Unity. Todas las medidas pasan por
-    /// <see cref="AllocationMeter"/> (FX9): varias pasadas de calentamiento del mismo bloque y el mínimo de hasta
+    /// útiles y bloqueo, y el solver una vez calentado. Solo dotnet por <c>[NonParallelizable]</c> (fuera del subconjunto
+    /// de NUnit 3.5), los tableros de <see cref="ReferenceBoards"/> y <see cref="AllocationMeter"/>, que también son de
+    /// <c>DotnetOnly/</c>; no por <see cref="GC.GetAllocatedBytesForCurrentThread"/>, que existe en Unity. Todas las
+    /// medidas pasan por <see cref="AllocationMeter"/> (FX9): varias pasadas de calentamiento del mismo bloque y el mínimo de hasta
     /// <see cref="AllocationMeter.MaxAttempts"/> medidas, con los mismos umbrales de siempre.
     /// </summary>
     [TestFixture]

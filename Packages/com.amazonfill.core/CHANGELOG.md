@@ -16,6 +16,12 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
   3 pasadas de calentamiento del mismo bloque (también los caminos que antes solo recorría la ventana, como el modo contrario
   en `UsefulMovesInRun`) y el mínimo de hasta 5 medidas, con los mismos umbrales (0 bytes; < 1 KB por `Solve`; < 1 KB por
   realidad). Una asignación real se repite en todas las medidas y el mensaje del fallo las lista. Sin cambios en el núcleo.
+- **Pendiente fuera de FX9 (Unity, audio):** dos pruebas de Unity siguen con una sola medida tras calentar, el patrón
+  frágil: `AmbientMusicTests.Mix_TickFaunaAndReport_DoNotAllocate` (EditMode) y
+  `AmbientMusicHooksTests.RealService_MusicOff_SilencesBedLayersAndAmbientAtOnce_AndItsFrameDoesNotAllocate` (PlayMode).
+  No son del núcleo y FX9 no toca Unity; si fallan de vez en cuando, una tarea aparte puede aplicarles el mismo criterio (varias pasadas de calentamiento y el mínimo de N medidas, con el mismo umbral).
+  `AllocationMeter` se queda en `DotnetOnly/` porque no se ha probado en el runner de Unity, no por la API:
+  `GC.GetAllocatedBytesForCurrentThread` también existe allí.
 
 ### Integración de T51 (pregunta 46 decidida)
 

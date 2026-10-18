@@ -8,8 +8,10 @@ namespace AF.Core.Tests.DotnetOnly
 {
     /// <summary>
     /// Medida de las asignaciones de un bloque de código en el hilo actual, para las pruebas del bucle caliente sin
-    /// asignaciones (CLAUDE.md, regla dura 2; .claude/rules/core.md). Solo dotnet: usa
-    /// <see cref="GC.GetAllocatedBytesForCurrentThread"/>, que no existe en el perfil de Unity.
+    /// asignaciones (CLAUDE.md, regla dura 2; .claude/rules/core.md). Solo dotnet porque solo lo usan pruebas de
+    /// <c>DotnetOnly/</c> y no se ha probado en el runner de Unity (Mono, con otro recolector), no por la API:
+    /// <see cref="GC.GetAllocatedBytesForCurrentThread"/> también existe allí (la usan <c>AmbientMusicTests</c> y
+    /// <c>AmbientMusicHooksTests</c>). Compartirlo exigiría probarlo antes en EditMode y en PlayMode.
     /// </summary>
     /// <remarks>
     /// <para>FX9. Una sola medida tras una sola llamada de calentamiento fallaba de vez en cuando con la suite completa
