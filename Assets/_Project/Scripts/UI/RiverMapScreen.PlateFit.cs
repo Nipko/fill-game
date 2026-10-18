@@ -25,7 +25,8 @@ namespace AF.UI
     /// tapa menos; en la rejilla, el más cercano que no tapa el lleno o, si todos lo tapan, el más cercano. Una placa que ya se
     /// veía bien, o que queda entera fuera de la zona visible, no se mueve.</description></item>
     /// <item><description>Si una placa no cabe de ningún modo, en la vista Mundo no sale con ese encuadre [P]
-    /// (<see cref="PlateFitHidden"/>); arrastrar el mapa la vuelve a enseñar en su sitio. En la Cuenca se queda donde la puso FX7
+    /// (<see cref="PlateFitHidden"/>) ni cuenta como obstáculo para las demás (<c>PlateBlocked</c>); arrastrar el mapa la vuelve
+    /// a enseñar en su sitio. En la Cuenca se queda donde la puso FX7
     /// (no se oculta: el norte arriba, opción A, decide sus placas aparte).</description></item>
     /// <item><description>«Ponerse al día» rehace las placas en cada boya (<see cref="ShowProgressAt"/>): cuando cambian los mundos
     /// futuros (un mundo deja de serlo), las placas se vuelven a colocar con el encuadre de ese momento (antes, la del mundo
