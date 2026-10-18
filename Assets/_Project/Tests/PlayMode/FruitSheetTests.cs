@@ -343,7 +343,7 @@ namespace AF.Tests.PlayMode
             SettingsScreen settings = boot.SettingsView!;
             FactCatalog catalog = boot.FruitFacts!.Catalog;
             Assert.That(settings.AboutShown, Is.True, "Sobre la Amazonía, a la vista");
-            Assert.That(settings.IdleHintSlot.gameObject.activeSelf, Is.False, "el hueco de MO3 sigue oculto");
+            Assert.That(settings.IdleHintSlot.gameObject.activeSelf, Is.True, "la fila de MO3, a la vista, antes de Sobre la Amazonía");
             Assert.That(settings.AboutTitle, Is.EqualTo("Sobre la Amazonía"));
             Assert.That(settings.FruitsTitle, Is.EqualTo("Frutas del río"));
             Assert.That(settings.FruitCount, Is.EqualTo(catalog.Series.Count), "una ficha por serie del calendario");

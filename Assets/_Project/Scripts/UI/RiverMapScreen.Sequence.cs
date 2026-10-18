@@ -46,9 +46,9 @@ namespace AF.UI
     /// del <see cref="L10DimHideCover"/> (o el bocadillo o la placa, opacos, lo pisan de verdad), no se ven: ningún rótulo a medio
     /// tapar. Salvo la placa del mundo de destino (el del 11, el de «Jugar · Nivel 11» y el viaje de la canoa): se ve entera
     /// mientras sea un mundo futuro (hasta que la canoa llega a Santarém, su gran parada) y, si pisa la canoa en Belém con su
-    /// mástil y sus banderas (con <see cref="L10DimMarginDp"/> de margen), sube hasta quedar
-    /// <see cref="L10DestinationClearDp"/> dp por encima de lo alto del mástil, sin salir de la vista; al acabar, vuelve a su
-    /// sitio.</para>
+    /// mástil y sus banderas o el bocadillo (con <see cref="L10DimMarginDp"/> de margen), sube hasta quedar
+    /// <see cref="L10DestinationClearDp"/> dp por encima de lo alto de lo que pisa, sin salir de la vista (los rótulos que pisa
+    /// ahí se atenúan como los de la canoa); al acabar, vuelve a su sitio.</para>
     /// <para><b>Con <c>max_level</c> &gt; 10</b> y el Mapa sin ver (un perfil de antes del Mapa o <c>af_max_level</c>), la canoa
     /// «se pone al día» hasta <c>max_level</c> y sale del encuadre (que es el del 10: la casa, Belém y Santarém); en el juego normal
     /// (ganar el 10 y luego Siguiente, Inicio o cerrar la app) no pasa [P].</para>
@@ -161,6 +161,7 @@ namespace AF.UI
         private bool _seqDestMoved;
         private Vector2 _seqDestBase;
         private Vector2 _seqDestShifted;
+        private Rect _seqDestBox; // su caja (dp del lienzo de la UI) si la secuencia la subió: los rótulos que pisa se atenúan
 
         // La cabeza de TiTino en el rig de la casa (para el pico del bocadillo), buscada una vez.
         private RectTransform? _seqSlothHead;
@@ -788,7 +789,7 @@ namespace AF.UI
             }
 
             int plateEnd = _seqObstacleCount;
-            LiftL10Destination(canoeFrom, canoeTo, viewTop);
+            LiftL10Destination(canoeFrom, canoeTo, baseCount, bubbleEnd, viewTop);
             _seqDestIndex = -1;
             int countries = _countries.Count;
             int n = countries + _silhouettes.Count;
@@ -878,6 +879,18 @@ namespace AF.UI
                 }
             }
 
+            if (_seqDestMoved)
+            {
+                // La placa del mundo de destino, subida (LiftL10Destination): como la casa y la canoa.
+                Rect o = _seqDestBox;
+                float w = Mathf.Min(box.xMax, o.xMax + L10DimMarginDp) - Mathf.Max(box.xMin, o.xMin - L10DimMarginDp);
+                float h = Mathf.Min(box.yMax, o.yMax + L10DimMarginDp) - Mathf.Max(box.yMin, o.yMin - L10DimMarginDp);
+                if (w > 0f && h > 0f)
+                {
+                    covered += w * h;
+                }
+            }
+
             if (covered <= 0f)
             {
                 return 1f;
@@ -934,10 +947,12 @@ namespace AF.UI
         }
 
         // La placa del mundo de destino (el del nivel 11: «Jugar · Nivel 11» y el viaje de la canoa) en esta secuencia. Si su caja
-        // corta la de la canoa con su mástil y sus banderas donde están ahora (las piezas [from, to) de _seqObstacles,
-        // con L10DimMarginDp de margen), sube hasta quedar L10DestinationClearDp por encima de lo más alto de ellas, sin que su
-        // borde de arriba pase de viewTop. Sin asignaciones.
-        private void LiftL10Destination(int from, int to, float viewTop)
+        // corta la de la canoa con su mástil y sus banderas donde están ahora (las piezas [from, to) de _seqObstacles) o el
+        // bocadillo de TiTino (las piezas [bubbleFrom, bubbleTo); arreglo de la fusión de la ola 6: desde FX7 la placa del mundo 2
+        // se aparta del lleno y quedaba bajo el bocadillo), con L10DimMarginDp de margen, sube hasta quedar L10DestinationClearDp
+        // por encima de lo más alto de lo que pisa, sin que su borde de arriba pase de viewTop. Los rótulos que pisa ahí se
+        // atenúan como los de la casa y la canoa (L10DimFor, con _seqDestBox). Sin asignaciones.
+        private void LiftL10Destination(int from, int to, int bubbleFrom, int bubbleTo, float viewTop)
         {
             _seqDestPlate = null;
             int world = WorldTable.WorldOf(L10SequenceRule.Level + 1);
@@ -951,31 +966,62 @@ namespace AF.UI
             }
 
             RectTransform? plate = _seqDestPlate;
-            if (plate == null || from >= to)
+            if (plate == null || (from >= to && bubbleFrom >= bubbleTo))
             {
                 return;
             }
 
             Rect box = RootBox(plate);
-            float gearTop = float.MaxValue;
-            bool hit = false;
-            for (int i = from; i < to; i++)
-            {
-                Rect o = _seqObstacles[i];
-                gearTop = Mathf.Min(gearTop, o.yMin);
-                var grown = Rect.MinMaxRect(o.xMin - L10DimMarginDp, o.yMin - L10DimMarginDp, o.xMax + L10DimMarginDp, o.yMax + L10DimMarginDp);
-                hit |= box.Overlaps(grown);
-            }
-
             float localH = plate.rect.height;
-            if (!hit || localH <= 0f || box.height <= 0f)
+            if (localH <= 0f || box.height <= 0f)
             {
                 return;
             }
 
-            float newTop = Mathf.Max(viewTop, gearTop - L10DestinationClearDp - box.height);
-            float dy = newTop - box.yMin; // en dp de la UI, y hacia abajo: < 0 sube
-            if (dy >= -0.01f)
+            // Sube por encima de lo que pisa; si ahí pisa otra pieza (la canoa sobre el bocadillo o al revés), otra vez, por encima
+            // de ella (como mucho una vez por pieza).
+            float gearTop = float.MaxValue;
+            for (int i = from; i < to; i++)
+            {
+                gearTop = Mathf.Min(gearTop, _seqObstacles[i].yMin);
+            }
+
+            float top = box.yMin;
+            bool moved = false;
+            for (int round = 0; round <= (to - from) + (bubbleTo - bubbleFrom); round++)
+            {
+                var at = new Rect(box.xMin, top, box.width, box.height);
+                float hitTop = float.MaxValue;
+                if (L10Hits(at, from, to))
+                {
+                    hitTop = gearTop; // la canoa con todo su equipo, como antes
+                }
+
+                for (int i = bubbleFrom; i < bubbleTo; i++)
+                {
+                    if (L10Hits(at, i, i + 1))
+                    {
+                        hitTop = Mathf.Min(hitTop, _seqObstacles[i].yMin);
+                    }
+                }
+
+                if (hitTop == float.MaxValue)
+                {
+                    break;
+                }
+
+                float next = Mathf.Max(viewTop, hitTop - L10DestinationClearDp - box.height);
+                if (next >= top - 0.01f)
+                {
+                    break; // no puede subir más (viewTop)
+                }
+
+                top = next;
+                moved = true;
+            }
+
+            float dy = top - box.yMin; // en dp de la UI, y hacia abajo: < 0 sube
+            if (!moved || dy >= -0.01f)
             {
                 return;
             }
@@ -983,7 +1029,24 @@ namespace AF.UI
             _seqDestBase = plate.anchoredPosition;
             _seqDestShifted = _seqDestBase + new Vector2(0f, -dy * localH / box.height); // en el contenido, y hacia arriba
             plate.anchoredPosition = _seqDestShifted;
+            _seqDestBox = RootBox(plate);
             _seqDestMoved = true;
+        }
+
+        // La caja at corta alguna de las piezas [from, to) de _seqObstacles, con L10DimMarginDp de margen. Sin asignaciones.
+        private bool L10Hits(Rect at, int from, int to)
+        {
+            for (int i = from; i < to; i++)
+            {
+                Rect o = _seqObstacles[i];
+                var grown = Rect.MinMaxRect(o.xMin - L10DimMarginDp, o.yMin - L10DimMarginDp, o.xMax + L10DimMarginDp, o.yMax + L10DimMarginDp);
+                if (at.Overlaps(grown))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // La silueta k sigue siendo la del mundo de destino: «ponerse al día» rehace las siluetas en cada boya
