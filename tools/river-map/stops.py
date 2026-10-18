@@ -88,6 +88,7 @@ from riverdata import (  # noqa: E402  (la ruta de la herramienta va antes)
     COUNTRY_NAMES,
     GENERAR_MAPA_PATH,
     FACTS_PATH,
+    MAP_PATH,
     FACTS_REL,
     OVERRIDES_PATH,
     ROOT,
@@ -687,10 +688,15 @@ def validate(doc: dict, wt: WorldTable, model: "geometry.Model | None" = None, r
     return errors
 
 
-def build(source: dict, overrides: dict, wt: WorldTable) -> tuple[dict | None, list[str]]:
-    """Paradas con sus rutas (geometry.py) y todas las reglas, candidatos de la propuesta §5.1 bis incluidos."""
+def build(source: dict, overrides: dict, wt: WorldTable, geo: "geometry.Geometry | None" = None,
+          map_path: Path = MAP_PATH) -> tuple[dict | None, list[str]]:
+    """Paradas con sus rutas (geometry.py) y todas las reglas, candidatos de la propuesta §5.1 bis incluidos. Las rutas van
+    sobre la geometria geo o, sin ella, sobre la de river_map_v1.json commiteado (M5.1: la regenera geometry.py desde las
+    descargas; las paradas no dependen de ellas)."""
     try:
-        model, errors = geometry.build_model(source)
+        if geo is None:
+            geo = geometry.committed_geometry(map_path)
+        model, errors = geometry.build_model(source, geo)
     except geometry.GeometryError as e:
         return None, [f"geometria: {e}"]
     errors = [f"geometria: {e}" for e in errors]
@@ -1254,9 +1260,10 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
     return rows, errors
 
 
-def build_all(source: dict, overrides: dict, wt: WorldTable) -> tuple[dict | None, dict, list[str]]:
+def build_all(source: dict, overrides: dict, wt: WorldTable, geo: "geometry.Geometry | None" = None,
+              map_path: Path = MAP_PATH) -> tuple[dict | None, dict, list[str]]:
     """Paradas y textos: los textos solo se generan sobre un documento de paradas valido."""
-    doc, errors = build(source, overrides, wt)
+    doc, errors = build(source, overrides, wt, geo, map_path)
     if errors or doc is None:
         return doc, {}, errors
     rows, errors = build_texts(doc, source, overrides)
@@ -1401,6 +1408,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--worldtable", type=Path, default=WORLDTABLE_PATH, help="WorldTable.cs del cliente")
     ap.add_argument("--out", type=Path, default=STOPS_PATH, help="river_stops_v1.json que se escribe o se compara")
     ap.add_argument("--facts", type=Path, default=FACTS_PATH, help="facts.csv cuyo bloque map.* se escribe o se compara")
+    ap.add_argument("--map", type=Path, default=MAP_PATH,
+                    help="river_map_v1.json cuyas lineas dan las rutas (at y leg); por defecto, el commiteado (M5.1)")
     args = ap.parse_args(argv)
 
     try:
@@ -1411,7 +1420,7 @@ def main(argv: list[str] | None = None) -> int:
         emit(f"FAIL  {e}")
         return 1
 
-    doc, rows, errors = build_all(source, overrides, wt)
+    doc, rows, errors = build_all(source, overrides, wt, map_path=args.map)
     if errors:
         for err in errors:
             emit(f"FAIL  {err}")

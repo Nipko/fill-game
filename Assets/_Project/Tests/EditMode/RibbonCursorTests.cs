@@ -82,10 +82,14 @@ namespace AF.Tests.EditMode
             Assert.That(Vector2.Distance(cursor.TangentAtS(0f), first.normalized), Is.LessThan(1e-5f), "tangente unitaria, río abajo");
             Assert.That(cursor.TangentAtS(1f).magnitude, Is.EqualTo(1f).Within(1e-5f));
 
-            RiverLine atacuari = _map.Line("atacuari")!;
-            var single = new PolylineCursor(atacuari);
+            // Una línea de un solo punto (solo la boca). Desde M5.1 el archivo real ya no tiene ninguna (el Atacuari sale de
+            // HydroRIVERS): un documento mínimo con una.
+            RiverMap tiny = RiverMapReader.Read(RiverMapReaderTests.Doc(lines: RiverMapReaderTests.Lines(RiverMapReaderTests.Main(),
+                RiverMapReaderTests.Trib(pts: RiverMapReaderTests.EncodePoints(new ushort[] { 20000, 40000 })))));
+            RiverLine mouthOnly = tiny.Line("negro")!;
+            var single = new PolylineCursor(mouthOnly);
             Assert.That(single.Length, Is.EqualTo(0f));
-            Assert.That(single.PointAtS(0.5f), Is.EqualTo(new Vector2(atacuari.X(0), atacuari.Y(0))), "solo la boca");
+            Assert.That(single.PointAtS(0.5f), Is.EqualTo(new Vector2(mouthOnly.X(0), mouthOnly.Y(0))), "solo la boca");
             Assert.That(single.TangentAtS(0.5f), Is.EqualTo(new Vector2(0f, 1f)), "sin tramos: río abajo");
         }
 
@@ -154,8 +158,8 @@ namespace AF.Tests.EditMode
                 Vector2 end = new PolylineCursor(line).Point(line.PointCount - 1);
                 float gapDp = Vector2.Distance(host, end) * Basin;
 
-                // ≤ 15 km = 2 dp en la Cuenca (geometry.py, TOLERANCE_KM); el Pacaya es la excepción pendiente del dueño (37,1 km,
-                // PENDING_MOUTH_KM: su boca está en el canal de Puinahua, que el cauce de respaldo no dibuja).
+                // ≤ 15 km = 2 dp en la Cuenca (geometry.py, TOLERANCE_KM); el Pacaya es la excepción pendiente del dueño (23,8 km
+                // con el cauce de HydroRIVERS, M5.1; PENDING_MOUTH_KM: su boca está en el canal de Puinahua, que el cauce no dibuja).
                 float limit = line.Id == "pacaya" ? 4.5f : 2f;
                 Assert.That(gapDp, Is.LessThanOrEqualTo(limit), line.Id + " desemboca en " + _map.Lines[mouth.Line].Id + " s=" + mouth.S);
             }

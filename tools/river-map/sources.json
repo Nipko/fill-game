@@ -1,0 +1,209 @@
+{
+  "format": "af-river-map-sources/1",
+  "dir": "tools/river-map/source",
+  "note": "Descargas de la geometria de produccion del Mapa del rio (D-013, punto 5, Q11-A; M5.1). No se versionan (.gitignore); geometry.py comprueba su tamanno y su SHA-256 antes de usarlas. used = lo que lee la geometria: si falta uno, o estan todas o ninguna. Sin ellas, geometry.py --check comprueba lo commiteado.",
+  "datasets": [
+    {
+      "id": "ne10m",
+      "name": "Natural Earth 1:10m physical vectors: rivers_lake_centerlines (5.0.0), land (5.1.1) y coastline (5.0.0-pre9)",
+      "url": "https://www.naturalearthdata.com/downloads/10m-physical-vectors/",
+      "downloaded": "2026-10-18",
+      "license": "Dominio publico (Natural Earth, terms of use): uso libre, sin obligacion de atribuir [V ne_terms, propuesta del Mapa §3.6].",
+      "used_for": "land: la tierra del Mapa (continente recortado a la caja e islas >= 500 km2); rivers_lake_centerlines: el Casiquiare (bifurcacion que HydroRIVERS no representa). coastline: descargada con las demas, sin uso (su linea es el borde de land)."
+    },
+    {
+      "id": "hydrorivers",
+      "name": "HydroRIVERS v1.0, Sudamerica (HydroRIVERS_v10_sa) y su documentacion tecnica (HydroRIVERS_TechDoc_v10.pdf)",
+      "url": "https://www.hydrosheds.org/products/hydrorivers",
+      "downloaded": "2026-10-18",
+      "zip_sha256_prefix": "38bfdcdf",
+      "license": "HydroSHEDS License Agreement (https://www.hydrosheds.org): uso no comercial y comercial libre; atribuciones, redistribucion y garantias, en el acuerdo (TechDoc v1.0, §4.1). PENDIENTE DEL DUENNO: leer el acuerdo y fijar el texto de atribucion exacto que exige y donde va en el juego (aun no hay pantalla de creditos).",
+      "citation": "Lehner, B., Grill G. (2013): Global river hydrography and network routing: baseline data and new approaches to study the world's large river systems. Hydrological Processes, 27(15): 2171-2186. Data is available at www.hydrosheds.org.",
+      "used_for": "Las lineas del Mapa (src = hydrorivers): el cauce hasta Gurupa, los afluentes, los de paso y los rios locales."
+    }
+  ],
+  "files": [
+    {
+      "name": "HydroRIVERS_TechDoc_v10.pdf",
+      "dataset": "hydrorivers",
+      "bytes": 534461,
+      "sha256": "4afcdb2b54b93793a0196c2795ffe8ba6e7364a2ef31ecc2f783a7dd3b5df573",
+      "used": false
+    },
+    {
+      "name": "HydroRIVERS_v10_sa.dbf",
+      "dataset": "hydrorivers",
+      "bytes": 166959671,
+      "sha256": "b7849c15d3ca2bd9a1e88acc8c8ad2951c9e2b0c34b0d1f8d17b2109e293b8a6",
+      "used": true
+    },
+    {
+      "name": "HydroRIVERS_v10_sa.prj",
+      "dataset": "hydrorivers",
+      "bytes": 145,
+      "sha256": "a02a27b1d1982c8516d83398e85a3c8b1aef1713c13ef4d84d7bde17430c07c4",
+      "used": false
+    },
+    {
+      "name": "HydroRIVERS_v10_sa.shp",
+      "dataset": "hydrorivers",
+      "bytes": 212327612,
+      "sha256": "9d233f98052410ef731c31baea68de6a9c69972cda0f59c0bd01cc80f0daa2ec",
+      "used": true
+    },
+    {
+      "name": "HydroRIVERS_v10_sa.shx",
+      "dataset": "hydrorivers",
+      "bytes": 12967804,
+      "sha256": "f9e26a747e323e348702e0da2ec606adc945aa48f09dc150aecfaa1fd6dff935",
+      "used": true
+    },
+    {
+      "name": "ne_10m_coastline.README.html",
+      "dataset": "ne10m",
+      "bytes": 37038,
+      "sha256": "0cfb26be07cf31250743ba848194796a9f0ca567feb6999b681280afa2c99086",
+      "used": false
+    },
+    {
+      "name": "ne_10m_coastline.VERSION.txt",
+      "dataset": "ne10m",
+      "bytes": 12,
+      "sha256": "68ccb2a7210ff8601fb6e8f50cfea6c25a403bb8f2bd7cecbc2063afc7ed1f95",
+      "used": false
+    },
+    {
+      "name": "ne_10m_coastline.cpg",
+      "dataset": "ne10m",
+      "bytes": 5,
+      "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824",
+      "used": false
+    },
+    {
+      "name": "ne_10m_coastline.dbf",
+      "dataset": "ne10m",
+      "bytes": 392765,
+      "sha256": "9ccc214342fe400bf8c7d91d7a5b276b0457b0ada03e8d4be16ac5ba13037f3b",
+      "used": false
+    },
+    {
+      "name": "ne_10m_coastline.prj",
+      "dataset": "ne10m",
+      "bytes": 145,
+      "sha256": "a02a27b1d1982c8516d83398e85a3c8b1aef1713c13ef4d84d7bde17430c07c4",
+      "used": false
+    },
+    {
+      "name": "ne_10m_coastline.shp",
+      "dataset": "ne10m",
+      "bytes": 6806860,
+      "sha256": "459a4a97c09db19aadf5244026612de9d43748be27f83a360242b99f7fabb3c1",
+      "used": false
+    },
+    {
+      "name": "ne_10m_coastline.shx",
+      "dataset": "ne10m",
+      "bytes": 33164,
+      "sha256": "f873afee7f56779ce52253f740ec251c2f12244aea911dc40f0a85d75de8d5f2",
+      "used": false
+    },
+    {
+      "name": "ne_10m_land.README.html",
+      "dataset": "ne10m",
+      "bytes": 37096,
+      "sha256": "f22176c0b44403fd7b7381a404562007a595c477ca72d23d9b7ed3949e948b12",
+      "used": false
+    },
+    {
+      "name": "ne_10m_land.VERSION.txt",
+      "dataset": "ne10m",
+      "bytes": 7,
+      "sha256": "548358969090d629b41888f5fe664ac31b7203dfd849f7c1ef820ac055b62191",
+      "used": false
+    },
+    {
+      "name": "ne_10m_land.cpg",
+      "dataset": "ne10m",
+      "bytes": 5,
+      "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824",
+      "used": true
+    },
+    {
+      "name": "ne_10m_land.dbf",
+      "dataset": "ne10m",
+      "bytes": 350,
+      "sha256": "e422520372e65c6fb8220888580e5331d04699bcd71c27e53ad42e241a531cbd",
+      "used": true
+    },
+    {
+      "name": "ne_10m_land.prj",
+      "dataset": "ne10m",
+      "bytes": 145,
+      "sha256": "a02a27b1d1982c8516d83398e85a3c8b1aef1713c13ef4d84d7bde17430c07c4",
+      "used": false
+    },
+    {
+      "name": "ne_10m_land.shp",
+      "dataset": "ne10m",
+      "bytes": 7166824,
+      "sha256": "4cad3a49bc75c1a4c2f3d7efae04f2f8e63151c96764b2658effabf524331fa6",
+      "used": true
+    },
+    {
+      "name": "ne_10m_land.shx",
+      "dataset": "ne10m",
+      "bytes": 188,
+      "sha256": "f3b02a190c3020eeafd0f48de982619826b57ecd853cbc68e4fc049652891a04",
+      "used": true
+    },
+    {
+      "name": "ne_10m_rivers_lake_centerlines.README.html",
+      "dataset": "ne10m",
+      "bytes": 48596,
+      "sha256": "611c5c993f7fa7495f4c78046df9d97db244533ccfd2f0f80746d27c97db9891",
+      "used": false
+    },
+    {
+      "name": "ne_10m_rivers_lake_centerlines.VERSION.txt",
+      "dataset": "ne10m",
+      "bytes": 7,
+      "sha256": "30d0ad7c0f48ffeaaf390112b5b95823c7efa1da3ee5abc116eb481989340b58",
+      "used": false
+    },
+    {
+      "name": "ne_10m_rivers_lake_centerlines.cpg",
+      "dataset": "ne10m",
+      "bytes": 5,
+      "sha256": "3ad3031f5503a4404af825262ee8232cc04d4ea6683d42c5dd0a2f2a27ac9824",
+      "used": true
+    },
+    {
+      "name": "ne_10m_rivers_lake_centerlines.dbf",
+      "dataset": "ne10m",
+      "bytes": 1991273,
+      "sha256": "68079fde5fde6167d0c7c4f03e498164badcc3b687a93c436278ade83882b564",
+      "used": true
+    },
+    {
+      "name": "ne_10m_rivers_lake_centerlines.prj",
+      "dataset": "ne10m",
+      "bytes": 145,
+      "sha256": "a02a27b1d1982c8516d83398e85a3c8b1aef1713c13ef4d84d7bde17430c07c4",
+      "used": false
+    },
+    {
+      "name": "ne_10m_rivers_lake_centerlines.shp",
+      "dataset": "ne10m",
+      "bytes": 4208092,
+      "sha256": "f9a1cf6d9f58c0a6f182a7f25771a03e0a48026253d4484aab782b2586354d78",
+      "used": true
+    },
+    {
+      "name": "ne_10m_rivers_lake_centerlines.shx",
+      "dataset": "ne10m",
+      "bytes": 11884,
+      "sha256": "ab7b792de019d3a49ab1dd9960249c367cc94e43b8d5f577732892ec6107a3b2",
+      "used": true
+    }
+  ]
+}

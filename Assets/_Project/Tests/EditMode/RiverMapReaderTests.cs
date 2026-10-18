@@ -41,7 +41,8 @@ namespace AF.Tests.EditMode
             Assert.That(amazonas.Id, Is.EqualTo("amazonas"));
             Assert.That(amazonas.Kind, Is.EqualTo(RiverLineKind.Main));
             Assert.That(amazonas.Class, Is.EqualTo(1));
-            Assert.That(amazonas.PointCount, Is.EqualTo(105));
+            Assert.That(amazonas.Source, Is.EqualTo("hydrorivers"), "geometría de producción (M5.1)");
+            Assert.That(amazonas.PointCount, Is.EqualTo(1213), "HydroRIVERS simplificado por vista y la cola del estuario");
             Assert.That(amazonas.Mouth, Is.Null);
             Assert.That(amazonas.Water.Count, Is.EqualTo(2));
             Assert.That(amazonas.Water[0].Water, Is.EqualTo(RiverWater.Andean));
@@ -55,22 +56,24 @@ namespace AF.Tests.EditMode
             Assert.That(tapajos.Kind, Is.EqualTo(RiverLineKind.Tributary));
             Assert.That(tapajos.Class, Is.EqualTo(2));
             Assert.That(tapajos.Mouth!.Value.Line, Is.EqualTo(0), "el Tapajós desemboca en el cauce");
-            Assert.That(tapajos.Mouth!.Value.S, Is.EqualTo(0.855387f));
-            Assert.That(tapajos.FillOnPass, Is.EqualTo(0.1455f));
+            Assert.That(tapajos.Mouth!.Value.S, Is.EqualTo(0.873776f));
+            Assert.That(tapajos.FillOnPass, Is.EqualTo(0.1222f));
             Assert.That(tapajos.WaterAt(0.5f), Is.EqualTo(RiverWater.Clear));
 
-            Assert.That(map.Line("atacuari")!.PointCount, Is.EqualTo(1), "de algunos ríos locales solo se conoce la boca");
-            Assert.That(map.Line("atacuari")!.Length, Is.EqualTo(0f));
+            Assert.That(map.Line("atacuari")!.PointCount, Is.EqualTo(23), "de la investigación solo la boca; el trazado, de HydroRIVERS");
+            Assert.That(map.Line("atacuari")!.Length, Is.GreaterThan(0f));
+            Assert.That(map.Line("casiquiare")!.Source, Is.EqualTo("ne10m"), "una bifurcación que HydroRIVERS no representa");
+            Assert.That(map.Line("para")!.Source, Is.EqualTo("rio_amazonas"), "el ramal del Pará, de la investigación");
             Assert.That(map.Line("pacaya")!.Water.Count, Is.EqualTo(0), "agua sin comprobar: solo vidrio");
             Assert.That(map.Line("pacaya")!.WaterAt(0.5f), Is.EqualTo(RiverWater.None));
 
-            Assert.That(map.Land.VertexCount, Is.EqualTo(40));
-            Assert.That(map.Land.TriangleCount, Is.EqualTo(38));
+            Assert.That(map.Land.VertexCount, Is.EqualTo(1038), "Natural Earth: el continente recortado y sus islas (M5.1)");
+            Assert.That(map.Land.TriangleCount, Is.EqualTo(1022), "un anillo de n vértices da n − 2 triángulos: 1.038 − 2 × 8");
             Assert.That(map.Land.Zones.Count, Is.EqualTo(1));
             Assert.That(map.Land.Zones[0].Tile, Is.EqualTo("canopy"));
             Assert.That(map.Insets.Count, Is.EqualTo(0), "la 1.0 deja los recuadros vacíos");
             Assert.That(map.Lines[map.Home.Line].Id, Is.EqualTo("para"), "la casa de TiTino, en la bahía de Guajará");
-            Assert.That(map.Home.S, Is.EqualTo(0.727595f));
+            Assert.That(map.Home.S, Is.EqualTo(0.728669f), "M5.1: el ramal arranca en un vértice del cauce, a ~2 km de Gurupá");
             Assert.That(map.Labels.Count, Is.EqualTo(9));
             Assert.That(map.Labels[0].Country, Is.EqualTo("BR"));
             Assert.That(map.Labels[0].NameKey, Is.EqualTo("map.country.br.name"));
@@ -133,21 +136,21 @@ namespace AF.Tests.EditMode
         [Test]
         public void RealFile_FirstPoints_MatchGeometryPy()
         {
-            // Valores de geometry.decode_points sobre el archivo real (amazonas y land.verts).
+            // Valores de geometry.decode_points sobre el archivo real (amazonas y land.verts; M5.1).
             string json = File.ReadAllText(RealMapPath);
             ushort[] amazonas = RawPoints(json, "amazonas");
-            Assert.That(amazonas[0], Is.EqualTo(6522));
-            Assert.That(amazonas[1], Is.EqualTo(16479));
-            Assert.That(amazonas[2], Is.EqualTo(7400));
-            Assert.That(amazonas[3], Is.EqualTo(16611));
-            Assert.That(amazonas[4], Is.EqualTo(7924));
-            Assert.That(amazonas[5], Is.EqualTo(16662));
+            Assert.That(amazonas[0], Is.EqualTo(6586));
+            Assert.That(amazonas[1], Is.EqualTo(16466));
+            Assert.That(amazonas[2], Is.EqualTo(6832));
+            Assert.That(amazonas[3], Is.EqualTo(16363));
+            Assert.That(amazonas[4], Is.EqualTo(6974));
+            Assert.That(amazonas[5], Is.EqualTo(16454));
 
             RiverMap map = RiverMapReader.Read(json);
             Assert.That(map.Land.Xy[0], Is.EqualTo(1f));
-            Assert.That(map.Land.Xy[1], Is.EqualTo((float)(42459 / 65535.0 * map.Frame.Aspect)).Within(1e-6f));
-            Assert.That(map.Land.Xy[2], Is.EqualTo((float)(65014 / 65535.0)).Within(1e-7f));
-            Assert.That(map.Land.Xy[3], Is.EqualTo((float)(43382 / 65535.0 * map.Frame.Aspect)).Within(1e-6f));
+            Assert.That(map.Land.Xy[1], Is.EqualTo((float)(42710 / 65535.0 * map.Frame.Aspect)).Within(1e-6f));
+            Assert.That(map.Land.Xy[2], Is.EqualTo((float)(65291 / 65535.0)).Within(1e-7f));
+            Assert.That(map.Land.Xy[3], Is.EqualTo((float)(42562 / 65535.0 * map.Frame.Aspect)).Within(1e-6f));
             for (int i = 0; i < map.Land.Triangles.Length; i++)
             {
                 Assert.That(map.Land.Triangles[i], Is.InRange(0, map.Land.VertexCount - 1));
@@ -175,14 +178,18 @@ namespace AF.Tests.EditMode
             Assert.That(map.Lines[santarem.Path[1].Line].Id, Is.EqualTo("amazonas"));
             Assert.That(santarem.Path[1].S1, Is.LessThan(santarem.Path[1].S0), "río arriba, s decrece");
             Assert.That(santarem.Via, Is.EqualTo(new[] { "breves", "gurupa", "boca_del_xingu", "monte_alegre" }));
-            Assert.That(santarem.Mouths.Count, Is.EqualTo(2));
+            // M5.1: en HydroRIVERS la boca del Tapajós queda ~3 km río arriba del pie de Santarém; se llena al seguir
+            // Tapajós arriba (el leg del 21 lo recorre).
+            Assert.That(santarem.Mouths.Count, Is.EqualTo(1));
             Assert.That(map.Lines[santarem.Mouths[0]].Id, Is.EqualTo("xingu"));
-            Assert.That(map.Lines[santarem.Mouths[1]].Id, Is.EqualTo("tapajos"));
 
-            // Alter do Chão sale de Santarém por la boca del Tapajós: el mismo punto del agua en dos líneas.
+            // Alter do Chão sale de Santarém, en el cauce, sube hasta la boca del Tapajós (M5.1: ~3 km río arriba) y entra
+            // por ella: el mismo punto del agua en dos líneas.
             RiverStopRoute alter = routes.At(2)!;
-            Assert.That(map.Lines[alter.Path[0].Line].Id, Is.EqualTo("tapajos"));
-            Assert.That(alter.Path[0].S0, Is.EqualTo(1f));
+            Assert.That(map.Lines[alter.Path[0].Line].Id, Is.EqualTo("amazonas"));
+            Assert.That(map.Lines[alter.Path[1].Line].Id, Is.EqualTo("tapajos"));
+            Assert.That(alter.Path[1].S0, Is.EqualTo(1f));
+            Assert.That(alter.Path[0].S1, Is.EqualTo(map.Line("tapajos")!.Mouth!.Value.S));
             Assert.That(map.Lines[santarem.At.Line].Id, Is.EqualTo("amazonas"));
 
             for (int n = 0; n < routes.Count; n++)
@@ -205,13 +212,14 @@ namespace AF.Tests.EditMode
             RiverStopRoute heath = routes.At(30)!;
             Assert.That(heath.Id, Is.EqualTo("puerto_heath"));
             Assert.That(heath.Via[heath.Via.Count - 1], Is.EqualTo("teotonio"), "el relevo del guía en el viaje del 300 (Q18-A)");
-            // M4.5b: el 500 baja el Beni y sube el Mamoré por Villa Bella (las dos bocas, el mismo punto del Madeira), y el
-            // viaje del 560 vuelve a pasar por Teotônio, Madeira abajo.
+            // M4.5b: el 500 baja el Beni y sube el Mamoré por Villa Bella (en HydroRIVERS, M5.1, sus bocas quedan a un tramo
+            // de ~0,5 km del Madeira), y el viaje del 560 vuelve a pasar por Teotônio, Madeira abajo.
             RiverStopRoute guayaramerin = routes.At(50)!;
             Assert.That(guayaramerin.Id, Is.EqualTo("guayaramerin"));
-            Assert.That(guayaramerin.Path.Count, Is.EqualTo(2));
+            Assert.That(guayaramerin.Path.Count, Is.EqualTo(3));
             Assert.That(map.Lines[guayaramerin.Path[0].Line].Id, Is.EqualTo("beni"));
-            Assert.That(map.Lines[guayaramerin.Path[1].Line].Id, Is.EqualTo("mamore"));
+            Assert.That(map.Lines[guayaramerin.Path[1].Line].Id, Is.EqualTo("madeira"));
+            Assert.That(map.Lines[guayaramerin.Path[2].Line].Id, Is.EqualTo("mamore"));
             RiverStopRoute jenaro = routes.At(56)!;
             Assert.That(jenaro.Id, Is.EqualTo("jenaro_herrera"));
             Assert.That(jenaro.Via[0], Is.EqualTo("teotonio"), "Rosa vuelve en el viaje del 560 (Q18-A)");

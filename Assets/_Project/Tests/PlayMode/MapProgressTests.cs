@@ -71,7 +71,9 @@ namespace AF.Tests.PlayMode
             float anavilhanas = routes.At(6)!.At.S;
             Assert.That(map.FillFrom(negro), Is.LessThanOrEqualTo(manaos), "Manaos, lleno");
             Assert.That(map.FillFrom(negro), Is.GreaterThan(anavilhanas), "Anavilhanas, todavía no");
-            Assert.That(map.FillFrom(amazonas), Is.EqualTo(routes.At(4)!.At.S).Within(1e-6f), "el cauce, lleno hasta el Encuentro");
+            // M5.1: con HydroRIVERS la parada del Encuentro queda a 6 m río abajo de la boca del Negro (0,74886 frente a 0,748859),
+            // y el lleno llega hasta la boca: el mismo punto con la s redondeada a 6 decimales.
+            Assert.That(map.FillFrom(amazonas), Is.EqualTo(routes.At(4)!.At.S).Within(2e-6f), "el cauce, lleno hasta el Encuentro");
             Assert.That(map.FillFrom(amazonas), Is.GreaterThan(routes.At(7)!.At.S), "Tefé, todavía no");
             Assert.That(map.FillRibbon(negro).gameObject.activeSelf, Is.True);
             Assert.That(map.FillRibbon(negro).Look, Is.EqualTo(RibbonLook.Water));

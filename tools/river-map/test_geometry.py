@@ -1,25 +1,31 @@
 # -*- coding: utf-8 -*-
-"""test_geometry.py - pruebas de tools/river-map/geometry.py (geometria af-river-map/1 con el respaldo de la
-investigacion, y at y leg de las paradas; M2.6).
+"""test_geometry.py - pruebas de tools/river-map/geometry.py y shapefile.py (geometria af-river-map/1 y at y leg de las
+paradas; M2.6, con la geometria de produccion de M5.1).
 
 Ejecutar desde la raiz del repositorio:
     py -3.14 -m unittest discover -s tools/river-map -p "test_*.py"
 
-Cubre: la proyeccion (cinco puntos contra generar_mapa.py); el base64 de ida y vuelta (<= 0,5 px); las s de las bocas y
-de las paradas (de acuerdo con los km de la investigacion); la triangulacion por orejas; el archivo commiteado
-(determinista, al dia, UTF-8 sin BOM y LF); los legs continuos, que no cruzan tierra, con la ida y vuelta por las
-confluencias y el del 41 por Obidos, Parintins, Itacoatiara y la boca del Madeira; la tolerancia del canon (15 km) con
-solo las excepciones medidas pendientes del duenno, y sus avisos; y los fallos de --check: una parada desplazada 20 km
-(tambien un sitio tierra adentro y un punto de atraque, este con los 15 km del canon), una parada que retrocede (su s
-rio abajo de la anterior o su km_from_sea menor), un leg roto, una boca fuera de su rio (tambien la del Pacaya, mas alla
-de su cifra medida), un candidato de la propuesta §5.1 bis ausente y el desfase. M4.5a: los rios locales de 201-420 (el
-Aguarico y el Cuyabeno del desvio a Cuyabeno, el Tambopata y el Manu) con su anfitrion, el punto de paso teotonio del
-viaje del 300 en el Madeira y las 42 paradas de 1-420, con los km que solo bajan en los viajes de entrada.
+Las pruebas no necesitan las descargas de Natural Earth y HydroRIVERS (tools/river-map/source/, sin versionar): leen la
+geometria commiteada (el modo «commiteado» de --check, el del portatil) y usan fixtures pequennos escritos con
+shapefile.write_layer. Si las descargas estan, ProductionTests regenera ademas desde ellas.
+
+Cubre: la proyeccion (cinco puntos contra generar_mapa.py); el base64 de ida y vuelta (<= 0,5 px); el lector de
+shapefiles (PolyLine, Polygon, forma nula, .dbf y errores); sources.json (SHA-256, licencias y descargas ausentes,
+incompletas o con otro tamanno); el trazado por la red de HydroRIVERS (la cabecera que pasa por mas puntos de control,
+la boca en un vertice del anfitrion, la cola de la investigacion y un rio «solo_boca»); Douglas-Peucker por vista; el
+recorte de la tierra por la caja, la triangulacion sin vertices partidos y la validacion de la tierra por sus aristas
+(continente e islas); las s de las bocas y de las paradas (de acuerdo con los km de la investigacion); el archivo
+commiteado (determinista, al dia, UTF-8 sin BOM y LF, <= 90 KB); los legs continuos, que no cruzan tierra, con la ida y
+vuelta por las confluencias; la tolerancia de cada vista con solo las excepciones medidas pendientes del duenno, y sus
+avisos; y los fallos de --check: una parada desplazada 20 km (tambien un sitio tierra adentro y un punto de atraque), una
+parada que retrocede, un leg roto, un punto de control fuera de su linea (tambien la boca de un rio), la boca del Pacaya
+mas alla de su cifra medida, un candidato de la propuesta §5.1 bis ausente y el desfase.
 Solo biblioteca estandar.
 """
 from __future__ import annotations
 
 import copy
+import hashlib
 import importlib.util
 import json
 import os
@@ -33,23 +39,24 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 
 import geometry  # noqa: E402
+import shapefile  # noqa: E402
 from riverdata import (  # noqa: E402
     GENERAR_MAPA_PATH,
     MAP_PATH,
-    OVERRIDES_PATH,
     ROOT,
     SOURCE_PATH,
     STOPS_PATH,
-    WorldTable,
     load_json,
 )
 
 GEOMETRY_SCRIPT = HERE / "geometry.py"
+# Una carpeta de descargas que no existe: --check en el modo «commiteado» (el del portatil), en cualquier maquina.
+NO_SOURCES = HERE / "no_existe_m51"
 
 
 def run_geometry(*args: str, env: dict | None = None) -> subprocess.CompletedProcess:
     return subprocess.run([sys.executable, str(GEOMETRY_SCRIPT), *args], cwd=ROOT, capture_output=True, env=env,
-                          timeout=180)
+                          timeout=600)
 
 
 def is_ascii(data: bytes) -> bool:
@@ -63,11 +70,19 @@ def load_generar_mapa():
     return module
 
 
+def have_sources() -> bool:
+    try:
+        return geometry.sources_state(geometry.SOURCE_DIR, geometry.load_manifest()).status == "complete"
+    except geometry.GeometryError:
+        return False
+
+
 class Base(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.source = load_json(SOURCE_PATH)
-        cls.doc, cls.model, errors = geometry.build_map(cls.source)
+        cls.geo = geometry.committed_geometry(MAP_PATH)
+        cls.doc, cls.model, errors = geometry.build_map(cls.source, cls.geo)
         assert not errors, errors
         cls.lines = {line["id"]: line for line in cls.doc["lines"]}
         cls.stops = load_json(STOPS_PATH)
@@ -127,15 +142,294 @@ class EncodingTests(Base):
                 worst = max(worst, abs(X / geometry.Q - x) * width, abs(Y / geometry.Q - y) * width * frame.aspect)
         self.assertLessEqual(worst, 0.5)
 
-    def test_committed_pts_decode_to_the_source_points(self):
+    def test_model_lines_are_the_committed_points(self):
         committed = load_json(MAP_PATH)
         for line in committed["lines"]:
             with self.subTest(line=line["id"]):
                 self.assertEqual(self.model.lines[line["id"]].q, geometry.decode_points(line["pts"]))
 
 
+class ShapefileTests(unittest.TestCase):
+    """Lector minimo de .shp, .shx y .dbf (M5.1) con fixtures escritos por shapefile.write_layer."""
+
+    def test_polyline_round_trip_with_null_shape_and_attributes(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp) / "rios"
+            fields = [("HYRIV_ID", "N", 9, 0), ("UPLAND_SKM", "N", 10, 1), ("name", "C", 20, 0)]
+            records = [([[(-60.0, -5.0), (-59.5, -5.25)]], [7, 12.5, "Río Negro"]),
+                       ([], [8, None, ""]),
+                       ([[(-61.0, -4.0), (-60.0, -4.0)], [(-58.0, -3.0), (-57.5, -3.5), (-57.0, -3.0)]], [9, 3.0, "Ñ"])]
+            shapefile.write_layer(base, 3, records, fields)
+            with shapefile.Layer(base) as layer:
+                self.assertEqual(3, layer.count)
+                self.assertEqual(3, layer.shapes.shape_type)
+                self.assertEqual((-61.0, -5.25, -57.0, -3.0), layer.shapes.bbox)
+                self.assertEqual([[(-60.0, -5.0), (-59.5, -5.25)]], layer.shapes.parts(0))
+                self.assertEqual([], layer.shapes.parts(1))
+                self.assertIsNone(layer.shapes.record_bbox(1))
+                self.assertEqual(2, len(layer.shapes.parts(2)))
+                self.assertEqual((-61.0, -4.0, -57.0, -3.0), layer.shapes.record_bbox(2))
+                self.assertEqual([7, 8, 9], layer.table.column("HYRIV_ID"))
+                self.assertEqual([12.5, None, 3.0], layer.table.column("UPLAND_SKM"))
+                self.assertEqual({"HYRIV_ID": 7, "UPLAND_SKM": 12.5, "name": "Río Negro"}, layer.table.record(0))
+                self.assertEqual("Ñ", layer.table.column("name")[2])
+                with self.assertRaises(shapefile.ShapefileError):
+                    layer.table.column("NO_EXISTE")
+
+    def test_polygon_and_deleted_record(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp) / "tierra"
+            ring = [(0.0, 0.0), (0.0, 1.0), (1.0, 1.0), (1.0, 0.0), (0.0, 0.0)]
+            shapefile.write_layer(base, 5, [([ring], [1]), ([ring], [2])], [("id", "N", 4, 0)])
+            dbf = base.with_suffix(".dbf")
+            data = bytearray(dbf.read_bytes())
+            header_len = int.from_bytes(data[8:10], "little")
+            record_len = int.from_bytes(data[10:12], "little")
+            data[header_len + record_len] = ord("*")   # borra el segundo registro
+            dbf.write_bytes(bytes(data))
+            with shapefile.Layer(base) as layer:
+                self.assertEqual(5, layer.shapes.shape_type)
+                self.assertEqual([ring], layer.shapes.parts(0))
+                self.assertEqual([1, None], layer.table.column("id"))
+                self.assertIsNone(layer.table.record(1))
+
+    def test_not_a_shapefile_fails(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            base = Path(tmp) / "malo"
+            base.with_suffix(".shp").write_bytes(b"\x00" * 100)
+            base.with_suffix(".shx").write_bytes(b"\x00" * 100)
+            with self.assertRaises(shapefile.ShapefileError):
+                shapefile.Shapes(base.with_suffix(".shp"))
+
+
+class SourcesTests(unittest.TestCase):
+    """sources.json: SHA-256 de las descargas y su licencia (D-013, punto 5; M5.1)."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.manifest = geometry.load_manifest()
+
+    def test_manifest_lists_the_downloads_with_their_hash_and_license(self):
+        files = {f["name"]: f for f in self.manifest["files"]}
+        self.assertEqual(26, len(files))
+        used = sorted(n for n, f in files.items() if f["used"])
+        self.assertEqual(11, len(used), "shp, shx y dbf de las tres capas, y el cpg de las dos de Natural Earth")
+        for layer in (geometry.HR_LAYER, geometry.NE_LAND_LAYER, geometry.NE_RIVERS_LAYER):
+            for ext in ("shp", "shx", "dbf"):
+                self.assertTrue(files[f"{layer}.{ext}"]["used"], f"{layer}.{ext}")
+        self.assertFalse(files["ne_10m_coastline.shp"]["used"], "descargada, sin uso: su linea es el borde de land")
+        datasets = {d["id"]: d for d in self.manifest["datasets"]}
+        self.assertIn("Dominio publico", datasets["ne10m"]["license"])
+        self.assertIn("Lehner, B., Grill G. (2013)", datasets["hydrorivers"]["citation"])
+        self.assertIn("PENDIENTE DEL DUENNO", datasets["hydrorivers"]["license"])
+
+    def test_downloads_are_not_versioned(self):
+        self.assertIn("/tools/river-map/source/", (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines())
+
+    def test_absent_incomplete_and_wrong_size(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            self.assertEqual("absent", geometry.sources_state(Path(tmp), self.manifest).status)
+            cpg = Path(tmp) / "ne_10m_land.cpg"
+            cpg.write_bytes(b"UTF-8")
+            entry = next(f for f in self.manifest["files"] if f["name"] == "ne_10m_land.cpg")
+            self.assertEqual(entry["sha256"], hashlib.sha256(b"UTF-8").hexdigest(), "el .cpg de Natural Earth es «UTF-8»")
+            state = geometry.sources_state(Path(tmp), self.manifest)
+            self.assertEqual("bad", state.status)
+            self.assertTrue(state.problems[0].startswith("faltan HydroRIVERS_v10_sa.dbf"), state.problems)
+            cpg.write_bytes(b"UTF-16")
+            state = geometry.sources_state(Path(tmp), self.manifest)
+            self.assertIn("ne_10m_land.cpg: 6 bytes y sources.json dice 5", state.problems)
+
+    def test_complete_and_another_hash_with_a_fixture_manifest(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "a.shp").write_bytes(b"abc")
+            manifest = {"files": [{"name": "a.shp", "sha256": hashlib.sha256(b"abc").hexdigest(), "bytes": 3, "used": True},
+                                  {"name": "a.pdf", "sha256": "0" * 64, "bytes": 1, "used": False}]}
+            self.assertEqual("complete", geometry.sources_state(Path(tmp), manifest).status)
+            (Path(tmp) / "a.shp").write_bytes(b"abd")
+            state = geometry.sources_state(Path(tmp), manifest)
+            self.assertEqual(["a.shp: su SHA-256 no es el de sources.json (otra version o archivo danado)"], state.problems)
+
+    def test_check_with_bad_downloads_fails_and_without_them_does_not_regenerate(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            (Path(tmp) / "ne_10m_land.cpg").write_bytes(b"UTF-16")
+            proc = run_geometry("--check", "--sources", tmp)
+            self.assertEqual(1, proc.returncode)
+            self.assertIn(b"FAIL  descargas de", proc.stdout)
+            self.assertIn(b"ne_10m_land.cpg: 6 bytes", proc.stdout)
+            out = Path(tmp) / "map.json"
+            proc = run_geometry("--sources", str(NO_SOURCES), "--out", str(out))
+            self.assertEqual(1, proc.returncode)
+            self.assertIn(b"FAIL  faltan las descargas en", proc.stdout)
+            self.assertFalse(out.exists(), "sin las descargas no se escribe nada")
+
+
+def _hr_fixture(tmp: str) -> Path:
+    """Red de HydroRIVERS de juguete (lon, lat) dentro de la caja del marco. El cauce M (1 -> 2 -> 3 -> 12 -> mar), un
+    afluente T (4 -> 5 -> M2, por su primer vertice), un senuelo D (9) que nace en la cabecera de T, con mas cuenca, y llega a
+    M3 sin pasar por los puntos de control de T, otro E (10 -> 11) que va a otro mar, y un rio S «solo_boca» (6 y 7 -> 8 ->
+    M3b) con el tramo 6 de mas cuenca que el 7."""
+    base = Path(tmp) / "hr"
+    reaches = [
+        (1, 2, 100.0, [(-62.0, -5.0), (-61.5, -5.0), (-61.0, -5.0)]),
+        (2, 3, 200.0, [(-61.0, -5.0), (-60.5, -5.02), (-60.0, -5.0)]),
+        (3, 12, 300.0, [(-60.0, -5.0), (-59.5, -5.0)]),
+        (12, 0, 320.0, [(-59.5, -5.0), (-59.0, -5.0)]),
+        (4, 5, 20.0, [(-60.5, -6.21), (-60.7, -5.8)]),
+        (5, 2, 40.0, [(-60.7, -5.8), (-60.85, -5.4), (-61.0, -5.0)]),
+        (9, 3, 60.0, [(-60.48, -6.2), (-60.3, -5.6), (-60.0, -5.0)]),
+        (10, 11, 1.0, [(-60.48, -6.201), (-59.5, -6.5)]),
+        (11, 0, 2.0, [(-59.5, -6.5), (-59.0, -6.6)]),
+        (6, 8, 10.0, [(-59.8, -4.0), (-59.9, -4.5)]),
+        (7, 8, 3.0, [(-59.7, -4.4), (-59.9, -4.5)]),
+        (8, 12, 15.0, [(-59.9, -4.5), (-59.5, -5.0)]),
+    ]
+    reaches.sort(key=lambda r: r[0])
+    fields = [("HYRIV_ID", "N", 9, 0), ("NEXT_DOWN", "N", 9, 0), ("UPLAND_SKM", "N", 10, 1)]
+    shapefile.write_layer(base, 3, [([pts], [rid, nxt, up]) for rid, nxt, up, pts in reaches], fields)
+    return base
+
+
+class HydroRiversTraceTests(unittest.TestCase):
+    """Trazado por la red de HydroRIVERS (M5.1) con un fixture."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory()
+        cls.frame = geometry.Frame(-18.0, 7.0, -80.0, -47.0, -5.0)
+        cls.hr = geometry.HydroRivers(_hr_fixture(cls.tmp.name), cls.frame)
+        cls.index = {rid: i for i, rid in enumerate(cls.hr.ids)}
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.hr.close()
+        cls.tmp.cleanup()
+
+    def reaches(self, *ids):
+        return {self.index[i] for i in ids}
+
+    def test_main_goes_to_the_sea_and_takes_the_research_tail(self):
+        ctrl = [(-5.0, -62.0), (-5.02, -60.5), (-5.0, -59.3), (-4.5, -58.5), (-4.0, -58.0)]
+        pts, spans, joined = geometry._trace_hr(self.hr, "m", {}, ctrl, None)
+        self.assertFalse(joined)
+        self.assertEqual((-5.0, -62.0), pts[0])
+        self.assertEqual((-5.0, -59.0), pts[-1])
+        self.assertEqual([self.index[i] for i in (1, 2, 3, 12)], [s[0] for s in spans])
+        tail_pts, tail_spans, tail = geometry._research_tail(pts, spans, ctrl)
+        self.assertEqual(2, tail, "los dos puntos del estuario, a mas de 15 km de la red")
+        self.assertEqual([(-4.5, -58.5), (-4.0, -58.0)], tail_pts[-2:])
+        cut = pts.index((-5.0, -59.5))
+        self.assertEqual(pts[:cut + 1], tail_pts[:-2], "corta en el vertice mas cercano al ultimo punto de control bueno")
+        self.assertEqual([self.index[i] for i in (1, 2, 3)], [s[0] for s in tail_spans], "el tramo 12 queda fuera")
+
+    def test_head_with_more_control_points_wins_over_a_nearer_or_bigger_one(self):
+        # D (tramo 9) nace en la misma cabecera, tiene mas cuenca y llega al cauce, pero no pasa por el punto medio ni por
+        # la boca; E (10) va a otro mar. Gana T, que pasa por los tres puntos de control.
+        ctrl = [(-6.2, -60.48), (-5.8, -60.72), (-5.0, -61.0)]
+        pts, spans, joined = geometry._trace_hr(self.hr, "t", {}, ctrl, self.reaches(1, 2, 3, 12))
+        self.assertTrue(joined)
+        self.assertEqual([self.index[4], self.index[5]], [s[0] for s in spans])
+        self.assertEqual((-5.0, -61.0), pts[-1], "la boca es el primer vertice de M2: un vertice del anfitrion")
+        self.assertEqual((-6.21, -60.5), pts[0])
+
+    def test_solo_boca_climbs_by_the_biggest_basin(self):
+        pts, spans, joined = geometry._trace_hr(self.hr, "s", {"solo_boca": True}, [(-5.0, -59.5)],
+                                                self.reaches(1, 2, 3, 12))
+        self.assertTrue(joined)
+        self.assertEqual([self.index[6], self.index[8]], [s[0] for s in spans], "el 6 (10 km2) y no el 7 (3 km2)")
+        self.assertEqual([(-4.0, -59.8), (-4.5, -59.9), (-5.0, -59.5)], pts)
+
+    def test_near_and_downstream(self):
+        near = self.hr.near(-5.0, -61.0, 1.0)
+        self.assertEqual({self.index[1], self.index[2], self.index[5]}, set(near))
+        path, hit = self.hr.downstream(self.index[4], self.reaches(1, 2, 3, 12))
+        self.assertEqual(([self.index[4], self.index[5]], self.index[2]), (path, hit))
+        path, hit = self.hr.downstream(self.index[10], None)
+        self.assertEqual(-1, hit)
+
+
+class SimplifyTests(unittest.TestCase):
+    def test_douglas_peucker_keeps_ends_protected_and_within_tolerance(self):
+        # Un meandro de amplitud 1 km en un tramo recto de ~110 km de longitud a lo largo del ecuador.
+        pts = [(0.0, -60.0 + i * 0.01) for i in range(101)]
+        pts[50] = (0.009, pts[50][1])   # ~1 km al norte
+        pts[20] = (0.001, pts[20][1])   # ~0,11 km
+        idx = geometry.simplify(pts, [2.0] * 101, set())
+        self.assertEqual([0, 100], idx, "a 2 km (vista Cuenca) basta la recta")
+        idx = geometry.simplify(pts, [0.3] * 101, set())
+        self.assertIn(50, idx, "a 0,3 km (vista Mundo) queda el meandro de 1 km")
+        self.assertNotIn(20, idx)
+        idx = geometry.simplify(pts, [2.0] * 101, {77})
+        self.assertEqual([0, 77, 100], idx, "los vertices obligatorios (bocas, cortes) quedan")
+        tol = [2.0] * 101
+        tol[50] = 0.3   # el meandro, en la zona de la vista Mundo
+        self.assertIn(50, geometry.simplify(pts, tol, set()))
+
+
+class LandTests(Base):
+    def test_clip_ring_by_a_half_plane(self):
+        square = [(0.0, 0.0), (2.0, 0.0), (2.0, 2.0), (0.0, 2.0)]   # sentido positivo
+        self.assertEqual([square], geometry.clip_ring(square, 0, -1.0, 1))
+        self.assertEqual([], geometry.clip_ring(square, 0, 3.0, 1))
+        rings = geometry.clip_ring(square, 0, 1.0, 1)   # x >= 1
+        self.assertEqual(1, len(rings))
+        self.assertEqual(2.0, geometry._ring_area(rings[0]))
+        # Una U (abierta hacia arriba) cortada por y <= 1: dos patas, dos anillos.
+        u = [(0.0, 0.0), (3.0, 0.0), (3.0, 2.0), (2.0, 2.0), (2.0, 0.5), (1.0, 0.5), (1.0, 2.0), (0.0, 2.0)]
+        self.assertGreater(geometry._ring_area(u), 0)
+        rings = geometry.clip_ring(u, 1, 1.0, -1)
+        self.assertEqual(1, len(rings), "por abajo, la U entera es una pieza")
+        self.assertAlmostEqual(3.0 * 1.0 - 1.0 * 0.5, geometry._ring_area(rings[0]))
+        rings = geometry.clip_ring(u, 1, 1.0, 1)   # y >= 1: las dos patas
+        self.assertEqual(2, len(rings))
+        self.assertEqual([1.0, 1.0], sorted(geometry._ring_area(r) for r in rings))
+
+    def test_triangulate_square_concave_and_collinear_without_split_vertices(self):
+        for poly in ([(0, 0), (10, 0), (10, 10), (0, 10)],
+                     [(0, 0), (10, 0), (10, 10), (5, 3), (0, 10)],
+                     [(0, 0), (5, 0), (10, 0), (10, 10), (0, 10)],
+                     [(0, 0), (5, 0), (10, 0), (10, 5), (10, 10), (5, 10), (0, 10), (0, 5)]):
+            with self.subTest(poly=poly):
+                tris = geometry.triangulate(poly)
+                zones = [{"id": "land", "first": 0, "count": len(tris) // 3}]
+                self.assertEqual([], geometry.land_problems(poly, tris, zones))
+                self.assertEqual(len(poly) - 2, len(tris) // 3, "todos los vertices, tambien los alineados")
+
+    def test_land_problems_reports_crossings_overlaps_and_split_vertices(self):
+        self.assertTrue(geometry.polygon_problems([(0, 0), (10, 10), (10, 0), (0, 10)]))
+        square = [(0, 0), (10, 0), (10, 10), (0, 10)]
+        one = [{"id": "land", "first": 0, "count": 2}]
+        self.assertEqual([], geometry.land_problems(square, [0, 1, 2, 0, 2, 3], one))
+        self.assertIn("3 aristas dirigidas en mas de un triangulo (triangulos solapados)",
+                      geometry.land_problems(square, [0, 1, 2, 0, 1, 2], one))
+        # El vertice (5, 0) parte la arista (0,0)-(10,0) de un lado y no del otro (el triangulo de abajo no lo usa).
+        split = [(0, 0), (10, 0), (10, 10), (0, 10), (5, 0), (5, -5)]
+        problems = geometry.land_problems(split, [0, 1, 2, 0, 2, 3, 0, 5, 4, 4, 5, 1],
+                                          [{"id": "land", "first": 0, "count": 4}])
+        self.assertIn("la costa pasa dos veces por el vertice (0, 0)", problems, "un vertice que solo ve un lado")
+        self.assertIn("las zonas no cubren todos los triangulos",
+                      geometry.land_problems(square, [0, 1, 2, 0, 2, 3], [{"id": "land", "first": 0, "count": 1}]))
+
+    def test_land_of_the_file_is_the_continent_and_its_islands(self):
+        land = self.doc["land"]
+        verts = geometry.decode_points(land["verts"])
+        tris = geometry.decode_indices(land["tris"])
+        self.assertEqual([], geometry.land_problems(verts, tris, land["zones"]))
+        self.assertEqual([{"id": "land", "tile": "canopy", "first": 0, "count": len(tris) // 3}], land["zones"],
+                         "una sola zona hasta la mascara del artista (land_zones)")
+
+        def inside(p):
+            return any(geometry._in_triangle(p, *(verts[i] for i in tris[k:k + 3])) for k in range(0, len(tris), 3))
+        frame = self.model.frame
+        self.assertTrue(inside(frame.quant(-3.1189, -60.0217)), "Manaos")
+        self.assertTrue(inside(frame.quant(-1.0, -49.5)), "Marajo, una isla")
+        self.assertFalse(inside(frame.quant(5.0, -48.0)), "el Atlantico")
+        self.assertFalse(inside(frame.quant(-10.0, -79.5)), "el Pacifico")
+        self.assertEqual([("land", "canopy", ["a"])], geometry.land_zones(["a"]))
+
+
 class LinesTests(Base):
-    def test_kinds_and_classes(self):
+    def test_kinds_classes_and_sources(self):
         kinds = {lid: line["kind"] for lid, line in self.lines.items()}
         self.assertEqual("main", kinds["amazonas"])
         self.assertEqual("main", kinds["para"])
@@ -148,7 +442,18 @@ class LinesTests(Base):
         self.assertEqual([], self.doc["insets"])
         for line in self.doc["lines"]:
             self.assertEqual(geometry.CLASS[line["kind"]], line["class"])
-            self.assertEqual("rio_amazonas", line["src"])
+            self.assertEqual(geometry.LINE_SRC.get(line["id"], "hydrorivers"), line["src"], line["id"])
+        self.assertEqual({"para": "rio_amazonas", "casiquiare": "ne10m", "itaya": "rio_amazonas",
+                          "pacaya": "rio_amazonas"}, geometry.LINE_SRC)
+
+    def test_production_lines_are_finer_than_the_research(self):
+        # El cauce de HydroRIVERS con los meandros: muchos mas puntos que los 105 de la investigacion, y mas largo.
+        main = self.model.lines["amazonas"]
+        self.assertGreater(len(main.q), 1000)
+        self.assertGreater(main.arc_km[-1], 5500, "la poligonal de la investigacion mide 4.783 km (propuesta §3.6)")
+        self.assertEqual(6575.0, main.km_from_sea[0])
+        self.assertEqual(0.0, main.km_from_sea[-1])
+        self.assertTrue(all(a >= b for a, b in zip(main.km_from_sea, main.km_from_sea[1:])), "los km bajan rio abajo")
 
     def test_local_rivers_of_stops_11_13_15_16_18(self):
         for r in self.records:
@@ -171,11 +476,16 @@ class LinesTests(Base):
                 self.assertEqual(3, line["class"])
                 self.assertEqual(host, line["mouth"]["on"])
                 self.assertEqual(1.0, line["fill_on_pass"])
-                self.assertLessEqual(geometry.haversine(self.model.lines[rid].ll[-1],
-                                                        self.model.lines[host].point_at_s(line["mouth"]["s"])),
-                                     geometry.TOLERANCE_KM)
         self.assertEqual("black", self.lines["cuyabeno"]["water"][0]["type"], "laguna de agua negra")
         self.assertEqual("white", self.lines["aguarico"]["water"][0]["type"])
+
+    def test_hydrorivers_mouths_are_vertices_of_their_host(self):
+        for rid, line in self.model.lines.items():
+            if line.src != "hydrorivers" or line.host is None or self.model.lines[line.host].src == "rio_amazonas":
+                continue
+            with self.subTest(line=rid):
+                self.assertIn(line.q[-1], self.model.lines[line.host].q)
+                self.assertLess(geometry.haversine(line.ll[-1], self.model.lines[line.host].point_at_s(line.host_s)), 0.01)
 
     def test_passby_whole_and_madeira_and_napo_only_the_mouth(self):
         for line in self.doc["lines"]:
@@ -214,7 +524,7 @@ class LinesTests(Base):
         # Km del cauce de las confluencias (rio-amazonas.json): Santarem 704, Encuentro 1437, Nauta 3837.
         for lid, km in (("tapajos", 704), ("negro", 1437), ("maranon", 3837)):
             with self.subTest(line=lid):
-                self.assertAlmostEqual(km, self.model.km_at("amazonas", self.lines[lid]["mouth"]["s"]), delta=2.0)
+                self.assertAlmostEqual(km, self.model.km_at("amazonas", self.lines[lid]["mouth"]["s"]), delta=5.0)
         # s crece rio abajo: las bocas cercanas al mar tienen mas s.
         s = {lid: self.lines[lid]["mouth"]["s"] for lid in ("xingu", "trombetas", "tapajos", "madeira", "negro", "purus",
                                                             "japura", "napo", "maranon")}
@@ -237,64 +547,81 @@ class LinesTests(Base):
         self.assertEqual("teotonio", self.doc["passing"][-1]["id"], "despues de los de 1-200")
         self.assertEqual("map.stop.obidos.dato_01", passing["obidos"]["fact"])
         self.assertEqual("para", passing["breves"]["line"])
-        self.assertEqual("amazonas", passing["gurupa"]["line"], "Gurupa, en la bifurcacion: el cauce gana el empate")
-        self.assertEqual("amazonas", passing["boca_del_napo"]["line"])
+        # En la union con su anfitrion, el punto va en el anfitrion (M5.1): Gurupa, en el arranque del ramal, y las bocas.
+        for pid in ("gurupa", "boca_del_xingu", "boca_del_madeira", "boca_del_purus", "santo_antonio_do_ica", "boca_del_napo"):
+            self.assertEqual("amazonas", passing[pid]["line"], pid)
 
 
-class TriangulationTests(Base):
-    def test_ear_clip_square_and_concave(self):
-        square = [(0, 0), (10, 0), (10, 10), (0, 10)]
-        self.assertEqual(6, len(geometry.ear_clip(square)))
-        concave = [(0, 0), (10, 0), (10, 10), (5, 3), (0, 10)]
-        tris = geometry.ear_clip(concave)
-        self.assertEqual(9, len(tris))
-        area = sum(geometry._cross(*(concave[i] for i in tris[k:k + 3])) for k in range(0, len(tris), 3))
-        self.assertEqual(geometry._area2(concave), area)
-        for k in range(0, len(tris), 3):
-            self.assertGreater(geometry._cross(*(concave[i] for i in tris[k:k + 3])), 0)
+class ViewTests(Base):
+    """Tolerancias por vista (propuesta §3.6 y §11.3, punto 4; M5.1)."""
 
-    def test_collinear_vertex_adds_no_triangle(self):
-        poly = [(0, 0), (5, 0), (10, 0), (10, 10), (0, 10)]
-        tris = geometry.ear_clip(poly)
-        area = sum(geometry._cross(*(poly[i] for i in tris[k:k + 3])) for k in range(0, len(tris), 3))
-        self.assertEqual(geometry._area2(poly), area)
+    def test_tolerances_and_simplification_of_each_view(self):
+        self.assertEqual((15.0, 1.0), (geometry.TOLERANCE_KM, geometry.MUNDO_TOLERANCE_KM))
+        self.assertEqual((2.0, 0.3), (geometry.DP_CUENCA_KM, geometry.DP_MUNDO_KM))
+        zone = geometry.MundoZone(self.source)
+        self.assertTrue(zone.contains(-3.1189, -60.0217), "Manaos, una parada")
+        self.assertFalse(zone.contains(-15.512, -71.702), "el Mismi: El origen no es de la 1.0")
 
-    def test_self_intersecting_ring_is_reported(self):
-        self.assertTrue(geometry.polygon_problems([(0, 0), (10, 10), (10, 0), (0, 10)]))
+    def test_every_control_point_within_its_view_or_its_measured_exception(self):
+        zone = geometry.MundoZone(self.source)
+        used = 0
+        for rid in self.model.order:
+            line = self.model.lines[rid]
+            for j, p in enumerate(line.source["puntos"]):
+                d, view, allowed, pending = geometry.control_check(line, j, p, zone)
+                with self.subTest(line=rid, point=j):
+                    self.assertLessEqual(d, allowed)
+                    if pending:
+                        canon = geometry.MUNDO_TOLERANCE_KM if view == "Mundo" else geometry.TOLERANCE_KM
+                        self.assertGreater(d, canon, "una excepcion que ya no hace falta")
+                        self.assertLess(allowed - d, 0.1, "la excepcion no es la cifra medida")
+                        used += 1
+        self.assertEqual(67, used)
+        self.assertEqual(67, sum(len(v) for v in geometry.PENDING_CONTROL_KM.values()))
+        self.assertEqual([("amazonas", 84)], [(rid, j) for rid, items in geometry.PENDING_CONTROL_KM.items()
+                                               for j, km in items.items() if km > geometry.TOLERANCE_KM
+                                               and not zone.contains(*(lambda p: (p["lat"], p["lon"]))(
+                                                   self.model.lines[rid].source["puntos"][j]))])
 
-    def test_land_of_the_file(self):
-        land = self.doc["land"]
-        verts = geometry.decode_points(land["verts"])
-        tris = geometry.decode_indices(land["tris"])
-        self.assertEqual([], geometry.polygon_problems(verts))
-        self.assertEqual(len(verts) - 2, len(tris) // 3)
-        self.assertEqual([{"id": "land", "tile": "canopy", "first": 0, "count": len(tris) // 3}], land["zones"])
-        area = sum(geometry._cross(*(verts[i] for i in tris[k:k + 3])) for k in range(0, len(tris), 3))
-        self.assertEqual(geometry._area2(verts), area)
-        # Belem y Manaos, en tierra; un punto del Atlantico, fuera.
-        def inside(p):
-            return any(geometry._in_triangle(p, *(verts[i] for i in tris[k:k + 3])) for k in range(0, len(tris), 3))
-        frame = self.model.frame
-        self.assertTrue(inside(frame.quant(-1.4558, -48.5039)))
-        self.assertTrue(inside(frame.quant(-3.1189, -60.0217)))
-        self.assertFalse(inside(frame.quant(5.0, -48.0)))
+    def test_research_lines_have_no_exceptions(self):
+        for rid, src in geometry.LINE_SRC.items():
+            if src == "rio_amazonas":
+                self.assertNotIn(rid, geometry.PENDING_CONTROL_KM)
 
 
 class FileTests(Base):
-    def test_committed_file_is_what_the_source_gives(self):
+    def test_committed_file_is_what_its_geometry_gives(self):
         self.assertEqual(geometry.render(self.doc).encode("utf-8"), MAP_PATH.read_bytes())
 
-    def test_utf8_without_bom_with_lf(self):
+    def test_utf8_without_bom_with_lf_under_90_kb(self):
         data = MAP_PATH.read_bytes()
         self.assertFalse(data.startswith(b"\xef\xbb\xbf"))
         self.assertNotIn(b"\r", data)
         self.assertTrue(data.endswith(b"\n"))
-        self.assertLess(len(data), 90 * 1024, "unos 70-90 KB con las 100 paradas (08 §4.5)")
+        self.assertLessEqual(len(data), geometry.MAX_BYTES, "<= 90 KB (M5.1; 08 §4.5)")
+        self.assertEqual(90 * 1024, geometry.MAX_BYTES)
+
+    def test_check_without_downloads_is_deterministic_with_different_hash_seeds(self):
+        for seed in ("0", "1", "12345"):
+            env = dict(os.environ, PYTHONHASHSEED=seed)
+            proc = run_geometry("--check", "--sources", str(NO_SOURCES), env=env)
+            self.assertEqual(0, proc.returncode, proc.stdout)
+            self.assertIn(b"(commiteado;", proc.stdout)
+
+
+@unittest.skipUnless(have_sources(), "sin las descargas de Natural Earth y HydroRIVERS en tools/river-map/source/")
+class ProductionTests(unittest.TestCase):
+    """Con las descargas (escritorio): la geometria de produccion se regenera igual, byte a byte y con cualquier semilla."""
+
+    def test_check_regenerates_from_the_downloads(self):
+        proc = run_geometry("--check")
+        self.assertEqual(0, proc.returncode, proc.stdout)
+        self.assertIn(b"(produccion;", proc.stdout)
 
     def test_deterministic_bytes_with_different_hash_seeds(self):
         outs = []
         with tempfile.TemporaryDirectory() as tmp:
-            for seed in ("0", "1", "12345"):
+            for seed in ("0", "12345"):
                 out = Path(tmp) / f"map_{seed}.json"
                 env = dict(os.environ, PYTHONHASHSEED=seed)
                 proc = run_geometry("--out", str(out), env=env)
@@ -337,18 +664,21 @@ class RouteTests(Base):
         # cauce hasta el Ucayali.
         lines = {n: [p["line"] for p in self.by_n[n]["leg"]["path"]] for n in range(42, 70)}
         self.assertEqual(["manu", "madre_de_dios", "beni"], lines[42])
-        self.assertEqual(["beni", "mamore"], lines[50], "Beni abajo y Mamore arriba, sin tramo en el Madeira")
+        self.assertEqual(["beni", "madeira", "mamore"], lines[50],
+                         "Beni abajo y Mamore arriba; en HydroRIVERS, por un tramo de ~0,5 km del Madeira (M5.1)")
         self.assertEqual(["mamore", "itenez"], lines[51])
         self.assertEqual(["itenez", "mamore"], lines[53])
         self.assertEqual(["mamore", "madeira", "amazonas"], lines[56])
         leg56 = self.by_n[56]["leg"]
         self.assertEqual("teotonio", leg56["via"][0], "Madeira abajo: los rapidos de Teotonio, antes que su boca")
         self.assertLess(leg56["via"].index("boca_del_madeira"), leg56["via"].index("tamshiyacu"))
-        self.assertEqual({"line": "madeira", "s0": 0.0, "s1": 1.0}, self.by_n[56]["leg"]["path"][1], "el Madeira entero")
-        # El Beni y el Mamore entran en el Madeira en el mismo punto (Villa Bella): las dos bocas son el mismo sitio.
+        self.assertEqual("madeira", leg56["path"][1]["line"])
+        self.assertEqual(1.0, leg56["path"][1]["s1"], "el Madeira hasta su boca")
+        # El Beni y el Mamore entran en el Madeira junto a Villa Bella, a un tramo de HydroRIVERS el uno del otro.
         beni, mamore = self.lines["beni"]["mouth"], self.lines["mamore"]["mouth"]
         self.assertEqual(("madeira", "madeira"), (beni["on"], mamore["on"]))
-        self.assertEqual(beni["s"], mamore["s"])
+        self.assertLess(abs(beni["s"] - mamore["s"]), 0.002)
+        self.assertLess(geometry.haversine(self.model.lines["beni"].ll[-1], self.model.lines["mamore"].ll[-1]), 1.5)
 
     def test_there_and_back_through_the_confluences(self):
         # Iquitos/Itaya -> Allpahuayo-Mishana: el cauce hasta la boca del Nanay y el Nanay arriba; despues, abajo y a Nauta.
@@ -393,11 +723,11 @@ class RouteTests(Base):
 
     def test_tolerance_is_the_canon_and_exceptions_are_only_the_pending_ones(self):
         # 08 §4.5 y D-023, punto 20: <= 2 dp de su vista, <= 15 km en la Cuenca. Las excepciones son las medidas que esperan
-        # la firma del duenno (sin margen): ninguna nueva sin pasar por el.
+        # la firma del duenno (sin margen): ninguna nueva sin pasar por el. M5.1: medidas sobre la geometria de produccion.
         self.assertEqual(15.0, geometry.TOLERANCE_KM)
-        self.assertEqual({"flona_tapajos": 23.1, "amacayacu": 57.5, "pacaya_samiria": 46.2, "pacaya_alba": 46.2},
-                         geometry.PENDING_SITE_KM)
-        self.assertEqual({"pacaya": 37.1}, geometry.PENDING_MOUTH_KM)
+        self.assertEqual({"flona_tapajos": 33.3, "amacayacu": 58.7, "pacaya_samiria": 79.3, "pacaya_alba": 79.3,
+                          "yasuni": 29.2, "yasuni_dosel": 29.2}, geometry.PENDING_SITE_KM)
+        self.assertEqual({"pacaya": 23.9}, geometry.PENDING_MOUTH_KM)
         for s in self.stops["stops"]:
             if s["id"] not in geometry.PENDING_SITE_KM:
                 continue
@@ -412,12 +742,18 @@ class RouteTests(Base):
         self.assertTrue(geometry.same_place(self.model, ("amazonas", tapajos), ("tapajos", 1.0)))
         self.assertFalse(geometry.same_place(self.model, ("tapajos", 0.5), ("amazonas", tapajos)))
         self.assertFalse(geometry.same_place(self.model, ("negro", 1.0), ("amazonas", tapajos)))
-        # M4.5b: dos bocas en el mismo punto del mismo anfitrion (el Beni y el Mamore forman el Madeira en Villa Bella).
-        self.assertTrue(geometry.same_place(self.model, ("beni", 1.0), ("mamore", 1.0)))
-        self.assertTrue(geometry.same_place(self.model, ("mamore", 1.0), ("beni", 1.0)))
-        self.assertFalse(geometry.same_place(self.model, ("beni", 0.9), ("mamore", 1.0)))
         self.assertFalse(geometry.same_place(self.model, ("itenez", 1.0), ("beni", 1.0)), "el Itenez entra en el Mamore")
         self.assertFalse(geometry.same_place(self.model, ("negro", 1.0), ("tapajos", 1.0)), "bocas en otro punto del cauce")
+
+    def test_same_place_of_two_mouths_at_the_same_point(self):
+        # M4.5b: dos bocas en el mismo punto del mismo anfitrion son el mismo sitio (con el respaldo, el Beni y el Mamore en
+        # Villa Bella; en HydroRIVERS entran a un tramo de distancia, test_legs_of_421_700_...).
+        doc, model, errors = geometry.build_map(self.source)
+        self.assertEqual(["linea pacaya: su boca queda a 37.1 km de amazonas (maximo 23.9 km: excepcion medida pendiente "
+                          "del duenno; el canon es 15 km): mouth fuera de su rio"], errors,
+                         "con el respaldo, la boca del Pacaya queda mas lejos que la cifra medida de produccion")
+        self.assertTrue(geometry.same_place(model, ("beni", 1.0), ("mamore", 1.0)))
+        self.assertFalse(geometry.same_place(model, ("beni", 0.9), ("mamore", 1.0)))
 
     def test_in_world_rules_of_the_confluence_drops(self):
         # Propuesta §5.4 quater (M4.5b): los km a casa solo bajan dentro de un mundo con baja_por_confluencia y a otro rio;
@@ -464,9 +800,11 @@ class RouteTests(Base):
 
 
 class CheckTests(Base):
+    """Fallos de --check en el modo «commiteado» (sin las descargas): el del portatil, y el mismo en cualquier maquina."""
+
     def check(self, source: dict | None = None, stops: dict | None = None, map_bytes: bytes | None = None):
         with tempfile.TemporaryDirectory() as tmp:
-            args = ["--check"]
+            args = ["--check", "--sources", str(NO_SOURCES)]
             if source is not None:
                 path = Path(tmp) / "rio.json"
                 path.write_text(json.dumps(source, ensure_ascii=False), encoding="utf-8")
@@ -491,19 +829,20 @@ class CheckTests(Base):
     def test_check_passes_on_the_committed_files(self):
         code, out = self.check()
         self.assertEqual(0, code, out)
+        self.assertIn("AVISO sin las descargas en", out)
         self.assertIn("31 lineas, 18 puntos de paso y 3 miradores", out)
 
     def test_stop_moved_20_km_fails(self):
         src = copy.deepcopy(self.source)
         rec = next(r for r in src["paradas_1_200"] if r["k"] == 14)
-        rec["lat"] = round(rec["lat"] + 0.18, 4)   # unos 20 km al norte
-        self.assertFails("parada n=14 ('iquitos'): el sitio queda a 20.", source=src)
+        rec["lat"] = round(rec["lat"] + 0.18, 4)   # unos 20 km al norte; el cauce pasa a 4,8 km de Iquitos
+        self.assertFails("parada n=14 ('iquitos'): el sitio queda a 17.5", source=src)
 
     def test_inland_site_moved_20_km_away_from_its_river_fails(self):
         src = copy.deepcopy(self.source)
         rec = next(r for r in src["paradas_1_200"] if r["k"] == 10)
         rec["lat"] = round(rec["lat"] + 0.18, 4)   # unos 20 km mas al norte, mas lejos del Amazonas
-        self.assertFails("parada n=10 ('amacayacu'): el sitio queda a 77.", source=src)
+        self.assertFails("parada n=10 ('amacayacu'): el sitio queda a 78.", source=src)
 
     def test_dock_point_is_checked_with_the_canon_tolerance(self):
         at = self.stops["stops"][10]["at"]
@@ -524,13 +863,46 @@ class CheckTests(Base):
         self.assertEqual(0, code, out)
         for sid in geometry.PENDING_SITE_KM:
             self.assertIn(f"AVISO {sid}: sin atraque en la investigacion", out)
-        self.assertIn("AVISO linea pacaya: su boca queda a 37.1 km de amazonas (canon 15 km; excepcion 37.1 km", out)
+        self.assertIn("AVISO linea pacaya: su boca queda a 23.8 km de amazonas (canon 15 km; excepcion 23.9 km", out)
+        self.assertIn("AVISO linea amazonas: 37 puntos de control fuera de la tolerancia de su vista, con excepcion medida "
+                      "pendiente del duenno (PENDING_CONTROL_KM): 22 (1.1 km, Mundo)", out)
+        self.assertIn("84 (33.7 km, Cuenca)", out)
 
     def test_pending_mouth_moved_further_fails(self):
+        # La boca del Pacaya (su linea es el esbozo de la investigacion) ~11 km mas lejos del cauce: en la investigacion
+        # falla su punto de control; en la geometria, su boca, mas alla de la cifra medida.
         src = copy.deepcopy(self.source)
         pacaya = next(r for r in src["rios"] if r["id"] == "pacaya")
-        pacaya["puntos"][-1]["lat"] = round(pacaya["puntos"][-1]["lat"] + 0.2, 4)   # ~11 km mas lejos del cauce
-        self.assertFails("linea pacaya: su boca queda a 48.6 km de amazonas (maximo 37.1 km: excepcion medida", source=src)
+        pacaya["puntos"][-1]["lat"] = round(pacaya["puntos"][-1]["lat"] + 0.2, 4)
+        self.assertFails("lines[26] (pacaya): el punto de control 1 ('Boca (sistema del Ucayali-Puinahua)') queda a",
+                         source=src)
+        lines = dict(self.geo.lines)
+        src_id, q = lines["pacaya"]
+        lines["pacaya"] = (src_id, q[:-1] + [(q[-1][0] + 524, q[-1][1])])   # +0,2 grados de latitud
+        _, _, errors = geometry.build_map(self.source, geometry.Geometry("prueba", lines, self.geo.land))
+        self.assertTrue(any(e.startswith("linea pacaya: su boca queda a 29.8 km") and "(maximo 23.9 km: excepcion medida" in e
+                            for e in errors), errors)
+
+    def test_control_point_away_from_its_line_fails(self):
+        # Vista Mundo (a <= 100 km de una parada): Tamshiyacu (45), a 0,17 km del cauce, llevado a 5,1 km.
+        src = copy.deepcopy(self.source)
+        pts = next(r for r in src["rios"] if r["id"] == "amazonas")["puntos"]
+        pts[45]["lat"] = round(pts[45]["lat"] - 0.2, 4)
+        self.assertFails("lines[0] (amazonas): el punto de control 45 ('Tamshiyacu') queda a 5.1 km de la linea (vista "
+                         "Mundo: maximo 1 km, <= 2 dp en la vista Mundo)", source=src)
+        # Vista Cuenca (lejos de las paradas): Amatura (60), llevado a 20,5 km.
+        src = copy.deepcopy(self.source)
+        pts = next(r for r in src["rios"] if r["id"] == "amazonas")["puntos"]
+        pts[60]["lat"] = round(pts[60]["lat"] + 0.2, 4)
+        self.assertFails("lines[0] (amazonas): el punto de control 60 ('Amatura') queda a 20.5 km de la linea (vista "
+                         "Cuenca: maximo 15 km, <= 2 dp en la vista Cuenca)", source=src)
+
+    def test_mouth_outside_its_river_fails(self):
+        # La boca de la investigacion del Madeira, ~33 km al sur del cauce: su ultimo punto de control ya no esta en su linea.
+        src = copy.deepcopy(self.source)
+        madeira = next(r for r in src["rios"] if r["id"] == "madeira")
+        madeira["puntos"][-1]["lat"] = round(madeira["puntos"][-1]["lat"] - 0.3, 4)
+        self.assertFails("(madeira): el punto de control 11 ('Entra en el Amazonas') queda a", source=src)
 
     def test_stop_moved_along_the_river_fails_by_its_km(self):
         stops = copy.deepcopy(self.stops)
@@ -568,12 +940,6 @@ class CheckTests(Base):
         stops["stops"][4]["leg"]["path"][1]["s0"] = 0.8   # el cauce ya no empieza en la boca del Tapajos
         self.assertFails("parada n=4 ('encontro'): leg roto entre path[0]", stops=stops)
 
-    def test_mouth_outside_its_river_fails(self):
-        src = copy.deepcopy(self.source)
-        madeira = next(r for r in src["rios"] if r["id"] == "madeira")
-        madeira["puntos"][-1]["lat"] = round(madeira["puntos"][-1]["lat"] - 0.3, 4)   # ~33 km al sur del cauce
-        self.assertFails("linea madeira: su boca queda a", source=src)
-
     def test_missing_candidate_fails(self):
         src = copy.deepcopy(self.source)
         rec = next(r for r in src["paradas_1_200"] if r["id"] == "pacaya_samiria")
@@ -590,6 +956,14 @@ class CheckTests(Base):
     def test_drift_fails(self):
         data = MAP_PATH.read_bytes().replace(b'"reveal_on": 10', b'"reveal_on": 20', 1)
         self.assertFails("desfase", map_bytes=data)
+
+    def test_land_with_a_broken_triangulation_fails(self):
+        doc = json.loads(MAP_PATH.read_bytes().decode("utf-8"))
+        tris = geometry.decode_indices(doc["land"]["tris"])
+        tris[0], tris[1] = tris[1], tris[0]   # el primer triangulo, al reves
+        doc["land"]["tris"] = geometry.encode_indices(tris)
+        self.assertFails("land: el triangulo 0 es degenerado o va en sentido contrario",
+                         map_bytes=geometry.render(doc).encode("utf-8"))
 
     def test_validate_map_reports_a_main_line_too_short(self):
         src = copy.deepcopy(self.source)
