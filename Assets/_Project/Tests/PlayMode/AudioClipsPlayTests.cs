@@ -255,10 +255,13 @@ namespace AF.Tests.PlayMode
         public IEnumerator Stinger_WaitsForTheToada_UnderTheEffects_AndFollowsTheMusicSetting()
         {
             UnityAudioService s = Take();
-            s.UseClips(LoadRegistry());
+            AudioClipRegistry registry = LoadRegistry();
+            s.UseClips(registry);
             s.Configure(SoundSettings.Defaults);
             s.SetAdActive(false);
             yield return null;
+            float toadaMs = registry.Get(AudioBank.Index(SfxId.WinToada, 0))!.length * 1000f;
+            Assert.That(toadaMs, Is.GreaterThan(AudioMix.ToadaDuckMs + 200f), "el WAV de la toada dura más que el largo fijo (2,55 s)");
             int started = s.StingersStarted;
             s.PlayStinger(StingerId.MechCard);
             Assert.That(s.StingersStarted, Is.EqualTo(started + 1), "sin toada, suena ya");
@@ -266,10 +269,13 @@ namespace AF.Tests.PlayMode
             Assert.That(_probe.LastSfxGain, Is.EqualTo(UnityAudioService.StingerPeakDb + AudioMix.StingerGainDb), "bajo los efectos");
 
             s.Play(SfxId.WinToada, 0);
+            Assert.That(s.Mix.ToadaLeftMs, Is.EqualTo(toadaMs), "tarea FX7: lo que dura el WAV, no el largo fijo");
             s.PlayStinger(StingerId.Arrival);
             Assert.That(s.StingerPending, Is.True, "la toada suena: espera");
             Assert.That(s.StingersStarted, Is.EqualTo(started + 1));
-            s.Tick(AudioMix.ToadaDuckMs - 200f);
+            s.Tick(AudioMix.ToadaDuckMs + 50f);
+            Assert.That(s.StingerPending, Is.True, "pasado el largo fijo, la toada aún suena: sigue esperando");
+            s.Tick(toadaMs - AudioMix.ToadaDuckMs - 150f);
             Assert.That(s.StingerPending, Is.True, "nunca encima de la toada");
             s.Tick(300f);
             Assert.That(s.StingersStarted, Is.EqualTo(started + 2), "al terminar la toada");
@@ -280,6 +286,70 @@ namespace AF.Tests.PlayMode
             Assert.That(s.StingersStarted, Is.EqualTo(started + 2), "con Música apagada no suena [P]");
             Assert.That(s.StingerPlaying, Is.False, "y el que sonaba se calla");
             s.Configure(SoundSettings.Defaults);
+        }
+
+        [UnityTest]
+        public IEnumerator Toada_LastsItsClip_OfAnyLength_OrTheSynthFallbackClip()
+        {
+            // Tarea FX7: la espera de los remates y la atenuación del lecho duran lo que el clip de la toada que suena. Un WAV de
+            // prueba de 3,2 s (distinto del largo fijo de 2,25 s y del WAV de 2,55 s) …
+            AudioClipRegistry full = LoadRegistry();
+            int toadaSlot = AudioBank.Index(SfxId.WinToada, 0);
+            const int rate = 44100;
+            AudioClip custom = AudioClip.Create("sfx_win_toada_test", (int)(3.2f * rate), 1, rate, false);
+            var ids = new List<string>();
+            var clips = new List<AudioClip>();
+            for (int slot = 0; slot < AudioClipIds.Count; slot++)
+            {
+                ids.Add(AudioClipIds.Id(slot));
+                clips.Add(slot == toadaSlot ? custom : full.Get(slot)!);
+            }
+
+            AudioClipRegistry withCustom = AudioClipRegistry.Create(ids.ToArray(), clips.ToArray());
+            UnityAudioService s = Take();
+            s.UseClips(withCustom);
+            s.Configure(SoundSettings.Defaults);
+            s.SetAdActive(false);
+            yield return null;
+            int started = s.StingersStarted;
+            s.Play(SfxId.WinToada, 0);
+            Assert.That(_probe.LastSfxClip, Is.True, "suena el WAV de prueba");
+            Assert.That(s.Mix.ToadaLeftMs, Is.EqualTo(3200f).Within(0.5f), "lo que dura el clip");
+            s.PlayStinger(StingerId.Arrival);
+            s.Tick(3000f);
+            Assert.That(s.StingerPending && s.Mix.Ducked, Is.True, "a los 3 s, la toada de 3,2 s aún suena");
+            s.Tick(300f);
+            Assert.That(s.StingersStarted, Is.EqualTo(started + 1), "al terminar el clip");
+            Assert.That(s.Mix.Ducked, Is.False);
+
+            // … y, sin WAV de la toada, la del respaldo por código (su clip sintetizado, de unos 2,27 s).
+            ids.RemoveAt(toadaSlot);
+            clips.RemoveAt(toadaSlot);
+            AudioClipRegistry withoutToada = AudioClipRegistry.Create(ids.ToArray(), clips.ToArray());
+            s.UseClips(withoutToada);
+            yield return WaitLong(() => s.SynthReady, "el respaldo por código", 30f);
+            s.Play(SfxId.WinToada, 0);
+            Assert.That(_probe.LastSfxClip, Is.False, "suena el respaldo por código");
+            AudioClip? synth = null;
+            foreach (AudioSource source in s.GetComponentsInChildren<AudioSource>())
+            {
+                if (source.isPlaying && source.clip != null && source.clip.name.StartsWith("sfx_win_toada_", StringComparison.Ordinal))
+                {
+                    synth = source.clip;
+                }
+            }
+
+            Assert.That(synth, Is.Not.Null, "suena el clip sintetizado de la toada");
+            Assert.That(synth, Is.Not.SameAs(custom));
+            float synthMs = synth!.length * 1000f;
+            Assert.That(s.Mix.ToadaLeftMs, Is.EqualTo(synthMs).Within(0.5f), "lo que dura el clip sintetizado (" + synthMs + " ms)");
+            s.Tick(synthMs + 1f);
+            Assert.That(s.Mix.ToadaLeftMs, Is.EqualTo(0f));
+
+            s.UseClips(full);
+            UnityEngine.Object.Destroy(withCustom);
+            UnityEngine.Object.Destroy(withoutToada);
+            UnityEngine.Object.Destroy(custom);
         }
 
         private UnityAudioService Take()

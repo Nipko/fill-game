@@ -375,7 +375,7 @@ Las columnas «Tu propuesta» de las secciones 1-7 siguen siendo el encargo para
 | `sfx_morpho_idle` | −28 | sin cola añadida | Sin gancho todavía: Morpho por inactividad (MO3) |
 | `sfx_store_open` | −19 | sin cola añadida | Al abrirse la hoja de compra |
 
-**Ganchos de los remates (AU3):** junto a `sfx_world_banner` (`sting_world_banner`), `sfx_fact` (`sting_arrival`), `sfx_mech_card` en la tarjeta previa de un estreno (`sting_mech_card`; no en las que solo anuncian la dificultad) y en la transición a Nivel fallido (`sting_level_failed`; no al reanudar con la pantalla abierta). `sting_fruit_new` aún no tiene gancho.
+**Ganchos de los remates (AU3):** junto a `sfx_world_banner` (`sting_world_banner`), `sfx_fact` (`sting_arrival`), `sfx_mech_card` en la tarjeta previa de un estreno (`sting_mech_card`; no en las que solo anuncian la dificultad) y en la transición a Nivel fallido (`sting_level_failed`; no al reanudar con la pantalla abierta). `sting_fruit_new` aún no tiene gancho. Si la toada de la victoria suena, el remate espera al final exacto de su clip: el WAV `sfx_win_toada` dura 2,55 s y el del respaldo por código, unos 2,27 s (tarea FX7; antes esperaba 2,25 s fijos y empezaba 0,17-0,31 s antes del final del WAV). Lo mismo dura la atenuación del lecho por la toada.
 
 ### Peso del audio (AU3, 2026-10-17)
 

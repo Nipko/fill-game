@@ -23,6 +23,7 @@ namespace AF.Tests.PlayMode
 
         private static readonly Regex ButtonRx = new Regex("\\{\"id\":\"([a-z0-9_]+)\",\"x\":(-?\\d+),\"y\":(-?\\d+),\"w\":(-?\\d+),\"h\":(-?\\d+)\\}");
         private static readonly Regex CuiaRx = new Regex("\\{\"i\":(\\d+),\"x\":(-?\\d+),\"y\":(-?\\d+),\"w\":(-?\\d+),\"h\":(-?\\d+)\\}");
+        private static readonly Regex PartRx = new Regex(",\"sh\":-?\\d+,\"part\":(\\d+),\"parts\":(\\d+),");
 
         private readonly List<string> _lines = new List<string>();
 
@@ -50,7 +51,11 @@ namespace AF.Tests.PlayMode
             _lines.Clear();
         }
 
-        /// <summary>La última línea de la pantalla <paramref name="screen"/> en el nivel <paramref name="level"/>, o null.</summary>
+        /// <summary>
+        /// La última sonda de la pantalla <paramref name="screen"/> en el nivel <paramref name="level"/>, o null: su línea o, si
+        /// salió partida (tarea FX7: <c>"part":k,"parts":n</c>), sus <c>n</c> partes, de la 1 a la <c>n</c>, una por renglón
+        /// (<see cref="ButtonIds"/>, <see cref="Button"/> y <see cref="Cuias"/> leen todas).
+        /// </summary>
         public string? LastOf(string screen, int level)
         {
             string tag = Tag(screen, level);
@@ -58,11 +63,50 @@ namespace AF.Tests.PlayMode
             {
                 if (_lines[i].StartsWith(tag, StringComparison.Ordinal))
                 {
-                    return _lines[i];
+                    return Joined(i, tag);
                 }
             }
 
             return null;
+        }
+
+        /// <summary>Las líneas de una sonda devuelta por <see cref="LastOf"/> o <see cref="RequireLast"/> (una, o sus partes).</summary>
+        public static string[] Parts(string probe)
+        {
+            return probe.Split('\n');
+        }
+
+        /// <summary>Número de parte y partes de una línea partida (tarea FX7), o (0, 0) si salió entera.</summary>
+        public static (int Part, int Parts) PartOf(string line)
+        {
+            Match m = PartRx.Match(line);
+            return m.Success
+                ? (int.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture), int.Parse(m.Groups[2].Value, CultureInfo.InvariantCulture))
+                : (0, 0);
+        }
+
+        // La línea last o, si es la última parte de una sonda partida, sus partes (salen seguidas, en una sola llamada), una por
+        // renglón: todas de la misma pantalla y nivel y numeradas de 1 a n.
+        private string Joined(int last, string tag)
+        {
+            (int part, int parts) = PartOf(_lines[last]);
+            if (parts == 0)
+            {
+                return _lines[last];
+            }
+
+            Assert.That(part, Is.EqualTo(parts), "la última línea de una AF_LAYOUT partida es su última parte: " + _lines[last]);
+            Assert.That(last + 1, Is.GreaterThanOrEqualTo(parts), "las " + parts + " partes, capturadas");
+            var all = new string[parts];
+            for (int k = 0; k < parts; k++)
+            {
+                string line = _lines[last - parts + 1 + k];
+                Assert.That(line.StartsWith(tag, StringComparison.Ordinal), Is.True, "las partes salen seguidas: " + line);
+                Assert.That(PartOf(line), Is.EqualTo((k + 1, parts)), "parte " + (k + 1) + " de " + parts + ": " + line);
+                all[k] = line;
+            }
+
+            return string.Join("\n", all);
         }
 
         /// <summary>Líneas de la pantalla <paramref name="screen"/> en el nivel <paramref name="level"/>, en orden.</summary>
@@ -86,8 +130,9 @@ namespace AF.Tests.PlayMode
         {
             string? last = Last;
             Assert.That(last, Is.Not.Null, what + ": ninguna AF_LAYOUT");
-            Assert.That(last!.StartsWith(Tag(screen, level), StringComparison.Ordinal), Is.True, what + ": la última AF_LAYOUT es de «" + screen + "» del " + level + ": " + last);
-            return last;
+            string tag = Tag(screen, level);
+            Assert.That(last!.StartsWith(tag, StringComparison.Ordinal), Is.True, what + ": la última AF_LAYOUT es de «" + screen + "» del " + level + ": " + last);
+            return Joined(_lines.Count - 1, tag);
         }
 
         /// <summary>Ids de los botones de la línea, en orden.</summary>

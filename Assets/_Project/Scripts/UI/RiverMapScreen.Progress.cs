@@ -170,6 +170,22 @@ namespace AF.UI
         /// <summary>Hueco que busca la placa de una silueta con el borde de las líneas de clase 1-2 (dp) [P].</summary>
         public const float SilhouetteLineClearanceDp = 4f;
 
+        /// <summary>
+        /// Paso de la búsqueda de un sitio fuera del lleno para una placa en la zona visible de la Cuenca (dp), cuando cerca
+        /// de su parada no lo hay (revisión de FX7).
+        /// </summary>
+        public const float SilhouetteFarStepDp = 8f;
+
+        /// <summary>
+        /// Lo más lejos de su parada que se busca ese sitio fuera del lleno (dp) [P]: el centro de la placa, a lo sumo esto más medio
+        /// ancho de la placa (revisión de FX7: con max 200 la placa de Ucayali, en Perú, salía junto a «Brasil», en la otra punta de
+        /// la Cuenca).
+        /// </summary>
+        public const float SilhouetteFarMaxDistDp = 140f;
+
+        /// <summary>Hueco entre un país y el control de la Cuenca que pisaba, si se corre a su izquierda (dp) [P] (revisión de FX7).</summary>
+        public const float CountryControlGapDp = 6f;
+
         /// <summary>Silueta de un mundo futuro: <c>panel_alto</c> (#234452, el azul petróleo del panel, D-004; propuesta §3.5).</summary>
         public static readonly Color SilhouetteColor = Palette.Panel.Top;
 
@@ -198,6 +214,9 @@ namespace AF.UI
         private readonly List<float> _pastRosaLegSpacing = new List<float>();
         private readonly List<Vector2> _pastRosaStop = new List<Vector2>();
         private readonly List<Rect> _placed = new List<Rect>();
+        private bool[] _countryBasinHidden = Array.Empty<bool>();
+        private float[] _countryFreeClearance = Array.Empty<float>();
+        private float[] _countryUnderClearance = Array.Empty<float>();
         private static Material? _countryMaterial;
 
         private RectTransform? _fillLayer;
@@ -810,25 +829,44 @@ namespace AF.UI
             }
 
             PlaceBuoys(space);
+            LayoutOrientationLabels(); // antes que las placas: «Norte arriba» se coloca bajo «Andes ↑» si lo pisaría (FX7)
+            BasinControlObstacles(); // los controles de la Cuenca, obstáculo de los países y de las placas (FX7)
             _placed.Clear();
             PlaceCountries(space);
             PlaceSilhouettes(space);
-            LayoutOrientationLabels();
         }
 
         // Los países van en su punto de labels, pero nunca se salen del mapa por un lado (se corren hacia dentro lo justo) ni
         // pisan el río, que es el protagonista: si la caja choca con una línea de clase 1-2, o queda a menos de
         // CountryLineClearanceDp de su borde, se busca el sitio libre más cercano, hasta CountryMaxShiftDp (en horizontal y en
-        // vertical primero). Sin hueco libre, el de más hueco. Tampoco se pisan entre sí. Solo al cambiar de vista; sin asignaciones.
+        // vertical primero). Sin hueco libre, el de más hueco. Tampoco se pisan entre sí ni, en la Cuenca sin girar, quedan bajo sus
+        // controles (BasinControlObstacles: «Norte arriba», «Volver a la canoa», la canoa con su equipo, las boyas y los rótulos
+        // fijos «Andes ↑» y «Océano Atlántico ↓»; revisión de FX7: con max 140 «Ecuador» quedaba tras «Norte arriba»): si los
+        // controles le quitan todos los sitios, o los únicos que no pisaban el río (CountryBasinFallback), el país se corre a la
+        // izquierda del control que pisa en su punto (su borde derecho a CountryControlGapDp de él) y, si ahí pisa el río u otro
+        // rótulo, no sale en esa vista [P] (CountryBasinHidden; con el norte arriba vuelve, en su sitio de esa vista). Si fuera de
+        // los controles solo quedan sitios sobre el río y bajo ellos también, el de más hueco, como antes. Solo al cambiar de vista;
+        // sin asignaciones (salvo las tablas de la búsqueda si cambia el número de países).
         private void PlaceCountries(MapSpace space)
         {
             RiverMap map = _map!;
             float contentW = space.DpPerUnit * map.Width;
             float contentH = space.DpPerUnit * map.Height;
             IReadOnlyList<RiverMapLabel> labels = map.Labels;
+            if (_countryBasinHidden.Length != _countries.Count)
+            {
+                _countryBasinHidden = new bool[_countries.Count];
+                _countryFreeClearance = new float[_countries.Count];
+                _countryUnderClearance = new float[_countries.Count];
+            }
+
+            float u = NorthUpEase(_northUpT);
             for (int i = 0; i < labels.Count && i < _countries.Count; i++)
             {
                 TextMeshProUGUI label = _countries[i];
+                _countryBasinHidden[i] = false;
+                _countryFreeClearance[i] = float.NegativeInfinity;
+                _countryUnderClearance[i] = float.NegativeInfinity;
                 if (!label.gameObject.activeSelf)
                 {
                     continue;
@@ -841,6 +879,9 @@ namespace AF.UI
                 float bestClearance = float.NegativeInfinity;
                 int rings = Mathf.RoundToInt(CountryMaxShiftDp / LabelSearchStepDp);
                 bool found = false;
+                Vector2 home = best;
+                bool blocked = false;
+                float underClearance = float.NegativeInfinity; // el mejor hueco con el río de los sitios que pisan un control
                 for (int ring = 0; ring <= rings && !found; ring++)
                 {
                     int directions = ring == 0 ? 1 : SearchDirections.Length;
@@ -850,6 +891,17 @@ namespace AF.UI
                         Rect box = new Rect(c.x - (size.x * 0.5f), c.y - (size.y * 0.5f), size.x, size.y);
                         if (OverlapsPlaced(box))
                         {
+                            continue;
+                        }
+
+                        if (HitsBasinControl(box))
+                        {
+                            blocked = true;
+                            if (underClearance < 0f)
+                            {
+                                underClearance = Mathf.Max(underClearance, LineClearance(map, space, _view, box, 0f));
+                            }
+
                             continue;
                         }
 
@@ -864,15 +916,89 @@ namespace AF.UI
                     }
                 }
 
+                // Los controles le quitaron todos los sitios o los únicos que no pisaban el río (CountryBasinFallback): a la izquierda
+                // del control que pisa en su punto (si ese sitio no pisa el río ni otro rótulo) o, si no, fuera de esta vista [P]. Si
+                // los sitios que pisan un control también pisaban el río, se queda en `best`, el de más hueco, como antes de FX7.
+                bool hidden = false;
+                _countryFreeClearance[i] = bestClearance;
+                _countryUnderClearance[i] = underClearance;
+                if (CountryBasinFallback(blocked, bestClearance, underClearance))
+                {
+                    hidden = true;
+                    int k = BasinControlHit(new Rect(home.x - (size.x * 0.5f), home.y - (size.y * 0.5f), size.x, size.y));
+                    if (k >= 0)
+                    {
+                        // Los controles ya llevan MarkerObstacleGapDp de hueco: el borde derecho, a CountryControlGapDp del control.
+                        float xMax = _basinControls[k].xMin + MarkerObstacleGapDp - CountryControlGapDp;
+                        var c = new Vector2(xMax - (size.x * 0.5f), home.y);
+                        var box = new Rect(xMax - size.x, c.y - (size.y * 0.5f), size.x, size.y);
+                        hidden = box.xMin < LabelEdgeDp || OverlapsPlaced(box) || HitsBasinControl(box)
+                            || LineClearance(map, space, _view, box, CountryLineClearanceDp) < 0f;
+                        if (!hidden)
+                        {
+                            best = c;
+                        }
+                    }
+                }
+
+                _countryBasinHidden[i] = hidden;
+                SetLabelAlpha(label.canvasRenderer, CountryAlpha(i, u));
                 rt.anchoredPosition = best;
-                _placed.Add(new Rect(best.x - (size.x * 0.5f), best.y - (size.y * 0.5f), size.x, size.y));
+                if (!hidden)
+                {
+                    _placed.Add(new Rect(best.x - (size.x * 0.5f), best.y - (size.y * 0.5f), size.x, size.y));
+                }
             }
+        }
+
+        /// <summary>
+        /// El país <paramref name="i"/> (en el orden de <c>labels</c>) no sale en la Cuenca sin girar [P]: no cabe sin quedar bajo
+        /// uno de sus controles o pisar el río (<see cref="PlaceCountries"/>, <see cref="CountryBasinFallback"/>; revisión de FX7).
+        /// Con el norte arriba vuelve.
+        /// </summary>
+        internal bool CountryBasinHidden(int i)
+        {
+            return i < _countryBasinHidden.Length && _countryBasinHidden[i];
+        }
+
+        /// <summary>
+        /// Lo que vio la búsqueda del país <paramref name="i"/> en su última colocación (tests de FX7): <paramref name="free"/>, el
+        /// mejor hueco con el río de los sitios que no pisan ningún control ni otro rótulo, y <paramref name="under"/>, el de los
+        /// que pisan un control (como mucho 0); −∞ si no hubo ninguno.
+        /// </summary>
+        internal void CountryBasinSearch(int i, out float free, out float under)
+        {
+            bool known = i < _countryFreeClearance.Length;
+            free = known ? _countryFreeClearance[i] : float.NegativeInfinity;
+            under = known ? _countryUnderClearance[i] : float.NegativeInfinity;
+        }
+
+        /// <summary>
+        /// Un país de la Cuenca sin girar busca sitio a la izquierda del control que pisa en su punto o, si no lo hay, no sale en esa
+        /// vista [P] (revisión de FX7): solo si algún control le quitó un sitio (<paramref name="blocked"/>) y, o no le queda ninguno
+        /// fuera de los controles y de los otros rótulos (<paramref name="freeClearance"/> = −∞), o los que le quedan pisan el río
+        /// (&lt; 0) y el control le quitó uno que no lo pisaba (<paramref name="underClearance"/> ≥ 0): antes de FX7 salía ahí, bajo
+        /// el control. Si los sitios bajo un control también pisaban el río, se queda en el de más hueco fuera de ellos, como antes.
+        /// </summary>
+        internal static bool CountryBasinFallback(bool blocked, float freeClearance, float underClearance)
+        {
+            return blocked && (float.IsNegativeInfinity(freeClearance) || (freeClearance < 0f && underClearance >= 0f));
         }
 
         // La silueta, a la derecha de su gran parada o, si no cabe, a su izquierda, sin salirse del mapa y dejando libre la caja
         // de la canoa (con SilhouetteCanoeClearanceDp de hueco): si choca, prueba el otro lado y luego se mueve en vertical, hasta
-        // SilhouetteMaxShiftDp. Tampoco pisa los países ni otra silueta. Va en el lienzo estático, por debajo de la canoa, así que
-        // nunca puede quedar debajo de ella.
+        // SilhouetteMaxShiftDp. Tampoco pisa los países, otra silueta ni, en la Cuenca, los controles que flotan encima del mapa
+        // («Norte arriba» y, si sale, «Volver a la canoa»; tarea FX7, BasinControlObstacles). Va en el lienzo estático, por
+        // debajo de la canoa, así que nunca puede quedar debajo de ella.
+        // El lleno (el progreso del jugador) no se tapa si hay sitio (revisión de FX7: con max 200 las placas de los mundos 7 y 9
+        // tapaban cintas del lleno): un sitio cercano vale solo si no pisa ninguna línea del lleno (FillLinesUnder) y deja
+        // SilhouetteLineClearanceDp a las de clase 1-2. Si cerca no lo hay, en la Cuenca se busca en la zona visible con su
+        // encuadre de apertura, hasta SilhouetteFarMaxDistDp de la parada, el sitio fuera del lleno más cercano a ella
+        // (FarFillFreeSpot); si tampoco lo hay, el respaldo es el sitio cercano que tapa menos líneas del lleno y, a igualdad, el de
+        // más hueco. Límites aceptados [P]: la placa puede quedar algo lejos de su parada (el texto la nombra), pero no en otra
+        // región de la Cuenca, y una placa muy ancha puede no caber fuera del lleno sin pisar un control, un país o la canoa: con
+        // max 200, la del mundo 7 («Madre de Dios», 215 dp en una Cuenca de 328) tapa las menos líneas del lleno que puede cerca de
+        // su parada (dos). Fuera de la Cuenca (el Mundo, que se arrastra) no se busca lejos.
         private void PlaceSilhouettes(MapSpace space)
         {
             RiverMap map = _map!;
@@ -902,6 +1028,7 @@ namespace AF.UI
                 bool any = false;
                 bool found = false;
                 float bestClearance = float.NegativeInfinity;
+                int bestFillHits = int.MaxValue;
                 int steps = Mathf.RoundToInt(SilhouetteMaxShiftDp / LabelSearchStepDp);
                 for (int k = 0; k <= 2 * steps && !found; k++)
                 {
@@ -920,30 +1047,159 @@ namespace AF.UI
                             first = box;
                         }
 
-                        if ((hasCanoe && box.Overlaps(canoe)) || OverlapsPlaced(box))
+                        if ((hasCanoe && box.Overlaps(canoe)) || OverlapsPlaced(box) || HitsBasinControl(box))
                         {
                             continue;
                         }
 
                         // Como los países: el sitio libre más cercano que no tape el curso de los ríos (ni el frente, que va por
-                        // ellos); si ninguno llega a SilhouetteLineClearanceDp, el de más hueco.
+                        // ellos) ni el lleno. Si ninguno lo consigue, el respaldo es el que tapa menos líneas del lleno y, a
+                        // igualdad, el de más hueco (salvo que en la Cuenca FarFillFreeSpot encuentre uno fuera del lleno).
                         float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp);
-                        if (!any || clearance > bestClearance)
+                        int fillHits = FillLinesUnder(map, space, _view, box);
+                        if (!any || fillHits < bestFillHits || (fillHits == bestFillHits && clearance > bestClearance))
                         {
                             any = true;
+                            bestFillHits = fillHits;
                             bestClearance = clearance;
                             chosen = box;
                         }
 
-                        found = clearance >= SilhouetteLineClearanceDp;
+                        found = fillHits == 0 && clearance >= SilhouetteLineClearanceDp;
                     }
                 }
 
                 Rect plate = any ? chosen : first;
+                int fillMin = any ? bestFillHits : -1;
+                if (!found && (!any || bestFillHits > 0) && FarFillFreeSpot(map, space, p, size, hasCanoe, canoe, out Rect far))
+                {
+                    plate = far;
+                    fillMin = 0;
+                }
+
+                s.FillMin = fillMin;
+                s.FillHits = FillLinesUnder(map, space, _view, plate);
                 s.Root.pivot = new Vector2(0f, 0.5f);
                 s.Root.anchoredPosition = new Vector2(plate.xMin, plate.center.y);
                 _placed.Add(plate);
             }
+        }
+
+        // En la Cuenca sin girar, el sitio de una placa de tamaño size que no pisa ninguna línea del lleno, la canoa, los países, las
+        // otras placas ni los controles, dentro de la zona visible con el encuadre de apertura (_basinFrame) y del mapa (con
+        // LabelEdgeDp de margen) y con el centro a lo sumo a SilhouetteFarMaxDistDp más medio ancho de la parada p (revisión de FX7:
+        // que la placa no salte a otra región de la Cuenca), más cercano a p; vale aunque cruce afluentes de clase 1-2 que no estén
+        // llenos, y a igual distancia gana el de más hueco con ellos. En una
+        // rejilla de SilhouetteFarStepDp (y pegada a los bordes derecho e inferior). False si no hay ninguno: entonces la placa se
+        // queda cerca de su parada (una placa que se fuera lejos para tapar menos líneas, pero alguna, quitaría el sitio a las
+        // siguientes). Sin asignaciones.
+        private bool FarFillFreeSpot(RiverMap map, MapSpace space, Vector2 p, Vector2 size, bool hasCanoe, Rect canoe, out Rect spot)
+        {
+            spot = default;
+            if (_view != MapView.Basin || !_basinFrameSet)
+            {
+                return false;
+            }
+
+            float contentW = space.DpPerUnit * map.Width;
+            float contentH = space.DpPerUnit * map.Height;
+            float xMin = Mathf.Max(_basinFrame.xMin, 0f) + LabelEdgeDp;
+            float xMax = Mathf.Min(_basinFrame.xMax, contentW) - LabelEdgeDp;
+            float yMin = Mathf.Max(_basinFrame.yMin, -contentH) + LabelEdgeDp;
+            float yMax = Mathf.Min(_basinFrame.yMax, 0f) - LabelEdgeDp;
+            if (xMax - xMin < size.x || yMax - yMin < size.y)
+            {
+                return false;
+            }
+
+            int cols = Mathf.FloorToInt((xMax - xMin - size.x) / SilhouetteFarStepDp);
+            int rows = Mathf.FloorToInt((yMax - yMin - size.y) / SilhouetteFarStepDp);
+            float reach = SilhouetteFarMaxDistDp + (size.x * 0.5f);
+            bool any = false;
+            float bestDistance = float.PositiveInfinity;
+            float bestClearance = float.NegativeInfinity;
+            for (int r = 0; r <= rows + 1; r++)
+            {
+                float y = r <= rows ? yMin + (r * SilhouetteFarStepDp) : yMax - size.y;
+                for (int c = 0; c <= cols + 1; c++)
+                {
+                    float x = c <= cols ? xMin + (c * SilhouetteFarStepDp) : xMax - size.x;
+                    var box = new Rect(x, y, size.x, size.y);
+                    float distance = PointBoxDistance(p, box);
+                    if (distance > bestDistance + 0.01f || (box.center - p).sqrMagnitude > reach * reach || (hasCanoe && box.Overlaps(canoe))
+                        || OverlapsPlaced(box) || HitsBasinControl(box) || FillLinesUnder(map, space, _view, box) > 0)
+                    {
+                        continue;
+                    }
+
+                    float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp);
+                    if (!any || distance < bestDistance - 0.01f || clearance > bestClearance)
+                    {
+                        any = true;
+                        bestDistance = distance;
+                        bestClearance = clearance;
+                        spot = box;
+                    }
+                }
+            }
+
+            return any;
+        }
+
+        /// <summary>
+        /// Líneas del lleno que tapa la placa de la silueta <paramref name="i"/> (en el orden de <see cref="SilhouetteCount"/>),
+        /// contadas al colocarla (tests de FX7).
+        /// </summary>
+        internal int SilhouetteFillHits(int i)
+        {
+            return ActiveSilhouette(i).FillHits;
+        }
+
+        /// <summary>
+        /// Las menos líneas del lleno que tapaba un sitio de la placa <paramref name="i"/> libre de los demás obstáculos entre los
+        /// que probó su búsqueda: la cercana o, si en la Cuenca encontró uno fuera del lleno en la zona visible (hasta
+        /// <see cref="SilhouetteFarMaxDistDp"/> de su parada), 0; −1 si ninguno estaba libre (tests de FX7).
+        /// </summary>
+        internal int SilhouetteFillMin(int i)
+        {
+            return ActiveSilhouette(i).FillMin;
+        }
+
+        /// <summary>
+        /// Cuántas líneas del lleno pisa la caja <paramref name="box"/> (coordenadas locales del contenido) con el ancho de su
+        /// cinta en la vista actual (tests de FX7: las placas no tapan el lleno si hay sitio).
+        /// </summary>
+        internal int FillLinesUnderBox(Rect box)
+        {
+            return _map == null ? 0 : FillLinesUnder(_map, _space, _view, box);
+        }
+
+        /// <summary>
+        /// La caja de la placa de la silueta <paramref name="i"/> (en el orden de <see cref="SilhouetteCount"/>) en coordenadas
+        /// locales del contenido, sin girar.
+        /// </summary>
+        internal Rect SilhouetteLocalBox(int i)
+        {
+            RectTransform rt = ActiveSilhouette(i).Root;
+            Vector2 size = rt.sizeDelta;
+            Vector2 a = rt.anchoredPosition;
+            return new Rect(a.x - (rt.pivot.x * size.x), a.y - (rt.pivot.y * size.y), size.x, size.y);
+        }
+
+        /// <summary>La caja del país <paramref name="i"/> en coordenadas locales del contenido, sin girar.</summary>
+        internal Rect CountryLocalBox(int i)
+        {
+            RectTransform rt = _countries[i].rectTransform;
+            Vector2 size = rt.sizeDelta;
+            Vector2 a = rt.anchoredPosition;
+            return new Rect(a.x - (rt.pivot.x * size.x), a.y - (rt.pivot.y * size.y), size.x, size.y);
+        }
+
+        /// <summary>Zona visible de la Cuenca con su encuadre de apertura, en coordenadas locales del contenido (false fuera de ella).</summary>
+        internal bool BasinFrameLocal(out Rect frame)
+        {
+            frame = _basinFrame;
+            return _basinFrameSet;
         }
 
         // Direcciones de la búsqueda de sitio de un rótulo: en horizontal y en vertical primero, luego en diagonal.
@@ -1018,6 +1274,43 @@ namespace AF.UI
             }
 
             return clearance;
+        }
+
+        // Cuántas líneas del lleno (las de FillFrom < 1, de cualquier clase, en su trozo lleno: de FillFrom a la boca) pisa la caja
+        // box (coordenadas locales del contenido) con el ancho de su cinta en la vista y su orla (revisión de FX7). Sin asignaciones.
+        private int FillLinesUnder(RiverMap map, MapSpace space, MapView view, Rect box)
+        {
+            int hits = 0;
+            IReadOnlyList<RiverLine> lines = map.Lines;
+            int count = Mathf.Min(lines.Count, _fillFrom.Length);
+            for (int l = 0; l < count; l++)
+            {
+                float from = _fillFrom[l];
+                if (from >= 1f)
+                {
+                    continue;
+                }
+
+                RiverLine line = lines[l];
+                float half = (RibbonWidthDp(view, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp;
+                Rect near = Rect.MinMaxRect(box.xMin - half, box.yMin - half, box.xMax + half, box.yMax + half);
+                float[] cumulative = line.Cumulative;
+                float start = from * line.Length;
+                Vector2 a = space.ToLocal(line.X(0), line.Y(0));
+                for (int i = 1; i < line.PointCount; i++)
+                {
+                    Vector2 b = space.ToLocal(line.X(i), line.Y(i));
+                    if (cumulative[i] >= start && SegmentHitsBox(a, b, near))
+                    {
+                        hits++;
+                        break;
+                    }
+
+                    a = b;
+                }
+            }
+
+            return hits;
         }
 
         // Distancia entre el segmento ab y la caja (0 si la cruza o la toca).
@@ -1807,6 +2100,10 @@ namespace AF.UI
             public int World { get; set; }
 
             public Vector2 MapPoint { get; set; }
+
+            public int FillHits { get; set; }
+
+            public int FillMin { get; set; }
         }
 
         /// <summary>

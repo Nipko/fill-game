@@ -254,7 +254,10 @@ namespace AF.Audio.Unity
             int index = AudioBank.Index(id, tint);
             if (id == SfxId.WinToada && _mix.SfxAudible)
             {
-                _mix.ToadaStarted(); // el lecho baja 6 dB mientras suena (07 §9.4)
+                // El lecho baja 6 dB mientras suena (07 §9.4) y los remates esperan a que termine: lo que dura el clip que va a
+                // sonar, el WAV o el del respaldo por código (tarea FX7); sin clip todavía, el largo fijo.
+                AudioClip? toada = EffectClip(index, out _);
+                _mix.ToadaStarted(toada != null ? toada.length * 1000f : AudioMix.ToadaDuckMs);
             }
 
             PlayIndex(index, id, tint);
