@@ -10,15 +10,16 @@ namespace AF.Presentation
     /// el mismo sprite hace el capullo cerrado, la flor entreabierta y la abierta) y el cáliz espinoso que tapa la boca
     /// (<see cref="FlorSepals"/>, ya coloreado, del vino de los sépalos de la vitória-régia, para que no se lea como el cáliz
     /// verde del Brote). Aquí va también el dibujo del icono de la mecánica (<see cref="MechanicIcon"/> de 32 dp y el grande del
-    /// estreno, <see cref="CardHeroIcon"/>): la flor entreabierta, con los pétalos de fuera rosas y los de dentro blancos, sobre
-    /// su cáliz.
+    /// estreno, <see cref="CardHeroIcon"/>): la Flor cerrada del tablero, blanca (<see cref="FlorWhite"/>) y sin rosa, sobre su
+    /// cáliz de vino, con dos discos neutros a los lados (<see cref="FlorIconKeyFill"/> con filo de 1 dp en
+    /// <see cref="FlorIconKeyEdge"/>) por sus dos llaves en lógica Y (b.3); la fruta concreta la pone el nivel (revisión de VA1b).
     /// </summary>
     /// <remarks>
     /// <para>Color (direccion-visual-v2 §2.4, regla 1): el blanco de la flor no es el blanco puro, que se confundiría con la
     /// guanábana (#FAFAF7), sino <see cref="FlorWhite"/>, un blanco verdoso a ΔE00 10,7 de ella; el rosa de la flor abierta,
     /// <see cref="FlorPink"/>, queda a ΔE00 20,5 de la bacaba y a 19,7 del camu camu; el cáliz, <see cref="FlorSepal"/>, a
-    /// ΔE00 19,8 del cacao. Sin tintes de fruta en el icono (07 §3, regla 6). Las frutas llave las pinta el overlay con la fruta en
-    /// vuelo, que lleva su tinte a propósito.</para>
+    /// ΔE00 19,8 del cacao. Sin tintes de fruta en el icono (07 §3, regla 6). Las frutas llave las pinta el overlay con la muestra de
+    /// su dosis (<see cref="HojaAtadaSwatch"/>), que lleva su tinte a propósito.</para>
     /// <para>Perezosos: se generan la primera vez que se piden (el overlay los pide al unirse a la cuia) y tras
     /// <see cref="Dispose"/> se vuelven a generar. A <see cref="MechanicPxPerU"/> px por u. Lo sustituye el arte del artista; el
     /// nombre «Flor de vitória-régia» está pendiente del asesor cultural (glosario §6.5).</para>
@@ -45,6 +46,15 @@ namespace AF.Presentation
 
         /// <summary>Cáliz espinoso de la flor [P]: vino oscuro #5A2E3E, a ΔE00 19,8 del cacao (el tinte más cercano).</summary>
         public static readonly Color FlorSepal = Palette.Hex(0x5A2E3E);
+
+        /// <summary>Relleno de los dos discos neutros de las llaves en el icono [P]: #EADBC0, sin tinte de fruta (07 §3, regla 6).</summary>
+        public static readonly Color FlorIconKeyFill = Palette.Hex(0xEADBC0);
+
+        /// <summary>Filo de 1 dp de los discos de las llaves en el icono [P]: #3B2A20, que los separa del crema del medallón.</summary>
+        public static readonly Color FlorIconKeyEdge = Palette.Hex(0x3B2A20);
+
+        /// <summary>Diámetro de cada disco de llave en el icono, en fracción del lado del icono [P] (revisión de VA1b: ≈ 28 %).</summary>
+        public const float FlorIconKeyDiameter = 0.28f;
 
         private Sprite? _florPetal;
         private Sprite? _florSepals;
@@ -162,45 +172,66 @@ namespace AF.Presentation
             return MakeSprite(pc, "mech_flor_sepals", new Vector2(0.5f, 0f), Vector4.zero);
         }
 
-        // Icono de la Flor de vitória-régia en un lienzo cuadrado de s px (k = s / 96; y hacia arriba): la flor entreabierta sobre
-        // su cáliz espinoso, con los pétalos de fuera rosas y los de dentro blancos (b.3: «capullo blanco → rosa → abierto»), con
-        // contorno de vino oscuro para que se lea sobre la madera clara de la tarjeta. Solo la flor: sin la hoja redonda, que es la
-        // Hoja escudo (b.3).
+        // Icono de la Flor de vitória-régia en un lienzo cuadrado de s px (k = s / 96; y hacia arriba): la Flor cerrada del tablero
+        // (FlorOverlay sin llaves cumplidas), con sus cinco pétalos blancos (FlorWhite, sin rosa: el rosa solo sale al abrirse) en
+        // capullo, con el contorno gris del pétalo del tablero, sobre su cáliz espinoso de vino; y a los lados, abajo, dos discos
+        // neutros de FlorIconKeyDiameter del lado (FlorIconKeyFill con filo de 1 dp en FlorIconKeyEdge), las dos llaves en lógica Y
+        // (b.3), sin icono de fruta: la fruta concreta la pone el nivel (revisión de VA1b). Solo la flor: sin la hoja redonda, que
+        // es la Hoja escudo (b.3).
         private static void DrawFlorGlyph(PixelCanvas pc, int s)
         {
             float k = s / 96f;
-            Color outline = ColorMath.Darken(FlorSepal, 0.35f);
-            var foot = new Vector2(48f * k, 22f * k);
+            Color petalEdge = new Color(FlorWhite.r * 0.40f, FlorWhite.g * 0.40f, FlorWhite.b * 0.42f, 1f); // el gris del pétalo, teñido
+            Color sepalEdge = ColorMath.Darken(FlorSepal, 0.45f);
+            Color sepalLight = ColorMath.Lighten(FlorSepal, 0.30f);
+            var foot = new Vector2(48f * k, 24f * k);
 
-            // Pétalos de atrás a delante: los de fuera, rosas y muy abiertos; los de en medio, rosa claro; los de dentro, blancos.
-            float[] angles = { 62f, 36f, 14f };
-            float[] lens = { 50f, 58f, 64f };
-            Color[] fills = { FlorPink, Color.Lerp(FlorPink, FlorWhite, 0.5f), FlorWhite };
-            for (int ring = 0; ring < 3; ring++)
+            // Pétalos de atrás adelante, cerrados como en el tablero (giros de 15°, 7° y 0°): los de fuera, algo más oscuros.
+            float[] deg = { 15f, 7f };
+            float[] footX = { 4.5f, 2.5f };
+            for (int ring = 0; ring < 2; ring++)
             {
                 for (int side = -1; side <= 1; side += 2)
                 {
-                    float a = angles[ring] * Mathf.Deg2Rad;
+                    float a = deg[ring] * Mathf.Deg2Rad;
                     var dir = new Vector2(side * Mathf.Sin(a), Mathf.Cos(a));
-                    Vector2 b = foot + new Vector2(side * 3f * k, 0f);
-                    DrawLeafShape(pc, b - (dir * (1.5f * k)), dir, (lens[ring] + 3f) * k, 24f * k, outline, 1f);
-                    DrawLeafShape(pc, b, dir, lens[ring] * k, 19f * k, fills[ring], 1f);
+                    Vector2 b = foot + new Vector2(side * footX[ring] * k, 0f);
+                    DrawLeafShape(pc, b - (dir * (1.5f * k)), dir, 67f * k, 27f * k, petalEdge, 1f);
+                    DrawLeafShape(pc, b, dir, 64f * k, 22f * k, ring == 0 ? ColorMath.Darken(FlorWhite, 0.06f) : FlorWhite, 1f);
                 }
             }
 
-            // El pétalo del centro, blanco, en punta (aún entreabierta).
-            DrawLeafShape(pc, foot - new Vector2(0f, 1.5f * k), Vector2.up, 71f * k, 24f * k, outline, 1f);
-            DrawLeafShape(pc, foot, Vector2.up, 68f * k, 19f * k, FlorWhite, 1f);
-            pc.FillCapsule(foot.x, foot.y + (6f * k), foot.x, foot.y + (48f * k), 1.2f * k, ColorMath.Lighten(FlorWhite, 0.5f));
+            DrawLeafShape(pc, foot - new Vector2(0f, 1.5f * k), Vector2.up, 67f * k, 27f * k, petalEdge, 1f);
+            DrawLeafShape(pc, foot, Vector2.up, 64f * k, 22f * k, FlorWhite, 1f);
+            pc.FillCapsule(foot.x, foot.y + (8f * k), foot.x, foot.y + (48f * k), 1.1f * k, ColorMath.Lighten(FlorWhite, 0.5f));
 
-            // El cáliz: un collarín vino con espinas, bajo los pétalos.
-            pc.FillRoundedRect(22f * k, 6f * k, 74f * k, 26f * k, 9f * k, outline);
-            pc.FillRoundedRect(24.5f * k, 8.5f * k, 71.5f * k, 23.5f * k, 7f * k, FlorSepal);
-            pc.FillCapsule(32f * k, 21f * k, 64f * k, 21f * k, 1.2f * k, ColorMath.Lighten(FlorSepal, 0.30f));
+            // El cáliz: dos sépalos cortos que abrazan el pie de los pétalos y el collarín vino con espinas, delante.
+            for (int side = -1; side <= 1; side += 2)
+            {
+                var dir = new Vector2(side * 0.62f, 0.78f).normalized;
+                var b = new Vector2((48f + (side * 12f)) * k, 24f * k);
+                DrawLeafShape(pc, b - (dir * (2f * k)), dir, 24f * k, 18f * k, sepalEdge, 1f);
+                DrawLeafShape(pc, b, dir, 20f * k, 13f * k, FlorSepal, 1f);
+            }
+
+            // El collarín, algo más ancho que el capullo, como en el tablero (cáliz de 1,32 u).
+            pc.FillRoundedRect(25.5f * k, 9.5f * k, 70.5f * k, 30.5f * k, 9f * k, sepalEdge);
+            pc.FillRoundedRect(28f * k, 12f * k, 68f * k, 28f * k, 7f * k, FlorSepal);
+            pc.FillCapsule(35f * k, 25.5f * k, 61f * k, 25.5f * k, 1.1f * k, sepalLight);
             for (int i = 0; i < 6; i++)
             {
-                float x = Mathf.Lerp(28f * k, 68f * k, i / 5f);
-                pc.FillTriangle(new Vector2(x - (2.6f * k), 7f * k), new Vector2(x + (2.6f * k), 7f * k), new Vector2(x, 2f * k), outline);
+                float x = Mathf.Lerp(32f * k, 64f * k, i / 5f);
+                pc.FillTriangle(new Vector2(x - (2.4f * k), 10.5f * k), new Vector2(x + (2.4f * k), 10.5f * k), new Vector2(x, 5.5f * k), sepalEdge);
+            }
+
+            // Las dos llaves: discos neutros a los lados del cáliz, con el filo de 1 dp (UiPxPerDp px a cualquier tamaño).
+            float r = FlorIconKeyDiameter * 0.5f * s;
+            for (int side = -1; side <= 1; side += 2)
+            {
+                float cx = (48f + (side * 34f)) * k;
+                float cy = 18f * k;
+                pc.FillCircle(cx, cy, r, FlorIconKeyEdge);
+                pc.FillCircle(cx, cy, r - UiPxPerDp, FlorIconKeyFill);
             }
         }
     }

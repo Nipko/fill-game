@@ -243,8 +243,11 @@ namespace AF.Tests.PlayMode
             Assert.That(left.center.x, Is.LessThan(-0.3f), "una fruta en cada hombro");
             Assert.That(right.center.x, Is.GreaterThan(0.3f));
             Assert.That(left.center.y - (0.5f * FlorOverlay.KeyDiscU), Is.GreaterThan(CuiaGeometry.CavityTopU(4) + 0.05f), "sobre el líquido de la cuia llena (Q17 A)");
-            Assert.That(right.center.x + (0.5f * FlorOverlay.KeyDiscU), Is.LessThanOrEqualTo(CuiaGeometry.BodyOuterHalfWidthU), "el disco, dentro del ancho de la cuia");
-            Assert.That(flor.StepDurationMs(MechanicStepKind.Release), Is.EqualTo(FlorOverlay.ReleaseMs));
+            // Sobre los hombros y fuera del cuello (revisión de VA1b): las paredes del cuello se ven entre los discos y el cáliz, y por
+            // fuera no llegan a la mitad del hueco mínimo entre cuias (la cuia mide como mucho 0,70 de su ranura, BoardLayout).
+            Assert.That(right.center.x - (0.5f * FlorOverlay.KeyDiscU), Is.GreaterThanOrEqualTo(CuiaGeometry.NeckOuterHalfWidthU + 0.08f), "el disco derecho, fuera del cuello");
+            Assert.That(-left.center.x - (0.5f * FlorOverlay.KeyDiscU), Is.GreaterThanOrEqualTo(CuiaGeometry.NeckOuterHalfWidthU + 0.08f), "el izquierdo, también");
+            Assert.That(right.center.x + (0.5f * FlorOverlay.KeyDiscU), Is.LessThan(CuiaGeometry.BodyOuterHalfWidthU + ((1f / 0.70f) - 1f)), "menos de medio hueco fuera de la cuia");            Assert.That(flor.StepDurationMs(MechanicStepKind.Release), Is.EqualTo(FlorOverlay.ReleaseMs));
             Assert.That(flor.StepDurationMs(MechanicStepKind.Open), Is.EqualTo(0f));
             AssertSurfaceColors(flor, "Flor");
             string closed = Shown(_rig.Views[FlorIndex]); // D-002 (tocarla no la cambia): con el toque real, en Level403_Flor_InTheScene
@@ -459,6 +462,8 @@ namespace AF.Tests.PlayMode
             CuiaView budView = view.Views[index];
             BroteOverlay two = Brote(budView);
             float u = budView.Unit;
+            Assert.That(float.IsNaN(card.DebutTopDp), Is.False, "brote_n2 → Brote: la pantalla le pasa lo alto del Brote de dos hojas");
+            Assert.That(card.DebutTopDp, Is.EqualTo(ShownTopDp(view, budView)).Within(0.5f));
             Assert.That(two.TwoLeaves, Is.True);
             Assert.That(two.TwoLeavesFit, Is.LessThan(1f), "en la fila de arriba, algo más pequeño");
             Assert.That((two.VisibleTopU - budView.HeightU) * u, Is.LessThanOrEqualTo(LluviaOverlay.CloudTopMaxDp - BroteOverlay.TopRowFrameClearDp + 0.05f),
@@ -514,6 +519,60 @@ namespace AF.Tests.PlayMode
             CardSetup.AssertInsidePanel(view);
             view.CardFontScale = 1f;
             AssertCardIsNotSkipped(boot, florIndex);
+        }
+
+        [UnityTest]
+        public IEnumerator Level403_DebutCard_FallsBackOverRowOne_WhenAnchoredAboveTheDebutDoesNotFit()
+        {
+            // El respaldo de LevelCardView.ClearOfDebut (revisión de VA1b): si la tarjeta anclada DebutClearDp sobre la cuia que
+            // estrena quedaría por encima de la zona segura (safeTop + 8), va sobre la fila 1: a max(safeTop + 8, su tope). Con un
+            // lienzo sintético tan bajo que la tarjeta centrada queda casi en lo alto y la cuia que estrena bajo su centro.
+            yield return LoadWithCards(FlorDebutPack(), 403);
+            LevelCardView card = GameBootstrap.Current!.View!.LevelCard;
+            Assert.That(card.Card!.Kind, Is.EqualTo(LevelCardKind.Debut));
+            const float canvasW = 360f;
+            const float safeTop = 24f;
+            const float minTop = safeTop + 8f;
+
+            card.SetDebutClearance(float.NaN, float.NaN);
+            card.Layout(canvasW, 780f, safeTop, 0f);
+            float cardH = card.Pop.sizeDelta.y;
+            Assert.That(cardH, Is.GreaterThan(4f * LevelCardView.DebutClearDp), "la tarjeta del 403, medida");
+            float canvasH = Mathf.Ceil(cardH) + 80f;
+            card.Layout(canvasW, canvasH, safeTop, 0f);
+            float top = TopDp(card);
+            Assert.That(top, Is.EqualTo(Mathf.Round((canvasH - cardH) * 0.45f)).Within(0.5f), "sin cuia de estreno, al 45 % del alto libre");
+
+            // La cuia que estrena, bajo el centro de la tarjeta y tapada por ella; anclada sobre ella no cabría bajo la zona segura.
+            float debutTop = top + (cardH * 0.75f);
+            Assert.That(Mathf.Floor(debutTop - LevelCardView.DebutClearDp - cardH), Is.LessThan(minTop), "anclada, no cabe");
+            float[] rowOneTops = { minTop + 30f, minTop - 20f, float.NaN };
+            float[] expected = { minTop + 30f, minTop, minTop };
+            for (int i = 0; i < rowOneTops.Length; i++)
+            {
+                card.SetDebutClearance(debutTop, rowOneTops[i]);
+                card.Layout(canvasW, canvasH, safeTop, 0f);
+                Assert.That(TopDp(card), Is.EqualTo(expected[i]).Within(0.01f), "sobre la fila 1, a max(safeTop + 8, su tope): fila 1 a " + rowOneTops[i]);
+                Assert.That(card.Pop.sizeDelta.y, Is.EqualTo(cardH).Within(0.01f), "el mismo alto");
+            }
+
+            // Y con sitio para anclarla (la cuia más abajo, aún tapada por la tarjeta centrada): anclada DebutClearDp sobre la cuia.
+            float tallH = Mathf.Ceil(cardH) + 400f;
+            card.SetDebutClearance(float.NaN, float.NaN);
+            card.Layout(canvasW, tallH, safeTop, 0f);
+            float centered = TopDp(card);
+            float lowDebut = centered + (cardH * 0.75f);
+            card.SetDebutClearance(lowDebut, minTop + 30f);
+            card.Layout(canvasW, tallH, safeTop, 0f);
+            Assert.That(TopDp(card), Is.EqualTo(Mathf.Floor(lowDebut - LevelCardView.DebutClearDp - cardH)).Within(0.01f), "anclada DebutClearDp sobre la cuia");
+            Assert.That(TopDp(card), Is.GreaterThanOrEqualTo(minTop), "dentro de la zona segura");
+            card.SetDebutClearance(float.NaN, float.NaN);
+        }
+
+        // Lo alto de la tarjeta en dp desde arriba del lienzo (Pop: anclado arriba a la izquierda, pivote en el centro).
+        private static float TopDp(LevelCardView card)
+        {
+            return -card.Pop.anchoredPosition.y - (card.Pop.sizeDelta.y * 0.5f);
         }
 
         [UnityTest]

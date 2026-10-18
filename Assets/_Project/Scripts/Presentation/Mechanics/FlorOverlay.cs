@@ -35,8 +35,12 @@ namespace AF.Presentation.Mechanics
     /// 0,10-0,50; apertura 0,08-0,50; destellos a 0,40; abierta y quieta hasta 0,70; se desvanece 0,70-1.</para>
     /// <para><b>Tamaño</b>: lo más alto, la punta del pétalo central cerrado, queda <see cref="TopAboveRimU"/> = 0,84 u sobre lo
     /// alto de la cuia, por debajo del tope del Brote (1,0 u; la fila de arriba). Las muestras de las llaves, de
-    /// <see cref="KeyDiscU"/> (unos 18 dp con las cuias de 47 dp), cuelgan a <see cref="FruitCenterXU"/> del eje, con su borde de
-    /// abajo sobre la cara del líquido de la cuia llena.</para>
+    /// <see cref="KeyDiscU"/> (unos 18 dp con las cuias de 47 dp), van sobre los hombros, fuera del cuello: a
+    /// <see cref="FruitCenterXU"/> = 1,00 u del eje (el borde interior a ≈ 0,60 u, unos 2 dp de aire con el cuello de 0,50 u, cuyas
+    /// paredes de vidrio quedan a la vista bajo el cáliz, como en la cuia base y en el Brote) y con su borde de abajo en la cara
+    /// del líquido de la cuia llena (revisión de VA1b: con los discos sobre el cuello la cuia parecía otro recipiente, cortado,
+    /// con la flor suelta encima). Por fuera sobresalen ≈ 0,40 u del cuerpo, menos que la mitad del hueco mínimo entre cuias
+    /// (0,30 de la ranura con la cuia a 0,70 como mucho, BoardLayout).</para>
     /// <para>Sin asignaciones en <see cref="Show"/>, <see cref="Tick"/> ni en el paso (08 §5.4); todo se crea en
     /// <see cref="OnAttach"/>. Colores: <see cref="CollectSurfaceColors"/> (las frutas llevan su tinte a propósito).</para>
     /// </remarks>
@@ -66,11 +70,14 @@ namespace AF.Presentation.Mechanics
         /// <summary>Diámetro del disco de cada llave (u).</summary>
         public const float KeyDiscU = ProceduralArt.HojaAtadaSwatchU * KeyScale;
 
-        /// <summary>Centro de cada fruta: a un lado y otro del cuello, sobre los hombros (u desde el eje) [P].</summary>
-        public const float FruitCenterXU = 0.60f;
+        /// <summary>
+        /// Centro de cada fruta: sobre los hombros, fuera del cuello (u desde el eje) [P]: el borde interior del disco queda a
+        /// ≈ 0,60 u, con aire frente al cuello de <see cref="CuiaGeometry.NeckOuterHalfWidthU"/> (revisión de VA1b).
+        /// </summary>
+        public const float FruitCenterXU = 1.00f;
 
-        /// <summary>Centro de las frutas sobre el techo de la cavidad (u) [P]: su borde de abajo queda sobre el líquido de la cuia llena.</summary>
-        public const float FruitCenterAboveCavityU = 0.66f;
+        /// <summary>Centro de las frutas sobre el techo de la cavidad (u) [P]: su borde de abajo queda en la cara del líquido de la cuia llena.</summary>
+        public const float FruitCenterAboveCavityU = 0.45f;
 
         /// <summary>Lado de la ✓ de una llave cumplida (u): la de la Liana.</summary>
         public const float CheckU = ProceduralArt.LianaCheckU;
