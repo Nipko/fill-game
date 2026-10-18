@@ -100,7 +100,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             PlayModeHelpers.TakeClock(boot);
-            Assert.That(boot.Wallet!.Stock.Get(BoosterKind.Hint), Is.EqualTo(BoosterConfig.HintTutorialUnits), "acreditados al cargar");
+            Assert.That(boot.Wallet!.Stock.Get(BoosterKind.Hint), Is.EqualTo(boot.Flow!.Boosters.HintTutorialUnits), "acreditados al cargar");
             Assert.That(view.HintGiftedUnits, Is.EqualTo(3), "04 §2.3: 3 Morphos");
             bool sawTroop = false;
             int t = 0;
@@ -131,7 +131,8 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow!.Attempt.HintGifted, Is.True);
             TutorialSlothTests.WaitForInstruction(boot, "el 12");
 
-            // Con la presentación a la vista, Pista responde (la tarjeta no captura toques) y gasta del stock, no semillas.
+            // Con la presentación a la vista, Pista responde (la tarjeta no captura toques) y gasta del stock, no semillas. Sin dedo
+            // guía: 06 §2.2 lo pide para la primera, pero aún no existe en el cliente (pendiente; pregunta para el dueño) [P].
             Assert.That(boot.PressHint(), Is.True, "Pista con la presentación a la vista");
             yield return WaitAnswer(boot);
             Assert.That(boot.Flow.LastHint!.Value.Answer, Is.EqualTo(HintAnswer.Pour));

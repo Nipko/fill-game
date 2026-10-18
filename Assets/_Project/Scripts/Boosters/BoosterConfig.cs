@@ -28,12 +28,6 @@ namespace AF.Boosters
         public const int RevealGiftUnits = 1;
 
         /// <summary>
-        /// Morphos que se acreditan al stock en el nivel de desbloqueo (<c>hint_unlock_level</c>, el 12; 04 §2.3: «se acreditan
-        /// <b>3 Morphos</b> al stock»; 04 §4; 02 §13; 06 §2.2), una sola vez (<see cref="MorphoBooster.ShouldGift"/>; tarea TU1b).
-        /// </summary>
-        public const int HintTutorialUnits = 3;
-
-        /// <summary>
         /// Enfriamiento entre dos respuestas de Morpho [P] (04 §2.3: «Cooldown 5 s entre pistas»): cuenta desde la última
         /// respuesta, también desde las honestas que no cobran, con el <c>IClock</c> del flujo. No está en 08 §9: constante hasta
         /// que el dueño la lleve a la tabla.
@@ -93,6 +87,14 @@ namespace AF.Boosters
         /// </summary>
         [RemoteConfigKey("hint_unlock_level")]
         public int HintUnlockLevel { get; set; } = 12;
+
+        /// <summary>
+        /// <c>hint_tutorial_units</c>: Morphos que se acreditan al stock en el nivel de desbloqueo (<see cref="HintUnlockLevel"/>,
+        /// el 12; 08 §9: 3, rango 3; 04 §2.3: «se acreditan <b>3 Morphos</b> al stock»; 04 §4; 02 §13; 06 §2.2), una sola vez
+        /// (<see cref="MorphoBooster.ShouldGift"/>; tarea TU1b).
+        /// </summary>
+        [RemoteConfigKey("hint_tutorial_units")]
+        public int HintTutorialUnits { get; set; } = 3;
 
         /// <summary>
         /// <c>restart_confirm_min_pours</c>: con estos vertidos o más, Volver a la orilla pide confirmación y cuenta como fallo
@@ -163,6 +165,7 @@ namespace AF.Boosters
             Require(HintWeight >= 1 && HintWeight <= 16, "hint_weight va de 1 a 16");
             Require(HintTimeoutMs >= 1, "hint_timeout_ms debe ser >= 1");
             Require(HintUnlockLevel >= 1, "hint_unlock_level empieza en 1");
+            Require(HintTutorialUnits >= 1, "hint_tutorial_units debe ser >= 1");
             Require(RestartConfirmMinPours >= 1 && ReliefAfterFails >= 1, "umbrales >= 1");
             Require(AnimRiverLoweredBannerMs >= 0, "anim_river_lowered_banner_ms no puede ser negativo");
             Require(StuckOrderT1 != null && StuckOrderT3 != null, "stuck_order_* no puede ser null");

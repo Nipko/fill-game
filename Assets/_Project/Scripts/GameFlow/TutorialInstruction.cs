@@ -19,7 +19,9 @@ namespace AF.GameFlow
     /// <item>12: la presentación de Morpho, «¿Atascado? La morpho conoce el río» (04 §2.3 y 06 §2.2: «al cargar el nivel 12 TiTino
     /// presenta el botón con su retrato y <c>sloth_present</c>»; tarea TU1b). Sale tras la intro, como la del 1, 2 y 6, y TiTino
     /// señala el botón Pista con la cola de su tarjeta, como el de Marea en el 3 [P]; los 3 Morphos regalados los acredita el flujo
-    /// al cargar el nivel (<c>MorphoBooster.ShouldGift</c>, una sola vez).</item>
+    /// al cargar el nivel (<c>MorphoBooster.ShouldGift</c>, una sola vez; <c>hint_tutorial_units</c>). 06 §2.2 pide además que
+    /// «la primera se gasta con dedo guía»: como en el 1-2, el dedo guía aún no existe en el cliente y la primera Pista se gasta
+    /// sin él (pendiente; pregunta para el dueño) [P].</item>
     /// </list>
     /// Prioridad tras la intro (02 §4.2; 07 §6.4; guion de la intro §14): tutorial &gt; Fruta nueva &gt; miquito &gt; rótulo. La
     /// instrucción entra la primera en la cola de avisos; la tarjeta del miquito y el rótulo no salen en estos niveles

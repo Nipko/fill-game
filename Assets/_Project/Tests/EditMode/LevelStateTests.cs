@@ -283,8 +283,8 @@ namespace AF.Tests.EditMode
             // Con el flujo: al cargar el 12 por primera vez, 3 Morphos al stock, anotados en el nivel en curso.
             var rig = new Rig(packs: TestPacks.Campaign);
             rig.Start(12);
-            Assert.That(rig.Economy.Wallet.Stock.Get(BoosterKind.Hint), Is.EqualTo(BoosterConfig.HintTutorialUnits));
-            Assert.That(BoosterConfig.HintTutorialUnits, Is.EqualTo(3), "04 §2.3: 3 Morphos");
+            Assert.That(rig.Economy.Wallet.Stock.Get(BoosterKind.Hint), Is.EqualTo(rig.Flow.Boosters.HintTutorialUnits));
+            Assert.That(rig.Flow.Boosters.HintTutorialUnits, Is.EqualTo(3), "04 §2.3: 3 Morphos (hint_tutorial_units)");
             Assert.That(rig.Flow.Attempt.HintGifted, Is.True);
             Assert.That(rig.Store.Load()!.History, Is.EqualTo("h2|P||m||"));
             Assert.That(rig.Economy.Wallet.Apply(Transaction.UseStock(BoosterKind.Hint)).IsApplied, Is.True, "gasta uno");

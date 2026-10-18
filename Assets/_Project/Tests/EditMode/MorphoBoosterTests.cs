@@ -114,11 +114,16 @@ namespace AF.Tests.EditMode
             Assert.That(config.SolverWeight, Is.EqualTo(2));
             Assert.That(config.HintTimeoutMs, Is.EqualTo(150));
             Assert.That(config.HintUnlockLevel, Is.EqualTo(12));
+            Assert.That(config.HintTutorialUnits, Is.EqualTo(3));
             Assert.That(BoosterConfig.HintCooldownMs, Is.EqualTo(5000), "04 §2.3: «Cooldown 5 s entre pistas» [P]");
             Assert.That(EconomyConfig.Defaults.HintSeedPrice, Is.EqualTo(100));
 
             config.HintTimeoutMs = 0;
             Assert.Throws<InvalidOperationException>(() => config.Validate());
+
+            BoosterConfig noGift = BoosterConfig.Defaults;
+            noGift.HintTutorialUnits = 0;
+            Assert.Throws<InvalidOperationException>(() => noGift.Validate(), "hint_tutorial_units >= 1");
         }
 
         [Test]
@@ -128,7 +133,7 @@ namespace AF.Tests.EditMode
             BoosterConfig config = BoosterConfig.Defaults;
             var economy = new EconomyFixture(0);
             Wallet wallet = economy.Wallet;
-            Assert.That(BoosterConfig.HintTutorialUnits, Is.EqualTo(3), "04 §2.3: «se acreditan 3 Morphos al stock»");
+            Assert.That(config.HintTutorialUnits, Is.EqualTo(3), "hint_tutorial_units; 04 §2.3: «se acreditan 3 Morphos al stock»");
             Assert.That(MorphoBooster.ShouldGift(12, 11, false, wallet, config), Is.True);
             Assert.That(MorphoBooster.ShouldGift(12, 0, false, wallet, config), Is.True, "también con un perfil nuevo (af_level)");
             Assert.That(MorphoBooster.ShouldGift(12, 11, true, wallet, config), Is.False, "ya regalado en este nivel");
