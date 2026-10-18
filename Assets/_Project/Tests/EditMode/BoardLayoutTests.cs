@@ -2,6 +2,7 @@
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Presentation;
+using AF.Presentation.Mechanics;
 using AF.UI;
 using NUnit.Framework;
 
@@ -522,11 +523,103 @@ namespace AF.Tests.EditMode
             Assert.That(Split(BoardLayout.Compute(11, 10, H5, 360f, Top, Bottom, 9)), Is.EqualTo("5/6"), "la pareja tiene que ser de las generadas");
         }
 
+        [TestCase(Bottom)]
+        [TestCase(Bottom640)]
+        public void TinajaAtARowEnd_SqueezesItsRow_SoTheJarAndTheJirauStayInsideTheGlassExtent(float bottom)
+        {
+            // TJ2 (revisión): la vasija (2,70 u frente a las 2 u del vidrio) y el poste del jirau de su cuia salen de su ranura. Si
+            // caen en una punta de su fila, esa fila se aprieta hacia dentro: nada de la pareja pasa de lo que ocupa el vidrio en
+            // una fila llena (el marco se adelgaza con ContentLeft igual que sin tinaja) y el jirau queda ≥ 2 dp dentro, sobre la
+            // repisa. Las filas, el ancho de la cuia y las demás filas no cambian; dentro de la fila, nada se solapa.
+            for (int generated = 2; generated <= 16; generated++)
+            {
+                for (int pair = 0; pair + 1 < generated; pair++)
+                {
+                    for (int side = 0; side < 2; side++)
+                    {
+                        int tinaja = pair + side;
+                        int partner = side == 0 ? pair + 1 : pair;
+                        int max = System.Math.Min(16, generated + 2);
+                        for (int count = generated; count <= max; count++)
+                        {
+                            string at = "generadas " + generated + ", en pantalla " + count + ", tinaja " + tinaja + ", su cuia " + partner + ", boardBottom " + bottom;
+                            BoardLayoutResult plain = BoardLayout.Compute(count, generated, H5, 360f, Top, bottom, pair);
+                            BoardLayoutResult r = BoardLayout.Compute(count, generated, H5, 360f, Top, bottom, pair, tinaja);
+                            Assert.That(Split(r), Is.EqualTo(Split(plain)), at + ": las mismas filas");
+                            Assert.That(r.CuiaWidth, Is.EqualTo(plain.CuiaWidth), at + ": el mismo ancho de cuia");
+                            int row = r.RowOf[tinaja];
+                            Assert.That(r.RowOf[partner], Is.EqualTo(row), at + ": la misma fila");
+                            float last = float.MinValue;
+                            for (int i = 0; i < count; i++)
+                            {
+                                Assert.That(r.RowOf[i], Is.EqualTo(plain.RowOf[i]), at + ": fila de la cuia " + i);
+                                Assert.That(r.FootY[i], Is.EqualTo(plain.FootY[i]), at + ": pie de la cuia " + i);
+                                if (r.RowOf[i] != row)
+                                {
+                                    Assert.That(r.CenterX[i], Is.EqualTo(plain.CenterX[i]), at + ": las otras filas no se mueven (cuia " + i + ")");
+                                }
+                                else
+                                {
+                                    if (last > float.MinValue)
+                                    {
+                                        Assert.That(r.CenterX[i] - last, Is.GreaterThanOrEqualTo(r.CuiaWidth - 0.01f), at + ": sin solaparse (cuia " + i + ")");
+                                        Assert.That(r.CenterX[i] - last, Is.LessThanOrEqualTo(r.SlotWidth + 0.01f), at + ": como mucho una ranura (cuia " + i + ")");
+                                    }
+
+                                    last = r.CenterX[i];
+                                }
+                            }
+
+                            float u = r.CuiaWidth / 2f;
+                            float limit = System.Math.Min(plain.ContentLeft, plain.PanelX + BoardLayout.TinajaContentFromPanel);
+                            Assert.That(r.ContentLeft, Is.GreaterThanOrEqualTo(limit - 0.01f), at + ": no pide más sitio que el vidrio");
+                            float right = 360f - r.ContentLeft;
+                            float half = 0.5f * ProceduralArt.TinajaBodyWidthU * u;
+                            Assert.That(r.CenterX[tinaja] - half, Is.GreaterThanOrEqualTo(r.ContentLeft - 0.01f), at + ": la vasija, dentro");
+                            Assert.That(r.CenterX[tinaja] + half, Is.LessThanOrEqualTo(right + 0.01f), at + ": la vasija, dentro");
+                            float post = r.CenterX[partner] + ((partner < tinaja ? -1f : 1f) * TinajaOverlay.JirauCuiaExtentU * u);
+                            float jirauL = System.Math.Min(post, r.CenterX[tinaja] - (TinajaOverlay.JirauTinajaExtentU * u));
+                            float jirauR = System.Math.Max(post, r.CenterX[tinaja] + (TinajaOverlay.JirauTinajaExtentU * u));
+                            Assert.That(jirauL, Is.GreaterThanOrEqualTo(r.ContentLeft + BoardLayout.TinajaJirauInsetDp - 0.01f), at + ": el jirau, sobre la repisa");
+                            Assert.That(jirauR, Is.LessThanOrEqualTo(right - BoardLayout.TinajaJirauInsetDp + 0.01f), at + ": el jirau, sobre la repisa");
+                        }
+                    }
+                }
+            }
+        }
+
+        [Test]
+        public void TinajaAtARowEnd_Case6x4_TheJarNoLongerReachesTheFrame()
+        {
+            // La captura tj2_09 (revisión de TJ2): la pareja en la 4 y la 5 (6/4), la tinaja al final de la fila 1. Sin apretar,
+            // la vasija pasaba ≈ 0,35 u del vidrio de la punta y llegaba al marco; ahora acaba donde acaba el vidrio de la otra
+            // punta. Sin tinaja en una punta (la pareja en la 1 y la 2), nada se mueve.
+            BoardLayoutResult plain = BoardLayout.Compute(10, 10, H5, 360f, Top, Bottom, 4);
+            BoardLayoutResult r = BoardLayout.Compute(10, 10, H5, 360f, Top, Bottom, 4, 5);
+            Assert.That(Split(r), Is.EqualTo("6/4"));
+            float u = r.CuiaWidth / 2f;
+            float glassLeft = r.CenterX[0] - (0.5f * r.CuiaWidth);
+            Assert.That(plain.CenterX[5] + (0.5f * ProceduralArt.TinajaBodyWidthU * u), Is.GreaterThan(360f - glassLeft + 1f), "antes se salía");
+            Assert.That(r.CenterX[5] + (0.5f * ProceduralArt.TinajaBodyWidthU * u), Is.EqualTo(360f - glassLeft).Within(0.01f), "ahora acaba donde el vidrio de la otra punta");
+            Assert.That(r.CenterX[0], Is.EqualTo(plain.CenterX[0]), "la otra punta no se mueve");
+            Assert.That(r.ContentLeft, Is.EqualTo(glassLeft).Within(0.01f));
+
+            BoardLayoutResult middle = BoardLayout.Compute(10, 10, H5, 360f, Top, Bottom, 1, 2);
+            BoardLayoutResult middlePlain = BoardLayout.Compute(10, 10, H5, 360f, Top, Bottom, 1);
+            for (int i = 0; i < 10; i++)
+            {
+                Assert.That(middle.CenterX[i], Is.EqualTo(middlePlain.CenterX[i]), "la pareja en medio de su fila: cuia " + i);
+            }
+
+            Assert.That(BoardLayout.Compute(10, 10, H5, 360f, Top, Bottom, 4, 7).CenterX[5], Is.EqualTo(plain.CenterX[5]), "un índice de tinaja fuera de la pareja no aprieta nada");
+        }
+
         [Test]
         public void TinajaPairStart_FindsThePairOnTheInitialBoard()
         {
-            // El 323 del paquete de muestra (pack_schema 3): su cuia en la 1 y la tinaja en la 2; y el 329: su cuia en la 8 y la
-            // tinaja en la 9. Tras la suelta (la cuia sin tipo), ya no hay pareja que buscar: por eso se mira el tablero inicial.
+            // El 323 del paquete de muestra (pack_schema 3): su cuia en la 1 y la tinaja en la 2; y un tablero con la tinaja en la
+            // 1 y su cuia a la derecha, en la 2. Tras la suelta (la cuia sin tipo), ya no hay pareja que buscar: por eso se mira
+            // el tablero inicial.
             var tinaja = Cuia.Create(5, new[] { 9, 11, 9 }, 0b011).WithMechanic(MechanicType.Tinaja);
             Cuia cucharon = Cuia.Empty(2).WithMechanic(MechanicType.Cucharon);
             var board323 = new BoardState(new[] { Cuia.Create(4, new[] { 11, 11, 13 }), cucharon, tinaja, Cuia.Empty(4) });

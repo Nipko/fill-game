@@ -43,6 +43,18 @@ namespace AF.Presentation
         /// <summary>Elevación de la selección: 16 dp (02 §4.1; 07 §4.3).</summary>
         public const float LiftDp = 16f;
 
+        /// <summary>
+        /// Elevación de la Tinaja seleccionada: 8 dp, porque pesa (07 §4.3, fila Tinaja; propuesta de la Tinaja, tabla
+        /// «Animación y sonido»; M13, D-019; tarea TJ2).
+        /// </summary>
+        public const float TinajaLiftDp = 8f;
+
+        /// <summary>Balanceo de la Tinaja al seleccionarla: ±2° (07 §4.3; propuesta de la Tinaja, «Animación y sonido»).</summary>
+        public const float TinajaSwayDeg = 2f;
+
+        /// <summary>Duración del balanceo de la Tinaja al seleccionarla [P]: una ida y vuelta que se apaga al asentarse.</summary>
+        public const float TinajaSwayMs = 360f;
+
         /// <summary>Altura extra del área táctil sobre la cuia, para alcanzarla elevada (02 §3.3).</summary>
         public const float TouchHeadroomDp = 32f;
 
@@ -122,6 +134,9 @@ namespace AF.Presentation
         private bool _fruitPatterns;
         private bool _pourIcons;
         private float _liftValue;
+        private float _swayElapsed = -1f;
+        private int _tinajaPartner = -1;
+        private bool _glassHidden;
         private float _shakeElapsed = -1f;
         private float _sealElapsed = -1f;
         private bool _sealDropsDone;
@@ -191,6 +206,35 @@ namespace AF.Presentation
 
         /// <summary>El vidrio lleva el +10 % de brillo de la selección (solo el origen, D-002).</summary>
         public bool GlassBoosted => _glassBoost;
+
+        /// <summary>
+        /// El vidrio (trasero, frontal y marcas de dosis) está oculto porque lo tapa el cuerpo de barro de la Tinaja
+        /// (<see cref="TinajaOverlay.BodyVisible"/>): la vasija no se lee dentro de una botella, tampoco boca abajo (TJ2).
+        /// </summary>
+        public bool GlassHidden => _glassHidden;
+
+        /// <summary>
+        /// Elevación de la selección de esta cuia (dp): <see cref="TinajaLiftDp"/> si lo último mostrado es una Tinaja y
+        /// <see cref="LiftDp"/> en las demás.
+        /// </summary>
+        public float LiftAmountDp => _shownCuia.Mechanic == MechanicType.Tinaja ? TinajaLiftDp : LiftDp;
+
+        /// <summary>
+        /// Su cuia, si esta es la Tinaja: el índice de la pareja en el tablero inicial del nivel (−1 sin pareja). La fija la
+        /// pantalla al construir el tablero y la recibe el <see cref="TinajaOverlay"/> (<see cref="TinajaOverlay.AssignPartner"/>):
+        /// así el jirau sigue bajo las dos ranuras de la pareja aunque la partida se reanude tras la suelta (07 §4.3; 02 §5).
+        /// </summary>
+        public void SetTinajaPartner(int index)
+        {
+            _tinajaPartner = index;
+            if (_overlays[(int)MechanicType.Tinaja] is TinajaOverlay tinaja && tinaja.AttachedHost != null)
+            {
+                tinaja.AssignPartner(index);
+            }
+        }
+
+        /// <summary>La pareja de la Tinaja que fijó la pantalla (<see cref="SetTinajaPartner"/>), o −1.</summary>
+        public int TinajaPartner => _tinajaPartner;
 
         /// <summary>Altura actual del líquido en dosis (suma de rellenos), para el chorro.</summary>
         public float LiquidLevel
@@ -657,6 +701,11 @@ namespace AF.Presentation
         /// </summary>
         public void SetLifted(bool lifted)
         {
+            if (lifted && !_liftTarget && _shownCuia.Mechanic == MechanicType.Tinaja)
+            {
+                _swayElapsed = 0f; // la tinaja sube con su balanceo (07 §4.3)
+            }
+
             _liftTarget = lifted;
             SetGlassBoost(lifted && !_locked);
             ApplyFruitIcons();
@@ -841,6 +890,26 @@ namespace AF.Presentation
                     o.Show(cuia, sealedNow);
                 }
             }
+
+            SyncTinajaGlass();
+        }
+
+        // Mientras se ve el cuerpo de barro de la Tinaja (arte provisional), el vidrio de la cuia (trasero, frontal y marcas de
+        // dosis, con su boca y su pie de cuerda) se oculta en todos los estados: la vasija no se lee metida en una botella ni,
+        // boca abajo, con el vidrio asomando por los lados de su boca (TJ2). Sin el cuerpo (release hasta el arte), el vidrio.
+        private void SyncTinajaGlass()
+        {
+            bool hide = _overlays[(int)MechanicType.Tinaja] is TinajaOverlay tinaja && tinaja.AttachedHost != null
+                && tinaja.Visible && tinaja.BodyVisible;
+            if (hide == _glassHidden)
+            {
+                return;
+            }
+
+            _glassHidden = hide;
+            _back.enabled = !hide;
+            _front.enabled = !hide;
+            _marks.enabled = !hide;
         }
 
         private CuiaOverlay? EnsureOverlay(MechanicType type)
@@ -869,6 +938,11 @@ namespace AF.Presentation
         private void AttachOverlay(CuiaOverlay overlay)
         {
             overlay.Attach(_host);
+            if (overlay is TinajaOverlay tinaja && _tinajaPartner >= 0)
+            {
+                tinaja.AssignPartner(_tinajaPartner); // la pareja del tablero inicial, que fijó la pantalla
+            }
+
             if (_inFlight)
             {
                 overlay.SetInFlight(true);
@@ -1023,10 +1097,10 @@ namespace AF.Presentation
                 }
 
                 // Subida con rebote (easeOutBack: pico de ≈ 17,6 dp hacia t ≈ 0,58 y asiento en 16; guía 6.1) y bajada
-                // ease-in (6.2).
-                float y = LiftDp * (_liftTarget ? Ease.OutBack(_liftValue) : Ease.In(_liftValue));
+                // ease-in (6.2). La Tinaja sube 8 dp con un balanceo de ±2° que se apaga (07 §4.3).
+                float y = LiftAmountDp * (_liftTarget ? Ease.OutBack(_liftValue) : Ease.In(_liftValue));
                 y += HopOffset(dtMs);
-                WritePose(new Vector2(x, y), 0f);
+                WritePose(new Vector2(x, y), SwayAngle(dtMs));
             }
             else
             {
@@ -1044,6 +1118,26 @@ namespace AF.Presentation
                     o.Tick(dtMs);
                 }
             }
+        }
+
+        // Balanceo de la Tinaja al seleccionarla: 2° · sen(2π · t / T) · (1 − t / T) durante T = TinajaSwayMs; 0 fuera de él,
+        // al bajarla o si ya no es una Tinaja. Sin asignaciones.
+        private float SwayAngle(float dtMs)
+        {
+            if (_swayElapsed < 0f)
+            {
+                return 0f;
+            }
+
+            _swayElapsed += dtMs;
+            if (_swayElapsed >= TinajaSwayMs || !_liftTarget || _shownCuia.Mechanic != MechanicType.Tinaja)
+            {
+                _swayElapsed = -1f;
+                return 0f;
+            }
+
+            float t = _swayElapsed / TinajaSwayMs;
+            return TinajaSwayDeg * Mathf.Sin(2f * Mathf.PI * t) * (1f - t);
         }
 
         /// <inheritdoc />

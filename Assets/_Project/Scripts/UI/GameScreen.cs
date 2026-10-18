@@ -1598,7 +1598,7 @@ namespace AF.UI
 
             _views = views;
             _generatedCount = Mathf.Max(1, flow.GeneratedCuias); // cuias generadas: fijan las filas (D-006); las añadidas van a la más corta
-            _tinajaPair = TinajaPairOf(flow.Session.Initial); // la tinaja y su cuia, en la misma fila (02 §5; GameScreen.Tinaja.cs)
+            _tinajaPair = BindTinajaPair(flow.Session.Initial); // la tinaja y su cuia, en la misma fila (02 §5; GameScreen.Tinaja.cs)
             OrderBoardLayers();
             float f = GameConfig.SpeedFactor(flow.LevelNumber);
             _timings = new PourTimings(
@@ -2870,7 +2870,7 @@ namespace AF.UI
             // [P]), ninguna cuia cambia de fila (T-C) y solo se recalcula el ancho con el T en pantalla (re-layout de 300 ms,
             // 02 §4.1; tope de D-004).
             int generated = _generatedCount > 0 ? Mathf.Min(_generatedCount, _views.Length) : _views.Length;
-            _layout = BoardLayout.Compute(_views.Length, generated, heightU, w, BoardTop, BoardBottom, _tinajaPair);
+            _layout = BoardLayout.Compute(_views.Length, generated, heightU, w, BoardTop, BoardBottom, _tinajaPair, _tinajaIndex);
             BoardLayoutResult l = _layout;
             for (int i = 0; i < _views.Length; i++)
             {
@@ -2884,12 +2884,7 @@ namespace AF.UI
             float py = l.PanelY;
             float pw = l.PanelWidth;
             float ph = l.PanelHeight;
-            float leftEdge = float.MaxValue;
-            for (int i = 0; i < _views.Length; i++)
-            {
-                leftEdge = Mathf.Min(leftEdge, l.CenterX[i] - (l.CuiaWidth * 0.5f));
-            }
-
+            float leftEdge = l.ContentLeft; // el vidrio y, con la Tinaja, su vasija y el poste de su cuia (GameScreen.Tinaja.cs)
             float frameScale = Mathf.Clamp((leftEdge - px - 8f) / _art.PanelFrameDp, 0.45f, 1f);
             _panelFrame.pixelsPerUnitMultiplier = 1f / frameScale;
             float frame = _art.PanelFrameDp * frameScale;

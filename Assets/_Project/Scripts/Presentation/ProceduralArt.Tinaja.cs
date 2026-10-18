@@ -10,8 +10,9 @@ namespace AF.Presentation
     /// más alta que ancha, con hombro, el labio por cuello corto y una sola línea incisa, con gotitas quietas de «sudor»), la
     /// boca (<see cref="TinajaMouthDisc"/> y su sombra, <see cref="TinajaMouthGloss"/>), las bandas de luz de las capas
     /// reveladas (<see cref="TinajaBand"/>), el icono de la fruta (<see cref="TinajaGlyph"/>), el chip «×n»
-    /// (<see cref="TinajaChipPill"/>), el jirau (<see cref="TinajaJirau"/> y su atadura del medio, <see cref="TinajaJirauTie"/>), y
-    /// el poste del jirau del que cuelga su cuia (<see cref="TinajaPost"/>) con el asa de fibra (<see cref="TinajaAsa"/>).
+    /// (<see cref="TinajaChipPill"/>), el jirau (<see cref="TinajaJirau"/>, con las ataduras solo en las puntas), y el poste del
+    /// jirau del que cuelga su cuia (<see cref="TinajaPost"/>) con el asa de fibra (<see cref="TinajaAsa"/>). La vasija, el jirau,
+    /// su cuia colgada y el asa son contenido cultural: pendiente del asesor cultural (D-019; 07 §4.3; encargo de arte 3.4).
     /// </summary>
     /// <remarks>
     /// <para><b>Compuerta</b> (<see cref="MapArtRule"/>, como el arte provisional del Mapa y de TiTino): las piezas que son arte
@@ -25,7 +26,8 @@ namespace AF.Presentation
     /// ataduras y el asa, en tonos <c>fibra_*</c>. La boca y las bandas llevan el tinte a propósito (es lo que se ve).</para>
     /// <para><b>Vetos</b> (07 §4.3 y §8.1): sin decoración (kené, marajoara, tapajônica), sin cara, ni dos bocas, ni hoja en la
     /// boca; nunca redonda y baja, morada, con fuego, vapor ni burbujas; nada de cordón, liana ni nudo entre la tinaja y su cuia
-    /// (el poste del jirau va del lado contrario a la tinaja).</para>
+    /// (propuesta, b.2 «Aspecto»; encargo de arte, sección 3): el poste del jirau va del lado contrario a la tinaja y el jirau son
+    /// varas continuas bajo las dos ranuras, atadas solo en las puntas (nada en el punto medio entre las dos piezas).</para>
     /// <para>Todo perezoso: se genera la primera vez que se pide (al mostrar la tinaja o su cuia al cargar el nivel), nunca en un
     /// paso; tras <see cref="Dispose"/> se vuelve a generar.</para>
     /// </remarks>
@@ -117,7 +119,7 @@ namespace AF.Presentation
 
         /// <summary>
         /// Madera del chip «×n», <see cref="Palette.Frame"/> #7C4E3A (07 §4.3: «marfil sobre madera»): con el marfil
-        /// <see cref="Palette.UiPaper"/> de los glifos da ≈ 6,6:1 (≥ 5:1) y queda a ΔE00 ≥ 10 de los 14 tintes.
+        /// <see cref="Palette.UiPaper"/> de los glifos da ≈ 5,9:1 (≥ 5:1) y queda a ΔE00 ≥ 10 de los 14 tintes.
         /// </summary>
         public static readonly Color TinajaChipWood = Palette.Frame;
 
@@ -154,7 +156,6 @@ namespace AF.Presentation
         private Sprite? _tinajaBand;
         private Sprite? _tinajaChipPill;
         private Sprite? _tinajaJirau;
-        private Sprite? _tinajaJirauTie;
         private Sprite? _tinajaPost;
         private Sprite? _tinajaAsa;
         private readonly Sprite?[] _tinajaGlyphs = new Sprite?[Cuia.MaxTintColor + 1];
@@ -176,9 +177,6 @@ namespace AF.Presentation
 
         /// <summary>Jirau: tres varas atadas en las puntas (9 cortes en horizontal; se estira bajo las dos ranuras).</summary>
         internal Sprite TinajaJirau => _tinajaJirau != null ? _tinajaJirau : (_tinajaJirau = BuildTinajaJirau());
-
-        /// <summary>Atadura de fibra del medio del jirau (entre las dos ranuras).</summary>
-        internal Sprite TinajaJirauTie => _tinajaJirauTie != null ? _tinajaJirauTie : (_tinajaJirauTie = BuildTinajaJirauTie());
 
         /// <summary>
         /// Poste del jirau con su travesaño y el gancho de fibra, a la derecha del eje de la cuia (<see cref="TinajaPostRectU"/>;
@@ -440,7 +438,8 @@ namespace AF.Presentation
         }
 
         // Jirau: tres varas horizontales (sombra abajo, luz arriba y algo de veta) con una atadura de fibra en cada punta, en el
-        // borde de 9 cortes; el centro se estira sin deformar las ataduras.
+        // borde de 9 cortes; el centro se estira sin deformar las ataduras y no lleva ninguna (veto de b.2: nada entre las dos
+        // piezas).
         private Sprite BuildTinajaJirau()
         {
             const float k = UiPxPerDp;
@@ -467,17 +466,8 @@ namespace AF.Presentation
             return MakeSprite(pc, "mech_tinaja_jirau", new Vector2(0.5f, 0.5f), new Vector4(border, 0f, border, 0f), UiPxPerDp);
         }
 
-        private Sprite BuildTinajaJirauTie()
-        {
-            const float k = UiPxPerDp;
-            int h = Mathf.RoundToInt(TinajaJirauDesignDp * k);
-            int w = Mathf.RoundToInt(6f * k);
-            var pc = new PixelCanvas(w, h);
-            DrawJirauLashing(pc, w * 0.5f, h);
-            return MakeSprite(pc, "mech_tinaja_jirau_tie", new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
-        }
-
-        // Atadura de fibra: vueltas diagonales que abrazan las tres varas en x = cx.
+        // Atadura de fibra de una punta del jirau: vueltas diagonales que abrazan las tres varas en x = cx (dentro del borde de
+        // 9 cortes, así el centro que se estira son varas lisas).
         private static void DrawJirauLashing(PixelCanvas pc, float cx, int h)
         {
             float half = 1.7f * UiPxPerDp;

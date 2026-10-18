@@ -12,7 +12,8 @@ namespace AF.Presentation.Mechanics
     /// [P]: la vasija de barro opaca que tapa el vidrio entero, con la boca a la vista (el tinte y el icono de la fruta de arriba,
     /// R7), el chip «×n» en el hombro con las dosis que quedan dentro (contando la boca), las capas ya reveladas como bandas de luz
     /// a su altura con su icono, y el jirau bajo las dos ranuras (la de la tinaja y la de su cuia). Vacía, boca abajo sobre el
-    /// jirau, sin boca ni chip.
+    /// jirau, sin boca ni chip. La vasija, el jirau y su aspecto son contenido cultural: pendiente del asesor cultural (D-019;
+    /// 07 §4.3; encargo de arte 3.4).
     /// </summary>
     /// <remarks>
     /// <para><b>Nunca agua turbia</b> (contrato 27; 08 §5.2): bajo la vasija, la vista pinta las ocultas con el barro
@@ -20,17 +21,24 @@ namespace AF.Presentation.Mechanics
     /// <see cref="MurkyMarks"/> no pone la insignia «?×n» ni anima su revelado. Lo oculto no se ve por ningún lado: ni su color,
     /// ni su orden, ni qué frutas guarda (Q-Ti5: <c>ui_tinaja_show_contents</c> = false; no hay vista de contenidos).</para>
     /// <para><b>Arte</b> (<see cref="MapArtRule"/>): el cuerpo y el jirau son arte provisional y solo salen con
-    /// <see cref="MapArtRule.ShowProvisional"/> (Editor y desarrollo) hasta que lleguen los PNG del artista; la boca, el chip y
-    /// las bandas los pinta el código según el estado y salen siempre.</para>
+    /// <see cref="MapArtRule.ShowProvisional"/> (Editor y desarrollo) hasta que lleguen los PNG del artista. La boca (con su
+    /// brillo y su icono) y las bandas están hechas para la silueta de la vasija: salen solo con ella. Sin el cuerpo (release
+    /// hasta el arte) se ve el vidrio, con la cima y las capas reveladas en su líquido y las ocultas del barro (<c>CuiaView</c>),
+    /// y solo el chip «×n», en el hombro del vidrio (<see cref="GlassChipCenterU"/>). Mientras el cuerpo está a la vista, la
+    /// vista oculta el vidrio de la cuia (<c>CuiaView</c>): la vasija no se lee metida en una botella, tampoco boca abajo.</para>
     /// <para><b>Su cuia</b> (<see cref="CucharonOverlay"/>) va en la ranura contigua de la misma fila (02 §5; <c>BoardLayout</c>).
     /// El jirau lo dibuja la tinaja, que nunca pierde su tipo, porque es estado permanente (07 §4.3: «no un resaltado», D-002) y
-    /// sigue bajo las dos ranuras cuando su cuia baja (la suelta). La pareja se reconoce por la cuia de tipo <c>Cucharon</c> a su
-    /// lado y se recuerda; si la tinaja ya llega vacía (partida reanudada tras la suelta), por la Cuia chica de 2 de al lado, a la
-    /// derecha antes que a la izquierda [P].</para>
-    /// <para><b>Nada cambia al seleccionar</b> (D-002): todo cuelga del estado. Los gestos (sacar, el revelado en la boca, la
-    /// suelta y el balanceo al seleccionar) son de la tarea TJ3; hasta entonces el overlay no tiene pasos propios.</para>
+    /// sigue bajo las dos ranuras cuando su cuia baja (la suelta), atado solo en las puntas: nada de cordón, liana ni nudo entre
+    /// las dos piezas (b.2 «Aspecto»; encargo de arte, sección 3). La pareja es la del tablero inicial del nivel, que pasa la
+    /// pantalla (<see cref="AssignPartner"/>; <c>CuiaView.SetTinajaPartner</c>), así que vale también al reanudar tras la suelta.
+    /// Sin ella (bancos de prueba), se reconoce por la cuia de tipo <c>Cucharon</c> a su lado y se recuerda; si la tinaja ya llega
+    /// vacía, por la Cuia chica de 2 de al lado, a la derecha antes que a la izquierda [P].</para>
+    /// <para><b>Nada cambia al seleccionar</b> (D-002): todo cuelga del estado. La elevación de la tinaja (8 dp con un balanceo
+    /// de 2°, 07 §4.3) la hace <c>CuiaView</c>; los gestos (sacar, el revelado en la boca y la suelta) son de la tarea TJ3, y
+    /// hasta entonces el overlay no tiene pasos propios.</para>
     /// <para>Sin asignaciones en <see cref="Show"/>, <see cref="Tick"/> ni <see cref="OnBoardLayout"/> (08 §5.4): los iconos de
-    /// las frutas de la tinaja se generan en el primer <see cref="Show"/> (al cargar el nivel).</para>
+    /// los 14 tintes y las cifras del chip se generan en el primer <see cref="Show"/> (al cargar el nivel), así que ni una
+    /// partida reanudada con la tinaja vacía a la que Marea devuelve dosis genera texturas a mitad de un paso.</para>
     /// </remarks>
     public sealed class TinajaOverlay : CuiaOverlay
     {
@@ -70,7 +78,6 @@ namespace AF.Presentation.Mechanics
         private readonly Image[] _bandGlyphs = new Image[MaxBands];
         private RectTransform _layerRoot = null!;
         private Image _jirau = null!;
-        private Image _jirauTie = null!;
         private Image _body = null!;
         private Image _mouth = null!;
         private Image _mouthGlyph = null!;
@@ -84,6 +91,7 @@ namespace AF.Presentation.Mechanics
         private int _bandMask;
         private int _partner = -1;
         private bool _partnerSure;
+        private bool _partnerAssigned;
         private bool _artShown;
         private bool _upsideDown;
         private int _layoutVersion = -1;
@@ -195,20 +203,27 @@ namespace AF.Presentation.Mechanics
             Visible = on;
             if (on && !_prewarmed)
             {
-                Prewarm(cuia);
+                Prewarm();
             }
 
             bool art = on && MapArtRule.ShowProvisional;
             int count = on ? cuia.Count : 0;
             bool empty = count == 0;
             _count = count;
-            _artShown = art;
+            if (art != _artShown)
+            {
+                _artShown = art;
+                PlaceChip();
+            }
+
             SetUpsideDown(empty);
             OverlayParts.SetVisible(_body, art);
 
-            // Boca (R7): la fruta de arriba, con su tinte y su icono. Si la cima estuviera oculta (no debería), la boca va oscura
-            // y sin icono: lo oculto nunca enseña su tinte.
-            bool mouth = on && !empty;
+            // Boca (R7): la fruta de arriba, con su tinte y su icono, en la boca de la vasija (solo con su cuerpo: sin él, la cima
+            // ya se ve en el líquido del vidrio). Si la cima estuviera oculta (no debería), la boca va oscura y sin icono: lo
+            // oculto nunca enseña su tinte.
+            bool filled = on && !empty;
+            bool mouth = filled && art;
             int top = count - 1;
             bool topShown = mouth && !cuia.IsHiddenAt(top);
             int tint = topShown ? cuia.ColorAt(top) : 0;
@@ -226,9 +241,10 @@ namespace AF.Presentation.Mechanics
             OverlayParts.SetVisible(_mouthGloss, mouth);
             OverlayParts.SetVisible(_mouthGlyph, mouth && tint > 0);
 
-            // Chip «×n»: las dosis que quedan dentro, contando la boca (b.2, «Qué se ve»).
-            OverlayParts.SetVisible(_chip, mouth);
-            if (mouth)
+            // Chip «×n»: las dosis que quedan dentro, contando la boca (b.2, «Qué se ve»); en el hombro de la vasija o, sin ella,
+            // en el del vidrio.
+            OverlayParts.SetVisible(_chip, filled);
+            if (filled)
             {
                 Sprite digit = Host.Art.MurkyBadgeDigit(count);
                 if (_chipDigit.sprite != digit)
@@ -237,7 +253,8 @@ namespace AF.Presentation.Mechanics
                 }
             }
 
-            // Bandas: las capas bajo la boca que ya están reveladas (R7, T6, I5; la Luciérnaga), a su altura y con su icono.
+            // Bandas: las capas bajo la boca que ya están reveladas (R7, T6, I5; la Luciérnaga), a su altura y con su icono, en el
+            // barro (solo con el cuerpo de la vasija: sin él, el vidrio ya enseña la capa revelada y se pintaría dos veces).
             int bands = 0;
             for (int k = 0; k < MaxBands; k++)
             {
@@ -270,6 +287,7 @@ namespace AF.Presentation.Mechanics
         public override void Layout(float u, float heightU)
         {
             _u = u;
+            PlaceChip();
             OverlayParts.Place(_body, 0f, 0.5f * ProceduralArt.TinajaBodyHeightU, ProceduralArt.TinajaBodyWidthU, ProceduralArt.TinajaBodyHeightU, u);
             OverlayParts.Place(_mouth, 0f, ProceduralArt.TinajaMouthCenterU, ProceduralArt.TinajaMouthWidthU, ProceduralArt.TinajaMouthHeightU, u);
             OverlayParts.Place(_mouthGloss, 0f, ProceduralArt.TinajaMouthCenterU, ProceduralArt.TinajaMouthWidthU, ProceduralArt.TinajaMouthHeightU, u);
@@ -280,20 +298,6 @@ namespace AF.Presentation.Mechanics
                 float w = 2f * (ProceduralArt.TinajaHalfWidthU(y) - ProceduralArt.TinajaBandInsetU);
                 OverlayParts.Place(_bands[k], 0f, y, w, ProceduralArt.TinajaBandHeightU, u);
                 OverlayParts.Place(_bandGlyphs[k], 0f, y, ProceduralArt.TinajaBandGlyphU, ProceduralArt.TinajaBandGlyphU, u);
-            }
-
-            // El chip, en dp fijos (texto de ≥ 14 sp, 07 §4.3), centrado en el hombro.
-            RectTransform chip = _chip.rectTransform;
-            var chipPos = new Vector2(0f, ChipCenterU * u);
-            var chipSize = new Vector2(ProceduralArt.TinajaChipWidthDp, ProceduralArt.TinajaChipHeightDp);
-            if (chip.anchoredPosition != chipPos)
-            {
-                chip.anchoredPosition = chipPos;
-            }
-
-            if (chip.sizeDelta != chipSize)
-            {
-                chip.sizeDelta = chipSize;
             }
 
             _layoutVersion = -1;
@@ -335,6 +339,38 @@ namespace AF.Presentation.Mechanics
             into.Add(ProceduralArt.JirauShade);
         }
 
+        /// <summary>
+        /// Centro del chip «×n» sin el cuerpo de la vasija (u desde el pie) [P]: en el hombro del vidrio de una cuia de
+        /// <paramref name="capacity"/> dosis, entre lo alto de la cavidad y el cuello (sin el cuerpo no hay hombro de barro).
+        /// </summary>
+        public static float GlassChipCenterU(int capacity)
+        {
+            return CuiaGeometry.CavityTopU(capacity) + (0.5f * CuiaGeometry.ShoulderU);
+        }
+
+        /// <summary>
+        /// Fija su cuia: la pareja del tablero inicial del nivel (la pasa la pantalla, que la conoce aunque la suelta le haya
+        /// quitado el tipo; 07 §4.3 y 02 §5: el jirau va bajo las dos ranuras de la pareja). Manda sobre lo que se deduzca del
+        /// tablero mostrado; −1 lo olvida. Sin asignaciones.
+        /// </summary>
+        public void AssignPartner(int index)
+        {
+            if (index < 0)
+            {
+                _partnerAssigned = false;
+                _partnerSure = false;
+                SetPartner(-1, false);
+                return;
+            }
+
+            _partnerAssigned = true;
+            SetPartner(index, true);
+            if (Visible)
+            {
+                PlaceJirau(true);
+            }
+        }
+
         /// <summary>Centro de la banda de la capa <paramref name="k"/> (u desde el pie): a la altura de su dosis en la Cuia alta de 5.</summary>
         public static float BandCenterU(int k)
         {
@@ -360,8 +396,7 @@ namespace AF.Presentation.Mechanics
             _layerRoot.anchoredPosition = Vector2.zero;
             go.AddComponent<LayerLink>().Owner = Host.SlotBack;
             _jirau = OverlayParts.NewImage("TinajaJirau", _layerRoot, Host.Art.TinajaJirau, Color.white);
-            _jirau.type = Image.Type.Sliced;
-            _jirauTie = OverlayParts.NewImage("TinajaJirauTie", _layerRoot, Host.Art.TinajaJirauTie, Color.white);
+            _jirau.type = Image.Type.Sliced; // varas continuas, atadas solo en las puntas (el borde del 9-slice)
 
             // La vasija y lo que se ve en ella, en el cuerpo, sobre el vidrio y el líquido.
             _body = OverlayParts.NewImage("TinajaBody", Host.BodyFront, Host.Art.TinajaBody, Color.white);
@@ -388,18 +423,38 @@ namespace AF.Presentation.Mechanics
             OverlayParts.SetVisible(_chipDigit, true);
         }
 
-        // Prepara los iconos de las frutas de la tinaja (las que pueden subir a la boca o revelarse), una sola vez: así ningún
-        // Show posterior ni ningún paso genera texturas.
-        private void Prewarm(Cuia cuia)
+        // Prepara los iconos de los 14 tintes y las cifras del chip (1 … capacidad), una sola vez, al cargar el nivel: así ningún
+        // Show posterior ni ningún paso genera texturas, aunque la tinaja llegue vacía (partida reanudada tras la suelta) y Marea
+        // le devuelva dosis después.
+        private void Prewarm()
         {
             _prewarmed = true;
-            for (int k = 0; k < cuia.Count; k++)
+            for (int tint = Cuia.MinColor; tint <= Cuia.MaxTintColor; tint++)
             {
-                int tint = cuia.ColorAt(k);
-                if (tint >= Cuia.MinColor && tint <= Cuia.MaxTintColor)
-                {
-                    Host.Art.TinajaGlyph(tint);
-                }
+                Host.Art.TinajaGlyph(tint);
+            }
+
+            for (int n = 1; n <= Host.Capacity; n++)
+            {
+                Host.Art.MurkyBadgeDigit(n);
+            }
+        }
+
+        // El chip, en dp fijos (texto de ≥ 14 sp, 07 §4.3): en el hombro de la vasija o, sin su cuerpo, en el del vidrio.
+        private void PlaceChip()
+        {
+            RectTransform chip = _chip.rectTransform;
+            float centerU = _artShown ? ChipCenterU : GlassChipCenterU(Host.Capacity);
+            var chipPos = new Vector2(0f, centerU * _u);
+            var chipSize = new Vector2(ProceduralArt.TinajaChipWidthDp, ProceduralArt.TinajaChipHeightDp);
+            if (chip.anchoredPosition != chipPos)
+            {
+                chip.anchoredPosition = chipPos;
+            }
+
+            if (chip.sizeDelta != chipSize)
+            {
+                chip.sizeDelta = chipSize;
             }
         }
 
@@ -415,8 +470,8 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // El jirau bajo la ranura de la tinaja y la de su cuia (la contigua de la misma fila), con la atadura del medio entre
-        // las dos; sin pareja conocida o en otra fila, solo bajo la de la tinaja.
+        // El jirau bajo la ranura de la tinaja y la de su cuia (la contigua de la misma fila): varas continuas, sin nada en el
+        // punto medio entre las dos (veto de b.2); sin pareja conocida o en otra fila, solo bajo la de la tinaja.
         private void PlaceJirau(bool on)
         {
             ICuiaBoard? board = Host.Board;
@@ -432,7 +487,6 @@ namespace AF.Presentation.Mechanics
             }
 
             OverlayParts.SetVisible(_jirau, show);
-            OverlayParts.SetVisible(_jirauTie, show && _partner >= 0 && SameRow(board!, Host.Index, _partner));
         }
 
         private void LayoutJirau(ICuiaBoard board)
@@ -479,28 +533,15 @@ namespace AF.Presentation.Mechanics
             {
                 _jirau.pixelsPerUnitMultiplier = mult;
             }
-
-            RectTransform tie = _jirauTie.rectTransform;
-            float mid = pair ? (0.5f * (board.Foot(i).x + board.Foot(_partner).x)) - origin.x : pos.x;
-            var tiePos = new Vector2(mid, pos.y);
-            var tieSize = new Vector2(6f * h / ProceduralArt.TinajaJirauDesignDp, h);
-            if (tie.anchoredPosition != tiePos)
-            {
-                tie.anchoredPosition = tiePos;
-            }
-
-            if (tie.sizeDelta != tieSize)
-            {
-                tie.sizeDelta = tieSize;
-            }
         }
 
-        // Su cuia: la contigua de tipo Cucharon (b.2 regla 1; CucharonMechanic.ValidateInitial), y se recuerda. Si no la hay (la
-        // tinaja ya llega con su cuia suelta), la Cuia chica de 2 de al lado, a la derecha antes que a la izquierda [P], hasta
-        // ver la de verdad (Marea la vuelve a colgar).
+        // Su cuia: la del tablero inicial si la pantalla la pasó (AssignPartner). Si no (bancos de prueba), la contigua de tipo
+        // Cucharon (b.2 regla 1; CucharonMechanic.ValidateInitial), y se recuerda; si no la hay (la tinaja ya llega con su cuia
+        // suelta), la Cuia chica de 2 de al lado, a la derecha antes que a la izquierda [P], hasta ver la de verdad (Marea la
+        // vuelve a colgar).
         private void FindPartner(ICuiaBoard board)
         {
-            if (_partnerSure)
+            if (_partnerSure || _partnerAssigned)
             {
                 return;
             }

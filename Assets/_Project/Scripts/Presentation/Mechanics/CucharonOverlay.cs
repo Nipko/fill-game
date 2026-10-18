@@ -12,7 +12,8 @@ namespace AF.Presentation.Mechanics
     /// TJ2) [P]: una Cuia chica de vidrio, que dibuja la vista con su contenido a la vista, colgada del jirau junto a la tinaja,
     /// como las cuias pitingas que se cuelgan con fibra por dos agujeritos. El overlay pone el poste del jirau con su travesaño y
     /// el gancho (en la ranura, detrás del cuerpo: no viaja) y el asa pequeña de fibra de la cuia (en el cuerpo: es suya, para que
-    /// se lea como el cazo de la casa). El jirau de debajo lo dibuja <see cref="TinajaOverlay"/>, que es permanente.
+    /// se lea como el cazo de la casa). El jirau de debajo lo dibuja <see cref="TinajaOverlay"/>, que es permanente. Su cuia
+    /// colgada, el poste y el asa son contenido cultural: pendiente del asesor cultural (D-019; 07 §4.3; encargo de arte 3.4).
     /// </summary>
     /// <remarks>
     /// <para><b>Vetos</b> (07 §4.3; b.2): nada de cordón, liana ni nudo entre la tinaja y su cuia (es la imagen de la Liana, M3):

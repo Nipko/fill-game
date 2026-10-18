@@ -2,6 +2,8 @@
 using System;
 using AF.Core.Board;
 using AF.Core.Mechanics;
+using AF.Presentation;
+using AF.Presentation.Mechanics;
 
 namespace AF.UI
 {
@@ -74,6 +76,14 @@ namespace AF.UI
 
         /// <summary>Borde inferior del panel.</summary>
         public float PanelBottom => PanelY + PanelHeight;
+
+        /// <summary>
+        /// Borde izquierdo de lo que se dibuja en el tablero, contando el lado más justo (el layout es simétrico): el vidrio de
+        /// las cuias y, con la Tinaja, su vasija (más ancha que el vidrio) y el poste del jirau de su cuia. El marco del panel se
+        /// adelgaza con él (<c>GameScreen</c>, guía 3.2: ≥ 8 dp entre lo que se dibuja y el marco). Sin tinaja, el borde del
+        /// vidrio de la cuia de más a la izquierda.
+        /// </summary>
+        public float ContentLeft { get; internal set; }
     }
 
     /// <summary>
@@ -92,7 +102,9 @@ namespace AF.UI
     /// (<see cref="MinBlockSlack"/> [P]): así la fila 1 elevada queda ≥ 8 dp bajo el canto interior del marco de 13,5 dp
     /// aunque el panel se recorte bajo el HUD (guía 3.2); si no cabe, las cuias se reducen hasta el mínimo de 28 dp.
     /// La Tinaja y su cuia (M13; D-019; 02 §5; 07 §4.5: «su cuia, en la ranura contigua de la misma fila») van siempre en la
-    /// misma fila: si el reparto de arriba las parte, se mueve el corte (<see cref="Compute(int, int, float, float, float, float, int)"/>).
+    /// misma fila: si el reparto de arriba las parte, se mueve el corte (<see cref="Compute(int, int, float, float, float, float, int)"/>);
+    /// y si la vasija (o el poste de su cuia) cae en una punta de la fila y se saldría de lo que ocupa el vidrio en una fila
+    /// llena, esa fila se aprieta hacia dentro (<see cref="Compute(int, int, float, float, float, float, int, int)"/>).
     /// Alrededor del bloque va el panel del tablero, <see cref="PanelMargin"/> (22 dp) por abajo y por arriba en todos los
     /// tableros, y 8 dp desde los bordes del ancho útil. No hay techo del vertido ni hueco reservado para él (D-006): el
     /// origen se dibuja delante de todo mientras vierte.
@@ -135,6 +147,31 @@ namespace AF.UI
 
         /// <summary>Margen del panel desde el borde del ancho útil (guía 3.2).</summary>
         public const float PanelSide = 8f;
+
+        /// <summary>
+        /// Lo que la vasija de la Tinaja sale de cada lado del vidrio de su ranura (u): medio ancho del sprite del cuerpo
+        /// (<see cref="ProceduralArt.TinajaBodyWidthU"/>, 1,35 u) menos el medio ancho de la cuia (1 u) = 0,35 u (TJ2).
+        /// </summary>
+        public const float TinajaSideExtraU = (0.5f * ProceduralArt.TinajaBodyWidthU) - (0.5f * CuiaGeometry.WidthU);
+
+        /// <summary>
+        /// Lo que el poste del jirau (y el jirau bajo él) sale del vidrio de su cuia, del lado contrario a la tinaja (u):
+        /// <see cref="TinajaOverlay.JirauCuiaExtentU"/> (1,33 u) menos el medio ancho de la cuia = 0,33 u (TJ2).
+        /// </summary>
+        public const float TinajaPostExtraU = TinajaOverlay.JirauCuiaExtentU - (0.5f * CuiaGeometry.WidthU);
+
+        /// <summary>
+        /// Lo que el jirau se queda, como mínimo, dentro de lo que ocupa el vidrio por el lado del poste (dp) [P]: así no sale de
+        /// la punta de la repisa (02 §5; 07 §4.3: el jirau va bajo las dos ranuras, sobre la repisa). Por el lado de la tinaja ya
+        /// queda dentro de la vasija (<see cref="TinajaOverlay.JirauTinajaExtentU"/> &lt; medio ancho del cuerpo).
+        /// </summary>
+        public const float TinajaJirauInsetDp = 2f;
+
+        /// <summary>
+        /// Distancia mínima (dp) desde el borde del panel hasta lo que se dibuja con la Tinaja cuando sobra sitio: el marco
+        /// tallado más ancho (13,5 dp) + 8 dp (guía 3.2) [P]. Con menos sitio, el límite es el vidrio de una fila llena.
+        /// </summary>
+        public const float TinajaContentFromPanel = 13.5f + 8f;
 
         /// <summary>
         /// Holgura mínima (dp) entre el bloque y la zona del tablero, repartida arriba y abajo [P] (D-006): 2 × 13,5. Con el
@@ -217,6 +254,21 @@ namespace AF.UI
         /// de una fila).
         /// </summary>
         public static BoardLayoutResult Compute(int count, int generatedCount, float heightU, float canvasWidth, float boardTop, float boardBottom, int pairStart)
+        {
+            return Compute(count, generatedCount, heightU, canvasWidth, boardTop, boardBottom, pairStart, -1);
+        }
+
+        /// <summary>
+        /// Como <see cref="Compute(int, int, float, float, float, float, int)"/>, sabiendo cuál es la tinaja
+        /// (<paramref name="tinajaIndex"/>: <paramref name="pairStart"/> o <paramref name="pairStart"/> + 1; −1 si no se sabe).
+        /// La vasija es más ancha que el vidrio (<see cref="TinajaSideExtraU"/>) y el poste de su cuia sale de su ranura del
+        /// lado contrario (<see cref="TinajaPostExtraU"/>): si caen en una punta de su fila y se saldrían de lo que ocupa el
+        /// vidrio en una fila llena (o, con sitio de sobra, de <see cref="TinajaContentFromPanel"/> desde el panel), esa fila se
+        /// aprieta hacia dentro desde esa punta (las demás cuias de la fila, igual de separadas entre sí; la otra punta no se
+        /// mueve) [P]. Así la vasija, el poste y el jirau quedan sobre la repisa y a ≥ 8 dp del marco como el vidrio
+        /// (<see cref="BoardLayoutResult.ContentLeft"/>), sin cambiar filas ni el ancho de la cuia.
+        /// </summary>
+        public static BoardLayoutResult Compute(int count, int generatedCount, float heightU, float canvasWidth, float boardTop, float boardBottom, int pairStart, int tinajaIndex)
         {
             if (count < 1 || count > 16)
             {
@@ -304,14 +356,77 @@ namespace AF.UI
                 result.RowFootY[r] = blockTop + Lift + (r * (cuiaH + Lift + RowGap)) + cuiaH;
             }
 
-            // Cada fila, centrada con su número final de cuias (x0 con el PerRow definitivo); la columna pasa a centro.
+            // La Tinaja (TJ2): lo que su vasija y el poste de su cuia salen del vidrio y, si se saldrían por una punta de su fila,
+            // la fila apretada hacia dentro (primer centro y paso). CenterX aún guarda la columna de cada cuia.
+            // Solo con la pareja entera (tinajaIndex dentro de ella, las dos en la misma fila); si no, como sin tinaja.
+            bool pair = tinajaIndex >= 0 && pairStart >= 0 && pairStart + 1 < generatedCount && (tinajaIndex == pairStart || tinajaIndex == pairStart + 1)
+                && result.RowOf[pairStart] == result.RowOf[pairStart + 1];
+            int partner = pair ? (tinajaIndex == pairStart ? pairStart + 1 : pairStart) : -1;
+            float u = cuiaW / 2f;
+            float extraT = pair ? TinajaSideExtraU * u : 0f;
+            float extraP = pair ? (TinajaPostExtraU * u) + TinajaJirauInsetDp : 0f;
+            int tRow = -1;
+            float tFirst = 0f;
+            float tPitch = slot;
+            if (pair)
+            {
+                tRow = result.RowOf[tinajaIndex];
+                int n = result.PerRow[tRow];
+                int colT = (int)result.CenterX[tinajaIndex];
+                int colP = (int)result.CenterX[partner];
+                float extraL = colT == 0 ? extraT : (colP == 0 ? extraP : 0f);
+                float extraR = colT == n - 1 ? extraT : (colP == n - 1 ? extraP : 0f);
+                float usableLeft = (canvasWidth - width) / 2f;
+                float fullGlassLeft = ((canvasWidth - (maxPerRow * slot)) / 2f) + (0.5f * slot) - (0.5f * cuiaW);
+                float limitL = Math.Min(fullGlassLeft, usableLeft + PanelSide + TinajaContentFromPanel);
+                float x0 = (canvasWidth - (n * slot)) / 2f;
+                float first = x0 + (0.5f * slot);
+                float last = x0 + ((n - 0.5f) * slot);
+                float overL = Math.Max(0f, limitL - (first - (0.5f * cuiaW) - extraL));
+                float overR = Math.Max(0f, (last + (0.5f * cuiaW) + extraR) - (canvasWidth - limitL));
+                tFirst = first + overL;
+                tPitch = n > 1 ? Math.Max(cuiaW, ((last - overR) - tFirst) / (n - 1)) : slot;
+            }
+
+            // Cada fila, centrada con su número final de cuias (x0 con el PerRow definitivo); la columna pasa a centro. La de la
+            // tinaja, apretada si hace falta (arriba).
             for (int i = 0; i < count; i++)
             {
                 int r = result.RowOf[i];
                 float x0 = (canvasWidth - (result.PerRow[r] * slot)) / 2f;
-                result.CenterX[i] = x0 + ((result.CenterX[i] + 0.5f) * slot);
+                result.CenterX[i] = r == tRow ? tFirst + (result.CenterX[i] * tPitch) : x0 + ((result.CenterX[i] + 0.5f) * slot);
                 result.FootY[i] = result.RowFootY[r];
             }
+
+            // Lo que se dibuja, por el lado más justo: el vidrio y, con la Tinaja, su vasija y el poste de su cuia.
+            float minLeft = float.MaxValue;
+            float maxRight = float.MinValue;
+            for (int i = 0; i < count; i++)
+            {
+                float left = result.CenterX[i] - (0.5f * cuiaW);
+                float right = result.CenterX[i] + (0.5f * cuiaW);
+                if (pair && i == tinajaIndex)
+                {
+                    left -= extraT;
+                    right += extraT;
+                }
+                else if (i == partner)
+                {
+                    if (partner < tinajaIndex)
+                    {
+                        left -= extraP;
+                    }
+                    else
+                    {
+                        right += extraP;
+                    }
+                }
+
+                minLeft = Math.Min(minLeft, left);
+                maxRight = Math.Max(maxRight, right);
+            }
+
+            result.ContentLeft = Math.Min(minLeft, canvasWidth - maxRight);
 
             // Panel (guía 3.2): 8 dp desde el ancho útil (≤ 480) y 22 dp bajo y sobre el bloque en todos los tableros (D-006
             // retira el margen de 36 dp de una fila, que solo existía por el techo del vertido); si sube por encima de

@@ -286,6 +286,8 @@ namespace AF.Tests.PlayMode
             var cuch = (CucharonOverlay)cv.OverlayOf(MechanicType.Cucharon)!;
             Assert.That(tin.UpsideDown, Is.False);
             Assert.That(tin.BodyVisible && tin.JirauVisible, Is.True);
+            Assert.That(tv.GlassHidden, Is.True, "con el cuerpo de barro, el vidrio de la cuia no se ve (no es una vasija en una botella)");
+            Assert.That(cv.GlassHidden, Is.False, "su cuia es de vidrio");
             Assert.That(cuch.Visible && cuch.PostVisible && cuch.AsaVisible, Is.True, "su cuia, colgada del jirau");
 
             // La suelta (b.2 regla 8): la tinaja vacía queda inerte boca abajo sobre el jirau; su cuia, una Cuia chica normal.
@@ -296,6 +298,14 @@ namespace AF.Tests.PlayMode
             Assert.That(tin.BodyVisible, Is.True);
             Assert.That(tin.MouthVisible || tin.ChipVisible || tin.BandCount > 0, Is.False, "sin boca, sin chip y sin bandas");
             Assert.That(tin.JirauVisible, Is.True, "el jirau es permanente (07 §4.3)");
+            Assert.That(tv.GlassHidden, Is.True, "boca abajo, el vidrio tampoco asoma por los lados de su boca");
+            string[] glass = { "GlassBack", "GlassFront", "DoseMarks" };
+            for (int g = 0; g < glass.Length; g++)
+            {
+                Image piece = tv.Body.Find(glass[g]).GetComponent<Image>();
+                Assert.That(piece.enabled, Is.False, glass[g] + ", oculto bajo el barro");
+            }
+
             Assert.That(cuch.Visible || cuch.PostVisible || cuch.AsaVisible, Is.False, "su cuia ya no cuelga");
             Assert.That(tv.Murky.BadgeVisible, Is.False);
 
@@ -316,15 +326,144 @@ namespace AF.Tests.PlayMode
             _rig = new MechanicTestKit.Rig(Art, board);
             var tin = (TinajaOverlay)_rig.Views[TinajaIndex].OverlayOf(MechanicType.Tinaja)!;
             var cuch = (CucharonOverlay)_rig.Views[CucharonIndex].OverlayOf(MechanicType.Cucharon)!;
+            CuiaView tv = _rig.Views[TinajaIndex];
             Assert.That(tin.BodyVisible || tin.JirauVisible, Is.False, "sin el cuerpo ni el jirau provisionales");
             Assert.That(cuch.PostVisible || cuch.AsaVisible, Is.False, "sin el poste ni el asa provisionales");
-            Assert.That(tin.MouthVisible && tin.ChipVisible, Is.True, "la boca y el chip los pinta el código según el estado");
-            AssertNotMurky(_rig.Views[TinajaIndex], board[TinajaIndex], "sin arte");
+
+            // Sin la vasija, la boca, su brillo, su icono y las bandas (hechas para su silueta) no salen: el vidrio ya enseña la
+            // cima y lo revelado en su líquido. Solo el chip «×n», en el hombro del vidrio.
+            Assert.That(tin.MouthVisible || tin.MouthGlyphVisible, Is.False, "sin boca flotando sobre el cuello del vidrio");
+            Assert.That(tv.GlassHidden, Is.False, "se ve el vidrio");
+            Assert.That(tin.ChipVisible, Is.True, "el chip lo pinta el código según el estado");
+            Assert.That(tin.ChipCount, Is.EqualTo(3));
+            float u = tv.Unit;
+            Assert.That(tin.ChipRectDp.center.y / u, Is.EqualTo(TinajaOverlay.GlassChipCenterU(LevelValidation.TinajaCapacity)).Within(0.001f), "en el hombro del vidrio");
+            Assert.That(TinajaOverlay.GlassChipCenterU(LevelValidation.TinajaCapacity), Is.GreaterThan(CuiaGeometry.CavityTopU(LevelValidation.TinajaCapacity)), "sobre el líquido, sin tapar la cima");
+            tv.ShowContent(board[TinajaIndex].WithRevealed(0b11), false);
+            Assert.That(tin.BandCount, Is.EqualTo(0), "sin bandas encima de las dosis reveladas del vidrio (no salen dos veces)");
+            Assert.That(tin.BandMask, Is.EqualTo(0));
+            foreach (Image img in ActiveImages(tv))
+            {
+                string sprite = img.sprite != null ? img.sprite.name : string.Empty;
+                Assert.That(sprite, Does.Not.StartWith("mech_tinaja_glyph_").And.Not.StartWith("mech_tinaja_band").And.Not.StartWith("mech_tinaja_mouth"), img.name + ": sin piezas de la vasija sin su cuerpo");
+            }
+
+            tv.ShowContent(board[TinajaIndex], false);
+            AssertNotMurky(tv, board[TinajaIndex], "sin arte");
 
             MapArtRule.ForceProvisional = true; // Editor y desarrollo
-            _rig.Views[TinajaIndex].ShowContent(board[TinajaIndex], false);
+            tv.ShowContent(board[TinajaIndex], false);
             _rig.Views[CucharonIndex].ShowContent(board[CucharonIndex], false);
             Assert.That(tin.BodyVisible && tin.JirauVisible && cuch.PostVisible && cuch.AsaVisible, Is.True);
+            Assert.That(tin.MouthVisible && tin.MouthGlyphVisible && tin.ChipVisible, Is.True, "con la vasija, su boca y el chip");
+            Assert.That(tin.ChipRectDp.center.y / u, Is.EqualTo(TinajaOverlay.ChipCenterU).Within(0.001f), "en el hombro de la vasija");
+            Assert.That(tv.GlassHidden, Is.True);
+            tv.ShowContent(board[TinajaIndex].WithRevealed(0b10), false);
+            Assert.That(tin.BandMask, Is.EqualTo(0b10), "con la vasija, la banda de luz de lo revelado");
+        }
+
+        [UnityTest]
+        public IEnumerator Partner_IsTheOneOfTheInitialBoard_AfterResumingPastTheRelease()
+        {
+            // Reanudar tras la suelta: la tinaja vacía (la 2), su cuia ya sin tipo a la derecha (la 3) y otra Cuia chica de 2 a la
+            // izquierda (la 1). Mirando solo el tablero mostrado no se sabe cuál es (la suelta le quitó el tipo); con la pareja
+            // del tablero inicial, que pasa GameScreen, el jirau va bajo las dos ranuras de la pareja (07 §4.3; 02 §5).
+            yield return null;
+            var board = new BoardState(new[]
+            {
+                Cuia.Create(4, new[] { Lulo, Lulo, Urucum }), Cuia.Create(2, new[] { Jenipapo, Lulo }),
+                Cuia.Empty(LevelValidation.TinajaCapacity).WithMechanic(MechanicType.Tinaja), Cuia.Empty(2), Cuia.Empty(4),
+            });
+            _rig = new MechanicTestKit.Rig(Art, board);
+            CuiaView tv = _rig.Views[2];
+            var tin = (TinajaOverlay)tv.OverlayOf(MechanicType.Tinaja)!;
+
+            tv.SetTinajaPartner(3);
+            Assert.That(tv.TinajaPartner, Is.EqualTo(3));
+            Assert.That(tin.PartnerIndex, Is.EqualTo(3), "la pareja del tablero inicial manda");
+            ICuiaBoard b = tv.OverlayHost.Board!;
+            Rect jirau = tin.JirauRect;
+            Assert.That(jirau.xMax, Is.GreaterThan(b.Foot(3).x), "bajo la ranura de su cuia, a la derecha");
+            Assert.That(jirau.xMin, Is.GreaterThan(b.Foot(1).x + (0.5f * _rig.Views[1].Unit * CuiaGeometry.WidthU)), "y no bajo la otra Cuia chica de 2");
+
+            // Ni Marea ni otro Show la cambian; una vista nueva la recibe antes de unir su overlay (GameScreen la fija al
+            // construir el tablero, antes de BoardAnimator.Bind).
+            tv.ShowContent(Cuia.Create(5, new[] { Jenipapo }).WithMechanic(MechanicType.Tinaja), false);
+            Assert.That(tin.PartnerIndex, Is.EqualTo(3));
+            using (var other = new MechanicTestKit.Rig(Art, board, views => views[2].SetTinajaPartner(3)))
+            {
+                var t2 = (TinajaOverlay)other.Views[2].OverlayOf(MechanicType.Tinaja)!;
+                Assert.That(t2.PartnerIndex, Is.EqualTo(3));
+                Assert.That(t2.JirauRect.xMax, Is.GreaterThan(other.Views[2].OverlayHost.Board!.Foot(3).x));
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Selected_TinajaLifts8dp_WithA2DegreeSway_07_4_3()
+        {
+            yield return null;
+            _rig = new MechanicTestKit.Rig(Art, Board323());
+            CuiaView tv = _rig.Views[TinajaIndex];
+            CuiaView other = _rig.Views[0];
+            Assert.That(tv.LiftAmountDp, Is.EqualTo(CuiaView.TinajaLiftDp));
+            Assert.That(other.LiftAmountDp, Is.EqualTo(CuiaView.LiftDp));
+            Assert.That(CuiaView.TinajaLiftDp, Is.EqualTo(8f), "07 §4.3: sube 8 dp (pesa)");
+
+            tv.SetLifted(true);
+            float maxAngle = 0f;
+            float maxY = 0f;
+            for (int t = 0; t < 600; t += PlayModeHelpers.FrameMs)
+            {
+                _rig.Tick(PlayModeHelpers.FrameMs);
+                maxAngle = Mathf.Max(maxAngle, Mathf.Abs(tv.BodyAngle));
+                maxY = Mathf.Max(maxY, tv.BodyOffset.y);
+            }
+
+            Assert.That(maxAngle, Is.InRange(1f, CuiaView.TinajaSwayDeg + 0.01f), "un balanceo de 2° como mucho");
+            Assert.That(tv.BodyAngle, Is.EqualTo(0f).Within(0.001f), "y se apaga");
+            Assert.That(tv.BodyOffset.y, Is.EqualTo(CuiaView.TinajaLiftDp).Within(0.01f), "asentada a 8 dp");
+            Assert.That(maxY, Is.LessThan(CuiaView.LiftDp), "nunca sube como una cuia normal");
+            tv.SetLifted(false);
+            _rig.Run(200);
+            Assert.That(tv.BodyOffset.y, Is.EqualTo(0f).Within(0.01f));
+
+            other.SetLifted(true);
+            _rig.Run(400);
+            Assert.That(other.BodyOffset.y, Is.EqualTo(CuiaView.LiftDp).Within(0.01f), "las demás, 16 dp y sin balanceo");
+            Assert.That(other.BodyAngle, Is.EqualTo(0f).Within(0.001f));
+        }
+
+        [UnityTest]
+        public IEnumerator Glyphs_AllTintsPreparedOnLoad_EvenWithTheTinajaEmpty_08_5_4()
+        {
+            // Una partida reanudada tras la suelta (la tinaja vacía): al cargar se preparan los iconos de los 14 tintes, así que
+            // cuando Marea le devuelva dosis no se genera ninguna textura a mitad de un paso.
+            yield return null;
+            using (var art = new ProceduralArt("white"))
+            {
+                var board = new BoardState(new[]
+                {
+                    Cuia.Create(4, new[] { Lulo, Lulo, Urucum }), Cuia.Create(2, new[] { Jenipapo, Lulo }),
+                    Cuia.Empty(LevelValidation.TinajaCapacity).WithMechanic(MechanicType.Tinaja), Cuia.Empty(4),
+                });
+                using (var rig = new MechanicTestKit.Rig(art, board))
+                {
+                    for (int tint = Cuia.MinColor; tint <= Cuia.MaxTintColor; tint++)
+                    {
+                        Assert.That(art.HasTinajaGlyph(tint), Is.True, "icono del tinte " + tint + ", preparado al cargar");
+                    }
+
+                    CuiaView tv = rig.Views[2];
+                    Cuia back = Cuia.Create(5, new[] { Jenipapo, Lulo, CamuCamu }, 0b011).WithMechanic(MechanicType.Tinaja).WithRevealed(0b10);
+                    using (var warm = new MechanicTestKit.Rig(Art, board))
+                    {
+                        warm.Views[2].ShowContent(back, false); // calienta lo que no es del arte (como ShowContentAndTick_DoNotAllocate)
+                        warm.Views[2].ShowContent(board[2], false);
+                    }
+
+                    Assert.That(() => tv.ShowContent(back, false), Is.Not.AllocatingGCMemory(), "Marea tras la suelta, sin asignaciones");
+                }
+            }
         }
 
         [UnityTest]
@@ -356,6 +495,8 @@ namespace AF.Tests.PlayMode
             Assert.That(root, Is.Not.Null, "en la capa de tablero de atrás, en una raíz propia");
             var rootRt = (RectTransform)root!;
             Assert.That(rootRt.anchorMin, Is.EqualTo(new Vector2(0f, 1f)), "anclada arriba a la izquierda, como las ranuras");
+            Assert.That(root.childCount, Is.EqualTo(1), "solo las varas: nada de cordón, liana ni nudo entre las dos piezas (b.2 «Aspecto»)");
+            Assert.That(root.Find("TinajaJirauTie"), Is.Null, "sin atadura en el punto medio entre la tinaja y su cuia");
 
             // Lo que se pinta: el centro del jirau en el mundo cae bajo el punto medio de los dos pies (no solo en las cuentas).
             Vector3 world = tv.OverlayHost.BoardBackLayer!.TransformPoint(new Vector3(jirau.center.x, jirau.center.y, 0f));
@@ -569,11 +710,40 @@ namespace AF.Tests.PlayMode
                 Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
                 BoardLayoutResult layout = screen.Layout!;
                 Assert.That(layout.RowOf[cucharon], Is.EqualTo(layout.RowOf[tinaja]), "pareja " + cucharon + "-" + tinaja + ": la misma fila");
-                Assert.That(layout.CenterX[tinaja] - layout.CenterX[cucharon], Is.EqualTo(layout.SlotWidth).Within(0.01f), "contiguas");
+                float pitch = layout.CenterX[tinaja] - layout.CenterX[cucharon];
+                Assert.That(pitch, Is.GreaterThan(layout.CuiaWidth).And.LessThanOrEqualTo(layout.SlotWidth + 0.01f), "contiguas");
+                Assert.That(screen.TinajaIndex, Is.EqualTo(tinaja));
+                Assert.That(screen.Views[tinaja].TinajaPartner, Is.EqualTo(cucharon), "la pantalla pasa la pareja del tablero inicial");
                 if (p == 1)
                 {
                     Assert.That(layout.PerRow[0], Is.Not.EqualTo(5), "el corte de 5/5 se movió");
                 }
+
+                // La vasija y el jirau, dentro de lo que ocupa el vidrio y sobre la repisa: a ≥ 2 dp de su punta y lejos del marco
+                // como el vidrio (el marco se adelgaza con ContentLeft).
+                float w = (2f * layout.PanelX) + layout.PanelWidth;
+                float uT = screen.Views[tinaja].Unit;
+                float bodyL = layout.CenterX[tinaja] - (0.5f * ProceduralArt.TinajaBodyWidthU * uT);
+                float bodyR = layout.CenterX[tinaja] + (0.5f * ProceduralArt.TinajaBodyWidthU * uT);
+                Assert.That(bodyL, Is.GreaterThanOrEqualTo(layout.ContentLeft - 0.01f));
+                Assert.That(bodyR, Is.LessThanOrEqualTo(w - layout.ContentLeft + 0.01f), "pareja " + cucharon + "-" + tinaja + ": la vasija no llega al marco");
+                float shelfL = layout.PanelX + screen.PanelFrameDp + 6f;
+                float shelfR = layout.PanelX + layout.PanelWidth - screen.PanelFrameDp - 6f;
+                float glassLeft = float.MaxValue;
+                for (int i = 0; i < screen.Views.Length; i++)
+                {
+                    if (i != tinaja && i != cucharon)
+                    {
+                        glassLeft = Mathf.Min(glassLeft, layout.CenterX[i] - (0.5f * layout.CuiaWidth));
+                    }
+                }
+
+                Assert.That(layout.ContentLeft, Is.GreaterThanOrEqualTo(glassLeft - 0.01f), "la pareja no pide más sitio que el vidrio: el marco, como sin tinaja");
+                ICuiaBoard board = tv.OverlayHost.Board!;
+                Rect jirau = TinajaOf(tv).JirauRect;
+                float toCanvas = layout.CenterX[tinaja] - board.Foot(tinaja).x;
+                Assert.That(jirau.xMin + toCanvas, Is.GreaterThanOrEqualTo(shelfL + 2f - 0.01f), "el jirau, sobre la repisa");
+                Assert.That(jirau.xMax + toCanvas, Is.LessThanOrEqualTo(shelfR - 2f + 0.01f), "el jirau, sobre la repisa");
 
                 var tin = tv.OverlayOf(MechanicType.Tinaja) as TinajaOverlay;
                 Assert.That(tin, Is.Not.Null);
@@ -588,6 +758,11 @@ namespace AF.Tests.PlayMode
 
                 AssertNotMurky(tv, flow.Session.Current[tinaja], "jugando, pareja " + cucharon + "-" + tinaja);
             }
+        }
+
+        private static TinajaOverlay TinajaOf(CuiaView view)
+        {
+            return (TinajaOverlay)view.OverlayOf(MechanicType.Tinaja)!;
         }
 
         // Ninguna capa oculta de la tinaja lleva el pardo, el aspecto turbio ni el «?», y no hay insignia «?×n»; las ocultas van

@@ -20,14 +20,16 @@ namespace AF.Tests.PlayMode
     /// Capturas de revisión de la Tinaja y su cuia (tarea TJ2; <c>[Explicit]</c>, no forman parte de la suite), con el tablero
     /// del 323 (<see cref="TinajaVisualTests.Pack323"/>) y la pantalla simulada de <see cref="SnapshotKit"/> (360 × 780 dp):
     /// <c>tj2_01_l323_inicio</c> (tras la intro: la vasija con la boca de jenipapo, «×3», su cuia colgada del poste y el jirau
-    /// bajo las dos ranuras), <c>tj2_02_l323_seleccionada</c> (la tinaja elevada como origen, sin cambiar: D-002),
+    /// bajo las dos ranuras, sin el vidrio debajo y sin nada entre las dos piezas), <c>tj2_02_l323_seleccionada</c> (la tinaja
+    /// elevada como origen, 8 dp con su balanceo, sin cambiar: D-002),
     /// <c>tj2_03_l323_sacar</c> (a mitad del vertido en su cuia, con el gesto normal hasta TJ3), <c>tj2_04_l323_sacada</c> (tras
     /// sacar: la boca de lulo, «×2» y su cuia con el jenipapo), <c>tj2_05_l323_marea_banda</c> (Marea: la boca de jenipapo y la
     /// banda de luz del lulo, revelado, a su altura), <c>tj2_06_l323_bandas</c> (todo revelado, como tras la Luciérnaga: dos
     /// bandas), <c>tj2_07_l323_vacia</c> (la suelta: la tinaja vacía boca abajo sobre el jirau y su cuia suelta),
-    /// <c>tj2_08_l323_release</c> (como en release, sin el arte provisional: solo la boca, el chip y las bandas sobre el vidrio,
-    /// con las ocultas del barro y nunca turbias) y <c>tj2_09_l323_pareja_corte</c> (la pareja en la 4 y la 5, donde el reparto
-    /// 5/5 de D-006 las partiría: van juntas, 6/4). Sirven para mirar a 47-48 dp la vasija (más alta que ancha, lisa, sin «?» ni
+    /// <c>tj2_08_l323_release</c> (como en release, sin el arte provisional: el vidrio con la cima y el lulo revelado en su
+    /// líquido, las ocultas del barro y nunca turbias, y solo el chip en el hombro del vidrio: sin boca, sin bandas ni iconos
+    /// dobles) y <c>tj2_09_l323_pareja_corte</c> (la pareja en la 4 y la 5, donde el reparto 5/5 de D-006 las partiría: van
+    /// juntas, 6/4, con la fila apretada para que la vasija y el jirau no lleguen al marco ni salgan de la repisa). Sirven para mirar a 47-48 dp la vasija (más alta que ancha, lisa, sin «?» ni
     /// pardo), la boca y su icono, el chip, las bandas, el jirau y el asa sin nudo entre las dos piezas. Necesitan gráficos:
     /// <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.TinajaSnapshotTests</c> sin <c>-nographics</c>;
     /// los PNG quedan en <c>Logs/snapshots/</c>.
