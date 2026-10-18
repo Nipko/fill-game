@@ -144,8 +144,10 @@ namespace AF.UI
         private int[] _plateSide = Array.Empty<int>();
         private readonly Rect[] _northUpObstacles = new Rect[4];
         private int _northUpObstacleCount;
-        private readonly Rect[] _basinControls = new Rect[5];
+        private readonly Rect[] _basinControls = new Rect[7];
         private int _basinControlCount;
+        private Rect _basinFrame;
+        private bool _basinFrameSet;
         private float _northUpShiftScale = float.NaN;
         private float _northUpLineScale = 1f;
         private float _rowShift;
@@ -630,7 +632,7 @@ namespace AF.UI
                 float alpha = i < _labelHidden.Length && _labelHidden[i] ? 1f - u : 1f;
                 if (i < countries)
                 {
-                    SetLabelAlpha(_countries[i].canvasRenderer, alpha);
+                    SetLabelAlpha(_countries[i].canvasRenderer, CountryAlpha(i, u));
                 }
                 else
                 {
@@ -1236,6 +1238,14 @@ namespace AF.UI
             _pins.Commit();
         }
 
+        // Opacidad del país i con el giro u: se funde con el giro si no cabe con el norte arriba (_labelHidden) y aparece con él si
+        // no cabe en la Cuenca sin girar (CountryBasinHidden; revisión de FX7).
+        private float CountryAlpha(int i, float u)
+        {
+            float alpha = i < _labelHidden.Length && _labelHidden[i] ? 1f - u : 1f;
+            return CountryBasinHidden(i) ? Mathf.Min(alpha, u) : alpha;
+        }
+
         // Opacidad de un rótulo del contenido (un país o una placa con su texto), solo si cambia. Sin asignaciones.
         private static void SetLabelAlpha(CanvasRenderer cr, float alpha)
         {
@@ -1339,13 +1349,17 @@ namespace AF.UI
         // Lo que ninguna placa de mundo futuro pisa en la vista Cuenca sin girar (tarea FX7, observación 5 de la prueba de la ola
         // 5: con max 58 la placa «Mundo 5 · Loreto · Nivel 141» rozaba «Norte arriba»): los controles que flotan encima, «Norte
         // arriba» y, si el encuadre de la Cuenca lo enseña (la canoa queda fuera en una zona que no la deja entera), «Volver a la
-        // canoa», la canoa con su mástil, sus banderas y el guía, como con el norte arriba (NorthUpObstacles), y la fila de boyas del
-        // frente. Cajas en coordenadas locales del contenido (y hacia arriba), con el encuadre con que abre la Cuenca (centrada en el
-        // mapa, ApplyView) y con MarkerObstacleGapDp de hueco: ninguna placa de mundo futuro se coloca encima (PlaceSilhouettes). Fuera de la Cuenca,
-        // ninguna. Solo al cambiar de vista o de zona; sin asignaciones.
+        // canoa», la canoa con su mástil, sus banderas y el guía, como con el norte arriba (NorthUpObstacles), la fila de boyas del
+        // frente y los rótulos fijos «Andes ↑» y «Océano Atlántico ↓» (revisión de FX7: un país corrido para no quedar bajo «Norte
+        // arriba» pisaba «Andes ↑»). Cajas en coordenadas locales del contenido (y hacia arriba), con el encuadre con que abre la
+        // Cuenca (centrada en el mapa, ApplyView) y con MarkerObstacleGapDp de hueco: ninguna placa de mundo futuro se coloca encima
+        // (PlaceSilhouettes) y ningún país se queda debajo (PlaceCountries; revisión de FX7: con max 140 «Ecuador» quedaba tras
+        // «Norte arriba»). Guarda también la zona visible con ese encuadre (_basinFrame), donde se busca un sitio fuera del lleno
+        // para una placa. Fuera de la Cuenca, ninguna. Solo al cambiar de vista o de zona; sin asignaciones.
         private void BasinControlObstacles()
         {
             _basinControlCount = 0;
+            _basinFrameSet = false;
             RiverMap? map = _map;
             if (_view != MapView.Basin || map == null)
             {
@@ -1354,10 +1368,24 @@ namespace AF.UI
 
             Vector2 c = _space.ToLocal(new Vector2(map.Width * 0.5f, map.Height * 0.5f));
             var o = new Vector2(ClampAxis((_viewW * 0.5f) - c.x, _contentW, _viewW), ClampAxis((_viewH * 0.5f) + c.y, _contentH, _viewH));
+            _basinFrame = FromView(new Rect(0f, 0f, _viewW, _viewH), o);
+            _basinFrameSet = true;
             if (_northUpBuilt)
             {
                 Rect b = NorthUpButtonFrameRect();
                 _basinControls[_basinControlCount++] = Grow(FromView(new Rect(b.x - FramePadDp, b.y - FramePadDp, b.width, b.height), o), MarkerObstacleGapDp);
+            }
+
+            Rect andes = FixedViewRect(AndesLabel);
+            if (andes.width > 0f)
+            {
+                _basinControls[_basinControlCount++] = Grow(FromView(andes, o), MarkerObstacleGapDp);
+            }
+
+            Rect atlantic = FixedViewRect(AtlanticLabel);
+            if (atlantic.width > 0f)
+            {
+                _basinControls[_basinControlCount++] = Grow(FromView(atlantic, o), MarkerObstacleGapDp);
             }
 
             // La canoa con su mástil y sus banderas (con la proa a un lado o al otro, que depende del guía) y el guía: la caja de
@@ -1423,15 +1451,21 @@ namespace AF.UI
         // La caja (coordenadas locales del contenido) pisa un control de la Cuenca sin girar (BasinControlObstacles).
         private bool HitsBasinControl(Rect box)
         {
+            return BasinControlHit(box) >= 0;
+        }
+
+        // El primer control de la Cuenca sin girar que pisa la caja (índice en _basinControls), o −1.
+        private int BasinControlHit(Rect box)
+        {
             for (int k = 0; k < _basinControlCount; k++)
             {
                 if (box.Overlaps(_basinControls[k]))
                 {
-                    return true;
+                    return k;
                 }
             }
 
-            return false;
+            return -1;
         }
 
         /// <summary>

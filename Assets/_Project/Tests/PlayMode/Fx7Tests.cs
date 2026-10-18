@@ -27,8 +27,13 @@ namespace AF.Tests.PlayMode
     /// <item><description>observación 5: en la vista Cuenca con max 58, ninguna placa de mundo futuro pisa «Norte arriba» (la del
     /// mundo 5, «Loreto · Nivel 141», lo rozaba), ni «Volver a la canoa» si sale, con la vista de siempre y con el norte
     /// arriba; y con otros progresos. En la Cuenca sin girar tampoco quedan bajo la canoa, su mástil, sus banderas, el guía ni la
-    /// fila de boyas del frente (revisión de FX7: con max 200 la placa del mundo 9 la rozaba), y la que no encuentra un sitio
-    /// libre tapa las menos líneas del lleno que puede.</description></item>
+    /// fila de boyas del frente (revisión de FX7: con max 200 la placa del mundo 9 la rozaba); y cada placa tapa las menos líneas
+    /// del lleno que puede entre los sitios libres que prueba (con max 200, las de los mundos 8 y 9, ninguna; la del 7, la más
+    /// ancha, sigue tapando dos: fuera del lleno solo cabría en la franja de arriba, bajo «Norte arriba», «Andes ↑» o un país,
+    /// porque más abajo el cauce lleno corta el mapa a menos de su ancho del borde; es un límite aceptado, no un caso resuelto, y
+    /// el test comprueba que no queda ningún sitio libre fuera del lleno con lo que había al colocarla). Los países de la
+    /// Cuenca tampoco quedan bajo «Norte arriba» ni los demás controles (con max 140 «Ecuador» quedaba tras el botón): o se
+    /// apartan o no salen en esa vista.</description></item>
     /// </list>
     /// No necesitan gráficos. La captura de la Cuenca con 58 es <c>15_map_lleno_cuenca_max58</c> (<c>MapProgressSnapshotTests</c>).
     /// </summary>
@@ -282,6 +287,242 @@ namespace AF.Tests.PlayMode
                 Assert.That(map.NorthUpTurning, Is.False);
                 Canvas.ForceUpdateCanvases();
                 AssertPlatesClear(map, map.NorthUpPlateCount, "max " + max + ", norte arriba");
+                map.NorthUpButton.onClick.Invoke();
+                map.Tick(MapConfig.NorthUpRotateMs);
+                map.SetView(MapView.World);
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator BasinPlates_CoverTheLeastFillTheyCan_NoneWhenThereIsRoom()
+        {
+            yield return MapMarkersTests.OpenApp(201);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            foreach (int max in new[] { 200, 140, 300, 58 })
+            {
+                if (max != 200)
+                {
+                    MapMarkersTests.Reopen(boot, new MemoryProgressStore(max + 1, max, max), max + 1);
+                }
+
+                map.SetView(MapView.Basin);
+                map.Tick(16f);
+                Canvas.ForceUpdateCanvases();
+                string at = "max " + max + ", Cuenca";
+                Assert.That(map.BasinFrameLocal(out Rect frame), Is.True, at + ": la zona visible de la Cuenca");
+                int plates = map.SilhouetteCount;
+                var boxes = new List<Rect>();
+                for (int i = 0; i < plates; i++)
+                {
+                    int world = map.SilhouetteWorld(i);
+                    Rect box = map.SilhouetteLocalBox(i);
+                    int hits = map.FillLinesUnderBox(box); // recontadas en la caja donde quedó la placa
+                    Debug.Log("FX7 " + at + ": la placa del mundo " + world + " " + box + " tapa " + hits + " línea(s) del lleno (la búsqueda vio "
+                        + map.SilhouetteFillMin(i) + " como mínimo)");
+                    Assert.That(map.SilhouetteFillHits(i), Is.EqualTo(hits), at + ": la placa del mundo " + world + " está donde la colocó su búsqueda");
+                    Assert.That(map.SilhouetteFillMin(i), Is.GreaterThanOrEqualTo(0), at + ": la placa del mundo " + world + " encontró un sitio libre");
+                    Assert.That(hits, Is.EqualTo(map.SilhouetteFillMin(i)),
+                        at + ": la placa del mundo " + world + " " + box + " tapa " + hits + " línea(s) del lleno; había un sitio que tapaba menos");
+                    foreach (Rect other in boxes)
+                    {
+                        Assert.That(box.Overlaps(other), Is.False, at + ": dos placas se pisan");
+                    }
+
+                    boxes.Add(box);
+                    if (max != 200)
+                    {
+                        continue;
+                    }
+
+                    // Con max 200 (revisión de FX7): las placas de los mundos 8 y 9 caben fuera del lleno y no lo tapan; la del
+                    // mundo 7 (la más ancha) solo cabría fuera de él donde pisaría «Norte arriba», un país o la canoa con su
+                    // equipo: es el límite aceptado (RiverMapScreen.PlaceSilhouettes).
+                    if (world == 7)
+                    {
+                        AssertNoFreeRoomOutOfTheFill(map, frame, i, at);
+                    }
+                    else
+                    {
+                        Assert.That(hits, Is.EqualTo(0), at + ": la placa del mundo " + world + " " + box + " tapa " + hits + " línea(s) del lleno");
+                    }
+                }
+
+                if (max == 200)
+                {
+                    Assert.That(boxes.Count, Is.EqualTo(3), at + ": las placas de los mundos 7, 8 y 9");
+                }
+
+                // Lo de siempre sigue valiendo con las placas lejos de su parada.
+                AssertPlatesClear(map, plates, at);
+                AssertPlatesClearOfTheGear(map, plates, at);
+                AssertPlatesClearOfTheBuoys(map, plates, at);
+                map.SetView(MapView.World);
+            }
+        }
+
+        // Toda caja del tamaño de la placa «plate» dentro de la zona visible de la Cuenca (frame, coordenadas locales del contenido;
+        // rejilla de 2 dp) que no pisa ninguna línea del lleno pisa «Norte arriba», «Andes ↑», «Océano Atlántico ↓» o la canoa con
+        // su equipo (con MarkerObstacleGapDp de hueco), un país o una placa colocada antes que ella (las de después no le quitan
+        // sitio: es lo que había cuando la buscó).
+        private static void AssertNoFreeRoomOutOfTheFill(RiverMapScreen map, Rect frame, int plate, string at)
+        {
+            RectTransform layer = map.LabelLayer!;
+            float gap = RiverMapScreen.MarkerObstacleGapDp * layer.lossyScale.x;
+            var obstacles = new List<Rect> { Grow(AfLayoutLog.WorldRect((RectTransform)map.NorthUpButton.transform), gap) };
+            foreach (TMPro.TextMeshProUGUI? fixedLabel in new[] { map.AndesLabel, map.AtlanticLabel })
+            {
+                if (fixedLabel != null && fixedLabel.gameObject.activeInHierarchy && !string.IsNullOrEmpty(fixedLabel.text))
+                {
+                    obstacles.Add(Grow(AfLayoutLog.WorldRect(fixedLabel.rectTransform), gap));
+                }
+            }
+
+            if (map.HasCanoe)
+            {
+                obstacles.Add(Grow(AfLayoutLog.WorldRect(map.Canoe.rectTransform), gap));
+                if (map.Mast != null && map.Mast.gameObject.activeInHierarchy)
+                {
+                    obstacles.Add(Grow(AfLayoutLog.WorldRect(map.Mast.rectTransform), gap));
+                }
+
+                for (int f = 0; f < map.CanoeFlagCount; f++)
+                {
+                    if (map.CanoeFlagImage(f).gameObject.activeInHierarchy)
+                    {
+                        obstacles.Add(Grow(AfLayoutLog.WorldRect(map.CanoeFlagImage(f).rectTransform), gap));
+                    }
+                }
+            }
+
+            for (int i = 0; i < map.Map!.Labels.Count; i++)
+            {
+                if (map.CountryLabel(i).gameObject.activeInHierarchy && !map.CountryBasinHidden(i))
+                {
+                    obstacles.Add(LocalToWorld(layer, map.CountryLocalBox(i)));
+                }
+            }
+
+            // Solo las placas que se colocaron antes que ella: las de después no le quitan ningún sitio.
+            for (int i = 0; i < plate; i++)
+            {
+                obstacles.Add(LocalToWorld(layer, map.SilhouetteLocalBox(i)));
+            }
+
+            Vector2 size = map.SilhouetteLocalBox(plate).size;
+            float edge = RiverMapScreen.LabelEdgeDp;
+            float contentW = map.Space.DpPerUnit * map.Map!.Width;
+            float contentH = map.Space.DpPerUnit * map.Map!.Height;
+            float xMin = Mathf.Max(frame.xMin, 0f) + edge;
+            float xMax = Mathf.Min(frame.xMax, contentW) - edge;
+            float yMin = Mathf.Max(frame.yMin, -contentH) + edge;
+            float yMax = Mathf.Min(frame.yMax, 0f) - edge;
+            int outOfTheFill = 0;
+            float yLow = float.PositiveInfinity;
+            float yHigh = float.NegativeInfinity;
+            for (float y = yMin; y + size.y <= yMax; y += 2f)
+            {
+                for (float x = xMin; x + size.x <= xMax; x += 2f)
+                {
+                    var box = new Rect(x, y, size.x, size.y);
+                    if (map.FillLinesUnderBox(box) > 0)
+                    {
+                        continue;
+                    }
+
+                    outOfTheFill++;
+                    yLow = Mathf.Min(yLow, box.yMin);
+                    yHigh = Mathf.Max(yHigh, box.yMax);
+                    Rect w = LocalToWorld(layer, box);
+                    bool blocked = false;
+                    foreach (Rect o in obstacles)
+                    {
+                        blocked |= w.Overlaps(o);
+                    }
+
+                    Assert.That(blocked, Is.True, at + ": la placa " + plate + " cabría fuera del lleno en " + box + " sin pisar nada");
+                }
+            }
+
+            Debug.Log("FX7 " + at + ": la placa " + plate + " tiene " + outOfTheFill + " sitios fuera del lleno (y de " + yLow + " a " + yHigh + "), todos ocupados");
+        }
+
+        // Caja local del contenido (dp, y hacia arriba desde su esquina superior izquierda) en coordenadas del mundo.
+        private static Rect LocalToWorld(RectTransform layer, Rect box)
+        {
+            Rect r = layer.rect;
+            Vector3 a = layer.TransformPoint(new Vector3(r.xMin + box.xMin, r.yMax + box.yMin, 0f));
+            Vector3 b = layer.TransformPoint(new Vector3(r.xMin + box.xMax, r.yMax + box.yMax, 0f));
+            return Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+        }
+
+        private static Rect Grow(Rect r, float by)
+        {
+            return Rect.MinMaxRect(r.xMin - by, r.yMin - by, r.xMax + by, r.yMax + by);
+        }
+
+        [UnityTest]
+        public IEnumerator BasinCountries_NotUnderTheMapControls_At140_AndOtherProgress()
+        {
+            yield return MapMarkersTests.OpenApp(141);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            foreach (int max in new[] { 140, 58, 200, 300 })
+            {
+                if (max != 140)
+                {
+                    MapMarkersTests.Reopen(boot, new MemoryProgressStore(max + 1, max, max), max + 1);
+                }
+
+                map.SetView(MapView.Basin);
+                map.Tick(16f);
+                Canvas.ForceUpdateCanvases();
+                string at = "max " + max + ", Cuenca";
+                Rect button = AfLayoutLog.WorldRect((RectTransform)map.NorthUpButton.transform);
+                bool canoeShown = map.BackToCanoeShown;
+                Rect canoe = canoeShown ? AfLayoutLog.WorldRect((RectTransform)map.BackToCanoeButton.transform) : default;
+                Rect andes = AfLayoutLog.WorldRect(map.AndesLabel!.rectTransform);
+                int shown = 0;
+                for (int i = 0; i < map.Map!.Labels.Count; i++)
+                {
+                    TMPro.TextMeshProUGUI label = map.CountryLabel(i);
+                    if (!label.gameObject.activeInHierarchy)
+                    {
+                        continue;
+                    }
+
+                    if (map.CountryBasinHidden(i))
+                    {
+                        Assert.That(label.canvasRenderer.GetAlpha(), Is.EqualTo(0f), at + ": «" + label.text + "» no sale en la Cuenca");
+                        continue;
+                    }
+
+                    shown++;
+                    Assert.That(label.canvasRenderer.GetAlpha(), Is.EqualTo(1f), at + ": «" + label.text + "» sale");
+                    Rect box = AfLayoutLog.WorldRect(label.rectTransform);
+                    Assert.That(box.Overlaps(button), Is.False, at + ": «" + label.text + "» " + box + " queda bajo «Norte arriba» " + button);
+                    Assert.That(box.Overlaps(andes), Is.False, at + ": «" + label.text + "» " + box + " pisa «Andes ↑» " + andes);
+                    if (canoeShown)
+                    {
+                        Assert.That(box.Overlaps(canoe), Is.False, at + ": «" + label.text + "» " + box + " queda bajo «Volver a la canoa» " + canoe);
+                    }
+                }
+
+                Assert.That(shown, Is.GreaterThanOrEqualTo(map.CountryLabelCount - 1), at + ": a lo sumo un país se queda sin sitio");
+
+                // Con el norte arriba, un país que no salía en la Cuenca vuelve (si cabe con el norte arriba).
+                map.NorthUpButton.onClick.Invoke();
+                map.Tick(MapConfig.NorthUpRotateMs);
+                map.Tick(16f);
+                for (int i = 0; i < map.Map!.Labels.Count; i++)
+                {
+                    TMPro.TextMeshProUGUI label = map.CountryLabel(i);
+                    if (label.gameObject.activeInHierarchy && map.CountryBasinHidden(i) && !map.NorthUpCountryHidden(i))
+                    {
+                        Assert.That(label.canvasRenderer.GetAlpha(), Is.EqualTo(1f), at + ", norte arriba: «" + label.text + "» vuelve");
+                    }
+                }
+
                 map.NorthUpButton.onClick.Invoke();
                 map.Tick(MapConfig.NorthUpRotateMs);
                 map.SetView(MapView.World);
