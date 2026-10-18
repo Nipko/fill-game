@@ -17,10 +17,14 @@ namespace AF.Tests.PlayMode
     /// <item><description>«ponerse al día» que cruza Santarém (visto 5, max 12; M3.5), con la vista arrastrada a Santarém o al
     /// Encuentro: al abrir (<c>fx8_map_catchup_l05</c> y <c>_l05_santarem</c>, con la placa del mundo 2), justo al llegar la canoa
     /// al 10 (<c>_l10_santarem</c>, ya sin placa; antes de FX8, la caja del mundo 2 decía ahí «Mundo 3 · Manaos», y
-    /// <c>_l10_encontro</c>, con la del mundo 3 junto a su gran parada), al acabar (<c>_l12_encontro</c>) y en la vista recién
-    /// abierta con 12 (<c>fx8_map_fresh_l12</c> y <c>_l12_encontro</c>, con la placa en el mismo sitio);</description></item>
-    /// <item><description>la ventanita del hito p20 de la tarjeta previa con la temporada del nivel que se va a jugar (07 §2.1):
-    /// el 60 (ciclo A) sin la LUT de temporada, con ella y con la B forzada, y el 40 (ciclo B) con ella y con la A forzada;</description></item>
+    /// <c>_l10_encontro</c>, con la del mundo 3 junto a su gran parada), al acabar (<c>_l12_encontro</c>, y
+    /// <c>_l12_santarem</c>, tras «Volver a la canoa»: canoa en su sitio, tarro de Santarém lleno y sin la placa del mundo 2,
+    /// como en <c>fx8_map_fresh_l12</c>, con el encuadre algo corrido) y en la vista recién abierta con 12 (<c>fx8_map_fresh_l12</c> y
+    /// <c>_l12_encontro</c>, con la placa en el mismo sitio);</description></item>
+    /// <item><description>la ventanita del hito p20 de la tarjeta previa con la temporada del primer nivel de la parada a la que
+    /// se llega, la misma de su tarjeta del Mapa y de la victoria con vista (07 §2.1): el 60 hacia Anavilhanas (61, ciclo B) sin
+    /// la LUT de temporada, con ella y con la A forzada, y el 40 hacia el Encuentro (41, ciclo A) con ella y con la B
+    /// forzada;</description></item>
     /// <item><description>la tarjeta de la parada del Mapa con la temporada del primer nivel de la parada: Manaos (51, ciclo A)
     /// sin ella, con ella y con la B forzada, y Alter do Chão (21, ciclo B) con ella y con la A forzada.</description></item>
     /// </list>
@@ -74,10 +78,14 @@ namespace AF.Tests.PlayMode
             map.Tick(MapConfig.ArrivalSampleFillMs);
             Assert.That(map.CatchingUp, Is.False);
             SaveMap(dir, "fx8_map_catchup_l12_encontro", map);
+            map.BackToCanoe(); // «Volver a la canoa»: la canoa centrada (al abrir, el encuadre se corre algo; la línea AF_FX8 «encuadre» lo da)
+            Vector2 caughtUp = map.ContentOffset;
+            SaveMap(dir, "fx8_map_catchup_l12_santarem", map); // como fx8_map_fresh_l12: canoa, tarro lleno y sin placa del mundo 2
 
             MapMarkersTests.Reopen(boot, new MemoryProgressStore(13, 12, 12), 13);
             Assert.That(map.CatchingUp, Is.False);
             SaveMap(dir, "fx8_map_fresh_l12", map);
+            Debug.Log("AF_FX8 encuadre: tras ponerse al día " + caughtUp.ToString("F1") + ", recién abierto " + map.ContentOffset.ToString("F1"));
             CenterOnPlate(map, 3);
             SaveMap(dir, "fx8_map_fresh_l12_encontro", map);
         }
@@ -105,10 +113,10 @@ namespace AF.Tests.PlayMode
             string dir = SnapshotKit.Prepare();
             GameScreen.SimulatedScreen = HudLabelTests.Screen780;
             yield return CaptureCard(dir, "fx8_card_hito_l60_off", 60, false, null);
-            yield return CaptureCard(dir, "fx8_card_hito_l60_a", 60, true, null);
-            yield return CaptureCard(dir, "fx8_card_hito_l60_b_forced", 60, true, Season.LowWater);
-            yield return CaptureCard(dir, "fx8_card_hito_l40_b", 40, true, null);
-            yield return CaptureCard(dir, "fx8_card_hito_l40_a_forced", 40, true, Season.HighWater);
+            yield return CaptureCard(dir, "fx8_card_hito_l60_b", 60, true, null);
+            yield return CaptureCard(dir, "fx8_card_hito_l60_a_forced", 60, true, Season.HighWater);
+            yield return CaptureCard(dir, "fx8_card_hito_l40_a", 40, true, null);
+            yield return CaptureCard(dir, "fx8_card_hito_l40_b_forced", 40, true, Season.LowWater);
         }
 
         [UnityTest]
@@ -151,7 +159,7 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Attach(boot);
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.Save(dir, name);
-            Debug.Log("AF_FX8 " + name + ": nivel " + level + ", parada " + card.HitoStop!.Id + ", temporada "
+            Debug.Log("AF_FX8 " + name + ": nivel " + level + ", parada " + card.HitoStop!.Id + " (nivel " + card.HitoStop.FirstLevel + "), temporada "
                 + (SeasonTable.Letter(card.HitoSeason) ?? "-") + ", luz " + Rgb(card.HitoLut) + ", fondo " + Rgb(boot.View.StopBackdrop.LutColor));
         }
 

@@ -42,7 +42,8 @@ namespace AF.UI
     /// <c>AF_LAYOUT level_card</c>, con los rectángulos nuevos.</para>
     /// <para><b>Hito p20</b> (M2.5; 02 §10; D-013, punto 8): en el 40, el 60… la tarjeta lleva la fila «Si lo superas, llegas a
     /// {lugar}» con la silueta del sitio (<see cref="LevelCardView.HitoStopFor"/> con <see cref="RiverStops"/>; la ventanita, con
-    /// el agua de los niveles de esa parada y la luz de la temporada del nivel que se va a jugar, como el fondo: 07 §2.1, FX8).
+    /// el agua de los niveles de esa parada y la luz de la temporada de su primer nivel, como su tarjeta del Mapa y la victoria con
+    /// vista: 07 §2.1, FX8).
     /// <c>AF_STATE level_card</c> la anota con <c>"hito"</c> (el id de la parada o
     /// null), <c>"hito_silhouette"</c> (<c>png</c>, <c>shape</c>, <c>code</c> o <c>none</c>) y <c>"hito_omitted"</c>, y
     /// <c>AF_LAYOUT</c>, con el rectángulo <c>level_card_hito</c>.</para>
@@ -130,7 +131,9 @@ namespace AF.UI
             _cardLayoutSent = false;
             RiverStop? hito = LevelCardView.HitoStopFor(card.Level, RiverStops);
             UpdateDebutClearance(card);
-            Season season = hito != null ? SeasonFor(Seasons, card.Level) : Season.None; // la del nivel que se va a jugar (FX8)
+            // La temporada del primer nivel de la parada a la que se llega, como su tarjeta del Mapa y la victoria con vista (07 §2.1:
+            // no hay dos dibujos del mismo sitio que se contradigan; FX8). El hito cierra un ciclo de 20 y la parada empieza el siguiente.
+            Season season = hito != null ? SeasonFor(Seasons, hito.FirstLevel) : Season.None;
             _levelCard.Show(card, hito, hito != null ? HitoWater(flow, hito) : string.Empty, season, flow.ReduceMotion, _canvasW, _canvasH,
                 _safeTop, _safeBottom);
             RestoreBoardUnit();

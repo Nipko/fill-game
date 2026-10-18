@@ -152,22 +152,28 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// La ventanita del hito lleva la luz de la temporada del nivel que se va a jugar, como el fondo del tablero (07 §2.1; tarea
-        /// FX8): el 40 (ciclo 21-40, B) hacia el Encuentro, con su pieza por código, y el 60 (ciclo 41-60, A) hacia Anavilhanas, con
-        /// su silueta provisional. Sin la LUT de temporada (o sin tabla), la de la parada sola, como antes.
+        /// La ventanita del hito lleva la luz de la temporada del primer nivel de la parada a la que se llega, la misma con la que se
+        /// ve ese sitio en su tarjeta del Mapa (<c>RiverMapScreen.StopCardSeason</c>) y en la victoria con vista (07 §2.1: no
+        /// hay dos dibujos del mismo sitio que se contradigan; tarea FX8), y no la del nivel que se juega, que cierra el ciclo
+        /// anterior: el 40 (ciclo 21-40, B) hacia el Encuentro (41, ciclo A), con su pieza por código, y el 60 (ciclo 41-60, A)
+        /// hacia Anavilhanas (61, ciclo B), con su silueta provisional. Sin la LUT de temporada (o sin tabla), la de la parada
+        /// sola, como antes.
         /// </summary>
         [UnityTest]
-        public IEnumerator HitoWindow_CarriesTheSeasonOfTheLevelToPlay([Values(40, 60)] int level)
+        public IEnumerator HitoWindow_CarriesTheSeasonOfTheDestinationStop([Values(40, 60)] int level)
         {
-            Season expected = level == 40 ? Season.LowWater : Season.HighWater;
+            Season expected = level == 40 ? Season.HighWater : Season.LowWater;
+            Season played = level == 40 ? Season.LowWater : Season.HighWater;
             GameScreen.SeasonLutEnabled = false;
             yield return CardSetup.Load(level);
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(boot.Seasons, Is.Not.Null, "premisa: la escena lleva la tabla de temporada");
-            Assert.That(boot.Seasons!.SeasonOf(level), Is.EqualTo(expected), "premisa: el ciclo del " + level);
+            Assert.That(boot.Seasons!.SeasonOf(level), Is.EqualTo(played), "premisa: el ciclo del " + level);
             LevelCardView card = boot.View!.LevelCard;
             RiverStop stop = card.HitoStop!;
             Assert.That(stop, Is.Not.Null);
+            Assert.That(stop.FirstLevel, Is.EqualTo(level + 1), "premisa: la parada empieza en el ciclo siguiente");
+            Assert.That(boot.Seasons.SeasonOf(stop.FirstLevel), Is.EqualTo(expected), "premisa: el ciclo de la parada");
             Assert.That(card.HitoScene.IsEmpty, Is.False);
             Assert.That(card.HitoSeason, Is.EqualTo(Season.None), "sin la LUT de temporada");
             Assert.That(card.HitoLut, Is.EqualTo(StopBackdrop.LutOf(stop)));
@@ -179,7 +185,8 @@ namespace AF.Tests.PlayMode
             card = GameBootstrap.Current!.View!.LevelCard;
             Assert.That(card.HitoStop!.Id, Is.EqualTo(stop.Id));
             stop = card.HitoStop; // la escena se recargó con su catálogo
-            Assert.That(card.HitoSeason, Is.EqualTo(expected), "la temporada del nivel que se va a jugar");
+            Assert.That(card.HitoSeason, Is.EqualTo(expected), "la temporada del primer nivel de la parada de destino");
+            Assert.That(card.HitoSeason, Is.Not.EqualTo(played), "no la del nivel que se juega");
             Color lut = StopBackdrop.LutOf(stop, expected);
             Assert.That(card.HitoLut, Is.EqualTo(lut), "la luz de la parada por la de la temporada, como el fondo");
             Assert.That(card.HitoLut, Is.Not.EqualTo(StopBackdrop.LutOf(stop)));

@@ -531,7 +531,8 @@ namespace AF.UI
         public RiverStop? HitoStop => _hitoStop;
 
         /// <summary>
-        /// Temporada con la que se pinta la ventanita del hito: la del ciclo del nivel que se va a jugar (07 §2.1; tarea FX8);
+        /// Temporada con la que se pinta la ventanita del hito: la del ciclo del primer nivel de su parada (<see cref="RiverStop.FirstLevel"/>,
+        /// la del ciclo siguiente al del hito), como la tarjeta de la parada en el Mapa y la victoria con vista (07 §2.1; tarea FX8);
         /// <see cref="Season.None"/> sin tabla o sin hito.
         /// </summary>
         public Season HitoSeason => _hitoSeason;
@@ -664,8 +665,9 @@ namespace AF.UI
 
         /// <summary>
         /// Como <see cref="Show(LevelCardInfo, RiverStop, string, bool, float, float, float, float)"/>, con la ventanita del hito
-        /// en la temporada <paramref name="hitoSeason"/>: la del ciclo del nivel que se va a jugar (07 §2.1: la tarjeta usa la
-        /// misma composición que el fondo, temporada incluida; tarea FX8). <see cref="Season.None"/> = sin temporada, como antes.
+        /// en la temporada <paramref name="hitoSeason"/>: la del ciclo del primer nivel de esa parada (07 §2.1: la tarjeta usa la
+        /// misma composición que el fondo, temporada incluida, y el sitio se ve igual en su tarjeta del Mapa y en la victoria con
+        /// vista; tarea FX8). <see cref="Season.None"/> = sin temporada, como antes.
         /// </summary>
         public void Show(LevelCardInfo card, RiverStop? hitoStop, string hitoWater, Season hitoSeason, bool reduceMotion, float canvasW,
             float canvasH, float safeTop, float safeBottom)
