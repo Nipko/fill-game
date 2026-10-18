@@ -122,6 +122,29 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void ShouldGift_OnlyAtTheUnlockLevel_NotYetBeaten_AndOnce()
+        {
+            // Tarea TU1b (04 §2.3): 3 Morphos al cargar el 12 por primera vez; nunca otro nivel, ni el 12 ya superado, ni dos veces.
+            BoosterConfig config = BoosterConfig.Defaults;
+            var economy = new EconomyFixture(0);
+            Wallet wallet = economy.Wallet;
+            Assert.That(BoosterConfig.HintTutorialUnits, Is.EqualTo(3), "04 §2.3: «se acreditan 3 Morphos al stock»");
+            Assert.That(MorphoBooster.ShouldGift(12, 11, false, wallet, config), Is.True);
+            Assert.That(MorphoBooster.ShouldGift(12, 0, false, wallet, config), Is.True, "también con un perfil nuevo (af_level)");
+            Assert.That(MorphoBooster.ShouldGift(12, 11, true, wallet, config), Is.False, "ya regalado en este nivel");
+            Assert.That(MorphoBooster.ShouldGift(12, 12, false, wallet, config), Is.False, "el 12 ya superado");
+            Assert.That(MorphoBooster.ShouldGift(11, 10, false, wallet, config), Is.False);
+            Assert.That(MorphoBooster.ShouldGift(13, 12, false, wallet, config), Is.False);
+            Assert.That(MorphoBooster.ShouldGift(12, 11, false, null, config), Is.False, "sin cartera");
+            Assert.That(wallet.Apply(Transaction.GrantStock(BoosterKind.Hint, 1)).IsApplied, Is.True);
+            Assert.That(MorphoBooster.ShouldGift(12, 11, false, wallet, config), Is.True, "con stock previo también: son 3 regalados [P]");
+
+            config.HintUnlockLevel = 14; // hint_unlock_level por Remote Config: el regalo va con la ranura
+            Assert.That(MorphoBooster.ShouldGift(12, 11, false, wallet, config), Is.False);
+            Assert.That(MorphoBooster.ShouldGift(14, 13, false, wallet, config), Is.True);
+        }
+
+        [Test]
         public void Answer1_Pour_AStarWithoutHidden_AndSafeMovesWithTheTinaja()
         {
             MorphoBooster morpho = NewMorpho();
@@ -734,6 +757,13 @@ namespace AF.Tests.EditMode
             public void OnHintCleared()
             {
                 Cleared++;
+            }
+
+            public int Gifted { get; private set; }
+
+            public void OnHintGifted(int units)
+            {
+                Gifted += units;
             }
 
             public void OnLevelLoaded(int level)

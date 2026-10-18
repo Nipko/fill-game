@@ -25,5 +25,12 @@ namespace AF.GameFlow
 
         /// <summary>La pista resaltada se apaga: el tablero cambió (vertido u otra acción) o el nivel dejó de estar en juego (04 §2.3 d).</summary>
         void OnHintCleared();
+
+        /// <summary>
+        /// Se acreditaron <paramref name="units"/> Morphos al stock al cargar el nivel de desbloqueo por primera vez (04 §2.3: 3
+        /// en el 12; tarea TU1b). Llega en LOADING, tras <see cref="ILevelFlowListener.OnLevelLoaded"/>; la presentación de TiTino
+        /// sale después de la intro (instrucción del tutorial).
+        /// </summary>
+        void OnHintGifted(int units);
     }
 }

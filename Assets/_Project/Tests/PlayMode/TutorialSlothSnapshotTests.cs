@@ -51,6 +51,11 @@ namespace AF.Tests.PlayMode
         {
             foreach (int level in TutorialInstruction.Levels)
             {
+                if (level == TutorialInstruction.MorphoLevel)
+                {
+                    continue; // la presentación de Morpho del 12 tiene sus capturas (TU1b: TutorialMorphoSnapshotTests)
+                }
+
                 string dir = Prepare(false, 1f);
                 yield return TutorialSlothTests.Load(level);
                 yield return Capture(GameBootstrap.Current!, dir, "tu1a_l" + level + "_780_100");

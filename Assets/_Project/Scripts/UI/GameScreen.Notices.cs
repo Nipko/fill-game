@@ -870,7 +870,7 @@ namespace AF.UI
         /// 6 y la presentación de Morpho del 12, con el retrato de TiTino (D-016, T2-A), y el 8, el de Capi con la Cuia extra y
         /// «Reiniciar es gratis…» [P]. En ellos no hay aviso de TiTino tras Volver a la orilla (guion de la intro §14: manda la
         /// instrucción, y TiTino sale como mucho una vez). Los de TiTino que ya se pintan son los de
-        /// <see cref="TutorialInstruction.Levels"/> (1, 2, 3 y 6, TU1a; GameScreen.Cards.cs); el 12 llega con TU1b.
+        /// <see cref="TutorialInstruction.Levels"/> (1, 2, 3 y 6, TU1a, y 12, TU1b; GameScreen.Cards.cs).
         /// </summary>
         internal static readonly int[] SlothTutorialLevels = { 1, 2, 3, 6, 8, 12 };
 

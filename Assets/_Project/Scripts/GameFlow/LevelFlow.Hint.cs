@@ -271,6 +271,21 @@ namespace AF.GameFlow
             (_listener as IHintListener)?.OnHintCleared();
         }
 
+        // Regalo del 12 (04 §2.3; TU1b): al cargar el nivel de desbloqueo aún no superado, si no se regaló ya en él, se acreditan
+        // BoosterConfig.HintTutorialUnits Morphos al stock y queda anotado en el intento (marca m de level_state, que Load guarda en
+        // la misma escritura del perfil). Al reanudar no pasa por aquí (Resume no llama a Load) y el intento vuelve con la marca.
+        private void GiftHintOnLoad(int number)
+        {
+            if (!MorphoBooster.ShouldGift(number, _progress.LoadMaxLevel(), _attempt.HintGifted, _wallet, _boosters)
+                || !_wallet!.Apply(Transaction.GrantStock(BoosterKind.Hint, BoosterConfig.HintTutorialUnits)).IsApplied)
+            {
+                return;
+            }
+
+            _attempt.HintGifted = true;
+            (_listener as IHintListener)?.OnHintGifted(BoosterConfig.HintTutorialUnits);
+        }
+
         // Nivel nuevo o reabierto: sin consulta, sin pista resaltada y sin pistas usadas. El enfriamiento sigue (es por reloj).
         private void ResetHint()
         {

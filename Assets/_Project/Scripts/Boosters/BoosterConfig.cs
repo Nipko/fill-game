@@ -28,6 +28,12 @@ namespace AF.Boosters
         public const int RevealGiftUnits = 1;
 
         /// <summary>
+        /// Morphos que se acreditan al stock en el nivel de desbloqueo (<c>hint_unlock_level</c>, el 12; 04 §2.3: «se acreditan
+        /// <b>3 Morphos</b> al stock»; 04 §4; 02 §13; 06 §2.2), una sola vez (<see cref="MorphoBooster.ShouldGift"/>; tarea TU1b).
+        /// </summary>
+        public const int HintTutorialUnits = 3;
+
+        /// <summary>
         /// Enfriamiento entre dos respuestas de Morpho [P] (04 §2.3: «Cooldown 5 s entre pistas»): cuenta desde la última
         /// respuesta, también desde las honestas que no cobran, con el <c>IClock</c> del flujo. No está en 08 §9: constante hasta
         /// que el dueño la lleve a la tabla.
@@ -82,8 +88,8 @@ namespace AF.Boosters
         public int HintTimeoutMs { get; set; } = 150;
 
         /// <summary>
-        /// <c>hint_unlock_level</c>: la ranura de Morpho aparece en este nivel (04 §2.3 y §4: debut en el 12, con 3 Morphos
-        /// regalados; el regalo es de TU1b).
+        /// <c>hint_unlock_level</c>: la ranura de Morpho aparece en este nivel (04 §2.3 y §4: debut en el 12, con
+        /// <see cref="HintTutorialUnits"/> Morphos regalados al cargarlo por primera vez; TU1b).
         /// </summary>
         [RemoteConfigKey("hint_unlock_level")]
         public int HintUnlockLevel { get; set; } = 12;

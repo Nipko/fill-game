@@ -264,6 +264,61 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void HintGiftMark_RoundTrips_AndTheLevel12GiftIsOnce_ThroughExitReentryAndResume()
+        {
+            // Tarea TU1b (04 §2.3): la marca «m» (ya se acreditaron los 3 Morphos del 12) va en cualquier pantalla, también al
+            // salir al inicio, como la «c» de Capi y la «l» de la Luciérnaga; h2 sin ella se sigue leyendo igual.
+            var sb = new StringBuilder();
+            LevelStateSnapshot.WriteHistory(sb, SavedPhase.Playing, new AddedCuiaKind[0], false, false, null, hintGifted: true);
+            Assert.That(sb.ToString(), Is.EqualTo("h2|P||m||"));
+            LevelStateSnapshot.WriteHistory(
+                sb, SavedPhase.StuckModal, new[] { AddedCuiaKind.Extra }, true, true, null, balsaShown: true, revealGifted: true, hintGifted: true);
+            Assert.That(sb.ToString(), Is.EqualTo("h2|S|E|gcblm||"));
+            Assert.That(LevelStateSnapshot.TryParseHistory("h2|X||mc||", out SavedHistory exited), Is.True, "las marcas en cualquier orden");
+            Assert.That(exited.HintGifted && exited.ExtraCuiaGifted, Is.True);
+            Assert.That(LevelStateSnapshot.TryParseHistory("h2|P||||", out SavedHistory none), Is.True);
+            Assert.That(none.HintGifted, Is.False);
+            Assert.That(LevelStateSnapshot.TryParseHistory("h2|P||mm||", out _), Is.False, "marca repetida: roto");
+
+            // Con el flujo: al cargar el 12 por primera vez, 3 Morphos al stock, anotados en el nivel en curso.
+            var rig = new Rig(packs: TestPacks.Campaign);
+            rig.Start(12);
+            Assert.That(rig.Economy.Wallet.Stock.Get(BoosterKind.Hint), Is.EqualTo(BoosterConfig.HintTutorialUnits));
+            Assert.That(BoosterConfig.HintTutorialUnits, Is.EqualTo(3), "04 §2.3: 3 Morphos");
+            Assert.That(rig.Flow.Attempt.HintGifted, Is.True);
+            Assert.That(rig.Store.Load()!.History, Is.EqualTo("h2|P||m||"));
+            Assert.That(rig.Economy.Wallet.Apply(Transaction.UseStock(BoosterKind.Hint)).IsApplied, Is.True, "gasta uno");
+
+            // Volver a la orilla y volver a cargar el mismo nivel (salir y entrar sin cerrar la app): ni uno más.
+            Assert.That(rig.Flow.Restart(), Is.True);
+            rig.Flow.Load(12);
+            Assert.That(rig.Economy.Wallet.Stock.Get(BoosterKind.Hint), Is.EqualTo(2), "reintentar o volver a entrar no lo repite");
+
+            // Reabrir la app con el nivel en curso (Resume no pasa por Load) y, tras salir al inicio, volver a jugarlo.
+            Rig again = rig.Reopen();
+            Assert.That(again.Flow.Resume(rig.Store.Load()!), Is.True);
+            Assert.That(again.Flow.Attempt.HintGifted, Is.True);
+            Assert.That(again.Economy.Wallet.Stock.Get(BoosterKind.Hint), Is.EqualTo(2), "reanudar no lo repite");
+            again.Flow.LeaveLevel();
+            Assert.That(again.Store.Load()!.History, Is.EqualTo("h2|X||m||"));
+            Rig later = again.Reopen();
+            Assert.That(later.Flow.RestoreExited(again.Store.Load()!), Is.True);
+            Assert.That(later.Flow.Attempt.HintGifted, Is.True);
+            later.Start(12);
+            Assert.That(later.Economy.Wallet.Stock.Get(BoosterKind.Hint), Is.EqualTo(2), "salir al inicio y volver a entrar no lo repite");
+
+            // Otro nivel no regala; y el 12 ya superado tampoco (max_level ≥ 12), aunque el intento sea nuevo.
+            var other = new Rig(packs: TestPacks.Campaign);
+            other.Start(13);
+            Assert.That(other.Economy.Wallet.Stock.Get(BoosterKind.Hint), Is.EqualTo(0), "solo en hint_unlock_level");
+            var replay = new Rig(packs: TestPacks.Campaign);
+            replay.Progress.SaveWin(12, 13);
+            replay.Start(12);
+            Assert.That(replay.Economy.Wallet.Stock.Get(BoosterKind.Hint), Is.EqualTo(0), "el 12 ya superado no regala");
+            Assert.That(replay.Flow.Attempt.HintGifted, Is.False);
+        }
+
+        [Test]
         public void TheBalsaShownInTheBlock_IsRestoredWithTheModal_AndForgottenWhenTheBlockEnds()
         {
             var rig = new Rig(offset: 25, seeds: 0);

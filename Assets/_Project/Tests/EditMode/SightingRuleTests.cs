@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using AF.Boosters;
 using AF.GameFlow;
 using AF.Levels;
 using AF.Levels.Json;
@@ -37,7 +38,7 @@ namespace AF.Tests.EditMode
         }
 
         /// <summary>
-        /// La instrucción del tutorial con TiTino (TU1a; 02 §13; guion de la intro §14) ocupa el 1, el 2, el 3 y el 6: ninguna
+        /// La instrucción del tutorial con TiTino (TU1a y TU1b; 02 §13; guion de la intro §14) ocupa el 1, el 2, el 3, el 6 y el 12: ninguna
         /// tarjeta del miquito ni «Fruta nueva» en ellos (tutorial &gt; Fruta nueva &gt; miquito, una tarjeta por nivel como mucho:
         /// D-023, punto 39; 02 §4.2; guion §14), tampoco en el 2, aunque 06 §2.2 la liste; el 8 es de Capi y no lleva instrucción de
         /// TiTino.
@@ -45,7 +46,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void TutorialLevels_AreBusy_AndKeepTheirOrder()
         {
-            Assert.That(TutorialInstruction.Levels, Is.EqualTo(new[] { 1, 2, 3, 6 }));
+            Assert.That(TutorialInstruction.Levels, Is.EqualTo(new[] { 1, 2, 3, 6, 12 }));
             foreach (int level in TutorialInstruction.Levels)
             {
                 Assert.That(SightingRule.IsBusy(level), Is.True, "el " + level + " lleva la instrucción del tutorial");
@@ -53,7 +54,10 @@ namespace AF.Tests.EditMode
             }
 
             Assert.That(TutorialInstruction.Has(8), Is.False, "el 8 es de Capi");
-            Assert.That(TutorialInstruction.Has(12), Is.False, "el 12 es de TU1b");
+            Assert.That(TutorialInstruction.KeyFor(TutorialInstruction.MorphoLevel), Is.EqualTo(TutorialInstruction.MorphoKey), "el 12, Morpho (TU1b)");
+            Assert.That(TutorialInstruction.MorphoLevel, Is.EqualTo(BoosterConfig.Defaults.HintUnlockLevel), "el default de hint_unlock_level");
+            Assert.That(TutorialInstruction.PointsAtHint(12), Is.True);
+            Assert.That(TutorialInstruction.PointsAtHint(3) || TutorialInstruction.PointsAtUndo(12), Is.False);
             Assert.That(TutorialInstruction.KeyFor(4), Is.Null);
             Assert.That(TutorialInstruction.KeyFor(TutorialInstruction.UndoLevel), Is.EqualTo(TutorialInstruction.UndoKey), "el 3, Marea");
             Assert.That(TutorialInstruction.PointsAtUndo(3), Is.True);

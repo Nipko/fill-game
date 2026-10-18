@@ -105,6 +105,12 @@ namespace AF.GameFlow
         /// </summary>
         public bool RevealGifted { get; internal set; }
 
+        /// <summary>
+        /// Ya se acreditaron los Morphos del nivel de desbloqueo de Morpho en este nivel (04 §2.3; marca <c>m</c>; tarea TU1b): no
+        /// se repite al salir y volver a entrar ni al reabrir la app.
+        /// </summary>
+        public bool HintGifted { get; internal set; }
+
         /// <summary>Orígenes de los vertidos aplicados, en orden.</summary>
         public List<int> Sources { get; } = new List<int>(64);
 
@@ -135,7 +141,8 @@ namespace AF.GameFlow
     /// <c>c</c>: Capi ya regaló la Cuia extra del nivel, que también se guarda al salir al inicio; <c>b</c>: la Balsa de
     /// rescate ya se enseñó en este bloqueo, solo con <c>S</c> o <c>G</c>, para reabrir el modal tal cual; <c>l</c>: ya se
     /// regaló la Luciérnaga del estreno de Aguas turbias, 04 §2.5, que también se guarda al salir al inicio; tarea T10 del
-    /// paso 1: la marca nueva no cambia la versión, porque h2 sin ella se sigue leyendo igual), V los vertidos aplicados
+    /// paso 1: la marca nueva no cambia la versión, porque h2 sin ella se sigue leyendo igual; <c>m</c>: ya se acreditaron los 3
+    /// Morphos del nivel 12, 04 §2.3, también al salir al inicio; tarea TU1b, con la misma regla), V los vertidos aplicados
     /// como pares de dígitos hexadecimales origen-destino (16 cuias como mucho) y R las capas reveladas (Aguas turbias, 02 R8
     /// y §11 T6): un triple hexadecimal por cuia con alguna capa revelada, en orden, con la cuia (1 dígito) y la máscara de
     /// <see cref="LevelSession.RevealedLayers"/> (2 dígitos); p. ej. <c>002</c> = capa 1 de la cuia 0. La fase va aquí porque
@@ -159,6 +166,7 @@ namespace AF.GameFlow
         private const char ExtraCuiaGiftMark = 'c';
         private const char BalsaShownMark = 'b';
         private const char RevealGiftMark = 'l';
+        private const char HintGiftMark = 'm';
         private const string HexDigits = "0123456789abcdef";
 
         /// <summary>
@@ -206,12 +214,13 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Escribe <c>history</c> h2 en <paramref name="sb"/> (que se vacía antes). <paramref name="balsaShown"/> solo se anota
-        /// con Aguas estancadas o ¿Seguro? (es del bloqueo en curso); <paramref name="revealGifted"/> (marca <c>l</c>), en
-        /// cualquier pantalla. Sin <paramref name="session"/> (se salió al inicio), V y R van vacías.
+        /// con Aguas estancadas o ¿Seguro? (es del bloqueo en curso); <paramref name="revealGifted"/> (marca <c>l</c>) y
+        /// <paramref name="hintGifted"/> (marca <c>m</c>, TU1b), en cualquier pantalla. Sin <paramref name="session"/> (se salió
+        /// al inicio), V y R van vacías.
         /// </summary>
         public static void WriteHistory(
             StringBuilder sb, SavedPhase phase, IReadOnlyList<AddedCuiaKind> added, bool undoGiftUsed, bool extraCuiaGifted, LevelSession? session,
-            bool balsaShown = false, bool revealGifted = false)
+            bool balsaShown = false, bool revealGifted = false, bool hintGifted = false)
         {
             sb.Clear();
             sb.Append(HistoryVersion).Append(Separator).Append(PhaseCode(phase)).Append(Separator);
@@ -239,6 +248,11 @@ namespace AF.GameFlow
             if (revealGifted)
             {
                 sb.Append(RevealGiftMark);
+            }
+
+            if (hintGifted)
+            {
+                sb.Append(HintGiftMark);
             }
 
             sb.Append(Separator);
@@ -328,6 +342,10 @@ namespace AF.GameFlow
                 else if (mark == RevealGiftMark && !parsed.RevealGifted)
                 {
                     parsed.RevealGifted = true;
+                }
+                else if (mark == HintGiftMark && !parsed.HintGifted)
+                {
+                    parsed.HintGifted = true;
                 }
                 else
                 {

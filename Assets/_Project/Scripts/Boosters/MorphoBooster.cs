@@ -272,6 +272,25 @@ namespace AF.Boosters
         }
 
         /// <summary>
+        /// Regalo del tutorial (04 §2.3: «al cargar el nivel 12 TiTino presenta el botón … y se acreditan 3 Morphos al stock»;
+        /// tarea TU1b): al cargar el nivel de desbloqueo (<c>hint_unlock_level</c>) aún no superado (<paramref name="maxLevel"/>
+        /// &lt; nivel), si no se regaló ya en este nivel (<paramref name="alreadyGifted"/>, que <c>AF.GameFlow</c> guarda en
+        /// <c>level_state</c> también al salir al inicio y que vuelve al reanudar). El mismo patrón que la Cuia extra del 8 y la
+        /// Luciérnaga del 100, salvo que no mira el stock: son <see cref="BoosterConfig.HintTutorialUnits"/> regalados, no «uno si
+        /// no tienes» [P] (un Morpho de una compra del Mercado antes del 12 no se come el regalo). Así salir y volver a entrar,
+        /// reintentar o reabrir la app no lo repite.
+        /// </summary>
+        public static bool ShouldGift(int level, int maxLevel, bool alreadyGifted, Wallet? wallet, BoosterConfig config)
+        {
+            if (config == null)
+            {
+                throw new ArgumentNullException(nameof(config));
+            }
+
+            return wallet != null && !alreadyGifted && level == config.HintUnlockLevel && maxLevel < level;
+        }
+
+        /// <summary>
         /// Estado del botón en <paramref name="level"/> (04 §2.3): <paramref name="hintSupported"/> del nivel,
         /// <paramref name="hasLegalPour"/> (PLAYING con algún vertido legal), <paramref name="thinking"/>, el enfriamiento que
         /// queda y el stock y el saldo de <paramref name="wallet"/>.

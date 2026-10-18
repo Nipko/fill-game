@@ -4,18 +4,22 @@ using System;
 namespace AF.GameFlow
 {
     /// <summary>
-    /// La instrucción del tutorial que acompaña TiTino con su retrato y <c>sloth_present</c> (tarea TU1a; D-016, T2-A y T5-B;
-    /// 02 §13, párrafo «TiTino en el tutorial»; 06 §2.2; guion de la intro §14; propuesta de TiTino d.3, punto 2, y paso 6e de
-    /// (i)): una por nivel, de ≤ 2 líneas, en los niveles <see cref="Levels"/> (1, 2, 3 y 6). Regla pura y determinista, sin motor
-    /// y sin asignaciones: devuelve claves de <c>strings.csv</c>, nunca texto (regla de localización). La presentación de Morpho
-    /// del 12 es de TU1b, que añade su nivel aquí; el 8 sigue siendo de Capi, que trae la Cuia extra (04 §2.2), y no está.
+    /// La instrucción del tutorial que acompaña TiTino con su retrato y <c>sloth_present</c> (tareas TU1a y TU1b; D-016, T2-A y
+    /// T5-B; 02 §13, párrafo «TiTino en el tutorial»; 06 §2.2; guion de la intro §14; propuesta de TiTino d.3, punto 2, y paso 6e
+    /// de (i)): una por nivel, de ≤ 2 líneas, en los niveles <see cref="Levels"/> (1, 2, 3, 6 y 12). Regla pura y determinista,
+    /// sin motor y sin asignaciones: devuelve claves de <c>strings.csv</c>, nunca texto (regla de localización). El 8 sigue siendo
+    /// de Capi, que trae la Cuia extra (04 §2.2), y no está.
     /// <list type="bullet">
     /// <item>1: «Termina la cuia casi llena antes de apartar» (02 §13 y 06 §2.2, la lección del nivel; el dedo guía de 1-2 aún no
     /// existe en el cliente) [P];</item>
     /// <item>2: dos vacíos por primera vez, «reserva uno» (02 §13 y 06 §2.2) [P];</item>
     /// <item>3: el tooltip de Marea, «Marea · Deshacer: toca para devolver el agua» (04 §2.1; TiTino señala el botón con su
     /// retrato). En 1-10 Marea es ilimitada (<c>undo_unlimited_until_level</c> = 10), así que su primer uso no descuenta;</item>
-    /// <item>6: «Guarda una cuia vacía: es tu espacio para pensar» (06 §2.2: la frase de TiTino al inicio del 6, con su retrato).</item>
+    /// <item>6: «Guarda una cuia vacía: es tu espacio para pensar» (06 §2.2: la frase de TiTino al inicio del 6, con su retrato);</item>
+    /// <item>12: la presentación de Morpho, «¿Atascado? La morpho conoce el río» (04 §2.3 y 06 §2.2: «al cargar el nivel 12 TiTino
+    /// presenta el botón con su retrato y <c>sloth_present</c>»; tarea TU1b). Sale tras la intro, como la del 1, 2 y 6, y TiTino
+    /// señala el botón Pista con la cola de su tarjeta, como el de Marea en el 3 [P]; los 3 Morphos regalados los acredita el flujo
+    /// al cargar el nivel (<c>MorphoBooster.ShouldGift</c>, una sola vez).</item>
     /// </list>
     /// Prioridad tras la intro (02 §4.2; 07 §6.4; guion de la intro §14): tutorial &gt; Fruta nueva &gt; miquito &gt; rótulo. La
     /// instrucción entra la primera en la cola de avisos; la tarjeta del miquito y el rótulo no salen en estos niveles
@@ -44,14 +48,23 @@ namespace AF.GameFlow
         /// <summary>Clave de la frase del nivel 6 (<c>tutorial_one_empty</c>; 06 §2.2) [P].</summary>
         public const string OneEmptyKey = "tutorial_one_empty";
 
+        /// <summary>Clave de la presentación de Morpho del nivel 12 (<c>tutorial_morpho</c>; 04 §2.3; TU1b) [P].</summary>
+        public const string MorphoKey = "tutorial_morpho";
+
         /// <summary>Nivel del tutorial de Marea (04 §2.1: tutorial en el nivel 3 [P]; 02 §13).</summary>
         public const int UndoLevel = 3;
 
-        /// <summary>Niveles con instrucción del tutorial con TiTino, en orden (TU1a: 1, 2, 3 y 6; el 12 llega con TU1b).</summary>
-        public static readonly int[] Levels = { 1, 2, UndoLevel, 6 };
+        /// <summary>
+        /// Nivel de la presentación de Morpho (04 §2.3 y §4: «Nivel 12» [P]; 02 §13): el default de <c>hint_unlock_level</c>. Si
+        /// Remote Config moviera la ranura, la vista no la enseña en un nivel sin ranura Pista (GameScreen.Cards.cs).
+        /// </summary>
+        public const int MorphoLevel = 12;
+
+        /// <summary>Niveles con instrucción del tutorial con TiTino, en orden (TU1a: 1, 2, 3 y 6; TU1b: 12).</summary>
+        public static readonly int[] Levels = { 1, 2, UndoLevel, 6, MorphoLevel };
 
         // Clave de cada nivel de Levels, en el mismo orden.
-        private static readonly string[] s_keys = { FinishFullKey, KeepOneEmptyKey, UndoKey, OneEmptyKey };
+        private static readonly string[] s_keys = { FinishFullKey, KeepOneEmptyKey, UndoKey, OneEmptyKey, MorphoKey };
 
         /// <summary>
         /// Las claves de las instrucciones, en el orden de <see cref="Levels"/> (tests: todas en <c>strings.csv</c>). Una copia
@@ -84,6 +97,15 @@ namespace AF.GameFlow
         public static bool PointsAtUndo(int level)
         {
             return level == UndoLevel;
+        }
+
+        /// <summary>
+        /// La instrucción de <paramref name="level"/> es la presentación de Morpho (el 12; 04 §2.3: «TiTino presenta el botón»):
+        /// sale tras la intro y TiTino señala el botón Pista [P].
+        /// </summary>
+        public static bool PointsAtHint(int level)
+        {
+            return level == MorphoLevel;
         }
     }
 }

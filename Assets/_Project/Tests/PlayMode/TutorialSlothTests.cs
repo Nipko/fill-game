@@ -338,7 +338,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Level8_StaysWithCapi_AndOtherLevels_NoInstruction([Values(8, 4, 5, 7, 12)] int level)
+        public IEnumerator Level8_StaysWithCapi_AndOtherLevels_NoInstruction([Values(8, 4, 5, 7, 13)] int level)
         {
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
             yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));

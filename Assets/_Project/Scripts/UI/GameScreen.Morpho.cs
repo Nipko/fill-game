@@ -78,6 +78,25 @@ namespace AF.UI
             _morphoFx.Clear(); // otro vertido o cualquier cambio: los anillos se apagan (04 §2.3 d)
         }
 
+        /// <summary>Morphos acreditados por el regalo del nivel de desbloqueo desde que se creó la pantalla (TU1b; tests).</summary>
+        internal int HintGiftedUnits { get; private set; }
+
+        /// <inheritdoc />
+        public void OnHintGifted(int units)
+        {
+            // Llega al cargar el 12 por primera vez (LOADING; 04 §2.3; TU1b): el stock ya lleva los 3 Morphos y la insignia de la
+            // ranura pasa a «+3» en el siguiente repintado de la bandeja. Sin aviso propio: la presentación es la instrucción de
+            // TiTino tras la intro (GameScreen.Cards.cs), y tras la intro sale como mucho una tarjeta por nivel (D-023, punto 39).
+            HintGiftedUnits += units;
+            LevelFlow flow = RequireFlow();
+            if (DevProbe.Enabled && flow.HasLevel)
+            {
+                _probe.Event("hint", "\"phase\":\"gift\",\"level\":" + flow.LevelNumber.ToString(CultureInfo.InvariantCulture)
+                    + ",\"units\":" + units.ToString(CultureInfo.InvariantCulture)
+                    + ",\"stock\":" + flow.Hint.Stock.ToString(CultureInfo.InvariantCulture));
+            }
+        }
+
         /// <summary>
         /// Pista en un nivel sin <c>hint_supported</c> (04 §2.3 b): el globo «La morpho no conoce este tramo todavía» sobre la
         /// ranura gris.
