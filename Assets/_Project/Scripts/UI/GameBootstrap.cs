@@ -50,7 +50,9 @@ namespace AF.UI
     /// <see cref="MapOpenSource.L10"/> (<see cref="OnAppScreenChanged"/>), que hace la secuencia
     /// (<c>RiverMapScreen.Sequence.cs</c>). Al acabarla o saltarla se anota lo visto hasta el 10 (<see cref="MarkMapSeen"/>), así
     /// que sale una vez. Su «Jugar» abre el 11 y su ← deja el inicio. Los tests la apagan con
-    /// <see cref="L10SequenceOverride"/>.</para>
+    /// <see cref="L10SequenceOverride"/>. Mientras el Mapa (opaco) está encima del inicio, la ventanita de casa no se ve
+    /// (<see cref="HomeWindowCovered"/>): el saludo del día de TiTino (como mucho 1; D-016, punto 5) espera a que se cierre y
+    /// no se gasta debajo de la secuencia sin verse.</para>
     /// <para>Pantalla de arranque (06 §2.2; D-016, T2-A; tarea TI6d; <see cref="BootSplash"/>): en cada arranque en frío, el río y
     /// el logotipo salen en el primer fotograma, antes de cargar nada, y TiTino entra en su embaúba en cuanto hay perfil y arte
     /// (<c>sloth_wake</c> en la primera apertura, <c>sloth_idle</c> en las demás; sin su arte final, en release, no sale). Al
@@ -919,6 +921,13 @@ namespace AF.UI
 
             int play = app.PlayLevel;
             map.Open(source, _riverMapData!, _riverRoutes!, stops, progress, play, app.PlayLevelAvailable);
+            if (app.Screen == AppScreen.Lobby)
+            {
+                // La ventanita de casa se va ya, antes del siguiente paso de TiTino en el inicio: con la secuencia del Mapa del 10,
+                // en la misma llamada que hace entrar al inicio (revisión de M4.2).
+                _lobby?.SetCommerceOpen(HomeWindowCovered);
+            }
+
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
             _skipNextDelta = true;
@@ -943,6 +952,11 @@ namespace AF.UI
             }
 
             _probe?.MapClose(stats, progress?.MapSeenLevel ?? 0);
+            if (_app != null && _app.Screen == AppScreen.Lobby)
+            {
+                _lobby?.SetCommerceOpen(HomeWindowCovered); // la ventanita de casa vuelve con el inicio a la vista (revisión de M4.2)
+            }
+
             _skipNextDelta = true;
             return true;
         }
@@ -1243,6 +1257,12 @@ namespace AF.UI
         // Hay una pantalla de pago delante: la hoja «Compra simulada» o un anuncio (y lo que lo rodea; propuesta del personaje
         // d.11). Las ofertas que vengan (Mochila de inicio, Mercado) se suman aquí. Sin asignar memoria.
         private bool CommerceOpen => (_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible);
+
+        // La ventanita de casa del inicio no sale (LobbyScreen.SetCommerceOpen): con una pantalla de pago delante (D-013, punto 6)
+        // o con el Mapa del río encima, que es opaco (revisión de M4.2). Con el Mapa, TiTino no se ve: su saludo del día (como
+        // mucho 1; D-016, punto 5) no se decide debajo de la secuencia del Mapa del 10 (ni de la pestaña), sino al cerrarlo, en
+        // la misma visita al inicio (o en la siguiente, si su «Jugar» va al nivel). Sin asignar memoria.
+        private bool HomeWindowCovered => CommerceOpen || (_mapScreen != null && _mapScreen.Visible);
 
         // Lote de guardado de una acción del jugador: el perfil se escribe una vez al cerrarlo (revisión B2-5); sin lote, nada.
         private ProfileSaveScope Saves()
@@ -1562,7 +1582,7 @@ namespace AF.UI
             if (_app.Screen != AppScreen.Level)
             {
                 _app.RefreshNoCanoes();
-                _lobby?.SetCommerceOpen(CommerceOpen); // la ventanita de casa no sale en pantallas de pago (M2.1; D-013, punto 6)
+                _lobby?.SetCommerceOpen(HomeWindowCovered); // ni en pantallas de pago (M2.1; D-013, punto 6) ni bajo el Mapa (M4.2)
                 _lobby?.Tick(dt);
                 return;
             }

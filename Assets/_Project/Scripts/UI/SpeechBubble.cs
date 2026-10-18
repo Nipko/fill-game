@@ -12,9 +12,11 @@ namespace AF.UI
     /// victoria: vidrio esmerilado casi opaco con borde de madera clara (D-003), texto en Nunito Bold de
     /// <see cref="TextSp"/> sp (02 §6) con la escala de texto (02 §12) y un pico (un cuadrado girado 45°, medio fuera) con su
     /// sombra de 1 dp. Se ajusta al texto (el ancho más estrecho con las mismas líneas, como mucho <c>maxWidth</c>) y crece hacia
-    /// arriba desde el pico: <see cref="PlaceAbove"/> lo deja encima de un punto, con el pico apuntándolo, sin salirse de los
-    /// márgenes que se le den. No recibe toques. Gráfico provisional por código; nada de lo que hace por fotograma asigna
-    /// memoria (<see cref="SetAlpha"/>): el texto y las medidas, solo al enseñarlo o al recolocarlo.
+    /// arriba desde el pico: <see cref="PlaceAbove(float, float, float, float, float, float)"/> lo deja encima de un punto, con el
+    /// pico apuntándolo, sin salirse de los márgenes que se le den; si lo que habla queda más abajo, el pico sigue con un tallo
+    /// del color del borde hasta él (revisión de M4.2: TiTino cuelga bajo la copa de su embaúba). No recibe toques. Gráfico
+    /// provisional por código; nada de lo que hace por fotograma asigna memoria (<see cref="SetAlpha"/>): el texto y las medidas,
+    /// solo al enseñarlo o al recolocarlo.
     /// </summary>
     internal sealed class SpeechBubble
     {
@@ -58,6 +60,7 @@ namespace AF.UI
 
         private readonly RectTransform _root;
         private readonly CanvasGroup _group;
+        private readonly Image _stem;
         private readonly Image _tailShadow;
         private readonly Image _tailRim;
         private readonly Image _tailPlate;
@@ -70,6 +73,8 @@ namespace AF.UI
             _group = _root.gameObject.AddComponent<CanvasGroup>();
             _group.blocksRaycasts = false;
             _group.interactable = false;
+            _stem = UiBuilder.Image("Stem", _root, null, RimColor); // detrás del pico, que tapa su arranque
+            _stem.gameObject.SetActive(false);
             _tailShadow = UiBuilder.Image("TailShadow", _root, null, TailShadowColor);
             _tailRim = UiBuilder.Image("TailRim", _root, null, RimColor);
             Image rim = UiBuilder.Sliced("Rim", _root, art.RoundedRect, RimColor);
@@ -99,6 +104,12 @@ namespace AF.UI
         /// <summary>El pico (el vidrio, sin borde ni sombra).</summary>
         public RectTransform Tail => _tailPlate.rectTransform;
 
+        /// <summary>El tallo del pico (activo solo si lo que habla queda más abajo que la punta del pico).</summary>
+        public RectTransform Stem => _stem.rectTransform;
+
+        /// <summary>El pico lleva tallo.</summary>
+        public bool StemShown => _stem.gameObject.activeSelf;
+
         /// <summary>Está a la vista (aunque sea con opacidad 0 al empezar su fundido).</summary>
         public bool Visible => _root.gameObject.activeSelf;
 
@@ -108,10 +119,16 @@ namespace AF.UI
         /// <summary>Opacidad (0 oculto).</summary>
         public float Alpha => Visible ? _group.alpha : 0f;
 
-        /// <summary>Punta del pico en dp del padre (arriba a la izquierda, y hacia abajo), tras <see cref="PlaceAbove"/>.</summary>
+        /// <summary>
+        /// Punta del pico (o de su tallo, si lo lleva) en dp del padre (arriba a la izquierda, y hacia abajo), tras
+        /// <see cref="PlaceAbove(float, float, float, float, float, float, float, float)"/>.
+        /// </summary>
         public Vector2 TailTip { get; private set; }
 
-        /// <summary>Enseña <paramref name="text"/> con opacidad <paramref name="alpha"/>; colócalo después con <see cref="PlaceAbove"/>.</summary>
+        /// <summary>
+        /// Enseña <paramref name="text"/> con opacidad <paramref name="alpha"/>; colócalo después con
+        /// <see cref="PlaceAbove(float, float, float, float, float, float)"/>.
+        /// </summary>
         public void Show(string text, float alpha)
         {
             _label.text = text;
@@ -141,6 +158,17 @@ namespace AF.UI
         /// </summary>
         public void PlaceAbove(float x, float y, float minX, float maxX, float minY, float maxWidth)
         {
+            PlaceAbove(x, y, minX, maxX, minY, maxWidth, y, 0f);
+        }
+
+        /// <summary>
+        /// Como <see cref="PlaceAbove(float, float, float, float, float, float)"/>, con la punta del pico en <paramref name="y"/> y,
+        /// si <paramref name="pointY"/> queda más abajo, un tallo de <paramref name="stemWidth"/> dp del color del borde que baja
+        /// desde la punta, en vertical, hasta <paramref name="pointY"/> (encima de lo que haya detrás del bocadillo). Solo al
+        /// enseñarlo o al recolocarlo.
+        /// </summary>
+        public void PlaceAbove(float x, float y, float minX, float maxX, float minY, float maxWidth, float pointY, float stemWidth)
+        {
             float room = Mathf.Max(0f, maxX - minX - (2f * RimDp));
             float limit = Mathf.Max((2f * PadXDp) + 24f, Mathf.Min(maxWidth, room));
             FitText(_label, limit - (2f * PadXDp), out float textWidth, out float textHeight);
@@ -152,6 +180,27 @@ namespace AF.UI
             UiBuilder.Place(_root, left, top, width, height);
             float tailX = Mathf.Clamp(x - left, Mathf.Min(TailCornerDp, width * 0.5f), Mathf.Max(width - TailCornerDp, width * 0.5f));
             TailTip = new Vector2(left + tailX, top + height + TailOutDp);
+            float stem = pointY - TailTip.y;
+            bool withStem = stem > 0.5f && stemWidth > 0f;
+            if (_stem.gameObject.activeSelf != withStem)
+            {
+                _stem.gameObject.SetActive(withStem);
+            }
+
+            if (withStem)
+            {
+                // Arranca dentro del pico (que lo tapa) para que no quede hueco con la punta, y acaba en pointY.
+                float from = height + (TailOutDp * 0.5f);
+                RectTransform rt = _stem.rectTransform;
+                rt.anchorMin = new Vector2(0f, 1f);
+                rt.anchorMax = new Vector2(0f, 1f);
+                rt.pivot = new Vector2(0.5f, 1f);
+                rt.sizeDelta = new Vector2(stemWidth, height + TailOutDp + stem - from);
+                rt.anchoredPosition = new Vector2(tailX, -from);
+                rt.localRotation = Quaternion.identity;
+                TailTip = new Vector2(TailTip.x, pointY);
+            }
+
             PlaceTail(_tailShadow.rectTransform, tailX, height + TailShadowDp, TailDp + (2f * RimDp) + (2f * TailShadowDp));
             PlaceTail(_tailRim.rectTransform, tailX, height, TailDp + (2f * RimDp));
             PlaceTail(_tailPlate.rectTransform, tailX, height, TailDp);

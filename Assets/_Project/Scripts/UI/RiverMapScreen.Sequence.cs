@@ -20,8 +20,10 @@ namespace AF.UI
     /// <item><description><b>Vista Cuenca</b>, con el estuario ya lleno (lo pinta el río de M3.4 con <c>max_level</c>).</description></item>
     /// <item><description><b>TiTino se presenta</b> desde su casa del estuario con <c>sloth_present</c> y, si tiene voz
     /// (<c>ui_sloth_enabled</c> ∧ <c>settings.sloth_messages</c>; D-016, punto 4) y su casa se ve, el bocadillo
-    /// <c>map_l10_intro</c> («Yo vivo aquí, donde el río entra al mar.» [P]; nunca una clave <c>sloth_line_*</c>), encima de él
-    /// con el pico hacia él (<see cref="SpeechBubble"/>), lo que pide su lectura (<see cref="NoticeTiming.ReadMs(string)"/>). Sin
+    /// <c>map_l10_intro</c> («Yo vivo aquí, donde el río entra al mar.» [P]; nunca una clave <c>sloth_line_*</c>), encima de la
+    /// copa de su embaúba con el pico hacia él y, como TiTino cuelga bajo la rama, un tallo del pico que baja por delante de la
+    /// copa hasta <see cref="L10BubbleStemGapDp"/> dp de su coronilla (<see cref="SpeechBubble"/>; revisión de M4.2: que se vea
+    /// quién habla), lo que pide su lectura (<see cref="NoticeTiming.ReadMs(string)"/>). Sin
     /// voz, solo el gesto (<see cref="PresentOnlyMs"/>); sin su arte (release, P-M5), nada.</description></item>
     /// <item><description><b>La placa del Dato del río 1</b> (el <c>arrival_fact</c> de la parada 1,
     /// <c>map.stop.estuario.dato_03</c>; 08 §4.5) con el retrato de TiTino, arriba de la zona del mapa, y a la vez <b>la canoa de
@@ -42,7 +44,11 @@ namespace AF.UI
     /// dato, y los nombres de país y las placas que pisan el bocadillo, la placa del dato, la casa o la canoa con su mástil, sus banderas y
     /// el guía (al salir y al llegar; <see cref="L10DimMarginDp"/> de margen) bajan a <see cref="L10DimAlpha"/> o, si les tapa más
     /// del <see cref="L10DimHideCover"/> (o el bocadillo o la placa, opacos, lo pisan de verdad), no se ven: ningún rótulo a medio
-    /// tapar.</para>
+    /// tapar. Salvo la placa del mundo de destino (el del 11, el de «Jugar · Nivel 11» y el viaje de la canoa): se ve entera
+    /// mientras sea un mundo futuro (hasta que la canoa llega a Santarém, su gran parada) y, si pisa la canoa en Belém con su
+    /// mástil y sus banderas (con <see cref="L10DimMarginDp"/> de margen), sube hasta quedar
+    /// <see cref="L10DestinationClearDp"/> dp por encima de lo alto del mástil, sin salir de la vista; al acabar, vuelve a su
+    /// sitio.</para>
     /// <para><b>Con <c>max_level</c> &gt; 10</b> y el Mapa sin ver (un perfil de antes del Mapa o <c>af_max_level</c>), la canoa
     /// «se pone al día» hasta <c>max_level</c> y sale del encuadre (que es el del 10: la casa, Belém y Santarém); en el juego normal
     /// (ganar el 10 y luego Siguiente, Inicio o cerrar la app) no pasa [P].</para>
@@ -96,6 +102,18 @@ namespace AF.UI
         /// <summary>Si una pieza de la secuencia tapa más de esta fracción de un rótulo, el rótulo no se ve (alpha 0) [P].</summary>
         public const float L10DimHideCover = 0.2f;
 
+        /// <summary>
+        /// Hueco entre la placa del mundo de destino y lo alto de la canoa con su mástil y sus banderas cuando la secuencia la
+        /// sube para separarla de ella (dp) [P] (revisión de M4.2).
+        /// </summary>
+        public const float L10DestinationClearDp = 8f;
+
+        /// <summary>Lo que el tallo del pico del bocadillo se queda por encima de la coronilla de TiTino (dp) [P] (revisión de M4.2).</summary>
+        public const float L10BubbleStemGapDp = 6f;
+
+        /// <summary>Grosor del tallo del pico del bocadillo (dp) [P] (revisión de M4.2).</summary>
+        public const float L10BubbleStemDp = 2f;
+
         private RectTransform? _seqLayer;
         private Button? _seqSkip;
         private SpeechBubble? _seqBubble;
@@ -134,8 +152,19 @@ namespace AF.UI
         private float[] _seqDimPlate = Array.Empty<float>();
         private CanvasGroup? _seqNorthUpGroup;
         private readonly Vector3[] _seqCorners = new Vector3[4];
-        private readonly Rect[] _seqObstacles = new Rect[10 + MaxCanoeFlags];
+        private readonly Rect[] _seqObstacles = new Rect[11 + MaxCanoeFlags];
         private int _seqObstacleCount;
+
+        // La placa del mundo de destino (el del 11): nunca se atenúa y, si pisa la canoa en Belém, sube (revisión de M4.2).
+        private RectTransform? _seqDestPlate;
+        private int _seqDestIndex = -1;
+        private bool _seqDestMoved;
+        private Vector2 _seqDestBase;
+        private Vector2 _seqDestShifted;
+
+        // La cabeza de TiTino en el rig de la casa (para el pico del bocadillo), buscada una vez.
+        private RectTransform? _seqSlothHead;
+        private SlothRig? _seqSlothHeadOf;
 
         /// <summary>
         /// Lo llama la secuencia al acabar, al saltarla o al cerrar el Mapa a medias (una vez por secuencia): <see cref="GameBootstrap"/>
@@ -202,6 +231,15 @@ namespace AF.UI
 
         /// <summary>Cuánto se aplica el atenuado de los rótulos y el botón «Norte arriba» oculto (0 fuera de la secuencia; 1 en ella).</summary>
         internal float L10DimAmount => _seqDim;
+
+        /// <summary>
+        /// La placa del mundo de destino (el del nivel 11) en esta secuencia, o null si no se ve (también cuando la canoa llega a
+        /// Santarém, la gran parada de ese mundo: «ponerse al día» quita su silueta, porque ya no es un mundo futuro).
+        /// </summary>
+        internal RectTransform? L10DestinationPlate => L10DestinationLive(_seqDestIndex - _countries.Count) ? _seqDestPlate : null;
+
+        /// <summary>La placa del mundo de destino se subió para no pisar la canoa en Belém (y sigue subida).</summary>
+        internal bool L10DestinationLifted => _seqDestMoved;
 
         /// <summary>
         /// Salta la secuencia del Mapa del 10 (el toque en cualquier sitio): la canoa llega en el acto, el bocadillo y la placa se
@@ -536,6 +574,8 @@ namespace AF.UI
             _seqFactKey = null;
             _seqFactText = string.Empty;
             HideL10Pieces();
+            _seqDestPlate = null;
+            _seqDestIndex = -1;
         }
 
         // Fuera de la secuencia (o al acabar su fundido): sin bocadillo ni placa, la casa a su tamaño, los rótulos enteros y
@@ -547,6 +587,7 @@ namespace AF.UI
             _seqHomeGrown = false;
             _seqDim = 0f;
             ApplyL10Dim();
+            RestoreL10Destination();
             _seqBubble?.Hide();
             if (_seqPlate != null)
             {
@@ -601,22 +642,38 @@ namespace AF.UI
 
             if (_seqWithBubble && _seqBubble != null && _houseSloth != null)
             {
-                // La cabeza de TiTino: medio cuerpo por encima de su punto en la rama (el rig cuelga centrado en él), con la figura
-                // ya a su tamaño de la secuencia (aunque esté creciendo: el bocadillo no se mueve con el rebote).
+                // El bocadillo, medio cuerpo por encima del punto de TiTino en la rama (sobre la copa), con la figura ya a su tamaño
+                // de la secuencia (aunque esté creciendo: el bocadillo no se mueve con el rebote). TiTino cuelga bajo la rama, así
+                // que el pico sigue con un tallo hasta L10BubbleStemGapDp de su coronilla (revisión de M4.2).
                 float now = _seqHomeK;
                 float k = _seqHomeGrown ? L10HomeScale : 1f;
                 SetL10HomeScale(k);
                 Vector2 at = RootDp(_houseSloth.Root, Vector2.zero);
+                float crown = L10SlothCrown(at.y, k);
                 SetL10HomeScale(now);
-                float head = _houseSloth.Size * k * 0.5f;
-                _seqBubble.PlaceAbove(at.x, at.y - head - L10BubbleGapDp, left + L10InsetDp, left + _viewW - L10InsetDp, top + L10InsetDp,
-                    L10BubbleMaxWidthDp);
+                float tip = at.y - (_houseSloth.Size * k * 0.5f) - L10BubbleGapDp;
+                _seqBubble.PlaceAbove(at.x, tip, left + L10InsetDp, left + _viewW - L10InsetDp, top + L10InsetDp, L10BubbleMaxWidthDp,
+                    Mathf.Max(tip, crown - L10BubbleStemGapDp), L10BubbleStemDp);
             }
 
             if (_seqActive)
             {
-                DecideL10Dim();
+                DecideL10Dim(top + L10InsetDp);
             }
+        }
+
+        // Lo alto de la cabeza de TiTino (dp del lienzo de la UI, y hacia abajo) con la figura a k (ya puesta): la caja de la pieza
+        // de la cabeza del rig; sin ella, su sitio en el rig colgado (la cabeza, entre los brazos, bajo el punto de la rama).
+        private float L10SlothCrown(float branchY, float k)
+        {
+            SlothRig rig = _houseSloth!;
+            if (!ReferenceEquals(_seqSlothHeadOf, rig))
+            {
+                _seqSlothHeadOf = rig;
+                _seqSlothHead = rig.Root.Find("Body/Head") as RectTransform;
+            }
+
+            return _seqSlothHead != null ? RootBox(_seqSlothHead).yMin : branchY + (rig.Size * k * 0.2f);
         }
 
         // TiTino mira hacia facing (±1) en su rama, sin moverse. Sin asignaciones.
@@ -669,9 +726,11 @@ namespace AF.UI
         // pisa la casa crecida o la canoa con su mástil, sus banderas y el guía (donde está y donde llegará), el bocadillo o la
         // placa del dato, con L10DimMarginDp de margen, baja a L10DimAlpha; si le tapan más de L10DimHideCover, a 0. Lo que pisan
         // el bocadillo y la placa se atenúa solo mientras se ven (con su fundido: ApplyL10Dim), y las placas de mundo se van
-        // además mientras se ve la placa del dato. Los CanvasGroup se crean la primera vez; después, sin asignaciones.
-        private void DecideL10Dim()
+        // además mientras se ve la placa del dato. La placa del mundo de destino no se atenúa nunca: si pisa la canoa, sube
+        // (LiftL10Destination, sin pasar de viewTop). Los CanvasGroup se crean la primera vez; después, sin asignaciones.
+        private void DecideL10Dim(float viewTop)
         {
+            RestoreL10Destination(); // se decide otra vez desde su sitio de siempre
             _seqObstacleCount = 0;
             if (_seqHomeGrown && _houseTree != null)
             {
@@ -682,6 +741,8 @@ namespace AF.UI
                 SetL10HomeScale(now);
             }
 
+            int canoeFrom = _seqObstacleCount;
+            int canoeTo = canoeFrom;
             if (_hasCanoe)
             {
                 AddL10Obstacle(_canoe.rectTransform);
@@ -697,6 +758,7 @@ namespace AF.UI
                     }
                 }
 
+                canoeTo = _seqObstacleCount; // la canoa con su mástil y sus banderas donde está ahora (en Belém al empezar)
                 if (_guide != null && _guide.gameObject.activeInHierarchy)
                 {
                     AddL10Obstacle(_guide.rectTransform);
@@ -713,6 +775,10 @@ namespace AF.UI
             {
                 AddL10Obstacle(_seqBubble.Rect, true); // ya colocado, aunque aún no se vea
                 AddL10Obstacle(_seqBubble.Tail, true);
+                if (_seqBubble.StemShown)
+                {
+                    AddL10Obstacle(_seqBubble.Stem, true); // el tallo del pico, hasta TiTino
+                }
             }
 
             int bubbleEnd = _seqObstacleCount;
@@ -722,6 +788,8 @@ namespace AF.UI
             }
 
             int plateEnd = _seqObstacleCount;
+            LiftL10Destination(canoeFrom, canoeTo, viewTop);
+            _seqDestIndex = -1;
             int countries = _countries.Count;
             int n = countries + _silhouettes.Count;
             if (_seqDimGroups.Length < n)
@@ -749,11 +817,16 @@ namespace AF.UI
                     _seqDimGroups[i] = group;
                 }
 
-                if (!rt.gameObject.activeInHierarchy)
+                if (!rt.gameObject.activeInHierarchy || ReferenceEquals(rt, _seqDestPlate))
                 {
                     _seqDimTarget[i] = 1f;
                     _seqDimBubble[i] = 1f;
                     _seqDimPlate[i] = 1f;
+                    if (rt.gameObject.activeInHierarchy)
+                    {
+                        _seqDestIndex = i; // la placa del mundo de destino: entera durante toda la secuencia
+                    }
+
                     continue;
                 }
 
@@ -831,9 +904,9 @@ namespace AF.UI
 
                 float rest = _seqDimTarget[i];
                 float target = Mathf.Min(Mathf.Lerp(rest, _seqDimBubble[i], bubble), Mathf.Lerp(rest, _seqDimPlate[i], plate));
-                if (i >= countries)
+                if (i >= countries && (i != _seqDestIndex || !L10DestinationLive(i - countries)))
                 {
-                    target = Mathf.Lerp(target, 0f, plate); // placa de mundo: fuera con la placa del dato
+                    target = Mathf.Lerp(target, 0f, plate); // placa de mundo: fuera con la placa del dato (salvo la del destino)
                 }
 
                 float alpha = Mathf.Lerp(1f, target, _seqDim);
@@ -857,6 +930,85 @@ namespace AF.UI
                     _seqNorthUpGroup.interactable = on;
                     _seqNorthUpGroup.blocksRaycasts = on;
                 }
+            }
+        }
+
+        // La placa del mundo de destino (el del nivel 11: «Jugar · Nivel 11» y el viaje de la canoa) en esta secuencia. Si su caja
+        // corta la de la canoa con su mástil y sus banderas donde están ahora (las piezas [from, to) de _seqObstacles,
+        // con L10DimMarginDp de margen), sube hasta quedar L10DestinationClearDp por encima de lo más alto de ellas, sin que su
+        // borde de arriba pase de viewTop. Sin asignaciones.
+        private void LiftL10Destination(int from, int to, float viewTop)
+        {
+            _seqDestPlate = null;
+            int world = WorldTable.WorldOf(L10SequenceRule.Level + 1);
+            for (int i = 0; i < _silhouettes.Count; i++)
+            {
+                if (_silhouettes[i].World == world && _silhouettes[i].Root.gameObject.activeInHierarchy)
+                {
+                    _seqDestPlate = _silhouettes[i].Root;
+                    break;
+                }
+            }
+
+            RectTransform? plate = _seqDestPlate;
+            if (plate == null || from >= to)
+            {
+                return;
+            }
+
+            Rect box = RootBox(plate);
+            float gearTop = float.MaxValue;
+            bool hit = false;
+            for (int i = from; i < to; i++)
+            {
+                Rect o = _seqObstacles[i];
+                gearTop = Mathf.Min(gearTop, o.yMin);
+                var grown = Rect.MinMaxRect(o.xMin - L10DimMarginDp, o.yMin - L10DimMarginDp, o.xMax + L10DimMarginDp, o.yMax + L10DimMarginDp);
+                hit |= box.Overlaps(grown);
+            }
+
+            float localH = plate.rect.height;
+            if (!hit || localH <= 0f || box.height <= 0f)
+            {
+                return;
+            }
+
+            float newTop = Mathf.Max(viewTop, gearTop - L10DestinationClearDp - box.height);
+            float dy = newTop - box.yMin; // en dp de la UI, y hacia abajo: < 0 sube
+            if (dy >= -0.01f)
+            {
+                return;
+            }
+
+            _seqDestBase = plate.anchoredPosition;
+            _seqDestShifted = _seqDestBase + new Vector2(0f, -dy * localH / box.height); // en el contenido, y hacia arriba
+            plate.anchoredPosition = _seqDestShifted;
+            _seqDestMoved = true;
+        }
+
+        // La silueta k sigue siendo la del mundo de destino: «ponerse al día» rehace las siluetas en cada boya
+        // (ShowProgressAt) y, al llegar la canoa a Santarém, la del mundo 2 deja de serlo (ya no es futuro) y su placa pasa a otro
+        // mundo; desde entonces se trata como las demás. Sin asignaciones.
+        private bool L10DestinationLive(int k)
+        {
+            return _seqDestIndex >= 0 && _seqDestPlate != null && k >= 0 && k < _silhouettes.Count
+                && ReferenceEquals(_silhouettes[k].Root, _seqDestPlate) && _silhouettes[k].Root.gameObject.activeInHierarchy
+                && _silhouettes[k].World == WorldTable.WorldOf(L10SequenceRule.Level + 1);
+        }
+
+        // La placa del mundo de destino vuelve a su sitio de siempre, si la subió la secuencia y nadie la recolocó después.
+        private void RestoreL10Destination()
+        {
+            if (!_seqDestMoved)
+            {
+                return;
+            }
+
+            _seqDestMoved = false;
+            RectTransform? plate = _seqDestPlate;
+            if (plate != null && (plate.anchoredPosition - _seqDestShifted).sqrMagnitude < 1e-6f)
+            {
+                plate.anchoredPosition = _seqDestBase;
             }
         }
 

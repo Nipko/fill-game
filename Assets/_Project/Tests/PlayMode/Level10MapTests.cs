@@ -28,7 +28,10 @@ namespace AF.Tests.PlayMode
     /// al inicio, una vez; con lo visto hasta el 10, ya no;</item>
     /// <item>un toque la salta; «Jugar · Nivel 11» abre el 11 y «←» deja el inicio;</item>
     /// <item>sin voz de TiTino, sin bocadillo (solo el gesto); nunca una frase <c>sloth_line_*</c>;</item>
-    /// <item>las sondas <c>map_open</c> con <c>source</c> <c>l10</c> y <c>river_fact_shown</c> con el dato.</item>
+    /// <item>las sondas <c>map_open</c> con <c>source</c> <c>l10</c> y <c>river_fact_shown</c> con el dato;</item>
+    /// <item>(revisión de M4.2) el saludo del día de TiTino en el inicio no se gasta debajo del Mapa: se decide al cerrarlo; la
+    /// placa del mundo de destino se ve entera toda la secuencia, sin pisar la canoa en Belém; y el pico del bocadillo llega a
+    /// ≤ 8 dp de la cabeza de TiTino.</item>
     /// </list>
     /// </summary>
     public sealed class Level10MapTests
@@ -49,6 +52,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap.L10SequenceOverride = null;
             MapArtRule.ForceProvisional = null;
             GameScreen.SimulatedScreen = null;
+            HomeSloth.ManualTickForTests = false;
             LaunchOptions.Reset();
             OnDemandRendering.renderFrameInterval = 1;
         }
@@ -277,6 +281,58 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator HomeGreeting_IsNotSpentUnderTheSequence_ButWhenTheMapCloses()
+        {
+            // Revisión de M4.2: el primer arranque tras ganar el 10, con el saludo de regreso pendiente (7 días sin abrir). La
+            // ventanita de casa del inicio no se ve bajo el Mapa, así que TiTino no decide su saludo del día (como mucho 1;
+            // D-016, punto 5) mientras dura la secuencia, y sí al cerrar el Mapa, en la misma visita.
+            HomeSloth.ManualTickForTests = true;
+            var clock = new ManualClock(T0);
+            Profile profile = ProfileWonTen();
+            profile.Sloth.LastSeenDate = clock.LocalNow().AddDays(-7).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            LaunchOptions.ClockOverride = clock;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            LobbyScreen lobby = boot.Lobby!;
+            HomeSloth sloth = lobby.HomeWindow.Sloth!;
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(map.Visible, Is.True);
+            Assert.That(map.L10SequenceActive, Is.True);
+
+            // Bajo la secuencia: la ventanita no se ve y TiTino no saluda, aunque su reloj avance.
+            yield return null;
+            yield return null;
+            for (int t = 0; t < 1000; t += 16)
+            {
+                sloth.Tick(16f);
+            }
+
+            Assert.That(map.L10SequenceActive, Is.True, "sigue la secuencia");
+            Assert.That(lobby.HomeWindow.Visible, Is.False, "la ventanita de casa, oculta bajo el Mapa");
+            Assert.That(sloth.Shown, Is.False);
+            Assert.That(sloth.GreetingDecisions, Is.EqualTo(0), "el saludo del día no se decide debajo del Mapa");
+            Assert.That(sloth.BubbleShown, Is.False);
+            Assert.That(boot.Profile!.Sloth.LastGreetingDate, Is.Not.EqualTo(clock.LocalDateKey()), "ni se gasta el de hoy");
+            Assert.That(boot.View!.SlothSession.LinesThisSession, Is.EqualTo(0), "ninguna frase de TiTino en el inicio");
+            Assert.That(boot.View.SlothSession.PreviousScreenSpoke, Is.False);
+
+            // Se salta y se cierra el Mapa con «←»: la ventanita vuelve y TiTino saluda en esa misma visita.
+            Assert.That(map.SkipL10Sequence(), Is.True);
+            map.BackButton.onClick.Invoke();
+            Assert.That(map.Visible, Is.False);
+            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(lobby.HomeWindow.Visible, Is.True, "la ventanita, de vuelta con el inicio a la vista");
+            sloth.Tick(16f);
+            Assert.That(sloth.GreetingDecisions, Is.EqualTo(1), "el saludo se decide al cerrar el Mapa");
+            Assert.That(sloth.LastGreeting.Greeting, Is.True, "el de regreso, a la vista");
+            Assert.That(boot.Profile.Sloth.LastGreetingDate, Is.EqualTo(clock.LocalDateKey()));
+            yield return null;
+            Assert.That(lobby.HomeWindow.Visible, Is.True, "y sigue a la vista");
+            Assert.That(sloth.GreetingDecisions, Is.EqualTo(1), "una vez");
+        }
+
+        [UnityTest]
         public IEnumerator Probes_MapOpenWithSourceL10_AndRiverFactShown()
         {
             var lines = new List<string>();
@@ -398,17 +454,51 @@ namespace AF.Tests.PlayMode
             Assert.That(northUp.blocksRaycasts, Is.False);
             AssertNoLabelHalfCovered(map, root, VictorySetup.CanvasRect(map.L10Bubble!.Rect, root), "bocadillo");
 
-            // Con la placa del dato: las placas de mundo se van y ningún rótulo queda a medio tapar por ella.
+            // La placa del mundo de destino (el 2, el de «Jugar · Nivel 11»), entera y sin pisar la canoa en Belém con su mástil y
+            // sus banderas (revisión de M4.2).
+            RectTransform destination = map.L10DestinationPlate!;
+            Assert.That(destination, Is.Not.Null, "la placa del mundo 2 se ve en la secuencia");
+            StringAssert.Contains("w02", destination.name);
+            AssertWhole(destination, "placa del destino, con TiTino");
+            AssertClearOfCanoe(map, root, destination);
+            Rect view = VictorySetup.CanvasRect(map.ViewportRect, root);
+            Rect dest = VictorySetup.CanvasRect(destination, root);
+            Assert.That(dest.yMin, Is.GreaterThanOrEqualTo(view.yMin - 0.5f), "sin salir de la vista");
+
+            // Con la placa del dato y la canoa de viaje: las placas de mundo se van (salvo la del destino) y ningún rótulo queda a
+            // medio tapar por ella.
             Tick(map, map.L10TripFromMs - 400 + 600);
             Assert.That(map.L10FactShown, Is.True);
+            Assert.That(map.CatchingUp, Is.True, "la canoa aún no llegó a Santarém");
+            Assert.That(map.L10DestinationPlate, Is.SameAs(destination));
             foreach (RectTransform plate in map.SilhouettePlates())
             {
                 CanvasGroup g = plate.GetComponent<CanvasGroup>();
+                if (plate == destination)
+                {
+                    AssertWhole(plate, "placa del destino, con la placa del dato");
+                    continue;
+                }
+
                 Assert.That(g != null && g.alpha <= 0.001f, Is.True, plate.name + ": fuera mientras se ve la placa del dato");
             }
 
             AssertNoLabelHalfCovered(map, root, VictorySetup.CanvasRect(map.L10Plate!, root), "placa del dato");
             Assert.That(northUp.alpha, Is.EqualTo(0f));
+
+            // La canoa llega a Santarém, la gran parada del mundo 2: «ponerse al día» quita su silueta (ya no es un mundo futuro) y
+            // su placa pasa a otro mundo, que se trata como las demás.
+            Tick(map, map.CatchUpDurationMs);
+            Assert.That(map.CatchingUp, Is.False);
+            Assert.That(map.L10DestinationPlate, Is.Null, "el mundo 2 ya no es futuro");
+            if (map.L10FactShown)
+            {
+                foreach (RectTransform plate in map.SilhouettePlates())
+                {
+                    CanvasGroup g = plate.GetComponent<CanvasGroup>();
+                    Assert.That(g != null && g.alpha <= 0.001f, Is.True, plate.name + ": fuera mientras se ve la placa del dato");
+                }
+            }
 
             // Al acabar, todo vuelve: la casa a su tamaño y mirando como siempre, los rótulos y «Norte arriba».
             Tick(map, map.L10SequenceDurationMs);
@@ -421,6 +511,7 @@ namespace AF.Tests.PlayMode
             Assert.That(northUp.alpha, Is.EqualTo(1f));
             Assert.That(northUp.interactable, Is.True);
             Assert.That(northUp.blocksRaycasts, Is.True);
+            Assert.That(map.L10DestinationLifted, Is.False, "la placa del destino, otra vez en su sitio");
             foreach (RectTransform plate in map.SilhouettePlates())
             {
                 CanvasGroup g = plate.GetComponent<CanvasGroup>();
@@ -471,6 +562,38 @@ namespace AF.Tests.PlayMode
             Assert.That(checkedLabels, Is.GreaterThan(0), "hay rótulos que mirar");
         }
 
+        // La placa se ve entera (sin CanvasGroup o con alpha 1).
+        private static void AssertWhole(RectTransform plate, string what)
+        {
+            CanvasGroup g = plate.GetComponent<CanvasGroup>();
+            Assert.That(plate.gameObject.activeInHierarchy, Is.True, what);
+            Assert.That(g == null || g.alpha >= 0.999f, Is.True, what + ": entera");
+        }
+
+        // La placa no corta la canoa con su mástil y sus banderas donde están ahora (con L10DimMarginDp de margen).
+        private static void AssertClearOfCanoe(RiverMapScreen map, RectTransform root, RectTransform plate)
+        {
+            Rect box = VictorySetup.CanvasRect(plate, root);
+            var gear = new List<RectTransform> { map.Canoe.rectTransform };
+            if (map.Mast != null && map.Mast.gameObject.activeInHierarchy)
+            {
+                gear.Add(map.Mast.rectTransform);
+            }
+
+            for (int i = 0; i < map.CanoeFlagCount; i++)
+            {
+                gear.Add(map.CanoeFlagImage(i).rectTransform);
+            }
+
+            float m = RiverMapScreen.L10DimMarginDp - 0.5f;
+            foreach (RectTransform rt in gear)
+            {
+                Rect o = VictorySetup.CanvasRect(rt, root);
+                var grown = Rect.MinMaxRect(o.xMin - m, o.yMin - m, o.xMax + m, o.yMax + m);
+                Assert.That(box.Overlaps(grown), Is.False, plate.name + " pisa " + rt.name + " de la canoa");
+            }
+        }
+
         // Avanza el Mapa ms milisegundos en pasos de un fotograma (el reloj del juego está quitado).
         internal static void Tick(RiverMapScreen map, int ms)
         {
@@ -503,6 +626,23 @@ namespace AF.Tests.PlayMode
             Assert.That(bubble.yMax, Is.LessThanOrEqualTo(at.y), "el bocadillo, encima de TiTino");
             Assert.That(Mathf.Abs(tail.center.x - at.x), Is.LessThanOrEqualTo((rig.Size * RiverMapScreen.L10HomeScale * 0.5f) + 1f), "el pico, sobre TiTino");
             Assert.That(tail.yMax, Is.LessThanOrEqualTo(at.y + 1f), "el pico no lo tapa");
+
+            // Revisión de M4.2: TiTino cuelga bajo la rama, así que la punta del pico (o de su tallo) llega a ≤ 8 dp de su cabeza,
+            // por encima de ella, sin taparle la cara.
+            var head = rig.Root.Find("Body/Head") as RectTransform;
+            Assert.That(head, Is.Not.Null, "la cabeza del rig");
+            Rect headBox = VictorySetup.CanvasRect(head!, root);
+            Rect pointer = map.L10Bubble.StemShown ? VictorySetup.CanvasRect(map.L10Bubble.Stem, root) : tail;
+            var tip = new Vector2(pointer.center.x, pointer.yMax);
+            float dx = Mathf.Max(0f, Mathf.Max(headBox.xMin - tip.x, tip.x - headBox.xMax));
+            float dy = Mathf.Max(0f, Mathf.Max(headBox.yMin - tip.y, tip.y - headBox.yMax));
+            Assert.That(Mathf.Sqrt((dx * dx) + (dy * dy)), Is.LessThanOrEqualTo(8f), "la punta del pico, a ≤ 8 dp de la cabeza de TiTino");
+            Assert.That(tip.y, Is.LessThanOrEqualTo(headBox.yMin + 0.5f), "sin taparle la cara");
+            if (map.L10Bubble.StemShown)
+            {
+                Assert.That(pointer.width, Is.EqualTo(RiverMapScreen.L10BubbleStemDp).Within(0.6f), "un tallo fino");
+                Assert.That(pointer.yMin, Is.LessThanOrEqualTo(tail.yMax), "que sale del pico");
+            }
         }
 
         private static void AssertInside(Rect inner, Rect outer, string what)
