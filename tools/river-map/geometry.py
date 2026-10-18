@@ -78,10 +78,15 @@ de river_stops_v1.json (at y leg) son las de este Mapa: paradas a <= TOLERANCE_K
 punto de atraque si la investigacion lo da), km de acuerdo con km_from_sea y que no retroceden, tramos continuos que no
 cruzan tierra (dos tramos solo se unen en el mismo (line, s) o en una confluencia: la boca de un afluente, o el arranque
 del ramal, y su s sobre el anfitrion; cualquier otro salto cruza tierra), via y mouths existentes; ademas, todas las reglas de
-stops.py (candidatos de la propuesta §5.1 bis incluidos). Las unicas excepciones a las tolerancias son las pendientes del
-duenno (PENDING_SITE_KM, PENDING_MOUTH_KM y PENDING_CONTROL_KM: la cifra medida, sin margen). Avisa (sin fallar) de cada
-excepcion en uso, de las descargas ausentes y de los datos de los puntos de paso y de los miradores que aun no tienen texto
-en facts.csv.
+stops.py (candidatos de la propuesta §5.1 bis incluidos). Las unicas excepciones a las tolerancias son las [P] pendientes
+del duenno (PENDING_SITE_KM, PENDING_MOUTH_KM y PENDING_CONTROL_KM: la cifra medida, sin margen; pregunta 65 propuesta): con
+ellas, el criterio de M5.1 de las dos vistas aun no esta cumplido. Avisa (sin fallar) de cada excepcion en uso, de las
+lineas que siguen siendo el esbozo de la investigacion (pending_sketches), de las descargas ausentes y de los datos de los
+puntos de paso y de los miradores que aun no tienen texto en facts.csv.
+
+Paradas en una confluencia [P] (revision de M5.1; confluence_s): una parada cuyo sitio queda a <= CONFLUENCE_KM del punto
+donde la investigacion pone la boca de un afluente de su linea se ancla en la s de esa boca (Santarem, el Encuentro, Nauta,
+Boca Manu, Riberalta...): al llegar se cruza la boca y su afluente se llena.
 """
 from __future__ import annotations
 
@@ -158,22 +163,29 @@ HOSTS = {
 RIVER_LISTS = ("rios", "rios_locales_201_700")
 BRANCHES = {"para": "amazonas"}   # ramal: su primer punto esta sobre el cauce
 
-# Excepciones a TOLERANCE_KM PENDIENTES DEL DUENNO (pregunta abierta, propuesta como D-025; no son canon). La tolerancia es
-# <= 15 km para todo (D-023, punto 20); estas cifras son la distancia MEDIDA con los datos de hoy (redondeada hacia arriba a
-# 0,1 km, sin margen), congelada para que --check siga en verde y falle si un dato se aleja mas. --check avisa de cada una.
+# [P] Excepciones a las tolerancias del canon, PENDIENTES DEL DUENNO (no son canon). El canon (D-013, punto 5; 08 §4.5; D-023,
+# punto 20) pide cada punto a <= 2 dp de su vista: <= 15 km en la Cuenca (TOLERANCE_KM) y, con la geometria de produccion,
+# <= 1 km en la vista Mundo (MUNDO_TOLERANCE_KM). Con HydroRIVERS no se cumple sin estas excepciones, asi que el criterio de
+# M5.1 («--check en verde con las tolerancias de las dos vistas») NO esta cumplido: --check pasa porque estas cifras son la
+# distancia MEDIDA con los datos de hoy (redondeada hacia arriba a 0,1 km, sin margen), congelada para que falle si un dato
+# se aleja mas; avisa de cada una. Se proponen al duenno como pregunta 65 de docs/GDD.md §6.3 (el siguiente numero libre en
+# 5d2a569; lo registra el carril de documentacion), con cuatro opciones (README, notas de M5.1): (a) medir contra la orilla o
+# el ancho del cauce y no contra su linea central; (b) en la vista Mundo, 2 dp al zoom real de cada mundo
+# (RiverMapScreen.WorldZoom, de 4x a 15x: de ~4,2 a ~1,1 km) y no 1 km en todas partes; (c) que el investigador corrija los
+# puntos [E]; (d) aceptar estas excepciones.
 # - Sitios tierra adentro: el punto de la investigacion es el centro del area protegida, no un punto del rio. Se validan
 #   por su punto de atraque (campo «atraque» {lat, lon} del registro de la investigacion) con los 15 km del canon; mientras
 #   la investigacion no lo anada, rige la cifra medida entre el centro y su punto del rio. Medidas sobre la geometria de
 #   produccion (M5.1; con el respaldo eran 23,1, 57,5 y 46,2 km): sus rios de HydroRIVERS pasan por otro sitio que la
 #   poligonal recta de la investigacion. Yasuni (y su variante) entra con M5.1: a unos 9 km del Napo de respaldo, queda a
-#   26 km del Napo de HydroRIVERS (su punto del rio, a 29,2 km).
+#   26 km del Napo de HydroRIVERS (su punto del rio, a 28,9 km).
 PENDING_SITE_KM = {
     "flona_tapajos": 33.3,    # centro de la FLONA do Tapajos (notas: «la canoa se amarra en la orilla del Tapajos mas cercana»)
-    "amacayacu": 58.7,        # centro del parque (notas: al norte del rio); su punto del rio, km 3.185 («frente del parque»)
-    "pacaya_samiria": 79.3,   # centro de la reserva (notas: «la canoa entra por la boca del Samiria, en el Maranon»)
-    "pacaya_alba": 79.3,      # la misma reserva, al alba
-    "yasuni": 29.2,           # coordenada de Wikidata del parque (Q1641326), sin atraque
-    "yasuni_dosel": 29.2,     # el mismo parque
+    "amacayacu": 58.6,        # centro del parque (notas: al norte del rio); su punto del rio, km 3.185 («frente del parque»)
+    "pacaya_samiria": 78.6,   # centro de la reserva (notas: «la canoa entra por la boca del Samiria, en el Maranon»)
+    "pacaya_alba": 78.6,      # la misma reserva, al alba
+    "yasuni": 29.0,           # coordenada de Wikidata del parque (Q1641326), sin atraque
+    "yasuni_dosel": 29.0,     # el mismo parque
 }
 # - Bocas: la del Pacaya esta en el canal de Puinahua, que el cauce no dibuja: con el respaldo, a 37,08 km; con el cauce de
 #   HydroRIVERS (M5.1), a 23,83 km. El Pacaya de HydroRIVERS desde la cabecera de la investigacion no pasa por su boca
@@ -182,28 +194,30 @@ PENDING_MOUTH_KM = {"pacaya": 23.9}
 # - Puntos de control de la investigacion sobre la geometria de produccion (M5.1; propuesta §3.6 y §11.3, punto 4): a
 #   <= 15 km en la vista Cuenca y a <= 1 km en la vista Mundo (MundoZone). Los puntos de control son ciudades en la orilla,
 #   bocas y confluencias estimadas [E] de rios de 1 a 20 km de ancho, y la linea de HydroRIVERS va por el centro de su
-#   cauce principal: 66 quedan a mas de 1 km en la vista Mundo (Pucallpa, 5,3 km; Iquitos, 4,8 km; Careiro, 9,4 km...) y
-#   3 a mas de 15 km (la boca del Nhamunda, 33,7 km, en la vista Cuenca; la del Curua, 26,8 km, y Belterra, 22,4 km, en
-#   la Mundo): entran por un lago o un brazo, o la ciudad esta en la meseta. {linea: {indice del punto: km medidos,
-#   redondeados hacia arriba a 0,1 km y sin margen}}, congelados para que --check siga en verde y falle si un punto se aleja
-#   mas; --check los avisa. Solo con la geometria de produccion (las lineas de la investigacion no tienen excepciones).
+#   cauce principal. De los 299 puntos de las lineas de produccion, 129 caen en la vista Mundo: 70 quedan a mas de 1 km
+#   (36 del cauce, de sus 105 puntos; Pucallpa, 5,6 km; Iquitos, 4,8; Careiro, 9,4...), 32 a mas de 2,1 km (2 dp a 8x), 17
+#   a mas de 4,2 km (2 dp a 4x) y 2 a mas de 15 km (la boca del Curua, 27,5 km, y Belterra, 22,6 km); en la Cuenca, 1 (la
+#   boca del Nhamunda, 33,7 km): entran por un lago o un brazo, o la ciudad esta en la meseta. {linea: {indice del punto: km medidos,
+#   redondeados hacia arriba a 0,1 km y sin margen}}. Solo con la geometria de produccion (las lineas de la investigacion no
+#   tienen excepciones; pending_sketches avisa de ellas).
 PENDING_CONTROL_KM: dict = {
-    "amazonas": {22: 1.1, 23: 1.7, 26: 1.2, 29: 4.3, 31: 3.0, 32: 5.3, 33: 1.6, 36: 1.2, 37: 1.3, 39: 1.1, 40: 8.1,
-                 42: 2.9, 43: 1.1, 44: 1.1, 46: 4.8, 47: 3.2, 48: 1.4, 49: 1.8, 52: 2.3, 53: 2.8, 54: 2.8, 55: 2.9,
-                 56: 1.3, 57: 1.1, 58: 13.0, 66: 4.1, 67: 2.4, 68: 4.3, 69: 4.8, 74: 4.4, 75: 5.2, 77: 9.4, 78: 8.0,
-                 84: 33.7, 87: 1.2, 88: 26.8, 90: 4.6},
-    "tapajos": {7: 3.3, 8: 2.0, 9: 2.2, 10: 22.4, 11: 12.8, 12: 2.7},
-    "negro": {13: 5.8, 14: 1.5, 15: 1.5, 16: 2.1, 17: 1.9},
-    "putumayo_ica": {1: 2.6, 2: 1.1, 6: 1.1, 9: 7.1, 10: 1.5},
-    "napo": {5: 1.2, 6: 2.2, 9: 1.1},
-    "maranon": {14: 8.4, 17: 1.1},
-    "beni": {5: 1.8, 6: 1.3},
-    "mamore": {8: 3.3},
+    "amazonas": {22: 1.2, 23: 1.4, 26: 1.8, 29: 4.5, 30: 1.9, 31: 3.0, 32: 5.6, 33: 1.8, 36: 1.4, 37: 1.3, 39: 1.1,
+                 40: 8.1, 42: 2.6, 43: 1.1, 44: 1.4, 46: 4.8, 47: 3.1, 48: 2.1, 49: 1.9, 52: 2.3, 53: 2.8, 54: 2.8,
+                 55: 2.9, 56: 1.5, 58: 13.0, 66: 3.5, 67: 2.8, 68: 4.1, 69: 4.9, 74: 4.8, 75: 5.1, 77: 9.5, 78: 8.8,
+                 84: 33.7, 87: 1.2, 88: 27.5, 90: 4.8},
+    "tapajos": {7: 2.6, 8: 2.0, 9: 2.4, 10: 22.6, 11: 12.7, 12: 2.7},
+    "negro": {13: 6.3, 14: 1.9, 15: 1.6, 16: 2.1, 17: 1.9},
+    "putumayo_ica": {1: 2.0, 6: 1.3, 9: 7.1, 10: 1.2},
+    "napo": {3: 1.1, 5: 1.1, 6: 2.2, 9: 1.7},
+    "maranon": {14: 8.4, 16: 1.4, 17: 1.5},
+    "madre_de_dios": {3: 1.3, 4: 1.3, 8: 1.3},
+    "beni": {5: 1.9},
+    "mamore": {4: 1.3, 8: 3.3},
     "japura": {2: 1.1},
-    "nanay": {1: 1.3},
+    "nanay": {1: 1.4},
     "atacuari": {0: 1.9},
-    "aguarico": {3: 1.7},
-    "manu": {0: 1.1, 1: 1.2},
+    "aguarico": {2: 1.2, 3: 1.7},
+    "manu": {0: 1.1},
 }
 
 # [P] Afluentes: «solo su boca (unos 80-120 km)» al pasarla (propuesta §3.4); los de paso y los locales, enteros.
@@ -211,6 +225,7 @@ MOUTH_FILL_KM = 100.0
 # [P] Dos aguas lado a lado (propuesta §3.4: «unos 30 dp» en la vista Mundo; la muestra parte ~65 km).
 SPLIT_KM = 65.0
 SPLITS = (("encontro", "negro"), ("santarem", "tapajos"))   # (id, afluente que da la segunda agua)
+SPLIT_SIDE_KM = 10.0   # de que orilla llega el afluente: su punto a 10 km de la boca frente al cauce +-10 km (revision de M5.1)
 # [P] Los miradores de 1-200 estan en el estuario: el primer Mapa (nivel 10) ya los revela (propuesta §5.2).
 VIEWPOINT_REVEAL_ON = 10
 # [P] Una sola zona de tierra hasta la mascara del artista (su punto de entrada: land_zones; M5.1).
@@ -421,6 +436,16 @@ class Line:
             return self.up_km[-1]
         return self.up_km[i] + t * (self.up_km[i + 1] - self.up_km[i])
 
+    def locate_arc_from_end(self, km: float) -> tuple:
+        """(i, t) del punto a km por la propia linea (geodesica) desde su ultimo punto; el primero si la linea es mas corta."""
+        if len(self.ll) == 1:
+            return 0, 0.0
+        target = max(0.0, self.arc_km[-1] - km)
+        for i, d in enumerate(self.seg_km):
+            if self.arc_km[i + 1] >= target and d > 0:
+                return i, min(1.0, max(0.0, (target - self.arc_km[i]) / d))
+        return len(self.seg_km) - 1, 1.0
+
     def locate_up_from_mouth(self, dkm: float) -> tuple | None:
         if len(self.ll) == 1:
             return (0, 0.0) if abs(dkm) < 1e-9 else None
@@ -548,7 +573,10 @@ def _calibrate(line: "Line", ctrl: list, km: list | None, source: dict) -> None:
         i, t, d = line.constrained_projection(lat, lon, start)
         s = line.s_of(i, t)
         line.ctrl_s.append(_round_s(s))
-        if d <= TOLERANCE_KM:
+        # Un punto que se proyecta rio arriba del anterior anclado (en el mismo segmento) no ancla los km: con el cauce
+        # simplificado (revision de M5.1), Careiro da Varzea, en la orilla sur y a 9,5 km de la linea, caia rio arriba del
+        # Encuentro y su km (1.424) dejaba fuera el del Encuentro (1.437), y con el los km del Negro.
+        if d <= TOLERANCE_KM and (not anchored or s >= anchored[-1][1]):
             start = i
             anchored.append((j, s))
     line.anchored = anchored
@@ -853,12 +881,16 @@ def _splits(model: Model) -> tuple:
         if s1 is None or s1 <= s0:
             errors.append(f"split {sid}: no hay {SPLIT_KM:g} km de cauce rio abajo de la confluencia")
             continue
-        # Orilla del afluente mirando rio abajo (s creciente): izquierda si su penultimo punto queda a la izquierda.
-        i, t = main.locate(s0)
-        a = model.frame.screen(*main.q[i])
-        b = model.frame.screen(*main.q[min(i + 1, len(main.q) - 1)])
-        c = model.frame.screen(*line.q[-2]) if len(line.q) >= 2 else a
-        m = model.frame.screen(*_quant_float(model.frame, *main.point(i, t)))
+        # Orilla del afluente mirando rio abajo (s creciente): izquierda si su punto a SPLIT_SIDE_KM de la boca queda a la
+        # izquierda del cauce entre SPLIT_SIDE_KM rio arriba y rio abajo de la confluencia. Con distancias y no con los
+        # vertices vecinos: simplificado (revision de M5.1), el penultimo punto del Negro caia al otro lado del ultimo
+        # segmento del cauce.
+        up = model.s_at_km(MAIN_ID, km0 + SPLIT_SIDE_KM)
+        down = model.s_at_km(MAIN_ID, km0 - SPLIT_SIDE_KM)
+        a = model.frame.screen(*_quant_float(model.frame, *main.point_at_s(s0 if up is None else up)))
+        b = model.frame.screen(*_quant_float(model.frame, *main.point_at_s(s1 if down is None else down)))
+        c = model.frame.screen(*_quant_float(model.frame, *line.point(*line.locate_arc_from_end(SPLIT_SIDE_KM))))
+        m = model.frame.screen(*_quant_float(model.frame, *main.point_at_s(s0)))
         dx, dy = b[0] - a[0], b[1] - a[1]
         # En pantalla (y hacia abajo), la izquierda de la direccion (dx, dy) es (dy, -dx).
         left_side = (c[0] - m[0]) * dy + (c[1] - m[1]) * (-dx) > 0
@@ -1130,12 +1162,51 @@ def stop_at(model: Model, record: dict) -> tuple:
     s = model.s_at_km(rid, float(km_value), slack_km=TOLERANCE_KM)
     if s is None:
         return None, [f"{tag}: km_desde_el_mar {km_value} no cae en {rid} (fuera de su tramo)"]
-    return {"line": rid, "s": _round_s(s)}, []
+    mouth_s = confluence_s(model, record, rid, s)
+    return {"line": rid, "s": _round_s(s if mouth_s is None else mouth_s)}, []
+
+
+# [P] Paradas en una confluencia (revision de M5.1): una parada cuyo sitio (o atraque) queda a <= CONFLUENCE_KM del punto
+# donde la investigacion pone la boca de un afluente de su linea (el ultimo punto de control del afluente) es una parada en
+# esa confluencia (Santarem y el Tapajos, el Encuentro y el Negro, Nauta y el Maranon, Boca Manu y el Manu, Riberalta y el
+# Madre de Dios...). Se ancla en la s de esa boca sobre su linea (si su punto por km queda a <= TOLERANCE_KM de ella): al
+# llegar, la boca se cruza y su afluente se llena, como con el respaldo, y no quedan tramos de metros entre la parada y la
+# boca. Con HydroRIVERS, el punto por km de Santarem quedaba ~3 km rio abajo de la boca del Tapajos y el de Boca Manu ~2 km
+# rio abajo de la del Manu: la canoa, que sube, se paraba antes de la boca. 5 km: las coordenadas de las ciudades son su
+# centro, a unos km de la boca (Santarem, 3,8 km); menos de 1 dp en la Cuenca.
+CONFLUENCE_KM = 5.0
+
+
+def confluence_s(model: Model, record: dict, rid: str, s: float) -> float | None:
+    """s de la boca en la que se ancla una parada en una confluencia (CONFLUENCE_KM), o None. Con dos bocas, la del afluente
+    mas cercano a su sitio (a igualdad, el primero del orden de la investigacion)."""
+    place, _, problem = site_point(record)
+    if problem:
+        return None
+    host = model.lines[rid]
+    here = host.point_at_s(s)
+    best = None
+    for k, cid in enumerate(model.order):
+        child = model.lines[cid]
+        points = child.source.get("puntos") or []
+        if child.host != rid or child.kind == "main" or child.host_s is None or not points:
+            continue
+        try:
+            mouth = (float(points[-1]["lat"]), float(points[-1]["lon"]))
+        except (TypeError, KeyError, ValueError):
+            continue
+        d = haversine(place, mouth)
+        if d > CONFLUENCE_KM or haversine(here, host.point_at_s(child.host_s)) > TOLERANCE_KM:
+            continue
+        if best is None or (d, k) < best[0]:
+            best = ((d, k), child.host_s)
+    return None if best is None else best[1]
 
 
 def route(model: Model, a: dict, b: dict) -> list:
     """Tramos por agua de a {line, s} a b {line, s}: subiendo por los anfitriones hasta el rio comun y bajando hasta b
-    (ida y vuelta por las confluencias). Cada tramo, {line, s0, s1}; sin tramos de longitud cero salvo si a = b."""
+    (ida y vuelta por las confluencias). Cada tramo, {line, s0, s1}; sin tramos de longitud cero salvo si a = b o para
+    acabar en la linea de b (una parada en la boca del afluente por el que se llega: Riberalta)."""
     ca, cb = model.chain(a["line"]), model.chain(b["line"])
     common = next(x for x in ca if x in cb)
     pieces = []
@@ -1155,13 +1226,16 @@ def route(model: Model, a: dict, b: dict) -> list:
     else:
         pieces.append([common, s, b["s"]])
     kept = [p for p in pieces if p[1] != p[2]]
-    if not kept:
-        kept = [[b["line"], b["s"], b["s"]]]
+    if not kept or kept[-1][0] != b["line"]:
+        # Sin tramos (a = b) o, con las paradas en una confluencia (confluence_s), un viaje que baja un afluente hasta su
+        # boca, donde esta la parada (Riberalta): el tramo de longitud cero en la linea de la parada, para que el viaje
+        # siempre acabe en ella (el cliente lo espera).
+        kept.append([b["line"], b["s"], b["s"]])
     return [{"line": p[0], "s0": p[1], "s1": p[2]} for p in kept]
 
 
-# Dos s a menos de esto son el mismo punto al cruzar bocas y puntos de paso: las s van redondeadas a 6 decimales (M5.1: la
-# parada del Encuentro queda a 6 m de la boca del Negro, 0,74886 frente a 0,748859; en el cauce, 1e-6 de s son ~6 m).
+# Dos s a menos de esto son el mismo punto al cruzar bocas y puntos de paso: las s van redondeadas a 6 decimales (en el
+# cauce, 1e-6 de s son ~6 m; antes de confluence_s, la parada del Encuentro quedaba a 6 m de la boca del Negro).
 S_EPS = 2e-6
 
 
@@ -1540,14 +1614,30 @@ NE_LAND_LAYER = "ne_10m_land"
 # Natural Earth dibujan como rio: se queda la poligonal de la investigacion) y el Casiquiare (una bifurcacion, que la red
 # en arbol de HydroRIVERS no representa: su linea de Natural Earth, con la boca llevada al vertice mas cercano del Negro).
 LINE_SRC = {"para": "rio_amazonas", "casiquiare": "ne10m", "itaya": "rio_amazonas", "pacaya": "rio_amazonas"}
+# Por que las de la investigacion se quedan en su esbozo (pendiente del duenno o del investigador; revision de M5.1): se
+# dibujan en la vista Mundo (el ramal lleva la casa de TiTino; el Itaya y el Pacaya, 08 §4.5, «solo en la vista Mundo»),
+# pero sin meandros, y --check no puede medirlas con la tolerancia de esa vista: sus puntos de control son sus propios puntos.
+# --check avisa de cada una (pending_sketches).
+SKETCH_WHY = {
+    "para": "los furos de Breves y el estuario son agua ancha: HydroRIVERS no los dibuja como rio y Natural Earth "
+            "(rivers_lake_centerlines) no tiene ningun rio Para (en el estuario solo el final del Tocantins)",
+    "itaya": "en HydroRIVERS el rio que nace en su cabecera entra en el cauce ~45 km antes de Iquitos, no en su boca",
+    "pacaya": "en HydroRIVERS el rio que nace en su cabecera va a otro rio, no a su boca (canal de Puinahua)",
+}
 NE_NAMES = {"casiquiare": "Casiquiare"}
 
 HEAD_SNAP_KM = 15.0     # cabecera de la investigacion -> tramos de HydroRIVERS candidatos (<= 2 dp de la vista Cuenca)
 HEAD_CUT_KM = 30.0      # la linea empieza en el vertice mas cercano a la cabecera entre los primeros 30 km del camino
 MOUTH_SNAP_KM = 15.0    # boca de un rio «solo_boca» -> tramos que entran en su anfitrion
 # [P] Douglas-Peucker por vista (propuesta §11.3, punto 2: «a unos 2 km en la Cuenca y a unos 0,3 km en la vista Mundo»).
-DP_MUNDO_KM = 0.3
-DP_CUENCA_KM = 2.0
+# Revision de M5.1 [P]: 0,3 y 2 km dejaban 1.213 puntos en el cauce (la propuesta §11.3 estimaba 300-800), segmentos mas
+# cortos que el ancho del trazo en la Cuenca (2 km son ~0,24 dp: los rios se veian deshilachados, D-003) y la franja del
+# viaje del 81 en 22 ms frente a sus 8 ms (propuesta §11.4). Ahora: en la vista Mundo, la misma tolerancia que sus puntos de
+# control (MUNDO_TOLERANCE_KM, 2 dp a 15x): la simplificacion nunca aparta la linea mas de lo que admite la vista; en la
+# Cuenca, 6 km (~0,7 dp), muy por debajo de sus 15 km. La franja del 81 tarda 7,8-8,3 ms y no baja con menos vertices (con
+# 2 km en la vista Mundo, 7,75 ms): el resto es del cliente (README, notas de M5.1).
+DP_MUNDO_KM = 1.0
+DP_CUENCA_KM = 6.0
 # [P] Zona de la vista Mundo: a <= MUNDO_RADIUS_KM de una parada de la 1.0 (su sitio o su atraque; las de rio-amazonas.json).
 # Ahi la simplificacion es la de la vista Mundo y los puntos de control se validan con MUNDO_TOLERANCE_KM.
 MUNDO_RADIUS_KM = 100.0
@@ -2486,7 +2576,7 @@ def main(argv: list | None = None) -> int:
          f"validos y {_rel(args.out)} al dia ({geo.kind}; {size} bytes)")
     emit(f"OK  rutas de {_rel(args.stops)} (at y leg de {len(committed['stops'])} paradas) de acuerdo con el Mapa")
     for warning in (pending_exceptions(committed, model, records) + pending_controls(model, source)
-                    + pending_facts(doc, args.facts)):
+                    + pending_sketches(model) + pending_facts(doc, args.facts)):
         emit(f"AVISO {warning}")
     return 0
 
@@ -2510,6 +2600,23 @@ def pending_controls(model: Model, source: dict) -> list:
                        "medida pendiente del duenno (PENDING_CONTROL_KM): " + ", ".join(used))
         if spare:
             out.append(f"linea {rid}: sobran sus excepciones de PENDING_CONTROL_KM en " + ", ".join(spare))
+    return out
+
+
+def pending_sketches(model: Model) -> list:
+    """Un aviso por linea que, con la geometria de produccion o la commiteada, sigue siendo el esbozo de la investigacion
+    (LINE_SRC = rio_amazonas): se ve en la vista Mundo sin meandros y su tolerancia no se puede medir (revision de M5.1)."""
+    if model.geo is None:
+        return []
+    out = []
+    for rid in model.order:
+        line = model.lines[rid]
+        if line.src != SRC:
+            continue
+        why = SKETCH_WHY.get(rid, "sin geometria de produccion")
+        out.append(f"linea {rid}: sigue siendo el esbozo de la investigacion (src {SRC}, {len(line.q)} puntos, sin "
+                   f"meandros); se dibuja en la vista Mundo y --check solo la mide en la Cuenca, contra sus propios puntos, "
+                   f"nunca con la tolerancia de la vista Mundo (pendiente del duenno o del investigador: {why})")
     return out
 
 

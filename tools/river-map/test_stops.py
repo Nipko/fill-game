@@ -87,6 +87,11 @@ class FieldTests(unittest.TestCase):
     def bg(self, kit, hero=None, code=None, lut=None) -> dict:
         return {"kit": kit, "hero": hero, "code": code, "lut": lut}
 
+    def map_doc_mouth(self, rid: str) -> float:
+        """s de la boca de la linea rid sobre su anfitrion en el river_map_v1.json commiteado."""
+        doc = json.loads(MAP_PATH.read_bytes().decode("utf-8"))
+        return next(line["mouth"]["s"] for line in doc["lines"] if line["id"] == rid)
+
     def assertStop(self, n: int, **expected):
         stop = self.by_n[n]
         for key, value in expected.items():
@@ -227,8 +232,14 @@ class FieldTests(unittest.TestCase):
                         arrival_fact="map.stop.riberalta.dato_01", facts=["map.stop.riberalta.dato_02"],
                         world_question="map.world.w08.question", answers_world_question=False,
                         bg=self.bg("bg_kit_w08", code="kit:confluencia_madre_de_dios_beni"))
+        # Riberalta esta en la confluencia (geometry.confluence_s [P], revision de M5.1): la parada se ancla en la boca del
+        # Madre de Dios sobre el Beni; el viaje baja el Madre de Dios hasta su boca y acaba con un tramo de longitud cero en el
+        # Beni, la linea de la parada (route; el cliente espera que el viaje acabe en ella).
         self.assertEqual(["manu", "madre_de_dios", "beni"], [p["line"] for p in self.by_n[42]["leg"]["path"]],
                          "Manu abajo, Madre de Dios abajo y el Beni (viaje del 420, ya lleno)")
+        mouth = self.map_doc_mouth("madre_de_dios")
+        self.assertEqual({"line": "beni", "s0": mouth, "s1": mouth}, self.by_n[42]["leg"]["path"][-1])
+        self.assertEqual({"line": "beni", "s": mouth}, self.by_n[42]["at"])
         self.assertEqual([], self.by_n[42]["leg"]["mouths"])
 
     def test_n42_to_49_go_up_the_beni(self):

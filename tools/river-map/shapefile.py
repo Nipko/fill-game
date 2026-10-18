@@ -54,19 +54,21 @@ class Shapes:
         self.path = Path(shp)
         shx = Path(shx) if shx is not None else self.path.with_suffix(".shx")
         self._f, self._m = _open_map(self.path)
+        # Cualquier fallo despues de abrir (cabeceras, indice o tipo de forma) cierra los dos mmap y los dos archivos: en
+        # Windows, un archivo abierto queda bloqueado (revision de M5.1).
         try:
             self._fx, self._mx = _open_map(shx)
+            self.shape_type, self.bbox = self._header(self._m, self.path.name)
+            self._header(self._mx, shx.name)
+            n = (len(self._mx) - 100) // 8
+            if 100 + 8 * n != len(self._mx):
+                raise ShapefileError(f"{shx.name}: el indice no tiene registros de 8 bytes")
+            self.count = n
+            if self.shape_type not in SUPPORTED_TYPES:
+                raise ShapefileError(f"{self.path.name}: tipo de forma {self.shape_type} no soportado")
         except Exception:
             self.close()
             raise
-        self.shape_type, self.bbox = self._header(self._m, self.path.name)
-        self._header(self._mx, shx.name)
-        n = (len(self._mx) - 100) // 8
-        if 100 + 8 * n != len(self._mx):
-            raise ShapefileError(f"{shx.name}: el indice no tiene registros de 8 bytes")
-        self.count = n
-        if self.shape_type not in SUPPORTED_TYPES:
-            raise ShapefileError(f"{self.path.name}: tipo de forma {self.shape_type} no soportado")
 
     @staticmethod
     def _header(m, name: str) -> tuple:

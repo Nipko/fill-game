@@ -42,7 +42,7 @@ namespace AF.Tests.EditMode
             Assert.That(amazonas.Kind, Is.EqualTo(RiverLineKind.Main));
             Assert.That(amazonas.Class, Is.EqualTo(1));
             Assert.That(amazonas.Source, Is.EqualTo("hydrorivers"), "geometría de producción (M5.1)");
-            Assert.That(amazonas.PointCount, Is.EqualTo(1213), "HydroRIVERS simplificado por vista y la cola del estuario");
+            Assert.That(amazonas.PointCount, Is.EqualTo(496), "HydroRIVERS simplificado por vista (1 km en la Mundo y 6 km en la Cuenca; revisión de M5.1) y la cola del estuario");
             Assert.That(amazonas.Mouth, Is.Null);
             Assert.That(amazonas.Water.Count, Is.EqualTo(2));
             Assert.That(amazonas.Water[0].Water, Is.EqualTo(RiverWater.Andean));
@@ -56,19 +56,19 @@ namespace AF.Tests.EditMode
             Assert.That(tapajos.Kind, Is.EqualTo(RiverLineKind.Tributary));
             Assert.That(tapajos.Class, Is.EqualTo(2));
             Assert.That(tapajos.Mouth!.Value.Line, Is.EqualTo(0), "el Tapajós desemboca en el cauce");
-            Assert.That(tapajos.Mouth!.Value.S, Is.EqualTo(0.873776f));
-            Assert.That(tapajos.FillOnPass, Is.EqualTo(0.1222f));
+            Assert.That(tapajos.Mouth!.Value.S, Is.EqualTo(0.871295f));
+            Assert.That(tapajos.FillOnPass, Is.EqualTo(0.1255f));
             Assert.That(tapajos.WaterAt(0.5f), Is.EqualTo(RiverWater.Clear));
 
-            Assert.That(map.Line("atacuari")!.PointCount, Is.EqualTo(23), "de la investigación solo la boca; el trazado, de HydroRIVERS");
+            Assert.That(map.Line("atacuari")!.PointCount, Is.EqualTo(11), "de la investigación solo la boca; el trazado, de HydroRIVERS");
             Assert.That(map.Line("atacuari")!.Length, Is.GreaterThan(0f));
             Assert.That(map.Line("casiquiare")!.Source, Is.EqualTo("ne10m"), "una bifurcación que HydroRIVERS no representa");
             Assert.That(map.Line("para")!.Source, Is.EqualTo("rio_amazonas"), "el ramal del Pará, de la investigación");
             Assert.That(map.Line("pacaya")!.Water.Count, Is.EqualTo(0), "agua sin comprobar: solo vidrio");
             Assert.That(map.Line("pacaya")!.WaterAt(0.5f), Is.EqualTo(RiverWater.None));
 
-            Assert.That(map.Land.VertexCount, Is.EqualTo(1038), "Natural Earth: el continente recortado y sus islas (M5.1)");
-            Assert.That(map.Land.TriangleCount, Is.EqualTo(1022), "un anillo de n vértices da n − 2 triángulos: 1.038 − 2 × 8");
+            Assert.That(map.Land.VertexCount, Is.EqualTo(473), "Natural Earth: el continente recortado y sus islas (M5.1)");
+            Assert.That(map.Land.TriangleCount, Is.EqualTo(457), "un anillo de n vértices da n − 2 triángulos: 473 − 2 × 8");
             Assert.That(map.Land.Zones.Count, Is.EqualTo(1));
             Assert.That(map.Land.Zones[0].Tile, Is.EqualTo("canopy"));
             Assert.That(map.Insets.Count, Is.EqualTo(0), "la 1.0 deja los recuadros vacíos");
@@ -144,13 +144,13 @@ namespace AF.Tests.EditMode
             Assert.That(amazonas[2], Is.EqualTo(6832));
             Assert.That(amazonas[3], Is.EqualTo(16363));
             Assert.That(amazonas[4], Is.EqualTo(6974));
-            Assert.That(amazonas[5], Is.EqualTo(16454));
+            Assert.That(amazonas[5], Is.EqualTo(16611));
 
             RiverMap map = RiverMapReader.Read(json);
             Assert.That(map.Land.Xy[0], Is.EqualTo(1f));
             Assert.That(map.Land.Xy[1], Is.EqualTo((float)(42710 / 65535.0 * map.Frame.Aspect)).Within(1e-6f));
-            Assert.That(map.Land.Xy[2], Is.EqualTo((float)(65291 / 65535.0)).Within(1e-7f));
-            Assert.That(map.Land.Xy[3], Is.EqualTo((float)(42562 / 65535.0 * map.Frame.Aspect)).Within(1e-6f));
+            Assert.That(map.Land.Xy[2], Is.EqualTo((float)(63916 / 65535.0)).Within(1e-7f));
+            Assert.That(map.Land.Xy[3], Is.EqualTo((float)(42327 / 65535.0 * map.Frame.Aspect)).Within(1e-6f));
             for (int i = 0; i < map.Land.Triangles.Length; i++)
             {
                 Assert.That(map.Land.Triangles[i], Is.InRange(0, map.Land.VertexCount - 1));
@@ -178,18 +178,17 @@ namespace AF.Tests.EditMode
             Assert.That(map.Lines[santarem.Path[1].Line].Id, Is.EqualTo("amazonas"));
             Assert.That(santarem.Path[1].S1, Is.LessThan(santarem.Path[1].S0), "río arriba, s decrece");
             Assert.That(santarem.Via, Is.EqualTo(new[] { "breves", "gurupa", "boca_del_xingu", "monte_alegre" }));
-            // M5.1: en HydroRIVERS la boca del Tapajós queda ~3 km río arriba del pie de Santarém; se llena al seguir
-            // Tapajós arriba (el leg del 21 lo recorre).
-            Assert.That(santarem.Mouths.Count, Is.EqualTo(1));
+            // Santarém está en la confluencia: se ancla en la boca del Tapajós (geometry.confluence_s [P], revisión de M5.1) y
+            // al llegar se llena.
+            Assert.That(santarem.Mouths.Count, Is.EqualTo(2));
             Assert.That(map.Lines[santarem.Mouths[0]].Id, Is.EqualTo("xingu"));
+            Assert.That(map.Lines[santarem.Mouths[1]].Id, Is.EqualTo("tapajos"));
+            Assert.That(santarem.At.S, Is.EqualTo(map.Line("tapajos")!.Mouth!.Value.S));
 
-            // Alter do Chão sale de Santarém, en el cauce, sube hasta la boca del Tapajós (M5.1: ~3 km río arriba) y entra
-            // por ella: el mismo punto del agua en dos líneas.
+            // Alter do Chão sale de Santarém por la boca del Tapajós: el mismo punto del agua en dos líneas.
             RiverStopRoute alter = routes.At(2)!;
-            Assert.That(map.Lines[alter.Path[0].Line].Id, Is.EqualTo("amazonas"));
-            Assert.That(map.Lines[alter.Path[1].Line].Id, Is.EqualTo("tapajos"));
-            Assert.That(alter.Path[1].S0, Is.EqualTo(1f));
-            Assert.That(alter.Path[0].S1, Is.EqualTo(map.Line("tapajos")!.Mouth!.Value.S));
+            Assert.That(map.Lines[alter.Path[0].Line].Id, Is.EqualTo("tapajos"));
+            Assert.That(alter.Path[0].S0, Is.EqualTo(1f));
             Assert.That(map.Lines[santarem.At.Line].Id, Is.EqualTo("amazonas"));
 
             for (int n = 0; n < routes.Count; n++)
