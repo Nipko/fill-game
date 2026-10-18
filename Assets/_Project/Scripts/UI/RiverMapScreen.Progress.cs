@@ -810,10 +810,10 @@ namespace AF.UI
             }
 
             PlaceBuoys(space);
+            LayoutOrientationLabels(); // antes que las placas: «Norte arriba» se coloca bajo «Andes ↑» si lo pisaría (FX7)
             _placed.Clear();
             PlaceCountries(space);
             PlaceSilhouettes(space);
-            LayoutOrientationLabels();
         }
 
         // Los países van en su punto de labels, pero nunca se salen del mapa por un lado (se corren hacia dentro lo justo) ni
@@ -871,11 +871,13 @@ namespace AF.UI
 
         // La silueta, a la derecha de su gran parada o, si no cabe, a su izquierda, sin salirse del mapa y dejando libre la caja
         // de la canoa (con SilhouetteCanoeClearanceDp de hueco): si choca, prueba el otro lado y luego se mueve en vertical, hasta
-        // SilhouetteMaxShiftDp. Tampoco pisa los países ni otra silueta. Va en el lienzo estático, por debajo de la canoa, así que
-        // nunca puede quedar debajo de ella.
+        // SilhouetteMaxShiftDp. Tampoco pisa los países, otra silueta ni, en la Cuenca, los controles que flotan encima del mapa
+        // («Norte arriba» y, si sale, «Volver a la canoa»; tarea FX7, BasinControlObstacles). Va en el lienzo estático, por
+        // debajo de la canoa, así que nunca puede quedar debajo de ella.
         private void PlaceSilhouettes(MapSpace space)
         {
             RiverMap map = _map!;
+            BasinControlObstacles();
             float contentW = space.DpPerUnit * map.Width;
             float contentH = space.DpPerUnit * map.Height;
             Rect canoe = CanoeBoxLocal;
@@ -920,7 +922,7 @@ namespace AF.UI
                             first = box;
                         }
 
-                        if ((hasCanoe && box.Overlaps(canoe)) || OverlapsPlaced(box))
+                        if ((hasCanoe && box.Overlaps(canoe)) || OverlapsPlaced(box) || HitsBasinControl(box))
                         {
                             continue;
                         }

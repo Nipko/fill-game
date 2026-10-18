@@ -93,6 +93,37 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Mix_Toada_LastsTheClipLength_NotTheFixedOne_AndStingersWaitUntilItsExactEnd()
+        {
+            // Tarea FX7 (observación 3 de la prueba de la ola 5): el WAV dura 2,55 s y los remates empezaban 0,3 s antes de su
+            // final porque la espera usaba el largo fijo. Con un clip de otro largo, la toada dura lo que el clip.
+            const float clipMs = 2550f;
+            Assert.That(clipMs, Is.Not.EqualTo(AudioMix.ToadaDuckMs), "un largo distinto del fijo");
+            var mix = new AudioMix();
+            var queue = new StingerQueue();
+            mix.ToadaStarted(clipMs);
+            Assert.That(mix.ToadaLeftMs, Is.EqualTo(clipMs), "lo que dura el clip");
+            Assert.That(queue.Request(StingerId.Arrival, mix.ToadaLeftMs), Is.False, "con la toada, espera");
+            mix.Tick(AudioMix.ToadaDuckMs + 1f);
+            Assert.That(mix.Ducked, Is.True, "pasado el largo fijo, la toada sigue sonando");
+            Assert.That(queue.Advance(mix.ToadaLeftMs, out _), Is.False, "y el remate sigue esperando");
+            mix.Tick(clipMs - AudioMix.ToadaDuckMs - 2f);
+            Assert.That(queue.Advance(mix.ToadaLeftMs, out _), Is.False, "1 ms antes del final del clip, aún no");
+            mix.Tick(1f);
+            Assert.That(mix.ToadaLeftMs, Is.EqualTo(0f));
+            Assert.That(mix.Ducked, Is.False, "el lecho vuelve al final del clip");
+            Assert.That(queue.Advance(mix.ToadaLeftMs, out StingerId id), Is.True, "al final exacto del clip");
+            Assert.That(id, Is.EqualTo(StingerId.Arrival));
+
+            mix.ToadaStarted(1800f);
+            Assert.That(mix.ToadaLeftMs, Is.EqualTo(1800f), "un clip más corto que el fijo, también");
+            mix.ToadaStarted(0f);
+            Assert.That(mix.ToadaLeftMs, Is.EqualTo(AudioMix.ToadaDuckMs), "sin largo, el fijo");
+            mix.ToadaStarted(float.NaN);
+            Assert.That(mix.ToadaLeftMs, Is.EqualTo(AudioMix.ToadaDuckMs), "un largo inválido, el fijo");
+        }
+
+        [Test]
         public void PercussionLayers_FirstAtTheFirstSeal_ThenOneEvery25Percent_UpTo2()
         {
             Assert.That(AudioMix.PercussionLayers(0, 8, 2), Is.EqualTo(0), "sin sellar, solo el lecho");

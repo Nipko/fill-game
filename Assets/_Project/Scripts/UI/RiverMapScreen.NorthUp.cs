@@ -142,8 +142,10 @@ namespace AF.UI
         private bool[] _labelLine = Array.Empty<bool>();
         private bool[] _labelHidden = Array.Empty<bool>();
         private int[] _plateSide = Array.Empty<int>();
-        private readonly Rect[] _northUpObstacles = new Rect[3];
+        private readonly Rect[] _northUpObstacles = new Rect[4];
         private int _northUpObstacleCount;
+        private readonly Rect[] _basinControls = new Rect[4];
+        private int _basinControlCount;
         private float _northUpShiftScale = float.NaN;
         private float _northUpLineScale = 1f;
         private float _rowShift;
@@ -1025,6 +1027,23 @@ namespace AF.UI
                 row.x += _rowShift;
                 _northUpObstacles[_northUpObstacleCount++] = Grow(row, g);
             }
+
+            // «Norte arriba», que sigue en el marco con el norte arriba (tarea FX7): su caja en la zona visible, llevada al marco
+            // girado. Con el giro entero, un punto v del contenido queda en pantalla, desde el centro de la zona y con y hacia
+            // arriba, en scale × (S(v) − S(centro del contenido)) (ApplyNorthUp); así que un punto s de la pantalla es, en el marco
+            // girado, s / scale + S(centro) = s / scale + (alto, ancho) / 2 del contenido.
+            if (_northUpBuilt)
+            {
+                Rect b = NorthUpButtonFrameRect();
+                float x0 = b.xMin - FramePadDp - (_viewW * 0.5f);
+                float x1 = b.xMax - FramePadDp - (_viewW * 0.5f);
+                float y0 = (_viewH * 0.5f) - (b.yMax - FramePadDp);
+                float y1 = (_viewH * 0.5f) - (b.yMin - FramePadDp);
+                float cx = _contentH * 0.5f;
+                float cy = _contentW * 0.5f;
+                Rect button = Rect.MinMaxRect((x0 / scale) + cx, (y0 / scale) + cy, (x1 / scale) + cx, (y1 / scale) + cy);
+                _northUpObstacles[_northUpObstacleCount++] = Grow(button, g);
+            }
         }
 
         // La caja box de una figura derecha en pantalla con su punto en at (coordenadas del contenido), en el marco girado: la
@@ -1290,6 +1309,15 @@ namespace AF.UI
                 return;
             }
 
+            Rect r = NorthUpButtonFrameRect();
+            UiBuilder.Place((RectTransform)_northUpButton.Button.transform, r.x, r.y, r.width, r.height);
+        }
+
+        // Dónde va «Norte arriba» en el marco (dp, y hacia abajo): arriba a la derecha de la zona del mapa, a la medida de su
+        // texto y, si pisaría «Andes ↑» (ya colocado), justo debajo. Lo usan su colocación y la de las placas de la Cuenca
+        // (BasinControlObstacles y NorthUpObstacles), que se colocan antes que él.
+        private Rect NorthUpButtonFrameRect()
+        {
             float labelW = Mathf.Ceil(UiBuilder.MinTextWidth(_northUpLabel!));
             float w = Mathf.Min(_viewW - 16f, Mathf.Max(MinTouchDp * 2f, labelW + 32f));
             float x = FramePadDp + _viewW - NorthUpInsetDp - w;
@@ -1305,7 +1333,88 @@ namespace AF.UI
                 }
             }
 
-            UiBuilder.Place((RectTransform)_northUpButton.Button.transform, x, y, w, MinTouchDp);
+            return new Rect(x, y, w, MinTouchDp);
+        }
+
+        // Lo que ninguna placa de mundo futuro pisa en la vista Cuenca sin girar (tarea FX7, observación 5 de la prueba de la ola
+        // 5: con max 58 la placa «Mundo 5 · Loreto · Nivel 141» rozaba «Norte arriba»): los controles que flotan encima, «Norte
+        // arriba» y, si el encuadre de la Cuenca lo enseña (la canoa queda fuera en una zona que no la deja entera), «Volver a la
+        // canoa», y la canoa con su mástil, sus banderas y el guía, como con el norte arriba (NorthUpObstacles). Cajas en coordenadas locales del
+        // contenido (y hacia arriba), con el encuadre con que abre la Cuenca (centrada en el mapa, ApplyView) y con
+        // MarkerObstacleGapDp de hueco: ninguna placa de mundo futuro se coloca encima (PlaceSilhouettes). Fuera de la Cuenca,
+        // ninguna. Solo al cambiar de vista o de zona; sin asignaciones.
+        private void BasinControlObstacles()
+        {
+            _basinControlCount = 0;
+            RiverMap? map = _map;
+            if (_view != MapView.Basin || map == null)
+            {
+                return;
+            }
+
+            Vector2 c = _space.ToLocal(new Vector2(map.Width * 0.5f, map.Height * 0.5f));
+            var o = new Vector2(ClampAxis((_viewW * 0.5f) - c.x, _contentW, _viewW), ClampAxis((_viewH * 0.5f) + c.y, _contentH, _viewH));
+            if (_northUpBuilt)
+            {
+                Rect b = NorthUpButtonFrameRect();
+                _basinControls[_basinControlCount++] = Grow(FromView(new Rect(b.x - FramePadDp, b.y - FramePadDp, b.width, b.height), o), MarkerObstacleGapDp);
+            }
+
+            // La canoa con su mástil y sus banderas (con la proa a un lado o al otro, que depende del guía) y el guía: la caja de
+            // la canoa sola (PlaceSilhouettes) dejaba que una placa quedara debajo de las banderas (capturas de FX7 con max 140 y 200).
+            if (_markersReady && _hasCanoe && _progress != null && _routes != null)
+            {
+                int max = Mathf.Clamp(_progress.MaxLevel, 0, WorldTable.LastLevel);
+                float facing = _canoeFacing;
+                GearPose(_space, max, _canoeMap, FinalFlagCount(max), ref facing, out Vector2 canoe, out Vector2 guide, out _, out _, out _,
+                    out _, out float mastH);
+                Rect gear = default;
+                for (int side = 0; side < 2; side++)
+                {
+                    float f = side == 0 ? -1f : 1f;
+                    var foot = canoe + new Vector2(-f * ProceduralArt.MapCanoeWidthDp * SternFraction, 2f);
+                    Rect box = GearBox(canoe, foot, mastH, f);
+                    gear = side == 0 ? box : Rect.MinMaxRect(Mathf.Min(gear.xMin, box.xMin), Mathf.Min(gear.yMin, box.yMin),
+                        Mathf.Max(gear.xMax, box.xMax), Mathf.Max(gear.yMax, box.yMax));
+                }
+
+                _basinControls[_basinControlCount++] = Grow(gear, MarkerObstacleGapDp);
+                _basinControls[_basinControlCount++] = Grow(GuideBox(guide), MarkerObstacleGapDp);
+            }
+
+            if (_hasCanoe)
+            {
+                Vector2 local = _space.ToLocal(_canoeMap);
+                var p = new Vector2(o.x + local.x, o.y - local.y);
+                bool inView = p.x >= CanoeMarginDp && p.x <= _viewW - CanoeMarginDp && p.y >= CanoeMarginDp && p.y <= _viewH - CanoeMarginDp;
+                var target = new Vector2(ClampAxis((_viewW * 0.5f) - local.x, _contentW, _viewW), ClampAxis((_viewH * 0.5f) + local.y, _contentH, _viewH));
+                if (!inView && (Mathf.Abs(target.x - o.x) > 0.5f || Mathf.Abs(target.y - o.y) > 0.5f))
+                {
+                    Rect b = FixedViewRect((RectTransform)_backToCanoe.Button.transform);
+                    _basinControls[_basinControlCount++] = Grow(FromView(b, o), MarkerObstacleGapDp);
+                }
+            }
+        }
+
+        // La caja r de la zona visible (dp, y hacia abajo) en coordenadas locales del contenido (y hacia arriba) con el contenido
+        // en o: lo inverso de InView.
+        private static Rect FromView(Rect r, Vector2 o)
+        {
+            return Rect.MinMaxRect(r.xMin - o.x, o.y - r.yMax, r.xMax - o.x, o.y - r.yMin);
+        }
+
+        // La caja (coordenadas locales del contenido) pisa un control de la Cuenca sin girar (BasinControlObstacles).
+        private bool HitsBasinControl(Rect box)
+        {
+            for (int k = 0; k < _basinControlCount; k++)
+            {
+                if (box.Overlaps(_basinControls[k]))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         /// <summary>

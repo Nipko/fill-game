@@ -709,6 +709,12 @@ namespace AF.UI
         /// (no se guarda: la app se reabre en Nivel fallido o en el nivel).</description></item>
         /// <item><description>Inicio: <c>lobby</c>, <c>content_end</c> y <c>no_canoes</c>.</description></item>
         /// </list>
+        /// Ninguna línea pasa de <see cref="MaxLayoutLineBytes"/> (tarea FX7: una línea de logcat se corta en 4.068 bytes, y con
+        /// <c>af_max_level 560</c> la del Mapa llegaba cortada): si no cabe, la sonda sale en varias líneas seguidas, todas de la
+        /// misma pantalla y con su <c>level</c>, <c>sw</c> y <c>sh</c>, con <c>"part":k,"parts":n</c> detrás de <c>sh</c>; las cuias van
+        /// enteras en la parte 1 (en las demás, <c>"cuias":[]</c>) y los botones, en orden, repartidos entre las partes. Quien toca
+        /// junta los botones de las <c>n</c> últimas líneas de la pantalla (de la parte 1 a la <c>n</c>). Una línea que cabe sale como
+        /// siempre, sin <c>part</c> ni <c>parts</c>.
         /// </summary>
         public void Layout(string screen, int level, CuiaView[]? cuias, string[] buttonIds, RectTransform[] buttons)
         {
@@ -724,7 +730,8 @@ namespace AF.UI
             sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"sw\":").Append(Screen.width.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"sh\":").Append(Screen.height.ToString(CultureInfo.InvariantCulture));
-            sb.Append(",\"cuias\":[");
+            string head = sb.ToString();
+            sb.Clear();
             if (cuias != null)
             {
                 for (int i = 0; i < cuias.Length; i++)
@@ -740,21 +747,101 @@ namespace AF.UI
                 }
             }
 
-            sb.Append("],\"buttons\":[");
+            string cuiaList = sb.ToString();
+            var entries = new string[buttons.Length];
             for (int i = 0; i < buttons.Length; i++)
             {
-                if (i > 0)
-                {
-                    sb.Append(',');
-                }
-
+                sb.Clear();
                 sb.Append("{\"id\":\"").Append(buttonIds[i]).Append('"');
                 AppendRect(sb, buttons[i]);
                 sb.Append('}');
+                entries[i] = sb.ToString();
             }
 
-            sb.Append("]}");
-            Debug.Log(sb.ToString());
+            string[] lines = LayoutLines(head, cuiaList, entries, MaxLayoutLineBytes);
+            for (int i = 0; i < lines.Length; i++)
+            {
+                Debug.Log(lines[i]);
+            }
+        }
+
+        /// <summary>
+        /// Tope de bytes (UTF-8) de una línea <c>AF_LAYOUT</c> (tarea FX7): por debajo de los 4.068 de una entrada de logcat, con
+        /// margen para la etiqueta y la prioridad.
+        /// </summary>
+        public const int MaxLayoutLineBytes = 3900;
+
+        /// <summary>
+        /// Las líneas <c>AF_LAYOUT</c> de una pantalla (tarea FX7): <paramref name="head"/> (<c>AF_LAYOUT {"screen":…,"sh":N</c>),
+        /// las cuias ya escritas (<paramref name="cuiaList"/>, sin corchetes) y cada botón (<paramref name="buttons"/>, un objeto
+        /// JSON cada uno), en una sola línea si cabe en <paramref name="maxBytes"/> bytes de UTF-8; si no, en las partes que
+        /// hagan falta, cada una con <c>"part":k,"parts":n</c>, las cuias solo en la primera y los botones en orden, tantos como
+        /// quepan en cada una (uno solo, aunque no quepa, si él solo ya no cabe).
+        /// </summary>
+        public static string[] LayoutLines(string head, string cuiaList, string[] buttons, int maxBytes)
+        {
+            Encoding utf8 = Encoding.UTF8;
+            string whole = head + ",\"cuias\":[" + cuiaList + "],\"buttons\":[" + string.Join(",", buttons) + "]}";
+            if (utf8.GetByteCount(whole) <= maxBytes)
+            {
+                return new[] { whole };
+            }
+
+            // Lo que ocupa una parte sin sus botones: la cabecera, "part" y "parts" (con hasta 4 cifras cada uno), las cuias en la
+            // primera y los corchetes; cada botón suma su objeto y su coma.
+            int headBytes = utf8.GetByteCount(head) + utf8.GetByteCount(",\"part\":0000,\"parts\":0000") + utf8.GetByteCount(",\"cuias\":[],\"buttons\":[]}");
+            int cuiaBytes = utf8.GetByteCount(cuiaList);
+            var groups = new System.Collections.Generic.List<int>(); // primer botón de cada parte
+            int used = 0;
+            for (int i = 0; i < buttons.Length; i++)
+            {
+                int b = utf8.GetByteCount(buttons[i]);
+                if (groups.Count > 0)
+                {
+                    int budget = maxBytes - headBytes - (groups.Count == 1 ? cuiaBytes : 0);
+                    if (used + 1 + b <= budget)
+                    {
+                        used += 1 + b; // con su coma
+                        continue;
+                    }
+                }
+
+                groups.Add(i);
+                used = b;
+            }
+
+            if (groups.Count == 0)
+            {
+                groups.Add(0); // sin botones: una sola parte con las cuias
+            }
+
+            int parts = groups.Count;
+            var lines = new string[parts];
+            var sb = new StringBuilder(maxBytes);
+            for (int p = 0; p < parts; p++)
+            {
+                int from = groups[p];
+                int to = p + 1 < parts ? groups[p + 1] : buttons.Length;
+                sb.Clear();
+                sb.Append(head);
+                sb.Append(",\"part\":").Append((p + 1).ToString(CultureInfo.InvariantCulture));
+                sb.Append(",\"parts\":").Append(parts.ToString(CultureInfo.InvariantCulture));
+                sb.Append(",\"cuias\":[").Append(p == 0 ? cuiaList : string.Empty).Append("],\"buttons\":[");
+                for (int i = from; i < to; i++)
+                {
+                    if (i > from)
+                    {
+                        sb.Append(',');
+                    }
+
+                    sb.Append(buttons[i]);
+                }
+
+                sb.Append("]}");
+                lines[p] = sb.ToString();
+            }
+
+            return lines;
         }
 
         private void AppendRect(StringBuilder sb, RectTransform rt)
