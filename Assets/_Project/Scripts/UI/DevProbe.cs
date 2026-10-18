@@ -14,8 +14,9 @@ namespace AF.UI
 {
     /// <summary>
     /// Sonda de desarrollo (docs/dev/prototipo-v0.md c): en builds de desarrollo (<see cref="Debug.isDebugBuild"/>)
-    /// escribe en el log, en una sola línea JSON con InvariantCulture, <c>AF_LAYOUT</c> (rectángulos táctiles en píxeles
-    /// con origen arriba a la izquierda; se toca en el centro) y <c>AF_STATE</c> (eventos del nivel), para que un
+    /// escribe en el log, en una línea JSON con InvariantCulture, <c>AF_LAYOUT</c> (rectángulos táctiles en píxeles con origen
+    /// arriba a la izquierda; se toca en el centro; partida en varias líneas con <c>"part"</c>/<c>"parts"</c> si pasa de
+    /// <see cref="MaxLayoutLineBytes"/>: ver <see cref="Layout"/>) y <c>AF_STATE</c> (eventos del nivel), para que un
     /// agente pueda jugar y verificar el prototipo con <c>adb logcat -s Unity</c> y <c>adb shell input tap</c>.
     /// </summary>
     /// <remarks>
@@ -712,7 +713,8 @@ namespace AF.UI
         /// Ninguna línea pasa de <see cref="MaxLayoutLineBytes"/> (tarea FX7: una línea de logcat se corta en 4.068 bytes, y con
         /// <c>af_max_level 560</c> la del Mapa llegaba cortada): si no cabe, la sonda sale en varias líneas seguidas, todas de la
         /// misma pantalla y con su <c>level</c>, <c>sw</c> y <c>sh</c>, con <c>"part":k,"parts":n</c> detrás de <c>sh</c>; las cuias van
-        /// enteras en la parte 1 (en las demás, <c>"cuias":[]</c>) y los botones, en orden, repartidos entre las partes. Quien toca
+        /// enteras en la parte 1 (en las demás, <c>"cuias":[]</c>) y los botones, en orden, repartidos entre las partes (la parte 1
+        /// puede ir sin botones; las excepciones al tope, en <see cref="LayoutLines"/>). Quien toca
         /// junta los botones de las <c>n</c> últimas líneas de la pantalla (de la parte 1 a la <c>n</c>). Una línea que cabe sale como
         /// siempre, sin <c>part</c> ni <c>parts</c>.
         /// </summary>
@@ -776,7 +778,10 @@ namespace AF.UI
         /// las cuias ya escritas (<paramref name="cuiaList"/>, sin corchetes) y cada botón (<paramref name="buttons"/>, un objeto
         /// JSON cada uno), en una sola línea si cabe en <paramref name="maxBytes"/> bytes de UTF-8; si no, en las partes que
         /// hagan falta, cada una con <c>"part":k,"parts":n</c>, las cuias solo en la primera y los botones en orden, tantos como
-        /// quepan en cada una (uno solo, aunque no quepa, si él solo ya no cabe).
+        /// quepan en cada una. Si con las cuias no cabe ni el primer botón, la parte 1 va solo con las cuias y ese botón abre la
+        /// parte 2. Solo dos casos pasan del tope, y no se parten: un botón suelto que por sí mismo (con la cabecera de su parte) ya
+        /// no cabe, que va solo en su parte, y unas cuias que ya no caben solas en la parte 1 (con los datos reales, unos 35 bytes
+        /// por cuia y unos 55 por botón, ninguno de los dos llega a pasar).
         /// </summary>
         public static string[] LayoutLines(string head, string cuiaList, string[] buttons, int maxBytes)
         {
@@ -804,6 +809,12 @@ namespace AF.UI
                         used += 1 + b; // con su coma
                         continue;
                     }
+                }
+                else if (cuiaBytes > 0 && b > maxBytes - headBytes - cuiaBytes)
+                {
+                    // La parte 1 lleva las cuias: si con ellas el primer botón ya no cabe, la parte 1 va solo con las cuias y el
+                    // botón abre la parte 2 (revisión de FX7). Sin cuias, un botón que no cabe solo va solo en la parte 1.
+                    groups.Add(i);
                 }
 
                 groups.Add(i);

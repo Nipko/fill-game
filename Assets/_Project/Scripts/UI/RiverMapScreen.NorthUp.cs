@@ -144,7 +144,7 @@ namespace AF.UI
         private int[] _plateSide = Array.Empty<int>();
         private readonly Rect[] _northUpObstacles = new Rect[4];
         private int _northUpObstacleCount;
-        private readonly Rect[] _basinControls = new Rect[4];
+        private readonly Rect[] _basinControls = new Rect[5];
         private int _basinControlCount;
         private float _northUpShiftScale = float.NaN;
         private float _northUpLineScale = 1f;
@@ -1339,9 +1339,9 @@ namespace AF.UI
         // Lo que ninguna placa de mundo futuro pisa en la vista Cuenca sin girar (tarea FX7, observación 5 de la prueba de la ola
         // 5: con max 58 la placa «Mundo 5 · Loreto · Nivel 141» rozaba «Norte arriba»): los controles que flotan encima, «Norte
         // arriba» y, si el encuadre de la Cuenca lo enseña (la canoa queda fuera en una zona que no la deja entera), «Volver a la
-        // canoa», y la canoa con su mástil, sus banderas y el guía, como con el norte arriba (NorthUpObstacles). Cajas en coordenadas locales del
-        // contenido (y hacia arriba), con el encuadre con que abre la Cuenca (centrada en el mapa, ApplyView) y con
-        // MarkerObstacleGapDp de hueco: ninguna placa de mundo futuro se coloca encima (PlaceSilhouettes). Fuera de la Cuenca,
+        // canoa», la canoa con su mástil, sus banderas y el guía, como con el norte arriba (NorthUpObstacles), y la fila de boyas del
+        // frente. Cajas en coordenadas locales del contenido (y hacia arriba), con el encuadre con que abre la Cuenca (centrada en el
+        // mapa, ApplyView) y con MarkerObstacleGapDp de hueco: ninguna placa de mundo futuro se coloca encima (PlaceSilhouettes). Fuera de la Cuenca,
         // ninguna. Solo al cambiar de vista o de zona; sin asignaciones.
         private void BasinControlObstacles()
         {
@@ -1380,6 +1380,23 @@ namespace AF.UI
 
                 _basinControls[_basinControlCount++] = Grow(gear, MarkerObstacleGapDp);
                 _basinControls[_basinControlCount++] = Grow(GuideBox(guide), MarkerObstacleGapDp);
+            }
+
+            // La fila de boyas del frente (revisión de FX7: con max 200 la placa del mundo 9 la rozaba): la caja de los centros de
+            // las boyas que se ven, más su radio (el de PlaceBuoys, que va antes que las placas) y MarkerObstacleGapDp. El frente es,
+            // con el lleno, lo que el jugador lee en el Mapa.
+            if (_buoyCount > 0 && _buoys != null)
+            {
+                float r = _buoys.Radius;
+                Vector2 b0 = _buoyLocal[0];
+                Rect row = Rect.MinMaxRect(b0.x - r, b0.y - r, b0.x + r, b0.y + r);
+                for (int i = 1; i < _buoyCount; i++)
+                {
+                    Vector2 b = _buoyLocal[i];
+                    row = Rect.MinMaxRect(Mathf.Min(row.xMin, b.x - r), Mathf.Min(row.yMin, b.y - r), Mathf.Max(row.xMax, b.x + r), Mathf.Max(row.yMax, b.y + r));
+                }
+
+                _basinControls[_basinControlCount++] = Grow(row, MarkerObstacleGapDp);
             }
 
             if (_hasCanoe)

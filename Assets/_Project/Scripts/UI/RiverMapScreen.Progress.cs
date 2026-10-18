@@ -904,6 +904,7 @@ namespace AF.UI
                 bool any = false;
                 bool found = false;
                 float bestClearance = float.NegativeInfinity;
+                int bestFillHits = int.MaxValue;
                 int steps = Mathf.RoundToInt(SilhouetteMaxShiftDp / LabelSearchStepDp);
                 for (int k = 0; k <= 2 * steps && !found; k++)
                 {
@@ -928,16 +929,20 @@ namespace AF.UI
                         }
 
                         // Como los países: el sitio libre más cercano que no tape el curso de los ríos (ni el frente, que va por
-                        // ellos); si ninguno llega a SilhouetteLineClearanceDp, el de más hueco.
+                        // ellos) ni el lleno. Si ninguno llega a SilhouetteLineClearanceDp, el respaldo es el que tapa menos líneas
+                        // del lleno (el progreso del jugador; revisión de FX7: con max 200 las placas de los mundos 7 y 8 tapaban
+                        // dos y una cintas del lleno) y, a igualdad, el de más hueco.
                         float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp);
-                        if (!any || clearance > bestClearance)
+                        int fillHits = FillLinesUnder(map, space, _view, box);
+                        if (!any || fillHits < bestFillHits || (fillHits == bestFillHits && clearance > bestClearance))
                         {
                             any = true;
+                            bestFillHits = fillHits;
                             bestClearance = clearance;
                             chosen = box;
                         }
 
-                        found = clearance >= SilhouetteLineClearanceDp;
+                        found = fillHits == 0 && clearance >= SilhouetteLineClearanceDp;
                     }
                 }
 
@@ -1020,6 +1025,43 @@ namespace AF.UI
             }
 
             return clearance;
+        }
+
+        // Cuántas líneas del lleno (las de FillFrom < 1, de cualquier clase, en su trozo lleno: de FillFrom a la boca) pisa la caja
+        // box (coordenadas locales del contenido) con el ancho de su cinta en la vista y su orla (revisión de FX7). Sin asignaciones.
+        private int FillLinesUnder(RiverMap map, MapSpace space, MapView view, Rect box)
+        {
+            int hits = 0;
+            IReadOnlyList<RiverLine> lines = map.Lines;
+            int count = Mathf.Min(lines.Count, _fillFrom.Length);
+            for (int l = 0; l < count; l++)
+            {
+                float from = _fillFrom[l];
+                if (from >= 1f)
+                {
+                    continue;
+                }
+
+                RiverLine line = lines[l];
+                float half = (RibbonWidthDp(view, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp;
+                Rect near = Rect.MinMaxRect(box.xMin - half, box.yMin - half, box.xMax + half, box.yMax + half);
+                float[] cumulative = line.Cumulative;
+                float start = from * line.Length;
+                Vector2 a = space.ToLocal(line.X(0), line.Y(0));
+                for (int i = 1; i < line.PointCount; i++)
+                {
+                    Vector2 b = space.ToLocal(line.X(i), line.Y(i));
+                    if (cumulative[i] >= start && SegmentHitsBox(a, b, near))
+                    {
+                        hits++;
+                        break;
+                    }
+
+                    a = b;
+                }
+            }
+
+            return hits;
         }
 
         // Distancia entre el segmento ab y la caja (0 si la cruza o la toca).
