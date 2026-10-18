@@ -94,6 +94,21 @@ namespace AF.Tests.PlayMode
             NoFruitNewUnlessSet();
             NoSlothRestartNoticeUnlessSet();
             NoTutorialSlothUnlessSet();
+            NoL10SequenceUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga la secuencia del Mapa del 10 (M4.2) si el test no la fijó (<see cref="GameBootstrap.L10SequenceOverride"/> = null):
+        /// los tests que no tratan de ella entran al inicio con <c>max_level</c> ≥ 10 y <c>map_seen_level</c> 0, y pulsan «Siguiente»
+        /// en la victoria del 10, como antes de que existiera (sin el Mapa encima del inicio ni el inicio en lugar del 11). Los que
+        /// la prueban (<c>Level10MapTests</c>) la encienden y la vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoL10SequenceUnlessSet()
+        {
+            if (GameBootstrap.L10SequenceOverride == null)
+            {
+                GameBootstrap.L10SequenceOverride = false;
+            }
         }
 
         /// <summary>

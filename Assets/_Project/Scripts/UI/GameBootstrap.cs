@@ -44,6 +44,13 @@ namespace AF.UI
     /// (<see cref="OpenRiverMap"/>); el ← de su cabecera y el Atrás de Android lo cierran (<see cref="CloseRiverMap"/>, que anota
     /// lo visto en <c>map_seen_level</c>) y su «Jugar» cierra y abre el nivel. La geometría se lee y se decodifica la primera vez
     /// que se abre (una sola vez por arranque); si no valida, se avisa y la pestaña desaparece.</para>
+    /// <para>Secuencia del Mapa del 10 (06 §2.3; P-M4; tarea M4.2; <see cref="L10SequenceRule"/>): con el Mapa en la escena,
+    /// «Siguiente» en la victoria del 10 pasa por AD_GATE y va al inicio, y cada entrada al inicio con <c>max_level</c> ≥ 10 y
+    /// <c>map_seen_level</c> &lt; 10 (también tras Inicio en esa victoria o tras cerrar la app) abre encima el Mapa desde
+    /// <see cref="MapOpenSource.L10"/> (<see cref="OnAppScreenChanged"/>), que hace la secuencia
+    /// (<c>RiverMapScreen.Sequence.cs</c>). Al acabarla o saltarla se anota lo visto hasta el 10 (<see cref="MarkMapSeen"/>), así
+    /// que sale una vez. Su «Jugar» abre el 11 y su ← deja el inicio. Los tests la apagan con
+    /// <see cref="L10SequenceOverride"/>.</para>
     /// <para>Pantalla de arranque (06 §2.2; D-016, T2-A; tarea TI6d; <see cref="BootSplash"/>): en cada arranque en frío, el río y
     /// el logotipo salen en el primer fotograma, antes de cargar nada, y TiTino entra en su embaúba en cuanto hay perfil y arte
     /// (<c>sloth_wake</c> en la primera apertura, <c>sloth_idle</c> en las demás; sin su arte final, en release, no sale). Al
@@ -147,6 +154,13 @@ namespace AF.UI
 
         /// <summary>Instancia activa (una por escena).</summary>
         public static GameBootstrap? Current { get; private set; }
+
+        /// <summary>
+        /// Secuencia del Mapa del 10 (tarea M4.2) encendida (true) o apagada (false) por un test; null = la del juego (encendida con
+        /// el Mapa en la escena). Los tests PlayMode que no tratan de ella la apagan (<c>PlayModeHelpers.NoL10SequenceUnlessSet</c>):
+        /// con <c>max_level</c> ≥ 10 y <c>map_seen_level</c> 0 entran al inicio y ganan el 10 como antes de que existiera.
+        /// </summary>
+        public static bool? L10SequenceOverride { get; set; }
 
         /// <summary>
         /// Pantalla de arranque (06 §2.2; tarea TI6d) mientras se ve: null antes de crearla, después de cortarla y en los
@@ -951,8 +965,9 @@ namespace AF.UI
             return progress.MapSeenLevel != before;
         }
 
-        // «Jugar» del Mapa: desde la pestaña del inicio, cierra y abre el nivel (o Sin canoas, como el «Jugar» del inicio); abierto
-        // encima de otra pantalla (pausa, victoria, banner), solo cierra y se vuelve a ella (sus tareas cambian el texto).
+        // «Jugar» del Mapa: desde la pestaña del inicio o en la secuencia del Mapa del 10 (que vive sobre el inicio: «Jugar · Nivel
+        // 11»; M4.2), cierra y abre el nivel (o Sin canoas, como el «Jugar» del inicio); abierto encima de otra pantalla (pausa,
+        // victoria, banner), solo cierra y se vuelve a ella (sus tareas cambian el texto).
         private void PressMapPlay()
         {
             RiverMapScreen? map = _mapScreen;
@@ -961,7 +976,7 @@ namespace AF.UI
                 return;
             }
 
-            bool fromLobby = map.Source == MapOpenSource.Lobby;
+            bool fromLobby = map.Source == MapOpenSource.Lobby || map.Source == MapOpenSource.L10;
             CloseRiverMap();
             if (fromLobby && _app != null && _app.Screen == AppScreen.Lobby)
             {
@@ -1008,6 +1023,11 @@ namespace AF.UI
                 if (_lobby != null)
                 {
                     _lobby.RiverMapAvailable = false;
+                }
+
+                if (_app != null)
+                {
+                    _app.L10MapAvailable = false; // sin Mapa, «Siguiente» en el 10 carga el 11 (M4.2)
                 }
 
                 return false;
@@ -1188,8 +1208,10 @@ namespace AF.UI
                 CloseFruitSheet();
             }
 
-            // El Mapa abierto desde la pestaña vive sobre el inicio: si la app deja el inicio por otro camino, se cierra antes.
-            if (screen != AppScreen.Lobby && _mapScreen != null && _mapScreen.Visible && _mapScreen.Source == MapOpenSource.Lobby)
+            // El Mapa abierto desde la pestaña (o el del 10, M4.2) vive sobre el inicio: si la app deja el inicio por otro camino, se
+            // cierra antes.
+            if (screen != AppScreen.Lobby && _mapScreen != null && _mapScreen.Visible
+                && (_mapScreen.Source == MapOpenSource.Lobby || _mapScreen.Source == MapOpenSource.L10))
             {
                 CloseRiverMap();
             }
@@ -1205,6 +1227,14 @@ namespace AF.UI
             if (screen == AppScreen.Lobby && _app != null)
             {
                 _screen?.PrefetchWorldBanner(_app.PlayLevel);
+
+                // La secuencia del Mapa del 10 (06 §2.3; P-M4; M4.2): tras «Siguiente» en la victoria del 10 o, si se pulsó Inicio o
+                // se cerró la app, en la primera entrada al inicio con max_level ≥ 10 y map_seen_level < 10. Al acabarla se anota lo
+                // visto hasta el 10: no se repite.
+                if (_app.L10MapDue)
+                {
+                    OpenRiverMap(MapOpenSource.L10);
+                }
             }
         }
 
@@ -1405,6 +1435,8 @@ namespace AF.UI
             _mapScreen.Fauna = Fauna; // el miquito del tramo en la tarjeta de la parada (M4.1)
             _mapScreen.FruitSeries = FruitFacts?.Catalog; // la fruta de la serie en la tarjeta de la parada (D-022; M4.1)
             _mapScreen.LevelWater = level => _app?.Catalog.Find(level)?.WaterBase; // el agua del fondo de la tarjeta (M4.1)
+            _mapScreen.L10SequenceEnded = () => MarkMapSeen(L10SequenceRule.Level); // la secuencia del Mapa del 10 no se repite (M4.2)
+            _mapScreen.L10SlothVoice = () => _screen == null || _screen.SlothVoice; // su bocadillo, solo con voz (D-016, punto 4)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
             BuildFruitSheet(); // F4: la ficha de una fruta, desde la línea de la victoria y desde Ajustes (GameBootstrap.Fruit.cs)
@@ -1425,7 +1457,10 @@ namespace AF.UI
                 WorldBannersEnabled = LaunchOptions.ResolveLevelCards(),
             };
             _screen.Bind(_flow, _services);
-            _app = new AppFlow(_flow, progress, _wallet, this);
+            _app = new AppFlow(_flow, progress, _wallet, this)
+            {
+                L10MapAvailable = RiverMapAvailable && (L10SequenceOverride ?? true), // la secuencia del Mapa del 10 (M4.2)
+            };
             _lobby.Bind(_app, _services);
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
