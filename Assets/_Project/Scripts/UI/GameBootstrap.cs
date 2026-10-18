@@ -821,6 +821,7 @@ namespace AF.UI
             settings.Show(LocLocale.Offered(Loc.Catalog, Loc.ShowUnapproved), profile.Settings.Language, profile.Settings.Patterns,
                 profile.Settings.SlothMessages);
             settings.MarkAudio(profile.Settings.Sound, profile.Settings.Music, profile.Settings.Haptics); // AU1
+            settings.MarkIdleHint(profile.Settings.IdleHint); // MO3
             _skipNextDelta = true;
             return true;
         }
@@ -1395,6 +1396,7 @@ namespace AF.UI
             _mapScreen.LevelWater = level => _app?.Catalog.Find(level)?.WaterBase; // el agua del fondo de la tarjeta (M4.1)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
+            _settingsScreen.IdleHintToggled = on => ChooseIdleHint(on); // MO3: Pista por inactividad
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
             _flow = new LevelFlow(catalog, progress, _screen, LaunchOptions.ResolveTapSwitchSelection(), LaunchOptions.ResolvePourMode(), _wallet)

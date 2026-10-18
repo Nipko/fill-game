@@ -651,7 +651,8 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Las filas de Ajustes, de arriba abajo: Sonido, Música y Vibración, los idiomas, los patrones y Mensajes de TiTino.
+        // Las filas de Ajustes, de arriba abajo: Sonido, Música y Vibración, los idiomas, los patrones, Mensajes de TiTino y Pista
+        // por inactividad.
         private static System.Collections.Generic.List<Button> Rows(SettingsScreen settings)
         {
             var rows = new System.Collections.Generic.List<Button>
@@ -669,6 +670,7 @@ namespace AF.Tests.PlayMode
             rows.Add(settings.PatternsButton(PatternsSetting.On));
             rows.Add(settings.PatternsButton(PatternsSetting.Off));
             rows.Add(settings.SlothMessagesButton);
+            rows.Add(settings.IdleHintButton); // MO3
             return rows;
         }
 

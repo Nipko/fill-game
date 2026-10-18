@@ -29,12 +29,15 @@ namespace AF.UI
     /// desmarcan (<c>settings.sound</c>, <c>music</c> y <c>haptics</c>, activadas por defecto) y se aplican al momento, en
     /// <see cref="AudioSlot"/> (<c>SettingsScreen.Audio.cs</c>). Con ellas la tarjeta no cabe en un teléfono 16:9 al 130 %: lo de
     /// debajo de la cabecera va en un visor que se desplaza cuando hace falta.</item>
+    /// <item><b>Pista por inactividad</b> (tarea MO3; 02 §3.4 y §12; 04 §2.3; 07 §7.8): una fila que se marca o se desmarca
+    /// (<c>settings.idle_hint</c> [P], activada por defecto; apagada equivale a <c>hint_idle_delay_s</c> = 0 en el dispositivo y
+    /// no afecta a Morpho), en <see cref="IdleHintSlot"/>, tras «Mensajes de TiTino».</item>
     /// </list>
-    /// Sin Eliminar cuenta: no existe (D-008: lo que no existe se oculta). Los huecos de la pista
-    /// por inactividad (MO3) y «Sobre la Amazonía» (F4) están creados y ocultos (<see cref="IdleHintSlot"/> y
-    /// <see cref="AboutSlot"/>): esas tareas los llenan y <see cref="Layout"/> los coloca cuando se activan. Elegir llama a quien
+    /// Sin Eliminar cuenta: no existe (D-008: lo que no existe se oculta). El hueco de «Sobre la Amazonía» (F4) está creado y
+    /// oculto (<see cref="AboutSlot"/>): esa tarea lo llena y <see cref="Layout"/> lo coloca cuando se active. Elegir llama a quien
     /// la abre (<c>GameBootstrap</c>), que guarda el perfil y aplica: el idioma reconstruye la UI volviendo al inicio, con esta
-    /// pantalla otra vez abierta (FXT); los patrones, al momento; los mensajes de TiTino, desde su siguiente aparición. Escala de la fuente
+    /// pantalla otra vez abierta (FXT); los patrones y la pista por inactividad, al momento; los mensajes de TiTino, desde su
+    /// siguiente aparición. Escala de la fuente
     /// <see cref="FontScale"/> hasta el 130 % sin recortes (02 §12), con todo texto ≥ 12 sp.
     /// </summary>
     internal sealed partial class SettingsScreen
@@ -62,6 +65,12 @@ namespace AF.UI
         /// <c>sloth_messages</c>.
         /// </summary>
         public const string SlothMessagesId = "sloth_messages";
+
+        /// <summary>
+        /// Id de la fila «Pista por inactividad» en la sonda (<c>AF_LAYOUT</c>) y clave de <c>settings_change</c>: <c>idle_hint</c>,
+        /// el campo <c>settings.idle_hint</c> del perfil [P] (08 §8.2 aún no la lista en <c>af_settings_change.key</c>).
+        /// </summary>
+        public const string IdleHintId = "idle_hint";
 
         /// <summary>Margen interior de la tarjeta (dp): el de la cabecera arriba y el del visor abajo, dentro del marco.</summary>
         public const float PanelInsetDp = 16f;
@@ -113,11 +122,13 @@ namespace AF.UI
         private readonly List<OptionRow> _languageRows = new List<OptionRow>();
         private readonly OptionRow[] _patternRows = new OptionRow[3];
         private readonly OptionRow _slothRow;
+        private readonly OptionRow _idleRow;
         private readonly List<string> _offered = new List<string>();
 
         private string _language = SettingsData.LanguageAuto;
         private PatternsSetting _patterns = PatternsSetting.Auto;
         private bool _slothMessages = true;
+        private bool _idleHint = true;
         private float _fontScale = 1f;
         private int _screenW;
         private int _screenH;
@@ -167,8 +178,11 @@ namespace AF.UI
             _slothRow = new OptionRow(SlothMessagesSlot, art, "SlothMessages", SlothMessagesId, UiText.SettingsSlothMessages,
                 () => _onSlothMessages(!_slothMessages));
 
-            // Huecos de las tareas siguientes, ocultos hasta que existan (D-008).
-            IdleHintSlot = HiddenSlot("IdleHintSlot");
+            // Pista por inactividad (MO3): una fila que se marca o se desmarca, en su hueco.
+            IdleHintSlot = UiBuilder.Rect("IdleHintSlot", _content);
+            _idleRow = new OptionRow(IdleHintSlot, art, "IdleHint", IdleHintId, UiText.SettingsIdleHint, () => IdleHintToggled?.Invoke(!_idleHint));
+
+            // Hueco de la tarea siguiente, oculto hasta que exista (D-008).
             AboutSlot = HiddenSlot("AboutSlot");
 
             // Fundidos de los bordes del visor (revisión de AU1), encima del contenido y sin recibir toques: abajo mientras quede
@@ -231,8 +245,23 @@ namespace AF.UI
         /// <summary>Si la fila «Mensajes de TiTino» lleva la marca (mensajes activados).</summary>
         public bool SlothMessagesMarked => _slothRow.Selected;
 
-        /// <summary>Hueco de la pista por inactividad (MO3), oculto.</summary>
+        /// <summary>Hueco de «Pista por inactividad» (MO3), con su fila.</summary>
         public RectTransform IdleHintSlot { get; }
+
+        /// <summary>Al tocar «Pista por inactividad»: el valor nuevo de <c>settings.idle_hint</c>. Lo fija <c>GameBootstrap</c>.</summary>
+        public Action<bool>? IdleHintToggled { get; set; }
+
+        /// <summary>Lo que se marca en «Pista por inactividad» (<c>settings.idle_hint</c>).</summary>
+        public bool SelectedIdleHint => _idleHint;
+
+        /// <summary>Botón de la fila «Pista por inactividad» (la marca o la desmarca).</summary>
+        public Button IdleHintButton => _idleRow.Button;
+
+        /// <summary>Texto de la fila «Pista por inactividad».</summary>
+        public string IdleHintLabel => _idleRow.Label.text;
+
+        /// <summary>Si la fila «Pista por inactividad» lleva la marca (pista activada).</summary>
+        public bool IdleHintMarked => _idleRow.Selected;
 
         /// <summary>Hueco de «Sobre la Amazonía» (F4), oculto.</summary>
         public RectTransform AboutSlot { get; }
@@ -338,6 +367,7 @@ namespace AF.UI
             }
 
             yield return _slothRow.Label;
+            yield return _idleRow.Label;
             foreach (TextMeshProUGUI label in AudioTexts())
             {
                 yield return label;
@@ -410,6 +440,13 @@ namespace AF.UI
         {
             _slothMessages = on;
             _slothRow.SetSelected(on);
+        }
+
+        /// <summary>Marca o desmarca «Pista por inactividad» sin cerrar (al abrir y tras tocarla).</summary>
+        public void MarkIdleHint(bool on)
+        {
+            _idleHint = on;
+            _idleRow.SetSelected(on);
         }
 
         /// <summary>Cierra la pantalla (sin avisar a nadie: lo hace quien la cierra).</summary>
@@ -507,7 +544,13 @@ namespace AF.UI
             _rowTops.Add(y);
             y += rowH + RowGapDp;
 
-            // Huecos de MO3 y F4: aún ocultos (no ocupan sitio). El contenido acaba en la última fila.
+            // Pista por inactividad (MO3): una fila en su hueco, tras Mensajes de TiTino.
+            UiBuilder.Place(IdleHintSlot, 16f, y, inner, rowH);
+            _idleRow.Place(0f, 0f, inner, rowH, s);
+            _rowTops.Add(y);
+            y += rowH + RowGapDp;
+
+            // Hueco de F4: aún oculto (no ocupa sitio). El contenido acaba en la última fila.
             y -= RowGapDp;
 
             // La tarjeta crece con el contenido hasta el alto libre entre las zonas seguras; si no cabe, el contenido se desplaza
@@ -605,7 +648,7 @@ namespace AF.UI
                 return;
             }
 
-            int n = 2 + _offered.Count + _patternRows.Length + AudioRowCount;
+            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount;
             var ids = new string[n];
             var rects = new RectTransform[n];
             ids[0] = "close";
@@ -625,6 +668,9 @@ namespace AF.UI
 
             ids[k] = _slothRow.Id;
             rects[k] = _slothRow.Root;
+            k++;
+            ids[k] = _idleRow.Id; // idle_hint (MO3)
+            rects[k] = _idleRow.Root;
             AudioLayoutIds(ids, rects, k + 1); // sound, music y haptics (AU1)
 
             _probe.Layout("settings", 0, null, ids, rects);

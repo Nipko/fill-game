@@ -94,6 +94,21 @@ namespace AF.Tests.PlayMode
             NoFruitNewUnlessSet();
             NoSlothRestartNoticeUnlessSet();
             NoTutorialSlothUnlessSet();
+            NoIdleHintUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga la pista por inactividad (MO3) si el test no la fijó (<see cref="GameScreen.IdleHintOverride"/> = null): con el
+        /// reloj manual que salta minutos (canoas, anuncios) o con más de 12 s reales en juego, una cuia pulsaría y sonaría
+        /// <c>sfx_morpho_idle</c> en mitad de pruebas que no tratan de ella. Los que la prueban (<c>IdleHintTests</c>) la encienden
+        /// y la vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoIdleHintUnlessSet()
+        {
+            if (GameScreen.IdleHintOverride == null)
+            {
+                GameScreen.IdleHintOverride = false;
+            }
         }
 
         /// <summary>

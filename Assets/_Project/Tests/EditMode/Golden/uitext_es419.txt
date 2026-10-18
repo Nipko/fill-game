@@ -168,6 +168,7 @@ UiText.RiverLoweredColor	El río bajó: esta vez hay un color menos
 UiText.RiverLoweredCuia	El río bajó: esta vez hay una cuia más
 UiText.Seeds	Semillas
 UiText.Settings	Ajustes
+UiText.SettingsIdleHint	Pista por inactividad
 UiText.SettingsLanguageAuto	Automático
 UiText.SettingsPatternsAuto	Automático
 UiText.SettingsPatternsOff	Nunca

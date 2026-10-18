@@ -5,7 +5,8 @@ using AF.Localization;
 namespace AF.UI
 {
     /// <summary>
-    /// Textos de Morpho · Pista (tarea MO2; 04 §2.3; 02 T5; D-019; glosario §5.1 y §10), de <c>strings.csv</c>. Parcial de
+    /// Textos de Morpho · Pista (tarea MO2; 04 §2.3; 02 T5; D-019; glosario §5.1 y §10) y de la fila de Ajustes de la pista por
+    /// inactividad (tarea MO3; 02 §12), de <c>strings.csv</c>. Parcial de
     /// <see cref="UiText"/>. Las respuestas que nombran fauna (la luciérnaga, la morpho) nacen <c>pendiente_asesor</c>; los
     /// botones de la tarjeta de respuesta son los de siempre (<see cref="Undo"/> y <see cref="RestartLong"/>).
     /// </summary>
@@ -16,6 +17,12 @@ namespace AF.UI
 
         /// <summary><c>hint_unsupported</c>: el globo de la ranura gris en un nivel sin <c>hint_supported</c> (04 §2.3 b).</summary>
         public static string HintUnsupported => Loc.T(Keys.HintUnsupported);
+
+        /// <summary>
+        /// <c>settings_idle_hint</c> [P]: la fila «Pista por inactividad» de Ajustes (02 §12; 07 §7.8; tarea MO3), el interruptor de
+        /// <c>settings.idle_hint</c>.
+        /// </summary>
+        public static string SettingsIdleHint => Loc.T(Keys.SettingsIdleHint);
 
         /// <summary>
         /// La frase de una respuesta de Morpho sin vertido (04 §2.3; 02 T5, en su orden; D-019): «Desde aquí no hay salida…»,
@@ -59,6 +66,9 @@ namespace AF.UI
 
             /// <summary><c>hint_unsupported</c> [P]: 04 §2.3 b.</summary>
             public const string HintUnsupported = "hint_unsupported";
+
+            /// <summary><c>settings_idle_hint</c> [P]: fila de Ajustes de la pista por inactividad (02 §12; MO3).</summary>
+            public const string SettingsIdleHint = "settings_idle_hint";
         }
     }
 }

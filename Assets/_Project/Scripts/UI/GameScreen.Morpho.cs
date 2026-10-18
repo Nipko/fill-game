@@ -24,8 +24,8 @@ namespace AF.UI
     /// </list>
     /// Sin asignaciones por fotograma: las imágenes se crean una vez y los sprites de la mariposa, al cargar un nivel con la ranura
     /// (<see cref="MorphoFx.Prewarm"/>); la sonda (<c>DevProbe.Event("hint", …)</c>) solo escribe en desarrollo, en las respuestas.
-    /// Se llama GameScreen.Morpho.cs (revisión de MO2): <c>GameScreen.Hint.cs</c> queda libre para la pista por inactividad de
-    /// MO3, que lo crea como archivo nuevo.
+    /// Se llama GameScreen.Morpho.cs (revisión de MO2): la pista por inactividad (MO3) va en <c>GameScreen.Hint.cs</c>, con los
+    /// mismos ganchos (<c>HintTick</c> y <c>HintLevelLoaded</c> la llaman).
     /// </summary>
     public sealed partial class GameScreen : IHintListener
     {
@@ -147,6 +147,7 @@ namespace AF.UI
         partial void HintTick(float dtMs)
         {
             _morphoFx.Tick(dtMs, _views);
+            IdleHintTick(dtMs); // pista por inactividad (MO3; GameScreen.Hint.cs)
             if (!_hintCard.Visible)
             {
                 return;
@@ -166,6 +167,7 @@ namespace AF.UI
             _morphoFx.Snap();
             _hintCard.Hide();
             _hintCardBoard = null;
+            IdleHintLevelLoaded(); // pista por inactividad (MO3): la cuenta, desde cero
             if (flow.Hint.State != HintState.Hidden)
             {
                 _morphoFx.Prewarm(); // la mariposa genera ya sus sprites: ni el toque ni el vuelo crean texturas

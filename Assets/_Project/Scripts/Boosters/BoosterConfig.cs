@@ -97,6 +97,21 @@ namespace AF.Boosters
         public int HintTutorialUnits { get; set; } = 3;
 
         /// <summary>
+        /// <c>hint_idle_from_level</c>: la pista por inactividad existe desde este nivel, en todos los siguientes y sin tope
+        /// (08 §9: 3, rango 1-5; 02 §3.4 y 04 §2.3; tarea MO3, <c>AF.GameFlow.IdleHint</c>).
+        /// </summary>
+        [RemoteConfigKey("hint_idle_from_level")]
+        public int HintIdleFromLevel { get; set; } = 3;
+
+        /// <summary>
+        /// <c>hint_idle_delay_s</c>: segundos sin toques tras los que un origen de la ruta del solver pulsa una vez (08 §9: 12,
+        /// rango 8-20; 0 = apagada; 02 §3.4 y 04 §2.3). El interruptor «Pista por inactividad» de Ajustes (02 §12;
+        /// <c>settings.idle_hint</c>) equivale a 0 en el dispositivo (<c>IdleHint.DelayMs</c>).
+        /// </summary>
+        [RemoteConfigKey("hint_idle_delay_s")]
+        public int HintIdleDelayS { get; set; } = 12;
+
+        /// <summary>
         /// <c>restart_confirm_min_pours</c>: con estos vertidos o más, Volver a la orilla pide confirmación y cuenta como fallo
         /// blando (04 §2.7 y §5.2).
         /// </summary>
@@ -166,6 +181,8 @@ namespace AF.Boosters
             Require(HintTimeoutMs >= 1, "hint_timeout_ms debe ser >= 1");
             Require(HintUnlockLevel >= 1, "hint_unlock_level empieza en 1");
             Require(HintTutorialUnits >= 1, "hint_tutorial_units debe ser >= 1");
+            Require(HintIdleFromLevel >= 1, "hint_idle_from_level empieza en 1");
+            Require(HintIdleDelayS >= 0, "hint_idle_delay_s no puede ser negativo (0 = apagada)");
             Require(RestartConfirmMinPours >= 1 && ReliefAfterFails >= 1, "umbrales >= 1");
             Require(AnimRiverLoweredBannerMs >= 0, "anim_river_lowered_banner_ms no puede ser negativo");
             Require(StuckOrderT1 != null && StuckOrderT3 != null, "stuck_order_* no puede ser null");
