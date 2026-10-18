@@ -14,6 +14,10 @@
                    -testPlatform <Mode> -testResults Logs/<mode>.xml -logFile Logs/<mode>.log [-testFilter <patron>]
          (sin -quit: -runTests cierra el Editor al escribir los resultados)
 
+    Si otro proceso (Unity.Licensing.Client o el broker de la CLI) tiene abierto el XML o el log de
+    una ejecucion anterior y no se puede borrar, se usa un nombre unico junto a el
+    (<nombre>-<fecha>-<pid><ext>) y se avisa; los codigos de salida no cambian por ello.
+
     Nunca instala nada (no pasa --allow-install) y nunca lanza batchmode sobre una carpeta con un
     Editor abierto. Muestra el resumen del XML NUnit, los tests fallidos y, si no compila, solo las
     primeras -MaxErrors lineas "error CS" del log.
@@ -280,6 +284,26 @@ function Write-Results {
     }
 }
 
+function Resolve-FreeOutputFile {
+    # Borra el archivo de una ejecucion anterior y devuelve la ruta que se usara. Si otro proceso lo tiene abierto
+    # (Unity.Licensing.Client o el broker de la Unity CLI que sobreviven al Editor), Remove-Item falla: en vez de salir
+    # con 1 se usa un nombre unico junto a el (<nombre>-<fecha>-<pid><ext>), que ademas evita leer resultados viejos.
+    param([string]$Path)
+    if (-not (Test-Path -LiteralPath $Path)) { return $Path }
+    try {
+        Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+        return $Path
+    }
+    catch {
+        $dir = Split-Path -Parent $Path
+        $name = [System.IO.Path]::GetFileNameWithoutExtension($Path)
+        $ext = [System.IO.Path]::GetExtension($Path)
+        $alt = Join-Path $dir ('{0}-{1}-{2}{3}' -f $name, (Get-Date -Format 'yyyyMMdd-HHmmss'), $PID, $ext)
+        [Console]::Out.WriteLine("AVISO: no se pudo borrar $Path (lo tiene abierto otro proceso); se usa $alt.")
+        return $alt
+    }
+}
+
 # --------------------------------------------------------------------------------------------
 $info = Get-UnityProjectInfo -Path $ProjectPath
 $label = if ($info.Changeset) { "$($info.Version) ($($info.Changeset))" } else { $info.Version }
@@ -291,8 +315,9 @@ if (-not $LogFile) { $LogFile = Join-Path $info.Root "Logs/$modeLower.log" }
 foreach ($f in @($ResultsFile, $LogFile)) {
     $d = Split-Path -Parent $f
     if ($d -and -not (Test-Path -LiteralPath $d)) { New-Item -ItemType Directory -Force -Path $d | Out-Null }
-    if (Test-Path -LiteralPath $f) { Remove-Item -LiteralPath $f -Force }
 }
+$ResultsFile = Resolve-FreeOutputFile -Path $ResultsFile
+$LogFile = Resolve-FreeOutputFile -Path $LogFile
 
 if (Test-ProjectOpenInEditor -Root $info.Root) {
     Stop-WithCode 5 ("ERROR: el proyecto esta abierto en un Editor (Temp/UnityLockfile bloqueado)." + [Environment]::NewLine +

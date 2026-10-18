@@ -47,8 +47,9 @@ namespace AF.EditorTools
     /// Códigos de salida de <see cref="Apply"/> (solo en batchmode): 0 hecho · 2 falta algún WAV de la especificación · 4 excepción.
     ///
     /// <see cref="BuildGameAab"/> mide el peso del audio en un AAB de la escena del juego (el de humo, <see cref="BuildSmoke"/>,
-    /// usa una escena mínima y no lleva el audio): <c>Builds/Android/game.aab</c> y el informe por carpeta en
-    /// <see cref="SizeReportPath"/>. Códigos: 0 hecho · 2 Player Settings distintos · 3 sin módulo Android · 4 build fallido ·
+    /// usa una escena mínima y no lleva el audio): <c>Builds/Android/game.aab</c>, el informe por carpeta en
+    /// <see cref="SizeReportPath"/> y el peso por grupo en <see cref="AabSizeReport.ReportPath"/> (B2). Es el AAB que mide la
+    /// compuerta de tamaño del CI (<c>ci/size-gate.ps1</c>). Códigos: 0 hecho · 2 Player Settings distintos · 3 sin módulo Android · 4 build fallido ·
     /// 5 sin la escena del juego en Build Settings · 6 compuerta de textos.
     /// </summary>
     public static class AudioAssetSetup
@@ -517,6 +518,12 @@ namespace AF.EditorTools
             Directory.CreateDirectory(Path.GetDirectoryName(SizeReportPath)!);
             File.WriteAllText(SizeReportPath, text, new UTF8Encoding(false));
             Debug.Log(LogPrefix + "peso del audio:\n" + text);
+
+            // B2: el mismo AAB por grupo (niveles, textos, fuentes, arte, audio…), para la compuerta de tamaño (08 §6.1).
+            string groups = AabSizeReport.Report(contents, aabBytes);
+            Directory.CreateDirectory(Path.GetDirectoryName(AabSizeReport.ReportPath)!);
+            File.WriteAllText(AabSizeReport.ReportPath, groups, new UTF8Encoding(false));
+            Debug.Log(LogPrefix + "peso por grupo:\n" + groups);
         }
 
         /// <summary>

@@ -13,6 +13,17 @@
          y 12.1). Se ejecuta si hay bundletool (parametro -Bundletool o variable BUNDLETOOL_JAR) y java.
          En CI se exige con -RequireBundletool.
 
+    Con -Breakdown, ademas, el desglose del .aab por grupo (codigo nativo, datos de Unity, dex,
+    recursos de Android, metadatos y cada asset pack), en MB comprimidos dentro del AAB y sin
+    comprimir. El peso por grupo de los datos de Unity (niveles, fuentes, arte, audio...) lo da el
+    Build Report: Logs/aab-size.md de AF.EditorTools.AudioAssetSetup.BuildGameAab (tarea B2).
+
+    Que AAB mide la compuerta (B2, 2026-10-18): el de la escena del juego, que lleva el audio, los
+    packs de niveles y las fuentes (AF.EditorTools.AudioAssetSetup.BuildGameAab, Builds/Android/game.aab,
+    o el AAB de release del CI con las mismas escenas de Build Settings). El AAB de humo
+    (AF.EditorTools.BuildSmoke, smoke.aab) usa una escena minima sin audio ni niveles: sirve para
+    la compuerta de 16 KB, no para la de tamano.
+
     Unidades: 1 MB = 1.000.000 bytes (como Play Console), que es lo mas estricto.
     Funciona en Windows (PowerShell 7) y en el runner Ubuntu de GitHub Actions (pwsh).
 
@@ -34,10 +45,16 @@
 .PARAMETER RequireBundletool
     Falla con 3 si no se puede medir con bundletool (uso en CI).
 
+.PARAMETER Breakdown
+    Escribe tambien el desglose de cada .aab por grupo (solo informa; no cambia el veredicto).
+    Un .aab que no se puede leer como ZIP sale con 2.
+
 .EXAMPLE
     pwsh -NoProfile -File ci/size-gate.ps1 Builds/Android/smoke.aab
 .EXAMPLE
     pwsh -NoProfile -File ci/size-gate.ps1 build/Android -MaxMB 80 -RequireBundletool
+.EXAMPLE
+    pwsh -NoProfile -File ci/size-gate.ps1 Builds/Android/game.aab -Breakdown
 #>
 [CmdletBinding()]
 param(
@@ -45,7 +62,8 @@ param(
     [string]$Path = '',
     [string]$MaxMB = '80',
     [string]$Bundletool = $env:BUNDLETOOL_JAR,
-    [switch]$RequireBundletool
+    [switch]$RequireBundletool,
+    [switch]$Breakdown
 )
 
 Set-StrictMode -Version 3.0
@@ -100,6 +118,50 @@ function Format-MB([long]$Bytes) {
     return ($Bytes / 1000000.0).ToString('0.00', [System.Globalization.CultureInfo]::InvariantCulture)
 }
 
+# Grupo de una entrada del .aab (modulo/ruta). Los asset packs (modulos distintos de base) van enteros en su grupo.
+function Get-AabGroup([string]$Name) {
+    $parts = $Name.Split('/')
+    if ($parts.Count -lt 2) {
+        if ($Name -in @('BundleConfig.pb')) { return 'metadatos y firma' }
+        return 'otros'
+    }
+    $module = $parts[0]
+    if ($module -in @('META-INF', 'BUNDLE-METADATA')) { return 'metadatos y firma' }
+    if ($module -ne 'base') { return "asset pack $module" }
+    switch ($parts[1]) {
+        'lib' { if ($parts.Count -ge 4) { return "codigo nativo ($($parts[2]))" } else { return 'codigo nativo' } }
+        'assets' { if ($parts.Count -ge 4 -and $parts[2] -eq 'bin') { return 'datos de Unity (assets/bin)' } else { return 'otros assets' } }
+        'dex' { return 'dex (Java/Kotlin)' }
+        'root' { return 'root (kotlin y otros)' }
+        default { return 'recursos y manifiesto de Android' }
+    }
+}
+
+function Write-AabBreakdown([System.IO.FileInfo]$Aab) {
+    try {
+        $zip = [System.IO.Compression.ZipFile]::OpenRead($Aab.FullName)
+    }
+    catch {
+        Stop-WithCode 2 "ERROR: no se puede leer '$($Aab.FullName)' como ZIP: $($_.Exception.Message)"
+    }
+    try {
+        $packed = @{}
+        $raw = @{}
+        foreach ($e in $zip.Entries) {
+            $g = Get-AabGroup $e.FullName
+            $packed[$g] = [long]($packed[$g] ?? 0) + $e.CompressedLength
+            $raw[$g] = [long]($raw[$g] ?? 0) + $e.Length
+        }
+    }
+    finally {
+        $zip.Dispose()
+    }
+    Write-Output '  Desglose del .aab (MB comprimidos en el AAB / sin comprimir):'
+    foreach ($g in ($packed.Keys | Sort-Object { - $packed[$_] }, { $_ })) {
+        Write-Output ('    {0,-40} {1,8} {2,8}' -f $g, (Format-MB $packed[$g]), (Format-MB $raw[$g]))
+    }
+}
+
 $failed = $false
 $limitText = $limitMB.ToString('0.##', [System.Globalization.CultureInfo]::InvariantCulture)
 Write-Output "Presupuesto: $limitText MB ($limitBytes bytes)"
@@ -108,6 +170,7 @@ foreach ($aab in $aabs) {
     $status = if ($size -le $limitBytes) { 'OK' } else { 'SUPERA' }
     if ($status -ne 'OK') { $failed = $true }
     Write-Output ("[{0}] archivo .aab: {1} MB - {2}" -f $status, (Format-MB $size), $aab.FullName)
+    if ($Breakdown) { Write-AabBreakdown $aab }
 
     if ($canBundletool) {
         $tmp = Join-Path ([System.IO.Path]::GetTempPath()) ("size-gate-" + [guid]::NewGuid().ToString('N'))
