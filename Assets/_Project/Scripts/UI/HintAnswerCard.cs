@@ -19,13 +19,34 @@ namespace AF.UI
     /// <remarks>
     /// Con el material de los modales de D-008 (<see cref="ModalKit"/>) y un velo ligero que recoge los toques [P]: la respuesta
     /// es una elección y no se pisa con un toque al tablero. Textos a 17 sp que pasan a otra línea y nunca bajan de 12 sp
-    /// (<see cref="ModalKit.Line"/>; 02 §12); la tarjeta crece con su texto. La cierra la pantalla si el nivel deja de estar en
-    /// juego o el tablero cambia (<c>GameScreen.Hint.cs</c>).
+    /// (<see cref="ModalKit.Line"/>; 02 §12); la tarjeta crece con su texto. Los cortes (tras los dos puntos, y nunca tras un
+    /// artículo o una preposición corta) los decide la tabla de textos con su salto de línea y sus espacios duros, no el código
+    /// (<c>.claude/rules/localizacion.md</c>: nada de partir ni hacer <c>Replace</c> sobre texto visible; revisión de MO2). La cierra la pantalla si el nivel deja de estar en
+    /// juego o el tablero cambia (<c>GameScreen.Morpho.cs</c>).
     /// </remarks>
     internal sealed class HintAnswerCard
     {
-        /// <summary>Lado de la mariposa de la cabecera (dp) [P].</summary>
-        public const float IconDp = 40f;
+        /// <summary>Lado de la mariposa de la cabecera, dentro de su disco (dp) [P].</summary>
+        public const float IconDp = 34f;
+
+        /// <summary>
+        /// Disco azul petróleo de la cabecera con su borde de madera (dp) [P] (revisión de MO2): el glifo de la ranura Pista,
+        /// pensado para la cara azul del botón (sus cuias son crema), no se lee sobre el papel de la tarjeta; en el disco, sí.
+        /// Centrado sobre la frase.
+        /// </summary>
+        public const float IconDiscDp = 52f;
+
+        /// <summary>Borde de madera del disco (dp) [P].</summary>
+        public const float IconDiscRimDp = 2f;
+
+        /// <summary>Azul petróleo del disco (#1F6F80) [P] (revisión de MO2).</summary>
+        public static readonly Color IconDiscColor = Palette.Hex(0x1F6F80);
+
+        /// <summary>
+        /// Margen de la frase a cada lado de la tarjeta (dp) [P] (revisión de MO2: ≥ 20; la superficie de papel empieza a 8, así
+        /// que a la frase le quedan 16 dp de papel por lado). Los botones conservan los 16 dp de siempre.
+        /// </summary>
+        public const float BodySideDp = 24f;
 
         /// <summary>Alfa del velo [P]: más ligero que el de los modales del embudo; el tablero se sigue leyendo.</summary>
         public const float DimAlpha = 0.35f;
@@ -34,6 +55,8 @@ namespace AF.UI
         private readonly RectTransform _root;
         private readonly RectTransform _panel;
         private readonly Image _surface;
+        private readonly Image _iconRim;
+        private readonly Image _iconDisc;
         private readonly Image _icon;
         private readonly ReliefParts _close;
         private readonly TextMeshProUGUI _body;
@@ -50,6 +73,8 @@ namespace AF.UI
             dimButton.navigation = new Navigation { mode = Navigation.Mode.None };
             dimButton.onClick.AddListener(() => onClose());
             _panel = ModalKit.Card("Panel", _root, art, out _surface);
+            _iconRim = UiBuilder.Image("MorphoRim", _panel, art.Disc, Palette.FamilyWood.Base);
+            _iconDisc = UiBuilder.Image("MorphoDisc", _panel, art.Disc, IconDiscColor);
             _icon = UiBuilder.Image("Morpho", _panel, art.IconMorpho, Color.white);
             _icon.preserveAspect = true;
             _close = ModalKit.Close("CloseButton", _panel, art, onClose);
@@ -76,6 +101,9 @@ namespace AF.UI
 
         /// <summary>La frase (tests de tamaño: ≥ 12 sp).</summary>
         public TextMeshProUGUI Body => _body;
+
+        /// <summary>El disco de la mariposa de la cabecera, con su borde (tests de solapes).</summary>
+        public RectTransform IconDisc => _iconRim.rectTransform;
 
         public Button CloseButton => _close.Button;
 
@@ -111,10 +139,16 @@ namespace AF.UI
             float width = Mathf.Min(328f, canvasW - 32f);
             float inner = width - 32f;
             float y = 16f;
-            UiBuilder.Place(_icon.rectTransform, 16f, y, IconDp, IconDp);
+
+            // La mariposa en su disco, centrada sobre la frase; la X, arriba a la derecha.
+            float discX = (width - IconDiscDp) * 0.5f;
+            UiBuilder.Place(_iconRim.rectTransform, discX, y, IconDiscDp, IconDiscDp);
+            float disc = IconDiscDp - (2f * IconDiscRimDp);
+            UiBuilder.Place(_iconDisc.rectTransform, discX + IconDiscRimDp, y + IconDiscRimDp, disc, disc);
+            UiBuilder.Place(_icon.rectTransform, (width - IconDp) * 0.5f, y + ((IconDiscDp - IconDp) * 0.5f), IconDp, IconDp);
             UiBuilder.Place((RectTransform)_close.Button.transform, width - 16f - ModalKit.CloseDp, y - 4f, ModalKit.CloseDp, ModalKit.CloseDp);
-            y += IconDp + 8f;
-            y += ModalKit.PlaceLine(_body, 16f, y, inner, 26f) + 14f;
+            y += IconDiscDp + 8f;
+            y += ModalKit.PlaceLine(_body, BodySideDp, y, width - (2f * BodySideDp), 26f) + 14f;
             ModalKit.Place(_undo, 16f, y, inner);
             y += ModalKit.HeightOf(_undo) + 8f;
             ModalKit.Place(_restart, 16f, y, inner);

@@ -374,7 +374,8 @@ namespace AF.Tests.PlayMode
             // A 360 dp de ancho, la columna del saldo llega hasta el área de Reiniciar: la píldora no puede crecer hacia la
             // izquierda y «[Réíñíçíár ···]» va en dos líneas ya al 100 %. Con las 4 ranuras del 100 (Pista desde el 12, MO2),
             // «[Déshácér ··]» ya no cabe en una línea al 100 % y va en dos, en la ranura más ancha que deja la pantalla. Al 130 %,
-            // «[Déshácér» no cabe entero ni en la bandeja apretada: pendiente del dueño (TrayUndo_EnXA_360_130_KnownIssue).
+            // «[Déshácér» (74,6 dp) solo cabe entero en la bandeja apretada (79 dp por ranura) con el aire de
+            // BoosterTray.LabelTightInsetDp (revisión de MO2; pendiente del dueño con la opción recomendada aplicada).
             float scale = percent / 100f;
             yield return LongLabelSetup.LoadLevel100(LocLocale.Pseudo, scale, HudLabelTests.Screen780);
             GameScreen view = GameBootstrap.Current!.View!;
@@ -384,9 +385,11 @@ namespace AF.Tests.PlayMode
             // Al 130 %, «[Réíñíçíár» no cabe en el área: la píldora crece y estrecha la columna del saldo, sin partir la palabra
             // (tarea FX5). Lo que sube la cuia al seleccionarla, aparte (RestartPill_360_KnownIssues).
             LongLabelSetup.AssertRestart(view, scale, 2, false);
-            if (percent == 100)
+            LongLabelSetup.AssertSlot(view, tray.UndoLabel, tray.UndoGlyph, scale, 2, "Marea");
+            if (percent == 130)
             {
-                LongLabelSetup.AssertSlot(view, tray.UndoLabel, tray.UndoGlyph, scale, 2, "Marea");
+                Assert.That(tray.Compact, Is.True, "«[Déshácér» no cabía entero con la separación de siempre");
+                Assert.That(tray.LabelInsetNowDp, Is.EqualTo(BoosterTray.LabelTightInsetDp), "ni con el aire de la ranura de 64 dp");
             }
 
             LongLabelSetup.AssertSlotFits(view, tray.ExtraLabel, tray.ExtraGlyph, scale, "Cuia extra");
@@ -480,21 +483,6 @@ namespace AF.Tests.PlayMode
             Assert.That(stuck.HandfulButton.gameObject.activeInHierarchy && stuck.BalsaButton.gameObject.activeInHierarchy, Is.True, "Puñado y Balsa en la rama B");
             LongLabelSetup.AssertOfferAir(stuck.HandfulLabel, stuck.OfferFaceDp, 1.3f, "Puñado");
             LongLabelSetup.AssertOfferAir(stuck.BalsaLabel, stuck.OfferFaceDp, 1.3f, "Balsa");
-        }
-
-        /// <summary>
-        /// «[Déshácér ··]» (Marea en en-XA) al 130 % a 360 dp con las 4 ranuras del 100 (tarea MO2; pendiente del dueño): su
-        /// palabra más larga no cabe entera ni con la bandeja apretada (<see cref="BoosterTray.Compact"/>, 79 dp por ranura con el
-        /// aire de 4 dp) y se parte. es-419 sí cabe (MorphoUiTests.Tray_FourSlots_At360dp_130Percent_es419_NoBrokenLabels). Se
-        /// deja escrito (explícito: hoy falla) para cuando el dueño decida (con Pororoca, 5 ranuras de 56 dp, 07 §7.4, empeora).
-        /// </summary>
-        [UnityTest]
-        [Explicit("Pendiente del dueño (MO2): «[Déshácér» en en-XA al 130 % no cabe entero en 4 ranuras a 360 dp; hoy falla.")]
-        public IEnumerator TrayUndo_EnXA_360_130_KnownIssue()
-        {
-            yield return LongLabelSetup.LoadLevel100(LocLocale.Pseudo, 1.3f, HudLabelTests.Screen780);
-            GameScreen view = GameBootstrap.Current!.View!;
-            LongLabelSetup.AssertSlotFits(view, view.Tray.UndoLabel, view.Tray.UndoGlyph, 1.3f, "Marea");
         }
 
         /// <summary>

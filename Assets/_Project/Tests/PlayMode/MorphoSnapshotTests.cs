@@ -16,12 +16,15 @@ namespace AF.Tests.PlayMode
     /// Capturas de revisión de Morpho · Pista (tarea MO2; <c>[Explicit]</c>, no forman parte de la suite), en
     /// <c>Logs/snapshots/es-419/mo2_*</c>, con un recorte a tamaño real (<c>*_zoom</c>) de cada una:
     /// <c>mo2_01_tray_l15</c> (3 ranuras: Marea, Cuia extra y Pista con su precio), <c>mo2_02_tray_l100</c> (4 ranuras, Revelar
-    /// la última), <c>mo2_03_tray_missing_l106</c> (tres «Te faltan {n}» a la vez, sin pisarse), <c>mo2_04_slot48</c> (la ranura a
-    /// 48 dp: el glifo a 24 dp), <c>mo2_05_flight_l15</c> (la mariposa a mitad del vuelo al origen), <c>mo2_06_hop_l15</c> (el
-    /// salto al destino con la estela), <c>mo2_07_rings_l15</c> (las dos cuias con su anillo), <c>mo2_08_card_*</c> (las tres
-    /// respuestas sin vertido, también al 130 %) y <c>mo2_09_unsupported_l15</c> (el globo de la ranura gris). Necesitan
-    /// gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.MorphoSnapshotTests</c> sin
-    /// <c>-nographics</c>.
+    /// la última), <c>mo2_02b_tray_l100_130</c> (las 4 ranuras con la fuente al 130 % a 360 dp: la bandeja apretada),
+    /// <c>mo2_03_tray_missing_l106</c> (tres «Te faltan {n}» a la vez, sin pisarse), <c>mo2_04_slot48</c> (la ranura a 48 dp: el
+    /// glifo a 24 dp), <c>mo2_05_flight_l15</c> (la mariposa a mitad del vuelo al origen), <c>mo2_06_hop_l15</c> (el salto al
+    /// destino con la estela), <c>mo2_07_rings_l15</c> (las dos cuias con su anillo), <c>mo2_07b_rings_reduced_motion_l15</c>
+    /// (con Reducir movimiento, el primer fotograma tras la respuesta: la mariposa ya posada y los dos anillos),
+    /// <c>mo2_08_card_*</c> (las cuatro respuestas sin vertido tras un vertido, con Deshacer habilitado, también al 130 %, y
+    /// <c>mo2_08_card_no_exit_disabled_100</c> sin vertidos: Deshacer gris) y <c>mo2_09_unsupported_l15</c> (el globo de la ranura
+    /// gris). Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.MorphoSnapshotTests</c>
+    /// sin <c>-nographics</c>.
     /// </summary>
     [Explicit("Capturas visuales manuales; necesitan dispositivo gráfico.")]
     public sealed class MorphoSnapshotTests
@@ -66,6 +69,17 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Save(dir, "mo2_03_tray_missing_l106");
             SaveCrop(dir, "mo2_03_tray_missing_l106_zoom", boot.View!.Tray.TrayRect, 10f, 50f);
             Assert.That(File.Exists(Path.Combine(dir, "mo2_03_tray_missing_l106.png")), Is.True);
+
+            // La bandeja apretada (revisión de MO2): las 4 ranuras con la fuente al 130 % a 360 dp. La última: la pantalla
+            // simulada cambia la escala del lienzo de las capturas que vienen detrás.
+            LaunchOptions.FontScaleOverride = 1.3f;
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
+            LaunchOptions.AdFillOverride = null;
+            yield return Load(100, FunnelSetup.Profile(500));
+            boot = GameBootstrap.Current!;
+            Assert.That(boot.View!.Tray.Compact, Is.True, "la bandeja apretada");
+            SnapshotKit.Save(dir, "mo2_02b_tray_l100_130");
+            SaveCrop(dir, "mo2_02b_tray_l100_130_zoom", boot.View.Tray.TrayRect, 10f, 40f);
         }
 
         [UnityTest]
@@ -101,6 +115,30 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator CaptureReducedMotion()
+        {
+            // Con Reducir movimiento (07 §7.8), el primer fotograma tras la respuesta: sin vuelo, la mariposa aparece posada en el
+            // destino con un fundido corto y los dos anillos se encienden a la vez, sin latir.
+            string dir = SnapshotKit.Prepare();
+            yield return Load(15, FunnelSetup.Profile(500));
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            MorphoFx fx = view.MorphoFx;
+            boot.Flow!.ReduceMotion = true;
+            Assert.That(boot.PressHint(), Is.True);
+            while (boot.Flow.HintThinking)
+            {
+                PlayModeHelpers.TickExact(boot, 2);
+                yield return null;
+            }
+
+            Assert.That(fx.OnTarget && fx.SourceRinging && fx.TargetRinging, Is.True);
+            PlayModeHelpers.TickExact(boot, PlayModeHelpers.FrameMs);
+            SnapshotKit.Save(dir, "mo2_07b_rings_reduced_motion_l15");
+            SaveCrop(dir, "mo2_07b_rings_reduced_motion_l15_zoom", fx.TargetRing.rectTransform, 80f, 30f);
+        }
+
+        [UnityTest]
         public IEnumerator CaptureAnswerCards([Values(100, 130)] int percent)
         {
             string dir = SnapshotKit.Prepare();
@@ -108,13 +146,33 @@ namespace AF.Tests.PlayMode
             yield return Load(15, FunnelSetup.Profile(500));
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
-            HintAnswer[] answers = { HintAnswer.NoExit, HintAnswer.NoSafePour, HintAnswer.NotFound };
-            string[] names = { "no_exit", "no_safe_pour_tinaja", "not_found" };
-            for (int i = 0; i < answers.Length; i++)
+            if (percent == 100)
             {
-                view.OnHint(new HintResult(answers[i], default, i == 1, HintSolver.SafeMoves, 2, 0, 0, false, false));
+                // Sin vertidos, Deshacer va gris: una sola captura de ese estado (revisión de MO2).
+                view.OnHint(new HintResult(HintAnswer.NoExit, default, false, HintSolver.SafeMoves, 2, 0, 0, false, false));
                 PlayModeHelpers.Step(boot, 50);
                 yield return SnapshotKit.Wait(0.1f);
+                Assert.That(view.HintAnswerCard.UndoEnabled, Is.False);
+                SnapshotKit.Save(dir, "mo2_08_card_no_exit_disabled_100_l15");
+                SaveCrop(dir, "mo2_08_card_no_exit_disabled_100_l15_zoom", view.HintAnswerCard.Panel, 10f, 10f);
+                view.HintAnswerCard.CloseButton.onClick.Invoke();
+            }
+
+            // El caso real: Morpho responde sin vertido después de jugar, con Deshacer habilitado (relieve azul).
+            var first = MorphoUiTests.OtherLegalPour(boot.Flow!.Session.Current, default);
+            boot.TapCuia(first.Source);
+            boot.TapCuia(first.Target);
+            PlayModeHelpers.StepUntilIdle(boot, 4000);
+            Assert.That(boot.Flow.Session.AppliedPours, Is.EqualTo(1));
+            HintAnswer[] answers = { HintAnswer.NoExit, HintAnswer.NoSafePour, HintAnswer.NoSafePour, HintAnswer.NotFound };
+            bool[] tinaja = { false, false, true, false };
+            string[] names = { "no_exit", "no_safe_pour_cuia", "no_safe_pour_tinaja", "not_found" };
+            for (int i = 0; i < answers.Length; i++)
+            {
+                view.OnHint(new HintResult(answers[i], default, tinaja[i], HintSolver.SafeMoves, 2, 0, 0, false, false));
+                PlayModeHelpers.Step(boot, 50);
+                yield return SnapshotKit.Wait(0.1f);
+                Assert.That(view.HintAnswerCard.UndoEnabled, Is.True, names[i]);
                 string name = "mo2_08_card_" + names[i] + "_" + percent + "_l15";
                 SnapshotKit.Save(dir, name);
                 SaveCrop(dir, name + "_zoom", view.HintAnswerCard.Panel, 10f, 10f);

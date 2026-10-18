@@ -16,7 +16,10 @@ namespace AF.Presentation
     /// ≥ 12,6 (del Huito); su reflejo (<see cref="MorphoLight"/>), a ≥ 15 (del Agua del Tapajós); el cuerpo
     /// (<see cref="MorphoBody"/>), a ≥ 17; y el anillo (<see cref="MorphoRingColor"/>), a ≥ 14 (de la Guanábana). El marfil del
     /// destello (<see cref="Palette.UiPaper"/>) queda a 7 de la Guanábana: solo va en puntos de ≤ 2 dp, la excepción de la
-    /// regla (como el filo de la luciérnaga). Lo comprueba <c>MorphoUiTests</c>.</para>
+    /// regla (como el filo de la luciérnaga). La mariposa que vuela (revisión de MO2) lleva alas más claras,
+    /// <see cref="MorphoFlightBlue"/> (a ≥ 23,6) con el reflejo <see cref="MorphoFlightLight"/> (a ≥ 10,6, del Agua del
+    /// Tapajós), y un halo de 2 dp (<see cref="MorphoHalo"/>, a 8,9 del Copoazú: línea de ≤ 2 dp, la misma excepción). Lo
+    /// comprueba <c>MorphoUiTests</c>.</para>
     /// <para>Pendiente de revisión del asesor cultural (nombra fauna) y del artista 2D, que lo sustituye.</para>
     /// </remarks>
     public sealed partial class ProceduralArt
@@ -48,10 +51,48 @@ namespace AF.Presentation
         /// <summary>Anillo claro con que laten las dos cuias de la pista (#CFE4FF) [P]: aditivo, sobre <see cref="RevealHalo"/>.</summary>
         public static readonly Color MorphoRingColor = Palette.Hex(0xCFE4FF);
 
+        /// <summary>
+        /// Azul iridiscente de las alas de la mariposa que vuela (#2F80ED) [P] (revisión de MO2: más claro que el azul morpho del
+        /// glifo, el de 07 §7.6, para que se siga sobre el panel azul petróleo; D-003, luz de juego).
+        /// </summary>
+        public static readonly Color MorphoFlightBlue = Palette.Hex(0x2F80ED);
+
+        /// <summary>
+        /// Reflejo de las alas en vuelo y color de la estela (#88D8FF) [P] (la revisión de MO2 pedía #7FD3FF, que queda a ΔE00 9,9
+        /// del Agua del Tapajós; este, a 10,6).
+        /// </summary>
+        public static readonly Color MorphoFlightLight = Palette.Hex(0x88D8FF);
+
+        /// <summary>
+        /// Halo claro de 2 dp alrededor de la mariposa en vuelo (#FFF4D6, alfa <see cref="MorphoHaloAlpha"/>) [P] (revisión de
+        /// MO2): queda a ΔE00 8,9 del Copoazú, pero es una línea de ≤ 2 dp, la excepción de la regla 1 (como el destello).
+        /// </summary>
+        public static readonly Color MorphoHalo = Palette.Hex(0xFFF4D6);
+
+        /// <summary>Alfa del halo de la mariposa [P].</summary>
+        public const float MorphoHaloAlpha = 0.85f;
+
+        /// <summary>
+        /// Margen de los sprites de la mariposa en vuelo a cada lado (px a <see cref="MechanicPxPerU"/>): cabe el halo
+        /// (<see cref="MorphoHaloPx"/>) y lo que las alas sobresalen de su caja.
+        /// </summary>
+        public const int MorphoSpritePadPx = 12;
+
+        /// <summary>
+        /// Lo que el halo engorda la silueta (px): ≈ 2 dp con la mariposa de 24-28 dp de envergadura (88 px de alas: 7 px son
+        /// 1,9-2,2 dp).
+        /// </summary>
+        public const float MorphoHaloPx = 7f;
+
+        // Altura de la maza de las antenas del glifo (px, y hacia arriba) [P].
+        private const float AntennaTipY = 87f;
+
         private Sprite? _iconMorpho;
         private Sprite? _iconMorphoDisabled;
         private Sprite? _morphoWings;
         private Sprite? _morphoBody;
+        private Sprite? _morphoWingsHalo;
+        private Sprite? _morphoBodyHalo;
 
         /// <summary>Glifo de Pista · Morpho (32 dp a 3 px/dp): la mariposa azul con su destello sobre dos cuias (07 §7.6).</summary>
         public Sprite IconMorpho => _iconMorpho != null ? _iconMorpho : (_iconMorpho = BuildIconMorpho(false));
@@ -63,10 +104,16 @@ namespace AF.Presentation
         /// Las alas abiertas de la mariposa en vuelo (<see cref="MorphoWingsWidthU"/> × <see cref="MorphoWingsHeightU"/> u), con
         /// la raíz en el centro: el aleteo es la escala horizontal de la imagen.
         /// </summary>
-        public Sprite MorphoWingsSprite => _morphoWings != null ? _morphoWings : (_morphoWings = BuildMorphoWings());
+        public Sprite MorphoWingsSprite => _morphoWings != null ? _morphoWings : (_morphoWings = BuildMorphoWings(false));
 
         /// <summary>Cuerpo, cabeza y antenas (<see cref="MorphoBodyWidthU"/> × <see cref="MorphoBodyHeightU"/> u), cabeza arriba; pivote en el centro.</summary>
-        public Sprite MorphoBodySprite => _morphoBody != null ? _morphoBody : (_morphoBody = BuildMorphoBody());
+        public Sprite MorphoBodySprite => _morphoBody != null ? _morphoBody : (_morphoBody = BuildMorphoBody(false));
+
+        /// <summary>Silueta del halo de las alas (blanca; la tiñe <see cref="MorphoHalo"/>), del tamaño de <see cref="MorphoWingsSprite"/>.</summary>
+        public Sprite MorphoWingsHaloSprite => _morphoWingsHalo != null ? _morphoWingsHalo : (_morphoWingsHalo = BuildMorphoWings(true));
+
+        /// <summary>Silueta del halo del cuerpo (blanca), del tamaño de <see cref="MorphoBodySprite"/>.</summary>
+        public Sprite MorphoBodyHaloSprite => _morphoBodyHalo != null ? _morphoBodyHalo : (_morphoBodyHalo = BuildMorphoBody(true));
 
         // Glifo de 96 × 96 px (y hacia arriba): dos cuias pequeñas abajo, en crema con la sombra de 1 dp del canto de la familia
         // (como «+1 cuia»), y la mariposa encima, con un contorno de tinta de 2,5 dp (07 §7.6: trazo 2,5 dp; la cara de la ranura
@@ -132,56 +179,74 @@ namespace AF.Presentation
                 }
             }
 
+            // Las antenas acaban 3 px más abajo y su contorno engorda menos que el del cuerpo (revisión de MO2): con el contorno
+            // de tinta, la maza llega a y = 87 + 2,4 + 3 = 92,4 px, dentro del lienzo de 96 (antes, 96,9: salía recortada).
             float g = grow * 0.6f;
+            float ga = grow * 0.4f;
             pc.FillCapsule(48f, 44f, 48f, 72f, 3.4f + g, body);
             pc.FillCircle(48f, 75f, 4.2f + g, body);
             for (int s = -1; s <= 1; s += 2)
             {
-                pc.FillCapsule(48f + (s * 1.5f), 78f, 48f + (s * 9f), 90f, 1.3f + g, body);
-                pc.FillCircle(48f + (s * 9f), 90f, 2.4f + g, body);
+                pc.FillCapsule(48f + (s * 1.5f), 78f, 48f + (s * 9f), AntennaTipY, 1.3f + ga, body);
+                pc.FillCircle(48f + (s * 9f), AntennaTipY, 2.4f + ga, body);
             }
         }
 
-        // Alas abiertas a MechanicPxPerU (y hacia arriba): las de arriba, grandes, y las de abajo, con el filo oscuro, el azul,
-        // el reflejo claro hacia la raíz y dos puntos de marfil en las puntas (≤ 2 dp).
-        private Sprite BuildMorphoWings()
+        // Alas abiertas a MechanicPxPerU (y hacia arriba), en un lienzo con MorphoSpritePadPx de margen por lado (para el halo):
+        // las de arriba, grandes, y las de abajo, con el filo oscuro, el azul iridiscente del vuelo, el reflejo claro hacia la
+        // raíz y dos puntos de marfil en las puntas (≤ 2 dp). Con halo, solo la silueta engordada MorphoHaloPx, en blanco (la
+        // imagen la tiñe con MorphoHalo).
+        private Sprite BuildMorphoWings(bool halo)
         {
             int w = Mathf.RoundToInt(MorphoWingsWidthU * MechanicPxPerU);
             int h = Mathf.RoundToInt(MorphoWingsHeightU * MechanicPxPerU);
-            var pc = new PixelCanvas(w, h);
-            float cx = w * 0.5f;
-            float cy = h * 0.5f;
+            int pad = MorphoSpritePadPx;
+            var pc = new PixelCanvas(w + (2 * pad), h + (2 * pad));
+            float cx = (w * 0.5f) + pad;
+            float cy = (h * 0.5f) + pad;
             for (int s = -1; s <= 1; s += 2)
             {
                 float upDeg = 90f - (s * 58f);
                 float lowDeg = 90f + (s * 60f);
+                if (halo)
+                {
+                    FillEllipseRotated(pc, cx + (s * 22f), cy + 9f, 25f + MorphoHaloPx, 15f + MorphoHaloPx, upDeg, Color.white);
+                    FillEllipseRotated(pc, cx + (s * 15f), cy - 14f, 16f + MorphoHaloPx, 11f + MorphoHaloPx, lowDeg, Color.white);
+                    continue;
+                }
+
                 FillEllipseRotated(pc, cx + (s * 22f), cy + 9f, 25f, 15f, upDeg, MorphoDeep);
                 FillEllipseRotated(pc, cx + (s * 15f), cy - 14f, 16f, 11f, lowDeg, MorphoDeep);
-                FillEllipseRotated(pc, cx + (s * 22f), cy + 9.5f, 22f, 12.5f, upDeg, MorphoBlue);
-                FillEllipseRotated(pc, cx + (s * 15f), cy - 13.5f, 13.5f, 8.8f, lowDeg, MorphoBlue);
-                FillEllipseRotated(pc, cx + (s * 17f), cy + 6f, 11f, 6f, upDeg, ColorMath.WithAlpha(MorphoLight, 0.9f));
+                FillEllipseRotated(pc, cx + (s * 22f), cy + 9.5f, 22f, 12.5f, upDeg, MorphoFlightBlue);
+                FillEllipseRotated(pc, cx + (s * 15f), cy - 13.5f, 13.5f, 8.8f, lowDeg, MorphoFlightBlue);
+                FillEllipseRotated(pc, cx + (s * 17f), cy + 6f, 12f, 6.5f, upDeg, MorphoFlightLight);
+                FillEllipseRotated(pc, cx + (s * 12f), cy - 11f, 6f, 3.5f, lowDeg, ColorMath.WithAlpha(MorphoFlightLight, 0.85f));
                 pc.FillCircle(cx + (s * 38f), cy + 26f, 2.2f, Palette.UiPaper);
             }
 
-            return MakeSprite(pc, "morpho_wings", new Vector2(0.5f, 0.5f), Vector4.zero);
+            return MakeSprite(pc, halo ? "morpho_wings_halo" : "morpho_wings", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
 
-        // Cuerpo a MechanicPxPerU (cabeza arriba): abdomen, tórax, cabeza y dos antenas con su maza.
-        private Sprite BuildMorphoBody()
+        // Cuerpo a MechanicPxPerU (cabeza arriba), con el mismo margen: abdomen, tórax, cabeza y dos antenas con su maza. Con halo,
+        // la silueta engordada MorphoHaloPx, en blanco.
+        private Sprite BuildMorphoBody(bool halo)
         {
             int w = Mathf.RoundToInt(MorphoBodyWidthU * MechanicPxPerU);
             int h = Mathf.RoundToInt(MorphoBodyHeightU * MechanicPxPerU);
-            var pc = new PixelCanvas(w, h);
-            float cx = w * 0.5f;
-            pc.FillCapsule(cx, 6f, cx, h * 0.62f, 3.6f, MorphoBody);
-            pc.FillCircle(cx, (h * 0.62f) + 4f, 4.6f, MorphoBody);
+            int pad = MorphoSpritePadPx;
+            var pc = new PixelCanvas(w + (2 * pad), h + (2 * pad));
+            float cx = (w * 0.5f) + pad;
+            float g = halo ? MorphoHaloPx : 0f;
+            Color c = halo ? Color.white : MorphoBody;
+            pc.FillCapsule(cx, pad + 6f, cx, pad + (h * 0.62f), 3.6f + g, c);
+            pc.FillCircle(cx, pad + (h * 0.62f) + 4f, 4.6f + g, c);
             for (int s = -1; s <= 1; s += 2)
             {
-                pc.FillCapsule(cx + (s * 1.5f), (h * 0.62f) + 7f, cx + (s * 8f), h - 4f, 1.2f, MorphoBody);
-                pc.FillCircle(cx + (s * 8f), h - 4f, 2.2f, MorphoBody);
+                pc.FillCapsule(cx + (s * 1.5f), pad + (h * 0.62f) + 7f, cx + (s * 8f), pad + h - 4f, 1.2f + g, c);
+                pc.FillCircle(cx + (s * 8f), pad + h - 4f, 2.2f + g, c);
             }
 
-            return MakeSprite(pc, "morpho_body", new Vector2(0.5f, 0.5f), Vector4.zero);
+            return MakeSprite(pc, halo ? "morpho_body_halo" : "morpho_body", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
     }
 }

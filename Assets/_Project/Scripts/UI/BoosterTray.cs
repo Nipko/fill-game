@@ -47,7 +47,7 @@ namespace AF.UI
     /// nada, el precio en rojo con «Te faltan {n}», que late al tocarla (<see cref="PulseHintMissing"/>). Pulsada mientras
     /// Morpho piensa; gris sin vertido legal, fuera de PLAYING o en el enfriamiento; gris en un nivel sin
     /// <c>hint_supported</c>, y entonces tocarla enseña el globo «La morpho no conoce este tramo todavía»
-    /// (<see cref="ShowHintTooltip"/>; 04 §2.3 b). La acción la pone la pantalla (<c>GameScreen.Hint.cs</c>);</description></item>
+    /// (<see cref="ShowHintTooltip"/>; 04 §2.3 b). La acción la pone la pantalla (<c>GameScreen.Morpho.cs</c>);</description></item>
     /// <item><description>[Revelar · Luciérnaga] (tarea T14) solo en los niveles de Aguas turbias mientras quede alguna dosis
     /// oculta, siempre la última a la derecha, detrás de Pista (pregunta 29; D-020): «+N» con stock; sin stock, el precio (120, <c>reveal_seed_price</c>) y, sin
     /// saldo, en rojo con «Te faltan {n}»; sin stock ni saldo y con <c>rv_reveal</c>, «+1» con el icono de video
@@ -162,13 +162,24 @@ namespace AF.UI
         /// <summary>
         /// Separación entre ranuras de la bandeja apretada (dp) [P] (tarea MO2, con la 4.ª ranura; L4): cuando la palabra más
         /// larga de una etiqueta no cabe entera en la ranura más ancha que deja la pantalla con la separación de siempre (8 dp),
-        /// la bandeja aprieta sus separaciones antes que partir una palabra (02 §12: nada se recorta). Pasa en es-419 con la
-        /// fuente al 130 % a 360 dp de ancho: «Deshacer» mide 68,7 dp y con 4 ranuras quedaban 72 dp por ranura.
+        /// la bandeja aprieta sus separaciones antes que partir una palabra (02 §12: nada se recorta; D-020, pregunta 36 (a): la
+        /// letra no baja de 12 sp × escala). Pasa en es-419 con la fuente al 130 % a 360 dp de ancho: «Deshacer» mide 68,7 dp y
+        /// con 4 ranuras quedaban 72 dp por ranura. Es la mitad de los 8 dp entre objetivos táctiles de la guía 3.6: pendiente
+        /// del dueño (revisión de MO2), con la opción recomendada aplicada.
         /// </summary>
         public const float CompactGapDp = 4f;
 
         /// <summary>Margen de la bandeja apretada a cada lado de las ranuras (dp) [P] (<see cref="CompactGapDp"/>).</summary>
         public const float CompactPadDp = 8f;
+
+        /// <summary>
+        /// Aire a cada lado de la etiqueta cuando la palabra más larga no cabe ni en la bandeja apretada con el aire de la ranura
+        /// de 64 dp (<see cref="LabelNarrowInsetDp"/>) (dp) [P] (revisión de MO2): en en-XA con la fuente al 130 % a 360 dp,
+        /// «[Déshácér» mide 74,6 dp y la ranura apretada, 79 (71 por dentro con 4 dp por lado; 75 con este). Antes de partir una
+        /// palabra (02 §12) se estrecha el aire, no la letra (D-020, pregunta 36 (a)). Pendiente del dueño junto con
+        /// <see cref="CompactGapDp"/>.
+        /// </summary>
+        public const float LabelTightInsetDp = 2f;
 
         private const float GapDp = 8f;
         private const float PadDp = 16f;
@@ -328,6 +339,9 @@ namespace AF.UI
         /// <summary>Aviso «Te faltan {n}» de Pista (tests de solapes).</summary>
         public RectTransform HintMissingRect => _hint.MissingRect;
 
+        /// <summary>Texto del aviso «Te faltan {n}» de Pista (tests de tamaño y desbordes: 12 sp × escala).</summary>
+        public TextMeshProUGUI HintMissingLabel => _hint.MissingLabel;
+
         /// <summary>Etiqueta de precio de Pista (tests de solapes).</summary>
         public RectTransform HintPriceRect => _hint.PriceRect;
 
@@ -385,7 +399,7 @@ namespace AF.UI
         /// <summary>
         /// Aire de ahora a cada lado de la etiqueta de una ranura ensanchada (dp): <see cref="LabelSideInsetDp"/>, o
         /// <see cref="LabelNarrowInsetDp"/>, el de la ranura de 64 dp, si ni apretada cabe la palabra más larga con el de
-        /// siempre (tests).
+        /// siempre, o <see cref="LabelTightInsetDp"/> si ni con ese (tests).
         /// </summary>
         public float LabelInsetNowDp => _wideInset;
 
@@ -610,7 +624,7 @@ namespace AF.UI
             return _hint.PulseMissing(missing, reduceMotion);
         }
 
-        /// <summary>Acción del botón Pista (la pone <c>GameScreen.Hint.cs</c>: <c>IGameActions.PressHint</c>).</summary>
+        /// <summary>Acción del botón Pista (la pone <c>GameScreen.Morpho.cs</c>: <c>IGameActions.PressHint</c>).</summary>
         public void SetHintAction(Action onHint)
         {
             _onHint = onHint ?? throw new ArgumentNullException(nameof(onHint));
@@ -905,7 +919,8 @@ namespace AF.UI
             }
 
             // Si la palabra más larga no cabe entera ni en la ranura más ancha (la etiqueta iría en dos líneas partiendo esa
-            // palabra), la bandeja se aprieta (MO2) y, si ni así, el aire de la etiqueta es el de la ranura de 64 dp.
+            // palabra), la bandeja se aprieta (MO2) y, si ni así, el aire de la etiqueta es el de la ranura de 64 dp y, si ni
+            // con ese, LabelTightInsetDp (revisión de MO2).
             float cap = CapFor(canvasW, _pad, _gap);
             if (word + (2f * LabelSideInsetDp) > cap)
             {
@@ -914,7 +929,7 @@ namespace AF.UI
                 cap = CapFor(canvasW, _pad, _gap);
                 if (word + (2f * LabelSideInsetDp) > cap)
                 {
-                    _wideInset = LabelNarrowInsetDp;
+                    _wideInset = word + (2f * LabelNarrowInsetDp) > cap ? LabelTightInsetDp : LabelNarrowInsetDp;
                 }
             }
 

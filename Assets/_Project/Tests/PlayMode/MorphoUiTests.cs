@@ -157,14 +157,27 @@ namespace AF.Tests.PlayMode
             Assert.That(fx.Target, Is.EqualTo(hint.Target));
             Assert.That(fx.SourceRinging || fx.TargetRinging, Is.False, "aún en vuelo");
 
-            // 0,4 s: se posa en el origen, que late con su anillo.
-            PlayModeHelpers.TickExact(boot, (int)MorphoFx.FlightMs + 4);
+            // Revisión de MO2: despega con la envergadura del glifo de la ranura (28 dp), con su halo claro.
+            Assert.That(fx.ButterflySpanDp, Is.EqualTo(MorphoFx.TakeoffSpanDp).Within(0.5f), "despega con la envergadura del glifo");
+            PlayModeHelpers.TickExact(boot, 100);
+            Assert.That(fx.WingsHalo.color.a, Is.GreaterThan(0.5f), "halo claro");
+            Assert.That(fx.ButterflySpanDp, Is.InRange(MorphoFx.PerchSpanDp, MorphoFx.TakeoffSpanDp), "baja de 28 a 24 dp en el vuelo");
+
+            // 0,4 s: se posa en el origen, que late con su anillo; la estela del vuelo se ve aún (6-8 puntos que se apagan).
+            PlayModeHelpers.TickExact(boot, (int)MorphoFx.FlightMs - 100 + 4);
             Assert.That(fx.Flying, Is.False);
             Assert.That(fx.SourceRinging, Is.True, "el origen late");
             Assert.That(fx.TargetRinging, Is.False);
+            Assert.That(fx.ButterflySpanDp, Is.EqualTo(MorphoFx.PerchSpanDp).Within(0.01f), "posada, 24 dp");
+            Assert.That(fx.TrailVisible, Is.InRange(6, MorphoFx.TrailCount), "la estela del vuelo");
+            Assert.That(fx.TrailNewestAlpha, Is.InRange(0.5f, MorphoFx.TrailAlpha + 0.001f), "el punto más nuevo, casi a 0,8");
 
-            // Salta al destino con su estela; las dos cuias laten.
-            PlayModeHelpers.TickExact(boot, (int)(MorphoFx.PerchMs + MorphoFx.HopMs) + 8);
+            // Salta al destino con su estela; las dos cuias laten. La mariposa nunca baja de 22 dp.
+            PlayModeHelpers.TickExact(boot, (int)(MorphoFx.PerchMs + (MorphoFx.HopMs * 0.9f)));
+            Assert.That(fx.Hopping, Is.True);
+            Assert.That(fx.TrailVisible, Is.InRange(6, MorphoFx.TrailCount), "la estela del salto");
+            Assert.That(fx.ButterflySpanDp, Is.GreaterThanOrEqualTo(MorphoFx.MinSpanDp));
+            PlayModeHelpers.TickExact(boot, (int)(MorphoFx.HopMs * 0.1f) + 8);
             Assert.That(fx.OnTarget && fx.SourceRinging && fx.TargetRinging, Is.True, "las dos laten");
             Assert.That(fx.SparklesRequested, Is.GreaterThan(0), "estela de destellos azules");
 
@@ -300,7 +313,7 @@ namespace AF.Tests.PlayMode
                 HintAnswerCard card = view.HintAnswerCard;
                 Assert.That(card.Visible, Is.True, "«No encuentro un camino desde aquí» (03 §5)");
                 Assert.That(card.Answer, Is.EqualTo(HintAnswer.NotFound));
-                Assert.That(card.Text, Is.EqualTo("No encuentro un camino desde aquí"));
+                Assert.That(card.Text, Is.EqualTo("No encuentro un\u00A0camino desde aquí"));
                 Assert.That(boot.Wallet!.Seeds, Is.EqualTo(500), "no cobra");
                 Assert.That(card.UndoEnabled, Is.True);
                 string line = layout.RequireLast("hint_answer", Level, "tarjeta de Morpho");
@@ -349,10 +362,11 @@ namespace AF.Tests.PlayMode
             HintAnswerCard card = view.HintAnswerCard;
             HintAnswer[] answers = { HintAnswer.NoExit, HintAnswer.NoSafePour, HintAnswer.NoSafePour, HintAnswer.NotFound };
             bool[] tinaja = { false, false, true, false };
+            // Con el salto tras los dos puntos y los espacios duros tras los artículos de la tabla (revisión de MO2).
             string[] texts =
             {
-                "Desde aquí no hay salida: la Marea o la orilla", "No veo un vertido seguro: la luciérnaga ilumina una cuia",
-                "No veo un vertido seguro: la luciérnaga ilumina la tinaja", "No encuentro un camino desde aquí",
+                "Desde aquí no hay salida:\nla\u00A0Marea o\u00A0la\u00A0orilla", "No veo un\u00A0vertido seguro:\nla\u00A0luciérnaga ilumina una\u00A0cuia",
+                "No veo un\u00A0vertido seguro:\nla\u00A0luciérnaga ilumina la\u00A0tinaja", "No encuentro un\u00A0camino desde aquí",
             };
             for (int i = 0; i < answers.Length; i++)
             {
@@ -378,7 +392,30 @@ namespace AF.Tests.PlayMode
                     Assert.That(panel.Contains(r.min - new Vector2(-0.5f, -0.5f)) && panel.Contains(r.max - new Vector2(0.5f, 0.5f)), Is.True, what + ": dentro de la tarjeta " + r);
                 }
 
+                Rect disc = VictorySetup.CanvasRect(card.IconDisc, root);
+                Assert.That(panel.Contains(disc.min + new Vector2(0.5f, 0.5f)) && panel.Contains(disc.max - new Vector2(0.5f, 0.5f)), Is.True, what + ": el disco, dentro de la tarjeta " + disc);
+                Assert.That(disc.center.x, Is.EqualTo(panel.center.x).Within(0.5f), what + ": el disco, centrado sobre la frase");
                 Assert.That(body.Overlaps(close) || body.Overlaps(undo) || body.Overlaps(restart) || undo.Overlaps(restart) || close.Overlaps(undo), Is.False, what + ": sin solapes");
+                Assert.That(disc.Overlaps(close) || disc.Overlaps(body), Is.False, what + ": el disco no pisa la X ni la frase");
+
+                // Margen de la frase (revisión de MO2: ≥ 20 dp hasta el canto de la tarjeta) y cortes cuidados: con dos puntos,
+                // la primera línea acaba en ellos; ninguna línea, salvo la última, acaba en un artículo o una preposición de 1-2
+                // letras (los espacios duros de la tabla).
+                Rect ink = InkOf(card.Body, root);
+                Assert.That(ink.xMin - panel.xMin, Is.GreaterThanOrEqualTo(20f - 0.5f), what + ": margen izquierdo de la frase");
+                Assert.That(panel.xMax - ink.xMax, Is.GreaterThanOrEqualTo(20f - 0.5f), what + ": margen derecho de la frase");
+                string[] lines = Lines(card.Body);
+                Assert.That(lines.Length, Is.InRange(1, 2), what + ": líneas «" + string.Join(" / ", lines) + "»");
+                if (texts[i].IndexOf(':') >= 0)
+                {
+                    Assert.That(lines.Length == 2 && lines[0].EndsWith(":", StringComparison.Ordinal), Is.True, what + ": corta tras los dos puntos «" + string.Join(" / ", lines) + "»");
+                }
+
+                for (int l = 0; l < lines.Length - 1; l++)
+                {
+                    string[] words = lines[l].Split(' ', '\u00A0');
+                    Assert.That(words[words.Length - 1].Length, Is.GreaterThan(2), what + ": la línea «" + lines[l] + "» acaba en una palabra corta");
+                }
                 Assert.That(undo.height >= 48f - 0.01f && restart.height >= 48f - 0.01f && close.height >= 48f - 0.01f, Is.True, what + ": botones de 48 dp o más (07 §7.8)");
             }
         }
@@ -422,10 +459,13 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator MissingNotices_OfFourSlots_At12sp_WithoutOverlaps()
+        public IEnumerator MissingNotices_OfFourSlots_At12sp_WithoutOverlaps([Values(100, 130)] int percent)
         {
             // 106 con 50 semillas y sin video: Cuia extra (150), Pista (100) y Revelar (120) enseñan su «Te faltan {n}» a la vez,
-            // estrechos, cada uno sobre su ranura y sin pisarse.
+            // estrechos, cada uno sobre su ranura y sin pisarse; los tres a 12 sp (× escala: 02 §12; D-020, pregunta 36 (a)) y
+            // enteros, también el de Pista, el nuevo de MO2.
+            float scale = percent / 100f;
+            LaunchOptions.FontScaleOverride = scale;
             GameScreen.SimulatedScreen = HudLabelTests.Screen780;
             LaunchOptions.AdFillOverride = FakeAdFill.NoFill;
             yield return LoadPlaying(106, FunnelSetup.Profile(50));
@@ -442,9 +482,15 @@ namespace AF.Tests.PlayMode
             Rect slot = VictorySetup.CanvasRect((RectTransform)tray.HintButton.transform, root);
             Assert.That(hint.center.x, Is.EqualTo(slot.center.x).Within(0.5f), "sobre su ranura");
             Assert.That(hint.yMax, Is.LessThanOrEqualTo(slot.yMin + 0.5f));
-            foreach (TextMeshProUGUI label in new[] { tray.ExtraMissingLabel, tray.RevealMissingLabel })
+            Canvas.ForceUpdateCanvases();
+            string[] names = { "Cuia extra", "Pista", "Revelar" };
+            TextMeshProUGUI[] labels = { tray.ExtraMissingLabel, tray.HintMissingLabel, tray.RevealMissingLabel };
+            for (int i = 0; i < labels.Length; i++)
             {
-                Assert.That(label.fontSize, Is.EqualTo(12f).Within(0.01f), "12 sp (02 §12)");
+                TextMeshProUGUI label = labels[i];
+                label.ForceMeshUpdate(true, true);
+                Assert.That(label.fontSize, Is.EqualTo(12f * scale).Within(0.01f), names[i] + ": 12 sp × escala (02 §12)");
+                Assert.That(new LocInventory(Loc.Locale, scale).ProblemsOf(label), Is.Empty, names[i] + ": «" + label.text + "» cabe en su placa");
             }
         }
 
@@ -455,6 +501,7 @@ namespace AF.Tests.PlayMode
             Color[] surfaces =
             {
                 ProceduralArt.MorphoBlue, ProceduralArt.MorphoDeep, ProceduralArt.MorphoLight, ProceduralArt.MorphoBody, ProceduralArt.MorphoRingColor,
+                ProceduralArt.MorphoFlightBlue, ProceduralArt.MorphoFlightLight,
             };
             for (int c = 0; c < surfaces.Length; c++)
             {
@@ -465,6 +512,36 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(ColorMath.DeltaE00(ProceduralArt.MorphoBlue, Palette.Hex(0x2F6FD6)), Is.LessThan(0.01f), "el azul morpho de 07 §7.6");
+        }
+
+        // Las líneas que pinta TextMeshPro (con ForceMeshUpdate hecho), sin los espacios del corte.
+        private static string[] Lines(TextMeshProUGUI text)
+        {
+            TMP_TextInfo info = text.textInfo;
+            var lines = new string[info.lineCount];
+            for (int l = 0; l < info.lineCount; l++)
+            {
+                TMP_LineInfo line = info.lineInfo[l];
+                var chars = new char[Math.Max(0, line.lastCharacterIndex - line.firstCharacterIndex + 1)];
+                for (int c = 0; c < chars.Length; c++)
+                {
+                    chars[c] = info.characterInfo[line.firstCharacterIndex + c].character;
+                }
+
+                lines[l] = new string(chars).Trim(' ', '\n', '\u00A0');
+            }
+
+            return lines;
+        }
+
+        // La caja de la tinta de un texto (los glifos visibles) en el lienzo de root.
+        private static Rect InkOf(TextMeshProUGUI text, RectTransform root)
+        {
+            Bounds b = text.textBounds;
+            Vector3 min = root.InverseTransformPoint(text.rectTransform.TransformPoint(b.min));
+            Vector3 max = root.InverseTransformPoint(text.rectTransform.TransformPoint(b.max));
+            Rect r = root.rect;
+            return Rect.MinMaxRect(min.x - r.xMin, r.yMax - max.y, max.x - r.xMin, r.yMax - min.y);
         }
 
         // n ranuras de 64 dp en el orden dado, con 8 dp entre ellas, y la bandeja (16 + n·64 + (n − 1)·8 + 16) centrada.
@@ -557,7 +634,7 @@ namespace AF.Tests.PlayMode
         }
 
         // Un vertido legal distinto de skip (el primero en orden de origen y destino).
-        private static Pour OtherLegalPour(BoardState board, Pour skip)
+        internal static Pour OtherLegalPour(BoardState board, Pour skip)
         {
             for (int s = 0; s < board.Count; s++)
             {

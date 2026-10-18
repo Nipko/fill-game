@@ -24,6 +24,8 @@ namespace AF.UI
     /// </list>
     /// Sin asignaciones por fotograma: las imágenes se crean una vez y los sprites de la mariposa, al cargar un nivel con la ranura
     /// (<see cref="MorphoFx.Prewarm"/>); la sonda (<c>DevProbe.Event("hint", …)</c>) solo escribe en desarrollo, en las respuestas.
+    /// Se llama GameScreen.Morpho.cs (revisión de MO2): <c>GameScreen.Hint.cs</c> queda libre para la pista por inactividad de
+    /// MO3, que lo crea como archivo nuevo.
     /// </summary>
     public sealed partial class GameScreen : IHintListener
     {
@@ -114,7 +116,7 @@ namespace AF.UI
         partial void HintBuild()
         {
             _tray.SetHintAction(() => _actions.PressHint());
-            _morphoFx = new MorphoFx(_mechanicFrontLayer, _art, _fx);
+            _morphoFx = new MorphoFx(_mechanicFrontLayer, _art);
             _hintCard = new HintAnswerCard(_root, _art, OnHintCardUndo, OnHintCardRestart, OnHintCardClose);
         }
 

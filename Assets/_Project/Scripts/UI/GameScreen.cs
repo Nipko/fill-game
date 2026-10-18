@@ -46,7 +46,7 @@ namespace AF.UI
     /// nada. Los del Mapa del río y de la victoria (arquitectura de la tanda 4, §2; tarea M1.3b): <c>Stop*</c> (fondo por
     /// parada, GameScreen.Stop.cs), <c>Arrival*</c> (llegada, GameScreen.Arrival.cs), <c>Slot*</c> (ranura del Dato del río) y
     /// <c>Sloth*</c> (TiTino en la victoria), estos dos en GameScreen.Victory.cs. Los de Morpho · Pista (tarea MO2):
-    /// <c>Hint*</c> (GameScreen.Hint.cs).</para>
+    /// <c>Hint*</c> (GameScreen.Morpho.cs).</para>
     /// </remarks>
     public sealed partial class GameScreen : ILevelFlowListener
     {
@@ -3228,7 +3228,7 @@ namespace AF.UI
         // Luciérnaga: botones visibles para AF_LAYOUT (EmitLevelLayout, antes de emitir).
         partial void RevealLayoutIds(List<string> ids, List<RectTransform> rects);
 
-        // Morpho · Pista (GameScreen.Hint.cs; tarea MO2): al final del constructor, después de RevealBuild.
+        // Morpho · Pista (GameScreen.Morpho.cs; tarea MO2): al final del constructor, después de RevealBuild.
         partial void HintBuild();
 
         // Morpho: al final de LayoutHud, tras RevealLayout.
