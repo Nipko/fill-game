@@ -9,6 +9,7 @@ using AF.Presentation;
 using AF.Save;
 using AF.UI;
 using NUnit.Framework;
+using TMPro;
 using UnityEngine;
 using UnityEngine.TestTools;
 using UnityEngine.UI;
@@ -23,8 +24,9 @@ namespace AF.Tests.PlayMode
     /// <item>al cargar el 12 por primera vez se acreditan 3 Morphos (la insignia de la ranura, «+3») antes de la intro, una
     /// sola vez: ni Volver a la orilla ni reabrir la app los repiten (marca <c>m</c> de <c>level_state</c>);</item>
     /// <item>la presentación sale con el mecanismo de TU1a: tras la intro y cuando la tropa ya se fue, nunca antes (el orden de
-    /// la intro, intacto), en la tarjeta de TiTino con su retrato y <c>sloth_present</c>, y con la cola en el eje del botón Pista
-    /// cuando va sobre el muelle [P]; sin tapar cuias, bandeja ni HUD, a 640 y 780 dp, al 100 y al 130 %, y sin capturar toques:
+    /// la intro, intacto), en la tarjeta de TiTino con su retrato y <c>sloth_present</c>, en el sitio de 02 §13 y D-016 (T5-B):
+    /// sobre la franja del panorama si mide ≥ 64 dp y, si no, sobre el muelle, con la cola en el eje del botón Pista [P]; si no
+    /// cabe en una línea, corta tras «¿Atascado?»; sin tapar cuias, bandeja ni HUD, a 640 y 780 dp, al 100 y al 130 %, y sin capturar toques:
     /// con ella a la vista, Pista gasta el primer Morpho del regalo;</item>
     /// <item>sin la ranura Pista (si Remote Config moviera <c>hint_unlock_level</c>), el 12 no la enseña.</item>
     /// </list>
@@ -61,7 +63,7 @@ namespace AF.Tests.PlayMode
             SlothNoticeCard card = TutorialSlothTests.WaitForInstruction(boot, "el 12");
             Assert.That(TutorialInstruction.KeyFor(Level), Is.EqualTo(TutorialInstruction.MorphoKey));
             Assert.That(card.Text, Is.EqualTo(Loc.T(TutorialInstruction.MorphoKey)), "«¿Atascado? La morpho conoce el río» (04 §2.3)");
-            Assert.That(card.Text, Is.EqualTo("¿Atascado? La morpho conoce el río"), "texto canon de 04 §2.3 y 06 §2.2 en es-419");
+            Assert.That(card.Text, Is.EqualTo(CanonText), "texto canon de 04 §2.3 y 06 §2.2 en es-419, con sus espacios duros");
             Assert.That(card.Pose, Is.EqualTo(SlothPoseId.Present), "sloth_present");
             Assert.That(card.Portrait.sprite, Is.Not.Null, "su retrato");
             Assert.That(card.Lines, Is.InRange(1, SlothNoticeCard.MaxLines), "≤ 2 líneas (02 §13)");
@@ -75,12 +77,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Sighting.Visible || view.SightingPending, Is.False, "sin tarjeta del miquito");
             Assert.That(view.StopLabelView.Visible, Is.False, "sin rótulo del lugar");
             LogPlace(view, card, "el 12 a 780 al 100 %");
-            Assert.That(view.TutorialSlothOnDock, Is.True, "junto a la bandeja: sobre el muelle, si cabe (cabe en el 12 a 780 dp)");
-            Assert.That(view.TutorialPointsAtHint, Is.True, "TiTino presenta el botón (04 §2.3): la cola, en el eje de Pista");
-            Assert.That(view.LastTutorialProbe, Does.Contain("\"over_hint\":true"));
-            Assert.That(card.TailVisible, Is.True, "con la cola");
-            AssertHintTail(view, "el 12");
-            TutorialSlothTests.AssertDockAir(view, "el 12");
+            AssertPlace(view, card, "el 12 a 780 al 100 %");
             AssertClear(view, "el 12");
 
             // Se va sola tras su tiempo de lectura: no se queda fija.
@@ -211,17 +208,8 @@ namespace AF.Tests.PlayMode
                     GameScreen view = boot.View!;
                     SlothNoticeCard card = TutorialSlothTests.WaitForInstruction(boot, at);
                     LogPlace(view, card, at);
-                    if (view.TutorialSlothOnDock)
-                    {
-                        TutorialSlothTests.AssertDockAir(view, at);
-                    }
-
-                    if (card.TailVisible)
-                    {
-                        Assert.That(view.TutorialPointsAtHint, Is.True, at + ": la cola señala Pista");
-                        AssertHintTail(view, at);
-                    }
-
+                    AssertPlace(view, card, at);
+                    AssertBreakAfterTheQuestion(card, at);
                     Assert.That(card.Label.fontSize, Is.GreaterThanOrEqualTo((UiBuilder.MinTextSp * scale) - 0.01f), at + ": nunca menos de 12 sp");
                     Assert.That(card.Lines, Is.InRange(1, SlothNoticeCard.MaxLines), at);
                     var graphics = new List<Graphic>();
@@ -238,6 +226,46 @@ namespace AF.Tests.PlayMode
                     }
 
                     LaunchOptions.Reset();
+                    TutorialSlothTests.Hooks();
+                }
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator OnTheDock_WhenTheBandIsUnder64dp_TheTailPointsAtTheHintButton()
+        {
+            // La otra rama de 02 §13 y D-016 (T5-B), con la franja forzada por debajo de 64 dp (TutorialBandOverrideDp): sobre el
+            // muelle, pegada a la bandeja y con la cola en el eje del botón Pista, a 640 y 780 dp, al 100 y al 130 %.
+            foreach (bool small in new[] { false, true })
+            {
+                foreach (float scale in new[] { 1f, 1.3f })
+                {
+                    string at = "el 12 a " + (small ? "640" : "780") + " al " + (scale > 1.01f ? "130" : "100") + " % con la franja a 40 dp";
+                    GameScreen.SimulatedScreen = small ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
+                    LaunchOptions.FontScaleOverride = scale;
+                    GameScreen.TutorialBandOverrideDp = 40f;
+                    yield return Load(new MemoryProfileStore(FunnelSetup.Profile(500)));
+                    GameBootstrap boot = GameBootstrap.Current!;
+                    GameScreen view = boot.View!;
+                    SlothNoticeCard card = TutorialSlothTests.WaitForInstruction(boot, at);
+                    LogPlace(view, card, at);
+                    Assert.That(view.TutorialSlothOnDock, Is.True, at + ": franja < 64 dp, sobre el muelle");
+                    Assert.That(view.LastTutorialProbe, Does.Contain("\"mode\":\"dock\""), at);
+                    Assert.That(card.TailVisible, Is.True, at + ": con la cola");
+                    Assert.That(view.TutorialPointsAtHint, Is.True, at + ": TiTino presenta el botón (04 §2.3): la cola, en el eje de Pista");
+                    Assert.That(view.TutorialPointsAtUndo, Is.False, at + ": señala Pista, no Marea");
+                    Assert.That(view.LastTutorialProbe, Does.Contain("\"over_hint\":true"), at);
+                    AssertHintTail(view, at);
+                    TutorialSlothTests.AssertDockAir(view, at);
+                    TutorialSlothTests.AssertPostUnder(view, at);
+                    for (int t = 0; t < 1000; t += PlayModeHelpers.FrameMs)
+                    {
+                        AssertClear(view, at + " a los " + t + " ms");
+                        PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                    }
+
+                    LaunchOptions.Reset();
+                    GameScreen.TutorialBandOverrideDp = null;
                     TutorialSlothTests.Hooks();
                 }
             }
@@ -269,6 +297,62 @@ namespace AF.Tests.PlayMode
         }
 
         // ------------------------------------------------------------------------------------------- utilidades
+
+        /// <summary>
+        /// «¿Atascado? La morpho conoce el río» (04 §2.3 y 06 §2.2) tal como está en <c>strings.csv</c>: con espacios duros (U+00A0)
+        /// entre las palabras de la segunda frase, para que, si no cabe en una línea, corte solo tras «¿Atascado?» (revisión de TU1b).
+        /// </summary>
+        internal const string CanonText = "¿Atascado? La morpho conoce el río";
+
+        /// <summary>
+        /// El sitio de 02 §13 y D-016 (T5-B), sin la excepción del 3 (04 §2.3 dice que TiTino «presenta» el botón): sobre la franja
+        /// del panorama si mide ≥ 64 dp (y su alto + aire), sin cola y dentro de la franja; si no, sobre el muelle, con su aire y, si
+        /// lleva cola, en el eje del botón Pista.
+        /// </summary>
+        internal static void AssertPlace(GameScreen view, SlothNoticeCard card, string at)
+        {
+            float band = view.Layout!.PanelY - view.HudBottomDp;
+            bool bandFits = band >= Mathf.Max(GameScreen.SightingBandDp, card.Height + GameScreen.SightingBandAirDp);
+            TestContext.WriteLine("AF_TUTORIAL " + at + ": franja de " + SlothFailTests.F(band) + " dp");
+            if (bandFits)
+            {
+                Assert.That(view.TutorialSlothOnDock, Is.False, at + ": franja ≥ 64 dp, sobre el panorama (02 §13)");
+                Assert.That(view.LastTutorialProbe, Does.Contain("\"mode\":\"band\""), at);
+                Assert.That(card.TailVisible, Is.False, at + ": sin cola sobre el panorama");
+                Assert.That(view.TutorialPointsAtHint, Is.False, at);
+                Assert.That(view.LastTutorialProbe, Does.Contain("\"over_hint\":false"), at);
+                Rect r = VictorySetup.CanvasRect(card.Root, view.NoticeLayer);
+                Assert.That(r.yMin, Is.GreaterThanOrEqualTo(view.HudBottomDp - 0.5f), at + ": bajo el HUD");
+                Assert.That(r.yMax, Is.LessThanOrEqualTo(view.Layout.PanelY + 0.5f), at + ": dentro de la franja, sobre el marco del tablero");
+                return;
+            }
+
+            Assert.That(view.TutorialSlothOnDock, Is.True, at + ": franja < 64 dp, sobre el muelle");
+            Assert.That(view.LastTutorialProbe, Does.Contain("\"mode\":\"dock\""), at);
+            TutorialSlothTests.AssertDockAir(view, at);
+            if (card.TailVisible)
+            {
+                Assert.That(view.TutorialPointsAtHint, Is.True, at + ": la cola señala Pista");
+                AssertHintTail(view, at);
+            }
+        }
+
+        /// <summary>En dos líneas, la primera es «¿Atascado?»: nunca deja «La» al final de la línea, lejos de «morpho».</summary>
+        internal static void AssertBreakAfterTheQuestion(SlothNoticeCard card, string at)
+        {
+            TextMeshProUGUI label = card.Label;
+            label.ForceMeshUpdate(true, true);
+            TMP_TextInfo info = label.textInfo;
+            if (info.lineCount < 2)
+            {
+                return;
+            }
+
+            TMP_LineInfo first = info.lineInfo[0];
+            string line = label.text.Substring(first.firstCharacterIndex, first.lastVisibleCharacterIndex - first.firstCharacterIndex + 1);
+            TestContext.WriteLine("AF_TUTORIAL " + at + ": primera línea «" + line + "»");
+            Assert.That(line, Is.EqualTo("¿Atascado?"), at + ": corta tras «¿Atascado?»");
+        }
 
         /// <summary>El 12 en su primer intento (max_level 11), con el perfil de <paramref name="store"/>, sin reloj y con la intro saltada.</summary>
         internal static IEnumerator Load(MemoryProfileStore store)
@@ -343,9 +427,9 @@ namespace AF.Tests.PlayMode
 
     /// <summary>
     /// Capturas de la presentación de Morpho en el 12 (tarea TU1b; 04 §2.3; 02 §13), en <c>Logs/snapshots/es-419/</c>:
-    /// <c>tu1b_l12_{640|780}_{100|130}</c>, con TiTino sobre el muelle y su cola sobre el botón Pista (insignia «+3»): con cola,
-    /// el muelle gana a la franja del panorama aunque mida ≥ 64 dp (como el tooltip de Marea del 3), así que no hace falta forzar
-    /// la franja. Cada captura comprueba los solapes y escribe una línea <c>AF_TUTORIAL</c>. Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter
+    /// <c>tu1b_l12_{640|780}_{100|130}</c>, con TiTino en el sitio de 02 §13 y D-016 (T5-B; la franja del panorama si mide ≥ 64
+    /// dp y, si no, el muelle), y <c>tu1b_l12_dock_{640|780}_{100|130}</c>, con la franja forzada por debajo de 64 dp: sobre el
+    /// muelle, con su cola sobre el botón Pista (insignia «+3»). Cada captura comprueba los solapes y escribe una línea <c>AF_TUTORIAL</c>. Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.TutorialMorphoSnapshotTests</c> sin <c>-nographics</c>).
     /// </summary>
     [Explicit("Capturas de la presentación de Morpho en el 12 (TU1b); necesitan dispositivo gráfico.")]
@@ -375,16 +459,24 @@ namespace AF.Tests.PlayMode
             {
                 foreach (float scale in new[] { 1f, 1.3f })
                 {
+                    string suffix = (small ? "640" : "780") + "_" + (scale > 1.01f ? "130" : "100");
                     string dir = Prepare(small, scale);
                     yield return TutorialMorphoTests.Load(new MemoryProfileStore(FunnelSetup.Profile(500)));
-                    yield return Capture(GameBootstrap.Current!, dir,
-                        "tu1b_l12_" + (small ? "640" : "780") + "_" + (scale > 1.01f ? "130" : "100"));
+                    yield return Capture(GameBootstrap.Current!, dir, "tu1b_l12_" + suffix, false);
+                    Release();
+
+                    // La otra rama de 02 §13, con la franja forzada por debajo de 64 dp: sobre el muelle, con la cola sobre Pista.
+                    dir = Prepare(small, scale);
+                    GameScreen.TutorialBandOverrideDp = 40f;
+                    yield return TutorialMorphoTests.Load(new MemoryProfileStore(FunnelSetup.Profile(500)));
+                    yield return Capture(GameBootstrap.Current!, dir, "tu1b_l12_dock_" + suffix, true);
+                    GameScreen.TutorialBandOverrideDp = null;
                     Release();
                 }
             }
         }
 
-        private static IEnumerator Capture(GameBootstrap boot, string dir, string name)
+        private static IEnumerator Capture(GameBootstrap boot, string dir, string name, bool forcedDock)
         {
             GameScreen view = boot.View!;
             SlothNoticeCard card = TutorialSlothTests.WaitForInstruction(boot, name);
@@ -393,15 +485,21 @@ namespace AF.Tests.PlayMode
             Assert.That(view.TutorialSlothVisible, Is.True, name + ": la presentación, a la vista");
             Assert.That(view.Tray.HintBadgeText, Is.EqualTo("+3"), name + ": la insignia con los 3 regalados");
             TutorialMorphoTests.AssertClear(view, name);
+            TutorialMorphoTests.AssertBreakAfterTheQuestion(card, name);
+            if (forcedDock)
+            {
+                Assert.That(view.TutorialSlothOnDock, Is.True, name + ": franja < 64 dp, sobre el muelle");
+                Assert.That(view.TutorialPointsAtHint, Is.True, name + ": la cola señala Pista");
+            }
+            else
+            {
+                TutorialMorphoTests.AssertPlace(view, card, name);
+            }
+
             if (view.TutorialSlothOnDock)
             {
                 TutorialSlothTests.AssertDockAir(view, name);
                 TutorialSlothTests.AssertPostUnder(view, name);
-            }
-
-            if (card.TailVisible)
-            {
-                Assert.That(view.TutorialPointsAtHint, Is.True, name + ": la cola señala Pista");
             }
 
             Debug.Log("AF_TUTORIAL " + name + ": «" + card.Text + "» en " + card.Lines + " líneas a " + SlothFailTests.F(card.Label.fontSize)

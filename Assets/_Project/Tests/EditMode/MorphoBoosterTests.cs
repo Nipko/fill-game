@@ -150,6 +150,32 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Flow_Level12_TellsTheGiftOnce_WithItsUnits_NotOnRestartNorOnLoad()
+        {
+            // TU1b (04 §2.3): el flujo avisa a la vista (IHintListener.OnHintGifted) una sola vez, con los 3 Morphos, al cargar el 12
+            // aún no superado; ni Volver a la orilla ni volver a cargar el nivel lo repiten.
+            Rig rig = NewRig(500, maxLevel: 11);
+            rig.Start(12);
+            Assert.That(rig.Hints.GiftCalls, Is.EqualTo(1), "un aviso");
+            Assert.That(rig.Hints.Gifted, Is.EqualTo(3), "con 3 Morphos (hint_tutorial_units)");
+            Assert.That(rig.Hints.Gifted, Is.EqualTo(rig.Flow.Boosters.HintTutorialUnits));
+            Assert.That(rig.Economy.Wallet.Stock.Get(BoosterKind.Hint), Is.EqualTo(3), "los mismos que entran al stock");
+
+            Assert.That(rig.Flow.Restart(), Is.True, "Volver a la orilla");
+            Assert.That(rig.Hints.GiftCalls, Is.EqualTo(1), "Volver a la orilla no avisa otra vez");
+            rig.Start(12);
+            Assert.That(rig.Hints.GiftCalls, Is.EqualTo(1), "volver a cargar el 12 no avisa otra vez");
+            Assert.That(rig.Hints.Gifted, Is.EqualTo(3));
+            Assert.That(rig.Economy.Wallet.Stock.Get(BoosterKind.Hint), Is.EqualTo(3), "ni regala otra vez");
+
+            // Otro nivel no avisa.
+            Rig other = NewRig(500, maxLevel: 12);
+            other.Start(13);
+            Assert.That(other.Hints.GiftCalls, Is.EqualTo(0));
+            Assert.That(other.Hints.Gifted, Is.EqualTo(0));
+        }
+
+        [Test]
         public void Answer1_Pour_AStarWithoutHidden_AndSafeMovesWithTheTinaja()
         {
             MorphoBooster morpho = NewMorpho();
@@ -766,9 +792,12 @@ namespace AF.Tests.EditMode
 
             public int Gifted { get; private set; }
 
+            public int GiftCalls { get; private set; }
+
             public void OnHintGifted(int units)
             {
                 Gifted += units;
+                GiftCalls++;
             }
 
             public void OnLevelLoaded(int level)

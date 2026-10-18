@@ -17,8 +17,8 @@ namespace AF.GameFlow
     /// retrato). En 1-10 Marea es ilimitada (<c>undo_unlimited_until_level</c> = 10), así que su primer uso no descuenta;</item>
     /// <item>6: «Guarda una cuia vacía: es tu espacio para pensar» (06 §2.2: la frase de TiTino al inicio del 6, con su retrato);</item>
     /// <item>12: la presentación de Morpho, «¿Atascado? La morpho conoce el río» (04 §2.3 y 06 §2.2: «al cargar el nivel 12 TiTino
-    /// presenta el botón con su retrato y <c>sloth_present</c>»; tarea TU1b). Sale tras la intro, como la del 1, 2 y 6, y TiTino
-    /// señala el botón Pista con la cola de su tarjeta, como el de Marea en el 3 [P]; los 3 Morphos regalados los acredita el flujo
+    /// presenta el botón con su retrato y <c>sloth_present</c>»; tarea TU1b). Sale tras la intro y en el sitio de la del 1, 2 y 6 (02 §13;
+    /// D-016, T5-B); si va sobre el muelle, la cola de su tarjeta señala el botón Pista [P]; los 3 Morphos regalados los acredita el flujo
     /// al cargar el nivel (<c>MorphoBooster.ShouldGift</c>, una sola vez; <c>hint_tutorial_units</c>). 06 §2.2 pide además que
     /// «la primera se gasta con dedo guía»: como en el 1-2, el dedo guía aún no existe en el cliente y la primera Pista se gasta
     /// sin él (pendiente; pregunta para el dueño) [P].</item>

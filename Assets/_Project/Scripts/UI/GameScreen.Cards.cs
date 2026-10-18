@@ -66,9 +66,10 @@ namespace AF.UI
     /// Sin TiTino (<c>ui_sloth_enabled</c> apagado o, en release,
     /// sin su arte) o si la tarjeta no cabe, la instrucción sale como aviso de texto (<c>_toast</c>): el tutorial no se pierde [P]. El ajuste «Mensajes de TiTino» no la quita: es la instrucción del
     /// tutorial, no una frase de su banco [P]. El 8 sigue siendo de Capi (su aviso de la Cuia extra). En el 12 (tarea TU1b; 04
-    /// §2.3; 06 §2.2) TiTino presenta Morpho tras la intro, «¿Atascado? La morpho conoce el río», y señala el botón Pista como el de
-    /// Marea en el 3: sobre el muelle, pegada a la bandeja si cabe, con la cola en el eje del botón Pista, y si no, como las demás
-    /// [P]; solo si la ranura Pista está en la bandeja (si Remote Config moviera <c>hint_unlock_level</c>, el 12 sin ranura no la
+    /// §2.3; 06 §2.2) TiTino presenta Morpho tras la intro, «¿Atascado? La morpho conoce el río», en el sitio de las demás
+    /// (02 §13 y D-016, T5-B: sobre la franja del panorama si mide ≥ 64 dp y, si no, sobre el muelle; sin la excepción del 3, porque
+    /// 04 §2.3 dice que TiTino «presenta» el botón, no que lo señale); sobre el muelle va pegada a la bandeja con la cola en el eje
+    /// del botón Pista si cabe con ella [P]; solo si la ranura Pista está en la bandeja (si Remote Config moviera <c>hint_unlock_level</c>, el 12 sin ranura no la
     /// enseña). Los 3 Morphos los acredita el flujo al cargar el nivel por primera vez (<see cref="OnHintGifted"/>; la insignia de
     /// la ranura pasa a «+3»). Sonda <c>AF_STATE tutorial</c> con el nivel, la clave, la duración, el sitio (<c>band</c>,
     /// <c>dock</c> o <c>toast</c>), si es el tooltip de Marea (<c>undo</c>) o la presentación de Morpho (<c>hint</c>) y si la cola
@@ -682,8 +683,9 @@ namespace AF.UI
         // cabe con su cola (la punta, a TutorialTailUndoAirDp sobre el marco de Marea y en su eje), aunque la franja mida ≥ 64 dp:
         // 02 §13 y D-016 (T5-B) piden la franja si mide ≥ 64 dp y 04 §2.1 que señale el botón, y desde la franja no se puede
         // señalar la bandeja. Prioridad de 04 §2.1 [P], pregunta para el dueño (entrega de TU1a). Si no cabe con su cola, sale
-        // como las demás instrucciones, sin cola. La presentación de Morpho del 12 (TU1b; 04 §2.3: «TiTino presenta el botón») hace
-        // lo mismo con el botón Pista [P].
+        // como las demás instrucciones, sin cola. La presentación de Morpho del 12 (TU1b) no tiene esa excepción (04 §2.3 dice
+        // «TiTino presenta el botón», no que lo señale): sigue 02 §13 y D-016 (T5-B), la franja si mide ≥ 64 dp y, si no, el
+        // muelle; solo entonces, pegada a la bandeja con la cola en el eje del botón Pista si cabe con ella (si no, sin cola) [P].
         private bool PlaceTutorialCard(BoardLayoutResult l, float height, TutorialTarget target)
         {
             _slothNoticeDockBottom = float.NaN;
@@ -697,39 +699,51 @@ namespace AF.UI
             float targetX = float.NaN;
             float tailBottom = target != TutorialTarget.None ? TutorialDockLimit(target, out targetX) : float.NaN;
             bool tailFits = target != TutorialTarget.None && !float.IsNaN(targetX) && dockTop + height <= tailBottom;
+            // Solo el tooltip de Marea del 3 antepone el muelle con cola a la franja (04 §2.1: «TiTino señala el botón» [P]).
+            bool tailFirst = target == TutorialTarget.Undo;
             float top;
             bool dock;
-            if (tailFits)
+            bool tail;
+            if (tailFits && tailFirst)
             {
                 top = tailBottom - height;
                 dock = true;
+                tail = true;
             }
             else if (bandFits)
             {
                 top = BoardTop + ((realBand - height) * 0.5f);
                 dock = false;
+                tail = false;
+            }
+            else if (tailFits)
+            {
+                top = tailBottom - height;
+                dock = true;
+                tail = true;
             }
             else if (dockFits)
             {
                 top = dockTop;
                 dock = true;
+                tail = false;
             }
             else
             {
                 return false;
             }
 
-            _slothNotice!.Place(_canvasW, top, tailFits ? targetX : float.NaN);
+            _slothNotice!.Place(_canvasW, top, tail ? targetX : float.NaN);
 
             // La cola señala el botón si su punta queda en su eje (la limita el aire de TailInsetDp con los lados de la tarjeta).
-            _tutorialOverTarget = tailFits && Mathf.Abs(_slothNotice.TailCenterXDp - targetX) <= TutorialPointToleranceDp;
+            _tutorialOverTarget = tail && Mathf.Abs(_slothNotice.TailCenterXDp - targetX) <= TutorialPointToleranceDp;
             if (dock)
             {
                 // Con cola, lo que baja la tarjeta sobre el muelle llega a su punta (sin su canto, como la placa): así la aparta
                 // también una burbuja «Te faltan {n}» que saliera debajo (KeepSightingClearOfBubbles).
-                _slothNoticeDockBottom = top + height + (tailFits ? SlothNoticeCard.TailHeightDp : 0f);
+                _slothNoticeDockBottom = top + height + (tail ? SlothNoticeCard.TailHeightDp : 0f);
                 _slothCoversPost = CardOverPost(_slothNotice.Root, SlothNoticeCard.EdgeDp)
-                    || (tailFits && CardOverPost(_slothNotice.Tail, SlothNoticeCard.EdgeDp));
+                    || (tail && CardOverPost(_slothNotice.Tail, SlothNoticeCard.EdgeDp));
             }
 
             return true;
