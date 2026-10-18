@@ -148,8 +148,13 @@ namespace AF.Presentation
         /// LUT de la temporada A, aguas altas (07 §2.1; D-009, punto 6) [P]: luz fresca y verdosa de la crecida; el canal verde
         /// entero y el azul casi, así que el cielo no pierde brillo y los tonos cálidos del panorama no bajan de S 0,30 (VA-03).
         /// Es la única señal de la temporada (sin cartel), así que se nota a tamaño de teléfono: en la franja del panorama del
-        /// tablero, ΔE00 medio ≥ 5 frente al fondo sin temporada y ≥ 8 frente a B en la misma parada (revisión de SE2, medido
-        /// en <c>SeasonLutSnapshotTests</c>). Se multiplica con la de la parada.
+        /// tablero, ΔE00 medio ≥ 5 frente al fondo sin temporada y ≥ 8 frente a B en la misma parada (revisión de SE2). Medido
+        /// sobre las capturas de <c>SeasonLutSnapshotTests</c>, fuera del test (ningún test lo vigila: si se retoca la LUT, hay
+        /// que volver a medirlo), en las filas 0-380 de la captura de 1080 × 2340 sin la caja del HUD (x 30-1060, y 110-270):
+        /// 6,3 y 8,6 en la 41, y 6,9 y 9,7 en la 61. El 8,6 va justo (con otra caja del HUD, 8,1): suavizar cualquiera de las
+        /// dos LUT de temporada puede dejarlo por debajo de 8. En las paradas con luz propia, su cielo y su bruma tapan casi
+        /// todo el panorama y la temporada se nota menos: en Pacaya-Samiria al alba (191) da 2,8 y 3,6 (Leticia al atardecer,
+        /// sin medir). Se multiplica con la de la parada.
         /// </summary>
         public static readonly Color HighWaterLut = new Color(0.76f, 1f, 0.9f, 1f);
 

@@ -27,12 +27,20 @@ namespace AF.Tests.PlayMode
     /// <c>season_a_l61_forced</c> (la misma parada con la A forzada);</description></item>
     /// <item><description><c>season_a_l91_on</c> (Leticia al atardecer, ciclo 81, A: las dos luces juntas);</description></item>
     /// <item><description><c>season_b_l181_on</c> (ciclo 181, B, el último de 1-200);</description></item>
+    /// <item><description><c>season_b_l191_off</c>, <c>season_b_l191_on</c> y <c>season_a_l191_forced</c> (Pacaya-Samiria al
+    /// alba, ciclo 181, B: la única parada <c>dawn</c> de 1-200 y con agua negra; la luz más oscura de 21-200, la del
+    /// alba por la de aguas bajas);</description></item>
     /// <item><description><c>season_b_lobby_l168_off</c> y <c>season_b_lobby_l168_on</c> (el inicio, con «Jugar» en un ciclo B).</description></item>
     /// </list>
     /// Cada captura escribe su línea <c>AF_SEASON</c> con la sonda del fondo. Criterio de la revisión de SE2 (la LUT es la única
-    /// señal de la temporada, sin cartel): en la franja del panorama del tablero (filas 0-380 de 2340, fuera del HUD), ΔE00
-    /// medio ≥ 5 entre <c>_off</c> y <c>_on</c>, y ≥ 8 entre A y B en la misma parada (<c>_on</c> frente a <c>_forced</c>);
-    /// se mide sobre los PNG, fuera del test. Explícito: necesita gráficos (<c>unity test
+    /// señal de la temporada, sin cartel): en la franja del panorama del tablero (filas 0-380 de 2340 sin la caja del HUD,
+    /// x 30-1060, y 110-270), ΔE00 medio ≥ 5 entre <c>_off</c> y <c>_on</c>, y ≥ 8 entre A y B en la misma parada (<c>_on</c>
+    /// frente a <c>_forced</c>). VA-03, fuera del panel (en la 191, x 23-1057, y 240-1886), de las piezas del HUD y de la bandeja
+    /// (x 285-800, y 1915-2245): media de V ≥ 0,55 y de S ≥ 0,30, y como mucho un 10 % de píxeles con V &lt; 0,25. Las dos
+    /// cosas se miden sobre los PNG, fuera del test (ningún test las vigila); en la ronda final de la revisión de SE2:
+    /// ΔE00 6,3 y 8,6 en la 41, 6,9 y 9,7 en la 61, y 2,8 y 3,6 en la 191 (la luz del alba tapa casi todo el panorama);
+    /// VA-03 en la 191 con la B (la luz más oscura de 21-200): V 0,64, S 0,47 y un 1,3 % por debajo de V 0,25 (sin temporada,
+    /// V 0,66 y S 0,48). Explícito: necesita gráficos (<c>unity test
     /// &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.SeasonLutSnapshotTests</c> sin <c>-nographics</c>); los PNG
     /// quedan en <c>Logs/snapshots/es-419/</c>.
     /// </summary>
@@ -62,6 +70,9 @@ namespace AF.Tests.PlayMode
             yield return CaptureBoard(dir, "season_a_l61_forced", 61, true, Season.LowWater, Season.HighWater);
             yield return CaptureBoard(dir, "season_a_l91_on", 91, true, Season.HighWater);
             yield return CaptureBoard(dir, "season_b_l181_on", 181, true, Season.LowWater);
+            yield return CaptureBoard(dir, "season_b_l191_off", 191, false, Season.LowWater);
+            yield return CaptureBoard(dir, "season_b_l191_on", 191, true, Season.LowWater);
+            yield return CaptureBoard(dir, "season_a_l191_forced", 191, true, Season.LowWater, Season.HighWater);
         }
 
         [UnityTest]
