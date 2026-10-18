@@ -45,7 +45,8 @@ namespace AF.UI
     /// GameScreen.Cards.cs, GameScreen.Reveal.cs y GameScreen.Funnel.cs) sin editar este. Sin implementación no hacen
     /// nada. Los del Mapa del río y de la victoria (arquitectura de la tanda 4, §2; tarea M1.3b): <c>Stop*</c> (fondo por
     /// parada, GameScreen.Stop.cs), <c>Arrival*</c> (llegada, GameScreen.Arrival.cs), <c>Slot*</c> (ranura del Dato del río) y
-    /// <c>Sloth*</c> (TiTino en la victoria), estos dos en GameScreen.Victory.cs.</para>
+    /// <c>Sloth*</c> (TiTino en la victoria), estos dos en GameScreen.Victory.cs. Los de Morpho · Pista (tarea MO2):
+    /// <c>Hint*</c> (GameScreen.Hint.cs).</para>
     /// </remarks>
     public sealed partial class GameScreen : ILevelFlowListener
     {
@@ -487,7 +488,7 @@ namespace AF.UI
             _restartLabel = restartLabel;
             _restart.Relief.Bind(_restart.Face, _restart.Base, _restart.FaceImage, art.DiscWood, restartIcon, null, null);
 
-            // Bandeja de comodines (B2-1; 07 §7.4): Marea y, desde el 8, Cuia extra.
+            // Bandeja de comodines (B2-1; 07 §7.4): Marea, desde el 8 Cuia extra y desde el 12 Pista (MO2).
             _tray = new BoosterTray(_hud, art, OnTrayUndo, () => _actions.PressExtraCuia());
 
             // ---- Cuia elevada cuyo cielo entra en la fila del HUD (revisión de la captura 48c): en los tableros que pasan bajo el
@@ -627,6 +628,7 @@ namespace AF.UI
             LabelsBuild();
             CardsBuild();
             RevealBuild();
+            HintBuild();
             ArrivalBuild();
             ApplyScreenMetrics(true);
         }
@@ -921,6 +923,7 @@ namespace AF.UI
             LabelsTick(dtMs);
             CardsTick(dtMs);
             RevealTick(dtMs);
+            HintTick(dtMs);
             StopTick(dtMs);
             ArrivalTick(dtMs);
             SlotTick(dtMs);
@@ -964,6 +967,7 @@ namespace AF.UI
             LabelsLevelLoaded(flow);
             CardsLevelLoaded(flow);
             RevealLevelLoaded(flow);
+            HintLevelLoaded(flow);
             StopLevelLoaded(flow);
             ArrivalLevelLoaded(flow);
             _levelLayoutDeferred = false;
@@ -2386,6 +2390,12 @@ namespace AF.UI
                 _layoutRects.Add((RectTransform)_tray.ExtraCuiaButton.transform);
             }
 
+            if (_tray.HintShown)
+            {
+                _layoutIds.Add("hint");
+                _layoutRects.Add((RectTransform)_tray.HintButton.transform);
+            }
+
             _layoutIds.Add("restart");
             _layoutRects.Add((RectTransform)_restart.Button.transform);
             _layoutIds.Add("pause");
@@ -2580,6 +2590,7 @@ namespace AF.UI
             LabelsLayoutHud();
             CardsLayout();
             RevealLayout();
+            HintLayout();
         }
 
         // Panel de victoria de arriba abajo según lo que ofrece (con o sin Cosecha doble), con la cinta, los rayos y el velo
@@ -3216,6 +3227,18 @@ namespace AF.UI
 
         // Luciérnaga: botones visibles para AF_LAYOUT (EmitLevelLayout, antes de emitir).
         partial void RevealLayoutIds(List<string> ids, List<RectTransform> rects);
+
+        // Morpho · Pista (GameScreen.Hint.cs; tarea MO2): al final del constructor, después de RevealBuild.
+        partial void HintBuild();
+
+        // Morpho: al final de LayoutHud, tras RevealLayout.
+        partial void HintLayout();
+
+        // Morpho: en cada Tick, tras RevealTick.
+        partial void HintTick(float dtMs);
+
+        // Morpho: al final de OnLevelLoaded, tras RevealLevelLoaded.
+        partial void HintLevelLoaded(LevelFlow flow);
 
         // Embudo (GameScreen.Funnel.cs): justo antes de abrir ¿Seguro? (GiveUpConfirm) o Nivel fallido (LevelFailed), para
         // colorear sus cabeceras.

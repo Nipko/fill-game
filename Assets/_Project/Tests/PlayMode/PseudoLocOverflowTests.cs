@@ -159,7 +159,7 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.TickExact(boot, 1100);
             yield return shot.Take("banner_l41", false);
 
-            // Bandeja de comodines del 100 en juego, sin semillas: Marea, «+1 cuia» con su precio y «Te faltan {n}», y Revelar
+            // Bandeja de comodines del 100 en juego, sin semillas: Marea, «+1 cuia» con su precio y «Te faltan {n}», Pista y Revelar
             // con la Luciérnaga regalada (hallazgo 2 de la prueba del 2026-10-14).
             LaunchOptions.LevelCardsOverride = false;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
@@ -169,7 +169,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap hud = boot;
             yield return PlayModeHelpers.WaitFor(() => hud.Flow!.Phase == FlowPhase.Playing && hud.View!.IsViewIdle, "el 100 en juego");
             yield return SnapshotKit.Wait(0.5f);
-            Assert.That(boot.View!.Tray.SlotCount, Is.EqualTo(3), "Marea, «+1 cuia» y Revelar");
+            Assert.That(boot.View!.Tray.SlotCount, Is.EqualTo(4), "Marea, «+1 cuia», Pista y Revelar");
             Assert.That(boot.View.Tray.ExtraMissingLabel.gameObject.activeInHierarchy, Is.True, "«Te faltan {n}» de «+1 cuia»");
             yield return shot.Take("bandeja_l100", false);
 
@@ -343,10 +343,13 @@ namespace AF.Tests.PlayMode
             view.RelayoutForTests();
             yield return null;
 
-            Assert.That(LongLabelSetup.SlotCap(view), Is.EqualTo(BoosterTray.SlotMaxDp), "a 438 dp de ancho manda el tope de la ranura");
-            Assert.That(tray.SlotWidth, Is.EqualTo(BoosterTray.SlotMaxDp).Within(0.01f), "las ranuras se ensanchan hasta el tope");
+            // Con las 4 ranuras del 100 (Pista desde el 12, MO2), a 438 dp ya manda la pantalla (91 dp), no el tope de 104.
+            Assert.That(tray.SlotCount, Is.EqualTo(4));
+            Assert.That(LongLabelSetup.SlotCap(view), Is.LessThan(BoosterTray.SlotMaxDp), "a 438 dp de ancho, con 4 ranuras, manda la pantalla");
+            Assert.That(tray.SlotWidth, Is.EqualTo(LongLabelSetup.SlotCap(view)).Within(0.01f), "las ranuras se ensanchan hasta lo que deja la pantalla");
             LongLabelSetup.AssertSlot(view, tray.UndoLabel, tray.UndoGlyph, scale, 2, "Marea");
             LongLabelSetup.AssertSlot(view, tray.ExtraLabel, tray.ExtraGlyph, scale, 1, "Cuia extra");
+            LongLabelSetup.AssertSlot(view, tray.HintLabel, tray.HintGlyph, scale, 1, "Pista");
             LongLabelSetup.AssertSlot(view, tray.RevealLabel, tray.RevealGlyph, scale, 1, "Revelar");
             LongLabelSetup.AssertTrayInside(view);
             Assert.That(tray.GrowDp, Is.InRange(0f, BoosterTray.MaxGrowDp), "lo que crecen las ranuras hacia abajo");
@@ -369,8 +372,9 @@ namespace AF.Tests.PlayMode
         public IEnumerator EnXA_360_TrayAndRestart([Values(100, 130)] int percent)
         {
             // A 360 dp de ancho, la columna del saldo llega hasta el área de Reiniciar: la píldora no puede crecer hacia la
-            // izquierda y «[Réíñíçíár ···]» va en dos líneas ya al 100 %. «[Déshácér ··]» cabe en una ranura ensanchada al
-            // 100 %; al 130 % no cabe ni en la más ancha que deja la pantalla (98 dp) y va en dos líneas.
+            // izquierda y «[Réíñíçíár ···]» va en dos líneas ya al 100 %. Con las 4 ranuras del 100 (Pista desde el 12, MO2),
+            // «[Déshácér ··]» ya no cabe en una línea al 100 % y va en dos, en la ranura más ancha que deja la pantalla. Al 130 %,
+            // «[Déshácér» no cabe entero ni en la bandeja apretada: pendiente del dueño (TrayUndo_EnXA_360_130_KnownIssue).
             float scale = percent / 100f;
             yield return LongLabelSetup.LoadLevel100(LocLocale.Pseudo, scale, HudLabelTests.Screen780);
             GameScreen view = GameBootstrap.Current!.View!;
@@ -380,15 +384,15 @@ namespace AF.Tests.PlayMode
             // Al 130 %, «[Réíñíçíár» no cabe en el área: la píldora crece y estrecha la columna del saldo, sin partir la palabra
             // (tarea FX5). Lo que sube la cuia al seleccionarla, aparte (RestartPill_360_KnownIssues).
             LongLabelSetup.AssertRestart(view, scale, 2, false);
-            bool two = percent == 130;
-            LongLabelSetup.AssertSlot(view, tray.UndoLabel, tray.UndoGlyph, scale, two ? 2 : 1, "Marea");
-            LongLabelSetup.AssertSlot(view, tray.ExtraLabel, tray.ExtraGlyph, scale, 1, "Cuia extra");
-            LongLabelSetup.AssertSlot(view, tray.RevealLabel, tray.RevealGlyph, scale, 1, "Revelar");
-            if (two)
+            if (percent == 100)
             {
-                Assert.That(tray.SlotWidth, Is.EqualTo(LongLabelSetup.SlotCap(view)).Within(0.01f), "las ranuras llegan a lo que deja la pantalla");
+                LongLabelSetup.AssertSlot(view, tray.UndoLabel, tray.UndoGlyph, scale, 2, "Marea");
             }
 
+            LongLabelSetup.AssertSlotFits(view, tray.ExtraLabel, tray.ExtraGlyph, scale, "Cuia extra");
+            LongLabelSetup.AssertSlotFits(view, tray.HintLabel, tray.HintGlyph, scale, "Pista");
+            LongLabelSetup.AssertSlotFits(view, tray.RevealLabel, tray.RevealGlyph, scale, "Revelar");
+            Assert.That(tray.SlotWidth, Is.EqualTo(LongLabelSetup.SlotCap(view)).Within(0.01f), "las ranuras llegan a lo que deja la pantalla");
             LongLabelSetup.AssertTrayInside(view);
             Assert.That(tray.GrowDp, Is.InRange(0f, BoosterTray.MaxGrowDp), "lo que crecen las ranuras hacia abajo");
         }
@@ -476,6 +480,21 @@ namespace AF.Tests.PlayMode
             Assert.That(stuck.HandfulButton.gameObject.activeInHierarchy && stuck.BalsaButton.gameObject.activeInHierarchy, Is.True, "Puñado y Balsa en la rama B");
             LongLabelSetup.AssertOfferAir(stuck.HandfulLabel, stuck.OfferFaceDp, 1.3f, "Puñado");
             LongLabelSetup.AssertOfferAir(stuck.BalsaLabel, stuck.OfferFaceDp, 1.3f, "Balsa");
+        }
+
+        /// <summary>
+        /// «[Déshácér ··]» (Marea en en-XA) al 130 % a 360 dp con las 4 ranuras del 100 (tarea MO2; pendiente del dueño): su
+        /// palabra más larga no cabe entera ni con la bandeja apretada (<see cref="BoosterTray.Compact"/>, 79 dp por ranura con el
+        /// aire de 4 dp) y se parte. es-419 sí cabe (MorphoUiTests.Tray_FourSlots_At360dp_130Percent_es419_NoBrokenLabels). Se
+        /// deja escrito (explícito: hoy falla) para cuando el dueño decida (con Pororoca, 5 ranuras de 56 dp, 07 §7.4, empeora).
+        /// </summary>
+        [UnityTest]
+        [Explicit("Pendiente del dueño (MO2): «[Déshácér» en en-XA al 130 % no cabe entero en 4 ranuras a 360 dp; hoy falla.")]
+        public IEnumerator TrayUndo_EnXA_360_130_KnownIssue()
+        {
+            yield return LongLabelSetup.LoadLevel100(LocLocale.Pseudo, 1.3f, HudLabelTests.Screen780);
+            GameScreen view = GameBootstrap.Current!.View!;
+            LongLabelSetup.AssertSlotFits(view, view.Tray.UndoLabel, view.Tray.UndoGlyph, 1.3f, "Marea");
         }
 
         /// <summary>
@@ -571,13 +590,13 @@ namespace AF.Tests.PlayMode
         private const float Tol = 0.5f;
 
         /// <summary>
-        /// El 100 en juego (Marea, «+1 cuia» y Revelar en la bandeja; sin semillas) en <paramref name="locale"/>, con la fuente a
+        /// El 100 en juego (Marea, «+1 cuia», Pista y Revelar en la bandeja; sin semillas) en <paramref name="locale"/>, con la fuente a
         /// <paramref name="scale"/> y en la pantalla <paramref name="screen"/>.
         /// </summary>
         public static IEnumerator LoadLevel100(string locale, float scale, Vector4 screen)
         {
             yield return LoadLevel(100, locale, scale, screen);
-            Assert.That(GameBootstrap.Current!.View!.Tray.SlotCount, Is.EqualTo(3), "Marea, «+1 cuia» y Revelar");
+            Assert.That(GameBootstrap.Current!.View!.Tray.SlotCount, Is.EqualTo(4), "Marea, «+1 cuia», Pista y Revelar");
         }
 
         /// <summary>El nivel <paramref name="level"/> en juego, sin semillas, como <see cref="LoadLevel100"/>.</summary>
@@ -748,11 +767,17 @@ namespace AF.Tests.PlayMode
                 + h.ToString("0.0", CultureInfo.InvariantCulture) + " dp; tinta " + Describe(ink));
         }
 
-        /// <summary>Ancho más grande que puede tomar cada ranura en esta pantalla (dp): el tope o lo que deja la pantalla.</summary>
+        /// <summary>
+        /// Ancho más grande que puede tomar cada ranura en esta pantalla (dp): el tope o lo que deja la pantalla, con la separación
+        /// de siempre (16 dp de margen y 8 entre ranuras) o, con la bandeja apretada (MO2), la de <see cref="BoosterTray.CompactPadDp"/>
+        /// y <see cref="BoosterTray.CompactGapDp"/>.
+        /// </summary>
         public static float SlotCap(GameScreen view)
         {
             int n = view.Tray.SlotCount;
-            float room = (view.CanvasWidth - (2f * BoosterTray.TrayEdgeDp) - (2f * 16f) - ((n - 1) * 8f)) / n;
+            float pad = view.Tray.Compact ? BoosterTray.CompactPadDp : 16f;
+            float gap = view.Tray.Compact ? BoosterTray.CompactGapDp : 8f;
+            float room = (view.CanvasWidth - (2f * BoosterTray.TrayEdgeDp) - (2f * pad) - ((n - 1) * gap)) / n;
             return Mathf.Max(64f, Mathf.Min(BoosterTray.SlotMaxDp, Mathf.Floor(room)));
         }
 
@@ -784,9 +809,19 @@ namespace AF.Tests.PlayMode
             Assert.That(r.xMin, Is.GreaterThanOrEqualTo(-Tol), what + ": la etiqueta empieza dentro de la ranura");
             Assert.That(r.xMax, Is.LessThanOrEqualTo(face.width + Tol), what + ": la etiqueta acaba dentro de la ranura");
             Rect ink = InkRect(label, faceRect);
-            float air = view.Tray.SlotWidth > 64.01f ? BoosterTray.LabelSideInsetDp : BoosterTray.LabelNarrowInsetDp;
+            float air = view.Tray.SlotWidth > 64.01f ? view.Tray.LabelInsetNowDp : BoosterTray.LabelNarrowInsetDp;
             Assert.That(ink.xMin, Is.GreaterThanOrEqualTo(air - Tol), what + ": aire a la izquierda de la tinta (" + ink.xMin.ToString("0.0", CultureInfo.InvariantCulture) + " dp)");
             Assert.That(face.width - ink.xMax, Is.GreaterThanOrEqualTo(air - Tol), what + ": aire a la derecha de la tinta (" + (face.width - ink.xMax).ToString("0.0", CultureInfo.InvariantCulture) + " dp)");
+        }
+
+        /// <summary>Una ranura en una o dos líneas (las que salgan), con las comprobaciones de <see cref="AssertSlot"/>.</summary>
+        public static void AssertSlotFits(GameScreen view, TextMeshProUGUI label, Image glyph, float scale, string what)
+        {
+            Canvas.ForceUpdateCanvases();
+            label.ForceMeshUpdate(true, true);
+            int lines = label.textInfo.lineCount;
+            Assert.That(lines, Is.InRange(1, 2), what + ": líneas de «" + label.text + "»");
+            AssertSlot(view, label, glyph, scale, lines, what);
         }
 
         /// <summary>Ninguna palabra partida por dentro: cada línea, salvo la última, acaba donde hay un espacio.</summary>

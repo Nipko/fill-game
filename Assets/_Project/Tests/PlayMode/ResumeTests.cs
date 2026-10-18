@@ -268,9 +268,9 @@ namespace AF.Tests.PlayMode
             Assert.That(resumed.Session.Current, Is.EqualTo(board), "el mismo tablero, con la capa 1 a la vista");
             Assert.That(again.View!.Views[0].ShownCuia.HiddenMask, Is.EqualTo(0b01), "la vista enseña la capa revelada y oculta la otra");
 
-            // T-A: la bandeja reabierta, entera y sin huecos: Marea, «+1 cuia» y Revelar (la cuia 0 conserva una oculta).
+            // T-A: la bandeja reabierta, entera y sin huecos: Marea, «+1 cuia», Pista (MO2) y Revelar (la cuia 0 conserva una oculta).
             Assert.That(again.View.ExtraCuiaButton.gameObject.activeInHierarchy, Is.True, "«+1 cuia» se ve al reabrir");
-            Assert.That(again.View.Tray.SlotCount, Is.EqualTo(3), "Marea, Cuia extra y Revelar");
+            Assert.That(again.View.Tray.SlotCount, Is.EqualTo(4), "Marea, Cuia extra, Pista y Revelar");
         }
 
         [UnityTest]
@@ -305,7 +305,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.ExtraCuiaButton.gameObject.activeInHierarchy, Is.True, "«+1 cuia» sigue en su ranura");
             Assert.That(view.ExtraCuiaButton.interactable, Is.False, "gris: ya se usó en este nivel");
             Assert.That(view.Tray.ExtraPriceShown, Is.EqualTo(0), "sin precio");
-            Assert.That(view.Tray.SlotCount, Is.EqualTo(3), "Marea, Cuia extra y Revelar, sin huecos");
+            Assert.That(view.Tray.SlotCount, Is.EqualTo(4), "Marea, Cuia extra, Pista y Revelar, sin huecos");
             string layout = _layout.RequireLast("level", 100, "nivel reabierto");
             AfLayoutLog.AssertCenterInside(layout, "undo", (RectTransform)view.UndoButton.transform);
             AfLayoutLog.AssertCenterInside(layout, "extra_cuia", (RectTransform)view.ExtraCuiaButton.transform);

@@ -11,6 +11,29 @@ using UnityEngine.UI;
 namespace AF.UI
 {
     /// <summary>
+    /// Las ranuras de la bandeja en el orden canónico de 07 §7.4, de izquierda a derecha (02 §5 y 04 §2 lo copian; pregunta 29,
+    /// D-020: Revelar va detrás de Morpho y de Pororoca). El valor es la posición relativa: una ranura que no existe no deja
+    /// hueco (<see cref="BoosterTray.PositionOf"/>).
+    /// </summary>
+    internal enum TraySlot
+    {
+        /// <summary>[Deshacer · Marea].</summary>
+        Undo = 0,
+
+        /// <summary>[+1 cuia · Cuia extra].</summary>
+        ExtraCuia = 1,
+
+        /// <summary>[Pista · Morpho] (MO2).</summary>
+        Hint = 2,
+
+        /// <summary>[Barajar · Pororoca]: aún no está en el cliente (tanda siguiente); su hueco ya está en el orden.</summary>
+        Shuffle = 3,
+
+        /// <summary>[Revelar · Luciérnaga]: solo en niveles con ocultas, siempre la última.</summary>
+        Reveal = 4,
+    }
+
+    /// <summary>
     /// Bandeja cumbuca de comodines (tarea B2-1; GDD 07 §7.4, 02 §5, 04 §1.1, §2.1, §2.2 y §2.5) con el orden canónico y los
     /// equivalentes de Magic Sort (ficha §2.3 y §5.2: deshacer, añadir botella; barajar llega con la Pororoca en I6):
     /// <list type="bullet">
@@ -19,8 +42,14 @@ namespace AF.UI
     /// recarga; gris sin historial;</description></item>
     /// <item><description>[+1 cuia · Cuia extra] desde el nivel 8: «+N» con stock o el precio (150), en rojo y con «Te faltan
     /// {n}» encima sin saldo; gris si ya se usó en el nivel, si no queda vertido útil o con 16 cuias;</description></item>
+    /// <item><description>[Pista · Morpho] (tarea MO2; 04 §2.3) desde <c>hint_unlock_level</c> (12), tras Cuia extra: «+N» con
+    /// stock; sin stock, el precio (100, <c>hint_seed_price</c>); sin saldo y con <c>rv_hint</c>, «+1» con el icono de video; sin
+    /// nada, el precio en rojo con «Te faltan {n}», que late al tocarla (<see cref="PulseHintMissing"/>). Pulsada mientras
+    /// Morpho piensa; gris sin vertido legal, fuera de PLAYING o en el enfriamiento; gris en un nivel sin
+    /// <c>hint_supported</c>, y entonces tocarla enseña el globo «La morpho no conoce este tramo todavía»
+    /// (<see cref="ShowHintTooltip"/>; 04 §2.3 b). La acción la pone la pantalla (<c>GameScreen.Hint.cs</c>);</description></item>
     /// <item><description>[Revelar · Luciérnaga] (tarea T14) solo en los niveles de Aguas turbias mientras quede alguna dosis
-    /// oculta, siempre la última a la derecha: «+N» con stock; sin stock, el precio (120, <c>reveal_seed_price</c>) y, sin
+    /// oculta, siempre la última a la derecha, detrás de Pista (pregunta 29; D-020): «+N» con stock; sin stock, el precio (120, <c>reveal_seed_price</c>) y, sin
     /// saldo, en rojo con «Te faltan {n}»; sin stock ni saldo y con <c>rv_reveal</c>, «+1» con el icono de video
     /// (<see cref="SetRevealBadge"/>). La visibilidad, la insignia y la acción las pone la pantalla de nivel
     /// (<c>GameScreen.Reveal.cs</c>).</description></item>
@@ -29,10 +58,12 @@ namespace AF.UI
     /// tres ranuras de un nivel turbio). Las etiquetas de las ranuras van a 12 sp y nunca menos (02 §12; tarea L4): si la más
     /// larga no cabe en 64 dp (otro idioma, en-XA o la fuente al 130 %), todas las ranuras se ensanchan por igual hasta que
     /// quepa, sin pasar de <see cref="SlotMaxDp"/> ni salir de la pantalla; si ni así cabe, esa etiqueta va en dos líneas y su
-    /// glifo se encoge para dejarle sitio (<c>Slot.Place</c>). Con 5 ranuras pasarían a 56 dp (07 §7.4), pero Morpho (12) y Pororoca (30) no están
-    /// en el cliente y en la 1.0 nunca hay más de 3: sus ranuras llegan con sus comodines, y entonces Revelar pasa a ser la 5.ª
-    /// (04 §2.5, a la derecha de Pororoca). Se refresca cada fotograma solo si algo cambió, sin asignar memoria (08 §5.4): el
-    /// video de Marea se pregunta a los anuncios como mucho cada <see cref="UndoVideoPollMs"/> (<see cref="Tick"/>).
+    /// glifo se encoge para dejarle sitio (<c>Slot.Place</c>). El orden es el canónico de 07 §7.4 (<see cref="TraySlot"/>:
+    /// Marea, Cuia extra, Pista, [Pororoca] y Revelar), sin huecos y con la bandeja centrada: con 3 y 4 ranuras miden 64 dp y con
+    /// las 5, 56 dp (<see cref="BaseSlotDpFor"/>). Pororoca (30) aún no está en el cliente (va en la tanda siguiente): hoy hay
+    /// como mucho 4 ranuras (Marea, Cuia extra, Pista y Revelar en un nivel turbio), y su hueco ya está en el orden
+    /// (<see cref="PositionOf"/>). Se refresca cada fotograma solo si algo cambió, sin asignar memoria (08 §5.4): los videos de
+    /// Marea y de Pista se preguntan a los anuncios como mucho cada <see cref="UndoVideoPollMs"/> (<see cref="Tick"/>).
     /// </summary>
     internal sealed class BoosterTray
     {
@@ -113,9 +144,37 @@ namespace AF.UI
         /// </summary>
         public const float MaxGrowDp = 12f;
 
-        private const float SlotDp = 64f;
+        /// <summary>Ancho de las ranuras con 1-4 ranuras (dp; 07 §7.4 y guía 3.6).</summary>
+        public const float SlotDp = 64f;
+
+        /// <summary>Ancho de las ranuras con las 5 (dp; 07 §7.4: «con los 5 pasan a 56 dp»).</summary>
+        public const float FiveSlotsDp = 56f;
+
+        /// <summary>
+        /// Lo más ancho del globo «La morpho no conoce este tramo todavía» sobre la ranura Pista (dp) [P]: pasa a dos líneas
+        /// antes que salir de ahí, y nunca de la pantalla.
+        /// </summary>
+        public const float HintTooltipMaxDp = 220f;
+
+        /// <summary>Tamaño del texto del globo de Pista (sp) [P]: ≥ 12 sp (02 §12).</summary>
+        public const float HintTooltipSp = 13f;
+
+        /// <summary>
+        /// Separación entre ranuras de la bandeja apretada (dp) [P] (tarea MO2, con la 4.ª ranura; L4): cuando la palabra más
+        /// larga de una etiqueta no cabe entera en la ranura más ancha que deja la pantalla con la separación de siempre (8 dp),
+        /// la bandeja aprieta sus separaciones antes que partir una palabra (02 §12: nada se recorta). Pasa en es-419 con la
+        /// fuente al 130 % a 360 dp de ancho: «Deshacer» mide 68,7 dp y con 4 ranuras quedaban 72 dp por ranura.
+        /// </summary>
+        public const float CompactGapDp = 4f;
+
+        /// <summary>Margen de la bandeja apretada a cada lado de las ranuras (dp) [P] (<see cref="CompactGapDp"/>).</summary>
+        public const float CompactPadDp = 8f;
+
         private const float GapDp = 8f;
         private const float PadDp = 16f;
+        private const float TooltipPadXDp = 10f;
+        private const float TooltipPadYDp = 5f;
+        private const float TooltipGapDp = 6f;
 
         // «Te faltan {n}» de dos ranuras vecinas a la vez: cada aviso cabe en su paso de ranura (64 + 8, o el ancho de la ranura
         // ensanchada + 8) con 2 dp de aire entre los dos. A 12 sp, «Te faltan» y una cifra de 2 caben en una línea («Te faltan
@@ -127,12 +186,18 @@ namespace AF.UI
         private readonly Image _tray;
         private readonly Slot _undo;
         private readonly Slot _extra;
+        private readonly Slot _hint;
         private readonly Slot _reveal;
+        private readonly Slot[] _order;
+        private readonly Slot[] _activeBuf = new Slot[5];
+        private readonly RectTransform _tip;
+        private readonly TextMeshProUGUI _tipText;
         private readonly char[] _buf = new char[24];
 
         private LevelFlow? _flow;
         private GameServices? _services;
         private Action? _onReveal;
+        private Action? _onHint;
         private int _key = int.MinValue;
         private int _revealKey = int.MinValue;
         private int _refreshRepaints;
@@ -140,6 +205,9 @@ namespace AF.UI
         private float _trayTop;
         private int _slots = 1;
         private float _slotW = SlotDp;
+        private float _gap = GapDp;
+        private float _pad = PadDp;
+        private float _wideInset = LabelSideInsetDp;
         private float _grow;
         private float _trayX;
         private int _slotsVersion;
@@ -147,6 +215,10 @@ namespace AF.UI
         private bool _revealPressed;
         private bool _undoVideoReady;
         private float _undoVideoPollMs;
+        private bool _hintVideoReady;
+        private float _hintVideoPollMs;
+        private bool _hintPressed;
+        private float _tipMs;
 
         public BoosterTray(Transform hud, ProceduralArt art, Action onUndo, Action onExtraCuia)
         {
@@ -155,9 +227,67 @@ namespace AF.UI
             _undo = new Slot("UndoButton", hud, art, art.IconUndo, art.IconUndoDisabled, UiText.Undo, onUndo);
             _extra = new Slot("ExtraCuiaButton", hud, art, art.IconCuiaPlus, art.IconCuiaPlusDisabled, UiText.ExtraCuia, onExtraCuia);
             _extra.SetActive(false);
+            _hint = new Slot("HintButton", hud, art, art.IconMorpho, art.IconMorphoDisabled, UiText.HintLabel, () => _onHint?.Invoke());
+            _hint.SetActive(false);
             _reveal = new Slot("RevealButton", hud, art, art.IconFirefly, art.IconFireflyDisabled, UiText.RevealLabel, () => _onReveal?.Invoke());
             _reveal.SetActive(false);
+            _order = new[] { _undo, _extra, _hint, _reveal }; // 07 §7.4, sin Pororoca (TraySlot.Shuffle) todavía
+
+            // Globo de Pista sin hint_supported (04 §2.3 b): placa clara con texto de tinta, sobre la ranura; no captura toques.
+            _tip = UiBuilder.Rect("HintTooltip", hud);
+            Image tipPlate = UiBuilder.Sliced("Plate", _tip, art.RoundedRect, Palette.PanelLight);
+            tipPlate.pixelsPerUnitMultiplier = 24f / 9f;
+            UiBuilder.Stretch(tipPlate.rectTransform);
+            _tipText = UiBuilder.Label("Value", _tip, TextStyle.PlainBold, string.Empty, HintTooltipSp, Palette.Ink, TextAlignmentOptions.Center);
+            UiBuilder.Stretch(_tipText.rectTransform);
+            _tipText.rectTransform.offsetMin = new Vector2(TooltipPadXDp, TooltipPadYDp);
+            _tipText.rectTransform.offsetMax = new Vector2(-TooltipPadXDp, -TooltipPadYDp);
+            _tip.gameObject.SetActive(false);
         }
+
+        /// <summary>
+        /// Ancho de cada ranura (dp) con <paramref name="slots"/> ranuras a la vista (07 §7.4): 64 hasta 4 y 56 con las 5. Antes de
+        /// ensanchar por una etiqueta que no cabe (tarea L4).
+        /// </summary>
+        public static float BaseSlotDpFor(int slots)
+        {
+            return slots >= 5 ? FiveSlotsDp : SlotDp;
+        }
+
+        /// <summary>
+        /// Posición (0 = la de la izquierda) de <paramref name="slot"/> entre las ranuras de <paramref name="activeMask"/> (bit
+        /// <c>(int)TraySlot</c> = la ranura existe), en el orden canónico de 07 §7.4 y sin huecos; −1 si no existe. Sin
+        /// asignaciones.
+        /// </summary>
+        public static int PositionOf(TraySlot slot, int activeMask)
+        {
+            int bit = 1 << (int)slot;
+            if ((activeMask & bit) == 0)
+            {
+                return -1;
+            }
+
+            int position = 0;
+            for (int below = activeMask & (bit - 1); below != 0; below &= below - 1)
+            {
+                position++;
+            }
+
+            return position;
+        }
+
+        /// <summary>
+        /// Ancho de la bandeja (dp) con <paramref name="slots"/> ranuras de <see cref="BaseSlotDpFor"/>: 16 + n · ancho + (n − 1) · 8
+        /// + 16 (07 §7.4 y guía 3.6; tests).
+        /// </summary>
+        public static float WidthFor(int slots)
+        {
+            return PadDp + (slots * BaseSlotDpFor(slots)) + ((slots - 1) * GapDp) + PadDp;
+        }
+
+        /// <summary>Ranuras que existen ahora, como máscara de bits de <see cref="TraySlot"/> (tests).</summary>
+        public int ActiveMask => (_undo.Active ? 1 << (int)TraySlot.Undo : 0) | (_extra.Active ? 1 << (int)TraySlot.ExtraCuia : 0)
+            | (_hint.Active ? 1 << (int)TraySlot.Hint : 0) | (_reveal.Active ? 1 << (int)TraySlot.Reveal : 0);
 
         /// <summary>Botón de Marea.</summary>
         public Button UndoButton => _undo.Parts.Button;
@@ -167,6 +297,63 @@ namespace AF.UI
 
         /// <summary>Botón de Revelar · Luciérnaga (solo en los niveles de Aguas turbias con ocultas).</summary>
         public Button RevealButton => _reveal.Parts.Button;
+
+        /// <summary>Botón de Pista · Morpho (desde <c>hint_unlock_level</c>; MO2).</summary>
+        public Button HintButton => _hint.Parts.Button;
+
+        /// <summary>La ranura de Pista existe en el nivel.</summary>
+        public bool HintShown => _hint.Active;
+
+        /// <summary>Etiqueta de la ranura de Pista (tests de desbordes).</summary>
+        public TextMeshProUGUI HintLabel => _hint.Label;
+
+        /// <summary>Glifo de la ranura de Pista (tests y capturas: la mariposa).</summary>
+        public Image HintGlyph => _hint.Glyph;
+
+        /// <summary>Texto de la insignia de Pista («+N» del stock o «+1» del video), o vacío.</summary>
+        public string HintBadgeText => _hint.BadgeText;
+
+        /// <summary>Precio que muestra Pista (0 si no lo muestra).</summary>
+        public int HintPriceShown => _hint.PriceShown;
+
+        /// <summary>Pista muestra «Te faltan {n}».</summary>
+        public bool HintShowsMissing => _hint.MissingShown;
+
+        /// <summary>Pista ofrece el video (<c>rv_hint</c>): la insignia lleva el icono de video.</summary>
+        public bool HintShowsVideo => _hint.VideoShown;
+
+        /// <summary>Texto del aviso «Te faltan {n}» de Pista (vacío si no se ve).</summary>
+        public string HintMissingText => _hint.MissingText;
+
+        /// <summary>Aviso «Te faltan {n}» de Pista (tests de solapes).</summary>
+        public RectTransform HintMissingRect => _hint.MissingRect;
+
+        /// <summary>Etiqueta de precio de Pista (tests de solapes).</summary>
+        public RectTransform HintPriceRect => _hint.PriceRect;
+
+        /// <summary>«Te faltan {n}» de Pista responde al toque (<see cref="PulseHintMissing"/>; tests).</summary>
+        public bool HintMissingPulsing => _hint.PulsingNow;
+
+        /// <summary>La cara de Pista está pulsada: Morpho piensa.</summary>
+        public bool HintPressed => _hintPressed;
+
+        /// <summary>Pista tiene el aspecto de un botón que se puede usar (ni gris ni sin <c>hint_supported</c>; tests).</summary>
+        public bool HintLooksEnabled => _hint.Parts.Relief.Interactable;
+
+        /// <summary>El globo «La morpho no conoce este tramo todavía» se ve (<see cref="ShowHintTooltip"/>).</summary>
+        public bool HintTooltipVisible => _tip.gameObject.activeSelf;
+
+        /// <summary>Texto del globo de Pista (vacío si no se ve).</summary>
+        public string HintTooltipText => _tip.gameObject.activeSelf ? _tipText.text : string.Empty;
+
+        /// <summary>Globo de Pista (tests de solapes).</summary>
+        public RectTransform HintTooltipRect => _tip;
+
+        /// <summary>Texto del globo de Pista (tests de tamaño: ≥ 12 sp).</summary>
+        public TextMeshProUGUI HintTooltipLabel => _tipText;
+
+        /// <summary>Ms que le quedan al globo de Pista (0 si no se ve; tests).</summary>
+        public float HintTooltipLeftMs => _tip.gameObject.activeSelf ? _tipMs : 0f;
 
         /// <summary>La ranura de Cuia extra existe en el nivel.</summary>
         public bool ExtraCuiaShown => _extra.Active;
@@ -184,7 +371,29 @@ namespace AF.UI
         public int SlotsVersion => _slotsVersion;
 
         /// <summary>Ancho de la bandeja (dp).</summary>
-        public float Width => PadDp + (_slots * _slotW) + ((_slots - 1) * GapDp) + PadDp;
+        public float Width => _pad + (_slots * _slotW) + ((_slots - 1) * _gap) + _pad;
+
+        /// <summary>
+        /// La bandeja va apretada (<see cref="CompactGapDp"/> y <see cref="CompactPadDp"/>): la palabra más larga de una etiqueta
+        /// no cabía con la separación de siempre (tests).
+        /// </summary>
+        public bool Compact => _gap < GapDp;
+
+        /// <summary>Separación de ahora entre ranuras (dp): 8, o <see cref="CompactGapDp"/> apretada (tests).</summary>
+        public float GapNowDp => _gap;
+
+        /// <summary>
+        /// Aire de ahora a cada lado de la etiqueta de una ranura ensanchada (dp): <see cref="LabelSideInsetDp"/>, o
+        /// <see cref="LabelNarrowInsetDp"/>, el de la ranura de 64 dp, si ni apretada cabe la palabra más larga con el de
+        /// siempre (tests).
+        /// </summary>
+        public float LabelInsetNowDp => _wideInset;
+
+        /// <summary>Ancho más grande que puede tomar ahora cada ranura en un lienzo de <paramref name="canvasW"/> dp (tests).</summary>
+        public float SlotCapFor(float canvasW)
+        {
+            return CapFor(canvasW, _pad, _gap);
+        }
 
         /// <summary>Ancho de cada ranura (dp): 64, o más si una etiqueta no cabe (tarea L4; <see cref="SlotMaxDp"/>).</summary>
         public float SlotWidth => _slotW;
@@ -341,7 +550,13 @@ namespace AF.UI
             top = float.PositiveInfinity;
             _undo.MinMissingTop(ref top);
             _extra.MinMissingTop(ref top);
+            _hint.MinMissingTop(ref top);
             _reveal.MinMissingTop(ref top);
+            if (_tip.gameObject.activeInHierarchy)
+            {
+                top = Mathf.Min(top, -_tip.anchoredPosition.y); // el globo de Pista tampoco se tapa
+            }
+
             return !float.IsPositiveInfinity(top);
         }
 
@@ -352,6 +567,8 @@ namespace AF.UI
             _key = int.MinValue;
             _revealKey = int.MinValue;
             ForgetUndoVideo();
+            ForgetHintVideo();
+            HideHintTooltip();
         }
 
         /// <summary>
@@ -365,7 +582,110 @@ namespace AF.UI
                 _undoVideoPollMs -= dtMs;
             }
 
+            if (_hintVideoPollMs > 0f)
+            {
+                _hintVideoPollMs -= dtMs;
+            }
+
+            if (_tip.gameObject.activeSelf)
+            {
+                _tipMs -= dtMs;
+                if (_tipMs <= 0f || !_hint.Parts.Button.gameObject.activeInHierarchy)
+                {
+                    HideHintTooltip();
+                }
+            }
+
+            _hint.TickMissingPulse(dtMs);
             _reveal.TickMissingPulse(dtMs);
+        }
+
+        /// <summary>
+        /// Respuesta al toque de Pista sin stock, sin saldo y sin video (como Revelar: pregunta 48 (b), D-022) [P]: late la
+        /// burbuja «Te faltan {n}» de su ranura, con la cifra <paramref name="missing"/>; con <paramref name="reduceMotion"/>,
+        /// solo el color. False si la burbuja no se ve o lleva otra cifra. Sin asignaciones.
+        /// </summary>
+        public bool PulseHintMissing(int missing, bool reduceMotion)
+        {
+            return _hint.PulseMissing(missing, reduceMotion);
+        }
+
+        /// <summary>Acción del botón Pista (la pone <c>GameScreen.Hint.cs</c>: <c>IGameActions.PressHint</c>).</summary>
+        public void SetHintAction(Action onHint)
+        {
+            _onHint = onHint ?? throw new ArgumentNullException(nameof(onHint));
+        }
+
+        /// <summary>
+        /// Enseña sobre la ranura Pista el globo «La morpho no conoce este tramo todavía» (04 §2.3 b) durante lo que se tarda en
+        /// leerlo (<see cref="NoticeTiming.ReadMs"/>): a <see cref="HintTooltipSp"/> sp, en una línea si cabe en
+        /// <see cref="HintTooltipMaxDp"/> y si no en dos, centrado sobre la ranura y dentro de la pantalla. Otro toque lo vuelve a
+        /// empezar. False si la ranura no se ve.
+        /// </summary>
+        public bool ShowHintTooltip()
+        {
+            if (!_hint.Active || !_hint.Parts.Button.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            string text = UiText.HintUnsupported;
+            _tipText.text = text;
+            _tipMs = NoticeTiming.ReadMs(text.Length);
+            _tip.gameObject.SetActive(true);
+            _tip.SetAsLastSibling();
+            PlaceHintTooltip();
+            return true;
+        }
+
+        /// <summary>Oculta el globo de Pista.</summary>
+        public void HideHintTooltip()
+        {
+            _tipMs = 0f;
+            if (_tip.gameObject.activeSelf)
+            {
+                _tip.gameObject.SetActive(false);
+            }
+        }
+
+        // El globo de Pista sobre su ranura: ancho de su línea (o HintTooltipMaxDp y dos líneas), centrado y dentro de la pantalla.
+        // Mide al enseñarlo y al recolocar la bandeja, nunca por fotograma.
+        private void PlaceHintTooltip()
+        {
+            if (!_tip.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            float scale = UiBuilder.TextScale;
+            float maxW = Mathf.Min(HintTooltipMaxDp * scale, _canvasW - (2f * TrayEdgeDp));
+            float inner = maxW - (2f * TooltipPadXDp);
+            _tipText.textWrappingMode = TextWrappingModes.NoWrap;
+            float line = Mathf.Ceil(_tipText.GetPreferredValues(_tipText.text, float.PositiveInfinity, float.PositiveInfinity).x);
+            bool wrap = line > inner;
+            _tipText.textWrappingMode = wrap ? TextWrappingModes.Normal : TextWrappingModes.NoWrap;
+            float textW = wrap ? inner : line;
+            float textH = Mathf.Ceil(_tipText.GetPreferredValues(_tipText.text, textW, float.PositiveInfinity).y);
+            float w = textW + (2f * TooltipPadXDp);
+            float h = textH + (2f * TooltipPadYDp);
+            var slot = (RectTransform)_hint.Parts.Button.transform;
+            float slotX = slot.anchoredPosition.x;
+            float slotTop = -slot.anchoredPosition.y;
+            float x = Mathf.Clamp(slotX + ((_slotW - w) * 0.5f), TrayEdgeDp, _canvasW - TrayEdgeDp - w);
+
+            // Por encima de las burbujas «Te faltan {n}» de las vecinas, si se ven: el globo es más ancho que su ranura.
+            float bottom = slotTop - (TooltipGapDp * scale);
+            float bubbles = float.PositiveInfinity;
+            _undo.MinMissingTop(ref bubbles);
+            _extra.MinMissingTop(ref bubbles);
+            _hint.MinMissingTop(ref bubbles);
+            _reveal.MinMissingTop(ref bubbles);
+            if (!float.IsPositiveInfinity(bubbles))
+            {
+                bottom = Mathf.Min(bottom, bubbles - MissingNeighborGapDp);
+            }
+
+            UiBuilder.Place(_tip, x, bottom - h, w, h);
         }
 
         /// <summary>
@@ -488,6 +808,12 @@ namespace AF.UI
                 _key = int.MinValue;
                 _revealKey = int.MinValue;
                 ForgetUndoVideo();
+                ForgetHintVideo();
+            }
+
+            if (!visible)
+            {
+                HideHintTooltip();
             }
 
             // Cada ranura se enseña si la bandeja se ve y la ranura existe (Slot.SetVisible lo combina con Active): pasarle
@@ -496,6 +822,7 @@ namespace AF.UI
             _tray.gameObject.SetActive(visible);
             _undo.SetVisible(visible);
             _extra.SetVisible(visible);
+            _hint.SetVisible(visible);
             _reveal.SetVisible(visible);
         }
 
@@ -508,15 +835,14 @@ namespace AF.UI
             _canvasW = canvasW;
             _trayTop = trayTop;
             _slotW = SlotWidthFor(canvasW);
-            _grow = _undo.GrowFor(_slotW);
-            if (_extra.Active)
+            _grow = 0f;
+            for (int i = 0; i < _order.Length; i++)
             {
-                _grow = Mathf.Max(_grow, _extra.GrowFor(_slotW));
-            }
-
-            if (_reveal.Active)
-            {
-                _grow = Mathf.Max(_grow, _reveal.GrowFor(_slotW));
+                _order[i].Spacing(_gap, _wideInset);
+                if (_order[i].Active)
+                {
+                    _grow = Mathf.Max(_grow, _order[i].GrowFor(_slotW));
+                }
             }
 
             float width = Width;
@@ -533,20 +859,19 @@ namespace AF.UI
                 UiBuilder.Place(_tray.rectTransform, trayX - 8f, trayTop - 2f, width + 16f, 94f + _grow);
             }
 
-            // Orden canónico de 07 §7.4, de izquierda a derecha y sin huecos: Marea, Cuia extra y Revelar. Todas las ranuras
-            // miden lo mismo, también a lo alto (_grow).
-            float x = trayX + PadDp;
-            _undo.Place(x, trayTop + 4f, _slotW, _grow);
-            if (_extra.Active)
+            // Orden canónico de 07 §7.4 (TraySlot), de izquierda a derecha y sin huecos: Marea, Cuia extra, Pista, [Pororoca] y
+            // Revelar. Todas las ranuras miden lo mismo, también a lo alto (_grow).
+            float x = trayX + _pad;
+            for (int i = 0; i < _order.Length; i++)
             {
-                x += _slotW + GapDp;
-                _extra.Place(x, trayTop + 4f, _slotW, _grow);
-            }
+                Slot slot = _order[i];
+                if (!slot.Active)
+                {
+                    continue;
+                }
 
-            if (_reveal.Active)
-            {
-                x += _slotW + GapDp;
-                _reveal.Place(x, trayTop + 4f, _slotW, _grow);
+                slot.Place(x, trayTop + 4f, _slotW, _grow);
+                x += _slotW + _gap;
             }
 
             LayoutMissing();
@@ -557,29 +882,51 @@ namespace AF.UI
         // SlotMaxDp ni de lo que deja la pantalla (la bandeja a TrayEdgeDp de cada borde). Mide al colocar, nunca por fotograma.
         private float SlotWidthFor(float canvasW)
         {
-            float text = _undo.LabelTextDp;
-            if (_extra.Active)
+            float text = 0f;
+            float word = 0f;
+            for (int i = 0; i < _order.Length; i++)
             {
-                text = Mathf.Max(text, _extra.LabelTextDp);
+                if (_order[i].Active)
+                {
+                    text = Mathf.Max(text, _order[i].LabelTextDp);
+                    word = Mathf.Max(word, _order[i].LabelWordDp);
+                }
             }
 
-            if (_reveal.Active)
+            // Cabe en la ranura de 64 dp (56 con las 5, 07 §7.4) con su aire de siempre: no se ensancha (guía 3.6). Si no, su
+            // línea y LabelSideInsetDp por lado (revisión de L4).
+            _gap = GapDp;
+            _pad = PadDp;
+            _wideInset = LabelSideInsetDp;
+            float baseW = BaseSlotDpFor(_slots);
+            if (text + (2f * LabelNarrowInsetDp) <= baseW)
             {
-                text = Mathf.Max(text, _reveal.LabelTextDp);
+                return baseW;
             }
 
-            // Cabe en la ranura de 64 dp con su aire de siempre: no se ensancha (guía 3.6). Si no, su línea y LabelSideInsetDp
-            // por lado (revisión de L4).
-            if (text + (2f * LabelNarrowInsetDp) <= SlotDp)
+            // Si la palabra más larga no cabe entera ni en la ranura más ancha (la etiqueta iría en dos líneas partiendo esa
+            // palabra), la bandeja se aprieta (MO2) y, si ni así, el aire de la etiqueta es el de la ranura de 64 dp.
+            float cap = CapFor(canvasW, _pad, _gap);
+            if (word + (2f * LabelSideInsetDp) > cap)
             {
-                return SlotDp;
+                _gap = CompactGapDp;
+                _pad = CompactPadDp;
+                cap = CapFor(canvasW, _pad, _gap);
+                if (word + (2f * LabelSideInsetDp) > cap)
+                {
+                    _wideInset = LabelNarrowInsetDp;
+                }
             }
 
-            float need = text + (2f * LabelSideInsetDp);
+            float need = text + (2f * _wideInset);
+            return Mathf.Clamp(Mathf.Ceil(need), baseW, Mathf.Max(baseW, cap));
+        }
 
-            float room = (canvasW - (2f * TrayEdgeDp) - (2f * PadDp) - ((_slots - 1) * GapDp)) / _slots;
-            float cap = Mathf.Max(SlotDp, Mathf.Min(SlotMaxDp, Mathf.Floor(room)));
-            return Mathf.Clamp(Mathf.Ceil(need), SlotDp, cap);
+        // Lo más ancho que puede ir cada ranura con pad y gap: SlotMaxDp, sin salir de la pantalla (TrayEdgeDp a cada lado).
+        private float CapFor(float canvasW, float pad, float gap)
+        {
+            float room = (canvasW - (2f * TrayEdgeDp) - (2f * pad) - ((_slots - 1) * gap)) / _slots;
+            return Mathf.Max(BaseSlotDpFor(_slots), Mathf.Min(SlotMaxDp, Mathf.Floor(room)));
         }
 
         /// <summary>
@@ -605,10 +952,15 @@ namespace AF.UI
 
             UndoStatus undo = flow.UndoStatus;
             ExtraCuiaOffer extra = flow.ExtraCuia;
+            HintOffer hint = flow.Hint;
             bool video = UndoVideo(undo);
             int seeds = Math.Max(0, (_services?.Wallet.Seeds ?? 0) - Math.Max(0, seedsPending));
+            bool hintVideo = HintVideo(hint, seeds);
             bool undoEnabled = undo.HasQuota ? flow.CanUndo : flow.AcceptsBoardInput;
             int key = Hash(undo.Unlimited ? 1 : 0, undo.FreeLeft, undo.Stock, video ? 1 : 0, undoEnabled ? 1 : 0, (int)extra.State, extra.Stock, extra.Missing, seeds);
+
+            // Pista (MO2): estado, stock, precio y video; nunca los ms del enfriamiento, que cambian en cada fotograma.
+            key = Hash(key, (int)hint.State, hint.Stock, hint.Price, hintVideo ? 1 : 0, 0, 0, 0, 0);
             if (key == _key)
             {
                 return;
@@ -617,11 +969,19 @@ namespace AF.UI
             _key = key;
             _refreshRepaints++;
             bool showExtra = extra.State != ExtraCuiaState.Hidden;
-            if (showExtra != _extra.Active)
+            bool showHint = hint.State != HintState.Hidden;
+            if (showExtra != _extra.Active || showHint != _hint.Active)
             {
                 _extra.SetActive(showExtra);
+                _hint.SetActive(showHint);
+                if (!showHint)
+                {
+                    HideHintTooltip();
+                }
+
                 _slots = CountSlots();
                 _slotsVersion++;
+                _revealKey = int.MinValue;
                 Layout(_canvasW, _trayTop);
             }
 
@@ -681,12 +1041,80 @@ namespace AF.UI
                 }
             }
 
+            if (showHint)
+            {
+                PaintHint(hint, seeds, hintVideo);
+            }
+
             LayoutMissing();
+        }
+
+        // Pista · Morpho (04 §2.3; 04 §1.1: el stock se gasta antes que las semillas): lista (o pensando), «+N» con stock; si no, el
+        // precio; sin saldo y con rv_hint, «+1» con el icono de video; sin nada, el precio en rojo con «Te faltan {n}» (el mismo
+        // orden que cobra GameBootstrap.PressHint). Pulsada mientras Morpho piensa. Gris sin vertido legal, fuera de PLAYING y en
+        // el enfriamiento, con el stock si lo hay. Sin hint_supported, gris y sin nada, pero el toque llega (el globo de 04 §2.3 b).
+        private void PaintHint(HintOffer hint, int seeds, bool video)
+        {
+            bool usable = hint.State == HintState.Ready || hint.State == HintState.Thinking;
+            bool unsupported = hint.State == HintState.Unsupported;
+            UiBuilder.SetEnabled(_hint.Parts.Button, usable);
+            if (unsupported)
+            {
+                _hint.Parts.Button.interactable = true; // gris, pero el toque enseña el globo
+            }
+            else
+            {
+                HideHintTooltip();
+            }
+
+            bool thinking = hint.State == HintState.Thinking;
+            if (thinking != _hintPressed)
+            {
+                _hintPressed = thinking;
+                _hint.Parts.Relief.Press(thinking);
+            }
+
+            if (!usable)
+            {
+                _hint.ShowBadge(null, false);
+                _hint.ShowStockBadge(unsupported ? 0 : hint.Stock);
+                _hint.HidePrice();
+            }
+            else if (hint.Stock > 0)
+            {
+                _hint.ShowBadge(null, false);
+                _hint.ShowStockBadge(hint.Stock);
+                _hint.HidePrice();
+            }
+            else if (seeds >= hint.Price)
+            {
+                _hint.ShowBadge(null, false);
+                _hint.ShowStockBadge(0);
+                _hint.ShowPrice(hint.Price, 0);
+            }
+            else if (video)
+            {
+                _hint.ShowStockBadge(0);
+                _hint.ShowBadge(Number(1, true), true);
+                _hint.HidePrice();
+            }
+            else
+            {
+                _hint.ShowBadge(null, false);
+                _hint.ShowStockBadge(0);
+                _hint.ShowPrice(hint.Price, Math.Max(0, hint.Price - seeds));
+            }
         }
 
         private int CountSlots()
         {
-            return 1 + (_extra.Active ? 1 : 0) + (_reveal.Active ? 1 : 0);
+            int n = 0;
+            for (int i = 0; i < _order.Length; i++)
+            {
+                n += _order[i].Active ? 1 : 0;
+            }
+
+            return n;
         }
 
         // ¿«+3» de Marea con el icono de video? Solo sin cupo (B2-1). La respuesta de los anuncios se guarda UndoVideoPollMs
@@ -716,24 +1144,65 @@ namespace AF.UI
             _undoVideoPollMs = 0f;
         }
 
+        // ¿«+1» de Pista con el icono de video (rv_hint)? Solo si se puede pedir ya, sin stock y sin saldo (el orden de
+        // PaintHint); la respuesta de los anuncios se guarda UndoVideoPollMs, como la de Marea.
+        private bool HintVideo(HintOffer hint, int seeds)
+        {
+            GameServices? services = _services;
+            bool asks = services != null && (hint.State == HintState.Ready || hint.State == HintState.Thinking) && hint.Stock == 0 && seeds < hint.Price;
+            if (!asks)
+            {
+                ForgetHintVideo();
+                return false;
+            }
+
+            if (_hintVideoPollMs <= 0f)
+            {
+                _hintVideoReady = services!.RewardedReady(AdPlacement.Hint);
+                _hintVideoPollMs = UndoVideoPollMs;
+            }
+
+            return _hintVideoReady;
+        }
+
+        private void ForgetHintVideo()
+        {
+            _hintVideoReady = false;
+            _hintVideoPollMs = 0f;
+        }
+
         // «Te faltan {n}» encima de cada ranura sin saldo (104 dp, como desde B2-1); si la vecina también lo enseña, los dos
         // estrechan a su paso de ranura para no pisarse. El texto va a 12 sp, el mínimo de 02 §12, y nunca menos: si no cabe en
         // una línea (una cifra de 3 con el aviso estrecho), la cifra baja a una segunda línea y la placa crece hacia arriba
         // (Slot.PlaceMissing), sin salir del hueco entre el tablero y la bandeja.
         private void LayoutMissing()
         {
-            bool undo = _undo.MissingShown;
-            bool extra = _extra.Active && _extra.MissingShown;
-            bool reveal = _reveal.Active && _reveal.MissingShown;
+            // Vecinas en el orden de la bandeja, sin huecos: una ranura que no existe no separa a las de sus lados.
+            int n = 0;
+            for (int i = 0; i < _order.Length; i++)
+            {
+                Slot slot = _order[i];
+                if (slot.Active)
+                {
+                    _activeBuf[n++] = slot;
+                }
+                else
+                {
+                    slot.PlaceMissing(slot.MissingWideNowDp);
+                }
+            }
 
-            // Vecinas en el orden de la bandeja (sin la Cuia extra, Marea y Revelar quedan juntas).
-            bool undoNarrow = undo && (extra || (!_extra.Active && reveal));
-            bool extraNarrow = extra && (undo || reveal);
-            bool revealNarrow = reveal && (extra || (!_extra.Active && undo));
-            float narrow = _slotW + GapDp - MissingNeighborGapDp;
-            _undo.PlaceMissing(undoNarrow ? narrow : _undo.MissingWideNowDp);
-            _extra.PlaceMissing(extraNarrow ? narrow : _extra.MissingWideNowDp);
-            _reveal.PlaceMissing(revealNarrow ? narrow : _reveal.MissingWideNowDp);
+            float narrow = _slotW + _gap - MissingNeighborGapDp;
+            for (int i = 0; i < n; i++)
+            {
+                Slot slot = _activeBuf[i];
+                bool shown = slot.MissingShown;
+                bool left = i > 0 && _activeBuf[i - 1].MissingShown;
+                bool right = i < n - 1 && _activeBuf[i + 1].MissingShown;
+                slot.PlaceMissing(shown && (left || right) ? narrow : slot.MissingWideNowDp);
+            }
+
+            PlaceHintTooltip(); // el globo de Pista, por encima de las burbujas que se vean
         }
 
         private string Number(int value, bool plus)
@@ -849,6 +1318,8 @@ namespace AF.UI
             private float _y;
             private float _missingW = MissingWideDp;
             private float _w = SlotDp;
+            private float _gap = GapDp;
+            private float _wideInset = LabelSideInsetDp;
             private float _grow;
             private bool _labelTwoLines;
             private int _missingShown = -1;
@@ -913,10 +1384,20 @@ namespace AF.UI
             /// Aire a cada lado de la etiqueta en una ranura de <paramref name="w"/> dp: <see cref="LabelNarrowInsetDp"/> en la de
             /// 64 dp de la guía 3.6 y <see cref="LabelSideInsetDp"/> en la ensanchada (revisión de L4).
             /// </summary>
-            public static float LabelInsetFor(float w)
+            public float LabelInsetFor(float w)
             {
-                return w > SlotDp + 0.01f ? LabelSideInsetDp : LabelNarrowInsetDp;
+                return w > SlotDp + 0.01f ? _wideInset : LabelNarrowInsetDp;
             }
+
+            /// <summary>La separación hasta la ranura vecina y el aire de la etiqueta ensanchada de ahora (los pone la bandeja).</summary>
+            public void Spacing(float gap, float wideInset)
+            {
+                _gap = gap;
+                _wideInset = wideInset;
+            }
+
+            /// <summary>Ancho de la palabra más larga de la etiqueta (dp): lo menos que necesita para no partirla (MO2).</summary>
+            public float LabelWordDp => UiBuilder.LongestWordWidth(Label);
 
             /// <summary>Ancho del aviso «Te faltan {n}» sin vecinas con el ancho de ahora de la ranura (dp).</summary>
             public float MissingWideNowDp => _w + MissingWideExtraDp;
@@ -1177,7 +1658,7 @@ namespace AF.UI
             // La etiqueta de precio, centrada en la ranura y como mucho del ancho de su paso de ranura con 2 dp de aire.
             private void PlacePrice()
             {
-                float k = Mathf.Clamp((_w + GapDp - 2f) / _price.Width, PriceMinScale, 1f);
+                float k = Mathf.Clamp((_w + _gap - 2f) / _price.Width, PriceMinScale, 1f);
                 _price.Root.localScale = new Vector3(k, k, 1f);
                 float top = Mathf.Max(PriceCenterDp + _grow - (_price.Height * 0.5f * k), LabelTopDp + LabelHeightDp + _grow - PriceBelowLabelDp);
                 _price.PlaceAt((_w - (_price.Width * k)) * 0.5f, top);
