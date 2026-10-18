@@ -25,7 +25,7 @@ namespace AF.UI
             string? line = FormatLocaleState(resolution, CultureInfo.CurrentCulture.Name);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -38,7 +38,7 @@ namespace AF.UI
             string? line = FormatLocaleState(resolution, CultureInfo.CurrentCulture.Name, deviceTag, AndroidDeviceLocale.SourceKey(device), Loc.NumberFormat.Tag);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 

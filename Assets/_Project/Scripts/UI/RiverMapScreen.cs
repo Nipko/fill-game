@@ -744,6 +744,7 @@ namespace AF.UI
             }
 
             SetOffset(new Vector2(_offset.x + deltaDp.x, _offset.y - deltaDp.y));
+            PlatesDragged(); // FX10: otro encuadre; las placas que no cabían en el de apertura vuelven
             _activeMs = ActiveLingerMs;
         }
 
@@ -1055,6 +1056,7 @@ namespace AF.UI
             Vector2 offset = new Vector2((_viewW * 0.5f) - c.x, (_viewH * 0.5f) + c.y);
             MarkersFrame(ref offset);
             SetOffset(offset);
+            PlatesFitView(); // FX10: las placas de los mundos futuros, enteras a la vista con este encuadre
         }
 
         // Coloca el contenido con su esquina en offset (dp, y hacia abajo), sin salirse del mapa, y decide «Volver a la canoa»: en

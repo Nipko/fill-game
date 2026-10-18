@@ -215,6 +215,7 @@ namespace AF.UI
             }
 
             ShowMarkersAt(level);
+            PlatesFollowProgress(); // FX10: si un mundo dejó de ser futuro, las placas se vuelven a colocar
             if (IsUnseenArrival(level))
             {
                 FillStopMarker(level / RiverStopCatalog.LevelsPerStop);
@@ -243,6 +244,7 @@ namespace AF.UI
                 ShowProgressAt(_catchTo);
                 StartFades(from);
                 ShowMarkersAt(_catchTo);
+                PlatesFollowProgress(); // FX10
                 SendCatchUpArrivals(from, _catchTo, byTouch);
             }
 

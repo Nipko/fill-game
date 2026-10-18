@@ -33,7 +33,7 @@ namespace AF.UI
             string? text = FormatFruitLine(line, slotDp);
             if (text != null)
             {
-                Debug.Log(text);
+                Write(text);
             }
         }
 
@@ -42,7 +42,7 @@ namespace AF.UI
             string? text = FormatSlotMeasure(level, locale, scale, ms, fruitMs, slotDp);
             if (text != null)
             {
-                Debug.Log(text);
+                Write(text);
             }
         }
 
@@ -51,7 +51,7 @@ namespace AF.UI
             string? text = FormatFactPageOpen(tintId, unlocked, from, level);
             if (text != null)
             {
-                Debug.Log(text);
+                Write(text);
             }
         }
 
