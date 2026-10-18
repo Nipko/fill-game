@@ -41,6 +41,32 @@ namespace AF.GameFlow
 
         private readonly int _mechanics;
 
+        /// <summary>
+        /// Mecánica de la cuia que estrena <paramref name="intro"/> (<c>intro_mechanic</c>; las variantes, con la de su base: el
+        /// Brote de dos hojas es un Brote y la Liana de cuenta, una Liana), o <see cref="MechanicType.None"/> si el estreno no
+        /// es de una cuia con mecánica (el Barro, las Cuias chica y alta, Aguas turbias) o no hay estreno. La vista la usa para
+        /// no tapar con la tarjeta la cuia que se estrena (VA1b).
+        /// </summary>
+        public static MechanicType DebutMechanicType(string? intro)
+        {
+            switch (intro)
+            {
+                case "hoja": return MechanicType.Hoja;
+                case "brote":
+                case BroteTwoLeavesIntro: return MechanicType.Brote;
+                case "liana":
+                case LianaCountIntro: return MechanicType.Liana;
+                case "remolino": return MechanicType.Remolino;
+                case "lluvia": return MechanicType.Lluvia;
+                case "pirana": return MechanicType.Pirana;
+                case "matapi": return MechanicType.Matapi;
+                case "tinaja": return MechanicType.Tinaja;
+                case HojaAtadaIntro: return MechanicType.HojaAtada;
+                case FlorIntro: return MechanicType.Flor;
+                default: return MechanicType.None;
+            }
+        }
+
         /// <summary>Crea la tarjeta (en el juego, <see cref="For"/>).</summary>
         /// <param name="level">Número de campaña del nivel.</param>
         /// <param name="label"><c>difficulty.label</c>: <c>normal</c>, <c>hard</c> o <c>very_hard</c>.</param>

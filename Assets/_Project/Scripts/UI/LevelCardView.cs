@@ -138,6 +138,13 @@ namespace AF.UI
         /// <summary>Alto de la silueta del sitio en la fila del hito (dp) [P]: los 80 dp del héroe a la misma escala, redondeados.</summary>
         public const float HitoSilhouetteHeightDp = 22f;
 
+        /// <summary>
+        /// Aire mínimo (dp) entre el borde inferior de la tarjeta de estreno y lo más alto que se ve de la cuia que estrena,
+        /// cuando esa cuia queda por debajo de la tarjeta (VA1b, revisión de la tarjeta del 403): la tarjeta no tapa la mecánica
+        /// que enseña [P].
+        /// </summary>
+        public const float DebutClearDp = 12f;
+
         /// <summary>Marco de madera de la ventanita de la silueta, a cada lado (dp) [P].</summary>
         public const float HitoFrameDp = 2f;
 
@@ -292,6 +299,8 @@ namespace AF.UI
         private LevelCardInfo? _card;
         private int _iconCount;
         private float _fontScale = 1f;
+        private float _debutTopDp = float.NaN;
+        private float _rowOneTopDp = float.NaN;
         private float _tutorialBaseSp;
         private int _tutorialLines;
         private string _tutorialSource = string.Empty;
@@ -763,8 +772,25 @@ namespace AF.UI
         }
 
         /// <summary>
+        /// Lo más alto que se ve de la cuia que estrena (con su overlay) y de la fila 1 del tablero, en dp desde arriba del lienzo
+        /// (NaN = sin cuia de estreno o sin tablero). Lo da la pantalla antes de <c>Show</c> y de cada
+        /// <see cref="Layout"/>; ver <see cref="Layout"/> (VA1b).
+        /// </summary>
+        public void SetDebutClearance(float debutTopDp, float rowOneTopDp)
+        {
+            _debutTopDp = debutTopDp;
+            _rowOneTopDp = rowOneTopDp;
+        }
+
+        /// <summary>Lo más alto de la cuia que estrena, en dp desde arriba del lienzo (NaN si no hay; tests).</summary>
+        public float DebutTopDp => _debutTopDp;
+
+        /// <summary>
         /// Coloca la tarjeta en la pantalla de <paramref name="canvasW"/> × <paramref name="canvasH"/> dp (con
-        /// <see cref="FontScale"/>), centrada a lo ancho y al 45 % del alto libre, dentro de la zona segura.
+        /// <see cref="FontScale"/>), centrada a lo ancho y al 45 % del alto libre, dentro de la zona segura. Si la cuia que estrena
+        /// (<see cref="SetDebutClearance"/>) queda por debajo del centro de la tarjeta y a menos de <see cref="DebutClearDp"/> de su
+        /// borde inferior, la tarjeta se ancla por abajo a <see cref="DebutClearDp"/> sobre esa cuia y crece solo hacia arriba; si
+        /// así no cabe, va sobre la fila 1 del tablero (VA1b: la tarjeta no tapa la mecánica que enseña).
         /// </summary>
         public void Layout(float canvasW, float canvasH, float safeTop, float safeBottom)
         {
@@ -890,6 +916,7 @@ namespace AF.UI
 
             float top = Mathf.Round((canvasH - cardH) * 0.45f);
             top = Mathf.Clamp(top, safeTop + 8f, Mathf.Max(safeTop + 8f, canvasH - safeBottom - 8f - cardH));
+            top = ClearOfDebut(top, cardH, safeTop + 8f);
             float left = (canvasW - cardW) * 0.5f;
             _pop.anchorMin = new Vector2(0f, 1f);
             _pop.anchorMax = new Vector2(0f, 1f);
@@ -901,6 +928,31 @@ namespace AF.UI
             // tarjeta: en 1-200 solo se generan y se guardan las superficies de 5 altos (144, 180 y 281 dp; y, con la fila del hito
             // p20, 225 y 352 dp [P], memoria de M2.5).
             ModalKit.Size(_panel, _surface, _art, 0f, 0f, cardW, cardH, true);
+        }
+
+        // La cuia que estrena por debajo del centro de la tarjeta y a menos de DebutClearDp de su borde inferior: la tarjeta se
+        // ancla por abajo a DebutClearDp sobre ella (crece solo hacia arriba con la fuente); si así no cabe bajo la zona segura,
+        // va sobre la fila 1 (su tope, o minTop si la fila 1 queda más arriba). Solo en los estrenos.
+        private float ClearOfDebut(float top, float cardH, float minTop)
+        {
+            if (_card == null || _card.Kind != LevelCardKind.Debut || float.IsNaN(_debutTopDp))
+            {
+                return top;
+            }
+
+            bool below = _debutTopDp > top + (cardH * 0.5f);
+            if (!below || top + cardH <= _debutTopDp - DebutClearDp)
+            {
+                return top;
+            }
+
+            float anchored = Mathf.Floor(_debutTopDp - DebutClearDp - cardH);
+            if (anchored >= minTop)
+            {
+                return anchored;
+            }
+
+            return float.IsNaN(_rowOneTopDp) ? minTop : Mathf.Max(minTop, Mathf.Round(_rowOneTopDp));
         }
 
         // Baja air dp todo lo colocado desde y (en el cuerpo de la tarjeta): el tutorial, la Luciérnaga y la píldora.

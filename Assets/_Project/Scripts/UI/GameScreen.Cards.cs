@@ -122,6 +122,7 @@ namespace AF.UI
             HoldIntroForCard(flow);
             _cardLayoutSent = false;
             RiverStop? hito = LevelCardView.HitoStopFor(card.Level, RiverStops);
+            UpdateDebutClearance(card);
             _levelCard.Show(card, hito, hito != null ? HitoWater(flow, hito) : string.Empty, flow.ReduceMotion, _canvasW, _canvasH,
                 _safeTop, _safeBottom);
             RestoreBoardUnit();
@@ -175,6 +176,11 @@ namespace AF.UI
         {
             if (_cardsBuilt && _levelCard.Visible)
             {
+                if (_levelCard.Card != null)
+                {
+                    UpdateDebutClearance(_levelCard.Card); // el tablero ya está colocado en la pantalla nueva
+                }
+
                 _levelCard.Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
                 RestoreBoardUnit(); // al cambiar de pantalla, LayoutBoard pone después la unidad nueva
                 RefreshCardProbe();
@@ -184,6 +190,55 @@ namespace AF.UI
             {
                 BannerLayout();
             }
+        }
+
+        // La tarjeta de estreno no tapa la cuia que estrena (VA1b): le pasa lo más alto que se ve de esa cuia (su cuerpo y las
+        // piezas a la vista de su overlay; con varias, la más baja en la pantalla) y lo alto de la fila 1, en dp desde arriba del
+        // lienzo. Solo al mostrar la tarjeta y al cambiar de pantalla (no por fotograma).
+        private void UpdateDebutClearance(LevelCardInfo card)
+        {
+            MechanicType type = card.Kind == LevelCardKind.Debut ? LevelCardInfo.DebutMechanicType(card.IntroMechanic) : MechanicType.None;
+            float debutTop = float.NaN;
+            float rowOneTop = float.NaN;
+            for (int i = 0; i < _views.Length; i++)
+            {
+                CuiaView view = _views[i];
+                CanvasRectDp(view.Body, out _, out float bodyTop, out _, out _);
+                rowOneTop = float.IsNaN(rowOneTop) ? bodyTop : Mathf.Min(rowOneTop, bodyTop);
+                if (type == MechanicType.None || view.ShownCuia.Mechanic != type)
+                {
+                    continue;
+                }
+
+                float top = bodyTop;
+                var host = view.OverlayHost;
+                top = Mathf.Min(top, ShownChildrenTopDp(host.SlotBack));
+                top = Mathf.Min(top, ShownChildrenTopDp(host.BodyBack));
+                top = Mathf.Min(top, ShownChildrenTopDp(host.BodyFront));
+                top = Mathf.Min(top, ShownChildrenTopDp(host.SlotFront));
+                debutTop = float.IsNaN(debutTop) ? top : Mathf.Max(debutTop, top);
+            }
+
+            _levelCard.SetDebutClearance(debutTop, rowOneTop);
+        }
+
+        // Lo más alto (dp desde arriba del lienzo) de los hijos a la vista de anchor; +∞ si no hay ninguno.
+        private float ShownChildrenTopDp(RectTransform anchor)
+        {
+            float top = float.PositiveInfinity;
+            for (int c = 0; c < anchor.childCount; c++)
+            {
+                var child = anchor.GetChild(c) as RectTransform; // algún overlay cuelga piezas sin RectTransform
+                if (child == null || !child.gameObject.activeSelf || child.rect.width <= 0f || child.rect.height <= 0f)
+                {
+                    continue;
+                }
+
+                CanvasRectDp(child, out _, out float childTop, out _, out _);
+                top = Mathf.Min(top, childTop);
+            }
+
+            return top;
         }
 
         // El mordisco de la tarjeta del 183 (PiranaBiteDemo) coloca sus cuias de 44 dp con CuiaView.SetGeometry, que escribe su

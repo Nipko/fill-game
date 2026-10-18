@@ -51,6 +51,7 @@ namespace AF.Tests.PlayMode
             _rig?.Dispose();
             _rig = null;
             LaunchOptions.Reset();
+            GameScreen.SimulatedScreen = null;
         }
 
         [OneTimeTearDown]
@@ -91,8 +92,13 @@ namespace AF.Tests.PlayMode
             Assert.That(two.BudColor, Is.EqualTo(Palette.Tint(Aguaje)), "el capullo dice la fruta que lo abre");
             for (int side = -1; side <= 1; side += 2)
             {
-                Assert.That(two.WrapOutDeg(side), Is.EqualTo(BroteOverlay.WrapClosedDeg).Within(0.05f), "cerrada sobre el capullo: " + side);
-                Assert.That(two.WrapColor(side).r, Is.EqualTo(BroteOverlay.WrapClosedShade).Within(1e-3f), "plegada, en sombra: " + side);
+                Assert.That(two.WrapOutDeg(side), Is.EqualTo(BroteOverlay.WrapClosedDeg).Within(0.05f), "cerrada, en V estrecha: " + side);
+                Assert.That(two.WrapColor(side), Is.EqualTo(Color.white), "el verde medio de su sprite, sin oscurecer (revisión de VA1b): " + side);
+
+                // La silueta, más ancha que la del Brote a la altura del capullo: el canto de fuera de cada hoja cerrada sobresale
+                // del contorno del capullo (3-4 dp con la cuia de 48 dp; lo mide Level343_DebutCard en el tablero real).
+                Assert.That(two.WrapOuterU(side), Is.GreaterThan(two.CorkHalfWidthU + 0.1f), "la hoja sobresale del capullo: " + side);
+                Assert.That(two.WrapOuterU(side), Is.GreaterThan(brote.CorkHalfWidthU + 0.1f), "más ancha que el Brote: " + side);
             }
 
             // Cerradas, las dos hojas dejan el capullo a la vista entre ellas y por encima: sus puntas no llegan a la del capullo.
@@ -153,7 +159,7 @@ namespace AF.Tests.PlayMode
             Assert.That(two.Visible && two.CorkVisible, Is.True, "sigue siendo Brote");
             Assert.That(two.ClosedLeaves, Is.EqualTo(1));
             Assert.That(two.WrapOutDeg(-1), Is.EqualTo(BroteOverlay.WrapOpenDeg).Within(0.05f), "la izquierda, abierta");
-            Assert.That(two.WrapColor(-1).r, Is.EqualTo(1f).Within(1e-3f), "abierta, a plena luz");
+            Assert.That(two.WrapColor(-1), Is.EqualTo(Color.white), "abierta, con el color de su sprite");
             Assert.That(two.WrapOutDeg(1), Is.EqualTo(BroteOverlay.WrapClosedDeg).Within(0.05f), "la derecha, cerrada");
             Assert.That(two.VisibleTopU, Is.LessThanOrEqualTo(CuiaGeometry.HeightU(4) + BroteOverlay.TopAboveRimU + 1e-3f));
             Assert.That(two.WrapTip(-1).x, Is.GreaterThan(-CuiaGeometry.BodyOuterHalfWidthU - 0.05f), "abierta, no se sale del ancho de la cuia");
@@ -241,10 +247,7 @@ namespace AF.Tests.PlayMode
             Assert.That(flor.StepDurationMs(MechanicStepKind.Release), Is.EqualTo(FlorOverlay.ReleaseMs));
             Assert.That(flor.StepDurationMs(MechanicStepKind.Open), Is.EqualTo(0f));
             AssertSurfaceColors(flor, "Flor");
-            string closed = Shown(_rig.Views[FlorIndex]);
-
-            // D-002: tocarla no la cambia (no es origen; el toque es un vertido ilegal).
-            Assert.That(Shown(_rig.Views[FlorIndex]), Is.EqualTo(closed));
+            string closed = Shown(_rig.Views[FlorIndex]); // D-002 (tocarla no la cambia): con el toque real, en Level403_Flor_InTheScene
 
             // La primera llave (cacao) se sella en otra cuia: su ✓ y la flor entreabierta, blanca.
             BoardState half = _rig.Pour(start, 2, 0, out PourVisual sealCacao);
@@ -366,6 +369,57 @@ namespace AF.Tests.PlayMode
                 brote.Layout(24f, CuiaGeometry.HeightU(4));
             }, Is.Not.AllocatingGCMemory(), "Show, Tick y Layout sin asignaciones (08 §5.4)");
             Assert.That(flor.Visible && brote.WrapsVisible, Is.True);
+
+            // Los fotogramas del paso, los nuevos del bucle de juego (08 §5.4): la hoja que abre el Brote de dos hojas (Open,
+            // n = 2 → 1, BroteOverlay.ApplyLeaf) y el Release de la Flor (FlorOverlay.ApplyRelease), con sus destellos.
+            MechanicStepContext open = StepContext(MechanicStepKind.Open, 4, two, oneLeft, Aguaje);
+            MechanicStepContext release = StepContext(MechanicStepKind.Release, FlorIndex, flowerCuia, flowerCuia.WithoutMechanic(), Cacao);
+
+            // Calentamiento: un paso entero de cada uno (el pool de efectos y los sprites de las frutas, ya creados).
+            PlayWhole(brote, in open, two);
+            PlayWhole(flor, in release, flowerCuia);
+
+            Assert.That(brote.PlayStep(in open), Is.GreaterThan(0f));
+            Assert.That(flor.PlayStep(in release), Is.GreaterThan(0f));
+            brote.Tick(0.25f * BroteOverlay.LeafStepMs);
+            flor.Tick(0.25f * FlorOverlay.ReleaseMs);
+            Assert.That(brote.IsLeafStep && flor.IsAnimating, Is.True, "a mitad de los dos pasos");
+            Assert.That(() =>
+            {
+                for (int f = 0; f < 6; f++)
+                {
+                    brote.Tick(16f); // cruza los destellos de la hoja (t = 0,35)
+                    flor.Tick(16f);
+                }
+            }, Is.Not.AllocatingGCMemory(), "Tick a mitad del paso Open y del Release sin asignaciones (08 §5.4)");
+            Assert.That(brote.IsLeafStep && flor.IsAnimating, Is.True, "siguen a mitad de paso");
+            brote.SnapStep();
+            flor.SnapStep();
+        }
+
+        // Contexto de un paso en el banco (sin otra cuia), con las capas, los efectos y el arte del banco.
+        private MechanicStepContext StepContext(MechanicStepKind kind, int index, Cuia before, Cuia after, int tint)
+        {
+            MechanicTestKit.Rig rig = _rig!;
+            return new MechanicStepContext(kind, index, -1, before, after, false, default, default, false, rig.Animator.Foot(index), default,
+                rig.Animator, rig.BackLayer, rig.FrontLayer, rig.Fx, Art, 1f, false, tint, 0);
+        }
+
+        // Un paso entero del overlay (calentamiento) y vuelta al reposo con rest.
+        private static void PlayWhole(CuiaOverlay overlay, in MechanicStepContext ctx, Cuia rest)
+        {
+            Assert.That(overlay.PlayStep(in ctx), Is.GreaterThan(0f));
+            for (int f = 0; f < 60 && overlay.IsAnimating; f++)
+            {
+                overlay.Tick(16f);
+                if (f == 40)
+                {
+                    overlay.SnapStep();
+                }
+            }
+
+            overlay.SnapStep();
+            overlay.Show(rest, false);
         }
 
         // ---------------------------------------------------------------- Escena: tarjetas de estreno y Marea
@@ -398,7 +452,23 @@ namespace AF.Tests.PlayMode
             Assert.That(card.MedallionSprite, Is.SameAs(view.CardArt.CardMedallion));
             Assert.That(view.LastCardProbe, Does.Contain("\"intro\":\"brote_n2\"").And.Contain("\"kind\":\"debut\""));
             CardSetup.AssertInsidePanel(view);
-            AssertCardIsNotSkipped(boot, MechanicTestKit.IndexOf(flow, MechanicType.Brote));
+
+            // En el tablero de 12 cuias (3 filas), el Brote de dos hojas va en la fila de arriba (revisión de VA1b): deja al menos
+            // TopRowFrameClearDp bajo el canto interior del marco, y sus hojas cerradas sobresalen 3-4 dp del capullo a cada lado.
+            int index = MechanicTestKit.IndexOf(flow, MechanicType.Brote);
+            CuiaView budView = view.Views[index];
+            BroteOverlay two = Brote(budView);
+            float u = budView.Unit;
+            Assert.That(two.TwoLeaves, Is.True);
+            Assert.That(two.TwoLeavesFit, Is.LessThan(1f), "en la fila de arriba, algo más pequeño");
+            Assert.That((two.VisibleTopU - budView.HeightU) * u, Is.LessThanOrEqualTo(LluviaOverlay.CloudTopMaxDp - BroteOverlay.TopRowFrameClearDp + 0.05f),
+                "≥ 4 dp bajo el marco (D-003)");
+            for (int side = -1; side <= 1; side += 2)
+            {
+                Assert.That((two.WrapOuterU(side) - two.CorkHalfWidthU) * u, Is.InRange(3f, 4.5f), "la hoja sobresale 3-4 dp del capullo: " + side);
+            }
+
+            AssertCardIsNotSkipped(boot, index);
         }
 
         [UnityTest]
@@ -427,7 +497,23 @@ namespace AF.Tests.PlayMode
             Assert.That(view.CardArt.MechanicIcon(MechanicType.Flor), Is.Not.Null, "y su icono de 32 dp para la fila de iconos");
             Assert.That(view.LastCardProbe, Does.Contain("\"intro\":\"flor\""));
             CardSetup.AssertInsidePanel(view);
-            AssertCardIsNotSkipped(boot, MechanicTestKit.IndexOf(flow, MechanicType.Flor));
+
+            // La Flor va en la fila de abajo: la tarjeta no la tapa, ni con la fuente al 130 % (revisión de VA1b): su borde inferior
+            // queda al menos DebutClearDp sobre lo más alto de la Flor, y crece solo hacia arriba.
+            int florIndex = MechanicTestKit.IndexOf(flow, MechanicType.Flor);
+            float florTop = ShownTopDp(view, view.Views[florIndex]);
+            Assert.That(card.DebutTopDp, Is.EqualTo(florTop).Within(0.5f), "la pantalla le pasa lo alto de la Flor");
+            float bottom100 = VictorySetup.CanvasRect(card.Panel, (RectTransform)view.Canvas.transform).yMax;
+            Assert.That(bottom100, Is.LessThanOrEqualTo(florTop - LevelCardView.DebutClearDp + 0.5f), "100 %: no tapa la Flor");
+            view.CardFontScale = 1.3f;
+            Canvas.ForceUpdateCanvases();
+            Rect panel130 = VictorySetup.CanvasRect(card.Panel, (RectTransform)view.Canvas.transform);
+            Assert.That(panel130.yMax, Is.LessThanOrEqualTo(florTop - LevelCardView.DebutClearDp + 0.5f), "130 %: tampoco");
+            Assert.That(panel130.yMax, Is.EqualTo(bottom100).Within(1f), "anclada por abajo: crece hacia arriba");
+            CardSetup.AssertPanelOnScreen(view);
+            CardSetup.AssertInsidePanel(view);
+            view.CardFontScale = 1f;
+            AssertCardIsNotSkipped(boot, florIndex);
         }
 
         [UnityTest]
@@ -613,9 +699,10 @@ namespace AF.Tests.PlayMode
 
         // ---------------------------------------------------------------- Ayudas
 
-        // Carga el paquete con las tarjetas encendidas (como CardSetup.Load con el catálogo real).
+        // Carga el paquete con las tarjetas encendidas (como CardSetup.Load con el catálogo real), en la pantalla de 360 × 780 dp.
         private static IEnumerator LoadWithCards(string pack, int level)
         {
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780; // el teléfono de 360 × 780 dp de las capturas
             LaunchOptions.LevelCardsOverride = true;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1240));
             yield return PlayModeHelpers.LoadGameWithPack(pack, level, new MemoryProgressStore(level, level - 1));
@@ -685,6 +772,27 @@ namespace AF.Tests.PlayMode
             Assert.That(result.Error, Is.Null);
             Assert.That(LevelValidation.Validate(result.State!), Is.Null, "tablero válido");
             return result.State!;
+        }
+
+        // Lo más alto que se ve de la cuia (su cuerpo y las piezas a la vista de su overlay), en dp desde arriba del lienzo.
+        private static float ShownTopDp(GameScreen screen, CuiaView cuia)
+        {
+            var root = (RectTransform)screen.Canvas.transform;
+            float top = VictorySetup.CanvasRect(cuia.Body, root).yMin;
+            CuiaOverlayHost host = cuia.OverlayHost;
+            foreach (RectTransform anchor in new[] { host.SlotBack, host.BodyBack, host.BodyFront, host.SlotFront })
+            {
+                for (int i = 0; i < anchor.childCount; i++)
+                {
+                    var child = anchor.GetChild(i) as RectTransform;
+                    if (child != null && child.gameObject.activeSelf && child.rect.width > 0f && child.rect.height > 0f)
+                    {
+                        top = Mathf.Min(top, VictorySetup.CanvasRect(child, root).yMin);
+                    }
+                }
+            }
+
+            return top;
         }
 
         // Lo que se ve de las piezas del overlay bajo el cuerpo: nombre, activación, posición, giro, escala y color de cada imagen.

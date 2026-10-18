@@ -34,7 +34,7 @@ namespace AF.Tests.PlayMode
     /// Sirven para mirar a 47-56 dp que se distingan de su base (el Brote y la Liana), que se lea el color del capullo y las dos
     /// frutas, los solapes con las vecinas, con el marco y con la fila de arriba, y la línea D-003. Necesitan gráficos:
     /// <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.VariantsSnapshotTests</c> sin <c>-nographics</c>; los
-    /// PNG quedan en <c>Logs/snapshots/</c>.
+    /// PNG quedan en <c>Logs/snapshots/&lt;idioma&gt;/</c> (<c>Logs/snapshots/es-419/</c> por defecto; <c>SnapshotKit.Prepare</c>).
     /// </summary>
     [Explicit("Capturas visuales manuales; necesitan dispositivo gráfico.")]
     public sealed class VariantsSnapshotTests

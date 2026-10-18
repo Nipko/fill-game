@@ -35,10 +35,12 @@ namespace AF.Presentation.Mechanics
     /// <see cref="SnapStep"/> y <c>ShowContent(ctx.After)</c>, que lo oculta. Marea lo vuelve a pintar cerrado.</para>
     /// <para><b>Brote de dos hojas</b> (<c>n</c> = 2; variante de la 1.0, estreno en el 343; 02 §9.1 «Variantes» y R10 b;
     /// propuesta de D-007 b.3: «Brote con dos hojas cerradas; cada dosis abre una»; tarea VA1b) [P]: en lugar de las dos hojitas
-    /// que asoman por detrás, dos hojas grandes cerradas por delante, una a cada lado del capullo, inclinadas hacia el eje
-    /// (<see cref="WrapClosedDeg"/>) y algo más oscuras (<see cref="WrapClosedShade"/>): el capullo se ve entre las dos y por
-    /// encima, con su color. <see cref="Cuia.MechanicN"/> dice cuántas siguen cerradas: con 2, las dos; con 1 (ya recibió una
-    /// dosis), la izquierda está abierta hacia fuera (<see cref="WrapOpenDeg"/>) y a plena luz. Cada dosis de su color abre una
+    /// que asoman por detrás, dos hojas grandes cerradas por delante, una a cada lado del capullo, en una V estrecha
+    /// (<see cref="WrapClosedDeg"/>) cuyo canto de fuera sobresale del capullo, en verde medio con la nervadura en luz y un filo
+    /// oscuro (<see cref="ProceduralArt.BroteWrapLeaf"/>): el capullo se ve entre las dos y por encima, con su color, y la
+    /// silueta, a la altura del capullo, es más ancha que la del Brote. En la fila de arriba se encoge lo justo para dejar
+    /// <see cref="TopRowFrameClearDp"/> de aire bajo el marco. <see cref="Cuia.MechanicN"/> dice cuántas siguen cerradas: con
+    /// 2, las dos; con 1 (ya recibió una dosis), la izquierda está abierta hacia fuera (<see cref="WrapOpenDeg"/>). Cada dosis de su color abre una
     /// en el paso Open de la etapa (b) (<see cref="LeafStepMs"/>; el núcleo lo marca en <c>BroteLeafOpenedMask</c> y la cola lo
     /// despacha aquí, con <c>ctx.After</c> aún con el Brote): la hoja gira hacia fuera con un pequeño rebote y suelta unos
     /// destellos del color del capullo. La que germina hace el paso Open del Brote, con las dos hojas grandes en el papel de
@@ -100,29 +102,31 @@ namespace AF.Presentation.Mechanics
         /// <summary>Apertura de una hoja del Brote de dos hojas sin germinar (ms) [P]: la misma duración que la germinación.</summary>
         public const float LeafStepMs = OpenStepMs;
 
-        /// <summary>Pie de cada hoja grande del Brote de dos hojas (u desde el eje), dentro del cáliz.</summary>
-        public const float WrapFootXU = 0.32f;
+        /// <summary>
+        /// Pie de cada hoja grande del Brote de dos hojas (u desde el eje), dentro del cáliz: cerradas, su canto de fuera
+        /// sobresale del contorno del capullo (≈ 0,14 u, 3-4 dp con la cuia de 48 dp; revisión de VA1b).
+        /// </summary>
+        public const float WrapFootXU = 0.345f;
 
         /// <summary>Pie de las hojas grandes sobre lo alto de la cuia (u; desde <c>HeightU</c>), dentro del cáliz.</summary>
         public const float WrapFootAboveTopU = 0.02f;
 
         /// <summary>
-        /// Giro hacia fuera de una hoja grande cerrada (grados desde la vertical; negativo = hacia el eje): se cierra sobre el
-        /// costado del capullo.
+        /// Giro hacia fuera de una hoja grande cerrada (grados desde la vertical): cerradas, las dos forman una V estrecha
+        /// alrededor del capullo (±12° del eje; revisión de VA1b), así que, a la altura del capullo, la silueta es más ancha que
+        /// la del Brote.
         /// </summary>
-        public const float WrapClosedDeg = -10f;
+        public const float WrapClosedDeg = 12f;
 
-        /// <summary>Giro hacia fuera de una hoja grande abierta (grados desde la vertical).</summary>
-        public const float WrapOpenDeg = 48f;
+        /// <summary>Giro hacia fuera de una hoja grande abierta (grados desde la vertical): la punta no se sale del ancho de la cuia.</summary>
+        public const float WrapOpenDeg = 46f;
 
-        /// <summary>Escala a lo ancho de las hojas grandes (sobre la hojita del Brote): más estrechas, para que el capullo se vea.</summary>
-        public const float WrapScaleX = 0.68f;
-
-        /// <summary>Escala a lo largo de las hojas grandes (sobre la hojita del Brote).</summary>
-        public const float WrapScaleY = 1.02f;
-
-        /// <summary>Tono de una hoja grande cerrada (multiplica el verde de la hojita): plegada, en sombra; la abierta, a plena luz.</summary>
-        public const float WrapClosedShade = 0.80f;
+        /// <summary>
+        /// Aire mínimo (dp) entre lo más alto del Brote de dos hojas en la fila de arriba y el canto interior del marco del
+        /// panel, que queda <see cref="LluviaOverlay.CloudTopMaxDp"/> sobre lo alto de la cuia (revisión de VA1b, D-003: con la
+        /// cuia de 48 dp la punta del capullo, a 1,0 u, tocaba la madera). Ahí el capullo y las hojas se encogen lo justo.
+        /// </summary>
+        public const float TopRowFrameClearDp = 4f;
 
         /// <summary>Destellos al abrirse una hoja sin germinar.</summary>
         public const int LeafSparkleCount = 3;
@@ -132,6 +136,12 @@ namespace AF.Presentation.Mechanics
 
         // n del Brote de dos hojas al empezar (BroteMechanic.TwoLeaves, interno del núcleo; firma de pack_schema 3).
         private const int TwoLeavesN = 2;
+
+        // Silueta de las hojas grandes y del capullo (DrawLeafShape ovada, ProceduralArt): lo más ancho de la hoja está al 38 % de
+        // su largo, y la hoja y el capullo dibujados ocupan el 95 % y el 98 % del ancho de su sprite.
+        private const float WrapWidestAt = 0.38f;
+        private const float WrapDrawnWidthFraction = 0.95f;
+        private const float CorkDrawnWidthFraction = 0.98f;
 
         // Hojitas: pie (u desde el eje y sobre lo alto de la cuia, HeightU) y lo que sube al abrirse, como mucho.
         private const float LeafFootXU = 0.18f;
@@ -158,6 +168,7 @@ namespace AF.Presentation.Mechanics
         private int _closedLeaves;
         private bool _leafStep;
         private int _leafIndex;
+        private float _fit = 1f;
 
         /// <inheritdoc />
         public override MechanicType Type => MechanicType.Brote;
@@ -202,6 +213,30 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>Muestra el Brote de dos hojas (<c>n</c> &gt; 0; VA1b): las dos hojas grandes por delante en lugar de las hojitas.</summary>
         public bool TwoLeaves => _twoLeaves;
+
+        /// <summary>
+        /// Escala del capullo y de las hojas grandes del Brote de dos hojas (1, o menos en la fila de arriba para dejar
+        /// <see cref="TopRowFrameClearDp"/> bajo el marco); 1 en el Brote normal.
+        /// </summary>
+        public float TwoLeavesFit => _twoLeaves ? _fit : 1f;
+
+        /// <summary>
+        /// Canto de fuera de la hoja grande izquierda (−1) o derecha (1) en lo más ancho de la hoja (u desde el eje, en valor
+        /// absoluto; con su giro y su escala): la silueta del Brote de dos hojas.
+        /// </summary>
+        public float WrapOuterU(int side)
+        {
+            RectTransform rt = (side < 0 ? _wrapL : _wrapR).rectTransform;
+            float u = Mathf.Max(0.01f, _u);
+            float len = rt.sizeDelta.y * Mathf.Abs(rt.localScale.y) / u;
+            float half = 0.5f * WrapDrawnWidthFraction * rt.sizeDelta.x * Mathf.Abs(rt.localScale.x) / u;
+            float rad = Mathf.Abs(WrapOutDeg(side)) * Mathf.Deg2Rad;
+            float foot = Mathf.Abs(rt.anchoredPosition.x) / u;
+            return foot + (Mathf.Sin(rad) * WrapWidestAt * len) + (Mathf.Cos(rad) * half);
+        }
+
+        /// <summary>Medio ancho del capullo dibujado (u desde el eje, con su escala).</summary>
+        public float CorkHalfWidthU => 0.5f * CorkRectU.width * CorkDrawnWidthFraction;
 
         /// <summary>Hojas grandes que siguen cerradas (2 o 1) en el Brote de dos hojas; 0 en el Brote normal.</summary>
         public int ClosedLeaves => _twoLeaves ? _closedLeaves : 0;
@@ -284,6 +319,7 @@ namespace AF.Presentation.Mechanics
             Visible = on;
             _twoLeaves = on && cuia.MechanicN > 0;
             _closedLeaves = _twoLeaves ? cuia.MechanicN : 0;
+            UpdateFit();
             if (on)
             {
                 int top = cuia.Count - 1;
@@ -301,9 +337,9 @@ namespace AF.Presentation.Mechanics
             {
                 PlaceClosed();
             }
-            else if (_twoLeaves)
+            else if (_twoLeaves || _cork.rectTransform.localScale.x != 1f)
             {
-                PoseWrapsAtRest(1f); // las hojas grandes según las que siguen cerradas (VA1b)
+                PlaceClosed(); // las hojas grandes según las que siguen cerradas y el capullo a su escala de fila (VA1b)
             }
 
             OverlayParts.SetVisible(_cork, on);
@@ -319,6 +355,22 @@ namespace AF.Presentation.Mechanics
         {
             _u = u;
             _heightU = heightU;
+            UpdateFit();
+            if (_elapsed >= 0f)
+            {
+                ApplyStep(StepProgress);
+            }
+            else
+            {
+                PlaceClosed();
+            }
+        }
+
+        /// <inheritdoc />
+        public override void OnBoardLayout()
+        {
+            // La escala de la fila de arriba depende de las demás cuias: con el tablero ya colocado (VA1b).
+            UpdateFit();
             if (_elapsed >= 0f)
             {
                 ApplyStep(StepProgress);
@@ -357,6 +409,7 @@ namespace AF.Presentation.Mechanics
             _closedLeaves = before;
             _leafStep = _twoLeaves && ctx.After.Mechanic == MechanicType.Brote;
             _leafIndex = Mathf.Clamp(TwoLeavesN - before, 0, 1);
+            UpdateFit();
             OverlayParts.SetVisible(_cork, true);
             OverlayParts.SetVisible(_sepals, true);
             OverlayParts.SetVisible(_leafL, !_twoLeaves);
@@ -424,7 +477,9 @@ namespace AF.Presentation.Mechanics
         {
             into.Add(ProceduralArt.BroteLeafLight); // cáliz y hojitas (el capullo lleva el tinte de la cima a propósito)
             into.Add(ProceduralArt.BroteLeafDark);
-            into.Add(Shade(ProceduralArt.BroteLeafLight, WrapClosedShade)); // las hojas grandes cerradas del Brote de dos hojas (VA1b)
+            into.Add(ProceduralArt.BroteWrapFill); // las hojas grandes del Brote de dos hojas (VA1b): verde, nervadura y filo
+            into.Add(ProceduralArt.BroteWrapVein);
+            into.Add(ProceduralArt.BroteWrapEdge);
         }
 
         /// <inheritdoc />
@@ -444,8 +499,8 @@ namespace AF.Presentation.Mechanics
             _leafR.rectTransform.pivot = new Vector2(0.5f, 0f);
 
             // Brote de dos hojas (VA1b): las dos hojas grandes, delante del capullo y del cáliz.
-            _wrapL = OverlayParts.NewImage("BroteWrapL", Host.BodyFront, Host.Art.BroteSprout, Color.white);
-            _wrapR = OverlayParts.NewImage("BroteWrapR", Host.BodyFront, Host.Art.BroteSprout, Color.white);
+            _wrapL = OverlayParts.NewImage("BroteWrapL", Host.BodyFront, Host.Art.BroteWrapLeaf, Color.white);
+            _wrapR = OverlayParts.NewImage("BroteWrapR", Host.BodyFront, Host.Art.BroteWrapLeaf, Color.white);
             _wrapL.rectTransform.pivot = new Vector2(0.5f, 0f);
             _wrapR.rectTransform.pivot = new Vector2(0.5f, 0f);
         }
@@ -474,7 +529,7 @@ namespace AF.Presentation.Mechanics
         private void PoseWrap(Image wrap, float side, float a, float alpha)
         {
             float deg = Mathf.LerpUnclamped(WrapClosedDeg, WrapOpenDeg, a);
-            OverlayParts.Place(wrap, side * WrapFootXU, _heightU + WrapFootAboveTopU, ProceduralArt.BroteSproutWidthU, ProceduralArt.BroteSproutHeightU, _u);
+            OverlayParts.Place(wrap, side * WrapFootXU, _heightU + WrapFootAboveTopU, ProceduralArt.BroteWrapWidthU, ProceduralArt.BroteWrapHeightU, _u);
             RectTransform rt = wrap.rectTransform;
             // La izquierda gira a la izquierda (z positiva) al abrirse. Se compara componente a componente: el == de Quaternion
             // da por iguales giros de menos de ≈ 0,1°, y el último fotograma del rebote no volvería a la pose de reposo.
@@ -485,14 +540,44 @@ namespace AF.Presentation.Mechanics
                 rt.localRotation = rotation;
             }
 
-            var s = new Vector3(side * WrapScaleX, WrapScaleY, 1f);
+            var s = new Vector3(side * _fit, _fit, 1f);
             if (rt.localScale != s)
             {
                 rt.localScale = s;
             }
 
-            float shade = Mathf.Lerp(WrapClosedShade, 1f, Mathf.Clamp01(a));
-            OverlayParts.SetColor(wrap, new Color(shade, shade, shade, alpha));
+            OverlayParts.SetColor(wrap, new Color(1f, 1f, 1f, alpha));
+        }
+
+        // Escala del Brote de dos hojas en la fila de arriba (sin cuia por encima de su boca en el tablero): el capullo y las
+        // hojas grandes se encogen lo justo para que la punta del capullo quede TopRowFrameClearDp bajo el canto interior del
+        // marco (CloudTopMaxDp sobre lo alto de la cuia). En las demás filas, sin tablero o en el Brote normal, 1. Sin
+        // asignaciones.
+        private void UpdateFit()
+        {
+            _fit = 1f;
+            CuiaOverlayHost? host = AttachedHost;
+            ICuiaBoard? board = host?.Board;
+            int index = host?.Index ?? -1;
+            if (!_twoLeaves || board == null || (uint)index >= (uint)board.Count)
+            {
+                return;
+            }
+
+            float mouth = board.Foot(index).y + (_heightU * _u);
+            for (int j = 0; j < board.Count; j++)
+            {
+                if (board.Foot(j).y > mouth + 1f)
+                {
+                    return; // hay una fila encima: no llega al marco
+                }
+            }
+
+            float limitU = (LluviaOverlay.CloudTopMaxDp - TopRowFrameClearDp) / Mathf.Max(0.01f, _u);
+            if (limitU < TopAboveRimU)
+            {
+                _fit = Mathf.Clamp((limitU + CorkBelowTopU) / ProceduralArt.BroteCorkHeightU, 0.5f, 1f);
+            }
         }
 
         // Paso en curso: abrir una hoja del Brote de dos hojas o germinar.
@@ -618,7 +703,8 @@ namespace AF.Presentation.Mechanics
         {
             OverlayParts.Place(_cork, 0f, footY, ProceduralArt.BroteCorkWidthU, ProceduralArt.BroteCorkHeightU, _u);
             OverlayParts.Place(_gloss, -0.2f, 0.72f, 0.14f, 0.32f, _u); // dentro del capullo, arriba a la izquierda (a 0,59 de su alto)
-            SetScale(_cork.rectTransform, sx, sy);
+            float fit = TwoLeavesFit; // el Brote de dos hojas, en la fila de arriba, algo más pequeño (bajo el marco)
+            SetScale(_cork.rectTransform, sx * fit, sy * fit);
             Color c = _cork.color;
             if (!Mathf.Approximately(c.a, alpha))
             {
@@ -686,11 +772,6 @@ namespace AF.Presentation.Mechanics
             Vector2 tip = rt.anchoredPosition + (Vector2)(rt.localRotation * new Vector3(0f, len, 0f));
             float u = Mathf.Max(0.01f, _u);
             return tip / u;
-        }
-
-        private static Color Shade(Color c, float shade)
-        {
-            return new Color(c.r * shade, c.g * shade, c.b * shade, c.a);
         }
 
         private static void SetScale(RectTransform rt, float sx, float sy)
