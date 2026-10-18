@@ -153,8 +153,11 @@ namespace AF.Presentation.Mechanics
         /// <summary>Suelta: la cara de la vasija se oscurece hasta un 18 % de canto (según 1 − |cos θ|) [P].</summary>
         public const float UpendShadeMax = 0.18f;
 
-        /// <summary>Suelta: color de la base de la vasija (barro cocido, ≈ #A87A5C) [P].</summary>
-        public static readonly Color UpendBaseColor = new Color32(0xA8, 0x7A, 0x5C, 0xFF);
+        /// <summary>
+        /// Suelta: color de la tapa de la base de la vasija, #B88A66 [P] (revisión de TJ3): la cara que sube al voltearse y la
+        /// tapa elíptica de arriba boca abajo (<c>ProceduralArt.TinajaBaseCap</c>, con su borde de 1 dp un 15 % más oscuro).
+        /// </summary>
+        public static readonly Color BaseCapColor = new Color32(0xB8, 0x8A, 0x66, 0xFF);
 
         /// <summary>
         /// Fondo seco de la boca (la tinaja vacía que espera su vuelco y la boca de la intro antes del chorrito; TJ3) [P]: un
@@ -175,17 +178,32 @@ namespace AF.Presentation.Mechanics
         /// <summary>Gotas de la vuelta de su cuia al sacar que caben a la vez (<see cref="Drip"/>).</summary>
         public const int MaxDrips = 3;
 
-        /// <summary>Sacar: cada gota cae hasta la boca en 200 ms (02 §4.1; b.2) [P].</summary>
-        public const float DripFallMs = 200f;
+        /// <summary>
+        /// Sacar: cada gota cae hasta el centro de la boca en 80 ms (02 §4.1; b.2) [P]: las tres caen en la boca oscura del
+        /// revelado, antes de que florezca la fruta nueva (revisión de TJ3).
+        /// </summary>
+        public const float DripFallMs = 80f;
 
-        /// <summary>Sacar: gravedad de las gotas (u/s²), la de las salpicaduras [P].</summary>
-        public const float DripGravityU = 18f;
+        /// <summary>Sacar: al caer, cada gota se apaga (alfa de 1 a 0) en 80 ms en el agua de la boca [P] (revisión de TJ3).</summary>
+        public const float DripFadeMs = 80f;
 
-        /// <summary>Sacar: tamaño de una gota (u), con un mínimo de <see cref="DripMinDp"/> [P].</summary>
-        public const float DripSizeU = 0.22f;
+        /// <summary>Sacar: gravedad de las gotas (u/s²) [P]: con ella y <see cref="DripFallMs"/>, la gota acelera al caer.</summary>
+        public const float DripGravityU = 60f;
 
-        /// <summary>Sacar: tamaño mínimo de una gota (dp): el círculo del sprite mide ≈ 3 dp con 3,5 [P].</summary>
-        public const float DripMinDp = 3.5f;
+        /// <summary>Sacar: diámetro de una gota (dp), ≈ 18 px a 1080 [P] (revisión de TJ3).</summary>
+        public const float DripDiameterDp = 6f;
+
+        /// <summary>Sacar: brillo blanco de la gota (dp), arriba a la izquierda [P] (revisión de TJ3).</summary>
+        public const float DripGlintDp = 1.5f;
+
+        /// <summary>Sacar: la gota lleva el tinte de lo sacado aclarado un 25 % en la luminosidad OKLab [P] (revisión de TJ3).</summary>
+        public const float DripLightness = 1.25f;
+
+        /// <summary>
+        /// Sacar: la gota cae al centro de la cavidad, 0,1 u bajo el centro del agua de la boca (u) [P]: dentro de la boca, tras
+        /// el labio de delante, nunca en su canto (revisión de TJ3).
+        /// </summary>
+        public const float DripLandBelowU = 0.1f;
 
         /// <summary>Reducir movimiento: fundidos de 0,25 s (b.2, «Reducir movimiento»).</summary>
         public const float ReducedFadeMs = 250f;
@@ -253,6 +271,13 @@ namespace AF.Presentation.Mechanics
         private readonly float[] _dripVy = new float[MaxDrips];
         private readonly float[] _dripSizeU = new float[MaxDrips];
         private readonly Color[] _dripColor = new Color[MaxDrips];
+        private readonly Image[] _dripGlints = new Image[MaxDrips];
+
+        // Revisión de TJ3 (suelta): la tapa de la base boca abajo y la copia boca abajo del fundido de Reducir movimiento.
+        private Image _baseCap = null!;
+        private Image _bodyFlip = null!;
+        private Sprite _bodyOpen = null!;
+        private Sprite _bodyClosed = null!;
 
         /// <inheritdoc />
         public override MechanicType Type => MechanicType.Tinaja;
@@ -430,8 +455,34 @@ namespace AF.Presentation.Mechanics
             return RectU(_drips[i].rectTransform);
         }
 
-        /// <summary>La elipse de la cara que se aleja en el vuelco de la suelta está a la vista (TJ3).</summary>
+        /// <summary>La elipse de la cara de la boca (seca) que se aleja en la primera mitad del vuelco está a la vista (TJ3).</summary>
         public bool UpendCapVisible => _upendCap.gameObject.activeSelf;
+
+        /// <summary>
+        /// La tapa de la base está a la vista (TJ3): la cara que sube en la segunda mitad del vuelco y, boca abajo, la tapa
+        /// elíptica de arriba.
+        /// </summary>
+        public bool BaseCapVisible => _baseCap.gameObject.activeSelf;
+
+        /// <summary>Rectángulo de la tapa de la base (u desde el centro del pie; tests y capturas).</summary>
+        public Rect BaseCapRectU => RectU(_baseCap.rectTransform);
+
+        /// <summary>
+        /// El cuerpo enseña el hueco oscuro de la boca (boca arriba). Boca abajo, y desde la mitad del vuelco, el cuerpo es el
+        /// cerrado: sin hueco, con el arco del canto del labio abajo (revisión de TJ3).
+        /// </summary>
+        public bool BodyShowsCavity => _body.sprite == _bodyOpen;
+
+        /// <summary>
+        /// Opacidad de la copia boca abajo del fundido cruzado de la suelta con Reducir movimiento (0 sin fundido; TJ3).
+        /// </summary>
+        public float FlipFadeAlpha => _bodyFlip.gameObject.activeSelf ? _bodyFlip.color.a : 0f;
+
+        /// <summary>Color (con su alfa) de la gota <paramref name="i"/> (tests y capturas).</summary>
+        public Color DripColor(int i)
+        {
+            return _drips[i].color;
+        }
 
         /// <summary>Color de la cara de la vasija (blanco en reposo; se oscurece de canto en el vuelco, TJ3).</summary>
         public Color BodyColor => _body.color;
@@ -458,6 +509,11 @@ namespace AF.Presentation.Mechanics
             bool art = on && MapArtRule.ShowProvisional;
             int count = on ? cuia.Count : 0;
             bool empty = count == 0;
+            if (count > _count)
+            {
+                ClearDrips(); // Marea o Volver a la orilla devuelven dosis: ninguna gota de antes sigue cayendo
+            }
+
             _count = count;
             if (art != _artShown)
             {
@@ -469,6 +525,7 @@ namespace AF.Presentation.Mechanics
             bool hold = on && empty && _holdUpright;
             SetUpsideDown(empty && !hold);
             OverlayParts.SetVisible(_body, art);
+            PlaceBaseCap(art && _upsideDown);
 
             // Boca (R7): la fruta de arriba, con su tinte y su icono, en la boca de la vasija (solo con su cuerpo: sin él, la cima
             // ya se ve en el líquido del vidrio). Si la cima estuviera oculta (no debería), la boca va oscura y sin icono: lo
@@ -732,6 +789,7 @@ namespace AF.Presentation.Mechanics
             if (ctx.Kind == MechanicStepKind.Upend && MapArtRule.ShowProvisional)
             {
                 _holdUpright = true;
+                ClearDrips(); // la suelta: su cuia ya está en su ranura y no queda ninguna gota
                 Show(ctx.Before, false);
                 _upendSide = ctx.OtherIndex >= 0 && ctx.OtherPos.x > ctx.SelfPos.x ? 1f : -1f; // se tumba hacia el lado contrario a su cuia
                 Begin(MechanicStepKind.Upend, speed, ctx.ReduceMotion);
@@ -783,11 +841,13 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>
         /// Una gota de la vuelta de su cuia al sacar (02 §4.1 y 07 §5.6: «vuelve con 2-3 gotas»; b.2; revisión de TJ3): cae desde
-        /// <paramref name="fromDp"/> (el pie de su cuia, en dp desde el pie de la tinaja) hasta el agua de la boca en
-        /// <see cref="DripFallMs"/>, con el tinte <paramref name="tint"/> de lo que sacó y el brillo de 1 px del sprite de gota. La
-        /// dibuja la tinaja, que va delante de su cuia, encima de su boca: si su pie aún está detrás del labio, nace en lo alto de
-        /// la boca, y nunca fuera de ella. Sin anillo ni burbujas. Sin el cuerpo de la vasija (release hasta el arte), nada. Sin
-        /// asignaciones.
+        /// <paramref name="fromDp"/> (el punto más bajo de su cuia, en dp desde el pie de la tinaja) hasta el centro de la cavidad
+        /// (<see cref="DripLandBelowU"/> bajo el centro de la boca) en <see cref="DripFallMs"/> y allí se apaga en
+        /// <see cref="DripFadeMs"/>. Mide <see cref="DripDiameterDp"/>, con el tinte <paramref name="tint"/> de lo que sacó
+        /// aclarado (<see cref="DripLightness"/>) y un brillo blanco de <see cref="DripGlintDp"/>. La dibuja la tinaja, que va
+        /// delante de su cuia, encima de su boca: si su cuia aún está detrás del labio, nace en lo alto de la boca, y nunca fuera
+        /// de ella. Se borran al florecer la fruta del revelado, en la suelta y con Marea o Volver a la orilla. Sin anillo ni
+        /// burbujas. Sin el cuerpo de la vasija (release hasta el arte), nada. Sin asignaciones.
         /// </summary>
         public void Drip(Vector2 fromDp, Color tint)
         {
@@ -818,13 +878,15 @@ namespace AF.Presentation.Mechanics
             float y0 = Mathf.Max(fromDp.y / u, mouthTop);
             float fall = DripFallMs / 1000f;
             _dripFrom[slot] = new Vector2(x, y0);
-            _dripVy[slot] = (ProceduralArt.TinajaMouthCenterU - y0 + (0.5f * DripGravityU * fall * fall)) / fall;
-            _dripSizeU[slot] = Mathf.Max(DripMinDp, DripSizeU * u) / u;
-            _dripColor[slot] = new Color(tint.r, tint.g, tint.b, 1f);
+            _dripVy[slot] = (DripLandU - y0 + (0.5f * DripGravityU * fall * fall)) / fall;
+            _dripSizeU[slot] = DripDiameterDp / u;
+            Color c = ColorMath.ScaleOkLightness(new Color(tint.r, tint.g, tint.b, 1f), DripLightness);
+            _dripColor[slot] = new Color(Mathf.Clamp01(c.r), Mathf.Clamp01(c.g), Mathf.Clamp01(c.b), 1f);
             _dripAge[slot] = 0f;
             DripsStarted++;
             PlaceDrip(slot);
             OverlayParts.SetVisible(_drips[slot], true);
+            OverlayParts.SetVisible(_dripGlints[slot], true);
         }
 
         /// <summary>
@@ -833,6 +895,7 @@ namespace AF.Presentation.Mechanics
         /// </summary>
         public void BeginIntro(Color dryMouth)
         {
+            ClearDrips();
             _intro = true;
             _introMarks = false;
             _introMouth = dryMouth;
@@ -927,7 +990,10 @@ namespace AF.Presentation.Mechanics
             _jirau.type = Image.Type.Sliced; // varas continuas, atadas solo en las puntas (el borde del 9-slice)
 
             // La vasija y lo que se ve en ella, en el cuerpo, sobre el vidrio y el líquido.
-            _body = OverlayParts.NewImage("TinajaBody", Host.BodyFront, Host.Art.TinajaBody, Color.white);
+            _bodyOpen = Host.Art.TinajaBody;
+            _bodyClosed = Host.Art.TinajaBodyClosed;
+            _body = OverlayParts.NewImage("TinajaBody", Host.BodyFront, _bodyOpen, Color.white);
+            _bodyFlip = OverlayParts.NewImage("TinajaBodyFlip", Host.BodyFront, _bodyClosed, Color.white); // Reducir movimiento (TJ3)
             for (int k = 0; k < MaxBands; k++)
             {
                 _bands[k] = OverlayParts.NewImage("TinajaBand" + k, Host.BodyFront, Host.Art.TinajaBand, Color.white);
@@ -945,10 +1011,12 @@ namespace AF.Presentation.Mechanics
             _dryCenter = OverlayParts.NewImage("TinajaDryMouth", Host.BodyFront, Host.Art.TinajaDryMouthCenter, DryMouthCenter); // el fondo seco (TJ3)
             _mouthGlyph = OverlayParts.NewImage("TinajaMouthGlyph", Host.BodyFront, null, Color.white);
             _ring = OverlayParts.NewImage("TinajaRing", Host.BodyFront, Host.Art.Ring, RingColor); // la onda del revelado (TJ3)
-            _upendCap = OverlayParts.NewImage("TinajaUpendCap", Host.BodyFront, Host.Art.TinajaMouthDisc, UpendBaseColor); // la cara del vuelco (TJ3)
+            _upendCap = OverlayParts.NewImage("TinajaUpendCap", Host.BodyFront, Host.Art.TinajaMouthDisc, DryMouthRim); // la cara de la boca en el vuelco (TJ3)
+            _baseCap = OverlayParts.NewImage("TinajaBaseCap", Host.BodyFront, Host.Art.TinajaBaseCap, BaseCapColor); // la base, boca abajo (TJ3)
             for (int i = 0; i < MaxDrips; i++)
             {
-                _drips[i] = OverlayParts.NewImage("TinajaDrip" + i, Host.BodyFront, Host.Art.Drop, Color.white); // las gotas al sacar (TJ3)
+                _drips[i] = OverlayParts.NewImage("TinajaDrip" + i, Host.BodyFront, Host.Art.TinajaDripDot, Color.white); // las gotas al sacar (TJ3)
+                _dripGlints[i] = OverlayParts.NewImage("TinajaDripGlint" + i, Host.BodyFront, Host.Art.TinajaDripDot, Color.white);
             }
             _chip = OverlayParts.NewImage("TinajaChip", Host.BodyFront, Host.Art.TinajaChipPill, Color.white);
             _chip.type = Image.Type.Sliced;
@@ -1015,6 +1083,11 @@ namespace AF.Presentation.Mechanics
                 }
             }
 
+            if (after)
+            {
+                ClearDrips(); // la fruta nueva florece: ninguna gota de lo sacado sigue a la vista (revisión de TJ3)
+            }
+
             if (mouth)
             {
                 OverlayParts.SetColor(_mouth, bloom <= 0f ? dark : (bloom >= 1f ? tint : ColorMath.OkLabLerp(dark, tint, bloom)));
@@ -1043,23 +1116,30 @@ namespace AF.Presentation.Mechanics
 
         // La suelta: boca seca y quieta mientras su cuia baja; después la vasija se voltea sobre el jirau y queda boca abajo. El
         // vuelco se lee como un sólido que da la vuelta (revisión de TJ3): el extremo que se aleja enseña su cara (la boca seca y,
-        // pasada la mitad, la base) como una elipse que crece con |sen θ|, la cara se oscurece de canto, la vasija se ladea hacia
-        // fuera de su cuia con el pivote en su canto de abajo de ese lado (apoyada en el jirau todo el rato, sin levantarse) y
-        // termina con un asiento de UpendSettleDeg.
+        // pasada la mitad, la tapa de la base) como una elipse que crece con |sen θ|, la cara se oscurece de canto, la vasija se
+        // ladea hacia fuera de su cuia con el pivote en su canto de abajo de ese lado (apoyada en el jirau todo el rato, sin
+        // levantarse) y termina con un asiento de UpendSettleDeg. Desde la mitad del giro el cuerpo es el cerrado (sin el hueco de
+        // la boca, que ya mira abajo). Con Reducir movimiento, sin giro: un fundido cruzado de ReducedFadeMs (ApplyUpendFade).
         private void ApplyUpend(float x)
         {
             bool tumbling = x >= UpendHoldMs;
+            if (_stepReduce)
+            {
+                ApplyUpendFade(tumbling ? Mathf.Clamp01((x - UpendHoldMs) / ReducedFadeMs) : 0f);
+                return;
+            }
+
             OverlayParts.SetVisible(_mouth, !tumbling);
             OverlayParts.SetVisible(_mouthGloss, false);
             OverlayParts.SetVisible(_dryCenter, !tumbling);
             OverlayParts.SetVisible(_mouthGlyph, false);
-            float flipMs = _stepReduce ? 1f : UpendMs - UpendSettleMs;
-            float q = !tumbling ? 0f : (_stepReduce ? 1f : Mathf.Clamp01((x - UpendHoldMs) / flipMs));
+            float flipMs = UpendMs - UpendSettleMs;
+            float q = !tumbling ? 0f : Mathf.Clamp01((x - UpendHoldMs) / flipMs);
             float theta = Mathf.PI * Ease.InOut(q);
             float sy = Mathf.Cos(theta);
             float sin = Mathf.Abs(Mathf.Sin(theta));
             float settle = 0f;
-            if (tumbling && !_stepReduce && q >= 1f)
+            if (tumbling && q >= 1f)
             {
                 settle = UpendSettleDeg * Mathf.Sin(Mathf.PI * Mathf.Clamp01((x - UpendHoldMs - flipMs) / UpendSettleMs));
             }
@@ -1079,23 +1159,95 @@ namespace AF.Presentation.Mechanics
                 rt.localScale = scale;
             }
 
+            SetBodySprite(sy < 0f ? _bodyClosed : _bodyOpen); // desde la mitad del giro, sin el hueco de la boca
             rt.localRotation = Quaternion.Euler(0f, 0f, angle);
             rt.anchoredPosition = center * _u;
             float shade = 1f - (UpendShadeMax * (1f - Mathf.Abs(sy)));
             OverlayParts.SetColor(_body, new Color(shade, shade, shade, 1f));
 
-            // La cara del extremo que se aleja (arriba en la proyección): la boca seca mientras la boca va arriba y la base después.
-            bool cap = tumbling && !_stepReduce && sin > 0.02f;
-            OverlayParts.SetVisible(_upendCap, cap);
+            // La cara del extremo que se aleja (arriba en la proyección): la boca seca mientras la boca va arriba y la tapa de la
+            // base después, que acaba con la proporción de la tapa en reposo (TinajaBaseCapAspect).
+            bool mouthEnd = sy > 0f;
+            bool cap = tumbling && (mouthEnd ? sin > 0.02f : true);
+            OverlayParts.SetVisible(_upendCap, cap && mouthEnd);
+            OverlayParts.SetVisible(_baseCap, cap && !mouthEnd);
             if (cap)
             {
-                bool mouthEnd = sy > 0f;
+                Image img = mouthEnd ? _upendCap : _baseCap;
                 float w = mouthEnd ? 2f * ProceduralArt.TinajaOpeningRxU : 2f * hb;
+                float aspect = mouthEnd ? UpendCapAspect * sin : Mathf.Max(UpendCapAspect * sin, ProceduralArt.TinajaBaseCapAspect * -sy);
                 float endY = mouthEnd ? ProceduralArt.TinajaLipCenterU * sy : h;
                 Vector2 end = contact + CuiaView.Rotate(new Vector2(-lean * hb, endY), rad);
-                OverlayParts.Place(_upendCap, end.x, end.y, w, UpendCapAspect * w * sin, _u);
-                _upendCap.rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle);
-                OverlayParts.SetColor(_upendCap, mouthEnd ? DryMouthRim : ColorMath.Darken(UpendBaseColor, UpendShadeMax * (1f - sin)));
+                OverlayParts.Place(img, end.x, end.y, w, aspect * w, _u);
+                img.rectTransform.localRotation = Quaternion.Euler(0f, 0f, angle);
+                OverlayParts.SetColor(img, mouthEnd ? DryMouthRim : ColorMath.Darken(BaseCapColor, UpendShadeMax * (1f - Mathf.Abs(sy))));
+            }
+        }
+
+        // Suelta con Reducir movimiento (b.2: «Fundidos de 0,25 s»): sin giro, la vasija boca arriba con el fondo seco se funde
+        // en la vasija boca abajo (la copia _bodyFlip, con su tapa de la base) en ReducedFadeMs. Sin asignaciones.
+        private void ApplyUpendFade(float k)
+        {
+            RectTransform rt = _body.rectTransform;
+            if (rt.localScale != Vector3.one)
+            {
+                rt.localScale = Vector3.one;
+            }
+
+            SetBodySprite(_bodyOpen);
+            rt.localRotation = Quaternion.identity;
+            rt.anchoredPosition = new Vector2(0f, 0.5f * ProceduralArt.TinajaBodyHeightU * _u);
+            OverlayParts.SetColor(_body, new Color(1f, 1f, 1f, 1f - k));
+            OverlayParts.SetVisible(_mouth, true);
+            OverlayParts.SetVisible(_dryCenter, true);
+            OverlayParts.SetVisible(_mouthGloss, false);
+            OverlayParts.SetVisible(_mouthGlyph, false);
+            OverlayParts.SetColor(_mouth, OverlayParts.Fade(DryMouthRim, 1f - k));
+            OverlayParts.SetColor(_dryCenter, OverlayParts.Fade(DryMouthCenter, 1f - k));
+            OverlayParts.SetVisible(_upendCap, false);
+
+            bool flip = k > 0f;
+            OverlayParts.SetVisible(_bodyFlip, flip);
+            if (flip)
+            {
+                OverlayParts.Place(_bodyFlip, 0f, 0.5f * ProceduralArt.TinajaBodyHeightU, ProceduralArt.TinajaBodyWidthU, ProceduralArt.TinajaBodyHeightU, _u);
+                RectTransform ft = _bodyFlip.rectTransform;
+                var down = new Vector3(1f, -1f, 1f);
+                if (ft.localScale != down)
+                {
+                    ft.localScale = down;
+                }
+
+                OverlayParts.SetColor(_bodyFlip, new Color(1f, 1f, 1f, k));
+            }
+
+            PlaceBaseCap(flip);
+            if (flip)
+            {
+                OverlayParts.SetColor(_baseCap, OverlayParts.Fade(BaseCapColor, k));
+            }
+        }
+
+        // La tapa de la base, boca abajo y en reposo: una elipse de TinajaBaseCapAspect sobre lo alto de la vasija volteada.
+        private void PlaceBaseCap(bool on)
+        {
+            OverlayParts.SetVisible(_baseCap, on);
+            if (!on)
+            {
+                return;
+            }
+
+            float w = 2f * ProceduralArt.TinajaHalfWidthU(0f);
+            OverlayParts.Place(_baseCap, 0f, ProceduralArt.TinajaBodyHeightU, w, ProceduralArt.TinajaBaseCapAspect * w, _u);
+            _baseCap.rectTransform.localRotation = Quaternion.identity;
+            OverlayParts.SetColor(_baseCap, BaseCapColor);
+        }
+
+        private void SetBodySprite(Sprite sprite)
+        {
+            if (_body.sprite != sprite)
+            {
+                _body.sprite = sprite;
             }
         }
 
@@ -1118,10 +1270,9 @@ namespace AF.Presentation.Mechanics
                 }
 
                 _dripAge[i] += dtMs;
-                if (_dripAge[i] >= DripFallMs)
+                if (_dripAge[i] >= DripFallMs + DripFadeMs)
                 {
-                    _dripAge[i] = -1f;
-                    OverlayParts.SetVisible(_drips[i], false);
+                    HideDrip(i);
                     continue;
                 }
 
@@ -1129,21 +1280,50 @@ namespace AF.Presentation.Mechanics
             }
         }
 
+        // Cae con gravedad hasta el centro de la cavidad y allí se apaga en DripFadeMs; su brillo, arriba a la izquierda.
         private void PlaceDrip(int i)
         {
-            float t = _dripAge[i] / 1000f;
+            float t = Mathf.Min(_dripAge[i], DripFallMs) / 1000f;
             float y = _dripFrom[i].y + (_dripVy[i] * t) - (0.5f * DripGravityU * t * t);
             float size = _dripSizeU[i];
             OverlayParts.Place(_drips[i], _dripFrom[i].x, y, size, size, _u);
-            float alpha = 1f - Mathf.Clamp01(((_dripAge[i] / DripFallMs) - 0.75f) / 0.25f);
+            float alpha = 1f - Mathf.Clamp01((_dripAge[i] - DripFallMs) / DripFadeMs);
             OverlayParts.SetColor(_drips[i], OverlayParts.Fade(_dripColor[i], alpha));
+            float glint = DripGlintDp / Mathf.Max(0.0001f, _u);
+            float off = 0.22f * size;
+            OverlayParts.Place(_dripGlints[i], _dripFrom[i].x - off, y + off, glint, glint, _u);
+            OverlayParts.SetColor(_dripGlints[i], new Color(1f, 1f, 1f, alpha));
         }
+
+        private void HideDrip(int i)
+        {
+            _dripAge[i] = -1f;
+            OverlayParts.SetVisible(_drips[i], false);
+            OverlayParts.SetVisible(_dripGlints[i], false);
+        }
+
+        // Borra las gotas que sigan a la vista (al florecer la fruta del revelado, en la suelta, con Marea o en la intro).
+        private void ClearDrips()
+        {
+            for (int i = 0; i < MaxDrips; i++)
+            {
+                if (_dripAge[i] >= 0f)
+                {
+                    HideDrip(i);
+                }
+            }
+        }
+
+        // Altura de llegada de las gotas (u desde el pie): el centro de la cavidad.
+        private static float DripLandU => ProceduralArt.TinajaMouthCenterU - DripLandBelowU;
 
         // Deja las piezas que mueven los pasos en reposo (el siguiente Show pinta el estado).
         private void ResetStepParts()
         {
             OverlayParts.SetVisible(_ring, false);
             OverlayParts.SetVisible(_upendCap, false);
+            OverlayParts.SetVisible(_baseCap, false); // Show la vuelve a poner si queda boca abajo
+            OverlayParts.SetVisible(_bodyFlip, false);
             OverlayParts.SetColor(_body, Color.white);
             _chip.rectTransform.localScale = Vector3.one;
             OverlayParts.SetColor(_mouthGlyph, Color.white);
@@ -1235,7 +1415,8 @@ namespace AF.Presentation.Mechanics
             }
         }
 
-        // Vacía, boca abajo sobre el jirau (b.2 regla 8): la vasija volteada en su caja, sin boca ni chip.
+        // Vacía, boca abajo sobre el jirau (b.2 regla 8): la vasija volteada en su caja, sin boca ni chip, con el cuerpo cerrado
+        // (el arco del canto del labio abajo) y, si se ve el cuerpo, la tapa de la base arriba (PlaceBaseCap, en Show).
         private void SetUpsideDown(bool on)
         {
             _upsideDown = on;
@@ -1245,6 +1426,8 @@ namespace AF.Presentation.Mechanics
             {
                 rt.localScale = scale;
             }
+
+            SetBodySprite(on ? _bodyClosed : _bodyOpen); // boca abajo, sin el hueco de la boca (revisión de TJ3)
         }
 
         // El jirau bajo la ranura de la tinaja y la de su cuia (la contigua de la misma fila): varas continuas, sin nada en el

@@ -55,6 +55,7 @@ namespace AF.Tests.PlayMode
             _rig?.Dispose();
             _rig = null;
             MapArtRule.ForceProvisional = null;
+            GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
 
@@ -121,6 +122,9 @@ namespace AF.Tests.PlayMode
             float maxCuiaRise = 0f;
             bool layered = false;
             int maxDrips = 0;
+            float highestDrip = float.MinValue;
+            float liftMs = BoardAnimator.ScoopLiftFraction * 300f;
+            float lastDripEnd = FlowEndMs + liftMs + ((BoardAnimator.ScoopDripCount - 1) * BoardAnimator.ScoopDripEveryMs) + TinajaOverlay.DripFallMs + TinajaOverlay.DripFadeMs;
             float half = 0.5f * ProceduralArt.TinajaMouthWidthU;
             float mouthTop = ProceduralArt.TinajaMouthCenterU + (0.5f * ProceduralArt.TinajaMouthHeightU);
             for (int t = 0; t < (int)CuiaBackMs + 200; t += PlayModeHelpers.FrameMs)
@@ -131,13 +135,14 @@ namespace AF.Tests.PlayMode
                 Assert.That(_rig.Animator.TryGetPourPose(Tinaja, out _, out _), Is.False, "sin pose de vertido en la tinaja");
                 Assert.That(_rig.Animator.ActiveStreams, Is.EqualTo(0), "sin chorro: su cuia recoge el agua en la boca (" + t + " ms)");
 
-                // Las gotas de la vuelta (02 §4.1; b.2): solo en sus primeros 150 ms (más su caída), de su pie a la boca.
+                // Las gotas de la vuelta (02 §4.1; b.2; revisión de TJ3): tras salir su cuia de la boca, del punto más bajo de su cuia
+                // al centro de la cavidad, y se apagan allí; las borra el revelado al florecer la fruta nueva.
                 int drips = tin.ActiveDrips;
                 maxDrips = Mathf.Max(maxDrips, drips);
                 if (drips > 0)
                 {
-                    Assert.That(t + PlayModeHelpers.FrameMs, Is.GreaterThan(FlowEndMs), "no caen antes de la vuelta (" + t + " ms)");
-                    Assert.That(t, Is.LessThan(FlowEndMs + 150f + TinajaOverlay.DripFallMs + PlayModeHelpers.FrameMs), "ni después (" + t + " ms)");
+                    Assert.That(t + PlayModeHelpers.FrameMs, Is.GreaterThan(FlowEndMs + liftMs), "no caen antes de que su cuia salga de la boca (" + t + " ms)");
+                    Assert.That(t, Is.LessThan(lastDripEnd + PlayModeHelpers.FrameMs), "ni después (" + t + " ms)");
                 }
 
                 for (int k = 0; k < TinajaOverlay.MaxDrips; k++)
@@ -145,10 +150,13 @@ namespace AF.Tests.PlayMode
                     Rect d = tin.DripRectU(k);
                     if (tin.DripActive(k))
                     {
-                        Assert.That(d.center.y, Is.LessThanOrEqualTo(mouthTop + 1f), "cae del pie de su cuia, junto a la boca (" + t + " ms)");
+                        highestDrip = Mathf.Max(highestDrip, d.center.y);
+                        Assert.That(d.center.y, Is.LessThanOrEqualTo(mouthTop + 1f), "cae de su cuia, junto a la boca (" + t + " ms)");
                         Assert.That(Mathf.Abs(d.center.x), Is.LessThanOrEqualTo(half), "la gota cae en la boca (" + t + " ms)");
-                        Assert.That(d.center.y, Is.GreaterThanOrEqualTo(ProceduralArt.TinajaMouthCenterU - 0.01f), "y no pasa del agua (" + t + " ms)");
-                        Assert.That(d.width * tv.Unit, Is.GreaterThanOrEqualTo(TinajaOverlay.DripMinDp - 0.01f), "≥ 3 dp");
+                        Assert.That(d.center.y, Is.GreaterThanOrEqualTo(ProceduralArt.TinajaMouthCenterU - TinajaOverlay.DripLandBelowU - 0.01f), "y para en el centro de la cavidad (" + t + " ms)");
+                        Assert.That(d.width * tv.Unit, Is.EqualTo(TinajaOverlay.DripDiameterDp).Within(0.01f), "6 dp");
+                        Color c = tin.DripColor(k);
+                        Assert.That(ColorMath.LabLightness(new Color(c.r, c.g, c.b, 1f)), Is.GreaterThan(ColorMath.LabLightness(Palette.Tint(Jenipapo))), "el tinte, aclarado");
                     }
                 }
 
@@ -180,6 +188,8 @@ namespace AF.Tests.PlayMode
             Assert.That(layered, Is.True);
             Assert.That(tin.DripsStarted, Is.EqualTo(BoardAnimator.ScoopDripCount), "vuelve con sus gotas, una vez");
             Assert.That(maxDrips, Is.GreaterThanOrEqualTo(2), "2-3 gotas cayendo a la vez");
+            Assert.That(highestDrip, Is.GreaterThan(ProceduralArt.TinajaTopU + 0.1f), "se ven caer: nacen por encima del labio");
+            Assert.That(tin.ActiveDrips, Is.EqualTo(0), "y no quedan pegadas al borde");
             Assert.That(maxCuiaAngle, Is.EqualTo(BoardAnimator.ScoopTiltDeg).Within(0.01f));
             Assert.That(maxCuiaRise, Is.GreaterThan((ProceduralArt.TinajaMouthCenterU - BoardAnimator.ScoopFootBelowMouthU) * tv.Unit), "el arco pasa por encima de la vasija");
             _rig.RunUntilIdle(4000);
@@ -324,8 +334,20 @@ namespace AF.Tests.PlayMode
                     float h = ProceduralArt.TinajaBodyHeightU * Mathf.Abs(tin.BodyScaleY);
                     float expected = ((hb * Mathf.Abs(Mathf.Sin(a))) + (0.5f * h * Mathf.Cos(a))) * tv.Unit;
                     Assert.That(tin.BodyCenterDp.y, Is.EqualTo(expected).Within(0.05f), "apoyada en el jirau (" + now + " ms)");
-                    baseShown |= tin.UpendCapVisible && tin.BodyScaleY < -0.2f;
+                    baseShown |= tin.BaseCapVisible && tin.BodyScaleY < -0.2f;
                     shaded |= tin.BodyColor.r < 0.9f;
+                }
+
+                // El hueco de la boca solo se ve mientras la boca mira arriba: desde la mitad del giro, el cuerpo cerrado.
+                if (tin.BodyScaleY < 0f)
+                {
+                    Assert.That(tin.BodyShowsCavity, Is.False, "sin cavidad desde la mitad del vuelco (" + now + " ms)");
+                    Assert.That(tin.UpendCapVisible, Is.False, "ni la cara de la boca (" + now + " ms)");
+                }
+                else if (tin.BodyScaleY > 0.5f)
+                {
+                    Assert.That(tin.BodyShowsCavity, Is.True, "boca arriba, con su boca (" + now + " ms)");
+                    Assert.That(tin.BaseCapVisible, Is.False, "sin la tapa de la base (" + now + " ms)");
                 }
 
                 rose |= cv.BodyOffset.y > 1f;
@@ -338,6 +360,11 @@ namespace AF.Tests.PlayMode
             Assert.That(rose && settled, Is.True, "su cuia se descuelga (sube), baja y se asienta en su ranura");
             Assert.That(tin.BodyColor.r + tin.BodyColor.g + tin.BodyColor.b, Is.EqualTo(3f).Within(0.001f), "la cara, otra vez sin sombra");
             Assert.That(tin.UpendCapVisible, Is.False);
+            Assert.That(tin.BaseCapVisible, Is.True, "boca abajo: la tapa de la base arriba");
+            Rect cap = tin.BaseCapRectU;
+            Assert.That(cap.height / cap.width, Is.EqualTo(ProceduralArt.TinajaBaseCapAspect).Within(0.001f), "con la proporción de la boca");
+            Assert.That(cap.center.y, Is.EqualTo(ProceduralArt.TinajaBodyHeightU).Within(0.001f), "sobre lo alto de la vasija volteada");
+            Assert.That(tin.BodyShowsCavity, Is.False, "y abajo el canto del labio, sin cavidad");
             Assert.That(tin.BodyAngleDeg, Is.EqualTo(0f).Within(0.01f));
             MechanicStepRecord unhook = Find(MechanicStepKind.Unhook);
             MechanicStepRecord upend = Find(MechanicStepKind.Upend);
@@ -458,16 +485,33 @@ namespace AF.Tests.PlayMode
         public void ScoopArc_StaysUnderTheCeiling_NeverBelowTheMouth()
         {
             const float u = 20f;
-            const float h = 3.6f;
-            Assert.That(BoardAnimator.ScoopArcTop(0f, 100f, h, u, float.PositiveInfinity), Is.EqualTo(100f + (BoardAnimator.ScoopArcU * u)), "sin techo: 1,5 u sobre la boca");
-            float ceiling = 100f + ((h + BoardAnimator.ScoopCeilingMarginU + 0.5f) * u);
-            Assert.That(BoardAnimator.ScoopArcTop(0f, 100f, h, u, ceiling), Is.EqualTo(100f + (0.5f * u)).Within(0.001f), "lo justo bajo el techo");
-            Assert.That(BoardAnimator.ScoopArcTop(0f, 100f, h, u, 50f), Is.EqualTo(100f), "nunca por debajo de la boca");
+            const float reach = 4.1f;
+            Assert.That(BoardAnimator.ScoopArcTop(0f, 100f, reach, u, float.PositiveInfinity), Is.EqualTo(100f + (BoardAnimator.ScoopArcU * u)), "sin techo: 1,5 u sobre la boca");
+            float ceiling = 100f + ((reach + BoardAnimator.ScoopCeilingMarginU + 0.5f) * u);
+            Assert.That(BoardAnimator.ScoopArcTop(0f, 100f, reach, u, ceiling), Is.EqualTo(100f + (0.5f * u)).Within(0.001f), "lo justo bajo el techo");
+            Assert.That(BoardAnimator.ScoopArcTop(0f, 100f, reach, u, 50f), Is.EqualTo(100f), "nunca por debajo de la boca");
+        }
+
+        [Test]
+        public void ScoopReach_CountsTheTiltedGlass_AndItsAsa()
+        {
+            // Su cuia es una Cuia chica de 2 (3,60 u) y su asa llega a 4,00 u: derecha, manda el asa.
+            int cap = LevelValidation.CucharonCapacity;
+            Rect asa = ProceduralArt.TinajaAsaRectU;
+            Assert.That(BoardAnimator.ScoopReachU(cap, 0f, false), Is.EqualTo(CuiaGeometry.HeightU(cap)).Within(0.001f), "derecha: su borde");
+            Assert.That(BoardAnimator.ScoopReachU(cap, 0f, true), Is.EqualTo(asa.yMax).Within(0.001f), "derecha: lo alto del asa");
+            float tilt = BoardAnimator.ScoopTiltDeg * Mathf.Deg2Rad;
+            float corner = Mathf.Sqrt((asa.xMax * asa.xMax) + (asa.yMax * asa.yMax));
+            Assert.That(Mathf.Atan2(asa.xMax, asa.yMax), Is.LessThan(tilt), "la esquina del asa pasa por la vertical del pie antes de los 20°");
+            Assert.That(BoardAnimator.ScoopReachU(cap, BoardAnimator.ScoopTiltDeg, true), Is.EqualTo(corner).Within(0.001f), "inclinándose a 20°: la esquina del asa, justo encima del pie");
+            Assert.That(BoardAnimator.ScoopReachU(cap, BoardAnimator.ScoopTiltDeg, false), Is.GreaterThan(CuiaGeometry.HeightU(cap) * Mathf.Cos(tilt)), "el vidrio girado, con su esquina");
         }
 
         [UnityTest]
-        public IEnumerator Scoop_ItsCuiaStaysUnderTheCeiling_InTheRig()
+        public IEnumerator Scoop_UnderALowCeiling_ItsCuiaSinksInTheMouth_AsaIncluded()
         {
+            // El techo a 2 u sobre el pie de su cuia en la boca (revisión de TJ3): de pie en la boca, su cuia (≈ 4,1 u con el asa
+            // y la inclinación) no cabe; se hunde tras la tinaja y nada de ella pasa del techo en ningún fotograma.
             yield return null;
             BoardState board = TinajaVisualTests.Board323();
             _rig = new MechanicTestKit.Rig(Art, board);
@@ -475,20 +519,180 @@ namespace AF.Tests.PlayMode
             CuiaView cv = _rig.Views[Cucharon];
             float u = cv.Unit;
             float dipY = BoardAnimator.ScoopFootFor(tv).y;
-            float ceiling = dipY + ((cv.HeightU + BoardAnimator.ScoopCeilingMarginU + 0.5f) * u);
+            float ceiling = dipY + (2f * u);
             _rig.Animator.ScoopCeilingY = ceiling;
             _rig.Pour(board, Tinaja, Cucharon, out PourVisual _);
+            float lipTop = tv.FootPosition.y + (ProceduralArt.TinajaTopU * tv.Unit);
             float maxFoot = float.MinValue;
+            bool sank = false;
             for (int t = 0; t < 1200 && !_rig.Animator.IsIdle; t += PlayModeHelpers.FrameMs)
             {
                 _rig.Tick(PlayModeHelpers.FrameMs);
+                float top = CuiaTopY(cv);
+                Assert.That(top, Is.LessThanOrEqualTo(ceiling + 0.5f), "bajo el techo, con el asa y la esquina girada (" + t + " ms)");
                 float foot = cv.FootPosition.y + cv.BodyOffset.y;
                 maxFoot = Mathf.Max(maxFoot, foot);
-                Assert.That(foot + (cv.HeightU * u), Is.LessThanOrEqualTo(ceiling - (BoardAnimator.ScoopCeilingMarginU * u) + 0.5f + (BoardAnimator.ReturnBounceU * u)), "bajo el techo (" + t + " ms)");
+                if (t >= 360 && t <= 520)
+                {
+                    Assert.That(foot, Is.LessThan(dipY - u), "hundida en la boca (" + t + " ms)");
+                    Assert.That(cv.BodyAngle, Is.EqualTo(0f).Within(0.01f), "derecha: hundida más de ScoopUprightSinkU (" + t + " ms)");
+                    Assert.That(top, Is.GreaterThan(lipTop), "pero asoma sobre el labio (" + t + " ms)");
+                    sank = true;
+                }
             }
 
-            Assert.That(maxFoot, Is.GreaterThan(dipY), "el arco sigue pasando sobre la boca");
+            Assert.That(sank, Is.True);
+            Assert.That(maxFoot, Is.GreaterThan(cv.FootPosition.y + u), "el arco sigue subiendo a la boca");
             _rig.RunUntilIdle(4000);
+        }
+
+        [UnityTest]
+        public IEnumerator Scoop_InAThreeRowBoard_ItsCuiaAndItsAsaStayUnderTheHud()
+        {
+            // El caso real (D-006: 3 filas desde 11 cuias, lo normal en 323-700): la tinaja en la fila de arriba, bajo la cabecera.
+            // En cada fotograma de sacar, lo más alto de su cuia (el vidrio girado y el asa) queda bajo el techo de GameScreen. Con
+            // la pantalla de un teléfono de 360 × 780 dp (la de las capturas): la de batchmode es otra y el techo queda lejos.
+            GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
+            yield return PlayModeHelpers.LoadGameWithPack(TinajaStepsSnapshotTests.Pack323ThreeRows(), 323, new MemoryProgressStore(323, 322));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            LevelFlow flow = boot.Flow!;
+            for (int t = 0; t < 12000 && flow.Phase != FlowPhase.Playing; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            if (flow.Phase != FlowPhase.Playing)
+            {
+                boot.TapAnywhere();
+            }
+
+            PlayModeHelpers.StepUntilIdle(boot, 6000);
+            GameScreen screen = boot.View!;
+            BoardAnimator animator = screen.Animator;
+            CuiaView tv = screen.Views[Tinaja];
+            CuiaView cv = screen.Views[Cucharon];
+            float ceiling = animator.ScoopCeilingY;
+            Assert.That(float.IsPositiveInfinity(ceiling), Is.False, "GameScreen fija el techo bajo la cabecera");
+            float dipY = BoardAnimator.ScoopFootFor(tv).y;
+            Assert.That(dipY + (BoardAnimator.ScoopReachU(cv.Capacity, BoardAnimator.ScoopTiltDeg, true) * cv.Unit), Is.GreaterThan(ceiling), "de pie en la boca no cabría: el caso del arreglo");
+
+            Assert.That(boot.TapCuia(Tinaja).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(Cucharon).Kind, Is.EqualTo(TapKind.Poured));
+            float highest = float.MinValue;
+            bool inMouth = false;
+            for (int t = 0; t < 2000 && !animator.IsIdle; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                float top = CuiaTopY(cv);
+                highest = Mathf.Max(highest, top);
+                Assert.That(top, Is.LessThanOrEqualTo(ceiling + 0.5f), "su cuia no invade la cabecera (" + t + " ms; techo " + ceiling + ")");
+                if (Mathf.Abs((cv.FootPosition.x + cv.BodyOffset.x) - tv.FootPosition.x) < 0.5f)
+                {
+                    // En la boca: hundida tras la tinaja (más de 1 u), así que entra derecha (ScoopTiltFor).
+                    Assert.That(cv.FootPosition.y + cv.BodyOffset.y, Is.LessThan(dipY - (BoardAnimator.ScoopUprightSinkU * cv.Unit)), "hundida en la boca (" + t + " ms)");
+                    Assert.That(cv.BodyAngle, Is.EqualTo(0f).Within(0.01f), "y derecha (" + t + " ms)");
+                    inMouth = true;
+                }
+            }
+
+            Assert.That(inMouth, Is.True, "sacó en la boca");
+            Assert.That(highest, Is.GreaterThan(ceiling - cv.Unit), "y llegó cerca del techo: el tope se probó");
+            PlayModeHelpers.StepUntilIdle(boot, 6000);
+            Assert.That(flow.Session.Current[Cucharon].Count, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator ReducedMotion_ScoopAndRelease_FadesWithoutRingBounceOrTumble_SameState()
+        {
+            // Reducir movimiento (b.2: «Fundidos de 0,25 s»): el revelado sin anillo ni rebote del chip, sin gotas; la suelta sin
+            // giro ni cara del vuelco (un fundido cruzado a la vasija boca abajo) y su cuia quieta; el estado final, el mismo.
+            yield return null;
+            BoardState s0 = TinajaVisualTests.Board323();
+            _rig = new MechanicTestKit.Rig(Art, s0);
+            _rig.Animator.ReduceMotion = true;
+            CuiaView tv = _rig.Views[Tinaja];
+            CuiaView cv = _rig.Views[Cucharon];
+            var tin = (TinajaOverlay)tv.OverlayOf(MechanicType.Tinaja)!;
+            var cuch = (CucharonOverlay)cv.OverlayOf(MechanicType.Cucharon)!;
+            _rig.Animator.Steps.ClearLog();
+            BoardState s1 = _rig.Pour(s0, Tinaja, Cucharon, out _);
+            bool revealed = false;
+            for (int t = 0; t < 4000 && !_rig.Animator.IsIdle; t += PlayModeHelpers.FrameMs)
+            {
+                _rig.Tick(PlayModeHelpers.FrameMs);
+                Assert.That(tin.RingVisible, Is.False, "sin anillo (" + t + " ms)");
+                Assert.That(tin.ChipScale, Is.EqualTo(1f), "sin rebote del chip (" + t + " ms)");
+                Assert.That(tin.ActiveDrips, Is.EqualTo(0), "sin gotas (" + t + " ms)");
+                revealed |= _rig.Animator.Steps.TryGetRunning(MechanicStepKind.Reveal, Tinaja, out _, out _);
+            }
+
+            Assert.That(revealed, Is.True, "el revelado es un paso, con su fundido");
+            Assert.That(tin.MouthTint, Is.EqualTo(Lulo));
+            Assert.That(tin.ChipCount, Is.EqualTo(2));
+            Assert.That(tin.DripsStarted, Is.EqualTo(0));
+
+            BoardState s2 = _rig.Pour(s1, Tinaja, Cucharon, out _);
+            _rig.RunUntilIdle(4000);
+            BoardState s3 = _rig.Pour(s2, Cucharon, Empty7, out _);
+            _rig.RunUntilIdle(4000);
+            _rig.Animator.Steps.ClearLog();
+            BoardState s4 = _rig.Pour(s3, Tinaja, Cucharon, out _);
+            bool fading = false;
+            bool upendRan = false;
+            bool unhookRan = false;
+            for (int t = 0; t < 4000 && !_rig.Animator.IsIdle; t += PlayModeHelpers.FrameMs)
+            {
+                _rig.Tick(PlayModeHelpers.FrameMs);
+                Assert.That(tin.UpendCapVisible, Is.False, "sin la cara del vuelco (" + t + " ms)");
+                Assert.That(tin.BodyAngleDeg, Is.EqualTo(0f).Within(0.01f), "sin ladearse (" + t + " ms)");
+                Assert.That(Mathf.Abs(tin.BodyScaleY), Is.EqualTo(1f), "sin girar: boca arriba o boca abajo (" + t + " ms)");
+                Assert.That(cv.OverlayHost.BodyNudgeDp, Is.EqualTo(0f), "su cuia, quieta en su ranura (" + t + " ms)");
+                float a = tin.FlipFadeAlpha;
+                fading |= a > 0.05f && a < 0.95f;
+                upendRan |= _rig.Animator.Steps.TryGetRunning(MechanicStepKind.Upend, Tinaja, out _, out _);
+                unhookRan |= _rig.Animator.Steps.TryGetRunning(MechanicStepKind.Unhook, Cucharon, out _, out _);
+            }
+
+            Assert.That(upendRan && unhookRan, Is.True, "los pasos de la suelta se ejecutan");
+            Assert.That(fading, Is.True, "un fundido cruzado a la vasija boca abajo");
+            Assert.That(tin.FlipFadeAlpha, Is.EqualTo(0f), "la copia del fundido se retira");
+            Assert.That(s4[Tinaja].IsEmpty, Is.True);
+            Assert.That(tin.UpsideDown, Is.True, "el mismo estado final: boca abajo");
+            Assert.That(tin.BodyScaleY, Is.EqualTo(-1f));
+            Assert.That(tin.BaseCapVisible && !tin.BodyShowsCavity, Is.True);
+            Assert.That(tin.BodyColor.a, Is.EqualTo(1f), "opaca");
+            Assert.That(tin.HoldingUpright || tin.IsAnimating, Is.False);
+            Assert.That(cuch.Visible || cuch.AsaVisible || cuch.PostVisible, Is.False, "su cuia, suelta");
+            Assert.That(cv.ShownCuia.Mechanic, Is.EqualTo(MechanicType.None));
+            Assert.That(cv.OverlayHost.BodyNudgeDp, Is.EqualTo(0f));
+        }
+
+        /// <summary>
+        /// Lo más alto de la cuia <paramref name="cv"/> en el contenedor, con su pose: el contorno del vidrio
+        /// (<see cref="CuiaGeometry.OuterHalfWidth"/>) y el rectángulo del asa de su cuia colgada, girados sobre el centro del pie.
+        /// </summary>
+        internal static float CuiaTopY(CuiaView cv)
+        {
+            float u = cv.Unit;
+            Vector2 foot = cv.FootPosition + cv.BodyOffset;
+            float rad = cv.BodyAngle * Mathf.Deg2Rad;
+            float h = cv.HeightU;
+            float best = float.MinValue;
+            for (int i = 0; i <= 90; i++)
+            {
+                float y = h * i / 90f;
+                float x = CuiaGeometry.OuterHalfWidth(Mathf.Min(y, h - 0.0001f), cv.Capacity);
+                best = Mathf.Max(best, foot.y + CuiaView.Rotate(new Vector2(x, y) * u, rad).y);
+                best = Mathf.Max(best, foot.y + CuiaView.Rotate(new Vector2(-x, y) * u, rad).y);
+            }
+
+            Rect asa = ProceduralArt.TinajaAsaRectU;
+            best = Mathf.Max(best, foot.y + CuiaView.Rotate(new Vector2(asa.xMin, asa.yMax) * u, rad).y);
+            best = Mathf.Max(best, foot.y + CuiaView.Rotate(new Vector2(asa.xMax, asa.yMax) * u, rad).y);
+            best = Mathf.Max(best, foot.y + CuiaView.Rotate(new Vector2(asa.xMin, asa.yMin) * u, rad).y);
+            best = Mathf.Max(best, foot.y + CuiaView.Rotate(new Vector2(asa.xMax, asa.yMin) * u, rad).y);
+            return best;
         }
 
         [UnityTest]
@@ -805,8 +1009,8 @@ namespace AF.Tests.PlayMode
     /// orilla en ese estado (<c>tj3_13</c>: la banda verde sigue tras la intro), la suelta (<c>tj3_08</c>, el fondo seco mate
     /// esperando boca arriba; <c>tj3_09</c>, la vasija a mitad del vuelco, con su base y la cara de canto; <c>tj3_10</c>, boca
     /// abajo y su cuia suelta) y Marea tras la suelta (<c>tj3_11</c>: su cuia otra vez colgada y la tinaja con «×1», la boca azul
-    /// y la barriga lisa: no queda nada revelado bajo la boca). Aparte, un tablero de 3 filas (<c>tj3_14</c>): el arco de sacar
-    /// bajo la cabecera. Necesitan gráficos:
+    /// y la barriga lisa: no queda nada revelado bajo la boca). Aparte, un tablero de 3 filas: el arco de sacar (<c>tj3_14</c>) y
+    /// su cuia hundida en la boca (<c>tj3_15</c>), las dos bajo la cabecera, asa incluida. Necesitan gráficos:
     /// <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.TinajaStepsSnapshotTests</c> sin <c>-nographics</c>;
     /// los PNG quedan en <c>Logs/snapshots/</c>.
     /// </summary>
@@ -993,14 +1197,20 @@ namespace AF.Tests.PlayMode
             for (int t = 0; t < 900; t += PlayModeHelpers.FrameMs)
             {
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
-                highest = Mathf.Max(highest, cv.FootPosition.y + cv.BodyOffset.y + (cv.HeightU * cv.Unit));
+                highest = Mathf.Max(highest, TinajaStepsTests.CuiaTopY(cv)); // el vidrio girado y el asa
                 if (t == 176)
                 {
                     SnapshotKit.Save(dir, "tj3_14_l323_tres_filas_arco");
                 }
+
+                if (t == 432)
+                {
+                    SnapshotKit.Save(dir, "tj3_15_l323_tres_filas_en_la_boca");
+                }
             }
 
-            Debug.Log("[TJ3] tres filas: lo mas alto de su cuia " + highest + " dp; techo del arco " + animator.ScoopCeilingY + " dp");
+            Debug.Log("[TJ3] tres filas: lo mas alto de su cuia (asa incluida) " + highest + " dp; techo del arco " + animator.ScoopCeilingY + " dp");
+            Assert.That(highest, Is.LessThanOrEqualTo(animator.ScoopCeilingY + 0.5f), "su cuia, asa incluida, bajo la cabecera");
             PlayModeHelpers.StepUntilIdle(boot, 6000);
         }
 

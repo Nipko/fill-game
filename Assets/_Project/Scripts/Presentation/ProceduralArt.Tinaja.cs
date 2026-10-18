@@ -69,6 +69,21 @@ namespace AF.Presentation
         public const float TinajaOpeningRyU = 0.39f;
 
         /// <summary>
+        /// Boca abajo (TJ3): grosor del arco del canto delantero del labio (u): 0,125 u, ≈ 3 dp con la cuia de 48 dp (u ≈ 24 dp)
+        /// [P] (revisión de TJ3).
+        /// </summary>
+        public const float TinajaUpendLipArcU = 0.125f;
+
+        /// <summary>Boca abajo: el arco del canto del labio, un barro más claro que el cuerpo, #C9A07E [P] (revisión de TJ3).</summary>
+        public static readonly Color TinajaUpendLipArc = Palette.Hex(0xC9A07E);
+
+        /// <summary>Boca abajo: alto de la tapa de la base sobre su ancho, 0,28, como la boca vista desde arriba [P] (revisión de TJ3).</summary>
+        public const float TinajaBaseCapAspect = 0.28f;
+
+        /// <summary>Boca abajo: borde de la tapa de la base (u): ≈ 1 dp con la cuia de 48 dp [P].</summary>
+        public const float TinajaBaseCapRimU = 0.042f;
+
+        /// <summary>
         /// Ancho del agua de la boca (u): 1,42 u, 0,71 del ancho de la cuia (07 §4.3: «boca de 0,70 del ancho o más»; ≈ 34 dp con
         /// la cuia de 48 dp).
         /// </summary>
@@ -249,10 +264,30 @@ namespace AF.Presentation
         private Sprite? _tinajaPost;
         private Sprite? _tinajaAsa;
         private Sprite? _tinajaDryMouthCenter;
+        private Sprite? _tinajaBodyClosed;
+        private Sprite? _tinajaBaseCap;
+        private Sprite? _tinajaDripDot;
         private readonly Sprite?[] _tinajaGlyphs = new Sprite?[Cuia.MaxTintColor + 1];
 
         /// <summary>Cuerpo de la tinaja (<see cref="TinajaBodyWidthU"/> × <see cref="TinajaBodyHeightU"/> u, pivote al centro).</summary>
-        internal Sprite TinajaBody => _tinajaBody != null ? _tinajaBody : (_tinajaBody = BuildTinajaBody());
+        internal Sprite TinajaBody => _tinajaBody != null ? _tinajaBody : (_tinajaBody = BuildTinajaBody(false));
+
+        /// <summary>
+        /// Cuerpo de la tinaja boca abajo (TJ3, revisión de la suelta; mismas medidas que <see cref="TinajaBody"/>): sin el hueco
+        /// oscuro de la boca. El labio es barro, como la panza, con el arco de su canto delantero (la mitad de la elipse que, ya
+        /// volteada, queda abajo) en un barro más claro (<see cref="TinajaUpendLipArc"/>, ≈ 3 dp): una vasija maciza vista
+        /// desde arriba, nunca un tubo abierto. El overlay lo pone al voltearse (desde la mitad del giro) y boca abajo.
+        /// </summary>
+        internal Sprite TinajaBodyClosed => _tinajaBodyClosed != null ? _tinajaBodyClosed : (_tinajaBodyClosed = BuildTinajaBody(true));
+
+        /// <summary>
+        /// Tapa de la base de la tinaja boca abajo (TJ3): elipse blanca con un borde de ≈ 1 dp al 85 % (el overlay la tiñe de
+        /// <c>TinajaOverlay.BaseCapColor</c>, así el borde queda un 15 % más oscuro).
+        /// </summary>
+        internal Sprite TinajaBaseCap => _tinajaBaseCap != null ? _tinajaBaseCap : (_tinajaBaseCap = BuildTinajaBaseCap());
+
+        /// <summary>Gota de la vuelta de su cuia al sacar (TJ3): círculo blanco opaco de canto suave (el overlay lo tiñe).</summary>
+        internal Sprite TinajaDripDot => _tinajaDripDot != null ? _tinajaDripDot : (_tinajaDripDot = BuildTinajaDripDot());
 
         /// <summary>Elipse blanca del agua de la boca: la tiñe el overlay con la fruta de arriba.</summary>
         internal Sprite TinajaMouthDisc => _tinajaMouthDisc != null ? _tinajaMouthDisc : (_tinajaMouthDisc = BuildTinajaMouthDisc());
@@ -357,8 +392,9 @@ namespace AF.Presentation
 
         // Cuerpo: la panza (perfil de TinajaHalfWidthU) con sombreado cilíndrico (luz arriba a la izquierda, D-003), su contorno,
         // la línea incisa y el sudor; encima, el labio (elipse clara) con el hueco oscuro de la boca. El agua de la boca la
-        // pinta el overlay con su tinte.
-        private Sprite BuildTinajaBody()
+        // pinta el overlay con su tinte. Cerrado (closed, para boca abajo): el labio es barro sombreado como la panza, sin hueco,
+        // y su mitad de arriba (abajo al voltearlo: el canto delantero) lleva un arco de barro claro de TinajaUpendLipArcU.
+        private Sprite BuildTinajaBody(bool closed)
         {
             const float px = MechanicPxPerU;
             int w = Mathf.RoundToInt(TinajaBodyWidthU * px);
@@ -369,23 +405,33 @@ namespace AF.Presentation
             for (int y = 0; y < h; y++)
             {
                 float yu = (y + 0.5f) / px;
-                float half = yu <= TinajaLipCenterU ? TinajaHalfWidthU(yu) : 0f;
+                bool lipRow = closed && yu > TinajaLipCenterU;
+                float half = yu <= TinajaLipCenterU ? TinajaHalfWidthU(yu) : (lipRow ? TinajaSilhouetteHalfWidthU(yu) : 0f);
                 if (half <= 0f)
                 {
                     continue;
                 }
 
+                float shadeHalf = lipRow ? TinajaLipRxU : half; // el labio cerrado sigue el sombreado del cuello
                 for (int x = 0; x < w; x++)
                 {
                     float xu = ((x + 0.5f) - cx) / px;
                     float dist = (Mathf.Abs(xu) - half) * px; // negativa dentro
+                    if (lipRow)
+                    {
+                        // Sobre el centro del labio, el canto es la elipse: distancia aproximada (en px) por su semieje menor.
+                        float ex = xu / TinajaLipRxU;
+                        float ey = (yu - TinajaLipCenterU) / TinajaLipRyU;
+                        dist = (Mathf.Sqrt((ex * ex) + (ey * ey)) - 1f) * TinajaLipRyU * px;
+                    }
+
                     float cover = PixelCanvas.Coverage(dist);
                     if (cover <= 0f)
                     {
                         continue;
                     }
 
-                    float nx = Mathf.Clamp(xu / half, -1f, 1f);
+                    float nx = Mathf.Clamp(xu / shadeHalf, -1f, 1f);
                     Color col = Color.Lerp(Palette.TinajaClayLight, Palette.TinajaClayShade, Mathf.SmoothStep(0f, 1f, (nx + 0.55f) / 1.5f));
                     col = Color.Lerp(col, Palette.TinajaClay, 0.35f);
                     float edge = nx * nx * nx * nx;
@@ -402,6 +448,11 @@ namespace AF.Presentation
                     else if (dy < -1.2f && dy > -2.8f)
                     {
                         col = ColorMath.Lighten(col, 0.10f);
+                    }
+
+                    if (lipRow && -dist < TinajaUpendLipArcU * px)
+                    {
+                        col = TinajaUpendLipArc; // el canto delantero del labio, ya volteado (TJ3)
                     }
 
                     col = Color.Lerp(col, TinajaClayLine, Mathf.Clamp01(1f - ((-dist) / line)));
@@ -422,6 +473,11 @@ namespace AF.Presentation
                 pc.FillCircle(sx - (0.3f * r), sy + (0.3f * r), 0.38f * r, ColorMath.WithAlpha(Color.white, 0.95f));
             }
 
+            if (closed)
+            {
+                return MakeSprite(pc, "mech_tinaja_body_closed", new Vector2(0.5f, 0.5f), Vector4.zero);
+            }
+
             // Labio: canto oscuro, cara de arriba clara y, por dentro, el hueco oscuro (más claro hacia delante).
             float lx = cx;
             float ly = TinajaLipCenterU * px;
@@ -430,6 +486,31 @@ namespace AF.Presentation
             pc.FillEllipseSoft(lx, ly + (0.02f * px), TinajaOpeningRxU * px, TinajaOpeningRyU * px, 1f, TinajaOpeningFront);
             pc.FillEllipseSoft(lx, ly + (0.10f * px), TinajaOpeningRxU * px * 0.92f, TinajaOpeningRyU * px * 0.70f, 6f, TinajaOpeningDark);
             return MakeSprite(pc, "mech_tinaja_body", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        // Tapa de la base (TJ3): elipse blanca con un borde de TinajaBaseCapRimU al 85 % (gris; el tinte del overlay la oscurece).
+        private Sprite BuildTinajaBaseCap()
+        {
+            const float px = MechanicPxPerU;
+            float wu = 2f * TinajaHalfWidthU(0f);
+            int w = Mathf.RoundToInt(wu * px) + 4;
+            int h = Mathf.RoundToInt(wu * TinajaBaseCapAspect * px) + 4;
+            var pc = new PixelCanvas(w, h);
+            float rx = (w * 0.5f) - 2f;
+            float ry = (h * 0.5f) - 2f;
+            float rim = TinajaBaseCapRimU * px;
+            pc.FillEllipseSoft(w * 0.5f, h * 0.5f, rx, ry, 1f, new Color(0.85f, 0.85f, 0.85f, 1f));
+            pc.FillEllipseSoft(w * 0.5f, h * 0.5f, rx - rim, ry - rim, 1f, Color.white);
+            return MakeSprite(pc, "mech_tinaja_base_cap", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        // Gota de la vuelta (TJ3): círculo blanco opaco de canto suave.
+        private Sprite BuildTinajaDripDot()
+        {
+            const int s = 32;
+            var pc = new PixelCanvas(s, s);
+            pc.FillEllipseSoft(s * 0.5f, s * 0.5f, (s * 0.5f) - 1f, (s * 0.5f) - 1f, 1f, Color.white);
+            return MakeSprite(pc, "mech_tinaja_drip", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
 
         // Elipse blanca del agua de la boca, de borde suave (el tinte lo pone Image.color).
