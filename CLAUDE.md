@@ -44,7 +44,7 @@ Desde la raíz del repositorio o del worktree. Si `dotnet` no está en el PATH (
 ```
 dotnet build dotnet/AmazonFill.slnx -warnaserror      # núcleo y herramientas, sin avisos
 dotnet test  dotnet/AmazonFill.slnx                    # todos los tests .NET
-python tools/validate_schema.py                       # 40/40 PASS; código 1 si falla
+python tools/validate_schema.py                       # 103/103 PASS; código 1 si falla
                                                       # reescribe tools/out/schema_example_08_4_1.json desde 08 §4.1; commitea el cambio si aparece
 python tools/econ_sim.py --runs 300 | diff --strip-trailing-cr -q - tools/out/econ_B.md
                                                       # (Git Bash) solo si tocas economía; sin salida = idéntico
@@ -53,8 +53,8 @@ python tools/river-map/geometry.py --check            # cuando exista
 python -m unittest discover -s tools/river-map -p "test_*.py"
 python docs/research/mapa-del-rio/generar_mapa.py --check
 pwsh -NoProfile -File scripts/unity-compile.ps1       # ¿compila Unity? errores: solo las 30 primeras líneas "error CS"
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 2.628 hoy en integracion-fase1-fase2 (2.625 + 3 omitidos); dotnet test: 981 (975 + 6 omitidos)
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.151 (1.021 + 130 explícitos de capturas); antes de cada PR que toque Unity
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 2.728 hoy en integracion-fase1-fase2 (2.725 + 3 omitidos); dotnet test: 981 (975 + 6 omitidos)
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.276 (1.129 + 147 explícitos de capturas); antes de cada PR que toque Unity
 ```
 - Las pruebas de `tools/` van como fixtures (`tools/level-generator/specs/tests/`, `tools/level-qa/fixtures/`) y como un modo `--self-test` en la propia herramienta; `tools/river-map/` suma sus `test_*.py` (unittest). No hay proyectos de tests de `tools/` en `dotnet/AmazonFill.slnx`.
 - Los scripts de Unity lanzan `unity test <proyecto> --mode <Mode> --architecture arm64 ...` (respaldo: `Unity.exe -batchmode -runTests`). Códigos: 0 verde · 1 errores de compilación · 2 argumentos · 3 no encuentra el proyecto Unity (¿carpeta equivocada?) · 4 falta CLI o Editor · 5 proyecto abierto en un Editor · 6 sin veredicto (lee el log; no reintentes a ciegas) · 8 tests fallidos.
