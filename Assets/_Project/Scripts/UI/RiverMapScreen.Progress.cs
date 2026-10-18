@@ -171,10 +171,17 @@ namespace AF.UI
         public const float SilhouetteLineClearanceDp = 4f;
 
         /// <summary>
-        /// Paso de la búsqueda de un sitio fuera del lleno para una placa en toda la zona visible de la Cuenca (dp), cuando cerca
+        /// Paso de la búsqueda de un sitio fuera del lleno para una placa en la zona visible de la Cuenca (dp), cuando cerca
         /// de su parada no lo hay (revisión de FX7).
         /// </summary>
         public const float SilhouetteFarStepDp = 8f;
+
+        /// <summary>
+        /// Lo más lejos de su parada que se busca ese sitio fuera del lleno (dp) [P]: el centro de la placa, a lo sumo esto más medio
+        /// ancho de la placa (revisión de FX7: con max 200 la placa de Ucayali, en Perú, salía junto a «Brasil», en la otra punta de
+        /// la Cuenca).
+        /// </summary>
+        public const float SilhouetteFarMaxDistDp = 140f;
 
         /// <summary>Hueco entre un país y el control de la Cuenca que pisaba, si se corre a su izquierda (dp) [P] (revisión de FX7).</summary>
         public const float CountryControlGapDp = 6f;
@@ -208,6 +215,8 @@ namespace AF.UI
         private readonly List<Vector2> _pastRosaStop = new List<Vector2>();
         private readonly List<Rect> _placed = new List<Rect>();
         private bool[] _countryBasinHidden = Array.Empty<bool>();
+        private float[] _countryFreeClearance = Array.Empty<float>();
+        private float[] _countryUnderClearance = Array.Empty<float>();
         private static Material? _countryMaterial;
 
         private RectTransform? _fillLayer;
@@ -832,11 +841,12 @@ namespace AF.UI
         // CountryLineClearanceDp de su borde, se busca el sitio libre más cercano, hasta CountryMaxShiftDp (en horizontal y en
         // vertical primero). Sin hueco libre, el de más hueco. Tampoco se pisan entre sí ni, en la Cuenca sin girar, quedan bajo sus
         // controles (BasinControlObstacles: «Norte arriba», «Volver a la canoa», la canoa con su equipo, las boyas y los rótulos
-        // fijos «Andes ↑» y «Océano Atlántico ↓»; revisión de FX7: con max 140 «Ecuador» quedaba tras «Norte arriba»): si un
-        // control le quita un sitio y no queda ninguno que no pise el río, el país se corre a la izquierda del control que pisa en su
-        // punto (su borde derecho a CountryControlGapDp de él) y, si ahí pisa el río u otro rótulo, no sale en esa vista
-        // (CountryBasinHidden; con el norte arriba vuelve, en su sitio de esa vista). Solo al cambiar de vista; sin asignaciones
-        // (salvo la tabla de ocultos si cambia el número de países).
+        // fijos «Andes ↑» y «Océano Atlántico ↓»; revisión de FX7: con max 140 «Ecuador» quedaba tras «Norte arriba»): si los
+        // controles le quitan todos los sitios, o los únicos que no pisaban el río (CountryBasinFallback), el país se corre a la
+        // izquierda del control que pisa en su punto (su borde derecho a CountryControlGapDp de él) y, si ahí pisa el río u otro
+        // rótulo, no sale en esa vista [P] (CountryBasinHidden; con el norte arriba vuelve, en su sitio de esa vista). Si fuera de
+        // los controles solo quedan sitios sobre el río y bajo ellos también, el de más hueco, como antes. Solo al cambiar de vista;
+        // sin asignaciones (salvo las tablas de la búsqueda si cambia el número de países).
         private void PlaceCountries(MapSpace space)
         {
             RiverMap map = _map!;
@@ -846,6 +856,8 @@ namespace AF.UI
             if (_countryBasinHidden.Length != _countries.Count)
             {
                 _countryBasinHidden = new bool[_countries.Count];
+                _countryFreeClearance = new float[_countries.Count];
+                _countryUnderClearance = new float[_countries.Count];
             }
 
             float u = NorthUpEase(_northUpT);
@@ -853,6 +865,8 @@ namespace AF.UI
             {
                 TextMeshProUGUI label = _countries[i];
                 _countryBasinHidden[i] = false;
+                _countryFreeClearance[i] = float.NegativeInfinity;
+                _countryUnderClearance[i] = float.NegativeInfinity;
                 if (!label.gameObject.activeSelf)
                 {
                     continue;
@@ -867,6 +881,7 @@ namespace AF.UI
                 bool found = false;
                 Vector2 home = best;
                 bool blocked = false;
+                float underClearance = float.NegativeInfinity; // el mejor hueco con el río de los sitios que pisan un control
                 for (int ring = 0; ring <= rings && !found; ring++)
                 {
                     int directions = ring == 0 ? 1 : SearchDirections.Length;
@@ -882,6 +897,11 @@ namespace AF.UI
                         if (HitsBasinControl(box))
                         {
                             blocked = true;
+                            if (underClearance < 0f)
+                            {
+                                underClearance = Mathf.Max(underClearance, LineClearance(map, space, _view, box, 0f));
+                            }
+
                             continue;
                         }
 
@@ -896,10 +916,13 @@ namespace AF.UI
                     }
                 }
 
-                // Un control le quitó un sitio y no queda ninguno que no pise el río: a la izquierda del control que pisa en su punto
-                // (si ese sitio no pisa el río ni otro rótulo) o, si no, fuera de esta vista.
+                // Los controles le quitaron todos los sitios o los únicos que no pisaban el río (CountryBasinFallback): a la izquierda
+                // del control que pisa en su punto (si ese sitio no pisa el río ni otro rótulo) o, si no, fuera de esta vista [P]. Si
+                // los sitios que pisan un control también pisaban el río, se queda en `best`, el de más hueco, como antes de FX7.
                 bool hidden = false;
-                if (blocked && bestClearance < 0f)
+                _countryFreeClearance[i] = bestClearance;
+                _countryUnderClearance[i] = underClearance;
+                if (CountryBasinFallback(blocked, bestClearance, underClearance))
                 {
                     hidden = true;
                     int k = BasinControlHit(new Rect(home.x - (size.x * 0.5f), home.y - (size.y * 0.5f), size.x, size.y));
@@ -929,12 +952,37 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// El país <paramref name="i"/> (en el orden de <c>labels</c>) no sale en la Cuenca sin girar: no cabe sin quedar bajo
-        /// uno de sus controles (<see cref="PlaceCountries"/>; revisión de FX7). Con el norte arriba vuelve.
+        /// El país <paramref name="i"/> (en el orden de <c>labels</c>) no sale en la Cuenca sin girar [P]: no cabe sin quedar bajo
+        /// uno de sus controles o pisar el río (<see cref="PlaceCountries"/>, <see cref="CountryBasinFallback"/>; revisión de FX7).
+        /// Con el norte arriba vuelve.
         /// </summary>
         internal bool CountryBasinHidden(int i)
         {
             return i < _countryBasinHidden.Length && _countryBasinHidden[i];
+        }
+
+        /// <summary>
+        /// Lo que vio la búsqueda del país <paramref name="i"/> en su última colocación (tests de FX7): <paramref name="free"/>, el
+        /// mejor hueco con el río de los sitios que no pisan ningún control ni otro rótulo, y <paramref name="under"/>, el de los
+        /// que pisan un control (como mucho 0); −∞ si no hubo ninguno.
+        /// </summary>
+        internal void CountryBasinSearch(int i, out float free, out float under)
+        {
+            bool known = i < _countryFreeClearance.Length;
+            free = known ? _countryFreeClearance[i] : float.NegativeInfinity;
+            under = known ? _countryUnderClearance[i] : float.NegativeInfinity;
+        }
+
+        /// <summary>
+        /// Un país de la Cuenca sin girar busca sitio a la izquierda del control que pisa en su punto o, si no lo hay, no sale en esa
+        /// vista [P] (revisión de FX7): solo si algún control le quitó un sitio (<paramref name="blocked"/>) y, o no le queda ninguno
+        /// fuera de los controles y de los otros rótulos (<paramref name="freeClearance"/> = −∞), o los que le quedan pisan el río
+        /// (&lt; 0) y el control le quitó uno que no lo pisaba (<paramref name="underClearance"/> ≥ 0): antes de FX7 salía ahí, bajo
+        /// el control. Si los sitios bajo un control también pisaban el río, se queda en el de más hueco fuera de ellos, como antes.
+        /// </summary>
+        internal static bool CountryBasinFallback(bool blocked, float freeClearance, float underClearance)
+        {
+            return blocked && (float.IsNegativeInfinity(freeClearance) || (freeClearance < 0f && underClearance >= 0f));
         }
 
         // La silueta, a la derecha de su gran parada o, si no cabe, a su izquierda, sin salirse del mapa y dejando libre la caja
@@ -944,13 +992,13 @@ namespace AF.UI
         // debajo de la canoa, así que nunca puede quedar debajo de ella.
         // El lleno (el progreso del jugador) no se tapa si hay sitio (revisión de FX7: con max 200 las placas de los mundos 7 y 9
         // tapaban cintas del lleno): un sitio cercano vale solo si no pisa ninguna línea del lleno (FillLinesUnder) y deja
-        // SilhouetteLineClearanceDp a las de clase 1-2. Si cerca no lo hay, en la Cuenca se busca en toda la zona visible con su
-        // encuadre de apertura el sitio fuera del lleno más cercano a la parada (FarFillFreeSpot); si tampoco lo hay, el respaldo es
-        // el sitio cercano que tapa menos líneas del lleno y, a igualdad, el de más hueco. Límites aceptados: la placa puede quedar
-        // lejos de su parada (el texto la nombra), y una placa muy ancha puede no caber fuera del lleno sin pisar un control, un
-        // país o la canoa: con max 200, la del mundo 7 («Madre de Dios», 215 dp en una Cuenca de 328) solo cabría fuera del lleno en
-        // la franja de arriba, bajo «Norte arriba» y los países, así que tapa las menos líneas del lleno que puede cerca de su parada
-        // (dos). Fuera de la Cuenca (el Mundo, que se arrastra) no se busca lejos.
+        // SilhouetteLineClearanceDp a las de clase 1-2. Si cerca no lo hay, en la Cuenca se busca en la zona visible con su
+        // encuadre de apertura, hasta SilhouetteFarMaxDistDp de la parada, el sitio fuera del lleno más cercano a ella
+        // (FarFillFreeSpot); si tampoco lo hay, el respaldo es el sitio cercano que tapa menos líneas del lleno y, a igualdad, el de
+        // más hueco. Límites aceptados [P]: la placa puede quedar algo lejos de su parada (el texto la nombra), pero no en otra
+        // región de la Cuenca, y una placa muy ancha puede no caber fuera del lleno sin pisar un control, un país o la canoa: con
+        // max 200, la del mundo 7 («Madre de Dios», 215 dp en una Cuenca de 328) tapa las menos líneas del lleno que puede cerca de
+        // su parada (dos). Fuera de la Cuenca (el Mundo, que se arrastra) no se busca lejos.
         private void PlaceSilhouettes(MapSpace space)
         {
             RiverMap map = _map!;
@@ -1039,7 +1087,9 @@ namespace AF.UI
 
         // En la Cuenca sin girar, el sitio de una placa de tamaño size que no pisa ninguna línea del lleno, la canoa, los países, las
         // otras placas ni los controles, dentro de la zona visible con el encuadre de apertura (_basinFrame) y del mapa (con
-        // LabelEdgeDp de margen), más cercano a la parada p; a igual distancia, el de más hueco con las líneas de clase 1-2. En una
+        // LabelEdgeDp de margen) y con el centro a lo sumo a SilhouetteFarMaxDistDp más medio ancho de la parada p (revisión de FX7:
+        // que la placa no salte a otra región de la Cuenca), más cercano a p; vale aunque cruce afluentes de clase 1-2 que no estén
+        // llenos, y a igual distancia gana el de más hueco con ellos. En una
         // rejilla de SilhouetteFarStepDp (y pegada a los bordes derecho e inferior). False si no hay ninguno: entonces la placa se
         // queda cerca de su parada (una placa que se fuera lejos para tapar menos líneas, pero alguna, quitaría el sitio a las
         // siguientes). Sin asignaciones.
@@ -1064,6 +1114,7 @@ namespace AF.UI
 
             int cols = Mathf.FloorToInt((xMax - xMin - size.x) / SilhouetteFarStepDp);
             int rows = Mathf.FloorToInt((yMax - yMin - size.y) / SilhouetteFarStepDp);
+            float reach = SilhouetteFarMaxDistDp + (size.x * 0.5f);
             bool any = false;
             float bestDistance = float.PositiveInfinity;
             float bestClearance = float.NegativeInfinity;
@@ -1075,8 +1126,8 @@ namespace AF.UI
                     float x = c <= cols ? xMin + (c * SilhouetteFarStepDp) : xMax - size.x;
                     var box = new Rect(x, y, size.x, size.y);
                     float distance = PointBoxDistance(p, box);
-                    if (distance > bestDistance + 0.01f || (hasCanoe && box.Overlaps(canoe)) || OverlapsPlaced(box) || HitsBasinControl(box)
-                        || FillLinesUnder(map, space, _view, box) > 0)
+                    if (distance > bestDistance + 0.01f || (box.center - p).sqrMagnitude > reach * reach || (hasCanoe && box.Overlaps(canoe))
+                        || OverlapsPlaced(box) || HitsBasinControl(box) || FillLinesUnder(map, space, _view, box) > 0)
                     {
                         continue;
                     }
@@ -1106,8 +1157,8 @@ namespace AF.UI
 
         /// <summary>
         /// Las menos líneas del lleno que tapaba un sitio de la placa <paramref name="i"/> libre de los demás obstáculos entre los
-        /// que probó su búsqueda: la cercana o, si en la Cuenca encontró uno fuera del lleno en toda la zona visible, 0; −1 si ninguno
-        /// estaba libre (tests de FX7).
+        /// que probó su búsqueda: la cercana o, si en la Cuenca encontró uno fuera del lleno en la zona visible (hasta
+        /// <see cref="SilhouetteFarMaxDistDp"/> de su parada), 0; −1 si ninguno estaba libre (tests de FX7).
         /// </summary>
         internal int SilhouetteFillMin(int i)
         {

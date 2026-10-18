@@ -28,12 +28,13 @@ namespace AF.Tests.PlayMode
     /// mundo 5, «Loreto · Nivel 141», lo rozaba), ni «Volver a la canoa» si sale, con la vista de siempre y con el norte
     /// arriba; y con otros progresos. En la Cuenca sin girar tampoco quedan bajo la canoa, su mástil, sus banderas, el guía ni la
     /// fila de boyas del frente (revisión de FX7: con max 200 la placa del mundo 9 la rozaba); y cada placa tapa las menos líneas
-    /// del lleno que puede entre los sitios libres que prueba (con max 200, las de los mundos 8 y 9, ninguna; la del 7, la más
-    /// ancha, sigue tapando dos: fuera del lleno solo cabría en la franja de arriba, bajo «Norte arriba», «Andes ↑» o un país,
-    /// porque más abajo el cauce lleno corta el mapa a menos de su ancho del borde; es un límite aceptado, no un caso resuelto, y
-    /// el test comprueba que no queda ningún sitio libre fuera del lleno con lo que había al colocarla). Los países de la
+    /// del lleno que puede entre los sitios libres que prueba, sin alejarse de su parada más de
+    /// <see cref="RiverMapScreen.SilhouetteFarMaxDistDp"/> más medio ancho (la del mundo 9, Ucayali, saltaba con max 200 a la otra
+    /// punta de la Cuenca); si tapa el lleno (con max 200, la del 7, la más ancha), es un límite aceptado, no un caso resuelto, y el
+    /// test comprueba que a su alcance no queda ningún sitio libre fuera del lleno con lo que había al colocarla. Los países de la
     /// Cuenca tampoco quedan bajo «Norte arriba» ni los demás controles (con max 140 «Ecuador» quedaba tras el botón): o se
-    /// apartan o no salen en esa vista.</description></item>
+    /// apartan o, solo si no les queda ningún sitio libre de controles, de otros rótulos y del río y los controles les quitaron
+    /// todos o uno que no lo pisaba, no salen en esa vista [P] (<see cref="RiverMapScreen.CountryBasinFallback"/>).</description></item>
     /// </list>
     /// No necesitan gráficos. La captura de la Cuenca con 58 es <c>15_map_lleno_cuenca_max58</c> (<c>MapProgressSnapshotTests</c>).
     /// </summary>
@@ -330,27 +331,33 @@ namespace AF.Tests.PlayMode
                     }
 
                     boxes.Add(box);
-                    if (max != 200)
-                    {
-                        continue;
-                    }
 
-                    // Con max 200 (revisión de FX7): las placas de los mundos 8 y 9 caben fuera del lleno y no lo tapan; la del
-                    // mundo 7 (la más ancha) solo cabría fuera de él donde pisaría «Norte arriba», un país o la canoa con su
-                    // equipo: es el límite aceptado (RiverMapScreen.PlaceSilhouettes).
-                    if (world == 7)
+                    // Cerca de su parada, en su región de la Cuenca (revisión de FX7: con max 200 la placa de Ucayali, en Perú, salía
+                    // junto a «Brasil»): el centro, a lo sumo a SilhouetteFarMaxDistDp más medio ancho.
+                    Vector2 stop = map.Space.ToLocal(map.SilhouetteMapPoint(i));
+                    float reach = RiverMapScreen.SilhouetteFarMaxDistDp + (box.width * 0.5f);
+                    float distance = Vector2.Distance(box.center, stop);
+                    Assert.That(distance, Is.LessThanOrEqualTo(reach + 0.01f),
+                        at + ": la placa del mundo " + world + " " + box + " queda a " + distance + " dp de su parada " + stop);
+
+                    // Si tapa el lleno, no le quedaba ningún sitio libre fuera de él a su alcance (con max 200, la del mundo 7, la más
+                    // ancha: es el límite aceptado, RiverMapScreen.PlaceSilhouettes).
+                    if (hits > 0)
                     {
-                        AssertNoFreeRoomOutOfTheFill(map, frame, i, at);
-                    }
-                    else
-                    {
-                        Assert.That(hits, Is.EqualTo(0), at + ": la placa del mundo " + world + " " + box + " tapa " + hits + " línea(s) del lleno");
+                        AssertNoFreeRoomOutOfTheFill(map, frame, i, stop, reach, at);
                     }
                 }
 
                 if (max == 200)
                 {
                     Assert.That(boxes.Count, Is.EqualTo(3), at + ": las placas de los mundos 7, 8 y 9");
+                    bool ucayali = false;
+                    for (int i = 0; i < plates; i++)
+                    {
+                        ucayali |= map.SilhouetteWorld(i) == 9;
+                    }
+
+                    Assert.That(ucayali, Is.True, at + ": la placa del mundo 9 (Ucayali), con la distancia a su parada comprobada");
                 }
 
                 // Lo de siempre sigue valiendo con las placas lejos de su parada.
@@ -362,10 +369,10 @@ namespace AF.Tests.PlayMode
         }
 
         // Toda caja del tamaño de la placa «plate» dentro de la zona visible de la Cuenca (frame, coordenadas locales del contenido;
-        // rejilla de 2 dp) que no pisa ninguna línea del lleno pisa «Norte arriba», «Andes ↑», «Océano Atlántico ↓» o la canoa con
-        // su equipo (con MarkerObstacleGapDp de hueco), un país o una placa colocada antes que ella (las de después no le quitan
-        // sitio: es lo que había cuando la buscó).
-        private static void AssertNoFreeRoomOutOfTheFill(RiverMapScreen map, Rect frame, int plate, string at)
+        // rejilla de 2 dp) y con el centro a lo sumo a «reach» de su parada «stop» que no pisa ninguna línea del lleno pisa «Norte
+        // arriba», «Andes ↑», «Océano Atlántico ↓» o la canoa con su equipo (con MarkerObstacleGapDp de hueco), un país o una placa
+        // colocada antes que ella (las de después no le quitan sitio: es lo que había cuando la buscó).
+        private static void AssertNoFreeRoomOutOfTheFill(RiverMapScreen map, Rect frame, int plate, Vector2 stop, float reach, string at)
         {
             RectTransform layer = map.LabelLayer!;
             float gap = RiverMapScreen.MarkerObstacleGapDp * layer.lossyScale.x;
@@ -425,7 +432,7 @@ namespace AF.Tests.PlayMode
                 for (float x = xMin; x + size.x <= xMax; x += 2f)
                 {
                     var box = new Rect(x, y, size.x, size.y);
-                    if (map.FillLinesUnderBox(box) > 0)
+                    if (Vector2.Distance(box.center, stop) > reach || map.FillLinesUnderBox(box) > 0)
                     {
                         continue;
                     }
@@ -464,6 +471,16 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator BasinCountries_NotUnderTheMapControls_At140_AndOtherProgress()
         {
+            // La regla de ocultar un país en la Cuenca sin girar [P], también en casos que estos datos no dan (por ejemplo, un país
+            // cuyo punto no queda bajo ningún control, pero algún sitio de su búsqueda sí; revisión de FX7).
+            float none = float.NegativeInfinity;
+            Assert.That(RiverMapScreen.CountryBasinFallback(false, none, none), Is.False, "sin ningún control de por medio, como antes de FX7");
+            Assert.That(RiverMapScreen.CountryBasinFallback(true, 2f, 0f), Is.False, "le queda un sitio fuera de los controles que no pisa el río");
+            Assert.That(RiverMapScreen.CountryBasinFallback(true, -4f, -2f), Is.False,
+                "fuera de los controles solo pisa el río, y bajo ellos también: el de más hueco fuera de ellos, como antes");
+            Assert.That(RiverMapScreen.CountryBasinFallback(true, -4f, 0f), Is.True, "el control le quitó el único sitio que no pisaba el río");
+            Assert.That(RiverMapScreen.CountryBasinFallback(true, none, -2f), Is.True, "los controles y los otros rótulos le quitan todos los sitios");
+
             yield return MapMarkersTests.OpenApp(141);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
@@ -491,10 +508,28 @@ namespace AF.Tests.PlayMode
                         continue;
                     }
 
+                    // Lo que vio su búsqueda: el mejor hueco con el río fuera de los controles y de los otros rótulos (free) y bajo
+                    // un control (under, como mucho 0).
+                    map.CountryBasinSearch(i, out float free, out float under);
+                    bool fallback = RiverMapScreen.CountryBasinFallback(true, free, under);
+                    Debug.Log("FX7 " + at + ": «" + label.text + "» " + (map.CountryBasinHidden(i) ? "no sale" : "sale") + "; hueco con el río fuera de los controles "
+                        + free.ToString("0.0", CultureInfo.InvariantCulture) + " dp, bajo ellos " + under.ToString("0.0", CultureInfo.InvariantCulture) + " dp");
                     if (map.CountryBasinHidden(i))
                     {
+                        // Solo si no le quedaba ningún sitio libre de controles, de otros rótulos y del río, y los controles le
+                        // quitaron todos o uno que no pisaba el río (revisión de FX7: con un sitio fuera de los controles que tampoco
+                        // pisa el río, o si bajo ellos también lo pisaba, sale en su región).
+                        Assert.That(free, Is.LessThan(0f), at + ": «" + label.text + "» se oculta aunque tenía un sitio libre de controles y del río");
+                        Assert.That(fallback, Is.True, at + ": «" + label.text + "» se oculta aunque fuera de los controles cabía como bajo ellos");
                         Assert.That(label.canvasRenderer.GetAlpha(), Is.EqualTo(0f), at + ": «" + label.text + "» no sale en la Cuenca");
                         continue;
+                    }
+
+                    if (fallback)
+                    {
+                        // Salió corrido a la izquierda del control que pisaba en su punto: sin pisar el río.
+                        float gap = RiverMapScreen.LineClearance(map.Map!, map.Space, MapView.Basin, map.CountryLocalBox(i), 0f);
+                        Assert.That(gap, Is.GreaterThanOrEqualTo(0f), at + ": «" + label.text + "», corrido a la izquierda del control, pisa el río");
                     }
 
                     shown++;

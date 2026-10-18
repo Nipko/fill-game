@@ -24,12 +24,12 @@ namespace AF.Tests.PlayMode
     /// Atlántico ↓»;</item>
     /// <item><c>15_map_lleno_cuenca_max58</c>: la misma, en la Cuenca, con los países, las siluetas de los mundos 4 y 5 y las
     /// boyas en la fila corta bajo la parada (el tramo, a 1×, no deja distinguirlas); sin «Ecuador», que no cabe sin quedar bajo
-    /// «Norte arriba» o «Andes ↑» ni pisar el río (revisión de FX7; sale con el norte arriba);</item>
+    /// «Norte arriba» o «Andes ↑» ni pisar el río (revisión de FX7, [P]; sale con el norte arriba);</item>
     /// <item><c>16_map_lleno_cuenca_max200</c>: la Cuenca con <c>max_level</c> 200 (el Tapajós claro, el Negro negro, los de paso
     /// enteros, y el Madeira y el Napo solo en su boca, de al menos 14 dp), con el lleno en su orla de vidrio y su reflejo sobre el
-    /// vidrio fantasma; las placas de los mundos 8 y 9, fuera del lleno, y la del 7, la más ancha, sobre dos cintas del lleno
-    /// (límite aceptado en la revisión de FX7: fuera del lleno solo cabría bajo «Norte arriba» o los países; <c>Fx7Tests</c>);
-    /// sin «Ecuador», como con 58;</item>
+    /// vidrio fantasma; la placa del mundo 8, fuera del lleno; la del 9 (Ucayali), en su región, sobre una cinta del lleno, y la del
+    /// 7, la más ancha, sobre dos (límites aceptados [P] en la revisión de FX7: a su alcance, fuera del lleno solo cabrían bajo
+    /// «Norte arriba», los países o la canoa; <c>Fx7Tests</c>); sin «Ecuador», como con 58;</item>
     /// <item><c>17_map_lleno_mundo_saltado</c>: vista Mundo con el 55 y el 57 saltados (sus boyas llevan a Rosa);</item>
     /// <item><c>18_map_lleno_cuenca_silueta_w6</c>: la Cuenca con <c>max_level</c> 140 y una gran parada del mundo 6 en el Napo
     /// (como la de M3.7a): su silueta «Mundo 6 · Oriente · Nivel 201» y, como con 200, sin «Ecuador».</item>
