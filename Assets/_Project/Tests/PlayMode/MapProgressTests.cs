@@ -832,6 +832,14 @@ namespace AF.Tests.PlayMode
                     var boxes = new List<Rect>();
                     for (int i = 0; i < data.Labels.Count; i++)
                     {
+                        if (map.CountryBasinHidden(i))
+                        {
+                            // En la Cuenca no sale: no cabe sin quedar bajo un control del Mapa ni pisar el río (revisión de FX7).
+                            Assert.That(v, Is.EqualTo(MapView.Basin), data.Labels[i].Country + " con max " + max + ": solo se oculta en la Cuenca");
+                            Assert.That(map.CountryLabel(i).canvasRenderer.GetAlpha(), Is.EqualTo(0f), data.Labels[i].Country + " con max " + max);
+                            continue;
+                        }
+
                         RectTransform rt = map.CountryLabel(i).rectTransform;
                         Vector2 c = rt.anchoredPosition;
                         Vector2 size = rt.sizeDelta;

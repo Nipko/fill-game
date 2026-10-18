@@ -81,6 +81,21 @@ namespace AF.UI
         public static string TutorialBrote => Loc.T(Keys.TutorialBrote);
 
         /// <summary>
+        /// Brote de dos hojas [P] (variante del Brote, 02 §9.1 «Variantes» y R10 b; propuesta de D-007 b.3: «Brote con dos hojas
+        /// cerradas; cada dosis abre una»; estreno en el 343, VA1b): cada dosis de su fruta abre una hoja y con las dos germina, sin
+        /// nombrar la fruta (la dice el color del capullo). Pendiente de revisión del asesor cultural (el nombre también, glosario
+        /// §6.5).
+        /// </summary>
+        public static string TutorialBroteN2 => Loc.T(Keys.TutorialBroteN2);
+
+        /// <summary>
+        /// Flor de vitória-régia [P] (variante de la Liana con fruta, 02 §9.1 «Variantes» y R10 d; propuesta de D-007 b.3: dos
+        /// llaves en lógica Y, «con una sola, la flor está blanca y entreabierta»; estreno en el 403, VA1b): se abre al sellar las
+        /// dos frutas que enseña. Pendiente de revisión del asesor cultural (el nombre también, glosario §6.5).
+        /// </summary>
+        public static string TutorialFlor => Loc.T(Keys.TutorialFlor);
+
+        /// <summary>
         /// Piraña (02 §9.1 M7; estreno en el 183) [P] (D-012, punto 1: opción C + D): que se lleva una dosis a su cueva lo enseña
         /// el mordisco animado de la tarjeta (<c>PiranaBiteDemo</c>), así que el texto dice cuándo muerde y que sellar a tiempo
         /// evita el mordisco (la regla del núcleo: la cuia que se sella con ese vertido no se muerde). Conserva «la cuia que
@@ -101,7 +116,8 @@ namespace AF.UI
 
         /// <summary>
         /// Tutorial de una pantalla del estreno <paramref name="introMechanic"/> (<c>intro_mechanic</c> de D-007), o null si no es
-        /// ninguno de los 11 de 1-200 ni de las variantes con cliente (Liana de cuenta y Hoja atada, VA1a).
+        /// ninguno de los 11 de 1-200 ni de las variantes con cliente (Liana de cuenta y Hoja atada, VA1a; Brote de dos hojas y
+        /// Flor de vitória-régia, VA1b).
         /// </summary>
         public static string? Tutorial(string? introMechanic)
         {
@@ -119,6 +135,8 @@ namespace AF.UI
                 case "barro": return TutorialBarro;
                 case "lluvia": return TutorialLluvia;
                 case "brote": return TutorialBrote;
+                case LevelCardInfo.BroteTwoLeavesIntro: return TutorialBroteN2;
+                case LevelCardInfo.FlorIntro: return TutorialFlor;
                 case "pirana": return TutorialPirana;
                 default: return null;
             }

@@ -182,7 +182,11 @@ namespace AF.Audio
         /// <summary>Atenuación del lecho durante la toada y los modales (dB; 07 §9.4).</summary>
         public const float DuckDb = -6f;
 
-        /// <summary>Lo que dura la atenuación por la toada (ms): su largo (2,25 s).</summary>
+        /// <summary>
+        /// Lo que dura la toada cuando no se sabe su largo (ms; 2,25 s): el servicio da el del clip que suena (el WAV o el del
+        /// respaldo por código) con <see cref="ToadaStarted(float)"/>; este valor queda para el servicio falso y para un clip que aún
+        /// no existe (tarea FX7).
+        /// </summary>
         public const float ToadaDuckMs = 2250f;
 
         /// <summary>
@@ -363,10 +367,20 @@ namespace AF.Audio
             AdActive = active;
         }
 
-        /// <summary>Suena la toada: el lecho baja durante <see cref="ToadaDuckMs"/>.</summary>
+        /// <summary>Suena la toada sin largo conocido: el lecho baja durante <see cref="ToadaDuckMs"/>.</summary>
         public void ToadaStarted()
         {
             _toadaLeftMs = ToadaDuckMs;
+        }
+
+        /// <summary>
+        /// Suena la toada con un clip de <paramref name="lengthMs"/> ms (tarea FX7: <c>AudioClip.length</c> del WAV o del
+        /// respaldo por código): el lecho baja y los remates esperan hasta el final exacto del clip. Un largo no positivo (o no
+        /// finito) cuenta como <see cref="ToadaDuckMs"/>.
+        /// </summary>
+        public void ToadaStarted(float lengthMs)
+        {
+            _toadaLeftMs = lengthMs > 0f && !float.IsInfinity(lengthMs) ? lengthMs : ToadaDuckMs;
         }
 
         /// <summary>Avanza el fundido y la atenuación <paramref name="dtMs"/> ms.</summary>

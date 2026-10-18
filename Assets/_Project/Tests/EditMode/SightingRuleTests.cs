@@ -16,9 +16,6 @@ namespace AF.Tests.EditMode
     /// </summary>
     public sealed class SightingRuleTests
     {
-        // Estrenos de variantes de campaign_v2 que el cliente aún no tiene: el Brote de dos hojas (343) y la Flor (403), de VA1b.
-        private static readonly int[] PendingVariantDebuts = { 343, 403 };
-
         // Estreno de la Tinaja (D-019), que entra con TJ4 y C1b.
         private const int PendingTinajaDebut = 323;
 
@@ -102,11 +99,12 @@ namespace AF.Tests.EditMode
         }
 
         /// <summary>
-        /// La lista de estrenos del cliente (VA1a) coincide con la especificación de la campaña 201-700
+        /// La lista de estrenos del cliente (VA1a y VA1b) coincide con la especificación de la campaña 201-700
         /// (<c>tools/level-generator/specs/campaign_v2.json</c>: <c>mechanics</c> con <c>variant_of</c> y su celda ★ del
-        /// calendario; 02 §9.1, lista única y «Variantes»): 243 Liana de cuenta (<c>liana_n</c>) y 283 Hoja atada
-        /// (<c>hoja_atada</c>) ya están en <see cref="SightingRule.VariantDebutLevels"/>; 343 y 403 entran con VA1b. Cada estreno
-        /// de variante es un hito: no lleva la tarjeta del miquito.
+        /// calendario; 02 §9.1, lista única y «Variantes»): 243 Liana de cuenta (<c>liana_n</c>), 283 Hoja atada
+        /// (<c>hoja_atada</c>), 343 Brote de dos hojas (<c>brote_n2</c>) y 403 Flor (<c>flor</c>), todas en
+        /// <see cref="SightingRule.VariantDebutLevels"/>, sin pendientes. Cada estreno de variante es un hito: no lleva la tarjeta
+        /// del miquito, y tiene su texto de tutorial.
         /// </summary>
         [Test]
         public void VariantDebuts_MatchCampaignV2()
@@ -127,14 +125,16 @@ namespace AF.Tests.EditMode
             var client = new SortedSet<int>(SightingRule.VariantDebutLevels);
             Assert.That(client.Count, Is.EqualTo(SightingRule.VariantDebutLevels.Length), "sin repetidos");
             Assert.That(SightingRule.VariantDebutLevels, Is.Ordered, "en orden");
-            foreach (int pending in PendingVariantDebuts)
-            {
-                Assert.That(client.Add(pending), Is.True, "el " + pending + " aún no está en el cliente (VA1b)");
-            }
-
-            Assert.That(client, Is.EqualTo(variants.Keys), "las variantes de campaign_v2 y las del cliente (más las de VA1b)");
+            Assert.That(client, Is.EqualTo(variants.Keys), "las variantes de campaign_v2 y las del cliente, sin pendientes (VA1b)");
+            Assert.That(SightingRule.VariantDebutLevels, Is.EqualTo(new[] { 243, 283, 343, 403 }));
             Assert.That(variants[243], Is.EqualTo(LevelCardInfo.LianaCountIntro), "243: Liana de cuenta");
             Assert.That(variants[283], Is.EqualTo(LevelCardInfo.HojaAtadaIntro), "283: Hoja atada");
+            Assert.That(variants[343], Is.EqualTo(LevelCardInfo.BroteTwoLeavesIntro), "343: Brote de dos hojas");
+            Assert.That(variants[403], Is.EqualTo(LevelCardInfo.FlorIntro), "403: Flor de vitória-régia");
+            foreach (int debut in SightingRule.VariantDebutLevels)
+            {
+                Assert.That(AF.UI.UiText.Tutorial(variants[debut]), Is.Not.Null.And.Not.Empty, "el estreno del " + debut + " tiene su texto");
+            }
 
             JsonValue calendar = spec.Get("calendar")!;
             foreach (int debut in SightingRule.VariantDebutLevels)
@@ -150,6 +150,7 @@ namespace AF.Tests.EditMode
 
             Assert.That(SightingRule.IsDebut(244), Is.False);
             Assert.That(SightingRule.IsBusy(284), Is.False);
+            Assert.That(SightingRule.IsDebut(344) || SightingRule.IsDebut(404), Is.False);
         }
 
         /// <summary>

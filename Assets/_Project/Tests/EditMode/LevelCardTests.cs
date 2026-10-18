@@ -387,6 +387,35 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void DebutMechanicType_EveryIntroMechanic()
+        {
+            // La cuia que la tarjeta de estreno no debe tapar (VA1b): cada intro_mechanic del enum de pack_schema 3 (D-007; 08 §4.1),
+            // las variantes de la 1.0 con la mecánica de su base, y None si el estreno no es de una cuia con mecánica o no hay.
+            Assert.That(LevelCardInfo.DebutMechanicType("hoja"), Is.EqualTo(MechanicType.Hoja));
+            Assert.That(LevelCardInfo.DebutMechanicType("brote"), Is.EqualTo(MechanicType.Brote));
+            Assert.That(LevelCardInfo.DebutMechanicType(LevelCardInfo.BroteTwoLeavesIntro), Is.EqualTo(MechanicType.Brote), "brote_n2: el Brote de dos hojas es un Brote");
+            Assert.That(LevelCardInfo.BroteTwoLeavesIntro, Is.EqualTo("brote_n2"));
+            Assert.That(LevelCardInfo.DebutMechanicType("liana"), Is.EqualTo(MechanicType.Liana));
+            Assert.That(LevelCardInfo.DebutMechanicType(LevelCardInfo.LianaCountIntro), Is.EqualTo(MechanicType.Liana), "liana_n: la Liana de cuenta es una Liana");
+            Assert.That(LevelCardInfo.LianaCountIntro, Is.EqualTo("liana_n"));
+            Assert.That(LevelCardInfo.DebutMechanicType("matapi"), Is.EqualTo(MechanicType.Matapi));
+            Assert.That(LevelCardInfo.DebutMechanicType("remolino"), Is.EqualTo(MechanicType.Remolino));
+            Assert.That(LevelCardInfo.DebutMechanicType("lluvia"), Is.EqualTo(MechanicType.Lluvia));
+            Assert.That(LevelCardInfo.DebutMechanicType("pirana"), Is.EqualTo(MechanicType.Pirana));
+            Assert.That(LevelCardInfo.DebutMechanicType("tinaja"), Is.EqualTo(MechanicType.Tinaja));
+            Assert.That(LevelCardInfo.DebutMechanicType(LevelCardInfo.HojaAtadaIntro), Is.EqualTo(MechanicType.HojaAtada));
+            Assert.That(LevelCardInfo.HojaAtadaIntro, Is.EqualTo("hoja_atada"));
+            Assert.That(LevelCardInfo.DebutMechanicType(LevelCardInfo.FlorIntro), Is.EqualTo(MechanicType.Flor));
+            Assert.That(LevelCardInfo.FlorIntro, Is.EqualTo("flor"));
+            foreach (string none in new[] { "barro", "chica", "alta", "murky" })
+            {
+                Assert.That(LevelCardInfo.DebutMechanicType(none), Is.EqualTo(MechanicType.None), none + ": sin cuia con mecánica");
+            }
+
+            Assert.That(LevelCardInfo.DebutMechanicType(null), Is.EqualTo(MechanicType.None), "sin estreno");
+        }
+
+        [Test]
         public void Ribbon_OnlyWhenTheRewardIsAnExactMultiple()
         {
             // La cinta anuncia lo que se paga (02 §10; §c.2): con premios que no son múltiplos exactos, sin cinta.
