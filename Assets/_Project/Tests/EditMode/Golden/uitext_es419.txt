@@ -216,7 +216,7 @@ UiText.TutorialMurkyRule	Debajo nunca se repite la fruta de encima.
 UiText.TutorialPirana	Cada cuatro vertidos, la piraña muerde la cuia que acabas de llenar. Sellarla a tiempo evita el mordisco.
 UiText.TutorialRemolino	Las dos cuias del remolino están unidas por debajo: lo que viertes en una aparece en el fondo de la otra.
 UiText.TutorialTinaja	La tinaja no deja ver: solo ves la fruta de arriba, y la de debajo nunca es igual.
-UiText.TutorialTinajaScoop	Saca el agua con su cuia chica: le caben dos dosis.
+UiText.TutorialTinajaScoop	Saca el agua con su cuia chica:\nle caben dos dosis.
 UiText.TutorialTinajaTip	Si sacas dos veces, la primera dosis queda debajo.
 UiText.Undo	Deshacer
 UiText.WorldSeparator	 · 

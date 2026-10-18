@@ -393,12 +393,17 @@ namespace AF.Tests.PlayMode
             Assert.That(v.FireflyText, Is.Null, "sin la línea de la Luciérnaga ni regalo");
             Assert.That(v.GiftText, Is.Null);
             Assert.That(UiText.TutorialTinaja, Is.EqualTo("La tinaja no deja ver: solo ves la fruta de arriba, y la de debajo nunca es igual."));
-            Assert.That(UiText.TutorialTinajaScoop, Is.EqualTo("Saca el agua con su cuia chica: le caben dos dosis."));
+            // Revisión de TJ4: salto fijo tras los dos puntos y espacio duro en «cuia chica» (el ajuste equilibrado partía
+            // «su cuia / chica:»).
+            Assert.That(UiText.TutorialTinajaScoop, Is.EqualTo("Saca el agua con su cuia chica:\nle caben dos dosis."));
             Assert.That(v.TutorialLines, Is.InRange(1, LevelCardView.MaxTutorialLines), "la línea 1, ≤ 2 líneas a 360 dp");
             Assert.That(v.Tutorial.fontSize, Is.GreaterThanOrEqualTo(12f - 0.01f));
             TextMeshProUGUI second = v.SecondLine!;
             second.ForceMeshUpdate(true, true);
-            Assert.That(second.textInfo.lineCount, Is.InRange(1, 2), "la línea 2, ≤ 2 líneas");
+            Assert.That(second.textInfo.lineCount, Is.EqualTo(2), "la línea 2, en 2 renglones: «… su cuia chica: / le caben dos dosis.»");
+            TMP_LineInfo first = second.textInfo.lineInfo[0];
+            string firstRow = second.text.Substring(first.firstCharacterIndex, first.lastCharacterIndex - first.firstCharacterIndex + 1).TrimEnd();
+            Assert.That(firstRow, Is.EqualTo("Saca el agua con su cuia chica:"), "«cuia chica» nunca se parte");
             Assert.That(second.fontSize, Is.GreaterThanOrEqualTo(12f - 0.01f));
             Assert.That(v.HeroSprite, Is.Not.Null, "el medallón con la vasija");
             Assert.That(v.HeroSprite, Is.SameAs(view.CardArt.CardHeroIcon(TinajaTutorial.IntroMechanic)));
@@ -434,6 +439,69 @@ namespace AF.Tests.PlayMode
             boot.TapAnywhere();
             PlayModeHelpers.Step(boot, 100);
             Assert.That(boot.View!.ToastText, Is.Null);
+        }
+
+        [UnityTest]
+        public IEnumerator Tip_324_NeverOnResume()
+        {
+            // 02 §9.1 M13 y el contexto de tutorial_tinaja_tip: «nunca al reanudar». El 324 con su consejo, un vertido (sacar) que
+            // guarda level_state y, al cerrar y abrir la app, el mismo nivel sin intro y sin consejo.
+            var store = new MemoryProfileStore(FunnelSetup.Profile(500));
+            LaunchOptions.ProfileStoreOverride = store;
+            yield return PlayModeHelpers.LoadGameWithPack(PackAt(TinajaVisualTests.Pack323(Cucharon, Tinaja), TinajaTutorial.TipLevel), TinajaTutorial.TipLevel, new MemoryProgressStore(TinajaTutorial.TipLevel, TinajaTutorial.TipLevel - 1));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            PlayModeHelpers.StepUntilIdle(boot, 6000);
+            Assert.That(boot.View!.TinajaTipShownCount, Is.EqualTo(1), "el consejo del primer intento");
+            TinajaStepsTests.Scoop(boot);
+            Assert.That(ProfileJson.Deserialize(store.Json!).LevelState, Is.Not.Null, "el vertido guarda el nivel en curso");
+
+            _lines.Clear();
+            yield return PlayModeHelpers.LoadApp(store); // como cerrar y abrir la app
+            GameBootstrap again = GameBootstrap.Current!;
+            Assert.That(again, Is.Not.SameAs(boot));
+            PlayModeHelpers.TakeClock(again);
+            PlayModeHelpers.Step(again, 100);
+            LevelFlow resumed = again.Flow!;
+            Assert.That(resumed.LevelNumber, Is.EqualTo(TinajaTutorial.TipLevel));
+            Assert.That(resumed.Phase, Is.EqualTo(FlowPhase.Playing), "reanudado, sin intro (02 §14)");
+            Assert.That(resumed.Session.AppliedPours, Is.EqualTo(1));
+            Assert.That(again.View!.TinajaTipShownCount, Is.EqualTo(0), "al reanudar no sale (nunca al reanudar)");
+            Assert.That(again.View.ToastText, Is.Null);
+            Assert.That(HasEvent("\"event\":\"tinaja_tip\""), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Tip_324_AgainAfterBackToTheShore()
+        {
+            // El dilema de las dos dosis es de cada intento: tras Volver a la orilla (intro corta), el consejo sale otra vez.
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
+            yield return PlayModeHelpers.LoadGameWithPack(PackAt(TinajaVisualTests.Pack323(Cucharon, Tinaja), TinajaTutorial.TipLevel), TinajaTutorial.TipLevel, new MemoryProgressStore(TinajaTutorial.TipLevel, TinajaTutorial.TipLevel - 1));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            LevelFlow flow = boot.Flow!;
+            GameScreen view = boot.View!;
+            boot.TapAnywhere();
+            PlayModeHelpers.StepUntilIdle(boot, 6000);
+            int shown = view.TinajaTipShownCount;
+            Assert.That(shown, Is.EqualTo(1), "el consejo del primer intento");
+            TinajaStepsTests.Scoop(boot);
+
+            _lines.Clear();
+            Assert.That(boot.PressRestart(), Is.True, "Volver a la orilla");
+            Assert.That(view.ToastText, Is.Null, "los avisos del intento anterior se van");
+            for (int t = 0; t < 8000 && flow.Phase != FlowPhase.Playing; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            PlayModeHelpers.Step(boot, 100);
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(flow.Session.AppliedPours, Is.EqualTo(0), "otra vez desde la orilla");
+            Assert.That(view.TinajaTipShownCount, Is.EqualTo(shown + 1), "sale otra vez en el nuevo intento");
+            Assert.That(view.ToastText, Is.EqualTo(UiText.TutorialTinajaTip));
+            Assert.That(HasEvent("\"event\":\"tinaja_tip\"", "\"retry\":true"), Is.True);
         }
 
         [Test]
