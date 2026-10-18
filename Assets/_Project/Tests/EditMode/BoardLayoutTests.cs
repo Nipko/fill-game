@@ -1,4 +1,6 @@
 #nullable enable
+using AF.Core.Board;
+using AF.Core.Mechanics;
 using AF.Presentation;
 using AF.UI;
 using NUnit.Framework;
@@ -448,6 +450,103 @@ namespace AF.Tests.EditMode
             Assert.That(r.CuiaWidth, Is.LessThan(64f));
             Assert.That(r.FootY[0], Is.LessThanOrEqualTo(315f + 0.01f));
             Assert.That(r.BlockTop, Is.GreaterThanOrEqualTo(Top - 0.01f));
+        }
+
+        // 02 §5 y 07 §4.5 (Tinaja, M13; D-019; propuesta de la Tinaja, c.6; TJ2): la tinaja y su cuia, en ranuras contiguas de la
+        // misma fila. Si el reparto de D-006 pone el corte entre las dos, se mueve: la fila más larga, lo más corta posible; a
+        // igualdad, el más parecido al de 02 §5 y con más cuias arriba [P].
+        [TestCase(Bottom, 10, 4, "6/4")]
+        [TestCase(Bottom, 10, 3, "5/5")]
+        [TestCase(Bottom, 7, 3, "3/4")]
+        [TestCase(Bottom, 11, 3, "3/4/4")]
+        [TestCase(Bottom, 11, 7, "4/3/4")]
+        [TestCase(Bottom, 16, 5, "5/6/5")]
+        [TestCase(Bottom640, 11, 5, "5/6")]
+        [TestCase(Bottom640, 14, 6, "8/6")]
+        [TestCase(Bottom640, 14, 5, "7/7")]
+        public void TinajaPair_SameRow_MovesTheCut_At360x780And360x640(float bottom, int count, int pairStart, string split)
+        {
+            BoardLayoutResult r = BoardLayout.Compute(count, count, H5, 360f, Top, bottom, pairStart);
+            Assert.That(Split(r), Is.EqualTo(split));
+            Assert.That(r.RowOf[pairStart], Is.EqualTo(r.RowOf[pairStart + 1]), "la tinaja y su cuia, en la misma fila");
+            Assert.That(r.CenterX[pairStart + 1] - r.CenterX[pairStart], Is.EqualTo(r.SlotWidth).Within(0.01f), "en ranuras contiguas");
+            Assert.That(r.Rows, Is.EqualTo(BoardLayout.Compute(count, count, H5, 360f, Top, bottom).Rows), "el número de filas no cambia");
+            AssertRowsConsistent(r);
+        }
+
+        [TestCase(Bottom)]
+        [TestCase(Bottom640)]
+        public void TinajaPair_AlwaysSameRow_EveryPositionAndCount_EvenWithAddedCuias(float bottom)
+        {
+            // Propiedad a 360 × 780 y 360 × 640 (TJ2: «probado a 360 × 780 y 360 × 640»), con la tinaja de 5 (6,60 u, la altura de
+            // la Cuia alta de 5; 07 §4.5): con 2-16 generadas, la pareja en cualquier posición y hasta dos cuias añadidas (Cuia extra,
+            // Cuia de rescate), las dos van en la misma fila y contiguas; las filas no cambian al añadir (D-006); la fila más
+            // larga crece como mucho en una; y sin cortar la pareja el reparto es el de 02 §5.
+            for (int generated = 2; generated <= 16; generated++)
+            {
+                BoardLayoutResult plain = BoardLayout.Compute(generated, generated, H5, 360f, Top, bottom);
+                for (int pair = 0; pair + 1 < generated; pair++)
+                {
+                    BoardLayoutResult before = BoardLayout.Compute(generated, generated, H5, 360f, Top, bottom, pair);
+                    string what = "generadas " + generated + ", pareja " + pair + "-" + (pair + 1) + ", boardBottom " + bottom;
+                    Assert.That(before.Rows, Is.EqualTo(plain.Rows), what + ": las mismas filas");
+                    Assert.That(MaxPerRow(before), Is.LessThanOrEqualTo(MaxPerRow(plain) + 1), what + ": la fila más larga, como mucho una más");
+                    if (plain.RowOf[pair] == plain.RowOf[pair + 1])
+                    {
+                        Assert.That(Split(before), Is.EqualTo(Split(plain)), what + ": sin corte entre las dos, el reparto de 02 §5");
+                    }
+
+                    int max = System.Math.Min(16, generated + 2);
+                    for (int count = generated; count <= max; count++)
+                    {
+                        BoardLayoutResult r = BoardLayout.Compute(count, generated, H5, 360f, Top, bottom, pair);
+                        string at = what + ", en pantalla " + count;
+                        Assert.That(r.RowOf[pair], Is.EqualTo(r.RowOf[pair + 1]), at + ": la tinaja y su cuia, en la misma fila");
+                        Assert.That(r.CenterX[pair + 1] - r.CenterX[pair], Is.EqualTo(r.SlotWidth).Within(0.01f), at + ": contiguas");
+                        for (int i = 0; i < generated; i++)
+                        {
+                            Assert.That(r.RowOf[i], Is.EqualTo(before.RowOf[i]), at + ": fila de la cuia " + i + " (D-006)");
+                        }
+
+                        AssertRowsConsistent(r);
+                    }
+                }
+            }
+        }
+
+        [Test]
+        public void TinajaPair_OutOfRangeOrMissing_IsIgnored()
+        {
+            Assert.That(Split(BoardLayout.Compute(10, 10, H5, 360f, Top, Bottom, -1)), Is.EqualTo("5/5"));
+            Assert.That(Split(BoardLayout.Compute(10, 10, H5, 360f, Top, Bottom, 9)), Is.EqualTo("5/5"), "sin cuia detrás de la última");
+            Assert.That(Split(BoardLayout.Compute(11, 10, H5, 360f, Top, Bottom, 9)), Is.EqualTo("5/6"), "la pareja tiene que ser de las generadas");
+        }
+
+        [Test]
+        public void TinajaPairStart_FindsThePairOnTheInitialBoard()
+        {
+            // El 323 del paquete de muestra (pack_schema 3): su cuia en la 1 y la tinaja en la 2; y el 329: su cuia en la 8 y la
+            // tinaja en la 9. Tras la suelta (la cuia sin tipo), ya no hay pareja que buscar: por eso se mira el tablero inicial.
+            var tinaja = Cuia.Create(5, new[] { 9, 11, 9 }, 0b011).WithMechanic(MechanicType.Tinaja);
+            Cuia cucharon = Cuia.Empty(2).WithMechanic(MechanicType.Cucharon);
+            var board323 = new BoardState(new[] { Cuia.Create(4, new[] { 11, 11, 13 }), cucharon, tinaja, Cuia.Empty(4) });
+            Assert.That(BoardLayout.TinajaPairStart(board323), Is.EqualTo(1));
+            var board329 = new BoardState(new[] { Cuia.Empty(4), tinaja, cucharon, Cuia.Empty(4) });
+            Assert.That(BoardLayout.TinajaPairStart(board329), Is.EqualTo(1), "su cuia a la derecha: la pareja empieza en la tinaja");
+            var released = new BoardState(new[] { Cuia.Empty(4), Cuia.Empty(5).WithMechanic(MechanicType.Tinaja), Cuia.Empty(2), Cuia.Empty(4) });
+            Assert.That(BoardLayout.TinajaPairStart(released), Is.EqualTo(-1));
+            Assert.That(BoardLayout.TinajaPairStart(new BoardState(new[] { Cuia.Empty(4), Cuia.Empty(4) })), Is.EqualTo(-1));
+        }
+
+        private static int MaxPerRow(BoardLayoutResult r)
+        {
+            int max = 0;
+            for (int i = 0; i < r.Rows; i++)
+            {
+                max = System.Math.Max(max, r.PerRow[i]);
+            }
+
+            return max;
         }
 
         private static string Split(BoardLayoutResult r)

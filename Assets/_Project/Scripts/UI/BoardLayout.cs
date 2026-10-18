@@ -1,5 +1,7 @@
 #nullable enable
 using System;
+using AF.Core.Board;
+using AF.Core.Mechanics;
 
 namespace AF.UI
 {
@@ -89,6 +91,8 @@ namespace AF.UI
     /// <c>boardBottom</c>, sin espacio muerto abajo. El bloque no supera <c>(boardBottom − boardTop) − 27</c> dp
     /// (<see cref="MinBlockSlack"/> [P]): así la fila 1 elevada queda ≥ 8 dp bajo el canto interior del marco de 13,5 dp
     /// aunque el panel se recorte bajo el HUD (guía 3.2); si no cabe, las cuias se reducen hasta el mínimo de 28 dp.
+    /// La Tinaja y su cuia (M13; D-019; 02 §5; 07 §4.5: «su cuia, en la ranura contigua de la misma fila») van siempre en la
+    /// misma fila: si el reparto de arriba las parte, se mueve el corte (<see cref="Compute(int, int, float, float, float, float, int)"/>).
     /// Alrededor del bloque va el panel del tablero, <see cref="PanelMargin"/> (22 dp) por abajo y por arriba en todos los
     /// tableros, y 8 dp desde los bordes del ancho útil. No hay techo del vertido ni hueco reservado para él (D-006): el
     /// origen se dibuja delante de todo mientras vierte.
@@ -200,6 +204,20 @@ namespace AF.UI
         /// </summary>
         public static BoardLayoutResult Compute(int count, int generatedCount, float heightU, float canvasWidth, float boardTop, float boardBottom)
         {
+            return Compute(count, generatedCount, heightU, canvasWidth, boardTop, boardBottom, -1);
+        }
+
+        /// <summary>
+        /// Como <see cref="Compute(int, int, float, float, float, float)"/>, con la pareja de la Tinaja (M13; 02 §5; 07 §4.5) en
+        /// las cuias generadas <paramref name="pairStart"/> y <paramref name="pairStart"/> + 1 (la tinaja y su cuia, contiguas;
+        /// <see cref="TinajaPairStart"/>), o −1 sin pareja. Las dos van siempre en la misma fila: si el reparto de 02 §5 (D-006)
+        /// pone el corte entre ellas, se usa el reparto en el mismo número de filas que no las separa con la fila más larga lo
+        /// más corta posible (la cuia más ancha) y, a igualdad, el más parecido al de 02 §5 y el que deja más cuias arriba [P].
+        /// El número de filas no cambia (<see cref="RowsFor"/>) y ninguna cuia añadida se mete entre las dos (van a la derecha
+        /// de una fila).
+        /// </summary>
+        public static BoardLayoutResult Compute(int count, int generatedCount, float heightU, float canvasWidth, float boardTop, float boardBottom, int pairStart)
+        {
             if (count < 1 || count > 16)
             {
                 throw new ArgumentOutOfRangeException(nameof(count), count, "Entre 1 y 16 cuias (02 R1).");
@@ -217,13 +235,24 @@ namespace AF.UI
             // cada cuia dentro de su fila (sin otro array); al final se convierte en el centro con el PerRow definitivo.
             // 1) Las generadas, fila a fila como al cargar el nivel: ⌈restantes/filas⌉ de arriba abajo.
             int remaining = generatedCount;
-            int index = 0;
             for (int r = 0; r < rows; r++)
             {
                 int left = rows - r;
                 int n = (remaining + left - 1) / left;
                 result.PerRow[r] = n;
                 remaining -= n;
+            }
+
+            // La Tinaja y su cuia, en la misma fila (02 §5; 07 §4.5): si el corte cae entre las dos, otro reparto.
+            if (pairStart >= 0 && pairStart + 1 < generatedCount && SplitsPair(result.PerRow, rows, pairStart))
+            {
+                KeepPairTogether(result.PerRow, rows, generatedCount, pairStart);
+            }
+
+            int index = 0;
+            for (int r = 0; r < rows; r++)
+            {
+                int n = result.PerRow[r];
                 for (int j = 0; j < n; j++)
                 {
                     result.RowOf[index] = r;
@@ -295,6 +324,104 @@ namespace AF.UI
             result.PanelWidth = canvasWidth - (2f * panelX);
             result.PanelHeight = panelBottom - panelTop;
             return result;
+        }
+
+        /// <summary>
+        /// Primera cuia de la pareja de la Tinaja en <paramref name="board"/> (la de índice menor de las dos: la tinaja y su cuia
+        /// son contiguas, M13, b.2 regla 1), o −1 si el tablero no tiene tinaja con su cuia colgada. Se mira en el tablero
+        /// inicial del nivel: la suelta quita el tipo a su cuia, pero las filas no cambian a mitad de nivel (D-006). Sin
+        /// asignaciones.
+        /// </summary>
+        public static int TinajaPairStart(BoardState board)
+        {
+            for (int i = 0; i < board.Count; i++)
+            {
+                if (board[i].Mechanic != MechanicType.Tinaja)
+                {
+                    continue;
+                }
+
+                if (i + 1 < board.Count && board[i + 1].Mechanic == MechanicType.Cucharon)
+                {
+                    return i;
+                }
+
+                if (i > 0 && board[i - 1].Mechanic == MechanicType.Cucharon)
+                {
+                    return i - 1;
+                }
+            }
+
+            return -1;
+        }
+
+        // El corte entre dos filas cae entre la cuia pairStart y la siguiente.
+        private static bool SplitsPair(int[] perRow, int rows, int pairStart)
+        {
+            int boundary = 0;
+            for (int r = 0; r < rows - 1; r++)
+            {
+                boundary += perRow[r];
+                if (boundary == pairStart + 1)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Reparto de generated cuias en rows filas (2 o 3, ≥ 1 por fila) sin corte entre pairStart y pairStart + 1: la fila más
+        // larga, lo más corta posible; a igualdad, lo más cerca del reparto de 02 §5 (perRow al entrar) y, después, con más
+        // cuias arriba [P]. Como mucho 3 filas y 16 cuias: unas decenas de repartos. Escribe el elegido en perRow.
+        private static void KeepPairTogether(int[] perRow, int rows, int generated, int pairStart)
+        {
+            int c0 = perRow[0];
+            int c1 = perRow[1];
+            int c2 = rows > 2 ? perRow[2] : 0;
+            int cut = pairStart + 1;
+            int best0 = -1;
+            int best1 = 0;
+            int bestMax = int.MaxValue;
+            int bestDist = int.MaxValue;
+            for (int n0 = 1; n0 < generated; n0++)
+            {
+                int n1From = rows == 3 ? 1 : generated - n0;
+                int n1To = rows == 3 ? generated - n0 - 1 : generated - n0;
+                for (int n1 = n1From; n1 <= n1To; n1++)
+                {
+                    int n2 = rows == 3 ? generated - n0 - n1 : 0;
+                    if (n0 == cut || (rows == 3 && n0 + n1 == cut))
+                    {
+                        continue;
+                    }
+
+                    int max = Math.Max(n0, Math.Max(n1, n2));
+                    int dist = Math.Abs(n0 - c0) + Math.Abs(n1 - c1) + Math.Abs(n2 - c2);
+                    bool better = max < bestMax
+                        || (max == bestMax && dist < bestDist)
+                        || (max == bestMax && dist == bestDist && (n0 > best0 || (n0 == best0 && n1 > best1)));
+                    if (better)
+                    {
+                        best0 = n0;
+                        best1 = n1;
+                        bestMax = max;
+                        bestDist = dist;
+                    }
+                }
+            }
+
+            if (best0 < 0)
+            {
+                return; // sin otro reparto (no pasa con la pareja dentro de las generadas y 2 o 3 filas): se queda el de 02 §5
+            }
+
+            perRow[0] = best0;
+            perRow[1] = best1;
+            if (rows == 3)
+            {
+                perRow[2] = generated - best0 - best1;
+            }
         }
 
         // Ancho de la cuia con rows filas de como mucho perRow cuias: clamp(0,70 × ranura, 28, tope) y, si el bloque no

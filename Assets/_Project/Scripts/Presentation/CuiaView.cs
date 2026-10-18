@@ -16,7 +16,8 @@ namespace AF.Presentation
     /// cavidad opaca, líquido (<see cref="LiquidGraphic"/>, shader <c>AF/UI/Liquid</c>), vidrio frontal, tapa de calabaza,
     /// aro de luz y destello. La vista nunca decide reglas: muestra lo que le dice el modelo o la cola de animación (02 §3.2).
     /// Las dosis ocultas (Aguas turbias) y el Barro los pintan <see cref="MurkyMarks"/> y <see cref="MudMarks"/>, que cuelgan
-    /// del cuerpo encima del líquido; cada mecánica, su <see cref="CuiaOverlay"/> (07 §4.3, «Bloqueada por mecánica»).
+    /// del cuerpo encima del líquido; cada mecánica, su <see cref="CuiaOverlay"/> (07 §4.3, «Bloqueada por mecánica»). Las
+    /// ocultas de la Tinaja no son agua turbia: van en el barro de su vasija (contrato 27), que las tapa.
     /// </summary>
     /// <remarks>
     /// <para>Input (02 §3.1): el touch-down solo avisa (la elevación empieza ya, 0 ms de latencia percibida) y la
@@ -273,13 +274,15 @@ namespace AF.Presentation
 
         /// <summary>
         /// Muestra el contenido final de <paramref name="cuia"/> (sin animación). Una dosis oculta nunca enseña su tinte: la
-        /// pinta <see cref="MurkyMarks.PaintHidden"/> (07 §4.3); el Barro, <see cref="MudMarks.PaintMud"/>. Mientras una marca
-        /// anima, se pinta el líquido pero no se llama a su <c>Show</c> (el final del paso cierra).
+        /// pinta <see cref="MurkyMarks.PaintHidden"/> (07 §4.3) o, en la Tinaja, el barro opaco de su vasija
+        /// (<see cref="Palette.TinajaClay"/>, mate, sin «?» ni pardo: contrato 27); el Barro, <see cref="MudMarks.PaintMud"/>.
+        /// Mientras una marca anima, se pinta el líquido pero no se llama a su <c>Show</c> (el final del paso cierra).
         /// </summary>
         public void ShowContent(Cuia cuia, bool sealedNow)
         {
             _shownCuia = cuia;
             int count = cuia.Count;
+            bool murkyWater = MurkyMarks.IsMurkyWater(cuia);
             for (int k = 0; k < Capacity; k++)
             {
                 if (k >= count)
@@ -288,7 +291,14 @@ namespace AF.Presentation
                 }
                 else if (cuia.IsHiddenAt(k))
                 {
-                    PaintHiddenDose(k);
+                    if (murkyWater)
+                    {
+                        PaintHiddenDose(k);
+                    }
+                    else
+                    {
+                        PaintTinajaHiddenDose(k);
+                    }
                 }
                 else
                 {
@@ -460,13 +470,33 @@ namespace AF.Presentation
             _mud.Snap();
         }
 
-        /// <summary>Pinta la dosis <paramref name="k"/> como oculta (pardo opaco y «?»; la intro en el primer impacto).</summary>
+        /// <summary>
+        /// Pinta la dosis <paramref name="k"/> como oculta (pardo opaco y «?»; la intro en el primer impacto). En la Tinaja (la
+        /// del último <see cref="ShowContent"/>), su barro opaco: sus ocultas nunca se pintan como agua turbia (contrato 27).
+        /// </summary>
         internal void PaintHiddenDose(int k)
         {
-            if ((uint)k < (uint)Capacity)
+            if ((uint)k >= (uint)Capacity)
             {
-                TrackDose(k, _murky.PaintHidden(_liquid, k), 1f);
+                return;
             }
+
+            if (!MurkyMarks.IsMurkyWater(_shownCuia))
+            {
+                PaintTinajaHiddenDose(k);
+                return;
+            }
+
+            TrackDose(k, _murky.PaintHidden(_liquid, k), 1f);
+        }
+
+        // Dosis oculta de la Tinaja: el barro de su vasija, mate, sin tinte, sin patrón y sin icono (la tapa el cuerpo de la
+        // vasija, TinajaOverlay; sin su arte, en release, se ve barro y nunca la fruta).
+        private void PaintTinajaHiddenDose(int k)
+        {
+            Color clay = Palette.HiddenDose(true);
+            TrackDose(k, clay, 1f);
+            _liquid.SetMatteDose(k, clay, 1f);
         }
 
         /// <summary>Pinta la dosis <paramref name="k"/> como Barro (pardo de várzea y grumos; la intro en el primer impacto).</summary>
