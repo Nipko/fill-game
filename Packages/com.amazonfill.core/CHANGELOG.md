@@ -4,6 +4,19 @@ Formato basado en [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/); v
 
 ## [Sin publicar]
 
+### Pruebas de asignaciones estables (FX9)
+
+- **Las pruebas «sin asignaciones» ya no fallan de vez en cuando** (CLAUDE.md, regla dura 2). Con la suite completa,
+  `UsefulMovesInRun`/`UsefulMovesInSingle_DoNotAllocate` (4.896 bytes) y `WarmSolverInRun_OnlyAllocatesTheSolution` (unos
+  7.700 bytes de más) fallaban en unas 3 de cada 110 ejecuciones de `dotnet test`. No era el núcleo: el exceso no se repite al
+  medir otra vez, no aparece con `HotLoopAllocationTests` sola ni con un bucle sin llamadas al núcleo en la suite, no coincide
+  con recolecciones ni con el JIT en el hilo, y cambia de tamaño; en la ventana fallida del solver, el recorrido del montón
+  solo encontró la solución (`Pour[37]`, 472 bytes). Todas las medidas de `HotLoopAllocationTests` (61 tests) y la de
+  `MurkyParityTests.SafeMoves_AllocateLessThan1KBPerReality_AfterWarmingUp` pasan ahora por `AllocationMeter` (solo dotnet):
+  3 pasadas de calentamiento del mismo bloque (también los caminos que antes solo recorría la ventana, como el modo contrario
+  en `UsefulMovesInRun`) y el mínimo de hasta 5 medidas, con los mismos umbrales (0 bytes; < 1 KB por `Solve`; < 1 KB por
+  realidad). Una asignación real se repite en todas las medidas y el mensaje del fallo las lista. Sin cambios en el núcleo.
+
 ### Integración de T51 (pregunta 46 decidida)
 
 - **Aguas estancadas por bucle (T51, D-014):** el dueño aplicó las recomendaciones pendientes el 2026-10-13 («Sí, aplica las
