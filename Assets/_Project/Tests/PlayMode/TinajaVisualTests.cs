@@ -25,7 +25,8 @@ namespace AF.Tests.PlayMode
     /// se ve» y «Aspecto», y c.6; contrato 27): la vasija opaca con la boca (tinte e icono de la fruta de arriba), el chip «×n»,
     /// las bandas de las capas reveladas y, vacía, boca abajo; su cuia con el poste del jirau y el asa; el jirau bajo las dos
     /// ranuras. La tinaja <b>nunca se pinta como turbia</b>: ni el pardo #8A7B6A, ni el «?», ni la insignia «?×n», tampoco al
-    /// revelar ni durante la intro. El arte provisional sale con <see cref="MapArtRule"/>; el estado, siempre. En el banco de
+    /// revelar ni durante la intro. El arte provisional (cuerpo, jirau, poste y asa) sale con <see cref="MapArtRule"/>, y la boca
+    /// y las bandas, solo con el cuerpo; en release, del overlay solo sale el chip «×n», en el hombro del vidrio. En el banco de
     /// <see cref="MechanicTestKit"/> con el 323 del paquete de muestra (su cuia en la 1 y la tinaja en la 2) y, en la escena,
     /// la pareja en la misma fila (02 §5) también cuando el reparto de D-006 la partiría.
     /// </summary>
@@ -229,7 +230,9 @@ namespace AF.Tests.PlayMode
             Assert.That(tin.BandMask, Is.EqualTo(0b10));
             Assert.That(tin.Band(1).gameObject.activeSelf && tin.BandGlyph(1).gameObject.activeSelf, Is.True);
             Assert.That(tin.Band(0).gameObject.activeSelf, Is.False, "la de abajo sigue oculta");
-            Assert.That(Opaque(tin.Band(1).color), Is.EqualTo(Opaque(ColorMath.Lighten(Palette.Tint(Lulo), TinajaOverlay.BandLighten))));
+            Assert.That(tin.Band(1).color, Is.EqualTo(Opaque(Palette.Tint(Lulo))), "el HEX del tinte, sin aclarar y opaco");
+            Assert.That(tin.BandLight(1).gameObject.activeSelf, Is.True, "con su filo de luz");
+            Assert.That(tin.BandLight(1).color, Is.EqualTo(TinajaOverlay.BandEdgeLight));
             Assert.That(tin.BandGlyph(1).sprite, Is.SameAs(Art.TinajaGlyph(Lulo)));
             float u = view.Unit;
             Assert.That(tin.Band(1).rectTransform.anchoredPosition.y / u, Is.EqualTo(TinajaOverlay.BandCenterU(1)).Within(0.001f), "a la altura de su dosis");
@@ -254,7 +257,7 @@ namespace AF.Tests.PlayMode
             var forbidden = new[]
             {
                 Opaque(Palette.Tint(Urucum)), Opaque(Palette.Tint(CamuCamu)),
-                Opaque(ColorMath.Lighten(Palette.Tint(Urucum), TinajaOverlay.BandLighten)), Opaque(ColorMath.Lighten(Palette.Tint(CamuCamu), TinajaOverlay.BandLighten)),
+                Opaque(ColorMath.Darken(Palette.Tint(Urucum), TinajaOverlay.BandRimDarken)), Opaque(ColorMath.Darken(Palette.Tint(CamuCamu), TinajaOverlay.BandRimDarken)),
             };
             foreach (Image img in ActiveImages(view))
             {
@@ -409,17 +412,41 @@ namespace AF.Tests.PlayMode
             Assert.That(other.LiftAmountDp, Is.EqualTo(CuiaView.LiftDp));
             Assert.That(CuiaView.TinajaLiftDp, Is.EqualTo(8f), "07 §4.3: sube 8 dp (pesa)");
 
+            // Propuesta de la Tinaja, b.2, «Animación y sonido»: sube 8 dp y se asienta con un balanceo de 2°, en 100 + 150 ms. El
+            // banco usa anim_lift_ms = 100 (08 §9).
+            const float liftMs = 100f;
+            Assert.That(CuiaView.TinajaSwayMs, Is.EqualTo(150f), "el asiento con balanceo, 150 ms");
+            tv.SetLiftDuration(liftMs);
             tv.SetLifted(true);
             float maxAngle = 0f;
             float maxY = 0f;
-            for (int t = 0; t < 600; t += PlayModeHelpers.FrameMs)
+            int firstSway = -1;
+            int lastSway = -1;
+            float yAtFirstSway = 0f;
+            for (int t = PlayModeHelpers.FrameMs; t <= 600; t += PlayModeHelpers.FrameMs)
             {
                 _rig.Tick(PlayModeHelpers.FrameMs);
-                maxAngle = Mathf.Max(maxAngle, Mathf.Abs(tv.BodyAngle));
+                float angle = Mathf.Abs(tv.BodyAngle);
+                if (angle > 0.0001f)
+                {
+                    if (firstSway < 0)
+                    {
+                        firstSway = t;
+                        yAtFirstSway = tv.BodyOffset.y;
+                    }
+
+                    lastSway = t;
+                }
+
+                maxAngle = Mathf.Max(maxAngle, angle);
                 maxY = Mathf.Max(maxY, tv.BodyOffset.y);
             }
 
             Assert.That(maxAngle, Is.InRange(1f, CuiaView.TinajaSwayDeg + 0.01f), "un balanceo de 2° como mucho");
+            Assert.That(firstSway, Is.GreaterThanOrEqualTo((int)liftMs), "sin balanceo durante la subida: empieza al terminarla");
+            Assert.That(yAtFirstSway, Is.EqualTo(CuiaView.TinajaLiftDp).Within(0.01f), "ya arriba, a 8 dp");
+            int settled = lastSway + PlayModeHelpers.FrameMs; // el primer fotograma quieto
+            Assert.That(settled, Is.InRange(250 - PlayModeHelpers.FrameMs, 250 + (2 * PlayModeHelpers.FrameMs)), "100 + 150 ms: unos 250 ms en total");
             Assert.That(tv.BodyAngle, Is.EqualTo(0f).Within(0.001f), "y se apaga");
             Assert.That(tv.BodyOffset.y, Is.EqualTo(CuiaView.TinajaLiftDp).Within(0.01f), "asentada a 8 dp");
             Assert.That(maxY, Is.LessThan(CuiaView.LiftDp), "nunca sube como una cuia normal");
@@ -490,7 +517,10 @@ namespace AF.Tests.PlayMode
             Assert.That(jirau.xMin, Is.LessThanOrEqualTo(b.Foot(CucharonIndex).x - (ProceduralArt.TinajaPostXU * cv.Unit)), "llega al poste, que se apoya en él");
             Assert.That(jirau.xMax, Is.EqualTo(b.Foot(TinajaIndex).x + (TinajaOverlay.JirauTinajaExtentU * u)).Within(0.01f), "y por el lado de la tinaja, sin llegar al canto de la ranura (el marco)");
             Assert.That(jirau.yMax, Is.EqualTo(b.Foot(TinajaIndex).y + (TinajaOverlay.JirauTopAboveFootU * u)).Within(0.01f));
-            Assert.That(jirau.height, Is.EqualTo(TinajaOverlay.JirauHeightU * u).Within(0.01f));
+            Assert.That(jirau.height, Is.EqualTo(TinajaOverlay.JirauHeightDp(u)).Within(0.01f));
+            Assert.That(jirau.yMin, Is.GreaterThanOrEqualTo(b.Foot(TinajaIndex).y - 3f - 0.01f), "ninguna vara baja de la cara superior de la repisa (pie ± 3 dp)");
+            Assert.That(jirau.yMax, Is.LessThanOrEqualTo(b.Foot(TinajaIndex).y + 3f), "ni sube por encima de ella");
+            Assert.That(TinajaOverlay.JirauTopAboveFootU * u, Is.LessThan(1f), "su vara de arriba, justo bajo el pie: las dos piezas se apoyan en ella");
             Transform? root = tv.OverlayHost.BoardBackLayer!.Find("TinajaJirau" + TinajaIndex);
             Assert.That(root, Is.Not.Null, "en la capa de tablero de atrás, en una raíz propia");
             var rootRt = (RectTransform)root!;
@@ -506,17 +536,16 @@ namespace AF.Tests.PlayMode
             Assert.That(drawn.x - halfW, Is.LessThan(cv.Root.position.x), "lo que se pinta va bajo el pie de su cuia");
             Assert.That(drawn.x + halfW, Is.GreaterThan(tv.Root.position.x), "y bajo el de la tinaja");
             Assert.That(drawn.y, Is.LessThan(tv.Root.position.y), "bajo la línea de pie");
-            Assert.That(drawn.y, Is.GreaterThan(tv.Root.position.y - (TinajaOverlay.JirauHeightU * u)), "pegado a ella");
+            Assert.That(drawn.y, Is.GreaterThan(tv.Root.position.y - TinajaOverlay.JirauHeightDp(u)), "pegado a ella");
 
-            // El poste, del lado contrario a la tinaja (nada entre las dos piezas: 07 §4.3) y dentro de su ranura; el asa, de la
-            // boca de su cuia al gancho del travesaño.
+            // El poste, del lado contrario a la tinaja (nada entre las dos piezas: 07 §4.3) y dentro de su ranura; el asa, de
+            // hombro a hombro de su cuia, apoyada en el gancho.
             Assert.That(cuch.PostSide, Is.EqualTo(-1f), "la tinaja está a la derecha: el poste, a la izquierda");
             Rect post = cuch.PostRectU;
             Assert.That(post.xMax, Is.LessThan(0.25f), "del lado contrario");
             float halfSlotU = 0.5f * (b.SlotRect(CucharonIndex).width / cv.Unit);
             Assert.That(-post.xMin, Is.LessThanOrEqualTo(halfSlotU), "dentro de su ranura");
-            Assert.That(cuch.AsaRectU.yMin, Is.LessThan(CuiaGeometry.HeightU(2)), "el asa sale del labio de su cuia");
-            Assert.That(cuch.AsaRectU.yMax, Is.LessThanOrEqualTo(ProceduralArt.TinajaPostArmU), "y llega al gancho, bajo el travesaño");
+            AssertHangsWithoutGallows(cuch);
 
             // Con la tinaja a la izquierda de su cuia, el poste va a la derecha.
             BoardBuildResult mirrored = BoardBuilder.Build(new[] { 4, 5, 2, 4 }, new[] { new[] { 11, 11, 13 }, new[] { 9, 11, 9 }, new int[0], new int[0] },
@@ -537,20 +566,29 @@ namespace AF.Tests.PlayMode
         {
             yield return null;
 
-            // Opaca: la silueta tapa el vidrio de la Cuia alta de 5 a cualquier altura (las ocultas no asoman por el canto).
+            // Opaca: la silueta tapa el vidrio de la Cuia alta de 5 hasta lo alto de su cuello (las ocultas no asoman por el canto);
+            // el borde de fibra de encima no hace falta, porque con el cuerpo a la vista el vidrio entero se oculta (CuiaView).
             float height = CuiaGeometry.HeightU(LevelValidation.TinajaCapacity);
+            float neckTop = CuiaGeometry.CavityTopU(LevelValidation.TinajaCapacity) + CuiaGeometry.ShoulderU + CuiaGeometry.NeckU;
             float maxHalf = 0f;
             for (float y = 0f; y <= height; y += 0.005f)
             {
+                maxHalf = Mathf.Max(maxHalf, ProceduralArt.TinajaSilhouetteHalfWidthU(y));
+                if (y > neckTop)
+                {
+                    continue;
+                }
+
                 float glass = CuiaGeometry.OuterHalfWidth(y, LevelValidation.TinajaCapacity);
                 float jar = ProceduralArt.TinajaSilhouetteHalfWidthU(y);
                 Assert.That(jar, Is.GreaterThanOrEqualTo(glass + 0.02f), "a " + y.ToString("0.000", CultureInfo.InvariantCulture) + " u");
-                maxHalf = Mathf.Max(maxHalf, jar);
             }
 
             // Más alta que ancha, con el alto de la Cuia alta de 5 (07 §4.5) y dentro de la ranura (≥ 1 / 0,70 del ancho).
             float top = ProceduralArt.TinajaLipCenterU + ProceduralArt.TinajaLipRyU;
-            Assert.That(top, Is.InRange(height, height + 0.2f), "su alto, el de la Cuia alta de 5");
+            Assert.That(top, Is.EqualTo(height).Within(0.001f), "su alto, el de la Cuia alta de 5: 6,60 u (02 §5; 07 §4.5)");
+            Assert.That(ProceduralArt.TinajaTopU, Is.EqualTo(6.60f).Within(0.001f));
+            Assert.That(ProceduralArt.TinajaSilhouetteHalfWidthU(height + 0.01f), Is.EqualTo(0f), "nada por encima de 6,60 u");
             Assert.That(top, Is.GreaterThan(2f * (2f * maxHalf)), "más del doble de alta que ancha: nunca redonda y baja (07 §4.3)");
             Assert.That(2f * maxHalf, Is.LessThan(CuiaGeometry.WidthU / 0.70f), "cabe en su ranura");
             Assert.That(ProceduralArt.TinajaBodyHeightU, Is.GreaterThanOrEqualTo(top));
@@ -571,6 +609,9 @@ namespace AF.Tests.PlayMode
             float digitDp = ProceduralArt.MurkyBadgeDp * ProceduralArt.TinajaChipGlyphScale * (28f / 42f); // el dígito ocupa 28 de los 42 px de su celda
             Assert.That(digitDp, Is.GreaterThanOrEqualTo(10f), "la cifra mide como un texto de 14 sp");
             Assert.That(ColorMath.ContrastRatio(Palette.UiPaper, ProceduralArt.TinajaChipWood), Is.GreaterThanOrEqualTo(5f));
+            float digitTopDp = (0.5f * ProceduralArt.TinajaChipHeightDp) + (0.5f * digitDp);
+            float glossBottomDp = ProceduralArt.TinajaChipHeightDp - ProceduralArt.TinajaChipGlossTopDp - ProceduralArt.TinajaChipGlossDp;
+            Assert.That(digitTopDp, Is.LessThan(glossBottomDp - 0.5f), "el brillo del chip, por encima de la cifra: toda la cifra, sobre la madera a ≥ 5:1");
             float chipHalfU = 0.5f * ProceduralArt.TinajaChipHeightDp / u48;
             Assert.That(TinajaOverlay.ChipCenterU - chipHalfU, Is.GreaterThan(TinajaOverlay.BandCenterU(3) + (0.5f * ProceduralArt.TinajaBandHeightU)));
             Assert.That(TinajaOverlay.ChipCenterU + chipHalfU, Is.LessThan(ProceduralArt.TinajaMouthCenterU - (0.5f * ProceduralArt.TinajaMouthHeightU)));
@@ -758,6 +799,142 @@ namespace AF.Tests.PlayMode
 
                 AssertNotMurky(tv, flow.Session.Current[tinaja], "jugando, pareja " + cucharon + "-" + tinaja);
             }
+        }
+
+        [UnityTest]
+        public IEnumerator Bands_KeepTheirTintHex_ForAll14Tints()
+        {
+            // La banda tiene que emparejarse con su fruta: el relleno, con el HEX del tinte opaco (aclararlo lavaba los oscuros:
+            // el jenipapo salía gris lavanda y el cacao cerca del pardo de Aguas turbias, vetado en la tinaja por 07 §4.3), más
+            // cerca de su tinte que de cualquier otro, lejos del pardo #8A7B6A y del barro; y, si el tinte queda cerca del barro
+            // (hoy el Agua del Río Negro), un contorno de 1 dp con el tinte oscurecido que sí se separa de él.
+            yield return null;
+            _rig = new MechanicTestKit.Rig(Art, Board323());
+            CuiaView tv = _rig.Views[TinajaIndex];
+            var tin = TinajaOf(tv);
+            int rims = 0;
+            for (int tint = Cuia.MinColor; tint <= Cuia.MaxTintColor; tint++)
+            {
+                int top = tint == Lulo ? Jenipapo : Lulo;
+                tv.ShowContent(Cuia.Create(5, new[] { tint, top }).WithMechanic(MechanicType.Tinaja), false);
+                Assert.That(tin.BandMask, Is.EqualTo(0b1), "tinte " + tint + ": su banda");
+                Color band = tin.Band(0).color;
+                Assert.That(band.a, Is.EqualTo(1f), "tinte " + tint + ": opaca");
+                Assert.That(Opaque(band), Is.EqualTo(Opaque(Palette.Tint(tint))), "tinte " + tint + ": el HEX del tinte");
+                float own = ColorMath.DeltaE00(band, Palette.Tint(tint));
+                for (int other = Cuia.MinColor; other <= Cuia.MaxTintColor; other++)
+                {
+                    if (other != tint)
+                    {
+                        Assert.That(own, Is.LessThan(ColorMath.DeltaE00(band, Palette.Tint(other))), "tinte " + tint + ": más cerca de su tinte que del " + other);
+                    }
+                }
+
+                Assert.That(ColorMath.DeltaE00(band, Palette.Murky), Is.GreaterThanOrEqualTo(15f), "tinte " + tint + ": lejos del pardo de Aguas turbias");
+                Assert.That(ColorMath.DeltaE00(band, Palette.TinajaClay), Is.GreaterThanOrEqualTo(12f), "tinte " + tint + ": se ve sobre el barro");
+                bool rim = TinajaOverlay.BandNeedsRim(tint);
+                Assert.That(tin.BandRim(0).gameObject.activeSelf, Is.EqualTo(rim), "tinte " + tint + ": contorno solo si hace falta");
+                Color edge = rim ? tin.BandRim(0).color : band; // lo que separa la banda del barro alrededor
+                if (rim)
+                {
+                    rims++;
+                    Assert.That(Opaque(edge), Is.EqualTo(Opaque(ColorMath.Darken(Palette.Tint(tint), TinajaOverlay.BandRimDarken))));
+                }
+
+                for (int b = 0; b < TinajaOverlay.BandBodyTones.Length; b++)
+                {
+                    Assert.That(ColorMath.DeltaE00(edge, TinajaOverlay.BandBodyTones[b]), Is.GreaterThanOrEqualTo(TinajaOverlay.BandRimMinDeltaE), "tinte " + tint + ": su canto frente al barro " + b);
+                }
+            }
+
+            Assert.That(TinajaOverlay.BandNeedsRim(14), Is.True, "el Agua del Río Negro, cerca del barro de la sombra, lleva contorno");
+            Assert.That(rims, Is.GreaterThan(0));
+        }
+
+        [UnityTest]
+        public IEnumerator Release_WithoutTheArt_TheRowKeepsTheUniformSlots_02_5()
+        {
+            // En release, hasta el arte, no hay vasija ni poste: la fila de la pareja no se aprieta y el marco no se adelgaza por
+            // piezas que no se dibujan (02 §5; 07 §4.1: ranura = ancho útil / cuias de la fila más larga). El corte entre filas sí
+            // se mueve para que la pareja vaya junta.
+            int[][] pairs = { new[] { 1, 2 }, new[] { 4, 5 } };
+            for (int p = 0; p < pairs.Length; p++)
+            {
+                int cucharon = pairs[p][0];
+                int tinaja = pairs[p][1];
+                LaunchOptions.Reset();
+                MapArtRule.ForceProvisional = false;
+                yield return PlayModeHelpers.LoadGameWithPack(Pack323(cucharon, tinaja), 323, new MemoryProgressStore(323, 322));
+                GameBootstrap boot = GameBootstrap.Current!;
+                PlayModeHelpers.TakeClock(boot);
+                GameScreen screen = boot.View!;
+                Assert.That(screen.TinajaIndex, Is.EqualTo(tinaja));
+                Assert.That(screen.LayoutTinajaIndex, Is.EqualTo(-1), "sin el arte, el layout no hace sitio a la vasija ni al poste");
+                BoardLayoutResult layout = screen.Layout!;
+                Assert.That(layout.RowOf[cucharon], Is.EqualTo(layout.RowOf[tinaja]), "pareja " + cucharon + "-" + tinaja + ": la misma fila");
+                for (int i = 0; i + 1 < screen.Views.Length; i++)
+                {
+                    if (layout.RowOf[i] == layout.RowOf[i + 1])
+                    {
+                        Assert.That(layout.CenterX[i + 1] - layout.CenterX[i], Is.EqualTo(layout.SlotWidth).Within(0.01f), "pareja " + cucharon + "-" + tinaja + ": el paso de la ranura entre " + i + " y " + (i + 1));
+                    }
+                }
+
+                float glassLeft = float.MaxValue;
+                for (int i = 0; i < screen.Views.Length; i++)
+                {
+                    glassLeft = Mathf.Min(glassLeft, layout.CenterX[i] - (0.5f * layout.CuiaWidth));
+                }
+
+                Assert.That(layout.ContentLeft, Is.EqualTo(glassLeft).Within(0.01f), "el marco, como sin tinaja");
+                if (p == 1)
+                {
+                    Assert.That(layout.PerRow[0], Is.Not.EqualTo(5), "el corte de 5/5 se movió también sin el arte");
+                }
+
+                // Con el arte (Editor y desarrollo), la fila se aprieta si la vasija o el poste caen en una punta.
+                MapArtRule.ForceProvisional = true;
+                Assert.That(screen.LayoutTinajaIndex, Is.EqualTo(tinaja));
+            }
+        }
+
+        // La cuia cuelga como el cazo de la casa, sin silueta de horca (07 §8; 07 §4.3 y b.2): un poste trasero bajo del lado
+        // contrario a la tinaja, sin travesaño, con un gancho corto fuera del cuello; el asa, un arco de fibra de hombro a hombro
+        // que pasa holgado sobre el cuello y el borde de fibra y se apoya en el gancho. Ningún tramo horizontal sobre el cuello y
+        // ninguna cuerda hasta el cuello ni el corcho.
+        private static void AssertHangsWithoutGallows(CucharonOverlay cuch)
+        {
+            const int cap = LevelValidation.CucharonCapacity;
+            float rimTop = CuiaGeometry.HeightU(cap);
+            Assert.That(ProceduralArt.TinajaPostTopU, Is.InRange(rimTop, 4.0f + 0.001f), "un poste bajo: la punta, a 4,0 u");
+            Assert.That(ProceduralArt.TinajaPostXU, Is.EqualTo(1.19f).Within(0.001f));
+            Assert.That(cuch.PostRectU.yMax, Is.LessThanOrEqualTo(ProceduralArt.TinajaPostTopU + 0.15f), "sin nada por encima de la punta");
+            Assert.That(ProceduralArt.TinajaAsaTopU, Is.LessThanOrEqualTo(3.95f), "la cima del asa, como mucho a 3,95 u");
+            Assert.That(ProceduralArt.TinajaAsaYAt(0f), Is.EqualTo(ProceduralArt.TinajaAsaTopU).Within(0.001f));
+
+            // El asa sale de los dos hombros (donde el vidrio mide ±0,80 u), sobre el líquido y bajo el cuello.
+            Assert.That(CuiaGeometry.OuterHalfWidth(ProceduralArt.TinajaAsaFootU, cap), Is.EqualTo(ProceduralArt.TinajaAsaHalfU).Within(0.02f), "arranca en los hombros");
+            Assert.That(ProceduralArt.TinajaAsaFootU, Is.InRange(CuiaGeometry.CavityTopU(cap), CuiaGeometry.CavityTopU(cap) + CuiaGeometry.ShoulderU));
+            Assert.That(ProceduralArt.TinajaAsaYAt(ProceduralArt.TinajaAsaHalfU), Is.EqualTo(ProceduralArt.TinajaAsaFootU).Within(0.001f));
+            Assert.That(cuch.AsaRectU.xMin, Is.LessThanOrEqualTo(-ProceduralArt.TinajaAsaHalfU));
+            Assert.That(cuch.AsaRectU.xMax, Is.GreaterThanOrEqualTo(ProceduralArt.TinajaAsaHalfU));
+            Assert.That(cuch.AsaRectU.yMin, Is.LessThan(ProceduralArt.TinajaAsaFootU));
+            Assert.That(cuch.AsaRectU.yMax, Is.LessThanOrEqualTo(ProceduralArt.TinajaPostTopU + 0.001f));
+
+            // Sobre el cuello y el borde de fibra, el asa pasa holgada (≥ 0,10 u): no toca el cuello ni el corcho.
+            float neckZone = CuiaGeometry.RimHalfWidthU + 0.05f;
+            for (float x = -neckZone; x <= neckZone; x += 0.01f)
+            {
+                Assert.That(ProceduralArt.TinajaAsaYAt(x), Is.GreaterThanOrEqualTo(rimTop + 0.10f), "el asa a " + x.ToString("0.00", CultureInfo.InvariantCulture) + " u, sobre el cuello");
+            }
+
+            // El gancho: fuera del cuello y del borde de fibra, más bajo que la cima del asa y justo bajo su flanco (se apoya).
+            Vector2 hook = ProceduralArt.TinajaHookU;
+            Assert.That(hook.x, Is.GreaterThanOrEqualTo(CuiaGeometry.RimHalfWidthU + 0.15f), "el gancho no pasa sobre el cuello");
+            Assert.That(hook.x, Is.LessThan(ProceduralArt.TinajaPostXU));
+            Assert.That(hook.y, Is.LessThan(ProceduralArt.TinajaAsaTopU), "más bajo que la cima del asa");
+            float asaAtHook = ProceduralArt.TinajaAsaYAt(hook.x);
+            Assert.That(asaAtHook - hook.y, Is.InRange(0.02f, 0.12f), "bajo el flanco del asa, que se apoya en él");
         }
 
         private static TinajaOverlay TinajaOf(CuiaView view)

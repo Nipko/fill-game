@@ -266,7 +266,10 @@ namespace AF.UI
         /// vidrio en una fila llena (o, con sitio de sobra, de <see cref="TinajaContentFromPanel"/> desde el panel), esa fila se
         /// aprieta hacia dentro desde esa punta (las demás cuias de la fila, igual de separadas entre sí; la otra punta no se
         /// mueve) [P]. Así la vasija, el poste y el jirau quedan sobre la repisa y a ≥ 8 dp del marco como el vidrio
-        /// (<see cref="BoardLayoutResult.ContentLeft"/>), sin cambiar filas ni el ancho de la cuia.
+        /// (<see cref="BoardLayoutResult.ContentLeft"/>), sin cambiar filas ni el ancho de la cuia. Solo hay que pasar la tinaja
+        /// cuando esas piezas se dibujan (el arte provisional o el del artista; <c>GameScreen.LayoutTinajaIndex</c>): sin ellas,
+        /// con −1, la fila conserva el reparto uniforme de 02 §5 y 07 §4.1, y el corte entre filas se mueve igual con
+        /// <paramref name="pairStart"/>.
         /// </summary>
         public static BoardLayoutResult Compute(int count, int generatedCount, float heightU, float canvasWidth, float boardTop, float boardBottom, int pairStart, int tinajaIndex)
         {

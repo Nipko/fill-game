@@ -8,22 +8,27 @@ namespace AF.Presentation
     /// Arte procedural [P] de la Tinaja (M13; D-019; 07 §4.3 y §4.5; propuesta de la Tinaja, b.2 «Aspecto» y c.6; encargo de
     /// arte, 3.1; tarea TJ2) hasta el arte del artista: el cuerpo de barro cocido claro (<see cref="TinajaBody"/>; vasija lisa,
     /// más alta que ancha, con hombro, el labio por cuello corto y una sola línea incisa, con gotitas quietas de «sudor»), la
-    /// boca (<see cref="TinajaMouthDisc"/> y su sombra, <see cref="TinajaMouthGloss"/>), las bandas de luz de las capas
-    /// reveladas (<see cref="TinajaBand"/>), el icono de la fruta (<see cref="TinajaGlyph"/>), el chip «×n»
-    /// (<see cref="TinajaChipPill"/>), el jirau (<see cref="TinajaJirau"/>, con las ataduras solo en las puntas), y el poste del
-    /// jirau del que cuelga su cuia (<see cref="TinajaPost"/>) con el asa de fibra (<see cref="TinajaAsa"/>). La vasija, el jirau,
-    /// su cuia colgada y el asa son contenido cultural: pendiente del asesor cultural (D-019; 07 §4.3; encargo de arte 3.4).
+    /// boca (<see cref="TinajaMouthDisc"/> y su sombra, <see cref="TinajaMouthGloss"/>), las bandas de las capas reveladas
+    /// (<see cref="TinajaBand"/> con el tinte, su filo de luz <see cref="TinajaBandLight"/> y, si hace falta, su contorno
+    /// <see cref="TinajaBandRim"/>), el icono de la fruta (<see cref="TinajaGlyph"/>), el chip «×n»
+    /// (<see cref="TinajaChipPill"/>), el jirau (<see cref="TinajaJirau"/>, dos varas atadas solo en las puntas), y el poste bajo
+    /// con su gancho (<see cref="TinajaPost"/>) del que cuelga su cuia por el asa de fibra (<see cref="TinajaAsa"/>). La vasija,
+    /// el jirau, su cuia colgada y el asa son contenido cultural: pendiente del asesor cultural (D-019; 07 §4.3; encargo de arte
+    /// 3.4).
     /// </summary>
     /// <remarks>
     /// <para><b>Compuerta</b> (<see cref="MapArtRule"/>, como el arte provisional del Mapa y de TiTino): las piezas que son arte
     /// (cuerpo, jirau, poste y asa) solo salen con <see cref="MapArtRule.ShowProvisional"/> (Editor y desarrollo). Sus ranuras de
     /// PNG aún no tienen nombre en el glosario §11 (encargo de arte, sección 5, pendiente 1: «ningún PNG lleva un nombre
-    /// inventado»), así que en release no se pinta ninguna hasta que lleguen. Lo que pinta el código según el estado (la boca con
-    /// su tinte y su icono, las bandas y el chip) sale siempre.</para>
+    /// inventado»), así que en release no se pinta ninguna hasta que lleguen. La boca (con su brillo y su icono) y las bandas
+    /// están hechas para la silueta de la vasija y salen solo con el cuerpo provisional. En release, sin el cuerpo, del overlay
+    /// solo sale el chip «×n», en el hombro del vidrio (<c>TinajaOverlay.GlassChipCenterU</c>); la cima y las capas reveladas
+    /// se ven en el líquido del vidrio (<c>TinajaOverlay</c>, <c>CuiaView</c>).</para>
     /// <para><b>Color</b> (direccion-visual-v2 §2.4, regla 1; 07 §3, regla 6): el barro (<see cref="Palette.TinajaClay"/>), la
     /// madera del jirau (<see cref="JirauWood"/>, <see cref="JirauShade"/>) y la del chip (<see cref="TinajaChipWood"/>) quedan a
     /// ΔE00 ≥ 10 de los 14 tintes; nunca el pardo #8A7B6A ni el «?» de Aguas turbias, ni el terracota #B5653A (07 §4.3). Las
-    /// ataduras y el asa, en tonos <c>fibra_*</c>. La boca y las bandas llevan el tinte a propósito (es lo que se ve).</para>
+    /// ataduras y el asa, en tonos <c>fibra_*</c>. La boca y las bandas llevan el HEX del tinte a propósito, sin aclarar (es lo
+    /// que se ve y lo que se empareja con su fruta).</para>
     /// <para><b>Vetos</b> (07 §4.3 y §8.1): sin decoración (kené, marajoara, tapajônica), sin cara, ni dos bocas, ni hoja en la
     /// boca; nunca redonda y baja, morada, con fuego, vapor ni burbujas; nada de cordón, liana ni nudo entre la tinaja y su cuia
     /// (propuesta, b.2 «Aspecto»; encargo de arte, sección 3): el poste del jirau va del lado contrario a la tinaja y el jirau son
@@ -36,17 +41,26 @@ namespace AF.Presentation
         /// <summary>Ancho del sprite del cuerpo de la tinaja (u): la panza (2 × 1,28 u, dentro de la ranura de ≥ 2,86 u) con margen.</summary>
         public const float TinajaBodyWidthU = 2.70f;
 
-        /// <summary>Alto del sprite del cuerpo de la tinaja (u): del pie (y = 0) a lo alto del labio con margen.</summary>
-        public const float TinajaBodyHeightU = 6.80f;
+        /// <summary>
+        /// Alto del sprite del cuerpo de la tinaja (u): del pie (y = 0) a lo alto del labio (<see cref="TinajaTopU"/>, 6,60 u) con
+        /// un margen de 0,04 u (≈ 4 px a <c>MechanicPxPerU</c>) para el canto suavizado.
+        /// </summary>
+        public const float TinajaBodyHeightU = 6.64f;
+
+        /// <summary>
+        /// Lo alto de la vasija (u desde el pie): 6,60 u, el alto de la Cuia alta de 5 (02 §5: «la tinaja ocupa una ranura con el
+        /// alto de la Cuia alta de 5 (6,60 u)»; 07 §4.5; encargo de arte 3.1), el mismo con que el layout mide su fila.
+        /// </summary>
+        public const float TinajaTopU = TinajaLipCenterU + TinajaLipRyU;
 
         /// <summary>Centro del labio (la elipse de arriba de la vasija, vista un poco desde arriba; u desde el pie) [P].</summary>
-        public const float TinajaLipCenterU = 6.27f;
+        public const float TinajaLipCenterU = 6.15f;
 
         /// <summary>Medio ancho del labio (u) [P]: la boca entra dentro con su 0,70 del ancho de la cuia.</summary>
         public const float TinajaLipRxU = 0.86f;
 
-        /// <summary>Medio alto del labio (u) [P]: lo alto de la vasija queda en 6,74 u.</summary>
-        public const float TinajaLipRyU = 0.47f;
+        /// <summary>Medio alto del labio (u) [P]: lo alto de la vasija queda en 6,60 u (<see cref="TinajaTopU"/>).</summary>
+        public const float TinajaLipRyU = 0.45f;
 
         /// <summary>Medio ancho del hueco oscuro de la boca, dentro del labio (u) [P].</summary>
         public const float TinajaOpeningRxU = 0.76f;
@@ -64,7 +78,7 @@ namespace AF.Presentation
         public const float TinajaMouthHeightU = 0.72f;
 
         /// <summary>Centro del agua de la boca (u desde el pie): un poco más abajo que el labio, que asoma por detrás.</summary>
-        public const float TinajaMouthCenterU = 6.25f;
+        public const float TinajaMouthCenterU = 6.13f;
 
         /// <summary>
         /// Lado de la celda del icono de la fruta en la boca (u) [P]: la silueta (0,9 de la celda) mide ≈ 14,3 dp con la cuia de
@@ -72,8 +86,29 @@ namespace AF.Presentation
         /// </summary>
         public const float TinajaMouthGlyphU = 0.66f;
 
-        /// <summary>Alto de una banda de luz de una capa revelada (u) [P]: algo menos que la dosis, centrada a su altura.</summary>
+        /// <summary>
+        /// Centro del brillo del agua de la boca, desde el centro de la boca (u) [P]: en el cuarto de arriba a la izquierda de la
+        /// elipse, por encima de la sombra del icono de la fruta.
+        /// </summary>
+        public static readonly Vector2 TinajaMouthGlossOffsetU = new Vector2(-0.35f, 0.18f);
+
+        /// <summary>Opacidad del brillo de la boca (≤ 0,25) [P].</summary>
+        public const float TinajaMouthGlossAlpha = 0.25f;
+
+        /// <summary>Alto de una banda de una capa revelada (u) [P]: algo menos que la dosis, centrada a su altura.</summary>
         public const float TinajaBandHeightU = 0.62f;
+
+        /// <summary>
+        /// Lienzo de las piezas de una banda (px): 192 × 60, que el overlay estira a la banda (≈ 2,2 × 0,62 u); con la cuia de
+        /// 48 dp, ≈ 4 px por dp en alto.
+        /// </summary>
+        private const int BandPxWidth = 192;
+
+        private const int BandPxHeight = 60;
+
+        // Filo de luz (≈ 1,5 dp con la cuia de 48 dp) y contorno (≈ 1 dp) de una banda, en px de su lienzo.
+        private const float BandLightPx = 6f;
+        private const float BandRimPx = 4f;
 
         /// <summary>Lo que la banda se queda dentro del contorno de la panza por cada lado (u) [P].</summary>
         public const float TinajaBandInsetU = 0.14f;
@@ -96,8 +131,11 @@ namespace AF.Presentation
         /// <summary>Ancho del chip «×n» (dp) [P]: dos celdas de glifo y su margen.</summary>
         public const float TinajaChipWidthDp = (2f * MurkyBadgeCellDp * TinajaChipGlyphScale) + 6f;
 
-        /// <summary>Alto de diseño del jirau (dp, a <see cref="UiPxPerDp"/>); el overlay lo escala al alto en u con el multiplicador del 9-slice.</summary>
-        public const float TinajaJirauDesignDp = 14f;
+        /// <summary>
+        /// Alto de diseño del jirau (dp, a <see cref="UiPxPerDp"/>): dos varas. El overlay lo escala a su alto
+        /// (<c>TinajaOverlay.JirauHeightDp</c>) con el multiplicador del 9-slice.
+        /// </summary>
+        public const float TinajaJirauDesignDp = 6f;
 
         /// <summary>Borde de 9 cortes del jirau a cada lado (dp de diseño): las ataduras de las puntas.</summary>
         public const float TinajaJirauBorderDp = 5f;
@@ -105,23 +143,71 @@ namespace AF.Presentation
         /// <summary>Poste del jirau: distancia de su eje al eje de la cuia que cuelga (u) [P], dentro de la ranura (≥ 1,43 u).</summary>
         public const float TinajaPostXU = 1.19f;
 
-        /// <summary>Altura del travesaño del poste, del que cuelga el asa (u desde el pie) [P].</summary>
-        public const float TinajaPostArmU = 4.48f;
+        /// <summary>
+        /// Punta del poste (u desde el pie) [P]: un poste trasero bajo, a la altura de la cima del asa, sin travesaño (nada pasa
+        /// por encima del cuello de su cuia: la silueta poste + travesaño + cuerda se leía como una horca, 07 §8).
+        /// </summary>
+        public const float TinajaPostTopU = 4.00f;
 
-        /// <summary>Punto del gancho del que cuelga el asa (u desde el pie): bajo el travesaño, en el eje de la cuia.</summary>
-        public const float TinajaHookU = 4.30f;
+        /// <summary>Medio ancho del asa de fibra (u) [P]: sale de los dos hombros de la Cuia chica de 2, donde el vidrio mide ±0,80 u.</summary>
+        public const float TinajaAsaHalfU = 0.80f;
 
-        /// <summary>Caja del sprite del poste en u, desde el eje de la cuia (a la derecha; a la izquierda se refleja).</summary>
-        public static readonly Rect TinajaPostRectU = new Rect(-0.20f, -0.20f, 1.55f, 4.92f);
-
-        /// <summary>Caja del sprite del asa de fibra en u, desde el eje y el pie de una Cuia chica de 2 (alto 3,60 u).</summary>
-        public static readonly Rect TinajaAsaRectU = new Rect(-0.52f, 3.30f, 1.04f, 1.12f);
+        /// <summary>Cima del asa de fibra (u desde el pie) [P]: 0,32 u sobre lo alto de la Cuia chica de 2 (3,60 u), como mucho 3,95 u.</summary>
+        public const float TinajaAsaTopU = 3.92f;
 
         /// <summary>
-        /// Madera del chip «×n», <see cref="Palette.Frame"/> #7C4E3A (07 §4.3: «marfil sobre madera»): con el marfil
-        /// <see cref="Palette.UiPaper"/> de los glifos da ≈ 5,9:1 (≥ 5:1) y queda a ΔE00 ≥ 10 de los 14 tintes.
+        /// Gancho del poste (u, desde el eje y el pie de su cuia; a la derecha, se refleja a su lado) [P]: sale corto hacia delante
+        /// de la punta del poste, baja hacia su cuia y se curva hacia arriba bajo el flanco del asa, que se apoya en él. Queda fuera
+        /// del cuello y del borde de fibra de su cuia (≥ 0,55 u del eje) y más bajo que la cima del asa.
+        /// </summary>
+        public static readonly Vector2 TinajaHookU = new Vector2(0.74f, 3.38f);
+
+        /// <summary>Caja del sprite del poste en u, desde el eje de la cuia (a la derecha; a la izquierda se refleja).</summary>
+        public static readonly Rect TinajaPostRectU = new Rect(-0.20f, -0.12f, 1.55f, 4.24f);
+
+        /// <summary>
+        /// Arranque del asa en los hombros de la Cuia chica de 2 (u desde el pie) [P]: la altura del hombro donde el vidrio mide
+        /// ±<see cref="TinajaAsaHalfU"/> (<c>CuiaGeometry.OuterHalfWidth</c>), sobre el líquido (2,60 u) y bajo el cuello.
+        /// </summary>
+        public const float TinajaAsaFootU = 2.77f;
+
+        /// <summary>Exponente de la curva del asa [P]: con 3, el arco sube recto desde los hombros y pasa holgado sobre el borde de fibra.</summary>
+        private const float TinajaAsaExponent = 3f;
+
+        /// <summary>Caja del sprite del asa de fibra en u, desde el eje y el pie de una Cuia chica de 2 (alto 3,60 u).</summary>
+        public static readonly Rect TinajaAsaRectU = new Rect(-0.92f, 2.62f, 1.84f, 1.38f);
+
+        /// <summary>
+        /// Altura del eje del asa (u desde el pie) a <paramref name="xU"/> u del eje de su cuia: un arco
+        /// |x / <see cref="TinajaAsaHalfU"/>|³ + |(y − <see cref="TinajaAsaFootU"/>) / (cima − arranque)|³ = 1 desde los hombros
+        /// hasta <see cref="TinajaAsaTopU"/>; −1 fuera del asa.
+        /// </summary>
+        public static float TinajaAsaYAt(float xU)
+        {
+            float e = Mathf.Abs(xU) / TinajaAsaHalfU;
+            if (e > 1f)
+            {
+                return -1f;
+            }
+
+            float k = Mathf.Pow(1f - Mathf.Pow(e, TinajaAsaExponent), 1f / TinajaAsaExponent);
+            return TinajaAsaFootU + ((TinajaAsaTopU - TinajaAsaFootU) * k);
+        }
+
+        /// <summary>
+        /// Madera del chip «×n», <see cref="Palette.Frame"/> #7C4E3A (07 §4.3: «marfil sobre madera»), a ΔE00 ≥ 10 de los 14
+        /// tintes. Contraste de la cifra: 5,9:1 (marfil <see cref="Palette.UiPaper"/> #F4EBDA sobre #7C4E3A), medido en la
+        /// captura tj2_01 del 2026-10-18: la cifra sale #F4EBDA sobre #7C4E3A en toda su altura, porque el brillo (#8E6756, que
+        /// con la cifra daría 3,9:1) es una franja de <see cref="TinajaChipGlossDp"/> dp por encima de los glifos, con 1 dp de
+        /// madera entre los dos.
         /// </summary>
         public static readonly Color TinajaChipWood = Palette.Frame;
+
+        /// <summary>Alto de la franja de brillo del chip (dp) [P], por encima de los glifos.</summary>
+        public const float TinajaChipGlossDp = 2f;
+
+        /// <summary>Distancia de la franja de brillo al borde de arriba del chip (dp): el canto oscuro de 1 dp.</summary>
+        public const float TinajaChipGlossTopDp = 1f;
 
         /// <summary>Varas del jirau, madera clara #B09468 [P] (ΔE00 ≥ 16 frente a los 14 tintes).</summary>
         public static readonly Color JirauWood = Palette.Hex(0xB09468);
@@ -135,7 +221,9 @@ namespace AF.Presentation
         private static readonly Color TinajaOpeningFront = Palette.Hex(0x6B4A35);
 
         // Perfil de la panza: alturas (u desde el pie) y medio ancho (u) en cada una; entre dos puntos, smoothstep (monótono:
-        // sin rebotes). Cubre el vidrio de la Cuia alta de 5 entero (CuiaGeometry.OuterHalfWidth): la tinaja es opaca.
+        // sin rebotes). Con el labio, cubre el vidrio de la Cuia alta de 5 (CuiaGeometry.OuterHalfWidth) hasta lo alto de su
+        // cuello: la tinaja es opaca. Su borde de fibra (de 6,35 a 6,60 u) no hace falta cubrirlo: con el cuerpo a la vista, el
+        // vidrio de la cuia entero se oculta (CuiaView).
         private static readonly float[] TinajaProfileY = { 0.00f, 0.15f, 0.60f, 1.60f, 2.60f, 3.60f, 4.50f, 5.20f, 5.50f, 5.65f, 5.85f, 6.40f };
         private static readonly float[] TinajaProfileHalf = { 0.86f, 0.95f, 1.10f, 1.24f, 1.28f, 1.24f, 1.14f, 1.06f, 1.035f, 1.02f, 0.88f, 0.86f };
 
@@ -154,6 +242,8 @@ namespace AF.Presentation
         private Sprite? _tinajaMouthDisc;
         private Sprite? _tinajaMouthGloss;
         private Sprite? _tinajaBand;
+        private Sprite? _tinajaBandLight;
+        private Sprite? _tinajaBandRim;
         private Sprite? _tinajaChipPill;
         private Sprite? _tinajaJirau;
         private Sprite? _tinajaPost;
@@ -166,25 +256,31 @@ namespace AF.Presentation
         /// <summary>Elipse blanca del agua de la boca: la tiñe el overlay con la fruta de arriba.</summary>
         internal Sprite TinajaMouthDisc => _tinajaMouthDisc != null ? _tinajaMouthDisc : (_tinajaMouthDisc = BuildTinajaMouthDisc());
 
-        /// <summary>Sombra del labio sobre el agua de la boca (arriba) y un brillo (abajo a la izquierda), encima del agua.</summary>
+        /// <summary>Sombra del labio sobre el agua de la boca (arriba) y un brillo (arriba a la izquierda), encima del agua.</summary>
         internal Sprite TinajaMouthGloss => _tinajaMouthGloss != null ? _tinajaMouthGloss : (_tinajaMouthGloss = BuildTinajaMouthGloss());
 
-        /// <summary>Banda de luz blanca de bordes suaves: la tiñe el overlay con la fruta de la capa revelada.</summary>
+        /// <summary>Relleno de una banda, blanco opaco de canto nítido: lo tiñe el overlay con el HEX del tinte de la capa revelada.</summary>
         internal Sprite TinajaBand => _tinajaBand != null ? _tinajaBand : (_tinajaBand = BuildTinajaBand());
+
+        /// <summary>Filo de luz de una banda: sus franjas de arriba y abajo (el overlay las pone en marfil al 35 %).</summary>
+        internal Sprite TinajaBandLight => _tinajaBandLight != null ? _tinajaBandLight : (_tinajaBandLight = BuildTinajaBandLight());
+
+        /// <summary>Contorno de ≈ 1 dp de una banda (el overlay lo tiñe con el tinte oscurecido, solo si el tinte queda cerca del barro).</summary>
+        internal Sprite TinajaBandRim => _tinajaBandRim != null ? _tinajaBandRim : (_tinajaBandRim = BuildTinajaBandRim());
 
         /// <summary>Píldora de madera del chip «×n» (9 cortes en horizontal, <see cref="TinajaChipHeightDp"/> de alto).</summary>
         internal Sprite TinajaChipPill => _tinajaChipPill != null ? _tinajaChipPill : (_tinajaChipPill = BuildTinajaChipPill());
 
-        /// <summary>Jirau: tres varas atadas en las puntas (9 cortes en horizontal; se estira bajo las dos ranuras).</summary>
+        /// <summary>Jirau: dos varas atadas en las puntas (9 cortes en horizontal; se estira bajo las dos ranuras).</summary>
         internal Sprite TinajaJirau => _tinajaJirau != null ? _tinajaJirau : (_tinajaJirau = BuildTinajaJirau());
 
         /// <summary>
-        /// Poste del jirau con su travesaño y el gancho de fibra, a la derecha del eje de la cuia (<see cref="TinajaPostRectU"/>;
-        /// pivote en el eje y el pie).
+        /// Poste bajo del jirau con su gancho corto, a la derecha del eje de la cuia (<see cref="TinajaPostRectU"/>; pivote en el
+        /// eje y el pie). Sin travesaño ni cuerda: nada pasa sobre el cuello de su cuia.
         /// </summary>
         internal Sprite TinajaPost => _tinajaPost != null ? _tinajaPost : (_tinajaPost = BuildTinajaPost());
 
-        /// <summary>Asa de fibra de su cuia (<see cref="TinajaAsaRectU"/>, pivote al centro): de los dos agujeritos del labio al gancho.</summary>
+        /// <summary>Asa de fibra de su cuia (<see cref="TinajaAsaRectU"/>, pivote al centro): un arco de hombro a hombro, sobre el cuello.</summary>
         internal Sprite TinajaAsa => _tinajaAsa != null ? _tinajaAsa : (_tinajaAsa = BuildTinajaAsa());
 
         /// <summary>
@@ -339,7 +435,7 @@ namespace AF.Presentation
             return MakeSprite(pc, "mech_tinaja_mouth", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
 
-        // Sobre el agua de la boca: la sombra del labio en el canto de atrás (arriba) y un brillo en el de delante (abajo).
+        // Sobre el agua de la boca: la sombra del labio en el canto de atrás (arriba) y un brillo arriba a la izquierda.
         private Sprite BuildTinajaMouthGloss()
         {
             const float px = MechanicPxPerU;
@@ -371,23 +467,66 @@ namespace AF.Presentation
                 }
             }
 
-            pc.FillEllipseSoft(cx - (0.30f * rx), cy - (0.52f * ry), 0.28f * rx, 0.12f * ry, 2f, ColorMath.WithAlpha(Color.white, 0.40f));
+            // El brillo, en el cuarto de arriba a la izquierda (la luz de D-003), nunca a la altura de la sombra del icono de la
+            // fruta (abajo): así no hace una sombra doble junto a él.
+            pc.FillEllipseSoft(cx + (TinajaMouthGlossOffsetU.x * px), cy + (TinajaMouthGlossOffsetU.y * px), 0.28f * rx, 0.12f * ry, 2f, ColorMath.WithAlpha(Color.white, TinajaMouthGlossAlpha));
             return MakeSprite(pc, "mech_tinaja_mouth_gloss", new Vector2(0.5f, 0.5f), Vector4.zero);
         }
 
-        // Banda de luz: blanca, más intensa en el centro y de bordes suaves (la luz que pasa por el barro).
+        // Las tres piezas de una banda comparten lienzo (BandPx) y forma: un rectángulo redondeado de canto nítido (solo el
+        // suavizado de 1 px), para que el relleno sea el tinte entero, sin mezclarse con el barro en un degradado.
+        // Relleno: blanco opaco (lo tiñe el overlay con el HEX del tinte, alfa 1).
         private Sprite BuildTinajaBand()
         {
-            const int w = 192;
-            const int h = 60;
+            return BuildTinajaBandPiece("mech_tinaja_band", 0);
+        }
+
+        // Filo de luz: las franjas de arriba y abajo (≈ 1,5 dp con la cuia de 48 dp), blancas; el overlay las pone en marfil al
+        // 35 % (TinajaOverlay.BandEdgeLight).
+        private Sprite BuildTinajaBandLight()
+        {
+            return BuildTinajaBandPiece("mech_tinaja_band_light", 1);
+        }
+
+        // Contorno: un anillo de ≈ 1 dp por dentro del canto; el overlay lo tiñe con el tinte oscurecido (solo los tintes que
+        // quedan cerca del barro, TinajaOverlay.BandNeedsRim).
+        private Sprite BuildTinajaBandRim()
+        {
+            return BuildTinajaBandPiece("mech_tinaja_band_rim", 2);
+        }
+
+        private Sprite BuildTinajaBandPiece(string name, int piece)
+        {
+            const int w = BandPxWidth;
+            const int h = BandPxHeight;
+            const float radius = 12f;
             var pc = new PixelCanvas(w, h);
             for (int y = 0; y < h; y++)
             {
-                float vy = Mathf.Abs(((y + 0.5f) / h) - 0.5f) * 2f;
                 for (int x = 0; x < w; x++)
                 {
-                    float vx = Mathf.Abs(((x + 0.5f) / w) - 0.5f) * 2f;
-                    float a = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((1f - vy) / 0.30f)) * Mathf.SmoothStep(0f, 1f, Mathf.Clamp01((1f - vx) / 0.16f));
+                    float d = PixelCanvas.RoundedRectDistance(x + 0.5f, y + 0.5f, 0.5f, 0.5f, w - 0.5f, h - 0.5f, radius);
+                    float cover = PixelCanvas.Coverage(d);
+                    if (cover <= 0f)
+                    {
+                        continue;
+                    }
+
+                    float a;
+                    if (piece == 0)
+                    {
+                        a = cover;
+                    }
+                    else if (piece == 1)
+                    {
+                        float fromEdge = Mathf.Min(y + 0.5f, h - (y + 0.5f)); // px hasta el canto de arriba o de abajo
+                        a = cover * Mathf.Clamp01(BandLightPx + 0.5f - fromEdge);
+                    }
+                    else
+                    {
+                        a = Mathf.Clamp01(cover - PixelCanvas.Coverage(d + BandRimPx));
+                    }
+
                     if (a > 0f)
                     {
                         pc.Set(x, y, new Color(1f, 1f, 1f, a));
@@ -395,7 +534,7 @@ namespace AF.Presentation
                 }
             }
 
-            return MakeSprite(pc, "mech_tinaja_band", new Vector2(0.5f, 0.5f), Vector4.zero);
+            return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero);
         }
 
         // Icono de la fruta sobre transparente: el contorno (si lo lleva) y la silueta en el color de los Patrones de fruta.
@@ -423,7 +562,9 @@ namespace AF.Presentation
             return MakeSprite(pc, "mech_tinaja_glyph_" + TintIds[tint], new Vector2(0.5f, 0.5f), Vector4.zero);
         }
 
-        // Píldora de madera del chip: canto oscuro de 1 dp, madera y un brillo arriba (la luz de juego, D-003).
+        // Píldora de madera del chip: canto oscuro de 1 dp, madera y un brillo arriba (la luz de juego, D-003). El brillo es una
+        // franja de 2 dp pegada al canto de arriba (de 15 a 17 dp), por encima de los glifos: la cifra (≈ 10,3 dp, centrada en el
+        // chip de 18 dp) acaba a ≈ 14,1 dp, así que nunca cae sobre él y queda entera sobre la madera.
         private Sprite BuildTinajaChipPill()
         {
             const float k = UiPxPerDp;
@@ -433,13 +574,13 @@ namespace AF.Presentation
             var pc = new PixelCanvas(w, h);
             pc.FillRoundedRect(0f, 0f, w, h, r, Palette.WoodDark);
             pc.FillRoundedRect(k, k, w - k, h - k, r - k, TinajaChipWood);
-            pc.FillRoundedRectSoft(2.5f * k, h * 0.58f, w - (2.5f * k), h - (2f * k), (h * 0.2f) - 1f, 2.5f, ColorMath.WithAlpha(Color.white, 0.14f));
+            pc.FillRoundedRectSoft(3.5f * k, h - (TinajaChipGlossTopDp + TinajaChipGlossDp) * k, w - (3.5f * k), h - (TinajaChipGlossTopDp * k), TinajaChipGlossDp * k * 0.5f, 1f, ColorMath.WithAlpha(Color.white, 0.14f));
             return MakeSprite(pc, "mech_tinaja_chip", new Vector2(0.5f, 0.5f), new Vector4(r + 1f, 0f, r + 1f, 0f), UiPxPerDp);
         }
 
-        // Jirau: tres varas horizontales (sombra abajo, luz arriba y algo de veta) con una atadura de fibra en cada punta, en el
+        // Jirau: dos varas horizontales (sombra abajo, luz arriba y algo de veta) con una atadura de fibra en cada punta, en el
         // borde de 9 cortes; el centro se estira sin deformar las ataduras y no lleva ninguna (veto de b.2: nada entre las dos
-        // piezas).
+        // piezas). Dos varas, y no tres, para que el jirau quepa entero en la cara superior de la repisa (TinajaOverlay).
         private Sprite BuildTinajaJirau()
         {
             const float k = UiPxPerDp;
@@ -447,12 +588,12 @@ namespace AF.Presentation
             int border = Mathf.RoundToInt(TinajaJirauBorderDp * k);
             int w = (2 * border) + 48;
             var pc = new PixelCanvas(w, h);
-            float rp = h / 6f;
-            for (int i = 0; i < 3; i++)
+            float rp = h / 4f;
+            for (int i = 0; i < 2; i++)
             {
                 float cy = rp + (i * 2f * rp);
-                pc.FillCapsule(rp + 0.5f, cy - 0.8f, w - rp - 0.5f, cy - 0.8f, rp, JirauShade);
-                pc.FillCapsule(rp + 0.5f, cy, w - rp - 0.5f, cy, rp - 1.1f, JirauWood);
+                pc.FillCapsule(rp + 0.5f, cy - 0.6f, w - rp - 0.5f, cy - 0.6f, rp, JirauShade);
+                pc.FillCapsule(rp + 0.5f, cy, w - rp - 0.5f, cy, rp - 1.0f, JirauWood);
                 pc.FillCapsule(rp + 2f, cy + (0.38f * rp), w - rp - 2f, cy + (0.38f * rp), 0.22f * rp, ColorMath.Lighten(JirauWood, 0.30f));
                 for (int g = 0; g < 4; g++)
                 {
@@ -466,7 +607,7 @@ namespace AF.Presentation
             return MakeSprite(pc, "mech_tinaja_jirau", new Vector2(0.5f, 0.5f), new Vector4(border, 0f, border, 0f), UiPxPerDp);
         }
 
-        // Atadura de fibra de una punta del jirau: vueltas diagonales que abrazan las tres varas en x = cx (dentro del borde de
+        // Atadura de fibra de una punta del jirau: vueltas diagonales que abrazan las dos varas en x = cx (dentro del borde de
         // 9 cortes, así el centro que se estira son varas lisas).
         private static void DrawJirauLashing(PixelCanvas pc, float cx, int h)
         {
@@ -479,8 +620,10 @@ namespace AF.Presentation
             }
         }
 
-        // Poste del jirau a la derecha del eje (se refleja para la izquierda): la vara vertical desde el jirau, el travesaño
-        // hasta el eje y, bajo él, el gancho de fibra del que cuelga el asa. Nada une la tinaja con su cuia.
+        // Poste del jirau a la derecha del eje (se refleja para la izquierda): una vara baja que se apoya en el jirau, con la
+        // punta a TinajaPostTopU, y de la punta un gancho corto de madera que baja hacia su cuia y se curva hacia arriba bajo el
+        // flanco del asa (TinajaHookU). Sin travesaño ni cuerda: nada pasa sobre el cuello de su cuia ni lo toca (la silueta
+        // poste + travesaño + cuerda al cuello se leía como una horca, 07 §8). Nada une la tinaja con su cuia.
         private Sprite BuildTinajaPost()
         {
             const float px = MechanicPxPerU;
@@ -492,36 +635,52 @@ namespace AF.Presentation
             float oy = -box.yMin * px;
             float postX = ox + (TinajaPostXU * px);
             float postR = 0.075f * px;
-            float armY = oy + (TinajaPostArmU * px);
-            float armR = 0.065f * px;
+            float baseY = oy - (0.05f * px); // sobre las varas del jirau
+            float topY = oy + (TinajaPostTopU * px);
 
-            // Vara vertical: sombra, madera y luz a la izquierda.
-            pc.FillCapsule(postX + 1.2f, oy + 2f, postX + 1.2f, armY + (0.06f * px), postR, JirauShade);
-            pc.FillCapsule(postX, oy + 2f, postX, armY + (0.06f * px), postR - 1.2f, JirauWood);
-            pc.FillCapsule(postX - (0.35f * postR), oy + 6f, postX - (0.35f * postR), armY, 0.22f * postR, ColorMath.Lighten(JirauWood, 0.30f));
+            // Vara vertical: sombra, madera y luz a la izquierda; la punta, redondeada.
+            pc.FillCapsule(postX + 1.2f, baseY, postX + 1.2f, topY - postR, postR, JirauShade);
+            pc.FillCapsule(postX, baseY, postX, topY - postR, postR - 1.2f, JirauWood);
+            pc.FillCapsule(postX - (0.35f * postR), baseY + 4f, postX - (0.35f * postR), topY - (1.5f * postR), 0.22f * postR, ColorMath.Lighten(JirauWood, 0.30f));
 
-            // Travesaño hasta el eje de la cuia, atado al poste.
-            float armX0 = ox - (0.08f * px);
-            pc.FillCapsule(armX0, armY - 1f, postX, armY - 1f, armR, JirauShade);
-            pc.FillCapsule(armX0, armY, postX, armY, armR - 1.1f, JirauWood);
-            pc.FillCapsule(armX0 + 3f, armY + (0.35f * armR), postX - 3f, armY + (0.35f * armR), 0.22f * armR, ColorMath.Lighten(JirauWood, 0.30f));
-            for (int i = 0; i < 3; i++)
+            // Gancho: de la punta del poste baja en curva hasta la copa (TinajaHookU), bajo el flanco del asa, y su punta sube un
+            // poco hacia su cuia sin llegar al borde de fibra (≥ 0,55 u del eje). Curva de Bézier cuadrática por tramos.
+            var p0 = new Vector2(postX - (0.4f * postR), topY - (1.2f * postR));
+            var p1 = new Vector2(ox + (0.96f * px), oy + (3.66f * px));
+            var p2 = new Vector2(ox + (TinajaHookU.x * px), oy + (TinajaHookU.y * px));
+            var tip = new Vector2(ox + ((TinajaHookU.x - 0.06f) * px), oy + ((TinajaHookU.y + 0.08f) * px));
+            float hookR = 0.036f * px;
+            const int steps = 14;
+            for (int pass = 0; pass < 2; pass++)
             {
-                float t = postX - (0.10f * px) + (i * 0.05f * px);
-                pc.FillCapsule(t - 2f, armY - armR - 1f, t + 2f, armY + armR + 1f, 1.1f, Palette.FiberBase);
+                Color col = pass == 0 ? JirauShade : JirauWood;
+                float rr = pass == 0 ? hookR + 1.1f : hookR;
+                float dy = pass == 0 ? -1f : 0f;
+                Vector2 prev = p0;
+                for (int s = 1; s <= steps; s++)
+                {
+                    float t = s / (float)steps;
+                    Vector2 q = ((1f - t) * (1f - t) * p0) + (2f * (1f - t) * t * p1) + (t * t * p2);
+                    pc.FillCapsule(prev.x, prev.y + dy, q.x, q.y + dy, rr, col);
+                    prev = q;
+                }
+
+                pc.FillCapsule(p2.x, p2.y + dy, tip.x, tip.y + dy, rr * 0.9f, col);
             }
 
-            // Gancho de fibra bajo el travesaño, en el eje: una lazada corta.
-            float hookX = ox;
-            float hookY = oy + (TinajaHookU * px);
-            pc.FillCapsule(hookX, armY - armR, hookX, hookY, 0.035f * px, Palette.FiberShadow);
-            pc.FillCapsule(hookX - 0.6f, armY - armR, hookX - 0.6f, hookY, 0.022f * px, Palette.FiberBase);
-            pc.StrokeArc(hookX, hookY - (0.05f * px), 0.055f * px, 0.035f * px, 200f, 520f, Palette.FiberBase);
+            // Una atadura de fibra donde el gancho sale de la punta (en el poste, lejos de su cuia).
+            for (int i = 0; i < 3; i++)
+            {
+                float y = topY - (0.10f * px) - (i * 0.045f * px);
+                pc.FillCapsule(postX - postR - 1f, y - 1.2f, postX + postR + 1f, y + 1.2f, 1.1f, Palette.FiberBase);
+            }
+
             return MakeSprite(pc, "mech_tinaja_post", new Vector2(ox / w, oy / h), Vector4.zero);
         }
 
-        // Asa de fibra de su cuia: dos cabos que salen de los agujeritos del labio (±0,40 u, 0,12 u bajo lo alto de la Cuia
-        // chica de 2) y se juntan arriba, en la lazada que cuelga del gancho.
+        // Asa de fibra de su cuia: un arco (TinajaAsaYAt) que sale de los dos hombros de la Cuia chica de 2 (±TinajaAsaHalfU, a
+        // TinajaAsaFootU) y sube holgado por encima del cuello y del borde de fibra hasta TinajaAsaTopU; en cada hombro, el nudito
+        // que la sujeta. No toca el cuello ni el borde.
         private Sprite BuildTinajaAsa()
         {
             const float px = MechanicPxPerU;
@@ -531,23 +690,52 @@ namespace AF.Presentation
             var pc = new PixelCanvas(w, h);
             float ox = -box.xMin * px;
             float oy = -box.yMin * px;
-            float holeY = oy + ((CuiaGeometry.HeightU(2) - 0.12f) * px);
-            float topY = oy + ((TinajaHookU - 0.06f) * px);
             float r = 0.034f * px;
-            for (int side = -1; side <= 1; side += 2)
+            const int steps = 48;
+            for (int pass = 0; pass < 2; pass++)
             {
-                float hx = ox + (side * 0.40f * px);
-                float mx = ox + (side * 0.16f * px);
-                float my = topY - (0.30f * px);
-                pc.FillCapsule(hx, holeY, mx, my, r + 0.8f, Palette.FiberShadow);
-                pc.FillCapsule(mx, my, ox, topY, r + 0.8f, Palette.FiberShadow);
-                pc.FillCapsule(hx, holeY, mx, my, r, Palette.FiberBase);
-                pc.FillCapsule(mx, my, ox, topY, r, Palette.FiberBase);
-                pc.FillCircle(hx, holeY, 1.6f * r, Palette.FiberShadow); // el nudito que asoma por el agujerito
+                Color col = pass == 0 ? Palette.FiberShadow : Palette.FiberBase;
+                float rr = pass == 0 ? r + 0.8f : r;
+                Vector2 prev = AsaPoint(-1f, ox, oy, px);
+                for (int s = 1; s <= steps; s++)
+                {
+                    Vector2 q = AsaPoint(-1f + (2f * s / steps), ox, oy, px);
+                    pc.FillCapsule(prev.x, prev.y, q.x, q.y, rr, col);
+                    prev = q;
+                }
             }
 
-            pc.StrokeArc(ox, topY + (0.03f * px), 0.05f * px, 0.03f * px, -20f, 200f, Palette.FiberLight);
+            // Brillo de la fibra en la cima y los nuditos de los hombros.
+            for (int s = -6; s < 6; s++)
+            {
+                Vector2 a = AsaPoint(s / 24f, ox, oy, px);
+                Vector2 b = AsaPoint((s + 1) / 24f, ox, oy, px);
+                pc.FillCapsule(a.x, a.y + (0.35f * r), b.x, b.y + (0.35f * r), 0.3f * r, Palette.FiberLight);
+            }
+
+            for (int side = -1; side <= 1; side += 2)
+            {
+                float kx = ox + (side * TinajaAsaHalfU * px);
+                float ky = oy + (TinajaAsaFootU * px);
+                pc.FillCircle(kx, ky, 1.6f * r, Palette.FiberShadow);
+                pc.FillCircle(kx - (0.3f * r), ky + (0.3f * r), 0.9f * r, Palette.FiberBase);
+            }
+
             return MakeSprite(pc, "mech_tinaja_asa", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        // Punto del asa en px del sprite para s ∈ [−1, 1]: x = s · medio ancho (de un hombro al otro). Cerca de los hombros, donde
+        // el arco sube casi recto, se reparte por la altura para que los tramos no salten.
+        private static Vector2 AsaPoint(float s, float ox, float oy, float px)
+        {
+            // Reparto por ángulo: x = ±a·|cos θ|^(2/p), y = arranque + b·|sen θ|^(2/p) (la misma curva que TinajaAsaYAt).
+            float theta = (1f - ((s + 1f) * 0.5f)) * Mathf.PI;
+            float c = Mathf.Cos(theta);
+            float sn = Mathf.Sin(theta);
+            float e = 2f / TinajaAsaExponent;
+            float x = Mathf.Sign(c) * TinajaAsaHalfU * Mathf.Pow(Mathf.Abs(c), e);
+            float y = TinajaAsaFootU + ((TinajaAsaTopU - TinajaAsaFootU) * Mathf.Pow(Mathf.Abs(sn), e));
+            return new Vector2(ox + (x * px), oy + (y * px));
         }
     }
 }

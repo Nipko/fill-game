@@ -2870,7 +2870,7 @@ namespace AF.UI
             // [P]), ninguna cuia cambia de fila (T-C) y solo se recalcula el ancho con el T en pantalla (re-layout de 300 ms,
             // 02 §4.1; tope de D-004).
             int generated = _generatedCount > 0 ? Mathf.Min(_generatedCount, _views.Length) : _views.Length;
-            _layout = BoardLayout.Compute(_views.Length, generated, heightU, w, BoardTop, BoardBottom, _tinajaPair, _tinajaIndex);
+            _layout = BoardLayout.Compute(_views.Length, generated, heightU, w, BoardTop, BoardBottom, _tinajaPair, LayoutTinajaIndex);
             BoardLayoutResult l = _layout;
             for (int i = 0; i < _views.Length; i++)
             {

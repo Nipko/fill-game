@@ -52,8 +52,13 @@ namespace AF.Presentation
         /// <summary>Balanceo de la Tinaja al seleccionarla: ±2° (07 §4.3; propuesta de la Tinaja, «Animación y sonido»).</summary>
         public const float TinajaSwayDeg = 2f;
 
-        /// <summary>Duración del balanceo de la Tinaja al seleccionarla [P]: una ida y vuelta que se apaga al asentarse.</summary>
-        public const float TinajaSwayMs = 360f;
+        /// <summary>
+        /// Duración del asiento con balanceo de la Tinaja al seleccionarla: 150 ms, después de la subida (propuesta de la Tinaja,
+        /// b.2, tabla «Animación y sonido», fila «Seleccionar la tinaja»: «Sube 8 dp … y se asienta con un balanceo de 2°» en
+        /// «100 + 150 ms»). La subida dura <c>anim_lift_ms</c> (100 ms por defecto, 08 §9; <see cref="SetLiftDuration"/>) y el
+        /// balanceo empieza cuando termina: unos 250 ms en total.
+        /// </summary>
+        public const float TinajaSwayMs = 150f;
 
         /// <summary>Altura extra del área táctil sobre la cuia, para alcanzarla elevada (02 §3.3).</summary>
         public const float TouchHeadroomDp = 32f;
@@ -135,6 +140,7 @@ namespace AF.Presentation
         private bool _pourIcons;
         private float _liftValue;
         private float _swayElapsed = -1f;
+        private bool _swayPending;
         private int _tinajaPartner = -1;
         private bool _glassHidden;
         private float _shakeElapsed = -1f;
@@ -703,7 +709,12 @@ namespace AF.Presentation
         {
             if (lifted && !_liftTarget && _shownCuia.Mechanic == MechanicType.Tinaja)
             {
-                _swayElapsed = 0f; // la tinaja sube con su balanceo (07 §4.3)
+                _swayPending = true; // la tinaja sube y, arriba, se asienta con su balanceo (07 §4.3; b.2: 100 + 150 ms)
+                _swayElapsed = -1f;
+            }
+            else if (!lifted)
+            {
+                _swayPending = false;
             }
 
             _liftTarget = lifted;
@@ -1081,6 +1092,12 @@ namespace AF.Presentation
                     _liftValue = Mathf.MoveTowards(_liftValue, target, dtMs / duration);
                 }
 
+                if (_swayPending && _liftTarget && _liftValue >= 1f)
+                {
+                    _swayPending = false; // la subida terminó: empieza el asiento con balanceo
+                    _swayElapsed = 0f;
+                }
+
                 float x = 0f;
                 if (_shakeElapsed >= 0f)
                 {
@@ -1097,7 +1114,7 @@ namespace AF.Presentation
                 }
 
                 // Subida con rebote (easeOutBack: pico de ≈ 17,6 dp hacia t ≈ 0,58 y asiento en 16; guía 6.1) y bajada
-                // ease-in (6.2). La Tinaja sube 8 dp con un balanceo de ±2° que se apaga (07 §4.3).
+                // ease-in (6.2). La Tinaja sube 8 dp y, arriba, se asienta con un balanceo de ±2° que se apaga (07 §4.3).
                 float y = LiftAmountDp * (_liftTarget ? Ease.OutBack(_liftValue) : Ease.In(_liftValue));
                 y += HopOffset(dtMs);
                 WritePose(new Vector2(x, y), SwayAngle(dtMs));
@@ -1120,8 +1137,8 @@ namespace AF.Presentation
             }
         }
 
-        // Balanceo de la Tinaja al seleccionarla: 2° · sen(2π · t / T) · (1 − t / T) durante T = TinajaSwayMs; 0 fuera de él,
-        // al bajarla o si ya no es una Tinaja. Sin asignaciones.
+        // Balanceo de la Tinaja al seleccionarla, desde que termina la subida: 2° · sen(2π · t / T) · (1 − t / T) durante
+        // T = TinajaSwayMs; 0 fuera de él, al bajarla o si ya no es una Tinaja. Sin asignaciones.
         private float SwayAngle(float dtMs)
         {
             if (_swayElapsed < 0f)

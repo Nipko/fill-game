@@ -11,7 +11,7 @@ namespace AF.Presentation.Mechanics
     /// M13 Tinaja (D-019; 02 §9.1 M13; 07 §4.3 y §4.5; propuesta de la Tinaja, b.2 «Qué se ve» y «Aspecto», y c.6; tarea TJ2)
     /// [P]: la vasija de barro opaca que tapa el vidrio entero, con la boca a la vista (el tinte y el icono de la fruta de arriba,
     /// R7), el chip «×n» en el hombro con las dosis que quedan dentro (contando la boca), las capas ya reveladas como bandas de luz
-    /// a su altura con su icono, y el jirau bajo las dos ranuras (la de la tinaja y la de su cuia). Vacía, boca abajo sobre el
+    /// (el tinte entero con un filo de luz) a su altura con su icono, y el jirau bajo las dos ranuras (la de la tinaja y la de su cuia). Vacía, boca abajo sobre el
     /// jirau, sin boca ni chip. La vasija, el jirau y su aspecto son contenido cultural: pendiente del asesor cultural (D-019;
     /// 07 §4.3; encargo de arte 3.4).
     /// </summary>
@@ -47,15 +47,22 @@ namespace AF.Presentation.Mechanics
 
         /// <summary>
         /// Centro del chip «×n» (u desde el pie) [P]: en el hombro, entre la banda más alta posible (la capa 3, hasta 4,41 u) y
-        /// el agua de la boca (desde 5,89 u).
+        /// el labio de la vasija (desde 5,70 u; el agua de la boca, desde 5,77 u).
         /// </summary>
-        public const float ChipCenterU = 5.32f;
+        public const float ChipCenterU = 5.24f;
 
-        /// <summary>Alto del jirau (u) [P]: tres varas de ≈ 4,7 dp con la cuia de 48 dp.</summary>
-        public const float JirauHeightU = 0.58f;
+        /// <summary>
+        /// Lo alto del jirau sobre la línea de pie (u) [P]: 0,02 u, justo bajo el pie, así las dos piezas se asientan sobre su vara
+        /// de arriba (se dibujan delante) en lugar de quedar detrás de ella.
+        /// </summary>
+        public const float JirauTopAboveFootU = 0.02f;
 
-        /// <summary>Lo alto del jirau sobre la línea de pie (u) [P]: las dos cuias se asientan sobre sus varas.</summary>
-        public const float JirauTopAboveFootU = 0.06f;
+        /// <summary>
+        /// Lo que el jirau baja de la línea de pie (dp) [P]: 3 dp, el fondo de la cara superior de la repisa (que va de pie − 3 a
+        /// pie + 3 en dp de AF.UI, guía visual v2, 4.5). Así sus dos varas quedan enteras sobre la cara superior y ninguna baja de
+        /// su canto (el bisel y el frente de la repisa siguen a la vista): un jirau sobre la repisa, no una esterilla en su canto.
+        /// </summary>
+        public const float JirauBelowFootDp = 3f;
 
         /// <summary>
         /// Lo que el jirau sale por el lado de la tinaja, desde su eje (u) [P]: bajo su pie y algo más, sin llegar al canto de la
@@ -66,15 +73,40 @@ namespace AF.Presentation.Mechanics
         /// <summary>Lo que el jirau sale por el lado de su cuia, desde su eje (u) [P]: hasta el poste, que se apoya en él.</summary>
         public const float JirauCuiaExtentU = ProceduralArt.TinajaPostXU + 0.14f;
 
-        /// <summary>Mezcla hacia el blanco de la luz de una banda sobre el tinte de su capa [P].</summary>
-        public const float BandLighten = 0.18f;
+        /// <summary>
+        /// Luz del filo de una banda: marfil #FAFAF7 al 35 % en sus franjas de arriba y abajo (≈ 1,5 dp con la cuia de 48 dp)
+        /// [P]. El relleno es el HEX del tinte sin aclarar y opaco: aclararlo hacia el blanco lavaba los tintes oscuros (el
+        /// jenipapo salía gris lavanda, el cacao cerca del pardo de Aguas turbias, vetado en la tinaja por 07 §4.3, y el Agua del
+        /// Río Negro se perdía en el barro), y el color de la banda tiene que emparejarse con el de su fruta.
+        /// </summary>
+        public static readonly Color BandEdgeLight = new Color(0xFA / 255f, 0xFA / 255f, 0xF7 / 255f, 0.35f);
 
-        /// <summary>Opacidad de una banda de luz [P].</summary>
-        public const float BandAlpha = 0.92f;
+        /// <summary>Oscurecido del contorno de 1 dp de una banda (sobre su tinte) [P].</summary>
+        public const float BandRimDarken = 0.35f;
+
+        /// <summary>
+        /// ΔE00 mínimo entre el tinte de una banda y el barro que la rodea (<see cref="BandBodyTones"/>): por debajo, la banda
+        /// lleva un contorno de 1 dp con el tinte oscurecido (<see cref="BandNeedsRim"/>; hoy, solo el Agua del Río Negro) [P].
+        /// </summary>
+        public const float BandRimMinDeltaE = 12f;
+
+        /// <summary>
+        /// Tonos del barro alrededor de una banda: el barro, su luz, su sombra y la sombra del canto de la panza, donde acaba la
+        /// banda (oscurecida un 10 %, <c>ProceduralArt.BuildTinajaBody</c>).
+        /// </summary>
+        public static readonly Color[] BandBodyTones =
+        {
+            Palette.TinajaClay, Palette.TinajaClayLight, Palette.TinajaClayShade, ColorMath.Darken(Palette.TinajaClayShade, 0.10f),
+        };
+
+        // Qué tintes llevan contorno en su banda (índice = tinte): se calcula una vez, sin asignaciones en Show.
+        private static readonly bool[] s_bandRim = BuildBandRims();
 
         private const float ChipGlyphStepDp = ProceduralArt.MurkyBadgeCellDp * ProceduralArt.TinajaChipGlyphScale;
 
         private readonly Image[] _bands = new Image[MaxBands];
+        private readonly Image[] _bandLights = new Image[MaxBands];
+        private readonly Image[] _bandRims = new Image[MaxBands];
         private readonly Image[] _bandGlyphs = new Image[MaxBands];
         private RectTransform _layerRoot = null!;
         private Image _jirau = null!;
@@ -143,7 +175,7 @@ namespace AF.Presentation.Mechanics
         /// <summary>Alto de la cifra del chip (dp): la celda de glifo escalada.</summary>
         public float ChipGlyphHeightDp => _chipDigit.rectTransform.sizeDelta.y;
 
-        /// <summary>Capas con banda de luz (bit k = capa k desde el fondo): las reveladas bajo la boca.</summary>
+        /// <summary>Capas con banda (bit k = capa k desde el fondo): las reveladas bajo la boca.</summary>
         public int BandMask => Visible ? _bandMask : 0;
 
         /// <summary>Hay alguna banda a la vista.</summary>
@@ -168,6 +200,27 @@ namespace AF.Presentation.Mechanics
         public Image Band(int k)
         {
             return _bands[k];
+        }
+
+        /// <summary>Imagen del filo de luz de la banda de la capa <paramref name="k"/> (tests y capturas).</summary>
+        public Image BandLight(int k)
+        {
+            return _bandLights[k];
+        }
+
+        /// <summary>Imagen del contorno de la banda de la capa <paramref name="k"/> (tests y capturas).</summary>
+        public Image BandRim(int k)
+        {
+            return _bandRims[k];
+        }
+
+        /// <summary>
+        /// La banda del tinte <paramref name="tint"/> lleva contorno: su tinte queda a ΔE00 &lt; <see cref="BandRimMinDeltaE"/>
+        /// de alguno de los tonos del barro (<see cref="BandBodyTones"/>).
+        /// </summary>
+        public static bool BandNeedsRim(int tint)
+        {
+            return tint >= 0 && tint < s_bandRim.Length && s_bandRim[tint];
         }
 
         /// <summary>Imagen del icono de la banda de la capa <paramref name="k"/> (tests y capturas).</summary>
@@ -254,20 +307,29 @@ namespace AF.Presentation.Mechanics
             }
 
             // Bandas: las capas bajo la boca que ya están reveladas (R7, T6, I5; la Luciérnaga), a su altura y con su icono, en el
-            // barro (solo con el cuerpo de la vasija: sin él, el vidrio ya enseña la capa revelada y se pintaría dos veces).
+            // barro (solo con el cuerpo de la vasija: sin él, el vidrio ya enseña la capa revelada y se pintaría dos veces). El
+            // relleno, con el HEX del tinte opaco; la luz, en el filo (BandEdgeLight); y, si el tinte queda cerca del barro, un
+            // contorno de 1 dp con el tinte oscurecido.
             int bands = 0;
             for (int k = 0; k < MaxBands; k++)
             {
                 bool band = mouth && k < top && !cuia.IsHiddenAt(k);
                 Image img = _bands[k];
                 Image glyph = _bandGlyphs[k];
+                bool rim = false;
                 if (band)
                 {
                     bands |= 1 << k;
                     int bt = cuia.ColorAt(k);
-                    Color c = ColorMath.Lighten(Palette.Tint(bt), BandLighten);
-                    c.a = BandAlpha;
+                    Color c = Palette.Tint(bt);
+                    c.a = 1f;
                     OverlayParts.SetColor(img, c);
+                    rim = BandNeedsRim(bt);
+                    if (rim)
+                    {
+                        OverlayParts.SetColor(_bandRims[k], ColorMath.Darken(c, BandRimDarken));
+                    }
+
                     Sprite gs = Host.Art.TinajaGlyph(bt);
                     if (glyph.sprite != gs)
                     {
@@ -276,6 +338,8 @@ namespace AF.Presentation.Mechanics
                 }
 
                 OverlayParts.SetVisible(img, band);
+                OverlayParts.SetVisible(_bandLights[k], band);
+                OverlayParts.SetVisible(_bandRims[k], rim);
                 OverlayParts.SetVisible(glyph, band);
             }
 
@@ -297,6 +361,8 @@ namespace AF.Presentation.Mechanics
                 float y = BandCenterU(k);
                 float w = 2f * (ProceduralArt.TinajaHalfWidthU(y) - ProceduralArt.TinajaBandInsetU);
                 OverlayParts.Place(_bands[k], 0f, y, w, ProceduralArt.TinajaBandHeightU, u);
+                OverlayParts.Place(_bandLights[k], 0f, y, w, ProceduralArt.TinajaBandHeightU, u);
+                OverlayParts.Place(_bandRims[k], 0f, y, w, ProceduralArt.TinajaBandHeightU, u);
                 OverlayParts.Place(_bandGlyphs[k], 0f, y, ProceduralArt.TinajaBandGlyphU, ProceduralArt.TinajaBandGlyphU, u);
             }
 
@@ -371,6 +437,15 @@ namespace AF.Presentation.Mechanics
             }
         }
 
+        /// <summary>
+        /// Alto del jirau (dp) con la unidad <paramref name="u"/> (dp por u): de <see cref="JirauTopAboveFootU"/> sobre la línea de
+        /// pie a <see cref="JirauBelowFootDp"/> bajo ella (≈ 3,5 dp con la cuia de 48 dp: dos varas de ≈ 1,7 dp).
+        /// </summary>
+        public static float JirauHeightDp(float u)
+        {
+            return (JirauTopAboveFootU * u) + JirauBelowFootDp;
+        }
+
         /// <summary>Centro de la banda de la capa <paramref name="k"/> (u desde el pie): a la altura de su dosis en la Cuia alta de 5.</summary>
         public static float BandCenterU(int k)
         {
@@ -403,6 +478,8 @@ namespace AF.Presentation.Mechanics
             for (int k = 0; k < MaxBands; k++)
             {
                 _bands[k] = OverlayParts.NewImage("TinajaBand" + k, Host.BodyFront, Host.Art.TinajaBand, Color.white);
+                _bandLights[k] = OverlayParts.NewImage("TinajaBandLight" + k, Host.BodyFront, Host.Art.TinajaBandLight, BandEdgeLight);
+                _bandRims[k] = OverlayParts.NewImage("TinajaBandRim" + k, Host.BodyFront, Host.Art.TinajaBandRim, Color.white);
             }
 
             for (int k = 0; k < MaxBands; k++)
@@ -511,7 +588,7 @@ namespace AF.Presentation.Mechanics
                 }
             }
 
-            float h = JirauHeightU * _u;
+            float h = JirauHeightDp(_u);
             float top = foot.y + (JirauTopAboveFootU * _u);
             Vector2 origin = LayerOrigin;
             RectTransform rt = _jirau.rectTransform;
@@ -611,6 +688,24 @@ namespace AF.Presentation.Mechanics
             Vector2 size = rt.sizeDelta;
             Vector2 pos = rt.anchoredPosition;
             return new Rect(pos.x - (size.x * rt.pivot.x), pos.y - (size.y * rt.pivot.y), size.x, size.y);
+        }
+
+        private static bool[] BuildBandRims()
+        {
+            var rims = new bool[Cuia.MaxTintColor + 1];
+            for (int t = Cuia.MinColor; t <= Cuia.MaxTintColor; t++)
+            {
+                Color tint = Palette.Tint(t);
+                for (int b = 0; b < BandBodyTones.Length; b++)
+                {
+                    if (ColorMath.DeltaE00(tint, BandBodyTones[b]) < BandRimMinDeltaE)
+                    {
+                        rims[t] = true;
+                    }
+                }
+            }
+
+            return rims;
         }
 
         // Origen de la raíz del jirau en el espacio de las capas de tablero (el de ICuiaBoard).
