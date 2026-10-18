@@ -94,6 +94,9 @@ namespace AF.UI
         private TextAsset? fruitCalendar;
 
         [SerializeField]
+        private TextAsset? seasonTable;
+
+        [SerializeField]
         private TextAsset? stringsTable;
 
         [SerializeField]
@@ -337,6 +340,22 @@ namespace AF.UI
         public void ConfigureFruitCalendar(TextAsset? calendar)
         {
             fruitCalendar = calendar;
+        }
+
+        /// <summary>Tabla de temporada asignada (<c>seasons_v1.json</c>; escena generada por <c>GameSceneBuilder</c>; SE2).</summary>
+        public TextAsset? SeasonTableAsset => seasonTable;
+
+        /// <summary>
+        /// Tabla de temporada leída al arrancar (<c>af-seasons/1</c>; pregunta 32 b, D-020; 03 §12; tarea SE2): la LUT de aguas
+        /// altas o bajas de cada ciclo de 20 en el fondo del tablero y del inicio. Null si falta el archivo o no valida: se avisa y
+        /// el juego sigue sin LUT de temporada, como antes.
+        /// </summary>
+        public SeasonTable? Seasons { get; private set; }
+
+        /// <summary>Asigna la tabla de temporada (escena generada por <c>GameSceneBuilder</c>).</summary>
+        public void ConfigureSeasons(TextAsset? table)
+        {
+            seasonTable = table;
         }
 
         /// <summary>Tabla de textos de la UI asignada (<c>strings.csv</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
@@ -1526,8 +1545,11 @@ namespace AF.UI
             _screen.RiverMapOpenable = RiverMapAvailable; // «Mapa del río» en la pausa y «Ver mapa» en la victoria (M4.3)
             FruitFacts = LoadFruitFacts(fruitCalendar); // calendario de Frutas del río (D-017)
             _screen.FruitFacts = FruitFacts; // la línea de fruta de la victoria (F3)
+            Seasons = LoadSeasons(seasonTable); // tabla de temporada del cliente (pregunta 32 b; SE2)
+            _screen.Seasons = Seasons; // la LUT de aguas altas o bajas del fondo del tablero
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
             _lobby.RiverStops = RiverStops; // el sitio, «Faltan N» y la ventanita de casa en el inicio (M2.1)
+            _lobby.Seasons = Seasons; // la LUT de temporada del fondo del inicio, como el tablero (SE2)
             _lobby.RiverMapAvailable = RiverMapAvailable; // la pestaña del Mapa del río, desde max_level ≥ 10 (M3.3)
             _mapScreen = new RiverMapScreen(transform, _art, _probe, () => CloseRiverMap(), () => PressMapPlay());
             _mapScreen.Fauna = Fauna; // el miquito del tramo en la tarjeta de la parada (M4.1)
@@ -1771,6 +1793,27 @@ namespace AF.UI
             catch (LevelFormatException e)
             {
                 Debug.LogError(LogPrefix + e.Message + " El juego sigue sin el Mapa.");
+                return null;
+            }
+        }
+
+        // Tabla de temporada de la escena (af-seasons/1; SE1 y SE2), como las paradas del Mapa: si falta el archivo, un aviso; si no
+        // valida, un error con la ruta del valor. En los dos casos, null y el juego sigue sin LUT de temporada (como antes).
+        internal static SeasonTable? LoadSeasons(TextAsset? table)
+        {
+            if (table == null)
+            {
+                Debug.LogWarning(LogPrefix + "falta la tabla de temporada (TextAsset): el juego sigue sin LUT de temporada. Regenera la escena con AF.UI.Editor.GameSceneBuilder.CreateGameScene.");
+                return null;
+            }
+
+            try
+            {
+                return SeasonTableReader.Read(table.text);
+            }
+            catch (LevelFormatException e)
+            {
+                Debug.LogError(LogPrefix + e.Message + " El juego sigue sin LUT de temporada.");
                 return null;
             }
         }

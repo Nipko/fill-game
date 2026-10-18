@@ -247,13 +247,14 @@ namespace AF.Tests.PlayMode
             StringAssert.Contains("\"stop\":9,\"id\":\"leticia_atardecer\",\"world\":4,\"hero\":\"bg_hero_leticia\"", line);
             StringAssert.Contains("\"lut\":\"dusk\",\"water\":\"white\",\"fade\":false,\"build_ms\":", line);
             StringAssert.IsMatch("\"build_ms\":[0-9.]+,\"warm_ms\":[0-9.]+,\"hero_src\"", line); // FX4
-            StringAssert.Contains("\"hero_src\":\"shape\",\"shape\":\"leticia\",\"code\":null,\"change\":\"cut\"}", line);
+            StringAssert.Contains("\"hero_src\":\"shape\",\"shape\":\"leticia\",\"code\":null,\"change\":\"cut\",\"season\":\"A\"}", line); // SE2
             Match m = Regex.Match(line, "\"build_ms\":([0-9.]+)");
             Assert.That(m.Success, Is.True, line);
             double ms = double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
             TestContext.WriteLine("build_ms en el Editor: " + ms);
             Assert.That(ms, Is.LessThanOrEqualTo(8d), "08 §5.4");
-            Assert.That(GameBootstrap.Current!.View!.PanoramaTint, Is.EqualTo(StopBackdrop.DuskLut), "el panorama con la luz del atardecer");
+            Assert.That(GameBootstrap.Current!.View!.PanoramaTint, Is.EqualTo(StopBackdrop.DuskLut * StopBackdrop.HighWaterLut),
+                "el panorama con la luz del atardecer y la de aguas altas del ciclo 81 (SE2)");
         }
 
         [UnityTest]

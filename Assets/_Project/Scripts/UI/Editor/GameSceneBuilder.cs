@@ -14,7 +14,8 @@ namespace AF.UI.Editor
     /// Genera la escena <c>Assets/_Project/Scenes/Game.unity</c> del prototipo v0 (docs/dev/prototipo-v0.md c) y la
     /// deja como la única de Build Settings. La escena es casi vacía (.claude/rules/unity-assets.md): cámara, EventSystem
     /// con <see cref="InputSystemUIInputModule"/> y <see cref="GameBootstrap"/> enlazado a los paquetes de niveles
-    /// (<see cref="LevelPackPaths"/>), al catálogo de miquitos, a las paradas y a la geometría del Mapa del río, a las tablas de textos
+    /// (<see cref="LevelPackPaths"/>), al catálogo de miquitos, a las paradas y a la geometría del Mapa del río, a la tabla de
+    /// temporada (<see cref="SeasonTablePath"/>; tarea SE2), a las tablas de textos
     /// (<see cref="LocTables"/>; tarea L2b) y al registro de clips grabados (<see cref="AudioClipRegistry"/>; tarea AU3: lo genera
     /// antes <c>AF.EditorTools.AudioAssetSetup.Apply</c>); la UI se construye por código en tiempo de ejecución. Es la forma versionada de
     /// crear la escena (CLAUDE.md, regla dura 3).
@@ -60,6 +61,12 @@ namespace AF.UI.Editor
 
         /// <summary>Calendario de Frutas del río (<c>af-facts/1</c>; D-017; 08 §4.6; contrato 31).</summary>
         public const string FruitCalendarPath = "Assets/_Project/Data/Content/frutas_del_rio_v1.json";
+
+        /// <summary>
+        /// Tabla de temporada del cliente (<c>af-seasons/1</c>; pregunta 32 b, D-020; la genera <c>tools/level-generator --seasons</c>,
+        /// tarea SE1; la LUT de aguas altas o bajas del fondo, tarea SE2).
+        /// </summary>
+        public const string SeasonTablePath = "Assets/_Project/Data/Levels/seasons_v1.json";
 
         private const string LogPrefix = "[AF.GameSceneBuilder] ";
 
@@ -163,6 +170,13 @@ namespace AF.UI.Editor
             }
 
             bootstrap.ConfigureFruitCalendar(fruits);
+            TextAsset? seasons = AssetDatabase.LoadAssetAtPath<TextAsset>(SeasonTablePath);
+            if (seasons == null)
+            {
+                Debug.LogWarning(LogPrefix + "no existe la tabla de temporada " + SeasonTablePath + ": el juego seguirá sin LUT de temporada.");
+            }
+
+            bootstrap.ConfigureSeasons(seasons);
 
             // Tablas de textos (D-018; 08 §4.7): sin ellas el juego arranca, avisa y va sin textos (GameBootstrap).
             TextAsset? strings = AssetDatabase.LoadAssetAtPath<TextAsset>(LocTables.StringsAssetPath);
