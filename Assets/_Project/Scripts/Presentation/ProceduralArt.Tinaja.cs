@@ -263,6 +263,7 @@ namespace AF.Presentation
         private Sprite? _tinajaJirau;
         private Sprite? _tinajaPost;
         private Sprite? _tinajaAsa;
+        private Sprite? _tinajaGlow;
         private Sprite? _tinajaDryMouthCenter;
         private Sprite? _tinajaBodyClosed;
         private Sprite? _tinajaBaseCap;
@@ -313,6 +314,22 @@ namespace AF.Presentation
 
         /// <summary>Píldora de madera del chip «×n» (9 cortes en horizontal, <see cref="TinajaChipHeightDp"/> de alto).</summary>
         internal Sprite TinajaChipPill => _tinajaChipPill != null ? _tinajaChipPill : (_tinajaChipPill = BuildTinajaChipPill());
+
+        /// <summary>
+        /// Luz de la Luciérnaga dentro de la panza (TJ4; propuesta de la Tinaja, b.2 «Animación y sonido»: «la barriga se enciende
+        /// por dentro»): elipse blanca de borde muy suave, del ancho de la panza (<see cref="TinajaGlowWidthU"/> ×
+        /// <see cref="TinajaGlowHeightU"/>); el overlay la tiñe con la luz de la luciérnaga y la funde.
+        /// </summary>
+        internal Sprite TinajaGlow => _tinajaGlow != null ? _tinajaGlow : (_tinajaGlow = BuildTinajaGlow());
+
+        /// <summary>Ancho (u) de la luz de la Luciérnaga en la panza: lo ancho de la panza sin el canto.</summary>
+        public const float TinajaGlowWidthU = 2.30f;
+
+        /// <summary>Alto (u) de la luz de la Luciérnaga en la panza: de la capa de abajo al cuello.</summary>
+        public const float TinajaGlowHeightU = 5.00f;
+
+        /// <summary>Centro (u desde el pie) de la luz de la Luciérnaga en la panza.</summary>
+        public const float TinajaGlowCenterU = 2.90f;
 
         /// <summary>Jirau: dos varas atadas en las puntas (9 cortes en horizontal; se estira bajo las dos ranuras).</summary>
         internal Sprite TinajaJirau => _tinajaJirau != null ? _tinajaJirau : (_tinajaJirau = BuildTinajaJirau());
@@ -486,6 +503,114 @@ namespace AF.Presentation
             pc.FillEllipseSoft(lx, ly + (0.02f * px), TinajaOpeningRxU * px, TinajaOpeningRyU * px, 1f, TinajaOpeningFront);
             pc.FillEllipseSoft(lx, ly + (0.10f * px), TinajaOpeningRxU * px * 0.92f, TinajaOpeningRyU * px * 0.70f, 6f, TinajaOpeningDark);
             return MakeSprite(pc, "mech_tinaja_body", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        // Luz de la Luciérnaga (TJ4): elipse blanca con el borde que se apaga despacio (una luz que sale de dentro, sin canto).
+        private Sprite BuildTinajaGlow()
+        {
+            const float px = MechanicPxPerU * 0.5f; // es una luz difusa: media resolución basta
+            int w = Mathf.RoundToInt(TinajaGlowWidthU * px);
+            int h = Mathf.RoundToInt(TinajaGlowHeightU * px);
+            var pc = new PixelCanvas(w, h);
+            float cx = w * 0.5f;
+            float cy = h * 0.5f;
+            for (int y = 0; y < h; y++)
+            {
+                for (int x = 0; x < w; x++)
+                {
+                    float nx = ((x + 0.5f) - cx) / cx;
+                    float ny = ((y + 0.5f) - cy) / cy;
+                    float d = Mathf.Sqrt((nx * nx) + (ny * ny));
+                    float a = Mathf.Clamp01(1f - d);
+                    a = a * a * (3f - (2f * a)); // smoothstep: centro lleno y borde que se apaga
+                    if (a > 0f)
+                    {
+                        pc.Blend(x, y, Color.white, a);
+                    }
+                }
+            }
+
+            return MakeSprite(pc, "mech_tinaja_glow", new Vector2(0.5f, 0.5f), Vector4.zero);
+        }
+
+        /// <summary>
+        /// Icono de la Tinaja (TJ4; la tarjeta del estreno, su medallón, y la fila de iconos de una tarjeta con etiqueta) en un lienzo
+        /// cuadrado de <paramref name="s"/> px (y hacia arriba): la silueta de la vasija (<see cref="TinajaSilhouetteHalfWidthU"/>)
+        /// con su barro claro, el contorno, la línea incisa y el hueco oscuro de la boca, sin agua ni fruta (07 §3, regla 6: sin
+        /// tintes de fruta en los iconos). Su cuia no tiene icono propio: la pareja cuenta como una mecánica (02 §9.2, regla 4).
+        /// </summary>
+        internal static void DrawTinajaGlyph(PixelCanvas pc, int s)
+        {
+            float scale = 0.90f * s / TinajaTopU; // px por u
+            float cx = s * 0.5f;
+            float y0 = 0.05f * s;
+            float line = Mathf.Max(1f, 0.035f * s);
+            for (int y = 0; y < s; y++)
+            {
+                float yu = ((y + 0.5f) - y0) / scale;
+                float half = TinajaSilhouetteHalfWidthU(yu);
+                if (half <= 0f)
+                {
+                    continue;
+                }
+
+                for (int x = 0; x < s; x++)
+                {
+                    float xu = ((x + 0.5f) - cx) / scale;
+                    float dist = (Mathf.Abs(xu) - half) * scale;
+                    float cover = PixelCanvas.Coverage(dist);
+                    if (cover <= 0f)
+                    {
+                        continue;
+                    }
+
+                    float nx = Mathf.Clamp(xu / Mathf.Max(0.01f, half), -1f, 1f);
+                    Color col = Color.Lerp(Palette.TinajaClayLight, Palette.TinajaClayShade, Mathf.SmoothStep(0f, 1f, (nx + 0.55f) / 1.5f));
+                    if (Mathf.Abs(yu - TinajaIncisedLineU) * scale < 0.6f * line)
+                    {
+                        col = Color.Lerp(col, TinajaClayLine, 0.6f);
+                    }
+
+                    col = Color.Lerp(col, TinajaClayLine, Mathf.Clamp01(1f - ((-dist) / line)));
+                    col.a = 1f;
+                    pc.Blend(x, y, col, cover);
+                }
+            }
+
+            float ly = y0 + (TinajaLipCenterU * scale);
+            pc.FillEllipseSoft(cx, ly, TinajaOpeningRxU * scale, TinajaOpeningRyU * scale, 1f, TinajaOpeningFront);
+            pc.FillEllipseSoft(cx, ly + (0.06f * scale), TinajaOpeningRxU * scale * 0.88f, TinajaOpeningRyU * scale * 0.66f, 1.5f, TinajaOpeningDark);
+        }
+
+        /// <summary>
+        /// Mide el dibujo de la vasija de <see cref="DrawTinajaGlyph"/> en un lienzo de <paramref name="s"/> px (tests de TJ4: las
+        /// texturas generadas no se pueden leer): x = píxeles con alfa &gt; 0,5, y = ancho y z = alto de su caja (px).
+        /// </summary>
+        public static Vector3Int MeasureTinajaGlyph(int s)
+        {
+            var pc = new PixelCanvas(s, s);
+            DrawTinajaGlyph(pc, s);
+            int opaque = 0;
+            int minX = s;
+            int maxX = -1;
+            int minY = s;
+            int maxY = -1;
+            for (int y = 0; y < s; y++)
+            {
+                for (int x = 0; x < s; x++)
+                {
+                    if (pc.Get(x, y).a > 0.5f)
+                    {
+                        opaque++;
+                        minX = Mathf.Min(minX, x);
+                        maxX = Mathf.Max(maxX, x);
+                        minY = Mathf.Min(minY, y);
+                        maxY = Mathf.Max(maxY, y);
+                    }
+                }
+            }
+
+            return opaque == 0 ? Vector3Int.zero : new Vector3Int(opaque, maxX - minX + 1, maxY - minY + 1);
         }
 
         // Tapa de la base (TJ3): elipse blanca con un borde de TinajaBaseCapRimU al 85 % (gris; el tinte del overlay la oscurece).

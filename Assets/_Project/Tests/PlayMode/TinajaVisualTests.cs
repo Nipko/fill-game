@@ -162,9 +162,14 @@ namespace AF.Tests.PlayMode
             CuiaView view = _rig.Views[TinajaIndex];
             AssertNotMurky(view, board[TinajaIndex], "al cargar");
 
-            // El revelado de Aguas turbias no corre en la tinaja: ni por la regla ni con la Luciérnaga (su boca la anima TJ3).
+            // El revelado de Aguas turbias no corre en la tinaja: ni por la regla (su boca la anima TJ3) ni con la Luciérnaga, que
+            // enciende su barriga y saca sus capas como bandas (TJ4), nunca con el pardo ni el «?».
             Assert.That(view.PlayReveal(0b11, RevealStyle.Rule), Is.EqualTo(0f));
-            Assert.That(view.PlayReveal(0b11, RevealStyle.Firefly), Is.EqualTo(0f));
+            Assert.That(view.MarksAnimating, Is.False);
+            Assert.That(view.PlayReveal(0b11, RevealStyle.Firefly), Is.EqualTo(TinajaOverlay.FireflyMs).Within(1e-3f), "TJ4: la luz de la luciérnaga");
+            Assert.That(view.MarksAnimating, Is.True);
+            AssertNotMurky(view, board[TinajaIndex], "con la Luciérnaga");
+            view.SnapMarks();
             Assert.That(view.MarksAnimating, Is.False);
             AssertNotMurky(view, board[TinajaIndex], "tras pedir un revelado");
 

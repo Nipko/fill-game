@@ -1042,6 +1042,7 @@ namespace AF.UI
             // tarjeta del miquito queda pendiente hasta que la tropa se vaya (GameScreen.Notices.cs).
             LevelFlow ready = RequireFlow();
             MaybeShowTutorial(ready); // la instrucción del tutorial con TiTino en 1, 2, 3 y 6 (TU1a), la primera de la cola
+            MaybeShowTinajaTip(ready); // el consejo del segundo tablero del estreno de la Tinaja (324 [P]; TJ4)
             MaybeShowFruitNew(ready); // «Fruta nueva» en el estreno de un tinte (F5), antes que el miquito y el rótulo
             MaybeShowSighting(ready);
             ShowRevealGiftIfReady(ready);

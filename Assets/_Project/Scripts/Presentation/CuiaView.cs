@@ -442,6 +442,12 @@ namespace AF.Presentation
             }
         }
 
+        // El overlay de la Tinaja de esta cuia, si lo tiene (sin asignaciones).
+        private TinajaOverlay? TinajaOf()
+        {
+            return OverlayOf(MechanicType.Tinaja) as TinajaOverlay;
+        }
+
         /// <summary>Overlay de la mecánica <paramref name="type"/> de esta cuia (null si nunca se creó o aún no tiene tablero).</summary>
         public CuiaOverlay? OverlayOf(MechanicType type)
         {
@@ -472,10 +478,18 @@ namespace AF.Presentation
         /// Revelado animado de las capas <paramref name="layerMask"/> (paso Reveal de la cola con <see cref="RevealStyle.Rule"/>;
         /// la Luciérnaga con <see cref="RevealStyle.Firefly"/>): delega en <see cref="MurkyMarks.PlayReveal"/> con el tinte real
         /// de cada capa del estado mostrado. Las capas se ven turbias desde este fotograma. Devuelve la duración (ms) ya
-        /// multiplicada por <paramref name="speedFactor"/>, o 0.
+        /// multiplicada por <paramref name="speedFactor"/>, o 0. En la Tinaja (TJ4), la Luciérnaga no aclara agua turbia (no la
+        /// hay, contrato 27): la barriga se enciende por dentro y sus capas salen como bandas (<see cref="TinajaOverlay.PlayFirefly"/>,
+        /// con <paramref name="reduceMotion"/>); la regla de la cola ya la anima su overlay (TJ3).
         /// </summary>
-        public float PlayReveal(int layerMask, RevealStyle style, float speedFactor = 1f)
+        public float PlayReveal(int layerMask, RevealStyle style, float speedFactor = 1f, bool reduceMotion = false)
         {
+            if (style == RevealStyle.Firefly && !MurkyMarks.IsMurkyWater(_shownCuia))
+            {
+                TinajaOverlay? tinaja = TinajaOf();
+                return tinaja != null ? tinaja.PlayFirefly(layerMask, _shownCuia, speedFactor, reduceMotion) : 0f;
+            }
+
             float ms = _murky.PlayReveal(_liquid, layerMask, style, _shownCuia, speedFactor);
             if (ms > 0f)
             {
@@ -510,12 +524,19 @@ namespace AF.Presentation
         /// <summary>Duración nominal (ms, sin factor) del lavado del barro (<see cref="MudMarks.WashDurationMs"/>).</summary>
         public float MudWashStepMs => _mud.WashDurationMs;
 
-        /// <summary>Las marcas de turbias o de barro están animando un paso.</summary>
-        public bool MarksAnimating => _murky.IsAnimating || _mud.IsAnimating;
+        /// <summary>
+        /// Las marcas de turbias o de barro están animando un paso, o la Luciérnaga está revelando la tinaja
+        /// (<see cref="TinajaOverlay.FireflyAnimating"/>; TJ4).
+        /// </summary>
+        public bool MarksAnimating => _murky.IsAnimating || _mud.IsAnimating || (TinajaOf()?.FireflyAnimating ?? false);
 
-        /// <summary>Termina en el acto el revelado o el lavado en curso (el <c>ShowContent</c> del final del paso cierra).</summary>
+        /// <summary>
+        /// Termina en el acto el revelado o el lavado en curso, también el de la Luciérnaga en la tinaja (el <c>ShowContent</c> del
+        /// final del paso cierra).
+        /// </summary>
         public void SnapMarks()
         {
+            TinajaOf()?.SnapFirefly();
             _murky.Snap();
             _mud.Snap();
         }

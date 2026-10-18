@@ -117,7 +117,7 @@ namespace AF.UI
         /// <summary>
         /// Tutorial de una pantalla del estreno <paramref name="introMechanic"/> (<c>intro_mechanic</c> de D-007), o null si no es
         /// ninguno de los 11 de 1-200 ni de las variantes con cliente (Liana de cuenta y Hoja atada, VA1a; Brote de dos hojas y
-        /// Flor de vitória-régia, VA1b).
+        /// Flor de vitória-régia, VA1b) ni la Tinaja (323, TJ4: su línea 1; la 2, <see cref="TutorialTinajaScoop"/>).
         /// </summary>
         public static string? Tutorial(string? introMechanic)
         {
@@ -138,6 +138,7 @@ namespace AF.UI
                 case LevelCardInfo.BroteTwoLeavesIntro: return TutorialBroteN2;
                 case LevelCardInfo.FlorIntro: return TutorialFlor;
                 case "pirana": return TutorialPirana;
+                case TinajaTutorial.IntroMechanic: return TutorialTinaja; // la línea 2 va en su renglón (LevelCardView; TJ4)
                 default: return null;
             }
         }

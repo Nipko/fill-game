@@ -208,6 +208,31 @@ namespace AF.Presentation.Mechanics
         /// <summary>Reducir movimiento: fundidos de 0,25 s (b.2, «Reducir movimiento»).</summary>
         public const float ReducedFadeMs = 250f;
 
+        /// <summary>
+        /// La Luciérnaga en la tinaja (TJ4; 04 §2.5; propuesta de la Tinaja, b.2 «Animación y sonido»: «entra por la boca; la
+        /// barriga se enciende por dentro y muestra sus capas como bandas», 0,6 s): lo mismo que el revelado de las turbias
+        /// (<see cref="MurkyMarks.RevealFireflyMs"/>), sin el pardo ni el «?».
+        /// </summary>
+        public const float FireflyMs = MurkyMarks.RevealFireflyMs;
+
+        /// <summary>La luz de dentro sube en estos ms al posarse la luciérnaga [P].</summary>
+        public const float FireflyGlowInMs = 150f;
+
+        /// <summary>Y se apaga en los últimos ms del revelado [P].</summary>
+        public const float FireflyGlowOutMs = 200f;
+
+        /// <summary>Opacidad máxima de la luz de dentro sobre el barro [P].</summary>
+        public const float FireflyGlowAlpha = 0.55f;
+
+        /// <summary>La luz baja desde la boca: la banda de arriba empieza a encenderse aquí… [P]</summary>
+        public const float FireflyFrontStartMs = 100f;
+
+        /// <summary>…y la de más abajo, aquí; cada banda se enciende en <see cref="FireflyBandFadeMs"/> [P].</summary>
+        public const float FireflyFrontEndMs = 420f;
+
+        /// <summary>Fundido de cada banda al pasar la luz [P].</summary>
+        public const float FireflyBandFadeMs = 120f;
+
         // Qué tintes llevan contorno en su banda (índice = tinte): se calcula una vez, sin asignaciones en Show.
         private static readonly bool[] s_bandRim = BuildBandRims();
 
@@ -278,6 +303,16 @@ namespace AF.Presentation.Mechanics
         private Image _bodyFlip = null!;
         private Sprite _bodyOpen = null!;
         private Sprite _bodyClosed = null!;
+
+        // TJ4: la Luciérnaga (la luz de dentro y las capas que se encienden de arriba abajo).
+        private Image _glow = null!;
+        private bool _firefly;
+        private float _fireflyT;
+        private float _fireflySpeed = 1f;
+        private bool _fireflyReduce;
+        private int _fireflyMask;
+        private int _fireflyLayers;
+        private Cuia _fireflyCuia;
 
         /// <inheritdoc />
         public override MechanicType Type => MechanicType.Tinaja;
@@ -467,6 +502,18 @@ namespace AF.Presentation.Mechanics
         /// <summary>Rectángulo de la tapa de la base (u desde el centro del pie; tests y capturas).</summary>
         public Rect BaseCapRectU => RectU(_baseCap.rectTransform);
 
+        /// <summary>La Luciérnaga está revelando la tinaja (<see cref="PlayFirefly"/>; TJ4).</summary>
+        public bool FireflyAnimating => _firefly;
+
+        /// <summary>Capas que revela la Luciérnaga en curso (0 sin revelado; tests).</summary>
+        public int FireflyMask => _firefly ? _fireflyMask : 0;
+
+        /// <summary>Opacidad de la luz de dentro (0 apagada; tests y capturas).</summary>
+        public float GlowAlpha => _glow.gameObject.activeSelf ? _glow.color.a : 0f;
+
+        /// <summary>Rectángulo de la luz de dentro (u desde el pie y el eje; tests).</summary>
+        public Rect GlowRectU => RectU(_glow.rectTransform);
+
         /// <summary>
         /// El cuerpo enseña el hueco oscuro de la boca (boca arriba). Boca abajo, y desde la mitad del vuelco, el cuerpo es el
         /// cerrado: sin hueco, con el arco del canto del labio abajo (revisión de TJ3).
@@ -637,6 +684,7 @@ namespace AF.Presentation.Mechanics
             OverlayParts.Place(_mouthGloss, 0f, ProceduralArt.TinajaMouthCenterU, ProceduralArt.TinajaMouthWidthU, ProceduralArt.TinajaMouthHeightU, u);
             OverlayParts.Place(_mouthGlyph, 0f, ProceduralArt.TinajaMouthCenterU, ProceduralArt.TinajaMouthGlyphU, ProceduralArt.TinajaMouthGlyphU, u);
             OverlayParts.Place(_dryCenter, 0f, ProceduralArt.TinajaMouthCenterU, ProceduralArt.TinajaMouthWidthU, ProceduralArt.TinajaMouthHeightU, u);
+            OverlayParts.Place(_glow, 0f, ProceduralArt.TinajaGlowCenterU, ProceduralArt.TinajaGlowWidthU, ProceduralArt.TinajaGlowHeightU, u);
             for (int k = 0; k < MaxBands; k++)
             {
                 float y = BandCenterU(k);
@@ -668,6 +716,19 @@ namespace AF.Presentation.Mechanics
             {
                 _stepT += dtMs;
                 ApplyStep();
+            }
+
+            if (_firefly)
+            {
+                _fireflyT += dtMs;
+                if (_fireflyT >= (_fireflyReduce ? ReducedFadeMs : FireflyMs) * _fireflySpeed)
+                {
+                    EndFirefly(false); // la pantalla pinta enseguida lo revelado (GameScreen.Reveal.cs: PaintRevealed)
+                }
+                else
+                {
+                    ApplyFirefly();
+                }
             }
 
             if (_dryFadeT >= 0f)
@@ -994,6 +1055,7 @@ namespace AF.Presentation.Mechanics
             _bodyClosed = Host.Art.TinajaBodyClosed;
             _body = OverlayParts.NewImage("TinajaBody", Host.BodyFront, _bodyOpen, Color.white);
             _bodyFlip = OverlayParts.NewImage("TinajaBodyFlip", Host.BodyFront, _bodyClosed, Color.white); // Reducir movimiento (TJ3)
+            _glow = OverlayParts.NewImage("TinajaGlow", Host.BodyFront, Host.Art.TinajaGlow, Color.clear); // la Luciérnaga (TJ4), bajo las bandas
             for (int k = 0; k < MaxBands; k++)
             {
                 _bands[k] = OverlayParts.NewImage("TinajaBand" + k, Host.BodyFront, Host.Art.TinajaBand, Color.white);
@@ -1026,6 +1088,163 @@ namespace AF.Presentation.Mechanics
             PlaceChipGlyph(_chipDigit, 0.5f * ChipGlyphStepDp);
             OverlayParts.SetVisible(_chipTimes, true); // cuelgan del chip: se ven y se ocultan con él
             OverlayParts.SetVisible(_chipDigit, true);
+        }
+
+        /// <summary>
+        /// La Luciérnaga revela la tinaja (TJ4; 04 §2.5: «revela todas las capas ocultas de la tinaja»; propuesta de la Tinaja, b.2
+        /// «Animación y sonido»): con la luciérnaga ya posada en la boca, la barriga se enciende por dentro
+        /// (<see cref="FireflyGlowAlpha"/>, con la luz de la luciérnaga) y las capas <paramref name="layerMask"/> de
+        /// <paramref name="shown"/> (el estado mostrado, con el tinte real de cada capa) se encienden como bandas de arriba abajo,
+        /// en <see cref="FireflyMs"/> × <paramref name="speedFactor"/>. Con Reducir movimiento, sin luz: las bandas a la vez en un
+        /// fundido de <see cref="ReducedFadeMs"/>. Devuelve la duración (ms, con el factor), o 0 si no hay nada que enseñar (sin
+        /// el cuerpo de la vasija, en release hasta el arte, el vidrio enseña lo revelado al pintarse; sin capas ocultas bajo la
+        /// boca). Nunca pinta el pardo ni el «?» (contrato 27). Al terminar, las bandas quedan encendidas y la pantalla pinta lo
+        /// revelado. Sin asignaciones.
+        /// </summary>
+        public float PlayFirefly(int layerMask, Cuia shown, float speedFactor, bool reduceMotion)
+        {
+            if (!Visible || !_artShown || shown.Mechanic != MechanicType.Tinaja || shown.Count < 2)
+            {
+                return 0f;
+            }
+
+            int under = (1 << Mathf.Min(MaxBands, shown.Count - 1)) - 1; // las capas bajo la boca, donde van las bandas
+            int layers = layerMask & shown.HiddenMask & under;
+            if (layers == 0)
+            {
+                return 0f;
+            }
+
+            SnapFirefly();
+            _firefly = true;
+            _fireflyT = 0f;
+            _fireflySpeed = Mathf.Max(0.01f, speedFactor);
+            _fireflyReduce = reduceMotion;
+            _fireflyMask = layers;
+            _fireflyCuia = shown;
+            int n = 0;
+            for (int k = 0; k < MaxBands; k++)
+            {
+                n += (layers >> k) & 1;
+            }
+
+            _fireflyLayers = n;
+            ApplyFirefly();
+            return (reduceMotion ? ReducedFadeMs : FireflyMs) * _fireflySpeed;
+        }
+
+        /// <summary>
+        /// Termina en el acto el revelado de la Luciérnaga (otro vertido, Marea, Volver a la orilla o fuera de PLAYING): sin luz y
+        /// la tinaja con su último estado mostrado (la pantalla pinta después el que le toca). Sin revelado, nada.
+        /// </summary>
+        public void SnapFirefly()
+        {
+            if (_firefly)
+            {
+                EndFirefly(true);
+            }
+        }
+
+        // Un fotograma de la Luciérnaga, en ms nominales: la luz de dentro sube, se mantiene y se apaga; cada capa se enciende cuando
+        // la luz baja hasta ella (la de arriba primero). Show puede repintar el estado de antes mientras dura: esto lo vuelve a
+        // poner encima en cada fotograma.
+        private void ApplyFirefly()
+        {
+            float x = _fireflyT / _fireflySpeed;
+            float glow = 0f;
+            if (!_fireflyReduce)
+            {
+                float up = Mathf.Clamp01(x / FireflyGlowInMs);
+                float down = Mathf.Clamp01((FireflyMs - x) / FireflyGlowOutMs);
+                glow = FireflyGlowAlpha * Mathf.Min(up, down);
+            }
+
+            OverlayParts.SetVisible(_glow, glow > 0f);
+            if (glow > 0f)
+            {
+                OverlayParts.SetColor(_glow, OverlayParts.Fade(ProceduralArt.FireflyLit, glow));
+            }
+
+            int rank = 0;
+            float span = FireflyFrontEndMs - FireflyFrontStartMs;
+            for (int k = MaxBands - 1; k >= 0; k--)
+            {
+                if (((_fireflyMask >> k) & 1) == 0)
+                {
+                    continue;
+                }
+
+                float start = _fireflyReduce ? 0f : FireflyFrontStartMs + (_fireflyLayers > 1 ? rank * span / (_fireflyLayers - 1) : 0f);
+                float fade = _fireflyReduce ? ReducedFadeMs : FireflyBandFadeMs;
+                SetFireflyBand(k, Mathf.Clamp01((x - start) / fade));
+                rank++;
+            }
+        }
+
+        // Banda k encendida con opacidad a (0 = apagada): el tinte real de la capa, su filo de luz, su contorno y su icono.
+        private void SetFireflyBand(int k, float a)
+        {
+            bool on = a > 0f;
+            Image img = _bands[k];
+            Image glyph = _bandGlyphs[k];
+            OverlayParts.SetVisible(img, on);
+            OverlayParts.SetVisible(_bandLights[k], on);
+            OverlayParts.SetVisible(glyph, on);
+            int bt = _fireflyCuia.ColorAt(k);
+            bool rim = on && BandNeedsRim(bt);
+            OverlayParts.SetVisible(_bandRims[k], rim);
+            if (!on)
+            {
+                return;
+            }
+
+            Color c = Palette.Tint(bt);
+            c.a = a;
+            OverlayParts.SetColor(img, c);
+            OverlayParts.SetColor(_bandLights[k], OverlayParts.Fade(BandEdgeLight, a));
+            if (rim)
+            {
+                Color r = ColorMath.Darken(Palette.Tint(bt), BandRimDarken);
+                r.a = a;
+                OverlayParts.SetColor(_bandRims[k], r);
+            }
+
+            Sprite gs = Host.Art.TinajaGlyph(bt);
+            if (glyph.sprite != gs)
+            {
+                glyph.sprite = gs;
+            }
+
+            OverlayParts.SetColor(glyph, new Color(1f, 1f, 1f, a));
+        }
+
+        // Fin de la Luciérnaga: sin luz, cada pieza con su color de reposo y, con repaint, la tinaja con su último estado. Sin
+        // repaint (fin natural), las bandas reveladas quedan encendidas hasta que la pantalla pinte el estado revelado.
+        private void EndFirefly(bool repaint)
+        {
+            _firefly = false;
+            OverlayParts.SetVisible(_glow, false);
+            for (int k = 0; k < MaxBands; k++)
+            {
+                if (((_fireflyMask >> k) & 1) == 0)
+                {
+                    continue;
+                }
+
+                if (!repaint)
+                {
+                    SetFireflyBand(k, 1f);
+                }
+
+                OverlayParts.SetColor(_bandLights[k], BandEdgeLight);
+                OverlayParts.SetColor(_bandGlyphs[k], Color.white);
+            }
+
+            _fireflyMask = 0;
+            if (repaint && _hasLast && AttachedHost != null)
+            {
+                Show(_last, _lastSealed);
+            }
         }
 
         private void Begin(MechanicStepKind kind, float speed, bool reduce)

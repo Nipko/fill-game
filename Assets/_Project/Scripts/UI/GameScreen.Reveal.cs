@@ -15,19 +15,22 @@ namespace AF.UI
     /// Parcial de la Luciérnaga · Revelar (arquitectura del paso 1, §7; tarea T14; 04 §2.5; 07 §7.4 y §7.6; 02 §5), sin editar
     /// GameScreen.cs:
     /// <list type="bullet">
-    /// <item><description><b>Bandeja</b>: la ranura Revelar (<see cref="BoosterTray"/>) existe solo en los niveles de Aguas
-    /// turbias mientras quede alguna dosis oculta y desaparece (la bandeja se recentra) cuando no queda ninguna; su insignia
+    /// <item><description><b>Bandeja</b>: la ranura Revelar (<see cref="BoosterTray"/>) existe solo en los niveles con dosis
+    /// ocultas (<see cref="AF.Levels.LevelDefinition.HasHiddenDoses"/>: los de Aguas turbias y, desde D-019, los de la Tinaja; 04
+    /// §2.5 y 02 §5; tarea TJ4) mientras quede alguna y desaparece (la bandeja se recentra) cuando no queda ninguna; su insignia
     /// lleva el stock, el precio o el video (<see cref="RefreshRevealBadge"/>). Al aparecer o desaparecer, AF_LAYOUT se vuelve a
     /// emitir con el botón <c>reveal</c>, y también cuando aparece otra ranura después de emitirlo (la Cuia extra, en el primer
     /// fotograma del nivel): los botones de la bandeja se recolocan.</description></item>
-    /// <item><description><b>Selección</b> (<see cref="OnRevealSelection"/>): las cuias turbias laten con un aro de luz
+    /// <item><description><b>Selección</b> (<see cref="OnRevealSelection"/>): las cuias turbias (o la tinaja, D-019) laten con un aro de luz
     /// (<see cref="RevealPulse"/>, en la capa de mecánicas delantera). Es la única excepción a D-002, y solo en este modo; el
     /// botón se queda pulsado y otro toque en él cancela. Los toques los enruta LevelFlow (T10).</description></item>
     /// <item><description><b>Revelado</b> (<see cref="OnRevealed"/>, con lo revelado ya aplicado, guardado y cobrado): la
     /// luciérnaga sale del botón y se posa en el borde de la cuia (<see cref="RevealFireflyFx"/>), y entonces su luz baja por
     /// el vidrio: <c>CuiaView.PlayReveal(mask, RevealStyle.Firefly)</c>, el pardo que se aclara de arriba abajo en 0,6 s ×
-    /// factor y cada «?» que gira y muestra su fruta (T15). Al terminar, la cola registra la cuia revelada
-    /// (<c>BoardAnimator.ShowContent</c>).</description></item>
+    /// factor y cada «?» que gira y muestra su fruta (T15). En la tinaja (TJ4) se posa en su boca y no hay agua turbia que aclarar:
+    /// la barriga se enciende por dentro y sus capas salen como bandas de arriba abajo en el mismo tiempo
+    /// (<c>TinajaOverlay.PlayFirefly</c>). Al terminar, la cola registra la cuia revelada (<c>BoardAnimator.ShowContent</c>). Nunca
+    /// se cobra sin efecto: el toque en una cuia sin ocultas (también su cuia chica) cancela sin coste (LevelFlow.Reveal.cs).</description></item>
     /// <item><description><b>Regalo</b> (<see cref="OnRevealGifted"/>, nivel 100): el aviso «+1 Luciérnaga» sale al habilitarse
     /// el toque, tras la tarjeta previa (LEVEL_CARD), si la hay, y la intro, por la cola de avisos (D-011, punto 2;
     /// GameScreen.Notices.cs).</description></item>
@@ -335,7 +338,7 @@ namespace AF.UI
             if (e == RevealFireflyEvent.Landed && !_revealMarks)
             {
                 _revealMarks = true;
-                if (view.PlayReveal(_revealMask, RevealStyle.Firefly, _revealSpeed) <= 0f)
+                if (view.PlayReveal(_revealMask, RevealStyle.Firefly, _revealSpeed, flow.ReduceMotion) <= 0f)
                 {
                     PaintRevealed(flow); // nada que aclarar (la vista ya no lo tenía oculto)
                 }
@@ -421,11 +424,12 @@ namespace AF.UI
             SyncRevealSlot(flow, true);
         }
 
-        // La ranura existe en un nivel turbio con alguna oculta; si la última se reveló con la Luciérnaga, espera a que la
-        // luciérnaga termine para irse (sale de ese botón). Al aparecer o desaparecer, AF_LAYOUT se vuelve a emitir (emit).
+        // La ranura existe en un nivel con dosis ocultas (Aguas turbias o la Tinaja: HasHiddenDoses, el murky del paquete; 04 §2.5;
+        // TJ4) con alguna oculta todavía; si la última se reveló con la Luciérnaga, espera a que la luciérnaga termine para irse
+        // (sale de ese botón). Al aparecer o desaparecer, AF_LAYOUT se vuelve a emitir (emit).
         private void SyncRevealSlot(LevelFlow? flow, bool emit)
         {
-            bool want = flow != null && flow.HasLevel && flow.Level.IsMurky && flow.Session.HiddenCount > 0;
+            bool want = flow != null && flow.HasLevel && flow.Level.HasHiddenDoses && flow.Session.HiddenCount > 0;
             if (!want && flow != null && _revealCuia >= 0 && flow.Phase == FlowPhase.Playing)
             {
                 want = _tray.RevealShown;
@@ -510,11 +514,15 @@ namespace AF.UI
             return BoardPoint(rt.TransformPoint(new Vector3(r.center.x, r.yMax - 10f, 0f)));
         }
 
-        // Dónde se posa: sobre el borde de la boca (con la cuia elevada, también), del lado por el que llega.
+        // Dónde se posa: sobre el borde de la boca (con la cuia elevada, también), del lado por el que llega. En la tinaja con su
+        // vasija (TJ4; b.2: «entra por la boca»), sobre el labio de la vasija, que es más alto que el vidrio.
         private static Vector2 RevealPerch(CuiaView view, Vector2 from)
         {
             float u = view.Unit;
-            Vector2 rim = view.FootPosition + view.BodyOffset + new Vector2(0f, view.HeightU * u);
+            float top = view.OverlayOf(AF.Core.Mechanics.MechanicType.Tinaja) is TinajaOverlay jar && jar.BodyVisible
+                ? Mathf.Max(view.HeightU, ProceduralArt.TinajaTopU)
+                : view.HeightU;
+            Vector2 rim = view.FootPosition + view.BodyOffset + new Vector2(0f, top * u);
             return RevealFireflyFx.PerchFor(rim, u, from.x <= rim.x ? -1f : 1f);
         }
 

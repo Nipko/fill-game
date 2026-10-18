@@ -297,6 +297,7 @@ namespace AF.UI
         private int _hitoLines;
         private PiranaBiteDemo? _bite;
         private bool _biteOn;
+        private bool _scoopLine;
         private LevelCardInfo? _card;
         private int _iconCount;
         private float _fontScale = 1f;
@@ -517,7 +518,16 @@ namespace AF.UI
         public float TextBoxWidth => _textBoxWidth;
 
         /// <summary>Línea de la Luciérnaga, o null si no se ve.</summary>
-        public string? FireflyText => _firefly.gameObject.activeSelf ? _firefly.text : null;
+        public string? FireflyText => _firefly.gameObject.activeSelf && !_scoopLine ? _firefly.text : null;
+
+        /// <summary>
+        /// Línea 2 del tutorial de la Tinaja («Saca el agua con su cuia chica…»; 02 §9.1 M13; TJ4), en el renglón de la línea de la
+        /// Luciérnaga, o null si no se ve.
+        /// </summary>
+        public string? ScoopText => _firefly.gameObject.activeSelf && _scoopLine ? _firefly.text : null;
+
+        /// <summary>El renglón bajo el tutorial (la línea de la Luciérnaga o la línea 2 de la Tinaja; null si no se ve; tests).</summary>
+        public TextMeshProUGUI? SecondLine => _firefly.gameObject.activeSelf ? _firefly : null;
 
         /// <summary>«+1 Luciérnaga», o null si no se ve.</summary>
         public string? GiftText => _gift.gameObject.activeSelf ? _giftText.text : null;
@@ -748,9 +758,13 @@ namespace AF.UI
             _tutorial.text = _tutorialSource;
             _divider.gameObject.SetActive(labeled && tutorial != null);
 
-            // Luciérnaga (04 §2.5): la línea en el estreno de las turbias y «+1 Luciérnaga» cuando se regaló al cargar.
-            bool fireflyLine = card.RevealGifted || string.Equals(intro, LevelFlow.MurkyIntroMechanic, StringComparison.Ordinal);
-            _firefly.gameObject.SetActive(fireflyLine);
+            // Luciérnaga (04 §2.5): la línea en el estreno de las turbias y «+1 Luciérnaga» cuando se regaló al cargar. En el
+            // estreno de la Tinaja (02 §9.1 M13; TJ4), ese renglón lleva la línea 2 de su tutorial, la de su cuia chica: cada una de
+            // las dos líneas canónicas cabe así en 2 líneas a 360 dp (las dos juntas no caben ni a 12 sp).
+            _scoopLine = TinajaTutorial.IsDebut(intro);
+            bool fireflyLine = !_scoopLine && (card.RevealGifted || string.Equals(intro, LevelFlow.MurkyIntroMechanic, StringComparison.Ordinal));
+            _firefly.text = _scoopLine ? UiText.TutorialTinajaScoop : UiText.FireflyLine;
+            _firefly.gameObject.SetActive(fireflyLine || _scoopLine);
             _gift.gameObject.SetActive(card.RevealGifted);
             if (card.RevealGifted)
             {
