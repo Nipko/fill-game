@@ -9,7 +9,7 @@ namespace AF.Tests.EditMode
 {
     /// <summary>
     /// Peso del AAB del juego por grupo (tarea B2): cada entrada del Build Report cae en un solo grupo, los assets se cuentan
-    /// una vez por ruta y los MB suman todas sus entradas.
+    /// una vez por grupo y ruta (y una vez por ruta en el total) y los MB suman todas sus entradas.
     /// </summary>
     public sealed class AabSizeReportTests
     {
@@ -70,6 +70,27 @@ namespace AF.Tests.EditMode
             Assert.That(report, Does.Contain("| Arte | 0 | 0.00 | 0.0 |"));
             Assert.That(report, Does.Contain("| **Datos empaquetados** | 5 | **10.00** | 100.0 |"));
             Assert.That(report, Does.Contain("AAB: 40.00 MB"));
+        }
+
+        [Test]
+        public void Report_CountsAssetInEachGroupItSpans_AndSkipsEntriesWithoutPath()
+        {
+            var contents = new List<PackedEntry>
+            {
+                // Un mismo .asset con una textura (Arte) y un ScriptableObject (Otros): reparte MB y cuenta en los dos grupos.
+                new PackedEntry("Assets/Settings/Atlas.asset", typeof(Texture2D), 3000000),
+                new PackedEntry("Assets/Settings/Atlas.asset", typeof(ScriptableObject), 1000000),
+                // Entradas sin ruta: suman MB en los recursos integrados, pero no son assets.
+                new PackedEntry(string.Empty, typeof(Shader), 500000),
+                new PackedEntry(string.Empty, null, 500000),
+            };
+
+            string report = AabSizeReport.Report(contents, 10000000);
+
+            Assert.That(report, Does.Contain("| Arte | 1 | 3.00 | 60.0 |"));
+            Assert.That(report, Does.Contain("| Otros | 1 | 1.00 | 20.0 |"));
+            Assert.That(report, Does.Contain("| Recursos integrados de Unity | 0 | 1.00 | 20.0 |"));
+            Assert.That(report, Does.Contain("| **Datos empaquetados** | 1 | **5.00** | 100.0 |"));
         }
     }
 }

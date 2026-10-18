@@ -21,6 +21,7 @@ Fecha: 2026-10-18 · Ejecutado por: agente (build-release) · Base: `integracion
 |---|---|---|
 | `unity run <wt> --architecture x86_64 --log-file Logs/b2-smoke.log --no-tail --timeout 5400 --non-interactive -- -nographics -buildTarget Android -executeMethod AF.EditorTools.BuildSmoke.BuildAndroid` | 0 | AAB en 245,1 s y APK en 14,6 s, sin errores |
 | `unity run <wt> --architecture x86_64 --log-file Logs/b2-game-aab.log ... -executeMethod AF.EditorTools.AudioAssetSetup.BuildGameAab` | 0 | `game.aab` en 35,7 s (incremental), más `Logs/audio-size.md` y `Logs/aab-size.md` |
+| Ídem tras la revisión (`Logs/b2-game-aab-2.log`), con el recuento de assets por grupo y ruta | 0 | `game.aab` de 51.869.066 bytes (51,87 MB, igual) y `Logs/aab-size.md` de nuevo |
 | `pwsh ci/size-gate.ps1 Builds/Android/smoke.aab -Breakdown -RequireBundletool -Bundletool <bundletool-all-1.17.2.jar del Editor>` | 0 | archivo 40,03 MB y Play 38,95-38,96 MB |
 | `pwsh ci/size-gate.ps1 Builds/Android/game.aab -Breakdown -RequireBundletool -Bundletool <ídem>` | 0 | archivo 51,87 MB y Play 50,79-50,80 MB |
 | `CHECK16_REQUIRE_ZIPALIGN=1 BUNDLETOOL_JAR=<ídem> ZIPALIGN=<build-tools 36.0.0> bash ci/check-16kb.sh smoke.aab smoke.apk` | 0 | 14 `.so` de 64 bits y 0 fallos |
@@ -61,11 +62,11 @@ Nota: `BuildSmoke` escribe `tamano=38.18 MB` en MiB. La compuerta, como Play Con
 | Shaders y materiales | 8 | 0,09 | 0,2 | — |
 | Escenas y scripts | 326 | 0,03 | 0,1 | — |
 | Paquetes (URP, TextMeshPro, Input System…) | 2.326 | 5,92 | 17,0 | — |
-| Recursos integrados de Unity | 4 | 3,33 | 9,6 | — |
-| Otros | 11 | 0,03 | 0,1 | — |
-| **Datos empaquetados** | 2.883 | **34,76** | 100 | |
+| Recursos integrados de Unity | 3 | 3,33 | 9,6 | — |
+| Otros | 12 | 0,03 | 0,1 | — |
+| **Datos empaquetados** | 2.882 | **34,76** | 100 | |
 
-Los MB empaquetados son los bytes serializados antes de comprimir el AAB: el audio Vorbis apenas se comprime, y los JSON y los atlas sí. Las fuentes pesan 6,88 MB sin comprimir, cuatro veces y media lo estimado: es el primer candidato a recortar si hace falta sitio.
+La columna Assets cuenta las rutas distintas de cada grupo: un asset con entradas en dos grupos (en este build, uno de `Otros`) cuenta en los dos y una vez en el total, y las entradas sin ruta suman MB pero no cuentan como asset. Los MB empaquetados son los bytes serializados antes de comprimir el AAB: el audio Vorbis apenas se comprime, y los JSON y los atlas sí. Las fuentes pesan 6,88 MB sin comprimir, cuatro veces y media lo estimado: es el primer candidato a recortar si hace falta sitio.
 
 ## Frente a B0 y al AAB de 35 MB
 
@@ -99,13 +100,27 @@ Lo esperable en esta fase: hasta el visto bueno del asesor cultural y las traduc
 
 - **`ci/size-gate.ps1`:**
   - `-Breakdown` escribe el desglose de cada `.aab` por grupo: código nativo, datos de Unity, dex, recursos de Android, metadatos y cada asset pack. Solo informa y no cambia el veredicto.
-  - Un `.aab` ilegible con `-Breakdown` sale con 2.
+  - Un `.aab` ilegible con `-Breakdown` sale con 2 (consta en el uso y en el código 2 de la cabecera).
   - La cabecera dice qué AAB mide la compuerta.
-- **`Assets/_Project/Editor/CI/AabSizeReport.cs`** (nuevo): clasifica el contenido del Build Report por grupo. `AudioAssetSetup.BuildGameAab` lo escribe en `Logs/aab-size.md`, junto al informe del audio. Lo prueba `AabSizeReportTests` (EditMode).
-- **`scripts/unity-test.ps1` y `scripts/unity-compile.ps1`:** si otro proceso tiene abierto el log o el XML de la ejecución anterior y no se puede borrar, usan un nombre único junto a él (`<nombre>-<fecha>-<pid><ext>`) y avisan. Esos procesos son `Unity.Licensing.Client` o el broker de la CLI. Antes salían con 1, y en `unity-compile.ps1` el 1 significa «errores de compilación». Los códigos de salida documentados no cambian.
+- **`Assets/_Project/Editor/CI/AabSizeReport.cs`** (nuevo): clasifica el contenido del Build Report por grupo y cuenta los assets por grupo y ruta. `AudioAssetSetup.BuildGameAab` lo escribe en `Logs/aab-size.md`, junto al informe del audio. Lo prueba `AabSizeReportTests` (EditMode).
+- **`scripts/unity-test.ps1` y `scripts/unity-compile.ps1`:** si otro proceso tiene abierto el log o el XML de la ejecución anterior y no se puede borrar, usan un nombre único junto a él (`<nombre>-<fecha>-<pid><ext>`) y avisan. Esos procesos son `Unity.Licensing.Client` o el broker de la CLI. Antes salían con 1, y en `unity-compile.ps1` el 1 significa «errores de compilación». Los códigos de salida documentados no cambian. Al empezar borran los nombres alternativos de ejecuciones anteriores que ya no estén abiertos, para que no se acumulen en `Logs/`.
+
+## Archivos fuera de la lista de B2
+
+La tarea solo asignaba `ci/size-gate.ps1` y `BuildSmoke.cs` (este no hizo falta tocarlo). Quedan fuera de la lista, todos dentro del ámbito del rol build-release (`ci/**`, `scripts/**`, `Assets/_Project/Editor/CI/**`):
+
+- `Assets/_Project/Editor/CI/AabSizeReport.cs` y `Assets/_Project/Tests/EditMode/AabSizeReportTests.cs` (nuevos, con sus `.meta`): el informe por grupo que pide la especificación («anotar el tamaño por grupo»). El Build Report no se puede leer desde `size-gate.ps1`.
+- `Assets/_Project/Editor/CI/AudioAssetSetup.cs`: solo el gancho que escribe `Logs/aab-size.md` en `BuildGameAab`, que es el AAB que mide la compuerta.
+- `scripts/unity-test.ps1` y `scripts/unity-compile.ps1`: **es un cambio aparte**, no de la medida. Hizo falta porque un `Unity.Licensing.Client` superviviente bloqueaba el log y los scripts salían con 1. Son infraestructura de todos los carriles: el tech-lead decide si entra con B2 o se saca a una tarea propia (va en un commit separado de la revisión).
+- `docs/setup/medida-aab-b2.md` (este informe): es el informe de tamaño que pide el criterio de aceptación.
+
+B2 no edita el GDD ni el traspaso: lo que hay que cambiar en ellos lo hace el carril de documentación (sección siguiente).
 
 ## Pendiente
 
+- **Para el carril de documentación** (B2 no edita el canon):
+  - GDD 08 §6.1, fila «Audio», y la cabecera del capítulo: anotar que B2 midió el AAB del juego el 2026-10-18 (`game.aab` de 51,87 MB y 50,80 MB de descarga en Play, con los niveles 1-300) y que la compuerta de tamaño del CI **deberá** medir ese AAB y no el de humo: el job aún no existe (s30). Mejor con la medida repetida con los niveles 1-700.
+  - Traspaso (`docs/dev/traspaso/README.md`, paso 4, «La compuerta de tamaño del CI»): las mismas cifras y que con el arte a 2× de B0 y los SDK no cabe en 80 MB (sección «Frente a B0 y al AAB de 35 MB»).
 - Repetir esta medida con los niveles 1-700 cuando C1b esté integrado.
 - La medida de referencia es la del CI Linux x64 (s30/s32), con `-RequireBundletool` y `CHECK16_REQUIRE_ZIPALIGN=1`, sobre el AAB del juego.
 - Del dueño:

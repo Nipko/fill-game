@@ -103,22 +103,32 @@ namespace AF.EditorTools
         }
 
         /// <summary>
-        /// Tabla del peso por grupo: assets distintos (por ruta), MB empaquetados (1 MB = 1.000.000 bytes, como
-        /// <c>ci/size-gate.ps1</c>) y porcentaje del total empaquetado, y el AAB al pie. Pública para los tests.
+        /// Tabla del peso por grupo: assets distintos (por par grupo y ruta), MB empaquetados (1 MB = 1.000.000 bytes, como
+        /// <c>ci/size-gate.ps1</c>) y porcentaje del total empaquetado, y el AAB al pie. Un asset cuyas entradas caen en dos
+        /// grupos (un <c>.asset</c> con una textura y un ScriptableObject) cuenta en los dos, igual que reparte sus MB; la fila
+        /// del total cuenta las rutas distintas. Las entradas sin ruta suman MB pero no cuentan como asset. Pública para los tests.
         /// </summary>
         public static string Report(IReadOnlyList<PackedEntry> contents, long aabBytes)
         {
             var bytes = new long[Groups.Length];
             var assets = new int[Groups.Length];
-            var seen = new HashSet<string>(StringComparer.Ordinal);
+            var seenInGroup = new HashSet<string>(StringComparer.Ordinal);
+            var seenPaths = new HashSet<string>(StringComparer.Ordinal);
             long all = 0;
             for (int i = 0; i < contents.Count; i++)
             {
                 PackedEntry entry = contents[i];
-                int group = GroupOf(entry.SourcePath, entry.Type);
+                string path = entry.SourcePath ?? string.Empty;
+                int group = GroupOf(path, entry.Type);
                 bytes[group] += entry.PackedSize;
                 all += entry.PackedSize;
-                if (seen.Add(entry.SourcePath ?? string.Empty))
+                if (path.Length == 0)
+                {
+                    continue;
+                }
+
+                seenPaths.Add(path);
+                if (seenInGroup.Add(group.ToString(CultureInfo.InvariantCulture) + "|" + path))
                 {
                     assets[group]++;
                 }
@@ -135,10 +145,12 @@ namespace AF.EditorTools
                     .Append(share.ToString("0.0", CultureInfo.InvariantCulture)).Append(" |\n");
             }
 
-            sb.Append("| **Datos empaquetados** | ").Append(seen.Count.ToString(CultureInfo.InvariantCulture)).Append(" | **")
+            sb.Append("| **Datos empaquetados** | ").Append(seenPaths.Count.ToString(CultureInfo.InvariantCulture)).Append(" | **")
                 .Append(Mb(all)).Append("** | 100.0 |\n\n");
             sb.Append("AAB: ").Append(Mb(aabBytes)).Append(" MB (1 MB = 1.000.000 bytes). Los datos empaquetados van sin comprimir;")
                 .Append(" el código nativo, el dex y los recursos de Android no salen aquí (ci/size-gate.ps1 -Breakdown).\n");
+            sb.Append("Assets: rutas distintas en cada grupo; un asset con entradas en dos grupos cuenta en los dos y una vez en el")
+                .Append(" total; las entradas sin ruta suman MB pero no cuentan como asset.\n");
             return sb.ToString();
         }
 

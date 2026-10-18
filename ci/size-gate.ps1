@@ -30,7 +30,7 @@
     Codigos de salida:
       0  todos los AAB dentro del presupuesto
       1  algun AAB supera el presupuesto
-      2  argumentos incorrectos o no se encontro ningun .aab
+      2  argumentos incorrectos, no se encontro ningun .aab o, con -Breakdown, un .aab ilegible como ZIP
       3  falta una herramienta exigida (bundletool o java con -RequireBundletool) o bundletool fallo
 
 .PARAMETER Path
@@ -82,7 +82,7 @@ if (-not [double]::TryParse($MaxMB, [System.Globalization.NumberStyles]::Float, 
 $limitBytes = [long][Math]::Floor($limitMB * 1000000)
 
 if (-not $Path) {
-    Stop-WithCode 2 'Uso: pwsh -NoProfile -File ci/size-gate.ps1 <archivo.aab | carpeta | comodin> [-MaxMB 80] [-Bundletool <jar>] [-RequireBundletool]'
+    Stop-WithCode 2 'Uso: pwsh -NoProfile -File ci/size-gate.ps1 <archivo.aab | carpeta | comodin> [-MaxMB 80] [-Bundletool <jar>] [-RequireBundletool] [-Breakdown]'
 }
 
 # Resolver la lista de AAB.
