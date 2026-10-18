@@ -79,6 +79,27 @@ namespace AF.UI
             return InView(SilhouetteLocalBox(i), _offset);
         }
 
+        /// <summary>
+        /// Una placa (la silueta <paramref name="i"/>, en el orden de <see cref="SilhouetteCount"/>; −1, una que no es ninguna de
+        /// ellas) en <paramref name="localBox"/> (coordenadas locales del contenido) pisaría la canoa con su equipo, el guía, una
+        /// mini cuia u otra placa que sale (<c>PlateBlocked</c>; una oculta por FX10 no cuenta). Para los tests.
+        /// </summary>
+        internal bool SilhouetteBlockedAt(int i, Rect localBox)
+        {
+            int self = -1;
+            int seen = 0;
+            for (int k = 0; i >= 0 && k < _silhouettes.Count; k++)
+            {
+                if (_silhouettes[k].Root.gameObject.activeSelf && seen++ == i)
+                {
+                    self = k;
+                    break;
+                }
+            }
+
+            return PlateBlocked(self, localBox);
+        }
+
         // Tras abrir una vista (ApplyView, con el encuadre ya puesto): las placas, enteras a la vista.
         private void PlatesFitView()
         {
