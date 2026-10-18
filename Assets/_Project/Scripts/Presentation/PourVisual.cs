@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using AF.Core.Board;
+using AF.Core.Mechanics;
 using AF.Core.Rules;
 
 namespace AF.Presentation
@@ -74,6 +75,19 @@ namespace AF.Presentation
 
         /// <summary>Tinte de las dosis movidas: la cima del origen antes del vertido.</summary>
         public int Tint => Before[Pour.Source].TopColor;
+
+        /// <summary>
+        /// El vertido es <b>sacar</b> (M13, la Tinaja; D-019; propuesta de la Tinaja, b.2 «Animación y sonido» y c.6; tarea TJ3):
+        /// la tinaja vierte en su cuia colgada. Su gesto es el contrario al normal: <b>se mueve el destino</b> (su cuia entra en la
+        /// boca, se llena y vuelve) y el origen no se inclina. Los vertidos desde su cuia usan el gesto normal.
+        /// </summary>
+        public bool IsScoop => Before[Pour.Source].Mechanic == MechanicType.Tinaja && Before[Pour.Target].Mechanic == MechanicType.Cucharon;
+
+        /// <summary>
+        /// La cuia que vuela en el gesto: el origen en un vertido normal (D-006) y la cuia tocada al sacar (<see cref="IsScoop"/>).
+        /// Los pasos de mecánica que la pintan esperan a que vuelva a su ranura (<see cref="Mechanics.MechanicStepQueue"/>).
+        /// </summary>
+        public int Mover => IsScoop ? Pour.Target : Pour.Source;
 
         /// <summary>
         /// Máscara de Aguas turbias reveladas en el vertido (02 R7, §11; bit i = cuia i): hoy solo el origen, en la etapa (a).

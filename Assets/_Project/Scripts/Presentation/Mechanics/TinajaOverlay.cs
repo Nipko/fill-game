@@ -34,8 +34,11 @@ namespace AF.Presentation.Mechanics
     /// Sin ella (bancos de prueba), se reconoce por la cuia de tipo <c>Cucharon</c> a su lado y se recuerda; si la tinaja ya llega
     /// vacía, por la Cuia chica de 2 de al lado, a la derecha antes que a la izquierda [P].</para>
     /// <para><b>Nada cambia al seleccionar</b> (D-002): todo cuelga del estado. La elevación de la tinaja (8 dp con un balanceo
-    /// de 2°, 07 §4.3) la hace <c>CuiaView</c>; los gestos (sacar, el revelado en la boca y la suelta) son de la tarea TJ3, y
-    /// hasta entonces el overlay no tiene pasos propios.</para>
+    /// de 2°, 07 §4.3) la hace <c>CuiaView</c>. Los gestos son de la tarea TJ3: sacar lo anima <c>BoardAnimator</c> (se mueve su
+    /// cuia), y el overlay ejecuta sus dos pasos, el revelado en la boca (<see cref="MechanicStepKind.Reveal"/>, etapa a) y la
+    /// vasija que se tumba en la suelta (<see cref="MechanicStepKind.Upend"/>, etapa f, con la espera boca arriba de
+    /// <see cref="HoldUpright"/>), y la intro de D-010 (<see cref="BeginIntro"/>: la fruta solo en la boca y el chip en el primer
+    /// impacto).</para>
     /// <para>Sin asignaciones en <see cref="Show"/>, <see cref="Tick"/> ni <see cref="OnBoardLayout"/> (08 §5.4): los iconos de
     /// los 14 tintes y las cifras del chip se generan en el primer <see cref="Show"/> (al cargar el nivel), así que ni una
     /// partida reanudada con la tinaja vacía a la que Marea devuelve dosis genera texturas a mitad de un paso.</para>
@@ -99,6 +102,45 @@ namespace AF.Presentation.Mechanics
             Palette.TinajaClay, Palette.TinajaClayLight, Palette.TinajaClayShade, ColorMath.Darken(Palette.TinajaClayShade, 0.10f),
         };
 
+        /// <summary>Revelado en la boca (TJ3; b.2 «Animación y sonido»: ≤ 400 ms): duración nominal del paso Reveal.</summary>
+        public const float RevealStepMs = 400f;
+
+        /// <summary>Revelado: la boca queda oscura 100 ms (b.2).</summary>
+        public const float RevealDarkMs = 100f;
+
+        /// <summary>Revelado: la fruta nueva florece en 0,10 s, en OKLab (b.2; como D-010).</summary>
+        public const float RevealBloomMs = 100f;
+
+        /// <summary>Revelado: el rebote del chip al bajar (×n+1 → ×n) dura 200 ms y sube la escala un 25 % [P].</summary>
+        public const float ChipBounceMs = 200f;
+
+        /// <summary>Revelado: lo que sube la escala del chip en su rebote [P].</summary>
+        public const float ChipBounce = 0.25f;
+
+        /// <summary>Revelado: el anillo de onda crece de 0,6 a 1,5 veces la boca mientras se apaga, sin burbujas [P].</summary>
+        public const float RingStartScale = 0.6f;
+
+        /// <summary>Revelado: escala final del anillo de onda [P].</summary>
+        public const float RingEndScale = 1.5f;
+
+        /// <summary>Color del anillo de onda: marfil al 60 % [P].</summary>
+        public static readonly Color RingColor = new Color(0xFA / 255f, 0xFA / 255f, 0xF7 / 255f, 0.6f);
+
+        /// <summary>Suelta: la boca enseña el fondo seco mientras su cuia baja del jirau, 300 ms (b.2).</summary>
+        public const float UpendHoldMs = 300f;
+
+        /// <summary>Suelta: la tinaja se tumba boca abajo sobre el jirau en 500 ms (b.2).</summary>
+        public const float UpendMs = 500f;
+
+        /// <summary>Suelta: al voltearse, la vasija se levanta 0,35 u a mitad del giro [P].</summary>
+        public const float UpendLiftU = 0.35f;
+
+        /// <summary>Suelta: y se ladea 8° hacia fuera de su cuia [P].</summary>
+        public const float UpendTiltDeg = 8f;
+
+        /// <summary>Reducir movimiento: fundidos de 0,25 s (b.2, «Reducir movimiento»).</summary>
+        public const float ReducedFadeMs = 250f;
+
         // Qué tintes llevan contorno en su banda (índice = tinte): se calcula una vez, sin asignaciones en Show.
         private static readonly bool[] s_bandRim = BuildBandRims();
 
@@ -129,6 +171,26 @@ namespace AF.Presentation.Mechanics
         private int _layoutVersion = -1;
         private bool _prewarmed;
         private Vector2 _jirauFoot;
+
+        // TJ3: último estado mostrado, la espera boca arriba, el paso en curso y la intro.
+        private Image _ring = null!;
+        private Cuia _last;
+        private bool _lastSealed;
+        private bool _hasLast;
+        private bool _holdUpright;
+        private bool _stepping;
+        private MechanicStepKind _stepKind;
+        private float _stepT;
+        private float _stepSpeed = 1f;
+        private bool _stepReduce;
+        private int _stepTint;
+        private int _stepOldCount;
+        private int _stepNewCount;
+        private float _upendSide = 1f;
+        private bool _intro;
+        private bool _introMarks;
+        private Color _introMouth;
+        private int _introTint;
 
         /// <inheritdoc />
         public override MechanicType Type => MechanicType.Tinaja;
@@ -250,10 +312,31 @@ namespace AF.Presentation.Mechanics
         public Rect BodyRectU => RectU(_body.rectTransform);
 
         /// <inheritdoc />
+        public override bool IsAnimating => _stepping;
+
+        /// <summary>La tinaja vacía espera boca arriba, con el fondo seco en la boca, a su paso Upend (TJ3).</summary>
+        public bool HoldingUpright => _holdUpright;
+
+        /// <summary>El anillo de onda del revelado de la boca está a la vista (TJ3).</summary>
+        public bool RingVisible => _ring.gameObject.activeSelf;
+
+        /// <summary>Escala del chip «×n» (1 en reposo; el rebote del revelado la sube un momento, TJ3).</summary>
+        public float ChipScale => _chip.rectTransform.localScale.x;
+
+        /// <summary>Escala vertical del cuerpo (1 boca arriba, −1 boca abajo; entre medias, tumbándose, TJ3).</summary>
+        public float BodyScaleY => _body.rectTransform.localScale.y;
+
+        /// <summary>Hay una intro en curso (Llenar y teñir, D-010; TJ3): el chip y las bandas esperan al primer impacto.</summary>
+        public bool InIntro => _intro;
+
+        /// <inheritdoc />
         public override void Show(Cuia cuia, bool sealedNow)
         {
             bool on = cuia.Mechanic == MechanicType.Tinaja;
             Visible = on;
+            _last = cuia;
+            _lastSealed = sealedNow;
+            _hasLast = true;
             if (on && !_prewarmed)
             {
                 Prewarm();
@@ -269,16 +352,18 @@ namespace AF.Presentation.Mechanics
                 PlaceChip();
             }
 
-            SetUpsideDown(empty);
+            // Con la última sacada (TJ3), la tinaja vacía espera boca arriba, con el fondo seco, hasta su paso Upend.
+            bool hold = on && empty && _holdUpright;
+            SetUpsideDown(empty && !hold);
             OverlayParts.SetVisible(_body, art);
 
             // Boca (R7): la fruta de arriba, con su tinte y su icono, en la boca de la vasija (solo con su cuerpo: sin él, la cima
             // ya se ve en el líquido del vidrio). Si la cima estuviera oculta (no debería), la boca va oscura y sin icono: lo
-            // oculto nunca enseña su tinte.
+            // oculto nunca enseña su tinte. Vacía y esperando (hold), oscura: el fondo seco.
             bool filled = on && !empty;
-            bool mouth = filled && art;
+            bool mouth = (filled || hold) && art;
             int top = count - 1;
-            bool topShown = mouth && !cuia.IsHiddenAt(top);
+            bool topShown = mouth && filled && !cuia.IsHiddenAt(top);
             int tint = topShown ? cuia.ColorAt(top) : 0;
             if (mouth && tint != _mouthTint)
             {
@@ -345,6 +430,10 @@ namespace AF.Presentation.Mechanics
 
             _bandMask = bands;
             PlaceJirau(on);
+            if (_intro)
+            {
+                ApplyIntro();
+            }
         }
 
         /// <inheritdoc />
@@ -383,6 +472,12 @@ namespace AF.Presentation.Mechanics
         /// </summary>
         public override void Tick(float dtMs)
         {
+            if (_stepping)
+            {
+                _stepT += dtMs;
+                ApplyStep();
+            }
+
             ICuiaBoard? board = Host.Board;
             if (board == null || !_jirau.gameObject.activeSelf)
             {
@@ -434,6 +529,168 @@ namespace AF.Presentation.Mechanics
             if (Visible)
             {
                 PlaceJirau(true);
+            }
+        }
+
+        /// <inheritdoc />
+        public override float StepDurationMs(MechanicStepKind kind)
+        {
+            switch (kind)
+            {
+                case MechanicStepKind.Reveal:
+                    return RevealStepMs;
+                case MechanicStepKind.Upend:
+                    return UpendHoldMs + UpendMs;
+                default:
+                    return 0f;
+            }
+        }
+
+        /// <summary>
+        /// Pasos de la tinaja (TJ3; propuesta de la Tinaja, b.2 «Animación y sonido»):
+        /// <list type="bullet">
+        /// <item><description><see cref="MechanicStepKind.Reveal"/> (etapa a, R7): la boca queda oscura
+        /// <see cref="RevealDarkMs"/>, la fruta nueva florece en <see cref="RevealBloomMs"/> (OKLab, como D-010) con un anillo de
+        /// onda sin burbujas, y el chip baja (×n+1 → ×n) con un rebote; en ≤ 400 ms. Sin el cuerpo de la vasija (release hasta
+        /// el arte), solo el chip.</description></item>
+        /// <item><description><see cref="MechanicStepKind.Upend"/> (etapa f): la boca enseña el fondo seco mientras su cuia baja
+        /// del jirau (<see cref="UpendHoldMs"/>) y la vasija se tumba boca abajo sobre el jirau (<see cref="UpendMs"/>). Sin el
+        /// cuerpo no hay nada que tumbar: 0 (salto).</description></item>
+        /// </list>
+        /// Con Reducir movimiento, fundidos sin anillo ni rebote. Sin asignaciones.
+        /// </summary>
+        public override float PlayStep(in MechanicStepContext ctx)
+        {
+            if (_stepping)
+            {
+                SnapStep();
+            }
+
+            float speed = Mathf.Max(0.01f, ctx.SpeedFactor);
+            if (ctx.Kind == MechanicStepKind.Reveal)
+            {
+                Cuia after = ctx.After;
+                Show(after, ctx.AfterSealed);
+                int top = after.Count - 1;
+                _stepTint = top >= 0 && !after.IsHiddenAt(top) ? after.ColorAt(top) : 0;
+                _stepNewCount = after.Count;
+                _stepOldCount = Mathf.Min(Host.Capacity, after.Count + 1);
+                Begin(MechanicStepKind.Reveal, speed, ctx.ReduceMotion);
+                return RevealStepMs * speed;
+            }
+
+            if (ctx.Kind == MechanicStepKind.Upend && MapArtRule.ShowProvisional)
+            {
+                _holdUpright = true;
+                Show(ctx.Before, false);
+                _upendSide = ctx.OtherIndex >= 0 && ctx.OtherPos.x > ctx.SelfPos.x ? 1f : -1f; // se tumba hacia el lado contrario a su cuia
+                Begin(MechanicStepKind.Upend, speed, ctx.ReduceMotion);
+                return (UpendHoldMs + UpendMs) * speed;
+            }
+
+            return 0f;
+        }
+
+        /// <inheritdoc />
+        public override void SnapStep()
+        {
+            if (!_stepping)
+            {
+                return;
+            }
+
+            _stepping = false;
+            if (_stepKind == MechanicStepKind.Upend)
+            {
+                _holdUpright = false;
+            }
+
+            ResetStepParts();
+            if (_hasLast)
+            {
+                Show(_last, _lastSealed); // la cola pinta después el estado de después del paso
+            }
+        }
+
+        /// <summary>
+        /// La tinaja vacía espera boca arriba, con el fondo seco, hasta su paso Upend (lo pide <c>BoardAnimator</c> al encolar la
+        /// última sacada y lo suelta al acabar o saltar el plan; TJ3). Si cambia, se vuelve a pintar el último estado. Sin
+        /// asignaciones.
+        /// </summary>
+        public void HoldUpright(bool on)
+        {
+            if (_holdUpright == on)
+            {
+                return;
+            }
+
+            _holdUpright = on;
+            if (!_stepping && _hasLast && AttachedHost != null)
+            {
+                Show(_last, _lastSealed);
+            }
+        }
+
+        /// <summary>
+        /// Empieza la intro (Llenar y teñir, D-010; TJ3): hasta el primer impacto no se ven ni el chip «×n» ni las bandas, y la
+        /// boca la pinta la intro (<see cref="SetIntroMouth"/>): seca, con el agua del río y con su fruta al florecer.
+        /// </summary>
+        public void BeginIntro(Color dryMouth)
+        {
+            _intro = true;
+            _introMarks = false;
+            _introMouth = dryMouth;
+            _introTint = 0;
+            _mouthTint = -1;
+            if (_hasLast && AttachedHost != null)
+            {
+                Show(_last, _lastSealed);
+            }
+        }
+
+        /// <summary>Color del agua de la boca durante la intro y, si <paramref name="tint"/> &gt; 0, el icono de esa fruta. Sin asignaciones.</summary>
+        public void SetIntroMouth(Color color, int tint)
+        {
+            if (!_intro)
+            {
+                return;
+            }
+
+            _introMouth = color;
+            _introTint = tint;
+            ApplyIntroMouth();
+        }
+
+        /// <summary>El primer impacto de la intro (D-010): desde este fotograma, el chip «×n» y las bandas ya reveladas.</summary>
+        public void ShowIntroMarks()
+        {
+            if (!_intro || _introMarks)
+            {
+                return;
+            }
+
+            _introMarks = true;
+            if (_hasLast && AttachedHost != null)
+            {
+                Show(_last, _lastSealed);
+            }
+        }
+
+        /// <summary>Fin de la intro: la tinaja vuelve a pintarse solo desde su estado.</summary>
+        public void EndIntro()
+        {
+            if (!_intro)
+            {
+                return;
+            }
+
+            _intro = false;
+            _introMarks = false;
+            _mouthTint = -1;
+            OverlayParts.SetColor(_mouthGlyph, Color.white);
+            if (_hasLast && AttachedHost != null)
+            {
+                Show(_last, _lastSealed);
             }
         }
 
@@ -490,6 +747,7 @@ namespace AF.Presentation.Mechanics
             _mouth = OverlayParts.NewImage("TinajaMouth", Host.BodyFront, Host.Art.TinajaMouthDisc, Color.white);
             _mouthGloss = OverlayParts.NewImage("TinajaMouthGloss", Host.BodyFront, Host.Art.TinajaMouthGloss, Color.white);
             _mouthGlyph = OverlayParts.NewImage("TinajaMouthGlyph", Host.BodyFront, null, Color.white);
+            _ring = OverlayParts.NewImage("TinajaRing", Host.BodyFront, Host.Art.Ring, RingColor); // la onda del revelado (TJ3)
             _chip = OverlayParts.NewImage("TinajaChip", Host.BodyFront, Host.Art.TinajaChipPill, Color.white);
             _chip.type = Image.Type.Sliced;
             _chipTimes = OverlayParts.NewImage("TinajaChipX", _chip.rectTransform, Host.Art.MurkyBadgeTimes, Color.white);
@@ -498,6 +756,164 @@ namespace AF.Presentation.Mechanics
             PlaceChipGlyph(_chipDigit, 0.5f * ChipGlyphStepDp);
             OverlayParts.SetVisible(_chipTimes, true); // cuelgan del chip: se ven y se ocultan con él
             OverlayParts.SetVisible(_chipDigit, true);
+        }
+
+        private void Begin(MechanicStepKind kind, float speed, bool reduce)
+        {
+            _stepping = true;
+            _stepKind = kind;
+            _stepT = 0f;
+            _stepSpeed = speed;
+            _stepReduce = reduce;
+            ApplyStep();
+        }
+
+        // Fotograma del paso en curso, en ms nominales (sin el factor de velocidad). Sin asignaciones.
+        private void ApplyStep()
+        {
+            float x = _stepT / Mathf.Max(0.01f, _stepSpeed);
+            if (_stepKind == MechanicStepKind.Reveal)
+            {
+                ApplyReveal(x);
+            }
+            else if (_stepKind == MechanicStepKind.Upend)
+            {
+                ApplyUpend(x);
+            }
+        }
+
+        // Revelado en la boca: oscura, onda y floración OKLab de la fruta nueva; el chip baja con un rebote.
+        private void ApplyReveal(float x)
+        {
+            bool mouth = _mouth.gameObject.activeSelf;
+            Color tint = _stepTint > 0 ? Palette.Tint(_stepTint) : Palette.WoodDark;
+            tint.a = 1f;
+            Color dark = Palette.WoodDark;
+            dark.a = 1f;
+            float bloom;
+            bool after;
+            if (_stepReduce)
+            {
+                bloom = Mathf.Clamp01(x / ReducedFadeMs); // Reducir movimiento: fundido, sin onda ni rebote
+                after = true;
+                OverlayParts.SetVisible(_ring, false);
+            }
+            else
+            {
+                after = x >= RevealDarkMs;
+                bloom = after ? Mathf.Clamp01((x - RevealDarkMs) / RevealBloomMs) : 0f;
+                float q = (x - RevealDarkMs) / (RevealStepMs - RevealDarkMs);
+                bool ring = mouth && after && q < 1f;
+                OverlayParts.SetVisible(_ring, ring);
+                if (ring)
+                {
+                    float sc = Mathf.Lerp(RingStartScale, RingEndScale, Ease.Out(q));
+                    OverlayParts.Place(_ring, 0f, ProceduralArt.TinajaMouthCenterU, ProceduralArt.TinajaMouthWidthU * sc, ProceduralArt.TinajaMouthHeightU * sc, _u);
+                    OverlayParts.SetColor(_ring, OverlayParts.Fade(RingColor, 1f - q));
+                }
+            }
+
+            if (mouth)
+            {
+                OverlayParts.SetColor(_mouth, bloom <= 0f ? dark : (bloom >= 1f ? tint : ColorMath.OkLabLerp(dark, tint, bloom)));
+                OverlayParts.SetColor(_mouthGlyph, new Color(1f, 1f, 1f, bloom));
+                _mouthTint = -1; // el próximo Show la vuelve a pintar entera
+            }
+
+            int n = after ? _stepNewCount : _stepOldCount;
+            if (n > 0)
+            {
+                Sprite digit = Host.Art.MurkyBadgeDigit(n);
+                if (_chipDigit.sprite != digit)
+                {
+                    _chipDigit.sprite = digit;
+                }
+            }
+
+            float k = _stepReduce || !after ? 0f : Mathf.Clamp01((x - RevealDarkMs) / ChipBounceMs);
+            float scale = 1f + (ChipBounce * Mathf.Sin(Mathf.PI * k));
+            var s3 = new Vector3(scale, scale, 1f);
+            if (_chip.rectTransform.localScale != s3)
+            {
+                _chip.rectTransform.localScale = s3;
+            }
+        }
+
+        // La suelta: boca seca y quieta mientras su cuia baja; después la vasija se voltea sobre el jirau (se levanta un poco y se
+        // ladea hacia fuera de su cuia a mitad del giro) y queda boca abajo.
+        private void ApplyUpend(float x)
+        {
+            bool tumbling = x >= UpendHoldMs;
+            OverlayParts.SetVisible(_mouth, !tumbling);
+            OverlayParts.SetVisible(_mouthGloss, !tumbling);
+            OverlayParts.SetVisible(_mouthGlyph, false);
+            float q = !tumbling ? 0f : (_stepReduce ? 1f : Mathf.Clamp01((x - UpendHoldMs) / UpendMs));
+            float e = Ease.InOut(q);
+            float arc = Mathf.Sin(Mathf.PI * e);
+            RectTransform rt = _body.rectTransform;
+            float sy = Mathf.Cos(Mathf.PI * e);
+            var scale = new Vector3(1f, sy, 1f);
+            if (rt.localScale != scale)
+            {
+                rt.localScale = scale;
+            }
+
+            // El canto de abajo sigue sobre el jirau: la vasija se abate hacia él y se levanta ya boca abajo (no flota).
+            rt.localRotation = Quaternion.Euler(0f, 0f, arc * UpendTiltDeg * _upendSide);
+            rt.anchoredPosition = new Vector2(0f, ((0.5f * ProceduralArt.TinajaBodyHeightU * Mathf.Abs(sy)) + (arc * UpendLiftU)) * _u);
+        }
+
+        // Deja las piezas que mueven los pasos en reposo (el siguiente Show pinta el estado).
+        private void ResetStepParts()
+        {
+            OverlayParts.SetVisible(_ring, false);
+            _chip.rectTransform.localScale = Vector3.one;
+            OverlayParts.SetColor(_mouthGlyph, Color.white);
+            RectTransform rt = _body.rectTransform;
+            rt.localScale = Vector3.one; // SetUpsideDown (en Show) la deja exacta: ±1
+            rt.localRotation = Quaternion.identity;
+            rt.anchoredPosition = new Vector2(0f, 0.5f * ProceduralArt.TinajaBodyHeightU * _u);
+            _mouthTint = -1;
+        }
+
+        // Intro (D-010): sin chip ni bandas hasta el primer impacto; la boca, del color que pide la intro.
+        private void ApplyIntro()
+        {
+            if (!_introMarks)
+            {
+                OverlayParts.SetVisible(_chip, false);
+                for (int k = 0; k < MaxBands; k++)
+                {
+                    OverlayParts.SetVisible(_bands[k], false);
+                    OverlayParts.SetVisible(_bandLights[k], false);
+                    OverlayParts.SetVisible(_bandRims[k], false);
+                    OverlayParts.SetVisible(_bandGlyphs[k], false);
+                }
+            }
+
+            ApplyIntroMouth();
+        }
+
+        private void ApplyIntroMouth()
+        {
+            if (!_mouth.gameObject.activeSelf)
+            {
+                return;
+            }
+
+            OverlayParts.SetColor(_mouth, _introMouth);
+            _mouthTint = -1;
+            bool glyph = _introTint > 0;
+            if (glyph)
+            {
+                Sprite gs = Host.Art.TinajaGlyph(_introTint);
+                if (_mouthGlyph.sprite != gs)
+                {
+                    _mouthGlyph.sprite = gs;
+                }
+            }
+
+            OverlayParts.SetVisible(_mouthGlyph, glyph);
         }
 
         // Prepara los iconos de los 14 tintes y las cifras del chip (1 … capacidad), una sola vez, al cargar el nivel: así ningún

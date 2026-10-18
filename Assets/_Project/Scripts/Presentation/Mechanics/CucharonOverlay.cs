@@ -22,7 +22,7 @@ namespace AF.Presentation.Mechanics
     /// el poste va del lado contrario a la tinaja y el asa es de su cuia (de un hombro al otro, apoyada en el gancho).</para>
     /// <para><b>La suelta</b> (b.2 regla 8; R10 f): cuando la tinaja se vacía, su cuia pasa a ser una Cuia chica normal
     /// (<c>Cuia.WithoutMechanic</c>) y todo el overlay se oculta; Marea la vuelve a colgar. La animación de la suelta (su cuia
-    /// baja del jirau) es de la tarea TJ3.</para>
+    /// baja del jirau) es su paso <see cref="MechanicStepKind.Unhook"/> (TJ3), a la vez que la tinaja se tumba.</para>
     /// <para><b>Arte</b> (<see cref="MapArtRule"/>): poste, gancho y asa son arte provisional y solo salen con
     /// <see cref="MapArtRule.ShowProvisional"/> (Editor y desarrollo) hasta los PNG del artista. Nada cambia al seleccionar
     /// (D-002): al elevarse, el asa sube con su cuia y se separa del gancho, como al descolgarla. Sin asignaciones en
@@ -35,9 +35,90 @@ namespace AF.Presentation.Mechanics
         private float _u = 24f;
         private float _side = 1f;
         private bool _sideSure;
+        private bool _stepping;
+        private float _stepT;
+        private float _stepSpeed = 1f;
+        private bool _stepReduce;
+
+        /// <summary>Suelta (TJ3; b.2 «Animación y sonido»): su cuia se descuelga del jirau y se asienta en su ranura en 300 ms.</summary>
+        public const float UnhookMs = 300f;
+
+        /// <summary>Suelta: lo que sube el asa al salir del gancho antes de apagarse (u) [P].</summary>
+        public const float UnhookLiftU = 0.30f;
 
         /// <inheritdoc />
         public override MechanicType Type => MechanicType.Cucharon;
+
+        /// <inheritdoc />
+        public override bool IsAnimating => _stepping;
+
+        /// <summary>Opacidad del asa (1 en reposo; se apaga en la suelta, TJ3).</summary>
+        public float AsaAlpha => _asa.color.a;
+
+        /// <summary>Opacidad del poste (1 en reposo; se apaga en la suelta, TJ3).</summary>
+        public float PostAlpha => _post.color.a;
+
+        /// <inheritdoc />
+        public override float StepDurationMs(MechanicStepKind kind)
+        {
+            return kind == MechanicStepKind.Unhook ? UnhookMs : 0f;
+        }
+
+        /// <summary>
+        /// La suelta (<see cref="MechanicStepKind.Unhook"/>, etapa f de R10; TJ3): el asa sube y sale del gancho y, con el poste,
+        /// se apaga mientras su cuia se asienta en su ranura como una Cuia chica normal. Sin el arte provisional no hay asa ni
+        /// poste: 0 (salto). Con Reducir movimiento, solo el fundido. Sin asignaciones.
+        /// </summary>
+        public override float PlayStep(in MechanicStepContext ctx)
+        {
+            if (ctx.Kind != MechanicStepKind.Unhook || !MapArtRule.ShowProvisional || !_asa.gameObject.activeSelf)
+            {
+                return 0f;
+            }
+
+            _stepping = true;
+            _stepT = 0f;
+            _stepSpeed = Mathf.Max(0.01f, ctx.SpeedFactor);
+            _stepReduce = ctx.ReduceMotion;
+            Apply();
+            return UnhookMs * _stepSpeed;
+        }
+
+        /// <inheritdoc />
+        public override void SnapStep()
+        {
+            if (!_stepping)
+            {
+                return;
+            }
+
+            _stepping = false;
+            OverlayParts.SetColor(_asa, Color.white);
+            OverlayParts.SetColor(_post, Color.white);
+            Place();
+        }
+
+        /// <inheritdoc />
+        public override void Tick(float dtMs)
+        {
+            if (_stepping)
+            {
+                _stepT += dtMs;
+                Apply();
+            }
+        }
+
+        // Fotograma de la suelta: el asa sube (ease-out) y se apaga en la segunda mitad; el poste, a la vez.
+        private void Apply()
+        {
+            float q = Mathf.Clamp01(_stepT / (UnhookMs * _stepSpeed));
+            float fade = 1f - Mathf.Clamp01((q - 0.4f) / 0.6f);
+            float lift = _stepReduce ? 0f : Ease.Out(Mathf.Clamp01(q / 0.6f)) * UnhookLiftU;
+            Rect asa = ProceduralArt.TinajaAsaRectU;
+            OverlayParts.Place(_asa, asa.center.x, asa.center.y + lift, asa.width, asa.height, _u);
+            OverlayParts.SetColor(_asa, new Color(1f, 1f, 1f, fade));
+            OverlayParts.SetColor(_post, new Color(1f, 1f, 1f, fade));
+        }
 
         /// <summary>El poste bajo del jirau con su gancho está a la vista.</summary>
         public bool PostVisible => _post.gameObject.activeSelf;

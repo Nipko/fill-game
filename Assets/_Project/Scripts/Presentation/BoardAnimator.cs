@@ -73,6 +73,14 @@ namespace AF.Presentation
     /// (<see cref="StepStaging.JobEnd"/>). Los pasos que pintan el origen no empiezan hasta que vuelve a su ranura, y el fin
     /// del trabajo nunca pinta ese estado previo encima de pasos ya terminados (pinta el del punto en que va el plan). Las
     /// cuias que cambiaron sin paso saltan a su estado final al llegar el caudal.</para>
+    /// <para><b>Sacar de la Tinaja</b> (M13; D-019; propuesta de la Tinaja, b.2 «Animación y sonido» y c.6; tarea TJ3): cuando la
+    /// tinaja vierte en su cuia colgada (<see cref="PourVisual.IsScoop"/>) <b>se mueve el destino</b>: la tinaja no se inclina
+    /// (se asienta si estaba elevada) y su cuia viaja en arco a la boca (<c>anim_travel_ms</c>), entra inclinada
+    /// <see cref="ScoopTiltDeg"/> por detrás del labio (la tinaja se dibuja encima), se llena (<c>anim_pour_dose_ms</c>) y
+    /// vuelve (<c>anim_return_ms</c>) dejando caer unas gotas en la boca: 880 ms con los defaults, como un vertido. Sin chorro y
+    /// sin encadenado. El revelado de la nueva boca empieza en cuanto su cuia sale; la suelta (etapa f), cuando vuelve a su
+    /// ranura, y mientras tanto la tinaja vacía espera boca arriba (<see cref="TinajaOverlay.HoldUpright"/>). Los vertidos
+    /// desde su cuia usan el gesto normal.</para>
     /// <para><b>Contadores</b> (Lluvia y cueva de la Piraña que cuentan un vertido útil; etapa (e) de R10): un cambio solo de
     /// contador no retiene la cuia ni impide el encadenado (02 §3.2), pero no se pinta en el toque: se repinta cuando llega
     /// el caudal del trabajo que lo causó (<c>FlowEnd + StreamGrowMs</c>; en el encadenado, el del último vertido sumado),
@@ -156,6 +164,24 @@ namespace AF.Presentation
 
         /// <summary>Rebote del retorno a la ranura (u; 07 §5.2). El de Magic Sort (≈ 50 px) no está confirmado: no se copia.</summary>
         public const float ReturnBounceU = 0.03f;
+
+        /// <summary>
+        /// Sacar de la Tinaja (TJ3; propuesta de la Tinaja, b.2 «Animación y sonido»): su cuia entra en la boca inclinada 20°,
+        /// con la cima hacia el lado del que viene.
+        /// </summary>
+        public const float ScoopTiltDeg = 20f;
+
+        /// <summary>
+        /// Sacar: el pie de su cuia queda en el eje de la tinaja, 0,30 u bajo el centro de su boca (<c>TinajaMouthCenterU</c>),
+        /// detrás del labio, que tapa su base [P].
+        /// </summary>
+        public const float ScoopFootBelowMouthU = 0.30f;
+
+        /// <summary>Sacar: el arco del viaje cruza 1,5 u por encima del pie más alto (el de la boca), sobre el labio [P].</summary>
+        public const float ScoopArcU = 1.5f;
+
+        /// <summary>Sacar: mientras se llena, su cuia baja y sube 0,10 u en la boca (recoger el agua) [P].</summary>
+        public const float ScoopBobU = 0.10f;
 
         private const int SilhouetteRows = 24;
         private const int SilhouetteCols = 6;
@@ -667,7 +693,9 @@ namespace AF.Presentation
                 }
             }
 
-            bool chainable = steps == 0 && !through && !before[receiver].MudExposed && others == 0 && v.RevealedMask == 0;
+            // Sacar de la Tinaja (TJ3): se mueve su cuia, no el origen; cada sacada es un gesto entero (no se encadena).
+            bool scoop = v.IsScoop;
+            bool chainable = !scoop && steps == 0 && !through && !before[receiver].MudExposed && others == 0 && v.RevealedMask == 0;
             if (chainable && TryChain(source, target, v.Amount, tint, srcBefore, srcAfter, srcSealed, tgtBefore, tgtAfter, tgtSealed, after, counters))
             {
                 ChainedCount++;
@@ -686,6 +714,21 @@ namespace AF.Presentation
                 }
             }
 
+            // La última sacada: la tinaja vacía espera boca arriba, con el fondo seco, hasta su paso Upend (etapa f; TJ3).
+            bool jarHold = false;
+            if (scoop && plan >= 0)
+            {
+                for (int e = 0; e < steps; e++)
+                {
+                    if (_plan[e].Kind == MechanicStepKind.Upend && _plan[e].Index == source)
+                    {
+                        TinajaAt(source)?.HoldUpright(true);
+                        jarHold = true;
+                        break;
+                    }
+                }
+            }
+
             Enqueue(new Job
             {
                 Source = source,
@@ -694,6 +737,8 @@ namespace AF.Presentation
                 Amount = v.Amount,
                 Tint = tint,
                 IsUndo = false,
+                Scoop = scoop,
+                JarHold = jarHold,
                 Through = through,
                 OnMud = onMud,
                 Chainable = chainable,
@@ -720,7 +765,7 @@ namespace AF.Presentation
             // 07 §5.2: el origen sigue con sus iconos de fruta desde el toque en el destino (la selección ya bajó) si el trabajo
             // arranca en el próximo fotograma; si espera a otro que retiene alguna de sus cuias, desde que arranca (Start).
             int last = _count - 1;
-            if (last >= 0 && _jobs[last].Source == source && !_jobs[last].Started && CanStart(last))
+            if (!scoop && last >= 0 && _jobs[last].Source == source && !_jobs[last].Started && CanStart(last))
             {
                 _views[source].SetPourIcons(true);
             }
@@ -1022,7 +1067,8 @@ namespace AF.Presentation
                 return true;
             }
 
-            return (job.Source == cuia && !job.SrcDone)
+            // Al sacar (TJ3), la tinaja sigue delante, sobre su cuia, hasta que su cuia vuelve a la ranura.
+            return (job.Source == cuia && (!job.SrcDone || (job.Scoop && !job.TgtDone)))
                 || (job.Target == cuia && !job.TgtDone)
                 || ((job.Jump & bit) != 0 && !job.ExtraDone)
                 || (PlanPending(ref job) & bit) != 0;
@@ -1062,6 +1108,12 @@ namespace AF.Presentation
                 return;
             }
 
+            if (job.Scoop)
+            {
+                StartScoop(ref job);
+                return;
+            }
+
             s.Lock();
             s.SetPourIcons(true); // 07 §5.2: iconos del origen en el viaje y el caudal, hasta el retorno
             job.StartOffset = s.BodyOffset;
@@ -1095,6 +1147,19 @@ namespace AF.Presentation
         // llegar el caudal (con su sellado si lo hay).
         private void SetEnds(ref Job job)
         {
+            if (job.Scoop)
+            {
+                // Sacar (TJ3): su cuia llega a la boca (viaje), se llena (caudal) y vuelve (retorno); la parte de la tinaja (y el
+                // revelado de su boca) termina cuando la cuia sale, al llegar el caudal, como el salto de las demás cuias.
+                job.StreamEnd = job.FlowEnd;
+                job.ReturnStart = job.FlowEnd;
+                job.TgtEnd = job.FlowEnd + _timings.ReturnMs;
+                job.ExtraStart = job.FlowEnd + StreamGrowMs;
+                job.SrcEnd = job.ExtraStart;
+                job.ExtraEnd = job.ExtraStart + (job.ExtraSeal != 0 ? CuiaView.SealMs : 0f);
+                return;
+            }
+
             job.StreamEnd = job.FlowEnd + _timings.TailMs;
             job.ReturnStart = Mathf.Max(_timings.TravelMs, job.StreamEnd);
             job.SrcEnd = job.ReturnStart + _timings.ReturnMs;
@@ -1114,12 +1179,17 @@ namespace AF.Presentation
             float p = Mathf.Clamp((time - job.StreamStart) / Mathf.Max(1f, job.DoseMs), 0f, job.Amount);
 
             // El destino se llena cuando la cabeza del chorro llega a su superficie (Marea no tiene chorro).
-            float fillDelay = job.IsUndo ? 0f : StreamGrowMs;
+            // Al sacar (TJ3) no hay chorro: su cuia se llena dentro de la boca desde que llega.
+            float fillDelay = job.IsUndo || job.Scoop ? 0f : StreamGrowMs;
             float pt = Mathf.Clamp((time - job.StreamStart - fillDelay) / Mathf.Max(1f, job.DoseMs), 0f, job.Amount);
+            if (job.Scoop)
+            {
+                ScoopPose(ref job, time, color);
+            }
 
             // La pose del origen se fija antes de dibujar el chorro: así el chorro sale del labio de este fotograma y no
             // del anterior (con fotogramas largos el retraso se veía como un chorro que nacía por encima del labio).
-            if (!job.IsUndo && !job.SrcDone && time < job.SrcEnd)
+            if (!job.IsUndo && !job.Scoop && !job.SrcDone && time < job.SrcEnd)
             {
                 s.SetPose(PoseOffset(ref job, time, s.Unit), PoseAngle(ref job, time));
                 if (time >= job.ReturnStart)
@@ -1265,20 +1335,24 @@ namespace AF.Presentation
             if (job.Plan >= 0 && !job.PlanDone && time >= job.ExtraStart)
             {
                 float step = dtMs;
+                // La cuia que vuela: el origen o, al sacar de la Tinaja, su cuia (TJ3; PourVisual.Mover).
+                bool moverDone = job.Scoop ? job.TgtDone : job.SrcDone;
+                float moverEnd = job.Scoop ? job.TgtEnd : job.SrcEnd;
                 if (!job.PlanBegun)
                 {
                     job.PlanBegun = true;
                     float over = Mathf.Min(dtMs, time - job.ExtraStart);
                     // El presupuesto cuenta desde el último vertido tocado, no desde el de este trabajo (FX6): si el jugador
                     // vertió después, el corte de la celebración o del modal, si llega, cuenta desde ese toque más reciente.
-                    _steps.Begin(job.Plan, job.Age - over, Mathf.Max(0f, SinceLastPourMs - over), job.SrcDone ? 0f : job.SrcEnd - job.ExtraStart);
+                    _steps.Begin(job.Plan, job.Age - over, Mathf.Max(0f, SinceLastPourMs - over), moverDone ? 0f : moverEnd - job.ExtraStart);
                     step = over;
                 }
 
-                if (_steps.Tick(job.Plan, step, job.SrcDone))
+                if (_steps.Tick(job.Plan, step, moverDone))
                 {
                     _steps.Release(job.Plan);
                     job.PlanDone = true;
+                    ReleaseJarHold(ref job);
                 }
             }
         }
@@ -1379,6 +1453,20 @@ namespace AF.Presentation
         {
             ref Job job = ref _jobs[index];
             CuiaView s = _views[job.Source];
+            if (job.Scoop)
+            {
+                // Sacar (TJ3): la tinaja no se movió; su parte acaba cuando su cuia sale de la boca, pero sigue delante, tapando a
+                // su cuia, hasta que esta vuelve a la ranura (FinishTarget).
+                job.SrcDone = true;
+                PaintJobEnd(index, job.Source, job.SrcAfter, job.SrcSealedAfter);
+                if (job.TgtDone)
+                {
+                    ReturnJar(ref job);
+                }
+
+                return;
+            }
+
             if (job.Started && !job.IsUndo)
             {
                 s.SetTongue(0f, Color.clear, 0);
@@ -1399,6 +1487,18 @@ namespace AF.Presentation
         private void FinishTarget(int index)
         {
             ref Job job = ref _jobs[index];
+            if (job.Scoop && job.Started)
+            {
+                // Su cuia vuelve a la ranura (TJ3); la tinaja, ya sin nada que tapar, también.
+                CuiaView t = _views[job.Target];
+                t.ReturnBody();
+                t.Unlock();
+                if (job.SrcDone)
+                {
+                    ReturnJar(ref job);
+                }
+            }
+
             job.TgtDone = true;
             PaintJobEnd(index, job.Target, job.TgtAfter, job.TgtSealedAfter);
         }
@@ -1793,12 +1893,149 @@ namespace AF.Presentation
                 job.PlanDone = true;
             }
 
+            ReleaseJarHold(ref job); // la tinaja vacía, ya boca abajo (TJ3)
             if (job.Counters != 0)
             {
                 PaintCounters(index);
             }
 
             EndIntake(ref job);
+        }
+
+        // ---- Sacar de la Tinaja (TJ3; propuesta de la Tinaja, b.2 «Animación y sonido»; D-019) ----
+
+        // El overlay de la Tinaja de la cuia i, o null.
+        private TinajaOverlay? TinajaAt(int i)
+        {
+            return (uint)i < (uint)_views.Length ? _views[i].OverlayOf(MechanicType.Tinaja) as TinajaOverlay : null;
+        }
+
+        // Arranca el gesto de sacar: la tinaja no se inclina (se asienta si estaba elevada) y pasa delante, y su cuia vuela a la
+        // boca. Las dos van a la capa de vertido (D-006: lo que se mueve, delante de todo), su cuia primero y la tinaja encima:
+        // así su cuia entra «por detrás del labio» y lo que queda dentro de la vasija no se ve.
+        private void StartScoop(ref Job job)
+        {
+            CuiaView s = _views[job.Source];
+            CuiaView t = _views[job.Target];
+            s.Lock();
+            t.Lock();
+            job.JarStartOffset = s.BodyOffset;
+            job.JarStartAngle = s.BodyAngle;
+            job.StartOffset = t.BodyOffset;
+            job.Before = job.SrcBefore.Count;
+            job.DoseMs = _timings.DoseMs;
+            job.StreamStart = _timings.TravelMs;
+            job.FlowEnd = job.StreamStart + (job.Amount * _timings.DoseMs);
+            job.TiltBias = 0f;
+            SetEnds(ref job);
+            job.Dir = t.FootPosition.x >= s.FootPosition.x ? 1f : -1f;
+            job.MouthTarget = ScoopFootFor(s);
+            job.PourAngle = -job.Dir * ScoopTiltDeg;
+            job.PourOffset = job.MouthTarget - t.FootPosition;
+            t.MoveBodyTo(_frontLayer);
+            s.MoveBodyTo(_frontLayer);
+            job.JarFront = true;
+        }
+
+        /// <summary>
+        /// Pie de su cuia mientras se llena en la boca de la tinaja <paramref name="jar"/> (en el contenedor): en el eje de la
+        /// tinaja, <see cref="ScoopFootBelowMouthU"/> bajo el centro de su boca, con la unidad de la tinaja.
+        /// </summary>
+        public static Vector2 ScoopFootFor(CuiaView jar)
+        {
+            return jar.FootPosition + new Vector2(0f, (ProceduralArt.TinajaMouthCenterU - ScoopFootBelowMouthU) * jar.Unit);
+        }
+
+        // Pose de la tinaja y de su cuia en el instante time del gesto de sacar. La tinaja se asienta en el viaje. Su cuia: viaje en
+        // arco por encima de la vasija (una cúbica que sube en su columna, cruza a ScoopArcU sobre la boca y baja en el eje),
+        // inclinándose a ScoopTiltDeg; en la boca, se llena con un leve vaivén; vuelta por el mismo arco al revés con el rebote
+        // de 07 §5.2 y, al salir, 2-3 gotas que caen en la boca. Sin asignaciones.
+        private void ScoopPose(ref Job job, float time, Color color)
+        {
+            CuiaView s = _views[job.Source];
+            CuiaView t = _views[job.Target];
+            float travel = Mathf.Max(1f, _timings.TravelMs);
+            if (job.JarFront)
+            {
+                float e = Ease.Out(Mathf.Clamp01(time / travel));
+                s.SetPose(Vector2.Lerp(job.JarStartOffset, Vector2.zero, e), Mathf.Lerp(job.JarStartAngle, 0f, e));
+            }
+
+            if (job.TgtDone || time >= job.TgtEnd)
+            {
+                return;
+            }
+
+            float u = t.Unit;
+            Vector2 rest = t.FootPosition;
+            Vector2 dip = job.MouthTarget;
+            float top = Mathf.Max(rest.y, dip.y) + (ScoopArcU * u);
+            Vector2 foot;
+            float angle;
+            if (time < job.StreamStart)
+            {
+                float e = Ease.InOut(time / travel);
+                Vector2 from = rest + job.StartOffset;
+                foot = Cubic(from, new Vector2(from.x, top), new Vector2(dip.x, top), dip, e);
+                angle = job.PourAngle * e;
+            }
+            else if (time < job.ReturnStart)
+            {
+                float q = Mathf.Clamp01((time - job.StreamStart) / Mathf.Max(1f, job.FlowEnd - job.StreamStart));
+                foot = dip - new Vector2(0f, Mathf.Sin(Mathf.PI * q) * ScoopBobU * u);
+                angle = job.PourAngle;
+                if (job.Splashes == 0)
+                {
+                    job.Splashes = 1;
+                    t.Ripple(); // el agua entra en su cuia
+                }
+            }
+            else
+            {
+                float r = Ease.InOutSine((time - job.ReturnStart) / Mathf.Max(1f, _timings.ReturnMs));
+                foot = Cubic(dip, new Vector2(dip.x, top), new Vector2(rest.x, top), rest, r);
+                foot.y += Mathf.Sin(Mathf.PI * r) * ReturnBounceU * u;
+                angle = job.PourAngle * (1f - r);
+                if (!job.ScoopDrops)
+                {
+                    job.ScoopDrops = true;
+                    Fx?.Splash(s.FootPosition + new Vector2(0f, ProceduralArt.TinajaMouthCenterU * s.Unit), color, s.Unit);
+                }
+            }
+
+            t.SetPose(foot - rest, angle);
+        }
+
+        private static Vector2 Cubic(Vector2 a, Vector2 b, Vector2 c, Vector2 d, float e)
+        {
+            float k = 1f - e;
+            return (k * k * k * a) + (3f * k * k * e * b) + (3f * k * e * e * c) + (e * e * e * d);
+        }
+
+        // La tinaja vuelve a su ranura y suelta la pose (al volver su cuia o al saltar el trabajo).
+        private void ReturnJar(ref Job job)
+        {
+            if (!job.JarFront)
+            {
+                return;
+            }
+
+            job.JarFront = false;
+            CuiaView s = _views[job.Source];
+            s.ReturnBody();
+            s.Unlock();
+        }
+
+        // Fin de la espera boca arriba de la tinaja vacía (al acabar o saltar el plan): ya puede tumbarse.
+        private void ReleaseJarHold(ref Job job)
+        {
+            if (!job.JarHold)
+            {
+                return;
+            }
+
+            job.JarHold = false;
+            TinajaAt(job.Source)?.HoldUpright(false);
         }
 
         // La cuia tocada deja de tragarse el chorro (T52): al terminar el trabajo o al llevarlo a su final.
@@ -1989,7 +2226,7 @@ namespace AF.Presentation
         {
             for (int i = 0; i < _count; i++)
             {
-                if (_jobs[i].Started && !_jobs[i].IsUndo && _jobs[i].Source == source)
+                if (_jobs[i].Started && !_jobs[i].IsUndo && !_jobs[i].Scoop && _jobs[i].Source == source)
                 {
                     offset = _jobs[i].PourOffset;
                     angleDeg = _jobs[i].PourAngle;
@@ -2038,6 +2275,12 @@ namespace AF.Presentation
             public int Amount;
             public int Tint;
             public bool IsUndo;
+            public bool Scoop; // sacar de la Tinaja (TJ3): se mueve su cuia (la tocada), no el origen
+            public bool JarFront; // la tinaja está en la capa de vertido, sobre su cuia
+            public bool JarHold; // la tinaja vacía espera boca arriba a su paso Upend
+            public bool ScoopDrops; // ya cayeron las gotas al salir su cuia de la boca
+            public Vector2 JarStartOffset;
+            public float JarStartAngle;
             public bool Through;
             public bool Intake; // por un Remolino, la cuia tocada se está tragando el chorro (T52; RemolinoOverlay.BeginIntake)
             public bool OnMud;

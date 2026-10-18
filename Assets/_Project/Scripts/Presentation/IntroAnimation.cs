@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 using AF.Core.Board;
+using AF.Core.Mechanics;
+using AF.Presentation.Mechanics;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -44,6 +46,10 @@ namespace AF.Presentation
     /// turbias, con su trama y su «?», y la insignia sale al final. El Barro no es
     /// una racha: tampoco recibe fruta ni florece, y aparece con <see cref="Palette.Mud"/> y sus grumos en ese mismo fotograma
     /// (la regla de 02 §4.2 aplicada al Barro [P]).</para>
+    /// <para>La Tinaja (M13; D-010 con D-019; propuesta de la Tinaja, b.2 «Animación y sonido»; TJ3): el chorrito entra por su
+    /// boca el tiempo de sus dosis sin que se vea subir el agua, la tropa deja caer una sola fruta, en la boca (las de debajo,
+    /// ocultas o ya reveladas, no reciben fruta), y el chip «×n» y las bandas aparecen en el fotograma del primer impacto. Sus
+    /// ocultas nunca son agua turbia: el barro de su vasija (contrato 27), también con <see cref="ReduceMotion"/>.</para>
     /// <para>Con <see cref="ReduceMotion"/> (07 §7.8, cuando exista el ajuste): fundido de 250 ms al estado final y, en modo
     /// rama, un miquito quieto que se desvanece 600 ms después (guion §9; recomendación Q13 A, pendiente de D-010).</para>
     /// </remarks>
@@ -129,6 +135,7 @@ namespace AF.Presentation
 
         private readonly IntroChoreography _plan = new IntroChoreography();
         private readonly IntroInput _input = new IntroInput();
+        private readonly TinajaOverlay?[] _jars = new TinajaOverlay?[MaxCuias]; // la Tinaja de cada cuia (TJ3), o null
         private readonly IntroAudioCues _audio = new IntroAudioCues(); // AU1: los sonidos de Llenar y teñir
         private readonly ProceduralArt _art;
         private readonly RectTransform _layer;
@@ -459,6 +466,13 @@ namespace AF.Presentation
 
             for (int i = 0; i < n; i++)
             {
+                if (board[i].Mechanic == MechanicType.Tinaja || board[i].Mechanic == MechanicType.Cucharon)
+                {
+                    // La vasija y su cuia colgada con el tablero nuevo (también tras Volver a la orilla con la tinaja ya vacía,
+                    // boca abajo, y su cuia suelta): sus overlays se pintan desde el estado; las dosis las vacía la intro aquí.
+                    views[i].ShowContent(board[i], board.IsSealed(i));
+                }
+
                 views[i].Lock();
                 views[i].SetSealed(false);
                 views[i].SetPose(Vector2.zero, 0f);
@@ -473,6 +487,11 @@ namespace AF.Presentation
                 {
                     views[i].Murky.Prewarm(); // los sprites de la insignia «?×n», ya: el primer impacto no crea texturas (A10)
                 }
+
+                // La Tinaja (D-010; TJ3): su boca seca hasta llenarse y la fruta solo en ella; el chip «×n» y las bandas, en el
+                // primer impacto.
+                _jars[i] = board[i].Mechanic == MechanicType.Tinaja ? views[i].OverlayOf(MechanicType.Tinaja) as TinajaOverlay : null;
+                _jars[i]?.BeginIntro(DryMouth);
             }
 
             PlanDrops(water);
@@ -684,6 +703,8 @@ namespace AF.Presentation
                 }
 
                 _views[i].Unlock();
+                _jars[i]?.EndIntro();
+                _jars[i] = null;
                 _views[i].ShowContent(_final[i], _sealed[i]);
             }
 
@@ -780,6 +801,10 @@ namespace AF.Presentation
                 {
                     CuiaView v = _views[i];
                     Cuia final = _final[i];
+
+                    // Las ocultas de la Tinaja no son agua turbia (contrato 27): el barro de su vasija, mate, como en CuiaView
+                    // (la misma regla, MurkyMarks.IsMurkyWater, y el mismo color, Palette.HiddenDose).
+                    bool murkyWater = MurkyMarks.IsMurkyWater(final);
                     for (int k = 0; k < v.Capacity; k++)
                     {
                         if (k >= final.Count)
@@ -792,17 +817,27 @@ namespace AF.Presentation
                         int tint = final.ColorAt(k);
                         bool mud = !hidden && tint == Cuia.MudColor;
                         bool inert = hidden || mud; // ocultas y Barro: sin tinte ni patrón
-                        Color c = hidden ? MurkyColor : Palette.Tint(tint);
+                        Color c = hidden ? Palette.HiddenDose(!murkyWater) : Palette.Tint(tint);
                         var faded = new Color(c.r, c.g, c.b, s);
                         v.SetDose(k, faded, 1f, inert ? 0 : tint);
-                        if (hidden)
+                        if (hidden && murkyWater)
                         {
                             v.Liquid.SetDose(k, faded, 1f, 0, LiquidGraphic.MurkyLook.Hidden); // ya turbia: trama y «?»
                         }
-                        else if (mud)
+                        else if (inert)
                         {
-                            v.Liquid.SetMatteDose(k, faded, 1f); // el Barro, mate desde el primer fotograma (T20)
+                            v.Liquid.SetMatteDose(k, faded, 1f); // el Barro y el barro de la tinaja, mate desde el primer fotograma (T20)
                         }
+                    }
+
+                    TinajaOverlay? jar = _jars[i];
+                    if (jar != null && final.Count > 0)
+                    {
+                        // La boca se funde de seca a su fruta (Reducir movimiento: sin impactos; el chip, al final).
+                        int top = final.Count - 1;
+                        int mouthTint = final.IsHiddenAt(top) ? 0 : final.ColorAt(top);
+                        Color fruit = mouthTint > 0 ? Opaque(Palette.Tint(mouthTint)) : DryMouth;
+                        jar.SetIntroMouth(ColorMath.OkLabLerp(DryMouth, fruit, s), s >= 1f ? mouthTint : 0);
                     }
                 }
 
@@ -834,9 +869,14 @@ namespace AF.Presentation
                         // Ocultas y Barro: agua del río hasta el primer impacto y, desde ese fotograma, su pardo con su marca.
                         bool hidden = _input.Hidden[(i * IntroInput.MaxDoses) + k];
                         bool shown = p.FirstImpactMs >= 0f && t >= p.FirstImpactMs;
+                        int inertTint = _input.Tints[(i * IntroInput.MaxDoses) + k];
                         if (shown && hidden)
                         {
-                            v.PaintHiddenDose(k);
+                            v.PaintHiddenDose(k); // en la Tinaja, el barro de su vasija (CuiaView; contrato 27)
+                        }
+                        else if (shown && inertTint != Cuia.MudColor)
+                        {
+                            v.SetDose(k, Palette.Tint(inertTint), 1f, inertTint); // capa ya revelada bajo la boca de la Tinaja
                         }
                         else if (shown)
                         {
@@ -864,7 +904,53 @@ namespace AF.Presentation
                         v.SetDose(k, ColorMath.OkLabLerp(_waterA, Palette.Tint(tint), s), 1f, tint);
                     }
                 }
+
+                ApplyJar(i, t);
             }
+        }
+
+        // La boca de la Tinaja en la intro (D-010; TJ3): seca hasta que el chorrito la llena, el agua del río (opaca, sobre el
+        // barro) y la fruta que cae en ella florece en OKLab con su icono; el chip «×n» y las bandas, en el primer impacto.
+        private void ApplyJar(int i, float t)
+        {
+            TinajaOverlay? jar = _jars[i];
+            int doses = _input.Doses[i];
+            if (jar == null || doses <= 0)
+            {
+                return;
+            }
+
+            IntroChoreography p = _plan;
+            int top = doses - 1;
+            Color color = DryMouth;
+            int glyph = 0;
+            if (p.FillEndMs[i] >= 0f && t >= p.FillEndMs[i])
+            {
+                Color water = Opaque(_water);
+                color = water;
+                int run = p.RunOf(i, top);
+                float s = run >= 0 ? Mathf.Clamp01((t - p.RunBloomMs[run]) / StripeMs) : 0f;
+                if (s > 0f)
+                {
+                    int tint = p.RunTint[run];
+                    color = ColorMath.OkLabLerp(water, Opaque(Palette.Tint(tint)), s);
+                    glyph = s >= 1f ? tint : 0;
+                }
+            }
+
+            jar.SetIntroMouth(color, glyph);
+            if (p.FirstImpactMs >= 0f && t >= p.FirstImpactMs)
+            {
+                jar.ShowIntroMarks();
+            }
+        }
+
+        /// <summary>Boca de la Tinaja seca (D-010; TJ3): el fondo de barro oscuro, el mismo de la boca sin fruta del overlay.</summary>
+        public static readonly Color DryMouth = Opaque(Palette.WoodDark);
+
+        private static Color Opaque(Color c)
+        {
+            return new Color(c.r, c.g, c.b, 1f);
         }
 
         // Todo lo cosmético, por tiempo: río, madera, chorritos, frutas, penachos, anillos, gotas, dosel y tropa. alpha < 1:
@@ -975,6 +1061,10 @@ namespace AF.Presentation
                     float span = Mathf.Max(1f, p.FillEndMs[i] - p.FillStartMs[i]);
                     float level = _input.Doses[i] * Ease.Out(Mathf.Clamp01((t - p.FillStartMs[i]) / span));
                     headY = _input.FootY[i] - ((CuiaGeometry.CavityBottomU + level) * unit);
+                    if (_input.Jar[i])
+                    {
+                        headY = p.CavityFloorY[i]; // la Tinaja: entra por la boca, sin que se vea subir el agua (TJ3)
+                    }
                 }
 
                 float from = t > p.FillEndMs[i] ? Mathf.Clamp01((t - p.FillEndMs[i]) / Mathf.Max(1f, p.StreamTailMs)) : 0f;
