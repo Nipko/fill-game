@@ -157,9 +157,14 @@ function Write-AabBreakdown([System.IO.FileInfo]$Aab) {
         $zip.Dispose()
     }
     Write-Output '  Desglose del .aab (MB comprimidos en el AAB / sin comprimir):'
+    $entriesTotal = [long]0
     foreach ($g in ($packed.Keys | Sort-Object { - $packed[$_] }, { $_ })) {
         Write-Output ('    {0,-40} {1,8} {2,8}' -f $g, (Format-MB $packed[$g]), (Format-MB $raw[$g]))
+        $entriesTotal += $packed[$g]
     }
+    # Lo que no es CompressedLength: cabeceras locales, directorio central y relleno del ZIP.
+    # Con esta fila, el desglose suma el tamano del archivo.
+    Write-Output ('    {0,-40} {1,8}' -f 'cabeceras y directorio del ZIP', (Format-MB ($Aab.Length - $entriesTotal)))
 }
 
 $failed = $false

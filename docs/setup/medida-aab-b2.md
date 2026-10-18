@@ -2,12 +2,14 @@
 
 Fecha: 2026-10-18 · Ejecutado por: agente (build-release) · Base: `integracion-fase1-fase2` en `cb2460e` (ola 6 cerrada) más FX8, en el worktree del carril Unity A · Fuentes: GDD 08 §6.1 y §12.1, CLAUDE.md (compuertas de 80 MB y 16 KB), `docs/setup/plan-instalacion.md` (el build de referencia de release es el del CI Linux x64).
 
-## Veredicto: cumple
+## Veredicto provisional: cumple con los niveles 1-300 (falta C1b)
+
+**B2 no está terminada.** La tarea pide la medida con los 700 niveles de la ola 7 y depende de C1b, que no está en esta rama, como tampoco TJ3 ni TJ4, que van antes en el carril (`git log cb2460e..HEAD` solo trae FX8 y B2, y `tanda4/o7-c1b` no tiene commits sobre `cb2460e`). Lo que sigue es la medida de la base actual (B2a). Queda pendiente B2b: repetir `BuildGameAab`, `ci/size-gate.ps1 -Breakdown -RequireBundletool` y `ci/check-16kb.sh` sobre `game.aab` cuando C1b (y TJ3/TJ4) estén en la rama, y actualizar las tablas «Peso por grupo» y «Frente a B0». El tech-lead decide si deja B2 abierta o la parte así.
 
 - **Tamaño:** el AAB del juego pesa **51,87 MB**, y su descarga en Play (`bundletool get-size total`) es de **50,80 MB** como máximo, frente al tope de 80 MB. El AAB de humo pesa 40,03 MB, con una descarga de 38,96 MB.
 - **16 KB correcto** en `smoke.aab`, `smoke.apk` y `game.aab`. Las 7 `.so` de `arm64-v8a` están alineadas a 16384 en cada uno, y `zipalign -c -P 16 -v 4` sale bien en el APK y en el APK universal de cada AAB.
 - **Manifiesto de `game.aab`:** `com.amazonfill.dev`, minSdk 26 y targetSdk 36. Permisos: `INTERNET` (sigue pendiente del dueño), `VIBRATE` (D-026) y el `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` propio de AndroidX.
-- **Salvedad: no están los 700 niveles.** El cliente solo trae los niveles 1-300 (`tutorial_v0` y los mundos 2-6). C1b, que registra los packs 7-9, no está en esta base: el commit que pasó el encargo como C1b (`cb2460e`) es el cierre de la ola 6, y la rama `tanda4/o7-c1b` no tiene commits. Los niveles 301-700 suman, por estimación, unos **0,51 MB sin comprimir y ≈ 0,05 MB en el AAB**: 1,28 KB por nivel en bruto y 0,13 KB con deflate, medidos sobre los 40 niveles de muestra del mundo 7 en `tools/out/sample_*`. No cambian el veredicto. Hay que repetir la medida cuando C1b esté integrado; con el build incremental tarda menos de 1 min.
+- **Faltan los niveles 301-700.** El cliente solo trae los niveles 1-300 (`tutorial_v0` y los mundos 2-6). C1b, que registra los packs 7-9 (`pack_schema` 3, con la Tinaja), no está en esta base: el commit que pasó el encargo como C1b (`cb2460e`) es el cierre de la ola 6. Lo que añadan es **una estimación, no una medida**. El peso por nivel crece con el mundo: 0,87 KB en el mundo 2, 1,21 en el 3, 1,31 en el 4, 1,34 en el 5 y **1,39 KB en el 6** (`mundo_06_v1.json`: 139.470 B para 100 niveles, 11.603 B con deflate). Las muestras del mundo 7 de `tools/out/sample_*` dan 1,28 KB, menos que el mundo 6, así que no sirven de cota. Con 1,39 KB por nivel, los 400 niveles suman unos **0,56 MB sin comprimir** (≈ 0,6 MB si siguen creciendo y con los campos de la Tinaja) y **≈ 0,05 MB en el AAB** (0,12 KB por nivel con deflate). Aunque fueran el doble, no cambiarían el veredicto de tamaño, pero solo la medida de B2b lo confirma.
 
 ## Qué AAB mide la compuerta de tamaño
 
@@ -21,7 +23,7 @@ Fecha: 2026-10-18 · Ejecutado por: agente (build-release) · Base: `integracion
 |---|---|---|
 | `unity run <wt> --architecture x86_64 --log-file Logs/b2-smoke.log --no-tail --timeout 5400 --non-interactive -- -nographics -buildTarget Android -executeMethod AF.EditorTools.BuildSmoke.BuildAndroid` | 0 | AAB en 245,1 s y APK en 14,6 s, sin errores |
 | `unity run <wt> --architecture x86_64 --log-file Logs/b2-game-aab.log ... -executeMethod AF.EditorTools.AudioAssetSetup.BuildGameAab` | 0 | `game.aab` en 35,7 s (incremental), más `Logs/audio-size.md` y `Logs/aab-size.md` |
-| Ídem tras la revisión (`Logs/b2-game-aab-2.log`), con el recuento de assets por grupo y ruta | 0 | `game.aab` de 51.869.066 bytes (51,87 MB, igual) y `Logs/aab-size.md` de nuevo |
+| Ídem tras la revisión, con el recuento de assets por grupo y ruta (su log no se conservó: en `Logs/` solo queda `b2-game-aab.log`, del primer build) | 0 | `game.aab` de 51.869.066 bytes (51,87 MB, igual) y `Logs/aab-size.md` de nuevo (15:42) |
 | `pwsh ci/size-gate.ps1 Builds/Android/smoke.aab -Breakdown -RequireBundletool -Bundletool <bundletool-all-1.17.2.jar del Editor>` | 0 | archivo 40,03 MB y Play 38,95-38,96 MB |
 | `pwsh ci/size-gate.ps1 Builds/Android/game.aab -Breakdown -RequireBundletool -Bundletool <ídem>` | 0 | archivo 51,87 MB y Play 50,79-50,80 MB |
 | `CHECK16_REQUIRE_ZIPALIGN=1 BUNDLETOOL_JAR=<ídem> ZIPALIGN=<build-tools 36.0.0> bash ci/check-16kb.sh smoke.aab smoke.apk` | 0 | 14 `.so` de 64 bits y 0 fallos |
@@ -31,7 +33,7 @@ SHA-256:
 
 - `smoke.aab`: `d5987d8f395045cebcb1024435d42f14b9c80ec8d594f376201375b014d92cff`
 - `smoke.apk`: `f31d445a4481ad8e50b1a73894297cf2eaafa598e7a7643befb9b7c4f298c19b`
-- `game.aab`: `a49112cdaa3b05926e738d0ffff8ef268cd2d90650d143e0f456d6ea7a72b004`
+- `game.aab`: `cf3e0061ebe82928d7928c3ecfc1d0ef3c5b413fd2d0e9adb3d2f3f31ce2d489` (el del build tras la revisión, el que miden las tablas; el del primer build, del mismo tamaño, era `a49112cd…b004`)
 
 Los tres están en `Builds/Android/`, que ignora git, y no se suben a ningún sitio.
 
@@ -48,13 +50,16 @@ Nota: `BuildSmoke` escribe `tamano=38.18 MB` en MiB. La compuerta, como Play Con
 | dex (Java/Kotlin) | 2,35 / 6,44 | 2,35 / 6,44 |
 | Recursos y manifiesto de Android | 0,22 / 0,67 | 0,22 / 0,67 |
 | Metadatos, firma y `root` | 0,07 / 0,17 | 0,07 / 0,17 |
+| Cabeceras y directorio del ZIP | 0,09 | 0,09 |
 | **Total** | **51,87** | **40,03** |
+
+La última fila es el tamaño del archivo menos la suma de los `CompressedLength` de sus 493 entradas (491 en `smoke.aab`): 91.522 B en `game.aab` y 91.174 B en `smoke.aab`. Son las cabeceras locales y el directorio central del ZIP, que no pertenecen a ninguna entrada; `ci/size-gate.ps1 -Breakdown` ya la escribe. Las filas van redondeadas a dos decimales, así que su suma puede diferir del total en 0,01.
 
 ### Dentro de los datos de Unity (Build Report de `game.aab`; `Logs/aab-size.md`; MB empaquetados sin comprimir)
 
 | Grupo | Assets | MB | % | Estimación de 08 §6.1 |
 |---|---:|---:|---:|---|
-| Niveles (packs 1-300 y `seasons_v1`) | 7 | 0,38 | 1,1 | ≈ 2,5 MB sin comprimir con los 700 niveles y el Reto del río (aquí faltan los 301-700, ≈ +0,51 MB) |
+| Niveles (packs 1-300 y `seasons_v1`) | 7 | 0,38 | 1,1 | ≈ 2,5 MB sin comprimir con los 700 niveles y el Reto del río (aquí faltan los 301-700, ≈ +0,56 MB estimados; ver el veredicto) |
 | Textos, Mapa y datos (`Data/Loc`, `Map`, `Content`, `Fauna`) | 6 | 0,85 | 2,4 | — |
 | Fuentes (atlas TMP de Nunito, Baloo 2 y LiberationSans) | 20 | 6,88 | 19,8 | ≈ 1,5 MB |
 | Arte | 1 | 0,35 | 1,0 | Los gráficos siguen hechos por código; el arte encargado aún no ha llegado |
@@ -99,7 +104,7 @@ Lo esperable en esta fase: hasta el visto bueno del asesor cultural y las traduc
 ## Cambios de B2
 
 - **`ci/size-gate.ps1`:**
-  - `-Breakdown` escribe el desglose de cada `.aab` por grupo: código nativo, datos de Unity, dex, recursos de Android, metadatos y cada asset pack. Solo informa y no cambia el veredicto.
+  - `-Breakdown` escribe el desglose de cada `.aab` por grupo: código nativo, datos de Unity, dex, recursos de Android, metadatos, cada asset pack y las cabeceras y el directorio del ZIP, para que el desglose sume el tamaño del archivo. Solo informa y no cambia el veredicto.
   - Un `.aab` ilegible con `-Breakdown` sale con 2 (consta en el uso y en el código 2 de la cabecera).
   - La cabecera dice qué AAB mide la compuerta.
 - **`Assets/_Project/Editor/CI/AabSizeReport.cs`** (nuevo): clasifica el contenido del Build Report por grupo y cuenta los assets por grupo y ruta. `AudioAssetSetup.BuildGameAab` lo escribe en `Logs/aab-size.md`, junto al informe del audio. Lo prueba `AabSizeReportTests` (EditMode).
@@ -121,7 +126,7 @@ B2 no edita el GDD ni el traspaso: lo que hay que cambiar en ellos lo hace el ca
 - **Para el carril de documentación** (B2 no edita el canon):
   - GDD 08 §6.1, fila «Audio», y la cabecera del capítulo: anotar que B2 midió el AAB del juego el 2026-10-18 (`game.aab` de 51,87 MB y 50,80 MB de descarga en Play, con los niveles 1-300) y que la compuerta de tamaño del CI **deberá** medir ese AAB y no el de humo: el job aún no existe (s30). Mejor con la medida repetida con los niveles 1-700.
   - Traspaso (`docs/dev/traspaso/README.md`, paso 4, «La compuerta de tamaño del CI»): las mismas cifras y que con el arte a 2× de B0 y los SDK no cabe en 80 MB (sección «Frente a B0 y al AAB de 35 MB»).
-- Repetir esta medida con los niveles 1-700 cuando C1b esté integrado.
+- **B2b:** repetir esta medida con los niveles 1-700 cuando C1b (y TJ3/TJ4) estén en la rama: `BuildGameAab`, `ci/size-gate.ps1 -Breakdown -RequireBundletool` y `ci/check-16kb.sh` sobre `game.aab`, y actualizar el veredicto y las tablas «Peso por grupo» y «Frente a B0». Hasta entonces B2 no se da por cerrada en la integración.
 - La medida de referencia es la del CI Linux x64 (s30/s32), con `-RequireBundletool` y `CHECK16_REQUIRE_ZIPALIGN=1`, sobre el AAB del juego.
 - Del dueño:
   - decidir el permiso `INTERNET`;
