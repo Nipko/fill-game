@@ -34,6 +34,18 @@ namespace AF.UI
     /// placa se van y quedan «Jugar · Nivel 11» y «←». Cerrar el Mapa a medias (Atrás de Android) también la completa. Al acabar,
     /// saltarla o cerrarla, lo visto del Mapa pasa al 10 (<see cref="L10SequenceEnded"/>: <c>MarkMapSeen(10)</c>), así que no se
     /// repite, y la sonda escribe <c>river_fact_shown</c> con el dato y lo que estuvo a la vista.</para>
+    /// <para><b>A tamaño de teléfono</b> (revisión de M4.2): la vista Cuenca no se amplía (la casa mide lo mismo en dp a cualquier
+    /// zoom), así que durante la secuencia la figura de la casa (la embaúba y TiTino) crece a <see cref="L10HomeScale"/>× sobre su
+    /// pie, con un rebote de <see cref="L10HomeGrowMs"/> ms al entrar, y TiTino mira hacia el estuario al presentarse (la garra de
+    /// <c>sloth_present</c> señala el agua); al acabar vuelve a su tamaño con el fundido de salida. Mientras dura, el botón «Norte
+    /// arriba» no se ve ni se toca (la capa del salto lo tapa); las placas de los mundos futuros se van mientras se ve la placa del
+    /// dato, y los nombres de país y las placas que pisan el bocadillo, la placa del dato, la casa o la canoa con su mástil, sus banderas y
+    /// el guía (al salir y al llegar; <see cref="L10DimMarginDp"/> de margen) bajan a <see cref="L10DimAlpha"/> o, si les tapa más
+    /// del <see cref="L10DimHideCover"/> (o el bocadillo o la placa, opacos, lo pisan de verdad), no se ven: ningún rótulo a medio
+    /// tapar.</para>
+    /// <para><b>Con <c>max_level</c> &gt; 10</b> y el Mapa sin ver (un perfil de antes del Mapa o <c>af_max_level</c>), la canoa
+    /// «se pone al día» hasta <c>max_level</c> y sale del encuadre (que es el del 10: la casa, Belém y Santarém); en el juego normal
+    /// (ganar el 10 y luego Siguiente, Inicio o cerrar la app) no pasa [P].</para>
     /// <para>Con Reducir movimiento, sin fundidos ni viaje (lo hace «ponerse al día»). Las piezas se crean una vez; los textos y
     /// las medidas, al empezar y al recolocar; por fotograma, solo opacidades y escalas, sin asignaciones.</para>
     /// </summary>
@@ -63,6 +75,27 @@ namespace AF.UI
         /// <summary>Margen de la placa del dato y del bocadillo con el borde de la zona del mapa (dp) [P].</summary>
         public const float L10InsetDp = 8f;
 
+        /// <summary>
+        /// Escala de la figura de la casa (embaúba y TiTino) durante la secuencia [P] (revisión de M4.2): en la Cuenca la casa va a
+        /// <see cref="HomeBasinScale"/> y TiTino apenas se ve a tamaño de teléfono; así mide ≥ <see cref="L10TiTinoMinDp"/> dp de alto.
+        /// </summary>
+        public const float L10HomeScale = 2f;
+
+        /// <summary>Alto mínimo de TiTino (sus piezas, con la rama) durante la secuencia (dp) [P].</summary>
+        public const float L10TiTinoMinDp = 40f;
+
+        /// <summary>Rebote de entrada de la figura de la casa hasta <see cref="L10HomeScale"/> (ms) [P].</summary>
+        public const float L10HomeGrowMs = 250f;
+
+        /// <summary>Opacidad de un nombre de país o una placa de mundo que pisa una pieza de la secuencia [P].</summary>
+        public const float L10DimAlpha = 0.35f;
+
+        /// <summary>Margen alrededor del bocadillo, la placa del dato y la canoa al decidir qué rótulo pisan (dp) [P].</summary>
+        public const float L10DimMarginDp = 4f;
+
+        /// <summary>Si una pieza de la secuencia tapa más de esta fracción de un rótulo, el rótulo no se ve (alpha 0) [P].</summary>
+        public const float L10DimHideCover = 0.2f;
+
         private RectTransform? _seqLayer;
         private Button? _seqSkip;
         private SpeechBubble? _seqBubble;
@@ -88,6 +121,21 @@ namespace AF.UI
         private bool _seqWithPlate;
         private float _seqPlateShownMs;
         private bool _seqFactReported;
+
+        // La figura de la casa a tamaño de teléfono, el atenuado de los rótulos y el botón «Norte arriba» (revisión de M4.2).
+        private bool _seqHomeGrown;
+        private float _seqHomeK = 1f;
+        private float _seqFacing = 1f;
+        private float _seqDim;
+        private int _seqDimCount;
+        private CanvasGroup?[] _seqDimGroups = Array.Empty<CanvasGroup?>();
+        private float[] _seqDimTarget = Array.Empty<float>();
+        private float[] _seqDimBubble = Array.Empty<float>();
+        private float[] _seqDimPlate = Array.Empty<float>();
+        private CanvasGroup? _seqNorthUpGroup;
+        private readonly Vector3[] _seqCorners = new Vector3[4];
+        private readonly Rect[] _seqObstacles = new Rect[10 + MaxCanoeFlags];
+        private int _seqObstacleCount;
 
         /// <summary>
         /// Lo llama la secuencia al acabar, al saltarla o al cerrar el Mapa a medias (una vez por secuencia): <see cref="GameBootstrap"/>
@@ -148,6 +196,12 @@ namespace AF.UI
 
         /// <summary>El retrato de la placa del dato (null sin su arte).</summary>
         internal Image? L10Portrait => _seqPortrait;
+
+        /// <summary>Escala actual de la figura de la casa (1 fuera de la secuencia; <see cref="L10HomeScale"/> durante ella).</summary>
+        internal float L10HomeCurrentScale => _seqHomeK;
+
+        /// <summary>Cuánto se aplica el atenuado de los rótulos y el botón «Norte arriba» oculto (0 fuera de la secuencia; 1 en ella).</summary>
+        internal float L10DimAmount => _seqDim;
 
         /// <summary>
         /// Salta la secuencia del Mapa del 10 (el toque en cualquier sitio): la canoa llega en el acto, el bocadillo y la placa se
@@ -237,6 +291,13 @@ namespace AF.UI
                 _seqOutMs += dtMs;
                 float a = 1f - Mathf.Clamp01(_seqOutMs / L10OutFadeMs);
                 SetL10Alpha(a);
+                if (_seqHomeGrown)
+                {
+                    SetL10HomeScale(Mathf.Lerp(1f, L10HomeScale, a)); // la casa vuelve a su tamaño con el fundido
+                }
+
+                _seqDim = Mathf.Min(_seqDim, a);
+                ApplyL10Dim();
                 if (a <= 0f)
                 {
                     HideL10Pieces();
@@ -264,6 +325,14 @@ namespace AF.UI
             }
 
             bool reduce = ProgressReduceMotion;
+
+            // La figura de la casa crece sobre su pie con un rebote al entrar (con Reducir movimiento, ya a su tamaño).
+            if (_seqHomeGrown)
+            {
+                float grow = reduce || _seqMs >= L10HomeGrowMs ? 1f : Ease.OutBack(Mathf.Clamp01(_seqMs / L10HomeGrowMs));
+                SetL10HomeScale(Mathf.LerpUnclamped(1f, L10HomeScale, grow));
+                FaceL10Sloth(_seqFacing); // sin cambios, no toca nada
+            }
 
             // Mientras TiTino se presenta, «ponerse al día» espera quieto en Belém: su reloj vuelve a cero y la canoa a su sitio
             // (en un fotograma no llega a encender una boya: 100 ms como mucho frente a 150 por boya).
@@ -307,6 +376,8 @@ namespace AF.UI
                 }
             }
 
+            ApplyL10Dim(); // las placas de mundo se van con la entrada de la placa del dato
+
             if (_seqMs >= _seqEndMs)
             {
                 FinishL10Sequence(false, true);
@@ -340,8 +411,16 @@ namespace AF.UI
         {
             _seqStarted = true;
             _seqMs = 0f;
-            FrameL10(); // TiTino, Belém y Santarém a la vista: con la casa dentro, el bocadillo
             bool titino = _houseShown && _houseSloth != null;
+            _seqHomeGrown = titino;
+            FrameL10(); // TiTino (a su tamaño de la secuencia), Belém y Santarém a la vista: con la casa dentro, el bocadillo
+            SetL10HomeScale(titino && ProgressReduceMotion ? L10HomeScale : 1f); // con movimiento, crece con su rebote
+            _seqDim = 1f; // «Norte arriba» fuera y los rótulos que pisa la secuencia, atenuados (se deciden al colocar)
+            if (_catchUp)
+            {
+                MoveCanoe(_catchFrom); // la canoa, en Belém mientras TiTino se presenta (y medida ahí)
+            }
+
             bool voice = L10SlothVoice == null || L10SlothVoice();
             _seqWithBubble = titino && voice && _homeInView && _seqBubbleText.Length > 0;
             _seqWithPlate = _seqFactText.Length > 0;
@@ -405,6 +484,9 @@ namespace AF.UI
                 _houseSloth.Play(SlothPoseId.Idle, ProgressReduceMotion);
             }
 
+            _seqFacing = 1f;
+            FaceL10Sloth(1f); // mira otra vez como siempre
+
             ReportL10Fact();
             if (fade && !ProgressReduceMotion && (L10BubbleShown || L10FactShown))
             {
@@ -456,9 +538,15 @@ namespace AF.UI
             HideL10Pieces();
         }
 
+        // Fuera de la secuencia (o al acabar su fundido): sin bocadillo ni placa, la casa a su tamaño, los rótulos enteros y
+        // «Norte arriba» a la vista.
         private void HideL10Pieces()
         {
             _seqOutMs = -1f;
+            SetL10HomeScale(1f);
+            _seqHomeGrown = false;
+            _seqDim = 0f;
+            ApplyL10Dim();
             _seqBubble?.Hide();
             if (_seqPlate != null)
             {
@@ -502,14 +590,338 @@ namespace AF.UI
                 PlaceL10Plate(left + L10InsetDp, top + L10InsetDp, Mathf.Max(96f, _viewW - (2f * L10InsetDp)));
             }
 
+            if (_seqHomeGrown)
+            {
+                // TiTino mira (y señala) hacia el estuario. «Norte arriba» recoloca la figura cuando cambia el encuadre (y la deja
+                // mirando como siempre): se pone al día antes con el encuadre de la secuencia.
+                ApplyNorthUp(false);
+                _seqFacing = _homeLocal.x > _homeAt.x ? -1f : 1f;
+                FaceL10Sloth(_seqFacing);
+            }
+
             if (_seqWithBubble && _seqBubble != null && _houseSloth != null)
             {
-                // La cabeza de TiTino: medio cuerpo por encima de su punto en la rama (el rig cuelga centrado en él).
+                // La cabeza de TiTino: medio cuerpo por encima de su punto en la rama (el rig cuelga centrado en él), con la figura
+                // ya a su tamaño de la secuencia (aunque esté creciendo: el bocadillo no se mueve con el rebote).
+                float now = _seqHomeK;
+                float k = _seqHomeGrown ? L10HomeScale : 1f;
+                SetL10HomeScale(k);
                 Vector2 at = RootDp(_houseSloth.Root, Vector2.zero);
-                float head = _houseSloth.Size * 0.5f;
+                SetL10HomeScale(now);
+                float head = _houseSloth.Size * k * 0.5f;
                 _seqBubble.PlaceAbove(at.x, at.y - head - L10BubbleGapDp, left + L10InsetDp, left + _viewW - L10InsetDp, top + L10InsetDp,
                     L10BubbleMaxWidthDp);
             }
+
+            if (_seqActive)
+            {
+                DecideL10Dim();
+            }
+        }
+
+        // TiTino mira hacia facing (±1) en su rama, sin moverse. Sin asignaciones.
+        private void FaceL10Sloth(float facing)
+        {
+            SlothRig? rig = _houseSloth;
+            if (rig == null || !_houseShown)
+            {
+                return;
+            }
+
+            Vector2 p = rig.Root.anchoredPosition;
+            rig.Place(p.x, -p.y, facing);
+        }
+
+        // La figura de la casa (embaúba y TiTino) a k veces su tamaño sobre su pie: la capa de la casa escala alrededor de él. Sin
+        // asignaciones.
+        private void SetL10HomeScale(float k)
+        {
+            _seqHomeK = k;
+            RectTransform? layer = _houseLayer;
+            if (layer == null)
+            {
+                return;
+            }
+
+            var pivot = new Vector2(0f, 1f); // el de siempre (FillTopLeft): con escala 1, la casa no se mueve
+            if (k != 1f)
+            {
+                Rect r = layer.rect;
+                if (r.width > 0f && r.height > 0f)
+                {
+                    pivot = new Vector2(_homeLocal.x / r.width, 1f + (_homeLocal.y / r.height));
+                }
+            }
+
+            if (layer.pivot != pivot)
+            {
+                layer.pivot = pivot; // estirada y sin sizeDelta: la caja no se mueve, solo el punto fijo de la escala
+            }
+
+            var scale = new Vector3(k, k, 1f);
+            if (layer.localScale != scale)
+            {
+                layer.localScale = scale;
+            }
+        }
+
+        // Decide (al empezar y al recolocar) qué rótulos del mapa atenúa la secuencia: un nombre de país o una placa de mundo que
+        // pisa la casa crecida o la canoa con su mástil, sus banderas y el guía (donde está y donde llegará), el bocadillo o la
+        // placa del dato, con L10DimMarginDp de margen, baja a L10DimAlpha; si le tapan más de L10DimHideCover, a 0. Lo que pisan
+        // el bocadillo y la placa se atenúa solo mientras se ven (con su fundido: ApplyL10Dim), y las placas de mundo se van
+        // además mientras se ve la placa del dato. Los CanvasGroup se crean la primera vez; después, sin asignaciones.
+        private void DecideL10Dim()
+        {
+            _seqObstacleCount = 0;
+            if (_seqHomeGrown && _houseTree != null)
+            {
+                // La casa, a su tamaño de la secuencia (aunque aún esté creciendo).
+                float now = _seqHomeK;
+                SetL10HomeScale(L10HomeScale);
+                AddL10Obstacle(_houseTree.rectTransform);
+                SetL10HomeScale(now);
+            }
+
+            if (_hasCanoe)
+            {
+                AddL10Obstacle(_canoe.rectTransform);
+                if (_flagCount > 0 && _mast != null)
+                {
+                    AddL10Obstacle(_mast.rectTransform);
+                    for (int i = 0; i < _flagCount && i < _flagImages.Length; i++)
+                    {
+                        if (_flagImages[i] != null)
+                        {
+                            AddL10Obstacle(_flagImages[i]!.rectTransform);
+                        }
+                    }
+                }
+
+                if (_guide != null && _guide.gameObject.activeInHierarchy)
+                {
+                    AddL10Obstacle(_guide.rectTransform);
+                }
+
+                // Donde llegará: la canoa con su mástil y sus banderas, y el guía, con max_level (coordenadas del contenido).
+                var layer = (RectTransform)_canoe.rectTransform.parent;
+                AddL10Obstacle(layer, _gearBox);
+                AddL10Obstacle(layer, _guideBox);
+            }
+
+            int baseCount = _seqObstacleCount;
+            if (_seqWithBubble && _seqBubble != null)
+            {
+                AddL10Obstacle(_seqBubble.Rect, true); // ya colocado, aunque aún no se vea
+                AddL10Obstacle(_seqBubble.Tail, true);
+            }
+
+            int bubbleEnd = _seqObstacleCount;
+            if (_seqWithPlate && _seqPlate != null)
+            {
+                AddL10Obstacle(_seqPlate, true); // ya colocada, aunque no salga hasta que parta la canoa
+            }
+
+            int plateEnd = _seqObstacleCount;
+            int countries = _countries.Count;
+            int n = countries + _silhouettes.Count;
+            if (_seqDimGroups.Length < n)
+            {
+                Array.Resize(ref _seqDimGroups, n);
+                Array.Resize(ref _seqDimTarget, n);
+                Array.Resize(ref _seqDimBubble, n);
+                Array.Resize(ref _seqDimPlate, n);
+            }
+
+            _seqDimCount = n;
+            for (int i = 0; i < n; i++)
+            {
+                RectTransform rt = i < countries ? _countries[i].rectTransform : _silhouettes[i - countries].Root;
+                if (_seqDimGroups[i] == null || _seqDimGroups[i]!.transform != rt)
+                {
+                    CanvasGroup? group = rt.GetComponent<CanvasGroup>();
+                    if (group == null)
+                    {
+                        group = rt.gameObject.AddComponent<CanvasGroup>();
+                        group.blocksRaycasts = false;
+                        group.interactable = false;
+                    }
+
+                    _seqDimGroups[i] = group;
+                }
+
+                if (!rt.gameObject.activeInHierarchy)
+                {
+                    _seqDimTarget[i] = 1f;
+                    _seqDimBubble[i] = 1f;
+                    _seqDimPlate[i] = 1f;
+                    continue;
+                }
+
+                Rect box = RootBox(rt);
+                _seqDimTarget[i] = L10DimFor(box, baseCount, baseCount, baseCount);
+                _seqDimBubble[i] = L10DimFor(box, baseCount, baseCount, bubbleEnd);
+                _seqDimPlate[i] = L10DimFor(box, baseCount, bubbleEnd, plateEnd);
+            }
+
+            if (_seqNorthUpGroup == null && _northUpBuilt)
+            {
+                GameObject button = _northUpButton.Button.gameObject;
+                CanvasGroup? existing = button.GetComponent<CanvasGroup>();
+                _seqNorthUpGroup = existing != null ? existing : button.AddComponent<CanvasGroup>();
+            }
+
+            ApplyL10Dim();
+        }
+
+        // La opacidad de un rótulo con la caja box (dp del lienzo de la UI) frente a las piezas de siempre (las baseCount primeras)
+        // y las de [from, to): 1 si no pisa ninguna; L10DimAlpha si lo pisan un poco; 0 si le tapan más de L10DimHideCover (suma
+        // de lo que tapa cada pieza, con su margen), y también 0 si el bocadillo o la placa, opacos, lo pisan de verdad.
+        private float L10DimFor(Rect box, int baseCount, int from, int to)
+        {
+            float area = box.width * box.height;
+            if (area <= 0f)
+            {
+                return 1f;
+            }
+
+            float covered = 0f;
+            for (int i = 0; i < to; i++)
+            {
+                if (i >= baseCount && i < from)
+                {
+                    continue;
+                }
+
+                Rect o = _seqObstacles[i];
+                float w = Mathf.Min(box.xMax, o.xMax + L10DimMarginDp) - Mathf.Max(box.xMin, o.xMin - L10DimMarginDp);
+                float h = Mathf.Min(box.yMax, o.yMax + L10DimMarginDp) - Mathf.Max(box.yMin, o.yMin - L10DimMarginDp);
+                if (w > 0f && h > 0f)
+                {
+                    covered += w * h;
+                    if (i >= baseCount && box.Overlaps(o))
+                    {
+                        return 0f; // el bocadillo o la placa (opacos, encima) lo tapan de verdad: nunca a medio tapar
+                    }
+                }
+            }
+
+            if (covered <= 0f)
+            {
+                return 1f;
+            }
+
+            return covered / area > L10DimHideCover ? 0f : L10DimAlpha;
+        }
+
+        // Aplica el atenuado (_seqDim: 0 nada, 1 entero): los rótulos que pisan la casa y la canoa; los que pisan el bocadillo y
+        // la placa del dato, con la opacidad de cada uno; las placas de mundo fuera mientras se ve la placa del dato, y «Norte
+        // arriba» oculto y sin toques. Sin asignaciones.
+        private void ApplyL10Dim()
+        {
+            float plate = _seqPlate != null && _seqPlate.gameObject.activeSelf ? _seqPlateGroup!.alpha : 0f;
+            float bubble = _seqBubble != null && _seqBubble.Visible ? _seqBubble.Alpha : 0f;
+            int countries = _countries.Count;
+            for (int i = 0; i < _seqDimCount && i < _seqDimGroups.Length; i++)
+            {
+                CanvasGroup? group = _seqDimGroups[i];
+                if (group == null)
+                {
+                    continue;
+                }
+
+                float rest = _seqDimTarget[i];
+                float target = Mathf.Min(Mathf.Lerp(rest, _seqDimBubble[i], bubble), Mathf.Lerp(rest, _seqDimPlate[i], plate));
+                if (i >= countries)
+                {
+                    target = Mathf.Lerp(target, 0f, plate); // placa de mundo: fuera con la placa del dato
+                }
+
+                float alpha = Mathf.Lerp(1f, target, _seqDim);
+                if (group.alpha != alpha)
+                {
+                    group.alpha = alpha;
+                }
+            }
+
+            if (_seqNorthUpGroup != null)
+            {
+                float alpha = 1f - _seqDim;
+                bool on = _seqDim <= 0f;
+                if (_seqNorthUpGroup.alpha != alpha)
+                {
+                    _seqNorthUpGroup.alpha = alpha;
+                }
+
+                if (_seqNorthUpGroup.interactable != on)
+                {
+                    _seqNorthUpGroup.interactable = on;
+                    _seqNorthUpGroup.blocksRaycasts = on;
+                }
+            }
+        }
+
+        // La caja de rt como pieza de la secuencia: si está a la vista o, con evenHidden, aunque aún no se vea (ya colocada).
+        private void AddL10Obstacle(RectTransform rt, bool evenHidden = false)
+        {
+            if (_seqObstacleCount < _seqObstacles.Length && (evenHidden || rt.gameObject.activeInHierarchy))
+            {
+                _seqObstacles[_seqObstacleCount++] = RootBox(rt);
+            }
+        }
+
+        // Una caja en coordenadas locales de layer (dp, y hacia arriba, desde su esquina de arriba a la izquierda), al lienzo de la UI.
+        private void AddL10Obstacle(RectTransform layer, Rect local)
+        {
+            if (_seqObstacleCount >= _seqObstacles.Length || local.width <= 0f || local.height <= 0f)
+            {
+                return;
+            }
+
+            Rect r = layer.rect;
+            float x0 = float.MaxValue;
+            float x1 = float.MinValue;
+            float y0 = float.MaxValue;
+            float y1 = float.MinValue;
+            for (int i = 0; i < 4; i++)
+            {
+                float lx = (i & 1) == 0 ? local.xMin : local.xMax;
+                float ly = (i & 2) == 0 ? local.yMin : local.yMax;
+                Vector3 world = layer.TransformPoint(new Vector3(r.xMin + lx, r.yMax + ly, 0f));
+                Vector2 p = WorldToRootDp(world);
+                x0 = Mathf.Min(x0, p.x);
+                x1 = Mathf.Max(x1, p.x);
+                y0 = Mathf.Min(y0, p.y);
+                y1 = Mathf.Max(y1, p.y);
+            }
+
+            _seqObstacles[_seqObstacleCount++] = Rect.MinMaxRect(x0, y0, x1, y1);
+        }
+
+        // La caja de rt en dp del lienzo de la UI (arriba a la izquierda, y hacia abajo). Sin asignaciones.
+        private Rect RootBox(RectTransform rt)
+        {
+            rt.GetWorldCorners(_seqCorners);
+            float x0 = float.MaxValue;
+            float x1 = float.MinValue;
+            float y0 = float.MaxValue;
+            float y1 = float.MinValue;
+            for (int i = 0; i < 4; i++)
+            {
+                Vector2 p = WorldToRootDp(_seqCorners[i]);
+                x0 = Mathf.Min(x0, p.x);
+                x1 = Mathf.Max(x1, p.x);
+                y0 = Mathf.Min(y0, p.y);
+                y1 = Mathf.Max(y1, p.y);
+            }
+
+            return Rect.MinMaxRect(x0, y0, x1, y1);
+        }
+
+        private Vector2 WorldToRootDp(Vector3 world)
+        {
+            Vector3 p = _root.InverseTransformPoint(world);
+            Rect r = _root.rect;
+            return new Vector2(p.x - r.xMin, r.yMax - p.y);
         }
 
         // El encuadre de la secuencia en la Cuenca: centrado en la caja de la casa de TiTino (del pie a lo alto del árbol), Belém
@@ -526,7 +938,7 @@ namespace AF.UI
 
             MapSpace space = _space;
             Vector2 min = _homeLocal;
-            Vector2 max = _homeLocal + new Vector2(0f, _homeHeight);
+            Vector2 max = _homeLocal + new Vector2(0f, _homeHeight * (_seqHomeGrown ? L10HomeScale : 1f));
             if (TryCanoePoint(map, routes, _catchFrom, out Vector2 from))
             {
                 GrowL10Box(space.ToLocal(from), ref min, ref max);

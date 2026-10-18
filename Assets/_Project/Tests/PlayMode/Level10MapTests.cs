@@ -78,6 +78,9 @@ namespace AF.Tests.PlayMode
             Tick(map, 16);
             Assert.That(map.HomeShown, Is.True, "la casa de TiTino con el arte provisional");
             Assert.That(map.HomeSloth!.Pose, Is.EqualTo(SlothPoseId.Present));
+            Assert.That(map.L10HomeCurrentScale, Is.LessThan(RiverMapScreen.L10HomeScale), "la casa crece con un rebote");
+            Tick(map, (int)RiverMapScreen.L10HomeGrowMs);
+            Assert.That(map.L10HomeCurrentScale, Is.EqualTo(RiverMapScreen.L10HomeScale).Within(1e-4f), "y se queda a su tamaño de la secuencia");
             Assert.That(map.L10WithBubble, Is.True);
             Assert.That(map.L10BubbleText, Is.EqualTo("Yo vivo aquí, donde el río entra al mar."), "map_l10_intro (06 §2.3; P-M2)");
             Assert.That(map.L10TripFromMs, Is.EqualTo(NoticeTiming.ReadMs(map.L10BubbleText)), "lo que pide su lectura");
@@ -353,6 +356,121 @@ namespace AF.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator AtPhoneSize_TiTinoGrows_NorthUpHides_PlatesGo_AndNoLabelIsHalfCovered()
+        {
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileWonTen()));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            RiverMapScreen map = boot.RiverMapView!;
+            RectTransform root = (RectTransform)map.Canvas.transform;
+            SlothRig rig = map.HomeSloth!;
+            Assert.That(map.NorthUpShown, Is.True, "el botón existe en la Cuenca");
+
+            // Se queda a L10HomeScale (el rebote de entrada, con el reloj del test desde el primer fotograma: FirstVictoryOf10_*):
+            // TiTino, de ≥ 40 dp de alto, señala hacia el estuario.
+            Tick(map, 400);
+            Assert.That(map.L10HomeCurrentScale, Is.EqualTo(RiverMapScreen.L10HomeScale).Within(1e-4f));
+            Assert.That(rig.Pose, Is.EqualTo(SlothPoseId.Present));
+            var pieces = new List<Rect>();
+            rig.CollectRects(root, pieces);
+            Assert.That(pieces.Count, Is.GreaterThan(0));
+            float top = float.MaxValue;
+            float bottom = float.MinValue;
+            foreach (Rect r in pieces)
+            {
+                top = Mathf.Min(top, r.yMin);
+                bottom = Mathf.Max(bottom, r.yMax);
+            }
+
+            Assert.That(bottom - top, Is.GreaterThanOrEqualTo(RiverMapScreen.L10TiTinoMinDp), "TiTino se ve a tamaño de teléfono");
+            Vector2 hand = rig.Current.FrontArmTo - new Vector2(0.22f, 0.02f);
+            Assert.That(hand.magnitude * rig.Size * RiverMapScreen.L10HomeScale, Is.GreaterThanOrEqualTo(10f), "sloth_present: la garra se suelta y señala");
+            Rect tree = VictorySetup.CanvasRect(map.HomeTree!.rectTransform, root);
+            Assert.That(tree.height, Is.GreaterThan(map.HomeTree.rectTransform.rect.height * 1.5f), "la embaúba crece con él");
+            AssertBubblePointsAtTiTino(map);
+
+            // «Norte arriba», fuera y sin toques durante toda la secuencia.
+            CanvasGroup northUp = map.NorthUpButton.GetComponent<CanvasGroup>();
+            Assert.That(northUp, Is.Not.Null);
+            Assert.That(northUp.alpha, Is.EqualTo(0f));
+            Assert.That(northUp.interactable, Is.False);
+            Assert.That(northUp.blocksRaycasts, Is.False);
+            AssertNoLabelHalfCovered(map, root, VictorySetup.CanvasRect(map.L10Bubble!.Rect, root), "bocadillo");
+
+            // Con la placa del dato: las placas de mundo se van y ningún rótulo queda a medio tapar por ella.
+            Tick(map, map.L10TripFromMs - 400 + 600);
+            Assert.That(map.L10FactShown, Is.True);
+            foreach (RectTransform plate in map.SilhouettePlates())
+            {
+                CanvasGroup g = plate.GetComponent<CanvasGroup>();
+                Assert.That(g != null && g.alpha <= 0.001f, Is.True, plate.name + ": fuera mientras se ve la placa del dato");
+            }
+
+            AssertNoLabelHalfCovered(map, root, VictorySetup.CanvasRect(map.L10Plate!, root), "placa del dato");
+            Assert.That(northUp.alpha, Is.EqualTo(0f));
+
+            // Al acabar, todo vuelve: la casa a su tamaño y mirando como siempre, los rótulos y «Norte arriba».
+            Tick(map, map.L10SequenceDurationMs);
+            Assert.That(map.L10SequenceDone, Is.True);
+            Tick(map, 300);
+            Assert.That(map.L10HomeCurrentScale, Is.EqualTo(1f));
+            Assert.That(map.L10DimAmount, Is.EqualTo(0f));
+            Assert.That(rig.Root.localScale.x, Is.EqualTo(1f), "mira como siempre");
+            Assert.That(VictorySetup.CanvasRect(map.HomeTree.rectTransform, root).height, Is.EqualTo(map.HomeTree.rectTransform.rect.height).Within(0.5f));
+            Assert.That(northUp.alpha, Is.EqualTo(1f));
+            Assert.That(northUp.interactable, Is.True);
+            Assert.That(northUp.blocksRaycasts, Is.True);
+            foreach (RectTransform plate in map.SilhouettePlates())
+            {
+                CanvasGroup g = plate.GetComponent<CanvasGroup>();
+                Assert.That(g == null || g.alpha >= 0.999f, Is.True, plate.name + ": vuelve");
+            }
+
+            foreach (TMPro.TextMeshProUGUI country in map.CountryLabels())
+            {
+                CanvasGroup g = country.GetComponent<CanvasGroup>();
+                Assert.That(g == null || g.alpha >= 0.999f, Is.True, country.name + ": vuelve");
+            }
+        }
+
+        // Ningún nombre de país ni placa de mundo a la vista entero (alpha ≥ 0,99) pisa la pieza piece (con el margen de
+        // L10DimMarginDp); uno atenuado nunca pasa de L10DimAlpha, y uno que la pieza (opaca) tapa de verdad no se ve.
+        private static void AssertNoLabelHalfCovered(RiverMapScreen map, RectTransform root, Rect piece, string what)
+        {
+            float m = RiverMapScreen.L10DimMarginDp - 0.5f;
+            Rect grown = Rect.MinMaxRect(piece.xMin - m, piece.yMin - m, piece.xMax + m, piece.yMax + m);
+            var labels = new List<RectTransform>();
+            foreach (TMPro.TextMeshProUGUI country in map.CountryLabels())
+            {
+                labels.Add(country.rectTransform);
+            }
+
+            labels.AddRange(map.SilhouettePlates());
+            int checkedLabels = 0;
+            foreach (RectTransform label in labels)
+            {
+                CanvasGroup g = label.GetComponent<CanvasGroup>();
+                float alpha = g != null ? g.alpha : 1f;
+                Rect box = VictorySetup.CanvasRect(label, root);
+                checkedLabels++;
+                if (alpha >= 0.99f)
+                {
+                    Assert.That(box.Overlaps(grown), Is.False, label.name + " entero, pisado por el " + what);
+                }
+                else if (box.Overlaps(piece))
+                {
+                    Assert.That(alpha, Is.LessThanOrEqualTo(0.001f), label.name + ": tapado de verdad por el " + what + ", fuera");
+                }
+                else
+                {
+                    Assert.That(alpha, Is.LessThanOrEqualTo(RiverMapScreen.L10DimAlpha + 0.001f), label.name + ": atenuado o fuera");
+                }
+            }
+
+            Assert.That(checkedLabels, Is.GreaterThan(0), "hay rótulos que mirar");
+        }
+
         // Avanza el Mapa ms milisegundos en pasos de un fotograma (el reloj del juego está quitado).
         internal static void Tick(RiverMapScreen map, int ms)
         {
@@ -383,7 +501,7 @@ namespace AF.Tests.PlayMode
             Rect r = root.rect;
             var at = new Vector2(local.x - r.xMin, r.yMax - local.y);
             Assert.That(bubble.yMax, Is.LessThanOrEqualTo(at.y), "el bocadillo, encima de TiTino");
-            Assert.That(Mathf.Abs(tail.center.x - at.x), Is.LessThanOrEqualTo(rig.Size * 0.5f + 1f), "el pico, sobre TiTino");
+            Assert.That(Mathf.Abs(tail.center.x - at.x), Is.LessThanOrEqualTo((rig.Size * RiverMapScreen.L10HomeScale * 0.5f) + 1f), "el pico, sobre TiTino");
             Assert.That(tail.yMax, Is.LessThanOrEqualTo(at.y + 1f), "el pico no lo tapa");
         }
 
