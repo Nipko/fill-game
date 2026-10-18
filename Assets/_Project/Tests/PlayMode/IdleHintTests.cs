@@ -192,6 +192,62 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator PauseOpen_IsNotIdleness_AndClosingItRestartsTheCountFromZero()
+        {
+            yield return LoadPlaying(3, FunnelSetup.Profile(Seeds));
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            ArmIdle(boot);
+
+            // 11 s quieto y se abre la pausa: la vista ocupada no cuenta como inactividad, por mucho que pase el reloj.
+            FunnelSetup.Clock.Advance(TimeSpan.FromSeconds(11));
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.IdleHint.QueryCount, Is.EqualTo(0));
+            view.PauseButton.onClick.Invoke();
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.Pause.Visible, Is.True, "la pausa está abierta");
+            Assert.That(view.IdleHint.Armed, Is.False, "con la pausa abierta la cuenta no corre");
+            FunnelSetup.Clock.Advance(TimeSpan.FromSeconds(60));
+            PlayModeHelpers.Step(boot, 20 * PlayModeHelpers.FrameMs);
+            Assert.That(view.IdleHint.QueryCount, Is.EqualTo(0), "la pausa no es inactividad: no pregunta");
+            Assert.That(view.IdlePulses, Is.EqualTo(0), "ni pulsa");
+
+            // Al cerrarla, la cuenta empieza de cero: los 11 s de antes no suman.
+            view.Pause.ResumeButton.onClick.Invoke();
+            Assert.That(view.Pause.Visible, Is.False);
+            ArmIdle(boot);
+            FunnelSetup.Clock.Advance(TimeSpan.FromMilliseconds(11900));
+            PlayModeHelpers.Step(boot, 5 * PlayModeHelpers.FrameMs);
+            Assert.That(view.IdleHint.QueryCount, Is.EqualTo(0), "la cuenta empezó al cerrar la pausa");
+            FunnelSetup.Clock.Advance(TimeSpan.FromMilliseconds(100));
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.IdleHint.QueryCount, Is.EqualTo(1), "12 s desde que se cerró la pausa");
+            yield return WaitAnswer(boot);
+            Assert.That(view.IdlePulses, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator LevelWithoutHintSupported_NeverPulses()
+        {
+            // El tablero del nivel 7 con hint_supported = false (04 §2.3 b; el de MorphoUiTests.Unsupported_GreySlot_TooltipOnTap):
+            // en juego, desde el 3 y con la pista encendida, pero sin solver que la respalde: nunca pregunta ni pulsa.
+            yield return LoadPlaying(15, FunnelSetup.Profile(Seeds), MorphoUiTests.UnsupportedPack(15));
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            Assert.That(flow.Level.HintSupported, Is.False, "hint_supported = false");
+            Assert.That(flow.AcceptsBoardInput, Is.True, "el nivel está en juego");
+            Assert.That(IdleHint.AppliesTo(flow.LevelNumber, flow.Boosters), Is.True, "desde hint_idle_from_level");
+            StepUntilIdle(boot);
+            PlayModeHelpers.Step(boot, 100);
+            Assert.That(view.IdleHint.Armed, Is.False, "sin hint_supported la cuenta no corre");
+            FunnelSetup.Clock.Advance(TimeSpan.FromSeconds(60));
+            PlayModeHelpers.Step(boot, 20 * PlayModeHelpers.FrameMs);
+            Assert.That(view.IdleHint.QueryCount, Is.EqualTo(0), "no pregunta al solver");
+            Assert.That(view.IdlePulses, Is.EqualTo(0), "ni pulsa");
+        }
+
+        [UnityTest]
         public IEnumerator OffInSettings_NeverPulses_AndTurningItBackOnApplies()
         {
             Profile profile = FunnelSetup.Profile(Seeds);
