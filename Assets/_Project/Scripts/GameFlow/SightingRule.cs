@@ -15,7 +15,7 @@ namespace AF.GameFlow
     /// aparte). Solo en el primer intento del nivel: los reintentos ya la vieron. Decide también en qué niveles sale la tarjeta
     /// «Fruta nueva» y de qué tinte (<see cref="FruitNewAt"/>; 06 §4.5; tarea F5). Los niveles ocupados por estrenos salen de la
     /// especificación de la campaña (<see cref="OccupiedDebutLevels"/>, con las variantes de capacidad 18, 22 y 160 y los estrenos
-    /// aún sin tarjeta 323, 343 y 403) más los hitos de 02 §13 (propuesta de Frutas §3.3).
+    /// aún sin tarjeta, hoy solo la Tinaja en el 323) más los hitos de 02 §13 (propuesta de Frutas §3.3).
     /// </summary>
     public static class SightingRule
     {
@@ -64,19 +64,19 @@ namespace AF.GameFlow
         /// <summary>
         /// Estrenos de las variantes de la 1.0 con su tarjeta de estreno (02 §9.1, «Variantes» y lista única de estrenos; D-007,
         /// propuesta de D-007 b.3; firma de <c>pack_schema</c> 3), en orden: Liana de cuenta 243 (<c>intro_mechanic</c>
-        /// <c>liana_n</c> [P]) y Hoja atada 283 (<c>hoja_atada</c>). El Brote de dos hojas (343) y la Flor (403) entran con su
-        /// cliente (tarea VA1b). Van aparte de <see cref="MechanicDebutLevels"/>, que sigue siendo la copia de los 11 estrenos de
+        /// <c>liana_n</c> [P]), Hoja atada 283 (<c>hoja_atada</c>; VA1a), Brote de dos hojas 343 (<c>brote_n2</c> [P]) y Flor de
+        /// vitória-régia 403 (<c>flor</c>; las dos, VA1b). Van aparte de <see cref="MechanicDebutLevels"/>, que sigue siendo la copia de los 11 estrenos de
         /// 1-200 que usan los tests de los paquetes y de las capturas, pero cuentan igual como hitos (<see cref="MilestoneLevels"/>):
         /// el nivel lleva su tarjeta de estreno y no comparte la de «¡Miquito a la vista!». La compara con
         /// <c>tools/level-generator/specs/campaign_v2.json</c> un test (SightingRuleTests).
         /// </summary>
-        public static readonly int[] VariantDebutLevels = { 243, 283 };
+        public static readonly int[] VariantDebutLevels = { 243, 283, 343, 403 };
 
         /// <summary>
         /// Hitos con su propia presentación (02 §13: Marea 3, Reto del río 7, Cuia extra 8, Mercado 10, contador de Marea y
         /// Cosecha doble 11, Morpho 12, Cántaro 20, animación corta 21, Pororoca 30, Canoas y Cuia de rescate 31), todos los
         /// estrenos de <see cref="MechanicDebutLevels"/> (D-007 y 04 §2.5: 14, 27, 43, 63, 83, 100, 103, 123, 143, 163 y 183) y
-        /// los de las variantes (<see cref="VariantDebutLevels"/>: 243 y 283), en orden y sin repetidos. Se arma con las dos
+        /// los de las variantes (<see cref="VariantDebutLevels"/>: 243, 283, 343 y 403), en orden y sin repetidos. Se arma con las dos
         /// listas: un estreno nuevo no puede quedarse fuera.
         /// </summary>
         public static readonly int[] MilestoneLevels = SortedUnion(SortedUnion(new[] { 3, 7, 8, 10, 11, 12, 20, 21, 30, 31 }, MechanicDebutLevels), VariantDebutLevels);
@@ -92,14 +92,15 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Estrenos de <c>campaign_v2.json</c> (<c>mechanics[].debut</c>) cuya tarjeta de estreno aún no tiene el cliente: la
-        /// Tinaja en el 323 (D-019; 06 y 07, lista única de estrenos), el Brote de dos hojas en el 343 y la Flor en el 403 (02 §9.1,
+        /// Tinaja en el 323 (D-019; 06 y 07, lista única de estrenos). El Brote de dos hojas (343) y la Flor (403) estuvieron aquí
+        /// hasta que VA1b les dio su tarjeta (02 §9.1,
         /// «Variantes»). Ocupan ya su nivel (<see cref="IsBusy"/> y <see cref="OccupiedDebutLevels"/>): la tarjeta del miquito
         /// nunca cae en un estreno (07 §6.4; 02 §13), aunque sus packs lleguen antes que su tarjeta. No cuentan en
         /// <see cref="IsDebut"/> ni en <see cref="MilestoneLevels"/>, que siguen siendo los estrenos con tarjeta. Cuando un estreno
-        /// tenga la suya (el 343 y el 403 con VA1b, en <see cref="VariantDebutLevels"/>; la Tinaja, con la tarea que le dé
+        /// tenga la suya (como el 343 y el 403 con VA1b, que pasaron a <see cref="VariantDebutLevels"/>; la Tinaja, con la tarea que le dé
         /// tarjeta, en <see cref="MechanicDebutLevels"/>), sale de aquí; mientras siga, la unión no lo repite.
         /// </summary>
-        public static readonly int[] DebutsWithoutCardLevels = { 323, 343, 403 };
+        public static readonly int[] DebutsWithoutCardLevels = { 323 };
 
         /// <summary>
         /// Todos los estrenos de la campaña que ocupan su nivel (<c>mechanics[].debut</c> ∪ <c>capacities[].debut</c> de las

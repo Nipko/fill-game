@@ -91,7 +91,9 @@ StuckRefillSeeds(3,150,two)	+3 Deshacer\n150 semillas
 Tutorial(alta)	Esta agua tiene cinco dosis: solo cabe en la cuia alta
 Tutorial(barro)	El barro acepta cualquier fruta; el primer vertido lo lava… y entierra lo que hay debajo.
 Tutorial(brote)	El brote está cerrado: vierte más camu camu encima para que germine.
+Tutorial(brote_n2)	Este brote tiene dos hojas: cada dosis de su fruta abre una, y con las dos germina.
 Tutorial(chica)	Esta cuia chica solo guarda dos dosis: úsala para apartar, no para terminar
+Tutorial(flor)	La flor se abre cuando selles cuias de sus dos frutas: con una sola, solo se entreabre.
 Tutorial(hoja)	Esta hoja solo deja pasar aguaje. Vierte aguaje para abrirla.
 Tutorial(hoja_atada)	La hoja atada nunca cae: solo recibe su fruta, pero también puedes verter desde ella.
 Tutorial(liana)	La liana se suelta cuando selles una cuia de taperebá.
@@ -192,7 +194,9 @@ UiText.StuckUnsolvable	Ni una cuia más salva este tramo. Prueba la Marea o vuel
 UiText.TutorialAlta	Esta agua tiene cinco dosis: solo cabe en la cuia alta
 UiText.TutorialBarro	El barro acepta cualquier fruta; el primer vertido lo lava… y entierra lo que hay debajo.
 UiText.TutorialBrote	El brote está cerrado: vierte más camu camu encima para que germine.
+UiText.TutorialBroteN2	Este brote tiene dos hojas: cada dosis de su fruta abre una, y con las dos germina.
 UiText.TutorialChica	Esta cuia chica solo guarda dos dosis: úsala para apartar, no para terminar
+UiText.TutorialFlor	La flor se abre cuando selles cuias de sus dos frutas: con una sola, solo se entreabre.
 UiText.TutorialHoja	Esta hoja solo deja pasar aguaje. Vierte aguaje para abrirla.
 UiText.TutorialHojaAtada	La hoja atada nunca cae: solo recibe su fruta, pero también puedes verter desde ella.
 UiText.TutorialLiana	La liana se suelta cuando selles una cuia de taperebá.

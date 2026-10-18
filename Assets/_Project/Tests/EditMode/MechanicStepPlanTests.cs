@@ -108,6 +108,67 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Plan_Flor_DropSealsSecondKey_ReleaseInDPrime() // 02 R10 (f′): la gota que sella la segunda llave abre la Flor en (d′)
+        {
+            // La Flor admite la Lluvia (campaign_v2: not_with de la Flor = Liana, Piraña, Tinaja y turbias; VA1b): con el taperebá
+            // sellado en Before, la última gota sella el agua (la otra llave) en (c′) y la Flor se abre en el mismo vertido.
+            PourVisual v = StepBoards.FlorDropSealsSecondKey(out int rain, out int flor);
+            Assert.That(v.Events.LianaReleasedMask, Is.EqualTo(0), "la Flor no es una Liana");
+            Assert.That(v.Events.ReleasedMask, Is.EqualTo(1 << flor), "el núcleo la abre en el mismo vertido");
+            Assert.That(MechanicStepPlan.ReleaseStepMask(in v), Is.EqualTo(1 << flor));
+            int n = MechanicStepPlan.Build(in v, _plan);
+            Assert.That(n, Is.EqualTo(3), Describe(n));
+            AssertEntry(0, MechanicStepKind.RainEnd, StepStage.E, rain, -1);
+            AssertEntry(1, MechanicStepKind.Seal, StepStage.CPrime, rain, -1);
+            AssertEntry(2, MechanicStepKind.Release, StepStage.DPrime, flor, rain);
+            Assert.That(_plan[2].Tint, Is.EqualTo(StepBoards.Water), "el tinte de la llave que la abre: la de la cuia que sella la gota");
+            Assert.That(MechanicStepPlan.ReleaseStage(in v, flor), Is.EqualTo(StepStage.DPrime), "con Before y (c) solo está una llave");
+
+            // Hasta su etapa, la Flor sigue cerrada con sus dos llaves (StepStaging no la repinta fuera de orden).
+            Cuia pre = StepStaging.Pre(in v, flor, StepStage.DPrime);
+            Assert.That(pre.Mechanic, Is.EqualTo(MechanicType.Flor));
+            Assert.That(pre.MechanicKey, Is.EqualTo(StepBoards.LianaKey));
+            Assert.That(pre.MechanicKey2, Is.EqualTo(StepBoards.Water));
+            Assert.That(StepStaging.Pre(in v, flor, StepStage.D).Mechanic, Is.EqualTo(MechanicType.Flor), "tampoco se abre en (d)");
+            Assert.That(v.After[flor].Mechanic, Is.EqualTo(MechanicType.None), "abierta al final del vertido");
+        }
+
+        [Test]
+        public void Plan_Flor_SecondKeySealedInC_WithDropSeal_ReleaseInD()
+        {
+            // El receptor sella la segunda llave en (c) y la gota del mismo vertido sella el agua en (c′), que no es llave: la Flor se
+            // abre en (d), antes que los contadores. Las dos llaves no pueden sellarse en (c) en un mismo vertido (un vertido sella
+            // como mucho su receptor en (c)), así que (d) es siempre «Before + (c)».
+            PourVisual v = StepBoards.FlorSecondKeyInCWithDrop(out int rain, out int flor, out int receiver);
+            Assert.That(MechanicStepPlan.FixedPointSealMask(in v), Is.EqualTo(1 << rain), "hay (c′): ReleaseStage mira las llaves");
+            int n = MechanicStepPlan.Build(in v, _plan);
+            Assert.That(n, Is.EqualTo(4), Describe(n));
+            AssertEntry(0, MechanicStepKind.Seal, StepStage.C, receiver, -1);
+            AssertEntry(1, MechanicStepKind.Release, StepStage.D, flor, receiver);
+            AssertEntry(2, MechanicStepKind.RainEnd, StepStage.E, rain, -1);
+            AssertEntry(3, MechanicStepKind.Seal, StepStage.CPrime, rain, -1);
+            Assert.That(_plan[1].Tint, Is.EqualTo(StepBoards.FlorKey2), "la llave que acaba de cumplirse");
+            Assert.That(MechanicStepPlan.ReleaseStage(in v, flor), Is.EqualTo(StepStage.D));
+            Assert.That(StepStaging.Pre(in v, flor, StepStage.D).Mechanic, Is.EqualTo(MechanicType.Flor));
+            Assert.That(StepStaging.Pre(in v, flor, StepStage.E).Mechanic, Is.EqualTo(MechanicType.None), "abierta tras (d)");
+        }
+
+        [Test]
+        public void ReleaseStepMask_LeavesOutTheTinajaCuia() // M13, R10 (f): la cuia de la Tinaja baja del jirau, sin paso Release
+        {
+            PourVisual v = StepBoards.CucharonReleased(out int tinaja, out int cucharon);
+            Assert.That(v.Events.CucharonReleasedMask, Is.EqualTo(1 << cucharon));
+            Assert.That(v.Events.ReleasedMask, Is.EqualTo(1 << cucharon), "el núcleo la marca en ReleasedMask");
+            Assert.That(v.After[tinaja].Mechanic, Is.EqualTo(MechanicType.Tinaja), "la tinaja vacía no se suelta nunca");
+            Assert.That(MechanicStepPlan.ReleaseStepMask(in v), Is.EqualTo(0), "ni la Tinaja ni su cuia entran en la máscara");
+            int n = MechanicStepPlan.Build(in v, _plan);
+            for (int i = 0; i < n; i++)
+            {
+                Assert.That(_plan[i].Kind, Is.Not.EqualTo(MechanicStepKind.Release), Describe(n));
+            }
+        }
+
+        [Test]
         public void Plan_BiteDispatchedToCave() // la cueva ejecuta el mordisco (no hay CaveReceive)
         {
             PourVisual v = StepBoards.Bite(out int cave, out int victim);
@@ -211,6 +272,12 @@ namespace AF.Tests.EditMode
     internal static class StepBoards
     {
         public const int LianaKey = 3;
+
+        /// <summary>Tinte agua (Agua del Tapajós), el de la Lluvia de estos tableros.</summary>
+        public const int Water = 10;
+
+        /// <summary>Segunda llave de la Flor del tablero de (d) con gota (aguaje).</summary>
+        public const int FlorKey2 = 4;
 
         public static BoardState Build(int[][] cuias, MechanicSpec[]? attrs, int[]? caps = null, int[][]? hidden = null)
         {
@@ -325,6 +392,61 @@ namespace AF.Tests.EditMode
             BoardState counted = After(b, 3, 2);
             Assert.That(counted[0].MechanicCounter, Is.EqualTo(1));
             return Pour(counted, 2, 5);
+        }
+
+        // Lluvia (0) + Flor (1) con llaves taperebá (3) y agua (10): 7 → 6 sella el taperebá (cuenta para la Lluvia) y 2 → 5 deja
+        // caer la última gota, que sella el agua en f′ y abre la Flor en (d′).
+        public static PourVisual FlorDropSealsSecondKey(out int rain, out int flor)
+        {
+            BoardState b = Build(
+                new[] { new[] { Water, Water, Water }, new[] { 1, 2, 1, 2 }, new[] { 2, 1 }, new[] { 1 }, new[] { 2 }, new int[0], new[] { 3, 3, 3 }, new[] { 3 } },
+                new[] { new MechanicSpec(MechanicType.Lluvia, key: Water, n: 1, k: 2), new MechanicSpec(MechanicType.Flor, key: LianaKey, key2: Water), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+            rain = 0;
+            flor = 1;
+            BoardState counted = After(b, 7, 6);
+            Assert.That(counted.IsSealed(6), Is.True, "el taperebá, sellado antes");
+            Assert.That(counted[flor].Mechanic, Is.EqualTo(MechanicType.Flor), "con una llave sigue cerrada");
+            Assert.That(counted[0].MechanicCounter, Is.EqualTo(1));
+            PourVisual v = Pour(counted, 2, 5);
+            Assert.That(v.Events.LluviaEndedMask, Is.EqualTo(1 << rain), "la última gota");
+            Assert.That(v.After.IsSealed(rain), Is.True);
+            return v;
+        }
+
+        // Lluvia (0) + Flor (1) con llaves taperebá (3) y aguaje (4): 7 → 6 sella el taperebá y 9 → 8 sella el aguaje en (c) y
+        // deja caer la última gota, que sella el agua (que no es llave) en f′.
+        public static PourVisual FlorSecondKeyInCWithDrop(out int rain, out int flor, out int receiver)
+        {
+            BoardState b = Build(
+                new[] { new[] { Water, Water, Water }, new[] { 1, 2, 1, 2 }, new[] { 2, 1 }, new[] { 1 }, new[] { 2 }, new int[0], new[] { 3, 3, 3 }, new[] { 3 }, new[] { FlorKey2, FlorKey2, FlorKey2 }, new[] { FlorKey2 } },
+                new[] { new MechanicSpec(MechanicType.Lluvia, key: Water, n: 1, k: 2), new MechanicSpec(MechanicType.Flor, key: LianaKey, key2: FlorKey2), MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None, MechanicSpec.None });
+            rain = 0;
+            flor = 1;
+            receiver = 8;
+            BoardState counted = After(b, 7, 6);
+            Assert.That(counted[0].MechanicCounter, Is.EqualTo(1));
+            PourVisual v = Pour(counted, 9, 8);
+            Assert.That(v.After.IsSealed(receiver) && v.After.IsSealed(rain), Is.True, "sella el aguaje y la gota sella el agua");
+            Assert.That(v.Events.ReleasedMask, Is.EqualTo(1 << flor));
+            return v;
+        }
+
+        // M13: la tinaja (2) con [1 (oculta), 2] y su cuia (3); el segundo 2 → 3 la vacía y su cuia baja del jirau (R10 f).
+        public static PourVisual CucharonReleased(out int tinaja, out int cucharon)
+        {
+            var b = new BoardState(new[]
+            {
+                Cuia.Create(4, new[] { 2, 2, 2 }),
+                Cuia.Create(4, new[] { 1, 1, 1 }),
+                Cuia.Create(LevelValidation.TinajaCapacity, new[] { 1, 2 }, 0x1).WithMechanic(MechanicType.Tinaja),
+                Cuia.Empty(LevelValidation.CucharonCapacity).WithMechanic(MechanicType.Cucharon),
+                Cuia.Empty(4),
+            });
+            tinaja = 2;
+            cucharon = 3;
+            BoardState first = After(b, 2, 3);
+            Assert.That(first[cucharon].Mechanic, Is.EqualTo(MechanicType.Cucharon), "sigue colgada");
+            return Pour(first, 2, 3);
         }
 
         // Cueva de la Piraña (0, cap 2, k = 2): el segundo vertido útil la hace morder la cima del receptor (2).

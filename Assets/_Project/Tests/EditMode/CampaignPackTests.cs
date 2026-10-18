@@ -201,9 +201,10 @@ namespace AF.Tests.EditMode
         public void World6Debuts_CountLiana243_AndTiedLeaf283()
         {
             // 03 §11 y SightingRule.VariantDebutLevels (VA1a): en 201-300 solo estrenan la Liana de cuenta (243, intro_mechanic
-            // liana_n [P]) y la Hoja atada (283, hoja_atada; D-023, punto 5); son los únicos niveles no saltables del mundo 6.
+            // liana_n [P]) y la Hoja atada (283, hoja_atada; D-023, punto 5); son los únicos niveles no saltables del mundo 6. Los
+            // estrenos del Brote de dos hojas (343) y de la Flor (403), de VA1b, caen en el mundo 7.
             LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
-            Assert.That(AF.GameFlow.SightingRule.VariantDebutLevels, Is.EqualTo(new[] { 243, 283 }));
+            Assert.That(AF.GameFlow.SightingRule.VariantDebutLevels, Is.EqualTo(new[] { 243, 283, 343, 403 }));
             for (int level = 201; level <= 300; level++)
             {
                 LevelDefinition def = catalog.Find(level)!;

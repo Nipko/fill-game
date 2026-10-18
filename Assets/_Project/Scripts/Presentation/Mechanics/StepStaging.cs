@@ -20,7 +20,7 @@ namespace AF.Presentation.Mechanics
     /// la pierde y vuelve a su contador de <c>Before</c>. Un mordisco perdido o una gota que espera solo devuelven el
     /// contador.</description></item>
     /// <item><description>Open (b) y Release (d o d′): el contenido de <c>After[i]</c> con la mecánica de
-    /// <c>Before[i]</c>.</description></item>
+    /// <c>Before[i]</c> (también la hoja del Brote de dos hojas y la Flor de vitória-régia, VA1b).</description></item>
     /// <item><description>Seal (c o c′): el contenido no cambia; <see cref="PreSealed"/> da false hasta su etapa.</description></item>
     /// <item><description>Receive (a): la pareja del Remolino vuelve a <c>Before[i]</c> (las dosis entran por el fondo en el
     /// paso).</description></item>
@@ -163,7 +163,7 @@ namespace AF.Presentation.Mechanics
             {
                 case StepStage.DPrime:
                 case StepStage.D:
-                    if (MechanicStepPlan.Has(ev.LianaReleasedMask, index) && MechanicStepPlan.ReleaseStage(in v, index) == stage)
+                    if (MechanicStepPlan.Has(MechanicStepPlan.ReleaseStepMask(in v), index) && MechanicStepPlan.ReleaseStage(in v, index) == stage)
                     {
                         cur = WithMechanicOf(before, cur);
                     }
@@ -174,7 +174,7 @@ namespace AF.Presentation.Mechanics
                     return UndoCounters(in v, index, cur);
 
                 case StepStage.B:
-                    if (MechanicStepPlan.Has(ev.HojaOpenedMask | ev.BroteOpenedMask, index))
+                    if (MechanicStepPlan.Has(ev.HojaOpenedMask | ev.BroteOpenedMask | ev.BroteLeafOpenedMask, index))
                     {
                         cur = WithMechanicOf(before, cur);
                     }
@@ -275,7 +275,8 @@ namespace AF.Presentation.Mechanics
                 mechanic.MechanicN,
                 mechanic.MechanicK,
                 mechanic.MechanicCounter,
-                mechanic.MechanicFlags);
+                mechanic.MechanicFlags,
+                mechanic.Mechanic == MechanicType.Flor ? mechanic.MechanicKey2 : 0);
         }
     }
 }
