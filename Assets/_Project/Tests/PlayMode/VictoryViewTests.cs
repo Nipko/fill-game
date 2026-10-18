@@ -1,6 +1,7 @@
 #nullable enable
 using System.Collections;
 using AF.GameFlow;
+using AF.Levels;
 using AF.Presentation;
 using AF.UI;
 using NUnit.Framework;
@@ -76,7 +77,9 @@ namespace AF.Tests.PlayMode
             Assert.That(view.VictoryViewFading, Is.False);
             Assert.That(b.Fading, Is.False, "el fondo termina a la vez");
             Assert.That(b.FrontAlpha, Is.EqualTo(1f));
-            Assert.That(view.PanoramaTint, Is.EqualTo(StopBackdrop.LutOf(b.Stop)), "el panorama con la luz del sitio nuevo");
+            Assert.That(view.PanoramaTint, Is.EqualTo(StopBackdrop.LutOf(b.Stop, Season.LowWater)),
+                "el panorama con la luz del sitio nuevo y la de aguas bajas del ciclo del 21 (SE2)");
+            Assert.That(b.Season, Is.EqualTo(Season.LowWater), "la temporada del nivel siguiente");
             Assert.That(GameScreen.VictoryViewFadeMs, Is.EqualTo(250f));
 
             PlayModeHelpers.Step(boot, 1500);

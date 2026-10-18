@@ -143,6 +143,7 @@ namespace AF.UI
         private float _contentDp;
         private float _sinceShownMs = -1f;
         private float _dismissedMs = -1f;
+        private float _sheetMs;
         private bool _shown;
 
         /// <summary>Hay algún proveedor activo: la ranura se reserva (<see cref="IVictoryLineProvider.SlotActive"/>).</summary>
@@ -188,9 +189,17 @@ namespace AF.UI
 
         /// <summary>
         /// Milisegundos desde que se vio la victoria hasta que se cerró con Siguiente (AD_GATE) o Inicio (−1 si sigue abierta):
-        /// el <c>dismissed_ms</c> del punto común de <c>river_fact_shown</c> (M1.6 y F3).
+        /// el <c>dismissed_ms</c> del punto común de <c>river_fact_shown</c> (M1.6 y F3). Incluye el tiempo con la ficha de la fruta
+        /// abierta encima (<see cref="SheetMs"/>; revisión de F4): es tiempo real hasta el toque en «Siguiente» (08 §8.2), aunque la
+        /// vista de la victoria (<see cref="SinceShownMs"/>) no avance mientras tanto.
         /// </summary>
         public float DismissedMs => _dismissedMs;
+
+        /// <summary>
+        /// Milisegundos que la ficha de una fruta (F4) estuvo abierta encima de esta victoria, con la vista congelada: se suman a
+        /// <see cref="DismissedMs"/> y no a <see cref="SinceShownMs"/>.
+        /// </summary>
+        public float SheetMs => _sheetMs;
 
         /// <summary>Proveedores registrados (en orden de registro).</summary>
         public int ProviderCount => _providers.Count;
@@ -365,6 +374,7 @@ namespace AF.UI
         {
             _sinceShownMs = 0f;
             _dismissedMs = -1f;
+            _sheetMs = 0f;
             _shown = false;
             for (int i = 0; i < _providers.Count; i++)
             {
@@ -407,7 +417,19 @@ namespace AF.UI
         {
             if (_sinceShownMs >= 0f && _dismissedMs < 0f)
             {
-                _dismissedMs = _sinceShownMs;
+                _dismissedMs = _sinceShownMs + _sheetMs;
+            }
+        }
+
+        /// <summary>
+        /// La ficha de una fruta siguió abierta encima de la victoria <paramref name="dtMs"/> ms más (F4; revisión de F4): la vista
+        /// no avanza, pero el reloj de <see cref="DismissedMs"/> sí. Fuera de la victoria o ya cerrada, nada. Sin asignaciones.
+        /// </summary>
+        public void AddSheetMs(float dtMs)
+        {
+            if (_sinceShownMs >= 0f && _dismissedMs < 0f && dtMs > 0f)
+            {
+                _sheetMs += dtMs;
             }
         }
 

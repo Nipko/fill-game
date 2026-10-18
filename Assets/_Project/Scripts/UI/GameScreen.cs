@@ -607,7 +607,7 @@ namespace AF.UI
             UiBuilder.Place(pauseIcon.rectTransform, 7f, 7f, 26f, 26f);
             _pauseButton.Relief.Bind(_pauseButton.Face, _pauseButton.Base, _pauseButton.FaceImage, art.DiscWood, pauseIcon, null, null);
             _walletBar = new WalletBar(_topLayer, art);
-            _pause = new PauseMenu(_root, art, OnResume, OnPauseRestart, OnPauseQuit);
+            _pause = new PauseMenu(_root, art, OnResume, OnPauseMap, OnPauseRestart, OnPauseQuit);
             _confirm = new QuitConfirm(_root, art, OnConfirm, OnConfirmCancel, OnConfirmUndo);
             _banner = new Toast("RiverLowered", _root, art, 18f);
             _toast = new Toast("Toast", _noticeLayer, art, 15f);
@@ -1846,8 +1846,39 @@ namespace AF.UI
             }
 
             flow.ClearSelection();
-            _pause.Show(flow.CanRestart, _canvasW, _canvasH);
+            _pause.Show(flow.CanRestart, PauseMapOffered, _canvasW, _canvasH);
             EmitPauseLayout();
+        }
+
+        /// <summary>
+        /// El Mapa del río se puede abrir desde esta pantalla (la geometría y las paradas en la escena; lo fija
+        /// <see cref="GameBootstrap"/> y lo apaga si la geometría no valida): sin él, ni «Mapa del río» en la pausa ni «Ver mapa» en
+        /// la victoria (tarea M4.3). False por defecto (tests sin Mapa).
+        /// </summary>
+        internal bool RiverMapOpenable { get; set; }
+
+        /// <summary>
+        /// La pausa ofrece «Mapa del río» (02 §5; D-013, punto 7; tarea M4.3): con el Mapa (<see cref="RiverMapOpenable"/>) y desde
+        /// <c>max_level</c> ≥ 10, como la pestaña del inicio (D-008: oculto hasta el 10) [P].
+        /// </summary>
+        internal bool PauseMapOffered
+        {
+            get
+            {
+                IMapProgress? progress = _services?.MapProgress;
+                return RiverMapOpenable && progress != null && progress.MaxLevel >= RiverMapScreen.TabFromMaxLevel;
+            }
+        }
+
+        // Pausa › «Mapa del río» (D-013, punto 7; 04 §5.2; tarea M4.3): el Mapa encima del nivel en pausa, con «Volver al nivel»; no
+        // es salir del nivel (ni canoa, ni Crecida, ni fails_level, ni cambio de fase). Al cerrarlo se vuelve al nivel, sin la
+        // pausa. Si no se puede abrir, la pausa se queda como estaba.
+        private void OnPauseMap()
+        {
+            if (_actions.OpenRiverMap(MapOpenSource.Pause))
+            {
+                _pause.Hide();
+            }
         }
 
         private void EmitPauseLayout()

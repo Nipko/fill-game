@@ -36,8 +36,14 @@ namespace AF.UI
     /// victoria (la fila 1,40 s de 07 §5.4), con un fundido de <see cref="VictoryLineSlot.FruitFadeMs"/> ms; con Reducir
     /// movimiento, sin fundido (<see cref="VictoryLineSlot.FruitLineAlpha"/>). Sin sonido ni confeti; no bloquea, no pide toques y
     /// no es un takeover.</item>
-    /// <item><b>Toques:</b> ninguno hasta F4 (la ficha): todos sus gráficos van con <c>raycastTarget</c> false y su CanvasGroup no
-    /// bloquea, así que no entra en <c>AF_LAYOUT victory</c>.</item>
+    /// <item><b>Toques</b> (tarea F4; D-017 Q4-A; propuesta de Frutas §2.2, regla 4): toda la línea es un botón de
+    /// <see cref="VictoryLineSlot.MinContentDp"/> dp de alto como mínimo (<see cref="TapArea"/>) que abre la ficha de su fruta
+    /// (<see cref="FruitSheet"/>; lo hace quien da <see cref="Tapped"/>, <c>GameBootstrap</c>). Recibe toques en cuanto se ve (con
+    /// «Siguiente», a los <see cref="VictoryLineSlot.FruitRevealMs"/> ms), nunca antes, y entra en <c>AF_LAYOUT victory</c> como
+    /// <see cref="TapId"/>, solo si la ficha se puede abrir (<see cref="Opens"/>: en release, con su título y su contador
+    /// aprobados). Sus gráficos no reciben toques: solo el área táctil. Para que se vea que se puede tocar (revisión de F4), lleva a
+    /// la derecha de la cabecera un chevrón «›» dibujado (<see cref="Chevron"/>, solo si abre la ficha; su sitio se reserva
+    /// siempre) y, al pulsarla, un fondo redondeado de <see cref="PressRadiusDp"/> dp (<see cref="PressBack"/>).</item>
     /// <item><b>Textos:</b> solo si están todos en el idioma de la UI (<see cref="UiText.TryFruitLine"/>): nunca mezcla idiomas y,
     /// en release, nunca enseña nada sin aprobar.</item>
     /// <item><b>Sitio:</b> arriba de la ranura, a <see cref="TopAirDp"/> dp como mucho bajo su borde, con el sobrante de la ranura
@@ -86,6 +92,36 @@ namespace AF.UI
         /// <summary>Del nombre al sello [P].</summary>
         public const float SealGapDp = 4f;
 
+        /// <summary>Id del área táctil de la línea en <c>AF_LAYOUT victory</c> (F4).</summary>
+        public const string TapId = "fruit_line";
+
+        /// <summary>
+        /// Chevrón «›» a la derecha de la cabecera, dibujado (un icono, nunca texto), cuando la línea abre la ficha (revisión de F4:
+        /// que se vea que se puede tocar) (dp).
+        /// </summary>
+        public const float ChevronDp = 16f;
+
+        /// <summary>Hueco entre la cabecera y el chevrón (dp).</summary>
+        public const float ChevronGapDp = 4f;
+
+        /// <summary>
+        /// Ancho que la cabecera deja siempre a su derecha para el chevrón (dp): también al medir H y cuando la línea no abre la
+        /// ficha, para que la cabecera se parta igual en la medida y en la línea.
+        /// </summary>
+        public const float ChevronReserveDp = ChevronDp + ChevronGapDp;
+
+        /// <summary>Radio del fondo que se ve al pulsar la línea (dp; revisión de F4).</summary>
+        public const float PressRadiusDp = 12f;
+
+        /// <summary>Lo que el fondo de la pulsación sale de la línea por los lados (dp), para que no roce el texto.</summary>
+        public const float PressPadXDp = 6f;
+
+        /// <summary>Lo que el fondo de la pulsación sale de la línea por arriba y por abajo (dp).</summary>
+        public const float PressPadYDp = 2f;
+
+        /// <summary>Alfa del fondo de la línea mientras se pulsa (en reposo, 0) (revisión de F4).</summary>
+        public const float PressedAlpha = 0.6f;
+
         /// <summary>Paso con el que baja el texto si una línea real no cabe en H [P].</summary>
         public const float ShrinkStepSp = 0.5f;
 
@@ -100,6 +136,15 @@ namespace AF.UI
 
         /// <summary>Aro del sello: el verde hoja de la cinta «¡Nivel completado!» [P].</summary>
         public static readonly Color SealRing = Palette.FamilyLeaf.Deep;
+
+        /// <summary>
+        /// Fondo de la línea al pulsarla [P] (revisión de F4): la crema del panel oscurecida un 12 % (el disco del icono), al
+        /// <see cref="PressedAlpha"/>; la crema clara sin oscurecer no se distinguiría del panel.
+        /// </summary>
+        public static readonly Color PressedBack = IconBack;
+
+        /// <summary>Chevrón de la cabecera: la tinta de «Dato del río».</summary>
+        public static readonly Color ChevronInk = HeaderInk;
 
         private readonly ProceduralArt _art;
         private readonly Func<FactSchedule?> _schedule;
@@ -120,9 +165,13 @@ namespace AF.UI
         private Image? _sealFace;
         private Image? _sealIcon;
         private TextMeshProUGUI? _textLabel;
+        private Button? _tap;
+        private Image? _pressBack;
+        private ChevronGlyph? _chevron;
         private float _width;
         private float _height;
         private bool _reduceMotion;
+        private bool _opens;
 
         /// <summary>
         /// Crea la línea. <paramref name="measureParent"/> aloja las etiquetas de medir (ocultas); <paramref name="schedule"/> da el
@@ -142,6 +191,35 @@ namespace AF.UI
             _measureBody.textWrappingMode = TextWrappingModes.Normal;
             measure.gameObject.SetActive(false);
         }
+
+        /// <summary>
+        /// Lo que hace un toque en la línea a la vista (F4: abrir la ficha de su fruta; lo da <c>GameBootstrap</c>). Sin él, la línea
+        /// no recibe toques ni entra en <c>AF_LAYOUT victory</c>.
+        /// </summary>
+        public Action? Tapped { get; set; }
+
+        /// <summary>
+        /// La línea recibe toques ahora: se ve (con «Siguiente», tras <see cref="VictoryLineSlot.FruitRevealMs"/> ms) y abre la ficha
+        /// (<see cref="Opens"/>).
+        /// </summary>
+        public bool Touchable => _group != null && _group.blocksRaycasts;
+
+        /// <summary>
+        /// Un toque en la línea de ahora abriría la ficha (revisión de F4): alguien escucha (<see cref="Tapped"/>) y la ficha se puede
+        /// enseñar en el idioma de la UI (<see cref="UiText.FruitSheetVisible"/>; su título y su contador tienen texto y, en release,
+        /// están aprobados, con estados independientes de los de la línea). Si no, la línea se ve pero no recibe toques, no suena ni
+        /// entra en <c>AF_LAYOUT victory</c>. Se decide al enseñarla (el idioma no cambia durante la victoria).
+        /// </summary>
+        public bool Opens => _opens && Tapped != null;
+
+        /// <summary>Área táctil de la línea (≥ <see cref="VictoryLineSlot.MinContentDp"/> dp de alto; null hasta la primera colocación).</summary>
+        public RectTransform? TapArea => _tap != null ? (RectTransform)_tap.transform : null;
+
+        /// <summary>Chevrón «›» de la cabecera (revisión de F4): se ve si la línea abre la ficha (<see cref="Opens"/>). Null hasta la primera colocación.</summary>
+        public Graphic? Chevron => _chevron;
+
+        /// <summary>Fondo redondeado de la línea, transparente en reposo y al <see cref="PressedAlpha"/> al pulsarla. Null hasta la primera colocación.</summary>
+        public Image? PressBack => _pressBack;
 
         /// <summary>La línea existe en esta partida (false: tests de la ranura sola). Cuenta desde la siguiente maquetación.</summary>
         public bool Enabled { get; set; } = true;
@@ -289,7 +367,7 @@ namespace AF.UI
 
             var watch = System.Diagnostics.Stopwatch.StartNew();
             float headerSize = HeaderSp * textScale;
-            float avail = widthDp - IconDp - IconGapDp;
+            float avail = widthDp - IconDp - IconGapDp - ChevronReserveDp; // como en Arrange: el chevrón, siempre reservado
             float textSize = VictoryLineSlot.TextSp * textScale;
             float textLine = LineHeight(headerSize);
             float need = 0f;
@@ -361,8 +439,10 @@ namespace AF.UI
             BodyText = text;
             Sealed = @sealed;
             Shown = true;
+            _opens = UiText.FruitSheetVisible;
             _root.gameObject.SetActive(true);
             _group!.alpha = 0f;
+            SetTouchable(false); // hasta que entre, con «Siguiente» (Tick)
             Arrange();
             return true;
         }
@@ -413,12 +493,15 @@ namespace AF.UI
             {
                 _group.alpha = a;
             }
+
+            SetTouchable(a > 0f && Opens);
         }
 
         /// <inheritdoc />
         public void Hide()
         {
             Shown = false;
+            SetTouchable(false);
             if (_root != null && _root.gameObject.activeSelf)
             {
                 _root.gameObject.SetActive(false);
@@ -428,7 +511,31 @@ namespace AF.UI
         /// <inheritdoc />
         public void LayoutIds(List<string> ids, List<RectTransform> rects)
         {
-            // Sin toques hasta F4 (la ficha): no hay área táctil que anunciar.
+            // La victoria publica su AF_LAYOUT al terminar de subir el panel, antes de que entre la línea: el área táctil se anuncia
+            // en cuanto la línea se enseña y abre la ficha (Opens) (recibe toques desde que entra, con «Siguiente»).
+            if (Shown && Opens && _tap != null)
+            {
+                ids.Add(TapId);
+                rects.Add((RectTransform)_tap.transform);
+            }
+        }
+
+        // Un toque en el área de la línea: solo si se ve (el CanvasGroup no deja pasar toques antes) y alguien escucha.
+        private void OnTap()
+        {
+            if (Shown && Touchable)
+            {
+                Tapped?.Invoke();
+            }
+        }
+
+        private void SetTouchable(bool on)
+        {
+            if (_group != null && _group.blocksRaycasts != on)
+            {
+                _group.blocksRaycasts = on;
+                _group.interactable = on;
+            }
         }
 
         private void ResetState()
@@ -438,6 +545,7 @@ namespace AF.UI
             Position = default;
             Key = null;
             ShownFactId = null;
+            _opens = false;
             HeaderText = string.Empty;
             ProgressText = string.Empty;
             BodyText = string.Empty;
@@ -449,8 +557,8 @@ namespace AF.UI
             TextSizeDp = 0f;
         }
 
-        // Crea la línea bajo el contenido de la ranura (una vez): la raíz con su CanvasGroup, el icono, la cabecera, el sello y el
-        // texto. Ningún gráfico recibe toques (raycastTarget false hasta F4).
+        // Crea la línea bajo el contenido de la ranura (una vez): la raíz con su CanvasGroup, el área táctil (F4), el icono, la
+        // cabecera, el sello y el texto. Solo el área táctil recibe toques; el CanvasGroup no los deja pasar mientras no se ve.
         private void Build(RectTransform content)
         {
             if (_root != null)
@@ -469,6 +577,30 @@ namespace AF.UI
             _group.alpha = 0f;
             _group.blocksRaycasts = false;
             _group.interactable = false;
+            _tap = UiBuilder.BareButton("Tap", root, OnTap); // detrás de todo: los gráficos no reciben toques
+
+            // Que se vea que se puede tocar (revisión de F4): un fondo redondeado, transparente en reposo y oscuro al pulsar (el
+            // tinte del botón), y el chevrón de la cabecera.
+            _pressBack = UiBuilder.Sliced("PressBack", _tap.transform, _art.RoundedRect, PressedBack);
+            _pressBack.pixelsPerUnitMultiplier = 24f / PressRadiusDp;
+            _pressBack.raycastTarget = false;
+            UiBuilder.Stretch(_pressBack.rectTransform);
+            _pressBack.rectTransform.offsetMin = new Vector2(-PressPadXDp, -PressPadYDp);
+            _pressBack.rectTransform.offsetMax = new Vector2(PressPadXDp, PressPadYDp);
+            _tap.targetGraphic = _pressBack;
+            _tap.transition = Selectable.Transition.ColorTint;
+            var rest = new Color(1f, 1f, 1f, 0f);
+            _tap.colors = new ColorBlock
+            {
+                normalColor = rest,
+                highlightedColor = rest,
+                pressedColor = new Color(1f, 1f, 1f, PressedAlpha),
+                selectedColor = rest,
+                disabledColor = rest,
+                colorMultiplier = 1f,
+                fadeDuration = 0.08f,
+            };
+            _pressBack.canvasRenderer.SetAlpha(0f);
             _iconBack = UiBuilder.Image("FruitIconBack", root, _art.Disc, IconBack);
             _iconBack.raycastTarget = false;
             _icon = UiBuilder.Image("FruitIcon", root, null, Color.white);
@@ -484,6 +616,7 @@ namespace AF.UI
             _sealIcon.preserveAspect = true;
             _textLabel = Label("Text", root, TextStyle.Body, VictoryLineSlot.TextSp, TextInk, TextAlignmentOptions.TopLeft);
             _textLabel.textWrappingMode = TextWrappingModes.Normal;
+            _chevron = ChevronGlyph.Create("Chevron", root, ChevronInk);
             root.gameObject.SetActive(false);
         }
 
@@ -521,9 +654,9 @@ namespace AF.UI
             UiBuilder.Place(_icon.rectTransform, 0f, off, IconDp, IconDp);
 
             // La cabecera: «Dato del río», el punto medio y el contador seguidos en una fila si caben; si no, el contador en una
-            // segunda fila, sin el punto.
+            // segunda fila, sin el punto. A la derecha queda siempre el sitio del chevrón (revisión de F4), como al medir H.
             float x = IconDp + IconGapDp;
-            float avail = w - x;
+            float avail = w - x - ChevronReserveDp;
             HeaderHeightDp = HeaderHeightFor(HeaderText, ProgressText, Sealed, headerSize, LineHeight(headerSize), avail, out bool oneRow,
                 out float headerW, out float progressW, out float lineH);
             HeaderWrapped = !oneRow;
@@ -551,6 +684,10 @@ namespace AF.UI
             SetLabel(_progressLabel!, ProgressText, headerSize, progressX, progressTop, progressBox, lineH);
             PlaceSeal(fruit, progressX + progressBox + SealGapDp, progressTop + ((lineH - SealDp) * 0.5f));
 
+            // El chevrón «›», pegado a la derecha y centrado a lo alto de la cabecera, solo si la línea abre la ficha.
+            SetActive(_chevron, Opens);
+            UiBuilder.Place(_chevron!.rectTransform, w - ChevronDp, off + Mathf.Round((HeaderHeightDp - ChevronDp) * 0.5f), ChevronDp, ChevronDp);
+
             // El texto, a todo el ancho bajo la cabecera: 14 sp, o menos si una línea real no cabe en H (nunca menos de 12 sp).
             float top = off + HeaderHeightDp;
             float room = block - HeaderHeightDp - VictoryLineSlot.BottomDp;
@@ -566,6 +703,10 @@ namespace AF.UI
             TextSizeDp = size;
             SetLabel(_textLabel!, BodyText, size, 0f, top, w, Mathf.Max(h, 1f));
             ShownHeightDp = HeaderHeightDp + h + VictoryLineSlot.BottomDp;
+
+            // Toda la línea es un botón de 48 dp como mínimo (02 §6; propuesta de Frutas §2.2, regla 4), dentro de la ranura.
+            float tapH = Mathf.Max(VictoryLineSlot.MinContentDp, ShownHeightDp);
+            UiBuilder.Place((RectTransform)_tap!.transform, 0f, Mathf.Max(0f, Mathf.Min(off, _height - tapH)), w, tapH);
         }
 
         // El sello de la última línea (Q5-A): un aro verde, una cara clara y el icono de la fruta, sin animación.
@@ -682,6 +823,71 @@ namespace AF.UI
             public float Width { get; }
 
             public float Height { get; }
+        }
+
+        /// <summary>
+        /// Chevrón «›» dibujado con dos trazos (quads), sin textura ni fuente (revisión de F4: un icono, nunca texto), del color del
+        /// gráfico. Las coordenadas de los trazos van de 0 a 1 en su caja, con y hacia arriba. Sin raycast.
+        /// </summary>
+        [RequireComponent(typeof(CanvasRenderer))]
+        internal sealed class ChevronGlyph : MaskableGraphic
+        {
+            private static readonly Vector2 Top = new Vector2(0.36f, 0.82f);
+            private static readonly Vector2 Tip = new Vector2(0.68f, 0.50f);
+            private static readonly Vector2 Bottom = new Vector2(0.36f, 0.18f);
+
+            /// <summary>Crea el chevrón bajo <paramref name="parent"/>, de color <paramref name="tint"/>.</summary>
+            public static ChevronGlyph Create(string name, Transform parent, Color tint)
+            {
+                var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(ChevronGlyph));
+                go.transform.SetParent(parent, false);
+                ChevronGlyph glyph = go.GetComponent<ChevronGlyph>();
+                glyph.raycastTarget = false;
+                glyph.color = tint;
+                glyph.SetVerticesDirty();
+                return glyph;
+            }
+
+            /// <inheritdoc />
+            protected override void OnPopulateMesh(VertexHelper vh)
+            {
+                vh.Clear();
+                Rect r = rectTransform.rect;
+                float s = Mathf.Min(r.width, r.height);
+                if (s <= 0f)
+                {
+                    return;
+                }
+
+                float half = 0.075f * s;
+                Stroke(vh, r, Top, Tip, half);
+                Stroke(vh, r, Tip, Bottom, half);
+            }
+
+            // Un trazo de a a b (0-1 en la caja r) con medio ancho half (dp) y extremos cuadrados que se solapan en la unión.
+            private void Stroke(VertexHelper vh, Rect r, Vector2 a, Vector2 b, float half)
+            {
+                Vector2 p = new Vector2(r.xMin + (a.x * r.width), r.yMin + (a.y * r.height));
+                Vector2 q = new Vector2(r.xMin + (b.x * r.width), r.yMin + (b.y * r.height));
+                Vector2 dir = q - p;
+                float length = dir.magnitude;
+                if (length <= 0f)
+                {
+                    return;
+                }
+
+                dir /= length;
+                Vector2 n = new Vector2(-dir.y, dir.x) * half;
+                Vector2 e = dir * (half * 0.9f);
+                Color32 c = color;
+                int i = vh.currentVertCount;
+                vh.AddVert(p - e - n, c, Vector2.zero);
+                vh.AddVert(p - e + n, c, Vector2.zero);
+                vh.AddVert(q + e + n, c, Vector2.zero);
+                vh.AddVert(q + e - n, c, Vector2.zero);
+                vh.AddTriangle(i, i + 1, i + 2);
+                vh.AddTriangle(i, i + 2, i + 3);
+            }
         }
     }
 }

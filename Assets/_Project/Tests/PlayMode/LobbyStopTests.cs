@@ -169,7 +169,7 @@ namespace AF.Tests.PlayMode
             yield return null;
             Assert.That(lobby.StopBackdrop.Stop, Is.Null);
             Assert.That(lobby.StopBackdrop.Root.gameObject.activeSelf, Is.False);
-            Assert.That(lobby.PanoramaTint, Is.EqualTo(Color.white), "el panorama sin tinte, como antes");
+            Assert.That(lobby.PanoramaTint, Is.EqualTo(StopBackdrop.LowWaterLut), "el panorama sin la luz de la parada, solo con la de aguas bajas del ciclo del 195 (SE2)");
             Assert.That(lobby.StopRemainingShown, Is.False);
             Assert.That(lobby.HomeWindow.Visible, Is.False);
             Assert.That(lobby.PlayLabel, Is.EqualTo("Jugar · Nivel 195"));

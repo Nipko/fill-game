@@ -113,6 +113,49 @@ namespace AF.GameFlow
         }
     }
 
+    /// <summary>
+    /// Cuándo sale sola la secuencia del Mapa del 10 (06 §2.3; D-013, punto 7; P-M4 (a) de D-023; tarea M4.2), sin motor, sin
+    /// estado y sin asignaciones. Es el único Mapa que sale solo fuera de los banners de mundo y del fin de contenido:
+    /// <list type="bullet">
+    /// <item><description><see cref="AfterNext"/>: tras la victoria del 10, «Siguiente» pasa por AD_GATE y, en lugar de cargar el
+    /// 11, la app va al inicio con la secuencia encima (<see cref="MapMoments.ForVictory"/> =
+    /// <see cref="VictoryMoment.L10Map"/>), si el Mapa no se vio aún hasta el 10.</description></item>
+    /// <item><description><see cref="OnLobby"/>: si se pulsó Inicio en esa victoria o se cerró la app, al entrar al inicio con
+    /// <c>max_level</c> ≥ 10 y <c>progress.map_seen_level</c> &lt; 10 (P-M4: «no hace falta estado nuevo»). Sale una vez: al
+    /// acabarla, saltarla o cerrar el Mapa, <c>map_seen_level</c> pasa al 10 y ya no se cumple.</description></item>
+    /// </list>
+    /// Sin el Mapa (<paramref name="mapAvailable"/> = false en las dos: sin geometría o apagada), nunca.
+    /// </summary>
+    public static class L10SequenceRule
+    {
+        /// <summary>El nivel de la secuencia: el 10, la primera llegada (<see cref="RiverStopCatalog.LevelsPerStop"/>).</summary>
+        public const int Level = RiverStopCatalog.LevelsPerStop;
+
+        /// <summary>
+        /// «Siguiente» en la victoria de <paramref name="wonLevel"/> abre la secuencia en lugar del nivel siguiente: es el 10, el
+        /// Mapa está disponible (<see cref="MapMoments.ForVictory"/> da <see cref="VictoryMoment.L10Map"/>) y lo visto del Mapa
+        /// (<paramref name="mapSeenLevel"/>) no llega al 10. Un nivel fuera de 1..1.000 da false.
+        /// </summary>
+        public static bool AfterNext(int wonLevel, int mapSeenLevel, bool mapAvailable)
+        {
+            if (wonLevel != Level || mapSeenLevel >= Level)
+            {
+                return false;
+            }
+
+            return MapMoments.ForVictory(wonLevel, null, mapAvailable, MapConfig.UiMapAutopen) == VictoryMoment.L10Map;
+        }
+
+        /// <summary>
+        /// Al entrar al inicio, la secuencia sale si el Mapa está disponible, se ganó el 10 (<paramref name="maxLevel"/> ≥ 10) y
+        /// lo visto (<paramref name="mapSeenLevel"/>) no llega al 10 (P-M4).
+        /// </summary>
+        public static bool OnLobby(int maxLevel, int mapSeenLevel, bool mapAvailable)
+        {
+            return mapAvailable && maxLevel >= Level && mapSeenLevel < Level;
+        }
+    }
+
     /// <summary>Vista de <see cref="AppFlow"/>: se llama de forma síncrona en cada cambio de pantalla, antes de cargar el nivel.</summary>
     public interface IAppFlowListener
     {
@@ -136,6 +179,15 @@ namespace AF.GameFlow
     /// no pasa por AD_GATE (02 §6).</description></item>
     /// <item><description>Al abrir la app con un nivel en curso guardado (<c>level_state</c>), se reabre ese nivel tal cual
     /// (02 §14; tarea B2-5); si se había salido de él al inicio, se abre el inicio y el nivel recuerda sus fallos.</description></item>
+    /// <item><description>Secuencia del Mapa del 10 (06 §2.3; P-M4; tarea M4.2; <see cref="L10SequenceRule"/>): con el Mapa
+    /// disponible (<see cref="L10MapAvailable"/>), «Siguiente» en la victoria del 10 pasa por AD_GATE y va al inicio en lugar de
+    /// cargar el 11; al entrar al inicio, <see cref="L10MapDue"/> dice a la vista que abra encima la secuencia (también tras Inicio
+    /// en esa victoria o tras cerrar la app). Su «Jugar» abre el 11.</description></item>
+    /// <item><description>Fin de contenido con el Mapa (06 §9; D-013, punto 7; tarea M4.3): con el Mapa disponible
+    /// (<see cref="ContentEndMapAvailable"/>), «Siguiente» en la victoria del último nivel publicado pasa por AD_GATE y abre «El río
+    /// sigue creciendo» como siempre, pero antes el Mapa del río: <see cref="ContentEndMapDue"/> dice a la vista que lo abra encima
+    /// (con el viaje hasta el último tramo publicado), y al cerrarlo queda la pantalla de siempre, con su texto y su ETA. Solo por
+    /// ese camino (el de ganar el último nivel), no al pulsar «Jugar» en el inicio con el contenido ya acabado.</description></item>
     /// </list>
     /// No es seguro entre hilos.
     /// </summary>
@@ -146,6 +198,7 @@ namespace AF.GameFlow
         private readonly IProgressStore _progress;
         private readonly Wallet _wallet;
         private readonly IAppFlowListener _listener;
+        private bool _contentEndFromWin;
 
         /// <summary>Crea la navegación; no muestra nada hasta <see cref="Start"/> o <see cref="StartAtLevel"/>.</summary>
         public AppFlow(LevelFlow level, IProgressStore progress, Wallet wallet, IAppFlowListener listener)
@@ -204,6 +257,34 @@ namespace AF.GameFlow
 
         /// <summary>Días estimados hasta los próximos niveles (<c>live_content_end_message.next_batch_eta_days</c>, 08 §9).</summary>
         public int ContentEndEtaDays => GameConfig.LiveContentEndNextBatchEtaDays;
+
+        /// <summary>
+        /// El Mapa del río se puede abrir (geometría y paradas en la escena; lo fija la vista al arrancar): sin él, la secuencia del
+        /// Mapa del 10 no existe y «Siguiente» en el 10 carga el 11, como antes (tarea M4.2). False por defecto.
+        /// </summary>
+        public bool L10MapAvailable { get; set; }
+
+        /// <summary>
+        /// Con el inicio a la vista, toca abrir encima la secuencia del Mapa del 10 (<see cref="L10SequenceRule.OnLobby"/>: el Mapa
+        /// disponible, <c>max_level</c> ≥ 10 y <c>map_seen_level</c> &lt; 10). La vista lo mira en cada entrada al inicio
+        /// (<see cref="IAppFlowListener.OnAppScreenChanged"/>); deja de cumplirse en cuanto se anota lo visto del Mapa.
+        /// </summary>
+        public bool L10MapDue => Screen == AppScreen.Lobby
+            && L10SequenceRule.OnLobby(_progress.LoadMaxLevel(), _progress.LoadMapSeenLevel(), L10MapAvailable);
+
+        /// <summary>
+        /// El Mapa del río se puede abrir al acabarse el contenido (geometría y paradas en la escena; lo fija la vista al arrancar):
+        /// sin él, «El río sigue creciendo» sale sola, como antes (tarea M4.3). False por defecto.
+        /// </summary>
+        public bool ContentEndMapAvailable { get; set; }
+
+        /// <summary>
+        /// Con «El río sigue creciendo» a la vista, toca abrir encima, antes que ella, el Mapa del río (06 §9; D-013, punto 7; tarea
+        /// M4.3): el Mapa está disponible y se llegó ganando el último nivel publicado («Siguiente» en su victoria, tras AD_GATE). La
+        /// vista lo mira al entrar en la pantalla (<see cref="IAppFlowListener.OnAppScreenChanged"/>); deja de cumplirse al salir de
+        /// ella. «Jugar» en el inicio con el contenido ya acabado abre la pantalla sola.
+        /// </summary>
+        public bool ContentEndMapDue => Screen == AppScreen.ContentEnd && _contentEndFromWin && ContentEndMapAvailable;
 
         /// <summary>
         /// Primera pantalla (08 §2.3): con un nivel en curso guardado (<paramref name="saved"/>, <c>level_state</c>), ese nivel
@@ -272,7 +353,10 @@ namespace AF.GameFlow
         /// Siguiente en la pantalla de victoria (sin auto-avance por tiempo, 02 §6; tras la Cosecha doble lo llama también la
         /// vista, D-011 punto 4): AD_GATE (el intersticial, si toca: 05 §6.3) y después N + 1, o la pantalla que lo impida. Sin
         /// anuncio que mostrar, el nivel siguiente se carga en esta misma llamada. Fuera de VICTORY_SCREEN (una segunda llamada,
-        /// ya en AD_GATE) devuelve false y no hace nada.
+        /// ya en AD_GATE) devuelve false y no hace nada. En la victoria del 10, con la secuencia del Mapa del 10 pendiente
+        /// (<see cref="L10SequenceRule.AfterNext"/>), después de AD_GATE va al inicio, que la abre encima (<see cref="L10MapDue"/>;
+        /// 06 §2.3, tarea M4.2). En la del último nivel publicado, a «El río sigue creciendo» con el Mapa encima
+        /// (<see cref="ContentEndMapDue"/>; tarea M4.3).
         /// </summary>
         public bool PressNext()
         {
@@ -281,12 +365,23 @@ namespace AF.GameFlow
                 return false;
             }
 
-            int next = _level.LevelNumber + 1;
+            int won = _level.LevelNumber;
+            int next = won + 1;
+            bool l10Map = L10SequenceRule.AfterNext(won, _progress.LoadMapSeenLevel(), L10MapAvailable);
             return _level.BeginAdGate(() =>
             {
-                if (Screen == AppScreen.Level && _level.Phase == FlowPhase.AdGate)
+                if (Screen != AppScreen.Level || _level.Phase != FlowPhase.AdGate)
                 {
-                    Enter(next);
+                    return;
+                }
+
+                if (l10Map)
+                {
+                    Go(AppScreen.Lobby); // la secuencia del Mapa del 10 se abre encima del inicio; su «Jugar» abre el 11
+                }
+                else
+                {
+                    Enter(next, true); // tras el último nivel publicado, el Mapa y «El río sigue creciendo» (M4.3)
                 }
             });
         }
@@ -367,11 +462,13 @@ namespace AF.GameFlow
             return true;
         }
 
-        private bool Enter(int level)
+        // fromWin: se entra con «Siguiente» desde la victoria del nivel anterior (el Mapa sale antes del fin de contenido, M4.3).
+        private bool Enter(int level, bool fromWin = false)
         {
             if (!_catalog.Contains(level))
             {
                 OverlayLevel = level;
+                _contentEndFromWin = fromWin;
                 Go(AppScreen.ContentEnd);
                 return true;
             }
@@ -391,6 +488,11 @@ namespace AF.GameFlow
 
         private void Go(AppScreen screen)
         {
+            if (screen != AppScreen.ContentEnd)
+            {
+                _contentEndFromWin = false; // ContentEndMapDue solo vale mientras se ve la pantalla a la que se llegó ganando
+            }
+
             Screen = screen;
             _listener.OnAppScreenChanged(screen);
         }

@@ -35,8 +35,11 @@ namespace AF.Presentation
     /// de <see cref="StopShapes"/>, solo con <see cref="MapArtRule.ShowProvisional"/> (en release, sin héroe). Las piezas del
     /// kit (<c>kit:&lt;pieza&gt;</c>: la baliza y la orilla de Nauta) van igual, como silueta provisional.</item>
     /// </list>
-    /// <see cref="LutColor"/> es la luz de la parada (solo <c>dusk</c> y <c>dawn</c>): quien la usa la multiplica sobre el panorama;
-    /// aquí tiñe el héroe y no la banda (VA-23). La LUT de temporada la añade SE2 y el velo de Muy difícil no se toca.
+    /// <see cref="LutColor"/> es la luz de la parada (solo <c>dusk</c> y <c>dawn</c>) por la LUT de la temporada del ciclo
+    /// (<see cref="SeasonLutOf"/>: aguas altas o bajas, de la tabla del cliente; D-009, punto 6; pregunta 32 b, D-020; 07 §2.1;
+    /// tarea SE2): quien la usa la multiplica sobre el panorama; aquí tiñe el héroe y no la banda ni las piezas por código, que
+    /// son agua (VA-23). Sin temporada (1-20, fuera de la tabla o sin tabla), la de la parada sola, como antes. La temporada se ve
+    /// también sin parada (sobre el panorama). El velo de Muy difícil no se toca.
     /// <para>Sin parada (sin catálogo, o del 201 en adelante mientras no haya paradas) no pinta nada: el aspecto de hoy. Al
     /// cambiar de composición puede fundir en <c>fadeMs</c> (<see cref="Apply"/>): la nueva entra encima con dos juegos de capas
     /// que se alternan, cada uno con su composición; la vieja se queda entera debajo, así que su banda opaca nunca deja ver el
@@ -141,6 +144,26 @@ namespace AF.Presentation
         /// <summary>Multiplicador de la luz del alba sobre el panorama y el héroe [P].</summary>
         public static readonly Color DawnLut = new Color(0.86f, 0.84f, 0.97f, 1f);
 
+        /// <summary>
+        /// LUT de la temporada A, aguas altas (07 §2.1; D-009, punto 6) [P]: luz fresca y verdosa de la crecida; el canal verde
+        /// entero y el azul casi, así que el cielo no pierde brillo y los tonos cálidos del panorama no bajan de S 0,30 (VA-03).
+        /// Es la única señal de la temporada (sin cartel), así que se nota a tamaño de teléfono: en la franja del panorama del
+        /// tablero, ΔE00 medio ≥ 5 frente al fondo sin temporada y ≥ 8 frente a B en la misma parada (revisión de SE2). Medido
+        /// sobre las capturas de <c>SeasonLutSnapshotTests</c>, fuera del test (ningún test lo vigila: si se retoca la LUT, hay
+        /// que volver a medirlo), en las filas 0-380 de la captura de 1080 × 2340 sin la caja del HUD (x 30-1060, y 110-270):
+        /// 6,3 y 8,6 en la 41, y 6,9 y 9,7 en la 61. El 8,6 va justo (con otra caja del HUD, 8,1): suavizar cualquiera de las
+        /// dos LUT de temporada puede dejarlo por debajo de 8. En las paradas con luz propia, su cielo y su bruma tapan casi
+        /// todo el panorama y la temporada se nota menos: en Pacaya-Samiria al alba (191) da 2,8 y 3,6 (Leticia al atardecer,
+        /// sin medir). Se multiplica con la de la parada.
+        /// </summary>
+        public static readonly Color HighWaterLut = new Color(0.76f, 1f, 0.9f, 1f);
+
+        /// <summary>
+        /// LUT de la temporada B, aguas bajas (07 §2.1; D-009, punto 6) [P]: luz dorada y seca de la vaciante; el canal rojo
+        /// entero (VA-03). Con la misma regla de visibilidad que <see cref="HighWaterLut"/>. Se multiplica con la de la parada.
+        /// </summary>
+        public static readonly Color LowWaterLut = new Color(1f, 0.88f, 0.7f, 1f);
+
         // Cielo por mundo (07 §2.1, columna «Hora del día» [P]): arriba, en el horizonte, y su opacidad arriba y abajo.
         private static readonly Color NoonTop = Palette.Hex(0x3FA7E0);
         private static readonly Color NoonHorizon = Palette.Hex(0xBDE8F2);
@@ -202,6 +225,7 @@ namespace AF.Presentation
         private RiverStop? _stop;
         private string _water = string.Empty;
         private Color _waterColor = Palette.WaterWhite;
+        private Season _season;
         private Color _lut = Color.white;
         private Color _lutFrom = Color.white;
         private string _heroSource = HeroNone;
@@ -260,10 +284,14 @@ namespace AF.Presentation
         public Color BandColor => _waterColor;
 
         /// <summary>
-        /// Luz de la parada: <see cref="DuskLut"/> en <c>dusk</c>, <see cref="DawnLut"/> en <c>dawn</c> y blanco en las demás y sin
-        /// parada. Es la de destino: durante el fundido, la que se ve es <see cref="DisplayedLutColor"/>.
+        /// Luz del fondo: la de la parada (<see cref="LutOf"/>: <see cref="DuskLut"/> en <c>dusk</c>, <see cref="DawnLut"/> en
+        /// <c>dawn</c> y blanco en las demás y sin parada) por la de la temporada (<see cref="SeasonLutOf"/>; blanco sin ella). Es
+        /// la de destino: durante el fundido, la que se ve es <see cref="DisplayedLutColor"/>.
         /// </summary>
         public Color LutColor => _lut;
+
+        /// <summary>Temporada del ciclo con la que se compuso el fondo (<see cref="Season.None"/> sin ella).</summary>
+        public Season Season => _season;
 
         /// <summary>La luz que se ve ahora: la de destino, o entre la anterior y ella durante el fundido.</summary>
         public Color DisplayedLutColor => Fading ? Color.Lerp(_lutFrom, _lut, FadeProgress) : _lut;
@@ -361,6 +389,32 @@ namespace AF.Presentation
         }
 
         /// <summary>
+        /// LUT de la temporada <paramref name="season"/>: <see cref="HighWaterLut"/> (A), <see cref="LowWaterLut"/> (B) o blanco
+        /// sin temporada.
+        /// </summary>
+        public static Color SeasonLutOf(Season season)
+        {
+            switch (season)
+            {
+                case Season.HighWater:
+                    return HighWaterLut;
+                case Season.LowWater:
+                    return LowWaterLut;
+                default:
+                    return Color.white;
+            }
+        }
+
+        /// <summary>
+        /// Luz del fondo de <paramref name="stop"/> en la temporada <paramref name="season"/>: la de la parada por la de la
+        /// temporada (<see cref="LutColor"/> tras <see cref="Apply"/>).
+        /// </summary>
+        public static Color LutOf(RiverStop? stop, Season season)
+        {
+            return LutOf(stop) * SeasonLutOf(season);
+        }
+
+        /// <summary>
         /// Cielo de la parada (07 §2.1, hora del mundo; atardecer y alba por su luz) [P]: arriba, en el horizonte y su opacidad
         /// arriba (≤ <see cref="SkyMaxAlpha"/>) y en el horizonte (≤ <see cref="SkyMaxAlpha"/>, o ≤ <see cref="SkyLowMaxAlpha"/>
         /// con <c>dusk</c> o <c>dawn</c>). Sin tinte (alfa 0) en el mundo 1 y sin parada.
@@ -410,12 +464,14 @@ namespace AF.Presentation
         /// Compone el fondo de la parada <paramref name="stop"/> con el agua base del mundo <paramref name="worldWater"/>
         /// (<c>white</c>, <c>clear</c> o <c>black</c>). Con <paramref name="crossfade"/> y una parada ya a la vista, funde en
         /// <paramref name="fadeMs"/> ms (la nueva entra mientras la vieja se va); si no, corte. Null = sin parada: el aspecto de
-        /// hoy (con fundido, se va). Si ya se ve esa composición, no hace nada.
+        /// hoy (con fundido, se va), salvo la luz de la temporada. <paramref name="season"/> es la temporada del ciclo del nivel
+        /// (<see cref="SeasonTable.SeasonOf"/>; SE2): su LUT va sobre la de la parada (<see cref="LutColor"/>), y sin ella, como
+        /// antes. Si ya se ve esa composición (parada, agua y temporada), no hace nada.
         /// </summary>
-        public void Apply(RiverStop? stop, string worldWater, bool crossfade, float fadeMs)
+        public void Apply(RiverStop? stop, string worldWater, bool crossfade, float fadeMs, Season season = Season.None)
         {
             string water = worldWater ?? string.Empty;
-            if (ReferenceEquals(stop, _stop) && string.Equals(water, _water, StringComparison.Ordinal))
+            if (ReferenceEquals(stop, _stop) && string.Equals(water, _water, StringComparison.Ordinal) && season == _season)
             {
                 BuildMs = 0d;
                 return;
@@ -428,7 +484,8 @@ namespace AF.Presentation
             _stop = stop;
             _water = water;
             _waterColor = Palette.WaterBase(water);
-            _lut = LutOf(stop);
+            _season = season;
+            _lut = LutOf(stop, season);
             ResolveHero(stop);
 
             if (crossfade && fadeMs > 0f && showing)

@@ -183,7 +183,7 @@ Mide formato, duración, pico, continua, silencio inicial, fundido final, energ�
   - el agua, la lluvia y la fauna de cada mundo, con la lluvia ligera, media o fuerte según el nivel [P];
   - el lecho, sus 3 capas y la variante nocturna, programados en el mismo instante;
   - el tema de menú;
-  - 4 de los 5 remates, que esperan a que termine la toada: el del banner de mundo, el de la llegada a la parada, el de la tarjeta previa de un estreno (no el de las tarjetas que solo anuncian la dificultad) y el de Nivel fallido (en la transición, no al reanudar).
+  - los 5 remates, que esperan a que termine la toada: el del banner de mundo, el de la llegada a la parada, el de la tarjeta previa de un estreno (no el de las tarjetas que solo anuncian la dificultad), el de Nivel fallido (en la transición, no al reanudar) y el de la tarjeta «Fruta nueva» (desde FX6).
 - **Lo que no tiene WAV:** los mundos 10-13 suenan con el audio por código.
 - **Pendiente del asesor cultural:** 24 piezas (16 de la fauna y 8 efectos, entre ellos la piha y el boto) llevan `advisor_review` «pendiente» en el manifiesto, 16 con una especie o región sustituta, no amazónica; lista en `lista-de-sonidos.md`, sección 9. Se cambian sin tocar código: el WAV nuevo en su ruta y otra pasada de `AudioAssetSetup.Apply`.
 - **Comprobación:** `check_audio.py` sigue en 0 fallos (los WAV no se tocan). Las líneas `AF_STATE` de desarrollo dicen en el teléfono si cada sonido sale del clip o del respaldo (`docs/dev/prototipo-v0.md`).

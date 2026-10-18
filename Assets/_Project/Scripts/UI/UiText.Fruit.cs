@@ -78,6 +78,43 @@ namespace AF.UI
             return true;
         }
 
+        /// <summary><c>fact_sheet_title</c> [P] (glosario §10): «Frutas del río», título de la ficha y de la lista de Ajustes (F4).</summary>
+        public static string FactSheetTitle => Loc.T(Keys.FactSheetTitle);
+
+        /// <summary><c>fact_sources</c> [P] (glosario §10): «Fuentes», pie de la ficha de una fruta (F4).</summary>
+        public static string FactSources => Loc.T(Keys.FactSources);
+
+        /// <summary>
+        /// <c>settings_about_amazon</c> [P]: «Sobre la Amazonía», la sección de Ajustes con la lista de Frutas del río (07 §8.2;
+        /// D-017 Q4-A; tarea F4). Sin clave en el glosario §10: pendiente de registrarla.
+        /// </summary>
+        public static string SettingsAboutAmazon => Loc.T(Keys.SettingsAboutAmazon);
+
+        /// <summary>
+        /// <c>fact_locked</c> [P] (glosario §10): «Nivel {n}», una línea en silueta de la ficha (o una fruta sin empezar en la lista
+        /// de Ajustes) con el nivel <paramref name="level"/> en que sale, sin separador de miles.
+        /// </summary>
+        public static string FactLocked(int level)
+        {
+            return Format(Keys.FactLocked, LocArgs.OfDigits("n", NonNegative(level)));
+        }
+
+        /// <summary>
+        /// <c>fact_starts_at</c> [P] (glosario §10): «Su serie empieza en el nivel {n}», la ficha de una serie sin ninguna línea
+        /// revelada, con el nivel <paramref name="level"/> de su primera línea, sin separador de miles.
+        /// </summary>
+        public static string FactStartsAt(int level)
+        {
+            return Format(Keys.FactStartsAt, LocArgs.OfDigits("n", NonNegative(level)));
+        }
+
+        /// <summary>
+        /// La ficha de Frutas del río se puede enseñar en el idioma de la UI (D-018, Q10-A; tarea F4): su título y su contador
+        /// (<c>fact_sheet_title</c> y <c>fact_progress</c>) tienen texto y, en release, están aprobados, como la cabecera de la línea
+        /// de la victoria (<see cref="TryFruitLine"/>). Si no, ni la línea abre la ficha ni Ajustes enseña la lista.
+        /// </summary>
+        public static bool FruitSheetVisible => Visible(Keys.FactSheetTitle) && Visible(Keys.FactProgress);
+
         // Un texto de UI que se puede enseñar en el idioma de ahora: con texto en su columna y, en release, aprobado.
         private static bool Visible(string key)
         {
@@ -92,6 +129,29 @@ namespace AF.UI
 
             /// <summary><c>fact_progress</c> [P] (glosario §10).</summary>
             public const string FactProgress = "fact_progress";
+
+            /// <summary><c>fact_sheet_title</c> [P] (glosario §10; F4).</summary>
+            public const string FactSheetTitle = "fact_sheet_title";
+
+            /// <summary><c>fact_locked</c> [P] (glosario §10; F4).</summary>
+            public const string FactLocked = "fact_locked";
+
+            /// <summary><c>fact_starts_at</c> [P] (glosario §10; F4).</summary>
+            public const string FactStartsAt = "fact_starts_at";
+
+            /// <summary><c>fact_sources</c> [P] (glosario §10; F4).</summary>
+            public const string FactSources = "fact_sources";
+
+            /// <summary>
+            /// <c>fact_a11y</c> [P] (glosario §10; F4): «Dato del río. {name}, {k} de {n}. {text}», la etiqueta del lector de
+            /// pantalla de la línea de fruta. Hoy el juego no tiene API de accesibilidad y la plantilla lleva 4 marcadores, uno más
+            /// de los que admite <c>LocArgs</c> (arquitectura de la tanda 4, §1): se formateará cuando llegue el lector de pantalla
+            /// (open issue de F4).
+            /// </summary>
+            public const string FactA11y = "fact_a11y";
+
+            /// <summary><c>settings_about_amazon</c> [P] (F4; sin clave en el glosario §10).</summary>
+            public const string SettingsAboutAmazon = "settings_about_amazon";
         }
     }
 }

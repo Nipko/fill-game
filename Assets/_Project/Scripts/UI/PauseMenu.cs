@@ -10,9 +10,12 @@ namespace AF.UI
     /// <summary>
     /// Menú de pausa (GDD 02 §5: «pausa (abre Ajustes, Volver a la orilla, Mapa del río)»; D-008; tarea B2-3), con la
     /// composición de Magic Sort (ficha §4.2: el engranaje despliega los botones y el tablero se oscurece) y el material de
-    /// D-003: «Seguir jugando», «Volver a la orilla» (gratis; con ≥ 8 vertidos pide confirmación, 04 §2.7) y «Salir» (desde el
-    /// 31 pide «¿Salir del nivel? Perderás 1 canoa» [P]; en 1-30 sale sin coste). Ajustes y Mapa del río llegan con sus
-    /// pantallas.
+    /// D-003: «Seguir jugando», «Mapa del río» (tarea M4.3), «Volver a la orilla» (gratis; con ≥ 8 vertidos pide confirmación,
+    /// 04 §2.7) y «Salir» (desde el 31 pide «¿Salir del nivel? Perderás 1 canoa» [P]; en 1-30 sale sin coste). Ajustes llega con
+    /// su pantalla.
+    /// <para>«Mapa del río» (<c>river_map</c>, glosario §7.1; D-013, punto 7; 04 §5.2) abre el Mapa encima del nivel en pausa, con
+    /// «Volver al nivel» en lugar de «Jugar»: no es salir del nivel, así que no gasta canoa ni cuenta como fallo. Sale con el
+    /// Mapa en la escena y desde <c>max_level</c> ≥ 10, como la pestaña del inicio (D-008: oculto hasta el 10) [P].</para>
     /// </summary>
     internal sealed class PauseMenu
     {
@@ -23,10 +26,11 @@ namespace AF.UI
         private readonly Image _header;
         private readonly ReliefParts _close;
         private readonly ReliefParts _resume;
+        private readonly ReliefParts _map;
         private readonly ReliefParts _restart;
         private readonly ReliefParts _quit;
 
-        public PauseMenu(Transform parent, ProceduralArt art, Action onResume, Action onRestart, Action onQuit)
+        public PauseMenu(Transform parent, ProceduralArt art, Action onResume, Action onMap, Action onRestart, Action onQuit)
         {
             _art = art;
             _root = UiBuilder.Rect("PauseMenu", parent);
@@ -35,6 +39,7 @@ namespace AF.UI
             ModalKit.Header(_panel, art, UiText.Pause, out _header);
             _close = ModalKit.Close("CloseButton", _panel, art, onResume);
             _resume = ModalKit.Cta("ResumeButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, UiText.KeepPlaying, 21f, onResume, out _);
+            _map = ModalKit.Cta("MapButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.RiverMap, 18f, onMap, out _);
             _restart = ModalKit.Cta("RestartButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.RestartLong, 18f, onRestart, out _);
             _quit = ModalKit.Cta("QuitButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.Quit, 18f, onQuit, out _);
             _root.gameObject.SetActive(false);
@@ -47,6 +52,9 @@ namespace AF.UI
 
         public Button ResumeButton => _resume.Button;
 
+        /// <summary>«Mapa del río» (tarea M4.3): solo se ve si <see cref="Show"/> lo pidió.</summary>
+        public Button MapButton => _map.Button;
+
         public Button RestartButton => _restart.Button;
 
         public Button QuitButton => _quit.Button;
@@ -56,7 +64,11 @@ namespace AF.UI
             _root.gameObject.SetActive(false);
         }
 
-        public void Show(bool canRestart, float canvasW, float canvasH)
+        /// <summary>
+        /// Abre el menú: «Volver a la orilla» si <paramref name="canRestart"/> y «Mapa del río» si <paramref name="canMap"/> (el
+        /// Mapa en la escena y <c>max_level</c> ≥ 10; tarea M4.3).
+        /// </summary>
+        public void Show(bool canRestart, bool canMap, float canvasW, float canvasH)
         {
             _root.gameObject.SetActive(true);
             float width = Mathf.Min(300f, canvasW - 48f);
@@ -67,6 +79,13 @@ namespace AF.UI
             y += 56f;
             ModalKit.Place(_resume, 16f, y, inner);
             y += ModalKit.HeightOf(_resume) + 10f;
+            _map.Button.gameObject.SetActive(canMap);
+            if (canMap)
+            {
+                ModalKit.Place(_map, 16f, y, inner);
+                y += ModalKit.HeightOf(_map) + 8f;
+            }
+
             _restart.Button.gameObject.SetActive(canRestart);
             if (canRestart)
             {
@@ -83,6 +102,11 @@ namespace AF.UI
         {
             ids.Add("resume");
             rects.Add((RectTransform)_resume.Button.transform);
+            if (_map.Button.gameObject.activeSelf)
+            {
+                ids.Add("pause_map");
+                rects.Add((RectTransform)_map.Button.transform);
+            }
             if (_restart.Button.gameObject.activeSelf)
             {
                 ids.Add("pause_restart");

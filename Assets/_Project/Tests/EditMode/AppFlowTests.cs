@@ -96,6 +96,38 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void ContentEndMap_IsDueOnlyAfterWinningTheLastLevel_WithTheMap()
+        {
+            // 06 §9; D-013, punto 7; tarea M4.3: tras ganar el último nivel publicado, «Siguiente» abre «El río sigue creciendo»
+            // y la vista abre antes el Mapa encima; con el contenido ya acabado, «Jugar» abre la pantalla sola.
+            Fixture fx = Fixture.Tutorial(nextLevel: 10);
+            fx.App.ContentEndMapAvailable = true;
+            fx.App.Start(false);
+            Assert.That(fx.App.ContentEndMapDue, Is.False, "en el inicio");
+            fx.App.PressPlay();
+            Win(fx.Flow);
+            Assert.That(fx.App.ContentEndMapDue, Is.False, "en la victoria");
+            Assert.That(fx.App.PressNext(), Is.True);
+            Assert.That(fx.App.Screen, Is.EqualTo(AppScreen.ContentEnd));
+            Assert.That(fx.App.ContentEndMapDue, Is.True, "tras ganar el último nivel publicado");
+            Assert.That(fx.App.CloseOverlay(), Is.True);
+            Assert.That(fx.App.ContentEndMapDue, Is.False, "al salir de la pantalla deja de cumplirse");
+            Assert.That(fx.App.PressPlay(), Is.True);
+            Assert.That(fx.App.Screen, Is.EqualTo(AppScreen.ContentEnd));
+            Assert.That(fx.App.ContentEndMapDue, Is.False, "«Jugar» con el contenido acabado: la pantalla sola");
+
+            // Sin el Mapa en la escena, nunca.
+            Fixture without = Fixture.Tutorial(nextLevel: 10);
+            without.App.Start(false);
+            without.App.PressPlay();
+            Win(without.Flow);
+            Assert.That(without.App.PressNext(), Is.True);
+            Assert.That(without.App.Screen, Is.EqualTo(AppScreen.ContentEnd));
+            Assert.That(without.App.ContentEndMapAvailable, Is.False, "false por defecto");
+            Assert.That(without.App.ContentEndMapDue, Is.False);
+        }
+
+        [Test]
         public void From31_PlayingWithoutCanoes_OpensNoCanoes()
         {
             // 04 §7.1 «Qué bloquea» y 06 §4.7 (D-008): con el desplazamiento de desarrollo, el nivel 31 es el tablero del 1.

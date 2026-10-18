@@ -1669,7 +1669,7 @@ namespace AF.UI
             {
                 RiverStop? stop = stops.At(n);
                 RiverStopRoute? route = routes.At(n);
-                if (stop == null || route == null || stop.World > _world)
+                if (stop == null || route == null || stop.World > _world || !ModesShowsStop(stop)) // ui_map_mode = worlds (M4.3)
                 {
                     continue;
                 }

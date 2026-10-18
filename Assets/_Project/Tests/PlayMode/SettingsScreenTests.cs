@@ -129,8 +129,8 @@ namespace AF.Tests.PlayMode
             Assert.That(settings.PatternsLabel(PatternsSetting.On), Is.EqualTo("Siempre"));
             Assert.That(settings.PatternsLabel(PatternsSetting.Off), Is.EqualTo("Nunca"));
             Assert.That(settings.PatternsMarked(PatternsSetting.Auto), Is.True);
-            Assert.That(settings.IdleHintSlot.gameObject.activeSelf || settings.AboutSlot.gameObject.activeSelf,
-                Is.False, "los huecos de MO3 y F4, ocultos (D-008)");
+            Assert.That(settings.IdleHintSlot.gameObject.activeSelf, Is.False, "el hueco de MO3, oculto (D-008)");
+            Assert.That(settings.AboutSlot.gameObject.activeSelf, Is.True, "Sobre la Amazonía (F4), con el açaí empezado");
             Assert.That(settings.SlothMessagesSlot.gameObject.activeSelf, Is.True, "la fila de TI3, a la vista");
             Assert.That(settings.SlothMessagesLabel, Is.EqualTo("Mensajes de TiTino"));
             Assert.That(settings.SlothMessagesMarked && settings.SelectedSlothMessages, Is.True, "activada por defecto (D-016)");

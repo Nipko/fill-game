@@ -24,8 +24,12 @@ namespace AF.UI
     /// null; <see cref="StopBackdrop.HeroId"/>), <c>lut</c>, <c>water</c>, <c>fade</c> (true si hubo fundido) y <c>build_ms</c> (lo
     /// que costó componerlo con sus mallas; ≤ 8 ms, 08 §5.4); y además <c>warm_ms</c> (lo que costó, antes y fuera de
     /// <c>build_ms</c>, preparar el primer uso en la primera carga con parada, <see cref="StopBackdrop.Prewarm"/>; 0 en las
-    /// demás; tarea FX4), <c>hero_src</c> (<c>png</c>, <c>shape</c> o <c>none</c>), <c>shape</c>, <c>code</c> y <c>change</c>
-    /// (<c>cut</c>, <c>fade</c> o <c>same</c>).</para>
+    /// demás; tarea FX4), <c>hero_src</c> (<c>png</c>, <c>shape</c> o <c>none</c>), <c>shape</c>, <c>code</c>, <c>change</c>
+    /// (<c>cut</c>, <c>fade</c> o <c>same</c>) y <c>season</c> (<c>A</c>, <c>B</c> o null; SE2).</para>
+    /// <para><b>Temporada del ciclo</b> (D-009, punto 6; pregunta 32 b, D-020; 07 §2.1; tarea SE2): la luz del fondo lleva,
+    /// sobre la de la parada, la LUT de aguas altas o bajas del ciclo del nivel (<see cref="Seasons"/>, la tabla del cliente
+    /// <c>seasons_v1.json</c>), también sin parada; la victoria con vista de una llegada, la del nivel siguiente. Sin la tabla,
+    /// como antes.</para>
     /// <para>La banda de agua no se pinta bajo el relleno opaco del panel (<see cref="StopBackdrop.PanelHoleInsetDp"/>), y el
     /// hueco sigue al tablero cuando sube con la victoria o un modal.</para>
     /// <para><b>Victoria con vista</b> (D-013, punto 8, Q6-A; 02 §6; 07 §5.4; <c>ui_victory_view</c>, 08 §9; tarea M2.2): al abrirse
@@ -102,6 +106,7 @@ namespace AF.UI
         private bool _victoryViewArrival;
         private RiverStop? _victoryViewStop;
         private string _victoryViewWater = string.Empty;
+        private Season _victoryViewSeason;
 
         // ms de la celebración en curso (StopTick, antes del Tick del flujo, como la ola de saltos de las cuias): en la victoria,
         // lo que ya pasó de la ola. Vuelve a 0 con cada carga.
@@ -167,6 +172,44 @@ namespace AF.UI
             return stops!.FirstStopOfWorld(stop.World) ?? stop;
         }
 
+        /// <summary>
+        /// Tabla de temporada del cliente (<c>af-seasons/1</c>; SE2): la LUT de aguas altas o bajas de cada ciclo de 20. Null =
+        /// sin temporada (como antes).
+        /// </summary>
+        public SeasonTable? Seasons { get; set; }
+
+        /// <summary>
+        /// Solo tests y capturas: false apaga la LUT de temporada en el tablero y en el inicio (la comparación con y sin ella;
+        /// SE2). En el juego, siempre true.
+        /// </summary>
+        internal static bool SeasonLutEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Solo capturas: fuerza la temporada (A o B) en el tablero y en el inicio, con o sin tabla, para comparar las dos en la
+        /// misma parada (SE2). Null, la de la tabla; en el juego, siempre null.
+        /// </summary>
+        internal static Season? SeasonOverride { get; set; }
+
+        /// <summary>
+        /// Temporada del nivel <paramref name="level"/> con la tabla <paramref name="seasons"/> (<see cref="Season.None"/> sin
+        /// tabla, fuera de ella o con <see cref="SeasonLutEnabled"/> apagado; <see cref="SeasonOverride"/> si está puesta). Sin
+        /// asignaciones.
+        /// </summary>
+        internal static Season SeasonFor(SeasonTable? seasons, int level)
+        {
+            if (!SeasonLutEnabled)
+            {
+                return Season.None;
+            }
+
+            if (SeasonOverride.HasValue)
+            {
+                return SeasonOverride.Value;
+            }
+
+            return seasons != null ? seasons.SeasonOf(level) : Season.None;
+        }
+
         partial void StopBuild(RectTransform scene)
         {
             _stopBackdrop = new StopBackdrop(scene, _art);
@@ -211,10 +254,13 @@ namespace AF.UI
             _stopCelebrationMs = 0f;
             RiverStop? stop = StopForLevel(RiverStops, flow.LevelNumber, MapConfig.UiBgPerStop);
             string water = flow.Level.WaterBase;
+            Season season = SeasonFor(Seasons, flow.LevelNumber);
             RiverStop? before = _stopBackdrop.Stop;
-            // Sin parada antes ni después no cambia nada visible, aunque cambie el agua del mundo (201 en adelante, sin catálogo).
-            bool same = (before == null && stop == null)
-                || (ReferenceEquals(before, stop) && string.Equals(_stopBackdrop.Water, water, System.StringComparison.Ordinal));
+            // Sin parada antes ni después no cambia nada visible, aunque cambie el agua del mundo (sin catálogo), salvo la luz de
+            // la temporada (SE2).
+            bool same = season == _stopBackdrop.Season
+                && ((before == null && stop == null)
+                    || (ReferenceEquals(before, stop) && string.Equals(_stopBackdrop.Water, water, System.StringComparison.Ordinal)));
             bool fade = _stopLoadedOnce && !flow.ReduceMotion && !same;
             _stopLoadedOnce = true;
             if (StopPrewarmEnabled)
@@ -222,7 +268,7 @@ namespace AF.UI
                 _stopBackdrop.Prewarm(stop, water); // el primer uso, fuera de build_ms (FX4; sonda warm_ms)
             }
 
-            _stopBackdrop.Apply(stop, water, fade, MapConfig.StopCrossfadeMs);
+            _stopBackdrop.Apply(stop, water, fade, MapConfig.StopCrossfadeMs, season);
             _lastStopChange = same ? StopChangeSame : (_stopBackdrop.Fading ? StopChangeFade : StopChangeCut);
             ApplyStopLut();
             EmitStopProbe(flow);
@@ -248,11 +294,13 @@ namespace AF.UI
             _victoryViewArrival = stops != null && won != RiverStopCatalog.LevelsPerStop && stops.ArrivalOnWin(won) != null;
             _victoryViewStop = null;
             _victoryViewWater = flow.Level.WaterBase;
+            _victoryViewSeason = _stopBackdrop.Season;
             if (_victoryViewArrival)
             {
                 int next = won + 1;
                 _victoryViewStop = StopForLevel(stops, next, MapConfig.UiBgPerStop);
                 _victoryViewWater = flow.Catalog.Find(next)?.WaterBase ?? flow.Level.WaterBase;
+                _victoryViewSeason = SeasonFor(Seasons, next); // la luz de la temporada del nivel siguiente (SE2)
             }
 
             // Tras la ola de saltos (02 §6; 07 §5.4): con más de 10 cuias sigue saltando al abrirse la victoria (la última cuia
@@ -276,7 +324,7 @@ namespace AF.UI
             LayoutStopBackdrop(); // sin hueco: bajo el panel que se va, la banda del agua
             if (_victoryViewArrival)
             {
-                _stopBackdrop.Apply(_victoryViewStop, _victoryViewWater, !cut, VictoryViewFadeMs);
+                _stopBackdrop.Apply(_victoryViewStop, _victoryViewWater, !cut, VictoryViewFadeMs, _victoryViewSeason);
                 ApplyStopLut();
             }
 
@@ -353,8 +401,8 @@ namespace AF.UI
             }
         }
 
-        // La luz de la parada sobre el panorama y el cielo que lo completa (blanco = como hoy). La banda de agua no la lleva
-        // (VA-23).
+        // La luz de la parada y de la temporada sobre el panorama y el cielo que lo completa (blanco = como hoy). La banda de agua
+        // no la lleva (VA-23).
         private void ApplyStopLut()
         {
             Color lut = _stopBackdrop.DisplayedLutColor;
@@ -404,6 +452,7 @@ namespace AF.UI
             AppendJsonString(sb, "shape", b.Shape);
             AppendJsonString(sb, "code", b.Code);
             AppendJsonString(sb, "change", _lastStopChange);
+            AppendJsonString(sb, "season", SeasonTable.Letter(b.Season)); // SE2
             _lastStopProbe = sb.ToString();
             _probe.Event("stop", _lastStopProbe);
         }

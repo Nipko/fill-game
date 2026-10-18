@@ -12,7 +12,7 @@ namespace AF.Audio
         /// <summary><c>sting_arrival</c>: llegada a una parada (niveles 10k).</summary>
         Arrival = 1,
 
-        /// <summary><c>sting_fruit_new</c>: tarjeta «Fruta nueva» (aún sin tarjeta en el cliente: sin gancho).</summary>
+        /// <summary><c>sting_fruit_new</c>: tarjeta «Fruta nueva» (tarea F5), con <c>sfx_fruit_new</c>.</summary>
         FruitNew = 2,
 
         /// <summary><c>sting_mech_card</c>: tarjeta previa de una mecánica nueva.</summary>

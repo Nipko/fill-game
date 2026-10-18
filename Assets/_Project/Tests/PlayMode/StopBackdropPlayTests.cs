@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Text.RegularExpressions;
 using AF.GameFlow;
+using AF.Levels;
 using AF.Presentation;
 using AF.UI;
 using NUnit.Framework;
@@ -35,6 +36,7 @@ namespace AF.Tests.PlayMode
         {
             GameScreen.SimulatedScreen = null;
             GameScreen.VictoryViewOverride = null;
+            GameScreen.SeasonOverride = null;
             LaunchOptions.Reset();
             StopBackdrop.HeroSpriteOverride = null;
             MapArtRule.ForceProvisional = null;
@@ -177,6 +179,57 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator WithoutTheCatalog_OnlyTheSeasonChanges_From20To21_AndNotFrom21To22()
+        {
+            // Sin parada antes ni después, el cambio de temporada sí se ve (SE2): de 20 (sin temporada) a 21 (ciclo B), la luz de
+            // aguas bajas sobre el panorama; dentro del ciclo, de 21 a 22, nada. En el juego, sin catálogo o del 201 sin paradas.
+            yield return HudSetup.LoadAtIntro(19);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            Assert.That(boot.Seasons, Is.Not.Null, "premisa: la escena lleva la tabla de temporada");
+            Assert.That(boot.Seasons!.SeasonOf(20), Is.EqualTo(Season.None), "premisa: el 20 no tiene temporada");
+            Assert.That(boot.Seasons.SeasonOf(21), Is.EqualTo(Season.LowWater), "premisa: el ciclo del 21 es B");
+            Assert.That(boot.Seasons.SeasonOf(22), Is.EqualTo(Season.LowWater));
+            view.RiverStops = null; // como sin river_stops_v1.json
+            StopBackdrop b = view.StopBackdrop;
+
+            WinAndPressNext(boot, 20);
+            Assert.That(b.Stop, Is.Null);
+            Assert.That(b.Season, Is.EqualTo(Season.None));
+            Assert.That(view.PanoramaTint, Is.EqualTo(Color.white), "el 20, sin parada ni temporada: sin tinte");
+
+            WinAndPressNext(boot, 21);
+            Assert.That(b.Stop, Is.Null, "sigue sin parada");
+            Assert.That(view.LastStopChange, Is.Not.EqualTo(GameScreen.StopChangeSame), "solo cambia la temporada, y eso se ve");
+            Assert.That(view.LastStopChange, Is.EqualTo(GameScreen.StopChangeCut), "sin parada a la vista no hay capas que fundir");
+            Assert.That(b.Season, Is.EqualTo(Season.LowWater));
+            Assert.That(b.LutColor, Is.EqualTo(StopBackdrop.LowWaterLut));
+            Assert.That(view.PanoramaTint, Is.EqualTo(StopBackdrop.LowWaterLut), "el panorama con la luz de aguas bajas");
+            Assert.That(b.Root.gameObject.activeSelf, Is.False, "nada del fondo de la parada");
+            Assert.That(view.LastStopProbe, Is.Not.Null, "la sonda stop en el Editor (build de desarrollo)");
+            StringAssert.Contains("\"level\":21", view.LastStopProbe);
+            StringAssert.Contains("\"hero\":null", view.LastStopProbe);
+            StringAssert.Contains("\"change\":\"cut\"", view.LastStopProbe);
+            StringAssert.EndsWith(",\"season\":\"B\"", view.LastStopProbe);
+
+            WinAndPressNext(boot, 22);
+            Assert.That(view.LastStopChange, Is.EqualTo(GameScreen.StopChangeSame), "misma temporada y sin parada: nada cambia");
+            Assert.That(b.BuildMs, Is.EqualTo(0d), "la misma composición no se reconstruye");
+            Assert.That(b.Fading, Is.False);
+            Assert.That(b.Season, Is.EqualTo(Season.LowWater));
+            Assert.That(view.PanoramaTint, Is.EqualTo(StopBackdrop.LowWaterLut));
+            StringAssert.EndsWith("\"change\":\"same\",\"season\":\"B\"", view.LastStopProbe);
+        }
+
+        private static void WinAndPressNext(GameBootstrap boot, int next)
+        {
+            VictorySetup.WinToVictoryScreen(boot);
+            PlayModeHelpers.Step(boot, 1500);
+            Assert.That(boot.PressNext(), Is.True);
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(next));
+        }
+
+        [UnityTest]
         public IEnumerator TheBandHole_FollowsThePanel_WhenTheBoardRisesForTheVictory()
         {
             GameScreen.VictoryViewOverride = false; // con ui_victory_view = true, la victoria lo cambia antes (VictoryViewTests)
@@ -247,13 +300,14 @@ namespace AF.Tests.PlayMode
             StringAssert.Contains("\"stop\":9,\"id\":\"leticia_atardecer\",\"world\":4,\"hero\":\"bg_hero_leticia\"", line);
             StringAssert.Contains("\"lut\":\"dusk\",\"water\":\"white\",\"fade\":false,\"build_ms\":", line);
             StringAssert.IsMatch("\"build_ms\":[0-9.]+,\"warm_ms\":[0-9.]+,\"hero_src\"", line); // FX4
-            StringAssert.Contains("\"hero_src\":\"shape\",\"shape\":\"leticia\",\"code\":null,\"change\":\"cut\"}", line);
+            StringAssert.Contains("\"hero_src\":\"shape\",\"shape\":\"leticia\",\"code\":null,\"change\":\"cut\",\"season\":\"A\"}", line); // SE2
             Match m = Regex.Match(line, "\"build_ms\":([0-9.]+)");
             Assert.That(m.Success, Is.True, line);
             double ms = double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
             TestContext.WriteLine("build_ms en el Editor: " + ms);
             Assert.That(ms, Is.LessThanOrEqualTo(8d), "08 §5.4");
-            Assert.That(GameBootstrap.Current!.View!.PanoramaTint, Is.EqualTo(StopBackdrop.DuskLut), "el panorama con la luz del atardecer");
+            Assert.That(GameBootstrap.Current!.View!.PanoramaTint, Is.EqualTo(StopBackdrop.DuskLut * StopBackdrop.HighWaterLut),
+                "el panorama con la luz del atardecer y la de aguas altas del ciclo 81 (SE2)");
         }
 
         [UnityTest]

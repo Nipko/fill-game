@@ -141,9 +141,24 @@ namespace AF.UI
     }
 
     /// <summary>
+    /// Desde dónde se abre la ficha de una fruta de Frutas del río (<see cref="FruitSheet"/>; D-017 Q4-A: «desde la línea y desde
+    /// Ajustes › Sobre la Amazonía»; tarea F4). Va en la sonda <c>af_fact_page_open</c> como <c>from</c> (solo en desarrollo: el
+    /// evento de 08 §8.2 lleva <c>tint_id</c> y <c>unlocked</c>).
+    /// </summary>
+    public enum FruitSheetSource
+    {
+        /// <summary>La línea de fruta de la victoria.</summary>
+        Victory = 0,
+
+        /// <summary>Ajustes › «Sobre la Amazonía» › «Frutas del río».</summary>
+        Settings = 1,
+    }
+
+    /// <summary>
     /// Desde dónde se abre el Mapa del río (<c>af_map_open.source</c>, 08 §8.2; D-013, punto 7; propuesta del Mapa §8.1 y
-    /// §11.5). En la tarea M3.3 solo existe la pestaña del inicio (<see cref="Lobby"/>); los demás los abren sus tareas: la
-    /// pausa y la victoria (M4.3), el banner de mundo (M3.6), el Mapa del 10 (M4.2) y el fin de contenido (M4.3).
+    /// §11.5): la pestaña del inicio (M3.3), el banner de mundo (M3.6), el Mapa del 10 (M4.2) y, desde la tarea M4.3, la pausa
+    /// (encima del nivel, con «Volver al nivel» y sin salir de él: 04 §5.2), «Ver mapa» en la victoria del <c>10k</c> (encima de
+    /// la victoria, que sigue igual debajo) y el fin de contenido (antes de «El río sigue creciendo», 06 §9).
     /// </summary>
     public enum MapOpenSource
     {
@@ -153,7 +168,7 @@ namespace AF.UI
         /// <summary>Pausa del nivel (<c>pause</c>): encima del nivel, sin salir de él (D-013, punto 7).</summary>
         Pause = 1,
 
-        /// <summary>«Ver mapa» de la victoria del <c>10k</c> (<c>victory</c>).</summary>
+        /// <summary>«Ver mapa» de la victoria del <c>10k</c> (<c>victory</c>): encima de la victoria, que vuelve tal cual al cerrarlo.</summary>
         Victory = 2,
 
         /// <summary>«Ver mapa» del banner de mundo (<c>world_change</c>).</summary>
@@ -162,7 +177,7 @@ namespace AF.UI
         /// <summary>El Mapa del 10, que sale solo (<c>l10</c>; 06 §2.3).</summary>
         L10 = 4,
 
-        /// <summary>Al acabarse el contenido (<c>content_end</c>; 06 §9).</summary>
+        /// <summary>Al acabarse el contenido (<c>content_end</c>; 06 §9): antes de «El río sigue creciendo», que queda al cerrarlo.</summary>
         ContentEnd = 5,
     }
 
@@ -263,7 +278,9 @@ namespace AF.UI
         /// <summary>
         /// Abre el Mapa del río (D-013; 06 §4.7; tarea M3.3) desde <paramref name="source"/>, en la vista Mundo. False si no hay
         /// Mapa (faltan sus datos), si ya está abierto, si delante hay una pantalla de pago o el aviso del perfil bloqueado, o si
-        /// esa entrada no está disponible ahora (la pestaña del inicio, desde <c>max_level</c> ≥ 10).
+        /// esa entrada no está disponible ahora: la pestaña del inicio y la pausa, desde <c>max_level</c> ≥ 10 (la pausa, con el
+        /// nivel en juego); «Ver mapa» de la victoria, con la victoria a la vista; el fin de contenido, con «El río sigue creciendo»
+        /// (tarea M4.3).
         /// </summary>
         bool OpenRiverMap(MapOpenSource source);
 
@@ -279,5 +296,16 @@ namespace AF.UI
         /// del inicio cuando ya no hay llegadas sin ver. False si no cambió nada o no hay progreso.
         /// </summary>
         bool MarkMapSeen(int level);
+
+        /// <summary>
+        /// Abre la ficha de la serie de Frutas del río <paramref name="subject"/> (<c>acai</c>, <c>rio_napo</c>…; D-017 Q4-A; tarea
+        /// F4; <see cref="FruitSheet"/>) desde <paramref name="source"/>: desde la victoria, solo la de la línea que se ve y solo con
+        /// la victoria a la vista; desde Ajustes, con Ajustes abierta. Escribe la sonda <c>af_fact_page_open</c> {tint_id, unlocked}
+        /// (08 §8.2). Mientras se ve, la victoria no avanza. False si no se abre.
+        /// </summary>
+        bool OpenFruitSheet(string subject, FruitSheetSource source);
+
+        /// <summary>Cierra la ficha de una fruta (su X, el velo o el Atrás de Android): se vuelve a lo de debajo tal como estaba.</summary>
+        bool CloseFruitSheet();
     }
 }

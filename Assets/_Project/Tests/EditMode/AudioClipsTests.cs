@@ -264,7 +264,7 @@ namespace AF.Tests.EditMode
                 AudioCues.Install(null);
             }
 
-            Assert.That(AudioClipIds.Id(AudioClipIds.StingerSlot(StingerId.FruitNew)), Is.EqualTo("sting_fruit_new"), "en el registro, sin gancho");
+            Assert.That(AudioClipIds.Id(AudioClipIds.StingerSlot(StingerId.FruitNew)), Is.EqualTo("sting_fruit_new"), "en el registro (su gancho, la tarjeta «Fruta nueva»: AudioHooksTests)");
         }
 
         [Test]

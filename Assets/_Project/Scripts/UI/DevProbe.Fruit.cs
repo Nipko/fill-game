@@ -21,6 +21,10 @@ namespace AF.UI
     /// Sirve para medirlo en el teléfono con <c>adb logcat -s Unity</c>.
     /// <c>river_fact_shown</c> sale del punto común de la ranura (<see cref="RiverFactShown"/>, DevProbe.Map.cs) con el
     /// <c>fact_id</c> de la línea de fruta. Solo claves e identificadores, nunca texto visible (regla de localización).
+    /// <para>Y <c>fact_page_open</c> (tarea F4; <c>af_fact_page_open</c> de 08 §8.2, D-017 Q4-A), al abrir la ficha de una fruta
+    /// (<see cref="FruitSheet"/>): <c>tint_id</c> (el sujeto de la serie: <c>acai</c>, o <c>rio_napo</c> en una serie de río [P]),
+    /// <c>unlocked</c> (las líneas reveladas) y, solo en la sonda, <c>from</c> (<c>victory</c> o <c>settings</c>) y <c>level</c>
+    /// (el de la victoria; 0 desde Ajustes).</para>
     /// </summary>
     public sealed partial class DevProbe
     {
@@ -40,6 +44,36 @@ namespace AF.UI
             {
                 Debug.Log(text);
             }
+        }
+
+        internal void FactPageOpen(string tintId, int unlocked, FruitSheetSource from, int level)
+        {
+            string? text = FormatFactPageOpen(tintId, unlocked, from, level);
+            if (text != null)
+            {
+                Debug.Log(text);
+            }
+        }
+
+        /// <summary>Texto de la línea <c>AF_STATE fact_page_open</c>; null si la sonda no escribe.</summary>
+        internal string? FormatFactPageOpen(string tintId, int unlocked, FruitSheetSource from, int level)
+        {
+            if (!Enabled)
+            {
+                return null;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"fact_page_open\"");
+            AppendTime(sb);
+            sb.Append(",\"tint_id\":");
+            AppendKey(sb, tintId);
+            sb.Append(",\"unlocked\":").Append(unlocked.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"from\":\"").Append(from == FruitSheetSource.Victory ? "victory" : "settings").Append('"');
+            sb.Append(",\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
+            sb.Append('}');
+            return sb.ToString();
         }
 
         /// <summary>Texto de la línea <c>AF_PERF slot_measure</c>; null si la sonda no escribe.</summary>

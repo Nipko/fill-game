@@ -143,6 +143,7 @@ namespace AF.UI
         private readonly HomeWindow _home;
         private GameServices? _services;
         private RiverStopCatalog? _riverStops;
+        private SeasonTable? _seasons;
         private RiverStop? _currentStop;
         private RiverStop? _nextStop;
         private bool _remainingReady;
@@ -356,6 +357,21 @@ namespace AF.UI
             set
             {
                 _riverStops = value;
+                _stopLevelShown = -1;
+            }
+        }
+
+        /// <summary>
+        /// Tabla de temporada del cliente (<c>af-seasons/1</c>; SE2): el fondo del inicio lleva la LUT de aguas altas o bajas del
+        /// ciclo de «Jugar», como el tablero (07 §2.1). Null = sin temporada (como antes). Al cambiarla, el inicio se rehace en el
+        /// siguiente fotograma.
+        /// </summary>
+        public SeasonTable? Seasons
+        {
+            get => _seasons;
+            set
+            {
+                _seasons = value;
                 _stopLevelShown = -1;
             }
         }
@@ -946,7 +962,8 @@ namespace AF.UI
             _nextStop = _currentStop != null ? stops!.At(_currentStop.N + 1) : null;
             RiverStop? backdrop = inRange ? GameScreen.StopForLevel(stops, level, MapConfig.UiBgPerStop) : null;
             LevelDefinition? def = app.Catalog.Find(level);
-            _stopBackdrop.Apply(backdrop, def != null ? def.WaterBase : app.Catalog.WaterBase, false, 0f);
+            Season season = level >= 1 && level <= WorldTable.LastLevel ? GameScreen.SeasonFor(_seasons, level) : Season.None;
+            _stopBackdrop.Apply(backdrop, def != null ? def.WaterBase : app.Catalog.WaterBase, false, 0f, season);
             ApplyStopLut();
 
             // «Faltan N»: solo con la parada siguiente en el catálogo y con su nombre en el idioma (en release, un nombre sin el
@@ -994,7 +1011,8 @@ namespace AF.UI
             UiBuilder.Place(_remainingLabel.rectTransform, RemainingPadDp, 0f, innerW, boxH);
         }
 
-        // La luz de la parada sobre el panorama y el cielo que lo completa (blanco = como antes), como en el tablero.
+        // La luz de la parada y de la temporada (SE2) sobre el panorama y el cielo que lo completa (blanco = como antes), como en
+        // el tablero.
         private void ApplyStopLut()
         {
             Color lut = _stopBackdrop.LutColor;

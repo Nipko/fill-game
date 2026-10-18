@@ -504,6 +504,42 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator FruitNew_Level4_PlaysTheCardSoundAndItsStingerOnce()
+        {
+            // Pendiente de AU3, cerrado en FX6: sting_fruit_new suena con la tarjeta «Fruta nueva» (F5) como los otros remates
+            // (el servicio lo deja para después de la toada, va con el ajuste Música y a −8 dB), junto a sfx_fruit_new afinado
+            // a su fruta, una vez al salir la tarjeta y nunca antes.
+            FunnelSetup.Hooks();
+            GameScreen.FruitNewOverride = true;
+            try
+            {
+                GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp
+                LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1240));
+                yield return PlayModeHelpers.LoadGame(4, new MemoryProgressStore(4, 3));
+                GameBootstrap boot = GameBootstrap.Current!;
+                PlayModeHelpers.TakeClock(boot);
+                FruitNewCard card = boot.View!.FruitNewView;
+                for (int t = 0; t < 14000 && !card.Visible; t += PlayModeHelpers.FrameMs)
+                {
+                    Assert.That(_audio.StingerCount(StingerId.FruitNew, false), Is.EqualTo(0), "el remate no sale antes que la tarjeta (" + t + " ms)");
+                    PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                }
+
+                Assert.That(card.Visible, Is.True, "la tarjeta de la guanábana sale tras la intro del 4");
+                Assert.That(_audio.Count(SfxId.FruitNew, true), Is.EqualTo(1), "07 §9.2: sfx_fruit_new con la tarjeta");
+                Assert.That(_audio.StingerCount(StingerId.FruitNew, true), Is.EqualTo(1), "AU3: su remate, con la tarjeta");
+                PlayModeHelpers.Step(boot, 8000);
+                Assert.That(card.Visible, Is.False, "la tarjeta ya se fue");
+                Assert.That(_audio.StingerCount(StingerId.FruitNew, false), Is.EqualTo(1), "una sola vez");
+                Assert.That(_audio.Count(SfxId.FruitNew, false), Is.EqualTo(1), "y su efecto, una vez");
+            }
+            finally
+            {
+                GameScreen.FruitNewOverride = null;
+            }
+        }
+
+        [UnityTest]
         public IEnumerator Hoja43_Opening_PlaysItsMechanicSound()
         {
             yield return MechanicTestKit.LoadPlaying(43);
@@ -651,7 +687,8 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Las filas de Ajustes, de arriba abajo: Sonido, Música y Vibración, los idiomas, los patrones y Mensajes de TiTino.
+        // Las filas de Ajustes, de arriba abajo: Sonido, Música y Vibración, los idiomas, los patrones, Mensajes de TiTino y, desde
+        // F4, las frutas de «Sobre la Amazonía» (una por fila, de una o de dos columnas: las dos de una fila se cortan a la vez).
         private static System.Collections.Generic.List<Button> Rows(SettingsScreen settings)
         {
             var rows = new System.Collections.Generic.List<Button>
@@ -669,6 +706,11 @@ namespace AF.Tests.PlayMode
             rows.Add(settings.PatternsButton(PatternsSetting.On));
             rows.Add(settings.PatternsButton(PatternsSetting.Off));
             rows.Add(settings.SlothMessagesButton);
+            for (int i = 0; i < settings.FruitCount; i += settings.FruitColumns)
+            {
+                rows.Add(settings.FruitButton(i));
+            }
+
             return rows;
         }
 

@@ -44,6 +44,22 @@ namespace AF.UI
     /// (<see cref="OpenRiverMap"/>); el ← de su cabecera y el Atrás de Android lo cierran (<see cref="CloseRiverMap"/>, que anota
     /// lo visto en <c>map_seen_level</c>) y su «Jugar» cierra y abre el nivel. La geometría se lee y se decodifica la primera vez
     /// que se abre (una sola vez por arranque); si no valida, se avisa y la pestaña desaparece.</para>
+    /// <para>Secuencia del Mapa del 10 (06 §2.3; P-M4; tarea M4.2; <see cref="L10SequenceRule"/>): con el Mapa en la escena,
+    /// «Siguiente» en la victoria del 10 pasa por AD_GATE y va al inicio, y cada entrada al inicio con <c>max_level</c> ≥ 10 y
+    /// <c>map_seen_level</c> &lt; 10 (también tras Inicio en esa victoria o tras cerrar la app) abre encima el Mapa desde
+    /// <see cref="MapOpenSource.L10"/> (<see cref="OnAppScreenChanged"/>), que hace la secuencia
+    /// (<c>RiverMapScreen.Sequence.cs</c>). Al acabarla o saltarla se anota lo visto hasta el 10 (<see cref="MarkMapSeen"/>), así
+    /// que sale una vez. Su «Jugar» abre el 11 y su ← deja el inicio. Los tests la apagan con
+    /// <see cref="L10SequenceOverride"/>. Mientras el Mapa (opaco) está encima del inicio, la ventanita de casa no se ve
+    /// (<see cref="HomeWindowCovered"/>): el saludo del día de TiTino (como mucho 1; D-016, punto 5) espera a que se cierre y
+    /// no se gasta debajo de la secuencia sin verse.</para>
+    /// <para>Más entradas del Mapa (D-013, punto 7; tarea M4.3; <c>RiverMapScreen.Modes.cs</c>): la pausa › «Mapa del río» lo
+    /// abre encima del nivel (<see cref="MapOpenSource.Pause"/>, desde <c>max_level</c> ≥ 10), con «Volver al nivel», sin salir
+    /// de él (04 §5.2: ni canoa, ni Crecida, ni <c>fails_level</c>); «Ver mapa» de la victoria del <c>10k</c>, encima de la
+    /// victoria (<see cref="MapOpenSource.Victory"/>); y, al ganar el último nivel publicado, «Siguiente» lleva a «El río sigue
+    /// creciendo» con el Mapa encima (<see cref="MapOpenSource.ContentEnd"/>; <see cref="AppFlow.ContentEndMapDue"/>), que hace
+    /// el viaje del último tramo: al cerrarlo queda la pantalla de siempre. Los tests apagan el del fin de contenido con
+    /// <see cref="ContentEndMapOverride"/>. Si la app deja la pantalla de debajo por otro camino, el Mapa se cierra antes.</para>
     /// <para>Pantalla de arranque (06 §2.2; D-016, T2-A; tarea TI6d; <see cref="BootSplash"/>): en cada arranque en frío, el río y
     /// el logotipo salen en el primer fotograma, antes de cargar nada, y TiTino entra en su embaúba en cuanto hay perfil y arte
     /// (<c>sloth_wake</c> en la primera apertura, <c>sloth_idle</c> en las demás; sin su arte final, en release, no sale). Al
@@ -76,6 +92,9 @@ namespace AF.UI
 
         [SerializeField]
         private TextAsset? fruitCalendar;
+
+        [SerializeField]
+        private TextAsset? seasonTable;
 
         [SerializeField]
         private TextAsset? stringsTable;
@@ -147,6 +166,20 @@ namespace AF.UI
 
         /// <summary>Instancia activa (una por escena).</summary>
         public static GameBootstrap? Current { get; private set; }
+
+        /// <summary>
+        /// Secuencia del Mapa del 10 (tarea M4.2) encendida (true) o apagada (false) por un test; null = la del juego (encendida con
+        /// el Mapa en la escena). Los tests PlayMode que no tratan de ella la apagan (<c>PlayModeHelpers.NoL10SequenceUnlessSet</c>):
+        /// con <c>max_level</c> ≥ 10 y <c>map_seen_level</c> 0 entran al inicio y ganan el 10 como antes de que existiera.
+        /// </summary>
+        public static bool? L10SequenceOverride { get; set; }
+
+        /// <summary>
+        /// El Mapa del fin de contenido (tarea M4.3) encendido (true) o apagado (false) por un test; null = el del juego (encendido
+        /// con el Mapa en la escena). Los tests PlayMode que no tratan de él lo apagan (<c>PlayModeHelpers.NoContentEndMapUnlessSet</c>):
+        /// tras ganar el último nivel publicado, «El río sigue creciendo» sale sola, como antes de que existiera.
+        /// </summary>
+        public static bool? ContentEndMapOverride { get; set; }
 
         /// <summary>
         /// Pantalla de arranque (06 §2.2; tarea TI6d) mientras se ve: null antes de crearla, después de cortarla y en los
@@ -307,6 +340,22 @@ namespace AF.UI
         public void ConfigureFruitCalendar(TextAsset? calendar)
         {
             fruitCalendar = calendar;
+        }
+
+        /// <summary>Tabla de temporada asignada (<c>seasons_v1.json</c>; escena generada por <c>GameSceneBuilder</c>; SE2).</summary>
+        public TextAsset? SeasonTableAsset => seasonTable;
+
+        /// <summary>
+        /// Tabla de temporada leída al arrancar (<c>af-seasons/1</c>; pregunta 32 b, D-020; 03 §12; tarea SE2): la LUT de aguas
+        /// altas o bajas de cada ciclo de 20 en el fondo del tablero y del inicio. Null si falta el archivo o no valida: se avisa y
+        /// el juego sigue sin LUT de temporada, como antes.
+        /// </summary>
+        public SeasonTable? Seasons { get; private set; }
+
+        /// <summary>Asigna la tabla de temporada (escena generada por <c>GameSceneBuilder</c>).</summary>
+        public void ConfigureSeasons(TextAsset? table)
+        {
+            seasonTable = table;
         }
 
         /// <summary>Tabla de textos de la UI asignada (<c>strings.csv</c>; escena generada por <c>GameSceneBuilder</c>).</summary>
@@ -845,6 +894,12 @@ namespace AF.UI
                 return false;
             }
 
+            // La ficha de una fruta (F4), encima de la victoria o de Ajustes: Atrás la cierra y deja lo de debajo como estaba.
+            if (FruitSheetOpen)
+            {
+                return CloseFruitSheet();
+            }
+
             // El Mapa del río se cierra con Atrás, como con su ← (M3.3), también abierto encima del nivel (pausa, victoria).
             if (_mapScreen != null && _mapScreen.Visible)
             {
@@ -867,9 +922,11 @@ namespace AF.UI
         /// <inheritdoc />
         /// <remarks>
         /// La pestaña del inicio (<see cref="MapOpenSource.Lobby"/>) solo con el inicio a la vista y desde <c>max_level</c> ≥
-        /// <see cref="RiverMapScreen.TabFromMaxLevel"/>; las demás entradas las piden sus tareas (pausa, victoria, banner, Mapa del
-        /// 10, fin de contenido) y se abren encima de lo que haya. La primera vez lee y decodifica la geometría. Escribe
-        /// <c>AF_STATE map_open</c>.
+        /// <see cref="RiverMapScreen.TabFromMaxLevel"/>; la pausa (<see cref="MapOpenSource.Pause"/>), con el nivel en juego (se
+        /// puede pausar) y desde ese mismo <c>max_level</c>; «Ver mapa» (<see cref="MapOpenSource.Victory"/>), con la victoria a la
+        /// vista; el fin de contenido (<see cref="MapOpenSource.ContentEnd"/>), con «El río sigue creciendo» (tarea M4.3). Las demás
+        /// entradas (banner, Mapa del 10) las piden sus tareas. Todas se abren encima de lo que haya. La primera vez lee y decodifica
+        /// la geometría. Escribe <c>AF_STATE map_open</c>.
         /// </remarks>
         public bool OpenRiverMap(MapOpenSource source)
         {
@@ -882,7 +939,7 @@ namespace AF.UI
                 return false;
             }
 
-            if (CommerceOpen || (_lockedNotice != null && _lockedNotice.Visible) || (_settingsScreen != null && _settingsScreen.Visible))
+            if (CommerceOpen || (_lockedNotice != null && _lockedNotice.Visible) || (_settingsScreen != null && _settingsScreen.Visible) || FruitSheetOpen)
             {
                 return false;
             }
@@ -892,6 +949,11 @@ namespace AF.UI
                 return false;
             }
 
+            if (!MapSourceOpenNow(source, app, progress))
+            {
+                return false; // la pausa, la victoria y el fin de contenido, solo con su pantalla a la vista (M4.3)
+            }
+
             if (!EnsureRiverMap())
             {
                 return false;
@@ -899,6 +961,13 @@ namespace AF.UI
 
             int play = app.PlayLevel;
             map.Open(source, _riverMapData!, _riverRoutes!, stops, progress, play, app.PlayLevelAvailable);
+            if (app.Screen != AppScreen.Level)
+            {
+                // La ventanita de casa se va ya, antes del siguiente paso de TiTino en el inicio: con la secuencia del Mapa del 10,
+                // en la misma llamada que hace entrar al inicio (revisión de M4.2).
+                _lobby?.SetCommerceOpen(HomeWindowCovered);
+            }
+
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
             _skipNextDelta = true;
@@ -923,6 +992,11 @@ namespace AF.UI
             }
 
             _probe?.MapClose(stats, progress?.MapSeenLevel ?? 0);
+            if (_app != null && _app.Screen != AppScreen.Level)
+            {
+                _lobby?.SetCommerceOpen(HomeWindowCovered); // la ventanita de casa vuelve con el inicio a la vista (revisión de M4.2)
+            }
+
             _skipNextDelta = true;
             return true;
         }
@@ -945,8 +1019,10 @@ namespace AF.UI
             return progress.MapSeenLevel != before;
         }
 
-        // «Jugar» del Mapa: desde la pestaña del inicio, cierra y abre el nivel (o Sin canoas, como el «Jugar» del inicio); abierto
-        // encima de otra pantalla (pausa, victoria, banner), solo cierra y se vuelve a ella (sus tareas cambian el texto).
+        // «Jugar» del Mapa: desde la pestaña del inicio o en la secuencia del Mapa del 10 (que vive sobre el inicio: «Jugar · Nivel
+        // 11»; M4.2), cierra y abre el nivel (o Sin canoas, como el «Jugar» del inicio); abierto encima de otra pantalla (pausa,
+        // victoria, banner o fin de contenido), solo cierra y se vuelve a ella: «Volver al nivel» desde la pausa y «Volver» desde la
+        // victoria y el fin de contenido (M4.3; RiverMapScreen.Modes.cs).
         private void PressMapPlay()
         {
             RiverMapScreen? map = _mapScreen;
@@ -955,11 +1031,31 @@ namespace AF.UI
                 return;
             }
 
-            bool fromLobby = map.Source == MapOpenSource.Lobby;
+            bool fromLobby = map.Source == MapOpenSource.Lobby || map.Source == MapOpenSource.L10;
             CloseRiverMap();
             if (fromLobby && _app != null && _app.Screen == AppScreen.Lobby)
             {
                 PressPlay();
+            }
+        }
+
+        // La entrada source se puede abrir ahora (M4.3): la pausa, con el nivel en juego (se puede pausar) y desde max_level ≥ 10
+        // (como la pestaña); «Ver mapa», con la victoria a la vista; el fin de contenido, con «El río sigue creciendo». Las demás,
+        // como antes (la pestaña la mira OpenRiverMap; el banner y el Mapa del 10, sus tareas).
+        private bool MapSourceOpenNow(MapOpenSource source, AppFlow app, IProgressStore progress)
+        {
+            LevelFlow? flow = _flow;
+            switch (source)
+            {
+                case MapOpenSource.Pause:
+                    return app.Screen == AppScreen.Level && flow != null && flow.HasLevel && (flow.CanQuit || flow.CanRestart)
+                        && progress.MaxLevel >= RiverMapScreen.TabFromMaxLevel;
+                case MapOpenSource.Victory:
+                    return app.Screen == AppScreen.Level && flow != null && flow.Phase == FlowPhase.VictoryScreen;
+                case MapOpenSource.ContentEnd:
+                    return app.Screen == AppScreen.ContentEnd;
+                default:
+                    return true;
             }
         }
 
@@ -1002,6 +1098,17 @@ namespace AF.UI
                 if (_lobby != null)
                 {
                     _lobby.RiverMapAvailable = false;
+                }
+
+                if (_app != null)
+                {
+                    _app.L10MapAvailable = false; // sin Mapa, «Siguiente» en el 10 carga el 11 (M4.2)
+                    _app.ContentEndMapAvailable = false; // y «El río sigue creciendo» sale sola (M4.3)
+                }
+
+                if (_screen != null)
+                {
+                    _screen.RiverMapOpenable = false; // ni «Mapa del río» en la pausa ni «Ver mapa» en la victoria (M4.3)
                 }
 
                 return false;
@@ -1176,8 +1283,22 @@ namespace AF.UI
         /// <inheritdoc />
         public void OnAppScreenChanged(AppScreen screen)
         {
-            // El Mapa abierto desde la pestaña vive sobre el inicio: si la app deja el inicio por otro camino, se cierra antes.
-            if (screen != AppScreen.Lobby && _mapScreen != null && _mapScreen.Visible && _mapScreen.Source == MapOpenSource.Lobby)
+            // La ficha de una fruta vive sobre la victoria o sobre Ajustes: si la app cambia de pantalla por otro camino, se cierra.
+            if (FruitSheetOpen)
+            {
+                CloseFruitSheet();
+            }
+
+            // El Mapa abierto desde la pestaña (o el del 10, M4.2) vive sobre el inicio: si la app deja el inicio por otro camino, se
+            // cierra antes.
+            if (screen != AppScreen.Lobby && _mapScreen != null && _mapScreen.Visible
+                && (_mapScreen.Source == MapOpenSource.Lobby || _mapScreen.Source == MapOpenSource.L10))
+            {
+                CloseRiverMap();
+            }
+
+            // Lo mismo con el de la pausa y el de la victoria, que viven sobre el nivel, y con el del fin de contenido (M4.3).
+            if (_mapScreen != null && _mapScreen.Visible && MapOutlivesItsScreen(_mapScreen.Source, screen))
             {
                 CloseRiverMap();
             }
@@ -1193,6 +1314,37 @@ namespace AF.UI
             if (screen == AppScreen.Lobby && _app != null)
             {
                 _screen?.PrefetchWorldBanner(_app.PlayLevel);
+
+                // La secuencia del Mapa del 10 (06 §2.3; P-M4; M4.2): tras «Siguiente» en la victoria del 10 o, si se pulsó Inicio o
+                // se cerró la app, en la primera entrada al inicio con max_level ≥ 10 y map_seen_level < 10. Al acabarla se anota lo
+                // visto hasta el 10: no se repite.
+                if (_app.L10MapDue)
+                {
+                    OpenRiverMap(MapOpenSource.L10);
+                }
+            }
+
+            // Fin de contenido tras ganar el último nivel publicado (06 §9; D-013, punto 7; M4.3): antes de «El río sigue creciendo»,
+            // el Mapa encima con el viaje del último tramo; al cerrarlo queda la pantalla de siempre.
+            if (screen == AppScreen.ContentEnd && _app != null && _app.ContentEndMapDue)
+            {
+                OpenRiverMap(MapOpenSource.ContentEnd);
+            }
+        }
+
+        // El Mapa abierto desde source ya no tiene debajo su pantalla al pasar la app a screen (M4.3): la pausa y la victoria viven
+        // sobre el nivel; el fin de contenido, sobre «El río sigue creciendo».
+        private static bool MapOutlivesItsScreen(MapOpenSource source, AppScreen screen)
+        {
+            switch (source)
+            {
+                case MapOpenSource.Pause:
+                case MapOpenSource.Victory:
+                    return screen != AppScreen.Level;
+                case MapOpenSource.ContentEnd:
+                    return screen != AppScreen.ContentEnd;
+                default:
+                    return false;
             }
         }
 
@@ -1201,6 +1353,12 @@ namespace AF.UI
         // Hay una pantalla de pago delante: la hoja «Compra simulada» o un anuncio (y lo que lo rodea; propuesta del personaje
         // d.11). Las ofertas que vengan (Mochila de inicio, Mercado) se suman aquí. Sin asignar memoria.
         private bool CommerceOpen => (_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible);
+
+        // La ventanita de casa del inicio no sale (LobbyScreen.SetCommerceOpen): con una pantalla de pago delante (D-013, punto 6)
+        // o con el Mapa del río encima, que es opaco (revisión de M4.2). Con el Mapa, TiTino no se ve: su saludo del día (como
+        // mucho 1; D-016, punto 5) no se decide debajo de la secuencia del Mapa del 10 (ni de la pestaña), sino al cerrarlo, en
+        // la misma visita al inicio (o en la siguiente, si su «Jugar» va al nivel). Sin asignar memoria.
+        private bool HomeWindowCovered => CommerceOpen || (_mapScreen != null && _mapScreen.Visible);
 
         // Lote de guardado de una acción del jugador: el perfil se escribe una vez al cerrarlo (revisión B2-5); sin lote, nada.
         private ProfileSaveScope Saves()
@@ -1384,17 +1542,24 @@ namespace AF.UI
             RiverStops = LoadRiverStops(riverStops);
             _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013): fondo, llegada y rótulo del lugar
             _screen.RiverGeometry = TryRiverGeometry; // la geometría del Mapa para el viaje de mundo del banner (M3.6)
+            _screen.RiverMapOpenable = RiverMapAvailable; // «Mapa del río» en la pausa y «Ver mapa» en la victoria (M4.3)
             FruitFacts = LoadFruitFacts(fruitCalendar); // calendario de Frutas del río (D-017)
             _screen.FruitFacts = FruitFacts; // la línea de fruta de la victoria (F3)
+            Seasons = LoadSeasons(seasonTable); // tabla de temporada del cliente (pregunta 32 b; SE2)
+            _screen.Seasons = Seasons; // la LUT de aguas altas o bajas del fondo del tablero
             _lobby = new LobbyScreen(transform, _art, _probe, () => PressPlay(), () => PressCanoes(), () => PressSettings(), () => PressBack(), this);
             _lobby.RiverStops = RiverStops; // el sitio, «Faltan N» y la ventanita de casa en el inicio (M2.1)
+            _lobby.Seasons = Seasons; // la LUT de temporada del fondo del inicio, como el tablero (SE2)
             _lobby.RiverMapAvailable = RiverMapAvailable; // la pestaña del Mapa del río, desde max_level ≥ 10 (M3.3)
             _mapScreen = new RiverMapScreen(transform, _art, _probe, () => CloseRiverMap(), () => PressMapPlay());
             _mapScreen.Fauna = Fauna; // el miquito del tramo en la tarjeta de la parada (M4.1)
             _mapScreen.FruitSeries = FruitFacts?.Catalog; // la fruta de la serie en la tarjeta de la parada (D-022; M4.1)
             _mapScreen.LevelWater = level => _app?.Catalog.Find(level)?.WaterBase; // el agua del fondo de la tarjeta (M4.1)
+            _mapScreen.L10SequenceEnded = () => MarkMapSeen(L10SequenceRule.Level); // la secuencia del Mapa del 10 no se repite (M4.2)
+            _mapScreen.L10SlothVoice = () => _screen == null || _screen.SlothVoice; // su bocadillo, solo con voz (D-016, punto 4)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
+            BuildFruitSheet(); // F4: la ficha de una fruta, desde la línea de la victoria y desde Ajustes (GameBootstrap.Fruit.cs)
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
             _flow = new LevelFlow(catalog, progress, _screen, LaunchOptions.ResolveTapSwitchSelection(), LaunchOptions.ResolvePourMode(), _wallet)
@@ -1412,7 +1577,11 @@ namespace AF.UI
                 WorldBannersEnabled = LaunchOptions.ResolveLevelCards(),
             };
             _screen.Bind(_flow, _services);
-            _app = new AppFlow(_flow, progress, _wallet, this);
+            _app = new AppFlow(_flow, progress, _wallet, this)
+            {
+                L10MapAvailable = RiverMapAvailable && (L10SequenceOverride ?? true), // la secuencia del Mapa del 10 (M4.2)
+                ContentEndMapAvailable = RiverMapAvailable && (ContentEndMapOverride ?? true), // el Mapa del fin de contenido (M4.3)
+            };
             _lobby.Bind(_app, _services);
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
@@ -1503,10 +1672,18 @@ namespace AF.UI
                 }
             }
 
+            // La ficha de una fruta (F4): encima de la victoria, la congela (ni la vista ni el flujo avanzan: ni la línea, ni el
+            // avance tras la Cosecha doble, ni AD_GATE) hasta cerrarla, y al cerrarla se vuelve a la victoria tal como estaba. El
+            // tiempo con la ficha abierta sí cuenta en el dismissed_ms de la línea (revisión de F4).
+            if (TickFruitSheet(dt))
+            {
+                return;
+            }
+
             if (_app.Screen != AppScreen.Level)
             {
                 _app.RefreshNoCanoes();
-                _lobby?.SetCommerceOpen(CommerceOpen); // la ventanita de casa no sale en pantallas de pago (M2.1; D-013, punto 6)
+                _lobby?.SetCommerceOpen(HomeWindowCovered); // ni en pantallas de pago (M2.1; D-013, punto 6) ni bajo el Mapa (M4.2)
                 _lobby?.Tick(dt);
                 return;
             }
@@ -1616,6 +1793,27 @@ namespace AF.UI
             catch (LevelFormatException e)
             {
                 Debug.LogError(LogPrefix + e.Message + " El juego sigue sin el Mapa.");
+                return null;
+            }
+        }
+
+        // Tabla de temporada de la escena (af-seasons/1; SE1 y SE2), como las paradas del Mapa: si falta el archivo, un aviso; si no
+        // valida, un error con la ruta del valor. En los dos casos, null y el juego sigue sin LUT de temporada (como antes).
+        internal static SeasonTable? LoadSeasons(TextAsset? table)
+        {
+            if (table == null)
+            {
+                Debug.LogWarning(LogPrefix + "falta la tabla de temporada (TextAsset): el juego sigue sin LUT de temporada. Regenera la escena con AF.UI.Editor.GameSceneBuilder.CreateGameScene.");
+                return null;
+            }
+
+            try
+            {
+                return SeasonTableReader.Read(table.text);
+            }
+            catch (LevelFormatException e)
+            {
+                Debug.LogError(LogPrefix + e.Message + " El juego sigue sin LUT de temporada.");
                 return null;
             }
         }
