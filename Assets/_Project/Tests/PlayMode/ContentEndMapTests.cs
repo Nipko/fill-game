@@ -24,6 +24,7 @@ namespace AF.Tests.PlayMode
     /// <item>el viaje del último tramo publicado (del 290 al 300) de boya en boya, dentro del tope de <c>anim_map_world_ms</c>, sin
     /// repetir la llegada ya vista (ningún <c>stop_arrive</c> más) y con «Volver» en lugar de «Jugar»;</item>
     /// <item>un toque lo completa; con Reducir movimiento, el estado final con el fundido de «ponerse al día»;</item>
+    /// <item>sin frase de TiTino: ni el bocadillo del Mapa ni el saludo o el Dato de la ventanita de casa, debajo;</item>
     /// <item>al cerrarlo (← o «Volver»), la pantalla de siempre, con su título y su ETA, y sin frase de TiTino;</item>
     /// <item>la sonda <c>map_open</c> con <c>source</c> <c>content_end</c>;</item>
     /// <item>«Jugar» en el inicio con el contenido ya acabado abre la pantalla sola, sin el Mapa.</item>
@@ -77,6 +78,13 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.App!.ContentEndMapAvailable, Is.True, "la escena trae el Mapa");
             Assert.That(map.Visible, Is.False, "la victoria del 300 no lo abre por sí sola");
 
+            // TiTino: lo que ya dijo en la sesión (la victoria) y los saludos del inicio decididos hasta ahora.
+            Assert.That(boot.Lobby!.HomeWindow.Sloth, Is.Not.Null, "TiTino en la ventanita de casa, debajo de la pantalla");
+            HomeSloth sloth = boot.Lobby.HomeWindow.Sloth!;
+            SlothSession slothSession = boot.View!.SlothSession;
+            int slothLines = slothSession.LinesThisSession;
+            int greetings = sloth.GreetingDecisions;
+
             Application.logMessageReceived += OnLog;
             try
             {
@@ -89,6 +97,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(map.Source, Is.EqualTo(MapOpenSource.ContentEnd));
                 Assert.That(map.PlayLabel, Is.EqualTo(UiText.Back), "nada que jugar: «Volver» [P]");
                 Assert.That(boot.Lobby!.OverlayVisible, Is.True, "la pantalla de siempre espera debajo");
+                AssertNoSlothLine(map, sloth, slothSession, slothLines, greetings, "con el Mapa recién abierto");
 
                 // El viaje del último tramo publicado, de boya en boya, aunque la franja de la victoria ya lo anotara como visto.
                 Assert.That(map.ContentEndJourney, Is.True);
@@ -110,6 +119,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(map.CatchUpElapsedMs, Is.LessThanOrEqualTo(MapConfig.AnimMapWorldMs));
                 Assert.That(map.CatchUpArrivals, Is.EqualTo(0), "la llegada al 300 ya se vio en la victoria: no se repite");
                 Assert.That(map.Visible, Is.True, "el Mapa se queda hasta que se cierra");
+                AssertNoSlothLine(map, sloth, slothSession, slothLines, greetings, "con el viaje terminado");
 
                 // Se cierra: «El río sigue creciendo», con su texto y su ETA; sin frase de TiTino.
                 map.BackButton.onClick.Invoke();
@@ -119,6 +129,14 @@ namespace AF.Tests.PlayMode
                 Assert.That(boot.Lobby.OverlayTitle, Is.EqualTo("El río sigue creciendo"));
                 Assert.That(boot.Lobby.OverlayTitle, Is.EqualTo(UiText.ContentEndTitle));
                 Assert.That(boot.Flow.LevelNumber, Is.EqualTo(300), "no se carga ningún 301");
+
+                // Un rato con la pantalla a la vista: TiTino, debajo, no saluda ni dice nada (el saludo espera al inicio).
+                for (int t = 0; t < 2000; t += PlayModeHelpers.FrameMs)
+                {
+                    sloth.Tick(PlayModeHelpers.FrameMs);
+                }
+
+                AssertNoSlothLine(map, sloth, slothSession, slothLines, greetings, "con «El río sigue creciendo»");
 
                 // Volver lleva al inicio; el Mapa no vuelve a salir solo.
                 boot.Lobby.BackButton.onClick.Invoke();
@@ -228,6 +246,18 @@ namespace AF.Tests.PlayMode
             {
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
             }
+        }
+
+        // Sin frase de TiTino en el Mapa del fin de contenido ni en la pantalla de debajo (M4.3, punto 3): ni el bocadillo del Mapa,
+        // ni el saludo o el Dato del perezoso de la ventanita de casa, ni ninguna línea más en la sesión de TiTino.
+        private static void AssertNoSlothLine(RiverMapScreen map, HomeSloth sloth, SlothSession session, int lines, int greetings, string when)
+        {
+            Assert.That(map.L10WithBubble, Is.False, when + ": el Mapa sin bocadillo de TiTino");
+            Assert.That(map.L10BubbleShown, Is.False, when);
+            Assert.That(sloth.BubbleShown, Is.False, when + ": sin saludo en la ventanita");
+            Assert.That(sloth.FactCardShown, Is.False, when + ": sin Dato del perezoso");
+            Assert.That(sloth.GreetingDecisions, Is.EqualTo(greetings), when + ": el saludo del día no se decide");
+            Assert.That(session.LinesThisSession, Is.EqualTo(lines), when + ": ninguna frase más de TiTino");
         }
 
         private static void Tick(RiverMapScreen map, int ms)

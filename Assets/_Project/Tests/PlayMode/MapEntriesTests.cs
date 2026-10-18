@@ -2,6 +2,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using AF.Core.Session;
 using AF.GameFlow;
 using AF.Levels;
 using AF.Presentation;
@@ -25,8 +26,9 @@ namespace AF.Tests.PlayMode
     /// cierra; antes del 10, la pausa no lo ofrece;</item>
     /// <item>«Ver mapa» en la victoria del 20 (con la llegada): entra con «Inicio», en su fila, completa la franja (una sola
     /// <c>stop_arrive</c>: el Mapa no la repite), abre el Mapa encima de la victoria con «Volver» y vuelve a ella; «Siguiente»
-    /// se habilita y entra en los mismos milisegundos que sin abrir el Mapa, y AD_GATE lleva al 21; sin llegada (el 21), no
-    /// está;</item>
+    /// se habilita y entra en los mismos milisegundos que sin abrir el Mapa, y AD_GATE lleva al 21; en un AD_GATE que dura
+    /// fotogramas (un anuncio retenido), «Ver mapa» queda inactivo y no abre el Mapa, y al cerrarse el anuncio se carga el 21
+    /// como sin él; sin llegada (el 21), no está;</item>
     /// <item>las sondas <c>map_open</c> con <c>source</c> <c>pause</c> y <c>victory</c>;</item>
     /// <item>con <c>worlds</c>, solo las grandes paradas (la primera de cada mundo: una por mundo) y sin boyas.</item>
     /// </list>
@@ -258,14 +260,44 @@ namespace AF.Tests.PlayMode
             Assert.That(view.NextButton.interactable, Is.True);
             Assert.That(view.StopArriveCount, Is.EqualTo(1));
 
-            // En AD_GATE ya no responde.
+            // En AD_GATE ya no responde. La victoria del 20 no trae intersticial (empiezan en el 22) y la puerta del juego cierra
+            // en la misma llamada sin anuncio: el test pone una que retiene el anuncio hasta cerrarlo, para que AD_GATE dure
+            // fotogramas (como Level11_AnAdGateLeftOpen_CancelsTheWait_AndLoadsTheNextLevelOnce). Ya contó la victoria (RecordWin)
+            // con la puerta del juego.
+            var gate = new HeldAdGate();
+            boot.Flow.AdGate = gate;
             Assert.That(boot.PressNext(), Is.True);
-            if (boot.Flow.Phase == FlowPhase.AdGate)
-            {
-                Assert.That(view.VictoryMapButton.interactable, Is.False);
-                view.VictoryMapButton.onClick.Invoke();
-                Assert.That(map.Visible, Is.False);
-            }
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.AdGate));
+            Assert.That(gate.Runs, Is.EqualTo(1));
+            Assert.That(gate.WonLevel, Is.EqualTo(20));
+            PlayModeHelpers.Step(boot, 3 * PlayModeHelpers.FrameMs); // AD_GATE dura fotogramas
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.AdGate), "el anuncio sigue abierto");
+            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(20));
+            Assert.That(view.VictoryMapShown, Is.True, "sigue en su sitio, inactivo, como «Inicio»");
+            Assert.That(view.VictoryMapButton.interactable, Is.False);
+            Assert.That(view.HomeButton.interactable, Is.False);
+            Assert.That(view.NextButton.interactable, Is.False);
+            view.VictoryMapButton.onClick.Invoke();
+            Assert.That(map.Visible, Is.False, "en AD_GATE, «Ver mapa» no abre el Mapa");
+            Assert.That(view.VictoryMapOpened, Is.EqualTo(1), "solo la vez de antes");
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Victory), Is.False, "ni por la entrada de la victoria");
+            Assert.That(map.Visible, Is.False);
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.AdGate));
+            Assert.That(gate.Runs, Is.EqualTo(1));
+
+            // Al cerrar el anuncio, el 21 como sin el Mapa: una sola carga, sin «Ver mapa» y con el Mapa cerrado.
+            gate.Close();
+            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(21));
+            Assert.That(VictorySetup.InNewLevel(boot.Flow.Phase), Is.True, "en su INTRO, LEVEL_CARD o PLAYING: " + boot.Flow.Phase);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
+            LevelSession loaded = boot.Flow.Session;
+            PlayModeHelpers.Step(boot, 1000);
+            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(21), "sin llegar al 22");
+            Assert.That(boot.Flow.Session, Is.SameAs(loaded), "el 21 no se vuelve a cargar");
+            Assert.That(view.VictoryMapShown, Is.False, "el nivel nuevo, sin «Ver mapa»");
+            Assert.That(view.VictoryMapButton.gameObject.activeSelf, Is.False);
+            Assert.That(map.Visible, Is.False);
+            Assert.That(gate.Runs, Is.EqualTo(1));
         }
 
         [UnityTest]
@@ -473,6 +505,34 @@ namespace AF.Tests.PlayMode
                 Assert.That(now._nextLevel, Is.EqualTo(_nextLevel), when + ": next_level");
                 Assert.That(now._savedLevel, Is.EqualTo(_savedLevel), when + ": nivel en curso guardado");
                 Assert.That(now._savedFails, Is.EqualTo(_savedFails), when + ": fails_level guardado");
+            }
+        }
+
+        // AD_GATE que retiene el anuncio hasta Close (la puerta del juego cierra en la misma llamada si no hay intersticial).
+        private sealed class HeldAdGate : IAdGate
+        {
+            private Action? _onDone;
+
+            public int Runs { get; private set; }
+
+            public int WonLevel { get; private set; }
+
+            public void RecordWin(int level)
+            {
+            }
+
+            public void Run(int wonLevel, Action onDone)
+            {
+                Runs++;
+                WonLevel = wonLevel;
+                _onDone = onDone;
+            }
+
+            public void Close()
+            {
+                Action? onDone = _onDone;
+                _onDone = null;
+                onDone?.Invoke();
             }
         }
     }
