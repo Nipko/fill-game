@@ -108,6 +108,8 @@ namespace AF.UI
             SettingsScreen? settings = _settingsScreen;
             if (settings != null)
             {
+                // Abierta desde Ajustes, la hoja empieza bajo su cabecera (revisión de F4): «Ajustes» y su X, enteros bajo el velo.
+                _fruitSheet.SettingsHeaderBottom = () => settings.Visible ? settings.HeaderBottomDp : 0f;
                 settings.FruitCatalog = FruitFacts?.Catalog;
                 settings.FruitProgress = _progress;
                 settings.FruitChosen = subject => OpenFruitSheet(subject, FruitSheetSource.Settings);

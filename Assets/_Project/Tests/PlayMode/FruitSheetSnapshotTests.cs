@@ -25,8 +25,9 @@ namespace AF.Tests.PlayMode
     /// del desplazamiento, «Fuentes»;</item>
     /// <item><c>f4_06_sheet_unstarted</c>: el achiote sin empezar (su frase de «Fruta nueva» y «Su serie empieza en el nivel 41»);</item>
     /// <item><c>f4_07_settings_about</c>: Ajustes desplazada hasta el final de «Sobre la Amazonía» con las frutas (en silueta las
-    /// que no empezaron); <c>f4_07b_settings_about_top</c>: desplazada hasta la cabecera de la sección, con las frutas reveladas
-    /// (revisión de F4); y <c>f4_08_settings_sheet</c>: la ficha abierta desde ahí, encima de Ajustes.</item>
+    /// que no empezaron); <c>f4_07b_settings_about_top</c>, solo en el peor caso (a 780 dp y al 100 % saldría igual que la 07):
+    /// desplazada hasta la cabecera de la sección, con las frutas reveladas
+    /// (revisión de F4); y <c>f4_08_settings_sheet</c>: la ficha abierta desde ahí, encima de Ajustes, bajo su cabecera.</item>
     /// </list>
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.FruitSheetSnapshotTests</c>
     /// sin <c>-nographics</c>). Falla si un texto de la ficha baja de 12 sp por la escala o se recorta
@@ -120,12 +121,22 @@ namespace AF.Tests.PlayMode
             yield return SnapshotKit.Wait(0.3f);
             SettingsScreenTests.AssertFits(settings, "Ajustes con Sobre la Amazonía" + suffix);
             SnapshotKit.Save(dir, "f4_07_settings_about" + suffix);
-            settings.ScrollToAbout();
-            yield return SnapshotKit.Wait(0.3f);
-            SnapshotKit.Save(dir, "f4_07b_settings_about_top" + suffix);
+            if (worst)
+            {
+                // Solo en el peor caso (revisión de F4): a 780 dp y al 100 %, ScrollToAbout y ScrollToEnd llegan a la misma posición
+                // y la captura saldría igual que la 07.
+                float end = settings.ScrollPosition;
+                settings.ScrollToAbout();
+                Assert.That(settings.ScrollPosition, Is.Not.EqualTo(end).Within(0.001f), "la 07b enseña otra posición que la 07");
+                yield return SnapshotKit.Wait(0.3f);
+                SnapshotKit.Save(dir, "f4_07b_settings_about_top" + suffix);
+            }
+
             settings.FruitButton("agua_tapajos")!.onClick.Invoke();
             sheet = boot.FruitSheetView!;
             Assert.That(sheet.Visible, Is.True);
+            Assert.That(sheet.PanelTopDp, Is.GreaterThanOrEqualTo(settings.HeaderBottomDp + FruitSheet.SettingsHeaderGapDp - 0.5f),
+                "revisión de F4: la hoja empieza bajo la cabecera de Ajustes, sin cortarla");
             SnapshotKit.AttachOverlay(sheet.Canvas);
             sheet.Canvas.planeDistance = 4f; // delante de Ajustes
             yield return SnapshotKit.Wait(0.3f);

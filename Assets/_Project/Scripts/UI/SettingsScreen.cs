@@ -242,6 +242,12 @@ namespace AF.UI
         public RectTransform AboutSlot { get; }
 
         /// <summary>
+        /// Base de la cabecera (la placa «Ajustes» y su X), en dp desde el borde de arriba del lienzo, de la última colocación
+        /// (revisión de F4): la ficha de una fruta abierta desde aquí empieza por debajo (<see cref="FruitSheet.SettingsHeaderGapDp"/>).
+        /// </summary>
+        public float HeaderBottomDp { get; private set; }
+
+        /// <summary>
         /// Escala de la fuente del sistema, entre 1 y <see cref="LevelCardView.MaxFontScale"/> (02 §12: por encima del 130 % se
         /// fija ese tope). Las opciones crecen en alto con el texto. La escala de Android aún no llega al juego [P]: tests y
         /// capturas. Con la pantalla abierta, se vuelve a colocar.
@@ -554,6 +560,7 @@ namespace AF.UI
             top = Mathf.Min(top, ch - safeBottom - 8f - h);
             top = Mathf.Max(top, safeTop + 8f);
             ModalKit.Size(_panel, _surface, _art, Mathf.Round((cw - w) * 0.5f), top, w, h, true);
+            HeaderBottomDp = top + 16f + Mathf.Max(48f, headerH); // la placa y la X van de 16 dp a 16 + max(48, placa)
         }
 
         /// <summary>

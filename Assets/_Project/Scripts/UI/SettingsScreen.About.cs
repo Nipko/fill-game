@@ -232,6 +232,9 @@ namespace AF.UI
             UpdateFades();
         }
 
+        /// <summary>Posición del desplazamiento de Ajustes (1 arriba, 0 abajo; capturas: que dos capturas no enseñen lo mismo).</summary>
+        public float ScrollPosition => _scroll.vertical ? _scroll.verticalNormalizedPosition : 1f;
+
         /// <summary>Alto de la ficha <paramref name="i"/> de la lista (dp): todas iguales.</summary>
         public float FruitTileHeight(int i)
         {

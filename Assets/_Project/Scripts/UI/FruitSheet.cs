@@ -32,7 +32,8 @@ namespace AF.UI
     /// (ninguna revelada), en su lugar su frase de «Fruta nueva» (<c>fact.&lt;tinte&gt;.tag</c>, si tiene texto) y «Su serie empieza
     /// en el nivel {n}» (<c>fact_starts_at</c>).</item>
     /// <item><b>Fuentes</b> (<c>fact_sources</c>), al pie: el título y el dominio de la dirección (<see cref="SourceDomain"/>) de
-    /// cada fuente que citan las líneas que se leen (<see cref="SourcesOf"/>), como texto en gris neutro, sin abrir el navegador
+    /// cada fuente que citan las líneas que se leen (<see cref="SourcesOf"/>), como texto (el título en gris neutro y el dominio,
+    /// más pequeño, en tinta secundaria; revisión de F4), sin abrir el navegador
     /// (propuesta §2.3; 07 §8.2) [P: solo las de las líneas a la vista; el dominio y no la dirección entera, revisión de F4].</item>
     /// <item><b>Desplazamiento:</b> si no cabe, el visor acaba a media fila (<see cref="CutAtRow"/>, como Ajustes), con el fundido
     /// de abajo, para que se vea que la ficha sigue.</item>
@@ -80,14 +81,35 @@ namespace AF.UI
         /// <summary>«Nivel {n}» de una línea en silueta (sp).</summary>
         public const float LockedSp = 13f;
 
-        /// <summary>Frase de «Fruta nueva» y «Su serie empieza en el nivel {n}» (sp).</summary>
+        /// <summary>
+        /// Frase de «Fruta nueva» de una serie sin empezar (sp; revisión de F4): Nunito Regular con la tinta del texto, el contenido
+        /// de la ficha, por encima del dato de servicio «Su serie empieza en el nivel {n}».
+        /// </summary>
+        public const float TagSp = 16f;
+
+        /// <summary>«Su serie empieza en el nivel {n}» (sp): Nunito Regular en tinta secundaria, bajo la frase (revisión de F4).</summary>
         public const float StartSp = 14f;
+
+        /// <summary>Hueco entre la frase de «Fruta nueva» y «Su serie empieza en el nivel {n}» (dp).</summary>
+        public const float TagGapDp = 8f;
 
         /// <summary>«Fuentes» (sp).</summary>
         public const float SourcesTitleSp = 14f;
 
-        /// <summary>Título y dominio de una fuente (sp; revisión de F4): Nunito Regular, por encima del mínimo de 02 §12.</summary>
-        public const float SourceSp = 13f;
+        /// <summary>Título de una fuente (sp; revisión de F4): Nunito Regular en la tinta de las fuentes (<see cref="SourceInk"/>).</summary>
+        public const float SourceSp = 14f;
+
+        /// <summary>
+        /// Dominio de una fuente (sp; revisión de F4): Nunito Regular, más pequeño que el título y en la tinta secundaria
+        /// (<see cref="SoftInk"/>), sin subrayado ni azul; 12 sp es el mínimo de 02 §12 (al 130 %, 15,6).
+        /// </summary>
+        public const float SourceDomainSp = 12f;
+
+        /// <summary>Del título de una fuente a su dominio (dp; revisión de F4).</summary>
+        public const float SourceDomainGapDp = 4f;
+
+        /// <summary>Entre una fuente y la siguiente (dp; revisión de F4): bastante más que dentro de una, para que se vea dónde empieza cada una.</summary>
+        public const float SourceGapDp = 14f;
 
         /// <summary>Interlineado del título y del dominio de una fuente, en veces el tamaño del texto (revisión de F4).</summary>
         public const float SourceLineHeight = 1.25f;
@@ -122,15 +144,24 @@ namespace AF.UI
         /// </summary>
         public const float TopGapDp = 40f;
 
+        /// <summary>
+        /// Abierta desde Ajustes, aire entre la base de la cabecera de Ajustes (su placa y su X) y el borde de arriba de la hoja (dp;
+        /// revisión de F4): «Ajustes» y su cierre se ven enteros bajo el velo, como migas de pan, y la hoja nunca los corta.
+        /// </summary>
+        public const float SettingsHeaderGapDp = 8f;
+
         /// <summary>Tinta de los textos: la madera oscura sobre la madera clara (como las secciones de Ajustes).</summary>
         public static readonly Color Ink = Palette.FamilyWood.Deep;
 
-        /// <summary>Tinta secundaria (nombre científico y «Nivel {n}»): la madera base (≥ 4,5:1 sobre la crema).</summary>
+        /// <summary>
+        /// Tinta secundaria (nombre científico, «Nivel {n}», «Su serie empieza en el nivel {n}» y el dominio de cada fuente): la
+        /// madera base (≥ 4,5:1 sobre la crema).
+        /// </summary>
         public static readonly Color SoftInk = Palette.FamilyWood.Base;
 
         /// <summary>
-        /// Tinta de las fuentes del pie [P] (revisión de F4): un gris cálido neutro (#5E5850, ≥ 4,5:1 sobre las dos cremas) y no el
-        /// marrón de la madera, para que el dominio no parezca un enlace que se pueda tocar (no lo es: no se abre el navegador).
+        /// Tinta del título de cada fuente del pie [P] (revisión de F4): un gris cálido neutro (#5E5850, ≥ 4,5:1 sobre las dos
+        /// cremas), sin subrayado ni azul, para que no parezca un enlace que se pueda tocar (no lo es: no se abre el navegador).
         /// </summary>
         public static readonly Color SourceInk = new Color32(0x5E, 0x58, 0x50, 0xFF);
 
@@ -234,8 +265,10 @@ namespace AF.UI
             _name = WrappedLabel("Name", TextStyle.PlainBold, NameSp, Ink);
             _scientific = WrappedLabel("Scientific", TextStyle.Body, ScientificSp, SoftInk);
             _scientific.fontStyle = FontStyles.Italic;
-            _tag = WrappedLabel("Tag", TextStyle.Body, StartSp, Ink);
-            _startsAt = WrappedLabel("StartsAt", TextStyle.PlainBold, StartSp, Ink);
+            // Una serie sin empezar (revisión de F4): la frase de la fruta manda (16 sp, la tinta del texto) y el nivel en que empieza
+            // va debajo como dato de servicio (Nunito Regular de 14 sp en tinta secundaria, como dice el contexto de fact_starts_at).
+            _tag = WrappedLabel("Tag", TextStyle.Body, TagSp, Ink);
+            _startsAt = WrappedLabel("StartsAt", TextStyle.Body, StartSp, SoftInk);
             _sourcesTitle = WrappedLabel("SourcesTitle", TextStyle.PlainBold, SourcesTitleSp, Ink);
             _sourcesTitle.text = UiText.FactSources;
 
@@ -307,6 +340,16 @@ namespace AF.UI
         /// <summary>Desde dónde se abrió la última vez.</summary>
         public FruitSheetSource Source { get; private set; }
 
+        /// <summary>
+        /// Base de la cabecera de Ajustes (dp desde el borde de arriba del lienzo; <see cref="SettingsScreen.HeaderBottomDp"/>), o
+        /// 0 si Ajustes no se ve. Lo da <c>GameBootstrap</c>. Abierta desde Ajustes, la hoja empieza
+        /// <see cref="SettingsHeaderGapDp"/> dp por debajo (revisión de F4): nunca corta la placa «Ajustes» ni deja dos X apiladas.
+        /// </summary>
+        public Func<float>? SettingsHeaderBottom { get; set; }
+
+        /// <summary>Borde de arriba de la hoja (dp desde el del lienzo), de la última colocación.</summary>
+        public float PanelTopDp { get; private set; }
+
         /// <summary>Serie que enseña (null antes de abrirla).</summary>
         public FactSeries? Series => _series;
 
@@ -342,6 +385,23 @@ namespace AF.UI
 
         /// <summary>Fuentes del pie, en el orden en que las citan las líneas que se leen.</summary>
         public IReadOnlyList<FactSource> Sources => _sources;
+
+        /// <summary>Etiqueta de la frase de «Fruta nueva» (tests).</summary>
+        public TextMeshProUGUI TagLabel => _tag;
+
+        /// <summary>Etiqueta de «Su serie empieza en el nivel {n}» (tests).</summary>
+        public TextMeshProUGUI StartsAtLabel => _startsAt;
+
+        /// <summary>Título y dominio de la fuente <paramref name="i"/> del pie (0..<see cref="Sources"/>.Count − 1; tests).</summary>
+        public (TextMeshProUGUI Title, TextMeshProUGUI Domain) SourceLabels(int i)
+        {
+            if (i < 0 || i >= _sources.Count)
+            {
+                throw new ArgumentOutOfRangeException(nameof(i), i, "La ficha cita " + _sources.Count + " fuentes.");
+            }
+
+            return (_sourceRows[i].Title, _sourceRows[i].Domain);
+        }
 
         /// <summary>Se ve el pie de «Fuentes».</summary>
         public bool SourcesShown => _sourcesTitle.gameObject.activeSelf;
@@ -407,12 +467,12 @@ namespace AF.UI
             {
                 ("texto sobre la madera clara", Ink, (Color)Palette.PanelLight),
                 ("texto sobre la madera clara baja", Ink, (Color)Palette.PanelLightLow),
-                ("científico, nivel y fuente sobre la madera clara", SoftInk, (Color)Palette.PanelLight),
-                ("científico, nivel y fuente sobre la madera clara baja", SoftInk, (Color)Palette.PanelLightLow),
+                ("científico, nivel, inicio y dominio sobre la madera clara", SoftInk, (Color)Palette.PanelLight),
+                ("científico, nivel, inicio y dominio sobre la madera clara baja", SoftInk, (Color)Palette.PanelLightLow),
                 ("número de una línea revelada", (Color)Palette.Cream, NumberBack),
                 ("número de una línea en silueta", Ink, LockedBack),
-                ("fuente sobre la madera clara", SourceInk, (Color)Palette.PanelLight),
-                ("fuente sobre la madera clara baja", SourceInk, (Color)Palette.PanelLightLow),
+                ("título de una fuente sobre la madera clara", SourceInk, (Color)Palette.PanelLight),
+                ("título de una fuente sobre la madera clara baja", SourceInk, (Color)Palette.PanelLightLow),
             };
         }
 
@@ -713,12 +773,20 @@ namespace AF.UI
 
             float contentH = LayoutContent(w, s);
 
-            // La hoja crece con el contenido hasta dejar TopGapDp libres bajo la zona segura; si no cabe, el contenido se
-            // desplaza. Va pegada abajo (8 dp de marco quedan fuera de la pantalla); bajo el visor quedan 16 dp más la zona segura
-            // de abajo (revisión de F4: no el mínimo de GameScreen.MinSafeBottom, que dejaba una franja vacía; la hoja no tiene
-            // nada que tocar abajo, solo texto que se desplaza).
+            // La hoja crece con el contenido hasta dejar TopGapDp libres bajo la zona segura (abierta desde Ajustes, hasta
+            // SettingsHeaderGapDp bajo su cabecera, revisión de F4); si no cabe, el contenido se desplaza. Va pegada abajo (8 dp de
+            // marco quedan fuera de la pantalla); bajo el visor quedan 16 dp más la zona segura de abajo (revisión de F4: no el
+            // mínimo de GameScreen.MinSafeBottom, que dejaba una franja vacía; la hoja no tiene nada que tocar abajo, solo texto
+            // que se desplaza).
             float bottomPad = InsetDp + safeBottom;
-            float maxH = Mathf.Max(headerBottom + 48f + bottomPad, ch - safeTop - TopGapDp + 8f);
+            float topLimit = safeTop + TopGapDp;
+            float settingsBottom = Source == FruitSheetSource.Settings && SettingsHeaderBottom != null ? SettingsHeaderBottom() : 0f;
+            if (settingsBottom > 0f)
+            {
+                topLimit = Mathf.Max(topLimit, settingsBottom + SettingsHeaderGapDp);
+            }
+
+            float maxH = Mathf.Max(headerBottom + 48f + bottomPad, ch - topLimit + 8f);
             float h = Mathf.Min(headerBottom + contentH + bottomPad + 8f, maxH);
             float viewH = h - headerBottom - bottomPad - 8f;
             _scroll.vertical = contentH > viewH + 0.5f;
@@ -735,7 +803,8 @@ namespace AF.UI
             UiBuilder.Place(_viewport, 0f, headerBottom, w, viewH);
             UiBuilder.Place(_content, 0f, 0f, w, contentH);
             _scroll.velocity = Vector2.zero;
-            ModalKit.Size(_panel, _surface, _art, Mathf.Round((cw - w) * 0.5f), ch - h + 8f, w, h, true);
+            PanelTopDp = ch - h + 8f;
+            ModalKit.Size(_panel, _surface, _art, Mathf.Round((cw - w) * 0.5f), PanelTopDp, w, h, true);
 
             // Los fundidos, del color de la superficie en cada borde del visor, sobre el ancho del texto con 2 dp de aire.
             float surfaceH = h - 16f; // la superficie va 8 dp dentro de la hoja por cada lado (UiBuilder.ModalBody)
@@ -857,10 +926,10 @@ namespace AF.UI
             // Una serie sin empezar: su frase de «Fruta nueva» y el nivel en que empieza.
             if (_tag.gameObject.activeSelf)
             {
-                float h = Measure(_tag, StartSp * s, right - x);
+                float h = Measure(_tag, TagSp * s, right - x);
                 UiBuilder.Place(_tag.rectTransform, x, y, right - x, h);
                 AddBox(y, h);
-                y += h + 8f;
+                y += h + TagGapDp;
             }
 
             if (_startsAt.gameObject.activeSelf)
@@ -871,7 +940,7 @@ namespace AF.UI
                 y += h + RowGapDp;
             }
 
-            // Fuentes, al pie: el título y el dominio de cada una, como texto, con 8 dp entre fuentes.
+            // Fuentes, al pie: el título y el dominio de cada una, como texto, con SourceGapDp entre fuentes (revisión de F4).
             if (_sourcesTitle.gameObject.activeSelf)
             {
                 y += 8f;
@@ -883,7 +952,7 @@ namespace AF.UI
                 {
                     float sh = _sourceRows[i].Place(x, y, right - x, s);
                     AddBox(y, sh);
-                    y += sh + 8f;
+                    y += sh + SourceGapDp;
                 }
             }
 
@@ -1137,13 +1206,14 @@ namespace AF.UI
         }
 
         // Una fuente del pie: su título y su dominio (revisión de F4: no la dirección entera, que se partía a media palabra), cada
-        // uno en su etiqueta (nunca pegados en una cadena), en Nunito Regular de 13 sp con interlineado de 1,25, en gris neutro.
+        // uno en su etiqueta (nunca pegados en una cadena), en Nunito Regular con interlineado de 1,25: el título a 14 sp en gris
+        // neutro y, a 4 dp, el dominio a 12 sp en la tinta secundaria (revisión de F4: que se vea dónde empieza cada fuente).
         private sealed class SourceRow
         {
             public SourceRow(Transform parent, int index)
             {
                 Title = Wrapped("Source" + (index + 1) + "Title", parent, TextStyle.Body, SourceSp, SourceInk);
-                Domain = Wrapped("Source" + (index + 1) + "Domain", parent, TextStyle.Body, SourceSp, SourceInk);
+                Domain = Wrapped("Source" + (index + 1) + "Domain", parent, TextStyle.Body, SourceDomainSp, SoftInk);
                 Title.lineSpacing = LineSpacingFor(Title, SourceLineHeight);
                 Domain.lineSpacing = LineSpacingFor(Domain, SourceLineHeight);
             }
@@ -1169,9 +1239,9 @@ namespace AF.UI
             {
                 float th = Measure(Title, SourceSp * s, w);
                 UiBuilder.Place(Title.rectTransform, x, y, w, th);
-                float uh = Measure(Domain, SourceSp * s, w);
-                UiBuilder.Place(Domain.rectTransform, x, y + th + 2f, w, uh);
-                return th + 2f + uh;
+                float uh = Measure(Domain, SourceDomainSp * s, w);
+                UiBuilder.Place(Domain.rectTransform, x, y + th + SourceDomainGapDp, w, uh);
+                return th + SourceDomainGapDp + uh;
             }
         }
     }

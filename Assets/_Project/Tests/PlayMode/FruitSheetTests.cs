@@ -78,6 +78,27 @@ namespace AF.Tests.PlayMode
                 Assert.That(g.raycastTarget, Is.EqualTo(g.transform == tap), g.name + ": solo el área táctil recibe toques");
             }
 
+            // Revisión de F4: se ve que se puede tocar. El chevrón «›» (un icono), a la derecha de la cabecera y dentro del área
+            // táctil, sin pisar el contador; y un fondo que solo aparece al pulsar.
+            Graphic chevron = line.Chevron!;
+            Assert.That(chevron.gameObject.activeSelf, Is.True, "el chevrón, con la línea que abre la ficha");
+            Assert.That(chevron.color, Is.EqualTo(FactLine.ChevronInk));
+            RectTransform cr = chevron.rectTransform;
+            RectTransform progress = line.ProgressLabel!.rectTransform;
+            Assert.That(cr.rect.width, Is.EqualTo(FactLine.ChevronDp).Within(0.01f));
+            Assert.That(cr.anchoredPosition.x + cr.rect.width, Is.EqualTo(tap.rect.width).Within(0.5f), "pegado a la derecha");
+            Assert.That(progress.anchoredPosition.x + progress.rect.width, Is.LessThanOrEqualTo(cr.anchoredPosition.x - FactLine.ChevronGapDp + 0.5f),
+                "sin pisar el contador");
+            Assert.That(-cr.anchoredPosition.y, Is.GreaterThanOrEqualTo(line.OffsetDp - 0.5f));
+            Assert.That(-cr.anchoredPosition.y + cr.rect.height, Is.LessThanOrEqualTo(line.OffsetDp + line.HeaderHeightDp + 0.5f), "en la cabecera");
+            Button tapButton = tap.GetComponent<Button>();
+            Assert.That(tapButton.transition, Is.EqualTo(Selectable.Transition.ColorTint));
+            Assert.That(tapButton.targetGraphic, Is.SameAs(line.PressBack));
+            Assert.That(tapButton.colors.normalColor.a, Is.EqualTo(0f), "en reposo, sin fondo");
+            Assert.That(tapButton.colors.selectedColor.a, Is.EqualTo(0f), "ni tras el toque");
+            Assert.That(tapButton.colors.pressedColor.a, Is.EqualTo(FactLine.PressedAlpha), "al pulsar, el fondo");
+            Assert.That(line.PressBack!.canvasRenderer.GetAlpha(), Is.EqualTo(0f).Within(0.001f), "en reposo no se ve");
+
             string victory = log.RequireLast("victory", 3, "AF_LAYOUT victory");
             Assert.That(AfLayoutLog.ButtonIds(victory), Does.Contain(FactLine.TapId), "la línea entra en AF_LAYOUT victory");
 
@@ -235,6 +256,28 @@ namespace AF.Tests.PlayMode
 
             Assert.That(sheet.Sources[0].Id, Is.EqualTo("A1"));
             Assert.That(sheet.StartsAtText, Is.Empty);
+
+            // Revisión de F4: en cada fuente, el título (14 sp, gris neutro) y, a 4 dp, el dominio (12 sp, tinta secundaria); entre
+            // fuentes, 14 dp. Ninguno en azul ni subrayado.
+            Assert.That(sheet.Sources.Count, Is.GreaterThan(1));
+            for (int i = 0; i < sheet.Sources.Count; i++)
+            {
+                (TextMeshProUGUI title, TextMeshProUGUI domain) = sheet.SourceLabels(i);
+                Assert.That(title.fontSize, Is.EqualTo(FruitSheet.SourceSp).Within(0.01f), "título");
+                Assert.That(domain.fontSize, Is.EqualTo(FruitSheet.SourceDomainSp).Within(0.01f), "dominio");
+                Assert.That(title.color, Is.EqualTo(FruitSheet.SourceInk));
+                Assert.That(domain.color, Is.EqualTo(FruitSheet.SoftInk));
+                Assert.That((title.fontStyle & FontStyles.Underline) == 0 && (domain.fontStyle & FontStyles.Underline) == 0, Is.True, "sin subrayado");
+                float titleBottom = -title.rectTransform.anchoredPosition.y + title.rectTransform.rect.height;
+                Assert.That(-domain.rectTransform.anchoredPosition.y, Is.EqualTo(titleBottom + FruitSheet.SourceDomainGapDp).Within(0.5f));
+                if (i > 0)
+                {
+                    TextMeshProUGUI previous = sheet.SourceLabels(i - 1).Domain;
+                    float previousBottom = -previous.rectTransform.anchoredPosition.y + previous.rectTransform.rect.height;
+                    Assert.That(-title.rectTransform.anchoredPosition.y, Is.EqualTo(previousBottom + FruitSheet.SourceGapDp).Within(0.5f), "entre fuentes");
+                }
+            }
+
             sheet.Hide();
 
             // El achiote, sin empezar: su frase de «Fruta nueva» y el nivel en que empieza; sin líneas ni fuentes.
@@ -246,6 +289,17 @@ namespace AF.Tests.PlayMode
             Assert.That(sheet.TagText, Is.EqualTo(Loc.Fact("fact.urucum.tag")).And.Not.Empty);
             Assert.That(sheet.StartsAtText, Is.EqualTo("Su serie empieza en el nivel 41"));
             Assert.That(sheet.SourcesShown, Is.False);
+
+            // Revisión de F4: la frase de la fruta manda (16 sp, la tinta del texto) y el nivel en que empieza va debajo, en Nunito
+            // Regular de 14 sp (como dice el contexto de fact_starts_at) y en tinta secundaria, a 8 dp.
+            float scale = UiBuilder.TextScale;
+            Assert.That(sheet.TagLabel.fontSize, Is.EqualTo(FruitSheet.TagSp * scale).Within(0.01f));
+            Assert.That(sheet.TagLabel.color, Is.EqualTo(FruitSheet.Ink));
+            Assert.That(sheet.StartsAtLabel.fontSize, Is.EqualTo(FruitSheet.StartSp * scale).Within(0.01f));
+            Assert.That(sheet.StartsAtLabel.font, Is.SameAs(sheet.TagLabel.font), "Nunito Regular, como la frase");
+            Assert.That(sheet.StartsAtLabel.color, Is.EqualTo(FruitSheet.SoftInk));
+            Assert.That(-sheet.StartsAtLabel.rectTransform.anchoredPosition.y,
+                Is.EqualTo(-sheet.TagLabel.rectTransform.anchoredPosition.y + sheet.TagLabel.rectTransform.rect.height + FruitSheet.TagGapDp).Within(0.5f));
             Assert.That(sheet.Icon.color, Is.EqualTo(FruitSheet.SilhouetteColor), "el icono, en silueta");
             Assert.That(sheet.ScientificText, Is.EqualTo("Bixa orellana"));
             sheet.Hide();
@@ -322,6 +376,9 @@ namespace AF.Tests.PlayMode
             Assert.That(settings.Visible, Is.True, "Ajustes, debajo");
             Assert.That(boot.FactPageOpenCount, Is.EqualTo(1));
             Assert.That(sheet.Canvas.sortingOrder, Is.GreaterThan(settings.Canvas.sortingOrder), "encima de Ajustes");
+            Assert.That(settings.HeaderBottomDp, Is.GreaterThan(0f));
+            Assert.That(sheet.PanelTopDp, Is.GreaterThanOrEqualTo(settings.HeaderBottomDp + FruitSheet.SettingsHeaderGapDp - 0.5f),
+                "revisión de F4: la hoja empieza bajo la cabecera de Ajustes («Ajustes» y su X, enteros bajo el velo)");
             Assert.That(boot.OpenFruitSheet("acai", FruitSheetSource.Settings), Is.False, "una ficha cada vez");
 
             // Atrás: primero la ficha y después Ajustes.
