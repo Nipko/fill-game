@@ -123,7 +123,7 @@ namespace AF.GameFlow
         /// <summary>
         /// El nivel ya tiene banner de mundo (<see cref="WorldBanners.ShowsOn"/>), Fruta nueva, un hito propio, un estreno de la
         /// campaña sin tarjeta propia (<see cref="CapacityVariantLevels"/> y <see cref="DebutsWithoutCardLevels"/>) o la
-        /// instrucción del tutorial con TiTino (<see cref="TutorialInstruction.Has"/>: 1, 2, 3 y 6; tarea TU1a), que va la
+        /// instrucción del tutorial con TiTino (<see cref="TutorialInstruction.Has"/>: 1, 2, 3, 6 y 12; tareas TU1a y TU1b), que va la
         /// primera (tutorial &gt; Fruta nueva &gt; miquito &gt; rótulo).
         /// </summary>
         public static bool IsBusy(int level)
@@ -139,7 +139,7 @@ namespace AF.GameFlow
         /// mucho una por nivel: en 1-300 sale en el 4, 7, 11, 21, 41, 61, 81, 111, 141 y 201 (y en el 301 cuando haya niveles).
         /// Gana a la tarjeta del miquito y al rótulo del lugar, que no salen en esos niveles (<see cref="IsBusy"/> y
         /// <see cref="StopLabelRule"/>). <b>Con el tutorial</b> (tarea TU1a): nunca en un nivel con instrucción del tutorial con
-        /// TiTino (<see cref="TutorialInstruction.Has"/>: 1, 2, 3 y 6). Tras la intro sale como mucho una tarjeta por nivel, con
+        /// TiTino (<see cref="TutorialInstruction.Has"/>: 1, 2, 3, 6 y 12). Tras la intro sale como mucho una tarjeta por nivel, con
         /// prioridad tutorial &gt; Fruta nueva &gt; miquito &gt; rótulo (D-023, punto 39; 02 §4.2; 07 §6.4; guion de la intro
         /// §14), así que en el 2 sale solo la instrucción y el taperebá se queda sin tarjeta, como el açaí y el aguaje en el 1. La
         /// fila del 2 de 06 §2.2 («Tarjeta "Fruta nueva: Taperebá"») y la lista de 06 §4.5 (que empieza en el 1) chocan con esa

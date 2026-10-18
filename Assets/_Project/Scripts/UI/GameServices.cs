@@ -227,6 +227,20 @@ namespace AF.UI
         /// </summary>
         bool PressRevealVideo();
 
+        /// <summary>
+        /// Pista · Morpho de la bandeja (04 §2.3; tarea MO2): pide la pista pagando con el stock o, si no, con
+        /// <c>hint_seed_price</c> semillas, que solo se cobran al dar un vertido (MO1); sin stock ni saldo, el video
+        /// <c>rv_hint</c> (<see cref="PressHintVideo"/>); sin nada, late la burbuja «Te faltan {n}» de la ranura, sin cobrar. En
+        /// un nivel sin <c>hint_supported</c>, el globo «La morpho no conoce este tramo todavía». False si no se pidió nada.
+        /// </summary>
+        bool PressHint();
+
+        /// <summary>
+        /// Video <c>rv_hint</c> de Pista (04 §2.3: «1 pista»): al terminar el anuncio, +1 Morpho al stock y la pista pagando con
+        /// él. False si no hay video (sin fill no aparece) o no se puede pedir ahora.
+        /// </summary>
+        bool PressHintVideo();
+
         /// <summary>«+3 Deshacer · Ver video».</summary>
         bool PressUndoRefillVideo();
 

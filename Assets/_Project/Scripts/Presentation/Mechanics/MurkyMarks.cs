@@ -1,5 +1,6 @@
 #nullable enable
 using AF.Core.Board;
+using AF.Core.Mechanics;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,7 +12,8 @@ namespace AF.Presentation.Mechanics
     /// 0,5 u, sin su tinte ni el patrón de su fruta), muestra la insignia «?×n» con las ocultas que quedan y anima el revelado.
     /// <c>CuiaView</c> le delega el pintado (<see cref="PaintHidden"/>), la sincroniza con el estado (<see cref="Show"/>) y le
     /// delega el revelado animado (<see cref="PlayReveal"/>, <c>CuiaView.PlayReveal</c>), así que el aspecto de las turbias
-    /// cambia aquí sin tocar la vista.
+    /// cambia aquí sin tocar la vista. Las ocultas de la Tinaja no son agua turbia (<see cref="IsMurkyWater"/>; contrato 27):
+    /// ni se pintan aquí, ni cuentan en la insignia, ni se revelan con esta animación.
     /// </summary>
     /// <remarks>
     /// <para>La trama y el «?» los pinta el shader dentro de la banda de su dosis, así que siguen a la banda cuando la cuia se
@@ -319,10 +321,24 @@ namespace AF.Presentation.Mechanics
             return Palette.Murky;
         }
 
-        /// <summary>Cuenta en la insignia las dosis ocultas de <paramref name="cuia"/> y ninguna otra. Idempotente.</summary>
+        /// <summary>
+        /// Cuenta en la insignia las dosis ocultas de <paramref name="cuia"/> y ninguna otra. Idempotente. Las de la Tinaja no
+        /// cuentan (<see cref="IsMurkyWater"/>): no son agua turbia y su vasija lleva su propio chip «×n».
+        /// </summary>
         public void Show(Cuia cuia)
         {
-            SetMask(cuia.Count > 0 ? cuia.HiddenMask & ((1 << _capacity) - 1) : 0);
+            SetMask(cuia.Count > 0 && IsMurkyWater(cuia) ? cuia.HiddenMask & ((1 << _capacity) - 1) : 0);
+        }
+
+        /// <summary>
+        /// Las dosis ocultas de <paramref name="cuia"/> se pintan como Aguas turbias (el pardo <see cref="Palette.Murky"/>, la
+        /// trama y el «?»; 07 §4.3). Falso en la Tinaja (M13; D-019; contrato 27; 08 §5.2): su vasija es de barro opaco y sus
+        /// ocultas no son agua turbia, así que nunca llevan el pardo, el «?» ni la insignia «?×n», ni se revelan con su
+        /// animación (la boca de la tinaja la pinta su overlay).
+        /// </summary>
+        public static bool IsMurkyWater(Cuia cuia)
+        {
+            return cuia.Mechanic != MechanicType.Tinaja;
         }
 
         /// <summary>
@@ -335,9 +351,9 @@ namespace AF.Presentation.Mechanics
         public float PlayReveal(LiquidGraphic liquid, int layerMask, RevealStyle style, Cuia shown, float speedFactor)
         {
             int layers = layerMask & ((1 << Mathf.Min(_capacity, shown.Count)) - 1);
-            if (liquid == null || layers == 0)
+            if (liquid == null || layers == 0 || !IsMurkyWater(shown))
             {
-                return 0f;
+                return 0f; // en la Tinaja, nada turbio que aclarar: el ShowContent del final del paso pinta la boca y las bandas
             }
 
             Snap();

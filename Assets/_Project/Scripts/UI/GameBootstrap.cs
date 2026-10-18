@@ -870,6 +870,7 @@ namespace AF.UI
             settings.Show(LocLocale.Offered(Loc.Catalog, Loc.ShowUnapproved), profile.Settings.Language, profile.Settings.Patterns,
                 profile.Settings.SlothMessages);
             settings.MarkAudio(profile.Settings.Sound, profile.Settings.Music, profile.Settings.Haptics); // AU1
+            settings.MarkIdleHint(profile.Settings.IdleHint); // MO3
             _skipNextDelta = true;
             return true;
         }
@@ -1559,6 +1560,7 @@ namespace AF.UI
             _mapScreen.L10SlothVoice = () => _screen == null || _screen.SlothVoice; // su bocadillo, solo con voz (D-016, punto 4)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
+            _settingsScreen.IdleHintToggled = on => ChooseIdleHint(on); // MO3: Pista por inactividad
             BuildFruitSheet(); // F4: la ficha de una fruta, desde la línea de la victoria y desde Ajustes (GameBootstrap.Fruit.cs)
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
@@ -1567,6 +1569,8 @@ namespace AF.UI
                 AdGate = new InterstitialGate(_ads, _probe, _wallet), // AD_GATE tras «Siguiente» (B2-4)
                 StateStore = new ProfileLevelStateStore(profile, batch), // nivel en curso tras cada vertido (B2-5)
                 SaveBatch = batch, // una escritura del perfil por acción del jugador
+                Clock = clock, // Morpho (MO1): hint_timeout_ms y el enfriamiento, con el mismo reloj que la cartera
+                HintProbe = _probe, // AF_PERF morpho de cada respuesta (MO1)
 
                 // Tarjeta previa (LEVEL_CARD, 02 §10): LaunchOptions.LevelCardsOverride ?? GameConfig.LevelCardsEnabledDefault,
                 // apagada hasta que exista su vista (T13).
@@ -1718,6 +1722,10 @@ namespace AF.UI
                 _screen.SettleReveal();
                 _flow.ClearSelection();
             }
+
+            // MO3 (02 §3.4; 04 §2.3): el tiempo fuera de la app no es inactividad en el tablero; la cuenta de la pista por
+            // inactividad empieza de cero, como tras un toque.
+            _screen?.IdleHintBackFromBackground();
         }
 
         // Tablas de textos de la escena (o las del test, LaunchOptions.LocTablesOverride) → Loc (D-018; 08 §4.7). Si faltan o no

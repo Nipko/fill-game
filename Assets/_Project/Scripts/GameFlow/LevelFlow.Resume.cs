@@ -73,8 +73,8 @@ namespace AF.GameFlow
 
         /// <summary>
         /// <c>level_state</c> de un nivel del que se salió al inicio (<see cref="ResumeCheck.Exited"/>): el nivel recuerda
-        /// <c>fails_level</c>, la variante aliviada y si Capi ya regaló su Cuia extra y si ya se regaló la Luciérnaga, para
-        /// cuando se vuelva a jugar (04 §2.7, §2.2 y §2.5). False si no sirve.
+        /// <c>fails_level</c>, la variante aliviada y si Capi ya regaló su Cuia extra y si ya se regalaron la Luciérnaga y los
+        /// Morphos del 12, para cuando se vuelva a jugar (04 §2.7, §2.2, §2.5 y §2.3). False si no sirve.
         /// </summary>
         public bool RestoreExited(LevelStateData saved)
         {
@@ -83,7 +83,7 @@ namespace AF.GameFlow
                 return false;
             }
 
-            _attempt.Restore(saved.Level, saved.FailsLevel, relief, null, false, history.ExtraCuiaGifted, history.RevealGifted);
+            _attempt.Restore(saved.Level, saved.FailsLevel, relief, null, false, history.ExtraCuiaGifted, history.RevealGifted, history.HintGifted);
             return true;
         }
 
@@ -129,7 +129,8 @@ namespace AF.GameFlow
 
             int number = saved.Level;
             _catalog.Serve(number); // carga del nivel: el aviso del kill switch si se sirve el publicado (KS1)
-            _attempt.Restore(number, saved.FailsLevel, relief, history.Added, history.UndoGiftUsed, history.ExtraCuiaGifted, history.RevealGifted);
+            _attempt.Restore(
+                number, saved.FailsLevel, relief, history.Added, history.UndoGiftUsed, history.ExtraCuiaGifted, history.RevealGifted, history.HintGifted);
             var session = new LevelSession(BoardFor(def, relief), GameConfig.FutileRuleEnabled, _pourMode);
             for (int i = 0; i < history.Sources.Count; i++)
             {
@@ -155,6 +156,7 @@ namespace AF.GameFlow
 
             // 02 §14: al reanudar no hay tarjeta previa (LEVEL_CARD) ni intro; la Luciérnaga no sigue eligiendo cuia.
             EndRevealSelection();
+            ResetHint();
             ResetLevelCard();
             Phase = FlowPhase.Loading;
             _level = def;
@@ -288,13 +290,15 @@ namespace AF.GameFlow
             {
                 LevelStateSnapshot.WriteRevealed(session.Initial, session.Current, s.RevealedCuias);
                 LevelStateSnapshot.WriteHistory(
-                    _historyBuilder, phase, _attempt.Added, _attempt.UndoGiftUsed, _attempt.ExtraCuiaGifted, session, _balsaShown, _attempt.RevealGifted);
+                    _historyBuilder, phase, _attempt.Added, _attempt.UndoGiftUsed, _attempt.ExtraCuiaGifted, session, _balsaShown, _attempt.RevealGifted,
+                    _attempt.HintGifted);
             }
             else
             {
                 s.RevealedCuias.Clear();
                 LevelStateSnapshot.WriteHistory(
-                    _historyBuilder, phase, Array.Empty<AddedCuiaKind>(), false, _attempt.ExtraCuiaGifted, null, revealGifted: _attempt.RevealGifted);
+                    _historyBuilder, phase, Array.Empty<AddedCuiaKind>(), false, _attempt.ExtraCuiaGifted, null, revealGifted: _attempt.RevealGifted,
+                    hintGifted: _attempt.HintGifted);
             }
 
             s.History = _historyBuilder.ToString();

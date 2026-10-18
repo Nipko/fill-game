@@ -6,7 +6,8 @@ namespace AF.Presentation.Mechanics
     /// <summary>
     /// Fábrica de overlays (contrato de overlays, arquitectura del paso 1 §5): un switch fijo, una clase por mecánica y por
     /// archivo, para que cada tarea de mecánica reescriba solo su archivo. El Barro y Aguas turbias no son tipos de mecánica
-    /// (están en el contenido): los pintan <see cref="MudMarks"/> y <see cref="MurkyMarks"/>.
+    /// (están en el contenido): los pintan <see cref="MudMarks"/> y <see cref="MurkyMarks"/>. Las ocultas de la Tinaja no son
+    /// agua turbia: las tapa su vasija (<see cref="TinajaOverlay"/>; contrato 27).
     /// </summary>
     public static class CuiaOverlays
     {
@@ -29,6 +30,10 @@ namespace AF.Presentation.Mechanics
                     return new LluviaOverlay();
                 case MechanicType.Pirana:
                     return new PiranaOverlay();
+                case MechanicType.Tinaja:
+                    return new TinajaOverlay(); // M13 (TJ2): la vasija, su boca, el chip «×n», las bandas y el jirau
+                case MechanicType.Cucharon:
+                    return new CucharonOverlay(); // su cuia chica (TJ2): el poste del jirau y el asa de fibra
                 case MechanicType.HojaAtada:
                     return new HojaOverlay(true); // la variante atada de la Hoja (VA1a), en el mismo archivo
                 case MechanicType.Flor:

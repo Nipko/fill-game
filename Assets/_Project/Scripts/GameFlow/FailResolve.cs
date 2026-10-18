@@ -100,9 +100,16 @@ namespace AF.GameFlow
         public bool RevealGifted { get; internal set; }
 
         /// <summary>
+        /// Ya se acreditaron los Morphos del nivel de desbloqueo de Morpho en este nivel (04 §2.3: 3, una vez; marca <c>m</c> de
+        /// <c>level_state.history</c>; tarea TU1b). Dura como <see cref="ExtraCuiaGifted"/>: también al salir al inicio y volver a
+        /// entrar, y vuelve al reanudar.
+        /// </summary>
+        public bool HintGifted { get; internal set; }
+
+        /// <summary>
         /// Entrar en el nivel <paramref name="level"/> (Jugar, Siguiente): si es otro nivel, todo vuelve a cero; si es el mismo
-        /// (se salió al inicio y se vuelve), se conservan <c>fails_level</c>, la variante y los regalos de Capi y de la
-        /// Luciérnaga, pero no las cuias añadidas.
+        /// (se salió al inicio y se vuelve), se conservan <c>fails_level</c>, la variante y los regalos de Capi, de la
+        /// Luciérnaga y de Morpho, pero no las cuias añadidas.
         /// </summary>
         public void Enter(int level)
         {
@@ -113,6 +120,7 @@ namespace AF.GameFlow
                 ReliefIndex = -1;
                 ExtraCuiaGifted = false;
                 RevealGifted = false;
+                HintGifted = false;
             }
 
             _added.Clear();
@@ -132,17 +140,19 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Lo guardado en <c>level_state</c> (tarea B2-5): el nivel, <c>fails_level</c>, la variante servida, los regalos de Capi
-        /// y de la Luciérnaga y, si el nivel sigue en curso, las cuias añadidas y la recarga gratis de la rama F.
+        /// Lo guardado en <c>level_state</c> (tarea B2-5): el nivel, <c>fails_level</c>, la variante servida, los regalos de Capi,
+        /// de la Luciérnaga y de Morpho (TU1b) y, si el nivel sigue en curso, las cuias añadidas y la recarga gratis de la rama F.
         /// </summary>
         internal void Restore(
-            int level, int failsLevel, int reliefIndex, IReadOnlyList<AddedCuiaKind>? added, bool undoGiftUsed, bool extraCuiaGifted, bool revealGifted)
+            int level, int failsLevel, int reliefIndex, IReadOnlyList<AddedCuiaKind>? added, bool undoGiftUsed, bool extraCuiaGifted, bool revealGifted,
+            bool hintGifted = false)
         {
             Level = level;
             FailsLevel = Math.Max(0, failsLevel);
             ReliefIndex = reliefIndex < 0 ? -1 : reliefIndex;
             ExtraCuiaGifted = extraCuiaGifted;
             RevealGifted = revealGifted;
+            HintGifted = hintGifted;
             _added.Clear();
             if (added != null)
             {

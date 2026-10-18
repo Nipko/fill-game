@@ -106,19 +106,21 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Tray_ThreeSlots64dp_OnlyMurky()
+        public IEnumerator Tray_FourSlots64dp_RevealLast_OnlyMurky()
         {
+            // Desde el 12 está Pista (MO2): en el 100, Marea, Cuia extra, Pista y Revelar, la última (07 §7.4; pregunta 29).
             yield return LoadPlaying(Level100, FunnelSetup.Profile(0));
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             BoosterTray tray = view.Tray;
-            Assert.That(tray.SlotCount, Is.EqualTo(3), "Marea, Cuia extra y Revelar");
-            Assert.That(tray.Width, Is.EqualTo(240f).Within(0.01f), "16 + 3·64 + 2·8 + 16");
+            Assert.That(tray.SlotCount, Is.EqualTo(4), "Marea, Cuia extra, Pista y Revelar");
+            Assert.That(tray.Width, Is.EqualTo(312f).Within(0.01f), "16 + 4·64 + 3·8 + 16");
             RectTransform undo = (RectTransform)tray.UndoButton.transform;
             RectTransform extra = (RectTransform)tray.ExtraCuiaButton.transform;
+            RectTransform hint = (RectTransform)tray.HintButton.transform;
             RectTransform reveal = (RectTransform)tray.RevealButton.transform;
             Assert.That(reveal.gameObject.activeInHierarchy, Is.True);
-            foreach (RectTransform slot in new[] { undo, extra, reveal })
+            foreach (RectTransform slot in new[] { undo, extra, hint, reveal })
             {
                 Assert.That(slot.rect.width, Is.EqualTo(64f).Within(0.01f), slot.name + ": 64 dp (07 §7.4: con 5 ranuras, 56)");
                 Assert.That(slot.rect.height, Is.GreaterThanOrEqualTo(48f));
@@ -126,17 +128,18 @@ namespace AF.Tests.PlayMode
 
             // Orden canónico (07 §7.4), Revelar la última a la derecha, sin solapes y con 8 dp entre ranuras; bandeja centrada.
             Assert.That(extra.anchoredPosition.x - (undo.anchoredPosition.x + 64f), Is.EqualTo(8f).Within(0.01f));
-            Assert.That(reveal.anchoredPosition.x - (extra.anchoredPosition.x + 64f), Is.EqualTo(8f).Within(0.01f));
-            Assert.That(undo.anchoredPosition.x, Is.EqualTo(((view.CanvasWidth - 240f) * 0.5f) + 16f).Within(0.01f));
-            Assert.That(WorldRect(undo).Overlaps(WorldRect(extra)) || WorldRect(extra).Overlaps(WorldRect(reveal)), Is.False);
+            Assert.That(hint.anchoredPosition.x - (extra.anchoredPosition.x + 64f), Is.EqualTo(8f).Within(0.01f));
+            Assert.That(reveal.anchoredPosition.x - (hint.anchoredPosition.x + 64f), Is.EqualTo(8f).Within(0.01f));
+            Assert.That(undo.anchoredPosition.x, Is.EqualTo(((view.CanvasWidth - 312f) * 0.5f) + 16f).Within(0.01f));
+            Assert.That(WorldRect(undo).Overlaps(WorldRect(extra)) || WorldRect(extra).Overlaps(WorldRect(hint)) || WorldRect(hint).Overlaps(WorldRect(reveal)), Is.False);
             Assert.That(tray.RevealGlyph.sprite.name, Is.EqualTo("icon_firefly"), "07 §7.6: la luciérnaga encendida sobre una cuia oscura");
             Assert.That(reveal.GetComponentInChildren<TMPro.TextMeshProUGUI>().text, Is.EqualTo(UiText.RevealLabel), "«Revelar» (glosario §5.1)");
 
-            // Un nivel sin Aguas turbias (101): sin ranura y con la bandeja de 2, centrada.
+            // Un nivel sin Aguas turbias (101): sin ranura y con la bandeja de 3 (Marea, Cuia extra y Pista), centrada.
             yield return LoadPlaying(101, FunnelSetup.Profile(0));
             view = GameBootstrap.Current!.View!;
             Assert.That(view.Tray.RevealShown, Is.False);
-            Assert.That(view.Tray.SlotCount, Is.EqualTo(2));
+            Assert.That(view.Tray.SlotCount, Is.EqualTo(3));
             Assert.That(view.Tray.RevealButton.gameObject.activeInHierarchy, Is.False);
         }
 
@@ -417,7 +420,7 @@ namespace AF.Tests.PlayMode
                 yield return LoadPlaying(plain[i], FunnelSetup.Profile(0));
                 GameScreen plainView = GameBootstrap.Current!.View!;
                 Assert.That(plainView.Tray.RevealShown, Is.False, "nivel " + plain[i]);
-                Assert.That(plainView.Tray.SlotCount, Is.EqualTo(2), "nivel " + plain[i] + ": Marea y Cuia extra");
+                Assert.That(plainView.Tray.SlotCount, Is.EqualTo(3), "nivel " + plain[i] + ": Marea, Cuia extra y Pista");
                 Assert.That(LastLayout(plain[i]), Does.Not.Contain("\"id\":\"reveal\""));
             }
 
@@ -425,7 +428,7 @@ namespace AF.Tests.PlayMode
             yield return LoadPlaying(Level100, FunnelSetup.Profile(0));
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
-            Assert.That(view.Tray.SlotCount, Is.EqualTo(3));
+            Assert.That(view.Tray.SlotCount, Is.EqualTo(4));
             Assert.That(boot.PressReveal(), Is.True);
             boot.TapCuia(MurkyCuia100);
             Assert.That(boot.Flow!.Session.HiddenCount, Is.EqualTo(0));
@@ -440,10 +443,10 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Tray.RevealShowsVideo, Is.False);
             StepUntilRevealDone(boot, 5000);
             Assert.That(view.Tray.RevealShown, Is.False);
-            Assert.That(view.Tray.SlotCount, Is.EqualTo(2));
-            Assert.That(view.Tray.Width, Is.EqualTo(168f).Within(0.01f));
+            Assert.That(view.Tray.SlotCount, Is.EqualTo(3), "Marea, Cuia extra y Pista");
+            Assert.That(view.Tray.Width, Is.EqualTo(240f).Within(0.01f));
             RectTransform undo = (RectTransform)view.Tray.UndoButton.transform;
-            Assert.That(undo.anchoredPosition.x, Is.EqualTo(((view.CanvasWidth - 168f) * 0.5f) + 16f).Within(0.01f), "se recentra");
+            Assert.That(undo.anchoredPosition.x, Is.EqualTo(((view.CanvasWidth - 240f) * 0.5f) + 16f).Within(0.01f), "se recentra");
             Assert.That(boot.PressReveal(), Is.False, "sin ocultas no hay Luciérnaga que usar");
         }
 
@@ -497,7 +500,7 @@ namespace AF.Tests.PlayMode
         {
             // Luciérnaga en la bandeja (ola 4) tras T-A y T-B: se cierra la app en el 100 con alguna oculta (el vertido 0 → 1
             // revela la capa 1 y la cuia 0 conserva la 0) y se vuelve a abrir. Sin avanzar ningún fotograma con el reloj del
-            // test, Marea, «+1 cuia» y Revelar se ven, de 64 dp y centradas (240 dp), y la última AF_LAYOUT level trae los tres
+            // test, Marea, «+1 cuia», Pista y Revelar se ven, de 64 dp y centradas (312 dp), y la última AF_LAYOUT level trae los cuatro
             // con el centro sobre lo dibujado.
             var store = new MemoryProfileStore(FunnelSetup.Profile(0));
             LaunchOptions.ProfileStoreOverride = store;
@@ -520,11 +523,13 @@ namespace AF.Tests.PlayMode
             Assert.That(tray.UndoButton.gameObject.activeInHierarchy, Is.True, "Marea");
             Assert.That(tray.ExtraCuiaButton.gameObject.activeInHierarchy, Is.True, "«+1 cuia»");
             Assert.That(tray.RevealButton.gameObject.activeInHierarchy, Is.True, "Revelar");
-            Assert.That(tray.SlotCount, Is.EqualTo(3));
-            Assert.That(tray.Width, Is.EqualTo(240f).Within(0.01f), "16 + 3·64 + 2·8 + 16");
+            Assert.That(tray.HintButton.gameObject.activeInHierarchy, Is.True, "Pista (MO2)");
+            Assert.That(tray.SlotCount, Is.EqualTo(4));
+            Assert.That(tray.Width, Is.EqualTo(312f).Within(0.01f), "16 + 4·64 + 3·8 + 16");
             string? layout = LastLayout(Level100);
             Assert.That(layout, Is.Not.Null, "AF_LAYOUT level del 100 al reabrir");
-            Assert.That(AfLayoutLog.ButtonIds(layout!), Does.Contain("undo").And.Contain("extra_cuia").And.Contain("reveal"), layout);
+            Assert.That(AfLayoutLog.ButtonIds(layout!), Does.Contain("undo").And.Contain("extra_cuia").And.Contain("hint").And.Contain("reveal"), layout);
+            AfLayoutLog.AssertCenterInside(layout!, "hint", (RectTransform)tray.HintButton.transform);
             AfLayoutLog.AssertCenterInside(layout!, "undo", (RectTransform)tray.UndoButton.transform);
             AfLayoutLog.AssertCenterInside(layout!, "extra_cuia", (RectTransform)tray.ExtraCuiaButton.transform);
             AfLayoutLog.AssertCenterInside(layout!, "reveal", (RectTransform)tray.RevealButton.transform);

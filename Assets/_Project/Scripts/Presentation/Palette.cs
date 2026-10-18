@@ -52,6 +52,30 @@ namespace AF.Presentation
         /// </summary>
         public static readonly Color Mud = Hex(0x5F563A);
 
+        /// <summary>
+        /// Barro cocido claro de la Tinaja (M13; D-019; 07 §4.3; propuesta de la Tinaja, b.2 «Aspecto»), #C69A78, dentro del
+        /// rango #C4906E-#C7A182 [P, hasta el arte del artista]: ΔE00 ≥ 15 frente a los 14 tintes (el más cercano, Aguaje) y
+        /// ≥ 15,9 frente a <see cref="Murky"/>. Es el color principal de la vasija opaca y el de sus dosis ocultas en el líquido
+        /// (<see cref="HiddenDose"/>): la tinaja nunca se pinta como agua turbia (contrato 27; 08 §5.2).
+        /// </summary>
+        public static readonly Color TinajaClay = Hex(0xC69A78);
+
+        /// <summary>Barro de la Tinaja en la luz (el extremo claro del rango de 07 §4.3, #C7A182).</summary>
+        public static readonly Color TinajaClayLight = Hex(0xC7A182);
+
+        /// <summary>Barro de la Tinaja en la sombra (el extremo oscuro del rango de 07 §4.3, #C4906E).</summary>
+        public static readonly Color TinajaClayShade = Hex(0xC4906E);
+
+        /// <summary>
+        /// Color con el que la vista pinta en el líquido una dosis oculta de una cuia con la mecánica <paramref name="tinaja"/>:
+        /// con la Tinaja, su barro opaco (<see cref="TinajaClay"/>; sus ocultas no son agua turbia, contrato 27); si no, el
+        /// pardo de Aguas turbias (<see cref="Murky"/>).
+        /// </summary>
+        public static Color HiddenDose(bool tinaja)
+        {
+            return tinaja ? TinajaClay : Murky;
+        }
+
         /// <summary>Tapa de calabaza, madera clara #C9A36B (07 §4.4).</summary>
         public static readonly Color CapWood = Hex(0xC9A36B);
 

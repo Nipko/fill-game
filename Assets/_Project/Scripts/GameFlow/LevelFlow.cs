@@ -223,7 +223,8 @@ namespace AF.GameFlow
         /// LOADING del nivel <paramref name="level"/> (o del primero si no existe) y arranque de la intro, con el cupo de Marea
         /// entero. Volver a entrar en el mismo nivel (tras salir al inicio) conserva <c>fails_level</c> y la variante aliviada,
         /// no las cuias añadidas (04 §2.2: desaparecen al abandonar el nivel). En el nivel 8, la primera vez, Capi regala una
-        /// Cuia extra (04 §2.2), y en el estreno de Aguas turbias (100), una Luciérnaga (04 §2.5); los regalos quedan anotados en
+        /// Cuia extra (04 §2.2), en el 12, 3 Morphos (04 §2.3; TU1b), y en el estreno de Aguas turbias (100), una Luciérnaga
+        /// (04 §2.5); los regalos quedan anotados en
         /// <c>level_state</c> y no se repiten al salir y volver a entrar. Con <see cref="LevelCardsEnabled"/>, un nivel con
         /// etiqueta o con estreno pasa antes por la tarjeta previa (LEVEL_CARD, 02 §10) y la intro espera a
         /// <see cref="DismissLevelCard"/>. Con <see cref="WorldBannersEnabled"/>, el primer nivel de un mundo (desde el 2), al entrar
@@ -237,6 +238,7 @@ namespace AF.GameFlow
                 LevelDefinition def = _catalog.Serve(number)!; // con el kill switch (KS1): el override o el publicado con aviso
                 bool firstEntry = _attempt.Level != number; // se entra en el nivel (no se vuelve a entrar en él): el banner de mundo
                 EndRevealSelection();
+                ResetHint();
                 ResetLevelCard();
                 Phase = FlowPhase.Loading;
                 _level = def;
@@ -257,6 +259,7 @@ namespace AF.GameFlow
                     _listener.OnExtraCuiaGifted(BoosterConfig.ExtraCuiaTutorialUnits);
                 }
 
+                GiftHintOnLoad(number); // los 3 Morphos del 12, una vez (04 §2.3; TU1b)
                 bool revealGifted = GiftRevealOnLoad(def, number);
                 int introMs = ReduceMotion ? GameConfig.ReducedMotionIntroMs : GameConfig.TintDurationMs(number);
                 if (!TryShowWorldBanner(number, firstEntry, introMs, revealGifted)
@@ -317,6 +320,8 @@ namespace AF.GameFlow
 
                     break;
             }
+
+            TickHint(); // Morpho (MO1): respuesta del hilo de trabajo, corte por hint_timeout_ms y pista que se apaga
         }
 
         /// <summary>

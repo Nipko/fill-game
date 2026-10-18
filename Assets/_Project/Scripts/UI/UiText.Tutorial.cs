@@ -5,8 +5,8 @@ using AF.Localization;
 namespace AF.UI
 {
     /// <summary>
-    /// Textos de la instrucción del tutorial con TiTino en los niveles 1, 2, 3 y 6 (tarea TU1a; D-016, T2-A y T5-B; 02 §13; 04
-    /// §2.1; 06 §2.2). Parcial de <see cref="UiText"/>: las claves las decide <see cref="TutorialInstruction"/> (AF.GameFlow
+    /// Textos de la instrucción del tutorial con TiTino en los niveles 1, 2, 3, 6 y 12 (tareas TU1a y TU1b; D-016, T2-A y T5-B;
+    /// 02 §13; 04 §2.1 y §2.3; 06 §2.2). Parcial de <see cref="UiText"/>: las claves las decide <see cref="TutorialInstruction"/> (AF.GameFlow
     /// devuelve claves, nunca texto) y aquí se leen de <c>strings.csv</c>. Nacen <c>pendiente_asesor</c>, como las demás
     /// <c>tutorial_*</c>; sin traducción, en EN y PT-BR quedan vacías (D-018).
     /// </summary>
@@ -32,6 +32,9 @@ namespace AF.UI
 
             /// <summary><c>tutorial_one_empty</c> [P] (TU1a): la frase del nivel 6 (06 §2.2).</summary>
             public const string TutorialOneEmpty = TutorialInstruction.OneEmptyKey;
+
+            /// <summary><c>tutorial_morpho</c> [P] (TU1b): la presentación de Morpho del nivel 12 (04 §2.3; 06 §2.2).</summary>
+            public const string TutorialMorpho = TutorialInstruction.MorphoKey;
         }
     }
 }

@@ -27,6 +27,13 @@ namespace AF.Boosters
         /// </summary>
         public const int RevealGiftUnits = 1;
 
+        /// <summary>
+        /// Enfriamiento entre dos respuestas de Morpho [P] (04 §2.3: «Cooldown 5 s entre pistas»): cuenta desde la última
+        /// respuesta, también desde las honestas que no cobran, con el <c>IClock</c> del flujo. No está en 08 §9: constante hasta
+        /// que el dueño la lleve a la tabla.
+        /// </summary>
+        public const int HintCooldownMs = 5000;
+
         /// <summary>Una instancia nueva con los defaults de 08 §9.</summary>
         public static BoosterConfig Defaults => new BoosterConfig();
 
@@ -65,6 +72,44 @@ namespace AF.Boosters
         /// <summary><c>hint_weight</c>: peso del A* en cliente (03 §5).</summary>
         [RemoteConfigKey("hint_weight")]
         public double HintWeight { get; set; } = 2.0;
+
+        /// <summary>
+        /// <c>hint_timeout_ms</c>: tiempo que tiene Morpho en el cliente (08 §9: 150, rango 100-300; 03 §5 y 04 §2.3). Al pasar,
+        /// el hilo principal marca la <c>SolverCancellation</c> de la consulta con su <c>IClock</c> (K2): «No encuentro un camino
+        /// desde aquí» y no cobra (<see cref="MorphoBooster"/>).
+        /// </summary>
+        [RemoteConfigKey("hint_timeout_ms")]
+        public int HintTimeoutMs { get; set; } = 150;
+
+        /// <summary>
+        /// <c>hint_unlock_level</c>: la ranura de Morpho aparece en este nivel (04 §2.3 y §4: debut en el 12, con
+        /// <see cref="HintTutorialUnits"/> Morphos regalados al cargarlo por primera vez; TU1b).
+        /// </summary>
+        [RemoteConfigKey("hint_unlock_level")]
+        public int HintUnlockLevel { get; set; } = 12;
+
+        /// <summary>
+        /// <c>hint_tutorial_units</c>: Morphos que se acreditan al stock en el nivel de desbloqueo (<see cref="HintUnlockLevel"/>,
+        /// el 12; 08 §9: 3, rango 3; 04 §2.3: «se acreditan <b>3 Morphos</b> al stock»; 04 §4; 02 §13; 06 §2.2), una sola vez
+        /// (<see cref="MorphoBooster.ShouldGift"/>; tarea TU1b).
+        /// </summary>
+        [RemoteConfigKey("hint_tutorial_units")]
+        public int HintTutorialUnits { get; set; } = 3;
+
+        /// <summary>
+        /// <c>hint_idle_from_level</c>: la pista por inactividad existe desde este nivel, en todos los siguientes y sin tope
+        /// (08 §9: 3, rango 1-5; 02 §3.4 y 04 §2.3; tarea MO3, <c>AF.GameFlow.IdleHint</c>).
+        /// </summary>
+        [RemoteConfigKey("hint_idle_from_level")]
+        public int HintIdleFromLevel { get; set; } = 3;
+
+        /// <summary>
+        /// <c>hint_idle_delay_s</c>: segundos sin toques tras los que un origen de la ruta del solver pulsa una vez (08 §9: 12,
+        /// rango 8-20; 0 = apagada; 02 §3.4 y 04 §2.3). El interruptor «Pista por inactividad» de Ajustes (02 §12;
+        /// <c>settings.idle_hint</c>) equivale a 0 en el dispositivo (<c>IdleHint.DelayMs</c>).
+        /// </summary>
+        [RemoteConfigKey("hint_idle_delay_s")]
+        public int HintIdleDelayS { get; set; } = 12;
 
         /// <summary>
         /// <c>restart_confirm_min_pours</c>: con estos vertidos o más, Volver a la orilla pide confirmación y cuenta como fallo
@@ -133,6 +178,11 @@ namespace AF.Boosters
             Require(ExtraCuiaMaxPerLevel >= 0 && RescueMaxPerLevel >= 0, "los topes no pueden ser negativos");
             Require(HintBudgetNodes >= 1, "hint_budget_nodes debe ser >= 1");
             Require(HintWeight >= 1 && HintWeight <= 16, "hint_weight va de 1 a 16");
+            Require(HintTimeoutMs >= 1, "hint_timeout_ms debe ser >= 1");
+            Require(HintUnlockLevel >= 1, "hint_unlock_level empieza en 1");
+            Require(HintTutorialUnits >= 1, "hint_tutorial_units debe ser >= 1");
+            Require(HintIdleFromLevel >= 1, "hint_idle_from_level empieza en 1");
+            Require(HintIdleDelayS >= 0, "hint_idle_delay_s no puede ser negativo (0 = apagada)");
             Require(RestartConfirmMinPours >= 1 && ReliefAfterFails >= 1, "umbrales >= 1");
             Require(AnimRiverLoweredBannerMs >= 0, "anim_river_lowered_banner_ms no puede ser negativo");
             Require(StuckOrderT1 != null && StuckOrderT3 != null, "stuck_order_* no puede ser null");

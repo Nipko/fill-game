@@ -795,7 +795,7 @@ namespace AF.Tests.PlayMode
             AssertSlots(view, 1, tray.UndoButton);
             Assert.That(tray.RevealButton.gameObject.activeInHierarchy, Is.False);
 
-            // Nivel 100: Marea, Cuia extra y Revelar, de 64 dp; al irse Revelar quedan Marea y Cuia extra, recentradas.
+            // Nivel 100: Marea, Cuia extra, Pista (MO2) y Revelar, de 64 dp; al irse Revelar quedan las otras tres, recentradas.
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
             yield return PlayModeHelpers.LoadGame(100, new MemoryProgressStore(100, 99));
             boot = GameBootstrap.Current!;
@@ -804,11 +804,11 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.Step(boot, 50);
             view = boot.View!;
             tray = view.Tray;
-            AssertSlots(view, 3, tray.UndoButton, tray.ExtraCuiaButton, tray.RevealButton);
+            AssertSlots(view, 4, tray.UndoButton, tray.ExtraCuiaButton, tray.HintButton, tray.RevealButton);
             Assert.That(tray.SetRevealVisible(false), Is.True);
-            AssertSlots(view, 2, tray.UndoButton, tray.ExtraCuiaButton);
+            AssertSlots(view, 3, tray.UndoButton, tray.ExtraCuiaButton, tray.HintButton);
             Assert.That(tray.SetRevealVisible(true), Is.True);
-            AssertSlots(view, 3, tray.UndoButton, tray.ExtraCuiaButton, tray.RevealButton);
+            AssertSlots(view, 4, tray.UndoButton, tray.ExtraCuiaButton, tray.HintButton, tray.RevealButton);
         }
 
         [UnityTest]

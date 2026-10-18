@@ -127,6 +127,8 @@ UiText.GiveUpConfirmLastCanoe	Perderás tu última canoa
 UiText.GiveUpConfirmTitle	¿Seguro?
 UiText.Haptics	Vibración
 UiText.Harvest	Cosecha
+UiText.HintLabel	Pista
+UiText.HintUnsupported	La morpho no conoce este tramo todavía
 UiText.Home	Inicio
 UiText.KeepPlaying	Seguir jugando
 UiText.Language	Idioma
@@ -172,6 +174,7 @@ UiText.RiverMap	Mapa del río
 UiText.Seeds	Semillas
 UiText.Settings	Ajustes
 UiText.SettingsAboutAmazon	Sobre la Amazonía
+UiText.SettingsIdleHint	Pista por inactividad
 UiText.SettingsLanguageAuto	Automático
 UiText.SettingsPatternsAuto	Automático
 UiText.SettingsPatternsOff	Nunca
