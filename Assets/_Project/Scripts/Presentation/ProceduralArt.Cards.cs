@@ -111,7 +111,8 @@ namespace AF.Presentation
         /// Icono grande (<see cref="CardHeroIconDp"/>) del estreno <paramref name="introMechanic"/> (<c>intro_mechanic</c> de
         /// D-007: <c>chica</c>, <c>alta</c>, <c>hoja</c>, <c>matapi</c>, <c>liana</c>, <c>remolino</c>, <c>barro</c>,
         /// <c>lluvia</c>, <c>brote</c> o <c>pirana</c>; y las variantes de la 1.0, <c>hoja_atada</c> y <c>liana_n</c>,
-        /// <see cref="LianaCountIconKey"/>), o null si no es ninguno. <c>murky</c> no tiene: su estreno, el 100, es la
+        /// <see cref="LianaCountIconKey"/> (VA1a), y <c>brote_n2</c>, <see cref="BroteTwoLeavesIconKey"/>, y <c>flor</c> (VA1b)),
+        /// o null si no es ninguno. <c>murky</c> no tiene: su estreno, el 100, es la
         /// tarjeta combinada, que lleva el chip «?» y no el medallón.
         /// </summary>
         public Sprite? CardHeroIcon(string? introMechanic)
@@ -149,6 +150,8 @@ namespace AF.Presentation
                     return BuildHeroPixels(name, DrawMudGlyph);
                 case LianaCountIconKey:
                     return BuildHeroPixels(name, DrawLianaCountGlyph);
+                case BroteTwoLeavesIconKey:
+                    return BuildHeroPixels(name, DrawBroteTwoLeavesGlyph); // ProceduralArt.BroteDosHojas.cs (VA1b)
                 default:
                     if (!MechanicTypes.TryParse(key, out MechanicType type) || type == MechanicType.None)
                     {

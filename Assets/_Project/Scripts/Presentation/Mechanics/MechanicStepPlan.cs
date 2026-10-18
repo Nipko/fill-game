@@ -89,7 +89,8 @@ namespace AF.Presentation.Mechanics
     /// </summary>
     /// <remarks>
     /// <para>Etapas: (a) Reveal en el origen, MudWash en el receptor y Receive en la pareja del Remolino; (b) Open de la Hoja
-    /// o el Brote; (c) Seal; (d) Release de la Liana; (e) RainDrop, RainWait, RainEnd, Bite y BiteLost; (c′) Seal de lo que
+    /// o el Brote (también la hoja que abre el Brote de dos hojas sin germinar, <see cref="PourEvents.BroteLeafOpenedMask"/>;
+    /// VA1b); (c) Seal; (d) Release de la Liana y de la Flor de vitória-régia (<see cref="ReleaseStepMask"/>; VA1b); (e) RainDrop, RainWait, RainEnd, Bite y BiteLost; (c′) Seal de lo que
     /// sella el punto fijo f′ tras una gota o un mordisco, <c>SealedMask ∩ (LluviaDropMask | PiranaCaveMask)</c>; (d′) Release
     /// de las Lianas que solo suelta un sellado de (c′).</para>
     /// <para>(c′) no depende de <see cref="PourEvents.FixedPointPasses"/>: el núcleo cuenta como vuelta 1 la que sella la
@@ -101,11 +102,12 @@ namespace AF.Presentation.Mechanics
     /// tapa cae antes de que se suelte la Liana); entonces el trabajo del vertido no lo sella. Si no, el sellado se queda en
     /// el trabajo (450 ms tras el caudal, 07 §5.3), como en un vertido normal.</para>
     /// <para>(d′) para la Liana con fruta: ninguna cuia sellada en (c) tiene la llave en la cima y alguna de (c′) sí. Para la
-    /// Liana de cuenta (variante del 243 en adelante): las selladas de <c>Before</c> más las de (c) no llegan a <c>n</c>.</para>
+    /// Liana de cuenta (variante del 243 en adelante): las selladas de <c>Before</c> más las de (c) no llegan a <c>n</c>. Para la
+    /// Flor de vitória-régia (403; VA1b): con las selladas de <c>Before</c> y las de (c) no están sus dos llaves.</para>
     /// <para>Despacho a la cuia dueña de la mecánica: Bite y BiteLost a la cueva (OtherIndex = la víctima); Receive a la
     /// pareja (OtherIndex = la cuia tocada); Release a la Liana (OtherIndex = la sellada con la llave, preferentemente la de
-    /// su etapa); RainDrop, RainWait y RainEnd a la Lluvia (RainEnd es la última gota, que también cae); Open a la Hoja o el
-    /// Brote; Seal a la cuia; Reveal al origen y MudWash al receptor.</para>
+    /// su etapa; la Flor, con el tinte de esa cuia, la llave que la abre); RainDrop, RainWait y RainEnd a la Lluvia (RainEnd es
+    /// la última gota, que también cae); Open a la Hoja o el Brote; Seal a la cuia; Reveal al origen y MudWash al receptor.</para>
     /// </remarks>
     public static class MechanicStepPlan
     {
@@ -167,8 +169,8 @@ namespace AF.Presentation.Mechanics
                 count = Add(buffer, count, new StepEntry(MechanicStepKind.Receive, StepStage.A, recv, ev.Target, ev.Color, LowMask(ev.Amount)));
             }
 
-            // (b) Aperturas por recepción.
-            int opened = ev.HojaOpenedMask | ev.BroteOpenedMask;
+            // (b) Aperturas por recepción (y la hoja del Brote de dos hojas que se abre sin germinar, VA1b).
+            int opened = ev.HojaOpenedMask | ev.BroteOpenedMask | ev.BroteLeafOpenedMask;
             for (int i = 0; i < n; i++)
             {
                 if (Has(opened, i))
@@ -282,7 +284,7 @@ namespace AF.Presentation.Mechanics
         {
             PourEvents ev = v.Events;
             int cPrime = FixedPointSealMask(in v);
-            if (cPrime == 0 || !Has(ev.LianaReleasedMask, index))
+            if (cPrime == 0 || !Has(ReleaseStepMask(in v), index))
             {
                 return StepStage.D;
             }
@@ -291,6 +293,14 @@ namespace AF.Presentation.Mechanics
             BoardState after = v.After;
             int cSeal = ev.SealedMask & ~cPrime;
             Cuia liana = before[index];
+            if (liana.Mechanic == MechanicType.Flor)
+            {
+                // La Flor (VA1b): en (d) si con las selladas de Before y las de (c) ya están sus dos llaves; si no, la abre (c′).
+                bool both = KeySealedByStageC(before, after, cSeal, index, liana.MechanicKey)
+                    && KeySealedByStageC(before, after, cSeal, index, liana.MechanicKey2);
+                return both ? StepStage.D : StepStage.DPrime;
+            }
+
             if (liana.MechanicN == 0)
             {
                 int key = liana.MechanicKey;
@@ -318,6 +328,34 @@ namespace AF.Presentation.Mechanics
             return Has(FixedPointSealMask(in v), index) ? StepStage.CPrime : StepStage.C;
         }
 
+        /// <summary>
+        /// Cuias que se sueltan por un sellado en este vertido con un paso Release (etapa (d) o (d′)): las Lianas
+        /// (<see cref="PourEvents.LianaReleasedMask"/>) y las Flores de vitória-régia (VA1b), que el núcleo solo marca en
+        /// <see cref="PourEvents.ReleasedMask"/> (la cuia de la Tinaja también va ahí, pero baja en (f) y no es de aquí). 0 sin
+        /// eventos. Sin asignaciones.
+        /// </summary>
+        public static int ReleaseStepMask(in PourVisual v)
+        {
+            if (!v.HasEvents)
+            {
+                return 0;
+            }
+
+            PourEvents ev = v.Events;
+            int mask = ev.LianaReleasedMask;
+            int rest = ev.ReleasedMask & ~mask;
+            BoardState before = v.Before;
+            for (int i = 0; rest != 0 && i < before.Count && i < 32; i++)
+            {
+                if (Has(rest, i) && before[i].Mechanic == MechanicType.Flor)
+                {
+                    mask |= 1 << i;
+                }
+            }
+
+            return mask;
+        }
+
         private static int AddReleases(in PourVisual v, StepStage stage, StepEntry[] buffer, int count)
         {
             PourEvents ev = v.Events;
@@ -326,10 +364,17 @@ namespace AF.Presentation.Mechanics
             int n = Math.Min(before.Count, after.Count);
             int cPrime = FixedPointSealMask(in v);
             int stageSeals = stage == StepStage.DPrime ? cPrime : ev.SealedMask & ~cPrime;
+            int released = ReleaseStepMask(in v);
             for (int i = 0; i < n; i++)
             {
-                if (!Has(ev.LianaReleasedMask, i) || ReleaseStage(in v, i) != stage)
+                if (!Has(released, i) || ReleaseStage(in v, i) != stage)
                 {
+                    continue;
+                }
+
+                if (before[i].Mechanic == MechanicType.Flor)
+                {
+                    count = Add(buffer, count, FlorRelease(in v, stage, stageSeals, i));
                     continue;
                 }
 
@@ -357,7 +402,7 @@ namespace AF.Presentation.Mechanics
                 return true;
             }
 
-            if ((ev.HojaOpenedMask | ev.BroteOpenedMask) != 0 || ev.LianaReleasedMask != 0)
+            if ((ev.HojaOpenedMask | ev.BroteOpenedMask | ev.BroteLeafOpenedMask) != 0 || ReleaseStepMask(in v) != 0)
             {
                 return true;
             }
@@ -368,6 +413,60 @@ namespace AF.Presentation.Mechanics
             }
 
             return (ev.SealedMask & ~(1 << recv)) != 0;
+        }
+
+        // Paso Release de la Flor index en la etapa stage (VA1b): la otra cuia es la sellada de esa etapa con una de sus llaves en
+        // la cima (la segunda llave primero), o cualquiera sellada con una de ellas; el tinte, la llave de esa cuia (la que se
+        // acaba de cumplir).
+        private static StepEntry FlorRelease(in PourVisual v, StepStage stage, int stageSeals, int index)
+        {
+            BoardState after = v.After;
+            Cuia flor = v.Before[index];
+            int key = flor.MechanicKey;
+            int key2 = flor.MechanicKey2;
+            int other = SealedWithTop(after, stageSeals, index, key2);
+            if (other < 0)
+            {
+                other = SealedWithTop(after, stageSeals, index, key);
+            }
+
+            if (other < 0)
+            {
+                other = SealedWithTopAnywhere(after, index, key2);
+            }
+
+            if (other < 0)
+            {
+                other = SealedWithTopAnywhere(after, index, key);
+            }
+
+            int tint = other >= 0 ? after[other].TopColor : key2;
+            return new StepEntry(MechanicStepKind.Release, stage, index, other, tint, 0);
+        }
+
+        // La llave key de la Flor index ya está sellada antes de (d): sellada en Before o en la etapa (c) de este vertido (cSeal),
+        // en una cuia con key en la cima.
+        private static bool KeySealedByStageC(BoardState before, BoardState after, int cSeal, int index, int key)
+        {
+            for (int j = 0; j < after.Count; j++)
+            {
+                if (j == index)
+                {
+                    continue;
+                }
+
+                if (j < before.Count && before.IsSealed(j) && before[j].TopColor == key)
+                {
+                    return true;
+                }
+
+                if (Has(cSeal, j) && after.IsSealed(j) && after[j].TopColor == key)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // La víctima del mordisco: siempre el receptor (PiranaBittenMask lo marca).

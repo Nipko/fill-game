@@ -130,7 +130,7 @@ namespace AF.Tests.EditMode
                 lines.Add("StuckRefillSeeds(3," + refillPrice + ",one)", UiText.StuckRefillSeeds(3, refillPrice, false));
             }
 
-            foreach (string m in new[] { "chica", "alta", "hoja", "matapi", "liana", "murky", "remolino", "barro", "lluvia", "brote", "pirana", "liana_n", "hoja_atada", "otro" })
+            foreach (string m in new[] { "chica", "alta", "hoja", "matapi", "liana", "murky", "remolino", "barro", "lluvia", "brote", "pirana", "liana_n", "hoja_atada", "brote_n2", "flor", "otro" })
             {
                 lines.Add("Tutorial(" + m + ")", UiText.Tutorial(m));
             }

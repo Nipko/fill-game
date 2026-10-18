@@ -28,8 +28,9 @@ namespace AF.UI
     /// oscura, como en el tablero: <c>ProceduralArt.CardIconOnWater</c>).</description></item>
     /// <item><description>Estreno: el icono grande de la mecánica en su medallón (de agua oscura para el Matapi) y el texto del
     /// tutorial. También en los estrenos de las variantes de la 1.0 (<c>SightingRule.VariantDebutLevels</c>): la Liana de cuenta
-    /// (243), con la liana y sus cuentas, y la Hoja atada (283), con el cordel, el medallón y la hoja, cada una con su icono [P]
-    /// (VA1a).</description></item>
+    /// (243), con la liana y sus cuentas, y la Hoja atada (283), con el cordel, el medallón y la hoja (VA1a); el Brote de dos
+    /// hojas (343), con una hoja grande cerrada y otra abierta junto al capullo, y la Flor de vitória-régia (403), entreabierta
+    /// sobre su cáliz (VA1b), cada una con su icono [P].</description></item>
     /// <item><description>Las dos cosas (nivel 100): la de dificultad con el tutorial de Aguas turbias, que lleva la línea T4
     /// obligatoria, y la línea de la Luciérnaga (04 §2.5) con «+1 Luciérnaga».</description></item>
     /// </list>

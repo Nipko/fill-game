@@ -31,6 +31,8 @@ namespace AF.Presentation.Mechanics
                     return new PiranaOverlay();
                 case MechanicType.HojaAtada:
                     return new HojaOverlay(true); // la variante atada de la Hoja (VA1a), en el mismo archivo
+                case MechanicType.Flor:
+                    return new FlorOverlay(); // la Flor de vitória-régia (VA1b); el Brote de dos hojas va en BroteOverlay (n = 2)
                 default:
                     return null;
             }

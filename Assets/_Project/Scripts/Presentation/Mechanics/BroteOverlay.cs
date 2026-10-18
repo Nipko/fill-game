@@ -33,6 +33,17 @@ namespace AF.Presentation.Mechanics
     /// vuelva (contrato de T07): el brote abierto sigue a la vista cuando el origen aterriza.
     /// Mientras anima (<see cref="IsAnimating"/>), la vista no llama a <see cref="Show"/>; la cola cierra el paso con
     /// <see cref="SnapStep"/> y <c>ShowContent(ctx.After)</c>, que lo oculta. Marea lo vuelve a pintar cerrado.</para>
+    /// <para><b>Brote de dos hojas</b> (<c>n</c> = 2; variante de la 1.0, estreno en el 343; 02 §9.1 «Variantes» y R10 b;
+    /// propuesta de D-007 b.3: «Brote con dos hojas cerradas; cada dosis abre una»; tarea VA1b) [P]: en lugar de las dos hojitas
+    /// que asoman por detrás, dos hojas grandes cerradas por delante, una a cada lado del capullo, inclinadas hacia el eje
+    /// (<see cref="WrapClosedDeg"/>) y algo más oscuras (<see cref="WrapClosedShade"/>): el capullo se ve entre las dos y por
+    /// encima, con su color. <see cref="Cuia.MechanicN"/> dice cuántas siguen cerradas: con 2, las dos; con 1 (ya recibió una
+    /// dosis), la izquierda está abierta hacia fuera (<see cref="WrapOpenDeg"/>) y a plena luz. Cada dosis de su color abre una
+    /// en el paso Open de la etapa (b) (<see cref="LeafStepMs"/>; el núcleo lo marca en <c>BroteLeafOpenedMask</c> y la cola lo
+    /// despacha aquí, con <c>ctx.After</c> aún con el Brote): la hoja gira hacia fuera con un pequeño rebote y suelta unos
+    /// destellos del color del capullo. La que germina hace el paso Open del Brote, con las dos hojas grandes en el papel de
+    /// las hojitas: se abren del todo y se desvanecen. Un tramo de 2 en <c>run</c> lo hace germinar de una vez (D-005). Marea
+    /// vuelve a cerrar la hoja (02 §1.2).</para>
     /// <para>Sin asignaciones en <see cref="Tick"/>, <see cref="PlayStep"/> ni <see cref="Show"/> (08 §5.4); las partículas
     /// salen del pool común de <see cref="FxLayer"/> (tope de 44) y con Reducir movimiento no se emiten.</para>
     /// </remarks>
@@ -86,8 +97,41 @@ namespace AF.Presentation.Mechanics
         /// <summary>Instante de los destellos (fracción del paso).</summary>
         public const float SparkleAt = 0.12f;
 
+        /// <summary>Apertura de una hoja del Brote de dos hojas sin germinar (ms) [P]: la misma duración que la germinación.</summary>
+        public const float LeafStepMs = OpenStepMs;
+
+        /// <summary>Pie de cada hoja grande del Brote de dos hojas (u desde el eje), dentro del cáliz.</summary>
+        public const float WrapFootXU = 0.32f;
+
+        /// <summary>Pie de las hojas grandes sobre lo alto de la cuia (u; desde <c>HeightU</c>), dentro del cáliz.</summary>
+        public const float WrapFootAboveTopU = 0.02f;
+
+        /// <summary>
+        /// Giro hacia fuera de una hoja grande cerrada (grados desde la vertical; negativo = hacia el eje): se cierra sobre el
+        /// costado del capullo.
+        /// </summary>
+        public const float WrapClosedDeg = -10f;
+
+        /// <summary>Giro hacia fuera de una hoja grande abierta (grados desde la vertical).</summary>
+        public const float WrapOpenDeg = 48f;
+
+        /// <summary>Escala a lo ancho de las hojas grandes (sobre la hojita del Brote): más estrechas, para que el capullo se vea.</summary>
+        public const float WrapScaleX = 0.68f;
+
+        /// <summary>Escala a lo largo de las hojas grandes (sobre la hojita del Brote).</summary>
+        public const float WrapScaleY = 1.02f;
+
+        /// <summary>Tono de una hoja grande cerrada (multiplica el verde de la hojita): plegada, en sombra; la abierta, a plena luz.</summary>
+        public const float WrapClosedShade = 0.80f;
+
+        /// <summary>Destellos al abrirse una hoja sin germinar.</summary>
+        public const int LeafSparkleCount = 3;
+
         // Margen tras la duración con el que el overlay cierra solo un paso que la cola no cerró (no debería pasar).
         private const float StuckGuardMs = 1000f;
+
+        // n del Brote de dos hojas al empezar (BroteMechanic.TwoLeaves, interno del núcleo; firma de pack_schema 3).
+        private const int TwoLeavesN = 2;
 
         // Hojitas: pie (u desde el eje y sobre lo alto de la cuia, HeightU) y lo que sube al abrirse, como mucho.
         private const float LeafFootXU = 0.18f;
@@ -99,6 +143,8 @@ namespace AF.Presentation.Mechanics
         private Image _sepals = null!;
         private Image _leafL = null!;
         private Image _leafR = null!;
+        private Image _wrapL = null!;
+        private Image _wrapR = null!;
         private RectTransform _slot = null!;
         private IBoardFx? _fx;
         private Color _budColor = Color.white;
@@ -108,6 +154,10 @@ namespace AF.Presentation.Mechanics
         private float _duration;
         private bool _sparkled;
         private bool _posed;
+        private bool _twoLeaves;
+        private int _closedLeaves;
+        private bool _leafStep;
+        private int _leafIndex;
 
         /// <inheritdoc />
         public override MechanicType Type => MechanicType.Brote;
@@ -150,6 +200,38 @@ namespace AF.Presentation.Mechanics
         /// <summary>Apertura de las hojitas (grados hacia fuera desde la vertical; <see cref="ClosedLeafDeg"/> plegadas).</summary>
         public float LeafOpenDeg => Mathf.DeltaAngle(0f, _leafL.rectTransform.localEulerAngles.z);
 
+        /// <summary>Muestra el Brote de dos hojas (<c>n</c> &gt; 0; VA1b): las dos hojas grandes por delante en lugar de las hojitas.</summary>
+        public bool TwoLeaves => _twoLeaves;
+
+        /// <summary>Hojas grandes que siguen cerradas (2 o 1) en el Brote de dos hojas; 0 en el Brote normal.</summary>
+        public int ClosedLeaves => _twoLeaves ? _closedLeaves : 0;
+
+        /// <summary>El paso en curso abre una hoja del Brote de dos hojas sin germinar.</summary>
+        public bool IsLeafStep => _elapsed >= 0f && _leafStep;
+
+        /// <summary>Las hojas grandes del Brote de dos hojas están a la vista.</summary>
+        public bool WrapsVisible => _wrapL.gameObject.activeSelf && _wrapL.color.a > 0.001f;
+
+        /// <summary>Giro hacia fuera (grados desde la vertical; negativo = hacia el eje) de la hoja grande izquierda (−1) o derecha (1).</summary>
+        public float WrapOutDeg(int side)
+        {
+            RectTransform rt = (side < 0 ? _wrapL : _wrapR).rectTransform;
+            float z = Mathf.DeltaAngle(0f, rt.localEulerAngles.z);
+            return side < 0 ? z : -z;
+        }
+
+        /// <summary>Color pintado de la hoja grande izquierda (−1) o derecha (1), con su alfa.</summary>
+        public Color WrapColor(int side)
+        {
+            return (side < 0 ? _wrapL : _wrapR).color;
+        }
+
+        /// <summary>Punta de la hoja grande izquierda (−1) o derecha (1), en u desde el pie.</summary>
+        public Vector2 WrapTip(int side)
+        {
+            return LeafTipU(side < 0 ? _wrapL : _wrapR);
+        }
+
         /// <summary>Rectángulo del capullo (u desde el centro del pie de la cuia, hacia arriba), con su escala.</summary>
         public Rect CorkRectU => RectU(_cork.rectTransform);
 
@@ -180,6 +262,11 @@ namespace AF.Presentation.Mechanics
                     top = Mathf.Max(top, Mathf.Max(LeafTipU(_leafL).y, LeafTipU(_leafR).y));
                 }
 
+                if (WrapsVisible)
+                {
+                    top = Mathf.Max(top, Mathf.Max(LeafTipU(_wrapL).y, LeafTipU(_wrapR).y));
+                }
+
                 return top;
             }
         }
@@ -195,6 +282,8 @@ namespace AF.Presentation.Mechanics
         {
             bool on = cuia.Mechanic == MechanicType.Brote;
             Visible = on;
+            _twoLeaves = on && cuia.MechanicN > 0;
+            _closedLeaves = _twoLeaves ? cuia.MechanicN : 0;
             if (on)
             {
                 int top = cuia.Count - 1;
@@ -212,11 +301,17 @@ namespace AF.Presentation.Mechanics
             {
                 PlaceClosed();
             }
+            else if (_twoLeaves)
+            {
+                PoseWrapsAtRest(1f); // las hojas grandes según las que siguen cerradas (VA1b)
+            }
 
             OverlayParts.SetVisible(_cork, on);
             OverlayParts.SetVisible(_sepals, on);
-            OverlayParts.SetVisible(_leafL, on);
-            OverlayParts.SetVisible(_leafR, on);
+            OverlayParts.SetVisible(_leafL, on && !_twoLeaves);
+            OverlayParts.SetVisible(_leafR, on && !_twoLeaves);
+            OverlayParts.SetVisible(_wrapL, _twoLeaves);
+            OverlayParts.SetVisible(_wrapR, _twoLeaves);
         }
 
         /// <inheritdoc />
@@ -226,7 +321,7 @@ namespace AF.Presentation.Mechanics
             _heightU = heightU;
             if (_elapsed >= 0f)
             {
-                Apply(StepProgress);
+                ApplyStep(StepProgress);
             }
             else
             {
@@ -254,11 +349,21 @@ namespace AF.Presentation.Mechanics
             _elapsed = 0f;
             _sparkled = false;
             Visible = true;
+
+            // Brote de dos hojas (VA1b): las hojas que le faltaban antes del paso; si después sigue siendo Brote, solo se abre
+            // una hoja (la primera cerrada: la izquierda con 2, la derecha con 1) y no germina.
+            int before = ctx.Before.Mechanic == MechanicType.Brote ? ctx.Before.MechanicN : 0;
+            _twoLeaves = before > 0;
+            _closedLeaves = before;
+            _leafStep = _twoLeaves && ctx.After.Mechanic == MechanicType.Brote;
+            _leafIndex = Mathf.Clamp(TwoLeavesN - before, 0, 1);
             OverlayParts.SetVisible(_cork, true);
             OverlayParts.SetVisible(_sepals, true);
-            OverlayParts.SetVisible(_leafL, true);
-            OverlayParts.SetVisible(_leafR, true);
-            Apply(0f);
+            OverlayParts.SetVisible(_leafL, !_twoLeaves);
+            OverlayParts.SetVisible(_leafR, !_twoLeaves);
+            OverlayParts.SetVisible(_wrapL, _twoLeaves);
+            OverlayParts.SetVisible(_wrapR, _twoLeaves);
+            ApplyStep(0f);
             return ms;
         }
 
@@ -284,7 +389,7 @@ namespace AF.Presentation.Mechanics
             }
 
             // Pasada la duración se queda en el último fotograma (todo transparente) hasta que la cola llame a SnapStep.
-            Apply(Mathf.Clamp01(_elapsed / Mathf.Max(1f, _duration)));
+            ApplyStep(Mathf.Clamp01(_elapsed / Mathf.Max(1f, _duration)));
         }
 
         /// <inheritdoc />
@@ -296,11 +401,22 @@ namespace AF.Presentation.Mechanics
             }
 
             _elapsed = -1f;
+            if (_leafStep)
+            {
+                // La hoja abierta se queda: la cola pinta ShowContent(ctx.After) con el Brote de una hoja cerrada.
+                _leafStep = false;
+                _closedLeaves = Mathf.Max(0, _closedLeaves - 1);
+                PlaceClosed();
+                return;
+            }
+
             PlaceClosed();
             OverlayParts.SetVisible(_cork, false);
             OverlayParts.SetVisible(_sepals, false);
             OverlayParts.SetVisible(_leafL, false);
             OverlayParts.SetVisible(_leafR, false);
+            OverlayParts.SetVisible(_wrapL, false);
+            OverlayParts.SetVisible(_wrapR, false);
         }
 
         /// <inheritdoc />
@@ -308,6 +424,7 @@ namespace AF.Presentation.Mechanics
         {
             into.Add(ProceduralArt.BroteLeafLight); // cáliz y hojitas (el capullo lleva el tinte de la cima a propósito)
             into.Add(ProceduralArt.BroteLeafDark);
+            into.Add(Shade(ProceduralArt.BroteLeafLight, WrapClosedShade)); // las hojas grandes cerradas del Brote de dos hojas (VA1b)
         }
 
         /// <inheritdoc />
@@ -325,6 +442,12 @@ namespace AF.Presentation.Mechanics
             _sepals.rectTransform.pivot = new Vector2(0.5f, 0f);
             _leafL.rectTransform.pivot = new Vector2(0.5f, 0f);
             _leafR.rectTransform.pivot = new Vector2(0.5f, 0f);
+
+            // Brote de dos hojas (VA1b): las dos hojas grandes, delante del capullo y del cáliz.
+            _wrapL = OverlayParts.NewImage("BroteWrapL", Host.BodyFront, Host.Art.BroteSprout, Color.white);
+            _wrapR = OverlayParts.NewImage("BroteWrapR", Host.BodyFront, Host.Art.BroteSprout, Color.white);
+            _wrapL.rectTransform.pivot = new Vector2(0.5f, 0f);
+            _wrapR.rectTransform.pivot = new Vector2(0.5f, 0f);
         }
 
         // Pose de reposo: el capullo en la boca sobre su cáliz y las hojitas plegadas, opacos y sin escala.
@@ -335,6 +458,73 @@ namespace AF.Presentation.Mechanics
             PoseSepals(1f, 1f, 1f);
             PoseLeaf(_leafL, -1f, ClosedLeafDeg, 1f, 0f, 1f);
             PoseLeaf(_leafR, 1f, ClosedLeafDeg, 1f, 0f, 1f);
+            PoseWrapsAtRest(1f);
+        }
+
+        // Hojas grandes del Brote de dos hojas en reposo: abiertas las primeras (2 − cerradas) desde la izquierda, con su alfa.
+        private void PoseWrapsAtRest(float alpha)
+        {
+            int open = TwoLeavesN - _closedLeaves;
+            PoseWrap(_wrapL, -1f, open > 0 ? 1f : 0f, alpha);
+            PoseWrap(_wrapR, 1f, open > 1 ? 1f : 0f, alpha);
+        }
+
+        // Hoja grande del lado side con apertura a (0 cerrada sobre el capullo, 1 abierta; pasa de 1 en el rebote y al
+        // germinar) y alfa.
+        private void PoseWrap(Image wrap, float side, float a, float alpha)
+        {
+            float deg = Mathf.LerpUnclamped(WrapClosedDeg, WrapOpenDeg, a);
+            OverlayParts.Place(wrap, side * WrapFootXU, _heightU + WrapFootAboveTopU, ProceduralArt.BroteSproutWidthU, ProceduralArt.BroteSproutHeightU, _u);
+            RectTransform rt = wrap.rectTransform;
+            // La izquierda gira a la izquierda (z positiva) al abrirse. Se compara componente a componente: el == de Quaternion
+            // da por iguales giros de menos de ≈ 0,1°, y el último fotograma del rebote no volvería a la pose de reposo.
+            Quaternion rotation = Quaternion.Euler(0f, 0f, -side * deg);
+            Quaternion current = rt.localRotation;
+            if (current.z != rotation.z || current.w != rotation.w || current.x != rotation.x || current.y != rotation.y)
+            {
+                rt.localRotation = rotation;
+            }
+
+            var s = new Vector3(side * WrapScaleX, WrapScaleY, 1f);
+            if (rt.localScale != s)
+            {
+                rt.localScale = s;
+            }
+
+            float shade = Mathf.Lerp(WrapClosedShade, 1f, Mathf.Clamp01(a));
+            OverlayParts.SetColor(wrap, new Color(shade, shade, shade, alpha));
+        }
+
+        // Paso en curso: abrir una hoja del Brote de dos hojas o germinar.
+        private void ApplyStep(float t)
+        {
+            if (_leafStep)
+            {
+                ApplyLeaf(t);
+            }
+            else
+            {
+                Apply(t);
+            }
+        }
+
+        // Fotograma t (0..1) de la apertura de una hoja sin germinar: el capullo no cambia; la hoja _leafIndex gira hacia fuera
+        // con un pequeño rebote y se aclara, y a mitad de camino suelta unos destellos del color del capullo.
+        private void ApplyLeaf(float t)
+        {
+            _posed = true;
+            PoseCork(_heightU - CorkBelowTopU, 1f, 1f, 1f);
+            PoseSepals(1f, 1f, 1f);
+            int open = TwoLeavesN - _closedLeaves; // las que ya estaban abiertas antes del paso
+            float a = Ease.OutBack(Mathf.Clamp01(t / 0.8f));
+            PoseWrap(_wrapL, -1f, _leafIndex == 0 ? a : (open > 0 ? 1f : 0f), 1f);
+            PoseWrap(_wrapR, 1f, _leafIndex == 1 ? a : (open > 1 ? 1f : 0f), 1f);
+            if (!_sparkled && t >= 0.35f)
+            {
+                _sparkled = true;
+                Vector2 tip = LeafTipU(_leafIndex == 0 ? _wrapL : _wrapR);
+                _fx?.Sparkles(_slot.anchoredPosition + (tip * _u), ColorMath.Lighten(_budColor, 0.3f), LeafSparkleCount, _u);
+            }
         }
 
         // Fotograma t (0..1) de la germinación; los destellos salen una sola vez al cruzar su instante.
@@ -410,6 +600,17 @@ namespace AF.Presentation.Mechanics
 
             PoseLeaf(_leafL, -1f, open, grow, rise, alpha);
             PoseLeaf(_leafR, 1f, open, grow, rise, alpha);
+            if (_twoLeaves)
+            {
+                // Brote de dos hojas (VA1b): las hojas grandes hacen de hojitas: las cerradas se abren con ellas, las ya abiertas
+                // siguen el vaivén, y todas se desvanecen con ellas.
+                float spread = (open - ClosedLeafDeg) / (OpenLeafDeg - ClosedLeafDeg);
+                int alreadyOpen = TwoLeavesN - _closedLeaves;
+                float aL = alreadyOpen > 0 ? Mathf.Max(1f, spread) : spread;
+                float aR = alreadyOpen > 1 ? Mathf.Max(1f, spread) : spread;
+                PoseWrap(_wrapL, -1f, Mathf.Max(0f, aL), alpha);
+                PoseWrap(_wrapR, 1f, Mathf.Max(0f, aR), alpha);
+            }
         }
 
         // Capullo con pie en footY (u), escala (sx, sy) desde el pie y opacidad; su brillo va con él.
@@ -485,6 +686,11 @@ namespace AF.Presentation.Mechanics
             Vector2 tip = rt.anchoredPosition + (Vector2)(rt.localRotation * new Vector3(0f, len, 0f));
             float u = Mathf.Max(0.01f, _u);
             return tip / u;
+        }
+
+        private static Color Shade(Color c, float shade)
+        {
+            return new Color(c.r * shade, c.g * shade, c.b * shade, c.a);
         }
 
         private static void SetScale(RectTransform rt, float sx, float sy)

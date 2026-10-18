@@ -33,6 +33,12 @@ namespace AF.GameFlow
         /// <summary><c>intro_mechanic</c> del estreno de la Hoja atada (283; firma de <c>pack_schema</c> 3).</summary>
         public const string HojaAtadaIntro = "hoja_atada";
 
+        /// <summary><c>intro_mechanic</c> del estreno del Brote de dos hojas (343; firma de <c>pack_schema</c> 3; VA1b) [P].</summary>
+        public const string BroteTwoLeavesIntro = "brote_n2";
+
+        /// <summary><c>intro_mechanic</c> del estreno de la Flor de vitória-régia (403; firma de <c>pack_schema</c> 3; VA1b).</summary>
+        public const string FlorIntro = "flor";
+
         private readonly int _mechanics;
 
         /// <summary>Crea la tarjeta (en el juego, <see cref="For"/>).</summary>
