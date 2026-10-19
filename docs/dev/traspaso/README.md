@@ -4,6 +4,55 @@ Escrito por la sesión de Claude Code del portátil (Windows 11 ARM64) para la s
 
 ## 1. Resumen
 
+> *Estado del 2026-10-19* (tanda 4: **ola 6 cerrada en `cb2460e`** y probada en el teléfono en `5d2a569` con resultado «cumple», `pruebas-telefono-2026-10-18-tanda4-ola6.md`; **ola 7, parte A, integrada en `6523058`** y probada en el teléfono en `c5e1c58` con resultado «cumple» y una observación, `pruebas-telefono-2026-10-19.md`; **parte B (C1b, C1c y D3) en su rama**; escrito por D3):
+> - **Ola 7 por carriles** (ramas leídas el 2026-10-19; las de la parte A ya están en `integracion-fase1-fase2`):
+>   - **Unity A** (`tanda4/o7-unity-a`, `45b721d`; parte A):
+>     - FX8 (`ae863b2` y su revisión `6dfd080`), los pendientes de código de la ola 6. El fallo por comprobar de M3.5 (abajo, en el estado del 2026-10-18) se reprodujo (con visto 5 y max 12, la placa del mundo 3 en el sitio de la del mundo 2) y está arreglado: al cambiar los mundos futuros sin cambiar de vista, los rótulos se recolocan como al abrir. La ventanita del hito de la tarjeta previa y la tarjeta de la parada usan la temporada del primer nivel de la parada de destino (07 §2.1). Tras usar una Pista, TiTino no dice en la victoria las frases n.º 4 y 8 de su banco.
+>     - B2 (`9a68a69` a `45b721d`; informe en `docs/setup/medida-aab-b2.md`): la medida del AAB del juego, con las cifras de «Tamaño», abajo. Es la B2a, con los niveles 1-300; la B2b (repetirla con 1-700) espera a que C1b esté en la rama.
+>   - **Unity B** (`tanda4/o7-unity-b`, `9e2c7d5`; parte A):
+>     - TJ3 (`0ae1eea`, `83f4bf3` y `cb7e483`): el gesto de sacar (su cuia viaja en arco a la boca, se llena y vuelve con unas gotas: 880 ms, como un vertido), el revelado en la boca, la suelta en la etapa nueva (f) de R10 (su cuia se descuelga y la vasija se vuelca boca abajo sobre el jirau), la intro con la Tinaja, Marea y reanudar sin formato nuevo, con `sfx_tinaja_scoop`, `sfx_tinaja_reveal` y `sfx_tinaja_release`.
+>     - TJ4 (`096b82c`, `809e427` y `9e2c7d5`): la Luciérnaga con la tinaja (solo late la vasija y nunca cobra sin efecto), Morpho con tableros con tinaja, la tarjeta del estreno del 323, el consejo del 324 [P], el campo `tinaja` de `AF_STATE` y `ui_tinaja_show_contents` = false (D-019, Q-Ti5-A).
+>     - Con TJ1-TJ4, la Tinaja está entera en el cliente, pero ningún pack publicado la usa todavía (C1c, abajo).
+>   - **Núcleo** (`tanda4/o7-core`, `1429976`; parte A): FX9 estabiliza las pruebas «sin asignaciones» del bucle caliente, que fallaban de vez en cuando con la suite completa. `AllocationMeter`, solo dotnet, calienta el bloque y se queda con el mínimo de hasta 5 medidas, con los mismos umbrales: 20 de 20 ejecuciones seguidas sin fallos. Sin cambios en el núcleo. Las dos pruebas de Unity con una sola medida quedan anotadas en el CHANGELOG del paquete para una tarea aparte.
+>   - **FX10** (`tanda4/o7-fx10`, `c313132`; parte A), las observaciones 1-3 de la prueba de la ola 6:
+>     - ninguna línea de la sonda pasa de 960 bytes, y las que no caben salen partidas;
+>     - las placas de los mundos futuros quedan enteras y fuera de la ventanita de casa;
+>     - `BuildDev` borra antes el APK anterior y el de Gradle, así que el `dev.apk` ya no crece entre builds.
+>   - **Geometría del Mapa** (`tanda4/o7-geo`; parte A; adelantadas de la ola 8):
+>     - M5.1 (`5615cbb` a `cdff504`): la geometría de producción, con la tierra y el Casiquiare de Natural Earth y las líneas de HydroRIVERS en las dos vistas (desviación [P]: pregunta 65); `sources.json` lleva los hashes y las licencias, y las descargas quedan fuera de git;
+>     - M5.1c (`484cfa5` a `4a64fbe`): el cliente con esa geometría. Las cintas no tienen dientes (puntos a 1,5 anchos del trazo y bisel donde el inglete pasaría de 1,25 [P]), la franja del viaje del 81 baja de 7,5 a 2,4 ms y las placas de la Cuenca sin sitio junto a su parada buscan en una rejilla de la zona visible.
+>   - **Niveles 301-700** (`tanda4/o7-c1b`, `4023188`; parte B, sin integrar):
+>     - GEN79 (`2232b9a` a `b54854a`) genera los mundos 7-9 con D-027, en sus dos variantes;
+>     - C1b (`83a8a94` a `017f53f`) los publica en el cliente con la **variante b** (`published_variant` = "b" en `campaign_v2.json`; la a, en `tools/out/salida_a/`). El cliente llega al 700: banners del 301, el 421 y el 561, el Brote de dos hojas en el 343, la Flor en el 403 y el fin de contenido tras el 700; el inicio del 701 conserva el fondo y la ventanita de la parada 69;
+>     - C1c (`ec3390c` a `4023188`) deja el 323 sin la Tinaja, porque la compuerta de PF1 no consta en verde (pregunta abierta de D-019; sección 6, paso 4), y juega el 323 real de la variante a de punta a punta en `Tinaja323EndToEndTests` (PlayMode).
+>   - **Documentación** (`tanda4/o7-docs`): D3, esta puesta al día. Lleva el estado de D-013 a D-020 en `docs/dev/decisiones.md`, las preguntas 65 y 66 en `docs/GDD.md` §6.3, las sondas de la Tinaja en `docs/dev/prototipo-v0.md` y el estado en 09 §0.4.
+>   - **Fuera de la tanda:** el Reto del río se encargó a un tercer equipo (`docs/dev/traspaso/spark-reto-del-rio.md`, en `integracion-fase1-fase2`), con las respuestas del dueño a sus R-Q1-R-Q10.
+> - **Verificación de la parte A** (escritorio x64, `6523058`):
+>   - `dotnet build -warnaserror`, 0 avisos; `dotnet test`, 981 (975 + 6 omitidos);
+>   - `validate_schema.py`, 103/103; `stops.py --check` (70 paradas, 308 textos `map.*`), `geometry.py --check` (3 avisos de miradores sin texto) y `generar_mapa.py --check` OK; 176 tests de `tools/river-map`; `check_audio.py`, 173/173;
+>   - Unity compila; EditMode, 2.744 (2.741 + 3 omitidos); PlayMode, 1.334 (1.175 + 159 explícitos de capturas);
+>   - `dev.apk` de 64,81 MB, igual en dos builds seguidos.
+> - **Tamaño (B2, 2026-10-18, niveles 1-300):**
+>   - el AAB del juego (`AudioAssetSetup.BuildGameAab`) pesa **51,87 MB**, con 50,80 MB de descarga en Play, frente al tope de 80 MB; el de humo, 40,03 MB. 16 KB correcto en los dos;
+>   - margen: 28,13 MB hoy; 17,11 MB con el arte de B0 a 1×; 6,58 MB con el arte a 2×. Con los SDK de 08 §6.1 (≈ 12-18 MB), a 1× queda entre 5,1 y −0,9 MB, y a 2× **no cabe** (85,4-91,4 MB). Hacen falta Addressables y PAD (08 §6.2), recortar las fuentes (6,88 MB sin comprimir, cuatro veces y media lo estimado) o las dos cosas. Lo medirá de verdad M5.2 con el arte;
+>   - los niveles 301-700 suman ≈ 0,05 MB en el AAB (estimación; la medida es la B2b);
+>   - **aviso de `LocReleaseGate`:** con `com.amazonfill.dev` solo avisa, pero encuentra **811 problemas** que pararían un build de release. Son 153 claves sin texto en `en` y 154 en `pt-BR`, 126 textos culturales de `strings.csv` en `pendiente_asesor` y 683 filas de `facts.csv` sin `aprobado_es`. Es lo esperable hasta el asesor y las traducciones.
+> - **Qué probar en el teléfono con la parte B** (cuando la sesión principal integre C1b, C1c y D3; perfil limpio con `pm clear`; sondas en `docs/dev/prototipo-v0.md`):
+>   1. **301-700 (C1b):** del 300 al 301 con «Siguiente», con el banner del 301 y el relevo de Rosa y el bufeo en `teotonio` en su viaje. Banners del 421 y del 561. Estrenos del Brote de dos hojas (343) y de la Flor (403), con su tarjeta. Los hitos de 14 cuias en 3 filas de 5/5/4 a 360 × 780 (por ejemplo, el 580 y el 620). Con `--ei af_max_level 699` y el 700 ganado, el Mapa del fin de contenido y «El río sigue creciendo»; el inicio del 701 conserva el fondo y la ventanita de TiTino.
+>   2. **El 323 (C1c):** sale como nivel normal, sin la Tinaja ni su tarjeta (variante b).
+>   3. **La tarjeta de la parada 32** (321-330): los Datos de Pará como «Otro dato» (D-022, pregunta 50).
+>   4. **Del README de `tools/river-map` (M5.1), Mapa y banners de viaje:**
+>      - al llegar a Santarém (victoria del 10) se llena el Tapajós y al llegar a Boca Manu (380), el Manu;
+>      - el Japurá se llena en la llegada a Tefé (70) y no en la de Leticia (80);
+>      - el nombre de Caballococha sale en el viaje del 120 y no en el del 130;
+>      - los ríos de la Cuenca se ven como líneas limpias y no deshilachadas (capturas 13 y 15-18);
+>      - el banner del viaje del 81 se monta sin tirones.
+>   5. **Lo que quedó sin probar en la parte A:** la temporada en la tarjeta de la parada y en la del hito (FX8); TiTino en la victoria tras usar una Pista; la fluidez del banner del 41 y del 81, en vídeo; y que un segundo build seguido no crezca.
+>   6. **Regresión:** 1-12, 41, 63, 100, 143, 183, 243 y 283, más 301, 343, 403 y 561, sin excepciones en logcat.
+> - **Fallo conocido** (anterior a la ola 7; anotado en `6523058` y sin arreglar): tras «ponerse al día», el agua del último tramo no se ve si ese tramo necesita más cintas que el de partida (Mapa desde la pausa del 41 y del fin de contenido). La cinta nueva que crea `FrontRibbonAt` no pasa por `FitRibbon`. En la prueba de la parte A no se distinguió a simple vista: hace falta una captura ampliada del último tramo.
+> - **Observación de la prueba de la parte A:** en la vista Mundo los ríos se ven quebrados, con tramos rectos y esquinas marcadas. Entra en la pregunta 65 (parte 3).
+> - **Pendientes del dueño tras la ola 7:** en la sección 6, paso 4.
+>
 > *Estado del 2026-10-18* (tanda 4: **ola 5 cerrada en `9fc15f9`** y probada en el teléfono en `a9b0376` con resultado «cumple», `pruebas-telefono-2026-10-17-tanda4-ola5.md`; **ola 6 en integración**; escrito por M4.6):
 > - **Integrado en la ola 5:**
 >   - el carril del Mapa: las paradas 421-700 (M4.5b, k = 42-69), así que los datos del Mapa cubren ya 1-700;
@@ -395,9 +444,20 @@ Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 
   - **Escuchar el audio en el teléfono:** las notas de fruta y el chorro (calidad Vorbis 0,8), que las capas de la música no se desfasen tras varios bucles y que en `amb_w01_fauna_02` no se entienda ninguna voz. El portátil solo comprobó las sondas.
   - **El asesor cultural:** las 24 piezas de audio con `advisor_review` pendiente (entre ellas el boto y la piha del banner; 17 con especie o región sustituta, no amazónica, 10 de la fauna y 7 efectos, entre ellos el boto; la piha no es sustituta), los textos nuevos de las olas 5 y 6 (`map_l10_intro`, las frases de TiTino, `tutorial_morpho`, los `hint_*` que nombran fauna, `tutorial_brote_n2` y `tutorial_flor`) y la embaúba de la ventanita.
   - **Formato de las distancias** (observación 6 de la prueba de la ola 5): «a unos 1,480 km» con el teléfono en en-US es lo que manda Q8-A de D-018 (cifras con la región del teléfono) y D-025; FX7 no lo cambió. Si el dueño prefiere que sigan al idioma del juego, es una decisión nueva.
-  - **La compuerta de tamaño del CI** (pendiente de B2 y del CI, s30): debe medir un AAB con la escena del juego, como `AF.EditorTools.AudioAssetSetup.BuildGameAab` (51,51 MB con el audio), y no el de humo, que no lleva el audio (08 §6.1).
+  - **La compuerta de tamaño del CI** (pendiente del CI, s30): debe medir el AAB del juego, el de `AF.EditorTools.AudioAssetSetup.BuildGameAab`, y no el de humo, que no lleva el audio, los niveles ni los textos (08 §6.1; ya consta en la cabecera de `ci/size-gate.ps1`). B2 lo midió el 2026-10-18 con los niveles 1-300: 51,87 MB y 50,80 MB de descarga en Play; con el arte a 2× de B0 y los SDK no cabe en 80 MB (sección 1, «Tamaño»; `docs/setup/medida-aab-b2.md`).
   - **El 323 sale sin Tinaja** (C1c, 2026-10-19; pregunta abierta de `docs/dev/decisiones.md`, D-019): TJ4 está en verde, pero la compuerta de PF1 (el factor de Morpho en un teléfono de clase A) no, así que 301-700 se publican con la variante b (salida B de Q-Ti3) hasta que el dueño la dé por buena. Entonces: `published_variant` = "a" en `campaign_v2.json`, regenerar el registro y los paquetes de 301-700, `LevelCatalog.PublishedVariant` = `VariantA` y regenerar la escena.
   - **Sigue pendiente de antes:** el teléfono de clase A para el factor de Morpho y el shader (pregunta 44), las preguntas 18, 19, 21-26 y 52-54, las líneas 17-20 del cacao y del arazá y la curación de los mundos 6-9.
+
+- **Pendientes del dueño tras la ola 7 de la tanda 4** (2026-10-19; la prueba de la parte A está en `pruebas-telefono-2026-10-19.md`). Ninguna de las preguntas de arriba tiene respuesta registrada en `docs/dev/decisiones.md`: siguen abiertas.
+  - **La pregunta 65 de `docs/GDD.md` §6.3, la geometría de producción del Mapa (M5.1)**, en tres partes:
+    - (1) **las tolerancias de la vista Mundo.** Con HydroRIVERS, 70 de los 129 puntos de control de esa vista quedan a más de 1 km de su línea, 3 puntos pasan incluso de los 15 km de la Cuenca (la boca del Curuá, Belterra y la boca del Nhamundá), y 6 sitios tierra adentro (la FLONA do Tapajós, Amacayacu, Pacaya-Samiria y Yasuní, con sus variantes), también. Están como excepciones medidas [P] (`PENDING_CONTROL_KM` y `PENDING_SITE_KM` de `tools/river-map/geometry.py`), así que `--check` pasa con las cifras congeladas. Opciones: (a) medir contra la orilla o el ancho del cauce; (b) 2 dp al zoom real de cada mundo; (c) que el investigador corrija los puntos [E]; (d) aceptar las excepciones. Recomendada, (d), ya aplicada como [P];
+    - (2) **la fuente de las líneas de la vista Cuenca.** Salen de HydroRIVERS y no de Natural Earth, que piden D-013, punto 5, y 08 §4.5: desviación [P]. Opciones: (a) ratificar HydroRIVERS en las dos vistas y alinear 08 §4.5; (b) la Cuenca desde Natural Earth, que cambia el contrato 29. Recomendada, (a);
+    - (3) **el alcance de la vista Mundo** (`MundoZone`: la tolerancia de 1 km solo a ≤ 100 km de una parada [P]). Recomendada, (a), dejar los 100 km; la observación de la prueba de la parte A (ríos quebrados en la vista Mundo) es este caso.
+  - **La pregunta 66, los [P] de la ola 7 por ratificar:** entre ellos, los dos de M5.1c (`SpacingWidths` 1,5 y `BevelMiter` 1,25), las paradas en una confluencia de M5.1 y el consejo del 324 de TJ4.
+  - **La atribución de HydroRIVERS:** leer su acuerdo de licencia (en hydrosheds.org; no viene en la descarga), fijar el texto de atribución que exige y decidir dónde va en el juego, que aún no tiene pantalla de créditos (README de `tools/river-map`, notas de M5.1).
+  - **El 323 con la Tinaja** (arriba, «El 323 sale sin Tinaja»): depende del factor de Morpho en un teléfono de clase A.
+  - **La curación de los mundos 7-9:** los informes de la variante publicada, la b (`tools/out/curation_w07.md` a `curation_w09.md`, 122 niveles, 13 retos sin su etiqueta), con C1b.
+  - **El sitio en el AAB antes de los SDK y del arte a 2×:** Addressables y PAD, fuentes recortadas o arte a 1× (B2; sección 1, «Tamaño»). Y el permiso `INTERNET`, que sigue pendiente.
 
 ## 7. Decisiones del dueño vigentes (registro en `docs/dev/decisiones.md`)
 
@@ -429,6 +489,7 @@ Material de partida: `docs/research/fauna/propuesta-fauna.md` (10 especies y 18 
 | D-024 | Reglas de la Hoja atada (2026-10-14): la capacidad de su llave y una Hoja atada por fruta, con las recomendadas de la revisión de K3a. Documentación aplicada (FIXD) e implementada en el núcleo (FIXK, ola 1 de la tanda 4); el generador y level-qa la heredan por `LevelValidation` |
 | D-025 | Un solo formato de cifras, también en los precios: todo con `Loc.Number` (región del teléfono; sin región, es-CO [P]) y los precios como moneda + importe con ese formato. **Implementada en FXT** (`Loc.Price`; el adaptador de Unity IAP compondrá con `Loc.PriceFromMicros`) |
 | D-026 | Audio provisional por código (2026-10-16): los 61 efectos del laboratorio portados a C# y generados al arrancar, con los arreglos de su revisión (cada uno a su nivel, graves al 50 % por encima de 300 Hz, cola de dosel solo donde va, gestos ≤ 0,2 s y el chorro como bucle que sube con el llenado), Sonido, Música y Vibración en Ajustes y el permiso `VIBRATE` aprobado para los hápticos. **Implementada en AU1**, con el ambiente por mundo y la música adaptativa provisionales de AU2 (detrás del ajuste Música [P]); integrada en `bd649ac` y llevada a 07 §9 (FXD2). Desde AU3 (ola 5, `4476796`), el juego suena con los 173 WAV de la entrega 1 y el audio por código queda de respaldo; la prueba de la ola 5 lo comprobó por sondas (cumple) y falta escucharlo |
+| D-027 | Mundos 7-9 (2026-10-18): las 25 celdas, K = 10 en los retos de 421-700, los hitos de 14 cuias con K = 12 + 1 vacío (salvo el 620 y el 680), el alivio hasta 13 cuias con la Tinaja y QA-PAR sin el par del rango en sus estrenos, todo de la propuesta de los mundos 7-9. Implementada en GEN79 y publicada en el cliente con la variante b (C1b, ola 7, en su rama); falta la curación del dueño |
 
 ## 8. Cómo trabaja el dueño (preferencias aprendidas)
 
