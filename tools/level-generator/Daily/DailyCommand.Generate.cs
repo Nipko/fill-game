@@ -255,9 +255,11 @@ internal static partial class DailyCommand
             return;
         }
 
-        // Mínimo de pares de riesgo con K tintes (nota §1.1): B1 0 y 0; B2 1 y 3; B3 3 y 4.
+        // Mínimo de pares de riesgo con K tintes (nota §1.1): B1 0 y 0; B2 (solo K = 8, R-Q1b) 1; B3 3 y 4, con tope libre.
         string mins = string.Join(" ", spec.Bands.SelectMany(b => Enumerable.Range(b.KMin, b.KMax - b.KMin + 1).Select(k => $"B{b.Band}K{k}={tints.MinPairs(b.Band, k)}")));
-        check(mins == "B1K6=0 B1K7=0 B2K8=1 B2K9=3 B3K10=3 B3K11=4", $"minimo de pares de riesgo por K igual a la nota sec. 1.1 ({mins})");
+        check(mins == "B1K6=0 B1K7=0 B2K8=1 B3K10=3 B3K11=4", $"minimo de pares de riesgo por K igual a la nota sec. 1.1 ({mins})");
+        check(tints.EffectiveCap(1, 6) == 0 && tints.EffectiveCap(2, 8) == 1 && tints.EffectiveCap(3, 10) == DailySpec.MaxRiskPairsCap
+            && tints.SetCount(3, 11) == 12, "tope efectivo: B1 0, B2 1 y B3 libre (todos los conjuntos de K tintes: C(12, 11) = 12 con K = 11)");
         check(tints.Pool(spec.Band(1)).Count == 7 && tints.Pool(spec.Band(2)).Count == 9 && tints.Pool(spec.Band(3)).Count == 12,
             "pool de tintes por banda: 7, 9 y 12 (nota sec. 1.1)");
 
@@ -292,10 +294,9 @@ internal static partial class DailyCommand
         }
 
         check(parallel.Boards.Where(x => x.Band == 1).All(x => !x.OverRiskCap && x.Palette.RiskPairs == 0)
-            && parallel.Boards.First(x => x.Band == 2 && x.Day == 0).Palette.RiskPairs <= 1
-            && parallel.Boards.First(x => x.Band == 2 && x.Day == 1) is { OverRiskCap: true, Palette.RiskPairs: 3 }
-            && parallel.Boards.Where(x => x.Band == 3).All(x => x.OverRiskCap && x.Palette.RiskPairs == tints.MinPairs(3, x.K)),
-            "pares de riesgo: B1 0; B2 K 8 <= 1; B2 K 9 y B3 marcados con el minimo posible (R-Q1b)");
+            && parallel.Boards.Where(x => x.Band == 2).All(x => !x.OverRiskCap && x.Palette.RiskPairs <= 1)
+            && parallel.Boards.Where(x => x.Band == 3).All(x => !x.OverRiskCap && x.Palette.RiskPairs >= tints.MinPairs(3, x.K)),
+            "pares de riesgo: B1 0; B2 <= 1; B3 libre (R-Q1b (a)); ninguno por encima del tope");
 
         // El JSON: cabecera daily y lo que el pack no lleva.
         JsonNode pack = JsonNode.Parse(a)!;

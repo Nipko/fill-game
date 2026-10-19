@@ -26,7 +26,10 @@ internal static class DailyReport
         L($"- Especificación: `{spec.Path}` ({spec.Name}); tintes y pares de riesgo de `{spec.TintsFrom}`.");
         L($"- Pack: `{packPath}`, {I(packBytes.Length)} bytes, SHA-256 `{Convert.ToHexStringLower(SHA256.HashData(packBytes))}`.");
         L($"- Tableros: {I(run.Boards.Count)}; errores: {I(run.Errors.Count)}.");
-        L("- **Estado [P]:** la especificación está pendiente de R-Q1b (paleta de B2 con K = 9 y de B3, nota §1.1), de la fórmula del agua de R-Q2 y de R-Q11 (días fuera de ventana, nota §1.6). Este pool no se publica (R5) hasta que el dueño responda.");
+        L("- **Estado:** R-Q1b (a) y R-Q11 (a) decididas por el dueño el 2026-10-19: B2 solo con K = 8, B3 con max_pares_riesgo libre (03 §4.5) y la ventana del bot como compuerta (un día fuera de ventana no se publica; `level-qa --daily` lo da como fallo). Siguen [P] la fórmula del agua de R-Q2, `k_by_day` y las fuentes de cada banda.");
+        L("- Tope de pares de riesgo por banda: " + string.Join(", ", spec.Bands.Select(b => $"B{I(b.Band)} {(b.RiskFree ? "libre" : I(b.MaxRiskPairs))}")) + ".");
+        L("- Fuentes por banda (en orden; cada una con max_candidates candidatos): " + string.Join("; ", spec.Bands.Select(b =>
+            $"B{I(b.Band)} " + string.Join(" -> ", b.Rules.Select(Src).Concat(b.Fallbacks.Select(Src))))) + ".");
         L();
 
         L("## Resumen por banda");
@@ -168,6 +171,10 @@ internal static class DailyReport
 
         return sb.ToString();
     }
+
+    private static string Src(DailySource s) =>
+        s.Gen + (s.E is int e ? " E=" + e.ToString(CultureInfo.InvariantCulture) : "")
+        + (s.Nodes is int n ? " (" + n.ToString(CultureInfo.InvariantCulture) + " nodos)" : "");
 
     private static double Median(List<double> sorted) =>
         sorted.Count % 2 == 1 ? sorted[sorted.Count / 2] : (sorted[(sorted.Count / 2) - 1] + sorted[sorted.Count / 2]) / 2;

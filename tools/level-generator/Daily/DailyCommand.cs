@@ -65,16 +65,22 @@ internal static partial class DailyCommand
         ("0 candidatos", r => Band(r, 0)["max_candidates"] = 0, "(banda 1): \"max_candidates\" debe ser un entero 1-30"),
         ("31 candidatos", r => Band(r, 0)["max_candidates"] = 31, "(banda 1): \"max_candidates\" debe ser un entero 1-30"),
         ("fuente desconocida", r => Rule(r, 2, 0)["gen"] = "inverse", "\"gen\" (inverse) desconocida; solo walk, deep o fill"),
-        ("fill sin e", r => Rule(r, 1, 0).Remove("e"), "fill lleva \"e\" igual a los vacios de la banda (1;"),
+        ("fill sin e", r => Rule(r, 0, 0).Remove("e"), "fill lleva \"e\" igual a los vacios de la banda (2;"),
         ("fill con otros vacios", r => Source(r, 0)["fallback"] = new JsonObject { ["gen"] = "fill", ["e"] = 1 }, "source.fallback: fill lleva \"e\" igual a los vacios de la banda (2;"),
         ("deep con e", r => Rule(r, 2, 0)["e"] = 1, "\"e\" solo vale con fill (no con deep)"),
-        ("reglas solapadas", r => Rule(r, 1, 1)["k"] = new JsonArray(8, 8), "se solapa con otra regla ([8, 8])"),
-        ("K sin regla", r => Source(r, 1)["rules"]!.AsArray().RemoveAt(1), "(banda 2): source: ninguna regla cubre K = 9"),
+        ("reglas solapadas", r => Source(r, 2)["rules"]!.AsArray().Add(new JsonObject { ["k"] = new JsonArray(11, 11), ["gen"] = "deep" }),
+            "source.rules[1]: \"k\" [11, 11] se solapa con otra regla ([10, 11])"),
+        ("K sin regla", r => Rule(r, 2, 0)["k"] = new JsonArray(10, 10), "(banda 3): source: ninguna regla cubre K = 11"),
+        ("respaldo vacio", r => Source(r, 0)["fallback"] = new JsonArray(), "(banda 1): source: \"fallback\" vacio; null si no hay respaldo"),
+        ("respaldo de la lista desconocido", r => Source(r, 0)["fallback"]![1]!["gen"] = "inverse", "source.fallback[1]: \"gen\" (inverse) desconocida"),
+        ("nodes con walk", r => Source(r, 0)["fallback"]![1]!["nodes"] = 60000, "source.fallback[1]: \"nodes\" solo vale con deep"),
+        ("nodes por debajo de 1.000", r => Source(r, 0)["fallback"]![2]!["nodes"] = 500, "source.fallback[2]: \"nodes\" solo vale con deep y debe ser un entero 1000-300000"),
         ("regla fuera de la banda", r => Rule(r, 0, 0)["k"] = new JsonArray(5, 7), "\"k\" [5, 7] fuera de la banda (6-7)"),
         ("regla con K minimo > maximo", r => Rule(r, 2, 0)["k"] = new JsonArray(11, 10), "source.rules[0]: \"k\" [11, 10] con minimo > maximo"),
         ("sin fallback", r => Source(r, 2).Remove("fallback"), "(banda 3): source: falta \"fallback\""),
         ("paleta sin status", r => Palette(r, 1).Remove("status"), "(banda 2): palette: falta \"status\""),
         ("max_risk_pairs negativo", r => Palette(r, 0)["max_risk_pairs"] = -1, "(banda 1): palette: \"max_risk_pairs\" debe ser un entero 0-10"),
+        ("max_risk_pairs con otro texto", r => Palette(r, 2)["max_risk_pairs"] = "sin tope", "(banda 3): palette: \"max_risk_pairs\" debe ser un entero 0-10 o \"libre\""),
         ("debut_until 0", r => Palette(r, 2)["debut_until"] = 0, "(banda 3): palette: \"debut_until\" debe ser un entero >= 1"),
         ("agua sin status", r => Water(r).Remove("status"), "water: falta \"status\""),
         ("falta un mundo", r => Water(r)["worlds"]!.AsArray().RemoveAt(4), "water: falta el mundo 5"),
@@ -178,18 +184,21 @@ internal static partial class DailyCommand
             DailyBand b3 = spec.Band(3);
             Check(spec.PackId == "daily_pool_v1", "pack_id daily_pool_v1 (03 sec. 16)");
             Check(b1 is { KMin: 6, KMax: 7, Empties: 2, BotFailMin: 0.40, BotFailMax: 0.60 }
-                && b2 is { KMin: 8, KMax: 9, Empties: 1, BotFailMin: 0.60, BotFailMax: 0.80 }
+                && b2 is { KMin: 8, KMax: 8, Empties: 1, BotFailMin: 0.60, BotFailMax: 0.80 }
                 && b3 is { KMin: 10, KMax: 11, Empties: 1, BotFailMin: 0.75, BotFailMax: 1.00 },
-                "bandas de 03 sec. 16: K 6-7/8-9/10-11, vacios 2/1/1, bot 40-60/60-80/>=75 %");
+                "bandas de 03 sec. 16 con R-Q1b (a): K 6-7/8/10-11, vacios 2/1/1, bot 40-60/60-80/>=75 %");
             Check(spec.Bands.All(b => b.Capacity == 4 && b.MaxCandidates == 30), "capacidad 4 y 30 candidatos en las tres bandas");
-            Check(b1.SourceFor(6).Gen == "walk" && b1.SourceFor(7).Gen == "walk" && b1.Fallback is { Gen: "fill", E: 2 },
-                "B1: walk; respaldo fill E=2 (nota sec. 13)");
-            Check(b2.SourceFor(8) is { Gen: "fill", E: 1 } && b2.SourceFor(9).Gen == "deep" && b2.Fallback is null,
-                "B2: fill E=1 con K 8, deep con K 9 (nota sec. 13)");
-            Check(b3.SourceFor(10).Gen == "deep" && b3.SourceFor(11).Gen == "deep" && b3.Fallback is null, "B3: deep (nota sec. 13)");
-            Check(b1 is { DebutUntil: 40, MaxRiskPairs: 0 } && b2 is { DebutUntil: 80, MaxRiskPairs: 1 } && b3 is { DebutUntil: 200, MaxRiskPairs: 2 },
-                "paleta de R-Q1: tintes hasta 40/80/200, tope 0/1/2 (B2 y B3 [P] por R-Q1b)");
-            Check(b2.KOfDay(416) == 8 && b2.KOfDay(417) == 9 && b3.KOfDay(0) == 10 && b3.KOfDay(729) == 11, "K por dia: par el menor, impar el mayor [P]");
+            Check(b1.SourceFor(6) is { Gen: "fill", E: 2 } && b1.SourceFor(7) is { Gen: "fill", E: 2 }
+                && b1.Fallbacks.Count == 3 && b1.Fallbacks[0] is { Gen: "deep", Nodes: null } && b1.Fallbacks[1].Gen == "walk"
+                && b1.Fallbacks[2] is { Gen: "deep", Nodes: 60000 },
+                "B1: fill E=2; respaldos deep, walk y deep con 60.000 nodos (R5 [P], R-Q11)");
+            Check(b2.SourceFor(8).Gen == "deep" && b2.Fallbacks.Count == 1 && b2.Fallback is { Gen: "fill", E: 1 },
+                "B2: deep; respaldo fill E=1 (R5 [P], R-Q11)");
+            Check(b3.SourceFor(10).Gen == "deep" && b3.SourceFor(11).Gen == "deep" && b3.Fallbacks.Count == 0, "B3: deep (nota sec. 13)");
+            Check(b1 is { DebutUntil: 40, MaxRiskPairs: 0, RiskFree: false } && b2 is { DebutUntil: 80, MaxRiskPairs: 1, RiskFree: false }
+                && b3 is { DebutUntil: 200, RiskFree: true, MaxRiskPairs: DailySpec.MaxRiskPairsCap },
+                "paleta de R-Q1 y R-Q1b (a): tintes hasta 40/80/200, tope 0/1/libre (libre = 10, todos los pares de 03 sec. 4.5)");
+            Check(b2.KOfDay(416) == 8 && b2.KOfDay(417) == 8 && b3.KOfDay(0) == 10 && b3.KOfDay(729) == 11, "K por dia: par el menor, impar el mayor [P]; B2 siempre 8");
             Check(spec.WorldOfDay(0).World == 1 && spec.WorldOfDay(8).World == 9 && spec.WorldOfDay(9).World == 1 && spec.WorldOfDay(729).World == 1 + (729 % 9),
                 "mundo del dia = 1 + (dia mod 9) [P] (dias 0, 8, 9 y 729)");
             string waters = string.Join(",", spec.Worlds.Select(w => w.WaterBase));

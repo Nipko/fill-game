@@ -1,8 +1,8 @@
 // Especificación del pool del Reto del río (specs/daily_v1.json; R2 del encargo docs/dev/traspaso/spark-reto-del-rio.md):
 // lector con validación. Datos de 03 §16 (bandas, K, vacíos y ventana del bot), 03 §4.4 (fuente y rechazo por ventana, con
 // un máximo de 30 candidatos), 02 R1 (T <= 14 cuias; capacidad 4), glosario §8 (agua base por mundo) y las decisiones del
-// dueño R-Q1 (paleta) y R-Q2 (agua), con la propuesta de la nota de diseño docs/dev/reto-del-rio.md §13. Lo que falta
-// decidir (R-Q1b, la fórmula de R-Q2) va en la especificación como parámetro con su campo "status" [P].
+// dueño R-Q1 y R-Q1b (paleta: B3 con max_pares_riesgo libre) y R-Q2 (agua), con la propuesta de la nota de diseño
+// docs/dev/reto-del-rio.md §13. Lo que es propuesta (la fórmula de R-Q2, las fuentes) va con su campo "status" [P].
 //
 // Comprueba, con un mensaje que dice dónde y por qué:
 //   - claves desconocidas (la raíz, water, cada banda, bot_fail, source, sus reglas y palette): un error tipográfico no pasa;
@@ -14,8 +14,11 @@
 //     (02 R1); capacidad 4 (nota §13: sin Cuia chica ni alta); ventana 0 <= min <= max <= 1; candidatos 1-30 (03 §4.4);
 //   - source: reglas por K que cubren cada K de la banda una sola vez con una fuente conocida (walk, deep o fill; el
 //     enum gen.source del esquema); fill lleva "e" igual a los vacíos de la banda y walk y deep no lo llevan (nota §13: sin
-//     relajaciones que cambien los vacíos); "fallback" null o una fuente con la misma regla;
-//   - palette: "status" (la marca [P] de R-Q1b no se pierde en silencio), debut_until >= 1 y max_risk_pairs 0-10 (esquema).
+//     relajaciones que cambien los vacíos); deep admite "nodes" (1.000-300.000; 03 §4.2); "fallback" null, una fuente o una lista no vacía de fuentes (respaldos en orden,
+//     cada uno con sus max_candidates; R-Q11: la ventana es compuerta), con la misma regla;
+//   - palette: "status" (la marca de la decisión no se pierde en silencio), debut_until >= 1 y max_risk_pairs 0-10 (esquema)
+//     o "libre" (R-Q1b; como la campaña desde el 201, CampaignSpec.FreeRiskPairs): sin tope; se guarda como el número de
+//     pares de riesgo de 03 §4.5 (10, MaxRiskPairsCap), que ningún tablero puede superar, y RiskFree = true.
 using System.Globalization;
 using System.Text.Json;
 using System.Text.Json.Nodes;
@@ -25,8 +28,11 @@ namespace AmazonFill.Tools.LevelGenerator.Daily;
 
 internal sealed class DailySpecException(string message) : Exception(message);
 
-/// <summary>Fuente de los tableros de un tramo de K (03 §4.4): walk, deep o fill (con E vacíos).</summary>
-internal sealed record DailySource(int KMin, int KMax, string Gen, int? E);
+/// <summary>
+/// Fuente de los tableros de un tramo de K (03 §4.4): walk, deep (con <paramref name="Nodes"/> nodos del barajado en
+/// profundidad, por defecto los de InverseDeep; más nodos, tableros más difíciles: 03 §4.2) o fill (con E vacíos).
+/// </summary>
+internal sealed record DailySource(int KMin, int KMax, string Gen, int? E, int? Nodes = null);
 
 internal sealed record DailyWorld(int World, string WorldId, string WaterBase);
 
@@ -40,10 +46,14 @@ internal sealed record DailyBand(
     double BotFailMax,
     int MaxCandidates,
     IReadOnlyList<DailySource> Rules,
-    DailySource? Fallback,
+    IReadOnlyList<DailySource> Fallbacks,
     int DebutUntil,
-    int MaxRiskPairs)
+    int MaxRiskPairs,
+    bool RiskFree)
 {
+    /// <summary>El primer respaldo, o null si la banda no tiene.</summary>
+    public DailySource? Fallback => Fallbacks.Count > 0 ? Fallbacks[0] : null;
+
     /// <summary>K del tablero de ese día (k_by_day = even_min_odd_max, nota §13 [P]): día par el menor, impar el mayor.</summary>
     public int KOfDay(int day) => day % 2 == 0 ? KMin : KMax;
 
@@ -62,6 +72,9 @@ internal sealed partial class DailySpec
     public const int MaxCandidatesCap = 30;
     public const int MaxRiskPairsCap = 10;
 
+    /// <summary>max_risk_pairs sin tope (R-Q1b; el mismo literal que la campaña, CampaignSpec.FreeRiskPairs).</summary>
+    public const string FreeRiskPairs = "libre";
+
     public static readonly string[] Gens = ["walk", "deep", "fill"];
     public static readonly string[] WaterBases = ["black", "white", "clear"];
 
@@ -73,8 +86,12 @@ internal sealed partial class DailySpec
     private static readonly string[] BandKeys = ["band", "note", "k", "empties", "capacity", "bot_fail", "max_candidates", "source", "palette"];
     private static readonly string[] BotFailKeys = ["min", "max"];
     private static readonly string[] SourceKeys = ["status", "rules", "fallback", "fallback_note"];
-    private static readonly string[] RuleKeys = ["k", "gen", "e"];
-    private static readonly string[] FallbackKeys = ["gen", "e"];
+    private static readonly string[] RuleKeys = ["k", "gen", "e", "nodes"];
+    private static readonly string[] FallbackKeys = ["gen", "e", "nodes"];
+
+    /// <summary>Nodos de deep admitidos: 1.000-300.000 (el presupuesto de A* del pipeline).</summary>
+    public const int MinDeepNodes = 1000;
+    public const int MaxDeepNodes = 300000;
     private static readonly string[] PaletteKeys = ["status", "debut_until", "max_risk_pairs"];
 
     public required string Path { get; init; }
@@ -344,7 +361,7 @@ internal sealed partial class DailySpec
             throw new DailySpecException(string.Create(CultureInfo.InvariantCulture, $"{at}: \"max_candidates\" debe ser un entero 1-{MaxCandidatesCap} (03 sec. 4.4)"));
         }
 
-        (List<DailySource> rules, DailySource? fallback) = ReadSource(o["source"], at + ": source", kMin, kMax, empties);
+        (List<DailySource> rules, List<DailySource> fallbacks) = ReadSource(o["source"], at + ": source", kMin, kMax, empties);
 
         JsonObject palette = Object(o["palette"], at + ": palette");
         Keys(palette, PaletteKeys, at + ": palette");
@@ -355,16 +372,18 @@ internal sealed partial class DailySpec
             throw new DailySpecException($"{at}: palette: \"debut_until\" debe ser un entero >= 1 (ultimo nivel de debut de los tintes de la banda)");
         }
 
-        int? risk = Int(palette["max_risk_pairs"]);
+        bool riskFree = Text(palette["max_risk_pairs"]) == FreeRiskPairs;
+        int? risk = riskFree ? MaxRiskPairsCap : Int(palette["max_risk_pairs"]);
         if (risk is not { } maxRisk || maxRisk < 0 || maxRisk > MaxRiskPairsCap)
         {
-            throw new DailySpecException(string.Create(CultureInfo.InvariantCulture, $"{at}: palette: \"max_risk_pairs\" debe ser un entero 0-{MaxRiskPairsCap}"));
+            throw new DailySpecException(string.Create(CultureInfo.InvariantCulture,
+                $"{at}: palette: \"max_risk_pairs\" debe ser un entero 0-{MaxRiskPairsCap} o \"{FreeRiskPairs}\""));
         }
 
-        return new DailyBand(band, kMin, kMax, empties, Capacity, min, max, candidates, rules, fallback, debutUntil, maxRisk);
+        return new DailyBand(band, kMin, kMax, empties, Capacity, min, max, candidates, rules, fallbacks, debutUntil, maxRisk, riskFree);
     }
 
-    private static (List<DailySource> Rules, DailySource? Fallback) ReadSource(JsonNode? node, string at, int kMin, int kMax, int empties)
+    private static (List<DailySource> Rules, List<DailySource> Fallbacks) ReadSource(JsonNode? node, string at, int kMin, int kMax, int empties)
     {
         JsonObject o = Object(node, at);
         Keys(o, SourceKeys, at);
@@ -411,20 +430,35 @@ internal sealed partial class DailySpec
         }
 
         rules.Sort((a, b) => a.KMin.CompareTo(b.KMin));
-        DailySource? fallback = null;
+        var fallbacks = new List<DailySource>();
         JsonNode? fb = o["fallback"];
-        if (fb is not null)
+        if (fb is JsonArray list2)
+        {
+            if (list2.Count == 0)
+            {
+                throw new DailySpecException($"{at}: \"fallback\" vacio; null si no hay respaldo");
+            }
+
+            for (int i = 0; i < list2.Count; i++)
+            {
+                string fa = string.Create(CultureInfo.InvariantCulture, $"{at}.fallback[{i}]");
+                JsonObject f = Object(list2[i], fa);
+                Keys(f, FallbackKeys, fa);
+                fallbacks.Add(Gen(f, fa, kMin, kMax, empties));
+            }
+        }
+        else if (fb is not null)
         {
             JsonObject f = Object(fb, at + ".fallback");
             Keys(f, FallbackKeys, at + ".fallback");
-            fallback = Gen(f, at + ".fallback", kMin, kMax, empties);
+            fallbacks.Add(Gen(f, at + ".fallback", kMin, kMax, empties));
         }
         else if (!o.ContainsKey("fallback"))
         {
             throw new DailySpecException($"{at}: falta \"fallback\" (null si no hay)");
         }
 
-        return (rules, fallback);
+        return (rules, fallbacks);
     }
 
     private static DailySource Gen(JsonObject o, string at, int kMin, int kMax, int empties)
@@ -450,7 +484,18 @@ internal sealed partial class DailySpec
             throw new DailySpecException($"{at}: \"e\" solo vale con fill (no con {gen})");
         }
 
-        return new DailySource(kMin, kMax, gen, e);
+        int? nodes = null;
+        if (o.ContainsKey("nodes"))
+        {
+            nodes = Int(o["nodes"]);
+            if (gen != "deep" || nodes is null || nodes < MinDeepNodes || nodes > MaxDeepNodes)
+            {
+                throw new DailySpecException(string.Create(CultureInfo.InvariantCulture,
+                    $"{at}: \"nodes\" solo vale con deep y debe ser un entero {MinDeepNodes}-{MaxDeepNodes}"));
+            }
+        }
+
+        return new DailySource(kMin, kMax, gen, e, nodes);
     }
 
     private static void Keys(JsonObject o, string[] allowed, string where)

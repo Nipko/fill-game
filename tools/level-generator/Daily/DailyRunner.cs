@@ -2,7 +2,7 @@
 //   - semilla: Prng.SeedFrom("amazonfill:v1:daily:b{b}:d{ddd}") (DailyIds); el tablero se reproduce desde su seed (03 §17 #10);
 //   - K: el de k_by_day (día par el menor de la banda, impar el mayor) [P];
 //   - candidatos: hasta max_candidates (30, 03 §4.4) con la fuente de la regla de ese K y, si ninguno entra en la ventana y
-//     la banda tiene "fallback" (B1: fill E=2), otros max_candidates con esa fuente. El candidato n (0, 1, ... contando
+//     la banda tiene respaldos ("fallback", uno o una lista), otros max_candidates con cada uno, en orden. El candidato n (0, 1, ... contando
 //     también los del respaldo) sale de la sub-semilla Prng.SubSeed(semilla, CandidateStream + n), y de ella, como en
 //     Generation/SlotGenerator: la fuente con esa sub-semilla, los tintes con SubSeed(.., 2) y el orden visual con
 //     SubSeed(.., 3). CandidateStream es el mismo valor que el de SlotGenerator ("GEN\0");
@@ -153,9 +153,9 @@ internal static class DailyRunner
             var built = new List<Built>();
             Built? chosen = null;
             var stages = new List<(DailySource Source, bool Fallback)> { (band.SourceFor(k), false) };
-            if (band.Fallback is not null)
+            foreach (DailySource fallback in band.Fallbacks)
             {
-                stages.Add((band.Fallback, true));
+                stages.Add((fallback, true));
             }
 
             int attempt = 0;
@@ -165,7 +165,7 @@ internal static class DailyRunner
                 for (int n = 0; n < band.MaxCandidates && chosen is null; n++, attempt++)
                 {
                     tried++;
-                    Built? c = Build(band, k, source.Gen, attempt, fallback, Prng.SubSeed(daySeed, CandidateStream + (ulong)attempt), seedText, out string? why);
+                    Built? c = Build(band, k, source, attempt, fallback, Prng.SubSeed(daySeed, CandidateStream + (ulong)attempt), seedText, out string? why);
                     if (c is null)
                     {
                         Count(rejects, why!);
@@ -263,9 +263,10 @@ internal static class DailyRunner
             return c.Par < 2 * k ? "par < 2K" : null;
         }
 
-        private Built? Build(DailyBand band, int k, string gen, int attempt, bool fallback, ulong seed, string seedText, out string? why)
+        private Built? Build(DailyBand band, int k, DailySource source, int attempt, bool fallback, ulong seed, string seedText, out string? why)
         {
             why = null;
+            string gen = source.Gen;
             var caps = new int[k + band.Empties];
             var units = new int[k];
             Array.Fill(caps, Cuia.DefaultCapacity);
@@ -286,7 +287,7 @@ internal static class DailyRunner
 
                     case "deep":
                     {
-                        InverseResult r = _deep.Generate(new InverseSpec(caps, units, band.Empties, -1, -1, PourMode.Run), seed);
+                        InverseResult r = _deep.Generate(new InverseSpec(caps, units, band.Empties, -1, -1, PourMode.Run), seed, source.Nodes ?? InverseDeep.DefaultMaxNodes);
                         baseState = r.State;
                         depth = r.Depth;
                         break;

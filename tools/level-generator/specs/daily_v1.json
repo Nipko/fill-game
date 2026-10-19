@@ -2,7 +2,7 @@
   "spec": "daily_v1",
   "spec_schema": 1,
   "description": "Especificación versionada del pool del Reto del río (daily_challenge; 03 §16; 06 §4.1) que leen tools/level-generator (--self-test daily; --daily desde R3) y tools/level-qa (--daily, R4). Datos copiados, no reglas: bandas, K, vacíos y ventanas del bot de 03 §16 [P]; fuente por banda análoga a 03 §4.4 con rechazo por ventana (máximo 30 candidatos) y sin las relajaciones de 03 §4.4 que cambiarían los vacíos de la banda (nota de diseño docs/dev/reto-del-rio.md §13); capacidades 4 (02 R1; 06 §2.1, regla 4), así que T = K + vacíos ≤ 14; paleta por banda de R-Q1 (tintes estrenados en el tramo y max_pares_riesgo), con los tintes y los pares de riesgo de tints_from (glosario §9; 03 §4.5); agua por mundo del glosario §8 con la rotación de R-Q2. Cada tablero: slot {band, day}, id d{b}_n{nnnn} y seed amazonfill:v1:daily:b{b}:d{ddd} (Daily/DailyIds.cs; esquema schemas/af-level-1.schema.json). Las marcas [P] son propuestas sin decisión del dueño.",
-  "status": "[P] borrador (R2 del encargo docs/dev/traspaso/spark-reto-del-rio.md). Bloqueos: R-Q1b (paleta de B2 con K = 9 y de B3: no caben en el tope de R-Q1, nota §1.1), la fórmula del agua de R-Q2 (nota §13) y R-Q11 (qué pasa si ningún candidato entra en la ventana, nota §1.6). R5 no publica el pool hasta que el dueño responda.",
+  "status": "R-Q1b y R-Q11 decididas por el dueño el 2026-10-19 (opción a de las dos): B2 solo con K = 8 y B3 con max_pares_riesgo libre, como la campaña desde el 201 (03 §4.5); la ventana del bot es compuerta, así que las fuentes [P] de cada banda se eligieron para que los 730 días entren en ella (R5; tools/out/daily_pool_v1_report.md). Siguen [P]: la fórmula del agua de R-Q2 (nota §13), k_by_day y las fuentes.",
   "pack_id": "daily_pool_v1",
   "days": 730,
   "pour_mode": "run",
@@ -36,12 +36,16 @@
       "bot_fail": { "min": 0.40, "max": 0.60 },
       "max_candidates": 30,
       "source": {
-        "status": "[P] nota §13 (análoga a 03 §4.4).",
+        "status": "[P] elegida en R5 para que los 730 días entren en la ventana (R-Q11 (a)): fill E=2 y, en orden, deep, walk y deep con 60.000 nodos (03 §4.2), cada uno con max_candidates. Walk primero dejaba 13 días por debajo de 0,40 (nota §13 proponía walk y fill E=2).",
         "rules": [
-          { "k": [6, 7], "gen": "walk" }
+          { "k": [6, 7], "gen": "fill", "e": 2 }
         ],
-        "fallback": { "gen": "fill", "e": 2 },
-        "fallback_note": "Si en max_candidates candidatos de walk ninguno entra en la ventana, fill E=2 (nota §13)."
+        "fallback": [
+          { "gen": "deep" },
+          { "gen": "walk" },
+          { "gen": "deep", "nodes": 60000 }
+        ],
+        "fallback_note": "Cada respaldo entra solo si en los max_candidates candidatos de las fuentes anteriores ninguno entró en la ventana; en el pool de R5, 23 días usan algún respaldo."
       },
       "palette": {
         "status": "decidida (R-Q1): tintes estrenados en 1-40, tope 0 (cabe: nota §1.1).",
@@ -52,21 +56,20 @@
     {
       "band": 2,
       "note": "Nivel máximo 41-200 (03 §16; 06 §4.1).",
-      "k": [8, 9],
+      "k": [8, 8],
       "empties": 1,
       "capacity": 4,
       "bot_fail": { "min": 0.60, "max": 0.80 },
       "max_candidates": 30,
       "source": {
-        "status": "[P] nota §13 (análoga a 03 §4.4): deep con K >= 9, fill E=1 con K <= 8.",
+        "status": "[P] elegida en R5 (R-Q11 (a)): deep y, de respaldo, fill E=1. Fill E=1 primero dejaba 96 días por encima de 0,80 (nota §13 proponía fill E=1 con K = 8).",
         "rules": [
-          { "k": [8, 8], "gen": "fill", "e": 1 },
-          { "k": [9, 9], "gen": "deep" }
+          { "k": [8, 8], "gen": "deep" }
         ],
-        "fallback": null
+        "fallback": { "gen": "fill", "e": 1 }
       },
       "palette": {
-        "status": "[P] R-Q1b pendiente: tintes estrenados en 1-80 con tope 1; con K = 9 el mínimo es 3 pares, así que no cabe (nota §1.1).",
+        "status": "decidida (R-Q1 y R-Q1b (a)): tintes estrenados en 1-80, tope 1, con K = 8 solo (con K = 9 el mínimo era 3 pares, nota §1.1).",
         "debut_until": 80,
         "max_risk_pairs": 1
       }
@@ -80,16 +83,16 @@
       "bot_fail": { "min": 0.75, "max": 1.00 },
       "max_candidates": 30,
       "source": {
-        "status": "[P] nota §13 (análoga a 03 §4.4).",
+        "status": "[P] nota §13 (análoga a 03 §4.4): deep; en R5 los 730 días entran en la ventana.",
         "rules": [
           { "k": [10, 11], "gen": "deep" }
         ],
         "fallback": null
       },
       "palette": {
-        "status": "[P] R-Q1b pendiente: tintes estrenados en 1-200 con tope 2; con K = 10 el mínimo es 3 pares y con K = 11, 4, así que no cabe (nota §1.1).",
+        "status": "decidida (R-Q1 y R-Q1b (a)): tintes estrenados en 1-200 con max_pares_riesgo libre, como la campaña desde el 201 (03 §4.5).",
         "debut_until": 200,
-        "max_risk_pairs": 2
+        "max_risk_pairs": "libre"
       }
     }
   ]
