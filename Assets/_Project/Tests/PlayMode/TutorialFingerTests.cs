@@ -24,7 +24,8 @@ namespace AF.Tests.PlayMode
     /// <item>otro vertido: se va y no vuelve en ese intento [P]; tampoco tras Volver a la orilla [P];</item>
     /// <item>deshacer con Marea con el dedo a la vista no es otro vertido [P]: se va (<c>undo</c>) y vuelve cuando la lección es
     /// legal otra vez; en el 2, la instrucción de TiTino se va al salir el dedo [P];</item>
-    /// <item>el arco del viaje pasa por encima de las bocas y la flecha de Reducir movimiento no pisa el marco del panel;</item>
+    /// <item>el arco del viaje lleva la mano entera por encima de las bocas (a mitad del viaje no tapa ninguna cuia del medio,
+    /// D-002) y la flecha de Reducir movimiento no pisa el marco del panel;</item>
     /// <item>ningún otro nivel lo muestra: el 3, el 6 y el 12 (D-028, 61 a: la presentación de TiTino hace de guía);</item>
     /// <item>con Reducir movimiento, sin animación: mano fija sobre el origen y flecha al destino;</item>
     /// <item>la sonda <c>AF_STATE tutorial_finger</c> dice si se ve, el origen y el destino.</item>
@@ -338,6 +339,79 @@ namespace AF.Tests.PlayMode
             }
         }
 
+        [UnityTest]
+        public IEnumerator HalfwayThroughTheMove_TheHandDoesNotCoverTheCuiasInBetween([Values(1, 2)] int level)
+        {
+            yield return TutorialSlothTests.Load(level);
+            GameBootstrap boot = GameBootstrap.Current!;
+            if (level == 2)
+            {
+                Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
+                Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured));
+                PlayModeHelpers.StepUntilIdle(boot, 6000);
+            }
+
+            TutorialFinger finger = WaitForFinger(boot, "el " + level);
+            float half = TutorialFinger.AppearMs + TutorialFinger.PressMs + (0.5f * TutorialFinger.MoveMs);
+            for (int guard = 0; guard < 400 && finger.CycleTimeMs < half; guard++)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(finger.CycleTimeMs, Is.InRange(half, half + PlayModeHelpers.FrameMs + 0.5f), "condición del test: a mitad del viaje");
+            Assert.That(finger.HandAlpha, Is.EqualTo(1f).Within(0.001f), "la mano, a la vista");
+
+            // El rectángulo de la mano (inclinada), en las coordenadas del dedo (las del contenedor del tablero, y hacia arriba).
+            var corners = new Vector3[4];
+            finger.Hand.rectTransform.GetWorldCorners(corners);
+            Rect hand = Bounds(finger.Root, corners);
+            CuiaView[] views = boot.View!.Views;
+            int between = 0;
+            for (int i = 0; i < views.Length; i++)
+            {
+                if (i == finger.Source || i == finger.Target)
+                {
+                    continue;
+                }
+
+                CuiaView v = views[i];
+                float u = v.Unit;
+                Vector2 foot = v.FootPosition + v.BodyOffset;
+                float top = foot.y + (v.HeightU * u);
+
+                // El tapón: el borde de fibra de lo alto de la boca; y la cuia entera, de ancho a ancho.
+                var cap = Rect.MinMaxRect(foot.x - (CuiaGeometry.RimHalfWidthU * u), top - (CuiaGeometry.RimU * u),
+                    foot.x + (CuiaGeometry.RimHalfWidthU * u), top);
+                var body = Rect.MinMaxRect(foot.x - (0.5f * CuiaGeometry.WidthU * u), foot.y, foot.x + (0.5f * CuiaGeometry.WidthU * u), top);
+                string at = "el " + level + ", cuia " + i + " (mano " + hand + ", tapón " + cap + ")";
+                Assert.That(hand.Overlaps(cap), Is.False, at + ": la mano no corta el tapón de una cuia que no es de la lección (D-002)");
+                Assert.That(hand.Overlaps(body), Is.False, at + ": ni la cuia");
+                if (body.xMax > hand.xMin && body.xMin < hand.xMax)
+                {
+                    between++;
+                    Assert.That(hand.yMin, Is.GreaterThanOrEqualTo(top + TutorialFinger.ArcHandAirDp - 1f),
+                        at + ": la mano pasa a " + TutorialFinger.ArcHandAirDp + " dp por encima de su boca");
+                }
+            }
+
+            Assert.That(between, Is.GreaterThan(0), "condición del test: a mitad del viaje la mano pasa sobre una cuia del medio");
+        }
+
+        // El rectángulo que cubre las esquinas (del mundo) en las coordenadas locales de space.
+        private static Rect Bounds(RectTransform space, Vector3[] worldCorners)
+        {
+            Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
+            Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
+            for (int c = 0; c < worldCorners.Length; c++)
+            {
+                Vector2 p = space.InverseTransformPoint(worldCorners[c]);
+                min = Vector2.Min(min, p);
+                max = Vector2.Max(max, p);
+            }
+
+            return Rect.MinMaxRect(min.x, min.y, max.x, max.y);
+        }
+
         // Espera (hasta 8 s) a que salga el dedo: nunca con la tropa en la rama ni fuera de PLAYING.
         internal static TutorialFinger WaitForFinger(GameBootstrap boot, string at)
         {
@@ -375,12 +449,27 @@ namespace AF.Tests.PlayMode
             float minScale = 1f;
             float maxY = float.NegativeInfinity;
             bool ripple = false;
+            bool halo = false;
+            float minStroke = float.PositiveInfinity;
+            float maxStroke = 0f;
             for (int t = 0; t < (int)TutorialFinger.CycleMs + 200; t += PlayModeHelpers.FrameMs)
             {
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
                 Vector2 tip = finger.TipPosition;
                 maxY = Mathf.Max(maxY, tip.y);
                 ripple |= finger.Ripple.color.a > 0.5f && finger.RippleOutline.color.a > 0.15f;
+                halo |= finger.RippleHalo.color.a > 0.1f;
+                if (finger.Ripple.color.a > 0f)
+                {
+                    // El trazo del anillo en dp: el del sprite (pintado a FingerRippleStrokeDp) por lo que se escala.
+                    Sprite ring = finger.Ripple.sprite;
+                    float scale = finger.Ripple.rectTransform.sizeDelta.x / (ring.rect.width / ProceduralArt.UiPxPerDp);
+                    float stroke = ProceduralArt.FingerRippleStrokeDp * scale;
+                    minStroke = Mathf.Min(minStroke, stroke);
+                    maxStroke = Mathf.Max(maxStroke, stroke);
+                    Assert.That(finger.RippleHalo.sprite, Is.Not.Null, at + ": el halo, con su anillo");
+                    Assert.That(finger.RippleHalo.rectTransform.sizeDelta, Is.EqualTo(finger.Ripple.rectTransform.sizeDelta), at + ": del tamaño del anillo");
+                }
                 atSource |= Vector2.Distance(tip, finger.SourceTap) < 0.5f && finger.HandAlpha > 0.9f;
                 atTarget |= atSource && Vector2.Distance(tip, finger.TargetTap) < 0.5f && finger.HandAlpha > 0.9f;
                 faded |= atTarget && finger.HandAlpha < 0.05f;
@@ -392,10 +481,19 @@ namespace AF.Tests.PlayMode
             Assert.That(faded, Is.True, at + ": y se funde antes de volver a empezar");
             Assert.That(minScale, Is.LessThan(0.95f), at + ": se hunde al tocar");
             Assert.That(maxY, Is.GreaterThan(finger.RimTopY), at + ": el arco pasa por encima de las bocas (no toca las cuias del medio)");
-            Assert.That(maxY, Is.LessThanOrEqualTo(finger.CeilingY - TutorialFinger.ArcCeilingAirDp + 0.5f), at + ": sin pasar del marco del panel");
+            Assert.That(maxY, Is.GreaterThanOrEqualTo(finger.RimTopY + TutorialFinger.HandDrop + TutorialFinger.ArcHandAirDp - 1f),
+                at + ": lo alto del arco deja la mano entera por encima de las bocas");
             Assert.That(finger.Ripple.sprite, Is.Not.Null, at + ": la onda, un anillo");
             Assert.That(finger.RippleOutline.sprite, Is.Not.Null, at + ": con su contorno de tinta");
             Assert.That(ripple, Is.True, at + ": la onda se ve al tocar (papel 0,9 y tinta 0,35 al nacer)");
+            Assert.That(halo, Is.True, at + ": con su halo cálido debajo (0,25 al nacer)");
+            Color warm = ProceduralArt.FingerRippleHalo;
+            Color tint = finger.RippleHalo.color;
+            Assert.That(new Vector3(tint.r, tint.g, tint.b), Is.EqualTo(new Vector3(warm.r, warm.g, warm.b)), at + ": el halo, #FFE9A8");
+            Assert.That(minStroke, Is.GreaterThanOrEqualTo(0.9f * ProceduralArt.FingerRippleStrokeDp - 0.01f),
+                at + ": el trazo de la onda no adelgaza al empezar (" + minStroke + " dp)");
+            Assert.That(maxStroke, Is.LessThanOrEqualTo(1.1f * ProceduralArt.FingerRippleStrokeDp + 0.01f),
+                at + ": ni engorda al acabar (" + maxStroke + " dp)");
             Assert.That(finger.Shown, Is.True, at + ": sigue en bucle");
         }
 

@@ -27,8 +27,24 @@ namespace AF.Presentation
         /// <summary>Alto del sprite de la punta de la flecha (dp) [P].</summary>
         public const float FingerArrowHeadHeightDp = 20f;
 
-        /// <summary>Diámetro exterior del anillo de la onda del toque, con su contorno (dp) [P].</summary>
+        /// <summary>Diámetro exterior del anillo de la onda del toque al acabar, con su contorno (dp) [P].</summary>
         public const float FingerRippleDp = 42f;
+
+        /// <summary>Diámetro exterior del anillo de la onda del toque al empezar, con su contorno (dp) [P].</summary>
+        public const float FingerRippleStartDp = 20f;
+
+        /// <summary>
+        /// Anillos de la onda pintados, de <see cref="FingerRippleStartDp"/> a <see cref="FingerRippleDp"/> dp a pasos iguales
+        /// (revisión de DC6): cada uno con su trazo de <see cref="FingerRippleStrokeDp"/> dp, para que el trazo no adelgace al
+        /// escalar el sprite (con el más cercano, ±10 % como mucho) [P].
+        /// </summary>
+        public const int FingerRippleSteps = 7;
+
+        /// <summary>Ancho del halo cálido debajo del anillo de la onda (dp) [P].</summary>
+        public const float FingerRippleHaloDp = 6f;
+
+        /// <summary>Margen del lienzo de cada anillo de la onda, por lado, para el halo (dp) [P].</summary>
+        private const float FingerRippleMarginDp = 1f;
 
         /// <summary>Trazo del anillo de papel de la onda (dp) [P].</summary>
         public const float FingerRippleStrokeDp = 3f;
@@ -51,6 +67,9 @@ namespace AF.Presentation
         /// <summary>Pliegues de los dedos doblados y uña (#D9C8AC) [P].</summary>
         public static readonly Color FingerCrease = Palette.Hex(0xD9C8AC);
 
+        /// <summary>Halo cálido de la onda del toque, la luz de juego de D-003 (#FFE9A8) [P].</summary>
+        public static readonly Color FingerRippleHalo = Palette.Hex(0xFFE9A8);
+
         /// <summary>
         /// La yema del índice en el sprite de la mano, normalizada (0-1, desde abajo a la izquierda): el pivote del RectTransform
         /// que la coloca, para que la posición de la mano sea el punto que toca.
@@ -59,8 +78,9 @@ namespace AF.Presentation
 
         private Sprite? _fingerHand;
         private Sprite? _fingerArrowHead;
-        private Sprite? _fingerRipple;
-        private Sprite? _fingerRippleOutline;
+        private readonly Sprite?[] _fingerRipple = new Sprite?[FingerRippleSteps];
+        private readonly Sprite?[] _fingerRippleOutline = new Sprite?[FingerRippleSteps];
+        private readonly Sprite?[] _fingerRippleHalo = new Sprite?[FingerRippleSteps];
 
         /// <summary>
         /// La mano del dedo guía (<see cref="FingerHandWidthDp"/> × <see cref="FingerHandHeightDp"/> dp): el índice estirado hacia
@@ -74,28 +94,67 @@ namespace AF.Presentation
         /// </summary>
         public Sprite FingerArrowHead => _fingerArrowHead != null ? _fingerArrowHead : (_fingerArrowHead = BuildFingerArrowHead());
 
-        /// <summary>
-        /// El anillo de papel de la onda del toque (<see cref="FingerRippleDp"/> dp, trazo de <see cref="FingerRippleStrokeDp"/>
-        /// dp), en blanco para teñirlo (<see cref="Palette.UiPaper"/>); pivote en el centro. Revisión de DC6: un anillo y no un
-        /// disco, para que se lea sobre el açaí y sobre el cuerpo oscuro de la cuia vacía (D-003, luz de juego).
-        /// </summary>
-        public Sprite FingerRipple => _fingerRipple != null ? _fingerRipple
-            : (_fingerRipple = BuildFingerRing("tutorial_finger_ripple", FingerRippleStrokeDp));
-
-        /// <summary>
-        /// El contorno de tinta del anillo de la onda: el mismo anillo, <see cref="FingerRippleOutlineDp"/> dp más ancho por lado,
-        /// en blanco para teñirlo (<see cref="Palette.UiInk"/>), que va debajo del de papel.
-        /// </summary>
-        public Sprite FingerRippleOutline => _fingerRippleOutline != null ? _fingerRippleOutline
-            : (_fingerRippleOutline = BuildFingerRing("tutorial_finger_ripple_outline", FingerRippleStrokeDp + (2f * FingerRippleOutlineDp)));
-
-        private Sprite BuildFingerRing(string name, float strokeDp)
+        /// <summary>Diámetro exterior (con el contorno) del anillo <paramref name="step"/> de la onda (dp).</summary>
+        public static float FingerRippleStepDp(int step)
         {
-            int size = Mathf.CeilToInt(FingerRippleDp * UiPxPerDp);
+            return Mathf.Lerp(FingerRippleStartDp, FingerRippleDp, step / (float)(FingerRippleSteps - 1));
+        }
+
+        /// <summary>Lado del lienzo del anillo <paramref name="step"/> de la onda, con el halo y su margen (dp).</summary>
+        public static float FingerRippleCanvasDp(int step)
+        {
+            return Mathf.Round((FingerRippleStepDp(step) + (2f * FingerRippleMarginDp)) * UiPxPerDp) / UiPxPerDp; // px enteros
+        }
+
+        /// <summary>El anillo de la onda pintado más cercano a <paramref name="diameter"/> dp.</summary>
+        public static int FingerRippleNearestStep(float diameter)
+        {
+            float k = (diameter - FingerRippleStartDp) / (FingerRippleDp - FingerRippleStartDp) * (FingerRippleSteps - 1);
+            return Mathf.Clamp(Mathf.RoundToInt(k), 0, FingerRippleSteps - 1);
+        }
+
+        /// <summary>
+        /// El anillo de papel <paramref name="step"/> de la onda del toque (<see cref="FingerRippleStepDp"/> dp, trazo de
+        /// <see cref="FingerRippleStrokeDp"/> dp), en blanco para teñirlo (<see cref="Palette.UiPaper"/>); pivote en el centro y
+        /// lienzo de <see cref="FingerRippleCanvasDp"/> dp. Un anillo y no un disco, para que se lea sobre el açaí y sobre el
+        /// cuerpo oscuro de la cuia vacía (D-003, luz de juego).
+        /// </summary>
+        public Sprite FingerRippleAt(int step)
+        {
+            Sprite? sprite = _fingerRipple[step];
+            return sprite != null ? sprite
+                : (_fingerRipple[step] = BuildFingerRing("tutorial_finger_ripple_" + step, step, FingerRippleStrokeDp));
+        }
+
+        /// <summary>
+        /// El contorno de tinta del anillo <paramref name="step"/>: el mismo anillo, <see cref="FingerRippleOutlineDp"/> dp más
+        /// ancho por lado, en blanco para teñirlo (<see cref="Palette.UiInk"/>), que va debajo del de papel.
+        /// </summary>
+        public Sprite FingerRippleOutlineAt(int step)
+        {
+            Sprite? sprite = _fingerRippleOutline[step];
+            return sprite != null ? sprite : (_fingerRippleOutline[step] = BuildFingerRing("tutorial_finger_ripple_outline_" + step, step,
+                FingerRippleStrokeDp + (2f * FingerRippleOutlineDp)));
+        }
+
+        /// <summary>
+        /// El halo cálido del anillo <paramref name="step"/>: el mismo anillo, de <see cref="FingerRippleHaloDp"/> dp, en blanco
+        /// para teñirlo (<see cref="FingerRippleHalo"/>), que va debajo del contorno.
+        /// </summary>
+        public Sprite FingerRippleHaloAt(int step)
+        {
+            Sprite? sprite = _fingerRippleHalo[step];
+            return sprite != null ? sprite
+                : (_fingerRippleHalo[step] = BuildFingerRing("tutorial_finger_ripple_halo_" + step, step, FingerRippleHaloDp));
+        }
+
+        private Sprite BuildFingerRing(string name, int step, float strokeDp)
+        {
+            int size = Mathf.RoundToInt(FingerRippleCanvasDp(step) * UiPxPerDp);
             var pc = new PixelCanvas(size, size);
             float c = size * 0.5f;
             float outer = FingerRippleStrokeDp + (2f * FingerRippleOutlineDp);
-            float radius = ((FingerRippleDp - outer) * 0.5f) * UiPxPerDp;
+            float radius = ((FingerRippleStepDp(step) - outer) * 0.5f) * UiPxPerDp;
             pc.StrokeArc(c, c, radius, strokeDp * UiPxPerDp, 0f, 360f, Color.white);
             return MakeSprite(pc, name, new Vector2(0.5f, 0.5f), Vector4.zero, UiPxPerDp);
         }
