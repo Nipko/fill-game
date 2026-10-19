@@ -10,8 +10,9 @@ namespace AF.UI
     /// tarjeta «¡Miquito a la vista!» queda a la vista (<see cref="GameScreen.SightingShown"/>), la especie se apunta en
     /// <c>fauna.sighted</c> del perfil (esquema 2), con su primer nivel, y se escribe la sonda <c>af_fauna_sighted</c>
     /// {species_id, level, first} (DevProbe.Fauna.cs). La segunda vez de la misma especie, <c>first</c> = false, la lista no
-    /// crece y no se guarda nada. La primera vez, el perfil se guarda por el lote del juego (en segundo plano con el perfil en
-    /// disco, D-012; nada nuevo en el vertido); con el perfil en solo lectura (08 §4.4) queda en memoria para esta sesión. Lo
+    /// crece y no se guarda nada. La primera vez, el perfil se guarda en un lote propio (<see cref="Saves"/>): su cierre lo
+    /// entrega al escritor de segundo plano con el perfil en disco (D-012; nada nuevo en el vertido ni en el hilo principal,
+    /// salvo serializar); con el perfil en solo lectura (08 §4.4) queda en memoria para esta sesión. Lo
     /// necesitan el Cuaderno de campo (1.1) y el puente en el Mapa del río.
     /// </summary>
     public sealed partial class GameBootstrap
@@ -35,7 +36,12 @@ namespace AF.UI
             ProfileSaveBatch? batch = _saveBatch;
             if (first && batch != null && !ProfileLocked)
             {
-                batch.TrySave(profile);
+                // Dentro de un lote: fuera de él, ProfileSaveBatch.Save escribiría en síncrono (fsync y Replace) en el hilo
+                // principal, en plena partida (la tarjeta sale al irse la tropa). El cierre lo entrega al escritor (HandOff).
+                using (Saves())
+                {
+                    batch.TrySave(profile);
+                }
             }
 
             FaunaSightedCount++;

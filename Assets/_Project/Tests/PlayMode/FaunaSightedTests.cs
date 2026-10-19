@@ -1,5 +1,7 @@
 #nullable enable
+using System;
 using System.Collections;
+using System.IO;
 using AF.Core.Rules;
 using AF.Core.Session;
 using AF.GameFlow;
@@ -19,10 +21,17 @@ namespace AF.Tests.PlayMode
     /// <c>af_fauna_sighted</c> una vez, con <c>first</c> = true, cuando la tarjeta queda a la vista (no antes, mientras espera a
     /// que se vaya la tropa); el perfil se guarda una vez por el lote. Si la especie ya estaba, la sonda sale con <c>first</c> =
     /// false, la lista no crece y no se guarda nada. Si se gana antes de que se vaya la tropa, la tarjeta no sale y no hay
-    /// avistamiento ni sonda. Y el texto de la sonda: <c>{species_id, level, first}</c>, solo identificadores.
+    /// avistamiento ni sonda. Con el perfil en disco (<see cref="LocalProfileStore"/>), el guardado del avistamiento va en
+    /// segundo plano (D-012): el cierre de su lote lo entrega al escritor, sin escritura síncrona en el hilo principal. Y el
+    /// texto de la sonda: <c>{species_id, level, first}</c>, solo identificadores.
     /// </summary>
     public sealed class FaunaSightedTests
     {
+        // Tope de espera al escritor de segundo plano en el test con el perfil en disco.
+        private const int WaitMs = 10000;
+
+        private string? _dir;
+
         [SetUp]
         public void SetUp()
         {
@@ -33,7 +42,16 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             GameScreen.SimulatedScreen = null;
+            GameBootstrap? boot = GameBootstrap.Current;
+            ProfileSaveBatch? batch = boot != null ? boot.SaveBatch : null;
+            batch?.FlushSync(WaitMs);
             LaunchOptions.Reset();
+            if (_dir != null && Directory.Exists(_dir))
+            {
+                Directory.Delete(_dir, true);
+            }
+
+            _dir = null;
         }
 
         [UnityTest]
@@ -69,6 +87,38 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Sighting.Visible, Is.True);
             Assert.That(boot.FaunaSightedCount, Is.EqualTo(1));
             Assert.That(store.SaveCount, Is.EqualTo(saves + 1));
+        }
+
+        [UnityTest]
+        public IEnumerator Level5_WithTheProfileOnDisk_TheSightingIsSavedInTheBackground()
+        {
+            // Revisión de DC15: el guardado del avistamiento nuevo sigue los presupuestos de D-012 (escritor en segundo plano).
+            // Fuera de un lote, ProfileSaveBatch escribiría en síncrono en el hilo principal (LastWriteInBackground = false).
+            _dir = Path.Combine(Application.temporaryCachePath, "af_fauna_" + Guid.NewGuid().ToString("N"));
+            var local = new LocalProfileStore(_dir);
+            local.Save(FunnelSetup.Profile(0));
+            yield return LoadLevel5FromTheStart(local);
+            GameBootstrap boot = GameBootstrap.Current!;
+            ProfileSaveBatch batch = boot.SaveBatch!;
+            Assert.That(batch.Writer, Is.Not.Null, "con el perfil en disco, el escritor de segundo plano está en marcha");
+            string id = SpeciesOf5(boot);
+
+            PlayModeHelpers.TickExact(boot, boot.Flow!.IntroDurationMs);
+            Assert.That(boot.View!.SightingPending, Is.True, "la tarjeta espera a que se vaya la tropa");
+            Assert.That(batch.Writer!.WaitIdle(WaitMs), Is.True);
+            int writes = batch.WriteCount;
+
+            StepUntilTheCardShows(boot);
+
+            Assert.That(boot.LastFaunaSightedFirst, Is.True);
+            Assert.That(batch.WriteCount, Is.EqualTo(writes + 1), "el avistamiento nuevo, en una escritura");
+            Assert.That(batch.LastWriteInBackground, Is.True, "entregado al escritor: nada síncrono en el hilo principal");
+            Assert.That(batch.FlushSync(WaitMs), Is.True);
+            ProfileLoadResult loaded = new LocalProfileStore(_dir).Load();
+            Assert.That(loaded.HasProfile, Is.True, "perfil en disco: " + loaded.Status);
+            Assert.That(loaded.Profile!.Fauna.Sighted.Count, Is.EqualTo(1));
+            Assert.That(loaded.Profile.Fauna.Sighted[0].SpeciesId, Is.EqualTo(id));
+            Assert.That(loaded.Profile.Fauna.Sighted[0].Level, Is.EqualTo(5));
         }
 
         [UnityTest]
@@ -131,7 +181,7 @@ namespace AF.Tests.PlayMode
             StringAssert.Contains(",\"level\":9,\"first\":false}", again);
         }
 
-        private static IEnumerator LoadLevel5FromTheStart(MemoryProfileStore store)
+        private static IEnumerator LoadLevel5FromTheStart(IProfileStore store)
         {
             GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f);
             LaunchOptions.ProfileStoreOverride = store;
