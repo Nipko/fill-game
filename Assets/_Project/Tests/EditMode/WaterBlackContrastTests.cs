@@ -30,6 +30,12 @@ namespace AF.Tests.EditMode
             return Mathf.Sqrt((lab.y * lab.y) + (lab.z * lab.z));
         }
 
+        private static float Hue(Color c)
+        {
+            Vector3 lab = ColorMath.ToLab(c);
+            return Mathf.Atan2(lab.z, lab.y) * Mathf.Rad2Deg;
+        }
+
         [Test]
         public void KeepsTwentyNineLStar_FromTint14_Opaque()
         {
@@ -50,13 +56,13 @@ namespace AF.Tests.EditMode
         [Test]
         public void ReadsAsAmberTea_NotAlmostBlack()
         {
-            // Más croma que #4A2C14 en la cavidad (≥ 1,4 veces y C* ≥ 22) y tono ámbar: h entre 45° y 70° (naranja-pardo).
+            // Más croma que #4A2C14 en la cavidad (≥ 1,4 veces y C* ≥ 22) y tono ámbar, opaca y en la cavidad: h entre 50° y 70°
+            // (naranja-pardo, hacia el tinte 14; por debajo de 50° se lee caoba rojiza, de la familia de la cereza).
             Color now = OnCavity(Palette.WaterBlack);
             Assert.That(Chroma(now), Is.GreaterThanOrEqualTo(22f));
             Assert.That(Chroma(now), Is.GreaterThanOrEqualTo(1.4f * Chroma(OnCavity(Previous))));
-            Vector3 lab = ColorMath.ToLab(Palette.WaterBlack);
-            float hue = Mathf.Atan2(lab.z, lab.y) * Mathf.Rad2Deg;
-            Assert.That(hue, Is.InRange(45f, 70f));
+            Assert.That(Hue(Palette.WaterBlack), Is.InRange(50f, 70f), "opaca");
+            Assert.That(Hue(now), Is.InRange(50f, 70f), "en la cavidad");
             Assert.That(ColorMath.DeltaE00(now, Palette.Panel.Cavity), Is.GreaterThanOrEqualTo(15f), "se ve en la cavidad vacía");
         }
 
