@@ -18,7 +18,10 @@ namespace AF.Tests.PlayMode
     /// pintaba fuera de la vista; hasta la canoa solo se veía el vidrio. Aquí, desde la pausa del 41 (max 40, visto 30) y en el
     /// Mapa del fin de contenido del 300, al abrir, en cada fotograma del viaje y al acabar: cada cinta del frente y su orla llevan
     /// el espacio y el ancho de la vista, su malla no está vacía y el final del agua (donde está la canoa) cae dentro de la zona
-    /// visible; también en la Cuenca y otra vez en el Mundo. Las capturas son las de <see cref="Fx10SnapshotTests"/> y
+    /// visible; también en la Cuenca y otra vez en el Mundo. Revisión: cada cinta del frente y su orla van sobre el vidrio de su
+    /// línea (su espacio, su ancho y sus secciones a menos de medio ancho del eje del vidrio); con el tope del frente repartido
+    /// entre las 5 piezas del tramo del 300, en Mundo saltaban puntos y se veían dos cauces. Las capturas son las de
+    /// <see cref="Fx10SnapshotTests"/> y
     /// <c>MapProgressSnapshotTests</c>.
     /// </summary>
     public sealed class Fx11Tests
@@ -118,6 +121,7 @@ namespace AF.Tests.PlayMode
                     if (drawn)
                     {
                         Assert.That(ribbon.LastVertexCount, Is.GreaterThan(0), what + ": malla no vacía");
+                        AssertOnTheGlass(map, ribbon, what);
                     }
                 }
             }
@@ -138,6 +142,71 @@ namespace AF.Tests.PlayMode
             Assert.That(end.x >= -1f && end.y >= -1f && end.x <= view.x + 1f && end.y <= view.y + 1f, Is.True,
                 at + ": el final del agua (" + last.name + ", s " + last.FillStart + "-" + last.FillEnd + ": " + a + " y " + b + ") en " + end
                 + ", dentro de la zona visible " + view + " (canoa en " + canoe + ")");
+        }
+
+        // Revisión de FX11: el agua y su orla van sobre el vidrio de su línea, con su espacio y su ancho, y siguen su trazo: cada
+        // sección cae cerca del eje del vidrio y cada punto de la línea dentro del intervalo queda a la misma distancia (más medio
+        // ancho como mucho) de la cinta que del vidrio. El fin de contenido del 300 en Mundo, con el tope del frente repartido
+        // entre las 5 piezas del tramo, saltaba puntos: las secciones seguían en la línea, pero las cuerdas entre ellas se
+        // apartaban del vidrio de 5 a 10 dp (dos cauces a la vista).
+        private static void AssertOnTheGlass(RiverMapScreen map, RiverRibbonGraphic ribbon, string what)
+        {
+            RiverRibbonGraphic glass = map.Glass(ribbon.Line!.Index);
+            Assert.That(glass.gameObject.activeSelf && glass.Line == ribbon.Line, Is.True, what + ": su vidrio");
+            Assert.That(glass.Space, Is.EqualTo(ribbon.Space), what + ": el espacio del vidrio");
+            Assert.That(ribbon.WidthDp, Is.EqualTo(glass.WidthDp).Within(1e-4f), what + ": el ancho del vidrio");
+            Assert.That(glass.LastSectionPointCount, Is.GreaterThan(1), what + ": el vidrio dibujado");
+            Assert.That(ribbon.LastSectionPointCount, Is.GreaterThan(1), what + ": la cinta dibujada");
+            float dp = ribbon.Space.DpPerUnit;
+
+            // Las secciones de la cinta, sobre el vidrio (los extremos y los cambios de agua caen en la línea, no en una cuerda
+            // del vidrio suavizado: hasta un ancho).
+            float sections = 0f;
+            for (int i = 0; i < ribbon.LastSectionPointCount; i++)
+            {
+                sections = Mathf.Max(sections, DistanceToSections(glass, ribbon.LastSectionPoint(i)) * dp);
+            }
+
+            Assert.That(sections, Is.LessThanOrEqualTo(glass.WidthDp),
+                what + ": sus secciones, a " + sections + " dp del eje del vidrio como mucho (ancho " + glass.WidthDp + " dp)");
+
+            // Los puntos de la línea dentro del intervalo: la cinta no se aparta de ellos más que el vidrio (que también suaviza).
+            PolylineCursor cursor = ribbon.Cursor!;
+            float a0 = ribbon.FillStart * cursor.Length;
+            float a1 = ribbon.FillEnd * cursor.Length;
+            float apart = 0f;
+            int checkedPoints = 0;
+            for (int v = 0; v < cursor.PointCount; v++)
+            {
+                float arc = cursor.ArcOfPoint(v);
+                if (arc <= a0 || arc >= a1)
+                {
+                    continue;
+                }
+
+                Vector2 p = cursor.Point(v);
+                apart = Mathf.Max(apart, (DistanceToSections(ribbon, p) - DistanceToSections(glass, p)) * dp);
+                checkedPoints++;
+            }
+
+            Assert.That(apart, Is.LessThanOrEqualTo(glass.WidthDp * 0.5f),
+                what + ": se aparta del vidrio " + apart + " dp como mucho en " + checkedPoints + " puntos de la línea (ancho " + glass.WidthDp + " dp)");
+        }
+
+        // Distancia (unidades del Mapa) de «p» a la polilínea de las secciones de la última malla de la cinta.
+        private static float DistanceToSections(RiverRibbonGraphic ribbon, Vector2 p)
+        {
+            float best = float.MaxValue;
+            int n = ribbon.LastSectionPointCount;
+            for (int k = 0; k + 1 < n; k++)
+            {
+                Vector2 a = ribbon.LastSectionPoint(k);
+                Vector2 ab = ribbon.LastSectionPoint(k + 1) - a;
+                float t = ab.sqrMagnitude > 0f ? Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude) : 0f;
+                best = Mathf.Min(best, (a + (ab * t) - p).magnitude);
+            }
+
+            return best;
         }
 
         // El punto en s de la cinta, en dp dentro de la zona visible (y hacia abajo), con el espacio de la propia cinta.

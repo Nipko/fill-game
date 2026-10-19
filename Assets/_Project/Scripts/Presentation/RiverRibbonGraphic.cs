@@ -49,7 +49,7 @@ namespace AF.Presentation
     /// triángulos y color por vértice sobre el material de UI por defecto, como <see cref="WaterStripGraphic"/> y
     /// <see cref="BezierStripGraphic"/>, sin shader propio. Dibuja el intervalo [s0, s1] de una línea (<see cref="SetFill"/>), de
     /// modo que sirve para las tres instancias de la pantalla: el vidrio (toda la cuenca, una vez), el lleno (al abrir y tras una
-    /// llegada) y el frente (solo el tramo que se anima, con <see cref="FrontMaxVertices"/> como tope).
+    /// llegada) y el frente (solo el tramo que se anima; sin saltar puntos desde la revisión de FX11, para seguir el vidrio).
     /// <list type="bullet">
     /// <item><description>Ancho por la clase de la línea: <see cref="WidthClass1Dp"/>, <see cref="WidthClass2Dp"/> y
     /// <see cref="WidthClass3Dp"/> [P]; uniones en inglete limitadas a <see cref="MiterLimit"/> veces el medio ancho, para que un
@@ -92,7 +92,11 @@ namespace AF.Presentation
         /// <summary>Ancho de los ríos locales (clase 3), en dp [P].</summary>
         public const float WidthClass3Dp = 2f;
 
-        /// <summary>Tope de vértices del frente, el tramo que se anima (propuesta del Mapa §11.4).</summary>
+        /// <summary>
+        /// Tope de vértices del frente, el tramo que se anima (propuesta del Mapa §11.4). Desde la revisión de FX11 el Mapa ya no
+        /// lo aplica a sus cintas del frente (llevan <see cref="MaxVertices"/>, como el vidrio y el lleno, para no saltar puntos y
+        /// seguir el vidrio); queda como tope de referencia de las pruebas de la cinta.
+        /// </summary>
         public const int FrontMaxVertices = 400;
 
         /// <summary>Tope de vértices de una malla de uGUI.</summary>
@@ -423,7 +427,7 @@ namespace AF.Presentation
             return _planPoint[i];
         }
 
-        /// <summary>Tope de vértices (al menos 8; el frente usa <see cref="FrontMaxVertices"/>).</summary>
+        /// <summary>Tope de vértices (al menos 8; por defecto, <see cref="MaxVertices"/>).</summary>
         public void SetVertexBudget(int maxVertices)
         {
             maxVertices = Mathf.Clamp(maxVertices, 8, MaxVertices);
