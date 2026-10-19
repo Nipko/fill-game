@@ -99,7 +99,7 @@ namespace AF.LiveOps
         /// <summary>Pendientes confirmadas y pagadas.</summary>
         public int Confirmed { get; }
 
-        /// <summary>Pendientes anuladas (fecha posterior a la del servidor).</summary>
+        /// <summary>Pendientes anuladas (a más de <see cref="DailyChallengeRules.PendingWindowDays"/> día de la fecha del servidor; R-Q12b).</summary>
         public int Voided { get; }
 
         /// <summary>Cobros sin red que se dan por buenos.</summary>
@@ -136,6 +136,12 @@ namespace AF.LiveOps
     {
         /// <summary>Días seguidos ganados que dan la Pororoca (06 §4.1; R-Q7: cada racha completa).</summary>
         public const int StreakLength = 7;
+
+        /// <summary>
+        /// R-Q12b (a): un pendiente solo se valida si su fecha está a este número de días o menos de la fecha del servidor, hacia
+        /// atrás o hacia delante; los demás se anulan.
+        /// </summary>
+        public const int PendingWindowDays = 1;
 
         /// <summary>Único valor de <c>live_daily_streak7_reward</c> que se sabe pagar: 1 Pororoca al stock (04 §2.4; 08 §9).</summary>
         public const string ShuffleReward = "shuffle";
@@ -245,11 +251,15 @@ namespace AF.LiveOps
         /// <c>sec_clock_max_drift_h</c>; si no, no cambia nada (<see cref="DailyReconcileResult.Ran"/> = false). La fecha del
         /// servidor es la local de <c>UtcNow + desfase + LocalOffset</c>.
         /// <list type="bullet">
-        /// <item>Pendientes con fecha ≤ la del servidor: se pagan (60 y, si cerraban racha, la Pororoca).</item>
-        /// <item>Pendientes posteriores: se anulan, sin semillas; se quita su sello y la racha se rompe (R-Q7: un día sin ganar la rompe).</item>
-        /// <item>Cobros sin red: según <see cref="ReconcileMode"/> (R-Q12).</item>
+        /// <item>R-Q12b (a): pendientes con |fecha − fecha del servidor| ≤ <see cref="PendingWindowDays"/> día: se validan y se pagan
+        /// (60 y, si cerraban racha, la Pororoca).</item>
+        /// <item>Los demás pendientes (más viejos o más adelantados): se anulan, sin semillas; se quita su sello y la racha se
+        /// rompe en ese día (R-Q7: un día sin ganar la rompe).</item>
+        /// <item>Cobros sin red: según <see cref="ReconcileMode"/> (R-Q12; el dueño eligió (a), no se retira nada).</item>
         /// </list>
-        /// <c>LastClaimedDate</c> nunca retrocede. Se registra y se guarda antes de pagar.
+        /// Con alguna fecha anulada, la racha (la del registro y la de cada pendiente que se paga, para la Pororoca) se corta en la
+        /// última fecha anulada anterior: solo cuentan los días seguidos después de ella. R-Q12 (aclaración a): nada de lo ya pagado
+        /// (semillas, Pororoca) se retira. <c>LastClaimedDate</c> nunca retrocede. Se registra y se guarda antes de pagar.
         /// </summary>
         public DailyReconcileResult Reconcile()
         {
@@ -258,7 +268,8 @@ namespace AF.LiveOps
                 return default;
             }
 
-            string serverToday = ClockExtensions.FormatDateKey((_clock.UtcNow + offset + _clock.LocalOffset).Date);
+            DateTime serverDate = (_clock.UtcNow + offset + _clock.LocalOffset).Date;
+            string serverToday = ClockExtensions.FormatDateKey(serverDate);
             DailyChallengeRecord record = _store.Load();
             if (record.PendingClaims.Count == 0 && record.OfflineClaims.Count == 0)
             {
@@ -266,20 +277,23 @@ namespace AF.LiveOps
                 return new DailyReconcileResult(true, 0, 0, 0, 0, 0, 0, null);
             }
 
+            int count = record.PendingClaims.Count + record.OfflineClaims.Count;
             var toPay = new DailyClaimEntry[record.PendingClaims.Count];
+            var voidedDates = new DateTime[count];
             int confirmed = 0;
             int voided = 0;
             for (int i = 0; i < record.PendingClaims.Count; i++)
             {
                 DailyClaimEntry entry = record.PendingClaims[i];
-                if (string.CompareOrdinal(entry.DateKey, serverToday) <= 0)
+                DateTime date = ParseDateKey(entry.DateKey, nameof(entry.DateKey));
+                if (Math.Abs((date - serverDate).Days) <= PendingWindowDays)
                 {
                     toPay[confirmed++] = entry;
                 }
                 else
                 {
                     Unstamp(record, entry.DateKey);
-                    voided++;
+                    voidedDates[voided++] = date;
                 }
             }
 
@@ -292,7 +306,7 @@ namespace AF.LiveOps
                     && string.CompareOrdinal(entry.DateKey, serverToday) > 0)
                 {
                     Unstamp(record, entry.DateKey);
-                    offlineVoided++;
+                    voidedDates[voided + offlineVoided++] = ParseDateKey(entry.DateKey, nameof(entry.DateKey));
                 }
                 else
                 {
@@ -300,10 +314,18 @@ namespace AF.LiveOps
                 }
             }
 
-            if (voided + offlineVoided > 0)
+            int allVoided = voided + offlineVoided;
+            if (allVoided > 0 && record.LastClaimedDate != null)
             {
-                // Los anulados son siempre los últimos cobros (fechas > la del servidor): la racha queda rota [P].
-                record.StreakDays = 0;
+                record.StreakDays = StreakAfterVoids(
+                    ParseDateKey(record.LastClaimedDate, nameof(record.LastClaimedDate)), record.StreakDays, voidedDates, allVoided);
+            }
+
+            for (int i = 0; i < confirmed && allVoided > 0; i++)
+            {
+                DailyClaimEntry entry = toPay[i];
+                int streak = StreakAfterVoids(ParseDateKey(entry.DateKey, nameof(entry.DateKey)), entry.StreakDays, voidedDates, allVoided);
+                toPay[i] = new DailyClaimEntry(entry.DateKey, streak);
             }
 
             record.PendingClaims.Clear();
@@ -380,6 +402,25 @@ namespace AF.LiveOps
             {
                 record.OfflineClaims.RemoveRange(0, drop);
             }
+        }
+
+        // La racha de streak días seguidos que acaba en date, cortada en la última fecha anulada que cae dentro de ella (ese día
+        // ya no cuenta como ganado): quedan los días entre esa fecha y date; 0 si se anuló date.
+        private static int StreakAfterVoids(DateTime date, int streak, DateTime[] voidedDates, int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                if (voidedDates[i] <= date)
+                {
+                    int after = (date - voidedDates[i]).Days;
+                    if (after < streak)
+                    {
+                        streak = after;
+                    }
+                }
+            }
+
+            return streak;
         }
 
         private static void Stamp(DailyChallengeRecord record, DateTime date)

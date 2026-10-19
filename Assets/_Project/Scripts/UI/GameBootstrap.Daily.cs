@@ -51,6 +51,12 @@ namespace AF.UI
         private float _dailyCardW;
         private float _dailyCardH;
 
+        /// <summary>
+        /// Último día del Reto cerrado sin victoria (<see cref="DailyChallengeService.DayEnded"/>: el <c>fail</c> del día, una vez y
+        /// solo si no se ganó; R-Q15 a), o null. Lo escribirá la sonda <c>af_daily_challenge</c> de R10 (<c>DailyProbeFormat</c>).
+        /// </summary>
+        public DailyPlayEnd? LastDailyDayEnd { get; private set; }
+
         /// <summary>Pool del Reto para los tests (gana a <see cref="dailyPool"/>); <see cref="ResetDailyOverrides"/> lo limpia.</summary>
         internal static DailyPool? DailyPoolOverride { get; set; }
 
@@ -143,6 +149,7 @@ namespace AF.UI
             Wallet dailyWallet = LevelFlow.CreateDailyWallet(profile, batch.Durable, clock);
             var rules = new DailyChallengeRules(store, dailyWallet, clock, server, config);
             var service = new DailyChallengeService(store, rules, clock, config, pool);
+            service.DayEnded += OnDailyDayEnded; // antes del primer DiscardStale: el fail del día que se cierra al abrir (R-Q15 a)
             service.DiscardStale();
             rules.Reconcile();
 
@@ -233,6 +240,11 @@ namespace AF.UI
             }
 
             return OpenDaily(card.State);
+        }
+
+        private void OnDailyDayEnded(DailyPlayEnd end)
+        {
+            LastDailyDayEnd = end; // R10: AF_STATE daily_challenge con DailyProbeFormat
         }
 
         private void OnDailyCardTap(DailyCardState state)
