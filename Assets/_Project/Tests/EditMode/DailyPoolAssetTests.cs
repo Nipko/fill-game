@@ -10,7 +10,7 @@ namespace AF.Tests.EditMode
     /// El pool publicado del Reto del río (tarea R5 de <c>docs/dev/traspaso/spark-reto-del-rio.md</c>):
     /// <c>Assets/_Project/Data/Daily/daily_pool_v1.json</c>, generado por <c>tools/level-generator --daily</c> y validado por
     /// <c>tools/level-qa --daily</c>, se lee con <see cref="DailyPoolReader"/> en el modo estricto del juego
-    /// (<see cref="DailyPoolCoverage.AllBands"/>, que ya comprueba la semilla de cada slot): 3 bandas × 730 días (03 §16), con el
+    /// (<see cref="DailyPoolCoverage.AllBands"/>, que ya comprueba la semilla de cada slot): 3 bandas × 729 días (03 §16; R-Q2b), con el
     /// slot y el id de cada día, sin alivio, y el K y los vacíos de su banda (03 §16 con R-Q1b (a): B1 6-7 con 2 vacíos, B2 solo 8
     /// y B3 10-11 con 1).
     /// </summary>
@@ -22,11 +22,12 @@ namespace AF.Tests.EditMode
             File.ReadAllText(Path.Combine(Application.dataPath, "_Project", "Data", "Daily", "daily_pool_v1.json")));
 
         [Test]
-        public void PublishedPool_ReadsStrict_ThreeBandsOf730Days()
+        public void PublishedPool_ReadsStrict_ThreeBandsOf729Days()
         {
             DailyPool pool = Pool;
             Assert.That(pool.PackId, Is.EqualTo("daily_pool_v1"));
             Assert.That(pool.BandCount, Is.EqualTo(3));
+            Assert.That(DailyPool.Days, Is.EqualTo(729), "R-Q2b: 81 × 9 días");
             Assert.That(pool.Count, Is.EqualTo(3 * DailyPool.Days));
             for (int band = DailyPool.MinBand; band <= DailyPool.MaxBand; band++)
             {
@@ -39,6 +40,7 @@ namespace AF.Tests.EditMode
                     Assert.That(board.Relief.Count, Is.EqualTo(0), "03 §16: sin alivio");
                     Assert.That(pool.BandOf(board), Is.EqualTo(band));
                     Assert.That(pool.DayOf(board), Is.EqualTo(day));
+                    Assert.That(board.World, Is.EqualTo(1 + (day % 9)), "R-Q2b: mundo 1 + (día mod 9)");
                 }
             }
         }

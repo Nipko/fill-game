@@ -12,13 +12,13 @@ namespace AF.Levels
     public enum DailyPoolCoverage
     {
         /// <summary>
-        /// Por defecto y el único modo del juego: las 3 bandas, cada una con sus 730 días (2.190 tableros; 03 §16). Un pool real
+        /// Por defecto y el único modo del juego: las 3 bandas, cada una con sus 729 días (2.187 tableros; 03 §16 y R-Q2b). Un pool real
         /// al que le falte una banda dejaría sin Reto a los jugadores de esa banda, así que se rechaza.
         /// </summary>
         AllBands = 0,
 
         /// <summary>
-        /// Solo para tests y herramientas: al menos una banda, y cada banda presente con sus 730 días. El formato de cada
+        /// Solo para tests y herramientas: al menos una banda, y cada banda presente con sus 729 días. El formato de cada
         /// tablero se valida igual que en <see cref="AllBands"/>; lo único que cambia es que una banda puede faltar entera.
         /// </summary>
         PresentBands = 1,
@@ -34,11 +34,11 @@ namespace AF.Levels
     /// <list type="bullet">
     /// <item>cabecera: <c>kind</c> distinto de <c>daily</c>; <c>pack_schema</c> ausente o fuera de
     /// <see cref="LevelPackReader.MinPackSchema"/>-<see cref="LevelPackReader.SupportedPackSchema"/> (08 §4.4);</item>
-    /// <item>cada tablero: sin <c>slot</c> o con <c>level</c>; banda fuera de 1-3 o día fuera de 0-729; <c>id</c> distinto de
+    /// <item>cada tablero: sin <c>slot</c> o con <c>level</c>; banda fuera de 1-3 o día fuera de 0-728; <c>id</c> distinto de
     /// <c>d{b}_n{nnnn}</c> o <c>seed</c> distinta de <c>amazonfill:v1:daily:b{b}:d{ddd}</c> para su slot, con el padding exacto
     /// (la semilla con otro padding da otro hash y no reproduce el tablero; 03 §17 #10); <c>solution</c>, <c>safe_path</c> o
     /// <c>qa</c> (el esquema los excluye en todo nivel); <c>relief</c> ausente o no vacío (03 §16: el Reto no tiene alivio);</item>
-    /// <item>el pool: un slot o un id repetido; una banda incompleta (menos de 730 días) y, en el modo por defecto
+    /// <item>el pool: un slot o un id repetido; una banda incompleta (menos de 729 días) y, en el modo por defecto
     /// (<see cref="DailyPoolCoverage.AllBands"/>), una banda que falta.</item>
     /// </list>
     /// <para><c>difficulty</c> es opcional en <c>daily</c> según el esquema (el pool se publica sin métricas, nota §13): si viene,
@@ -223,7 +223,7 @@ namespace AF.Levels
 
             if (day < 0 || day >= DailyPool.Days)
             {
-                throw new LevelFormatException(where + ": 'slot.day' " + Position(day) + " fuera de 0-729 (03 §16).");
+                throw new LevelFormatException(where + ": 'slot.day' " + Position(day) + " fuera de 0-" + Position(DailyPool.Days - 1) + " (03 §16; R-Q2b).");
             }
 
             string id = RequireString(node, "id", where);

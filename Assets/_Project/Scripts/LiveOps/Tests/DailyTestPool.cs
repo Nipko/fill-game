@@ -6,7 +6,7 @@ using AF.Levels;
 namespace AF.LiveOps.Tests
 {
     /// <summary>
-    /// Pool de prueba del Reto del río con las 3 bandas × 730 días, construido en código y leído con
+    /// Pool de prueba del Reto del río con las 3 bandas × 729 días (DailyPool.Days), construido en código y leído con
     /// <see cref="DailyPoolReader"/> (modo estricto). Mismo tablero que <c>AF.Tests.EditMode.DailyPoolTestPacks</c> (el nivel 1
     /// de 02 §13), copiado porque ese ensamblado no es visible desde aquí. No es el pool real (R5).
     /// </summary>
