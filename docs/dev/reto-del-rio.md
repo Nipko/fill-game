@@ -341,8 +341,8 @@ function reconciliar(r = store.Load()):          # al obtener hora de servidor
     if not server.TryGetServerOffset(out off) or |off| > sec_clock_max_drift_h: return 0
     hoy_srv = fecha local de (clock.UtcNow + off + clock.LocalOffset)
     for fecha in r.PendingDates:
-        if fecha <= hoy_srv: pagar 60 (+ Pororoca si esa fecha cerró una racha de 7)
-        else: anular (sin semillas, se quita el sello y se recalcula la racha; LastClaimedDate no retrocede)
+        if |fecha − hoy_srv| <= 1 día: pagar 60 (+ Pororoca si esa fecha cerró una racha de 7)     # R-Q12b (a)
+        else: anular (sin semillas, se quita el sello y la racha se corta en esa fecha; LastClaimedDate no retrocede)
     r.PendingDates.Clear(); store.Save(r)
 ```
 
