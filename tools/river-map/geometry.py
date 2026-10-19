@@ -1319,7 +1319,7 @@ def build_routes(model: Model, records: list) -> tuple:
 
 
 def control_check(line: Line, j: int, point: dict, zone: "MundoZone | None") -> tuple:
-    """(distancia en km, vista, maximo permitido, excepcion pendiente?) del punto de control j de una linea. Vista Mundo
+    """(distancia en km, vista, maximo permitido, excepcion medida (aceptada, D-028)?) del punto de control j de una linea. Vista Mundo
     si la linea no es de la investigacion y el punto queda en la zona de las paradas (MundoZone); si no, Cuenca. El maximo
     es la tolerancia de la vista o, si la hay, la excepcion medida de PENDING_CONTROL_KM."""
     lat, lon = float(point["lat"]), float(point["lon"])
@@ -1621,7 +1621,7 @@ HR_LAYER = "HydroRIVERS_v10_sa"
 NE_RIVERS_LAYER = "ne_10m_rivers_lake_centerlines"
 NE_LAND_LAYER = "ne_10m_land"
 
-# Origen de cada linea [P] (src): HydroRIVERS por defecto, en las dos vistas, la unica fuente con la red (bocas exactas) y a
+# Origen de cada linea (src): HydroRIVERS por defecto, en las dos vistas, la unica fuente con la red (bocas exactas) y a
 # la escala de la vista Mundo: decidido por el duenno el 2026-10-19 (D-028, pregunta 65: 1 d, 2 a, 3 a; esta es la
 # parte 2, (a)). D-013, punto 5, y 08 §4.5 pedian Natural Earth en la vista Cuenca; el carril de documentacion los alinea
 # (docstring del modulo). Excepciones: el ramal del Para (los furos de Breves y el estuario son agua ancha que ni
