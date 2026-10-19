@@ -4,8 +4,9 @@
 //     1-3 y los rechazos de la banda 0 y 4 y de los días -1 y 730, el padding exacto), sus patrones frente a los del esquema
 //     schemas/af-level-1.schema.json (rama kind = daily), los 2.190 ids y semillas distintos y de ida y vuelta, que
 //     specs/daily_v1.json carga con los valores de 03 §16 y de la nota docs/dev/reto-del-rio.md §13, y que una especificación
-//     mal formada (mutaciones en memoria de la versionada) se rechaza con su mensaje.
-//   - --daily: lo implementa R3; hasta entonces sale con 2 (fallar cerrado, .claude/rules/ci.md).
+//     mal formada (mutaciones en memoria de la versionada) se rechaza con su mensaje. Desde R3, además, la generación
+//     (DailyCommand.Generate.cs): 3 días por banda, determinismo byte a byte y lo que el pack promete.
+//   - --daily (R3): genera el pool (DailyRunner, DailyPackWriter y DailyReport; DailyCommand.Generate.cs).
 // Imprime ASCII (PASS / FAIL). Códigos: 0 = todo PASS; 1 = algún FAIL; 2 = uso, o la especificación o el esquema no se
 // encuentran. Desde la raíz del repositorio.
 using System.Globalization;
@@ -16,7 +17,7 @@ using AmazonFill.Tools.LevelGenerator.Campaign;
 
 namespace AmazonFill.Tools.LevelGenerator.Daily;
 
-internal static class DailyCommand
+internal static partial class DailyCommand
 {
     public const string SpecPath = "tools/level-generator/specs/daily_v1.json";
     public const string SchemaPath = "schemas/af-level-1.schema.json";
@@ -30,12 +31,10 @@ internal static class DailyCommand
 
         if (args.Length >= 1 && args[0] == "--daily")
         {
-            Console.Error.WriteLine("level-generator --daily: todavia no esta implementado (tarea R3 del Reto del rio); solo --self-test daily.");
-            return 2;
+            return RunDaily(args);
         }
 
-        Console.Error.WriteLine("level-generator: uso del Reto del rio: --self-test daily (y --daily desde R3).");
-        return 2;
+        return DailyUsage("uso del Reto del rio: --daily ... o --self-test daily.");
     }
 
     /// <summary>Mutaciones de specs/daily_v1.json que Parse tiene que rechazar y el texto que debe llevar el mensaje.</summary>
@@ -209,6 +208,12 @@ internal static class DailyCommand
 
         Rejects(Check, "{ \"spec\": ", baseDir, "JSON ilegible", "JSON ilegible");
         Rejects(Check, "[]", baseDir, "raiz que no es un objeto", "debe ser un objeto JSON");
+
+        // 5. Generación (R3): 3 días por banda.
+        if (spec is not null)
+        {
+            GenerationChecks(Check, spec);
+        }
 
         Console.WriteLine(failures == 0 ? "self-test daily: todo PASS" : $"self-test daily: {failures} FAIL");
         return failures == 0 ? 0 : 1;
