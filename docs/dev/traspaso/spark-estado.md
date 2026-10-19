@@ -4,6 +4,55 @@ Encargo: `docs/dev/traspaso/spark-reto-del-rio.md` (de `origin/integracion-fase1
 
 ---
 
+## 2026-10-19 · R3 · Modo `--daily` del generador: HECHA
+
+- **Commits** (en `spark/reto-del-rio-r3`, fusionados con `--no-ff` en `spark/reto-del-rio` como `c87a181`):
+  - `e8783b9`: arreglos menores de la revisión de R2;
+  - `bb1dad2`: el modo `--daily`;
+  - `ee48f52`: la muestra `tools/out/daily_sample/daily_pool_v1.json` (30 tableros, 20.144 bytes, SHA-256 `61cf6bef…3ac1`) y `tools/out/daily_sample_report.md`. Se commitea como las otras muestras de `tools/out/`.
+- **Archivos nuevos** en `tools/level-generator/Daily/`: `DailyRunner.cs`, `DailyTints.cs` (copia adaptada de `TintAssigner`, que no cambia), `DailyPackWriter.cs`, `DailyReport.cs` y `DailyCommand.Generate.cs`.
+- **Uso:**
+  ```
+  dotnet run --project tools/level-generator -- --daily --spec tools/level-generator/specs/daily_v1.json --bands 1,2,3 --days 0-729 --out <dir> [--report <md>] [--check] [--threads N]
+  ```
+  Códigos de salida: 0 (también con avisos), 1 (un día sin tablero o `--check` distinto), 2 (uso).
+- **Verificación:**
+
+  | Comando | Resultado |
+  |---|---|
+  | `--daily` de la muestra (bandas 1-3, días 0-9) | exit 0; `--check` idéntico con 20 hilos y con 1 |
+  | `python tools/validate_schema.py --pack tools/out/daily_sample/daily_pool_v1.json` | PASS |
+  | `python tools/validate_schema.py` | 103/103 |
+  | `--self-test daily` | todo PASS: 3 días por banda idénticos byte a byte en paralelo y con 1 hilo; la semilla reproduce `d2_n0001` |
+  | `--self-test` general | todo PASS |
+  | `dotnet build` de `tools/level-generator` y de `dotnet/AmazonFill.slnx` con `-warnaserror` | 0 avisos |
+  | `dotnet test` | 981 (975 + 6 omitidos) |
+
+- **Pool completo** (3 × 730), generado fuera del repositorio: 6,1 s con 20 hilos y 1.445.059 bytes. Valida con `--pack` y es reproducible. **No se publica** (R5 bloqueada).
+- **Muestra, por banda (10 días cada una):**
+
+  | Banda | bot_fail mín · mediana · máx | par mín · mediana · máx | Fuera de ventana | Pares > tope |
+  |---|---|---|---|---|
+  | B1 | 0,400 · 0,438 · 0,600 | 13 · 16,5 · 21 | 0 | 0 |
+  | B2 | 0,625 · 0,725 · 0,900 | 19 · 20,5 · 25 | 2 (`d2_n0002` 0,85, `d2_n0006` 0,90; los dos K 8 con `fill`) | 5 (los de K 9) |
+  | B3 | 0,750 · 0,950 · 1,000 | 21 · 22,5 · 25 | 0 | 10 (todos) |
+
+- **En el pool completo:**
+  - B1: 13 días fuera de ventana (mínimo 0,30) y 231 con el respaldo `fill` E=2;
+  - B2: 55 fuera de ventana y 365 por encima del tope de pares;
+  - B3: 0 fuera de ventana y los 730 por encima del tope de pares.
+- **code-reviewer:** APROBADO a la primera. Reprodujo la muestra byte a byte, comprobó el SHA y cruzó las 30 filas del informe con el pack (0 discrepancias). Las sugerencias menores van en R4.
+- **[P] de R3:**
+  - R-Q1b: si el tope no admite el K, el tablero lleva el **mínimo de pares posible** y queda marcado, sin cambiar K ni paleta;
+  - R-Q11: si ningún candidato entra en la ventana, se guarda **el más cercano** y queda marcado;
+  - cabecera con `empties_default` 1 y `max_risk_pairs` igual al máximo real, así que R4 comprueba el tope por banda contra la especificación;
+  - `world` en cada tablero (opcional en `daily`);
+  - un tablero por línea, como `PackWriter`;
+  - `skippable` false (04 §2.6 e) y `hint_supported` true (06 §4.1; R-Q8).
+- **Para el dueño (datos de R-Q11):**
+  - B3 sale casi siempre ≥ 0,90 (mediana 0,95): entra en «≥ 75 %», pero son tableros muy difíciles;
+  - B2 con K 8 y `fill` se pasa de la ventana en 55 de 730 días.
+
 ## 2026-10-19 · R2 · Especificación del pool y autoprueba: HECHA
 
 - **Commits:** `da6a9bb` (especificación, lector, ids y autoprueba) y `99d35f7` («Enganche:» del despacho en `tools/level-generator/Program.cs`), en `spark/reto-del-rio-r2`; fusionados con `--no-ff` en `spark/reto-del-rio` (`3ca28dc`).
