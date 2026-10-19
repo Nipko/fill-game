@@ -48,7 +48,7 @@ const string Usage = """
       temporada A o B de cada ciclo de 20 de las especificaciones (hoy specs/campaign_v1.json: ciclos 21-181) en
       <tabla.json> con el formato [P] af-seasons/1 {format, source, cycles[{from_level, season}]}; varias
       especificaciones se unen en orden, sin huecos ni solapes. --until <nivel>: la tabla acaba en el ciclo que termina
-      en ese nivel, el ultimo publicado (300 desde P7a: campaign_v1 + campaign_v2 hasta el mundo 6); las especificaciones
+      en ese nivel, el ultimo con pack (700 desde GEN79: campaign_v1 + campaign_v2 enteras); las especificaciones
       se comprueban enteras. Con --check no escribe: falla si la del disco difiere (desfase con el calendario).
       Codigos: 0 = escrita o identica; 1 = desfase, algun ciclo sin temporada A o B o --until a mitad de ciclo o fuera
       de las especificaciones; 2 = uso o especificacion ilegible.
@@ -56,26 +56,28 @@ const string Usage = """
       (ciclos 21-181 identicos a campaign_v1, formato, determinismo, desfase con la del disco, union, --until y rechazos).
       "tinaja": el paso Ti de la Tinaja con semillas fijas (tope de dosis por tipo de nivel, T4, boca, hidden, su cuia
       contigua y en la misma fila), el slot 323 de specs/sample_tinaja.json con sus filtros (ruta segura, paseos, S0 sin
-      trampas) y su JSON (pack_schema 3), el alivio sin frutas de la tinaja, el tope de 12 cuias con tinaja (02 sec. 5),
-      los tableros de la ficha b.2 y, como INFO, la calibracion de Morpho (nodos/ms del PC) en los estados mas pesados
+      trampas) y su JSON (pack_schema 3), el alivio sin frutas de la tinaja, el tope de 12 cuias con tinaja (02 sec. 5)
+      y el de 13 de su alivio (D-027), los tableros de la ficha b.2 y, como INFO, la calibracion de Morpho (nodos/ms del
+      PC) en los estados mas pesados
       del pack de muestra (tools/out/sample_tinaja). "variants": las variantes de la 1.0 (P5; Ln, Ha, B2 y Fl): codigos,
       el orden de la superposicion sin las variantes, cada paso sobre tableros base fijos (colocacion valida segun
       LevelValidation, determinismo), los estrenos 243, 263, 283 y 303 de specs/sample_variants.json (un ejemplar, 2 vacios y
       bot < 0,20), su JSON (attrs, key2 de la Flor, intro_mechanic y pack_schema 3) leido de vuelta con el mismo hash, y la
       key2 en el alivio y al cambiar los colores. "registry" (P4): specs/campaign_v2.json con sus dos variantes (la b
-      cambia las 19 celdas con la Tinaja), --validate-spec en verde en las dos y en campaign_v1, el registro de
-      combinaciones (102 entradas en la a y 96 en la b, el versionado identico al regenerado), el hueco maximo de 34
-      entre primeras veces, max_risk_pairs "libre", K = 13 en los hitos de 561-700, --seasons de v1 + v2 y los fixtures
-      negativos de P4. "curation" (P7a): el archivo de decisiones del dueno (--decisions) y su uso en el informe de
+      cambia las 18 celdas con la Tinaja), --validate-spec en verde en las dos y en campaign_v1, el registro de
+      combinaciones (98 entradas en la a y 94 en la b con D-027, el versionado identico al regenerado), el hueco maximo
+      de 34 entre primeras veces, max_risk_pairs "libre", el k_plan de D-027 (retos de 10 en 421-700, hitos de 561-700
+      con K = 12 salvo el 620 y el 680 con 13), --seasons de v1 + v2 y los fixtures negativos de P4. "curation" (P7a): el archivo de decisiones del dueno (--decisions) y su uso en el informe de
       curacion, con specs/curation_v2.json y los fixtures specs/tests/curation_*.json: los rechazos de la lectura (clave
       desconocida, format, otra spec, cell, level no entero, <= 0 o fuera de la especificacion, decision fuera de la
       lista, fecha, sustituir o cambiar la celda sin note y nivel repetido) y el codigo 2 de --spec con uno de ellos;
       las filas de la tabla del dueno en 201-300 (sin generar tableros); el error por un nivel sin fila, el aviso por
       otra celda y las decisiones fuera de --levels ignoradas; la ultima columna y el estado (pendiente, aceptada y
       anotada, con cambios pedidos). "holgura" (P7d): la holgura repartida en cuias a medias del tope de 14 cuias
-      (SplitSlackPour sobre un tablero fijo y las etapas de los hitos de 14 cuias de 561-700 y de los retos con la cueva
-      de la Pirana y el Brote; ningun slot de 11-560 la usa y la que la usa lleva la cuia de holgura). Desde la raiz del
-      repositorio.
+      (SplitSlackPour sobre un tablero fijo; con D-027, los hitos de K = 12 de 561-700 con su vacio y sin repartirla y
+      los de K = 13 sin cambiar K; el mecanismo, con la forma de antes de D-027: las etapas de los hitos de 14 cuias de
+      561-700 y de los retos con la cueva de la Pirana y el Brote; ningun slot de 11-560 la usa y la que la usa lleva la
+      cuia de holgura). Desde la raiz del repositorio.
       Codigos: 0 = todo PASS; 1 = algun FAIL; 2 = uso o especificacion ilegible.
     --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
       niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)

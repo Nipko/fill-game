@@ -6,9 +6,8 @@
 //   - el 328 de la muestra (una comodidad pura, «C») con el número 327: celda Ti en la a y C (su respaldo) en la b.
 // Comprueba, solo con las dos comprobaciones de las mecánicas del calendario (QA-MECH-SPEC y QA-MECH-CELL; las demás fallan
 // por ser dos niveles sueltos, y no se miran):
-//   - con --variant a (y sin --variant, porque la publicada de campaign_v2 es la a): el 323 pasa y el 327 da QA-MECH-CELL (la
-//     tinaja de la celda no está en el nivel);
-//   - con --variant b: al revés, el 327 pasa y el 323 da QA-MECH-SPEC (Ti no está en la celda Ma) y QA-MECH-CELL (falta el
+//   - con --variant a: el 323 pasa y el 327 da QA-MECH-CELL (la tinaja de la celda no está en el nivel);
+//   - con --variant b (y sin --variant, porque la publicada de campaign_v2 es la b desde C1b; d.5.8): al revés, el 327 pasa y el 323 da QA-MECH-SPEC (Ti no está en la celda Ma) y QA-MECH-CELL (falta el
 //     Matapi); en los tres casos, código 1 (la especificación se leyó), no 2;
 //   - los dos errores de uso salen con 2 y su motivo por stderr: una variante inexistente (--variant c con campaign_v2) y una
 //     especificación sin variantes (--variant b con campaign_v1, la de por defecto).
@@ -45,8 +44,8 @@ internal static class VariantOptionSelfTest
             CampaignSpec a = CampaignSpec.Load(CampaignV2, CampaignSpec.VariantA);
             CampaignSpec b = CampaignSpec.Load(CampaignV2, CampaignSpec.VariantB);
             Check(a.Plan(323).Cell.Has("Ti") && a.Plan(327).Cell.Has("Ti") && b.Plan(323).Cell.Literal == "Ma" && b.Plan(327).Cell.Literal == "C"
-                  && a.PublishedVariant == CampaignSpec.VariantA,
-                "campaign_v2: el 323 y el 327 llevan la Tinaja en la a; en la b, Ma y C; la publicada es la a");
+                  && a.PublishedVariant == CampaignSpec.VariantB,
+                "campaign_v2: el 323 y el 327 llevan la Tinaja en la a; en la b, Ma y C; la publicada es la b (C1b)");
             string json = BuildPack();
             Directory.CreateDirectory(dir);
             File.WriteAllText(pack, json);
@@ -73,10 +72,10 @@ internal static class VariantOptionSelfTest
             string expectedB = "QA-MECH-CELL 323, QA-MECH-SPEC 323";
             Check(codeA == 1 && Calendar(outA) == expectedA,
                 F($"--variant a: el 323 pasa y el 327 da QA-MECH-CELL (codigo {codeA}; {Calendar(outA)})"));
-            Check(codeDefault == 1 && Calendar(outDefault) == expectedA,
-                F($"sin --variant, la publicada (a): lo mismo que con --variant a (codigo {codeDefault}; {Calendar(outDefault)})"));
             Check(codeB == 1 && Calendar(outB) == expectedB,
                 F($"--variant b: el 327 pasa y el 323 da QA-MECH-CELL y QA-MECH-SPEC (codigo {codeB}; {Calendar(outB)})"));
+            Check(codeDefault == 1 && Calendar(outDefault) == expectedB,
+                F($"sin --variant, la publicada (b): lo mismo que con --variant b (codigo {codeDefault}; {Calendar(outDefault)})"));
             Check(outA.Contains("[QA-MECH-CELL] nivel 327: tinaja de la celda (Ti) no esta en el nivel", StringComparison.Ordinal),
                 "--variant a: el motivo del 327 es la tinaja de su celda");
             Check(outB.Contains("[QA-MECH-SPEC] nivel 323: Ti no esta en la celda del calendario (Ma)", StringComparison.Ordinal)

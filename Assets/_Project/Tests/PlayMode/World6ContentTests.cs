@@ -16,16 +16,16 @@ namespace AF.Tests.PlayMode
     /// El mundo 6, Oriente (201-300), en la escena <c>Game</c> real (tarea C1a; 03 §11; glosario §8, <c>w06_oriente</c>; D-012;
     /// 06 §9; D-017; F1c), sin paquetes de prueba:
     /// <list type="bullet">
-    /// <item>carga: la escena enlaza <c>mundo_06_v1.json</c> (<c>pack_schema</c> 3, de P7a) tras los 5 paquetes de 1-200; el
-    /// catálogo cubre 1-300 sin huecos y los niveles de muestra del mundo 6 arrancan con su tablero y llegan a jugarse, con el
+    /// <item>carga: la escena enlaza <c>mundo_06_v1.json</c> (<c>pack_schema</c> 3, de P7a) tras los 5 paquetes de 1-200 (y,
+    /// desde C1b, los mundos 7-9 detrás); el catálogo cubre 1-700 sin huecos y los niveles de muestra del mundo 6 arrancan con su tablero y llegan a jugarse, con el
     /// fondo que dan los datos del Mapa (la parada del nivel si el catálogo de paradas llega al mundo 6, M4.5a; si no, el de
     /// hoy);</item>
     /// <item>banner: el 201 abre el del mundo 6 («Mundo 6: Oriente · Ecuador · Napo + lagunas negras de Cuyabeno», de
     /// <c>strings.csv</c>) antes de la intro, y un toque lo cierra; con la regla del juego, el viaje de mundo (M3.6) sale si y
     /// solo si el catálogo de paradas tiene la gran parada del mundo 6;</item>
     /// <item>estrenos: la tarjeta de la Liana de cuenta en el 243 y la de la Hoja atada en el 283 (VA1a), con el catálogo real;</item>
-    /// <item>fin de contenido: tras ganar el 300, «Siguiente» abre «El río sigue creciendo» (06 §9): el último nivel publicado,
-    /// sin ningún número fijo;</item>
+    /// <item>«Siguiente» del 200 abre el 201 (el fin de contenido, tras el 700 desde C1b, y el paso del 300 al 301 están en
+    /// <c>Worlds7to9ContentTests</c>);</item>
     /// <item>líneas: cada victoria de 261-300 lleva su línea de río (<c>rio_napo</c> 261-280 y <c>rio_amazonas</c> 281-300; propuesta
     /// de Frutas §5.16) salvo donde el árbitro dice otra cosa, y todas caben, en es-419 al 100 % y en en-XA al 130 % a
     /// 360 × 640.</item>
@@ -62,9 +62,9 @@ namespace AF.Tests.PlayMode
             LevelFlow flow = boot.Flow!;
             GameScreen view = boot.View!;
             LevelCatalog catalog = flow.Catalog;
-            Assert.That(catalog.Packs.Count, Is.EqualTo(6), "tutorial_v0, mundo_02_v1 a mundo_05_v1 y mundo_06_v1");
+            Assert.That(catalog.Packs.Count, Is.EqualTo(9), "tutorial_v0, mundo_02_v1 a mundo_05_v1, mundo_06_v1 y mundo_07_v1 a mundo_09_v1 (C1b)");
             Assert.That(catalog.FirstLevel, Is.EqualTo(1));
-            Assert.That(catalog.LastLevel, Is.EqualTo(300));
+            Assert.That(catalog.LastLevel, Is.EqualTo(700));
             Assert.That(catalog.IsContiguous, Is.True, catalog.DescribeGaps());
             LevelPack world6 = catalog.PackOf(201)!;
             Assert.That(world6.PackId, Is.EqualTo("mundo_06_v1"));
@@ -188,29 +188,6 @@ namespace AF.Tests.PlayMode
                 LaunchOptions.Reset();
                 FunnelSetup.Hooks();
             }
-        }
-
-        [UnityTest]
-        public IEnumerator ContentEnd_AfterWinning300_NextOpensTheRiverKeepsGrowing()
-        {
-            yield return FactLineTests.Win(300);
-            GameBootstrap boot = GameBootstrap.Current!;
-            LevelFlow flow = boot.Flow!;
-            Assert.That(flow.Catalog.LastLevel, Is.EqualTo(300), "el último nivel publicado");
-            Assert.That(flow.Catalog.NextLevelAfter(300), Is.Null);
-            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Level));
-            Assert.That(boot.PressNext(), Is.True);
-            for (int elapsed = 0; elapsed < 10000 && boot.App.Screen == AppScreen.Level; elapsed += PlayModeHelpers.FrameMs)
-            {
-                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
-            }
-
-            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.ContentEnd), "06 §9: tras el 300, «El río sigue creciendo»");
-            Assert.That(boot.App.OverlayLevel, Is.EqualTo(301));
-            yield return null;
-            Assert.That(boot.Lobby!.OverlayVisible, Is.True);
-            Assert.That(boot.Lobby.OverlayTitle, Is.EqualTo("El río sigue creciendo"));
-            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(300), "no se carga ningún 301: el 300 sigue siendo el último jugado");
         }
 
         [UnityTest]
