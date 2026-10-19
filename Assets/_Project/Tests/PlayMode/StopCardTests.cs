@@ -24,9 +24,10 @@ namespace AF.Tests.PlayMode
     /// fondo de la parada en pequeño, el dato de llegada y sus dos «Otro dato» en ciclo, la fuente solo si tiene fila y el miquito
     /// del tramo y el achiote, la fruta de la serie de 41-60 (D-022); Belém con sus cinco frutas (el açaí de la serie primero),
     /// Alter do Chão con el agua del Tapajós de la serie y el camu camu que debuta en el 21, y el Encuentro con el achiote;</item>
-    /// <item>la fuente del dato («Fuente: …», <c>map_card_source</c>) con su fila en un catálogo de prueba: dentro de la placa,
-    /// bajo el dato, ≥ 12 sp y con contraste; con los datos reales de Manaos, pendiente (el contrato de la etiqueta de la fuente no
-    /// está fijado y <c>stops.py</c> no la genera: el test queda en Ignore con el motivo);</item>
+    /// <item>la fuente del dato («Fuente: …», <c>map_card_source</c>, de la fila <c>&lt;clave del dato&gt;.source</c> que genera
+    /// <c>stops.py</c>; D-028, pregunta 57 a): con los datos reales de Manaos («Fuente: Wikipedia») y de Amacayacu (la fuente más
+    /// larga del Mapa, «Parques Nacionales Naturales de Colombia»), a 360 × 780 y a 360 × 640 y al 100 % y al 130 % (DC10), y con
+    /// su fila en un catálogo de prueba: dentro de la placa, bajo el dato, ≥ 12 sp, sin recortes y con contraste;</item>
     /// <item>una parada futura: solo la silueta con su filo de luz bajo el velo, sin reflejo (ni el del PNG ni el de la silueta
     /// provisional: su malla, con el tono, no baja de la línea del agua) y «Nivel 71» en la cabecera;</item>
     /// <item>los tres miradores del estuario desde el 10 (ninguno con 9), solo en la vista Mundo, y su tarjeta, sin el tono de
@@ -109,7 +110,7 @@ namespace AF.Tests.PlayMode
             card.OtherFactButton.onClick.Invoke();
             Assert.That(card.FactKey, Is.EqualTo("map.stop.manaos.dato_02"), "vuelve al de llegada");
 
-            // La fuente del dato: ManaosCard_ShowsTheSourceOfItsFact (pendiente) y Source_WithItsRow_IsShownInsideThePlate.
+            // La fuente del dato: ManaosCard_ShowsTheSourceOfItsFact (datos reales) y Source_WithItsRow_IsShownInsideThePlate.
             Assert.That(card.FutureToneOn, Is.False, "una parada alcanzada, a todo color");
             Assert.That(card.HeroTone.enabled || card.ShapeTone.enabled, Is.False, "sin silueta");
 
@@ -136,17 +137,36 @@ namespace AF.Tests.PlayMode
             Assert.That(card.FutureLevelText, Is.Empty);
         }
 
+        // Con los datos reales (DC10; D-028, pregunta 57 a): la fuente del dato de llegada de Manaos (51-60) y la de Amacayacu
+        // (101-110), la más larga del Mapa, dentro de la placa en las dos pantallas (360 × 780 y 360 × 640 dp) y al 100 % y al 130 %.
         [UnityTest]
-        [Ignore("Pendiente [P] de M4.1: 06 §4.5 y la propuesta del Mapa §7 piden «el dato con su fuente», pero ni 08 §4.7 ni el glosario fijan dónde va la etiqueta corta de la fuente (fila <clave del dato>.source de facts.csv, otra forma o un campo de river_stops_v1.json derivado de fuente/fuentes) y tools/river-map/stops.py no la genera; lo decide el dueño y lo genera el carril del Mapa.")]
         public IEnumerator ManaosCard_ShowsTheSourceOfItsFact()
         {
-            yield return MapMarkersTests.OpenApp(59);
-            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
-            Assert.That(map.OpenStopCard(5), Is.True);
-            StopCard card = map.Card!;
-            Assert.That(card.FactKey, Is.EqualTo("map.stop.manaos.dato_02"));
-            Assert.That(card.SourceText, Is.Not.Empty, "el dato de llegada de Manaos, con su fuente");
-            Assert.That(card.SourceText, Is.EqualTo(UiText.MapCardSource(StopCard.SourceOf("map.stop.manaos.dato_02"))));
+            Assert.That(StopCard.SourceOf("map.stop.manaos.dato_02"), Is.EqualTo("Wikipedia"), "fila de stops.py (DC9)");
+            Assert.That(StopCard.SourceOf("map.stop.amacayacu.dato_01"), Is.EqualTo("Parques Nacionales Naturales de Colombia"));
+            foreach (Vector4 screen in new[] { HudLabelTests.Screen780, HudLabelTests.Screen640 })
+            {
+                foreach (float textScale in new[] { 1f, UiBuilder.MaxTextScale })
+                {
+                    GameScreen.SimulatedScreen = screen;
+                    LaunchOptions.FontScaleOverride = textScale;
+                    yield return MapMarkersTests.OpenApp(111);
+                    RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+                    string where = screen.y.ToString("F0", System.Globalization.CultureInfo.InvariantCulture) + " px al "
+                        + Mathf.RoundToInt(textScale * 100f) + " %";
+                    foreach ((int n, string factKey) in new[] { (5, "map.stop.manaos.dato_02"), (10, "map.stop.amacayacu.dato_01") })
+                    {
+                        Assert.That(map.OpenStopCard(n), Is.True, where);
+                        Canvas.ForceUpdateCanvases();
+                        StopCard card = map.Card!;
+                        string at = factKey + ", " + where;
+                        Assert.That(card.FactKey, Is.EqualTo(factKey), at);
+                        Assert.That(card.SourceText, Is.Not.Empty, at + ": el dato de llegada, con su fuente");
+                        Assert.That(card.SourceText, Is.EqualTo(UiText.MapCardSource(StopCard.SourceOf(factKey))), at);
+                        AssertSourceInsideThePlate(map, card, textScale, at);
+                    }
+                }
+            }
         }
 
         [UnityTest]
@@ -187,16 +207,7 @@ namespace AF.Tests.PlayMode
                     Assert.That(card.SourceLabel.gameObject.activeInHierarchy, Is.True, where);
                     Assert.That(new List<TextMeshProUGUI>(card.Texts()), Does.Contain(card.SourceLabel), where);
 
-                    // Dentro de la placa, bajo el dato, ≥ 12 sp, sin recortes y con contraste ≥ 4,5:1 sobre la madera oscura.
-                    Rect panel = CanvasRect(card.PanelRect, map.Canvas);
-                    Rect text = CanvasRect(card.SourceLabel.rectTransform, map.Canvas);
-                    Rect fact = CanvasRect(card.FactLabel.rectTransform, map.Canvas);
-                    Assert.That(panel.Contains(text.min + new Vector2(0.5f, 0.5f)) && panel.Contains(text.max - new Vector2(0.5f, 0.5f)), Is.True, where + ": dentro de la placa");
-                    Assert.That(text.yMin, Is.GreaterThanOrEqualTo(fact.yMax - 0.5f), where + ": bajo el dato");
-                    Assert.That(card.SourceLabel.fontSize, Is.GreaterThanOrEqualTo((UiBuilder.MinTextSp * textScale) - 0.01f), where);
-                    Assert.That(new LocInventory(LocLocale.SourceLocale, textScale).ProblemsOf(card.SourceLabel), Is.Empty, where);
-                    Assert.That(card.SourceLabel.color, Is.EqualTo(StopCard.SourceColor));
-                    Assert.That(ColorMath.ContrastRatio(StopCard.SourceColor, Palette.WoodDark), Is.GreaterThanOrEqualTo(4.5f));
+                    AssertSourceInsideThePlate(map, card, textScale, where);
 
                     // Con «Otro dato», el siguiente no tiene fuente: la línea se va.
                     card.OtherFact();
@@ -758,6 +769,21 @@ namespace AF.Tests.PlayMode
             {
                 Assert.That(image.sprite, Is.Not.SameAs(seed), where + ": " + image.name + " sin el icono de semillas");
             }
+        }
+
+        // La línea de la fuente, dentro de la placa, bajo el dato, ≥ 12 sp, sin recortes y con contraste ≥ 4,5:1 sobre la madera oscura.
+        internal static void AssertSourceInsideThePlate(RiverMapScreen map, StopCard card, float textScale, string where)
+        {
+            Assert.That(card.SourceLabel.gameObject.activeInHierarchy, Is.True, where);
+            Rect panel = CanvasRect(card.PanelRect, map.Canvas);
+            Rect text = CanvasRect(card.SourceLabel.rectTransform, map.Canvas);
+            Rect fact = CanvasRect(card.FactLabel.rectTransform, map.Canvas);
+            Assert.That(panel.Contains(text.min + new Vector2(0.5f, 0.5f)) && panel.Contains(text.max - new Vector2(0.5f, 0.5f)), Is.True, where + ": dentro de la placa");
+            Assert.That(text.yMin, Is.GreaterThanOrEqualTo(fact.yMax - 0.5f), where + ": bajo el dato");
+            Assert.That(card.SourceLabel.fontSize, Is.GreaterThanOrEqualTo((UiBuilder.MinTextSp * textScale) - 0.01f), where);
+            Assert.That(new LocInventory(LocLocale.SourceLocale, textScale).ProblemsOf(card.SourceLabel), Is.Empty, where);
+            Assert.That(card.SourceLabel.color, Is.EqualTo(StopCard.SourceColor));
+            Assert.That(ColorMath.ContrastRatio(StopCard.SourceColor, Palette.WoodDark), Is.GreaterThanOrEqualTo(4.5f));
         }
 
         // facts.csv sin las filas <clave del dato>.source del Mapa (DC9): una por línea, con la clave al principio. map.myth.source es

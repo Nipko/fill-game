@@ -33,8 +33,8 @@ namespace AF.UI
     /// parte); el fondo del tablero de la parada en pequeño (el panorama con <see cref="StopBackdrop"/>: cielo, banda de agua del
     /// mundo, piezas por código y héroe, a la escala de la tarjeta); el dato (el de llegada y, con «Otro dato»
     /// (<c>map_card_other_fact</c>), los demás de la parada, uno cada vez) con su fuente (<c>map_card_source</c>, «Fuente: …»,
-    /// bajo el dato, si la fila <c>&lt;clave del dato&gt;.source</c> [P] tiene texto; ver <see cref="SourceSuffix"/>: el contrato
-    /// de esa etiqueta está pendiente y hoy ningún dato la tiene); el miquito del tramo (su retrato y su nombre,
+    /// bajo el dato, si la fila <c>&lt;clave del dato&gt;.source</c> tiene texto; ver <see cref="SourceSuffix"/>; D-028, pregunta
+    /// 57 a: la genera <c>tools/river-map/stops.py</c>); el miquito del tramo (su retrato y su nombre,
     /// <c>fauna.&lt;id&gt;.name</c>, solo con su arte de tarjeta) y sus frutas (icono y nombre, <c>tint.&lt;id&gt;.name</c>;
     /// <see cref="CardTints"/>): primero la de la serie de Frutas del río que corre en sus niveles (D-022; 02 §6, fila «Dato del
     /// río»; 06 §4.4: ahí queda a la vista la línea de fruta que el dato de llegada desplaza en el <c>10k</c>; calendario
@@ -109,14 +109,13 @@ namespace AF.UI
         public const float GapDp = 10f;
 
         /// <summary>
-        /// Final de la clave de la fuente de un dato [P]: la fila <c>&lt;clave del dato&gt;.source</c> de <c>facts.csv</c> con el
-        /// nombre corto de la fuente tal cual («Ramsar», «SINCHI»; <c>map_card_source</c>, 06 §4.5 y propuesta del Mapa §7: «el
-        /// dato con su fuente»). <b>Pendiente</b>: ni 08 §4.7 ni el glosario §10-§11 fijan dónde va esa etiqueta (una fila de
-        /// <c>facts.csv</c> con esta u otra forma, o un campo de <c>river_stops_v1.json</c> derivado de <c>fuente</c> /
-        /// <c>fuentes</c> de los datos de origen), y el bloque <c>map.*</c> de <c>facts.csv</c> es solo de
-        /// <c>tools/river-map/stops.py</c>, que aún no la genera: hasta que el dueño fije el contrato y el carril del Mapa la genere,
-        /// ningún dato tiene fuente y la línea no sale (la tarjeta la enseña en cuanto exista la fila; lo prueba
-        /// <c>StopCardTests</c> con un catálogo de prueba).
+        /// Final de la clave de la fuente de un dato: la fila <c>&lt;clave del dato&gt;.source</c> de <c>facts.csv</c> con el
+        /// nombre corto de la fuente tal cual («Wikipedia», «Acta Amazonica»; <c>map_card_source</c>, 06 §4.5 y propuesta del
+        /// Mapa §7: «el dato con su fuente»). Contrato fijado por el dueño en D-028 (pregunta 57 a): la fila la genera
+        /// <c>tools/river-map/stops.py --write-texts</c> (el bloque <c>map.*</c> de <c>facts.csv</c> es solo suyo) con el nombre
+        /// corto de <c>tools/river-map/overrides.json</c> (<c>source_short</c>) de la primera fuente [V] del dato o, sin ninguna
+        /// [V], de la primera. Un dato sin esa fila no enseña la línea. Lo prueba <c>StopCardTests</c> con los datos reales
+        /// (Manaos y Amacayacu, la fuente más larga) y con un catálogo de prueba.
         /// </summary>
         public const string SourceSuffix = ".source";
 
@@ -609,7 +608,7 @@ namespace AF.UI
             return into.Count;
         }
 
-        /// <summary>Nombre corto de la fuente del dato <paramref name="factKey"/> (fila <see cref="SourceSuffix"/> [P]), o «».</summary>
+        /// <summary>Nombre corto de la fuente del dato <paramref name="factKey"/> (fila <see cref="SourceSuffix"/>; D-028), o «».</summary>
         public static string SourceOf(string factKey)
         {
             return string.IsNullOrEmpty(factKey) ? string.Empty : Loc.Fact(factKey + SourceSuffix);
