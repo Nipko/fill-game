@@ -1,14 +1,17 @@
 // --self-test registry (P4 de la tanda 4): la especificación de 201-700 (specs/campaign_v2.json) con sus dos variantes, el
 // registro de combinaciones (d.5.6 de la propuesta de D-009) y la regla de 60 niveles (D-009 punto 8), sin proyecto de tests
 // (las pruebas de tools/ van como fixtures y modos --self-test). Comprueba:
-//   - las dos variantes: la «b» cambia exactamente las 19 celdas de "fallback" (d.5.4) y no tiene la Tinaja; la «a» se publica;
+//   - las dos variantes: la «b» cambia exactamente las 18 celdas de "fallback" (d.5.4; el 352 ya no lleva la Tinaja desde
+//     D-027) y no tiene la Tinaja; la «a» se publica;
 //   - --validate-spec en verde en las dos y en campaign_v1 (21 reglas en la v1 y 24 en la v2);
-//   - las cifras de D2 (d.5.6): 102 entradas en la «a» (40 de 11-200 y 62 de 201-700) y 96 en la «b» (40 y 56), las del
-//     ejemplo de d.5.6, códigos en orden ordinal y un conjunto por entrada; el hueco máximo entre primeras veces, 34 (526 → 560);
+//   - las cifras del registro (d.5.6, con las celdas de D-027): 98 entradas en la «a» (40 de 11-200 y 58 de 201-700) y 94 en
+//     la «b» (40 y 54); antes de D-027 eran 102 y 96: salen Ti+Br (340), B2+Ti (352), Pi+Br+Ba (460) y Ma+Ba+Ho (640) y se
+//     mueven B2+Ln (358 → 346), B2+Re (360 → 352), Pi+B2 (366 → 369), Ha+Ba (389 → 398) y Fl+Ll (418 → 415); las del ejemplo
+//     de d.5.6, códigos en orden ordinal y un conjunto por entrada; el hueco máximo entre primeras veces, 34 (526 → 560);
 //   - el registro versionado (specs/combinations_registry_v1.json) es el de la variante publicada, byte a byte, y regenerarlo
 //     da los mismos bytes (UTF-8 sin BOM y LF);
-//   - lo que sale de la especificación y no del código: max_risk_pairs «libre», K = 13 en los hitos de 561-700 y el tope de
-//     mecánicas por rol;
+//   - lo que sale de la especificación y no del código: max_risk_pairs «libre», el k_plan de D-027 (retos de 11 en el mundo 7
+//     y de 10 en 421-700; hitos de 561-700 con K = 12, salvo el 620 y el 680 con 13) y el tope de mecánicas por rol;
 //   - la tabla de temporada de campaign_v1 + campaign_v2 (SE1): 34 ciclos seguidos, 21-681;
 //   - los fixtures negativos de P4 (specs/tests) fallan con su regla y, si la declaran, en su variante;
 //   - los límites: un hueco de 60 pasa NOVELTY-60 (novelty_gap_60.json), FALLBACK sale en las dos variantes, --registry
@@ -38,8 +41,8 @@ internal static class RegistrySelfTest
         ("tools/level-generator/specs/tests/variant_with_base.json", "FORBIDDEN", null),
     ];
 
-    /// <summary>Las 19 celdas con la Tinaja de d.5.4 (las que cambia la variante «b»).</summary>
-    private static readonly int[] TinajaCells = [323, 324, 325, 327, 329, 332, 338, 340, 352, 355, 392, 454, 494, 531, 574, 591, 631, 651, 691];
+    /// <summary>Las 18 celdas con la Tinaja de d.5.4 (las que cambia la variante «b»); el 352 es B2+Re desde D-027.</summary>
+    private static readonly int[] TinajaCells = [323, 324, 325, 327, 329, 332, 338, 340, 355, 392, 454, 494, 531, 574, 591, 631, 651, 691];
 
     public static int Run()
     {
@@ -71,7 +74,7 @@ internal static class RegistrySelfTest
             "campaign_v2: variantes a y b, publicada la a (d.5.8); campaign_v1 con una sola");
         int[] changed = [.. Enumerable.Range(a.FirstLevel, a.LastLevel - a.FirstLevel + 1).Where(n => a.Calendar[n].Literal != b.Calendar[n].Literal)];
         Check(changed.SequenceEqual(TinajaCells) && a.FallbackCells.Keys.Order().SequenceEqual(TinajaCells),
-            F($"la variante b cambia exactamente las 19 celdas con la Tinaja de d.5.4 ({changed.Length} celdas)"));
+            F($"la variante b cambia exactamente las 18 celdas con la Tinaja de d.5.4 ({changed.Length} celdas)"));
         Check(a.MechanicTable.Any(m => m.Code == MechanicCodes.Tinaja) && b.MechanicTable.All(m => m.Code != MechanicCodes.Tinaja)
               && b.Calendar.Values.All(c => !c.Has(MechanicCodes.Tinaja)) && !b.IntroLevels.ContainsKey(323) && a.IntroLevels[323] == "tinaja",
             "la Tinaja solo en la variante a (only_variant): sin celdas ni intro_mechanic en la b");
@@ -91,10 +94,15 @@ internal static class RegistrySelfTest
         // 3. Registro (d.5.6).
         List<CombinationEntry> regA = CombinationsRegistry.Build(a.CellsWithHistory(), a.VariantCodes);
         List<CombinationEntry> regB = CombinationsRegistry.Build(b.CellsWithHistory(), b.VariantCodes);
-        Check(regA.Count == 102 && regA.Count(e => e.Level <= 200) == 40 && regB.Count == 96 && regB.Count(e => e.Level <= 200) == 40,
-            F($"registro: {regA.Count} entradas en la a ({regA.Count(e => e.Level <= 200)} + {regA.Count(e => e.Level > 200)}) y {regB.Count} en la b ({regB.Count(e => e.Level <= 200)} + {regB.Count(e => e.Level > 200)}); D2: 102 (40 + 62) y 96 (40 + 56)"));
+        Check(regA.Count == 98 && regA.Count(e => e.Level <= 200) == 40 && regB.Count == 94 && regB.Count(e => e.Level <= 200) == 40,
+            F($"registro: {regA.Count} entradas en la a ({regA.Count(e => e.Level <= 200)} + {regA.Count(e => e.Level > 200)}) y {regB.Count} en la b ({regB.Count(e => e.Level <= 200)} + {regB.Count(e => e.Level > 200)}); con D-027: 98 (40 + 58) y 94 (40 + 54)"));
         bool Has(List<CombinationEntry> reg, int level, string kind, params string[] codes) =>
             reg.Any(e => e.Level == level && e.Kind == kind && e.Codes.SequenceEqual(codes));
+        bool Gone(List<CombinationEntry> reg, params string[] codes) => !reg.Any(e => e.Codes.SequenceEqual(codes));
+        Check(Gone(regA, "Br", "Ti") && Gone(regA, "B2", "Ti") && Gone(regA, "Ba", "Br", "Pi") && Gone(regA, "Ba", "Ho", "Ma")
+              && Has(regA, 346, "combination", "B2", "Ln") && Has(regA, 352, "combination", "B2", "Re") && Has(regA, 369, "combination", "B2", "Pi")
+              && Has(regA, 398, "combination", "Ba", "Ha") && Has(regA, 415, "combination", "Fl", "Ll"),
+            "D-027 en el registro: sin Ti+Br, B2+Ti, Pi+Br+Ba ni Ma+Ba+Ho; B2+Ln en el 346, B2+Re en el 352, Pi+B2 en el 369, Ha+Ba en el 398 y Fl+Ll en el 415");
         Check(Has(regA, 14, "debut", "Ch") && Has(regA, 35, "combination", "Al", "Ch") && Has(regA, 243, "variant", "Ln")
               && Has(regA, 320, "combination", "Br", "Ha", "Ll") && Has(regA, 323, "debut", "Ti") && Has(regA, 646, "combination", "Br", "Ha", "Pi"),
             "entradas del ejemplo de d.5.6 (14 Ch, 35 Al+Ch, 243 Ln variant, 320 Br+Ha+Ll) y 323 Ti y 646 (primer reto con tres)");
@@ -126,8 +134,9 @@ internal static class RegistrySelfTest
         // 6. Lo que sale de la especificación.
         Check(a.MaxRiskPairsAt(201) == a.RiskPairs.Count && a.RiskPairs.Count == 10 && v1.MaxRiskPairsAt(200) == 2,
             "max_risk_pairs \"libre\" desde el 201 = los 10 pares de riesgo (03 sec. 11); campaign_v1 sin cambios (2 en el 200)");
-        Check(a.KAt(580) == 13 && a.KAt(700) == 13 && a.KAt(560) == 11 && a.KAt(578) == 12 && a.KAt(561) == 10,
-            "k_plan: K = 13 en los hitos de 561-700 (580 el primero), 11 en el 560, 12 en los retos y 10 en recuperacion del mundo 9");
+        Check(a.KAt(306) == 11 && a.KAt(418) == 11 && a.KAt(429) == 10 && a.KAt(558) == 10 && a.KAt(560) == 11 && a.KAt(578) == 10
+              && a.KAt(580) == 12 && a.KAt(640) == 12 && a.KAt(700) == 12 && a.KAt(620) == 13 && a.KAt(680) == 13 && a.KAt(561) == 10 && a.KAt(562) == 10,
+            "k_plan (D-027): retos de 11 en el mundo 7 y de 10 en 421-700, hito 11 en el 560; hitos de 561-700 con K = 12 (580, 640 y 700), salvo el 620 y el 680 con 13; 10 en recuperacion del mundo 9");
         Check(a.MaxMechanicsAt(300, SlotRole.Milestone) == 2 && a.MaxMechanicsAt(320, SlotRole.Milestone) == 3 && a.MaxMechanicsAt(301, SlotRole.Challenge) == 3
               && a.MaxMechanicsAt(310, SlotRole.Comfort) == 2 && v1.MaxMechanicsAt(200, SlotRole.Milestone) == 2,
             "mechanics_per_level: 3 en retos desde el 301 y en hitos desde el 320; 2 en el resto y en campaign_v1");
@@ -142,7 +151,8 @@ internal static class RegistrySelfTest
             string introsA = string.Join(" ", plansA.Where(p => p.Intro is not null).Select(p => F($"{p.Level}:{p.Intro}")));
             string introsB = string.Join(" ", plansB.Where(p => p.Intro is not null).Select(p => F($"{p.Level}:{p.Intro}")));
             Check(introsA == "243:liana_n 283:hoja_atada 323:tinaja 343:brote_n2 403:flor" && introsB == "243:liana_n 283:hoja_atada 343:brote_n2 403:flor"
-                  && plansA.All(p => !p.Ramp && p.MaxRiskPairs == 10) && plansA.Where(p => p.Role == SlotRole.Milestone && p.Level >= 561).All(p => p.K == 13)
+                  && plansA.All(p => !p.Ramp && p.MaxRiskPairs == 10)
+                  && plansA.Where(p => p.Role == SlotRole.Milestone && p.Level >= 561).All(p => p.K == (p.Level is 620 or 680 ? 13 : 12))
                   && plansA.Select(p => p.World.World).Distinct().SequenceEqual([6, 7, 8, 9]),
                 F($"plan de 201-700 en las dos variantes (mundos 6-9, sin rampa, 10 pares de riesgo); estrenos a: {introsA}; b: {introsB}"));
         }
@@ -204,8 +214,8 @@ internal static class RegistrySelfTest
             CampaignSpec h = CampaignSpec.Load(hito340);
             int hFailures = h.Variants.Sum(v => SpecValidator.Validate(CampaignSpec.Load(hito340, v)).Count(i => !i.Warning));
             int tinajaIn321 = Enumerable.Range(321, 20).Count(n => h.Calendar[n].Has(MechanicCodes.Tinaja));
-            Check(hFailures == 0 && tinajaIn321 == 7 && !h.FallbackCells.ContainsKey(340) && h.FallbackCells.Count == 18,
-                F($"hito340_fallback_in_a.json: el 340 en Br+Ba (MD) sin su entrada de fallback pasa --validate-spec en las dos variantes ({hFailures} fallos; la Tinaja en {tinajaIn321} niveles de 321-340)"));
+            Check(hFailures == 0 && tinajaIn321 == 7 && !h.FallbackCells.ContainsKey(340) && h.FallbackCells.Count == 17,
+                F($"hito340_fallback_in_a.json: el 340 en Br+Ba (MD) sin su entrada de fallback pasa --validate-spec en las dos variantes ({hFailures} fallos; la Tinaja en {tinajaIn321} niveles de 321-340; {h.FallbackCells.Count} respaldos, los 18 de D-027 menos el del 340)"));
 
             string tmp = Path.Combine(Path.GetTempPath(), F($"af-registry-selftest-{Environment.ProcessId}.json"));
             try

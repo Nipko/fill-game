@@ -84,6 +84,15 @@ internal static class CurationReport
         List<GeneratedLevel> review = picks.Where(l => Reasons(l, stats).Review.Count > 0).ToList();
         W();
         W(F($"- Retos e hitos: {picks.Count} ({challenges} retos y {milestones} hitos); {hit} miden la etiqueta objetivo o más (D-009) y {picks.Count - hit} no."));
+        List<GeneratedLevel> missed = picks.Where(l => CampaignSpec.LabelRank(l.Chosen!.MeasuredLabel) < CampaignSpec.LabelRank(l.Plan.TargetLabel)).ToList();
+        if (missed.Count > 0)
+        {
+            // Aparte (GEN79): los que se publican sin la etiqueta de su celda, para que el dueño los vea de un vistazo.
+            W("- No miden su etiqueta objetivo y se publican con la que miden (c.2; 03 §7): "
+              + string.Join(", ", missed.Select(l => F($"{l.Plan.Level} ({l.Plan.RoleName} {l.Plan.Cell.Literal}: {LabelName(l.Chosen!.MeasuredLabel)}, bot_fail {l.Chosen!.Bot:0.000})")))
+              + ".");
+        }
+
         W(F($"- Etiquetas publicadas en {first}-{last}: {levels.Count(l => l.Chosen!.MeasuredLabel == "hard")} Difícil y {levels.Count(l => l.Chosen!.MeasuredLabel == "very_hard")} Muy difícil de {levels.Count} niveles (03 §11: 25 % y 5 %)."));
         W(review.Count == 0
             ? "- Para revisar: ninguno; la propuesta es aceptar los retos e hitos tal como salen."

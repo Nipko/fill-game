@@ -15,6 +15,26 @@
     {"from_level": 221, "season": "A"},
     {"from_level": 241, "season": "B"},
     {"from_level": 261, "season": "B"},
-    {"from_level": 281, "season": "A"}
+    {"from_level": 281, "season": "A"},
+    {"from_level": 301, "season": "A"},
+    {"from_level": 321, "season": "B"},
+    {"from_level": 341, "season": "A"},
+    {"from_level": 361, "season": "B"},
+    {"from_level": 381, "season": "A"},
+    {"from_level": 401, "season": "A"},
+    {"from_level": 421, "season": "B"},
+    {"from_level": 441, "season": "B"},
+    {"from_level": 461, "season": "A"},
+    {"from_level": 481, "season": "B"},
+    {"from_level": 501, "season": "A"},
+    {"from_level": 521, "season": "B"},
+    {"from_level": 541, "season": "A"},
+    {"from_level": 561, "season": "B"},
+    {"from_level": 581, "season": "B"},
+    {"from_level": 601, "season": "A"},
+    {"from_level": 621, "season": "B"},
+    {"from_level": 641, "season": "B"},
+    {"from_level": 661, "season": "A"},
+    {"from_level": 681, "season": "B"}
   ]
 }

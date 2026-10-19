@@ -32,6 +32,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-024 | 2026-10-14 | Reglas de la Hoja atada: la capacidad de su llave y una por fruta | Decidida por el dueño (las recomendadas de la revisión de K3a, por «Sí, aplica las recomendadas también»). Documentación aplicada el 2026-10-14 (FIXD). En implementación: FIXK, en el núcleo; el generador y level-qa la heredan por `LevelValidation` |
 | D-025 | 2026-10-14 | Un solo formato de cifras, también en los precios | Decidida por el dueño («unificar formatos», tras la prueba de la tanda 4). La regla (región del teléfono, Q8-A) es [P] de este registro. Implementada en FXT (puntos 1 y 2; el 3, lista la función para el adaptador de Unity IAP) |
 | D-026 | 2026-10-16 | Audio provisional por código y permiso `VIBRATE` | Decidida por el dueño («lanza ya AU1 en paralelo a la ola 4, con los arreglos de niveles y graves, y apruebo el permiso VIBRATE para el háptico del sellado»). Implementada en AU1 (tanda 4, ola 4, carril de audio): `AF.Audio` y `AF.Audio.Unity`, los 61 efectos con su nivel, Ajustes de Sonido, Música y Vibración, los hápticos y el permiso en el manifiesto; AU2 (la misma ola) añadió el ambiente por mundo y la música adaptativa provisionales, también por código y detrás del ajuste Música [P]. Integrada en `bd649ac` y llevada a 07 §9 (FXD2, 2026-10-16). Pendiente: la prueba en el teléfono y los encargos al compositor y al diseñador de sonido (07 §9.5) |
+| D-027 | 2026-10-18 | Mundos 7-9: las celdas, los K y los ajustes del generador para poder generarlos | Decidida por el dueño (todas las recomendaciones de la propuesta de los mundos 7-9: 25 celdas, K = 10 en los retos de 421-700, hitos de 14 cuias con K = 12 + 1 vacío, alivio hasta 13 cuias con la Tinaja y QA-PAR sin el par del rango en los estrenos de la Tinaja). Implementada en GEN79 (tanda 4, ola 7): especificación, generador, level-qa y los packs de 301-700 en sus dos variantes. Pendientes: la curación del dueño (123 niveles), el registro en el cliente (C1b) y el reflejo en 02 §5 y 03 §11, §12 y §17 (carril de documentación) |
 
 ---
 
@@ -2486,3 +2487,51 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Hápticos con `Handheld.Vibrate`:** solo da una duración fija, sin los efectos predefinidos de Android.
 
 **Cómo revertir.** Instalar el servicio mudo (`AudioCues.Install(null)`) y ocultar otra vez las tres filas de Ajustes; quitar el gancho del manifiesto retira `VIBRATE`. Siempre con una decisión nueva que sustituya a D-026.
+
+---
+
+## D-027 · Mundos 7-9: las celdas, los K y los ajustes del generador para poder generarlos
+
+- **Fecha:** 2026-10-18. Registrada el 2026-10-18 (GEN79, tanda 4, ola 7).
+- **Estado:** decidida por el dueño en el chat: «Acepto todas las recomendaciones de la propuesta de los mundos 7-9: las 25 celdas, K = 10 en los retos de 421-700, los hitos de 14 cuias con K = 12 + 1 vacío, el alivio hasta 13 cuias con Tinaja y eximir de QA-PAR los tableros del estreno de la Tinaja. Genera los mundos.» **Implementada en GEN79:** la especificación, el generador, level-qa y los packs de 301-700 en sus dos variantes. Pendientes: la curación del dueño (123 niveles), el registro de los packs en el cliente (C1b) y el reflejo en el GDD (carril de documentación; ver «Qué cambia en el GDD»).
+  - **Fuente:** la propuesta «Mundos 7, 8 y 9 (niveles 301-700): por qué no se generan y qué cambiar» (2026-10-18), con las medidas de cada opción en el equipo de escritorio. Vive fuera del repositorio, en el scratchpad de la sesión principal: este registro es su copia en lo que se decidió.
+- **Sustituye:** en `tools/level-generator/specs/campaign_v2.json`, 25 celdas del calendario de d.5.3 (D-023, punto 10), el respaldo del 352 y el `k_plan` [P] de 421-700; el tope de cuias del alivio con la Tinaja [P] de P1. Contesta la pregunta de P7d (¿un hito de 14 cuias puede ir sin cuia vacía?): no.
+- **No sustituye:** D-009 (el ciclo de 20, la escalera y la etiqueta por el bot ×40), D-019 (la Tinaja, su estreno en el 323 y la salida B), los estrenos de D-007 y D-023 ni el tope de 12 cuias de un nivel con la Tinaja (02 §5).
+
+**Contexto.**
+- Los packs `mundo_07_v1.json`, `mundo_08_v1.json` y `mundo_09_v1.json` nunca se generaron (P7b-P7d quedaron bloqueadas): el generador avanza ciclo a ciclo y se paraba en el primero sin colocación.
+- Causas medidas: la escalera de D-009 (un reto temprano que solo sale Muy difícil o uno tardío que solo sale fácil impide colocar el ciclo, sobre todo con las Aguas turbias en p15); la Tinaja con el tope de 12 cuias, que con el Brote o el Brote de dos hojas baja a 8 colores y deja el 340 y el 352 sin dificultad; los retos de K = 11 y 12, que salen Muy difíciles en más del 80 % de los intentos; los hitos de 14 cuias del 640 y el 700, que no caben con K = 13; los niveles con la Tinaja de 12 cuias sin alivio (329, 338 y 340), y el par de los estrenos de la Tinaja (K ≤ 6), por debajo del par del rango en level-qa.
+
+**Decisión.**
+1. **25 celdas del calendario** (variante a; las demás no cambian): 340 Ti+Ho (MD), 346 B2+Ln (D), 352 B2+Re (D), 358 Ln+Re (D), 360 B2+Ln (MD), 366 Ho+Tu (D), 369 Pi+B2 (D), 380 Pi+Ho (MD), 386 Ba+Tu (D), 389 Li+Ha (D), 395 Li+Ba (D), 398 Ha+Ba (D), 415 Fl+Ll (D), 418 Ba+Tu (D), 460 Pi+Ba (MD), 509 Fl (D), 529 Ho+Re (D), 538 Ha+Re (D), 552 Ln+Re (D), 558 Fl (D), y los hitos 580, 600, 640 (Ma+Ba), 660 y 700 sin «K = 13». Casi todas reordenan los retos de un ciclo; ninguna quita un estreno ni una mecánica. El 352 ya no lleva la Tinaja, así que pierde su respaldo de `fallback` (18 respaldos; en 341-360 la Tinaja sale solo en el 355).
+2. **K de los retos:** 10 en 421-700 (mundos 8 y 9); los del mundo 7 siguen con 11 (con 10, el ciclo 401-420 no colocaba). Las comodidades no cambian (11). La dificultad tardía viene de las mecánicas y la etiqueta la sigue midiendo el bot (D-009).
+3. **Hitos de 14 cuias con K = 12 + 1 vacío** + la cuia a medias de su mecánica en el 580, 600, 640, 660 y 700: el jugador conserva siempre una cuia vacía, como en el resto del juego (la opción (b) de la propuesta; con la (a), la holgura repartida en cuias a medias de P7d, el hito no tendría ninguna; en el 580 y el 640 la cuia vacía la ocupa la red del Matapi). El 620 y el 680 siguen con K = 13 + 1 vacío. Todos los hitos desde el 580 siguen teniendo 14 cuias.
+4. **Alivio con la Tinaja hasta 13 cuias:** la variante «una cuia vacía más» (03 §13) de un nivel con la Tinaja de 12 cuias puede tener 13, con la pareja en la misma fila; el nivel sigue con 12 como mucho (02 §5). 13 cuias caben en el tablero de D-006 (≤ 16 ranuras; 2 o 3 filas) y el cliente no parte la pareja (TJ2).
+5. **QA-PAR exime del par del rango los tableros de estreno de la Tinaja** (los de ★Ti con K ≤ 6: el 323, el 324 y el 325), como ya pasaba con su K: su solución es más corta que el par objetivo de 201-400 (el 324 y el 325, 13 y 14 movimientos frente al mínimo de 15,4). El par recalculado y el par ≥ 2K siguen valiendo.
+
+**Medidas** (GEN79, equipo de escritorio x64, Release):
+- Los tres mundos se generan enteros en las dos variantes, en unos 17 minutos los seis a la vez (la variante a sola, en serie, unos 20). Tres ejecuciones dan los mismos bytes y los mismos que midió la propuesta.
+- Registro de combinaciones: 98 entradas en la a y 94 en la b (antes, 102 y 96); `--validate-spec`, 24 reglas sin fallos en las dos, con el mismo hueco máximo entre primeras veces (34, del 526 al 560).
+- Etiquetas publicadas: mundo 7, 29 Difícil y 6 Muy difícil de 120 niveles; mundo 8, 30 y 7 de 140; mundo 9, 27 y 7 de 140 (03 §11: 25 % y 5 %). Todos los hitos miden Muy difícil. 14 retos no llegan a Difícil y se publican sin la etiqueta (c.2; 03 §7): 369; 429, 452, 466, 469 y 486; 566, 569, 592, 615, 646, 658, 686 y 692. El 646 es el «primer reto con tres mecánicas» de d.5.2.
+- level-qa: 0 fallos en los seis packs (las dos variantes de los tres mundos), con los avisos conocidos: QA-CUIAS (los estrenos de la Tinaja de 10 cuias, tableros de 14 cuias en 201-400 y retos de 11 cuias con K = 10 en 401-700), QA-WINDOW (los 14 retos sin etiqueta) y QA-BAND-Q (un hito en banda de reto con el mínimo cumplido).
+
+**Consecuencias.**
+- **Especificación y registro:** `campaign_v2.json` (celdas, `fallback`, `k_plan` y sus notas) y `combinations_registry_v1.json`, regenerado.
+- **Código** (sin paquetes, SDK, permisos ni versiones nuevas): `Superposition.TinajaReliefMaxCuias` y `Relief.PlusEmpty` (generador); `TinajaChecks.Structure` con el tope de su variante en QA-RELIEF-VALID y `BaseChecks.TinajaDebutParExempt` en QA-PAR (level-qa), con sus fixtures y `--self-test`. La holgura repartida en cuias a medias (P7d) solo la usa el 680 en sus etapas de relajación; el mecanismo se queda y `--self-test holgura` lo prueba con la forma de antes de esta decisión.
+- **Datos:** `Assets/_Project/Data/Levels/mundo_07_v1.json` a `mundo_09_v1.json` (variante a), `tools/out/salida_b/` (variante b), los informes de curación `tools/out/curation_w07.md` a `curation_w09.md` y la tabla de temporada `seasons_v1.json`, ampliada a 21-700. El cliente los registra en C1b.
+- **Sin cambios** en el formato de nivel (`pack_schema` 3), Remote Config, la analítica ni la economía.
+
+**Qué cambia en el GDD** (pendiente, carril de documentación):
+- 03 §11 (K de los retos de 421-700 y los hitos de 14 cuias con K = 12 + 1 vacío, salvo el 620 y el 680) y §12 (el reordenamiento de retos frente a d.5.3, si se cita);
+- 02 §5 (fila «Tinaja y su cuia»: el alivio, hasta 13 cuias);
+- 03 §17, comprobación 2 (la excepción del par en los estrenos de la Tinaja);
+- la propuesta de mecánicas (`docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md`, d.5.3 y d.5.4), si se quiere que su tabla siga siendo copia literal.
+
+**Alternativas descartadas** (medidas en la propuesta): el respaldo Br+Ba del 340 en la a (coloca, pero no arregla el alivio del 329 y el 338), K = 11 en los retos de 421-700 (frágil: coloca en 1 de 4 combinaciones), K = 10 en los retos del mundo 7 (401-420 no coloca), hitos de 14 cuias con K = 13 y sin cuia vacía (bot al 100 % y el 700 no coloca), y publicar solo la variante b.
+
+**Cómo revertir.** Con una decisión nueva que sustituya a D-027, cambiando la especificación y el generador y regenerando los packs de 301-700, el registro y los informes. Mientras C1b no los publique, sin coste para el jugador.
+
+**Archivos afectados.**
+- **Especificación y datos** (GEN79): `tools/level-generator/specs/campaign_v2.json`, `combinations_registry_v1.json`, los packs y los informes de arriba y `seasons_v1.json`; regenerados por el texto nuevo de sus informes (sin cambios en sus packs): `tools/out/curation_w06.md` (la lista aparte de los retos e hitos sin su etiqueta) y `tools/out/sample_tinaja_report.md` (el tope del alivio).
+- **Código** (GEN79): `tools/level-generator/Generation/Superposition.cs`, `Metrics/Relief.cs`, `Generation/CampaignReport.cs`, `Generation/CurationReport.cs`, `Generation/SeasonTableWriter.cs` y los `--self-test` (`TinajaSelfTest`, `RegistrySelfTest`, `HolguraSelfTest` y `CurationSelfTest`); `tools/level-qa/Checks/BaseChecks.cs`, `TinajaChecks.cs`, `ReliefChecks.cs` y `RulesSelfTest.cs`, con dos fixtures nuevos.
+- **Documentación** (GEN79): este registro, `tools/level-generator/README.md`, `tools/level-qa/README.md` y `docs/dev/traspaso/README.md`.

@@ -44,10 +44,11 @@ internal static class SeasonTableWriter
     public const string TableV1 = "Assets/_Project/Data/Levels/seasons_v1.json";
 
     /// <summary>
-    /// Último nivel publicado en el cliente, hasta el que llega la tabla del disco (<c>--until</c>): 300 desde P7a (mundo 6,
-    /// 201-300); P7b, P7c y P7d lo suben a 420, 560 y 700 al publicar sus mundos.
+    /// Último nivel con pack generado, hasta el que llega la tabla del disco (<c>--until</c>): 300 desde P7a (mundo 6,
+    /// 201-300) y 700 desde GEN79 (mundos 7-9, 301-700, con D-027): toda la vuelta 1. El cliente registra los packs de 301-700
+    /// en C1b; la tabla ya los cubre (una temporada por ciclo, sin efecto en los niveles que no se juegan).
     /// </summary>
-    public const int PublishedUntil = 300;
+    public const int PublishedUntil = 700;
     public const string InvalidLetterFixture = "tools/level-generator/specs/tests/seasons_invalid_letter.json";
 
     private static readonly UTF8Encoding Utf8NoBom = new(encoderShouldEmitUTF8Identifier: false);

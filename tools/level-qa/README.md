@@ -72,13 +72,17 @@ que se regenera; por defecto el de la especificación, el mismo que el `--levels
 la regeneración de QA-REPRO y QA-BAND-Q salen de ella; una especificación sin variantes solo admite `a`) y `--no-reproduce`.
 El informe de `--report` copia en su línea de origen `--spec`, `--levels` y `--variant` si se pasan.
 
-Mundos 7-9 (P7b-P7d), en sus dos variantes: la publicada (a, con la Tinaja) y la salida B (b, sin ella), que se guarda en
-`tools/out/salida_b/` (forma prevista; el mundo 7 aún no está generado):
+Mundos 7-9 (GEN79, con D-027), en sus dos variantes: la publicada (a, con la Tinaja), en `Assets/_Project/Data/Levels/`, y la
+salida B (b, sin ella), en `tools/out/salida_b/`. Cada pack con su rango (`--levels 301-420`, `421-560` y `561-700`); el del
+mundo 7:
 
 ```
 dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420
 dotnet run --project tools/level-qa -c Release -- tools/out/salida_b/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b
 ```
+
+Resultado de los seis packs (GEN79): 0 fallos, con los avisos conocidos de QA-CUIAS, QA-WINDOW y QA-BAND-Q que anota
+`tools/level-generator/README.md` («Mundos 7, 8 y 9»).
 
 Códigos de salida: 0 = todo cumple (los avisos no fallan); 1 = algún nivel no cumple, el esquema falla, el pack no se
 reproduce o falta Python; 2 = uso incorrecto, sin paquetes o un archivo ilegible. Sin argumentos sale con 2 (un glob vacío
@@ -122,6 +126,10 @@ prueba y sobre las especificaciones de muestra:
 - **QA-VAR-FLOR** (`VariantChecks.FlorProblems` y `CanSealOutside`): las casas de las dos frutas de la Flor se cuentan como
   D-024 (una Hoja atada, un Matapi con dosis o la Lluvia solo son casa de su fruta; la Liana, otra Flor, la Tinaja y su cuia,
   de ninguna), con un caso que pasa y otro que falla para cada una, y la fruta de U_c = 5 cuya única cuia de 5 es la Flor.
+- **La Tinaja (D-027)** (`TinajaChecks.Structure` y `BaseChecks.TinajaDebutParExempt`): un nivel de 12 cuias con la tinaja
+  pasa QA-TINAJA-CUIAS y uno de 13 no; con el tope del alivio, 13 pasa y 14 no; QA-PAR exime del par del rango el 323, el 324 y el
+  325 de `campaign_v2.json` (estreno con la tinaja y K ≤ 6) y no la práctica 327, el estreno con K = 7, el estreno del Brote de
+  dos hojas (343, sin la tinaja) ni el 324 de la variante b (C).
 
 Sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra las especificaciones; tarda menos de un segundo.
 
@@ -164,7 +172,7 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-SEALED | ninguna cuia sellada al inicio | 03 §17 #5 |
 | QA-STUCK | `atascado(S0)` = false | 02 §9.2 regla 1 |
 | QA-VALID | el resto de `LevelValidation` (mecánicas, Barro, Aguas turbias) | 03 §17 #5-#7 |
-| QA-PAR | par recalculado (A* w = 1, `run`) igual al publicado; par ≥ 2K; par objetivo del rango ±30 % | 03 §17 #1-#2 |
+| QA-PAR | par recalculado (A* w = 1, `run`) igual al publicado; par ≥ 2K; par objetivo del rango ±30 %, salvo en los tableros de estreno de la Tinaja (★ con la tinaja y K ≤ 6: el 323-325), exentos del par del rango por su K (decisión del dueño del 2026-10-18, D-027; `BaseChecks.TinajaDebutParExempt`) | 03 §17 #1-#2; D-027 |
 | QA-TINT-DEBUT | cada tinte con debut anterior o igual al nivel | 03 §17 #4 |
 | QA-KMAX | K entre `k_min` y `k_max` de la cabecera | 03 §17 #4 |
 | QA-RISK | `risk_pairs` recalculado y ≤ `max_risk_pairs` | 03 §4.5 |
@@ -189,7 +197,7 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-LABEL-ACCURACY | aviso: acierto de etiqueta por ciclo < 60 % | c.7 |
 | QA-HITO-14 | K = 13 solo en un hito (p20) cuyo K del `k_plan` de la especificación es 13 (desde el 561); ese hito lleva 14 cuias de 4 con 13 colores + 1 vacío, sin capacidades, sin la cueva de la Piraña (sería la cuia 15) y sin la Tinaja (con ella, 12 cuias como mucho). El vacío es la holgura de la aritmética del nivel, no una cuia vacía literal [P]: Σ caps − Σ unidades = 4, sin el Barro y con las gotas pendientes de la Lluvia, así que puede ir repartido en cuias a medias (el Brote de dos hojas del 580, el 600 y el 700, d.5.2). Las 14 cuias con K ≤ 12 (K + 1 vacío + la cueva de la Piraña: un reto o un hito de 401-560, o la firma 920 de d.5.7) no son de esta comprobación; más de 14 cuias, QA-STRUCT | 03 §1, §11-§12; d.5.1-d.5.2 [P]; 02 R1 y §5 |
 | QA-RELIEF-MIN | ≥ 1 variante desde el 31 | 03 §13 |
-| QA-RELIEF-VALID | variantes válidas; con tinaja, también su forma (una, su cuia contigua y en la misma fila, ≤ 12 cuias, T4 y combinaciones) | 03 §13; 02 §9.1 M13 |
+| QA-RELIEF-VALID | variantes válidas; con tinaja, también su forma (una, su cuia contigua y en la misma fila, ≤ 13 cuias, T4 y combinaciones): el tope del nivel (12) más la cuia vacía de `plus_empty` (D-027; `Superposition.TinajaReliefMaxCuias`, el mismo del generador) | 03 §13; 02 §9.1 M13; D-027 |
 | QA-RELIEF-MINUS | `minus_color` resoluble con el par entero publicado y sin quitar una fruta de la tinaja | 03 §13; propuesta de la tinaja c.3 punto 4 |
 | QA-RELIEF-PLUS | `plus_empty` = el base con exactamente un vacío de 4 más: al final o, con tinaja, en la ranura que deja la pareja en la misma fila | 03 §13 |
 | QA-RELIEF-BOT | `bot_fail` de la variante recalculado; baja ≥ 0,20 (base < 0,20: par menor o vacío extra) | 03 §17 #8 |
@@ -217,7 +225,7 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-TINAJA-TIER | dosis de la tinaja por tipo de nivel: estreno, comodidad y práctica 3 (2 ocultas); retos 4-5 (3-4); hito 5 (4) (`Superposition.TinajaDoses`) | D-019, Q-Ti1 A; 02 §9.1 M13 |
 | QA-TINAJA-ONE | una sola tinaja y una sola cuia suya | 02 §9.1 M13 regla 1 |
 | QA-TINAJA-PAIR | su cuia en la ranura contigua y en la misma fila con cualquiera de las filas del cliente (`Superposition.SameRow`) | 02 §9.1 M13 regla 1; D-006 |
-| QA-TINAJA-CUIAS | como mucho 12 cuias con la tinaja, contando la pareja | 02 §5 [P] |
+| QA-TINAJA-CUIAS | como mucho 12 cuias con la tinaja en el nivel, contando la pareja (en sus variantes de alivio, 13: QA-RELIEF-VALID) | 02 §5 [P]; D-027 |
 | QA-TINAJA-MASK | `hidden` = todas las capas de la tinaja menos la boca, y nada oculto fuera de ella (sin Aguas turbias) | 02 §9.1 M13 regla 1; propuesta de la tinaja c.4 |
 | QA-TINAJA-T4 | T4 en toda la columna de la tinaja | 02 §9.1 M13 regla 1 |
 | QA-TINAJA-COMBO | sin Liana, Remolino, Lluvia ni Piraña, y sin Barro dentro de la tinaja o de su cuia (fuera de la pareja, sí) | 02 §9.1 M13, combinaciones |
@@ -241,6 +249,7 @@ Cada fixture es un paquete con un defecto. El nombre empieza por el id de la com
 for f in tools/level-qa/fixtures/QA-*.json; do
   id=$(basename "$f" | sed 's/__.*//')
   case "$f" in
+    *__tinaja_v2_*) spec="--spec tools/level-generator/specs/campaign_v2.json";;
     *__tinaja_*) spec="--spec tools/level-generator/specs/sample_tinaja.json";;
     *__variante_*) spec="--spec tools/level-generator/specs/sample_variants.json";;
     *__hito14_*) spec="--spec tools/level-qa/fixtures/specs/hito14_k13.json";;
@@ -271,7 +280,16 @@ QA-BAND-Q en las recuperaciones 21, 22, 61, 81, 122, 141 y 161, las comodidades 
 QA-SCHEMA.
 
 Los de la tinaja (`QA-*__tinaja_*.json`) son niveles 321-340 y se pasan con la
-especificación de la muestra de P1 (`specs/sample_tinaja.json`, la única con la tinaja en el calendario hasta P4). Salen del
+especificación de la muestra de P1 (`specs/sample_tinaja.json`, la única con la tinaja en el calendario hasta P4), salvo los
+`QA-*__tinaja_v2_*.json`, que se pasan con `campaign_v2.json` (su par objetivo es el de 201-400).
+
+Los dos de D-027 (decisión del dueño del 2026-10-18): `QA-RELIEF-VALID__tinaja_alivio_de_14_cuias` es el reto 329 de la muestra
+(11 cuias) con su `plus_empty` llevado a 14 cuias (dos vacíos más al final): pasa del tope de 13 del alivio con la tinaja; da
+además QA-RELIEF-PLUS (no es el base con un solo vacío más). El `plus_empty` de 13 cuias de un nivel de 12 pasa (los niveles
+con tinaja de 12 cuias del mundo 7 y `--self-test reglas`). `QA-PAR__tinaja_v2_par_corto_fuera_del_estreno` es el estreno 324 de
+la muestra (K = 6 y par 13) con el número de la práctica 327 (Ti, sin ★): fuera del estreno, el par del rango 201-400 (22-36
+±30 %, 15,4 como mínimo) vuelve a exigirse y falla; da además QA-WINDOW (`bot_fail` 0 en una comodidad). El mismo tablero como
+324 pasa QA-PAR (`--self-test reglas` prueba la regla con el 323-325, el 327, K = 7, el estreno sin tinaja y la variante b). Salen del
 pack de muestra con un defecto (QA-TINAJA-ONE, PAIR, CUIAS, MASK, T4, COMBO, SLOT en p1 y en p19, TIER, QA-RELIEF-MASK y
 QA-RELIEF-MINUS) o de tableros que rechazan los filtros del generador: QA-TINAJA-DEBUT
 (`tinaja_estreno_s0_sin_seguridad_demostrada`; antes de FIXG, `tinaja_estreno_con_trampa_en_s0`) es un estreno con 10 vertidos

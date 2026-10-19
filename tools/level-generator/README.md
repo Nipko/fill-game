@@ -49,9 +49,9 @@ recomendación aplica D-023, punto 10. Mismo formato que `campaign_v1.json`, con
 `campaign_v1.json` no cambia):
 
 - `calendar`: las 500 celdas de d.5.3, literales (copiadas por programa de las tablas de la propuesta), con los códigos de
-  d.5.1 (Ln, Ha, Ti, B2 y Fl) y «(MD; K = 13)» en los hitos de 14 cuias. Es la **variante a**, con la Tinaja (estreno en el
-  323, D-019).
-- `fallback`: el respaldo sin la Tinaja de cada una de sus 19 celdas (d.5.4). `--variant b` (en `--spec`, `--registry` y
+  d.5.1 (Ln, Ha, Ti, B2 y Fl) y «(MD; K = 13)» en los hitos de K = 13 (el 620 y el 680), salvo las 25 celdas de 340-700 que
+  cambió D-027 (2026-10-18; sección «Mundos 7, 8 y 9»). Es la **variante a**, con la Tinaja (estreno en el 323, D-019).
+- `fallback`: el respaldo sin la Tinaja de cada una de sus 18 celdas (d.5.4; el 352 ya no la lleva desde D-027). `--variant b` (en `--spec`, `--registry` y
   en la lectura, `CampaignSpec.Load(path, "b")`) toma el calendario con esas celdas: la **variante b**, la salida B de
   D-019. `published_variant` (a) es la que se lee sin `--variant`; la cambia C1b si se publica la b (d.5.8).
 - En la tabla `mechanics`, las nueve de `campaign_v1` (para leer las celdas y contar la historia) más las de la 1.0, con
@@ -69,9 +69,11 @@ recomendación aplica D-023, punto 10. Mismo formato que `campaign_v1.json`, con
 
 Datos del GDD: rangos de las filas 201-400 y 401-700 de 03 §11; mundos 6-9 del glosario §8 (Oriente 201-300, Madre de
 Dios 301-420, Madidi 421-560 y Ucayali 561-700; `world_id` [P]); temporadas de d.5, punto 4; ciclo, ventanas y etiquetas
-de D-009, como en `campaign_v1`. `k_plan` [P]: mundo 6, recuperación 9 y el resto 10; mundos 7 y 8, 10 y 11; mundo 9,
-recuperación 10, comodidad 11, retos 12 e hito 13 (K = 13 + 1 vacío desde el 561, el primero en el 580). Con la Tinaja el
-generador baja K hasta 12 cuias (02 §5).
+de D-009, como en `campaign_v1`. `k_plan` [P], con D-027: mundo 6, recuperación 9 y el resto 10; mundo 7, recuperación 10 y el
+resto 11; mundo 8, recuperación 10, comodidad e hito 11 y retos 10; mundo 9, recuperación 10, comodidad 11, retos 10 e hitos
+12 (14 cuias: K = 12 + 1 vacío + la cuia a medias de su mecánica en el 580, 600, 640, 660 y 700), salvo el 620 y el 680, con
+K = 13 + 1 vacío (filas de un solo nivel delante: el lector toma la primera fila que cubre el nivel). Con la Tinaja el
+generador baja K hasta 12 cuias (02 §5); su alivio «una cuia vacía más» llega a 13 (D-027).
 
 ```
 dotnet run --project tools/level-generator -c Release -- --validate-spec tools/level-generator/specs/campaign_v2.json
@@ -79,8 +81,8 @@ dotnet run --project tools/level-generator -c Release -- --registry tools/level-
 dotnet run --project tools/level-generator -c Release -- --self-test registry
 ```
 
-No genera packs: los mundos 6-9 los generan P7a-P7d con `--levels` por mundo (y la b con `--variant b`, en `tools/out`); el
-mundo 6 ya está (sección «Mundo 6: 201-300», P7a).
+No genera packs: los mundos 6-9 se generan con `--levels` por mundo (y la b con `--variant b`, en `tools/out/salida_b/`): el
+mundo 6 en P7a (sección «Mundo 6: 201-300») y los mundos 7-9 en GEN79 (sección «Mundos 7, 8 y 9: 301-700»).
 
 ## Registro de combinaciones publicadas (`--registry`; P4)
 
@@ -117,9 +119,10 @@ Formato [P] `af-combinations/1` (`Campaign/SpecValidator.cs`, `CombinationsRegis
   entradas de un código del registro son estrenos con ★.
 - `source`: la cadena de `previous`; `variant`: la publicada (o la de `--variant`). UTF-8 sin BOM, LF y una entrada por
   línea: regenerarlo da los mismos bytes. Nunca se edita a mano.
-- El archivo refleja solo la variante que se publica: 102 entradas con la a (40 de 11-200 y 62 de 201-700); con la b serían
-  96 (40 y 56). **Se regenera antes de fusionar** si cambia lo que se publica (la b, el respaldo del hito 340 o el del 354;
-  d.5.6 y d.5.8). `--check` no escribe y sale con 1 si el del disco difiere o falta; la especificación tiene que pasar
+- El archivo refleja solo la variante que se publica: 98 entradas con la a (40 de 11-200 y 58 de 201-700); con la b serían
+  94 (40 y 54). Antes de D-027 eran 102 y 96: salen Ti+Br (340), B2+Ti (352), Pi+Br+Ba (460) y Ma+Ba+Ho (640), y se mueven
+  B2+Ln (358 → 346), B2+Re (360 → 352), Pi+B2 (366 → 369), Ha+Ba (389 → 398) y Fl+Ll (418 → 415).
+  **Se regenera antes de fusionar** si cambia lo que se publica (la b, el respaldo del hito 340 o el del 354; d.5.6 y d.5.8). `--check` no escribe y sale con 1 si el del disco difiere o falta; la especificación tiene que pasar
   `--validate-spec` en todas sus variantes, como en `--validate-spec` (si no, 1 y no escribe).
 - **Respaldo del hito 340 en la a** (d.5.4: si la tinaja no llega al 0,90 del bot): en `campaign_v2.json` se cambia la celda
   340 a `Br+Ba (MD)`, **se quita también su entrada de `fallback`** (la celda ya no lleva la Tinaja y, si el respaldo se
@@ -166,7 +169,7 @@ un `FAIL [regla]` por cada incumplimiento o un `AVISO`. Reglas (ids estables):
 Las tres últimas solo se aplican si la especificación las necesita (dos variantes, un K ≥ 13 o `novelty_max_gap`). Con
 `campaign_v1.json` y con `sample_variants.json`: 21 reglas, 0 fallos (la salida no cambia con P4, salvo el texto de MAX-2).
 Con `campaign_v2.json`: 24 reglas, 0 fallos en las dos variantes, que se comprueban enteras, cada una con su resumen, su
-registro en memoria (102 entradas en la a y 96 en la b) y su hueco máximo entre primeras veces (34, del 526 al 560); los
+registro en memoria (98 entradas en la a y 94 en la b, con D-027) y su hueco máximo entre primeras veces (34, del 526 al 560); los
 fallos llevan la variante. Las reglas comprueban el calendario; lo publicado lo comprueba `level-qa` (QA-MECH-CELL y
 QA-GAP-120).
 
@@ -212,7 +215,9 @@ de cada fixture enumera sus reglas.
   por capacidad y mecánica y por origen), la definición de 03 §7 [P].
 - `Relief.cs`: variantes de alivio de 03 §13 (`plus_empty` sin resolver, con par null; `minus_color` = la eliminación
   resoluble de par más alto con A* a 100.000). Se publican las dos [P] en el orden de 03 §13, si cumplen el criterio de
-  level-qa (03 §17 #8). Nunca se quita un color que sea llave o contenido de una mecánica [P].
+  level-qa (03 §17 #8). Nunca se quita un color que sea llave o contenido de una mecánica [P]. Con la tinaja, `plus_empty`
+  llega a 13 cuias con la pareja (el tope de 12 del nivel más su cuia vacía; decisión del dueño del 2026-10-18, D-027;
+  `Superposition.TinajaReliefMaxCuias`), y level-qa aplica el mismo tope en QA-RELIEF-VALID.
 - `Parity.cs` (`--parity`): sobre los 40 niveles de `tools/out/levels_proto.json` y `tools/out_inverse/levels_proto.json`
   compara par y complejidad (40/40), ramificación y trampas a 2 decimales (≥ 38/40) y color y par de −1 color (donde el
   prototipo los tiene). `bot_fail` y `D` no se comparan: el PRNG cambia (09 R26). La cifra de C# se redondea al par
@@ -329,12 +334,15 @@ Decisiones [P] de la generación (para revisar en la integración):
     con 2 vacíos (03 §4.4) pasa de 14 cuias y no aplica, y el endurecimiento con `deep` sigue sin la cuia de holgura: la
     holgura repartida nunca cambia la fuente de esas etapas.
 
-  En 561-700 (variantes a y b), solo 580, 592, 600, 646, 660, 680 y 700. Ningún slot de 11-560 llega a estos casos: los
-  packs 11-300 no cambian y 301-560 (P7b, P7c) generan como antes de P7d. `--self-test holgura` lo comprueba con las
-  configuraciones de todas las etapas, con y sin endurecimiento, y comprueba que toda etapa que reparte la holgura lleva la
-  cuia de holgura. Pendiente del dueño (pregunta de P7d): con la holgura repartida, el hito de 14 cuias no tiene ninguna
-  cuia vacía (la holgura 4 va en dos cuias a medias). 03 §1 y §11 dicen «13 llenas + 1 vacío»; QA-HITO-14 ya admite que
-  la holgura vaya repartida.
+  **Con D-027 (2026-10-18) casi ningún nivel la usa.** El dueño respondió a la pregunta de P7d con la (b): un hito de 14
+  cuias conserva su cuia vacía, así que los del 580, 600, 640, 660 y 700 van con K = 12 + 1 vacío + la cuia a medias de su
+  mecánica, y los retos de 561-700, con K = 10 (no llegan a 14 cuias). En 201-700 (variantes a y b) solo el 680 (Li+Ha+Re,
+  K = 13 + 1 vacío) reparte la holgura, en la relajación del hito de sus etapas 1-2; su tablero publicado sale de la etapa 0,
+  con la cuia vacía. Ningún slot de 11-560 llega a estos casos. El mecanismo se queda para un hito de K = 13 con una
+  mecánica de cuias a medias: `--self-test holgura` lo prueba con la forma de antes de D-027 (`HolguraSelfTest.Legacy`, el
+  `k_plan` de retos 12 e hitos 13 y las celdas «(MD; K = 13)» de esos cinco hitos: 580, 592, 600, 646, 660, 680 y 700, como
+  arriba) y comprueba con `campaign_v2.json` que los hitos de K = 12 llevan su vacío sin repartir la holgura, que el 620 y el
+  680 no cambian K ni pasan de 14 cuias y que toda etapa que la reparte lleva la cuia de holgura.
 
 Diagnóstico: con la variable de entorno `LEVELGEN_TRACE=<nivel>` el generador traza por stderr cada candidato de ese
 nivel (fuente, K, vacíos, bot_fail, motivo del rechazo y milisegundos) y un resumen del slot. No cambia la salida.
@@ -427,8 +435,8 @@ dotnet run --project tools/level-generator -c Release -- --self-test curation
   no de una aritmética de ciclos; con 301-320 generados no hay línea del ciclo de estreno.
 - Cuándo sale esa sección (`CurationReport.ShowsTinaja`: con 321-340 en la a y en la b; no con 201-300 ni con 301-320) y las
   filas de su tabla (`CurationReport.TinajaRows`): una por cada una de las 8 celdas con la Tinaja de la a, en orden; la del 323
-  (★Ti, respaldo Ma) y la del 340 (Ti+Br (MD), respaldo Br+Ba (MD)) dicen la celda publicada con o sin la Tinaja (en la b,
-  la del respaldo) y las dosis «n (n − 1)», con las ocultas entre paréntesis (la máscara tapa todas las capas menos la boca), o
+  (★Ti, respaldo Ma) y la del 340 (Ti+Ho (MD) desde D-027, respaldo Br+Ba (MD)) dicen la celda publicada con o sin la
+  Tinaja (en la b, la del respaldo) y las dosis «n (n − 1)», con las ocultas entre paréntesis (la máscara tapa todas las capas menos la boca), o
   «—» sin medir.
 
 Con una especificación de dos variantes, las dos líneas de comando del informe (la de «Generado por» y la de level-qa) llevan
@@ -437,36 +445,81 @@ Con una especificación de dos variantes, las dos líneas de comando del informe
 La anota quien recoge la decisión del dueño (tech-lead) y se regenera el informe con el comando de arriba. Si la curación pide
 cambios, se cambian la especificación o el generador y se regeneran el pack, el informe y la comprobación de level-qa.
 
-`tools/out/curation_w06.md` es el del mundo 6; P7b-P7d escriben `curation_w07.md` a `curation_w09.md`.
+`tools/out/curation_w06.md` es el del mundo 6 (P7a) y `curation_w07.md` a `curation_w09.md`, los de los mundos 7-9 (GEN79). Desde
+GEN79 el resumen lista aparte los retos e hitos que no miden su etiqueta objetivo y se publican con la que miden.
 
-## Mundo 9: 561-700 (P7d; sin generar)
+## Mundos 7, 8 y 9: 301-700 (GEN79; D-027)
 
-El mundo 9 (Ucayali, `w09_ucayali` [P]) se generará con los mismos comandos que el 6, con `--levels 561-700`,
-`--curation tools/out/curation_w09.md` y, con la Tinaja en 574, 591, 631, 651 y 691, también la salida B (`--variant b`).
-Trae los hitos de 14 cuias (K = 13 + 1 vacío; 03 §11; d.5.1), que el generador construye con la holgura repartida en cuias
-a medias cuando la celda la necesita (decisión [P] de la generación, arriba; `--self-test holgura`).
+Los mundos 7 (Madre de Dios, 301-420), 8 (Madidi, 421-560) y 9 (Ucayali, 561-700) con `campaign_v2.json`, en sus dos
+variantes: la publicada (a, con la Tinaja: estreno en el 323) en `Assets/_Project/Data/Levels/` y la salida B de D-019 (b,
+sin ella) en `tools/out/salida_b/`. P7b-P7d no llegaron a generarlos: con la especificación de P4, varios ciclos no tenían
+colocación (la escalera de D-009 con retos que solo salían Muy difíciles o fáciles, la Tinaja con el tope de 12 cuias y los
+hitos de 14 cuias del 640 y el 700). La propuesta de los mundos 7-9 midió cada bloqueo y sus opciones, y el dueño aceptó
+todas sus recomendaciones el 2026-10-18 (**D-027**, `docs/dev/decisiones.md`):
 
-**Aún no hay pack** (2026-10-16): con `campaign_v2.json` tal como está, 4 de los 7 ciclos no tienen colocación. Cifras del
-equipo de escritorio (Release, `LEVELGEN_TRACE`):
+- **25 celdas** del calendario (la lista, en `calendar_note` de la especificación): la mayoría reordena los retos de un ciclo
+  para la escalera; el 340 pasa a Ti+Ho (MD), el 352 a B2+Re (D) (sin la Tinaja y sin su respaldo), el 360 a B2+Ln (MD), el
+  380 a Pi+Ho (MD), el 460 a Pi+Ba (MD), el 509 a Fl (D) y el 640 a Ma+Ba (MD). Ninguna quita un estreno ni una mecánica.
+- **K = 10 en los retos de 421-700** (11 en los del mundo 7) y **los hitos de 14 cuias con K = 12 + 1 vacío** + la cuia a
+  medias de su mecánica (580, 600, 640, 660 y 700; el 620 y el 680 siguen con K = 13 + 1 vacío): el jugador conserva siempre
+  una cuia vacía.
+- **El alivio de los niveles con Tinaja llega a 13 cuias** (`Superposition.TinajaReliefMaxCuias`; level-qa, QA-RELIEF-VALID).
+- **QA-PAR exime del par del rango los tableros de estreno de la Tinaja** (323-325, K ≤ 6; `BaseChecks.TinajaDebutParExempt`).
 
-| Nivel | Celda | Qué pasa |
-|---|---|---|
-| 640 | Ma+Ba+Ho (MD; K = 13) | Ninguna etapa cabe en 14 cuias: la Hoja necesita el vacío de 4 entero (toda la holgura de K = 13) y el Matapi (vacío o 1-3 dosis de un color) y el Barro (hueco para la dosis desplazada) necesitan más. Es la aritmética de la celda, no de la búsqueda |
-| 615 | Li+Re (D) | 0 candidatos publicables de unos 600: 536 miden Muy difícil (no se publica en un reto D), 19 en ventana agotan A* (300.000, `fill` con 2 vacíos) y 12 en ventana tienen par < 2K (`walk`) |
-| 666 | Li+Ha (D) | Igual: 437 Muy difícil y 38 en ventana con par < 2K, de 589 tableros |
-| 678 | Ha+Re (D) | Igual: 525 Muy difícil, 23 en ventana con par < 2K y 10 que agotan A*, de 588 tableros |
-| 700 | Ma+Ha+B2 (MD; K = 13) | Con la holgura repartida salen tableros, pero los 133 que entran en la ventana no tienen solución (A*); los demás no dejan sitio al Brote de dos hojas |
-| 641-660 | — | Todos los slots tienen opciones, pero el escalón de D-009 no coloca (el 658, Ha+Re (D), solo tiene 2) |
+D depende del pool del rango de 03 §11 (201-400 y 401-700), así que cada pack se reproduce solo con sus `--levels` (lo mismo en
+`--check` y en level-qa). Comandos del mundo 7 (los del 8 y el 9, con `421-560` y `561-700` y su `curation_w08.md` o
+`curation_w09.md`):
 
-Con el 640 cambiado a `Ma+Ba (MD; K = 13)` (solo como prueba en una copia de la especificación; no se publica), los ciclos
-561-580, 581-600 y 621-640 colocan, con sus hitos de 14 cuias del 580, el 600 y el 640; los demás siguen sin colocación. Los
-retos de K = 12 de 601-700 miden casi todos Muy difícil (03 §4.4 solo prevé relajar el reto hacia `fill` con 2 vacíos). Lo que
-falta es del dueño y del tech-lead: la celda del 640, el K o la relajación de esos retos (y el 700), y si el hito de 14 cuias
-puede ir sin ninguna cuia vacía, con la holgura repartida (arriba; si se acepta, el carril de documentación ajusta 03 §1 y
-§11).
+```
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant a --out Assets/_Project/Data/Levels --curation tools/out/curation_w07.md --decisions tools/level-generator/specs/curation_v2.json
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b --out tools/out/salida_b
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant a --out Assets/_Project/Data/Levels --check
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b --out tools/out/salida_b --check
+dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant a
+dotnet run --project tools/level-qa -c Release -- tools/out/salida_b/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b
+```
 
-Las cifras de la tabla son de antes de limitar la holgura repartida a los casos de arriba (revisión de P7d). Con el límite,
-581-600 da el mismo pack byte a byte, 561-580 sigue colocando y 641-660 sigue sin colocación (el 658 sigue con 2 opciones).
+| Pack | Niveles | Bytes | SHA-256 | Tiempo (s) |
+|---|---|---|---|---|
+| `mundo_07_v1.json` (a) | 120 | 173.002 | `347846ec92f9b0991b74c0ade72a605a235af5d51b5d09c4cec6ab1cb18bdb44` | 1.025 · 1.047 |
+| `mundo_08_v1.json` (a) | 140 | 201.608 | `c3e8c7bf3465285b1ab519ea4eb248f6b8c1780837179d7560d0f73d3f6c2ac9` | 405 · 423 |
+| `mundo_09_v1.json` (a) | 140 | 200.770 | `ddf2ffb8433b6958b7edd05f5798770413adfc583f852b5cc6aa020112533872` | 625 · 704 |
+| `salida_b/mundo_07_v1.json` (b) | 120 | 174.986 | `348e0939d1a32042a362d58a8ce2e7ff2f694705bf49f2287c043cb1686a4106` | 440 · 456 |
+| `salida_b/mundo_08_v1.json` (b) | 140 | 201.051 | `a5e8422b8712d8ed29be22667a1912398b0051530dbb027ce9f529dc9ddda19f` | 402 · 425 |
+| `salida_b/mundo_09_v1.json` (b) | 140 | 199.466 | `e49492d72b6f5ca0e20108971fc7d54a957a77ff1114c13d41a77034966ed12c` | 622 · 681 |
+
+Todos `pack_schema` 3. Tiempos del equipo de escritorio x64 (AMD Ryzen 9 9900X, Release, 24 hilos), con los seis
+generadores a la vez: la primera ejecución y la última (en la b, la de `--check`), de unos 6 a 17 minutos cada uno y unos 17
+minutos los seis juntos. La variante a sola, en serie, son unos 20 minutos (la propuesta: 629, 201 y 385 s). Determinismo: tres ejecuciones de cada pack (la primera, una segunda en otra carpeta y la
+última, con el generador final, en el repositorio) dan los mismos bytes, y los mismos de la propuesta; el informe de curación
+también, salvo la línea del comando. `--check` de las seis, en verde.
+
+level-qa (la compuerta completa, con QA-REPRO: regenera cada pack en memoria y lo compara byte a byte): 0 fallos en los seis, con avisos conocidos (no fallan):
+
+| Pack | Avisos |
+|---|---|
+| 7 a | 9: QA-CUIAS en los estrenos de la Tinaja 323-325 (10 cuias, K = 6) y en el 343-345 y el 369 (14 cuias, por encima de las 11-13 de 201-400); QA-WINDOW en el reto 369 (bot 0,450); QA-BAND-Q en el hito 320 (banda de reto con el mínimo cumplido) |
+| 7 b | 8: QA-CUIAS en el 335, 343-345, 369 y 378 (14 cuias); QA-WINDOW en el 369; QA-BAND-Q en el hito 340 |
+| 8 a | 11: QA-WINDOW en los retos 429, 452, 466, 469 y 486; QA-CUIAS en los retos de 11 cuias con K = 10 (458, 478, 492, 509, 538 y 552; 401-700 pide 12-14) |
+| 8 b | 10: los mismos, sin el QA-WINDOW del 486 |
+| 9 a | 12: QA-WINDOW en los retos 566, 569, 592, 615, 646, 658, 686 y 692; QA-CUIAS en los retos de 11 cuias 606, 612, 655 y 666 |
+| 9 b | 12: los mismos |
+
+Con el generador y level-qa de antes de D-027, el 7 a daba 8 fallos (los 6 de QA-RELIEF-VALID por el alivio de 13 cuias en el
+327, 329, 332, 338, 340 y 355, y los 2 de QA-PAR en el 324 y el 325): los quitan los dos ajustes de level-qa.
+
+Para la curación del dueño quedan 123 niveles (`tools/out/curation_w07.md`, `curation_w08.md` y `curation_w09.md`): los 36 retos e
+hitos del mundo 7 y sus estrenos 323, 343 y 403, y los 42 retos e hitos de cada uno de los mundos 8 y 9. Todos los hitos
+miden Muy difícil; 14 retos no miden su etiqueta objetivo y se publican sin la etiqueta Difícil (c.2; 03 §7), cada informe los
+lista aparte: el 369 del mundo 7; el 429, 452, 466, 469 y 486 del 8; y el 566, 569, 592, 615, 646, 658, 686 y 692 del 9 (el
+646 es el «primer reto con tres mecánicas» de d.5.2). Etiquetas publicadas: mundo 7, 29 Difícil y 6 Muy difícil de 120; mundo
+8, 30 y 7 de 140; mundo 9, 27 y 7 de 140 (03 §11: 25 % y 5 %).
+
+Los packs los registra en el cliente C1b, que genera sus `.meta` y decide la variante que se publica (D-019, Q-Ti3; d.5.8). Si
+la curación pide cambios, se cambian la especificación o el generador y se regeneran los packs, los informes y level-qa. El
+ciclo de 20 con la escalera estricta es sensible a todo el mundo (el índice D se calcula con todos los candidatos del rango):
+un cambio en un ciclo puede mover otro, así que cualquier cambio de celda, de K o del factor de Morpho (PF1) obliga a regenerar
+el mundo entero, y puede salir otro bloqueo.
 
 ## Tinaja (M13; D-019, Q-Ti1 A; 03 §8 y §9; propuesta de la tinaja c.3)
 
@@ -490,8 +543,11 @@ no falla (c.9: 0-2 %) y el tablero no entra en la ventana de comodidad (20-60 %)
 
 **Como mucho 12 cuias con la pareja** (02 §5, fila «Tinaja y su cuia»: «como mucho 12 cuias en un nivel con tinaja» [P];
 `Superposition.TinajaMaxCuias`): si la etapa pasa de 12, se baja K y el informe lo anota («tinaja: K <= n por el tope de 12
-cuias»); si K quedara por debajo de 3, la etapa no aplica. Es un tope de layout, así que tampoco se publica un
-`plus_empty` de 13 cuias [P]. Al relajar, los vacíos no cambian: K − 1 una vez (por debajo del tope), o `deep` si los
+cuias»); si K quedara por debajo de 3, la etapa no aplica. Es un tope de layout del nivel; su alivio `plus_empty` puede
+llegar a 13 cuias con la pareja en la misma fila (decisión del dueño del 2026-10-18, D-027, propuesta de los mundos 7-9 §6 A;
+`Superposition.TinajaReliefMaxCuias`; con 13 cuias el tablero de D-006 tiene 2 o 3 filas y la pareja va en la misma), pero no
+a 14. Sin él, los niveles con tinaja de 12 cuias cuyo `minus_color` no pasa los filtros (329, 338 y 340) se quedaban sin alivio
+y el mundo 7 no se escribía. Al relajar, los vacíos no cambian: K − 1 una vez (por debajo del tope), o `deep` si los
 candidatos quedan por debajo de la ventana.
 
 En los niveles con tinaja todas las búsquedas que deciden «hay solución» van **sin poda de fútiles**
@@ -632,13 +688,13 @@ cliente la lee de **una tabla por ciclo, copiada del calendario versionado** (pr
 el 2026-10-13: (b), D-020; 03 §12; 08, «Preguntas abiertas» 12). Solo cambia la LUT del fondo, sin cartel (la lee SE2).
 
 ```
-dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json tools/level-generator/specs/campaign_v2.json --until 300 --out Assets/_Project/Data/Levels/seasons_v1.json
-dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json tools/level-generator/specs/campaign_v2.json --until 300 --out Assets/_Project/Data/Levels/seasons_v1.json --check
+dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json tools/level-generator/specs/campaign_v2.json --until 700 --out Assets/_Project/Data/Levels/seasons_v1.json
+dotnet run --project tools/level-generator -- --seasons tools/level-generator/specs/campaign_v1.json tools/level-generator/specs/campaign_v2.json --until 700 --out Assets/_Project/Data/Levels/seasons_v1.json --check
 dotnet run --project tools/level-generator -- --self-test seasons
 ```
 
-`--until <nivel>` (P7a): la tabla acaba en el ciclo que termina en ese nivel, el último publicado en el cliente (300 desde P7a;
-P7b, P7c y P7d lo suben a 420, 560 y 700 con sus mundos, y con él `SeasonTableWriter.PublishedUntil`). Las especificaciones se
+`--until <nivel>` (P7a): la tabla acaba en el ciclo que termina en ese nivel, el último con pack (300 desde P7a y 700 desde
+GEN79, con los mundos 7-9: `SeasonTableWriter.PublishedUntil`). Las especificaciones se
 comprueban enteras; solo se escriben sus ciclos hasta ese nivel, y `source` lleva solo las que aportan alguno (con `--until
 200`, la tabla de `campaign_v1.json` sola, byte a byte). Un `--until` que no es el último nivel de un ciclo de las
 especificaciones sale con 1 y no escribe.
@@ -652,7 +708,7 @@ Formato [P] `af-seasons/1` (`Generation/SeasonTableWriter.cs`; no es un contrato
   "cycles": [
     {"from_level": 21, "season": "B"},
     ...
-    {"from_level": 281, "season": "A"}
+    {"from_level": 681, "season": "B"}
   ]
 }
 ```
@@ -660,9 +716,9 @@ Formato [P] `af-seasons/1` (`Generation/SeasonTableWriter.cs`; no es un contrato
 - `source`: la ruta de cada especificación, relativa a la raíz del repositorio (no a la carpeta desde la que se ejecuta) y
   con `/`; con varias, separadas por «, » en el orden de sus ciclos [P].
 - `cycles`: un ciclo por línea, en orden y sin huecos; cada uno va de `from_level` a `from_level` + 19. Los niveles 1-20
-  (tutorial y rampa) no tienen temporada. Hoy (P7a): 14 ciclos 21-281, los 9 de `campaign_v1.json` (21-181, idénticos a su
-  `seasons`) y los 5 del mundo 6 de `campaign_v2.json` (201 A, 221 A, 241 B, 261 B y 281 A; d.5 punto 4). Sin `--until`, con
-  `campaign_v2.json` entera serían 34 ciclos 21-681 (`--self-test registry` lo comprueba); P7b-P7d la amplían con sus mundos.
+  (tutorial y rampa) no tienen temporada. Hoy (GEN79): 34 ciclos 21-681, los 9 de `campaign_v1.json` (21-181, idénticos a su
+  `seasons`) y los 25 de `campaign_v2.json` (201-681; d.5 punto 4): la especificación entera, como sin `--until`
+  (`--self-test registry` lo comprueba).
 - UTF-8 sin BOM, LF y claves en orden fijo: la misma especificación da los mismos bytes.
 
 La herramienta copia y comprueba el formato: cada ciclo de la especificación (de `cycle.from_level` a `last_level`) con A o
