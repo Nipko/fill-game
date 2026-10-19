@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using AF.Core.Board;
+using AF.Core.Mechanics;
 
 namespace AF.Presentation
 {
@@ -124,6 +125,12 @@ namespace AF.Presentation
         /// <summary>Dosis oculta (Aguas turbias): <c>[i · MaxDoses + k]</c>.</summary>
         public readonly bool[] Hidden = new bool[MaxCuias * MaxDoses];
 
+        /// <summary>
+        /// La cuia es la Tinaja (M13; D-010 con D-019; TJ3): el chorrito entra por su boca sin que se vea subir el agua y la fruta
+        /// cae solo en la boca (<see cref="IsInert"/>: las dosis de debajo, ocultas o ya reveladas, no reciben fruta).
+        /// </summary>
+        public readonly bool[] Jar = new bool[MaxCuias];
+
         /// <summary>u en dp (medio ancho de la cuia, 07 §4.1).</summary>
         public float Unit = 24f;
 
@@ -206,16 +213,18 @@ namespace AF.Presentation
             Array.Clear(Doses, 0, Doses.Length);
             Array.Clear(Tints, 0, Tints.Length);
             Array.Clear(Hidden, 0, Hidden.Length);
+            Array.Clear(Jar, 0, Jar.Length);
         }
 
         /// <summary>
         /// La dosis <paramref name="k"/> de la cuia <paramref name="i"/> no forma racha ni recibe fruta: está oculta (Aguas
-        /// turbias, guion §10) o es Barro (color 15, 02 §9.1 M5: inerte, la regla de 02 §4.2 aplicada al Barro [P]).
+        /// turbias, guion §10), es Barro (color 15, 02 §9.1 M5: inerte, la regla de 02 §4.2 aplicada al Barro [P]) o está bajo la
+        /// boca de la Tinaja (<see cref="Jar"/>: la fruta, solo en la boca; TJ3).
         /// </summary>
         public bool IsInert(int i, int k)
         {
             int index = (i * MaxDoses) + k;
-            return Hidden[index] || Tints[index] == Cuia.MudColor;
+            return Hidden[index] || Tints[index] == Cuia.MudColor || (Jar[i] && k < Doses[i] - 1);
         }
 
         /// <summary>Fija la cuia <paramref name="i"/> a partir del modelo (tintes, dosis y ocultas; el Barro va como tinte 15).</summary>
@@ -226,6 +235,7 @@ namespace AF.Presentation
             Row[i] = row;
             int count = Math.Min(cuia.Count, MaxDoses);
             Doses[i] = count;
+            Jar[i] = cuia.Mechanic == MechanicType.Tinaja;
             for (int k = 0; k < MaxDoses; k++)
             {
                 bool on = k < count;
@@ -242,6 +252,7 @@ namespace AF.Presentation
             Row[i] = row;
             int count = Math.Min(tintsBottomUp.Length, MaxDoses);
             Doses[i] = count;
+            Jar[i] = false;
             for (int k = 0; k < MaxDoses; k++)
             {
                 bool on = k < count;
@@ -656,10 +667,13 @@ namespace AF.Presentation
         /// <summary>De dónde cae el chorrito (dp desde arriba): el canto interior del marco o el borde inferior de la repisa de arriba.</summary>
         public readonly float[] StreamTopY = new float[N];
 
-        /// <summary>Fondo de la cavidad (dp desde arriba).</summary>
+        /// <summary>Fondo de la cavidad (dp desde arriba); en la Tinaja, su boca: el chorrito no baja de ella (TJ3).</summary>
         public readonly float[] CavityFloorY = new float[N];
 
-        /// <summary>Superficie del agua con las dosis finales (dp desde arriba).</summary>
+        /// <summary>
+        /// Superficie del agua con las dosis finales (dp desde arriba), donde cae la fruta; en la Tinaja, su boca
+        /// (<c>ProceduralArt.TinajaMouthCenterU</c>): el agua no se ve subir y la fruta cae solo en la boca (D-010; TJ3).
+        /// </summary>
         public readonly float[] SurfaceY = new float[N];
 
         // ---- Rachas (de abajo arriba por cuia) ----
@@ -1295,6 +1309,12 @@ namespace AF.Presentation
                 float foot = input.FootY[i];
                 CavityFloorY[i] = foot - (CuiaGeometry.CavityBottomU * Unit);
                 SurfaceY[i] = foot - ((CuiaGeometry.CavityBottomU + Math.Max(0, input.Doses[i])) * Unit);
+                if (input.Jar[i])
+                {
+                    // La Tinaja (TJ3): el chorrito entra por la boca el tiempo de sus dosis y la fruta cae en ella.
+                    CavityFloorY[i] = foot - (ProceduralArt.TinajaMouthCenterU * Unit);
+                    SurfaceY[i] = CavityFloorY[i];
+                }
                 int row = Clamp(input.Row[i], 0, Rows - 1);
                 float x = input.CenterX[i];
                 if (row == 0)

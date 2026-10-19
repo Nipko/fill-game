@@ -273,15 +273,15 @@ namespace AF.Presentation
         /// <summary>
         /// Icono de 32 dp de la mecánica <paramref name="type"/> (tarjeta previa y HUD): hoja de palma, capullo, liana, matapi,
         /// remolino, nube, piraña, hoja atada de un lazo de fibra (VA1a) o flor de vitória-régia (VA1b), sin tintes de fruta
-        /// (07 §3, regla 6). Null para <see cref="MechanicType.None"/>; transparente para las que aún no tienen dibujo (la Tinaja
-        /// y su cuia).
+        /// (07 §3, regla 6), y la vasija de la Tinaja (TJ4). Null para <see cref="MechanicType.None"/> y para su cuia
+        /// (<see cref="MechanicType.Cucharon"/>: la pareja cuenta como una mecánica, 02 §9.2 regla 4; la representa la tinaja).
         /// </summary>
         public Sprite? MechanicIcon(MechanicType type)
         {
             int index = (int)type;
-            if (index <= 0 || index > (int)MechanicTypes.Last)
+            if (index <= 0 || index > (int)MechanicTypes.Last || type == MechanicType.Cucharon)
             {
-                return null;
+                return null; // su cuia no tiene icono: la pareja de la Tinaja cuenta como una mecánica (02 §9.2, regla 4; TJ4)
             }
 
             _mechanicIcons ??= new Sprite?[(int)MechanicTypes.Last + 1];
@@ -556,6 +556,9 @@ namespace AF.Presentation
                     break;
                 case MechanicType.Flor:
                     DrawFlorGlyph(pc, s); // ProceduralArt.Flor.cs (VA1b)
+                    break;
+                case MechanicType.Tinaja:
+                    DrawTinajaGlyph(pc, s); // ProceduralArt.Tinaja.cs (TJ4)
                     break;
             }
         }

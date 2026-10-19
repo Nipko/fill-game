@@ -27,11 +27,17 @@ namespace AF.Presentation.Mechanics
         /// <summary>(e) Contadores: gotas de la Lluvia y mordisco de la Piraña.</summary>
         E = 4,
 
+        /// <summary>
+        /// (f) Condiciones: la suelta de la cuia de la Tinaja cuando la tinaja queda vacía (b.2 regla 8; TJ3): su cuia baja del
+        /// jirau (<see cref="MechanicStepKind.Unhook"/>) y la tinaja se tumba (<see cref="MechanicStepKind.Upend"/>).
+        /// </summary>
+        F = 5,
+
         /// <summary>(c′) Sellados del punto fijo f′: la cuia que completa una gota o un mordisco.</summary>
-        CPrime = 5,
+        CPrime = 6,
 
         /// <summary>(d′) Lianas que solo suelta un sellado de (c′).</summary>
-        DPrime = 6,
+        DPrime = 7,
     }
 
     /// <summary>
@@ -92,7 +98,10 @@ namespace AF.Presentation.Mechanics
     /// o el Brote (también la hoja que abre el Brote de dos hojas sin germinar, <see cref="PourEvents.BroteLeafOpenedMask"/>;
     /// VA1b); (c) Seal; (d) Release de la Liana y de la Flor de vitória-régia (<see cref="ReleaseStepMask"/>; VA1b); (e) RainDrop, RainWait, RainEnd, Bite y BiteLost; (c′) Seal de lo que
     /// sella el punto fijo f′ tras una gota o un mordisco, <c>SealedMask ∩ (LluviaDropMask | PiranaCaveMask)</c>; (d′) Release
-    /// de las Lianas que solo suelta un sellado de (c′).</para>
+    /// de las Lianas que solo suelta un sellado de (c′). Entre (e) y (c′), la etapa (f) de condiciones: la suelta de la cuia de la
+    /// Tinaja (<see cref="PourEvents.CucharonReleasedMask"/>; TJ3), con dos pasos a la vez, Unhook en su cuia y Upend en la tinaja
+    /// (la otra cuia de cada uno es la de la pareja). No pasa por <see cref="ReleaseStepMask"/>, que es de (d) y (d′).</para>
+    /// <para>Al sacar de la Tinaja, el Reveal de (a) va en la tinaja y lo ejecuta su overlay (la nueva boca, no agua turbia).</para>
     /// <para>(c′) no depende de <see cref="PourEvents.FixedPointPasses"/>: el núcleo cuenta como vuelta 1 la que sella la
     /// cuia de la gota (y como vuelta 1 también la que solo confirma una Liana soltada en (d)), así que la máscara es la que
     /// distingue los dos casos. Sin vueltas extra (0), una gota o un mordisco no pudieron sellar nada y (c′) y (d′) quedan
@@ -111,11 +120,14 @@ namespace AF.Presentation.Mechanics
     /// </remarks>
     public static class MechanicStepPlan
     {
-        /// <summary>Pasos como mucho en un vertido (3 de (a), 2 de (b) y 16 por cada etapa de sellados, Lianas y contadores).</summary>
+        /// <summary>
+        /// Pasos como mucho en un vertido (3 de (a), 2 de (b), 16 por cada etapa de sellados, Lianas y contadores y los 2 de la
+        /// suelta de la Tinaja, que no se combina con contadores ni Lianas).
+        /// </summary>
         public const int MaxSteps = 64;
 
         /// <summary>Número de etapas (<see cref="StepStage"/>).</summary>
-        public const int StageCount = 7;
+        public const int StageCount = 8;
 
         /// <summary>
         /// Escribe en <paramref name="buffer"/> los pasos de <paramref name="v"/> en el orden de las etapas y devuelve cuántos
@@ -214,6 +226,20 @@ namespace AF.Presentation.Mechanics
                 else if (Has(ev.PiranaBiteLostMask, i))
                 {
                     count = Add(buffer, count, new StepEntry(MechanicStepKind.BiteLost, StepStage.E, i, recv, 0, 0));
+                }
+            }
+
+            // (f) Condiciones: la tinaja quedó vacía y su cuia baja del jirau (b.2 regla 8); la tinaja, a la vez, se tumba.
+            for (int i = 0; i < n; i++)
+            {
+                if (Has(ev.CucharonReleasedMask, i))
+                {
+                    int jar = TinajaOf(before, ev.Source);
+                    count = Add(buffer, count, new StepEntry(MechanicStepKind.Unhook, StepStage.F, i, jar, 0, 0));
+                    if (jar >= 0)
+                    {
+                        count = Add(buffer, count, new StepEntry(MechanicStepKind.Upend, StepStage.F, jar, i, 0, 0));
+                    }
                 }
             }
 
@@ -407,7 +433,7 @@ namespace AF.Presentation.Mechanics
                 return true;
             }
 
-            if ((ev.LluviaDropMask | ev.LluviaWaitingMask | ev.PiranaCaveMask | ev.PiranaBiteLostMask) != 0)
+            if ((ev.LluviaDropMask | ev.LluviaWaitingMask | ev.PiranaCaveMask | ev.PiranaBiteLostMask | ev.CucharonReleasedMask) != 0)
             {
                 return true;
             }
@@ -467,6 +493,26 @@ namespace AF.Presentation.Mechanics
             }
 
             return false;
+        }
+
+        // La tinaja de la pareja (una por nivel, b.2 regla 1): el origen si lo es (siempre al sacar); si no, la primera del
+        // tablero de antes; −1 si no hay.
+        private static int TinajaOf(BoardState before, int source)
+        {
+            if ((uint)source < (uint)before.Count && before[source].Mechanic == MechanicType.Tinaja)
+            {
+                return source;
+            }
+
+            for (int j = 0; j < before.Count; j++)
+            {
+                if (before[j].Mechanic == MechanicType.Tinaja)
+                {
+                    return j;
+                }
+            }
+
+            return -1;
         }
 
         // La víctima del mordisco: siempre el receptor (PiranaBittenMask lo marca).

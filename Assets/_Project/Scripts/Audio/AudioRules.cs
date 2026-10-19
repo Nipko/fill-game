@@ -23,6 +23,9 @@ namespace AF.Audio
 
         /// <summary><c>haptic_back_blocked</c>: Atrás no puede cerrar un aviso obligatorio, corto.</summary>
         BackBlocked = 4,
+
+        /// <summary><c>haptic_tinaja_release</c>: la suelta de la Tinaja (02 §4.1), ligero [P] (TJ3).</summary>
+        TinajaRelease = 5,
     }
 
     /// <summary>Intensidad de un háptico: el efecto predefinido de Android y su respaldo por duración (API 26-28).</summary>
@@ -57,16 +60,19 @@ namespace AF.Audio
                 case HapticKind.Capi: return "haptic_capi";
                 case HapticKind.Boto: return "haptic_boto";
                 case HapticKind.BackBlocked: return "haptic_back_blocked";
+                case HapticKind.TinajaRelease: return "haptic_tinaja_release";
                 default: throw new ArgumentOutOfRangeException(nameof(kind), "Háptico desconocido.");
             }
         }
 
-        /// <summary>Intensidad de la lista (§7): sellado ligero, victoria, Capi y Boto medios, Atrás bloqueado corto.</summary>
+        /// <summary>Intensidad de la lista (§7): sellado y suelta de la Tinaja ligeros, victoria, Capi y Boto medios, Atrás bloqueado corto.</summary>
         public static HapticStrength StrengthOf(HapticKind kind)
         {
             switch (kind)
             {
-                case HapticKind.Seal: return HapticStrength.Light;
+                case HapticKind.Seal:
+                case HapticKind.TinajaRelease:
+                    return HapticStrength.Light;
                 case HapticKind.BackBlocked: return HapticStrength.Short;
                 default: return HapticStrength.Medium;
             }

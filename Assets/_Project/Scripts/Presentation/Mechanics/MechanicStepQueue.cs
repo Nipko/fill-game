@@ -78,10 +78,13 @@ namespace AF.Presentation.Mechanics
     /// <remarks>
     /// <para><b>Despacho.</b> Cada paso va al overlay de la mecánica que la cuia dueña tiene en <c>ctx.Before</c>
     /// (<see cref="CuiaOverlay.PlayStep"/>); si no hay overlay o devuelve 0, se usa el paso por defecto. Reveal y MudWash van a
-    /// <c>CuiaView.PlayReveal</c> y <c>CuiaView.PlayMudWash</c> (las marcas). Al acabar cada paso,
+    /// <c>CuiaView.PlayReveal</c> y <c>CuiaView.PlayMudWash</c> (las marcas), salvo el Reveal de la Tinaja, que va a su overlay
+    /// (la nueva boca, nunca agua turbia; TJ3). Al acabar cada paso,
     /// <see cref="CuiaOverlay.SnapStep"/> (o el de las marcas) y <c>ShowContent(ctx.After, ctx.AfterSealed)</c> en las dos
     /// cuias.</para>
-    /// <para><b>El origen, primero en su ranura.</b> Ningún paso que pinte el origen (su <c>Index</c> o su
+    /// <para><b>El origen, primero en su ranura.</b> (Al sacar de la Tinaja, lo que vuela es su cuia, la cuia tocada:
+    /// <see cref="PourVisual.Mover"/>; aquí «el origen» es esa cuia, y el revelado de la boca no la espera.) Ningún paso que
+    /// pinte el origen (su <c>Index</c> o su
     /// <c>OtherIndex</c>) empieza antes de que vuelva a su ranura (<c>SrcDone</c>), igual que el Reveal: mientras vuela, el
     /// trabajo del vertido es quien lo pinta, y un paso que terminara antes (la gota de una Lluvia que es el origen, Q-B)
     /// quedaría debajo del estado con el que el trabajo lo devuelve. Los pasos de esa etapa que no lo tocan van a su hora y
@@ -281,7 +284,8 @@ namespace AF.Presentation.Mechanics
                 p.InUse = true;
                 p.Begun = false;
                 p.Visual = v;
-                p.Source = v.Source;
+                p.Scoop = v.IsScoop;
+                p.Source = v.Mover; // la cuia que vuela: al sacar de la Tinaja, su cuia (TJ3)
                 p.Count = Math.Min(count, MechanicStepPlan.MaxSteps);
                 p.Touched = 0;
                 for (int e = 0; e < p.Count; e++)
@@ -499,12 +503,13 @@ namespace AF.Presentation.Mechanics
             return end;
         }
 
-        // El paso e pinta el origen (como dueña o como la otra cuia) o es el Reveal: no empieza antes de que el origen vuelva
-        // a su ranura.
+        // El paso e pinta la cuia que vuela (como dueña o como la otra cuia) o es el Reveal de un vertido normal: no empieza
+        // antes de que vuelva a su ranura. Al sacar de la Tinaja (TJ3) vuela su cuia: el revelado de la boca empieza en cuanto
+        // la cuia sale de ella, y la suelta (Unhook y Upend, que la pintan) espera a que vuelva.
         private static bool WaitsForSource(Plan p, int e)
         {
             StepEntry se = p.Entries[e];
-            return se.Kind == MechanicStepKind.Reveal || se.Touches(p.Source);
+            return (se.Kind == MechanicStepKind.Reveal && !p.Scoop) || se.Touches(p.Source);
         }
 
         // Avanza el plan dtMs; devuelve true cuando ha terminado. srcDone: el origen ya volvió a su ranura.
@@ -640,6 +645,14 @@ namespace AF.Presentation.Mechanics
             switch (se.Kind)
             {
                 case MechanicStepKind.Reveal:
+                    if (p.Before[e].Mechanic == MechanicType.Tinaja)
+                    {
+                        // La nueva boca de la Tinaja la revela su overlay, nunca las marcas de turbias (contrato 27; TJ3).
+                        CuiaOverlay? jar = view.OverlayOf(MechanicType.Tinaja);
+                        p.Overlay[e] = jar;
+                        return jar != null ? jar.StepDurationMs(MechanicStepKind.Reveal) : 0f;
+                    }
+
                     return view.RevealStepMs(RevealStyle.Rule);
                 case MechanicStepKind.MudWash:
                     return view.MudWashStepMs;
@@ -683,6 +696,11 @@ namespace AF.Presentation.Mechanics
                 switch (se.Kind)
                 {
                     case MechanicStepKind.Reveal:
+                        if (p.Overlay[e] != null)
+                        {
+                            goto default; // la boca de la Tinaja (TJ3): su overlay
+                        }
+
                         ms = view!.PlayReveal(se.LayerMask, RevealStyle.Rule, p.Speed);
                         p.UsesMarks[e] = true;
                         break;
@@ -911,7 +929,8 @@ namespace AF.Presentation.Mechanics
             public bool InUse;
             public bool Begun;
             public PourVisual Visual;
-            public int Source;
+            public bool Scoop; // sacar de la Tinaja (TJ3): vuela su cuia, no el origen
+            public int Source; // la cuia que vuela (PourVisual.Mover)
             public float SrcBackAt;
             public int Count;
             public int Touched;

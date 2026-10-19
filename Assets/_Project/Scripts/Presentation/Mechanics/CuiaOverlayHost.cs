@@ -87,5 +87,12 @@ namespace AF.Presentation.Mechanics
         /// overlay).
         /// </summary>
         public ICuiaBoard? Board { get; internal set; }
+
+        /// <summary>
+        /// Desplazamiento vertical (dp) que un paso del overlay pide para el cuerpo de la cuia en reposo (TJ3: su cuia que se
+        /// descuelga del jirau y se asienta en su ranura). <c>CuiaView</c> lo suma a su pose de reposo (con la elevación de la
+        /// selección); mientras un trabajo mueve la cuia no cuenta. El overlay lo deja a 0 al terminar o saltar su paso.
+        /// </summary>
+        public float BodyNudgeDp { get; set; }
     }
 }

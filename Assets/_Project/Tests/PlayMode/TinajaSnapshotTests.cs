@@ -22,7 +22,7 @@ namespace AF.Tests.PlayMode
     /// <c>tj2_01_l323_inicio</c> (tras la intro: la vasija con la boca de jenipapo, «×3», su cuia colgada del poste y el jirau
     /// bajo las dos ranuras, sin el vidrio debajo y sin nada entre las dos piezas), <c>tj2_02_l323_seleccionada</c> (la tinaja
     /// elevada como origen, 8 dp con su balanceo, sin cambiar: D-002),
-    /// <c>tj2_03_l323_sacar</c> (a mitad del vertido en su cuia, con el gesto normal hasta TJ3), <c>tj2_04_l323_sacada</c> (tras
+    /// <c>tj2_03_l323_sacar</c> (a mitad de sacar: desde TJ3, su cuia en la boca de la tinaja), <c>tj2_04_l323_sacada</c> (tras
     /// sacar: la boca de lulo, «×2» y su cuia con el jenipapo), <c>tj2_05_l323_marea_banda</c> (Marea: la boca de jenipapo y la
     /// banda de luz del lulo, revelado, a su altura), <c>tj2_06_l323_bandas</c> (todo revelado, como tras la Luciérnaga: dos
     /// bandas), <c>tj2_07_l323_vacia</c> (la suelta: la tinaja vacía boca abajo sobre el jirau y su cuia suelta),

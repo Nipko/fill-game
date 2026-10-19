@@ -213,14 +213,16 @@ namespace AF.Levels
             }
         }
 
-        /// <summary>Alguna cuia es una Cuia chica (capacidad menor que 4, 02 §8).</summary>
+        /// <summary>
+        /// Alguna cuia es una Cuia chica (capacidad menor que 4, 02 §8). La tinaja y su cuia no cuentan (<see cref="IsTinajaPair"/>).
+        /// </summary>
         public bool HasSmallCuia
         {
             get
             {
                 for (int i = 0; i < _caps.Length; i++)
                 {
-                    if (_caps[i] < Cuia.DefaultCapacity)
+                    if (_caps[i] < Cuia.DefaultCapacity && !IsTinajaPair(i))
                     {
                         return true;
                     }
@@ -230,14 +232,16 @@ namespace AF.Levels
             }
         }
 
-        /// <summary>Alguna cuia es una Cuia alta (capacidad mayor que 4, 02 §8).</summary>
+        /// <summary>
+        /// Alguna cuia es una Cuia alta (capacidad mayor que 4, 02 §8). La tinaja y su cuia no cuentan (<see cref="IsTinajaPair"/>).
+        /// </summary>
         public bool HasTallCuia
         {
             get
             {
                 for (int i = 0; i < _caps.Length; i++)
                 {
-                    if (_caps[i] > Cuia.DefaultCapacity)
+                    if (_caps[i] > Cuia.DefaultCapacity && !IsTinajaPair(i))
                     {
                         return true;
                     }
@@ -245,6 +249,17 @@ namespace AF.Levels
 
                 return false;
             }
+        }
+
+        /// <summary>
+        /// La cuia <paramref name="index"/> es la tinaja (capacidad 5) o su cuia colgada (capacidad 2) al empezar: la pareja es una
+        /// mecánica, no una Cuia alta ni una Cuia chica (02 §9.2, regla 4; propuesta de la Tinaja, c.1 y c.6). Así la tarjeta
+        /// previa enseña un solo icono, el de la tinaja, y no los de las capacidades.
+        /// </summary>
+        private bool IsTinajaPair(int index)
+        {
+            MechanicType type = _attrs[index].Type;
+            return type == MechanicType.Tinaja || type == MechanicType.Cucharon;
         }
 
         /// <summary>Alguna cuia lleva la mecánica <paramref name="type"/> al empezar.</summary>

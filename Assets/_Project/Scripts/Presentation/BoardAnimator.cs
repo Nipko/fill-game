@@ -73,6 +73,15 @@ namespace AF.Presentation
     /// (<see cref="StepStaging.JobEnd"/>). Los pasos que pintan el origen no empiezan hasta que vuelve a su ranura, y el fin
     /// del trabajo nunca pinta ese estado previo encima de pasos ya terminados (pinta el del punto en que va el plan). Las
     /// cuias que cambiaron sin paso saltan a su estado final al llegar el caudal.</para>
+    /// <para><b>Sacar de la Tinaja</b> (M13; D-019; propuesta de la Tinaja, b.2 «Animación y sonido» y c.6; tarea TJ3): cuando la
+    /// tinaja vierte en su cuia colgada (<see cref="PourVisual.IsScoop"/>) <b>se mueve el destino</b>: la tinaja no se inclina
+    /// (se asienta si estaba elevada) y su cuia viaja en arco a la boca (<c>anim_travel_ms</c>), entra inclinada
+    /// <see cref="ScoopTiltDeg"/> por detrás del labio (la tinaja se dibuja encima), se llena (<c>anim_pour_dose_ms</c>) y
+    /// vuelve (<c>anim_return_ms</c>: primero recta hacia arriba y luego en arco) dejando caer unas gotas en la boca: 880 ms con
+    /// los defaults, como un vertido. Bajo un techo bajo (<see cref="ScoopCeilingY"/>; tableros de 3 filas), su cuia se hunde más
+    /// en la boca, tras la tinaja, para no invadir la cabecera. Sin chorro y sin encadenado. El revelado de la nueva boca empieza
+    /// en cuanto su cuia sale; la suelta (etapa f), cuando vuelve a su ranura, y mientras tanto la tinaja vacía espera boca arriba (<see cref="TinajaOverlay.HoldUpright"/>). Los vertidos
+    /// desde su cuia usan el gesto normal.</para>
     /// <para><b>Contadores</b> (Lluvia y cueva de la Piraña que cuentan un vertido útil; etapa (e) de R10): un cambio solo de
     /// contador no retiene la cuia ni impide el encadenado (02 §3.2), pero no se pinta en el toque: se repinta cuando llega
     /// el caudal del trabajo que lo causó (<c>FlowEnd + StreamGrowMs</c>; en el encadenado, el del último vertido sumado),
@@ -157,6 +166,71 @@ namespace AF.Presentation
         /// <summary>Rebote del retorno a la ranura (u; 07 §5.2). El de Magic Sort (≈ 50 px) no está confirmado: no se copia.</summary>
         public const float ReturnBounceU = 0.03f;
 
+        /// <summary>
+        /// Sacar de la Tinaja (TJ3; propuesta de la Tinaja, b.2 «Animación y sonido»): su cuia entra en la boca inclinada 20°,
+        /// con la cima hacia el lado del que viene.
+        /// </summary>
+        public const float ScoopTiltDeg = 20f;
+
+        /// <summary>
+        /// Sacar: el pie de su cuia queda en el eje de la tinaja, 0,65 u bajo el centro de su boca (<c>TinajaMouthCenterU</c>):
+        /// el labio y el cuello tapan su tercio de abajo, así se lee que se sumerge para recoger agua, y el agua que recoge (una
+        /// dosis) queda justo por encima del labio, donde se ve llenarse [P] (revisión de TJ3).
+        /// </summary>
+        public const float ScoopFootBelowMouthU = 0.65f;
+
+        /// <summary>
+        /// Sacar: el arco del viaje cruza 1,5 u por encima del pie más alto (el de la boca), sobre el labio [P], sin que su cuia
+        /// pase del techo del arco (<see cref="ScoopCeilingY"/>).
+        /// </summary>
+        public const float ScoopArcU = 1.5f;
+
+        /// <summary>Sacar: mientras se llena, su cuia baja y sube 0,15 u en la boca (recoger el agua) [P].</summary>
+        public const float ScoopBobU = 0.15f;
+
+        /// <summary>
+        /// Sacar: holgura (u) entre lo más alto de su cuia (<see cref="ScoopReachU"/>: el vidrio girado y el asa) y el techo
+        /// <see cref="ScoopCeilingY"/>; cubre el rebote de la vuelta (<see cref="ReturnBounceU"/>) [P].
+        /// </summary>
+        public const float ScoopCeilingMarginU = 0.10f;
+
+        /// <summary>
+        /// Sacar bajo un techo bajo (tableros de 3 filas con la tinaja arriba; revisión de TJ3): su cuia se hunde en la boca lo justo
+        /// para quedar bajo <see cref="ScoopCeilingY"/>, con la tinaja dibujada encima, pero el borde de su vidrio nunca baja de
+        /// 0,5 u sobre el centro del labio: algo de su cuia se ve siempre en la boca [P].
+        /// </summary>
+        public const float ScoopMinAboveLipU = 0.5f;
+
+        /// <summary>
+        /// Sacar bajo un techo bajo: hundida 1 u o más en la boca, su cuia entra derecha (sin los 20°), con su borde y su asa sobre
+        /// la boca; entre medias, la inclinación baja en proporción (<see cref="ScoopTiltFor"/>) [P] (revisión de TJ3).
+        /// </summary>
+        public const float ScoopUprightSinkU = 1f;
+
+        /// <summary>
+        /// Sacar: al volver, su cuia sale primero recta hacia arriba durante esta fracción de <c>anim_return_ms</c> (sin dejar de
+        /// estar inclinada) y luego vuelve en arco; así se separa del labio antes de soltar las gotas [P].
+        /// </summary>
+        public const float ScoopLiftFraction = 0.15f;
+
+        /// <summary>
+        /// Sacar: lo que el punto más bajo de su cuia sube sobre lo alto del labio de la tinaja antes de soltar la primera gota
+        /// (u), si el techo lo deja: así se ve caer [P] (revisión de TJ3).
+        /// </summary>
+        public const float ScoopDripClearU = 0.4f;
+
+        /// <summary>Sacar: gotas que su cuia deja caer en la boca al volver (02 §4.1 y 07 §5.6: «vuelve con 2-3 gotas») [P].</summary>
+        public const int ScoopDripCount = 3;
+
+        /// <summary>Sacar: la primera gota cae al acabar la subida recta de la vuelta (<see cref="ScoopLiftFraction"/>), más estos ms [P].</summary>
+        public const float ScoopDripStartMs = 0f;
+
+        /// <summary>
+        /// Sacar: una gota cada 15 ms, para que las tres caigan en la boca oscura del revelado, antes de que florezca la fruta nueva
+        /// (la tinaja borra las que queden entonces: <c>TinajaOverlay</c>) [P].
+        /// </summary>
+        public const float ScoopDripEveryMs = 15f;
+
         private const int SilhouetteRows = 24;
         private const int SilhouetteCols = 6;
 
@@ -208,6 +282,24 @@ namespace AF.Presentation
         /// <summary>La cola está vacía, sin trabajos ni pasos de mecánica (la vista ya muestra el modelo).</summary>
         public bool IsIdle => _count == 0 && _steps.ActiveCount == 0;
 
+        /// <summary>Chorros en uso ahora mismo (diagnóstico y tests: sacar de la Tinaja no usa ninguno, TJ3).</summary>
+        public int ActiveStreams
+        {
+            get
+            {
+                int n = 0;
+                for (int i = 0; i < _streams.Length; i++)
+                {
+                    if (_streams[i].InUse)
+                    {
+                        n++;
+                    }
+                }
+
+                return n;
+            }
+        }
+
         /// <summary>Cola de pasos de mecánica (diagnóstico y tests: registro, pasos en curso y presupuesto).</summary>
         public MechanicStepQueue Steps => _steps;
 
@@ -254,6 +346,15 @@ namespace AF.Presentation
         public float BoardWidth { get; set; }
 
         private float Width => BoardWidth > 0f ? BoardWidth : _streamLayer.rect.width;
+
+        /// <summary>
+        /// Techo del arco de sacar (TJ3), en coordenadas del contenedor del tablero (y hacia arriba; la de <c>FootPosition</c>):
+        /// lo más alto que puede llegar su cuia en el viaje y la vuelta, para que no invada la cabecera (Nivel, canoas) en los
+        /// tableros de 3 filas. Lo fija <c>GameScreen</c> bajo el HUD. Cuenta lo más alto de su cuia de verdad (el vidrio girado y
+        /// el asa, <see cref="ScoopReachU"/>): si de pie en la boca ya pasaría del techo, su cuia se hunde más en la boca, tras la
+        /// tinaja (<see cref="ScoopDip"/>), y el arco no sube de ahí. Infinito (por defecto): sin techo.
+        /// </summary>
+        public float ScoopCeilingY { get; set; } = float.PositiveInfinity;
 
         /// <summary>
         /// Capa del tablero detrás de las cuias (arquitectura del paso 1, §6): lo que une cuias o ronda el tablero (el canal
@@ -667,7 +768,9 @@ namespace AF.Presentation
                 }
             }
 
-            bool chainable = steps == 0 && !through && !before[receiver].MudExposed && others == 0 && v.RevealedMask == 0;
+            // Sacar de la Tinaja (TJ3): se mueve su cuia, no el origen; cada sacada es un gesto entero (no se encadena).
+            bool scoop = v.IsScoop;
+            bool chainable = !scoop && steps == 0 && !through && !before[receiver].MudExposed && others == 0 && v.RevealedMask == 0;
             if (chainable && TryChain(source, target, v.Amount, tint, srcBefore, srcAfter, srcSealed, tgtBefore, tgtAfter, tgtSealed, after, counters))
             {
                 ChainedCount++;
@@ -686,6 +789,21 @@ namespace AF.Presentation
                 }
             }
 
+            // La última sacada: la tinaja vacía espera boca arriba, con el fondo seco, hasta su paso Upend (etapa f; TJ3).
+            bool jarHold = false;
+            if (scoop && plan >= 0)
+            {
+                for (int e = 0; e < steps; e++)
+                {
+                    if (_plan[e].Kind == MechanicStepKind.Upend && _plan[e].Index == source)
+                    {
+                        TinajaAt(source)?.HoldUpright(true);
+                        jarHold = true;
+                        break;
+                    }
+                }
+            }
+
             Enqueue(new Job
             {
                 Source = source,
@@ -694,6 +812,8 @@ namespace AF.Presentation
                 Amount = v.Amount,
                 Tint = tint,
                 IsUndo = false,
+                Scoop = scoop,
+                JarHold = jarHold,
                 Through = through,
                 OnMud = onMud,
                 Chainable = chainable,
@@ -720,7 +840,7 @@ namespace AF.Presentation
             // 07 §5.2: el origen sigue con sus iconos de fruta desde el toque en el destino (la selección ya bajó) si el trabajo
             // arranca en el próximo fotograma; si espera a otro que retiene alguna de sus cuias, desde que arranca (Start).
             int last = _count - 1;
-            if (last >= 0 && _jobs[last].Source == source && !_jobs[last].Started && CanStart(last))
+            if (!scoop && last >= 0 && _jobs[last].Source == source && !_jobs[last].Started && CanStart(last))
             {
                 _views[source].SetPourIcons(true);
             }
@@ -1022,7 +1142,8 @@ namespace AF.Presentation
                 return true;
             }
 
-            return (job.Source == cuia && !job.SrcDone)
+            // Al sacar (TJ3), la tinaja sigue delante, sobre su cuia, hasta que su cuia vuelve a la ranura.
+            return (job.Source == cuia && (!job.SrcDone || (job.Scoop && !job.TgtDone)))
                 || (job.Target == cuia && !job.TgtDone)
                 || ((job.Jump & bit) != 0 && !job.ExtraDone)
                 || (PlanPending(ref job) & bit) != 0;
@@ -1062,6 +1183,12 @@ namespace AF.Presentation
                 return;
             }
 
+            if (job.Scoop)
+            {
+                StartScoop(ref job);
+                return;
+            }
+
             s.Lock();
             s.SetPourIcons(true); // 07 §5.2: iconos del origen en el viaje y el caudal, hasta el retorno
             job.StartOffset = s.BodyOffset;
@@ -1095,6 +1222,19 @@ namespace AF.Presentation
         // llegar el caudal (con su sellado si lo hay).
         private void SetEnds(ref Job job)
         {
+            if (job.Scoop)
+            {
+                // Sacar (TJ3): su cuia llega a la boca (viaje), se llena (caudal) y vuelve (retorno); la parte de la tinaja (y el
+                // revelado de su boca) termina cuando la cuia sale, al llegar el caudal, como el salto de las demás cuias.
+                job.StreamEnd = job.FlowEnd;
+                job.ReturnStart = job.FlowEnd;
+                job.TgtEnd = job.FlowEnd + _timings.ReturnMs;
+                job.ExtraStart = job.FlowEnd + StreamGrowMs;
+                job.SrcEnd = job.ExtraStart;
+                job.ExtraEnd = job.ExtraStart + (job.ExtraSeal != 0 ? CuiaView.SealMs : 0f);
+                return;
+            }
+
             job.StreamEnd = job.FlowEnd + _timings.TailMs;
             job.ReturnStart = Mathf.Max(_timings.TravelMs, job.StreamEnd);
             job.SrcEnd = job.ReturnStart + _timings.ReturnMs;
@@ -1114,12 +1254,17 @@ namespace AF.Presentation
             float p = Mathf.Clamp((time - job.StreamStart) / Mathf.Max(1f, job.DoseMs), 0f, job.Amount);
 
             // El destino se llena cuando la cabeza del chorro llega a su superficie (Marea no tiene chorro).
-            float fillDelay = job.IsUndo ? 0f : StreamGrowMs;
+            // Al sacar (TJ3) no hay chorro: su cuia se llena dentro de la boca desde que llega.
+            float fillDelay = job.IsUndo || job.Scoop ? 0f : StreamGrowMs;
             float pt = Mathf.Clamp((time - job.StreamStart - fillDelay) / Mathf.Max(1f, job.DoseMs), 0f, job.Amount);
+            if (job.Scoop)
+            {
+                ScoopPose(ref job, time, color);
+            }
 
             // La pose del origen se fija antes de dibujar el chorro: así el chorro sale del labio de este fotograma y no
             // del anterior (con fotogramas largos el retraso se veía como un chorro que nacía por encima del labio).
-            if (!job.IsUndo && !job.SrcDone && time < job.SrcEnd)
+            if (!job.IsUndo && !job.Scoop && !job.SrcDone && time < job.SrcEnd)
             {
                 s.SetPose(PoseOffset(ref job, time, s.Unit), PoseAngle(ref job, time));
                 if (time >= job.ReturnStart)
@@ -1265,20 +1410,24 @@ namespace AF.Presentation
             if (job.Plan >= 0 && !job.PlanDone && time >= job.ExtraStart)
             {
                 float step = dtMs;
+                // La cuia que vuela: el origen o, al sacar de la Tinaja, su cuia (TJ3; PourVisual.Mover).
+                bool moverDone = job.Scoop ? job.TgtDone : job.SrcDone;
+                float moverEnd = job.Scoop ? job.TgtEnd : job.SrcEnd;
                 if (!job.PlanBegun)
                 {
                     job.PlanBegun = true;
                     float over = Mathf.Min(dtMs, time - job.ExtraStart);
                     // El presupuesto cuenta desde el último vertido tocado, no desde el de este trabajo (FX6): si el jugador
                     // vertió después, el corte de la celebración o del modal, si llega, cuenta desde ese toque más reciente.
-                    _steps.Begin(job.Plan, job.Age - over, Mathf.Max(0f, SinceLastPourMs - over), job.SrcDone ? 0f : job.SrcEnd - job.ExtraStart);
+                    _steps.Begin(job.Plan, job.Age - over, Mathf.Max(0f, SinceLastPourMs - over), moverDone ? 0f : moverEnd - job.ExtraStart);
                     step = over;
                 }
 
-                if (_steps.Tick(job.Plan, step, job.SrcDone))
+                if (_steps.Tick(job.Plan, step, moverDone))
                 {
                     _steps.Release(job.Plan);
                     job.PlanDone = true;
+                    ReleaseJarHold(ref job);
                 }
             }
         }
@@ -1379,6 +1528,20 @@ namespace AF.Presentation
         {
             ref Job job = ref _jobs[index];
             CuiaView s = _views[job.Source];
+            if (job.Scoop)
+            {
+                // Sacar (TJ3): la tinaja no se movió; su parte acaba cuando su cuia sale de la boca, pero sigue delante, tapando a
+                // su cuia, hasta que esta vuelve a la ranura (FinishTarget).
+                job.SrcDone = true;
+                PaintJobEnd(index, job.Source, job.SrcAfter, job.SrcSealedAfter);
+                if (job.TgtDone)
+                {
+                    ReturnJar(ref job);
+                }
+
+                return;
+            }
+
             if (job.Started && !job.IsUndo)
             {
                 s.SetTongue(0f, Color.clear, 0);
@@ -1399,6 +1562,18 @@ namespace AF.Presentation
         private void FinishTarget(int index)
         {
             ref Job job = ref _jobs[index];
+            if (job.Scoop && job.Started)
+            {
+                // Su cuia vuelve a la ranura (TJ3); la tinaja, ya sin nada que tapar, también.
+                CuiaView t = _views[job.Target];
+                t.ReturnBody();
+                t.Unlock();
+                if (job.SrcDone)
+                {
+                    ReturnJar(ref job);
+                }
+            }
+
             job.TgtDone = true;
             PaintJobEnd(index, job.Target, job.TgtAfter, job.TgtSealedAfter);
         }
@@ -1793,12 +1968,280 @@ namespace AF.Presentation
                 job.PlanDone = true;
             }
 
+            ReleaseJarHold(ref job); // la tinaja vacía, ya boca abajo (TJ3)
             if (job.Counters != 0)
             {
                 PaintCounters(index);
             }
 
             EndIntake(ref job);
+        }
+
+        // ---- Sacar de la Tinaja (TJ3; propuesta de la Tinaja, b.2 «Animación y sonido»; D-019) ----
+
+        // El overlay de la Tinaja de la cuia i, o null.
+        private TinajaOverlay? TinajaAt(int i)
+        {
+            return (uint)i < (uint)_views.Length ? _views[i].OverlayOf(MechanicType.Tinaja) as TinajaOverlay : null;
+        }
+
+        // Arranca el gesto de sacar: la tinaja no se inclina (se asienta si estaba elevada) y pasa delante, y su cuia vuela a la
+        // boca. Las dos van a la capa de vertido (D-006: lo que se mueve, delante de todo), su cuia primero y la tinaja encima:
+        // así su cuia entra «por detrás del labio» y lo que queda dentro de la vasija no se ve.
+        private void StartScoop(ref Job job)
+        {
+            CuiaView s = _views[job.Source];
+            CuiaView t = _views[job.Target];
+            s.Lock();
+            t.Lock();
+            job.JarStartOffset = s.BodyOffset;
+            job.JarStartAngle = s.BodyAngle;
+            job.StartOffset = t.BodyOffset;
+            job.Before = job.SrcBefore.Count;
+            job.DoseMs = _timings.DoseMs;
+            job.StreamStart = _timings.TravelMs;
+            job.FlowEnd = job.StreamStart + (job.Amount * _timings.DoseMs);
+            job.TiltBias = 0f;
+            SetEnds(ref job);
+            job.Dir = t.FootPosition.x >= s.FootPosition.x ? 1f : -1f;
+            job.ScoopReach = ScoopReachU(t.Capacity, ScoopTiltDeg, true);
+            job.MouthTarget = ScoopDip(s, t, ScoopCeilingY);
+            job.PourAngle = -job.Dir * ScoopTiltFor(ScoopFootFor(s).y - job.MouthTarget.y, t.Unit);
+            job.PourOffset = job.MouthTarget - t.FootPosition;
+            t.MoveBodyTo(_frontLayer);
+            s.MoveBodyTo(_frontLayer);
+            job.JarFront = true;
+        }
+
+        /// <summary>
+        /// Pie de su cuia mientras se llena en la boca de la tinaja <paramref name="jar"/> (en el contenedor): en el eje de la
+        /// tinaja, <see cref="ScoopFootBelowMouthU"/> bajo el centro de su boca, con la unidad de la tinaja.
+        /// </summary>
+        public static Vector2 ScoopFootFor(CuiaView jar)
+        {
+            return jar.FootPosition + new Vector2(0f, (ProceduralArt.TinajaMouthCenterU - ScoopFootBelowMouthU) * jar.Unit);
+        }
+
+        /// <summary>
+        /// Pie de su cuia <paramref name="cuia"/> mientras se llena en la boca de la tinaja <paramref name="jar"/>, bajo el techo
+        /// <paramref name="ceilingY"/> (revisión de TJ3): el de <see cref="ScoopFootFor"/> o, si así lo más alto de su cuia
+        /// (<see cref="ScoopReachU"/>, con el asa y <see cref="ScoopCeilingMarginU"/>) pasaría del techo, más hundido en la boca,
+        /// tras la tinaja, lo justo para quedar debajo. Nunca tanto que el borde de su vidrio baje de
+        /// <see cref="ScoopMinAboveLipU"/> sobre el centro del labio (si ni así cabe, el techo no se cumple: no pasa en los
+        /// tableros del juego, lo comprueba <c>TinajaStepsTests</c> con el de 3 filas). Sin asignaciones.
+        /// </summary>
+        public static Vector2 ScoopDip(CuiaView jar, CuiaView cuia, float ceilingY)
+        {
+            Vector2 dip = ScoopFootFor(jar);
+            if (float.IsPositiveInfinity(ceilingY))
+            {
+                return dip;
+            }
+
+            float u = cuia.Unit;
+            float highest = ceilingY - ((ScoopReachU(cuia.Capacity, ScoopTiltDeg, true) + ScoopCeilingMarginU) * u);
+            float lowest = jar.FootPosition.y + ((ProceduralArt.TinajaLipCenterU + ScoopMinAboveLipU) * jar.Unit) - (ScoopReachU(cuia.Capacity, ScoopTiltDeg, false) * u);
+            dip.y = Mathf.Max(lowest, Mathf.Min(dip.y, highest));
+            return dip;
+        }
+
+        /// <summary>
+        /// Inclinación de su cuia en la boca (grados): <see cref="ScoopTiltDeg"/> de pie en la boca; hundida
+        /// <paramref name="sinkDp"/> bajo ese pie (<see cref="ScoopDip"/>, techo bajo), cada vez más derecha, y derecha del todo
+        /// desde <see cref="ScoopUprightSinkU"/>: así lo que asoma de ella queda sobre la boca y no se ladea por detrás del cuello.
+        /// Lo más alto de su cuia ya se midió con la inclinación entera (<see cref="ScoopReachU"/> barre de 0° a 20°), así que
+        /// enderezarla nunca la sube del techo.
+        /// </summary>
+        public static float ScoopTiltFor(float sinkDp, float unit)
+        {
+            return ScoopTiltDeg * (1f - Mathf.Clamp01(sinkDp / (ScoopUprightSinkU * Mathf.Max(0.0001f, unit))));
+        }
+
+        /// <summary>
+        /// Lo más alto de una cuia de <paramref name="capacity"/> dosis sobre su pie (u) mientras se inclina de 0° a
+        /// <paramref name="tiltDeg"/> (el giro es sobre el centro del pie): el contorno del vidrio (<see cref="CuiaGeometry.OuterHalfWidth"/>)
+        /// y, con <paramref name="withAsa"/>, el asa de su cuia colgada (<see cref="ProceduralArt.TinajaAsaRectU"/>), que sobresale
+        /// por encima del borde. Para cada punto (x, y), la altura girada es x·sen θ + y·cos θ: su máximo en [0, θ] es su radio si
+        /// su ángulo desde la vertical cae dentro y, si no, el del extremo. Sin asignaciones.
+        /// </summary>
+        public static float ScoopReachU(int capacity, float tiltDeg, bool withAsa)
+        {
+            float tilt = Mathf.Abs(tiltDeg) * Mathf.Deg2Rad;
+            float h = CuiaGeometry.HeightU(capacity);
+            float best = 0f;
+            const int Steps = 72;
+            for (int i = 0; i <= Steps; i++)
+            {
+                float y = h * i / Steps;
+                best = Mathf.Max(best, ReachOf(CuiaGeometry.OuterHalfWidth(Mathf.Min(y, h - 0.0001f), capacity), y, tilt));
+            }
+
+            if (withAsa)
+            {
+                Rect asa = ProceduralArt.TinajaAsaRectU;
+                float x = Mathf.Max(Mathf.Abs(asa.xMin), Mathf.Abs(asa.xMax));
+                best = Mathf.Max(best, ReachOf(x, asa.yMax, tilt));
+                best = Mathf.Max(best, ReachOf(x, asa.yMin, tilt));
+            }
+
+            return best;
+        }
+
+        // Máximo de x·sen θ + y·cos θ para θ en [0, tilt] (x ≥ 0: el lado que sube; la cuia es simétrica).
+        private static float ReachOf(float x, float y, float tilt)
+        {
+            float r = Mathf.Sqrt((x * x) + (y * y));
+            float phi = Mathf.Atan2(x, y); // ángulo del punto desde la vertical
+            return phi <= tilt ? r : r * Mathf.Cos(tilt - phi);
+        }
+
+        // Pose de la tinaja y de su cuia en el instante time del gesto de sacar. La tinaja se asienta en el viaje. Su cuia: viaje en
+        // arco por encima de la vasija (una cúbica que sube en su columna, cruza a ScoopArcU sobre la boca, bajo el techo
+        // ScoopCeilingY, y baja en el eje), inclinándose a ScoopTiltDeg; al llegar a la boca suena sfx_tinaja_scoop; en la boca,
+        // se llena con un leve vaivén; al volver, sale recta hacia arriba (ScoopLiftFraction de la vuelta) hasta que su punto más
+        // bajo queda ScoopDripClearU sobre el labio (si el techo lo deja), suelta ScoopDripCount gotas que caen al centro de la boca
+        // (las dibuja la tinaja, delante: TinajaOverlay.Drip) y vuelve en arco con el rebote de 07 §5.2. Sin asignaciones.
+        private void ScoopPose(ref Job job, float time, Color color)
+        {
+            CuiaView s = _views[job.Source];
+            CuiaView t = _views[job.Target];
+            float travel = Mathf.Max(1f, _timings.TravelMs);
+            if (job.JarFront)
+            {
+                float e = Ease.Out(Mathf.Clamp01(time / travel));
+                s.SetPose(Vector2.Lerp(job.JarStartOffset, Vector2.zero, e), Mathf.Lerp(job.JarStartAngle, 0f, e));
+            }
+
+            if (job.TgtDone || time >= job.TgtEnd)
+            {
+                return;
+            }
+
+            float u = t.Unit;
+            Vector2 rest = t.FootPosition;
+            Vector2 dip = job.MouthTarget;
+            float top = ScoopArcTop(rest.y, dip.y, job.ScoopReach, u, ScoopCeilingY);
+            if (time >= job.StreamStart && job.Splashes == 0)
+            {
+                job.Splashes = 1;
+                t.Ripple(); // el agua entra en su cuia
+                ScoopAudio(ref job); // el «glup» al llegar a la boca (02 §4.1)
+            }
+
+            Vector2 foot;
+            float angle;
+            float returnMs = Mathf.Max(1f, _timings.ReturnMs);
+            float liftMs = ScoopLiftFraction * returnMs;
+            Vector2 lifted = dip + new Vector2(0f, ScoopLiftDp(s, u, dip.y, job.ScoopReach, ScoopCeilingY));
+            if (time < job.StreamStart)
+            {
+                float e = Ease.InOut(time / travel);
+                Vector2 from = rest + job.StartOffset;
+                foot = Cubic(from, new Vector2(from.x, top), new Vector2(dip.x, top), dip, e);
+                angle = job.PourAngle * e;
+            }
+            else if (time < job.ReturnStart)
+            {
+                float q = Mathf.Clamp01((time - job.StreamStart) / Mathf.Max(1f, job.FlowEnd - job.StreamStart));
+                foot = dip - new Vector2(0f, Mathf.Sin(Mathf.PI * q) * ScoopBobU * u);
+                angle = job.PourAngle;
+            }
+            else if (time < job.ReturnStart + liftMs)
+            {
+                // Sale de la boca recta hacia arriba, aún inclinada: el agua que sobra gotea desde lo alto.
+                foot = Vector2.Lerp(dip, lifted, Ease.Out((time - job.ReturnStart) / Mathf.Max(1f, liftMs)));
+                angle = job.PourAngle;
+            }
+            else
+            {
+                float r = Ease.InOutSine((time - job.ReturnStart - liftMs) / Mathf.Max(1f, returnMs - liftMs));
+                float arc = Mathf.Max(top, lifted.y);
+                foot = Cubic(lifted, new Vector2(lifted.x, arc), new Vector2(rest.x, arc), rest, r);
+                foot.y += Mathf.Sin(Mathf.PI * r) * ReturnBounceU * u;
+                angle = job.PourAngle * (1f - r);
+            }
+
+            t.SetPose(foot - rest, angle);
+
+            // Las gotas de la vuelta (02 §4.1; 07 §5.6; b.2): caen desde el punto más bajo de su cuia (la esquina del pie que baja),
+            // una cada ScoopDripEveryMs desde lo alto de la subida, con el tinte de lo que sacó. Las dibuja la tinaja, que va
+            // delante de su cuia: así se ven caer en la boca. Reducir movimiento: no.
+            while (job.ScoopDrops < ScoopDripCount && time >= job.ReturnStart + liftMs + ScoopDripStartMs + (job.ScoopDrops * ScoopDripEveryMs))
+            {
+                job.ScoopDrops++;
+                if (!ReduceMotion)
+                {
+                    Vector2 low = foot + LowestCornerDp(angle, u);
+                    TinajaAt(job.Source)?.Drip(low - (s.FootPosition + s.BodyOffset), color);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Lo que su cuia sube recta al salir de la boca (dp): hasta que su punto más bajo (inclinada <see cref="ScoopTiltDeg"/>)
+        /// queda <see cref="ScoopDripClearU"/> sobre lo alto del labio de la tinaja <paramref name="jar"/>, sin que lo más alto de
+        /// su cuia (<paramref name="reachU"/> u) pase del techo <paramref name="ceilingY"/>; 0 si no cabe.
+        /// </summary>
+        public static float ScoopLiftDp(CuiaView jar, float unit, float dipY, float reachU, float ceilingY)
+        {
+            float lowBelowFoot = CuiaGeometry.FootHalfWidthU * Mathf.Sin(ScoopTiltDeg * Mathf.Deg2Rad) * unit;
+            float want = jar.FootPosition.y + ((ProceduralArt.TinajaTopU + ScoopDripClearU) * jar.Unit) + lowBelowFoot - dipY;
+            float room = float.IsPositiveInfinity(ceilingY) ? want : ceilingY - ((reachU + ScoopCeilingMarginU) * unit) - dipY;
+            return Mathf.Max(0f, Mathf.Min(want, room));
+        }
+
+        // Esquina del pie que queda más abajo con la cuia girada angle grados (dp, desde el centro del pie).
+        private static Vector2 LowestCornerDp(float angleDeg, float unit)
+        {
+            float rad = angleDeg * Mathf.Deg2Rad;
+            float side = angleDeg > 0f ? -1f : 1f; // giro antihorario: baja la esquina izquierda
+            return CuiaView.Rotate(new Vector2(side * CuiaGeometry.FootHalfWidthU * unit, 0f), rad);
+        }
+
+        /// <summary>
+        /// Altura (y del contenedor) de los puntos de control del arco de sacar: <see cref="ScoopArcU"/> sobre el pie más alto (el
+        /// de la boca, <paramref name="dipY"/>), bajada lo justo para que lo más alto de su cuia (<paramref name="reachU"/> u sobre
+        /// su pie, <see cref="ScoopReachU"/>, con <see cref="ScoopCeilingMarginU"/> de holgura) no pase de
+        /// <paramref name="ceilingY"/>, y nunca por debajo de la boca (que <see cref="ScoopDip"/> ya deja bajo el techo). La cúbica
+        /// no sale de sus puntos de control, así que su pie nunca pasa de ella.
+        /// </summary>
+        public static float ScoopArcTop(float restY, float dipY, float reachU, float unit, float ceilingY)
+        {
+            float top = Mathf.Max(restY, dipY) + (ScoopArcU * unit);
+            float cap = ceilingY - ((reachU + ScoopCeilingMarginU) * unit);
+            return Mathf.Max(dipY, Mathf.Min(top, cap));
+        }
+
+        private static Vector2 Cubic(Vector2 a, Vector2 b, Vector2 c, Vector2 d, float e)
+        {
+            float k = 1f - e;
+            return (k * k * k * a) + (3f * k * k * e * b) + (3f * k * e * e * c) + (e * e * e * d);
+        }
+
+        // La tinaja vuelve a su ranura y suelta la pose (al volver su cuia o al saltar el trabajo).
+        private void ReturnJar(ref Job job)
+        {
+            if (!job.JarFront)
+            {
+                return;
+            }
+
+            job.JarFront = false;
+            CuiaView s = _views[job.Source];
+            s.ReturnBody();
+            s.Unlock();
+        }
+
+        // Fin de la espera boca arriba de la tinaja vacía (al acabar o saltar el plan): ya puede tumbarse.
+        private void ReleaseJarHold(ref Job job)
+        {
+            if (!job.JarHold)
+            {
+                return;
+            }
+
+            job.JarHold = false;
+            TinajaAt(job.Source)?.HoldUpright(false);
         }
 
         // La cuia tocada deja de tragarse el chorro (T52): al terminar el trabajo o al llevarlo a su final.
@@ -1989,7 +2432,7 @@ namespace AF.Presentation
         {
             for (int i = 0; i < _count; i++)
             {
-                if (_jobs[i].Started && !_jobs[i].IsUndo && _jobs[i].Source == source)
+                if (_jobs[i].Started && !_jobs[i].IsUndo && !_jobs[i].Scoop && _jobs[i].Source == source)
                 {
                     offset = _jobs[i].PourOffset;
                     angleDeg = _jobs[i].PourAngle;
@@ -2038,6 +2481,14 @@ namespace AF.Presentation
             public int Amount;
             public int Tint;
             public bool IsUndo;
+            public bool Scoop; // sacar de la Tinaja (TJ3): se mueve su cuia (la tocada), no el origen
+            public bool JarFront; // la tinaja está en la capa de vertido, sobre su cuia
+            public bool JarHold; // la tinaja vacía espera boca arriba a su paso Upend
+            public int ScoopDrops; // gotas que ya cayeron al salir su cuia de la boca (hasta ScoopDripCount)
+            public bool ScoopSounded; // ya sonó sfx_tinaja_scoop (una vez por trabajo)
+            public float ScoopReach; // lo más alto de su cuia sobre su pie, con el asa (u; ScoopReachU)
+            public Vector2 JarStartOffset;
+            public float JarStartAngle;
             public bool Through;
             public bool Intake; // por un Remolino, la cuia tocada se está tragando el chorro (T52; RemolinoOverlay.BeginIntake)
             public bool OnMud;

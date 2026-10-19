@@ -204,6 +204,7 @@ La vibración usa los efectos estándar de Android (tick y click) y se puede apa
 | `haptic_capi` | Llega Capi con la cuia de rescate | Media |
 | `haptic_boto` | Salto del Boto | Media |
 | `haptic_back_blocked` | Atrás no puede cerrar un aviso obligatorio | Corta |
+| `haptic_tinaja_release` | La suelta de la Tinaja (02 §4.1), con `sfx_tinaja_release` [P] | Ligera, 20 ms |
 
 **Mezcla y ajustes [P]:**
 
@@ -274,8 +275,8 @@ Para la 1.0 hacen falta unos 61 efectos, el ambiente de 9 mundos y unas 60 pieza
 
 | Bloque | Ya suena en el juego | Aún no suena | Provisional o definitivo |
 | --- | --- | --- | --- |
-| Efectos (§1-§4) | 40 de los 61, con su gancho: el tablero y el vertido, la intro, la victoria, Aguas estancadas, Marea, Capi, la Luciérnaga, Volver a la orilla, El río bajó, las canoas, la interfaz, la tienda, la tarjeta previa, la llegada a la parada, el banner de mundo, la tarjeta «Fruta nueva» (`sfx_fruit_new`, desde F5), Morpho y su pista por inactividad (`sfx_hint` y `sfx_morpho_idle`, desde MO2 y MO3, ola 6) y las mecánicas de 1-200. Tres más tienen el gancho listo pero están por oír: la Hoja atada (gancho en `AudioBoard.Step` y vista desde VA1a, ola 4; sale en el mundo 6, pero ningún test comprueba aún que suene), la Flor (gancho en `AudioBoard.Step`, al abrirse y al soltar, y vista desde VA1b, ola 6, pero ningún nivel del cliente lleva Flor hasta que C1b publique el 403) y la Tinaja al elegirla (gancho en `AudioBoard`, pero ningún nivel del cliente lleva Tinaja hasta C1b, y su vista llega con TJ3-TJ4) | 18: Pororoca, el Salto del Boto, la Canasta, la Crecida y la Hoja escudo, la Liana de cuenta, la Tinaja al sacar, revelar y soltar, los gestos de TiTino, Rosa y el Mapa del río. Su clip existe; falta la pantalla, la mecánica o la llamada (columna «Dónde suena hoy»). El recuento es por el gancho propio de cada efecto: el clip de `sfx_map_rosa` ya se oye como fauna del ambiente en los mundos 2, 3, 5 y 9 (AU2; sección 5), aunque su gancho del Mapa del río aún falta | Grabados de la entrega 1 (AU3); el código queda de respaldo |
-| Vibración (§7) | `haptic_seal`, `haptic_win`, `haptic_capi` y `haptic_back_blocked`, con el permiso `VIBRATE` aprobado por el dueño (D-026) | `haptic_boto`, con el Salto del Boto | Los efectos predefinidos de Android; se pueden quedar |
+| Efectos (§1-§4) | 40 de los 61, con su gancho: el tablero y el vertido, la intro, la victoria, Aguas estancadas, Marea, Capi, la Luciérnaga, Volver a la orilla, El río bajó, las canoas, la interfaz, la tienda, la tarjeta previa, la llegada a la parada, el banner de mundo, la tarjeta «Fruta nueva» (`sfx_fruit_new`, desde F5), Morpho y su pista por inactividad (`sfx_hint` y `sfx_morpho_idle`, desde MO2 y MO3, ola 6) y las mecánicas de 1-200. Seis más tienen el gancho listo pero están por oír: la Hoja atada (gancho en `AudioBoard.Step` y vista desde VA1a, ola 4; sale en el mundo 6, pero ningún test comprueba aún que suene), la Flor (gancho en `AudioBoard.Step`, al abrirse y al soltar, y vista desde VA1b, ola 6, pero ningún nivel del cliente lleva Flor hasta que C1b publique el 403) y la Tinaja al elegirla, sacar, revelar y soltar (ganchos en `AudioBoard` y, al sacar, en `BoardAnimator`, desde TJ3, con su vista; pero ningún nivel del cliente lleva Tinaja hasta C1b) | 15: Pororoca, el Salto del Boto, la Canasta, la Crecida y la Hoja escudo, la Liana de cuenta, los gestos de TiTino, Rosa y el Mapa del río. Su clip existe; falta la pantalla, la mecánica o la llamada (columna «Dónde suena hoy»). El recuento es por el gancho propio de cada efecto: el clip de `sfx_map_rosa` ya se oye como fauna del ambiente en los mundos 2, 3, 5 y 9 (AU2; sección 5), aunque su gancho del Mapa del río aún falta | Grabados de la entrega 1 (AU3); el código queda de respaldo |
+| Vibración (§7) | `haptic_seal`, `haptic_win`, `haptic_capi` y `haptic_back_blocked`, con el permiso `VIBRATE` aprobado por el dueño (D-026) | `haptic_boto`, con el Salto del Boto, y `haptic_tinaja_release` (gancho desde TJ3, con la suelta; ningún nivel del cliente lleva Tinaja hasta C1b) | Los efectos predefinidos de Android; se pueden quedar |
 | Ambiente (§5) | Agua de los mundos 1-9, lluvia por nivel y animales con efectos provisionales (AU2) | Animales de Oriente (6) y perfiles propios de los mundos 10-13 (suenan como el 1) | Agua, lluvia y fauna grabadas de los mundos 1-9 (AU3); los mundos 10-13 siguen por código |
 | Música (§6) | Lecho de cada mundo 1-9, capas de percusión, variante nocturna y tema de menú (AU2) | La pantalla de la Crecida y el Mercado (aún no existen) | Grabada en la entrega 1 (AU3): lecho, capas, nocturna, menú y los 5 remates con gancho (`sting_fruit_new`, desde FX6) |
 | Ajustes | Sonido, Música y Vibración, encendidos por defecto; el ambiente va con Música [P] | — | Definitivo (07 §9.4) |
@@ -304,7 +305,7 @@ Las columnas «Tu propuesta» de las secciones 1-7 siguen siendo el encargo para
 
 **Hápticos:** los efectos predefinidos de Android con el permiso `VIBRATE`, aprobado en D-026:
 
-- `EFFECT_TICK` en `haptic_seal` y `haptic_back_blocked`;
+- `EFFECT_TICK` en `haptic_seal`, `haptic_tinaja_release` y `haptic_back_blocked`;
 - `EFFECT_CLICK` en `haptic_win`, `haptic_capi` y `haptic_boto`;
 - con API 26-28, un pulso de 20, 15 o 40 ms.
 
@@ -353,10 +354,10 @@ Las columnas «Tu propuesta» de las secciones 1-7 siguen siendo el encargo para
 | `sfx_mech_brote` | −20 | sin cola añadida | Paso «se abre» del Brote |
 | `sfx_mech_flor` | −18 | sin cola añadida | Pasos «se abre» y «suelta» de la Flor: el gancho está en `AudioBoard.Step` y la vista existe desde VA1b (ola 6), pero no suena en el juego hasta que C1b publique el 403, su estreno |
 | `sfx_mech_hoja_atada` | −20 | sin cola añadida | Paso «se abre» de la Hoja atada: el gancho está en `AudioBoard.Step` y la vista existe desde VA1a (ola 4); por comprobar en el juego, porque ningún test de audio lo prueba todavía |
-| `sfx_tinaja_select` | −26 | sin cola añadida | Al elegir la Tinaja (en lugar de `sfx_select`): el gancho está en `AudioBoard`, pero no suena hasta que un nivel del cliente lleve Tinaja (C1b) y exista su vista (TJ3-TJ4) |
-| `sfx_tinaja_scoop` | −22 | sin cola añadida | Sin gancho todavía: Tinaja (TJ3-TJ4) |
-| `sfx_tinaja_reveal` | −25 | dosel | Sin gancho todavía: Tinaja (TJ3-TJ4) |
-| `sfx_tinaja_release` | −19 | sin cola añadida | Sin gancho todavía: Tinaja (TJ3-TJ4) |
+| `sfx_tinaja_select` | −26 | sin cola añadida | Al elegir la Tinaja (en lugar de `sfx_select`): el gancho está en `AudioBoard`, pero no suena hasta que un nivel del cliente lleve Tinaja (C1b) |
+| `sfx_tinaja_scoop` | −22 | sin cola añadida | Sacar de la Tinaja: una vez por gesto, cuando su cuia llega a la boca (`BoardAnimator`, TJ3); sacar no suena `sfx_pour_*`. No suena en el juego hasta que un nivel del cliente lleve Tinaja (C1b). **Pendiente de decisión:** 02 §4.1 (fila «Sacar») y la propuesta de la Tinaja (b.2) piden además un «tic al empezar», pero 07 §9, 07 §5.6 y esta lista solo nombran el «glup» y ese tic no tiene id: no suena ni tiene gancho hasta que el dueño o el carril de documentación decidan si va (y con qué id de la lista) o si lo cubre otro sonido |
+| `sfx_tinaja_reveal` | −25 | dosel | Paso «revelado de la boca» de la Tinaja (`AudioBoard.Step`, TJ3). No suena en el juego hasta C1b |
+| `sfx_tinaja_release` | −19 | sin cola añadida | La suelta de la Tinaja, en el paso de su cuia (Unhook; `AudioBoard.Step`, TJ3), con `haptic_tinaja_release`; el vuelco de la vasija (Upend) no suena aparte. No suena en el juego hasta C1b |
 | `sfx_sloth_nod` | −22 | sin cola añadida | Sin gancho todavía: Gestos de TiTino (TI6a y siguientes) |
 | `sfx_sloth_happy` | −20 | sin cola añadida | Sin gancho todavía: Gestos de TiTino |
 | `sfx_sloth_branch` | −24 | sin cola añadida | Sin gancho todavía: Gestos de TiTino |

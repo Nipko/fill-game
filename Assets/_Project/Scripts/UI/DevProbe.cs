@@ -179,8 +179,8 @@ namespace AF.UI
         /// <summary>
         /// Campos del tablero de la línea <c>AF_STATE</c> (cada uno empieza con coma):
         /// <list type="bullet">
-        /// <item><description><c>murky</c>: el nivel tiene Aguas turbias (<paramref name="initial"/> con dosis ocultas; 02
-        /// §11);</description></item>
+        /// <item><description><c>murky</c>: el nivel tiene Aguas turbias (<paramref name="initial"/> con dosis ocultas fuera de la
+        /// tinaja, <see cref="HasMurkyWater"/>; 02 §11; TJ4);</description></item>
         /// <item><description><c>mech</c>: una cadena por cuia de <paramref name="current"/>, <c>"-"</c> sin mecánica o su tipo
         /// (<see cref="MechanicTypes.ToKey"/>) con <c>;key=K</c>, <c>;pair=P</c> (siempre en el Remolino), <c>;n=N</c>,
         /// <c>;k=K</c> y <c>;c=C</c> (el contador) si valen más de 0 y <c>;closed</c> con la Hoja puesta o el Brote cerrado
@@ -188,13 +188,15 @@ namespace AF.UI
         /// <item><description><c>hidden</c>: la máscara de ocultas de cada cuia (bit k = dosis k desde el fondo);</description></item>
         /// <item><description><c>sealed</c>: los índices de las cuias selladas;</description></item>
         /// <item><description><c>counter</c>, solo si hay contador (Lluvia o Piraña; <see cref="LevelCounter"/>):
-        /// <c>type</c>, <c>cuia</c>, <c>remaining</c>, <c>pending</c> y <c>blocked</c>.</description></item>
+        /// <c>type</c>, <c>cuia</c>, <c>remaining</c>, <c>pending</c> y <c>blocked</c>;</description></item>
+        /// <item><description><c>tinaja</c>, solo con la Tinaja: dosis, reveladas y su cuia colgada o suelta
+        /// (<see cref="AppendTinajaFields"/>; TJ4).</description></item>
         /// </list>
         /// Puro: no depende de <see cref="LevelFlow"/> ni de <see cref="Enabled"/>.
         /// </summary>
         internal static void AppendBoardFields(StringBuilder sb, BoardState initial, BoardState current)
         {
-            sb.Append(",\"murky\":").Append(initial.HasHidden ? "true" : "false");
+            sb.Append(",\"murky\":").Append(HasMurkyWater(initial) ? "true" : "false"); // la tinaja no es agua turbia (TJ4)
             sb.Append(",\"mech\":[");
             for (int i = 0; i < current.Count; i++)
             {
@@ -247,6 +249,8 @@ namespace AF.UI
                 sb.Append(",\"pending\":").Append(counter.PendingDrops.ToString(CultureInfo.InvariantCulture));
                 sb.Append(",\"blocked\":").Append(counter.Blocked ? "true" : "false").Append('}');
             }
+
+            AppendTinajaFields(sb, initial, current); // solo con tinaja (DevProbe.Tinaja.cs; TJ4)
         }
 
         /// <summary>

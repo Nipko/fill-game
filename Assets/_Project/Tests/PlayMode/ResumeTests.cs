@@ -5,10 +5,12 @@ using System.Collections.Generic;
 using System.IO;
 using AF.Boosters;
 using AF.Core.Board;
+using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Economy;
 using AF.GameFlow;
 using AF.Presentation;
+using AF.Presentation.Mechanics;
 using AF.Save;
 using AF.Solver.Search;
 using AF.UI;
@@ -271,6 +273,103 @@ namespace AF.Tests.PlayMode
             // T-A: la bandeja reabierta, entera y sin huecos: Marea, «+1 cuia», Pista (MO2) y Revelar (la cuia 0 conserva una oculta).
             Assert.That(again.View.ExtraCuiaButton.gameObject.activeInHierarchy, Is.True, "«+1 cuia» se ve al reabrir");
             Assert.That(again.View.Tray.SlotCount, Is.EqualTo(4), "Marea, Cuia extra, Pista y Revelar");
+        }
+
+        [UnityTest]
+        public IEnumerator Resume_Tinaja_MidLevelAndAfterTheRelease_SameState_NotMurky()
+        {
+            // Tarea TJ3 (M13, D-019 Q-Ti6; 02 R7, R8, R10 f, §11 T6 y §14): el 323 del paquete de muestra (su cuia en la 1 y la
+            // tinaja en la 2 con [jenipapo*, lulo*, jenipapo]). Sacar dos veces y Marea: la tinaja con 2 dosis, las dos ya vistas, y
+            // su cuia colgada con 1. Al cerrar y abrir la app, el mismo estado y pintado como la tinaja, nunca como agua turbia.
+            // Después, hasta la suelta: al reabrir, la tinaja vacía boca abajo y su cuia suelta; Marea la vuelve a colgar.
+            const int cucharon = TinajaVisualTests.CucharonIndex;
+            const int tinaja = TinajaVisualTests.TinajaIndex;
+            MapArtRule.ForceProvisional = true;
+            try
+            {
+                var store = new MemoryProfileStore(FunnelSetup.Profile(0));
+                LaunchOptions.ProfileStoreOverride = store;
+                yield return PlayModeHelpers.LoadGameWithPack(TinajaVisualTests.Pack323(cucharon, tinaja), 323, new MemoryProgressStore(323, 322));
+                GameBootstrap boot = GameBootstrap.Current!;
+                PlayModeHelpers.TakeClock(boot);
+                boot.TapAnywhere();
+                PlayModeHelpers.StepUntilIdle(boot, 6000);
+                LevelFlow flow = boot.Flow!;
+                TinajaStepsTests.Scoop(boot);
+                TinajaStepsTests.Scoop(boot);
+                Assert.That(boot.PressUndo(), Is.True, "Marea");
+                PlayModeHelpers.StepUntilIdle(boot, 4000);
+                BoardState board = flow.Session.Current;
+                Assert.That(board[tinaja].Count, Is.EqualTo(2));
+                Assert.That(board[tinaja].HiddenMask, Is.EqualTo(0), "lo revelado sigue revelado");
+                LevelStateData saved = ProfileJson.Deserialize(store.Json!).LevelState!;
+                StringAssert.EndsWith("|21|203", saved.History, "V: un vertido 2→1 (sacar); R: las capas 0 y 1 de la tinaja");
+                Assert.That(saved.RevealedCuias, Is.EqualTo(new[] { tinaja }));
+
+                yield return PlayModeHelpers.LoadApp(store); // como cerrar y abrir la app
+                GameBootstrap again = GameBootstrap.Current!;
+                Assert.That(again, Is.Not.SameAs(boot));
+                PlayModeHelpers.TakeClock(again);
+                PlayModeHelpers.Step(again, 50);
+                LevelFlow resumed = again.Flow!;
+                Assert.That(resumed.LevelNumber, Is.EqualTo(323));
+                Assert.That(resumed.Phase, Is.EqualTo(FlowPhase.Playing), "sin intro (02 §14)");
+                Assert.That(resumed.Session.Current, Is.EqualTo(board), "el mismo tablero: dosis, lo revelado y su cuia colgada");
+                Assert.That(resumed.Session.RevealedLayers(tinaja), Is.EqualTo(0b11));
+                AssertTinajaView(again, tinaja, cucharon, mouth: 11, chip: 2, bands: 0b01, hanging: true);
+
+                // Hasta la suelta: su cuia llena va a la vacía 7 y la última sacada la suelta (R10 f).
+                TinajaStepsTests.Scoop(again);
+                Assert.That(again.TapCuia(cucharon).Kind, Is.EqualTo(TapKind.Selected));
+                Assert.That(again.TapCuia(7).Kind, Is.EqualTo(TapKind.Poured));
+                PlayModeHelpers.StepUntilIdle(again, 4000);
+                TinajaStepsTests.Scoop(again);
+                BoardState released = resumed.Session.Current;
+                Assert.That(released[tinaja].IsEmpty, Is.True);
+                Assert.That(released[cucharon].Mechanic, Is.EqualTo(MechanicType.None), "suelta");
+
+                yield return PlayModeHelpers.LoadApp(store);
+                GameBootstrap third = GameBootstrap.Current!;
+                PlayModeHelpers.TakeClock(third);
+                PlayModeHelpers.Step(third, 50);
+                LevelFlow flow3 = third.Flow!;
+                Assert.That(flow3.Phase, Is.EqualTo(FlowPhase.Playing));
+                Assert.That(flow3.Session.Current, Is.EqualTo(released), "tras la suelta, el mismo tablero");
+                var tin = (TinajaOverlay)third.View!.Views[tinaja].OverlayOf(MechanicType.Tinaja)!;
+                Assert.That(tin.UpsideDown, Is.True, "vacía, boca abajo sobre el jirau");
+                Assert.That(tin.HoldingUpright, Is.False);
+                Assert.That(tin.JirauVisible, Is.True);
+                Assert.That(third.View.Views[cucharon].OverlayOf(MechanicType.Cucharon)?.Visible ?? false, Is.False, "su cuia, suelta");
+
+                Assert.That(third.PressUndo(), Is.True, "Marea");
+                PlayModeHelpers.StepUntilIdle(third, 4000);
+                Assert.That(flow3.Session.Current[cucharon].Mechanic, Is.EqualTo(MechanicType.Cucharon));
+                AssertTinajaView(third, tinaja, cucharon, mouth: 9, chip: 1, bands: 0, hanging: true);
+            }
+            finally
+            {
+                MapArtRule.ForceProvisional = null;
+            }
+        }
+
+        // La tinaja reabierta se pinta como la tinaja (boca, chip, bandas y su cuia), nunca como agua turbia (contrato 27).
+        private static void AssertTinajaView(GameBootstrap boot, int tinaja, int cucharon, int mouth, int chip, int bands, bool hanging)
+        {
+            CuiaView tv = boot.View!.Views[tinaja];
+            var tin = (TinajaOverlay)tv.OverlayOf(MechanicType.Tinaja)!;
+            Assert.That(tin.UpsideDown, Is.False);
+            Assert.That(tin.MouthTint, Is.EqualTo(mouth), "la boca");
+            Assert.That(tin.ChipCount, Is.EqualTo(chip), "«×n»");
+            Assert.That(tin.BandMask, Is.EqualTo(bands), "las capas ya vistas, como bandas");
+            Assert.That(tv.Murky.BadgeVisible, Is.False, "sin «?×n»");
+            for (int k = 0; k < tv.Capacity; k++)
+            {
+                Assert.That(tv.Liquid.MurkyLookAt(k), Is.EqualTo(LiquidGraphic.MurkyLook.None), "capa " + k + " sin «?»");
+                Assert.That(tv.DoseColor(k), Is.Not.EqualTo(Palette.Murky), "capa " + k + " sin el pardo");
+            }
+
+            CuiaOverlay? cuch = boot.View.Views[cucharon].OverlayOf(MechanicType.Cucharon);
+            Assert.That(cuch != null && cuch.Visible, Is.EqualTo(hanging), "su cuia, colgada del jirau");
         }
 
         [UnityTest]
