@@ -714,7 +714,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 - Código y tests: los de U2-U6, entre ellos los que retiran `GameScreen.PourCeilingFor`, `PourCavityDp`, `PourCeilingAirDp`, `BoardAnimator.TopLimitY`, `MaxRaiseU`, `LipClearanceU` y `BoardLayout.PanelMarginTopOneRow`.
 - Documentación (D2-D6): `docs/GDD.md`, `docs/gdd/{00, 01, 02, 03, 04, 07, 08, 09}`, `docs/art/direccion-visual-v2.md`, la nota de respuestas de la propuesta y `CLAUDE.md`.
 
-**Pregunta para el dueño (abierta).** Surgió en la revisión del código de D-006. El registro no elige por el dueño (CLAUDE.md, regla 10). **Respondida el 2026-10-19** (D-030, pregunta 2): **(c)**, 3 filas al cargar cuando T + 2 pasa de 14 (T generadas ≥ 13), en cualquier proporción; tarea DC18 (`BoardLayout.RowsFor` y el caso en `BoardLayoutTests`).
+**Pregunta para el dueño (abierta hasta el 2026-10-19).** Surgió en la revisión del código de D-006. El registro no elige por el dueño (CLAUDE.md, regla 10). **Respondida el 2026-10-19** (D-030, pregunta 2): **(c)**, 3 filas al cargar cuando T + 2 pasa de 14 (T generadas ≥ 13), en cualquier proporción; tarea DC18 (`BoardLayout.RowsFor` y el caso en `BoardLayoutTests`).
 
 | # | Pregunta | Opciones | Bloquea |
 |---|---|---|---|
@@ -2807,7 +2807,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - Este registro: la tabla (D-006, D-008, D-021, D-029 y D-030), P12 de D-006, el punto 7 y las preguntas de D-008, el punto 5 de D-013, el estado de D-021 y las listas «Fuera de esta decisión» de D-028 y D-029.
 - `docs/dev/traspaso/README.md`: §1 (pendientes tras la ola 4), §6, paso 4 (las respondidas salen de los pendientes del dueño) y §7 (las filas de D-006, D-008, D-021, D-028, D-029 y D-030).
 
-**Alternativas descartadas.** 1 (b); 2 (a) y (b); 3 (b); 4 (a) y (b); 5 (b) y (c), es decir, #2 B y C; 6 (a), es decir, #9 A y B y #14 A y B; 7 (b), es decir, #20 A y B; 8 (a); 9 (a) y (c); 10 (b); 11 (b); 12 (b); 13 (a) y (c); 14 (b); 15 (a); 16 (a); 17 (a); 18 (a); 19 (b).
+**Alternativas descartadas.** 1 (b); 2 (a) y (b); 3 (b); 4 (a) y (b); 5 (b) y (c), es decir, #2 B y C; 6 (a), es decir, #9 A y #14 A (y con la C quedan fuera también #9 B y #14 B); 7 (b), es decir, #20 B (y la #20 A, que el plan no ofrecía); 8 (a); 9 (a) y (c); 10 (b); 11 (b); 12 (b); 13 (a) y (c); 14 (b); 15 (a); 16 (a); 17 (a); 18 (a); 19 (b).
 
 **Cómo revertir.** Con una decisión nueva que sustituya a D-030, pregunta a pregunta. Ninguna toca packs ni datos publicados; la 15 añade un campo al perfil que, mientras el esquema no se publique, se quita sin migrar.
 
