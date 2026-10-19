@@ -3,6 +3,7 @@
   "rootNamespace": "AF.UI.Editor",
   "references": [
     "AF.UI",
+    "AF.Levels",
     "AF.Audio.Unity",
     "UnityEngine.UI",
     "Unity.InputSystem"

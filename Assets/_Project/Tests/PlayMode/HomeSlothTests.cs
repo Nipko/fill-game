@@ -398,9 +398,13 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator ContentEnd_DoesNotSpendTheGreetingBehindTheModal_ItComesWhenItCloses()
         {
-            // El catálogo de la escena acaba en el 300: con el 301, «Jugar» abre «El río sigue creciendo» (06 §9).
+            // Un catálogo que acaba en el 10 (el del tutorial): con el 11, «Jugar» abre «El río sigue creciendo» (06 §9) con la
+            // ventanita de su parada debajo. El de la escena acaba en el 700 desde C1b, y el 701 no tiene parada en los datos del
+            // Mapa, así que allí la ventanita no sale.
             ManualClock clock = At(0, 8);
-            var store = new MemoryProfileStore(ProfileAt(301, clock));
+            LaunchOptions.LevelPackJsonOverride = System.IO.File.ReadAllText(
+                System.IO.Path.Combine(Application.dataPath, "_Project", "Data", "Levels", "tutorial_v0.json"));
+            var store = new MemoryProfileStore(ProfileAt(11, clock));
             yield return Load(store, clock);
             GameBootstrap boot = GameBootstrap.Current!;
             LobbyScreen lobby = boot.Lobby!;

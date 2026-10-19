@@ -32,11 +32,12 @@ namespace AF.Levels
 
     /// <summary>
     /// Catálogo de niveles de campaña: el índice nivel → paquete de GDD 08 §2.2 (<c>AF.Levels</c>) sobre uno o varios
-    /// <see cref="LevelPack"/> (en la escena, <c>tutorial_v0</c> y <c>mundo_02</c> … <c>mundo_06</c>: 1-300 desde C1a). Resuelve
-    /// cada número de nivel con su definición y su paquete, dice cuál es el siguiente disponible y detecta huecos y
-    /// repetidos. Si un nivel no está en el catálogo (después del último o en un hueco), quien juega ve «El río sigue
-    /// creciendo» (08 §6.2; 06 §9): el fin de contenido es dinámico, el último nivel publicado (<see cref="LastLevel"/>; el 300
-    /// con el mundo 6), y no hay ningún número fijo que cambiar al publicar otro paquete.
+    /// <see cref="LevelPack"/> (en la escena, <c>tutorial_v0</c> y <c>mundo_02</c> … <c>mundo_09</c>: 1-300 desde C1a y 1-700
+    /// desde C1b, con los mundos 7-9 en la variante <see cref="PublishedVariant"/>). Resuelve cada número de nivel con su
+    /// definición y su paquete, dice cuál es el siguiente disponible y detecta huecos y repetidos. Si un nivel no está en el
+    /// catálogo (después del último o en un hueco), quien juega ve «El río sigue creciendo» (08 §6.2; 06 §9): el fin de
+    /// contenido es dinámico, el último nivel publicado (<see cref="LastLevel"/>; el 700 con el mundo 9), y no hay ningún número
+    /// fijo que cambiar al publicar otro paquete.
     /// </summary>
     /// <remarks>
     /// <para><see cref="LevelOffset"/> (solo builds de desarrollo, extra <c>af_level_offset</c> [P], tarea B1-5) desplaza el
@@ -55,6 +56,31 @@ namespace AF.Levels
     {
         /// <summary>Desplazamiento máximo admitido (cubre de sobra los 1.040 niveles de la vuelta 1, 06 §10).</summary>
         public const int MaxLevelOffset = 100000;
+
+        /// <summary>
+        /// Variante «a» de los mundos 7-9 (301-700; <c>campaign_v2.json</c>, D-023 punto 10 y D-027): con la Tinaja, que estrena
+        /// en el 323 (D-019). Sus paquetes son <c>Data/Levels/mundo_07_v1.json</c> a <c>mundo_09_v1.json</c> (GEN79).
+        /// </summary>
+        public const string VariantA = "a";
+
+        /// <summary>
+        /// Variante «b» de los mundos 7-9: la salida B de D-019 (Q-Ti3), sin la Tinaja, con el respaldo de cada celda. Sus
+        /// paquetes son <c>Data/Levels/salida_b/mundo_07_v1.json</c> a <c>mundo_09_v1.json</c>, copias byte a byte de
+        /// <c>tools/out/salida_b/</c> (GEN79; un test EditMode lo comprueba).
+        /// </summary>
+        public const string VariantB = "b";
+
+        /// <summary>
+        /// Variante de los mundos 7-9 que enlaza la escena (<c>GameSceneBuilder.LevelPackPaths</c>; tarea C1b). La condición de
+        /// D-019 (Q-Ti3; 03 §11; C1b, «Condición de la Tinaja»): se publica la «a» si TJ4 y la compuerta de PF1 (el factor de
+        /// Morpho medido en un teléfono de clase A) están en verde; si no, la «b». Mientras la compuerta de PF1 no conste en verde,
+        /// la «b» [P] (anotado en el traspaso). Para publicar la Tinaja: este valor a <see cref="VariantA"/> y regenerar la escena
+        /// con <c>GameSceneBuilder.CreateGameScene</c> (C1c).
+        /// </summary>
+        public const string PublishedVariant = VariantB;
+
+        /// <summary>La escena publica la Tinaja (estreno en el 323): <see cref="PublishedVariant"/> es <see cref="VariantA"/>.</summary>
+        public static bool TinajaPublished => string.Equals(PublishedVariant, VariantA, StringComparison.Ordinal);
 
         private readonly LevelPack[] _packs;
         private readonly int[] _numbers;

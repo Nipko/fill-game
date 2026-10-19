@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using AF.Audio.Unity;
+using AF.Levels;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -36,8 +37,10 @@ namespace AF.UI.Editor
         /// <summary>
         /// Paquetes de la escena, en orden (08 §2.2: índice nivel → paquete; tarea B1-5; traspaso §6 pasos 1.1-1.2): el tutorial
         /// (1-10), la campaña 11-200 de <c>pack_schema</c> 2 (<c>mundo_02</c> 11-40, <c>mundo_03</c> 41-80, <c>mundo_04</c>
-        /// 81-140 y <c>mundo_05</c> 141-200) y el mundo 6, Oriente, de <c>pack_schema</c> 3 (<c>mundo_06</c> 201-300, generado
-        /// por P7a; tarea C1a; 03 §11). El primero va en <c>levelPack</c> y el resto en <c>extraLevelPacks</c>. El último nivel
+        /// 81-140 y <c>mundo_05</c> 141-200), el mundo 6, Oriente, de <c>pack_schema</c> 3 (<c>mundo_06</c> 201-300, generado
+        /// por P7a; tarea C1a; 03 §11) y los mundos 7-9 (<c>mundo_07</c> 301-420, <c>mundo_08</c> 421-560 y <c>mundo_09</c>
+        /// 561-700, generados por GEN79 con D-027; tarea C1b) en la variante <see cref="LevelCatalog.PublishedVariant"/>
+        /// (<see cref="WorldPackPath"/>). El primero va en <c>levelPack</c> y el resto en <c>extraLevelPacks</c>. El último nivel
         /// del último paquete es el fin de contenido: después, «El río sigue creciendo» (06 §9).
         /// </summary>
         public static readonly string[] LevelPackPaths =
@@ -48,7 +51,28 @@ namespace AF.UI.Editor
             "Assets/_Project/Data/Levels/mundo_04_v1.json",
             "Assets/_Project/Data/Levels/mundo_05_v1.json",
             "Assets/_Project/Data/Levels/mundo_06_v1.json",
+            WorldPackPath(7, LevelCatalog.PublishedVariant),
+            WorldPackPath(8, LevelCatalog.PublishedVariant),
+            WorldPackPath(9, LevelCatalog.PublishedVariant),
         };
+
+        /// <summary>
+        /// Ruta del paquete del mundo <paramref name="world"/> (7-9) en la variante <paramref name="variant"/> de
+        /// <c>campaign_v2.json</c> (D-023 punto 10; D-019 Q-Ti3): la «a», con la Tinaja, en <c>Data/Levels/</c> (la que escribe
+        /// el generador); la «b», sin ella, en <c>Data/Levels/salida_b/</c> (copia de <c>tools/out/salida_b/</c>).
+        /// </summary>
+        public static string WorldPackPath(int world, string variant)
+        {
+            if (world < 7 || world > 9)
+            {
+                throw new ArgumentOutOfRangeException(nameof(world), world, "Solo los mundos 7-9 tienen dos variantes.");
+            }
+
+            string file = "mundo_0" + world.ToString(System.Globalization.CultureInfo.InvariantCulture) + "_v1.json";
+            return string.Equals(variant, LevelCatalog.VariantB, StringComparison.Ordinal)
+                ? "Assets/_Project/Data/Levels/salida_b/" + file
+                : "Assets/_Project/Data/Levels/" + file;
+        }
 
         /// <summary>Catálogo de miquitos de la intro «Llenar y teñir» (<c>af-fauna/0</c>; guion de la intro §4.3).</summary>
         public const string FaunaCatalogPath = "Assets/_Project/Data/Fauna/miquitos_v0.json";

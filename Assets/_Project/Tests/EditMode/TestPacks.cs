@@ -15,9 +15,9 @@ namespace AF.Tests.EditMode
         public static string TutorialPath => Path.Combine(Application.dataPath, "_Project/Data/Levels/tutorial_v0.json");
 
         /// <summary>
-        /// Rutas de los 6 paquetes de la escena, en el orden de <c>GameSceneBuilder.LevelPackPaths</c>: el tutorial (1-10), la
-        /// campaña 11-200 de <c>pack_schema</c> 2 (traspaso §6 pasos 1.1-1.2) y el mundo 6 (201-300, <c>pack_schema</c> 3; tarea
-        /// C1a).
+        /// Rutas de los 9 paquetes de la escena, en el orden de <c>GameSceneBuilder.LevelPackPaths</c>: el tutorial (1-10), la
+        /// campaña 11-200 de <c>pack_schema</c> 2 (traspaso §6 pasos 1.1-1.2), el mundo 6 (201-300, <c>pack_schema</c> 3; tarea
+        /// C1a) y los mundos 7-9 (301-700; tarea C1b) en la variante publicada (<see cref="LevelCatalog.PublishedVariant"/>).
         /// </summary>
         public static string[] CampaignPaths => new[]
         {
@@ -27,7 +27,31 @@ namespace AF.Tests.EditMode
             Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_04_v1.json"),
             Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_05_v1.json"),
             Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_06_v1.json"),
+            WorldPath(7, LevelCatalog.PublishedVariant),
+            WorldPath(8, LevelCatalog.PublishedVariant),
+            WorldPath(9, LevelCatalog.PublishedVariant),
         };
+
+        /// <summary>
+        /// Ruta del paquete del mundo <paramref name="world"/> (7-9) en la variante <paramref name="variant"/> (como
+        /// <c>GameSceneBuilder.WorldPackPath</c>): la «a», con la Tinaja, en <c>Data/Levels/</c>; la «b», en
+        /// <c>Data/Levels/salida_b/</c>.
+        /// </summary>
+        public static string WorldPath(int world, string variant)
+        {
+            string file = "mundo_0" + world.ToString(System.Globalization.CultureInfo.InvariantCulture) + "_v1.json";
+            return variant == LevelCatalog.VariantB
+                ? Path.Combine(Application.dataPath, "_Project/Data/Levels/salida_b", file)
+                : Path.Combine(Application.dataPath, "_Project/Data/Levels", file);
+        }
+
+        private static readonly LevelPack?[] _variantA = new LevelPack?[3];
+
+        /// <summary>El paquete del mundo <paramref name="world"/> (7-9) de la variante «a», con la Tinaja, leído del disco (una vez).</summary>
+        public static LevelPack WorldVariantA(int world)
+        {
+            return _variantA[world - 7] ??= LevelPackReader.Read(File.ReadAllText(WorldPath(world, LevelCatalog.VariantA)));
+        }
 
         private static LevelPack? _tutorial;
         private static LevelPack[]? _campaign;
@@ -35,7 +59,7 @@ namespace AF.Tests.EditMode
         /// <summary>Paquete <c>tutorial_v0</c> leído del disco (una vez).</summary>
         public static LevelPack Tutorial => _tutorial ??= LevelPackReader.Read(File.ReadAllText(TutorialPath));
 
-        /// <summary>Los 6 paquetes de <see cref="CampaignPaths"/> leídos del disco (una vez).</summary>
+        /// <summary>Los 9 paquetes de <see cref="CampaignPaths"/> leídos del disco (una vez).</summary>
         public static IReadOnlyList<LevelPack> Campaign
         {
             get

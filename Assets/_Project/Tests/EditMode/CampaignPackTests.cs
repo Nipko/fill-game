@@ -1,20 +1,25 @@
 #nullable enable
 using System.Collections.Generic;
+using System.IO;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Core.Session;
 using AF.Levels;
 using NUnit.Framework;
+using UnityEngine;
 
 namespace AF.Tests.EditMode
 {
     /// <summary>
-    /// Los 6 paquetes de la escena (tutorial_v0 y mundo_02..05_v1, <c>pack_schema</c> 2; traspaso §6 pasos 1.1-1.2; y
-    /// mundo_06_v1, <c>pack_schema</c> 3, desde la tarea C1a; 08 §4.1 y §4.4; contrato 21): cubren los niveles 1-300 sin huecos,
-    /// cada tablero (base y relief) construye con las mecánicas del núcleo, pasa <see cref="LevelValidation"/> y arranca una
-    /// sesión jugable, los estrenos de D-007 (02 §9.1 y §11; 02 §8) están donde dice el calendario y los del mundo 6, la Liana
-    /// de cuenta en el 243 y la Hoja atada en el 283 (03 §11; D-023, punto 5), también.
+    /// Los 9 paquetes de la escena (tutorial_v0 y mundo_02..05_v1, <c>pack_schema</c> 2; traspaso §6 pasos 1.1-1.2;
+    /// mundo_06_v1, <c>pack_schema</c> 3, desde la tarea C1a; y mundo_07..09_v1, <c>pack_schema</c> 3, desde la tarea C1b, en la
+    /// variante <see cref="LevelCatalog.PublishedVariant"/>; 08 §4.1 y §4.4; contrato 21): cubren los niveles 1-700 sin huecos,
+    /// cada tablero (base y relief) construye con las mecánicas del núcleo, pasa <see cref="LevelValidation"/>, arranca una
+    /// sesión jugable y cabe en el tablero (≤ 16 cuias, D-006), los estrenos de D-007 (02 §9.1 y §11; 02 §8) están donde dice el
+    /// calendario y los del mundo 6, la Liana de cuenta en el 243 y la Hoja atada en el 283 (03 §11; D-023, punto 5), y los de
+    /// los mundos 7-9, la Tinaja en el 323 (solo en la variante «a», D-019), el Brote de dos hojas en el 343 y la Flor en el 403,
+    /// también. La variante «a» de los mundos 7-9, que la escena no enlaza mientras se publique la «b», se comprueba aparte.
     /// </summary>
     public sealed class CampaignPackTests
     {
@@ -25,19 +30,20 @@ namespace AF.Tests.EditMode
         private static readonly string[] DebutIntros = { "chica", "alta", "hoja", "matapi", "liana", "murky", "remolino", "barro", "lluvia", "brote", "pirana" };
 
         [Test]
-        public void Packs_LoadAndCover1To300()
+        public void Packs_LoadAndCover1To700()
         {
             IReadOnlyList<LevelPack> packs = TestPacks.Campaign;
-            Assert.That(packs.Count, Is.EqualTo(6));
+            Assert.That(packs.Count, Is.EqualTo(9));
             LevelCatalog catalog = LevelCatalog.Create(packs);
             Assert.That(catalog.FirstLevel, Is.EqualTo(1));
-            Assert.That(catalog.LastLevel, Is.EqualTo(300));
-            Assert.That(catalog.Count, Is.EqualTo(300));
+            Assert.That(catalog.LastLevel, Is.EqualTo(700));
+            Assert.That(catalog.Count, Is.EqualTo(700));
             Assert.That(catalog.IsContiguous, Is.True, catalog.DescribeGaps());
             Assert.That(catalog.NextLevelAfter(200), Is.EqualTo(201), "el 200 ya no es el fin de contenido");
-            Assert.That(catalog.NextLevelAfter(300), Is.Null, "tras el 300, «El río sigue creciendo» (06 §9)");
+            Assert.That(catalog.NextLevelAfter(300), Is.EqualTo(301), "el 300 ya no es el fin de contenido (C1b)");
+            Assert.That(catalog.NextLevelAfter(700), Is.Null, "tras el 700, «El río sigue creciendo» (06 §9)");
 
-            for (int level = 1; level <= 300; level++)
+            for (int level = 1; level <= 700; level++)
             {
                 LevelDefinition def = catalog.Find(level)!;
                 Assert.That(def.Level, Is.EqualTo(level));
@@ -52,14 +58,25 @@ namespace AF.Tests.EditMode
             Assert.That(packs[5].First.Level, Is.EqualTo(201));
             Assert.That(packs[5].World, Is.EqualTo(6), "glosario §8: Oriente");
             Assert.That(catalog.PackOf(300), Is.SameAs(packs[5]));
+            int[] first = { 301, 421, 561 };
+            int[] last = { 420, 560, 700 };
+            for (int w = 0; w < 3; w++)
+            {
+                LevelPack pack = packs[6 + w];
+                Assert.That(pack.PackId, Is.EqualTo("mundo_0" + (7 + w) + "_v1"));
+                Assert.That(pack.World, Is.EqualTo(7 + w), "glosario §8: Madre de Dios, Madidi y Ucayali");
+                Assert.That(pack.First.Level, Is.EqualTo(first[w]));
+                Assert.That(pack.Levels[pack.Count - 1].Level, Is.EqualTo(last[w]));
+                Assert.That(catalog.PackOf(last[w]), Is.SameAs(pack));
+            }
         }
 
         [Test]
-        public void Boards_BuildAndValidate_All290()
+        public void Boards_BuildAndValidate_All690()
         {
             LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
             int checkedLevels = 0;
-            for (int level = 11; level <= 300; level++)
+            for (int level = 11; level <= 700; level++)
             {
                 LevelDefinition def = catalog.Find(level)!;
                 BoardState board = def.CreateBoard();
@@ -73,18 +90,19 @@ namespace AF.Tests.EditMode
                 }
 
                 Assert.That(board.HiddenCount, Is.EqualTo(def.HiddenCount), def.Id);
+                Assert.That(def.CuiaCount, Is.LessThanOrEqualTo(BoardState.MaxCuias), "D-006: ≤ 16 ranuras (" + def.Id + ")");
                 checkedLevels++;
             }
 
-            Assert.That(checkedLevels, Is.EqualTo(290));
+            Assert.That(checkedLevels, Is.EqualTo(690));
         }
 
         [Test]
-        public void Relief_BuildAndValidate_All532()
+        public void Relief_BuildAndValidate_All1310()
         {
             LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
             int variants = 0;
-            for (int level = 1; level <= 300; level++)
+            for (int level = 1; level <= 700; level++)
             {
                 LevelDefinition def = catalog.Find(level)!;
                 if (level >= 31)
@@ -101,9 +119,13 @@ namespace AF.Tests.EditMode
                     BoardState board = relief.CreateBoard();
                     string where = def.Id + ".relief[" + r + "] " + relief.Type;
                     Assert.That(board.Count, Is.EqualTo(relief.CuiaCount), where);
+                    Assert.That(relief.CuiaCount, Is.LessThanOrEqualTo(BoardState.MaxCuias), "D-006: ≤ 16 ranuras (" + where + ")");
                     Assert.That(relief.Attrs.Count, Is.EqualTo(relief.CuiaCount), where);
                     Assert.That(LevelValidation.Validate(board), Is.Null, where);
-                    Assert.That(board.HasHidden, Is.False, "relief sin ocultos: " + where);
+                    if (!def.HasMechanic(MechanicType.Tinaja))
+                    {
+                        Assert.That(board.HasHidden, Is.False, "relief sin ocultos (salvo la máscara de la Tinaja): " + where);
+                    }
                     Assert.That(new LevelSession(board, true, PourModes.Default).Status, Is.EqualTo(LevelStatus.Playing), where);
                     if (relief.Type == ReliefBoard.TypePlusEmpty)
                     {
@@ -118,7 +140,10 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(variants, Is.EqualTo(334 + 198), "334 en 1-200 y 198 en el mundo 6 (100 de un color menos y 98 de una vacía más)");
+            int worlds7to9 = LevelCatalog.TinajaPublished ? 774 : 778;
+            Assert.That(variants, Is.EqualTo(334 + 198 + worlds7to9),
+                "334 en 1-200, 198 en el mundo 6 (100 de un color menos y 98 de una vacía más) y, en los mundos 7-9, 774 en la variante «a» "
+                + "(379 y 395) o 778 en la «b» (384 y 394)");
         }
 
         [Test]
@@ -230,6 +255,121 @@ namespace AF.Tests.EditMode
             Assert.That(liana, Is.GreaterThanOrEqualTo(0), "el 243 lleva su Liana de cuenta");
             Assert.That(l243.Attrs[liana].N, Is.EqualTo(1), "n = 1 (mundo_06_v1.json)");
             Assert.That(catalog.Find(283)!.HasMechanic(MechanicType.HojaAtada), Is.True);
+        }
+
+        [Test]
+        public void Worlds7To9Debuts_InThePublishedVariant_AreTheOnlyNotSkippableLevels()
+        {
+            // 03 §11 y SightingRule.VariantDebutLevels (VA1b): en 301-700 estrenan el Brote de dos hojas (343, brote_n2 [P]) y la
+            // Flor (403, flor) en las dos variantes, y la Tinaja (323, tinaja; D-019) solo en la «a». Con la «b» publicada (salida
+            // B de D-019 Q-Ti3), ningún nivel de 301-700 lleva la Tinaja y el 323 es un nivel normal (en la b, Ma).
+            LevelCatalog catalog = LevelCatalog.Create(TestPacks.Campaign);
+            bool tinaja = LevelCatalog.TinajaPublished;
+            for (int level = 301; level <= 700; level++)
+            {
+                LevelDefinition def = catalog.Find(level)!;
+                string? intro = level == 343 ? AF.GameFlow.LevelCardInfo.BroteTwoLeavesIntro
+                    : level == 403 ? AF.GameFlow.LevelCardInfo.FlorIntro
+                    : level == 323 && tinaja ? "tinaja" : null;
+                Assert.That(def.IntroMechanic, Is.EqualTo(intro), "intro_mechanic del " + level + " (variante " + LevelCatalog.PublishedVariant + ")");
+                Assert.That(def.Skippable, Is.EqualTo(intro == null), "skippable es false justo en los estrenos (" + level + ")");
+                Assert.That(def.World, Is.EqualTo(WorldTable.WorldOf(level)));
+                if (!tinaja || level < 323)
+                {
+                    Assert.That(def.HasMechanic(MechanicType.Tinaja), Is.False, "sin la Tinaja: " + level);
+                }
+
+                if (level < 343)
+                {
+                    Assert.That(BroteTwoLeaves(def), Is.False, "Brote de dos hojas antes del 343: " + level);
+                }
+
+                if (level < 403)
+                {
+                    Assert.That(def.HasMechanic(MechanicType.Flor), Is.False, "Flor antes del 403: " + level);
+                }
+            }
+
+            Assert.That(BroteTwoLeaves(catalog.Find(343)!), Is.True, "el 343 lleva su Brote de dos hojas");
+            Assert.That(catalog.Find(403)!.HasMechanic(MechanicType.Flor), Is.True, "el 403 lleva su Flor");
+        }
+
+        [Test]
+        public void VariantA_Debuts323_343_403_ArriveNotSkippable_AndEveryBoardBuildsAndFits()
+        {
+            // La variante «a» de los mundos 7-9 (GEN79, D-027), con la Tinaja: la publica C1c si se cumple la condición de D-019.
+            // Sus estrenos (la Tinaja en el 323, el Brote de dos hojas en el 343 y la Flor en el 403) llegan al cliente con
+            // skippable = false, y todos sus tableros (base y relief, con la máscara de la Tinaja) construyen, pasan
+            // LevelValidation y caben en el tablero (≤ 16 cuias, D-006).
+            var packs = new[] { TestPacks.WorldVariantA(7), TestPacks.WorldVariantA(8), TestPacks.WorldVariantA(9) };
+            LevelCatalog catalog = LevelCatalog.Create(packs);
+            Assert.That(catalog.FirstLevel, Is.EqualTo(301));
+            Assert.That(catalog.LastLevel, Is.EqualTo(700));
+            Assert.That(catalog.IsContiguous, Is.True, catalog.DescribeGaps());
+            int tinajaLevels = 0;
+            int variants = 0;
+            for (int level = 301; level <= 700; level++)
+            {
+                LevelDefinition def = catalog.Find(level)!;
+                string? intro = level == 323 ? "tinaja"
+                    : level == 343 ? AF.GameFlow.LevelCardInfo.BroteTwoLeavesIntro
+                    : level == 403 ? AF.GameFlow.LevelCardInfo.FlorIntro : null;
+                Assert.That(def.IntroMechanic, Is.EqualTo(intro), "intro_mechanic del " + level + " (variante a)");
+                Assert.That(def.Skippable, Is.EqualTo(intro == null), "skippable es false justo en los estrenos (" + level + ", variante a)");
+                if (def.HasMechanic(MechanicType.Tinaja))
+                {
+                    Assert.That(level, Is.GreaterThanOrEqualTo(323), "la Tinaja estrena en el 323 (D-019)");
+                    tinajaLevels++;
+                }
+
+                BoardState board = def.CreateBoard();
+                Assert.That(LevelValidation.Validate(board), Is.Null, def.Id);
+                Assert.That(new LevelSession(board, true, PourModes.Default).Status, Is.EqualTo(LevelStatus.Playing), def.Id);
+                Assert.That(def.CuiaCount, Is.LessThanOrEqualTo(BoardState.MaxCuias), "D-006: " + def.Id);
+                for (int r = 0; r < def.Relief.Count; r++)
+                {
+                    ReliefBoard relief = def.Relief[r];
+                    string where = def.Id + ".relief[" + r + "] " + relief.Type;
+                    BoardState rb = relief.CreateBoard();
+                    Assert.That(LevelValidation.Validate(rb), Is.Null, where);
+                    Assert.That(relief.CuiaCount, Is.LessThanOrEqualTo(BoardState.MaxCuias), "D-006: " + where);
+                    variants++;
+                }
+            }
+
+            Assert.That(catalog.Find(323)!.HasMechanic(MechanicType.Tinaja), Is.True, "el 323 estrena la Tinaja");
+            Assert.That(tinajaLevels, Is.EqualTo(18), "la Tinaja en 18 niveles de 301-700 (10 en el mundo 7, 3 en el 8 y 5 en el 9)");
+            Assert.That(variants, Is.EqualTo(774));
+        }
+
+        [Test]
+        public void SalidaB_CopiesInAssets_AreByteIdenticalToTheGenerator()
+        {
+            // Data/Levels/salida_b/ (lo que enlaza la escena con la variante «b») es una copia de tools/out/salida_b/, la salida
+            // del generador que comprueba su --check (GEN79): nunca se edita a mano.
+            string root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+            for (int world = 7; world <= 9; world++)
+            {
+                string file = "mundo_0" + world + "_v1.json";
+                string generated = Path.Combine(root, "tools", "out", "salida_b", file);
+                Assert.That(File.Exists(generated), Is.True, generated);
+                Assert.That(File.ReadAllBytes(TestPacks.WorldPath(world, LevelCatalog.VariantB)), Is.EqualTo(File.ReadAllBytes(generated)),
+                    "Data/Levels/salida_b/" + file + " = tools/out/salida_b/" + file);
+            }
+        }
+
+        // El nivel lleva un Brote de dos hojas (n = 2).
+        private static bool BroteTwoLeaves(LevelDefinition def)
+        {
+            for (int i = 0; i < def.CuiaCount; i++)
+            {
+                if (def.Attrs[i].Type == MechanicType.Brote && def.Attrs[i].N == 2)
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         // Índice de la primera Liana de cuenta (n > 0) del nivel, o -1.
