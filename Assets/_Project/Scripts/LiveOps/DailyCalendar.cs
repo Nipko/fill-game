@@ -12,12 +12,22 @@ namespace AF.LiveOps
     /// </summary>
     public readonly struct DailySlot : IEquatable<DailySlot>
     {
-        /// <summary>Crea el slot.</summary>
+        /// <summary>Crea el slot (sin sustitución pedida, o con la pedida igual a la servida).</summary>
         public DailySlot(int band, int day, string? overrideId)
+            : this(band, day, overrideId, overrideId)
+        {
+        }
+
+        /// <summary>
+        /// Crea el slot con la sustitución servida (<paramref name="overrideId"/>) y la que pedía <c>daily_overrides</c>
+        /// (<paramref name="requestedOverrideId"/>), que pueden diferir si el id pedido no está en el pool.
+        /// </summary>
+        public DailySlot(int band, int day, string? overrideId, string? requestedOverrideId)
         {
             Band = band;
             Day = day;
             OverrideId = overrideId;
+            RequestedOverrideId = requestedOverrideId;
         }
 
         /// <summary>Banda del jugador (1-3) según su nivel máximo. Con una sustitución de otra banda [P] sigue siendo la del jugador.</summary>
@@ -29,8 +39,17 @@ namespace AF.LiveOps
         /// <summary>Id del tablero sustituto (<c>d{b}_n{nnnn}</c>, ya comprobado en el pool), o null si se sirve el cálculo normal.</summary>
         public string? OverrideId { get; }
 
+        /// <summary>
+        /// Id que pedía <c>daily_overrides[fecha][banda]</c>, aunque no se sirviera (null si la tabla no traía nada para esa fecha y
+        /// banda). Distingue «sin sustitución» de «sustitución pedida pero ignorada» para que la sonda lo anote (nota §6; R10).
+        /// </summary>
+        public string? RequestedOverrideId { get; }
+
         /// <summary>Hay sustitución.</summary>
         public bool IsOverride => OverrideId != null;
+
+        /// <summary><c>daily_overrides</c> pedía un tablero para esta fecha y banda, pero no está en el pool: se sirve el cálculo normal.</summary>
+        public bool IsOverrideIgnored => RequestedOverrideId != null && OverrideId == null;
 
         /// <summary>
         /// El tablero de este slot en <paramref name="pool"/>: el sustituto si lo hay, si no <c>pool.Find(Band, Day)</c> (null si el
@@ -49,7 +68,8 @@ namespace AF.LiveOps
         /// <inheritdoc />
         public bool Equals(DailySlot other)
         {
-            return Band == other.Band && Day == other.Day && string.Equals(OverrideId, other.OverrideId, StringComparison.Ordinal);
+            return Band == other.Band && Day == other.Day && string.Equals(OverrideId, other.OverrideId, StringComparison.Ordinal)
+                && string.Equals(RequestedOverrideId, other.RequestedOverrideId, StringComparison.Ordinal);
         }
 
         /// <inheritdoc />
@@ -68,7 +88,8 @@ namespace AF.LiveOps
         /// <inheritdoc />
         public override string ToString()
         {
-            return "b" + Band + ":d" + Day + (OverrideId == null ? "" : "→" + OverrideId);
+            return "b" + Band + ":d" + Day + (OverrideId == null ? "" : "→" + OverrideId)
+                + (IsOverrideIgnored ? " (ignorado: " + RequestedOverrideId + ")" : "");
         }
     }
 
@@ -192,12 +213,17 @@ namespace AF.LiveOps
             int band = BandFor(maxLevel, config.LvlDailyBracketLevels);
             int day = PoolDay(localDate, config.LiveDailyOffset);
             string? overrideId = null;
-            if (config.DailyOverrides != null && config.DailyOverrides.TryGet(dateKey, band, out string id) && pool.FindById(id) != null)
+            string? requested = null;
+            if (config.DailyOverrides != null && config.DailyOverrides.TryGet(dateKey, band, out string id))
             {
-                overrideId = id;
+                requested = id;
+                if (pool.FindById(id) != null)
+                {
+                    overrideId = id;
+                }
             }
 
-            return new DailySlot(band, day, overrideId);
+            return new DailySlot(band, day, overrideId, requested);
         }
     }
 }

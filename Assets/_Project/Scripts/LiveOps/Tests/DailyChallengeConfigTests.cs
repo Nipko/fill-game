@@ -11,12 +11,14 @@ namespace AF.LiveOps.Tests
 {
     /// <summary>
     /// Guarda contra cifras y nombres inventados (R7a; patrón de <c>EconomyConfigTests</c>): cada propiedad de
-    /// <see cref="DailyChallengeConfig"/> lleva su clave de Remote Config, y su clave, su tipo y su default se leen de la tabla
-    /// única de GDD 08 §9. Además: ninguna clave es un alias retirado, validación y guardas del ensamblado <c>AF.LiveOps</c>.
+    /// <see cref="DailyChallengeConfig"/> (y de <see cref="ClockSecurityConfig"/>, la fuente única de <c>sec_clock_max_drift_h</c>
+    /// en <c>AF.Platform</c>) lleva su clave de Remote Config, y su clave, su tipo y su default se leen de la tabla única de
+    /// GDD 08 §9. Además: ninguna clave es un alias retirado, validación y guardas del ensamblado <c>AF.LiveOps</c>.
     /// </summary>
     public sealed class DailyChallengeConfigTests
     {
-        // Las 9 claves de la nota docs/dev/reto-del-rio.md §11.
+        // Las 9 claves de la nota docs/dev/reto-del-rio.md §11: 8 en DailyChallengeConfig y sec_clock_max_drift_h en
+        // ClockSecurityConfig (AF.Platform), que DailyChallengeConfig expone en ClockSecurity.
         private static readonly string[] ExpectedKeys =
         {
             "biz_feature_daily_challenge", "live_unlock_level_daily", "lvl_daily_bracket_levels", "live_daily_offset",
@@ -38,21 +40,24 @@ namespace AF.LiveOps.Tests
             DailyChallengeConfig config = DailyChallengeConfig.Defaults;
 
             var seen = new List<string>();
-            foreach (PropertyInfo property in typeof(DailyChallengeConfig).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            foreach (object instance in new object[] { config, config.ClockSecurity })
             {
-                var attribute = property.GetCustomAttribute<RemoteConfigKeyAttribute>();
-                if (attribute == null)
+                foreach (PropertyInfo property in instance.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance))
                 {
-                    continue;
-                }
+                    var attribute = property.GetCustomAttribute<RemoteConfigKeyAttribute>();
+                    if (attribute == null)
+                    {
+                        continue;
+                    }
 
-                string key = attribute.Key;
-                Assert.That(table.ContainsKey(key), Is.True, key + " no está en 08 §9 (¿alias retirado o nombre inventado?)");
-                RcRow row = table[key];
-                Assert.That(row.Type, Is.EqualTo(GddType(property.PropertyType)), key + ": tipo");
-                Assert.That(row.Default, Is.Not.Null, key + ": no se pudo leer el default");
-                Assert.That(Format(property.GetValue(config)), Is.EqualTo(row.Default), key + ": default");
-                seen.Add(key);
+                    string key = attribute.Key;
+                    Assert.That(table.ContainsKey(key), Is.True, key + " no está en 08 §9 (¿alias retirado o nombre inventado?)");
+                    RcRow row = table[key];
+                    Assert.That(row.Type, Is.EqualTo(GddType(property.PropertyType)), key + ": tipo");
+                    Assert.That(row.Default, Is.Not.Null, key + ": no se pudo leer el default");
+                    Assert.That(Format(property.GetValue(instance)), Is.EqualTo(row.Default), key + ": default");
+                    seen.Add(key);
+                }
             }
 
             seen.Sort(StringComparer.Ordinal);
@@ -73,12 +78,15 @@ namespace AF.LiveOps.Tests
             // El párrafo también nombra claves vigentes (los destinos tras «→» y «`live_daily_challenge_reward` = 50», un default
             // antiguo): por eso se contrasta con la lista explícita y no con todo el párrafo.
             var retiredSet = new HashSet<string>(RetiredKeys, StringComparer.Ordinal);
-            foreach (PropertyInfo property in typeof(DailyChallengeConfig).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            foreach (Type type in ConfigTypes)
             {
-                var attribute = property.GetCustomAttribute<RemoteConfigKeyAttribute>();
-                if (attribute != null)
+                foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
                 {
-                    Assert.That(retiredSet.Contains(attribute.Key), Is.False, attribute.Key + " es un alias retirado");
+                    var attribute = property.GetCustomAttribute<RemoteConfigKeyAttribute>();
+                    if (attribute != null)
+                    {
+                        Assert.That(retiredSet.Contains(attribute.Key), Is.False, attribute.Key + " es un alias retirado");
+                    }
                 }
             }
         }
@@ -86,12 +94,15 @@ namespace AF.LiveOps.Tests
         [Test]
         public void EverySetting_CarriesItsRemoteConfigKey()
         {
-            foreach (PropertyInfo property in typeof(DailyChallengeConfig).GetProperties(BindingFlags.Public | BindingFlags.Instance))
+            foreach (Type type in ConfigTypes)
             {
-                if (property.CanWrite)
+                foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
                 {
-                    Assert.That(property.GetCustomAttribute<RemoteConfigKeyAttribute>(), Is.Not.Null,
-                        property.Name + ": toda cifra configurable sale de 08 §9");
+                    if (property.CanWrite)
+                    {
+                        Assert.That(property.GetCustomAttribute<RemoteConfigKeyAttribute>(), Is.Not.Null,
+                            type.Name + "." + property.Name + ": toda cifra configurable sale de 08 §9");
+                    }
                 }
             }
         }
@@ -105,7 +116,26 @@ namespace AF.LiveOps.Tests
 
             Assert.That(DailyChallengeConfig.Defaults.LiveDailyOffset, Is.EqualTo(0));
             Assert.That(DailyChallengeConfig.Defaults.LiveUnlockLevelDaily, Is.EqualTo(10));
-            Assert.That(DailyChallengeConfig.Defaults.ClockMaxDrift, Is.EqualTo(TimeSpan.FromHours(24)));
+            Assert.That(DailyChallengeConfig.Defaults.ClockSecurity.ClockMaxDrift, Is.EqualTo(TimeSpan.FromHours(24)));
+
+            a.ClockSecurity.SecClockMaxDriftH = 6;
+            Assert.That(DailyChallengeConfig.Defaults.ClockSecurity.SecClockMaxDriftH, Is.EqualTo(24), "cada instancia lleva su anti-reloj");
+            Assert.That(ClockSecurityConfig.Defaults.SecClockMaxDriftH, Is.EqualTo(24));
+        }
+
+        [Test]
+        public void ClockSecurity_ExceedsMaxDrift_IsStrictAndSymmetric()
+        {
+            ClockSecurityConfig clock = ClockSecurityConfig.Defaults;
+
+            Assert.That(clock.ExceedsMaxDrift(TimeSpan.Zero), Is.False);
+            Assert.That(clock.ExceedsMaxDrift(TimeSpan.FromHours(24)), Is.False, "24 h justas no superan la cota");
+            Assert.That(clock.ExceedsMaxDrift(TimeSpan.FromHours(-24)), Is.False);
+            Assert.That(clock.ExceedsMaxDrift(TimeSpan.FromHours(24) + TimeSpan.FromSeconds(1)), Is.True);
+            Assert.That(clock.ExceedsMaxDrift(TimeSpan.FromHours(-25)), Is.True);
+
+            clock.SecClockMaxDriftH = 0;
+            Assert.Throws<InvalidOperationException>(() => clock.Validate());
         }
 
         [Test]
@@ -124,7 +154,7 @@ namespace AF.LiveOps.Tests
                 c => c.LiveDailyChallengeReward = new DailyChallengeReward(-1, 2),
                 c => c.LiveDailyChallengeReward = new DailyChallengeReward(60, 0),
                 c => c.LiveDailyStreak7Reward = "",
-                c => c.SecClockMaxDriftH = 0,
+                c => c.ClockSecurity.SecClockMaxDriftH = 0,
             };
 
             for (int i = 0; i < bad.Count; i++)
@@ -138,19 +168,32 @@ namespace AF.LiveOps.Tests
         [Test]
         public void SecClockMaxDriftH_HasASingleSourceInTheClient()
         {
-            // Nota §11: «clave global; si otro config la declara, una sola fuente». Ningún otro archivo de Scripts la marca.
-            string scripts = Path.Combine(LiveOpsTestFiles.RepoRoot, "Assets", "_Project", "Scripts");
+            // Nota §11: «clave global; si otro config la declara, una sola fuente». Solo ClockSecurityConfig (AF.Platform) la
+            // marca, ni en los scripts del juego ni en los paquetes (el núcleo y los que vengan).
             string marker = "[RemoteConfigKey(\"" + "sec_clock_max_drift_h" + "\")]";
             var declaring = new List<string>();
-            foreach (string file in Directory.GetFiles(scripts, "*.cs", SearchOption.AllDirectories))
+            int scanned = 0;
+            foreach (string root in new[]
+                     {
+                         Path.Combine(LiveOpsTestFiles.RepoRoot, "Assets", "_Project", "Scripts"),
+                         Path.Combine(LiveOpsTestFiles.RepoRoot, "Packages"),
+                     })
             {
-                if (File.ReadAllText(file).Contains(marker))
+                Assert.That(Directory.Exists(root), Is.True, root);
+                foreach (string file in Directory.GetFiles(root, "*.cs", SearchOption.AllDirectories))
                 {
-                    declaring.Add(Path.GetFileName(file));
+                    scanned++;
+                    if (File.ReadAllText(file).Contains(marker))
+                    {
+                        declaring.Add(Path.GetFileName(file));
+                    }
                 }
             }
 
-            Assert.That(declaring, Is.EqualTo(new[] { "DailyChallengeConfig.cs" }));
+            Assert.That(scanned, Is.GreaterThan(100), "se recorrieron Scripts y Packages");
+            Assert.That(declaring, Is.EqualTo(new[] { "ClockSecurityConfig.cs" }));
+            Assert.That(typeof(ClockSecurityConfig).Assembly.GetName().Name, Is.EqualTo("AF.Platform"),
+                "AF.Economy (Canoas) debe poder leerla sin referenciar AF.LiveOps");
         }
 
         [Test]
@@ -196,6 +239,8 @@ namespace AF.LiveOps.Tests
 
             Assert.That(scanned, Is.GreaterThanOrEqualTo(3));
         }
+
+        private static readonly Type[] ConfigTypes = { typeof(DailyChallengeConfig), typeof(ClockSecurityConfig) };
 
         private static string GddType(Type type)
         {

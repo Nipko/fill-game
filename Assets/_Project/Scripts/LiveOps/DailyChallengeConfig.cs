@@ -54,7 +54,8 @@ namespace AF.LiveOps
 
     /// <summary>
     /// Cifras del Reto del río (<c>daily_challenge</c>; 06 §4.1; 03 §16) con los <b>defaults compilados</b> de la tabla única de
-    /// 08 §9 y sus nombres exactos (nota <c>docs/dev/reto-del-rio.md</c> §11). Ninguna cifra sale de aquí:
+    /// 08 §9 y sus nombres exactos (nota <c>docs/dev/reto-del-rio.md</c> §11): 8 claves propias y <c>sec_clock_max_drift_h</c>
+    /// a través de <see cref="ClockSecurity"/>. Ninguna cifra sale de aquí:
     /// <c>DailyChallengeConfigTests</c> las contrasta con 08 §9, como <c>EconomyConfigTests</c>. No usa ninguno de los alias
     /// retirados (<c>daily_offset</c>, <c>daily_reward_seeds</c>, <c>daily_bands</c>, <c>daily_bracket_levels</c>…). Cuando
     /// exista <c>AF.RemoteConfig</c>, sus valores se copiarán en una instancia; hasta entonces se usa <see cref="Defaults"/>.
@@ -103,16 +104,12 @@ namespace AF.LiveOps
         public bool UiMurkyBonusEnabled { get; set; }
 
         /// <summary>
-        /// <c>sec_clock_max_drift_h</c>: horas de desfase máximo entre el reloj del dispositivo y el del servidor antes de dejar
-        /// el premio «pendiente de validar» (08 §10.1). Es la única clave global del anti-reloj (absorbe
-        /// <c>canoes_clock_max_drift_h</c>); hoy no la declara ningún otro config del cliente, así que esta es su única fuente.
-        /// Cuando otro módulo (Canoas, 04 §7.1) la necesite, deberá leerla de una sola clase, no duplicarla.
+        /// Anti-reloj (08 §10.1): <c>sec_clock_max_drift_h</c>, la clave global que también usará Canoas (04 §7.1). No se declara
+        /// aquí: su única fuente es <see cref="ClockSecurityConfig"/> en <c>AF.Platform</c>, porque <c>AF.Economy</c> no puede
+        /// referenciar <c>AF.LiveOps</c>. Solo lectura: se cambia su valor, no la instancia (cuando exista <c>AF.RemoteConfig</c>
+        /// se copiará en ella, como el resto de las claves).
         /// </summary>
-        [RemoteConfigKey("sec_clock_max_drift_h")]
-        public int SecClockMaxDriftH { get; set; } = 24;
-
-        /// <summary>Desfase máximo como intervalo: <see cref="SecClockMaxDriftH"/> horas.</summary>
-        public TimeSpan ClockMaxDrift => TimeSpan.FromHours(SecClockMaxDriftH);
+        public ClockSecurityConfig ClockSecurity { get; } = new ClockSecurityConfig();
 
         /// <summary>Comprueba que los valores tienen sentido (no que coincidan con 08 §9: eso lo hacen los tests).</summary>
         /// <exception cref="InvalidOperationException">Algún valor está fuera de lo admisible.</exception>
@@ -127,7 +124,7 @@ namespace AF.LiveOps
             Require(LiveDailyChallengeReward.Seeds >= 0 && LiveDailyChallengeReward.MurkyBonusMult >= 1,
                 "live_daily_challenge_reward inválido");
             Require(!string.IsNullOrEmpty(LiveDailyStreak7Reward), "live_daily_streak7_reward no puede estar vacío");
-            Require(SecClockMaxDriftH >= 1, "sec_clock_max_drift_h debe ser >= 1");
+            ClockSecurity.Validate();
         }
 
         /// <summary>Escribe los umbrales con la sintaxis de 08 §9: <c>[41, 201]</c>.</summary>
