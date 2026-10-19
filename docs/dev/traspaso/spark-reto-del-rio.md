@@ -1,4 +1,4 @@
-# Encargo al equipo Spark: el Reto del río (2026-10-20)
+# Encargo al equipo Spark: el Reto del río (2026-10-19)
 
 Escrito por la sesión tech-lead del equipo de escritorio para la sesión de Claude Code del **ASUS ProArt con NVIDIA «RTX Spark»** (el «Spark»). Decisión del dueño del 2026-10-20, literal: «Sí: encarga al Spark el Reto del río».
 
@@ -315,7 +315,7 @@ En `docs/GDD.md` §6.3 no hay ninguna pregunta abierta sobre el Reto: las bandas
 | R-Q9 | **`result = fail` en `af_daily_challenge`:** sin canoas ni fallo duro, ¿qué cuenta como fallo? | 08 §8.2; 04 §5.2 | La sonda de R10 |
 | R-Q10 | **Las comprobaciones de campaña en el pool:** ¿se aplican al Reto la anti-repetición (03 §17 #9) y el tope de trampas tempranas (03 §17 #3)? El GDD no lo dice | 03 §17 | R4. Mide, informa como aviso y pregunta: no lo hagas compuerta |
 
-**Decididas por el dueño el 2026-10-20** (respondió, literal: «Acepto tus propuestas para R-Q1 a R-Q10 del Reto del río; déjalas en el encargo del Spark»). Ya no bloquean nada; aplícalas tal cual y regístralas en `spark-estado.md` para que el integrador las lleve a `docs/dev/decisiones.md`:
+**Decididas por el dueño el 2026-10-19** (respondió, literal: «Acepto tus propuestas para R-Q1 a R-Q10 del Reto del río; déjalas en el encargo del Spark»). Ya no bloquean nada; aplícalas tal cual y regístralas en `spark-estado.md` para que el integrador las lleve a `docs/dev/decisiones.md`:
 
 | Id | Decisión |
 |---|---|
@@ -329,6 +329,18 @@ En `docs/GDD.md` §6.3 no hay ninguna pregunta abierta sobre el Reto: las bandas
 | R-Q8 | Los comodines son los de la campaña salvo los que el GDD excluye en el Reto (Cuia de rescate y Salto del Boto), y gastan el stock igual que en la campaña |
 | R-Q9 | `result = fail` en `af_daily_challenge` es salir sin ganar ese día |
 | R-Q10 | La anti-repetición (03 §17 #9) y el tope de trampas tempranas (03 §17 #3) se miden en el pool y se informan como aviso, sin ser compuerta |
+
+**Respuestas del integrador a lo que dejó el Spark en `spark-estado.md` (2026-10-19).** El dueño fijó la regla «si tienen recomendada, vamos con esas», así que quedan decididas con la recomendada:
+
+| Id | Decisión |
+|---|---|
+| R-Q1b | (a) B2 solo con K = 8 y B3 con `max_pares_riesgo` libre, como la campaña desde el 201 |
+| R-Q11 | (a) la ventana del bot es compuerta: un día sin candidato en la ventana no se publica hasta ajustar la especificación |
+| R-Q12 | (a) al reconectar, la reconciliación no retira semillas cobradas sin red |
+| R-Q13 | (a) sin intersticial al terminar un Reto |
+| R-Q14 | (a) la Pororoca de la racha entra en el stock y espera al nivel 30 que la desbloquea |
+
+Y se confirma: `IServerDate` y `FakeServerDate` van en **AF.Platform** (08 §2.2), no en AF.LiveOps.
 
 Lo que sí está decidido no se pregunta: el desbloqueo tras ganar el 10 (06 §2.3; `live_unlock_level_daily`), los reintentos ilimitados, que no gasta canoas, que no toca la Crecida y el premio de 60 (secciones anteriores).
 
