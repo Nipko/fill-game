@@ -45,19 +45,20 @@ Geometria de produccion (M5.1):
   HydroRIVERS, que no dibuja los estuarios como rio: siguen con los puntos de la investigacion (la cola del canal norte y la
   del estuario del Para). LINE_SRC: el ramal del Para, el Itaya y el Pacaya, de la investigacion; el Casiquiare, de
   Natural Earth (una bifurcacion).
-  DESVIACION [P] DEL CANON, pendiente del duenno (pregunta 65 propuesta, parte 2; README, notas de M5.1): D-013, punto 5
-  (Q11-A), 08 §4.5 (el «Origen» y su ejemplo, con src «ne10m» en el cauce) y la propuesta del Mapa (§3.6 y §11.3, punto 1)
-  piden Natural Earth 1:10m para la vista Cuenca y HydroRIVERS para la vista Mundo. Aqui las lineas salen de HydroRIVERS en
+  HydroRIVERS en las dos vistas: decidido por el duenno el 2026-10-19 (D-028, pregunta 65: 1 d, 2 a, 3 a; esta es la
+  parte 2, (a); README, notas de M5.1). D-013, punto 5 (Q11-A), 08 §4.5 (el «Origen» y su ejemplo, con src «ne10m» en el
+  cauce) y la propuesta del Mapa (§3.6 y §11.3, punto 1) pedian Natural Earth 1:10m para la vista Cuenca y HydroRIVERS
+  para la vista Mundo; el carril de documentacion alinea 08 §4.5 y D-013, punto 5. Las lineas salen de HydroRIVERS en
   las dos vistas (la misma linea, simplificada por vista: DP_CUENCA_KM y DP_MUNDO_KM), y de Natural Earth solo la tierra y
   el Casiquiare. Por que: el contrato 29 da un solo pts por linea (no hay una linea por vista), y Natural Earth no tiene la
   red (ni NEXT_DOWN ni las bocas en un vertice del anfitrion), le faltan 11 rios del Mapa (el Takutu, el Nanay, el
   Tambopata, el Manu...) y la propia Natural Earth avisa de «suspect alignments» en partes de la cuenca del Amazonas (su
-  pagina de los rios; propuesta §3.6, [V ne_rivers]). No es canon hasta que el duenno lo ratifique y el carril de
-  documentacion alinee 08 §4.5.
+  pagina de los rios; propuesta §3.6, [V ne_rivers]).
 - Douglas-Peucker por vista: DP_MUNDO_KM a <= MUNDO_RADIUS_KM de una parada de la 1.0 (MundoZone) y DP_CUENCA_KM en el
-  resto; las bocas, los cortes y las colas no se simplifican. MundoZone [P] no es todo lo que ensenna la vista Mundo (de 4x a
+  resto; las bocas, los cortes y las colas no se simplifican. MundoZone no es todo lo que ensenna la vista Mundo (de 4x a
   15x y se arrastra por todo el mapa): fuera de ella, a 4x y 15x, los 6 km de DP_CUENCA_KM son ~2,8 y ~10,6 dp, por encima
-  de los 2 dp de esa vista (pregunta 65 propuesta, parte 3).
+  de los 2 dp de esa vista. El radio de 100 km y esos quiebros lejos de las paradas: decidido por el duenno el 2026-10-19
+  (D-028, pregunta 65: 1 d, 2 a, 3 a; esta es la parte 3, (a)).
 - Km: el cauce, km_desde_el_mar de sus puntos de control y de las paradas a <= TOLERANCE_KM, interpolado en s; los
   afluentes, el km de su boca de la investigacion mas el recorrido sin meandros por sus puntos (como la investigacion).
 - Tierra: Natural Earth land recortada a la caja (el continente y las islas de al menos MIN_ISLAND_KM2), simplificada por
@@ -89,11 +90,11 @@ de river_stops_v1.json (at y leg) son las de este Mapa: paradas a <= TOLERANCE_K
 punto de atraque si la investigacion lo da), km de acuerdo con km_from_sea y que no retroceden, tramos continuos que no
 cruzan tierra (dos tramos solo se unen en el mismo (line, s) o en una confluencia: la boca de un afluente, o el arranque
 del ramal, y su s sobre el anfitrion; cualquier otro salto cruza tierra), via y mouths existentes; ademas, todas las reglas de
-stops.py (candidatos de la propuesta §5.1 bis incluidos). Las unicas excepciones a las tolerancias son las [P] pendientes
-del duenno (PENDING_SITE_KM, PENDING_MOUTH_KM y PENDING_CONTROL_KM: la cifra medida, sin margen; pregunta 65 propuesta): con
-ellas, el criterio de M5.1 de las dos vistas aun no esta cumplido. Avisa (sin fallar) de cada excepcion en uso, de las
-lineas que siguen siendo el esbozo de la investigacion (pending_sketches), de las descargas ausentes y de los datos de los
-puntos de paso y de los miradores que aun no tienen texto en facts.csv.
+stops.py (candidatos de la propuesta §5.1 bis incluidos). Las unicas excepciones a las tolerancias son las medidas
+(PENDING_SITE_KM, PENDING_MOUTH_KM y PENDING_CONTROL_KM: la cifra medida, sin margen), excepciones aceptadas por el duenno
+(D-028, pregunta 65, parte 1, (d)): con ellas, el criterio de M5.1 de las dos vistas se cumple. Avisa (sin fallar) de cada
+excepcion en uso, de las lineas que siguen siendo el esbozo de la investigacion (pending_sketches), de las descargas
+ausentes y de los datos de los puntos de paso y de los miradores que aun no tienen texto en facts.csv.
 
 Paradas en una confluencia [P] (revision de M5.1; confluence_s): una parada cuyo sitio queda a <= CONFLUENCE_KM del punto
 donde la investigacion pone la boca de un afluente de su linea se ancla en la s de esa boca (Santarem, el Encuentro, Nauta,
@@ -174,17 +175,16 @@ HOSTS = {
 RIVER_LISTS = ("rios", "rios_locales_201_700")
 BRANCHES = {"para": "amazonas"}   # ramal: su primer punto esta sobre el cauce
 
-# [P] Excepciones a las tolerancias del canon, PENDIENTES DEL DUENNO (no son canon). El canon (D-013, punto 5; 08 §4.5; D-023,
-# punto 20) pide cada punto a <= 2 dp de su vista: <= 15 km en la Cuenca (TOLERANCE_KM) y, con la geometria de produccion,
-# <= 1 km en la vista Mundo (MUNDO_TOLERANCE_KM). Con HydroRIVERS no se cumple sin estas excepciones, asi que el criterio de
-# M5.1 («--check en verde con las tolerancias de las dos vistas») NO esta cumplido: --check pasa porque estas cifras son la
-# distancia MEDIDA con los datos de hoy (redondeada hacia arriba a 0,1 km, sin margen), congelada para que falle si un dato
-# se aleja mas; avisa de cada una. Se proponen al duenno como pregunta 65 de docs/GDD.md §6.3 (el siguiente numero libre en
-# 5d2a569; lo registra el carril de documentacion), con cuatro opciones (README, notas de M5.1): (a) medir contra la orilla o
-# el ancho del cauce y no contra su linea central; (b) en la vista Mundo, 2 dp al zoom real de cada mundo
-# (RiverMapScreen.WorldZoom, de 4x a 15x: de ~4,2 a ~1,1 km) y no 1 km en todas partes; (c) que el investigador corrija los
-# puntos [E]; (d) aceptar estas excepciones. Recomendacion del dev: (d), la aplicada como [P] (la (c) se puede sumar
-# despues: cada excepcion que deje de hacer falta se quita).
+# Excepciones aceptadas a las tolerancias del canon: decidido por el duenno el 2026-10-19 (D-028, pregunta 65: 1 d, 2 a,
+# 3 a; esta es la parte 1, (d)). Los nombres PENDING_* son historicos (no se renombran para no tocar los tests ni los
+# avisos). El canon (D-013, punto 5; 08 §4.5; D-023, punto 20) pide cada punto a <= 2 dp de su vista: <= 15 km en la
+# Cuenca (TOLERANCE_KM) y, con la geometria de produccion, <= 1 km en la vista Mundo (MUNDO_TOLERANCE_KM). Con HydroRIVERS
+# no se cumple sin estas excepciones; con ellas, aceptadas, el criterio de M5.1 («--check en verde con las tolerancias de
+# las dos vistas») se cumple. Estas cifras son la distancia MEDIDA con los datos de hoy (redondeada hacia arriba a 0,1 km,
+# sin margen), congelada para que --check falle si un dato se aleja mas; avisa de cada una. El duenno eligio la (d) de la
+# pregunta 65 de docs/GDD.md §6.3 (README, notas de M5.1): aceptar estas excepciones tal como estan. La (c), que el
+# investigador corrija los puntos [E] y de el atraque de los sitios tierra adentro, se puede sumar despues: cada excepcion
+# que deje de hacer falta se quita.
 # - Sitios tierra adentro: el punto de la investigacion es el centro del area protegida, no un punto del rio. Se validan
 #   por su punto de atraque (campo «atraque» {lat, lon} del registro de la investigacion) con los 15 km del canon; mientras
 #   la investigacion no lo anada, rige la cifra medida entre el centro y su punto del rio. Medidas sobre la geometria de
@@ -1466,7 +1466,7 @@ def site_point(record: dict) -> tuple:
 
 
 def pending_exceptions(stops_doc: dict, model: Model, records: list) -> list:
-    """Avisos de las excepciones a TOLERANCE_KM que siguen en uso (pendientes del duenno) y de las que ya sobran."""
+    """Avisos de las excepciones a TOLERANCE_KM que siguen en uso (aceptadas, D-028) y de las que ya sobran."""
     warnings = []
     by_k = {r.get("k"): r for r in records if isinstance(r, dict)}
     for s in stops_doc.get("stops", []):
@@ -1622,11 +1622,12 @@ NE_RIVERS_LAYER = "ne_10m_rivers_lake_centerlines"
 NE_LAND_LAYER = "ne_10m_land"
 
 # Origen de cada linea [P] (src): HydroRIVERS por defecto, en las dos vistas, la unica fuente con la red (bocas exactas) y a
-# la escala de la vista Mundo. Es una desviacion [P] de D-013, punto 5, y de 08 §4.5, que piden Natural Earth en la vista
-# Cuenca (docstring del modulo; pregunta 65 propuesta, parte 2). Excepciones: el ramal del Para (los furos de Breves y el
-# estuario son agua ancha que ni HydroRIVERS ni Natural Earth dibujan como rio: se queda la poligonal de la investigacion)
-# y el Casiquiare (una bifurcacion, que la red en arbol de HydroRIVERS no representa: su linea de Natural Earth, con la
-# boca llevada al vertice mas cercano del Negro); el Itaya y el Pacaya, sus esbozos de la investigacion (README).
+# la escala de la vista Mundo: decidido por el duenno el 2026-10-19 (D-028, pregunta 65: 1 d, 2 a, 3 a; esta es la
+# parte 2, (a)). D-013, punto 5, y 08 §4.5 pedian Natural Earth en la vista Cuenca; el carril de documentacion los alinea
+# (docstring del modulo). Excepciones: el ramal del Para (los furos de Breves y el estuario son agua ancha que ni
+# HydroRIVERS ni Natural Earth dibujan como rio: se queda la poligonal de la investigacion) y el Casiquiare (una
+# bifurcacion, que la red en arbol de HydroRIVERS no representa: su linea de Natural Earth, con la boca llevada al vertice
+# mas cercano del Negro); el Itaya y el Pacaya, sus esbozos de la investigacion (README).
 LINE_SRC = {"para": "rio_amazonas", "casiquiare": "ne10m", "itaya": "rio_amazonas", "pacaya": "rio_amazonas"}
 # Por que las de la investigacion se quedan en su esbozo (pendiente del duenno o del investigador; revision de M5.1): se
 # dibujan en la vista Mundo (el ramal lleva la casa de TiTino; el Itaya y el Pacaya, 08 §4.5, «solo en la vista Mundo»),
@@ -1653,16 +1654,17 @@ MOUTH_SNAP_KM = 15.0    # boca de un rio «solo_boca» -> tramos que entran en s
 # 7,75 ms): el resto es del cliente (README, notas de M5.1).
 DP_MUNDO_KM = 1.0
 DP_CUENCA_KM = 6.0
-# [P] Zona de la vista Mundo: a <= MUNDO_RADIUS_KM de una parada de la 1.0 (su sitio o su atraque; las de rio-amazonas.json).
+# Zona de la vista Mundo: a <= MUNDO_RADIUS_KM de una parada de la 1.0 (su sitio o su atraque; las de rio-amazonas.json).
 # Ahi la simplificacion es la de la vista Mundo y los puntos de control se validan con MUNDO_TOLERANCE_KM. No cubre todo lo
 # que ensenna la vista Mundo: el encuadre (RiverMapScreen.WorldZoom: la caja de las paradas del mundo al 60 % de la zona,
 # de 4x a 15x) abarca a 4x ~6,9 grados (~760 km) de ancho en 360 dp, y se arrastra por todo el mapa. Fuera de la zona, los
 # 6 km de DP_CUENCA_KM son ~2,8 dp a 4x y ~10,6 dp a 15x (13,1 dp por grado * zoom / 111 km), por encima de los 2 dp de la
 # vista (08 §4.5; D-023, punto 20). Con 1 km en todo el mapa el archivo mediria 54.114 bytes y 5.051 puntos (frente a
 # 26.386 y 2.148; 200 km: 33.025 y 3.026; 400 km: 45.806 y 4.469; medido con las descargas), sin medir aun la franja del
-# 81 (con 0,3 y 2 km, 53 KB y 22 ms). Pendiente del duenno: pregunta 65 propuesta, parte 3 (README, notas de M5.1);
-# recomendacion del dev: (a), dejar los 100 km (la aplicada como [P]): un radio mayor cambia las s de todo el Mapa y
-# las rutas de las paradas, y pide medir de nuevo la franja del 81 y probar en el telefono.
+# 81 (con 0,3 y 2 km, 53 KB y 22 ms). El radio de 100 km: decidido por el duenno el 2026-10-19 (D-028, pregunta 65:
+# 1 d, 2 a, 3 a; esta es la parte 3, (a); README, notas de M5.1): se aceptan esos quiebros lejos de las paradas; un radio
+# mayor cambiaria las s de todo el Mapa y las rutas de las paradas, y pediria medir de nuevo la franja del 81 y probar en
+# el telefono.
 MUNDO_RADIUS_KM = 100.0
 # Tolerancia de la vista Mundo (propuesta §3.6: <= 2 dp a 15x son ~1 km).
 MUNDO_TOLERANCE_KM = 1.0
@@ -2606,7 +2608,7 @@ def main(argv: list | None = None) -> int:
 
 def pending_controls(model: Model, source: dict) -> list:
     """Un aviso por linea con los puntos de control fuera de la tolerancia de su vista que solo pasan por su excepcion
-    medida (PENDING_CONTROL_KM, pendientes del duenno), y de las excepciones que ya sobran."""
+    medida (PENDING_CONTROL_KM, excepciones aceptadas, D-028), y de las excepciones que ya sobran."""
     zone = MundoZone(source) if model.geo is not None else None
     out = []
     for rid in model.order:
