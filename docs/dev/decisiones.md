@@ -2712,13 +2712,13 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - `docs/GDD.md`: versión 1.17, estado, convención [sim], §2 (#16), §3.3 (la fila de `econ_B_tramos.md`), §6.1 (#4, el sumidero), §6.2 (la Cuia de rescate), §6.3 (entrada, filas 18, 21, 25, 26, 52, 55, 56, 58, 59 y 62-64, y la parte 3 de la 66), §7.1 (contrato 18), §7.3 (V5 cerrada), §8 (punto 3) y §9 (pasos 12 y 19).
 - 00: §3.3 (nota de F7 y Q17), §6.4 («Sin canoas») y §10 (las claves de P14, las de la ficha sin [P], `settings_about_amazon` y `victory_perfect` [P]).
 - 01: §7.2 (el primer bloqueo del casual).
-- 02: §6 («¡Perfecto!»), §9.1 (M1 y M13: el dedo guía, DC7), §13 (fila 3) y Preguntas abiertas 11 y 12.
+- 02: §6 («¡Perfecto!»), §8 (el tutorial del 27, la 21), §9.1 (M1 y M13: el dedo guía, DC7), §13 (fila 3) y Preguntas abiertas 11 y 12.
 - 03: §5 (P7), §11 (tabla y nota de vigilancia) y Preguntas abiertas 8 y 9.
-- 04: §2.1, §2.7 (Q17), §5.2 y §6.2 (P16), §6.5 (P14), §7.3 (P17), §9 (cifras [sim]) y Preguntas abiertas 9.
+- 04: §2.1, §2.5 (la tarjeta del 100, la 21), §2.7 (Q17), §5.2 y §6.2 (P16), §6.5 (P14), §7.3 (P17), §9 (cifras [sim]) y Preguntas abiertas 9.
 - 05: Resumen, §3 (cifras [sim]), §4.1 y §5 (P17), §5 (#23), §7 (#12), Desviaciones, Conflictos, pregunta 2 y Dependencias.
 - 06: §2.2 (filas 2 y 3), §4.2 (#17), §4.5 (la «Fruta nueva» desde el 4), §4.6 (F7), §4.7 (#18) y §5.1 (#21).
-- 07: §2.1 y §3 (agua negra, Q14), §3 (fila 13, la 18), §5.4 («¡Perfecto!»), §6.2 (F11), §6.4 (Q11), §9 (la 64) y Preguntas abiertas 11.
-- 08: §4.2 y §5.1 (agua negra), §6.1 (la 64) y §8.2 (`af_fauna_sighted`).
+- 07: §2.1 y §3 (agua negra, Q14), §3 (fila 13, la 18), §5.4 («¡Perfecto!»), §6.2 (F11), §6.4 (Q11), §7.7 (la demostración del 183, la 21), §9 (la 64) y Preguntas abiertas 11.
+- 08: §4.2 y §5.1 (agua negra), §5.4 (la fila «Audio»; la 64) y §8.2 (`af_fauna_sighted`).
 - 09: §1.2 (F13).
 - En cada capítulo de esta lista, su línea de fecha («actualizado el 2026-10-19 (DC1b) con D-029»).
 - Fuera del GDD: la guía visual (revisión 11 y el token `agua_negra`), el guion de la intro (§18: Q11, Q14 y Q17), la propuesta de fauna (F7-F13), la nota de respuestas de la propuesta de Magic Sort y `docs/dev/prototipo-v0.md` (P7).
