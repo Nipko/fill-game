@@ -16,7 +16,8 @@ namespace AF.Tests.PlayMode
     /// <list type="bullet">
     /// <item><c>dc6_l1_source</c>, <c>dc6_l1_move</c> y <c>dc6_l1_target</c>: el 1, la mano tocando el origen, a medio viaje y
     /// tocando el destino;</item>
-    /// <item><c>dc6_l2_source</c> y <c>dc6_l2_target</c>: el 2 tras el primer vertido, la racha de 3 açaí sobre el hueco de 2;</item>
+    /// <item><c>dc6_l2_source</c>, <c>dc6_l2_move</c> y <c>dc6_l2_target</c>: el 2 tras el primer vertido, la racha de 3 açaí
+    /// sobre el hueco de 2, como en el juego: la instrucción de TiTino ya se fue al salir el dedo;</item>
     /// <item><c>dc6_l{1|2}_reduce</c>: con Reducir movimiento, la mano fija sobre el origen y la flecha al destino.</item>
     /// </list>
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.TutorialFingerSnapshotTests</c>
@@ -55,11 +56,8 @@ namespace AF.Tests.PlayMode
             // La mano tocando el origen (en lo hondo del toque), a medio viaje y tocando el destino.
             StepTo(boot, finger, TutorialFinger.AppearMs + (0.5f * TutorialFinger.PressMs));
             yield return Save(boot, dir, "dc6_l" + level + "_source");
-            if (level == 1)
-            {
-                StepTo(boot, finger, TutorialFinger.AppearMs + TutorialFinger.PressMs + (0.5f * TutorialFinger.MoveMs));
-                yield return Save(boot, dir, "dc6_l1_move");
-            }
+            StepTo(boot, finger, TutorialFinger.AppearMs + TutorialFinger.PressMs + (0.5f * TutorialFinger.MoveMs));
+            yield return Save(boot, dir, "dc6_l" + level + "_move");
 
             StepTo(boot, finger, TutorialFinger.AppearMs + TutorialFinger.PressMs + TutorialFinger.MoveMs + (0.5f * TutorialFinger.PressMs));
             yield return Save(boot, dir, "dc6_l" + level + "_target");

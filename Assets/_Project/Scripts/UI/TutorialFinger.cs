@@ -17,7 +17,7 @@ namespace AF.UI
     /// nunca resalta destinos al seleccionar (D-002) y no se enciende ni cambia con la selección.
     /// <list type="number">
     /// <item><description><b>Bucle</b> (<see cref="CycleMs"/>): aparece sobre el origen (<see cref="AppearMs"/>), lo toca (se hunde
-    /// un poco y deja una onda, <see cref="PressMs"/>), viaja en arco al destino (<see cref="MoveMs"/>), lo toca, se queda
+    /// un poco y deja una onda en anillo, <see cref="PressMs"/>), viaja en arco por encima de las bocas al destino (<see cref="MoveMs"/>), lo toca, se queda
     /// (<see cref="HoldMs"/>), se funde (<see cref="FadeMs"/>) y espera (<see cref="GapMs"/>) antes de volver a empezar. Las
     /// duraciones son [P].</description></item>
     /// <item><description><b>Reducir movimiento</b> (07 §7.8): sin animación. La mano, fija sobre el origen, y una flecha de la boca
@@ -57,8 +57,14 @@ namespace AF.UI
         /// <summary>Lo que se hunde la mano al tocar (fracción de su tamaño) [P].</summary>
         public const float PressDepth = 0.12f;
 
-        /// <summary>Altura del arco del viaje sobre la recta entre los dos toques (u) [P].</summary>
-        public const float ArcU = 0.9f;
+        /// <summary>
+        /// Aire del punto más alto del arco del viaje sobre la boca más alta del origen y el destino (u) [P]: la yema pasa por
+        /// encima de las bocas y no se apoya en las cuias del medio, que no son de la lección (revisión de DC6; D-002).
+        /// </summary>
+        public const float ArcClearU = 0.4f;
+
+        /// <summary>Aire mínimo entre la yema, en lo alto del arco, y el borde interior del panel (dp) [P].</summary>
+        public const float ArcCeilingAirDp = 8f;
 
         /// <summary>
         /// Altura del punto que toca la yema, desde el pie de la cuia (fracción de su alto) [P]: el cuerpo de la cuia, que es donde
@@ -70,13 +76,19 @@ namespace AF.UI
         public const float HandTiltDeg = 20f;
 
         /// <summary>Diámetro de la onda al empezar (dp) [P].</summary>
-        public const float RippleStartDp = 10f;
+        public const float RippleStartDp = 16f;
 
-        /// <summary>Diámetro de la onda al acabar (dp) [P].</summary>
-        public const float RippleEndDp = 36f;
+        /// <summary>
+        /// Diámetro de la onda al acabar (dp) [P]: el anillo de <see cref="ProceduralArt.FingerRippleDp"/>, con su trazo de
+        /// <see cref="ProceduralArt.FingerRippleStrokeDp"/> dp a este tamaño (al empezar, más fino: el sprite se escala) [P].
+        /// </summary>
+        public const float RippleEndDp = ProceduralArt.FingerRippleDp;
 
-        /// <summary>Alfa de la onda al nacer (baja a 0) [P].</summary>
-        public const float RippleAlpha = 0.6f;
+        /// <summary>Alfa del anillo de papel de la onda al nacer (baja a 0) [P].</summary>
+        public const float RippleAlpha = 0.9f;
+
+        /// <summary>Alfa del contorno de tinta de la onda al nacer (baja a 0) [P].</summary>
+        public const float RippleOutlineAlpha = 0.35f;
 
         /// <summary>Altura de la flecha de Reducir movimiento sobre el borde de la boca (u) [P].</summary>
         public const float ArrowAboveRimU = 0.5f;
@@ -87,8 +99,15 @@ namespace AF.UI
         /// <summary>Grosor del contorno de tinta de la línea de la flecha, por lado (dp) [P].</summary>
         public const float ArrowOutlineDp = 1.5f;
 
+        /// <summary>
+        /// Aire mínimo entre la punta de la flecha (su lado de arriba) y el borde interior del panel (dp) [P]: con cuias altas
+        /// (el 1, T = 3) la flecha baja hasta dejarlo, para no pisar el marco (revisión de DC6; D-003 y D-004).
+        /// </summary>
+        public const float ArrowCeilingAirDp = 6f;
+
         private readonly ProceduralArt _art;
         private readonly RectTransform _root;
+        private readonly Image _rippleOutline;
         private readonly Image _ripple;
         private readonly Image _shaftOutline;
         private readonly Image _shaft;
@@ -103,6 +122,9 @@ namespace AF.UI
         private Vector2 _srcRim;
         private Vector2 _dstRim;
         private float _u = 24f;
+        private float _arcLift;
+        private float _arcApexY;
+        private float _rimTopY;
 
         /// <summary>Crea las imágenes (ocultas) en <paramref name="layer"/>, que cubre el contenedor del tablero.</summary>
         public TutorialFinger(RectTransform layer, ProceduralArt art)
@@ -116,7 +138,8 @@ namespace AF.UI
             _root.pivot = new Vector2(0f, 1f);
             _root.anchoredPosition = Vector2.zero;
             _root.sizeDelta = Vector2.zero;
-            _ripple = NewImage("Ripple", art.Disc, new Vector2(0.5f, 0.5f));
+            _rippleOutline = NewImage("RippleOutline", null, new Vector2(0.5f, 0.5f));
+            _ripple = NewImage("Ripple", null, new Vector2(0.5f, 0.5f));
             _shaftOutline = NewImage("ArrowShaftOutline", null, new Vector2(0f, 0.5f));
             _shaft = NewImage("ArrowShaft", null, new Vector2(0f, 0.5f));
             _head = NewImage("ArrowHead", null, new Vector2(1f, 0.5f));
@@ -154,8 +177,23 @@ namespace AF.UI
         /// <summary>La punta de la flecha de Reducir movimiento (tests).</summary>
         public Image ArrowHead => _head;
 
-        /// <summary>La onda del toque (tests).</summary>
+        /// <summary>La onda del toque: el anillo de papel (tests).</summary>
         public Image Ripple => _ripple;
+
+        /// <summary>El contorno de tinta del anillo de la onda (tests).</summary>
+        public Image RippleOutline => _rippleOutline;
+
+        /// <summary>
+        /// Borde interior de arriba del panel del tablero (y en coordenadas del contenedor, hacia arriba; infinito = sin límite):
+        /// ni la flecha ni lo alto del arco lo pasan. Lo pone <c>GameScreen</c> antes de cada fotograma.
+        /// </summary>
+        public float CeilingY { get; set; } = float.PositiveInfinity;
+
+        /// <summary>La y de la yema en lo alto del arco del viaje (tests).</summary>
+        public float ArcApexY => _arcApexY;
+
+        /// <summary>La y de la boca más alta del origen y el destino (el borde de arriba de la cuia; tests).</summary>
+        public float RimTopY => _rimTopY;
 
         /// <summary>La flecha se ve (solo con Reducir movimiento).</summary>
         public bool ArrowVisible => Shown && _shaft.gameObject.activeSelf;
@@ -191,6 +229,8 @@ namespace AF.UI
             {
                 _hand.sprite = _art.FingerHand;
                 _head.sprite = _art.FingerArrowHead;
+                _ripple.sprite = _art.FingerRipple;
+                _rippleOutline.sprite = _art.FingerRippleOutline;
             }
 
             Source = source;
@@ -205,6 +245,7 @@ namespace AF.UI
             _shaft.gameObject.SetActive(reduceMotion);
             _head.gameObject.SetActive(reduceMotion);
             _ripple.gameObject.SetActive(!reduceMotion);
+            _rippleOutline.gameObject.SetActive(!reduceMotion);
             Follow(views);
             Apply();
         }
@@ -360,8 +401,24 @@ namespace AF.UI
             _u = Mathf.Max(1f, dst.Unit);
             _srcTap = TapOf(src);
             _dstTap = TapOf(dst);
-            _srcRim = RimOf(src);
-            _dstRim = RimOf(dst);
+            _rimTopY = Mathf.Max(TopOf(src), TopOf(dst));
+
+            // La flecha, a ArrowAboveRimU sobre las bocas, pero con la punta a ArrowCeilingAirDp del borde del panel.
+            float arrowMax = CeilingY - (0.5f * ProceduralArt.FingerArrowHeadHeightDp) - ArrowCeilingAirDp;
+            _srcRim = RimOf(src, arrowMax);
+            _dstRim = RimOf(dst, arrowMax);
+
+            // Lo alto del arco: ArcClearU sobre la boca más alta, sin pasar del borde del panel (ni bajar de los dos toques).
+            float midY = 0.5f * (_srcTap.y + _dstTap.y);
+            float apex = Mathf.Min(_rimTopY + (ArcClearU * _u), CeilingY - ArcCeilingAirDp);
+            _arcApexY = Mathf.Max(apex, Mathf.Max(_srcTap.y, _dstTap.y));
+            _arcLift = Mathf.Max(0f, _arcApexY - midY);
+        }
+
+        private static float TopOf(CuiaView view)
+        {
+            float u = Mathf.Max(1f, view.Unit);
+            return view.FootPosition.y + view.BodyOffset.y + (view.HeightU * u);
         }
 
         private static Vector2 TapOf(CuiaView view)
@@ -370,10 +427,12 @@ namespace AF.UI
             return view.FootPosition + view.BodyOffset + new Vector2(0f, view.HeightU * TapHeightFraction * u);
         }
 
-        private static Vector2 RimOf(CuiaView view)
+        private static Vector2 RimOf(CuiaView view, float maxY)
         {
             float u = Mathf.Max(1f, view.Unit);
-            return view.FootPosition + view.BodyOffset + new Vector2(0f, (view.HeightU + ArrowAboveRimU) * u);
+            Vector2 p = view.FootPosition + view.BodyOffset + new Vector2(0f, (view.HeightU + ArrowAboveRimU) * u);
+            p.y = Mathf.Min(p.y, maxY);
+            return p;
         }
 
         // Pose del fotograma: la mano (posición, hundido y alfa), la onda y, con Reducir movimiento, la flecha.
@@ -412,7 +471,7 @@ namespace AF.UI
             {
                 float k = (t - pressEnd1) / MoveMs;
                 float e = k * k * (3f - (2f * k));
-                pos = Vector2.Lerp(_srcTap, _dstTap, e) + new Vector2(0f, ArcU * _u * Mathf.Sin(Mathf.PI * e));
+                pos = Vector2.Lerp(_srcTap, _dstTap, e) + new Vector2(0f, _arcLift * Mathf.Sin(Mathf.PI * e));
             }
             else if (t < pressEnd2)
             {
@@ -439,16 +498,17 @@ namespace AF.UI
             float scale = 1f - (PressDepth * press);
             hand.localScale = new Vector3(scale, scale, 1f);
             SetAlpha(_hand, Mathf.Clamp01(alpha));
-            RectTransform rr = _ripple.rectTransform;
             if (ripple >= 0f)
             {
                 float d = Mathf.Lerp(RippleStartDp, RippleEndDp, ripple);
-                rr.anchoredPosition = pos;
-                rr.sizeDelta = new Vector2(d, d);
+                PlaceRipple(_rippleOutline.rectTransform, pos, d);
+                PlaceRipple(_ripple.rectTransform, pos, d);
+                SetAlpha(_rippleOutline, RippleOutlineAlpha * (1f - ripple), Palette.UiInk);
                 SetAlpha(_ripple, RippleAlpha * (1f - ripple), Palette.UiPaper);
             }
             else
             {
+                SetAlpha(_rippleOutline, 0f, Palette.UiInk);
                 SetAlpha(_ripple, 0f, Palette.UiPaper);
             }
         }
@@ -471,6 +531,12 @@ namespace AF.UI
             head.anchoredPosition = to;
             head.localRotation = rot;
             SetAlpha(_head, 1f);
+        }
+
+        private static void PlaceRipple(RectTransform rt, Vector2 pos, float diameter)
+        {
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = new Vector2(diameter, diameter);
         }
 
         private static void PlaceBar(RectTransform rt, Vector2 from, float length, float thickness, Quaternion rot)

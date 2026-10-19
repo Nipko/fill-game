@@ -22,6 +22,9 @@ namespace AF.Tests.PlayMode
     /// primero de la solución en el 1; en el 2, la racha de 3 sobre el hueco de 2, en cuanto es legal), nunca bloquea el toque, y
     /// se va al hacerlo; los dos niveles, de punta a punta siguiendo el dedo;</item>
     /// <item>otro vertido: se va y no vuelve en ese intento [P]; tampoco tras Volver a la orilla [P];</item>
+    /// <item>deshacer con Marea con el dedo a la vista no es otro vertido [P]: se va (<c>undo</c>) y vuelve cuando la lección es
+    /// legal otra vez; en el 2, la instrucción de TiTino se va al salir el dedo [P];</item>
+    /// <item>el arco del viaje pasa por encima de las bocas y la flecha de Reducir movimiento no pisa el marco del panel;</item>
     /// <item>ningún otro nivel lo muestra: el 3, el 6 y el 12 (D-028, 61 a: la presentación de TiTino hace de guía);</item>
     /// <item>con Reducir movimiento, sin animación: mano fija sobre el origen y flecha al destino;</item>
     /// <item>la sonda <c>AF_STATE tutorial_finger</c> dice si se ve, el origen y el destino.</item>
@@ -182,6 +185,79 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Level2_UndoWithTheFingerShowing_ItGoes_AndComesBackWhenTheLessonIsLegalAgain()
+        {
+            yield return TutorialSlothTests.Load(2);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured));
+            PlayModeHelpers.StepUntilIdle(boot, 6000);
+            TutorialFinger finger = WaitForFinger(boot, "el 2");
+            Assert.That(view.TutorialFingerPour, Is.EqualTo(new Pour(2, 0, 2)));
+
+            // Deshacer no es otro vertido [P]: se va con su motivo y espera (el tablero inicial, lleno, no tiene la lección).
+            Assert.That(boot.PressUndo(), Is.True, "Marea, disponible en el 2");
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(flow.Session.AppliedPours, Is.EqualTo(0), "condición del test: deshecho");
+            Assert.That(view.TutorialFingerVisible, Is.False, "deshacer: se va");
+            Assert.That(view.TutorialFingerCancelled, Is.False, "no es otro vertido");
+            Assert.That(view.TutorialFingerArmed, Is.True, "vuelve a esperar");
+            AssertProbe(view, false, 2, 0, "undo");
+            for (int t = 0; t < 3000; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                Assert.That(view.TutorialFingerVisible, Is.False, "sin lección legal, sin dedo (a los " + t + " ms)");
+            }
+
+            // El mismo primer vertido vuelve a dejar la lección posible: el dedo vuelve y se sigue hasta ganar.
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured));
+            PlayModeHelpers.StepUntilIdle(boot, 6000);
+            finger = WaitForFinger(boot, "el 2 tras deshacer");
+            Assert.That(view.TutorialFingerPour, Is.EqualTo(new Pour(2, 0, 2)));
+            AssertProbe(view, true, 2, 0, "show");
+            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(2), "vuelve una vez");
+            Assert.That(boot.TapCuia(2).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Poured));
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.TutorialFingerFollowed, Is.True);
+            Assert.That(finger.Shown, Is.False);
+            yield return FinishWithTheSolver(boot, "el 2");
+        }
+
+        [UnityTest]
+        public IEnumerator Level2_TheTiTinoInstructionLeavesWhenTheFingerShows()
+        {
+            yield return TutorialSlothTests.Load(2);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            for (int t = 0; t < 8000 && !view.TutorialSlothVisible; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(view.TutorialSlothVisible, Is.True, "condición del test: la instrucción del 2 a la vista");
+            Assert.That(boot.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(3).Kind, Is.EqualTo(TapKind.Poured));
+            for (int t = 0; t < 8000 && !view.TutorialFingerVisible; t += PlayModeHelpers.FrameMs)
+            {
+                Assert.That(view.TutorialSlothVisible || !view.TutorialFingerVisible, Is.True);
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(view.TutorialFingerVisible, Is.True, "el dedo sale");
+            SlothNoticeCard card = view.SlothNoticeView!;
+            float alpha = card.Visible ? card.Alpha : 0f;
+            Assert.That(card.DurationMs, Is.GreaterThan(3000f),
+                "condición del test: la instrucción dura lo bastante para coincidir con el dedo si no se fuera");
+            PlayModeHelpers.Step(boot, 250);
+            Assert.That(view.TutorialSlothVisible, Is.False, "la instrucción del tablero de antes se va con su fundido (alfa al salir el dedo: " + alpha + ")");
+            Assert.That(view.TutorialFingerVisible, Is.True, "el dedo sigue");
+        }
+
+        [UnityTest]
         public IEnumerator FollowedInTheFirstAttempt_NotAgainAfterVolverALaOrilla()
         {
             yield return TutorialSlothTests.Load(1);
@@ -248,6 +324,11 @@ namespace AF.Tests.PlayMode
             Vector2 head = finger.ArrowHead.rectTransform.anchoredPosition;
             Assert.That(Mathf.Abs(head.x - finger.TargetTap.x), Is.LessThan(0.01f), "la punta, en el eje del destino");
             Assert.That(head.y, Is.GreaterThan(finger.TargetTap.y), "sobre su boca");
+            Assert.That(float.IsInfinity(finger.CeilingY), Is.False, "con el borde del panel");
+            Assert.That(head.y + (0.5f * ProceduralArt.FingerArrowHeadHeightDp),
+                Is.LessThanOrEqualTo(finger.CeilingY - TutorialFinger.ArrowCeilingAirDp + 0.01f),
+                "la punta, a ≥ " + TutorialFinger.ArrowCeilingAirDp + " dp del marco del panel");
+            Assert.That(finger.RippleOutline.gameObject.activeSelf, Is.False, "sin contorno de onda");
             for (int t = 0; t < (int)TutorialFinger.CycleMs + 500; t += PlayModeHelpers.FrameMs)
             {
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
@@ -292,10 +373,14 @@ namespace AF.Tests.PlayMode
             bool atTarget = false;
             bool faded = false;
             float minScale = 1f;
+            float maxY = float.NegativeInfinity;
+            bool ripple = false;
             for (int t = 0; t < (int)TutorialFinger.CycleMs + 200; t += PlayModeHelpers.FrameMs)
             {
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
                 Vector2 tip = finger.TipPosition;
+                maxY = Mathf.Max(maxY, tip.y);
+                ripple |= finger.Ripple.color.a > 0.5f && finger.RippleOutline.color.a > 0.15f;
                 atSource |= Vector2.Distance(tip, finger.SourceTap) < 0.5f && finger.HandAlpha > 0.9f;
                 atTarget |= atSource && Vector2.Distance(tip, finger.TargetTap) < 0.5f && finger.HandAlpha > 0.9f;
                 faded |= atTarget && finger.HandAlpha < 0.05f;
@@ -306,6 +391,11 @@ namespace AF.Tests.PlayMode
             Assert.That(atTarget, Is.True, at + ": y luego el destino");
             Assert.That(faded, Is.True, at + ": y se funde antes de volver a empezar");
             Assert.That(minScale, Is.LessThan(0.95f), at + ": se hunde al tocar");
+            Assert.That(maxY, Is.GreaterThan(finger.RimTopY), at + ": el arco pasa por encima de las bocas (no toca las cuias del medio)");
+            Assert.That(maxY, Is.LessThanOrEqualTo(finger.CeilingY - TutorialFinger.ArcCeilingAirDp + 0.5f), at + ": sin pasar del marco del panel");
+            Assert.That(finger.Ripple.sprite, Is.Not.Null, at + ": la onda, un anillo");
+            Assert.That(finger.RippleOutline.sprite, Is.Not.Null, at + ": con su contorno de tinta");
+            Assert.That(ripple, Is.True, at + ": la onda se ve al tocar (papel 0,9 y tinta 0,35 al nacer)");
             Assert.That(finger.Shown, Is.True, at + ": sigue en bucle");
         }
 

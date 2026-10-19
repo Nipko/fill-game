@@ -87,7 +87,12 @@ namespace AF.UI
     /// 1, el primero de la solución; en el 2, el vertido parcial de la lección (una racha de 3 sobre un hueco de 2) en cuanto es
     /// legal, que en su tablero inicial, lleno, no lo es: sale tras el primer vertido que lo deja posible. Se va al hacer ese
     /// vertido; si el jugador hace otro, se va y no vuelve en ese intento [P] (en el 1, también si vierte antes de que salga:
-    /// ya pasaron los dos primeros toques). Un modal del embudo lo oculta hasta que se vuelve a jugar; otro intento, la victoria u
+    /// ya pasaron los dos primeros toques). Deshacer con Marea no es otro vertido [P]: con el dedo a la vista, se va (sonda con
+    /// <c>reason</c> <c>undo</c>) y vuelve a esperar su momento sobre el tablero deshecho (en el 2, a que la lección vuelva a ser
+    /// legal: tras deshacer el primer vertido, al siguiente que la deje posible); si ya se fue por otro vertido, deshacer no lo
+    /// trae. En el 2, al salir el dedo, la instrucción de TiTino («Hay dos cuias vacías…»), que habla del tablero de antes del
+    /// primer vertido, se va con su fundido normal si sigue a la vista [P]: las dos ayudas no compiten y la de TiTino no queda
+    /// desmentida por el tablero. Un modal del embudo lo oculta hasta que se vuelve a jugar; otro intento, la victoria u
     /// otro nivel lo retiran. Con Reducir movimiento, mano fija sobre el origen y flecha al destino. El 12 no lleva dedo (D-028,
     /// 61 a): la presentación de TiTino con la cola sobre «Pista» hace de guía. Sonda <c>AF_STATE tutorial_finger</c> (nivel,
     /// <c>visible</c>, <c>from</c>, <c>to</c>, <c>amount</c>, <c>lesson</c>, <c>reduce</c> y <c>reason</c>) en cada cambio, y
@@ -912,8 +917,9 @@ namespace AF.UI
         private string? _lastFingerProbe;
         private int _fingerShown;
 
-        // Del dedo en el intento: apagado (sin dedo o retirado), esperando su momento, a la vista (o suspendido), hecho (el
-        // jugador hizo el vertido) o cancelado (hizo otro: no vuelve en ese intento [P]).
+        // Del dedo en el intento: apagado (sin dedo o retirado), esperando su momento (también tras deshacer con el dedo a la
+        // vista [P]), a la vista (o suspendido), hecho (el jugador hizo el vertido) o cancelado (hizo otro: no vuelve en ese
+        // intento [P]).
         private enum FingerState
         {
             Off = 0,
@@ -1014,6 +1020,20 @@ namespace AF.UI
             BoardState current = session.Current;
             if (pours != _fingerWatchPours || !ReferenceEquals(current, _fingerWatchBoard))
             {
+                if (pours < _fingerWatchPours)
+                {
+                    // Deshizo con Marea: no es otro vertido [P]. Con el dedo a la vista, se va y vuelve a esperar sobre el tablero
+                    // deshecho (en el 2, a que la lección vuelva a ser legal); esperando, sigue esperando.
+                    if (_fingerState == FingerState.Showing)
+                    {
+                        EndTutorialFinger(FingerState.Armed, "undo");
+                    }
+
+                    _fingerWatchPours = pours;
+                    _fingerWatchBoard = current;
+                    return;
+                }
+
                 bool onePour = pours == _fingerWatchPours + 1;
                 Pour last = onePour ? session.GetAppliedPour(pours - 1) : default;
                 if (_fingerState == FingerState.Showing)
@@ -1045,6 +1065,8 @@ namespace AF.UI
             if (_fingerState == FingerState.Showing)
             {
                 TutorialFinger finger = _finger!;
+                LeaveStaleTutorialCard();
+                finger.CeilingY = FingerCeilingY();
                 bool wasShown = finger.Shown;
                 finger.Suspend(held, _views);
                 finger.Tick(dtMs, _views);
@@ -1076,6 +1098,7 @@ namespace AF.UI
             }
 
             _finger ??= new TutorialFinger(_mechanicFrontLayer, _art);
+            _finger.CeilingY = FingerCeilingY();
             _finger.Show(_fingerPour.Source, _fingerPour.Target, _views, flow.ReduceMotion);
             if (!_finger.Active)
             {
@@ -1085,6 +1108,7 @@ namespace AF.UI
 
             _fingerState = FingerState.Showing;
             _fingerShown++;
+            LeaveStaleTutorialCard();
             EmitFingerProbe(true, "show");
             if (DevProbe.Enabled)
             {
@@ -1092,7 +1116,26 @@ namespace AF.UI
             }
         }
 
-        // Retira el dedo y deja el estado del intento en state; con reason, la sonda (solo si estaba a la vista o esperando).
+        // El borde interior de arriba del panel del tablero, en las coordenadas del dedo (las del contenedor del tablero, hacia
+        // arriba): ni la flecha de Reducir movimiento ni lo alto del arco lo pasan (revisión de DC6). Sin tablero, sin límite.
+        private float FingerCeilingY()
+        {
+            BoardLayoutResult? l = _layout;
+            return l == null ? float.PositiveInfinity : -(l.PanelY + PanelFrameDp);
+        }
+
+        // En el 2, con el dedo a la vista, la instrucción de TiTino («Hay dos cuias vacías…») habla del tablero de antes del
+        // primer vertido: si sigue a la vista, se va con su fundido normal (revisión de DC6) [P]. Sin asignaciones.
+        private void LeaveStaleTutorialCard()
+        {
+            if (_fingerLesson == FingerLesson.PartialRun && TutorialSlothVisible)
+            {
+                _slothNotice!.Leave();
+            }
+        }
+
+        // Retira el dedo y deja el estado del intento en state; con reason, la sonda (solo si estaba a la vista o esperando; al
+        // deshacer, solo si estaba a la vista).
         private void EndTutorialFinger(FingerState state, string? reason)
         {
             bool wasShown = _finger != null && _finger.Shown && _fingerState == FingerState.Showing;
@@ -1108,7 +1151,7 @@ namespace AF.UI
         }
 
         // AF_STATE tutorial_finger: nivel, si se ve, el vertido (origen, destino y dosis), la lección (first o partial), Reducir
-        // movimiento y el motivo (show, held, resume, followed, self, other_pour, attempt o level_end). Solo con la sonda y en
+        // movimiento y el motivo (show, held, resume, followed, self, other_pour, undo, attempt o level_end). Solo con la sonda y en
         // los cambios, nunca por fotograma.
         private void EmitFingerProbe(bool visible, string reason)
         {
