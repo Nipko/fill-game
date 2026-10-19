@@ -773,6 +773,14 @@ namespace AF.Tests.PlayMode
             Assert.That(tray.RevealMissingWidth, Is.GreaterThan(100f), "ancho");
             AssertNotice(tray.RevealMissingLabel, 1, "«Te faltan 1.300» ancho");
             AssertOverItsSlot(tray.RevealMissingRect, (RectTransform)tray.RevealButton.transform, "Revelar");
+
+            // DC4: sin stock y con video, Revelar ofrece primero el video («+1» con su icono), aunque las semillas alcancen el
+            // precio: ni precio ni «Te faltan {n}» (como Marea).
+            tray.SetRevealBadge(0, 120, 500, true, true, false);
+            Assert.That(tray.RevealShowsVideo, Is.True, "el video, antes que el precio");
+            Assert.That(tray.RevealBadgeText, Is.EqualTo("+1"));
+            Assert.That(tray.RevealPriceShown, Is.EqualTo(0), "sin precio");
+            Assert.That(tray.RevealShowsMissing, Is.False, "sin «Te faltan {n}»");
         }
 
         [UnityTest]
