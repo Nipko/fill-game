@@ -321,7 +321,7 @@ namespace AF.Tests.PlayMode
         public void Facts_AreTheVictorysOwn()
         {
             // D-016, punto 5: la cadencia (stats.levels_won con esta victoria; TI6b), Difícil o Muy difícil, el
-            // estreno y la Cuia de rescate. La Crecida y Morpho aún no existen en el cliente.
+            // estreno, la Cuia de rescate y Morpho (FX8). La Crecida aún no existe en el cliente.
             SlothVictoryFacts f = GameScreen.SlothFactsFor(264, 264, LevelDefinition.LabelHard, null, true, true, false);
             Assert.That(f.WinCount, Is.EqualTo(264));
             SlothVictoryFacts counted = GameScreen.SlothFactsFor(264, 7, LevelDefinition.LabelNormal, null, false, true, false);
@@ -334,6 +334,7 @@ namespace AF.Tests.PlayMode
             Assert.That(f.Streak, Is.EqualTo(0));
             Assert.That(f.StreakMilestone, Is.False);
             Assert.That(f.UsedHint, Is.False);
+            Assert.That(GameScreen.SlothFactsFor(264, 264, null, null, false, true, false, true).UsedHint, Is.True, "Morpho en este nivel (FX8)");
             Assert.That(GameScreen.SlothFactsFor(264, 264, LevelDefinition.LabelVeryHard, null, false, true, false).Hard, Is.True);
             Assert.That(GameScreen.SlothFactsFor(264, 264, LevelDefinition.LabelNormal, null, false, true, false).Hard, Is.False);
             Assert.That(GameScreen.SlothFactsFor(264, 264, null, null, false, true, false).Hard, Is.False);
@@ -391,6 +392,78 @@ namespace AF.Tests.PlayMode
             Assert.That(view.CurrentVictoryLine.FruitKey, Is.Not.Null);
             Assert.That(view.LastSlothLine.Speaks, Is.False, "con la línea de fruta, solo el gesto");
             Assert.That(view.SlothView.HasBubble, Is.False);
+        }
+
+        /// <summary>
+        /// Pendiente de MO1 (tarea FX8): <c>usedHint</c> llega a TiTino desde las pistas de Morpho cobradas en el nivel
+        /// (<see cref="LevelFlow.HintsUsed"/> &gt; 0). Sin pista, false; con una cobrada, true, y TiTino no dice las frases n.º 4 y 8
+        /// del banco de victoria, que presumen de haberlo resuelto solo (propuesta de TiTino e.4; <see cref="SlothLines.ForVictory"/>).
+        /// El 63 con 43 victorias antes es la victoria 44: le toca hablar, y con su semilla (63 + 44 = 107) sin pista elige la n.º 4
+        /// (con el dato del color aprobado, 107 mod 8 = 3) o la 8 (sin él, 107 mod 7 = 6), así que la pista cambia la frase: si
+        /// <c>usedHint</c> no llegara, la aserción con pista fallaría.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator UsedHint_IsTheChargedMorphoHints_AndTitinoSkipsTheSoloLines()
+        {
+            yield return WinPack(OneRowPack(63), 63, v => v.FruitKeyOf = null, 43);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            PlayModeHelpers.Step(boot, 1600);
+            Assert.That(boot.Flow!.HintsUsed, Is.EqualTo(0));
+            Assert.That(view.LastSlothFacts.UsedHint, Is.False, "sin pista");
+            Assert.That(view.LastSlothFacts.WinCount, Is.EqualTo(44), "premisa: los datos son los de esta victoria");
+            Assert.That(view.LastSlothLine.Speaks, Is.True, "premisa: victoria número 44, le toca");
+            Assert.That(view.LastSlothLine.Key, Is.EqualTo("sloth_line_win_04").Or.EqualTo("sloth_line_win_08"),
+                "premisa: sin pista, con esta semilla, una de las frases que presumen de haberlo resuelto solo");
+            string unhinted = view.LastSlothLine.Key!;
+
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(1240));
+            yield return PlayModeHelpers.LoadGameWithPack(OneRowPack(63), 63, new MemoryProgressStore(63, 62, levelsWon: 43));
+            boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            view = boot.View!;
+            view.FruitKeyOf = null;
+            LevelFlow flow = boot.Flow!;
+            boot.TapAnywhere();
+            for (int t = 0; t < 4000 && (flow.Phase != FlowPhase.Playing || !view.IsViewIdle); t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(flow.PressHint(), Is.True, "Morpho, desde el 12");
+            float start = Time.realtimeSinceStartup;
+            while (flow.HintThinking)
+            {
+                Assert.That(Time.realtimeSinceStartup - start, Is.LessThan(PlayModeHelpers.TimeoutSeconds), "Morpho no respondió");
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                yield return null;
+            }
+
+            Assert.That(flow.LastHint!.Value.Charged, Is.True, "una pista cobrada");
+            Assert.That(flow.HintsUsed, Is.EqualTo(1));
+            VictorySetup.WinToVictoryScreen(boot);
+            PlayModeHelpers.Step(boot, 1600);
+            Assert.That(flow.HintsUsed, Is.EqualTo(1), "sigue contada en la victoria");
+            Assert.That(view.LastSlothFacts.UsedHint, Is.True, "con una pista de Morpho cobrada");
+            Assert.That(view.LastSlothFacts.WinCount, Is.EqualTo(44));
+            Assert.That(view.LastSlothLine.Speaks, Is.True, "victoria número 44: le toca");
+            Assert.That(view.LastSlothLine.Moment, Is.EqualTo(SlothMoment.Win));
+            Assert.That(view.LastSlothLine.Key, Is.Not.EqualTo("sloth_line_win_04").And.Not.EqualTo("sloth_line_win_08"),
+                "nunca tras Morpho las frases que presumen de haberlo resuelto solo");
+            Assert.That(view.LastSlothLine.Key, Is.Not.EqualTo(unhinted), "la pista cambia la frase de la misma semilla");
+
+            // La misma regla en SlothLines, sin la escena: con la misma semilla, sin pista elige la n.º 4 y tras Morpho otra.
+            SlothContext c = new SlothSession(new SlothData(), true, true, true, 4, 4).Context;
+            SlothVictoryFacts solo = GameScreen.SlothFactsFor(63, 44, LevelDefinition.LabelNormal, null, false, true, true, false);
+            SlothLine soloLine = SlothLines.ForVictory(63, default(VictoryLine), c.WithVictory(in solo));
+            Assert.That(soloLine.Speaks, Is.True);
+            Assert.That(soloLine.Key, Is.EqualTo("sloth_line_win_04"), "premisa: sin pista, la n.º 4");
+            SlothVictoryFacts hinted = GameScreen.SlothFactsFor(63, 44, LevelDefinition.LabelNormal, null, false, true, true, true);
+            Assert.That(hinted.UsedHint, Is.True);
+            SlothLine line = SlothLines.ForVictory(63, default(VictoryLine), c.WithVictory(in hinted));
+            Assert.That(line.Speaks, Is.True);
+            Assert.That(line.Key, Is.Not.EqualTo("sloth_line_win_04").And.Not.EqualTo("sloth_line_win_08"));
         }
 
         [UnityTest]

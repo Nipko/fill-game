@@ -32,6 +32,9 @@ namespace AF.Tests.PlayMode
     /// <item>los tres miradores del estuario desde el 10 (ninguno con 9), solo en la vista Mundo, y su tarjeta, sin el tono de
     /// una parada futura abierta antes;</item>
     /// <item>su ←, el velo y el Atrás de Android la cierran sin cerrar el Mapa;</item>
+    /// <item>la luz de la temporada del ciclo del primer nivel de la parada, como el fondo del tablero (07 §2.1; tarea FX8): la
+    /// de Manaos (51, ciclo A) y la de Alter do Chão (21, ciclo B) sobre la de la parada; Belém (1), sin temporada; sin la tabla,
+    /// como antes;</item>
     /// <item>ningún precio ni semilla, contraste ≥ 4,5:1, controles ≥ 48 dp y textos ≥ 12 sp sin recortes, en las tarjetas de
     /// parada y en la de un mirador.</item>
     /// </list>
@@ -48,6 +51,8 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             GameScreen.SimulatedScreen = null;
+            GameScreen.SeasonLutEnabled = true;
+            GameScreen.SeasonOverride = null;
             MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();
             OnDemandRendering.renderFrameInterval = 1;
@@ -237,6 +242,58 @@ namespace AF.Tests.PlayMode
             Assert.That(card.FactKeys[0], Is.EqualTo("map.stop.manaos.dato_01"));
             Assert.That(card.Sample.Filled, Is.True);
             yield return null;
+        }
+
+        [UnityTest]
+        public IEnumerator Card_CarriesTheSeasonOfItsFirstLevel_LikeTheBoard()
+        {
+            yield return MapMarkersTests.OpenApp(59);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            SeasonTable seasons = boot.Seasons!;
+            Assert.That(seasons, Is.Not.Null, "premisa: la escena lleva la tabla de temporada");
+            Assert.That(map.Seasons, Is.SameAs(seasons), "el Mapa recibe la misma tabla que el tablero y el inicio");
+            foreach ((int n, Season expected) in new[] { (5, Season.HighWater), (2, Season.LowWater), (0, Season.None), (7, Season.LowWater) })
+            {
+                RiverStop stop = boot.RiverStops!.At(n)!;
+                string where = "parada " + n + " (" + stop.Id + ", nivel " + stop.FirstLevel + ")";
+                Assert.That(seasons.SeasonOf(stop.FirstLevel), Is.EqualTo(expected), "premisa: " + where);
+
+                // Sin la LUT de temporada (o sin tabla), como antes de FX8: solo la luz de la parada.
+                GameScreen.SeasonLutEnabled = false;
+                Assert.That(map.OpenStopCard(n), Is.True, where);
+                StopCard card = map.Card!;
+                Assert.That(card.Backdrop.Season, Is.EqualTo(Season.None), where);
+                Assert.That(card.Backdrop.LutColor, Is.EqualTo(StopBackdrop.LutOf(stop)), where);
+                Assert.That(card.PanoramaTint, Is.EqualTo(StopBackdrop.LutOf(stop)), where);
+                Color off = card.PanoramaTint;
+                card.Hide();
+
+                // Con ella, la del ciclo del primer nivel de la parada por encima de la de la parada (la misma que el fondo).
+                GameScreen.SeasonLutEnabled = true;
+                Assert.That(map.OpenStopCard(n), Is.True, where);
+                Assert.That(card.Backdrop.Season, Is.EqualTo(expected), where);
+                Assert.That(map.StopCardSeason(stop), Is.EqualTo(expected), where);
+                Assert.That(card.Backdrop.LutColor, Is.EqualTo(StopBackdrop.LutOf(stop, expected)), where);
+                Assert.That(card.PanoramaTint, Is.EqualTo(StopBackdrop.LutOf(stop, expected)), where);
+                if (expected == Season.None)
+                {
+                    Assert.That(card.PanoramaTint, Is.EqualTo(off), "sin temporada en su ciclo, la misma luz: " + where);
+                }
+                else
+                {
+                    Assert.That(card.PanoramaTint, Is.Not.EqualTo(off), "la temporada cambia la luz: " + where);
+                }
+
+                card.Hide();
+            }
+
+            // Sin la tabla, como antes.
+            map.Seasons = null;
+            Assert.That(map.OpenStopCard(5), Is.True);
+            Assert.That(map.Card!.Backdrop.Season, Is.EqualTo(Season.None));
+            Assert.That(map.Card.PanoramaTint, Is.EqualTo(StopBackdrop.LutOf(boot.RiverStops!.At(5))));
+            map.Seasons = seasons;
         }
 
         [UnityTest]
