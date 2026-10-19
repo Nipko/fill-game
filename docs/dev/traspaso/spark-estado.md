@@ -6,6 +6,17 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-19 · Decisión del dueño: R-Q2b, pool de 729 días
+
+- **El problema:** el agua y el fondo rotan «según la fecha» (R-Q2), pero con un pool de 730 días y 9 mundos (730 mod 9 = 1), un mundo grabado en cada tablero deja de seguir a la fecha a partir de la segunda vuelta.
+- **Opciones presentadas:** el cliente calcula el mundo con la fecha local (cambia el significado de `water_base`, contrato 21); aceptar el salto; o un pool múltiplo de 9.
+- **El dueño eligió** «Pool de 729 o 738 días» y, después, **«729 días (Recomendado)»**:
+  - 81 × 9 = **729 días por banda, 2.187 tableros**;
+  - el día del pool va de 0 a 728 y cabe en el esquema actual, sin tocar el contrato 21;
+  - el índice pasa a `(días_desde(2026-01-01) + live_daily_offset) mod 729`;
+  - el mundo del tablero es `1 + (día mod 9)`, que sigue a la fecha en todas las vueltas (con `live_daily_offset` constante, desplazado por ese offset).
+- **Para el integrador (E11):** cambia 03 §16 y 06 §4.1, que dicen 730 y 2.190, y el pool de 08 §4.1 y §6.2.
+
 ## Resumen (2026-10-19)
 
 - **Rama:** `spark/reto-del-rio`, en `752bb55`. Ya lleva fusionado `origin/integracion-fase1-fase2` (`6377345`).
