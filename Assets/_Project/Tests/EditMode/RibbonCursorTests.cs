@@ -158,8 +158,9 @@ namespace AF.Tests.EditMode
                 Vector2 end = new PolylineCursor(line).Point(line.PointCount - 1);
                 float gapDp = Vector2.Distance(host, end) * Basin;
 
-                // ≤ 15 km = 2 dp en la Cuenca (geometry.py, TOLERANCE_KM); el Pacaya es la excepción pendiente del dueño (23,8 km
-                // con el cauce de HydroRIVERS, M5.1; PENDING_MOUTH_KM: su boca está en el canal de Puinahua, que el cauce no dibuja).
+                // ≤ 15 km = 2 dp en la Cuenca (geometry.py, TOLERANCE_KM); el Pacaya es la excepción pendiente del dueño (23,9 km,
+                // medida 23,83 con el cauce de HydroRIVERS y redondeada hacia arriba, M5.1; PENDING_MOUTH_KM: su boca está en
+                // el canal de Puinahua, que el cauce no dibuja).
                 float limit = line.Id == "pacaya" ? 4.5f : 2f;
                 Assert.That(gapDp, Is.LessThanOrEqualTo(limit), line.Id + " desemboca en " + _map.Lines[mouth.Line].Id + " s=" + mouth.S);
             }

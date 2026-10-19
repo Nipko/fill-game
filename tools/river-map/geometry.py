@@ -45,8 +45,19 @@ Geometria de produccion (M5.1):
   HydroRIVERS, que no dibuja los estuarios como rio: siguen con los puntos de la investigacion (la cola del canal norte y la
   del estuario del Para). LINE_SRC: el ramal del Para, el Itaya y el Pacaya, de la investigacion; el Casiquiare, de
   Natural Earth (una bifurcacion).
-- Douglas-Peucker por vista: DP_MUNDO_KM a <= MUNDO_RADIUS_KM de una parada de la 1.0 (la vista Mundo) y DP_CUENCA_KM en el
-  resto (la Cuenca); las bocas, los cortes y las colas no se simplifican.
+  DESVIACION [P] DEL CANON, pendiente del duenno (pregunta 65 propuesta, parte 2; README, notas de M5.1): D-013, punto 5
+  (Q11-A), 08 §4.5 (el «Origen» y su ejemplo, con src «ne10m» en el cauce) y la propuesta del Mapa (§3.6 y §11.3, punto 1)
+  piden Natural Earth 1:10m para la vista Cuenca y HydroRIVERS para la vista Mundo. Aqui las lineas salen de HydroRIVERS en
+  las dos vistas (la misma linea, simplificada por vista: DP_CUENCA_KM y DP_MUNDO_KM), y de Natural Earth solo la tierra y
+  el Casiquiare. Por que: el contrato 29 da un solo pts por linea (no hay una linea por vista), y Natural Earth no tiene la
+  red (ni NEXT_DOWN ni las bocas en un vertice del anfitrion), le faltan 11 rios del Mapa (el Takutu, el Nanay, el
+  Tambopata, el Manu...) y la propia Natural Earth avisa de «suspect alignments» en partes de la cuenca del Amazonas (su
+  pagina de los rios; propuesta §3.6, [V ne_rivers]). No es canon hasta que el duenno lo ratifique y el carril de
+  documentacion alinee 08 §4.5.
+- Douglas-Peucker por vista: DP_MUNDO_KM a <= MUNDO_RADIUS_KM de una parada de la 1.0 (MundoZone) y DP_CUENCA_KM en el
+  resto; las bocas, los cortes y las colas no se simplifican. MundoZone [P] no es todo lo que ensenna la vista Mundo (de 4x a
+  15x y se arrastra por todo el mapa): fuera de ella, a 4x y 15x, los 6 km de DP_CUENCA_KM son ~2,8 y ~10,6 dp, por encima
+  de los 2 dp de esa vista (pregunta 65 propuesta, parte 3).
 - Km: el cauce, km_desde_el_mar de sus puntos de control y de las paradas a <= TOLERANCE_KM, interpolado en s; los
   afluentes, el km de su boca de la investigacion mas el recorrido sin meandros por sus puntos (como la investigacion).
 - Tierra: Natural Earth land recortada a la caja (el continente y las islas de al menos MIN_ISLAND_KM2), simplificada por
@@ -1609,10 +1620,12 @@ HR_LAYER = "HydroRIVERS_v10_sa"
 NE_RIVERS_LAYER = "ne_10m_rivers_lake_centerlines"
 NE_LAND_LAYER = "ne_10m_land"
 
-# Origen de cada linea [P] (src): HydroRIVERS por defecto, la unica fuente con la red (bocas exactas) y a la escala de la
-# vista Mundo. Excepciones: el ramal del Para (los furos de Breves y el estuario son agua ancha que ni HydroRIVERS ni
-# Natural Earth dibujan como rio: se queda la poligonal de la investigacion) y el Casiquiare (una bifurcacion, que la red
-# en arbol de HydroRIVERS no representa: su linea de Natural Earth, con la boca llevada al vertice mas cercano del Negro).
+# Origen de cada linea [P] (src): HydroRIVERS por defecto, en las dos vistas, la unica fuente con la red (bocas exactas) y a
+# la escala de la vista Mundo. Es una desviacion [P] de D-013, punto 5, y de 08 §4.5, que piden Natural Earth en la vista
+# Cuenca (docstring del modulo; pregunta 65 propuesta, parte 2). Excepciones: el ramal del Para (los furos de Breves y el
+# estuario son agua ancha que ni HydroRIVERS ni Natural Earth dibujan como rio: se queda la poligonal de la investigacion)
+# y el Casiquiare (una bifurcacion, que la red en arbol de HydroRIVERS no representa: su linea de Natural Earth, con la
+# boca llevada al vertice mas cercano del Negro); el Itaya y el Pacaya, sus esbozos de la investigacion (README).
 LINE_SRC = {"para": "rio_amazonas", "casiquiare": "ne10m", "itaya": "rio_amazonas", "pacaya": "rio_amazonas"}
 # Por que las de la investigacion se quedan en su esbozo (pendiente del duenno o del investigador; revision de M5.1): se
 # dibujan en la vista Mundo (el ramal lleva la casa de TiTino; el Itaya y el Pacaya, 08 §4.5, «solo en la vista Mundo»),
@@ -1632,14 +1645,21 @@ MOUTH_SNAP_KM = 15.0    # boca de un rio «solo_boca» -> tramos que entran en s
 # [P] Douglas-Peucker por vista (propuesta §11.3, punto 2: «a unos 2 km en la Cuenca y a unos 0,3 km en la vista Mundo»).
 # Revision de M5.1 [P]: 0,3 y 2 km dejaban 1.213 puntos en el cauce (la propuesta §11.3 estimaba 300-800), segmentos mas
 # cortos que el ancho del trazo en la Cuenca (2 km son ~0,24 dp: los rios se veian deshilachados, D-003) y la franja del
-# viaje del 81 en 22 ms frente a sus 8 ms (propuesta §11.4). Ahora: en la vista Mundo, la misma tolerancia que sus puntos de
-# control (MUNDO_TOLERANCE_KM, 2 dp a 15x): la simplificacion nunca aparta la linea mas de lo que admite la vista; en la
-# Cuenca, 6 km (~0,7 dp), muy por debajo de sus 15 km. La franja del 81 tarda 7,8-8,3 ms y no baja con menos vertices (con
-# 2 km en la vista Mundo, 7,75 ms): el resto es del cliente (README, notas de M5.1).
+# viaje del 81 en 22 ms frente a sus 8 ms (propuesta §11.4). Ahora: en MundoZone, la misma tolerancia que los puntos de
+# control de la vista Mundo (MUNDO_TOLERANCE_KM, 2 dp a 15x): ahi la simplificacion no aparta la linea mas de lo que admite
+# esa vista; en el resto, 6 km (~0,7 dp en la Cuenca, muy por debajo de sus 15 km), que la vista Mundo tambien ensenna fuera
+# de MundoZone (abajo). La franja del 81 tarda 7,8-8,3 ms y no baja con menos vertices (con 2 km en la vista Mundo,
+# 7,75 ms): el resto es del cliente (README, notas de M5.1).
 DP_MUNDO_KM = 1.0
 DP_CUENCA_KM = 6.0
 # [P] Zona de la vista Mundo: a <= MUNDO_RADIUS_KM de una parada de la 1.0 (su sitio o su atraque; las de rio-amazonas.json).
-# Ahi la simplificacion es la de la vista Mundo y los puntos de control se validan con MUNDO_TOLERANCE_KM.
+# Ahi la simplificacion es la de la vista Mundo y los puntos de control se validan con MUNDO_TOLERANCE_KM. No cubre todo lo
+# que ensenna la vista Mundo: el encuadre (RiverMapScreen.WorldZoom: la caja de las paradas del mundo al 60 % de la zona,
+# de 4x a 15x) abarca a 4x ~6,9 grados (~760 km) de ancho en 360 dp, y se arrastra por todo el mapa. Fuera de la zona, los
+# 6 km de DP_CUENCA_KM son ~2,8 dp a 4x y ~10,6 dp a 15x (13,1 dp por grado * zoom / 111 km), por encima de los 2 dp de la
+# vista (08 §4.5; D-023, punto 20). Con 1 km en todo el mapa el archivo mediria 54.114 bytes y 5.051 puntos (frente a
+# 26.386 y 2.148; 200 km: 33.025 y 3.026; 400 km: 45.806 y 4.469; medido con las descargas), sin medir aun la franja del
+# 81 (con 0,3 y 2 km, 53 KB y 22 ms). Pendiente del duenno: pregunta 65 propuesta, parte 3 (README, notas de M5.1).
 MUNDO_RADIUS_KM = 100.0
 # Tolerancia de la vista Mundo (propuesta §3.6: <= 2 dp a 15x son ~1 km).
 MUNDO_TOLERANCE_KM = 1.0

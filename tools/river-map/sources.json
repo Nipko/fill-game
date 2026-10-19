@@ -9,7 +9,7 @@
       "url": "https://www.naturalearthdata.com/downloads/10m-physical-vectors/",
       "downloaded": "2026-10-18",
       "license": "Dominio publico (Natural Earth, terms of use): uso libre, sin obligacion de atribuir [V ne_terms, propuesta del Mapa §3.6].",
-      "used_for": "land: la tierra del Mapa (continente recortado a la caja e islas >= 500 km2); rivers_lake_centerlines: el Casiquiare (bifurcacion que HydroRIVERS no representa). coastline: descargada con las demas, sin uso (su linea es el borde de land)."
+      "used_for": "land: la tierra del Mapa (continente recortado a la caja e islas >= 500 km2); rivers_lake_centerlines: solo el Casiquiare (bifurcacion que HydroRIVERS no representa); las demas lineas de la vista Cuenca salen de HydroRIVERS, desviacion [P] de D-013, punto 5, y de 08 §4.5 (README, notas de M5.1, pregunta 65 propuesta, parte 2). coastline: descargada con las demas, sin uso (su linea es el borde de land)."
     },
     {
       "id": "hydrorivers",
@@ -19,7 +19,7 @@
       "zip_sha256_prefix": "38bfdcdf",
       "license": "HydroSHEDS License Agreement (https://www.hydrosheds.org): uso no comercial y comercial libre; atribuciones, redistribucion y garantias, en el acuerdo (TechDoc v1.0, §4.1). PENDIENTE DEL DUENNO: leer el acuerdo y fijar el texto de atribucion exacto que exige y donde va en el juego (aun no hay pantalla de creditos).",
       "citation": "Lehner, B., Grill G. (2013): Global river hydrography and network routing: baseline data and new approaches to study the world's large river systems. Hydrological Processes, 27(15): 2171-2186. Data is available at www.hydrosheds.org.",
-      "used_for": "Las lineas del Mapa (src = hydrorivers): el cauce hasta Gurupa, los afluentes, los de paso y los rios locales."
+      "used_for": "Las lineas del Mapa (src = hydrorivers) en las dos vistas, la Cuenca incluida (desviacion [P] de D-013, punto 5, y de 08 §4.5; pregunta 65 propuesta, parte 2): el cauce hasta Gurupa, los afluentes, los de paso y los rios locales."
     }
   ],
   "files": [
