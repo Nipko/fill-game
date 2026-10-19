@@ -126,7 +126,7 @@ internal static class DailyReport
         {
             int n = run.Boards.Count(b => b.Band == kv.Key);
             long max = run.Boards.Where(b => b.Band == kv.Key).Max(b => b.Milliseconds);
-            L($"- B{I(kv.Key)}: {F(kv.Value / 1000.0, 1)} s de CPU sumados en {I(n)} tableros ({F((double)kv.Value / n, 0)} ms por tablero; el más lento, {I(max)} ms).");
+            L($"- B{I(kv.Key)}: {F(kv.Value / 1000.0, 1)} s sumando el tiempo de pared de cada uno de sus {I(n)} tableros (con varios hilos se solapan; {F((double)kv.Value / n, 0)} ms por tablero; el más lento, {I(max)} ms).");
         }
 
         if (run.Errors.Count > 0)

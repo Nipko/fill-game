@@ -134,7 +134,7 @@ internal static partial class DailyCommand
             List<DailyBoard> bs = run.Boards.Where(b => b.Band == band.Band).ToList();
             long ms = run.BandMilliseconds.TryGetValue(band.Band, out long m) ? m : 0;
             Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
-                $"B{band.Band}: {bs.Count} tableros, {bs.Count(b => !b.InWindow)} fuera de ventana, {bs.Count(b => b.UsedFallback)} con respaldo, {bs.Count(b => b.OverRiskCap)} con pares > tope, {bs.Sum(b => b.Tried)} candidatos, {ms / 1000.0:F1} s de CPU"));
+                $"B{band.Band}: {bs.Count} tableros, {bs.Count(b => !b.InWindow)} fuera de ventana, {bs.Count(b => b.UsedFallback)} con respaldo, {bs.Count(b => b.OverRiskCap)} con pares > tope, {bs.Sum(b => b.Tried)} candidatos, {ms / 1000.0:F1} s (suma de tiempos de pared por tablero)"));
             foreach (DailyBoard b in bs.Where(b => !b.InWindow))
             {
                 Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
