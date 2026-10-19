@@ -1561,6 +1561,7 @@ namespace AF.UI
             _mapScreen.LevelWater = level => _app?.Catalog.Find(level)?.WaterBase; // el agua del fondo de la tarjeta (M4.1)
             _mapScreen.L10SequenceEnded = () => MarkMapSeen(L10SequenceRule.Level); // la secuencia del Mapa del 10 no se repite (M4.2)
             _mapScreen.L10SlothVoice = () => _screen == null || _screen.SlothVoice; // su bocadillo, solo con voz (D-016, punto 4)
+            _mapScreen.L10BubbleSaid = () => _screen?.SlothSession.RecordMapIntro(); // el saludo del inicio se aplaza (D-028, 60 b)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
             _settingsScreen.IdleHintToggled = on => ChooseIdleHint(on); // MO3: Pista por inactividad

@@ -329,6 +329,8 @@ namespace AF.GameFlow
         /// de regreso, tras ≥ 3 días sin abrir (<c>sloth.last_seen_date</c>; frases 22-24); si no, en la primera apertura del día
         /// entre las 06:00 y las 12:00, el de la mañana (n.º 25), nunca el mismo día que el de regreso. Con los topes de la
         /// sesión; sin frase, solo el saludo con la mano. Lee <see cref="SlothContext.Home"/>.
+        /// <para>Justo después del bocadillo del Mapa del 10 (<see cref="SlothContext.PreviousScreenMapIntro"/>; D-028, pregunta 60 b),
+        /// el saludo que tocaba no sale ni se gasta (<see cref="SlothLine.Deferred"/>): queda para la visita siguiente.</para>
         /// <para>«Primera apertura del día entre las 06:00 y las 12:00» (d.7 y d.10) se lee [P] (pendiente del dueño) como «la
         /// primera apertura del día, si cae entre las 06:00 y las 12:00»: se mira <c>sloth.last_seen_date</c>, que se apunta en
         /// cada inicio aunque no haya saludo, así que quien abre a las 05:30 y otra vez a las 07:00 del mismo día no tiene el de
@@ -353,6 +355,13 @@ namespace AF.GameFlow
             if (!returning && !morning)
             {
                 return Nothing(SlothScreen.Home);
+            }
+
+            if (c.PreviousScreenMapIntro)
+            {
+                // D-028 (pregunta 60 b): TiTino acaba de presentarse en el Mapa del 10. El saludo no sale y no se gasta: queda
+                // para la visita siguiente al inicio (Deferred: ni last_greeting_date ni last_seen_date).
+                return new SlothLine(SlothScreen.Home, SlothGesture.None, SlothMoment.Return, SlothData.NoLine, null, 0, false, true);
             }
 
             if (!c.Messages || !UnderCaps(in c))
