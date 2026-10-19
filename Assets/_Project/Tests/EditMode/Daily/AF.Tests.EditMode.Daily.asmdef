@@ -1,0 +1,32 @@
+{
+  "name": "AF.Tests.EditMode.Daily",
+  "rootNamespace": "AF.Tests.EditMode.Daily",
+  "references": [
+    "AF.Core",
+    "AF.Levels",
+    "AF.GameFlow",
+    "AF.UI",
+    "AF.LiveOps",
+    "AF.Platform",
+    "AF.Save",
+    "AF.Economy",
+    "AF.Localization",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
