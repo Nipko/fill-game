@@ -315,6 +315,21 @@ En `docs/GDD.md` §6.3 no hay ninguna pregunta abierta sobre el Reto: las bandas
 | R-Q9 | **`result = fail` en `af_daily_challenge`:** sin canoas ni fallo duro, ¿qué cuenta como fallo? | 08 §8.2; 04 §5.2 | La sonda de R10 |
 | R-Q10 | **Las comprobaciones de campaña en el pool:** ¿se aplican al Reto la anti-repetición (03 §17 #9) y el tope de trampas tempranas (03 §17 #3)? El GDD no lo dice | 03 §17 | R4. Mide, informa como aviso y pregunta: no lo hagas compuerta |
 
+**Decididas por el dueño el 2026-10-20** (respondió, literal: «Acepto tus propuestas para R-Q1 a R-Q10 del Reto del río; déjalas en el encargo del Spark»). Ya no bloquean nada; aplícalas tal cual y regístralas en `spark-estado.md` para que el integrador las lleve a `docs/dev/decisiones.md`:
+
+| Id | Decisión |
+|---|---|
+| R-Q1 | Cada banda usa solo los tintes ya estrenados en su tramo de la campaña: B1 (K 6-7) con los de 1-40 y `max_pares_riesgo` 0; B2 (K 8-9) con los de 1-80 y como mucho 1; B3 (K 10-11) con los de 1-200 y como mucho 2 |
+| R-Q2 | El agua (`water_base`) y el fondo rotan por los mundos 1-9 según la fecha: el agua y el kit de fondo del mundo de ese día |
+| R-Q3 | Manda la fecha en que se empezó la partida: se sigue con ese tablero y se cobra ese premio aunque se gane pasada la medianoche |
+| R-Q4 | La partida del Reto se reanuda al volver a abrir la app el mismo día; al cambiar de día se descarta |
+| R-Q5 | El bloque `daily_challenge` del perfil añade la última fecha cobrada, el premio pendiente de validar y los sellos del mes (además de `last_date`, `result` y `streak_days`) |
+| R-Q6 | `daily_overrides` = `{fecha: {banda: id del pool}}` |
+| R-Q7 | La Pororoca sale cada 7 días seguidos ganados (cada racha completa); un día sin ganar rompe la racha; el marco de país de los sellos queda fuera hasta que existan cosméticos |
+| R-Q8 | Los comodines son los de la campaña salvo los que el GDD excluye en el Reto (Cuia de rescate y Salto del Boto), y gastan el stock igual que en la campaña |
+| R-Q9 | `result = fail` en `af_daily_challenge` es salir sin ganar ese día |
+| R-Q10 | La anti-repetición (03 §17 #9) y el tope de trampas tempranas (03 §17 #3) se miden en el pool y se informan como aviso, sin ser compuerta |
+
 Lo que sí está decidido no se pregunta: el desbloqueo tras ganar el 10 (06 §2.3; `live_unlock_level_daily`), los reintentos ilimitados, que no gasta canoas, que no toca la Crecida y el premio de 60 (secciones anteriores).
 
 ---
@@ -410,7 +425,7 @@ Cada tarea dura como mucho 1-1,5 días y se cierra con implementación, code-rev
   más la autoprueba y la verificación completa.
 - **Depende de:** R3.
 
-### R5 · Generar y publicar el pool (S-M; level-pipeline-dev). Bloqueada por R-Q1 y R-Q2
+### R5 · Generar y publicar el pool (S-M; level-pipeline-dev)
 
 - **Salidas:**
   - `Assets/_Project/Data/Daily/daily_pool_v1.json`, con 2.190 tableros (su `.meta` lo genera Unity al importar; commitéalo tal cual);
