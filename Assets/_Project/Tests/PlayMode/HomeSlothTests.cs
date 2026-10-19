@@ -398,16 +398,16 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator ContentEnd_DoesNotSpendTheGreetingBehindTheModal_ItComesWhenItCloses()
         {
-            // Un catálogo que acaba en el 10 (el del tutorial): con el 11, «Jugar» abre «El río sigue creciendo» (06 §9) con la
-            // ventanita de su parada debajo. El de la escena acaba en el 700 desde C1b, y el 701 no tiene parada en los datos del
-            // Mapa, así que allí la ventanita no sale.
+            // El catálogo de la escena acaba en el 700 (C1b): con el 701, «Jugar» abre «El río sigue creciendo» (06 §9). El 701 no
+            // tiene parada en los datos del Mapa (paradas 0-69): la ventanita enseña la del 700 (LobbyScreen.StopLevel).
             ManualClock clock = At(0, 8);
-            LaunchOptions.LevelPackJsonOverride = System.IO.File.ReadAllText(
-                System.IO.Path.Combine(Application.dataPath, "_Project", "Data", "Levels", "tutorial_v0.json"));
-            var store = new MemoryProfileStore(ProfileAt(11, clock));
+            var store = new MemoryProfileStore(ProfileAt(701, clock));
             yield return Load(store, clock);
             GameBootstrap boot = GameBootstrap.Current!;
             LobbyScreen lobby = boot.Lobby!;
+            Assert.That(boot.App!.PlayLevelAvailable, NUnit.Framework.Is.False, "premisa: el 701 no está publicado");
+            Assert.That(lobby.HomeWindow.Stop, NUnit.Framework.Is.Not.Null, "la parada del último nivel publicado");
+            Assert.That(lobby.HomeWindow.Stop!.N, NUnit.Framework.Is.EqualTo(69));
             HomeSloth sloth = lobby.HomeWindow.Sloth!;
             Assert.That(boot.PressPlay(), NUnit.Framework.Is.True);
             Assert.That(boot.App!.Screen, NUnit.Framework.Is.EqualTo(AppScreen.ContentEnd));

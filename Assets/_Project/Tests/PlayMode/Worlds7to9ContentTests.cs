@@ -333,6 +333,59 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(700), "no se carga ningún 701: el 700 sigue siendo el último jugado");
         }
 
+        [UnityTest]
+        public IEnumerator ContentEnd_Lobby_At701_KeepsTheBackdropAndTiTinoOfTheStopOf700()
+        {
+            // Quien acabó el 700 tiene el 701 en «Jugar»; el 701 no tiene parada en los datos del Mapa (paradas 0-69), y el inicio
+            // sigue con el fondo de la parada actual y TiTino en su ventanita (06 §4, fila Lobby; D-013 Q17-A; D-016): los del 700.
+            Profile profile = AF.Economy.Wallet.NewProfile(new AF.Platform.ManualClock(new System.DateTime(2026, 10, 18, 15, 0, 0, System.DateTimeKind.Utc)));
+            profile.Progress.NextLevel = 701;
+            profile.Progress.MaxLevel = 700;
+            profile.Progress.MapSeenLevel = 700;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+            GameBootstrap boot = GameBootstrap.Current!;
+            LobbyScreen lobby = boot.Lobby!;
+            yield return null;
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(boot.App.PlayLevel, Is.EqualTo(701));
+            Assert.That(boot.App.PlayLevelAvailable, Is.False, "premisa: el 701 no está publicado");
+            RiverStopCatalog stops = boot.RiverStops!;
+            Assert.That(stops.StopOf(701), Is.Null, "premisa: el 701 no tiene parada en los datos del Mapa");
+            RiverStop last = stops.StopOf(700)!;
+            Assert.That(last.N, Is.EqualTo(69), "premisa: la parada del 700");
+
+            AF.Presentation.StopBackdrop backdrop = lobby.StopBackdrop;
+            Assert.That(backdrop.Stop, Is.Not.Null, "06 §4: el fondo de la parada actual");
+            Assert.That(backdrop.Stop, Is.SameAs(GameScreen.StopForLevel(stops, 700, MapConfig.UiBgPerStop)), "el mismo que el tablero del 700");
+            Assert.That(backdrop.Root.gameObject.activeInHierarchy, Is.True);
+            Assert.That(lobby.PanoramaTint, Is.EqualTo(backdrop.LutColor), "la luz de la parada sobre el panorama");
+            Assert.That(lobby.HomeWindow.Visible, Is.True, "TiTino en la ventanita de casa");
+            Assert.That(lobby.HomeWindow.Stop, Is.SameAs(last));
+            Assert.That(lobby.HomeWindow.Sloth, Is.Not.Null);
+            Assert.That(lobby.StopRemainingShown, Is.False, "sin parada siguiente ni nivel publicado no hay «Faltan…»");
+
+            // «Jugar» abre «El río sigue creciendo» con el inicio, fondo y ventanita, detrás del velo.
+            Assert.That(boot.PressPlay(), Is.True);
+            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.ContentEnd));
+            yield return null;
+            Assert.That(lobby.OverlayVisible, Is.True);
+            Assert.That(lobby.HomeWindow.Visible, Is.True, "la ventanita sigue detrás del velo");
+            Assert.That(backdrop.Stop, Is.SameAs(GameScreen.StopForLevel(stops, 700, MapConfig.UiBgPerStop)));
+            Assert.That(lobby.StopRemainingShown, Is.False);
+        }
+
+        [Test]
+        public void StopLevel_OnlyFallsBackToTheLastPublishedLevel_WithoutAStopForTheContentEnd()
+        {
+            RiverStopCatalog stops = RiverStopCatalogReader.Read(File.ReadAllText(
+                Path.Combine(Application.dataPath, "_Project", "Data", "Map", "river_stops_v1.json")));
+            Assert.That(LobbyScreen.StopLevel(stops, 701, 700), Is.EqualTo(700), "el 701, sin parada: la del 700");
+            Assert.That(LobbyScreen.StopLevel(stops, 700, 700), Is.EqualTo(700));
+            Assert.That(LobbyScreen.StopLevel(stops, 58, 300), Is.EqualTo(58), "publicado: el suyo");
+            Assert.That(LobbyScreen.StopLevel(stops, 58, 1), Is.EqualTo(58), "fin de contenido con parada: la suya, como antes");
+            Assert.That(LobbyScreen.StopLevel(null, 701, 700), Is.EqualTo(701), "sin catálogo de paradas, nada cambia");
+        }
+
         // La tarjeta del estreno de intro en level, no saltable y dentro del panel.
         private static void AssertDebutCard(int level, string intro, string source)
         {
