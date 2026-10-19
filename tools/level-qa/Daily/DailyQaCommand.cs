@@ -6,7 +6,7 @@
 //   - --spec: por defecto tools/level-generator/specs/daily_v1.json; los tintes y los pares de riesgo, de su tints_from.
 //   - --partial: valida una muestra (p. ej. tools/out/daily_sample): los días que faltan no fallan, pero sale siempre el aviso
 //     QA-DAILY-DAYS «muestra parcial … no es el pool completo». El tamaño (QA-DAILY-SIZE) se mira siempre. Sin --partial, el
-//     pack tiene que traer las 3 bandas × 730 días.
+//     pack tiene que traer las 3 bandas × 729 días (R-Q2b).
 //   - --no-reproduce: salta QA-DAILY-REPRO (aviso); nunca en el CI.
 //   - Reproducción: ejecuta «dotnet run --project tools/level-generator -c Release -- --daily --spec <spec> --bands <las del
 //     pack> --days <los del pack> --out <carpeta temporal>» desde la raíz del repositorio (RepoRoot: la carpeta con
@@ -481,16 +481,16 @@ internal static class DailyQaCommand
             Check(ham is { Warning: true } && ham.Board == DailyIds.Id(1, usedDay) && hf.Count == 0,
                 string.Create(CultureInfo.InvariantCulture, $"QA-DAILY-REPEAT-HAMMING es aviso y no fallo con dos dias casi iguales (dias {baseDay} y {usedDay}): {ham?.Message ?? "no sale"} (fallos: {string.Join("; ", hf.Select(i => i.Check + " " + i.Message))})"));
 
-            // Vuelta del ciclo: el dia 729 y el dia 0 son vecinos (dia mod 730).
+            // Vuelta del ciclo: el ultimo dia (728) y el dia 0 son vecinos (dia mod 729).
             var wp = new DailyQaPack
             {
                 Path = "memoria",
                 Bytes = 0,
                 Json = [],
-                Levels = [DailyChecksTestLevel(vp.Levels[0], vp.Levels[0].Day!.Value, 0), DailyChecksTestLevel(vp.Levels[0], 729, 1)],
+                Levels = [DailyChecksTestLevel(vp.Levels[0], vp.Levels[0].Day!.Value, 0), DailyChecksTestLevel(vp.Levels[0], DailyIds.Days - 1, 1)],
             };
             Check(DailyChecks.Repetition(wp).Any(i => i.Warning && i.Check == "QA-DAILY-REPEAT-SHAPE" && i.Board == "d1_n0000"),
-                "anti-repeticion con la vuelta del ciclo: el dia 0 se compara con el 729 (solo aviso)");
+                "anti-repeticion con la vuelta del ciclo: el dia 0 se compara con el 728 (solo aviso)");
         }
 
         // Cada fixture malo falla con su id.

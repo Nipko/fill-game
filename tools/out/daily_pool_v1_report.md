@@ -4,8 +4,8 @@ Generado por `tools/level-generator --daily` (tarea R3 del encargo `docs/dev/tra
 
 - Comando: `dotnet run --project tools/level-generator -- --daily --spec tools/level-generator/specs/daily_v1.json --out Assets/_Project/Data/Daily --report tools/out/daily_pool_v1_report.md`
 - Especificación: `tools/level-generator/specs/daily_v1.json` (daily_v1); tintes y pares de riesgo de `campaign_v2.json`.
-- Pack: `Assets/_Project/Data/Daily/daily_pool_v1.json`, 1432127 bytes, SHA-256 `7dfe28d2a0fa2e52e403687df301f21fb173c23a1b8dd54e6a7c7f077ed0dfb5`.
-- Tableros: 2190; errores: 0.
+- Pack: `Assets/_Project/Data/Daily/daily_pool_v1.json`, 1430135 bytes, SHA-256 `6371e164f3c7a2f7fe1c9a5a01a864316eb9a1a2b4c8e77486f37b285163a3b9`.
+- Tableros: 2187; errores: 0.
 - **Estado:** R-Q1b (a) y R-Q11 (a) decididas por el dueño el 2026-10-19: B2 solo con K = 8, B3 con max_pares_riesgo libre (03 §4.5) y la ventana del bot como compuerta (un día fuera de ventana no se publica; `level-qa --daily` lo da como fallo). Siguen [P] la fórmula del agua de R-Q2, `k_by_day` y las fuentes de cada banda.
 - Tope de pares de riesgo por banda: B1 0, B2 1, B3 libre.
 - Fuentes por banda (en orden; cada una con max_candidates candidatos): B1 fill E=2 -> deep -> walk -> deep (60000 nodos); B2 deep -> fill E=1; B3 deep.
@@ -14,9 +14,9 @@ Generado por `tools/level-generator --daily` (tarea R3 del encargo `docs/dev/tra
 
 | Banda | Tableros | K (tableros) | Ventana del bot | bot_fail mín · mediana · media · máx | par mín · mediana · media · máx | par/K mediana | Candidatos (media por día) | En ventana | Fuera de ventana | Con respaldo | Pares > tope |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| B1 | 730 | 6: 365, 7: 365 | 0.40-0.60 | 0.400 · 0.475 · 0.477 · 0.600 | 13 · 20.0 · 20.0 · 25 | 3.14 | 5603 (7.7) | 730 | 0 | 23 | 0 |
-| B2 | 730 | 8: 730 | 0.60-0.80 | 0.600 · 0.725 · 0.721 · 0.800 | 16 · 18.0 · 18.1 · 25 | 2.25 | 3486 (4.8) | 730 | 0 | 1 | 0 |
-| B3 | 730 | 10: 365, 11: 365 | 0.75-1.00 | 0.750 · 0.975 · 0.938 · 1.000 | 20 · 22.0 · 22.5 · 28 | 2.10 | 957 (1.3) | 730 | 0 | 0 | 0 |
+| B1 | 729 | 6: 365, 7: 364 | 0.40-0.60 | 0.400 · 0.475 · 0.477 · 0.600 | 13 · 20.0 · 20.0 · 25 | 3.14 | 5598 (7.7) | 729 | 0 | 23 | 0 |
+| B2 | 729 | 8: 729 | 0.60-0.80 | 0.600 · 0.725 · 0.721 · 0.800 | 16 · 18.0 · 18.1 · 25 | 2.25 | 3484 (4.8) | 729 | 0 | 1 | 0 |
+| B3 | 729 | 10: 365, 11: 364 | 0.75-1.00 | 0.750 · 0.975 · 0.938 · 1.000 | 20 · 22.0 · 22.5 · 28 | 2.10 | 956 (1.3) | 729 | 0 | 0 | 0 |
 
 ## Rechazos por banda y motivo
 
@@ -24,8 +24,8 @@ Candidatos descartados antes del elegido (los «fuera de la ventana del bot» in
 
 | Banda | Motivo | Candidatos |
 |---|---|---|
-| B1 | fuera de la ventana del bot | 4873 |
-| B2 | fuera de la ventana del bot | 2756 |
+| B1 | fuera de la ventana del bot | 4869 |
+| B2 | fuera de la ventana del bot | 2755 |
 | B3 | fuera de la ventana del bot | 85 |
 | B3 | par < 2K | 142 |
 
@@ -43,10 +43,10 @@ Ninguno.
 
 ## Tiempos
 
-- Total (pared): 14.8 s con 20 hilos.
-- B1: 68.1 s sumando el tiempo de pared de cada uno de sus 730 tableros (con varios hilos se solapan; 93 ms por tablero; el más lento, 2952 ms).
-- B2: 136.8 s sumando el tiempo de pared de cada uno de sus 730 tableros (con varios hilos se solapan; 187 ms por tablero; el más lento, 2015 ms).
-- B3: 51.8 s sumando el tiempo de pared de cada uno de sus 730 tableros (con varios hilos se solapan; 71 ms por tablero; el más lento, 850 ms).
+- Total (pared): 8.5 s con 20 hilos.
+- B1: 40.6 s sumando el tiempo de pared de cada uno de sus 729 tableros (con varios hilos se solapan; 56 ms por tablero; el más lento, 1837 ms).
+- B2: 78.3 s sumando el tiempo de pared de cada uno de sus 729 tableros (con varios hilos se solapan; 107 ms por tablero; el más lento, 1152 ms).
+- B3: 30.2 s sumando el tiempo de pared de cada uno de sus 729 tableros (con varios hilos se solapan; 41 ms por tablero; el más lento, 738 ms).
 
 ## Tableros
 
@@ -781,7 +781,6 @@ Ninguno.
 | d1_n0726 | 6 | 2 | fill | 29 | 0.400 | 20 | 0 | 0 | 7 | white |  |
 | d1_n0727 | 7 | 2 | fill | 5 | 0.575 | 23 | 0 | 0 | 8 | white |  |
 | d1_n0728 | 6 | 2 | fill | 4 | 0.400 | 19 | 0 | 0 | 9 | white |  |
-| d1_n0729 | 7 | 2 | fill | 5 | 0.400 | 20 | 0 | 0 | 1 | white |  |
 | d2_n0000 | 8 | 1 | deep | 6 | 0.700 | 17 | 1 | 0 | 1 | white |  |
 | d2_n0001 | 8 | 1 | deep | 3 | 0.750 | 17 | 1 | 0 | 2 | clear |  |
 | d2_n0002 | 8 | 1 | deep | 2 | 0.650 | 19 | 1 | 0 | 3 | black |  |
@@ -1511,7 +1510,6 @@ Ninguno.
 | d2_n0726 | 8 | 1 | deep | 2 | 0.600 | 18 | 1 | 0 | 7 | white |  |
 | d2_n0727 | 8 | 1 | deep | 1 | 0.775 | 18 | 1 | 0 | 8 | white |  |
 | d2_n0728 | 8 | 1 | deep | 4 | 0.600 | 18 | 1 | 0 | 9 | white |  |
-| d2_n0729 | 8 | 1 | deep | 2 | 0.675 | 20 | 1 | 0 | 1 | white |  |
 | d3_n0000 | 10 | 1 | deep | 3 | 0.775 | 21 | 5 | 0 | 1 | white |  |
 | d3_n0001 | 11 | 1 | deep | 2 | 0.975 | 24 | 4 | 0 | 2 | clear |  |
 | d3_n0002 | 10 | 1 | deep | 1 | 1.000 | 22 | 5 | 0 | 3 | black |  |
@@ -2241,4 +2239,3 @@ Ninguno.
 | d3_n0726 | 10 | 1 | deep | 1 | 1.000 | 21 | 4 | 0 | 7 | white |  |
 | d3_n0727 | 11 | 1 | deep | 1 | 0.875 | 25 | 5 | 0 | 8 | white |  |
 | d3_n0728 | 10 | 1 | deep | 1 | 0.925 | 22 | 4 | 0 | 9 | white |  |
-| d3_n0729 | 11 | 1 | deep | 1 | 0.975 | 22 | 4 | 0 | 1 | white |  |

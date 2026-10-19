@@ -1,8 +1,8 @@
 // --daily (R3 del encargo docs/dev/traspaso/spark-reto-del-rio.md): genera el pool del Reto del río.
 //   dotnet run --project tools/level-generator -c Release -- --daily --spec tools/level-generator/specs/daily_v1.json
-//       [--bands 1,2,3] [--days 0-729] --out <carpeta> [--report <informe.md>] [--check] [--threads n]
+//       [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <informe.md>] [--check] [--threads n]
 //   - --bands y --days: listas separadas por comas con rangos a-b (p. ej. 0-9,100,200-209); por defecto, todas las bandas y
-//     todos los días (0-729); sin repetidos;
+//     todos los días (0-728; 729 días, R-Q2b); sin repetidos;
 //   - escribe <carpeta>/<pack_id>.json (daily_pool_v1.json) y, con --report, el informe; con --check no escribe nada y
 //     compara el pack con el del disco byte a byte;
 //   - --threads: hilos (por defecto, los del equipo); el pack no depende de ellos.
@@ -30,7 +30,7 @@ internal static partial class DailyCommand
     private static int DailyUsage(string message)
     {
         Console.Error.WriteLine(AsciiText.Of("level-generator --daily: " + message));
-        Console.Error.WriteLine("  --daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-729] --out <carpeta> [--report <informe.md>] [--check] [--threads n]");
+        Console.Error.WriteLine("  --daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <informe.md>] [--check] [--threads n]");
         Console.Error.WriteLine("  --self-test daily");
         return 2;
     }
@@ -92,7 +92,7 @@ internal static partial class DailyCommand
             return DailyUsage("--bands: " + bandError);
         }
 
-        if (!TryParseList(daysArg ?? "0-729", 0, DailyIds.Days - 1, out List<int> days, out string? dayError))
+        if (!TryParseList(daysArg ?? "0-" + (DailyIds.Days - 1).ToString(CultureInfo.InvariantCulture), 0, DailyIds.Days - 1, out List<int> days, out string? dayError))
         {
             return DailyUsage("--days: " + dayError);
         }
@@ -239,10 +239,12 @@ internal static partial class DailyCommand
     private static void GenerationChecks(Action<bool, string> check, DailySpec spec)
     {
         // Listas de --bands / --days.
-        check(TryParseList("0-2,5,10-11", 0, 729, out List<int> l, out _) && string.Join(",", l) == "0,1,2,5,10,11", "--days 0-2,5,10-11 = 0,1,2,5,10,11");
-        check(!TryParseList("0-730", 0, 729, out _, out _) && !TryParseList("3,1-3", 1, 3, out _, out _) && !TryParseList("2-1", 0, 729, out _, out _)
-            && !TryParseList("a", 0, 729, out _, out _) && !TryParseList("", 0, 729, out _, out _) && !TryParseList("-1", 0, 729, out _, out _),
-            "--days/--bands rechazan 0-730, repetidos, 2-1, texto, vacio y -1");
+        int lastDay = DailyIds.Days - 1;
+        check(TryParseList("0-2,5,10-11", 0, lastDay, out List<int> l, out _) && string.Join(",", l) == "0,1,2,5,10,11", "--days 0-2,5,10-11 = 0,1,2,5,10,11");
+        check(TryParseList("0-728", 0, lastDay, out List<int> all, out _) && all.Count == 729 && !TryParseList("0-729", 0, lastDay, out _, out _)
+            && !TryParseList("3,1-3", 1, 3, out _, out _) && !TryParseList("2-1", 0, lastDay, out _, out _)
+            && !TryParseList("a", 0, lastDay, out _, out _) && !TryParseList("", 0, lastDay, out _, out _) && !TryParseList("-1", 0, lastDay, out _, out _),
+            "--days 0-728 son 729 dias; --days/--bands rechazan 0-729, repetidos, 2-1, texto, vacio y -1");
 
         DailyTints tints;
         try

@@ -1,7 +1,9 @@
 // Identificadores del pool del Reto del río (03 §16; 08 §4.1; esquema schemas/af-level-1.schema.json, rama kind = daily):
 //   - id   d{b}_n{nnnn}                      (patrón ^d[1-3]_n[0-9]{4}$), p. ej. d2_n0417;
 //   - seed amazonfill:v1:daily:b{b}:d{ddd}   (patrón ^amazonfill:v1:daily:b[1-3]:d[0-9]{3}$), p. ej. amazonfill:v1:daily:b2:d417;
-// con b = banda 1-3 y el día del pool 0-729 con ceros a la izquierda: cuatro cifras en el id y tres en la semilla (03 §16).
+// con b = banda 1-3 y el día del pool 0-728 con ceros a la izquierda: cuatro cifras en el id y tres en la semilla (03 §16).
+// El pool tiene 729 días por banda (R-Q2b, decidida por el dueño el 2026-10-19: 81 × 9, para que el mundo 1 + (día mod 9)
+// siga a la fecha en todas las vueltas); los patrones del esquema no cambian.
 // El padding es exacto: d2_n417 o amazonfill:v1:daily:b2:d0417 no son válidos, porque el hash de la semilla (Prng.SeedFrom,
 // FNV-1a sobre los bytes UTF-8 del texto) cambiaría y el tablero no se reproduciría (glosario §11; 03 §17 #10).
 // Lo prueba --self-test daily (DailyCommand).
@@ -16,8 +18,8 @@ internal static partial class DailyIds
     public const int MinBand = 1;
     public const int MaxBand = 3;
 
-    /// <summary>Días del pool por banda (3 × 730 = 2.190 tableros; 03 §16).</summary>
-    public const int Days = 730;
+    /// <summary>Días del pool por banda: 729 = 81 × 9 (R-Q2b), 3 × 729 = 2.187 tableros (03 §16 decía 730).</summary>
+    public const int Days = 729;
 
     /// <summary>Copia del patrón del esquema (allOf[0].then…id.pattern); --self-test daily comprueba que son iguales.</summary>
     public const string IdPattern = "^d[1-3]_n[0-9]{4}$";
@@ -53,7 +55,7 @@ internal static partial class DailyIds
 
     public static string? IdOfSeed(string? seed) => TryParseSeed(seed, out int b, out int d) ? Id(b, d) : null;
 
-    /// <summary>Mensaje del error, o null si la banda (1-3) y el día (0-729) son válidos.</summary>
+    /// <summary>Mensaje del error, o null si la banda (1-3) y el día (0-728) son válidos.</summary>
     public static string? Problem(int band, int day)
     {
         if (band < MinBand || band > MaxBand)

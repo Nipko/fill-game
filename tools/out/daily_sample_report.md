@@ -43,10 +43,10 @@ Ninguno.
 
 ## Tiempos
 
-- Total (pared): 2.2 s con 20 hilos.
-- B1: 11.4 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 1137 ms por tablero; el más lento, 2002 ms).
-- B2: 16.0 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 1599 ms por tablero; el más lento, 2174 ms).
-- B3: 5.5 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 550 ms por tablero; el más lento, 1011 ms).
+- Total (pared): 1.0 s con 20 hilos.
+- B1: 3.3 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 331 ms por tablero; el más lento, 609 ms).
+- B2: 4.5 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 451 ms por tablero; el más lento, 957 ms).
+- B3: 2.0 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 196 ms por tablero; el más lento, 395 ms).
 
 ## Tableros
 

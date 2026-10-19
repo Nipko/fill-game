@@ -1,8 +1,8 @@
 // Reto del río (daily_challenge; 03 §16): entrada de level-generator para --daily y --self-test daily (R2-R3 del encargo
 // docs/dev/traspaso/spark-reto-del-rio.md). Program.cs despacha aquí antes de su --self-test genérico.
-//   - --self-test daily (R2): ids y semillas de DailyIds (d2_n0417 <-> amazonfill:v1:daily:b2:d417, días 0 y 729, bandas
-//     1-3 y los rechazos de la banda 0 y 4 y de los días -1 y 730, el padding exacto), sus patrones frente a los del esquema
-//     schemas/af-level-1.schema.json (rama kind = daily), los 2.190 ids y semillas distintos y de ida y vuelta, que
+//   - --self-test daily (R2): ids y semillas de DailyIds (d2_n0417 <-> amazonfill:v1:daily:b2:d417, días 0 y 728, bandas
+//     1-3 y los rechazos de la banda 0 y 4 y de los días -1 y 729, el padding exacto), sus patrones frente a los del esquema
+//     schemas/af-level-1.schema.json (rama kind = daily), los 2.187 ids y semillas distintos y de ida y vuelta, que
 //     specs/daily_v1.json carga con los valores de 03 §16 y de la nota docs/dev/reto-del-rio.md §13, y que una especificación
 //     mal formada (mutaciones en memoria de la versionada) se rechaza con su mensaje. Desde R3, además, la generación
 //     (DailyCommand.Generate.cs): 3 días por banda, determinismo byte a byte y lo que el pack promete.
@@ -42,7 +42,7 @@ internal static partial class DailyCommand
     [
         ("clave desconocida en la raiz", r => r["comment"] = "x", "clave desconocida 'comment'"),
         ("spec_schema 2", r => r["spec_schema"] = 2, "\"spec_schema\" debe ser 1"),
-        ("days 729", r => r["days"] = 729, "\"days\" debe ser 730"),
+        ("days 730", r => r["days"] = 730, "\"days\" debe ser 729"),
         ("pour_mode single", r => r["pour_mode"] = "single", "\"pour_mode\" debe ser \"run\""),
         ("tints_from inexistente", r => r["tints_from"] = "no_existe.json", "\"tints_from\" (no_existe.json) no existe"),
         ("k_by_day desconocido", r => r["k_by_day"] = "random", "\"k_by_day\" (random) desconocido"),
@@ -88,7 +88,10 @@ internal static partial class DailyCommand
         ("mundo repetido", r => Water(r)["worlds"]!.AsArray()[1] = new JsonObject { ["world"] = 1, ["world_id"] = "w01_estuario", ["water_base"] = "white" }, "water.worlds[1]: mundo 1 repetido"),
         ("agua desconocida", r => Water(r)["worlds"]!.AsArray()[0]!["water_base"] = "muddy", "water.worlds[0]: \"water_base\" (muddy) debe ser black, white o clear"),
         ("modulo 0", r => Water(r)["world_of_day"]!["modulo"] = 0, "water.world_of_day: \"offset\" y \"modulo\" deben ser enteros >= 1"),
-        ("modulo 8 con 9 mundos", r => Water(r)["world_of_day"]!["modulo"] = 8, "water: 9 mundos, pero world_of_day solo usa 8"),
+        ("modulo 8 con 9 mundos", r => Water(r)["world_of_day"]!["modulo"] = 8, "\"modulo\" 8 no divide a los 729 dias del pool"),
+        ("modulo 10 con 10 mundos", r => { Water(r)["world_of_day"]!["modulo"] = 10; Water(r)["worlds"]!.AsArray().Add(new JsonObject { ["world"] = 10, ["world_id"] = "w10_alto_negro", ["water_base"] = "black" }); },
+            "water.world_of_day: \"modulo\" 10 no divide a los 729 dias del pool (R-Q2b"),
+        ("modulo 3 con 9 mundos", r => Water(r)["world_of_day"]!["modulo"] = 3, "water: 9 mundos, pero world_of_day solo usa 3"),
     ];
 
     private static int SelfTest()
@@ -110,28 +113,28 @@ internal static partial class DailyCommand
         Check(DailyIds.Id(2, 417) == "d2_n0417" && DailyIds.Seed(2, 417) == "amazonfill:v1:daily:b2:d417", "d2_n0417 <-> amazonfill:v1:daily:b2:d417 (03 sec. 16)");
         Check(DailyIds.SeedOfId("d2_n0417") == "amazonfill:v1:daily:b2:d417" && DailyIds.IdOfSeed("amazonfill:v1:daily:b2:d417") == "d2_n0417", "SeedOfId / IdOfSeed del ejemplo");
         Check(DailyIds.Id(1, 0) == "d1_n0000" && DailyIds.Seed(1, 0) == "amazonfill:v1:daily:b1:d000", "dia 0: d1_n0000 y amazonfill:v1:daily:b1:d000");
-        Check(DailyIds.Id(3, 729) == "d3_n0729" && DailyIds.Seed(3, 729) == "amazonfill:v1:daily:b3:d729", "dia 729: d3_n0729 y amazonfill:v1:daily:b3:d729");
+        Check(DailyIds.Id(3, 728) == "d3_n0728" && DailyIds.Seed(3, 728) == "amazonfill:v1:daily:b3:d728", "dia 728: d3_n0728 y amazonfill:v1:daily:b3:d728 (729 dias, R-Q2b)");
         Check(DailyIds.Id(1, 5) == "d1_n0005" && DailyIds.Seed(1, 5) == "amazonfill:v1:daily:b1:d005", "padding: cuatro cifras en el id y tres en la semilla (d1_n0005, d005)");
-        foreach ((int band, int day, string what) in new[] { (0, 0, "banda 0"), (4, 0, "banda 4"), (2, -1, "dia -1"), (2, 730, "dia 730") })
+        foreach ((int band, int day, string what) in new[] { (0, 0, "banda 0"), (4, 0, "banda 4"), (2, -1, "dia -1"), (2, 729, "dia 729") })
         {
             string? idError = Throws(() => DailyIds.Id(band, day));
             string? seedError = Throws(() => DailyIds.Seed(band, day));
-            string expected = what.StartsWith("banda", StringComparison.Ordinal) ? "fuera de 1-3" : "fuera de 0-729";
+            string expected = what.StartsWith("banda", StringComparison.Ordinal) ? "fuera de 1-3" : "fuera de 0-728";
             Check(idError is not null && idError.Contains(expected, StringComparison.Ordinal) && seedError is not null,
                 $"{what} se rechaza con mensaje claro ({idError ?? "sin error"})");
         }
 
-        foreach (string bad in new[] { "d0_n0001", "d4_n0001", "d2_n0730", "d2_n0417 ", "d2_n417", "d2_n00417", "D2_n0417", "d2_n0417\n", "d2_n٤١٧٠" })
+        foreach (string bad in new[] { "d0_n0001", "d4_n0001", "d2_n0729", "d2_n0417 ", "d2_n417", "d2_n00417", "D2_n0417", "d2_n0417\n", "d2_n٤١٧٠" })
         {
             Check(!DailyIds.TryParseId(bad, out _, out _), $"id rechazado: {Printable(bad)}");
         }
 
-        foreach (string bad in new[] { "amazonfill:v1:daily:b0:d001", "amazonfill:v1:daily:b4:d001", "amazonfill:v1:daily:b2:d730", "amazonfill:v1:daily:b2:d0417", "amazonfill:v1:daily:b2:d41", "amazonfill:v2:daily:b2:d417", "amazonfill:v1:daily:b2:d417\n" })
+        foreach (string bad in new[] { "amazonfill:v1:daily:b0:d001", "amazonfill:v1:daily:b4:d001", "amazonfill:v1:daily:b2:d729", "amazonfill:v1:daily:b2:d0417", "amazonfill:v1:daily:b2:d41", "amazonfill:v2:daily:b2:d417", "amazonfill:v1:daily:b2:d417\n" })
         {
             Check(!DailyIds.TryParseSeed(bad, out _, out _), $"semilla rechazada: {Printable(bad)}");
         }
 
-        Check(DailyIds.TryParseId("d3_n0729", out int pb, out int pd) && pb == 3 && pd == 729, "TryParseId(d3_n0729) = banda 3, dia 729");
+        Check(DailyIds.TryParseId("d3_n0728", out int pb, out int pd) && pb == 3 && pd == 728, "TryParseId(d3_n0728) = banda 3, dia 728");
 
         // 2. Los patrones frente al esquema (rama kind = daily; el esquema es la única copia del formato, contrato 21).
         (string? schemaId, string? schemaSeed) = SchemaPatterns();
@@ -198,9 +201,10 @@ internal static partial class DailyCommand
             Check(b1 is { DebutUntil: 40, MaxRiskPairs: 0, RiskFree: false } && b2 is { DebutUntil: 80, MaxRiskPairs: 1, RiskFree: false }
                 && b3 is { DebutUntil: 200, RiskFree: true, MaxRiskPairs: DailySpec.MaxRiskPairsCap },
                 "paleta de R-Q1 y R-Q1b (a): tintes hasta 40/80/200, tope 0/1/libre (libre = 10, todos los pares de 03 sec. 4.5)");
-            Check(b2.KOfDay(416) == 8 && b2.KOfDay(417) == 8 && b3.KOfDay(0) == 10 && b3.KOfDay(729) == 11, "K por dia: par el menor, impar el mayor [P]; B2 siempre 8");
-            Check(spec.WorldOfDay(0).World == 1 && spec.WorldOfDay(8).World == 9 && spec.WorldOfDay(9).World == 1 && spec.WorldOfDay(729).World == 1 + (729 % 9),
-                "mundo del dia = 1 + (dia mod 9) [P] (dias 0, 8, 9 y 729)");
+            Check(b2.KOfDay(416) == 8 && b2.KOfDay(417) == 8 && b3.KOfDay(0) == 10 && b3.KOfDay(727) == 11 && b3.KOfDay(728) == 10, "K por dia: par el menor, impar el mayor [P]; B2 siempre 8");
+            Check(spec.WorldOfDay(0).World == 1 && spec.WorldOfDay(8).World == 9 && spec.WorldOfDay(9).World == 1 && spec.WorldOfDay(728).World == 9
+                && DailyIds.Days % spec.WorldModulo == 0,
+                "mundo del dia = 1 + (dia mod 9) y 729 = 81 x 9: el dia 728 es el mundo 9 y la vuelta empieza en el 1, como la fecha (R-Q2b)");
             string waters = string.Join(",", spec.Worlds.Select(w => w.WaterBase));
             Check(waters == "white,clear,black,white,white,white,white,white,white", $"agua base de los mundos 1-9 del glosario sec. 8 ({waters})");
         }

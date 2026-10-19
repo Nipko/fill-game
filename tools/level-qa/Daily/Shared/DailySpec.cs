@@ -6,9 +6,10 @@
 //
 // Comprueba, con un mensaje que dice dónde y por qué:
 //   - claves desconocidas (la raíz, water, cada banda, bot_fail, source, sus reglas y palette): un error tipográfico no pasa;
-//   - "spec_schema" 1, "days" 730 (DailyIds.Days), "pour_mode" run (D-005; el pack asume run), "k_by_day" conocido y
+//   - "spec_schema" 1, "days" 729 (DailyIds.Days; R-Q2b), "pour_mode" run (D-005; el pack asume run), "k_by_day" conocido y
 //     "tints_from" presente (y existente junto a la especificación si se lee de disco);
-//   - water: world_of_day con offset >= 1 y modulo >= 1, y un mundo por cada valor de offset..offset+modulo-1, sin repetir,
+//   - water: world_of_day con offset >= 1 y modulo >= 1 que divide a los días del pool (R-Q2b: así el mundo sigue a la
+//     fecha en todas las vueltas), y un mundo por cada valor de offset..offset+modulo-1, sin repetir,
 //     con world_id wNN_* de su número y water_base black, white o clear (esquema, $defs.water_base);
 //   - bands: exactamente las bandas 1-3, sin repetir; K mínimo >= 2 y <= máximo; vacíos >= 1; K máximo + vacíos <= 14
 //     (02 R1); capacidad 4 (nota §13: sin Cuia chica ni alta); ventana 0 <= min <= max <= 1; candidatos 1-30 (03 §4.4);
@@ -269,6 +270,12 @@ internal sealed partial class DailySpec
                 throw new DailySpecException(string.Create(CultureInfo.InvariantCulture,
                     $"{where}: falta el mundo {world} (world_of_day da los mundos {offset}-{offset + modulo - 1})"));
             }
+        }
+
+        if (DailyIds.Days % modulo != 0)
+        {
+            throw new DailySpecException(string.Create(CultureInfo.InvariantCulture,
+                $"{where}.world_of_day: \"modulo\" {modulo} no divide a los {DailyIds.Days} dias del pool (R-Q2b: el mundo tiene que seguir a la fecha en todas las vueltas)"));
         }
 
         if (worlds.Count != modulo)
