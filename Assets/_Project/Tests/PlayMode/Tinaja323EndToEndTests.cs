@@ -437,6 +437,7 @@ namespace AF.Tests.PlayMode
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
             }
 
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing), "la intro termina antes de la captura de inicio");
             PlayModeHelpers.Step(boot, 300);
             Save(dir, "c1c_02_start_l323", boot);
 
