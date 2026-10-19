@@ -207,7 +207,7 @@ namespace AF.Tests.PlayMode
         }
 
         // Todo carácter visible de un texto activo con una fuente del juego sale de su atlas: ni de la reserva de TMP ni como □.
-        private static void Scan(string capture, List<string> problems)
+        internal static void Scan(string capture, List<string> problems)
         {
             TMP_Text[] texts = Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
             int scanned = 0;

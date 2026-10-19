@@ -3,8 +3,9 @@
 //   - minus_color nunca quita una fruta que esté en la tinaja (rompería T4 y la máscara): QA-RELIEF-MINUS;
 //   - la variante de un nivel con tinaja la conserva con su máscara en hidden (todas sus capas menos la boca), y una variante
 //     sin tinaja no publica hidden (decisión del dueño del 2026-10-14, opción a de la revisión de P2a; 08 §4.1): QA-RELIEF-MASK;
-//   - la forma de la tinaja en la variante (una, su cuia contigua y en la misma fila, ≤ 12 cuias, T4 y combinaciones;
-//     TinajaChecks.Structure) da QA-RELIEF-VALID;
+//   - la forma de la tinaja en la variante (una, su cuia contigua y en la misma fila, ≤ 13 cuias, T4 y combinaciones;
+//     TinajaChecks.Structure) da QA-RELIEF-VALID. El tope del alivio es el del nivel (12, 02 §5) más la cuia vacía de
+//     plus_empty: decisión del dueño del 2026-10-18 (D-027; Superposition.TinajaReliefMaxCuias), la misma que el generador;
 //   - plus_empty con tinaja admite el vacío de más en otra ranura que la última, para dejar la pareja en la misma fila
 //     (Relief.PlusEmptyWithTinaja): el resto del tablero, igual que el base;
 //   - la variante repite la ruta segura y los paseos (TinajaWalks con ReliefOptions [P], pendiente de decisión; sin la
@@ -15,6 +16,7 @@ using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Solver.Search;
 using AmazonFill.Tools.LevelGenerator.Campaign;
+using AmazonFill.Tools.LevelGenerator.Generation;
 using AmazonFill.Tools.LevelGenerator.Metrics;
 
 namespace AmazonFill.Tools.LevelQa.Checks;
@@ -24,7 +26,7 @@ internal static class ReliefChecks
     public static readonly (string Id, string Rule)[] Ids =
     [
         ("QA-RELIEF-MIN", "relief con al menos una variante desde el nivel 31 (03 sec. 13; 08 sec. 4.1)"),
-        ("QA-RELIEF-VALID", "cada variante es un tablero valido (BoardBuilder y LevelValidation; con tinaja, su forma: una, su cuia contigua y en la misma fila, <= 12 cuias, T4 y combinaciones)"),
+        ("QA-RELIEF-VALID", "cada variante es un tablero valido (BoardBuilder y LevelValidation; con tinaja, su forma: una, su cuia contigua y en la misma fila, <= 13 cuias (D-027), T4 y combinaciones)"),
         ("QA-RELIEF-MINUS", "minus_color resoluble (A* a 100.000) con el par entero publicado y sin el color removed, que nunca es una fruta de la tinaja (03 sec. 13; propuesta de la tinaja c.3 punto 4)"),
         ("QA-RELIEF-PLUS", "plus_empty = el tablero base con exactamente un vacio de 4 mas (al final; con tinaja, en la ranura que deja la pareja en la misma fila) (03 sec. 13)"),
         ("QA-RELIEF-BOT", "bot_fail de la variante recalculado; baja >= 0,20, o con base < 0,20 par menor (minus_color) o el vacio extra (plus_empty) (03 sec. 17 #8)"),
@@ -69,7 +71,7 @@ internal static class ReliefChecks
                     $"{name}: variante sin tinaja con hidden ({board.Hidden.Length} posiciones): solo la lleva una variante con la tinaja"));
             }
 
-            foreach ((string id, string msg) in TinajaChecks.Structure(board))
+            foreach ((string id, string msg) in TinajaChecks.Structure(board, Superposition.TinajaReliefMaxCuias))
             {
                 yield return Fail(id == "QA-TINAJA-MASK" ? "QA-RELIEF-MASK" : "QA-RELIEF-VALID", $"{name}: {msg}");
             }

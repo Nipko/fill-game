@@ -39,8 +39,6 @@ namespace AF.Tests.EditMode
         // Índice del taperebá en SightingRule.FruitDebutTints (estreno en el 2, sin tarjeta: sus claves siguen en las tablas).
         private static readonly int Tapereba = System.Array.IndexOf(SightingRule.FruitDebutTints, "tapereba");
 
-        private static readonly string[] Packs = { "tutorial_v0", "mundo_02_v1", "mundo_03_v1", "mundo_04_v1", "mundo_05_v1", "mundo_06_v1" };
-
         private static string SpecPath(string name) => Path.Combine(Application.dataPath, "..", "tools", "level-generator", "specs", name);
 
         // mechanics[].debut ∪ capacities[].debut de una especificación de campaña.
@@ -202,9 +200,8 @@ namespace AF.Tests.EditMode
         {
             var firstSeen = new Dictionary<string, int>();
             int lastLevel = 0;
-            foreach (string pack in Packs)
+            foreach (LevelPack p in TestPacks.Campaign) // los 9 paquetes de la escena (1-700 desde C1b, variante publicada)
             {
-                LevelPack p = LevelPackReader.Read(File.ReadAllText(Path.Combine(Application.dataPath, "_Project/Data/Levels", pack + ".json")));
                 foreach (LevelDefinition level in p.Levels)
                 {
                     lastLevel = Mathf.Max(lastLevel, level.Level);

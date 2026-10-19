@@ -23,6 +23,8 @@ namespace AF.EditorTools
     /// de textos, menos, en los atlas de Nunito, los que solo se pintan en Baloo 2 (<see cref="Characters(GlyphFamily)"/>). Antes
     /// de crear nada, <see cref="FontCoverage"/> comprueba que cada carácter de las tablas esté en la TTF de su familia; si no,
     /// para con el código 5 y los lista.</para>
+    /// <para>Peso (tarea FNT1): cada atlas es el más pequeño de <see cref="AtlasSizes"/> en el que caben sus glifos, con el mismo
+    /// muestreo y el mismo margen (el texto se ve igual), y LiberationSans sale del build (<see cref="TrimTmpDefaults"/>).</para>
     ///
     /// Uso en batchmode (sin ningún Editor abierto en la carpeta):
     ///   unity run &lt;repo&gt; --architecture arm64 --log-file Logs/font-setup.log --non-interactive
@@ -31,7 +33,8 @@ namespace AF.EditorTools
     ///   ... -executeMethod AF.EditorTools.FontSetup.ApplyStyles
     /// Códigos de salida (solo en batchmode): 0 OK · 2 faltan los recursos esenciales de TMP tras importarlos (vuelve a
     /// ejecutarlo) · 3 falta una fuente (o un font asset, con ApplyStyles), o una fuente no tiene familia en
-    /// <see cref="FontCoverage"/> · 4 excepción · 5 un carácter de las tablas no está
+    /// <see cref="FontCoverage"/>, o faltan el font asset de <see cref="DefaultFont"/> o los ajustes de TMP al sacar LiberationSans ·
+    /// 4 excepción, o no se puede mover un asset de LiberationSans · 5 un carácter de las tablas no está
     /// en la TTF de su familia o está prohibido (<see cref="FontCoverage"/>), o los glifos no caben en el atlas más grande ·
     /// 6 las tablas de textos no se pueden leer.
     /// </summary>
@@ -59,6 +62,66 @@ namespace AF.EditorTools
 
         // Carpeta temporal donde se crea cada font asset antes de copiarlo sobre el que ya existe (así conserva su GUID).
         private const string TempDir = "Assets/_FontSetupTemp";
+
+        /// <summary>
+        /// Tamaños de atlas que se prueban, de menor a mayor peso (tarea FNT1): 1024 de ancho y de 512 a 1024 de alto en pasos
+        /// de 64, y 2048 × 1024 como último recurso (el máximo de la guía, 8). Cada fuente se queda con el primero en el que
+        /// caben todos sus glifos. El muestreo (<see cref="SamplingPointSize"/>) y el margen (<see cref="AtlasPadding"/>) no
+        /// cambian: cada glifo sale con el mismo campo de distancia, solo en otro sitio del atlas, y el texto se ve igual. El
+        /// atlas es Alpha8 sin mipmaps, así que su peso es el número de píxeles: un alto que no es potencia de dos no le cuesta
+        /// nada a la GPU (OpenGL ES 3 y Vulkan, minSdk 26).
+        /// </summary>
+        internal static readonly Vector2Int[] AtlasSizes =
+        {
+            new Vector2Int(1024, 512),
+            new Vector2Int(1024, 576),
+            new Vector2Int(1024, 640),
+            new Vector2Int(1024, 704),
+            new Vector2Int(1024, 768),
+            new Vector2Int(1024, 832),
+            new Vector2Int(1024, 896),
+            new Vector2Int(1024, 960),
+            new Vector2Int(1024, 1024),
+            new Vector2Int(2048, 1024),
+        };
+
+        /// <summary>
+        /// Símbolos que el código pone en los textos fuera de las tablas (tarea FNT1): el signo de multiplicar, el punto medio de
+        /// los separadores y el espacio duro (U+00A0, el que sustituye a U+202F en las cifras). Van en las cinco fuentes:
+        /// <see cref="Characters(GlyphFamily, FontCoverageReport)"/> los añade siempre, aunque un símbolo nuevo salga de Latin-1.
+        /// ✓ no es texto: es un icono procedural (M3.3).
+        /// </summary>
+        public const string CodeSymbols = "×· ";
+
+        /// <summary>
+        /// Flechas que solo pinta Baloo 2: «→» de la Cosecha doble y «↑», «↓» de los rótulos del Mapa (glosario §10). No las pone
+        /// el código: salen de <c>strings.csv</c> (<c>double_harvest_delta</c>, <c>map_label_andes</c> y <c>map_label_atlantic</c>,
+        /// las claves de <see cref="FontCoverage.TitleOnlyKeys"/>). Se fijan aquí para que el atlas de Baloo 2 las tenga aunque
+        /// cambien esos textos: <see cref="Characters(GlyphFamily, FontCoverageReport)"/> las añade en <see cref="GlyphFamily.Title"/>.
+        /// </summary>
+        public const string TitleCodeSymbols = "→↑↓";
+
+        /// <summary>Carpeta de las fuentes de TextMeshPro que entran en el build (dentro de un <c>Resources</c>).</summary>
+        public const string TmpResourcesFontsDir = "Assets/TextMesh Pro/Resources/Fonts & Materials";
+
+        /// <summary>
+        /// Carpeta de TextMeshPro fuera de <c>Resources</c> a la que <see cref="ApplyAll"/> mueve LiberationSans (tarea FNT1): el
+        /// juego no la usa, y dentro de <c>Resources</c> entraba entera en el build (su atlas de 1024 × 1024 y la TTF de la reserva
+        /// dinámica). Fuera, solo la ve el Editor.
+        /// </summary>
+        public const string TmpEditorFontsDir = "Assets/TextMesh Pro/Fonts";
+
+        /// <summary>Los assets de LiberationSans que vienen con los recursos esenciales de TMP.</summary>
+        internal static readonly string[] LiberationSansAssets =
+        {
+            "LiberationSans SDF.asset",
+            "LiberationSans SDF - Fallback.asset",
+            "LiberationSans SDF - Outline.mat",
+            "LiberationSans SDF - Drop Shadow.mat",
+        };
+
+        /// <summary>Fuente por defecto de TMP (<c>TMP Settings</c>) en lugar de LiberationSans: el texto corrido del juego.</summary>
+        public const string DefaultFont = "Nunito-Regular";
 
         /// <summary>Puntuación tipográfica fija de la guía 5.6 (la de siempre, además de lo que piden las tablas).</summary>
         public const string Typography = "–—‘’“”…•";
@@ -203,6 +266,20 @@ namespace AF.EditorTools
                 Append(sb, seen, tables[i]);
             }
 
+            // Los símbolos fijos, al final: si ya los traen Latin-1 o las tablas, el orden (y el atlas) no cambia.
+            for (int i = 0; i < CodeSymbols.Length; i++)
+            {
+                Append(sb, seen, CodeSymbols[i]);
+            }
+
+            if (family == GlyphFamily.Title)
+            {
+                for (int i = 0; i < TitleCodeSymbols.Length; i++)
+                {
+                    Append(sb, seen, TitleCodeSymbols[i]);
+                }
+            }
+
             return sb.ToString();
         }
 
@@ -237,14 +314,91 @@ namespace AF.EditorTools
             // La carpeta temporal de Save() no puede quedarse en Assets/ (acabaría commiteada con su .meta): se borra la que
             // dejara un intento anterior interrumpido y, pase lo que pase (también con una excepción, código 4), al terminar.
             DeleteTempDir();
+            int code;
             try
             {
-                return Generate(coverage);
+                code = Generate(coverage);
             }
             finally
             {
                 DeleteTempDir();
             }
+
+            // Solo con los atlas del juego regenerados se cambia TMP Settings y se saca LiberationSans (si no, el build se
+            // quedaría sin la fuente que pinta de reserva y el código de salida ocultaría el error de Generate).
+            if (code != 0)
+            {
+                return code;
+            }
+
+            return TrimTmpDefaults();
+        }
+
+        /// <summary>
+        /// Saca LiberationSans del build (tarea FNT1): pone <see cref="DefaultFont"/> como fuente por defecto de <c>TMP Settings</c>
+        /// (TMP la usa al crear un texto y como última reserva) y mueve los assets de LiberationSans de
+        /// <see cref="TmpResourcesFontsDir"/> a <see cref="TmpEditorFontsDir"/>, fuera de <c>Resources</c>, con sus GUID. El juego
+        /// asigna siempre su fuente (<c>UiFonts</c>), y cada carácter de las tablas está en el atlas de su familia
+        /// (<see cref="AtlasGaps"/>): LiberationSans no pintaba nada, pero entraba entera en el build. Idempotente: lo que ya está
+        /// fuera no se toca. Devuelve 0, 3 (falta el font asset de <see cref="DefaultFont"/> o los ajustes de TMP) o 4 (no se
+        /// puede mover un asset).
+        /// </summary>
+        internal static int TrimTmpDefaults()
+        {
+            string defaultPath = OutputDir + "/" + DefaultFont + " SDF.asset";
+            TMP_FontAsset? defaultFont = AssetDatabase.LoadAssetAtPath<TMP_FontAsset>(defaultPath);
+            TMP_Settings? settings = AssetDatabase.LoadAssetAtPath<TMP_Settings>(TmpSettingsPath);
+            if (defaultFont == null || settings == null)
+            {
+                Debug.LogError(LogPrefix + "falta " + (defaultFont == null ? defaultPath : TmpSettingsPath) + ": no se puede cambiar la fuente por defecto de TMP.");
+                return 3;
+            }
+
+            var so = new SerializedObject(settings);
+            SerializedProperty property = so.FindProperty("m_defaultFontAsset");
+            if (property == null)
+            {
+                Debug.LogError(LogPrefix + "TMP Settings no tiene m_defaultFontAsset en esta versión de TextMeshPro.");
+                return 4;
+            }
+
+            if (property.objectReferenceValue != defaultFont)
+            {
+                property.objectReferenceValue = defaultFont;
+                so.ApplyModifiedPropertiesWithoutUndo();
+                EditorUtility.SetDirty(settings);
+                Debug.Log(LogPrefix + "fuente por defecto de TMP: " + defaultPath + ".");
+            }
+
+            EnsureFolder(TmpEditorFontsDir);
+            for (int i = 0; i < LiberationSansAssets.Length; i++)
+            {
+                string from = TmpResourcesFontsDir + "/" + LiberationSansAssets[i];
+                if (AssetDatabase.LoadAssetAtPath<UnityEngine.Object>(from) == null)
+                {
+                    continue;
+                }
+
+                string to = TmpEditorFontsDir + "/" + LiberationSansAssets[i];
+                string error = AssetDatabase.MoveAsset(from, to);
+                if (!string.IsNullOrEmpty(error))
+                {
+                    Debug.LogError(LogPrefix + "no se puede mover " + from + " a " + to + ": " + error);
+                    return 4;
+                }
+
+                Debug.Log(LogPrefix + "fuera del build: " + to + ".");
+            }
+
+            // La carpeta vacía no se queda: git no guarda carpetas vacías, y su .meta solo daría avisos al clonar.
+            if (AssetDatabase.IsValidFolder(TmpResourcesFontsDir)
+                && Directory.GetFileSystemEntries(FontCoverage.DiskPath(TmpResourcesFontsDir)).Length == 0)
+            {
+                AssetDatabase.DeleteAsset(TmpResourcesFontsDir);
+            }
+
+            AssetDatabase.SaveAssets();
+            return 0;
         }
 
         private static int Generate(FontCoverageReport coverage)
@@ -277,20 +431,40 @@ namespace AF.EditorTools
                 GlyphFamily family = FontCoverage.FamilyOfFont(name);
                 string chars = Characters(family, coverage);
 
-                // Primero un atlas de 1024 × 1024; si no caben todos los glifos que tiene la fuente, se repite con 2048 × 1024,
-                // el máximo de la guía (8). Lo que la TTF no tiene (algún carácter de Latin-1 que no sale en las tablas) solo se
-                // avisa: lo de las tablas ya lo comprobó FontCoverage.
-                TMP_FontAsset? asset = CreateStatic(font, name, chars, 1024, 1024, out string missing);
-                string notInFont = NotInFont(name, missing, out string notFitting);
-                if (asset != null && notFitting.Length > 0)
+                // El atlas más pequeño de AtlasSizes en el que caben todos los glifos que tiene la fuente (FNT1; antes, siempre
+                // 1024 × 1024). Lo que la TTF no tiene (algún carácter de Latin-1 que no sale en las tablas) solo se avisa: lo de
+                // las tablas ya lo comprobó FontCoverage.
+                TMP_FontAsset? asset = null;
+                string notInFont = string.Empty;
+                string notFitting = string.Empty;
+                Vector2Int size = AtlasSizes[0];
+                for (int s = 0; s < AtlasSizes.Length; s++)
                 {
-                    Debug.LogWarning(LogPrefix + name + ": " + notFitting.Length + " glifos no caben en 1024 × 1024; el atlas pasa a 2048 × 1024 y dobla su peso. "
-                        + "Mide el AAB: criterio de B1 «el AAB crece ≤ 0,5 MB [E]».");
-                    UnityEngine.Object.DestroyImmediate(asset.material);
-                    UnityEngine.Object.DestroyImmediate(asset.atlasTexture);
-                    UnityEngine.Object.DestroyImmediate(asset);
-                    asset = CreateStatic(font, name, chars, 2048, 1024, out missing);
+                    if (asset != null)
+                    {
+                        UnityEngine.Object.DestroyImmediate(asset.material);
+                        UnityEngine.Object.DestroyImmediate(asset.atlasTexture);
+                        UnityEngine.Object.DestroyImmediate(asset);
+                    }
+
+                    size = AtlasSizes[s];
+                    asset = CreateStatic(font, name, chars, size.x, size.y, out string missing);
+                    if (asset == null)
+                    {
+                        break;
+                    }
+
                     notInFont = NotInFont(name, missing, out notFitting);
+                    if (notFitting.Length == 0)
+                    {
+                        break;
+                    }
+                }
+
+                if (asset != null && size.x * size.y > 1024 * 1024)
+                {
+                    Debug.LogWarning(LogPrefix + name + ": los glifos no caben en 1024 × 1024; el atlas pasa a " + size.x + " × " + size.y + " y dobla su peso. "
+                        + "Mide el AAB: criterio de B1 «el AAB crece ≤ 0,5 MB [E]».");
                 }
 
                 if (asset == null)

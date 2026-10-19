@@ -16,7 +16,8 @@ namespace AF.Tests.PlayMode
     /// solo para las cintas que ya había. Si «ponerse al día» llegaba a un tramo con más piezas que el de partida (en el 41, el de
     /// la parada 4: Tapajós y Amazonas), la cinta nueva se quedaba con el espacio por defecto de la Cuenca (328 dp por unidad) y se
     /// pintaba fuera de la vista; hasta la canoa solo se veía el vidrio. Aquí, desde la pausa del 41 (max 40, visto 30) y en el
-    /// Mapa del fin de contenido del 300, al abrir, en cada fotograma del viaje y al acabar: cada cinta del frente y su orla llevan
+    /// tramo del 300 (el fin de contenido de la ola 6; desde C1b, desde la pausa del 301) y en el Mapa del fin de contenido del
+    /// 700, al abrir, en cada fotograma del viaje y al acabar: cada cinta del frente y su orla llevan
     /// el espacio y el ancho de la vista, su malla no está vacía y el final del agua (donde está la canoa) cae dentro de la zona
     /// visible; también en la Cuenca y otra vez en el Mundo. Revisión: cada cinta del frente y su orla van sobre el vidrio de su
     /// línea (su espacio, su ancho y sus secciones a menos de medio ancho del eje del vidrio); con el tope del frente repartido
@@ -50,8 +51,25 @@ namespace AF.Tests.PlayMode
             CheckTheViews(map, "pausa del 41");
         }
 
+        // El tramo del 300 (el fin de contenido de la ola 6): desde C1b, desde la pausa del 301 (max 300, visto 290).
         [UnityTest]
-        public IEnumerator ContentEndMap_After300_EveryFrontRibbonHasTheViewSpace_AndTheWaterReachesTheCanoe()
+        public IEnumerator PauseMap_At301_TheLegOf300_EveryFrontRibbonHasTheViewSpace_AndTheWaterReachesTheCanoe()
+        {
+            MapArtRule.ForceProvisional = true;
+            yield return Fx10Tests.OpenFromPause(301, 300, 290);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Assert.That(map.Source, Is.EqualTo(MapOpenSource.Pause));
+            Assert.That(map.CatchingUp, Is.True, "«ponerse al día» por el tramo del 300");
+            CatchUpAndCheck(map, "tramo del 300");
+            CheckTheViews(map, "tramo del 300");
+        }
+
+        // El fin de contenido de verdad, tras el 700 (C1b). Las paradas del Mapa son las 0-69 (M4.5b): la 69 (Tambo) se alcanza al
+        // ganar el 690 y el tramo de 691-700 iría a la parada 70, que no está en river_stops_v1.json. Con 700 no hay frente
+        // (FrontStopOf(700) = 70, sin ruta): todo el río hasta Tambo va en el lleno y la canoa espera en Tambo, a la vista. Si
+        // llega la parada 70, este test pasa a pedir el frente como el del tramo del 300.
+        [UnityTest]
+        public IEnumerator ContentEndMap_After700_NoFrontPastTheLastStop_TheCanoeAtTheLastStop_InTheView()
         {
             GameBootstrap.ContentEndMapOverride = true;
             MapArtRule.ForceProvisional = true;
@@ -60,8 +78,19 @@ namespace AF.Tests.PlayMode
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             Assert.That(map.Source, Is.EqualTo(MapOpenSource.ContentEnd));
             Assert.That(map.CatchingUp, Is.True, "el viaje del último tramo");
-            CatchUpAndCheck(map, "fin de contenido");
-            CheckTheViews(map, "fin de contenido");
+            Assert.That(RiverMapScreen.FrontStopOf(700), Is.EqualTo(70));
+            for (int t = 0; t < 30000 && (map.CatchingUp || map.CatchUpFading); t += 16)
+            {
+                map.Tick(16f);
+                AssertFront(map, "fin de contenido, a " + t + " ms", false);
+            }
+
+            Assert.That(map.CatchingUp, Is.False, "fin de contenido: el viaje terminó");
+            map.Tick(16f);
+            Assert.That(map.FrontStop, Is.EqualTo(-1), "sin ruta de la parada 70 en el catálogo (paradas 0-69)");
+            Assert.That(map.FrontPieceCount, Is.EqualTo(0), "sin frente tras la última parada");
+            Assert.That(map.HasCanoe, Is.True, "la canoa");
+            Assert.That(map.CanoeInView, Is.True, "la canoa, a la vista al acabar el viaje");
         }
 
         // Revisión de FX11: el frente ya no lleva el tope de 400 vértices de la propuesta del Mapa §11.4 (desviación anotada allí,
@@ -69,15 +98,14 @@ namespace AF.Tests.PlayMode
         // FrontMeasuredMaxVertices, y se mide la memoria del viaje: los fotogramas sin cambio del llenado no asignan (ni el Tick
         // ni el lienzo) y solo asignan los ≤ 10 en que cambia (uno por boya). Esos asignan lo mismo con el tope de 400 repartido
         // (medido: 27-38 bloques de GC.Alloc por boya con los dos topes), así que no los causa el tope; quedan anotados en §11.4.
+        // Desde C1b el fin de contenido llega tras el 700: el tramo del 300 se recorre desde la pausa del 301 (max 300, visto 290).
         [UnityTest]
-        public IEnumerator ContentEndMap_After300_TheFrontVertices_AndTheJourneyOnlyAllocatesAtTheBuoys()
+        public IEnumerator PauseMap_At301_TheLegOf300_TheFrontVertices_AndTheJourneyOnlyAllocatesAtTheBuoys()
         {
-            GameBootstrap.ContentEndMapOverride = true;
             MapArtRule.ForceProvisional = true;
-            GameScreen.SimulatedScreen = Fx10Tests.Phone;
-            yield return Fx10Tests.OpenContentEnd();
+            yield return Fx10Tests.OpenFromPause(301, 300, 290);
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
-            Assert.That(map.CatchingUp, Is.True, "el viaje del último tramo");
+            Assert.That(map.CatchingUp, Is.True, "«ponerse al día» por el tramo del 300");
             map.Tick(16f);
             Canvas.ForceUpdateCanvases();
             int frames = 0;

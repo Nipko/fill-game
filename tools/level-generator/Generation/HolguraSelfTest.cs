@@ -4,7 +4,13 @@
 //   - SlotGenerator.SplitSlackPour sobre un tablero fijo: vierte el tramo entero de la cima (1-3 dosis) de una cuia llena en
 //     el último vacío de 4, nunca de una cuia llena de un solo color; conserva las dosis de cada color; la misma semilla da el
 //     mismo tablero, y sin vacío o sin cuia con tramo de 1-3 dosis devuelve false sin tocar nada;
-//   - la configuración de las etapas (SlotGenerator.Config) en los slots de 561-700 que lo necesitan:
+//   - con campaign_v2.json (D-027, 2026-10-18): los hitos de 561-700 de K = 12 (580, 600, 640, 660 y 700) van con 1 vacío + la
+//     cuia a medias de su mecánica (14 cuias como mucho) en la etapa 0 y ninguna de sus etapas reparte la holgura; los de K = 13
+//     (620 y 680) no cambian de K ni pasan de 14 cuias, y solo el 680 la reparte, en sus etapas 1-2; los retos de 561-700 van
+//     con K = 10;
+//   - el mecanismo, con la forma de antes de D-027 (Legacy: campaign_v2.json con el k_plan de 561-700 de retos 12 e hitos 13 y
+//     las celdas «(MD; K = 13)» de 580, 600, 640, 660 y 700): sigue en el código para un hito de K = 13 con una mecánica de
+//     cuias a medias. La configuración de las etapas (SlotGenerator.Config) en los slots que lo necesitaban:
 //       * hitos de 14 cuias (K = 13 + 1 vacío; 03 §11; d.5.1): el 580 (Matapi + Brote de dos hojas) y el 600 (Hoja atada +
 //         Brote de dos hojas + Barro) reparten la holgura desde la etapa 0, con 14 cuias, K = 13, sin vacío de la etapa y
 //         uno de la fuente, y también en las etapas 1-2 con endurecimiento; el 620 (con la Lluvia, que necesita el vacío de 4)
@@ -12,16 +18,17 @@
 //         con 60.000 nodos; sin él, la etapa 1 repite la 0 y la 2 es deep con 60.000 nodos) con K = 13, 1 vacío y 14 cuias;
 //         ninguna etapa de un hito de 14 cuias, con y sin endurecimiento, cambia K ni pasa de 14 cuias; el 640 (Matapi +
 //         Barro + Hoja) no tiene ninguna etapa: la Hoja se lleva el vacío entero y el Matapi y el Barro no caben con K = 13
-//         (pendiente del dueño y del tech-lead);
+//         (por eso D-027 lo cambió a Ma+Ba con K = 12);
 //       * con un hito de 14 cuias de Matapi + Barro (sin la Hoja), las etapas 1-2 reparten la holgura (relajación del hito);
 //       * los retos de 14 cuias con la cueva de la Piraña y el Brote (592 Pi+B2 y 646 Pi+Br+Ha; K = 12): la cuia de holgura
 //         sustituye al vacío;
 //       * las etapas 1-2 del 592 y el 646, con y sin endurecimiento: null o una configuración posible; solo la relajación
 //         «walk con 1 vacío» de la etapa 2 reparte la holgura;
 //   - un slot de 11-560 no reparte la holgura en ninguna etapa (los packs 11-300 no cambian; --check lo confirma con los packs);
-//   - en 201-700 (variantes a y b), toda etapa con la holgura repartida lleva la cuia de holgura y la fuente walk, y en 561-700
-//     solo la reparten los hitos de 14 cuias y los retos de K = 12 + la cueva en la etapa 0 y en la relajación «walk con 1
-//     vacío» de la etapa 2 (HolguraSelfTest.SplitLevels).
+//   - en 201-700 (variantes a y b), toda etapa con la holgura repartida lleva la cuia de holgura y la fuente walk; con
+//     campaign_v2.json solo la reparten los niveles de HolguraSelfTest.SplitLevels, y con la forma de antes de D-027, los de
+//     LegacySplitLevels (los hitos de 14 cuias y los retos de K = 12 + la cueva en la etapa 0 y en la relajación «walk con 1
+//     vacío» de la etapa 2).
 // Imprime ASCII (PASS / FAIL) y sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación.
 using AF.Core.Board;
 using AF.Core.Determinism;
@@ -57,8 +64,20 @@ internal static class HolguraSelfTest
             failures += ok ? 0 : 1;
         }
 
+        CampaignSpec legacy;
+        try
+        {
+            legacy = Legacy();
+        }
+        catch (CampaignSpecException e)
+        {
+            Console.Error.WriteLine(AsciiText.Of("level-generator --self-test: forma de antes de D-027: " + e.Message));
+            return 2;
+        }
+
         SplitPour(Check);
-        Stages(spec, Check);
+        Current(spec, Check);
+        Stages(legacy, Check);
         Scope(v1, Check);
 
         Console.WriteLine(failures == 0 ? "self-test holgura: todo PASS" : $"self-test holgura: {failures} FAIL");
@@ -162,7 +181,7 @@ internal static class HolguraSelfTest
         check(At(640).All(c => c is null),
             "640 (Ma+Ba+Ho): ninguna etapa (la Hoja se lleva el vacio entero; el Matapi y el Barro no caben con K = 13)");
 
-        CampaignSpec maBa = WithCell(spec, 640, "Ma+Ba (MD; K = 13)");
+        CampaignSpec maBa = WithCell(640, "Ma+Ba (MD; K = 13)");
         var genMaBa = new SlotGenerator(maBa);
         StageConfig?[] relax = [.. Enumerable.Range(0, SlotGenerator.Stages).Select(s => genMaBa.Config(maBa.Plan(640), s, dropMurky: false))];
         check(relax[0] is { SplitSlack: false, Empties: 1, Slack: false } && relax.Skip(1).All(c => c is { SplitSlack: true, Empties: 0, Slack: true } && Cuias(c) == SpecValidator.MaxCuias),
@@ -194,20 +213,59 @@ internal static class HolguraSelfTest
         }
     }
 
-    /// <summary>La especificación con una celda cambiada (copia en memoria por un archivo temporal que la extiende).</summary>
-    private static CampaignSpec WithCell(CampaignSpec spec, int level, string cell)
+    /// <summary>
+    /// campaign_v2.json con la forma de antes de D-027 en 561-700 (k_plan de retos 12 e hitos 13, y las celdas «(MD; K = 13)» de
+    /// los cinco hitos que D-027 pasó a K = 12): la que necesita la holgura repartida. Solo para probar el mecanismo.
+    /// </summary>
+    internal static CampaignSpec Legacy() => WithOverrides("self-test holgura: 561-700 antes de D-027", new System.Text.Json.Nodes.JsonObject
+    {
+        ["k_plan"] = LegacyKPlan(),
+        ["calendar"] = new System.Text.Json.Nodes.JsonObject
+        {
+            ["580"] = "Ma+B2 (MD; K = 13)",
+            ["600"] = "Ha+B2+Ba (MD; K = 13)",
+            ["640"] = "Ma+Ba+Ho (MD; K = 13)",
+            ["660"] = "Br+Ha+Re (MD; K = 13)",
+            ["700"] = "Ma+Ha+B2 (MD; K = 13)",
+        },
+    });
+
+    /// <summary>La forma de antes de D-027 con una celda cambiada (copia en memoria por un archivo temporal que la extiende).</summary>
+    private static CampaignSpec WithCell(int level, string cell) =>
+        WithOverrides("self-test holgura: celda cambiada", new System.Text.Json.Nodes.JsonObject
+        {
+            ["k_plan"] = LegacyKPlan(),
+            ["calendar"] = new System.Text.Json.Nodes.JsonObject { [level.ToString(System.Globalization.CultureInfo.InvariantCulture)] = cell },
+        });
+
+    /// <summary>El k_plan de antes de D-027: 301-560 con retos de 11 y 561-700 con retos de 12 e hitos de 13.</summary>
+    private static System.Text.Json.Nodes.JsonNode LegacyKPlan() => System.Text.Json.Nodes.JsonNode.Parse(
+        """
+        [{"levels": [201, 300], "recovery": 9, "comfort": 10, "challenge": 10, "milestone": 10},
+         {"levels": [301, 560], "recovery": 10, "comfort": 11, "challenge": 11, "milestone": 11},
+         {"levels": [561, 700], "recovery": 10, "comfort": 11, "challenge": 12, "milestone": 13}]
+        """)!;
+
+    /// <summary>Una especificación que extiende campaign_v2.json con las claves de <paramref name="overrides"/>, por un archivo temporal.</summary>
+    private static CampaignSpec WithOverrides(string description, System.Text.Json.Nodes.JsonObject overrides)
     {
         string dir = Path.Combine(Path.GetTempPath(), "af-holgura-" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(dir);
         try
         {
-            string path = Path.Combine(dir, "campaign_v2_640.json");
+            string path = Path.Combine(dir, "campaign_v2_holgura.json");
             var root = new System.Text.Json.Nodes.JsonObject
             {
                 ["extends"] = Path.GetFullPath(SpecPath),
-                ["description"] = "self-test holgura: celda cambiada",
-                ["calendar"] = new System.Text.Json.Nodes.JsonObject { [level.ToString(System.Globalization.CultureInfo.InvariantCulture)] = cell },
+                ["description"] = description,
             };
+            foreach (string key in overrides.Select(kv => kv.Key).ToList())
+            {
+                System.Text.Json.Nodes.JsonNode? value = overrides[key];
+                overrides.Remove(key);
+                root[key] = value;
+            }
+
             File.WriteAllText(path, root.ToJsonString(), new System.Text.UTF8Encoding(false));
             return CampaignSpec.Load(path);
         }
@@ -218,33 +276,57 @@ internal static class HolguraSelfTest
     }
 
     /// <summary>
-    /// Niveles de 561-700 que reparten la holgura en alguna etapa (variantes a y b): los hitos de 14 cuias con una mecánica de
-    /// cuias a medias desde la etapa 0 (580, 600, 660 y 700), los de 14 cuias sin la Hoja ni la Lluvia en sus etapas 1-2 (680,
-    /// Li+Ha+Re) y los retos de K = 12 + la cueva de la Piraña con el Brote en la etapa 0 y en la relajación «walk con 1
-    /// vacío» de la etapa 2 (592 y 646) (README, «Holgura repartida»).
+    /// Niveles de 201-700 de campaign_v2.json que reparten la holgura en alguna etapa (variantes a y b), con el k_plan de D-027
+    /// (README, «Holgura repartida»): solo el 680 (Li+Ha+Re, K = 13 + 1 vacío), en la relajación del hito de sus etapas 1-2, porque
+    /// no lleva la Hoja ni la Lluvia (su tablero publicado sale de la etapa 0, con la cuia vacía). Los hitos de K = 12 caben con su
+    /// vacío y la cuia a medias de su mecánica, el 620 lleva la Lluvia y los retos de K = 10 no llegan a 14 cuias.
     /// </summary>
-    internal static readonly int[] SplitLevels = [580, 592, 600, 646, 660, 680, 700];
+    internal static readonly int[] SplitLevels = [680];
+
+    /// <summary>
+    /// Los de la forma de antes de D-027 (<see cref="Legacy"/>): los hitos de 14 cuias con una mecánica de cuias a medias desde
+    /// la etapa 0 (580, 600, 660 y 700), los de 14 cuias sin la Hoja ni la Lluvia en sus etapas 1-2 (680, Li+Ha+Re) y los retos de
+    /// K = 12 + la cueva de la Piraña con el Brote en la etapa 0 y en la relajación «walk con 1 vacío» de la etapa 2 (592 y 646).
+    /// </summary>
+    internal static readonly int[] LegacySplitLevels = [580, 592, 600, 646, 660, 680, 700];
 
     private static void Scope(CampaignSpec v1, Action<bool, string> check)
     {
-        // 11-560: ningún slot reparte la holgura (los packs 11-300 no cambian; 301-560, de P7b y P7c, generan como antes).
-        // 201-700, variantes a y b: SplitSlack ⇒ Slack (la cuia que reparte) y la fuente de la configuración es walk; en 561-700
-        // solo en los casos declarados, y en los niveles de SplitLevels.
+        // 11-560: ningún slot reparte la holgura (los packs 11-300 no cambian; 301-560 tampoco la necesitan).
+        // 201-700, variantes a y b: SplitSlack ⇒ Slack (la cuia que reparte) y la fuente de la configuración es walk; solo en
+        // los casos declarados y en los niveles de SplitLevels (con D-027) o LegacySplitLevels (la forma de antes, solo la a).
+        var current = new List<CampaignSpec> { v1 };
+        foreach (string variant in new[] { CampaignSpec.VariantA, CampaignSpec.VariantB })
+        {
+            current.Add(CampaignSpec.Load(SpecPath, variant));
+        }
+
+        (bool none, bool coherent, bool declared, SortedSet<int> found) = Split(current);
+        check(none, "11-560 (campaign_v1 y campaign_v2 en las variantes a y b): ningun slot reparte la holgura en ninguna etapa, con y sin endurecimiento");
+        check(coherent, "201-700, variantes a y b: toda etapa con la holgura repartida lleva la cuia de holgura (SplitSlack => Slack) y la fuente walk en la configuracion");
+        check(declared && found.SequenceEqual(SplitLevels),
+            $"201-700 con el k_plan de D-027: la holgura repartida solo en los niveles declarados ({(SplitLevels.Length == 0 ? "ninguno" : string.Join(", ", SplitLevels))}; sale en {(found.Count == 0 ? "ninguno" : string.Join(", ", found))})");
+
+        (bool _, bool legacyCoherent, bool legacyDeclared, SortedSet<int> legacyFound) = Split([Legacy()]);
+        check(legacyCoherent && legacyDeclared && legacyFound.SequenceEqual(LegacySplitLevels),
+            $"forma de antes de D-027 (561-700 con retos de 12 e hitos de 13): la holgura repartida solo en los hitos de 14 cuias y en los retos de K = 12 + la cueva (etapa 0 y relajacion walk con 1 vacio), en {string.Join(", ", LegacySplitLevels)} (sale en {string.Join(", ", legacyFound)})");
+    }
+
+    /// <summary>
+    /// Recorre todas las etapas (con y sin endurecimiento) de los niveles de cada especificación: si ninguna reparte la holgura
+    /// en 11-560, si toda etapa que la reparte lleva la cuia de holgura y la fuente walk, si solo la reparten los casos
+    /// declarados (hito de K = 13 o reto de K = 12 con la cueva) y en qué niveles.
+    /// </summary>
+    private static (bool None, bool Coherent, bool Declared, SortedSet<int> Found) Split(List<CampaignSpec> specs)
+    {
         bool none = true;
         bool coherent = true;
         bool declared = true;
         var found = new SortedSet<int>();
-        var specs = new List<(CampaignSpec Spec, int From, int To)> { (v1, v1.FirstLevel, v1.LastLevel) };
-        foreach (string variant in new[] { CampaignSpec.VariantA, CampaignSpec.VariantB })
-        {
-            CampaignSpec v2 = CampaignSpec.Load(SpecPath, variant);
-            specs.Add((v2, v2.FirstLevel, v2.LastLevel));
-        }
-
-        foreach ((CampaignSpec spec, int from, int to) in specs)
+        foreach (CampaignSpec spec in specs)
         {
             var gen = new SlotGenerator(spec);
-            for (int level = from; level <= to; level++)
+            for (int level = spec.FirstLevel; level <= spec.LastLevel; level++)
             {
                 LevelPlan plan = spec.Plan(level);
                 for (int stage = 0; stage < SlotGenerator.Stages; stage++)
@@ -269,9 +351,35 @@ internal static class HolguraSelfTest
             }
         }
 
-        check(none, "11-560 (campaign_v1 y campaign_v2 en las variantes a y b): ningun slot reparte la holgura en ninguna etapa, con y sin endurecimiento");
-        check(coherent, "201-700, variantes a y b: toda etapa con la holgura repartida lleva la cuia de holgura (SplitSlack => Slack) y la fuente walk en la configuracion");
-        check(declared && found.SequenceEqual(SplitLevels),
-            $"561-700: la holgura repartida solo en los hitos de 14 cuias y en los retos de K = 12 + la cueva (etapa 0 y relajacion walk con 1 vacio), en {string.Join(", ", SplitLevels)} (sale en {string.Join(", ", found)})");
+        return (none, coherent, declared, found);
+    }
+
+    /// <summary>
+    /// campaign_v2.json con D-027: los hitos de 561-700 de K = 12 (580, 600, 640, 660 y 700) van con 1 vacío de la etapa y la cuia
+    /// a medias de su mecánica, 14 cuias como mucho, y ninguna etapa reparte la holgura; los de K = 13 (620 y 680) conservan K = 13
+    /// y 14 cuias en todas sus etapas; los retos de 561-700, K = 10.
+    /// </summary>
+    private static void Current(CampaignSpec spec, Action<bool, string> check)
+    {
+        var gen = new SlotGenerator(spec);
+        StageConfig?[] At(int level, bool harder = false) =>
+            [.. Enumerable.Range(0, SlotGenerator.Stages).Select(s => gen.Config(spec.Plan(level), s, dropMurky: false, harder))];
+
+        foreach (int level in new[] { 580, 600, 640, 660, 700 })
+        {
+            StageConfig? s0 = At(level)[0];
+            bool noSplit = new[] { false, true }.All(harder => At(level, harder).All(c => c is null || (!c.SplitSlack && Cuias(c) <= SpecValidator.MaxCuias)));
+            check(spec.Plan(level).K == 12 && s0 is { K: 12, Empties: 1, SplitSlack: false } && Cuias(s0) <= SpecValidator.MaxCuias && noSplit,
+                $"{level} ({spec.Plan(level).Cell.Literal}; D-027): K = 12 + 1 vacio + la cuia a medias de su mecanica en la etapa 0 ({(s0 is null ? 0 : Cuias(s0))} cuias), y ninguna etapa, con y sin endurecimiento, reparte la holgura ni pasa de 14 cuias");
+        }
+
+        bool k13 = new[] { 620, 680 }.All(level => spec.Plan(level).K == SpecValidator.HitoK && new[] { false, true }.All(harder =>
+            At(level, harder).Any(c => c is not null)
+            && At(level, harder).All(c => c is null || (c.K == SpecValidator.HitoK && Cuias(c) == SpecValidator.MaxCuias))));
+        check(k13, "620 y 680 (K = 13 + 1 vacio; D-027 no los cambia), con y sin endurecimiento: al menos una etapa, y ninguna cambia K = 13 ni pasa de 14 cuias");
+
+        int[] challenges = [.. Enumerable.Range(561, 140).Where(n => spec.Plan(n).Role == SlotRole.Challenge)];
+        check(challenges.Length == 35 && challenges.All(n => spec.Plan(n).K == 10),
+            $"retos de 561-700 con K = 10 (D-027): {challenges.Length} retos");
     }
 }

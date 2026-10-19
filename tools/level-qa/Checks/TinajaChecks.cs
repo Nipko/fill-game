@@ -4,7 +4,8 @@
 //   QA-TINAJA-PAIR   su cuia en la ranura contigua y en la misma fila con cualquiera de las filas del cliente (b.2 regla 1;
 //                    Superposition.SameRow, la misma regla que el orden visual del generador);
 //   QA-TINAJA-CUIAS  como mucho 12 cuias en un nivel con tinaja, contando la pareja (02 §5, fila «Tinaja y su cuia» [P];
-//                    Superposition.TinajaMaxCuias);
+//                    Superposition.TinajaMaxCuias); en sus variantes de alivio, 13 (la cuia vacía de plus_empty; decisión del
+//                    dueño del 2026-10-18, D-027; Superposition.TinajaReliefMaxCuias), que ReliefChecks da como QA-RELIEF-VALID;
 //   QA-TINAJA-MASK   hidden = exactamente todas las capas de la tinaja menos la boca, y nada oculto fuera de ella (b.2
 //                    regla 1: es la única fuente de ocultas; c.4);
 //   QA-TINAJA-T4     T4 en toda la columna: dos dosis vecinas nunca son de la misma fruta (b.2 regla 1);
@@ -125,9 +126,11 @@ internal static class TinajaChecks
 
     /// <summary>
     /// Controles de forma de la tinaja sobre un tablero (el del nivel o el de una variante de alivio): ONE, PAIR, CUIAS, MASK,
-    /// T4 y COMBO, como pares (id, motivo). Vacío si el tablero no lleva la tinaja ni su cuia.
+    /// T4 y COMBO, como pares (id, motivo). Vacío si el tablero no lleva la tinaja ni su cuia. <paramref name="maxCuias"/>: el
+    /// tope de cuias con la pareja, el del nivel (<see cref="Superposition.TinajaMaxCuias"/>, 12) o, en una variante de alivio,
+    /// el suyo (<see cref="Superposition.TinajaReliefMaxCuias"/>, 13; D-027).
     /// </summary>
-    public static IEnumerable<(string Id, string Message)> Structure(BoardData b)
+    public static IEnumerable<(string Id, string Message)> Structure(BoardData b, int maxCuias = Superposition.TinajaMaxCuias)
     {
         int n = b.Cuias.Length;
         int[] tinajas = Enumerable.Range(0, b.Attrs.Length).Where(i => b.Attrs[i].Type == MechanicType.Tinaja).ToArray();
@@ -143,10 +146,10 @@ internal static class TinajaChecks
                 $"{tinajas.Length} tinaja(s) (cuias {List(tinajas)}) y {cuias.Length} cuia(s) suya(s) (cuias {List(cuias)}); va una de cada"));
         }
 
-        if (n > Superposition.TinajaMaxCuias)
+        if (n > maxCuias)
         {
             yield return ("QA-TINAJA-CUIAS", string.Create(CultureInfo.InvariantCulture,
-                $"{n} cuias con la tinaja; como mucho {Superposition.TinajaMaxCuias}, contando la pareja"));
+                $"{n} cuias con la tinaja; como mucho {maxCuias}, contando la pareja"));
         }
 
         if (tinajas.Length == 1 && cuias.Length == 1)

@@ -1,0 +1,96 @@
+{
+  "spec": "daily_v1",
+  "spec_schema": 1,
+  "description": "Especificación versionada del pool del Reto del río (daily_challenge; 03 §16; 06 §4.1) que leen tools/level-generator (--self-test daily; --daily desde R3) y tools/level-qa (--daily, R4). Datos copiados, no reglas: bandas, K, vacíos y ventanas del bot de 03 §16 [P]; fuente por banda análoga a 03 §4.4 con rechazo por ventana (máximo 30 candidatos) y sin las relajaciones de 03 §4.4 que cambiarían los vacíos de la banda (nota de diseño docs/dev/reto-del-rio.md §13); capacidades 4 (02 R1; 06 §2.1, regla 4), así que T = K + vacíos ≤ 14; paleta por banda de R-Q1 (tintes estrenados en el tramo y max_pares_riesgo), con los tintes y los pares de riesgo de tints_from (glosario §9; 03 §4.5); agua por mundo del glosario §8 con la rotación de R-Q2. Cada tablero: slot {band, day}, id d{b}_n{nnnn} y seed amazonfill:v1:daily:b{b}:d{ddd} (Daily/DailyIds.cs; esquema schemas/af-level-1.schema.json). Las marcas [P] son propuestas sin decisión del dueño.",
+  "status": "[P] borrador (R2 del encargo docs/dev/traspaso/spark-reto-del-rio.md). Bloqueos: R-Q1b (paleta de B2 con K = 9 y de B3: no caben en el tope de R-Q1, nota §1.1), la fórmula del agua de R-Q2 (nota §13) y R-Q11 (qué pasa si ningún candidato entra en la ventana, nota §1.6). R5 no publica el pool hasta que el dueño responda.",
+  "pack_id": "daily_pool_v1",
+  "days": 730,
+  "pour_mode": "run",
+  "tints_from": "campaign_v2.json",
+  "tints_from_note": "Los 14 tintes con su debut (glosario §9) y los pares de riesgo de 03 §4.5 salen de esa especificación (los mismos que campaign_v1.json); aquí no se copian para no tener dos fuentes.",
+  "k_by_day": "even_min_odd_max",
+  "k_by_day_note": "[P] nota §13: día par -> el K menor de la banda, día impar -> el mayor.",
+  "water": {
+    "status": "[P] R-Q2: el dueño decidió que el agua y el fondo rotan por los mundos 1-9 según la fecha; la fórmula es una propuesta de la nota §13.",
+    "world_of_day": { "offset": 1, "modulo": 9 },
+    "world_of_day_note": "mundo del día = offset + (día mod modulo) = 1 + (día mod 9), con el día del pool 0-729.",
+    "worlds": [
+      { "world": 1, "world_id": "w01_estuario", "water_base": "white" },
+      { "world": 2, "world_id": "w02_tapajos", "water_base": "clear" },
+      { "world": 3, "world_id": "w03_manaos", "water_base": "black" },
+      { "world": 4, "world_id": "w04_trapecio", "water_base": "white" },
+      { "world": 5, "world_id": "w05_loreto", "water_base": "white" },
+      { "world": 6, "world_id": "w06_oriente", "water_base": "white" },
+      { "world": 7, "world_id": "w07_madre_de_dios", "water_base": "white" },
+      { "world": 8, "world_id": "w08_madidi", "water_base": "white" },
+      { "world": 9, "world_id": "w09_ucayali", "water_base": "white" }
+    ]
+  },
+  "bands": [
+    {
+      "band": 1,
+      "note": "Nivel máximo < 41 (lvl_daily_bracket_levels = [41, 201]; 03 §16; 06 §4.1).",
+      "k": [6, 7],
+      "empties": 2,
+      "capacity": 4,
+      "bot_fail": { "min": 0.40, "max": 0.60 },
+      "max_candidates": 30,
+      "source": {
+        "status": "[P] nota §13 (análoga a 03 §4.4).",
+        "rules": [
+          { "k": [6, 7], "gen": "walk" }
+        ],
+        "fallback": { "gen": "fill", "e": 2 },
+        "fallback_note": "Si en max_candidates candidatos de walk ninguno entra en la ventana, fill E=2 (nota §13)."
+      },
+      "palette": {
+        "status": "decidida (R-Q1): tintes estrenados en 1-40, tope 0 (cabe: nota §1.1).",
+        "debut_until": 40,
+        "max_risk_pairs": 0
+      }
+    },
+    {
+      "band": 2,
+      "note": "Nivel máximo 41-200 (03 §16; 06 §4.1).",
+      "k": [8, 9],
+      "empties": 1,
+      "capacity": 4,
+      "bot_fail": { "min": 0.60, "max": 0.80 },
+      "max_candidates": 30,
+      "source": {
+        "status": "[P] nota §13 (análoga a 03 §4.4): deep con K >= 9, fill E=1 con K <= 8.",
+        "rules": [
+          { "k": [8, 8], "gen": "fill", "e": 1 },
+          { "k": [9, 9], "gen": "deep" }
+        ],
+        "fallback": null
+      },
+      "palette": {
+        "status": "[P] R-Q1b pendiente: tintes estrenados en 1-80 con tope 1; con K = 9 el mínimo es 3 pares, así que no cabe (nota §1.1).",
+        "debut_until": 80,
+        "max_risk_pairs": 1
+      }
+    },
+    {
+      "band": 3,
+      "note": "Nivel máximo 201 o más (03 §16; 06 §4.1).",
+      "k": [10, 11],
+      "empties": 1,
+      "capacity": 4,
+      "bot_fail": { "min": 0.75, "max": 1.00 },
+      "max_candidates": 30,
+      "source": {
+        "status": "[P] nota §13 (análoga a 03 §4.4).",
+        "rules": [
+          { "k": [10, 11], "gen": "deep" }
+        ],
+        "fallback": null
+      },
+      "palette": {
+        "status": "[P] R-Q1b pendiente: tintes estrenados en 1-200 con tope 2; con K = 10 el mínimo es 3 pares y con K = 11, 4, así que no cabe (nota §1.1).",
+        "debut_until": 200,
+        "max_risk_pairs": 2
+      }
+    }
+  ]
+}

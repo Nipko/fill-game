@@ -4,16 +4,21 @@
 //     desde el 301, y en hitos, desde el 320 (02 §9.2 regla 4; 03 §12, fila p20; d.5.1 de la propuesta); sin la clave
 //     mechanics_per_level, 2 siempre (campaign_v1);
 //   - QA-HITO-14 (CycleChecks.Hito14Problems): el hito de K = 13 con el vacío repartido en cuias a medias (Brote de dos hojas y
-//     Matapi con dosis, como el 580; con Barro, como el 600) pasa, igual que con una cuia vacía literal; un reto con K = 12 + 1
-//     vacío + la cueva de la Piraña (14 cuias) no es de esta comprobación; K = 13 fuera de su hito, con capacidades, con la
-//     Piraña o con otra holgura, falla; el Brote de dos hojas del 580 y del 600 cumple QA-VAR-B2 (VariantChecks.B2Problems) y
-//     con 3 dosis no;
+//     Matapi con dosis, como el 580 antes de D-027; con Barro, como el 600) pasa, igual que con una cuia vacía literal; un
+//     reto con K = 12 + 1 vacío + la cueva de la Piraña (14 cuias) no es de esta comprobación; K = 13 fuera de su hito, con
+//     capacidades, con la Piraña o con otra holgura, falla; el Brote de dos hojas del 580 y del 600 cumple QA-VAR-B2
+//     (VariantChecks.B2Problems) y con 3 dosis no;
 //   - las casas de la Flor (QA-VAR-FLOR; VariantChecks.FlorProblems y CanSealOutside, D-024): una Hoja atada, un Matapi con dosis
-//     o la Lluvia solo son casa de su fruta, y la Liana, otra Flor o la Tinaja, de ninguna.
+//     o la Lluvia solo son casa de su fruta, y la Liana, otra Flor o la Tinaja, de ninguna;
+//   - la Tinaja (decisión del dueño del 2026-10-18, D-027): el tope de cuias con la pareja es 12 en el nivel (QA-TINAJA-CUIAS)
+//     y 13 en sus variantes de alivio (QA-RELIEF-VALID; TinajaChecks.Structure con Superposition.TinajaReliefMaxCuias), y QA-PAR
+//     exime del par del rango solo los tableros de estreno de la Tinaja con K <= 6 (BaseChecks.TinajaDebutParExempt): el 323-325
+//     de campaign_v2.json en la a, no en la b (sin tinaja), ni la práctica 327, ni con K = 7, ni el estreno sin la tinaja.
 // Imprime ASCII (PASS / FAIL) y sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra las especificaciones.
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AmazonFill.Tools.LevelGenerator.Campaign;
+using AmazonFill.Tools.LevelGenerator.Generation;
 using AmazonFill.Tools.LevelGenerator.Metrics;
 
 namespace AmazonFill.Tools.LevelQa.Checks;
@@ -22,15 +27,20 @@ internal static class RulesSelfTest
 {
     public const string VariantsSpec = "tools/level-generator/specs/sample_variants.json";
     public const string CampaignSpecPath = "tools/level-generator/specs/campaign_v1.json";
+    public const string CampaignV2Path = "tools/level-generator/specs/campaign_v2.json";
 
     public static int Run()
     {
         CampaignSpec variants;
         CampaignSpec campaign;
+        CampaignSpec v2a;
+        CampaignSpec v2b;
         try
         {
             variants = CampaignSpec.Load(VariantsSpec);
             campaign = CampaignSpec.Load(CampaignSpecPath);
+            v2a = CampaignSpec.Load(CampaignV2Path, CampaignSpec.VariantA);
+            v2b = CampaignSpec.Load(CampaignV2Path, CampaignSpec.VariantB);
         }
         catch (CampaignSpecException e)
         {
@@ -48,6 +58,7 @@ internal static class RulesSelfTest
         MechanicsCap(variants, campaign, Check);
         Hito14(Check);
         Flor(Check);
+        Tinaja(v2a, v2b, Check);
 
         Console.WriteLine(failures == 0 ? "self-test reglas: todo PASS" : $"self-test reglas: {failures} FAIL");
         return failures == 0 ? 0 : 1;
@@ -264,6 +275,64 @@ internal static class RulesSelfTest
         string[] problems = [.. VariantChecks.FlorProblems(b, 0, units)];
         check(pass ? problems.Length == 0 : problems.Length == 1 && problems[0].Contains("no tienen casa", StringComparison.Ordinal),
             "QA-VAR-FLOR: " + what + (problems.Length > 0 ? " [" + string.Join(" | ", problems) + "]" : " [sin motivos]"));
+    }
+
+    // ---------------------------------------------------------------------------------------------------------------
+    // Tinaja: topes de cuias y par de su estreno (D-027)
+    // ---------------------------------------------------------------------------------------------------------------
+
+    private static void Tinaja(CampaignSpec v2a, CampaignSpec v2b, Action<bool, string> check)
+    {
+        check(Superposition.TinajaReliefMaxCuias == Superposition.TinajaMaxCuias + 1,
+            $"tope de cuias con la tinaja: {Superposition.TinajaMaxCuias} en el nivel y {Superposition.TinajaReliefMaxCuias} en el alivio (D-027)");
+
+        // Tableros de n cuias con la tinaja y su cuia en la misma fila: el tope solo mira cuántas son.
+        foreach ((int n, int max, bool pass, string what) in new[]
+        {
+            (12, Superposition.TinajaMaxCuias, true, "nivel de 12 cuias con tinaja"),
+            (13, Superposition.TinajaMaxCuias, false, "nivel de 13 cuias con tinaja"),
+            (13, Superposition.TinajaReliefMaxCuias, true, "alivio de 13 cuias con tinaja (plus_empty de un nivel de 12)"),
+            (14, Superposition.TinajaReliefMaxCuias, false, "alivio de 14 cuias con tinaja"),
+        })
+        {
+            BoardData b = TinajaBoard(n);
+            string[] cuias = [.. TinajaChecks.Structure(b, max).Where(x => x.Id == "QA-TINAJA-CUIAS").Select(x => x.Message)];
+            check(pass ? cuias.Length == 0 : cuias.Length == 1,
+                $"QA-TINAJA-CUIAS (tope {max}): {what} {(pass ? "pasa" : "falla")}" + (cuias.Length > 0 ? " [" + string.Join(" | ", cuias) + "]" : " [sin motivos]"));
+        }
+
+        // QA-PAR: el par del rango no se exige en los tableros de estreno de la Tinaja con K <= 6.
+        BoardData withTinaja = TinajaBoard(8);
+        BoardData without = Board([.. Full(6), [], []]);
+        foreach ((CampaignSpec spec, int level, BoardData b, int k, bool exempt, string what) in new[]
+        {
+            (v2a, 323, withTinaja, 6, true, "estreno 323 (★Ti) con K = 6"),
+            (v2a, 324, withTinaja, 5, true, "estreno 324 (★Ti) con K = 5"),
+            (v2a, 325, withTinaja, 6, true, "estreno 325 (★Ti) con K = 6"),
+            (v2a, 325, withTinaja, 7, false, "estreno 325 (★Ti) con K = 7"),
+            (v2a, 327, withTinaja, 6, false, "practica 327 (Ti), no es estreno"),
+            (v2a, 343, without, 6, false, "estreno 343 (★B2), sin la tinaja"),
+            (v2b, 324, without, 6, false, "324 de la variante b (C), sin la tinaja"),
+        })
+        {
+            LevelPlan plan = spec.Plan(level);
+            bool got = BaseChecks.TinajaDebutParExempt(plan, b, k);
+            check(got == exempt, $"QA-PAR: {what} {(exempt ? "exento" : "no exento")} del par del rango (D-027) [DebutBoard={plan.DebutBoard}, tinaja={b.HasTinaja}]");
+        }
+    }
+
+    /// <summary>
+    /// Tablero de <paramref name="n"/> cuias: la tinaja (cap 5, 3 dosis con T4 y la máscara) y su cuia vacía (cap 2) en las
+    /// ranuras 0 y 1 (la misma fila con cualquier reparto), y el resto, cuias de 4 vacías o llenas.
+    /// </summary>
+    private static BoardData TinajaBoard(int n)
+    {
+        int[] caps = [5, 2, .. Enumerable.Repeat(Cuia.DefaultCapacity, n - 2)];
+        int[][] cuias = [[1, 2, 1], [], .. Enumerable.Range(0, n - 2).Select(i => i < 3 ? Enumerable.Repeat(i + 3, 4).ToArray() : Array.Empty<int>())];
+        var attrs = new MechanicSpec[n];
+        attrs[0] = new MechanicSpec(MechanicType.Tinaja);
+        attrs[1] = new MechanicSpec(MechanicType.Cucharon);
+        return new BoardData(caps, cuias, attrs, [[0, 0], [0, 1]]);
     }
 
     // ---------------------------------------------------------------------------------------------------------------

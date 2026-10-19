@@ -73,6 +73,30 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Report_ListsTheFontsByAssetAndType_HeaviestFirst()
+        {
+            // FNT1: el desglose del grupo «Fuentes» suma las entradas de cada asset y tipo, de más a menos peso, sin otros grupos.
+            var contents = new List<PackedEntry>
+            {
+                new PackedEntry("Assets/_Project/Resources/AF/Fonts/Nunito-Regular SDF.asset", typeof(Material), 2000),
+                new PackedEntry("Assets/_Project/Resources/AF/Fonts/Nunito-Regular SDF.asset", typeof(Texture2D), 786432),
+                new PackedEntry("Assets/TextMesh Pro/Fonts/LiberationSans.ttf", typeof(Font), 350000),
+                new PackedEntry("Assets/_Project/Resources/AF/Fonts/Nunito-Regular SDF - Plain.mat", typeof(Material), 1000),
+                new PackedEntry("Assets/_Project/Resources/AF/Fonts/Nunito-Regular SDF - Plain.mat", typeof(Material), 700),
+                new PackedEntry("Assets/_Project/Data/Loc/strings.csv", typeof(TextAsset), 900000),
+            };
+
+            string report = AabSizeReport.Report(contents, 10000000);
+            string fonts = report.Substring(report.IndexOf("## Fuentes por asset", System.StringComparison.Ordinal));
+
+            Assert.That(fonts, Is.EqualTo("## Fuentes por asset\n\n| Asset | Tipo | MB |\n| --- | --- | ---: |\n"
+                + "| Assets/_Project/Resources/AF/Fonts/Nunito-Regular SDF.asset | Texture2D | 0.786 |\n"
+                + "| Assets/TextMesh Pro/Fonts/LiberationSans.ttf | Font | 0.350 |\n"
+                + "| Assets/_Project/Resources/AF/Fonts/Nunito-Regular SDF.asset | Material | 0.002 |\n"
+                + "| Assets/_Project/Resources/AF/Fonts/Nunito-Regular SDF - Plain.mat | Material | 0.002 |\n"));
+        }
+
+        [Test]
         public void Report_CountsAssetInEachGroupItSpans_AndSkipsEntriesWithoutPath()
         {
             var contents = new List<PackedEntry>

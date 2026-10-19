@@ -7,7 +7,9 @@ namespace AF.GameFlow
     /// En qué niveles sale el banner de entrada a un mundo (07 §2.2, regla transversal 1; 02 §6; glosario §8 y §10, clave
     /// <c>world_banner</c>): «Mundo {n}: {nombre} · {país} · {río}», presentado por Capi, al cargar el primer nivel de cada mundo
     /// desde el 2 (11, 41, 81, 141 y, con el mundo 6 publicado desde C1a, 201, «Mundo 6: Oriente · Ecuador · Napo + lagunas
-    /// negras de Cuyabeno»; después 301, 421…, según <see cref="WorldTable"/>), antes de la intro y solo en
+    /// negras de Cuyabeno»; y, con los mundos 7-9 publicados desde C1b, 301 «Mundo 7: Madre de Dios · Perú · Tambopata / Madre
+    /// de Dios», 421 «Mundo 8: Madidi · Bolivia · Beni / Mamoré, Iténez» y 561 «Mundo 9: Ucayali · Perú · Ucayali,
+    /// Shanay-Timpishka»; después 701, 821…, según <see cref="WorldTable"/>), antes de la intro y solo en
     /// el primer intento. El nivel 1 no lo lleva (decisión del dueño del 2026-10-11: allí el primer contacto es el tutorial,
     /// 06 §2.1 regla 3). Regla pura, sin asignaciones; quién la aplica y cuándo, en <c>LevelFlow.Cards.cs</c>.
     /// </summary>

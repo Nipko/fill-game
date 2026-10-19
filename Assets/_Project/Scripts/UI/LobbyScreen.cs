@@ -34,7 +34,8 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item><description><b>el sitio</b>: su propio <see cref="AF.Presentation.StopBackdrop"/> con la parada de «Jugar»
     /// (<see cref="RiverStopCatalog.StopOf"/> de <see cref="AppFlow.PlayLevel"/>; el mismo fondo que el tablero de ese nivel,
-    /// <see cref="GameScreen.StopForLevel"/>), con su luz sobre el panorama y corte directo al cambiar de nivel;</description></item>
+    /// <see cref="GameScreen.StopForLevel"/>; en el fin de contenido sin parada para ese nivel, la del último publicado,
+    /// <see cref="StopLevel"/>), con su luz sobre el panorama y corte directo al cambiar de nivel;</description></item>
     /// <item><description><b>«Faltan {n} niveles para {lugar}»</b> (<c>map_stop_remaining</c>, con el plural de la tabla) bajo
     /// «Jugar», en Nunito Bold de <see cref="StopRemainingSp"/> sp sobre madera, hacia la parada siguiente; se arma solo al
     /// cambiar de nivel y no sale con el fin de contenido, con Sin canoas ni si esa parada no está en el catálogo;</description></item>
@@ -953,16 +954,19 @@ namespace AF.UI
 
         // La parada de «Jugar» (M2.1), solo al cambiar de nivel o de catálogo: el fondo (corte directo; con ui_bg_per_stop =
         // false, la gran parada del mundo, como el tablero), la luz sobre el panorama, «Faltan…» hacia la parada siguiente y la
-        // ventanita con la parada actual. Fuera de 1..1.000 o sin catálogo, nada: el inicio de siempre.
+        // ventanita con la parada actual. Fuera de 1..1.000 o sin catálogo, nada: el inicio de siempre. En el fin de contenido,
+        // si el nivel de «Jugar» no tiene parada en los datos del Mapa (el 701 con las paradas 0-69), la del último nivel
+        // publicado (06 §4: fondo de la parada actual y TiTino en la ventanita; StopLevel).
         private void ApplyStop(AppFlow app, int level)
         {
             RiverStopCatalog? stops = _riverStops;
-            bool inRange = stops != null && level >= 1 && level <= WorldTable.LastLevel;
-            _currentStop = inRange ? stops!.StopOf(level) : null;
+            int stopLevel = StopLevel(stops, level, app.Catalog.LastLevel);
+            bool inRange = stops != null && stopLevel >= 1 && stopLevel <= WorldTable.LastLevel;
+            _currentStop = inRange ? stops!.StopOf(stopLevel) : null;
             _nextStop = _currentStop != null ? stops!.At(_currentStop.N + 1) : null;
-            RiverStop? backdrop = inRange ? GameScreen.StopForLevel(stops, level, MapConfig.UiBgPerStop) : null;
-            LevelDefinition? def = app.Catalog.Find(level);
-            Season season = level >= 1 && level <= WorldTable.LastLevel ? GameScreen.SeasonFor(_seasons, level) : Season.None;
+            RiverStop? backdrop = inRange ? GameScreen.StopForLevel(stops, stopLevel, MapConfig.UiBgPerStop) : null;
+            LevelDefinition? def = app.Catalog.Find(stopLevel);
+            Season season = stopLevel >= 1 && stopLevel <= WorldTable.LastLevel ? GameScreen.SeasonFor(_seasons, stopLevel) : Season.None;
             _stopBackdrop.Apply(backdrop, def != null ? def.WaterBase : app.Catalog.WaterBase, false, 0f, season);
             ApplyStopLut();
 
@@ -973,6 +977,21 @@ namespace AF.UI
             _remainingLabel.text = _remainingReady ? UiText.MapStopRemaining(RiverJourney.LevelsLeft(level), place) : string.Empty;
             LayoutRemaining();
             ApplyStopVisibility();
+        }
+
+        /// <summary>
+        /// Nivel cuya parada se enseña en el inicio con <paramref name="level"/> en «Jugar»: el propio nivel, salvo en el fin de
+        /// contenido (más allá de <paramref name="lastPublished"/>) cuando ese nivel no tiene parada en los datos del Mapa; entonces,
+        /// el último nivel publicado (el 701 con las paradas 0-69 enseña la parada del 700). Con parada, el de siempre.
+        /// </summary>
+        internal static int StopLevel(RiverStopCatalog? stops, int level, int lastPublished)
+        {
+            if (stops == null || level <= lastPublished || lastPublished < 1 || stops.StopOf(level) != null)
+            {
+                return level;
+            }
+
+            return lastPublished;
         }
 
         // Qué se ve del Mapa en el inicio según la pantalla: «Faltan…» no sale con el fin de contenido ni con Sin canoas; la

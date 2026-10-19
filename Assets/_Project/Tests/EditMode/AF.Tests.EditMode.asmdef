@@ -20,7 +20,8 @@
     "AF.Localization",
     "AF.Audio",
     "AF.Audio.Unity",
-    "AF.Audio.Editor"
+    "AF.Audio.Editor",
+    "Unity.TextMeshPro"
   ],
   "includePlatforms": [
     "Editor"
