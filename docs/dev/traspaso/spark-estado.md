@@ -4,6 +4,16 @@ Encargo: `docs/dev/traspaso/spark-reto-del-rio.md` (de `origin/integracion-fase1
 
 ---
 
+## 2026-10-19 · ⚠ La licencia de Unity vuelve a fallar (pendiente del dueño, 2.ª vez)
+
+- **Hacia las 13:35** los batchmode vuelven a salir con el código 6, con los mismos errores que la primera vez:
+  - `Code 404 … Found 0 entitlement groups and 0 free entitlements`;
+  - `'com.unity.editor.headless' was not found`;
+  - `No valid Unity Editor license found`.
+- **Patrón:** las dos veces, justo antes del fallo, arrancó un proceso nuevo de la Unity CLI, `unity.exe --internal-auth-broker-serve` (PID nuevo a las 12:09 y a las 13:35). Parece que, al renovar la sesión, la CLI se queda sin derechos para el modo headless. La pasada larga que acababa de terminar (bloque c, PlayMode 1.334) salió bien porque arrancó antes.
+- **Qué afecta:** la verificación en Unity de R8 y de lo que sigue. Sigo escribiendo y revisando el código, pero no lo fusiono hasta pasarlo por Unity.
+- **No he usado `unity auth` ni `unity license`** (regla dura 5).
+
 ## 2026-10-19 · Bloque (c) (R6-R7b: lector y lógica del Reto, sin pantalla): listo para integrar
 
 Verificación completa de `spark/reto-del-rio` en `0a1b3ac`:
