@@ -4,6 +4,21 @@ Encargo: `docs/dev/traspaso/spark-reto-del-rio.md` (de `origin/integracion-fase1
 
 ---
 
+## 2026-10-19 · ⚠ BLOQUEO: la licencia de Unity dejó de valer en este equipo (pendiente del dueño)
+
+- **Desde** unas 12:10 (hora local) ningún batchmode arranca: `unity-compile.ps1` y `unity-test.ps1` salen con el código 6.
+- **Log** (`.claude/worktrees/spark-r6/Logs/compile.log`):
+  - `Error: Code 404 … Found 0 entitlement groups and 0 free entitlements matching requested entitlement ids`;
+  - `'com.unity.editor.headless' was not found`;
+  - `No valid Unity Editor license found`.
+- **Qué no es la causa:** el aviso «Code 10 while verifying Licensing Client signature» ya salía en las pasadas buenas de la línea base (10:55 y 11:33), cuando sí se resolvían los derechos. Unity Hub (3.22.3) y la CLI (1.0.0-beta.13) no han cambiado de versión.
+- **Hipótesis:** se retiró o caducó el derecho de la licencia en el servidor. Por ejemplo, el asiento está en uso en otro equipo, o la licencia no incluye `com.unity.editor.headless`.
+- **No he usado `unity auth` ni `unity license`** (regla dura 5).
+- **Lo que necesito del dueño:** revisar la licencia de Unity de este equipo en Unity Hub (Preferencias › Licencias). Cuando vuelva a funcionar, avisa al Spark para repetir las pruebas de Unity pendientes:
+  - R6 en el worktree `spark-r6`: compilar y pasar EditMode (esperado 2.851: 2.848 + 3 omitidos);
+  - todo lo que haya del cliente desde R7.
+- **Qué afecta:** todo el carril del cliente (R6-R11) queda sin verificar en Unity. Sigo escribiendo el código y lo compruebo fuera de Unity, pero no lo doy por terminado ni lo fusiono hasta pasar Unity. El carril de herramientas (R2-R4) no lo necesita.
+
 ## 2026-10-19 · R3 · Modo `--daily` del generador: HECHA
 
 - **Commits** (en `spark/reto-del-rio-r3`, fusionados con `--no-ff` en `spark/reto-del-rio` como `c87a181`):
