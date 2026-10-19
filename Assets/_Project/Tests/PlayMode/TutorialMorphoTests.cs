@@ -129,7 +129,7 @@ namespace AF.Tests.PlayMode
             TutorialSlothTests.WaitForInstruction(boot, "el 12");
 
             // Con la presentación a la vista, Pista responde (la tarjeta no captura toques) y gasta del stock, no semillas. Sin dedo
-            // guía: 06 §2.2 lo pide para la primera, pero aún no existe en el cliente (pendiente; pregunta para el dueño) [P].
+            // guía (D-028, pregunta 61 (a)): la presentación de TiTino con la cola sobre «Pista» hace de guía.
             Assert.That(boot.PressHint(), Is.True, "Pista con la presentación a la vista");
             yield return WaitAnswer(boot);
             Assert.That(boot.Flow.LastHint!.Value.Answer, Is.EqualTo(HintAnswer.Pour));

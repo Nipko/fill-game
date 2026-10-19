@@ -518,7 +518,8 @@ namespace AF.Tests.EditMode
         private static void AssertSame(in SlothLine x, in SlothLine y, string what)
         {
             Assert.That(x.Screen == y.Screen && x.Gesture == y.Gesture && x.Moment == y.Moment && x.Index == y.Index
-                && string.Equals(x.Key, y.Key, StringComparison.Ordinal) && x.Arg == y.Arg && x.Greeting == y.Greeting, Is.True, what);
+                && string.Equals(x.Key, y.Key, StringComparison.Ordinal) && x.Arg == y.Arg && x.Greeting == y.Greeting
+                && x.Deferred == y.Deferred, Is.True, what);
         }
 
         // ------------------------------------------------------------------------------------------- fallo y reinicio

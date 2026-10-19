@@ -235,6 +235,15 @@ namespace AF.UI
         /// <summary>La tarjeta del miquito espera a que la tropa se vaya (aún no está en la cola; tests).</summary>
         internal bool SightingPending => _sightingPending != null;
 
+        /// <summary>
+        /// La tarjeta «¡Miquito a la vista!» de su turno en la cola salió a la vista (Q11 del guion de la intro, D-029; tarea
+        /// DC15): la especie y el nivel. Lo engancha <see cref="GameBootstrap"/> para apuntar el avistamiento en el perfil
+        /// (<c>fauna.sighted</c>) y escribir la sonda <c>af_fauna_sighted</c>. Se llama una vez por tarjeta que sale; si la tarjeta
+        /// no sale (se gana antes de que se vaya la tropa, no cabe o la tapa algo de más prioridad), no se llama. El camino de
+        /// tests y capturas (<see cref="ShowSighting"/>) no lo llama. Null: nada (tests sin juego).
+        /// </summary>
+        internal Action<FaunaSpecies, int>? SightingShown { get; set; }
+
         /// <summary>El aviso del tablero (tests: duración y toques).</summary>
         internal Toast NoticeToast => _toast;
 
@@ -656,6 +665,10 @@ namespace AF.UI
                         if (species != null)
                         {
                             ShowSightingNow(species); // si no cabe, no sale y pasa el siguiente
+                            if (_sighting.Visible)
+                            {
+                                NotifySightingShown(species); // el avistamiento, al quedar a la vista (DC15)
+                            }
                         }
 
                         break;
@@ -769,7 +782,8 @@ namespace AF.UI
         // «¡Miquito a la vista!» (guion de la intro §4.5 y §14): al habilitarse el input tras la intro, en el primer intento del
         // primer nivel libre desde el nivel_tarjeta de la especie del tramo (nunca la de otro mundo) y solo con su arte
         // (FaunaArtAvailable: fuera de desarrollo, sin el PNG del retrato no sale). Queda pendiente hasta que la tropa se vaya
-        // (TickNotices). Sin persistir ni af_fauna_sighted: eso exige migrar el perfil (Q11, PR aparte).
+        // (TickNotices). El avistamiento (fauna.sighted y af_fauna_sighted; Q11, D-029, DC15) se apunta cuando la tarjeta sale
+        // a la vista (PumpNotices → SightingShown), no aquí: si no sale, no hay avistamiento.
         private void MaybeShowSighting(LevelFlow flow)
         {
             FaunaCatalog? fauna = Fauna;
@@ -828,6 +842,17 @@ namespace AF.UI
 
             _sighting.Place(_canvasW, top);
             _sighting.Show(_art.MonkeyArtFor(species).Portrait, name, fact);
+        }
+
+        // Avisa del avistamiento de la tarjeta que acaba de salir, con el nivel en curso (DC15). Sin nivel, nada.
+        private void NotifySightingShown(FaunaSpecies species)
+        {
+            Action<FaunaSpecies, int>? shown = SightingShown;
+            LevelFlow? flow = _flow;
+            if (shown != null && flow != null && flow.HasLevel)
+            {
+                shown(species, flow.LevelNumber);
+            }
         }
 
         /// <summary>

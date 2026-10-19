@@ -87,8 +87,9 @@ namespace AF.UI
             Pointer? pointer = Pointer.current;
             bool touched = _idleTouched || (pointer != null && pointer.press.isPressed);
             _idleTouched = false;
+            // Con el dedo guía a la vista (el 43 y el 323 tienen pista por inactividad), no pulsa: las dos ayudas no compiten (DC7) [P].
             bool busy = !Visible || !IsViewIdle || _pause.Visible || _confirm.Visible || _hintCard.Visible || _morphoFx.Active
-                || NoticeShowing;
+                || NoticeShowing || TutorialFingerVisible;
             switch (_idleHint.Tick(flow, IdleHintSetting, touched, busy))
             {
                 case IdleHintSignal.Pulse:

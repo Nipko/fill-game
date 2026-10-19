@@ -16,14 +16,13 @@ namespace AF.Save.Tests
         public void Default_IsZero_AlsoWithoutTheField()
         {
             Profile fresh = Profile.CreateNew(new ManualClock(SampleProfiles.T0), 5);
-            Profile old = ProfileJson.Deserialize("{\"profile_schema\": 1, \"progress\": {\"max_level\": 87, \"next_level\": 88}}");
-            Profile noProgress = ProfileJson.Deserialize("{\"profile_schema\": 1}");
+            Profile old = ProfileJson.Deserialize("{\"profile_schema\": 2, \"progress\": {\"max_level\": 87, \"next_level\": 88}}");
+            Profile noProgress = ProfileJson.Deserialize("{\"profile_schema\": 2}");
 
             Assert.That(fresh.Progress.MapSeenLevel, Is.EqualTo(0));
             Assert.That(old.Progress.MapSeenLevel, Is.EqualTo(0));
             Assert.That(noProgress.Progress.MapSeenLevel, Is.EqualTo(0));
             StringAssert.Contains("\"map_seen_level\": 0", ProfileJson.Serialize(old));
-            Assert.That(Profile.CurrentSchema, Is.EqualTo(1), "sin migración: el esquema aún no se ha publicado");
         }
 
         [TestCase(0, 0)]
@@ -36,7 +35,7 @@ namespace AF.Save.Tests
         [TestCase(int.MinValue, 0)]
         public void IsClampedToZeroAndMaxLevel_WhenRead(int stored, int expected)
         {
-            string json = "{\"profile_schema\": 1, \"progress\": {\"max_level\": 87, \"map_seen_level\": "
+            string json = "{\"profile_schema\": 2, \"progress\": {\"max_level\": 87, \"map_seen_level\": "
                 + stored.ToString(System.Globalization.CultureInfo.InvariantCulture) + "}}";
 
             Assert.That(ProfileJson.Deserialize(json).Progress.MapSeenLevel, Is.EqualTo(expected));
@@ -71,7 +70,7 @@ namespace AF.Save.Tests
         [TestCase("[80]")]
         public void InvalidValue_IsZero_WithoutCorruptingTheProfile(string value)
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 1, \"progress\": {\"max_level\": 87, \"map_seen_level\": " + value + "}}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"progress\": {\"max_level\": 87, \"map_seen_level\": " + value + "}}");
 
             Assert.That(p.Progress.MapSeenLevel, Is.EqualTo(0));
             Assert.That(p.Progress.MaxLevel, Is.EqualTo(87));

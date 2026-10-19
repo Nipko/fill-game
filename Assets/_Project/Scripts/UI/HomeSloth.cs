@@ -23,7 +23,8 @@ namespace AF.UI
     /// con <c>sloth_wave</c> y, si hay voz, su frase en el bocadillo. Se decide una vez por visita al inicio, cuando la ventanita
     /// se ve con el inicio delante (<see cref="AppScreen.Lobby"/>; con «El río sigue creciendo» abierto, espera a que se cierre
     /// para no gastar el saludo del día detrás del modal); en cada visita se apunta <c>sloth.last_seen_date</c> y se guarda el
-    /// perfil si algo cambió. Durante <c>sloth_wave</c>, el rig baja hasta <see cref="WaveDropDp"/> dp para que el marco no
+    /// perfil si algo cambió. Justo después del bocadillo del Mapa del 10 (D-028, pregunta 60 b), el saludo que tocaba no sale
+    /// ni se gasta y esa visita no apunta nada: queda para la visita siguiente al inicio. Durante <c>sloth_wave</c>, el rig baja hasta <see cref="WaveDropDp"/> dp para que el marco no
     /// corte la garra que saluda. Colgado, se agarra a la rama pintada de la embaúba de la ventanita y la rama del rig no se
     /// pinta (si no, se verían dos ramas y una bajaría con él); tumbado o en ovillo, sobre la rama del rig, más abajo.</item>
     /// <item><b>Toque</b> (<see cref="Tap"/>): <c>sloth_look</c> y, como mucho una vez por sesión, un «Dato del perezoso»
@@ -596,18 +597,24 @@ namespace AF.UI
             int lineBefore = returnIndex < last.Length ? last[returnIndex] : SlothData.NoLine;
 
             var context = new SlothContext(session.Enabled && Enabled, _messages!(), session.FailEnabled, session.WinLineEveryN,
-                session.LinesPerSessionMax, session.LinesThisSession, session.PreviousScreenSpoke, last)
+                session.LinesPerSessionMax, session.LinesThisSession, session.PreviousScreenSpoke, last, session.PreviousScreenMapIntro)
                 .WithHome(new SlothHomeFacts(today, hour, seenBefore, greetedBefore, _nextLevel!()));
             SlothLine line = SlothLines.ForHome(in context);
             string text = string.Empty;
             bool speaks = line.Speaks && UiText.TrySlothLine(in line, out text);
             SlothLine shown = speaks
                 ? line
-                : new SlothLine(SlothScreen.Home, line.Gesture, line.Moment, SlothData.NoLine, null, 0, line.Greeting);
+                : new SlothLine(SlothScreen.Home, line.Gesture, line.Moment, SlothData.NoLine, null, 0, line.Greeting, line.Deferred);
             session.Record(in shown, in context);
 
-            // El sloth del perfil, aunque la sesión lleve el suyo: la última apertura, el saludo del día y la frase vista.
-            data.LastSeenDate = today;
+            // El sloth del perfil, aunque la sesión lleve el suyo: la última apertura, el saludo del día y la frase vista. Con el
+            // saludo aplazado tras el bocadillo del Mapa del 10 (D-028, pregunta 60 b), nada: el saludo queda para la visita
+            // siguiente (si aquí se apuntara la apertura de hoy, el de la mañana ya no tocaría).
+            if (!shown.Deferred)
+            {
+                data.LastSeenDate = today;
+            }
+
             if (shown.Greeting)
             {
                 data.LastGreetingDate = today;

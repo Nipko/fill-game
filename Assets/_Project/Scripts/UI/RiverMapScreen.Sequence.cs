@@ -24,7 +24,9 @@ namespace AF.UI
     /// copa de su embaúba con el pico hacia él y, como TiTino cuelga bajo la rama, un tallo del pico que baja por delante de la
     /// copa hasta <see cref="L10BubbleStemGapDp"/> dp de su coronilla (<see cref="SpeechBubble"/>; revisión de M4.2: que se vea
     /// quién habla), lo que pide su lectura (<see cref="NoticeTiming.ReadMs(string)"/>). Sin
-    /// voz, solo el gesto (<see cref="PresentOnlyMs"/>); sin su arte (release, P-M5), nada.</description></item>
+    /// voz, solo el gesto (<see cref="PresentOnlyMs"/>); sin su arte (release, P-M5), nada. Si el bocadillo sale, lo avisa
+    /// (<see cref="L10BubbleSaid"/>): no gasta ninguna frase de la sesión de TiTino, pero cuenta como pantalla en la que habló y
+    /// el saludo del día del inicio que la sigue se aplaza (D-028, pregunta 60 b).</description></item>
     /// <item><description><b>La placa del Dato del río 1</b> (el <c>arrival_fact</c> de la parada 1,
     /// <c>map.stop.estuario.dato_03</c>; 08 §4.5) con el retrato de TiTino, arriba de la zona del mapa, y a la vez <b>la canoa de
     /// Capi sube de Belém a Santarém</b>: «ponerse al día» (M3.5), que espera quieto mientras TiTino habla, enciende las boyas de
@@ -175,6 +177,12 @@ namespace AF.UI
 
         /// <summary>TiTino tiene voz (<c>ui_sloth_enabled</c> ∧ <c>settings.sloth_messages</c>); sin quien lo diga, sí.</summary>
         internal Func<bool>? L10SlothVoice { get; set; }
+
+        /// <summary>
+        /// Lo llama la secuencia cuando sale el bocadillo <c>map_l10_intro</c> (una vez por secuencia): <see cref="GameBootstrap"/>
+        /// lo apunta en la sesión de TiTino (<c>SlothSession.RecordMapIntro</c>; D-028, pregunta 60 b).
+        /// </summary>
+        internal Action? L10BubbleSaid { get; set; }
 
         /// <summary>La secuencia del Mapa del 10 está en marcha (el toque la salta).</summary>
         public bool L10SequenceActive => _seqActive;
@@ -480,6 +488,7 @@ namespace AF.UI
             if (_seqWithBubble)
             {
                 _seqBubble!.Show(_seqBubbleText, ProgressReduceMotion ? 1f : 0f);
+                L10BubbleSaid?.Invoke(); // fuera del tope de frases, dentro de «dos pantallas seguidas» (D-028, pregunta 60 b)
             }
 
             if (_seqWithPlate)

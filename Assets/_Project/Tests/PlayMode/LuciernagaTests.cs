@@ -8,6 +8,7 @@ using AF.Boosters;
 using AF.Core.Board;
 using AF.Economy;
 using AF.GameFlow;
+using AF.Platform;
 using AF.Presentation;
 using AF.Presentation.Mechanics;
 using AF.Save;
@@ -27,7 +28,8 @@ namespace AF.Tests.PlayMode
     /// AF_LAYOUT, el modo de selección (solo laten las turbias), el revelado con el stock, con semillas y con el video, el aviso
     /// sin saldo ni video, la cancelación sin coste, la ranura que desaparece sin ocultas y lo revelado que sobrevive a Marea, a
     /// Volver a la orilla y a reabrir (con alguna oculta, las 3 ranuras desde el primer fotograma y en AF_LAYOUT). Con el
-    /// catálogo real: nivel 100, cuia 0 = [10*, 8*, 6] y cuia 1 = [6]; nivel 106, cuia 6 = [14*, 1].
+    /// catálogo real: nivel 100, cuia 0 = [10*, 8*, 6] y cuia 1 = [6]; nivel 106, cuia 6 = [14*, 1]; nivel 135, ocultas en las
+    /// cuias 7 y 8.
     /// </summary>
     public sealed class LuciernagaTests
     {
@@ -35,6 +37,9 @@ namespace AF.Tests.PlayMode
         private const int MurkyCuia100 = 0;
         private const int Level106 = 106;
         private const int MurkyCuia106 = 6;
+        private const int Level135 = 135;
+        private const int FirstMurkyCuia135 = 7;
+        private const int SecondMurkyCuia135 = 8;
 
         private readonly List<string> _lines = new List<string>();
 
@@ -299,6 +304,8 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Reveal_Seeds_Level106()
         {
+            // Sin video (no_fill) y con saldo, el botón paga con semillas (D-028: las semillas solo cuando no hay video).
+            LaunchOptions.AdFillOverride = FakeAdFill.NoFill;
             var store = new MemoryProfileStore(FunnelSetup.Profile(500));
             LaunchOptions.ProfileStoreOverride = store;
             yield return LoadPlayingWithStore(Level106);
@@ -307,9 +314,9 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow!.Level.IsMurky, Is.True);
             Assert.That(boot.Wallet!.Stock.Get(BoosterKind.Reveal), Is.EqualTo(0), "sin regalo fuera del estreno");
             Assert.That(view.ToastText, Is.Null);
-            Assert.That(view.Tray.RevealPriceShown, Is.EqualTo(120), "sin stock, el precio (reveal_seed_price)");
+            Assert.That(view.Tray.RevealPriceShown, Is.EqualTo(120), "sin stock ni video, el precio (reveal_seed_price)");
             Assert.That(view.Tray.RevealShowsMissing, Is.False);
-            Assert.That(view.Tray.RevealShowsVideo, Is.False, "con saldo, el botón paga con semillas");
+            Assert.That(view.Tray.RevealShowsVideo, Is.False, "sin video y con saldo, el botón paga con semillas");
 
             int writes = boot.SaveBatch!.WriteCount;
             Assert.That(boot.PressReveal(), Is.True);
@@ -326,6 +333,112 @@ namespace AF.Tests.PlayMode
             Assert.That(saved.LevelState!.History, Does.EndWith("|601"), "R: la capa 0 de la cuia 6");
             StepUntilRevealDone(boot, 5000);
             MechanicTestKit.AssertViewMatchesModel(boot);
+        }
+
+        [UnityTest]
+        public IEnumerator Reveal_VideoFirst_EvenWithSeeds_Level106()
+        {
+            // D-028 (GDD §6.3, pregunta 23 a): sin stock y con video de rv_reveal (fill, tope y espera), el toque abre el video
+            // aunque haya saldo, como Marea, y la insignia enseña «+1» con el icono de video, no el precio. Al terminar, +1
+            // Luciérnaga y el modo de selección pagando con ella: las semillas no se tocan. Después, la espera de 60 s (el reloj
+            // del test no avanza) ya bloquea el video.
+            var store = new MemoryProfileStore(FunnelSetup.Profile(500));
+            LaunchOptions.ProfileStoreOverride = store;
+            yield return LoadPlayingWithStore(Level106);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            Assert.That(boot.Wallet!.Stock.Get(BoosterKind.Reveal), Is.EqualTo(0));
+            Assert.That(view.Tray.RevealShowsVideo, Is.True, "con saldo y video, la insignia del video");
+            Assert.That(view.Tray.RevealBadgeText, Is.EqualTo("+1"));
+            Assert.That(view.Tray.RevealPriceShown, Is.EqualTo(0), "sin el precio");
+            Assert.That(view.Tray.RevealShowsMissing, Is.False);
+
+            int presented = FunnelSetup.AdsPresenter.Presented;
+            Assert.That(boot.PressReveal(), Is.True);
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(presented + 1), "el toque abre el video");
+            Assert.That(FunnelSetup.AdsPresenter.Last!.Placement, Is.EqualTo(AdPlacement.Reveal));
+            Assert.That(boot.Flow!.RevealSelecting, Is.True, "tras la recompensa, a elegir cuia");
+            Assert.That(boot.Flow.RevealSelectionPayment, Is.EqualTo(RevealPayment.Stock), "con la unidad del video");
+            Assert.That(boot.Wallet.Stock.Get(BoosterKind.Reveal), Is.EqualTo(1), "+1 Luciérnaga");
+            Assert.That(boot.Ads!.CheckRewarded(AdPlacement.Reveal).IsAllowed, Is.False, "en la espera de 60 s");
+            Assert.That(boot.TapCuia(MurkyCuia106).Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(boot.Flow.Session.Current[MurkyCuia106].HiddenMask, Is.EqualTo(0));
+            Assert.That(boot.Wallet.Stock.Get(BoosterKind.Reveal), Is.EqualTo(0));
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(500), "ninguna semilla");
+            Assert.That(ProfileJson.Deserialize(store.Json!).Wallet.Seeds, Is.EqualTo(500));
+            StepUntilRevealDone(boot, 5000);
+        }
+
+        [UnityTest]
+        public IEnumerator Reveal_DuringTheVideoWait_PaysWithSeeds_Level135()
+        {
+            // D-028: en la espera de 60 s de rv_reveal no hay video, así que con saldo la insignia vuelve al precio (tras el
+            // sondeo) y el toque cobra con semillas, sin abrir anuncio. El 135 tiene ocultas en dos cuias: la primera se revela
+            // con el video y la ranura sigue para la segunda (en el 106 la ranura se va al revelar su única oculta).
+            var store = new MemoryProfileStore(FunnelSetup.Profile(500));
+            LaunchOptions.ProfileStoreOverride = store;
+            yield return LoadPlayingWithStore(Level135);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            Assert.That(boot.Flow!.Level.IsMurky, Is.True);
+            Assert.That(boot.Wallet!.Stock.Get(BoosterKind.Reveal), Is.EqualTo(0));
+            Assert.That(view.Tray.RevealShowsVideo, Is.True, "con saldo y video, la insignia del video");
+
+            int presented = FunnelSetup.AdsPresenter.Presented;
+            Assert.That(boot.PressReveal(), Is.True);
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(presented + 1), "el primer toque abre el video");
+            Assert.That(boot.Flow.RevealSelectionPayment, Is.EqualTo(RevealPayment.Stock));
+            Assert.That(boot.TapCuia(FirstMurkyCuia135).Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(boot.Flow.Session.Current[FirstMurkyCuia135].HiddenMask, Is.EqualTo(0));
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(500), "el video no cobra");
+            StepUntilRevealDone(boot, 5000);
+
+            // La espera de 60 s (el reloj del test no avanza): tras el sondeo, la insignia enseña el precio.
+            Assert.That(boot.Flow.Session.HiddenCount, Is.GreaterThan(0), "queda la segunda cuia turbia");
+            Assert.That(view.Tray.RevealShown, Is.True);
+            Assert.That(boot.Ads!.CheckRewarded(AdPlacement.Reveal).IsAllowed, Is.False, "en la espera de 60 s");
+            PlayModeHelpers.Step(boot, 600);
+            Assert.That(view.Tray.RevealShowsVideo, Is.False, "en la espera, sin video");
+            Assert.That(view.Tray.RevealPriceShown, Is.EqualTo(120), "sin video, el precio");
+            Assert.That(view.Tray.RevealShowsMissing, Is.False);
+
+            presented = FunnelSetup.AdsPresenter.Presented;
+            Assert.That(boot.PressReveal(), Is.True);
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(presented), "ningún anuncio");
+            Assert.That(boot.Flow.RevealSelectionPayment, Is.EqualTo(RevealPayment.Seeds));
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(500), "abrir la selección no cobra");
+            Assert.That(boot.TapCuia(SecondMurkyCuia135).Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(boot.Flow.Session.Current[SecondMurkyCuia135].HiddenMask, Is.EqualTo(0));
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(380), "120 semillas");
+            Assert.That(ProfileJson.Deserialize(store.Json!).Wallet.Seeds, Is.EqualTo(380));
+            StepUntilRevealDone(boot, 5000);
+        }
+
+        [UnityTest]
+        public IEnumerator Reveal_WithSeeds_AtTheDailyCap_PaysWithSeeds_Level106()
+        {
+            // D-028: sin video por el tope de rv_reveal (3 al día, 04 §2.5) y con saldo, la insignia enseña el precio y el
+            // toque cobra con semillas, sin abrir anuncio.
+            Profile profile = FunnelSetup.Profile(500);
+            profile.Daily.DateLocal = FunnelSetup.Clock.LocalDateKey();
+            profile.Daily.RvReveal = 3;
+            profile.Daily.RvTotal = 3;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
+            yield return LoadPlayingWithStore(Level106);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            Assert.That(boot.Ads!.CheckRewarded(AdPlacement.Reveal).IsAllowed, Is.False, "el tope de hoy");
+            Assert.That(view.Tray.RevealShowsVideo, Is.False);
+            Assert.That(view.Tray.RevealPriceShown, Is.EqualTo(120), "sin video, el precio");
+            Assert.That(view.Tray.RevealShowsMissing, Is.False);
+
+            int presented = FunnelSetup.AdsPresenter.Presented;
+            Assert.That(boot.PressReveal(), Is.True);
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(presented), "ningún anuncio");
+            Assert.That(boot.Flow!.RevealSelectionPayment, Is.EqualTo(RevealPayment.Seeds));
+            Assert.That(boot.TapCuia(MurkyCuia106).Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(380), "120 semillas");
+            StepUntilRevealDone(boot, 5000);
         }
 
         [UnityTest]
@@ -637,13 +750,15 @@ namespace AF.Tests.PlayMode
             // Sin stock ni saldo y con fill, la ranura ofrece el video (rv_reveal). Preguntar a los anuncios crea la cadena de la
             // fecha del contador diario, así que solo se pregunta cada RevealVideoPollMs: entre dos preguntas, 20 fotogramas sin
             // asignaciones (08 §5.4). La segunda carga mide (la primera calienta).
-            for (int pass = 0; pass < 2; pass++)
+            // Desde D-028 la ranura ofrece el video también con saldo: la tercera y la cuarta carga lo miden con 500 semillas.
+            for (int pass = 0; pass < 4; pass++)
             {
-                LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
+                LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(pass < 2 ? 0 : 500));
                 yield return LoadPlayingWithStore(Level106);
                 GameBootstrap boot = GameBootstrap.Current!;
                 GameScreen view = boot.View!;
                 Assert.That(view.Tray.RevealShowsVideo, Is.True);
+                Assert.That(view.Tray.RevealPriceShown, Is.EqualTo(0), "el video, no el precio");
 
                 // Justo después de una pregunta, el plazo vuelve a RevealVideoPollMs.
                 float last = view.RevealVideoPollLeftMs;
@@ -670,7 +785,8 @@ namespace AF.Tests.PlayMode
                     }
                 }
 
-                if (pass == 1)
+                float left = view.RevealVideoPollLeftMs;
+                if (pass % 2 == 1)
                 {
                     Assert.That(Run20, Is.Not.AllocatingGCMemory(), "20 fotogramas con el video ofrecido");
                 }
@@ -679,7 +795,25 @@ namespace AF.Tests.PlayMode
                     Run20();
                 }
 
+                Assert.That(view.RevealVideoPollLeftMs, Is.EqualTo(left - 80f).Within(0.01f), "en esos 80 ms no volvió a preguntar");
                 Assert.That(view.Tray.RevealShowsVideo, Is.True);
+
+                // Y no deja de preguntar: la siguiente pregunta llega a los RevealVideoPollMs de la anterior.
+                int more = 0;
+                last = view.RevealVideoPollLeftMs;
+                for (; more < 1000; more += 4)
+                {
+                    PlayModeHelpers.TickExact(boot, 4);
+                    if (view.RevealVideoPollLeftMs > last)
+                    {
+                        more += 4;
+                        break;
+                    }
+
+                    last = view.RevealVideoPollLeftMs;
+                }
+
+                Assert.That(80f + more, Is.EqualTo(GameScreen.RevealVideoPollMs).Within(8f), "una pregunta cada RevealVideoPollMs");
                 yield return null;
             }
         }
