@@ -25,7 +25,8 @@ namespace AF.Tests.PlayMode
     /// <see cref="CaptureTheStopCardSources"/> (DC10; D-028, pregunta 57 a), la línea «Fuente: …» con los datos reales:
     /// <c>dc10_card_&lt;parada&gt;_fuente_&lt;780|640&gt;[_130]</c>, la tarjeta de Manaos («Fuente: Wikipedia») y la de Amacayacu
     /// (la fuente más larga del Mapa, «Parques Nacionales Naturales de Colombia»), a 360 × 780 y a 360 × 640 dp, al 100 % y al
-    /// 130 %, con max 110; antes de guardar comprueba que la línea quede dentro de la placa, bajo el dato y a ≥ 12 sp. Cada
+    /// 130 %, con max 110; antes de guardar comprueba que la línea quede dentro de la placa, bajo el dato y a ≥ 12 sp, y la placa a
+    /// ≥ 8 dp por encima de «Jugar» (revisión de DC10). Cada
     /// captura escribe su línea <c>AF_MAP</c>.
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.SamplesSnapshotTests</c>
     /// sin <c>-nographics</c>); los PNG quedan en <c>Logs/snapshots/es-419/</c>.
@@ -95,6 +96,7 @@ namespace AF.Tests.PlayMode
                             StopCard card = m.Card!;
                             Assert.That(card.SourceText, Is.Not.Empty, name);
                             StopCardTests.AssertSourceInsideThePlate(m, card, scale, name);
+                            StopCardTests.AssertClearOfPlay(m, card, name);
                             Debug.Log("AF_MAP " + name + ": fuente «" + card.SourceText + "» a "
                                 + card.SourceLabel.fontSize.ToString("F1", CultureInfo.InvariantCulture) + " sp, "
                                 + StopCardTests.CanvasRect(card.SourceLabel.rectTransform, m.Canvas) + " en la placa "
