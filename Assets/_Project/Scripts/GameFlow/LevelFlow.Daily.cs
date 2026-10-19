@@ -75,8 +75,17 @@ namespace AF.GameFlow
     /// alivio (<c>relief</c> = []) y con su propio <see cref="StateStore"/> (R-Q4): nunca toca el <c>level_state</c> ni el
     /// <c>fails_level</c> de la campaña.</description></item>
     /// </list>
-    /// El resultado sale por <see cref="DailyResult"/>. La Crecida, la Canasta y el Salto del Boto aún no existen en el cliente
-    /// (FailResolve, StuckModalModel): cuando lleguen, el flujo del Reto no los alcanza porque no gana niveles de campaña.
+    /// El resultado sale por <see cref="DailyResult"/>.
+    /// <para><b>Fallos del Reto.</b> Volver a la orilla desde el pie de Aguas estancadas sigue pasando por
+    /// <c>Fail(FailKind.Hard)</c> (y desde la cabecera con ≥ <c>restart_confirm_min_pours</c> vertidos, por
+    /// <c>Fail(FailKind.Soft)</c>), es decir, por <see cref="FailResolve.Resolve"/>, y la vista recibe
+    /// <see cref="ILevelFlowListener.OnFailResolved"/>. Hoy eso solo sube el <c>fails_level</c> del intento del Reto (sin efecto:
+    /// <c>relief</c> = []) y pide a la cartera del Reto un <c>HardFail</c> que no cobra nada (sin canoas); ningún código escribe
+    /// <c>stats.fails_hard</c>, y la vista de campaña solo lo anota en su sonda (<c>fail_hard</c>). La Crecida y la Hoja escudo
+    /// aún no existen en el cliente; cuando lleguen a <see cref="FailResolve.Resolve"/>, ese camino las rompería también en el
+    /// Reto, contra 06 §4.3 («si not nivel.es_campana: return»): hace falta el enganche descrito en el informe de R8 (una
+    /// guarda con <see cref="IsDaily"/>). El Salto del Boto tampoco existe; en el Reto no se ofrecerá porque no hay embudo
+    /// de D-008 (04 §2.6 e).</para>
     /// </summary>
     public sealed partial class LevelFlow
     {
@@ -236,10 +245,14 @@ namespace AF.GameFlow
         /// <param name="effectiveLevel">Nivel efectivo (≥ 1): desbloqueos de los comodines.</param>
         /// <param name="campaignProgress">Progreso de la campaña: solo se lee.</param>
         /// <param name="listener">Vista del Reto (también los avisos opcionales de Morpho, la Luciérnaga y la tarjeta previa).</param>
-        /// <param name="dailyWallet">Cartera de <see cref="CreateDailyWallet"/>, o null (tests sin economía: sin stock).</param>
+        /// <param name="dailyWallet">
+        /// Cartera de <see cref="CreateDailyWallet"/> (obligatoria: sin ella <c>rescue_min_level</c> volvería al default de la
+        /// campaña y, con nivel efectivo ≥ 31, el embudo de D-008).
+        /// </param>
         /// <param name="campaignBoosters">Cifras de los comodines de la campaña (por defecto las de 08 §9); se pasan por <see cref="DailyBoosters"/>.</param>
         /// <param name="tapSwitchSelection">Valor de <c>tap_switch_selection</c>.</param>
         /// <param name="pourMode">Modo de vertido (<c>rules_pour_mode</c>, D-005).</param>
+        /// <exception cref="ArgumentNullException">Falta el tablero, el progreso, la vista o la cartera.</exception>
         /// <exception cref="ArgumentException">El tablero lleva mecánicas, ocultas o alivio, o la cartera no es la del Reto.</exception>
         /// <exception cref="ArgumentOutOfRangeException"><paramref name="effectiveLevel"/> fuera de 1..1.000.000.</exception>
         public static LevelFlow CreateDaily(
@@ -247,7 +260,7 @@ namespace AF.GameFlow
             int effectiveLevel,
             IProgressStore campaignProgress,
             ILevelFlowListener listener,
-            Wallet? dailyWallet = null,
+            Wallet dailyWallet,
             BoosterConfig? campaignBoosters = null,
             bool tapSwitchSelection = GameConfig.TapSwitchSelection,
             PourMode pourMode = PourModes.Default)
@@ -272,7 +285,12 @@ namespace AF.GameFlow
                 throw new ArgumentOutOfRangeException(nameof(effectiveLevel), effectiveLevel, "El nivel efectivo del Reto va de 1 a 1.000.000.");
             }
 
-            if (dailyWallet != null && !IsDailyEconomy(dailyWallet.Config))
+            if (dailyWallet == null)
+            {
+                throw new ArgumentNullException(nameof(dailyWallet), "El Reto necesita su cartera (LevelFlow.CreateDailyWallet).");
+            }
+
+            if (!IsDailyEconomy(dailyWallet.Config))
             {
                 throw new ArgumentException("La cartera del Reto se crea con LevelFlow.CreateDailyWallet (sin Cosecha de campaña ni canoas).", nameof(dailyWallet));
             }
@@ -299,10 +317,13 @@ namespace AF.GameFlow
         /// Empieza la partida del Reto: LOADING del tablero e intro (02 §2), sin canoa (04 §7.1), con las Mareas gratis del
         /// tablero enteras. Un flujo que no es del Reto lanza.
         /// </summary>
-        /// <exception cref="InvalidOperationException">El flujo no es del Reto (<see cref="CreateDaily"/>).</exception>
+        /// <exception cref="InvalidOperationException">
+        /// El flujo no es del Reto (<see cref="CreateDaily"/>), tiene <see cref="AdGate"/> (R-Q13 [P]: sin intersticial) o guarda
+        /// en el <c>level_state</c> de la campaña (<see cref="ProfileLevelStateStore"/>; R-Q4: el Reto usa su propio almacén).
+        /// </exception>
         public void StartDaily()
         {
-            RequireDaily();
+            RequireDailySetup();
             _dailyAttempt = 1;
             _dailyExited = false;
             Load(_catalog.FirstLevel);
@@ -314,10 +335,14 @@ namespace AF.GameFlow
         /// nivel efectivo (<see cref="DailyEffectiveLevel(int, LevelStateData, LevelDefinition)"/>) o no se puede rehacer; entonces
         /// quien llama la descarta y usa <see cref="StartDaily"/>.
         /// </summary>
-        /// <exception cref="InvalidOperationException">El flujo no es del Reto.</exception>
+        /// <remarks>
+        /// <see cref="DailyAttempt"/> vuelve a 1: <c>level_state</c> no guarda el número de intento (cambiarlo es del formato de
+        /// 04 §10.1). Si R10 lo necesita para la analítica, que lo guarde el almacén del Reto junto a la partida.
+        /// </remarks>
+        /// <exception cref="InvalidOperationException">Como en <see cref="StartDaily"/>.</exception>
         public bool ResumeDaily(LevelStateData saved)
         {
-            RequireDaily();
+            RequireDailySetup();
             if (saved == null || CheckResume(saved) != ResumeCheck.Resumable || !Resume(saved))
             {
                 return false;
@@ -357,6 +382,20 @@ namespace AF.GameFlow
             return true;
         }
 
+        private void RequireDailySetup()
+        {
+            RequireDaily();
+            if (AdGate != null)
+            {
+                throw new InvalidOperationException("El Reto no tiene intersticial (R-Q13 [P]): deja AdGate en null.");
+            }
+
+            if (StateStore is ProfileLevelStateStore)
+            {
+                throw new InvalidOperationException("El Reto guarda su partida en su propio almacén (R-Q4), no en el level_state de la campaña.");
+            }
+        }
+
         private void RequireDaily()
         {
             if (_dailyBoard == null)
@@ -388,9 +427,16 @@ namespace AF.GameFlow
             _dailyAttempt = _dailyAttempt < 1 ? 2 : _dailyAttempt + 1;
         }
 
-        // Paquete af-level/1 de un solo nivel con el tablero del pool numerado como effectiveLevel. AF.Levels no expone cómo
-        // renumerar un LevelDefinition (constructores internos), así que se escribe el JSON del tablero y se lee con
-        // LevelPackReader, que lo valida igual que la campaña; después se comprueba que el tablero leído es el mismo.
+        // Paquete de un solo nivel con el tablero del pool numerado como effectiveLevel. AF.Levels no expone cómo renumerar un
+        // LevelDefinition (constructores internos), así que se escribe el JSON del tablero y se lee con LevelPackReader; después
+        // se comprueba que el tablero leído es el mismo («same», abajo).
+        //
+        // OJO: es un documento INTERNO que NO cumple af-level/1 (schemas/af-level-1.schema.json): con kind = daily el esquema
+        // exige slot y prohíbe level en cada tablero, y con kind = campaign exigiría el id m{mm}_v{v}_n{nnnn}, world 1-13, lap y
+        // world_id con patrón, que el tablero del Reto (d{b}_n{nnnn}, mundo 0 posible) no tiene. Solo funciona porque
+        // LevelPackReader no valida kind, id, slot ni world_id (sí el tablero, con BoardBuilder y LevelValidation). Si el lector
+        // se vuelve estricto, esto se rompe: el arreglo limpio es el enganche de AF.Levels del informe de R8
+        // (LevelDefinition.WithLevel interno + LevelCatalog.ForBoard). Nunca se escribe a disco ni sale del cliente.
         private static LevelPack DailyPackFor(LevelDefinition board, int effectiveLevel)
         {
             if (board.HiddenCount > 0 || board.Relief.Count > 0 || board.IntroMechanic != null)

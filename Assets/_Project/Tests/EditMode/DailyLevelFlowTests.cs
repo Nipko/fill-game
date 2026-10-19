@@ -263,7 +263,13 @@ namespace AF.Tests.EditMode
             Assert.That(
                 () => LevelFlow.CreateDaily(DailyBoard, 13, rig.Progress, new RecordingListener(), rig.CampaignWallet),
                 Throws.TypeOf<ArgumentException>());
-            Assert.That(() => LevelFlow.CreateDaily(DailyBoard, 0, rig.Progress, new RecordingListener()), Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.That(
+                () => LevelFlow.CreateDaily(DailyBoard, 0, rig.Progress, new RecordingListener(), rig.DailyWallet),
+                Throws.TypeOf<ArgumentOutOfRangeException>());
+            Assert.That(
+                () => LevelFlow.CreateDaily(DailyBoard, 41, rig.Progress, new RecordingListener(), null!),
+                Throws.TypeOf<ArgumentNullException>(),
+                "sin cartera del Reto, rescue_min_level volvería al 31 y con él el embudo de D-008");
 
             var campaign = new LevelFlow(TestPacks.Tutorial, new MemoryProgressStore(), new RecordingListener());
             Assert.That(campaign.IsDaily, Is.False);
@@ -271,6 +277,175 @@ namespace AF.Tests.EditMode
             Assert.That(() => campaign.StartDaily(), Throws.TypeOf<InvalidOperationException>());
             Assert.That(() => campaign.ExitDaily(), Throws.TypeOf<InvalidOperationException>());
             Assert.That(LevelFlow.DailyEffectiveLevel(-3), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void StartAndResume_RejectAnAdGate_AndTheCampaignLevelState()
+        {
+            var rig = new DailyRig(DailyBoard, maxLevel: 12);
+            rig.Flow.AdGate = new NoAdGate();
+            Assert.That(() => rig.Flow.StartDaily(), Throws.TypeOf<InvalidOperationException>(), "sin intersticial (R-Q13 [P])");
+            Assert.That(() => rig.Flow.ResumeDaily(new LevelStateData()), Throws.TypeOf<InvalidOperationException>());
+            rig.Flow.AdGate = null;
+            rig.Flow.StateStore = new ProfileLevelStateStore(rig.Profile, rig.Store);
+            Assert.That(() => rig.Flow.StartDaily(), Throws.TypeOf<InvalidOperationException>(), "nunca el level_state de campaña (R-Q4)");
+            Assert.That(rig.Flow.HasLevel, Is.False);
+            rig.Flow.StateStore = rig.DailyStore;
+            rig.Flow.StartDaily();
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
+        }
+
+        [Test]
+        public void RestartFromTheModal_ResolvesAHardFailOfTheDailyAttemptOnly()
+        {
+            // Hoy el pie del modal pasa por Fail(Hard) → FailResolve y la vista recibe OnFailResolved (lo anota en su sonda); no
+            // hay canoa, ni stats.fails_hard, ni fails_level de campaña. Cuando exista la Crecida hará falta la guarda del
+            // informe de R8 (06 §4.3: el Reto no la toca).
+            var rig = new DailyRig(StuckBoard, maxLevel: 40);
+            CampaignSnapshot before = rig.Snapshot();
+            rig.StartPlaying();
+            rig.GetStuck();
+            Assert.That(rig.Flow.PressRestart(), Is.True);
+            Assert.That(rig.Listener.Saw("fail:Hard:1"), Is.True, "OnFailResolved(Hard) del intento del Reto, sin canoa");
+            Assert.That(rig.Listener.Events.Exists(e => e.EndsWith(":canoe", StringComparison.Ordinal)), Is.False);
+            Assert.That(rig.Flow.Attempt.FailsLevel, Is.EqualTo(1), "el fails_level es el del intento del Reto");
+            Assert.That(rig.Profile.Stats.FailsHard, Is.EqualTo(before.FailsHard), "stats.fails_hard");
+            Assert.That(rig.DailyStore.Load()!.FailsLevel, Is.EqualTo(1), "se guarda en el almacén del Reto");
+            rig.AssertCampaignUntouched(before);
+        }
+
+        [Test]
+        public void RestartFromTheHeaderAfterManyPours_AsksConfirm_AndIsASoftFailWithoutEffects()
+        {
+            var rig = new DailyRig(LongBoard, maxLevel: 40);
+            CampaignSnapshot before = rig.Snapshot();
+            rig.StartPlaying();
+            SolveResult solution = new AStarSolver().Solve(rig.Flow.Session.Current, SolverOptions.ForPipeline(rig.Flow.Session.PourMode));
+            int pours = BoosterConfig.Defaults.RestartConfirmMinPours;
+            for (int i = 0; i < pours; i++)
+            {
+                rig.Flow.TapCuia(solution.GetMove(i).Source);
+                Assert.That(rig.Flow.TapCuia(solution.GetMove(i).Target).Kind, Is.EqualTo(TapKind.Poured), "vertido " + (i + 1));
+            }
+
+            Assert.That(rig.Flow.Session.Status, Is.EqualTo(LevelStatus.Playing));
+            Assert.That(rig.Flow.RestartNeedsConfirm, Is.True, "≥ restart_confirm_min_pours: la vista confirma (04 §2.7)");
+            Assert.That(rig.Flow.PressRestart(), Is.True);
+            Assert.That(rig.Listener.Saw("fail:Soft:1"), Is.True);
+            Assert.That(rig.Results.Count, Is.EqualTo(1));
+            Assert.That(rig.Results[0].Outcome, Is.EqualTo(DailyPlayOutcome.Restart));
+            Assert.That(rig.Results[0].Pours, Is.EqualTo(pours));
+            Assert.That(rig.Results[0].FromStuckModal, Is.False);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
+            rig.AssertCampaignUntouched(before);
+        }
+
+        [Test]
+        public void ExitFromTheStuckModal_DeliversFail_WithoutCanoe()
+        {
+            var rig = new DailyRig(StuckBoard, maxLevel: 40);
+            CampaignSnapshot before = rig.Snapshot();
+            rig.StartPlaying();
+            rig.GetStuck();
+            Assert.That(rig.Flow.CanQuit, Is.True);
+            Assert.That(rig.Flow.ExitDaily(), Is.True);
+            Assert.That(rig.Results.Count, Is.EqualTo(1));
+            Assert.That(rig.Results[0].Outcome, Is.EqualTo(DailyPlayOutcome.Exit));
+            Assert.That(rig.Results[0].Pours, Is.EqualTo(1));
+            Assert.That(rig.Listener.Events.Exists(e => e.StartsWith("fail:", StringComparison.Ordinal)), Is.False, "salir no es fallo");
+            Assert.That(rig.DailyStore.Load(), Is.Null);
+            rig.AssertCampaignUntouched(before);
+        }
+
+        [Test]
+        public void Morpho_SpendsTheStock_WhenItGivesAPour()
+        {
+            var rig = new DailyRig(DailyBoard, maxLevel: 12);
+            rig.Grant(BoosterKind.Hint, 1);
+            CampaignSnapshot before = rig.Snapshot();
+            rig.StartPlaying();
+            Assert.That(rig.Flow.Hint.State, Is.EqualTo(HintState.Ready));
+            Assert.That(rig.Flow.PressHint(), Is.True);
+            var watch = System.Diagnostics.Stopwatch.StartNew();
+            while (rig.Flow.HintThinking)
+            {
+                Assert.That(watch.ElapsedMilliseconds, Is.LessThan(10000), "Morpho no respondió");
+                System.Threading.Thread.Sleep(1);
+                rig.Flow.Tick(16, true);
+            }
+
+            HintResult? hint = rig.Flow.LastHint;
+            Assert.That(hint.HasValue, Is.True);
+            Assert.That(hint!.Value.Answer, Is.EqualTo(HintAnswer.Pour));
+            Assert.That(hint.Value.Charged, Is.True);
+            Assert.That(rig.Profile.Stock.Hint, Is.EqualTo(0), "el Morpho sale del stock (R-Q8)");
+            Assert.That(rig.Profile.Wallet.Seeds, Is.EqualTo(before.Seeds), "con stock no se cobran semillas");
+        }
+
+        private static LevelDefinition? _longBoard;
+
+        /// <summary>
+        /// Primer nivel de la campaña sin mecánicas, ocultas, alivio ni estreno cuya solución pasa de
+        /// <c>restart_confirm_min_pours</c> vertidos: sirve de tablero del Reto para un reinicio con confirmación.
+        /// </summary>
+        private static LevelDefinition LongBoard
+        {
+            get
+            {
+                if (_longBoard != null)
+                {
+                    return _longBoard;
+                }
+
+                int needed = BoosterConfig.Defaults.RestartConfirmMinPours + 1;
+                IReadOnlyList<LevelPack> packs = TestPacks.Campaign;
+                for (int p = 0; p < packs.Count; p++)
+                {
+                    for (int i = 0; i < packs[p].Count; i++)
+                    {
+                        LevelDefinition def = packs[p].Levels[i];
+                        if (def.HiddenCount > 0 || def.Relief.Count > 0 || def.IntroMechanic != null || HasAttrs(def))
+                        {
+                            continue;
+                        }
+
+                        SolveResult result = new AStarSolver().Solve(def.CreateBoard(), SolverOptions.ForPipeline(PourModes.Default));
+                        if (result.MoveCount >= needed)
+                        {
+                            _longBoard = def;
+                            return def;
+                        }
+                    }
+                }
+
+                Assert.Fail("No hay un tablero de campaña largo y sin mecánicas para la prueba.");
+                return null!;
+            }
+        }
+
+        private static bool HasAttrs(LevelDefinition def)
+        {
+            for (int i = 0; i < def.Attrs.Count; i++)
+            {
+                if (!def.Attrs[i].IsNone)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private sealed class NoAdGate : IAdGate
+        {
+            public void RecordWin(int level)
+            {
+            }
+
+            public void Run(int wonLevel, Action onDone)
+            {
+                onDone();
+            }
         }
 
         [Test]
@@ -452,6 +627,16 @@ namespace AF.Tests.EditMode
                 Flow.StartDaily();
                 Flow.TapAnywhere();
                 Assert.That(Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            }
+
+            public void GetStuck()
+            {
+                Assert.That(Flow.TapCuia(3).Kind, Is.EqualTo(TapKind.Selected));
+                Assert.That(Flow.TapCuia(4).Kind, Is.EqualTo(TapKind.Poured));
+                Assert.That(Flow.Session.Status, Is.EqualTo(LevelStatus.Stuck));
+                Flow.Tick(16, true);
+                Flow.Tick(GameConfig.StuckModalDelayMs, true);
+                Assert.That(Flow.Phase, Is.EqualTo(FlowPhase.StuckModal));
             }
 
             public void Solve()
