@@ -580,3 +580,21 @@ Cada bloque, verificado y empujado en `spark/reto-del-rio`.
 ```text
 Eres el equipo Spark del proyecto Tintalú: haz git fetch, lee CLAUDE.md y docs/dev/traspaso/spark-reto-del-rio.md de origin/integracion-fase1-fase2 y sigue ese documento al pie de la letra para implementar el Reto del río en la rama spark/reto-del-rio, empezando por R0 y sin esperar confirmación entre tareas; para solo en lo que el documento manda parar y anótalo en docs/dev/traspaso/spark-estado.md.
 ```
+
+---
+
+## 9. Notas del integrador
+
+### Bloque (a) integrado (2026-10-19)
+
+R0-R4 y R6 están en `integracion-fase1-fase2` (`fcbbd94` y `0d844cf`): revisado sin bloqueantes y verificado en el escritorio x64. La muestra de 30 tableros regenerada aquí sale idéntica byte a byte a la tuya. Recuentos de referencia: EditMode 2.861 (2.858 + 3), PlayMode 1.359 (1.196 + 163) y dotnet test 981 (975 + 6). Haz `git merge origin/integracion-fase1-fase2` en tu rama antes de seguir.
+
+**Pendiente para ti (en tu próxima tarea, antes de R5):**
+1. **R-Q1b (a):** en `tools/level-generator/specs/daily_v1.json`, B2 solo con K = 8 (`k: [8, 8]`; quita la regla `deep` de K = 9) y B3 sin tope de pares. Rehaz la muestra y su informe.
+2. **R-Q11 (a):** la ventana del bot es compuerta también en el generador: un día sin candidato dentro de la ventana es un error y no se publica (`DailyRunner`, bloque «el más cercano»). Que QA lo siga comprobando.
+3. **R-Q2:** el agua y el fondo rotan «según la fecha», como decidió el dueño, no según el día del pool: con `1 + (día mod 9)` y 730 mod 9 = 1, al dar la vuelta el mundo deja de seguir al calendario. Usa la fecha (por ejemplo, días desde una época fija, mod 9) y quita su [P].
+4. Quita las marcas «abierta» o «[P]» de R-Q1b y R-Q11-R-Q14 en `docs/dev/reto-del-rio.md`, en la especificación y en `spark-estado.md`: ya están decididas (sección 5).
+5. Ordena `spark-estado.md`: la tabla «Preguntas nuevas» de R1, con la cabecera junto a sus filas, y una sola sección «Enganches para el integrador» con E11 y E14.
+6. Opcional: incluye `daily` en el `--self-test` sin nombre del generador y de level-qa.
+
+**Corrección del encargo §3.3, punto 1:** el despacho de `--daily` en `tools/level-generator/Program.cs` va antes del `--self-test` genérico (que rechazaría «daily»), no antes de `--parity`. Lo que hiciste es lo correcto.
