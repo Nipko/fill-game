@@ -6,6 +6,15 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-19 · Decisión del dueño: R-Q11b, 30 candidatos por fuente
+
+- **La pregunta:** para que los 729 días de cada banda entren en la ventana del bot, R5 prueba hasta 30 candidatos **por fuente** y, si ninguno entra, pasa a la siguiente.
+  - B1: `fill` E=2 → `deep` → `walk` → `deep` de 60.000 nodos, hasta 120 candidatos por día. Solo 23 días necesitan respaldo.
+  - B2: `deep` → `fill` E=1, al revés que la tabla de 03 §4.4 para K ≤ 8. Con `fill` primero, 96 días salían por encima de la ventana.
+- **El dueño respondió «Aceptar (Recomendado)»:** el «máximo 30 candidatos» de 03 §4.4 se lee como 30 por fuente, con respaldos en orden. No se relajan vacíos, K, capacidad ni ventanas.
+- **Para el integrador (E11):** anotarlo en 03 §4.4 o §16 y en `decisiones.md`.
+- **Nota sobre R-Q2b:** con `live_daily_offset` ≠ 0 (mod 9) el mundo sigue rotando a diario con la fecha, desplazado por el offset. Propuesta [P]: documentarlo en 08 §9, en la fila de `live_daily_offset` (E11).
+
 ## 2026-10-19 · Decisión del dueño: R-Q2b, pool de 729 días
 
 - **El problema:** el agua y el fondo rotan «según la fecha» (R-Q2), pero con un pool de 730 días y 9 mundos (730 mod 9 = 1), un mundo grabado en cada tablero deja de seguir a la fecha a partir de la segunda vuelta.
