@@ -781,8 +781,8 @@ namespace AF.UI
                 bool used = i < lines.Count;
                 ResetFillRibbon(_fill[i], used ? lines[i] : null);
                 ResetFillRibbon(_fillCasing[i], used ? lines[i] : null);
-                _fill[i].SetAnchors(MouthAnchorsOf(map, used ? lines[i] : null)); // FX12: la misma curva que el vidrio
-                _fillCasing[i].SetAnchors(MouthAnchorsOf(map, used ? lines[i] : null));
+                _fill[i].SetAnchors(RiverRibbonGraphic.MouthAnchorsOf(map, used ? lines[i] : null)); // FX12: la misma curva que el vidrio
+                _fillCasing[i].SetAnchors(RiverRibbonGraphic.MouthAnchorsOf(map, used ? lines[i] : null));
                 if (used)
                 {
                     _fill[i].gameObject.name = "Fill_" + lines[i].Id;
@@ -1528,7 +1528,8 @@ namespace AF.UI
                 // siquiera los 400 enteros por pieza bastan (la del Amazonas pide 360 de agua y 504 de orla). El frente solo se
                 // rehace al cambiar su llenado (una vez por boya, ≤ 10 por apertura), y solo la pieza que cambia. Es una desviación provisional
                 // [P] del «≤ 400 vértices» del frente de la propuesta del Mapa §11.4, anotada allí y pendiente del dueño: el frente del
-                // 300 pide 2.534 vértices entre agua y orla en Mundo (medido; lo acota Fx11Tests).
+                // 300 pide 2.534 vértices entre agua y orla en Mundo y, con el trazo curvo de la revisión de FX12, 5.764 (medido; lo
+                // acota Fx11Tests con un tope provisional [P] de 6.500, pendiente del dueño).
                 const int budget = RiverRibbonGraphic.MaxVertices;
                 float left = _frontFraction * total;
                 for (int i = 0; i < path.Count && left > 0f; i++)
@@ -1547,8 +1548,8 @@ namespace AF.UI
                     float end = piece.S0 + ((piece.S1 - piece.S0) * t);
                     SetFrontPiece(FrontRibbonAt(k), line, budget, piece.S0, end);
                     SetFrontPiece(_frontCasing[k], line, budget, piece.S0, end);
-                    _front[k].SetAnchors(MouthAnchorsOf(map, line)); // FX12: la misma curva que el vidrio
-                    _frontCasing[k].SetAnchors(MouthAnchorsOf(map, line));
+                    _front[k].SetAnchors(RiverRibbonGraphic.MouthAnchorsOf(map, line)); // FX12: la misma curva que el vidrio
+                    _frontCasing[k].SetAnchors(RiverRibbonGraphic.MouthAnchorsOf(map, line));
 
                     // FX11: el espacio y el ancho de la vista al montarla. ProgressSpace solo ajusta las cintas que ya había al
                     // cambiar de vista; si «ponerse al día» llega a un tramo con más piezas que el de partida (en el 41, el de la

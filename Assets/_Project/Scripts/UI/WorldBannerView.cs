@@ -2087,6 +2087,27 @@ namespace AF.UI
         /// <summary>Cintas de agua activas (las líneas llenas que entran en la franja).</summary>
         public int WaterCount => ActiveCount(_core);
 
+        /// <summary>Cintas de cada clase (vidrio, orla del agua y agua), una por línea del Mapa (tests: FX12).</summary>
+        public int RibbonSlotCount => _glass.Count;
+
+        /// <summary>Cinta de vidrio de la línea <paramref name="i"/> (tests: FX12).</summary>
+        public RiverRibbonGraphic GlassRibbon(int i)
+        {
+            return _glass[i];
+        }
+
+        /// <summary>Orla del agua de la línea <paramref name="i"/> (tests: FX12).</summary>
+        public RiverRibbonGraphic CasingRibbon(int i)
+        {
+            return _casing[i];
+        }
+
+        /// <summary>Agua de la línea <paramref name="i"/> (tests: FX12).</summary>
+        public RiverRibbonGraphic CoreRibbon(int i)
+        {
+            return _core[i];
+        }
+
         /// <summary>Vértices de la tierra en la última malla.</summary>
         public int LandVertexCount => _land.LastVertexCount;
 
@@ -2198,7 +2219,7 @@ namespace AF.UI
                 SetupRibbon(_glass[i], visible ? line : null, RibbonLook.Glass, sA, sB, space);
                 SetupRibbon(_casing[i], filled ? line : null, RibbonLook.Water, filled ? from : 1f, sB, space);
                 SetupRibbon(_core[i], filled ? line : null, RibbonLook.Water, filled ? from : 1f, sB, space);
-                float[]? anchors = MouthAnchorsOf(map, line); // FX12: las bocas de los afluentes, como en el Mapa
+                float[]? anchors = RiverRibbonGraphic.MouthAnchorsOf(map, line); // FX12: las bocas de los afluentes, como en el Mapa
                 _glass[i].SetAnchors(visible ? anchors : null);
                 _casing[i].SetAnchors(filled ? anchors : null);
                 _core[i].SetAnchors(filled ? anchors : null);
@@ -3005,26 +3026,6 @@ namespace AF.UI
         private Sprite? GuideSprite(string guide)
         {
             return string.Equals(guide, RiverJourney.GuideBufeo, StringComparison.Ordinal) ? _art.MapBufeo : _guideSprite;
-        }
-
-        // FX12: las bocas de los afluentes de cada línea, las anclas del trazo curvo. Asigna: una vez por Mapa.
-        private float[][]? _mouthAnchors;
-        private RiverMap? _mouthAnchorsFor;
-
-        private float[]? MouthAnchorsOf(RiverMap map, RiverLine? line)
-        {
-            if (line == null)
-            {
-                return null;
-            }
-
-            if (!ReferenceEquals(map, _mouthAnchorsFor) || _mouthAnchors == null)
-            {
-                _mouthAnchors = RiverRibbonGraphic.MouthAnchors(map);
-                _mouthAnchorsFor = map;
-            }
-
-            return line.Index < _mouthAnchors.Length ? _mouthAnchors[line.Index] : null;
         }
 
         private static void SetupRibbon(RiverRibbonGraphic ribbon, RiverLine? line, RibbonLook look, float s0, float s1, MapSpace space)
