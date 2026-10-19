@@ -20,7 +20,7 @@ Generado por `tools/level-generator --daily` (tarea R3 del encargo `docs/dev/tra
 
 ## Rechazos por banda y motivo
 
-Candidatos descartados antes del elegido (los «fuera de la ventana del bot» incluyen, en los días fuera de ventana, el que acabó elegido como el más cercano).
+Candidatos descartados antes del elegido.
 
 | Banda | Motivo | Candidatos |
 |---|---|---|
@@ -43,10 +43,10 @@ Ninguno.
 
 ## Tiempos
 
-- Total (pared): 1.0 s con 20 hilos.
-- B1: 3.3 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 331 ms por tablero; el más lento, 609 ms).
-- B2: 4.5 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 451 ms por tablero; el más lento, 957 ms).
-- B3: 2.0 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 196 ms por tablero; el más lento, 395 ms).
+- Total (pared): 1.4 s con 20 hilos.
+- B1: 7.8 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 777 ms por tablero; el más lento, 1232 ms).
+- B2: 10.6 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 1062 ms por tablero; el más lento, 1392 ms).
+- B3: 3.9 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 387 ms por tablero; el más lento, 887 ms).
 
 ## Tableros
 

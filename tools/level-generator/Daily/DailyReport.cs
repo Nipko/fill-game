@@ -55,7 +55,7 @@ internal static class DailyReport
         L();
         L("## Rechazos por banda y motivo");
         L();
-        L("Candidatos descartados antes del elegido (los «fuera de la ventana del bot» incluyen, en los días fuera de ventana, el que acabó elegido como el más cercano).");
+        L("Candidatos descartados antes del elegido.");
         L();
         L("| Banda | Motivo | Candidatos |");
         L("|---|---|---|");

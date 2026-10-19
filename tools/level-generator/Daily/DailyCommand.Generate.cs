@@ -135,17 +135,6 @@ internal static partial class DailyCommand
             long ms = run.BandMilliseconds.TryGetValue(band.Band, out long m) ? m : 0;
             Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
                 $"B{band.Band}: {bs.Count} tableros, {bs.Count(b => !b.InWindow)} fuera de ventana, {bs.Count(b => b.UsedFallback)} con respaldo, {bs.Count(b => b.OverRiskCap)} con pares > tope, {bs.Sum(b => b.Tried)} candidatos, {ms / 1000.0:F1} s (suma de tiempos de pared por tablero)"));
-            foreach (DailyBoard b in bs.Where(b => !b.InWindow))
-            {
-                Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
-                    $"WARN {b.Id}: bot_fail {b.Bot:F3} fuera de la ventana {band.BotFailMin:F2}-{band.BotFailMax:F2} (R-Q11; el mas cercano de {b.Tried} candidatos)"));
-            }
-
-            foreach (IGrouping<int, DailyBoard> g in bs.Where(b => b.OverRiskCap).GroupBy(b => b.K).OrderBy(g => g.Key))
-            {
-                Console.WriteLine(string.Create(CultureInfo.InvariantCulture,
-                    $"WARN B{band.Band} K = {g.Key}: {g.Count()} tableros con {tints.MinPairs(band.Band, g.Key)} pares de riesgo, por encima del tope {band.MaxRiskPairs} (R-Q1b, nota sec. 1.1: la paleta no admite ese K con el tope)"));
-            }
         }
 
         Console.WriteLine(string.Create(CultureInfo.InvariantCulture, $"tiempo: {sw.Elapsed.TotalSeconds:F1} s con {run.Threads} hilos"));
