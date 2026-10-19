@@ -185,6 +185,28 @@ namespace AF.LiveOps
             return IndexOf(PendingClaims, dateKey) >= 0;
         }
 
+        /// <summary>
+        /// La fecha <paramref name="dateKey"/> (<c>yyyy-MM-dd</c>) tiene su sello en el mes guardado (<see cref="StampsMonth"/> y
+        /// <see cref="StampDays"/>). False si la clave no es una fecha o el sello se quitó al anular el cobro (nota §7.2).
+        /// </summary>
+        public bool IsStamped(string? dateKey)
+        {
+            if (StampsMonth == null || StampsMonth.Length != 7 || dateKey == null || dateKey.Length != 10
+                || string.CompareOrdinal(dateKey, 0, StampsMonth, 0, 7) != 0 || dateKey[7] != '-')
+            {
+                return false;
+            }
+
+            int tens = dateKey[8] - '0';
+            int units = dateKey[9] - '0';
+            if (tens < 0 || tens > 3 || units < 0 || units > 9)
+            {
+                return false;
+            }
+
+            return StampDays.Contains(tens * 10 + units);
+        }
+
         /// <summary>Copia independiente (listas y partida incluidas).</summary>
         public DailyChallengeRecord Clone()
         {

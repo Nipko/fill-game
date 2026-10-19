@@ -18,7 +18,7 @@ namespace AF.LiveOps
         /// <summary>3. Pendiente de validar: el premio de hoy espera la hora del servidor (08 §10.1).</summary>
         PendingValidation = 2,
 
-        /// <summary>4. Sellado: hoy ya se cobró.</summary>
+        /// <summary>4. Sellado: hoy ya se cobró y su sello sigue puesto (un cobro anulado al reconciliar vuelve a «Jugar»).</summary>
         Sealed = 3,
 
         /// <summary>5. Jugar: el tablero de hoy (con el reloj atrasado se juega sin premio).</summary>
@@ -117,7 +117,11 @@ namespace AF.LiveOps
                 return DailyCardState.PendingValidation;
             }
 
-            return string.Equals(record.LastClaimedDate, today, StringComparison.Ordinal) ? DailyCardState.Sealed : DailyCardState.Play;
+            // Sellado solo con el sello de hoy puesto: si la reconciliación anuló el cobro (reloj adelantado, nota §7.2), el sello se
+            // quitó y LastClaimedDate no retrocede, así que la tarjeta vuelve a «Jugar» (sin premio: la fecha ya se reclamó).
+            return string.Equals(record.LastClaimedDate, today, StringComparison.Ordinal) && record.IsStamped(today)
+                ? DailyCardState.Sealed
+                : DailyCardState.Play;
         }
 
         /// <summary>Slot de hoy (R7a: banda, día del pool y sustitución).</summary>
