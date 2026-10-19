@@ -462,7 +462,7 @@ todas sus recomendaciones el 2026-10-18 (**D-027**, `docs/dev/decisiones.md`):
   380 a Pi+Ho (MD), el 460 a Pi+Ba (MD), el 509 a Fl (D) y el 640 a Ma+Ba (MD). Ninguna quita un estreno ni una mecánica.
 - **K = 10 en los retos de 421-700** (11 en los del mundo 7) y **los hitos de 14 cuias con K = 12 + 1 vacío** + la cuia a
   medias de su mecánica (580, 600, 640, 660 y 700; el 620 y el 680 siguen con K = 13 + 1 vacío): el jugador conserva siempre
-  una cuia vacía.
+  una cuia vacía (en el 580, el 640 y el 700 la cuia vacía la ocupa la red del Matapi).
 - **El alivio de los niveles con Tinaja llega a 13 cuias** (`Superposition.TinajaReliefMaxCuias`; level-qa, QA-RELIEF-VALID).
 - **QA-PAR exime del par del rango los tableros de estreno de la Tinaja** (323-325, K ≤ 6; `BaseChecks.TinajaDebutParExempt`).
 
@@ -491,7 +491,8 @@ dotnet run --project tools/level-qa -c Release -- tools/out/salida_b/mundo_07_v1
 Todos `pack_schema` 3. Tiempos del equipo de escritorio x64 (AMD Ryzen 9 9900X, Release, 24 hilos), con los seis
 generadores a la vez: la primera ejecución y la última (en la b, la de `--check`), de unos 6 a 17 minutos cada uno y unos 17
 minutos los seis juntos. La variante a sola, en serie, son unos 20 minutos (la propuesta: 629, 201 y 385 s). Determinismo: tres ejecuciones de cada pack (la primera, una segunda en otra carpeta y la
-última, con el generador final, en el repositorio) dan los mismos bytes, y los mismos de la propuesta; el informe de curación
+última, con el generador final, en el repositorio) dan los mismos bytes, y coinciden con los hashes de la propuesta en las variantes a de los tres mundos y en la b del mundo 7
+(de la b de los mundos 8 y 9 la propuesta no da hash: solo consta el determinismo propio); el informe de curación
 también, salvo la línea del comando. `--check` de las seis, en verde.
 
 level-qa (la compuerta completa, con QA-REPRO: regenera cada pack en memoria y lo compara byte a byte): 0 fallos en los seis, con avisos conocidos (no fallan):
@@ -512,7 +513,8 @@ Para la curación del dueño quedan 123 niveles (`tools/out/curation_w07.md`, `c
 hitos del mundo 7 y sus estrenos 323, 343 y 403, y los 42 retos e hitos de cada uno de los mundos 8 y 9. Todos los hitos
 miden Muy difícil; 14 retos no miden su etiqueta objetivo y se publican sin la etiqueta Difícil (c.2; 03 §7), cada informe los
 lista aparte: el 369 del mundo 7; el 429, 452, 466, 469 y 486 del 8; y el 566, 569, 592, 615, 646, 658, 686 y 692 del 9 (el
-646 es el «primer reto con tres mecánicas» de d.5.2). Etiquetas publicadas: mundo 7, 29 Difícil y 6 Muy difícil de 120; mundo
+646 es el «primer reto con tres mecánicas» de d.5.2; 03 §11: `curation_w09.md` lo señala en su fila y en la lista aparte,
+con `CurationReport.FirstThreeMechanicChallenge`). Etiquetas publicadas: mundo 7, 29 Difícil y 6 Muy difícil de 120; mundo
 8, 30 y 7 de 140; mundo 9, 27 y 7 de 140 (03 §11: 25 % y 5 %).
 
 Los packs los registra en el cliente C1b, que genera sus `.meta` y decide la variante que se publica (D-019, Q-Ti3; d.5.8). Si

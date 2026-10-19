@@ -84,12 +84,14 @@ internal static class CurationReport
         List<GeneratedLevel> review = picks.Where(l => Reasons(l, stats).Review.Count > 0).ToList();
         W();
         W(F($"- Retos e hitos: {picks.Count} ({challenges} retos y {milestones} hitos); {hit} miden la etiqueta objetivo o más (D-009) y {picks.Count - hit} no."));
+        int? threeMechanics = FirstThreeMechanicChallenge(spec);
+        string ThreeNote(LevelPlan p) => p.Level == threeMechanics ? "; " + ThreeMechanicsNote : "";
         List<GeneratedLevel> missed = picks.Where(l => CampaignSpec.LabelRank(l.Chosen!.MeasuredLabel) < CampaignSpec.LabelRank(l.Plan.TargetLabel)).ToList();
         if (missed.Count > 0)
         {
             // Aparte (GEN79): los que se publican sin la etiqueta de su celda, para que el dueño los vea de un vistazo.
             W("- No miden su etiqueta objetivo y se publican con la que miden (c.2; 03 §7): "
-              + string.Join(", ", missed.Select(l => F($"{l.Plan.Level} ({l.Plan.RoleName} {l.Plan.Cell.Literal}: {LabelName(l.Chosen!.MeasuredLabel)}, bot_fail {l.Chosen!.Bot:0.000})")))
+              + string.Join(", ", missed.Select(l => F($"{l.Plan.Level} ({l.Plan.RoleName} {l.Plan.Cell.Literal}: {LabelName(l.Chosen!.MeasuredLabel)}, bot_fail {l.Chosen!.Bot:0.000}{ThreeNote(l.Plan)})")))
               + ".");
         }
 
@@ -120,7 +122,7 @@ internal static class CurationReport
             Candidate c = l.Chosen!;
             LevelPlan p = l.Plan;
             int band = Pool.BandIndex(c.Quantile);
-            W(F($"| {p.Level} | {p.Position} | {p.RoleName} | {p.Cell.Literal} | {c.K} | {c.Board.Caps.Length} | {c.Empties} ({c.FreeEmpties}) | {c.Par} | {c.Bot:0.000} | {p.Window} | {LabelName(c.MeasuredLabel)} | {LabelName(p.TargetLabel)} | {c.D:0.00} | {c.Quantile:0.000} ({BandText(band)}) | {Alternatives(l)} | {Proposal(l, stats)} |"));
+            W(F($"| {p.Level} | {p.Position} | {p.RoleName} | {p.Cell.Literal} | {c.K} | {c.Board.Caps.Length} | {c.Empties} ({c.FreeEmpties}) | {c.Par} | {c.Bot:0.000} | {p.Window} | {LabelName(c.MeasuredLabel)} | {LabelName(p.TargetLabel)} | {c.D:0.00} | {c.Quantile:0.000} ({BandText(band)}) | {Alternatives(l)} | {Proposal(l, stats)}{ThreeNote(p)} |"));
         }
 
         // Hitos, uno a uno.
@@ -237,6 +239,28 @@ internal static class CurationReport
         }
 
         return sb.ToString();
+    }
+
+    /// <summary>Nota del primer reto con tres mecánicas (03 §11: «primer reto con tres mecánicas en el 646»; d.5.2).</summary>
+    public const string ThreeMechanicsNote = "primer reto con tres mecánicas, d.5.2; 03 §11";
+
+    /// <summary>
+    /// El primer reto (p6, p9, p12, p15 o p18) del calendario de la especificación con tres mecánicas o más (03 §11; d.5.2; lo
+    /// prueba --self-test curation), o null si no hay ninguno. Mira todo el calendario, no solo los niveles generados, para que el
+    /// informe de un mundo lo señale aunque los anteriores no se generen con él (GEN79).
+    /// </summary>
+    internal static int? FirstThreeMechanicChallenge(CampaignSpec spec)
+    {
+        foreach (int level in spec.Calendar.Keys.Order())
+        {
+            LevelPlan plan = spec.Plan(level);
+            if (plan.Role == SlotRole.Challenge && plan.MechanicCount >= 3)
+            {
+                return level;
+            }
+        }
+
+        return null;
     }
 
     /// <summary>Apariciones como mucho de la tinaja en su ciclo de estreno, 321-340 (propuesta de la tinaja d.3, «C0»; D-019).</summary>

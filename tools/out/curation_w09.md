@@ -13,7 +13,7 @@ Compuerta automática (verde antes de pedir la curación): `dotnet run --project
 | `Assets/_Project/Data/Levels/mundo_09_v1.json` | 140 | 3 | 200770 | `ddf2ffb8433b6958b7edd05f5798770413adfc583f852b5cc6aa020112533872` |
 
 - Retos e hitos: 42 (35 retos y 7 hitos); 34 miden la etiqueta objetivo o más (D-009) y 8 no.
-- No miden su etiqueta objetivo y se publican con la que miden (c.2; 03 §7): 566 (reto Ma+Re (D): Normal, bot_fail 0.700), 569 (reto B2+Ba (D): Normal, bot_fail 0.675), 592 (reto Pi+B2 (D): Normal, bot_fail 0.425), 615 (reto Li+Re (D): Normal, bot_fail 0.650), 646 (reto Pi+Br+Ha (D): Normal, bot_fail 0.550), 658 (reto Ha+Re (D): Normal, bot_fail 0.675), 686 (reto Ma+Ho (D): Normal, bot_fail 0.625), 692 (reto Ma+Ha (D): Normal, bot_fail 0.725).
+- No miden su etiqueta objetivo y se publican con la que miden (c.2; 03 §7): 566 (reto Ma+Re (D): Normal, bot_fail 0.700), 569 (reto B2+Ba (D): Normal, bot_fail 0.675), 592 (reto Pi+B2 (D): Normal, bot_fail 0.425), 615 (reto Li+Re (D): Normal, bot_fail 0.650), 646 (reto Pi+Br+Ha (D): Normal, bot_fail 0.550; primer reto con tres mecánicas, d.5.2; 03 §11), 658 (reto Ha+Re (D): Normal, bot_fail 0.675), 686 (reto Ma+Ho (D): Normal, bot_fail 0.625), 692 (reto Ma+Ha (D): Normal, bot_fail 0.725).
 - Etiquetas publicadas en 561-700: 27 Difícil y 7 Muy difícil de 140 niveles (03 §11: 25 % y 5 %).
 - Para revisar: 566 (reto), 569 (reto), 592 (reto), 615 (reto), 632 (reto), 646 (reto), 658 (reto), 686 (reto), 692 (reto). El resto, aceptar.
 
@@ -47,7 +47,7 @@ Etiqueta = la que mide el bot ×40 y se publica (D-009); Objetivo = la de la cel
 | 635 | 15 | reto | Ma+Tu (D) | 10 | 12 | 1 (0) | 24 | 0.825 | [0.75, 0.90) | Difícil | Difícil | 0.72 | 0.907 (reto) | 5 | aceptar (turbia: 3 dosis ocultas en 2 cuia(s), 6 realidad(es) compatibles con lo visible) |
 | 638 | 18 | reto | Ba+Ho (D) | 10 | 13 | 2 (1) | 28 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.90 | 0.940 (reto) | 5 | aceptar |
 | 640 | 20 | hito | Ma+Ba (MD) | 12 | 14 | 1 (0) | 27 | 0.975 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.05 | 0.957 (hito) | 5 | aceptar |
-| 646 | 6 | reto | Pi+Br+Ha (D) | 10 | 13 | 1 (1) | 20 | 0.550 | [0.75, 0.90) | Normal | Difícil | 0.15 | 0.661 (comodidad) | 0 | **revisar**: mide Normal (bot_fail 0.550) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir; ningún otro candidato del slot mide la etiqueta objetivo: sustituirlo pide más candidatos (otra ronda del generador) o cambiar la celda |
+| 646 | 6 | reto | Pi+Br+Ha (D) | 10 | 13 | 1 (1) | 20 | 0.550 | [0.75, 0.90) | Normal | Difícil | 0.15 | 0.661 (comodidad) | 0 | **revisar**: mide Normal (bot_fail 0.550) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir; ningún otro candidato del slot mide la etiqueta objetivo: sustituirlo pide más candidatos (otra ronda del generador) o cambiar la celda; primer reto con tres mecánicas, d.5.2; 03 §11 |
 | 649 | 9 | reto | Pi+Ha (D) | 10 | 12 | 1 (1) | 22 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.31 | 0.757 (reto) | 4 | aceptar |
 | 652 | 12 | reto | Br+Re (D) | 10 | 12 | 1 (1) | 22 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.37 | 0.787 (reto) | 0 | aceptar |
 | 655 | 15 | reto | Br+Tu (D) | 10 | 11 | 0 (0) | 22 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.42 | 0.804 (reto) | 5 | aceptar (turbia: 2 dosis ocultas en 1 cuia(s), 1 realidad(es) compatibles con lo visible) |

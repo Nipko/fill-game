@@ -22,6 +22,8 @@
 //   - cuándo sale esa sección (CurationReport.ShowsTinaja: con 321-340 en las dos variantes, no con 201-300 ni 301-320) y las
 //     filas de su tabla (CurationReport.TinajaRows): las 8 celdas de la a en orden, y las del 323 y el 340 con la celda de la a,
 //     el respaldo de la b (Ma y Br+Ba (MD)), la celda publicada con o sin la Tinaja y las dosis «n (n − 1)» o la raya.
+//   - el primer reto con tres mecánicas del calendario (CurationReport.FirstThreeMechanicChallenge; 03 §11, d.5.2): el 646 en
+//     las dos variantes, que el informe señala en su fila (GEN79).
 // Imprime ASCII (PASS / FAIL) y sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación. Desde la raíz
 // del repositorio.
 using System.Globalization;
@@ -219,6 +221,10 @@ internal static class CurationSelfTest
             "Tinaja (a) con 301-320 generados: sin apariciones ni línea del ciclo de estreno", first: 301, last: 320);
 
         TinajaTable(check, a, b);
+
+        // Primer reto con tres mecánicas (03 §11: «en el 646»; d.5.2; GEN79): el informe lo señala en su fila.
+        check(CurationReport.FirstThreeMechanicChallenge(a) == 646 && CurationReport.FirstThreeMechanicChallenge(b) == 646,
+            "primer reto con tres mecanicas: el 646 en las dos variantes de campaign_v2.json");
     }
 
     /// <summary>
