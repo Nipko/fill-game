@@ -87,7 +87,7 @@ namespace AF.Tests.PlayMode
             GameScreen.SimulatedScreen = height == 640 ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
             yield return VictoryArrivalTests.Win(level);
             string at = "nivel " + level + " a 360 × " + height + (slot ? " con" : " sin") + " ranura";
-            AssertBandVictory(at, true, height == 780);
+            AssertBandVictory(at, true, height == 780, true, level != 40);
         }
 
         [UnityTest]
@@ -96,7 +96,7 @@ namespace AF.Tests.PlayMode
             GameScreen.SimulatedScreen = height == 640 ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
             LaunchOptions.FontScaleOverride = 1.3f;
             yield return VictoryArrivalTests.Win(level);
-            AssertBandVictory("nivel " + level + " a 360 × " + height + " con ranura al 130 %", true, false, false);
+            AssertBandVictory("nivel " + level + " a 360 × " + height + " con ranura al 130 %", true, false, false, level != 40);
         }
 
         [UnityTest]
@@ -128,6 +128,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.VictoryViewWaitMs, Is.GreaterThan(0f), "premisa: la ola de saltos sigue al abrirse la victoria");
             Assert.That(sloth.Visible, Is.False, "TiTino espera a la vista");
             Assert.That(view.CurrentVictoryLine.SlothSpeaks, Is.True, "lo que dirá ya está decidido (el 40 es su hito)");
+            Decided decided = Decided.Of(view);
             int waited = 0;
             while (view.VictoryViewWaitMs >= 0f && waited < 1000)
             {
@@ -139,10 +140,46 @@ namespace AF.Tests.PlayMode
             Assert.That(view.VictoryViewWaitMs, Is.LessThan(0f));
             Assert.That(sloth.Visible, Is.True, "entra con la vista");
             Assert.That(sloth.ClockMs, Is.LessThanOrEqualTo(PlayModeHelpers.FrameMs), "su reloj arranca con la vista");
+            decided.AssertSeen(view, "3 filas al empezar la vista");
             PlayModeHelpers.Step(boot, 1600);
             Assert.That(sloth.BubbleShown, Is.True, "y habla");
             Assert.That(sloth.BubbleText, Is.EqualTo(Loc.T("sloth_line_milestone_01")));
             SlothVictoryTests.AssertNoIntersection(view, "3 filas");
+            decided.AssertSeen(view, "3 filas a los 1,6 s");
+        }
+
+        [UnityTest]
+        public IEnumerator ThreeRows60_WaitsForTheWave_WithTheHeroItDecidedWith()
+        {
+            // 15 cuias en el 60 (hito con llegada y héroe): TiTino espera a la vista y el héroe con el que se decidió la caja (antes
+            // de que el fondo cambie a la parada de la llegada) es el que se ve al entrar y después (revisión de DC2).
+            SlothVictoryTests.NoSlot(true);
+            yield return SlothVictoryTests.WinPack(SlothVictoryTests.FifteenCuiaPack(60), 60);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            SlothVictory sloth = view.SlothView;
+            Assert.That(view.Layout!.Rows, Is.EqualTo(3));
+            Assert.That(view.VictoryViewWaitMs, Is.GreaterThan(0f), "premisa: la ola de saltos sigue al abrirse la victoria");
+            Decided decided = Decided.Of(view);
+            Assert.That(decided.Hero.width, Is.GreaterThan(0f), "premisa: el 60 trae héroe");
+            Assert.That(sloth.Visible, Is.False, "TiTino espera a la vista");
+            for (int t = 0; t < 1000 && view.VictoryViewWaitMs >= 0f; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.TickExact(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(view.VictoryViewWaitMs, Is.LessThan(0f));
+            decided.AssertSeen(view, "60 de 3 filas al empezar la vista");
+            Assert.That(sloth.Visible, Is.EqualTo(decided.BoxDp >= SlothVictory.GestureBoxDp), "sale si la caja decidida da");
+            PlayModeHelpers.Step(boot, 1600);
+            decided.AssertSeen(view, "60 de 3 filas a los 1,6 s");
+            Assert.That(view.SlothCouldSpeak, Is.EqualTo(view.CurrentVictoryLine.SlothSpeaks));
+            if (view.CurrentVictoryLine.SlothSpeaks)
+            {
+                Assert.That(sloth.BubbleShown, Is.True, "habla con la caja con la que se decidió");
+            }
+
+            SlothVictoryTests.AssertNoIntersection(view, "60 de 3 filas");
         }
 
         [UnityTest]
@@ -204,36 +241,52 @@ namespace AF.Tests.PlayMode
         // ------------------------------------------------------------------------------------------- utilidades
 
         // Avanza la victoria 1,6 s comprobando cada fotograma que TiTino no se cruza con nada, mide la franja y comprueba lo de
-        // DC2: TiTino sale (si mustShow) y, con ≥ 104 dp, habla en su hito; el héroe con el que se decidió la caja es el que se ve.
-        private static void AssertBandVictory(string at, bool hito, bool mustSpeak, bool mustShow = true)
+        // DC2: TiTino sale (si mustShow) y, con ≥ 104 dp, habla en su hito; el héroe y la caja con los que se decidió la victoria
+        // (SlothVictoryShown: SlothCanSpeak y el árbitro), leídos antes del primer tick, son los que se ven en cada fotograma de la
+        // vista (con withHero, el héroe no es vacío: un hito con llegada y héroe).
+        private static void AssertBandVictory(string at, bool hito, bool mustSpeak, bool mustShow = true, bool withHero = false)
         {
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             SlothVictory sloth = view.SlothView;
-            var tops = new List<float>();
+            Decided decided = Decided.Of(view);
+            if (withHero)
+            {
+                Assert.That(decided.Hero.width, Is.GreaterThan(0f), at + ": premisa: el hito trae héroe");
+            }
+
             for (int ms = 0; ms <= 1600; ms += PlayModeHelpers.FrameMs)
             {
                 SlothVictoryTests.AssertNoIntersection(view, at + " a los " + ms + " ms");
                 AssertClearOfHeroAndRibbon(view, at + " a los " + ms + " ms");
                 PlayModeHelpers.TickExact(boot, PlayModeHelpers.FrameMs);
-                tops.Add(view.SlothBandTopDp);
+                if (view.VictoryViewWaitMs < 0f)
+                {
+                    decided.AssertSeen(view, at + " a los " + ms + " ms"); // la caja no se mueve durante la victoria
+                }
             }
 
             VictoryLine line = view.CurrentVictoryLine;
             Rect hero = view.HeroRect;
-            float band = view.VictoryPanelTopDp - 38f - GameScreen.SlothRibbonGapDp - view.SlothHeaderBottomDp;
-            string report = "AF_SLOTH_BAND " + at + ": franja " + SlothVictoryTests.F(view.SlothHeaderBottomDp) + " → "
-                + SlothVictoryTests.F(view.VictoryPanelTopDp - 38f - GameScreen.SlothRibbonGapDp) + " (" + SlothVictoryTests.F(band) + " dp), héroe "
+            float header = view.SlothHeaderBottomDp;
+            float ribbon = view.VictoryPanelTopDp - 38f;
+            float band = ribbon - GameScreen.SlothRibbonGapDp - header;
+            GameScreen.SlothViewBand(header, ribbon - 4f, hero, out float t4, out float b4);
+            GameScreen.SlothViewBand(header, ribbon, hero, out float t0, out float b0);
+            string report = "AF_SLOTH_BAND " + at + ": franja " + SlothVictoryTests.F(header) + " → "
+                + SlothVictoryTests.F(ribbon - GameScreen.SlothRibbonGapDp) + " (" + SlothVictoryTests.F(band) + " dp), héroe "
                 + (hero.height > 0f ? SlothVictoryTests.F(hero.yMin) + " → " + SlothVictoryTests.F(hero.yMax) : "no") + ", caja "
                 + SlothVictoryTests.F(view.SlothBandTopDp) + " → " + SlothVictoryTests.F(view.SlothBandBottomDp) + " (" + SlothVictoryTests.F(view.SlothBoxDp)
-                + " dp), " + view.Layout!.Rows + " filas, TiTino " + sloth.Mode + " a " + SlothVictoryTests.F(sloth.SizeDp) + " dp, habla " + line.SlothSpeaks
-                + ", dato de llegada " + line.ArrivalFact + ", bocadillo " + (sloth.HasBubble ? sloth.BubbleLines + " líneas a " + SlothVictoryTests.F(sloth.BubbleFontDp) + " dp" : "no");
+                + " dp; con aire 4: " + SlothVictoryTests.F(b4 - t4) + ", con aire 0: " + SlothVictoryTests.F(b0 - t0) + "), " + view.Layout!.Rows
+                + " filas, TiTino " + sloth.Mode + " a " + SlothVictoryTests.F(sloth.SizeDp) + " dp (rama en " + SlothVictoryTests.F(sloth.RootY)
+                + "), habla " + line.SlothSpeaks + ", dato de llegada " + line.ArrivalFact + ", bocadillo "
+                + (sloth.HasBubble ? sloth.BubbleLines + " líneas a " + SlothVictoryTests.F(sloth.BubbleFontDp) + " dp" : "no");
             TestContext.WriteLine(report);
             Debug.Log(report);
 
             Assert.That(view.VictoryViewOn, Is.True, at + ": la victoria con vista");
             Assert.That(view.BoardAlpha, Is.EqualTo(0f), at + ": el tablero ya se fue");
-            Assert.That(view.SlothViewHeroRect, Is.EqualTo(hero), at + ": la caja se decidió con el héroe que se ve");
+            decided.AssertSeen(view, at + " a los 1,6 s");
             if (mustShow)
             {
                 Assert.That(view.SlothBoxDp, Is.GreaterThanOrEqualTo(SlothVictory.GestureBoxDp), at + ": la franja da para TiTino");
@@ -276,10 +329,48 @@ namespace AF.Tests.PlayMode
                 Assert.That(sloth.BubbleShown, Is.True, at);
             }
 
-            // La caja no se mueve durante la victoria (la decidida es la que se ve).
-            foreach (float t in tops)
+            // Con la vista, TiTino cuelga al pie de su caja (cerca de la cinta, o encima del héroe si va encima) [P; DC2].
+            Assert.That(sloth.RootY + (SlothVictory.RigDownS * sloth.SizeDp), Is.EqualTo(view.SlothBandBottomDp - SlothVictory.InsetDp).Within(0.6f),
+                at + ": TiTino al pie de su caja");
+        }
+
+        // Héroe y caja con los que se decidió la victoria (GameScreen.SlothDecided*), leídos antes del primer tick.
+        private readonly struct Decided
+        {
+            public readonly Rect Hero;
+            public readonly float Top;
+            public readonly float Bottom;
+
+            private Decided(Rect hero, float top, float bottom)
             {
-                Assert.That(t, Is.EqualTo(view.SlothBandTopDp).Within(0.01f), at + ": la caja no se mueve");
+                Hero = hero;
+                Top = top;
+                Bottom = bottom;
+            }
+
+            public float BoxDp => Bottom - Top;
+
+            public static Decided Of(GameScreen view)
+            {
+                return new Decided(view.SlothDecidedHeroRect, view.SlothDecidedBandTopDp, view.SlothDecidedBandBottomDp);
+            }
+
+            // Con la vista ya empezada, el héroe que se ve (el del fondo) es el decidido y la caja de TiTino es la decidida.
+            public void AssertSeen(GameScreen view, string at)
+            {
+                Rect seen = view.HeroRect;
+                string heroes = ": el héroe que se ve " + seen + " es el decidido " + Hero;
+                Assert.That(seen.xMin, Is.EqualTo(Hero.xMin).Within(0.01f), at + heroes);
+                Assert.That(seen.yMin, Is.EqualTo(Hero.yMin).Within(0.01f), at + heroes);
+                Assert.That(seen.width, Is.EqualTo(Hero.width).Within(0.01f), at + heroes);
+                Assert.That(seen.height, Is.EqualTo(Hero.height).Within(0.01f), at + heroes);
+                Assert.That(view.SlothBandTopDp, Is.EqualTo(Top).Within(0.01f), at + ": la caja que se ve es la decidida (arriba)");
+                Assert.That(view.SlothBandBottomDp, Is.EqualTo(Bottom).Within(0.01f), at + ": la caja que se ve es la decidida (abajo)");
+                if (view.SlothView.Visible)
+                {
+                    Assert.That(view.SlothView.BoxTop, Is.EqualTo(Top).Within(0.01f), at + ": TiTino en la caja decidida (arriba)");
+                    Assert.That(view.SlothView.BoxBottom, Is.EqualTo(Bottom).Within(0.01f), at + ": TiTino en la caja decidida (abajo)");
+                }
             }
         }
 
@@ -321,11 +412,13 @@ namespace AF.Tests.PlayMode
 
     /// <summary>
     /// Capturas de TiTino en la victoria con vista (tarea DC2; pregunta 53 a de D-028), en <c>Logs/snapshots/es-419/</c>, a los
-    /// 1,60 s de abrirse la pantalla de victoria (la fila 2,40), con el bocadillo a la vista si habla:
+    /// 1,60 s de abrirse la pantalla de victoria (la fila 2,40), con el bocadillo a la vista si habla; las de 640, a 1080 × 1920 px
+    /// (16:9, solo la pantalla simulada):
     /// <list type="bullet">
     /// <item><c>dc2_real_l{40|60|80|140}_{780|640}</c>: los hitos del catálogo real con la ranura del Dato del río, y
     /// <c>…_sinranura</c>, sin ella;</item>
-    /// <item><c>dc2_3filas_{780|640}</c>: un tablero de 3 filas (el 40 con 15 cuias), con la ranura;</item>
+    /// <item><c>dc2_3filas_{780|640}</c>: un tablero de 3 filas (el 40 con 15 cuias), con la ranura, y <c>…_sinranura</c>, sin
+    /// ella;</item>
     /// <item><c>dc2_real_l{40|60}_{780|640}_130</c>: el 40 (sin héroe) y el 60 (con héroe; TiTino no cabe) al 130 %.</item>
     /// </list>
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.SlothVictoryBandSnapshotTests</c>
@@ -372,7 +465,11 @@ namespace AF.Tests.PlayMode
         {
             foreach (bool small in new[] { false, true })
             {
+                SlothVictoryTests.NoSlot(false);
                 yield return Capture("dc2_3filas_" + (small ? "640" : "780"), SlothVictoryTests.FifteenCuiaPack(40), 40, small, 1f, !small);
+                SlothVictoryTests.NoSlot(true);
+                yield return Capture("dc2_3filas_" + (small ? "640" : "780") + "_sinranura", SlothVictoryTests.FifteenCuiaPack(40), 40, small, 1f, false);
+                SlothVictoryTests.NoSlot(false);
                 yield return Capture("dc2_real_l40_" + (small ? "640" : "780") + "_130", null, 40, small, 1.3f, false);
                 yield return Capture("dc2_real_l60_" + (small ? "640" : "780") + "_130", null, 60, small, 1.3f, false);
             }
@@ -397,7 +494,10 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Attach(GameBootstrap.Current!);
             SlothVictoryBandTests.AssertBand(name, mustSpeak, scale < 1.01f);
             yield return SnapshotKit.Wait(0.2f);
-            SnapshotKit.Save(dir, name);
+
+            // A 360 × 640 (1080 × 1920 px, 16:9), solo la pantalla simulada: GameScreen la maqueta arriba de la captura y lo de
+            // abajo es fondo que en ese teléfono no existe (revisión de DC2; como FX5).
+            SnapshotKit.SaveTop(dir, name, small ? (int)HudLabelTests.Screen640.y : SnapshotKit.Height);
             SnapshotKit.Release();
             LaunchOptions.Reset();
         }

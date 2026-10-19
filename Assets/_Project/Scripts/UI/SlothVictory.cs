@@ -258,6 +258,13 @@ namespace AF.UI
         public float BoxBottom => _bottom;
 
         /// <summary>
+        /// TiTino cuelga al pie de su caja en lugar de arriba (la victoria con vista, DC2) [P]: en la franja de la cabecera a la
+        /// cinta, cerca de la cinta, a la misma altura en todos los hitos sin héroe que lo impida. Se fija antes de
+        /// <see cref="Show"/>; sin ella (TI6a), arriba de la caja, bajo la cabecera.
+        /// </summary>
+        public bool AnchorBottom { get; set; }
+
+        /// <summary>
         /// Lo que hace TiTino con una caja de <paramref name="boxDp"/> dp y <paramref name="rows"/> filas de cuias (d.4): con 3
         /// filas, nada (07 §5.1: no queda franja libre); si no, según el alto.
         /// </summary>
@@ -468,9 +475,10 @@ namespace AF.UI
                 _rig.SetArt(_rig.Art, s);
             }
 
-            // TiTino cuelga arriba de la caja, bajo la cabecera, con su garra alzada dentro del margen.
+            // TiTino cuelga arriba de la caja, bajo la cabecera, con su garra alzada dentro del margen; con AnchorBottom, al pie de
+            // la caja, con lo que cuelga dentro del margen.
             _rootX = RestXFor(s);
-            _rootY = top + InsetDp + (RigUpS * s);
+            _rootY = AnchorBottom ? bottom - InsetDp - (RigDownS * s) : top + InsetDp + (RigUpS * s);
             Mode = mode;
 
             if (_hasText && mode == SlothVictoryMode.Speak)

@@ -71,6 +71,9 @@ namespace AF.UI
         private float _slothBandTop;
         private float _slothBandBottom;
         private Rect _slothViewHero;
+        private Rect _slothDecidedHero;
+        private float _slothDecidedTop;
+        private float _slothDecidedBottom;
         private bool _slothPending;
         private SlothGesture _slothPendingGesture;
         private string? _slothPendingText;
@@ -642,6 +645,10 @@ namespace AF.UI
                 VictoryFreeBand(out top, out bottom);
             }
 
+            // La caja y el héroe con los que se decide la victoria (SlothCanSpeak y el árbitro); SlothViewBegun no los toca (tests).
+            _slothDecidedHero = _slothViewHero;
+            _slothDecidedTop = top;
+            _slothDecidedBottom = bottom;
             _slothBandTop = top;
             _slothBandBottom = bottom;
             _slothHitoText = null;
@@ -678,8 +685,9 @@ namespace AF.UI
             _slothCanSpeak = true;
         }
 
-        // Filas de cuias del nivel para la caja de TiTino (con 3, no sale: 07 §5.1). En la victoria con vista el tablero se va y la
-        // caja no depende de las filas (DC2): cuenta como una.
+        // Filas de cuias del nivel para la caja de TiTino (con 3, no sale: 07 §5.4, fila 0,60, y GDD §6.3, fila 53). En la victoria
+        // con vista el tablero se va y la caja no depende de las filas: cuenta como una, así que con 3 filas TiTino sí sale si la
+        // franja da [P; DC2: cambia la regla escrita de 07 §5.4, fila 0,60; DC1 la lleva a 07 §5.4 y a la fila 53].
         private int SlothRows => SlothViewOn ? 1 : _layout?.Rows ?? 1;
 
         // Contexto de SlothLines para la victoria de flow con una caja de boxDp: la sesión (con el ajuste de ahora) y los datos de
@@ -783,13 +791,21 @@ namespace AF.UI
                 }
             }
 
+            // Con la victoria con vista, TiTino entra cuando empieza la vista (cuando el tablero empieza a irse), un solo criterio
+            // para todos los tableros [P; DC2]:
+            //  - con 10 cuias o menos la ola de saltos ya acabó y la vista empieza al abrirse la victoria: TiTino entra en la fila
+            //    0,80 de 07 §5.4 (ratificada en 54 a). Su rama se cruza con las cuias y el panel del tablero mientras se
+            //    desvanecen (≤ 250 ms, 02 §6): solapamiento con el tablero que se va [P; DC2], para que DC1 lo lleve a 07 §5.4 y a
+            //    la fila 53;
+            //  - con 11-16 cuias, la ola sigue y StopVictoryShown espera a que acabe para llevarse el tablero: TiTino espera con
+            //    él, nunca sobre las cuias a la vista (SlothTick), y su rama y su bocadillo llegan después de las filas 0,80 y 1,10.
+            // Con la vista, TiTino cuelga al pie de su caja, cerca de la cinta (SlothVictory.AnchorBottom) [P; DC2].
+            sloth.AnchorBottom = SlothViewOn;
             bool shown;
             bool bubble;
             if (SlothViewOn && CelebrationWaveEndMs(_views.Length) - _stopCelebrationMs > 0f)
             {
-                // Victoria con vista con la ola de saltos aún en marcha (11-16 cuias; StopVictoryShown espera a que acabe para
-                // llevarse el tablero): TiTino entra cuando empieza la vista, nunca sobre las cuias a la vista (SlothTick) [P; DC2].
-                // Lo que enseñará ya está decidido: su caja no cambia hasta entonces.
+                // La ola de saltos aún en marcha (11-16 cuias): lo que enseñará ya está decidido; su caja no cambia hasta entonces.
                 sloth.Hide();
                 SlothVictoryMode mode = SlothVictory.ModeFor(box, SlothRows);
                 shown = mode != SlothVictoryMode.None && line.Gesture != SlothGesture.None && sloth.EnsureArt();
@@ -1032,6 +1048,18 @@ namespace AF.UI
 
         /// <summary>Héroe del sitio que TiTino no tapa en la victoria con vista (dp del lienzo; vacío sin héroe; tests).</summary>
         internal Rect SlothViewHeroRect => _slothViewHero;
+
+        /// <summary>
+        /// Héroe del sitio con el que se decidió la última victoria (<c>SlothVictoryShown</c>, antes de que el fondo cambie a la parada
+        /// de la llegada; <see cref="ViewHeroRectFor"/>), que SlothViewBegun no toca (tests: el que se ve tiene que ser este).
+        /// </summary>
+        internal Rect SlothDecidedHeroRect => _slothDecidedHero;
+
+        /// <summary>Canto de arriba de la caja con la que se decidió la última victoria (dp desde arriba; tests).</summary>
+        internal float SlothDecidedBandTopDp => _slothDecidedTop;
+
+        /// <summary>Canto de abajo de la caja con la que se decidió la última victoria (dp desde arriba; tests).</summary>
+        internal float SlothDecidedBandBottomDp => _slothDecidedBottom;
 
         /// <summary>Pie de la cabecera (la insignia, lo más bajo del HUD; dp desde arriba; tests).</summary>
         internal float SlothHeaderBottomDp => HudBadgeBottom;

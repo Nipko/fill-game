@@ -789,7 +789,10 @@ namespace AF.Tests.PlayMode
             }
 
             // Con la victoria con vista ya empezada, las cuias se van (o ya se fueron) con el tablero (M2.2) y TiTino usa la franja
-            // de la cabecera a la cinta (DC2): no cuentan.
+            // de la cabecera a la cinta (DC2): no cuentan. Con 10 cuias o menos la vista empieza al abrirse la victoria y la rama de
+            // TiTino entra a la vez (la fila 0,80): durante el fundido del tablero (≤ 250 ms) se cruza con las cuias y el panel del
+            // tablero, que se desvanecen, solapamiento marcado [P; DC2] en GameScreen.SlothShowVictory para que DC1 lo lleve a
+            // 07 §5.4. Con 11-16 cuias TiTino espera a la vista: nunca se cruza con las cuias a la vista.
             bool boardLeaving = view.VictoryViewOn && view.VictoryViewWaitMs < 0f;
             BoardLayoutResult layout = view.Layout!;
             float shift = view.BoardContainer.anchoredPosition.y;
