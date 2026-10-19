@@ -208,6 +208,9 @@ namespace AF.Presentation
         /// <summary>Cursor de la línea (el mismo que pueden usar la canoa y Rosa), o null.</summary>
         public PolylineCursor? Cursor => _cursor;
 
+        /// <summary>Espacio del Mapa con el que se dibuja (<see cref="SetSpace"/>).</summary>
+        public MapSpace Space => _space;
+
         /// <summary>Inicio del intervalo dibujado (s).</summary>
         public float FillStart => _s0;
 

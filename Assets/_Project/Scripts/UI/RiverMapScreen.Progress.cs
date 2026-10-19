@@ -1543,6 +1543,13 @@ namespace AF.UI
                     float end = piece.S0 + ((piece.S1 - piece.S0) * t);
                     SetFrontPiece(FrontRibbonAt(k), line, budget, piece.S0, end);
                     SetFrontPiece(_frontCasing[k], line, budget, piece.S0, end);
+
+                    // FX11: el espacio y el ancho de la vista al montarla. ProgressSpace solo ajusta las cintas que ya había al
+                    // cambiar de vista; si «ponerse al día» llega a un tramo con más piezas que el de partida (en el 41, el de la
+                    // parada 4: Tapajós y Amazonas), la cinta nueva se quedaba en el espacio por defecto de la Cuenca, fuera de la
+                    // vista, y la reutilizada, con el de antes. Sin coste si no cambian (SetSpace y SetWidth comparan).
+                    FitRibbon(_front[k], _space);
+                    FitRibbon(_frontCasing[k], _space);
                 }
             }
 
