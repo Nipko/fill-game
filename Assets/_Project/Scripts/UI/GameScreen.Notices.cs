@@ -737,6 +737,35 @@ namespace AF.UI
             _slothNotice?.Hide();
         }
 
+        /// <summary>Veces que salió el consejo de la Tinaja del segundo tablero de su estreno desde que se creó la pantalla (tests).</summary>
+        internal int TinajaTipShownCount { get; private set; }
+
+        // Consejo del segundo tablero del estreno de la Tinaja (02 §9.1 M13: «Si sacas dos veces, la primera dosis queda debajo.»;
+        // TinajaTutorial.TipLevel, el 324 [P]; tarea TJ4): una línea en el aviso de texto, la primera de la cola, al habilitarse
+        // el toque tras la intro (también tras Volver a la orilla: el dilema de las dos dosis es de cada intento), solo si el nivel
+        // lleva tinaja; al reanudar no pasa por aquí (sin intro). Sin texto en este idioma, nada (nunca otro idioma; D-018).
+        private void MaybeShowTinajaTip(LevelFlow flow)
+        {
+            if (!flow.HasLevel || TinajaTutorial.TipKeyFor(flow.LevelNumber, flow.Level.HasTinaja) == null)
+            {
+                return;
+            }
+
+            string text = UiText.TutorialTinajaTip;
+            if (text.Length == 0)
+            {
+                return;
+            }
+
+            EnqueueNoticeFirst(NoticeKind.Text, text);
+            TinajaTipShownCount++;
+            if (DevProbe.Enabled)
+            {
+                _probe.Event("tinaja_tip", "\"level\":" + flow.LevelNumber.ToString(CultureInfo.InvariantCulture)
+                    + ",\"key\":\"" + TinajaTutorial.TipKey + "\",\"retry\":" + (_introRetry ? "true" : "false"));
+            }
+        }
+
         // «¡Miquito a la vista!» (guion de la intro §4.5 y §14): al habilitarse el input tras la intro, en el primer intento del
         // primer nivel libre desde el nivel_tarjeta de la especie del tramo (nunca la de otro mundo) y solo con su arte
         // (FaunaArtAvailable: fuera de desarrollo, sin el PNG del retrato no sale). Queda pendiente hasta que la tropa se vaya

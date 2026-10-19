@@ -130,7 +130,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Factory_TinajaAndItsCuia_HaveTheirOverlays_WithoutStepsUntilTJ3()
+        public IEnumerator Factory_TinajaAndItsCuia_HaveTheirOverlays_WithTheirStepsFromTJ3()
         {
             yield return null;
             CuiaOverlay? tinaja = CuiaOverlays.Create(MechanicType.Tinaja);
@@ -141,8 +141,12 @@ namespace AF.Tests.PlayMode
             Assert.That(cucharon!.Type, Is.EqualTo(MechanicType.Cucharon));
             foreach (MechanicStepKind kind in System.Enum.GetValues(typeof(MechanicStepKind)))
             {
-                Assert.That(tinaja.StepDurationMs(kind), Is.EqualTo(0f), "sin pasos propios hasta TJ3: " + kind);
-                Assert.That(cucharon.StepDurationMs(kind), Is.EqualTo(0f), "sin pasos propios hasta TJ3: " + kind);
+                // TJ3: la tinaja revela su boca y se tumba en la suelta; su cuia baja del jirau. Nada más.
+                float jar = kind == MechanicStepKind.Reveal ? TinajaOverlay.RevealStepMs
+                    : (kind == MechanicStepKind.Upend ? TinajaOverlay.UpendHoldMs + TinajaOverlay.UpendMs : 0f);
+                float cuia = kind == MechanicStepKind.Unhook ? CucharonOverlay.UnhookMs : 0f;
+                Assert.That(tinaja.StepDurationMs(kind), Is.EqualTo(jar), "pasos de la tinaja: " + kind);
+                Assert.That(cucharon.StepDurationMs(kind), Is.EqualTo(cuia), "pasos de su cuia: " + kind);
             }
 
             Assert.That(CuiaOverlays.Create(MechanicType.HojaAtada), Is.InstanceOf<HojaOverlay>(), "los casos de antes, igual");
@@ -158,9 +162,14 @@ namespace AF.Tests.PlayMode
             CuiaView view = _rig.Views[TinajaIndex];
             AssertNotMurky(view, board[TinajaIndex], "al cargar");
 
-            // El revelado de Aguas turbias no corre en la tinaja: ni por la regla ni con la Luciérnaga (su boca la anima TJ3).
+            // El revelado de Aguas turbias no corre en la tinaja: ni por la regla (su boca la anima TJ3) ni con la Luciérnaga, que
+            // enciende su barriga y saca sus capas como bandas (TJ4), nunca con el pardo ni el «?».
             Assert.That(view.PlayReveal(0b11, RevealStyle.Rule), Is.EqualTo(0f));
-            Assert.That(view.PlayReveal(0b11, RevealStyle.Firefly), Is.EqualTo(0f));
+            Assert.That(view.MarksAnimating, Is.False);
+            Assert.That(view.PlayReveal(0b11, RevealStyle.Firefly), Is.EqualTo(TinajaOverlay.FireflyMs).Within(1e-3f), "TJ4: la luz de la luciérnaga");
+            Assert.That(view.MarksAnimating, Is.True);
+            AssertNotMurky(view, board[TinajaIndex], "con la Luciérnaga");
+            view.SnapMarks();
             Assert.That(view.MarksAnimating, Is.False);
             AssertNotMurky(view, board[TinajaIndex], "tras pedir un revelado");
 

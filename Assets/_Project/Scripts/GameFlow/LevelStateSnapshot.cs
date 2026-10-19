@@ -152,6 +152,12 @@ namespace AF.GameFlow
     /// </list>
     /// Sin el tablero: se reconstruye con el nivel, la variante, las cuias añadidas y los vertidos, con las reglas del núcleo,
     /// y después se restauran las capas reveladas de R (<see cref="LevelSession.RestoreRevealed"/>).
+    /// <para>La Tinaja (M13; TJ3) no necesita campos propios ni cambia la versión: sus dosis y su cuia colgada o suelta salen de
+    /// V (sacar es un vertido más, tinaja → su cuia, y la suelta de R10 f la rehace el núcleo), y sus capas ya vistas van en R
+    /// como las de Aguas turbias (lo revelado sigue revelado tras Marea y Volver a la orilla: D-019 Q-Ti6; 02 R7 e I5).
+    /// <c>revealed_cuias</c> la incluye en cuanto se ve alguna de sus capas. Nada aquí la trata como agua turbia: ni la marca
+    /// <c>l</c> (la Luciérnaga del estreno de Aguas turbias, <c>intro_mechanic</c> <c>murky</c>) ni el aspecto, que es de la
+    /// pantalla.</para>
     /// </summary>
     public static class LevelStateSnapshot
     {

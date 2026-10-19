@@ -43,6 +43,21 @@ namespace AF.Presentation
             AudioCues.PourLevel(job.PourVoice, level);
         }
 
+        // Sacar de la Tinaja (TJ3; 02 §4.1, fila «Sacar»: «glup» de calabaza en el agua): sin chorro ni sfx_pour_*;
+        // sfx_tinaja_scoop suena una vez por trabajo, cuando su cuia llega a la boca. El «tic al empezar» que también piden
+        // 02 §4.1 y la propuesta b.2 no tiene id en 07 §9 ni en docs/audio/lista-de-sonidos.md: queda pendiente de decisión
+        // (lista de sonidos §9, fila sfx_tinaja_scoop), sin gancho ni clip inventado.
+        private static void ScoopAudio(ref Job job)
+        {
+            if (job.ScoopSounded)
+            {
+                return;
+            }
+
+            job.ScoopSounded = true;
+            AudioCues.Play(SfxId.TinajaScoop);
+        }
+
         // El chorro se suelta sin haber llegado a su corte (salto del trabajo): se calla sin sfx_pour_end.
         private static void PourAudioCut(ref Job job)
         {

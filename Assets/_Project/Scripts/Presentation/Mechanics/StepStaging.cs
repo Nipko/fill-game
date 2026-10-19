@@ -21,6 +21,8 @@ namespace AF.Presentation.Mechanics
     /// contador.</description></item>
     /// <item><description>Open (b) y Release (d o d′): el contenido de <c>After[i]</c> con la mecánica de
     /// <c>Before[i]</c> (también la hoja del Brote de dos hojas y la Flor de vitória-régia, VA1b).</description></item>
+    /// <item><description>Unhook y Upend (f; la Tinaja, TJ3): su cuia vuelve a la mecánica de <c>Before[i]</c> (colgada) con el
+    /// contenido de <c>After[i]</c>; la tinaja, vacía, no cambia (la espera boca arriba la pinta su overlay).</description></item>
     /// <item><description>Seal (c o c′): el contenido no cambia; <see cref="PreSealed"/> da false hasta su etapa.</description></item>
     /// <item><description>Receive (a): la pareja del Remolino vuelve a <c>Before[i]</c> (las dosis entran por el fondo en el
     /// paso).</description></item>
@@ -63,7 +65,7 @@ namespace AF.Presentation.Mechanics
                 return cur;
             }
 
-            for (int s = (int)StepStage.DPrime; s >= (int)stage; s--)
+            for (int s = MechanicStepPlan.StageCount - 1; s >= (int)stage; s--)
             {
                 cur = Undo(in v, index, (StepStage)s, cur);
             }
@@ -164,6 +166,16 @@ namespace AF.Presentation.Mechanics
                 case StepStage.DPrime:
                 case StepStage.D:
                     if (MechanicStepPlan.Has(MechanicStepPlan.ReleaseStepMask(in v), index) && MechanicStepPlan.ReleaseStage(in v, index) == stage)
+                    {
+                        cur = WithMechanicOf(before, cur);
+                    }
+
+                    return cur;
+
+                case StepStage.F:
+                    // La suelta de la cuia de la Tinaja (TJ3): hasta su paso, sigue colgada (con el contenido de After). La tinaja
+                    // no cambia en (f): ya está vacía (la deja así el trabajo de sacar).
+                    if (MechanicStepPlan.Has(ev.CucharonReleasedMask, index))
                     {
                         cur = WithMechanicOf(before, cur);
                     }

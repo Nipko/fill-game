@@ -156,6 +156,15 @@ namespace AF.GameFlow
         public const int UiSlothLinesPerSessionMax = 4;
 
         /// <summary>
+        /// <c>ui_tinaja_show_contents</c> = false (08 §9; D-019, Q-Ti5-A; tarea TJ4): la Tinaja enseña qué frutas guarda, sin el
+        /// orden. Apagada en la 1.0 (se enciende si el soft launch muestra quejas de suerte): la tinaja solo enseña su boca, el chip
+        /// «×n» y las capas ya reveladas, y ninguna vista ni etiqueta dice qué frutas quedan dentro. Al solver no le cambia nada.
+        /// Constante sin <c>[RemoteConfigKey]</c> hasta que exista <c>AF.RemoteConfig</c> en el cliente; la lee
+        /// <see cref="TinajaTutorial.ShowsContents"/>.
+        /// </summary>
+        public const bool UiTinajaShowContents = false;
+
+        /// <summary>
         /// <c>live_content_end_message</c> = <c>{"next_batch_eta_days":14}</c> (08 §9): días estimados hasta los próximos 100
         /// niveles, que muestra la pantalla «El río sigue creciendo» (06 §9; 08 §6.2).
         /// </summary>

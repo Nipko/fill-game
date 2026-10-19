@@ -104,6 +104,7 @@ Tutorial(murky)	El agua turbia esconde frutas. Debajo nunca se repite la fruta d
 Tutorial(otro)	<null>
 Tutorial(pirana)	Cada cuatro vertidos, la piraña muerde la cuia que acabas de llenar. Sellarla a tiempo evita el mordisco.
 Tutorial(remolino)	Las dos cuias del remolino están unidas por debajo: lo que viertes en una aparece en el fondo de la otra.
+Tutorial(tinaja)	La tinaja no deja ver: solo ves la fruta de arriba, y la de debajo nunca es igual.
 UiText.Back	Volver
 UiText.BackHome	Volver al inicio
 UiText.Buy	Comprar
@@ -214,6 +215,9 @@ UiText.TutorialMurky	El agua turbia esconde frutas. Debajo nunca se repite la fr
 UiText.TutorialMurkyRule	Debajo nunca se repite la fruta de encima.
 UiText.TutorialPirana	Cada cuatro vertidos, la piraña muerde la cuia que acabas de llenar. Sellarla a tiempo evita el mordisco.
 UiText.TutorialRemolino	Las dos cuias del remolino están unidas por debajo: lo que viertes en una aparece en el fondo de la otra.
+UiText.TutorialTinaja	La tinaja no deja ver: solo ves la fruta de arriba, y la de debajo nunca es igual.
+UiText.TutorialTinajaScoop	Saca el agua con su cuia chica:\nle caben dos dosis.
+UiText.TutorialTinajaTip	Si sacas dos veces, la primera dosis queda debajo.
 UiText.Undo	Deshacer
 UiText.WorldSeparator	 · 
 WorldBanner(1)	Mundo 1: Estuario · Brasil (Pará) · Amazonas / Tocantins

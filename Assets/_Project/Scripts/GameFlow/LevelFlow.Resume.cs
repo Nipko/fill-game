@@ -29,6 +29,11 @@ namespace AF.GameFlow
     /// LOADING del mismo nivel sin intro y con la pantalla que estaba abierta: cerrar la app nunca cobra canoa ni cuenta como
     /// fallo (no se resuelve nada al reabrir), y tampoco es una salida gratis del embudo. Las capas de Aguas turbias ya
     /// reveladas se guardan en <c>history</c> h2 y se restauran al reabrir (02 R8 y §11 T6: el conocimiento no se revierte).
+    /// <para>La Tinaja (M13; D-019 Q-Ti6; tarea TJ3) se guarda y se reanuda con el mismo formato, sin tratarla como turbia: sus
+    /// dosis y su cuia colgada o suelta salen de rehacer los vertidos con las reglas del núcleo (sacar y la suelta de R10 f, que
+    /// solo depende del recuento visible), y las capas ya vistas (las que destapó sacar, también deshecho con Marea, y la
+    /// Luciérnaga) van en la sección R como las de Aguas turbias. La pantalla las pinta como la tinaja: la vasija con su boca, el
+    /// chip y las bandas, nunca el pardo ni el «?» (contrato 27).</para>
     /// </summary>
     public sealed partial class LevelFlow
     {
@@ -225,7 +230,9 @@ namespace AF.GameFlow
         // máscara. Es exacto en 1-200 porque ver antes una oculta solo cambia lo que pasa después si alarga la racha (R6) o
         // permite un sellado (R5), y con T4 (bajo una oculta nunca va el color de la de encima) eso solo ocurre si un lavado de
         // Barro deja sobre ella su mismo color; ningún nivel de la campaña lleva Barro en una cuia turbia
-        // (MurkyPersistenceTests lo comprueba). Si un pack futuro lo combinara, al añadir una cuia el rehacer da otra cantidad,
+        // (MurkyPersistenceTests lo comprueba). En la Tinaja (TJ3) también es exacto: sacar mueve siempre 1 (T4: la racha de la
+        // boca es 1), su legalidad no mira lo oculto, no lleva Barro y la suelta depende solo del recuento («×n»), así que ver
+        // antes una capa no cambia ningún vertido (ResumeTests de PlayMode lo comprueban). Si un pack futuro lo combinara, al añadir una cuia el rehacer da otra cantidad,
         // la cuia no se añade y no se cobra (LastFunnelError); al reanudar habría que guardar el punto del revelado.
         private static bool TryRestoreRevealed(LevelSession session, int cuia, int layers)
         {
