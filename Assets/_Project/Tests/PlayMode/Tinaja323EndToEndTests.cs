@@ -255,6 +255,7 @@ namespace AF.Tests.PlayMode
 
                 Assert.That(before[move.Target].Mechanic, Is.Not.EqualTo(MechanicType.Tinaja), "la tinaja nunca recibe (M13)");
                 int drips = jar.DripsStarted;
+                int stateMark = _states.Count;
                 TapResult poured = MechanicTestKit.Tap(boot, move);
                 Assert.That(poured.Kind, Is.EqualTo(TapKind.Poured), "vertido " + i + " (" + move.Source + " → " + move.Target + ")");
                 bool layered = false;
@@ -283,12 +284,14 @@ namespace AF.Tests.PlayMode
                     scoops++;
                     Assert.That(layered, Is.True, "sacada " + scoops + ": vuela su cuia, no la tinaja");
                     Assert.That(jar.DripsStarted, Is.EqualTo(drips + BoardAnimator.ScoopDripCount), "sacada " + scoops + ": vuelve con sus gotas");
-                    Assert.That(HasState("\"event\":\"pour\"", "\"doses\":" + after[tinaja].Count), Is.True, "AF_STATE tinaja tras la sacada " + scoops);
+                    // Solo las líneas AF_STATE de este vertido, con el objeto tinaja completo hasta sus dosis.
+                    string jarState = "\"tinaja\":{\"cuia\":" + tinaja + ",\"partner\":" + scoop + ",\"doses\":" + after[tinaja].Count + ",";
+                    Assert.That(HasStateSince(stateMark, "\"event\":\"pour\"", jarState), Is.True, "AF_STATE tinaja tras la sacada " + scoops);
                     if (after[tinaja].IsEmpty)
                     {
                         // R10 f: la última sacada suelta su cuia, que queda como una Cuia chica normal.
                         Assert.That(after[scoop].Mechanic, Is.EqualTo(MechanicType.None), "su cuia baja del jirau");
-                        Assert.That(HasState("\"event\":\"pour\"", "\"doses\":0", "\"hung\":false"), Is.True, "AF_STATE: suelta");
+                        Assert.That(HasStateSince(stateMark, "\"event\":\"pour\"", jarState, "\"hung\":false"), Is.True, "AF_STATE: suelta");
                         released = true;
                     }
                 }
@@ -348,8 +351,15 @@ namespace AF.Tests.PlayMode
 
         private bool HasState(params string[] parts)
         {
-            foreach (string line in _states)
+            return HasStateSince(0, parts);
+        }
+
+        // Como HasState, pero solo en las líneas AF_STATE llegadas desde el índice from (las de un vertido concreto).
+        private bool HasStateSince(int from, params string[] parts)
+        {
+            for (int i = from; i < _states.Count; i++)
             {
+                string line = _states[i];
                 bool all = true;
                 foreach (string p in parts)
                 {
