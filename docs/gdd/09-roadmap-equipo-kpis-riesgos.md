@@ -59,13 +59,12 @@ Semana 1 = 2026-10-05; 2 semanas de margen por fiestas (28-12-2026 a 08-01-2027)
 
 **Estado al 2026-10-19** (tanda 4, ola 7; detalle en `docs/dev/traspaso/README.md`, sección 1, y en el estado de D-013 a D-020 de `docs/dev/decisiones.md`): el trabajo de la Fase 3 que no espera al arte va por delante del calendario. El Mapa del río tiene los datos de 1-700 y la geometría de producción (M5.1, adelantada de la ola 8); TiTino, Frutas del río y la base de idiomas están en el cliente con arte y textos provisionales; y la Tinaja está entera en el cliente (TJ1-TJ4). En la rama de C1b, el cliente juega 1-700 con la variante b. Sigue en la ruta crítica lo humano:
 - el arte final;
-- el asesor cultural: 126 textos de la UI y 683 filas de `facts.csv` sin aprobar;
-- las traducciones: 153 claves sin texto en `en` y 154 en `pt-BR`;
+- el asesor cultural y las traducciones (recuento de `LocReleaseGate` en B2: traspaso, sección 1, «Tamaño»);
 - la curación de los mundos 7-9;
 - el teléfono de clase A, que decide si el 323 sale con la Tinaja (R36; D-019, salida B de Q-Ti3);
-- las preguntas 52-66 de GDD §6.3.
+- las preguntas abiertas de GDD §6.3 (18, 19, 21-26 y 52-66).
 
-El AAB del juego mide 51,87 MB con 1-300 (B2): con el arte a 2× y los SDK no cabe en 80 MB sin Addressables y PAD (08 §6.2) o sin recortar las fuentes.
+Con el arte a 2× y los SDK, el AAB del juego no cabe en 80 MB sin Addressables y PAD (08 §6.2) o sin recortar las fuentes (medida de B2: traspaso, sección 1, «Tamaño», y `docs/setup/medida-aab-b2.md`).
 
 Versiones posteriores: **1.1** de alcance completo en la semana 6 del soft launch (S25, ≈ 05-09 de abril de 2027) si D1 ≥28 %, limitada por el arte (fondos 6-8 y skins 5-13: 6-8 semanas-artista desde la Fase 4); **1.2** de alcance completo 8-10 semanas después (≈ junio-julio de 2027) si D7 ≥9 %; **target API 37**: prueba en el último parche de 6.3 en el primer trimestre de 2027 y subida en el live-ops antes del 31-08-2027 (R11).
 
