@@ -160,8 +160,9 @@ namespace AF.Tests.EditMode
 
                 // ≤ 15 km = 2 dp en la Cuenca (geometry.py, TOLERANCE_KM); el Pacaya es la excepción pendiente del dueño (23,9 km,
                 // medida 23,83 con el cauce de HydroRIVERS y redondeada hacia arriba, M5.1; PENDING_MOUTH_KM: su boca está en
-                // el canal de Puinahua, que el cauce no dibuja).
-                float limit = line.Id == "pacaya" ? 4.5f : 2f;
+                // el canal de Puinahua, que el cauce no dibuja). En dp: 23,9 km × 13,1 dp por grado / 111 km = 2,82 dp,
+                // redondeado hacia arriba a 0,1 dp (medida con river_map_v1.json: 2,81 dp).
+                float limit = line.Id == "pacaya" ? 2.9f : 2f;
                 Assert.That(gapDp, Is.LessThanOrEqualTo(limit), line.Id + " desemboca en " + _map.Lines[mouth.Line].Id + " s=" + mouth.S);
             }
         }

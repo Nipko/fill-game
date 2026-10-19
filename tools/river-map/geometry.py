@@ -183,7 +183,8 @@ BRANCHES = {"para": "amazonas"}   # ramal: su primer punto esta sobre el cauce
 # 5d2a569; lo registra el carril de documentacion), con cuatro opciones (README, notas de M5.1): (a) medir contra la orilla o
 # el ancho del cauce y no contra su linea central; (b) en la vista Mundo, 2 dp al zoom real de cada mundo
 # (RiverMapScreen.WorldZoom, de 4x a 15x: de ~4,2 a ~1,1 km) y no 1 km en todas partes; (c) que el investigador corrija los
-# puntos [E]; (d) aceptar estas excepciones.
+# puntos [E]; (d) aceptar estas excepciones. Recomendacion del dev: (d), la aplicada como [P] (la (c) se puede sumar
+# despues: cada excepcion que deje de hacer falta se quita).
 # - Sitios tierra adentro: el punto de la investigacion es el centro del area protegida, no un punto del rio. Se validan
 #   por su punto de atraque (campo «atraque» {lat, lon} del registro de la investigacion) con los 15 km del canon; mientras
 #   la investigacion no lo anada, rige la cifra medida entre el centro y su punto del rio. Medidas sobre la geometria de
@@ -1659,7 +1660,9 @@ DP_CUENCA_KM = 6.0
 # 6 km de DP_CUENCA_KM son ~2,8 dp a 4x y ~10,6 dp a 15x (13,1 dp por grado * zoom / 111 km), por encima de los 2 dp de la
 # vista (08 §4.5; D-023, punto 20). Con 1 km en todo el mapa el archivo mediria 54.114 bytes y 5.051 puntos (frente a
 # 26.386 y 2.148; 200 km: 33.025 y 3.026; 400 km: 45.806 y 4.469; medido con las descargas), sin medir aun la franja del
-# 81 (con 0,3 y 2 km, 53 KB y 22 ms). Pendiente del duenno: pregunta 65 propuesta, parte 3 (README, notas de M5.1).
+# 81 (con 0,3 y 2 km, 53 KB y 22 ms). Pendiente del duenno: pregunta 65 propuesta, parte 3 (README, notas de M5.1);
+# recomendacion del dev: (a), dejar los 100 km (la aplicada como [P]): un radio mayor cambia las s de todo el Mapa y
+# las rutas de las paradas, y pide medir de nuevo la franja del 81 y probar en el telefono.
 MUNDO_RADIUS_KM = 100.0
 # Tolerancia de la vista Mundo (propuesta §3.6: <= 2 dp a 15x son ~1 km).
 MUNDO_TOLERANCE_KM = 1.0
