@@ -11,7 +11,7 @@
   "k_by_day": "even_min_odd_max",
   "k_by_day_note": "[P] nota §13: día par -> el K menor de la banda, día impar -> el mayor.",
   "water": {
-    "status": "[P] R-Q2: el dueño decidió que el agua y el fondo rotan por los mundos 1-9 según la fecha; la fórmula es una propuesta de la nota §13.",
+    "status": "[P] R-Q2, pendiente de una decisión nueva (R5): el dueño decidió que el agua y el fondo rotan por los mundos 1-9 según la fecha, pero cada tablero del pool sirve a todas las fechas con el mismo día del pool (03 §16: (días desde 2026-01-01 + live_daily_offset) mod 730) y 730 mod 9 = 1, así que ningún mundo grabado en el tablero sigue a la fecha en todas las vueltas. Hasta que el dueño elija, se graba 1 + (día mod 9): coincide con 1 + (días desde 2026-01-01 mod 9) en la primera vuelta con offset 0 y salta un mundo en cada vuelta (o con offset distinto de 0). Opciones: (a) aceptar ese salto; (b) que el cliente calcule mundo, agua y fondo con la fecha local y el water_base del tablero sea solo el de la primera vuelta (cambia la semántica del campo, contrato 21); (c) un pool de 729 o 738 días, múltiplo de 9 (cambia 03 §16), que sigue la fecha con offset 0.",
     "world_of_day": { "offset": 1, "modulo": 9 },
     "world_of_day_note": "mundo del día = offset + (día mod modulo) = 1 + (día mod 9), con el día del pool 0-729.",
     "worlds": [

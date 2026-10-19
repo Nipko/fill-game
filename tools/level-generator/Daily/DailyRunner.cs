@@ -12,11 +12,10 @@
 //     semilla del tablero, como la campaña con la suya);
 //   - aceptación: el primer candidato en la ventana bot_fail de la banda que A* resuelve (presupuesto del pipeline,
 //     MetricsEngine.Par) con par >= 2K (03 §17 #2);
-//   - si ninguno entra en la ventana (R-Q11, nota §1.6) [P]: se guarda el más cercano a la ventana (distancia de bot_fail a
-//     la ventana, desempate por número de candidato) que A* resuelve con par >= 2K, y se marca. level-qa --daily (R4) lo da
-//     como fallo, así que R5 no publica un pool así;
-//   - si la paleta de la banda no admite ese K con su tope de pares (B2 con K = 9 y B3, nota §1.1, R-Q1b) [P]: el tablero
-//     sale con el mínimo de pares posible (DailyTints) y se marca; ni K ni la paleta cambian.
+//   - si ningún candidato entra en la ventana, el día es un error y no se escribe el pack: la ventana es compuerta (R-Q11 (a),
+//     decidida por el dueño el 2026-10-19); se ajusta la especificación (fuentes o K, [P]) y se vuelve a generar.
+//     level-qa --daily (QA-DAILY-BOT) lo sigue comprobando;
+//   - si la paleta de la banda no admite algún K con su tope de pares, DailyTints da error antes de generar (R-Q1b (a)).
 // Las bandas y los días son independientes: se generan en paralelo, con un generador por hilo, y el resultado no depende
 // del número de hilos (lo comprueba --self-test daily).
 using System.Collections.Concurrent;
@@ -66,7 +65,7 @@ internal sealed class DailyBoard
 
     public string SeedText => DailyIds.Seed(Band, Day);
 
-    /// <summary>Pares de riesgo por encima del tope de la banda (R-Q1b) [P].</summary>
+    /// <summary>Pares de riesgo por encima del tope de la banda: nunca, porque DailyTints no lo admite (R-Q1b (a)).</summary>
     public bool OverRiskCap => Palette.RiskPairs > RiskCap;
 }
 
@@ -195,24 +194,13 @@ internal static class DailyRunner
                 }
             }
 
-            if (chosen is null)
-            {
-                // R-Q11 [P]: el más cercano a la ventana que A* resuelve con par >= 2K.
-                foreach (Built c in built.Where(c => !c.ParChecked || c.Par >= 0).OrderBy(c => c.Distance).ThenBy(c => c.Attempt))
-                {
-                    if (CheckPar(c, k) is null)
-                    {
-                        chosen = c;
-                        break;
-                    }
-                }
-            }
-
             sw.Stop();
             if (chosen is null)
             {
+                // R-Q11 (a): la ventana es compuerta; sin candidato en ella, el día no se publica.
+                double closest = built.Count == 0 ? double.NaN : built.Min(c => c.Distance);
                 error = string.Create(CultureInfo.InvariantCulture,
-                    $"{DailyIds.Id(band.Band, day)}: ningun candidato resoluble con par >= 2K en {tried} intentos ({string.Join("; ", rejects.Select(r => r.Key + " x" + r.Value))})");
+                    $"{DailyIds.Id(band.Band, day)}: ningun candidato dentro de la ventana {band.BotFailMin:0.00}-{band.BotFailMax:0.00} resoluble con par >= 2K en {tried} intentos (R-Q11 (a): la ventana es compuerta; el mas cercano queda a {closest:0.000} de ella; {string.Join("; ", rejects.Select(r => r.Key + " x" + r.Value))})");
                 return null;
             }
 

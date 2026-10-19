@@ -29,24 +29,24 @@ Candidatos descartados antes del elegido (los «fuera de la ventana del bot» in
 | B3 | fuera de la ventana del bot | 2 |
 | B3 | par < 2K | 1 |
 
-## Días fuera de la ventana del bot (R-Q11) [P]
+## Días fuera de la ventana del bot (R-Q11 (a))
 
-Ningún candidato entró en la ventana; se guardó el más cercano que A* resuelve con par >= 2K. `level-qa --daily` (R4) lo da como fallo.
+La ventana es compuerta: un día sin candidato en ella es un error y el pack no se escribe. Esta lista sale vacía en un pack escrito.
 
 Ninguno.
 
-## Tableros con más pares de riesgo que el tope de su banda (R-Q1b) [P]
+## Tableros con más pares de riesgo que el tope de su banda (R-Q1b (a))
 
-La paleta de R-Q1 no admite ese K con el tope (nota §1.1): el tablero lleva el mínimo de pares posible con ese K; no cambian ni K ni la paleta.
+Un K que la paleta no admite con su tope es un error de la especificación antes de generar; esta lista sale vacía.
 
 Ninguno.
 
 ## Tiempos
 
-- Total (pared): 1.5 s con 20 hilos.
-- B1: 5.1 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 506 ms por tablero; el más lento, 847 ms).
-- B2: 7.6 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 756 ms por tablero; el más lento, 1498 ms).
-- B3: 3.1 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 313 ms por tablero; el más lento, 706 ms).
+- Total (pared): 2.2 s con 20 hilos.
+- B1: 11.4 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 1137 ms por tablero; el más lento, 2002 ms).
+- B2: 16.0 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 1599 ms por tablero; el más lento, 2174 ms).
+- B3: 5.5 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 550 ms por tablero; el más lento, 1011 ms).
 
 ## Tableros
 

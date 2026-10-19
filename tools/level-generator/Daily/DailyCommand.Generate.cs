@@ -6,9 +6,9 @@
 //   - escribe <carpeta>/<pack_id>.json (daily_pool_v1.json) y, con --report, el informe; con --check no escribe nada y
 //     compara el pack con el del disco byte a byte;
 //   - --threads: hilos (por defecto, los del equipo); el pack no depende de ellos.
-// Códigos: 0 = generado (o idéntico con --check), aunque haya avisos (días fuera de ventana, R-Q11; pares por encima del tope,
-// R-Q1b: los marca el informe y los da como fallo level-qa --daily, R4); 1 = algún día sin tablero, un tablero que no cumple
-// lo que promete el pack o --check con un pack distinto o ausente; 2 = uso o especificación ilegible.
+// Códigos: 0 = generado (o idéntico con --check); 1 = algún día sin tablero (también un día sin candidato en la ventana del
+// bot: R-Q11 (a), la ventana es compuerta), un tablero que no cumple lo que promete el pack o --check con un pack distinto o
+// ausente; 2 = uso o especificación ilegible (también una paleta que no admite un K con su tope: R-Q1b (a)).
 // Además, la parte de generación de --self-test daily (GenerationChecks).
 using System.Diagnostics;
 using System.Globalization;
@@ -262,6 +262,33 @@ internal static partial class DailyCommand
             && tints.SetCount(3, 11) == 12, "tope efectivo: B1 0, B2 1 y B3 libre (todos los conjuntos de K tintes: C(12, 11) = 12 con K = 11)");
         check(tints.Pool(spec.Band(1)).Count == 7 && tints.Pool(spec.Band(2)).Count == 9 && tints.Pool(spec.Band(3)).Count == 12,
             "pool de tintes por banda: 7, 9 y 12 (nota sec. 1.1)");
+
+        // R-Q11 (a): sin candidato en la ventana, el dia es un error y no hay tablero (B1 con una ventana imposible, 0,99-1,00).
+        string specDir = Path.GetDirectoryName(Path.GetFullPath(SpecPath))!;
+        CampaignSpec campaign = CampaignSpec.Load(Path.Combine(specDir, spec.TintsFrom));
+        JsonObject strict = JsonNode.Parse(File.ReadAllText(SpecPath))!.AsObject();
+        strict["bands"]![0]!["bot_fail"] = new JsonObject { ["min"] = 0.99, ["max"] = 1.0 };
+        DailySpec impossible = DailySpec.Parse(strict.ToJsonString(), "daily_v1 (ventana imposible)", specDir);
+        DailyRun gated = DailyRunner.Run(impossible, new DailyTints(campaign, impossible), [1], [0], 1);
+        check(gated.Boards.Count == 0 && gated.Errors.Count == 1 && gated.Errors[0].Contains("R-Q11 (a)", StringComparison.Ordinal),
+            $"R-Q11 (a): un dia sin candidato en la ventana es un error y no da tablero ({(gated.Errors.Count > 0 ? gated.Errors[0][..Math.Min(120, gated.Errors[0].Length)] : "sin error")})");
+
+        // R-Q1b (a): una paleta que no admite un K con su tope es un error antes de generar (B2 con K = 9: 3 pares, tope 1).
+        JsonObject k9 = JsonNode.Parse(File.ReadAllText(SpecPath))!.AsObject();
+        k9["bands"]![1]!["k"] = new JsonArray(9, 9);
+        k9["bands"]![1]!["source"]!["rules"]![0]!["k"] = new JsonArray(9, 9);
+        string? k9Error = null;
+        try
+        {
+            _ = new DailyTints(campaign, DailySpec.Parse(k9.ToJsonString(), "daily_v1 (B2 K = 9)", specDir));
+        }
+        catch (DailySpecException e)
+        {
+            k9Error = e.Message;
+        }
+
+        check(k9Error is not null && k9Error.Contains("con K = 9 el minimo de pares de riesgo es 3, por encima del tope 1", StringComparison.Ordinal),
+            $"R-Q1b (a): B2 con K = 9 se rechaza antes de generar ({k9Error ?? "se acepto"})");
 
         int[] bands = [1, 2, 3];
         int[] days = [0, 1, 2];

@@ -79,9 +79,9 @@ internal static class DailyReport
         }
 
         L();
-        L("## Días fuera de la ventana del bot (R-Q11) [P]");
+        L("## Días fuera de la ventana del bot (R-Q11 (a))");
         L();
-        L("Ningún candidato entró en la ventana; se guardó el más cercano que A* resuelve con par >= 2K. `level-qa --daily` (R4) lo da como fallo.");
+        L("La ventana es compuerta: un día sin candidato en ella es un error y el pack no se escribe. Esta lista sale vacía en un pack escrito.");
         L();
         List<DailyBoard> outside = run.Boards.Where(b => !b.InWindow).ToList();
         if (outside.Count == 0)
@@ -100,9 +100,9 @@ internal static class DailyReport
         }
 
         L();
-        L("## Tableros con más pares de riesgo que el tope de su banda (R-Q1b) [P]");
+        L("## Tableros con más pares de riesgo que el tope de su banda (R-Q1b (a))");
         L();
-        L("La paleta de R-Q1 no admite ese K con el tope (nota §1.1): el tablero lleva el mínimo de pares posible con ese K; no cambian ni K ni la paleta.");
+        L("Un K que la paleta no admite con su tope es un error de la especificación antes de generar; esta lista sale vacía.");
         L();
         var over = run.Boards.Where(b => b.OverRiskCap).GroupBy(b => (b.Band, b.K)).OrderBy(g => g.Key.Band).ThenBy(g => g.Key.K).ToList();
         if (over.Count == 0)

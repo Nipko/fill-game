@@ -5,10 +5,9 @@
 //   - se enumeran todos los conjuntos de K tintes del pool (como mucho 2^12 máscaras con los 12 tintes de B3) y se elige uno al azar, con el PRNG
 //     del candidato, entre los que tienen como mucho el tope efectivo de pares de riesgo (exacto, sin los 50 barajados de
 //     TintAssigner, que pueden fallar aunque exista un conjunto válido);
-//   - tope efectivo = max(max_risk_pairs de la banda, mínimo de pares posible con ese K). Si el mínimo supera el tope (B2 con
-//     K = 9 y B3: nota §1.1, pendiente de R-Q1b) [P], el tablero sale con el mínimo de pares posible y se marca: no se
-//     cambia K ni la paleta, que son lo decidido (03 §16; R-Q1), y se excede el tope lo menos posible; el informe y la
-//     consola lo avisan y R5 no publica hasta que el dueño responda;
+//   - el tope es max_risk_pairs de la banda; con "libre" (R-Q1b (a): B3) entran todos los conjuntos. Si con algún K de la
+//     banda el mínimo de pares posible supera el tope, la especificación no se puede cumplir: error (DailySpecException) y
+//     no se genera nada (R-Q1b (a) decidió B2 solo con K = 8 justo por eso; nota §1.1);
 //   - la asignación índice -> tinte evita que dos tintes de un par de riesgo queden juntos en una cuia, como TintAssigner
 //     (hasta 50 permutaciones, con TintAssigner.Adjacent; si ninguna lo logra, la de menos contactos).
 using AF.Core.Board;
@@ -61,7 +60,13 @@ internal sealed class DailyTints
                 }
 
                 int min = all.Min(s => s.Pairs);
-                int cap = Math.Max(band.MaxRiskPairs, min);
+                int cap = band.MaxRiskPairs;
+                if (min > cap)
+                {
+                    throw new DailySpecException(string.Create(System.Globalization.CultureInfo.InvariantCulture,
+                        $"banda {band.Band}: con K = {k} el minimo de pares de riesgo es {min}, por encima del tope {cap} (R-Q1 y R-Q1b; nota sec. 1.1)"));
+                }
+
                 _sets[(band.Band, k)] = (all.Where(s => s.Pairs <= cap).Select(s => s.Set).ToList(), cap, min);
             }
         }
@@ -72,7 +77,7 @@ internal sealed class DailyTints
     /// <summary>Mínimo de pares de riesgo posible con K tintes del pool de la banda.</summary>
     public int MinPairs(int band, int k) => _sets[(band, k)].MinPairs;
 
-    /// <summary>Tope efectivo: el de la banda o, si no cabe, el mínimo posible (marcado en el informe) [P].</summary>
+    /// <summary>Tope de la banda (con «libre», todos los pares de 03 §4.5).</summary>
     public int EffectiveCap(int band, int k) => _sets[(band, k)].Cap;
 
     /// <summary>Conjuntos de K tintes dentro del tope efectivo.</summary>
