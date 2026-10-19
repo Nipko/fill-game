@@ -4,6 +4,22 @@ Encargo: `docs/dev/traspaso/spark-reto-del-rio.md` (de `origin/integracion-fase1
 
 ---
 
+## 2026-10-19 · Decisiones del dueño sobre las preguntas nuevas (R-Q1b, R-Q11-R-Q16)
+
+El dueño respondió, literal: «aplica las recomendaciones y pon trabajo en paralelo para avanzar mas rapido». Se aplica la opción recomendada (la primera) de cada pregunta abierta. El integrador debe llevarlas a `docs/dev/decisiones.md` junto con R-Q1-R-Q10.
+
+| Id | Decisión |
+|---|---|
+| R-Q1b | (a) **B2 solo con K = 8** (cambia 03 §16 y 06 §4.1, que dan K 8-9) y **B3 con `max_pares_riesgo` libre**, como la campaña desde el 201 (03 §4.5). B1 sin cambios |
+| R-Q11 | (a) La ventana del bot **es compuerta**: un día fuera de ventana no se publica hasta ajustar la especificación (fuente o K, que son [P]); QA-DAILY-BOT sigue siendo fallo |
+| R-Q12 | (a) Al reconectar no se retira nada de lo cobrado sin red (`KeepOfflineClaims`, el default actual) |
+| R-Q12 (aclaración) | (a) Al anular una fecha no se retiran semillas ni la Pororoca |
+| R-Q12b | (a) Un pendiente solo se valida si `|fecha − hoy_servidor| ≤ 1 día`; los demás se anulan |
+| R-Q13 | (a) Sin intersticial al terminar un Reto |
+| R-Q14 | (a) La Pororoca de la racha entra en el stock y espera al nivel 30, en que se desbloquea |
+| R-Q15 | (a) `af_daily_challenge.result = fail` **una vez por día**, y solo si ese día termina sin victoria |
+| R-Q16 | (a) Salir de la partida del Reto sin ganar la deja **reanudable el mismo día**; al cambiar de día se descarta (R-Q4) |
+
 ## 2026-10-19 · R8 · La partida del Reto en AF.GameFlow: código APROBADO, falta Unity
 
 - **Commits:** `49501b4` y `535b92c` (arreglos de la revisión), en `spark/reto-del-rio-r8` (sale de R7b). **Empujada, pero sin fusionar** en `spark/reto-del-rio` hasta que pase Unity.
