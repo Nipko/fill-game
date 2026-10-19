@@ -3,6 +3,7 @@ using AF.Core.Board;
 using AF.Core.Rules;
 using AF.GameFlow;
 using AF.Presentation;
+using AF.Solver.Murky;
 using AF.Solver.Search;
 using UnityEngine;
 using UnityEngine.UI;
@@ -14,7 +15,8 @@ namespace AF.UI
     /// 06 §2.2; 02 §4, D-002): una mano que va del origen al destino de un vertido, en bucle, sin capturar toques, hasta que el
     /// jugador hace ese vertido (la retira <c>GameScreen</c>). Componente reutilizable: no sabe de niveles ni de reglas; recibe el
     /// vertido (<see cref="Show"/>) y lo señala. Es una ayuda explícita del tutorial que solo señala el vertido de la lección:
-    /// nunca resalta destinos al seleccionar (D-002) y no se enciende ni cambia con la selección.
+    /// nunca resalta destinos al seleccionar (D-002) y no se enciende ni cambia con la selección. Lo usan el tutorial (el 1 y el
+    /// 2) y dos estrenos de 02 §9.1 (tarea DC7; D-029): la Hoja del 43 y la Tinaja del 323, en dos pasos.
     /// <list type="number">
     /// <item><description><b>Bucle</b> (<see cref="CycleMs"/>): aparece sobre el origen (<see cref="AppearMs"/>), lo toca (se hunde
     /// un poco y deja una onda en anillo con su halo, <see cref="PressMs"/>), viaja en arco al destino con la mano entera por
@@ -355,18 +357,24 @@ namespace AF.UI
         /// legal (el tablero inicial del 2 está lleno: la lección llega tras el primer vertido). «El primero de la solución» casi
         /// nunca vale aquí: la solución óptima del 2 de <c>tutorial_v0</c> (par 6) no pasa por el parcial, que cuesta un vertido
         /// más; el dedo enseña la lección de 02 §13, no el camino más corto [P].</description></item>
+        /// <item><description><see cref="FingerLesson.HojaKey"/> (el estreno de la Hoja, el 43; DC7): un vertido de la fruta de
+        /// la hoja a la cuia con hoja (<see cref="TutorialInstruction.IsHojaLesson"/>) en cuanto es legal, igual que el parcial
+        /// del 2: el primero de la solución si lo es; si no, el primero en orden de índice que deja el tablero con
+        /// solución.</description></item>
         /// </list>
-        /// False también si el solver no encuentra solución en su presupuesto (el del pipeline, 03 §5).
+        /// False también si el solver no encuentra solución en su presupuesto (el del pipeline, 03 §5). La Tinaja va aparte
+        /// (<see cref="TryChooseTinaja"/>): con dosis ocultas, el A* sobre el tablero verdadero sabría lo que el jugador no ve.
         /// </summary>
         public static bool TryChoose(FingerLesson lesson, BoardState state, PourMode mode, bool futileRule, AStarSolver solver, out Pour pour)
         {
             pour = default;
-            if (lesson == FingerLesson.None || state.IsWon())
+            if (lesson == FingerLesson.None || lesson == FingerLesson.TinajaScoop || state.IsWon())
             {
                 return false;
             }
 
-            SolverOptions options = SolverOptions.ForPipeline(mode, state).WithFutileRule(futileRule);
+            // Sin poda de fútiles en un nivel con tinaja (SolverOptions.ForLevel, M13 R14), también con la regla de la partida.
+            SolverOptions options = SolverOptions.ForPipeline(mode).WithFutileRule(futileRule).ForLevel(state);
             SolveResult solved = solver.Solve(state, options);
             bool hasFirst = solved.Status == SolveStatus.Solved && solved.MoveCount > 0;
             if (lesson == FingerLesson.FirstPour)
@@ -383,7 +391,7 @@ namespace AF.UI
             if (hasFirst)
             {
                 Pour first = solved.GetMove(0);
-                if (TutorialInstruction.IsPartialRunLesson(state, first.Source, first.Target, mode))
+                if (IsLesson(lesson, state, first.Source, first.Target, mode))
                 {
                     pour = first;
                     return true;
@@ -394,13 +402,13 @@ namespace AF.UI
             {
                 for (int t = 0; t < state.Count; t++)
                 {
-                    if (!TutorialInstruction.IsPartialRunLesson(state, s, t, mode))
+                    if (!IsLesson(lesson, state, s, t, mode))
                     {
                         continue;
                     }
 
                     BoardState next = PourRules.Apply(state, s, t, mode);
-                    if (next.IsWon() || solver.Solve(next, SolverOptions.ForPipeline(mode, next).WithFutileRule(futileRule)).Status == SolveStatus.Solved)
+                    if (next.IsWon() || solver.Solve(next, options).Status == SolveStatus.Solved)
                     {
                         pour = new Pour(s, t, PourRules.Amount(state, s, t, mode));
                         return true;
@@ -409,6 +417,55 @@ namespace AF.UI
             }
 
             return false;
+        }
+
+        /// <summary>
+        /// El vertido que señala el dedo en el paso <paramref name="step"/> del estreno de la Tinaja (02 §9.1 M13: «tinaja → su
+        /// cuia y, después, su cuia → destino»; tarea DC7) sobre <paramref name="state"/>: en el 1, sacar de la tinaja a su cuia
+        /// (<see cref="TutorialInstruction.IsTinajaScoop"/>); en el 2, verter de su cuia, <paramref name="scoop"/>, a otra. Solo
+        /// vertidos seguros en todas las realidades coherentes con lo visible (<see cref="SafeMoves"/>, como Morpho y la pista por
+        /// inactividad; T4 con <paramref name="reference"/>, el tablero inicial del nivel): el dedo no sabe lo que guarda la
+        /// tinaja, y nunca señala un vertido que pueda dejar el tablero sin salida. Del 2, el primero en el orden de
+        /// <see cref="SafeMoves"/> (origen y destino) [P]. False si no hay ninguno, si no se pudo decidir con su presupuesto (el del
+        /// pipeline por realidad, 03 §8) o si el tablero ya es victoria.
+        /// </summary>
+        public static bool TryChooseTinaja(int step, int scoop, BoardState state, BoardState reference, PourMode mode, bool futileRule,
+            SafeMoves safe, out Pour pour)
+        {
+            pour = default;
+            if ((step != 1 && step != 2) || state.IsWon() || (uint)scoop >= (uint)state.Count)
+            {
+                return false;
+            }
+
+            SolverOptions options = SafeMoves.ForPipeline(mode).WithFutileRule(futileRule).ForLevel(state);
+            if (safe.Find(state, options, reference) != RealityStatus.Ok || safe.Outcome != SafeMovesOutcome.Found)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < safe.Count; i++)
+            {
+                Pour move = safe.GetMove(i);
+                bool lesson = step == 1
+                    ? move.Target == scoop && TutorialInstruction.IsTinajaScoop(state, move.Source, move.Target)
+                    : move.Source == scoop;
+                if (lesson)
+                {
+                    pour = move;
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // El vertido de source a target es el de la lección (el 2 o el estreno de la Hoja; el 1 toma el primero de la solución).
+        private static bool IsLesson(FingerLesson lesson, BoardState state, int source, int target, PourMode mode)
+        {
+            return lesson == FingerLesson.HojaKey
+                ? TutorialInstruction.IsHojaLesson(state, source, target)
+                : TutorialInstruction.IsPartialRunLesson(state, source, target, mode);
         }
 
         private Image NewImage(string name, Sprite? sprite, Vector2 pivot)
@@ -462,7 +519,9 @@ namespace AF.UI
 
                 Vector2 foot = v.FootPosition;
                 bool sameRow = Mathf.Abs(foot.y - src.FootPosition.y) <= 1f || Mathf.Abs(foot.y - dst.FootPosition.y) <= 1f;
-                if (sameRow && foot.x > x0 && foot.x < x1)
+                // Con los extremos (±1 dp): la cuia de la fila del origen que queda justo encima del destino (o al revés) también
+                // está en el camino; en el 323, la tinaja entre su cuia y un destino de la fila de abajo (DC7).
+                if (sameRow && foot.x >= x0 - 1f && foot.x <= x1 + 1f)
                 {
                     top = Mathf.Max(top, TopOf(v));
                 }

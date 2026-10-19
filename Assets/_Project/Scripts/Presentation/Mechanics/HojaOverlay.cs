@@ -12,7 +12,8 @@ namespace AF.Presentation.Mechanics
     /// la fruta llave grande en el centro, algo girada, sobre un medallón pulido apaisado (<see cref="ProceduralArt.FruitFlight"/>;
     /// ni el medallón es un disco ni la fruta va derecha, para que el conjunto no se lea como un ojo). Su silueta es
     /// alargada y con puntas para no confundirse con la hoja redonda de la Hoja escudo (02 §9.1; glosario §6.3). Es un estado,
-    /// no un resaltado: no se ilumina al seleccionar (D-002), no lleva dedo guía (D-002, P5) y al tocarla como origen solo se
+    /// no un resaltado: no se ilumina al seleccionar (D-002), no se resalta como destino (el dedo guía del primer uso, en el 43, es una ayuda explícita del tutorial aparte, en
+    /// AF.UI: D-028 con P5 y D-029; tarea DC7) y al tocarla como origen solo se
     /// sacude la cuia (<c>CuiaView.Shake</c>).
     /// </summary>
     /// <remarks>

@@ -608,11 +608,23 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.RiverMapView!.Visible, Is.True, "el Mapa, desde la pausa");
         }
 
-        /// <summary>La victoria del 300 y «Siguiente»: el Mapa del fin de contenido, recién abierto.</summary>
+        /// <summary>
+        /// La victoria del 300 y «Siguiente»: el Mapa del fin de contenido, recién abierto. Desde C1b el contenido publicado llega
+        /// al 700, así que el fin de contenido del 300 de la prueba en el teléfono (observación 3) se reproduce con el catálogo del
+        /// mundo 6 solo (201-300, <c>mundo_06_v1.json</c>): el último nivel vuelve a ser el 300, con el mismo Mapa y el mismo
+        /// progreso.
+        /// </summary>
         internal static IEnumerator OpenContentEnd()
         {
-            yield return FactLineTests.Win(300);
+            FunnelSetup.Hooks();
+            LaunchOptions.FontScaleOverride = 1f;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(VictorySetup.Profile(1240));
+            string world6 = System.IO.File.ReadAllText(System.IO.Path.Combine(Application.dataPath, "_Project", "Data", "Levels", "mundo_06_v1.json"));
+            yield return PlayModeHelpers.LoadGameWithPack(world6, 300, new MemoryProgressStore(300, 299));
             GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Flow!.Catalog.LastLevel, Is.EqualTo(300), "condición del test: el contenido acaba en el 300");
+            PlayModeHelpers.TakeClock(boot);
+            VictorySetup.WinToVictoryScreen(boot);
             Assert.That(boot.PressNext(), Is.True);
             for (int elapsed = 0; elapsed < 10000 && boot.App!.Screen == AppScreen.Level; elapsed += PlayModeHelpers.FrameMs)
             {
