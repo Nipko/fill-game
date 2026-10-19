@@ -76,6 +76,10 @@ namespace AF.Presentation
     /// saltan los mismos puntos y quedan una sobre otra; los une con cuerdas, como con el presupuesto. Las uniones cuyo inglete
     /// pasaría de <see cref="BevelMiter"/> medios anchos van en bisel: el lado de dentro con su inglete y el de fuera cortado por
     /// una cuña, sin picos ni solapes.</description></item>
+    /// <item><description>Trazo curvo (<see cref="SetCurve"/>; FX12, la vista Mundo y el viaje del banner): sobre el trazo suave, la
+    /// cinta sigue una curva de Catmull-Rom centrípeta por los puntos que se quedan (filtrados, y pasando cerca de las bocas de los
+    /// afluentes: <see cref="SetAnchors"/>), partida donde hace falta. Es de la línea entera, así que el vidrio, el lleno, el frente
+    /// y su orla van sobre la misma curva. Solo cambia el dibujo: los datos, el cursor y lo que se coloca sobre la línea, no.</description></item>
     /// </list>
     /// Las coordenadas son las locales de su RectTransform según <see cref="MapSpace"/>. Solo se reconstruye cuando cambia algo
     /// (<see cref="SetFill"/> sin cambios no hace nada ni asigna memoria); al reconstruirse no asigna memoria tras la primera vez.
@@ -139,6 +143,53 @@ namespace AF.Presentation
         /// </summary>
         public const float BevelMiter = 1.25f;
 
+        /// <summary>
+        /// Con el trazo curvo (<see cref="SetCurve"/>; FX12), separación mínima entre los puntos de la línea por los que pasa la
+        /// curva, en anchos de la cinta en pantalla [P]: más que <see cref="SpacingWidths"/> (16 dp en la clase 1 y 10 dp en la clase 2
+        /// de la vista Mundo), para que la curva, partida donde hace falta, quede dentro del tope del frente de FX11 (medido en el
+        /// frente del 300 en Mundo: 2.886 vértices, frente a 2.534 con cuerdas cada 1,5 anchos; <c>Fx11Tests</c>).
+        /// </summary>
+        public const float CurveSpacingWidths = 2f;
+
+        /// <summary>
+        /// Con el trazo curvo, lo más que una cuerda de la cinta se aparta de la curva, en dp [P]: un tramo se parte por la mitad
+        /// mientras su punto medio quede más lejos de la cuerda (o gire más de <see cref="CurveMaxTurnDegrees"/>).
+        /// </summary>
+        public const float CurveToleranceDp = 0.75f;
+
+        /// <summary>Con el trazo curvo, giro máximo entre dos cuerdas seguidas de un tramo, en grados [P].</summary>
+        public const float CurveMaxTurnDegrees = 25f;
+
+        /// <summary>Con el trazo curvo, largo mínimo de una cuerda en pantalla, en dp [P] (no se parte más).</summary>
+        public const float CurveMinStepDp = 0.75f;
+
+        /// <summary>Con el trazo curvo, veces como mucho que se parte por la mitad un tramo (hasta 32 cuerdas) [P].</summary>
+        public const int CurveMaxDepth = 6;
+
+        /// <summary>
+        /// Con el trazo curvo, pasadas del filtro (1, 2, 1) / 4 sobre los puntos por los que pasa la curva [P]: quita los picos de un
+        /// punto de la geometría de producción (las puntas de la línea no se mueven).
+        /// </summary>
+        public const int CurveSmoothPasses = 1;
+
+        /// <summary>Con el trazo curvo, lo más que el filtro aparta un punto del suyo, en anchos de la cinta [P].</summary>
+        public const float CurveMaxShiftWidths = 1.5f;
+
+        /// <summary>
+        /// Con el trazo curvo, alcance de la vuelta de un ancla (<see cref="SetAnchors"/>) a su sitio, en separaciones de los puntos
+        /// [P]: los puntos de alrededor vuelven con ella, cada vez menos, para que la curva no haga esquina en la boca.
+        /// </summary>
+        public const float CurveAnchorReach = 3f;
+
+        /// <summary>
+        /// Con el trazo curvo, lo más que la curva pasa de un ancla, en anchos de la cinta [P]: menos de medio ancho, así que la boca
+        /// del afluente cae dentro de la cinta de su anfitrión.
+        /// </summary>
+        public const float CurveAnchorWidths = 0.3f;
+
+        // Con el trazo curvo, un paso de la curva no va a menos de esto (dp) de una sección del plan: una cuerda de nada.
+        private const float CurveMinGapDp = 0.5f;
+
         /// <summary>Canto de vidrio de la orla del agua llena (dp), por fuera del ancho del agua [P].</summary>
         public const float CasingRimDp = 1.5f;
 
@@ -201,6 +252,30 @@ namespace AF.Presentation
         private bool[] _keep = Array.Empty<bool>();
         private float _keepUnits = -1f;
         private int _bevelCount;
+
+        // Trazo curvo (FX12): los puntos por los que pasa la curva (_kept: arco, punto filtrado, punto de la línea y si es un ancla) y
+        // sus pasos (_grid: arco y punto); se calculan para la separación _curveUnits y la escala _curveDp (−1, por calcular). _chords: la
+        // última malla sigue cuerdas entre sus secciones (puntos saltados o curva), no la polilínea.
+        private bool _curve;
+        private bool[] _keptFixed = Array.Empty<bool>();
+        private Vector2[] _keptOrigin = Array.Empty<Vector2>();
+        private float[]? _anchors;
+        private Vector2[] _keptPoint = Array.Empty<Vector2>();
+        private float[] _keptArc = Array.Empty<float>();
+        private float[] _gridArc = Array.Empty<float>();
+        private Vector2[] _gridPoint = Array.Empty<Vector2>();
+        private int _gridCount;
+        private int _keptCount;
+        private float _curveUnits = -1f;
+        private float _curveDp = -1f;
+        private bool _chords;
+
+        // Segundo plan, para subdividir el primero (se intercambian; solo crecen).
+        private float[] _subArc = Array.Empty<float>();
+        private int[] _subVertex = Array.Empty<int>();
+        private Vector2[] _subPoint = Array.Empty<Vector2>();
+        private RunLook[] _subLook = Array.Empty<RunLook>();
+        private bool[] _subConnect = Array.Empty<bool>();
 
         /// <summary>Configura el gráfico (sin raycast).</summary>
         public void Setup()
@@ -319,14 +394,80 @@ namespace AF.Presentation
             _line = line;
             _cursor = line != null ? new PolylineCursor(line) : null;
             _keepUnits = -1f;
+            _curveUnits = -1f;
             if (line != null && _keep.Length < line.PointCount)
             {
                 _keep = new bool[line.PointCount]; // solo crece: con la línea más larga, ya no asigna
             }
 
+            _anchors = null;
+            EnsureKeptCapacity();
             _s0 = 0f;
             _s1 = 1f;
             SetVerticesDirty();
+        }
+
+        /// <summary>
+        /// Con el trazo curvo (FX12), los puntos de la línea (en s, de menor a mayor) por los que la curva tiene que pasar sin
+        /// moverse: las bocas de sus afluentes (<see cref="MouthAnchors"/>), para que sigan cayendo sobre ella. El arreglo es de
+        /// quien llama (no se copia); <see cref="SetLine"/> lo quita.
+        /// </summary>
+        public void SetAnchors(float[]? anchorS)
+        {
+            if (ReferenceEquals(anchorS, _anchors))
+            {
+                return;
+            }
+
+            _anchors = anchorS;
+            _curveUnits = -1f;
+            EnsureKeptCapacity();
+            SetVerticesDirty();
+        }
+
+        /// <summary>
+        /// Las bocas de los afluentes de cada línea de <paramref name="map"/> (por el índice de la línea; s en ella, de menor a mayor),
+        /// para <see cref="SetAnchors"/>. Asigna: una vez por Mapa.
+        /// </summary>
+        public static float[][] MouthAnchors(RiverMap map)
+        {
+            var lists = new System.Collections.Generic.List<float>[map.Lines.Count];
+            for (int i = 0; i < map.Lines.Count; i++)
+            {
+                RiverMapPlace? mouth = map.Lines[i].Mouth;
+                if (mouth != null && mouth.Value.Line >= 0 && mouth.Value.Line < lists.Length)
+                {
+                    (lists[mouth.Value.Line] ??= new System.Collections.Generic.List<float>()).Add(mouth.Value.S);
+                }
+            }
+
+            var anchors = new float[lists.Length][];
+            for (int i = 0; i < lists.Length; i++)
+            {
+                if (lists[i] == null)
+                {
+                    anchors[i] = Array.Empty<float>();
+                    continue;
+                }
+
+                lists[i].Sort();
+                anchors[i] = lists[i].ToArray();
+            }
+
+            return anchors;
+        }
+
+        // Los arreglos de los puntos de la curva, para los de la línea y sus anclas (solo crecen).
+        private void EnsureKeptCapacity()
+        {
+            int size = (_line != null ? _line.PointCount : 0) + (_anchors != null ? _anchors.Length : 0);
+            if (_keptArc.Length < size)
+            {
+                _keptArc = new float[size];
+                _keptPoint = new Vector2[size];
+                _keptFixed = new bool[size];
+                _keptOrigin = new Vector2[size];
+            }
         }
 
         /// <summary>Espacio del Mapa (dp por unidad y origen local).</summary>
@@ -417,10 +558,36 @@ namespace AF.Presentation
         /// <summary>Trazo suave (<see cref="SetSmooth"/>).</summary>
         public bool Smooth => _smooth;
 
+        /// <summary>
+        /// Trazo curvo (FX12; solo con el trazo suave): los puntos que se quedan van a <see cref="CurveSpacingWidths"/> anchos (no a
+        /// <see cref="SpacingWidths"/>) y, en vez de cuerdas entre ellos, la cinta sigue la curva de Catmull-Rom centrípeta que pasa
+        /// por ellos, partida por la mitad donde la cuerda se aparta más de <see cref="CurveToleranceDp"/> o gira más de
+        /// <see cref="CurveMaxTurnDegrees"/> (cuerdas de al menos <see cref="CurveMinStepDp"/>, como mucho
+        /// <see cref="CurveMaxDepth"/> veces por tramo); los codos que siguen pasando de <see cref="BevelMiter"/> van en bisel, como
+        /// con cuerdas. La curva es de la línea entera
+        /// (cada arco de la polilínea cae en un punto fijo de ella, y los pasos también), así que el vidrio, el lleno, el frente y
+        /// su orla de una línea van sobre la misma curva. Lo enciende la vista Mundo (y el viaje del banner), donde el zoom deja
+        /// ver las esquinas; la Cuenca sigue con cuerdas. Los datos no cambian: solo el dibujo.
+        /// </summary>
+        public void SetCurve(bool on)
+        {
+            if (on != _curve)
+            {
+                _curve = on;
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>Trazo curvo (<see cref="SetCurve"/>).</summary>
+        public bool Curve => _curve;
+
         /// <summary>Uniones en bisel de la última malla (trazo suave).</summary>
         public int LastBevelCount => _bevelCount;
 
-        /// <summary>Secciones del plan de la última malla (las puntas, los puntos de la línea y los cambios de agua; tests).</summary>
+        /// <summary>
+        /// Secciones del plan de la última malla (las puntas, los puntos de la línea y los cambios de agua y, con el trazo curvo, los
+        /// pasos de la curva; tests).
+        /// </summary>
         public int LastSectionPointCount => _planCount;
 
         /// <summary>Punto (unidades del marco) de la sección <paramref name="i"/> del plan de la última malla (tests).</summary>
@@ -467,6 +634,7 @@ namespace AF.Presentation
             _markCount = 0;
             _planCount = 0;
             _decimated = false;
+            _chords = false;
             _truncated = false;
             RiverLine? line = _line;
             PolylineCursor? cursor = _cursor;
@@ -500,7 +668,7 @@ namespace AF.Presentation
 
             // Trazo suave: solo los puntos que se quedan (UpdateKeep) y, cerca de las dos puntas del intervalo, ninguno a menos de
             // media separación de ellas (una cuerda de nada haría un quiebro).
-            float units = _smooth ? SpacingWidths * WidthDp / _space.DpPerUnit : 0f;
+            float units = _smooth ? (_curve ? CurveSpacingWidths : SpacingWidths) * WidthDp / _space.DpPerUnit : 0f;
             float endSq = 0f;
             Vector2 startPoint = Vector2.zero;
             Vector2 endPoint = Vector2.zero;
@@ -605,6 +773,15 @@ namespace AF.Presentation
             }
 
             _decimated = keptVertices < inner;
+            _chords = _decimated;
+            if (_curve && units > 0f && _planCount >= 2)
+            {
+                // Trazo curvo (FX12): cada sección, en la curva de la línea, y entre ellas los pasos de la curva que caben.
+                UpdateCurve(cursor, units);
+                RefinePlan(cursor, perSection);
+                _chords = true;
+            }
+
             _bevelCount = 0;
             int remaining = 0;
             for (int i = 0; i < _planCount; i++)
@@ -708,7 +885,7 @@ namespace AF.Presentation
         // única cuerda).
         private Vector2 SectionOffset(PolylineCursor cursor, int i)
         {
-            if (!_decimated)
+            if (!_chords)
             {
                 int vertex = _planVertex[i];
                 if (vertex >= 0)
@@ -866,7 +1043,7 @@ namespace AF.Presentation
         {
             dIn = Vector2.zero;
             dOut = Vector2.zero;
-            if (!_decimated)
+            if (!_chords)
             {
                 int vertex = _planVertex[i];
                 if (vertex <= 0 || vertex >= cursor.PointCount - 1)
@@ -958,6 +1135,406 @@ namespace AF.Presentation
                     _keep[lastKept] = false;
                 }
             }
+        }
+
+        // Trazo curvo: los puntos que se quedan, en orden, y los pasos de la curva de la línea entera (_grid: arco y punto, en orden,
+        // empezando por cada punto que se queda), para la separación «units» y la escala de la vista: cada tramo entre dos puntos se
+        // parte por la mitad mientras su cuerda se aparte de la curva más de CurveToleranceDp o gire más de CurveMaxTurnDegrees
+        // (hasta CurveMaxDepth veces y sin cuerdas de menos de CurveMinStepDp). Elegidos sobre la línea entera, como los puntos
+        // (UpdateKeep, ya hecho). Solo si cambia la separación o la escala; los arreglos solo crecen.
+        private void UpdateCurve(PolylineCursor cursor, float units)
+        {
+            float dp = _space.DpPerUnit;
+            if (units == _curveUnits && dp == _curveDp)
+            {
+                return;
+            }
+
+            _curveUnits = units;
+            _curveDp = dp;
+            // Los puntos que se quedan y las anclas (SetAnchors), por arco; un punto a menos de media separación de un ancla se
+            // salta (salvo las puntas de la línea), y un ancla a menos de media separación de una punta se queda en la punta.
+            int n = cursor.PointCount;
+            float[]? anchors = _anchors;
+            int m = anchors != null ? anchors.Length : 0;
+            float length = cursor.Length;
+            float gap = 0.5f * units;
+            int a = 0;
+            _keptCount = 0;
+            for (int i = 0; i < n; i++)
+            {
+                if (!_keep[i])
+                {
+                    continue;
+                }
+
+                float arc = cursor.ArcOfPoint(i);
+                while (a < m && anchors![a] * length < arc)
+                {
+                    float anchorArc = anchors[a] * length;
+                    if (anchorArc >= gap && length - anchorArc >= gap)
+                    {
+                        AddKept(cursor, anchorArc, Vector2.zero, true);
+                    }
+
+                    a++;
+                }
+
+                bool end = i == 0 || i == n - 1;
+                int c = _keptCount;
+                bool nearPrevious = c > 0 && _keptFixed[c - 1] && arc - _keptArc[c - 1] < gap;
+                bool nearNext = a < m && (anchors![a] * length) - arc < gap && anchors[a] * length >= gap
+                    && length - (anchors[a] * length) >= gap;
+                if (!end && (nearPrevious || nearNext))
+                {
+                    continue;
+                }
+
+                AddKept(cursor, arc, cursor.Point(i), false);
+            }
+
+            int count = _keptCount;
+            for (int k = 0; k < count; k++)
+            {
+                _keptOrigin[k] = _keptPoint[k];
+            }
+
+            // Filtro (1, 2, 1) / 4 de los puntos de dentro, CurveSmoothPasses veces: quita los dientes de un punto (un pico de la
+            // geometría de producción) sin mover las puntas; ningún punto se aparta más de CurveMaxShiftWidths anchos del suyo.
+            for (int pass = 0; pass < CurveSmoothPasses; pass++)
+            {
+                Vector2 before = count > 0 ? _keptPoint[0] : Vector2.zero;
+                for (int k = 1; k < count - 1; k++)
+                {
+                    Vector2 here = _keptPoint[k];
+                    _keptPoint[k] = (0.25f * (before + _keptPoint[k + 1])) + (0.5f * here);
+                    before = here;
+                }
+            }
+
+            float maxShift = CurveMaxShiftWidths * WidthDp / dp;
+            for (int k = 1; k < count - 1; k++)
+            {
+                Vector2 shift = _keptPoint[k] - _keptOrigin[k];
+                if (shift.sqrMagnitude > maxShift * maxShift)
+                {
+                    _keptPoint[k] = _keptOrigin[k] + (shift.normalized * maxShift);
+                }
+            }
+
+            // Cada ancla vuelve hasta CurveAnchorWidths anchos de su sitio (la boca cae dentro de la cinta sin forzar un codo en ella),
+            // y los puntos de alrededor con ella, cada vez menos hasta CurveAnchorReach separaciones; las puntas no se mueven.
+            float reach = CurveAnchorReach * units;
+            float slack = CurveAnchorWidths * WidthDp / dp;
+            for (int k = 1; k < count - 1; k++)
+            {
+                if (!_keptFixed[k])
+                {
+                    continue;
+                }
+
+                Vector2 back = _keptOrigin[k] - _keptPoint[k];
+                float away = back.magnitude;
+                if (away <= slack)
+                {
+                    continue;
+                }
+
+                back *= 1f - (slack / away);
+                for (int j = k; j > 0 && _keptArc[k] - _keptArc[j] < reach; j--)
+                {
+                    _keptPoint[j] += back * Falloff((_keptArc[k] - _keptArc[j]) / reach);
+                }
+
+                for (int j = k + 1; j < count - 1 && _keptArc[j] - _keptArc[k] < reach; j++)
+                {
+                    _keptPoint[j] += back * Falloff((_keptArc[j] - _keptArc[k]) / reach);
+                }
+            }
+
+            _gridCount = 0;
+            float tolerance = CurveToleranceDp / dp;
+            float minStep = CurveMinStepDp / dp;
+            float cosTurn = Mathf.Cos(CurveMaxTurnDegrees * Mathf.Deg2Rad);
+            for (int k = 0; k < count; k++)
+            {
+                Vector2 p0 = _keptPoint[k];
+                AddGrid(_keptArc[k], p0);
+                if (k + 1 < count)
+                {
+                    Subdivide(cursor, k, 0f, p0, 1f, _keptPoint[k + 1], 0, tolerance, minStep, cosTurn);
+                }
+            }
+        }
+
+        // Un punto de la curva en el arco «arc»: el de la línea («point») o, si es un ancla, el de la polilínea en ese arco.
+        private void AddKept(PolylineCursor cursor, float arc, Vector2 point, bool anchor)
+        {
+            int c = _keptCount;
+            if (c > 0 && arc - _keptArc[c - 1] <= 1e-7f)
+            {
+                _keptFixed[c - 1] |= anchor; // en el arco del punto anterior: solo lo fija
+                return;
+            }
+
+            _keptArc[c] = arc;
+            _keptPoint[c] = anchor ? cursor.PointAtArc(arc) : point;
+            _keptFixed[c] = anchor;
+            _keptCount = c + 1;
+        }
+
+        // Peso de la vuelta de un ancla a una distancia x ∈ [0, 1] de su alcance: 1 en el ancla y 0 al final, sin esquinas.
+        private static float Falloff(float x)
+        {
+            x = Mathf.Clamp01(x);
+            float r = 1f - x;
+            return r * r * (1f + (2f * x));
+        }
+
+        // Parte el trozo [t0, t1] del tramo k de la curva si su cuerda se aparta o gira de más, y añade los pasos de dentro en orden.
+        private void Subdivide(PolylineCursor cursor, int k, float t0, Vector2 p0, float t1, Vector2 p1, int depth, float tolerance,
+            float minStep, float cosTurn)
+        {
+            if (depth >= CurveMaxDepth)
+            {
+                return;
+            }
+
+            float tm = 0.5f * (t0 + t1);
+            Vector2 pm = CurveSpan(cursor, k, tm);
+            Vector2 a = pm - p0;
+            Vector2 b = p1 - pm;
+            float la = a.magnitude;
+            float lb = b.magnitude;
+            if (la < minStep || lb < minStep)
+            {
+                return;
+            }
+
+            Vector2 chord = p1 - p0;
+            float lc = chord.magnitude;
+            float apart = lc > 1e-9f ? Mathf.Abs((chord.x * a.y) - (chord.y * a.x)) / lc : la;
+            bool turns = Vector2.Dot(a, b) < cosTurn * la * lb;
+
+            // La curva junto a las dos puntas del trozo (la tangente, por una diferencia corta): si se aparta de la cuerda más de
+            // medio giro, se parte aunque el punto medio caiga cerca (un codo pegado a una punta).
+            float dt = (t1 - t0) * (1f / 16f);
+            Vector2 near0 = CurveSpan(cursor, k, t0 + dt) - p0;
+            Vector2 near1 = p1 - CurveSpan(cursor, k, t1 - dt);
+            float cosHalf = Mathf.Cos(0.5f * CurveMaxTurnDegrees * Mathf.Deg2Rad);
+            turns |= Vector2.Dot(near0, chord) < cosHalf * near0.magnitude * lc;
+            turns |= Vector2.Dot(near1, chord) < cosHalf * near1.magnitude * lc;
+            if (apart <= tolerance && !turns)
+            {
+                return;
+            }
+
+            Subdivide(cursor, k, t0, p0, tm, pm, depth + 1, tolerance, minStep, cosTurn);
+            float a0 = _keptArc[k];
+            AddGrid(a0 + ((_keptArc[k + 1] - a0) * tm), pm);
+            Subdivide(cursor, k, tm, pm, t1, p1, depth + 1, tolerance, minStep, cosTurn);
+        }
+
+        private void AddGrid(float arc, Vector2 point)
+        {
+            if (_gridCount >= _gridArc.Length)
+            {
+                int size = Mathf.Max(64, _gridArc.Length * 2); // solo crece: con la escala de más pasos, ya no asigna
+                Array.Resize(ref _gridArc, size);
+                Array.Resize(ref _gridPoint, size);
+            }
+
+            _gridArc[_gridCount] = arc;
+            _gridPoint[_gridCount] = point;
+            _gridCount++;
+        }
+
+        // El primer paso de la curva con arco mayor que «arc».
+        private int FirstGridAfter(float arc)
+        {
+            int lo = 0;
+            int hi = _gridCount;
+            while (lo < hi)
+            {
+                int mid = (lo + hi) >> 1;
+                if (_gridArc[mid] <= arc)
+                {
+                    lo = mid + 1;
+                }
+                else
+                {
+                    hi = mid;
+                }
+            }
+
+            return lo;
+        }
+
+        // El tramo de la curva (el k-ésimo punto que se queda y el siguiente) que contiene el arco «arc» de la polilínea.
+        private int FindSpan(float arc)
+        {
+            int lo = 0;
+            int hi = _keptCount - 2;
+            while (lo < hi)
+            {
+                int mid = (lo + hi + 1) >> 1;
+                if (_keptArc[mid] <= arc)
+                {
+                    lo = mid;
+                }
+                else
+                {
+                    hi = mid - 1;
+                }
+            }
+
+            return lo;
+        }
+
+        /// <summary>
+        /// Punto (unidades del marco) de la curva del trazo curvo en el arco <paramref name="arc"/> de la polilínea: en el tramo entre
+        /// dos puntos que se quedan, la fracción del arco entre ellos. Sin trazo curvo calculado, el de la polilínea.
+        /// </summary>
+        private Vector2 CurvePointAt(PolylineCursor cursor, float arc)
+        {
+            if (_keptCount < 2)
+            {
+                return cursor.PointAtArc(arc);
+            }
+
+            int k = FindSpan(arc);
+            float a0 = _keptArc[k];
+            float a1 = _keptArc[k + 1];
+            return CurveSpan(cursor, k, a1 > a0 ? Mathf.Clamp01((arc - a0) / (a1 - a0)) : 0f);
+        }
+
+        // Catmull-Rom centrípeta (Barry-Goldman, alfa 0,5) entre los puntos que se quedan k y k + 1, en t ∈ [0, 1]; en las puntas de
+        // la línea, el punto de fuera se refleja. Pasa por los dos puntos y no hace bucles ni picos en los codos cerrados.
+        private Vector2 CurveSpan(PolylineCursor cursor, int k, float t)
+        {
+            Vector2 p1 = _keptPoint[k];
+            Vector2 p2 = _keptPoint[k + 1];
+            if (t <= 0f)
+            {
+                return p1;
+            }
+
+            if (t >= 1f)
+            {
+                return p2;
+            }
+
+            // Relativo a p1, para no perder precisión.
+            Vector2 a2 = p2 - p1;
+            Vector2 a0 = k > 0 ? _keptPoint[k - 1] - p1 : -a2;
+            Vector2 a3 = k + 2 < _keptCount ? _keptPoint[k + 2] - p1 : a2 + a2;
+            float t1 = Mathf.Max(Mathf.Sqrt(a0.magnitude), 1e-6f);
+            float t2 = t1 + Mathf.Max(Mathf.Sqrt(a2.magnitude), 1e-6f);
+            float t3 = t2 + Mathf.Max(Mathf.Sqrt((a3 - a2).magnitude), 1e-6f);
+            float u = t1 + (t * (t2 - t1));
+            Vector2 q1 = a0 * ((t1 - u) / t1); // y p1 (el origen) por (u − 0) / t1
+            Vector2 q2 = a2 * ((u - t1) / (t2 - t1));
+            Vector2 q3 = (a2 * ((t3 - u) / (t3 - t2))) + (a3 * ((u - t2) / (t3 - t2)));
+            Vector2 r1 = (q1 * ((t2 - u) / t2)) + (q2 * (u / t2));
+            Vector2 r2 = (q2 * ((t3 - u) / (t3 - t1))) + (q3 * ((u - t1) / (t3 - t1)));
+            Vector2 c = (r1 * ((t2 - u) / (t2 - t1))) + (r2 * ((u - t1) / (t2 - t1)));
+            return p1 + c;
+        }
+
+        // Trazo curvo: lleva cada sección del plan a la curva (las de los puntos que se quedan ya están en ella) y mete entre cada
+        // dos secciones unidas los pasos de la curva de la línea que caen entre ellas (a más de CurveMinGapDp), con el aspecto de la
+        // tira; si no caben todos en el presupuesto, uno de cada «stride». Los pasos son los de la línea entera, así que el vidrio
+        // y un trozo suyo pasan por los mismos puntos. Sin asignaciones tras la primera vez con el plan más largo.
+        private void RefinePlan(PolylineCursor cursor, int perSection)
+        {
+            int used = 0;
+            for (int i = 0; i < _planCount; i++)
+            {
+                _planPoint[i] = CurvePointAt(cursor, _planArc[i]);
+
+                used += Cost(_planLook[i]);
+            }
+
+            float gap = CurveMinGapDp / _space.DpPerUnit;
+            int candidates = RefineSweep(cursor, gap, 1, false);
+            int room = (_budget - used) / perSection;
+            if (candidates == 0 || room <= 0)
+            {
+                return;
+            }
+
+            int stride = candidates <= room ? 1 : (candidates + room - 1) / room;
+            int sections = _planCount + candidates + 1;
+            if (_subArc.Length < sections)
+            {
+                _subArc = new float[sections];
+                _subVertex = new int[sections];
+                _subPoint = new Vector2[sections];
+                _subLook = new RunLook[sections];
+                _subConnect = new bool[sections];
+            }
+
+            RefineSweep(cursor, gap, stride, true);
+        }
+
+        // Recorre los pasos de la curva entre las secciones unidas del plan; con «emit», escribe el plan nuevo (las secciones y uno
+        // de cada «stride» pasos) en el segundo plan y los intercambia. Devuelve los pasos que caben entre secciones.
+        private int RefineSweep(PolylineCursor cursor, float gap, int stride, bool emit)
+        {
+            int candidates = 0;
+            int written = 0;
+            for (int i = 0; i < _planCount; i++)
+            {
+                if (emit)
+                {
+                    _subArc[written] = _planArc[i];
+                    _subVertex[written] = _planVertex[i];
+                    _subPoint[written] = _planPoint[i];
+                    _subLook[written] = _planLook[i];
+                    _subConnect[written] = _planConnect[i];
+                    written++;
+                }
+
+                if (i + 1 >= _planCount || !_planConnect[i + 1])
+                {
+                    continue;
+                }
+
+                float a0 = _planArc[i] + gap;
+                float a1 = _planArc[i + 1] - gap;
+                if (a1 <= a0)
+                {
+                    continue;
+                }
+
+                RunLook look = _planLook[i + 1];
+                for (int g = FirstGridAfter(a0); g < _gridCount && _gridArc[g] < a1; g++)
+                {
+                    if (emit && candidates % stride == 0)
+                    {
+                        _subArc[written] = _gridArc[g];
+                        _subVertex[written] = -1;
+                        _subPoint[written] = _gridPoint[g];
+                        _subLook[written] = look;
+                        _subConnect[written] = true;
+                        written++;
+                    }
+
+                    candidates++;
+                }
+            }
+
+            if (emit)
+            {
+                (_planArc, _subArc) = (_subArc, _planArc);
+                (_planVertex, _subVertex) = (_subVertex, _planVertex);
+                (_planPoint, _subPoint) = (_subPoint, _planPoint);
+                (_planLook, _subLook) = (_subLook, _planLook);
+                (_planConnect, _subConnect) = (_subConnect, _planConnect);
+                _planCount = written;
+            }
+
+            return candidates;
         }
 
         // Banda k de la sección: de u0 a u1 en medios anchos (+1 = orilla izquierda mirando río abajo) y su color. «half» es el
@@ -1120,7 +1697,7 @@ namespace AF.Presentation
                 RunLook look;
                 Vector2 center;
                 Vector2 dir;
-                if ((_decimated || _truncated) && _planCount >= 2)
+                if ((_chords || _truncated) && _planCount >= 2)
                 {
                     // La cuerda [chord, chord + 1] con arco[chord] ≤ arc < arco[chord + 1] (las secciones repetidas de un cambio de
                     // agua tienen el mismo arco y se pasan de largo).

@@ -154,7 +154,8 @@ namespace AF.Tests.PlayMode
         }
 
         // El frente del 300 (agua y orla) en Mundo, medido el 2026-10-19: 1.028 vértices de agua y 1.506 de orla (2.534; la pieza
-        // más cara, la orla del Amazonas, 504); en Cuenca, 724. Tope con margen; anotado en la propuesta del Mapa §11.4.
+        // más cara, la orla del Amazonas, 504); en Cuenca, 724. Tope con margen; anotado en la propuesta del Mapa §11.4. Desde FX12
+        // (trazo curvo en Mundo), 2.886 en Mundo (1.170 de agua y 1.716 de orla; la pieza más cara, 654) y 724 en Cuenca: dentro del tope.
         private const int FrontMeasuredMaxVertices = 3000;
 
         // Al abrir, en cada fotograma y al acabar. Devuelve las piezas del frente al abrir y las más que tuvo.

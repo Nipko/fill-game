@@ -658,6 +658,147 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Curve_IsSmootherThanTheChords_AndAPieceRunsOnTheGlassCurve([Values(4f, 15f)] float zoom)
+        {
+            // FX12: con el trazo curvo, a la escala de la vista Mundo (4× y 15×, con el ancho de la clase 1 del Mundo), el giro máximo
+            // entre cuerdas seguidas baja a menos de la mitad que con las cuerdas de M5.1c y un trozo (el lleno, el frente) va sobre la curva del
+            // vidrio entero, con sus puntas en ella.
+            var space = new MapSpace(Basin * zoom, Vector2.zero);
+            foreach (string id in new[] { "amazonas", "napo", "purus" })
+            {
+                RiverLine line = _map.Line(id)!;
+                RiverRibbonGraphic chords = Ribbon(line, RibbonLook.Glass);
+                chords.SetSpace(space);
+                chords.SetWidth(8f);
+                chords.SetSmooth(true);
+                Mesh(chords);
+                RiverRibbonGraphic whole = Ribbon(line, RibbonLook.Glass);
+                whole.SetSpace(space);
+                whole.SetWidth(8f);
+                whole.SetSmooth(true);
+                whole.SetCurve(true);
+                Assert.That(whole.Curve, Is.True);
+                Mesh(whole);
+                float before = SectionTurn(chords, space);
+                float after = SectionTurn(whole, space);
+                Assert.That(after, Is.LessThan(before * 0.5f), id + " a " + zoom + "×: giro máximo entre cuerdas " + after + "° frente a " + before + "°");
+
+                RiverRibbonGraphic piece = Ribbon(line, RibbonLook.Water);
+                piece.SetSpace(space);
+                piece.SetWidth(8f);
+                piece.SetSmooth(true);
+                piece.SetCurve(true);
+                piece.SetFill(0.31f, 0.67f);
+                Mesh(piece);
+                float worst = 0f;
+                for (int k = 0; k < piece.LastSectionPointCount; k++)
+                {
+                    worst = Mathf.Max(worst, DistanceToSections(whole, piece.LastSectionPoint(k)) * space.DpPerUnit);
+                }
+
+                Assert.That(worst, Is.LessThanOrEqualTo(2f), id + " a " + zoom + "×: el trozo, a " + worst + " dp del vidrio (≤ 2 dp)");
+            }
+        }
+
+        [Test]
+        public void Curve_PassesNearItsAnchors()
+        {
+            // FX12: la curva pasa a ≤ CurveAnchorWidths anchos de cada ancla (las bocas de los afluentes), así que la punta del
+            // afluente cae dentro de la cinta de su anfitrión.
+            float[][] anchors = RiverRibbonGraphic.MouthAnchors(_map);
+            RiverLine amazonas = _map.Line("amazonas")!;
+            Assert.That(anchors[amazonas.Index].Length, Is.GreaterThan(3), "el cauce recibe afluentes");
+            var space = new MapSpace(Basin * 4f, Vector2.zero);
+            RiverRibbonGraphic ribbon = Ribbon(amazonas, RibbonLook.Glass);
+            ribbon.SetSpace(space);
+            ribbon.SetWidth(8f);
+            ribbon.SetSmooth(true);
+            ribbon.SetCurve(true);
+            ribbon.SetAnchors(anchors[amazonas.Index]);
+            Mesh(ribbon);
+            var cursor = new PolylineCursor(amazonas);
+            float limit = (RiverRibbonGraphic.CurveAnchorWidths * 8f) + RiverRibbonGraphic.CurveToleranceDp + 0.05f;
+            foreach (float s in anchors[amazonas.Index])
+            {
+                float gap = DistanceToSections(ribbon, cursor.PointAtS(s)) * space.DpPerUnit;
+                Assert.That(gap, Is.LessThanOrEqualTo(limit), "la boca en s " + s);
+            }
+        }
+
+        [Test]
+        public void Curve_Mesh_DoesNotAllocate_AfterTheFirstBuild()
+        {
+            RiverRibbonGraphic front = Ribbon(_map.Lines[0], RibbonLook.Water);
+            front.SetSmooth(true);
+            front.SetCurve(true);
+            front.SetPatterns(true);
+            front.SetAnchors(RiverRibbonGraphic.MouthAnchors(_map)[0]);
+            var populate = (Action<VertexHelper>)Delegate.CreateDelegate(typeof(Action<VertexHelper>), front, RibbonPopulate);
+            using (var vh = new VertexHelper())
+            {
+                float s = 0.70f;
+                float zoom = 4f;
+                TestDelegate frame = () =>
+                {
+                    s += 0.0001f;
+                    zoom += 0.01f; // también al cambiar de escala (se vuelve a calcular la curva)
+                    front.SetSpace(new MapSpace(Basin * zoom, Vector2.zero));
+                    front.SetFill(0.70f, s);
+                    populate(vh);
+                };
+
+                // Calentamiento: la escala de más pasos y la malla más grande, para que los arreglos ya tengan su tamaño.
+                front.SetSpace(new MapSpace(Basin * 8f, Vector2.zero));
+                front.SetFill(0f, 1f);
+                populate(vh);
+                front.SetSpace(new MapSpace(Basin * zoom, Vector2.zero));
+                populate(vh);
+                frame();
+                Assert.That(frame, Is.Not.AllocatingGCMemory());
+                Assert.That(vh.currentVertCount, Is.GreaterThan(0));
+            }
+        }
+
+        // Giro máximo (grados) entre cuerdas seguidas de las secciones de la última malla, en pantalla (sin las de menos de 0,25 dp).
+        private static float SectionTurn(RiverRibbonGraphic ribbon, MapSpace space)
+        {
+            float worst = 0f;
+            Vector2 previous = Vector2.zero;
+            for (int k = 0; k + 1 < ribbon.LastSectionPointCount; k++)
+            {
+                Vector2 d = (ribbon.LastSectionPoint(k + 1) - ribbon.LastSectionPoint(k)) * space.DpPerUnit;
+                if (d.magnitude < 0.25f)
+                {
+                    continue;
+                }
+
+                if (previous != Vector2.zero)
+                {
+                    worst = Mathf.Max(worst, Vector2.Angle(previous, d));
+                }
+
+                previous = d;
+            }
+
+            return worst;
+        }
+
+        // Distancia (unidades del Mapa) de «p» a la polilínea de las secciones de la última malla.
+        private static float DistanceToSections(RiverRibbonGraphic ribbon, Vector2 p)
+        {
+            float best = float.MaxValue;
+            for (int k = 0; k + 1 < ribbon.LastSectionPointCount; k++)
+            {
+                Vector2 a = ribbon.LastSectionPoint(k);
+                Vector2 ab = ribbon.LastSectionPoint(k + 1) - a;
+                float t = ab.sqrMagnitude > 0f ? Mathf.Clamp01(Vector2.Dot(p - a, ab) / ab.sqrMagnitude) : 0f;
+                best = Mathf.Min(best, (a + (ab * t) - p).magnitude);
+            }
+
+            return best;
+        }
+
+        [Test]
         public void Smooth_Mesh_DoesNotAllocate_AfterTheFirstBuild()
         {
             RiverRibbonGraphic front = Ribbon(_map.Lines[0], RibbonLook.Water);

@@ -933,6 +933,27 @@ namespace AF.UI
             return Mathf.Clamp(zoom, WorldZoomMin, WorldZoomMax);
         }
 
+        // FX12: las bocas de los afluentes de cada línea, las anclas del trazo curvo (RiverRibbonGraphic.SetAnchors). Asigna: una vez
+        // por Mapa.
+        private float[][]? _mouthAnchors;
+        private RiverMap? _mouthAnchorsFor;
+
+        private float[]? MouthAnchorsOf(RiverMap map, RiverLine? line)
+        {
+            if (line == null)
+            {
+                return null;
+            }
+
+            if (!ReferenceEquals(map, _mouthAnchorsFor) || _mouthAnchors == null)
+            {
+                _mouthAnchors = RiverRibbonGraphic.MouthAnchors(map);
+                _mouthAnchorsFor = map;
+            }
+
+            return line.Index < _mouthAnchors.Length ? _mouthAnchors[line.Index] : null;
+        }
+
         // Una cinta de vidrio por línea del Mapa (toda la cuenca, una vez por Mapa) y la tierra. Asigna: solo al abrir.
         private void EnsureGeometry(RiverMap map)
         {
@@ -960,6 +981,7 @@ namespace AF.UI
                 bool used = i < lines.Count;
                 ribbon.gameObject.SetActive(used);
                 ribbon.SetLine(used ? lines[i] : null);
+                ribbon.SetAnchors(MouthAnchorsOf(map, used ? lines[i] : null)); // FX12: las bocas de sus afluentes
                 if (used)
                 {
                     ribbon.gameObject.name = "Glass_" + lines[i].Id;
@@ -1034,6 +1056,7 @@ namespace AF.UI
                 {
                     ribbon.SetSpace(space);
                     ribbon.SetWidth(RibbonWidthDp(view, ribbon.Line.Class));
+                    ribbon.SetCurve(view == MapView.World); // FX12: en el Mundo, el zoom deja ver las esquinas
                 }
             }
 

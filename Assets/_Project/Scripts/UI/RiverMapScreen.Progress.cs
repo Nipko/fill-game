@@ -781,6 +781,8 @@ namespace AF.UI
                 bool used = i < lines.Count;
                 ResetFillRibbon(_fill[i], used ? lines[i] : null);
                 ResetFillRibbon(_fillCasing[i], used ? lines[i] : null);
+                _fill[i].SetAnchors(MouthAnchorsOf(map, used ? lines[i] : null)); // FX12: la misma curva que el vidrio
+                _fillCasing[i].SetAnchors(MouthAnchorsOf(map, used ? lines[i] : null));
                 if (used)
                 {
                     _fill[i].gameObject.name = "Fill_" + lines[i].Id;
@@ -1545,6 +1547,8 @@ namespace AF.UI
                     float end = piece.S0 + ((piece.S1 - piece.S0) * t);
                     SetFrontPiece(FrontRibbonAt(k), line, budget, piece.S0, end);
                     SetFrontPiece(_frontCasing[k], line, budget, piece.S0, end);
+                    _front[k].SetAnchors(MouthAnchorsOf(map, line)); // FX12: la misma curva que el vidrio
+                    _frontCasing[k].SetAnchors(MouthAnchorsOf(map, line));
 
                     // FX11: el espacio y el ancho de la vista al montarla. ProgressSpace solo ajusta las cintas que ya había al
                     // cambiar de vista; si «ponerse al día» llega a un tramo con más piezas que el de partida (en el 41, el de la
@@ -1651,6 +1655,7 @@ namespace AF.UI
             {
                 ribbon.SetSpace(space);
                 ribbon.SetWidth(RibbonWidthDp(_view, ribbon.Line.Class));
+                ribbon.SetCurve(_view == MapView.World); // FX12: la misma curva que el vidrio
             }
         }
 

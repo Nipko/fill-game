@@ -2198,6 +2198,10 @@ namespace AF.UI
                 SetupRibbon(_glass[i], visible ? line : null, RibbonLook.Glass, sA, sB, space);
                 SetupRibbon(_casing[i], filled ? line : null, RibbonLook.Water, filled ? from : 1f, sB, space);
                 SetupRibbon(_core[i], filled ? line : null, RibbonLook.Water, filled ? from : 1f, sB, space);
+                float[]? anchors = MouthAnchorsOf(map, line); // FX12: las bocas de los afluentes, como en el Mapa
+                _glass[i].SetAnchors(visible ? anchors : null);
+                _casing[i].SetAnchors(filled ? anchors : null);
+                _core[i].SetAnchors(filled ? anchors : null);
                 if (visible)
                 {
                     _glass[i].SetGlassBodyAlpha(RiverMapScreen.MapGlassBodyAlpha);
@@ -3003,6 +3007,26 @@ namespace AF.UI
             return string.Equals(guide, RiverJourney.GuideBufeo, StringComparison.Ordinal) ? _art.MapBufeo : _guideSprite;
         }
 
+        // FX12: las bocas de los afluentes de cada línea, las anclas del trazo curvo. Asigna: una vez por Mapa.
+        private float[][]? _mouthAnchors;
+        private RiverMap? _mouthAnchorsFor;
+
+        private float[]? MouthAnchorsOf(RiverMap map, RiverLine? line)
+        {
+            if (line == null)
+            {
+                return null;
+            }
+
+            if (!ReferenceEquals(map, _mouthAnchorsFor) || _mouthAnchors == null)
+            {
+                _mouthAnchors = RiverRibbonGraphic.MouthAnchors(map);
+                _mouthAnchorsFor = map;
+            }
+
+            return line.Index < _mouthAnchors.Length ? _mouthAnchors[line.Index] : null;
+        }
+
         private static void SetupRibbon(RiverRibbonGraphic ribbon, RiverLine? line, RibbonLook look, float s0, float s1, MapSpace space)
         {
             bool on = line != null;
@@ -3017,6 +3041,7 @@ namespace AF.UI
             ribbon.SetFill(s0, s1);
             ribbon.SetSpace(space);
             ribbon.SetWidth(RiverMapScreen.RibbonWidthDp(MapView.World, line!.Class));
+            ribbon.SetCurve(true); // FX12: como en la vista Mundo
         }
 
         private static RiverRibbonGraphic NewRibbon(string name, RectTransform parent, RibbonPart part)
