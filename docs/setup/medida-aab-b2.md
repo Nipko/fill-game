@@ -131,3 +131,85 @@ B2 no edita el GDD ni el traspaso: lo que hay que cambiar en ellos lo hace el ca
 - Del dueño:
   - decidir el permiso `INTERNET`;
   - decidir cómo se gana sitio antes de los SDK y del arte a 2×: Addressables y PAD, fuentes recortadas o arte a 1×.
+
+## FNT1: fuentes recortadas sin perder ningún glifo (2026-10-19)
+
+Tarea FNT1 de la ola 7, carril de fuentes (rama `tanda4/o7-fonts`, con B2 fusionada). Mide, recorta y vuelve a medir las fuentes, el primer candidato de B2. No decide nada sobre el resto del sitio (Addressables y PAD, arte a 1×): eso sigue siendo del dueño.
+
+### De dónde salían los 6,88 MB
+
+Desglose del grupo «Fuentes» del Build Report de `game.aab` (sección nueva «Fuentes por asset» de `Logs/aab-size.md`, MB empaquetados sin comprimir):
+
+| Asset | Antes | Después |
+|---|---:|---:|
+| Atlas de los 5 font assets del juego (Alpha8, 1024 × 1024 cada uno) | 5 × 1,049 = 5,24 | 2 × 0,852 + 3 × 0,787 = 4,07 |
+| Atlas de `LiberationSans SDF` (TMP, 1024 × 1024) | 1,05 | — |
+| `LiberationSans.ttf` (la reserva dinámica `LiberationSans SDF - Fallback` la arrastraba) | 0,35 | — |
+| Tablas de glifos de los font assets (5 × 0,020 y LiberationSans 0,029) | 0,13 | 0,10 |
+| Materiales (9 de estilo, 5 de los font assets y 4 de LiberationSans) | 0,02 | 0,01 |
+| `PerfectDOSVGA437.ttf` (depuración de URP, paquete; fuera del alcance de FNT1) | 0,08 | 0,08 |
+| **Total del grupo** (20 assets → 15) | **6,88** | **4,26** |
+
+- Casi todo es píxel de atlas: 1 byte por píxel, sin compresión de textura. Las tablas de caracteres pesan poco.
+- **Los atlas iban medio vacíos.** Cada fuente tiene 199-202 glifos a 56 pt con un margen de 13 px. Con el margen, ocupan 0,64-0,70 Mpx de los 1,05 Mpx del atlas fijo de 1024 × 1024.
+- **LiberationSans no pintaba nada en el juego** y entraba entera en el build. Estaba en `Resources` y era la fuente por defecto de `TMP Settings`. Todos los textos usan su fuente de `UiFonts`, y cada carácter de las tablas está en el atlas de su familia (`FontSetup.AtlasGaps`, B1).
+
+### Qué se recortó, y qué no
+
+Lo genera `AF.EditorTools.FontSetup.ApplyAll`, idempotente. No hay YAML a mano.
+
+1. **Atlas a medida, con el mismo muestreo y el mismo margen.** Cada fuente se queda con el atlas más pequeño de `FontSetup.AtlasSizes` en el que caben todos sus glifos: 1024 de ancho y de 512 a 1024 de alto, en pasos de 64.
+   - Resultado: Baloo 2 ExtraBold y Bold y Nunito Regular, 1024 × 768; Nunito ExtraBold y Bold, 1024 × 832.
+   - El campo de distancia de cada glifo es el mismo (56 pt, 13 px): el texto se ve igual.
+   - Un alto que no es potencia de dos no cuesta nada: Alpha8 sin mipmaps, en OpenGL ES 3 y Vulkan.
+2. **LiberationSans fuera del build.**
+   - `TMP Settings` toma Nunito Regular SDF como fuente por defecto.
+   - Los cuatro assets de LiberationSans pasan, con sus GUID, de `Assets/TextMesh Pro/Resources/Fonts & Materials/` a `Assets/TextMesh Pro/Fonts/`, fuera de `Resources`. La carpeta vacía se borra.
+   - Al reserializar los ajustes, Unity escribe `m_ActiveFontFeatures` como `kern`. Es la conversión que TMP ya hacía al cargarlos (`TMP_Settings.instance`), así que el interletraje no cambia.
+3. **Descartado, para no tocar el aspecto:**
+   - **Menos margen.** Hasta 12 px en Baloo 2 (contorno y sombra, ≥ 0,20 em de la guía 5.6) y 9 px en Nunito ExtraBold (solo contorno, ≥ 0,15 em). Ahorraría un 7 % y un 25 % de sus atlas, pero cambia el grosor de la negrita sintética de TMP (`<b>`), que depende del margen.
+   - **Menos muestreo.** Cambia el aspecto.
+   - **Reservas dinámicas.** Hoy no hace falta ninguna: no queda ningún carácter raro fuera de los atlas.
+4. Los juegos de caracteres siguen siendo ASCII, Latin-1, la tipografía de la guía y lo que piden las tablas (B1). El pseudoidioma en-XA ya solo usa Latin-1.
+
+### Medida antes y después (escritorio x64, `AudioAssetSetup.BuildGameAab` y `ci/size-gate.ps1 -Breakdown -RequireBundletool`, bundletool 1.17.2 del Editor)
+
+| | Antes (rama en 4eece23) | Después (FNT1) | Diferencia |
+|---|---:|---:|---:|
+| Fuentes en el Build Report (MB sin comprimir) | 6,88 | 4,26 | −2,62 |
+| Datos de Unity empaquetados (Build Report) | 34,76 | 32,14 | −2,62 |
+| Datos de Unity en el AAB (comprimidos / sin comprimir) | 21,16 / 49,48 | 20,52 / 46,86 | −0,64 / −2,62 |
+| `game.aab` | 51,87 MB | 51,23 MB | −0,64 |
+| Descarga en Play (`bundletool get-size total`, máx.) | 50,80 MB | 50,17 MB | −0,63 |
+
+- Los atlas son sobre todo ceros y el AAB ya los comprimía bien. Por eso los 2,62 MB sin comprimir se quedan en unos 0,64 MB de descarga.
+- El margen hasta 80 MB crece en 0,63 MB. En la tabla «Frente a B0», el escenario a 1× con los SDK pasa de 5,1 a −0,9 MB a 5,7 a −0,3 MB.
+- SHA-256:
+  - `game.aab` de antes: `9e77e4d0…a53c`;
+  - `game.aab` de después: `4f03fcb6…f9b5`.
+- `Builds/` y `Logs/` los ignora git.
+
+### Ningún glifo perdido: pruebas y capturas
+
+- **`FontTrimTests` (EditMode, nuevo):**
+  - cada carácter de `strings.csv`, `facts.csv` y `glossary.csv` (es-419, en y pt-BR), de las cifras y de en-XA está en el atlas estático de su propia fuente, en las cinco, sin buscar en reservas (con ellas, TMP acabaría en la fuente por defecto y el carácter se pintaría con otra tipografía) y sin añadir glifos. Lo mismo con los símbolos fijos de `FontSetup`, que `FontSetup.Characters` mete siempre en los atlas: los que pone el código (`CodeSymbols`: ×, · y U+00A0, en las cinco) y las flechas → ↑ ↓ de `strings.csv` (`TitleCodeSymbols`, claves de `FontCoverage.TitleOnlyKeys`; solo en Baloo 2);
+  - ✓ no está en ningún atlas: es un icono procedural;
+  - los atlas conservan el muestreo y el margen, son estáticos, sin TTF y de ≤ 1024 × 1024, y suman menos píxeles que antes;
+  - no queda ningún font asset ni TTF en una carpeta `Resources`, salvo los del juego;
+  - `TMP Settings` apunta a Nunito Regular, sin reservas globales.
+- **`AabSizeReportTests`:** cubre la sección «Fuentes por asset».
+- **Capturas antes y después** (`FontTrimSnapshotTests`, nuevo, y `FontGlyphSnapshotTests` de B1, con gráficos):
+  - pantallas: el inicio, Ajustes con «Sobre la Amazonía» y las frutas, la ficha del açaí abierta desde ahí (`fnt1_02b_ficha_fruta`, `FruitSheet`, con su nombre y sus datos), la tarjeta de Manaos en el Mapa y la victoria del 3 con la línea de fruta, en es-419 a 360 × 780 dp y al 100 % y en en-XA a 360 × 640 dp y al 130 %, más las hojas de glifos y el inicio y la victoria del 11 de B1: 18 capturas (más 5 de es-419 al 130 %, solo después; ver abajo);
+  - el antes son las fuentes y `TMP Settings` de `4eece23` (LiberationSans dentro de `Resources`) con el mismo código de las pruebas; el después, las de FNT1. Están en `Logs/snapshots-antes/<locale>/` y `Logs/snapshots-despues/<locale>/`, con los mismos nombres (git los ignora);
+  - las 18 pasan el escaneo de B1 antes y después: ningún carácter fuera del atlas de su fuente y ningún □;
+  - es-419 al 130 % (revisión de FNT1): la tarea pide las capturas «en es-419 y en-XA al 130 %», y las 18 de arriba siguen la convención de las capturas del repositorio (es-419 al 100 % y en-XA al 130 % como peor caso). Para cubrir también la otra lectura, `Capture_Es419_640_130` hace las mismas 5 pantallas en es-419 a 360 × 640 dp y al 130 %, el tamaño real con más texto en español (`fnt1_*_640_130`, en `Logs/snapshots-despues/es-419/`). Solo hay **después**: pasan el escaneo (ningún carácter fuera del atlas y ningún □), y los cortes de línea más largos («Faltan 6 niveles para Floresta Nacional do Tapajós», «en Pará y Amapá» de la ficha) caben sin tocar el borde. El **antes** no se capturó: exigía cambiar en el worktree las fuentes commiteadas por las de `4eece23` y deshacerlo después, y el permiso del agente no lo dejó. Que un glifo esté en el atlas no depende de la escala (`FontTrimTests` cubre todos los caracteres) y el muestreo del SDF ya se compara al 130 % en en-XA (diferencia máxima 3-6 en las de texto). Queda para que el tech-lead confirme si basta así o si quiere también el antes de esas 5;
+  - la comparación píxel a píxel, con el SHA-256 de cada PNG, está en `Logs/fnt1-diff.txt`, y las ampliaciones ×8 (antes, después y diferencia ×8) del inicio y de la victoria, en `Logs/fnt1-diff/`:
+    - las 8 de texto de FNT1 (Ajustes, ficha, tarjeta y victoria): 0,015-0,047 % de píxeles distintos, diferencia máxima de 3 a 6 niveles de 255 y ninguno por encima de 16. Es el muestreo del mismo campo de distancia en otra posición del atlas: a simple vista no se distingue;
+    - `fnt1_01_inicio`: 0,038 % y 0,067 %. Los únicos píxeles con más de 16 niveles (77 y 39, hasta 102) están en x 148-168, y 315-356: el brazo animado de TiTino en su ventanita, no el texto;
+    - las hojas de glifos de B1: 0,071-0,096 %, máximo 5-7; `b1_02_inicio_l4`: 0,021 % y 0,027 %, máximo 17 y 11 (un solo píxel por encima de 16);
+    - `b1_03_victoria_l11`: 4,6 % en es-419 (máximo 187) y 0,49 % en en-XA (máximo 7). Son las hojas que caen en la victoria, que esa prueba gana en tiempo real; no hay ninguna en el texto.
+
+### Pendiente
+
+- Del dueño, si quiere más sitio de las fuentes, con nueva revisión visual: el margen mínimo de la guía (−7 % en Baloo 2 y −25 % en Nunito ExtraBold de sus atlas) o quitar `PerfectDOSVGA437.ttf` (0,08 MB) desactivando la depuración en tiempo de ejecución de URP.
+- La medida de referencia sigue siendo la del CI Linux x64 (s30/s32), y B2b la repetirá con los niveles 1-700.
