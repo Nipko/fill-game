@@ -4,6 +4,59 @@ Encargo: `docs/dev/traspaso/spark-reto-del-rio.md` (de `origin/integracion-fase1
 
 ---
 
+## 2026-10-19 · R8 · La partida del Reto en AF.GameFlow: código APROBADO, falta Unity
+
+- **Commits:** `49501b4` y `535b92c` (arreglos de la revisión), en `spark/reto-del-rio-r8` (sale de R7b). **Empujada, pero sin fusionar** en `spark/reto-del-rio` hasta que pase Unity.
+- **Archivos nuevos:** `Assets/_Project/Scripts/GameFlow/LevelFlow.Daily.cs` y `Assets/_Project/Tests/EditMode/DailyLevelFlowTests.cs` (18 tests), con sus `.meta`.
+- **Cómo funciona (sin tocar archivos existentes):** `LevelFlow.CreateDaily(...)` monta un flujo propio. **E8 ya no hace falta como estaba previsto.**
+  - Catálogo de un solo tablero, numerado con el nivel efectivo `max_level + 1` [P], así que los desbloqueos de `BoosterConfig` funcionan sin cambiar nada.
+  - Progreso de solo lectura: ni `SaveWin` ni `SaveNextLevel`, y sin regalos de tutorial.
+  - Cartera del Reto **obligatoria**, sobre el mismo `Profile`, con una copia de `EconomyConfig` (`eco_reward_*` = 0; `rescue_min_level` = ∞): sin canoas, sin rescate, sin fallo duro con coste y sin Cosecha.
+  - Copia de `BoosterConfig` con la Marea no ilimitada y sin Cuia de rescate.
+  - Sin `AdGate`, sin intersticial (R-Q13 [P]) y `StateStore` propio; rechaza el de campaña.
+  - Un oyente intermedio entrega el evento `DailyResult` (Win/Exit/Restart) sin depender de AF.LiveOps.
+  - Los tests de reflexión fallan si `EconomyConfig` o `BoosterConfig` ganan una clave que no se copia.
+- **Verificación:**
+  - autor, antes de que fallara la licencia: compila; EditMode 2.991 (2.987 + 3 omitidos y 1 fallo del test inestable `IntroArtTests`, que pasa al relanzarlo); **PlayMode 1.334 (1.175 + 159), 0 fallos**;
+  - tras los arreglos (`535b92c`): `dotnet build -warnaserror` sin avisos y un arnés .NET fuera del repositorio con 18/18;
+  - **pendiente:** `unity-compile` + EditMode (esperado 2.996: 2.993 + 3) + PlayMode, en cuanto vuelva la licencia.
+- **code-reviewer:** primera ronda CAMBIOS NECESARIOS. Los tres bloqueantes:
+  - sin cartera, el Reto caía en el embudo de D-008;
+  - el comentario sobre la Crecida era falso;
+  - el JSON interno no cumple af-level/1 y no lo decía.
+  
+  Segunda ronda: **APROBADO a falta de Unity**.
+- **[P]:** nivel efectivo `max_level + 1`, congelado al empezar; sin regalos de tutorial; Marea con las 3 gratis y luego el stock; sin intersticial; salir borra la partida guardada del Reto (R-Q16 sigue abierta); modal de Aguas estancadas con Marea + Volver a la orilla; `DailyAttempt` vuelve a 1 al reanudar.
+- **Enganches para el integrador (nuevos):**
+  - **E19** · `Scripts/GameFlow/LevelFlow.Funnel.cs` y `FailResolve.cs`, **para cuando exista la Crecida** (06 §4.3: «si not nivel.es_campana: return»):
+    ```diff
+    @@ private void Fail(FailKind kind)
+    -        FailOutcome outcome = FailResolve.Resolve(_attempt, kind, LevelNumber, _wallet);
+    +        FailOutcome outcome = FailResolve.Resolve(_attempt, kind, LevelNumber, _wallet, campaign: !IsDaily);
+    ```
+    ```diff
+    -        public static FailOutcome Resolve(LevelAttempt attempt, FailKind kind, int level, Wallet? wallet)
+    +        public static FailOutcome Resolve(LevelAttempt attempt, FailKind kind, int level, Wallet? wallet, bool campaign = true)
+    ...
+                 canoeLost = wallet.Apply(Transaction.HardFail(level)).CanoeLost;
+             }
+    +        if (!campaign)
+    +        {
+    +            return new FailOutcome(kind, attempt.FailsLevel, canoeLost); // 06 §4.3: el Reto no rompe la Crecida ni gasta la Hoja escudo
+    +        }
+    ```
+    - Hoy no hace falta: por esa vía no se cuenta nada de campaña (`stats.fails_hard` no cambia, y lo fija un test).
+    - Prueba: el test del reinicio desde el modal del Reto comprueba que la Crecida del perfil no cambia, y un test de campaña, que sí se rompe.
+  - **E20** · `Scripts/Levels/LevelDefinition.cs` y `LevelCatalog.cs` (limpieza): quita el paso por un JSON interno no conforme con el esquema.
+    - `internal LevelDefinition WithLevel(int level) => new LevelDefinition(Id, level, World, WaterBase, _palette, Units, _caps, _cuias, _attrs, IsMurky, _hidden, Par, DifficultyLabel, _relief, IntroMechanic, Skippable, HintSupported, Band, ParApprox);`
+    - `public static LevelCatalog ForBoard(LevelDefinition board, int level) => FromPack(new LevelPack("daily_play", "daily", board.World, "daily_play", board.WaterBase, new[] { board.WithLevel(level) }));`
+    - Después, `DailyPackFor` se reduce a `LevelCatalog.ForBoard(board, effectiveLevel)`.
+    - Prueba: `DailyLevelFlowTests` tal cual, con la comprobación «same».
+- **Notas para R9 y R10:**
+  - `LevelNumber` es el nivel efectivo: no se enseña como «Nivel N» ni dispara tutoriales ni sondas de campaña; se usa `DailyBoardId`.
+  - El HUD del Reto se suscribe a la cartera del Reto, y el saldo de la campaña hay que refrescarlo al volver.
+  - La UI llama a `ExitDaily`, no a `AppFlow.ExitToLobby`.
+
 ## 2026-10-19 · ⚠ La licencia de Unity vuelve a fallar (pendiente del dueño, 2.ª vez)
 
 - **Hacia las 13:35** los batchmode vuelven a salir con el código 6, con los mismos errores que la primera vez:
