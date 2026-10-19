@@ -381,7 +381,12 @@ internal sealed partial class DailySpec
             JsonObject r = Object(list[i], ra);
             Keys(r, RuleKeys, ra);
             (int lo, int hi) = Pair(r["k"], ra + ": \"k\"");
-            if (lo > hi || lo < kMin || hi > kMax)
+            if (lo > hi)
+            {
+                throw new DailySpecException(string.Create(CultureInfo.InvariantCulture, $"{ra}: \"k\" [{lo}, {hi}] con minimo > maximo"));
+            }
+
+            if (lo < kMin || hi > kMax)
             {
                 throw new DailySpecException(string.Create(CultureInfo.InvariantCulture, $"{ra}: \"k\" [{lo}, {hi}] fuera de la banda ({kMin}-{kMax})"));
             }

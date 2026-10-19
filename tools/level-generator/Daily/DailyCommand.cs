@@ -72,6 +72,7 @@ internal static class DailyCommand
         ("reglas solapadas", r => Rule(r, 1, 1)["k"] = new JsonArray(8, 8), "se solapa con otra regla ([8, 8])"),
         ("K sin regla", r => Source(r, 1)["rules"]!.AsArray().RemoveAt(1), "(banda 2): source: ninguna regla cubre K = 9"),
         ("regla fuera de la banda", r => Rule(r, 0, 0)["k"] = new JsonArray(5, 7), "\"k\" [5, 7] fuera de la banda (6-7)"),
+        ("regla con K minimo > maximo", r => Rule(r, 2, 0)["k"] = new JsonArray(11, 10), "source.rules[0]: \"k\" [11, 10] con minimo > maximo"),
         ("sin fallback", r => Source(r, 2).Remove("fallback"), "(banda 3): source: falta \"fallback\""),
         ("paleta sin status", r => Palette(r, 1).Remove("status"), "(banda 2): palette: falta \"status\""),
         ("max_risk_pairs negativo", r => Palette(r, 0)["max_risk_pairs"] = -1, "(banda 1): palette: \"max_risk_pairs\" debe ser un entero 0-10"),
@@ -188,7 +189,7 @@ internal static class DailyCommand
                 "B2: fill E=1 con K 8, deep con K 9 (nota sec. 13)");
             Check(b3.SourceFor(10).Gen == "deep" && b3.SourceFor(11).Gen == "deep" && b3.Fallback is null, "B3: deep (nota sec. 13)");
             Check(b1 is { DebutUntil: 40, MaxRiskPairs: 0 } && b2 is { DebutUntil: 80, MaxRiskPairs: 1 } && b3 is { DebutUntil: 200, MaxRiskPairs: 2 },
-                "paleta de R-Q1 [P]: tintes hasta 40/80/200, tope 0/1/2");
+                "paleta de R-Q1: tintes hasta 40/80/200, tope 0/1/2 (B2 y B3 [P] por R-Q1b)");
             Check(b2.KOfDay(416) == 8 && b2.KOfDay(417) == 9 && b3.KOfDay(0) == 10 && b3.KOfDay(729) == 11, "K por dia: par el menor, impar el mayor [P]");
             Check(spec.WorldOfDay(0).World == 1 && spec.WorldOfDay(8).World == 9 && spec.WorldOfDay(9).World == 1 && spec.WorldOfDay(729).World == 1 + (729 % 9),
                 "mundo del dia = 1 + (dia mod 9) [P] (dias 0, 8, 9 y 729)");
