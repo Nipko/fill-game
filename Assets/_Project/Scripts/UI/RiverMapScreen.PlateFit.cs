@@ -45,6 +45,13 @@ namespace AF.UI
         /// <summary>Paso de la rejilla con que se busca sitio en toda la zona visible para una placa que no cabe junto a su punto (dp).</summary>
         public const float PlateFitGridDp = 8f;
 
+        /// <summary>
+        /// Para los tests: una zona más (coordenadas de la zona visible, dp, y hacia abajo) que las placas de la vista Mundo no pisan,
+        /// como un control. Prueba la placa sin sitio sin depender de la geometría del Mapa (M5.1c: con la de producción, todas
+        /// caben). Null en el juego.
+        /// </summary>
+        internal static Rect? PlateFitTestObstacle { get; set; }
+
         private bool[] _plateFitHidden = new bool[0];
         private long _plateFitWorlds = -1;
         private int _plateFitMoves;
@@ -348,7 +355,7 @@ namespace AF.UI
         {
             if (!basin)
             {
-                return FixedHit(seen, window, button);
+                return FixedHit(seen, window, button) || (PlateFitTestObstacle.HasValue && seen.Overlaps(PlateFitTestObstacle.Value));
             }
 
             return (window && seen.Overlaps(Grow(_frameWin, HomeWindowCuiaGapDp))) || HitsBasinControl(local);

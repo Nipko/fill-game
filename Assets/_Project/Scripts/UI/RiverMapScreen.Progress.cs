@@ -1574,6 +1574,7 @@ namespace AF.UI
             RiverRibbonGraphic ribbon = go.GetComponent<RiverRibbonGraphic>();
             ribbon.Setup();
             ribbon.SetPart(part);
+            ribbon.SetSmooth(true); // M5.1c: los mismos puntos que el vidrio, sin dientes
             return ribbon;
         }
 

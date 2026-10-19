@@ -950,6 +950,7 @@ namespace AF.UI
                 FillTopLeft((RectTransform)go.transform);
                 RiverRibbonGraphic ribbon = go.GetComponent<RiverRibbonGraphic>();
                 ribbon.Setup();
+                ribbon.SetSmooth(true); // M5.1c: sin dientes con la geometría de producción
                 _glass.Add(ribbon);
             }
 

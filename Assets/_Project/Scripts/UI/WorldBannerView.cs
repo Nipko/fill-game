@@ -1922,6 +1922,8 @@ namespace AF.UI
         private int[] _nearLine = Array.Empty<int>();
         private int _nearCount;
         private bool[] _lineVisible = Array.Empty<bool>();
+        private int[] _viewFirst = Array.Empty<int>();
+        private int[] _viewLast = Array.Empty<int>();
         private BannerTravel? _built;
         private float _builtScale = 1f;
         private float _w;
@@ -2178,17 +2180,24 @@ namespace AF.UI
             if (_lineVisible.Length < _glass.Count)
             {
                 _lineVisible = new bool[_glass.Count];
+                _viewFirst = new int[_glass.Count];
+                _viewLast = new int[_glass.Count];
             }
 
+            // Cada cinta, recortada al trozo de su línea que entra en la franja (M5.1c: con la geometría de producción, las cintas
+            // enteras se comían el presupuesto de 8 ms); sus puntas quedan fuera, a VisibleMarginDp del borde.
             for (int i = 0; i < _glass.Count; i++)
             {
                 RiverLine? line = i < lines.Count ? lines[i] : null;
-                bool visible = line != null && LineInView(line);
+                bool visible = line != null && LineInView(line, out _viewFirst[i], out _viewLast[i]);
                 _lineVisible[i] = visible;
-                bool filled = visible && fill[i] < RiverMapScreen.NoFill;
-                SetupRibbon(_glass[i], visible ? line : null, RibbonLook.Glass, 0f, 1f, space);
-                SetupRibbon(_casing[i], filled ? line : null, RibbonLook.Water, filled ? fill[i] : 1f, 1f, space);
-                SetupRibbon(_core[i], filled ? line : null, RibbonLook.Water, filled ? fill[i] : 1f, 1f, space);
+                float sA = visible ? line!.SOfPoint(_viewFirst[i]) : 0f;
+                float sB = visible ? line!.SOfPoint(_viewLast[i]) : 1f;
+                float from = visible ? Mathf.Max(fill[i], sA) : 1f;
+                bool filled = visible && fill[i] < RiverMapScreen.NoFill && from < sB;
+                SetupRibbon(_glass[i], visible ? line : null, RibbonLook.Glass, sA, sB, space);
+                SetupRibbon(_casing[i], filled ? line : null, RibbonLook.Water, filled ? from : 1f, sB, space);
+                SetupRibbon(_core[i], filled ? line : null, RibbonLook.Water, filled ? from : 1f, sB, space);
                 if (visible)
                 {
                     _glass[i].SetGlassBodyAlpha(RiverMapScreen.MapGlassBodyAlpha);
@@ -2431,30 +2440,39 @@ namespace AF.UI
             _center = new Vector2((minN + maxN) * 0.5f, (minE + maxE) * 0.5f);
         }
 
-        // La línea entra en la franja (algún tramo de su polilínea toca la franja con un margen). Sin asignaciones.
-        private bool LineInView(RiverLine line)
+        // La línea entra en la franja (algún tramo de su polilínea toca la franja con un margen), y el trozo que entra: del primer
+        // punto del primer tramo que la toca (first) al último del último (last). Sin asignaciones.
+        private bool LineInView(RiverLine line, out int first, out int last)
         {
             float hx = (_w * 0.5f) + VisibleMarginDp;
             float hy = (_h * 0.5f) + VisibleMarginDp;
             int count = line.PointCount;
+            first = 0;
+            last = count - 1;
             Vector2 prev = StripPoint(new Vector2(line.X(0), line.Y(0)));
             if (count == 1)
             {
                 return Mathf.Abs(prev.x) <= hx && Mathf.Abs(prev.y) <= hy;
             }
 
+            first = -1;
             for (int i = 1; i < count; i++)
             {
                 Vector2 p = StripPoint(new Vector2(line.X(i), line.Y(i)));
                 if (Mathf.Max(prev.x, p.x) >= -hx && Mathf.Min(prev.x, p.x) <= hx && Mathf.Max(prev.y, p.y) >= -hy && Mathf.Min(prev.y, p.y) <= hy)
                 {
-                    return true;
+                    if (first < 0)
+                    {
+                        first = i - 1;
+                    }
+
+                    last = i;
                 }
 
                 prev = p;
             }
 
-            return false;
+            return first >= 0;
         }
 
         // Un nombre por punto de paso con texto, ya escrito, sobre una píldora de madera oscura al PassingPillAlpha (crema con su
@@ -2537,7 +2555,7 @@ namespace AF.UI
                 float y = Mathf.Clamp(p.y + (side * PassingUpDp), yBottom, yTop);
                 float yOther = p.y - (side * PassingUpDp);
                 bool otherFits = yOther >= yBottom && yOther <= yTop;
-                CollectNearRivers(travel.Map, x, (w * 0.5f) + PassingRingMaxDp);
+                CollectNearRivers(travel.Map, x, (w * 0.5f) + PassingRingMaxDp, yBottom - (h * 0.5f), yTop + (h * 0.5f));
                 var best = new Vector2(x, y);
                 int bestHits = int.MaxValue;
                 if (!SearchPill(i, x, y, side, p.y, w, h, yBottom, yTop, ref best, ref bestHits, out Vector2 at)
@@ -2621,7 +2639,7 @@ namespace AF.UI
                 return false;
             }
 
-            int hits = NearRiverHits(x, y, hw, hh);
+            int hits = NearRiverHits(x, y, hw, hh, bestHits);
             if (hits == 0)
             {
                 return true;
@@ -2669,9 +2687,11 @@ namespace AF.UI
             return new Vector2(x, y);
         }
 
-        // Los tramos de las líneas a la vista que pasan a menos de reach dp (en x) de x, ya ensanchados con su medio ancho de cinta,
-        // la orla y PassingRiverGapDp, para que la búsqueda de una píldora mire solo los de cerca. Por línea, en orden.
-        private void CollectNearRivers(RiverMap map, float x, float reach)
+        // Los tramos de las líneas a la vista que pasan a menos de reach dp (en x) de x y entre yMin y yMax (lo que puede ocupar una
+        // píldora en la franja), ya ensanchados con su medio ancho de cinta, la orla y PassingRiverGapDp, para que la búsqueda de una
+        // píldora mire solo los de cerca. Solo el trozo de cada línea que entra en la franja (LineInView; M5.1c: antes, una banda de
+        // toda la altura del Mapa). Por línea, en orden.
+        private void CollectNearRivers(RiverMap map, float x, float reach, float yMin, float yMax)
         {
             _nearCount = 0;
             IReadOnlyList<RiverLine> lines = map.Lines;
@@ -2686,11 +2706,15 @@ namespace AF.UI
                 float grow = (RiverMapScreen.RibbonWidthDp(MapView.World, line.Class) * 0.5f) + RiverRibbonGraphic.CasingDp + PassingRiverGapDp;
                 float x0 = x - reach - grow;
                 float x1 = x + reach + grow;
-                Vector2 prev = StripPoint(new Vector2(line.X(0), line.Y(0)));
-                for (int k = 1; k < line.PointCount; k++)
+                float y0 = yMin - grow;
+                float y1 = yMax + grow;
+                int first = _viewFirst[i];
+                int last = _viewLast[i];
+                Vector2 prev = StripPoint(new Vector2(line.X(first), line.Y(first)));
+                for (int k = first + 1; k <= last; k++)
                 {
                     Vector2 q = StripPoint(new Vector2(line.X(k), line.Y(k)));
-                    if (Mathf.Max(prev.x, q.x) >= x0 && Mathf.Min(prev.x, q.x) <= x1)
+                    if (Mathf.Max(prev.x, q.x) >= x0 && Mathf.Min(prev.x, q.x) <= x1 && Mathf.Max(prev.y, q.y) >= y0 && Mathf.Min(prev.y, q.y) <= y1)
                     {
                         if (_nearCount == _nearA.Length)
                         {
@@ -2713,12 +2737,13 @@ namespace AF.UI
             }
         }
 
-        // Cuántas líneas distintas (de las de CollectNearRivers) corta la caja de centro (x, y) y medios lados hw × hh.
-        private int NearRiverHits(float x, float y, float hw, float hh)
+        // Cuántas líneas distintas (de las de CollectNearRivers) corta la caja de centro (x, y) y medios lados hw × hh, contadas hasta
+        // cap (con cap cortes ya no puede ser el mejor sitio: no hace falta seguir).
+        private int NearRiverHits(float x, float y, float hw, float hh, int cap)
         {
             int hits = 0;
             int last = -1;
-            for (int n = 0; n < _nearCount; n++)
+            for (int n = 0; n < _nearCount && hits < cap; n++)
             {
                 int line = _nearLine[n];
                 if (line == last)
@@ -3002,6 +3027,7 @@ namespace AF.UI
             RiverRibbonGraphic ribbon = go.GetComponent<RiverRibbonGraphic>();
             ribbon.Setup();
             ribbon.SetPart(part);
+            ribbon.SetSmooth(true); // M5.1c: como en el Mapa
             go.SetActive(false);
             return ribbon;
         }

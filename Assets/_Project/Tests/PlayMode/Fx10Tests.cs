@@ -59,6 +59,7 @@ namespace AF.Tests.PlayMode
         {
             Application.logMessageReceived -= OnLog;
             GameBootstrap.ContentEndMapOverride = null;
+            RiverMapScreen.PlateFitTestObstacle = null;
             MapArtRule.ForceProvisional = null;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
@@ -425,10 +426,12 @@ namespace AF.Tests.PlayMode
 
         /// <summary>
         /// La placa que no cabe de ningún modo [P]. El lienzo mide al menos 360 × 780 dp (02 §5), así que una pantalla simulada
-        /// más estrecha o más baja no encoge la zona del mapa (328 dp de ancho): el caso sale con los textos más largos que admite
-        /// el juego, en-XA (+35 %, <c>LocPseudo</c>) a la escala de texto máxima (<see cref="UiBuilder.MaxTextScale"/>). Con 299,
-        /// en la vista Mundo, la placa del mundo 9 no cabe entera junto a su punto ni en ningún sitio a su alcance sin pisar nada
-        /// (con los textos reales en es-419, a 1 y a 1,3, ninguna se oculta en los casos medidos). Comprueba que (a) no sale (ni
+        /// más estrecha o más baja no encoge la zona del mapa (328 dp de ancho). Con la geometría de las pruebas de FX10, en-XA
+        /// (+35 %, <c>LocPseudo</c>) a la escala de texto máxima (<see cref="UiBuilder.MaxTextScale"/>) dejaba sin sitio la placa
+        /// del mundo 9 con 299; con la de producción (M5.1) todas caben en todos los progresos medidos (M5.1c), así que la falta
+        /// de sitio la pone el test, sin depender de la geometría: un obstáculo que cubre la zona visible
+        /// (<see cref="RiverMapScreen.PlateFitTestObstacle"/>), que ninguna placa de la vista Mundo puede pisar. Sigue con en-XA
+        /// al 130 % y 299. Comprueba que (a) no sale (ni
         /// su placa ni su texto); (b) no es obstáculo: otra placa puede ir sobre su caja (<c>PlateBlocked</c>); (c) arrastrar el
         /// mapa la vuelve a enseñar en su sitio, y entonces sí es obstáculo; (d) al abrir otra vez la vista se vuelve a pesar: en
         /// la Cuenca no se oculta (ni con otros progresos) y, de vuelta en el Mundo, vuelve a no salir.
@@ -439,6 +442,7 @@ namespace AF.Tests.PlayMode
             LaunchOptions.LanguageOverride = LocLocale.Pseudo;
             LaunchOptions.FontScaleOverride = UiBuilder.MaxTextScale;
             MapArtRule.ForceProvisional = true;
+            RiverMapScreen.PlateFitTestObstacle = new Rect(-1000f, -1000f, 3000f, 3000f); // toda la zona visible
             yield return MapMarkersTests.OpenApp(300);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
