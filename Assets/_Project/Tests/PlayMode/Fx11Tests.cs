@@ -64,6 +64,99 @@ namespace AF.Tests.PlayMode
             CheckTheViews(map, "fin de contenido");
         }
 
+        // Revisión de FX11: el frente ya no lleva el tope de 400 vértices de la propuesta del Mapa §11.4 (desviación anotada allí,
+        // pendiente del dueño). Aquí se mide lo que pide en el tramo del 300 (5 piezas, el caso de la revisión) y se acota con
+        // FrontMeasuredMaxVertices, y se mide la memoria del viaje: los fotogramas sin cambio del llenado no asignan (ni el Tick
+        // ni el lienzo) y solo asignan los ≤ 10 en que cambia (uno por boya). Esos asignan lo mismo con el tope de 400 repartido
+        // (medido: 27-38 bloques de GC.Alloc por boya con los dos topes), así que no los causa el tope; quedan anotados en §11.4.
+        [UnityTest]
+        public IEnumerator ContentEndMap_After300_TheFrontVertices_AndTheJourneyOnlyAllocatesAtTheBuoys()
+        {
+            GameBootstrap.ContentEndMapOverride = true;
+            MapArtRule.ForceProvisional = true;
+            GameScreen.SimulatedScreen = Fx10Tests.Phone;
+            yield return Fx10Tests.OpenContentEnd();
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Assert.That(map.CatchingUp, Is.True, "el viaje del último tramo");
+            map.Tick(16f);
+            Canvas.ForceUpdateCanvases();
+            int frames = 0;
+            int changes = 0;
+            int allocating = 0;
+            int blocks = 0;
+            float fill = map.FrontFraction;
+            for (int t = 0; t < 30000 && (map.CatchingUp || map.CatchUpFading); t += 16)
+            {
+                int tickBlocks = AllocBlocks(() => map.Tick(16f));
+                int canvasBlocks = AllocBlocks(Canvas.ForceUpdateCanvases);
+                frames++;
+                bool changed = map.FrontFraction != fill;
+                fill = map.FrontFraction;
+                changes += changed ? 1 : 0;
+                if (tickBlocks + canvasBlocks > 0)
+                {
+                    allocating++;
+                    blocks += tickBlocks + canvasBlocks;
+                }
+
+                Assert.That(changed || tickBlocks + canvasBlocks == 0, Is.True,
+                    "a " + t + " ms, sin cambio del llenado: " + tickBlocks + " bloques de GC.Alloc en el Tick y " + canvasBlocks + " en el lienzo");
+            }
+
+            Debug.Log("FX11 viaje del 300: " + frames + " fotogramas, " + changes + " cambios del llenado, " + allocating
+                + " fotogramas con asignaciones (" + blocks + " bloques de GC.Alloc)");
+            Assert.That(map.CatchingUp, Is.False, "el viaje terminó");
+            Assert.That(frames, Is.GreaterThan(RiverMapScreen.BuoysPerLeg), "fotogramas del viaje");
+            Assert.That(changes, Is.InRange(1, RiverMapScreen.BuoysPerLeg), "el llenado cambia una vez por boya como mucho");
+            map.Tick(16f);
+            CheckFrontVertices(map, MapView.World, "Mundo");
+            map.SetView(MapView.Basin);
+            map.Tick(16f);
+            CheckFrontVertices(map, MapView.Basin, "Cuenca");
+        }
+
+        // Bloques de GC.Alloc del hilo principal durante «action» (como Is.Not.AllocatingGCMemory, pero contándolos).
+        private static int AllocBlocks(System.Action action)
+        {
+            UnityEngine.Profiling.Recorder recorder = UnityEngine.Profiling.Recorder.Get("GC.Alloc");
+            recorder.FilterToCurrentThread();
+            recorder.enabled = false;
+            recorder.enabled = true;
+            action();
+            recorder.enabled = false;
+            int n = recorder.sampleBlockCount;
+            recorder.CollectFromAllThreads();
+            return n;
+        }
+
+        // Lo que pide el frente entero (agua y orla) del tramo del 300, a la vista: se registra la cifra y se acota por
+        // FrontMeasuredMaxVertices (la cifra medida con margen, anotada en la propuesta §11.4).
+        private static void CheckFrontVertices(RiverMapScreen map, MapView view, string at)
+        {
+            Assert.That(map.View, Is.EqualTo(view));
+            Canvas.ForceUpdateCanvases();
+            int n = map.FrontPieceCount;
+            Assert.That(n, Is.EqualTo(5), at + ": el tramo del 300, 5 piezas");
+            int water = 0;
+            int casing = 0;
+            int most = 0;
+            for (int i = 0; i < n; i++)
+            {
+                water += map.FrontRibbon(i).LastVertexCount;
+                casing += map.FrontCasingRibbon(i).LastVertexCount;
+                most = Mathf.Max(most, Mathf.Max(map.FrontRibbon(i).LastVertexCount, map.FrontCasingRibbon(i).LastVertexCount));
+            }
+
+            Debug.Log("FX11 frente del 300 en " + at + ": " + water + " vértices de agua y " + casing + " de orla (" + (water + casing)
+                + "); la pieza más cara, " + most);
+            Assert.That(water + casing, Is.InRange(1, FrontMeasuredMaxVertices),
+                at + ": el frente del 300, " + water + " de agua y " + casing + " de orla");
+        }
+
+        // El frente del 300 (agua y orla) en Mundo, medido el 2026-10-19: 1.028 vértices de agua y 1.506 de orla (2.534; la pieza
+        // más cara, la orla del Amazonas, 504); en Cuenca, 724. Tope con margen; anotado en la propuesta del Mapa §11.4.
+        private const int FrontMeasuredMaxVertices = 3000;
+
         // Al abrir, en cada fotograma y al acabar. Devuelve las piezas del frente al abrir y las más que tuvo.
         private static (int Open, int Most) CatchUpAndCheck(RiverMapScreen map, string at)
         {
