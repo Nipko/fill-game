@@ -9,8 +9,7 @@
 //   - Bot x40 (MetricsEngine.BotFail, enlazado del generador) con la semilla del tablero y su ventana con la tolerancia de 1e-9
 //     del generador: FALLO (R-Q11 abierta; nota §13). Pares de riesgo contra el tope de la banda: FALLO (R-Q1b abierta).
 //   - Reproducción (QA-DAILY-REPRO, 03 §17 #10): DailyQaCommand ejecuta el generador (--daily en un proceso hijo, a una
-//     carpeta temporal) con las bandas y los días del pack y compara gen, palette, units_per_color, caps, cuias y risk_pairs
-//     de cada tablero. level-qa no enlaza tools/level-generator/Daily/ (su .csproj no se toca en el Spark: enganche).
+//     carpeta temporal) con las bandas y los días del pack y compara cada tablero entero (igualdad profunda del JSON). level-qa no enlaza tools/level-generator/Daily/ (su .csproj no se toca en el Spark: enganche).
 //   - Anti-repetición (#9, Campaign/BoardShape.cs como la campaña) y trampas tempranas (#3, el tope por etiqueta de
 //     SlotGenerator.EarlyTrapCap) solo como aviso (R-Q10).
 using System.Collections.Concurrent;
@@ -75,9 +74,6 @@ internal static class DailyChecks
 
     public static readonly string[] Forbidden = ["level", "difficulty", "solution", "safe_path", "qa"];
 
-    /// <summary>Claves de la reproducción (lo que define el tablero; id, seed, world y water_base tienen su comprobación).</summary>
-    public static readonly string[] ReproKeys = ["gen", "palette", "units_per_color", "caps", "cuias", "risk_pairs"];
-
     public static readonly (string Id, string Rule)[] Ids =
     [
         ("QA-DAILY-SCHEMA", "JSON valido contra schemas/af-level-1.schema.json con python tools/validate_schema.py --pack (03 sec. 17 #11)"),
@@ -97,9 +93,9 @@ internal static class DailyChecks
         ("QA-DAILY-PAR", "par >= 2K (03 sec. 17 #2)"),
         ("QA-DAILY-BOT", "bot_fail x40 con la semilla del tablero dentro de la ventana de la banda (03 sec. 16; 03 sec. 17 #3; R-Q11 abierta: falla)"),
         ("QA-DAILY-REPRO", "el generador reproduce el tablero desde su banda y dia (03 sec. 17 #10)"),
-        ("QA-DAILY-SIZE", "pool completo < 2 MB sin comprimir (R5 del encargo; 03 sec. 16)"),
-        ("QA-DAILY-REPEAT-SHAPE", "aviso: forma distinta de la de los 200 dias anteriores de su banda (03 sec. 17 #9; R-Q10)"),
-        ("QA-DAILY-REPEAT-HAMMING", "aviso: Hamming >= 25 % con los 20 dias anteriores de su banda (03 sec. 17 #9; R-Q10)"),
+        ("QA-DAILY-SIZE", "pack < 2 MB sin comprimir, tambien con --partial (R5 del encargo; 03 sec. 16)"),
+        ("QA-DAILY-REPEAT-SHAPE", "aviso: forma distinta de la de los 200 dias anteriores de su banda, con la vuelta del ciclo (729 -> 0) (03 sec. 17 #9; R-Q10)"),
+        ("QA-DAILY-REPEAT-HAMMING", "aviso: Hamming >= 25 % con los 20 dias anteriores de su banda, con la vuelta del ciclo (03 sec. 17 #9; R-Q10)"),
         ("QA-DAILY-EARLY-TRAPS", "aviso: trampas tempranas dentro del tope de la etiqueta que da el bot (Q16 B; 03 sec. 17 #3; R-Q10)"),
     ];
 
@@ -410,7 +406,9 @@ internal static class DailyChecks
                 $"bot_fail {e.Bot:0.000} fuera de la ventana {db.BotFailMin:0.00}-{db.BotFailMax:0.00} de la banda {b} (R-Q11 abierta, nota sec. 1.6)"));
         }
 
-        string label = e.Bot >= 0.90 ? "very_hard" : e.Bot >= 0.75 ? "hard" : "normal";
+        // Etiqueta por bot_fail con los umbrales de la especificación de tintes y la tolerancia de CampaignSpec.MeasuredLabel
+        // (sin los niveles del primer Difícil y Muy difícil, que son de la campaña).
+        string label = e.Bot >= tints.VeryHardThreshold - WindowTolerance ? "very_hard" : e.Bot >= tints.HardThreshold - WindowTolerance ? "hard" : "normal";
         int cap = SlotGenerator.EarlyTrapCap(label);
         if (e.EarlyTraps > cap)
         {
@@ -459,43 +457,67 @@ internal static class DailyChecks
         }
     }
 
-    public static IEnumerable<DailyIssue> Size(long bytes, bool partial)
+    /// <summary>Siempre, también con --partial (una muestra queda muy por debajo de 2 MB).</summary>
+    public static IEnumerable<DailyIssue> Size(long bytes)
     {
-        if (!partial && bytes >= MaxBytes)
+        if (bytes >= MaxBytes)
         {
             yield return new DailyIssue("QA-DAILY-SIZE", "-", string.Create(CultureInfo.InvariantCulture, $"{bytes} bytes (como mucho {MaxBytes - 1})"));
         }
     }
 
-    /// <summary>Anti-repetición por banda en orden de día, con las ventanas de la campaña en días (BoardShape).</summary>
+    /// <summary>
+    /// Anti-repetición por banda con las ventanas de la campaña en días (BoardShape): cada tablero frente a los de su banda de
+    /// los 200 (forma) y 20 (Hamming) días anteriores, dando la vuelta al ciclo (el pool se juega con día mod 730: al 729
+    /// le sigue el 0) y, antes, frente a otro del mismo día (duplicado). Solo avisos (R-Q10).
+    /// </summary>
     public static IEnumerable<DailyIssue> Repetition(DailyQaPack pack)
     {
-        foreach (IGrouping<int, DailyQaLevel> g in pack.Levels.Where(l => l.ReadError is null && l.Band is not null && l.Day is not null)
+        foreach (IGrouping<int, DailyQaLevel> g in pack.Levels.Where(l => l.ReadError is null && l.Band is int b && l.Day is int d && DailyIds.Problem(b, d) is null)
             .GroupBy(l => l.Band!.Value).OrderBy(g => g.Key))
         {
             List<DailyQaLevel> seq = g.OrderBy(l => l.Day).ThenBy(l => l.Index).ToList();
-            var shapes = seq.Select(l => BoardShape.Shape(l.Caps, l.Cuias, new int[l.Caps.Length])).ToList();
-            for (int i = 0; i < seq.Count; i++)
+            var byDay = seq.GroupBy(l => l.Day!.Value).ToDictionary(x => x.Key, x => x.ToList());
+            var shapes = seq.ToDictionary(l => l.Index, l => BoardShape.Shape(l.Caps, l.Cuias, new int[l.Caps.Length]));
+            foreach (DailyQaLevel cur in seq)
             {
-                int day = seq[i].Day!.Value;
-                for (int j = i - 1; j >= 0 && day - seq[j].Day!.Value <= BoardShape.ShapeWindow; j--)
+                DailyQaLevel? shapeHit = Previous(cur, byDay, BoardShape.ShapeWindow).FirstOrDefault(o => shapes[o.Index] == shapes[cur.Index]);
+                if (shapeHit is not null)
                 {
-                    if (shapes[j] == shapes[i])
+                    yield return new DailyIssue("QA-DAILY-REPEAT-SHAPE", cur.Name, $"misma forma que {shapeHit.Name}; solo aviso (R-Q10)", Warning: true);
+                }
+
+                foreach (DailyQaLevel o in Previous(cur, byDay, BoardShape.HammingWindow))
+                {
+                    double h = BoardShape.Hamming(o.Cuias, cur.Cuias);
+                    if (h < BoardShape.MinHamming)
                     {
-                        yield return new DailyIssue("QA-DAILY-REPEAT-SHAPE", seq[i].Name, $"misma forma que {seq[j].Name}; solo aviso (R-Q10)", Warning: true);
+                        yield return new DailyIssue("QA-DAILY-REPEAT-HAMMING", cur.Name, string.Create(CultureInfo.InvariantCulture,
+                            $"Hamming {h:0.00} con {o.Name} (< 0,25); solo aviso (R-Q10)"), Warning: true);
                         break;
                     }
                 }
+            }
+        }
+    }
 
-                for (int j = i - 1; j >= 0 && day - seq[j].Day!.Value <= BoardShape.HammingWindow; j--)
+    /// <summary>Los tableros anteriores de la banda, del más cercano al más lejano: el mismo día (índice menor) y después
+    /// los días día − 1 … día − <paramref name="window"/>, módulo 730.</summary>
+    private static IEnumerable<DailyQaLevel> Previous(DailyQaLevel cur, Dictionary<int, List<DailyQaLevel>> byDay, int window)
+    {
+        int day = cur.Day!.Value;
+        foreach (DailyQaLevel o in byDay[day].Where(o => o.Index < cur.Index))
+        {
+            yield return o;
+        }
+
+        for (int dist = 1; dist <= Math.Min(window, DailyIds.Days - 1); dist++)
+        {
+            if (byDay.TryGetValue(((day - dist) % DailyIds.Days + DailyIds.Days) % DailyIds.Days, out List<DailyQaLevel>? list))
+            {
+                foreach (DailyQaLevel o in list)
                 {
-                    double h = BoardShape.Hamming(seq[j].Cuias, seq[i].Cuias);
-                    if (h < BoardShape.MinHamming)
-                    {
-                        yield return new DailyIssue("QA-DAILY-REPEAT-HAMMING", seq[i].Name, string.Create(CultureInfo.InvariantCulture,
-                            $"Hamming {h:0.00} con {seq[j].Name} (< 0,25); solo aviso (R-Q10)"), Warning: true);
-                        break;
-                    }
+                    yield return o;
                 }
             }
         }

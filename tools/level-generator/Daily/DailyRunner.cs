@@ -77,15 +77,15 @@ internal static class DailyRunner
     /// <summary>Flujo de sub-semillas de los candidatos: el mismo valor que <see cref="SlotGenerator.CandidateStream"/>.</summary>
     public const ulong CandidateStream = SlotGenerator.CandidateStream;
 
+    public const ulong TintStream = 2;
+    public const ulong ShuffleStream = 3;
+
     /// <summary>Tolerancia de los extremos de la ventana del bot, la misma que Generation/SlotGenerator (1e-9).</summary>
     public const double WindowTolerance = 1e-9;
-
-    public const ulong TintStream = 2;
 
     /// <summary>bot_fail dentro de la ventana [min, max] de la banda, con <see cref="WindowTolerance"/> en los extremos.</summary>
     public static bool InWindow(DailyBand band, double bot) =>
         bot >= band.BotFailMin - WindowTolerance && bot <= band.BotFailMax + WindowTolerance;
-    public const ulong ShuffleStream = 3;
 
     public static DailyRun Run(DailySpec spec, DailyTints tints, IReadOnlyList<int> bands, IReadOnlyList<int> days, int threads)
     {
