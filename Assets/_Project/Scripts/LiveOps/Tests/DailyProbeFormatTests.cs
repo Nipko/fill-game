@@ -28,6 +28,16 @@ namespace AF.LiveOps.Tests
         }
 
         [Test]
+        public void DailyChallenge_WithoutResult_IsNull()
+        {
+            Assert.That(_format.DailyChallenge(5, "2026-10-19", DailyResult.None, 1000, 2), Is.Null, "nada que informar");
+            Assert.That(
+                _format.DailyChallenge(5, "2026-10-19", DailyResult.Abandon, null, 0),
+                Does.Contain("\"result\":\"abandon\""),
+                "el valor de 08 §8.2 se sigue sabiendo escribir, aunque el servicio ya no lo emite");
+        }
+
+        [Test]
         public void Win_FromTheClaimReport_AndNothingWithoutReward()
         {
             var confirmed = new DailyClaimReport(ClaimOutcome.Confirmed, "2026-10-19", 7, 60, 1, null);
@@ -148,7 +158,7 @@ namespace AF.LiveOps.Tests
             string[] lines =
             {
                 _format.Card(long.MaxValue, DailyCardState.PendingValidation, "2026-10-19", slot, "d3_n0365", 7),
-                _format.DailyChallenge(long.MaxValue, "2026-10-19", DailyResult.Win, long.MaxValue, int.MaxValue),
+                _format.DailyChallenge(long.MaxValue, "2026-10-19", DailyResult.Win, long.MaxValue, int.MaxValue)!,
                 _format.LevelStart(long.MaxValue, "d3_n0365", 3),
                 _format.EarnSeeds(long.MaxValue, int.MaxValue)!,
             };

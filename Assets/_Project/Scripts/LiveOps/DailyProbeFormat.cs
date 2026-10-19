@@ -30,10 +30,16 @@ namespace AF.LiveOps
 
         /// <summary>
         /// Línea <c>AF_STATE daily_challenge</c> (<c>af_daily_challenge</c> de 08 §8.2) con los valores dados.
-        /// <paramref name="tMs"/> null o negativo sale como <c>null</c>.
+        /// <paramref name="tMs"/> null o negativo sale como <c>null</c>. Null con <see cref="DailyResult.None"/>: no hay resultado
+        /// que informar.
         /// </summary>
-        public string DailyChallenge(long t, string dateKey, DailyResult result, long? tMs, int streakDays)
+        public string? DailyChallenge(long t, string dateKey, DailyResult result, long? tMs, int streakDays)
         {
+            if (result == DailyResult.None)
+            {
+                return null;
+            }
+
             StringBuilder sb = Begin("daily_challenge", t);
             sb.Append(",\"date\":");
             AppendId(sb, dateKey);

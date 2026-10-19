@@ -178,7 +178,8 @@ namespace AF.LiveOps
         /// Al abrir la app y cada vez que se vuelve al inicio (R-Q4; la UI, antes de pintar la tarjeta): si hay una partida de otro
         /// día, se descarta y se devuelve; si es de hoy, se conserva para reanudarla. Si es de un día pasado que no se ganó, ese día
         /// terminó sin victoria (R-Q15): se registra <c>result = fail</c> en el perfil y se avisa con <see cref="DayEnded"/>, una
-        /// sola vez (la partida ya no está). Null si no había nada que descartar.
+        /// sola vez: la partida ya no está y, aunque el reloj atrasado permita jugar otra vez ese día, solo se informa un día
+        /// posterior a <see cref="DailyChallengeRecord.LastDate"/>. Null si no había nada que descartar.
         /// </summary>
         public DailyPlayEnd? DiscardStale()
         {
@@ -190,7 +191,11 @@ namespace AF.LiveOps
                 return null;
             }
 
-            bool ended = string.CompareOrdinal(play.DateKey, today) < 0 && !WonThatDay(record, play.DateKey);
+            // Solo un día posterior al último resultado registrado (LastDate solo avanza y guarda win y fail): con el reloj
+            // atrasado, un día ya informado con fail o ya ganado (aunque no sea el último cobrado) no se informa otra vez.
+            bool ended = string.CompareOrdinal(play.DateKey, today) < 0
+                && !WonThatDay(record, play.DateKey)
+                && (record.LastDate == null || string.CompareOrdinal(play.DateKey, record.LastDate) > 0);
             DailyResult reported = ended ? DailyResult.Fail : DailyResult.None;
             int streak = ended ? StreakBrokenBy(record, play.DateKey) : 0;
             RecordResult(record, play.DateKey, reported);

@@ -325,6 +325,50 @@ namespace AF.LiveOps.Tests
         }
 
         [Test]
+        public void ClockBackToADayAlreadyFailed_DoesNotReportItAgain()
+        {
+            var f = new DailyFixture();
+            var ended = new System.Collections.Generic.List<DailyPlayEnd>();
+            f.Service.DayEnded += e => ended.Add(e);
+            f.Service.Start(DailyFixture.MaxLevel);
+            f.NextDay();
+            Assert.That(f.Service.DiscardStale()!.Value.Result, Is.EqualTo(DailyResult.Fail), "fail del 19, el 20");
+
+            f.NextDay(-1);                      // el reloj vuelve al 19
+            Assert.That(f.Service.Start(DailyFixture.MaxLevel).DateKey, Is.EqualTo("2026-10-19"));
+            f.Service.RecordExitWithoutWin();
+            f.NextDay();
+
+            DailyPlayEnd end = f.Service.DiscardStale()!.Value;
+            Assert.That(end.Result, Is.EqualTo(DailyResult.None), "el 19 ya se informó");
+            Assert.That(ended.Count, Is.EqualTo(1), "una sola vez por día");
+            Assert.That(f.Record.InProgress, Is.Null);
+            Assert.That(f.Record.Result, Is.EqualTo(DailyResult.Fail));
+            Assert.That(f.Record.LastDate, Is.EqualTo("2026-10-19"));
+        }
+
+        [Test]
+        public void ClockBackReplayOfAWonDayThatIsNotTheLastClaimed_NoFail()
+        {
+            var f = new DailyFixture();
+            int ended = 0;
+            f.Service.DayEnded += _ => ended++;
+            f.WinToday();
+            f.NextDay();
+            f.WinToday();
+
+            f.NextDay(-1);                      // el reloj vuelve al 19, ganado, pero el último cobro es el 20
+            Assert.That(f.Service.Start(DailyFixture.MaxLevel).DateKey, Is.EqualTo("2026-10-19"));
+            f.Service.RecordExitWithoutWin();
+            f.NextDay(2);
+
+            Assert.That(f.Service.DiscardStale()!.Value.Result, Is.EqualTo(DailyResult.None));
+            Assert.That(ended, Is.EqualTo(0));
+            Assert.That(f.Record.Result, Is.EqualTo(DailyResult.Win));
+            Assert.That(f.Record.LastDate, Is.EqualTo("2026-10-20"));
+        }
+
+        [Test]
         public void DiscardOfAFuturePlay_ClockBack_ReportsNothing()
         {
             var f = new DailyFixture();

@@ -350,7 +350,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void ExitFromTheStuckModal_DeliversFail_WithoutCanoe()
+        public void ExitFromTheStuckModal_DeliversExit_WithoutCanoe_AndKeepsTheModalToResume()
         {
             var rig = new DailyRig(StuckBoard, maxLevel: 40);
             CampaignSnapshot before = rig.Snapshot();
@@ -367,6 +367,79 @@ namespace AF.Tests.EditMode
             Assert.That(saved!.Stuck, Is.True, "se reabriría en el modal de Aguas estancadas");
             Assert.That(saved.Pours, Is.EqualTo(1));
             rig.AssertCampaignUntouched(before);
+        }
+
+        [Test]
+        public void ResumeFromTheStuckModal_ReopensIt_WithOnlyMareaAndRestart()
+        {
+            var rig = new DailyRig(StuckBoard, maxLevel: 40);
+            CampaignSnapshot before = rig.Snapshot();
+            rig.StartPlaying();
+            rig.GetStuck();
+            Assert.That(rig.Flow.ExitDaily(), Is.True);
+            LevelStateData saved = rig.DailyStore.Load()!;
+
+            // R-Q16: el mismo día se vuelve a entrar con un flujo nuevo del Reto sobre su propio almacén.
+            var listener = new RecordingListener();
+            LevelFlow reopened = LevelFlow.CreateDaily(StuckBoard, LevelFlow.DailyEffectiveLevel(40), rig.Progress, listener, rig.DailyWallet);
+            reopened.StateStore = rig.DailyStore;
+            reopened.Clock = rig.Clock;
+            Assert.That(reopened.ResumeDaily(saved), Is.True);
+            Assert.That(reopened.Phase, Is.EqualTo(FlowPhase.StuckModal), "se reabre en el modal de Aguas estancadas");
+            Assert.That(reopened.Session.AppliedPours, Is.EqualTo(1));
+
+            Assert.That(reopened.RescueOffered, Is.False, "sin Cuia de rescate (06 §4.1)");
+            Assert.That(reopened.FrozenRescueQuote, Is.Null);
+            Assert.That(reopened.BuyRescue(), Is.Null);
+            Assert.That(reopened.ApplyPaidRescue(), Is.False, "tampoco la de la Balsa");
+            Assert.That(reopened.CanoeAtStake, Is.False);
+            Assert.That(reopened.PressGiveUp(), Is.False, "sin embudo de D-008");
+            Assert.That(reopened.QuitCostsCanoe, Is.False);
+
+            StuckModalView view = StuckModalModel.Build(reopened.BuildStuckContext(true, true, GeoTier.T1), reopened.Boosters);
+            Assert.That(view.Rescue, Is.EqualTo(StuckRescueKind.None));
+            Assert.That(view.Offers.Count, Is.EqualTo(0), "ni Balsa ni Puñado");
+            Assert.That(view.CanoeLine, Is.EqualTo(StuckCanoeLine.None));
+            Assert.That(view.Footer, Is.EqualTo(StuckFooter.RestartFree), "el pie es Volver a la orilla");
+            Assert.That(view.Undo, Is.EqualTo(StuckUndoKind.Undo), "la Marea");
+            rig.AssertCampaignUntouched(before);
+        }
+
+        [Test]
+        public void Exit_IsEndOfLevel_AndWritesSynchronously()
+        {
+            // Con un lote de guardado sobre un disco con escritor en segundo plano (T-D): el vertido va en segundo plano y la
+            // salida del Reto, que guarda la partida para reanudarla (R-Q16), espera al escritor y escribe en el hilo principal.
+            var clock = new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5));
+            Profile profile = Wallet.NewProfile(clock);
+            profile.Progress.MaxLevel = 40;
+            var disk = new MainThreadDisk();
+            var batch = new ProfileSaveBatch(disk);
+            Assert.That(batch.Writer, Is.Not.Null, "disco de bytes: hay escritor");
+            LevelFlow flow = LevelFlow.CreateDaily(
+                DailyBoard, LevelFlow.DailyEffectiveLevel(40), new ProfileProgressStore(profile, batch), new RecordingListener(),
+                LevelFlow.CreateDailyWallet(profile, batch.Durable, clock));
+            var store = new BatchedDailyStore(profile, batch);
+            flow.StateStore = store;
+            flow.SaveBatch = batch;
+            flow.Clock = clock;
+            flow.StartDaily();
+            flow.TapAnywhere();
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+
+            flow.TapCuia(0);
+            flow.TapCuia(2);
+            Assert.That(flow.Session.AppliedPours, Is.EqualTo(1));
+            Assert.That(batch.LastWriteInBackground, Is.True, "el vertido, en segundo plano");
+            Assert.That(batch.Writer!.WaitIdle(5000), Is.True);
+
+            int writes = batch.WriteCount;
+            Assert.That(flow.ExitDaily(), Is.True);
+
+            Assert.That(batch.WriteCount, Is.EqualTo(writes + 1), "una escritura");
+            Assert.That(batch.LastWriteInBackground, Is.False, "fin de nivel: en síncrono");
+            Assert.That(disk.LastOnMainThread, Is.True, "en el hilo principal");
+            Assert.That(store.Load()!.Pours, Is.EqualTo(1), "la partida guardada para reanudarla");
         }
 
         [Test]
@@ -585,6 +658,73 @@ namespace AF.Tests.EditMode
             public LevelStateData? LevelState;
             public int CampaignFailsLevel;
             public string CampaignHistory = "";
+        }
+
+        /// <summary>Disco de bytes de prueba (sin retener): anota si cada escritura fue en el hilo principal.</summary>
+        private sealed class MainThreadDisk : IProfileByteStore
+        {
+            private readonly int _mainThread = System.Threading.Thread.CurrentThread.ManagedThreadId;
+            private volatile bool _lastOnMain;
+
+            public bool LastOnMainThread => _lastOnMain;
+
+            public ProfileLoadResult Load()
+            {
+                return new ProfileLoadResult(ProfileLoadStatus.NotFound, null);
+            }
+
+            public void Save(Profile profile)
+            {
+                WriteBytes(Serialize(profile));
+            }
+
+            public void Delete()
+            {
+            }
+
+            public byte[] Serialize(Profile profile)
+            {
+                return System.Text.Encoding.UTF8.GetBytes(ProfileJson.Serialize(profile));
+            }
+
+            public void WriteBytes(byte[] bytes)
+            {
+                _lastOnMain = System.Threading.Thread.CurrentThread.ManagedThreadId == _mainThread;
+            }
+        }
+
+        /// <summary>
+        /// Almacén del Reto de prueba que, como el de la UI, guarda el perfil por el lote al guardar la partida (sin tocar el
+        /// <c>level_state</c> de campaña).
+        /// </summary>
+        private sealed class BatchedDailyStore : ILevelStateStore
+        {
+            private readonly Profile _profile;
+            private readonly IProfileStore _store;
+            private readonly MemoryLevelStateStore _inner = new MemoryLevelStateStore();
+
+            public BatchedDailyStore(Profile profile, IProfileStore store)
+            {
+                _profile = profile;
+                _store = store;
+            }
+
+            public LevelStateData? Load()
+            {
+                return _inner.Load();
+            }
+
+            public void Save(LevelStateData state)
+            {
+                _inner.Save(state);
+                _store.Save(_profile);
+            }
+
+            public void Clear()
+            {
+                _inner.Clear();
+                _store.Save(_profile);
+            }
         }
 
         /// <summary>
