@@ -149,7 +149,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Exit_DeliversFail_WithoutCanoe_AndClearsTheDailySave()
+        public void Exit_DeliversExit_WithoutCanoe_AndKeepsTheDailySaveResumable()
         {
             var rig = new DailyRig(DailyBoard, maxLevel: 40);
             CampaignSnapshot before = rig.Snapshot();
@@ -159,11 +159,20 @@ namespace AF.Tests.EditMode
             Assert.That(rig.DailyStore.Load(), Is.Not.Null, "el Reto guarda la partida en su almacén (R-Q4)");
             Assert.That(rig.Flow.ExitDaily(), Is.True);
             Assert.That(rig.Results.Count, Is.EqualTo(1));
-            Assert.That(rig.Results[0].Outcome, Is.EqualTo(DailyPlayOutcome.Exit), "result = fail (R-Q9)");
+            Assert.That(rig.Results[0].Outcome, Is.EqualTo(DailyPlayOutcome.Exit));
             Assert.That(rig.Results[0].Pours, Is.EqualTo(1));
-            Assert.That(rig.DailyStore.Load(), Is.Null, "salir descarta la partida del Reto [P]");
+            LevelStateData? saved = rig.DailyStore.Load();
+            Assert.That(saved, Is.Not.Null, "salir deja la partida para reanudarla el mismo día (R-Q16)");
+            Assert.That(saved!.Pours, Is.EqualTo(1));
             Assert.That(rig.Flow.ExitDaily(), Is.False, "una sola salida");
             Assert.That(rig.Results.Count, Is.EqualTo(1));
+
+            var listener = new RecordingListener();
+            LevelFlow reopened = LevelFlow.CreateDaily(DailyBoard, 41, rig.Progress, listener, rig.DailyWallet);
+            reopened.StateStore = rig.DailyStore;
+            Assert.That(reopened.ResumeDaily(saved), Is.True, "R-Q16: se reanuda donde se dejó");
+            Assert.That(reopened.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(reopened.Session.AppliedPours, Is.EqualTo(1));
             rig.AssertCampaignUntouched(before);
         }
 
@@ -353,7 +362,10 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Results[0].Outcome, Is.EqualTo(DailyPlayOutcome.Exit));
             Assert.That(rig.Results[0].Pours, Is.EqualTo(1));
             Assert.That(rig.Listener.Events.Exists(e => e.StartsWith("fail:", StringComparison.Ordinal)), Is.False, "salir no es fallo");
-            Assert.That(rig.DailyStore.Load(), Is.Null);
+            LevelStateData? saved = rig.DailyStore.Load();
+            Assert.That(saved, Is.Not.Null, "R-Q16: la partida queda para reanudarla");
+            Assert.That(saved!.Stuck, Is.True, "se reabriría en el modal de Aguas estancadas");
+            Assert.That(saved.Pours, Is.EqualTo(1));
             rig.AssertCampaignUntouched(before);
         }
 

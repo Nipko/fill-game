@@ -56,7 +56,7 @@ namespace AF.LiveOps
 
     /// <summary>
     /// Fachada del Reto del río para <c>AF.UI</c> (nota §1.4 y §3 [P]; 08 §2.2, «Entrega a: UI»): estado de la tarjeta, tablero de
-    /// hoy, empezar, reanudar o descartar (R-Q4), salir sin ganar (R-Q9) y reclamar (R-Q3, con <see cref="DailyChallengeRules"/>).
+    /// hoy, empezar, reanudar o descartar (R-Q4), salir sin ganar dejándola reanudable (R-Q9, R-Q16) y reclamar (R-Q3, con <see cref="DailyChallengeRules"/>).
     /// Sin UI ni GameFlow: la partida (R8) escribe su estado con <see cref="SaveState"/> y avisa de la victoria con
     /// <see cref="ClaimWin"/>.
     /// <para>
@@ -223,8 +223,9 @@ namespace AF.LiveOps
         }
 
         /// <summary>
-        /// El jugador sale sin ganar (R-Q9: <c>result = fail</c>): se registra el resultado (salvo si ese día ya estaba ganado [P]) y la
-        /// partida se cierra [P: salir no la deja para reanudar; R-Q4 solo habla de reabrir la app].
+        /// El jugador sale sin ganar (R-Q9: <c>result = fail</c>): se registra el resultado (salvo si ese día ya estaba ganado [P]).
+        /// R-Q16: la partida <b>no</b> se cierra: sigue en <see cref="DailyChallengeRecord.InProgress"/> para reanudarla el mismo día
+        /// (<see cref="Resumable"/>); al cambiar de día la descarta <see cref="DiscardStale"/> (R-Q4).
         /// </summary>
         /// <exception cref="InvalidOperationException">No hay partida en curso.</exception>
         public DailyPlayEnd RecordExitWithoutWin()
@@ -233,7 +234,6 @@ namespace AF.LiveOps
             DailyPlayInProgress play = record.InProgress ?? throw new InvalidOperationException("No hay partida del Reto en curso.");
             DailyResult reported = WonThatDay(record, play.DateKey) ? DailyResult.None : DailyResult.Fail;
             RecordResult(record, play.DateKey, reported);
-            record.InProgress = null;
             _store.Save(record);
             return new DailyPlayEnd(play.DateKey, play.Band, play.BoardId, reported);
         }

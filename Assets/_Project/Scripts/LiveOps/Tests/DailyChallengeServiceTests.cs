@@ -9,7 +9,8 @@ namespace AF.LiveOps.Tests
 {
     /// <summary>
     /// Fachada del Reto (nota §3 y §8 [P]): estados de la tarjeta en su orden, empezar con fecha y banda congeladas, la partida que
-    /// cruza la medianoche (R-Q3), reanudar el mismo día y descartar otro día (R-Q4), salir sin ganar (R-Q9) y reclamar.
+    /// cruza la medianoche (R-Q3), reanudar el mismo día y descartar otro día (R-Q4), salir sin ganar (R-Q9) dejándola reanudable
+    /// (R-Q16) y reclamar.
     /// </summary>
     public sealed class DailyChallengeServiceTests
     {
@@ -63,6 +64,9 @@ namespace AF.LiveOps.Tests
             f.Service.Start(DailyFixture.MaxLevel);
             Assert.That(f.Service.CardState(DailyFixture.MaxLevel), Is.EqualTo(DailyCardState.InProgress));
             f.Service.RecordExitWithoutWin();
+            Assert.That(f.Service.CardState(DailyFixture.MaxLevel), Is.EqualTo(DailyCardState.InProgress), "salir la deja reanudable (R-Q16)");
+            Assert.That(f.Service.ClaimWin(), Is.EqualTo(ClaimOutcome.NoReward), "la fecha ya está reclamada (pendiente)");
+            Assert.That(f.Service.CardState(DailyFixture.MaxLevel), Is.EqualTo(DailyCardState.PendingValidation));
 
             f.Server.GoOnline(TimeSpan.Zero);
             f.Rules.Reconcile();
@@ -241,9 +245,35 @@ namespace AF.LiveOps.Tests
             Assert.That(end.Result.ToId(), Is.EqualTo("fail"));
             Assert.That(f.Record.Result, Is.EqualTo(DailyResult.Fail));
             Assert.That(f.Record.LastDate, Is.EqualTo("2026-10-19"));
-            Assert.That(f.Record.InProgress, Is.Null);
             Assert.That(f.Seeds, Is.EqualTo(0));
-            Assert.That(f.Service.CardState(DailyFixture.MaxLevel), Is.EqualTo(DailyCardState.Play), "se puede reintentar");
+        }
+
+        // ---- R-Q16: salir sin ganar la deja reanudable el mismo día ----
+
+        [Test]
+        public void ExitWithoutWin_KeepsThePlayResumableTheSameDay()
+        {
+            var f = new DailyFixture();
+            f.Service.Start(DailyFixture.MaxLevel);
+            f.Service.SaveState(new LevelStateData { Seed = "amazonfill:v1:daily:b1:d291", Pours = 4, History = "h" });
+
+            f.Service.RecordExitWithoutWin();
+
+            Assert.That(f.Store.Persisted.InProgress, Is.Not.Null, "R-Q16: no se cierra");
+            Assert.That(f.Service.CardState(DailyFixture.MaxLevel), Is.EqualTo(DailyCardState.InProgress), "«Seguir»");
+            DailyPlayInProgress? resumable = f.Service.Resumable;
+            Assert.That(resumable, Is.Not.Null);
+            Assert.That(resumable!.State.Pours, Is.EqualTo(4));
+            Assert.That(f.Service.Start(DailyFixture.MaxLevel).State.Pours, Is.EqualTo(4), "Start la reanuda");
+
+            f.Store.Reopen();
+            Assert.That(f.Service.DiscardStale(), Is.Null, "el mismo día, al reabrir, tampoco se descarta");
+            Assert.That(f.Service.Resumable, Is.Not.Null);
+
+            f.NextDay();
+            Assert.That(f.Service.Resumable, Is.Null, "otro día ya no se reanuda (R-Q4)");
+            Assert.That(f.Service.DiscardStale(), Is.Not.Null);
+            Assert.That(f.Record.InProgress, Is.Null);
         }
 
         [Test]
@@ -255,6 +285,8 @@ namespace AF.LiveOps.Tests
 
             Assert.That(f.Service.RecordExitWithoutWin().Result, Is.EqualTo(DailyResult.None));
             Assert.That(f.Record.Result, Is.EqualTo(DailyResult.Win));
+            Assert.That(f.Service.CardState(DailyFixture.MaxLevel), Is.EqualTo(DailyCardState.InProgress), "la rejugada también se reanuda (R-Q16) [P]");
+            Assert.That(f.Service.ClaimWin(), Is.EqualTo(ClaimOutcome.NoReward));
             Assert.That(f.Service.CardState(DailyFixture.MaxLevel), Is.EqualTo(DailyCardState.Sealed));
         }
 
