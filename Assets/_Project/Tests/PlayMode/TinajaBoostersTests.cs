@@ -586,6 +586,37 @@ namespace AF.Tests.PlayMode
             Assert.That(DevProbe.HasMurkyWater(TinajaVisualTests.Board323()), Is.False);
         }
 
+        [UnityTest]
+        public IEnumerator Consumers_LabeledCard_OneIconForTheTinajaAndItsCuia_AndNoMurkyChip()
+        {
+            // Revisión de TJ4: en la fila de iconos de una tarjeta con etiqueta, la pareja tinaja + su cuia cuenta como una
+            // mecánica (02 §9.2, regla 4): un solo icono, la vasija, sin los de la Cuia alta (la tinaja es de 5) ni de la Cuia
+            // chica (su cuia es de 2; propuesta de la Tinaja, c.1 y c.6), y sin el chip «?» de Aguas turbias.
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
+            yield return PlayModeHelpers.LoadGameWithPack(HardPack(), Level, new MemoryProgressStore(Level, Level - 1));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            LevelFlow flow = boot.Flow!;
+            GameScreen view = boot.View!;
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.LevelCard), "la tarjeta de Difícil");
+            Assert.That(flow.Level.HasSmallCuia, Is.False, "su cuia no es una Cuia chica");
+            Assert.That(flow.Level.HasTallCuia, Is.False, "la tinaja no es una Cuia alta");
+            LevelCardInfo card = flow.LevelCard!;
+            Assert.That(card.Kind, Is.EqualTo(LevelCardKind.Difficulty));
+            Assert.That(card.IsMurky, Is.False, "la tinaja no es Aguas turbias");
+            PlayModeHelpers.Step(boot, 600);
+
+            LevelCardView v = view.LevelCard;
+            Assert.That(v.Visible, Is.True);
+            Assert.That(v.IconCount, Is.EqualTo(1), "un solo icono para la pareja");
+            Assert.That(v.IconAt(0), Is.SameAs(view.CardArt.MechanicIcon(MechanicType.Tinaja)));
+            Assert.That(v.IconAt(0)!.name, Is.EqualTo("mech_icon_tinaja"));
+            Assert.That(v.MurkyShown, Is.False, "sin chip «?»");
+            Assert.That(view.LastCardProbe, Does.Contain("\"kind\":\"difficulty\"").And.Contain("\"murky\":false").And.Contain("\"icons\":[\"tinaja\""));
+            Assert.That(view.LastCardProbe, Does.Not.Contain("\"chica\"").And.Not.Contain("\"alta\""), "sin iconos de capacidades en la sonda");
+        }
+
         // ---------------------------------------------------------------------------------------------------------------------
 
         /// <summary>
@@ -610,6 +641,15 @@ namespace AF.Tests.PlayMode
             string debut = json.Replace("\"relief\": []", "\"relief\": [], \"intro_mechanic\": \"tinaja\"");
             Assert.That(debut, Is.Not.EqualTo(json), "el paquete de prueba cambió de forma");
             return debut;
+        }
+
+        /// <summary>El 323 de muestra con la etiqueta Difícil (<c>hard</c>) y sin estreno: la tarjeta con la fila de iconos.</summary>
+        internal static string HardPack()
+        {
+            string json = TinajaVisualTests.Pack323(Cucharon, Tinaja);
+            string hard = json.Replace("\"difficulty\": { \"par\": 16 }", "\"difficulty\": { \"label\": \"hard\", \"par\": 16 }");
+            Assert.That(hard, Is.Not.EqualTo(json), "el paquete de prueba cambió de forma");
+            return hard;
         }
 
         /// <summary>El paquete <paramref name="json"/> del 323 movido al nivel <paramref name="level"/>.</summary>

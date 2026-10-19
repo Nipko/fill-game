@@ -27,7 +27,8 @@ namespace AF.Tests.PlayMode
     /// <c>tj4_04_reveal_done_l323</c> (las dos capas reveladas como bandas, la ranura ya sin ocultas),
     /// <c>tj4_05_morpho_pour_l323</c> (Morpho en el S0 de b.2: la mariposa y los anillos),
     /// <c>tj4_06_tip_l324</c> (el consejo del 324 en el aviso) y <c>tj4_07_morpho_no_safe_l323</c> (la tarjeta «No veo un vertido
-    /// seguro: la luciérnaga ilumina la tinaja», con Deshacer y Volver a la orilla), cada una con su zoom donde hace falta.
+    /// seguro: la luciérnaga ilumina la tinaja», con Deshacer y Volver a la orilla), cada una con su zoom donde hace falta, y
+    /// <c>tj4_08_card_hard_l323</c> (la tarjeta de Difícil con un solo icono, la vasija, para la tinaja y su cuia).
     /// Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.TinajaDebutSnapshotTests</c>
     /// sin <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/es-419/</c>.
     /// </summary>
@@ -68,6 +69,23 @@ namespace AF.Tests.PlayMode
             LevelCardView card = boot.View!.LevelCard;
             TestContext.WriteLine("AF_TJ4 tj4_01: tutorial " + card.TutorialLines.ToString(CultureInfo.InvariantCulture) + " líneas a "
                 + card.TutorialBaseSp.ToString("0", CultureInfo.InvariantCulture) + " sp; línea 2 «" + card.ScoopText + "»");
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureHardCard()
+        {
+            // Revisión de TJ4: la tarjeta de Difícil de un nivel con tinaja, con un solo icono (la vasija) para la pareja.
+            string dir = SnapshotKit.Prepare();
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
+            yield return PlayModeHelpers.LoadGameWithPack(TinajaBoostersTests.HardPack(), 323, new MemoryProgressStore(323, 322));
+            GameBootstrap boot = GameBootstrap.Current!;
+            SnapshotKit.Attach(boot);
+            PlayModeHelpers.TakeClock(boot);
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelCard));
+            PlayModeHelpers.Step(boot, 800);
+            Save(dir, "tj4_08_card_hard_l323", boot);
+            TestContext.WriteLine("AF_TJ4 tj4_08: " + boot.View!.LevelCard.IconCount.ToString(CultureInfo.InvariantCulture) + " icono(s)");
         }
 
         [UnityTest]
