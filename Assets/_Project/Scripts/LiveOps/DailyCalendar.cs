@@ -33,7 +33,7 @@ namespace AF.LiveOps
         /// <summary>Banda del jugador (1-3) según su nivel máximo. Con una sustitución de otra banda [P] sigue siendo la del jugador.</summary>
         public int Band { get; }
 
-        /// <summary>Día del pool (0-729) por el cálculo normal, con <c>live_daily_offset</c>.</summary>
+        /// <summary>Día del pool (0-728) por el cálculo normal, con <c>live_daily_offset</c>.</summary>
         public int Day { get; }
 
         /// <summary>Id del tablero sustituto (<c>d{b}_n{nnnn}</c>, ya comprobado en el pool), o null si se sirve el cálculo normal.</summary>
@@ -97,7 +97,7 @@ namespace AF.LiveOps
     /// Calendario del Reto del río (03 §16; 06 §4.1; nota <c>docs/dev/reto-del-rio.md</c> §5-§6): fecha local → día del pool,
     /// nivel máximo → banda, desbloqueo y sustituciones <c>daily_overrides</c> (R-Q6). Sin motor y sin reloj del sistema: la
     /// fecha llega como parámetro o de <see cref="IClock"/> (<see cref="ClockExtensions.LocalDate"/>).
-    /// <code>reto(fecha, tramo) = pool[tramo][(días_desde(2026-01-01) + live_daily_offset) mod 730]</code>
+    /// <code>reto(fecha, tramo) = pool[tramo][(días_desde(2026-01-01) + live_daily_offset) mod 729]</code> (R-Q2b: 729 = 81 × 9 días)
     /// </summary>
     public static class DailyCalendar
     {
@@ -117,7 +117,7 @@ namespace AF.LiveOps
         }
 
         /// <summary>
-        /// Día del pool (0-729): <c>(DaysSinceEpoch + offset) mod 730</c> con módulo positivo, también con fechas anteriores a
+        /// Día del pool (0-728): <c>(DaysSinceEpoch + offset) mod 729</c> con módulo positivo, también con fechas anteriores a
         /// 2026-01-01 y con <paramref name="offset"/> negativo (<c>live_daily_offset</c>).
         /// </summary>
         public static int PoolDay(DateTime localDate, int offset)

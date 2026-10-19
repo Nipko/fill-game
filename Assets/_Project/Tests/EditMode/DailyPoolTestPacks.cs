@@ -44,7 +44,7 @@ namespace AF.Tests.EditMode
                 + "\"risk_pairs\":0,\"intro_mechanic\":null,\"skippable\":true,\"hint_supported\":true,\"relief\":[]" + extra + "}";
         }
 
-        /// <summary>Los 730 tableros de cada banda de <paramref name="bands"/>, en orden de banda y día.</summary>
+        /// <summary>Los 729 tableros (DailyPool.Days) de cada banda de <paramref name="bands"/>, en orden de banda y día.</summary>
         public static List<string> Boards(params int[] bands)
         {
             var boards = new List<string>(bands.Length * DailyPool.Days);

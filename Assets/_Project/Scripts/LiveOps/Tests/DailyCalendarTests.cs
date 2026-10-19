@@ -14,17 +14,20 @@ namespace AF.LiveOps.Tests
     {
         // ---- Día del pool (nota §6, tabla) ----
 
+        // R-Q2b: 729 días (81 × 9). 2027-12-31 está 729 días después del 2026-01-01, así que vuelve al día 0.
         [TestCase(2026, 1, 1, 0, 0)]
         [TestCase(2026, 10, 19, 0, 291)]
-        [TestCase(2027, 12, 31, 0, 729)]
-        [TestCase(2028, 1, 1, 0, 0)]
-        [TestCase(2025, 12, 31, 0, 729)]
-        [TestCase(2026, 1, 1, -1, 729)]
+        [TestCase(2027, 12, 30, 0, 728)]
+        [TestCase(2027, 12, 31, 0, 0)]
+        [TestCase(2028, 1, 1, 0, 1)]
+        [TestCase(2025, 12, 31, 0, 728)]
+        [TestCase(2026, 1, 1, -1, 728)]
         [TestCase(2026, 1, 2, 1, 2)]
-        [TestCase(2026, 1, 1, 730, 0)]
-        [TestCase(2026, 1, 1, -731, 729)]
-        [TestCase(2024, 1, 1, 0, 729)]
-        public void PoolDay_IsAPositiveModuloOf730(int year, int month, int day, int offset, int expected)
+        [TestCase(2026, 1, 1, 729, 0)]
+        [TestCase(2026, 1, 1, 730, 1)]
+        [TestCase(2026, 1, 1, -730, 728)]
+        [TestCase(2024, 1, 1, 0, 727)]
+        public void PoolDay_IsAPositiveModuloOf729(int year, int month, int day, int offset, int expected)
         {
             Assert.That(DailyCalendar.PoolDay(new DateTime(year, month, day), offset), Is.EqualTo(expected));
         }
@@ -33,7 +36,7 @@ namespace AF.LiveOps.Tests
         public void DaysSinceEpoch_IgnoresTheTime_AndIsNegativeBefore2026()
         {
             Assert.That(DailyCalendar.Epoch, Is.EqualTo(new DateTime(2026, 1, 1)));
-            Assert.That(DailyCalendar.PoolDays, Is.EqualTo(730));
+            Assert.That(DailyCalendar.PoolDays, Is.EqualTo(729));
             Assert.That(DailyCalendar.DaysSinceEpoch(new DateTime(2026, 10, 19, 23, 59, 59)), Is.EqualTo(291));
             Assert.That(DailyCalendar.DaysSinceEpoch(new DateTime(2025, 12, 31)), Is.EqualTo(-1));
         }
@@ -44,8 +47,8 @@ namespace AF.LiveOps.Tests
             DateTime date = new DateTime(9999, 12, 31);
             int a = DailyCalendar.PoolDay(date, int.MaxValue);
             int b = DailyCalendar.PoolDay(DateTime.MinValue, int.MinValue);
-            Assert.That(a, Is.InRange(0, 729));
-            Assert.That(b, Is.InRange(0, 729));
+            Assert.That(a, Is.InRange(0, 728));
+            Assert.That(b, Is.InRange(0, 728));
         }
 
         // ---- Bandas (03 §16; [41, 201]) ----
@@ -116,7 +119,7 @@ namespace AF.LiveOps.Tests
 
             DailySlot slot = DailyCalendar.Resolve(new DateTime(2026, 10, 19), 300, config, DailyTestPool.Full);
 
-            Assert.That(slot, Is.EqualTo(new DailySlot(3, 729, null)));
+            Assert.That(slot, Is.EqualTo(new DailySlot(3, 728, null)));
         }
 
         [Test]
