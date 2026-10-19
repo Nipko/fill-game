@@ -5,6 +5,7 @@ using System.Text;
 using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Mechanics;
+using AF.Core.Rules;
 using AF.Core.Session;
 using AF.GameFlow;
 using AF.Levels;
@@ -76,6 +77,21 @@ namespace AF.UI
     /// la ranura pasa a «+3»). Sonda <c>AF_STATE tutorial</c> con el nivel, la clave, la duración, el sitio (<c>band</c>,
     /// <c>dock</c> o <c>toast</c>), si es el tooltip de Marea (<c>undo</c>) o la presentación de Morpho (<c>hint</c>) y si la cola
     /// señala su botón, a ≤ <see cref="TutorialPointToleranceDp"/> dp de su eje (<c>over_undo</c> y <c>over_hint</c>).</para>
+    /// <para><b>Dedo guía</b> (tarea DC6; D-028, pregunta 61 (a) «con P5»; 02 §13, filas 1 y 2; 06 §2.2; 02 §4, D-002: ayuda
+    /// explícita que solo señala el vertido de la lección): en el 1 y el 2 (<see cref="TutorialInstruction.FingerFor"/>), solo
+    /// en el primer intento (ni tras Volver a la orilla ni al reanudar, que va sin intro) [P], el <see cref="TutorialFinger"/> va
+    /// del origen al destino del vertido de la lección, en bucle y sin capturar toques. Sale tras la intro, cuando la tropa ya se
+    /// fue, sin el rótulo del intento y con la vista quieta, como la instrucción de TiTino, que es la tarjeta de prioridad 1 del
+    /// nivel (02 l. 280: dedo guía → «Fruta nueva» → miquito): no añade otra tarjeta. El vertido lo elige
+    /// <see cref="TutorialFinger.TryChoose"/> con el solver sobre el tablero del momento (el pack no guarda la solución): en el
+    /// 1, el primero de la solución; en el 2, el vertido parcial de la lección (una racha de 3 sobre un hueco de 2) en cuanto es
+    /// legal, que en su tablero inicial, lleno, no lo es: sale tras el primer vertido que lo deja posible. Se va al hacer ese
+    /// vertido; si el jugador hace otro, se va y no vuelve en ese intento [P] (en el 1, también si vierte antes de que salga:
+    /// ya pasaron los dos primeros toques). Un modal del embudo lo oculta hasta que se vuelve a jugar; otro intento, la victoria u
+    /// otro nivel lo retiran. Con Reducir movimiento, mano fija sobre el origen y flecha al destino. El 12 no lleva dedo (D-028,
+    /// 61 a): la presentación de TiTino con la cola sobre «Pista» hace de guía. Sonda <c>AF_STATE tutorial_finger</c> (nivel,
+    /// <c>visible</c>, <c>from</c>, <c>to</c>, <c>amount</c>, <c>lesson</c>, <c>reduce</c> y <c>reason</c>) en cada cambio, y
+    /// <c>AF_LAYOUT level</c> otra vez al salir, con el rectángulo <c>tutorial_finger</c> de la mano.</para>
     /// </remarks>
     public sealed partial class GameScreen : ILevelCardListener
     {
@@ -273,6 +289,7 @@ namespace AF.UI
             }
 
             TickTutorialAfterPour(); // el tooltip de Marea del 3, tras el primer vertido que no acerca (TU1a)
+            TickTutorialFinger(dtMs); // el dedo guía del 1 y el 2 (DC6)
 
             LevelFlow? flow = _flow;
             bool inCard = flow != null && flow.HasLevel && flow.Phase == FlowPhase.LevelCard;
@@ -321,6 +338,7 @@ namespace AF.UI
             _cardLayoutSent = false;
             _tutorialAfterPour = null; // el tooltip de Marea que esperaba un vertido era del nivel anterior (TU1a)
             _undoTutorialDue = false;
+            EndTutorialFinger(FingerState.Off, null); // las vistas son nuevas: nada del dedo del nivel anterior (DC6)
             _levelCard.HideNow();
             BannerLevelLoaded();
         }
@@ -336,6 +354,12 @@ namespace AF.UI
             if (_cardsBuilt)
             {
                 BannerLayoutIds(ids, rects);
+            }
+
+            if (_finger != null && _finger.Shown)
+            {
+                ids.Add("tutorial_finger"); // la mano del dedo guía del 1 y el 2 (DC6), donde está al emitir
+                rects.Add(_finger.Hand.rectTransform);
             }
         }
 
@@ -585,6 +609,7 @@ namespace AF.UI
         // y solo hasta que salga una vez en esta sesión de juego.
         private void MaybeShowTutorial(LevelFlow flow)
         {
+            ArmTutorialFinger(flow); // el dedo guía del 1 y el 2 (DC6), aparte de la tarjeta de TiTino
             _tutorialAfterPour = null;
             _undoTutorialDue = false;
             if (!flow.HasLevel || !(TutorialSlothOverride ?? true))
@@ -867,6 +892,244 @@ namespace AF.UI
             sb.Append(",\"over_hint\":").Append(over && _tutorialTarget == TutorialTarget.Hint ? "true" : "false");
             _lastTutorialProbe = sb.ToString();
             _probe.Event("tutorial", _lastTutorialProbe);
+        }
+
+        // ------------------------------------------------------------------ Dedo guía del tutorial (DC6)
+
+        // El dedo guía del 1 y el 2 (null hasta el primero), su estado en el intento y el vertido que señala.
+        private TutorialFinger? _finger;
+        private FingerState _fingerState;
+        private FingerLesson _fingerLesson;
+        private Pour _fingerPour;
+
+        // Vigilancia del intento: los vertidos aplicados y el tablero con los que se miró por última vez, y el tablero para el
+        // que ya se buscó el vertido (el solver, solo al cambiar el tablero).
+        private int _fingerWatchPours;
+        private BoardState? _fingerWatchBoard;
+        private BoardState? _fingerChosenFor;
+        private bool _fingerHasChoice;
+        private AStarSolver? _fingerSolver;
+        private string? _lastFingerProbe;
+        private int _fingerShown;
+
+        // Del dedo en el intento: apagado (sin dedo o retirado), esperando su momento, a la vista (o suspendido), hecho (el
+        // jugador hizo el vertido) o cancelado (hizo otro: no vuelve en ese intento [P]).
+        private enum FingerState
+        {
+            Off = 0,
+            Armed = 1,
+            Showing = 2,
+            Done = 3,
+            Cancelled = 4,
+        }
+
+        /// <summary>
+        /// Solo tests: enciende o apaga el dedo guía del 1 y el 2 (null = encendido, como en el juego). Los tests PlayMode que no
+        /// tratan de él lo apagan (<c>PlayModeHelpers</c>), para que sus niveles 1 y 2 y sus capturas sigan como antes de DC6; los
+        /// que lo prueban (<c>TutorialFingerTests</c>) lo encienden y lo vuelven a null en su TearDown.
+        /// </summary>
+        internal static bool? TutorialFingerOverride { get; set; }
+
+        /// <summary>El dedo guía (tests y capturas; null si aún no salió ninguno).</summary>
+        internal TutorialFinger? TutorialFingerView => _finger;
+
+        /// <summary>El dedo guía se ve ahora (tests).</summary>
+        internal bool TutorialFingerVisible => _finger != null && _finger.Shown && _fingerState == FingerState.Showing;
+
+        /// <summary>El dedo guía espera su momento en este intento (tras la intro, la tropa y, en el 2, la lección legal; tests).</summary>
+        internal bool TutorialFingerArmed => _fingerState == FingerState.Armed;
+
+        /// <summary>El jugador hizo el vertido del dedo guía en este intento (tests).</summary>
+        internal bool TutorialFingerFollowed => _fingerState == FingerState.Done;
+
+        /// <summary>El dedo guía se fue por otro vertido y no vuelve en este intento (tests).</summary>
+        internal bool TutorialFingerCancelled => _fingerState == FingerState.Cancelled;
+
+        /// <summary>El vertido que señala o señaló el dedo guía en este intento (tests).</summary>
+        internal Pour TutorialFingerPour => _fingerPour;
+
+        /// <summary>Veces que salió el dedo guía desde que se creó la pantalla (tests).</summary>
+        internal int TutorialFingerShownCount => _fingerShown;
+
+        /// <summary>Campos de la última sonda <c>AF_STATE tutorial_finger</c> (null si no salió ninguna o sin sonda; tests).</summary>
+        internal string? LastTutorialFingerProbe => _lastFingerProbe;
+
+        // Al habilitarse el toque tras la intro (MaybeShowTutorial): en el 1 y el 2, solo en el primer intento [P], el dedo queda
+        // esperando su momento (TickTutorialFinger). Al reanudar no pasa por aquí (sin intro).
+        private void ArmTutorialFinger(LevelFlow flow)
+        {
+            EndTutorialFinger(FingerState.Off, null);
+            if (!flow.HasLevel || !(TutorialFingerOverride ?? true))
+            {
+                return;
+            }
+
+            FingerLesson lesson = TutorialInstruction.FingerFor(flow.LevelNumber);
+            if (lesson == FingerLesson.None || _introRetry)
+            {
+                return; // sin dedo en este nivel, o un reintento: no en los reintentos del mismo nivel [P]
+            }
+
+            LevelSession session = flow.Session;
+            _fingerLesson = lesson;
+            _fingerState = FingerState.Armed;
+            _fingerPour = default;
+            _fingerWatchPours = session.AppliedPours;
+            _fingerWatchBoard = session.Current;
+            _fingerChosenFor = null;
+            _fingerHasChoice = false;
+        }
+
+        // Cada fotograma (CardsTick): sigue el intento y enseña, mueve, suspende o retira el dedo. Sin asignaciones salvo al
+        // buscar el vertido (el solver, solo cuando cambia el tablero mientras espera) y en las sondas (solo en desarrollo).
+        private void TickTutorialFinger(float dtMs)
+        {
+            if (_fingerState != FingerState.Armed && _fingerState != FingerState.Showing)
+            {
+                return;
+            }
+
+            LevelFlow? flow = _flow;
+            if (flow == null || !flow.HasLevel)
+            {
+                EndTutorialFinger(FingerState.Off, null);
+                return;
+            }
+
+            FlowPhase phase = flow.Phase;
+            if (phase == FlowPhase.Intro || phase == FlowPhase.LevelCard || phase == FlowPhase.Loading)
+            {
+                EndTutorialFinger(FingerState.Off, "attempt"); // otro intento (Volver a la orilla): no vuelve [P]
+                return;
+            }
+
+            if (phase == FlowPhase.Celebration || phase == FlowPhase.VictoryScreen || phase == FlowPhase.AdGate)
+            {
+                EndTutorialFinger(FingerState.Off, "level_end");
+                return;
+            }
+
+            LevelSession session = flow.Session;
+            int pours = session.AppliedPours;
+            BoardState current = session.Current;
+            if (pours != _fingerWatchPours || !ReferenceEquals(current, _fingerWatchBoard))
+            {
+                bool onePour = pours == _fingerWatchPours + 1;
+                Pour last = onePour ? session.GetAppliedPour(pours - 1) : default;
+                if (_fingerState == FingerState.Showing)
+                {
+                    bool followed = onePour && last.Source == _fingerPour.Source && last.Target == _fingerPour.Target;
+                    EndTutorialFinger(followed ? FingerState.Done : FingerState.Cancelled, followed ? "followed" : "other_pour");
+                    return;
+                }
+
+                if (_fingerLesson == FingerLesson.FirstPour && pours > _fingerWatchPours)
+                {
+                    // En el 1 el dedo enseña los dos primeros toques: si ya vertió antes de que saliera, sobra [P].
+                    EndTutorialFinger(FingerState.Cancelled, "other_pour");
+                    return;
+                }
+
+                if (onePour && _fingerWatchBoard != null
+                    && TutorialInstruction.IsPartialRunLesson(_fingerWatchBoard, last.Source, last.Target, session.PourMode))
+                {
+                    EndTutorialFinger(FingerState.Done, "self"); // hizo el parcial de la lección sin el dedo
+                    return;
+                }
+
+                _fingerWatchPours = pours;
+                _fingerWatchBoard = current;
+            }
+
+            bool held = phase != FlowPhase.Playing || flow.IsResolving || session.Status != LevelStatus.Playing;
+            if (_fingerState == FingerState.Showing)
+            {
+                TutorialFinger finger = _finger!;
+                bool wasShown = finger.Shown;
+                finger.Suspend(held, _views);
+                finger.Tick(dtMs, _views);
+                if (wasShown != finger.Shown)
+                {
+                    EmitFingerProbe(finger.Shown, finger.Shown ? "resume" : "held");
+                }
+
+                return;
+            }
+
+            // Esperando: tras la intro, con la tropa ya ida, sin el rótulo del intento y con la vista quieta (como la instrucción).
+            if (held || _intro.TroopVisible || _banner.Visible || !IsViewIdle)
+            {
+                return;
+            }
+
+            if (!ReferenceEquals(_fingerChosenFor, current))
+            {
+                _fingerChosenFor = current;
+                _fingerSolver ??= new AStarSolver();
+                _fingerHasChoice = TutorialFinger.TryChoose(_fingerLesson, current, session.PourMode, session.FutileRuleEnabled,
+                    _fingerSolver, out _fingerPour);
+            }
+
+            if (!_fingerHasChoice)
+            {
+                return; // en el 2, la lección aún no es legal: espera al vertido que la deja posible
+            }
+
+            _finger ??= new TutorialFinger(_mechanicFrontLayer, _art);
+            _finger.Show(_fingerPour.Source, _fingerPour.Target, _views, flow.ReduceMotion);
+            if (!_finger.Active)
+            {
+                EndTutorialFinger(FingerState.Off, null);
+                return;
+            }
+
+            _fingerState = FingerState.Showing;
+            _fingerShown++;
+            EmitFingerProbe(true, "show");
+            if (DevProbe.Enabled)
+            {
+                EmitLevelLayout(); // AF_LAYOUT level otra vez, con tutorial_finger
+            }
+        }
+
+        // Retira el dedo y deja el estado del intento en state; con reason, la sonda (solo si estaba a la vista o esperando).
+        private void EndTutorialFinger(FingerState state, string? reason)
+        {
+            bool wasShown = _finger != null && _finger.Shown && _fingerState == FingerState.Showing;
+            bool wasLive = _fingerState == FingerState.Armed || _fingerState == FingerState.Showing;
+            _finger?.Hide();
+            _fingerState = state;
+            _fingerChosenFor = null;
+            _fingerHasChoice = false;
+            if (reason != null && wasLive && (wasShown || state == FingerState.Done || state == FingerState.Cancelled))
+            {
+                EmitFingerProbe(false, reason);
+            }
+        }
+
+        // AF_STATE tutorial_finger: nivel, si se ve, el vertido (origen, destino y dosis), la lección (first o partial), Reducir
+        // movimiento y el motivo (show, held, resume, followed, self, other_pour, attempt o level_end). Solo con la sonda y en
+        // los cambios, nunca por fotograma.
+        private void EmitFingerProbe(bool visible, string reason)
+        {
+            if (!DevProbe.Enabled)
+            {
+                return;
+            }
+
+            CultureInfo inv = CultureInfo.InvariantCulture;
+            bool hasPour = _fingerPour.Amount > 0;
+            var sb = new StringBuilder(160);
+            sb.Append("\"level\":").Append((_flow?.LevelNumber ?? 0).ToString(inv));
+            sb.Append(",\"visible\":").Append(visible ? "true" : "false");
+            sb.Append(",\"from\":").Append((hasPour ? _fingerPour.Source : -1).ToString(inv));
+            sb.Append(",\"to\":").Append((hasPour ? _fingerPour.Target : -1).ToString(inv));
+            sb.Append(",\"amount\":").Append(_fingerPour.Amount.ToString(inv));
+            AppendJsonString(sb, "lesson", _fingerLesson == FingerLesson.PartialRun ? "partial" : "first");
+            sb.Append(",\"reduce\":").Append(_finger != null && _finger.ReduceMotion ? "true" : "false");
+            AppendJsonString(sb, "reason", reason);
+            _lastFingerProbe = sb.ToString();
+            _probe.Event("tutorial_finger", _lastFingerProbe);
         }
     }
 }

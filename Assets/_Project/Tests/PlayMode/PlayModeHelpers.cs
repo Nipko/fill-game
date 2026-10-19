@@ -94,6 +94,7 @@ namespace AF.Tests.PlayMode
             NoFruitNewUnlessSet();
             NoSlothRestartNoticeUnlessSet();
             NoTutorialSlothUnlessSet();
+            NoTutorialFingerUnlessSet();
             NoL10SequenceUnlessSet();
             NoContentEndMapUnlessSet();
             NoIdleHintUnlessSet();
@@ -150,6 +151,19 @@ namespace AF.Tests.PlayMode
             if (GameScreen.TutorialSlothOverride == null)
             {
                 GameScreen.TutorialSlothOverride = false;
+            }
+        }
+
+        /// <summary>
+        /// Apaga el dedo guía del 1 y el 2 (DC6) si el test no lo fijó (<see cref="GameScreen.TutorialFingerOverride"/> = null):
+        /// los tests que no tratan de él juegan el 1 y el 2 y hacen sus capturas como antes de que existiera. Los que lo prueban
+        /// (<c>TutorialFingerTests</c>) lo encienden y lo vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoTutorialFingerUnlessSet()
+        {
+            if (GameScreen.TutorialFingerOverride == null)
+            {
+                GameScreen.TutorialFingerOverride = false;
             }
         }
 
