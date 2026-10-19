@@ -4,10 +4,10 @@
 //     desde el 301, y en hitos, desde el 320 (02 §9.2 regla 4; 03 §12, fila p20; d.5.1 de la propuesta); sin la clave
 //     mechanics_per_level, 2 siempre (campaign_v1);
 //   - QA-HITO-14 (CycleChecks.Hito14Problems): el hito de K = 13 con el vacío repartido en cuias a medias (Brote de dos hojas y
-//     Matapi con dosis, como el 580; con Barro, como el 600) pasa, igual que con una cuia vacía literal; un reto con K = 12 + 1
-//     vacío + la cueva de la Piraña (14 cuias) no es de esta comprobación; K = 13 fuera de su hito, con capacidades, con la
-//     Piraña o con otra holgura, falla; el Brote de dos hojas del 580 y del 600 cumple QA-VAR-B2 (VariantChecks.B2Problems) y
-//     con 3 dosis no;
+//     Matapi con dosis, como el 580 antes de D-027; con Barro, como el 600) pasa, igual que con una cuia vacía literal; un
+//     reto con K = 12 + 1 vacío + la cueva de la Piraña (14 cuias) no es de esta comprobación; K = 13 fuera de su hito, con
+//     capacidades, con la Piraña o con otra holgura, falla; el Brote de dos hojas del 580 y del 600 cumple QA-VAR-B2
+//     (VariantChecks.B2Problems) y con 3 dosis no;
 //   - las casas de la Flor (QA-VAR-FLOR; VariantChecks.FlorProblems y CanSealOutside, D-024): una Hoja atada, un Matapi con dosis
 //     o la Lluvia solo son casa de su fruta, y la Liana, otra Flor o la Tinaja, de ninguna;
 //   - la Tinaja (decisión del dueño del 2026-10-18, D-027): el tope de cuias con la pareja es 12 en el nivel (QA-TINAJA-CUIAS)

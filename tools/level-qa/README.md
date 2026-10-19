@@ -42,7 +42,7 @@ resultado que antes.
   `raised_milestone_from_level` (si falta, desde `raised_from_level`). Sin la clave, el tope es `max` (2) en todos los niveles:
   es el caso de `campaign_v1.json` (11-200), que no la lleva y no cambia. La llevan `sample_variants.json` y
   `sample_tinaja.json`, y la llevará `campaign_v2.json` (P4). Los hitos de K = 13 (QA-HITO-14) salen del `k_plan` (el hito con
-  K = 13, desde el 561 en 03 §11). MAX-2 de `--validate-spec` del generador sigue con «3 desde el 300» en el código hasta P4.
+  K = 13, desde el 561 en 03 §11; en `campaign_v2.json`, el 620 y el 680, D-027). MAX-2 de `--validate-spec` del generador sigue con «3 desde el 300» en el código hasta P4.
 - **Códigos del calendario de las variantes.** `MechanicChecks.Codes` lee cada `attrs[i]` con `MechanicCodes.CodeOf`, el mismo
   código que el generador: la Liana de cuenta es `Ln` y no `Li`, el Brote de dos hojas `B2` y no `Br`, y la Hoja atada `Ha` y
   la Flor `Fl` tienen su código (antes salían como `?`). Así QA-MECH-SPEC, QA-MECH-CELL, QA-MECH-DEBUT, QA-GAP-120, QA-MECH-COUNT
@@ -116,7 +116,7 @@ prueba y sobre las especificaciones de muestra:
   → 3 y sin plan → 2; con `campaign_v1.json` (sin `mechanics_per_level`), 2 también en retos e hitos; sin
   `raised_milestone_from_level`, los hitos suben con los retos; `raised_milestone_from_level` sin `raised_from_level` o
   `raised_max` < `max` no se cargan. Si `MaxMechanicsAt` devolviera siempre `max`, o el rol dejara de contar, falla aquí.
-- **QA-HITO-14** (`CycleChecks.Hito14Problems`): pasan el hito de K = 13 con 13 cuias llenas y 1 vacía, el del 580 (Brote de
+- **QA-HITO-14** (`CycleChecks.Hito14Problems`): pasan el hito de K = 13 con 13 cuias llenas y 1 vacía, el del 580 de antes de D-027 (Brote de
   dos hojas con 2 dosis y un Matapi con 2, sin cuia vacía: la holgura va en cuias a medias) y el del 600 (con Barro, que no
   cuenta en la holgura), y no son de esta comprobación un reto ni un hito de 401-560 con K = 12 + 1 vacío + la cueva de la
   Piraña (14 cuias); fallan K = 13 en un reto o en un hito con otro K en el `k_plan`, con una Cuia alta, con la Piraña o con
@@ -195,7 +195,7 @@ Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: m
 | QA-WINDOW | `bot_fail` en la ventana del slot: falla en recuperación, comodidad, estreno (< 0,20), remanso y rampa; un reto o el hito fuera de su ventana es aviso (se publica con la etiqueta que mide) | 03 §17 #3; 08 §4.1; c.2 |
 | QA-DEBUT | estrenos con 2 vacíos sin contar la tinaja ni su cuia (también el de una capacidad fuera de la rampa y del hito: la Cuia chica de 3 en el 22) y un ejemplar (la tinaja con su cuia es uno); `intro_mechanic` y `skippable` = false solo en el nivel de intro | 02 §9.2 regla 2; 02 §8; propuesta de la tinaja c.5 |
 | QA-LABEL-ACCURACY | aviso: acierto de etiqueta por ciclo < 60 % | c.7 |
-| QA-HITO-14 | K = 13 solo en un hito (p20) cuyo K del `k_plan` de la especificación es 13 (desde el 561); ese hito lleva 14 cuias de 4 con 13 colores + 1 vacío, sin capacidades, sin la cueva de la Piraña (sería la cuia 15) y sin la Tinaja (con ella, 12 cuias como mucho). El vacío es la holgura de la aritmética del nivel, no una cuia vacía literal [P]: Σ caps − Σ unidades = 4, sin el Barro y con las gotas pendientes de la Lluvia, así que puede ir repartido en cuias a medias (el Brote de dos hojas del 580, el 600 y el 700, d.5.2). Las 14 cuias con K ≤ 12 (K + 1 vacío + la cueva de la Piraña: un reto o un hito de 401-560, o la firma 920 de d.5.7) no son de esta comprobación; más de 14 cuias, QA-STRUCT | 03 §1, §11-§12; d.5.1-d.5.2 [P]; 02 R1 y §5 |
+| QA-HITO-14 | K = 13 solo en un hito (p20) cuyo K del `k_plan` de la especificación es 13 (desde el 561; en `campaign_v2.json`, el 620 y el 680, D-027 punto 3); ese hito lleva 14 cuias de 4 con 13 colores + 1 vacío, sin capacidades, sin la cueva de la Piraña (sería la cuia 15) y sin la Tinaja (con ella, 12 cuias como mucho). El vacío es la holgura de la aritmética del nivel, no una cuia vacía literal [P]: Σ caps − Σ unidades = 4, sin el Barro y con las gotas pendientes de la Lluvia, así que puede ir repartido en cuias a medias (antes de D-027, el Brote de dos hojas de los hitos de K = 13 del 580, el 600 y el 700, d.5.2; con D-027 solo lo hace la relajación del hito del 680 en las etapas 1-2 del generador, y su tablero publicado lleva la cuia vacía). Las 14 cuias con K ≤ 12 no son de esta comprobación: K + 1 vacío + la cueva de la Piraña (un reto o un hito de 401-560, o la firma 920 de d.5.7) y los hitos de K = 12 + 1 vacío + la cuia a medias de su mecánica (el 580, el 600, el 640, el 660 y el 700, D-027 punto 3); más de 14 cuias, QA-STRUCT | 03 §1, §11-§12; d.5.1-d.5.2 [P]; D-027; 02 R1 y §5 |
 | QA-RELIEF-MIN | ≥ 1 variante desde el 31 | 03 §13 |
 | QA-RELIEF-VALID | variantes válidas; con tinaja, también su forma (una, su cuia contigua y en la misma fila, ≤ 13 cuias, T4 y combinaciones): el tope del nivel (12) más la cuia vacía de `plus_empty` (D-027; `Superposition.TinajaReliefMaxCuias`, el mismo del generador) | 03 §13; 02 §9.1 M13; D-027 |
 | QA-RELIEF-MINUS | `minus_color` resoluble con el par entero publicado y sin quitar una fruta de la tinaja | 03 §13; propuesta de la tinaja c.3 punto 4 |

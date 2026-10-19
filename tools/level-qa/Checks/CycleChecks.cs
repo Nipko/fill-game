@@ -238,21 +238,25 @@ internal static class CycleChecks
     /// fila 401-700: «hitos de 14 cuias: K = 13 + 1 vacío desde 561, el primero en el 580, sin capacidades, Piraña ni Tinaja
     /// [P]»; 03 §12; d.5.1 de la propuesta): un nivel con K ≥ 13 es un hito (p20) cuyo K del k_plan es 13, y lleva 14 cuias de 4
     /// con 13 colores y 1 vacío, sin la cueva de la Piraña (sería la cuia 15) ni la Tinaja y su cuia (con ella, 12 cuias como
-    /// mucho, 02 §5). Desde qué nivel lo dice la especificación (k_plan), no el código.
+    /// mucho, 02 §5). Desde qué nivel lo dice la especificación (k_plan), no el código: con D-027 (punto 3), en campaign_v2.json
+    /// solo el 620 y el 680 llevan K = 13.
     /// <para>
     /// El «1 vacío» se cuenta como holgura de la aritmética del nivel, no como una cuia vacía literal [P]: Σ caps − Σ unidades =
     /// 4, sin contar el Barro, que no es un color (02 §9.1 M5), y con las gotas pendientes de la Lluvia (U_agua = dosis + gotas
-    /// = 4). El calendario de 201-700 (03 §12; d.5.2 de la propuesta) pone el Brote de dos hojas en los hitos de K = 13 del 580
-    /// (Ma+B2), el 600 (Ha+B2+Ba) y la firma 700, y el Brote de dos hojas empieza con 1-2 dosis y espacio ≥ 2 (QA-VAR-B2): con
-    /// 52 dosis en 14 cuias de 4, una cuia vacía literal obligaría a empezar con las otras 13 llenas, y ese hito no podría
-    /// publicarse. El generador hace lo mismo: a 14 cuias quita la cuia de holgura del Brote (SlotGenerator: «sin cuia de
-    /// holgura (tope de 14 cuias, 02 R1)») y la holgura del nivel sigue siendo 4. La letra de 03 §1 y §11 («13 llenas + 1
-    /// vacío») queda pendiente de ajustar en el GDD.
+    /// = 4). Antes de D-027, el calendario de 201-700 (03 §12; d.5.2 de la propuesta) ponía el Brote de dos hojas en los hitos
+    /// de K = 13 del 580 (Ma+B2), el 600 (Ha+B2+Ba) y la firma 700, y el Brote de dos hojas empieza con 1-2 dosis y espacio ≥ 2
+    /// (QA-VAR-B2): con 52 dosis en 14 cuias de 4, una cuia vacía literal obligaría a empezar con las otras 13 llenas, y ese
+    /// hito no podría publicarse. El generador hace lo mismo: a 14 cuias quita la cuia de holgura del Brote (SlotGenerator:
+    /// «sin cuia de holgura (tope de 14 cuias, 02 R1)») y la holgura del nivel sigue siendo 4. Con D-027 esos hitos van con
+    /// K = 12 y conservan su cuia vacía, y la holgura repartida se queda para un hito de K = 13 con una mecánica de cuias a
+    /// medias (hoy, solo la relajación del hito del 680 en el generador). La letra de 03 §1 y §11 («13 llenas + 1 vacío»)
+    /// queda pendiente de ajustar en el GDD.
     /// </para>
     /// <para>
-    /// Las 14 cuias por sí solas no hacen un hito: un reto o un hito con K ≤ 12 y la cueva de la Piraña (K + 1 vacío + la
-    /// cueva = 14) es válido (03 §11, fila 401-700: cuias 12-14; el 920 de d.5.7). El tope de 14 cuias generadas es de QA-STRUCT
-    /// (02 R1).
+    /// Las 14 cuias por sí solas no hacen un hito: con K ≤ 12 no son de esta comprobación un reto o un hito con la cueva de la
+    /// Piraña (K + 1 vacío + la cueva = 14; 03 §11, fila 401-700: cuias 12-14; el 920 de d.5.7) ni los hitos de K = 12 + 1
+    /// vacío + la cuia a medias de su mecánica (el 580, el 600, el 640, el 660 y el 700, D-027 punto 3). El tope de 14 cuias
+    /// generadas es de QA-STRUCT (02 R1).
     /// </para>
     /// </summary>
     private static IEnumerable<QaIssue> Hito14(QaLevel lv, LevelPlan plan) =>
