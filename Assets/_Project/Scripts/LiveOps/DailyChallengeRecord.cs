@@ -63,7 +63,7 @@ namespace AF.LiveOps
         }
 
         // Mismos campos que AF.GameFlow.LevelStateSnapshot.Copy (GameFlow no es visible desde aquí);
-        // DailyChallengeRecordTests comprueba por reflexión que no falta ninguno.
+        // DailyChallengeStoreTests.Record_CloneCopiesEveryProperty comprueba por reflexión que no falta ninguno.
         internal static LevelStateData CopyState(LevelStateData state)
         {
             var copy = new LevelStateData
@@ -164,7 +164,9 @@ namespace AF.LiveOps
 
         /// <summary>
         /// <c>offline_claims</c> [P]: cobros pagados sin red desde la última reconciliación. Solo los usa la rama (b) de R-Q12
-        /// (<see cref="DailyReconcileMode.VoidOfflineAfterServerDate"/>); la reconciliación la vacía en las dos ramas.
+        /// (<see cref="DailyReconcileMode.VoidOfflineAfterServerDate"/>); la reconciliación la vacía en las dos ramas. Acotada a los
+        /// cobros de los últimos <see cref="DailyChallengeRules.OfflineClaimsMaxDays"/> días [P]: sin red durante meses no crece
+        /// sin límite (una entrada por día cobrado).
         /// </summary>
         public List<DailyClaimEntry> OfflineClaims { get; } = new List<DailyClaimEntry>();
 
