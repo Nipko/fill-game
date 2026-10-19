@@ -87,12 +87,18 @@ namespace AF.EditorTools
 
         /// <summary>
         /// Símbolos que el código pone en los textos fuera de las tablas (tarea FNT1): el signo de multiplicar, el punto medio de
-        /// los separadores y el espacio duro (U+00A0, el que sustituye a U+202F en las cifras). Van en las cinco fuentes; las
-        /// flechas, solo en Baloo 2 (<see cref="TitleCodeSymbols"/>). ✓ no es texto: es un icono procedural (M3.3).
+        /// los separadores y el espacio duro (U+00A0, el que sustituye a U+202F en las cifras). Van en las cinco fuentes:
+        /// <see cref="Characters(GlyphFamily, FontCoverageReport)"/> los añade siempre, aunque un símbolo nuevo salga de Latin-1.
+        /// ✓ no es texto: es un icono procedural (M3.3).
         /// </summary>
         public const string CodeSymbols = "×· ";
 
-        /// <summary>Flechas que solo pinta Baloo 2: «→» de la Cosecha doble y «↑», «↓» de los rótulos del Mapa (glosario §10).</summary>
+        /// <summary>
+        /// Flechas que solo pinta Baloo 2: «→» de la Cosecha doble y «↑», «↓» de los rótulos del Mapa (glosario §10). No las pone
+        /// el código: salen de <c>strings.csv</c> (<c>double_harvest_delta</c>, <c>map_label_andes</c> y <c>map_label_atlantic</c>,
+        /// las claves de <see cref="FontCoverage.TitleOnlyKeys"/>). Se fijan aquí para que el atlas de Baloo 2 las tenga aunque
+        /// cambien esos textos: <see cref="Characters(GlyphFamily, FontCoverageReport)"/> las añade en <see cref="GlyphFamily.Title"/>.
+        /// </summary>
         public const string TitleCodeSymbols = "→↑↓";
 
         /// <summary>Carpeta de las fuentes de TextMeshPro que entran en el build (dentro de un <c>Resources</c>).</summary>
@@ -260,6 +266,20 @@ namespace AF.EditorTools
                 Append(sb, seen, tables[i]);
             }
 
+            // Los símbolos fijos, al final: si ya los traen Latin-1 o las tablas, el orden (y el atlas) no cambia.
+            for (int i = 0; i < CodeSymbols.Length; i++)
+            {
+                Append(sb, seen, CodeSymbols[i]);
+            }
+
+            if (family == GlyphFamily.Title)
+            {
+                for (int i = 0; i < TitleCodeSymbols.Length; i++)
+                {
+                    Append(sb, seen, TitleCodeSymbols[i]);
+                }
+            }
+
             return sb.ToString();
         }
 
@@ -304,8 +324,14 @@ namespace AF.EditorTools
                 DeleteTempDir();
             }
 
-            int trim = TrimTmpDefaults();
-            return code != 0 ? code : trim;
+            // Solo con los atlas del juego regenerados se cambia TMP Settings y se saca LiberationSans (si no, el build se
+            // quedaría sin la fuente que pinta de reserva y el código de salida ocultaría el error de Generate).
+            if (code != 0)
+            {
+                return code;
+            }
+
+            return TrimTmpDefaults();
         }
 
         /// <summary>

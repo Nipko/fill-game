@@ -13,9 +13,9 @@ namespace AF.Tests.EditMode
     /// Fuentes recortadas sin perder ningún glifo (tarea FNT1; medida de B2: 6,88 MB de fuentes en el build):
     /// <list type="bullet">
     /// <item>cada carácter de <c>strings.csv</c>, <c>facts.csv</c> y <c>glossary.csv</c> (es-419, en y pt-BR), de las cifras, de en-XA
-    /// y de los símbolos que pone el código (<see cref="FontSetup.CodeSymbols"/>; las flechas, solo en Baloo 2) está en el atlas
-    /// estático de cada fuente del juego o en una de sus reservas, tal como las busca TMP al pintar y sin añadir glifos (en el
-    /// build las reservas dinámicas se vacían);</item>
+    /// y de los símbolos fijos de <see cref="FontSetup"/> (<see cref="FontSetup.CodeSymbols"/>, y <see cref="FontSetup.TitleCodeSymbols"/>
+    /// solo en Baloo 2) está en el atlas estático de cada fuente del juego, sin reservas ni glifos añadidos al pintar: un carácter
+    /// que faltara se pintaría con otra tipografía (la fuente por defecto de TMP), y el aspecto cambiaría;</item>
     /// <item>los atlas conservan el muestreo y el margen (el texto se ve igual) y ninguno pasa de 1024 × 1024;</item>
     /// <item>LiberationSans no entra en el build: ningún font asset ni TTF de TMP en una carpeta <c>Resources</c>, y la fuente por
     /// defecto de TMP es Nunito Regular.</item>
@@ -27,7 +27,7 @@ namespace AF.Tests.EditMode
         private const int AtlasPadding = 13;
 
         [Test]
-        public void GameFonts_HaveEveryTableNumberPseudoAndCodeCharacter_InTheAtlasOrAFallback()
+        public void GameFonts_HaveEveryTableNumberPseudoAndCodeCharacter_InTheirOwnAtlas()
         {
             FontCoverageReport report = FontCoverage.Analyze(FontCoverage.ReadProjectTables(), new FontCoverage.TtfGlyphs().Has);
             Assert.That(report.Texts, Is.GreaterThan(150), "celdas con texto en es-419, en y pt-BR");
@@ -43,7 +43,8 @@ namespace AF.Tests.EditMode
                 for (int i = 0; i < chars.Length; i++)
                 {
                     checkedChars++;
-                    if (!asset.HasCharacter(chars[i], true, false))
+                    // Sin buscar en reservas: con searchFallbacks, TMP acaba en TMP_Settings.defaultFontAsset (Nunito Regular).
+                    if (!asset.HasCharacter(chars[i], false, false))
                     {
                         missing.Add(font + ": «" + chars[i] + "» (U+" + ((int)chars[i]).ToString("X4", CultureInfo.InvariantCulture) + ")");
                     }

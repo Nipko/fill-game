@@ -21,6 +21,7 @@ namespace AF.Tests.PlayMode
     /// <list type="bullet">
     /// <item><c>fnt1_01_inicio</c>: el inicio con 1.240 semillas y el 25 por jugar;</item>
     /// <item><c>fnt1_02_ajustes_frutas</c>: Ajustes desplazada hasta «Sobre la Amazonía», con las frutas;</item>
+    /// <item><c>fnt1_02b_ficha_fruta</c>: la ficha del açaí (<see cref="FruitSheet"/>) abierta desde ahí, con su nombre y sus datos;</item>
     /// <item><c>fnt1_03_tarjeta_parada</c>: la tarjeta de Manaos en el Mapa del río (max 58);</item>
     /// <item><c>fnt1_04_victoria_fruta</c>: la victoria del 3 con la línea de fruta («Açaí · 3/20»).</item>
     /// </list>
@@ -96,6 +97,18 @@ namespace AF.Tests.PlayMode
             yield return SnapshotKit.Wait(0.3f);
             Save(dir, "fnt1_02_ajustes_frutas", worst);
             FontGlyphSnapshotTests.Scan("fnt1_02_ajustes_frutas", problems);
+
+            // La ficha del açaí desde Ajustes, con su nombre y sus datos (con el 25 por jugar, la serie está entera).
+            UnityEngine.UI.Button? acai = settings.FruitButton("acai");
+            Assert.That(acai, Is.Not.Null, "el botón del açaí en Sobre la Amazonía");
+            acai!.onClick.Invoke();
+            FruitSheet sheet = boot.FruitSheetView!;
+            Assert.That(sheet.Visible, Is.True, "la ficha del açaí");
+            SnapshotKit.AttachOverlay(sheet.Canvas);
+            sheet.Canvas.planeDistance = 4f; // delante de Ajustes
+            yield return SnapshotKit.Wait(0.3f);
+            Save(dir, "fnt1_02b_ficha_fruta", worst);
+            FontGlyphSnapshotTests.Scan("fnt1_02b_ficha_fruta", problems);
 
             // Tarjeta de la parada de Manaos en el Mapa.
             LaunchOptions.FontScaleOverride = scale;

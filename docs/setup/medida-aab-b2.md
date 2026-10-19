@@ -192,17 +192,21 @@ Lo genera `AF.EditorTools.FontSetup.ApplyAll`, idempotente. No hay YAML a mano.
 ### Ningún glifo perdido: pruebas y capturas
 
 - **`FontTrimTests` (EditMode, nuevo):**
-  - cada carácter de `strings.csv`, `facts.csv` y `glossary.csv` (es-419, en y pt-BR), de las cifras y de en-XA está en el atlas estático de las cinco fuentes o en una de sus reservas, tal como las busca TMP y sin añadir glifos. Lo mismo con los símbolos que pone el código (`FontSetup.CodeSymbols`: ×, · y U+00A0; las flechas → ↑ ↓, solo en Baloo 2);
+  - cada carácter de `strings.csv`, `facts.csv` y `glossary.csv` (es-419, en y pt-BR), de las cifras y de en-XA está en el atlas estático de su propia fuente, en las cinco, sin buscar en reservas (con ellas, TMP acabaría en la fuente por defecto y el carácter se pintaría con otra tipografía) y sin añadir glifos. Lo mismo con los símbolos fijos de `FontSetup`, que `FontSetup.Characters` mete siempre en los atlas: los que pone el código (`CodeSymbols`: ×, · y U+00A0, en las cinco) y las flechas → ↑ ↓ de `strings.csv` (`TitleCodeSymbols`, claves de `FontCoverage.TitleOnlyKeys`; solo en Baloo 2);
   - ✓ no está en ningún atlas: es un icono procedural;
   - los atlas conservan el muestreo y el margen, son estáticos, sin TTF y de ≤ 1024 × 1024, y suman menos píxeles que antes;
   - no queda ningún font asset ni TTF en una carpeta `Resources`, salvo los del juego;
   - `TMP Settings` apunta a Nunito Regular, sin reservas globales.
 - **`AabSizeReportTests`:** cubre la sección «Fuentes por asset».
 - **Capturas antes y después** (`FontTrimSnapshotTests`, nuevo, y `FontGlyphSnapshotTests` de B1, con gráficos):
-  - pantallas: el inicio, Ajustes con «Sobre la Amazonía» y las frutas, la tarjeta de Manaos en el Mapa y la victoria del 3 con la línea de fruta, en es-419 a 360 × 780 dp y al 100 % y en en-XA a 360 × 640 dp y al 130 %, más las hojas de glifos y el inicio y la victoria del 11 de B1;
-  - las 16 pasan el escaneo de B1: ningún carácter fuera del atlas de su fuente y ningún □;
-  - comparadas píxel a píxel, en 14 de las 16 los píxeles distintos son el 0,01-0,1 %, con una diferencia máxima de 3 a 7 niveles de 255 (10 en un solo píxel). Es el muestreo del mismo campo de distancia en otra posición del atlas: a simple vista no se distingue;
-  - las otras dos son las de B1, `b1_02_inicio_l4` y `b1_03_victoria_l11`. Sus diferencias mayores están en la ventanita animada de TiTino (unos 50 px) y en las hojas que caen en la victoria, que esa prueba gana en tiempo real. No hay ninguna en el texto.
+  - pantallas: el inicio, Ajustes con «Sobre la Amazonía» y las frutas, la ficha del açaí abierta desde ahí (`fnt1_02b_ficha_fruta`, `FruitSheet`, con su nombre y sus datos), la tarjeta de Manaos en el Mapa y la victoria del 3 con la línea de fruta, en es-419 a 360 × 780 dp y al 100 % y en en-XA a 360 × 640 dp y al 130 %, más las hojas de glifos y el inicio y la victoria del 11 de B1: 18 capturas;
+  - el antes son las fuentes y `TMP Settings` de `4eece23` (LiberationSans dentro de `Resources`) con el mismo código de las pruebas; el después, las de FNT1. Están en `Logs/snapshots-antes/<locale>/` y `Logs/snapshots-despues/<locale>/`, con los mismos nombres (git los ignora);
+  - las 18 pasan el escaneo de B1 antes y después: ningún carácter fuera del atlas de su fuente y ningún □;
+  - la comparación píxel a píxel, con el SHA-256 de cada PNG, está en `Logs/fnt1-diff.txt`, y las ampliaciones ×8 (antes, después y diferencia ×8) del inicio y de la victoria, en `Logs/fnt1-diff/`:
+    - las 8 de texto de FNT1 (Ajustes, ficha, tarjeta y victoria): 0,015-0,047 % de píxeles distintos, diferencia máxima de 3 a 6 niveles de 255 y ninguno por encima de 16. Es el muestreo del mismo campo de distancia en otra posición del atlas: a simple vista no se distingue;
+    - `fnt1_01_inicio`: 0,038 % y 0,067 %. Los únicos píxeles con más de 16 niveles (77 y 39, hasta 102) están en x 148-168, y 315-356: el brazo animado de TiTino en su ventanita, no el texto;
+    - las hojas de glifos de B1: 0,071-0,096 %, máximo 5-7; `b1_02_inicio_l4`: 0,021 % y 0,027 %, máximo 17 y 11 (un solo píxel por encima de 16);
+    - `b1_03_victoria_l11`: 4,6 % en es-419 (máximo 187) y 0,49 % en en-XA (máximo 7). Son las hojas que caen en la victoria, que esa prueba gana en tiempo real; no hay ninguna en el texto.
 
 ### Pendiente
 
