@@ -30,8 +30,15 @@ namespace AF.Presentation
             Hex(0xA9672E), // 14 agua_negro · Agua del Río Negro
         };
 
-        /// <summary>Agua base negra #4A2C14 (07 §2.1).</summary>
-        public static readonly Color WaterBlack = Hex(0x4A2C14);
+        /// <summary>
+        /// Agua base negra (mundos 3 y 10; 07 §2.1) en ámbar-té translúcido, #562303 [P, hasta que DC1b cambie el HEX canónico
+        /// de 07 §2.1 y de la guía visual] (D-029; guion de la intro §18, Q14-A; tarea DC13): sustituye a #4A2C14, que al 70 %
+        /// sobre la cavidad se leía casi negro. Mismo L* (20,8; ΔL* 29,1 frente al tinte 14, Agua del Río Negro #A9672E) con
+        /// C* 36,4 en lugar de 23,8; compuesta en lineal al <c>IntroAnimation.WaterAlpha</c> (70 %, sin cambiar) sobre la
+        /// cavidad, #492314: ΔL* 31,3 frente al tinte 14 y C* 24,5 (antes 15,4). ΔE00 21,5 frente al Barro y ≥ 36 frente a la
+        /// blanca y la clara. Lo comprueba <c>WaterBlackContrastTests</c>.
+        /// </summary>
+        public static readonly Color WaterBlack = Hex(0x562303);
 
         /// <summary>Agua base blanca #B08A5A (07 §2.1; Estuario).</summary>
         public static readonly Color WaterWhite = Hex(0xB08A5A);
