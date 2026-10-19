@@ -49,7 +49,8 @@ namespace AF.UI
         /// Para los tests: una zona (coordenadas locales del contenido, dp) que la placa del mundo
         /// <see cref="PlateTestObstacleWorld"/> no pisa, como un control, en las dos vistas: ni al colocarla
         /// (<c>PlaceSilhouettes</c>, con su búsqueda en la rejilla de la Cuenca) ni al encajarla en la vista (FX10). Las demás placas
-        /// no la ven. Prueba la placa sin sitio (FX10) y la que no tiene sitio junto a su parada (M5.1c) sin depender de la geometría
+        /// no la ven. Prueba la placa sin sitio (FX10; la que no tiene sitio junto a su parada, M5.1c, la prueba
+        /// <see cref="PlateTestNoNearSpotWorld"/>) sin depender de la geometría
         /// del Mapa (con la de producción, todas caben en los casos medidos). Null en el juego.
         /// </summary>
         internal static Rect? PlateTestObstacle { get; set; }

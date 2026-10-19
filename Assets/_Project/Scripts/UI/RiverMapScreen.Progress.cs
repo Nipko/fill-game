@@ -1044,7 +1044,10 @@ namespace AF.UI
         // cabe, no lo enseña. Límites aceptados [P]: la placa puede quedar algo lejos de su parada (el texto la nombra), pero no en otra
         // región de la Cuenca, y una placa muy ancha puede no caber fuera del lleno sin pisar un control, un país o la canoa: con
         // max 200, la del mundo 7 («Madre de Dios», 215 dp en una Cuenca de 328) tapa las menos líneas del lleno que puede cerca de
-        // su parada (dos). Fuera de la Cuenca (el Mundo, que se arrastra) no se busca lejos.
+        // su parada (dos). La rejilla de FarSpot va a pasos de SilhouetteFarStepDp y puede no ver un sitio fuera del lleno que solo
+        // cabe entre dos de sus puntos: con el respaldo de M5.1c (leastFill) la placa tapa entonces líneas del lleno aunque ese
+        // sitio exista (con max 300, la del mundo 8 sin sitio junto a su parada, caso que solo provoca PlateTestNoNearSpotWorld).
+        // Fuera de la Cuenca (el Mundo, que se arrastra) no se busca lejos.
         private void PlaceSilhouettes(MapSpace space)
         {
             RiverMap map = _map!;
