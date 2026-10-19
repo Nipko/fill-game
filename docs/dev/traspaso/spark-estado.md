@@ -20,7 +20,7 @@ El dueño respondió, literal: «aplica las recomendaciones y pon trabajo en par
 | R-Q15 | (a) `af_daily_challenge.result = fail` **una vez por día**, y solo si ese día termina sin victoria |
 | R-Q16 | (a) Salir de la partida del Reto sin ganar la deja **reanudable el mismo día**; al cambiar de día se descarta (R-Q4) |
 
-## 2026-10-19 · R8 · La partida del Reto en AF.GameFlow: código APROBADO, falta Unity
+## 2026-10-19 · R8 · La partida del Reto en AF.GameFlow: HECHA (Unity en verde tras la revisión de la licencia)
 
 - **Commits:** `49501b4` y `535b92c` (arreglos de la revisión), en `spark/reto-del-rio-r8` (sale de R7b). **Empujada, pero sin fusionar** en `spark/reto-del-rio` hasta que pase Unity.
 - **Archivos nuevos:** `Assets/_Project/Scripts/GameFlow/LevelFlow.Daily.cs` y `Assets/_Project/Tests/EditMode/DailyLevelFlowTests.cs` (18 tests), con sus `.meta`.
@@ -35,7 +35,7 @@ El dueño respondió, literal: «aplica las recomendaciones y pon trabajo en par
 - **Verificación:**
   - autor, antes de que fallara la licencia: compila; EditMode 2.991 (2.987 + 3 omitidos y 1 fallo del test inestable `IntroArtTests`, que pasa al relanzarlo); **PlayMode 1.334 (1.175 + 159), 0 fallos**;
   - tras los arreglos (`535b92c`): `dotnet build -warnaserror` sin avisos y un arnés .NET fuera del repositorio con 18/18;
-  - **pendiente:** `unity-compile` + EditMode (esperado 2.996: 2.993 + 3) + PlayMode, en cuanto vuelva la licencia.
+  - **sobre `535b92c`, tras volver la licencia:** `unity-compile` OK; EditMode **2.996**: 2.992 + 3 omitidos y 1 fallo, el de tiempo de `IntroArtTests.FruitFlight…`, que al relanzarlo con `-Filter AF.Tests.EditMode.IntroArtTests` pasa 9/9; **PlayMode 1.334 (1.175 + 159), 0 fallos**. Fusionada en `spark/reto-del-rio`.
 - **code-reviewer:** primera ronda CAMBIOS NECESARIOS. Los tres bloqueantes:
   - sin cartera, el Reto caía en el embudo de D-008;
   - el comentario sobre la Crecida era falso;
