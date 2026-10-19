@@ -170,6 +170,9 @@ namespace AF.Tests.PlayMode
                 string strings = string.Empty;
                 string facts = string.Empty;
 #endif
+                // Sin las filas .source que genera stops.py (DC9; D-028, pregunta 57 a): solo la de prueba, y el «Otro dato» siguiente,
+                // sin fuente.
+                facts = WithoutSourceRows(facts);
                 string row = factKey + StopCard.SourceSuffix + "," + source + ",,,Prueba de M4.1: fuente corta del dato.,30,aprobado_es,,,,\n";
                 Loc.Configure(LocCatalog.Parse(strings, facts + row), LocLocale.SourceLocale, true);
                 try
@@ -755,6 +758,26 @@ namespace AF.Tests.PlayMode
             {
                 Assert.That(image.sprite, Is.Not.SameAs(seed), where + ": " + image.name + " sin el icono de semillas");
             }
+        }
+
+        // facts.csv sin las filas <clave del dato>.source del Mapa (DC9): una por línea, con la clave al principio. map.myth.source es
+        // un dato, no una fila de fuente: se queda.
+        private static string WithoutSourceRows(string facts)
+        {
+            var kept = new System.Text.StringBuilder(facts.Length);
+            foreach (string line in facts.Split('\n'))
+            {
+                int comma = line.IndexOf(',');
+                string key = comma < 0 ? string.Empty : line.Substring(0, comma);
+                bool sourceRow = key.StartsWith("map.", StringComparison.Ordinal) && key.EndsWith(StopCard.SourceSuffix, StringComparison.Ordinal)
+                    && !string.Equals(key, "map.myth.source", StringComparison.Ordinal);
+                if (!sourceRow && line.Length > 0)
+                {
+                    kept.Append(line).Append('\n');
+                }
+            }
+
+            return kept.ToString();
         }
 
         // Caja de rt en dp del lienzo, con el origen arriba a la izquierda.
