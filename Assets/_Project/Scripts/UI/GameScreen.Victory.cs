@@ -799,8 +799,6 @@ namespace AF.UI
             //    la fila 53;
             //  - con 11-16 cuias, la ola sigue y StopVictoryShown espera a que acabe para llevarse el tablero: TiTino espera con
             //    él, nunca sobre las cuias a la vista (SlothTick), y su rama y su bocadillo llegan después de las filas 0,80 y 1,10.
-            // Con la vista, TiTino cuelga al pie de su caja, cerca de la cinta (SlothVictory.AnchorBottom) [P; DC2].
-            sloth.AnchorBottom = SlothViewOn;
             bool shown;
             bool bubble;
             if (SlothViewOn && CelebrationWaveEndMs(_views.Length) - _stopCelebrationMs > 0f)

@@ -329,9 +329,9 @@ namespace AF.Tests.PlayMode
                 Assert.That(sloth.BubbleShown, Is.True, at);
             }
 
-            // Con la vista, TiTino cuelga al pie de su caja (cerca de la cinta, o encima del héroe si va encima) [P; DC2].
-            Assert.That(sloth.RootY + (SlothVictory.RigDownS * sloth.SizeDp), Is.EqualTo(view.SlothBandBottomDp - SlothVictory.InsetDp).Within(0.6f),
-                at + ": TiTino al pie de su caja");
+            // TiTino cuelga arriba de su caja, como en TI6a (SlothVictory.Place): con la vista, bajo la cabecera o bajo el héroe.
+            Assert.That(sloth.RootY - (SlothVictory.RigUpS * sloth.SizeDp), Is.EqualTo(view.SlothBandTopDp + SlothVictory.InsetDp).Within(0.6f),
+                at + ": TiTino arriba de su caja");
         }
 
         // Héroe y caja con los que se decidió la victoria (GameScreen.SlothDecided*), leídos antes del primer tick.
