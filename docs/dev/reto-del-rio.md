@@ -232,8 +232,7 @@ namespace AF.LiveOps
         public DailyPlayInProgress? InProgress { get; set; }  // R-Q4 [P]
     }
 
-    /// <summary>En el juego, sobre el perfil (enganche E4); en los tests, InMemoryDailyChallengeStore.</summary>
-    /// <summary>Mismo patrón que AF.GameFlow.ILevelStateStore / ProfileLevelStateStore: Save es void y,
+    /// <summary>En el juego, sobre el perfil (enganche E4); en los tests, InMemoryDailyChallengeStore. Mismo patrón que AF.GameFlow.ILevelStateStore / ProfileLevelStateStore: Save es void y,
     /// si la escritura falla, el cambio sigue en memoria (PendingSave) y sale con el siguiente guardado o con Flush.</summary>
     public interface IDailyChallengeStore
     {
