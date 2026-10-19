@@ -4,6 +4,21 @@ Encargo: `docs/dev/traspaso/spark-reto-del-rio.md` (de `origin/integracion-fase1
 
 ---
 
+## 2026-10-19 · Bloque (c) (R6-R7b: lector y lógica del Reto, sin pantalla): listo para integrar
+
+Verificación completa de `spark/reto-del-rio` en `0a1b3ac`:
+
+| Comando | Resultado |
+|---|---|
+| `dotnet build dotnet/AmazonFill.slnx -warnaserror` | código 0 |
+| `dotnet test dotnet/AmazonFill.slnx` | 981 (975 + 6), código 0 |
+| `python tools/validate_schema.py` | 103/103 |
+| `unity-compile.ps1 -Architecture arm64` | OK |
+| `unity-test.ps1 -Mode EditMode … -TimeoutSec 3600` | **2.978 (2.975 + 3 omitidos)**, 0 fallos |
+| `unity-test.ps1 -Mode PlayMode … -TimeoutSec 3600` | **1.334 (1.175 + 159 omitidos)**, 0 fallos |
+
+En total, 46 min. El bloque solo añade archivos nuevos: AF.LiveOps y sus tests, `DailyPool*` en AF.Levels y `IServerDate`, `FakeServerDate` y `ClockSecurityConfig` en AF.Platform. Ningún asmdef existente cambia todavía; `AF.UI.asmdef` += `AF.LiveOps` llegará con R9.
+
 ## 2026-10-19 · R7b · Premio, anti-reloj y racha: HECHA
 
 - **Commits** (en `spark/reto-del-rio-r7b`, fusionados con `--no-ff` en `spark/reto-del-rio` como `f0fb4c8`):
