@@ -555,8 +555,9 @@ namespace AF.UI
 
         /// <summary>
         /// Revelar · Luciérnaga de la bandeja (04 §2.5; tarea T14), en un lote de guardado: con stock, el modo de selección
-        /// pagando con él; sin stock y con <c>reveal_seed_price</c> semillas (120), pagando con ellas; sin saldo y con video
-        /// (<c>rv_reveal</c>), el anuncio (<see cref="PressRevealVideo"/>); sin nada, el aviso «Te faltan {n} semillas» [P], sin
+        /// pagando con él; sin stock y con video (<c>rv_reveal</c>: fill, tope y espera), el anuncio
+        /// (<see cref="PressRevealVideo"/>), aunque haya saldo (D-028, GDD §6.3 pregunta 23 a: video primero, como Marea); sin
+        /// video y con <c>reveal_seed_price</c> semillas (120), pagando con ellas; sin nada, el aviso «Te faltan {n} semillas» [P], sin
         /// cobrar (el precio en rojo y «Te faltan {n}» ya se ven en la ranura, como en la Cuia extra). Abrir la selección no cobra:
         /// el cobro llega al tocar la cuia, después de aplicar y guardar (T10; 04 §2.5 d). Con la selección abierta, otro toque en
         /// el botón la cancela sin coste [P].
@@ -590,16 +591,17 @@ namespace AF.UI
                     return flow.BeginRevealSelection(RevealPayment.Stock);
                 }
 
+                // D-028 (GDD §6.3, pregunta 23 a): sin stock, primero el video, como Marea; las semillas solo sin video.
+                if (PressRevealVideo())
+                {
+                    return true;
+                }
+
                 int price = flow.RevealPrice;
                 int missing = flow.Wallet?.Missing(price) ?? price;
                 if (missing == 0)
                 {
                     return flow.BeginRevealSelection(RevealPayment.Seeds);
-                }
-
-                if (PressRevealVideo())
-                {
-                    return true;
                 }
 
                 _screen?.ShowRevealMissing(missing);

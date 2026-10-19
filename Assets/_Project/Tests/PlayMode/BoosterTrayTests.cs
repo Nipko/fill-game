@@ -625,7 +625,9 @@ namespace AF.Tests.PlayMode
             // oculta, R5) y la Luciérnaga, pagada con semillas, la revela: la cuia sella y el nivel queda ganado (R12) mientras la
             // luciérnaga vuela. La cara de Revelar ya no está pulsada (la selección se cerró antes de la victoria) y la ranura,
             // sin ocultas, está gris. En el primer fotograma de la celebración, la bandeja se apaga y la ranura de Revelar se va
-            // (el revelado termina en el acto fuera de PLAYING).
+            // (el revelado termina en el acto fuera de PLAYING). Sin video (no_fill): con él, Revelar lo abriría antes de cobrar
+            // las semillas (D-028).
+            LaunchOptions.AdFillOverride = FakeAdFill.NoFill;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
             yield return PlayModeHelpers.LoadGameWithPack(RevealThatWinsPack(), 13, new MemoryProgressStore(13, 12));
             GameBootstrap boot = GameBootstrap.Current!;

@@ -782,8 +782,9 @@ namespace AF.UI
 
         /// <summary>
         /// Insignia y habilitado de Revelar (04 §2.5; 04 §1.1: el stock se gasta antes que las semillas): con
-        /// <paramref name="stock"/> &gt; 0, «+N» en ámbar; sin stock y con <paramref name="seeds"/> ≥ <paramref name="price"/>, el
-        /// precio; sin saldo y con <paramref name="video"/> (<c>rv_reveal</c> listo), «+1» con el icono de video; sin nada, el
+        /// <paramref name="stock"/> &gt; 0, «+N» en ámbar; sin stock y con <paramref name="video"/> (<c>rv_reveal</c> listo),
+        /// «+1» con el icono de video aunque haya saldo (D-028, GDD §6.3 pregunta 23 a: video primero, como Marea); sin video y
+        /// con <paramref name="seeds"/> ≥ <paramref name="price"/>, el precio; sin nada, el
         /// precio en rojo y «Te faltan {n}» encima, como la Cuia extra. Es el mismo orden en que cobra el botón
         /// (<c>IGameActions.PressReveal</c>). Con <paramref name="bare"/> queda gris y sin insignia, precio ni aviso, nada que
         /// comprar ahora: la pantalla lo pide cuando ya no queda ninguna oculta (la ranura solo espera a que la luciérnaga salga
@@ -828,17 +829,17 @@ namespace AF.UI
                 _reveal.ShowStockBadge(stock);
                 _reveal.HidePrice();
             }
-            else if (seeds >= price)
-            {
-                _reveal.ShowBadge(null, false);
-                _reveal.ShowStockBadge(0);
-                _reveal.ShowPrice(price, 0);
-            }
             else if (video)
             {
                 _reveal.ShowStockBadge(0);
                 _reveal.ShowBadge(Number(RevealVideoUnits, true), true);
                 _reveal.HidePrice();
+            }
+            else if (seeds >= price)
+            {
+                _reveal.ShowBadge(null, false);
+                _reveal.ShowStockBadge(0);
+                _reveal.ShowPrice(price, 0);
             }
             else
             {
