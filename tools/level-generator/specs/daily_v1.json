@@ -44,7 +44,7 @@
         "fallback_note": "Si en max_candidates candidatos de walk ninguno entra en la ventana, fill E=2 (nota §13)."
       },
       "palette": {
-        "status": "[P] R-Q1: tintes estrenados en 1-40, tope 0 (cabe: nota §1.1).",
+        "status": "decidida (R-Q1): tintes estrenados en 1-40, tope 0 (cabe: nota §1.1).",
         "debut_until": 40,
         "max_risk_pairs": 0
       }
