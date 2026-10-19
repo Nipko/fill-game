@@ -11,7 +11,8 @@ de hash); el desfase con lo commiteado; y los fixtures invalidos, cada uno con c
 Textos (M1.1t): el bloque map.* de facts.csv (contenido, columnas, orden ordinal, args, determinismo, filas de fuera del
 bloque intactas) y los fallos de --check (desfase, clave sin fila o sin texto, longitudes, cifras con separador y Belen).
 M2.6: facts[] con los «Otro dato», at y leg en cada parada, los nombres de los puntos de paso, de los miradores y de los
-paises de los rotulos, y los fixtures de las rutas (parada desplazada 20 km, boca fuera de su rio y candidato ausente).
+paises de los rotulos, y los fixtures de las rutas (parada desplazada 20 km y candidato ausente; la boca fuera de su rio
+la comprueba geometry.py --check desde M5.1, en test_geometry.py).
 M4.5a: las paradas 201-420 (k = 20-41) de paradas_201_700, con sus kinds, banderas (EC, BO y PE), preguntas, kits w06-w07,
 rutas por el Napo y el Madeira (teotonio en el viaje del 300), y sus textos; y los fixtures de los cruces nuevos.
 Solo biblioteca estandar.
@@ -85,6 +86,11 @@ class FieldTests(unittest.TestCase):
 
     def bg(self, kit, hero=None, code=None, lut=None) -> dict:
         return {"kit": kit, "hero": hero, "code": code, "lut": lut}
+
+    def map_doc_mouth(self, rid: str) -> float:
+        """s de la boca de la linea rid sobre su anfitrion en el river_map_v1.json commiteado."""
+        doc = json.loads(MAP_PATH.read_bytes().decode("utf-8"))
+        return next(line["mouth"]["s"] for line in doc["lines"] if line["id"] == rid)
 
     def assertStop(self, n: int, **expected):
         stop = self.by_n[n]
@@ -178,7 +184,9 @@ class FieldTests(unittest.TestCase):
         self.assertStop(25, levels=[251, 260], world=6, id="cuyabeno", kind="stop", country="EC", sample="black",
                         arrival_fact="map.stop.cuyabeno.dato_01",
                         bg=self.bg("bg_kit_w06", code="kit:laguna_negra_con_igapo"))
-        self.assertEqual({"line": "cuyabeno", "s": 0.0}, self.by_n[25]["at"], "la Laguna Grande, cabecera del Cuyabeno")
+        at = self.by_n[25]["at"]
+        self.assertEqual("cuyabeno", at["line"])
+        self.assertLess(at["s"], 0.05, "la Laguna Grande, en la cabecera del Cuyabeno (M5.1: el pie de su sitio)")
         self.assertEqual(["napo", "aguarico", "cuyabeno"], [p["line"] for p in self.by_n[25]["leg"]["path"]])
 
     def test_n29_misahualli_closes_world_6(self):
@@ -224,8 +232,14 @@ class FieldTests(unittest.TestCase):
                         arrival_fact="map.stop.riberalta.dato_01", facts=["map.stop.riberalta.dato_02"],
                         world_question="map.world.w08.question", answers_world_question=False,
                         bg=self.bg("bg_kit_w08", code="kit:confluencia_madre_de_dios_beni"))
+        # Riberalta esta en la confluencia (geometry.confluence_s [P], revision de M5.1): la parada se ancla en la boca del
+        # Madre de Dios sobre el Beni; el viaje baja el Madre de Dios hasta su boca y acaba con un tramo de longitud cero en el
+        # Beni, la linea de la parada (route; el cliente espera que el viaje acabe en ella).
         self.assertEqual(["manu", "madre_de_dios", "beni"], [p["line"] for p in self.by_n[42]["leg"]["path"]],
                          "Manu abajo, Madre de Dios abajo y el Beni (viaje del 420, ya lleno)")
+        mouth = self.map_doc_mouth("madre_de_dios")
+        self.assertEqual({"line": "beni", "s0": mouth, "s1": mouth}, self.by_n[42]["leg"]["path"][-1])
+        self.assertEqual({"line": "beni", "s": mouth}, self.by_n[42]["at"])
         self.assertEqual([], self.by_n[42]["leg"]["mouths"])
 
     def test_n42_to_49_go_up_the_beni(self):
@@ -244,9 +258,12 @@ class FieldTests(unittest.TestCase):
                         flag_raise=None, km_home=2518, arrival_fact="map.stop.guayaramerin.dato_01",
                         bg=self.bg("bg_kit_w08", code="kit:mamore_frontera"))
         path = self.by_n[50]["leg"]["path"]
-        self.assertEqual(["beni", "mamore"], [p["line"] for p in path])
-        self.assertEqual((1.0, 1.0), (path[0]["s1"], path[1]["s0"]), "las dos bocas, en Villa Bella")
-        self.assertLess(path[1]["s1"], path[1]["s0"], "Mamore arriba")
+        # M5.1: en HydroRIVERS el Beni y el Mamore entran en el Madeira a un tramo de distancia (~0,5 km): el leg los une por
+        # ese trocito del Madeira.
+        self.assertEqual(["beni", "madeira", "mamore"], [p["line"] for p in path])
+        self.assertEqual((1.0, 1.0), (path[0]["s1"], path[2]["s0"]), "las dos bocas, en Villa Bella")
+        self.assertLess(path[1]["s1"] - path[1]["s0"], 0.002, "el trocito del Madeira entre las dos bocas")
+        self.assertLess(path[2]["s1"], path[2]["s0"], "Mamore arriba")
         self.assertLess(self.by_n[50]["km_home"], self.by_n[49]["km_home"], "los km a casa bajan (baja_por_confluencia)")
         self.assertIn("baja_por_confluencia", self.records[50])
 
@@ -568,14 +585,6 @@ def _shift_stop(k: int, dlat: float):
     return mutate
 
 
-def _shift_mouth(rid: str, dlat: float):
-    """Fixture: mueve la boca (el ultimo punto) de un rio dlat grados de latitud."""
-    def mutate(src: dict, ov: dict) -> None:
-        river = next(r for r in src["rios"] if r["id"] == rid)
-        river["puntos"][-1]["lat"] = round(river["puntos"][-1]["lat"] + dlat, 4)
-    return mutate
-
-
 def _set_source(sid: str, field: str, value):
     def mutate(src: dict, ov: dict) -> None:
         next(f for f in src["fuentes"] if f["id"] == sid)[field] = value
@@ -704,8 +713,8 @@ FIXTURES = [
     # Rutas y «Otro dato» (M2.6).
     ("candidato de la propuesta §5.1 bis ausente", _drop_otro(7, "map.stop.tefe.dato_03"),
      "falta el candidato de la propuesta sec. 5.1 bis map.stop.tefe.dato_03"),
-    ("parada desplazada 20 km", _shift_stop(14, 0.18), "parada n=14 ('iquitos'): el sitio queda a 20."),
-    ("boca de un rio fuera de su rio", _shift_mouth("xingu", 0.3), "linea xingu: su boca queda a"),
+    # M5.1: el sitio se aleja 20 km al norte y el cauce de HydroRIVERS pasa a 4,8 km de Iquitos (17,5 km del nuevo sitio).
+    ("parada desplazada 20 km", _shift_stop(14, 0.18), "parada n=14 ('iquitos'): el sitio queda a 17.5 km"),
     ("Otro dato de 91 caracteres", _set_otro(5, 0, "texto", _TEXT_91), "map.stop.manaos.dato_03: 91 caracteres"),
     ("Otro dato con una fuente que no existe", _set_otro(0, 1, "fuente", "CR-F999"), "map.stop.belem.dato_02: la fuente"),
     # Belen en el contexto (M2.6: por la nota de un «Otro dato»; el titulo de una fuente con Belen se omite y queda su id

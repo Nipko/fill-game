@@ -29,7 +29,7 @@ namespace AF.UI
             }
 
             LastMorphoLine = FormatMorpho(result, level, waitMs, timeoutMs);
-            Debug.Log(LastMorphoLine);
+            Write(LastMorphoLine);
         }
 
         /// <summary>Texto de la línea <c>AF_PERF morpho</c> de una respuesta.</summary>

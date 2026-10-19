@@ -36,7 +36,7 @@ namespace AF.UI
             string? line = FormatArrival(phase, strip, slotDp);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -84,7 +84,7 @@ namespace AF.UI
             string? line = FormatStopArrive(level, stop, skipped, inMap);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -119,7 +119,7 @@ namespace AF.UI
             string? line = FormatRiverFactShown(level, factId, dismissedMs);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -149,7 +149,7 @@ namespace AF.UI
             string? line = FormatMapOpen(source, level, stop, world, view, zoom);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -183,7 +183,7 @@ namespace AF.UI
             string? line = FormatMapClose(stats, mapSeenLevel);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 

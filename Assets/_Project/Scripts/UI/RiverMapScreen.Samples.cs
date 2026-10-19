@@ -123,6 +123,23 @@ namespace AF.UI
         public FactCatalog? FruitSeries { get; set; }
 
         /// <summary>
+        /// Tabla de temporada del cliente (<c>af-seasons/1</c>; la pone <see cref="GameBootstrap"/>, como al tablero y al inicio):
+        /// la tarjeta de la parada lleva la LUT de la temporada del ciclo del primer nivel de la parada (07 §2.1; tarea FX8). Null =
+        /// sin temporada, como antes.
+        /// </summary>
+        public SeasonTable? Seasons { get; set; }
+
+        /// <summary>
+        /// Temporada con la que se pinta la tarjeta de la parada <paramref name="stop"/>: la del ciclo de su primer nivel
+        /// (<see cref="RiverStop.FirstLevel"/>, el primero que se juega con la canoa en ella; FX8), con los interruptores de las
+        /// pruebas del tablero (<see cref="GameScreen.SeasonFor"/>).
+        /// </summary>
+        internal Season StopCardSeason(RiverStop stop)
+        {
+            return GameScreen.SeasonFor(Seasons, stop.FirstLevel);
+        }
+
+        /// <summary>
         /// <c>water_base</c> del nivel (<c>white</c>, <c>black</c> o <c>clear</c>) para la banda del primer plano del fondo de la
         /// tarjeta (lo pone <see cref="GameBootstrap"/> con el catálogo de niveles). Null o sin respuesta: el agua del sitio de la
         /// gran parada del mundo, que es la del mundo en 1-700 (<see cref="WorldWaterOf"/>).
@@ -469,7 +486,7 @@ namespace AF.UI
 
             StopCard card = EnsureCard();
             card.Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
-            card.ShowStop(stop, StopReached(stop, _progress.MaxLevel), StopWater(stop), Fauna, FruitSeries);
+            card.ShowStop(stop, StopReached(stop, _progress.MaxLevel), StopWater(stop), Fauna, FruitSeries, StopCardSeason(stop));
             EmitLayout();
             return true;
         }

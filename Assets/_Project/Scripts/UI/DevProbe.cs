@@ -17,7 +17,9 @@ namespace AF.UI
     /// escribe en el log, en una línea JSON con InvariantCulture, <c>AF_LAYOUT</c> (rectángulos táctiles en píxeles con origen
     /// arriba a la izquierda; se toca en el centro; partida en varias líneas con <c>"part"</c>/<c>"parts"</c> si pasa de
     /// <see cref="MaxLayoutLineBytes"/>: ver <see cref="Layout"/>) y <c>AF_STATE</c> (eventos del nivel), para que un
-    /// agente pueda jugar y verificar el prototipo con <c>adb logcat -s Unity</c> y <c>adb shell input tap</c>.
+    /// agente pueda jugar y verificar el prototipo con <c>adb logcat -s Unity</c> y <c>adb shell input tap</c>. Ninguna línea
+    /// pasa de <see cref="MaxLineBytes"/> bytes (tarea FX10: logcat corta en ~1.024 caracteres): las que no caben salen en
+    /// partes (DevProbe.Lines.cs).
     /// </summary>
     /// <remarks>
     /// <para>Eventos de <c>AF_STATE</c>: <c>load</c>, <c>ready</c>, <c>pour</c>, <c>reject</c>, <c>undo</c>, <c>restart</c>,
@@ -90,7 +92,7 @@ namespace AF.UI
             sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"at_ms\":").Append(atMs.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"duration_cfg_ms\":").Append(durationCfgMs.ToString(CultureInfo.InvariantCulture)).Append('}');
-            Debug.Log(sb.ToString());
+            Write(sb.ToString());
         }
 
         /// <summary>
@@ -104,7 +106,7 @@ namespace AF.UI
             string? line = FormatState(evt, flow, tap, move);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -117,7 +119,7 @@ namespace AF.UI
             string? line = FormatState(evt, flow, tap, in result);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -145,7 +147,7 @@ namespace AF.UI
             string? line = FormatEvent(evt, fieldsJson);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -444,7 +446,7 @@ namespace AF.UI
             sb.Append(",\"save_ms\":").Append(ms.ToString("0.00", CultureInfo.InvariantCulture));
             sb.Append(",\"bg_ms\":").Append(bgMs.ToString("0.00", CultureInfo.InvariantCulture));
             sb.Append(",\"sync\":").Append(sync ? "true" : "false").Append('}');
-            Debug.Log(sb.ToString());
+            Write(sb.ToString());
         }
 
         /// <summary>
@@ -463,7 +465,7 @@ namespace AF.UI
             string? line = FormatFunnel(evt, flow, ledger, balsaOk);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -519,7 +521,7 @@ namespace AF.UI
             string? line = FormatPurchase(result, wallet);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -564,7 +566,7 @@ namespace AF.UI
             string? line = FormatVictory(evt, flow, doubleOffered);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -611,7 +613,7 @@ namespace AF.UI
             sb.Append(",\"decision\":\"").Append(decision.ToString()).Append('"');
             AppendWallet(sb, wallet);
             sb.Append('}');
-            Debug.Log(sb.ToString());
+            Write(sb.ToString());
         }
 
         /// <summary>
@@ -623,7 +625,7 @@ namespace AF.UI
             string? line = FormatAd(evt, ad, outcome, level, wallet);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -658,7 +660,7 @@ namespace AF.UI
             string? line = FormatApp(evt, app);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -714,8 +716,8 @@ namespace AF.UI
         /// (no se guarda: la app se reabre en Nivel fallido o en el nivel).</description></item>
         /// <item><description>Inicio: <c>lobby</c>, <c>content_end</c> y <c>no_canoes</c>.</description></item>
         /// </list>
-        /// Ninguna línea pasa de <see cref="MaxLayoutLineBytes"/> (tarea FX7: una línea de logcat se corta en 4.068 bytes, y con
-        /// <c>af_max_level 560</c> la del Mapa llegaba cortada): si no cabe, la sonda sale en varias líneas seguidas, todas de la
+        /// Ninguna línea pasa de <see cref="MaxLayoutLineBytes"/> (tareas FX7 y FX10: en el teléfono logcat corta cada mensaje en
+        /// unos 1.024 caracteres, y con <c>af_max_level 560</c> la del Mapa llegaba cortada): si no cabe, la sonda sale en varias líneas seguidas, todas de la
         /// misma pantalla y con su <c>level</c>, <c>sw</c> y <c>sh</c>, con <c>"part":k,"parts":n</c> detrás de <c>sh</c>; las cuias van
         /// enteras en la parte 1 (en las demás, <c>"cuias":[]</c>) y los botones, en orden, repartidos entre las partes (la parte 1
         /// puede ir sin botones; las excepciones al tope, en <see cref="LayoutLines"/>). Quien toca
@@ -772,10 +774,11 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Tope de bytes (UTF-8) de una línea <c>AF_LAYOUT</c> (tarea FX7): por debajo de los 4.068 de una entrada de logcat, con
-        /// margen para la etiqueta y la prioridad.
+        /// Tope de bytes (UTF-8) de una línea <c>AF_LAYOUT</c>, contada entera (tareas FX7 y FX10): el de todas las líneas de la
+        /// sonda, <see cref="MaxLineBytes"/>, por debajo de los ~1.024 caracteres en que logcat corta un mensaje en el teléfono
+        /// (FX7 lo puso en 3.900 por los 4.068 bytes de una entrada de logcat, pero el mensaje se corta antes).
         /// </summary>
-        public const int MaxLayoutLineBytes = 3900;
+        public const int MaxLayoutLineBytes = MaxLineBytes;
 
         /// <summary>
         /// Las líneas <c>AF_LAYOUT</c> de una pantalla (tarea FX7): <paramref name="head"/> (<c>AF_LAYOUT {"screen":…,"sh":N</c>),

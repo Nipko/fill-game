@@ -155,7 +155,19 @@ namespace AF.Tests.PlayMode
         {
             Debug.Log("AF_MAP " + name + ": vista " + map.View + ", zoom " + map.Zoom.ToString("0.00", CultureInfo.InvariantCulture)
                 + ", max " + map.ProgressLevel + ", frente " + map.FrontStop + " al " + map.FrontFraction.ToString("0.0", CultureInfo.InvariantCulture)
-                + ", boyas " + map.BuoyCount + ", siluetas " + map.SilhouetteCount + ", países " + map.CountryLabelCount);
+                + ", boyas " + map.BuoyCount + ", siluetas " + map.SilhouetteCount + ", países " + map.CountryLabelCount + PlateFit(map));
+        }
+
+        // FX10: placas de los mundos futuros que la colocación al abrir la vista movió o no enseña con este encuadre.
+        private static string PlateFit(RiverMapScreen map)
+        {
+            int hidden = 0;
+            for (int i = 0; i < map.SilhouetteCount; i++)
+            {
+                hidden += map.PlateFitHidden(i) ? 1 : 0;
+            }
+
+            return ", PlateFitMoves " + map.PlateFitMoves + ", PlateFitHidden " + hidden;
         }
     }
 }

@@ -71,6 +71,7 @@ namespace AF.Tests.PlayMode
             float anavilhanas = routes.At(6)!.At.S;
             Assert.That(map.FillFrom(negro), Is.LessThanOrEqualTo(manaos), "Manaos, lleno");
             Assert.That(map.FillFrom(negro), Is.GreaterThan(anavilhanas), "Anavilhanas, todavía no");
+            // La parada del Encuentro está en la boca del Negro (geometry.confluence_s [P], revisión de M5.1).
             Assert.That(map.FillFrom(amazonas), Is.EqualTo(routes.At(4)!.At.S).Within(1e-6f), "el cauce, lleno hasta el Encuentro");
             Assert.That(map.FillFrom(amazonas), Is.GreaterThan(routes.At(7)!.At.S), "Tefé, todavía no");
             Assert.That(map.FillRibbon(negro).gameObject.activeSelf, Is.True);

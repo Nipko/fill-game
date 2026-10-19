@@ -46,6 +46,9 @@
 
 .PARAMETER LogFile
     Log del Editor (por defecto Logs/compile.log dentro del proyecto; Logs/ esta en .gitignore).
+    Si otro proceso tiene abierto el log anterior y no se puede borrar, se usa un nombre unico
+    junto a el (<nombre>-<fecha>-<pid>.log) y se avisa; el codigo de salida no cambia por ello.
+    Los nombres alternativos de ejecuciones anteriores se borran al empezar (si ya no estan abiertos).
 
 .EXAMPLE
     pwsh -NoProfile -File scripts/unity-compile.ps1
@@ -240,6 +243,33 @@ function Write-LogHints {
     }
 }
 
+function Resolve-FreeOutputFile {
+    # Borra el archivo de una ejecucion anterior y devuelve la ruta que se usara. Si otro proceso lo tiene abierto
+    # (Unity.Licensing.Client o el broker de la Unity CLI que sobreviven al Editor), Remove-Item falla: en vez de salir
+    # con 1 (que aqui significa "errores de compilacion"), se usa un nombre unico junto a el (<nombre>-<fecha>-<pid><ext>).
+    param([string]$Path)
+    # Limpieza de los nombres alternativos de ejecuciones anteriores (los que sigan abiertos se quedan).
+    $dir = Split-Path -Parent $Path
+    $name = [System.IO.Path]::GetFileNameWithoutExtension($Path)
+    $ext = [System.IO.Path]::GetExtension($Path)
+    if ($dir -and (Test-Path -LiteralPath $dir -PathType Container)) {
+        $pattern = '^' + [regex]::Escape($name) + '-\d{8}-\d{6}-\d+' + [regex]::Escape($ext) + '$'
+        Get-ChildItem -LiteralPath $dir -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.Name -match $pattern } |
+            ForEach-Object { Remove-Item -LiteralPath $_.FullName -Force -ErrorAction SilentlyContinue }
+    }
+    if (-not (Test-Path -LiteralPath $Path)) { return $Path }
+    try {
+        Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+        return $Path
+    }
+    catch {
+        $alt = Join-Path $dir ('{0}-{1}-{2}{3}' -f $name, (Get-Date -Format 'yyyyMMdd-HHmmss'), $PID, $ext)
+        [Console]::Out.WriteLine("AVISO: no se pudo borrar $Path (lo tiene abierto otro proceso); se usa $alt.")
+        return $alt
+    }
+}
+
 # --------------------------------------------------------------------------------------------
 $info = Get-UnityProjectInfo -Path $ProjectPath
 $label = if ($info.Changeset) { "$($info.Version) ($($info.Changeset))" } else { $info.Version }
@@ -286,7 +316,7 @@ if (Test-ProjectOpenInEditor -Root $info.Root) {
 }
 
 # 2) Editor cerrado: compilacion en batchmode.
-if (Test-Path -LiteralPath $LogFile) { Remove-Item -LiteralPath $LogFile -Force }
+$LogFile = Resolve-FreeOutputFile -Path $LogFile
 $exitCode = $null
 $via = $null
 

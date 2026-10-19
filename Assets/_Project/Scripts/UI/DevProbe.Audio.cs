@@ -66,7 +66,7 @@ namespace AF.UI
 
             sb.Append(",\"src\":\"").Append(clip ? "clip" : AudioProbeIds.Synth).Append("\"}");
             LastSfxLine = sb.ToString();
-            Debug.Log(LastSfxLine);
+            Write(LastSfxLine);
         }
 
         /// <inheritdoc />
@@ -83,7 +83,7 @@ namespace AF.UI
             AppendTime(sb);
             sb.Append(",\"kind\":\"").Append(kind).Append("\"}");
             LastHapticLine = sb.ToString();
-            Debug.Log(LastHapticLine);
+            Write(LastHapticLine);
         }
 
         /// <inheritdoc />
@@ -101,7 +101,7 @@ namespace AF.UI
             sb.Append(",\"main_ms\":").Append(mainMs.ToString("0.0", CultureInfo.InvariantCulture));
             sb.Append(",\"clips\":").Append(clips.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"pcm_kib\":").Append(pcmKiB.ToString(CultureInfo.InvariantCulture)).Append('}');
-            Debug.Log(sb.ToString());
+            Write(sb.ToString());
         }
 
         /// <summary>Último <c>AF_STATE music</c> escrito (tests; null sin sonda).</summary>
@@ -130,7 +130,7 @@ namespace AF.UI
             sb.Append(",\"menu\":").Append(report.Menu ? "true" : "false");
             sb.Append(",\"clip\":\"").Append(clip).Append("\"}");
             LastMusicLine = sb.ToString();
-            Debug.Log(LastMusicLine);
+            Write(LastMusicLine);
         }
 
         /// <inheritdoc />
@@ -156,7 +156,7 @@ namespace AF.UI
 
             sb.Append('}');
             LastAmbientLine = sb.ToString();
-            Debug.Log(LastAmbientLine);
+            Write(LastAmbientLine);
         }
 
         // Sonido, Música y Vibración guardados, en la línea AF_STATE settings (AU1).

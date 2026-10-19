@@ -290,6 +290,8 @@ namespace AF.UI
         private readonly StopShapeGraphic _hitoGloss;
         private readonly TextMeshProUGUI _hitoText;
         private RiverStop? _hitoStop;
+        private Season _hitoSeason;
+        private Color _hitoLut = Color.white;
         private string _hitoSource = HitoSilhouetteNone;
         private bool _hitoOn;
         private bool _hitoOmitted;
@@ -538,6 +540,19 @@ namespace AF.UI
         /// <summary>Parada del hito p20 de la tarjeta mostrada (con su fila a la vista o no), o null si no es un hito con parada.</summary>
         public RiverStop? HitoStop => _hitoStop;
 
+        /// <summary>
+        /// Temporada con la que se pinta la ventanita del hito: la del ciclo del primer nivel de su parada (<see cref="RiverStop.FirstLevel"/>,
+        /// la del ciclo siguiente al del hito), como la tarjeta de la parada en el Mapa y la victoria con vista (07 §2.1; tarea FX8);
+        /// <see cref="Season.None"/> sin tabla o sin hito.
+        /// </summary>
+        public Season HitoSeason => _hitoSeason;
+
+        /// <summary>
+        /// Luz de la ventanita del hito: la de su parada por la de <see cref="HitoSeason"/>
+        /// (<see cref="StopBackdrop.LutOf(RiverStop, Season)"/>, como el fondo del tablero; FX8). Blanco sin ventanita.
+        /// </summary>
+        public Color HitoLut => _hitoLut;
+
         /// <summary>«Si lo superas, llegas a {lugar}», o null si la fila no se ve.</summary>
         public string? HitoText => _hitoRow.gameObject.activeSelf ? _hitoText.text : null;
 
@@ -655,6 +670,18 @@ namespace AF.UI
         public void Show(LevelCardInfo card, RiverStop? hitoStop, string hitoWater, bool reduceMotion, float canvasW, float canvasH,
             float safeTop, float safeBottom)
         {
+            Show(card, hitoStop, hitoWater, Season.None, reduceMotion, canvasW, canvasH, safeTop, safeBottom);
+        }
+
+        /// <summary>
+        /// Como <see cref="Show(LevelCardInfo, RiverStop, string, bool, float, float, float, float)"/>, con la ventanita del hito
+        /// en la temporada <paramref name="hitoSeason"/>: la del ciclo del primer nivel de esa parada (07 §2.1: la tarjeta usa la
+        /// misma composición que el fondo, temporada incluida, y el sitio se ve igual en su tarjeta del Mapa y en la victoria con
+        /// vista; tarea FX8). <see cref="Season.None"/> = sin temporada, como antes.
+        /// </summary>
+        public void Show(LevelCardInfo card, RiverStop? hitoStop, string hitoWater, Season hitoSeason, bool reduceMotion, float canvasW,
+            float canvasH, float safeTop, float safeBottom)
+        {
             _card = card ?? throw new ArgumentNullException(nameof(card));
             _reduceMotion = reduceMotion;
             bool labeled = card.Kind != LevelCardKind.Debut;
@@ -771,7 +798,7 @@ namespace AF.UI
                 _giftGlyph.sprite = _art.CardFirefly;
             }
 
-            ShowHito(hitoStop, hitoWater);
+            ShowHito(hitoStop, hitoWater, hitoSeason);
             _root.gameObject.SetActive(true);
             _dismissing = false;
             _entered = false;
@@ -1020,6 +1047,8 @@ namespace AF.UI
             _animMs = -1f;
             _card = null;
             _hitoStop = null;
+            _hitoSeason = Season.None;
+            _hitoLut = Color.white;
             _hitoOn = false;
             _hitoOmitted = false;
             _hitoDivider.gameObject.SetActive(false); // sin tarjeta, los accesores de la fila (HitoText…) no la ven
@@ -1142,9 +1171,11 @@ namespace AF.UI
         // Prepara la fila del hito hacia stop (null = sin fila): el texto (sin nombre del lugar en el idioma, sin fila) y la
         // ventanita (el PNG del héroe si existe; si no, la pieza por código de las dos aguas o, solo con MapArtRule, la silueta
         // provisional; sin nada de eso, la línea va sola). La malla se construye aquí, una vez por tarjeta.
-        private void ShowHito(RiverStop? stop, string water)
+        private void ShowHito(RiverStop? stop, string water, Season season)
         {
             _hitoStop = stop;
+            _hitoSeason = stop != null ? season : Season.None;
+            _hitoLut = Color.white;
             _hitoOn = false;
             _hitoSource = HitoSilhouetteNone;
             _hitoScene.Clear();
@@ -1204,7 +1235,8 @@ namespace AF.UI
             bool codePiece = _hitoSource == HitoSilhouetteCode;
             string? code = stop.Backdrop.Code;
             float hy = codePiece ? HitoCodeHorizonDp : HitoHorizonDp;
-            Color lut = StopBackdrop.LutOf(stop);
+            Color lut = StopBackdrop.LutOf(stop, _hitoSeason); // la luz de la parada por la de la temporada, como el fondo (FX8)
+            _hitoLut = lut;
             StopBackdrop.SkyOf(stop, out Color tintTop, out Color tintHorizon, out float alphaTop, out float alphaHorizon);
             Color skyTop = Color.Lerp(Palette.SkyTop, tintTop, alphaTop) * lut;
             Color skyHorizon = Color.Lerp(Palette.SkyHorizon, tintHorizon, alphaHorizon) * lut;

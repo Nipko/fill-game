@@ -70,6 +70,12 @@ namespace AF.Presentation
     /// (si no caben todos los cambios de agua, se omiten los últimos antes que la sección final, y la trama sigue el aspecto
     /// que dibuja la cinta), salvo con un tope que no admite ni dos secciones, que deja la malla vacía; la trama sale solo
     /// mientras quede presupuesto. Nunca se pasa del tope.</description></item>
+    /// <item><description>Trazo suave (<see cref="SetSmooth"/>; M5.1c, la geometría de producción de M5.1): la cinta se queda solo
+    /// con los puntos de la línea a <see cref="SpacingWidths"/> anchos de cinta en pantalla unos de otros (12 dp en la clase 1 y
+    /// 7,5 dp en la clase 2 de la vista Mundo), elegidos a lo largo de la línea entera, así que el vidrio y el agua de una línea
+    /// saltan los mismos puntos y quedan una sobre otra; los une con cuerdas, como con el presupuesto. Las uniones cuyo inglete
+    /// pasaría de <see cref="BevelMiter"/> medios anchos van en bisel: el lado de dentro con su inglete y el de fuera cortado por
+    /// una cuña, sin picos ni solapes.</description></item>
     /// </list>
     /// Las coordenadas son las locales de su RectTransform según <see cref="MapSpace"/>. Solo se reconstruye cuando cambia algo
     /// (<see cref="SetFill"/> sin cambios no hace nada ni asigna memoria); al reconstruirse no asigna memoria tras la primera vez.
@@ -114,6 +120,18 @@ namespace AF.Presentation
         public const float AndeanDashFraction = 0.7f;
 
         private const float RimMaxFraction = 0.35f;
+
+        /// <summary>
+        /// Con el trazo suave (<see cref="SetSmooth"/>), separación mínima entre los puntos de la línea que dibuja la cinta, en anchos
+        /// de la cinta en pantalla (M5.1c) [P]: 12 dp en la clase 1 (8 dp) y 7,5 dp en la clase 2 (5 dp) de la vista Mundo.
+        /// </summary>
+        public const float SpacingWidths = 1.5f;
+
+        /// <summary>
+        /// Con el trazo suave, una unión cuyo inglete mediría más de estos medios anchos (un giro de más de 74°) va en bisel
+        /// (M5.1c) [P].
+        /// </summary>
+        public const float BevelMiter = 1.25f;
 
         /// <summary>Canto de vidrio de la orla del agua llena (dp), por fuera del ancho del agua [P].</summary>
         public const float CasingRimDp = 1.5f;
@@ -171,6 +189,13 @@ namespace AF.Presentation
         private bool _decimated;
         private bool _truncated; // el presupuesto cortó el plan antes de algún cambio de agua
 
+        // Trazo suave: los puntos de la línea que se quedan (elegidos a lo largo de la línea entera, desde su primer punto) para la
+        // separación en unidades del marco _keepUnits; −1, por calcular.
+        private bool _smooth;
+        private bool[] _keep = Array.Empty<bool>();
+        private float _keepUnits = -1f;
+        private int _bevelCount;
+
         /// <summary>Configura el gráfico (sin raycast).</summary>
         public void Setup()
         {
@@ -205,7 +230,8 @@ namespace AF.Presentation
         public float PatternOpacity => _patternOpacity;
 
         /// <summary>
-        /// La última malla saltó puntos de la línea por el presupuesto: la cinta sigue cuerdas entre los puntos que quedan.
+        /// La última malla saltó puntos de la línea por el presupuesto o por el trazo suave (<see cref="SetSmooth"/>): la cinta sigue
+        /// cuerdas entre los puntos que quedan.
         /// </summary>
         public bool LastWasDecimated => _decimated;
 
@@ -283,6 +309,12 @@ namespace AF.Presentation
 
             _line = line;
             _cursor = line != null ? new PolylineCursor(line) : null;
+            _keepUnits = -1f;
+            if (line != null && _keep.Length < line.PointCount)
+            {
+                _keep = new bool[line.PointCount]; // solo crece: con la línea más larga, ya no asigna
+            }
+
             _s0 = 0f;
             _s1 = 1f;
             SetVerticesDirty();
@@ -359,6 +391,35 @@ namespace AF.Presentation
             }
         }
 
+        /// <summary>
+        /// Trazo suave (M5.1c): solo los puntos de la línea a <see cref="SpacingWidths"/> anchos de cinta en pantalla unos de otros,
+        /// unidos con cuerdas, y uniones en bisel donde el inglete pasaría de <see cref="BevelMiter"/>. Lo usan el Mapa y el viaje
+        /// del banner; apagado, la cinta sigue cada punto de la polilínea.
+        /// </summary>
+        public void SetSmooth(bool on)
+        {
+            if (on != _smooth)
+            {
+                _smooth = on;
+                SetVerticesDirty();
+            }
+        }
+
+        /// <summary>Trazo suave (<see cref="SetSmooth"/>).</summary>
+        public bool Smooth => _smooth;
+
+        /// <summary>Uniones en bisel de la última malla (trazo suave).</summary>
+        public int LastBevelCount => _bevelCount;
+
+        /// <summary>Secciones del plan de la última malla (las puntas, los puntos de la línea y los cambios de agua; tests).</summary>
+        public int LastSectionPointCount => _planCount;
+
+        /// <summary>Punto (unidades del marco) de la sección <paramref name="i"/> del plan de la última malla (tests).</summary>
+        public Vector2 LastSectionPoint(int i)
+        {
+            return _planPoint[i];
+        }
+
         /// <summary>Tope de vértices (al menos 8; el frente usa <see cref="FrontMaxVertices"/>).</summary>
         public void SetVertexBudget(int maxVertices)
         {
@@ -428,6 +489,27 @@ namespace AF.Presentation
 
             int inner = Mathf.Max(0, last - first + 1);
 
+            // Trazo suave: solo los puntos que se quedan (UpdateKeep) y, cerca de las dos puntas del intervalo, ninguno a menos de
+            // media separación de ellas (una cuerda de nada haría un quiebro).
+            float units = _smooth ? SpacingWidths * WidthDp / _space.DpPerUnit : 0f;
+            float endSq = 0f;
+            Vector2 startPoint = Vector2.zero;
+            Vector2 endPoint = Vector2.zero;
+            if (units > 0f)
+            {
+                UpdateKeep(cursor, units);
+                endSq = 0.25f * units * units;
+                startPoint = cursor.PointAtArc(aStart);
+                endPoint = cursor.PointAtArc(aEnd);
+            }
+
+            int usable = 0;
+            for (int v = NextUsable(cursor, first, last, units, startPoint, endPoint, endSq); v <= last;
+                v = NextUsable(cursor, v + 1, last, units, startPoint, endPoint, endSq))
+            {
+                usable++;
+            }
+
             // Presupuesto: secciones fijas (los dos extremos y cada cambio de agua, que va dos veces) y, si no caben todas, se
             // salta uno de cada «stride» puntos intermedios; si no cabe ninguno, se saltan todos.
             int boundaries = 0;
@@ -453,13 +535,13 @@ namespace AF.Presentation
 
             int fixedSections = 2 + (2 * boundaries);
             int stride = 1;
-            int nextVertex = first;
-            if ((inner + fixedSections) * perSection > _budget)
+            int nextVertex = NextUsable(cursor, first, last, units, startPoint, endPoint, endSq);
+            if ((usable + fixedSections) * perSection > _budget)
             {
                 int room = (_budget / perSection) - fixedSections;
                 if (room >= 1)
                 {
-                    stride = (inner + room - 1) / room;
+                    stride = (usable + room - 1) / room;
                 }
                 else
                 {
@@ -467,7 +549,7 @@ namespace AF.Presentation
                 }
             }
 
-            EnsurePlanCapacity(inner + fixedSections + 1);
+            EnsurePlanCapacity(usable + fixedSections + 1);
             int keptVertices = 0;
             RunLook look = LookAt(line, _s0, water);
             int used = AddPlan(cursor, aStart, -1, look, false);
@@ -496,7 +578,10 @@ namespace AF.Presentation
                 if (atVertex)
                 {
                     keptVertices++;
-                    nextVertex += stride;
+                    for (int k = 0; k < stride && nextVertex <= last; k++)
+                    {
+                        nextVertex = NextUsable(cursor, nextVertex + 1, last, units, startPoint, endPoint, endSq);
+                    }
                 }
 
                 if (atBoundary)
@@ -511,11 +596,37 @@ namespace AF.Presentation
             }
 
             _decimated = keptVertices < inner;
+            _bevelCount = 0;
+            int remaining = 0;
+            for (int i = 0; i < _planCount; i++)
+            {
+                remaining += Cost(_planLook[i]);
+            }
+
             int previous = -1;
             for (int i = 0; i < _planCount; i++)
             {
-                Vector2 offset = SectionOffset(cursor, i);
-                previous = EmitSection(vh, _planPoint[i], offset, _planLook[i], half, rim, _planConnect[i] ? previous : -1);
+                RunLook sectionLook = _planLook[i];
+                int connect = _planConnect[i] ? previous : -1;
+                remaining -= Cost(sectionLook);
+
+                // Trazo suave: un codo cerrado va en bisel (dos secciones en el punto) si cabe en el presupuesto con lo que queda.
+                if (_smooth && connect >= 0 && vh.currentVertCount + (2 * Cost(sectionLook)) + remaining <= _budget
+                    && TryBevel(cursor, i, half, out Vector2 inLeft, out Vector2 inRight, out Vector2 outLeft, out Vector2 outRight,
+                        out float upIn, out float upOut))
+                {
+                    previous = EmitSection(vh, (inLeft + inRight) * 0.5f, (inLeft - inRight) * 0.5f, upIn, sectionLook, half, rim, connect);
+                    previous = EmitSection(vh, (outLeft + outRight) * 0.5f, (outLeft - outRight) * 0.5f, upOut, sectionLook, half, rim, previous);
+                    _bevelCount++;
+                }
+                else
+                {
+                    Vector2 offset = SectionOffset(cursor, i);
+                    Vector2 center = _space.ToLocal(_planPoint[i]);
+                    float up = offset.sqrMagnitude > 1e-12f ? offset.normalized.y : 0f; // > 0: la orilla izquierda queda arriba
+                    previous = EmitSection(vh, center, offset * half, up, sectionLook, half, rim, connect);
+                }
+
                 if (previous < 0)
                 {
                     break; // no pasa: el plan ya cuenta el presupuesto
@@ -652,10 +763,11 @@ namespace AF.Presentation
             return true;
         }
 
-        // Una sección transversal en el punto «mapPoint» del marco con el desplazamiento «offset» (en medios anchos): dos
-        // vértices por banda. Si «connect» ≥ 0, la une con la sección anterior de la misma tira. Devuelve el primer vértice de la
-        // sección, o −1 si no cabe en el presupuesto.
-        private int EmitSection(VertexHelper vh, Vector2 mapPoint, Vector2 offset, RunLook look, float half, float rim, int connect)
+        // Una sección transversal de centro «mid» (local) con el medio eje «axis» (local, hacia la orilla izquierda: el medio ancho por
+        // el inglete): dos vértices por banda, en mid + axis · u. «up» es la componente vertical (local) de la normal izquierda. Si
+        // «connect» ≥ 0, la une con la sección anterior de la misma tira. Devuelve el primer vértice de la sección, o −1 si no cabe
+        // en el presupuesto.
+        private int EmitSection(VertexHelper vh, Vector2 mid, Vector2 axis, float up, RunLook look, float half, float rim, int connect)
         {
             int bands = BandCount(look.Split);
             if (vh.currentVertCount + (2 * bands) > _budget)
@@ -663,9 +775,6 @@ namespace AF.Presentation
                 return -1;
             }
 
-            Vector2 center = _space.ToLocal(mapPoint);
-            float up = offset.sqrMagnitude > 1e-12f ? offset.normalized.y : 0f; // > 0: la orilla izquierda queda arriba
-            offset *= half;
             float alpha = color.a;
             int start = vh.currentVertCount;
             for (int k = 0; k < bands; k++)
@@ -673,8 +782,8 @@ namespace AF.Presentation
                 Band(look, k, rim, half, up, out float u0, out float u1, out Color c);
                 c.a *= alpha;
                 Color32 c32 = c;
-                vh.AddVert(center + (offset * u0), c32, Vector4.zero);
-                vh.AddVert(center + (offset * u1), c32, Vector4.zero);
+                vh.AddVert(mid + (axis * u0), c32, Vector4.zero);
+                vh.AddVert(mid + (axis * u1), c32, Vector4.zero);
                 if (connect >= 0)
                 {
                     int p = connect + (2 * k);
@@ -685,6 +794,161 @@ namespace AF.Presentation
             }
 
             return start;
+        }
+
+        // Bisel (trazo suave) en la sección i del plan, si es un codo cuyo inglete pasaría de BevelMiter medios anchos: dos
+        // secciones en el mismo punto, la primera perpendicular a lo que llega y la segunda a lo que sale, con el lado de dentro
+        // en el inglete (limitado a MiterLimit) y el de fuera a medio ancho del punto; entre las dos, una cuña por fuera y nada por
+        // dentro. Las orillas de cada una (izquierda y derecha, locales) y la componente vertical de su normal izquierda.
+        private bool TryBevel(PolylineCursor cursor, int i, float half, out Vector2 inLeft, out Vector2 inRight, out Vector2 outLeft,
+            out Vector2 outRight, out float upIn, out float upOut)
+        {
+            inLeft = inRight = outLeft = outRight = Vector2.zero;
+            upIn = upOut = 0f;
+            // Ni en las puntas ni en un cambio de agua (la tira nueva empieza en el mismo punto con su inglete).
+            if (i == 0 || i == _planCount - 1 || !_planConnect[i + 1] || !SectionDirections(cursor, i, out Vector2 dIn, out Vector2 dOut))
+            {
+                return false;
+            }
+
+            Vector2 nIn = Normal(dIn);
+            Vector2 nOut = Normal(dOut);
+            Vector2 m = nIn + nOut;
+            if (m.sqrMagnitude < 1e-6f)
+            {
+                return false; // media vuelta: la deja el inglete
+            }
+
+            m.Normalize();
+            float cos = Vector2.Dot(m, nOut);
+            if (cos >= 1f / BevelMiter)
+            {
+                return false; // el inglete basta
+            }
+
+            Vector2 center = _space.ToLocal(_planPoint[i]);
+            Vector2 inner = m * (half / Mathf.Max(cos, 1f / MiterLimit));
+            Vector2 lIn = MapSpace.DirectionToLocal(dIn);
+            Vector2 lOut = MapSpace.DirectionToLocal(dOut);
+            bool left = (lIn.x * lOut.y) - (lIn.y * lOut.x) > 0f; // gira a la izquierda: la orilla de dentro es la izquierda
+            if (left)
+            {
+                inLeft = center + inner;
+                outLeft = inLeft;
+                inRight = center - (nIn * half);
+                outRight = center - (nOut * half);
+            }
+            else
+            {
+                inRight = center - inner;
+                outRight = inRight;
+                inLeft = center + (nIn * half);
+                outLeft = center + (nOut * half);
+            }
+
+            upIn = nIn.y;
+            upOut = nOut.y;
+            return true;
+        }
+
+        // Direcciones (unidades del marco) por las que llega y sale la cinta en la sección i del plan: las de la polilínea en un punto
+        // de la línea o, con puntos saltados, las de las cuerdas. False si falta alguna.
+        private bool SectionDirections(PolylineCursor cursor, int i, out Vector2 dIn, out Vector2 dOut)
+        {
+            dIn = Vector2.zero;
+            dOut = Vector2.zero;
+            if (!_decimated)
+            {
+                int vertex = _planVertex[i];
+                if (vertex <= 0 || vertex >= cursor.PointCount - 1)
+                {
+                    return false;
+                }
+
+                cursor.DirectionsAt(vertex, out dIn, out dOut);
+                return dIn.sqrMagnitude > 0f && dOut.sqrMagnitude > 0f;
+            }
+
+            Vector2 p = _planPoint[i];
+            bool hasIn = false;
+            bool hasOut = false;
+            for (int k = i - 1; k >= 0 && !hasIn; k--)
+            {
+                hasIn = TryChord(_planPoint[k], p, out dIn);
+            }
+
+            for (int k = i + 1; k < _planCount && !hasOut; k++)
+            {
+                hasOut = TryChord(p, _planPoint[k], out dOut);
+            }
+
+            return hasIn && hasOut;
+        }
+
+        // El primer punto de la línea desde «from» (hasta «last») que dibuja la cinta: con el trazo suave (units > 0), uno de los que
+        // se quedan (UpdateKeep) que no esté a menos de media separación (endSq, al cuadrado) de las puntas del intervalo; si no,
+        // «from». Mayor que «last» si no queda ninguno.
+        private int NextUsable(PolylineCursor cursor, int from, int last, float units, Vector2 startPoint, Vector2 endPoint, float endSq)
+        {
+            if (units <= 0f)
+            {
+                return from;
+            }
+
+            for (int v = from; v <= last; v++)
+            {
+                if (!_keep[v])
+                {
+                    continue;
+                }
+
+                Vector2 p = cursor.Point(v);
+                if ((p - startPoint).sqrMagnitude >= endSq && (p - endPoint).sqrMagnitude >= endSq)
+                {
+                    return v;
+                }
+            }
+
+            return last + 1;
+        }
+
+        // Los puntos de la línea que se quedan con el trazo suave, para la separación «units» (unidades del marco): el primero, el
+        // último y, a lo largo de la línea, cada uno a «units» o más del anterior que se quedó (sin el último de ellos si queda a
+        // menos de media separación del final). Elegidos sobre la línea entera, así que no dependen del intervalo dibujado: el
+        // vidrio, la orla y el agua de una línea saltan los mismos. Solo si cambia la separación; sin asignaciones.
+        private void UpdateKeep(PolylineCursor cursor, float units)
+        {
+            if (units == _keepUnits)
+            {
+                return;
+            }
+
+            _keepUnits = units;
+            int n = cursor.PointCount;
+            float sq = units * units;
+            Vector2 kept = cursor.Point(0);
+            int lastKept = 0;
+            _keep[0] = true;
+            for (int i = 1; i < n - 1; i++)
+            {
+                Vector2 p = cursor.Point(i);
+                bool keep = (p - kept).sqrMagnitude >= sq;
+                _keep[i] = keep;
+                if (keep)
+                {
+                    kept = p;
+                    lastKept = i;
+                }
+            }
+
+            if (n > 1)
+            {
+                _keep[n - 1] = true;
+                if (lastKept > 0 && (cursor.Point(n - 1) - kept).sqrMagnitude < 0.25f * sq)
+                {
+                    _keep[lastKept] = false;
+                }
+            }
         }
 
         // Banda k de la sección: de u0 a u1 en medios anchos (+1 = orilla izquierda mirando río abajo) y su color. «half» es el

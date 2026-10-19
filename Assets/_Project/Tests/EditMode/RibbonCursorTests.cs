@@ -20,7 +20,8 @@ namespace AF.Tests.EditMode
     /// aguas a cada lado y el borde de vidrio), la trama de Patrones de fruta (con su forma en la andina), el frente a ≤ 400
     /// vértices, la trama con el aspecto que dibuja la cinta cuando el tope omite cambios de agua, la sección final que llega
     /// por su tramo, <see cref="RiverRibbonGraphic.SetFill"/> que no reconstruye ni asigna sin cambios, la malla sin
-    /// asignaciones y el inglete limitado en un codo de 170°; y
+    /// asignaciones y el inglete limitado en un codo de 170°; el trazo suave de M5.1c (puntos a <see cref="RiverRibbonGraphic.SpacingWidths"/>
+    /// anchos, los mismos en el vidrio y en el trozo de agua, uniones en bisel, sin pasarse del tope y sin asignaciones); y
     /// <see cref="LandGraphic"/> con un color por zona.
     /// </summary>
     public sealed class RibbonCursorTests
@@ -82,10 +83,14 @@ namespace AF.Tests.EditMode
             Assert.That(Vector2.Distance(cursor.TangentAtS(0f), first.normalized), Is.LessThan(1e-5f), "tangente unitaria, río abajo");
             Assert.That(cursor.TangentAtS(1f).magnitude, Is.EqualTo(1f).Within(1e-5f));
 
-            RiverLine atacuari = _map.Line("atacuari")!;
-            var single = new PolylineCursor(atacuari);
+            // Una línea de un solo punto (solo la boca). Desde M5.1 el archivo real ya no tiene ninguna (el Atacuari sale de
+            // HydroRIVERS): un documento mínimo con una.
+            RiverMap tiny = RiverMapReader.Read(RiverMapReaderTests.Doc(lines: RiverMapReaderTests.Lines(RiverMapReaderTests.Main(),
+                RiverMapReaderTests.Trib(pts: RiverMapReaderTests.EncodePoints(new ushort[] { 20000, 40000 })))));
+            RiverLine mouthOnly = tiny.Line("negro")!;
+            var single = new PolylineCursor(mouthOnly);
             Assert.That(single.Length, Is.EqualTo(0f));
-            Assert.That(single.PointAtS(0.5f), Is.EqualTo(new Vector2(atacuari.X(0), atacuari.Y(0))), "solo la boca");
+            Assert.That(single.PointAtS(0.5f), Is.EqualTo(new Vector2(mouthOnly.X(0), mouthOnly.Y(0))), "solo la boca");
             Assert.That(single.TangentAtS(0.5f), Is.EqualTo(new Vector2(0f, 1f)), "sin tramos: río abajo");
         }
 
@@ -154,9 +159,11 @@ namespace AF.Tests.EditMode
                 Vector2 end = new PolylineCursor(line).Point(line.PointCount - 1);
                 float gapDp = Vector2.Distance(host, end) * Basin;
 
-                // ≤ 15 km = 2 dp en la Cuenca (geometry.py, TOLERANCE_KM); el Pacaya es la excepción pendiente del dueño (37,1 km,
-                // PENDING_MOUTH_KM: su boca está en el canal de Puinahua, que el cauce de respaldo no dibuja).
-                float limit = line.Id == "pacaya" ? 4.5f : 2f;
+                // ≤ 15 km = 2 dp en la Cuenca (geometry.py, TOLERANCE_KM); el Pacaya es la excepción pendiente del dueño (23,9 km,
+                // medida 23,83 con el cauce de HydroRIVERS y redondeada hacia arriba, M5.1; PENDING_MOUTH_KM: su boca está en
+                // el canal de Puinahua, que el cauce no dibuja). En dp: 23,9 km × 13,1 dp por grado / 111 km = 2,82 dp,
+                // redondeado hacia arriba a 0,1 dp (medida con river_map_v1.json: 2,81 dp).
+                float limit = line.Id == "pacaya" ? 2.9f : 2f;
                 Assert.That(gapDp, Is.LessThanOrEqualTo(limit), line.Id + " desemboca en " + _map.Lines[mouth.Line].Id + " s=" + mouth.S);
             }
         }
@@ -415,10 +422,11 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Front_NeverPassesItsBudget_AndKeepsBothEnds()
+        public void Front_NeverPassesItsBudget_AndKeepsBothEnds([Values(false, true)] bool smooth)
         {
             RiverLine amazonas = _map.Lines[0];
             RiverRibbonGraphic front = Ribbon(amazonas, RibbonLook.Water);
+            front.SetSmooth(smooth);
             front.SetPatterns(true);
             front.SetVertexBudget(RiverRibbonGraphic.FrontMaxVertices);
             var cursor = new PolylineCursor(amazonas);
@@ -449,13 +457,14 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void SmallBudget_WithManyWaterChanges_KeepsBothEnds([Values(16, 30, 48, 60, 84, 100)] int budget)
+        public void SmallBudget_WithManyWaterChanges_KeepsBothEnds([Values(16, 30, 48, 60, 84, 100)] int budget, [Values(false, true)] bool smooth)
         {
             // El cauce entero en agua: cinco cambios (andina a blanca y las dos franjas de dos aguas) son 12 secciones fijas, que
             // con secciones de hasta 8 vértices no caben en 96. Ningún punto intermedio cabe y, si tampoco caben todos los
             // cambios, la sección final se queda con su sitio.
             RiverLine amazonas = _map.Lines[0];
             RiverRibbonGraphic ribbon = Ribbon(amazonas, RibbonLook.Water);
+            ribbon.SetSmooth(smooth);
             ribbon.SetVertexBudget(budget);
             List<UIVertex> verts = Mesh(ribbon);
             Assert.That(verts.Count, Is.LessThanOrEqualTo(budget));
@@ -476,14 +485,15 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Decimated_RibbonAndTrama_FollowTheChords()
+        public void Decimated_RibbonAndTrama_FollowTheChords([Values(false, true)] bool smooth)
         {
             // Con puntos saltados, la cinta une los que quedan con cuerdas: cada marca de la trama cae dentro de un triángulo
-            // de la cinta (antes seguían la polilínea original y algunas quedaban fuera).
+            // de la cinta (antes seguían la polilínea original y algunas quedaban fuera). Con el trazo suave, también con biseles.
             RiverLine amazonas = _map.Lines[0];
             RiverRibbonGraphic ribbon = Ribbon(amazonas, RibbonLook.Water);
+            ribbon.SetSmooth(smooth);
             ribbon.SetPatterns(true);
-            ribbon.SetVertexBudget(700);
+            ribbon.SetVertexBudget(smooth ? 2000 : 700);
             var stream = new List<UIVertex>();
             using (var vh = new VertexHelper())
             {
@@ -512,6 +522,167 @@ namespace AF.Tests.EditMode
             }
 
             Assert.That(worst, Is.LessThanOrEqualTo(0.05f), "la marca más alejada de la cinta, en dp");
+        }
+
+        [Test]
+        public void Smooth_KeepsPointsApart_TheSameInTheGlassAndInAPiece([Values(1f, 4f)] float zoom)
+        {
+            // M5.1c: con la geometría de producción (HydroRIVERS), una cinta que sigue cada punto sale dentada. Con el trazo suave
+            // se queda con los puntos a SpacingWidths anchos unos de otros, elegidos sobre la línea entera: un trozo de la línea
+            // (el lleno, el frente) dibuja los mismos que el vidrio entero, así que el agua queda justo encima.
+            var space = new MapSpace(Basin * zoom, Vector2.zero);
+            foreach (string id in new[] { "amazonas", "maranon", "napo", "purus" })
+            {
+                RiverLine line = _map.Line(id)!;
+                RiverRibbonGraphic raw = Ribbon(line, RibbonLook.Glass);
+                raw.SetSpace(space);
+                Mesh(raw);
+                int rawPoints = raw.LastSectionPointCount;
+                RiverRibbonGraphic whole = Ribbon(line, RibbonLook.Glass);
+                whole.SetSpace(space);
+                whole.SetSmooth(true);
+                Assert.That(whole.Smooth, Is.True);
+                Mesh(whole);
+                Assert.That(whole.LastWasDecimated, Is.True, id + ": salta puntos a " + zoom + "×");
+                Assert.That(whole.LastSectionPointCount, Is.LessThan(rawPoints), id + ": menos puntos que la polilínea");
+
+                // Entre los puntos de dentro, ninguno a menos de la separación del anterior (en dp).
+                float spacing = RiverRibbonGraphic.SpacingWidths * whole.WidthDp;
+                int n = whole.LastSectionPointCount;
+                Assert.That(n, Is.GreaterThan(4), id);
+                for (int k = 2; k < n - 1; k++)
+                {
+                    float gap = Vector2.Distance(whole.LastSectionPoint(k), whole.LastSectionPoint(k - 1)) * space.DpPerUnit;
+                    Assert.That(gap, Is.GreaterThanOrEqualTo(spacing * 0.999f), id + ": los puntos " + (k - 1) + " y " + k + " a " + zoom + "x");
+                }
+
+                // Un trozo (como el lleno o el frente) pasa por los mismos puntos que el vidrio entero.
+                RiverRibbonGraphic piece = Ribbon(line, RibbonLook.Glass);
+                piece.SetSpace(space);
+                piece.SetSmooth(true);
+                piece.SetFill(0.3f, 0.7f);
+                Mesh(piece);
+                int m = piece.LastSectionPointCount;
+                Assert.That(m, Is.GreaterThan(4), id);
+                for (int k = 1; k < m - 1; k++)
+                {
+                    Vector2 p = piece.LastSectionPoint(k);
+                    float best = float.MaxValue;
+                    for (int j = 0; j < n; j++)
+                    {
+                        best = Mathf.Min(best, Vector2.Distance(p, whole.LastSectionPoint(j)));
+                    }
+
+                    Assert.That(best, Is.LessThan(1e-6f), id + ": el punto " + k + " del trozo, en el vidrio");
+                }
+            }
+        }
+
+        [Test]
+        public void Smooth_Elbow170_IsBevelled_WithoutASpike()
+        {
+            // El codo de 170° del test del inglete, con el trazo suave: en bisel, dos secciones en el codo, la de fuera a medio
+            // ancho del punto (sin pico) y la de dentro en el inglete limitado.
+            double aspect = 33.0 * Math.Cos(5.0 * Math.PI / 180.0) / 25.0;
+            double angle = 170.0 * Math.PI / 180.0;
+            var bx = 0.5;
+            var by = 0.5;
+            ushort[] raw =
+            {
+                Quant(bx - 0.3), QuantY(by, aspect), Quant(bx), QuantY(by, aspect),
+                Quant(bx + (0.3 * Math.Cos(angle))), QuantY(by + (0.3 * Math.Sin(angle)), aspect),
+            };
+            string doc = RiverMapReaderTests.Doc(lines: RiverMapReaderTests.Lines(
+                RiverMapReaderTests.Main(pts: RiverMapReaderTests.EncodePoints(raw), splits: string.Empty), RiverMapReaderTests.Trib()));
+            RiverLine elbow = RiverMapReader.Read(doc).Lines[0];
+            RiverRibbonGraphic ribbon = Ribbon(elbow, RibbonLook.Glass);
+            ribbon.SetSmooth(true);
+            List<UIVertex> verts = Mesh(ribbon);
+            Assert.That(ribbon.LastBevelCount, Is.EqualTo(1));
+            Assert.That(verts.Count, Is.EqualTo(24), "cuatro secciones (inicio, el bisel en dos y fin) de seis vértices");
+            Vector2 b = new MapSpace(Basin, Vector2.zero).ToLocal(new PolylineCursor(elbow).Point(1));
+            float half = RiverRibbonGraphic.WidthClass1Dp * 0.5f;
+            int outer = 0;
+            float farthest = 0f;
+            for (int i = 6; i < 18; i++)
+            {
+                float d = Vector2.Distance(verts[i].position, b);
+                farthest = Mathf.Max(farthest, d);
+                outer += Mathf.Abs(d - half) < 0.01f ? 1 : 0;
+            }
+
+            Assert.That(outer, Is.EqualTo(2), "la orilla de fuera de las dos secciones del bisel, a medio ancho del codo");
+            Assert.That(farthest, Is.LessThanOrEqualTo((RiverRibbonGraphic.MiterLimit * half) + 0.01f), "sin pico");
+
+            // El cauce real a 1×, con el trazo suave: tiene codos cerrados entre los puntos que quedan (van en bisel) y ningún
+            // vértice pasa del límite del inglete (MiterLimit medios anchos) de la línea. Cada sección va en un punto de la
+            // polilínea (uno de sus puntos, una punta o un cambio de agua), así que su distancia a la línea acota la de su punto.
+            RiverLine cauce = _map.Lines[0];
+            RiverRibbonGraphic main = Ribbon(cauce, RibbonLook.Glass);
+            main.SetSmooth(true);
+            List<UIVertex> mainVerts = Mesh(main);
+            Assert.That(main.LastBevelCount, Is.GreaterThan(0), "el cauce tiene codos cerrados entre sus puntos");
+            var space = new MapSpace(Basin, Vector2.zero);
+            var cursor = new PolylineCursor(cauce);
+            var points = new Vector2[cauce.PointCount];
+            for (int i = 0; i < points.Length; i++)
+            {
+                points[i] = space.ToLocal(cursor.Point(i));
+            }
+
+            float limit = (RiverRibbonGraphic.MiterLimit * main.WidthDp * 0.5f) + 0.01f;
+            float worst = 0f;
+            for (int v = 0; v < mainVerts.Count; v++)
+            {
+                Vector2 q = mainVerts[v].position;
+                float best = float.PositiveInfinity;
+                for (int i = 1; i < points.Length && best > 0f; i++)
+                {
+                    Vector2 a = points[i - 1];
+                    Vector2 b2 = points[i];
+                    if (Mathf.Min(a.x, b2.x) - limit > q.x || Mathf.Max(a.x, b2.x) + limit < q.x
+                        || Mathf.Min(a.y, b2.y) - limit > q.y || Mathf.Max(a.y, b2.y) + limit < q.y)
+                    {
+                        continue;
+                    }
+
+                    Vector2 ab = b2 - a;
+                    float t = ab.sqrMagnitude > 1e-12f ? Mathf.Clamp01(Vector2.Dot(q - a, ab) / ab.sqrMagnitude) : 0f;
+                    best = Mathf.Min(best, Vector2.Distance(q, a + (t * ab)));
+                }
+
+                worst = Mathf.Max(worst, best);
+            }
+
+            Assert.That(worst, Is.LessThanOrEqualTo(limit), "el cauce, sin picos: ningún vértice más allá del límite del inglete");
+        }
+
+        [Test]
+        public void Smooth_Mesh_DoesNotAllocate_AfterTheFirstBuild()
+        {
+            RiverRibbonGraphic front = Ribbon(_map.Lines[0], RibbonLook.Water);
+            front.SetSmooth(true);
+            front.SetPatterns(true);
+            front.SetVertexBudget(RiverRibbonGraphic.FrontMaxVertices);
+            var populate = (Action<VertexHelper>)Delegate.CreateDelegate(typeof(Action<VertexHelper>), front, RibbonPopulate);
+            using (var vh = new VertexHelper())
+            {
+                float s = 0.70f;
+                float zoom = 1f;
+                TestDelegate frame = () =>
+                {
+                    s += 0.0001f;
+                    zoom += 0.01f; // también al cambiar de escala (se vuelven a elegir los puntos)
+                    front.SetSpace(new MapSpace(Basin * zoom, Vector2.zero));
+                    front.SetFill(0.70f, s);
+                    populate(vh);
+                };
+                front.SetFill(0f, 1f);
+                populate(vh);
+                frame();
+                Assert.That(frame, Is.Not.AllocatingGCMemory());
+                Assert.That(vh.currentVertCount, Is.GreaterThan(0));
+            }
         }
 
         [Test]

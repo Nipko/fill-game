@@ -116,6 +116,12 @@ GoogleService-Info.plist
 .env*
 
 # ---------------------------------------------------------------------------
+# Mapa del río (M5.1): las descargas de Natural Earth y HydroRIVERS (~395 MB) no se versionan.
+# Sus SHA-256 y licencias van en tools/river-map/sources.json (sí versionado).
+# ---------------------------------------------------------------------------
+/tools/river-map/source/
+
+# ---------------------------------------------------------------------------
 # Claude Code: estado local de cada agente o persona
 # ---------------------------------------------------------------------------
 .claude/worktrees/

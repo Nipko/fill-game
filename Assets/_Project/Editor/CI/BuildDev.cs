@@ -31,11 +31,26 @@ namespace AF.EditorTools
     ///      com.amazonfill.dev, un idioma ofrecido con la UI incompleta o texto cultural sin aprobado_es. Con
     ///      com.amazonfill.dev solo avisa en el log. Va antes de comprobar los Player Settings.
     /// Firma: clave de depuración de Unity. Nunca se sube a Google Play.
+    ///
+    /// Antes de construir borra el <c>dev.apk</c> anterior y el APK de depuración que dejó Gradle en el proyecto que exporta Unity
+    /// (<see cref="GradleDebugApkDirs"/>), y lo dice en el log (tarea FX10, observación 2 de la prueba de la ola 6 en el
+    /// teléfono): <c>dev.apk</c> es una copia de ese APK, y con el build incremental Gradle lo actualiza en su sitio y deja huecos
+    /// entre las entradas (37,6 MB de 105,6 en el portátil). Sin el APK anterior, Gradle lo vuelve a empaquetar entero. No cambia
+    /// los códigos de salida: si no se puede borrar, es una excepción (código 4), como cualquier otro fallo del build.
     /// </summary>
     public static class BuildDev
     {
         /// <summary>APK de desarrollo.</summary>
         public const string ApkPath = BuildSmoke.OutputDir + "/dev.apk";
+
+        /// <summary>
+        /// Carpetas donde deja Gradle el APK de depuración, relativas al proyecto, una por backend de scripting
+        /// (<c>Library/Bee/Android/Prj/&lt;IL2CPP|Mono2x&gt;/Gradle/…</c>): <c>dev.apk</c> es una copia de ese APK.
+        /// </summary>
+        public const string GradleProjectsDir = "Library/Bee/Android/Prj";
+
+        /// <summary>Ruta, dentro del proyecto Gradle de cada backend, de la carpeta del APK de depuración.</summary>
+        public const string GradleDebugApkDir = "Gradle/launcher/build/outputs/apk/debug";
 
         /// <summary>Escena del juego que debe estar en Build Settings.</summary>
         public const string GameScenePath = "Assets/_Project/Scenes/Game.unity";
@@ -136,10 +151,7 @@ namespace AF.EditorTools
             try
             {
                 EditorUserBuildSettings.buildAppBundle = false;
-                if (File.Exists(ApkPath))
-                {
-                    File.Delete(ApkPath);
-                }
+                DeletePreviousApks(ApkPath, GradleProjectsDir);
 
                 var options = new BuildPlayerOptions
                 {
@@ -176,6 +188,71 @@ namespace AF.EditorTools
             {
                 EditorUserBuildSettings.buildAppBundle = previousAppBundle;
             }
+        }
+
+        /// <summary>
+        /// Las carpetas del APK de depuración de Gradle que existen ahora (<paramref name="projectsDir"/>/&lt;backend&gt;/
+        /// <see cref="GradleDebugApkDir"/>; en el build, <see cref="GradleProjectsDir"/>), en orden ordinal.
+        /// </summary>
+        public static List<string> GradleDebugApkDirs(string projectsDir)
+        {
+            var dirs = new List<string>();
+            if (!Directory.Exists(projectsDir))
+            {
+                return dirs;
+            }
+
+            string[] backends = Directory.GetDirectories(projectsDir);
+            Array.Sort(backends, StringComparer.Ordinal);
+            foreach (string backend in backends)
+            {
+                string dir = Path.Combine(backend, GradleDebugApkDir).Replace('\\', '/');
+                if (Directory.Exists(dir))
+                {
+                    dirs.Add(dir);
+                }
+            }
+
+            return dirs;
+        }
+
+        /// <summary>
+        /// Borra el APK anterior <paramref name="apkPath"/> (en el build, <see cref="ApkPath"/>) y los APK de depuración de Gradle
+        /// bajo <paramref name="projectsDir"/> (<see cref="GradleDebugApkDirs"/>) y lo dice en el log, una línea por archivo (o
+        /// que no había APK anterior). Devuelve cuántos borró (tarea FX10).
+        /// </summary>
+        internal static int DeletePreviousApks(string apkPath, string projectsDir)
+        {
+            int deleted = 0;
+            if (File.Exists(apkPath))
+            {
+                long bytes = new FileInfo(apkPath).Length;
+                File.Delete(apkPath);
+                deleted++;
+                Debug.Log(string.Format(CultureInfo.InvariantCulture, "{0}borrado el {1} anterior ({2:F2} MB): el nuevo se escribe entero.",
+                    LogPrefix, apkPath, bytes / (1024.0 * 1024.0)));
+            }
+            else
+            {
+                Debug.Log(LogPrefix + "no hay " + apkPath + " anterior.");
+            }
+
+            foreach (string dir in GradleDebugApkDirs(projectsDir))
+            {
+                string[] apks = Directory.GetFiles(dir, "*.apk");
+                Array.Sort(apks, StringComparer.Ordinal);
+                foreach (string apk in apks)
+                {
+                    long bytes = new FileInfo(apk).Length;
+                    File.Delete(apk);
+                    deleted++;
+                    Debug.Log(string.Format(CultureInfo.InvariantCulture,
+                        "{0}borrado el APK anterior de Gradle {1} ({2:F2} MB): Gradle lo empaqueta entero, sin los huecos del build incremental.",
+                        LogPrefix, apk.Replace('\\', '/'), bytes / (1024.0 * 1024.0)));
+                }
+            }
+
+            return deleted;
         }
     }
 }

@@ -33,7 +33,7 @@ namespace AF.UI
             string? line = FormatBoot(report);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 

@@ -1555,6 +1555,7 @@ namespace AF.UI
             _mapScreen = new RiverMapScreen(transform, _art, _probe, () => CloseRiverMap(), () => PressMapPlay());
             _mapScreen.Fauna = Fauna; // el miquito del tramo en la tarjeta de la parada (M4.1)
             _mapScreen.FruitSeries = FruitFacts?.Catalog; // la fruta de la serie en la tarjeta de la parada (D-022; M4.1)
+            _mapScreen.Seasons = Seasons; // la LUT de temporada en la tarjeta de la parada, como el fondo (07 §2.1; FX8)
             _mapScreen.LevelWater = level => _app?.Catalog.Find(level)?.WaterBase; // el agua del fondo de la tarjeta (M4.1)
             _mapScreen.L10SequenceEnded = () => MarkMapSeen(L10SequenceRule.Level); // la secuencia del Mapa del 10 no se repite (M4.2)
             _mapScreen.L10SlothVoice = () => _screen == null || _screen.SlothVoice; // su bocadillo, solo con voz (D-016, punto 4)
