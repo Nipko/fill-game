@@ -61,13 +61,15 @@ namespace AF.UI
     /// sobre el muelle, una burbuja «Te faltan {n}» que sale debajo). Sobre el muelle va a ≥ 8 dp del marco del tablero y a ≥ 12
     /// dp del marco de Marea, y si tapa el poste, el poste se funde con ella. En el 3 es el tooltip de Marea, «Marea · Deshacer:
     /// toca para devolver el agua» (04 §2.1), que no sale tras la intro sino tras el primer vertido que no acerca a la solución
-    /// (02 §13 y 06 §2.2, «la primera vez que un vertido aleja de la solución»; 04 §2.1, «tras ejecutarlo»), medido con el solver,
-    /// y solo la primera vez en la sesión de juego (ni en los reintentos) [P]. Con TiTino señalando el botón: sobre el muelle,
+    /// (02 §13 y 06 §2.2, «la primera vez que un vertido aleja de la solución»; 04 §2.1, «tras ejecutarlo»), medido con el solver
+    /// (D-029, pregunta 56 a), y una sola vez en la vida (D-030, pregunta 15 (b); tarea DC23): se apunta en el perfil al mostrarse
+    /// (<c>progress.undo_tip_seen</c> [P], por <see cref="UndoTipShown"/>, que guarda en segundo plano) y, apuntado
+    /// (<see cref="UndoTipSeen"/>), no vuelve ni en el 3, ni en sus reintentos, ni en el 5, aunque se cierre la app. Si no salió
+    /// en el 3, sale al inicio del 5 (02 §13: «o al inicio del nivel 5 si no ocurrió»), al habilitarse el toque tras la intro, en
+    /// el mismo sitio y con la misma cola (<see cref="TutorialInstruction.UndoTipFor"/>). Con TiTino señalando el botón: sobre el muelle,
     /// pegada a la bandeja si cabe (aunque la franja mida ≥ 64 dp: prioridad de 04 §2.1 [P], pregunta para el dueño), con el
     /// retrato hacia el botón y una cola cuya punta queda en el eje del botón de Marea, a <see cref="TutorialTailUndoAirDp"/> dp
-    /// de su marco; en 1-10 Marea es ilimitada, así que su primer uso no descuenta. El respaldo de 02 §13 («o al inicio del
-    /// nivel 5 si no ocurrió») y «la primera vez» entre sesiones necesitan guardar en el perfil que ya salió (migración y
-    /// aprobación del dueño, como los avistamientos de <see cref="SightingRule"/>): aún no están, pregunta para el dueño.
+    /// de su marco; en 1-10 Marea es ilimitada, así que su primer uso no descuenta.
     /// Sin TiTino (<c>ui_sloth_enabled</c> apagado o, en release,
     /// sin su arte) o si la tarjeta no cabe, la instrucción sale como aviso de texto (<c>_toast</c>): el tutorial no se pierde [P]. El ajuste «Mensajes de TiTino» no la quita: es la instrucción del
     /// tutorial, no una frase de su banco [P]. El 8 sigue siendo de Capi (su aviso de la Cuia extra). En el 12 (tarea TU1b; 04
@@ -557,7 +559,8 @@ namespace AF.UI
         private int _undoWatchDistance = UndoTutorialUnknown;
         private bool _undoTutorialDue;
 
-        // El tooltip de Marea ya salió en esta sesión de juego: «la primera vez» (02 §13), nunca en los reintentos [P].
+        // El tooltip de Marea ya salió en esta pantalla (sin perfil enganchado, la única memoria; con perfil, la de esta sesión
+        // mientras el guardado va en segundo plano).
         private bool _undoTutorialDone;
 
         // Solver de la distancia del tooltip de Marea (perezoso: solo en el 3, al cambiar el número de vertidos).
@@ -589,8 +592,21 @@ namespace AF.UI
         /// <summary>El tooltip de Marea del 3 espera aún al primer vertido que no acerca a la solución (tests).</summary>
         internal bool TutorialWaitsForPour => _tutorialAfterPour != null;
 
-        /// <summary>El tooltip de Marea ya salió en esta sesión de juego y no vuelve (tests).</summary>
-        internal bool UndoTutorialDone => _undoTutorialDone;
+        /// <summary>
+        /// Lee <c>progress.undo_tip_seen</c> del perfil (D-030, pregunta 15 (b); DC23): el tooltip de Marea ya salió alguna vez. Lo
+        /// engancha GameBootstrap; null (tests sin perfil) = solo la memoria de esta pantalla. Se lee al habilitarse el toque tras
+        /// la intro del 3 y del 5 y al enseñar el tooltip, nunca por fotograma.
+        /// </summary>
+        internal System.Func<bool>? UndoTipSeen { get; set; }
+
+        /// <summary>
+        /// El tooltip de Marea acaba de salir (en la tarjeta de TiTino o como aviso de texto): GameBootstrap apunta
+        /// <c>progress.undo_tip_seen</c> y guarda el perfil en un lote, en segundo plano (D-012; DC23).
+        /// </summary>
+        internal System.Action? UndoTipShown { get; set; }
+
+        /// <summary>El tooltip de Marea ya salió (en esta pantalla o, con perfil, alguna vez: «una sola vez en la vida») y no vuelve (tests).</summary>
+        internal bool UndoTutorialDone => _undoTutorialDone || (UndoTipSeen?.Invoke() ?? false);
 
         /// <summary>
         /// La instrucción a la vista señala el botón de Marea con la cola de la tarjeta de TiTino, a ≤
@@ -626,8 +642,8 @@ namespace AF.UI
 
         // Al habilitarse el toque tras la intro (OnIntroFinished), la instrucción del nivel (TutorialInstruction.KeyFor) entra la
         // primera en la cola de avisos; sale cuando la tropa se ha ido y sin el rótulo del intento (PumpNotices).
-        // En el 3, el tooltip de Marea no entra aún: espera al primer vertido que no acerca a la solución (TickTutorialAfterPour),
-        // y solo hasta que salga una vez en esta sesión de juego.
+        // En el 3, el tooltip de Marea no entra aún: espera al primer vertido que no acerca a la solución (TickTutorialAfterPour);
+        // si no salió allí, entra en el 5, tras la intro. Solo hasta que salga una vez en la vida (progress.undo_tip_seen; DC23).
         private void MaybeShowTutorial(LevelFlow flow)
         {
             ArmTutorialFinger(flow); // el dedo guía del 1 y el 2 (DC6), aparte de la tarjeta de TiTino
@@ -638,10 +654,14 @@ namespace AF.UI
                 return;
             }
 
-            string? key = TutorialInstruction.KeyFor(flow.LevelNumber);
-            if (key == null)
+            int level = flow.LevelNumber;
+            UndoTipMoment undoTip = TutorialInstruction.IsUndoTipLevel(level)
+                ? TutorialInstruction.UndoTipFor(level, UndoTutorialDone)
+                : UndoTipMoment.None;
+            string? key = undoTip != UndoTipMoment.None ? TutorialInstruction.UndoKey : TutorialInstruction.KeyFor(level);
+            if (key == null || (TutorialInstruction.PointsAtUndo(level) && undoTip == UndoTipMoment.None))
             {
-                return;
+                return; // sin instrucción; o, en el 3, el tooltip ya salió alguna vez («una sola vez en la vida»; DC23)
             }
 
             string text = UiText.TutorialInstructionText(key);
@@ -655,13 +675,8 @@ namespace AF.UI
                 return; // la presentación de Morpho, solo con su ranura en la bandeja (hint_unlock_level movido por Remote Config) [P]
             }
 
-            if (TutorialInstruction.PointsAtUndo(flow.LevelNumber))
+            if (undoTip == UndoTipMoment.AfterPour)
             {
-                if (_undoTutorialDone)
-                {
-                    return; // «la primera vez» (02 §13): ni en los reintentos ni al volver a jugar el 3 [P]
-                }
-
                 // 02 §13 y 04 §2.1: tras el vertido que empeora la posición, medido con el solver desde el tablero del intento.
                 _tutorialAfterPour = text;
                 LevelSession session = flow.Session;
@@ -749,13 +764,19 @@ namespace AF.UI
             LevelFlow? flow = _flow;
             bool hasLevel = flow != null && flow.HasLevel;
             TutorialTarget target = !hasLevel ? TutorialTarget.None
-                : TutorialInstruction.PointsAtUndo(flow!.LevelNumber) ? TutorialTarget.Undo
+                : TutorialInstruction.IsUndoTipLevel(flow!.LevelNumber) ? TutorialTarget.Undo
                 : TutorialInstruction.PointsAtHint(flow!.LevelNumber) ? TutorialTarget.Hint
                 : TutorialTarget.None;
             _tutorialTarget = target;
             if (target == TutorialTarget.Undo)
             {
+                // Se apunta al mostrarse, también si sale como aviso de texto: una sola vez en la vida (DC23).
+                bool first = !_undoTutorialDone;
                 _undoTutorialDone = true;
+                if (first)
+                {
+                    UndoTipShown?.Invoke();
+                }
             }
 
             SlothArt? art = SlothEnabled ? _art.SlothRigArt() : null;
@@ -903,11 +924,12 @@ namespace AF.UI
             int level = _flow?.LevelNumber ?? 0;
             var sb = new StringBuilder(128);
             sb.Append("\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
-            AppendJsonString(sb, "key", TutorialInstruction.KeyFor(level));
+            bool undoTip = TutorialInstruction.IsUndoTipLevel(level);
+            AppendJsonString(sb, "key", undoTip ? TutorialInstruction.UndoKey : TutorialInstruction.KeyFor(level));
             sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
             AppendJsonString(sb, "mode", mode);
             bool over = mode != "toast" && _tutorialOverTarget;
-            sb.Append(",\"undo\":").Append(TutorialInstruction.PointsAtUndo(level) ? "true" : "false");
+            sb.Append(",\"undo\":").Append(undoTip ? "true" : "false");
             sb.Append(",\"over_undo\":").Append(over && _tutorialTarget == TutorialTarget.Undo ? "true" : "false");
             sb.Append(",\"hint\":").Append(TutorialInstruction.PointsAtHint(level) ? "true" : "false");
             sb.Append(",\"over_hint\":").Append(over && _tutorialTarget == TutorialTarget.Hint ? "true" : "false");

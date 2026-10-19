@@ -45,10 +45,13 @@ namespace AF.GameFlow
     /// <para>El tooltip de Marea del 3 no sale tras la intro sino tras el primer vertido que no acerca a la solución, medido con
     /// el solver (02 §13 y 06 §2.2: «la primera vez que un vertido aleja de la solución (distancia del solver +2)»; 04 §2.1: «tras
     /// ejecutarlo» el vertido tentador). Lectura débil [P]: en el tablero del 3 ningún vertido útil sube la distancia
-    /// (tools/out/tutorial_v0_report.md), así que vale «no la baja», la de la comprobación del nivel 3. Sale una vez por sesión
-    /// de juego, nunca en los reintentos [P]; el respaldo «al inicio del nivel 5 si no ocurrió» y «la primera vez» entre
-    /// sesiones necesitan guardarlo en el perfil (pregunta para el dueño). TiTino señala el botón: la tarjeta va sobre el muelle,
-    /// junto a la bandeja, con una cola que señala el botón de Marea (GameScreen.Cards.cs).</para>
+    /// (tools/out/tutorial_v0_report.md), así que vale «no la baja», la de la comprobación del nivel 3 (D-029, pregunta 56 a).
+    /// Sale una sola vez en la vida (D-030, pregunta 15 (b); tarea DC23): se apunta en el perfil al mostrarse
+    /// (<c>progress.undo_tip_seen</c> [P]) y, apuntado, no vuelve ni en el 3, ni en sus reintentos, ni en el 5. Si no salió en
+    /// el 3 (ganado sin un vertido que no acerque), sale al inicio del <see cref="UndoFallbackLevel"/> (02 §13 y 06 §2.2: «o al
+    /// inicio del nivel 5 si no ocurrió»), tras la intro, en el mismo sitio y con la misma cola; el 5 no tiene otra instrucción
+    /// (<see cref="UndoTipFor"/>). TiTino señala el botón: la tarjeta va sobre el muelle, junto a la bandeja, con una cola que
+    /// señala el botón de Marea (GameScreen.Cards.cs).</para>
     /// </summary>
     public static class TutorialInstruction
     {
@@ -69,6 +72,12 @@ namespace AF.GameFlow
 
         /// <summary>Nivel del tutorial de Marea (04 §2.1: tutorial en el nivel 3 [P]; 02 §13).</summary>
         public const int UndoLevel = 3;
+
+        /// <summary>
+        /// Nivel del respaldo del tooltip de Marea (02 §13 y 06 §2.2, fila del 3: «o al inicio del nivel 5 si no ocurrió»; D-030,
+        /// pregunta 15 (b); DC23): si no salió en el <see cref="UndoLevel"/>, sale tras la intro de este nivel.
+        /// </summary>
+        public const int UndoFallbackLevel = 5;
 
         /// <summary>
         /// Nivel de la presentación de Morpho (04 §2.3 y §4: «Nivel 12» [P]; 02 §13): el default de <c>hint_unlock_level</c>. Si
@@ -98,7 +107,7 @@ namespace AF.GameFlow
         /// Clave de la instrucción de <paramref name="level"/> o null si no tiene. Sin asignaciones. Sale en cada intento con su
         /// intro (el primero y tras Volver a la orilla: en estos niveles no hay aviso de TiTino tras el reinicio, porque la
         /// instrucción ya lo lleva; guion §14), nunca al reanudar, que va sin intro (02 §14); salvo el tooltip de Marea del 3, que
-        /// sale una sola vez (<see cref="PointsAtUndo"/>).
+        /// sale una sola vez en la vida y, si no salió en el 3, en el 5 (<see cref="UndoTipFor"/>; DC23).
         /// </summary>
         public static string? KeyFor(int level)
         {
@@ -113,6 +122,37 @@ namespace AF.GameFlow
         public static bool PointsAtUndo(int level)
         {
             return level == UndoLevel;
+        }
+
+        /// <summary>
+        /// Cuándo sale el tooltip de Marea en <paramref name="level"/> con <paramref name="seen"/> = <c>progress.undo_tip_seen</c>
+        /// (D-030, pregunta 15 (b); DC23): una sola vez en la vida. Ya visto, nunca (<see cref="UndoTipMoment.None"/>); si no, en el
+        /// <see cref="UndoLevel"/> tras el primer vertido que no acerca (<see cref="UndoTipMoment.AfterPour"/>; D-029, 56 a) y en
+        /// el <see cref="UndoFallbackLevel"/> tras la intro (<see cref="UndoTipMoment.AfterIntro"/>); en los demás niveles, nunca.
+        /// Sin asignaciones.
+        /// </summary>
+        public static UndoTipMoment UndoTipFor(int level, bool seen)
+        {
+            if (seen)
+            {
+                return UndoTipMoment.None;
+            }
+
+            if (level == UndoLevel)
+            {
+                return UndoTipMoment.AfterPour;
+            }
+
+            return level == UndoFallbackLevel ? UndoTipMoment.AfterIntro : UndoTipMoment.None;
+        }
+
+        /// <summary>
+        /// En <paramref name="level"/> puede salir el tooltip de Marea (el 3 o su respaldo, el 5), así que la instrucción que se
+        /// enseña en él señala el botón de Marea con la cola. Sin asignaciones.
+        /// </summary>
+        public static bool IsUndoTipLevel(int level)
+        {
+            return level == UndoLevel || level == UndoFallbackLevel;
         }
 
         /// <summary>
@@ -247,6 +287,19 @@ namespace AF.GameFlow
             int amount = PourRules.Amount(state, source, target, mode);
             return amount == FingerLessonHole && amount < state[source].TopRunLength;
         }
+    }
+
+    /// <summary>Cuándo sale el tooltip de Marea en un nivel (<see cref="TutorialInstruction.UndoTipFor"/>; DC23).</summary>
+    public enum UndoTipMoment
+    {
+        /// <summary>No sale: ya se vio o el nivel no es el 3 ni el 5.</summary>
+        None = 0,
+
+        /// <summary>En el 3, tras el primer vertido que no acerca a la solución (02 §13; 04 §2.1; D-029, pregunta 56 a).</summary>
+        AfterPour = 1,
+
+        /// <summary>En el 5, al habilitarse el toque tras la intro (02 §13 y 06 §2.2: «o al inicio del nivel 5 si no ocurrió»).</summary>
+        AfterIntro = 2,
     }
 
     /// <summary>Qué vertido señala el dedo guía de un nivel del tutorial (<see cref="TutorialInstruction.FingerFor"/>).</summary>
