@@ -28,7 +28,8 @@ namespace AF.Tests.PlayMode
     /// AF_LAYOUT, el modo de selección (solo laten las turbias), el revelado con el stock, con semillas y con el video, el aviso
     /// sin saldo ni video, la cancelación sin coste, la ranura que desaparece sin ocultas y lo revelado que sobrevive a Marea, a
     /// Volver a la orilla y a reabrir (con alguna oculta, las 3 ranuras desde el primer fotograma y en AF_LAYOUT). Con el
-    /// catálogo real: nivel 100, cuia 0 = [10*, 8*, 6] y cuia 1 = [6]; nivel 106, cuia 6 = [14*, 1].
+    /// catálogo real: nivel 100, cuia 0 = [10*, 8*, 6] y cuia 1 = [6]; nivel 106, cuia 6 = [14*, 1]; nivel 135, ocultas en las
+    /// cuias 7 y 8.
     /// </summary>
     public sealed class LuciernagaTests
     {
@@ -36,6 +37,9 @@ namespace AF.Tests.PlayMode
         private const int MurkyCuia100 = 0;
         private const int Level106 = 106;
         private const int MurkyCuia106 = 6;
+        private const int Level135 = 135;
+        private const int FirstMurkyCuia135 = 7;
+        private const int SecondMurkyCuia135 = 8;
 
         private readonly List<string> _lines = new List<string>();
 
@@ -362,6 +366,51 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Wallet.Stock.Get(BoosterKind.Reveal), Is.EqualTo(0));
             Assert.That(boot.Wallet.Seeds, Is.EqualTo(500), "ninguna semilla");
             Assert.That(ProfileJson.Deserialize(store.Json!).Wallet.Seeds, Is.EqualTo(500));
+            StepUntilRevealDone(boot, 5000);
+        }
+
+        [UnityTest]
+        public IEnumerator Reveal_DuringTheVideoWait_PaysWithSeeds_Level135()
+        {
+            // D-028: en la espera de 60 s de rv_reveal no hay video, así que con saldo la insignia vuelve al precio (tras el
+            // sondeo) y el toque cobra con semillas, sin abrir anuncio. El 135 tiene ocultas en dos cuias: la primera se revela
+            // con el video y la ranura sigue para la segunda (en el 106 la ranura se va al revelar su única oculta).
+            var store = new MemoryProfileStore(FunnelSetup.Profile(500));
+            LaunchOptions.ProfileStoreOverride = store;
+            yield return LoadPlayingWithStore(Level135);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            Assert.That(boot.Flow!.Level.IsMurky, Is.True);
+            Assert.That(boot.Wallet!.Stock.Get(BoosterKind.Reveal), Is.EqualTo(0));
+            Assert.That(view.Tray.RevealShowsVideo, Is.True, "con saldo y video, la insignia del video");
+
+            int presented = FunnelSetup.AdsPresenter.Presented;
+            Assert.That(boot.PressReveal(), Is.True);
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(presented + 1), "el primer toque abre el video");
+            Assert.That(boot.Flow.RevealSelectionPayment, Is.EqualTo(RevealPayment.Stock));
+            Assert.That(boot.TapCuia(FirstMurkyCuia135).Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(boot.Flow.Session.Current[FirstMurkyCuia135].HiddenMask, Is.EqualTo(0));
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(500), "el video no cobra");
+            StepUntilRevealDone(boot, 5000);
+
+            // La espera de 60 s (el reloj del test no avanza): tras el sondeo, la insignia enseña el precio.
+            Assert.That(boot.Flow.Session.HiddenCount, Is.GreaterThan(0), "queda la segunda cuia turbia");
+            Assert.That(view.Tray.RevealShown, Is.True);
+            Assert.That(boot.Ads!.CheckRewarded(AdPlacement.Reveal).IsAllowed, Is.False, "en la espera de 60 s");
+            PlayModeHelpers.Step(boot, 600);
+            Assert.That(view.Tray.RevealShowsVideo, Is.False, "en la espera, sin video");
+            Assert.That(view.Tray.RevealPriceShown, Is.EqualTo(120), "sin video, el precio");
+            Assert.That(view.Tray.RevealShowsMissing, Is.False);
+
+            presented = FunnelSetup.AdsPresenter.Presented;
+            Assert.That(boot.PressReveal(), Is.True);
+            Assert.That(FunnelSetup.AdsPresenter.Presented, Is.EqualTo(presented), "ningún anuncio");
+            Assert.That(boot.Flow.RevealSelectionPayment, Is.EqualTo(RevealPayment.Seeds));
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(500), "abrir la selección no cobra");
+            Assert.That(boot.TapCuia(SecondMurkyCuia135).Kind, Is.EqualTo(TapKind.Ignored));
+            Assert.That(boot.Flow.Session.Current[SecondMurkyCuia135].HiddenMask, Is.EqualTo(0));
+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(380), "120 semillas");
+            Assert.That(ProfileJson.Deserialize(store.Json!).Wallet.Seeds, Is.EqualTo(380));
             StepUntilRevealDone(boot, 5000);
         }
 

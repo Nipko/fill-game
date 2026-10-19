@@ -49,9 +49,9 @@ namespace AF.UI
     /// <c>hint_supported</c>, y entonces tocarla enseña el globo «La morpho no conoce este tramo todavía»
     /// (<see cref="ShowHintTooltip"/>; 04 §2.3 b). La acción la pone la pantalla (<c>GameScreen.Morpho.cs</c>);</description></item>
     /// <item><description>[Revelar · Luciérnaga] (tarea T14) solo en los niveles de Aguas turbias mientras quede alguna dosis
-    /// oculta, siempre la última a la derecha, detrás de Pista (pregunta 29; D-020): «+N» con stock; sin stock, el precio (120, <c>reveal_seed_price</c>) y, sin
-    /// saldo, en rojo con «Te faltan {n}»; sin stock ni saldo y con <c>rv_reveal</c>, «+1» con el icono de video
-    /// (<see cref="SetRevealBadge"/>). La visibilidad, la insignia y la acción las pone la pantalla de nivel
+    /// oculta, siempre la última a la derecha, detrás de Pista (pregunta 29; D-020): «+N» con stock; sin stock y con <c>rv_reveal</c>, «+1» con el icono de
+    /// video aunque haya saldo (D-028: video primero, como Marea); sin video, el precio (120, <c>reveal_seed_price</c>) y, si
+    /// falta saldo, en rojo con «Te faltan {n}» (<see cref="SetRevealBadge"/>). La visibilidad, la insignia y la acción las pone la pantalla de nivel
     /// (<c>GameScreen.Reveal.cs</c>).</description></item>
     /// </list>
     /// Antes del desbloqueo la ranura no existe y la bandeja se centra (07 §7.4): 16 + n·64 + (n − 1)·8 + 16 dp (240 con las
