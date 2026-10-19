@@ -8,7 +8,7 @@ namespace AF.Save.Tests
 {
     /// <summary>
     /// Migraciones <c>profile_schema n → n+1</c> encadenadas (GDD 08 §4.4: el esquema solo avanza). Se prueban con un
-    /// juego sintético 1 → 2 → 3 sobre el documento JSON; el paso real 1 → 2 de la build (DC15), en ProfileV1ToV2Tests.
+    /// juego sintético 1 → 2 → 3 sobre el documento JSON; el paso real 1 → 2 de la build (DC15), en <see cref="FaunaSightingTests"/>.
     /// </summary>
     public sealed class ProfileMigrationsTests
     {
