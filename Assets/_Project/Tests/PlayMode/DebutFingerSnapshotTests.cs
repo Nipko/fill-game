@@ -20,8 +20,8 @@ namespace AF.Tests.PlayMode
     /// medio viaje y tocando la cuia con hoja; <c>dc7_l43_reduce</c>, con Reducir movimiento;</item>
     /// <item><c>dc7_l323_scoop_source</c>, <c>dc7_l323_scoop_move</c> y <c>dc7_l323_scoop_target</c>: paso 1, de la tinaja a su
     /// cuia colgada;</item>
-    /// <item><c>dc7_l323_pour_move</c> y <c>dc7_l323_pour_target</c>: paso 2, tras sacar, de su cuia a un destino;
-    /// <c>dc7_l323_reduce</c>, el paso 1 con Reducir movimiento.</item>
+    /// <item><c>dc7_l323_pour_source</c>, <c>dc7_l323_pour_move</c> y <c>dc7_l323_pour_target</c>: paso 2, tras sacar, de su
+    /// cuia a un destino; <c>dc7_l323_reduce</c> y <c>dc7_l323_pour_reduce</c>, los pasos 1 y 2 con Reducir movimiento.</item>
     /// </list>
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.DebutFingerSnapshotTests</c>
     /// sin <c>-nographics</c>).
@@ -90,7 +90,7 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.StepUntilIdle(boot, 8000);
             yield return DebutFingerTests.WaitReal(boot, "el 323, paso 2");
             finger = boot.View!.TutorialFingerView!;
-            yield return CaptureLoop(boot, finger, dir, "dc7_l323_pour", false);
+            yield return CaptureLoop(boot, finger, dir, "dc7_l323_pour", true);
         }
 
         [UnityTest]
@@ -106,6 +106,19 @@ namespace AF.Tests.PlayMode
             SnapshotKit.Attach(boot);
             PlayModeHelpers.Step(boot, 600);
             yield return Save(boot, dir, "dc7_l323_reduce");
+
+            // Paso 2 con Reducir movimiento: la flecha de su cuia (fila 1) al destino (fila 2), por debajo de la tinaja.
+            int tinaja = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Tinaja);
+            int scoop = MechanicTestKit.IndexOf(boot.Flow!, MechanicType.Cucharon);
+            Assert.That(boot.TapCuia(tinaja).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(scoop).Kind, Is.EqualTo(TapKind.Poured));
+            PlayModeHelpers.StepUntilIdle(boot, 8000);
+            yield return DebutFingerTests.WaitReal(boot, "el 323, paso 2");
+            finger = boot.View!.TutorialFingerView!;
+            Assert.That(finger.Source, Is.EqualTo(scoop), "paso 2: su cuia");
+            Assert.That(finger.ArrowVisible, Is.True, "la flecha de su cuia al destino");
+            PlayModeHelpers.Step(boot, 600);
+            yield return Save(boot, dir, "dc7_l323_pour_reduce");
         }
 
         // La mano tocando el origen (si withSource), a medio viaje y tocando el destino.

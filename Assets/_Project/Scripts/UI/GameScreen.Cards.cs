@@ -1372,7 +1372,7 @@ namespace AF.UI
             }
         }
 
-        // AF_STATE tutorial_finger: nivel, si se ve, el vertido (origen, destino y dosis), la lección (first o partial), Reducir
+        // AF_STATE tutorial_finger: nivel, si se ve, el vertido (origen, destino y dosis), la lección (first, partial, hoja, tinaja_scoop o tinaja_pour), Reducir
         // movimiento y el motivo (show, held, resume, followed, self, other_pour, undo, attempt o level_end). Solo con la sonda y en
         // los cambios, nunca por fotograma.
         private void EmitFingerProbe(bool visible, string reason)
