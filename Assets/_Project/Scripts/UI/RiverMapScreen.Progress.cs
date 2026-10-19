@@ -240,6 +240,8 @@ namespace AF.UI
         private RiverMap? _progressMap;
         private int _progressLevel = -1;
         private int _progressBuilds;
+        private bool _silhouettesPlaced;
+        private int _silhouetteReplacements;
         private int _frontStop = -1;
         private float _frontFraction;
         private int _frontCount;
@@ -266,6 +268,12 @@ namespace AF.UI
 
         /// <summary>Veces que se calcularon el lleno y el frente (solo al abrir con otro <c>max_level</c> o con otro Mapa).</summary>
         public int ProgressBuilds => _progressBuilds;
+
+        /// <summary>
+        /// Veces que las placas de los mundos futuros se volvieron a colocar porque cambió cuáles se ven sin cambiar de vista
+        /// («ponerse al día» que cruza una gran parada; tarea FX8, <see cref="ReplaceSilhouettes"/>). Tests.
+        /// </summary>
+        internal int SilhouetteReplacements => _silhouetteReplacements;
 
         /// <summary>Parada hacia la que va el frente (<see cref="FrontStopOf"/>), o −1 si el catálogo no tiene su ruta.</summary>
         public int FrontStop => _frontStop;
@@ -668,7 +676,38 @@ namespace AF.UI
             }
 
             BuildFront(map, routes, max);
-            BuildSilhouettes(map, routes, max);
+            if (BuildSilhouettes(map, routes, max) && _silhouettesPlaced)
+            {
+                ReplaceSilhouettes(); // «ponerse al día» cruzó una gran parada: las placas, cada una junto a la de su mundo (FX8)
+            }
+        }
+
+        // Las placas que se ven cambiaron sin cambiar de vista («ponerse al día» que cruza una gran parada; tarea FX8): BuildSilhouettes
+        // reutiliza la caja de una silueta para otro mundo, y sin esto se quedaba en el sitio del mundo de antes (captura de M4.2:
+        // al llegar la canoa a Santarém, la caja del mundo 2 pasó a decir «Mundo 3 · Manaos · Nivel 41» en el sitio del mundo 2).
+        // Se vuelven a colocar los rótulos del lienzo estático como al cambiar de vista (ProgressSpace: los controles de la Cuenca,
+        // los países y las placas), con la canoa en su sitio de max_level como al abrir (PlaceSilhouettes), y, en la vista Mundo,
+        // se apartan de lo fijo del encuadre que ya se ve (ResolvePlates, sin mover el encuadre); con el norte arriba, se recalcula
+        // su corrimiento. Solo cuando cambia el conjunto (≤ una vez por gran parada), nunca por fotograma.
+        private void ReplaceSilhouettes()
+        {
+            MapSpace space = _space;
+            BasinControlObstacles();
+            _placed.Clear();
+            PlaceCountries(space);
+            PlaceSilhouettes(space);
+            if (_view == MapView.World && _markersReady && _markerCount > 0)
+            {
+                ResolvePlates(_offset);
+            }
+
+            if (_northUpOn)
+            {
+                NorthUpLabelShifts();
+                ApplyNorthUp(true);
+            }
+
+            _silhouetteReplacements++;
         }
 
         // ============================================================================================ ganchos
@@ -794,10 +833,12 @@ namespace AF.UI
 
             _progressMap = null;
             _progressLevel = -1;
+            _silhouettesPlaced = false;
         }
 
         partial void ProgressOpen(IMapProgress progress)
         {
+            _silhouettesPlaced = false; // hasta que ApplyView las coloque en esta apertura (FX8)
             if (_map == null || _fillLayer == null)
             {
                 return;
@@ -834,6 +875,7 @@ namespace AF.UI
             _placed.Clear();
             PlaceCountries(space);
             PlaceSilhouettes(space);
+            _silhouettesPlaced = true;
         }
 
         // Los países van en su punto de labels, pero nunca se salen del mapa por un lado (se corren hacia dentro lo justo) ni
@@ -1004,7 +1046,7 @@ namespace AF.UI
             RiverMap map = _map!;
             float contentW = space.DpPerUnit * map.Width;
             float contentH = space.DpPerUnit * map.Height;
-            Rect canoe = CanoeBoxLocal;
+            Rect canoe = CanoeHomeBox(space);
             bool hasCanoe = _hasCanoe && canoe.width > 0f;
             if (hasCanoe)
             {
@@ -1083,6 +1125,22 @@ namespace AF.UI
                 s.Root.anchoredPosition = new Vector2(plate.xMin, plate.center.y);
                 _placed.Add(plate);
             }
+        }
+
+        // La caja de la canoa en su sitio de max_level, como la deja ApplyView antes de colocar las placas (= CanoeBoxLocal en ese
+        // momento): «ponerse al día» la lleva por el agua, y las placas que se vuelven a colocar por el camino (FX8,
+        // ReplaceSilhouettes) quedan como en la vista recién abierta. Vacía sin canoa.
+        private Rect CanoeHomeBox(MapSpace space)
+        {
+            if (!_hasCanoe)
+            {
+                return Rect.zero;
+            }
+
+            Vector2 at = space.ToLocal(_canoeMap);
+            const float w = ProceduralArt.MapCanoeWidthDp;
+            const float h = ProceduralArt.MapCanoeHeightDp;
+            return new Rect(at.x - (0.5f * w), at.y - (CanoePivotY * h), w, h);
         }
 
         // En la Cuenca sin girar, el sitio de una placa de tamaño size que no pisa ninguna línea del lleno, la canoa, los países, las
@@ -1828,11 +1886,14 @@ namespace AF.UI
         // ============================================================================================ siluetas y rótulos
 
         // Una silueta por mundo futuro del catálogo con ruta hasta su gran parada (la que aún no se alcanzó: max < 10 · n), en esa
-        // parada, con «Mundo {n} · {nombre} · Nivel {primer nivel}» (map_next_world). Su texto se asigna aquí: solo al abrir.
-        private void BuildSilhouettes(RiverMap map, RiverRoutes routes, int max)
+        // parada, con «Mundo {n} · {nombre} · Nivel {primer nivel}» (map_next_world). Su texto se asigna aquí: al abrir y, al
+        // ponerse al día, cuando se alcanza una gran parada. True si cambió qué mundo lleva alguna caja o cuáles se ven: entonces
+        // hay que volver a colocarlas (FX8).
+        private bool BuildSilhouettes(RiverMap map, RiverRoutes routes, int max)
         {
             RiverStopCatalog? stops = _stops;
             int used = 0;
+            bool changed = false;
             for (int world = 2; stops != null && world <= WorldTable.WorldCount; world++)
             {
                 RiverStop? gate = stops.FirstStopOfWorld(world);
@@ -1843,6 +1904,7 @@ namespace AF.UI
                 }
 
                 Silhouette s = SilhouetteAt(used++);
+                changed |= s.World != world || !s.Root.gameObject.activeSelf;
                 s.World = world;
                 s.MapPoint = PlacePoint(map, route.At);
                 s.Label.text = UiText.MapNextWorld(world, gate.FirstLevel);
@@ -1862,8 +1924,11 @@ namespace AF.UI
                 if (_silhouettes[i].Root.gameObject.activeSelf)
                 {
                     _silhouettes[i].Root.gameObject.SetActive(false);
+                    changed = true;
                 }
             }
+
+            return changed;
         }
 
         private Silhouette SilhouetteAt(int i)

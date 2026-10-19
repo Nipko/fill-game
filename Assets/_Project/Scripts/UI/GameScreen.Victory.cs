@@ -122,6 +122,12 @@ namespace AF.UI
         internal SlothLine LastSlothLine { get; private set; }
 
         /// <summary>
+        /// Lo que TiTino supo de la última victoria en la que se decidió su línea (<see cref="SlothFactsFor"/>; tests de FX8:
+        /// <c>usedHint</c> con una pista de Morpho cobrada).
+        /// </summary>
+        internal SlothVictoryFacts LastSlothFacts { get; private set; }
+
+        /// <summary>
         /// El Mapa del río existe en el cliente (en el 10 cuenta él la primera llegada, 06 §2.3): false hasta M3.3, que lo
         /// enciende.
         /// </summary>
@@ -658,7 +664,8 @@ namespace AF.UI
             session.Messages = _slothVoiceOverride ?? SlothMessagesSetting;
             LevelDefinition level = flow.Level;
             SlothVictoryFacts facts = SlothFactsFor(flow.LevelNumber, flow.LevelsWon, level.DifficultyLabel, level.IntroMechanic,
-                flow.Attempt.Rescues > 0, boxDp >= SlothSpeakBoxDp, UiText.SlothColorFactApproved);
+                flow.Attempt.Rescues > 0, boxDp >= SlothSpeakBoxDp, UiText.SlothColorFactApproved, flow.HintsUsed > 0);
+            LastSlothFacts = facts;
             return session.Context.WithVictory(in facts);
         }
 
@@ -674,15 +681,18 @@ namespace AF.UI
         /// <item>Difícil o Muy difícil, por <c>difficulty.label</c> (<paramref name="difficultyLabel"/>);</item>
         /// <item>el estreno (<see cref="SlothDebutOf"/>);</item>
         /// <item>la Crecida (<c>streak.wins</c>) y su hito: 0 y no, porque el cliente aún no tiene la Crecida;</item>
-        /// <item>la Cuia de rescate en este nivel (<paramref name="usedRescue"/>) y Morpho: no, porque el cliente aún no lo tiene.</item>
+        /// <item>la Cuia de rescate en este nivel (<paramref name="usedRescue"/>) y Morpho (<paramref name="usedHint"/>: alguna pista
+        /// cobrada desde que se cargó el nivel, <see cref="LevelFlow.HintsUsed"/> &gt; 0; tarea FX8): con cualquiera de las dos,
+        /// TiTino no dice las frases n.º 4 y 8 del banco de victoria, que presumen de haberlo resuelto solo (propuesta de TiTino
+        /// e.4; <see cref="SlothLines.ForVictory"/>).</item>
         /// </list>
         /// </summary>
         internal static SlothVictoryFacts SlothFactsFor(int won, int winCount, string? difficultyLabel, string? introMechanic, bool usedRescue,
-            bool speakBox, bool colorFactApproved)
+            bool speakBox, bool colorFactApproved, bool usedHint = false)
         {
             bool hard = string.Equals(difficultyLabel, LevelDefinition.LabelHard, StringComparison.Ordinal)
                 || string.Equals(difficultyLabel, LevelDefinition.LabelVeryHard, StringComparison.Ordinal);
-            return new SlothVictoryFacts(Math.Max(0, winCount), hard, SlothDebutOf(won, introMechanic), 0, false, usedRescue, false, speakBox,
+            return new SlothVictoryFacts(Math.Max(0, winCount), hard, SlothDebutOf(won, introMechanic), 0, false, usedRescue, usedHint, speakBox,
                 colorFactApproved);
         }
 

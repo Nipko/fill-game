@@ -373,6 +373,9 @@ namespace AF.UI
         /// <summary>El fondo de la parada de la tarjeta.</summary>
         public StopBackdrop Backdrop => _backdrop;
 
+        /// <summary>Color del panorama de la escena (la luz de la parada y de la temporada; tests de FX8).</summary>
+        internal Color PanoramaTint => _panorama.color;
+
         /// <summary>Ventana del fondo (con su máscara).</summary>
         public RectTransform SceneRect => _sceneWindow;
 
@@ -646,9 +649,12 @@ namespace AF.UI
         /// Abre la tarjeta de <paramref name="stop"/>: entera si se alcanzó (<paramref name="reached"/>), o solo la silueta y «Nivel
         /// n» si es futura. <paramref name="worldWater"/> es el <c>water_base</c> del mundo de la parada (la banda del primer plano);
         /// <paramref name="fauna"/>, el catálogo de miquitos (null = sin fila del miquito); <paramref name="fruits"/>, el calendario de
-        /// Frutas del río (null = solo las frutas que debutaron en la parada).
+        /// Frutas del río (null = solo las frutas que debutaron en la parada); <paramref name="season"/>, la temporada del ciclo del
+        /// primer nivel de la parada (07 §2.1: la misma composición que el fondo, temporada incluida; tarea FX8), cuya LUT va sobre
+        /// la de la parada (<see cref="StopBackdrop.LutOf(RiverStop, Season)"/>); <see cref="Season.None"/> = sin temporada.
         /// </summary>
-        public void ShowStop(RiverStop stop, bool reached, string worldWater, FaunaCatalog? fauna, FactCatalog? fruits = null)
+        public void ShowStop(RiverStop stop, bool reached, string worldWater, FaunaCatalog? fauna, FactCatalog? fruits = null,
+            Season season = Season.None)
         {
             _stop = stop ?? throw new ArgumentNullException(nameof(stop));
             _viewpoint = null;
@@ -656,7 +662,7 @@ namespace AF.UI
             _root.gameObject.SetActive(true);
             _root.SetAsLastSibling();
 
-            _backdrop.Apply(stop, worldWater ?? string.Empty, false, 0f);
+            _backdrop.Apply(stop, worldWater ?? string.Empty, false, 0f, season);
             Color lut = _backdrop.LutColor;
             _panorama.color = lut;
             Color sky = Palette.SkyTop * lut;

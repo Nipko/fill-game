@@ -27,7 +27,10 @@ namespace AF.Tests.PlayMode
     /// <item>un toque lo completa (la llegada que faltaba, saltada); cerrarlo a medias, también; con Reducir movimiento, el estado
     /// final sin viaje ni llenado animado, con un fundido de 150 ms en lo nuevo; un toque en Mundo, Cuenca o «Volver a la canoa»
     /// también lo completa;</item>
-    /// <item>la franja de llegada de la victoria del 20 anota lo visto hasta el 20 (y la del 21, que no es llegada, nada).</item>
+    /// <item>la franja de llegada de la victoria del 20 anota lo visto hasta el 20 (y la del 21, que no es llegada, nada);</item>
+    /// <item>al cruzar una gran parada (Santarém, el 10, con visto 5 y max 12), cada placa de mundo futuro queda junto a la gran
+    /// parada de su mundo, con su texto, y en el mismo sitio que en la vista recién abierta (tarea FX8: antes la caja del mundo 2
+    /// pasaba a decir «Mundo 3» en el sitio del mundo 2).</item>
     /// </list>
     /// </summary>
     public sealed class MapCatchUpTests
@@ -93,6 +96,92 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Lobby.MapTabDotShown, Is.False);
             Assert.That(lines.Exists(l => l.Contains("\"event\":\"map_close\"") && l.Contains("\"map_seen_level\":58")), Is.True, string.Join("\n", lines));
             Assert.That(lines.Exists(l => l.Contains("\"event\":\"stop_arrive\"")), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator CrossingAGreatStop_EachPlateStaysByItsOwnWorld_AsInAFreshView()
+        {
+            // Visto 5 y max 12: «ponerse al día» cruza Santarém (el 10), la gran parada del mundo 2, cuya placa se va; la caja que
+            // la llevaba pasa al mundo 3 (BuildSilhouettes reutiliza las cajas en orden de mundo).
+            yield return MapMarkersTests.OpenApp(13, 5);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Assert.That(map.View, Is.EqualTo(MapView.World));
+            Assert.That(map.CatchingUp, Is.True);
+            Assert.That(map.CatchUpFromLevel, Is.EqualTo(5));
+            Assert.That(map.CatchUpToLevel, Is.EqualTo(12));
+            List<(int World, Rect Box, Vector2 Stop)> before = Plates(map);
+            Assert.That(before.Count, Is.GreaterThanOrEqualTo(2), "las placas de los mundos 2 y siguientes");
+            Assert.That(before[0].World, Is.EqualTo(2), "premisa: con 5, la placa del mundo 2 (Santarém)");
+            AssertPlatesByTheirWorlds(map, before, "al abrir, con 5");
+            int replacements = map.SilhouetteReplacements;
+
+            for (int i = 0; i < 20 && map.CatchingUp; i++)
+            {
+                map.Tick(MapConfig.CatchUpPerBuoyMs);
+            }
+
+            map.Tick(MapConfig.ArrivalSampleFillMs);
+            Canvas.ForceUpdateCanvases();
+            Assert.That(map.CatchingUp, Is.False);
+            Assert.That(map.ProgressLevel, Is.EqualTo(12));
+            Assert.That(map.CatchUpArrivals, Is.EqualTo(1), "la canoa llegó a Santarém");
+            List<(int World, Rect Box, Vector2 Stop)> caught = Plates(map);
+            Assert.That(caught.Count, Is.EqualTo(before.Count - 1), "la del mundo 2 se fue");
+            Assert.That(caught[0].World, Is.EqualTo(3));
+            AssertPlatesByTheirWorlds(map, caught, "tras ponerse al día hasta 12");
+            Assert.That(map.SilhouetteReplacements, Is.EqualTo(replacements + 1), "las placas se volvieron a colocar una vez, al cruzar el 10");
+
+            // Como en la vista recién abierta con 12 (sin nada que ponerse al día): los mismos mundos en los mismos sitios.
+            MapMarkersTests.Reopen(boot, new MemoryProgressStore(13, 12, 12), 13);
+            Assert.That(map.CatchingUp, Is.False);
+            List<(int World, Rect Box, Vector2 Stop)> fresh = Plates(map);
+            Assert.That(fresh.Count, Is.EqualTo(caught.Count));
+            for (int i = 0; i < fresh.Count; i++)
+            {
+                string at = "la placa del mundo " + fresh[i].World;
+                Assert.That(caught[i].World, Is.EqualTo(fresh[i].World), at);
+                Assert.That(Vector2.Distance(caught[i].Box.min, fresh[i].Box.min), Is.LessThan(0.5f),
+                    at + ": " + caught[i].Box + " tras ponerse al día, " + fresh[i].Box + " en la vista recién abierta");
+                Assert.That(caught[i].Box.size, Is.EqualTo(fresh[i].Box.size), at);
+            }
+        }
+
+        // Las placas de los mundos futuros que se ven, en orden de mundo: su mundo, su caja y el punto de su gran parada (en
+        // coordenadas locales del contenido).
+        private static List<(int World, Rect Box, Vector2 Stop)> Plates(RiverMapScreen map)
+        {
+            var plates = new List<(int World, Rect Box, Vector2 Stop)>();
+            for (int i = 0; i < map.SilhouetteCount; i++)
+            {
+                plates.Add((map.SilhouetteWorld(i), map.SilhouetteLocalBox(i), map.Space.ToLocal(map.SilhouetteMapPoint(i))));
+            }
+
+            return plates;
+        }
+
+        // Cada placa dice su mundo y queda junto a la gran parada de ese mundo (a lo sumo el hueco, el corrimiento vertical de la
+        // búsqueda y el hueco con lo fijo del encuadre), sin pisar otra placa.
+        private static void AssertPlatesByTheirWorlds(RiverMapScreen map, List<(int World, Rect Box, Vector2 Stop)> plates, string at)
+        {
+            GameBootstrap boot = GameBootstrap.Current!;
+            float reach = RiverMapScreen.SilhouetteGapDp + RiverMapScreen.SilhouetteMaxShiftDp + RiverMapScreen.FixedOverlayGapDp + 1f;
+            for (int i = 0; i < plates.Count; i++)
+            {
+                (int world, Rect box, Vector2 stop) = plates[i];
+                RiverStop gate = boot.RiverStops!.FirstStopOfWorld(world)!;
+                Assert.That(map.SilhouetteText(i), Is.EqualTo(UiText.MapNextWorld(world, gate.FirstLevel)), at + ": el texto de su mundo");
+                Vector2 expected = RiverMapScreen.PlacePoint(boot.RiverMapData!, boot.RiverRoutes!.At(gate.N)!.At);
+                Assert.That(Vector2.Distance(map.SilhouetteMapPoint(i), expected), Is.LessThan(1e-4f), at + ": el punto de la gran parada del mundo " + world);
+                float dx = Mathf.Max(0f, Mathf.Max(box.xMin - stop.x, stop.x - box.xMax));
+                float dy = Mathf.Max(0f, Mathf.Max(box.yMin - stop.y, stop.y - box.yMax));
+                Assert.That(Mathf.Sqrt((dx * dx) + (dy * dy)), Is.LessThanOrEqualTo(reach),
+                    at + ": la placa del mundo " + world + " " + box + ", junto a su gran parada " + stop);
+                for (int k = i + 1; k < plates.Count; k++)
+                {
+                    Assert.That(box.Overlaps(plates[k].Box), Is.False, at + ": las placas de los mundos " + world + " y " + plates[k].World + " se pisan");
+                }
+            }
         }
 
         [UnityTest]
