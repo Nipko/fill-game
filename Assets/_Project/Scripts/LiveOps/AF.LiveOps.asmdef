@@ -1,0 +1,20 @@
+{
+  "name": "AF.LiveOps",
+  "rootNamespace": "AF.LiveOps",
+  "references": [
+    "AF.Core",
+    "AF.Levels",
+    "AF.Platform",
+    "AF.Save",
+    "AF.Economy"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}
