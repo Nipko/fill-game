@@ -48,7 +48,7 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.View.Layout!.Rows, Is.EqualTo(3), "13 generadas: 3 filas (P12 de D-006, c)");
             Assert.That(Split(boot.View.Layout), Is.EqualTo("5/4/4"));
             yield return SnapshotKit.Wait(0.3f);
-            SnapshotKit.Save(dir, "dc18_l374_13_16x9");
+            SnapshotKit.SaveTop(dir, "dc18_l374_13_16x9", (int)HudLabelTests.Screen640.y);
             SnapshotKit.LogBoard("dc18_l374_13_16x9", boot);
         }
 
@@ -87,7 +87,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Layout!.Rows, Is.EqualTo(3), "14 generadas: 3 filas (P12 de D-006, c)");
             Assert.That(Split(view.Layout), Is.EqualTo("5/5/4"));
             yield return SnapshotKit.Wait(0.3f);
-            SnapshotKit.Save(dir, name + "_16x9");
+            SnapshotKit.SaveTop(dir, name + "_16x9", (int)HudLabelTests.Screen640.y);
             SnapshotKit.LogBoard(name + "_16x9", boot);
 
             // El rescate de verdad (como PhoneFixesTests.RescueForReal) y después la Cuia extra.
@@ -111,7 +111,7 @@ namespace AF.Tests.PlayMode
             Assert.That(Split(view.Layout), Is.EqualTo("5/5/6"), "ninguna fila de 8 (P12)");
             PlayModeHelpers.StepUntilIdle(boot, 4000);
             yield return SnapshotKit.Wait(0.3f);
-            SnapshotKit.Save(dir, name + "mas2_16x9");
+            SnapshotKit.SaveTop(dir, name + "mas2_16x9", (int)HudLabelTests.Screen640.y);
             SnapshotKit.LogBoard(name + "mas2_16x9", boot);
         }
 
