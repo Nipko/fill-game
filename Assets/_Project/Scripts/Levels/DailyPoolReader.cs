@@ -43,7 +43,7 @@ namespace AF.Levels
     /// </list>
     /// <para><c>difficulty</c> es opcional en <c>daily</c> según el esquema (el pool se publica sin métricas, nota §13): si viene,
     /// se leen <c>par</c> (≥ 1) y <c>label</c>; si no, par 0 y etiqueta <c>normal</c>. <c>world</c> también es opcional: 0 si
-    /// falta.</para>
+    /// falta, y 1-13 si viene (esquema <c>$defs/world</c>).</para>
     /// <para>[P] Sin mecánicas ni dosis ocultas: el pool no las lleva (nota §13; QA-DAILY #6 y #7) y el lector de mecánicas de
     /// <see cref="LevelPackReader"/> es privado. Un tablero con un <c>attrs</c> no nulo, <c>murky</c> = true, <c>hidden</c> no
     /// vacío o <c>intro_mechanic</c> no nulo se rechaza en lugar de leerse a medias. Si el Reto llega a usar mecánicas, el enganche
@@ -251,10 +251,15 @@ namespace AF.Levels
                 }
             }
 
-            int world = OptionalInt(node, "world", 0, where);
-            if (world != 0 && (world < 1 || world > 13))
+            // world es opcional en daily (esquema, rama daily); si viene, 1-13 ($defs/world; glosario §8). 0 = sin mundo.
+            int world = 0;
+            if (node.Has("world"))
             {
-                throw new LevelFormatException(where + ": 'world' fuera de 1-13 (glosario §8).");
+                world = RequireInt(node, "world", where);
+                if (world < 1 || world > 13)
+                {
+                    throw new LevelFormatException(where + ": 'world' " + Position(world) + " fuera de 1-13 (glosario §8).");
+                }
             }
 
             string waterBase = RequireWaterBase(node, where);
@@ -503,12 +508,6 @@ namespace AF.Levels
             }
 
             return value.AsBool();
-        }
-
-        private static int OptionalInt(JsonValue node, string key, int fallback, string where)
-        {
-            JsonValue? value = node.Get(key);
-            return value == null ? fallback : AsInt(value, key, where);
         }
 
         private static string RequireWaterBase(JsonValue node, string where)

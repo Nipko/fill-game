@@ -368,6 +368,124 @@ namespace AF.Tests.EditMode
                 "d1_n0005: 'difficulty.par' debe ser ≥ 1");
         }
 
+        // ---------- Revisión de R6: campos opcionales, estructura y la copia de ReadUnits/ReadBoard ----------
+
+        // Tablero d1_n0000 copiado literal de tools/out/daily_sample/daily_pool_v1.json (salida de R3, level-generator 1.0.0):
+        // si el generador cambia el formato, este test del cliente se rompe.
+        private const string GeneratedBoardD1N0000 =
+            "{\"schema\":\"af-level/1\",\"id\":\"d1_n0000\",\"slot\":{\"band\":1,\"day\":0},\"world\":1,\"seed\":\"amazonfill:v1:daily:b1:d000\","
+            + "\"gen\":{\"tool\":\"level-generator\",\"version\":\"1.0.0\",\"source\":\"walk\",\"depth\":15,\"candidates\":14},\"water_base\":\"white\","
+            + "\"palette\":[\"guanabana\",\"tapereba\",\"aguaje\",\"camu_camu\",\"acai\",\"agua_tapajos\"],\"units_per_color\":4,"
+            + "\"caps\":[4,4,4,4,4,4,4,4],\"cuias\":[[4,4,8,10],[],[1,1,6,3],[4,3,10,3],[6,6,6,10],[8,8,10,3],[],[4,1,1,8]],"
+            + "\"attrs\":[null,null,null,null,null,null,null,null],\"murky\":false,\"hidden\":[],\"risk_pairs\":0,\"intro_mechanic\":null,"
+            + "\"skippable\":false,\"hint_supported\":true,\"relief\":[]}";
+
+        [Test]
+        public void Read_BoardCopiedFromTheGenerator_IsRead()
+        {
+            // Dentro de un pool sintético completo de la banda 1 (PresentBands exige los 730 días).
+            List<string> boards = DailyPoolTestPacks.Boards(1);
+            boards[0] = GeneratedBoardD1N0000;
+            DailyPool pool = DailyPoolReader.Read(DailyPoolTestPacks.Pool(boards), DailyPoolCoverage.PresentBands);
+            LevelDefinition board = pool.FindById("d1_n0000")!;
+            Assert.That(board, Is.SameAs(pool.Find(1, 0)));
+            Assert.That(board.World, Is.EqualTo(1));
+            Assert.That(board.WaterBase, Is.EqualTo("white"));
+            Assert.That(board.CuiaCount, Is.EqualTo(8));
+            Assert.That(board.Palette.Count, Is.EqualTo(6));
+            Assert.That(board.CopyDoses(0), Is.EqualTo(new[] { 4, 4, 8, 10 }));
+            Assert.That(board.CopyDoses(1), Is.Empty);
+            Assert.That(board.Skippable, Is.False);
+            Assert.That(board.HintSupported, Is.True);
+            Assert.That(board.Par, Is.EqualTo(0));
+            Assert.That(board.CreateBoard(), Is.Not.Null);
+        }
+
+        [Test]
+        public void Read_OptionalFields_WorldMissingDifficultyWithoutLabelAndFalseFlags()
+        {
+            List<string> boards = DailyPoolTestPacks.Boards(2);
+            string world3 = "\"world\":" + DailyPoolTestPacks.WorldOf(3).ToString(System.Globalization.CultureInfo.InvariantCulture) + ",";
+            boards[3] = DailyPoolTestPacks.Board(2, 3).Replace(world3, "");
+            boards[4] = DailyPoolTestPacks.Board(2, 4, ",\"difficulty\":{\"bot_fail\":0.5,\"par\":14}");
+            boards[5] = DailyPoolTestPacks.Board(2, 5).Replace("\"skippable\":true,\"hint_supported\":true", "\"skippable\":false,\"hint_supported\":false");
+            boards[6] = DailyPoolTestPacks.Board(2, 6).Replace("\"units_per_color\":4", "\"units_per_color\":{\"8\":4}");
+            Assert.That(boards[3], Does.Not.Contain("\"world\""));
+            Assert.That(boards[5], Does.Contain("\"skippable\":false"));
+            Assert.That(boards[6], Does.Contain("{\"8\":4}"));
+            DailyPool pool = DailyPoolReader.Read(DailyPoolTestPacks.Pool(boards), DailyPoolCoverage.PresentBands);
+            Assert.That(pool.Find(2, 3)!.World, Is.EqualTo(0), "sin world, 0");
+            Assert.That(pool.Find(2, 4)!.Par, Is.EqualTo(14));
+            Assert.That(pool.Find(2, 4)!.DifficultyLabel, Is.EqualTo(LevelDefinition.LabelNormal), "difficulty sin label, normal");
+            Assert.That(pool.Find(2, 5)!.Skippable, Is.False);
+            Assert.That(pool.Find(2, 5)!.HintSupported, Is.False);
+            Assert.That(pool.Find(2, 6)!.Skippable, Is.True);
+            Assert.That(pool.Find(2, 6)!.HintSupported, Is.True);
+            Assert.That(pool.Find(2, 6)!.CreateBoard(), Is.Not.Null);
+        }
+
+        [TestCase("\"world\":6", "\"world\":0", "'world' 0 fuera de 1-13")]
+        [TestCase("\"world\":6", "\"world\":14", "'world' 14 fuera de 1-13")]
+        [TestCase("\"world\":6", "\"world\":\"6\"", "'world' debe ser un entero")]
+        [TestCase("\"skippable\":true", "\"skippable\":\"no\"", "'skippable' debe ser un booleano")]
+        [TestCase("\"hint_supported\":true", "\"hint_supported\":1", "'hint_supported' debe ser un booleano")]
+        [TestCase("\"murky\":false", "\"murky\":0", "'murky' debe ser un booleano")]
+        [TestCase("\"attrs\":[null,null,null]", "\"attrs\":[null,null]", "'attrs' debe tener una entrada por cuia")]
+        [TestCase("\"attrs\":[null,null,null]", "\"attrs\":5", "'attrs' debe tener una entrada por cuia")]
+        [TestCase("\"hidden\":[]", "\"hidden\":5", "'hidden' debe estar vacío")]
+        [TestCase("\"relief\":[]", "\"relief\":{}", "'relief' debe ser una lista vacía")]
+        [TestCase("\"water_base\":\"white\"", "\"water_base\":\"brown\"", "'water_base' debe ser black, white o clear")]
+        [TestCase("\"palette\":[\"acai\",\"aguaje\"]", "\"palette\":[\"acai\",3]", "'palette' debe ser una lista de cadenas")]
+        [TestCase("\"units_per_color\":4", "\"units_per_color\":7", "'units_per_color' fuera de 1..6")]
+        [TestCase("\"units_per_color\":4", "\"units_per_color\":{\"17\":4}", "'units_per_color' tiene la clave '17'")]
+        [TestCase("\"units_per_color\":4", "\"units_per_color\":{\"08\":4}", "'units_per_color' tiene la clave '08'")]
+        [TestCase("\"units_per_color\":4", "\"units_per_color\":{\"8\":0}", "'units_per_color' del color 8 fuera de 1..6")]
+        [TestCase("\"units_per_color\":4", "\"units_per_color\":{}", "'units_per_color' debe ser un entero de 1 a 6 o un objeto")]
+        [TestCase("\"units_per_color\":4,", "", "falta 'units_per_color'")]
+        [TestCase("\"caps\":[4,4,4]", "\"caps\":[4,4]", "'cuias' y 'caps' deben tener la misma longitud")]
+        [TestCase("\"caps\":[4,4,4]", "\"caps\":[7,4,4]", "capacidad fuera de 1..6 en la cuia 0")]
+        [TestCase("\"caps\":[4,4,4],\"cuias\":[[8,8,8,4],[4,4,4,8],[]]", "\"caps\":[],\"cuias\":[]", "'caps' debe tener entre 1 y 16 cuias")]
+        [TestCase("\"caps\":[4,4,4]", "\"caps\":4", "'caps' debe ser una lista")]
+        [TestCase("[[8,8,8,4],[4,4,4,8],[]]", "[[8,8,8,4,4],[4,4,8],[]]", "la cuia 0 tiene más dosis que su capacidad")]
+        [TestCase("[[8,8,8,4],[4,4,4,8],[]]", "[[8,8,8,4],5,[]]", "cada cuia debe ser una lista de dosis")]
+        [TestCase("[[8,8,8,4],[4,4,4,8],[]]", "[[8,8,8,16],[4,4,4,8],[]]", "color 16 fuera de 1..15")]
+        [TestCase("[[8,8,8,4],[4,4,4,8],[]]", "[[8,8,8,0],[4,4,4,8],[]]", "color 0 fuera de 1..15")]
+        public void Read_BadBoardField_Throws(string from, string to, string message)
+        {
+            string board = DailyPoolTestPacks.Board(1, 5);
+            Assert.That(board, Does.Contain(from), "el caso cambia algo que existe");
+            AssertRejects(DailyPoolTestPacks.Single(board.Replace(from, to)), "d1_n0005: " + message);
+        }
+
+        [TestCase(",\"difficulty\":5", "'difficulty' debe ser un objeto")]
+        [TestCase(",\"difficulty\":{\"label\":\"easy\",\"bot_fail\":0.5,\"par\":12,\"band\":\"comfort\"}", "'difficulty.label' debe ser normal, hard o very_hard")]
+        [TestCase(",\"difficulty\":{\"label\":3,\"par\":12}", "'difficulty.label' debe ser normal, hard o very_hard")]
+        [TestCase(",\"difficulty\":{\"label\":\"normal\"}", "falta el entero 'par'")]
+        public void Read_BadDifficulty_Throws(string extra, string message)
+        {
+            AssertRejects(DailyPoolTestPacks.Single(DailyPoolTestPacks.Board(1, 5, extra)), "d1_n0005: " + message);
+        }
+
+        [TestCase("[1, 2]", "La raíz del pool del Reto del río debe ser un objeto")]
+        [TestCase("\"daily\"", "La raíz del pool del Reto del río debe ser un objeto")]
+        [TestCase("{\"pack_schema\":2,\"kind\":\"daily\",\"levels\":[]}", "pool: falta la cadena 'pack_id'")]
+        [TestCase("{\"pack_schema\":2,\"pack_id\":\"daily_pool_v1\",\"kind\":\"daily\"}", "daily_pool_v1: 'levels' debe ser una lista no vacía")]
+        [TestCase("{\"pack_schema\":2,\"pack_id\":\"daily_pool_v1\",\"kind\":\"daily\",\"levels\":[]}", "daily_pool_v1: 'levels' debe ser una lista no vacía")]
+        [TestCase("{\"pack_schema\":2,\"pack_id\":\"daily_pool_v1\",\"kind\":\"daily\",\"levels\":{}}", "daily_pool_v1: 'levels' debe ser una lista no vacía")]
+        [TestCase("{\"pack_schema\":2,\"pack_id\":\"daily_pool_v1\",\"kind\":\"daily\",\"levels\":[5]}", "daily_pool_v1.levels[0]: cada tablero debe ser un objeto")]
+        [TestCase("{\"pack_schema\":\"2\",\"pack_id\":\"daily_pool_v1\",\"kind\":\"daily\",\"levels\":[]}", "daily_pool_v1: 'pack_schema' debe ser un entero")]
+        public void Read_BadStructure_Throws(string json, string message)
+        {
+            AssertRejects(json, message);
+        }
+
+        [Test]
+        public void Read_UnknownCoverage_ThrowsArgumentOutOfRange()
+        {
+            string json = DailyPoolTestPacks.Single(DailyPoolTestPacks.Board(1, 0));
+            Assert.Throws<ArgumentOutOfRangeException>(() => DailyPoolReader.Read(json, (DailyPoolCoverage)7));
+        }
+
         private static void AssertRejects(string json, string message, DailyPoolCoverage coverage = DailyPoolCoverage.AllBands)
         {
             LevelFormatException? e = Assert.Throws<LevelFormatException>(() => DailyPoolReader.Read(json, coverage));
