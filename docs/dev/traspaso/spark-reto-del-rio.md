@@ -1,4 +1,4 @@
-# Encargo al equipo Spark: el Reto del río (2026-10-20)
+# Encargo al equipo Spark: el Reto del río (2026-10-19)
 
 Escrito por la sesión tech-lead del equipo de escritorio para la sesión de Claude Code del **ASUS ProArt con NVIDIA «RTX Spark»** (el «Spark»). Decisión del dueño del 2026-10-20, literal: «Sí: encarga al Spark el Reto del río».
 
@@ -315,7 +315,7 @@ En `docs/GDD.md` §6.3 no hay ninguna pregunta abierta sobre el Reto: las bandas
 | R-Q9 | **`result = fail` en `af_daily_challenge`:** sin canoas ni fallo duro, ¿qué cuenta como fallo? | 08 §8.2; 04 §5.2 | La sonda de R10 |
 | R-Q10 | **Las comprobaciones de campaña en el pool:** ¿se aplican al Reto la anti-repetición (03 §17 #9) y el tope de trampas tempranas (03 §17 #3)? El GDD no lo dice | 03 §17 | R4. Mide, informa como aviso y pregunta: no lo hagas compuerta |
 
-**Decididas por el dueño el 2026-10-20** (respondió, literal: «Acepto tus propuestas para R-Q1 a R-Q10 del Reto del río; déjalas en el encargo del Spark»). Ya no bloquean nada; aplícalas tal cual y regístralas en `spark-estado.md` para que el integrador las lleve a `docs/dev/decisiones.md`:
+**Decididas por el dueño el 2026-10-19** (respondió, literal: «Acepto tus propuestas para R-Q1 a R-Q10 del Reto del río; déjalas en el encargo del Spark»). Ya no bloquean nada; aplícalas tal cual y regístralas en `spark-estado.md` para que el integrador las lleve a `docs/dev/decisiones.md`:
 
 | Id | Decisión |
 |---|---|
@@ -329,6 +329,18 @@ En `docs/GDD.md` §6.3 no hay ninguna pregunta abierta sobre el Reto: las bandas
 | R-Q8 | Los comodines son los de la campaña salvo los que el GDD excluye en el Reto (Cuia de rescate y Salto del Boto), y gastan el stock igual que en la campaña |
 | R-Q9 | `result = fail` en `af_daily_challenge` es salir sin ganar ese día |
 | R-Q10 | La anti-repetición (03 §17 #9) y el tope de trampas tempranas (03 §17 #3) se miden en el pool y se informan como aviso, sin ser compuerta |
+
+**Respuestas del integrador a lo que dejó el Spark en `spark-estado.md` (2026-10-19).** El dueño fijó la regla «si tienen recomendada, vamos con esas», así que quedan decididas con la recomendada:
+
+| Id | Decisión |
+|---|---|
+| R-Q1b | (a) B2 solo con K = 8 y B3 con `max_pares_riesgo` libre, como la campaña desde el 201 |
+| R-Q11 | (a) la ventana del bot es compuerta: un día sin candidato en la ventana no se publica hasta ajustar la especificación |
+| R-Q12 | (a) al reconectar, la reconciliación no retira semillas cobradas sin red |
+| R-Q13 | (a) sin intersticial al terminar un Reto |
+| R-Q14 | (a) la Pororoca de la racha entra en el stock y espera al nivel 30 que la desbloquea |
+
+Y se confirma: `IServerDate` y `FakeServerDate` van en **AF.Platform** (08 §2.2), no en AF.LiveOps.
 
 Lo que sí está decidido no se pregunta: el desbloqueo tras ganar el 10 (06 §2.3; `live_unlock_level_daily`), los reintentos ilimitados, que no gasta canoas, que no toca la Crecida y el premio de 60 (secciones anteriores).
 
@@ -568,3 +580,21 @@ Cada bloque, verificado y empujado en `spark/reto-del-rio`.
 ```text
 Eres el equipo Spark del proyecto Tintalú: haz git fetch, lee CLAUDE.md y docs/dev/traspaso/spark-reto-del-rio.md de origin/integracion-fase1-fase2 y sigue ese documento al pie de la letra para implementar el Reto del río en la rama spark/reto-del-rio, empezando por R0 y sin esperar confirmación entre tareas; para solo en lo que el documento manda parar y anótalo en docs/dev/traspaso/spark-estado.md.
 ```
+
+---
+
+## 9. Notas del integrador
+
+### Bloque (a) integrado (2026-10-19)
+
+R0-R4 y R6 están en `integracion-fase1-fase2` (`fcbbd94` y `0d844cf`): revisado sin bloqueantes y verificado en el escritorio x64. La muestra de 30 tableros regenerada aquí sale idéntica byte a byte a la tuya. Recuentos de referencia: EditMode 2.861 (2.858 + 3), PlayMode 1.359 (1.196 + 163) y dotnet test 981 (975 + 6). Haz `git merge origin/integracion-fase1-fase2` en tu rama antes de seguir.
+
+**Pendiente para ti (en tu próxima tarea, antes de R5):**
+1. **R-Q1b (a):** en `tools/level-generator/specs/daily_v1.json`, B2 solo con K = 8 (`k: [8, 8]`; quita la regla `deep` de K = 9) y B3 sin tope de pares. Rehaz la muestra y su informe.
+2. **R-Q11 (a):** la ventana del bot es compuerta también en el generador: un día sin candidato dentro de la ventana es un error y no se publica (`DailyRunner`, bloque «el más cercano»). Que QA lo siga comprobando.
+3. **R-Q2:** el agua y el fondo rotan «según la fecha», como decidió el dueño, no según el día del pool: con `1 + (día mod 9)` y 730 mod 9 = 1, al dar la vuelta el mundo deja de seguir al calendario. Usa la fecha (por ejemplo, días desde una época fija, mod 9) y quita su [P].
+4. Quita las marcas «abierta» o «[P]» de R-Q1b y R-Q11-R-Q14 en `docs/dev/reto-del-rio.md`, en la especificación y en `spark-estado.md`: ya están decididas (sección 5).
+5. Ordena `spark-estado.md`: la tabla «Preguntas nuevas» de R1, con la cabecera junto a sus filas, y una sola sección «Enganches para el integrador» con E11 y E14.
+6. Opcional: incluye `daily` en el `--self-test` sin nombre del generador y de level-qa.
+
+**Corrección del encargo §3.3, punto 1:** el despacho de `--daily` en `tools/level-generator/Program.cs` va antes del `--self-test` genérico (que rechazaría «daily»), no antes de `--parity`. Lo que hiciste es lo correcto.

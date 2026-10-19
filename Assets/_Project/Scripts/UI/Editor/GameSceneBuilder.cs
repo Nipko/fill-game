@@ -36,8 +36,12 @@ namespace AF.UI.Editor
         /// <summary>
         /// Paquetes de la escena, en orden (08 §2.2: índice nivel → paquete; tarea B1-5; traspaso §6 pasos 1.1-1.2): el tutorial
         /// (1-10), la campaña 11-200 de <c>pack_schema</c> 2 (<c>mundo_02</c> 11-40, <c>mundo_03</c> 41-80, <c>mundo_04</c>
-        /// 81-140 y <c>mundo_05</c> 141-200) y el mundo 6, Oriente, de <c>pack_schema</c> 3 (<c>mundo_06</c> 201-300, generado
-        /// por P7a; tarea C1a; 03 §11). El primero va en <c>levelPack</c> y el resto en <c>extraLevelPacks</c>. El último nivel
+        /// 81-140 y <c>mundo_05</c> 141-200), el mundo 6, Oriente, de <c>pack_schema</c> 3 (<c>mundo_06</c> 201-300, generado
+        /// por P7a; tarea C1a; 03 §11) y los mundos 7-9 (<c>mundo_07</c> 301-420, <c>mundo_08</c> 421-560 y <c>mundo_09</c>
+        /// 561-700, generados por GEN79 con D-027; tarea C1b) en la variante publicada, la que escribe el generador en
+        /// <c>Data/Levels/</c> con el <c>published_variant</c> de <c>campaign_v2.json</c> (hoy la «b», sin la Tinaja; D-019 Q-Ti3;
+        /// <c>LevelCatalog.PublishedVariant</c>, que un test EditMode compara con la especificación). El primero va en
+        /// <c>levelPack</c> y el resto en <c>extraLevelPacks</c>. El último nivel
         /// del último paquete es el fin de contenido: después, «El río sigue creciendo» (06 §9).
         /// </summary>
         public static readonly string[] LevelPackPaths =
@@ -48,6 +52,9 @@ namespace AF.UI.Editor
             "Assets/_Project/Data/Levels/mundo_04_v1.json",
             "Assets/_Project/Data/Levels/mundo_05_v1.json",
             "Assets/_Project/Data/Levels/mundo_06_v1.json",
+            "Assets/_Project/Data/Levels/mundo_07_v1.json",
+            "Assets/_Project/Data/Levels/mundo_08_v1.json",
+            "Assets/_Project/Data/Levels/mundo_09_v1.json",
         };
 
         /// <summary>Catálogo de miquitos de la intro «Llenar y teñir» (<c>af-fauna/0</c>; guion de la intro §4.3).</summary>

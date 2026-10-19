@@ -469,10 +469,22 @@ internal static class Superposition
 
     /// <summary>
     /// Cuias como mucho en un nivel con tinaja, contando la tinaja y su cuia (02 §5, fila «Tinaja y su cuia (D-019)»: «como
-    /// mucho 12 cuias en un nivel con tinaja» [P]; propuesta de la tinaja (f) y d.3). Es un tope de layout, así que rige
-    /// también en las variantes de alivio, que el cliente dibuja igual [P]. El tope general de 14 (02 R1) queda por encima.
+    /// mucho 12 cuias en un nivel con tinaja» [P]; propuesta de la tinaja (f) y d.3). Es un tope de layout del nivel; sus
+    /// variantes de alivio tienen el suyo, una cuia más (<see cref="TinajaReliefMaxCuias"/>, D-027). El tope general de 14
+    /// (02 R1) queda por encima.
     /// </summary>
     public const int TinajaMaxCuias = 12;
+
+    /// <summary>
+    /// Cuias como mucho en una variante de alivio de un nivel con tinaja, contando la pareja: el tope del nivel
+    /// (<see cref="TinajaMaxCuias"/>) más la cuia vacía de <c>plus_empty</c> (03 §13: «una cuia vacía más»). Decisión del dueño
+    /// del 2026-10-18 (D-027; propuesta de los mundos 7-9, §6 A): sin ella, un nivel con tinaja de 12 cuias cuyo
+    /// <c>minus_color</c> no pasa los filtros de la tinaja se quedaba sin alivio (329, 338 y 340) y el mundo 7 no se escribía.
+    /// La tinaja y su cuia cuentan como una pareja, en la misma fila (<c>Relief.PlusEmptyWithTinaja</c>), y 13 cuias caben en el
+    /// tablero de D-006 (≤ 16 ranuras; 2 o 3 filas, <see cref="RowOptions"/>), que el cliente reparte sin partir la pareja (TJ2).
+    /// El nivel sigue con <see cref="TinajaMaxCuias"/>; lo comprueba level-qa en QA-RELIEF-VALID.
+    /// </summary>
+    public const int TinajaReliefMaxCuias = TinajaMaxCuias + 1;
 
     /// <summary>
     /// Vacíos de 4 del tablero base de un nivel con tinaja, sin contar la pareja (propuesta de la tinaja c.3 punto 2; P1 de

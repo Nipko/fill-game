@@ -1501,8 +1501,8 @@ namespace AF.UI
 
         // ============================================================================================ frente y boyas
 
-        // El tramo del frente hasta LegFill de su longitud real (una cinta por tramo de la ruta, con el tope de vértices del frente
-        // repartido entre ellas) y sus 10 boyas, a (i + 1) / 10 de la ruta.
+        // El tramo del frente hasta LegFill de su longitud real (una cinta por tramo de la ruta, sin saltar puntos, como el vidrio
+        // y el lleno) y sus 10 boyas, a (i + 1) / 10 de la ruta.
         private void BuildFront(RiverMap map, RiverRoutes routes, int max)
         {
             int stop = FrontStopOf(max);
@@ -1514,18 +1514,20 @@ namespace AF.UI
             {
                 IReadOnlyList<RiverPathPiece> path = route.Path;
                 float total = 0f;
-                int pieces = 0;
                 for (int i = 0; i < path.Count; i++)
                 {
-                    float length = Mathf.Abs(path[i].S1 - path[i].S0) * map.Lines[path[i].Line].Length;
-                    total += length;
-                    if (length > 0f)
-                    {
-                        pieces++;
-                    }
+                    total += Mathf.Abs(path[i].S1 - path[i].S0) * map.Lines[path[i].Line].Length;
                 }
 
-                int budget = Mathf.Max(8, RiverRibbonGraphic.FrontMaxVertices / Mathf.Max(1, pieces));
+                // Revisión de FX11: cada cinta del frente (y su orla) con el tope de una malla, como el vidrio y el lleno. Con el
+                // tope del frente (FrontMaxVertices) repartido entre las piezas, en el tramo del 300 (5 piezas: Napo, Amazonas,
+                // Madeira, Beni y Madre de Dios) cada una tenía 80 vértices y en Mundo saltaba puntos; el agua y su orla, con
+                // distinto coste por sección, saltaban puntos distintos y ninguna seguía el vidrio: dos cauces a la vista. Ni
+                // siquiera los 400 enteros por pieza bastan (la del Amazonas pide 360 de agua y 504 de orla). El frente solo se
+                // rehace al cambiar su llenado (una vez por boya, ≤ 10 por apertura), y solo la pieza que cambia. Es una desviación provisional
+                // [P] del «≤ 400 vértices» del frente de la propuesta del Mapa §11.4, anotada allí y pendiente del dueño: el frente del
+                // 300 pide 2.534 vértices entre agua y orla en Mundo (medido; lo acota Fx11Tests).
+                const int budget = RiverRibbonGraphic.MaxVertices;
                 float left = _frontFraction * total;
                 for (int i = 0; i < path.Count && left > 0f; i++)
                 {
@@ -1543,6 +1545,13 @@ namespace AF.UI
                     float end = piece.S0 + ((piece.S1 - piece.S0) * t);
                     SetFrontPiece(FrontRibbonAt(k), line, budget, piece.S0, end);
                     SetFrontPiece(_frontCasing[k], line, budget, piece.S0, end);
+
+                    // FX11: el espacio y el ancho de la vista al montarla. ProgressSpace solo ajusta las cintas que ya había al
+                    // cambiar de vista; si «ponerse al día» llega a un tramo con más piezas que el de partida (en el 41, el de la
+                    // parada 4: Tapajós y Amazonas), la cinta nueva se quedaba en el espacio por defecto de la Cuenca, fuera de la
+                    // vista, y la reutilizada, con el de antes. Sin coste si no cambian (SetSpace y SetWidth comparan).
+                    FitRibbon(_front[k], _space);
+                    FitRibbon(_frontCasing[k], _space);
                 }
             }
 

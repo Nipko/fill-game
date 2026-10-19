@@ -31,13 +31,13 @@ namespace AF.Tests.PlayMode
 
         [UnityTest]
         public IEnumerator LoadGame_StartsWithTheCatalogBoard_AndReachesPlaying(
-            [Values(11, 41, 43, 81, 100, 103, 141, 183, 200, 201, 300)] int level)
+            [Values(11, 41, 43, 81, 100, 103, 141, 183, 200, 201, 300, 301, 421, 561, 700)] int level)
         {
             yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));
             GameBootstrap boot = GameBootstrap.Current!;
             LevelFlow flow = boot.Flow!;
             Assert.That(flow.Catalog.FirstLevel, Is.EqualTo(1));
-            Assert.That(flow.Catalog.LastLevel, Is.EqualTo(300), "la escena enlaza tutorial_v0 y mundo_02..06_v1 (C1a)");
+            Assert.That(flow.Catalog.LastLevel, Is.EqualTo(700), "la escena enlaza tutorial_v0 y mundo_02..09_v1 (C1a y C1b)");
             Assert.That(flow.LevelNumber, Is.EqualTo(level));
             Assert.That(flow.Level.Level, Is.EqualTo(level));
             Assert.That(flow.Level.World, Is.EqualTo(WorldTable.WorldOf(level)), "glosario §8");

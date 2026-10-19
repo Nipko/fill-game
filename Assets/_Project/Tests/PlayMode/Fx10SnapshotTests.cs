@@ -17,7 +17,7 @@ namespace AF.Tests.PlayMode
     /// <c>map_seen_level</c> 30), al abrir (la placa del mundo 3, Manaos, que se salía por la derecha, desplazada hacia dentro y
     /// entera) y al acabar «ponerse al día» (la del 3 ya no sale y la del mundo 4, Trapecio, se vuelve a colocar junto a su
     /// punto, fuera de este encuadre; antes heredaba el sitio de la del 3 y se salía por la derecha);</description></item>
-    /// <item><description><c>fx10_map_fin_contenido_300_abre</c> y <c>fx10_map_fin_contenido_300</c>: el Mapa del fin de contenido
+    /// <item><description><c>fx10_map_fin_contenido_700_abre</c> y <c>fx10_map_fin_contenido_700</c>: el Mapa del fin de contenido
     /// tras ganar el 300, al abrir (la placa del mundo 7, Madre de Dios, de 215 dp, que se salía por la izquierda bajo la
     /// ventanita, entera arriba a la izquierda, por encima de la canoa con sus banderas) y al acabar el viaje (la del 7 ya no
     /// sale y la del 8, Madidi, se vuelve a colocar junto a su punto, fuera de este encuadre; antes heredaba el sitio de la del 7,
@@ -74,12 +74,12 @@ namespace AF.Tests.PlayMode
             map.Tick(16f);
             yield return null;
             Fx10Tests.AssertPlatesFit(map, "fin de contenido, al abrir");
-            SnapshotKit.Save(dir, "fx10_map_fin_contenido_300_abre");
+            SnapshotKit.Save(dir, "fx10_map_fin_contenido_700_abre");
             Finish(map);
             yield return null;
             Fx10Tests.AssertPlatesFit(map, "fin de contenido, al acabar");
-            SnapshotKit.Save(dir, "fx10_map_fin_contenido_300");
-            Log("fx10_map_fin_contenido_300", map);
+            SnapshotKit.Save(dir, "fx10_map_fin_contenido_700");
+            Log("fx10_map_fin_contenido_700", map);
         }
 
         // «Ponerse al día» (o el viaje del fin de contenido) hasta el final, fotograma a fotograma, y el fundido.

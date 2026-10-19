@@ -13,8 +13,8 @@
 // dentro de una cuia con mecánica: rompería T4 y la máscara); las variantes conservan la máscara de la tinaja (todas sus capas
 // menos la boca, la que exige AF.Core) y repiten la ruta segura y los paseos (TinajaWalks con TinajaWalks.ReliefOptions, las
 // de Morpho: w = 2 y 40.000 nodos por realidad [P], pendiente de decisión; sin la compuerta de coste). plus_empty no se
-// publica si pasa de 12 cuias (02 §5: «como mucho 12 cuias en un nivel con tinaja»; Superposition.TinajaMaxCuias) [P]. El
-// pack escribe la máscara en el hidden de la variante (decisión del dueño del 2026-10-14, opción a de la revisión de P2a;
+// publica si pasa de 13 cuias (el tope de 12 del nivel, 02 §5, más su cuia vacía: decisión del dueño del 2026-10-18, D-027;
+// Superposition.TinajaReliefMaxCuias). El pack escribe la máscara en el hidden de la variante (decisión del dueño del 2026-10-14, opción a de la revisión de P2a;
 // 08 §4.1: relief_board admite hidden si y solo si su attrs contiene la tinaja).
 using AF.Core.Board;
 using AF.Core.Mechanics;
@@ -92,7 +92,7 @@ internal static class Relief
         return type == "plus_empty" || (par is int p && p < basePar);
     }
 
-    /// <summary>Variante +1 vacío (03 §13); interna y no privada para <c>--self-test tinaja</c> (tope de 12 cuias, 02 §5).</summary>
+    /// <summary>Variante +1 vacío (03 §13); interna y no privada para <c>--self-test tinaja</c> (tope de 13 cuias con tinaja, D-027).</summary>
     internal static ReliefBoard PlusEmpty(MetricsEngine metrics, BoardData board, double baseBot, string seedText)
     {
         var data = new BoardData(
@@ -102,10 +102,10 @@ internal static class Relief
             board.Hidden);
         if (board.HasTinaja)
         {
-            if (data.Caps.Length > Superposition.TinajaMaxCuias)
+            if (data.Caps.Length > Superposition.TinajaReliefMaxCuias)
             {
                 return new ReliefBoard("plus_empty", data, null, null, 1, false,
-                    "tinaja: con un vacio mas pasa del tope de 12 cuias con tinaja (02 sec. 5)");
+                    "tinaja: con un vacio mas pasa del tope de 13 cuias del alivio con tinaja (D-027)");
             }
 
             BoardData? withPair = PlusEmptyWithTinaja(board);

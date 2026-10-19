@@ -52,8 +52,10 @@ const string Usage = """
     tablero y el mismo hash que el generador; la Flor sin key2 no se construye. Sale con 0, 1 (algun FAIL) o 2.
     --self-test reglas: prueba en positivo y en negativo el tope de mecanicas por nivel (QA-MECH-COUNT: retos desde el 301 y
     hitos desde el 320 con sample_variants.json; 2 siempre con campaign_v1.json), QA-HITO-14 (el vacio del hito de K = 13
-    repartido en cuias a medias, como el 580 y el 600, y las 14 cuias con K = 12 y la cueva de la Pirana) y las casas de la
-    Flor de QA-VAR-FLOR (D-024). Sale con 0, 1 (algun FAIL) o 2.
+    repartido en cuias a medias, como el 580 y el 600 de antes de D-027, y las 14 cuias con K = 12 y la cueva de la Pirana),
+    las casas de la Flor de QA-VAR-FLOR (D-024) y la Tinaja de D-027: QA-TINAJA-CUIAS (12 cuias con la pareja en el nivel y
+    13 en sus variantes de alivio) y la excepcion de QA-PAR para sus tableros de estreno (BaseChecks.TinajaDebutParExempt).
+    Sale con 0, 1 (algun FAIL) o 2.
     --self-test variante (P7b): --variant por la linea de comandos, en un proceso hijo con --no-reproduce, sobre dos niveles
     del pack de muestra de la tinaja: con a (y sin --variant) el 323 con la tinaja pasa QA-MECH-SPEC y QA-MECH-CELL y una
     comodidad pura en el 327 da QA-MECH-CELL; con b, al reves; --variant c y --variant b con campaign_v1 salen con 2.

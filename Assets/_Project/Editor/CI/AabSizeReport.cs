@@ -151,7 +151,44 @@ namespace AF.EditorTools
                 .Append(" el código nativo, el dex y los recursos de Android no salen aquí (ci/size-gate.ps1 -Breakdown).\n");
             sb.Append("Assets: rutas distintas en cada grupo; un asset con entradas en dos grupos cuenta en los dos y una vez en el")
                 .Append(" total; las entradas sin ruta suman MB pero no cuentan como asset.\n");
+            AppendFonts(sb, contents);
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// Desglose del grupo «Fuentes» por asset y tipo de objeto (tarea FNT1): el atlas (Texture2D), las tablas de glifos
+        /// (el font asset), los materiales y las TTF, de más a menos peso (y por ruta, en orden ordinal, si pesan lo mismo).
+        /// </summary>
+        private static void AppendFonts(StringBuilder sb, IReadOnlyList<PackedEntry> contents)
+        {
+            const int fonts = 2;
+            var bytes = new Dictionary<string, long>(StringComparer.Ordinal);
+            for (int i = 0; i < contents.Count; i++)
+            {
+                PackedEntry entry = contents[i];
+                string path = entry.SourcePath ?? string.Empty;
+                if (GroupOf(path, entry.Type) != fonts)
+                {
+                    continue;
+                }
+
+                string key = (path.Length == 0 ? "(sin ruta)" : path) + " | " + (entry.Type != null ? entry.Type.Name : "-");
+                bytes.TryGetValue(key, out long sum);
+                bytes[key] = sum + entry.PackedSize;
+            }
+
+            var keys = new List<string>(bytes.Keys);
+            keys.Sort((a, b) =>
+            {
+                int bySize = bytes[b].CompareTo(bytes[a]);
+                return bySize != 0 ? bySize : string.CompareOrdinal(a, b);
+            });
+
+            sb.Append("\n## Fuentes por asset\n\n| Asset | Tipo | MB |\n| --- | --- | ---: |\n");
+            for (int i = 0; i < keys.Count; i++)
+            {
+                sb.Append("| ").Append(keys[i]).Append(" | ").Append((bytes[keys[i]] / 1000000.0).ToString("0.000", CultureInfo.InvariantCulture)).Append(" |\n");
+            }
         }
 
         private static string Mb(long value)
