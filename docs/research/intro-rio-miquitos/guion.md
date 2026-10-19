@@ -546,6 +546,8 @@ Banner de mundo (antes de la intro, canon) → intro → después, como mucho un
 | Q15 | Estilizaciones de color y forma (bacaba rosa, guanábana, lulo, icono bol del açaí) | A) Mantener el canon como estilización, sin Datos del río que la afirmen; en vuelo, ramita de açaí. B) Revisar los tintes con el asesor | **A** para la 1.0; B para el Cuaderno |
 | Q16 | Técnica de animación de los miquitos (decide el encargo al artista) | A) Rig recortable en uGUI: el artista dibuja piezas sobre una plantilla y el código anima. B) Hojas de fotogramas por pose | **A.** Menos arte, y `SpriteSkin` no funciona en el Canvas de pantalla que usa el juego |
 
+**Estado (2026-10-19, D-029 de `docs/dev/decisiones.md`).** El dueño aceptó las recomendadas que faltaban: **Q11 → A** (`af_fauna_sighted` al mostrar la tarjeta, desde la 1.0, con el avistamiento guardado en el perfil: tarea DC15; alta del evento en 08 §8.2); **Q14 → A** (agua negra en ámbar-té translúcido, #522500 al 70 %, ΔL* 29,4 frente al tinte 14: tarea DC13, con su captura de prueba; canon en 07 §2.1); y **Q17**, la pregunta que añadió el registro de D-010 (¿qué hace el hoatzin en el mundo 11?) → solo el vaciado, con la intro del reintento en modo dosel (sin código hasta el mundo 11). Las demás (Q1-Q10, Q12, Q13, Q15 y Q16) ya estaban aplicadas con su recomendación.
+
 ---
 
 ## 19. Tareas de implementación para unity-gameplay-dev

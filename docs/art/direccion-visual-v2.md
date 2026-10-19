@@ -20,6 +20,8 @@ Revisión 9 (2026-10-13, D-015): la pregunta 44 queda decidida. El presupuesto d
 
 Revisión 10 (2026-10-14, D-016 y D-019): con T5-B de TiTino, ninguna mascota se queda fija en el muelle durante la partida (C4 cerrado; 3.7 y 3.8): TiTino solo asoma sobre el muelle en la instrucción del tutorial y en el aviso tras Volver a la orilla, cuando la franja del panorama mide menos de 64 dp. La Tinaja (M13) tiene su paleta de barro y sus vetos en 07 §4.3. El presupuesto de texturas de la sección 8 admite los kits de mundo en ASTC 8×8 (D-013).
 
+Revisión 11 (2026-10-19, D-029): el agua base negra de los mundos 3 y 10 pasa a ámbar-té translúcido, **#522500** al 70 % (Q14 del guion de la intro, decidida con su recomendación; tarea DC13, con su captura de prueba): sustituye a #4A2C14, que al 70 % sobre la cavidad se leía casi negro. Canon en 07 §2.1; token `agua_negra` en 2.2.
+
 Fuentes: `docs/dev/decisiones.md` (D-001 a D-006), GDD 07 (§3 paleta, §4 cuia, §5 storyboards, §6 mascotas, §7 UI kit, §8 pautas culturales), GDD 02 (§3.3, §4, §5, §12), GDD 08 §5 (shader y rendimiento), glosario §0, §3, §9 y §10, `docs/research/09-referencia-magic-sort.md` y `docs/research/magic-sort/c-meta-liveops-ux.md` §4, la revisión del 2026-10-07 (material de entrada, verificado contra el código) y las capturas `Logs/device/v01-fix-*.png` y `docs/reviews/2026-10-07/visual/*.png`.
 
 Convenciones:
@@ -78,6 +80,7 @@ Los 14 tintes de glosario §9 y 07 §3 conservan su HEX, patrón, icono y regla 
 | `selva_media` / `selva_luz` / `selva_sombra` | #2C7A4B / #63B548 / #1C5236 | 46 / 67 / 31 | Vegetación de la orilla |
 | `rio_reflejo` | #F6CF92 | 85 | Reflejo del cielo junto al horizonte |
 | `rio_medio` / `rio_base` / `rio_profundo` | #CDA06A / **#B08A5A** / #80603E | 69 / 60 / 43 | Río; `rio_base` es el agua base blanca del Estuario (07 §2.1) |
+| `agua_negra` | **#522500** | 20,5 | Agua base negra de los mundos 3 y 10 (07 §2.1), en ámbar-té translúcido al 70 % (`IntroAnimation.WaterAlpha`); D-029 (Q14 del guion de la intro) y DC13: ΔL* 29,4 frente al tinte 14, Agua del Río Negro (#A9672E), y 31,5 compuesta sobre la cavidad (`WaterBlackContrastTests`). Antes, #4A2C14 |
 | `destello` | #FFF4D2 | 96 | Brillos del agua (aditivos) |
 | `hoja_oscura` / `hoja_media` / `hoja_clara` / `hoja_brillo` | #145A35 / #23824A / #5DBB3F / #C6EF6B | 33 / 48 / 68 / 89 | Follaje del marco |
 | `nervadura` | #0E3F25 | 23 | Nervios de las hojas |

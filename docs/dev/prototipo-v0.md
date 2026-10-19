@@ -69,7 +69,7 @@ El nivel 1 copia literalmente 02 §13. Los niveles 2-10 se diseñan a mano (03 �
 - nivel 5: un color está repartido en 3 cuias;
 - nivel 6: tiene un solo vacío.
 
-El informe trae, por nivel, la solución óptima y el camino más corto a Aguas estancadas. Las soluciones nunca entran en el pack (08 §4.1). El pack no declara su modo y se genera en `run` (pregunta P7, reescrita): uno generado en `single` y jugado en `run`, o al revés, da pares falsos.
+El informe trae, por nivel, la solución óptima y el camino más corto a Aguas estancadas. Las soluciones nunca entran en el pack (08 §4.1). El pack no declara su modo y se genera en `run` (pregunta P7, reescrita y retirada el 2026-10-19: el formato no declara el modo; D-029): uno generado en `single` y jugado en `run`, o al revés, da pares falsos.
 
 ## c) Capa Unity (unity-gameplay-dev)
 

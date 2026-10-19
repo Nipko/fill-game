@@ -13,9 +13,9 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-005 | 2026-10-08 | Vertido por tramo, como Magic Sort | Decidida por el dueño; en implementación (C1, L1, U1, D1-D6) |
 | D-006 | 2026-10-08 | Tablero, cuia y vertido como Magic Sort | Decidida por el dueño; en implementación (U2-U6, D1-D6). Pendiente: P12 (ranura de 42 dp en 16:9 con cuias añadidas) |
 | D-007 | 2026-10-08 | Mecánicas del río: catálogo de 12, estrenos de la 1.0 y reglas finas | Decidida por el dueño (todas las recomendaciones de la propuesta de cultura ribereña, §(h), y las reglas finas Q-A, Q-B y Q-C). Implementada en el núcleo y el generador (pista A, integrada en `6faf7c3`) y en Unity (paso 1 del traspaso, hasta `ce0ced4`). Registrada y llevada al GDD el 2026-10-11 y el 2026-10-12 (paso 2), con la lista única de estrenos en 02 §9.1. Las preguntas 27-31 y 33-35 de `docs/GDD.md` §6.3 quedaron decididas el 2026-10-13 con su recomendación (D-020): Lluvia y Piraña en la 1.0, «Zafra» solo como nombre del hito 420, Revelar en la 3.ª ranura, el formato [P] de `pack_schema` 2, `level_overrides` como respaldo del kill-switch en la 1.0, la tabla de novedades de 201-1000 antes de generar 201-700, P1-P3 con la excepción del Remolino y solo la burbuja del revelado rítmico. Pendiente, sin bloquear la 1.0: la revisión del asesor cultural. C1-9 (02 R16 con Liana y capacidades mixtas; pregunta 24) quedó decidida el 2026-10-19 en la (b) para la 1.0 (D-028): el bloqueo es la regla de la 1.0 y la (a) se estudia para la 1.1. D-019 (2026-10-13) añade al catálogo una mecánica propia, la Tinaja (M13). El formato de las variantes de la 1.0 en `pack_schema` 3 (Hoja atada, Brote de dos hojas y Flor) se firmó el 2026-10-14 (D-023) |
-| D-008 | 2026-10-08 | Bucle de partida como Magic Sort | Decidida por el dueño. Documentación aplicada el 2026-10-08 en `117f4be` (capítulos de «Archivos afectados»), dentro de la rama de código: **pendiente de la aprobación explícita del dueño antes de fusionar** o de un PR de documentación aparte (cambia el contrato 7). En implementación: pista B (B1-1-B1-6 y B2-1-B2-6). Los textos nuevos y los puntos [P] están pendientes (P14-P16, no bloquean). Abierta: P17, cuándo sale «Canoas infinitas 1 h» en Sin canoas (04 §7.3 y 05 §4.1 se contradicen). El número D-007 quedó reservado para las mecánicas especiales, en pausa; tiene su entrada desde el 2026-10-11 |
-| D-009 | 2026-10-08 | Dificultad escalonada: ciclo de 20 reordenado, etiqueta antes de jugar y rotación de plantillas | Decidida por el dueño (Q1 A, Q2 sí, Q3 A y Q4 A de la misma propuesta). Implementada en el generador y en `tools/econ_sim.py` (pista A) y en Unity (paso 1). Registrada y llevada al GDD el 2026-10-11 (paso 2). Pendientes: aprobar las cifras [sim] regeneradas con el ciclo nuevo (P-2) y decidir la tabla de etiquetas de 03 §11 frente a la campaña medida (preguntas 25 y 26 de `docs/GDD.md` §6.3). La fuente de la temporada del ciclo (pregunta 32: una tabla del cliente por ciclo) y la tabla de novedades de 201-1000 (pregunta 33: rehacerla antes de generar 201-700) quedaron decididas el 2026-10-13 (D-020); los nombres internos de las posiciones y de los hitos [P] esperan al asesor cultural. La pregunta 40 (la Cuia chica entre los 2 vacíos) quedó decidida el 2026-10-13 (D-015). D-013 (2026-10-13) cambia el contenido de la tarjeta previa del hito p20 (punto 2): añade «Si lo superas, llegas a {sitio}» |
-| D-010 | 2026-10-08 | «Llenar y teñir»: el río llena las cuias y los miquitos las tiñen con fruta | Decidida por el dueño (idea y ampliación del 2026-10-08); guion `docs/research/intro-rio-miquitos/guion.md` aprobado para implementar. Implementada en la rama `intro-rio-miquitos` (`fbdf11e`, `e479cf0` y `8955ef3`), sin fusionar. Documentación aplicada el 2026-10-09 en la misma rama. Pendientes, sin bloquear: confirmar Q1-Q16 del guion (el código aplica sus recomendaciones salvo Q11 y Q14), Q17, toda la fauna con el asesor cultural, el arte del artista y las preguntas abiertas de la propuesta de fauna (F7, F9-F11 y F13). Los números D-007 y D-009 los usó la pista de mecánicas y niveles (rama `fase1-mecanicas-niveles`); tienen su entrada desde el 2026-10-11. **Ampliación del 2026-10-09** (elenco de unas 50 especies que tiñen, una nueva cada 20 niveles), registrada el 2026-10-11: pendiente del diseño del paso 3 del traspaso |
+| D-008 | 2026-10-08 | Bucle de partida como Magic Sort | Decidida por el dueño. Documentación aplicada el 2026-10-08 en `117f4be` (capítulos de «Archivos afectados»), dentro de la rama de código: **pendiente de la aprobación explícita del dueño antes de fusionar** o de un PR de documentación aparte (cambia el contrato 7). En implementación: pista B (B1-1-B1-6 y B2-1-B2-6). P14-P17 (los textos nuevos y «Sin canoas», Marea primera en el modal, la canoa al salir con 0 vertidos y cuándo sale «Canoas infinitas 1 h» en Sin canoas) se decidieron el 2026-10-19 con su recomendación (P17: A, siempre; D-029): sin pendientes del dueño. El número D-007 quedó reservado para las mecánicas especiales, en pausa; tiene su entrada desde el 2026-10-11 |
+| D-009 | 2026-10-08 | Dificultad escalonada: ciclo de 20 reordenado, etiqueta antes de jugar y rotación de plantillas | Decidida por el dueño (Q1 A, Q2 sí, Q3 A y Q4 A de la misma propuesta). Implementada en el generador y en `tools/econ_sim.py` (pista A) y en Unity (paso 1). Registrada y llevada al GDD el 2026-10-11 (paso 2). Las cifras [sim] regeneradas con el ciclo nuevo (P-2) y la tabla de etiquetas de 03 §11 con la cuenta del ciclo quedaron aprobadas el 2026-10-19 (preguntas 25 y 26 de `docs/GDD.md` §6.3, (a); D-029) y están en el GDD. La fuente de la temporada del ciclo (pregunta 32: una tabla del cliente por ciclo) y la tabla de novedades de 201-1000 (pregunta 33: rehacerla antes de generar 201-700) quedaron decididas el 2026-10-13 (D-020); los nombres internos de las posiciones y de los hitos [P] esperan al asesor cultural. La pregunta 40 (la Cuia chica entre los 2 vacíos) quedó decidida el 2026-10-13 (D-015). D-013 (2026-10-13) cambia el contenido de la tarjeta previa del hito p20 (punto 2): añade «Si lo superas, llegas a {sitio}» |
+| D-010 | 2026-10-08 | «Llenar y teñir»: el río llena las cuias y los miquitos las tiñen con fruta | Decidida por el dueño (idea y ampliación del 2026-10-08); guion `docs/research/intro-rio-miquitos/guion.md` aprobado para implementar. Implementada en la rama `intro-rio-miquitos` (`fbdf11e`, `e479cf0` y `8955ef3`), sin fusionar. Documentación aplicada el 2026-10-09 en la misma rama. Q11, Q14 y Q17 del guion y F7-F13 de la propuesta de fauna se decidieron el 2026-10-19 con su recomendación (D-029: Q11 en DC15 y Q14 en DC13; F7 y F11, cuando lo dé el asesor; F9, al backlog; F13, en la 1.1). Pendientes, sin bloquear: toda la fauna con el asesor cultural y el arte del artista. Los números D-007 y D-009 los usó la pista de mecánicas y niveles (rama `fase1-mecanicas-niveles`); tienen su entrada desde el 2026-10-11. **Ampliación del 2026-10-09** (elenco de unas 50 especies que tiñen, una nueva cada 20 niveles), registrada el 2026-10-11: pendiente del diseño del paso 3 del traspaso |
 | D-011 | 2026-10-11 | Ajustes de la prueba en el teléfono: la victoria se cobra cuando se ve, avisos legibles, miquitos que se ven y Cosecha doble que avanza | Decidida por el dueño tras probar el `dev.apk` en el SM-S938B (tareas P1-P4 de `docs/dev/traspaso/pruebas-telefono-2026-10-11.md`). Implementada entera: los puntos 1, 3 y 4 en la tanda 1 (integrada en `7d755c4`), probada en el teléfono el 2026-10-12 con resultado «cumple» (`docs/dev/traspaso/pruebas-telefono-2026-10-12.md`); el punto 2 (avisos legibles) y la tarjeta del miquito tras la tropa en la tanda 2 (A2, `35301f9`; tanda integrada en `94905b8`), probada en el teléfono el 2026-10-13 con resultado «cumple» (`docs/dev/traspaso/pruebas-telefono-2026-10-13.md`). Llevada al GDD el 2026-10-12 (paso 2). Los [P] de la tanda 1 se ratificaron el 2026-10-13 (pregunta 38, D-020). Las preguntas 41 y 42, que dejó la tanda 2, quedaron decididas el 2026-10-13 (D-015); sus arreglos están en T52, integrada en `d2ce284` |
 | D-012 | 2026-10-09 y 2026-10-11 | Prueba del 2026-10-09: estreno de la Piraña, banner de mundo, sacudida, patrones, guardado por vertido y marco del panel | Decidida por el dueño. Registrada y llevada al GDD el 2026-10-12 (paso 2). Implementada entera. En la tanda 1 (`7d755c4`), probados en el teléfono el 2026-10-12 con resultado «cumple»: el mordisco fallido visible, la marca de pareja del Remolino y el guardado por vertido con escritor en segundo plano (52 vertidos medidos: p95 de 2,15 ms y máximo de 3,67 ms). En la tanda 2 (`94905b8`), probados en el teléfono el 2026-10-13 con resultado «cumple»: la sacudida y los patrones e iconos (B3, `dd208a6`) y el banner de mundo y el tutorial de la Piraña con mordisco animado (A4, `94905b8`). El vertido que gana cuenta en «ninguno > 8 ms» y los [P] de la tanda 1 (entre ellos el tope de 1.000 ms de los guardados síncronos y el aire de la ficha del Remolino) quedaron decididos el 2026-10-13 (preguntas 37 y 38 de `docs/GDD.md` §6.3, D-020): en el teléfono, máximo de 4,83 ms en 216 vertidos. Las preguntas 39, 43 y 44 quedaron decididas el 2026-10-13 (D-015). D-013 (2026-10-13) cambia la decisión 2: el banner de mundo trae dentro el viaje de mundo (Q4-D). Los iconos de fruta procedurales son [P] del artista y del asesor cultural (07 §3) |
 | D-013 | 2026-10-12 y 2026-10-13 | Mapa del río: remontar el Amazonas hasta donde nace | Decidida por el dueño (río arriba y un fondo por parada el 2026-10-12; la recomendación de cada pregunta de la sección 16 de la propuesta el 2026-10-13, con T1-A y T6-A de TiTino y Q1-A de Frutas del río). Documentación aplicada el 2026-10-13 (T50). **En implementación en la tanda 4** (estado del 2026-10-19, D3): los datos de las 70 paradas de 1-700 (M1.1, M4.5a y M4.5b) con la geometría de producción de Natural Earth y HydroRIVERS (M5.1 y M5.1c, adelantadas a la ola 7); el fondo por parada, la llegada en la victoria del `10k` y el rótulo del lugar (ola 2); la pantalla del Mapa con el río de vidrio, marcadores, «ponerse al día», tarjeta de la parada, Muestrario, miradores y «Norte arriba», y el viaje de mundo dentro del banner (olas 4 y 5); la secuencia del Mapa del 10 y las entradas desde la pausa, la victoria y el fin de contenido (ola 6); y las placas enteras de FX7, FX8 y FX10. En el cliente se juega hasta el 700 desde C1b (ola 7, en su rama). Faltan el arte final, la fuente del dato en la tarjeta (pregunta 57 de `docs/GDD.md` §6.3, decidida el 2026-10-19 en la (a): DC9 y DC10, D-028) y el arreglo del frente de agua tras «ponerse al día» (`FrontRibbonAt`). Las fuentes y las tolerancias de la geometría (pregunta 65) quedaron decididas el 2026-10-19 con las recomendadas (D-028): HydroRIVERS en las dos vistas, las excepciones medidas y `MundoZone` de 100 km. Cambia D-009 (punto 2) y D-012 (decisión 2); D-008 no cambia. Choques entre propuestas: pregunta 45 de `docs/GDD.md` §6.3, decidida el 2026-10-14 en la (a) (D-022). Todo nombre, dato y texto, pendiente del asesor cultural. Lo que dejaba abierto el punto 15 (T2, T4 y T5 de TiTino, Q2-Q7 de Frutas, Q1-Q12 de idiomas y Q-Ti1-Q-Ti7 de la tinaja) se decidió el 2026-10-13: D-016 a D-019. Las preguntas P-M1 a P-M8 de su plan de implementación se decidieron el 2026-10-14 con su recomendación (D-023) |
@@ -34,6 +34,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-026 | 2026-10-16 | Audio provisional por código y permiso `VIBRATE` | Decidida por el dueño («lanza ya AU1 en paralelo a la ola 4, con los arreglos de niveles y graves, y apruebo el permiso VIBRATE para el háptico del sellado»). Implementada en AU1 (tanda 4, ola 4, carril de audio): `AF.Audio` y `AF.Audio.Unity`, los 61 efectos con su nivel, Ajustes de Sonido, Música y Vibración, los hápticos y el permiso en el manifiesto; AU2 (la misma ola) añadió el ambiente por mundo y la música adaptativa provisionales, también por código y detrás del ajuste Música [P]. Integrada en `bd649ac` y llevada a 07 §9 (FXD2, 2026-10-16). Pendiente: la prueba en el teléfono y los encargos al compositor y al diseñador de sonido (07 §9.5) |
 | D-027 | 2026-10-18 | Mundos 7-9: las celdas, los K y los ajustes del generador para poder generarlos | Decidida por el dueño (todas las recomendaciones de la propuesta de los mundos 7-9: 25 celdas, K = 10 en los retos de 421-700, hitos de 14 cuias con K = 12 + 1 vacío, alivio hasta 13 cuias con la Tinaja y QA-PAR sin el par del rango en los estrenos de la Tinaja). Implementada en GEN79 (tanda 4, ola 7): especificación, generador, level-qa y los packs de 301-700 en sus dos variantes. Publicada en el cliente con la variante b en C1b (ola 7, en su rama; 122 niveles de curación en sus informes). Pendientes: la curación del dueño y el reflejo en 02 §5 y 03 §11, §12 y §17 (carril de documentación) |
 | D-028 | 2026-10-19 | Respuestas a las preguntas 19, 22-24, 53, 54, 57, 60, 61 (con P5) y 65 de `docs/GDD.md` §6.3 | Decidida por el dueño (la recomendación de cada pregunta y, en la 65, de sus tres partes: «Acepto la opción recomendada […] y en las dos de M5.1»; el espacio del AAB y el permiso `INTERNET`, aparte). Documentación aplicada el 2026-10-19 (DC1). En implementación en la ola 7 de la tanda 4: DC2 (53 y 54), DC3 (19), DC4 (23), DC5 (60), DC6 (61 y P5), DC8 (65), DC9 y DC10 (57) y DC11 (24); la 22 ya estaba en el cliente |
+| D-029 | 2026-10-19 | Respuestas a las preguntas con recomendación que seguían abiertas: 18, 21, 25, 26, 52, 55, 56, 58, 59 y 62-64 de `docs/GDD.md` §6.3, P7, P14-P17, el dedo guía de DC7, M5.1c, Q11, Q14, Q17, F7-F13 y la propuesta de Magic Sort | Decidida por el dueño («resolvamos las preguntas, pero si tienen recomendadas vamos con esas»; para DC7, «sí»), después de D-028. Documentación aplicada el 2026-10-19 (DC1b): las cifras [sim] del ciclo de D-009 en el GDD, 03 §11 con la cuenta del ciclo, P17 A en 05, el agua negra #522500 y `af_fauna_sighted` en 08 §8.2. Código en la ola 7 de la tanda 4: DC6, DC7 y DC12-DC16. Fuera: el espacio del AAB, `INTERNET` y las preguntas sin recomendación (lista en la entrada) |
 
 ---
 
@@ -412,7 +413,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 | P4 | Tras verter, ¿el origen se deselecciona (C4 actual, estilo *ball sort*) o sigue seleccionado si puede volver a verter al mismo destino (selección pegajosa, menos toques)? | Deseleccionar (C4 actual) | T3 (solo si cambia) | Cerrada: tras verter, el origen se deselecciona (C4 canónico) |
 | P5 | El dedo guía de los niveles 1-2 (02 §13) y Morpho (04 §2.3) muestran un destino: ¿se mantienen como ayudas explícitas compatibles con D-002? | Sí | T5 | Respondida (D-028, 2026-10-19): sí; el dedo guía de 1-2, en DC6. Antes dependía de D-002, no de D-001 (Magic Sort no mostró mano guía en los niveles 387-389, ficha §2.10) |
 | P6 | ¿Una dosis por vertido es también la regla de 1.0? Si es así, antes de la Fase 1 hay que recalibrar en `Single`: las cifras [V-proto] de 03 (`par ≥ 2K`, bot ×40 y etiquetas, índice D), Marea "3 por nivel", `restart_confirm_min_pours`, `lluvia_k_pours` y `pirana_k_pours` | Sí, con una tarea de recalibración aparte | Fase 1 (no v0) | Cerrada: `run` es la regla de 1.0; sin recalibración |
-| P7 | En 1.0, ¿el pack declara el modo con el que se calculó el par (cambio de contrato: `af-level/2`, `pack_schema` 2)? | Sí | `schemas/` (no v0) | Reescrita: «Con `run` por defecto y `single` solo de pruebas, ¿el formato sigue sin declarar el modo (los packs se generan siempre en `run`) y se retira P7?». Recomendación: sí. No bloquea |
+| P7 | En 1.0, ¿el pack declara el modo con el que se calculó el par (cambio de contrato: `af-level/2`, `pack_schema` 2)? | Sí | `schemas/` (no v0) | Reescrita: «Con `run` por defecto y `single` solo de pruebas, ¿el formato sigue sin declarar el modo (los packs se generan siempre en `run`) y se retira P7?». Respondida (D-029, 2026-10-19): sí; el formato no declara el modo y P7 se retira |
 
 ## 6. Riesgos
 
@@ -849,7 +850,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
       - 04 §6 y §7: el embudo con ¿Seguro? y Nivel fallido, que sustituye «Máximo un modal por bloqueo» (§6.6), y «Qué consume» (§7.1);
       - 08 §2.2, §2.3 y §8.2, y la columna «Uso» de tres filas de §9 (contrato 13), sin claves ni defaults nuevos;
       - 00, 02, 05, 06, 07, 09, GDD.md y la nota de respuestas de la propuesta, sin cifras nuevas.
-    - Queda abierta una contradicción del GDD que estas ediciones no resolvieron: cuándo se ofrece «Canoas infinitas 1 h» en Sin canoas (P17).
+    - Queda abierta una contradicción del GDD que estas ediciones no resolvieron: cuándo se ofrece «Canoas infinitas 1 h» en Sin canoas (P17). *Resuelta el 2026-10-19: P17 A (D-029); 05 §4.1 y §5 se alinearon con 04 §7.3 (DC1b).*
 - **Sustituye:**
   - en 04 §6.6, la regla «Máximo un modal por bloqueo; nunca se apila un segundo pop-up»;
   - en 04 §5.2 (contrato 7), la fila «Salir al Mapa del río … no es fallo», solo cuando se sale con el menú (cerrar la app sigue sin ser fallo);
@@ -916,7 +917,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
        - «Canoa extra · Ver video», +1 (`rv_extra_canoe`: 3 al día, 90 s);
        - «Llenar canoas · 200 semillas», hasta 5/5;
        - «Canoas infinitas 1 h» (`af_infinite_canoes_1h`: 1,99, COP 3.900).
-         - *Nota del 2026-10-08: cuándo se ofrece está pendiente de P17. 04 §7.3 la pone siempre, y así lo hace `NoCanoesScreen`; 05 §4.1 y §5, solo tras rechazar dos veces la Canoa extra en el día. El código no cambia hasta la respuesta.*
+         - *Nota del 2026-10-08: cuándo se ofrece está pendiente de P17. 04 §7.3 la pone siempre, y así lo hace `NoCanoesScreen`; 05 §4.1 y §5, solo tras rechazar dos veces la Canoa extra en el día. El código no cambia hasta la respuesta. Respondida el 2026-10-19: A, siempre (D-029), como ya lo hacía `NoCanoesScreen`.*
      - En cuanto hay una canoa, vuelve a «Nivel fallido» con «Reintentar», como Magic Sort (t = 338) [P].
    - **Salir.** Desde la pausa, «Salir».
      - Desde el 31: «¿Salir del nivel? Perderás 1 canoa» [P] → fallo duro → «Nivel fallido» → inicio. Cuesta la canoa aunque no haya vertidos, como Magic Sort en t = 5 [P] (pregunta P16).
@@ -933,7 +934,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
    - «Siguiente», sin auto-avance (`victory_autonext_s` = 0) → AD_GATE → nivel N+1.
    - «Inicio» → pantalla de inicio [P].
    - Como mucho 1 takeover por sesión.
-   - Sin el calificativo «¡Perfecto!»: la pregunta 10.2 #25 sigue abierta.
+   - Sin el calificativo «¡Perfecto!»: la pregunta 10.2 #25 sigue abierta. *Decidida el 2026-10-19 (D-029): «¡Perfecto!» solo cuando el intento se gana sin Cuia de rescate (tarea DC14).*
 4. **Anuncios simulados detrás de AF.Ads**, sin SDK.
    - **Intersticial**, solo tras tocar «Siguiente» (05 §6.1 y §6.3):
      - nunca antes del nivel 22 ni en la sesión de instalación;
@@ -1007,7 +1008,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
   - 09 §2.3 (y §1.1, filas #10, #13, #14 y #22);
   - la nota de respuestas de `docs/research/magic-sort/propuesta-tintalu.md`.
   - Nota de P17 (2026-10-08): 04 §7.3 y «Preguntas abiertas» 9; 05 §4.1, §5, «Conflictos detectados» y «Dependencias» (fila 04); y la fecha de cabecera de los dos. Solo señalan la contradicción; no cambian ninguna regla.
-  - Pendientes: el resumen de la definición de fallo de 03 §13, la línea de decisiones de `CLAUDE.md` y, tras la respuesta a P17, alinear 04 §7.3 o 05 §4.1 y §5 (lote Dc4).
+  - Pendientes: el resumen de la definición de fallo de 03 §13, la línea de decisiones de `CLAUDE.md` y, tras la respuesta a P17, alinear 04 §7.3 o 05 §4.1 y §5 (lote Dc4; hecho el 2026-10-19 en DC1b con P17 A: se alinearon 05 §4.1 y §5).
 
 **Preguntas para el dueño** (no bloquean).
 
@@ -1018,6 +1019,8 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 | P16 | Desde el 31, ¿salir del nivel cuesta una canoa también con 0 vertidos, como Magic Sort (t = 5)? | Sí |
 | P17 | ¿Cuándo sale «Canoas infinitas 1 h» (`af_infinite_canoes_1h`, 1,99) en Sin canoas? El GDD se contradice. **A:** siempre, detrás de esperar, el video y las semillas, y sin cuenta atrás: así lo dibuja 04 §7.3, la listan sin condición 02 §2, 06 §4.7 y el paso 4 de esta decisión, y así lo hace ya `NoCanoesScreen`. **B:** solo al quedarse sin canoas tras rechazar la Canoa extra dos veces en el día, con 1 impresión contextual al día que caduca a los 10 min: así lo dicen 05 §4.1 y §5; habría que definir qué cuenta como «rechazar» y cambiar el código. En los dos casos sigue en el Mercado | A [P]: es lo que dicen los demás capítulos y lo que hace el código, y la caducidad de 10 min de 05 §5 choca con «Sin cuenta atrás de oferta» de 04 §7.3. En contra: Magic Sort no vende vidas ilimitadas en «More Lives» (ficha §4.5). Con A se corrigen 05 §4.1 y §5; con B, 04 §7.3, 02 §2, 06 §4.7, este paso 4 y el código. Se alinea en el lote Dc4; hasta la respuesta, el código no se toca |
 
+**Respondidas el 2026-10-19** (D-029, con su recomendación): P14, P15 y P16, sí; P17, A. D-008 queda sin preguntas abiertas del dueño salvo la 10.2 #20 de la propuesta (punto 7), que no tiene recomendación aplicable.
+
 ---
 
 ## D-009 · Dificultad escalonada: ciclo de 20 reordenado, etiqueta antes de jugar y rotación de plantillas
@@ -1026,7 +1029,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 - **Estado:** decidida por el dueño con la recomendación de cada pregunta: Q1 A, Q2 sí, Q3 A y Q4 A de `docs/research/cultura-ribera/propuesta-mecanicas-dificultad.md` §(h). El resto de la propuesta (mecánicas) es D-007.
   - Implementada en la pista A: `tools/level-generator` (`--spec`, con el ciclo y el calendario de `specs/campaign_v1.json`), `tools/level-qa` y `tools/econ_sim.py` (tarea P-2, `0faf51e`). En Unity, en el paso 1 del traspaso: chip y cinta en Jugar y en Siguiente, tarjeta previa, HUD y cabeceras de ¿Seguro? y Nivel fallido.
   - Documentación aplicada el 2026-10-11 (paso 2 del traspaso).
-  - **Las cifras [sim] regeneradas con el ciclo nuevo esperan la aprobación del dueño** (P-2; `docs/dev/traspaso/planes-integracion.json`). Hasta entonces el GDD conserva las de la corrida del 2026-10-06 (GDD.md §7.3, V5).
+  - **Las cifras [sim] regeneradas con el ciclo nuevo esperan la aprobación del dueño** (P-2; `docs/dev/traspaso/planes-integracion.json`). Hasta entonces el GDD conserva las de la corrida del 2026-10-06 (GDD.md §7.3, V5). *Aprobadas el 2026-10-19 (pregunta 25 de GDD.md §6.3, (a); D-029): el GDD cita ya la corrida con el ciclo nuevo (DC1b) y V5 está cerrada.*
   - Los nombres internos de las posiciones (Vaciante, Aguas bajas, Repiquete, Bajada, Remanso, Pico) y los nombres de hito son [P] y pasan por el asesor cultural.
   - *Actualización del 2026-10-13:* **D-013 cambia el contenido de la tarjeta previa del hito p20** (punto 2): añade «Si lo superas, llegas a {sitio}» (`map_hito_preview`, glosario §10) y la silueta del sitio al que se llega al ganarlo (02 §10; 07 §7.7). La pregunta 40 (la Cuia chica entre los 2 vacíos) quedó decidida con su recomendación (a) (D-015): la campaña v1 no cambia.
 - **Sustituye:**
@@ -1111,7 +1114,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
   - **Escenario A** (`tools/out/econ_A.md`): saldo final del medio 23.815 → 24.043, del hábil 32.107 → 31.727 y del pagador 14.323 → 14.739; **primer bloqueo sin recursos del pagador 110 → 258** y del medio 57 → 49. Los ratios de referencia no cambian (7,0 / 6,6:1).
   - **B con tramos** (`tools/out/econ_B_tramos.md`): referencia de 101-500, 10,2 → 10,3:1; casual con 21,3 bloqueos por corrida en el 100 % de las corridas → 20,7 en el 99 %, primer bloqueo 198 → 203 y saldo final 895 → 893; medio con 3,1 (45 %) → 2,9 (44 %), neto diario −34 → −23, primer bloqueo 352 → 355 y saldo final 4.224 → 4.670; hábil con saldo final 18.120 → 17.710 y neto +508 → +494; pagador con 12,9 (90 %) → 13,2 (92 %), primer bloqueo 305 → 314 y saldo final 1.536 → 1.584.
   - **Variantes** (`tools/out/econ_variants.md`): en V0, saldo final del medio 15.686 → 16.067 y del casual 1.876 → 2.014, y casual con bloqueo sin recursos 70 → 76 %; en las demás, los ratios se mueven 0,1 como mucho y los saldos y porcentajes, en la misma medida.
-  - El detalle celda a celda, con las celdas que esta selección no recoge, es el diff de `0faf51e` en `tools/out/econ_*.md`. Las cifras del GDD se actualizan cuando el dueño las apruebe (V5; pregunta 25 de GDD.md §6.3).
+  - El detalle celda a celda, con las celdas que esta selección no recoge, es el diff de `0faf51e` en `tools/out/econ_*.md`. Las cifras del GDD se actualizan cuando el dueño las apruebe (V5; pregunta 25 de GDD.md §6.3). *Aprobadas el 2026-10-19 (D-029) y llevadas al GDD (DC1b).*
 - **Campaña v1 medida** (`tools/out/campaign_v1_report.md`):
   - etiquetas: 31-60, 13,3 % Difícil y 3,3 % Muy difícil; 61-100, 20 % y 5 %; 101-200, 23 % y 5 %. Desde el 61 los cinco retos apuntan a Difícil (25 % por ciclo), por encima del 15 % y del 15-20 % de 03 §11: queda como pregunta abierta (pregunta 26 de GDD.md §6.3);
   - acierto de etiqueta por ciclo: 67-100 %; cada remanso queda por debajo de la media de comodidad de su ciclo (QA-REMANSO);
@@ -1134,7 +1137,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 **Archivos afectados.**
 - **Herramientas** (pista A): `tools/level-generator` (`Campaign/`, `Generation/` y `specs/campaign_v1.json`), `tools/level-qa` (comprobaciones del ciclo, de banda, del remanso y de trampas), `tools/econ_sim.py` y `tools/out/econ_*.md` (P-2).
 - **Unity** (paso 1): `Assets/_Project/Scripts/UI/{LobbyScreen, DifficultyChip, GameScreen.Labels, GameScreen.Funnel, GiveUpConfirm, LevelFailedScreen, LevelCardView}.cs` y `Assets/_Project/Scripts/GameFlow/{LevelCardInfo, LevelFlow.Cards}.cs`, con sus tests.
-- **Documentación** (2026-10-11, paso 2): este registro; `docs/GDD.md` §2, §4, §6 y §7; `docs/gdd/{00, 02, 03, 04, 05, 06, 07, 08, 09}`, con solo una nota fechada en 05 §2.1 y §3.1. Las cifras [sim] de 01, 04, 05, 09 y GDD.md quedan para cuando el dueño las apruebe (V5).
+- **Documentación** (2026-10-11, paso 2): este registro; `docs/GDD.md` §2, §4, §6 y §7; `docs/gdd/{00, 02, 03, 04, 05, 06, 07, 08, 09}`, con solo una nota fechada en 05 §2.1 y §3.1. Las cifras [sim] de 01, 04, 05, 09 y GDD.md quedan para cuando el dueño las apruebe (V5); se aplicaron el 2026-10-19 (D-029, DC1b).
 
 ---
 
@@ -1142,7 +1145,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 
 - **Fecha:** 2026-10-08 (idea del dueño y su ampliación, y guion de la intro del mismo día). Registrada el 2026-10-09. La ampliación del 2026-10-09 (elenco de unas 50 especies que tiñen) se registró el 2026-10-11, al final de esta entrada.
 - **Estado:** decidida por el dueño, con el guion `docs/research/intro-rio-miquitos/guion.md` aprobado para implementar. Implementada en la rama `intro-rio-miquitos` (`fbdf11e`, con las revisiones `e479cf0` y `8955ef3`), **sin fusionar en `main`**.
-  - Las 16 preguntas del guion (§18) no tienen respuesta explícita una a una. La implementación aplica la recomendación de cada una, salvo Q11 y Q14. Aquí quedan como **recomendación aplicada, pendiente de confirmación** (tabla del final): no bloquean y el registro no elige por el dueño (CLAUDE.md, regla 10).
+  - Las 16 preguntas del guion (§18) no tienen respuesta explícita una a una. La implementación aplica la recomendación de cada una, salvo Q11 y Q14. Aquí quedan como **recomendación aplicada, pendiente de confirmación** (tabla del final): no bloquean y el registro no elige por el dueño (CLAUDE.md, regla 10). *El 2026-10-19 el dueño aceptó las recomendadas (D-029): Q11 (DC15), Q14 (DC13) y Q17, y F7-F13 de la propuesta de fauna.*
   - **Toda la fauna, los nombres comunes, los datos de las tarjetas y la palabra «miquitos» (y su traducción) quedan pendientes de revisión del asesor cultural** (07 §8.2).
   - La propuesta de fauna (`docs/research/fauna/propuesta-fauna.md`) queda como **material de apoyo**, no canon, con sus preguntas abiertas (F1-F14; estado al final). Donde choca con el guion, manda el guion (punto 7).
   - Numeración: D-007 (mecánicas, debuts) y D-009 (dificultad escalonada) son de la pista de mecánicas y niveles (rama `fase1-mecanicas-niveles`, `tools/level-generator/README.md`), que todavía no ha traído sus entradas a este registro. El código de esta rama cita la intro como «pendiente de D-009» (`IntroAnimation.cs`, `MonkeyRig.cs`, `TroopLayer.cs` y `SightingCard.cs`): debe decir D-010. *Nota del 2026-10-11: D-007 y D-009 ya tienen su entrada.*
@@ -1232,7 +1235,7 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
   - mientras no haya PNG, miquito procedural solo en builds de desarrollo. El vídeo de la tienda y el soft launch no se graban con provisionales.
   - Las plantillas por esqueleto que deben preparar los agentes en `docs/art/` no existen todavía.
 - **Audio:** `sfx_river_rise`, `sfx_fill` y `sfx_fruit_plip` [P] sustituyen a `sfx_submerge` y `sfx_emerge` (07 §9.2). Hoy no hay audio en el código; lo encarga el dueño (07 §9.5).
-- **Analítica:** sin cambios en 08 §8.2. `af_fauna_sighted` queda reservado y **no se emite** hasta Q11, que exige la aprobación del dueño, una migración del perfil (`ProfileMigrations`) y la entrada en 08 §8.2.
+- **Analítica:** sin cambios en 08 §8.2. `af_fauna_sighted` queda reservado y **no se emite** hasta Q11, que exige la aprobación del dueño, una migración del perfil (`ProfileMigrations`) y la entrada en 08 §8.2. *Q11 aprobada el 2026-10-19 (D-029): la entrada de 08 §8.2 está hecha (DC1b) y la migración y la sonda, en DC15.*
 - **Accesibilidad:** el ajuste Reducir movimiento todavía no existe en el perfil. La ruta ya está en el código: `LevelFlow.ReduceMotion` y `GameConfig.ReducedMotionIntroMs` = 250, que no es una clave de 08 §9.
 - **Riesgos** (guion §15):
   - densidad de la versión larga (R1);
@@ -1288,12 +1291,12 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
   - solo el nombre en 01, 06, 09 y en el resto de GDD.md, 02, 07 y 08; en 04 §2.7, el nombre y una nota que remite a Q17.
   - Los históricos y el material de apoyo no se tocan: `docs/research/`, `docs/reviews/` y `docs/dev/prototipo-v0.md`.
 - **Pendientes de documentación** (necesitan una respuesta del dueño o del asesor):
-  - 06 §4.6 y el glosario §3.3: la página Fauna del Cuaderno de campo con los miquitos (F7);
-  - 08 §8.2: `af_fauna_sighted` (Q11);
+  - 06 §4.6 y el glosario §3.3: la página Fauna del Cuaderno de campo con los miquitos (F7; decidida el 2026-10-19, D-029: una nota en los dos hasta que lo dé el asesor);
+  - 08 §8.2: `af_fauna_sighted` (Q11; hecho el 2026-10-19, D-029);
   - 07 §11: los días de arte de los miquitos y las frutas;
   - 07 §2.2: la columna «Fauna de ambiente» con la especie y los animales de ambiente de cada mundo (F9);
-  - 07 §6.2: si Rosa salta o solo asoma (F11);
-  - 04 §2.7 y el glosario §3.3: el hoatzin del mundo 11 (Q17);
+  - 07 §6.2: si Rosa salta o solo asoma (F11; decidida el 2026-10-19, D-029: una nota hasta que lo dé el asesor);
+  - 04 §2.7 y el glosario §3.3: el hoatzin del mundo 11 (Q17; hecho el 2026-10-19, D-029: solo el vaciado);
   - la línea de decisiones de `CLAUDE.md`;
   - los comentarios «pendiente de D-009» del código.
 
@@ -1311,23 +1314,23 @@ Las firmas actuales sin modo se mantienen **sin cambio de comportamiento** (equi
 | Q8 | Especie de los mundos 8-9 (421-700) | Maquisapa (*Ateles chamek*, EN), tras confirmar su presencia en el Madidi y su nombre por país. Alternativa: fraile (*Saimiri boliviensis*), del mismo género que el mono del nivel 1 | Aplicada (maquisapa en el catálogo) | No bloquea la 1.0 si Q9 es A |
 | Q9 | ¿Cuántas especies en la 1.0, y qué pasa sin arte? | Las especies 1-5. Un mundo sin arte final va en modo dosel, nunca con la especie de otro | Aplicada la regla del modo dosel; las especies de la 1.0 dependen del encargo | Encargo al artista (unos 30 días [E]) |
 | Q10 | Texto de la tarjeta | «¡Miquito a la vista!» | Aplicada | Texto final con el asesor |
-| Q11 | ¿Cuándo se registra el avistamiento? | `af_fauna_sighted` al mostrar la tarjeta, desde la 1.0 | **No aplicada**: la tarjeta sale, pero no se guarda ni se emite nada. Exige tu aprobación del evento (08 §8.2) y una migración del perfil, en un PR aparte | Cuaderno de campo (1.1) y el puente en el Mapa del río |
+| Q11 | ¿Cuándo se registra el avistamiento? | `af_fauna_sighted` al mostrar la tarjeta, desde la 1.0 | **No aplicada**: la tarjeta sale, pero no se guarda ni se emite nada. Exige tu aprobación del evento (08 §8.2) y una migración del perfil, en un PR aparte. **Decidida el 2026-10-19: sí (D-029)**; tarea DC15 | Cuaderno de campo (1.1) y el puente en el Mapa del río |
 | Q12 | Duración del nivel 1 | 1.400 ms como el resto de 1-20; medir primero. Solo si la prueba de cinco personas lo pide, una versión de estreno de 1.800 ms con una clave nueva | Aplicada (1.400 ms) | — |
 | Q13 | Reducir movimiento con especie | El miquito aparece quieto durante el fundido y 600 ms más | Aplicada en la ruta (el ajuste aún no existe) | — |
-| Q14 | Agua negra (mundos 3 y 10) | Ámbar-té translúcido que mantenga los 29 puntos de L* frente al tinte 14, tras una captura de prueba | **No aplicada**: el preset sigue en #4A2C14 al 70 % | Antes del mundo 3 (nivel 41) |
+| Q14 | Agua negra (mundos 3 y 10) | Ámbar-té translúcido que mantenga los 29 puntos de L* frente al tinte 14, tras una captura de prueba | **No aplicada**: el preset sigue en #4A2C14 al 70 %. **Decidida el 2026-10-19: sí (D-029)**; hecha en DC13: #522500 al 70 % | Antes del mundo 3 (nivel 41) |
 | Q15 | Estilizaciones de color y forma (bacaba rosa, guanábana, lulo, icono bol del açaí) | Mantener el canon como estilización, sin Datos del río que la afirmen; en vuelo, ramita de açaí. Revisar los tintes con el asesor para el Cuaderno | Aplicada | — |
 | Q16 | Técnica de animación de los miquitos | Rig recortable en uGUI: piezas sobre una plantilla por esqueleto y animación por código | Aplicada (rig procedural de 8 piezas) | Encargo al artista y plantillas en `docs/art/` |
-| Q17 | En el mundo 11, el hoatzin hace la animación de Volver a la orilla (glosario §3.3; 04 §2.7: «la animación la ejecuta el hoatzin»). ¿Solo vacía las cuias, o también suelta la fruta en la intro corta del reintento? | Solo el vaciado. La intro del reintento va en modo dosel, sin tropa, como en todos los mundos | Sin hoatzin en el código | Mundo 11 (nivel 821) |
+| Q17 | En el mundo 11, el hoatzin hace la animación de Volver a la orilla (glosario §3.3; 04 §2.7: «la animación la ejecuta el hoatzin»). ¿Solo vacía las cuias, o también suelta la fruta en la intro corta del reintento? | Solo el vaciado. La intro del reintento va en modo dosel, sin tropa, como en todos los mundos | Sin hoatzin en el código. **Decidida el 2026-10-19: solo el vaciado (D-029)** | Mundo 11 (nivel 821) |
 
-**Preguntas de la propuesta de fauna** (material de apoyo; sección f). Siguen abiertas las que el guion no resuelve:
+**Preguntas de la propuesta de fauna** (material de apoyo; sección f). Las que el guion no resuelve (decididas el 2026-10-19 con su recomendación, D-029):
 
 | # | Pregunta | Recomendación de la propuesta | Estado |
 |---|---|---|---|
-| F7 | ¿Se amplían el glosario §3.3 y 06 §4.6 con la página Fauna del Cuaderno de campo («Miquitos» y «Río y selva»)? | Sí, tras el asesor | Abierta (06 §4.6 sigue con 12 animales del elenco) |
-| F9 | ¿Microinteracciones al tocar la fauna del fondo (como mucho 2 animales por mundo, fuera del panel, sin dar nada económico)? | Sí, midiendo que no aumenten los toques erróneos en las cuias | Abierta |
-| F10 | ¿La fauna reacciona al sellar una cuia? | No: solo en la victoria y los hitos (prudencia con D-002) | Abierta |
-| F11 | ¿Quién salta en las celebraciones? | El tucuxi; Rosa asoma y exhala, como el boto real. Cambia 07 §6.2, con el asesor | Abierta |
-| F13 | ¿Algo nuevo a mitad de los mundos largos (6-11)? | Un segundo gesto de la misma especie en la 1.1 y, después, invitados opcionales | Abierta. La variación determinista por nivel ya alterna el lado de entrada, quién lidera y el reposo |
+| F7 | ¿Se amplían el glosario §3.3 y 06 §4.6 con la página Fauna del Cuaderno de campo («Miquitos» y «Río y selva»)? | Sí, tras el asesor | **Decidida el 2026-10-19: sí, tras el asesor (D-029).** 06 §4.6 sigue con 12 animales y una nota hasta entonces |
+| F9 | ¿Microinteracciones al tocar la fauna del fondo (como mucho 2 animales por mundo, fuera del panel, sin dar nada económico)? | Sí, midiendo que no aumenten los toques erróneos en las cuias | **Decidida el 2026-10-19: sí (D-029).** Al backlog: la especifica el tech-lead con la fauna del fondo |
+| F10 | ¿La fauna reacciona al sellar una cuia? | No: solo en la victoria y los hitos (prudencia con D-002) | **Decidida el 2026-10-19: no (D-029)** |
+| F11 | ¿Quién salta en las celebraciones? | El tucuxi; Rosa asoma y exhala, como el boto real. Cambia 07 §6.2, con el asesor | **Decidida el 2026-10-19 (D-029)**, con el asesor: nota en 07 §6.2; el código, cuando lo dé |
+| F13 | ¿Algo nuevo a mitad de los mundos largos (6-11)? | Un segundo gesto de la misma especie en la 1.1 y, después, invitados opcionales | **Decidida el 2026-10-19 (D-029)**: en la 1.1 (09 §1.2). La variación determinista por nivel ya alterna el lado de entrada, quién lidera y el reposo |
 
 Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - F1 es Q7, y F2 es Q6.
@@ -2594,7 +2597,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Fuera de esta decisión** (siguen pendientes del dueño):
 - **el espacio del AAB** antes de los SDK y del arte a 2× (Addressables y PAD, fuentes recortadas o arte a 1×; B2, `docs/setup/medida-aab-b2.md`) y **el permiso `INTERNET`** (`CLAUDE.md`): el dueño los decide aparte;
 - **las «Paradas en una confluencia [P]»** de M5.1 (punto 2 de la pregunta 66): siguen [P];
-- las demás preguntas abiertas de `docs/GDD.md` §6.3: la 18, la 21, la 25, la 26, la 52, la 55, la 56, la 58, la 59, las 62-64 y la 66.
+- las demás preguntas abiertas de `docs/GDD.md` §6.3: la 18, la 21, la 25, la 26, la 52, la 55, la 56, la 58, la 59, las 62-64 y la 66 (todas menos la 66 se decidieron el mismo día con su recomendación, D-029; de la 66, la parte 3).
 
 **Consecuencias.**
 - **Código** (ola 7 de la tanda 4; sin paquetes, SDK, permisos ni versiones nuevas): DC2, DC3 y DC10 (carril DC-U1: la victoria y el lienzo); DC4, DC5, DC6 y DC7 (carril DC-U2: Revelar, el Mapa del 10 y el tutorial); DC8, DC9 y DC11 (carril DC-P: las herramientas del Mapa y el núcleo).
@@ -2621,3 +2624,111 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Archivos afectados.**
 - **Documentación** (2026-10-19, DC1): este registro y los de «Qué cambia en el GDD».
 - **Código** (previsto, ola 7): `Assets/_Project/Scripts/{GameFlow, UI, Presentation}` (DC2-DC7 y DC10), `tools/river-map/` y el bloque `map.*` de `Assets/_Project/Data/Loc/facts.csv` (DC8 y DC9) y los textos del núcleo en `Packages/com.amazonfill.core/` (DC11), con sus tests; las listas exactas, en cada PR.
+
+---
+
+## D-029 · Respuestas del 2026-10-19 a las preguntas con recomendación que seguían abiertas
+
+- **Fecha:** 2026-10-19, después de D-028. Registrada el 2026-10-19 (DC1b, tanda 4, ola 7).
+- **Estado:** decidida por el dueño en el chat, literal: «resolvamos las preguntas, pero si tienen recomendadas vamos con esas». Y, para la pregunta de DC7 («¿el dedo guía entra también en el primer uso de la Hoja (43) y en el tutorial de la Tinaja (323)?»), la recomendada, «sí», queda aceptada.
+  - Gana la recomendación de cada pregunta abierta que la tenía, tal como estaba escrita el 2026-10-19: en `docs/GDD.md` §6.3 (las filas 18, 21, 25, 26, 52, 55, 56, 58, 59 y 62-64), en este registro (P7 de §5, P14-P17 de D-008 y las preguntas de D-010) y en la propuesta de Magic Sort (`docs/research/magic-sort/propuesta-tintalu.md` §10.2). Donde la recomendación es condicional («tras el asesor», «cuando el banner lleve ese texto», «hasta simular B»), se registra la condición y no se cumple por adelantado.
+  - Es un número aparte de D-028: otra frase del dueño, con otro alcance (todas las preguntas con recomendación, no una lista cerrada), y otro commit. La confirmación del alcance de DC7 va aquí y no en D-028, que solo dice P5.
+  - Documentación aplicada el 2026-10-19 (DC1b): en `docs/GDD.md` §6.3 las doce filas pasan a decididas con la última columna al día; la regla de cada respuesta va a su capítulo («Qué cambia en el GDD»). El código que falta, en las tareas DC6, DC7 y DC12-DC16 de la ola 7.
+- **Sustituye:**
+  - los [P] y las opciones abiertas de las preguntas de abajo;
+  - en 05 §4.1 y §5, la condición de dos rechazos de la Canoa extra y la caducidad de 10 min de «Canoas infinitas 1 h» (P17 A);
+  - en 03 §11, el 15 % y el 15-20 % de Difícil de 61-200 (pregunta 26);
+  - en 07 §2.1 y en la guía visual, el agua negra #4A2C14 (Q14);
+  - en GDD.md §7.3, V5: las cifras [sim] del GDD pasan a la corrida con el ciclo de D-009 (`0faf51e`).
+- **No sustituye:** D-002 (el dedo guía de la Hoja y de la Tinaja son ayudas explícitas, como el de 1-2); D-016, punto 5; D-023, punto 39 (una tarjeta por nivel tras la intro); D-007 Q17 A (ninguna mecánica tapa contenido); D-009 (el ciclo y sus etiquetas no cambian: la 26 solo alinea la tabla de 03 con la cuenta del ciclo); GDD.md §2 #11 (misma semilla al reintentar); 04 §7.1; los contratos 9 y 29.
+
+**Contexto.** Tras D-028, el mismo día, quedaban en `docs/GDD.md` §6.3 las preguntas 18, 21, 25 y 26 (pasos 1 y 2 del traspaso), la 52 (TI6a), las 55, 56, 58, 59 y 62-64 (olas 5 y 6; M4.6) y la 66 (ola 7); en este registro, P7 de §5, P14-P17 de D-008 y las preguntas del guion de la intro y de la propuesta de fauna de D-010; y las de la propuesta de Magic Sort (§10.2) que D-005, D-006 y D-008 no respondieron. El plan de la ola 7 (DC1b) separó las que tenían recomendación de las que no la tenían o la tenían en conflicto con el canon.
+
+**Decisión.**
+
+*Preguntas de `docs/GDD.md` §6.3.*
+1. **18 → (a): el «?» se apaga en las cuñas finas.** Con la cuia inclinada, el «?» de una dosis turbia se apaga en las cuñas de menos de 0,30 u y solo queda la trama, un instante: es una excepción de 07 §3, fila 13 (el Cacao junto al agua parda). Ya aplicada desde el paso 1.
+2. **21 → se ratifican los [P] de la tarjeta previa y los tutoriales** del paso 1 (la tarjeta única del 100, «agua» en el 27, el Matapi sobre agua oscura, `_FaceDilate` 0,18, sin «Toca para continuar», la intro retenida en t = 0 y el velo de 0,55). Ya aplicados.
+3. **25 → (a): se aprueban las cifras [sim] del ciclo de D-009** y se llevan a 05, 01, 04, 09 y `docs/GDD.md` (contrato 18; V5 cerrada). Selección de celdas en D-009 («Consecuencias»). Sin cambios en `tools/econ_sim.py` ni en `tools/out/` (`econ_sim.py --runs 300` reproduce `econ_B.md` byte a byte). Aplicada en la documentación (DC1b).
+4. **26 → (a): 03 §11 pasa a la cuenta del ciclo** (el 25 % de Difícil de 05 §3.1 desde el 61, con el 5 % de Muy difícil) y se vigila el acierto de etiqueta (D-009, punto 9: si baja del 60 % en un ciclo, se revisa el generador de esa posición). El generador no cambia. Aplicada en la documentación (DC1b).
+5. **52 → (a): la cadencia de TiTino cuenta `stats.levels_won`.** Ya aplicada (TI6b, `86318f8`). Falta verla en el teléfono.
+6. **55 → (a): sin «Fruta nueva» en el 1 ni en el 2.** Gana la instrucción del tutorial (una tarjeta por nivel); la frase del taperebá se lee en su ficha y en la tarjeta de su parada. Ya aplicada (`SightingRule.FruitNewAt`); documentación en 06 §2.2 y §4.5 (DC1b); el comentario del código, en DC16.
+7. **56 → (a): el tooltip de Marea del 3 sale tras el primer vertido que no acerca, sobre el muelle con la cola en Marea.** Ya aplicada (TU1a); documentación en 02 §13, 04 §2.1 y 06 §2.2 (DC1b); el [P] de `TutorialInstruction`, en DC6. El respaldo del 5 («al inicio del nivel 5 si no ocurrió») no entra: es una pregunta sin recomendación (abajo).
+8. **58 → (a): el orden del resumen del mundo 8**, con las dos bajadas declaradas (`baja_por_confluencia`) y la excepción de `--check`. Ya aplicada; las marcas de «pregunta abierta» y [P] de `tools/river-map/` y `docs/research/mapa-del-rio/`, en DC12.
+9. **59 → (a): la pregunta del mundo 9 en la cabecera del Mapa; la del arco V-VI, en el banner del 561 cuando el banner lleve ese texto [P].** Aplicada en el Mapa. El banner no tiene línea de pregunta: no hay tarea hasta que la tenga.
+10. **62 → (a): se ratifican los [P] de la ola 5.** Ya aplicados.
+11. **63 → (a): se ratifican los [P] de la ola 6**, con la pista por inactividad encendida por defecto. Ya aplicados. El glosario §10 quita el [P] a `fact_sheet_title`, `fact_locked`, `fact_starts_at`, `fact_sources` y `fact_a11y` y suma `settings_about_amazon` (DC1b).
+12. **64 → (a): se ratifican las tres [P] del audio de la entrega 1**: la lluvia fija por nivel (50 % ligera, 35 % media y 15 % fuerte), los remates a −8 dB de su pico (con el ajuste Música y tras la toada) y los efectos en Vorbis 0,8. Ya aplicadas (AU3); falta escucharlas (acción del dueño). Era la «decisión con el siguiente número libre» que pedía la fila 64.
+
+*Preguntas de este registro.*
+13. **P7 (§5, D-001/D-005), reescrita → sí:** el formato no declara el modo (los packs se generan siempre en `run`) y P7 se retira. Ya aplicada.
+14. **D-008, P14 → sí:** los textos nuevos del embudo y el nombre «Sin canoas». Sin [P] en 04 §6.5 y en el glosario §10 (DC1b); las notas de `strings.csv`, en DC16.
+15. **D-008, P15 → sí:** Marea, primera opción del modal. Ya aplicada.
+16. **D-008, P16 → sí:** desde el 31, salir del nivel cuesta una canoa también con 0 vertidos. Ya aplicada (`LevelFlow.Funnel`; el comentario, en DC16).
+17. **D-008, P17 → A:** «Canoas infinitas 1 h» sale siempre en Sin canoas, detrás de esperar, la Canoa extra por vídeo y las semillas, y sin cuenta atrás, como 04 §7.3 y como lo hace ya `NoCanoesScreen`. 05 §4.1 y §5 se corrigen (el lote Dc4 que estaba pendiente; DC1b). D-008 queda sin pendientes del dueño.
+18. **DC7 (P5 ampliada) → sí:** el dedo guía entra también en el primer uso de la Hoja (43) y en el tutorial de la Tinaja (323), como piden las fichas M1 y M13 de 02 §9.1, con el componente de DC6. Tarea: **DC7**.
+19. **M5.1c → se ratifica el trazo suave** que propuso la revisión de M5.1: puntos a 1,5 anchos del trazo (`SpacingWidths`) y bisel donde el inglete pasaría de 1,25 (`BevelMiter`). Es la parte 3 de la pregunta 66 de `docs/GDD.md` §6.3. Ya aplicado; las marcas, en DC16 (tras FX11). `tools/river-map/README.md` no se toca aquí.
+
+*Preguntas de D-010 (guion de la intro y propuesta de fauna).*
+20. **Q11 → sí:** `af_fauna_sighted` al mostrar la tarjeta, desde la 1.0, con el avistamiento guardado en el perfil (evento y migración aprobados). Tarea: **DC15**; alta del evento en 08 §8.2 (DC1b). La revisión de la pregunta 41 (2) queda resuelta con ella: sin tarjeta no hay avistamiento.
+21. **Q14 → sí:** el agua negra, en ámbar-té translúcido que conserva los 29 puntos de L* frente al tinte 14, tras la captura de prueba. Hecha en **DC13**: #522500 al 70 % (ΔL* 29,4 frente al tinte 14; 31,5 compuesta sobre la cavidad). 07 §2.1 y la guía visual, al día (DC1b).
+22. **Q17 → solo el vaciado:** en el mundo 11 el hoatzin solo hace el vaciado de Volver a la orilla, y la intro del reintento va en modo dosel, como en todos los mundos. Sin código hasta el mundo 11.
+23. **F7 → sí, tras el asesor:** el glosario §3.3 y 06 §4.6 se amplían con la página Fauna (miquitos y río y selva) cuando lo dé el asesor; hasta entonces, una nota.
+24. **F9 → sí:** microinteracciones con la fauna del fondo (como mucho 2 animales por mundo, fuera del panel, sin nada económico), midiendo que no aumenten los toques erróneos en las cuias. Al backlog, sin tarea en esta ola: lo especifica el tech-lead con la fauna del fondo.
+25. **F10 → no:** la fauna no reacciona al sellar una cuia (solo en la victoria y los hitos).
+26. **F11 → el tucuxi salta en las celebraciones; Rosa asoma y exhala.** Cambia 07 §6.2 **con el asesor**: una nota ahora; las poses y el código, cuando lo dé.
+27. **F13 → un segundo gesto de la misma especie en la 1.1** (09 §1.2) y, después, invitados opcionales.
+
+*Preguntas de la propuesta de Magic Sort (§10.2).*
+28. **#8 → A** (Liana con la variante `key`): ya estaba en D-007.
+29. **#10 → A:** Aguapé y Nasa con pez, al backlog tras el 183, con el asesor.
+30. **#11 → A:** la frecuencia de intersticiales se mantiene y se vigila.
+31. **#12 → se confirma:** clasificación G y categorías sensibles bloqueadas (apuestas, dinero real, trading y mercados de predicción) en todas las bandas de edad, y la prueba en el dispositivo de que «Close» responde al primer toque. 05 §7 lo exige en todas las bandas (DC1b); se implementa con MAX (sdk-integrator, fase de anuncios).
+32. **#13 (grabaciones) → A:** es una acción del dueño.
+33. **#16:** ya respondida por D-013.
+34. **#17 → B:** el bono diario deja elegir 1 de 3 premios visibles.
+35. **#18 → B:** un panel de «premios del día» tras ganar.
+36. **#19 → C:** hitos de racha 3 · 6 · 10 hasta simular la B. Es lo que hace la Crecida.
+37. **#21 → B:** un reloj diario común con un solo evento temporal.
+38. **#22 → B:** sin Canoas infinitas en la Mochila de inicio. Como está.
+39. **#23 → A:** la oferta temporal, como icono del inicio desde el 31, con cuenta atrás y sin abrirse sola.
+40. **#24 → B:** level-qa mide las trampas tempranas con tope por etiqueta. Ya está (QA-EARLY-TRAPS; D-007, Q16 B).
+41. **#25 → A:** «¡Perfecto!» solo cuando el intento se gana sin Cuia de rescate. Tarea: **DC14**; la regla, en 02 §6 y 07 §5.4, y la clave `victory_perfect` [P], en el glosario §10 (DC1b; si DC14 usa otra, se corrige allí).
+- **#15 no se registra como aceptada:** la cerró D-007 Q17 A (ninguna mecánica tapa contenido), y D-019 llevó el contenido oculto a la Tinaja.
+- **#17, #18, #21 y #23** son de sistemas que aún no existen (el bono diario de la Bitácora, el panel de premios, los eventos y las ofertas temporales): se registran ahora, con una nota de una línea en su sección (05 §5; 06 §4.2, §4.7 y §5.1), y el rediseño de esas secciones se hace cuando se planifiquen.
+
+**Fuera de esta decisión** (siguen pendientes del dueño):
+- **el espacio del AAB** (Addressables y PAD, arte a 1× y el margen de las fuentes de FNT1) y **el permiso `INTERNET`**: el dueño los decide aparte, como en D-028;
+- las preguntas **sin recomendación o en conflicto con el canon**, que siguen abiertas con su [P]: las «Paradas en una confluencia [P]» de M5.1 (punto 2 de la pregunta 66 de `docs/GDD.md` §6.3; sus puntos 1 y 4 tampoco entran); P12 de D-006 (16:9 con 13-14 cuias); las dos de D-021 (la velocidad del lanzamiento lateral y la barra de la Crecida); las #2, #9, #14 y #20 de la propuesta de Magic Sort (reabren decisiones del canon); la insignia del nivel en otros idiomas (L4); el rótulo del lugar sobre la silueta y la silueta con 3 filas; la ventanita de casa con 0 canoas; la victoria con vista que enseña poco sitio; la temporada de SE2, que apenas se nota; el formato de las distancias; el respaldo del tooltip de Marea en el 5; los dos [P] de TiTino (las frases fijas que se repiten y la lectura del saludo de la mañana); el tope 0,7 del cielo de `StopBackdrop` (hoja 02f); y `profile_locked_title` (aviso o pantalla de bloqueo);
+- las «Preguntas abiertas» antiguas de los capítulos 00-09 que no tenían recomendación (negocio, legal y publicación): fuera de este barrido; se revisan en la fase que las necesite.
+
+**Consecuencias.**
+- **Código** (ola 7 de la tanda 4; sin paquetes, SDK, permisos ni versiones nuevas): DC13 (agua negra, hecha en su rama), DC14 («¡Perfecto!»), DC15 (avistamiento y `af_fauna_sighted`), DC16 (marcas «pendiente del dueño» de preguntas ya decididas), DC12 (marcas de la 58 en las herramientas del Mapa), DC6 (el [P] del 3) y DC7 (el dedo guía de la Hoja y de la Tinaja).
+- **Analítica:** `af_fauna_sighted` {`species_id`, `level`, `first`} entra en 08 §8.2 (Q11).
+- **Economía:** las cifras [sim] del GDD pasan a la corrida con el ciclo de D-009 (contrato 18); sin cambios en `tools/econ_sim.py` ni en `tools/out/`.
+- **Sin cambios** en Remote Config, el formato de nivel ni los packs.
+
+**Qué cambia en el GDD** (aplicado el 2026-10-19, DC1b):
+- `docs/GDD.md`: versión 1.17, estado, convención [sim], §2 (#16), §3.3 (la fila de `econ_B_tramos.md`), §6.1 (#4, el sumidero), §6.2 (la Cuia de rescate), §6.3 (entrada, filas 18, 21, 25, 26, 52, 55, 56, 58, 59 y 62-64, y la parte 3 de la 66), §7.1 (contrato 18), §7.3 (V5 cerrada), §8 (punto 3) y §9 (pasos 12 y 19).
+- 00: §3.3 (nota de F7 y Q17), §6.4 («Sin canoas») y §10 (las claves de P14, las de la ficha sin [P], `settings_about_amazon` y `victory_perfect` [P]).
+- 01: §7.2 (el primer bloqueo del casual).
+- 02: §6 («¡Perfecto!»), §9.1 (M1 y M13: el dedo guía, DC7), §13 (fila 3) y Preguntas abiertas 11 y 12.
+- 03: §5 (P7), §11 (tabla y nota de vigilancia) y Preguntas abiertas 8 y 9.
+- 04: §2.1, §2.7 (Q17), §5.2 y §6.2 (P16), §6.5 (P14), §7.3 (P17), §9 (cifras [sim]) y Preguntas abiertas 9.
+- 05: Resumen, §3 (cifras [sim]), §4.1 y §5 (P17), §5 (#23), §7 (#12), Desviaciones, Conflictos, pregunta 2 y Dependencias.
+- 06: §2.2 (filas 2 y 3), §4.2 (#17), §4.5 (la «Fruta nueva» desde el 4), §4.6 (F7), §4.7 (#18) y §5.1 (#21).
+- 07: §2.1 y §3 (agua negra, Q14), §3 (fila 13, la 18), §5.4 («¡Perfecto!»), §6.2 (F11), §6.4 (Q11), §9 (la 64) y Preguntas abiertas 11.
+- 08: §4.2 y §5.1 (agua negra), §6.1 (la 64) y §8.2 (`af_fauna_sighted`).
+- 09: §1.2 (F13).
+- En cada capítulo de esta lista, su línea de fecha («actualizado el 2026-10-19 (DC1b) con D-029»).
+- Fuera del GDD: la guía visual (revisión 11 y el token `agua_negra`), el guion de la intro (§18: Q11, Q14 y Q17), la propuesta de fauna (F7-F13), la nota de respuestas de la propuesta de Magic Sort y `docs/dev/prototipo-v0.md` (P7).
+- Este registro: la tabla (D-008, D-009, D-010 y D-029), P7 de §5, las notas de D-008 (P14-P17, #20 y #25), D-009 (las cifras y las etiquetas) y D-010 (las tablas de Q y F y sus pendientes de documentación), y la lista de D-028 («Fuera de esta decisión»).
+- `docs/dev/traspaso/README.md`: §6, paso 4 (las respondidas salen de los pendientes del dueño) y §7 (las filas de D-008, D-009, D-010, D-016, D-017 y D-029).
+
+**Alternativas descartadas.** 18 (b); en la 21, la 62 y la 63, cambiar alguno de los [P]; 25 (b); 26 (b); 52 (b); 55 (b); 56 (b) y (c); 58 (b) y (c); 59 (b) y (c); 64 (b); P7, declarar el modo en el formato; P14-P16, «no»; P17 B; DC7, «no»; Q11 B y C; Q14 B; Q17, que el hoatzin también suelte la fruta; F7 B, F9 B, F10 B, F11 B y F13 C; y las opciones no recomendadas de #8, #10-#13, #17-#19 y #21-#25.
+
+**Cómo revertir.** Con una decisión nueva que sustituya a D-029, pregunta a pregunta. La 25 se revierte volviendo a citar la corrida del 2026-10-06 (`git show 0faf51e^:tools/out/econ_*.md`); la 26, con la tabla anterior de 03 §11; Q14, con `Palette.WaterBlack` = #4A2C14. Ninguna toca packs ni datos publicados.
+
+**Archivos afectados.**
+- **Documentación** (2026-10-19, DC1b): este registro y los de «Qué cambia en el GDD».
+- **Código** (ola 7): `Assets/_Project/Scripts/{GameFlow, UI, Presentation, Save}` (DC6, DC7, DC13-DC16), `Assets/_Project/Data/Loc/strings.csv` (DC14 y DC16), `tools/river-map/` y `docs/research/mapa-del-rio/` (DC12), con sus tests; las listas exactas, en cada PR.
