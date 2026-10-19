@@ -6,6 +6,15 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-19 · ⚠ La licencia de Unity falla por 3.ª vez (pendiente del dueño)
+
+- **Hacia las 16:45** los batchmode nuevos vuelven a salir con el código 6: `Found 0 entitlement groups`, `'com.unity.editor.headless' was not found`, `No valid Unity Editor license found`. Los que ya estaban en marcha (el PlayMode de `spark/reto-del-rio` y el de `spark-r9`) siguen corriendo.
+- **Patrón:** falla entre 1 y 2 h después de cada revisión del dueño (12:10, 13:35 y 16:45). Esta vez no se reinició el proceso `--internal-auth-broker-serve` (el último es de las 14:38), así que la hipótesis de la 2.ª caída no se confirma. Lo más probable es que caduque el token de la sesión y no se renueve para el modo headless. Habría que mirar en Unity Hub si la licencia es una suscripción por sesión o una licencia Personal sin activación offline.
+- **Qué queda frenado:** la verificación en Unity de la combinación de R5 con la rama de decisiones (worktree `spark-int`, `85fe0a3`).
+  - La parte .NET y de herramientas ya está en verde: build sin avisos, `dotnet test` 981, `validate_schema` 103/103, `--self-test` del generador todo PASS, y `level-qa --daily` del pool de 2.187 tableros con 0 fallos y 1.678 avisos (R-Q10).
+  - Las tres piezas pasaron Unity por separado: R5 (EditMode 2.995, 1 fallo del test inestable que pasa al relanzarlo), la rama de decisiones (3.023, ídem) y la rama principal (EditMode 3.006 en verde).
+- **No he usado `unity auth` ni `unity license`** (regla dura 5).
+
 ## 2026-10-19 · Decisión del dueño: R-Q11b, 30 candidatos por fuente
 
 - **La pregunta:** para que los 729 días de cada banda entren en la ventana del bot, R5 prueba hasta 30 candidatos **por fuente** y, si ninguno entra, pasa a la siguiente.
