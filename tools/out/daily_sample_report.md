@@ -47,10 +47,10 @@ La paleta de R-Q1 no admite ese K con el tope (nota §1.1): el tablero lleva el 
 
 ## Tiempos
 
-- Total (pared): 1.8 s con 20 hilos.
-- B1: 1.9 s de CPU sumados en 10 tableros (189 ms por tablero; el más lento, 519 ms).
-- B2: 8.4 s de CPU sumados en 10 tableros (836 ms por tablero; el más lento, 1784 ms).
-- B3: 2.5 s de CPU sumados en 10 tableros (252 ms por tablero; el más lento, 464 ms).
+- Total (pared): 1.6 s con 20 hilos.
+- B1: 1.8 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 182 ms por tablero; el más lento, 519 ms).
+- B2: 7.5 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 752 ms por tablero; el más lento, 1554 ms).
+- B3: 2.4 s sumando el tiempo de pared de cada uno de sus 10 tableros (con varios hilos se solapan; 244 ms por tablero; el más lento, 368 ms).
 
 ## Tableros
 
