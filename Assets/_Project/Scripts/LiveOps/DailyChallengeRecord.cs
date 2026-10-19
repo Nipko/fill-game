@@ -14,10 +14,16 @@ namespace AF.LiveOps
         /// <summary><c>win</c>: tablero ganado.</summary>
         Win = 1,
 
-        /// <summary><c>fail</c>: salir sin ganar ese día (R-Q9).</summary>
+        /// <summary>
+        /// <c>fail</c>: el día terminó sin victoria (R-Q9 con R-Q15): una vez por día, al descartar por cambio de día la partida
+        /// de un día jugado y no ganado (<see cref="DailyChallengeService.DiscardStale"/>).
+        /// </summary>
         Fail = 2,
 
-        /// <summary><c>abandon</c>: partida descartada por cambio de día al reabrir (R-Q4; nota §8 y §12) [P].</summary>
+        /// <summary>
+        /// <c>abandon</c> (08 §8.2): <b>no se emite</b> desde R-Q15 y R-Q16 (salir deja la partida reanudable y el día sin victoria
+        /// es <c>fail</c>). Se conserva por la taxonomía de 08 §8.2 y para leer un perfil que lo traiga.
+        /// </summary>
         Abandon = 3,
     }
 

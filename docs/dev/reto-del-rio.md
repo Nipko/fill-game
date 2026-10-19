@@ -370,7 +370,7 @@ En este orden:
 
 - Siempre: «Reto del río · {fecha corta}» (formato de la región vía `Loc`, 08 §2.2), olas de la banda (1-3) y «{n}/7».
 - Al cambiar de día con la app abierta, la tarjeta se recalcula al volver al inicio; la partida empezada ayer sigue (R-Q3).
-- Al reabrir otro día, `InProgress` de ayer se descarta con `result = abandon` [P] (R-Q4).
+- Al reabrir otro día o al volver al inicio, `InProgress` de un día anterior se descarta (R-Q4); si ese día no se ganó, es su único `result = fail` (R-Q15). Salir sin ganar deja la partida reanudable el mismo día (R-Q16).
 - Textos: solo claves, en `docs/dev/traspaso/spark-strings-reto.csv`, `status = borrador`.
 
 ---
@@ -434,7 +434,7 @@ Los alias retirados (`daily_offset`, `daily_reward_seeds`, `daily_bands`…) no 
 ## 12. Analítica y sondas (08 §8.2; R10)
 
 Sin `AF.Analytics`: líneas `AF_STATE` en `DevProbe.Daily.cs`, con el patrón de `DevProbe.Map.cs`. Solo identificadores.
-- `af_daily_challenge {date, result, t_ms, murky_bonus = false, streak_days}`: `win` al reclamar; `fail` al salir sin haber ganado ese día (R-Q9); `abandon` al descartarse por cambio de día [P].
+- `af_daily_challenge {date, result, t_ms, murky_bonus = false, streak_days}`: `win` al reclamar; `fail` una vez por día, al descartar por cambio de día la partida de un día jugado y no ganado (R-Q9 con R-Q15; `DailyChallengeService.DayEnded`); `abandon` ya no se emite (R-Q15 y R-Q16). `t_ms` del `fail`: null (el registro no guarda el tiempo jugado); `streak_days` del `fail`: la racha que ese día rompe [P].
 - `level_start {level_name = d{b}_n{nnnn}}`.
 - `earn_virtual_currency {source = daily_challenge, value}`; la Cosecha doble, `source = double_harvest` (E9).
 - Estado de la tarjeta como `AF_STATE`, para jugar con `adb`.
