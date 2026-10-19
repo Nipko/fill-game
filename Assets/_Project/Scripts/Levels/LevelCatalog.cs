@@ -75,7 +75,8 @@ namespace AF.Levels
         /// a <c>mundo_09_v1.json</c> (los que enlaza <c>GameSceneBuilder.LevelPackPaths</c>) y se versiona el registro de
         /// combinaciones; un test EditMode comprueba que coinciden. La condición de D-019 (Q-Ti3; 03 §11; C1b, «Condición de la
         /// Tinaja»): se publica la «a» si TJ4 y la compuerta de PF1 (el factor de Morpho medido en un teléfono de clase A) están
-        /// en verde; si no, la «b». Mientras la compuerta de PF1 no conste en verde, la «b» [P]. Para publicar la Tinaja (C1c),
+        /// en verde; si no, la «b». Mientras la compuerta de PF1 no conste en verde, la «b» [P] (C1c, 2026-10-19: TJ4 en verde y PF1
+        /// sin medir; pregunta abierta en D-019 de <c>docs/dev/decisiones.md</c>). Para publicar la Tinaja,
         /// todo antes de fusionar: <c>published_variant</c> = "a", regenerar el registro (<c>--registry</c>) y los tres paquetes
         /// en <c>Data/Levels/</c>, este valor a <see cref="VariantA"/> y regenerar la escena con
         /// <c>GameSceneBuilder.CreateGameScene</c>.
