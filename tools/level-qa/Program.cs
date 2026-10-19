@@ -82,6 +82,12 @@ if (args.Contains("--help") || args.Contains("-h"))
     return 0;
 }
 
+// Reto del río (Spark R4): --daily y --self-test daily, antes del --self-test genérico, que rechazaría "daily".
+if (args[0] == "--daily" || (args.Length == 2 && args[0] == "--self-test" && args[1] == "daily"))
+{
+    return AmazonFill.Tools.LevelQa.Daily.DailyQaCommand.Run(args);
+}
+
 // --self-test key2 (P5): el PackReader de level-qa lee la key2 de la Flor (y las demás variantes) del pack escrito por el
 // generador con el mismo tablero y el mismo hash (VariantsSelfTest.RunPackReadBack, enlazado del generador).
 // --self-test reglas (P6): QA-MECH-COUNT, QA-HITO-14 y las casas de QA-VAR-FLOR en positivo (Checks/RulesSelfTest.cs).

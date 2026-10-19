@@ -126,6 +126,12 @@ if (args.Length >= 1 && args[0] == "--validate-spec")
     return args.Length == 2 ? SpecValidator.Run(args[1]) : UsageError("--validate-spec lleva un solo archivo.");
 }
 
+// Reto del río (Spark R2-R3): --daily y --self-test daily, antes del --self-test genérico, que rechazaría "daily".
+if (args.Length >= 1 && (args[0] == "--daily" || (args.Length == 2 && args[0] == "--self-test" && args[1] == "daily")))
+{
+    return AmazonFill.Tools.LevelGenerator.Daily.DailyCommand.Run(args);
+}
+
 if (args.Length >= 1 && args[0] == "--self-test")
 {
     if (args.Length == 1)
