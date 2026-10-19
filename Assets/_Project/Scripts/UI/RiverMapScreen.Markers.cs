@@ -764,10 +764,10 @@ namespace AF.UI
                 return PlacePoint(map, routes.At(0)!.At);
             }
 
-            RiverStopRoute? route = s < routes.Count ? routes.At(s) : null;
+            RiverStopRoute? route = routes.At(s); // tras la última parada, la meta: la naciente (FX13)
             if (route == null)
             {
-                return PlacePoint(map, routes.At(routes.Count - 1)!.At);
+                return PlacePoint(map, routes.At(routes.LegCount - 1)!.At);
             }
 
             return RoutePoint(map, route, Mathf.Clamp01((x - (per * (s - 1))) / per));
@@ -798,7 +798,7 @@ namespace AF.UI
                 return guideTo;
             }
 
-            RiverStopRoute? route = s < routes.Count ? routes.At(s) : null;
+            RiverStopRoute? route = routes.At(s);
             float relay = 0.5f;
             RiverPassingPoint? point = map.PassingPoint(BannerTravel.RelayPassingId);
             if (route != null && point != null)
@@ -2720,7 +2720,7 @@ namespace AF.UI
             int s = x <= 0f ? 1 : Mathf.CeilToInt((x / per) - 1e-4f);
             float f = x <= 0f ? 0f : Mathf.Clamp01((x - (per * (s - 1))) / per);
             float left = lead;
-            for (int guard = 0; guard < 4 && s < routes.Count; guard++, s++, f = 0f)
+            for (int guard = 0; guard < 4 && s < routes.LegCount; guard++, s++, f = 0f)
             {
                 RiverStopRoute? leg = routes.At(s);
                 if (leg == null)

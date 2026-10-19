@@ -223,7 +223,8 @@ namespace AF.Tests.EditMode
             Assert.That(jenaro.Id, Is.EqualTo("jenaro_herrera"));
             Assert.That(jenaro.Via[0], Is.EqualTo("teotonio"), "Rosa vuelve en el viaje del 560 (Q18-A)");
             Assert.That(routes.At(69)!.Id, Is.EqualTo("tambo"));
-            Assert.That(routes.At(70), Is.Null);
+            Assert.That(routes.At(70)!.Id, Is.EqualTo(RiverRoutes.SourceGoalId), "tras la última parada, la meta (FX13)");
+            Assert.That(routes.At(71), Is.Null);
         }
 
         // ---------------------------------------------------------------------------------------------- base64 (P-M1)
@@ -441,6 +442,74 @@ namespace AF.Tests.EditMode
             Assert.That(routes.At(1)!.Path.Count, Is.EqualTo(2));
             Assert.That(routes.At(1)!.Via, Is.EqualTo(new[] { "gurupa" }));
             Assert.That(routes.At(1)!.Mouths, Is.EqualTo(new[] { 1 }));
+        }
+
+        // FX13 (decisión del dueño del 2026-10-19, en D-013): «que el último tramo (691-700) apunte a la naciente (el Mismi) como
+        // meta, sin parada nueva». Las paradas son las 0-69; tras Tambo (69), en el cauce, la meta es el primer punto del cauce.
+        [Test]
+        public void RealStops_AfterTheLastStop_TheGoalIsTheSourceOfTheMismi_WithoutANewStop()
+        {
+            RiverMap map = RiverMapReader.Read(File.ReadAllText(RealMapPath));
+            RiverRoutes routes = RiverMapReader.ReadRoutes(File.ReadAllText(RealStopsPath), map);
+            Assert.That(routes.Count, Is.EqualTo(70), "las paradas 0-69, sin parada nueva");
+            Assert.That(routes.LegCount, Is.EqualTo(71), "70 tramos de parada y el de la meta");
+
+            RiverStopRoute tambo = routes.At(69)!;
+            Assert.That(tambo.Id, Is.EqualTo("tambo"));
+            RiverStopRoute goal = routes.Goal!;
+            Assert.That(goal, Is.Not.Null);
+            Assert.That(routes.At(70), Is.SameAs(goal), "el tramo 70 (niveles 691-700) es el de la meta");
+            Assert.That(routes.At(71), Is.Null);
+            Assert.That(goal.N, Is.EqualTo(70));
+            Assert.That(goal.Id, Is.EqualTo(RiverRoutes.SourceGoalId));
+            Assert.That(goal.At.Line, Is.EqualTo(0), "en el cauce");
+            Assert.That(goal.At.S, Is.EqualTo(0f), "su primer punto: la naciente");
+            Assert.That(goal.Path.Count, Is.EqualTo(1));
+            Assert.That(goal.Path[0].Line, Is.EqualTo(0));
+            Assert.That(goal.Path[0].S0, Is.EqualTo(tambo.At.S), "sale de Tambo");
+            Assert.That(goal.Path[0].S1, Is.EqualTo(0f), "río arriba hasta la naciente");
+            Assert.That(goal.Via, Is.Empty, "sin puntos de paso por encima de Tambo");
+            Assert.That(goal.Mouths, Is.Empty, "sin bocas por encima de Tambo");
+
+            // El primer punto del cauce es la naciente del Mismi de la investigación (rio-amazonas.json: quebrada Carhuasanta,
+            // lat −15,512, lon −71,702): la cabecera del tramo de HydroRIVERS más cercano (M5.1), a unos 3 km (−15,488 de latitud).
+            RiverMapFrame frame = map.Frame;
+            map.Lines[0].PointAt(0f, out float x, out float y);
+            double lat = frame.LatMin + (x * (frame.LatMax - frame.LatMin));
+            double lon = frame.LonMin + (y / frame.Aspect * (frame.LonMax - frame.LonMin));
+            Assert.That(lat, Is.EqualTo(-15.512).Within(0.05), "latitud de la naciente (≈ 5 km)");
+            Assert.That(lon, Is.EqualTo(-71.702).Within(0.05), "longitud de la naciente (≈ 5 km)");
+            Assert.That(map.Lines[0].WaterAt(0f), Is.EqualTo(RiverWater.Andean), "el agua del tramo: andina en la cabecera");
+        }
+
+        [Test]
+        public void Goal_FromTheLastStopOnTheCauce_ClimbsToSZero_WithTheViaAndMouthsOnTheWay()
+        {
+            RiverMap map = RiverMapReader.Read(Doc());
+            RiverRoutes routes = RiverMapReader.ReadRoutes(Routes(Stop(0)), map);
+            RiverStopRoute goal = routes.Goal!;
+            Assert.That(goal, Is.Not.Null, "la última parada está en el cauce (amazonas, s = 0,9)");
+            Assert.That(goal.N, Is.EqualTo(1));
+            Assert.That(routes.LegCount, Is.EqualTo(2));
+            Assert.That(goal.Path[0].S0, Is.EqualTo(0.9f));
+            Assert.That(goal.Path[0].S1, Is.EqualTo(0f));
+            Assert.That(goal.Via, Is.EqualTo(new[] { "gurupa" }), "el punto de paso de s = 0,8, río arriba");
+            Assert.That(goal.Mouths, Is.EqualTo(new[] { 1 }), "la boca del negro (s = 0,3)");
+        }
+
+        [Test]
+        public void Goal_IsNull_WhenTheLastStopIsOffTheCauce_OrAlreadyAtTheSource()
+        {
+            RiverMap map = RiverMapReader.Read(Doc());
+            RiverRoutes onTributary = RiverMapReader.ReadRoutes(Routes(Stop(0), Stop(1)), map);
+            Assert.That(onTributary.Goal, Is.Null, "la última parada en el negro");
+            Assert.That(onTributary.LegCount, Is.EqualTo(2));
+            Assert.That(onTributary.At(2), Is.Null);
+
+            RiverRoutes atSource = RiverMapReader.ReadRoutes(Routes(Stop(0, at: "{\"line\": \"amazonas\", \"s\": 0.0}",
+                path: "[{\"line\": \"amazonas\", \"s0\": 0.0, \"s1\": 0.0}]")), map);
+            Assert.That(atSource.Goal, Is.Null, "ya en la naciente");
+            Assert.That(atSource.LegCount, Is.EqualTo(1));
         }
 
         [TestCaseSource(nameof(InvalidRoutes))]

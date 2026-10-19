@@ -812,7 +812,8 @@ namespace AF.UI
         /// <summary>
         /// Dónde está la canoa con <paramref name="maxLevel"/> niveles ganados (D-013, punto 3; propuesta del Mapa §3.4): en un
         /// <c>10k</c>, en la parada k recién alcanzada; si no, a (max mod 10) / 10 de la ruta de la parada siguiente, por el agua.
-        /// Más allá del catálogo, en su última parada. False sin rutas. Sin asignaciones.
+        /// Tras la última parada, por la ruta de la meta (<see cref="RiverRoutes.Goal"/>: la naciente del Mismi, FX13); más allá,
+        /// en la meta o, sin ella, en la última parada. False sin rutas. Sin asignaciones.
         /// </summary>
         public static bool TryCanoePoint(RiverMap map, RiverRoutes routes, int maxLevel, out Vector2 point)
         {
@@ -832,7 +833,7 @@ namespace AF.UI
                 return true;
             }
 
-            RiverStopRoute at = routes.At(Mathf.Min(arrived, routes.Count - 1))!;
+            RiverStopRoute at = routes.At(Mathf.Min(arrived, routes.LegCount - 1))!; // tras la última parada, la naciente (FX13)
             point = PlacePoint(map, at.At);
             return true;
         }
@@ -920,6 +921,46 @@ namespace AF.UI
                 y1 = Mathf.Max(y1, canoe.y);
             }
 
+            return BoxZoom(map, x0, y0, x1, y1, viewW, viewH, out center);
+        }
+
+        /// <summary>
+        /// Zoom de la vista Mundo [P] en el tramo de la meta (tarea FX13: de la última parada a la naciente, jugando 691-700 y en
+        /// el fin de contenido del 700): la caja de su salida, de la naciente y de la canoa, como <see cref="WorldZoom"/>. Así la
+        /// canoa y el agua del tramo se ven a la vez, también en el viaje final (el mundo 10 del 701 no tiene paradas).
+        /// </summary>
+        public static float GoalZoom(RiverMap map, RiverStopRoute goal, bool hasCanoe, Vector2 canoe, float viewW, float viewH,
+            out Vector2 center)
+        {
+            Vector2 a = RoutePoint(map, goal, 0f);
+            Vector2 b = PlacePoint(map, goal.At);
+            float x0 = Mathf.Min(a.x, b.x);
+            float y0 = Mathf.Min(a.y, b.y);
+            float x1 = Mathf.Max(a.x, b.x);
+            float y1 = Mathf.Max(a.y, b.y);
+            if (hasCanoe)
+            {
+                x0 = Mathf.Min(x0, canoe.x);
+                y0 = Mathf.Min(y0, canoe.y);
+                x1 = Mathf.Max(x1, canoe.x);
+                y1 = Mathf.Max(y1, canoe.y);
+            }
+
+            return BoxZoom(map, x0, y0, x1, y1, viewW, viewH, out center);
+        }
+
+        /// <summary>
+        /// El tramo del frente con <paramref name="maxLevel"/> niveles ganados es el de la meta (<see cref="RiverRoutes.Goal"/>;
+        /// 691-700 con las paradas 0-69). Sin asignaciones.
+        /// </summary>
+        public static bool OnGoalLeg(RiverRoutes routes, int maxLevel)
+        {
+            return routes.Goal != null && FrontStopOf(maxLevel) == routes.Goal.N;
+        }
+
+        // La caja (x0, y0)-(x1, y1) ocupa WorldFill de la zona, entre WorldZoomMin y WorldZoomMax; vacía, el centro del Mapa.
+        private static float BoxZoom(RiverMap map, float x0, float y0, float x1, float y1, float viewW, float viewH, out Vector2 center)
+        {
             if (x0 > x1)
             {
                 center = new Vector2(map.Width * 0.5f, map.Height * 0.5f);
@@ -1034,7 +1075,10 @@ namespace AF.UI
             Vector2 center;
             if (view == MapView.World)
             {
-                _zoom = WorldZoom(map, _routes, _stops, _world, _hasCanoe, _canoeMap, _viewW, _viewH, out center);
+                RiverStopRoute? goal = _routes.Goal;
+                _zoom = goal != null && _progress != null && OnGoalLeg(_routes, _progress.MaxLevel)
+                    ? GoalZoom(map, goal, _hasCanoe, _canoeMap, _viewW, _viewH, out center) // FX13: el tramo hasta la naciente
+                    : WorldZoom(map, _routes, _stops, _world, _hasCanoe, _canoeMap, _viewW, _viewH, out center);
                 SamplesFrame(ref _zoom, ref center);
             }
             else
@@ -1135,11 +1179,10 @@ namespace AF.UI
             _answered = question.Length > 0 && WorldQuestionAnswered(stops, _world, _progress!.MaxLevel);
             _check.gameObject.SetActive(_answered);
 
-            // «Faltan N» hacia la parada siguiente, con su nombre en el idioma (en release, sin el visto bueno del asesor es «»).
-            RiverStop? current = stops.StopOf(_playLevel);
-            RiverStop? next = current != null ? stops.At(current.N + 1) : null;
-            string place = next != null ? UiText.StopName(next) : string.Empty;
-            _remainingReady = playAvailable && next != null && place.Length > 0;
+            // «Faltan N» hacia la parada siguiente o, tras la última, hacia la naciente (FX13), con su nombre en el idioma (en
+            // release, sin el visto bueno del asesor es «»).
+            string place = UiText.NextPlaceName(stops, stops.StopOf(_playLevel));
+            _remainingReady = playAvailable && place.Length > 0;
             _remainingLabel.text = _remainingReady ? UiText.MapStopRemaining(RiverJourney.LevelsLeft(_playLevel), place) : string.Empty;
             _remaining.gameObject.SetActive(_remainingReady);
             _playLabel.text = UiText.PlayLevel(_playLevel);

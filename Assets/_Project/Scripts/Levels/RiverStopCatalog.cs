@@ -59,8 +59,9 @@ namespace AF.Levels
         /// <summary>Crea la parada (el lector ya la validó).</summary>
         public RiverStop(int n, int world, string id, StopKind kind, string country, string? countryName, int? kmFromSea, int kmHome,
             string sample, string? flagRaise, string? arrivalFact, string[] facts, string? worldQuestion, bool answersWorldQuestion,
-            RiverStopBackdrop backdrop)
+            RiverStopBackdrop backdrop, string? atLine = null)
         {
+            AtLine = atLine;
             N = n;
             World = world;
             Id = id;
@@ -143,6 +144,12 @@ namespace AF.Levels
 
         /// <summary>Clave del nombre de país de la placa: <see cref="CountryName"/> o, si es null, <c>map.country.&lt;iso2&gt;.name</c>.</summary>
         public string CountryNameKeyOrDefault { get; }
+
+        /// <summary>
+        /// Id de la línea del Mapa en la que está la parada (<c>at.line</c>), o null si el archivo no la trae. Solo dice si la
+        /// última parada está en el cauce (<see cref="RiverStopCatalog.HeadsToSource"/>; tarea FX13).
+        /// </summary>
+        public string? AtLine { get; }
     }
 
     /// <summary>
@@ -198,6 +205,15 @@ namespace AF.Levels
 
         /// <summary>Paradas del catálogo (20 en 1-200).</summary>
         public int Count => _stops.Length;
+
+        /// <summary>
+        /// Tras la última parada, el tramo va a la naciente del Mismi (tarea FX13; decisión del dueño del 2026-10-19, en D-013): la
+        /// última parada está en el cauce (<see cref="RiverMap.CauceLineId"/>), que sube hasta la naciente. Con las paradas 0-69,
+        /// Tambo: los niveles 691-700 van hacia la naciente. Es la misma condición con la que <see cref="RiverMapReader.SourceGoal"/>
+        /// da la ruta de la meta.
+        /// </summary>
+        public bool HeadsToSource => _stops.Length > 0
+            && string.Equals(_stops[_stops.Length - 1].AtLine, RiverMap.CauceLineId, StringComparison.Ordinal);
 
         /// <summary>Último nivel que cubren las paradas (1-200: el 200).</summary>
         public int LastLevel => _stops.Length * LevelsPerStop;

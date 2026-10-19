@@ -571,7 +571,7 @@ namespace AF.UI
 
             int max = Mathf.Clamp(maxLevel, 0, WorldTable.LastLevel);
             int front = FrontStopOf(max);
-            int reached = Mathf.Min(front - 1, routes.Count - 1);
+            int reached = Mathf.Min(front - 1, routes.LegCount - 1);
             for (int n = 0; n <= reached; n++)
             {
                 RiverStopRoute? route = routes.At(n);
@@ -2167,7 +2167,7 @@ namespace AF.UI
         /// </summary>
         public static bool RouteClimbs(RiverRoutes routes, int line)
         {
-            for (int n = 0; n < routes.Count; n++)
+            for (int n = 0; n < routes.LegCount; n++)
             {
                 RiverStopRoute? route = routes.At(n);
                 if (route == null)

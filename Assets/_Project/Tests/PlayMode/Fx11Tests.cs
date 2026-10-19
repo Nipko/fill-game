@@ -17,7 +17,7 @@ namespace AF.Tests.PlayMode
     /// la parada 4: Tapajós y Amazonas), la cinta nueva se quedaba con el espacio por defecto de la Cuenca (328 dp por unidad) y se
     /// pintaba fuera de la vista; hasta la canoa solo se veía el vidrio. Aquí, desde la pausa del 41 (max 40, visto 30) y en el
     /// tramo del 300 (el fin de contenido de la ola 6; desde C1b, desde la pausa del 301) y en el Mapa del fin de contenido del
-    /// 700, al abrir, en cada fotograma del viaje y al acabar: cada cinta del frente y su orla llevan
+    /// 700 (hasta la naciente del Mismi desde FX13), al abrir, en cada fotograma del viaje y al acabar: cada cinta del frente y su orla llevan
     /// el espacio y el ancho de la vista, su malla no está vacía y el final del agua (donde está la canoa) cae dentro de la zona
     /// visible; también en la Cuenca y otra vez en el Mundo. Revisión: cada cinta del frente y su orla van sobre el vidrio de su
     /// línea (su espacio, su ancho y sus secciones a menos de medio ancho del eje del vidrio); con el tope del frente repartido
@@ -65,11 +65,11 @@ namespace AF.Tests.PlayMode
         }
 
         // El fin de contenido de verdad, tras el 700 (C1b). Las paradas del Mapa son las 0-69 (M4.5b): la 69 (Tambo) se alcanza al
-        // ganar el 690 y el tramo de 691-700 iría a la parada 70, que no está en river_stops_v1.json. Con 700 no hay frente
-        // (FrontStopOf(700) = 70, sin ruta): todo el río hasta Tambo va en el lleno y la canoa espera en Tambo, a la vista. Si
-        // llega la parada 70, este test pasa a pedir el frente como el del tramo del 300.
+        // ganar el 690 y el tramo de 691-700 va a la meta, la naciente del Mismi (FX13; D-013, viñeta del 2026-10-19: sin parada
+        // nueva). En el viaje, cada cinta del frente lleva el espacio y el ancho de la vista y el agua llega hasta la canoa; al
+        // acabar, el tramo entero hasta la naciente, con la canoa en ella y a la vista (los detalles, en Fx13Tests).
         [UnityTest]
-        public IEnumerator ContentEndMap_After700_NoFrontPastTheLastStop_TheCanoeAtTheLastStop_InTheView()
+        public IEnumerator ContentEndMap_After700_TheFrontClimbsToTheSource_TheCanoeAtTheSource_InTheView()
         {
             GameBootstrap.ContentEndMapOverride = true;
             MapArtRule.ForceProvisional = true;
@@ -82,15 +82,17 @@ namespace AF.Tests.PlayMode
             for (int t = 0; t < 30000 && (map.CatchingUp || map.CatchUpFading); t += 16)
             {
                 map.Tick(16f);
-                AssertFront(map, "fin de contenido, a " + t + " ms", false);
+                AssertFront(map, "fin de contenido, a " + t + " ms", map.FrontStop == 70 && map.FrontFraction > 0f);
             }
 
             Assert.That(map.CatchingUp, Is.False, "fin de contenido: el viaje terminó");
             map.Tick(16f);
-            Assert.That(map.FrontStop, Is.EqualTo(-1), "sin ruta de la parada 70 en el catálogo (paradas 0-69)");
-            Assert.That(map.FrontPieceCount, Is.EqualTo(0), "sin frente tras la última parada");
+            Assert.That(map.FrontStop, Is.EqualTo(70), "el tramo de la meta (la naciente), tras la parada 69");
+            Assert.That(map.FrontFraction, Is.EqualTo(1f), "entero");
+            AssertFront(map, "fin de contenido, al acabar", true);
             Assert.That(map.HasCanoe, Is.True, "la canoa");
             Assert.That(map.CanoeInView, Is.True, "la canoa, a la vista al acabar el viaje");
+            CheckTheViews(map, "fin de contenido del 700");
         }
 
         // Revisión de FX11: el frente ya no lleva el tope de 400 vértices de la propuesta del Mapa §11.4 (desviación anotada allí,

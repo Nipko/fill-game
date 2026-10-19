@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using AF.Levels.Json;
 
@@ -751,7 +752,81 @@ namespace AF.Levels
                 routes[i] = new RiverStopRoute(i, idValue.AsString(), place, path, via, mouths);
             }
 
-            return new RiverRoutes(routes);
+            return new RiverRoutes(routes, SourceGoal(map, routes));
+        }
+
+        /// <summary>
+        /// La meta tras la última parada (tarea FX13; decisión del dueño del 2026-10-19, en D-013: «que el último tramo (691-700)
+        /// apunte a la naciente (el Mismi) como meta, sin parada nueva»): si la última parada está en el cauce
+        /// (<see cref="RiverMap.CauceLineId"/>, <c>main</c>, que va de la naciente del Mismi, s = 0, al Atlántico), una ruta de ella
+        /// a s = 0 por el cauce, río arriba, con los puntos de paso y las bocas que haya por el camino (ninguno con las paradas
+        /// 0-69). Null si la última parada no está en el cauce o ya está en la naciente. La misma condición, sin el Mapa, es
+        /// <see cref="RiverStopCatalog.HeadsToSource"/>. Asigna solo aquí, al cargar.
+        /// </summary>
+        public static RiverStopRoute? SourceGoal(RiverMap map, RiverStopRoute[] routes)
+        {
+            if (map == null || routes == null)
+            {
+                throw new ArgumentNullException(map == null ? nameof(map) : nameof(routes));
+            }
+
+            int cauce = map.LineIndexOf(RiverMap.CauceLineId);
+            if (routes.Length == 0 || cauce < 0 || map.Lines[cauce].Kind != RiverLineKind.Main)
+            {
+                return null;
+            }
+
+            RiverMapPlace from = routes[routes.Length - 1].At;
+            if (from.Line != cauce || from.S <= 0f)
+            {
+                return null;
+            }
+
+            // Río arriba, de la última parada hacia la naciente: s decreciente (inserción estable, sin depender del orden de Sort).
+            var via = new List<RiverPassingPoint>();
+            for (int i = 0; i < map.Passing.Count; i++)
+            {
+                RiverPassingPoint p = map.Passing[i];
+                if (p.At.Line == cauce && p.At.S > 0f && p.At.S < from.S)
+                {
+                    int k = via.Count;
+                    while (k > 0 && via[k - 1].At.S < p.At.S)
+                    {
+                        k--;
+                    }
+
+                    via.Insert(k, p);
+                }
+            }
+
+            var viaIds = new string[via.Count];
+            for (int i = 0; i < viaIds.Length; i++)
+            {
+                viaIds[i] = via[i].Id;
+            }
+
+            var mouths = new List<int>();
+            var mouthS = new List<float>();
+            for (int i = 0; i < map.Lines.Count; i++)
+            {
+                RiverMapPlace? mouth = map.Lines[i].Mouth;
+                if (map.Lines[i].Kind == RiverLineKind.Main || mouth == null || mouth.Value.Line != cauce || mouth.Value.S >= from.S)
+                {
+                    continue;
+                }
+
+                int k = mouths.Count;
+                while (k > 0 && mouthS[k - 1] < mouth.Value.S)
+                {
+                    k--;
+                }
+
+                mouths.Insert(k, i);
+                mouthS.Insert(k, mouth.Value.S);
+            }
+
+            var path = new[] { new RiverPathPiece(cauce, from.S, 0f) };
+            return new RiverStopRoute(routes.Length, RiverRoutes.SourceGoalId, new RiverMapPlace(cauce, 0f), path, viaIds, mouths.ToArray());
         }
 
         // Dos posiciones son el mismo punto del agua (como same_place de geometry.py): iguales; la boca de una línea (su s = 1) y
