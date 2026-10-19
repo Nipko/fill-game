@@ -78,7 +78,7 @@ internal static class CurationSelfTest
         CampaignSpec spec;
         try
         {
-            spec = CampaignSpec.Load(CampaignV2);
+            spec = CampaignSpec.Load(CampaignV2, CampaignSpec.VariantA);
         }
         catch (CampaignSpecException e)
         {

@@ -59,23 +59,26 @@ namespace AF.Levels
 
         /// <summary>
         /// Variante «a» de los mundos 7-9 (301-700; <c>campaign_v2.json</c>, D-023 punto 10 y D-027): con la Tinaja, que estrena
-        /// en el 323 (D-019). Sus paquetes son <c>Data/Levels/mundo_07_v1.json</c> a <c>mundo_09_v1.json</c> (GEN79).
+        /// en el 323 (D-019). Mientras no se publique, el generador la escribe con <c>--variant a</c> en
+        /// <c>tools/out/salida_a/</c> (fuera de <c>Assets/</c>; GEN79), y los tests la leen de ahí.
         /// </summary>
         public const string VariantA = "a";
 
         /// <summary>
-        /// Variante «b» de los mundos 7-9: la salida B de D-019 (Q-Ti3), sin la Tinaja, con el respaldo de cada celda. Sus
-        /// paquetes son <c>Data/Levels/salida_b/mundo_07_v1.json</c> a <c>mundo_09_v1.json</c>, copias byte a byte de
-        /// <c>tools/out/salida_b/</c> (GEN79; un test EditMode lo comprueba).
+        /// Variante «b» de los mundos 7-9: la salida B de D-019 (Q-Ti3), sin la Tinaja, con el respaldo de cada celda (d.5.4).
         /// </summary>
         public const string VariantB = "b";
 
         /// <summary>
-        /// Variante de los mundos 7-9 que enlaza la escena (<c>GameSceneBuilder.LevelPackPaths</c>; tarea C1b). La condición de
-        /// D-019 (Q-Ti3; 03 §11; C1b, «Condición de la Tinaja»): se publica la «a» si TJ4 y la compuerta de PF1 (el factor de
-        /// Morpho medido en un teléfono de clase A) están en verde; si no, la «b». Mientras la compuerta de PF1 no conste en verde,
-        /// la «b» [P] (anotado en el traspaso). Para publicar la Tinaja: este valor a <see cref="VariantA"/> y regenerar la escena
-        /// con <c>GameSceneBuilder.CreateGameScene</c> (C1c).
+        /// Variante de los mundos 7-9 que se publica (tarea C1b; d.5.8): la del <c>published_variant</c> de
+        /// <c>tools/level-generator/specs/campaign_v2.json</c>, con la que el generador escribe <c>Data/Levels/mundo_07_v1.json</c>
+        /// a <c>mundo_09_v1.json</c> (los que enlaza <c>GameSceneBuilder.LevelPackPaths</c>) y se versiona el registro de
+        /// combinaciones; un test EditMode comprueba que coinciden. La condición de D-019 (Q-Ti3; 03 §11; C1b, «Condición de la
+        /// Tinaja»): se publica la «a» si TJ4 y la compuerta de PF1 (el factor de Morpho medido en un teléfono de clase A) están
+        /// en verde; si no, la «b». Mientras la compuerta de PF1 no conste en verde, la «b» [P]. Para publicar la Tinaja (C1c),
+        /// todo antes de fusionar: <c>published_variant</c> = "a", regenerar el registro (<c>--registry</c>) y los tres paquetes
+        /// en <c>Data/Levels/</c>, este valor a <see cref="VariantA"/> y regenerar la escena con
+        /// <c>GameSceneBuilder.CreateGameScene</c>.
         /// </summary>
         public const string PublishedVariant = VariantB;
 

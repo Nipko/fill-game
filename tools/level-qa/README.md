@@ -72,13 +72,13 @@ que se regenera; por defecto el de la especificación, el mismo que el `--levels
 la regeneración de QA-REPRO y QA-BAND-Q salen de ella; una especificación sin variantes solo admite `a`) y `--no-reproduce`.
 El informe de `--report` copia en su línea de origen `--spec`, `--levels` y `--variant` si se pasan.
 
-Mundos 7-9 (GEN79, con D-027), en sus dos variantes: la publicada (a, con la Tinaja), en `Assets/_Project/Data/Levels/`, y la
-salida B (b, sin ella), en `tools/out/salida_b/`. Cada pack con su rango (`--levels 301-420`, `421-560` y `561-700`); el del
-mundo 7:
+Mundos 7-9 (GEN79, con D-027), en sus dos variantes: desde C1b, la publicada es la salida B (b, sin la Tinaja; d.5.8), en
+`Assets/_Project/Data/Levels/`, y la a (con ella) va a `tools/out/salida_a/` (con GEN79 era al revés: la a publicada y la b en
+`tools/out/salida_b/`). Cada pack con su rango (`--levels 301-420`, `421-560` y `561-700`); el del mundo 7:
 
 ```
 dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420
-dotnet run --project tools/level-qa -c Release -- tools/out/salida_b/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b
+dotnet run --project tools/level-qa -c Release -- tools/out/salida_a/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant a
 ```
 
 Resultado de los seis packs (GEN79): 0 fallos, con los avisos conocidos de QA-CUIAS, QA-WINDOW y QA-BAND-Q que anota
@@ -146,9 +146,8 @@ la celda es ★Ti en la a y Ma, su respaldo de d.5.4, en la b) y su 328, una com
 la b). Solo mira las comprobaciones de las mecánicas del calendario, QA-MECH-SPEC y QA-MECH-CELL (las demás fallan por ser
 dos niveles sueltos):
 
-- con `--variant a`, y sin `--variant` (la publicada de `campaign_v2.json` es la a): el 323 pasa y el 327 da QA-MECH-CELL
-  (la tinaja de su celda no está en el nivel);
-- con `--variant b`, al revés: el 327 pasa y el 323 da QA-MECH-SPEC (Ti fuera de la celda Ma) y QA-MECH-CELL (falta el
+- con `--variant a`: el 323 pasa y el 327 da QA-MECH-CELL (la tinaja de su celda no está en el nivel);
+- con `--variant b`, y sin `--variant` (la publicada de `campaign_v2.json` es la b desde C1b), al revés: el 327 pasa y el 323 da QA-MECH-SPEC (Ti fuera de la celda Ma) y QA-MECH-CELL (falta el
   Matapi). Si `--variant` dejara de llegar a la especificación, la b daría lo mismo que la a y fallaría aquí;
 - `--variant c` con `campaign_v2.json` y `--variant b` con `campaign_v1.json` (sin variantes) salen con 2 y su motivo.
 

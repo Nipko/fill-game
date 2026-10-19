@@ -27,22 +27,37 @@ namespace AF.Tests.EditMode
             Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_04_v1.json"),
             Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_05_v1.json"),
             Path.Combine(Application.dataPath, "_Project/Data/Levels/mundo_06_v1.json"),
-            WorldPath(7, LevelCatalog.PublishedVariant),
-            WorldPath(8, LevelCatalog.PublishedVariant),
-            WorldPath(9, LevelCatalog.PublishedVariant),
+            WorldPath(7),
+            WorldPath(8),
+            WorldPath(9),
         };
 
+        /// <summary>Raíz del repositorio (la carpeta de <c>Assets/</c>).</summary>
+        public static string RepoRoot => Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+
         /// <summary>
-        /// Ruta del paquete del mundo <paramref name="world"/> (7-9) en la variante <paramref name="variant"/> (como
-        /// <c>GameSceneBuilder.WorldPackPath</c>): la «a», con la Tinaja, en <c>Data/Levels/</c>; la «b», en
-        /// <c>Data/Levels/salida_b/</c>.
+        /// Ruta del paquete publicado del mundo <paramref name="world"/> (7-9): <c>Data/Levels/mundo_0N_v1.json</c>, que escribe el
+        /// generador en la variante <see cref="LevelCatalog.PublishedVariant"/> (como <c>GameSceneBuilder.LevelPackPaths</c>).
         /// </summary>
-        public static string WorldPath(int world, string variant)
+        public static string WorldPath(int world)
         {
-            string file = "mundo_0" + world.ToString(System.Globalization.CultureInfo.InvariantCulture) + "_v1.json";
-            return variant == LevelCatalog.VariantB
-                ? Path.Combine(Application.dataPath, "_Project/Data/Levels/salida_b", file)
-                : Path.Combine(Application.dataPath, "_Project/Data/Levels", file);
+            return Path.Combine(Application.dataPath, "_Project/Data/Levels", WorldFile(world));
+        }
+
+        /// <summary>
+        /// Ruta del paquete del mundo <paramref name="world"/> (7-9) en la variante «a», con la Tinaja: el publicado si se publica
+        /// la «a»; si no, el que escribe el generador con <c>--variant a</c> en <c>tools/out/salida_a/</c> (fuera de <c>Assets/</c>).
+        /// </summary>
+        public static string WorldVariantAPath(int world)
+        {
+            return LevelCatalog.TinajaPublished
+                ? WorldPath(world)
+                : Path.Combine(RepoRoot, "tools", "out", "salida_a", WorldFile(world));
+        }
+
+        private static string WorldFile(int world)
+        {
+            return "mundo_0" + world.ToString(System.Globalization.CultureInfo.InvariantCulture) + "_v1.json";
         }
 
         private static readonly LevelPack?[] _variantA = new LevelPack?[3];
@@ -50,7 +65,7 @@ namespace AF.Tests.EditMode
         /// <summary>El paquete del mundo <paramref name="world"/> (7-9) de la variante «a», con la Tinaja, leído del disco (una vez).</summary>
         public static LevelPack WorldVariantA(int world)
         {
-            return _variantA[world - 7] ??= LevelPackReader.Read(File.ReadAllText(WorldPath(world, LevelCatalog.VariantA)));
+            return _variantA[world - 7] ??= LevelPackReader.Read(File.ReadAllText(WorldVariantAPath(world)));
         }
 
         private static LevelPack? _tutorial;

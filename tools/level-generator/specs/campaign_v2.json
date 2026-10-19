@@ -8,8 +8,8 @@
   "pour_mode": "run",
   "previous": "campaign_v1.json",
   "previous_note": "La especificación anterior (11-200): las reglas de --validate-spec que necesitan historia (GAP-120, NO-3-ROW, SEASONS, RETURN de la Piraña en 201-220, FIRST-TIME y NOVELTY-60) la cuentan, pero solo fallan en 201-700; el registro de combinaciones se genera desde las dos (d.5.6).",
-  "published_variant": "a",
-  "published_variant_note": "Variante que se publica y con la que se versiona tools/level-generator/specs/combinations_registry_v1.json: la «a», la recomendada (d.5.8; D-023 punto 10). Se elige al integrar los mundos 7-9 en el cliente (C1b): si se publica la «b», C1b cambia este campo a \"b\" y regenera el registro con --registry antes de fusionar (d.5.6 y d.5.8).",
+  "published_variant": "b",
+  "published_variant_note": "Variante que se publica y con la que se versiona tools/level-generator/specs/combinations_registry_v1.json: la «b», la salida B de D-019 (sin la Tinaja), desde C1b (ola 7 de la tanda 4, 2026-10-19), porque la condición de D-019 Q-Ti3 (TJ4 y la compuerta de PF1 en verde) no consta cumplida: la compuerta de PF1 no está en verde (d.5.8). La recomendada sigue siendo la «a» (D-023 punto 10): para publicarla, este campo vuelve a \"a\", se regeneran el registro con --registry y los packs de los mundos 7-9 en Assets/_Project/Data/Levels/, y el cliente cambia LevelCatalog.PublishedVariant, todo antes de fusionar (d.5.6 y d.5.8). La «a» se genera con --variant a en tools/out/salida_a/.",
   "tints": [
     {"id": "guanabana", "engine": 1, "name_es": "Guanábana", "debut": 4},
     {"id": "cupuacu", "engine": 2, "name_es": "Copoazú", "debut": 81},

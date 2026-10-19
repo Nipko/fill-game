@@ -1,16 +1,16 @@
-# Curación de 561-700 (variante a): retos, hitos y estrenos para el dueño
+# Curación de 561-700 (variante b): retos, hitos y estrenos para el dueño
 
-Generado por `dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 561-700 --variant a --out Assets/_Project/Data/Levels --curation tools/out/curation_w09.md --decisions tools/level-generator/specs/curation_v2.json` con los mismos niveles colocados que el pack: no se edita a mano y no lleva tiempos (la decisión del dueño sale de `tools/level-generator/specs/curation_v2.json`). Niveles del mundo 9 (Ucayali, 561-700).
+Generado por `dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 561-700 --variant b --out Assets/_Project/Data/Levels --curation tools/out/curation_w09.md --decisions tools/level-generator/specs/curation_v2.json` con los mismos niveles colocados que el pack: no se edita a mano y no lleva tiempos (la decisión del dueño sale de `tools/level-generator/specs/curation_v2.json`). Niveles del mundo 9 (Ucayali, 561-700).
 
 Fuentes: 09 §0.1 (fila de level-pipeline-dev: el dueño aprueba la curación de retos e hitos de cada paquete) y §0.3 (propuesta de curación de los 30 retos e hitos que aprueba el dueño), 03 §7 (un reto por debajo de 0,75 se publica sin etiqueta y la curación decide si se sustituye por otro del pool del slot; banda por el cuantil q de D en el pool del rango), D-009 (etiqueta por el bot ×40 con la semilla del nivel: Difícil ≥ 0,75 y Muy difícil ≥ 0,90; retos en p6, p9, p12, p15 y p18 e hito en p20; c.2: un reto o el hito fuera de su ventana se publica con la etiqueta que mide), 03 §11-§12, 02 §9.2 regla 2 (estrenos) y la tabla de novedades de D2 (d.5.3; D-023 punto 10). La columna «Propuesta» es [P]: la decide el dueño.
 
-Compuerta automática (verde antes de pedir la curación): `dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_09_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 561-700 --variant a`. Cada reto o hito con aviso QA-WINDOW (bot_fail fuera de la ventana del slot) sale aquí como «revisar», y cada hito con aviso QA-BAND-Q (fuera de la banda de hito con el mínimo cumplido), como «revisar» o con nota de banda; los avisos QA-BAND-Q de las recuperaciones no entran en este informe. QA-BAND-Q no mira los retos y level-qa no mira risk_adjacent: las notas de banda de los retos y los «revisar» por risk_adjacent salen solo de este informe.
+Compuerta automática (verde antes de pedir la curación): `dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_09_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 561-700 --variant b`. Cada reto o hito con aviso QA-WINDOW (bot_fail fuera de la ventana del slot) sale aquí como «revisar», y cada hito con aviso QA-BAND-Q (fuera de la banda de hito con el mínimo cumplido), como «revisar» o con nota de banda; los avisos QA-BAND-Q de las recuperaciones no entran en este informe. QA-BAND-Q no mira los retos y level-qa no mira risk_adjacent: las notas de banda de los retos y los «revisar» por risk_adjacent salen solo de este informe.
 
 ## Resumen
 
 | Pack | Niveles | `pack_schema` | Bytes | SHA-256 |
 |---|---|---|---|---|
-| `Assets/_Project/Data/Levels/mundo_09_v1.json` | 140 | 3 | 200770 | `ddf2ffb8433b6958b7edd05f5798770413adfc583f852b5cc6aa020112533872` |
+| `Assets/_Project/Data/Levels/mundo_09_v1.json` | 140 | 3 | 199466 | `e49492d72b6f5ca0e20108971fc7d54a957a77ff1114c13d41a77034966ed12c` |
 
 - Retos e hitos: 42 (35 retos y 7 hitos); 34 miden la etiqueta objetivo o más (D-009) y 8 no.
 - No miden su etiqueta objetivo y se publican con la que miden (c.2; 03 §7): 566 (reto Ma+Re (D): Normal, bot_fail 0.700), 569 (reto B2+Ba (D): Normal, bot_fail 0.675), 592 (reto Pi+B2 (D): Normal, bot_fail 0.425), 615 (reto Li+Re (D): Normal, bot_fail 0.650), 646 (reto Pi+Br+Ha (D): Normal, bot_fail 0.550; primer reto con tres mecánicas, d.5.2; 03 §11), 658 (reto Ha+Re (D): Normal, bot_fail 0.675), 686 (reto Ma+Ho (D): Normal, bot_fail 0.625), 692 (reto Ma+Ha (D): Normal, bot_fail 0.725).
@@ -23,48 +23,48 @@ Etiqueta = la que mide el bot ×40 y se publica (D-009); Objetivo = la de la cel
 
 | Nivel | p | Rol | Calendario | K | Cuias | Vacíos (libres) | Par | bot_fail | Ventana | Etiqueta | Objetivo | D | q (banda) | Otros del slot | Propuesta [P] |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
-| 566 | 6 | reto | Ma+Re (D) | 10 | 12 | 2 (0) | 20 | 0.700 | [0.75, 0.90) | Normal | Difícil | 0.04 | 0.572 (comodidad) | 3 | **revisar**: mide Normal (bot_fail 0.700) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir |
-| 569 | 9 | reto | B2+Ba (D) | 10 | 12 | 1 (1) | 22 | 0.675 | [0.75, 0.90) | Normal | Difícil | 0.23 | 0.708 (reto) | 4 | **revisar**: mide Normal (bot_fail 0.675) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir |
-| 572 | 12 | reto | Ma+Ba (D) | 10 | 12 | 1 (0) | 22 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.26 | 0.726 (reto) | 5 | aceptar |
-| 575 | 15 | reto | Ma+Tu (D) | 10 | 12 | 1 (0) | 24 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.46 | 0.818 (reto) | 5 | aceptar (turbia: 2 dosis ocultas en 1 cuia(s), 1 realidad(es) compatibles con lo visible) |
-| 578 | 18 | reto | B2+Re (D) | 10 | 12 | 1 (1) | 24 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.61 | 0.869 (reto) | 1 | aceptar |
-| 580 | 20 | hito | Ma+B2 (MD) | 12 | 14 | 1 (0) | 30 | 0.900 | [0.90, 1.00] | Muy difícil | Muy difícil | 0.96 | 0.952 (hito) | 5 | aceptar |
-| 586 | 6 | reto | Pi+Ha (D) | 10 | 12 | 1 (1) | 22 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.35 | 0.777 (reto) | 15 | aceptar |
-| 589 | 9 | reto | Ha+B2 (D) | 10 | 12 | 1 (1) | 22 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.38 | 0.789 (reto) | 15 | aceptar |
-| 592 | 12 | reto | Pi+B2 (D) | 10 | 13 | 1 (1) | 22 | 0.425 | [0.75, 0.90) | Normal | Difícil | 0.40 | 0.797 (reto) | 0 | **revisar**: mide Normal (bot_fail 0.425) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir; ningún otro candidato del slot mide la etiqueta objetivo: sustituirlo pide más candidatos (otra ronda del generador) o cambiar la celda |
-| 595 | 15 | reto | Ba+Tu (D) | 10 | 12 | 1 (1) | 24 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.57 | 0.848 (reto) | 3 | aceptar (turbia: 2 dosis ocultas en 1 cuia(s), 1 realidad(es) compatibles con lo visible) |
-| 598 | 18 | reto | Pi+Ba (D) | 10 | 12 | 0 (0) | 24 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.67 | 0.886 (reto) | 17 | aceptar |
+| 566 | 6 | reto | Ma+Re (D) | 10 | 12 | 2 (0) | 20 | 0.700 | [0.75, 0.90) | Normal | Difícil | 0.03 | 0.563 (comodidad) | 3 | **revisar**: mide Normal (bot_fail 0.700) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir |
+| 569 | 9 | reto | B2+Ba (D) | 10 | 12 | 1 (1) | 22 | 0.675 | [0.75, 0.90) | Normal | Difícil | 0.22 | 0.706 (reto) | 4 | **revisar**: mide Normal (bot_fail 0.675) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir |
+| 572 | 12 | reto | Ma+Ba (D) | 10 | 12 | 1 (0) | 22 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.25 | 0.724 (reto) | 5 | aceptar |
+| 575 | 15 | reto | Ma+Tu (D) | 10 | 12 | 1 (0) | 24 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.45 | 0.817 (reto) | 5 | aceptar (turbia: 2 dosis ocultas en 1 cuia(s), 1 realidad(es) compatibles con lo visible) |
+| 578 | 18 | reto | B2+Re (D) | 10 | 12 | 1 (1) | 24 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.60 | 0.867 (reto) | 1 | aceptar |
+| 580 | 20 | hito | Ma+B2 (MD) | 12 | 14 | 1 (0) | 29 | 1.000 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.19 | 0.975 (hito) | 5 | aceptar |
+| 586 | 6 | reto | Pi+Ha (D) | 10 | 12 | 1 (1) | 22 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.34 | 0.775 (reto) | 15 | aceptar |
+| 589 | 9 | reto | Ha+B2 (D) | 10 | 12 | 1 (1) | 22 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.37 | 0.787 (reto) | 15 | aceptar |
+| 592 | 12 | reto | Pi+B2 (D) | 10 | 13 | 1 (1) | 22 | 0.425 | [0.75, 0.90) | Normal | Difícil | 0.40 | 0.795 (reto) | 0 | **revisar**: mide Normal (bot_fail 0.425) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir; ningún otro candidato del slot mide la etiqueta objetivo: sustituirlo pide más candidatos (otra ronda del generador) o cambiar la celda |
+| 595 | 15 | reto | Ba+Tu (D) | 10 | 12 | 1 (1) | 24 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.56 | 0.848 (reto) | 3 | aceptar (turbia: 2 dosis ocultas en 1 cuia(s), 1 realidad(es) compatibles con lo visible) |
+| 598 | 18 | reto | Pi+Ba (D) | 10 | 12 | 0 (0) | 24 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.66 | 0.884 (reto) | 17 | aceptar |
 | 600 | 20 | hito | Ha+B2+Ba (MD) | 12 | 14 | 1 (1) | 27 | 0.950 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.11 | 0.968 (hito) | 17 | aceptar |
 | 606 | 6 | reto | Ln+Re (D) | 10 | 11 | 1 (0) | 20 | 0.825 | [0.75, 0.90) | Difícil | Difícil | 0.29 | 0.743 (reto) | 6 | aceptar |
-| 609 | 9 | reto | Li+Ll (D) | 10 | 12 | 2 (1) | 21 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.34 | 0.773 (reto) | 17 | aceptar |
-| 612 | 12 | reto | Ll+Re (D) | 10 | 11 | 1 (0) | 20 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.44 | 0.812 (reto) | 5 | aceptar |
-| 615 | 15 | reto | Li+Re (D) | 10 | 12 | 2 (2) | 31 | 0.650 | [0.75, 0.90) | Normal | Difícil | 1.19 | 0.974 (hito) | 6 | **revisar**: mide Normal (bot_fail 0.650) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir |
-| 618 | 18 | reto | Ln+Ll (D) | 10 | 13 | 3 (2) | 30 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 1.28 | 0.979 (hito) | 16 | aceptar |
-| 620 | 20 | hito | Ln+Ll+Re (MD; K = 13) | 13 | 14 | 1 (0) | 31 | 1.000 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.53 | 0.988 (hito) | 29 | aceptar |
-| 626 | 6 | reto | Ma+Ba (D) | 10 | 12 | 1 (0) | 22 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.27 | 0.731 (reto) | 5 | aceptar |
-| 629 | 9 | reto | Ll+Ma (D) | 10 | 12 | 2 (0) | 25 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.42 | 0.801 (reto) | 5 | aceptar |
-| 632 | 12 | reto | Ma+Ho (D) | 10 | 12 | 2 (0) | 24 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.59 | 0.858 (reto) | 3 | **revisar**: risk_adjacent: 1 contacto(s) de tintes de un par de riesgo en una cuia (03 §4.5) |
+| 609 | 9 | reto | Li+Ll (D) | 10 | 12 | 2 (1) | 21 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.33 | 0.770 (reto) | 17 | aceptar |
+| 612 | 12 | reto | Ll+Re (D) | 10 | 11 | 1 (0) | 20 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.43 | 0.809 (reto) | 5 | aceptar |
+| 615 | 15 | reto | Li+Re (D) | 10 | 12 | 2 (2) | 31 | 0.650 | [0.75, 0.90) | Normal | Difícil | 1.17 | 0.974 (hito) | 6 | **revisar**: mide Normal (bot_fail 0.650) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir |
+| 618 | 18 | reto | Ln+Ll (D) | 10 | 13 | 3 (2) | 30 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 1.27 | 0.979 (hito) | 16 | aceptar |
+| 620 | 20 | hito | Ln+Ll+Re (MD; K = 13) | 13 | 14 | 1 (0) | 31 | 1.000 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.53 | 0.990 (hito) | 29 | aceptar |
+| 626 | 6 | reto | Ma+Ba (D) | 10 | 12 | 1 (0) | 22 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.26 | 0.730 (reto) | 5 | aceptar |
+| 629 | 9 | reto | Ll+Ma (D) | 10 | 12 | 2 (0) | 25 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.40 | 0.797 (reto) | 5 | aceptar |
+| 632 | 12 | reto | Ma+Ho (D) | 10 | 12 | 2 (0) | 24 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.57 | 0.858 (reto) | 3 | **revisar**: risk_adjacent: 1 contacto(s) de tintes de un par de riesgo en una cuia (03 §4.5) |
 | 635 | 15 | reto | Ma+Tu (D) | 10 | 12 | 1 (0) | 24 | 0.825 | [0.75, 0.90) | Difícil | Difícil | 0.72 | 0.907 (reto) | 5 | aceptar (turbia: 3 dosis ocultas en 2 cuia(s), 6 realidad(es) compatibles con lo visible) |
-| 638 | 18 | reto | Ba+Ho (D) | 10 | 13 | 2 (1) | 28 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.90 | 0.940 (reto) | 5 | aceptar |
-| 640 | 20 | hito | Ma+Ba (MD) | 12 | 14 | 1 (0) | 27 | 0.975 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.05 | 0.957 (hito) | 5 | aceptar |
-| 646 | 6 | reto | Pi+Br+Ha (D) | 10 | 13 | 1 (1) | 20 | 0.550 | [0.75, 0.90) | Normal | Difícil | 0.15 | 0.661 (comodidad) | 0 | **revisar**: mide Normal (bot_fail 0.550) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir; ningún otro candidato del slot mide la etiqueta objetivo: sustituirlo pide más candidatos (otra ronda del generador) o cambiar la celda; primer reto con tres mecánicas, d.5.2; 03 §11 |
-| 649 | 9 | reto | Pi+Ha (D) | 10 | 12 | 1 (1) | 22 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.31 | 0.757 (reto) | 4 | aceptar |
-| 652 | 12 | reto | Br+Re (D) | 10 | 12 | 1 (1) | 22 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.37 | 0.787 (reto) | 0 | aceptar |
-| 655 | 15 | reto | Br+Tu (D) | 10 | 11 | 0 (0) | 22 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.42 | 0.804 (reto) | 5 | aceptar (turbia: 2 dosis ocultas en 1 cuia(s), 1 realidad(es) compatibles con lo visible) |
-| 658 | 18 | reto | Ha+Re (D) | 10 | 12 | 2 (2) | 29 | 0.675 | [0.75, 0.90) | Normal | Difícil | 1.01 | 0.957 (hito) | 0 | **revisar**: mide Normal (bot_fail 0.675) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir; ningún otro candidato del slot mide la etiqueta objetivo: sustituirlo pide más candidatos (otra ronda del generador) o cambiar la celda |
-| 660 | 20 | hito | Br+Ha+Re (MD) | 12 | 14 | 1 (1) | 29 | 0.975 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.21 | 0.976 (hito) | 6 | aceptar |
-| 666 | 6 | reto | Li+Ha (D) | 10 | 11 | 1 (1) | 22 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.16 | 0.669 (comodidad) | 1 | aceptar (Difícil por el bot, con D en banda comodidad (q 0.669)) |
-| 669 | 9 | reto | Li+Br (D) | 10 | 12 | 1 (1) | 25 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.74 | 0.916 (reto) | 14 | aceptar |
-| 672 | 12 | reto | Li+Re (D) | 10 | 12 | 2 (2) | 31 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 1.09 | 0.964 (hito) | 6 | aceptar |
-| 675 | 15 | reto | Br+Tu (D) | 10 | 12 | 1 (1) | 26 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 1.13 | 0.970 (hito) | 17 | aceptar (turbia: 1 dosis ocultas en 1 cuia(s), 1 realidad(es) compatibles con lo visible) |
-| 678 | 18 | reto | Ha+Re (D) | 10 | 12 | 2 (2) | 28 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 1.15 | 0.972 (hito) | 5 | aceptar |
-| 680 | 20 | hito | Li+Ha+Re (MD; K = 13) | 13 | 14 | 1 (1) | 30 | 1.000 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.22 | 0.977 (hito) | 17 | aceptar |
-| 686 | 6 | reto | Ma+Ho (D) | 10 | 12 | 2 (0) | 25 | 0.625 | [0.75, 0.90) | Normal | Difícil | 0.26 | 0.725 (reto) | 3 | **revisar**: mide Normal (bot_fail 0.625) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir |
-| 689 | 9 | reto | Ho+B2 (D) | 10 | 12 | 1 (0) | 24 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.33 | 0.770 (reto) | 1 | aceptar |
-| 692 | 12 | reto | Ma+Ha (D) | 10 | 12 | 2 (1) | 23 | 0.725 | [0.75, 0.90) | Normal | Difícil | 0.55 | 0.843 (reto) | 7 | **revisar**: mide Normal (bot_fail 0.725) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir |
-| 695 | 15 | reto | Ho+Tu (D) | 10 | 12 | 1 (0) | 24 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.58 | 0.853 (reto) | 5 | aceptar (turbia: 2 dosis ocultas en 1 cuia(s), 1 realidad(es) compatibles con lo visible) |
-| 698 | 18 | reto | Ha+B2 (D) | 10 | 12 | 1 (1) | 22 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.71 | 0.897 (reto) | 3 | aceptar |
-| 700 | 20 | hito | Ma+Ha+B2 (MD) «Yarinacocha» [P] | 12 | 14 | 1 (0) | 28 | 0.975 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.06 | 0.963 (hito) | 2 | aceptar |
+| 638 | 18 | reto | Ba+Ho (D) | 10 | 13 | 2 (1) | 28 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.89 | 0.940 (reto) | 5 | aceptar |
+| 640 | 20 | hito | Ma+Ba (MD) | 12 | 14 | 1 (0) | 27 | 0.975 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.04 | 0.957 (hito) | 5 | aceptar |
+| 646 | 6 | reto | Pi+Br+Ha (D) | 10 | 13 | 1 (1) | 20 | 0.550 | [0.75, 0.90) | Normal | Difícil | 0.14 | 0.663 (comodidad) | 0 | **revisar**: mide Normal (bot_fail 0.550) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir; ningún otro candidato del slot mide la etiqueta objetivo: sustituirlo pide más candidatos (otra ronda del generador) o cambiar la celda; primer reto con tres mecánicas, d.5.2; 03 §11 |
+| 649 | 9 | reto | Pi+Ha (D) | 10 | 12 | 1 (1) | 22 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.30 | 0.756 (reto) | 4 | aceptar |
+| 652 | 12 | reto | Br+Re (D) | 10 | 12 | 1 (1) | 22 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.36 | 0.783 (reto) | 0 | aceptar |
+| 655 | 15 | reto | Br+Tu (D) | 10 | 11 | 0 (0) | 22 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 0.41 | 0.801 (reto) | 5 | aceptar (turbia: 2 dosis ocultas en 1 cuia(s), 1 realidad(es) compatibles con lo visible) |
+| 658 | 18 | reto | Ha+Re (D) | 10 | 12 | 2 (2) | 29 | 0.675 | [0.75, 0.90) | Normal | Difícil | 1.00 | 0.957 (hito) | 0 | **revisar**: mide Normal (bot_fail 0.675) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir; ningún otro candidato del slot mide la etiqueta objetivo: sustituirlo pide más candidatos (otra ronda del generador) o cambiar la celda |
+| 660 | 20 | hito | Br+Ha+Re (MD) | 12 | 14 | 1 (1) | 29 | 0.975 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.21 | 0.977 (hito) | 6 | aceptar |
+| 666 | 6 | reto | Li+Ha (D) | 10 | 11 | 1 (1) | 22 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.15 | 0.665 (comodidad) | 1 | aceptar (Difícil por el bot, con D en banda comodidad (q 0.665)) |
+| 669 | 9 | reto | Li+Br (D) | 10 | 12 | 1 (1) | 25 | 0.775 | [0.75, 0.90) | Difícil | Difícil | 0.73 | 0.916 (reto) | 14 | aceptar |
+| 672 | 12 | reto | Li+Re (D) | 10 | 12 | 2 (2) | 31 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 1.07 | 0.964 (hito) | 6 | aceptar |
+| 675 | 15 | reto | Br+Tu (D) | 10 | 12 | 1 (1) | 26 | 0.875 | [0.75, 0.90) | Difícil | Difícil | 1.12 | 0.970 (hito) | 17 | aceptar (turbia: 1 dosis ocultas en 1 cuia(s), 1 realidad(es) compatibles con lo visible) |
+| 678 | 18 | reto | Ha+Re (D) | 10 | 12 | 2 (2) | 28 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 1.14 | 0.972 (hito) | 5 | aceptar |
+| 680 | 20 | hito | Li+Ha+Re (MD; K = 13) | 13 | 14 | 1 (1) | 30 | 1.000 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.21 | 0.976 (hito) | 17 | aceptar |
+| 686 | 6 | reto | Ma+Ho (D) | 10 | 12 | 2 (0) | 25 | 0.625 | [0.75, 0.90) | Normal | Difícil | 0.25 | 0.723 (reto) | 3 | **revisar**: mide Normal (bot_fail 0.625) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir |
+| 689 | 9 | reto | Ho+B2 (D) | 10 | 12 | 1 (0) | 24 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.32 | 0.768 (reto) | 1 | aceptar |
+| 692 | 12 | reto | Ma+Ha (D) | 10 | 12 | 2 (1) | 23 | 0.725 | [0.75, 0.90) | Normal | Difícil | 0.54 | 0.843 (reto) | 7 | **revisar**: mide Normal (bot_fail 0.725) y apunta a Difícil: se publica con la etiqueta que mide (c.2; 03 §7); aceptar así o sustituir |
+| 695 | 15 | reto | Ho+Tu (D) | 10 | 12 | 1 (0) | 24 | 0.850 | [0.75, 0.90) | Difícil | Difícil | 0.57 | 0.853 (reto) | 5 | aceptar (turbia: 2 dosis ocultas en 1 cuia(s), 1 realidad(es) compatibles con lo visible) |
+| 698 | 18 | reto | Ha+B2 (D) | 10 | 12 | 1 (1) | 22 | 0.750 | [0.75, 0.90) | Difícil | Difícil | 0.70 | 0.898 (reto) | 3 | aceptar |
+| 700 | 20 | hito | Ma+Ha+B2 (MD) «Yarinacocha» [P] | 12 | 14 | 1 (0) | 28 | 0.975 | [0.90, 1.00] | Muy difícil | Muy difícil | 1.06 | 0.961 (hito) | 2 | aceptar |
 
 ## Hitos
 
@@ -73,9 +73,9 @@ p20 de cada ciclo («Pico» de c.3): Muy difícil por el bot (≥ 0,90; D-009) y
 ### 580 · Ma+B2 (MD)
 
 - Tablero: K 12, 14 cuias (14 de 4), 1 vacío(s) (0 libre(s)); fuente `deep`.
-- Mecánicas: Ma (cuia de 4); brote n=2 (1 dosis).
-- Medida: par 30 (2K = 24; par − 2K = 6, media del pool 1.9), bot_fail 0.900 → Muy difícil (objetivo Muy difícil), D 0.96, q 0.952 (banda hito), ramificación 3.43, trampas tempranas 0.
-- Notas de la generación: endurecimiento: deep con 60.000 nodos.
+- Mecánicas: brote n=2 (2 dosis); Ma (cuia de 4).
+- Medida: par 29 (2K = 24; par − 2K = 5, media del pool 1.9), bot_fail 1.000 → Muy difícil (objetivo Muy difícil), D 1.19, q 0.975 (banda hito), ramificación 4.55, trampas tempranas 0.
+- Notas de la generación: endurecimiento: deep.
 - Propuesta [P]: aceptar.
 
 ### 600 · Ha+B2+Ba (MD)
@@ -90,7 +90,7 @@ p20 de cada ciclo («Pico» de c.3): Muy difícil por el bot (≥ 0,90; D-009) y
 
 - Tablero: K 13, 14 cuias (14 de 4), 1 vacío(s) (0 libre(s)); fuente `deep`.
 - Mecánicas: Re (cuia de 4); liana n=1 (4 dosis); Ll (cuia de 4); Re (cuia de 4).
-- Medida: par 31 (2K = 26; par − 2K = 5, media del pool 1.9), bot_fail 1.000 → Muy difícil (objetivo Muy difícil), D 1.53, q 0.988 (banda hito), ramificación 7.03, trampas tempranas 0.
+- Medida: par 31 (2K = 26; par − 2K = 5, media del pool 1.9), bot_fail 1.000 → Muy difícil (objetivo Muy difícil), D 1.53, q 0.990 (banda hito), ramificación 7.03, trampas tempranas 0.
 - Notas de la generación: hito de 14 cuias: K y vacio fijos (QA-HITO-14); 2 ronda(s) extra de candidatos; 1 ronda(s) de banda.
 - Propuesta [P]: aceptar.
 
@@ -98,7 +98,7 @@ p20 de cada ciclo («Pico» de c.3): Muy difícil por el bot (≥ 0,90; D-009) y
 
 - Tablero: K 12, 14 cuias (14 de 4), 1 vacío(s) (0 libre(s)); fuente `deep`.
 - Mecánicas: Ma (cuia de 4); Barro: 1 dosis.
-- Medida: par 27 (2K = 24; par − 2K = 3, media del pool 1.9), bot_fail 0.975 → Muy difícil (objetivo Muy difícil), D 1.05, q 0.957 (banda hito), ramificación 5.00, trampas tempranas 0.
+- Medida: par 27 (2K = 24; par − 2K = 3, media del pool 1.9), bot_fail 0.975 → Muy difícil (objetivo Muy difícil), D 1.04, q 0.957 (banda hito), ramificación 5.00, trampas tempranas 0.
 - Notas de la generación: relajacion: deep con 60.000 nodos.
 - Propuesta [P]: aceptar.
 
@@ -106,7 +106,7 @@ p20 de cada ciclo («Pico» de c.3): Muy difícil por el bot (≥ 0,90; D-009) y
 
 - Tablero: K 12, 14 cuias (14 de 4), 1 vacío(s) (1 libre(s)); fuente `deep`.
 - Mecánicas: Br (cuia de 4); Re (cuia de 4); hoja_atada key=10 (3 dosis); Re (cuia de 4).
-- Medida: par 29 (2K = 24; par − 2K = 5, media del pool 1.9), bot_fail 0.975 → Muy difícil (objetivo Muy difícil), D 1.21, q 0.976 (banda hito), ramificación 7.24, trampas tempranas 0.
+- Medida: par 29 (2K = 24; par − 2K = 5, media del pool 1.9), bot_fail 0.975 → Muy difícil (objetivo Muy difícil), D 1.21, q 0.977 (banda hito), ramificación 7.24, trampas tempranas 0.
 - Notas de la generación: 2 ronda(s) de banda.
 - Propuesta [P]: aceptar.
 
@@ -114,7 +114,7 @@ p20 de cada ciclo («Pico» de c.3): Muy difícil por el bot (≥ 0,90; D-009) y
 
 - Tablero: K 13, 14 cuias (14 de 4), 1 vacío(s) (1 libre(s)); fuente `deep`.
 - Mecánicas: Li key=7 (cuia de 4); Re (cuia de 4); hoja_atada key=14 (4 dosis); Re (cuia de 4).
-- Medida: par 30 (2K = 26; par − 2K = 4, media del pool 1.9), bot_fail 1.000 → Muy difícil (objetivo Muy difícil), D 1.22, q 0.977 (banda hito), ramificación 5.00, trampas tempranas 4.
+- Medida: par 30 (2K = 26; par − 2K = 4, media del pool 1.9), bot_fail 1.000 → Muy difícil (objetivo Muy difícil), D 1.21, q 0.976 (banda hito), ramificación 5.00, trampas tempranas 4.
 - Notas de la generación: 2 ronda(s) extra de candidatos.
 - Propuesta [P]: aceptar.
 
@@ -122,7 +122,7 @@ p20 de cada ciclo («Pico» de c.3): Muy difícil por el bot (≥ 0,90; D-009) y
 
 - Tablero: K 12, 14 cuias (14 de 4), 1 vacío(s) (0 libre(s)); fuente `deep`.
 - Mecánicas: brote n=2 (2 dosis); Ma (cuia de 4); hoja_atada key=3 (4 dosis).
-- Medida: par 28 (2K = 24; par − 2K = 4, media del pool 1.9), bot_fail 0.975 → Muy difícil (objetivo Muy difícil), D 1.06, q 0.963 (banda hito), ramificación 5.21, trampas tempranas 0.
+- Medida: par 28 (2K = 24; par − 2K = 4, media del pool 1.9), bot_fail 0.975 → Muy difícil (objetivo Muy difícil), D 1.06, q 0.961 (banda hito), ramificación 5.21, trampas tempranas 0.
 - Propuesta [P]: aceptar.
 
 ## Variantes de la 1.0
@@ -142,7 +142,7 @@ Variantes de 02 §9.1 (propuesta de D-007 b.3; firma de `pack_schema` 3, D-023 p
 | 568 | 8 | comodidad | Ha | hoja_atada key=9 (4 dosis) | 1 | 1 | 0.575 |
 | 569 | 9 | reto | B2+Ba (D) | brote n=2 (1 dosis) | 2 | 1 | 0.675 |
 | 578 | 18 | reto | B2+Re (D) | brote n=2 (1 dosis) | 2 | 1 | 0.775 |
-| 580 | 20 | hito | Ma+B2 (MD) | brote n=2 (1 dosis) | 2 | 1 | 0.900 |
+| 580 | 20 | hito | Ma+B2 (MD) | brote n=2 (2 dosis) | 2 | 1 | 1.000 |
 | 585 | 5 | comodidad | Ha | hoja_atada key=7 (4 dosis) | 1 | 1 | 0.475 |
 | 586 | 6 | reto | Pi+Ha (D) | hoja_atada key=1 (4 dosis) | 2 | 1 | 0.850 |
 | 589 | 9 | reto | Ha+B2 (D) | hoja_atada key=11 (4 dosis); brote n=2 (1 dosis) | 2 | 1 | 0.875 |
@@ -172,38 +172,23 @@ Variantes de 02 §9.1 (propuesta de D-007 b.3; firma de `pack_schema` 3, D-023 p
 
 Todas las celdas con una variante la llevan en el nivel publicado.
 
-## Dónde va la Tinaja (variante a)
+## Dónde va la Tinaja (variante b)
 
 D-019 (Q-Ti1 A: nunca en recuperación, p1-p2, ni en remanso, p19; Q-Ti3 A: estreno en el 323, en la 1.0 si pasa sus pruebas y si Morpho con corte por tiempo y la Luciérnaga están listos en el cliente; si no, la salida B), la tabla de D2 (d.5.3, con el respaldo de cada celda en d.5.4; D-023 punto 10) y la propuesta de la tinaja d.3 (ciclo de estreno 321-340, «C0»: como mucho 8 apariciones). La variante a es la del dueño; la b, la salida B, se guarda aparte. Las 5 dosis de los retos y el hito dependen de la compuerta de coste de Morpho, con el factor 8× [P] del teléfono hasta medirlo en PF1 (pregunta 13): si PF1 lo cambia, este pack se regenera antes de integrarlo en el cliente (C1b).
 
 | Nivel | p | Rol | Celda en la a | Respaldo en la b | Publicado en este pack | Dosis (ocultas) | K | Cuias |
 |---|---|---|---|---|---|---|---|---|
-| 574 | 14 | comodidad | Ti | C | Ti: con la Tinaja | 3 (2) | 9 | 12 |
-| 591 | 11 | comodidad | Ti | C | Ti: con la Tinaja | 3 (2) | 9 | 12 |
-| 631 | 11 | comodidad | Ti | C | Ti: con la Tinaja | 3 (2) | 9 | 12 |
-| 651 | 11 | comodidad | Ti | C | Ti: con la Tinaja | 3 (2) | 9 | 12 |
-| 691 | 11 | comodidad | Ti | C | Ti: con la Tinaja | 3 (2) | 9 | 12 |
+| 574 | 14 | comodidad | Ti | C | C: sin la Tinaja | — | 11 | 13 |
+| 591 | 11 | comodidad | Ti | C | C: sin la Tinaja | — | 11 | 13 |
+| 631 | 11 | comodidad | Ti | C | C: sin la Tinaja | — | 11 | 13 |
+| 651 | 11 | comodidad | Ti | C | C: sin la Tinaja | — | 11 | 13 |
+| 691 | 11 | comodidad | Ti | C | C: sin la Tinaja | — | 11 | 13 |
 
 Apariciones por ciclo (calendario de la a): 561-580: 1 (574); 581-600: 1 (591); 621-640: 1 (631); 641-660: 1 (651); 681-700: 1 (691).
 
 - Tinaja solo donde la pone el calendario: sí.
 - Nunca en p1, p2 ni p19: ninguno.
-
-## Tinaja
-
-Filtros de `TinajaWalks` sobre el tablero publicado (03 §8): ruta segura (`SafePath`), 20 paseos seguros (todos tienen que ganar), 30 paseos casuales (ganados / perdidos por error / de adivinar / sin terminar en 400 vertidos; ninguno puede ser de adivinar; el primer estado sin vertido seguro de cada paseo es «presupuesto agotado» si `SafeMoves` agota sus 20.000 nodos por realidad, sin consultar la realidad verdadera y nunca «adivinar»; si `SafeMoves` demostró que ningún vertido es seguro en todas las realidades, es un error del jugador si la verdadera no tiene solución, «adivinar» si la tiene y «presupuesto agotado» si A* agota sus 300.000 nodos en ella), «S0 sin trampas» en el estreno (vertidos útiles de S0 que no son seguros; tiene que ser 0: «trampa en S0» si alguno deja una realidad demostrada sin solución y, si no, «presupuesto agotado») y la compuerta de coste de Morpho: w = 2 y 40.000 nodos por realidad desde cero en S0, en la ruta y en los paseos, con un tope de 18.750 nodos por consulta (150 ms × 1.000 nodos/ms del PC [E] ÷ factor 8× del teléfono [P], hasta PF1). Todas las búsquedas van sin poda de fútiles. Dosis por tipo de nivel (D-019, Q-Ti1 A): 3 en estreno, comodidad y práctica; 4-5 en retos; 5 en el hito. Vacíos sin contar la pareja: 2 en los tableros de estreno y 1 en los demás (la comodidad fuera del estreno, 1 [P], pendiente de decisión). Como mucho 12 cuias con la pareja (02 §5) [P]: si no caben, se baja K.
-
-| Nivel | p | Rol | Dosis (ocultas) | Realidades | Ruta segura | Paseos seguros | Casuales (g / p / a / s) | S0 sin trampas | Morpho: estados, nodos máx. | Candidatos rechazados por la tinaja |
-|---|---|---|---|---|---|---|---|---|---|---|
-| 574 | 14 | comodidad | 3 (2) | 2 | 19 vertidos | 20/20 | 23 / 7 / 0 / 0 | — | 517, 850 | — |
-| 591 | 11 | comodidad | 3 (2) | 2 | 19 vertidos | 20/20 | 16 / 14 / 0 / 0 | — | 434, 737 | — |
-| 631 | 11 | comodidad | 3 (2) | 2 | 21 vertidos | 20/20 | 13 / 17 / 0 / 0 | — | 479, 294 | — |
-| 651 | 11 | comodidad | 3 (2) | 2 | 19 vertidos | 20/20 | 16 / 14 / 0 / 0 | — | 508, 562 | — |
-| 691 | 11 | comodidad | 3 (2) | 2 | 20 vertidos | 20/20 | 19 / 11 / 0 / 0 | — | 644, 964 | — |
-
-Ningún nivel con tinaja en recuperación (p1-p2), remanso (p19) ni la rampa (D-019, Q-Ti1 A).
-
-Alivio (03 §13): `minus_color` nunca quita una fruta de la tinaja y las variantes repiten la ruta segura y los paseos (con `TinajaWalks.ReliefOptions`, las de Morpho: w = 2 y 40.000 nodos por realidad [P], pendiente de decisión) con la máscara de la tinaja, que el pack escribe en su `hidden` (`pack_schema` 3; 08 §4.1: `relief_board` admite `hidden` si y solo si su `attrs` contiene la tinaja). `plus_empty` no se publica si pasa de 13 cuias: el tope de 12 del nivel (02 §5) más su cuia vacía (D-027).
+- Variante b: 0 niveles con la Tinaja (la salida B no la lleva).
 
 ## Otros niveles con avisos
 

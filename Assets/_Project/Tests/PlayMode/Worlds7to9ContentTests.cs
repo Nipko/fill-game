@@ -26,9 +26,11 @@ namespace AF.Tests.PlayMode
     /// <item>estrenos: el Brote de dos hojas en el 343 y la Flor en el 403 (VA1b) con su tarjeta y skippable = false; la Tinaja
     /// en el 323 solo en la variante «a» (D-019): con la «b» publicada, el 323 es un nivel normal, y el estreno de la «a» se
     /// prueba con su paquete real cargado por el gancho de desarrollo (sin publicarlo);</item>
-    /// <item>tablero: los tableros de 14 cuias de 561-700 (los hitos 580-700, D-027, K = 12 + 1 vacío o K = 13, y el 694) caben en
-    /// el tablero de D-006 (≤ 16 ranuras) en el teléfono de pruebas (360 × 780 dp), en 3 filas de como mucho 5 como sus variantes
-    /// de alivio de 15 cuias;</item>
+    /// <item>tablero: los tableros más grandes de 301-700, sacados del catálogo (los de 14 cuias, como los hitos 580-700 de D-027,
+    /// y los de 13 cuias con capacidad 5, cuyo alivio tiene 14 de capacidad 5), caben en el tablero de D-006 (≤ 16 ranuras) en el
+    /// teléfono de pruebas (360 × 780 dp), con sus alivios (todos los tableros y alivios de 301-700,
+    /// también los de la «a», los comprueba con el layout el test EditMode
+    /// <c>CampaignPackTests.Worlds7To9_EveryBoardAndRelief_FitsTheBoardAt360x780</c>);</item>
     /// <item>fin de contenido: «Siguiente» del 300 abre el 301 y, tras ganar el 700, «El río sigue creciendo» (06 §9): el último
     /// nivel publicado, sin ningún número fijo.</item>
     /// </list>
@@ -43,9 +45,6 @@ namespace AF.Tests.PlayMode
             "Mundo 8: Madidi · Bolivia · Beni / Mamoré, Iténez",
             "Mundo 9: Ucayali · Perú · Ucayali, Shanay-Timpishka",
         };
-
-        // Los tableros de 14 cuias de 561-700 (los hitos desde el 580, D-027, y el 694 de la variante publicada).
-        private static readonly int[] FourteenCuiaLevels = { 580, 600, 620, 640, 660, 680, 694, 700 };
 
         [SetUp]
         public void SetUp()
@@ -227,7 +226,10 @@ namespace AF.Tests.PlayMode
         {
             // El paquete real de la variante «a» (GEN79), que publica C1c si se cumple la condición de D-019: cargado con el gancho
             // de desarrollo (LevelPackJsonOverride), sin tocar la escena.
-            string json = File.ReadAllText(Path.Combine(Application.dataPath, "_Project", "Data", "Levels", "mundo_07_v1.json"));
+            // Mientras se publique la «b», la «a» la escribe el generador con --variant a en tools/out/salida_a/ (fuera de Assets/).
+            string json = File.ReadAllText(LevelCatalog.TinajaPublished
+                ? Path.Combine(Application.dataPath, "_Project", "Data", "Levels", "mundo_07_v1.json")
+                : Path.Combine(Application.dataPath, "..", "tools", "out", "salida_a", "mundo_07_v1.json"));
             LaunchOptions.LevelCardsOverride = true;
             LaunchOptions.BannerArtSyncOverride = true;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1240));
@@ -241,7 +243,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator FourteenCuiaBoards_FitTheBoard_At360x780_InThreeRowsLikeTheirReliefOf15()
+        public IEnumerator LargestBoardsAndTheirRelief_FitTheBoard_At360x780()
         {
             GameScreen.SimulatedScreen = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp, como BoardRowsTests
             yield return PlayModeHelpers.LoadGame(580, new MemoryProgressStore(580, 579));
@@ -249,27 +251,40 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.TakeClock(boot);
             LevelFlow flow = boot.Flow!;
             GameScreen view = boot.View!;
-            foreach (int level in FourteenCuiaLevels)
+            var levels = new System.Collections.Generic.List<int>();
+            int tall = 0;
+            for (int level = 301; level <= 700; level++)
+            {
+                LevelDefinition def = flow.Catalog.Find(level)!;
+                bool tallThirteen = def.CuiaCount >= 13 && MaxCapacity(def.CreateBoard()) > 4;
+                if (def.CuiaCount == 14 || tallThirteen)
+                {
+                    levels.Add(level);
+                    tall += tallThirteen ? 1 : 0;
+                }
+            }
+
+            Assert.That(levels, Has.Member(580).And.Member(700), "los hitos de 14 cuias de D-027");
+            Assert.That(tall, Is.GreaterThan(0), "los de 13 cuias de capacidad 5 (con su alivio de 14 de capacidad 5)");
+            TestContext.WriteLine("tableros: " + string.Join(", ", levels));
+            foreach (int level in levels)
             {
                 flow.Load(level);
                 boot.TapAnywhere();
                 PlayModeHelpers.StepUntilIdle(boot, 3000);
                 string what = "nivel " + level;
-                Assert.That(flow.Level.CuiaCount, Is.EqualTo(14), what + ": 14 cuias");
-                Assert.That(view.Views.Length, Is.EqualTo(14), what);
-                AssertFits(view.Layout!, 14, what);
+                int count = flow.Level.CuiaCount;
+                Assert.That(view.Views.Length, Is.EqualTo(count), what);
+                AssertFits(view.Layout!, count, what);
                 for (int r = 0; r < flow.Level.Relief.Count; r++)
                 {
-                    ReliefBoard relief = flow.Level.Relief[r];
-                    Assert.That(relief.CuiaCount, Is.LessThanOrEqualTo(AF.Core.Board.BoardState.MaxCuias), what + ", relief " + r);
-                    if (relief.Type == ReliefBoard.TypePlusEmpty)
-                    {
-                        // La variante «una cuia vacía más» (03 §13) tiene 15 cuias: 3 filas de 5 (BoardLayout.RowsFor, D-006). Con
-                        // el tablero de 14 ya en 3 filas de como mucho 5, la ranura y el alto de fila son los mismos: también cabe.
-                        Assert.That(relief.CuiaCount, Is.EqualTo(15), what + ", relief " + r);
-                        Assert.That(view.Layout!.Rows, Is.EqualTo(3), what + ": 3 filas, como su alivio de 15");
-                        Assert.That(System.Linq.Enumerable.Max(view.Layout.PerRow), Is.LessThanOrEqualTo(5), what + ": filas de ≤ 5, como su alivio de 15");
-                    }
+                    // Cada alivio (03 §13; «una cuia vacía más» con 14 o 15 cuias) con el layout de la escena en esta pantalla:
+                    // el mismo BoardLayout.Compute que GameScreen.LayoutBoardPanel, entre el HUD y la bandeja (BoardBottom =
+                    // TrayTop − 40 dp), con las filas de sus cuias generadas (D-006).
+                    AF.Core.Board.BoardState rb = flow.Level.Relief[r].CreateBoard();
+                    BoardLayoutResult relief = BoardLayout.Compute(rb.Count, rb.Count, AF.Presentation.CuiaGeometry.HeightU(MaxCapacity(rb)),
+                        view.CanvasWidth, view.HudBottomDp, view.TrayTopDp - 40f, BoardLayout.TinajaPairStart(rb));
+                    AssertFits(relief, rb.Count, what + ", relief " + r + " (" + flow.Level.Relief[r].Type + ", " + rb.Count + " cuias)");
                 }
 
                 TestContext.WriteLine(what + ": " + view.Layout!.Rows + " filas (" + string.Join("/", view.Layout.PerRow) + "), cuia de "
@@ -334,6 +349,17 @@ namespace AF.Tests.PlayMode
             Assert.That(card.Card.IntroMechanic, Is.EqualTo(intro));
             Assert.That(view.LastCardProbe, Does.Contain("\"intro\":\"" + intro + "\"").And.Contain("\"kind\":\"debut\""));
             CardSetup.AssertInsidePanel(view);
+        }
+
+        private static int MaxCapacity(AF.Core.Board.BoardState board)
+        {
+            int max = 0;
+            for (int i = 0; i < board.Count; i++)
+            {
+                max = Mathf.Max(max, board[i].Capacity);
+            }
+
+            return max;
         }
 
         // El tablero cabe: ≤ 16 ranuras (D-006), la cuia no baja del mínimo de 02 §5 y todo el vidrio queda dentro del panel.

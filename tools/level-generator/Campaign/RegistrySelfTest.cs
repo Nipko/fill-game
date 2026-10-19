@@ -2,7 +2,7 @@
 // registro de combinaciones (d.5.6 de la propuesta de D-009) y la regla de 60 niveles (D-009 punto 8), sin proyecto de tests
 // (las pruebas de tools/ van como fixtures y modos --self-test). Comprueba:
 //   - las dos variantes: la «b» cambia exactamente las 18 celdas de "fallback" (d.5.4; el 352 ya no lleva la Tinaja desde
-//     D-027) y no tiene la Tinaja; la «a» se publica;
+//     D-027) y no tiene la Tinaja; se publica la «b» desde C1b (d.5.8: la condición de D-019 Q-Ti3 no consta cumplida);
 //   - --validate-spec en verde en las dos y en campaign_v1 (21 reglas en la v1 y 24 en la v2);
 //   - las cifras del registro (d.5.6, con las celdas de D-027): 98 entradas en la «a» (40 de 11-200 y 58 de 201-700) y 94 en
 //     la «b» (40 y 54); antes de D-027 eran 102 y 96: salen Ti+Br (340), B2+Ti (352), Pi+Br+Ba (460) y Ma+Ba+Ho (640) y se
@@ -59,7 +59,7 @@ internal static class RegistrySelfTest
         try
         {
             v1 = CampaignSpec.Load(CampaignV1);
-            a = CampaignSpec.Load(CampaignV2);
+            a = CampaignSpec.Load(CampaignV2, CampaignSpec.VariantA);
             b = CampaignSpec.Load(CampaignV2, CampaignSpec.VariantB);
         }
         catch (CampaignSpecException e)
@@ -69,9 +69,9 @@ internal static class RegistrySelfTest
         }
 
         // 1. Variantes (d.5.4).
-        Check(a.Variants.SequenceEqual([CampaignSpec.VariantA, CampaignSpec.VariantB]) && a.PublishedVariant == CampaignSpec.VariantA
-              && a.Variant == CampaignSpec.VariantA && !v1.HasVariants,
-            "campaign_v2: variantes a y b, publicada la a (d.5.8); campaign_v1 con una sola");
+        Check(a.Variants.SequenceEqual([CampaignSpec.VariantA, CampaignSpec.VariantB]) && a.PublishedVariant == CampaignSpec.VariantB
+              && a.Variant == CampaignSpec.VariantA && CampaignSpec.Load(CampaignV2).Variant == CampaignSpec.VariantB && !v1.HasVariants,
+            "campaign_v2: variantes a y b, publicada la b (d.5.8; C1b), la que se lee sin variante; campaign_v1 con una sola");
         int[] changed = [.. Enumerable.Range(a.FirstLevel, a.LastLevel - a.FirstLevel + 1).Where(n => a.Calendar[n].Literal != b.Calendar[n].Literal)];
         Check(changed.SequenceEqual(TinajaCells) && a.FallbackCells.Keys.Order().SequenceEqual(TinajaCells),
             F($"la variante b cambia exactamente las 18 celdas con la Tinaja de d.5.4 ({changed.Length} celdas)"));
@@ -116,14 +116,14 @@ internal static class RegistrySelfTest
             "las 40 entradas de 11-200 son las de campaign_v1 sola");
 
         // 4. Bytes: deterministas e iguales al versionado (la variante publicada).
-        byte[] once = CombinationsRegistry.Bytes(a);
+        byte[] once = CombinationsRegistry.Bytes(b);
         byte[] twice = CombinationsRegistry.Bytes(CampaignSpec.Load(CampaignV2));
         byte[]? onDisk = File.Exists(RegistryV1) ? File.ReadAllBytes(RegistryV1) : null;
         Check(once.AsSpan().SequenceEqual(twice) && onDisk is not null && onDisk.AsSpan().SequenceEqual(once),
-            F($"{RegistryV1}: identico al regenerado (variante a, {once.Length} bytes) y dos generaciones dan los mismos bytes"));
+            F($"{RegistryV1}: identico al regenerado (variante b, la publicada, {once.Length} bytes) y dos generaciones dan los mismos bytes"));
         Check(once.Length > 3 && !(once[0] == 0xEF && once[1] == 0xBB && once[2] == 0xBF) && !once.Contains((byte)'\r') && once[^1] == (byte)'\n',
             "UTF-8 sin BOM, LF y salto de linea final");
-        Check(!CombinationsRegistry.Bytes(b).AsSpan().SequenceEqual(once), "el registro de la b no es el versionado (cada variante con el suyo, d.5.6)");
+        Check(!CombinationsRegistry.Bytes(a).AsSpan().SequenceEqual(once), "el registro de la a no es el versionado (cada variante con el suyo, d.5.6)");
 
         // 5. NOVELTY-60: hueco máximo 34 (526 → 560) en las dos (d.5 punto 5).
         (int gapA, int fromA, int toA) = SpecValidator.MaxNoveltyGap(SpecValidator.NoveltyLevels(a.CellsWithHistory(), regA), a.FirstLevel);
@@ -213,7 +213,8 @@ internal static class RegistrySelfTest
             const string hito340 = "tools/level-generator/specs/tests/hito340_fallback_in_a.json";
             CampaignSpec h = CampaignSpec.Load(hito340);
             int hFailures = h.Variants.Sum(v => SpecValidator.Validate(CampaignSpec.Load(hito340, v)).Count(i => !i.Warning));
-            int tinajaIn321 = Enumerable.Range(321, 20).Count(n => h.Calendar[n].Has(MechanicCodes.Tinaja));
+            CampaignSpec hA = CampaignSpec.Load(hito340, CampaignSpec.VariantA);
+            int tinajaIn321 = Enumerable.Range(321, 20).Count(n => hA.Calendar[n].Has(MechanicCodes.Tinaja));
             Check(hFailures == 0 && tinajaIn321 == 7 && !h.FallbackCells.ContainsKey(340) && h.FallbackCells.Count == 17,
                 F($"hito340_fallback_in_a.json: el 340 en Br+Ba (MD) sin su entrada de fallback pasa --validate-spec en las dos variantes ({hFailures} fallos; la Tinaja en {tinajaIn321} niveles de 321-340; {h.FallbackCells.Count} respaldos, los 18 de D-027 menos el del 340)"));
 

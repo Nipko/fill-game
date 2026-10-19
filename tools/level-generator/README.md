@@ -53,7 +53,9 @@ recomendación aplica D-023, punto 10. Mismo formato que `campaign_v1.json`, con
   cambió D-027 (2026-10-18; sección «Mundos 7, 8 y 9»). Es la **variante a**, con la Tinaja (estreno en el 323, D-019).
 - `fallback`: el respaldo sin la Tinaja de cada una de sus 18 celdas (d.5.4; el 352 ya no la lleva desde D-027). `--variant b` (en `--spec`, `--registry` y
   en la lectura, `CampaignSpec.Load(path, "b")`) toma el calendario con esas celdas: la **variante b**, la salida B de
-  D-019. `published_variant` (a) es la que se lee sin `--variant`; la cambia C1b si se publica la b (d.5.8).
+  D-019. `published_variant` es la que se lee sin `--variant`: la b desde C1b (la condición de D-019 Q-Ti3, TJ4 y la
+  compuerta de PF1 en verde, no consta cumplida; d.5.8). Con ella se escriben los packs de `Assets/_Project/Data/Levels/` y el
+  registro de combinaciones.
 - En la tabla `mechanics`, las nueve de `campaign_v1` (para leer las celdas y contar la historia) más las de la 1.0, con
   `variant_of` (Ln y Fl de la Liana con fruta, Ha de la Hoja y B2 del Brote: pueden estrenarse en cualquier temporada, no van
   con su base y su estreno entra en el registro como `variant`), `not_with` y `only_with` (la columna «Con qué no va» de
@@ -81,7 +83,7 @@ dotnet run --project tools/level-generator -c Release -- --registry tools/level-
 dotnet run --project tools/level-generator -c Release -- --self-test registry
 ```
 
-No genera packs: los mundos 6-9 se generan con `--levels` por mundo (y la b con `--variant b`, en `tools/out/salida_b/`): el
+No genera packs: los mundos 6-9 se generan con `--levels` por mundo (y la a, mientras no se publique, con `--variant a`, en `tools/out/salida_a/`): el
 mundo 6 en P7a (sección «Mundo 6: 201-300») y los mundos 7-9 en GEN79 (sección «Mundos 7, 8 y 9: 301-700»).
 
 ## Registro de combinaciones publicadas (`--registry`; P4)
@@ -119,10 +121,10 @@ Formato [P] `af-combinations/1` (`Campaign/SpecValidator.cs`, `CombinationsRegis
   entradas de un código del registro son estrenos con ★.
 - `source`: la cadena de `previous`; `variant`: la publicada (o la de `--variant`). UTF-8 sin BOM, LF y una entrada por
   línea: regenerarlo da los mismos bytes. Nunca se edita a mano.
-- El archivo refleja solo la variante que se publica: 98 entradas con la a (40 de 11-200 y 58 de 201-700); con la b serían
-  94 (40 y 54). Antes de D-027 eran 102 y 96: salen Ti+Br (340), B2+Ti (352), Pi+Br+Ba (460) y Ma+Ba+Ho (640), y se mueven
+- El archivo refleja solo la variante que se publica: desde C1b, la b, con 94 entradas (40 de 11-200 y 54 de 201-700); con
+  la a serían 98 (40 y 58). Antes de D-027 eran 102 y 96: salen Ti+Br (340), B2+Ti (352), Pi+Br+Ba (460) y Ma+Ba+Ho (640), y se mueven
   B2+Ln (358 → 346), B2+Re (360 → 352), Pi+B2 (366 → 369), Ha+Ba (389 → 398) y Fl+Ll (418 → 415).
-  **Se regenera antes de fusionar** si cambia lo que se publica (la b, el respaldo del hito 340 o el del 354; d.5.6 y d.5.8). `--check` no escribe y sale con 1 si el del disco difiere o falta; la especificación tiene que pasar
+  **Se regenera antes de fusionar** si cambia lo que se publica (la variante, el respaldo del hito 340 o el del 354; d.5.6 y d.5.8). `--check` no escribe y sale con 1 si el del disco difiere o falta; la especificación tiene que pasar
   `--validate-spec` en todas sus variantes, como en `--validate-spec` (si no, 1 y no escribe).
 - **Respaldo del hito 340 en la a** (d.5.4: si la tinaja no llega al 0,90 del bot): en `campaign_v2.json` se cambia la celda
   340 a `Br+Ba (MD)`, **se quita también su entrada de `fallback`** (la celda ya no lleva la Tinaja y, si el respaldo se
@@ -349,8 +351,8 @@ nivel (fuente, K, vacíos, bot_fail, motivo del rechazo y milisegundos) y un res
 
 ## Mundo 6: 201-300 (P7a)
 
-El primer pack de 201-700: el mundo 6 (Oriente, `w06_oriente`) con `campaign_v2.json` en la variante publicada (a; sin la
-Tinaja, que no sale antes del 323), con los estrenos de la Liana de cuenta (243-245, `liana_n`) y de la Hoja atada (283-285,
+El primer pack de 201-700: el mundo 6 (Oriente, `w06_oriente`) con `campaign_v2.json` en la variante publicada entonces (a; sin la
+Tinaja, que no sale antes del 323: las dos variantes coinciden en 201-300 y dan el mismo pack), con los estrenos de la Liana de cuenta (243-245, `liana_n`) y de la Hoja atada (283-285,
 `hoja_atada`), y `pack_schema` 3 por la Hoja atada. D depende del pool del rango de 03 §11 (201-400), así que el pack solo se
 reproduce con `--levels 201-300` (lo mismo en `--check` y en level-qa).
 
@@ -451,8 +453,9 @@ GEN79 el resumen lista aparte los retos e hitos que no miden su etiqueta objetiv
 ## Mundos 7, 8 y 9: 301-700 (GEN79; D-027)
 
 Los mundos 7 (Madre de Dios, 301-420), 8 (Madidi, 421-560) y 9 (Ucayali, 561-700) con `campaign_v2.json`, en sus dos
-variantes: la publicada (a, con la Tinaja: estreno en el 323) en `Assets/_Project/Data/Levels/` y la salida B de D-019 (b,
-sin ella) en `tools/out/salida_b/`. P7b-P7d no llegaron a generarlos: con la especificación de P4, varios ciclos no tenían
+variantes: la a, con la Tinaja (estreno en el 323), y la salida B de D-019 (b, sin ella). GEN79 los generó con la a como
+publicada (en `Assets/_Project/Data/Levels/`) y la b en `tools/out/salida_b/`; desde C1b se publica la b (`published_variant`;
+d.5.8), que escribe el generador en `Assets/_Project/Data/Levels/`, y la a va a `tools/out/salida_a/` (fuera de `Assets/`). P7b-P7d no llegaron a generarlos: con la especificación de P4, varios ciclos no tenían
 colocación (la escalera de D-009 con retos que solo salían Muy difíciles o fáciles, la Tinaja con el tope de 12 cuias y los
 hitos de 14 cuias del 640 y el 700). La propuesta de los mundos 7-9 midió cada bloqueo y sus opciones, y el dueño aceptó
 todas sus recomendaciones el 2026-10-18 (**D-027**, `docs/dev/decisiones.md`):
@@ -471,29 +474,33 @@ D depende del pool del rango de 03 §11 (201-400 y 401-700), así que cada pack 
 `curation_w09.md`):
 
 ```
-dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant a --out Assets/_Project/Data/Levels --curation tools/out/curation_w07.md --decisions tools/level-generator/specs/curation_v2.json
-dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b --out tools/out/salida_b
-dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant a --out Assets/_Project/Data/Levels --check
-dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b --out tools/out/salida_b --check
-dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant a
-dotnet run --project tools/level-qa -c Release -- tools/out/salida_b/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b --out Assets/_Project/Data/Levels --curation tools/out/curation_w07.md --decisions tools/level-generator/specs/curation_v2.json
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant a --out tools/out/salida_a
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b --out Assets/_Project/Data/Levels --check
+dotnet run --project tools/level-generator -c Release -- --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant a --out tools/out/salida_a --check
+dotnet run --project tools/level-qa -c Release -- Assets/_Project/Data/Levels/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant b
+dotnet run --project tools/level-qa -c Release -- tools/out/salida_a/mundo_07_v1.json --spec tools/level-generator/specs/campaign_v2.json --levels 301-420 --variant a
 ```
+
+Hasta C1b los comandos eran los mismos con las variantes al revés (la a en `Assets/_Project/Data/Levels/` con su informe de
+curación y la b en `tools/out/salida_b/`): los bytes de cada pack no cambian con la carpeta ni con `published_variant`.
 
 | Pack | Niveles | Bytes | SHA-256 | Tiempo (s) |
 |---|---|---|---|---|
-| `mundo_07_v1.json` (a) | 120 | 173.002 | `347846ec92f9b0991b74c0ade72a605a235af5d51b5d09c4cec6ab1cb18bdb44` | 1.025 · 1.047 |
-| `mundo_08_v1.json` (a) | 140 | 201.608 | `c3e8c7bf3465285b1ab519ea4eb248f6b8c1780837179d7560d0f73d3f6c2ac9` | 405 · 423 |
-| `mundo_09_v1.json` (a) | 140 | 200.770 | `ddf2ffb8433b6958b7edd05f5798770413adfc583f852b5cc6aa020112533872` | 625 · 704 |
-| `salida_b/mundo_07_v1.json` (b) | 120 | 174.986 | `348e0939d1a32042a362d58a8ce2e7ff2f694705bf49f2287c043cb1686a4106` | 440 · 456 |
-| `salida_b/mundo_08_v1.json` (b) | 140 | 201.051 | `a5e8422b8712d8ed29be22667a1912398b0051530dbb027ce9f529dc9ddda19f` | 402 · 425 |
-| `salida_b/mundo_09_v1.json` (b) | 140 | 199.466 | `e49492d72b6f5ca0e20108971fc7d54a957a77ff1114c13d41a77034966ed12c` | 622 · 681 |
+| `salida_a/mundo_07_v1.json` (a) | 120 | 173.002 | `347846ec92f9b0991b74c0ade72a605a235af5d51b5d09c4cec6ab1cb18bdb44` | 1.025 · 1.047 |
+| `salida_a/mundo_08_v1.json` (a) | 140 | 201.608 | `c3e8c7bf3465285b1ab519ea4eb248f6b8c1780837179d7560d0f73d3f6c2ac9` | 405 · 423 |
+| `salida_a/mundo_09_v1.json` (a) | 140 | 200.770 | `ddf2ffb8433b6958b7edd05f5798770413adfc583f852b5cc6aa020112533872` | 625 · 704 |
+| `mundo_07_v1.json` (b, publicada) | 120 | 174.986 | `348e0939d1a32042a362d58a8ce2e7ff2f694705bf49f2287c043cb1686a4106` | 440 · 456 |
+| `mundo_08_v1.json` (b, publicada) | 140 | 201.051 | `a5e8422b8712d8ed29be22667a1912398b0051530dbb027ce9f529dc9ddda19f` | 402 · 425 |
+| `mundo_09_v1.json` (b, publicada) | 140 | 199.466 | `e49492d72b6f5ca0e20108971fc7d54a957a77ff1114c13d41a77034966ed12c` | 622 · 681 |
 
 Todos `pack_schema` 3. Tiempos del equipo de escritorio x64 (AMD Ryzen 9 9900X, Release, 24 hilos), con los seis
 generadores a la vez: la primera ejecución y la última (en la b, la de `--check`), de unos 6 a 17 minutos cada uno y unos 17
 minutos los seis juntos. La variante a sola, en serie, son unos 20 minutos (la propuesta: 629, 201 y 385 s). Determinismo: tres ejecuciones de cada pack (la primera, una segunda en otra carpeta y la
 última, con el generador final, en el repositorio) dan los mismos bytes, y coinciden con los hashes de la propuesta en las variantes a de los tres mundos y en la b del mundo 7
 (de la b de los mundos 8 y 9 la propuesta no da hash: solo consta el determinismo propio); el informe de curación
-también, salvo la línea del comando. `--check` de las seis, en verde.
+también, salvo la línea del comando. `--check` de las seis, en verde. En C1b, los seis regenerados en sus carpetas nuevas
+dan los mismos bytes (la b, los de `tools/out/salida_b/`, que se quita; la a, los de `Assets/_Project/Data/Levels/` de GEN79).
 
 level-qa (la compuerta completa, con QA-REPRO: regenera cada pack en memoria y lo compara byte a byte): 0 fallos en los seis, con avisos conocidos (no fallan):
 
@@ -509,15 +516,19 @@ level-qa (la compuerta completa, con QA-REPRO: regenera cada pack en memoria y l
 Con el generador y level-qa de antes de D-027, el 7 a daba 8 fallos (los 6 de QA-RELIEF-VALID por el alivio de 13 cuias en el
 327, 329, 332, 338, 340 y 355, y los 2 de QA-PAR en el 324 y el 325): los quitan los dos ajustes de level-qa.
 
-Para la curación del dueño quedan 123 niveles (`tools/out/curation_w07.md`, `curation_w08.md` y `curation_w09.md`): los 36 retos e
-hitos del mundo 7 y sus estrenos 323, 343 y 403, y los 42 retos e hitos de cada uno de los mundos 8 y 9. Todos los hitos
-miden Muy difícil; 14 retos no miden su etiqueta objetivo y se publican sin la etiqueta Difícil (c.2; 03 §7), cada informe los
-lista aparte: el 369 del mundo 7; el 429, 452, 466, 469 y 486 del 8; y el 566, 569, 592, 615, 646, 658, 686 y 692 del 9 (el
-646 es el «primer reto con tres mecánicas» de d.5.2; 03 §11: `curation_w09.md` lo señala en su fila y en la lista aparte,
-con `CurationReport.FirstThreeMechanicChallenge`). Etiquetas publicadas: mundo 7, 29 Difícil y 6 Muy difícil de 120; mundo
-8, 30 y 7 de 140; mundo 9, 27 y 7 de 140 (03 §11: 25 % y 5 %).
+Los informes de curación (`tools/out/curation_w07.md`, `curation_w08.md` y `curation_w09.md`) son, desde C1b, los de la
+variante publicada (b). Para la curación del dueño quedan 122 niveles: los 36 retos e hitos del mundo 7 y sus estrenos 343 y
+403 (en la b el 323 no estrena nada), y los 42 retos e hitos de cada uno de los mundos 8 y 9. Todos los hitos miden Muy
+difícil; 13 retos no miden su etiqueta objetivo y se publican sin la etiqueta Difícil (c.2; 03 §7), cada informe los lista
+aparte: el 369 del mundo 7; el 429, 452, 466 y 469 del 8; y el 566, 569, 592, 615, 646, 658, 686 y 692 del 9 (el 646 es el
+«primer reto con tres mecánicas» de d.5.2; 03 §11: `curation_w09.md` lo señala en su fila y en la lista aparte, con
+`CurationReport.FirstThreeMechanicChallenge`). Etiquetas publicadas: mundo 7, 29 Difícil y 6 Muy difícil de 120; mundo 8, 31
+y 7 de 140; mundo 9, 27 y 7 de 140 (03 §11: 25 % y 5 %). En la a (los informes de GEN79) eran 123 niveles y 14 retos: el
+323 estrena la Tinaja y el 486 del mundo 8 no mide Difícil (30 Difícil en el mundo 8).
 
-Los packs los registra en el cliente C1b, que genera sus `.meta` y decide la variante que se publica (D-019, Q-Ti3; d.5.8). Si
+Los packs los registra en el cliente C1b, que genera sus `.meta` y decide la variante que se publica (D-019, Q-Ti3; d.5.8):
+la b, así que cambia `published_variant` y regenera el registro, los packs y los informes de curación antes de fusionar (y el
+cliente lo comprueba: `LevelCatalog.PublishedVariant` = `published_variant` = la variante del registro, test EditMode). Si
 la curación pide cambios, se cambian la especificación o el generador y se regeneran los packs, los informes y level-qa. El
 ciclo de 20 con la escalera estricta es sensible a todo el mundo (el índice D se calcula con todos los candidatos del rango):
 un cambio en un ciclo puede mover otro, así que cualquier cambio de celda, de K o del factor de Morpho (PF1) obliga a regenerar

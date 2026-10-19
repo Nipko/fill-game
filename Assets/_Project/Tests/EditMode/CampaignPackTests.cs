@@ -1,11 +1,14 @@
 #nullable enable
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using AF.Core.Board;
 using AF.Core.Mechanics;
 using AF.Core.Rules;
 using AF.Core.Session;
 using AF.Levels;
+using AF.Presentation;
+using AF.UI;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -343,19 +346,96 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void SalidaB_CopiesInAssets_AreByteIdenticalToTheGenerator()
+        public void PublishedVariant_IsTheGeneratorsPublishedVariant_AndTheRegistrys()
         {
-            // Data/Levels/salida_b/ (lo que enlaza la escena con la variante «b») es una copia de tools/out/salida_b/, la salida
-            // del generador que comprueba su --check (GEN79): nunca se edita a mano.
-            string root = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-            for (int world = 7; world <= 9; world++)
+            // d.5.8: lo que publica el cliente (LevelCatalog.PublishedVariant, la variante de los paquetes de Data/Levels/ que
+            // escribe el generador) es el published_variant de campaign_v2.json y la variante del registro de combinaciones
+            // versionado (d.5.6), para que los mundos siguientes se generen contra el historial publicado.
+            string specs = Path.Combine(TestPacks.RepoRoot, "tools", "level-generator", "specs");
+            string spec = File.ReadAllText(Path.Combine(specs, "campaign_v2.json"));
+            string registry = File.ReadAllText(Path.Combine(specs, "combinations_registry_v1.json"));
+            Assert.That(Regex.Match(spec, "\"published_variant\"\\s*:\\s*\"([a-z])\"").Groups[1].Value, Is.EqualTo(LevelCatalog.PublishedVariant),
+                "published_variant de campaign_v2.json");
+            Assert.That(Regex.Match(registry, "\"variant\"\\s*:\\s*\"([a-z])\"").Groups[1].Value, Is.EqualTo(LevelCatalog.PublishedVariant),
+                "variant de combinations_registry_v1.json");
+            Assert.That(Directory.Exists(Path.Combine(Application.dataPath, "_Project", "Data", "Levels", "salida_b")), Is.False,
+                "una sola copia de 301-700 en Assets/: la publicada, en Data/Levels/");
+        }
+
+        [Test]
+        public void Worlds7To9_EveryBoardAndRelief_FitsTheBoardAt360x780()
+        {
+            // Criterio de C1b «ningún nivel desborda el tablero», sacado de los paquetes y no de una lista: cada tablero de 301-700
+            // (base y relief) de la variante publicada y de la «a» cabe a 360 × 780 dp (el teléfono de pruebas; BoardLayoutTests:
+            // tablero entre 88 y 620 dp) con el layout de la escena (D-006: ≤ 16 ranuras, 2 o 3 filas, cuia ≥ 28 dp y todo el
+            // vidrio dentro del panel). Incluye los de 14 cuias (hitos de 561-700 y los del mundo 7) y los de 13 cuias de capacidad
+            // 5 con su alivio de 14, los más altos. Worlds7to9ContentTests lo repite en la escena con esos tableros.
+            var catalogs = new[]
             {
-                string file = "mundo_0" + world + "_v1.json";
-                string generated = Path.Combine(root, "tools", "out", "salida_b", file);
-                Assert.That(File.Exists(generated), Is.True, generated);
-                Assert.That(File.ReadAllBytes(TestPacks.WorldPath(world, LevelCatalog.VariantB)), Is.EqualTo(File.ReadAllBytes(generated)),
-                    "Data/Levels/salida_b/" + file + " = tools/out/salida_b/" + file);
+                LevelCatalog.Create(TestPacks.Campaign),
+                LevelCatalog.Create(new[] { TestPacks.WorldVariantA(7), TestPacks.WorldVariantA(8), TestPacks.WorldVariantA(9) }),
+            };
+            string[] names = { LevelCatalog.PublishedVariant, LevelCatalog.VariantA };
+            int fourteen = 0;
+            int tallFourteen = 0;
+            for (int c = 0; c < catalogs.Length; c++)
+            {
+                for (int level = 301; level <= 700; level++)
+                {
+                    LevelDefinition def = catalogs[c].Find(level)!;
+                    string what = def.Id + " (variante " + names[c] + ")";
+                    BoardState board = def.CreateBoard();
+                    AssertFitsAt360x780(board, what);
+                    fourteen += c == 0 && board.Count == 14 ? 1 : 0;
+                    for (int r = 0; r < def.Relief.Count; r++)
+                    {
+                        BoardState rb = def.Relief[r].CreateBoard();
+                        AssertFitsAt360x780(rb, what + ".relief[" + r + "] " + def.Relief[r].Type);
+                        tallFourteen += c == 0 && rb.Count == 14 && MaxCapacity(rb) > 4 ? 1 : 0;
+                    }
+                }
             }
+
+            Assert.That(fourteen, Is.GreaterThan(0), "la variante publicada tiene tableros de 14 cuias");
+            Assert.That(tallFourteen, Is.GreaterThan(0), "y alivios de 14 cuias de capacidad 5");
+        }
+
+        // 360 × 780 dp: el tablero entre 88 y 620 dp (BoardLayoutTests; guía 3.2).
+        private const float FitTop = 88f;
+        private const float FitBottom = 620f;
+
+        // El tablero cabe con el layout de la escena (GameScreen.LayoutBoardPanel: el alto de la cuia más alta y la pareja de
+        // la Tinaja), como el AssertFits de Worlds7to9ContentTests.
+        private static void AssertFitsAt360x780(BoardState board, string what)
+        {
+            int count = board.Count;
+            Assert.That(count, Is.LessThanOrEqualTo(BoardState.MaxCuias), "D-006: ≤ 16 ranuras (" + what + ")");
+            float heightU = CuiaGeometry.HeightU(MaxCapacity(board));
+            BoardLayoutResult layout = BoardLayout.Compute(count, count, heightU, 360f, FitTop, FitBottom, BoardLayout.TinajaPairStart(board));
+            Assert.That(layout.Rows, Is.LessThanOrEqualTo(3), what + ": como mucho 3 filas (D-006)");
+            Assert.That(layout.CuiaWidth, Is.GreaterThanOrEqualTo(BoardLayout.MinCuiaWidth), what + ": cuia ≥ 28 dp");
+            float left = layout.PanelX;
+            float right = layout.PanelX + layout.PanelWidth;
+            for (int i = 0; i < count; i++)
+            {
+                float half = 0.5f * layout.CuiaWidth;
+                if (layout.CenterX[i] - half < left - 0.01f || layout.CenterX[i] + half > right + 0.01f
+                    || layout.FootY[i] > layout.PanelBottom + 0.01f || layout.FootY[i] - layout.CuiaHeight < layout.PanelY - 0.01f)
+                {
+                    Assert.Fail(what + ": la cuia " + i + " se sale del panel");
+                }
+            }
+        }
+
+        private static int MaxCapacity(BoardState board)
+        {
+            int max = 0;
+            for (int i = 0; i < board.Count; i++)
+            {
+                max = Mathf.Max(max, board[i].Capacity);
+            }
+
+            return max;
         }
 
         // El nivel lleva un Brote de dos hojas (n = 2).
