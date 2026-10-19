@@ -157,23 +157,20 @@ namespace AF.Core.Tests.DotnetOnly
         public void SafeMoves_AllocateLessThan1KBPerReality_AfterWarmingUp()
         {
             // C2-2: < 1 KB por realidad tras calentar. Se calienta con el mismo tablero (búferes del solver, de las realidades
-            // y del memo a su tamaño) y se vacía el memo, así que la medida incluye todas las búsquedas A*.
+            // y del memo a su tamaño) y se vacía el memo antes de cada pasada, así que la medida incluye todas las búsquedas
+            // A*. Calentamiento y mínimo de AllocationMeter (FX9).
             BoardState start = Board(0);
             var safe = new SafeMoves();
             SolverOptions options = SafeMoves.ForPipeline(PourMode.Run);
-            safe.Find(start, options, null, false);
-            safe.Find(start, options, null, false);
-            safe.ClearMemo();
-
-            long before = GC.GetAllocatedBytesForCurrentThread();
             RealityStatus status = safe.Find(start, options, null, false);
-            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            AllocationReading allocated = AllocationMeter.Measure(
+                () => safe.ClearMemo(), () => status = safe.Find(start, options, null, false), 1024L * safe.RealityCount);
 
-            TestContext.WriteLine(safe.RealityCount + " realidades, " + safe.Searches + " búsquedas A*, " + allocated + " bytes");
+            TestContext.WriteLine(safe.RealityCount + " realidades, " + safe.Searches + " búsquedas A*, " + allocated.Describe("SafeMoves"));
             Assert.That(status, Is.EqualTo(RealityStatus.Ok));
             Assert.That(safe.RealityCount, Is.EqualTo(12));
             Assert.That(safe.Searches, Is.GreaterThan(0));
-            Assert.That(allocated, Is.LessThan(1024L * safe.RealityCount));
+            Assert.That(allocated.Bytes, Is.LessThan(1024L * safe.RealityCount), allocated.Describe("SafeMoves"));
         }
 
         private static bool Wins(BoardState start, SafePathResult result)
