@@ -4,6 +4,106 @@ Encargo: `docs/dev/traspaso/spark-reto-del-rio.md` (de `origin/integracion-fase1
 
 ---
 
+## 2026-10-19 · Verificación completa de `spark/reto-del-rio` en `ba57160` (R0-R4 y R6): VERDE
+
+| Comando | Resultado |
+|---|---|
+| `dotnet build dotnet/AmazonFill.slnx -warnaserror` | código 0, 0 avisos |
+| `dotnet test dotnet/AmazonFill.slnx` | 981 (975 + 6 omitidos), código 0 |
+| `python tools/validate_schema.py` | 103/103 PASS |
+| `dotnet run --project tools/level-generator -- --self-test daily` | todo PASS |
+| `dotnet run --project tools/level-qa -- --self-test daily` | todo PASS |
+| `scripts/unity-compile.ps1 -Architecture arm64` | OK |
+| `scripts/unity-test.ps1 -Mode EditMode -Architecture arm64 -TimeoutSec 3600` | **2.851 (2.848 + 3 omitidos)**, 0 fallos: la línea base de 2.744 más 107 de R6 |
+| `scripts/unity-test.ps1 -Mode PlayMode -Architecture arm64 -TimeoutSec 3600` | **1.334 (1.175 + 159 omitidos)**, 0 fallos, igual que la línea base (32 min) |
+
+En total, 45 min. Durante parte del tiempo hubo otro batchmode en un worktree: como mucho 2-3 a la vez, en carpetas distintas, con 64 GB de RAM (el encargo §1 permite 3 con 32 GB o más).
+
+## 2026-10-19 · R6 · Lector del pool en AF.Levels: HECHA
+
+- **Commits:** `a724b43` (el lector y 66 tests) y `28be4a2` (los arreglos de la revisión y 41 tests más), en `spark/reto-del-rio-r6`; fusionados con `--no-ff` en `spark/reto-del-rio` (`afb58a2`).
+- **Archivos nuevos:**
+  - `Assets/_Project/Scripts/Levels/DailyPool.cs` y `DailyPoolReader.cs`;
+  - `Assets/_Project/Tests/EditMode/DailyPoolTestPacks.cs` y `DailyPoolReaderTests.cs` (107 tests);
+  - sus `.meta`, generados por Unity.
+- **Qué hace:**
+  - `DailyPoolReader.Read(json)` es estricto: pide las 3 bandas con 730 días cada una. `Read(json, DailyPoolCoverage.PresentBands)` existe solo para tests y herramientas.
+  - Rechaza con `LevelFormatException`: `kind` distinto de `daily`; `pack_schema` fuera de 1-3; `slot`, `id` o `seed` incoherentes; `level`; `solution`, `safe_path` o `qa`; `relief` que no está vacío; `world` fuera de 1-13; bandas incompletas; repetidos.
+  - [P] Rechaza también mecánicas, `murky`, `hidden` e `intro_mechanic` (nota §13).
+  - `Find(band, day)`, `FindById`, `BandOf` y `DayOf` no asignan memoria (comprobado con `GC.GetAllocatedBytesForCurrentThread`).
+  - El revisor leyó los 30 tableros de la muestra de R3 con el lector: todos se construyen y validan. Un tablero literal de R3 (`d1_n0000`) va en un test, para que un cambio de formato del generador rompa el cliente.
+- **Verificación** (worktree `spark-r6`, ARM64):
+  - `unity-compile.ps1` → OK;
+  - `unity-test.ps1 -Mode EditMode -TimeoutSec 3600` → **2.851 (2.848 + 3 omitidos), 0 fallos**;
+  - `dotnet build … -warnaserror` → 0 avisos.
+- **code-reviewer:** primera ronda CAMBIOS NECESARIOS (faltaban tests de varias reglas y se aceptaba `world` 0). Segunda ronda: código bien, pero la aprobación quedó condicionada a pasar Unity, que estaba bloqueado por la licencia. Pasó en verde tras la revisión del dueño: **APROBADO**.
+- **Test inestable** (no es del Spark): `IntroArtTests.FruitFlight_Has14DistinctSprites_InOneTexture_GeneratedWithin10ms` falló una vez por tiempo (10,42 ms con un tope de 10 ms) en este equipo ARM64. Al relanzarlo con filtro pasó.
+- **Enganche opcional** (E14): `DailyPoolReader` copia unas 90 líneas privadas de `LevelPackReader` (`ReadUnits`, `ReadBoard` y los ayudantes). Propuesta: extraerlas a una clase `internal` compartida de AF.Levels, y hacer `internal` el lector de mecánicas si el Reto llega a usarlas. Los tests de la copia protegen contra una divergencia.
+
+## 2026-10-19 · R4 · QA del pool en `level-qa --daily`: HECHA · Bloque (a) listo para integrar
+
+- **Commits** (en `spark/reto-del-rio-r4`, fusionados con `--no-ff` en `spark/reto-del-rio` como `ba57160`):
+  - `32b8cc4`: detalles de la revisión de R3;
+  - `cafe8c4`: la QA;
+  - `ed109a3`: «Enganche:» del despacho en `tools/level-qa/Program.cs`;
+  - `8afdd0e`: arreglos de la revisión.
+- **Archivos nuevos:**
+  - `tools/level-qa/Daily/DailyChecks.cs` (21 ids `QA-DAILY-*`) y `DailyQaCommand.cs`;
+  - `tools/level-qa/Daily/Shared/DailySpec.cs` y `DailyIds.cs`: copias byte a byte de las del generador; la autoprueba falla si divergen;
+  - `tools/level-qa/fixtures/daily/`: 1 fixture válido y 18 malos.
+- **Uso:**
+  ```
+  dotnet run --project tools/level-qa -- --daily <pack> [--spec <daily_v1.json>] [--partial] [--no-reproduce]
+  ```
+  `--self-test daily` prueba todos los fixtures.
+- **Severidad:**
+  - **fallo:** esquema (vía `validate_schema.py --pack`), slot ↔ id/seed, 730 días por banda, K/vacíos/capacidad, ventana del bot (R-Q11 abierta), A*, par ≥ 2K, tope de pares **por banda según la especificación** (R-Q1b abierta), sin mecánicas ni ocultos, `relief` vacío y campos prohibidos, ≤ 14 cuias, < 2 MB (siempre), y que la semilla reproduzca el tablero entero (proceso hijo del generador, 15 min de tope);
+  - **solo aviso (R-Q10):** anti-repetición (forma y Hamming, con la vuelta del ciclo 729 → 0) y trampas tempranas.
+- **Detalles:**
+  - Con `--partial` una muestra nunca pasa por pool completo: siempre sale el aviso «no es el pool completo».
+  - El despacho de `Program.cs` va antes del `--self-test` genérico, por la misma razón que en R2.
+- **Verificación:**
+  - `level-qa --self-test daily` → 30 PASS; las autopruebas que ya había → todo PASS;
+  - QA de la muestra con `--partial` → exit 1: 15 `QA-DAILY-RISK` (los K 9 de B2 y todo B3) y 2 `QA-DAILY-BOT` (`d2_n0002`, `d2_n0006`). Es lo esperado mientras R-Q1b y R-Q11 sigan abiertas;
+  - QA del pool completo (generado fuera del repositorio) → exit 1:
+
+    | Id | Fallos | Avisos | Por banda |
+    |---|---|---|---|
+    | QA-DAILY-RISK | 1.095 | — | B2: 365 · B3: 730 |
+    | QA-DAILY-BOT | 68 | — | B1: 13 · B2: 55 |
+    | QA-DAILY-REPEAT-SHAPE | — | 414 | B1: 133 · B2: 103 · B3: 178 |
+    | QA-DAILY-EARLY-TRAPS | — | 1.172 | B1: 353 · B2: 669 · B3: 150 |
+
+    Pasan DAYS, SIZE, SCHEMA y REPRO (los 2.190 tableros se reproducen).
+  - builds con `-warnaserror` → 0 avisos; `dotnet test` → 981 (975 + 6); `validate_schema.py` → 103/103.
+- **code-reviewer:** primera ronda CAMBIOS NECESARIOS (faltaban los tests de los avisos de R-Q10, y `--partial` apagaba la compuerta de tamaño). Arreglado; segunda ronda **APROBADO**.
+- **Para el dueño (R-Q10):** EARLY-TRAPS avisa en 1.172 de 2.190 tableros, porque con 1 vacío y la etiqueta «normal» el tope de la campaña es 0. Si algún día pasa a compuerta, el Reto necesitará su propio tope.
+
+### Bloque (a) (R2-R4: el modo diario del generador y su QA): **listo para integrar**
+
+Está en `spark/reto-del-rio` y no toca Unity. Enganches del bloque:
+- **E15** · `tools/level-generator/Program.cs` (líneas 133-143 en `ba57160`): que el `--self-test` sin nombre ejecute también `daily`:
+  ```diff
+           int holgura = HolguraSelfTest.Run();
+  -        return Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), Math.Max(curationTest, holgura));
+  +        int daily = AmazonFill.Tools.LevelGenerator.Daily.DailyCommand.Run(new[] { "--self-test", "daily" });
+  +        return Math.Max(Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), Math.Max(curationTest, holgura)), daily);
+  ```
+  - Añadir `|daily` a la línea 33 del texto `Usage` (`--self-test [tinaja|…|holgura|daily]`) y «, holgura o daily» al mensaje de la línea 176.
+  - Documentar `--daily` en `tools/level-generator/README.md`.
+  - Prueba: `dotnet run --project tools/level-generator -c Release -- --self-test` incluye «daily» y sale con 0.
+- **E16** · `tools/level-qa/level-qa.csproj`: enlazar las fuentes diarias del generador en lugar de copiarlas:
+  ```xml
+  <Compile Include="../level-generator/Daily/*.cs" Exclude="../level-generator/Daily/DailyCommand*.cs" LinkBase="Shared/Daily" />
+  ```
+  y borrar `tools/level-qa/Daily/Shared/` (más la comprobación de identidad de su autoprueba). Con eso, QA-DAILY-REPRO puede generar en memoria con `DailyRunner` en lugar de lanzar un proceso hijo. Prueba: `dotnet run --project tools/level-qa -- --self-test daily`.
+- **E17** · `tools/level-qa/Program.cs` y `README.md`: el `--self-test` sin nombre de level-qa solo ejecuta `key2`, así que no hace falta sumarle `daily`. Basta con documentarlo: en `Usage` (línea 27) `--self-test [key2|reglas|variante|daily]`, en el mensaje de la línea 97 «key2, reglas, variante o daily», y `--daily` en `tools/level-qa/README.md`.
+- **E18** · encargo §3.3, puntos 1 y 2: decir «antes del `--self-test` genérico» en lugar de «antes de `--parity`» o «antes de la lectura de argumentos de la campaña».
+
+## 2026-10-19 · Licencia de Unity: RESUELTO
+
+El dueño revisó la licencia en Unity Hub. Desde entonces Unity compila y pasa los tests (R6 en verde). La entrada de abajo queda como historial.
+
 ## 2026-10-19 · ⚠ BLOQUEO: la licencia de Unity dejó de valer en este equipo (pendiente del dueño)
 
 - **Desde** unas 12:10 (hora local) ningún batchmode arranca: `unity-compile.ps1` y `unity-test.ps1` salen con el código 6.
