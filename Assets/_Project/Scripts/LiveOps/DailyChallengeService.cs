@@ -26,19 +26,21 @@ namespace AF.LiveOps
     }
 
     /// <summary>
-    /// Una partida del Reto que terminó sin victoria: descartada por cambio de día (R-Q4, <see cref="DailyResult.Abandon"/>) o
-    /// abandonada por el jugador (R-Q9, <see cref="DailyResult.Fail"/>). Para la sonda <c>af_daily_challenge</c> (R10).
-    /// <see cref="Result"/> = <see cref="DailyResult.None"/> si ese día ya estaba ganado (no es «salir sin ganar ese día») [P].
+    /// «Fin de día» del Reto (R-Q15): la partida de un día pasado que se descarta (R-Q4) sin que ese día se ganara. Es el único
+    /// <c>af_daily_challenge.result = fail</c> de ese día (08 §8.2; R10). <see cref="Result"/> = <see cref="DailyResult.None"/>
+    /// (nada que informar) si ese día ya estaba ganado (rejugada) o si la partida es de una fecha posterior a hoy (reloj atrasado:
+    /// ese día no ha terminado) [P]. Sin <c>t_ms</c>: el registro no guarda el tiempo jugado (la sonda lo pone a null).
     /// </summary>
     public readonly struct DailyPlayEnd
     {
         /// <summary>Crea el informe.</summary>
-        public DailyPlayEnd(string dateKey, int band, string boardId, DailyResult result)
+        public DailyPlayEnd(string dateKey, int band, string boardId, DailyResult result, int streakDays)
         {
             DateKey = dateKey;
             Band = band;
             BoardId = boardId;
             Result = result;
+            StreakDays = streakDays;
         }
 
         /// <summary>Fecha de inicio de la partida.</summary>
@@ -50,19 +52,36 @@ namespace AF.LiveOps
         /// <summary>Tablero.</summary>
         public string BoardId { get; }
 
-        /// <summary>Resultado que se informa (o <see cref="DailyResult.None"/>: nada que informar).</summary>
+        /// <summary>Resultado que se informa: <see cref="DailyResult.Fail"/> o <see cref="DailyResult.None"/> (nada que informar).</summary>
         public DailyResult Result { get; }
+
+        /// <summary>
+        /// <c>streak_days</c> de <c>af_daily_challenge</c> [P]: la racha que ese día sin ganar rompe (R-Q7), es decir,
+        /// <see cref="DailyChallengeRecord.StreakDays"/> si el último cobro fue el día anterior a <see cref="DateKey"/>; si no, 0.
+        /// </summary>
+        public int StreakDays { get; }
+
+        /// <summary>Hay que informarlo (<see cref="Result"/> distinto de <see cref="DailyResult.None"/>).</summary>
+        public bool IsReported => Result != DailyResult.None;
     }
 
     /// <summary>
     /// Fachada del Reto del río para <c>AF.UI</c> (nota §1.4 y §3 [P]; 08 §2.2, «Entrega a: UI»): estado de la tarjeta, tablero de
-    /// hoy, empezar, reanudar o descartar (R-Q4), salir sin ganar (R-Q9) y reclamar (R-Q3, con <see cref="DailyChallengeRules"/>).
+    /// hoy, empezar, reanudar o descartar (R-Q4), salir sin ganar dejándola reanudable (R-Q9, R-Q16) y reclamar (R-Q3, con <see cref="DailyChallengeRules"/>).
     /// Sin UI ni GameFlow: la partida (R8) escribe su estado con <see cref="SaveState"/> y avisa de la victoria con
     /// <see cref="ClaimWin"/>.
     /// <para>
     /// Partida que cruza la medianoche (R-Q3): con la app abierta sigue siendo de su fecha de inicio y se cobra esa fecha. Al
-    /// reabrir la app (<see cref="DiscardStale"/>) o al empezar otra (<see cref="Start"/>), una partida de otro día se descarta con
-    /// resultado <c>abandon</c>.
+    /// reabrir la app o al volver al inicio (<see cref="DiscardStale"/>) o al empezar otra (<see cref="Start"/>), una partida de
+    /// otro día se descarta (R-Q4).
+    /// </para>
+    /// <para>
+    /// <c>af_daily_challenge.result</c> (R-Q15, R-Q16): <c>win</c> al reclamar (<see cref="ClaimWin"/>); <c>fail</c> una sola vez
+    /// por día, cuando ese día termina sin victoria. Como salir deja la partida reanudable (R-Q16) y ganar la cierra, un día jugado
+    /// y no ganado es exactamente uno cuya partida sigue en <see cref="DailyChallengeRecord.InProgress"/> cuando la fecha local ya
+    /// es otra: al descartarla, <see cref="DiscardStale"/> lo informa una vez (<see cref="DayEnded"/>). Un día sin partida no
+    /// informa nada. <c>abandon</c> ya no se emite: lo que cubría (salir, descartar por cambio de día) es ahora reanudar o
+    /// <c>fail</c>.
     /// </para>
     /// </summary>
     public sealed class DailyChallengeService
@@ -88,8 +107,16 @@ namespace AF.LiveOps
         /// <summary>El pool, o null.</summary>
         public DailyPool? Pool { get; }
 
-        /// <summary>Última partida descartada por cambio de día (para la sonda), o null.</summary>
+        /// <summary>
+        /// Última partida descartada por cambio de día, o null. Puede no informar nada (<see cref="DailyPlayEnd.IsReported"/>).
+        /// </summary>
         public DailyPlayEnd? LastDiscard { get; private set; }
+
+        /// <summary>
+        /// Un día terminó sin victoria (R-Q15): sale una vez por día, con <see cref="DailyResult.Fail"/>, desde
+        /// <see cref="DiscardStale"/> (también la que hace <see cref="Start"/>). Para la sonda <c>daily_challenge</c> (R10).
+        /// </summary>
+        public event Action<DailyPlayEnd>? DayEnded;
 
         /// <summary>El Reto está disponible para un jugador de nivel máximo <paramref name="maxLevel"/> (nota §6, «Desbloqueo»).</summary>
         public bool IsAvailable(int maxLevel)
@@ -148,24 +175,39 @@ namespace AF.LiveOps
         }
 
         /// <summary>
-        /// Al abrir la app (R-Q4): si hay una partida de otro día, se descarta con resultado <c>abandon</c> y se devuelve para la sonda;
-        /// si es de hoy, se conserva para reanudarla. Null si no había nada que descartar.
+        /// Al abrir la app y cada vez que se vuelve al inicio (R-Q4; la UI, antes de pintar la tarjeta): si hay una partida de otro
+        /// día, se descarta y se devuelve; si es de hoy, se conserva para reanudarla. Si es de un día pasado que no se ganó, ese día
+        /// terminó sin victoria (R-Q15): se registra <c>result = fail</c> en el perfil y se avisa con <see cref="DayEnded"/>, una
+        /// sola vez: la partida ya no está y, aunque el reloj atrasado permita jugar otra vez ese día, solo se informa un día
+        /// posterior a <see cref="DailyChallengeRecord.LastDate"/>. Null si no había nada que descartar.
         /// </summary>
         public DailyPlayEnd? DiscardStale()
         {
             DailyChallengeRecord record = _store.Load();
             DailyPlayInProgress? play = record.InProgress;
-            if (play == null || string.Equals(play.DateKey, _clock.LocalDateKey(), StringComparison.Ordinal))
+            string today = _clock.LocalDateKey();
+            if (play == null || string.Equals(play.DateKey, today, StringComparison.Ordinal))
             {
                 return null;
             }
 
-            DailyResult reported = WonThatDay(record, play.DateKey) ? DailyResult.None : DailyResult.Abandon;
+            // Solo un día posterior al último resultado registrado (LastDate solo avanza y guarda win y fail): con el reloj
+            // atrasado, un día ya informado con fail o ya ganado (aunque no sea el último cobrado) no se informa otra vez.
+            bool ended = string.CompareOrdinal(play.DateKey, today) < 0
+                && !WonThatDay(record, play.DateKey)
+                && (record.LastDate == null || string.CompareOrdinal(play.DateKey, record.LastDate) > 0);
+            DailyResult reported = ended ? DailyResult.Fail : DailyResult.None;
+            int streak = ended ? StreakBrokenBy(record, play.DateKey) : 0;
             RecordResult(record, play.DateKey, reported);
             record.InProgress = null;
             _store.Save(record);
-            var end = new DailyPlayEnd(play.DateKey, play.Band, play.BoardId, reported);
+            var end = new DailyPlayEnd(play.DateKey, play.Band, play.BoardId, reported, streak);
             LastDiscard = end;
+            if (end.IsReported)
+            {
+                DayEnded?.Invoke(end);
+            }
+
             return end;
         }
 
@@ -223,19 +265,15 @@ namespace AF.LiveOps
         }
 
         /// <summary>
-        /// El jugador sale sin ganar (R-Q9: <c>result = fail</c>): se registra el resultado (salvo si ese día ya estaba ganado [P]) y la
-        /// partida se cierra [P: salir no la deja para reanudar; R-Q4 solo habla de reabrir la app].
+        /// El jugador sale sin ganar. R-Q16: la partida <b>no</b> se cierra: sigue en <see cref="DailyChallengeRecord.InProgress"/>
+        /// para reanudarla el mismo día (<see cref="Resumable"/>); al cambiar de día la descarta <see cref="DiscardStale"/> (R-Q4).
+        /// R-Q15: salir no es un resultado; el <c>fail</c> sale una vez, si el día termina sin victoria. No cambia el registro (el
+        /// estado ya lo guardó la partida con <see cref="SaveState"/>). Devuelve la partida que queda.
         /// </summary>
         /// <exception cref="InvalidOperationException">No hay partida en curso.</exception>
-        public DailyPlayEnd RecordExitWithoutWin()
+        public DailyPlayInProgress RecordExitWithoutWin()
         {
-            DailyChallengeRecord record = _store.Load();
-            DailyPlayInProgress play = record.InProgress ?? throw new InvalidOperationException("No hay partida del Reto en curso.");
-            DailyResult reported = WonThatDay(record, play.DateKey) ? DailyResult.None : DailyResult.Fail;
-            RecordResult(record, play.DateKey, reported);
-            record.InProgress = null;
-            _store.Save(record);
-            return new DailyPlayEnd(play.DateKey, play.Band, play.BoardId, reported);
+            return _store.Load().InProgress ?? throw new InvalidOperationException("No hay partida del Reto en curso.");
         }
 
         /// <summary>
@@ -262,7 +300,21 @@ namespace AF.LiveOps
 
         private static bool WonThatDay(DailyChallengeRecord record, string dateKey)
         {
-            return record.Result == DailyResult.Win && string.Equals(record.LastDate, dateKey, StringComparison.Ordinal);
+            return string.Equals(record.LastClaimedDate, dateKey, StringComparison.Ordinal)
+                || (record.Result == DailyResult.Win && string.Equals(record.LastDate, dateKey, StringComparison.Ordinal));
+        }
+
+        // La racha viva al empezar dateKey (último cobro el día anterior), que ese día sin ganar rompe (R-Q7); si no, 0.
+        private static int StreakBrokenBy(DailyChallengeRecord record, string dateKey)
+        {
+            if (record.StreakDays <= 0
+                || !DailyChallengeRules.TryParseDateKey(record.LastClaimedDate, out DateTime last)
+                || !DailyChallengeRules.TryParseDateKey(dateKey, out DateTime date))
+            {
+                return 0;
+            }
+
+            return last == date.AddDays(-1) ? record.StreakDays : 0;
         }
 
         // last_date/result (08 §4.3) solo avanzan: una fecha anterior (reloj atrasado) no los pisa, ni otro resultado una victoria

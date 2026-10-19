@@ -75,15 +75,15 @@ Salieron de esta nota (R-Q1b, R-Q11-R-Q14) y de la revisión de R7b (R-Q12b, R-Q
 
 | Id | Hueco | Decisión | Estado en el código |
 |---|---|---|---|
-| R-Q1b | Paleta de B2 con K = 9 y de B3 (1.1) | (a) B2 solo con K = 8; B3 con `max_pares_riesgo` libre; B1 sin cambios | Pendiente en `daily_v1.json` (encargo §9, punto 1), con la muestra y su informe rehechos |
-| R-Q11 | Ningún candidato de 30 entra en la ventana del bot de su banda (03 §16; 03 §4.4 midió fallo 0,88-1,00 con 1 vacío) | (a) La ventana **es compuerta**: el día no se publica hasta ajustar la especificación (fuente o K, que son [P]) | QA: `QA-DAILY-BOT` es fallo (R4). Generador: pasa a ser **error** en `DailyRunner` (en curso en R5; hoy aún guarda el más cercano y lo marca) |
+| R-Q1b | Paleta de B2 con K = 9 y de B3 (1.1) | (a) B2 solo con K = 8; B3 con `max_pares_riesgo` libre; B1 sin cambios | Hecho en R5: B2 `k [8, 8]`; B3 `max_risk_pairs: "libre"`; la muestra y el pool, regenerados |
+| R-Q11 | Ningún candidato de 30 entra en la ventana del bot de su banda (03 §16; 03 §4.4 midió fallo 0,88-1,00 con 1 vacío) | (a) La ventana **es compuerta**: el día no se publica hasta ajustar la especificación (fuente o K, que son [P]) | Hecho: `QA-DAILY-BOT` es fallo (R4) y, en el generador, un día sin candidato en la ventana es un **error** y no se escribe el pack (R5) |
 | R-Q12 | Qué hace la reconciliación con las victorias cobradas **sin red** (08 §10.1) | (a) Nada: no se retira nada de lo cobrado sin red (la economía es autoritativa en el cliente en la 1.0, 08 §10.1 «Edición del perfil local») | Hecho: `DailyReconcileMode.KeepOfflineClaims`, el default (R7b). La rama (b) sigue detrás de la opción, con sus tests |
 | R-Q12 (aclaración) | En la rama (b), ¿se retiran las semillas de una fecha anulada? | (a) Al anular una fecha no se retiran semillas ni la Pororoca | Hecho: el código no retira ninguna de las dos |
-| R-Q12b | Qué fechas pendientes se validan (06 §4.1 compara «> 1 día») | (a) Solo si `\|fecha − hoy_servidor\| ≤ 1 día`; las demás se anulan | **Pendiente:** `DailyChallengeRules.Reconcile` paga hoy todo pendiente con fecha ≤ hoy del servidor (sección 7.2) |
+| R-Q12b | Qué fechas pendientes se validan (06 §4.1 compara «> 1 día») | (a) Solo si `\|fecha − hoy_servidor\| ≤ 1 día`; las demás se anulan | Hecho: `Reconcile` valida a ≤ 1 día (`PendingWindowDays`) y anula el resto; la racha se corta en la última fecha anulada (sección 7.2) |
 | R-Q13 | ¿Intersticial al terminar un Reto? (05 §6.1 solo habla de la campaña) | (a) No hay | Hecho: el flujo del Reto no tiene `AdGate` (R8) |
 | R-Q14 | La Pororoca de la racha puede llegar en B1 antes del nivel 30, que la desbloquea (04 §2.4) | (a) Entra en el stock y espera al nivel 30 | Hecho en el pago (`Transaction.GrantStock`, R7b); falta el aviso en la UI (R9) |
-| R-Q15 | ¿Cuántos `af_daily_challenge.result = fail`? (R-Q9) | (a) **Uno por día**, y solo si ese día termina sin victoria | **Pendiente** en la sonda (R10): R8 entrega `DailyPlayOutcome.Exit` en cada salida |
-| R-Q16 | Salir de la partida del Reto sin ganar | (a) La deja **reanudable el mismo día**; al cambiar de día se descarta (R-Q4) | **Pendiente:** `LevelFlow.ExitDaily` borra hoy la partida guardada (`StateStore?.Clear()`, R8) |
+| R-Q15 | ¿Cuántos `af_daily_challenge.result = fail`? (R-Q9) | (a) **Uno por día**, y solo si ese día termina sin victoria | Hecho: `DailyChallengeService.DiscardStale` emite el único `fail` (evento `DayEnded`) al descartar la partida de un día anterior sin victoria y posterior a `last_date`; `abandon` ya no se emite (sección 12) |
+| R-Q16 | Salir de la partida del Reto sin ganar | (a) La deja **reanudable el mismo día**; al cambiar de día se descarta (R-Q4) | Hecho: `ExitDaily` guarda en síncrono (también el modal de Aguas estancadas) y `RecordExitWithoutWin` conserva `InProgress` |
 
 ---
 
@@ -95,8 +95,8 @@ Salieron de esta nota (R-Q1b, R-Q11-R-Q14) y de la revisión de R7b (R-Q12b, R-Q
 | Desbloqueo visible | El inicio lo muestra desbloqueado tras ganar el 10 | 06 §2.3, pantallas 3 y 4 |
 | Presentación | Tarjeta de 2 s tras ganar el 7: «Desde el nivel 10, un tablero nuevo cada día» | 06 §2.2, nivel 7; 02 §13 |
 | Oculto si no existe | Mientras el sistema no exista en el build, su entrada queda oculta (D-008) | 06 §4.7 |
-| Índice | `reto(fecha, banda) = pool[banda][(días_desde(2026-01-01) + live_daily_offset) mod 730]` | 03 §16; 06 §4.1, pseudocódigo |
-| Pool | 2.190 tableros = 3 × 730, pack `daily_pool_v1`, `Data/Daily/daily_pool_v1.json`, grupo `levels_install` | 03 §16; 08 §3; 08 §6.2 |
+| Índice | `reto(fecha, banda) = pool[banda][(días_desde(2026-01-01) + live_daily_offset) mod 729]` (R-Q2b; el GDD dice 730) | 03 §16; 06 §4.1, pseudocódigo; R-Q2b |
+| Pool | 2.187 tableros = 3 × 729 (R-Q2b; el GDD dice 2.190 = 3 × 730), pack `daily_pool_v1`, `Data/Daily/daily_pool_v1.json`, grupo `levels_install` | 03 §16; 08 §3; 08 §6.2 |
 | Bandas | B1: nivel máximo < 41, K 6-7, 2 vacíos, bot 40-60 %. B2: 41-200, K 8 (R-Q1b; 03 §16 decía 8-9), 1 vacío, 60-80 %. B3: 201+, K 10-11, 1 vacío, ≥ 75 %. Umbrales `lvl_daily_bracket_levels` = [41, 201] | 03 §16 [P]; 06 §4.1 «Bandas»; R-Q1b |
 | Contenido | Sin mecánicas con disparador ni Aguas turbias; premio igual en las tres bandas | 03 §16; 06 §4.1 |
 | Reintentos | Ilimitados y deterministas (misma semilla) | 06 §4.1; 03 §13 |
@@ -270,7 +270,7 @@ namespace AF.LiveOps
 public static class DailyCalendar
 {
     public static readonly DateTime Epoch = new DateTime(2026, 1, 1);   // 03 §16
-    public const int PoolDays = 730;                                     // 03 §16
+    public const int PoolDays = DailyPool.Days;                          // 729 (R-Q2b; 03 §16 dice 730)
     public static int DaysSinceEpoch(DateTime localDate);                // puede ser negativo
     public static int PoolDay(DateTime localDate, int offset);           // módulo positivo, 0-729
     public static int BandFor(int maxLevel, IReadOnlyList<int> thresholds);   // [41, 201] → 1/2/3
@@ -299,7 +299,7 @@ public sealed class DailyChallengeRules
 
 **Desbloqueo** (08 §9; 06 §2.3): visible = `biz_feature_daily_challenge` && `max_level` ≥ `live_unlock_level_daily` (10) && pool cargado y válido.
 
-**Día del pool** (03 §16; 06 §4.1): `d = (fecha_local − 2026-01-01).Days`; `idx = (d + live_daily_offset) mod 730`, con módulo positivo. `fecha_local` = `clock.LocalDate()`.
+**Día del pool** (03 §16; 06 §4.1): `d = (fecha_local − 2026-01-01).Days`; `idx = (d + live_daily_offset) mod 729` (R-Q2b), con módulo positivo. `fecha_local` = `clock.LocalDate()`.
 
 | Fecha | Offset | Día |
 |---|---|---|
@@ -353,8 +353,8 @@ function reconciliar(r = store.Load()):          # al obtener hora de servidor
     if not server.TryGetServerOffset(out off) or |off| > sec_clock_max_drift_h: return 0
     hoy_srv = fecha local de (clock.UtcNow + off + clock.LocalOffset)
     for {fecha, racha} in r.PendingClaims:
-        if |fecha − hoy_srv| <= 1 día: pagar 60 (+ Pororoca si esa fecha cerró una racha de 7)   # R-Q12b
-        else: anular (sin semillas ni Pororoca; se quita el sello; LastClaimedDate no retrocede)
+        if |fecha − hoy_srv| <= 1 día: pagar 60 (+ Pororoca si esa fecha cerró una racha de 7)   # R-Q12b (a)
+        else: anular (sin semillas ni Pororoca; se quita el sello y la racha se corta en esa fecha; LastClaimedDate no retrocede)
     r.PendingClaims.Clear(); r.OfflineClaims.Clear(); store.Save(r)
 ```
 
@@ -386,7 +386,8 @@ En este orden:
 
 - Siempre: «Reto del río · {fecha corta}» (formato de la región vía `Loc`, 08 §2.2), olas de la banda (1-3) y «{n}/7».
 - Al cambiar de día con la app abierta, la tarjeta se recalcula al volver al inicio; la partida empezada ayer sigue (R-Q3).
-- Al reabrir otro día, `InProgress` de ayer se descarta con `result = abandon` [P] (R-Q4).
+- Al reabrir otro día o al volver al inicio, `InProgress` de un día anterior se descarta (`DiscardStale`, R-Q4); si ese día no se ganó y es posterior a `last_date`, es su único `result = fail` (R-Q15). Salir sin ganar deja la partida reanudable el mismo día (R-Q16). La UI se suscribe a `DayEnded` antes del primer `DiscardStale` del arranque.
+- Con el reloj atrasado, una partida de fecha futura se descarta sin informar [P]: si ese día no se vuelve a jugar, no tendrá `fail`.
 - Con la Pororoca en el stock antes del nivel 30 (R-Q14), la UI avisa de que espera a su desbloqueo [P: el texto].
 - Textos: solo claves, en `docs/dev/traspaso/spark-strings-reto.csv`, `status = borrador`.
 
@@ -401,7 +402,7 @@ En este orden:
 | Fallo | Sin efecto: sin canoas, Crecida ni alivio; `fails_level` se ignora. Cuando exista la Crecida, guarda E19 en `FailResolve` | 04 §5.2; 06 §4.3; 03 §16 |
 | Reintentos | Ilimitados, mismo tablero | 06 §4.1; 03 §13 |
 | Progreso de campaña | No cambia `max_level`, la Canasta, el Mapa ni las Frutas del río [P] | 06 §4.3 «Solo niveles de campaña» |
-| Salir | Sin canoa; la partida queda **reanudable el mismo día** (R-Q16; hoy `ExitDaily` la borra: pendiente); `af_daily_challenge.result = fail` **una vez por día**, solo si ese día termina sin victoria (R-Q15) | 04 §7.1; R-Q9; R-Q15; R-Q16 |
+| Salir | Sin canoa; la partida queda **reanudable el mismo día** (R-Q16; `ExitDaily` la guarda en síncrono); `af_daily_challenge.result = fail` **una vez por día**, solo si ese día termina sin victoria (R-Q15) | 04 §7.1; R-Q9; R-Q15; R-Q16 |
 | Marea | 3 gratis por tablero (`undo_free_per_level`) + stock; no ilimitada [P] | 04 §2.1; 08 §9 |
 | Cuia extra, Morpho, Pororoca, Luciérnaga | Como en la campaña, con stock (R-Q8); desbloqueo con el nivel efectivo `max_level + 1` [P]; topes de la campaña (la Pororoca, 3 al día compartidas con la campaña). La Luciérnaga no aparece (no hay ocultos) | 04 §2.2-§2.5; R-Q8 |
 | Cosecha doble | Desde `ads_rv_double_harvest_from_level` (nivel efectivo) [P]: 60 → 120; solo con premio CONFIRMADO [P]; necesita E9 | 06 §4.1; 04 §2.8 |
@@ -461,9 +462,9 @@ Los alias retirados (`daily_offset`, `daily_reward_seeds`, `daily_bands`…) no 
 ## 12. Analítica y sondas (08 §8.2; R10)
 
 Sin `AF.Analytics`: líneas `AF_STATE` en `DevProbe.Daily.cs`, con el patrón de `DevProbe.Map.cs`. Solo identificadores.
-- `af_daily_challenge {date, result, t_ms, murky_bonus = false, streak_days}`: `win` al reclamar; `fail` **una vez por día**, y solo si ese día termina sin victoria (R-Q9 y R-Q15; R8 entrega una `Exit` por salida, así que la sonda no emite una `fail` por cada una); `abandon` al descartarse por cambio de día [P].
-- `level_start {level_name = d{b}_n{nnnn}}`.
-- `earn_virtual_currency {source = daily_challenge, value}`; la Cosecha doble, `source = double_harvest` (E9).
+- `af_daily_challenge {date, result, t_ms, murky_bonus = false, streak_days}`: `win` al reclamar; `fail` **una vez por día**, y solo si ese día termina sin victoria (R-Q9 y R-Q15): lo emite `DailyChallengeService.DayEnded` al descartar la partida de un día anterior no ganado y posterior a `last_date`, así que con el reloj atrasado no se repite ni sale para un día ganado; `abandon` ya no se emite (R-Q15 y R-Q16), aunque `DailyProbeFormat` sabe escribirlo. En el `fail`, `t_ms` = null (el registro no guarda el tiempo jugado) y `streak_days` = la racha que ese día rompe [P]. Formato: `DailyProbeFormat` (AF.LiveOps, sin motor).
+- `level_start {level_name = d{b}_n{nnnn}, variant = base, band}` (08 §8.2).
+- `earn_virtual_currency {virtual_currency_name = seeds, source = daily_challenge, value}`; la Cosecha doble, `source = double_harvest` (E9).
 - Estado de la tarjeta como `AF_STATE`, para jugar con `adb`.
 
 ---
@@ -472,20 +473,20 @@ Sin `AF.Analytics`: líneas `AF_STATE` en `DevProbe.Daily.cs`, con el patrón de
 
 | Banda | K | Vacíos | Ventana del bot | Fuente [P] (análoga a 03 §4.4) |
 |---|---|---|---|---|
-| B1 | 6-7 | 2 | 40-60 % | `walk`; si en 30 candidatos ninguno entra, `fill` E=2 |
-| B2 | 8 (R-Q1b) | 1 | 60-80 % | `fill` E=1 (sin la regla `deep` de K = 9) |
+| B1 | 6-7 | 2 | 40-60 % | `fill` E=2 → `deep` → `walk` → `deep` de 60.000 nodos (R5) |
+| B2 | 8 (R-Q1b) | 1 | 60-80 % | `deep` → `fill` E=1 (R5; con `fill` primero, 96 días quedaban por encima de la ventana) |
 | B3 | 10-11 | 1 | ≥ 75 % | `deep` |
 
-- Rechazo por ventana: como mucho 30 candidatos (03 §4.4). Sin las relajaciones de 03 §4.4 (Cuia chica o 2 vacíos), que cambiarían los vacíos de la banda.
+- Rechazo por ventana: como mucho **30 candidatos por fuente**, con respaldos en orden (R-Q11b, decisión del dueño: así se lee el «máximo 30 candidatos» de 03 §4.4). Sin las relajaciones de 03 §4.4 (Cuia chica o 2 vacíos), que cambiarían los vacíos de la banda.
 - **R-Q11 (a): la ventana del bot es compuerta.** Un día sin candidato dentro de la ventana no se publica hasta ajustar la especificación (fuente o K, que son [P]):
-  - en el generador es un **error** (`DailyRunner`, bloque «el más cercano»; en curso en R5, encargo §9, punto 2; hasta entonces guarda el más cercano y lo marca en el informe);
-  - en `level-qa --daily`, `QA-DAILY-BOT` sigue siendo **fallo** (03 §17 #3), así que R5 no publica un pool con tableros fuera de ventana.
+  - en el generador es un **error**: el pack no se escribe (R5);
+  - en `level-qa --daily`, `QA-DAILY-BOT` sigue siendo **fallo** (03 §17 #3), así que el pool publicado (R5) tiene 0 días fuera de ventana.
 - K del tablero: día par → el K menor de la banda, día impar → el mayor [P] (en B2, con K = 8, ya no varía).
 - Capacidades 4, sin Cuia chica ni alta [P]: con capacidad 4 y vacíos enteros, T = K + vacíos (06 §2.1, regla 4; 02 §13); 02 R1 fija T ≤ 14 y la capacidad 4 por defecto.
 - Paleta: R-Q1 con R-Q1b (1.1): B1 1-40 con tope 0; B2 1-80 con tope 1 (K = 8); B3 1-200 sin tope de pares.
-- Agua y fondo (R-Q2): rotan por los mundos 1-9 **según la fecha**. Cada tablero lleva `world` y `water_base` del glosario §8 (w1 blanca, w2 clara, w3 negra, w4-w9 blanca); el cliente toma el kit de fondo de ese mundo. [P] la fórmula, hasta que R5 la resuelva: hoy es `1 + (idx mod 9)`, que no sigue al calendario al dar la vuelta (730 mod 9 = 1); el encargo §9, punto 3, pide contar desde la fecha (días desde una época fija, mod 9).
+- Agua y fondo (R-Q2): rotan por los mundos 1-9 **según la fecha**. Cada tablero lleva `world` y `water_base` del glosario §8 (w1 blanca, w2 clara, w3 negra, w4-w9 blanca); el cliente toma el kit de fondo de ese mundo. Fórmula: `1 + (día del pool mod 9)`. Con el pool de **729 días** (R-Q2b, 81 × 9) sigue a la fecha en todas las vueltas; con `live_daily_offset` ≢ 0 (mod 9), desplazada por el offset de forma constante. La especificación exige que el módulo divida a los días.
 - Cada tablero: `slot {band, day}`, `id` `d{b}_n{nnnn}`, `seed` `amazonfill:v1:daily:b{b}:d{ddd}`, `relief: []`, sin `difficulty`, `solution`, `safe_path` ni `qa`, sin mecánicas ni ocultos. JSON minificado con orden estable; cabecera `kind: daily`, `pack_id` `daily_pool_v1`.
-- `QA-DAILY-*` (03 §17): esquema (#11); `slot` ↔ `id`/`seed`; 730 días por banda; K, vacíos y ventana (#3); A* (#1); `par ≥ 2K` (#2); sin mecánicas ni ocultos (#6, #7); `relief` vacío; la semilla reproduce el tablero (#10); ≤ 14 cuias (#5). Anti-repetición (#9) y trampas tempranas (#3), solo aviso (R-Q10).
+- `QA-DAILY-*` (03 §17): esquema (#11); `slot` ↔ `id`/`seed`; 729 días por banda (R-Q2b); K, vacíos y ventana (#3); A* (#1); `par ≥ 2K` (#2); sin mecánicas ni ocultos (#6, #7); `relief` vacío; la semilla reproduce el tablero (#10); ≤ 14 cuias (#5). Anti-repetición (#9) y trampas tempranas (#3), solo aviso (R-Q10).
 - Tamaño < 2 MB sin comprimir (compuerta del encargo, R5; 03 §16 estima ≈ 1,4 MB [E]).
 
 ---
@@ -533,7 +534,7 @@ R-Q1-R-Q10: encargo §5 (fechadas el 2026-10-20 en la primera versión del encar
 | R-Q6 | `daily_overrides` (08 §9) | `{fecha: {banda: id del pool}}` | Sección 6 |
 | R-Q7 | Racha y sellos (06 §4.1) | Pororoca cada 7 días seguidos ganados; un día sin ganar rompe; marco fuera | Sección 7 |
 | R-Q8 | Comodines (06 §4.1) | Los de la campaña menos Cuia de rescate y Salto del Boto, con stock | Sección 9 |
-| R-Q9 | `result = fail` (08 §8.2) | Salir sin ganar ese día | Sección 12 |
+| R-Q9 | `result = fail` (08 §8.2) | Salir sin ganar ese día; lo concretan R-Q15 (uno por día, solo si el día termina sin victoria) y R-Q16 (salir deja la partida reanudable) | Sección 12 |
 | R-Q10 | Anti-repetición y trampas tempranas (03 §17) | Medir y avisar, sin compuerta | R4 |
 | R-Q1b | R-Q1 no cabe en B2 con K = 9 ni en B3 (1.1) | (a) B2 solo con K = 8 (cambia 03 §16 y 06 §4.1, que dan K 8-9) y B3 con `max_pares_riesgo` libre, como la campaña desde el 201 (03 §4.5). B1 sin cambios | `daily_v1.json`, R5 |
 | R-Q11 | Ningún candidato en la ventana del bot (03 §16) | (a) La ventana del bot es compuerta: un día fuera de ventana no se publica hasta ajustar la especificación (fuente o K, que son [P]); QA-DAILY-BOT sigue siendo fallo | Sección 13; R4, R5 |
@@ -544,6 +545,8 @@ R-Q1-R-Q10: encargo §5 (fechadas el 2026-10-20 en la primera versión del encar
 | R-Q14 | Pororoca antes del nivel 30 (04 §2.4) | (a) La Pororoca de la racha entra en el stock y espera al nivel 30, en que se desbloquea | Sección 8; R7b, R9 |
 | R-Q15 | Cuántos `result = fail` (08 §8.2) | (a) `af_daily_challenge.result = fail` una vez por día, y solo si ese día termina sin victoria | Sección 12; R10 |
 | R-Q16 | Salir sin ganar | (a) La partida del Reto queda reanudable el mismo día; al cambiar de día se descarta (R-Q4) | Secciones 8-10; R8, R9 |
+| R-Q2b | Agua «según la fecha» con 730 mod 9 = 1 | Pool de **729 días** por banda (81 × 9), 2.187 tableros | Secciones 2, 6 y 13; R5 |
+| R-Q11b | ¿«Máximo 30 candidatos» por día o por fuente? (03 §4.4) | 30 **por fuente**, con respaldos en orden | Sección 13; R5 |
 
 **Confirmado por el integrador:** `IServerDate` y `FakeServerDate` van en AF.Platform (sección 1.2).
 

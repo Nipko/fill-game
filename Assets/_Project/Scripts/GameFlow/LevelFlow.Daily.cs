@@ -18,7 +18,11 @@ namespace AF.GameFlow
         /// <summary>Tablero ganado (instante lógico de la victoria, R12). Quien llama cobra el premio (<c>DailyChallengeRules.Claim</c>).</summary>
         Win = 1,
 
-        /// <summary>Salida al inicio sin ganar (<see cref="LevelFlow.ExitDaily"/>): <c>af_daily_challenge.result = fail</c> (R-Q9).</summary>
+        /// <summary>
+        /// Salida al inicio sin ganar (<see cref="LevelFlow.ExitDaily"/>): la partida queda guardada para reanudarla el mismo día
+        /// (R-Q16). No es un resultado de <c>af_daily_challenge</c>: el <c>fail</c> sale una vez, cuando el día termina sin
+        /// victoria (R-Q15; lo decide AF.LiveOps).
+        /// </summary>
         Exit = 2,
 
         /// <summary>Volver a la orilla: nuevo intento con el mismo tablero (reintentos ilimitados; 06 §4.1). La partida sigue.</summary>
@@ -355,9 +359,10 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Salir del Reto sin ganar (pausa › Salir o la X de la cabecera): sin canoa ni fallo (04 §7.1), con el resultado
-        /// <see cref="DailyPlayOutcome.Exit"/> (<c>result = fail</c>, R-Q9). La partida guardada del Reto se borra [P]: volver a
-        /// entrar empieza el mismo tablero desde el principio (cerrar la app, en cambio, la deja para reanudar; R-Q4). False si
-        /// no hay partida, ya se ganó (tras la victoria, salir no es un resultado nuevo) o ya se salió.
+        /// <see cref="DailyPlayOutcome.Exit"/>. R-Q16: la partida del Reto queda guardada en su <see cref="StateStore"/>, con la
+        /// pantalla que se reabriría ahora (también el modal de Aguas estancadas), para reanudarla el mismo día con
+        /// <see cref="ResumeDaily"/>; al cambiar de día se descarta (R-Q4, AF.LiveOps). Es fin de nivel: la escritura va en
+        /// síncrono. False si no hay partida, ya se ganó (tras la victoria, salir no es un resultado nuevo) o ya se salió.
         /// </summary>
         /// <exception cref="InvalidOperationException">El flujo no es del Reto.</exception>
         public bool ExitDaily()
@@ -375,7 +380,7 @@ namespace AF.GameFlow
                 ClearSelection();
                 ResetHint();
                 SaveBatch?.RequireDurable();
-                StateStore?.Clear();
+                PersistState();
             }
 
             RaiseDaily(DailyPlayOutcome.Exit, pours, false);

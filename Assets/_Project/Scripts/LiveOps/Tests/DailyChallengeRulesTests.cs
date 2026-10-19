@@ -282,13 +282,13 @@ namespace AF.LiveOps.Tests
         }
 
         [Test]
-        public void Reconcile_PendingOnOrBeforeServerDate_IsPaid()
+        public void Reconcile_PendingOneDayBeforeServerDate_IsPaid()
         {
-            // El reloj del dispositivo va 2 días atrasado: hoy en el dispositivo es 17, en el servidor 19.
-            var f = new DailyFixture(FakeServerDate.Online(TimeSpan.FromHours(48)), localStart: new DateTime(2026, 10, 17, 10, 0, 0));
+            // El reloj del dispositivo va 30 h atrasado: hoy en el dispositivo es 18, en el servidor 19 (R-Q12b: a 1 día, vale).
+            var f = new DailyFixture(FakeServerDate.Online(TimeSpan.FromHours(30)), localStart: new DateTime(2026, 10, 18, 10, 0, 0));
             Assert.That(f.Rules.Claim(f.Today), Is.EqualTo(ClaimOutcome.Pending));
 
-            f.NextDay(2);                       // el jugador corrige el reloj
+            f.NextDay(1);                       // el jugador corrige el reloj
             f.Server.GoOnline(TimeSpan.Zero);
             DailyReconcileResult result = f.Rules.Reconcile();
 
@@ -298,7 +298,7 @@ namespace AF.LiveOps.Tests
             Assert.That(result.SeedsPaid, Is.EqualTo(60));
             Assert.That(f.Seeds, Is.EqualTo(60));
             Assert.That(f.Record.PendingClaims, Is.Empty);
-            Assert.That(f.Record.StampDays, Is.EqualTo(new[] { 17 }));
+            Assert.That(f.Record.StampDays, Is.EqualTo(new[] { 18 }));
             Assert.That(f.Store.Persisted.PendingClaims, Is.Empty, "se guardó");
             Assert.That(f.Rules.Reconcile().Total, Is.EqualTo(0), "no paga dos veces");
             Assert.That(f.Seeds, Is.EqualTo(60));
@@ -343,6 +343,72 @@ namespace AF.LiveOps.Tests
             Assert.That(f.Record.StreakDays, Is.EqualTo(0), "la racha se rompe");
             Assert.That(f.Record.LastClaimedDate, Is.EqualTo("2026-10-21"), "no retrocede: el 19-21 no se cobran otra vez");
             Assert.That(f.Rules.Claim("2026-10-19"), Is.EqualTo(ClaimOutcome.NoReward));
+        }
+
+        [Test]
+        public void Reconcile_RQ12b_PendingTwoDaysBeforeServerDate_IsVoided_WithoutTakingAnything()
+        {
+            // El reloj del dispositivo va 2 días atrasado: cobra el 17 cuando en el servidor es el 19.
+            var initial = new DailyChallengeRecord { LastClaimedDate = "2026-10-16", StreakDays = 2 };
+            var f = new DailyFixture(FakeServerDate.Online(TimeSpan.FromHours(48)), initial: initial,
+                localStart: new DateTime(2026, 10, 17, 10, 0, 0));
+            Assert.That(f.Rules.Claim(f.Today), Is.EqualTo(ClaimOutcome.Pending));
+            Assert.That(f.Record.StreakDays, Is.EqualTo(3));
+
+            f.NextDay(2);
+            f.Server.GoOnline(TimeSpan.Zero);
+            DailyReconcileResult result = f.Rules.Reconcile();
+
+            Assert.That(result.Confirmed, Is.EqualTo(0));
+            Assert.That(result.Voided, Is.EqualTo(1), "R-Q12b: a 2 días de la fecha del servidor");
+            Assert.That(f.Seeds, Is.EqualTo(0));
+            Assert.That(f.Record.StampDays, Is.Empty, "se quita el sello del 17");
+            Assert.That(f.Record.StreakDays, Is.EqualTo(0), "el 17 anulado rompe la racha");
+            Assert.That(f.Record.LastClaimedDate, Is.EqualTo("2026-10-17"), "no retrocede");
+            Assert.That(f.Record.PendingClaims, Is.Empty);
+        }
+
+        [Test]
+        public void Reconcile_RQ12b_PendingOneDayAfterServerDate_IsPaid()
+        {
+            // El reloj del dispositivo va 30 h adelantado: cobra el 20 cuando en el servidor es el 19.
+            var f = new DailyFixture(FakeServerDate.Online(TimeSpan.FromHours(-30)), localStart: new DateTime(2026, 10, 20, 10, 0, 0));
+            Assert.That(f.Rules.Claim(f.Today), Is.EqualTo(ClaimOutcome.Pending));
+
+            f.Server.GoOnline(TimeSpan.FromHours(-20));
+            DailyReconcileResult result = f.Rules.Reconcile();
+
+            Assert.That(result.Ran, Is.True);
+            Assert.That(result.Confirmed, Is.EqualTo(1), "R-Q12b: a 1 día, vale");
+            Assert.That(result.Voided, Is.EqualTo(0));
+            Assert.That(f.Seeds, Is.EqualTo(60));
+            Assert.That(f.Record.StampDays, Is.EqualTo(new[] { 20 }));
+            Assert.That(f.Record.StreakDays, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Reconcile_RQ12b_VoidedOldDay_CutsTheStreak_AndItsPororoca()
+        {
+            // Del 13 al 16 confirmados (racha 4); el 17, 18 y 19, pendientes. El servidor dice 19: el 17 se anula, el 18 y el 19 se
+            // pagan. La racha se corta en el 17: el 19 ya no cierra 7 días y no paga la Pororoca.
+            var initial = new DailyChallengeRecord { LastClaimedDate = "2026-10-19", StreakDays = 7, StampsMonth = "2026-10" };
+            initial.StampDays.AddRange(new[] { 13, 14, 15, 16, 17, 18, 19 });
+            initial.PendingClaims.Add(new DailyClaimEntry("2026-10-17", 5));
+            initial.PendingClaims.Add(new DailyClaimEntry("2026-10-18", 6));
+            initial.PendingClaims.Add(new DailyClaimEntry("2026-10-19", 7));
+            var f = new DailyFixture(FakeServerDate.Online(TimeSpan.Zero), initial: initial);
+
+            DailyReconcileResult result = f.Rules.Reconcile();
+
+            Assert.That(result.Confirmed, Is.EqualTo(2));
+            Assert.That(result.Voided, Is.EqualTo(1));
+            Assert.That(result.SeedsPaid, Is.EqualTo(120));
+            Assert.That(result.ShufflePaid, Is.EqualTo(0), "sin el 17, el 19 es el 2.º día seguido");
+            Assert.That(f.ShuffleGained, Is.EqualTo(0));
+            Assert.That(f.Record.StampDays, Is.EqualTo(new[] { 13, 14, 15, 16, 18, 19 }));
+            Assert.That(f.Record.StreakDays, Is.EqualTo(2), "18 y 19");
+            Assert.That(f.Rules.StreakShown(), Is.EqualTo(2));
+            Assert.That(f.Record.LastClaimedDate, Is.EqualTo("2026-10-19"));
         }
 
         [Test]
