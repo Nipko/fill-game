@@ -24,7 +24,7 @@ namespace AF.Presentation
     /// <item><b>0d, piezas por código</b>: en Santarém, el Amazonas (#B08A5A) opaco desde el horizonte, con el reflejo de la
     /// orilla al <see cref="ShoreReflectionAlpha"/> y las ondas de la banda, hasta una costura ondulada (seno de
     /// <see cref="SeamWaveDp"/> dp y <see cref="SeamWavePeriodDp"/> dp de periodo) con el Tapajós (#2E8B8B) delante, y la
-    /// columna de reflejo del sol del panorama que cruza las dos aguas; y la diagonal negra y beige del Encuentro (#4A2C14 y
+    /// columna de reflejo del sol del panorama que cruza las dos aguas; y la diagonal negra y beige del Encuentro (<see cref="Palette.WaterBlack"/> y
     /// #B08A5A), recta, que empieza en el borde de la pantalla. Las dos aguas se juntan en una costura de <see cref="SeamDp"/>
     /// dp de #E8F0E8 al 60 % con <see cref="SeamBlendDp"/> dp de mezcla a cada lado. Ya son definitivas: salen también en
     /// release.</item>

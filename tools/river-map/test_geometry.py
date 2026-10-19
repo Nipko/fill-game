@@ -16,8 +16,8 @@ la boca en un vertice del anfitrion, la cola de la investigacion y un rio «solo
 recorte de la tierra por la caja, la triangulacion sin vertices partidos y la validacion de la tierra por sus aristas
 (continente e islas); las s de las bocas y de las paradas (de acuerdo con los km de la investigacion); el archivo
 commiteado (determinista, al dia, UTF-8 sin BOM y LF, <= 90 KB); los legs continuos, que no cruzan tierra, con la ida y
-vuelta por las confluencias; la tolerancia de cada vista con solo las excepciones medidas pendientes del duenno, y sus
-avisos; y los fallos de --check: una parada desplazada 20 km (tambien un sitio tierra adentro y un punto de atraque), una
+vuelta por las confluencias; la tolerancia de cada vista con solo las excepciones medidas que acepto el duenno (D-028), y
+sus avisos; y los fallos de --check: una parada desplazada 20 km (tambien un sitio tierra adentro y un punto de atraque), una
 parada que retrocede, un leg roto, un punto de control fuera de su linea (tambien la boca de un rio), la boca del Pacaya
 mas alla de su cifra medida, un candidato de la propuesta §5.1 bis ausente y el desfase.
 Revision de M5.1, con fixtures de write_layer: la tierra de Natural Earth (sentido ESRI, recorte por la caja, agujero dentro
@@ -956,9 +956,10 @@ class RouteTests(Base):
                          [s["id"] for s in self.stops["stops"]
                           if "baja_por_confluencia" in next(r for r in self.records if r["k"] == s["n"])])
 
-    def test_tolerance_is_the_canon_and_exceptions_are_only_the_pending_ones(self):
-        # 08 §4.5 y D-023, punto 20: <= 2 dp de su vista, <= 15 km en la Cuenca. Las excepciones son las medidas que esperan
-        # la firma del duenno (sin margen): ninguna nueva sin pasar por el. M5.1: medidas sobre la geometria de produccion.
+    def test_tolerance_is_the_canon_and_exceptions_are_only_the_accepted_ones(self):
+        # 08 §4.5 y D-023, punto 20: <= 2 dp de su vista, <= 15 km en la Cuenca. Las excepciones son las medidas que acepto
+        # el duenno el 2026-10-19 (D-028, pregunta 65, parte 1, (d); sin margen): ninguna nueva sin pasar por el. M5.1:
+        # medidas sobre la geometria de produccion.
         self.assertEqual(15.0, geometry.TOLERANCE_KM)
         self.assertEqual({"flona_tapajos": 33.3, "amacayacu": 58.6, "pacaya_samiria": 78.6, "pacaya_alba": 78.6,
                           "yasuni": 29.0, "yasuni_dosel": 29.0}, geometry.PENDING_SITE_KM)
