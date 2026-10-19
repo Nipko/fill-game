@@ -65,7 +65,7 @@ namespace AF.UI
             }
 
             sb.Append("]}");
-            Debug.Log(sb.ToString());
+            Write(sb.ToString());
         }
 
         /// <summary>
@@ -77,7 +77,7 @@ namespace AF.UI
             string? line = FormatSettingsChange(key, value, patternsOn);
             if (line != null)
             {
-                Debug.Log(line);
+                Write(line);
             }
         }
 
@@ -119,7 +119,7 @@ namespace AF.UI
             sb.Append("AF_STATE {\"event\":\"settings_closed\"");
             AppendTime(sb);
             sb.Append('}');
-            Debug.Log(sb.ToString());
+            Write(sb.ToString());
         }
     }
 }

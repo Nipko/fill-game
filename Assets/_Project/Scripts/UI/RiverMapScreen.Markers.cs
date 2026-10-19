@@ -1256,10 +1256,11 @@ namespace AF.UI
                 }
             }
 
+            // Una placa que no sale con este encuadre (FX10, _plateFitHidden) no es obstáculo.
             for (int k = 0; k < _silhouettes.Count; k++)
             {
                 RectTransform other = _silhouettes[k].Root;
-                if (k != self && other.gameObject.activeSelf && box.Overlaps(PlateBox(other)))
+                if (k != self && other.gameObject.activeSelf && !(k < _plateFitHidden.Length && _plateFitHidden[k]) && box.Overlaps(PlateBox(other)))
                 {
                     return true;
                 }

@@ -704,6 +704,18 @@ namespace AF.Tests.PlayMode
             Assert.That(at, Is.EqualTo(line.Length), "nada detrás del objeto: " + line);
         }
 
+        /// <summary>
+        /// La línea es una etiqueta de la sonda (<c>AF_STATE </c>, <c>AF_LAYOUT </c>, <c>AF_PERF </c>…) y un objeto JSON válido,
+        /// entero (tarea FX10).
+        /// </summary>
+        internal static void AssertProbeJson(string line)
+        {
+            int at = line.IndexOf(" {", StringComparison.Ordinal) + 1;
+            Assert.That(at > 0 && line.StartsWith("AF_", StringComparison.Ordinal), Is.True, "una línea de la sonda: " + line);
+            Assert.That(JsonValue(line, ref at), Is.True, "JSON válido: " + line);
+            Assert.That(at, Is.EqualTo(line.Length), "nada detrás del objeto: " + line);
+        }
+
         // Un validador mínimo de JSON (objetos, listas, cadenas sin escapes raros, números, true, false y null).
         private static bool JsonValue(string s, ref int i)
         {
