@@ -46,11 +46,23 @@ namespace AF.UI
         public const float PlateFitGridDp = 8f;
 
         /// <summary>
-        /// Para los tests: una zona más (coordenadas de la zona visible, dp, y hacia abajo) que las placas de la vista Mundo no pisan,
-        /// como un control. Prueba la placa sin sitio sin depender de la geometría del Mapa (M5.1c: con la de producción, todas
-        /// caben). Null en el juego.
+        /// Para los tests: una zona (coordenadas locales del contenido, dp) que la placa del mundo
+        /// <see cref="PlateTestObstacleWorld"/> no pisa, como un control, en las dos vistas: ni al colocarla
+        /// (<c>PlaceSilhouettes</c>, con su búsqueda en la rejilla de la Cuenca) ni al encajarla en la vista (FX10). Las demás placas
+        /// no la ven. Prueba la placa sin sitio (FX10) y la que no tiene sitio junto a su parada (M5.1c) sin depender de la geometría
+        /// del Mapa (con la de producción, todas caben en los casos medidos). Null en el juego.
         /// </summary>
-        internal static Rect? PlateFitTestObstacle { get; set; }
+        internal static Rect? PlateTestObstacle { get; set; }
+
+        /// <summary>El mundo de la placa que no pisa <see cref="PlateTestObstacle"/> (tests).</summary>
+        internal static int PlateTestObstacleWorld { get; set; }
+
+        /// <summary>
+        /// Para los tests: la placa de este mundo no encuentra ningún sitio junto a su parada (<c>PlaceSilhouettes</c>), como si los
+        /// países y los ríos más detallados llenaran todos los huecos entre meandros (M5.1c); 0, ninguna. Prueba el respaldo de la
+        /// rejilla de la Cuenca sin depender de la geometría del Mapa. 0 en el juego.
+        /// </summary>
+        internal static int PlateTestNoNearSpotWorld { get; set; }
 
         private bool[] _plateFitHidden = new bool[0];
         private long _plateFitWorlds = -1;
@@ -224,7 +236,7 @@ namespace AF.UI
 
                 Rect local = PlateBox(root);
                 Rect seen = InView(local, o);
-                if (!seen.Overlaps(full) || (Inside(seen, inner) && !PlateFixedHit(local, seen, window, button, basin)))
+                if (!seen.Overlaps(full) || (Inside(seen, inner) && !PlateFixedHit(_silhouettes[k].World, local, seen, window, button, basin)))
                 {
                     continue; // entera fuera de la vista (no se ve) o entera dentro y libre
                 }
@@ -338,7 +350,7 @@ namespace AF.UI
             }
 
             Rect seen = InView(box, o);
-            if (!Inside(seen, inner) || PlateFixedHit(box, seen, window, button, basin) || PlateBlocked(k, box) || CountryUnder(box))
+            if (!Inside(seen, inner) || PlateFixedHit(_silhouettes[k].World, box, seen, window, button, basin) || PlateBlocked(k, box) || CountryUnder(box))
             {
                 return false;
             }
@@ -351,14 +363,26 @@ namespace AF.UI
         // en la vista Mundo, la ventanita, «Volver a la canoa» y los rótulos de orientación con los huecos de FixedHit (como
         // ResolvePlates); en la Cuenca, la ventanita y los controles de FX7 (BasinControlObstacles, con su hueco), que ya cuentan
         // «Norte arriba», «Volver a la canoa» y los rótulos.
-        private bool PlateFixedHit(Rect local, Rect seen, bool window, bool button, bool basin)
+        // world: el de la placa (para el obstáculo de los tests, PlateTestObstacle).
+        private bool PlateFixedHit(int world, Rect local, Rect seen, bool window, bool button, bool basin)
         {
+            if (TestObstacleHit(world, local))
+            {
+                return true;
+            }
+
             if (!basin)
             {
-                return FixedHit(seen, window, button) || (PlateFitTestObstacle.HasValue && seen.Overlaps(PlateFitTestObstacle.Value));
+                return FixedHit(seen, window, button);
             }
 
             return (window && seen.Overlaps(Grow(_frameWin, HomeWindowCuiaGapDp))) || HitsBasinControl(local);
+        }
+
+        // La placa del mundo world en local (coordenadas locales del contenido) pisa el obstáculo de los tests (PlateTestObstacle).
+        private static bool TestObstacleHit(int world, Rect local)
+        {
+            return PlateTestObstacle.HasValue && world == PlateTestObstacleWorld && local.Overlaps(PlateTestObstacle.Value);
         }
 
         // La caja (coordenadas locales del contenido) pisa un país que se ve.

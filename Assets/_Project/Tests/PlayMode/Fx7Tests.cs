@@ -52,6 +52,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             _layout?.Dispose();
+            RiverMapScreen.PlateTestNoNearSpotWorld = 0;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
             OnDemandRendering.renderFrameInterval = 1;
@@ -364,6 +365,85 @@ namespace AF.Tests.PlayMode
                 AssertPlatesClear(map, plates, at);
                 AssertPlatesClearOfTheGear(map, plates, at);
                 AssertPlatesClearOfTheBuoys(map, plates, at);
+                map.SetView(MapView.World);
+            }
+        }
+
+        /// <summary>
+        /// La colocación de las placas de la Cuenca no depende de los huecos entre meandros junto a su parada (M5.1c): con la
+        /// geometría de producción, los países y los ríos más detallados pueden llenarlos. Para cada placa con max 200 y 300, el
+        /// test le quita todos los sitios junto a su parada (<see cref="RiverMapScreen.PlateTestNoNearSpotWorld"/>: a su derecha
+        /// y a su izquierda, subiendo y bajando hasta <see cref="RiverMapScreen.SilhouetteMaxShiftDp"/>). La placa encuentra sitio
+        /// igual, en la rejilla de la zona visible (fuera del lleno o, si no lo hay, el que tapa menos líneas del lleno; antes se
+        /// quedaba en el primero junto a la parada, aunque pisara algo), con las reglas de FX7: a su alcance de la parada, sin
+        /// pisar otra placa, los controles, la canoa con su equipo ni las boyas, y tapando las líneas del lleno que vio su
+        /// búsqueda como mínimo.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator BasinPlates_NoRoomNextToTheStop_FindAGridSpot_WithinReach_ClearOfTheControls()
+        {
+            yield return MapMarkersTests.OpenApp(201);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            foreach (int max in new[] { 200, 300 })
+            {
+                if (max != 200)
+                {
+                    MapMarkersTests.Reopen(boot, new MemoryProgressStore(max + 1, max, max), max + 1);
+                }
+
+                RiverMapScreen.PlateTestNoNearSpotWorld = 0;
+                map.SetView(MapView.Basin);
+                map.Tick(16f);
+                int plates = map.SilhouetteCount;
+                Assert.That(plates, Is.GreaterThan(0), "max " + max + ": placas de mundos futuros");
+                var worlds = new List<int>();
+                for (int i = 0; i < plates; i++)
+                {
+                    worlds.Add(map.SilhouetteWorld(i));
+                }
+
+                foreach (int world in worlds)
+                {
+                    string at = "max " + max + ", Cuenca, la placa del mundo " + world + " sin sitio junto a su parada";
+                    RiverMapScreen.PlateTestNoNearSpotWorld = world;
+                    map.SetView(MapView.World);
+                    map.SetView(MapView.Basin);
+                    map.Tick(16f);
+                    Canvas.ForceUpdateCanvases();
+                    Assert.That(map.SilhouetteCount, Is.EqualTo(plates), at);
+                    int i = -1;
+                    for (int k = 0; k < plates && i < 0; k++)
+                    {
+                        i = map.SilhouetteWorld(k) == world ? k : -1;
+                    }
+
+                    Assert.That(i, Is.GreaterThanOrEqualTo(0), at);
+                    Rect box = map.SilhouetteLocalBox(i);
+                    Vector2 stop = map.Space.ToLocal(map.SilhouetteMapPoint(i));
+                    int hits = map.FillLinesUnderBox(box);
+                    Debug.Log("M5.1c " + at + ": " + box + " para la parada " + stop + ", tapa " + hits + " línea(s) del lleno (la búsqueda vio "
+                        + map.SilhouetteFillMin(i) + " como mínimo)");
+                    Assert.That(map.SilhouetteFillMin(i), Is.GreaterThanOrEqualTo(0), at + ": encontró un sitio libre en la rejilla");
+                    Assert.That(map.SilhouetteFillHits(i), Is.EqualTo(hits), at + ": está donde la colocó su búsqueda");
+                    Assert.That(hits, Is.EqualTo(map.SilhouetteFillMin(i)), at + ": tapa las líneas del lleno que vio como mínimo");
+                    float reach = RiverMapScreen.SilhouetteFarMaxDistDp + (box.width * 0.5f);
+                    float distance = Vector2.Distance(box.center, stop);
+                    Assert.That(distance, Is.LessThanOrEqualTo(reach + 0.01f), at + ": " + box + " a " + distance + " dp de su parada " + stop);
+                    for (int k = 0; k < plates; k++)
+                    {
+                        Assert.That(k == i || !box.Overlaps(map.SilhouetteLocalBox(k)), Is.True, at + ": pisa la placa del mundo " + map.SilhouetteWorld(k));
+                    }
+
+                    // Lo mínimo es el de la rejilla de la búsqueda (SilhouetteFarStepDp): aquí no se comprueba con la de 2 dp de
+                    // AssertNoFreeRoomOutOfTheFill, porque un hueco fuera del lleno más estrecho que el paso puede escapársele (con
+                    // max 300, la placa del mundo 8 sin sitio junto a su parada) [P].
+                    AssertPlatesClear(map, plates, at);
+                    AssertPlatesClearOfTheGear(map, plates, at);
+                    AssertPlatesClearOfTheBuoys(map, plates, at);
+                }
+
+                RiverMapScreen.PlateTestNoNearSpotWorld = 0;
                 map.SetView(MapView.World);
             }
         }

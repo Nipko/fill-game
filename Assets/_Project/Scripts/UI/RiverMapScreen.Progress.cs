@@ -1036,8 +1036,12 @@ namespace AF.UI
         // tapaban cintas del lleno): un sitio cercano vale solo si no pisa ninguna línea del lleno (FillLinesUnder) y deja
         // SilhouetteLineClearanceDp a las de clase 1-2. Si cerca no lo hay, en la Cuenca se busca en la zona visible con su
         // encuadre de apertura, hasta SilhouetteFarMaxDistDp de la parada, el sitio fuera del lleno más cercano a ella
-        // (FarFillFreeSpot); si tampoco lo hay, el respaldo es el sitio cercano que tapa menos líneas del lleno y, a igualdad, el de
-        // más hueco. Límites aceptados [P]: la placa puede quedar algo lejos de su parada (el texto la nombra), pero no en otra
+        // (FarSpot); si tampoco lo hay, el respaldo es el sitio cercano que tapa menos líneas del lleno y, a igualdad, el de más
+        // hueco. Si cerca no queda ningún sitio libre de lo demás (los países y los ríos más detallados de la geometría de
+        // producción pueden llenar los huecos entre meandros; M5.1c), en la Cuenca el respaldo es el sitio de esa misma rejilla, a
+        // su alcance, que tapa menos líneas del lleno y, a igualdad, el más cercano (FarSpot con leastFill), en vez del primer
+        // sitio junto a la parada, que pisaba algo; en el Mundo queda ese primer sitio, y FX10 (PlatesFit) lo aparta o, si no
+        // cabe, no lo enseña. Límites aceptados [P]: la placa puede quedar algo lejos de su parada (el texto la nombra), pero no en otra
         // región de la Cuenca, y una placa muy ancha puede no caber fuera del lleno sin pisar un control, un país o la canoa: con
         // max 200, la del mundo 7 («Madre de Dios», 215 dp en una Cuenca de 328) tapa las menos líneas del lleno que puede cerca de
         // su parada (dos). Fuera de la Cuenca (el Mundo, que se arrastra) no se busca lejos.
@@ -1089,14 +1093,15 @@ namespace AF.UI
                             first = box;
                         }
 
-                        if ((hasCanoe && box.Overlaps(canoe)) || OverlapsPlaced(box) || HitsBasinControl(box))
+                        if ((hasCanoe && box.Overlaps(canoe)) || OverlapsPlaced(box) || HitsBasinControl(box) || TestObstacleHit(s.World, box)
+                            || s.World == PlateTestNoNearSpotWorld)
                         {
                             continue;
                         }
 
                         // Como los países: el sitio libre más cercano que no tape el curso de los ríos (ni el frente, que va por
                         // ellos) ni el lleno. Si ninguno lo consigue, el respaldo es el que tapa menos líneas del lleno y, a
-                        // igualdad, el de más hueco (salvo que en la Cuenca FarFillFreeSpot encuentre uno fuera del lleno).
+                        // igualdad, el de más hueco (salvo que en la Cuenca FarSpot encuentre uno fuera del lleno).
                         float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp);
                         int fillHits = FillLinesUnder(map, space, _view, box);
                         if (!any || fillHits < bestFillHits || (fillHits == bestFillHits && clearance > bestClearance))
@@ -1113,10 +1118,16 @@ namespace AF.UI
 
                 Rect plate = any ? chosen : first;
                 int fillMin = any ? bestFillHits : -1;
-                if (!found && (!any || bestFillHits > 0) && FarFillFreeSpot(map, space, p, size, hasCanoe, canoe, out Rect far))
+                if (!found && (!any || bestFillHits > 0) && FarSpot(map, space, s.World, p, size, hasCanoe, canoe, false, out Rect far, out _))
                 {
                     plate = far;
                     fillMin = 0;
+                }
+                else if (!any && FarSpot(map, space, s.World, p, size, hasCanoe, canoe, true, out far, out int farFill))
+                {
+                    // Cerca no quedaba ningún sitio libre de lo demás (M5.1c): en la Cuenca, el de la rejilla que tapa menos lleno.
+                    plate = far;
+                    fillMin = farFill;
                 }
 
                 s.FillMin = fillMin;
@@ -1143,17 +1154,20 @@ namespace AF.UI
             return new Rect(at.x - (0.5f * w), at.y - (CanoePivotY * h), w, h);
         }
 
-        // En la Cuenca sin girar, el sitio de una placa de tamaño size que no pisa ninguna línea del lleno, la canoa, los países, las
-        // otras placas ni los controles, dentro de la zona visible con el encuadre de apertura (_basinFrame) y del mapa (con
-        // LabelEdgeDp de margen) y con el centro a lo sumo a SilhouetteFarMaxDistDp más medio ancho de la parada p (revisión de FX7:
-        // que la placa no salte a otra región de la Cuenca), más cercano a p; vale aunque cruce afluentes de clase 1-2 que no estén
-        // llenos, y a igual distancia gana el de más hueco con ellos. En una
-        // rejilla de SilhouetteFarStepDp (y pegada a los bordes derecho e inferior). False si no hay ninguno: entonces la placa se
-        // queda cerca de su parada (una placa que se fuera lejos para tapar menos líneas, pero alguna, quitaría el sitio a las
-        // siguientes). Sin asignaciones.
-        private bool FarFillFreeSpot(RiverMap map, MapSpace space, Vector2 p, Vector2 size, bool hasCanoe, Rect canoe, out Rect spot)
+        // En la Cuenca sin girar, el sitio de una placa (la del mundo world, de tamaño size) que no pisa ninguna línea del lleno, la
+        // canoa, los países, las otras placas ni los controles, dentro de la zona visible con el encuadre de apertura (_basinFrame)
+        // y del mapa (con LabelEdgeDp de margen) y con el centro a lo sumo a SilhouetteFarMaxDistDp más medio ancho de la parada p
+        // (revisión de FX7: que la placa no salte a otra región de la Cuenca), más cercano a p; vale aunque cruce afluentes de clase
+        // 1-2 que no estén llenos, y a igual distancia gana el de más hueco con ellos. En una rejilla de SilhouetteFarStepDp (y
+        // pegada a los bordes derecho e inferior). False si no hay ninguno: entonces la placa se queda cerca de su parada (una
+        // placa que se fuera lejos para tapar menos líneas, pero alguna, quitaría el sitio a las siguientes). Con leastFill (solo
+        // si cerca no quedaba ningún sitio libre de lo demás; M5.1c), vale también un sitio que tapa el lleno: el que tapa menos
+        // líneas y, a igualdad, el más cercano. fill, las líneas del lleno que tapa el sitio. Sin asignaciones.
+        private bool FarSpot(RiverMap map, MapSpace space, int world, Vector2 p, Vector2 size, bool hasCanoe, Rect canoe, bool leastFill,
+            out Rect spot, out int fill)
         {
             spot = default;
+            fill = 0;
             if (_view != MapView.Basin || !_basinFrameSet)
             {
                 return false;
@@ -1174,6 +1188,7 @@ namespace AF.UI
             int rows = Mathf.FloorToInt((yMax - yMin - size.y) / SilhouetteFarStepDp);
             float reach = SilhouetteFarMaxDistDp + (size.x * 0.5f);
             bool any = false;
+            int bestFill = int.MaxValue;
             float bestDistance = float.PositiveInfinity;
             float bestClearance = float.NegativeInfinity;
             for (int r = 0; r <= rows + 1; r++)
@@ -1184,16 +1199,23 @@ namespace AF.UI
                     float x = c <= cols ? xMin + (c * SilhouetteFarStepDp) : xMax - size.x;
                     var box = new Rect(x, y, size.x, size.y);
                     float distance = PointBoxDistance(p, box);
-                    if (distance > bestDistance + 0.01f || (box.center - p).sqrMagnitude > reach * reach || (hasCanoe && box.Overlaps(canoe))
-                        || OverlapsPlaced(box) || HitsBasinControl(box) || FillLinesUnder(map, space, _view, box) > 0)
+                    if ((!leastFill && distance > bestDistance + 0.01f) || (box.center - p).sqrMagnitude > reach * reach
+                        || (hasCanoe && box.Overlaps(canoe)) || OverlapsPlaced(box) || HitsBasinControl(box) || TestObstacleHit(world, box))
+                    {
+                        continue;
+                    }
+
+                    int hits = FillLinesUnder(map, space, _view, box);
+                    if (leastFill ? any && (hits > bestFill || (hits == bestFill && distance > bestDistance + 0.01f)) : hits > 0)
                     {
                         continue;
                     }
 
                     float clearance = LineClearance(map, space, _view, box, SilhouetteLineClearanceDp);
-                    if (!any || distance < bestDistance - 0.01f || clearance > bestClearance)
+                    if (!any || hits < bestFill || distance < bestDistance - 0.01f || clearance > bestClearance)
                     {
                         any = true;
+                        bestFill = hits;
                         bestDistance = distance;
                         bestClearance = clearance;
                         spot = box;
@@ -1201,6 +1223,7 @@ namespace AF.UI
                 }
             }
 
+            fill = any ? bestFill : 0;
             return any;
         }
 
@@ -1216,7 +1239,8 @@ namespace AF.UI
         /// <summary>
         /// Las menos líneas del lleno que tapaba un sitio de la placa <paramref name="i"/> libre de los demás obstáculos entre los
         /// que probó su búsqueda: la cercana o, si en la Cuenca encontró uno fuera del lleno en la zona visible (hasta
-        /// <see cref="SilhouetteFarMaxDistDp"/> de su parada), 0; −1 si ninguno estaba libre (tests de FX7).
+        /// <see cref="SilhouetteFarMaxDistDp"/> de su parada), 0; si cerca ninguno estaba libre, en la Cuenca, las del sitio de esa
+        /// zona que tapaba menos (M5.1c); −1 si no hubo ninguno libre (tests de FX7).
         /// </summary>
         internal int SilhouetteFillMin(int i)
         {

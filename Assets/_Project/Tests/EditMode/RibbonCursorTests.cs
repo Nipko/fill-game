@@ -614,11 +614,47 @@ namespace AF.Tests.EditMode
             Assert.That(outer, Is.EqualTo(2), "la orilla de fuera de las dos secciones del bisel, a medio ancho del codo");
             Assert.That(farthest, Is.LessThanOrEqualTo((RiverRibbonGraphic.MiterLimit * half) + 0.01f), "sin pico");
 
-            // Un giro suave sigue con su inglete: el cauce real a 1×, ningún vértice más allá del límite del inglete de su punto.
-            RiverRibbonGraphic main = Ribbon(_map.Lines[0], RibbonLook.Glass);
+            // El cauce real a 1×, con el trazo suave: tiene codos cerrados entre los puntos que quedan (van en bisel) y ningún
+            // vértice pasa del límite del inglete (MiterLimit medios anchos) de la línea. Cada sección va en un punto de la
+            // polilínea (uno de sus puntos, una punta o un cambio de agua), así que su distancia a la línea acota la de su punto.
+            RiverLine cauce = _map.Lines[0];
+            RiverRibbonGraphic main = Ribbon(cauce, RibbonLook.Glass);
             main.SetSmooth(true);
-            Mesh(main);
+            List<UIVertex> mainVerts = Mesh(main);
             Assert.That(main.LastBevelCount, Is.GreaterThan(0), "el cauce tiene codos cerrados entre sus puntos");
+            var space = new MapSpace(Basin, Vector2.zero);
+            var cursor = new PolylineCursor(cauce);
+            var points = new Vector2[cauce.PointCount];
+            for (int i = 0; i < points.Length; i++)
+            {
+                points[i] = space.ToLocal(cursor.Point(i));
+            }
+
+            float limit = (RiverRibbonGraphic.MiterLimit * main.WidthDp * 0.5f) + 0.01f;
+            float worst = 0f;
+            for (int v = 0; v < mainVerts.Count; v++)
+            {
+                Vector2 q = mainVerts[v].position;
+                float best = float.PositiveInfinity;
+                for (int i = 1; i < points.Length && best > 0f; i++)
+                {
+                    Vector2 a = points[i - 1];
+                    Vector2 b2 = points[i];
+                    if (Mathf.Min(a.x, b2.x) - limit > q.x || Mathf.Max(a.x, b2.x) + limit < q.x
+                        || Mathf.Min(a.y, b2.y) - limit > q.y || Mathf.Max(a.y, b2.y) + limit < q.y)
+                    {
+                        continue;
+                    }
+
+                    Vector2 ab = b2 - a;
+                    float t = ab.sqrMagnitude > 1e-12f ? Mathf.Clamp01(Vector2.Dot(q - a, ab) / ab.sqrMagnitude) : 0f;
+                    best = Mathf.Min(best, Vector2.Distance(q, a + (t * ab)));
+                }
+
+                worst = Mathf.Max(worst, best);
+            }
+
+            Assert.That(worst, Is.LessThanOrEqualTo(limit), "el cauce, sin picos: ningún vértice más allá del límite del inglete");
         }
 
         [Test]

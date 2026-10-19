@@ -59,7 +59,8 @@ namespace AF.Tests.PlayMode
         {
             Application.logMessageReceived -= OnLog;
             GameBootstrap.ContentEndMapOverride = null;
-            RiverMapScreen.PlateFitTestObstacle = null;
+            RiverMapScreen.PlateTestObstacle = null;
+            RiverMapScreen.PlateTestObstacleWorld = 0;
             MapArtRule.ForceProvisional = null;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
@@ -428,13 +429,15 @@ namespace AF.Tests.PlayMode
         /// La placa que no cabe de ningún modo [P]. El lienzo mide al menos 360 × 780 dp (02 §5), así que una pantalla simulada
         /// más estrecha o más baja no encoge la zona del mapa (328 dp de ancho). Con la geometría de las pruebas de FX10, en-XA
         /// (+35 %, <c>LocPseudo</c>) a la escala de texto máxima (<see cref="UiBuilder.MaxTextScale"/>) dejaba sin sitio la placa
-        /// del mundo 9 con 299; con la de producción (M5.1) todas caben en todos los progresos medidos (M5.1c), así que la falta
-        /// de sitio la pone el test, sin depender de la geometría: un obstáculo que cubre la zona visible
-        /// (<see cref="RiverMapScreen.PlateFitTestObstacle"/>), que ninguna placa de la vista Mundo puede pisar. Sigue con en-XA
-        /// al 130 % y 299. Comprueba que (a) no sale (ni
-        /// su placa ni su texto); (b) no es obstáculo: otra placa puede ir sobre su caja (<c>PlateBlocked</c>); (c) arrastrar el
-        /// mapa la vuelve a enseñar en su sitio, y entonces sí es obstáculo; (d) al abrir otra vez la vista se vuelve a pesar: en
-        /// la Cuenca no se oculta (ni con otros progresos) y, de vuelta en el Mundo, vuelve a no salir.
+        /// del mundo 9 con 299; con la de producción (M5.1) todas caben en todos los progresos medidos (M5.1c): el test lo comprueba
+        /// primero sin obstáculo, con 299 y con 140. Luego la falta de sitio la pone el test, sin depender de la geometría: un
+        /// obstáculo de prueba (<see cref="RiverMapScreen.PlateTestObstacle"/>) que cubre todo el mapa solo para una placa; las
+        /// demás no lo ven. Con 140 (con 299 solo asoma a la vista Mundo la del mundo 9), en-XA al 130 %: asoman las de los mundos
+        /// 6 y 9, y el obstáculo es para la primera. Comprueba que (a) no sale (ni su placa ni su texto) mientras las demás siguen
+        /// colocadas (ninguna oculta, pintadas y las que asomaban, a la vista); (b) no es obstáculo: otra placa, pintada y a la
+        /// vista, puede ir sobre su caja (<c>PlateBlocked</c>); (c) arrastrar el mapa la vuelve a enseñar en su sitio, y entonces sí
+        /// es obstáculo; (d) al abrir otra vez la vista se vuelve a pesar: en la Cuenca no se oculta (ni con otros progresos) y, de
+        /// vuelta en el Mundo, vuelve a no salir.
         /// </summary>
         [UnityTest]
         public IEnumerator WorldView_APlateWithNoRoom_IsHidden_IsNoObstacle_ComesBackOnDrag_AndIsWeighedAgainWithTheView()
@@ -442,30 +445,91 @@ namespace AF.Tests.PlayMode
             LaunchOptions.LanguageOverride = LocLocale.Pseudo;
             LaunchOptions.FontScaleOverride = UiBuilder.MaxTextScale;
             MapArtRule.ForceProvisional = true;
-            RiverMapScreen.PlateFitTestObstacle = new Rect(-1000f, -1000f, 3000f, 3000f); // toda la zona visible
             yield return MapMarkersTests.OpenApp(300);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
             Assert.That(Loc.Locale, Is.EqualTo(LocLocale.Pseudo));
             Assert.That(map.View, Is.EqualTo(MapView.World));
             map.Tick(16f);
-            AssertPlatesFit(map, "299 en en-XA al 130 %");
-
-            // (a) La que no cabe, sin pintar.
-            int hidden = -1;
-            for (int i = 0; i < map.SilhouetteCount && hidden < 0; i++)
+            AssertPlatesFit(map, "299 en en-XA al 130 %, sin obstáculo");
+            Vector2 view = map.ViewportSize;
+            var full = new Rect(0f, 0f, view.x, view.y);
+            int world = -1;
+            int seenBefore = 0;
+            var seenWorlds = new List<int>();
+            foreach (int max in new[] { 299, 140 })
             {
-                hidden = map.PlateFitHidden(i) ? i : -1;
+                if (max != 299)
+                {
+                    MapMarkersTests.Reopen(boot, new MemoryProgressStore(max + 1, max, max), max + 1);
+                    Assert.That(map.View, Is.EqualTo(MapView.World));
+                    map.Tick(16f);
+                    AssertPlatesFit(map, max + " en en-XA al 130 %, sin obstáculo");
+                }
+
+                // Sin el obstáculo, con la geometría de producción, ninguna se oculta (M5.1c).
+                for (int i = 0; i < map.SilhouetteCount; i++)
+                {
+                    Assert.That(map.PlateFitHidden(i), Is.False, "con " + max + ", sin obstáculo, la placa «" + map.SilhouetteText(i) + "» cabe (M5.1c)");
+                }
             }
 
-            Assert.That(hidden, Is.GreaterThanOrEqualTo(0), "con 299 en en-XA al 130 %, una placa de la vista Mundo no cabe");
+            // Con 140, la primera que asoma, la elegida.
+            for (int i = 0; i < map.SilhouetteCount; i++)
+            {
+                if (map.SilhouetteViewBox(i).Overlaps(full))
+                {
+                    seenBefore++;
+                    seenWorlds.Add(map.SilhouetteWorld(i));
+                    world = world < 0 ? map.SilhouetteWorld(i) : world;
+                }
+            }
+
+            Assert.That(seenBefore, Is.GreaterThanOrEqualTo(2), "con 140, al menos dos placas asoman a la vista Mundo: la que se queda sin sitio y otra");
+
+            // El obstáculo, solo para la placa de ese mundo; la vista se vuelve a pesar al abrirla otra vez.
+            RiverMapScreen.PlateTestObstacleWorld = world;
+            RiverMapScreen.PlateTestObstacle = new Rect(-100000f, -100000f, 200000f, 200000f); // todo el mapa
+            map.SetView(MapView.Basin);
+            map.Tick(16f);
+            map.SetView(MapView.World);
+            map.Tick(16f);
+            AssertPlatesFit(map, "140 en en-XA al 130 %");
+
+            // (a) La que no cabe, sin pintar; las demás, colocadas y pintadas, y alguna a la vista.
+            int hidden = -1;
+            int seen = 0;
+            int other = -1;
+            for (int i = 0; i < map.SilhouetteCount; i++)
+            {
+                if (map.SilhouetteWorld(i) == world)
+                {
+                    hidden = i;
+                    continue;
+                }
+
+                string at = "la placa «" + map.SilhouetteText(i) + "»";
+                Assert.That(map.PlateFitHidden(i), Is.False, at + ": las demás placas no se ocultan");
+                Assert.That(map.SilhouettePlate(i).enabled && map.SilhouetteLabel(i).enabled, Is.True, at + ": pintada");
+                bool inView = map.SilhouetteViewBox(i).Overlaps(full);
+                seen += inView ? 1 : 0;
+                Assert.That(inView || !seenWorlds.Contains(map.SilhouetteWorld(i)), Is.True, at + ": asomaba sin el obstáculo y sigue a la vista");
+                other = other < 0 && inView ? i : other;
+            }
+
+            Assert.That(hidden, Is.GreaterThanOrEqualTo(0), "la placa del mundo " + world);
+            Assert.That(map.PlateFitHidden(hidden), Is.True, "con el obstáculo, la placa del mundo " + world + " no cabe en la vista Mundo");
+            Assert.That(seen, Is.EqualTo(seenBefore - 1), "las demás placas que asomaban siguen a la vista: una oculta entre otras que se ven");
             string plate = "la placa «" + map.SilhouetteText(hidden) + "»";
-            Debug.Log("FX10 sin sitio: " + plate + " " + map.SilhouetteViewBox(hidden) + " en una zona de " + map.ViewportSize);
+            Debug.Log("FX10 sin sitio: " + plate + " " + map.SilhouetteViewBox(hidden) + " en una zona de " + map.ViewportSize + "; a la vista, "
+                + seenBefore + " placas sin obstáculo y " + seen + " más la oculta con él");
             Assert.That(map.SilhouettePlate(hidden).enabled, Is.False, plate + ": su placa no se pinta");
             Assert.That(map.SilhouetteLabel(hidden).enabled, Is.False, plate + ": su texto tampoco");
 
-            // (b) No es obstáculo: hay un trozo de su caja donde otra placa no pisa nada.
-            int other = hidden == 0 ? (map.SilhouetteCount > 1 ? 1 : -1) : 0;
+            // (b) No es obstáculo: hay un trozo de su caja donde otra placa, pintada y a la vista, no pisa nada.
+            Assert.That(other, Is.GreaterThanOrEqualTo(0), "otra placa a la vista");
+            Assert.That(map.PlateFitHidden(other), Is.False);
+            Assert.That(map.SilhouettePlate(other).enabled && map.SilhouetteLabel(other).enabled, Is.True, "la otra placa, pintada");
             Rect box = map.SilhouetteLocalBox(hidden);
             Rect free = default;
             bool found = false;
@@ -494,12 +558,12 @@ namespace AF.Tests.PlayMode
             // (d) Al abrir otra vez la vista se vuelve a pesar: en la Cuenca nunca se oculta; en el Mundo, otra vez no sale.
             map.SetView(MapView.Basin);
             map.Tick(16f);
-            AssertNoneHidden(map, "299 en en-XA al 130 %, Cuenca");
+            AssertNoneHidden(map, "140 en en-XA al 130 %, Cuenca");
             map.SetView(MapView.World);
             map.Tick(16f);
             Assert.That(map.PlateFitHidden(hidden), Is.True, plate + ": de vuelta en el Mundo, con el encuadre de apertura, no sale");
             Assert.That(map.SilhouettePlate(hidden).enabled || map.SilhouetteLabel(hidden).enabled, Is.False, plate + ": sin pintar");
-            AssertPlatesFit(map, "299 en en-XA al 130 %, Mundo otra vez");
+            AssertPlatesFit(map, "140 en en-XA al 130 %, Mundo otra vez");
 
             foreach (int max in new[] { 39, 140, 200, 300 })
             {
