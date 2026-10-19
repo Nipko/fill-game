@@ -1542,6 +1542,7 @@ namespace AF.UI
             _screen.SetVisible(false);
             Fauna = LoadFauna();
             _screen.Fauna = Fauna; // la especie de miquito de cada intro (guion de la intro §4.3)
+            _screen.SightingShown = RecordSighting; // el avistamiento en el perfil y af_fauna_sighted (DC15; GameBootstrap.Fauna.cs)
             RiverStops = LoadRiverStops(riverStops);
             _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013): fondo, llegada y rótulo del lugar
             _screen.RiverGeometry = TryRiverGeometry; // la geometría del Mapa para el viaje de mundo del banner (M3.6)

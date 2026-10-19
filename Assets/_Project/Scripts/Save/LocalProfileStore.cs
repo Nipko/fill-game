@@ -308,34 +308,68 @@ namespace AF.Save
                 return new Attempt(AttemptKind.TooNew, null, false, name + ": profile_schema " + Invariant(schema) + " es más nuevo que esta build (" + Invariant(_migrations.TargetSchema) + ")");
             }
 
-            bool migrated = false;
-            if (schema < _migrations.TargetSchema)
+            if (schema == _migrations.TargetSchema)
             {
                 try
                 {
-                    // 08 §4.4: antes de migrar se escribe profile.bak (si se migra la propia copia, ya lo es).
-                    if (!isBackup)
-                    {
-                        File.Copy(path, BackupPath, true);
-                    }
-
-                    _migrations.Migrate(root, schema);
+                    return new Attempt(AttemptKind.Ok, ProfileJson.FromNode(root), false, null);
                 }
-                catch (Exception e)
+                catch (FormatException e)
                 {
-                    return new Attempt(AttemptKind.MigrationFailed, null, false, name + ": migración desde profile_schema " + Invariant(schema) + " fallida: " + e.Message);
+                    return new Attempt(AttemptKind.Corrupt, null, false, name + ": " + e.Message);
                 }
+            }
 
-                migrated = true;
+            // 08 §4.4: antes de migrar, profile.bak (si se migra la propia copia, ya lo es). La migración va en memoria y el
+            // archivo no se toca hasta el siguiente Save, así que la copia se escribe cuando el documento ya migró y se leyó
+            // (DC15): un principal antiguo con un tipo equivocado es corrupto y no pisa la copia buena, que es lo que se carga
+            // entonces. Si el paso lanza, la copia también se escribe (el principal no se toca y la escritura queda bloqueada).
+            Profile profile;
+            try
+            {
+                _migrations.Migrate(root, schema);
+            }
+            catch (Exception e)
+            {
+                string? copyError = TryBackUp(path, isBackup);
+                return new Attempt(AttemptKind.MigrationFailed, null, false, name + ": migración desde profile_schema " + Invariant(schema) + " fallida: " + e.Message
+                    + (copyError == null ? string.Empty : " (" + copyError + ")"));
             }
 
             try
             {
-                return new Attempt(AttemptKind.Ok, ProfileJson.FromNode(root), migrated, null);
+                profile = ProfileJson.FromNode(root);
             }
             catch (FormatException e)
             {
                 return new Attempt(AttemptKind.Corrupt, null, false, name + ": " + e.Message);
+            }
+
+            string? backupError = TryBackUp(path, isBackup);
+            if (backupError != null)
+            {
+                return new Attempt(AttemptKind.MigrationFailed, null, false, name + ": migración desde profile_schema " + Invariant(schema) + " fallida: " + backupError);
+            }
+
+            return new Attempt(AttemptKind.Ok, profile, true, null);
+        }
+
+        // Copia el archivo a migrar en profile.bak (nada si es la propia copia); el mensaje del error, o null.
+        private string? TryBackUp(string path, bool isBackup)
+        {
+            if (isBackup)
+            {
+                return null;
+            }
+
+            try
+            {
+                File.Copy(path, BackupPath, true);
+                return null;
+            }
+            catch (Exception e)
+            {
+                return "no se pudo escribir " + BackupFileName + ": " + e.Message;
             }
         }
 

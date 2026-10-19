@@ -8,7 +8,7 @@ namespace AF.Save.Tests
 {
     /// <summary>
     /// Migraciones <c>profile_schema n → n+1</c> encadenadas (GDD 08 §4.4: el esquema solo avanza). Se prueban con un
-    /// juego sintético 1 → 2 → 3 sobre el documento JSON, porque la build actual está en el esquema 1 sin pasos.
+    /// juego sintético 1 → 2 → 3 sobre el documento JSON; el paso real 1 → 2 de la build (DC15), en ProfileV1ToV2Tests.
     /// </summary>
     public sealed class ProfileMigrationsTests
     {
@@ -53,7 +53,7 @@ namespace AF.Save.Tests
         [Test]
         public void CurrentSchema_IsANoOp()
         {
-            JsonNode doc = JsonText.Parse("{\"profile_schema\": 1}");
+            JsonNode doc = JsonText.Parse("{\"profile_schema\": " + Profile.CurrentSchema + "}");
 
             ProfileMigrations.Current.Migrate(doc, Profile.CurrentSchema);
 
