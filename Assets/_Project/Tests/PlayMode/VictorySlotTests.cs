@@ -353,6 +353,21 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator SlothBox_IsTheFreeBandBetweenHeaderAndCuias_AfterShiftToClear()
         {
+            // La caja de TI6a, sin la victoria con vista (ui_victory_view apagada); con ella, la franja de la cabecera a la cinta
+            // (DC2; SlothVictoryBandTests).
+            GameScreen.VictoryViewOverride = false;
+            try
+            {
+                yield return SlothBoxWithoutTheView();
+            }
+            finally
+            {
+                GameScreen.VictoryViewOverride = null;
+            }
+        }
+
+        private static IEnumerator SlothBoxWithoutTheView()
+        {
             yield return HudSetup.LoadAtIntro(40);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;

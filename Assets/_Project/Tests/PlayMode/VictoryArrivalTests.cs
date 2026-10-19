@@ -139,7 +139,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Level80_WelcomesToColombia()
         {
-            yield return Win(80);
+            // El 80 es un hito de TiTino: desde DC2 (victoria con vista) habla él y la llegada va sin dato (placa con la
+            // bienvenida). Con sus mensajes apagados, la llegada completa con su dato, que es lo que se mira aquí.
+            yield return Win(80, v => v.SlothVoice = false);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
             PlayModeHelpers.Step(boot, 1600);
