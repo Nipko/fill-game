@@ -4,6 +4,8 @@ Fecha: 2026-10-18 · Ejecutado por: agente (build-release) · Base: `integracion
 
 ## Veredicto provisional: cumple con los niveles 1-300 (falta C1b)
 
+> **Actualización (B2b, 2026-10-19):** medida repetida con los niveles 1-700 (C1b) y las fuentes recortadas (FNT1) en la integración de la parte B de la ola 7: `game.aab` de **51,32 MB** y descarga en Play de **50,26 MB** como máximo; cumple las dos compuertas. Detalle en la sección «B2b» al final. Lo que sigue es la medida de B2a y se conserva como estaba.
+
 **B2 no está terminada.** La tarea pide la medida con los 700 niveles de la ola 7 y depende de C1b, que no está en esta rama, como tampoco TJ3 ni TJ4, que van antes en el carril (`git log cb2460e..HEAD` solo trae FX8 y B2, y `tanda4/o7-c1b` no tiene commits sobre `cb2460e`). Lo que sigue es la medida de la base actual (B2a). Queda pendiente B2b: repetir `BuildGameAab`, `ci/size-gate.ps1 -Breakdown -RequireBundletool` y `ci/check-16kb.sh` sobre `game.aab` cuando C1b (y TJ3/TJ4) estén en la rama, y actualizar las tablas «Peso por grupo» y «Frente a B0». El tech-lead decide si deja B2 abierta o la parte así.
 
 - **Tamaño:** el AAB del juego pesa **51,87 MB**, y su descarga en Play (`bundletool get-size total`) es de **50,80 MB** como máximo, frente al tope de 80 MB. El AAB de humo pesa 40,03 MB, con una descarga de 38,96 MB.
@@ -213,3 +215,81 @@ Lo genera `AF.EditorTools.FontSetup.ApplyAll`, idempotente. No hay YAML a mano.
 
 - Del dueño, si quiere más sitio de las fuentes, con nueva revisión visual: el margen mínimo de la guía (−7 % en Baloo 2 y −25 % en Nunito ExtraBold de sus atlas) o quitar `PerfectDOSVGA437.ttf` (0,08 MB) desactivando la depuración en tiempo de ejecución de URP.
 - La medida de referencia sigue siendo la del CI Linux x64 (s30/s32), y B2b la repetirá con los niveles 1-700.
+
+## B2b: medida con los niveles 1-700 y FNT1 (2026-10-19)
+
+Base: el carril de los mundos 7-9 (`tanda4/o7-c1b`) con GEN79, C1b y C1c, la parte A de la ola 7 (`integracion-fase1-fase2` en `80b26b4`: TJ3/TJ4, FX8, B2, FX9, FX10, M5.1 y M5.1c), FX11 y FNT1 fusionados, y el arreglo de la fusión de los tests del fin de contenido. Escritorio x64, Unity 6000.3.25f1 x86_64 con el semáforo de Unity, bundletool 1.17.2 y build-tools 36.0.0 del Editor. Ejecutado por un agente (unity-gameplay-dev, integración).
+
+### Veredicto: cumple
+
+- **Tamaño:** `game.aab` pesa **51,32 MB** (51.321.880 B) y su descarga en Play (`bundletool get-size total`) es de **50,24-50,26 MB**, frente al tope de 80 MB.
+- **16 KB correcto:** las 7 `.so` de `arm64-v8a` están alineadas a 16384, y `zipalign -c -P 16 -v 4` sale bien en el APK universal.
+- **Manifiesto:** `com.amazonfill.dev`, minSdk 26 y targetSdk 36. Permisos: `INTERNET` (sigue pendiente del dueño), `VIBRATE` (D-026) y el `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` propio de AndroidX. Ninguno nuevo.
+- **Los niveles 301-700 confirman la estimación de B2a:** los tres packs (`mundo_07_v1.json`, `mundo_08_v1.json` y `mundo_09_v1.json`, variante b publicada) suman 575.503 B (0,58 MB sin comprimir, 1,44 KB por nivel; B2a estimaba ≈ 0,56-0,6 MB) y añaden unos 0,06 MB comprimidos al AAB.
+
+### Comandos
+
+| Comando | Código | Resultado |
+|---|---|---|
+| `unity run <wt> --architecture x86_64 --log-file <wt>/Logs/b2b-game-aab.log --no-tail --timeout 5400 --non-interactive -- -nographics -buildTarget Android -executeMethod AF.EditorTools.AudioAssetSetup.BuildGameAab` | 0 | `game.aab` en 269,0 s, 0 errores y 1 aviso, más `Logs/audio-size.md` y `Logs/aab-size.md` |
+| `pwsh ci/size-gate.ps1 Builds/Android/game.aab -Breakdown -RequireBundletool -Bundletool <bundletool-all-1.17.2.jar del Editor>` | 0 | archivo 51,32 MB y Play 50,24-50,26 MB |
+| `CHECK16_REQUIRE_ZIPALIGN=1 BUNDLETOOL_JAR=<ídem> ZIPALIGN=<build-tools 36.0.0>/zipalign.exe bash ci/check-16kb.sh Builds/Android/game.aab` | 0 | 7 `.so` de 64 bits y 0 fallos |
+| `java -jar <bundletool> dump manifest --bundle Builds/Android/game.aab` | 0 | el manifiesto de arriba |
+
+SHA-256 de `game.aab`: `e21ff7ee7c1fc6081d403a0beadb22e164032ebc4b3feff06b7f1e0e9ef67b7c` (en `Builds/Android/`, que ignora git).
+
+### Peso por grupo
+
+Dentro del AAB (`ci/size-gate.ps1 -Breakdown`; MB comprimidos en el AAB / sin comprimir):
+
+| Grupo | B2a (1-300) | FNT1 (1-300) | B2b (1-700 y FNT1) |
+|---|---|---|---|
+| Código nativo (`lib/arm64-v8a`) | 27,97 / 94,62 | — | 28,00 / 94,68 |
+| Datos de Unity (`assets/bin`) | 21,16 / 49,48 | 20,52 / 46,86 | 20,58 / 47,47 |
+| dex (Java/Kotlin) | 2,35 / 6,44 | — | 2,35 / 6,44 |
+| Recursos y manifiesto de Android | 0,22 / 0,67 | — | 0,22 / 0,67 |
+| Metadatos, firma y `root` | 0,07 / 0,17 | — | 0,07 / 0,17 |
+| Cabeceras y directorio del ZIP | 0,09 | — | 0,09 |
+| **Total** | **51,87** | **51,23** | **51,32** |
+
+FNT1 no publicó su desglose completo, solo la fila de los datos de Unity (sección FNT1). El código nativo crece 0,03 MB con el código de la ola 7 (TJ3/TJ4, C1b y C1c).
+
+Dentro de los datos de Unity (Build Report, `Logs/aab-size.md`; MB empaquetados sin comprimir):
+
+| Grupo | Assets | B2a | B2b | Diferencia |
+|---|---:|---:|---:|---:|
+| Niveles (packs 1-700 y `seasons_v1`) | 10 | 0,38 | 0,96 | +0,58 |
+| Textos, Mapa y datos | 6 | 0,85 | 0,87 | +0,02 |
+| Fuentes (FNT1) | 15 | 6,88 | 4,26 | −2,62 |
+| Arte | 1 | 0,35 | 0,35 | 0 |
+| Audio | 174 | 16,91 | 16,91 | 0 |
+| Shaders y materiales | 8 | 0,09 | 0,09 | 0 |
+| Escenas y scripts | 331 | 0,03 | 0,03 | 0 |
+| Paquetes | 2.326 | 5,92 | 5,92 | 0 |
+| Recursos integrados de Unity | 3 | 3,33 | 3,33 | 0 |
+| Otros | 12 | 0,03 | 0,03 | 0 |
+| **Datos empaquetados** | 2.885 | **34,76** | **32,74** | **−2,02** |
+
+Las fuentes pesan lo mismo que en FNT1: los textos de la ola 7 no añadieron ningún carácter fuera de los atlas (`FontTrimTests`, en verde en este árbol).
+
+### Frente a B0, con el AAB de hoy
+
+| Escenario | AAB (MB) | Margen hasta 80 MB |
+|---|---:|---:|
+| AAB del juego (`game.aab`, niveles 1-700 y FNT1, sin SDK ni arte) | 51,32 | 28,68 |
+| + arte encargado según B0, a 1× en el build (11,02 MB) | 62,34 | 17,66 |
+| + arte según B0, a 2× de entrega (21,55 MB) | 72,87 | 7,13 |
+| + SDK nativos de 08 §6.1 (≈ 12-18 MB) sobre el escenario a 1× | 74,3-80,3 | 5,7 a −0,3 |
+| + SDK sobre el escenario a 2× | 84,9-90,9 | **supera** |
+
+El veredicto de B2a no cambia: con los SDK y el arte a 2× no cabe, y a 1× queda justo. Los 700 niveles cuestan menos de una décima de MB en el AAB.
+
+### Avisos de LocReleaseGate (B1)
+
+Con `com.amazonfill.dev` solo avisa: **814 problemas** que pararían un build de release (811 en B2a; no se desglosaron los 3 de más). Lo esperable hasta el visto bueno del asesor cultural y las traducciones.
+
+### Pendiente
+
+- La medida de referencia sigue siendo la del CI Linux x64 (s30/s32), con `-RequireBundletool` y `CHECK16_REQUIRE_ZIPALIGN=1`, sobre el AAB del juego.
+- Para el carril de documentación: GDD 08 §6.1 y el traspaso, con estas cifras (B2b sustituye a B2a como la medida de la ola 7).
+- Del dueño, lo mismo que en B2a: el permiso `INTERNET` y cómo se gana sitio antes de los SDK y del arte a 2×.
