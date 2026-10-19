@@ -122,8 +122,8 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator AfterTheLastLevel_PlayOpensTheRiverKeepsGrowing()
         {
-            // El catálogo de la escena acaba en el 300 (tutorial_v0 y mundo_02..06_v1, desde C1a): el 301 aún no está publicado.
-            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(301)));
+            // El catálogo de la escena acaba en el 700 (tutorial_v0 y mundo_02..09_v1, desde C1b): el 701 aún no está publicado.
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(701)));
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
             Assert.That(boot.PressPlay(), Is.True);

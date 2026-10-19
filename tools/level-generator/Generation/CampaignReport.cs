@@ -444,7 +444,7 @@ internal static class CampaignReport
         }
 
         W();
-        W(F($"Alivio (03 §13): `minus_color` nunca quita una fruta de la tinaja y las variantes repiten la ruta segura y los paseos (con `TinajaWalks.ReliefOptions`, las de Morpho: w = {TinajaWalks.MorphoWeight} y {TinajaWalks.Thousands(TinajaWalks.MorphoRealityBudget)} nodos por realidad [P], pendiente de decisión) con la máscara de la tinaja, que el pack escribe en su `hidden` (`pack_schema` {PackWriter.TinajaPackSchema}; 08 §4.1: `relief_board` admite `hidden` si y solo si su `attrs` contiene la tinaja). `plus_empty` no se publica si pasa de {Superposition.TinajaMaxCuias} cuias (02 §5) [P]."));
+        W(F($"Alivio (03 §13): `minus_color` nunca quita una fruta de la tinaja y las variantes repiten la ruta segura y los paseos (con `TinajaWalks.ReliefOptions`, las de Morpho: w = {TinajaWalks.MorphoWeight} y {TinajaWalks.Thousands(TinajaWalks.MorphoRealityBudget)} nodos por realidad [P], pendiente de decisión) con la máscara de la tinaja, que el pack escribe en su `hidden` (`pack_schema` {PackWriter.TinajaPackSchema}; 08 §4.1: `relief_board` admite `hidden` si y solo si su `attrs` contiene la tinaja). `plus_empty` no se publica si pasa de {Superposition.TinajaReliefMaxCuias} cuias: el tope de {Superposition.TinajaMaxCuias} del nivel (02 §5) más su cuia vacía (D-027)."));
     }
 
     /// <summary>Niveles en los que sale cada mecánica (por código del calendario) y cada capacidad, sobre los tableros elegidos.</summary>

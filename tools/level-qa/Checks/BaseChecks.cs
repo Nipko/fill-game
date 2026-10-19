@@ -1,11 +1,13 @@
 // Comprobaciones base (P-7): GDD 03 §17 #1, #2, #4, #5, #11 (y #10 con el --check del generador); 08 §4.1 «Validación en
 // tools/level-qa»; D-007 Q16 B (trampas tempranas con tope por etiqueta: 0 en Normal, 1 en Difícil, sin tope en Muy
-// difícil). Todo se recalcula con AF.Core y AF.Solver sobre el JSON publicado.
+// difícil). Todo se recalcula con AF.Core y AF.Solver sobre el JSON publicado. QA-PAR exime del par del rango los tableros de
+// estreno de la Tinaja (K ≤ 6; decisión del dueño del 2026-10-18, D-027: TinajaDebutParExempt).
 using System.Globalization;
 using AF.Core.Board;
 using AF.Core.Rules;
 using AF.Solver.Search;
 using AmazonFill.Tools.LevelGenerator.Campaign;
+using AmazonFill.Tools.LevelGenerator.Generation;
 using AmazonFill.Tools.LevelGenerator.Metrics;
 
 namespace AmazonFill.Tools.LevelQa.Checks;
@@ -19,7 +21,7 @@ internal static class BaseChecks
         ("QA-SEALED", "ninguna cuia sellada al inicio (03 sec. 17 #5)"),
         ("QA-STUCK", "atascado(S0) = false (02 sec. 9.2 regla 1)"),
         ("QA-VALID", "resto de LevelValidation de AF.Core (mecanicas, Barro, Aguas turbias)"),
-        ("QA-PAR", "par recalculado (A* w = 1, run) igual al publicado; par >= 2K; dentro del par objetivo del rango +-30 % (03 sec. 17 #1-#2)"),
+        ("QA-PAR", "par recalculado (A* w = 1, run) igual al publicado; par >= 2K; dentro del par objetivo del rango +-30 % (03 sec. 17 #1-#2), salvo los tableros de estreno de la Tinaja (K <= 6; D-027)"),
         ("QA-TINT-DEBUT", "cada tinte con debut anterior o igual al nivel (03 sec. 17 #4)"),
         ("QA-KMAX", "K <= k_max y >= k_min de la cabecera (03 sec. 17 #4)"),
         ("QA-RISK", "risk_pairs recalculado igual al publicado y <= max_risk_pairs (03 sec. 4.5)"),
@@ -32,6 +34,17 @@ internal static class BaseChecks
         ("QA-SIZE", "pack <= 100 KB por 100 niveles sin relief (03 sec. 17 #11)"),
         ("QA-EARLY-TRAPS", "trampas tempranas dentro del tope de la etiqueta (Q16 B)"),
     ];
+
+    /// <summary>
+    /// Excepción del par del rango (03 §17 #2) para los tableros de estreno de la Tinaja: decisión del dueño del 2026-10-18
+    /// (D-027; propuesta de los mundos 7-9, §6 B). Van con K ≤ 6 (propuesta de la tinaja d.3; Superposition.TinajaDebutMaxK),
+    /// así que su solución es más corta que el par objetivo del rango (en el mundo 7, el 324 y el 325 tienen 13 y 14
+    /// movimientos frente al mínimo de 15,4 de 201-400): como su K, el estreno lleva su excepción declarada. Solo se exime el
+    /// par del rango; el par recalculado igual al publicado y el par ≥ 2K siguen valiendo. Un tablero de estreno (★ en la
+    /// celda) con la tinaja y K ≤ 6: en el mundo 7, el 323, el 324 y el 325; nunca en la variante b, que no lleva la tinaja.
+    /// </summary>
+    public static bool TinajaDebutParExempt(LevelPlan plan, BoardData board, int k) =>
+        plan.DebutBoard && board.HasTinaja && k <= Superposition.TinajaDebutMaxK;
 
     public static IEnumerable<QaIssue> Run(QaContext ctx, LevelEval e)
     {
@@ -99,7 +112,7 @@ internal static class BaseChecks
             yield return Fail("QA-PAR", string.Create(CultureInfo.InvariantCulture, $"par {lv.Par} < 2K = {2 * lv.K}"));
         }
 
-        if (e.Plan is LevelPlan plan)
+        if (e.Plan is LevelPlan plan && !TinajaDebutParExempt(plan, b, lv.K))
         {
             RangeInfo r = plan.Range;
             double lo = r.ParMin * 0.7;

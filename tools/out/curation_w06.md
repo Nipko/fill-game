@@ -13,6 +13,7 @@ Compuerta automática (verde antes de pedir la curación): `dotnet run --project
 | `Assets/_Project/Data/Levels/mundo_06_v1.json` | 100 | 3 | 139470 | `9903e8363553e65c9f77a067ed7221146a8250e6dedbccb6cfdae96db031689f` |
 
 - Retos e hitos: 30 (25 retos y 5 hitos); 27 miden la etiqueta objetivo o más (D-009) y 3 no.
+- No miden su etiqueta objetivo y se publican con la que miden (c.2; 03 §7): 246 (reto Ma+Re (D): Normal, bot_fail 0.600), 266 (reto Pi+Br (D): Normal, bot_fail 0.425), 280 (hito Pi+Br (MD): Normal, bot_fail 0.675).
 - Etiquetas publicadas en 201-300: 23 Difícil y 4 Muy difícil de 100 niveles (03 §11: 25 % y 5 %).
 - Para revisar: 246 (reto), 266 (reto), 280 (hito), 298 (reto). El resto, aceptar.
 - Estrenos: ★Ln en 243, 244, 245; ★Ha en 283, 284, 285 (6 de 6 con un ejemplar, 2 vacíos y bot_fail < 0,20).

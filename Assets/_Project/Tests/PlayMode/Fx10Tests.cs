@@ -30,11 +30,12 @@ namespace AF.Tests.PlayMode
     /// (<see cref="Join"/>);</description></item>
     /// <item><description>observación 3: con el Mapa a tamaño de teléfono (360 × 780 dp), desde la pausa del 41 (vista Mundo; con
     /// <c>map_seen_level</c> por debajo de 40, «ponerse al día» pasa la boya del 40 y la placa del mundo 4, «Trapecio»,
-    /// heredaba el sitio de la del 3, cortada por la derecha) y en el Mapa del fin de contenido del 300 (la del 8, «Madidi»,
-    /// heredaba el de la del 7, cortada por la izquierda y bajo la ventanita de casa), ninguna placa de mundo futuro que se vea
+    /// heredaba el sitio de la del 3, cortada por la derecha), en el tramo del 300 (el fin de contenido del teléfono en la ola 6;
+    /// desde C1b, desde la pausa del 301: la del 8, «Madidi», heredaba el de la del 7, cortada por la izquierda y bajo la
+    /// ventanita de casa) y en el Mapa del fin de contenido del 700, ninguna placa de mundo futuro que se vea
     /// se sale de la zona visible ni pisa la ventanita, al abrir, en cada fotograma del viaje y al acabar, y tampoco en la
-    /// Cuenca ni al volver a la vista Mundo; el arreglo actúa (mueve alguna placa) y la placa del mundo 3 (pausa) o la del 7
-    /// (fin de contenido) se ve al abrir, sin ocultarse. La placa que no cabe de ningún modo [P]: en la vista Mundo no sale
+    /// Cuenca ni al volver a la vista Mundo; el arreglo actúa (mueve alguna placa) y la placa del mundo 3 (pausa del 41) o la del 7
+    /// (tramo del 300) se ve al abrir, sin ocultarse. La placa que no cabe de ningún modo [P]: en la vista Mundo no sale
     /// (y no es obstáculo para las demás), vuelve al arrastrar y se vuelve a pesar al abrir otra vez la vista; en la Cuenca
     /// nunca se oculta.</description></item>
     /// </list>
@@ -407,8 +408,27 @@ namespace AF.Tests.PlayMode
             }
         }
 
+        // El tramo del 300 (el del fin de contenido del teléfono en la ola 6): desde C1b el fin de contenido llega tras el 700, así
+        // que el mismo viaje (de 290 a 300) se recorre con «ponerse al día» desde la pausa del 301 (max 300, visto 290).
         [UnityTest]
-        public IEnumerator ContentEndMap_After300_ThePlatesWholeInTheView_ClearOfTheHomeWindow_AlsoOnTheJourney()
+        public IEnumerator PauseMap_At301_TheLegOf300_ThePlatesWholeInTheView_ClearOfTheHomeWindow_AlsoOnTheJourney()
+        {
+            MapArtRule.ForceProvisional = true;
+            yield return OpenFromPause(301, 300, 290);
+            RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+            Assert.That(map.Source, Is.EqualTo(MapOpenSource.Pause));
+            Assert.That(map.CatchingUp, Is.True, "«ponerse al día» por el tramo del 300");
+            AssertWorldPlateSeen(map, 7, "tramo del 300, al abrir"); // Madre de Dios, aún futuro al empezar el viaje
+            (int moves, _) = CatchUpAndCheck(map, "tramo del 300");
+            Assert.That(moves, Is.GreaterThan(0), "tramo del 300: al abrir, el arreglo mueve alguna placa para que quede entera (observación 3)");
+            Assert.That(Worlds(map), Does.Contain(8), "la placa del mundo 8 (Madidi)");
+            Assert.That(map.HomeWindowShown, Is.True, "la ventanita de casa, a la vista (como en el teléfono)");
+            CheckTheViews(map, "tramo del 300");
+        }
+
+        // El fin de contenido de verdad, tras el 700: las placas, enteras a la vista y fuera de la ventanita, en todo el viaje.
+        [UnityTest]
+        public IEnumerator ContentEndMap_After700_ThePlatesWholeInTheView_ClearOfTheHomeWindow_AlsoOnTheJourney()
         {
             GameBootstrap.ContentEndMapOverride = true;
             MapArtRule.ForceProvisional = true;
@@ -417,11 +437,7 @@ namespace AF.Tests.PlayMode
             RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
             Assert.That(map.Source, Is.EqualTo(MapOpenSource.ContentEnd));
             Assert.That(map.CatchingUp, Is.True, "el viaje del último tramo");
-            AssertWorldPlateSeen(map, 7, "fin de contenido, al abrir"); // Madre de Dios, aún futuro al empezar el viaje
-            (int moves, _) = CatchUpAndCheck(map, "fin de contenido");
-            Assert.That(moves, Is.GreaterThan(0), "fin de contenido: al abrir, el arreglo mueve alguna placa para que quede entera (observación 3)");
-            Assert.That(Worlds(map), Does.Contain(8), "la placa del mundo 8 (Madidi)");
-            Assert.That(map.HomeWindowShown, Is.True, "la ventanita de casa, a la vista (como en el teléfono)");
+            CatchUpAndCheck(map, "fin de contenido");
             CheckTheViews(map, "fin de contenido");
         }
 
@@ -588,12 +604,18 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>El 41 en juego (perfil con max y map_seen_level dados), en pausa y con el Mapa abierto desde ella.</summary>
-        internal static IEnumerator OpenFromPause41(int max, int seen)
+        internal static IEnumerator OpenFromPause41(int max, int seen) => OpenFromPause(41, max, seen);
+
+        /// <summary>
+        /// El nivel <paramref name="level"/> en juego (perfil con max y map_seen_level dados), en pausa y con el Mapa abierto desde
+        /// ella. Con 301, max 300 y visto 290, «ponerse al día» recorre el tramo del 300 (el del fin de contenido hasta C1b).
+        /// </summary>
+        internal static IEnumerator OpenFromPause(int level, int max, int seen)
         {
             FunnelSetup.Hooks();
             GameScreen.SimulatedScreen = Phone;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500, 3));
-            yield return PlayModeHelpers.LoadGame(41, new MemoryProgressStore(41, max, seen));
+            yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, max, seen));
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
             for (int i = 0; i < 400 && boot.Flow!.Phase != FlowPhase.Playing; i++)
@@ -602,16 +624,19 @@ namespace AF.Tests.PlayMode
                 PlayModeHelpers.Step(boot, 50);
             }
 
-            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Playing), "el 41 en juego");
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Playing), "el " + level + " en juego");
             boot.View!.PauseButton.onClick.Invoke();
             boot.View.Pause.MapButton.onClick.Invoke();
             Assert.That(boot.RiverMapView!.Visible, Is.True, "el Mapa, desde la pausa");
         }
 
-        /// <summary>La victoria del 300 y «Siguiente»: el Mapa del fin de contenido, recién abierto.</summary>
+        /// <summary>Último nivel publicado (C1b: los mundos 7-9 llegan al 700): tras él, el fin de contenido.</summary>
+        internal const int ContentEndLevel = 700;
+
+        /// <summary>La victoria del último nivel publicado (700) y «Siguiente»: el Mapa del fin de contenido, recién abierto.</summary>
         internal static IEnumerator OpenContentEnd()
         {
-            yield return FactLineTests.Win(300);
+            yield return FactLineTests.Win(ContentEndLevel);
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(boot.PressNext(), Is.True);
             for (int elapsed = 0; elapsed < 10000 && boot.App!.Screen == AppScreen.Level; elapsed += PlayModeHelpers.FrameMs)

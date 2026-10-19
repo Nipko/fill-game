@@ -22,6 +22,8 @@
 //   - cuándo sale esa sección (CurationReport.ShowsTinaja: con 321-340 en las dos variantes, no con 201-300 ni 301-320) y las
 //     filas de su tabla (CurationReport.TinajaRows): las 8 celdas de la a en orden, y las del 323 y el 340 con la celda de la a,
 //     el respaldo de la b (Ma y Br+Ba (MD)), la celda publicada con o sin la Tinaja y las dosis «n (n − 1)» o la raya.
+//   - el primer reto con tres mecánicas del calendario (CurationReport.FirstThreeMechanicChallenge; 03 §11, d.5.2): el 646 en
+//     las dos variantes, que el informe señala en su fila (GEN79).
 // Imprime ASCII (PASS / FAIL) y sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación. Desde la raíz
 // del repositorio.
 using System.Globalization;
@@ -76,7 +78,7 @@ internal static class CurationSelfTest
         CampaignSpec spec;
         try
         {
-            spec = CampaignSpec.Load(CampaignV2);
+            spec = CampaignSpec.Load(CampaignV2, CampaignSpec.VariantA);
         }
         catch (CampaignSpecException e)
         {
@@ -219,13 +221,17 @@ internal static class CurationSelfTest
             "Tinaja (a) con 301-320 generados: sin apariciones ni línea del ciclo de estreno", first: 301, last: 320);
 
         TinajaTable(check, a, b);
+
+        // Primer reto con tres mecánicas (03 §11: «en el 646»; d.5.2; GEN79): el informe lo señala en su fila.
+        check(CurationReport.FirstThreeMechanicChallenge(a) == 646 && CurationReport.FirstThreeMechanicChallenge(b) == 646,
+            "primer reto con tres mecanicas: el 646 en las dos variantes de campaign_v2.json");
     }
 
     /// <summary>
     /// Cuándo sale «Dónde va la Tinaja» (CurationReport.ShowsTinaja) y sus filas (CurationReport.TinajaRows), con 321-340
     /// sintéticos en las dos variantes de campaign_v2.json: la sección sale con 321-340 en la a y en la b, y no con 201-300 ni
     /// con 301-320; hay una fila por cada una de las 8 celdas con la Tinaja de la a, en su orden; la fila del 323 y la del 340
-    /// dicen la celda de la a (★Ti y Ti+Br (MD)), el respaldo de la b (Ma y Br+Ba (MD)), la celda publicada con o sin la Tinaja y
+    /// dicen la celda de la a (★Ti y Ti+Ho (MD), D-027), el respaldo de la b (Ma y Br+Ba (MD)), la celda publicada con o sin la Tinaja y
     /// las dosis «n (n − 1)» (la máscara tapa todas las capas menos la boca) o «—» sin medir.
     /// </summary>
     private static void TinajaTable(Action<bool, string> check, CampaignSpec a, CampaignSpec b)
@@ -251,10 +257,10 @@ internal static class CurationSelfTest
             "Tinaja (a): una fila por cada una de las 8 celdas de 321-340, en orden (" + Show(rowsA) + ")");
         check(rowsA.Count == 8 && rowsA[0] == "| 323 | 3 | estreno | ★Ti | Ma | ★Ti: con la Tinaja | 3 (2) | 3 | 5 |",
             "Tinaja (a): fila del 323, celda ★Ti, respaldo Ma, publicado con la Tinaja y 3 dosis (2 ocultas)");
-        check(rowsA.Count == 8 && rowsA[7] == "| 340 | 20 | hito | Ti+Br (MD) | Br+Ba (MD) | Ti+Br (MD): con la Tinaja | 5 (4) | 6 | 9 |",
-            "Tinaja (a): fila del 340, celda Ti+Br (MD), respaldo Br+Ba (MD), con la Tinaja y 5 dosis (4 ocultas)");
+        check(rowsA.Count == 8 && rowsA[7] == "| 340 | 20 | hito | Ti+Ho (MD) | Br+Ba (MD) | Ti+Ho (MD): con la Tinaja | 5 (4) | 6 | 9 |",
+            "Tinaja (a): fila del 340, celda Ti+Ho (MD), respaldo Br+Ba (MD), con la Tinaja y 5 dosis (4 ocultas)");
         List<string> rowsA340 = CurationReport.TinajaRows(a, a, Levels(a, 340, 340, _ => false, _ => null));
-        check(rowsA340.SequenceEqual(["| 340 | 20 | hito | Ti+Br (MD) | Br+Ba (MD) | Ti+Br (MD): sin la Tinaja | — | 6 | 9 |"]),
+        check(rowsA340.SequenceEqual(["| 340 | 20 | hito | Ti+Ho (MD) | Br+Ba (MD) | Ti+Ho (MD): sin la Tinaja | — | 6 | 9 |"]),
             "Tinaja (a): el 340 publicado sin la Tinaja y sin medir dice «sin la Tinaja» y la raya en las dosis (" + Show(rowsA340) + ")");
 
         // b: las mismas 8 filas, con la celda del respaldo publicada sin la tinaja y sin dosis.
@@ -263,8 +269,8 @@ internal static class CurationSelfTest
             "Tinaja (b): las mismas 8 filas, las celdas con la Tinaja de la a (" + Show(rowsB) + ")");
         check(rowsB.Count == 8 && rowsB[0] == "| 323 | 3 | comodidad | ★Ti | Ma | Ma: sin la Tinaja | — | 3 | 5 |",
             "Tinaja (b): fila del 323 (comodidad en la b, sin el estreno), celda ★Ti de la a y Ma publicada sin la Tinaja");
-        check(rowsB.Count == 8 && rowsB[7] == "| 340 | 20 | hito | Ti+Br (MD) | Br+Ba (MD) | Br+Ba (MD): sin la Tinaja | — | 6 | 9 |",
-            "Tinaja (b): fila del 340, celda Ti+Br (MD) de la a y Br+Ba (MD) publicada sin la Tinaja");
+        check(rowsB.Count == 8 && rowsB[7] == "| 340 | 20 | hito | Ti+Ho (MD) | Br+Ba (MD) | Br+Ba (MD): sin la Tinaja | — | 6 | 9 |",
+            "Tinaja (b): fila del 340, celda Ti+Ho (MD) de la a y Br+Ba (MD) publicada sin la Tinaja");
         check(CurationReport.TinajaRows(a, a, Levels(a, 201, 300, _ => false, _ => null)).Count == 0
               && CurationReport.TinajaRows(b, a, Levels(b, 201, 300, _ => false, _ => null)).Count == 0,
             "Tinaja: sin filas con 201-300 en las dos variantes");

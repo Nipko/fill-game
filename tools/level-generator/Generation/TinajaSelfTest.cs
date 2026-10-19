@@ -9,7 +9,8 @@
 //     trampas y el JSON del pack (attrs, murky, hidden, intro_mechanic y pack_schema 3);
 //   - el alivio: minus_color nunca quita una fruta de la tinaja, las variantes conservan la máscara y la pareja, y su JSON
 //     lleva la máscara en hidden (08 §4.1: relief_board admite hidden si y solo si su attrs contiene la tinaja);
-//   - el tope de 12 cuias con tinaja (02 §5): la etapa baja K y plus_empty no pasa de 12 cuias;
+//   - el tope de 12 cuias con tinaja (02 §5): la etapa baja K; plus_empty puede llegar a 13 cuias con la pareja en la misma
+//     fila, pero no a 14 (D-027, Superposition.TinajaReliefMaxCuias);
 //   - «S0 sin trampas» detecta un vertido útil inseguro (el tablero perdido de b.2) y los filtros pasan en el S0 de b.2;
 //   - la separación trampa / presupuesto de «S0 sin trampas» (FIXG; TinajaWalks.S0Reject): el vertido del tablero perdido de
 //     b.2 es una trampa demostrada (ninguno sin demostrar); con un presupuesto mínimo, los vertidos inseguros del S0 de b.2 son
@@ -136,7 +137,9 @@ internal static class TinajaSelfTest
     /// <summary>
     /// Tope de 12 cuias con tinaja (02 §5, fila «Tinaja y su cuia»; Superposition.TinajaMaxCuias): con K = 10 u 11 en un reto
     /// (el rango 9-11 de 03 §11 para 301-400), la etapa baja K hasta 12 cuias con la pareja y el vacío, y la relajación
-    /// (K − 1) queda por debajo; plus_empty no publica una variante de 13 cuias.
+    /// (K − 1) queda por debajo. El alivio tiene el suyo, una cuia más (decisión del dueño del 2026-10-18, D-027;
+    /// Superposition.TinajaReliefMaxCuias): plus_empty de un tablero de 12 cuias da 13, con la pareja en la misma fila con 2 y
+    /// con 3 filas (D-006), y el de uno de 13 no se publica (14 cuias).
     /// </summary>
     private static void CuiaCap(CampaignSpec spec, Action<bool, string> check)
     {
@@ -151,15 +154,37 @@ internal static class TinajaSelfTest
                 F($"reto con tinaja y K = {k}: la etapa 0 baja a K = {s0?.K} ({(s0 is null ? 0 : Cuias(s0))} cuias con la pareja) y la relajacion a K = {s1?.K} (tope de 12 cuias, 02 sec. 5)"));
         }
 
-        // Un tablero de 12 cuias con tinaja (K = 9, 1 vacío y la pareja): plus_empty no pasa del tope.
+        check(Superposition.TinajaReliefMaxCuias == Superposition.TinajaMaxCuias + 1,
+            F($"tope del alivio con tinaja: {Superposition.TinajaReliefMaxCuias} cuias, el del nivel ({Superposition.TinajaMaxCuias}) mas su cuia vacia (D-027)"));
+
+        // Un tablero de 12 cuias con tinaja (K = 9, 1 vacío y la pareja): plus_empty llega a 13 cuias, sin pasar del tope del
+        // alivio, con la pareja contigua y en la misma fila con cualquiera de las filas del cliente (D-006).
         LevelPlan p = WithPlan(spec.Plan(329), k: 9);
         int[] caps = [.. Enumerable.Repeat(Cuia.DefaultCapacity, 10)];
         int[] units = [.. Enumerable.Repeat(Cuia.DefaultCapacity, 9)];
         BoardState baseState = new InverseWalk().Generate(new InverseSpec(caps, units, 1, -1, -1, PourMode.Run), 0x5EED0329UL).State!;
         GenBoard board = Step(spec, p, baseState, 7);
         ReliefBoard plus = Relief.PlusEmpty(gen.Metrics, board.ToData(), 1.0, p.SeedText);
-        check(board.Count == Superposition.TinajaMaxCuias && !plus.Meets && plus.Board.Caps.Length == Superposition.TinajaMaxCuias + 1,
-            F($"alivio de un tablero de {board.Count} cuias con tinaja: plus_empty no se publica ({plus.Note})"));
+        BoardData pb = plus.Board;
+        int ti = Array.FindIndex(pb.Attrs, a => a.Type == MechanicType.Tinaja);
+        int cu = Array.FindIndex(pb.Attrs, a => a.Type == MechanicType.Cucharon);
+        bool pairOk = ti >= 0 && cu >= 0 && Math.Abs(ti - cu) == 1 && Superposition.SameRow(pb.Caps.Length, Math.Min(ti, cu));
+        bool built = pb.Build().IsValid;
+        check(board.Count == Superposition.TinajaMaxCuias && pb.Caps.Length == Superposition.TinajaReliefMaxCuias && pairOk && built
+                && !plus.Note.Contains("tope", StringComparison.Ordinal),
+            F($"alivio de un tablero de {board.Count} cuias con tinaja: plus_empty de {pb.Caps.Length} cuias, valido, con la pareja ({ti}, {cu}) en la misma fila con {string.Join(" o ", Superposition.RowOptions(pb.Caps.Length))} filas y sin el tope (nota: '{plus.Note}')"));
+
+        // Un tablero de 13 cuias con tinaja (K = 10, 1 vacío y la pareja; ninguna etapa lo genera, pero el tope del alivio
+        // no depende de eso): plus_empty daría 14 y no se publica.
+        LevelPlan p13 = WithPlan(spec.Plan(329), k: 10);
+        int[] caps13 = [.. Enumerable.Repeat(Cuia.DefaultCapacity, 11)];
+        int[] units13 = [.. Enumerable.Repeat(Cuia.DefaultCapacity, 10)];
+        BoardState base13 = new InverseWalk().Generate(new InverseSpec(caps13, units13, 1, -1, -1, PourMode.Run), 0x5EED1329UL).State!;
+        GenBoard board13 = Step(spec, p13, base13, 7);
+        ReliefBoard plus13 = Relief.PlusEmpty(gen.Metrics, board13.ToData(), 1.0, p13.SeedText);
+        check(board13.Count == Superposition.TinajaReliefMaxCuias && !plus13.Meets
+                && plus13.Board.Caps.Length == Superposition.TinajaReliefMaxCuias + 1 && plus13.Note.Contains("tope de 13", StringComparison.Ordinal),
+            F($"alivio de un tablero de {board13.Count} cuias con tinaja: plus_empty de {plus13.Board.Caps.Length} no se publica ({plus13.Note})"));
     }
 
     private static void Rows(Action<bool, string> check)
