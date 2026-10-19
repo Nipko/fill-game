@@ -64,8 +64,12 @@ namespace AF.LiveOps
         /// Lee el JSON de Remote Config. Rechaza (con <see cref="FormatException"/>) lo que no tiene la forma de R-Q6: raíz que no
         /// es objeto, fecha que no es <c>yyyy-MM-dd</c> válida, banda que no es <c>"1"</c>-<c>"3"</c>, id que no es una cadena no
         /// vacía, y fechas o bandas repetidas. El llamador decide qué hacer con un valor rechazado (lo prudente: el default
-        /// <see cref="Empty"/>).
+        /// <see cref="Empty"/>, que es lo que hace <see cref="TryParse"/>).
         /// </summary>
+        /// <remarks>
+        /// Las comprobaciones de fecha y de banda repetidas son defensa en profundidad: <see cref="JsonParser"/> ya rechaza las
+        /// claves duplicadas dentro de un mismo objeto, así que hoy no se alcanzan; se mantienen por si el lector de JSON cambia.
+        /// </remarks>
         public static DailyOverrides Parse(string json)
         {
             if (json == null)
@@ -128,6 +132,34 @@ namespace AF.LiveOps
             }
 
             return byDate.Count == 0 ? Empty : new DailyOverrides(byDate);
+        }
+
+        /// <summary>
+        /// Lee el JSON de Remote Config sin lanzar: si el valor no tiene la forma de R-Q6 (<see cref="Parse"/>) o es null, deja
+        /// <paramref name="result"/> = <see cref="Empty"/> (el default <c>{}</c> de 08 §9), pone el motivo en
+        /// <paramref name="error"/> y devuelve false. Con un valor válido, <paramref name="error"/> queda vacío.
+        /// </summary>
+        public static bool TryParse(string? json, out DailyOverrides result, out string error)
+        {
+            if (json == null)
+            {
+                result = Empty;
+                error = "daily_overrides: el valor es null.";
+                return false;
+            }
+
+            try
+            {
+                result = Parse(json);
+                error = "";
+                return true;
+            }
+            catch (FormatException e)
+            {
+                result = Empty;
+                error = e.Message;
+                return false;
+            }
         }
 
         /// <summary>

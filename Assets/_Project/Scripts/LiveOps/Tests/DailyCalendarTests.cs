@@ -174,8 +174,37 @@ namespace AF.LiveOps.Tests
             DailyChallengeConfig config = WithOverrides("{\"2026-12-25\":{\"1\":\"d1_n9999\",\"2\":\"no_existe\"}}");
             var christmas = new DateTime(2026, 12, 25);
 
-            Assert.That(DailyCalendar.Resolve(christmas, 10, config, DailyTestPool.Full), Is.EqualTo(new DailySlot(1, 358, null)));
-            Assert.That(DailyCalendar.Resolve(christmas, 41, config, DailyTestPool.Full), Is.EqualTo(new DailySlot(2, 358, null)));
+            DailySlot b1 = DailyCalendar.Resolve(christmas, 10, config, DailyTestPool.Full);
+            DailySlot b2 = DailyCalendar.Resolve(christmas, 41, config, DailyTestPool.Full);
+
+            Assert.That(b1, Is.EqualTo(new DailySlot(1, 358, null, "d1_n9999")));
+            Assert.That(b2, Is.EqualTo(new DailySlot(2, 358, null, "no_existe")));
+            Assert.That(b1.Board(DailyTestPool.Full)!.Id, Is.EqualTo("d1_n0358"), "se sirve el cálculo normal");
+        }
+
+        [Test]
+        public void Override_Ignored_IsDistinguishedFromNoOverride()
+        {
+            DailyChallengeConfig config = WithOverrides("{\"2026-12-25\":{\"1\":\"d1_n9999\",\"2\":\"d2_n0033\"}}");
+            var christmas = new DateTime(2026, 12, 25);
+
+            DailySlot ignored = DailyCalendar.Resolve(christmas, 10, config, DailyTestPool.Full);
+            DailySlot served = DailyCalendar.Resolve(christmas, 41, config, DailyTestPool.Full);
+            DailySlot none = DailyCalendar.Resolve(christmas, 201, config, DailyTestPool.Full);
+
+            Assert.That(ignored.IsOverride, Is.False);
+            Assert.That(ignored.IsOverrideIgnored, Is.True);
+            Assert.That(ignored.RequestedOverrideId, Is.EqualTo("d1_n9999"));
+            Assert.That(ignored, Is.Not.EqualTo(new DailySlot(1, 358, null)), "«ignorado» no es «sin sustitución»");
+
+            Assert.That(served.IsOverride, Is.True);
+            Assert.That(served.IsOverrideIgnored, Is.False);
+            Assert.That(served.RequestedOverrideId, Is.EqualTo("d2_n0033"));
+
+            Assert.That(none.IsOverride, Is.False);
+            Assert.That(none.IsOverrideIgnored, Is.False);
+            Assert.That(none.RequestedOverrideId, Is.Null);
+            Assert.That(none, Is.EqualTo(new DailySlot(3, 358, null)));
         }
 
         [Test]

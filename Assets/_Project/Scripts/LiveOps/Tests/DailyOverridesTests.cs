@@ -63,5 +63,48 @@ namespace AF.LiveOps.Tests
         {
             Assert.Throws<ArgumentNullException>(() => DailyOverrides.Parse(null!));
         }
+
+        [Test]
+        public void TryParse_Valid_ReturnsTheTable()
+        {
+            bool ok = DailyOverrides.TryParse("{\"2026-12-25\":{\"1\":\"d1_n0100\"}}", out DailyOverrides result, out string error);
+
+            Assert.That(ok, Is.True);
+            Assert.That(error, Is.EqualTo(""));
+            Assert.That(result.TryGet("2026-12-25", 1, out string id), Is.True);
+            Assert.That(id, Is.EqualTo("d1_n0100"));
+        }
+
+        [Test]
+        public void TryParse_EmptyObject_IsTheDefault()
+        {
+            Assert.That(DailyOverrides.TryParse("{}", out DailyOverrides result, out string error), Is.True);
+            Assert.That(result, Is.SameAs(DailyOverrides.Empty));
+            Assert.That(error, Is.EqualTo(""));
+        }
+
+        [TestCase("[]")]
+        [TestCase("{\"2026-12-25\":\"d1_n0100\"}")]
+        [TestCase("{\"2026-13-01\":{\"1\":\"d1_n0100\"}}")]
+        [TestCase("{\"2026-12-25\":{\"4\":\"d1_n0100\"}}")]
+        [TestCase("{\"2026-12-25\":{\"1\":\"a\",\"1\":\"b\"}}")]
+        [TestCase("{")]
+        [TestCase("")]
+        public void TryParse_Invalid_LeavesEmptyAndExplains(string json)
+        {
+            bool ok = DailyOverrides.TryParse(json, out DailyOverrides result, out string error);
+
+            Assert.That(ok, Is.False);
+            Assert.That(result, Is.SameAs(DailyOverrides.Empty));
+            Assert.That(error, Is.Not.Empty);
+        }
+
+        [Test]
+        public void TryParse_Null_LeavesEmpty()
+        {
+            Assert.That(DailyOverrides.TryParse(null, out DailyOverrides result, out string error), Is.False);
+            Assert.That(result, Is.SameAs(DailyOverrides.Empty));
+            StringAssert.Contains("null", error);
+        }
     }
 }
