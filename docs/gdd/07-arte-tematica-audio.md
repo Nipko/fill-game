@@ -681,7 +681,7 @@ Crédito en pantalla: pantalla de créditos con nombre del asesor y de los artis
 - **Ambiente y música (AU2):** el paisaje sonoro de 9.1 y la música adaptativa de 9.3, provisionales (estado en esas secciones).
 - **Hápticos:** los de 9.2, con los efectos predefinidos de Android, gracias al permiso `VIBRATE`, que el dueño aprobó el 2026-10-16 (D-026, punto 3); es el único permiso nuevo de la tanda 4.
 - **Ajustes:** Sonido, Música y Vibración, encendidos por defecto y que se apagan al momento (9.4).
-- **Entrega 1 (AU3, desde la ola 5, `4476796`):** el juego suena con los 173 WAV de la entrega y el audio por código queda de respaldo. Sus tres decisiones, ratificadas por el dueño el 2026-10-19 (pregunta 64 de GDD.md §6.3, (a); D-029): la intensidad de la lluvia, fija por nivel (50 % ligera, 35 % media y 15 % fuerte); los remates a −8 dB de su pico, con el ajuste Música y después de la toada; y los efectos en Vorbis de calidad 0,8, no en ADPCM (08 §6.1). Falta escucharlas en el teléfono (acción del dueño).
+- **Entrega 1 (AU3, desde la ola 5, `4476796`):** el juego suena con los 173 WAV de la entrega y el audio por código queda de respaldo. Sus tres decisiones, ratificadas por el dueño el 2026-10-19 (pregunta 64 de GDD.md §6.3, (a); D-029): la intensidad de la lluvia, fija por nivel (50 % ligera, 35 % media y 15 % fuerte); los remates a −8 dB de su pico, con el ajuste Música y después de la toada; y los efectos en Vorbis de calidad 0,8, no en ADPCM (08 §5.4, fila «Audio»). Falta escucharlas en el teléfono (acción del dueño).
 
 ### 9.1 Paisaje sonoro por mundo
 
