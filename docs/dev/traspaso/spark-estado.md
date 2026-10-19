@@ -4,6 +4,69 @@ Encargo: `docs/dev/traspaso/spark-reto-del-rio.md` (de `origin/integracion-fase1
 
 ---
 
+## 2026-10-19 · R7b · Premio, anti-reloj y racha: HECHA
+
+- **Commits** (en `spark/reto-del-rio-r7b`, fusionados con `--no-ff` en `spark/reto-del-rio` como `f0fb4c8`):
+  - `a83ec1c`: sugerencias de la revisión de R7a;
+  - `880f7dc`: R7b.
+- **Archivos nuevos:**
+  - `Scripts/Platform/IServerDate.cs`, `FakeServerDate.cs` y `ClockSecurityConfig.cs`, donde ahora vive `sec_clock_max_drift_h`. Así es la única fuente y AF.Economy (Canoas) también puede leerla;
+  - `Scripts/LiveOps/IDailyChallengeStore.cs`, `DailyChallengeRecord.cs`, `InMemoryDailyChallengeStore.cs`, `DailyChallengeRules.cs` y `DailyChallengeService.cs`;
+  - tests (`DailyFixture`, `DailyChallengeRulesTests` 30, `DailyChallengeServiceTests` 18, `DailyChallengeStoreTests` 10).
+- **Cambios en R7a:** `DailyOverrides.TryParse` (un valor no válido se queda en `{}`); `DailySlot.RequestedOverrideId` e `IsOverrideIgnored`, para que la sonda anote una sustitución ignorada.
+- **Verificación** (worktree `spark-r7b`):
+  - `unity-compile.ps1` → OK;
+  - EditMode → **2.978 (2.975 + 3 omitidos)**, 0 fallos (70 tests nuevos);
+  - `dotnet build -warnaserror` → 0 avisos.
+  - El revisor lo repitió: 2.974 + 3 y 1 fallo, el de tiempo de `IntroArtTests.FruitFlight…` (inestable y ajeno); todos los de LiveOps en verde. Además, `dotnet test` 981 y `validate_schema.py` 103/103.
+- **code-reviewer:** **APROBADO** a la primera. Comprobó contra 06 §4.1 y 08 §10.1:
+  - nunca dos premios por fecha ni premio con el reloj atrasado;
+  - «pendiente» solo con red y desfase de más de 24 h;
+  - el orden registrar → guardar → pagar;
+  - la racha y la Pororoca en los días 7 y 14;
+  - los sellos del mes;
+  - R-Q3, R-Q4 y R-Q9;
+  - R-Q12 detrás de `DailyReconcileMode`, con las dos ramas probadas;
+  - los estados de la tarjeta en el orden de la nota §8.
+- **[P] de R7b:**
+  - `pending` y `offline_claims` son listas de `{date, streak}`: la nota §5 y §10 ya está al día;
+  - R-Q12 por defecto en (a), `KeepOfflineClaims`;
+  - anular en la reconciliación deja la racha a 0, quita el sello y no retira semillas;
+  - salir sin ganar cierra la partida, que no queda reanudable;
+  - salir de un día ya ganado no emite `fail`;
+  - `LevelStateSnapshot.Copy` va duplicada en AF.LiveOps, con un test por reflexión.
+- **Pendiente menor** (va en un commit posterior):
+  - documentar en `IDailyChallengeStore` que el registro y la cartera **tienen que vivir en el mismo `Profile`**, porque si no la garantía de «nunca dos pagos» se pierde (requisito de E4);
+  - acotar `offline_claims`;
+  - que `Reconcile` guarde solo si cambia algo;
+  - la cita del test en `DailyChallengeRecord.cs:66`;
+  - para R9: tras anular un pendiente con el reloj adelantado, la tarjeta sale «Sellada».
+
+### Preguntas nuevas para el dueño (de la revisión de R7b)
+
+| Id | Pregunta | Opciones (recomendada primero) | Qué bloquea |
+|---|---|---|---|
+| **R-Q12b** | Al validar un premio pendiente, ¿qué fechas se aceptan? Hoy se paga todo pendiente con fecha ≤ la del servidor, así que con red y el reloj atrasado a días no jugados se acaban pagando esos días. 06 §4.1 compara «> 1 día» | (a) solo si `|fecha − hoy_servidor| ≤ 1 día`; las demás se anulan; (b) toda fecha ≤ hoy del servidor (lo de ahora) | La rama de validación de R7b (es una línea) |
+| **R-Q15** | `af_daily_challenge.result = fail`: ¿una vez por cada salida sin ganar, una por día, o solo si el día termina sin victoria? (R-Q9) | (a) uno por día, solo si ese día no se gana; (b) uno por salida (lo de ahora) | La sonda de R10 |
+| **R-Q16** | Salir de la partida del Reto sin ganar: ¿la cierra (lo de ahora: solo se reanuda si se cierra la app; R-Q4) o la deja reanudable el mismo día? | (a) reanudable el mismo día; (b) se cierra | R8/R9 |
+| **R-Q12** (aclaración) | En la rama (b) de R-Q12, ¿se retiran las semillas de una fecha anulada? El código no retira ni semillas ni la Pororoca | (a) no se retira nada; (b) se retiran las que queden sin gastar | Solo la rama (b) |
+
+## 2026-10-19 · R7a · Calendario del Reto en AF.LiveOps: HECHA
+
+- **Commit:** `065d0e6`, en `spark/reto-del-rio-r7a`; fusionado con `--no-ff` en `spark/reto-del-rio` (`24d3f18`).
+- **Archivos nuevos** en `Assets/_Project/Scripts/LiveOps/`:
+  - `AF.LiveOps.asmdef` (sin motor; `autoReferenced: false`; referencia AF.Core, Levels, Platform, Save y Economy);
+  - `DailyChallengeConfig.cs` (las 9 claves de 08 §9 con sus defaults);
+  - `DailyOverrides.cs` (`{fecha: {banda: id}}`, R-Q6);
+  - `DailyCalendar.cs` (día del pool con módulo positivo, banda, desbloqueo, sustituciones y `DailySlot`);
+  - `Tests/` (asmdef y 57 tests, entre ellos uno que lee la tabla de 08 §9 del Markdown y compara nombres, tipos y defaults).
+- **Verificación** (worktree `spark-r7a`):
+  - compila;
+  - EditMode → 2.908 (2.905 + 3 omitidos), 0 fallos, en la pasada del revisor; en la del autor, 1 fallo del test inestable `IntroArtTests`, que pasa al relanzarlo;
+  - `dotnet test` 981 y `validate_schema.py` 103/103.
+- **code-reviewer:** **APROBADO** a la primera, sin bloqueantes. Las sugerencias (`TryParse`, sustitución ignorada visible, `sec_clock_max_drift_h` en AF.Platform) se aplicaron en R7b.
+- **Para el integrador:** 08 §9 sigue diciendo `daily_overrides` = `json {fecha: level_id}`; R-Q6 lo cambia a `{fecha: {banda: id}}` (E11). El test solo compara el tipo base `json` y el default `{}`.
+
 ## 2026-10-19 · Verificación completa de `spark/reto-del-rio` en `ba57160` (R0-R4 y R6): VERDE
 
 | Comando | Resultado |

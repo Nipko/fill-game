@@ -226,7 +226,8 @@ namespace AF.LiveOps
         public DailyResult Result { get; set; }               // result (08 §4.3)
         public int StreakDays { get; set; }                   // streak_days (08 §4.3)
         public string? LastClaimedDate { get; set; }          // R-Q5: ultima_fecha_reclamada (06 §4.1)
-        public List<string> PendingDates { get; } = new List<string>();   // R-Q5 [P: lista]
+        public List<DailyClaimEntry> PendingClaims { get; } = new List<DailyClaimEntry>();   // R-Q5 [P]: {fecha, racha} pendientes de validar
+        public List<DailyClaimEntry> OfflineClaims { get; } = new List<DailyClaimEntry>();   // [P] cobros sin red, para la rama (b) de R-Q12
         public string? StampsMonth { get; set; }              // R-Q5: yyyy-MM
         public List<int> StampDays { get; } = new List<int>();            // R-Q5: días sellados (1-31)
         public DailyPlayInProgress? InProgress { get; set; }  // R-Q4 [P]
@@ -322,7 +323,7 @@ function reclamar_reto(r = store.Load(), fecha = InProgress.DateKey):       # R-
     r.LastClaimedDate = fecha                             # también si queda pendiente (06 §4.1)
     r.LastDate = fecha; r.Result = Win
     sellar(r, fecha)                                      # si cambia el mes: StampsMonth = mes, StampDays = []
-    if estado == PENDIENTE: r.PendingDates.Add(fecha)
+    if estado == PENDIENTE: r.PendingClaims.Add({fecha, r.StreakDays})
     r.InProgress = null
     store.Save(r)
     if estado == CONFIRMADO:
@@ -340,10 +341,10 @@ function reclamar_reto(r = store.Load(), fecha = InProgress.DateKey):       # R-
 function reconciliar(r = store.Load()):          # al obtener hora de servidor
     if not server.TryGetServerOffset(out off) or |off| > sec_clock_max_drift_h: return 0
     hoy_srv = fecha local de (clock.UtcNow + off + clock.LocalOffset)
-    for fecha in r.PendingDates:
+    for {fecha, racha} in r.PendingClaims:
         if fecha <= hoy_srv: pagar 60 (+ Pororoca si esa fecha cerró una racha de 7)
         else: anular (sin semillas, se quita el sello y se recalcula la racha; LastClaimedDate no retrocede)
-    r.PendingDates.Clear(); store.Save(r)
+    r.PendingClaims.Clear(); r.OfflineClaims.Clear(); store.Save(r)
 ```
 
 Las victorias **sin red** se pagan al momento (08 §10.1: «sin red se acepta la fecha local»). Qué hace la reconciliación con ellas al reconectar es la pregunta **R-Q12** (sección 1.6): **pendiente**, no es regla. R7b la deja detrás de una opción y con tests de las dos ramas. En la 1.0 `IServerDate` es siempre `FakeServerDate.Offline()`: todo sale CONFIRMADO y la reconciliación no se ejecuta.
@@ -364,7 +365,7 @@ En este orden:
 |---|---|---|---|---|
 | 1 | **Oculta** | `biz_feature_daily_challenge` = false, `max_level` < `live_unlock_level_daily`, o pool ausente o inválido | Nada (D-008) | 06 §4.7; 08 §9 |
 | 2 | **En curso** | `InProgress.DateKey` == hoy | Reanuda la partida [P: «Seguir»] | R-Q4 |
-| 3 | **Pendiente de validar** | Hoy está en `PendingDates` | Sello pendiente, sin +60 todavía [P] | 06 §4.1; 08 §10.1 |
+| 3 | **Pendiente de validar** | Hoy está en `PendingClaims` | Sello pendiente, sin +60 todavía [P] | 06 §4.1; 08 §10.1 |
 | 4 | **Sellado** | `LastClaimedDate` == hoy y no pendiente | Sello; tocar abre el calendario del mes [P] | 06 §4.1 |
 | 5 | **Jugar** | En otro caso | Tablero de hoy; con el reloj atrasado se juega sin premio [P] | 06 §4.1 |
 
@@ -401,14 +402,15 @@ En este orden:
   "result": "win",
   "streak_days": 6,
   "last_claimed_date": "2026-10-19",
-  "pending_dates": [],
+  "pending": [],
+  "offline_claims": [],
   "stamps": { "month": "2026-10", "days": [1, 2, 5, 19] },
   "in_progress": null
 }
 ```
 
 - `last_date`, `result` y `streak_days` son de 08 §4.3; `result` con los valores de 08 §8.2.
-- `last_claimed_date`, `pending_dates` y `stamps`: R-Q5. `in_progress` [P] por R-Q4: `{date, band, id, level_state}` (04 §10.1).
+- `last_claimed_date`, `pending` y `stamps`: R-Q5. `pending` y `offline_claims` [P] son listas de `{date, streak}` (R7b): sin la racha, la reconciliación no sabría si una fecha cerraba una racha de 7. `offline_claims` solo sirve a la rama (b) de R-Q12 y hay que acotarla en E4 (en la 1.0 nunca se reconcilia). `in_progress` [P] por R-Q4: `{date, band, id, level_state}` (04 §10.1).
 - Sin migración: mientras el esquema no se publique, «un campo nuevo con un default razonable se añade sin migración» (08 §4.3).
 
 ---
