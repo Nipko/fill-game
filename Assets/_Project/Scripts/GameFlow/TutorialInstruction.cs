@@ -29,8 +29,9 @@ namespace AF.GameFlow
     /// </list>
     /// <para><b>Dedo guía</b> (tarea DC6; D-028, pregunta 61 (a) «con P5»: P5 de decisiones.md §5 respondida «Sí»; 02 §13, filas
     /// 1 y 2; 06 §2.2; 02 §4, D-002: ayuda explícita del tutorial, que solo señala el vertido de la lección y nunca resalta
-    /// destinos al seleccionar): solo en el 1 y el 2 (<see cref="FingerFor"/>); ningún otro nivel lo lleva, tampoco el 6 (02 §13:
-    /// «sin dedo guía»), el 12 (D-028) ni el 8 (el de la Cuia extra llega con Capi). Esta clase dice qué niveles lo llevan y qué
+    /// destinos al seleccionar): del tutorial, solo en el 1 y el 2 (<see cref="FingerFor(int)"/>); ningún otro nivel del tutorial lo
+    /// lleva, tampoco el 6 (02 §13: «sin dedo guía»), el 12 (D-028) ni el 8 (el de la Cuia extra llega con Capi); además, los
+    /// estrenos de la Hoja y de la Tinaja (ver más abajo). Esta clase dice qué niveles lo llevan y qué
     /// vertido cuenta como el de la lección (<see cref="IsPartialRunLesson"/>); el vertido concreto lo elige la vista con el solver
     /// sobre el tablero del momento (AF.UI, <c>TutorialFinger.TryChoose</c>), porque el pack no guarda la solución. Además, con
     /// el mismo componente, dos estrenos de 02 §9.1 (tarea DC7; D-029: «sí, con el componente de DC6»): el de la Hoja (43, M1,
@@ -143,10 +144,22 @@ namespace AF.GameFlow
             }
         }
 
-        /// <summary><paramref name="level"/> lleva dedo guía (solo el 1 y el 2).</summary>
+        /// <summary>
+        /// <paramref name="level"/> lleva el dedo guía del tutorial por número de nivel (solo el 1 y el 2), sin los estrenos de la
+        /// Hoja y de la Tinaja, que van por el <c>intro_mechanic</c>: para esos, <see cref="HasFinger(int, string)"/>.
+        /// </summary>
         public static bool HasFinger(int level)
         {
             return FingerFor(level) != FingerLesson.None;
+        }
+
+        /// <summary>
+        /// El nivel <paramref name="level"/> con el estreno <paramref name="introMechanic"/> lleva dedo guía: el del tutorial (el 1
+        /// y el 2) o el de los estrenos de la Hoja (43) y de la Tinaja (323 de la «a»), por <see cref="FingerFor(int, string)"/>.
+        /// </summary>
+        public static bool HasFinger(int level, string? introMechanic)
+        {
+            return FingerFor(level, introMechanic) != FingerLesson.None;
         }
 
         /// <summary><c>intro_mechanic</c> del estreno de la Hoja (el 43; 02 §9.1 M1; 08 §4.1).</summary>

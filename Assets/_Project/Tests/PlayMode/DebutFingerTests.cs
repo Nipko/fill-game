@@ -8,6 +8,7 @@ using AF.Core.Session;
 using AF.GameFlow;
 using AF.Levels;
 using AF.Presentation;
+using AF.Presentation.Mechanics;
 using AF.Save;
 using AF.Solver.Search;
 using AF.UI;
@@ -294,6 +295,286 @@ namespace AF.Tests.PlayMode
             AssertNever(boot, 6000, "el 323 de la «b»");
         }
 
+        // ------------------------------------------------------------------ Antes de que salga el dedo (revisión de DC7)
+
+        [UnityTest]
+        public IEnumerator Level43_TheLeafPourBeforeTheFingerShows_CountsAsDone_AndNoFinger()
+        {
+            yield return Load43();
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            Assert.That(view.TutorialFingerArmed, Is.True, "condición del test: el dedo aún espera");
+            Assert.That(view.TutorialFingerVisible, Is.False);
+            int hoja = MechanicTestKit.IndexOf(flow, MechanicType.Hoja);
+            int source = LeafLessonSource(flow.Session.Current, hoja);
+            Assert.That(boot.TapCuia(source).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(hoja).Kind, Is.EqualTo(TapKind.Poured), "la fruta de la hoja a la cuia con hoja, sin el dedo");
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.TutorialFingerFollowed, Is.True, "hizo la lección sin el dedo");
+            AssertProbeReason(view, "self", "hoja");
+            AssertNever(boot, 9000, "tras la lección hecha sin el dedo");
+            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(0));
+        }
+
+        [UnityTest]
+        public IEnumerator Level43_AnotherPourBeforeTheFingerShows_KeepsItWaiting_AndItShowsAfter()
+        {
+            yield return Load43();
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            Assert.That(view.TutorialFingerArmed, Is.True, "condición del test: el dedo aún espera");
+            Pour other = PourKeepingTheLeafLesson(flow.Session.Current);
+            Assert.That(MechanicTestKit.Tap(boot, other).Kind, Is.EqualTo(TapKind.Poured), "otro vertido, sin abrir la hoja");
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.TutorialFingerArmed, Is.True, "sigue esperando, como en el 2");
+            Assert.That(view.TutorialFingerCancelled || view.TutorialFingerFollowed, Is.False);
+
+            int hoja = MechanicTestKit.IndexOf(flow, MechanicType.Hoja);
+            TutorialFinger finger = TutorialFingerTests.WaitForFinger(boot, "el 43 tras otro vertido");
+            Assert.That(finger.Target, Is.EqualTo(hoja), "a la cuia con hoja");
+            Assert.That(TutorialInstruction.IsHojaLesson(flow.Session.Current, finger.Source, finger.Target), Is.True);
+            AssertProbe(view, true, finger.Source, hoja, "show", "hoja");
+        }
+
+        [UnityTest]
+        public IEnumerator Level43_WithTheFingerShowing_NoIdleHintPulse()
+        {
+            GameScreen.IdleHintOverride = true;
+            try
+            {
+                yield return Load43();
+                GameBootstrap boot = GameBootstrap.Current!;
+                GameScreen view = boot.View!;
+                TutorialFinger finger = TutorialFingerTests.WaitForFinger(boot, "el 43");
+                int delay = IdleHint.DelayMs(BoosterConfig.Defaults, true);
+                Assert.That(delay, Is.GreaterThan(0), "condición del test: la pista por inactividad está activa");
+
+                // Con el dedo a la vista, ni pregunta ni pulsa, aunque pase de sobra el plazo sin toques.
+                for (int i = 0; i < 3; i++)
+                {
+                    FunnelSetup.Clock.Advance(System.TimeSpan.FromMilliseconds(delay + 1000));
+                    for (int t = 0; t < 1000; t += PlayModeHelpers.FrameMs)
+                    {
+                        PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                        Assert.That(view.TutorialFingerVisible, Is.True, "el dedo sigue");
+                        Assert.That(view.IdlePulsing, Is.False, "sin pulso con el dedo a la vista");
+                    }
+                }
+
+                Assert.That(view.IdlePulses, Is.EqualTo(0));
+                Assert.That(view.IdleHint.QueryCount, Is.EqualTo(0), "ni consulta al solver");
+
+                // Condición del test: sin el dedo, la pista por inactividad sí pulsa (la retención era la del dedo).
+                Assert.That(boot.TapCuia(finger.Source).Kind, Is.EqualTo(TapKind.Selected));
+                Assert.That(boot.TapCuia(finger.Target).Kind, Is.EqualTo(TapKind.Poured));
+                PlayModeHelpers.StepUntilIdle(boot, 8000);
+                Assert.That(view.TutorialFingerVisible, Is.False);
+                view.IdleHintTouch();
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                FunnelSetup.Clock.Advance(System.TimeSpan.FromMilliseconds(delay + 100));
+                PlayModeHelpers.Step(boot, 3 * PlayModeHelpers.FrameMs);
+                Assert.That(view.IdleHint.QueryCount, Is.EqualTo(1), "sin el dedo, pregunta al cumplirse el plazo");
+                float start = Time.realtimeSinceStartup;
+                while (view.IdleHint.Querying)
+                {
+                    Assert.That(Time.realtimeSinceStartup - start, Is.LessThan(PlayModeHelpers.TimeoutSeconds), "la pista responde");
+                    PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                    yield return null;
+                }
+
+                Assert.That(view.IdlePulses, Is.EqualTo(1), "y pulsa");
+            }
+            finally
+            {
+                GameScreen.IdleHintOverride = null;
+            }
+        }
+
+        [UnityTest]
+        public IEnumerator Level43_ReduceMotion_TheArrowStopsBelowTheLeafKey_AndLeavesItVisible()
+        {
+            yield return Load43();
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            boot.Flow!.ReduceMotion = true;
+            int hoja = MechanicTestKit.IndexOf(boot.Flow, MechanicType.Hoja);
+            TutorialFinger finger = TutorialFingerTests.WaitForFinger(boot, "el 43 con Reducir movimiento");
+            Assert.That(finger.ArrowVisible, Is.True);
+            Assert.That(finger.Target, Is.EqualTo(hoja));
+            PlayModeHelpers.Step(boot, 200);
+
+            // La ficha de la fruta de la hoja (el medallón y la fruta), en pantalla: ni la punta ni la línea de la flecha la cortan.
+            Image? badge = null;
+            Image? fruit = null;
+            foreach (Image img in view.Views[hoja].Root.GetComponentsInChildren<Image>(true))
+            {
+                badge = img.name == "HojaBadge" ? img : badge;
+                fruit = img.name == "HojaFruit" ? img : fruit;
+            }
+
+            Assert.That(badge != null && badge.gameObject.activeInHierarchy, Is.True, "la ficha de la hoja, a la vista");
+            Assert.That(fruit != null && fruit.gameObject.activeInHierarchy, Is.True, "la fruta de la hoja, a la vista");
+            Rect key = WorldRect(badge!.rectTransform);
+            Rect keyFruit = WorldRect(fruit!.rectTransform);
+            foreach (Image part in new[] { finger.ArrowHead, finger.ArrowShaft })
+            {
+                Rect r = WorldRect(part.rectTransform);
+                Assert.That(r.Overlaps(key), Is.False, part.name + " no corta la ficha de la hoja");
+                Assert.That(r.Overlaps(keyFruit), Is.False, part.name + " no corta la fruta de la hoja");
+            }
+
+            // La punta, en el eje de la cuia con hoja, por debajo de la ficha y por encima del toque (en su boca o su cuello).
+            Vector2 head = finger.ArrowHead.rectTransform.anchoredPosition;
+            Assert.That(Mathf.Abs(head.x - finger.TargetTap.x), Is.LessThan(0.01f), "la punta, en el eje del destino");
+            Assert.That(head.y, Is.GreaterThan(finger.TargetTap.y), "sobre el toque");
+            CuiaView dst = view.Views[hoja];
+            Rect keyU = ((HojaOverlay)dst.Overlay!).KeyRectU;
+            Assert.That(keyU.height, Is.GreaterThan(0f));
+            float keyBottom = dst.FootPosition.y + dst.BodyOffset.y + (keyU.yMin * Mathf.Max(1f, dst.Unit));
+            Assert.That(head.y + (0.5f * ProceduralArt.FingerArrowHeadHeightDp),
+                Is.LessThanOrEqualTo(keyBottom - TutorialFinger.ArrowKeyAirDp + 0.01f),
+                "la punta, a ≥ " + TutorialFinger.ArrowKeyAirDp + " dp bajo la ficha");
+        }
+
+        [UnityTest]
+        public IEnumerator Level323VariantA_ScoopBeforeTheFingerShows_CountsAsStep1_AndStep2Shows()
+        {
+            yield return Load323();
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            int tinaja = MechanicTestKit.IndexOf(flow, MechanicType.Tinaja);
+            int scoop = MechanicTestKit.IndexOf(flow, MechanicType.Cucharon);
+            ScoopBeforeTheFinger(boot, tinaja, scoop);
+
+            PlayModeHelpers.StepUntilIdle(boot, 8000);
+            yield return WaitReal(boot, "el 323, paso 2 tras sacar sin el dedo");
+            TutorialFinger finger = boot.View!.TutorialFingerView!;
+            Assert.That(view.TutorialFingerStep, Is.EqualTo(2));
+            Assert.That(finger.Source, Is.EqualTo(scoop), "paso 2: de su cuia");
+            Assert.That(finger.Target, Is.Not.EqualTo(tinaja), "la tinaja nunca recibe");
+            Assert.That(PourRules.IsLegal(flow.Session.Current, finger.Source, finger.Target), Is.True);
+            AssertProbe(view, true, scoop, finger.Target, "show", "tinaja_pour");
+            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(1), "solo el paso 2");
+        }
+
+        [UnityTest]
+        public IEnumerator Level323VariantA_PourFromItsCuiaBeforeStep2Shows_CountsAsDone_AndNoFinger()
+        {
+            yield return Load323();
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            int tinaja = MechanicTestKit.IndexOf(flow, MechanicType.Tinaja);
+            int scoop = MechanicTestKit.IndexOf(flow, MechanicType.Cucharon);
+            ScoopBeforeTheFinger(boot, tinaja, scoop);
+
+            // Con el paso 2 esperando (la vista aún no está quieta tras sacar), de su cuia a un destino, sin el dedo.
+            Assert.That(view.TutorialFingerVisible, Is.False, "condición del test: el paso 2 aún no salió");
+            int target = LegalTargetOf(flow.Session.Current, scoop, tinaja);
+            Assert.That(boot.TapCuia(scoop).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(target).Kind, Is.EqualTo(TapKind.Poured), "de su cuia a un destino, sin el dedo");
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.TutorialFingerFollowed, Is.True, "los dos pasos, hechos sin el dedo");
+            AssertProbeReason(view, "self", "tinaja_pour");
+            PlayModeHelpers.StepUntilIdle(boot, 8000);
+            yield return null;
+            AssertNever(boot, 6000, "tras los dos pasos sin el dedo");
+            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(0));
+        }
+
+        [UnityTest]
+        public IEnumerator Level323VariantA_AnotherPourBeforeTheFingerShows_CancelsIt()
+        {
+            yield return Load323();
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            int tinaja = MechanicTestKit.IndexOf(flow, MechanicType.Tinaja);
+            int scoop = MechanicTestKit.IndexOf(flow, MechanicType.Cucharon);
+            Assert.That(view.TutorialFingerArmed, Is.True, "condición del test: el dedo aún espera");
+            Assert.That(view.TutorialFingerVisible, Is.False);
+            Pour other = PourOutsideThePair(flow.Session.Current, tinaja, scoop);
+            Assert.That(MechanicTestKit.Tap(boot, other).Kind, Is.EqualTo(TapKind.Poured), "un vertido que no es de la pareja");
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.TutorialFingerCancelled, Is.True, "otro vertido lo retira, como en el 1 [P]");
+            AssertProbeReason(view, "other_pour", "tinaja_scoop");
+            PlayModeHelpers.StepUntilIdle(boot, 8000);
+            yield return null;
+            AssertNever(boot, 6000, "tras otro vertido");
+            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(0));
+        }
+
+        [UnityTest]
+        public IEnumerator Level323VariantA_TheFireflySelectionHidesTheFinger_AndItComesBack()
+        {
+            Profile profile = FunnelSetup.Profile(500);
+            profile.Stock.Reveal = 1;
+            yield return Load323(profile);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            LevelFlow flow = boot.Flow!;
+            yield return WaitReal(boot, "el 323");
+            Assert.That(flow.RevealAvailable, Is.True, "condición del test: la Luciérnaga se puede usar (la tinaja oculta dosis)");
+            Assert.That(boot.PressReveal(), Is.True, "Revelar con el dedo a la vista");
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(flow.RevealSelecting, Is.True);
+            for (int t = 0; t < 2000; t += PlayModeHelpers.FrameMs)
+            {
+                Assert.That(view.TutorialFingerVisible, Is.False, "mientras se elige la cuia, sin dedo (" + t + " ms)");
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(view.LastTutorialFingerProbe, Does.Contain("\"reason\":\"held\""));
+            Assert.That(flow.RevealSelecting, Is.True, "la selección sigue abierta");
+            Assert.That(boot.PressReveal(), Is.True, "otro toque en Revelar la cancela, sin coste");
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs * 2);
+            Assert.That(flow.RevealSelecting, Is.False);
+            Assert.That(view.TutorialFingerVisible, Is.True, "y el dedo vuelve");
+            Assert.That(view.LastTutorialFingerProbe, Does.Contain("\"reason\":\"resume\""));
+            Assert.That(view.TutorialFingerShownCount, Is.EqualTo(1), "es el mismo dedo, no otro");
+        }
+
+        // ------------------------------------------------------------------ Mecánica apagada (revisión de DC7)
+
+        [UnityTest]
+        public IEnumerator HojaDebutWithoutALeafOnTheBoard_HasNoFinger()
+        {
+            // Lo que deja un nivel con el estreno de la Hoja y sin hoja en el tablero (mech_enabled.hoja apagada): el 42 del
+            // paquete del mundo 3 con intro_mechanic «hoja».
+            string json = WithIntroMechanic(ReadPack("Assets/_Project/Data/Levels/mundo_03_v1.json"), HojaLevel - 1, "hoja");
+            yield return LoadDebutWithoutItsMechanic(json, HojaLevel - 1);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Flow!.Level.IntroMechanic, Is.EqualTo(TutorialInstruction.HojaIntroMechanic), "condición del test");
+            Assert.That(HasMechanic(boot.Flow, MechanicType.Hoja), Is.False, "condición del test: sin hoja");
+            Assert.That(boot.View!.TutorialFingerLesson, Is.EqualTo(FingerLesson.None));
+            Assert.That(boot.View.TutorialFingerArmed, Is.False);
+            AssertNever(boot, 6000, "el estreno de la Hoja sin hoja");
+        }
+
+        [UnityTest]
+        public IEnumerator TinajaDebutWithoutThePair_HasNoFinger()
+        {
+            // Lo que deja un nivel con el estreno de la Tinaja y sin la pareja colgada (mech_enabled.tinaja apagada): el 322 del
+            // paquete de la «a» con intro_mechanic «tinaja».
+            int level = TinajaTutorial.DebutLevel - 1;
+            string json = WithIntroMechanic(Tinaja323EndToEndTests.VariantAPackJson(), level, TinajaTutorial.IntroMechanic);
+            yield return LoadDebutWithoutItsMechanic(json, level);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.Flow!.Level.IntroMechanic, Is.EqualTo(TinajaTutorial.IntroMechanic), "condición del test");
+            Assert.That(HasMechanic(boot.Flow, MechanicType.Tinaja), Is.False, "condición del test: sin tinaja");
+            Assert.That(boot.View!.TutorialFingerLesson, Is.EqualTo(FingerLesson.None));
+            Assert.That(boot.View.TutorialFingerArmed, Is.False);
+            for (int i = 0; i < 20; i++)
+            {
+                yield return null; // si se hubiera lanzado una búsqueda en un hilo, tendría tiempo de terminar
+            }
+
+            AssertNever(boot, 6000, "el estreno de la Tinaja sin la pareja");
+        }
+
         // ------------------------------------------------------------------ Carga
 
         /// <summary>El 43 real con su tarjeta del estreno: la cierra con un toque y salta la intro; queda en PLAYING.</summary>
@@ -342,6 +623,172 @@ namespace AF.Tests.PlayMode
         }
 
         // ------------------------------------------------------------------ Comprobaciones
+
+        // Alguna cuia del tablero del momento lleva la mecánica type (sin fallar si no, a diferencia de MechanicTestKit.IndexOf).
+        private static bool HasMechanic(LevelFlow flow, MechanicType type)
+        {
+            BoardState b = flow.Session.Current;
+            for (int i = 0; i < b.Count; i++)
+            {
+                if (b[i].Mechanic == type)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        // Un paquete de los datos del proyecto (ruta relativa a la raíz del proyecto Unity).
+        private static string ReadPack(string relative)
+        {
+            return System.IO.File.ReadAllText(System.IO.Path.Combine(Application.dataPath, "..", relative));
+        }
+
+        // El paquete json con el intro_mechanic del nivel level (que lo tiene a null) cambiado a introMechanic.
+        private static string WithIntroMechanic(string json, int level, string introMechanic)
+        {
+            int at = json.IndexOf("\"level\":" + level + ",", System.StringComparison.Ordinal);
+            Assert.That(at, Is.GreaterThanOrEqualTo(0), "el nivel " + level + " en el paquete");
+            const string Null = "\"intro_mechanic\":null";
+            int intro = json.IndexOf(Null, at, System.StringComparison.Ordinal);
+            int next = json.IndexOf("\"level\":" + (level + 1) + ",", at, System.StringComparison.Ordinal);
+            Assert.That(intro, Is.GreaterThan(at), "el intro_mechanic del " + level);
+            Assert.That(next < 0 || intro < next, Is.True, "el intro_mechanic es del " + level);
+            return json.Substring(0, intro) + "\"intro_mechanic\":\"" + introMechanic + "\"" + json.Substring(intro + Null.Length);
+        }
+
+        // Carga level del paquete json y pasa la tarjeta (si sale) y la intro; queda en PLAYING.
+        private static IEnumerator LoadDebutWithoutItsMechanic(string json, int level)
+        {
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtSyncOverride = true;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
+            yield return PlayModeHelpers.LoadGameWithPack(json, level, new MemoryProgressStore(level, level - 1));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            LevelFlow flow = boot.Flow!;
+            for (int i = 0; i < 4 && flow.Phase != FlowPhase.Playing; i++)
+            {
+                boot.TapAnywhere();
+                PlayModeHelpers.Step(boot, 50);
+            }
+
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing), "en juego");
+        }
+
+        // Saca de la tinaja a su cuia justo tras la intro, antes de que salga el dedo: cuenta como el paso 1 y el dedo espera
+        // al paso 2 (sin salir mientras la vista se mueve).
+        private static void ScoopBeforeTheFinger(GameBootstrap boot, int tinaja, int scoop)
+        {
+            GameScreen view = boot.View!;
+            Assert.That(tinaja, Is.GreaterThanOrEqualTo(0));
+            Assert.That(scoop, Is.GreaterThanOrEqualTo(0));
+            Assert.That(view.TutorialFingerArmed, Is.True, "condición del test: el dedo aún espera");
+            Assert.That(view.TutorialFingerVisible, Is.False);
+            Assert.That(view.TutorialFingerStep, Is.EqualTo(1));
+            Assert.That(boot.TapCuia(tinaja).Kind, Is.EqualTo(TapKind.Selected));
+            Assert.That(boot.TapCuia(scoop).Kind, Is.EqualTo(TapKind.Poured), "sacar sin el dedo");
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            Assert.That(view.TutorialFingerStep, Is.EqualTo(2), "sacar sin el dedo cuenta como el paso 1");
+            Assert.That(view.TutorialFingerArmed, Is.True, "y espera al paso 2");
+            Assert.That(view.TutorialFingerVisible, Is.False);
+        }
+
+        // Un origen del que la fruta de la hoja va legalmente a la cuia con hoja (la lección).
+        private static int LeafLessonSource(BoardState state, int hoja)
+        {
+            for (int s = 0; s < state.Count; s++)
+            {
+                if (TutorialInstruction.IsHojaLesson(state, s, hoja))
+                {
+                    return s;
+                }
+            }
+
+            Assert.Fail("sin la lección de la hoja en el tablero");
+            return -1;
+        }
+
+        // Un vertido legal que no va a la hoja y tras el cual la lección de la hoja sigue siendo posible.
+        private static Pour PourKeepingTheLeafLesson(BoardState state)
+        {
+            var solver = new AStarSolver();
+            for (int s = 0; s < state.Count; s++)
+            {
+                for (int t = 0; t < state.Count; t++)
+                {
+                    if (s == t || state[t].Mechanic == MechanicType.Hoja || !PourRules.IsLegal(state, s, t))
+                    {
+                        continue;
+                    }
+
+                    BoardState next = PourRules.Apply(state, s, t, PourModes.Default);
+                    if (TutorialFinger.TryChoose(FingerLesson.HojaKey, next, PourModes.Default, true, solver, out _))
+                    {
+                        return new Pour(s, t, PourRules.Amount(state, s, t, PourModes.Default));
+                    }
+                }
+            }
+
+            Assert.Fail("sin otro vertido que deje la lección de la hoja");
+            return default;
+        }
+
+        // Un destino legal de la cuia de la tinaja (nunca la tinaja).
+        private static int LegalTargetOf(BoardState state, int scoop, int tinaja)
+        {
+            for (int t = 0; t < state.Count; t++)
+            {
+                if (t != scoop && t != tinaja && PourRules.IsLegal(state, scoop, t))
+                {
+                    return t;
+                }
+            }
+
+            Assert.Fail("su cuia no tiene destino legal");
+            return -1;
+        }
+
+        // Un vertido legal que no sale de la tinaja ni de su cuia.
+        private static Pour PourOutsideThePair(BoardState state, int tinaja, int scoop)
+        {
+            for (int s = 0; s < state.Count; s++)
+            {
+                for (int t = 0; t < state.Count; t++)
+                {
+                    if (s != t && s != tinaja && s != scoop && PourRules.IsLegal(state, s, t))
+                    {
+                        return new Pour(s, t, PourRules.Amount(state, s, t, PourModes.Default));
+                    }
+                }
+            }
+
+            Assert.Fail("sin un vertido fuera de la pareja");
+            return default;
+        }
+
+        // Rectángulo en pantalla (mundo) que ocupa rt, con su giro.
+        private static Rect WorldRect(RectTransform rt)
+        {
+            var corners = new Vector3[4];
+            rt.GetWorldCorners(corners);
+            float x0 = Mathf.Min(Mathf.Min(corners[0].x, corners[1].x), Mathf.Min(corners[2].x, corners[3].x));
+            float x1 = Mathf.Max(Mathf.Max(corners[0].x, corners[1].x), Mathf.Max(corners[2].x, corners[3].x));
+            float y0 = Mathf.Min(Mathf.Min(corners[0].y, corners[1].y), Mathf.Min(corners[2].y, corners[3].y));
+            float y1 = Mathf.Max(Mathf.Max(corners[0].y, corners[1].y), Mathf.Max(corners[2].y, corners[3].y));
+            return Rect.MinMaxRect(x0, y0, x1, y1);
+        }
+
+        // La última sonda, sin el vertido (antes de salir el dedo aún no hay vertido elegido).
+        private static void AssertProbeReason(GameScreen view, string reason, string lesson)
+        {
+            string? probe = view.LastTutorialFingerProbe;
+            Assert.That(probe, Is.Not.Null, "AF_STATE tutorial_finger");
+            Assert.That(probe, Does.Contain("\"visible\":false"));
+            Assert.That(probe, Does.Contain("\"lesson\":\"" + lesson + "\""));
+            Assert.That(probe, Does.Contain("\"reason\":\"" + reason + "\""));
+        }
 
         /// <summary>
         /// Como <see cref="TutorialFingerTests.WaitForFinger"/>, pero con tiempo real: en el estreno de la Tinaja el vertido se

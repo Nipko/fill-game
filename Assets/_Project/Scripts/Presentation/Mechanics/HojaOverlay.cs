@@ -345,6 +345,28 @@ namespace AF.Presentation.Mechanics
             }
         }
 
+        /// <summary>
+        /// Hoja sin atar, cerrada: rectángulo de la ficha de la llave (el medallón y la fruta; u: x desde el eje, y desde el pie);
+        /// <see cref="Rect.zero"/> sin ficha a la vista o en la Hoja atada. Lo usa el dedo guía del estreno (DC7) para no taparla.
+        /// </summary>
+        public Rect KeyRectU
+        {
+            get
+            {
+                if (_tied || !Visible || !_badge.gameObject.activeSelf || _u <= 0f)
+                {
+                    return Rect.zero;
+                }
+
+                RectTransform rt = _badge.rectTransform;
+                Vector2 c = rt.anchoredPosition / _u;
+                float s = Mathf.Abs(rt.localScale.y);
+                float w = Mathf.Max(ProceduralArt.HojaBadgeWidthU, FruitU) * s;
+                float h = Mathf.Max(ProceduralArt.HojaBadgeHeightU, FruitU) * s;
+                return new Rect(c.x - (0.5f * w), c.y - (0.5f * h), w, h);
+            }
+        }
+
         /// <summary>Fruta llave que muestra (0 si aún ninguna).</summary>
         public int ShownKey => _key;
 
