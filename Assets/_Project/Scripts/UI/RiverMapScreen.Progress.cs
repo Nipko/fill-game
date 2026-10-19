@@ -1524,8 +1524,8 @@ namespace AF.UI
                 // Madeira, Beni y Madre de Dios) cada una tenía 80 vértices y en Mundo saltaba puntos; el agua y su orla, con
                 // distinto coste por sección, saltaban puntos distintos y ninguna seguía el vidrio: dos cauces a la vista. Ni
                 // siquiera los 400 enteros por pieza bastan (la del Amazonas pide 360 de agua y 504 de orla). El frente solo se
-                // rehace al cambiar su llenado (una vez por boya, ≤ 10 por apertura), y solo la pieza que cambia. Es una desviación
-                // del «≤ 400 vértices» del frente de la propuesta del Mapa §11.4, anotada allí y pendiente del dueño: el frente del
+                // rehace al cambiar su llenado (una vez por boya, ≤ 10 por apertura), y solo la pieza que cambia. Es una desviación provisional
+                // [P] del «≤ 400 vértices» del frente de la propuesta del Mapa §11.4, anotada allí y pendiente del dueño: el frente del
                 // 300 pide 2.534 vértices entre agua y orla en Mundo (medido; lo acota Fx11Tests).
                 const int budget = RiverRibbonGraphic.MaxVertices;
                 float left = _frontFraction * total;

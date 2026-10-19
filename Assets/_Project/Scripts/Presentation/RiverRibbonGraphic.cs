@@ -95,7 +95,7 @@ namespace AF.Presentation
         /// <summary>
         /// Tope de vértices del frente, el tramo que se anima, según la propuesta del Mapa §11.4 (≤ 400). Desde la revisión de FX11
         /// el Mapa ya no lo aplica a sus cintas del frente: llevan <see cref="MaxVertices"/>, como el vidrio y el lleno, para no
-        /// saltar puntos y seguir el vidrio. Es una desviación de §11.4, anotada allí y pendiente del dueño: el frente del 300
+        /// saltar puntos y seguir el vidrio. Es una desviación provisional [P] de §11.4, anotada allí y pendiente del dueño: el frente del 300
         /// (5 piezas) pide 2.534 vértices entre agua y orla en Mundo (medido; lo acota <c>Fx11Tests</c>). Queda como cifra de
         /// referencia: la usan las pruebas de la cinta y las de un frente de una sola pieza (<c>MapProgressTests</c>).
         /// </summary>
