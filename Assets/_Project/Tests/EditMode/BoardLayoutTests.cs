@@ -47,13 +47,14 @@ namespace AF.Tests.EditMode
 
         [TestCase(11, "6/5")]
         [TestCase(12, "6/6")]
-        [TestCase(13, "7/6")]
-        [TestCase(14, "7/7")]
+        [TestCase(13, "5/4/4")]
+        [TestCase(14, "5/5/4")]
         [TestCase(15, "5/5/5")]
         [TestCase(16, "6/5/5")]
-        public void Rows_In16x9_TwoRowsWinFrom11To14(int count, string split)
+        public void Rows_In16x9_TwoRowsWinIn11And12_ThreeFrom13(int count, string split)
         {
-            // D-006: en 16:9 (360 × 640 dp) las 2 filas dan la cuia más ancha con T = 11-14.
+            // D-006: en 16:9 (360 × 640 dp) las 2 filas dan la cuia más ancha con T = 11-12; con 13-14, 3 filas al cargar
+            // aunque 2 dieran la cuia más ancha (P12 de D-006, opción c; D-030).
             BoardLayoutResult r = BoardLayout.Compute(count, H4, 360f, Top, Bottom640);
             Assert.That(Split(r), Is.EqualTo(split));
         }
@@ -61,9 +62,10 @@ namespace AF.Tests.EditMode
         [Test]
         public void SevenPerRow_In16x9_GivesSlot48AndCuia33_6By94_08()
         {
-            // 02 §5: con 7 por fila, ranura 48 y cuia de 0,70 × 48 = 33,6 dp; alto 5,60 u = 94,08 dp (D-006).
-            BoardLayoutResult r = BoardLayout.Compute(14, H4, 360f, Top, Bottom640);
-            Assert.That(r.Rows, Is.EqualTo(2));
+            // 02 §5: con 7 por fila, ranura 48 y cuia de 0,70 × 48 = 33,6 dp; alto 5,60 u = 94,08 dp (D-006). Desde P12 (c) solo
+            // se llega a 7 por fila con 12 generadas (6/6) y Cuia extra y Cuia de rescate.
+            BoardLayoutResult r = BoardLayout.Compute(14, 12, H4, 360f, Top, Bottom640);
+            Assert.That(Split(r), Is.EqualTo("7/7"));
             Assert.That(r.SlotWidth, Is.EqualTo(48f).Within(0.01f));
             Assert.That(r.CuiaWidth, Is.EqualTo(33.6f).Within(0.01f));
             Assert.That(r.CuiaHeight, Is.EqualTo(94.08f).Within(0.01f));
@@ -140,8 +142,8 @@ namespace AF.Tests.EditMode
 
         [TestCase(11, 2, 39.2f)]
         [TestCase(12, 2, 39.2f)]
-        [TestCase(13, 2, 33.6f)]
-        [TestCase(14, 2, 33.6f)]
+        [TestCase(13, 3, 30.24f)] // P12 de D-006 (c): 3 filas con T ≥ 13 (antes, 7/6 en 2 filas de 33,6 dp)
+        [TestCase(14, 3, 30.24f)]
         [TestCase(15, 3, 30.24f)]
         [TestCase(16, 3, 30.24f)]
         public void ShortScreens_360x640(int count, int rows, float width)
@@ -220,6 +222,50 @@ namespace AF.Tests.EditMode
             Assert.That(r.RowOf[13], Is.EqualTo(2));
             Assert.That(r.RowOf[14], Is.EqualTo(1));
             AssertRowsConsistent(r);
+        }
+
+        // P12 de D-006, opción c (D-030, 2026-10-19): con 13-14 generadas, 2 filas dejaban una de 8 cuias al añadir Cuia extra
+        // y Cuia de rescate (ranura de 42 dp y cuia de 29,4 dp en 16:9, < 48 dp de 02 §3.3); se cargan en 3 filas en 16:9
+        // (360 × 640) y en 19,5:9 (360 × 780), como T + 2 > 14 (BoardLayout.MaxTwoRowWithAdded).
+        [TestCase(13, Bottom640)]
+        [TestCase(14, Bottom640)]
+        [TestCase(13, Bottom)]
+        [TestCase(14, Bottom)]
+        [TestCase(13, Bottom800)]
+        [TestCase(14, Bottom800)]
+        public void P12_ThirteenAndFourteenGenerated_LoadInThreeRows_In16x9And19_5x9(int generated, float bottom)
+        {
+            Assert.That(BoardLayout.RowsFor(generated, H4, 360f, Top, bottom), Is.EqualTo(3));
+            Assert.That(BoardLayout.Compute(generated, H4, 360f, Top, bottom).Rows, Is.EqualTo(3));
+            Assert.That(BoardLayout.Compute(System.Math.Min(16, generated + BoardLayout.AddedCuiasForRows), generated, H4, 360f, Top, bottom).Rows,
+                Is.EqualTo(3), "con Cuia extra y Cuia de rescate, las mismas filas (D-006, punto 4)");
+        }
+
+        [TestCase(Bottom640)]
+        [TestCase(Bottom)]
+        public void P12_FourteenPlusTwo_NoRowLongerThanSix_AndTheCuiaAtLeastAsWideAsSixteenInThreeRows(float bottom)
+        {
+            // 14 generadas (5/5/4) + Cuia extra + Cuia de rescate: 5/5/5 y luego 5/5/6 (a igualdad, la de abajo [P]). La fila más
+            // larga tiene 6 y la cuia mide al menos lo que con 16 generadas en 3 filas (6/5/5: 30,24 dp en 16:9, 02 §5).
+            BoardLayoutResult r = BoardLayout.Compute(16, 14, H4, 360f, Top, bottom);
+            Assert.That(r.Rows, Is.EqualTo(3));
+            Assert.That(MaxPerRow(r), Is.EqualTo(6));
+            Assert.That(Split(r), Is.EqualTo("5/5/6"));
+            BoardLayoutResult sixteen = BoardLayout.Compute(16, H4, 360f, Top, bottom);
+            Assert.That(r.CuiaWidth, Is.GreaterThanOrEqualTo(sixteen.CuiaWidth - 0.01f));
+            if (bottom == Bottom640)
+            {
+                Assert.That(r.CuiaWidth, Is.GreaterThanOrEqualTo(30.24f - 0.01f), "30,2 dp en 16:9 (02 §5)");
+            }
+
+            for (int generated = 1; generated <= 14; generated++)
+            {
+                int count = System.Math.Min(16, generated + BoardLayout.AddedCuiasForRows);
+                BoardLayoutResult added = BoardLayout.Compute(count, generated, H4, 360f, Top, bottom);
+                Assert.That(MaxPerRow(added), Is.LessThanOrEqualTo(7), "generadas " + generated + " + 2: ninguna fila de 8 (P12)");
+            }
+
+            Assert.That(BoardLayout.RowsFor(12, H4, 360f, Top, Bottom640), Is.EqualTo(2), "11-12 siguen eligiendo la cuia más ancha");
         }
 
         [TestCase(Bottom)]
@@ -463,8 +509,8 @@ namespace AF.Tests.EditMode
         [TestCase(Bottom, 11, 7, "4/3/4")]
         [TestCase(Bottom, 16, 5, "5/6/5")]
         [TestCase(Bottom640, 11, 5, "5/6")]
-        [TestCase(Bottom640, 14, 6, "8/6")]
-        [TestCase(Bottom640, 14, 5, "7/7")]
+        [TestCase(Bottom640, 14, 4, "4/5/5")] // P12 de D-006 (c): 14 en 3 filas también en 16:9
+        [TestCase(Bottom640, 14, 9, "5/4/5")]
         public void TinajaPair_SameRow_MovesTheCut_At360x780And360x640(float bottom, int count, int pairStart, string split)
         {
             BoardLayoutResult r = BoardLayout.Compute(count, count, H5, 360f, Top, bottom, pairStart);
