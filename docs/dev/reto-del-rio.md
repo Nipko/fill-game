@@ -305,10 +305,11 @@ public sealed class DailyChallengeRules
 |---|---|---|
 | 2026-01-01 | 0 | 0 |
 | 2026-10-19 | 0 | 291 |
-| 2027-12-31 | 0 | 729 |
-| 2028-01-01 | 0 | 0 |
-| 2025-12-31 | 0 | 729 |
-| 2026-01-01 | −1 | 729 |
+| 2027-12-30 | 0 | 728 |
+| 2027-12-31 | 0 | 0 (vuelta: 729 días) |
+| 2028-01-01 | 0 | 1 |
+| 2025-12-31 | 0 | 728 |
+| 2026-01-01 | −1 | 728 |
 
 **Sustituciones** (R-Q6; 03 §16; 06 §4.1): `daily_overrides` = `{"2026-12-25": {"1": "d1_n0100", "2": "d2_n0033"}}`.
 - Si existe `[fecha][banda]` y el id está en el pool (`DailyPool.FindById`), se sirve ese tablero; si no, el cálculo normal (y la sonda lo anota).
