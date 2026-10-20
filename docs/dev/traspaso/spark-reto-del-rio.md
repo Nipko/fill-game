@@ -598,3 +598,16 @@ R0-R4 y R6 están en `integracion-fase1-fase2` (`fcbbd94` y `0d844cf`): revisado
 6. Opcional: incluye `daily` en el `--self-test` sin nombre del generador y de level-qa.
 
 **Corrección del encargo §3.3, punto 1:** el despacho de `--daily` en `tools/level-generator/Program.cs` va antes del `--self-test` genérico (que rechazaría «daily»), no antes de `--parity`. Lo que hiciste es lo correcto.
+
+### Bloques (b)-(d) integrados (2026-10-20)
+
+R5, R7a, R7b, R8, R9, R10 y R11 están en `integracion-fase1-fase2` (`d54700b` y `d23df57`): revisados sin bloqueantes y verificados en el escritorio x64. EditMode 3.057 (3.054 + 3), PlayMode 1.383 (1.216 + 167) y dotnet test 981; el pool se reproduce byte a byte y `level-qa --daily` da 0 fallos. Haz `git merge origin/integracion-fase1-fase2` en tu rama.
+
+**R12 lo hace el integrador** cuando terminen los carriles de la ola 7, que tocan los mismos archivos (inicio, `GameBootstrap`, escena, perfil y `strings.csv`).
+
+**Pendiente para ti:**
+1. Commitea el parche completo de E16 en el repositorio (por ejemplo, como sección de `spark-parches-docs.md`): la ruta de `spark-estado.md` apunta a una carpeta temporal de tu equipo.
+2. Prepara la clase y el parche exacto de E6 (la tarjeta de la victoria del 7), que aún faltan.
+3. Corrige en `DailyChallengeScreen.cs` la referencia «E21», que debe ser «E25».
+4. Opcional: incluye `daily` en el `--self-test` sin nombre de level-qa y documenta `--daily` en su README (E17, tras E16).
+
