@@ -13,7 +13,7 @@ namespace AF.UI
     /// <summary>
     /// Calendario de sellos del Reto del río (tarea R9; 06 §4.1 «Pantalla»: «al ganar, el sello cae sobre el calendario del mes
     /// (cuadrícula de 28-31), +60 y el botón Cosecha doble»; nota §8): cuadrícula del mes con un casillero por día (28-31), los
-    /// sellos de <see cref="DailyChallengeRecord.StampDays"/>, y al ganar el sello del día que <b>cae</b> (animación por código de
+    /// sellos (hoja de los CTA, <see cref="StampColor"/>) de <see cref="DailyChallengeRecord.StampDays"/>, y al ganar el sello del día que <b>cae</b> (animación por código de
     /// <see cref="StampDropMs"/> ms: escala 2,4 → 1 con un rebote corto y opacidad 0 → 1), el premio «+60» con el icono de semilla
     /// cuando se pagó (<see cref="DailyClaimReport.SeedsPaid"/>), «+1 Pororoca» si cerró una racha de 7, y las líneas de
     /// pendiente de validar o sin premio. Botón «Inicio» y, oculto, «Cosecha doble».
@@ -27,6 +27,12 @@ namespace AF.UI
     /// </summary>
     public sealed class DailyStampCalendar
     {
+        /// <summary>
+        /// Color del sello: la hoja de los CTA (<c>Palette.UiGreenButton</c>) con el aro crema. Nunca rojo: la guía v2 §7 reserva
+        /// el rojo de la UI a <c>rojo_aviso</c>, y la heliconia es escena y FX, no UI (D-003).
+        /// </summary>
+        public static readonly Color StampColor = Palette.UiGreenButton;
+
         /// <summary>Orden del lienzo (encima del tablero; por debajo de Ajustes 40, tienda 50 y anuncio 60).</summary>
         public const int SortingOrder = 30;
 
@@ -99,7 +105,7 @@ namespace AF.UI
                 _cells[i] = UiBuilder.Image("Day" + (i + 1), _grid, art.RoundedRect, new Color(Palette.UiPaper.r, Palette.UiPaper.g, Palette.UiPaper.b, 0.9f));
                 _cellDays[i] = UiBuilder.Label("N", _cells[i].transform, TextStyle.PlainBold, string.Empty, 13f, Palette.UiWood, TextAlignmentOptions.Center);
                 UiBuilder.Stretch(_cellDays[i].rectTransform);
-                _stamps[i] = UiBuilder.Image("Stamp", _cells[i].transform, art.Disc, Palette.Heliconia);
+                _stamps[i] = UiBuilder.Image("Stamp", _cells[i].transform, art.Disc, StampColor);
                 Image ring = UiBuilder.Image("Ring", _stamps[i].transform, art.Ring, Palette.Cream);
                 UiBuilder.Stretch(ring.rectTransform);
                 UiBuilder.Place(_stamps[i].rectTransform, 4f, 4f, Cell - 8f, Cell - 8f);
@@ -203,7 +209,7 @@ namespace AF.UI
                 bool stamped = sameMonth && record.StampDays.Contains(i + 1);
                 _stamps[i].gameObject.SetActive(stamped);
                 _stamps[i].rectTransform.localScale = Vector3.one;
-                _stamps[i].color = Palette.Heliconia;
+                _stamps[i].color = StampColor;
                 if (stamped)
                 {
                     _stampedShown.Add(i + 1);
@@ -226,7 +232,7 @@ namespace AF.UI
                     Image stamp = _stamps[_fallingDay - 1];
                     stamp.gameObject.SetActive(true);
                     stamp.rectTransform.localScale = Vector3.one * 2.4f;
-                    stamp.color = WithAlpha(Palette.Heliconia, 0f);
+                    stamp.color = WithAlpha(StampColor, 0f);
                     _fallAlpha = c.Outcome == ClaimOutcome.Pending ? PendingAlpha : 1f;
                 }
 
@@ -292,11 +298,11 @@ namespace AF.UI
                 float scale = t < 0.75f ? Mathf.Lerp(2.4f, 0.92f, EaseIn(t / 0.75f)) : Mathf.Lerp(0.92f, 1f, (t - 0.75f) / 0.25f);
                 Image stamp = _stamps[_fallingDay - 1];
                 stamp.rectTransform.localScale = new Vector3(scale, scale, 1f);
-                stamp.color = WithAlpha(Palette.Heliconia, Mathf.Clamp01(t * 2f) * _fallAlpha);
+                stamp.color = WithAlpha(StampColor, Mathf.Clamp01(t * 2f) * _fallAlpha);
                 if (t >= 1f)
                 {
                     stamp.rectTransform.localScale = Vector3.one;
-                    stamp.color = WithAlpha(Palette.Heliconia, _fallAlpha);
+                    stamp.color = WithAlpha(StampColor, _fallAlpha);
                     _dropMs = -1f;
                     if (_rewardPending)
                     {

@@ -83,6 +83,9 @@ namespace AF.UI
     /// Siguiente), que sustituye por el calendario de sellos (<see cref="DailyStampCalendar"/>), y pone la cabecera «Reto del
     /// río» en la insignia del nivel (<see cref="GameScreen.LevelTitle"/>): nunca «Nivel N» (el nivel efectivo de R8 no se
     /// enseña);</item>
+    /// <item>el fondo es el genérico del río: esta vista no recibe <c>RiverStops</c> (el fondo por parada se elige con el número
+    /// de nivel, y aquí sería el nivel efectivo, que no es un lugar del Mapa). El kit del mundo del día (R-Q2: rota por los
+    /// mundos 1-9 según la fecha) queda pendiente de que <c>GameScreen</c> acepte un mundo en lugar de un nivel;</item>
     /// <item>la Crecida aún no existe en el cliente: no hay barra que quitar (cuando llegue a <see cref="GameScreen"/>, hará falta
     /// el enganche E21 para ocultarla con <see cref="LevelFlow.IsDaily"/>).</item>
     /// </list>
@@ -159,10 +162,10 @@ namespace AF.UI
         public DailyClaimReport? LastClaim { get; private set; }
 
         /// <summary>
-        /// La partida abierta terminó con «Salir» sin ganar. Qué queda después lo decide el servicio: con R-Q16 (a) la partida
-        /// sigue reanudable el mismo día y la tarjeta dice «Seguir»; el <c>fail</c> del día lo informa el servicio solo si el
-        /// día termina sin victoria (R-Q15 a). Esta pantalla no lee el valor que devuelve
-        /// <see cref="DailyChallengeService.RecordExitWithoutWin"/> (cambia de tipo en la rama <c>spark/reto-del-rio-dec</c>).
+        /// La partida abierta terminó con «Salir» sin ganar. R-Q16 (a): la partida sigue reanudable el mismo día
+        /// (<see cref="DailyChallengeService.RecordExitWithoutWin"/> la devuelve) y la tarjeta dice «Seguir»; salir no es un
+        /// resultado: el <c>fail</c> del día lo informa <see cref="DailyChallengeService.DayEnded"/>, una vez y solo si el día
+        /// termina sin victoria (R-Q15 a).
         /// </summary>
         public bool ExitedWithoutWin { get; private set; }
 
@@ -314,10 +317,14 @@ namespace AF.UI
             return false;
         }
 
-        /// <summary>Atrás de Android con el Reto abierto (enganche E22): el calendario o la partida se cierran como con «Salir».</summary>
+        /// <summary>
+        /// Atrás de Android con el Reto abierto (enganche E22): solo cierra el calendario (el de la tarjeta y el de después de
+        /// ganar, como «Inicio»). Con el tablero en juego no hace nada y devuelve false, como en un nivel de campaña (02 §3; 04
+        /// §6.6: Atrás no saca del nivel).
+        /// </summary>
         public bool HandleBack()
         {
-            return IsOpen && Exit();
+            return _calendar.Visible && GoHome();
         }
 
         // ---- ILevelFlowListener (todo a la vista salvo la pantalla de victoria de campaña) ----

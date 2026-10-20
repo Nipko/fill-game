@@ -210,7 +210,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator ExitWithoutWinning_IsFail_NoCanoe_AndTheCardSaysPlay()
+        public IEnumerator ExitWithoutWinning_KeepsTheGameResumable_NoCanoe_RQ16()
         {
             yield return Boot();
             GameBootstrap boot = GameBootstrap.Current!;
@@ -236,11 +236,47 @@ namespace AF.Tests.PlayMode
             Assert.That(profile.Progress.MaxLevel, Is.EqualTo(MaxLevel));
             Assert.That(profile.LevelState, Is.Null);
             Assert.That(boot.Lobby!.Visible, Is.True);
-            // Lo que queda lo decide el servicio: con R-Q16 (a) (rama spark/reto-del-rio-dec) la partida sigue reanudable y la
-            // tarjeta dice «Seguir»; con la API anterior se cerraba y decía «Jugar». La tarjeta sigue al servicio en los dos casos.
-            DailyCardState expected = boot.DailyService!.Resumable != null ? DailyCardState.InProgress : DailyCardState.Play;
-            Assert.That(boot.DailyCard!.State, Is.EqualTo(expected));
-            Assert.That(boot.DailyCard.Visible, Is.True);
+            Assert.That(boot.LastDailyDayEnd, Is.Null, "salir no es un resultado: el fail sale si el día termina sin victoria (R-Q15 a)");
+
+            // R-Q16 (a): la partida sigue reanudable el mismo día y la tarjeta dice «Seguir».
+            DailyChallengeCard card = boot.DailyCard!;
+            Assert.That(boot.DailyService!.Resumable, Is.Not.Null);
+            Assert.That(card.Visible, Is.True);
+            Assert.That(card.State, Is.EqualTo(DailyCardState.InProgress));
+            Assert.That(card.StateText, Is.EqualTo("Seguir"));
+
+            card.Button.onClick.Invoke();
+            daily = boot.DailyScreen!;
+            Assert.That(daily.IsOpen, Is.True);
+            Assert.That(daily.Resumed, Is.True, "tocar la tarjeta la reanuda");
+            Assert.That(daily.Flow!.Session.AppliedPours, Is.EqualTo(1), "con el vertido de antes de salir");
+            Assert.That(profile.Wallet.Canoes.Count, Is.EqualTo(canoes));
+        }
+
+        [UnityTest]
+        public IEnumerator AndroidBack_DoesNothingOnTheBoard_ButClosesTheCalendar()
+        {
+            yield return Boot();
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.PressDailyCard(), Is.True);
+            DailyChallengeScreen daily = boot.DailyScreen!;
+            ToPlaying(boot, daily);
+
+            Assert.That(daily.HandleBack(), Is.False, "con el tablero en juego Atrás no saca del Reto (02 §3; 04 §6.6)");
+            Assert.That(daily.IsOpen, Is.True);
+            Assert.That(daily.ExitedWithoutWin, Is.False);
+
+            Win(boot, daily);
+            StepUntil(boot, () => daily.Calendar.Visible, 20000, "calendario de sellos");
+            Assert.That(daily.HandleBack(), Is.True, "con el calendario, Atrás es «Inicio»");
+            Step(boot, Frame);
+            Assert.That(daily.IsOpen, Is.False);
+            Assert.That(boot.Lobby!.Visible, Is.True);
+
+            Assert.That(boot.PressDailyCard(), Is.True, "tarjeta sellada: el calendario del mes");
+            Assert.That(daily.HandleBack(), Is.True);
+            Assert.That(daily.Calendar.Visible, Is.False);
+            Assert.That(daily.HandleBack(), Is.False, "nada abierto");
         }
 
         [UnityTest]
@@ -329,6 +365,7 @@ namespace AF.Tests.PlayMode
             Assert.That(daily.Resumed, Is.True, "se reanuda (R-Q4)");
             Assert.That(daily.Flow!.Session.AppliedPours, Is.EqualTo(1), "con el vertido de antes");
             Assert.That(daily.View!.LevelTitle.text, Is.EqualTo("Reto del río"));
+            Assert.That(boot.LastDailyDayEnd, Is.Null, "el mismo día no termina ningún día (R-Q15 a)");
 
             Win(boot, daily);
             Assert.That(daily.LastClaimOutcome, Is.EqualTo(ClaimOutcome.Confirmed));
@@ -351,6 +388,10 @@ namespace AF.Tests.PlayMode
             boot = GameBootstrap.Current!;
 
             Assert.That(boot.DailyService!.Resumable, Is.Null, "al abrir la app se descarta la de ayer (R-Q4)");
+            Assert.That(boot.LastDailyDayEnd.HasValue, Is.True, "DayEnded llega antes del primer DiscardStale (R-Q15 a)");
+            Assert.That(boot.LastDailyDayEnd!.Value.DateKey, Is.EqualTo("2026-10-19"));
+            Assert.That(boot.LastDailyDayEnd.Value.Result, Is.EqualTo(DailyResult.Fail), "el día terminó sin victoria");
+            Assert.That(boot.LastDailyDayEnd.Value.IsReported, Is.True);
             Assert.That(_store.Load().InProgress == null || _store.Load().InProgress!.DateKey == "2026-10-20", Is.True);
             Assert.That(boot.DailyCard!.State, Is.EqualTo(DailyCardState.Play));
             Assert.That(boot.DailyCard.TitleText, Is.EqualTo("Reto del río · 20 oct"));

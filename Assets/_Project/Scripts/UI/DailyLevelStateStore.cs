@@ -16,11 +16,12 @@ namespace AF.UI
     /// <item><see cref="Load"/>: el estado guardado de la partida de <b>hoy</b> (fecha local), o null si no hay partida, si es de
     /// otro día (se descarta al empezar: <see cref="DailyChallengeService.Start"/> / <see cref="DailyChallengeService.DiscardStale"/>)
     /// o si aún no se guardó ningún estado (<c>level</c> = 0: recién empezada).</item>
-    /// <item><see cref="Save"/>: copia el estado en la partida en curso y guarda. Sin partida en curso no hace nada (la partida se
-    /// cerró: victoria o salida).</item>
-    /// <item><see cref="Clear"/> (victoria y salida): deja la partida sin estado guardado pero <b>no la cierra</b>; la cierran
-    /// <see cref="DailyChallengeService.ClaimWin"/> y <see cref="DailyChallengeService.RecordExitWithoutWin"/>, que el flujo
-    /// llama justo después (<c>LevelFlow</c> borra el estado antes de avisar de la victoria o de la salida).</item>
+    /// <item><see cref="Save"/>: copia el estado en la partida en curso y guarda (tras cada vertido y, con R-Q16 (a), también al
+    /// salir sin ganar: <c>LevelFlow.ExitDaily</c> guarda en síncrono y la partida queda reanudable). Sin partida en curso no
+    /// hace nada (la partida se cerró con la victoria o se descartó por cambio de día).</item>
+    /// <item><see cref="Clear"/> (victoria): deja la partida sin estado guardado pero <b>no la cierra</b>; la cierra
+    /// <see cref="DailyChallengeService.ClaimWin"/>, que se llama justo después (<c>LevelFlow</c> borra el estado antes de avisar
+    /// de la victoria).</item>
     /// </list>
     /// La fecha la decide <see cref="IClock"/>; nunca <c>DateTime.Now</c>.
     /// </summary>
