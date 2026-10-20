@@ -2984,3 +2984,15 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **B1a-Q2:** un cambio que solo toca `streak` actualiza `economy_ts`.
 - **Q-C2:** el Reto del río no lleva la Cosecha doble gratis del río crecido (se apoya en 06 §4.3, frente a una lectura literal de 04 §2.8); se anota en 04 §2.8.
 - Las Q-C1-Q-C14 [P] de `docs/dev/crecida-canasta.md` §7 quedan con su (a), como las implementó B1a.
+
+## D-034 · Publicación con Codex: la ficha de Play Console espera al dictamen de marca
+
+- **Fecha:** 2026-10-20. Registrada el 2026-10-20 por el integrador.
+- **Estado:** decidida por el dueño en el chat: «Ficha de Play Console: esperamos al dictamen de marca, como dice 08 §13.1 #1. Por ahora solo la cuenta de desarrollador y los borradores.»
+
+**Decisión.**
+- Un agente Codex (otra herramienta, en la rama `codex/publicacion`) prepara la publicación según `docs/dev/traspaso/codex-publicacion.md`: guía de Play Console, ficha en 3 idiomas, especificaciones de assets, política de privacidad, términos, página de eliminación de cuenta, `app-ads.txt`, web mínima, Data Safety, IARC y público, productos IAP, licencias y la lista de regresión de 60 casos. Sustituye al bloque B13 de la tanda 5, que sale del encargo del Spark. El integrador revisa y fusiona su rama.
+- **Ahora:** solo el registro de la cuenta de desarrollador de Google Play (lo hace el dueño) y los borradores.
+- **La app no se crea en Play Console hasta el dictamen favorable del abogado de marcas** (08 §13.1 #1 tal cual, sin cambios en el GDD), y ningún AAB se sube a Play (regla dura 6).
+
+**Cómo revertir.** Con una decisión nueva del dueño que cambie 08 §13.1 #1.
