@@ -143,6 +143,20 @@ namespace AF.Tests.PlayMode
         /// </summary>
         public static Color32[] SavePixels(string dir, string name)
         {
+            return Render(Path.Combine(dir, name + ".png"));
+        }
+
+        /// <summary>
+        /// Renderiza la cámara de las capturas y devuelve sus píxeles sin escribir ningún PNG (las filas empiezan por abajo; la
+        /// máscara del cielo de DC20 compara con una captura sin el tinte del cielo).
+        /// </summary>
+        public static Color32[] CapturePixels()
+        {
+            return Render(null);
+        }
+
+        private static Color32[] Render(string? png)
+        {
             Canvas.ForceUpdateCanvases();
             s_camera!.Render();
             RenderTexture previous = RenderTexture.active;
@@ -152,7 +166,11 @@ namespace AF.Tests.PlayMode
             tex.Apply();
             RenderTexture.active = previous;
             Color32[] pixels = tex.GetPixels32();
-            File.WriteAllBytes(Path.Combine(dir, name + ".png"), tex.EncodeToPNG());
+            if (png != null)
+            {
+                File.WriteAllBytes(png, tex.EncodeToPNG());
+            }
+
             Object.Destroy(tex);
             return pixels;
         }
