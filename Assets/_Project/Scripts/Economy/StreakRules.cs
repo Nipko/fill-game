@@ -151,9 +151,10 @@ namespace AF.Economy
 
         /// <summary>
         /// Añade a <paramref name="into"/> lo que la cartera debe aplicar, en orden: la Cosecha doble del río crecido
-        /// (<see cref="Transaction.DoubleHarvest"/> con la etiqueta <paramref name="winTier"/> de la victoria), las semillas del
-        /// hito 3 (<see cref="SeedSource.Streak"/>), la Canasta del hito 6 (sus semillas también con <see cref="SeedSource.Streak"/>,
-        /// porque cuentan en el tope: Q-C13) y la Cuia extra del hito 10. Nada en un fallo duro ni en un evento que no contó.
+        /// (<see cref="Transaction.DoubleHarvestRiver"/>, sin la compuerta del vídeo, con la etiqueta <paramref name="winTier"/>
+        /// de la victoria), las semillas del hito 3 (<see cref="SeedSource.Streak"/>), la Canasta del hito 6 (sus semillas también
+        /// con <see cref="SeedSource.Streak"/>, porque cuentan en el tope: Q-C13) y la Cuia extra del hito 10. Nada en un fallo
+        /// duro ni en un evento que no contó.
         /// </summary>
         public void AppendTransactions(List<Transaction> into, RewardTier winTier)
         {
@@ -169,7 +170,7 @@ namespace AF.Economy
 
             if (FreeDoubleHarvest)
             {
-                into.Add(Transaction.DoubleHarvest(Level, winTier));
+                into.Add(Transaction.DoubleHarvestRiver(Level, winTier));
             }
 
             if (HitSeeds > 0)

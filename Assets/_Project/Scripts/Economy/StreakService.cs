@@ -61,9 +61,8 @@ namespace AF.Economy
         public bool FreeDoubleHarvest => Streak.FreeDoubleHarvest;
 
         /// <summary>
-        /// Resultado de la Cosecha doble del río crecido, o null si no tocaba. En la rama sin el parche <c>S4-wallet</c> (E35)
-        /// la cartera la rechaza con <see cref="RejectReason.NotUnlocked"/> si <c>ads_rv_double_harvest_from_level</c> subiera por
-        /// encima del nivel (Q-C14); con el parche, nunca.
+        /// Resultado de la Cosecha doble del río crecido (<see cref="Transaction.DoubleHarvestRiver"/>, sin la compuerta del
+        /// vídeo: Q-C14 (a), E35), o null si no tocaba.
         /// </summary>
         public TransactionResult? DoubleHarvest { get; internal set; }
 

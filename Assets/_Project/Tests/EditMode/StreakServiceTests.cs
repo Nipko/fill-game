@@ -224,29 +224,6 @@ namespace AF.Tests.EditMode
             Assert.That(fx.Store.Persisted.HitsToday, Is.EqualTo(new[] { 3 }));
         }
 
-        // ---- x2 del río con la compuerta del vídeo por encima (Q-C14; sin el parche S4-wallet) ----
-
-        [Test]
-        public void RiverDouble_WithoutTheS4Patch_IsRejectedByTheVideoGate()
-        {
-            // Q-C14: sin el parche S4-wallet (E35), Wallet.Apply rechaza Transaction.DoubleHarvest por debajo de
-            // ads_rv_double_harvest_from_level. S4-wallet quita este test: con él, el x2 del río se paga
-            // (RiverDoubleHarvestTests.StreakService_PaysTheRiverDouble_EvenWithTheVideoGateAboveTheLevel).
-            EconomyConfig gate = EconomyConfig.Defaults;
-            gate.AdsRvDoubleHarvestFromLevel = 40;
-            var fx = new Fx(Record(Today, 1, river: true), economy: new EconomyFixture(config: gate));
-
-            StreakServiceResult r = fx.Service.ApplyWin(26, true, 25, RewardTier.Normal);
-
-            Assert.That(r.FreeDoubleHarvest, Is.True);
-            Assert.That(r.DoubleHarvest, Is.Not.Null);
-            Assert.That(r.DoubleHarvest!.Reason, Is.EqualTo(RejectReason.NotUnlocked));
-            Assert.That(r.Has(StreakServiceEvents.FreeDoubleHarvest), Is.False);
-            Assert.That(r.DoubleHarvestSeeds, Is.EqualTo(0));
-            Assert.That(r.AllApplied, Is.False);
-            Assert.That(fx.Wallet.Seeds, Is.EqualTo(0));
-        }
-
         // ---- Comodín del hito 6 con max_level (Q-C5 (a)) ----
 
         [Test]
