@@ -20,9 +20,9 @@ namespace AF.Tests.EditMode
 
         private sealed class Fx
         {
-            public Fx(StreakRecord? initial = null, StreakConfig? config = null)
+            public Fx(StreakRecord? initial = null, StreakConfig? config = null, EconomyFixture? economy = null)
             {
-                Economy = new EconomyFixture();
+                Economy = economy ?? new EconomyFixture();
                 Store = new InMemoryStreakStore(Economy.Clock, initial);
                 Service = new StreakService(Store, Economy.Wallet, Economy.Clock, 10, config);
             }
@@ -190,6 +190,82 @@ namespace AF.Tests.EditMode
             Assert.That(r.Transactions, Is.Empty, "sin Earn de 0 semillas");
             Assert.That(fx.Wallet.Seeds, Is.EqualTo(0));
             Assert.That(fx.Store.Persisted.HitsToday, Is.EqualTo(new[] { 3 }));
+        }
+
+        // ---- La cartera rechaza el pago del hito ----
+
+        [Test]
+        public void AMilestoneTheWalletRejects_StaysPaidToday_AndIsNotPaidAgain()
+        {
+            // Se guarda antes de pagar: si la cartera rechaza (aquí por desbordamiento), el hito queda cobrado igual.
+            var fx = new Fx(Record(Today, 2, shield: false), economy: new EconomyFixture(seeds: int.MaxValue - 100));
+            int level = 41;
+
+            StreakServiceResult r = fx.Win(ref level);
+
+            Assert.That(r.Streak.Milestone, Is.EqualTo(3));
+            Assert.That(r.Streak.MilestonePaid, Is.True);
+            Assert.That(r.Transactions.Count, Is.EqualTo(1));
+            Assert.That(r.Transactions[0].Reason, Is.EqualTo(RejectReason.Overflow));
+            Assert.That(r.AllApplied, Is.False);
+            Assert.That(r.StreakSeeds, Is.EqualTo(0));
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(int.MaxValue - 100));
+            Assert.That(fx.Store.Persisted.HitsToday, Is.EqualTo(new[] { 3 }));
+
+            StreakServiceResult fail = fx.Service.ApplyHardFail(level, true);
+            Assert.That(fail.Streak.StreakLost, Is.True, "sin hoja: la barra vuelve a 0");
+
+            StreakServiceResult again = fx.Win(ref level, 3);
+            Assert.That(again.Streak.Milestone, Is.EqualTo(3));
+            Assert.That(again.Streak.MilestonePaid, Is.False, "C6: ya cobrado hoy, aunque la cartera lo rechazara");
+            Assert.That(again.Transactions, Is.Empty);
+            Assert.That(again.AllApplied, Is.True);
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(int.MaxValue - 100));
+            Assert.That(fx.Store.Persisted.HitsToday, Is.EqualTo(new[] { 3 }));
+        }
+
+        // ---- x2 del río con la compuerta del vídeo por encima (Q-C14; sin el parche S4-wallet) ----
+
+        [Test]
+        public void RiverDouble_WithoutTheS4Patch_IsRejectedByTheVideoGate()
+        {
+            // Q-C14: sin el parche S4-wallet (E35), Wallet.Apply rechaza Transaction.DoubleHarvest por debajo de
+            // ads_rv_double_harvest_from_level. S4-wallet quita este test: con él, el x2 del río se paga
+            // (RiverDoubleHarvestTests.StreakService_PaysTheRiverDouble_EvenWithTheVideoGateAboveTheLevel).
+            EconomyConfig gate = EconomyConfig.Defaults;
+            gate.AdsRvDoubleHarvestFromLevel = 40;
+            var fx = new Fx(Record(Today, 1, river: true), economy: new EconomyFixture(config: gate));
+
+            StreakServiceResult r = fx.Service.ApplyWin(26, true, 25, RewardTier.Normal);
+
+            Assert.That(r.FreeDoubleHarvest, Is.True);
+            Assert.That(r.DoubleHarvest, Is.Not.Null);
+            Assert.That(r.DoubleHarvest!.Reason, Is.EqualTo(RejectReason.NotUnlocked));
+            Assert.That(r.Has(StreakServiceEvents.FreeDoubleHarvest), Is.False);
+            Assert.That(r.DoubleHarvestSeeds, Is.EqualTo(0));
+            Assert.That(r.AllApplied, Is.False);
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(0));
+        }
+
+        // ---- Comodín del hito 6 con max_level (Q-C5 (a)) ----
+
+        [Test]
+        public void HitSix_UsesTheMaxLevel_WhenALevelIsReplayed()
+        {
+            // 06 §4.5 no deja rejugar; aquí se fuerza: se gana el 32 con max_level = 45. Con el 32, el comodín sería el de la
+            // Canasta del 40 (Cuia extra); con max_level = 45, el de la del 50 (3 Marea).
+            var fx = new Fx(Record(Today, 5, hits: new[] { 3 }));
+
+            StreakServiceResult r = fx.Service.ApplyWin(32, true, 45, RewardTier.Normal);
+
+            Assert.That(r.Streak.Milestone, Is.EqualTo(6));
+            Assert.That(r.Streak.MilestonePaid, Is.True);
+            Assert.That(r.Streak.Basket.Kind, Is.EqualTo(BasketKind.Streak));
+            Assert.That(r.Streak.Basket.Level, Is.EqualTo(50));
+            Assert.That(Sources(r), Is.EqualTo(new[] { "streak", "stock:undo" }));
+            Assert.That(fx.Stock(BoosterKind.Undo), Is.EqualTo(3));
+            Assert.That(fx.Stock(BoosterKind.ExtraCuia), Is.EqualTo(0));
+            Assert.That(r.LevelBasket.IsNone, Is.True);
         }
 
         // ---- Hoja escudo (C9, C10) ----

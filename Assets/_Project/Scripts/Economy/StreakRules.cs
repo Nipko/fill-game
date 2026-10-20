@@ -252,9 +252,24 @@ namespace AF.Economy
         /// <see cref="BasketRules.HitSix"/>) o el 10 (Cuia extra + río crecido; la barra vuelve a 0), cada uno una vez por día
         /// local con <c>streak_hits_once_per_day</c>, y con el tope <c>streak_daily_cap</c> solo sobre las semillas del 3 y de
         /// la Canasta del 6 (pago parcial: Q-C10 (a)). Fuera de campaña, con la Crecida apagada o por debajo del debut, no hace
-        /// nada.
+        /// nada. El comodín del hito 6 sale de <paramref name="level"/>; si hay un <c>max_level</c> anterior, usa
+        /// <see cref="OnVictory(int, bool, int)"/>.
         /// </summary>
         public StreakOutcome OnVictory(int level, bool isCampaign)
+        {
+            return OnVictory(level, isCampaign, level);
+        }
+
+        /// <summary>
+        /// Como <see cref="OnVictory(int, bool)"/>, con el progreso de campaña: el comodín del hito 6 es el de la próxima Canasta de
+        /// nivel tras <c>max_level</c> después de la victoria, <c>Math.Max(level, progressLevel)</c> (Q-C5 (a)). Con 06 §4.5
+        /// («sin rejugar») <paramref name="level"/> nunca queda por debajo de <c>max_level</c> y da lo mismo; un nivel rejugado
+        /// no hace retroceder el comodín.
+        /// </summary>
+        /// <param name="level">Nivel ganado (≥ 1).</param>
+        /// <param name="isCampaign">Campaña.</param>
+        /// <param name="progressLevel"><c>max_level</c> antes de la victoria (0 o menos: sin progreso previo).</param>
+        public StreakOutcome OnVictory(int level, bool isCampaign, int progressLevel)
         {
             StreakRecord s = Record;
             var o = new StreakOutcome
@@ -285,7 +300,7 @@ namespace AF.Economy
                 o.Milestone = StreakRecord.HitBasket;
                 if (Payable(StreakRecord.HitBasket))
                 {
-                    BasketContents basket = BasketRules.HitSix(level, Basket);
+                    BasketContents basket = BasketRules.HitSix(Math.Max(level, progressLevel), Basket);
                     int paid = PayCapped(basket.Seeds, ref o);
                     o.Basket = basket.WithSeeds(paid);
                     MarkPaid(StreakRecord.HitBasket, ref o);
