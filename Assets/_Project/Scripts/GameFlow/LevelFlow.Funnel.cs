@@ -378,8 +378,8 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Pausa › «Salir» confirmado desde el 31 («¿Salir del nivel? Perderás 1 canoa» [P]; D-008; sin la línea de canoa si no
-        /// hay canoa en juego, <see cref="CanoeAtStake"/>): fallo duro, también con 0 vertidos [P] (P16), y Nivel fallido, cuya
+        /// Pausa › «Salir» confirmado desde el 31 («¿Salir del nivel? Perderás 1 canoa», aprobado: P14 de D-008, D-029; sin la línea de canoa si no
+        /// hay canoa en juego, <see cref="CanoeAtStake"/>): fallo duro, también con 0 vertidos (P16 de D-008, aprobada: D-029), y Nivel fallido, cuya
         /// X lleva al inicio. En 1-30 no es fallo: devuelve false y la salida la hace <see cref="AppFlow.ExitToLobby"/> sin coste.
         /// </summary>
         public bool ConfirmQuit()
