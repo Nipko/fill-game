@@ -108,7 +108,13 @@ namespace AF.UI
                 _stamps[i] = UiBuilder.Image("Stamp", _cells[i].transform, art.Disc, StampColor);
                 Image ring = UiBuilder.Image("Ring", _stamps[i].transform, art.Ring, Palette.Cream);
                 UiBuilder.Stretch(ring.rectTransform);
-                UiBuilder.Place(_stamps[i].rectTransform, 4f, 4f, Cell - 8f, Cell - 8f);
+                // Centrado en su casilla (pivote y anclaje en el centro): la caída 2,4× → 1× crece y encoge alrededor del centro (R11).
+                RectTransform stampRt = _stamps[i].rectTransform;
+                stampRt.anchorMin = new Vector2(0.5f, 0.5f);
+                stampRt.anchorMax = new Vector2(0.5f, 0.5f);
+                stampRt.pivot = new Vector2(0.5f, 0.5f);
+                stampRt.anchoredPosition = Vector2.zero;
+                stampRt.sizeDelta = new Vector2(Cell - 8f, Cell - 8f);
                 _stamps[i].gameObject.SetActive(false);
             }
 

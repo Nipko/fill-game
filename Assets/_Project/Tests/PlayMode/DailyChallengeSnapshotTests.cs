@@ -122,6 +122,7 @@ namespace AF.Tests.PlayMode
             DailyStampCalendar calendar = daily.Calendar;
             Step(boot, (int)(DailyStampCalendar.StampDropMs * 0.5f));
             Assert.That(calendar.StampLanded, Is.False, "a media caída");
+            AssertStampCentered(calendar, calendar.FallingDay);
             yield return Shot("r11_04_calendar_falling", calendar.Canvas.transform);
             calendar.Settle();
             Assert.That(calendar.RewardShown, Is.True);
@@ -195,6 +196,35 @@ namespace AF.Tests.PlayMode
             SnapshotKit.AttachLobby(boot);
             SnapshotKit.AttachOverlay(boot.DailyCard!.Root.GetComponentInParent<Canvas>().rootCanvas);
             SnapshotKit.AttachOverlay(boot.DailyScreen!.Calendar.Canvas);
+        }
+
+        // El sello que cae, concéntrico con su casilla a media caída (revisión de R11): su centro y el de la casilla coinciden en
+        // menos de 0,5 dp, y la escala es mayor que 1 (si el pivote no estuviera en el centro, crecería hacia abajo a la derecha).
+        private static void AssertStampCentered(DailyStampCalendar calendar, int day)
+        {
+            Assert.That(day, Is.GreaterThan(0), "hay un sello cayendo");
+            Assert.That(calendar.FallingScale, Is.GreaterThan(1.05f), "a media caída el sello aún es mayor que su casilla");
+            RectTransform? cell = null;
+            foreach (RectTransform rt in calendar.Canvas.GetComponentsInChildren<RectTransform>(true))
+            {
+                if (rt.name == "Day" + day.ToString(CultureInfo.InvariantCulture))
+                {
+                    cell = rt;
+                    break;
+                }
+            }
+
+            Assert.That(cell, Is.Not.Null, "casilla Day" + day);
+            var stamp = (RectTransform)cell!.Find("Stamp");
+            Assert.That(stamp, Is.Not.Null, "sello de la casilla " + day);
+            Canvas.ForceUpdateCanvases();
+            float dpPerWorld = 1f / cell.lossyScale.x;
+            Vector3 cellCenter = cell.TransformPoint(cell.rect.center);
+            Vector3 stampCenter = stamp.TransformPoint(stamp.rect.center);
+            float offDp = Vector2.Distance(cellCenter, stampCenter) * dpPerWorld;
+            Debug.Log("AF_STAMP día " + day + ": escala " + calendar.FallingScale.ToString("0.00", CultureInfo.InvariantCulture)
+                + ", desvío del centro " + offDp.ToString("0.00", CultureInfo.InvariantCulture) + " dp");
+            Assert.That(offDp, Is.LessThan(0.5f), "el sello que cae está centrado en su casilla");
         }
 
         // Captura y registra los textos visibles de la pieza que se revisa que no caben en su caja (AF_FIT).
