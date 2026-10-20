@@ -292,8 +292,8 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Nivel fallido de <paramref name="level"/> (d.5): <c>sloth_encourage</c> con <c>ui_sloth_fail_enabled</c>; frase solo en
-        /// el primer fallo del nivel (con los topes) y, si el fallo rompió la Crecida, la n.º 21 (<c>sloth_line_streak_04</c>). Lee
-        /// <see cref="SlothContext.Fail"/>.
+        /// el primer fallo del nivel (con los topes) y, si el fallo rompió la Crecida, la n.º 21 o una de sus alternativas
+        /// (mini-banco <c>StreakBrokenSet</c>; D-030, 16 b). Lee <see cref="SlothContext.Fail"/>.
         /// </summary>
         public static SlothLine ForFail(int level, in SlothContext c)
         {
@@ -317,11 +317,12 @@ namespace AF.GameFlow
         }
 
         /// <summary>
-        /// Aviso tras Volver a la orilla en <paramref name="level"/> (D-016, T5-B; d.5): solo en 1-30, en el primer reinicio del
-        /// nivel y si el nivel no tiene instrucción del tutorial; si no, no hay aviso (<see cref="SlothGesture.None"/>). Con aviso,
-        /// <c>sloth_encourage</c> y una frase de <c>restart</c> (con los topes) o, si el reinicio rompió la Crecida (25-30), la
-        /// n.º 21. Sin frase (mensajes apagados o topes), solo el gesto: quien enseña el aviso decide si sale sin ella. Lee
-        /// <see cref="SlothContext.Restart"/>.
+        /// Aviso tras Volver a la orilla en <paramref name="level"/> (D-016, T5-B; d.5): solo en 1-30, en el primer
+        /// reinicio del nivel y si el nivel no tiene instrucción del tutorial; si no, no hay aviso
+        /// (<see cref="SlothGesture.None"/>). Con aviso, <c>sloth_encourage</c> y una frase de <c>restart</c> (con los topes) o,
+        /// si el reinicio rompió la Crecida (25-30), la n.º 21 o una de sus alternativas (mini-banco
+        /// <c>StreakBrokenSet</c>; D-030, 16 b). Sin frase (mensajes apagados o topes), solo el gesto: quien enseña el
+        /// aviso decide si sale sin ella. Lee <see cref="SlothContext.Restart"/>.
         /// </summary>
         public static SlothLine ForRestartNotice(int level, in SlothContext c)
         {
