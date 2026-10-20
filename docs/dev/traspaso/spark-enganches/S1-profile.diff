@@ -366,10 +366,10 @@ index 033a03f..aac65ec 100644
  
 diff --git a/Assets/_Project/Tests/EditMode/StreakProfileTests.cs b/Assets/_Project/Tests/EditMode/StreakProfileTests.cs
 new file mode 100644
-index 0000000..d931cfc
+index 0000000..f213471
 --- /dev/null
 +++ b/Assets/_Project/Tests/EditMode/StreakProfileTests.cs
-@@ -0,0 +1,539 @@
+@@ -0,0 +1,572 @@
 +#nullable enable
 +using System;
 +using System.Collections.Generic;
@@ -706,6 +706,39 @@ index 0000000..d931cfc
 +            Assert.That(p.Daily.StreakHits, Is.Empty, "los hitos de ayer no cuentan hoy");
 +            Assert.That(p.Daily.StreakSeeds, Is.EqualTo(0));
 +            Assert.That(p.Streak!.Wins, Is.EqualTo(8));
++        }
++
++        [Test]
++        public void StaleRecord_TwoSavesInARow_OnlyTheSecondChangeIsApplied_AndSpendsTodaysShield()
++        {
++            // (d) Dos Save seguidos del mismo registro de ayer: el primero lleva el hito 3; entre los dos se gasta el escudo. El
++            // segundo no vuelve a sumar el hito ni las semillas y gasta el escudo de hoy (la carga de referencia es el primer Save).
++            var clock = Clock(new DateTime(2026, 10, 19, 23, 59, 0));
++            Profile p = NewProfile();
++            p.Streak = new StreakData { Wins = 2 };
++            var store = new ProfileStreakStore(p, new MemoryProfileStore(), clock);
++            StreakRecord r = store.Load();
++            Assert.That(r.ShieldAvailable, Is.True);
++
++            clock.Set(Utc(new DateTime(2026, 10, 20, 0, 0, 30)));
++            DailyCounters.RollOver(p.Daily, clock.LocalDateKey()); // la cartera o los anuncios pasan el día
++            r.Wins = 3;
++            r.HitsToday.Add(3);
++            r.SeedsToday += 300;
++            store.Save(r);
++
++            Assert.That(p.Daily.StreakHits, Is.EqualTo(new[] { 3 }));
++            Assert.That(p.Daily.StreakSeeds, Is.EqualTo(300));
++            Assert.That(p.Daily.ShieldAvailable, Is.True, "el primer Save no cambió el escudo");
++
++            r.ShieldAvailable = false; // fallo duro cubierto, con el mismo registro de ayer
++            store.Save(r);
++
++            Assert.That(p.Daily.ShieldAvailable, Is.False, "el escudo gastado entre los dos Save gasta el de hoy");
++            Assert.That(p.Daily.StreakHits, Is.EqualTo(new[] { 3 }), "el hito no se suma dos veces");
++            Assert.That(p.Daily.StreakSeeds, Is.EqualTo(300), "las semillas no se suman dos veces");
++            Assert.That(p.Daily.DateLocal, Is.EqualTo("2026-10-20"));
++            Assert.That(p.Streak!.Wins, Is.EqualTo(3));
 +        }
 +
 +        [Test]

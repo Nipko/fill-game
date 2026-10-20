@@ -1,0 +1,197 @@
+diff --git a/Assets/_Project/Scripts/Economy/StreakRules.cs b/Assets/_Project/Scripts/Economy/StreakRules.cs
+index 44bb776..b5cefeb 100644
+--- a/Assets/_Project/Scripts/Economy/StreakRules.cs
++++ b/Assets/_Project/Scripts/Economy/StreakRules.cs
+@@ -151,7 +151,8 @@ public string? MilestoneRewardValue
+ 
+         /// <summary>
+         /// Añade a <paramref name="into"/> lo que la cartera debe aplicar, en orden: la Cosecha doble del río crecido
+-        /// (<see cref="Transaction.DoubleHarvest"/> con la etiqueta <paramref name="winTier"/> de la victoria), las semillas del
++        /// (<see cref="Transaction.DoubleHarvestRiver"/>, sin la compuerta del vídeo, con la etiqueta <paramref name="winTier"/>
++        /// de la victoria), las semillas del
+         /// hito 3 (<see cref="SeedSource.Streak"/>), la Canasta del hito 6 (sus semillas también con <see cref="SeedSource.Streak"/>,
+         /// porque cuentan en el tope: Q-C13) y la Cuia extra del hito 10. Nada en un fallo duro ni en un evento que no contó.
+         /// </summary>
+@@ -169,7 +170,7 @@ public void AppendTransactions(List<Transaction> into, RewardTier winTier)
+ 
+             if (FreeDoubleHarvest)
+             {
+-                into.Add(Transaction.DoubleHarvest(Level, winTier));
++                into.Add(Transaction.DoubleHarvestRiver(Level, winTier));
+             }
+ 
+             if (HitSeeds > 0)
+diff --git a/Assets/_Project/Scripts/Economy/StreakService.cs b/Assets/_Project/Scripts/Economy/StreakService.cs
+index c8e317a..31e0950 100644
+--- a/Assets/_Project/Scripts/Economy/StreakService.cs
++++ b/Assets/_Project/Scripts/Economy/StreakService.cs
+@@ -61,9 +61,8 @@ internal StreakServiceResult(StreakOutcome streak)
+         public bool FreeDoubleHarvest => Streak.FreeDoubleHarvest;
+ 
+         /// <summary>
+-        /// Resultado de la Cosecha doble del río crecido, o null si no tocaba. En la rama sin el parche <c>S4-wallet</c> (E35)
+-        /// la cartera la rechaza con <see cref="RejectReason.NotUnlocked"/> si <c>ads_rv_double_harvest_from_level</c> subiera por
+-        /// encima del nivel (Q-C14); con el parche, nunca.
++        /// Resultado de la Cosecha doble del río crecido (<see cref="Transaction.DoubleHarvestRiver"/>, sin la compuerta del
++        /// vídeo: Q-C14 (a), E35), o null si no tocaba.
+         /// </summary>
+         public TransactionResult? DoubleHarvest { get; internal set; }
+ 
+diff --git a/Assets/_Project/Scripts/Economy/Transaction.cs b/Assets/_Project/Scripts/Economy/Transaction.cs
+index a1dbad4..bfcb832 100644
+--- a/Assets/_Project/Scripts/Economy/Transaction.cs
++++ b/Assets/_Project/Scripts/Economy/Transaction.cs
+@@ -254,6 +254,12 @@ private Transaction(TransactionKind kind)
+         /// <summary>SKU de la compra (05 §4.1), o null.</summary>
+         public string? Sku { get; private set; }
+ 
++        /// <summary>
++        /// Cosecha doble del río crecido (<see cref="DoubleHarvestRiver"/>): sin anuncio y sin la compuerta
++        /// <c>ads_rv_double_harvest_from_level</c> (Q-C14 (a) [P]).
++        /// </summary>
++        public bool RiverFull { get; private set; }
++
+         /// <summary>Cosecha de una victoria en el nivel <paramref name="level"/>: 20, 60 u 80 según la etiqueta (05 §2.1).</summary>
+         public static Transaction Win(int level, RewardTier tier)
+         {
+@@ -269,6 +275,22 @@ public static Transaction DoubleHarvest(int level, RewardTier tier)
+             return new Transaction(TransactionKind.DoubleHarvest) { Level = RequireLevel(level), Tier = tier, Source = SeedSource.DoubleHarvest };
+         }
+ 
++        /// <summary>
++        /// Cosecha doble del río crecido (04 §2.8: «durante río crecido… se aplica sin video»; 05 §2.4; nota
++        /// <c>docs/dev/crecida-canasta.md</c> C8, Q-C1 (a) y Q-C14 (a) [P], enganche E35): otra Cosecha igual a la de la victoria,
++        /// con <c>source</c> = <c>double_harvest</c>. A diferencia de <see cref="DoubleHarvest"/>, no pasa por la compuerta
++        /// <c>ads_rv_double_harvest_from_level</c>: no es la ubicación de vídeo <c>rv_double_harvest</c> y no gasta su tope
++        /// (<c>ads_rv_cap_double_harvest</c>, cosa de <c>AF.Ads</c>). Solo la pide la Crecida
++        /// (<see cref="StreakOutcome.AppendTransactions"/>), que ya decidió si toca.
++        /// </summary>
++        public static Transaction DoubleHarvestRiver(int level, RewardTier tier)
++        {
++            return new Transaction(TransactionKind.DoubleHarvest)
++            {
++                Level = RequireLevel(level), Tier = tier, Source = SeedSource.DoubleHarvest, RiverFull = true,
++            };
++        }
++
+         /// <summary>
+         /// Cosecha doble del Reto del río (04 §2.8; 06 §4.1, «Premio»: «Cosecha doble disponible»; enganche E9): otras
+         /// <paramref name="seeds"/> semillas, las del premio del Reto recién cobrado (60 → 120 [P]), con <c>source</c> =
+diff --git a/Assets/_Project/Scripts/Economy/Wallet.cs b/Assets/_Project/Scripts/Economy/Wallet.cs
+index 0a4c4b9..cd87459 100644
+--- a/Assets/_Project/Scripts/Economy/Wallet.cs
++++ b/Assets/_Project/Scripts/Economy/Wallet.cs
+@@ -162,7 +162,8 @@ public TransactionResult Apply(Transaction transaction)
+                     seedsDelta = Config.WinReward(transaction.Tier);
+                     break;
+                 case TransactionKind.DoubleHarvest:
+-                    if (transaction.Level < Config.AdsRvDoubleHarvestFromLevel)
++                    // La del río crecido no es la ubicación de vídeo: sin su compuerta (Q-C14 (a), E35).
++                    if (!transaction.RiverFull && transaction.Level < Config.AdsRvDoubleHarvestFromLevel)
+                     {
+                         return Reject(transaction, RejectReason.NotUnlocked);
+                     }
+diff --git a/Assets/_Project/Tests/EditMode/RiverDoubleHarvestTests.cs b/Assets/_Project/Tests/EditMode/RiverDoubleHarvestTests.cs
+new file mode 100644
+index 0000000..f85da36
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/RiverDoubleHarvestTests.cs
+@@ -0,0 +1,89 @@
++#nullable enable
++using System.Collections.Generic;
++using AF.Economy;
++using AF.Platform;
++using NUnit.Framework;
++
++namespace AF.Tests.EditMode
++{
++    /// <summary>
++    /// Cosecha doble del río crecido (enganche E35, parche <c>S4-wallet</c>; 04 §2.8; 05 §2.4; nota
++    /// <c>docs/dev/crecida-canasta.md</c> C8 y Q-C14 (a) [P]): <see cref="Transaction.DoubleHarvestRiver"/> no pasa por la compuerta
++    /// <c>ads_rv_double_harvest_from_level</c>, sale con <c>source</c> = <c>double_harvest</c> y no gasta el tope del vídeo
++    /// (<c>ads_rv_cap_double_harvest</c>).
++    /// </summary>
++    public sealed class RiverDoubleHarvestTests
++    {
++        private static EconomyConfig GateAt(int level)
++        {
++            EconomyConfig config = EconomyConfig.Defaults;
++            config.AdsRvDoubleHarvestFromLevel = level;
++            return config;
++        }
++
++        [Test]
++        public void RiverDouble_IsAcceptedBelowTheVideoGate_AndTheVideoOneIsNot()
++        {
++            var fx = new EconomyFixture(config: GateAt(40));
++
++            TransactionResult video = fx.Wallet.Apply(Transaction.DoubleHarvest(25, RewardTier.Hard));
++            Assert.That(video.Reason, Is.EqualTo(RejectReason.NotUnlocked), "el x2 por vídeo sigue con su compuerta");
++
++            TransactionResult river = fx.Wallet.Apply(Transaction.DoubleHarvestRiver(25, RewardTier.Hard));
++            Assert.That(river.IsApplied, Is.True);
++            Assert.That(river.SeedsDelta, Is.EqualTo(60), "dobla la Cosecha de la etiqueta (Difícil: 60)");
++            Assert.That(fx.Wallet.Seeds, Is.EqualTo(60));
++            Assert.That(river.Transaction.RiverFull, Is.True);
++            Assert.That(Transaction.DoubleHarvest(25, RewardTier.Hard).RiverFull, Is.False);
++        }
++
++        [Test]
++        public void RiverDouble_IsEmittedWithSourceDoubleHarvest()
++        {
++            var fx = new EconomyFixture();
++            var seen = new List<string>();
++            fx.Wallet.Changed += r => seen.Add(r.Transaction.Source.ToId());
++
++            TransactionResult river = fx.Wallet.Apply(Transaction.DoubleHarvestRiver(30, RewardTier.Normal));
++
++            Assert.That(river.Transaction.Kind, Is.EqualTo(TransactionKind.DoubleHarvest));
++            Assert.That(river.Transaction.Source.ToId(), Is.EqualTo("double_harvest"));
++            Assert.That(seen, Is.EqualTo(new[] { "double_harvest" }));
++        }
++
++        [Test]
++        public void RiverDouble_DoesNotSpendTheVideoCap()
++        {
++            var fx = new EconomyFixture();
++            fx.Profile.Daily.DateLocal = fx.Clock.LocalDateKey();
++            fx.Profile.Daily.RvDoubleHarvest = 4; // ads_rv_cap_double_harvest = 5
++            fx.Profile.Daily.RvTotal = 4;
++
++            for (int i = 0; i < 3; i++)
++            {
++                Assert.That(fx.Wallet.Apply(Transaction.DoubleHarvestRiver(30 + i, RewardTier.Normal)).IsApplied, Is.True);
++            }
++
++            Assert.That(fx.Profile.Daily.RvDoubleHarvest, Is.EqualTo(4), "el tope del vídeo es de AF.Ads y no se toca");
++            Assert.That(fx.Profile.Daily.RvTotal, Is.EqualTo(4));
++            Assert.That(fx.Wallet.Seeds, Is.EqualTo(60));
++        }
++
++        [Test]
++        public void StreakService_PaysTheRiverDouble_EvenWithTheVideoGateAboveTheLevel()
++        {
++            var eco = new EconomyFixture(config: GateAt(40));
++            var record = new StreakRecord { DateLocal = eco.Clock.LocalDateKey(), Wins = 1, RiverFull = true, ShieldAvailable = true };
++            var store = new InMemoryStreakStore(eco.Clock, record);
++            var service = new StreakService(store, eco.Wallet, eco.Clock, 10);
++
++            StreakServiceResult r = service.ApplyWin(26, true, 25, RewardTier.Normal);
++
++            Assert.That(r.FreeDoubleHarvest, Is.True);
++            Assert.That(r.DoubleHarvest!.IsApplied, Is.True, "Q-C14 (a): sin la compuerta del vídeo");
++            Assert.That(r.DoubleHarvest.Transaction.RiverFull, Is.True);
++            Assert.That(r.DoubleHarvestSeeds, Is.EqualTo(20));
++            Assert.That(eco.Wallet.Seeds, Is.EqualTo(20));
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/EditMode/RiverDoubleHarvestTests.cs.meta b/Assets/_Project/Tests/EditMode/RiverDoubleHarvestTests.cs.meta
+new file mode 100644
+index 0000000..c126b89
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/RiverDoubleHarvestTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 6c6bfad8e860cdd4ab2a45fe08d354f7
+\ No newline at end of file
