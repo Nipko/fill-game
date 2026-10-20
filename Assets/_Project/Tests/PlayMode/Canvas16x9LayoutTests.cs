@@ -323,7 +323,7 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// HUD (pausa, Reiniciar, insignia del nivel), tablero (el panel y cada cuia) y bandeja (sus botones a la vista): dentro de
+        /// HUD (pausa, Reiniciar, insignia del nivel, Semillas y Canoas, chip de dificultad), tablero (el panel y cada cuia) y bandeja (sus botones a la vista): dentro de
         /// la pantalla y de su zona segura, el HUD encima del panel, la bandeja debajo y sin solapes entre ellos (02 §5).
         /// </summary>
         internal static void AssertLayout(GameScreen view, string where)
@@ -339,6 +339,24 @@ namespace AF.Tests.PlayMode
             if (view.LevelBadgeRect.gameObject.activeInHierarchy)
             {
                 hud.Add(("insignia del nivel", VictorySetup.CanvasRect(view.LevelBadgeRect, root)));
+            }
+
+            // La cabecera de 02 §5 (revisión de DC3): la columna de Semillas y Canoas (en 16:9, compactada dentro de la fila con
+            // los tableros que pasan bajo el HUD: GameScreen.LabelsWalletColumn y WalletBar.Layout) y el chip de dificultad bajo
+            // la insignia (compacto o pegado bajo la placa en los tableros de 2 y 3 filas: GameScreen.LayoutHudLabels).
+            WalletBar wallet = view.WalletBar;
+            Assert.That(wallet.Visible && wallet.Compact, Is.True, where + ": condición del test, la cabecera de partida (Semillas)");
+            hud.Add(("Semillas", VictorySetup.CanvasRect(wallet.SeedsRect, root)));
+            if (wallet.CanoesRect.gameObject.activeInHierarchy)
+            {
+                hud.Add(("Canoas", VictorySetup.CanvasRect(wallet.CanoesRect, root)));
+            }
+
+            DifficultyChip chip = view.HudDifficultyChip;
+            bool chipShown = chip.Visible && chip.Root.gameObject.activeInHierarchy && GroupAlpha(chip.Root) >= 0.01f;
+            if (chipShown)
+            {
+                hud.Add((ChipName, ChipRect(chip, root)));
             }
 
             var tray = new List<(string, Rect)>();
@@ -380,7 +398,9 @@ namespace AF.Tests.PlayMode
             // 360 × 780; GameScreen.Labels.cs): con ella solo se exige que no toque las cuias.
             foreach ((string name, Rect r) in hud)
             {
-                if (name == "insignia del nivel")
+                // El chip pegado bajo la placa (HudLabelMode.Tucked) monta, como ella, sobre el canto del marco, a ≥ 4 dp de las
+                // cuias elevadas (GameScreen.BandTopFor): también solo se exige que no toque las cuias.
+                if (name == "insignia del nivel" || (name == ChipName && view.HudLabelsMode == GameScreen.HudLabelMode.Tucked))
                 {
                     Assert.That(r.yMax, Is.LessThanOrEqualTo(blockTop + 0.05f), where + ": " + name + " " + r + " encima de las cuias (" + blockTop + ")");
                     continue;
@@ -397,6 +417,65 @@ namespace AF.Tests.PlayMode
                 {
                     Assert.That(r.Overlaps(h), Is.False, where + ": " + name + " no se cruza con " + other);
                 }
+            }
+
+            TestContext.WriteLine("AF_DC3 " + where + ": modo de las etiquetas " + view.HudLabelsMode + ", chip " + (chipShown ? "a la vista" : "oculto")
+                + ", cabecera " + string.Join(", ", hud.ConvertAll(h => h.Item1 + " " + h.Item2)));
+            AssertTrayLabels(view, where);
+        }
+
+        private const string ChipName = "chip de dificultad";
+
+        // El chip entero: su caja, la píldora (con la sombra), el sello y la cinta «×n» si se ven.
+        private static Rect ChipRect(DifficultyChip chip, RectTransform root)
+        {
+            Rect r = VictorySetup.CanvasRect(chip.Root, root);
+            r = Union(r, VictorySetup.CanvasRect(chip.PillRect, root));
+            if (chip.SealShown)
+            {
+                r = Union(r, VictorySetup.CanvasRect(chip.MedallionRect, root));
+            }
+
+            if (chip.RibbonShown)
+            {
+                r = Union(r, VictorySetup.CanvasRect(chip.RibbonRect, root));
+            }
+
+            return r;
+        }
+
+        private static Rect Union(Rect a, Rect b)
+        {
+            return Rect.MinMaxRect(Mathf.Min(a.xMin, b.xMin), Mathf.Min(a.yMin, b.yMin), Mathf.Max(a.xMax, b.xMax), Mathf.Max(a.yMax, b.yMax));
+        }
+
+        /// <summary>
+        /// Etiquetas de la bandeja (revisión de DC3; 02 §12: las cajas crecen): en es-419 al 100 % cada etiqueta a la vista cabe en
+        /// una línea en su ranura con <see cref="BoosterTray.LabelNarrowInsetDp"/> de aire por lado (la ranura de 64 dp de 07 §7.4
+        /// y la guía 3.6; si no cupiera, la ranura se ensancharía, BoosterTray.SlotWidthFor). El margen de 6 dp por lado que
+        /// pidió la revisión obligaría a ensanchar las ranuras de 64 dp también a 360 × 780: queda para el dueño (open issue de
+        /// DC3); el aire de ahora sale en el registro.
+        /// </summary>
+        private static void AssertTrayLabels(GameScreen view, string where)
+        {
+            BoosterTray tray = view.Tray;
+            foreach ((string name, Button button, TextMeshProUGUI label) in new[]
+            {
+                ("Deshacer", tray.UndoButton, tray.UndoLabel), ("Cuia extra", tray.ExtraCuiaButton, tray.ExtraLabel),
+                ("Revelar", tray.RevealButton, tray.RevealLabel), ("Pista", tray.HintButton, tray.HintLabel),
+            })
+            {
+                if (!button.gameObject.activeInHierarchy || string.IsNullOrWhiteSpace(label.text))
+                {
+                    continue;
+                }
+
+                float pref = label.GetPreferredValues(label.text, float.PositiveInfinity, float.PositiveInfinity).x;
+                float slot = tray.SlotWidth;
+                TestContext.WriteLine("AF_DC3 " + where + ": «" + label.text.Replace(NewLine, " / ") + "» de " + pref.ToString("0.0") + " dp en la ranura de "
+                    + slot.ToString("0.0") + " dp (" + ((slot - pref) * 0.5f).ToString("0.0") + " dp por lado)");
+                Assert.That(pref + (2f * BoosterTray.LabelNarrowInsetDp), Is.LessThanOrEqualTo(slot + 0.05f),
+                    where + ": «" + label.text + "» (" + pref + " dp) cabe en su ranura de " + slot + " dp con su aire");
             }
         }
 
