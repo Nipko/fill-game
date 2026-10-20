@@ -36,9 +36,11 @@ namespace AF.Presentation
     /// </list>
     /// <see cref="LutColor"/> es la luz de la parada (solo <c>dusk</c> y <c>dawn</c>) por la LUT de la temporada del ciclo
     /// (<see cref="SeasonLutOf"/>: aguas altas o bajas, de la tabla del cliente; D-009, punto 6; pregunta 32 b, D-020; 07 §2.1;
-    /// tarea SE2): quien la usa la multiplica sobre el panorama; aquí tiñe el héroe y no la banda ni las piezas por código, que
-    /// son agua (VA-23). Sin temporada (1-20, fuera de la tabla o sin tabla), la de la parada sola, como antes. La temporada se ve
-    /// también sin parada (sobre el panorama). El velo de Muy difícil no se toca.
+    /// tarea SE2): quien la usa la multiplica sobre el panorama; aquí tiñe el héroe. La de la temporada sola llega además a lo
+    /// que el tablero deja a la vista (D-030, pregunta 13 b; tarea DC21): al tinte del cielo (<see cref="SeasonSky"/>) y al agua de la banda y de
+    /// las piezas por código, solo hasta <see cref="SeasonWaterMaxDeltaE"/> del preset (<see cref="SeasonWater"/>; VA-23). Sin
+    /// temporada (1-20, fuera de la tabla o sin tabla), la de la parada sola, como antes. La temporada se ve también sin parada
+    /// (sobre el panorama). El velo de Muy difícil no se toca.
     /// <para>Sin parada (sin catálogo, o del 201 en adelante mientras no haya paradas) no pinta nada: el aspecto de hoy. Al
     /// cambiar de composición puede fundir en <c>fadeMs</c> (<see cref="Apply"/>): la nueva entra encima con dos juegos de capas
     /// que se alternan, cada uno con su composición; la vieja se queda entera debajo, así que su banda opaca nunca deja ver el
@@ -107,6 +109,12 @@ namespace AF.Presentation
         /// <summary>Profundidad bajo el horizonte a la que la columna del sol ya no se ve (dp) [P].</summary>
         public const float SunColumnDepthDp = 44f;
 
+        /// <summary>
+        /// Lo más que la LUT de temporada aleja el agua de la banda y de las piezas por código (y sus ondas) de su preset (ΔE00)
+        /// [P]: por debajo del ΔE00 ≤ 5 de VA-23, con margen para el redondeo a 8 bits (DC21).
+        /// </summary>
+        public const float SeasonWaterMaxDeltaE = 4.5f;
+
         /// <summary>Lo que la banda deja sin pintar por dentro del borde del panel, bajo su relleno opaco (dp; el marco es ≤ 12).</summary>
         public const float PanelHoleInsetDp = 16f;
 
@@ -146,14 +154,11 @@ namespace AF.Presentation
         /// <summary>
         /// LUT de la temporada A, aguas altas (07 §2.1; D-009, punto 6) [P]: luz fresca y verdosa de la crecida; el canal verde
         /// entero y el azul casi, así que el cielo no pierde brillo y los tonos cálidos del panorama no bajan de S 0,30 (VA-03).
-        /// Es la única señal de la temporada (sin cartel), así que se nota a tamaño de teléfono: en la franja del panorama del
-        /// tablero, ΔE00 medio ≥ 5 frente al fondo sin temporada y ≥ 8 frente a B en la misma parada (revisión de SE2). Medido
-        /// sobre las capturas de <c>SeasonLutSnapshotTests</c>, fuera del test (ningún test lo vigila: si se retoca la LUT, hay
-        /// que volver a medirlo), en las filas 0-380 de la captura de 1080 × 2340 sin la caja del HUD (x 30-1060, y 110-270):
-        /// 6,3 y 8,6 en la 41, y 6,9 y 9,7 en la 61. El 8,6 va justo (con otra caja del HUD, 8,1): suavizar cualquiera de las
-        /// dos LUT de temporada puede dejarlo por debajo de 8. En las paradas con luz propia, su cielo y su bruma tapan casi
-        /// todo el panorama y la temporada se nota menos: en Pacaya-Samiria al alba (191) da 2,8 y 3,6 (Leticia al atardecer,
-        /// sin medir). Se multiplica con la de la parada.
+        /// Es la única señal de la temporada (sin cartel), así que se nota a tamaño de teléfono: en la zona visible del fondo
+        /// (cielo, panorama y banda por encima del panel, sin HUD, follaje ni panel), ΔE00 medio ≥ 5 frente al fondo sin
+        /// temporada y ≥ 8 frente a B en la misma parada, con 2 y 3 filas y en las paradas con luz propia (revisión de SE2;
+        /// D-030, pregunta 13 b). Lo vigila <c>SeasonVisibilitySnapshotTests</c> (capturas con gráficos: si se retoca una LUT de
+        /// temporada, el tinte del cielo o el agua, hay que volver a pasarlo). Se multiplica con la de la parada.
         /// </summary>
         public static readonly Color HighWaterLut = new Color(0.76f, 1f, 0.9f, 1f);
 
@@ -279,8 +284,13 @@ namespace AF.Presentation
         /// <summary>Agua base del mundo con la que se pinta la banda (<c>white</c>, <c>clear</c> o <c>black</c>).</summary>
         public string Water => _water;
 
-        /// <summary>Color de la banda del primer plano: el preset del agua base del mundo (VA-23).</summary>
+        /// <summary>Preset del agua base del mundo (VA-23), sin la temporada: la banda va a ≤ <see cref="SeasonWaterMaxDeltaE"/>.</summary>
         public Color BandColor => _waterColor;
+
+        /// <summary>
+        /// Agua de la banda y de las piezas por código con la temporada (<see cref="SeasonWater"/>; el preset sin ella; DC21).
+        /// </summary>
+        public Color SeasonWaterColor => SeasonWater(_waterColor, SeasonLutOf(_season));
 
         /// <summary>
         /// Luz del fondo: la de la parada (<see cref="LutOf"/>: <see cref="DuskLut"/> en <c>dusk</c>, <see cref="DawnLut"/> en
@@ -405,6 +415,70 @@ namespace AF.Presentation
         }
 
         /// <summary>
+        /// Agua <paramref name="water"/> con la LUT de temporada <paramref name="seasonLut"/> (DC21; D-030, pregunta 13 b): el agua
+        /// por la LUT, pero solo hasta donde el agua y sus ondas (<see cref="RippleColor"/>) quedan a ≤
+        /// <see cref="SeasonWaterMaxDeltaE"/> del preset (VA-23: ΔE00 ≤ 5); si la LUT entera se pasa, la mezcla más fuerte que
+        /// cabe (bisección). Con blanco, el agua tal cual. Sin asignaciones.
+        /// </summary>
+        public static Color SeasonWater(Color water, Color seasonLut)
+        {
+            if (seasonLut == Color.white)
+            {
+                return water;
+            }
+
+            var full = new Color(water.r * seasonLut.r, water.g * seasonLut.g, water.b * seasonLut.b, water.a);
+            if (WaterFits(water, full))
+            {
+                return full;
+            }
+
+            float lo = 0f;
+            float hi = 1f;
+            for (int i = 0; i < 14; i++)
+            {
+                float mid = (lo + hi) * 0.5f;
+                if (WaterFits(water, Color.Lerp(water, full, mid)))
+                {
+                    lo = mid;
+                }
+                else
+                {
+                    hi = mid;
+                }
+            }
+
+            return Color.Lerp(water, full, lo);
+        }
+
+        /// <summary>
+        /// Color del tinte del cielo <paramref name="sky"/> con la LUT de temporada <paramref name="seasonLut"/> (DC21; D-030,
+        /// pregunta 13 b): el color por la LUT, con el tono y el brillo que da, pero sin bajar de la saturación del color sin
+        /// ella (VA-03: con la LUT de aguas altas, el rosa del alba perdía el rojo y se agrisaba hasta S medio &lt; 0,30). La alfa,
+        /// la del color. Con blanco, el color tal cual. Sin asignaciones.
+        /// </summary>
+        public static Color SeasonSky(Color sky, Color seasonLut)
+        {
+            if (seasonLut == Color.white)
+            {
+                return sky;
+            }
+
+            var lit = new Color(sky.r * seasonLut.r, sky.g * seasonLut.g, sky.b * seasonLut.b, 1f);
+            Color.RGBToHSV(sky, out _, out float s0, out _);
+            Color.RGBToHSV(lit, out float h, out float s, out float v);
+            Color c = Color.HSVToRGB(h, Mathf.Max(s, s0), v);
+            c.a = sky.a;
+            return c;
+        }
+
+        private static bool WaterFits(Color preset, Color c)
+        {
+            return ColorMath.DeltaE00(c, preset) <= SeasonWaterMaxDeltaE
+                && ColorMath.DeltaE00(RippleColor(c), preset) <= SeasonWaterMaxDeltaE;
+        }
+
+        /// <summary>
         /// Luz del fondo de <paramref name="stop"/> en la temporada <paramref name="season"/>: la de la parada por la de la
         /// temporada (<see cref="LutColor"/> tras <see cref="Apply"/>).
         /// </summary>
@@ -516,7 +590,8 @@ namespace AF.Presentation
                 _root.gameObject.SetActive(stop != null);
             }
 
-            _front.Compose(stop, _waterColor, _lut, _heroSource, _shape, _heroSprite);
+            Color seasonLut = SeasonLutOf(season);
+            _front.Compose(stop, SeasonWater(_waterColor, seasonLut), _lut, seasonLut, _heroSource, _shape, _heroSprite);
             if (_laidOut && stop != null)
             {
                 Rebuild(_front);
@@ -568,12 +643,12 @@ namespace AF.Presentation
             layer.Root.gameObject.SetActive(true);
             _root.gameObject.SetActive(true);
             ResolveHero(stop);
-            layer.Compose(stop, Palette.WaterBase(worldWater ?? string.Empty), LutOf(stop), _heroSource, _shape, _heroSprite);
+            layer.Compose(stop, Palette.WaterBase(worldWater ?? string.Empty), LutOf(stop), Color.white, _heroSource, _shape, _heroSprite);
             Rebuild(layer);
             layer.BuildMeshes();
 
             // Todo como estaba: el juego de capas de detrás, oculto y sin composición, y el héroe de la parada que se ve.
-            layer.Compose(null, Palette.WaterWhite, Color.white, HeroNone, null, null);
+            layer.Compose(null, Palette.WaterWhite, Color.white, Color.white, HeroNone, null, null);
             layer.Root.gameObject.SetActive(layerActive);
             layer.Group.alpha = alpha;
             _root.gameObject.SetActive(rootActive);
@@ -710,13 +785,15 @@ namespace AF.Presentation
             float k = w / 360f;
             float horizon = _horizon;
             float visible = _hasBoard ? Mathf.Max(24f * k, _panelTop - horizon) : 64f * k;
-            BuildSky(layer.Sky, layer.Stop, w, horizon);
+            BuildSky(layer.Sky, layer.Stop, layer.SeasonLut, w, horizon);
             BuildBand(layer.Band, layer.Stop, layer.WaterColor, w, horizon, _bandBottom, k);
-            BuildCode(layer.Code, layer.Stop, layer.WaterColor, w, horizon, visible, k);
+            BuildCode(layer.Code, layer.Stop, layer.WaterColor, SeasonWater(Palette.WaterWhite, layer.SeasonLut), w, horizon, visible, k);
             BuildHero(layer, w, horizon, k);
         }
 
-        private static void BuildSky(StopShapeGraphic g, RiverStop? stop, float w, float horizon)
+        // El tinte del cielo lleva la LUT de temporada (SeasonSky; DC21; D-030, pregunta 13 b): sin ella, su alfa tapaba la
+        // temporada del panorama de debajo justo en lo que el tablero deja a la vista.
+        private static void BuildSky(StopShapeGraphic g, RiverStop? stop, Color seasonLut, float w, float horizon)
         {
             g.Clear();
             SkyOf(stop, out Color top, out Color bottom, out float aTop, out float aBottom);
@@ -725,6 +802,9 @@ namespace AF.Presentation
                 g.Commit();
                 return;
             }
+
+            top = SeasonSky(top, seasonLut);
+            bottom = SeasonSky(bottom, seasonLut);
 
             // Arriba, ≤ SkyMaxAlpha; en el tercio de abajo, con el atardecer y el alba, ≤ SkyLowMaxAlpha (el mismo 0,5: D-030, 18 b).
             string? lut = stop?.Backdrop.Lut;
@@ -855,11 +935,11 @@ namespace AF.Presentation
         // franja visible sobre el panel. VA-21: en los 16 dp de encima del panel, ningún detalle con ΔL* > 30 (la costura clara
         // sobre el agua clara se queda en ≈ 29; la diagonal, sobre el agua negra, queda fuera de esa franja). VA-23: en los 12 dp
         // de encima del panel no hay nada.
-        private static void BuildCode(StopShapeGraphic g, RiverStop? stop, Color near, float w, float horizon, float visible, float k)
+        private static void BuildCode(StopShapeGraphic g, RiverStop? stop, Color near, Color far, float w, float horizon, float visible,
+            float k)
         {
             g.Clear();
             string? code = stop?.Backdrop.Code;
-            Color far = Palette.WaterWhite;
             Color farTop = far;
             farTop.a = 0f;
             if (code == CodeClearWhite)
@@ -1149,17 +1229,22 @@ namespace AF.Presentation
 
             public Color Lut { get; private set; } = Color.white;
 
+            // LUT de la temporada sola: el cielo y el agua (DC21).
+            public Color SeasonLut { get; private set; } = Color.white;
+
             public string HeroSource { get; private set; } = HeroNone;
 
             public string? ShapeId { get; private set; }
 
             public Sprite? HeroSprite { get; private set; }
 
-            public void Compose(RiverStop? stop, Color waterColor, Color lut, string heroSource, string? shapeId, Sprite? heroSprite)
+            public void Compose(RiverStop? stop, Color waterColor, Color lut, Color seasonLut, string heroSource, string? shapeId,
+                Sprite? heroSprite)
             {
                 Stop = stop;
                 WaterColor = waterColor;
                 Lut = lut;
+                SeasonLut = seasonLut;
                 HeroSource = heroSource;
                 ShapeId = shapeId;
                 HeroSprite = heroSprite;
