@@ -36,6 +36,7 @@ Cada decisión del dueño que cambia reglas, UX o contratos del GDD se registra 
 | D-028 | 2026-10-19 | Respuestas a las preguntas 19, 22-24, 53, 54, 57, 60, 61 (con P5) y 65 de `docs/GDD.md` §6.3 | Decidida por el dueño (la recomendación de cada pregunta y, en la 65, de sus tres partes: «Acepto la opción recomendada […] y en las dos de M5.1»; el espacio del AAB y el permiso `INTERNET`, aparte). Documentación aplicada el 2026-10-19 (DC1). En implementación en la ola 7 de la tanda 4: DC2 (53 y 54), DC3 (19), DC4 (23), DC5 (60), DC6 (61 y P5), DC8 (65), DC9 y DC10 (57) y DC11 (24); la 22 ya estaba en el cliente |
 | D-029 | 2026-10-19 | Respuestas a las preguntas con recomendación que seguían abiertas: 18, 21, 25, 26, 52, 55, 56, 58, 59 y 62-64 de `docs/GDD.md` §6.3, P7, P14-P17, el dedo guía de DC7, las partes 1, 3 (M5.1c) y 4 de la 66, Q11, Q14, Q17, F7-F13 y la propuesta de Magic Sort | Decidida por el dueño («resolvamos las preguntas, pero si tienen recomendadas vamos con esas»; para DC7, «sí»), después de D-028. Documentación aplicada el 2026-10-19 (DC1b): las cifras [sim] del ciclo de D-009 en el GDD, 03 §11 con la cuenta del ciclo, P17 A en 05, el agua negra #522500 y `af_fauna_sighted` en 08 §8.2. Código en la ola 7 de la tanda 4: DC6, DC7 y DC12-DC16. Fuera: el espacio del AAB, `INTERNET` y las preguntas sin recomendación (lista en la entrada), decididas el mismo día, después (D-030) |
 | D-030 | 2026-10-19 | Respuestas a las 19 preguntas sin recomendación: la parte 2 de la 66 de `docs/GDD.md` §6.3, P12 de D-006, las dos de D-021, las #2, #9, #14 y #20 de la propuesta de Magic Sort y las observaciones de las pruebas y revisiones de las olas 2-6 | Decidida por el dueño («Acepto tus propuestas para las 19 preguntas sin recomendada: 1a, 2c, 3a, 4c, 5a, 6b, 7a, 8b, 9b, 10a, 11a, 12a, 13b, 14a, 15b, 16b, 17b, 18b y 19a»), después de D-029; las de Magic Sort, con la letra de la fuente: #2 A, #9 C, #14 C y #20 C. Documentación aplicada el 2026-10-19 (DC1c). Diez ya estaban aplicadas (la 11, en DC2); código en la ola 7 de la tanda 4: DC17-DC25. Fuera: el espacio del AAB y `INTERNET` |
+| D-031 | 2026-10-19 | Reto del río: pool de 729 días, bandas, premio, anti-reloj y partida | Decidida por el dueño (R-Q1-R-Q10 con «Acepto tus propuestas»; R-Q1b, R-Q11-R-Q16 y R-Q12b con la recomendada; R-Q2b, 729 días; R-Q11b, 30 candidatos por fuente). Implementada por el equipo Spark (R0-R11, `spark/reto-del-rio`; el bloque (a) integrado en `fcbbd94`). Documentación aplicada con E11 (03, 05, 06 y 08). Pendientes: los enganches E1-E25, la integración y la prueba en el teléfono |
 
 ---
 
@@ -2817,3 +2818,79 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Archivos afectados.**
 - **Documentación** (2026-10-19, DC1c): este registro y los de «Qué cambia en el GDD».
 - **Código** (ola 7): `tools/river-map/` (DC17), `Assets/_Project/Scripts/{UI, Presentation, GameFlow, Save}` (DC18-DC25) y `Assets/_Project/Data/Loc/strings.csv` (DC22 y DC25), con sus tests; las listas exactas, en cada PR.
+
+---
+
+## D-031 · Reto del río: pool de 729 días, bandas, premio, anti-reloj y partida
+
+- **Fecha:** 2026-10-19. Registrada el 2026-10-19 (enganche E11 del equipo Spark: `docs/dev/traspaso/spark-reto-del-rio.md` §5 y `docs/dev/traspaso/spark-estado.md`).
+- **Estado:** decidida por el dueño en el chat, en cuatro respuestas del 2026-10-19:
+  - **R-Q1-R-Q10:** «Acepto tus propuestas para R-Q1 a R-Q10 del Reto del río; déjalas en el encargo del Spark». La primera versión del encargo las fechaba el 2026-10-20; el encargo §5 y el reloj del Spark dicen 2026-10-19.
+  - **R-Q1b, R-Q11-R-Q16, la aclaración de R-Q12 y R-Q12b:** «aplica las recomendaciones y pon trabajo en paralelo para avanzar mas rapido», con la regla del integrador «si tienen recomendada, vamos con esas» (encargo §5): la opción (a), la recomendada, de cada una.
+  - **R-Q2b:** «Pool de 729 o 738 días» y, después, «729 días (Recomendado)».
+  - **R-Q11b:** «Aceptar (Recomendado)».
+  - **Confirmado por el integrador** (encargo §5): `IServerDate` y `FakeServerDate` van en AF.Platform (08 §2.2), no en AF.LiveOps.
+  - **Implementada** por el equipo Spark (R0-R11) en `spark/reto-del-rio`: el bloque (a) (generador, QA y lector del pool) está integrado en `integracion-fase1-fase2` (`fcbbd94`); el pool publicado (R5, `3c40393`), la lógica (R6-R7b), la partida (R8), las pantallas (R9) y las sondas (R10), pendientes de integrar. Pendientes: los enganches E1-E25 de `spark-estado.md` y la prueba en el teléfono.
+
+**Contexto.**
+- El GDD fija el Reto del río (03 §16, 06 §4.1, 08 §4.1, §4.3, §8.2 y §9), pero deja huecos que el código necesita: la paleta y el agua de cada banda, qué pasa al cruzar la medianoche, si se reanuda, los campos del perfil, el formato de `daily_overrides`, la cadencia de la racha, los comodines, qué es `fail` y qué comprobaciones de la campaña valen en el pool (encargo §5, R-Q1-R-Q10).
+- Al implementarlo salieron más: R-Q1 no cabía en B2 con K = 9 ni en B3 (con los tintes de su tramo hay al menos 3 pares de riesgo; `docs/dev/reto-del-rio.md` §1.1); con 1 vacío el bot falla 0,88-1,00 (03 §4.4), así que la ventana de B2 puede no alcanzarse; la reconciliación con el servidor, el intersticial y la Pororoca antes del nivel 30 no estaban decididos; y con 730 días y 9 mundos (730 mod 9 = 1) el mundo grabado en cada tablero deja de seguir a la fecha en la segunda vuelta del pool.
+
+**Decisión.**
+
+| Id | Decisión |
+|---|---|
+| R-Q1 | Cada banda usa solo los tintes ya estrenados en su tramo de la campaña: B1 (K 6-7) con los de 1-40 y `max_pares_riesgo` 0; B2 (K 8-9) con los de 1-80 y como mucho 1; B3 (K 10-11) con los de 1-200 y como mucho 2 (lo ajusta R-Q1b) |
+| R-Q1b | (a) B2 solo con K = 8 y B3 con `max_pares_riesgo` libre, como la campaña desde el 201 (03 §4.5). B1 sin cambios |
+| R-Q2 | El agua (`water_base`) y el fondo rotan por los mundos 1-9 según la fecha: el agua y el kit de fondo del mundo de ese día |
+| R-Q2b | Pool de **729 días por banda** (81 × 9), 2.187 tableros: el día del pool es `(días_desde(2026-01-01) + live_daily_offset) mod 729` y el mundo del tablero, `1 + (día mod 9)`, que sigue a la fecha en todas las vueltas (con `live_daily_offset` constante, desplazado por él) |
+| R-Q3 | Manda la fecha en que se empezó la partida: se sigue con ese tablero y se cobra ese premio aunque se gane pasada la medianoche |
+| R-Q4 | La partida del Reto se reanuda al volver a abrir la app el mismo día; al cambiar de día se descarta |
+| R-Q5 | El bloque `daily_challenge` del perfil añade la última fecha cobrada, el premio pendiente de validar y los sellos del mes (además de `last_date`, `result` y `streak_days`) |
+| R-Q6 | `daily_overrides` = `{fecha: {banda: id del pool}}` |
+| R-Q7 | La Pororoca sale cada 7 días seguidos ganados (cada racha completa); un día sin ganar rompe la racha; el marco de país de los sellos queda fuera hasta que existan cosméticos |
+| R-Q8 | Los comodines son los de la campaña salvo los que el GDD excluye en el Reto (Cuia de rescate y Salto del Boto), y gastan el stock igual que en la campaña |
+| R-Q9 | `result = fail` en `af_daily_challenge` es salir sin ganar ese día (lo concretan R-Q15 y R-Q16) |
+| R-Q10 | La anti-repetición (03 §17 #9) y el tope de trampas tempranas (03 §17 #3) se miden en el pool y se informan como aviso, sin ser compuerta |
+| R-Q11 | (a) La ventana del bot es compuerta: un día sin candidato dentro de la ventana no se publica hasta ajustar la especificación (fuente o K) |
+| R-Q11b | El «máximo 30 candidatos» de 03 §4.4 se lee como **30 por fuente**, con respaldos en orden. No se relajan vacíos, K, capacidad ni ventanas |
+| R-Q12 | (a) Al reconectar, la reconciliación no retira las semillas cobradas sin red |
+| R-Q12 (aclaración) | (a) Al anular una fecha no se retiran semillas ni la Pororoca |
+| R-Q12b | (a) Un premio pendiente solo se valida si `\|fecha − hoy_servidor\| ≤ 1 día`; los demás se anulan |
+| R-Q13 | (a) Sin intersticial al terminar un Reto |
+| R-Q14 | (a) La Pororoca de la racha entra en el stock y espera al nivel 30, que la desbloquea |
+| R-Q15 | (a) `af_daily_challenge.result = fail` una vez por día, y solo si ese día termina sin victoria |
+| R-Q16 | (a) Salir de la partida del Reto sin ganar la deja reanudable el mismo día; al cambiar de día se descarta (R-Q4) |
+
+**Consecuencias.**
+- **Datos:** `Assets/_Project/Data/Daily/daily_pool_v1.json`, 2.187 tableros y 1.430.135 bytes, generado por `tools/level-generator --daily` desde `tools/level-generator/specs/daily_v1.json` (no se edita a mano), con su informe `tools/out/daily_pool_v1_report.md`. `tools/level-qa --daily` lo da con 0 fallos y 1.678 avisos (los de R-Q10). Las fuentes de cada banda y `k_by_day` siguen siendo [P] de la especificación (03 §16).
+- **Código** (archivos nuevos, sin paquetes, SDK, permisos ni versiones nuevas): `tools/level-generator/Daily/` y `tools/level-qa/Daily/`; `Scripts/LiveOps/` (asmdef AF.LiveOps, sin motor); `DailyPool` y `DailyPoolReader` en AF.Levels; `IServerDate`, `FakeServerDate` y `ClockSecurityConfig` (la fuente única de `sec_clock_max_drift_h`) en AF.Platform; `LevelFlow.Daily.cs` en AF.GameFlow; la tarjeta, la partida, el calendario de sellos y `DevProbe.Daily.cs` en AF.UI.
+- **Formato de nivel:** sin cambios. El esquema admite `slot.day` 0-729 y el pool usa 0-728; el contrato 21 y `pack_schema` no cambian.
+- **Remote Config:** sin claves nuevas; `daily_overrides` cambia de tipo (`{fecha: {banda: id}}`) con el mismo default `{}`.
+- **Analítica:** sin eventos nuevos; R-Q15 y R-Q16 fijan cuándo sale `af_daily_challenge` (en la 1.0 no sale `abandon`). La Pororoca de la racha no tiene evento (08 §8.2 no lo define).
+- **Economía:** sin cambios en `tools/econ_sim.py` ni en las cifras [sim] (05 §3.2 ya cuenta el Reto).
+
+**Qué cambia en el GDD** (E11, en el mismo lote que este registro):
+- `docs/GDD.md` §2, decisión 21, y la fila de la fase 3 (2.187 tableros; K 8 en B2); las incidencias cerradas de §6 (15 y 16) se quedan como historia;
+- glosario (00), fila «Reto del río» (2.187 = 729 × 3; K 8 en B2);
+- 01, «Dependencias» (2.187 tableros);
+- 03 §4.4 (R-Q11b) y §16 (729 días y 2.187 tableros, B2 con K 8, paleta, agua, fuentes, compuerta y avisos), con las menciones de «Preguntas abiertas», 2, y «Dependencias»;
+- 05 §6.1 (sin intersticial en el Reto, R-Q13);
+- 06 §4.1 (índice mod 729, bandas, comodines, partida en curso, racha, sustituciones, reconciliación, anuncios y analítica; el pseudocódigo), con «Preguntas abiertas», 2, y «Dependencias»;
+- 08 §2.2 (fila `AF.Levels`), §3, §4.1 (fila `kind` y la validación en `tools/level-qa`), §4.3 (bloque `daily_challenge`), §6.1, §6.2, §8.2 (`level_start` y `af_daily_challenge`), §9 (`daily_overrides` y `live_daily_offset`) y «Dependencias» (filas 03 y 06);
+- 09, fila 19 de la tabla de decisiones, fase 3, F2 y «Dependencias» (2.187 tableros; K 8 en B2).
+
+**Alternativas descartadas.**
+- R-Q1b: (b) subir los topes (B2 a 3, B3 a 4); (c) mantener los topes y bajar K (B2 = 8, B3 = 9); (d) ampliar la paleta de B3 a 1-300 (no basta: el 13 añade 6-13 y 13-14).
+- R-Q2b: que el cliente calcule el mundo con la fecha local (cambia el significado de `water_base`, contrato 21); aceptar el salto en la segunda vuelta; 738 días.
+- R-Q11: (b) publicar el más cercano y avisar en QA; (c) ensanchar la ventana (cambia 03 §16).
+- R-Q12: (b) anular las victorias cobradas sin red con fecha posterior a la del servidor (queda en el código detrás de `DailyReconcileMode`, sin usarse). Aclaración: (b) retirar las semillas que queden sin gastar.
+- R-Q12b: (b) validar todo pendiente con fecha ≤ hoy del servidor.
+- R-Q13: (b) intersticial como en la campaña. R-Q14: (b) otro premio en B1; (c) nada antes del 30. R-Q15: (b) un `fail` por salida. R-Q16: (b) salir cierra la partida.
+
+**Cómo revertir.** Con una decisión nueva que sustituya a D-031. R-Q2b y R-Q11b obligan a regenerar el pool con la especificación cambiada (`--daily`), a cambiar el módulo del índice y a pasar `level-qa --daily`; R-Q12 (b) es una opción del código (`DailyReconcileMode`). Mientras el Reto no se publique, sin coste para el jugador.
+
+**Archivos afectados.**
+- **Herramientas y datos** (Spark, R2-R5): `tools/level-generator/specs/daily_v1.json`, `tools/level-generator/Daily/`, `tools/level-qa/Daily/` y `tools/level-qa/fixtures/daily/`, `tools/out/daily_sample/`, `tools/out/daily_sample_report.md`, `tools/out/daily_pool_v1_report.md` y `Assets/_Project/Data/Daily/daily_pool_v1.json`.
+- **Cliente** (Spark, R6-R11): `Assets/_Project/Scripts/LiveOps/`, `Scripts/Levels/DailyPool*.cs`, `Scripts/Platform/IServerDate.cs`, `FakeServerDate.cs` y `ClockSecurityConfig.cs`, `Scripts/GameFlow/LevelFlow.Daily.cs`, `Scripts/UI/DailyChallenge*.cs`, `DailyStampCalendar.cs`, `DailyLevelStateStore.cs`, `DailyText.cs`, `GameBootstrap.Daily.cs` y `DevProbe.Daily.cs`, y sus tests (`Scripts/LiveOps/Tests/`, `Tests/EditMode/Daily*.cs` y `Tests/PlayMode/Daily*.cs`).
+- **Documentación:** este registro, `docs/dev/reto-del-rio.md` (nota de diseño), `docs/dev/traspaso/spark-estado.md`, los capítulos de «Qué cambia en el GDD», `docs/dev/prototipo-v0.md` (sondas), `docs/dev/traspaso/README.md` y `CLAUDE.md` (E12).

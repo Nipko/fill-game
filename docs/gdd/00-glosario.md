@@ -299,7 +299,7 @@ Nombres en PT-BR [P] (propuesta de D-007, b.2): Hoja «Palha», Liana «Cipó»,
 
 | Sistema | Nombre canónico | EN | PT-BR | ID | Versión (research/05 §Roadmap; dirección) | Nota de diseño |
 |---|---|---|---|---|---|---|
-| Reto diario | **Reto del río** | River Challenge | Desafio do Rio | `daily_challenge` | 1.0 | Pool pregenerado indexado por fecha (dirección 17): 2.190 tableros = 730 × 3 bandas con K 6-7 / 8-9 / 10-11 (canon 03 §16) |
+| Reto diario | **Reto del río** | River Challenge | Desafio do Rio | `daily_challenge` | 1.0 | Pool pregenerado indexado por fecha (dirección 17): 2.187 tableros = 729 × 3 bandas con K 6-7 / 8 / 10-11 (canon 03 §16; R-Q1b, R-Q2b y D-031) |
 | Calendario de 30 casillas | **Bitácora del río** | River Logbook | Diário do Rio | `login_calendar` | 1.0 | Cada día sella una página; reclamo secuencial sin reinicio; ≈3.000 semillas/mes (dirección 12; research/04 C1 §3 [E]) |
 | Cofre cada 10 niveles | **Canasta** | Basket | Cesta | `chest_basket` | 1.0 | Contenido **visible** antes de abrir (frutas y comodines asomando); gratuita siempre; nunca comprable (dirección 15; research/08 C5.3 [V]) |
 | Álbum de colección | **Cuaderno de campo** | Field Notebook | Caderno de Campo | `album` | 1.1 | Páginas Frutas / Fauna / Ríos; cartas por progreso y eventos; sin sobres de pago (dirección 15) |
