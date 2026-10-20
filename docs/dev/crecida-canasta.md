@@ -61,12 +61,13 @@ todo va en **`AF.Economy`**, junto a la Canasta, porque sus hitos pagan con `Wal
 | `Assets/_Project/Scripts/Economy/StreakConfig.cs` | Claves `streak_*` y `biz_feature_win_streak` con `[RemoteConfigKey]` y los defaults de 08 §9; `StreakMilestones` (`streak_milestones`). |
 | `Assets/_Project/Scripts/Economy/BasketConfig.cs` | `eco_basket_cycle` y `eco_basket_seeds`. |
 | `Assets/_Project/Scripts/Economy/BasketRules.cs` | `BasketRules.For`, `HitSix`, el contenido de la Canasta grande (constante [P], Q-C12) y `BasketContents` (valor). |
-| `Assets/_Project/Scripts/Economy/StreakRules.cs` | `StreakState` (POCO), `StreakOutcome` (valor) y `StreakRules` (`OnVictory`, `OnHardFail`, `RollDay`). |
+| `Assets/_Project/Scripts/Economy/StreakRules.cs` | `StreakOutcome` (valor) y `StreakRules` (`OnVictory`, `OnHardFail`, `RollDay`) sobre el `StreakRecord` de A4 (`StreakRecord.cs`, `IStreakStore.cs`, `InMemoryStreakStore.cs`). |
 | `Assets/_Project/Scripts/Economy/EconomyJsonLite.cs` | Lector mínimo de los dos JSON de RC (un objeto plano y una lista de cadenas): `AF.Economy` no ve `AF.Levels` ni los internos de `AF.Save`. |
 | `Assets/_Project/Tests/EditMode/StreakBasketConfigTests.cs`, `BasketRulesTests.cs`, `StreakRulesTests.cs` | Tests (EditMode; el asmdef `AF.Tests.EditMode` ya referencia `AF.Economy`). |
 
 Todo sin motor, sin reloj del sistema y sin azar (`EconomyConfigTests.EconomyAssembly_HasNoEngine…` ya lo vigila en la carpeta).
-`OnVictory`, `OnHardFail`, `BasketRules.For` y `HitSix` no asignan memoria (devuelven valores `struct`); las transacciones
+`OnVictory`, `OnHardFail`, `BasketRules.For` y `HitSix` no asignan memoria (devuelven valores `struct`; la lista de hitos de
+`StreakRecord` solo reserva su arreglo la primera vez y `RollOver` la vacía sin soltarlo); las transacciones
 (`Transaction` es una clase) se piden aparte, con `AppendTransactions`.
 
 **Quién llama (enganches, §6):** `LevelFlow.Victory` (tras `Transaction.Win`) llama a `RollDay` y `OnVictory`; aplica el x2
@@ -78,15 +79,17 @@ gratis (Q-C1), las transacciones del hito y la Canasta de nivel. `FailResolve` (
 - `streak` = `{ "wins": int, "river_full": bool }`, **nullable y omitido** en el JSON hasta su primera escritura (la primera
   victoria de campaña desde el 25); sin migración, como `map_seen_level` (08 §4.3: `profile_schema` 1 aún no publicado).
 - En `daily` (04 §10.1), que ya se reinicia entero con `date_local`:
-  - `streak_hits` [P]: máscara de los hitos pagados hoy (1 = hito 3, 2 = hito 6, 4 = hito 10);
+  - `streak_hits` [P]: lista de los hitos pagados hoy (p. ej. `[3, 6]`; forma de A4);
   - `streak_seeds` [P]: semillas de la Crecida pagadas hoy (para el tope de 600);
   - un solo `shield_available`, **el de `daily`** (ya existe: `DailyData.ShieldAvailable`; `DailyCounters.RollOver` lo pone en
     true). Se quita `shield_available` del bloque `streak` de 08 §4.3 (hallazgo del plan §6).
 - `DailyCounters.RollOver` pone `streak_hits` y `streak_seeds` a 0 (enganche E28).
 - La Canasta, **sin bloque**: se deduce de `max_level`.
-- `StreakState` (en memoria) junta esas piezas: `Wins` y `RiverFull` (de `streak`), `ShieldAvailable`, `HitsToday`,
-  `SeedsToday` y `DayLocal` (de `daily`). El adaptador sobre el perfil (`ProfileStreakStore` [P], ola 3) copia de y hacia el
-  perfil y guarda con el mismo `IProfileStore` que la cartera, en el mismo lote, para que el pago y el hito no se separen.
+- `StreakRecord` (A4, `Scripts/Economy/StreakRecord.cs`) junta esas piezas: `Wins` y `RiverFull` (de `streak`),
+  `ShieldAvailable`, `HitsToday`, `SeedsToday` y `DateLocal` (de `daily`), con `RollOver` solo hacia delante. `StreakRules`
+  trabaja sobre ese mismo objeto (un solo estado). Lo cargan y guardan `IStreakStore` e `InMemoryStreakStore` (A4) y, en el
+  juego, el adaptador sobre el perfil del parche `S1-profile.diff`, con el mismo `IProfileStore` que la cartera, en el mismo
+  lote, para que el pago y el hito no se separen.
 
 ## 4. Remote Config (08 §9; nombres exactos)
 
@@ -152,7 +155,7 @@ Todas con recomendada (la primera). Ninguna reabre una decisión del dueño.
 | Q-C5 | «Próxima Canasta de nivel» para el hito 6 | **(a)** la del primer múltiplo de 10 mayor que `max_level` tras la victoria (como mínimo el 20); si es un múltiplo de 100, el comodín del ciclo en esa ranura (`undo3` en el 100), nunca la grande; (b) la grande entera |
 | Q-C6 | `streak_shield_per_day` = 2 (rango 1-2) | **(a)** en la 1.0, una sola hoja al día con el bool de `daily`, valga lo que valga (un test lo fija); (b) un contador de hojas en `daily` |
 | Q-C7 | `streak_broken` de `af_level_fail` | **(a)** solo si se perdió algo: barra ≥ 1 o río crecido; (b) en todo fallo duro sin hoja |
-| Q-C8 | Forma de los hitos de hoy en `daily` y su fusión entre dispositivos (04 §10.2 fusiona `daily` con `max` por clave) | **(a)** `streak_hits` como máscara (1/2/4), fusionada con OR, y `streak_seeds` con `max`; (b) tres bools |
+| Q-C8 | Forma de los hitos de hoy en `daily` y su fusión entre dispositivos (04 §10.2 fusiona `daily` con `max` por clave, que no vale para una lista) | **(a)** `streak_hits` como lista de hitos (`[3, 6]`, la forma de A4), fusionada por unión, y `streak_seeds` con `max`; (b) tres bools |
 | Q-C9 | El botón x2 por vídeo con río crecido | **(a)** no se ofrece (la Cosecha ya va doblada) y no gasta `ads_rv_cap_double_harvest`; (b) se ofrece además (×3) |
 | Q-C10 | El tope de 600 cuando no cabe un hito entero | **(a)** pago parcial (`min(cantidad, hueco)`, como `pay_streak_hit`); el hito queda cobrado; el comodín de la Canasta del 6 se da entero; (b) todo o nada |
 | Q-C11 | `biz_feature_win_streak` = false, o `streak_unlock_level` subido por encima del nivel actual | **(a)** se congela: no suma ni rompe, sin x2 del río y sin barra; el estado guardado se conserva; (b) se borra |
