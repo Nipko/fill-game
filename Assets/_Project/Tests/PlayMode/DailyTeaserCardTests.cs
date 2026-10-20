@@ -166,7 +166,11 @@ namespace AF.Tests.PlayMode
         }
     }
 
-    /// <summary>Tablas de textos de los tests del Reto: las del proyecto y, detrás, las filas de <c>spark-strings-reto.csv</c> (E5).</summary>
+    /// <summary>
+    /// Tablas de textos de los tests del Reto: las del proyecto y, detrás, las filas de <c>spark-strings-reto.csv</c> cuya clave
+    /// aún no está en <c>strings.csv</c> (las que E5 ya integró no se repiten; hoy, las de E5b: <c>daily_teaser</c> y
+    /// <c>no_canoes_daily</c>). Con E5b aplicado, son las tablas del proyecto tal cual.
+    /// </summary>
     internal static class DailyTestTables
     {
         public const string CsvPath = "docs/dev/traspaso/spark-strings-reto.csv";
@@ -175,9 +179,26 @@ namespace AF.Tests.PlayMode
         {
             string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
             string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile);
+            var keys = new System.Collections.Generic.HashSet<string>(StringComparer.Ordinal);
+            System.Collections.Generic.IReadOnlyList<LocCsvRow> rows = LocCsv.Parse(strings, LocCatalog.StringsFile);
+            for (int i = 1; i < rows.Count; i++)
+            {
+                keys.Add(rows[i].Fields[0]);
+            }
+
             string daily = LocCsv.Decode(System.IO.File.ReadAllBytes(LocTables.ProjectPath(CsvPath)), "spark-strings-reto.csv");
-            string rows = daily.Substring(daily.IndexOf('\n') + 1);
-            return new LocTableTexts(strings.EndsWith("\n", StringComparison.Ordinal) ? strings + rows : strings + "\n" + rows, facts);
+            var pending = new System.Text.StringBuilder();
+            foreach (string line in daily.Substring(daily.IndexOf('\n') + 1).Split('\n'))
+            {
+                int comma = line.IndexOf(',');
+                if (comma > 0 && !keys.Contains(line.Substring(0, comma)))
+                {
+                    pending.Append(line).Append('\n');
+                }
+            }
+
+            string body = strings.EndsWith("\n", StringComparison.Ordinal) ? strings : strings + "\n";
+            return new LocTableTexts(body + pending, facts);
         }
 
         public static LocCatalog Catalog()

@@ -85,7 +85,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator WithoutTheRetoInTheBuild_IsNotOffered()
         {
-            GameBootstrap.DailyPoolOverride = null; // sin pool (sin E3): D-008
+            GameBootstrap.DailyPoolDisabledOverride = true; // sin pool, aunque la escena lo traiga (E3): D-008
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(NoCanoesProfile(30)));
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);

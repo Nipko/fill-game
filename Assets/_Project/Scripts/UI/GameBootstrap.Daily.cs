@@ -61,6 +61,12 @@ namespace AF.UI
         /// <summary>Pool del Reto para los tests (gana a <see cref="dailyPool"/>); <see cref="ResetDailyOverrides"/> lo limpia.</summary>
         internal static DailyPool? DailyPoolOverride { get; set; }
 
+        /// <summary>
+        /// Los tests fuerzan «sin pool» (el Reto fuera del build, D-008) aunque la escena traiga <see cref="dailyPool"/> (E3):
+        /// gana a <see cref="DailyPoolOverride"/> y al pool de la escena; <see cref="ResetDailyOverrides"/> lo apaga.
+        /// </summary>
+        internal static bool DailyPoolDisabledOverride { get; set; }
+
         /// <summary>Almacén del Reto para los tests (gana a <see cref="DailyStoreFactory"/>).</summary>
         internal static IDailyChallengeStore? DailyStoreOverride { get; set; }
 
@@ -108,6 +114,7 @@ namespace AF.UI
         internal static void ResetDailyOverrides()
         {
             DailyPoolOverride = null;
+            DailyPoolDisabledOverride = false;
             DailyStoreOverride = null;
             DailyServerOverride = null;
         }
@@ -301,12 +308,14 @@ namespace AF.UI
             }
 
             DailyCardState state = _dailyService!.CardState(_progress!.MaxLevel);
-            DevProbe.DailyNoCanoesChoice();
-            LastNoCanoesChoice = DailyProbeFormat.NoCanoesDailyChoice;
             if (!PressNoCanoesHome())
             {
                 return false;
             }
+
+            // La elección se registra cuando Sin canoas ya se cerró por su camino (revisión de T1).
+            DevProbe.DailyNoCanoesChoice();
+            LastNoCanoesChoice = DailyProbeFormat.NoCanoesDailyChoice;
 
             _dailyCardShown = false;
             RefreshDailyCard();
@@ -392,6 +401,11 @@ namespace AF.UI
 
         private DailyPool? LoadDailyPool()
         {
+            if (DailyPoolDisabledOverride)
+            {
+                return null;
+            }
+
             if (DailyPoolOverride != null)
             {
                 return DailyPoolOverride;

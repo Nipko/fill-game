@@ -24,6 +24,13 @@ namespace AF.Tests.EditMode.Daily
     public sealed class DailyUiLogicTests
     {
         private const string CsvPath = "docs/dev/traspaso/spark-strings-reto.csv";
+        /// <summary>
+        /// Claves del Spark de E6 y E7 cuyas filas entran en <c>strings.csv</c> con el enganche E5b
+        /// (<c>docs/dev/traspaso/spark-enganches/E5b.diff</c>): hasta aplicarlo faltan enteras; aplicado, tienen que estar tal cual,
+        /// como las demás. Con E5b integrado, esta lista se vacía.
+        /// </summary>
+        private static readonly string[] PendingE5bKeys = { DailyText.Keys.Teaser, DailyText.Keys.NoCanoesDaily };
+
         private const string Header = "key,es-419,en,pt-BR,context,max_chars,status,status_en,status_pt-BR,notes,args";
 
         private static readonly TimeSpan Bogota = TimeSpan.FromHours(-5);
@@ -78,17 +85,26 @@ namespace AF.Tests.EditMode.Daily
             LocCatalog project = LocTables.FromProjectFiles();
             string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
             IReadOnlyList<LocCsvRow> rows = ReadCsvRows(out string daily);
+            int pending = 0;
             for (int i = 1; i < rows.Count; i++)
             {
-                // E5: la misma fila, tal cual (las filas del Reto se insertaron en orden ordinal por clave).
+                // E5: la misma fila, tal cual (las filas del Reto se insertaron en orden ordinal por clave). Las de E5b
+                // (PendingE5bKeys) pueden faltar enteras mientras no se aplique E5b; nunca estar con otro texto.
                 string key = rows[i].Fields[0];
+                if (IsPendingE5b(project, key))
+                {
+                    pending++;
+                    continue;
+                }
+
                 Assert.That(project.Strings.IndexOf(key), Is.GreaterThanOrEqualTo(0), key + " falta en strings.csv (E5)");
             }
 
+            Assert.That(pending == 0 || pending == PendingE5bKeys.Length, Is.True, "E5b entra entero o no entra");
             string[] lines = daily.Substring(daily.IndexOf('\n') + 1).Split('\n');
             foreach (string line in lines)
             {
-                if (line.Length > 0)
+                if (line.Length > 0 && !IsPendingE5b(project, line.Substring(0, line.IndexOf(','))))
                 {
                     Assert.That(strings.Contains(line + "\n"), Is.True, "fila distinta en strings.csv: " + line);
                 }
@@ -327,10 +343,35 @@ namespace AF.Tests.EditMode.Daily
             return LocCsv.Parse(text, "spark-strings-reto.csv");
         }
 
-        // Tablas del proyecto: con E5, strings.csv ya trae las filas del Reto.
+        // Una clave de E5b que aún no está en strings.csv.
+        private static bool IsPendingE5b(LocCatalog project, string key)
+        {
+            return Array.IndexOf(PendingE5bKeys, key) >= 0 && project.Strings.IndexOf(key) < 0;
+        }
+
+        // Tablas del proyecto (con E5, strings.csv ya trae las filas del Reto) y, detrás, las filas de E5b que aún falten.
         private static LocCatalog TestCatalog()
         {
-            return LocTables.FromProjectFiles();
+            string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
+            string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile);
+            LocCatalog project = LocCatalog.Parse(strings, facts);
+            ReadCsvRows(out string daily);
+            var pending = new System.Text.StringBuilder();
+            foreach (string line in daily.Substring(daily.IndexOf('\n') + 1).Split('\n'))
+            {
+                int comma = line.IndexOf(',');
+                if (comma > 0 && IsPendingE5b(project, line.Substring(0, comma)))
+                {
+                    pending.Append(line).Append('\n');
+                }
+            }
+
+            if (pending.Length == 0)
+            {
+                return project;
+            }
+
+            return LocCatalog.Parse((strings.EndsWith("\n", StringComparison.Ordinal) ? strings : strings + "\n") + pending, facts);
         }
 
         // strings.csv sin las filas nuevas del Reto: para probar el respaldo de Loc con claves que faltan.
