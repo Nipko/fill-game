@@ -1,5 +1,5 @@
 diff --git a/Assets/_Project/Data/Loc/glossary.csv b/Assets/_Project/Data/Loc/glossary.csv
-index b7b6623..edf811c 100644
+index b7b6623..8633378 100644
 --- a/Assets/_Project/Data/Loc/glossary.csv
 +++ b/Assets/_Project/Data/Loc/glossary.csv
 @@ -1,13 +1,13 @@
@@ -25,7 +25,7 @@ index b7b6623..edf811c 100644
  brand.cuia,brand,cuia,cuia,cuia,"El recipiente (glosario §4): palabra única e invariante en todos los idiomas, como término de marca; plural «cuias». Etiqueta funcional de respaldo, solo en textos de ayuda: «recipiente» (ES), «bottle» (EN), «frasco» (PT)."
  brand.name,brand,Tintalú,Tintalú,Tintalú,Nombre comercial (glosario §1.2): no se traduce y va siempre con tilde en lo visible. Ningún identificador lleva la marca (glosario §11). Marca pendiente del dictamen del abogado.
  character.capi,character,Capi,Capi,Capi,Capibara que trae cuias (glosario §3.1): nombre idéntico en todos los idiomas. Pendiente del asesor cultural (07 §8.2). Pendiente de la búsqueda de marca.
-@@ -17,28 +17,77 @@ character.sloth,character,TiTino,TiTino,TiTino,"Perezoso de tres dedos, personaj
+@@ -17,28 +17,79 @@ character.sloth,character,TiTino,TiTino,TiTino,"Perezoso de tres dedos, personaj
  currency,currency,Semillas,Seeds,Sementes,"Moneda blanda única, ID seeds (glosario §2.1); clave de UI currency (glosario §10)."
  daily_challenge,ui,Reto del río,River Challenge,Desafio do Rio,Reto diario (glosario §7.1 y §10).
  difficulty_hard,ui,Difícil,Hard,Difícil,Etiqueta de dificultad (glosario §6.1 y §10); subtítulo temático «Aguas bravas».
@@ -96,9 +96,11 @@ index b7b6623..edf811c 100644
 +place.guyana,place,Guyana,Guyana,Guiana,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 +place.iquitos,place,Iquitos,Iquitos,Iquitos,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 +place.itenez,place,Iténez,Iténez,Iténez,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
++place.kew,place,Kew,Kew,Kew,"Lugar (T2-Q3): el jardín botánico de Kew (Londres), fuente citada en los datos de fruta; invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 +place.mamore,place,Mamoré,Mamoré,Mamoré,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 +place.maranon,place,Marañón,Marañón,Marañón,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 +place.maroni,place,Maroni,Maroni,Maroni,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
++place.meeting_of_waters,place,Encuentro de las Aguas,Meeting of Waters,Encontro das Águas,"Lugar (T2-Q3): la confluencia del Negro y el Solimões en Manaos, que da nombre al evento de temporada (glosario §7.2, con los mismos EN y PT) y a la Cuia del Encuentro. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 +place.mexico,place,México,Mexico,México,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 +place.napo,place,Napo,Napo,Napo,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2)."
 +place.negro,place,Negro,Negro,Negro,"Lugar (T2-Q3): exónimo habitual o nombre invariante. EN y PT [P] de T2 (traducción con IA; D-022, pregunta 51 (b); decisión T2-Q3). Pendiente del asesor cultural (07 §8.2). El río; el tinte es «Agua del Río Negro» (Rio Negro Water)."
@@ -117,7 +119,7 @@ index b7b6623..edf811c 100644
  restart,booster,Reiniciar,Restart,Reiniciar,Etiqueta del HUD de Volver a la orilla (glosario §5.1 y §10).
  reveal,booster,Revelar,Reveal,Revelar,Etiqueta del HUD del comodín Luciérnaga (glosario §5.1 y §10).
  river_fact,ui,Dato del río,River fact,Curiosidade do rio,Dato educativo de la victoria (glosario §6.4 y §10).
-@@ -47,6 +96,7 @@ shop,ui,Mercado,Market,Mercado,"La tienda, ambientada en Ver-o-Peso (glosario §
+@@ -47,6 +98,7 @@ shop,ui,Mercado,Market,Mercado,"La tienda, ambientada en Ver-o-Peso (glosario §
  shuffle,booster,Barajar,Shuffle,Embaralhar,Etiqueta del HUD del comodín Pororoca (glosario §5.1 y §10).
  skip,booster,Saltar nivel,Skip level,Pular nível,"Etiqueta del comodín Salto del Boto (glosario §10; en el HUD, «Saltar», glosario §5.1)."
  streak,ui,Racha,Streak,Sequência,"Racha de victorias (glosario §10). El sistema se llama Crecida (EN «Rising River», PT «Enchente»; glosario §6.3)."
@@ -125,7 +127,7 @@ index b7b6623..edf811c 100644
  tint.acai.name,tint,Açaí,Açaí,Açaí,"Tinte acai (glosario §9): color violeta, #6A2C91, patrón «rombos», icono «bol (tigela)», debut (mundo · nivel) 1 · 1. EN se mantiene por notoriedad [P] (glosario §9). Fruta: Pendiente del asesor cultural (07 §8.2)."
  tint.agua_negro.name,tint,Agua del Río Negro,Rio Negro Water,Água do Rio Negro,"Tinte agua_negro (glosario §9): color ámbar, #A9672E, patrón «moteado», icono «hoja hundida», debut (mundo · nivel) 3 · 61. Nombre: Pendiente del asesor cultural (07 §8.2)."
  tint.agua_tapajos.name,tint,Agua del Tapajós,Tapajós Water,Água do Tapajós,"Tinte agua_tapajos (glosario §9): color turquesa, #3BB8D9, patrón «líneas onduladas», icono «gota», debut (mundo · nivel) 2 · 11. Nombre: Pendiente del asesor cultural (07 §8.2)."
-@@ -61,6 +111,10 @@ tint.jenipapo.name,tint,Huito,Jagua,Jenipapo,"Tinte jenipapo (glosario §9): col
+@@ -61,6 +113,10 @@ tint.jenipapo.name,tint,Huito,Jagua,Jenipapo,"Tinte jenipapo (glosario §9): col
  tint.lulo.name,tint,Lulo,Lulo,Lulo,"Tinte lulo (glosario §9): color verde, #4EB265, patrón «chevrons», icono «fruto peludo», debut (mundo · nivel) 4 · 111. Fruta: Pendiente del asesor cultural (07 §8.2)."
  tint.tapereba.name,tint,Taperebá,Hog Plum,Taperebá,"Tinte tapereba (glosario §9): color amarillo dorado, #F2B705, patrón «puntos grandes», icono «ciruela», debut (mundo · nivel) 1 · 2. Fruta: Pendiente del asesor cultural (07 §8.2)."
  tint.urucum.name,tint,Achiote,Achiote,Urucum,"Tinte urucum (glosario §9): color bermellón, #CF3E1C, patrón «triángulos», icono «cápsula erizada», debut (mundo · nivel) 3 · 41. Nombre ES elegido por reconocimiento en CO/PE/MX [P]. Fruta: Pendiente del asesor cultural (07 §8.2)."

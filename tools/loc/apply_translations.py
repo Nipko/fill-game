@@ -28,7 +28,7 @@ contiene, para las comprobaciones de los parches).
 
 Entregas que piden un parche (docs/dev/traspaso/spark-enganches/ y spark-traducciones/), comprobado antes de escribir:
 - *glosario*.csv: los nombres nuevos de glosario.diff (glossary.csv con el en de booster.undo);
-- strings_mapa*.csv: MapTextTests.patch (la prueba ya no exige en y pt-BR vacíos en las claves del Mapa);
+- strings_mapa*.csv: MapTextTests.diff (la prueba ya no exige en y pt-BR vacíos en las claves del Mapa);
 - facts_mapa*.csv y cualquier fila map.*: stops-preserve.diff (tools/river-map/stops.py conserva en, pt-BR y sus estados).
 
 Retención (T2-Q6; 08 §4.7: «una traducción solo vale con status en aprobado_es»; FactCatalogTests exige los estados vacíos
@@ -70,7 +70,7 @@ DEFAULT_DIR = REPO / "docs" / "dev" / "traspaso" / "spark-traducciones"
 DEFAULT_FILES = ("strings.csv", "strings_p14.csv")
 STATUS_ORDER = {"": 0, "borrador": 1, "pendiente_asesor": 2, "aprobado_es": 3}
 STOPS_MARKER = "PRESERVED_LOCALE_COLUMNS"  # lo añade stops-preserve.diff a tools/river-map/stops.py
-MAP_TEST_OLD = 'Is.Empty, key + " (" + locale + "): pendiente del traductor"'  # lo quita MapTextTests.patch
+MAP_TEST_OLD = 'Is.Empty, key + " (" + locale + "): pendiente del traductor"'  # lo quita MapTextTests.diff
 GLOSSARY_MARKER = "booster.undo"  # glosario.diff le da en
 # Copias de filas de strings.csv que las pruebas exigen idénticas a la tabla (DailyUiLogicTests, E5: «la misma fila, tal
 # cual»): las mismas celdas se aplican también ahí, con las mismas reglas, solo en las claves que tienen.
@@ -348,7 +348,7 @@ def requirement_errors(name: str, repo: Path) -> list[str]:
         if not any(r and r[0] == GLOSSARY_MARKER and len(r) > 3 and r[3] for r in rows):
             errs.append(f"{name}: necesita glosario.diff aplicado (glossary.csv sin el en de {GLOSSARY_MARKER})")
     if name.startswith("strings_mapa") and MAP_TEST_OLD in text("Assets/_Project/Tests/EditMode/MapTextTests.cs"):
-        errs.append(f"{name}: necesita MapTextTests.patch aplicado (la prueba aún exige en y pt-BR vacíos)")
+        errs.append(f"{name}: necesita MapTextTests.diff aplicado (la prueba aún exige en y pt-BR vacíos)")
     if name.startswith("facts_mapa") and STOPS_MARKER not in text("tools/river-map/stops.py"):
         errs.append(f"{name}: necesita stops-preserve.diff aplicado (stops.py no conserva en y pt-BR del bloque map.*)")
     return errs
