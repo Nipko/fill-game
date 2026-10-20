@@ -256,7 +256,7 @@ B8, B10 y B13 tampoco tocan el escritorio, y los dos módulos de B7 tampoco (sus
 
 ## 5. Preguntas para el dueño
 
-Lo que el GDD deja sin decidir. La primera opción de cada fila es la recomendada.
+Lo que el GDD deja sin decidir. La primera opción de cada fila es la recomendada; la que revierte una decisión del dueño va marcada «reabre».
 
 | Id | Pregunta | Opciones (recomendada primero) | Qué frena |
 |---|---|---|---|
