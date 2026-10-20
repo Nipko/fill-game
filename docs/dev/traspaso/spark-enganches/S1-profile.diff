@@ -1,0 +1,953 @@
+diff --git a/Assets/_Project/Scripts/Economy/ProfileStreakStore.cs b/Assets/_Project/Scripts/Economy/ProfileStreakStore.cs
+new file mode 100644
+index 0000000..2b1364e
+--- /dev/null
++++ b/Assets/_Project/Scripts/Economy/ProfileStreakStore.cs
+@@ -0,0 +1,172 @@
++#nullable enable
++using System;
++using AF.Platform;
++using AF.Save;
++
++namespace AF.Economy
++{
++    /// <summary>
++    /// <see cref="IStreakStore"/> del juego (parche S1-profile; 06 §4.3; 08 §4.3 con Q-M9 (a) [P] del plan de la tanda 5): la
++    /// Crecida en el mismo <see cref="Profile"/> que la cartera, guardado con el mismo <see cref="IProfileStore"/> (en el juego, el
++    /// lote <c>ProfileSaveBatch</c>, por su vía síncrona, como la cartera). <see cref="StreakRecord.Wins"/> y
++    /// <see cref="StreakRecord.RiverFull"/> van al bloque <c>streak</c>; <see cref="StreakRecord.ShieldAvailable"/>,
++    /// <see cref="StreakRecord.HitsToday"/> y <see cref="StreakRecord.SeedsToday"/>, a <c>daily</c> (<c>shield_available</c>,
++    /// <c>streak_hits</c> y <c>streak_seeds</c>), que comparten la cartera, los anuncios y las compras. Así el apunte de un hito y
++    /// su pago salen en la misma escritura del perfil y un hito nunca se paga dos veces el mismo día (<see cref="IStreakStore"/>).
++    /// Mismo patrón que <c>AF.LiveOps.ProfileDailyChallengeStore</c>: <see cref="Save"/> no lanza por un fallo de escritura; el
++    /// cambio queda en el perfil en memoria (<see cref="PendingSave"/>) y sale con el siguiente guardado del perfil o con
++    /// <see cref="Flush"/>.
++    /// <para>
++    /// <see cref="Load"/> pasa antes <c>daily</c> al día local del reloj con <see cref="DailyCounters.RollOver"/> (el bloque
++    /// entero, solo hacia delante; si cambia, <c>economy_ts</c> pasa a ahora), vuelve a leer el perfil en el estado vivo, lo recorta
++    /// (<see cref="StreakRecord.Normalize"/>) y recuerda lo que entregó. <see cref="Save"/> escribe siempre la racha y el río
++    /// crecido, y lleva los campos del día a <c>daily</c> con <see cref="StreakRecord.MergeDay"/>: si el registro es del día de
++    /// <c>daily</c>, se copian; si es de un día posterior, <c>daily</c> pasa antes a ese día (entero); si es de un día anterior
++    /// (cargado antes de medianoche y guardado después de que otro módulo pasara el día), se aplica a hoy solo lo que cambió desde
++    /// esa carga: hitos nuevos, aumento de semillas y escudo gastado (regla conservadora: puede pagar de menos en el borde de
++    /// medianoche, nunca dos veces). Si cambia algún campo de <c>daily</c>, <c>economy_ts</c> pasa a ahora (08 §4.3).
++    /// </para>
++    /// </summary>
++    public sealed class ProfileStreakStore : IStreakStore
++    {
++        private readonly Profile _profile;
++        private readonly IProfileStore _store;
++        private readonly IClock _clock;
++        private StreakRecord _live = new StreakRecord();
++        private StreakRecord _loaded;
++
++        /// <summary>Crea el almacén sobre <paramref name="profile"/>, que se guarda en <paramref name="store"/>.</summary>
++        public ProfileStreakStore(Profile profile, IProfileStore store, IClock clock)
++        {
++            _profile = profile ?? throw new ArgumentNullException(nameof(profile));
++            _store = store ?? throw new ArgumentNullException(nameof(store));
++            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
++            ReadInto(profile, _live);
++            _loaded = _live.Clone();
++        }
++
++        /// <inheritdoc />
++        public bool PendingSave { get; private set; }
++
++        /// <summary>Guardados pedidos (diagnóstico).</summary>
++        public int SaveCount { get; private set; }
++
++        /// <inheritdoc />
++        public StreakRecord Load()
++        {
++            if (DailyCounters.RollOver(_profile.Daily, _clock.LocalDateKey()))
++            {
++                _profile.EconomyTs = _clock.UtcNow;
++            }
++
++            ReadInto(_profile, _live);
++            _loaded = _live.Clone();
++            return _live;
++        }
++
++        /// <inheritdoc />
++        public void Save(StreakRecord record)
++        {
++            _live = record ?? throw new ArgumentNullException(nameof(record));
++            if (WriteTo(_profile, _loaded, record))
++            {
++                _profile.EconomyTs = _clock.UtcNow;
++            }
++
++            _loaded = record.Clone(); // otro Save del mismo registro no vuelve a sumar lo ya aplicado
++            Persist();
++        }
++
++        /// <inheritdoc />
++        public bool Flush()
++        {
++            if (PendingSave)
++            {
++                Persist();
++            }
++
++            return !PendingSave;
++        }
++
++        /// <summary>
++        /// Copia en <paramref name="record"/> la Crecida de <paramref name="profile"/>: <c>streak</c> (0 y false si es null) y los
++        /// campos del día de <c>daily</c>, con su <c>date_local</c>, recortados con <see cref="StreakRecord.Normalize"/> (un valor
++        /// fuera de rango en el archivo no llega a las reglas). No cambia el perfil.
++        /// </summary>
++        public static void ReadInto(Profile profile, StreakRecord record)
++        {
++            if (profile == null)
++            {
++                throw new ArgumentNullException(nameof(profile));
++            }
++
++            if (record == null)
++            {
++                throw new ArgumentNullException(nameof(record));
++            }
++
++            StreakData? streak = profile.Streak;
++            record.Wins = streak == null ? 0 : streak.Wins;
++            record.RiverFull = streak != null && streak.RiverFull;
++            DailyData daily = profile.Daily;
++            record.DateLocal = daily.DateLocal;
++            record.ShieldAvailable = daily.ShieldAvailable;
++            record.HitsToday.Clear();
++            record.HitsToday.AddRange(daily.StreakHits);
++            record.SeedsToday = daily.StreakSeeds;
++            record.Normalize();
++        }
++
++        /// <summary>
++        /// Escribe <paramref name="record"/>, que salió de <paramref name="loaded"/>, en <paramref name="profile"/> (con copias: el
++        /// perfil no comparte listas con el registro). <c>streak</c> siempre; los campos del día, con
++        /// <see cref="StreakRecord.MergeDay"/>, después de pasar <c>daily</c> entero al día del registro cuando es posterior
++        /// (<see cref="DailyCounters.RollOver"/>). Devuelve si cambió algún campo de <c>daily</c>.
++        /// </summary>
++        public static bool WriteTo(Profile profile, StreakRecord loaded, StreakRecord record)
++        {
++            if (profile == null)
++            {
++                throw new ArgumentNullException(nameof(profile));
++            }
++
++            if (loaded == null)
++            {
++                throw new ArgumentNullException(nameof(loaded));
++            }
++
++            if (record == null)
++            {
++                throw new ArgumentNullException(nameof(record));
++            }
++
++            profile.Streak = new StreakData { Wins = record.Wins, RiverFull = record.RiverFull };
++
++            DailyData daily = profile.Daily;
++            bool changed = record.DateLocal != null && DailyCounters.RollOver(daily, record.DateLocal);
++            var current = new StreakRecord
++            {
++                DateLocal = daily.DateLocal,
++                ShieldAvailable = daily.ShieldAvailable,
++                SeedsToday = daily.StreakSeeds,
++            };
++            current.HitsToday.AddRange(daily.StreakHits);
++            if (StreakRecord.MergeDay(current, loaded, record))
++            {
++                daily.ShieldAvailable = current.ShieldAvailable;
++                daily.StreakSeeds = current.SeedsToday;
++                daily.StreakHits.Clear();
++                daily.StreakHits.AddRange(current.HitsToday);
++                changed = true;
++            }
++
++            return changed;
++        }
++
++        private void Persist()
++        {
++            SaveCount++;
++            PendingSave = !_store.TrySave(_profile);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/Economy/ProfileStreakStore.cs.meta b/Assets/_Project/Scripts/Economy/ProfileStreakStore.cs.meta
+new file mode 100644
+index 0000000..106d9c5
+--- /dev/null
++++ b/Assets/_Project/Scripts/Economy/ProfileStreakStore.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: c1c82ba32093cd14aa9498b1b348d2ee
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/Save/DailyCounters.cs b/Assets/_Project/Scripts/Save/DailyCounters.cs
+index 922ddfa..d47a632 100644
+--- a/Assets/_Project/Scripts/Save/DailyCounters.cs
++++ b/Assets/_Project/Scripts/Save/DailyCounters.cs
+@@ -12,6 +12,8 @@ namespace AF.Save
+     /// <item>recompensados por ubicación y <c>rv_total</c>, <c>interstitials_today</c>, <c>rescues_today</c>,
+     /// <c>af_rescue_shown</c> y <c>shuffles_today</c> vuelven a 0;</item>
+     /// <item><c>shield_available</c> vuelve a true (05 §2.4 <c>reset_daily</c>: una Hoja escudo al día);</item>
++    /// <item><c>streak_hits</c> se vacía y <c>streak_seeds</c> vuelve a 0 (06 §4.3 <c>on_app_open</c>: los hitos de la Crecida se
++    /// pagan una vez por día local y el tope de 600 es del día; la racha y el río crecido, en <c>streak</c>, no se tocan);</item>
+     /// <item><c>af_rescue_declined_days</c> no se toca: cuenta rechazos de la Balsa de rescate y vuelve a 0 al comprar
+     /// (04 §6.2).</item>
+     /// </list>
+@@ -55,6 +57,8 @@ public static bool RollOver(DailyData daily, string todayKey)
+             daily.AfRescueShown = 0;
+             daily.ShufflesToday = 0;
+             daily.ShieldAvailable = true;
++            daily.StreakHits.Clear();
++            daily.StreakSeeds = 0;
+             return true;
+         }
+     }
+diff --git a/Assets/_Project/Scripts/Save/Profile.cs b/Assets/_Project/Scripts/Save/Profile.cs
+index fce57d5..a26889f 100644
+--- a/Assets/_Project/Scripts/Save/Profile.cs
++++ b/Assets/_Project/Scripts/Save/Profile.cs
+@@ -20,7 +20,8 @@ namespace AF.Save
+     /// [P] (los avistamientos de la tarjeta «¡Miquito a la vista!», Q11 del guion de la intro; D-029; tarea DC15), con su paso
+     /// de migración 1 → 2 (<see cref="ProfileMigrations"/>), y <c>progress.undo_tip_seen</c> [P] (el tooltip de Marea, una vez
+     /// en la vida; D-030, pregunta 15 (b); tarea DC23), que entra en el mismo esquema 2 sin paso propio porque aún no se ha
+-    /// publicado.
++    /// publicado. La Crecida (B1a; Q-M9 (a) [P]) añade <c>streak</c> (omitido mientras es null) y <c>daily.streak_hits</c> y
++    /// <c>daily.streak_seeds</c> (omitidos en su default), también sin migrar.
+     /// <para>
+     /// Es un contenedor de datos: las reglas (topes, precios, regeneración de canoas, reinicio diario) viven en
+     /// <c>AF.Economy</c>, <c>AF.Ads</c> y <c>AF.Boosters</c>, que lo mutan y lo guardan con <see cref="IProfileStore"/>.
+@@ -94,6 +95,17 @@ public sealed class Profile
+         /// </summary>
+         public DailyChallengeData? DailyChallenge { get; set; }
+ 
++        /// <summary>
++        /// <c>streak</c> (08 §4.3 con Q-M9 (a) [P] del plan de la tanda 5; 06 §4.3; 05 §2.4): la Crecida, <c>{wins, river_full}</c>,
++        /// o null si nunca se guardó (entonces la clave no se escribe). El <c>shield_available</c> de 08 §4.3 no está aquí: hay uno
++        /// solo, el de <c>daily</c> (04 §10.1), junto a los hitos y las semillas de hoy (<see cref="DailyData.StreakHits"/> y
++        /// <see cref="DailyData.StreakSeeds"/>), que se reinician con <c>date_local</c>. Vive en el mismo perfil que
++        /// <see cref="Wallet"/> para que el apunte de un hito y su pago salgan en la misma escritura (un hito nunca se paga dos veces
++        /// el mismo día). Las reglas las aplica <c>AF.Economy</c> (<c>ProfileStreakStore</c>); aquí solo se guardan. Entra sin subir
++        /// el esquema (va en el 2, y la migración 1 → 2 la conserva) porque aún no se ha publicado (08 §4.3).
++        /// </summary>
++        public StreakData? Streak { get; set; }
++
+         /// <summary>
+         /// Perfil de primera ejecución: <c>created_at</c> = ahora, 0 semillas (el GDD no fija otro saldo inicial),
+         /// <paramref name="initialCanoes"/> canoas, stock vacío, sin nivel en curso y el nivel 1 como siguiente
+@@ -169,7 +181,8 @@ public sealed class StockData
+ 
+     /// <summary>
+     /// <c>daily</c>: contadores del día local, con las claves de 04 §10.1 más <c>interstitials_today</c> (tope diario de
+-    /// intersticiales, 05 §6.3). Al cambiar <c>date_local</c> los pone a cero quien aplica la regla de cada uno.
++    /// intersticiales, 05 §6.3) y los de la Crecida <c>streak_hits</c> y <c>streak_seeds</c> [P] (06 §4.3; Q-M9 (a)).
++    /// Al cambiar <c>date_local</c> los pone a cero quien aplica la regla de cada uno.
+     /// </summary>
+     public sealed class DailyData
+     {
+@@ -216,8 +229,36 @@ public sealed class DailyData
+         /// <summary><c>shuffles_today</c>: Pororocas usadas hoy.</summary>
+         public int ShufflesToday { get; set; }
+ 
+-        /// <summary><c>shield_available</c>: Hoja escudo disponible hoy.</summary>
++        /// <summary>
++        /// <c>shield_available</c>: Hoja escudo disponible hoy (1 por día local, <c>streak_shield_per_day</c>; 06 §4.3). Es el único
++        /// <c>shield_available</c> del perfil: el bloque <c>streak</c> no lleva otro (Q-M9 (a) [P]).
++        /// </summary>
+         public bool ShieldAvailable { get; set; }
++
++        /// <summary>
++        /// <c>streak_hits</c> [P] (Q-M9 (a)): hitos de la Crecida ya pagados hoy (p. ej. <c>[3, 6]</c>; cada hito se paga una vez por
++        /// día local, <c>streak_hits_once_per_day</c>, 06 §4.3). Vacía por defecto; vacía, la clave no se escribe.
++        /// </summary>
++        public List<int> StreakHits { get; } = new List<int>();
++
++        /// <summary>
++        /// <c>streak_seeds</c> [P] (Q-M9 (a)): semillas de los hitos pagadas hoy que cuentan para el tope diario
++        /// (<c>streak_daily_cap</c>, 600; 06 §4.3). 0 por defecto; con 0, la clave no se escribe.
++        /// </summary>
++        public int StreakSeeds { get; set; }
++    }
++
++    /// <summary>
++    /// <c>streak</c> (08 §4.3 con Q-M9 (a) [P]): la Crecida que no es del día. Solo datos: el significado lo da
++    /// <c>AF.Economy.StreakRecord</c>.
++    /// </summary>
++    public sealed class StreakData
++    {
++        /// <summary><c>wins</c>: la racha (vuelve a 0 al pagar el hito 10 y tras un fallo duro no escudado; 05 §2.4).</summary>
++        public int Wins { get; set; }
++
++        /// <summary><c>river_full</c>: río crecido, hasta el siguiente fallo duro no escudado (08 §4.3; 05 §2.4).</summary>
++        public bool RiverFull { get; set; }
+     }
+ 
+     /// <summary><c>progress</c> (08 §4.3; 04 §10.1; <c>map_seen_level</c>, D-013, y <c>undo_tip_seen</c> [P], DC23).</summary>
+diff --git a/Assets/_Project/Scripts/Save/ProfileJson.cs b/Assets/_Project/Scripts/Save/ProfileJson.cs
+index 033a03f..aac65ec 100644
+--- a/Assets/_Project/Scripts/Save/ProfileJson.cs
++++ b/Assets/_Project/Scripts/Save/ProfileJson.cs
+@@ -15,7 +15,9 @@ namespace AF.Save
+     /// <c>settings</c>, <c>sloth</c> y <c>progress.map_seen_level</c> toman su default ante un valor ausente o inválido
+     /// (un ajuste nunca hace corrupto un perfil), y <c>map_seen_level</c> queda recortado a [0, <c>max_level</c>]; igual
+     /// <c>progress.undo_tip_seen</c> (DC23), que sin la clave o con otro tipo queda en «no visto». <c>fauna</c>
+-    /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta.
++    /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta. <c>streak</c> y
++    /// <c>daily_challenge</c> se omiten mientras son null, y <c>daily.streak_hits</c> y <c>daily.streak_seeds</c> en su default
++    /// (vacía y 0): son economía y un tipo equivocado en ellos es corrupción.
+     /// </summary>
+     public static class ProfileJson
+     {
+@@ -115,6 +117,16 @@ internal static JsonNode ToNode(Profile p)
+             daily.Set("af_rescue_hidden_until", Timestamp(d.AfRescueHiddenUntil));
+             daily.Set("shuffles_today", JsonNode.FromInt(d.ShufflesToday));
+             daily.Set("shield_available", JsonNode.FromBool(d.ShieldAvailable));
++            if (d.StreakHits.Count > 0)
++            {
++                daily.Set("streak_hits", IntList(d.StreakHits)); // Crecida (Q-M9 (a)): la clave falta en su default
++            }
++
++            if (d.StreakSeeds != 0)
++            {
++                daily.Set("streak_seeds", JsonNode.FromInt(d.StreakSeeds));
++            }
++
+             root.Set("daily", daily);
+ 
+             JsonNode progress = JsonNode.NewObject();
+@@ -127,6 +139,15 @@ internal static JsonNode ToNode(Profile p)
+             progress.Set("undo_tip_seen", JsonNode.FromBool(p.Progress.UndoTipSeen));
+             root.Set("progress", progress);
+ 
++            if (p.Streak != null)
++            {
++                // Crecida (Q-M9 (a)): tras progress, como en 08 §4.3; la clave falta hasta el primer guardado.
++                JsonNode streak = JsonNode.NewObject();
++                streak.Set("wins", JsonNode.FromInt(p.Streak.Wins));
++                streak.Set("river_full", JsonNode.FromBool(p.Streak.RiverFull));
++                root.Set("streak", streak);
++            }
++
+             root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
+ 
+             JsonNode entitlements = JsonNode.NewObject();
+@@ -242,6 +263,10 @@ internal static Profile FromNode(JsonNode root)
+                 d.AfRescueHiddenUntil = ReadTimestamp(daily, "af_rescue_hidden_until");
+                 d.ShufflesToday = ReadInt(daily, "shuffles_today", d.ShufflesToday);
+                 d.ShieldAvailable = ReadBool(daily, "shield_available", d.ShieldAvailable);
++                // Como el resto de listas y enteros del perfil: "streak_hits": null se lee como vacía y "streak_seeds": null es
++                // corrupción (ReadIntList y ReadInt). Los rangos (hitos 3/6/10, semillas >= 0) los recorta AF.Economy.
++                ReadIntList(daily, "streak_hits", d.StreakHits);
++                d.StreakSeeds = ReadInt(daily, "streak_seeds", d.StreakSeeds);
+             }
+ 
+             JsonNode? progress = Section(root, "progress");
+@@ -258,6 +283,17 @@ internal static Profile FromNode(JsonNode root)
+                 g.UndoTipSeen = TolerantBool(progress, "undo_tip_seen", g.UndoTipSeen);
+             }
+ 
++            // streak (Crecida; Q-M9 (a)): es economía (sus hitos pagan), así que un tipo equivocado es corrupción, como en wallet.
++            // Los rangos (wins 0-10) no se validan aquí: los interpreta AF.Economy, igual que daily_challenge.
++            JsonNode? streakNode = Section(root, "streak");
++            if (streakNode != null)
++            {
++                var streak = new StreakData();
++                streak.Wins = ReadInt(streakNode, "wins", streak.Wins);
++                streak.RiverFull = ReadBool(streakNode, "river_full", streak.RiverFull);
++                p.Streak = streak;
++            }
++
+             JsonNode? levelState = Section(root, "level_state");
+             p.LevelState = levelState == null ? null : ReadLevelState(levelState);
+ 
+diff --git a/Assets/_Project/Tests/EditMode/StreakProfileTests.cs b/Assets/_Project/Tests/EditMode/StreakProfileTests.cs
+new file mode 100644
+index 0000000..f213471
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/StreakProfileTests.cs
+@@ -0,0 +1,572 @@
++#nullable enable
++using System;
++using System.Collections.Generic;
++using System.IO;
++using System.Reflection;
++using AF.Economy;
++using AF.Platform;
++using AF.Save;
++using NUnit.Framework;
++
++namespace AF.Tests.EditMode
++{
++    /// <summary>
++    /// Parche S1-profile (B1a, tarea A4; 06 §4.3; 08 §4.3 con Q-M9 (a) [P]): el bloque <c>streak</c> = <c>{wins, river_full}</c>
++    /// (omitido mientras es null), <c>daily.streak_hits</c> y <c>daily.streak_seeds</c> (omitidos en su default), un solo
++    /// <c>shield_available</c> (el de <c>daily</c>), el cambio de día de <see cref="DailyCounters"/> y
++    /// <see cref="ProfileStreakStore"/> sobre el mismo perfil y el mismo almacén que la cartera.
++    /// </summary>
++    public sealed class StreakProfileTests
++    {
++        private static readonly TimeSpan Bogota = TimeSpan.FromHours(-5);
++
++        private static readonly string StreakJson = string.Join("\n", new[]
++        {
++            "    \"undo_tip_seen\": false",
++            "  },",
++            "  \"streak\": {",
++            "    \"wins\": 7,",
++            "    \"river_full\": true",
++            "  },",
++            "  \"level_state\": null,",
++        });
++
++        private static readonly string DailyTailJson = string.Join("\n", new[]
++        {
++            "    \"shield_available\": false,",
++            "    \"streak_hits\": [3, 6],",
++            "    \"streak_seeds\": 350",
++            "  },",
++        });
++
++        [Test]
++        public void NewProfile_WritesNoStreakKeys()
++        {
++            Profile p = NewProfile();
++            string json = ProfileJson.Serialize(p);
++
++            Assert.That(p.Streak, Is.Null);
++            Assert.That(json.Contains("streak"), Is.False, "streak, streak_hits y streak_seeds faltan hasta tener valor");
++            Assert.That(p.Daily.StreakHits, Is.Empty);
++            Assert.That(p.Daily.StreakSeeds, Is.EqualTo(0));
++            Assert.That(Profile.CurrentSchema, Is.EqualTo(2), "sin migración: el esquema no se ha publicado (08 §4.3)");
++
++            DailyCounters.RollOver(p.Daily, "2026-10-19");
++            Assert.That(ProfileJson.Serialize(p).Contains("streak"), Is.False, "tras el cambio de día siguen en su default");
++            StringAssert.Contains("\"shield_available\": true\n  },", ProfileJson.Serialize(p));
++        }
++
++        [Test]
++        public void FullStreak_IsWrittenWithItsKeys_AndRoundTripsExactly()
++        {
++            Profile p = FullProfile();
++            string json = ProfileJson.Serialize(p);
++
++            StringAssert.Contains(StreakJson, json, "streak tras progress, como en 08 §4.3, sin shield_available");
++            StringAssert.Contains(DailyTailJson, json, "streak_hits y streak_seeds al final de daily");
++            Assert.That(json.Split(new[] { "shield_available" }, StringSplitOptions.None).Length, Is.EqualTo(2), "un solo shield_available");
++
++            Profile copy = ProfileJson.Deserialize(json);
++            Assert.That(ProfileJson.Serialize(copy), Is.EqualTo(json));
++            Assert.That(copy.Streak, Is.Not.Null);
++            Assert.That(copy.Streak!.Wins, Is.EqualTo(7));
++            Assert.That(copy.Streak.RiverFull, Is.True);
++            Assert.That(copy.Daily.StreakHits, Is.EqualTo(new[] { 3, 6 }));
++            Assert.That(copy.Daily.StreakSeeds, Is.EqualTo(350));
++            Assert.That(copy.Daily.ShieldAvailable, Is.False);
++
++            Profile clone = p.Clone();
++            Assert.That(clone.Streak, Is.Not.SameAs(p.Streak));
++            clone.Daily.StreakHits.Add(10);
++            Assert.That(p.Daily.StreakHits, Is.EqualTo(new[] { 3, 6 }));
++        }
++
++        [Test]
++        public void ZeroStreak_IsStillWritten_OnceSaved()
++        {
++            Profile p = NewProfile();
++            p.Streak = new StreakData();
++
++            StringAssert.Contains("\"streak\": {\n    \"wins\": 0,\n    \"river_full\": false\n  },", ProfileJson.Serialize(p));
++            Assert.That(ProfileJson.Deserialize(ProfileJson.Serialize(p)).Streak, Is.Not.Null);
++        }
++
++        [Test]
++        public void MissingKeys_TakeDefaults()
++        {
++            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"streak\": {\"wins\": 4}, \"daily\": {\"date_local\": \"2026-10-19\"}}");
++            Assert.That(p.Streak!.Wins, Is.EqualTo(4));
++            Assert.That(p.Streak.RiverFull, Is.False);
++            Assert.That(p.Daily.StreakHits, Is.Empty);
++            Assert.That(p.Daily.StreakSeeds, Is.EqualTo(0));
++
++            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 2, \"streak\": null}").Streak, Is.Null);
++            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 2}").Streak, Is.Null);
++            Assert.That(ProfileJson.Deserialize("{\"profile_schema\": 2, \"daily\": {\"streak_hits\": null}}").Daily.StreakHits, Is.Empty);
++        }
++
++        [TestCase("{\"profile_schema\": 2, \"streak\": []}")]
++        [TestCase("{\"profile_schema\": 2, \"streak\": 4}")]
++        [TestCase("{\"profile_schema\": 2, \"streak\": {\"wins\": \"4\"}}")]
++        [TestCase("{\"profile_schema\": 2, \"streak\": {\"wins\": 4.5}}")]
++        [TestCase("{\"profile_schema\": 2, \"streak\": {\"river_full\": 1}}")]
++        [TestCase("{\"profile_schema\": 2, \"streak\": {\"river_full\": \"true\"}}")]
++        [TestCase("{\"profile_schema\": 2, \"daily\": {\"streak_hits\": 3}}")]
++        [TestCase("{\"profile_schema\": 2, \"daily\": {\"streak_hits\": {\"3\": true}}}")]
++        [TestCase("{\"profile_schema\": 2, \"daily\": {\"streak_hits\": [3, \"6\"]}}")]
++        [TestCase("{\"profile_schema\": 2, \"daily\": {\"streak_seeds\": \"350\"}}")]
++        [TestCase("{\"profile_schema\": 2, \"daily\": {\"streak_seeds\": true}}")]
++        [TestCase("{\"profile_schema\": 2, \"daily\": {\"streak_seeds\": null}}")]
++        public void WrongTypes_AreFormatErrors(string json)
++        {
++            Assert.Throws<FormatException>(() => ProfileJson.Deserialize(json));
++        }
++
++        [Test]
++        public void RollOver_NewDay_RefillsTheShield_AndClearsHitsAndSeeds_ButNotTheStreak()
++        {
++            Profile p = FullProfile();
++            p.Daily.RvTotal = 4;
++
++            Assert.That(DailyCounters.RollOver(p.Daily, "2026-10-20"), Is.True);
++
++            Assert.That(p.Daily.DateLocal, Is.EqualTo("2026-10-20"));
++            Assert.That(p.Daily.ShieldAvailable, Is.True);
++            Assert.That(p.Daily.StreakHits, Is.Empty);
++            Assert.That(p.Daily.StreakSeeds, Is.EqualTo(0));
++            Assert.That(p.Daily.RvTotal, Is.EqualTo(0), "el bloque entero, de una vez");
++            Assert.That(p.Streak!.Wins, Is.EqualTo(7), "sin expiración por reloj (04 §8)");
++            Assert.That(p.Streak.RiverFull, Is.True);
++        }
++
++        [TestCase("2026-10-19")]
++        [TestCase("2026-10-18")]
++        [TestCase("2025-12-31")]
++        public void RollOver_SameDayOrClockBack_RefillsNothing(string today)
++        {
++            Profile p = FullProfile();
++
++            Assert.That(DailyCounters.RollOver(p.Daily, today), Is.False);
++
++            Assert.That(p.Daily.DateLocal, Is.EqualTo("2026-10-19"));
++            Assert.That(p.Daily.ShieldAvailable, Is.False, "atrasar el reloj no repone la Hoja escudo");
++            Assert.That(p.Daily.StreakHits, Is.EqualTo(new[] { 3, 6 }));
++            Assert.That(p.Daily.StreakSeeds, Is.EqualTo(350));
++        }
++
++        [Test]
++        public void Store_Load_IsNeverNull_AndRollsTheWholeDailyBlock()
++        {
++            var clock = Clock(new DateTime(2026, 10, 19, 10, 0, 0));
++            Profile p = NewProfile();
++            var store = new ProfileStreakStore(p, new MemoryProfileStore(), clock);
++
++            StreakRecord r = store.Load();
++            Assert.That(r, Is.Not.Null);
++            Assert.That(store.Load(), Is.SameAs(r), "el estado vivo");
++            Assert.That(r.Wins, Is.EqualTo(0));
++            Assert.That(r.RiverFull, Is.False);
++            Assert.That(r.ShieldAvailable, Is.True, "primer día: una Hoja escudo");
++            Assert.That(r.DateLocal, Is.EqualTo("2026-10-19"));
++            Assert.That(p.Daily.DateLocal, Is.EqualTo("2026-10-19"));
++            Assert.That(p.Streak, Is.Null, "leer no crea el bloque");
++            Assert.That(p.EconomyTs, Is.EqualTo(clock.UtcNow), "el cambio de día muta daily: economy_ts (08 §4.3)");
++
++            Profile full = FullProfile();
++            full.Daily.RvHint = 2;
++            var store2 = new ProfileStreakStore(full, new MemoryProfileStore(), clock);
++            Assert.That(store2.Load().HitsToday, Is.EqualTo(new[] { 3, 6 }), "mismo día: nada se repone");
++            clock.Set(Utc(new DateTime(2026, 10, 20, 0, 1, 0)));
++            StreakRecord next = store2.Load();
++            Assert.That(next.ShieldAvailable, Is.True);
++            Assert.That(next.HitsToday, Is.Empty);
++            Assert.That(next.SeedsToday, Is.EqualTo(0));
++            Assert.That(next.Wins, Is.EqualTo(7));
++            Assert.That(full.Daily.RvHint, Is.EqualTo(0), "el cambio de día es el del bloque entero");
++        }
++
++        [Test]
++        public void Store_SeesADayChangeMadeByAnotherModule()
++        {
++            var clock = Clock(new DateTime(2026, 10, 19, 23, 59, 0));
++            Profile p = FullProfile();
++            var store = new ProfileStreakStore(p, new MemoryProfileStore(), clock);
++            StreakRecord stale = store.Load().Clone();
++
++            clock.Set(Utc(new DateTime(2026, 10, 20, 0, 1, 0)));
++            DailyCounters.RollOver(p.Daily, clock.LocalDateKey()); // la cartera o los anuncios pasan el día
++            stale.Wins = 8;
++            store.Save(stale);
++
++            Assert.That(p.Streak!.Wins, Is.EqualTo(8), "la racha se escribe siempre");
++            Assert.That(p.Daily.ShieldAvailable, Is.True, "un estado de ayer no pisa la Hoja escudo de hoy");
++            Assert.That(p.Daily.StreakHits, Is.Empty);
++            Assert.That(p.Daily.StreakSeeds, Is.EqualTo(0));
++            Assert.That(store.Load().ShieldAvailable, Is.True);
++        }
++
++        [Test]
++        public void Store_Save_RecordFromALaterDay_RollsTheWholeDailyBlockFirst()
++        {
++            var clock = Clock(new DateTime(2026, 10, 20, 9, 0, 0));
++            Profile p = FullProfile();
++            p.Daily.RvTotal = 3;
++            var record = new StreakRecord { Wins = 1, DateLocal = "2026-10-20", ShieldAvailable = false };
++
++            Assert.That(ProfileStreakStore.WriteTo(p, new StreakRecord(), record), Is.True);
++
++            Assert.That(p.Daily.DateLocal, Is.EqualTo("2026-10-20"));
++            Assert.That(p.Daily.RvTotal, Is.EqualTo(0));
++            Assert.That(p.Daily.ShieldAvailable, Is.False, "el escudo del estado");
++            Assert.That(p.Daily.StreakHits, Is.Empty);
++            Assert.That(clock.LocalDateKey(), Is.EqualTo("2026-10-20"));
++        }
++
++        [Test]
++        public void Store_Save_WritesTheWholeProfile_AndAReopenedStoreReadsTheSameState()
++        {
++            var clock = Clock(new DateTime(2026, 10, 19, 10, 0, 0));
++            var disk = new MemoryProfileStore();
++            Profile p = NewProfile();
++            var store = new ProfileStreakStore(p, disk, clock);
++            StreakRecord r = store.Load();
++            r.Wins = 3;
++            r.HitsToday.Add(3);
++            r.SeedsToday = 300;
++            store.Save(r);
++
++            Assert.That(disk.SaveCount, Is.EqualTo(1));
++            Assert.That(store.PendingSave, Is.False);
++            Assert.That(p.EconomyTs, Is.EqualTo(clock.UtcNow), "daily cambió: economy_ts (08 §4.3)");
++            r.HitsToday.Add(6); // sin Save no llega al perfil
++            Assert.That(p.Daily.StreakHits, Is.EqualTo(new[] { 3 }), "el perfil guarda una copia");
++
++            StreakRecord reopened = new ProfileStreakStore(disk.Load().Profile!, disk, clock).Load();
++            Assert.That(reopened.Wins, Is.EqualTo(3));
++            Assert.That(reopened.HitsToday, Is.EqualTo(new[] { 3 }));
++            Assert.That(reopened.SeedsToday, Is.EqualTo(300));
++            Assert.That(reopened.ShieldAvailable, Is.True);
++        }
++
++        [Test]
++        public void Store_OnlyStreakChange_LeavesEconomyTs()
++        {
++            var clock = Clock(new DateTime(2026, 10, 19, 10, 0, 0));
++            Profile p = NewProfile();
++            var store = new ProfileStreakStore(p, new MemoryProfileStore(), clock);
++            StreakRecord r = store.Load();
++            DateTime? afterRollOver = p.EconomyTs;
++            Assert.That(afterRollOver, Is.EqualTo(clock.UtcNow), "el cambio de día de Load sí cuenta");
++            clock.Set(clock.UtcNow.AddMinutes(5));
++            Assert.That(store.Load(), Is.SameAs(r));
++            Assert.That(p.EconomyTs, Is.EqualTo(afterRollOver), "mismo día: Load no muta nada");
++            store.Save(r); // sin cambios en daily
++            Assert.That(p.EconomyTs, Is.EqualTo(afterRollOver));
++
++            r.Wins = 2;
++            store.Save(r);
++            Assert.That(p.EconomyTs, Is.EqualTo(afterRollOver), "streak no es wallet, stock ni daily");
++            Assert.That(p.Streak!.Wins, Is.EqualTo(2));
++        }
++
++        [Test]
++        public void StaleRecord_HitPaidAfterTheWalletPassedTheDay_IsNotPaidAgainToday()
++        {
++            // (a) Load a las 23:59; la cartera pasa daily al día siguiente al pagar; el hito 3 se guarda con el registro de ayer.
++            var clock = Clock(new DateTime(2026, 10, 19, 23, 59, 0));
++            var disk = new MemoryProfileStore();
++            Profile profile = Wallet.NewProfile(clock);
++            var wallet = new Wallet(profile, disk, clock);
++            var store = new ProfileStreakStore(profile, disk, clock);
++            StreakRecord r = store.Load();
++            r.Wins = 3;
++
++            clock.Set(Utc(new DateTime(2026, 10, 20, 0, 0, 30)));
++            wallet.Apply(Transaction.Earn(SeedSource.Streak, 300));
++            Assert.That(profile.Daily.DateLocal, Is.EqualTo("2026-10-20"), "la cartera pasó el día");
++            r.HitsToday.Add(3);
++            r.SeedsToday += 300;
++            store.Save(r);
++
++            Assert.That(profile.Daily.StreakHits, Is.EqualTo(new[] { 3 }), "el hito 3 cuenta como pagado hoy");
++            Assert.That(profile.Daily.StreakSeeds, Is.EqualTo(300));
++            StreakRecord again = new ProfileStreakStore(disk.Load().Profile!, disk, clock).Load();
++            Assert.That(again.HitsToday, Is.EqualTo(new[] { 3 }), "no se vuelve a pagar hoy, tampoco al reabrir");
++            Assert.That(again.Wins, Is.EqualTo(3));
++        }
++
++        [Test]
++        public void StaleRecord_ShieldSpentAfterAnotherModulePassedTheDay_LeavesNoSecondShield()
++        {
++            // (b) El escudo se gasta con el registro de ayer: no queda un segundo escudo hoy.
++            var clock = Clock(new DateTime(2026, 10, 19, 23, 59, 0));
++            Profile p = NewProfile();
++            p.Streak = new StreakData { Wins = 4 };
++            var store = new ProfileStreakStore(p, new MemoryProfileStore(), clock);
++            StreakRecord r = store.Load();
++            Assert.That(r.ShieldAvailable, Is.True);
++
++            clock.Set(Utc(new DateTime(2026, 10, 20, 0, 0, 30)));
++            DailyCounters.RollOver(p.Daily, clock.LocalDateKey()); // los anuncios o las compras pasan el día
++            r.ShieldAvailable = false;
++            store.Save(r);
++
++            Assert.That(p.Daily.ShieldAvailable, Is.False, "no hay segundo escudo hoy");
++            Assert.That(store.Load().ShieldAvailable, Is.False);
++            Assert.That(p.Streak!.Wins, Is.EqualTo(4));
++        }
++
++        [Test]
++        public void StaleRecord_ShieldSpentYesterday_DoesNotDenyTodaysShield()
++        {
++            // (c) El registro ya llevaba el escudo de ayer gastado al cargarse: el de hoy sigue disponible.
++            var clock = Clock(new DateTime(2026, 10, 19, 23, 59, 0));
++            Profile p = FullProfile(); // 2026-10-19, escudo gastado, hitos [3, 6], 350 semillas
++            var store = new ProfileStreakStore(p, new MemoryProfileStore(), clock);
++            StreakRecord r = store.Load();
++
++            clock.Set(Utc(new DateTime(2026, 10, 20, 0, 0, 30)));
++            DailyCounters.RollOver(p.Daily, clock.LocalDateKey());
++            r.Wins = 8;
++            store.Save(r);
++
++            Assert.That(p.Daily.ShieldAvailable, Is.True, "el escudo de hoy no se niega");
++            Assert.That(p.Daily.StreakHits, Is.Empty, "los hitos de ayer no cuentan hoy");
++            Assert.That(p.Daily.StreakSeeds, Is.EqualTo(0));
++            Assert.That(p.Streak!.Wins, Is.EqualTo(8));
++        }
++
++        [Test]
++        public void StaleRecord_TwoSavesInARow_OnlyTheSecondChangeIsApplied_AndSpendsTodaysShield()
++        {
++            // (d) Dos Save seguidos del mismo registro de ayer: el primero lleva el hito 3; entre los dos se gasta el escudo. El
++            // segundo no vuelve a sumar el hito ni las semillas y gasta el escudo de hoy (la carga de referencia es el primer Save).
++            var clock = Clock(new DateTime(2026, 10, 19, 23, 59, 0));
++            Profile p = NewProfile();
++            p.Streak = new StreakData { Wins = 2 };
++            var store = new ProfileStreakStore(p, new MemoryProfileStore(), clock);
++            StreakRecord r = store.Load();
++            Assert.That(r.ShieldAvailable, Is.True);
++
++            clock.Set(Utc(new DateTime(2026, 10, 20, 0, 0, 30)));
++            DailyCounters.RollOver(p.Daily, clock.LocalDateKey()); // la cartera o los anuncios pasan el día
++            r.Wins = 3;
++            r.HitsToday.Add(3);
++            r.SeedsToday += 300;
++            store.Save(r);
++
++            Assert.That(p.Daily.StreakHits, Is.EqualTo(new[] { 3 }));
++            Assert.That(p.Daily.StreakSeeds, Is.EqualTo(300));
++            Assert.That(p.Daily.ShieldAvailable, Is.True, "el primer Save no cambió el escudo");
++
++            r.ShieldAvailable = false; // fallo duro cubierto, con el mismo registro de ayer
++            store.Save(r);
++
++            Assert.That(p.Daily.ShieldAvailable, Is.False, "el escudo gastado entre los dos Save gasta el de hoy");
++            Assert.That(p.Daily.StreakHits, Is.EqualTo(new[] { 3 }), "el hito no se suma dos veces");
++            Assert.That(p.Daily.StreakSeeds, Is.EqualTo(300), "las semillas no se suman dos veces");
++            Assert.That(p.Daily.DateLocal, Is.EqualTo("2026-10-20"));
++            Assert.That(p.Streak!.Wins, Is.EqualTo(3));
++        }
++
++        [Test]
++        public void Load_ClampsOutOfRangeValuesFromTheFile()
++        {
++            var clock = Clock(new DateTime(2026, 10, 19, 10, 0, 0));
++            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"streak\": {\"wins\": 15, \"river_full\": true},"
++                + " \"daily\": {\"date_local\": \"2026-10-19\", \"streak_hits\": [6, 3, 3, 7], \"streak_seeds\": -3}}");
++            Assert.That(p.Daily.StreakHits, Is.EqualTo(new[] { 6, 3, 3, 7 }), "AF.Save guarda lo que lee; recorta AF.Economy");
++
++            StreakRecord r = new ProfileStreakStore(p, new MemoryProfileStore(), clock).Load();
++
++            Assert.That(r.Wins, Is.EqualTo(10));
++            Assert.That(r.RiverFull, Is.True);
++            Assert.That(r.HitsToday, Is.EqualTo(new[] { 3, 6 }));
++            Assert.That(r.SeedsToday, Is.EqualTo(0));
++            var direct = new StreakRecord();
++            p.Streak!.Wins = -4;
++            ProfileStreakStore.ReadInto(p, direct);
++            Assert.That(direct.Wins, Is.EqualTo(0));
++        }
++
++        [Test]
++        public void HitAndPayment_LiveInTheSameProfile_AndGoOutInOneWrite()
++        {
++            // Requisito de «nunca dos pagos»: el apunte del hito y su pago, con el disco caído, quedan juntos en memoria y salen
++            // juntos en la siguiente escritura; reabrir no deja el pago sin el apunte.
++            var clock = Clock(new DateTime(2026, 10, 19, 10, 0, 0));
++            var disk = new FailingProfileStore { Fail = true };
++            Profile profile = Wallet.NewProfile(clock);
++            var wallet = new Wallet(profile, disk, clock);
++            var store = new ProfileStreakStore(profile, disk, clock);
++            int seeds = wallet.Seeds;
++
++            StreakRecord r = store.Load();
++            r.Wins = 3;
++            r.HitsToday.Add(3);
++            r.SeedsToday = 300;
++            store.Save(r);
++            wallet.Apply(Transaction.Earn(SeedSource.Streak, 300));
++            Assert.That(store.PendingSave, Is.True);
++            Assert.That(wallet.PendingSave, Is.True);
++            Assert.That(disk.Json, Is.Null);
++
++            disk.Fail = false;
++            Assert.That(store.Flush(), Is.True);
++            Assert.That(disk.WriteCount, Is.EqualTo(1));
++
++            Profile reopened = ProfileJson.Deserialize(disk.Json!);
++            Assert.That(reopened.Wallet.Seeds, Is.EqualTo(seeds + 300), "el pago");
++            Assert.That(reopened.Daily.StreakHits, Is.EqualTo(new[] { 3 }), "y su apunte, en la misma escritura");
++            Assert.That(reopened.Daily.StreakSeeds, Is.EqualTo(300));
++            Assert.That(reopened.Streak!.Wins, Is.EqualTo(3));
++
++            StreakRecord again = new ProfileStreakStore(reopened, disk, clock).Load();
++            Assert.That(again.HitsToday.Contains(3), Is.True, "el hito 3 ya está pagado hoy");
++        }
++
++        [Test]
++        public void FailedWrite_StaysPendingInTheProfile_UntilFlush()
++        {
++            var clock = Clock(new DateTime(2026, 10, 19, 10, 0, 0));
++            var disk = new FailingProfileStore { Fail = true };
++            Profile p = NewProfile();
++            var store = new ProfileStreakStore(p, disk, clock);
++            StreakRecord r = store.Load();
++            r.ShieldAvailable = false;
++
++            Assert.DoesNotThrow(() => store.Save(r));
++            Assert.That(store.PendingSave, Is.True);
++            Assert.That(p.Daily.ShieldAvailable, Is.False, "el cambio sigue en el perfil en memoria");
++            Assert.That(store.Flush(), Is.False);
++
++            disk.Fail = false;
++            Assert.That(store.Flush(), Is.True);
++            Assert.That(ProfileJson.Deserialize(disk.Json!).Daily.ShieldAvailable, Is.False);
++            Assert.That(store.Flush(), Is.True, "nada pendiente");
++            Assert.That(store.SaveCount, Is.EqualTo(3));
++        }
++
++        [Test]
++        public void SchemaOneProfile_KeepsTheStreak_AfterTheMigrationToSchemaTwo()
++        {
++            string dir = Path.Combine(Path.GetTempPath(), "af-streak-migration-" + Guid.NewGuid().ToString("N"));
++            Directory.CreateDirectory(dir);
++            try
++            {
++                File.WriteAllText(Path.Combine(dir, LocalProfileStore.FileName),
++                    "{\"profile_schema\": 1, \"streak\": {\"wins\": 5, \"river_full\": true},"
++                    + " \"daily\": {\"date_local\": \"2026-10-19\", \"streak_hits\": [3], \"streak_seeds\": 300}}");
++
++                ProfileLoadResult loaded = new LocalProfileStore(dir).Load();
++
++                Assert.That(loaded.Migrated, Is.True);
++                Assert.That(loaded.Profile!.Streak!.Wins, Is.EqualTo(5));
++                Assert.That(loaded.Profile.Streak.RiverFull, Is.True);
++                Assert.That(loaded.Profile.Daily.StreakHits, Is.EqualTo(new[] { 3 }));
++                Assert.That(loaded.Profile.Daily.StreakSeeds, Is.EqualTo(300));
++            }
++            finally
++            {
++                Directory.Delete(dir, true);
++            }
++        }
++
++        [Test]
++        public void Mapping_CoversEveryProperty()
++        {
++            AssertCovers(typeof(StreakData), "Wins", "RiverFull");
++            AssertCovers(typeof(StreakRecord), "Wins", "RiverFull", "DateLocal", "ShieldAvailable", "HitsToday", "SeedsToday");
++
++            Profile p = FullProfile();
++            var r = new StreakRecord();
++            ProfileStreakStore.ReadInto(p, r);
++            Assert.That(r.Wins, Is.EqualTo(7));
++            Assert.That(r.RiverFull, Is.True);
++            Assert.That(r.DateLocal, Is.EqualTo("2026-10-19"));
++            Assert.That(r.ShieldAvailable, Is.False);
++            Assert.That(r.HitsToday, Is.EqualTo(new[] { 3, 6 }));
++            Assert.That(r.SeedsToday, Is.EqualTo(350));
++
++            Profile back = NewProfile();
++            back.Daily.DateLocal = "2026-10-19";
++            ProfileStreakStore.WriteTo(back, new StreakRecord(), r);
++            Assert.That(ProfileJson.Serialize(back), Is.EqualTo(ProfileJson.Serialize(WithCreatedAt(FullProfile(), back.CreatedAt))));
++            Assert.That(back.Daily.StreakHits, Is.Not.SameAs(r.HitsToday));
++        }
++
++        private static Profile FullProfile()
++        {
++            Profile p = NewProfile();
++            p.Streak = new StreakData { Wins = 7, RiverFull = true };
++            p.Daily.DateLocal = "2026-10-19";
++            p.Daily.ShieldAvailable = false;
++            p.Daily.StreakHits.Add(3);
++            p.Daily.StreakHits.Add(6);
++            p.Daily.StreakSeeds = 350;
++            return p;
++        }
++
++        private static Profile WithCreatedAt(Profile p, DateTime createdAt)
++        {
++            p.CreatedAt = createdAt;
++            return p;
++        }
++
++        private static Profile NewProfile()
++        {
++            return Profile.CreateNew(new ManualClock(Utc(new DateTime(2026, 10, 19, 10, 0, 0)), Bogota), 5);
++        }
++
++        private static ManualClock Clock(DateTime bogota)
++        {
++            return new ManualClock(Utc(bogota), Bogota);
++        }
++
++        private static DateTime Utc(DateTime bogota)
++        {
++            return DateTime.SpecifyKind(bogota - Bogota, DateTimeKind.Utc);
++        }
++
++        private static void AssertCovers(Type type, params string[] mapped)
++        {
++            var set = new HashSet<string>(mapped);
++            foreach (PropertyInfo p in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
++            {
++                Assert.That(set.Contains(p.Name), Is.True, type.Name + "." + p.Name + " no está en la conversión del perfil");
++            }
++        }
++
++        private sealed class FailingProfileStore : IProfileStore
++        {
++            public bool Fail { get; set; }
++
++            public string? Json { get; private set; }
++
++            public int WriteCount { get; private set; }
++
++            public ProfileLoadResult Load()
++            {
++                return Json == null
++                    ? new ProfileLoadResult(ProfileLoadStatus.NotFound, null)
++                    : new ProfileLoadResult(ProfileLoadStatus.Loaded, ProfileJson.Deserialize(Json));
++            }
++
++            public void Save(Profile profile)
++            {
++                if (Fail)
++                {
++                    throw new IOException("disco lleno (simulado)");
++                }
++
++                Json = ProfileJson.Serialize(profile);
++                WriteCount++;
++            }
++
++            public void Delete()
++            {
++                Json = null;
++            }
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/EditMode/StreakProfileTests.cs.meta b/Assets/_Project/Tests/EditMode/StreakProfileTests.cs.meta
+new file mode 100644
+index 0000000..175aa2e
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/StreakProfileTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 91bf7735fa404bf459d22ca70988c5fd
+\ No newline at end of file

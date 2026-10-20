@@ -6,6 +6,76 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-20 · S2 = B1a · Crecida + Hoja escudo + Canasta (`spark/t5-b1a`): HECHA · verificación completa VERDE · lista para integrar
+
+- **Rama:** `spark/t5-b1a`, desde `a759597`. Fusiona `origin/integracion-fase1-fase2` (`815b2e5`) en `7fbc1cd`.
+- **Plan:** `docs/dev/plan-tanda5.md` (S1, en `spark/auditoria-1-0`). **Nota de diseño:** `docs/dev/crecida-canasta.md`, con las reglas C1-C14 y K1-K9, los enganches E26-E35 y las preguntas Q-C1-Q-C14.
+- **Tareas y revisiones.** Cada tarea pasó por el code-reviewer; todas quedaron **APROBADAS**, la mayoría en la 2.ª ronda:
+  - **A0** (`f68f72c`): la nota.
+  - **A1** (`65754d3`): `StreakConfig`, `BasketConfig` y `EconomyJsonLite`. Los defaults se comprueban contra la tabla de 08 §9 leída de verdad.
+  - **A2** (`a38653c`): `BasketRules`.
+    - Canasta cada 10 niveles: el 10 da solo semillas; el ciclo es `(L/10−2) mod 5`.
+    - Canasta grande cada 100: 150 semillas + Cuia extra + Morpho + 3 Marea (GDD.md §6.1 #13).
+    - `HitSix`.
+  - **A3** (`ead3aa2` y `1a09563`): `StreakRules`.
+    - Hitos 3, 6 y 10, una vez al día; tope de 600 con pago parcial; río crecido; Hoja escudo; solo en la campaña y desde el 25.
+    - Tests sin asignaciones y un oráculo contra `econ_sim.py`: 5 configuraciones × 24 semillas × 600 pasos.
+    - K9: el Salto del Boto también paga la Canasta del 10k (04 §2.6).
+  - **A4** (`f226165`, `f03e0ef` y `fb2bd3e`): `StreakRecord`, `IStreakStore`, `InMemoryStreakStore` y el parche S1.
+    - Regla conservadora con un registro de un día anterior: puede pagar de menos en el borde de medianoche, nunca dos veces.
+    - `Normalize` al leer.
+  - **A5** (`cd83385`, `9e3a88d` y `8e978ec`): `StreakService`, con `ApplyWin`, `ApplyHardFail`, `ApplySkip` y `Peek`.
+    - Orden: `Load` → `RollDay` → regla → `Save` → `Wallet.Apply`.
+    - Fuentes `streak` y `basket`. El kill switch congela la Crecida, pero la Canasta se sigue pagando.
+    - La Canasta de un 10k no se repaga, gracias a `maxLevelBefore`.
+    - El parche S4.
+  - **A6** (`c34cb00`, `701eb56` y `b3258fd`): el parcial `LevelFlow.Streak.cs`.
+    - `UseStreak`, `LastStreakResult`, `PeekStreak` y `OnSkipStreak`. `OnSkipStreak` pide `RequireDurable` y va dentro del mismo `Saves()` que el salto.
+    - El Reto queda fuera (`!IsDaily`).
+    - Con el río crecido no se ofrece el x2 por vídeo.
+    - Los parches S2 y S5.
+  - **A7** (`546fcf3`, `685bad9` y `04cda21`): `StreakProbeFormat`, `DevProbe.Streak.cs`, `GameBootstrap.Streak.cs`, `StreakProbeRunner` y el parche S3.
+    - Líneas `AF_STATE` (solo en desarrollo): `streak_state` y `streak_fail`, más `streak_milestone`, `streak_shield_used`, `free_double_harvest` y `basket_open`.
+    - En la victoria salen tras `AF_STATE win` y **antes** de `victory`; en el fallo duro, tras `fail_hard` y `level_failed`.
+- **Parches para el integrador** (`docs/dev/traspaso/spark-enganches/`, en LF). Se aplican **en este orden** y **después de fusionar `spark/t5-b1a`**, porque S4 reescribe archivos de la rama:
+  1. `S1-profile.diff`: `Profile.cs` (`streak` {`wins`, `river_full`}; `daily.streak_hits` y `daily.streak_seeds`), `ProfileJson.cs` y `DailyCounters.RollOver`; añade `ProfileStreakStore.cs` y `StreakProfileTests.cs`.
+  2. `S4-wallet.diff` (E35): `Transaction.DoubleHarvestRiver` (`internal`), sin la compuerta `ads_rv_double_harvest_from_level` y sin gastar `ads_rv_cap_double_harvest`; añade `RiverDoubleHarvestTests`.
+  3. `S2-flow.diff` (E29, E30): `LevelFlow.Victory.cs` (`ResolveWin`) y `LevelFlow.Funnel.cs` (`Fail`); añade `StreakFlowHookTests`.
+  4. `S5-flow-profile.diff`: test de integración que comprueba una sola escritura del perfil en la victoria y en el fallo duro (necesita S1 y S2).
+  5. `S3-bootstrap.diff` (E32): `SetUpStreak();` tras `SetUpDaily();` en `GameBootstrap.cs`, y `GameBootstrap.StreakProfile.cs` (necesita S1).
+- **Pendiente de otros bloques:**
+  - B3 (`SkipBooster`) debe llamar a `flow.OnSkipStreak()` dentro del `using (Saves())` del salto y antes de guardarlo (E34).
+  - B1b: barra, toasts y panel de premios (E33, nota §6.1).
+  - B7: `earn_virtual_currency` desde `Wallet.Apply`.
+  - Lector de Remote Config: hoy se usan `StreakConfig.Defaults` y `BasketConfig.Defaults`.
+  - Volver a correr la simulación de economía con la Canasta grande (05 §3.4).
+- **Verificación:**
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`7fbc1cd`) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py`; `econ_sim --runs 300` contra `econ_B.md` | 0 avisos; 981 (975 + 6); 103/103; idéntico |
+  | rama | `unity-compile`; EditMode; PlayMode (`-TimeoutSec 3600`) | OK; **3.309 (3.306 + 3), 0 fallos**; **1.589 (1.382 + 207), 0 fallos** |
+  | worktree temporal en `7fbc1cd` con S1 → S4 → S2 → S5 → S3 | `git apply` de los 5; `unity-compile`; EditMode; PlayMode | todo aplica; OK; **3.359 (3.355 + 3), 1 fallo: `IntroArtTests.FruitFlight…10ms`, el inestable (tope fijo de 10 ms)**; relanzado con filtro, 9/9; **1.589 (1.382 + 207), 0 fallos** |
+
+- **Decisiones [P]** (se avanzó con la opción recomendada; detalle en la nota §7):
+  - Q-C1 a Q-C14. Destacan:
+    - **Q-C2 (a):** el Reto no lleva el x2 gratis del río. Se aparta de una lectura literal de 04 §2.8; se apoya en 06 §4.3.
+    - **Q-C5 (a):** el comodín del hito 6 se calcula con `HitSix(max(level, max_level))`.
+    - **Q-C6 (a):** una sola hoja al día.
+    - **Q-C13 (a):** las 50 semillas del hito 6 van con `source = streak`, sin `af_basket_open`.
+    - **Q-C14 (a):** el x2 del río no pasa por la compuerta del vídeo.
+  - **Q-M9 (a):** esquema del perfil; un solo `shield_available`, el de `daily`.
+  - **Q-M10:** el módulo `AF.Economy`.
+  - **Sonda:** `level` en `streak_milestone` y `streak_shield_used` es solo de la sonda; no está en 08 §8.2.
+
+### Preguntas para el dueño (nuevas; no bloquean lo entregado)
+
+| Id | Pregunta | Recomendada |
+|---|---|---|
+| B1a-Q1 | Fusión con la nube (08 §11): «`daily` se fusiona con max por clave» no sirve para los campos nuevos. El `max` de `shield_available` devolvería un escudo ya gastado, y `streak_hits` es una lista | `shield_available` = true solo si las dos copias lo tienen; `streak_hits` por unión; `streak_seeds` por max |
+| B1a-Q2 | ¿Un cambio que solo toca `streak` cuenta como mutación de economía para `economy_ts`? Hoy no lo actualiza: en un fallo duro sin hoja en 25-30 podría ganar la copia antigua en un conflicto con el mismo `max_level` | Sí: que `streak` actualice `economy_ts` (cambio pequeño en S1 cuando lo decidas) |
+| Q-M2 | Diseño del panel único de premios (D-029 #18) | Bloquea B1b y B4 |
+
 ## 2026-10-20 · S1 · Auditoría de la 1.0 y plan de la tanda 5 (`spark/auditoria-1-0`): HECHA · lista para integrar (solo documentación)
 
 - **Rama:** `spark/auditoria-1-0`, desde `origin/integracion-fase1-fase2` en `a759597`.

@@ -1,0 +1,83 @@
+diff --git a/Assets/_Project/Tests/EditMode/StreakFlowProfileTests.cs b/Assets/_Project/Tests/EditMode/StreakFlowProfileTests.cs
+new file mode 100644
+index 0000000..19b503d
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/StreakFlowProfileTests.cs
+@@ -0,0 +1,68 @@
++#nullable enable
++using System;
++using AF.Core.Rules;
++using AF.Economy;
++using AF.GameFlow;
++using AF.Levels;
++using AF.Platform;
++using AF.Save;
++using NUnit.Framework;
++
++namespace AF.Tests.EditMode
++{
++    /// <summary>
++    /// Integración de la Crecida con el perfil de verdad (B1a, A6). <b>Necesita S1-profile.diff</b> (<see cref="ProfileStreakStore"/>,
++    /// <c>Profile.Streak</c>) <b>y S2-flow.diff</b> (las llamadas del flujo): va en el parche aparte
++    /// <c>docs/dev/traspaso/spark-enganches/S5-flow-profile.diff</c>, que se aplica después de S1 y S2. Con
++    /// <see cref="ProfileSaveBatch"/>, la cartera, el progreso y <see cref="ProfileStreakStore"/> sobre el mismo perfil, la
++    /// victoria (Cosecha, progreso, barra y hito) y el fallo duro (hoja) salen cada uno en una sola escritura.
++    /// </summary>
++    public sealed class StreakFlowProfileTests
++    {
++        [Test]
++        public void WinAndHardFail_EachGoOutInOneProfileWrite()
++        {
++            var clock = new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5));
++            Profile profile = Wallet.NewProfile(clock);
++            profile.Progress.MaxLevel = 24;
++            profile.Progress.NextLevel = 25;
++            var disk = new MemoryProfileStore();
++            var batch = new ProfileSaveBatch(disk);
++            var wallet = new Wallet(profile, batch, clock);
++            var progress = new ProfileProgressStore(profile, batch);
++            var streak = new ProfileStreakStore(profile, batch, clock);
++            var flow = new LevelFlow(
++                LevelCatalog.Create(new[] { TestPacks.Tutorial }, 20), progress, new RecordingListener(), GameConfig.TapSwitchSelection,
++                PourModes.Default, wallet)
++            {
++                SaveBatch = batch,
++            };
++            flow.UseStreak(new StreakService(streak, wallet, clock, 10));
++
++            // Victoria en el 25 (tablero 5 del tutorial): Cosecha, progreso y barra de la Crecida en una escritura.
++            flow.Load(25);
++            Assert.That(flow.TapAnywhere(), Is.True);
++            int writes = batch.WriteCount;
++            LevelStateTests.Win(flow);
++            Assert.That(flow.LastStreakResult!.Streak.Counted, Is.True);
++            Assert.That(batch.WriteCount, Is.EqualTo(writes + 1), "la victoria y la Crecida, en una sola escritura");
++            Profile saved = disk.Load().Profile!;
++            Assert.That(saved.Progress.MaxLevel, Is.EqualTo(25));
++            Assert.That(saved.Wallet.Seeds, Is.EqualTo(flow.HarvestBase));
++            Assert.That(saved.Streak, Is.Not.Null);
++            Assert.That(saved.Streak!.Wins, Is.EqualTo(1));
++
++            // Fallo duro en el 26 (tablero 6: 3 → 4 lo bloquea), desde el pie del modal: la hoja, en una escritura.
++            flow.Load(26);
++            Assert.That(flow.TapAnywhere(), Is.True);
++            LevelStateTests.GetStuck(flow);
++            writes = batch.WriteCount;
++            Assert.That(flow.Restart(), Is.True);
++            Assert.That(flow.LastStreakResult!.Streak.ShieldUsed, Is.True);
++            Assert.That(batch.WriteCount, Is.EqualTo(writes + 1), "el fallo duro y la hoja, en una sola escritura");
++            saved = disk.Load().Profile!;
++            Assert.That(saved.Daily.ShieldAvailable, Is.False);
++            Assert.That(saved.Streak!.Wins, Is.EqualTo(1));
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/EditMode/StreakFlowProfileTests.cs.meta b/Assets/_Project/Tests/EditMode/StreakFlowProfileTests.cs.meta
+new file mode 100644
+index 0000000..a2b91d0
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/StreakFlowProfileTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: bcedc31810591984fac3ce7613240725
+\ No newline at end of file
