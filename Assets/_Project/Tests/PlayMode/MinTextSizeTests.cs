@@ -38,8 +38,9 @@ namespace AF.Tests.PlayMode
     /// ratificado en la pregunta 47, (1): nunca tapa las cuias ni deja a medias la ficha «?×1» (al 100 %, junto a ella; al
     /// 130 %, la tapa entera);</description></item>
     /// <item><description>la etiqueta de los CTA con precio no se encoge con la escala (la etiqueta de precio se mide) y
-    /// Aguas estancadas deja el tablero entero sobre el panel al 100 %; al 130 % el tablero sube hasta su tope y lo que el
-    /// panel tapa se registra (conflicto de 02 §7 con 02 §12, pendiente del dueño).</description></item>
+    /// Aguas estancadas deja el tablero entero sobre el panel a 360 × 780 al 100 % (al 130 %, el tablero sube hasta su tope y
+    /// lo que el panel tapa se registra: conflicto de 02 §7 con 02 §12, pendiente del dueño); en 16:9, al 100 % y al 130 %, el
+    /// panel va compacto y no tapa ninguna cuia del 31 (tarea FX16a; <see cref="StuckCompactTests"/>).</description></item>
     /// </list>
     /// La pregunta 48 (b) (Revelar sin medios: sin aviso, responde la burbuja) se prueba en <c>PhoneFixesTests</c> y
     /// <c>LuciernagaTests</c>.
@@ -166,9 +167,17 @@ namespace AF.Tests.PlayMode
             StuckContext ctx = boot.Flow!.BuildStuckContext(false, true, GeoTier.T3);
             foreach ((string name, StuckContext variant) in StuckVariants(ctx))
             {
-                view.Stuck.Show(StuckModalModel.Build(variant, boot.Flow.Boosters), boot.Services, view.CanvasWidth);
-                view.Stuck.Place(view.CanvasWidth, view.CardCanvasHeight - view.CardSafeBottom - 8f - view.Stuck.Height);
+                view.Stuck.Show(StuckModalModel.Build(variant, boot.Flow.Boosters), boot.Services, view.CanvasWidth, view.StuckRoomDp);
+                view.Stuck.Place(view.CanvasWidth, view.CardCanvasHeight - view.CardSafeBottom - view.Stuck.BottomGapDp - view.Stuck.Height);
                 AssertStuck(view, scale, "Aguas estancadas, " + name + " " + at);
+                if (view.CardCanvasHeight <= GameScreen.MinHeight + 0.5f)
+                {
+                    // En 16:9, con el tablero subido como lo dejó la rama B: al 100 %, ninguna variante tapa las cuias; al 130 %, la
+                    // que las tape va compacta y se registra (FX16a; pendiente del dueño).
+                    float covered = StuckCompactTests.CoveredDp(view, "Aguas estancadas, " + name + " " + at);
+                    Assert.That(covered <= 0.05f || (scale > 1f && view.Stuck.Compact), Is.True,
+                        "Aguas estancadas, " + name + " " + at + ": ninguna cuia tapada (02 §7)");
+                }
             }
 
             // ¿Seguro? con la última canoa y el rescate en gris; después, con el rescate a la venta (−50 %) y la cabecera de Muy
@@ -204,20 +213,21 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// Pendiente del dueño (DC3; D-028): en 16:9 (360 × 640 dp) al 130 %, el panel de Aguas estancadas de la rama B (597 dp)
-        /// no cabe entre las zonas seguras (576 dp) y sube 21 dp por encima de la de arriba. Compactarlo sin bajar de 12 sp × 1,3 ni
-        /// renunciar a que los CTA crezcan (07 §7.8) es la misma pregunta que la revisión de A1 dejó abierta (StuckModal). Se deja
-        /// escrito (explícito: hoy falla) para cuando el dueño decida.
+        /// En 16:9 (360 × 640 dp) al 130 %, el panel de Aguas estancadas de la rama B cabe entre las zonas seguras y no tapa
+        /// ninguna cuia del 31 (tarea FX16a, decisión del dueño del 2026-10-20: compactarlo; antes
+        /// <c>Stuck_130_16x9_InsideTheSafeArea_KnownIssue</c>, explícito: el panel medía 597 dp, más que los 576 entre las zonas
+        /// seguras, y subía 21 dp por encima de la de arriba).
         /// </summary>
         [UnityTest]
-        [Explicit("Pendiente del dueño (DC3): en 16:9 al 130 %, el panel de Aguas estancadas (rama B) sube por encima de la zona segura; hoy falla.")]
-        public IEnumerator Stuck_130_16x9_InsideTheSafeArea_KnownIssue()
+        public IEnumerator Stuck_130_16x9_InsideTheSafeArea()
         {
             float scale = Use(1920, 130);
             yield return Load31(0, 1);
             GameBootstrap boot = GameBootstrap.Current!;
             FunnelSetup.GetStuck(boot);
-            AssertStuck(boot.View!, scale, "Aguas estancadas, rama B " + AtText(1920, 130), true);
+            Assert.That(boot.View!.Stuck.Compact, Is.True, "la disposición compacta");
+            AssertStuck(boot.View, scale, "Aguas estancadas, rama B " + AtText(1920, 130));
+            AssertBoardOverThePanel(boot.View, scale, "Aguas estancadas, rama B " + AtText(1920, 130));
         }
 
         [UnityTest]
@@ -791,10 +801,21 @@ namespace AF.Tests.PlayMode
                 + " dp; tablero subido " + shift.ToString("0.0") + " de " + room.ToString("0.0") + " dp; cuias de " + mouth.ToString("0.0") + " a "
                 + foot.ToString("0.0") + " dp: " + (whole ? "el tablero, entero sobre el panel" : "el panel tapa " + covered.ToString("0.0") + " dp de las cuias ("
                 + (100f * covered / Mathf.Max(1f, foot - mouth)).ToString("0") + " %)") + ".");
-            // En 16:9, desde DC3 (lienzo de 360 × 640 dp; D-028), ya al 100 % el panel de la rama B (413 dp con Puñado y Balsa a 56 dp) tapa la parte de abajo de
-            // las cuias del 31 aunque el tablero suba hasta su tope: se registra, como al 130 % (conflicto de 02 §7 con el lienzo de
-            // 16:9, pendiente del dueño; open issue de DC3).
-            if (scale <= 1f && view.CardCanvasHeight > GameScreen.MinHeight + 0.5f)
+            // En 16:9 (360 × 640 dp desde DC3; D-028), el panel de la rama B (413 dp al 100 % y 597 al 130 % en la disposición de
+            // siempre) tapaba la parte de abajo de las cuias del 31 aunque el tablero subiera hasta su tope; desde FX16a va compacto
+            // y al 100 % no tapa ninguna cuia (02 §7); al 130 %, la rama B (con Puñado, Balsa y su línea) ni compacta cabe bajo
+            // las cuias y se registra lo que tapa (pendiente del dueño; StuckCompactTests.Stuck_31_B130_16x9_NoCuiaCovered_KnownIssue).
+            // A 360 × 780, al 100 %, el tablero entero sobre el panel; al 130 %, se registra lo que tapa (conflicto de 02 §7 con
+            // 02 §12, pendiente del dueño desde A1).
+            if (view.CardCanvasHeight <= GameScreen.MinHeight + 0.5f && scale <= 1f)
+            {
+                Assert.That(covered, Is.LessThanOrEqualTo(0.05f), where + ": ninguna cuia tapada (02 §7; FX16a)");
+            }
+            else if (view.CardCanvasHeight <= GameScreen.MinHeight + 0.5f)
+            {
+                Assert.That(covered <= 0.05f || view.Stuck.Compact, Is.True, where + ": si tapa alguna cuia, el panel va compacto (FX16a)");
+            }
+            else if (scale <= 1f)
             {
                 Assert.That(whole, Is.True, where + ": el tablero entero sobre el panel (02 §7)");
             }
@@ -878,15 +899,15 @@ namespace AF.Tests.PlayMode
             yield return ("rama H, Canoas infinitas", h);
         }
 
-        private static void AssertStuck(GameScreen view, float scale, string where, bool strict = false)
+        private static void AssertStuck(GameScreen view, float scale, string where)
         {
             Assert.That(view.StuckVisible, Is.True, where);
-            AssertModal(view, view.Stuck.Panel, scale, where, strict);
+            AssertModal(view, view.Stuck.Panel, scale, where);
         }
 
         // Todos los textos a la vista del modal: ≥ 12 sp por la escala y sin salirse de su caja; el modal, dentro de la pantalla
         // y de su zona segura.
-        private static void AssertModal(GameScreen view, RectTransform modal, float scale, string where, bool strict = false)
+        private static void AssertModal(GameScreen view, RectTransform modal, float scale, string where)
         {
             Canvas.ForceUpdateCanvases();
             int texts = 0;
@@ -916,16 +937,6 @@ namespace AF.Tests.PlayMode
             Assert.That(r.xMin, Is.GreaterThanOrEqualTo(-0.05f), where + ": dentro de la pantalla");
             Assert.That(r.xMax, Is.LessThanOrEqualTo(view.CanvasWidth + 0.05f), where);
             Assert.That(r.yMax, Is.LessThanOrEqualTo(view.CardCanvasHeight - view.CardSafeBottom + 0.05f), where + ": sobre la zona segura de abajo");
-            if (!strict && modal == view.Stuck.Panel && view.CardCanvasHeight <= GameScreen.MinHeight + 0.5f && scale > 1.01f && r.yMin < view.SafeTopDp - 0.05f)
-            {
-                // Aguas estancadas en 16:9 al 130 % desde DC3 (360 × 640 dp; D-028): el panel de la rama B mide 597 dp y, anclado
-                // abajo, sube por encima de la zona segura de arriba. Se registra; Stuck_130_16x9_InsideTheSafeArea_KnownIssue lo
-                // exige (pendiente del dueño; open issue de DC3).
-                TestContext.WriteLine(where + ": el panel de " + r.height.ToString("0.0") + " dp empieza en " + r.yMin.ToString("0.0")
-                    + " dp, " + (view.SafeTopDp - r.yMin).ToString("0.0") + " dp por encima de la zona segura de arriba (pendiente del dueño, DC3).");
-                return;
-            }
-
             Assert.That(r.yMin, Is.GreaterThanOrEqualTo(view.SafeTopDp - 0.05f), where + ": bajo la zona segura de arriba");
         }
 

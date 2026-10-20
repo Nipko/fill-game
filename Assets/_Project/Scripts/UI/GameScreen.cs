@@ -1480,7 +1480,7 @@ namespace AF.UI
         {
             LevelFlow flow = RequireFlow();
             StuckModalView view = StuckModalModel.Build(StuckContext(flow), flow.Boosters);
-            _stuck.Show(view, _services, _canvasW);
+            _stuck.Show(view, _services, _canvasW, StuckRoomDp);
             _stuckSeedsShown = _services?.Wallet.Seeds ?? 0;
             _stuckUndoShown = flow.UndoStatus.Stock + (flow.UndoStatus.FreeLeft * 1000);
             if (_services != null && _stuckBalsaOk && !flow.BalsaShownThisBlock)
@@ -1503,7 +1503,7 @@ namespace AF.UI
             }
 
             UiBuilder.SetEnabled(_stuck.UndoButton, view.Undo != StuckUndoKind.Undo || flow.CanUndo);
-            _stuckPanelY = _canvasH - _safeBottom - 8f - _stuck.Height;
+            _stuckPanelY = _canvasH - _safeBottom - _stuck.BottomGapDp - _stuck.Height;
             if (layout || _stuckAnim < 0f)
             {
                 _stuck.Place(_canvasW, _stuckPanelY);
@@ -2685,7 +2685,7 @@ namespace AF.UI
 
             // Paneles anclados abajo (07 §5.4, §5.5, §7.5), con los CTA en la zona del pulgar (02 §3.3).
             float panelW = Mathf.Min(328f, w - 32f);
-            _stuckPanelY = _canvasH - _safeBottom - 8f - _stuck.Height;
+            _stuckPanelY = _canvasH - _safeBottom - _stuck.BottomGapDp - _stuck.Height;
             _stuck.Place(w, _stuckPanelY);
 
             LayoutVictory();
@@ -3127,6 +3127,37 @@ namespace AF.UI
             float room = highestTop - BoardTop;
             return Mathf.Clamp(needed, 0f, Mathf.Max(0f, room));
         }
+
+        /// <summary>
+        /// Alto que le queda a Aguas estancadas, con su aire de abajo, para no tapar ninguna cuia con el tablero subido hasta su
+        /// tope (<see cref="ShiftToClear"/>): del pie más bajo de las cuias, más <see cref="StuckCuiaGapDp"/>, a la zona segura
+        /// de abajo. Solo en los lienzos más bajos que <see cref="StuckModal.CompactCanvasBelowDp"/> (el 16:9; tarea FX16a): en
+        /// los demás, sin límite (el panel no cambia).
+        /// </summary>
+        internal float StuckRoomDp
+        {
+            get
+            {
+                if (_layout == null || _views.Length == 0 || _canvasH >= StuckModal.CompactCanvasBelowDp - 0.5f)
+                {
+                    return float.PositiveInfinity;
+                }
+
+                float highestTop = float.MaxValue;
+                float lowestFoot = float.MinValue;
+                for (int i = 0; i < _views.Length; i++)
+                {
+                    highestTop = Mathf.Min(highestTop, _layout.FootY[i] - (_views[i].HeightU * _views[i].Unit) - CuiaView.LiftDp);
+                    lowestFoot = Mathf.Max(lowestFoot, _layout.FootY[i]);
+                }
+
+                float lift = Mathf.Max(0f, highestTop - BoardTop);
+                return _canvasH - _safeBottom - (lowestFoot - lift + StuckCuiaGapDp);
+            }
+        }
+
+        /// <summary>Aire mínimo entre el pie de las cuias y el panel de Aguas estancadas compacto (dp) [P] (tarea FX16a).</summary>
+        internal const float StuckCuiaGapDp = 2f;
 
         private void ShiftBoard(float target, bool animate)
         {
