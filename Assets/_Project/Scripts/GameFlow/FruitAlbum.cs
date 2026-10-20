@@ -18,11 +18,11 @@ namespace AF.GameFlow
         /// <summary>
         /// Id de cada tinte por su número de motor (glosario §9; índice 0 vacío): el <c>tint_id</c> de <c>af_fruit_discovered</c>.
         /// </summary>
-        public static readonly string[] TintIds =
+        public static IReadOnlyList<string> TintIds { get; } = Array.AsReadOnly(new[]
         {
             string.Empty, "guanabana", "cupuacu", "tapereba", "aguaje", "urucum", "camu_camu", "bacaba", "acai", "jenipapo",
             "agua_tapajos", "lulo", "araza", "cacao", "agua_negro",
-        };
+        });
 
         private readonly Profile _profile;
         private readonly IProfileStore _store;

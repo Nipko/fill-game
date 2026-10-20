@@ -36,6 +36,18 @@ namespace AF.GameFlow
         /// <summary>La skin ganada en la última victoria de este flujo, o null (se limpia al cargar un nivel).</summary>
         public SkinUnlock? LastSkinUnlock => _lastSkinUnlock;
 
+        /// <summary>
+        /// La última skin ganada en este flujo (no se limpia al cargar) y cuántas van: con el contador, quien la lee no pierde una
+        /// victoria aunque la carga siguiente caiga en el mismo fotograma (revisión de B14).
+        /// </summary>
+        public SkinUnlock? LatestSkinUnlock { get; private set; }
+
+        /// <summary>Skins ganadas en este flujo (sube con cada <see cref="LatestSkinUnlock"/>).</summary>
+        public int SkinUnlockSerial { get; private set; }
+
+        /// <summary>Cargas de nivel de este flujo (sube con cada <c>Load</c>): quien espera «la pantalla siguiente» la compara.</summary>
+        public int LoadSerial { get; private set; }
+
         /// <summary>Tintes descubiertos en la última carga de nivel (número de motor, en orden; vacía si ninguno).</summary>
         public IReadOnlyList<int> LastFruitsDiscovered => _fruitsDiscovered;
 
@@ -60,11 +72,17 @@ namespace AF.GameFlow
         private void OnWinSkins()
         {
             _lastSkinUnlock = _skins?.ApplyLevelPassed(LevelNumber, !IsDaily);
+            if (_lastSkinUnlock != null)
+            {
+                LatestSkinUnlock = _lastSkinUnlock;
+                SkinUnlockSerial++;
+            }
         }
 
         // En Load, dentro del lote, con el tablero inicial ya creado.
         private void OnLoadAlbum()
         {
+            LoadSerial++;
             _lastSkinUnlock = null;
             _fruitsDiscovered.Clear();
             if (_album == null || IsDaily || _session == null)

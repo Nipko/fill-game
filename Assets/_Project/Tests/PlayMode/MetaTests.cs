@@ -92,6 +92,60 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Winning40_ThenNext_TheNoticeWaitsForTheWorldBannerOf41()
+        {
+            // El camino real: tras el 40, «Siguiente» abre el 41 con el banner del mundo 3 (D-012); el aviso no sale encima de él.
+            FunnelSetup.Hooks();
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtSyncOverride = true; // el arte del banner en el acto, como CardSetup
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(Wallet.NewProfile(new ManualClock(T0)));
+            yield return PlayModeHelpers.LoadGame(40, new MemoryProgressStore(40, 39));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            CloseCards(boot); // la tarjeta previa del 40 (Difícil)
+            VictorySetup.WinToVictoryScreen(boot);
+            boot.TickMeta(16f);
+            Assert.That(boot.SkinUnlockCount, Is.EqualTo(1));
+
+            boot.PressNext();
+            for (int i = 0; i < 200 && boot.Flow!.LevelNumber != 41; i++)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(41));
+            Assert.That(boot.Flow.WorldBanner, Is.Not.EqualTo(0), "el banner del mundo 3");
+            boot.TickMeta(16f);
+            Assert.That(boot.SkinToast == null || !boot.SkinToast.Visible, Is.True, "no encima del banner");
+            CloseCards(boot);
+            boot.TickMeta(16f);
+            Assert.That(boot.SkinToast!.Visible, Is.True, "al cerrarse el banner");
+            Assert.That(boot.SkinToast.Text, Is.EqualTo("Cuia de Santarém · puesta"));
+            Assert.That(boot.View!.Views[0].Skin, Is.SameAs(CuiaSkin.Santarem), "el 41 ya la lleva");
+            Assert.That(boot.SkinUnlockCount, Is.EqualTo(1));
+        }
+
+        // Cierra el banner de mundo y la tarjeta previa (con toques y su tiempo), hasta que el nivel entra.
+        internal static void CloseCards(GameBootstrap boot)
+        {
+            for (int i = 0; i < 400 && (boot.Flow!.Phase == FlowPhase.LevelCard || boot.Flow.WorldBanner != 0); i++)
+            {
+                if (boot.Flow.WorldBanner != 0)
+                {
+                    boot.Flow.DismissWorldBanner();
+                }
+                else
+                {
+                    boot.Flow.DismissLevelCard();
+                }
+
+                PlayModeHelpers.Step(boot, 50);
+            }
+
+            Assert.That(boot.Flow!.Phase == FlowPhase.LevelCard || boot.Flow.WorldBanner != 0, Is.False, "el nivel entra");
+        }
+
+        [UnityTest]
         public IEnumerator Level1_FillsTheAlbumWithItsTints_AndProbesEachOne()
         {
             yield return PlayModeHelpers.LoadGame(1, new MemoryProgressStore(1, 0));

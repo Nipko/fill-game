@@ -42,7 +42,8 @@ namespace AF.UI
         private FruitAlbum? _fruitAlbum;
         private OverlayCanvas? _metaCanvas;
         private Toast? _skinToast;
-        private SkinUnlock? _skinSeen;
+        private int _skinSerialSeen;
+        private int _skinToastLoad;
         private SkinUnlock? _skinToastPending;
         private int _fruitSeen;
 
@@ -94,7 +95,7 @@ namespace AF.UI
             _fruitAlbum = new FruitAlbum(profile, batch);
             flow.UseAlbum(_fruitAlbum);
             _fruitSeen = flow.FruitDiscoveryCount;
-            _skinSeen = null;
+            _skinSerialSeen = flow.SkinUnlockSerial;
             _probe?.SkinState(_skinService.Equipped, profile.Entitlements.Skins, backfilled);
 
             if (_mapScreen != null)
@@ -129,10 +130,10 @@ namespace AF.UI
                 return;
             }
 
-            SkinUnlock? unlock = flow.LastSkinUnlock;
-            if (unlock != null && !ReferenceEquals(unlock, _skinSeen))
+            if (flow.SkinUnlockSerial != _skinSerialSeen && flow.LatestSkinUnlock != null)
             {
-                _skinSeen = unlock;
+                _skinSerialSeen = flow.SkinUnlockSerial;
+                SkinUnlock unlock = flow.LatestSkinUnlock;
                 if (_art != null && _skinService != null)
                 {
                     _art.CuiaSkin = CuiaSkin.For(_skinService.Equipped); // las cuias del nivel siguiente ya la llevan
@@ -141,11 +142,15 @@ namespace AF.UI
                 SkinUnlockCount++;
                 _probe?.SkinUnlock(unlock.SkinId, unlock.Source, unlock.Level, unlock.Equipped);
                 _skinToastPending = unlock;
+                _skinToastLoad = flow.LoadSerial;
             }
 
             // El aviso sale en la pantalla siguiente (el nivel siguiente, con sus cuias ya con la skin, o el inicio), no sobre la
-            // victoria: allí taparía el bocadillo de TiTino y se sumaría a su panel (revisión de las capturas de B14).
-            if (_skinToastPending != null && (flow.LastSkinUnlock == null || (_app != null && _app.Screen != AppScreen.Level)))
+            // victoria, donde taparía el bocadillo de TiTino y se sumaría a su panel; y tras el banner de mundo y la tarjeta previa
+            // (LEVEL_CARD), que tras el 40, el 80 y el 140 siempre abren el 41, el 81 y el 141 (D-012): con ellos abiertos, espera.
+            if (_skinToastPending != null
+                && ((_app != null && _app.Screen != AppScreen.Level)
+                    || (flow.LoadSerial != _skinToastLoad && flow.Phase != FlowPhase.LevelCard && flow.WorldBanner == 0)))
             {
                 ShowSkinToast(_skinToastPending);
                 _skinToastPending = null;

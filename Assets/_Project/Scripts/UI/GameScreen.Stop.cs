@@ -25,7 +25,8 @@ namespace AF.UI
     /// que costó componerlo con sus mallas; ≤ 8 ms, 08 §5.4); y además <c>warm_ms</c> (lo que costó, antes y fuera de
     /// <c>build_ms</c>, preparar el primer uso en la primera carga con parada, <see cref="StopBackdrop.Prewarm"/>; 0 en las
     /// demás; tarea FX4), <c>hero_src</c> (<c>png</c>, <c>shape</c> o <c>none</c>), <c>shape</c>, <c>code</c>, <c>change</c>
-    /// (<c>cut</c>, <c>fade</c> o <c>same</c>) y <c>season</c> (<c>A</c>, <c>B</c> o null; SE2).</para>
+    /// (<c>cut</c>, <c>fade</c> o <c>same</c>), <c>season</c> (<c>A</c>, <c>B</c> o null; SE2) y, solo en Difícil y Muy difícil,
+    /// <c>light</c> (<c>afternoon</c> o <c>night</c>; B14).</para>
     /// <para><b>Temporada del ciclo</b> (D-009, punto 6; pregunta 32 b, D-020; 07 §2.1; tarea SE2): la luz del fondo lleva,
     /// sobre la de la parada, la LUT de aguas altas o bajas del ciclo del nivel (<see cref="Seasons"/>, la tabla del cliente
     /// <c>seasons_v1.json</c>), también sin parada; la victoria con vista de una llegada, la del nivel siguiente. Sin la tabla,
@@ -474,7 +475,11 @@ namespace AF.UI
             AppendJsonString(sb, "code", b.Code);
             AppendJsonString(sb, "change", _lastStopChange);
             AppendJsonString(sb, "season", SeasonTable.Letter(b.Season)); // SE2
-            AppendJsonString(sb, "light", StopBackdrop.DifficultyLightName(b.Light)); // B14: night, afternoon o null
+            string? light = StopBackdrop.DifficultyLightName(b.Light);
+            if (light != null)
+            {
+                AppendJsonString(sb, "light", light); // B14: night o afternoon; sin luz de dificultad, la clave no va
+            }
             _lastStopProbe = sb.ToString();
             _probe.Event("stop", _lastStopProbe);
         }

@@ -70,7 +70,8 @@ namespace AF.Tests.PlayMode
             yield return null;
             StopBackdrop board = boot.View!.StopBackdrop;
             Assert.That(board.Stop, Is.SameAs(stop), "el mismo sitio que el tablero del 58");
-            Assert.That(board.LutColor, Is.EqualTo(backdrop.LutColor));
+            // El tablero lleva además la luz de su dificultad (B14; 07 §7.7 [P]: el 58 es Difícil, luz de tarde); el inicio, no.
+            Assert.That(board.LutColor, Is.EqualTo(backdrop.LutColor * GameScreen.DifficultyLightFor(boot.Flow!.Level.DifficultyLabel)));
             Assert.That(board.HeroSource, Is.EqualTo(hero));
             Assert.That(board.Water, Is.EqualTo(backdrop.Water), "con la misma agua del mundo");
         }

@@ -83,6 +83,43 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator CaptureToastAfterTheWorldBanner()
+        {
+            // El camino real (revisión de B14): 40 → «Siguiente» → banner del mundo 3 en el 41 → el aviso, al cerrarse el banner.
+            string dir = SnapshotKit.Prepare();
+            FunnelSetup.Hooks();
+            MapArtRule.ForceProvisional = true;
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
+            LaunchOptions.LevelCardsOverride = true;
+            LaunchOptions.BannerArtSyncOverride = true;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(Wallet.NewProfile(new ManualClock(T0)));
+            yield return PlayModeHelpers.LoadGame(40, new MemoryProgressStore(40, 39));
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.TakeClock(boot);
+            SnapshotKit.Attach(boot);
+            MetaTests.CloseCards(boot);
+            VictorySetup.WinToVictoryScreen(boot);
+            boot.TickMeta(16f);
+            boot.PressNext();
+            for (int i = 0; i < 200 && boot.Flow!.LevelNumber != 41; i++)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            PlayModeHelpers.Step(boot, 600);
+            boot.TickMeta(16f);
+            yield return SnapshotKit.Wait(0.2f);
+            SnapshotKit.Save(dir, "b14_01c_banner_41_without_toast_780_100");
+            MetaTests.CloseCards(boot);
+            boot.TickMeta(16f);
+            boot.TickMeta(300f);
+            PlayModeHelpers.Step(boot, 400);
+            SnapshotKit.AttachOverlay(boot.MetaToastCanvas!);
+            yield return SnapshotKit.Wait(0.2f);
+            SnapshotKit.Save(dir, "b14_01d_level41_toast_780_100");
+        }
+
+        [UnityTest]
         public IEnumerator CaptureMapAndCards()
         {
             string dir = SnapshotKit.Prepare();
