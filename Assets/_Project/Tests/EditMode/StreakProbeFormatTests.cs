@@ -1,6 +1,8 @@
 #nullable enable
 using System.Collections.Generic;
+using System.Text;
 using AF.Economy;
+using AF.UI;
 using NUnit.Framework;
 
 namespace AF.Tests.EditMode
@@ -225,6 +227,43 @@ namespace AF.Tests.EditMode
             Assert.That(_format.AppendResult(lines, 3, r, null, 42), Is.EqualTo(1));
             Assert.That(lines[0], Is.EqualTo("previa"), "añade al final");
             Assert.That(lines[1], Does.StartWith("AF_STATE {\"event\":\"streak_milestone\",\"t\":3,"));
+        }
+
+        [Test]
+        public void TheGrandBasketLine_FitsInOneProbeLine()
+        {
+            StreakService service = Service();
+
+            StreakServiceResult r = service.ApplySkip(100, true);
+
+            Assert.That(r.LevelBasket.Kind, Is.EqualTo(BasketKind.Grand));
+            string line = _format.Basket(long.MaxValue, r)!;
+            Assert.That(
+                line,
+                Is.EqualTo("AF_STATE {\"event\":\"basket_open\",\"t\":" + long.MaxValue + ",\"level\":100,"
+                    + "\"contents_json\":\"{\\\"kind\\\":\\\"grand\\\",\\\"seeds\\\":150,\\\"undo\\\":3,\\\"hint\\\":1,"
+                    + "\\\"extra_cuia\\\":1}\"}"));
+            Assert.That(Encoding.UTF8.GetByteCount(line), Is.LessThanOrEqualTo(DevProbe.MaxLineBytes));
+        }
+
+        [Test]
+        public void ABasketWithEveryBoosterAndHugeNumbers_StillFitsInOneProbeLine()
+        {
+            StockDelta all = StockDelta.None;
+            for (int k = 0; k < BoosterKinds.Count; k++)
+            {
+                all = all.Plus((BoosterKind)k, int.MaxValue);
+            }
+
+            var r = new StreakServiceResult(default)
+            {
+                LevelBasket = new BasketContents(BasketKind.Grand, int.MaxValue, int.MaxValue, all),
+                Events = StreakServiceEvents.BasketOpened,
+            };
+
+            string line = _format.Basket(long.MaxValue, r)!;
+            Assert.That(line, Does.Contain("\\\"shuffle\\\":" + int.MaxValue), "los cinco comodines");
+            Assert.That(Encoding.UTF8.GetByteCount(line), Is.LessThanOrEqualTo(DevProbe.MaxLineBytes), line);
         }
     }
 }

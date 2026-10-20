@@ -32,8 +32,10 @@ namespace AF.UI
     /// Sondas (solo en desarrollo, <see cref="DevProbe.Enabled"/>): <c>streak_state</c> con <c>cause = start</c> al crear el
     /// servicio y, con <see cref="StreakProbeRunner"/>, las líneas de cada <see cref="LevelFlow.LastStreakResult"/> nuevo
     /// (victoria, fallo duro o Salto del Boto) y <c>streak_state</c> con <c>cause = day</c> al cambiar el día local
-    /// (<see cref="TickStreakProbe"/>). Se leen en el fotograma del fin de nivel o en el siguiente, después de la línea
-    /// <c>victory</c> o <c>level_failed</c> de la vista: la sonda no toca <c>GameScreen</c>.
+    /// (<see cref="TickStreakProbe"/>). La sonda no toca <c>GameScreen</c>: lee el resultado en el primer fotograma después de
+    /// producirse. En la victoria, las líneas salen después de <c>AF_STATE win</c> (de <c>ResolveWin</c>) y <b>antes</b> de
+    /// <c>victory</c>, que la vista escribe tras el drenado y la celebración (hasta unos 4 s después). En el fallo duro salen
+    /// después de <c>fail_hard</c> y de <c>level_failed</c> (o del modal que toque).
     /// </para>
     /// </summary>
     public sealed partial class GameBootstrap
@@ -53,6 +55,15 @@ namespace AF.UI
         /// <summary>Cifras de la Canasta para los tests (por defecto, <see cref="BasketConfig.Defaults"/>).</summary>
         internal static BasketConfig? BasketConfigOverride { get; set; }
 
+        /// <summary>
+        /// Sonda de la Crecida para los tests: null (por defecto) sigue a <see cref="DevProbe.Enabled"/>; false la apaga (ni
+        /// <c>streak_state</c> de partida, ni <see cref="StreakProbeRunner"/>, ni líneas en <see cref="TickStreakProbe"/>), para
+        /// probar en el Editor el camino de release. <see cref="ResetStreakOverrides"/> lo limpia.
+        /// </summary>
+        internal static bool? StreakProbeOverride { get; set; }
+
+        private static bool StreakProbeEnabled => (StreakProbeOverride ?? true) && DevProbe.Enabled;
+
         /// <summary>Servicio de la Crecida (null antes de <see cref="SetUpStreak"/>, o en release sin almacén en el perfil).</summary>
         public StreakService? StreakService => _streakService;
 
@@ -65,6 +76,7 @@ namespace AF.UI
             StreakStoreOverride = null;
             StreakConfigOverride = null;
             BasketConfigOverride = null;
+            StreakProbeOverride = null;
         }
 
         /// <summary>
@@ -94,8 +106,7 @@ namespace AF.UI
             StreakService? service = CreateStreakService(profile, batch, wallet, clock, basketUnlock, Debug.isDebugBuild, out bool inMemory);
             if (service == null)
             {
-                Debug.LogWarning(LogPrefix + "sin almacén de la Crecida en el perfil: este build no tiene Crecida ni Canasta.");
-                return false;
+                return false; // solo en release sin S1: sin Crecida ni Canasta, sin aviso (como el Reto sin registro)
             }
 
             if (inMemory)
@@ -106,7 +117,7 @@ namespace AF.UI
             _streakService = service;
             _streakClock = clock;
             flow.UseStreak(service);
-            if (DevProbe.Enabled)
+            if (StreakProbeEnabled)
             {
                 _streakProbeSeen = null;
                 _streakProbeDate = clock.LocalDate();
@@ -135,7 +146,7 @@ namespace AF.UI
         {
             StreakService? service = _streakService;
             LevelFlow? flow = _flow;
-            if (!DevProbe.Enabled || service == null || flow == null || _streakClock == null)
+            if (!StreakProbeEnabled || service == null || flow == null || _streakClock == null)
             {
                 return 0;
             }

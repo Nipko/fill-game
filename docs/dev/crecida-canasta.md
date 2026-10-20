@@ -153,16 +153,17 @@ parámetros de analítica.
   `enabled` (`biz_feature_win_streak`), `active` (hay barra en ese nivel) y `free_double_next` (la siguiente victoria lleva el x2
   del río).
 - `streak_fail`: `level`, `wins_before`, `river_full_before`, `shield_used`, `streak_broken`, `river_ended`.
-- `streak_shield_used`: `level`, `streak_at_use` (la barra que salvó la hoja).
+- `streak_shield_used`: `level` [P] (solo de la sonda: no está en 08 §8.2), `streak_at_use` (la barra que salvó la hoja).
 - `free_double_harvest`: `level`, `seeds` (las que entraron por la Cosecha doble del río crecido).
-- `streak_milestone`: `level`, `milestone`, `reward_type`, `reward_value` (solo con el hito pagado).
+- `streak_milestone`: `level` [P] (solo de la sonda: no está en 08 §8.2), `milestone`, `reward_type`, `reward_value` (solo con el hito pagado).
 - `basket_open`: `level`, `contents_json` (Canasta de nivel, en la victoria o en el Salto del Boto).
 
 Un resultado del servicio sale siempre en el orden `streak_fail`, `streak_shield_used`, `free_double_harvest`,
 `streak_milestone`, `basket_open` y, si cambió el estado, `streak_state`. La sonda no toca `GameScreen`: `StreakProbeRunner`
 (un componente que añade `SetUpStreak`, solo en desarrollo) mira cada fotograma si `LevelFlow.LastStreakResult` es otro objeto
-y, si lo es, escribe sus líneas, después de las líneas `victory` o `level_failed` de la vista (en ese fotograma o en el
-siguiente). `earn_virtual_currency` de la Crecida y la Canasta no sale aquí: la tabla lo deja a `Wallet.Apply`, con el sumidero
+y, si lo es, escribe sus líneas en el primer fotograma después de producirse. En la victoria salen después de `AF_STATE win`
+(de `ResolveWin`) y **antes** de `victory`, que la vista escribe tras el drenado y la celebración (hasta unos 4 s después); en el
+fallo duro, después de `fail_hard` y de `level_failed`. `earn_virtual_currency` de la Crecida y la Canasta no sale aquí: la tabla lo deja a `Wallet.Apply`, con el sumidero
 de analítica (B7).
 
 ## 6. Enganches previstos (E26+; parches probados en `docs/dev/traspaso/spark-enganches/` en la ola 3)
