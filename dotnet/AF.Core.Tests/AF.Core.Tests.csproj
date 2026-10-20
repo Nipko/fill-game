@@ -16,6 +16,20 @@
     <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
   </PropertyGroup>
 
+  <!--
+    Compuerta de cobertura (D-033, Q-T7): >= 80 % de líneas sobre AF.Core y AF.Solver, en total. Con
+    -p:CollectCoverage=true, coverlet.msbuild instrumenta solo esos dos ensamblados, escribe
+    dotnet/artifacts/coverage/coverage.cobertura.xml y hace fallar dotnet test si no se llega al umbral.
+  -->
+  <PropertyGroup Condition="'$(CollectCoverage)' == 'true'">
+    <Include>[AF.Core]*%2c[AF.Solver]*</Include>
+    <CoverletOutputFormat>cobertura</CoverletOutputFormat>
+    <CoverletOutput>$(MSBuildThisFileDirectory)../artifacts/coverage/</CoverletOutput>
+    <Threshold>80</Threshold>
+    <ThresholdType>line</ThresholdType>
+    <ThresholdStat>total</ThresholdStat>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Include="$(AfPackageDir)Tests/Editor/**/*.cs" Link="Shared/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="DotnetOnly/**/*.cs" />
@@ -25,6 +39,15 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
     <PackageReference Include="NUnit" Version="3.14.0" />
     <PackageReference Include="NUnit3TestAdapter" Version="6.3.0" />
+    <!--
+      Cobertura (D-033, Q-T7: coverlet solo para dotnet test). Inactiva por defecto: solo mide con
+      -p:CollectCoverage=true (compuerta del job core de .github/workflows/ci.yml); la configuración va en el
+      PropertyGroup condicionado de arriba. No llega a Unity: este proyecto no lo compila Unity.
+    -->
+    <PackageReference Include="coverlet.msbuild" Version="10.0.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="NUnit.Analyzers" Version="3.9.0">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
