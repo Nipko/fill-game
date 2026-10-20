@@ -471,6 +471,95 @@ Regla de redacción: tuteo en ES-419 ("tú"), "você" en PT-BR, imperativo en EN
 | Localización (D-018) [P] | Tablas `Assets/_Project/Data/Loc/strings.csv`, `facts.csv` y `glossary.csv` (contrato 32; 08 §4.7); idiomas `es-419`, `pt-BR` y `en` (tanda 1), `fr`, `de`, `it`, `nl`, `tr`, `ja`, `ko` y `ru` (tanda 2) y el idioma falso `en-XA`, solo en desarrollo; `settings.language` ∈ {`auto`, códigos de idioma}; fachada `Loc` en el ensamblado `AF.Localization`; propiedades de usuario `device_language` y `app_language` (08 §8.1) |
 | Fauna (miquitos) [P] | Catálogo `Assets/_Project/Data/Fauna/miquitos_v0.json`, formato `af-fauna/0`; id de especie = nombre científico en minúsculas con guiones bajos (`saimiri_collinsi`, `mico_argentatus`, `saguinus_bicolor`, `lagothrix_lagothricha`, `cacajao_calvus_ucayalii`, `plecturocebus_discolor`, `saguinus_imperator`, `ateles_chamek`, `aotus_trivirgatus`, `pithecia_pithecia`, `saimiri_sciureus_albigena`); ranuras de arte `fauna_<id>_partes`, `fauna_<id>_retrato`, `fruta_<id del tinte>` (sección 9), `rama_<mundo>` y `liana_tile`; evento `af_fauna_sighted` {species_id, level, first}, aprobado el 2026-10-19 (Q11, D-029; 08 §8.2; tarea DC15) (D-010) |
 
+## 12. Nombres con EN y PT de la traducción con IA (T2) [P]
+
+
+Decisión del dueño del 2026-10-20 (T2-Q3 y T2-Q4, «las preguntas t2 hagamos lo recomendado»; registro en `docs/dev/traspaso/spark-estado.md`): para traducir con IA (D-022, pregunta 51 (b)) los textos que nombran comodines, mecánicas, lugares y fauna, el glosario gana las formas EN y PT de esta sección. Todas son propuestas [P] de la tarea T2 del equipo Spark, sin revisión nativa; lo cultural (comodines con nombre de fauna o tupí, mecánicas, lugares y fauna) queda **pendiente del asesor cultural** (07 §8.2). `Data/Loc/glossary.csv` las recoge con dos tipos nuevos, `place` (lugares: países, ríos, ciudades y sitios, con su exónimo habitual o invariantes) y `fauna` (la fauna que citan los textos), ambos culturales; los comodines y las mecánicas conservan su fila y sus notas de las secciones 5.1 y 6.5. Ningún nombre lleva la cadena «Amazon» (sección 1): «Amazonas», «Amazonia» y las regiones quedan sin EN ni PT hasta que lo decida el dueño con el asesor (T2-Q7).
+
+| Término (`glossary.csv`) | Tipo | ES-419 | EN | PT-BR | Estado |
+|---|---|---|---|---|---|
+| `booster.continue_cuia` | booster | Cuia de rescate | Rescue Cuia | Cuia de Resgate | [P] T2 |
+| `booster.extra_cuia` | booster | Cuia extra | Extra Cuia | Cuia Extra | [P] T2 |
+| `booster.hint` | booster | Morpho | Morpho | Morpho | [P] T2 · pendiente del asesor |
+| `booster.restart` | booster | Volver a la orilla | Back to shore | Voltar à margem | [P] T2 |
+| `booster.reveal` | booster | Luciérnaga | Firefly | Vaga-lume | [P] T2 · pendiente del asesor |
+| `booster.rv_double_harvest` | booster | Cosecha doble | Double Harvest | Colheita dupla | [P] T2 |
+| `booster.shuffle` | booster | Pororoca | Pororoca | Pororoca | [P] T2 · pendiente del asesor |
+| `booster.skip` | booster | Salto del Boto | Boto Leap | Salto do Boto | [P] T2 · pendiente del asesor |
+| `booster.undo` | booster | Marea | Tide | Maré | [P] T2 |
+| `difficulty_subtitle_hard` | ui | Aguas bravas | Rough Waters | Águas bravas | [P] T2 · pendiente del asesor |
+| `difficulty_subtitle_very_hard` | ui | Noche de jaguar | Jaguar Night | Noite da Onça | [P] T2 · pendiente del asesor |
+| `fauna.agouti` | fauna | agutí | agouti | cutia | [P] T2 · pendiente del asesor |
+| `fauna.anaconda` | fauna | anaconda | anaconda | sucuri | [P] T2 · pendiente del asesor |
+| `fauna.caiman` | fauna | caimán | caiman | jacaré | [P] T2 · pendiente del asesor |
+| `fauna.deer` | fauna | venado | deer | veado | [P] T2 · pendiente del asesor |
+| `fauna.macaw` | fauna | guacamayo | macaw | arara | [P] T2 · pendiente del asesor |
+| `fauna.manatee` | fauna | manatí | manatee | peixe-boi | [P] T2 · pendiente del asesor |
+| `fauna.paca` | fauna | paca | paca | paca | [P] T2 · pendiente del asesor |
+| `fauna.parrot` | fauna | loro | parrot | papagaio | [P] T2 · pendiente del asesor |
+| `fauna.river_dolphin` | fauna | delfín de río | river dolphin | boto | [P] T2 · pendiente del asesor |
+| `fauna.tapir` | fauna | tapir | tapir | anta | [P] T2 · pendiente del asesor |
+| `fauna.toucan` | fauna | tucán | toucan | tucano | [P] T2 · pendiente del asesor |
+| `iap_af_rescue_name` | ui | Balsa de rescate | Rescue Raft | Balsa de Resgate | [P] T2 |
+| `mechanic.alta` | mechanic | Cuia alta | Tall Cuia | Cuia alta | [P] T2 |
+| `mechanic.barro` | mechanic | Barro | Mud | Barro | [P] T2 · pendiente del asesor |
+| `mechanic.brote` | mechanic | Brote | Sprout | Broto | [P] T2 · pendiente del asesor |
+| `mechanic.brote_n2` | mechanic | Brote de dos hojas | Two-Leaf Sprout | Broto de duas folhas | [P] T2 · pendiente del asesor |
+| `mechanic.chica` | mechanic | Cuia chica | Small Cuia | Cuia pequena | [P] T2 |
+| `mechanic.flor` | mechanic | Flor de vitória-régia | Water Lily Flower | Flor de vitória-régia | [P] T2 · pendiente del asesor |
+| `mechanic.hoja` | mechanic | Hoja | Leaf | Palha | [P] T2 · pendiente del asesor |
+| `mechanic.hoja_atada` | mechanic | Hoja atada | Tied Leaf | Palha atada | [P] T2 · pendiente del asesor |
+| `mechanic.liana` | mechanic | Liana con fruta | Fruit Vine | Cipó | [P] T2 · pendiente del asesor |
+| `mechanic.liana_n` | mechanic | Liana de cuenta | Counting Vine | Cipó de contas | [P] T2 · pendiente del asesor |
+| `mechanic.lluvia` | mechanic | Lluvia | Rain | Chuva | [P] T2 · pendiente del asesor |
+| `mechanic.matapi` | mechanic | Matapi | Matapi | Matapi | [P] T2 · pendiente del asesor |
+| `mechanic.pirana` | mechanic | Piraña | Piranha | Piranha | [P] T2 · pendiente del asesor |
+| `mechanic.remolino` | mechanic | Remolino | Whirlpool | Redemoinho | [P] T2 · pendiente del asesor |
+| `place.andes` | place | Andes | Andes | Andes | [P] T2 · pendiente del asesor |
+| `place.atlantic` | place | océano Atlántico | Atlantic Ocean | oceano Atlântico | [P] T2 · pendiente del asesor |
+| `place.belem` | place | Belém | Belém | Belém | [P] T2 · pendiente del asesor |
+| `place.beni` | place | Beni | Beni | Beni | [P] T2 · pendiente del asesor |
+| `place.bolivia` | place | Bolivia | Bolivia | Bolívia | [P] T2 · pendiente del asesor |
+| `place.branco` | place | Branco | Branco | Branco | [P] T2 · pendiente del asesor |
+| `place.brazil` | place | Brasil | Brazil | Brasil | [P] T2 · pendiente del asesor |
+| `place.cano_cristales` | place | Caño Cristales | Caño Cristales | Caño Cristales | [P] T2 · pendiente del asesor |
+| `place.caroni` | place | Caroní | Caroní | Caroní | [P] T2 · pendiente del asesor |
+| `place.casiquiare` | place | Casiquiare | Casiquiare | Casiquiare | [P] T2 · pendiente del asesor |
+| `place.colombia` | place | Colombia | Colombia | Colômbia | [P] T2 · pendiente del asesor |
+| `place.cuyabeno` | place | Cuyabeno | Cuyabeno | Cuyabeno | [P] T2 · pendiente del asesor |
+| `place.ecuador` | place | Ecuador | Ecuador | Equador | [P] T2 · pendiente del asesor |
+| `place.french_guiana` | place | Guayana Francesa | French Guiana | Guiana Francesa | [P] T2 · pendiente del asesor |
+| `place.guyana` | place | Guyana | Guyana | Guiana | [P] T2 · pendiente del asesor |
+| `place.iquitos` | place | Iquitos | Iquitos | Iquitos | [P] T2 · pendiente del asesor |
+| `place.itenez` | place | Iténez | Iténez | Iténez | [P] T2 · pendiente del asesor |
+| `place.kew` | place | Kew | Kew | Kew | [P] T2 · pendiente del asesor |
+| `place.mamore` | place | Mamoré | Mamoré | Mamoré | [P] T2 · pendiente del asesor |
+| `place.maranon` | place | Marañón | Marañón | Marañón | [P] T2 · pendiente del asesor |
+| `place.maroni` | place | Maroni | Maroni | Maroni | [P] T2 · pendiente del asesor |
+| `place.meeting_of_waters` | place | Encuentro de las Aguas | Meeting of Waters | Encontro das Águas | [P] T2 · pendiente del asesor |
+| `place.mexico` | place | México | Mexico | México | [P] T2 · pendiente del asesor |
+| `place.napo` | place | Napo | Napo | Napo | [P] T2 · pendiente del asesor |
+| `place.negro` | place | Negro | Negro | Negro | [P] T2 · pendiente del asesor |
+| `place.noel_kempff` | place | Noel Kempff | Noel Kempff | Noel Kempff | [P] T2 · pendiente del asesor |
+| `place.orinoco` | place | Orinoco | Orinoco | Orinoco | [P] T2 · pendiente del asesor |
+| `place.para` | place | Pará | Pará | Pará | [P] T2 · pendiente del asesor |
+| `place.peru` | place | Perú | Peru | Peru | [P] T2 · pendiente del asesor |
+| `place.santarem` | place | Santarém | Santarém | Santarém | [P] T2 · pendiente del asesor |
+| `place.shanay_timpishka` | place | Shanay-Timpishka | Shanay-Timpishka | Shanay-Timpishka | [P] T2 · pendiente del asesor |
+| `place.solimoes` | place | Solimões | Solimões | Solimões | [P] T2 · pendiente del asesor |
+| `place.suriname` | place | Surinam | Suriname | Suriname | [P] T2 · pendiente del asesor |
+| `place.takutu` | place | Takutu | Takutu | Takutu | [P] T2 · pendiente del asesor |
+| `place.tambopata` | place | Tambopata | Tambopata | Tambopata | [P] T2 · pendiente del asesor |
+| `place.tuichi` | place | Tuichi | Tuichi | Tuichi | [P] T2 · pendiente del asesor |
+| `place.venezuela` | place | Venezuela | Venezuela | Venezuela | [P] T2 · pendiente del asesor |
+| `stuck_subtitle` | ui | Aguas estancadas | Still waters | Águas paradas | [P] T2 |
+| `ui.basin` | ui | Cuenca | Basin | Bacia | [P] T2 |
+| `ui.handful` | ui | Puñado de semillas | Handful of seeds | Punhado de sementes | [P] T2 |
+| `ui.infinite_canoes` | ui | Canoas infinitas | Endless Canoes | Canoas infinitas | [P] T2 |
+| `ui.river_samples` | ui | Muestrario del río | River Samples | Mostruário do Rio | [P] T2 |
+
+Las mecánicas que ya tenían PT de la propuesta de D-007 (b.2) lo conservan (Hoja «Palha», Liana «Cipó», Matapi invariante; sección 6.5); para el Remolino se elige «Redemoinho» entre las dos de esa propuesta. El tinte `tint.agua_negro.name` sigue siendo «Rio Negro Water» / «Água do Rio Negro»; el río es `place.negro`. La ciudad de Manaos no tiene fila propia: «Manaos» es hoy el nombre invariante del mundo 3 (sección 8) y `glossary.csv` no admite dos filas con el mismo español; si el mundo pasa a «Manaus» en EN y PT, lo decide el dueño. `fact_sheet_title` sigue en el §10 «pendiente del traductor» (propuesta T2: «River Fruits» / «Frutas do Rio»).
+
 ## Parámetros configurables (Remote Config)
 
 Este capítulo solo nombra. **La tabla única de Remote Config, con defaults y rangos, es 08 §9**; aquí no se repiten valores. Claves que nacen del vocabulario de este glosario (nombres exactos de 08 §9):
