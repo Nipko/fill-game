@@ -17,7 +17,7 @@ Márgenes laterales: `SimulatedScreen` no los admite (`ReadScreen` fija `x = 0`)
 
 ### Parche: `b10-storesheet-safe-area.patch`
 
-`OverlayCanvas` expone `SafeTop` y `SafeBottom` (en unidades del lienzo), y `Measure()` también recalcula cuando cambia el safe area. La hoja suma `SafeBottom` a su altura: sigue llegando al borde inferior, pero su contenido queda por encima de la barra. Se aplica con `git apply docs/dev/traspaso/b10-storesheet-safe-area.patch` sobre `Assets/_Project/Scripts/UI/StoreSheet.cs`, que no es de GameScreen ni de AppFlow. Le toca a unity-gameplay-dev, junto con un test de PlayMode: `SimulatedScreen` con un margen inferior grande (p. ej. 220 px) y la comprobación de que `CancelButton` queda dentro del safe area.
+`OverlayCanvas` expone `SafeTop` y `SafeBottom` (en unidades del lienzo), y `Measure()` también recalcula cuando cambia el safe area. La hoja suma `SafeBottom` a su altura: sigue llegando al borde inferior, pero su contenido queda por encima de la barra. Se aplica con `git apply docs/dev/traspaso/b10-storesheet-safe-area.patch` (el `.patch` va en LF por `.gitattributes`) sobre `Assets/_Project/Scripts/UI/StoreSheet.cs`, que no es de GameScreen ni de AppFlow. Le toca a unity-gameplay-dev, junto con un test de PlayMode: `SimulatedScreen` con un margen inferior grande (p. ej. 220 px) y la comprobación de que `CancelButton` queda dentro del safe area.
 
 ## Retroceso predictivo: estado
 
