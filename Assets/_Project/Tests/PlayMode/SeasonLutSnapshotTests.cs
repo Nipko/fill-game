@@ -18,8 +18,8 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Capturas de la LUT de temporada en los fondos (tarea SE2; pregunta 32 b de docs/GDD.md §6.3, D-020; D-009, punto 6;
     /// 07 §2.1): el mismo tablero sin la LUT de temporada y con ella, en un ciclo A (aguas altas) y en uno B (aguas bajas),
-    /// para ver que solo cambia la luz del panorama, del cielo y del héroe, y no la banda de agua (VA-23) ni el brillo del
-    /// cielo (VA-03):
+    /// para ver que cambia la luz del panorama, del cielo y del héroe, y el agua de la banda solo hasta ΔE00 ≤ 4,5 de su preset
+    /// (VA-23; DC21), sin bajar el brillo del cielo (VA-03):
     /// <list type="bullet">
     /// <item><description><c>season_a_l41_off</c> y <c>season_a_l41_on</c> (ciclo 41, A), y <c>season_b_l41_forced</c> (la misma
     /// parada con la B forzada, <see cref="GameScreen.SeasonOverride"/>);</description></item>
@@ -35,7 +35,8 @@ namespace AF.Tests.PlayMode
     /// Cada captura escribe su línea <c>AF_SEASON</c> con la sonda del fondo. Criterio de la revisión de SE2 (la LUT es la única
     /// señal de la temporada, sin cartel): en la franja del panorama del tablero (filas 0-380 de 2340 sin la caja del HUD,
     /// x 30-1060, y 110-270), ΔE00 medio ≥ 5 entre <c>_off</c> y <c>_on</c>, y ≥ 8 entre A y B en la misma parada (<c>_on</c>
-    /// frente a <c>_forced</c>). VA-03, fuera del panel (en la 191, x 23-1057, y 240-1886), de las piezas del HUD y de la bandeja
+    /// frente a <c>_forced</c>); desde DC21 lo vigila <see cref="SeasonVisibilitySnapshotTests"/>, sobre lo que el tablero deja a
+    /// la vista. VA-03, fuera del panel (en la 191, x 23-1057, y 240-1886), de las piezas del HUD y de la bandeja
     /// (x 285-800, y 1915-2245): media de V ≥ 0,55 y de S ≥ 0,30, y como mucho un 10 % de píxeles con V &lt; 0,25. Las dos
     /// cosas se miden sobre los PNG, fuera del test (ningún test las vigila); en la ronda final de la revisión de SE2:
     /// ΔE00 6,3 y 8,6 en la 41, 6,9 y 9,7 en la 61, y 2,8 y 3,6 en la 191 (la luz del alba tapa casi todo el panorama);
@@ -98,7 +99,8 @@ namespace AF.Tests.PlayMode
             StopBackdrop b = boot.View!.StopBackdrop;
             Assert.That(b.Season, Is.EqualTo(season ? (forced ?? expected) : Season.None), name);
             Assert.That(boot.View.PanoramaTint, Is.EqualTo(StopBackdrop.LutOf(b.Stop, b.Season)), name);
-            Assert.That(b.BandColor, Is.EqualTo(Palette.WaterBase(boot.Flow!.Level.WaterBase)), name + ": la banda sin LUT (VA-23)");
+            Assert.That(b.BandColor, Is.EqualTo(Palette.WaterBase(boot.Flow!.Level.WaterBase)), name + ": el preset del mundo");
+            Assert.That(ColorMath.DeltaE00(b.SeasonWaterColor, b.BandColor), Is.LessThanOrEqualTo(5f), name + ": la banda, VA-23");
             SnapshotKit.Save(dir, name);
             Debug.Log("AF_SEASON " + name + ": nivel " + level + ", temporada " + (SeasonTable.Letter(b.Season) ?? "-") + ", luz "
                 + Rgb(b.LutColor) + ", " + boot.View.LastStopProbe);
