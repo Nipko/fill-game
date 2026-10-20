@@ -17,7 +17,8 @@ ejecuciones den los mismos bytes.
 | `--parity [--report <md>]` | Paridad de las métricas con el prototipo (03 §17-§18; 09 R26) | `tools/out/parity_report.md` |
 | `--spec <campaign.json> [--levels a-b] [--variant a\|b] --out <carpeta> [--report <md>] [--curation <md> [--decisions <json>]] [--check]` | Genera la campaña (03 §2); sin `--levels`, todos los niveles de la especificación; `--curation`, el informe de curación para el dueño (P7a), con su decisión de `--decisions` | `Assets/_Project/Data/Levels/mundo_0N_v1.json`, `tools/out/campaign_v1_report.md` y `tools/out/curation_wNN.md` |
 | `--seasons <campaign.json> [...] --out <tabla.json> [--until <nivel>] [--check]` | Tabla de temporada del cliente (pregunta 32 b), hasta el último nivel publicado | `Assets/_Project/Data/Levels/seasons_v1.json` |
-| `--self-test [tinaja\|seasons\|variants\|registry\|curation\|holgura]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
+| `--daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <md>] [--check] [--threads n]` | Pool del Reto del río (03 §16): un tablero por banda y día | `<carpeta>/daily_pool_v1.json` y el informe (la muestra: `tools/out/daily_sample/` y `tools/out/daily_sample_report.md`) |
+| `--self-test [tinaja\|seasons\|variants\|registry\|curation\|holgura\|daily]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
 
@@ -745,3 +746,41 @@ de cada nivel 21-200 frente a `CampaignSpec.SeasonOf`, el formato, el determinis
 corte de `--until` (hasta el 200, la tabla de `campaign_v1.json`; hasta el 60, dos ciclos), la unión de dos especificaciones y
 los rechazos (también `--until` a mitad de ciclo o fuera de las especificaciones), entre ellos el fixture
 `specs/tests/seasons_invalid_letter.json` (ciclo 61 con temporada C, que también falla `--validate-spec` por SEASONS).
+
+## Reto del río (`--daily`; R2-R3 del encargo del Spark)
+
+Pool del Reto del río (`daily_challenge`; 03 §16; nota de diseño `docs/dev/reto-del-rio.md` §13), en `Daily/`. La
+especificación es `specs/daily_v1.json` (lector `Daily/DailySpec.cs`): las tres bandas con su K por día (`k_by_day`), sus
+vacíos, su ventana de `bot_fail`, su fuente de candidatos (y el respaldo de B1), su paleta (tintes estrenados hasta
+`debut_until`) y su tope de pares de riesgo, y el agua y el mundo de cada día; los tintes y los pares de riesgo se leen de
+`campaign_v2.json` (`tints_from`), sin copiarlos.
+
+```
+dotnet run --project tools/level-generator -c Release -- --daily --spec tools/level-generator/specs/daily_v1.json --bands 1,2,3 --days 0-728 --out <carpeta> [--report <informe.md>] [--check] [--threads n]
+```
+
+- Un tablero por banda (1-3) y día (0-728), con id `d{b}_n{nnnn}` y semilla `amazonfill:v1:daily:b{b}:d{ddd}` (`Daily/DailyIds.cs`).
+- Sin mecánicas, sin ocultos y sin alivio (`relief` vacío), en `<carpeta>/daily_pool_v1.json` (af-level/1, `kind` daily).
+- `Daily/DailyRunner.cs` genera los candidatos con las fuentes de `AF.Solver` y `Generation/` sin cambiarlas, y acepta el
+  primero en la ventana del bot que A* resuelve con par ≥ 2K. `Daily/DailyTints.cs` pone los tintes,
+  `Daily/DailyPackWriter.cs` escribe el pack y `Daily/DailyReport.cs` el informe.
+- `--bands` y `--days` son listas con rangos (`0-9,100,200-209`); por defecto, todas.
+- `--threads` fija los hilos; el pack no depende de ellos.
+- Con `--check` no escribe: compara el pack con el del disco byte a byte.
+- Códigos: 0 = generado o idéntico (también con avisos: días fuera de la ventana o con pares por encima del tope, que el
+  informe marca y `level-qa --daily` da como fallo); 1 = algún día sin tablero, un tablero que no cumple lo que promete el
+  pack o `--check` distinto; 2 = uso o especificación ilegible.
+
+La muestra versionada (bandas 1-3, días 0-9; 30 tableros) es `tools/out/daily_sample/daily_pool_v1.json`, con su informe
+`tools/out/daily_sample_report.md`. El pool completo no se publica hasta R5 del encargo. La QA es
+`dotnet run --project tools/level-qa -c Release -- --daily <pack>` (con `--partial` para la muestra; `tools/level-qa/README.md`),
+que regenera los tableros del pack con este generador, en un proceso hijo, y los compara (QA-DAILY-REPRO).
+
+`--self-test daily` (también dentro del `--self-test` sin nombre) prueba los ids y las semillas (días 0 y 729, bandas 1-3, los
+rechazos y los patrones del esquema, rama `kind` daily), que `specs/daily_v1.json` carga con los valores de 03 §16 y de la nota
+§13, los rechazos de una especificación mal formada y la generación de 3 días por banda: determinismo byte a byte con 1 hilo y
+en paralelo, lo que el pack promete y que la semilla reproduce el tablero.
+
+```
+dotnet run --project tools/level-generator -c Release -- --self-test daily
+```

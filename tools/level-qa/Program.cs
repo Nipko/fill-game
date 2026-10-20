@@ -24,7 +24,8 @@ const string Usage = """
 
     Uso:
       dotnet run --project tools/level-qa -c Release -- <paquete.json> [<paquete.json> ...] [--report <informe.md>] [--spec <campaign.json>] [--levels a-b] [--variant a|b] [--no-reproduce]
-      dotnet run --project tools/level-qa -- --self-test [key2|reglas|variante]
+      dotnet run --project tools/level-qa -c Release -- --daily <daily_pool_v1.json> [--spec <daily_v1.json>] [--partial] [--no-reproduce]
+      dotnet run --project tools/level-qa -- --self-test [key2|reglas|variante|daily]
       dotnet run --project tools/level-qa -- --help
 
     Recalcula cada nivel con AF.Core y AF.Solver y comprueba: estructura, U_c, selladas, Aguas estancadas al inicio, par
@@ -60,6 +61,14 @@ const string Usage = """
     del pack de muestra de la tinaja: con a (y sin --variant) el 323 con la tinaja pasa QA-MECH-SPEC y QA-MECH-CELL y una
     comodidad pura en el 327 da QA-MECH-CELL; con b, al reves; --variant c y --variant b con campaign_v1 salen con 2.
     Sale con 0, 1 (algun FAIL) o 2.
+    --daily (Reto del rio, 03 sec. 16): QA del pool (QA-DAILY-*) con la especificacion tools/level-generator/specs/
+    daily_v1.json (o --spec), el mismo lector que el generador: esquema, slot, id y semilla, 730 dias por banda, K, vacios y
+    capacidad, paleta y tope de pares por banda, sin mecanicas ni alivio, A*, par >= 2K, ventana del bot, <= 14 cuias,
+    < 2 MB y QA-DAILY-REPRO (regenera los dias del pack con el generador, en un proceso hijo, y compara cada tablero
+    entero); la anti-repeticion y las trampas tempranas, solo aviso (R-Q10). --partial: una muestra (los dias que faltan no
+    fallan; avisa de que no es el pool completo). --no-reproduce salta QA-DAILY-REPRO; nunca en el CI.
+    --self-test daily: el fixture valido y los malos de tools/level-qa/fixtures/daily/ (cada uno falla con su id), los
+    avisos de R-Q10 y el tope de tamano. Sale con 0, 1 (algun FAIL) o 2.
 
     Codigos de salida: 0 = todo cumple (los avisos no fallan) o ayuda; 1 = algun nivel no cumple, el esquema falla, un
     pack no se reproduce o falta Python; 2 = uso incorrecto, sin paquetes o archivos ilegibles.
@@ -96,7 +105,7 @@ if (args[0] == "--self-test")
 {
     if (args.Length > 2 || (args.Length == 2 && args[1] != "key2" && args[1] != "reglas" && args[1] != "variante"))
     {
-        return UsageError("--self-test solo admite: key2, reglas o variante.");
+        return UsageError("--self-test solo admite: key2, reglas, variante o daily.");
     }
 
     if (args.Length == 2 && args[1] == "variante")

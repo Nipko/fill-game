@@ -26,7 +26,10 @@ internal static class DailyReport
         L($"- Especificación: `{spec.Path}` ({spec.Name}); tintes y pares de riesgo de `{spec.TintsFrom}`.");
         L($"- Pack: `{packPath}`, {I(packBytes.Length)} bytes, SHA-256 `{Convert.ToHexStringLower(SHA256.HashData(packBytes))}`.");
         L($"- Tableros: {I(run.Boards.Count)}; errores: {I(run.Errors.Count)}.");
-        L("- **Estado [P]:** la especificación está pendiente de R-Q1b (paleta de B2 con K = 9 y de B3, nota §1.1), de la fórmula del agua de R-Q2 y de R-Q11 (días fuera de ventana, nota §1.6). Este pool no se publica (R5) hasta que el dueño responda.");
+        L("- **Estado:** R-Q1b (a) y R-Q11 (a) decididas por el dueño el 2026-10-19: B2 solo con K = 8, B3 con max_pares_riesgo libre (03 §4.5) y la ventana del bot como compuerta (un día fuera de ventana no se publica; `level-qa --daily` lo da como fallo). Siguen [P] la fórmula del agua de R-Q2, `k_by_day` y las fuentes de cada banda.");
+        L("- Tope de pares de riesgo por banda: " + string.Join(", ", spec.Bands.Select(b => $"B{I(b.Band)} {(b.RiskFree ? "libre" : I(b.MaxRiskPairs))}")) + ".");
+        L("- Fuentes por banda (en orden; cada una con max_candidates candidatos): " + string.Join("; ", spec.Bands.Select(b =>
+            $"B{I(b.Band)} " + string.Join(" -> ", b.Rules.Select(Src).Concat(b.Fallbacks.Select(Src))))) + ".");
         L();
 
         L("## Resumen por banda");
@@ -52,7 +55,7 @@ internal static class DailyReport
         L();
         L("## Rechazos por banda y motivo");
         L();
-        L("Candidatos descartados antes del elegido (los «fuera de la ventana del bot» incluyen, en los días fuera de ventana, el que acabó elegido como el más cercano).");
+        L("Candidatos descartados antes del elegido.");
         L();
         L("| Banda | Motivo | Candidatos |");
         L("|---|---|---|");
@@ -76,9 +79,9 @@ internal static class DailyReport
         }
 
         L();
-        L("## Días fuera de la ventana del bot (R-Q11) [P]");
+        L("## Días fuera de la ventana del bot (R-Q11 (a))");
         L();
-        L("Ningún candidato entró en la ventana; se guardó el más cercano que A* resuelve con par >= 2K. `level-qa --daily` (R4) lo da como fallo.");
+        L("La ventana es compuerta: un día sin candidato en ella es un error y el pack no se escribe. Esta lista sale vacía en un pack escrito.");
         L();
         List<DailyBoard> outside = run.Boards.Where(b => !b.InWindow).ToList();
         if (outside.Count == 0)
@@ -97,9 +100,9 @@ internal static class DailyReport
         }
 
         L();
-        L("## Tableros con más pares de riesgo que el tope de su banda (R-Q1b) [P]");
+        L("## Tableros con más pares de riesgo que el tope de su banda (R-Q1b (a))");
         L();
-        L("La paleta de R-Q1 no admite ese K con el tope (nota §1.1): el tablero lleva el mínimo de pares posible con ese K; no cambian ni K ni la paleta.");
+        L("Un K que la paleta no admite con su tope es un error de la especificación antes de generar; esta lista sale vacía.");
         L();
         var over = run.Boards.Where(b => b.OverRiskCap).GroupBy(b => (b.Band, b.K)).OrderBy(g => g.Key.Band).ThenBy(g => g.Key.K).ToList();
         if (over.Count == 0)
@@ -168,6 +171,10 @@ internal static class DailyReport
 
         return sb.ToString();
     }
+
+    private static string Src(DailySource s) =>
+        s.Gen + (s.E is int e ? " E=" + e.ToString(CultureInfo.InvariantCulture) : "")
+        + (s.Nodes is int n ? " (" + n.ToString(CultureInfo.InvariantCulture) + " nodos)" : "");
 
     private static double Median(List<double> sorted) =>
         sorted.Count % 2 == 1 ? sorted[sorted.Count / 2] : (sorted[(sorted.Count / 2) - 1] + sorted[sorted.Count / 2]) / 2;

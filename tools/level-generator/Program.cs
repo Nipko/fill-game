@@ -30,7 +30,8 @@ const string Usage = """
       dotnet run --project tools/level-generator -- --registry <campaign.json> --out <registro.json> [--variant a|b] [--check]
       dotnet run --project tools/level-generator -- --parity [--report tools/out/parity_report.md]
       dotnet run --project tools/level-generator -- --seasons <campaign.json> [<campaign.json> ...] --out <tabla.json> [--until <nivel>] [--check]
-      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation|holgura]
+      dotnet run --project tools/level-generator -c Release -- --daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <informe.md>] [--check] [--threads n]
+      dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation|holgura|daily]
       dotnet run --project tools/level-generator -- --help
 
     --validate-spec: comprueba la especificacion de la campana (specs/campaign_v1.json, 11-200, y campaign_v2.json,
@@ -77,7 +78,9 @@ const string Usage = """
       (SplitSlackPour sobre un tablero fijo; con D-027, los hitos de K = 12 de 561-700 con su vacio y sin repartirla y
       los de K = 13 sin cambiar K; el mecanismo, con la forma de antes de D-027: las etapas de los hitos de 14 cuias de
       561-700 y de los retos con la cueva de la Pirana y el Brote; ningun slot de 11-560 la usa y la que la usa lleva la
-      cuia de holgura). Desde la raiz del repositorio.
+      cuia de holgura). "daily" (Reto del rio, 03 sec. 16): ids y semillas del pool (DailyIds), la especificacion
+      specs/daily_v1.json y sus rechazos, y la generacion de 3 dias por banda (determinismo byte a byte con 1 hilo y en
+      paralelo; la semilla reproduce el tablero). Desde la raiz del repositorio.
       Codigos: 0 = todo PASS; 1 = algun FAIL; 2 = uso o especificacion ilegible.
     --parity: recalcula con AF.Core/AF.Solver par, complejidad, ramificacion, trampas y la variante -1 color de los 40
       niveles del prototipo (tools/out/levels_proto.json y tools/out_inverse/levels_proto.json; GDD 03 sec. 17-18, 09 R26)
@@ -106,6 +109,13 @@ const string Usage = """
       sin entrada para el nivel (o con otra celda), "pendiente". Codigo 2 si esta mal formado, decide un nivel fuera de
       la especificacion o decide un nivel del rango que no es reto, hito ni primer tablero de estreno; las decisiones de
       la especificacion fuera de --levels se ignoran (--self-test curation).
+    --daily: pool del Reto del rio (03 sec. 16; docs/dev/reto-del-rio.md): un tablero por banda (1-3) y dia (0-728) desde
+      la semilla amazonfill:v1:daily:b{b}:d{ddd}, sin mecanicas ni alivio, en <carpeta>/<pack_id>.json (daily_pool_v1.json;
+      af-level/1, kind daily) y, con --report, el informe. --bands y --days: listas con rangos (p. ej. 0-9,100); por defecto
+      todas. --threads: hilos (el pack no depende de ellos). Con --check no escribe: falla si el pack del disco difiere. La
+      QA es level-qa --daily. Codigos: 0 = generado o identico (tambien con avisos: dias fuera de la ventana del bot o con
+      pares por encima del tope); 1 = algun dia sin tablero, un tablero que no cumple lo que promete el pack o --check
+      distinto; 2 = uso o especificacion ilegible.
     Codigos de salida: 0 = correcto o ayuda; 1 = la generacion o las comprobaciones fallaron;
     2 = uso incorrecto (sin argumentos, faltan opciones, u opcion desconocida o repetida).
     """;
@@ -142,7 +152,8 @@ if (args.Length >= 1 && args[0] == "--self-test")
         int registry = RegistrySelfTest.Run();
         int curationTest = CurationSelfTest.Run();
         int holgura = HolguraSelfTest.Run();
-        return Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), Math.Max(curationTest, holgura));
+        int daily = AmazonFill.Tools.LevelGenerator.Daily.DailyCommand.Run(["--self-test", "daily"]);
+        return Math.Max(Math.Max(Math.Max(Math.Max(tinaja, seasons), Math.Max(variants, registry)), Math.Max(curationTest, holgura)), daily);
     }
 
     if (args.Length == 2 && args[1] == "holgura")
@@ -175,7 +186,7 @@ if (args.Length >= 1 && args[0] == "--self-test")
         return SeasonTableWriter.SelfTest();
     }
 
-    return UsageError("--self-test solo admite: tinaja, seasons, variants, registry, curation u holgura.");
+    return UsageError("--self-test solo admite: tinaja, seasons, variants, registry, curation, holgura o daily.");
 }
 
 if (args.Length >= 1 && args[0] == "--seasons")

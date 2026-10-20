@@ -11,6 +11,7 @@
     "AF.Platform",
     "AF.Save",
     "AF.Economy",
+    "AF.LiveOps",
     "AF.Boosters",
     "AF.Ads",
     "AF.IAP",

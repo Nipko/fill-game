@@ -15,19 +15,23 @@ namespace AF.Tests.EditMode
     {
         private static DailyPool? _full;
 
-        // El pool completo (3 bandas × 730 días = 2.190 tableros) se lee una vez.
+        // Último día del pool (728 con DailyPool.Days = 729; R-Q2b).
+        private const int LastDay = DailyPool.Days - 1;
+
+        // El pool completo (3 bandas × 729 días = 2.187 tableros; R-Q2b) se lee una vez.
         private static DailyPool Full => _full ??= DailyPoolReader.Read(DailyPoolTestPacks.Pool(DailyPoolTestPacks.Boards(1, 2, 3)));
 
         // ---------- Casos buenos ----------
 
         [Test]
-        public void Read_FullPool_HasThreeBandsOf730Days()
+        public void Read_FullPool_HasThreeBandsOf729Days()
         {
             DailyPool pool = Full;
             Assert.That(pool.PackId, Is.EqualTo(DailyPoolTestPacks.PackId));
             Assert.That(pool.PackSchema, Is.EqualTo(2));
             Assert.That(pool.BandCount, Is.EqualTo(3));
-            Assert.That(pool.Count, Is.EqualTo(3 * 730));
+            Assert.That(pool.Count, Is.EqualTo(3 * DailyPool.Days));
+            Assert.That(DailyPool.Days, Is.EqualTo(729), "R-Q2b: 81 × 9 días");
             for (int band = 1; band <= 3; band++)
             {
                 Assert.That(pool.HasBand(band), Is.True, "banda " + band);
@@ -40,7 +44,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void Find_FirstAndLastDayOfEachBand_ReturnsTheBoardOfThatSlot(
             [Values(1, 2, 3)] int band,
-            [Values(0, 729)] int day)
+            [Values(0, LastDay)] int day)
         {
             LevelDefinition? board = Full.Find(band, day);
             Assert.That(board, Is.Not.Null);
@@ -68,13 +72,14 @@ namespace AF.Tests.EditMode
             DailyPool pool = Full;
             Assert.That(pool.FindById("d2_n0417"), Is.SameAs(pool.Find(2, 417)));
             Assert.That(pool.FindById("d1_n0000"), Is.SameAs(pool.Find(1, 0)));
-            Assert.That(pool.FindById("d3_n0729"), Is.SameAs(pool.Find(3, 729)));
+            Assert.That(pool.FindById("d3_n0728"), Is.SameAs(pool.Find(3, LastDay)));
         }
 
         [TestCase(null)]
         [TestCase("")]
         [TestCase("d2_n417")]
         [TestCase("d4_n0001")]
+        [TestCase("d1_n0729")]
         [TestCase("d1_n0730")]
         [TestCase("D1_n0001")]
         [TestCase("m01_v1_n0001")]
@@ -86,6 +91,7 @@ namespace AF.Tests.EditMode
         [TestCase(0, 0)]
         [TestCase(4, 0)]
         [TestCase(1, -1)]
+        [TestCase(1, DailyPool.Days)]
         [TestCase(1, 730)]
         [TestCase(-1, 5)]
         public void Find_OutOfRange_ReturnsNull(int band, int day)
@@ -106,11 +112,11 @@ namespace AF.Tests.EditMode
         {
             DailyPool pool = DailyPoolReader.Read(DailyPoolTestPacks.Pool(DailyPoolTestPacks.Boards(2)), DailyPoolCoverage.PresentBands);
             Assert.That(pool.BandCount, Is.EqualTo(1));
-            Assert.That(pool.Count, Is.EqualTo(730));
+            Assert.That(pool.Count, Is.EqualTo(DailyPool.Days));
             Assert.That(pool.HasBand(2), Is.True);
             Assert.That(pool.HasBand(1), Is.False);
             Assert.That(pool.Find(1, 0), Is.Null);
-            Assert.That(pool.Find(2, 729)!.Id, Is.EqualTo("d2_n0729"));
+            Assert.That(pool.Find(2, LastDay)!.Id, Is.EqualTo("d2_n0728"));
             Assert.That(pool.FindById("d1_n0000"), Is.Null);
         }
 
@@ -121,7 +127,7 @@ namespace AF.Tests.EditMode
             boards.Reverse();
             DailyPool pool = DailyPoolReader.Read(DailyPoolTestPacks.Pool(boards), DailyPoolCoverage.PresentBands);
             Assert.That(pool.Find(3, 0)!.Id, Is.EqualTo("d3_n0000"));
-            Assert.That(pool.Find(3, 729)!.Id, Is.EqualTo("d3_n0729"));
+            Assert.That(pool.Find(3, LastDay)!.Id, Is.EqualTo("d3_n0728"));
         }
 
         [Test]
@@ -152,26 +158,27 @@ namespace AF.Tests.EditMode
             Assert.That(DailyPool.IdOf(1, 5), Is.EqualTo("d1_n0005"));
             Assert.That(DailyPool.SeedOf(1, 5), Is.EqualTo("amazonfill:v1:daily:b1:d005"));
             Assert.That(DailyPool.IdOf(3, 0), Is.EqualTo("d3_n0000"));
-            Assert.That(DailyPool.SeedOf(3, 729), Is.EqualTo("amazonfill:v1:daily:b3:d729"));
+            Assert.That(DailyPool.SeedOf(3, LastDay), Is.EqualTo("amazonfill:v1:daily:b3:d728"));
             Assert.Throws<ArgumentOutOfRangeException>(() => DailyPool.IdOf(0, 1));
-            Assert.Throws<ArgumentOutOfRangeException>(() => DailyPool.SeedOf(1, 730));
+            Assert.Throws<ArgumentOutOfRangeException>(() => DailyPool.SeedOf(1, DailyPool.Days));
+            Assert.Throws<ArgumentOutOfRangeException>(() => DailyPool.IdOf(1, DailyPool.Days));
         }
 
         [Test]
         public void FindAndFindById_DoNotAllocate()
         {
             DailyPool pool = Full;
-            var ids = new string[3 * 730];
+            var ids = new string[3 * DailyPool.Days];
             for (int band = 1; band <= 3; band++)
             {
-                for (int day = 0; day < 730; day++)
+                for (int day = 0; day < DailyPool.Days; day++)
                 {
-                    ids[(band - 1) * 730 + day] = DailyPool.IdOf(band, day);
+                    ids[(band - 1) * DailyPool.Days + day] = DailyPool.IdOf(band, day);
                 }
             }
 
             int found = Lookups(pool, ids);
-            Assert.That(found, Is.EqualTo(2 * 3 * 730));
+            Assert.That(found, Is.EqualTo(2 * 3 * DailyPool.Days));
             long before = GC.GetAllocatedBytesForCurrentThread();
             for (int i = 0; i < 20; i++)
             {
@@ -179,7 +186,7 @@ namespace AF.Tests.EditMode
             }
 
             long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
-            Assert.That(found, Is.EqualTo(2 * 3 * 730));
+            Assert.That(found, Is.EqualTo(2 * 3 * DailyPool.Days));
             Assert.That(allocated, Is.EqualTo(0L), "Find y FindById no asignan memoria (nota §3, fila AF.Levels)");
         }
 
@@ -188,7 +195,7 @@ namespace AF.Tests.EditMode
             int found = 0;
             for (int band = 1; band <= 3; band++)
             {
-                for (int day = 0; day < 730; day++)
+                for (int day = 0; day < DailyPool.Days; day++)
                 {
                     LevelDefinition? board = pool.Find(band, day);
                     if (board != null && pool.BandOf(board) == band && pool.DayOf(board) == day)
@@ -196,7 +203,7 @@ namespace AF.Tests.EditMode
                         found++;
                     }
 
-                    if (pool.FindById(ids[(band - 1) * 730 + day]) == board)
+                    if (pool.FindById(ids[(band - 1) * DailyPool.Days + day]) == board)
                     {
                         found++;
                     }
@@ -265,8 +272,9 @@ namespace AF.Tests.EditMode
 
         [TestCase("\"band\":1", "\"band\":4", "'slot.band' 4 fuera de 1-3")]
         [TestCase("\"band\":1", "\"band\":0", "'slot.band' 0 fuera de 1-3")]
-        [TestCase("\"day\":5", "\"day\":730", "'slot.day' 730 fuera de 0-729")]
-        [TestCase("\"day\":5", "\"day\":-1", "'slot.day' -1 fuera de 0-729")]
+        [TestCase("\"day\":5", "\"day\":729", "'slot.day' 729 fuera de 0-728")]
+        [TestCase("\"day\":5", "\"day\":730", "'slot.day' 730 fuera de 0-728")]
+        [TestCase("\"day\":5", "\"day\":-1", "'slot.day' -1 fuera de 0-728")]
         [TestCase("\"slot\":{\"band\":1,\"day\":5}", "\"level\":5", "lleva 'slot' y no 'level'")]
         [TestCase("\"slot\":{\"band\":1,\"day\":5}", "\"slat\":1", "falta el objeto 'slot'")]
         [TestCase("\"day\":5", "\"dia\":5", "falta el entero 'day'")]
@@ -288,7 +296,7 @@ namespace AF.Tests.EditMode
         {
             List<string> boards = DailyPoolTestPacks.Boards(1);
             boards.RemoveAt(5);
-            AssertRejects(DailyPoolTestPacks.Pool(boards), "la banda 1 está incompleta: tiene 729 de 730 días (falta el día 5, d1_n0005", DailyPoolCoverage.PresentBands);
+            AssertRejects(DailyPoolTestPacks.Pool(boards), "la banda 1 está incompleta: tiene 728 de 729 días (falta el día 5, d1_n0005", DailyPoolCoverage.PresentBands);
             AssertRejects(DailyPoolTestPacks.Pool(boards), "la banda 1 está incompleta");
         }
 
@@ -296,8 +304,8 @@ namespace AF.Tests.EditMode
         public void Read_IncompleteBandInFullPool_Throws()
         {
             List<string> boards = DailyPoolTestPacks.Boards(1, 2, 3);
-            boards.RemoveAt(730 + 729);
-            AssertRejects(DailyPoolTestPacks.Pool(boards), "la banda 2 está incompleta: tiene 729 de 730 días (falta el día 729, d2_n0729");
+            boards.RemoveAt(DailyPool.Days + LastDay);
+            AssertRejects(DailyPoolTestPacks.Pool(boards), "la banda 2 está incompleta: tiene 728 de 729 días (falta el día 728, d2_n0728");
         }
 
         [Test]
@@ -311,7 +319,7 @@ namespace AF.Tests.EditMode
         {
             List<string> boards = DailyPoolTestPacks.Boards(1);
             boards.Add(DailyPoolTestPacks.Board(1, 417));
-            AssertRejects(DailyPoolTestPacks.Pool(boards), "levels[730] (d1_n0417): la banda 1 y el día 417 están repetidos (ya los tiene d1_n0417)", DailyPoolCoverage.PresentBands);
+            AssertRejects(DailyPoolTestPacks.Pool(boards), "levels[729] (d1_n0417): la banda 1 y el día 417 están repetidos (ya los tiene d1_n0417)", DailyPoolCoverage.PresentBands);
         }
 
         [TestCase("solution", "[[0,2]]")]
@@ -383,7 +391,7 @@ namespace AF.Tests.EditMode
         [Test]
         public void Read_BoardCopiedFromTheGenerator_IsRead()
         {
-            // Dentro de un pool sintético completo de la banda 1 (PresentBands exige los 730 días).
+            // Dentro de un pool sintético completo de la banda 1 (PresentBands exige los 729 días).
             List<string> boards = DailyPoolTestPacks.Boards(1);
             boards[0] = GeneratedBoardD1N0000;
             DailyPool pool = DailyPoolReader.Read(DailyPoolTestPacks.Pool(boards), DailyPoolCoverage.PresentBands);

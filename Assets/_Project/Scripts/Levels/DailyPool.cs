@@ -7,7 +7,7 @@ namespace AF.Levels
 {
     /// <summary>
     /// Pool del Reto del río (<c>daily_challenge</c>; 03 §16; 06 §4.1; 08 §4.1, <c>kind</c> = <c>daily</c>): un tablero por
-    /// banda (1-3) y día del pool (0-729), leído por <see cref="DailyPoolReader"/>. Nota de diseño
+    /// banda (1-3) y día del pool (0-728), leído por <see cref="DailyPoolReader"/>. Nota de diseño
     /// <c>docs/dev/reto-del-rio.md</c> §3, fila <c>AF.Levels</c>.
     /// </summary>
     /// <remarks>
@@ -27,8 +27,12 @@ namespace AF.Levels
         /// <summary>Última banda (nivel máximo ≥ 201).</summary>
         public const int MaxBand = 3;
 
-        /// <summary>Días del pool por banda (3 × 730 = 2.190 tableros; 03 §16).</summary>
-        public const int Days = 730;
+        /// <summary>
+        /// Días del pool por banda: 729 = 81 × 9 (R-Q2b, decidida por el dueño el 2026-10-19; 03 §16 decía 730), para que el mundo
+        /// del tablero, 1 + (día mod 9), siga a la fecha en todas las vueltas; 3 × 729 = 2.187 tableros. La única constante del
+        /// tamaño del pool en el cliente: <c>DailyCalendar.PoolDays</c> y el lector la usan.
+        /// </summary>
+        public const int Days = 729;
 
         /// <summary>Valor de <c>kind</c> de un pool (08 §4.1).</summary>
         public const string KindDaily = "daily";
@@ -72,7 +76,7 @@ namespace AF.Levels
         /// <summary><c>pack_schema</c> del paquete (1-<see cref="LevelPackReader.SupportedPackSchema"/>).</summary>
         public int PackSchema { get; }
 
-        /// <summary>Número de tableros (2.190 con las 3 bandas).</summary>
+        /// <summary>Número de tableros (2.187 con las 3 bandas).</summary>
         public int Count { get; }
 
         /// <summary>Bandas presentes (3 en un pool leído en modo estricto).</summary>
@@ -85,7 +89,7 @@ namespace AF.Levels
         }
 
         /// <summary>
-        /// Tablero de la banda <paramref name="band"/> (1-3) y el día del pool <paramref name="day"/> (0-729), o null si la banda
+        /// Tablero de la banda <paramref name="band"/> (1-3) y el día del pool <paramref name="day"/> (0-728), o null si la banda
         /// o el día están fuera de rango o la banda no está en el pool. No asigna memoria.
         /// </summary>
         public LevelDefinition? Find(int band, int day)
@@ -122,7 +126,7 @@ namespace AF.Levels
         }
 
         /// <summary>
-        /// Día del pool (0-729) de un tablero de este pool, o −1 si no es suyo. No asigna memoria.
+        /// Día del pool (0-728) de un tablero de este pool, o −1 si no es suyo. No asigna memoria.
         /// </summary>
         public int DayOf(LevelDefinition board)
         {
@@ -133,7 +137,7 @@ namespace AF.Levels
         /// Id <c>d{b}_n{nnnn}</c> del tablero (03 §16; esquema, rama <c>daily</c>), con el día en cuatro cifras: <c>d2_n0417</c>.
         /// Copia de <c>tools/level-generator/Daily/DailyIds.Id</c>.
         /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">Banda fuera de 1-3 o día fuera de 0-729.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Banda fuera de 1-3 o día fuera de 0-728.</exception>
         public static string IdOf(int band, int day)
         {
             CheckSlot(band, day);
@@ -144,7 +148,7 @@ namespace AF.Levels
         /// Semilla <c>amazonfill:v1:daily:b{b}:d{ddd}</c> del tablero (03 §16), con el día en tres cifras:
         /// <c>amazonfill:v1:daily:b2:d417</c>. Copia de <c>tools/level-generator/Daily/DailyIds.Seed</c>.
         /// </summary>
-        /// <exception cref="ArgumentOutOfRangeException">Banda fuera de 1-3 o día fuera de 0-729.</exception>
+        /// <exception cref="ArgumentOutOfRangeException">Banda fuera de 1-3 o día fuera de 0-728.</exception>
         public static string SeedOf(int band, int day)
         {
             CheckSlot(band, day);
@@ -167,7 +171,7 @@ namespace AF.Levels
 
             if (day < 0 || day >= Days)
             {
-                throw new ArgumentOutOfRangeException(nameof(day), "día " + day.ToString(CultureInfo.InvariantCulture) + " fuera de 0-729 (03 §16).");
+                throw new ArgumentOutOfRangeException(nameof(day), "día " + day.ToString(CultureInfo.InvariantCulture) + " fuera de 0-" + (Days - 1).ToString(CultureInfo.InvariantCulture) + " (03 §16; R-Q2b).");
             }
         }
     }

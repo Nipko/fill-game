@@ -1,8 +1,8 @@
 // Reto del río (daily_challenge; 03 §16): entrada de level-generator para --daily y --self-test daily (R2-R3 del encargo
 // docs/dev/traspaso/spark-reto-del-rio.md). Program.cs despacha aquí antes de su --self-test genérico.
-//   - --self-test daily (R2): ids y semillas de DailyIds (d2_n0417 <-> amazonfill:v1:daily:b2:d417, días 0 y 729, bandas
-//     1-3 y los rechazos de la banda 0 y 4 y de los días -1 y 730, el padding exacto), sus patrones frente a los del esquema
-//     schemas/af-level-1.schema.json (rama kind = daily), los 2.190 ids y semillas distintos y de ida y vuelta, que
+//   - --self-test daily (R2): ids y semillas de DailyIds (d2_n0417 <-> amazonfill:v1:daily:b2:d417, días 0 y 728, bandas
+//     1-3 y los rechazos de la banda 0 y 4 y de los días -1 y 729, el padding exacto), sus patrones frente a los del esquema
+//     schemas/af-level-1.schema.json (rama kind = daily), los 2.187 ids y semillas distintos y de ida y vuelta, que
 //     specs/daily_v1.json carga con los valores de 03 §16 y de la nota docs/dev/reto-del-rio.md §13, y que una especificación
 //     mal formada (mutaciones en memoria de la versionada) se rechaza con su mensaje. Desde R3, además, la generación
 //     (DailyCommand.Generate.cs): 3 días por banda, determinismo byte a byte y lo que el pack promete.
@@ -42,7 +42,7 @@ internal static partial class DailyCommand
     [
         ("clave desconocida en la raiz", r => r["comment"] = "x", "clave desconocida 'comment'"),
         ("spec_schema 2", r => r["spec_schema"] = 2, "\"spec_schema\" debe ser 1"),
-        ("days 729", r => r["days"] = 729, "\"days\" debe ser 730"),
+        ("days 730", r => r["days"] = 730, "\"days\" debe ser 729"),
         ("pour_mode single", r => r["pour_mode"] = "single", "\"pour_mode\" debe ser \"run\""),
         ("tints_from inexistente", r => r["tints_from"] = "no_existe.json", "\"tints_from\" (no_existe.json) no existe"),
         ("k_by_day desconocido", r => r["k_by_day"] = "random", "\"k_by_day\" (random) desconocido"),
@@ -65,16 +65,22 @@ internal static partial class DailyCommand
         ("0 candidatos", r => Band(r, 0)["max_candidates"] = 0, "(banda 1): \"max_candidates\" debe ser un entero 1-30"),
         ("31 candidatos", r => Band(r, 0)["max_candidates"] = 31, "(banda 1): \"max_candidates\" debe ser un entero 1-30"),
         ("fuente desconocida", r => Rule(r, 2, 0)["gen"] = "inverse", "\"gen\" (inverse) desconocida; solo walk, deep o fill"),
-        ("fill sin e", r => Rule(r, 1, 0).Remove("e"), "fill lleva \"e\" igual a los vacios de la banda (1;"),
+        ("fill sin e", r => Rule(r, 0, 0).Remove("e"), "fill lleva \"e\" igual a los vacios de la banda (2;"),
         ("fill con otros vacios", r => Source(r, 0)["fallback"] = new JsonObject { ["gen"] = "fill", ["e"] = 1 }, "source.fallback: fill lleva \"e\" igual a los vacios de la banda (2;"),
         ("deep con e", r => Rule(r, 2, 0)["e"] = 1, "\"e\" solo vale con fill (no con deep)"),
-        ("reglas solapadas", r => Rule(r, 1, 1)["k"] = new JsonArray(8, 8), "se solapa con otra regla ([8, 8])"),
-        ("K sin regla", r => Source(r, 1)["rules"]!.AsArray().RemoveAt(1), "(banda 2): source: ninguna regla cubre K = 9"),
+        ("reglas solapadas", r => Source(r, 2)["rules"]!.AsArray().Add(new JsonObject { ["k"] = new JsonArray(11, 11), ["gen"] = "deep" }),
+            "source.rules[1]: \"k\" [11, 11] se solapa con otra regla ([10, 11])"),
+        ("K sin regla", r => Rule(r, 2, 0)["k"] = new JsonArray(10, 10), "(banda 3): source: ninguna regla cubre K = 11"),
+        ("respaldo vacio", r => Source(r, 0)["fallback"] = new JsonArray(), "(banda 1): source: \"fallback\" vacio; null si no hay respaldo"),
+        ("respaldo de la lista desconocido", r => Source(r, 0)["fallback"]![1]!["gen"] = "inverse", "source.fallback[1]: \"gen\" (inverse) desconocida"),
+        ("nodes con walk", r => Source(r, 0)["fallback"]![1]!["nodes"] = 60000, "source.fallback[1]: \"nodes\" solo vale con deep"),
+        ("nodes por debajo de 1.000", r => Source(r, 0)["fallback"]![2]!["nodes"] = 500, "source.fallback[2]: \"nodes\" solo vale con deep y debe ser un entero 1000-300000"),
         ("regla fuera de la banda", r => Rule(r, 0, 0)["k"] = new JsonArray(5, 7), "\"k\" [5, 7] fuera de la banda (6-7)"),
         ("regla con K minimo > maximo", r => Rule(r, 2, 0)["k"] = new JsonArray(11, 10), "source.rules[0]: \"k\" [11, 10] con minimo > maximo"),
         ("sin fallback", r => Source(r, 2).Remove("fallback"), "(banda 3): source: falta \"fallback\""),
         ("paleta sin status", r => Palette(r, 1).Remove("status"), "(banda 2): palette: falta \"status\""),
         ("max_risk_pairs negativo", r => Palette(r, 0)["max_risk_pairs"] = -1, "(banda 1): palette: \"max_risk_pairs\" debe ser un entero 0-10"),
+        ("max_risk_pairs con otro texto", r => Palette(r, 2)["max_risk_pairs"] = "sin tope", "(banda 3): palette: \"max_risk_pairs\" debe ser un entero 0-10 o \"libre\""),
         ("debut_until 0", r => Palette(r, 2)["debut_until"] = 0, "(banda 3): palette: \"debut_until\" debe ser un entero >= 1"),
         ("agua sin status", r => Water(r).Remove("status"), "water: falta \"status\""),
         ("falta un mundo", r => Water(r)["worlds"]!.AsArray().RemoveAt(4), "water: falta el mundo 5"),
@@ -82,7 +88,10 @@ internal static partial class DailyCommand
         ("mundo repetido", r => Water(r)["worlds"]!.AsArray()[1] = new JsonObject { ["world"] = 1, ["world_id"] = "w01_estuario", ["water_base"] = "white" }, "water.worlds[1]: mundo 1 repetido"),
         ("agua desconocida", r => Water(r)["worlds"]!.AsArray()[0]!["water_base"] = "muddy", "water.worlds[0]: \"water_base\" (muddy) debe ser black, white o clear"),
         ("modulo 0", r => Water(r)["world_of_day"]!["modulo"] = 0, "water.world_of_day: \"offset\" y \"modulo\" deben ser enteros >= 1"),
-        ("modulo 8 con 9 mundos", r => Water(r)["world_of_day"]!["modulo"] = 8, "water: 9 mundos, pero world_of_day solo usa 8"),
+        ("modulo 8 con 9 mundos", r => Water(r)["world_of_day"]!["modulo"] = 8, "\"modulo\" 8 no divide a los 729 dias del pool"),
+        ("modulo 10 con 10 mundos", r => { Water(r)["world_of_day"]!["modulo"] = 10; Water(r)["worlds"]!.AsArray().Add(new JsonObject { ["world"] = 10, ["world_id"] = "w10_alto_negro", ["water_base"] = "black" }); },
+            "water.world_of_day: \"modulo\" 10 no divide a los 729 dias del pool (R-Q2b"),
+        ("modulo 3 con 9 mundos", r => Water(r)["world_of_day"]!["modulo"] = 3, "water: 9 mundos, pero world_of_day solo usa 3"),
     ];
 
     private static int SelfTest()
@@ -104,28 +113,28 @@ internal static partial class DailyCommand
         Check(DailyIds.Id(2, 417) == "d2_n0417" && DailyIds.Seed(2, 417) == "amazonfill:v1:daily:b2:d417", "d2_n0417 <-> amazonfill:v1:daily:b2:d417 (03 sec. 16)");
         Check(DailyIds.SeedOfId("d2_n0417") == "amazonfill:v1:daily:b2:d417" && DailyIds.IdOfSeed("amazonfill:v1:daily:b2:d417") == "d2_n0417", "SeedOfId / IdOfSeed del ejemplo");
         Check(DailyIds.Id(1, 0) == "d1_n0000" && DailyIds.Seed(1, 0) == "amazonfill:v1:daily:b1:d000", "dia 0: d1_n0000 y amazonfill:v1:daily:b1:d000");
-        Check(DailyIds.Id(3, 729) == "d3_n0729" && DailyIds.Seed(3, 729) == "amazonfill:v1:daily:b3:d729", "dia 729: d3_n0729 y amazonfill:v1:daily:b3:d729");
+        Check(DailyIds.Id(3, 728) == "d3_n0728" && DailyIds.Seed(3, 728) == "amazonfill:v1:daily:b3:d728", "dia 728: d3_n0728 y amazonfill:v1:daily:b3:d728 (729 dias, R-Q2b)");
         Check(DailyIds.Id(1, 5) == "d1_n0005" && DailyIds.Seed(1, 5) == "amazonfill:v1:daily:b1:d005", "padding: cuatro cifras en el id y tres en la semilla (d1_n0005, d005)");
-        foreach ((int band, int day, string what) in new[] { (0, 0, "banda 0"), (4, 0, "banda 4"), (2, -1, "dia -1"), (2, 730, "dia 730") })
+        foreach ((int band, int day, string what) in new[] { (0, 0, "banda 0"), (4, 0, "banda 4"), (2, -1, "dia -1"), (2, 729, "dia 729") })
         {
             string? idError = Throws(() => DailyIds.Id(band, day));
             string? seedError = Throws(() => DailyIds.Seed(band, day));
-            string expected = what.StartsWith("banda", StringComparison.Ordinal) ? "fuera de 1-3" : "fuera de 0-729";
+            string expected = what.StartsWith("banda", StringComparison.Ordinal) ? "fuera de 1-3" : "fuera de 0-728";
             Check(idError is not null && idError.Contains(expected, StringComparison.Ordinal) && seedError is not null,
                 $"{what} se rechaza con mensaje claro ({idError ?? "sin error"})");
         }
 
-        foreach (string bad in new[] { "d0_n0001", "d4_n0001", "d2_n0730", "d2_n0417 ", "d2_n417", "d2_n00417", "D2_n0417", "d2_n0417\n", "d2_n٤١٧٠" })
+        foreach (string bad in new[] { "d0_n0001", "d4_n0001", "d2_n0729", "d2_n0417 ", "d2_n417", "d2_n00417", "D2_n0417", "d2_n0417\n", "d2_n٤١٧٠" })
         {
             Check(!DailyIds.TryParseId(bad, out _, out _), $"id rechazado: {Printable(bad)}");
         }
 
-        foreach (string bad in new[] { "amazonfill:v1:daily:b0:d001", "amazonfill:v1:daily:b4:d001", "amazonfill:v1:daily:b2:d730", "amazonfill:v1:daily:b2:d0417", "amazonfill:v1:daily:b2:d41", "amazonfill:v2:daily:b2:d417", "amazonfill:v1:daily:b2:d417\n" })
+        foreach (string bad in new[] { "amazonfill:v1:daily:b0:d001", "amazonfill:v1:daily:b4:d001", "amazonfill:v1:daily:b2:d729", "amazonfill:v1:daily:b2:d0417", "amazonfill:v1:daily:b2:d41", "amazonfill:v2:daily:b2:d417", "amazonfill:v1:daily:b2:d417\n" })
         {
             Check(!DailyIds.TryParseSeed(bad, out _, out _), $"semilla rechazada: {Printable(bad)}");
         }
 
-        Check(DailyIds.TryParseId("d3_n0729", out int pb, out int pd) && pb == 3 && pd == 729, "TryParseId(d3_n0729) = banda 3, dia 729");
+        Check(DailyIds.TryParseId("d3_n0728", out int pb, out int pd) && pb == 3 && pd == 728, "TryParseId(d3_n0728) = banda 3, dia 728");
 
         // 2. Los patrones frente al esquema (rama kind = daily; el esquema es la única copia del formato, contrato 21).
         (string? schemaId, string? schemaSeed) = SchemaPatterns();
@@ -178,20 +187,24 @@ internal static partial class DailyCommand
             DailyBand b3 = spec.Band(3);
             Check(spec.PackId == "daily_pool_v1", "pack_id daily_pool_v1 (03 sec. 16)");
             Check(b1 is { KMin: 6, KMax: 7, Empties: 2, BotFailMin: 0.40, BotFailMax: 0.60 }
-                && b2 is { KMin: 8, KMax: 9, Empties: 1, BotFailMin: 0.60, BotFailMax: 0.80 }
+                && b2 is { KMin: 8, KMax: 8, Empties: 1, BotFailMin: 0.60, BotFailMax: 0.80 }
                 && b3 is { KMin: 10, KMax: 11, Empties: 1, BotFailMin: 0.75, BotFailMax: 1.00 },
-                "bandas de 03 sec. 16: K 6-7/8-9/10-11, vacios 2/1/1, bot 40-60/60-80/>=75 %");
+                "bandas de 03 sec. 16 con R-Q1b (a): K 6-7/8/10-11, vacios 2/1/1, bot 40-60/60-80/>=75 %");
             Check(spec.Bands.All(b => b.Capacity == 4 && b.MaxCandidates == 30), "capacidad 4 y 30 candidatos en las tres bandas");
-            Check(b1.SourceFor(6).Gen == "walk" && b1.SourceFor(7).Gen == "walk" && b1.Fallback is { Gen: "fill", E: 2 },
-                "B1: walk; respaldo fill E=2 (nota sec. 13)");
-            Check(b2.SourceFor(8) is { Gen: "fill", E: 1 } && b2.SourceFor(9).Gen == "deep" && b2.Fallback is null,
-                "B2: fill E=1 con K 8, deep con K 9 (nota sec. 13)");
-            Check(b3.SourceFor(10).Gen == "deep" && b3.SourceFor(11).Gen == "deep" && b3.Fallback is null, "B3: deep (nota sec. 13)");
-            Check(b1 is { DebutUntil: 40, MaxRiskPairs: 0 } && b2 is { DebutUntil: 80, MaxRiskPairs: 1 } && b3 is { DebutUntil: 200, MaxRiskPairs: 2 },
-                "paleta de R-Q1: tintes hasta 40/80/200, tope 0/1/2 (B2 y B3 [P] por R-Q1b)");
-            Check(b2.KOfDay(416) == 8 && b2.KOfDay(417) == 9 && b3.KOfDay(0) == 10 && b3.KOfDay(729) == 11, "K por dia: par el menor, impar el mayor [P]");
-            Check(spec.WorldOfDay(0).World == 1 && spec.WorldOfDay(8).World == 9 && spec.WorldOfDay(9).World == 1 && spec.WorldOfDay(729).World == 1 + (729 % 9),
-                "mundo del dia = 1 + (dia mod 9) [P] (dias 0, 8, 9 y 729)");
+            Check(b1.SourceFor(6) is { Gen: "fill", E: 2 } && b1.SourceFor(7) is { Gen: "fill", E: 2 }
+                && b1.Fallbacks.Count == 3 && b1.Fallbacks[0] is { Gen: "deep", Nodes: null } && b1.Fallbacks[1].Gen == "walk"
+                && b1.Fallbacks[2] is { Gen: "deep", Nodes: 60000 },
+                "B1: fill E=2; respaldos deep, walk y deep con 60.000 nodos (R5 [P], R-Q11)");
+            Check(b2.SourceFor(8).Gen == "deep" && b2.Fallbacks.Count == 1 && b2.Fallback is { Gen: "fill", E: 1 },
+                "B2: deep; respaldo fill E=1 (R5 [P], R-Q11)");
+            Check(b3.SourceFor(10).Gen == "deep" && b3.SourceFor(11).Gen == "deep" && b3.Fallbacks.Count == 0, "B3: deep (nota sec. 13)");
+            Check(b1 is { DebutUntil: 40, MaxRiskPairs: 0, RiskFree: false } && b2 is { DebutUntil: 80, MaxRiskPairs: 1, RiskFree: false }
+                && b3 is { DebutUntil: 200, RiskFree: true, MaxRiskPairs: DailySpec.MaxRiskPairsCap },
+                "paleta de R-Q1 y R-Q1b (a): tintes hasta 40/80/200, tope 0/1/libre (libre = 10, todos los pares de 03 sec. 4.5)");
+            Check(b2.KOfDay(416) == 8 && b2.KOfDay(417) == 8 && b3.KOfDay(0) == 10 && b3.KOfDay(727) == 11 && b3.KOfDay(728) == 10, "K por dia: par el menor, impar el mayor [P]; B2 siempre 8");
+            Check(spec.WorldOfDay(0).World == 1 && spec.WorldOfDay(8).World == 9 && spec.WorldOfDay(9).World == 1 && spec.WorldOfDay(728).World == 9
+                && DailyIds.Days % spec.WorldModulo == 0,
+                "mundo del dia = 1 + (dia mod 9) y 729 = 81 x 9: el dia 728 es el mundo 9 y la vuelta empieza en el 1, como la fecha (R-Q2b)");
             string waters = string.Join(",", spec.Worlds.Select(w => w.WaterBase));
             Check(waters == "white,clear,black,white,white,white,white,white,white", $"agua base de los mundos 1-9 del glosario sec. 8 ({waters})");
         }

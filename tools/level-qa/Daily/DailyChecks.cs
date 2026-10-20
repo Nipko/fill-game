@@ -7,7 +7,8 @@
 //   - El tablero se mide sobre caps y cuias (colores + vacíos, 02 R1): attrs, murky y hidden solo los mira QA-DAILY-MECH, para
 //     que una mecánica colada no cambie además el resto de las medidas.
 //   - Bot x40 (MetricsEngine.BotFail, enlazado del generador) con la semilla del tablero y su ventana con la tolerancia de 1e-9
-//     del generador: FALLO (R-Q11 abierta; nota §13). Pares de riesgo contra el tope de la banda: FALLO (R-Q1b abierta).
+//     del generador: FALLO (R-Q11 (a): la ventana es compuerta). Pares de riesgo contra el tope de la banda: FALLO, salvo con
+//     max_risk_pairs "libre" (R-Q1b (a): B3), que no pone tope.
 //   - Reproducción (QA-DAILY-REPRO, 03 §17 #10): DailyQaCommand ejecuta el generador (--daily en un proceso hijo, a una
 //     carpeta temporal) con las bandas y los días del pack y compara cada tablero entero (igualdad profunda del JSON). level-qa no enlaza tools/level-generator/Daily/ (su .csproj no se toca en el Spark: enganche).
 //   - Anti-repetición (#9, Campaign/BoardShape.cs como la campaña) y trampas tempranas (#3, el tope por etiqueta de
@@ -79,22 +80,22 @@ internal static class DailyChecks
         ("QA-DAILY-SCHEMA", "JSON valido contra schemas/af-level-1.schema.json con python tools/validate_schema.py --pack (03 sec. 17 #11)"),
         ("QA-DAILY-HEADER", "cabecera kind daily y pack_id de la especificacion; cada paleta en pool y K entre k_min y k_max"),
         ("QA-DAILY-STRUCT", "tablero legible y valido: BoardBuilder (U_c = units_per_color) y LevelValidation de AF.Core (sin selladas ni Aguas estancadas al inicio)"),
-        ("QA-DAILY-SLOT", "slot {band 1-3, day 0-729} coherente con id d{b}_n{nnnn} y seed amazonfill:v1:daily:b{b}:d{ddd} (03 sec. 16)"),
-        ("QA-DAILY-DAYS", "730 dias por banda en las bandas 1-3, sin huecos ni duplicados (con --partial: sin huecos exigidos, nunca pool completo)"),
+        ("QA-DAILY-SLOT", "slot {band 1-3, day 0-728} coherente con id d{b}_n{nnnn} y seed amazonfill:v1:daily:b{b}:d{ddd} (03 sec. 16)"),
+        ("QA-DAILY-DAYS", "729 dias por banda (R-Q2b) en las bandas 1-3, sin huecos ni duplicados (con --partial: sin huecos exigidos, nunca pool completo)"),
         ("QA-DAILY-SHAPE", "K de la banda y del dia (k_by_day), vacios de la banda y cuias de capacidad 4 llenas o vacias, units_per_color 4 (especificacion; nota sec. 13)"),
         ("QA-DAILY-CUIAS-14", "como mucho 14 cuias (02 R1; 03 sec. 17 #5)"),
         ("QA-DAILY-PALETTE", "paleta = tintes presentes, de tints_from y con debut <= debut_until de la banda (R-Q1)"),
-        ("QA-DAILY-RISK", "risk_pairs coherente y <= max_risk_pairs de la banda en la especificacion, no de la cabecera (R-Q1; R-Q1b abierta: falla)"),
+        ("QA-DAILY-RISK", "risk_pairs coherente y <= max_risk_pairs de la banda en la especificacion, no de la cabecera; \"libre\" no pone tope (R-Q1 y R-Q1b (a): B3 libre)"),
         ("QA-DAILY-MECH", "sin mecanicas ni ocultos: attrs todo null, murky false, hidden [] e intro_mechanic null (03 sec. 16; 03 sec. 17 #6 y #7)"),
         ("QA-DAILY-FIELDS", "sin level, difficulty, solution, safe_path ni qa (03 sec. 16; 08 sec. 4.1)"),
         ("QA-DAILY-RELIEF", "relief vacio (03 sec. 16)"),
         ("QA-DAILY-WATER", "world = offset + (dia mod modulo) y su water_base de la especificacion (R-Q2 [P])"),
         ("QA-DAILY-ASTAR", "resoluble con A* (w = 1, run; presupuesto del pipeline) (03 sec. 17 #1)"),
         ("QA-DAILY-PAR", "par >= 2K (03 sec. 17 #2)"),
-        ("QA-DAILY-BOT", "bot_fail x40 con la semilla del tablero dentro de la ventana de la banda (03 sec. 16; 03 sec. 17 #3; R-Q11 abierta: falla)"),
+        ("QA-DAILY-BOT", "bot_fail x40 con la semilla del tablero dentro de la ventana de la banda: compuerta (03 sec. 16; 03 sec. 17 #3; R-Q11 (a))"),
         ("QA-DAILY-REPRO", "el generador reproduce el tablero desde su banda y dia (03 sec. 17 #10)"),
         ("QA-DAILY-SIZE", "pack < 2 MB sin comprimir, tambien con --partial (R5 del encargo; 03 sec. 16)"),
-        ("QA-DAILY-REPEAT-SHAPE", "aviso: forma distinta de la de los 200 dias anteriores de su banda, con la vuelta del ciclo (729 -> 0) (03 sec. 17 #9; R-Q10)"),
+        ("QA-DAILY-REPEAT-SHAPE", "aviso: forma distinta de la de los 200 dias anteriores de su banda, con la vuelta del ciclo (728 -> 0) (03 sec. 17 #9; R-Q10)"),
         ("QA-DAILY-REPEAT-HAMMING", "aviso: Hamming >= 25 % con los 20 dias anteriores de su banda, con la vuelta del ciclo (03 sec. 17 #9; R-Q10)"),
         ("QA-DAILY-EARLY-TRAPS", "aviso: trampas tempranas dentro del tope de la etiqueta que da el bot (Q16 B; 03 sec. 17 #3; R-Q10)"),
     ];
@@ -285,7 +286,7 @@ internal static class DailyChecks
         bool slotOk = lv.Band is int band && lv.Day is int day && DailyIds.Problem(band, day) is null;
         if (!slotOk)
         {
-            yield return new DailyIssue("QA-DAILY-SLOT", n, string.Create(CultureInfo.InvariantCulture, $"slot ({lv.Band}, {lv.Day}) fuera de banda 1-3 y dia 0-729"));
+            yield return new DailyIssue("QA-DAILY-SLOT", n, string.Create(CultureInfo.InvariantCulture, $"slot ({lv.Band}, {lv.Day}) fuera de banda 1-3 y dia 0-728"));
             yield break;
         }
 
@@ -378,10 +379,10 @@ internal static class DailyChecks
         {
             yield return new DailyIssue("QA-DAILY-RISK", n, string.Create(CultureInfo.InvariantCulture, $"risk_pairs = {lv.RiskPairs} y los colores tienen {risk} pares de riesgo"));
         }
-        else if (risk > db.MaxRiskPairs)
+        else if (!db.RiskFree && risk > db.MaxRiskPairs)
         {
             yield return new DailyIssue("QA-DAILY-RISK", n, string.Create(CultureInfo.InvariantCulture,
-                $"{risk} pares de riesgo con K = {k}; el tope de la banda {b} es {db.MaxRiskPairs} (R-Q1b abierta, nota sec. 1.1)"));
+                $"{risk} pares de riesgo con K = {k}; el tope de la banda {b} es {db.MaxRiskPairs} (R-Q1 y R-Q1b; nota sec. 1.1)"));
         }
 
         // Medidas.
@@ -403,7 +404,7 @@ internal static class DailyChecks
         if (e.Bot < db.BotFailMin - WindowTolerance || e.Bot > db.BotFailMax + WindowTolerance)
         {
             yield return new DailyIssue("QA-DAILY-BOT", n, string.Create(CultureInfo.InvariantCulture,
-                $"bot_fail {e.Bot:0.000} fuera de la ventana {db.BotFailMin:0.00}-{db.BotFailMax:0.00} de la banda {b} (R-Q11 abierta, nota sec. 1.6)"));
+                $"bot_fail {e.Bot:0.000} fuera de la ventana {db.BotFailMin:0.00}-{db.BotFailMax:0.00} de la banda {b} (R-Q11 (a): la ventana es compuerta)"));
         }
 
         // Etiqueta por bot_fail con los umbrales de la especificación de tintes y la tolerancia de CampaignSpec.MeasuredLabel
@@ -417,7 +418,7 @@ internal static class DailyChecks
         }
     }
 
-    /// <summary>730 días por banda sin huecos ni duplicados (con <paramref name="partial"/>, los huecos solo avisan).</summary>
+    /// <summary>729 días por banda (R-Q2b) sin huecos ni duplicados (con <paramref name="partial"/>, los huecos solo avisan).</summary>
     public static IEnumerable<DailyIssue> Days(DailyQaPack pack, bool partial)
     {
         var seen = new HashSet<(int, int)>();
@@ -468,7 +469,7 @@ internal static class DailyChecks
 
     /// <summary>
     /// Anti-repetición por banda con las ventanas de la campaña en días (BoardShape): cada tablero frente a los de su banda de
-    /// los 200 (forma) y 20 (Hamming) días anteriores, dando la vuelta al ciclo (el pool se juega con día mod 730: al 729
+    /// los 200 (forma) y 20 (Hamming) días anteriores, dando la vuelta al ciclo (el pool se juega con día mod 729: al 728
     /// le sigue el 0) y, antes, frente a otro del mismo día (duplicado). Solo avisos (R-Q10).
     /// </summary>
     public static IEnumerable<DailyIssue> Repetition(DailyQaPack pack)
@@ -502,7 +503,7 @@ internal static class DailyChecks
     }
 
     /// <summary>Los tableros anteriores de la banda, del más cercano al más lejano: el mismo día (índice menor) y después
-    /// los días día − 1 … día − <paramref name="window"/>, módulo 730.</summary>
+    /// los días día − 1 … día − <paramref name="window"/>, módulo 729.</summary>
     private static IEnumerable<DailyQaLevel> Previous(DailyQaLevel cur, Dictionary<int, List<DailyQaLevel>> byDay, int window)
     {
         int day = cur.Day!.Value;
