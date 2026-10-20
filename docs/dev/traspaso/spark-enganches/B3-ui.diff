@@ -49,7 +49,7 @@ index a06be05..8e41fd8 100644
          {
              _pause.Hide();
 diff --git a/Assets/_Project/Scripts/UI/PauseMenu.cs b/Assets/_Project/Scripts/UI/PauseMenu.cs
-index cc2ca09..2bf013d 100644
+index cc2ca09..bb6f099 100644
 --- a/Assets/_Project/Scripts/UI/PauseMenu.cs
 +++ b/Assets/_Project/Scripts/UI/PauseMenu.cs
 @@ -1,7 +1,9 @@
@@ -99,17 +99,20 @@ index cc2ca09..2bf013d 100644
              _restart = ModalKit.Cta("RestartButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.RestartLong, 18f, onRestart, out _);
              _quit = ModalKit.Cta("QuitButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.Quit, 18f, onQuit, out _);
              _root.gameObject.SetActive(false);
-@@ -55,6 +68,9 @@ public PauseMenu(Transform parent, ProceduralArt art, Action onResume, Action on
+@@ -55,6 +68,12 @@ public PauseMenu(Transform parent, ProceduralArt art, Action onResume, Action on
          /// <summary>«Mapa del río» (tarea M4.3): solo se ve si <see cref="Show"/> lo pidió.</summary>
          public Button MapButton => _map.Button;
  
 +        /// <summary>«Salto del Boto»: solo se ve si <see cref="Show"/> lo pidió.</summary>
 +        public Button SkipButton => _skip.Button;
 +
++        /// <summary>Sprite de Rosa del botón (null hasta que <see cref="Show"/> lo enseña; tests).</summary>
++        internal Sprite? SkipRosaSprite => _skipRosa.sprite;
++
          public Button RestartButton => _restart.Button;
  
          public Button QuitButton => _quit.Button;
-@@ -66,9 +82,9 @@ public void Hide()
+@@ -66,9 +85,9 @@ public void Hide()
  
          /// <summary>
          /// Abre el menú: «Volver a la orilla» si <paramref name="canRestart"/> y «Mapa del río» si <paramref name="canMap"/> (el
@@ -121,7 +124,7 @@ index cc2ca09..2bf013d 100644
          {
              _root.gameObject.SetActive(true);
              float width = Mathf.Min(300f, canvasW - 48f);
-@@ -86,6 +102,25 @@ public void Show(bool canRestart, bool canMap, float canvasW, float canvasH)
+@@ -86,6 +105,25 @@ public void Show(bool canRestart, bool canMap, float canvasW, float canvasH)
                  y += ModalKit.HeightOf(_map) + 8f;
              }
  
@@ -147,10 +150,11 @@ index cc2ca09..2bf013d 100644
              _restart.Button.gameObject.SetActive(canRestart);
              if (canRestart)
              {
-@@ -107,6 +142,12 @@ public void VisibleButtons(List<string> ids, List<RectTransform> rects)
+@@ -107,6 +145,13 @@ public void VisibleButtons(List<string> ids, List<RectTransform> rects)
                  ids.Add("pause_map");
                  rects.Add((RectTransform)_map.Button.transform);
              }
++
 +            if (_skip.Button.gameObject.activeSelf)
 +            {
 +                ids.Add("pause_skip");
@@ -250,14 +254,15 @@ index 42621f2..8746677 100644
              _restart.Button.gameObject.SetActive(restart);
 diff --git a/Assets/_Project/Tests/PlayMode/SkipPlayModeTests.cs b/Assets/_Project/Tests/PlayMode/SkipPlayModeTests.cs
 new file mode 100644
-index 0000000..ff2a786
+index 0000000..5292d3a
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/SkipPlayModeTests.cs
-@@ -0,0 +1,120 @@
+@@ -0,0 +1,144 @@
 +#nullable enable
 +using System;
 +using System.Collections;
 +using AF.Boosters;
++using AF.Economy;
 +using AF.GameFlow;
 +using AF.Save;
 +using AF.UI;
@@ -321,14 +326,37 @@ index 0000000..ff2a786
 +            boot.TickSkipBanner();
 +            Assert.That(boot.SkipBannerView!.Visible, Is.True);
 +            Assert.That(boot.SkipBannerView.Text, Is.EqualTo(SkipText.Banner(300)));
++            Assert.That(boot.SkipBannerView.RosaSprite, Is.Not.Null, "Rosa, pintada al enseñar el banner");
++            Assert.That(boot.SkipBannerView.Interactable, Is.True);
++            Assert.That(boot.SkipBannerView.MissingText, Is.Null);
++
++            // Sin saldo: el banner sigue, en gris y con «Te faltan {n} semillas» (04 §1); el toque no abre nada.
++            while (boot.Wallet!.Seeds >= 300)
++            {
++                Assert.That(boot.Wallet.Apply(Transaction.Buy(SeedSink.ExtraCuia)).IsApplied, Is.True);
++            }
++
++            int poorSeeds = boot.Wallet.Seeds;
++            boot.TickSkipBanner();
++            Assert.That(boot.SkipBannerView.Visible, Is.True, "elegible sin saldo: en gris");
++            Assert.That(boot.SkipBannerView.Interactable, Is.False);
++            Assert.That(boot.SkipBannerView.MissingText, Is.EqualTo(UiText.MissingSeeds(300 - poorSeeds)));
++            Assert.That(boot.PressSkip(), Is.False);
++            Assert.That(boot.SkipConfirmView!.Visible, Is.False);
++            Assert.That(boot.Wallet.Apply(Transaction.Earn(SeedSource.Calendar, 1000 - poorSeeds)).IsApplied, Is.True);
++            boot.TickSkipBanner();
++            Assert.That(boot.SkipBannerView.Interactable, Is.True, "con saldo, otra vez lista");
++            Assert.That(boot.SkipBannerView.MissingText, Is.Null);
 +
 +            // Pausa: «Salto del Boto» con su precio; abre la confirmación y cierra la pausa; la X vuelve al juego.
 +            view.PauseButton.onClick.Invoke();
 +            Assert.That(view.Pause.Visible, Is.True);
 +            Assert.That(view.Pause.SkipButton.gameObject.activeSelf, Is.True, "04 §2.6: Rosa también en la pausa");
++            Assert.That(view.Pause.SkipRosaSprite, Is.Not.Null, "Rosa, pintada al enseñar la pausa con el Salto");
 +            view.Pause.SkipButton.onClick.Invoke();
 +            Assert.That(view.Pause.Visible, Is.False);
-+            Assert.That(boot.SkipConfirmView!.Visible, Is.True);
++            Assert.That(boot.SkipConfirmView.Visible, Is.True);
++            Assert.That(boot.SkipConfirmView.RosaSprite, Is.Not.Null, "Rosa, pintada al abrir la confirmación");
 +            boot.TickSkipBanner();
 +            Assert.That(boot.SkipBannerView.Visible, Is.False, "con la confirmación abierta, sin banner");
 +            boot.SkipConfirmView.CloseButton.onClick.Invoke();
