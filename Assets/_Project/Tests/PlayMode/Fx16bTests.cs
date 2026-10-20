@@ -127,7 +127,10 @@ namespace AF.Tests.PlayMode
 
                 if (locale == LocLocale.SpanishLatinAmerica && scale < 1.01f && !singleKey)
                 {
-                    Assert.That(step, Is.EqualTo(0), what + ": en es-419 al 100 % la victoria de siempre");
+                    // Hasta B1b, la victoria de siempre; con las barras de la Crecida y la Canasta del panel único (D-033, punto 10),
+                    // en una fila a media anchura, solo los márgenes justos del escalón 1 (medido: 476 dp de un tope de 480).
+                    Assert.That(step, Is.LessThanOrEqualTo(GameScreen.VictoryCompactMargins), what + ": en es-419 al 100 %, como mucho los márgenes justos");
+                    Assert.That(view.VictoryBarsDropped, Is.False, what + ": con las barras");
                 }
 
                 if (!singleKey)
@@ -163,9 +166,13 @@ namespace AF.Tests.PlayMode
                 GameScreen view = boot.View!;
                 PlayModeHelpers.Step(boot, 1600);
                 Assert.That(view.CardCanvasHeight, Is.EqualTo(GameScreen.ReferenceHeight).Within(0.01f), what);
-                Assert.That(view.VictoryCompact, Is.EqualTo(0), what + ": la victoria de siempre");
+                // 360 × 780 no compacta (D-032, punto 2), salvo, desde las barras de B1b (D-033, punto 10), en-XA al 130 %: los márgenes
+                // justos del escalón 1 [P] (pregunta abierta de B1b).
+                bool pseudo130 = locale == LocLocale.Pseudo && scale > 1.01f;
+                Assert.That(view.VictoryCompact, Is.EqualTo(pseudo130 ? GameScreen.VictoryCompactMargins : 0), what + ": la victoria de siempre");
+                Assert.That(view.VictoryBarsDropped, Is.False, what + ": con las barras");
                 Assert.That(view.VictorySlotWidthDp, Is.EqualTo(view.VictoryPanelWidthDp - (2f * VictoryLineSlot.SideDp)).Within(0.01f), what);
-                Assert.That(view.VictorySlot.ReserveDp, Is.EqualTo(VictoryLineSlot.ReserveOf(view.VictorySlot.ContentDp)).Within(0.01f), what);
+                Assert.That(view.VictorySlot.ReserveDp, Is.EqualTo(view.VictorySlot.ReserveFor(view.VictorySlot.ContentDp)).Within(0.01f), what);
                 Assert.That(view.HomeBottomDp, Is.GreaterThan(view.NextTopDp + ((RectTransform)view.NextButton.transform).rect.height), what + ": Inicio bajo Siguiente");
                 if (level == 20)
                 {

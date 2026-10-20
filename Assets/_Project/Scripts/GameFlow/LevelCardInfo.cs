@@ -39,6 +39,14 @@ namespace AF.GameFlow
         /// <summary><c>intro_mechanic</c> del estreno de la Flor de vitória-régia (403; firma de <c>pack_schema</c> 3; VA1b).</summary>
         public const string FlorIntro = "flor";
 
+        /// <summary>
+        /// Estreno de la tarjeta de la Crecida (04 §4: «Tarjeta de la Crecida al cargar el 25»; tarea B1b) [P]: no es un
+        /// <c>intro_mechanic</c> del paquete, sino el ID del sistema (<c>win_streak</c>, glosario §6.3) con el que el flujo arma
+        /// una tarjeta de estreno (<see cref="LevelCardKind.Debut"/>) al cargar el nivel de <c>streak_unlock_level</c>
+        /// (<see cref="ForStreak"/>). La vista la pinta como las demás: el icono grande y una línea.
+        /// </summary>
+        public const string StreakIntro = "win_streak";
+
         private readonly int _mechanics;
 
         /// <summary>
@@ -222,6 +230,16 @@ namespace AF.GameFlow
                 level.HasTallCuia,
                 level.IsMurky,
                 revealGifted);
+        }
+
+        /// <summary>
+        /// Tarjeta de la Crecida del nivel <paramref name="levelNumber"/> (04 §4; tarea B1b) [P]: un estreno sin etiqueta con
+        /// <see cref="StreakIntro"/>, sin iconos ni premio. Solo la pide el flujo para un nivel normal sin tarjeta propia (si el
+        /// nivel ya tiene tarjeta, esa gana).
+        /// </summary>
+        public static LevelCardInfo ForStreak(int levelNumber)
+        {
+            return new LevelCardInfo(levelNumber, LevelDefinition.LabelNormal, 0, 1, StreakIntro, 0, false, false, false, false, false);
         }
 
         /// <summary>

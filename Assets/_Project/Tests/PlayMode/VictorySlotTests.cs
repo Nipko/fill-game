@@ -232,8 +232,17 @@ namespace AF.Tests.PlayMode
                     Assert.That(slot.ContentDp, Is.GreaterThan(es100), "no el de es-419 al 100 %");
                     if (locale == LocLocale.Pseudo)
                     {
-                        Assert.That(slot.ContentDp, Is.GreaterThan(view.VictorySlotContentHeight(LocLocale.SpanishLatinAmerica, 1.3f)),
-                            "en-XA (117 caracteres) mide más que es-419 a la misma escala");
+                        // Desde el escalón 2 (D-032), el texto de la ranura va a 12 sp en los dos idiomas y puede ocupar las mismas líneas;
+                        // con las barras de B1b (D-033, punto 10), esta pantalla llega ahí al 130 %.
+                        float es130 = view.VictorySlotContentHeight(LocLocale.SpanishLatinAmerica, 1.3f);
+                        if (view.VictoryCompact >= GameScreen.VictoryCompactText)
+                        {
+                            Assert.That(slot.ContentDp, Is.GreaterThanOrEqualTo(es130), "en-XA (117 caracteres) no mide menos que es-419 a la misma escala");
+                        }
+                        else
+                        {
+                            Assert.That(slot.ContentDp, Is.GreaterThan(es130), "en-XA (117 caracteres) mide más que es-419 a la misma escala");
+                        }
                     }
 
                     // Con los huecos del escalón de la victoria compacta de ahora (D-032; en 16:9 al 130 %, los justos).

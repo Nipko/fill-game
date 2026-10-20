@@ -139,6 +139,7 @@ namespace AF.UI
                 case LevelCardInfo.FlorIntro: return TutorialFlor;
                 case "pirana": return TutorialPirana;
                 case TinajaTutorial.IntroMechanic: return TutorialTinaja; // la línea 2 va en su renglón (LevelCardView; TJ4)
+                case LevelCardInfo.StreakIntro: return TutorialStreak; // la tarjeta de la Crecida del 25 (04 §4; B1b)
                 default: return null;
             }
         }
