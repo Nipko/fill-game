@@ -20,6 +20,10 @@ Revisión 9 (2026-10-13, D-015): la pregunta 44 queda decidida. El presupuesto d
 
 Revisión 10 (2026-10-14, D-016 y D-019): con T5-B de TiTino, ninguna mascota se queda fija en el muelle durante la partida (C4 cerrado; 3.7 y 3.8): TiTino solo asoma sobre el muelle en la instrucción del tutorial y en el aviso tras Volver a la orilla, cuando la franja del panorama mide menos de 64 dp. La Tinaja (M13) tiene su paleta de barro y sus vetos en 07 §4.3. El presupuesto de texturas de la sección 8 admite los kits de mundo en ASTC 8×8 (D-013).
 
+Revisión 11 (2026-10-19, D-029): el agua base negra de los mundos 3 y 10 pasa a ámbar-té translúcido, **#522500** al 70 % (Q14 del guion de la intro, decidida con su recomendación; tarea DC13, con su captura de prueba): sustituye a #4A2C14, que al 70 % sobre la cavidad se leía casi negro. Canon en 07 §2.1; token `agua_negra` en 2.2.
+
+Revisión 12 (2026-10-19, D-030): fuera del español la insignia del nivel no cabía a 20 dp en su placa (en en-XA se salía; L4). El dueño eligió bajar su mínimo a **12 sp** (12 dp × escala de texto del sistema, nunca por debajo de 12 sp físicos; 02 §12; pregunta 8 (b); tarea DC19): en es-419 sigue a 20 sp (20 dp × escala de texto) y solo baja si no cabe; la placa no crece y la fila del HUD no cambia (3.5).
+
 Fuentes: `docs/dev/decisiones.md` (D-001 a D-006), GDD 07 (§3 paleta, §4 cuia, §5 storyboards, §6 mascotas, §7 UI kit, §8 pautas culturales), GDD 02 (§3.3, §4, §5, §12), GDD 08 §5 (shader y rendimiento), glosario §0, §3, §9 y §10, `docs/research/09-referencia-magic-sort.md` y `docs/research/magic-sort/c-meta-liveops-ux.md` §4, la revisión del 2026-10-07 (material de entrada, verificado contra el código) y las capturas `Logs/device/v01-fix-*.png` y `docs/reviews/2026-10-07/visual/*.png`.
 
 Convenciones:
@@ -78,6 +82,7 @@ Los 14 tintes de glosario §9 y 07 §3 conservan su HEX, patrón, icono y regla 
 | `selva_media` / `selva_luz` / `selva_sombra` | #2C7A4B / #63B548 / #1C5236 | 46 / 67 / 31 | Vegetación de la orilla |
 | `rio_reflejo` | #F6CF92 | 85 | Reflejo del cielo junto al horizonte |
 | `rio_medio` / `rio_base` / `rio_profundo` | #CDA06A / **#B08A5A** / #80603E | 69 / 60 / 43 | Río; `rio_base` es el agua base blanca del Estuario (07 §2.1) |
+| `agua_negra` | **#522500** | 20,5 | Agua base negra de los mundos 3 y 10 (07 §2.1), en ámbar-té translúcido al 70 % (`IntroAnimation.WaterAlpha`); D-029 (Q14 del guion de la intro) y DC13: ΔL* 29,4 frente al tinte 14, Agua del Río Negro (#A9672E), y 31,5 compuesta sobre la cavidad (`WaterBlackContrastTests`). Antes, #4A2C14 |
 | `destello` | #FFF4D2 | 96 | Brillos del agua (aditivos) |
 | `hoja_oscura` / `hoja_media` / `hoja_clara` / `hoja_brillo` | #145A35 / #23824A / #5DBB3F / #C6EF6B | 33 / 48 / 68 / 89 | Follaje del marco |
 | `nervadura` | #0E3F25 | 23 | Nervios de las hojas |
@@ -303,7 +308,7 @@ En v0 solo se dibujan la insignia y Reiniciar, pero en estas posiciones: así na
 |---|---|---|
 | Velo de estado | y 0 → `safeTop + 40`; `scrim` con alfa 0,35 → 0 | Que los iconos blancos del sistema se lean sobre el cielo claro |
 | **Insignia de nivel** | x 56-192, en `hudY + 2`. Placa de 120 × 44 y dos hojas de 8 dp que asoman por los extremos: **136 × 52 es el máximo del conjunto** y la placa no crece | Placa de `madera_oscura` con veta, bisel superior de 2 dp (`madera_luz`, alfa 0,7 [horno]), ranura tallada a 4 dp del borde y sombra (y + 3 dp, desenfoque 4, alfa 0,35). Texto «Nivel {n}» (glosario `level_n`): Baloo 2 ExtraBold, `crema`, contorno de 2,5 dp `madera_contorno`. Futuro: chip de dificultad debajo (07 §7.7) |
-| Texto de la insignia | Caja de 106 dp (la placa menos 7 dp por lado) | Tamaño = el menor entre 26 dp × escala de texto del sistema y el mayor que quepa en la caja con el contorno; **mínimo 20 dp**. Medido con Baloo 2 ExtraBold: «Nivel 7» ocupa 78,5 dp a 26 (102 dp al 130 %); «Nivel 100», 107,7 dp, baja a 24,4 dp; «Level 100» (EN), a 23,8; «Nivel 1000» cabe a 20 dp. Nunca se recorta (07 §7.8) |
+| Texto de la insignia | Caja de 106 dp (la placa menos 7 dp por lado) | Tamaño = el menor entre 26 dp × escala de texto del sistema y el mayor que quepa en la caja con el contorno; **mínimo 20 sp en es-419 (20 dp × escala de texto); si no cabe (otros idiomas, en-XA, escala al 130 %), baja hasta un mínimo de 12 sp (12 dp × escala de texto, nunca por debajo de 12 sp físicos)** (02 §12; D-030, pregunta 8 (b); tarea DC19). Medido con Baloo 2 ExtraBold: «Nivel 7» ocupa 78,5 dp a 26 (102 dp al 130 %); «Nivel 100», 107,7 dp, baja a 24,4 dp; «Level 100» (EN), a 23,8; «Nivel 1000» cabe a 20 dp. Nunca se recorta (07 §7.8) |
 | **Reiniciar** (Volver a la orilla) | Derecha; área táctil de 60 × 48 en x = W − 8 − 60 | **Disco** de 40 dp, familia Madera, con glifo `crema` de 26 dp: flecha circular con ola (07 §7.6). Píldora de 60 × 16 dp superpuesta 8 dp al pie del disco, con «Reiniciar» en Nunito ExtraBold 12, `crema`, sobre `madera_oscura` (13,7:1). Todo cabe en los 48 dp de la fila |
 
 ### 3.6 Bandeja inferior
