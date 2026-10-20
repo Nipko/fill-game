@@ -6,6 +6,35 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-19 · Entrega final: R0-R12 en `spark/reto-del-rio`, verificación completa VERDE
+
+Verificación en `spark-int`, sobre la rama con la parte del Spark de R12 (`ac54d82`) y los parches guardados (`bb5b163`, `fa5209e`):
+
+| Comando | Resultado |
+|---|---|
+| `dotnet build dotnet/AmazonFill.slnx -warnaserror` | código 0 |
+| `dotnet test dotnet/AmazonFill.slnx` | 981 (975 + 6) |
+| `python tools/validate_schema.py` | 103/103 |
+| `unity-compile.ps1 -Architecture arm64` | OK |
+| `unity-test.ps1 -Mode EditMode … -TimeoutSec 3600` | **3.058 (3.055 + 3 omitidos), 0 fallos** |
+| `unity-test.ps1 -Mode PlayMode … -TimeoutSec 3600` | **1.383 (1.216 + 167 omitidos), 0 fallos** (39 min) |
+| Capturas de R11 (`DailyChallengeSnapshotTests`, sin `-nographics`) | 4/4; `AF_FIT` = 0 textos fuera de su caja en es-419, es-419 16:9, en-XA y en-XA 16:9; `AF_STAMP` = desvío 0,00 dp |
+
+- **Recuentos de referencia del Spark para el integrador:**
+  - sin los enganches: EditMode **3.058**, PlayMode **1.383**;
+  - con los enganches aplicados (R12): EditMode 3.082 y PlayMode 1.394.
+- **Bloques listos para integrar:**
+  - (a) ya integrado;
+  - (b) el pool;
+  - (c) lógica;
+  - (d) partida y pantallas;
+  - (e) los enganches, con sus parches en `docs/dev/traspaso/spark-enganches/` y en `docs/dev/traspaso/spark-parches-docs.md`.
+- **Fuera de alcance o pendiente:**
+  - E1, E6 y E7 sin preparar (motivo en la entrada de R12);
+  - E16 por regenerar;
+  - E19, E20 y E25, para más adelante.
+  - Las capturas son de prueba; falta la prueba en el teléfono, que necesita los enganches aplicados en la integración.
+
 ## 2026-10-19 · R12 · Enganches para el integrador: parches exactos y PROBADOS · Bloque (e) listo
 
 **Probados contra:** `origin/integracion-fase1-fase2` en **`bc65242`**, con `spark/reto-del-rio` fusionada (R0-R11 y la parte del Spark de R12). Worktree temporal `r12-full`, no empujado, HEAD `c4ba4a1`.
