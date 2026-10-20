@@ -17,7 +17,8 @@ namespace AF.Tests.PlayMode
     /// «Faltan {n} niveles para {lugar}» bajo «Jugar» y la ventanita de casa de TiTino (provisional: solo en el Editor y en
     /// desarrollo; nunca en la ficha, las capturas de la tienda ni la UA). Una por parada, a 3 niveles de la siguiente:
     /// <c>lobby_stop_k0</c> (8, Belém: la ventanita sin píldora), <c>lobby_stop_k2</c> (28, Alter do Chão), <c>lobby_stop_k5</c>
-    /// (58, Manaos: «a unos 1.480 km»), <c>lobby_stop_k8</c> (88, Leticia) y <c>lobby_stop_k14</c> (148, Iquitos). Cada captura
+    /// (58, Manaos: «a unos 1.480 km»), <c>lobby_stop_k8</c> (88, Leticia) y <c>lobby_stop_k14</c> (148, Iquitos); con DC20, <c>lobby_stop_k9</c> (98, Leticia al atardecer) y
+    /// <c>lobby_stop_k19</c> (198, Pacaya-Samiria al alba). Cada captura
     /// escribe su línea <c>AF_LOBBY_STOP</c>. Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.LobbyStopSnapshotTests</c> sin <c>-nographics</c>); los PNG quedan en <c>Logs/snapshots/es-419/</c>.
     /// </summary>
@@ -42,6 +43,16 @@ namespace AF.Tests.PlayMode
             yield return Capture(dir, 5, 58);
             yield return Capture(dir, 8, 88);
             yield return Capture(dir, 14, 148);
+        }
+
+        // DC20 (D-030, pregunta 18 b): el inicio con el atardecer de Leticia (98) y el alba de Pacaya-Samiria (198), con el cielo
+        // a alfa ≤ 0,5 también en el tercio de abajo.
+        [UnityTest]
+        public IEnumerator CaptureTheLobbyAtDuskAndDawn()
+        {
+            string dir = SnapshotKit.Prepare();
+            yield return Capture(dir, 9, 98);
+            yield return Capture(dir, 19, 198);
         }
 
         private static IEnumerator Capture(string dir, int stop, int level)

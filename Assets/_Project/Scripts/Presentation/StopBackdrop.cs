@@ -12,10 +12,9 @@ namespace AF.Presentation
     /// anidado propio (guía 8, «Reconstrucción de Canvas»), y ninguna recibe toques (VA-08). De atrás adelante:
     /// <list type="number">
     /// <item><b>0a, cielo</b> con la hora del mundo de 07 §2.1 (o la luz de la parada: atardecer en la 9, alba en la 19), un
-    /// degradado por vértice con alfa ≤ <see cref="SkyMaxAlpha"/> sobre el cielo del panorama [P]; en el atardecer y el alba,
-    /// hasta <see cref="SkyLowMaxAlpha"/> en el tercio de abajo, para que la hora se lea a tamaño de teléfono (por encima del
-    /// ≤ 0,5 del plan del Mapa: pendiente del dueño con la hoja 02f). El mundo 1 va sin tinte: el panorama ya es su alba
-    /// dorada.</item>
+    /// degradado por vértice con alfa ≤ <see cref="SkyMaxAlpha"/> sobre el cielo del panorama [P], en todo el cielo y con
+    /// cualquier luz: también el tercio de abajo del atardecer y del alba (<see cref="SkyLowMaxAlpha"/>; D-030, pregunta 18 b).
+    /// El mundo 1 va sin tinte: el panorama ya es su alba dorada.</item>
     /// <item><b>0e, banda de agua del primer plano</b> con el <c>water_base</c> del mundo (07 §2.1; VA-23: ΔE00 ≤ 5), opaca bajo
     /// los <see cref="BandFadeDp"/> dp de junto al horizonte, donde deja ver el reflejo del cielo del panorama, con ondas finas
     /// del mismo tono. Con tablero, no pinta lo que tapa el relleno opaco del panel (su rectángulo menos
@@ -72,11 +71,11 @@ namespace AF.Presentation
         public const float SkyMaxAlpha = 0.5f;
 
         /// <summary>
-        /// Tope de opacidad del tinte en el tercio de abajo del cielo, solo con la luz <c>dusk</c> o <c>dawn</c> [P]. Se aparta
-        /// del «alfa ≤ 0,5» del plan del Mapa (M1.4, punto 1a) para que el alba de la parada 19 se distinga del atardecer
-        /// (revisión de M1.4): pendiente del dueño con la hoja 02f.
+        /// Tope de opacidad del tinte en el tercio de abajo del cielo con la luz <c>dusk</c> o <c>dawn</c> [P]: el mismo
+        /// «alfa ≤ 0,5» del plan del Mapa (M1.4, punto 1a) que el resto del cielo. La revisión de M1.4 lo había subido a 0,7 para
+        /// que el alba de la parada 19 se distinguiera del atardecer de la 9; el dueño eligió volver a ≤ 0,5 (D-030, pregunta 18 b).
         /// </summary>
-        public const float SkyLowMaxAlpha = 0.7f;
+        public const float SkyLowMaxAlpha = 0.5f;
 
         /// <summary>Grosor de la costura entre dos aguas (dp) [P].</summary>
         public const float SeamDp = 1.5f;
@@ -183,7 +182,7 @@ namespace AF.Presentation
         private const float DuskAlphaTop = 0.45f;
         private const float DuskAlphaHorizon = 0.4f;
         private const float DawnAlphaTop = 0.45f;
-        private const float DawnAlphaHorizon = 0.7f; // hasta SkyLowMaxAlpha, solo en el tercio de abajo
+        private const float DawnAlphaHorizon = 0.5f; // ≤ SkyLowMaxAlpha = SkyMaxAlpha (D-030, pregunta 18 b)
         private const float NoonAlphaTop = 0.4f;
         private const float NoonAlphaHorizon = 0.25f;
         private const float AfternoonAlphaTop = 0.4f;
@@ -416,8 +415,8 @@ namespace AF.Presentation
 
         /// <summary>
         /// Cielo de la parada (07 §2.1, hora del mundo; atardecer y alba por su luz) [P]: arriba, en el horizonte y su opacidad
-        /// arriba (≤ <see cref="SkyMaxAlpha"/>) y en el horizonte (≤ <see cref="SkyMaxAlpha"/>, o ≤ <see cref="SkyLowMaxAlpha"/>
-        /// con <c>dusk</c> o <c>dawn</c>). Sin tinte (alfa 0) en el mundo 1 y sin parada.
+        /// arriba y en el horizonte, las dos ≤ <see cref="SkyMaxAlpha"/> con cualquier luz (con <c>dusk</c> o <c>dawn</c>, el
+        /// horizonte ≤ <see cref="SkyLowMaxAlpha"/>, que es el mismo tope). Sin tinte (alfa 0) en el mundo 1 y sin parada.
         /// </summary>
         public static void SkyOf(RiverStop? stop, out Color top, out Color horizon, out float alphaTop, out float alphaHorizon)
         {
@@ -727,7 +726,7 @@ namespace AF.Presentation
                 return;
             }
 
-            // Arriba, ≤ SkyMaxAlpha; en el tercio de abajo puede subir hasta SkyLowMaxAlpha con el atardecer y el alba.
+            // Arriba, ≤ SkyMaxAlpha; en el tercio de abajo, con el atardecer y el alba, ≤ SkyLowMaxAlpha (el mismo 0,5: D-030, 18 b).
             string? lut = stop?.Backdrop.Lut;
             bool twilight = lut == LutDusk || lut == LutDawn;
             top.a = Mathf.Min(aTop, SkyMaxAlpha);
