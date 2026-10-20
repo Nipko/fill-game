@@ -154,13 +154,16 @@ namespace AF.Tests.PlayMode
             Assert.That(sloth.LastGreeting.Gesture, NUnit.Framework.Is.EqualTo(SlothGesture.None));
             Assert.That(sloth.BubbleShown, NUnit.Framework.Is.False);
 
-            // Al día siguiente, a las 07:00, vuelve el de la mañana.
+            // Al día siguiente, a las 07:00, vuelve el de la mañana, con la frase siguiente de su mini-banco (D-030, pregunta
+            // 16 b): nunca la misma que la última vista del momento.
             clock.Set(Day0.AddDays(1).AddHours(7));
             yield return Load(store, clock);
             sloth = Sloth();
             sloth.Tick(16f);
             Assert.That(sloth.LastGreeting.Greeting, NUnit.Framework.Is.True);
-            Assert.That(sloth.LastGreeting.Key, NUnit.Framework.Is.EqualTo("sloth_line_return_04"));
+            Assert.That(sloth.LastGreeting.Key, NUnit.Framework.Is.EqualTo("sloth_line_return_05"));
+            Assert.That(sloth.BubbleText, NUnit.Framework.Is.EqualTo(Loc.T("sloth_line_return_05")));
+            Assert.That(Saved(store).Sloth.LastLine[(int)SlothMoment.Return], NUnit.Framework.Is.EqualTo(4));
             Assert.That(Saved(store).Sloth.LastGreetingDate, NUnit.Framework.Is.EqualTo("2026-10-16"));
         }
 
