@@ -6,7 +6,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
-## 2026-10-20 · T1 · Cierre del Reto (`spark/reto-cierre`): HECHA en código; falta un PlayMode con los parches
+## 2026-10-20 · T1 · Cierre del Reto (`spark/reto-cierre`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/reto-cierre`, desde `origin/integracion-fase1-fase2` (`e7475d2`). Fusiona `27a7e9f` (R12 integrado) en `fea96b7`.
 - **Commits:**
@@ -31,11 +31,12 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
   | rama | `level-qa --self-test` (sin nombre y `daily`); `--daily` del pool publicado | todo PASS; 2.187 tableros, **0 fallos**, 1.678 avisos |
   | rama (`e68a9dd`) | `unity-compile`, EditMode, PlayMode | OK; **3.083** (3.079 + 3; 1 fallo, el inestable `IntroArtTests`); **1.404 (1.237 + 167), 0 fallos** |
   | worktree temporal con E5b + E6 + E7, sin `b1b4628` | EditMode, PlayMode | 3.083 (3.080 + 3), 0 fallos; 1.411, **2 fallos** en `FunnelPlayModeTests` del 31, los que arregla `b1b4628` |
-  | ídem, con `b1b4628` | `unity-compile` + PlayMode | **pendiente** (cayó la licencia de Unity; en marcha tras la revisión del dueño) |
+  | ídem, con `b1b4628` | `unity-compile` + PlayMode | OK; **1.411 (1.244 + 167), 0 fallos** (25 min), tras la revisión de la licencia por el dueño |
 
 - **code-reviewer:**
   - primera ronda CAMBIOS NECESARIOS: base vieja (tablas duplicadas con E5 y «sin pool» con E3);
-  - segunda ronda: código, tests y parches bien; un solo bloqueante, de documentación (esta entrada).
+  - segunda ronda: código, tests y parches bien; un solo bloqueante, de documentación (esta entrada);
+  - tercera ronda: **APROBADO** (a falta de Unity, que después salió en verde).
 - **[P] para el dueño:** los de E6 y E7, en sus fichas (recomendación: aceptarlos).
 - **Para el integrador:**
   - los parches aplican con `git apply --check` sobre la rama y sobre `origin/integracion-fase1-fase2` en `cb0f96f`;
