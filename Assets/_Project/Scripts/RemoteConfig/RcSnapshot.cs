@@ -62,7 +62,7 @@ namespace AF.RemoteConfig
                 return false;
             }
 
-            if (!Accepts<T>(v.Type))
+            if (!Accepts<T>(v.Type) || (typeof(T) == typeof(int) && (v.Integer < int.MinValue || v.Integer > int.MaxValue)))
             {
                 return false;
             }

@@ -21,7 +21,7 @@ namespace AF.RemoteConfig.Binding
     /// Sin reflexión (Managed Stripping High, B10): cada clave tiene su asignación escrita aquí, en una tabla por clase. Un
     /// valor remoto que no se entiende (JSON roto, tipo de otra forma) deja el default de esa propiedad y se anota en
     /// <see cref="RcConfigs.Errors"/>; si la clase entera no pasa su <c>Validate()</c> (fuera de rango), se usa su
-    /// <c>Defaults</c> completo y también se anota [P] (nota, Q-B7-4): nunca se juega con una cifra fuera del rango de 08 §9.
+    /// <c>Defaults</c> completo y también se anota [P] (nota, Q-B7-7): nunca se juega con una cifra fuera del rango de 08 §9.
     /// </para>
     /// Los kill switches de negocio entran ya combinados con <see cref="BizGates"/>: <c>biz_maintenance_mode</c> apaga
     /// anuncios e IAP, y <c>biz_min_app_version</c> apaga las compras.

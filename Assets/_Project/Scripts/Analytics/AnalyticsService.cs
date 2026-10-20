@@ -58,7 +58,13 @@ namespace AF.Analytics
         /// <summary>De dónde salen los comunes en cada envío; null = sin comunes.</summary>
         public ICommonParamsSource? CommonSource { get; set; }
 
-        /// <summary>Eventos o parámetros rechazados por el catálogo, en orden (<c>evento</c> o <c>evento.parámetro</c>).</summary>
+        /// <summary>Tope de <see cref="Violations"/> (las siguientes se cuentan en <see cref="ViolationCount"/>, no se guardan).</summary>
+        public const int MaxViolations = 64;
+
+        /// <summary>Rechazos del catálogo desde el arranque, también los que ya no caben en <see cref="Violations"/>.</summary>
+        public int ViolationCount { get; private set; }
+
+        /// <summary>Eventos o parámetros rechazados por el catálogo, en orden (<c>evento</c> o <c>evento.parámetro</c>), hasta <see cref="MaxViolations"/>.</summary>
         public IReadOnlyList<string> Violations => _violations;
 
         /// <summary>Eventos enviados (a algún sumidero).</summary>
@@ -90,7 +96,7 @@ namespace AF.Analytics
             CatalogEntry? entry = AnalyticsCatalog.Find(e.Name);
             if (entry == null)
             {
-                _violations.Add(e.Name);
+                Violate(e.Name);
                 return false;
             }
 
@@ -98,7 +104,7 @@ namespace AF.Analytics
             {
                 if (!entry.Allows(e.Params[i].Name))
                 {
-                    _violations.Add(e.Name + "." + e.Params[i].Name);
+                    Violate(e.Name + "." + e.Params[i].Name);
                     e.RemoveParamAt(i);
                 }
             }
@@ -144,7 +150,7 @@ namespace AF.Analytics
 
             if (!known || value == null)
             {
-                _violations.Add("user_property." + name);
+                Violate("user_property." + name);
                 return false;
             }
 
@@ -157,6 +163,15 @@ namespace AF.Analytics
             }
 
             return true;
+        }
+
+        private void Violate(string what)
+        {
+            ViolationCount++;
+            if (_violations.Count < MaxViolations)
+            {
+                _violations.Add(what);
+            }
         }
 
         /// <summary>Se da de baja del bus.</summary>

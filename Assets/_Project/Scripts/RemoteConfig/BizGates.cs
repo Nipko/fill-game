@@ -67,7 +67,7 @@ namespace AF.RemoteConfig
 
         /// <summary>
         /// <c>biz_maintenance_message</c>, tal cual. Remote Config lleva claves, nunca texto (<c>.claude/rules/localizacion.md</c>):
-        /// la vista lo trata como clave de <c>strings.csv</c> [P] (nota, Q-B7-6); vacío = el aviso genérico.
+        /// la vista lo trata como clave de <c>strings.csv</c> [P] (nota, Q-B7-8); vacío = el aviso genérico.
         /// </summary>
         public string MaintenanceMessage => _rc.Get<string>("biz_maintenance_message");
 

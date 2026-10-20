@@ -63,7 +63,7 @@ class GddError(Exception):
 
 
 def _interp_country_bool(keys, types, cell):
-    # «CO, PE, MX = true; resto false»: «resto» se escribe con la clave "*" [P] (nota §3, Q-B7-2).
+    # «CO, PE, MX = true; resto false»: «resto» se escribe con la clave "*" [P] (nota §2.1, Q-B7-4).
     return [(keys[0], "json", {"CO": True, "PE": True, "MX": True, "*": False}, None)]
 
 
@@ -122,7 +122,7 @@ def _interp_rv_cap(keys, types, cell):
 
 
 def _interp_rv_cooldown(keys, types, cell):
-    # «60 (extra_canoe 90)»: 60 en cada placement de ads_rv_cap_<placement> y 90 en extra_canoe [P] (nota §3, Q-B7-3).
+    # «60 (extra_canoe 90)»: 60 en cada placement de ads_rv_cap_<placement> y 90 en extra_canoe [P] (nota §2.1, Q-B7-5).
     return [("ads_rv_cooldown_s_" + p, "int", 90 if p == "extra_canoe" else 60, None) for p in RV_PLACEMENTS]
 
 

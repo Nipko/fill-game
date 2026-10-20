@@ -158,6 +158,13 @@ namespace AF.Analytics.Tests
             Assert.That(analytics.SetUserProperty("geo_tier", "T3"), Is.True);
             Assert.That(analytics.SetUserProperty("favorite_fruit", "acai"), Is.False);
             Assert.That(sink.Properties["geo_tier"], Is.EqualTo("T3"));
+            for (int i = 0; i < AnalyticsService.MaxViolations + 10; i++)
+            {
+                analytics.Log(AnalyticsEvent.Create("af_inventado"));
+            }
+
+            Assert.That(analytics.Violations.Count, Is.EqualTo(AnalyticsService.MaxViolations), "con tope");
+            Assert.That(analytics.ViolationCount, Is.EqualTo(AnalyticsService.MaxViolations + 13));
         }
 
         [Test]

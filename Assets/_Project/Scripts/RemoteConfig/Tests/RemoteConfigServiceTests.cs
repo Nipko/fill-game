@@ -57,6 +57,9 @@ namespace AF.RemoteConfig.Tests
             Assert.Throws<InvalidOperationException>(() => rc.Get<int>("anim_tint_skip_alarm_pct"), "un float no se lee como int");
             Assert.That(rc.TryGet("biz_iap_enabled", out int _), Is.False);
             Assert.That(rc.TryGet("canoes_max", out int max) && max == 5, Is.True);
+            rc.Activate(Values("hint_budget_nodes", "9999999999"));
+            Assert.That(rc.TryGet("hint_budget_nodes", out int _), Is.False, "no cabe en un int: false, sin excepción");
+            Assert.That(rc.Get<long>("hint_budget_nodes"), Is.EqualTo(9999999999L));
         }
 
         [Test]
