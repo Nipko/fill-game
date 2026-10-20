@@ -493,6 +493,7 @@ namespace AF.GameFlow
         private void Fail(FailKind kind)
         {
             FailOutcome outcome = FailResolve.Resolve(_attempt, kind, LevelNumber, _wallet);
+            OnHardFailStreak(kind); // Crecida y Hoja escudo, antes de avisar a la vista (E29, E31; LevelFlow.Streak.cs)
             _listener.OnFailResolved(outcome);
         }
 
