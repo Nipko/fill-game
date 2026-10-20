@@ -50,11 +50,6 @@ namespace AF.Tests.PlayMode
                 TestContext.WriteLine("AF_T2 aviso de contenido: " + note);
             }
 
-            foreach (string known in inventory.KnownIssues)
-            {
-                TestContext.WriteLine("AF_T2 pendiente del dueño: " + known);
-            }
-
             Assert.That(inventory.Scanned, Is.GreaterThan(80), "textos visibles mirados");
             Assert.That(inventory.Lines, Is.Empty, "textos que se salen o bajan de 12 sp en " + locale + " al " + percent + " %:\n" + string.Join("\n", inventory.Lines));
         }
