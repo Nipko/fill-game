@@ -27,7 +27,8 @@ namespace AF.Tests.PlayMode
     /// <item><description><c>fx12_banner_l41_mid</c>, <c>fx12_banner_l41_end</c> y <c>fx12_banner_l81_end</c>: el viaje del banner
     /// del 41 (a mitad y al llegar) y del 81 (al llegar).</description></item>
     /// </list>
-    /// Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.Fx12SnapshotTests</c> sin
+    /// Cada captura tiene su «antes» (<c>_antes</c>, con <see cref="RiverRibbonGraphic.CurveOffForSnapshots"/>: las cuerdas de
+    /// antes de FX12), para compararlas. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.Fx12SnapshotTests</c> sin
     /// <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/es-419/</c>.
     /// </summary>
     [Explicit("Capturas de FX12; necesitan dispositivo gráfico.")]
@@ -41,6 +42,7 @@ namespace AF.Tests.PlayMode
             GameScreen.SimulatedScreen = null;
             GameScreen.BannerTravelOverride = null;
             MapArtRule.ForceProvisional = null;
+            RiverRibbonGraphic.CurveOffForSnapshots = false;
             LaunchOptions.Reset();
             SnapshotKit.Release();
             UnityEngine.Rendering.OnDemandRendering.renderFrameInterval = 1;
@@ -48,6 +50,32 @@ namespace AF.Tests.PlayMode
 
         [UnityTest]
         public IEnumerator CaptureTheWorldView()
+        {
+            yield return World(string.Empty);
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureTheWorldViewBefore()
+        {
+            RiverRibbonGraphic.CurveOffForSnapshots = true;
+            yield return World("_antes");
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureTheBannerTravels()
+        {
+            yield return Banners(string.Empty);
+        }
+
+        [UnityTest]
+        public IEnumerator CaptureTheBannerTravelsBefore()
+        {
+            RiverRibbonGraphic.CurveOffForSnapshots = true;
+            yield return Banners("_antes");
+        }
+
+        // La vista Mundo con 58, 120 y 300 y la Cuenca con 58; «suffix», al final de cada nombre.
+        private static IEnumerator World(string suffix)
         {
             string dir = SnapshotKit.Prepare();
             GameScreen.SimulatedScreen = Fx10Tests.Phone;
@@ -65,12 +93,12 @@ namespace AF.Tests.PlayMode
             SnapshotKit.AttachOverlay(map.Canvas);
             yield return SnapshotKit.Wait(0.4f);
             Assert.That(map.View, Is.EqualTo(MapView.World));
-            SaveWithZoom(dir, "fx12_mundo_max58", map);
+            SaveWithZoom(dir, "fx12_mundo_max58" + suffix, map);
 
             map.SetView(MapView.Basin);
             yield return SnapshotKit.Wait(0.3f);
-            SnapshotKit.Save(dir, "fx12_cuenca_max58");
-            Log("fx12_cuenca_max58", map);
+            SnapshotKit.Save(dir, "fx12_cuenca_max58" + suffix);
+            Log("fx12_cuenca_max58" + suffix, map);
 
             foreach (int max in new[] { 120, 300 })
             {
@@ -80,20 +108,20 @@ namespace AF.Tests.PlayMode
                 map.SetView(MapView.World);
                 yield return SnapshotKit.Wait(0.3f);
                 Assert.That(map.View, Is.EqualTo(MapView.World));
-                SaveWithZoom(dir, "fx12_mundo_max" + max, map);
+                SaveWithZoom(dir, "fx12_mundo_max" + max + suffix, map);
             }
         }
 
-        [UnityTest]
-        public IEnumerator CaptureTheBannerTravels()
+        // El viaje del banner del 41 (a mitad y al llegar) y del 81 (al llegar); «suffix», al final de cada nombre.
+        private static IEnumerator Banners(string suffix)
         {
             FunnelSetup.Hooks();
             GameScreen.BannerTravelOverride = true;
             string dir = SnapshotKit.Prepare();
             float mid = WorldBannerView.TravelDelayMs + (0.5f * WorldBannerView.CanoeTravelMs);
-            yield return Banner(dir, 41, mid, "fx12_banner_l41_mid");
-            yield return Banner(dir, 41, 4200f, "fx12_banner_l41_end");
-            yield return Banner(dir, 81, 4200f, "fx12_banner_l81_end");
+            yield return Banner(dir, 41, mid, "fx12_banner_l41_mid" + suffix);
+            yield return Banner(dir, 41, 4200f, "fx12_banner_l41_end" + suffix);
+            yield return Banner(dir, 81, 4200f, "fx12_banner_l81_end" + suffix);
         }
 
         // El banner del nivel «level» con su viaje, a «ms» de entrar la tarjeta (como WorldBannerTravelSnapshotTests).

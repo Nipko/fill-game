@@ -184,9 +184,13 @@ namespace AF.Tests.PlayMode
         }
 
         // El frente del 300 (agua y orla) en Mundo, medido el 2026-10-19: 1.028 vértices de agua y 1.506 de orla (2.534; la pieza
-        // más cara, la orla del Amazonas, 504); en Cuenca, 724. Tope con margen; anotado en la propuesta del Mapa §11.4. Desde FX12
-        // (trazo curvo en Mundo), 2.886 en Mundo (1.170 de agua y 1.716 de orla; la pieza más cara, 654) y 724 en Cuenca: dentro del tope.
-        private const int FrontMeasuredMaxVertices = 3000;
+        // más cara, la orla del Amazonas, 504); en Cuenca, 724. Tope con margen; anotado en la propuesta del Mapa §11.4. Con la primera
+        // versión de FX12 (trazo curvo en Mundo, codos de hasta 25° y 0,75 dp), 2.886. Desde la revisión de FX12 (codos de ≤ 10° y
+        // flecha de ≤ 0,3 dp, que es lo que deja de verse como esquina), 5.764 en Mundo (2.326 de agua y 3.438 de orla; la pieza más
+        // cara, 1.314): no cabe en 3.000 con ningún reparto medido (el más barato con esa calidad, 4.088, aparta la curva de la
+        // polilínea hasta 6 dp en la canoa). Tope provisional [P] de 6.500, pendiente del dueño (anotado en la propuesta §11.4):
+        // el frente solo se rehace una vez por boya (≤ 10 por apertura).
+        private const int FrontMeasuredMaxVertices = 6500;
 
         // Al abrir, en cada fotograma y al acabar. Devuelve las piezas del frente al abrir y las más que tuvo.
         private static (int Open, int Most) CatchUpAndCheck(RiverMapScreen map, string at)
