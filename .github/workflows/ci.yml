@@ -150,7 +150,8 @@ jobs:
       needs.changes.outputs.unity == 'true' &&
       (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
     runs-on: ubuntu-24.04
-    timeout-minutes: 90
+    # PlayMode solo tarda unos 29 min en el escritorio (1.587 tests); el runner de 4 nucleos es mas lento.
+    timeout-minutes: 150
     concurrency:
       group: unity-personal-seat
       cancel-in-progress: false
