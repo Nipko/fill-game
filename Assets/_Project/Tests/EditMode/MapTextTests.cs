@@ -118,8 +118,10 @@ namespace AF.Tests.EditMode
                 {
                     if (locale != LocLocale.SourceLocale)
                     {
-                        Assert.That(strings.TextAt(r, locale), Is.Empty, key + " (" + locale + "): pendiente del traductor");
-                        Assert.That(strings.StatusAt(r, locale), Is.EqualTo(LocStatus.Missing), key + " (" + locale + ")");
+                        // Sin traducir (vacío y sin estado) o con la traducción con IA de T2 (traducido; D-022, pregunta 51 (b)),
+                        // que espera la revisión nativa y la del asesor.
+                        bool translated = strings.TextAt(r, locale).Length > 0;
+                        Assert.That(strings.StatusAt(r, locale), translated ? Is.EqualTo(LocStatus.Translated) : Is.EqualTo(LocStatus.Missing), key + " (" + locale + ")");
                     }
                 }
             }

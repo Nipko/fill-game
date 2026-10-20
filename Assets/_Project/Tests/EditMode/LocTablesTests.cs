@@ -506,6 +506,9 @@ namespace AF.Tests.EditMode
             // Las del Reto del río (R9; enganche E5): las pinta AF.UI.DailyText.
             keys.AddRange(DailyText.NewKeys);
 
+            // E6 y E7 del Spark (enganche E5b): la tarjeta del 7 y la línea de Sin canoas.
+            keys.AddRange(DailyText.E5bKeys);
+
             return keys;
         }
 

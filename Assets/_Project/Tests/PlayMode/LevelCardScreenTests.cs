@@ -437,7 +437,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator Card_FontScale130_NoOverflow()
         {
             // 02 §12: hasta el 130 % sin desbordes ni recortes a 360 dp; los contenedores crecen. También a 1080 × 1920 px (16:9,
-            // la pantalla de 360 × 640 dp de 02 §5; GameScreen la maqueta en 438,75 × 780 dp, ver HudLabelTests).
+            // la pantalla de 360 × 640 dp de 02 §5; GameScreen la maqueta en 360 × 640 dp desde DC3, ver HudLabelTests).
             foreach (Vector4 screen in new[] { HudLabelTests.Screen780, HudLabelTests.Screen640 })
             {
                 GameScreen.SimulatedScreen = screen;

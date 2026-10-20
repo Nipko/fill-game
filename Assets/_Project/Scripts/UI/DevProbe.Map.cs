@@ -177,6 +177,55 @@ namespace AF.UI
             return sb.ToString();
         }
 
+        /// <summary>
+        /// Línea <c>AF_STATE map_journey</c> del viaje del fin de contenido (tarea FX15; M4.3 y FX13; no es un evento de 08 §8.2,
+        /// solo una sonda de desarrollo para comprobar en el teléfono, sin vídeo, que la canoa hizo el viaje Tambo → naciente):
+        /// <paramref name="phase"/> <c>start</c> al abrir el Mapa y <c>end</c> al acabar, con <paramref name="by"/> <c>time</c>
+        /// (llegó sola), <c>touch</c> (un toque lo completó), <c>close</c> (se cerró a medias) o <c>reduce</c> (Reducir movimiento:
+        /// sin viaje, el fundido); <c>from</c> y <c>to</c>, los niveles del tramo; <c>ms</c>, lo que dura; <c>elapsed_ms</c>, lo que
+        /// llevaba al acabar (0 al empezar).
+        /// </summary>
+        public void MapJourney(string phase, int from, int to, int ms, float elapsedMs, string by)
+        {
+            string? line = FormatMapJourney(phase, from, to, ms, elapsedMs, by);
+            if (line != null)
+            {
+                Write(line);
+            }
+        }
+
+        /// <summary>Texto de la línea <c>AF_STATE map_journey</c>; null si la sonda no escribe.</summary>
+        public string? FormatMapJourney(string phase, int from, int to, int ms, float elapsedMs, string by)
+        {
+            if (!Enabled)
+            {
+                return null;
+            }
+
+            StringBuilder sb = _sb;
+            sb.Clear();
+            sb.Append("AF_STATE {\"event\":\"map_journey\"");
+            AppendTime(sb);
+            sb.Append(",\"source\":\"").Append(MapSourceName(MapOpenSource.ContentEnd)).Append('"');
+            sb.Append(",\"phase\":\"").Append(phase).Append('"');
+            sb.Append(",\"from\":").Append(from.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"to\":").Append(to.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"elapsed_ms\":").Append(Mathf.RoundToInt(Mathf.Max(0f, elapsedMs)).ToString(CultureInfo.InvariantCulture));
+            sb.Append(",\"by\":");
+            if (by.Length == 0)
+            {
+                sb.Append("null");
+            }
+            else
+            {
+                sb.Append('"').Append(by).Append('"');
+            }
+
+            sb.Append('}');
+            return sb.ToString();
+        }
+
         /// <summary>Línea <c>AF_STATE map_close</c> (<c>af_map_close</c> de 08 §8.2).</summary>
         public void MapClose(in MapCloseStats stats, int mapSeenLevel)
         {

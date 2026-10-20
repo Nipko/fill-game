@@ -61,6 +61,12 @@ namespace AF.UI
         /// <summary>Pool del Reto para los tests (gana a <see cref="dailyPool"/>); <see cref="ResetDailyOverrides"/> lo limpia.</summary>
         internal static DailyPool? DailyPoolOverride { get; set; }
 
+        /// <summary>
+        /// Los tests fuerzan «sin pool» (el Reto fuera del build, D-008) aunque la escena traiga <see cref="dailyPool"/> (E3):
+        /// gana a <see cref="DailyPoolOverride"/> y al pool de la escena; <see cref="ResetDailyOverrides"/> lo apaga.
+        /// </summary>
+        internal static bool DailyPoolDisabledOverride { get; set; }
+
         /// <summary>Almacén del Reto para los tests (gana a <see cref="DailyStoreFactory"/>).</summary>
         internal static IDailyChallengeStore? DailyStoreOverride { get; set; }
 
@@ -108,6 +114,7 @@ namespace AF.UI
         internal static void ResetDailyOverrides()
         {
             DailyPoolOverride = null;
+            DailyPoolDisabledOverride = false;
             DailyStoreOverride = null;
             DailyServerOverride = null;
         }
@@ -253,6 +260,71 @@ namespace AF.UI
             return OpenDaily(card.State);
         }
 
+        /// <summary>
+        /// El Reto del río está en este build: <see cref="SetUpDaily"/> lo creó con un pool válido (E2 y E3). Sin él, ni la tarjeta
+        /// del inicio, ni la presentación del 7 (<see cref="DailyTeaserCard"/>, E6), ni la línea de Sin canoas (E7): D-008.
+        /// </summary>
+        public bool DailyInBuild => _dailyService?.Pool != null;
+
+        /// <summary>
+        /// Sin canoas ofrece «Mientras esperas: Jugar el Reto del río» (E7; 04 §7.3; 04 §7.1: el Reto no requiere canoas): el Reto
+        /// está en el build y desbloqueado (nivel ≥ <c>live_unlock_level_daily</c>, con su interruptor) y hoy se puede jugar o
+        /// seguir (tarjeta Jugar o Seguir). Con el día ya sellado o pendiente de validar no se ofrece [P]: la tarjeta abriría el
+        /// calendario, no un tablero. Ni con el Reto ya abierto.
+        /// </summary>
+        public bool NoCanoesDailyAvailable
+        {
+            get
+            {
+                if (_dailyService == null || _dailyScreen == null || _progress == null || _dailyScreen.IsOpen)
+                {
+                    return false;
+                }
+
+                DailyCardState state = _dailyService.CardState(_progress.MaxLevel);
+                return state == DailyCardState.Play || state == DailyCardState.InProgress;
+            }
+        }
+
+        /// <summary>
+        /// «Mientras esperas: Jugar el Reto del río» de Sin canoas (E7): registra <c>af_no_canoes_choice</c> con
+        /// <c>choice = daily_challenge</c> (04 §11; 08 §8.2; hasta <c>AF.Analytics</c>, la sonda <c>AF_STATE no_canoes_choice</c>),
+        /// cierra Sin canoas por el camino de «Volver al inicio» (<see cref="PressNoCanoesHome"/>: desde el inicio, al inicio;
+        /// desde un nivel, sale al inicio como ese botón) y abre el tablero de hoy como la tarjeta. Devuelve si se abrió; con el
+        /// Reto no disponible (<see cref="NoCanoesDailyAvailable"/>) o sin Sin canoas delante, no hace nada.
+        /// </summary>
+        public bool PressNoCanoesDaily()
+        {
+            if (!NoCanoesDailyAvailable || _app == null)
+            {
+                return false;
+            }
+
+            bool fromLobby = _app.Screen == AppScreen.NoCanoes;
+            bool fromLevel = _flow != null && _flow.Phase == FlowPhase.NoCanoes;
+            if (!fromLobby && !fromLevel)
+            {
+                return false;
+            }
+
+            DailyCardState state = _dailyService!.CardState(_progress!.MaxLevel);
+            if (!PressNoCanoesHome())
+            {
+                return false;
+            }
+
+            // La elección se registra cuando Sin canoas ya se cerró por su camino (revisión de T1).
+            DevProbe.DailyNoCanoesChoice();
+            LastNoCanoesChoice = DailyProbeFormat.NoCanoesDailyChoice;
+
+            _dailyCardShown = false;
+            RefreshDailyCard();
+            return OpenDaily(state);
+        }
+
+        /// <summary>Última elección de Sin canoas registrada por el Reto (<c>daily_challenge</c>), o null (tests).</summary>
+        public string? LastNoCanoesChoice { get; private set; }
+
         private void OnDailyDayEnded(DailyPlayEnd end)
         {
             LastDailyDayEnd = end;
@@ -329,6 +401,11 @@ namespace AF.UI
 
         private DailyPool? LoadDailyPool()
         {
+            if (DailyPoolDisabledOverride)
+            {
+                return null;
+            }
+
             if (DailyPoolOverride != null)
             {
                 return DailyPoolOverride;

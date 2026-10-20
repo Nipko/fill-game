@@ -1,0 +1,34 @@
+diff --git a/Assets/_Project/Data/Loc/strings.csv b/Assets/_Project/Data/Loc/strings.csv
+index ed76da7..68e956e 100644
+--- a/Assets/_Project/Data/Loc/strings.csv
++++ b/Assets/_Project/Data/Loc/strings.csv
+@@ -17,6 +17,7 @@ daily_reward_seeds,+{n},,,"Premio del Reto en el calendario de sellos, junto al
+ daily_streak,{n}/{total},,,"Racha del Reto en la tarjeta del inicio (06 §4.1: «{n}/7»). {n}: días seguidos ganados que se muestran (0-7, nota §7.3); {total}: 7, los días que dan la Pororoca.",11,borrador,,,"[P] Tarea R9.",
+ daily_streak_reward,+1 Pororoca,,,"Línea del calendario cuando la victoria cierra una racha de 7 días (06 §4.1; R-Q7; 04 §2.4). Pororoca: nombre del comodín (glosario).",24,borrador,,,"[P] Tarea R9. Desde el nivel que desbloquea la Pororoca; antes, daily_streak_reward_locked (R-Q14 a).",
+ daily_streak_reward_locked,+1 Pororoca · se desbloquea en el nivel {level},,,"Línea del calendario cuando la victoria cierra una racha de 7 antes del nivel que desbloquea la Pororoca (R-Q14 a: entra en el stock y espera; 04 §2.4). {level}: nivel de desbloqueo (shuffle_unlock_level, 30), sin separador.",47,borrador,,,"[P] Tarea R9; decisión del dueño R-Q14 (a).",
++daily_teaser,"Desde el nivel {level}, un tablero nuevo cada día",,,"Tarjeta de 2 s que presenta el Reto del río en la pantalla de victoria del nivel 7 (06 §2.2, fila 7; 02 §13): placa de madera clara sobre las cuias, sin toques. {level}: nivel que desbloquea el Reto (live_unlock_level_daily, hoy 10), con cifras de la región.",56,pendiente_asesor,,,"[P] Enganche E6 del Spark. Texto de 06 §2.2 con el 10 como marcador. pendiente_asesor porque lo pide el encargo del Spark (§10, T1.2); el texto no nombra fauna, flora, pueblos ni lugares: el dueño puede bajarlo a borrador.",
+ daily_win_no_reward,Sin premio: esta fecha ya se reclamó,,,"Línea del calendario al ganar un Reto sin premio: la fecha es ≤ la última reclamada (ya se cobró, el reloj va hacia atrás o el cobro se anuló al reconciliar; 06 §4.1 «Anti-reloj»). Neutra: no dice que haya sello.",40,borrador,,,"[P] Texto sin decisión del dueño.",
+ daily_win_pending,Premio pendiente de validar,,,"Línea del calendario al ganar con el premio pendiente de la hora del servidor (06 §4.1; 08 §10.1): las semillas llegan al reconectar.",36,borrador,,,"[P] Tarea R9.",
+ difficulty_hard,Difícil,Hard,Difícil,"Chip de dificultad del botón Jugar, de la tarjeta previa y del HUD (glosario §6.1; 02 §10).",16,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
+@@ -110,6 +111,7 @@ month_short_11,nov,,,"Mes abreviado (noviembre) dentro de daily_date_short.",5,b
+ month_short_12,dic,,,"Mes abreviado (diciembre) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9.",
+ music,Música,Music,Música,"Fila de Ajustes (07 §9.3 y §9.4; tarea AU1): interruptor del ajuste settings.music, activado por defecto (audio_music_default_on); apagado, se calla el lecho del mundo. Glosario §10 (sound / music / haptics). Captura: Ajustes en Logs/snapshots/es-419/ (SettingsSnapshotTests).",16,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
+ next,Siguiente,Next,Próximo,Botón principal de la pantalla de victoria (02 §6).,20,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
++no_canoes_daily,Mientras esperas: Jugar el Reto del río,,,"Enlace de la pantalla Sin canoas, encima de «Volver al inicio» (04 §7.3, wireframe: «Mientras esperas: Jugar el Reto del río >»; el Reto no gasta canoas, 04 §7.1). Solo si hoy se puede jugar el Reto. Sin marcadores.",44,borrador,,,"[P] Enganche E7 del Spark. Texto literal del wireframe de 04 §7.3, sin el chevron.",
+ no_canoes_infinite,Canoas infinitas 1 h · {price},,,Botón de Sin canoas: Canoas infinitas 1 h (04 §7.3; af_infinite_canoes_1h). {price}: precio de la tienda tal cual.,32,aprobado_es,,,"Clave derivada [P]. Antes, «… {0}» con string.Format.",
+ no_canoes_next,Tu próxima canoa vuelve en,,,Texto sobre el cronómetro de Sin canoas (04 §7.3); el cronómetro mm:ss va aparte.,28,aprobado_es,,,Clave derivada [P].,
+ no_canoes_refill,Llenar canoas · {n}/{n},,,"Botón de Sin canoas: llenar las canoas por semillas (04 §7.3); la etiqueta de precio va al lado. {n}: canoes_max, sin separador.",24,aprobado_es,,,"Clave derivada [P]. Antes, «… {0}/{0}» con string.Format.",
+diff --git a/Assets/_Project/Tests/EditMode/LocTablesTests.cs b/Assets/_Project/Tests/EditMode/LocTablesTests.cs
+index 55ee219..4721986 100644
+--- a/Assets/_Project/Tests/EditMode/LocTablesTests.cs
++++ b/Assets/_Project/Tests/EditMode/LocTablesTests.cs
+@@ -506,6 +506,9 @@ internal static List<string> UiTextKeys()
+             // Las del Reto del río (R9; enganche E5): las pinta AF.UI.DailyText.
+             keys.AddRange(DailyText.NewKeys);
+ 
++            // E6 y E7 del Spark (enganche E5b): la tarjeta del 7 y la línea de Sin canoas.
++            keys.AddRange(DailyText.E5bKeys);
++
+             return keys;
+         }
+ 

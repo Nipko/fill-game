@@ -279,7 +279,8 @@ namespace AF.Tests.EditMode
             Assert.That(Real.SeasonOf(91), Is.EqualTo(Season.HighWater), "premisa");
             b.Apply(leticia, "white", false, 0f, Real.SeasonOf(91));
             Assert.That(b.Season, Is.EqualTo(Season.HighWater));
-            Assert.That(b.LutColor, Is.EqualTo(StopBackdrop.DuskLut * StopBackdrop.HighWaterLut), "la de la parada por la de la temporada");
+            Assert.That(b.LutColor, Is.EqualTo(StopBackdrop.DuskLut * StopBackdrop.TwilightHighWaterLut),
+                "la de la parada por la de la temporada (la A de las paradas con luz propia)");
             Assert.That(b.LutColor, Is.EqualTo(StopBackdrop.LutOf(leticia, Season.HighWater)));
 
             // La misma parada sin temporada: la luz de la parada sola (sin la tabla, como antes).
@@ -332,13 +333,16 @@ namespace AF.Tests.EditMode
                     b.Apply(stop, water, false, 0f, season);
                     Assert.That(b.BandColor, Is.EqualTo(Palette.WaterBase(water)), "parada " + n + ": el preset del mundo");
                     Color[] band = BandColors(b);
-                    Assert.That(band, Is.EqualTo(reference), "parada " + n + ", " + season + ": la banda no lleva la LUT de temporada");
+                    Assert.That(band.Length, Is.EqualTo(reference.Length), "parada " + n + ", " + season + ": la misma banda");
+                    Assert.That(band, Is.Not.EqualTo(reference), "parada " + n + ", " + season + ": la banda lleva la temporada (DC21)");
+                    Assert.That(ColorMath.DeltaE00(b.SeasonWaterColor, Palette.WaterBase(water)),
+                        Is.LessThanOrEqualTo(StopBackdrop.SeasonWaterMaxDeltaE + 0.01f), "parada " + n + ", " + season + ": el agua");
                     for (int i = 0; i < band.Length; i++)
                     {
                         if (band[i].a >= 0.99f)
                         {
                             Assert.That(ColorMath.DeltaE00(band[i], Palette.WaterBase(water)), Is.LessThanOrEqualTo(5f),
-                                "parada " + n + ", vértice " + i + ": ΔE00 ≤ 5 (VA-23)");
+                                "parada " + n + ", " + season + ", vértice " + i + ": ΔE00 ≤ 5 (VA-23)");
                         }
                     }
                 }
@@ -361,11 +365,11 @@ namespace AF.Tests.EditMode
                 Color lut = StopBackdrop.LutOf(stop, season);
                 Color[] tint = { top, Color.Lerp(top, horizon, 0.5f), horizon };
                 float[] alpha = { aTop, (aTop + aHorizon) * 0.5f, aHorizon };
-                AssertBright(pano, lut, tint, alpha, "parada " + n + " (" + season + ")");
+                AssertBright(pano, lut, Seasoned(tint, stop, season), alpha, "parada " + n + " (" + season + ")");
 
                 // Y la otra temporada, por si el calendario cambia.
                 Season other = season == Season.HighWater ? Season.LowWater : Season.HighWater;
-                AssertBright(pano, StopBackdrop.LutOf(stop, other), tint, alpha, "parada " + n + " (" + other + ")");
+                AssertBright(pano, StopBackdrop.LutOf(stop, other), Seasoned(tint, stop, other), alpha, "parada " + n + " (" + other + ")");
             }
 
             // Sin parada: el panorama solo con la luz de la temporada.
@@ -373,6 +377,151 @@ namespace AF.Tests.EditMode
             var zero = new[] { 0f, 0f, 0f };
             AssertBright(pano, StopBackdrop.HighWaterLut, none, zero, "aguas altas sin parada");
             AssertBright(pano, StopBackdrop.LowWaterLut, none, zero, "aguas bajas sin parada");
+        }
+
+        // El tinte del cielo con la LUT de temporada de la parada (DC21).
+        private static Color[] Seasoned(Color[] tint, RiverStop? stop, Season season)
+        {
+            Color lut = StopBackdrop.SeasonLutOf(stop, season);
+            var r = new Color[tint.Length];
+            for (int i = 0; i < tint.Length; i++)
+            {
+                r[i] = StopBackdrop.SeasonSky(tint[i], lut);
+            }
+
+            return r;
+        }
+
+        [Test]
+        public void DC21_TheSkyTint_CarriesTheSeasonLut()
+        {
+            StopBackdrop b = NewBackdrop();
+            int tinted = 0;
+            for (int n = 0; n < Stops.Count; n++)
+            {
+                RiverStop stop = Stops.At(n)!;
+                string water = WaterOf(stop.World);
+                b.Apply(stop, water, false, 0f);
+                Color[] none = SkyColors(b);
+                foreach (Season season in new[] { Season.HighWater, Season.LowWater })
+                {
+                    b.Apply(stop, water, false, 0f, season);
+                    Color[] sky = SkyColors(b);
+                    Assert.That(sky.Length, Is.EqualTo(none.Length), "parada " + n + ": el mismo cielo");
+                    Color lut = StopBackdrop.SeasonLutOf(stop, season);
+                    for (int i = 0; i < sky.Length; i++)
+                    {
+                        string what = "parada " + n + ", " + season + ", vértice " + i;
+                        Assert.That(sky[i].a, Is.EqualTo(none[i].a).Within(1.5f / 255f), what + ": la misma opacidad (≤ 0,5)");
+                        Assert.That(ColorMath.DeltaE00(sky[i], none[i]), Is.GreaterThan(1f), what + ": lleva la temporada");
+                    }
+
+                    if (sky.Length > 0)
+                    {
+                        // El primer vértice es el de arriba del cielo: su color con SeasonSky (la LUT sin bajar la saturación).
+                        Color top = StopBackdrop.SeasonSky(none[0], lut);
+                        Assert.That(sky[0].r, Is.EqualTo(top.r).Within(1.5f / 255f), "parada " + n + ", " + season + ": arriba (r)");
+                        Assert.That(sky[0].g, Is.EqualTo(top.g).Within(1.5f / 255f), "parada " + n + ", " + season + ": arriba (g)");
+                        Assert.That(sky[0].b, Is.EqualTo(top.b).Within(1.5f / 255f), "parada " + n + ", " + season + ": arriba (b)");
+                    }
+                }
+
+                tinted += none.Length > 0 ? 1 : 0;
+            }
+
+            Assert.That(tinted, Is.GreaterThan(0), "hay paradas con tinte de cielo");
+        }
+
+        [Test]
+        public void DC21_HighWater_AtDuskAndDawn_TurnsCool_NotOlive()
+        {
+            // Revisión de DC21 (D-003): la A multiplicada sobre la luz cálida del atardecer quitaba rojo y dejaba el verde, y el
+            // cielo salía oliva. En las paradas con luz propia la A es TwilightHighWaterLut: el tono de lo que se ve del fondo
+            // (panorama con el tinte del cielo encima) no gira hacia el amarillo verdoso más de MaxHueShift grados.
+            const float MaxHueShift = 8f;
+            Color[] pano = { Palette.SkyTop, Palette.SkyMid, Palette.SkyHorizon };
+            int twilight = 0;
+            for (int n = 0; n < Stops.Count; n++)
+            {
+                RiverStop stop = Stops.At(n)!;
+                Color own = StopBackdrop.LutOf(stop);
+                if (own == Color.white)
+                {
+                    Assert.That(StopBackdrop.SeasonLutOf(stop, Season.HighWater), Is.EqualTo(StopBackdrop.HighWaterLut), "parada " + n);
+                    continue;
+                }
+
+                twilight++;
+                Assert.That(StopBackdrop.SeasonLutOf(stop, Season.HighWater), Is.EqualTo(StopBackdrop.TwilightHighWaterLut), "parada " + n);
+                Assert.That(StopBackdrop.SeasonLutOf(stop, Season.LowWater), Is.EqualTo(StopBackdrop.LowWaterLut), "parada " + n);
+                StopBackdrop.SkyOf(stop, out Color top, out Color horizon, out float aTop, out float aHorizon);
+                Color[] tint = { top, Color.Lerp(top, horizon, 0.5f), horizon };
+                float[] alpha = { aTop, (aTop + aHorizon) * 0.5f, aHorizon };
+                Color[] none = Seasoned(tint, stop, Season.None);
+                Color[] high = Seasoned(tint, stop, Season.HighWater);
+                Color lut = StopBackdrop.LutOf(stop, Season.HighWater);
+                for (int i = 1; i < 3; i++) // los tonos cálidos: el medio y el horizonte
+                {
+                    Color.RGBToHSV(Color.Lerp(pano[i] * own, none[i], alpha[i]), out float h0, out _, out _);
+                    Color.RGBToHSV(Color.Lerp(pano[i] * lut, high[i], alpha[i]), out float h1, out _, out _);
+                    float shift = Mathf.DeltaAngle(h0 * 360f, h1 * 360f);
+                    Assert.That(shift, Is.LessThanOrEqualTo(MaxHueShift), "parada " + n + ", tono " + i + ": sin girar al oliva");
+                }
+            }
+
+            Assert.That(twilight, Is.GreaterThan(0), "hay paradas con luz propia");
+        }
+
+        [Test]
+        public void DC21_SeasonSky_KeepsTheSaturation_AndTheAlpha()
+        {
+            var pink = new Color(0.96f, 0.66f, 0.61f, 0.5f);
+            Assert.That(StopBackdrop.SeasonSky(pink, Color.white), Is.EqualTo(pink), "sin temporada, el color");
+            foreach (Color lut in new[] { StopBackdrop.HighWaterLut, StopBackdrop.TwilightHighWaterLut, StopBackdrop.LowWaterLut })
+            {
+                Color c = StopBackdrop.SeasonSky(pink, lut);
+                Color.RGBToHSV(pink, out _, out float s0, out _);
+                Color.RGBToHSV(c, out _, out float s1, out float v1);
+                Assert.That(s1, Is.GreaterThanOrEqualTo(s0 - 0.001f), "no baja la saturación (VA-03)");
+                Color.RGBToHSV(new Color(pink.r * lut.r, pink.g * lut.g, pink.b * lut.b), out _, out _, out float v);
+                Assert.That(v1, Is.EqualTo(v).Within(0.001f), "el brillo de la LUT");
+                Assert.That(c.a, Is.EqualTo(pink.a));
+            }
+        }
+
+        [Test]
+        public void DC21_SeasonWater_MovesTheWater_WithinVA23_AndApartBetweenSeasons()
+        {
+            foreach (string water in new[] { "white", "clear", "black" })
+            {
+                Color preset = Palette.WaterBase(water);
+                Assert.That(StopBackdrop.SeasonWater(preset, Color.white), Is.EqualTo(preset), water + ": sin temporada, el preset");
+                Color a = StopBackdrop.SeasonWater(preset, StopBackdrop.HighWaterLut);
+                Color twilight = StopBackdrop.SeasonWater(preset, StopBackdrop.TwilightHighWaterLut);
+                Color bb = StopBackdrop.SeasonWater(preset, StopBackdrop.LowWaterLut);
+                foreach (Color c in new[] { a, twilight, bb })
+                {
+                    Assert.That(ColorMath.DeltaE00(c, preset), Is.LessThanOrEqualTo(StopBackdrop.SeasonWaterMaxDeltaE + 0.01f), water + ": VA-23");
+                    Assert.That(ColorMath.DeltaE00(StopBackdrop.RippleColor(c), preset), Is.LessThanOrEqualTo(StopBackdrop.SeasonWaterMaxDeltaE + 0.01f),
+                        water + ": las ondas, VA-23");
+                    Assert.That(c.a, Is.EqualTo(preset.a));
+                }
+
+                Assert.That(ColorMath.DeltaE00(a, bb), Is.GreaterThan(1f), water + ": A y B se distinguen en el agua");
+                Assert.That(ColorMath.DeltaE00(twilight, bb), Is.GreaterThan(1f), water + ": A (al atardecer y al alba) y B se distinguen en el agua");
+            }
+        }
+
+        private static Color[] SkyColors(StopBackdrop b)
+        {
+            StopShapeGraphic g = b.SkyGraphic;
+            var colors = new Color[g.VertexCount];
+            for (int i = 0; i < colors.Length; i++)
+            {
+                colors[i] = g.ColorAt(i);
+            }
+
+            return colors;
         }
 
         private static void AssertBright(Color[] pano, Color lut, Color[] tint, float[] alpha, string what)

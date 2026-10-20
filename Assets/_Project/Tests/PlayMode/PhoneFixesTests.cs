@@ -438,7 +438,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator Banner_FontScale100And130_NoOverflowNorOverlap()
         {
             // 02 §12: hasta el 130 % sin desbordes ni recortes; los contenedores crecen. El 41 a 100 % y a 130 % a 360 × 780 dp y
-            // en 16:9 (438,75 × 780 dp), y el 11, el 81 y el 141 a 130 %.
+            // en 16:9 (360 × 640 dp desde DC3), y el 11, el 81 y el 141 a 130 %.
             foreach (Vector4 screen in new[] { HudLabelTests.Screen780, HudLabelTests.Screen640 })
             {
                 GameScreen.SimulatedScreen = screen;

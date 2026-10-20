@@ -57,7 +57,7 @@ namespace AF.Tests.PlayMode
             yield return Shot(dir, 160, "46e_hud_veryhard_l160");
             yield return Shot(dir, 180, "46f_hud_veryhard_l180");
 
-            // 16:9 (1080 × 1920 px): GameScreen lo maqueta en 438,75 × 780 dp, en la parte de arriba de la captura.
+            // 16:9 (1080 × 1920 px): GameScreen lo maqueta en 360 × 640 dp (DC3), en la parte de arriba de la captura.
             GameScreen.SimulatedScreen = HudLabelTests.Screen640;
             yield return Shot(dir, 200, "46c_hud_l200_16x9");
             yield return Shot(dir, 160, "46g_hud_l160_16x9");
@@ -83,7 +83,7 @@ namespace AF.Tests.PlayMode
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.Save(dir, "47b_next_chip_l59");
 
-            // El mismo chip colgado de Siguiente en 16:9 (1080 × 1920 px: 438,75 × 780 dp, en la parte de arriba de la captura).
+            // El mismo chip colgado de Siguiente en 16:9 (1080 × 1920 px: 360 × 640 dp desde DC3, en la parte de arriba de la captura).
             GameScreen.SimulatedScreen = HudLabelTests.Screen640;
             yield return HudSetup.LoadPlaying(59);
             boot = GameBootstrap.Current!;

@@ -19,7 +19,7 @@ namespace AF.Tests.PlayMode
     /// instante con el estado final en ese fotograma y el primer toque de juego en el siguiente, restos fundidos en ≤ 100 ms y
     /// un solo <c>af_anim_skipped</c> con <c>anim = tint</c>; primero se mueve el río; un chorrito sobre cada cuia no vacía y
     /// ninguno sobre las vacías; nada de la intro recibe toques; la tropa queda a ≥ 8 dp de las cuias y fuera del HUD y del
-    /// panel con 3, 7 y 16 cuias en 20:9 (360 × 780 dp) y 16:9 (el lienzo nunca baja de 780 dp: 439 × 780), en los tres
+    /// panel con 3, 7 y 16 cuias en 20:9 (360 × 780 dp) y 16:9 (360 × 640 dp desde DC3), en los tres
     /// modelos, y el agua nunca tapa la rama bajo los miquitos (labio &lt; rama &lt; tropa); seleccionar o verter no cambia
     /// nada de la tropa; 0 B por fotograma en todas las rutas; la onda del menisco, función solo del tiempo; la ruta de
     /// Reducir movimiento; la compuerta del arte de release; y la tarjeta «¡Miquito a la vista!» del nivel 5 (guion §4.5, A15
@@ -94,6 +94,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator LongIntro_RiverMovesFirst_StreamsFillEveryNonEmptyCuia_AndTheLastBloomEndsAtT()
         {
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780; // DC3: sin pantalla simulada, el Editor da un lienzo de 853 × 640 dp
             yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
@@ -212,7 +213,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Troop_KeepsClearOfCuiasHudAndPanel_InTheThreeModels([Values(2340, 1920)] int screenHeightPx)
         {
-            // 20:9 (360 × 780 dp) y 16:9 (el lienzo nunca baja de 780 dp de alto: 439 × 780 dp; 02 §5).
+            // 20:9 (360 × 780 dp) y 16:9 (360 × 640 dp desde DC3; 02 §5). En 16:9 los tableros que no dejan entre el HUD y el panel
+            // la franja de la rama (BranchMinBandDp) van con el dosel, y la tropa que cuelga, con menos de 64 dp, en fila: la regla
+            // de D-010 («pantallas de 640 dp sin franja», 02 §5, fila de la intro), no una excepción del test.
             GameScreen.SimulatedScreen = new Vector4(1080f, screenHeightPx, 96f, 48f);
             var cases = new (string Pack, int Level, IntroPerch Perch, TroopModel Model)[]
             {
@@ -247,10 +250,14 @@ namespace AF.Tests.PlayMode
                     view.DebugReplayIntro(duration, false);
                     IntroChoreography plan = view.Intro.Plan;
                     branches += plan.Perch == IntroPerch.Branch ? 1 : 0;
-                    Assert.That(plan.Perch, Is.EqualTo(perch), "posadero del nivel " + level);
-                    if (perch == IntroPerch.Branch)
+                    float band = view.Intro.Input.PanelTop - view.Intro.Input.HudBottom;
+                    bool short16x9 = screenHeightPx == 1920 && perch == IntroPerch.Branch;
+                    IntroPerch wantPerch = short16x9 && band < IntroChoreography.BranchMinBandDp ? IntroPerch.Canopy : perch;
+                    TroopModel wantModel = short16x9 && model == TroopModel.Hang && band < IntroChoreography.HangMinBandDp ? TroopModel.Row : model;
+                    Assert.That(plan.Perch, Is.EqualTo(wantPerch), "posadero del nivel " + level + " (franja de " + band + " dp)");
+                    if (wantPerch == IntroPerch.Branch)
                     {
-                        Assert.That(plan.Model, Is.EqualTo(model), "modelo del nivel " + level);
+                        Assert.That(plan.Model, Is.EqualTo(wantModel), "modelo del nivel " + level);
                     }
 
                     float hudBottom = view.Intro.Input.HudBottom;
@@ -280,7 +287,14 @@ namespace AF.Tests.PlayMode
                 }
             }
 
-            Assert.That(branches, Is.EqualTo(16), "8 tableros con tropa × 2 versiones");
+            if (screenHeightPx == 2340)
+            {
+                Assert.That(branches, Is.EqualTo(16), "8 tableros con tropa × 2 versiones");
+            }
+            else
+            {
+                Assert.That(branches, Is.GreaterThanOrEqualTo(2), "en 16:9, al menos el nivel 1 (1 fila) en la rama");
+            }
         }
 
         /// <summary>
@@ -573,6 +587,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator ReduceMotion_FadesIn250ms_WithAStillMonkey()
         {
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780; // DC3: sin pantalla simulada, el Editor da un lienzo de 853 × 640 dp
             yield return PlayModeHelpers.LoadGame(7, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
@@ -628,6 +643,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator SightingCard_AppearsAfterTheIntroOfLevel5_WithoutBlockingTouchesOrCoveringCuias()
         {
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780; // DC3: sin pantalla simulada, el Editor da un lienzo de 853 × 640 dp
             yield return PlayModeHelpers.LoadGame(4, new MemoryProgressStore());
             GameBootstrap boot = GameBootstrap.Current!;
             PlayModeHelpers.TakeClock(boot);
@@ -771,6 +787,13 @@ namespace AF.Tests.PlayMode
                 {
                     view.DebugReplayIntro(duration, false);
                     IntroChoreography plan = view.Intro.Plan;
+                    if (screenHeightPx == 1920 && view.Intro.Input.PanelTop - view.Intro.Input.HudBottom < IntroChoreography.BranchMinBandDp)
+                    {
+                        // 16:9 (360 × 640 dp desde DC3): sin la franja de la rama, el dosel (D-010; 02 §5): no hay rama que medir.
+                        Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Canopy), "nivel " + level + " en 16:9 sin franja");
+                        continue;
+                    }
+
                     Assert.That(plan.Perch, Is.EqualTo(IntroPerch.Branch), "nivel " + level);
                     Dictionary<Transform, int> order = RenderOrder(canvas);
                     int branchOrder = order[view.Troop.Branch.transform];
@@ -837,7 +860,7 @@ namespace AF.Tests.PlayMode
                 }
             }
 
-            Assert.That(measured, Is.GreaterThan(100), "miquitos medidos sobre la rama");
+            Assert.That(measured, Is.GreaterThan(screenHeightPx == 2340 ? 100 : 40), "miquitos medidos sobre la rama (en 16:9, solo los tableros con franja)");
             Assert.That(lipFrames, Is.GreaterThan(20), "con el labio del río a la vista");
         }
 
@@ -1097,7 +1120,7 @@ namespace AF.Tests.PlayMode
         /// <summary>
         /// Salida de la tropa (revisión: parecían monos fantasma a media salida): trepan hacia el follaje de la esquina más
         /// cercana, con alfa 1 hasta los últimos 80 ms, y la capa de la tropa está detrás del follaje de las esquinas. En un
-        /// teléfono (360 dp) llegan a su esquina y trepan junto a ella; en un lienzo ancho (el de 1.040 dp del Editor sin
+        /// teléfono (360 dp) llegan a su esquina y trepan junto a ella; en un lienzo ancho (el de 853 dp del Editor sin
         /// pantalla simulada, como una tableta), a 450 dp/s no llegan en los 500 ms de la salida y trepan igual mientras se
         /// funden (revisión del 2026-10-11: antes salían andando en plano). En la rama baja, un manojo de hojas en cada extremo,
         /// por delante de la tropa, de la rama hacia arriba y sin pasar sobre el HUD.

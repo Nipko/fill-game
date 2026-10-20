@@ -1666,8 +1666,9 @@ namespace AF.UI
 
         // Revisión de FX12: el tope de vértices de cada pieza de la ruta del frente (el agua y la orla, con las mismas secciones). Si
         // con todos los pasos de la curva (lo que pide cada pieza en el vidrio de su línea, a la escala de la vista) el frente entero
-        // cabe en FrontCurveMaxVertices, sin tope (el de una malla); si no, se reparte según lo que pide cada pieza. Sin trazo curvo
-        // (la Cuenca), sin tope, como desde FX11. Solo asigna si la ruta tiene más piezas que ninguna antes.
+        // cabe en FrontCurveMaxVertices, sin tope (el de una malla); si no, se reparte según lo que pide cada pieza (FX14: con un
+        // mínimo por pieza, FrontMinSections). Sin trazo curvo (la Cuenca), sin tope, como desde FX11. Solo asigna si la ruta tiene
+        // más piezas que ninguna antes.
         private void FitFrontBudgets(RiverMap map, RiverStopRoute route)
         {
             IReadOnlyList<RiverPathPiece> path = route.Path;
@@ -1684,25 +1685,84 @@ namespace AF.UI
                 RiverLine line = map.Lines[piece.Line];
                 int demand = piece.Line < _glass.Count ? Glass(piece.Line).CurveDemand(piece.S0, piece.S1) : 0;
                 _frontCoreBudget[i] = demand; // de momento, lo que pide
-                total += demand * (RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core)
-                    + RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing));
+                total += demand * FrontSectionVertices(line, piece);
             }
 
+            if (total <= FrontCurveMaxVertices)
+            {
+                for (int i = 0; i < path.Count; i++)
+                {
+                    _frontCoreBudget[i] = RiverRibbonGraphic.MaxVertices;
+                    _frontCasingBudget[i] = RiverRibbonGraphic.MaxVertices;
+                }
+
+                return;
+            }
+
+            // FX14: cada pieza se queda primero con lo que pide hasta FrontMinSections secciones (y nunca menos de
+            // FrontSectionsMin, el mínimo de una cinta; una pieza corta, como la punta del Beni con el 300, dibuja todos sus pasos
+            // y no se queda sin sitio ni para su plan) y el resto del tope se reparte según lo que pide de más cada una. Si esos
+            // mínimos ya pasan del tope (una ruta de muchas piezas; hoy el frente tiene como mucho 5), lo que pasa de
+            // FrontSectionsMin se reduce en proporción. Así la suma no pasa de FrontCurveMaxVertices, salvo que la ruta tenga
+            // tantas piezas que ni FrontSectionsMin por pieza quepan.
+            int reserved = 0;
+            int rest = 0;
+            int minimum = 0;
+            for (int i = 0; i < path.Count; i++)
+            {
+                int vertices = FrontSectionVertices(map.Lines[path[i].Line], path[i]);
+                int floor = FrontFloor(_frontCoreBudget[i]);
+                reserved += floor * vertices;
+                rest += Mathf.Max(0, _frontCoreBudget[i] - floor) * vertices;
+                minimum += FrontSectionsMin * vertices;
+            }
+
+            bool scaled = reserved > FrontCurveMaxVertices;
+            int left = scaled ? 0 : FrontCurveMaxVertices - reserved;
+            int spare = Mathf.Max(0, FrontCurveMaxVertices - minimum); // con scaled, lo que cabe por encima de los mínimos
+            int over = reserved - minimum;
+            int used = 0;
             for (int i = 0; i < path.Count; i++)
             {
                 RiverPathPiece piece = path[i];
                 RiverLine line = map.Lines[piece.Line];
-                if (total <= FrontCurveMaxVertices)
+                int demand = _frontCoreBudget[i];
+                int floor = FrontFloor(demand);
+                int extra = rest > 0 ? (int)((long)left * Mathf.Max(0, demand - floor) / rest) : 0;
+                if (scaled)
                 {
-                    _frontCoreBudget[i] = RiverRibbonGraphic.MaxVertices;
-                    _frontCasingBudget[i] = RiverRibbonGraphic.MaxVertices;
-                    continue;
+                    floor = FrontSectionsMin + (over > 0 ? (int)((long)(floor - FrontSectionsMin) * spare / over) : 0);
                 }
 
-                int sections = Mathf.Max(4, (int)((long)FrontCurveMaxVertices * _frontCoreBudget[i] / total));
+                int sections = floor + extra;
+                used += sections * FrontSectionVertices(line, piece);
                 _frontCoreBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core);
                 _frontCasingBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing);
             }
+
+            Debug.Assert(used <= Mathf.Max(FrontCurveMaxVertices, minimum), "FitFrontBudgets: el frente pasa del tope de FX11");
+        }
+
+        // FX14: las secciones que una pieza del frente que pide demand se queda antes de repartir el resto del tope.
+        private static int FrontFloor(int demand)
+        {
+            return Mathf.Max(FrontSectionsMin, Mathf.Min(demand, FrontMinSections));
+        }
+
+        // Secciones mínimas de una pieza del frente con tope (las de antes de FX14: Mathf.Max(4, ...)).
+        private const int FrontSectionsMin = 4;
+
+        /// <summary>
+        /// FX14: secciones que una pieza del frente con trazo curvo y tope recibe, como mínimo, de lo que pide antes de repartir el
+        /// resto del tope (<see cref="FrontCurveMaxVertices"/>) [P].
+        /// </summary>
+        public const int FrontMinSections = 24;
+
+        // Vértices de una sección de la pieza del frente: el agua y la orla.
+        private static int FrontSectionVertices(RiverLine line, RiverPathPiece piece)
+        {
+            return RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core)
+                + RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing);
         }
 
         // La cinta i del frente (el agua, en el lienzo dinámico, debajo de las boyas) y su orla (en el estático, con las del lleno:

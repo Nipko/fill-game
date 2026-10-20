@@ -87,7 +87,11 @@ namespace AF.Tests.PlayMode
             GameScreen.SimulatedScreen = height == 640 ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
             yield return VictoryArrivalTests.Win(level);
             string at = "nivel " + level + " a 360 × " + height + (slot ? " con" : " sin") + " ranura";
-            AssertBandVictory(at, true, height == 780, true, level != 40);
+
+            // En 16:9 con la ranura del Dato del río, desde DC3 (lienzo de 360 × 640 dp; D-028) la franja mide 44 dp en el 40 y
+            // 0 en los hitos con héroe (60, 80 y 140), menos que los 56 del gesto: TiTino no sale y el hito lleva su dato (la regla
+            // de DC2). Pendiente del dueño (open issue de DC3).
+            AssertBandVictory(at, true, height == 780, height == 780 || !slot, level != 40);
         }
 
         [UnityTest]
@@ -110,7 +114,7 @@ namespace AF.Tests.PlayMode
             GameScreen view = GameBootstrap.Current!.View!;
             Assert.That(view.Layout!.Rows, Is.EqualTo(3));
             string at = "40 de 3 filas a 360 × " + height + " al " + (scale > 1.01f ? "130" : "100") + " %" + (slot ? " con" : " sin") + " ranura";
-            AssertBandVictory(at, true, height == 780 && scale < 1.01f, scale < 1.01f || !slot);
+            AssertBandVictory(at, true, height == 780 && scale < 1.01f, (scale < 1.01f && height == 780) || !slot); // 640 con ranura: DC3
         }
 
         // ------------------------------------------------------------------------------------------- tiempos

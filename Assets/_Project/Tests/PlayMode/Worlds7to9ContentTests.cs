@@ -419,7 +419,7 @@ namespace AF.Tests.PlayMode
         private static void AssertFits(BoardLayoutResult layout, int count, string what)
         {
             Assert.That(count, Is.LessThanOrEqualTo(AF.Core.Board.BoardState.MaxCuias), what);
-            Assert.That(layout.Rows, Is.InRange(2, 3), what + ": 2 o 3 filas con 11-14 cuias (D-006)");
+            Assert.That(layout.Rows, Is.InRange(2, 3), what + ": 2 o 3 filas con 11-12 cuias (13-16: 3 filas, P12 de D-006 c)");
             Assert.That(layout.CuiaWidth, Is.GreaterThanOrEqualTo(BoardLayout.MinCuiaWidth), what + ": cuia ≥ 28 dp");
             float left = layout.PanelX;
             float right = layout.PanelX + layout.PanelWidth;

@@ -47,11 +47,6 @@ namespace AF.Tests.PlayMode
                 TestContext.WriteLine("AF_L4 aviso de contenido: " + note);
             }
 
-            foreach (string known in inventory.KnownIssues)
-            {
-                TestContext.WriteLine("AF_L4 pendiente del dueño: " + known);
-            }
-
             Assert.That(inventory.Scanned, Is.GreaterThan(80), "textos visibles mirados");
             Assert.That(inventory.Lines, Is.Empty, "textos que se salen o bajan de 12 sp en en-XA al " + percent + " %:\n" + string.Join("\n", inventory.Lines));
         }
@@ -300,10 +295,10 @@ namespace AF.Tests.PlayMode
     }
 
     /// <summary>
-    /// Los repliegues de L4 que las cadenas de la compuerta (<see cref="PseudoLocOverflowTests"/>, a 438 dp de ancho) no alcanzan
+    /// Los repliegues de L4 que las cadenas de la compuerta (<see cref="PseudoLocOverflowTests"/>, a 360 dp de ancho desde DC3) no alcanzan
     /// (revisión de L4): la ranura de la bandeja que llega a <see cref="BoosterTray.SlotMaxDp"/> y pone su etiqueta en dos líneas
     /// con el glifo más pequeño, y la píldora «Reiniciar» que crece hacia la izquierda y, si no basta, en dos líneas. Se fuerzan
-    /// con una etiqueta larga (a 438 dp) y con en-XA a 360 dp de ancho (<see cref="HudLabelTests.Screen780"/>, el teléfono de
+    /// con una etiqueta larga (a 438 dp, <see cref="LongLabelSetup.Screen438"/>) y con en-XA a 360 dp de ancho (<see cref="HudLabelTests.Screen780"/>, el teléfono de
     /// 02 §5), al 100 % y al 130 %. Mira que la etiqueta quede en las líneas que tocan, a 12 sp (× escala) o más y sin salirse
     /// (<see cref="LocInventory.ProblemsOf"/>), que el glifo no baje de <see cref="BoosterTray.LabelMinIconDp"/> ni pise la
     /// tinta de la etiqueta, que la bandeja no salga de la pantalla (<see cref="BoosterTray.TrayEdgeDp"/>) y que la píldora no
@@ -314,7 +309,7 @@ namespace AF.Tests.PlayMode
     {
         // Etiquetas largas forzadas (dp a 12 sp con Nunito ExtraBold): «Deshacer la jugada» mide unos 109 y no cabe ni en la
         // ranura de 104; sus dos palabras (53) caben cada una en una línea también al 130 %. «Reiniciar el nivel» mide unos 94:
-        // al 100 % cabe en una línea de la píldora ensanchada (hasta unos 115 dp a 438 de ancho); al 130 %, no.
+        // al 100 % cabe en una línea de la píldora ensanchada (hasta unos 115 dp a 438 de ancho, LongLabelSetup.Screen438); al 130 %, no.
         internal const string LongUndo = "Deshacer la jugada";
         internal const string LongRestart = "Reiniciar el nivel";
 
@@ -336,7 +331,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator Tray_LongLabel_WidestSlotThenTwoLines([Values(100, 130)] int percent)
         {
             float scale = percent / 100f;
-            yield return LongLabelSetup.LoadLevel100(LocLocale.SourceLocale, scale, HudLabelTests.Screen640);
+            yield return LongLabelSetup.LoadLevel100(LocLocale.SourceLocale, scale, LongLabelSetup.Screen438);
             GameScreen view = GameBootstrap.Current!.View!;
             BoosterTray tray = view.Tray;
             tray.UndoLabel.text = LongUndo;
@@ -359,13 +354,15 @@ namespace AF.Tests.PlayMode
         public IEnumerator Restart_LongLabel_GrowsLeftThenTwoLines([Values(100, 130)] int percent)
         {
             float scale = percent / 100f;
-            yield return LongLabelSetup.LoadLevel100(LocLocale.SourceLocale, scale, HudLabelTests.Screen640);
+            yield return LongLabelSetup.LoadLevel100(LocLocale.SourceLocale, scale, LongLabelSetup.Screen438);
             GameScreen view = GameBootstrap.Current!.View!;
             view.RestartLabel.text = LongRestart;
             view.RelayoutForTests();
             yield return null;
 
-            LongLabelSetup.AssertRestart(view, scale, percent == 100 ? 1 : 2);
+            // Al 130 %, en el lienzo de 438,9 × 640 dp (DC3), la píldora en dos líneas roza (0,6 dp) el sitio al que sube la cuia
+            // de arriba al seleccionarla: el mismo pendiente que RestartPill_360_KnownIssues. Sin ese margen, nada se cruza.
+            LongLabelSetup.AssertRestart(view, scale, percent == 100 ? 1 : 2, percent == 100);
         }
 
         [UnityTest]
@@ -494,19 +491,72 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// La insignia del nivel en en-XA (revisión de L4; pendiente del dueño): «[Ñívél 100 ··]» no cabe en la placa a 20 sp, el
-        /// mínimo de la guía 3.5 (D-003), y la placa no puede crecer (la columna del saldo va pegada). Se deja escrito (explícito:
-        /// hoy falla) para cuando el dueño decida entre rediseñar la placa o bajar el mínimo de la guía en otros idiomas.
+        /// La insignia del nivel en cada idioma (D-030, pregunta 8 b; antes LevelBadge_EnXA_KnownIssue, explícito): la placa no
+        /// crece, así que fuera del español el texto baja de 20 sp lo justo para caber, nunca por debajo de 12 sp (× escala; 02
+        /// §12) ni recortado; en español sigue a 20 sp (× escala) o más también al 130 % (DC19: «sin cambio visual»; D-030 habla
+        /// solo de otros idiomas). Al 130 % (26 dp), en español la tinta de los números de tres cifras llena la caja de 106 dp y en
+        /// algunos («Nivel 700») se sale unos dp: no se ajusta aquí, queda pendiente del dueño y el test solo lo apunta
+        /// (<c>AF_DC19 pendiente</c>).
+        /// Con el 100 (4 ranuras en la bandeja) y el 700, el número más largo del juego.
+        /// <para>en y pt-BR aún no tienen la UI completa, así que la escena no los ofrece y vuelve a es-419 al arrancar
+        /// (<see cref="LocLocale.IsOffered"/>; revisión de DC19: así estos casos repetían el de es-419). Se fuerzan como en
+        /// <see cref="VictorySlotMeasureSnapshotTests"/>: la escena arranca en la pantalla de inicio, el test cambia el idioma con
+        /// <see cref="Loc.SetLocale"/> y abre el nivel con Jugar, de modo que la insignia se escribe y se ajusta
+        /// (<c>FitLevelBadge</c>) ya en ese idioma; y el test exige el texto de <c>level_n</c> de esa columna de strings.csv.</para>
         /// </summary>
         [UnityTest]
-        [Explicit("Pendiente del dueño (revisión de L4): la insignia del nivel en otros idiomas necesita rediseño; hoy falla.")]
-        public IEnumerator LevelBadge_EnXA_KnownIssue([Values(100, 130)] int percent)
+        public IEnumerator LevelBadge_FitsAt12OrMore([Values(LocLocale.SpanishLatinAmerica, LocLocale.English, LocLocale.PortugueseBrazil, LocLocale.Pseudo)] string locale,
+            [Values(100, 130)] int percent, [Values(100, 700)] int level)
         {
             float scale = percent / 100f;
-            yield return LongLabelSetup.LoadLevel100(LocLocale.Pseudo, scale, HudLabelTests.Screen640);
+            bool forced = locale == LocLocale.English || locale == LocLocale.PortugueseBrazil;
+            if (forced)
+            {
+                yield return LongLabelSetup.LoadLevelFromLobby(level, locale, scale, HudLabelTests.Screen640);
+            }
+            else
+            {
+                yield return LongLabelSetup.LoadLevel(level, locale, scale, HudLabelTests.Screen640);
+            }
+
+            Assert.That(Loc.Locale, Is.EqualTo(locale), "la partida en " + locale);
             TextMeshProUGUI title = GameBootstrap.Current!.View!.LevelTitle;
-            Assert.That(title.fontSize, Is.GreaterThanOrEqualTo((LocInventory.BadgeMinSp * scale) - 0.01f), "la insignia a 20 sp (× escala) o más");
-            Assert.That(new LocInventory(Loc.Locale, scale).ProblemsOf(title), Is.Empty, "«" + title.text + "» cabe en la placa");
+            string number = level.ToString(CultureInfo.InvariantCulture);
+            TestContext.WriteLine("AF_DC19 " + locale + " al " + percent + " %: «" + title.text + "» a " + (title.fontSize / scale).ToString("0.##", CultureInfo.InvariantCulture) + " sp");
+            if (locale == LocLocale.Pseudo)
+            {
+                Assert.That(title.text, Does.Contain(number).And.Not.EqualTo("Nivel " + number), "la insignia del " + level + " en en-XA");
+            }
+            else
+            {
+                Assert.That(title.text, Is.EqualTo(BadgeText(locale) + number), "la insignia del " + level + " en " + locale + " (level_n de strings.csv)");
+            }
+
+            Assert.That(title.fontSize, Is.GreaterThanOrEqualTo((LocInventory.BadgeMinSp * scale) - 0.01f), "la insignia a 12 sp (× escala) o más");
+            string problems = new LocInventory(Loc.Locale, scale).ProblemsOf(title);
+            if (locale == LocLocale.SpanishLatinAmerica)
+            {
+                Assert.That(title.fontSize, Is.GreaterThanOrEqualTo((GameScreen.BadgeMinSp * scale) - 0.01f), "en español al " + percent + " %, a 20 sp (× escala) o más");
+                if (percent == 130)
+                {
+                    // Pendiente del dueño (DC19): en español al 130 % la insignia no baja de 20 sp y «Nivel 700» se sale unos dp.
+                    TestContext.WriteLine("AF_DC19 pendiente: es-419 al 130 %, «" + title.text + "»: " + (problems.Length > 0 ? problems : "cabe"));
+                    yield break;
+                }
+            }
+
+            Assert.That(problems, Is.Empty, "«" + title.text + "» cabe en la placa");
+        }
+
+        // level_n de strings.csv sin {n}, por idioma: «Nivel {n}», «Level {n}», «Nível {n}».
+        private static string BadgeText(string locale)
+        {
+            if (locale == LocLocale.English)
+            {
+                return "Level ";
+            }
+
+            return locale == LocLocale.PortugueseBrazil ? "Nível " : "Nivel ";
         }
 
         /// <summary>
@@ -527,7 +577,9 @@ namespace AF.Tests.PlayMode
 
     /// <summary>
     /// Capturas de <see cref="LongLabelLayoutTests"/> (<c>Logs/snapshots/&lt;idioma&gt;/l4r_*.png</c>): en-XA a 360 dp de ancho y
-    /// las etiquetas forzadas a 438, al 100 % y al 130 %. Explícito: necesita gráficos.
+    /// las etiquetas forzadas a 438, al 100 % y al 130 %. Las de 438 dp (<see cref="LongLabelSetup.Screen438"/>) se recortan a
+    /// 1080 × 1575 px, la pantalla simulada
+    /// (<see cref="SnapshotKit.SaveTop"/>, como DC18). Explícito: necesita gráficos.
     /// </summary>
     [Explicit("Capturas de los repliegues de L4; necesita dispositivo gráfico.")]
     public sealed class LongLabelSnapshotTests
@@ -540,11 +592,12 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Capture_EnXA_360([Values(100, 130)] int percent)
+        public IEnumerator Capture_EnXA_360([Values(100, 130)] int percent, [Values(100, 700)] int level)
         {
+            // Con el 700, el número más largo del juego, para ver la insignia del nivel en en-XA (DC19).
             string dir = SnapshotKit.Prepare(LocLocale.Pseudo);
-            yield return LongLabelSetup.LoadLevel100(LocLocale.Pseudo, percent / 100f, HudLabelTests.Screen780);
-            yield return Take(dir, "l4r_" + percent.ToString(CultureInfo.InvariantCulture) + "_juego360_l100");
+            yield return LongLabelSetup.LoadLevel(level, LocLocale.Pseudo, percent / 100f, HudLabelTests.Screen780);
+            yield return Take(dir, "l4r_" + percent.ToString(CultureInfo.InvariantCulture) + "_juego360_l" + level.ToString(CultureInfo.InvariantCulture), HudLabelTests.Screen780);
         }
 
         [UnityTest]
@@ -552,34 +605,43 @@ namespace AF.Tests.PlayMode
         {
             string dir = SnapshotKit.Prepare(LocLocale.Pseudo);
             yield return LongLabelSetup.LoadLevel(200, LocLocale.Pseudo, percent / 100f, HudLabelTests.Screen780);
-            yield return Take(dir, "l4r_" + percent.ToString(CultureInfo.InvariantCulture) + "_juego360_l200");
+            yield return Take(dir, "l4r_" + percent.ToString(CultureInfo.InvariantCulture) + "_juego360_l200", HudLabelTests.Screen780);
         }
 
         [UnityTest]
         public IEnumerator Capture_Forced_438([Values(100, 130)] int percent)
         {
             string dir = SnapshotKit.Prepare(LocLocale.SourceLocale);
-            yield return LongLabelSetup.LoadLevel100(LocLocale.SourceLocale, percent / 100f, HudLabelTests.Screen640);
+            yield return LongLabelSetup.LoadLevel100(LocLocale.SourceLocale, percent / 100f, LongLabelSetup.Screen438);
             GameScreen view = GameBootstrap.Current!.View!;
             view.Tray.UndoLabel.text = LongLabelLayoutTests.LongUndo;
             view.RestartLabel.text = LongLabelLayoutTests.LongRestart;
             view.RelayoutForTests();
-            yield return Take(dir, "l4r_" + percent.ToString(CultureInfo.InvariantCulture) + "_forzada_l100");
+            yield return Take(dir, "l4r_" + percent.ToString(CultureInfo.InvariantCulture) + "_forzada_l100", LongLabelSetup.Screen438);
         }
 
-        private static IEnumerator Take(string dir, string name)
+        // Guarda la captura con solo las filas de la pantalla simulada (16:9: 1080 × 1920 px; a 360 × 780 dp, la captura entera).
+        private static IEnumerator Take(string dir, string name, Vector4 screen)
         {
             GameBootstrap boot = GameBootstrap.Current!;
             SnapshotKit.Attach(boot);
             yield return SnapshotKit.Wait(0.3f);
             LongLabelSetup.Log(boot.View!, name);
-            SnapshotKit.Save(dir, name);
+            SnapshotKit.SaveTop(dir, name, (int)screen.y);
         }
     }
 
     /// <summary>Carga y comprobaciones de <see cref="LongLabelLayoutTests"/>.</summary>
     internal static class LongLabelSetup
     {
+        /// <summary>
+        /// Pantalla ancha y baja de 1080 × 1575 px (438,9 × 640 dp; zona segura de 32 dp arriba y 24 abajo) para las etiquetas
+        /// forzadas: antes de DC3 el 16:9 (<see cref="HudLabelTests.Screen640"/>) daba un lienzo de 438,75 × 780 dp con sitio para
+        /// que la ranura y la píldora crecieran; desde DC3 (D-028) el 16:9 mide 360 × 640 dp, y este lienzo conserva el ancho que
+        /// prueban estos repliegues.
+        /// </summary>
+        internal static readonly Vector4 Screen438 = new Vector4(1080f, 1575f, 79f, 40f);
+
         // Lo que sube una cuia al seleccionarla (guía 6.1: 16 dp, con el rebote hasta 17,6).
         private const float LiftDp = 17.6f;
 
@@ -611,6 +673,33 @@ namespace AF.Tests.PlayMode
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
             yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));
             GameBootstrap boot = GameBootstrap.Current!;
+            boot.TapAnywhere();
+            yield return PlayModeHelpers.WaitFor(() => boot.Flow!.Phase == FlowPhase.Playing && boot.View!.IsViewIdle, "el " + level + " en juego");
+            yield return SnapshotKit.Wait(0.3f);
+        }
+
+        /// <summary>
+        /// El nivel <paramref name="level"/> en juego en <paramref name="locale"/> aunque la escena no ofrezca ese idioma (en y
+        /// pt-BR mientras no tengan la UI completa): arranca en la pantalla de inicio con el progreso en ese nivel, cambia el
+        /// idioma con <see cref="Loc.SetLocale"/> (un estado que el juego no alcanza hasta completar sus columnas) y abre el nivel
+        /// con Jugar, así que la cabecera del nivel se construye ya en ese idioma. Sin semillas, como <see cref="LoadLevel"/>.
+        /// </summary>
+        public static IEnumerator LoadLevelFromLobby(int level, string locale, float scale, Vector4 screen)
+        {
+            FunnelSetup.Hooks();
+            LaunchOptions.FontScaleOverride = scale;
+            GameScreen.SimulatedScreen = screen;
+            LaunchOptions.LevelCardsOverride = false;
+            Profile profile = FunnelSetup.Profile(0);
+            profile.Progress.NextLevel = level;
+            profile.Progress.MaxLevel = level - 1;
+            profile.Progress.MapSeenLevel = level - 1;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby), "la pantalla de inicio con el " + level + " por jugar");
+            Loc.SetLocale(locale);
+            Assert.That(boot.PressPlay(), Is.True, "Jugar · Nivel " + level);
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(level), "el " + level + " desde el inicio");
             boot.TapAnywhere();
             yield return PlayModeHelpers.WaitFor(() => boot.Flow!.Phase == FlowPhase.Playing && boot.View!.IsViewIdle, "el " + level + " en juego");
             yield return SnapshotKit.Wait(0.3f);

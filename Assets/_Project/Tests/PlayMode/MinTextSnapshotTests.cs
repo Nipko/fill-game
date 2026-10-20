@@ -15,7 +15,7 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Capturas de revisión de la tarea A1 (12 sp como mínimo, pregunta 36 (a), D-020; escala de texto de 02 §12; el aviso con 3
     /// filas, preguntas 47 y 48; <c>[Explicit]</c>, no forman parte de la suite), al 100 % y al 130 % (<c>_130</c>) a 360 × 780 dp
-    /// y, con <c>_16x9</c>, a 1080 × 1920 px (438,75 × 780 dp, la de 360 × 640):
+    /// y, con <c>_16x9</c>, a 1080 × 1920 px (360 × 640 dp desde DC3):
     /// <list type="bullet">
     /// <item><description><c>a1_01_stuck_l31</c>: Aguas estancadas en el 31 sin semillas y con la última canoa (rama B: rescate
     /// en gris con «Te faltan 300 semillas», Puñado y Balsa);</description></item>
@@ -151,7 +151,7 @@ namespace AF.Tests.PlayMode
             {
                 if (sixteenNine)
                 {
-                    continue; // 3 filas en 16:9: las mismas medidas de tablero (438,75 × 780 dp); basta 360 × 780
+                    continue; // 3 filas en 16:9: basta 360 × 780 (las de 16:9, en Canvas16x9SnapshotTests desde DC3)
                 }
 
                 // El 135 con las 300 semillas justas: el rescate de verdad y «¡Una cuia más!» junto a la ficha «?×1».
@@ -179,7 +179,7 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // 100 % y 130 % a 360 × 780 dp, y 130 % a 1080 × 1920 px (438,75 × 780 dp).
+        // 100 % y 130 % a 360 × 780 dp, y 130 % a 1080 × 1920 px (360 × 640 dp desde DC3).
         private static (float Scale, bool SixteenNine, string Suffix)[] Variants()
         {
             return new[] { (1f, false, string.Empty), (1.3f, false, "_130"), (1.3f, true, "_130_16x9") };

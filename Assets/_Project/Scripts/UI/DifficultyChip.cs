@@ -80,7 +80,7 @@ namespace AF.UI
         public static readonly Color RivetColor = Palette.Hex(0xD9A441);
 
         private const float PillTopDp = (HeightDp - ProceduralArt.LabelPillDp) * 0.5f;
-        private const float RibbonTextDp = 16f;
+        internal const float RibbonTextDp = 16f;
         private const float RibbonTopDp = 4f;
         private const float TextGapDp = 5f;
         private const float EndPadDp = 12f;
@@ -94,7 +94,7 @@ namespace AF.UI
         private const float CompactEndPadDp = 8f;
         private const float CompactShadowDp = ProceduralArt.LabelPillShadowDp * CompactPillDp / ProceduralArt.LabelPillDp;
         private const float CompactPillTopDp = (CompactHeightDp - CompactPillDp) * 0.5f;
-        private const float CompactRibbonScale = 0.75f;
+        internal const float CompactRibbonScale = 0.75f;
 
         private static Sprite? s_ribbon;
 
@@ -206,6 +206,9 @@ namespace AF.UI
 
         /// <summary>Tamaño del texto de la píldora (dp).</summary>
         public float TextSize => _text.fontSize;
+
+        /// <summary>Tamaño del texto de la cinta «×n» (dp).</summary>
+        internal float RibbonTextSize => _ribbonText.fontSize;
 
         /// <summary>Crea el chip, oculto, bajo <paramref name="parent"/>.</summary>
         public static DifficultyChip Create(Transform parent, ProceduralArt art)
@@ -369,8 +372,11 @@ namespace AF.UI
             }
 
             _compact = compact;
-            _text.fontSize = compact ? CompactTextDp : TextDp;
-            _ribbonText.fontSize = compact ? RibbonTextDp * CompactRibbonScale : RibbonTextDp;
+            // Con la escala de texto de 02 §12 (UiBuilder.Label la aplica al crear la etiqueta): la compacta, a 12 sp × escala, nunca
+            // a 12 dp con la fuente al 130 % (en 16:9 a 360 × 640 dp sale en los tableros de 2 filas; tarea DC3).
+            float scale = UiBuilder.TextScale;
+            _text.fontSize = (compact ? CompactTextDp : TextDp) * scale;
+            _ribbonText.fontSize = (compact ? RibbonTextDp * CompactRibbonScale : RibbonTextDp) * scale;
             _pill.pixelsPerUnitMultiplier = compact ? (ProceduralArt.LabelPillDp + ProceduralArt.LabelPillShadowDp) / (CompactPillDp + CompactShadowDp) : 1f;
             if (Visible)
             {

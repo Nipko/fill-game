@@ -21,7 +21,7 @@ namespace AF.Tests.PlayMode
     /// <item><c>victory_view_l131_{000|end}</c>: una victoria sin llegada en un tablero de 3 filas del Trapecio (11 cuias a
     /// 360 × 780 dp; el sitio de siempre, sin el panel delante);</item>
     /// <item><c>victory_view_l131_640_end</c>: el mismo nivel a 360 × 640 dp, donde sus 11 cuias van en 2 filas (D-006: con
-    /// 11-14, la que dé la cuia más ancha), recortada a la pantalla de 640 dp (1080 × 1920 px);</item>
+    /// 11-12, la que dé la cuia más ancha; 13-16: 3 filas, P12 de D-006 c), recortada a la pantalla de 640 dp (1080 × 1920 px);</item>
     /// <item><c>victory_view_16_640_{000|end}</c>: 3 filas a 360 × 640 dp, con el paquete de prueba de 16 cuias (6/5/5) en el
     /// 131, porque en 1-200 ningún nivel pasa de 12 cuias: la victoria al abrirse (la ola aún salta y el tablero sigue entero)
     /// y entera (la cabecera, el sitio y la cinta con el panel más alto);</item>

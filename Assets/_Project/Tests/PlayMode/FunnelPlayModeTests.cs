@@ -192,7 +192,7 @@ namespace AF.Tests.PlayMode
         }
 
         // La última AF_LAYOUT es la de Sin canoas del 31, con un id por cada botón que se ve (close, extra_canoe_video,
-        // refill_canoes e infinite_canoes si se ofrecen, y home), en ese orden, y sus centros caen en lo que se ve.
+        // refill_canoes, infinite_canoes y daily_challenge (E7) si se ofrecen, y home), en ese orden, y sus centros caen en lo que se ve.
         private void AssertNoCanoesLayout(GameScreen view, string what)
         {
             string line = _layout.RequireLast("no_canoes", 31, what);
@@ -215,6 +215,12 @@ namespace AF.Tests.PlayMode
             {
                 expected.Add("infinite_canoes");
                 buttons.Add(panel.InfiniteButton);
+            }
+
+            if (panel.DailyLink.Visible)
+            {
+                expected.Add(NoCanoesDailyLink.LayoutId); // E7: «Mientras esperas: Jugar el Reto del río» (04 §7.3)
+                buttons.Add(panel.DailyLink.Button);
             }
 
             expected.Add("home");

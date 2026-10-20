@@ -774,7 +774,7 @@ dotnet run --project tools/level-generator -c Release -- --daily --spec tools/le
 La muestra versionada (bandas 1-3, días 0-9; 30 tableros) es `tools/out/daily_sample/daily_pool_v1.json`, con su informe
 `tools/out/daily_sample_report.md`. El pool completo no se publica hasta R5 del encargo. La QA es
 `dotnet run --project tools/level-qa -c Release -- --daily <pack>` (con `--partial` para la muestra; `tools/level-qa/README.md`),
-que regenera los tableros del pack con este generador, en un proceso hijo, y los compara (QA-DAILY-REPRO).
+que regenera en memoria los tableros del pack con el código de este generador (enlazado en level-qa) y los compara (QA-DAILY-REPRO).
 
 `--self-test daily` (también dentro del `--self-test` sin nombre) prueba los ids y las semillas (días 0 y 729, bandas 1-3, los
 rechazos y los patrones del esquema, rama `kind` daily), que `specs/daily_v1.json` carga con los valores de 03 §16 y de la nota

@@ -33,6 +33,12 @@ namespace AF.UI
     /// </summary>
     public sealed partial class RiverMapScreen
     {
+        // El by de la sonda map_journey (FX15): cómo acabó el viaje del fin de contenido.
+        private const string JourneyByTime = "time";
+        private const string JourneyByTouch = "touch";
+        private const string JourneyByClose = "close";
+        private const string JourneyByReduce = "reduce";
+
         private bool _catchUp;
         private int _catchFrom;
         private int _catchTo;
@@ -128,10 +134,13 @@ namespace AF.UI
                 // (el de los afluentes es de M3.4); las llegadas sin ver se cuentan como vistas.
                 SendCatchUpArrivals(from, max, false);
                 StartReducedFade(from, max);
+                ProbeJourney("start", string.Empty);
+                ProbeJourney("end", JourneyByReduce);
                 return;
             }
 
             _catchUp = true;
+            ProbeJourney("start", string.Empty); // FX15: la sonda del viaje del fin de contenido
             _catchStep = from;
             ShowProgressAt(from);
             StartFades(seen); // lo que ya estaba lleno en «from» pero nunca se vio (el Xingu con seen 0) aparece con su fundido
@@ -169,7 +178,7 @@ namespace AF.UI
 
             if (x >= _catchTo)
             {
-                FinishCatchUp(false);
+                FinishCatchUp(false, JourneyByTime);
                 return;
             }
 
@@ -181,7 +190,7 @@ namespace AF.UI
             EndReducedFade();
             if (_catchUp)
             {
-                FinishCatchUp(true); // cerrado a medias: lo que faltaba, como saltado
+                FinishCatchUp(true, JourneyByClose); // cerrado a medias: lo que faltaba, como saltado
             }
         }
 
@@ -198,7 +207,7 @@ namespace AF.UI
                 return false;
             }
 
-            FinishCatchUp(true);
+            FinishCatchUp(true, JourneyByTouch);
             return true;
         }
 
@@ -228,7 +237,7 @@ namespace AF.UI
         }
 
         // Acaba: el estado final (max_level) y, con un toque o el cierre, las llegadas que faltaban como saltadas.
-        private void FinishCatchUp(bool byTouch)
+        private void FinishCatchUp(bool byTouch, string by)
         {
             if (!_catchUp)
             {
@@ -236,6 +245,7 @@ namespace AF.UI
             }
 
             _catchUp = false;
+            ProbeJourney("end", by); // FX15: el viaje del fin de contenido acabó (antes de moverse nada, con lo que llevaba)
             _catchCompletedByTouch = byTouch;
             int from = _catchStep;
             if (from < _catchTo)
@@ -390,6 +400,18 @@ namespace AF.UI
         private bool IsUnseenArrival(int level)
         {
             return level > _catchSeen && level >= RiverStopCatalog.LevelsPerStop && level % RiverStopCatalog.LevelsPerStop == 0;
+        }
+
+        // FX15: AF_STATE map_journey del viaje del fin de contenido (solo de él; DevProbe.MapJourney), para comprobar en el
+        // teléfono por logcat que la canoa hizo el viaje Tambo → naciente: dura 1,5 s y en capturas cada 2 s no se ve.
+        private void ProbeJourney(string phase, string by)
+        {
+            if (_modesReplayFrom < 0 || !DevProbe.Enabled)
+            {
+                return;
+            }
+
+            _probe.MapJourney(phase, _catchFrom, _catchTo, CatchUpDurationMs, phase == "start" ? 0f : _catchMs, by);
         }
 
         // af_stop_arrive con view = map (08 §8.2): solo con parada en el catálogo.

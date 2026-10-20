@@ -40,6 +40,9 @@ namespace AF.EditorTools
     /// <item><description>un idioma ofrecido tiene la UI incompleta: alguna clave de <c>strings.csv</c> sin texto en ese idioma.
     /// Los idiomas ofrecidos son las columnas de idioma de <c>strings.csv</c> (es-419, en y pt-BR en la tanda 1): la tabla declara
     /// los idiomas del juego [P]. en-XA no es una columna y nunca se ofrece en release;</description></item>
+    /// <item><description>una cadena de UI de un idioma ofrecido distinto del español tiene texto pero no está en
+    /// <c>revisado_nativo</c> (08 §4.7; D-018, Q5-A: nunca traducción automática sin revisión en algo que vea el jugador; T2-Q5).
+    /// Una traducción con IA en <c>traducido</c> vale para los builds de prueba, no para un release;</description></item>
     /// <item><description>hay texto cultural (fruta, fauna, flora, lugar o pueblo) sin <c>aprobado_es</c>: toda fila de
     /// <c>facts.csv</c> (los textos largos son de fruta, fauna y del Mapa) y toda fila de <c>strings.csv</c> en
     /// <c>pendiente_asesor</c> (el estado con el que nace lo cultural; regla 9 de la propuesta de idiomas).</description></item>
@@ -89,6 +92,30 @@ namespace AF.EditorTools
                 {
                     problems.Add("UI incompleta en " + locale + ": claves de " + strings.File + " sin texto: "
                         + missing.Count.ToString(CultureInfo.InvariantCulture) + " (" + List(missing, MaxKeysPerLocale) + ").");
+                }
+            }
+
+            for (int l = 0; l < offered.Count; l++)
+            {
+                string locale = offered[l];
+                if (locale == LocLocale.SourceLocale)
+                {
+                    continue;
+                }
+
+                var unreviewed = new List<string>();
+                for (int r = 0; r < strings.Count; r++)
+                {
+                    if (strings.TextAt(r, locale).Length > 0 && strings.StatusAt(r, locale) != LocStatus.NativeReviewed)
+                    {
+                        unreviewed.Add(strings.KeyAt(r));
+                    }
+                }
+
+                if (unreviewed.Count > 0)
+                {
+                    problems.Add("UI sin " + LocStatusNames.NativeReviewed + " en " + locale + ": claves de " + strings.File + ": "
+                        + unreviewed.Count.ToString(CultureInfo.InvariantCulture) + " (" + List(unreviewed, MaxKeysPerLocale) + ").");
                 }
             }
 

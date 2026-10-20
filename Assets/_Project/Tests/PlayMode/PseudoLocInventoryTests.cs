@@ -18,7 +18,7 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Inventario de desbordes en en-XA (D-018, nivel 2; propuesta de idiomas §3.7 y §3.8; tarea L2b): con la
     /// pseudolocalización (el español alargado un 35 % y entre corchetes; <see cref="LocPseudo"/>), a 360 × 640 dp (la pantalla
-    /// 16:9 de 02 §5, que <c>GameScreen</c> maqueta en 438,75 × 780 dp; <see cref="HudLabelTests.Screen640"/>) y con la fuente al
+    /// 16:9 de 02 §5, que <c>GameScreen</c> maqueta en 360 × 640 dp desde DC3; <see cref="HudLabelTests.Screen640"/>) y con la fuente al
     /// 100 %, recorre las pantallas de <see cref="PseudoLocWalk"/> (el inicio con el botón Jugar de un nivel Difícil y su cinta,
     /// la tarjeta previa, el banner de mundo, la bandeja de comodines, la victoria, Aguas estancadas en las ramas A, B y C,
     /// ¿Seguro? y Nivel fallido) y <b>lista</b> sin fallar cada texto visible que se sale de su caja o, en la cinta «×3»/«×4», de
@@ -81,7 +81,6 @@ namespace AF.Tests.PlayMode
         private readonly string _locale;
         private readonly List<string> _lines = new List<string>();
         private readonly List<string> _notes = new List<string>();
-        private readonly List<string> _known = new List<string>();
 
         public LocInventory(string locale, float scale)
         {
@@ -119,15 +118,10 @@ namespace AF.Tests.PlayMode
         public IReadOnlyList<string> Notes => _notes;
 
         /// <summary>
-        /// Desbordes pendientes del dueño, que no cuentan en <see cref="Lines"/> (revisión de L4): el texto de la insignia del
-        /// nivel («LevelBadge/LevelTitle») que no cabe en su placa a 20 sp (× escala), el mínimo de la guía 3.5 (D-003). Pendiente
-        /// de rediseño: la placa no puede crecer y bajar de 20 sp contradice la guía. Solo si el texto sigue a 20 sp (× escala) o
-        /// más: por debajo, es un problema como cualquier otro.
+        /// Mínimo del texto de la insignia del nivel fuera del español (D-030, pregunta 8 b; GameScreen.BadgeFallbackMinSp): 12 sp,
+        /// el de 02 §12. En español sigue a 20 sp o más (guía 3.5); nunca se recorta.
         /// </summary>
-        public IReadOnlyList<string> KnownIssues => _known;
-
-        /// <summary>Mínimo del texto de la insignia del nivel (guía 3.5: 26 dp, mínimo 20; nunca se recorta).</summary>
-        public const float BadgeMinSp = 20f;
+        public const float BadgeMinSp = 12f;
 
         /// <summary>Mira los textos visibles de la escena y apunta los que tienen problemas, con el nombre de la pantalla.</summary>
         public void Scan(string screen)
@@ -136,7 +130,6 @@ namespace AF.Tests.PlayMode
             TMP_Text[] texts = UnityEngine.Object.FindObjectsByType<TMP_Text>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
             var found = new List<string>();
             var notes = new List<string>();
-            var known = new List<string>();
             for (int i = 0; i < texts.Length; i++)
             {
                 TMP_Text text = texts[i];
@@ -150,14 +143,7 @@ namespace AF.Tests.PlayMode
                 string problems = Describe(text);
                 if (problems.Length > 0)
                 {
-                    if (IsBadgeAtGuideMin(text))
-                    {
-                        known.Add(Line(screen, text, "pendiente del dueño (insignia a 20 sp, guía 3.5): " + problems));
-                    }
-                    else
-                    {
-                        found.Add(Line(screen, text, problems));
-                    }
+                    found.Add(Line(screen, text, problems));
                 }
 
                 if (text.name == "Tutorial" && Scale <= 1f && text.textInfo.lineCount > LevelCardView.MaxTutorialLines)
@@ -170,15 +156,6 @@ namespace AF.Tests.PlayMode
             _lines.AddRange(found);
             notes.Sort(StringComparer.Ordinal);
             _notes.AddRange(notes);
-            known.Sort(StringComparer.Ordinal);
-            _known.AddRange(known);
-        }
-
-        // El texto de la insignia del nivel a su mínimo de la guía 3.5 o más (KnownIssues).
-        private bool IsBadgeAtGuideMin(TMP_Text text)
-        {
-            Transform? parent = text.transform.parent;
-            return text.name == "LevelTitle" && parent != null && parent.name == "LevelBadge" && text.fontSize >= (BadgeMinSp * Scale) - 0.01f;
         }
 
         private static string Line(string screen, TMP_Text text, string what)
@@ -193,7 +170,7 @@ namespace AF.Tests.PlayMode
         public string Write(string dir, string fileName)
         {
             var sb = new StringBuilder();
-            sb.Append("# Inventario de textos (L2b y L4): ").Append(_locale).Append(", 360 × 640 dp (lienzo de 438,75 × 780 dp), fuente al ")
+            sb.Append("# Inventario de textos (L2b y L4): ").Append(_locale).Append(", 360 × 640 dp (lienzo de 360 × 640 dp desde DC3), fuente al ")
                 .Append(Mathf.RoundToInt(Scale * 100f).ToString(CultureInfo.InvariantCulture)).Append(" %\n");
             sb.Append("# Textos visibles mirados: ").Append(Scanned.ToString(CultureInfo.InvariantCulture))
                 .Append("; con problemas: ").Append(_lines.Count.ToString(CultureInfo.InvariantCulture)).Append('\n');
@@ -202,12 +179,6 @@ namespace AF.Tests.PlayMode
             {
                 sb.Append(line).Append('\n');
                 Debug.Log("AF_LOC_INV " + _locale + "\t" + line);
-            }
-
-            sb.Append("# Pendientes del dueño (no cuentan en la compuerta): ").Append(_known.Count.ToString(CultureInfo.InvariantCulture)).Append('\n');
-            foreach (string line in _known)
-            {
-                sb.Append(line).Append('\n');
             }
 
             sb.Append("# Avisos de contenido (no son desbordes): ").Append(_notes.Count.ToString(CultureInfo.InvariantCulture)).Append('\n');

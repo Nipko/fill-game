@@ -306,7 +306,7 @@ namespace AF.Tests.PlayMode
             double ms = double.Parse(m.Groups[1].Value, CultureInfo.InvariantCulture);
             TestContext.WriteLine("build_ms en el Editor: " + ms);
             Assert.That(ms, Is.LessThanOrEqualTo(8d), "08 §5.4");
-            Assert.That(GameBootstrap.Current!.View!.PanoramaTint, Is.EqualTo(StopBackdrop.DuskLut * StopBackdrop.HighWaterLut),
+            Assert.That(GameBootstrap.Current!.View!.PanoramaTint, Is.EqualTo(StopBackdrop.DuskLut * StopBackdrop.TwilightHighWaterLut),
                 "el panorama con la luz del atardecer y la de aguas altas del ciclo 81 (SE2)");
         }
 
