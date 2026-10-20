@@ -97,7 +97,7 @@ play,Jugar,Play,Jogar,Botón Jugar (glosario §10).,12,aprobado_es,traducido,tra
 play_level,Jugar · Nivel {n},,,"Botón Jugar del inicio (06 §4.7; D-008 punto 6), una sola frase. {n}: número de nivel, sin separador.",20,borrador,,,[P] Sin clave en el glosario §10 (propuesta de idiomas §3.3).,
 profile_locked_migration,"No pudimos abrir tu progreso, pero sigue a salvo. Actualiza la app para recuperarlo: lo que juegues ahora no se guardará y no hay compras.",,,Cuerpo del aviso cuando falló la migración del perfil (08 §4.4).,140,borrador,,,[P],
 profile_locked_play,Jugar sin guardar,,,Botón del aviso de perfil en solo lectura: juega sin guardar.,20,borrador,,,[P],
-profile_locked_title,Actualiza Tintalú,,,Título del aviso de perfil en solo lectura (08 §4.4). «Tintalú» no se traduce.,20,borrador,,,[P] Pendiente del dueño: aviso o pantalla de bloqueo.,
+profile_locked_title,Actualiza Tintalú,,,Título del aviso de perfil en solo lectura (08 §4.4). «Tintalú» no se traduce.,20,borrador,,,"Aviso, se sigue jugando sin guardar (D-030, 19 a).",
 profile_locked_too_new,Tu progreso es de una versión más nueva de Tintalú y sigue a salvo. Actualiza la app para jugar con él: lo que juegues ahora no se guardará y no hay compras.,,,Cuerpo del aviso con un perfil de una versión más nueva (08 §4.4). «Tintalú» no se traduce.,160,borrador,,,[P],
 quit,Salir,,,Botón «Salir» del menú de pausa (D-008).,12,borrador,,,[P],
 quit_confirm_canoe,{n:plural:Perderás {} canoa|Perderás {} canoas},,,"Línea del diálogo de salir del nivel (quit_confirm, segunda parte; D-008). n: canoas que se pierden (hoy siempre 1).",20,borrador,,,Aprobado por el dueño (P14 de D-008; D-029).,
