@@ -55,7 +55,11 @@ namespace AF.Tests.EditMode.Daily
                 Assert.That(f[1], Is.Not.Empty, key + ": texto es-419");
                 Assert.That(f[4], Is.Not.Empty, key + ": context");
                 Assert.That(int.TryParse(f[5], out int max) && max >= 1, Is.True, key + ": max_chars");
-                Assert.That(f[1].Length, Is.LessThanOrEqualTo(max + 8), key + ": el texto fuente cabe (con sus marcadores)");
+                // La misma regla que LocTablesTests.MaxChars_HoldsEs419_AndTranslationsGetThirtyPercentMore: es-419 cabe en
+                // max_chars y cada traducción en max_chars × 1,3, con la longitud visible (marcadores como se escriben).
+                Assert.That(VisibleLength(f[1]), Is.LessThanOrEqualTo(max), key + ": el texto es-419 cabe en max_chars");
+                Assert.That((VisibleLength(f[2]) * 10) <= (max * 13), Is.True, key + ": en cabe en max_chars × 1,3");
+                Assert.That((VisibleLength(f[3]) * 10) <= (max * 13), Is.True, key + ": pt-BR cabe en max_chars × 1,3");
                 Assert.That(f[6], Is.EqualTo("borrador").Or.EqualTo("pendiente_asesor"), key + ": status");
                 Assert.That(f[1].Contains("{0}") || f[1].Contains("{1}"), Is.False, key + ": marcadores con nombre");
             }
@@ -69,12 +73,25 @@ namespace AF.Tests.EditMode.Daily
         }
 
         [Test]
-        public void Csv_DoesNotRedefineProjectKeys_AndReusedKeysExist()
+        public void Csv_RowsAreInStringsCsv_E5_AndReusedKeysExist()
         {
             LocCatalog project = LocTables.FromProjectFiles();
-            foreach (string key in DailyText.NewKeys)
+            string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
+            IReadOnlyList<LocCsvRow> rows = ReadCsvRows(out string daily);
+            for (int i = 1; i < rows.Count; i++)
             {
-                Assert.That(project.Strings.IndexOf(key), Is.EqualTo(-1), key + " ya está en strings.csv: no es nueva");
+                // E5: la misma fila, tal cual (las filas del Reto se insertaron en orden ordinal por clave).
+                string key = rows[i].Fields[0];
+                Assert.That(project.Strings.IndexOf(key), Is.GreaterThanOrEqualTo(0), key + " falta en strings.csv (E5)");
+            }
+
+            string[] lines = daily.Substring(daily.IndexOf('\n') + 1).Split('\n');
+            foreach (string line in lines)
+            {
+                if (line.Length > 0)
+                {
+                    Assert.That(strings.Contains(line + "\n"), Is.True, "fila distinta en strings.csv: " + line);
+                }
             }
 
             foreach (string key in DailyText.ReusedKeys)
@@ -84,7 +101,7 @@ namespace AF.Tests.EditMode.Daily
         }
 
         [Test]
-        public void Csv_AppendedToStringsCsv_ParsesWithTheLocReader()
+        public void StringsCsv_WithTheRetoRows_ParsesWithTheLocReader()
         {
             Assert.That(() => TestCatalog(), Throws.Nothing);
             LocCatalog catalog = TestCatalog();
@@ -125,9 +142,9 @@ namespace AF.Tests.EditMode.Daily
         }
 
         [Test]
-        public void DailyText_KeysNotYetInStringsCsv_FallBackLikeLoc_DevMarksReleaseEmpty()
+        public void DailyText_KeysMissingFromTheTable_FallBackLikeLoc_DevMarksReleaseEmpty()
         {
-            LocCatalog project = LocTables.FromProjectFiles();
+            LocCatalog project = CatalogWithoutTheRetoRows();
             var date = new DateTime(2026, 10, 19);
 
             Loc.Configure(project, LocLocale.SourceLocale, true); // desarrollo: «[clave]»
@@ -218,20 +235,120 @@ namespace AF.Tests.EditMode.Daily
             Assert.Throws<ArgumentNullException>(() => new DailyLevelStateStore(null!, f.Clock));
         }
 
+        // Copia de LocTablesTests.VisibleLength (AF.Tests.EditMode; este ensamblado no lo ve): sin etiquetas de TextMeshPro ni
+        // saltos de línea; un plural cuenta su forma más larga; {} cuenta 2, {sep} 3 y cualquier otro marcador, lo que ocupa escrito.
+        private static int VisibleLength(string s)
+        {
+            return VisibleLength(s, 0, s.Length);
+        }
+
+        private static int VisibleLength(string s, int start, int end)
+        {
+            int n = 0;
+            int i = start;
+            while (i < end)
+            {
+                char c = s[i];
+                if (c == '{')
+                {
+                    int j = i + 1;
+                    while (j < end && (char.IsLetterOrDigit(s[j]) || s[j] == '_'))
+                    {
+                        j++;
+                    }
+
+                    if (j < end && s[j] == '}')
+                    {
+                        int nameLength = j - i - 1;
+                        n += nameLength == 0 ? 2 : (string.CompareOrdinal(s, i + 1, LocFormat.SeparatorName, 0, nameLength) == 0 && nameLength == 3 ? 3 : j + 1 - i);
+                        i = j + 1;
+                        continue;
+                    }
+
+                    const string plural = ":plural:";
+                    if (string.CompareOrdinal(s, j, plural, 0, plural.Length) == 0)
+                    {
+                        int k = j + plural.Length;
+                        int formStart = k;
+                        int depth = 0;
+                        int longest = 0;
+                        for (; k < end; k++)
+                        {
+                            char ch = s[k];
+                            if (ch == '{')
+                            {
+                                depth++;
+                            }
+                            else if (ch == '}' && depth > 0)
+                            {
+                                depth--;
+                            }
+                            else if ((ch == '|' || ch == '}') && depth == 0)
+                            {
+                                longest = Math.Max(longest, VisibleLength(s, formStart, k));
+                                formStart = k + 1;
+                                if (ch == '}')
+                                {
+                                    break;
+                                }
+                            }
+                        }
+
+                        n += longest;
+                        i = k + 1;
+                        continue;
+                    }
+                }
+
+                if (c == '<')
+                {
+                    int close = s.IndexOf('>', i);
+                    if (close > i + 1 && (char.IsLetter(s[i + 1]) || s[i + 1] == '/'))
+                    {
+                        i = close + 1;
+                        continue;
+                    }
+                }
+
+                if (c != '\n')
+                {
+                    n++;
+                }
+
+                i++;
+            }
+
+            return n;
+        }
+
         private static IReadOnlyList<LocCsvRow> ReadCsvRows(out string text)
         {
             text = LocCsv.Decode(File.ReadAllBytes(LocTables.ProjectPath(CsvPath)), "spark-strings-reto.csv");
             return LocCsv.Parse(text, "spark-strings-reto.csv");
         }
 
-        // Tabla de prueba propia: las del proyecto y, detrás, las filas del Reto (sin su cabecera), como hará E5.
+        // Tablas del proyecto: con E5, strings.csv ya trae las filas del Reto.
         private static LocCatalog TestCatalog()
+        {
+            return LocTables.FromProjectFiles();
+        }
+
+        // strings.csv sin las filas nuevas del Reto: para probar el respaldo de Loc con claves que faltan.
+        private static LocCatalog CatalogWithoutTheRetoRows()
         {
             string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
             string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile);
             ReadCsvRows(out string daily);
-            string rows = daily.Substring(daily.IndexOf('\n') + 1);
-            return LocCatalog.Parse(strings.EndsWith("\n", StringComparison.Ordinal) ? strings + rows : strings + "\n" + rows, facts);
+            string kept = strings;
+            foreach (string line in daily.Substring(daily.IndexOf('\n') + 1).Split('\n'))
+            {
+                if (line.Length > 0)
+                {
+                    kept = kept.Replace(line + "\n", "");
+                }
+            }
+
+            return LocCatalog.Parse(kept, facts);
         }
 
         private sealed class Fixture

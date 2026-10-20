@@ -37,7 +37,7 @@ namespace AF.Tests.PlayMode
     /// 30» (R-Q14 a).</item>
     /// </list>
     /// Textos: la tabla propia de <see cref="DailyChallengeTests"/> (las tablas del proyecto más
-    /// <c>docs/dev/traspaso/spark-strings-reto.csv</c>, como hará E5), así que es-419 muestra el texto real. Cada captura deja en el
+    /// <c>docs/dev/traspaso/spark-strings-reto.csv</c>, ya en <c>strings.csv</c> con E5), así que es-419 muestra el texto real. Cada captura deja en el
     /// log una línea <c>AF_FIT</c> por texto visible que no cabe en su caja. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode
     /// PlayMode --architecture arm64 --filter AF.Tests.PlayMode.DailyChallengeSnapshotTests</c> sin <c>-nographics</c>.
     /// </summary>
@@ -336,15 +336,12 @@ namespace AF.Tests.PlayMode
             return DateTime.SpecifyKind(bogota - Bogota, DateTimeKind.Utc);
         }
 
-        // Tabla propia: strings.csv y facts.csv del proyecto más las filas del Reto (sin su cabecera), como hará E5.
+        // Tablas del proyecto: con E5, strings.csv ya trae las filas del Reto (docs/dev/traspaso/spark-strings-reto.csv).
         private static LocTableTexts TestTables()
         {
             string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
             string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile);
-            string daily = LocCsv.Decode(
-                System.IO.File.ReadAllBytes(LocTables.ProjectPath("docs/dev/traspaso/spark-strings-reto.csv")), "spark-strings-reto.csv");
-            string rows = daily.Substring(daily.IndexOf('\n') + 1);
-            return new LocTableTexts(strings.EndsWith("\n", StringComparison.Ordinal) ? strings + rows : strings + "\n" + rows, facts);
+            return new LocTableTexts(strings, facts);
         }
     }
 }

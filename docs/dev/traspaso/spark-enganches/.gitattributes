@@ -1,0 +1,2 @@
+# Parches para el integrador (R12): siempre LF, para que git apply funcione igual en Windows y en Linux.
+*.diff text eol=lf
