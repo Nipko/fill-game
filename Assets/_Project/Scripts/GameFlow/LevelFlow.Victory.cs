@@ -138,6 +138,7 @@ namespace AF.GameFlow
                 StateStore?.Clear();
                 _perfect = _attempt.Rescues == 0; // antes de nada: el intento ganado, con sus cuias añadidas (DC14)
                 _attempt.Won();
+                int maxLevelBefore = _progress.LoadMaxLevel(); // la Canasta, solo la primera vez (E30; LevelFlow.Streak.cs)
                 _progress.SaveWin(LevelNumber, LevelNumber + 1);
                 ResetHarvest(_perfect);
                 RewardTiers.TryParse(Level.DifficultyLabel, out _harvestTier);
@@ -151,6 +152,7 @@ namespace AF.GameFlow
                     }
                 }
 
+                OnWinStreak(maxLevelBefore); // Crecida, x2 del río y Canasta, en el mismo lote (E30)
                 AdGate?.RecordWin(LevelNumber);
             }
 
@@ -164,6 +166,7 @@ namespace AF.GameFlow
             _harvest = 0;
             _harvestTier = RewardTier.Normal;
             _harvestDoubled = false;
+            ResetStreakResult(); // LevelFlow.Streak.cs: al cargar un nivel, el resultado de la Crecida del anterior ya no vale
         }
     }
 }

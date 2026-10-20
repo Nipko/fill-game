@@ -12,6 +12,8 @@ namespace AF.Save
     /// <item>recompensados por ubicación y <c>rv_total</c>, <c>interstitials_today</c>, <c>rescues_today</c>,
     /// <c>af_rescue_shown</c> y <c>shuffles_today</c> vuelven a 0;</item>
     /// <item><c>shield_available</c> vuelve a true (05 §2.4 <c>reset_daily</c>: una Hoja escudo al día);</item>
+    /// <item><c>streak_hits</c> se vacía y <c>streak_seeds</c> vuelve a 0 (06 §4.3 <c>on_app_open</c>: los hitos de la Crecida se
+    /// pagan una vez por día local y el tope de 600 es del día; la racha y el río crecido, en <c>streak</c>, no se tocan);</item>
     /// <item><c>af_rescue_declined_days</c> no se toca: cuenta rechazos de la Balsa de rescate y vuelve a 0 al comprar
     /// (04 §6.2).</item>
     /// </list>
@@ -55,6 +57,8 @@ namespace AF.Save
             daily.AfRescueShown = 0;
             daily.ShufflesToday = 0;
             daily.ShieldAvailable = true;
+            daily.StreakHits.Clear();
+            daily.StreakSeeds = 0;
             return true;
         }
     }
