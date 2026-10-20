@@ -477,7 +477,7 @@ namespace AF.Tests.EditMode
         {
             var pink = new Color(0.96f, 0.66f, 0.61f, 0.5f);
             Assert.That(StopBackdrop.SeasonSky(pink, Color.white), Is.EqualTo(pink), "sin temporada, el color");
-            foreach (Color lut in new[] { StopBackdrop.HighWaterLut, StopBackdrop.LowWaterLut })
+            foreach (Color lut in new[] { StopBackdrop.HighWaterLut, StopBackdrop.TwilightHighWaterLut, StopBackdrop.LowWaterLut })
             {
                 Color c = StopBackdrop.SeasonSky(pink, lut);
                 Color.RGBToHSV(pink, out _, out float s0, out _);
@@ -497,8 +497,9 @@ namespace AF.Tests.EditMode
                 Color preset = Palette.WaterBase(water);
                 Assert.That(StopBackdrop.SeasonWater(preset, Color.white), Is.EqualTo(preset), water + ": sin temporada, el preset");
                 Color a = StopBackdrop.SeasonWater(preset, StopBackdrop.HighWaterLut);
+                Color twilight = StopBackdrop.SeasonWater(preset, StopBackdrop.TwilightHighWaterLut);
                 Color bb = StopBackdrop.SeasonWater(preset, StopBackdrop.LowWaterLut);
-                foreach (Color c in new[] { a, bb })
+                foreach (Color c in new[] { a, twilight, bb })
                 {
                     Assert.That(ColorMath.DeltaE00(c, preset), Is.LessThanOrEqualTo(StopBackdrop.SeasonWaterMaxDeltaE + 0.01f), water + ": VA-23");
                     Assert.That(ColorMath.DeltaE00(StopBackdrop.RippleColor(c), preset), Is.LessThanOrEqualTo(StopBackdrop.SeasonWaterMaxDeltaE + 0.01f),
@@ -507,6 +508,7 @@ namespace AF.Tests.EditMode
                 }
 
                 Assert.That(ColorMath.DeltaE00(a, bb), Is.GreaterThan(1f), water + ": A y B se distinguen en el agua");
+                Assert.That(ColorMath.DeltaE00(twilight, bb), Is.GreaterThan(1f), water + ": A (al atardecer y al alba) y B se distinguen en el agua");
             }
         }
 
