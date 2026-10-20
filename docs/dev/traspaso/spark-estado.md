@@ -6,7 +6,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
-## 2026-10-19 · R0-R11 juntas (`spark-int`): verificación casi completa; PlayMode pendiente por la licencia (4.ª caída)
+## 2026-10-19 · R0-R11 juntas: verificación completa VERDE · Bloque (d) (R8-R11) listo para integrar
 
 - **Qué hay:** la rama principal (R0-R10) más R11, la nota con la tabla de días de 729 corregida (`09b11cd`) y los usos `--days 0-728`.
 - **Resultados** (worktree `spark-int`):
@@ -16,7 +16,9 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
   - EditMode **3.057** (3.053 + 3, 1 fallo: el de tiempo de `IntroArtTests.FruitFlight…`, inestable y ajeno).
 - **PlayMode: sin veredicto (código 6, licencia).** Hacia las 19:15 vuelve el 404 de derechos (`com.unity.editor.headless`). Es la 4.ª caída, de nuevo unas 2 h después de la última revisión del dueño.
 - **Por separado sí hay PlayMode en verde:** R10 sobre R9 (1.354) y R11 sobre la integración con R5 (1.373). Falta la combinación de las dos.
-- **Por eso no se empuja todavía.** En cuanto vuelva la licencia: PlayMode de `spark-int`, luego avance rápido de `spark/reto-del-rio` y push.
+- **PlayMode, tras la revisión de la licencia por el dueño:** **1.383 (1.216 + 167 omitidos)**, 0 fallos (43 min). Los omitidos incluyen los `[Explicit]` de capturas.
+- `spark/reto-del-rio` avanza hasta esta combinación y se empuja. También entran los parches de documentación E11/E12 aprobados (`docs/dev/traspaso/spark-parches-docs.md`, `571fdc2`) y los textos 0-728 (`7501c5e`), que solo tocan documentos y textos de ayuda.
+- **Recuentos de referencia del Spark:** EditMode 3.057; PlayMode 1.383.
 
 ## 2026-10-19 · R11 · Capturas y prueba de punta a punta: HECHA (APROBADO en 2.ª ronda; arreglo del sello en `171b404`)
 
