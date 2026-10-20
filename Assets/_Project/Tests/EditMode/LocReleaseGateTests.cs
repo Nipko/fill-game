@@ -79,6 +79,46 @@ namespace AF.Tests.EditMode
             }));
         }
 
+        /// <summary>
+        /// T2-Q5 (08 §4.7; D-018, Q5-A): en un idioma ofrecido distinto del español, una cadena de UI con texto que no está en
+        /// <c>revisado_nativo</c> (la traducción con IA en <c>traducido</c>, o un estado vacío o en borrador) para un release, con
+        /// una línea por idioma y sus claves; en desarrollo solo avisa. El español no tiene columna de estado por idioma.
+        /// </summary>
+        [Test]
+        public void UiWithoutNativeReview_ReleaseId_Blocks_DevelopmentId_OnlyWarns()
+        {
+            string strings = Header
+                + "back,Volver,Back,Voltar,Botón Volver.,12,aprobado_es,traducido,revisado_nativo,,\n"
+                + "next,Siguiente,Next,Próximo,Botón Siguiente.,12,aprobado_es,revisado_nativo,traducido,,\n"
+                + "play,Jugar,Play,Jogar,Botón Jugar.,12,aprobado_es,traducido,traducido,,\n";
+
+            LocReleaseReport report = LocReleaseGate.Evaluate(LocCatalog.Parse(strings, CleanFacts), ReleaseId);
+
+            Assert.That(report.Blocks, Is.True);
+            Assert.That(report.Problems, Is.EqualTo(new[]
+            {
+                "UI sin revisado_nativo en en: claves de strings.csv: 2 (back, play).",
+                "UI sin revisado_nativo en pt-BR: claves de strings.csv: 2 (next, play).",
+            }));
+
+            LocReleaseReport dev = LocReleaseGate.Evaluate(LocCatalog.Parse(strings, CleanFacts), ProjectSetup.ApplicationId);
+            Assert.That(dev.Problems, Is.EqualTo(report.Problems));
+            Assert.That(dev.Blocks, Is.False);
+        }
+
+        [Test]
+        public void UiWithoutNativeReview_EmptyCellsCountOnlyAsIncomplete()
+        {
+            // Una celda vacía ya es «UI incompleta»: no cuenta otra vez como sin revisión.
+            string strings = Header
+                + "back,Volver,Back,,Botón Volver.,12,aprobado_es,revisado_nativo,,,\n"
+                + "play,Jugar,Play,Jogar,Botón Jugar.,12,aprobado_es,revisado_nativo,revisado_nativo,,\n";
+
+            LocReleaseReport report = LocReleaseGate.Evaluate(LocCatalog.Parse(strings, CleanFacts), ReleaseId);
+
+            Assert.That(report.Problems, Is.EqualTo(new[] { "UI incompleta en pt-BR: claves de strings.csv sin texto: 1 (back)." }));
+        }
+
         [Test]
         public void ApprovedFacts_UntranslatedOrHalfTranslated_DoNotBlock()
         {
