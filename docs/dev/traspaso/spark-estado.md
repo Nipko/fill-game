@@ -6,6 +6,94 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-20 · T2 · Traducción con IA a inglés y portugués (`spark/traduccion-ia`): HECHA · verificación completa VERDE · lista para integrar
+
+- **Rama:** `spark/traduccion-ia`, desde `origin/integracion-fase1-fase2` (`e7475d2`).
+  - Fusiona `27a7e9f` en `2dd8866` y `cb0f96f` en `5254a64`.
+  - Commits propios: `0a05c6f`, `f73700b`, `d39a6ec`, `f9137ca`, `86dcdc8`, `7dec1d3` y `a9bdd2c`.
+- **Regla:** la rama **no edita** `strings.csv` ni `facts.csv`. Lo deja todo para que el integrador lo aplique al cerrar la ola 7.
+- **Qué entrega:**
+  - `docs/dev/traspaso/spark-traducciones/`: los CSV `key,es-419,en,pt-BR,status_en,status_pt-BR`, con el español con el que se tradujo para detectar cambios, y `pendientes.csv`, con cada celda vacía y su motivo.
+  - `tools/loc/apply_translations.py`, solo biblioteca estándar, con `--check` y `--self-test` (46/46).
+    - Toca únicamente `en`, `pt-BR` y sus estados.
+    - Nunca pisa una celda rellena y nunca escribe en `map.*` sin `stops-preserve.diff`.
+    - Retiene las filas de `facts.csv` cuyo español está por debajo de `aprobado_es`.
+    - Se niega a aplicar una entrega sin su parche.
+    - Aplica lo mismo a `spark-strings-reto.csv`.
+  - **Estado** de cada celda traducida: `traducido` (contrato 32, 08 §4.7: vacío → `traducido` → `revisado_nativo`).
+  - `Assets/_Project/Tests/PlayMode/TranslatedLocaleOverflowTests.cs`: mide los textos en `en` y `pt-BR`, al 100 % y al 130 %.
+- **Parches** (`docs/dev/traspaso/spark-enganches/`, con LF):
+  - `glosario.diff`: `glossary.csv` con los tipos nuevos `place` y `fauna`, los EN y PT de comodines, mecánicas, lugares y términos (lo cultural, pendiente del asesor y [P] de T2), y el ajuste de `GlossaryTableTests`;
+  - `glosario-gdd.diff`: la sección «12.» de `docs/gdd/00-glosario.md` y la frase de 08 §4.7;
+  - `stops-preserve.diff`: `tools/river-map/stops.py` conserva `en`, `pt-BR` y sus estados, con `test_stops_preserve.py`;
+  - `LocReleaseGate.diff`: en release, la UI en `en` o `pt-BR` sin `revisado_nativo` bloquea (D-018, Q5-A), con 2 tests;
+  - `MapTextTests.diff`.
+- **Orden para el integrador:**
+  1. Los cinco parches.
+  2. Fusiona `spark/reto-cierre` (T1) con E5b.
+  3. `python tools/loc/apply_translations.py` (por defecto: `strings.csv` y `strings_p14.csv`).
+  4. El script con `strings_mapa.csv`, `strings_glosario.csv`, `strings_mapa_glosario.csv` y `strings_t1.csv` como argumentos.
+  5. Las entregas de `facts`. Se pueden pasar ya: no escriben nada hasta que el español llegue a `aprobado_es`.
+  6. Si entran las comillas “ ” de los textos largos, regenera los atlas con `FontSetup.ApplyAll`.
+- **Recuentos** (celdas `en` / `pt-BR`):
+
+  | Entrega | Cuándo se aplica | en | pt-BR |
+  |---|---|---|---|
+  | `strings.csv` (incluye R12 y `victory_perfect`) | por defecto | 91 | 95 |
+  | `strings_p14.csv` | por defecto (T2-Q2) | 8 | 8 |
+  | `strings_mapa.csv` | con `MapTextTests.diff` | 19 | 19 |
+  | `strings_glosario.csv` | con `glosario.diff` | 54 | 50 |
+  | `strings_mapa_glosario.csv` | con los dos | 2 | 2 |
+  | `strings_t1.csv` | cuando estén las claves de T1 | 2 | 2 |
+  | `facts.csv`, `facts_glosario.csv`, `facts_mapa.csv` | retenidas (T2-Q6), 370 filas | 201 + 46 + 123 | 201 + 46 + 123 |
+
+  - **Con todo aplicado:**
+    - en `strings.csv` quedan 7 claves vacías en `en` y 8 en `pt-BR`: «Amazonas» y «Amazonía» (T2-Q7), Totuma sin glosario, `fact_sheet_title` con su §10 pendiente y el PT de `fauna_sighted_card`, pendiente del asesor;
+    - en `facts.csv` quedan 430 por idioma: 128 `map.*.source` (nombres de fuente, pregunta 57 (a)), 185 frases `map.*` y 117 de fruta, río y fauna (lugares, fauna, pueblos o comidas sin glosario, o «Amazonía»).
+  - **LocReleaseGate:** 814 problemas sin `LocReleaseGate.diff` y 816 con él (las 2 líneas nuevas, «UI sin `revisado_nativo`» en `en` y en `pt-BR`).
+- **Verificación:**
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`a9bdd2c`) | `dotnet build -warnaserror`, `dotnet test`, `validate_schema.py`, `apply_translations.py --self-test` | 0 avisos; 981 (975 + 6); 103/103; 46/46 |
+  | rama | `unity-compile`, EditMode, PlayMode (`-TimeoutSec 3600`) | OK; **3.148 (3.145 + 3), 0 fallos**; **1.513 (1.326 + 187), 0 fallos** |
+  | worktree temporal con los 5 parches y todas las entregas | EditMode | **3.150 (3.147 + 3), 0 fallos** |
+  | ídem (sobre la base anterior `27a7e9f`) | PlayMode, con `TranslatedLocaleOverflowTests` | 1.399 (1.232 + 167), 0 fallos; en y pt-BR al 100 y 130 %, 147 textos sin problemas |
+  | copias de `git archive` de la rama y de `cb0f96f` | `git apply` de los 5 parches; las 9 entregas; `--check`; `stops.py --check`; unittest de `river-map` | todo OK; 394 celdas, 370 filas retenidas, `facts.csv` idéntico |
+
+- **code-reviewer:**
+  - primera ronda CAMBIOS NECESARIOS: `facts` contra 08 §4.7, y «Amazonía» y regiones sin glosario;
+  - segunda ronda CAMBIOS NECESARIOS: `.patch` con CRLF, «Encuentro de las Aguas» y «Kew» sin glosario, y faltaba la parte del GDD;
+  - tercera ronda **APROBADO**, a falta de Unity (después, verde).
+- **Calidad:** el revisor repasó todas las traducciones en los dos idiomas: tuteo, «você» e imperativo; marcadores, plurales, cifras D-018 y NBSP intactos; ninguna cadena «Amazon»; lo cultural, solo con el glosario.
+- **Criterio para la fauna y la fruta genéricas:**
+  - sin glosario se traducen las categorías de vocabulario general (mono, ave, pez, ardilla…) y los alimentos de diccionario (piña, mango, café…);
+  - solo con el glosario, los nombres de especie o de la región (tapir, tucán, cocona…) y las preparaciones locales (yuca, fariña…).
+
+### Preguntas para el dueño (nuevas; no bloquean lo entregado)
+
+| Id | Pregunta | Qué desbloquea |
+|---|---|---|
+| T2-Q8 | Entrada del glosario para «Amazonas», «Amazonía» y «Sobre la Amazonía» (con el asesor; el glosario §1 evita la cadena «Amazon» por la marca) | 3 claves de UI, unas 60 frases de `facts.csv` y muchas `map.*` |
+| T2-Q9 | Mundo 3, «Manaos»: es invariante y `glossary.csv` no admite dos filas con el mismo es-419. ¿Pasa a «Manaus» en EN y PT? | `fact.agua_negro.10` y `.19`, el dato de *Saguinus bicolor* y `map.stop.manaos.*` |
+| T2-Q10 | Textos propuestos para el glosario §10: `fact_sheet_title` «River Fruits» / «Frutas do Rio», las filas de P14 y las de `map_*` | `fact_sheet_title` |
+| T2-Q11 | Propuestas [P] para el asesor: PT «Redemoinho» o «Rebojo» (Remolino); EN «Tide» (Marea), «Firefly» / «Vaga-lume» (Luciérnaga); «Noite da Onça»; «boto» como PT de «delfín de río»; «Meeting of Waters» | Validación de `glosario.diff` |
+| — | La revisión nativa de `en` y `pt-BR`: con `LocReleaseGate.diff`, un build de release se para hasta que exista | Publicar en `en` y `pt-BR` |
+
+## 2026-10-20 · T2 · Decisiones del dueño sobre las preguntas de la traducción con IA
+
+El dueño respondió, literal: «las preguntas t2 hagamos lo recomendado». Se aplica la opción recomendada de cada una. T2-Q6 y T2-Q7 salieron después, de la revisión de T2, y también se resuelven con la opción recomendada:
+
+| Id | Pregunta | Decisión (la recomendada) |
+|---|---|---|
+| T2-Q1 | El bloque `map.*` de `facts.csv`: `tools/river-map/stops.py` escribe `en` y `pt-BR` vacíos al regenerar | (a) `stops.py` conserva las columnas `en` y `pt-BR` y sus estados. Va como **parche probado**, porque `tools/river-map/**` es del integrador (encargo §3.2). Se traducen las frases `map.*` que solo usan nombres del glosario |
+| T2-Q2 | Las 8 claves de P14 (glosario §10: EN/PT a la espera del dueño) | (a) Se aprueban sus textos y se aplica `strings_p14.csv` |
+| T2-Q3 | Lugares, países, ciudades y ríos, comodines (Marea, Morpho, Luciérnaga), mecánicas y fauna sin EN/PT en el glosario | (a) Se añaden al glosario: los exónimos habituales de países, ciudades y ríos, y propuestas para comodines, mecánicas y fauna, con lo cultural en `pendiente_asesor` / propuesta. Va como **parche probado** de `Data/Loc/glossary.csv` y del glosario §10. Las traducciones que dependen de esos nombres, en un archivo aparte que se aplica con ese parche |
+| T2-Q4 | Términos que se tradujeron sin entrada en el glosario: Cosecha doble (Double Harvest / Colheita dupla), Aguas estancadas (Still waters / Águas paradas), Muestrario (Samples / Mostruário) y «Sobre la Amazonía» (About the Amazon / Sobre a Amazônia) | (a) Pasan al glosario, en el mismo parche que T2-Q3 |
+| T2-Q5 | `LocReleaseGate.Evaluate` no exige `revisado_nativo` en un build de release, aunque 08 §4.7 lo pide | (a) Se añade la regla: en release, una cadena de UI en `en` o `pt-BR` sin `revisado_nativo` es aviso o bloqueo, con el mismo nivel que los demás avisos de la puerta (D-018, Q5-A). Va como **parche probado** |
+| T2-Q6 | Frases de `facts.csv` con el español aún en `pendiente_asesor` (08 §4.7: una traducción solo vale con `aprobado_es`; `FactCatalogTests` exige los estados vacíos) | (a) **Retener**: la entrega de `facts.csv` queda guardada y se aplica cuando el asesor apruebe el español. El script no escribe filas por debajo de `aprobado_es` y detecta un español cambiado |
+| T2-Q7 | «Amazonía» / «the Amazon» / «a Amazônia» y regiones (trópico americano, América tropical, alta Amazonia…) sin entrada en el glosario; el glosario §1 evita la cadena «Amazon» por la marca de Amazon.com | (a) Se dejan **vacías** y anotadas en `pendientes.csv`, hasta que el dueño decida con el asesor la entrada del glosario |
+
 ## 2026-10-20 · T1 · Cierre del Reto (`spark/reto-cierre`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/reto-cierre`, desde `origin/integracion-fase1-fase2` (`e7475d2`). Fusiona `27a7e9f` (R12 integrado) en `fea96b7`.

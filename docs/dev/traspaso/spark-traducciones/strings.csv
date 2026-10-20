@@ -1,0 +1,108 @@
+key,es-419,en,pt-BR,status_en,status_pt-BR
+ad_simulated,Anuncio simulado,Simulated ad,Anúncio simulado,traducido,traducido
+back_home,Volver al inicio,Back to home,Voltar ao início,traducido,traducido
+cancel,Cancelar,Cancel,Cancelar,traducido,traducido
+content_end_eta,Río arriba llegan 100 niveles nuevos en {n:plural:{} día|unos {} días}.,100 new levels are coming upriver in {n:plural:{} day|about {} days}.,100 níveis novos chegam rio acima em {n:plural:{} dia|cerca de {} dias}.,traducido,traducido
+content_end_title,El río sigue creciendo,The river keeps growing,O rio continua crescendo,traducido,traducido
+daily_card_continue,Seguir,Continue,Continuar,traducido,traducido
+daily_card_pending,Pendiente de validar,Pending check,Aguardando validação,traducido,traducido
+daily_card_sealed,Sellado,Sealed,Selado,traducido,traducido
+daily_card_title,Reto del río · {date},River Challenge · {date},Desafio do Rio · {date},traducido,traducido
+daily_date_short,{day} {month},{month} {day},{day} {month},traducido,traducido
+daily_reward_seeds,+{n},+{n},+{n},traducido,traducido
+daily_streak,{n}/{total},{n}/{total},{n}/{total},traducido,traducido
+daily_win_no_reward,Sin premio: esta fecha ya se reclamó,No reward: this date was already claimed,Sem prêmio: esta data já foi resgatada,traducido,traducido
+daily_win_pending,Premio pendiente de validar,Reward pending check,Prêmio aguardando validação,traducido,traducido
+double_harvest,Cosecha doble: x2 por video,Double Harvest: x2 for a video,Colheita dupla: x2 por vídeo,traducido,traducido
+double_harvest_delta,+{n} → +{doubled},+{n} → +{doubled},+{n} → +{doubled},traducido,traducido
+extra_cuia_gift,Capi te trae una cuia más para este nivel. La próxima la encuentras en tu Canasta,Capi brings you one more cuia for this level. You'll find the next one in your Basket,Capi traz mais uma cuia para este nível. A próxima você encontra na sua Cesta,traducido,traducido
+fact_a11y,"Dato del río. {name}, {k} de {n}. {text}","River fact. {name}, {k} of {n}. {text}","Curiosidade do rio. {name}, {k} de {n}. {text}",traducido,traducido
+fact_locked,Nivel {n},Level {n},Nível {n},traducido,traducido
+fact_progress,{name} · {k}/{n},{name} · {k}/{n},{name} · {k}/{n},traducido,traducido
+fact_sources,Fuentes,Sources,Fontes,traducido,traducido
+fact_starts_at,Su serie empieza en el nivel {n},Its series starts at level {n},A série começa no nível {n},traducido,traducido
+giveup_confirm_last_canoe,Perderás tu última canoa,You'll lose your last canoe,Você perderá sua última canoa,traducido,traducido
+harvest,Cosecha,Harvest,Colheita,traducido,traducido
+hint_not_found,No encuentro un camino desde aquí,I can't find a way from here,Não encontro um caminho daqui,traducido,traducido
+home,Inicio,Home,Início,traducido,traducido
+iap_simulated_purchase,Compra simulada,Simulated purchase,Compra simulada,traducido,traducido
+keep_playing,Seguir jugando,Keep playing,Continuar jogando,traducido,traducido
+language_name_en_xa,Pseudolocalización (en-XA),Pseudolocalization (en-XA),Pseudolocalização (en-XA),traducido,traducido
+level_attempt,Nivel {n} · intento {attempt},Level {n} · attempt {attempt},Nível {n} · tentativa {attempt},traducido,traducido
+month_short_01,ene,Jan,jan,traducido,traducido
+month_short_02,feb,Feb,fev,traducido,traducido
+month_short_03,mar,Mar,mar,traducido,traducido
+month_short_04,abr,Apr,abr,traducido,traducido
+month_short_05,may,May,mai,traducido,traducido
+month_short_06,jun,Jun,jun,traducido,traducido
+month_short_07,jul,Jul,jul,traducido,traducido
+month_short_08,ago,Aug,ago,traducido,traducido
+month_short_09,sept,Sep,set,traducido,traducido
+month_short_10,oct,Oct,out,traducido,traducido
+month_short_11,nov,Nov,nov,traducido,traducido
+month_short_12,dic,Dec,dez,traducido,traducido
+no_canoes_infinite,Canoas infinitas 1 h · {price},Endless Canoes 1 h · {price},Canoas infinitas 1 h · {price},traducido,traducido
+no_canoes_next,Tu próxima canoa vuelve en,Your next canoe returns in,Sua próxima canoa volta em,traducido,traducido
+no_canoes_refill,Llenar canoas · {n}/{n},Refill canoes · {n}/{n},Encher canoas · {n}/{n},traducido,traducido
+no_canoes_title,Sin canoas,No canoes,Sem canoas,traducido,traducido
+no_canoes_video,Canoa extra · Ver video,Extra canoe · Watch video,Canoa extra · Assistir vídeo,traducido,traducido
+play_level,Jugar · Nivel {n},Play · Level {n},Jogar · Nível {n},traducido,traducido
+profile_locked_migration,"No pudimos abrir tu progreso, pero sigue a salvo. Actualiza la app para recuperarlo: lo que juegues ahora no se guardará y no hay compras.","We couldn't open your progress, but it's still safe. Update the app to get it back: what you play now won't be saved and purchases are off.","Não conseguimos abrir seu progresso, mas ele continua seguro. Atualize o app para recuperá-lo: o que você jogar agora não será salvo e não há compras.",traducido,traducido
+profile_locked_play,Jugar sin guardar,Play without saving,Jogar sem salvar,traducido,traducido
+profile_locked_title,Actualiza Tintalú,Update Tintalú,Atualize o Tintalú,traducido,traducido
+profile_locked_too_new,Tu progreso es de una versión más nueva de Tintalú y sigue a salvo. Actualiza la app para jugar con él: lo que juegues ahora no se guardará y no hay compras.,Your progress is from a newer version of Tintalú and is still safe. Update the app to play with it: what you play now won't be saved and purchases are off.,Seu progresso é de uma versão mais nova do Tintalú e continua seguro. Atualize o app para jogar com ele: o que você jogar agora não será salvo e não há compras.,traducido,traducido
+quit,Salir,Quit,Sair,traducido,traducido
+rescue_applied,¡Una cuia más! Sigue desde aquí,One more cuia! Keep going from here,Mais uma cuia! Continue daqui,traducido,traducido
+restart_confirm_body,Perderás los vertidos de este intento,You'll lose this attempt's pours,Você vai perder os despejos desta tentativa,traducido,traducido
+restart_confirm_title,¿Volver a la orilla?,Back to shore?,Voltar à margem?,traducido,traducido
+restart_long,Volver a la orilla,Back to shore,Voltar à margem,traducido,traducido
+reward_line,Premio: {n},Reward: {n},Prêmio: {n},traducido,traducido
+ribbon,×{n},×{n},×{n},traducido,traducido
+river_lowered_color,El río bajó: esta vez hay un color menos,The river dropped: one color fewer this time,O rio baixou: desta vez há uma cor a menos,traducido,traducido
+river_lowered_cuia,El río bajó: esta vez hay una cuia más,The river dropped: one more cuia this time,O rio baixou: desta vez há uma cuia a mais,traducido,traducido
+settings_idle_hint,Pista por inactividad,Hint when idle,Dica por inatividade,traducido,traducido
+settings_language_auto,Automático,Automatic,Automático,traducido,traducido
+settings_patterns_auto,Automático,Automatic,Automático,traducido,traducido
+settings_patterns_off,Nunca,Never,Nunca,traducido,traducido
+settings_patterns_on,Siempre,Always,Sempre,traducido,traducido
+settings_sloth_messages,Mensajes de TiTino,Messages from TiTino,Mensagens do TiTino,traducido,traducido
+simulated_ad_close,Cerrar,Close,Fechar,traducido,traducido
+simulated_ad_interstitial,intersticial,interstitial,intersticial,traducido,traducido
+simulated_ad_label,{placement} · {format},{placement} · {format},{placement} · {format},traducido,traducido
+simulated_ad_rewarded,recompensado,rewarded,recompensado,traducido,traducido
+stuck_balsa_499,"Balsa de rescate
+{price}","Rescue Raft
+{price}","Balsa de Resgate
+{price}",traducido,traducido
+stuck_balsa_499_content,"Todo para seguir: semillas, una cuia y canoas infinitas","All you need to go on: seeds, a cuia and endless canoes","Tudo para seguir: sementes, uma cuia e canoas infinitas",traducido,traducido
+stuck_pack_199,"Puñado de semillas
+{seeds} · {price}","Handful of seeds
+{seeds} · {price}","Punhado de sementes
+{seeds} · {price}",traducido,traducido
+stuck_rescue_cta,Continuar: +1 cuia,Continue: +1 cuia,Continuar: +1 cuia,traducido,traducido
+stuck_rescue_discount,Primer rescate del día: –50 %,First rescue today: –50%,Primeiro resgate do dia: –50%,traducido,traducido
+stuck_rescue_missing,{n:plural:Te falta {} semilla|Te faltan {} semillas},{n:plural:You need {} more seed|You need {} more seeds},{n:plural:Falta {} semente|Faltam {} sementes},traducido,traducido
+stuck_subtitle,Aguas estancadas,Still waters,Águas paradas,traducido,traducido
+stuck_undo_gift,+1 Deshacer · gratis,+1 Undo · free,+1 Desfazer · grátis,traducido,traducido
+stuck_undo_refill_ad,"+{n} Deshacer
+Ver video","+{n} Undo
+Watch video","+{n} Desfazer
+Assistir vídeo",traducido,traducido
+stuck_undo_refill_seeds,+{n} Deshacer{sep}{price:plural:{} semilla|{} semillas},+{n} Undo{sep}{price:plural:{} seed|{} seeds},+{n} Desfazer{sep}{price:plural:{} semente|{} sementes},traducido,traducido
+tray_missing,{n:plural:Te falta {}|Te faltan {}},{n:plural:Need {}|Need {}},{n:plural:Falta {}|Faltam {}},traducido,traducido
+tutorial_finish_full,Termina la cuia casi llena antes de apartar.,Finish the almost-full cuia before setting any aside.,Termine a cuia quase cheia antes de separar.,traducido,traducido
+tutorial_hoja,Esta hoja solo deja pasar aguaje. Vierte aguaje para abrirla.,,Esta palha só deixa passar buriti. Despeje buriti para abri-la.,,traducido
+tutorial_keep_one_empty,Hay dos cuias vacías: reserva una para el final.,There are two empty cuias: save one for the end.,Há duas cuias vazias: guarde uma para o final.,traducido,traducido
+tutorial_liana,La liana se suelta cuando selles una cuia de taperebá.,,O cipó se solta quando você selar uma cuia de taperebá.,,traducido
+tutorial_liana_n,Las cuentas de la liana dicen cuántas cuias debes sellar para que se suelte.,,As contas do cipó dizem quantas cuias você precisa selar para que ele se solte.,,traducido
+tutorial_matapi,Lo que entra al matapi no sale. Llénalo con una sola fruta.,,O que entra no matapi não sai. Encha-o com uma fruta só.,,traducido
+tutorial_murky,El agua turbia esconde frutas. Debajo nunca se repite la fruta de encima.,Murky water hides fruit. The fruit below is never the same as the one on top.,A água turva esconde frutas. Embaixo nunca se repete a fruta de cima.,traducido,traducido
+tutorial_murky_rule,Debajo nunca se repite la fruta de encima.,The fruit below is never the same as the one on top.,Embaixo nunca se repete a fruta de cima.,traducido,traducido
+tutorial_one_empty,Guarda una cuia vacía: es tu espacio para pensar.,Keep one cuia empty: it's your room to think.,Guarde uma cuia vazia: é seu espaço para pensar.,traducido,traducido
+tutorial_tinaja,"La tinaja no deja ver: solo ves la fruta de arriba, y la de debajo nunca es igual.","The water jar hides what's inside: you only see the top fruit, and the next one is never the same.","A talha não deixa ver: só se vê a fruta de cima, e a de baixo nunca é igual.",traducido,traducido
+tutorial_tinaja_scoop,"Saca el agua con su cuia chica:
+le caben dos dosis.","Scoop the water out with its small cuia:
+it holds two doses.","Tire a água com a cuia pequena dela:
+cabem duas doses.",traducido,traducido
+tutorial_tinaja_tip,"Si sacas dos veces, la primera dosis queda debajo.",Scoop twice and the first dose ends up underneath.,"Se tirar duas vezes, a primeira dose fica embaixo.",traducido,traducido
+victory_perfect,¡Perfecto!,Perfect!,Perfeito!,traducido,traducido
