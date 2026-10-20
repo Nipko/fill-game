@@ -245,10 +245,10 @@ index 42621f2..8746677 100644
              _restart.Button.gameObject.SetActive(restart);
 diff --git a/Assets/_Project/Tests/PlayMode/SkipPlayModeTests.cs b/Assets/_Project/Tests/PlayMode/SkipPlayModeTests.cs
 new file mode 100644
-index 0000000..9773b27
+index 0000000..ff2a786
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/SkipPlayModeTests.cs
-@@ -0,0 +1,105 @@
+@@ -0,0 +1,120 @@
 +#nullable enable
 +using System;
 +using System.Collections;
@@ -264,8 +264,9 @@ index 0000000..9773b27
 +    /// <summary>
 +    /// El Salto del Boto en la escena (bloque B3; 04 §2.6 y §6.6 wireframe D; nota <c>docs/dev/salto-del-boto.md</c>): en el 31
 +    /// (tablero 6 del tutorial con <c>af_level_offset</c> = 25), al quinto fallo Aguas estancadas ofrece «Salto del Boto · 300»,
-+    /// la pausa y el banner también; la confirmación lleva al 32 con 300 semillas menos, sin canoa, y el Mapa pone a Rosa en el
-+    /// 31. Necesita <c>B3-model.diff</c> y <c>B3-ui.diff</c>.
++    /// la pausa y el banner también; la confirmación avisa si se pierde una Cuia extra y lleva al 32 con 300 semillas menos, sin
++    /// canoa, y el Mapa pone a Rosa en el 31. Con progreso en memoria (<see cref="MemorySkipStore"/>) el salto no sube su
++    /// <c>max_level</c>: aquí no importa (el 32 no es un 10k ni elegible). Necesita <c>B3-model.diff</c> y <c>B3-ui.diff</c>.
 +    /// </summary>
 +    public sealed class SkipPlayModeTests
 +    {
@@ -337,14 +338,28 @@ index 0000000..9773b27
 +            view.Stuck.SkipButton.onClick.Invoke();
 +            Assert.That(boot.SkipConfirmView.Visible, Is.True);
 +            Assert.That(boot.SkipConfirmView.PriceShown, Is.EqualTo(300));
-+            Assert.That(boot.SkipConfirmView.WarnsExtraCuia, Is.False);
-+            int canoes = boot.Wallet!.Canoes.Count;
++            Assert.That(boot.SkipConfirmView.WarnsExtraCuia, Is.False, "sin Cuia extra aplicada, sin aviso");
++            boot.SkipConfirmView.CloseButton.onClick.Invoke();
++            Assert.That(view.StuckVisible, Is.True, "la X vuelve al modal");
++
++            // Con Cuia extra aplicada (Marea para salir del bloqueo, «+1 cuia»), la confirmación avisa de que se pierde (04 §2.6 c).
++            Assert.That(boot.PressUndo(), Is.True);
++            PlayModeHelpers.Step(boot, 300);
++            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
++            Assert.That(boot.PressExtraCuia(), Is.True);
++            Assert.That(boot.Flow.SkipLosesExtraCuia, Is.True);
++            view.PauseButton.onClick.Invoke();
++            view.Pause.SkipButton.onClick.Invoke();
++            Assert.That(boot.SkipConfirmView.Visible, Is.True);
++            Assert.That(boot.SkipConfirmView.WarnsExtraCuia, Is.True, "«Perderás la Cuia extra de este nivel»");
++            int seeds = boot.Wallet!.Seeds;
++            int canoes = boot.Wallet.Canoes.Count;
 +            boot.SkipConfirmView.ConfirmButton.onClick.Invoke();
 +
 +            Assert.That(boot.SkipConfirmView.Visible, Is.False);
 +            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(32), "Rosa lleva al siguiente nivel");
 +            Assert.That(view.StuckVisible, Is.False);
-+            Assert.That(boot.Wallet.Seeds, Is.EqualTo(700));
++            Assert.That(boot.Wallet.Seeds, Is.EqualTo(seeds - 300));
 +            Assert.That(boot.Wallet.Canoes.Count, Is.EqualTo(canoes), "sin canoa");
 +            Assert.That(progress.IsSkipped(31), Is.True, "el Mapa pone a Rosa en la boya del 31");
 +            Assert.That(progress.NextLevel, Is.EqualTo(32));
