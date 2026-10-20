@@ -154,6 +154,7 @@ UiText.NoCanoesVideo	Canoa extra · Ver video
 UiText.PatternsToggle	Patrones de fruta
 UiText.Pause	Pausa
 UiText.Play	Jugar
+UiText.PlayDaily	Jugar · Reto del río
 UiText.ProfileLockedMigration	No pudimos abrir tu progreso, pero sigue a salvo. Actualiza la app para recuperarlo: lo que juegues ahora no se guardará y no hay compras.
 UiText.ProfileLockedPlay	Jugar sin guardar
 UiText.ProfileLockedTitle	Actualiza Tintalú

@@ -84,6 +84,12 @@ namespace AF.UI
         /// <summary><c>play</c>.</summary>
         public static string Play => Loc.T(Keys.Play);
 
+        /// <summary>
+        /// «Jugar · Reto del río» (<c>play_daily</c>; D-032, punto 6): el botón del inicio tras acabar el contenido con el Reto
+        /// desbloqueado [P].
+        /// </summary>
+        public static string PlayDaily => Loc.T(Keys.PlayDaily);
+
         /// <summary><c>currency</c> (nombre del contador de semillas para el lector de pantalla).</summary>
         public static string Seeds => Loc.T(Keys.Currency);
 
@@ -646,6 +652,9 @@ namespace AF.UI
 
             /// <summary><c>play</c>.</summary>
             public const string Play = "play";
+
+            /// <summary><c>play_daily</c> [P].</summary>
+            public const string PlayDaily = "play_daily";
 
             /// <summary><c>play_level</c> [P].</summary>
             public const string PlayLevel = "play_level";

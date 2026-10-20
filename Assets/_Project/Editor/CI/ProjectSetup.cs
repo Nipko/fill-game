@@ -56,6 +56,20 @@ namespace AF.EditorTools
         /// </summary>
         public const string AppCategory = "game";
 
+        /// <summary>
+        /// Managed Stripping High (08 §5.4; D-033, Q-T6: aplicarlo ya, con link.xml y un build de prueba). Las excepciones van en
+        /// <c>Assets/Plugins/link.xml</c> (08 §3); si un SDK falla por reflexión se vuelve a Medium (08 §16.3, punto 3).
+        /// </summary>
+        public const ManagedStrippingLevel StrippingLevel = ManagedStrippingLevel.High;
+
+        /// <summary>
+        /// Retroceso predictivo de Android (08 §13.1 #4): todavía desactivado. Con <c>false</c>, Unity escribe
+        /// <c>android:enableOnBackInvokedCallback="false"</c> en el manifiesto y Atrás sigue llegando como Escape al Input System,
+        /// que es lo que prueban BackButtonTests y la prueba en el teléfono (FXT). Activarlo exige probar Atrás en frío en el
+        /// teléfono (Android 16) y pasar <c>-RequirePredictiveBack</c> a <c>ci/check-manifest.ps1</c> (bloque B10 de la tanda 5).
+        /// </summary>
+        public const bool PredictiveBack = false;
+
         const string LogPrefix = "[AF.ProjectSetup] ";
 
         [MenuItem("Amazon Fill/CI/Aplicar ajustes Android (dev)")]
@@ -91,6 +105,9 @@ namespace AF.EditorTools
             PlayerSettings.Android.buildApkPerCpuArchitecture = false;
             Debug.Log(LogPrefix + "appCategory antes: \"" + PlayerSettings.Android.appCategory + "\"");
             PlayerSettings.Android.appCategory = AppCategory;
+            PlayerSettings.SetManagedStrippingLevel(android, StrippingLevel);
+            PlayerSettings.stripEngineCode = true;
+            PlayerSettings.Android.predictiveBackSupport = PredictiveBack;
 
             // Sin firma de release: Unity firma con la clave de depuración. El keystore lo gestiona el dueño.
             PlayerSettings.Android.useCustomKeystore = false;
@@ -130,6 +147,9 @@ namespace AF.EditorTools
                 problems.Add("appCategory=" + PlayerSettings.Android.appCategory + " (esperado " + AppCategory + ")");
             }
 
+            Check(problems, "managedStrippingLevel", PlayerSettings.GetManagedStrippingLevel(android), StrippingLevel);
+            Check(problems, "stripEngineCode", PlayerSettings.stripEngineCode, true);
+            Check(problems, "predictiveBackSupport", PlayerSettings.Android.predictiveBackSupport, PredictiveBack);
             Check(problems, "useCustomKeystore", PlayerSettings.Android.useCustomKeystore, false);
             return problems;
         }
@@ -147,6 +167,9 @@ namespace AF.EditorTools
                 + ", targetSdk=" + (int)PlayerSettings.Android.targetSdkVersion
                 + ", arquitecturas=" + PlayerSettings.Android.targetArchitectures
                 + ", appCategory=" + PlayerSettings.Android.appCategory
+                + ", stripping=" + PlayerSettings.GetManagedStrippingLevel(android)
+                + ", stripEngineCode=" + PlayerSettings.stripEngineCode
+                + ", retrocesoPredictivo=" + PlayerSettings.Android.predictiveBackSupport
                 + ", aab=" + EditorUserBuildSettings.buildAppBundle
                 + ", keystorePropio=" + PlayerSettings.Android.useCustomKeystore;
         }

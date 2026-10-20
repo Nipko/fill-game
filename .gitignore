@@ -151,3 +151,6 @@ desktop.ini
 InitTestScene*.unity*
 mono_crash.*
 # END unity vcs doctor
+
+# CI: lista de objetos LFS para la clave de la cache (.github/workflows/ci.yml)
+/.lfs-assets-id
