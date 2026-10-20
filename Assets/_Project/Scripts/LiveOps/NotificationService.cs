@@ -81,6 +81,11 @@ namespace AF.LiveOps
             {
                 PlannedNotification p = plan[i];
                 string body = _texts.Resolve(p.BodyKey, p.Args);
+                if (body.Length == 0 && p.Type.IsComeback() && p.BodyKey != NotificationType.ComebackD7.BodyKey())
+                {
+                    body = _texts.Resolve(NotificationType.ComebackD7.BodyKey(), p.Args); // sin la variante en este idioma, la del D7 [P]
+                }
+
                 if (body.Length == 0 || title.Length == 0)
                 {
                     continue;

@@ -218,6 +218,7 @@ namespace AF.UI
                 return;
             }
 
+            TickPlatformScheduler();
             LevelFlow? flow = _flow;
             if (flow != null)
             {
@@ -295,6 +296,12 @@ namespace AF.UI
         /// <paramref name="scheduler"/> queda null y se usa <see cref="FakeNotificationScheduler"/>.
         /// </summary>
         static partial void CreatePlatformScheduler(IClock clock, ref INotificationScheduler? scheduler);
+
+        /// <summary>
+        /// Gancho de B6-notifications-real: cada fotograma, la respuesta pendiente del diálogo nativo (el paquete la da por sondeo).
+        /// Sin el parche no hace nada.
+        /// </summary>
+        partial void TickPlatformScheduler();
 
         private void OnSessionStarted(in SessionStart start)
         {

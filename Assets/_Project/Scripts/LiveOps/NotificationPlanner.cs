@@ -199,7 +199,9 @@ namespace AF.LiveOps
                 {
                     candidates.Add(new Candidate(NotificationType.StreakWaiting, Unspecified(at), new[]
                     {
+                        // {left} [P]: las victorias que faltan; el texto de 06 §8.3 («una victoria más») solo es verdad con 1.
                         NotificationArg.Number("n", context.StreakWins), NotificationArg.Number("m", next),
+                        NotificationArg.Number("left", next - context.StreakWins),
                     }, 0));
                 }
             }

@@ -112,7 +112,7 @@ namespace AF.LiveOps.Tests
             PlannedNotification streak = plan[0];
             Assert.That(streak.Type, Is.EqualTo(NotificationType.StreakWaiting));
             Assert.That(streak.FireAtLocal, Is.EqualTo(Today.AddDays(2).AddHours(9)), "07:00 cae en el silencio: 09:00");
-            Assert.That(streak.Args, Is.EqualTo(new[] { NotificationArg.Number("n", 7), NotificationArg.Number("m", 10) }));
+            Assert.That(streak.Args, Is.EqualTo(new[] { NotificationArg.Number("n", 7), NotificationArg.Number("m", 10), NotificationArg.Number("left", 3) }));
             Assert.That(plan.CountOf(NotificationType.StreakWaiting), Is.EqualTo(1));
 
             c.StreakWins = 2;
@@ -324,6 +324,20 @@ namespace AF.LiveOps.Tests
             texts.Missing.Add("push_daily_ready");
             int withoutDaily = service.OnBackground(c);
             Assert.That(withoutDaily, Is.EqualTo(Plan(c).Count - Plan(c).CountOf(NotificationType.DailyReady)), "sin texto en el idioma, sin aviso");
+            texts.Missing.Clear();
+            texts.Missing.Add("push_comeback_d14");
+            service.OnBackground(c);
+            LocalNotification? d14 = null;
+            foreach (LocalNotification n in scheduler.Scheduled)
+            {
+                if (n.Type == "comeback_d14")
+                {
+                    d14 = n;
+                }
+            }
+
+            Assert.That(d14, Is.Not.Null, "sin la variante en el idioma, el texto del D7");
+            Assert.That(d14!.Body, Is.EqualTo("[push_comeback_d7]"));
             texts.Missing.Clear();
             service.OnBackground(c);
 
