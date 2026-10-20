@@ -45,7 +45,8 @@
     auto (por defecto), cli (solo Unity CLI) o batchmode (solo Unity.exe).
 
 .PARAMETER TimeoutSec
-    Limite de tiempo (900 s por defecto). Primera importacion de un worktree nuevo: 3600.
+    Limite de tiempo. Por defecto, 900 s en EditMode y 3600 s en PlayMode (la suite completa tarda
+    unos 30-40 min y a 900 s no da veredicto). Primera importacion de un worktree nuevo: 3600.
 
 .PARAMETER MaxErrors
     Maximo de lineas "error CS" y de tests fallidos que se muestran (30 por defecto).
@@ -56,7 +57,7 @@
 .EXAMPLE
     pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode
 .EXAMPLE
-    pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode -TimeoutSec 1800
+    pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode -TimeoutSec 7200
 #>
 # Los parametros se validan a mano (no con ValidateSet/ValidateRange) para que un argumento
 # incorrecto salga siempre con 2, como "unity test".
@@ -71,7 +72,7 @@ param(
     [string]$Filter = '',
     [string]$ProjectPath = (Split-Path -Parent $PSScriptRoot),
     [string]$Runner = 'auto',
-    [string]$TimeoutSec = '900',
+    [string]$TimeoutSec = '',
     [string]$MaxErrors = '30',
     [string]$Architecture = 'arm64',
     [string]$UnityExe = '',
@@ -115,6 +116,7 @@ if (@('auto', 'cli', 'batchmode') -notcontains $Runner) { Stop-WithCode 2 "ERROR
 if (@('arm64', 'x86_64') -notcontains $Architecture) { Stop-WithCode 2 "ERROR: -Architecture debe ser arm64 o x86_64 (recibido: '$Architecture')." }
 $Runner = $Runner.ToLowerInvariant()
 $Architecture = $Architecture.ToLowerInvariant()
+if ($TimeoutSec -eq '') { $TimeoutSec = if ($Mode -eq 'PlayMode') { '3600' } else { '900' } }
 $timeoutSeconds = ConvertTo-CheckedInt -Name 'TimeoutSec' -Value $TimeoutSec -Min 60 -Max 14400
 $maxLines = ConvertTo-CheckedInt -Name 'MaxErrors' -Value $MaxErrors -Min 1 -Max 500
 
