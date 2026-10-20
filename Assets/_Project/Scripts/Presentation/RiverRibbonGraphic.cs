@@ -249,6 +249,13 @@ namespace AF.Presentation
         /// </summary>
         public const float CurveAnchorMergeWidths = 0.3f;
 
+        /// <summary>
+        /// Con el trazo curvo, vueltas como mucho de las anclas a su sitio (FX14) [P]: la vuelta de cada una mueve las de alrededor,
+        /// así que se repite hasta que todas quedan a ≤ <see cref="CurveAnchorWidths"/> (o se acaban las vueltas: entonces se
+        /// recortan).
+        /// </summary>
+        public const int CurveAnchorPasses = 4;
+
         // Con el trazo curvo, un paso de la curva no va a menos de esto (dp) de una sección del plan: una cuerda de nada.
         private const float CurveMinGapDp = 0.5f;
 
@@ -1410,32 +1417,24 @@ namespace AF.Presentation
             }
 
             // Cada ancla vuelve hasta CurveAnchorWidths anchos de su sitio (la boca cae dentro de la cinta sin forzar un codo en ella),
-            // y los puntos de alrededor con ella, cada vez menos hasta CurveAnchorReach separaciones; las puntas no se mueven.
+            // y los puntos de alrededor con ella, cada vez menos hasta CurveAnchorReach separaciones; las puntas no se mueven. FX14:
+            // hasta CurveAnchorPasses vueltas, mientras alguna siga más lejos.
             float reach = CurveAnchorReach * units;
             float slack = CurveAnchorWidths * WidthDp / dp;
+            int pulls = 0;
+            while (pulls < CurveAnchorPasses && PullAnchors(count, reach, slack))
+            {
+                pulls++;
+            }
+
+            // FX14: cada ancla, a ≤ «slack» de su sitio pase lo que pase: la vuelta de un ancla mueve las de alrededor, y con varias
+            // seguidas (las boyas de un tramo corto, cada pocos dp) la del medio podía acabar más lejos (la boya del 112 a 6,4 dp).
             for (int k = 1; k < count - 1; k++)
             {
-                if (!_keptFixed[k])
+                Vector2 shift = _keptPoint[k] - _keptOrigin[k];
+                if (_keptFixed[k] && shift.sqrMagnitude > slack * slack)
                 {
-                    continue;
-                }
-
-                Vector2 back = _keptOrigin[k] - _keptPoint[k];
-                float away = back.magnitude;
-                if (away <= slack)
-                {
-                    continue;
-                }
-
-                back *= 1f - (slack / away);
-                for (int j = k; j > 0 && _keptArc[k] - _keptArc[j] < reach; j--)
-                {
-                    _keptPoint[j] += back * Falloff((_keptArc[k] - _keptArc[j]) / reach);
-                }
-
-                for (int j = k + 1; j < count - 1 && _keptArc[j] - _keptArc[k] < reach; j++)
-                {
-                    _keptPoint[j] += back * Falloff((_keptArc[j] - _keptArc[k]) / reach);
+                    _keptPoint[k] = _keptOrigin[k] + (shift * (slack / shift.magnitude));
                 }
             }
 
@@ -1457,6 +1456,41 @@ namespace AF.Presentation
                     Subdivide(cursor, k, 0f, p0, 1f, _keptPoint[k + 1], 0);
                 }
             }
+        }
+
+        // Cada ancla vuelve hasta «slack» de su sitio (la boca cae dentro de la cinta sin forzar un codo en ella), y los puntos de
+        // alrededor con ella, cada vez menos hasta «reach» de arco; las puntas no se mueven. Devuelve si movió alguna.
+        private bool PullAnchors(int count, float reach, float slack)
+        {
+            bool moved = false;
+            for (int k = 1; k < count - 1; k++)
+            {
+                if (!_keptFixed[k])
+                {
+                    continue;
+                }
+
+                Vector2 back = _keptOrigin[k] - _keptPoint[k];
+                float away = back.magnitude;
+                if (away <= slack * 1.0001f)
+                {
+                    continue;
+                }
+
+                moved = true;
+                back *= 1f - (slack / away);
+                for (int j = k; j > 0 && _keptArc[k] - _keptArc[j] < reach; j--)
+                {
+                    _keptPoint[j] += back * Falloff((_keptArc[k] - _keptArc[j]) / reach);
+                }
+
+                for (int j = k + 1; j < count - 1 && _keptArc[j] - _keptArc[k] < reach; j++)
+                {
+                    _keptPoint[j] += back * Falloff((_keptArc[j] - _keptArc[k]) / reach);
+                }
+            }
+
+            return moved;
         }
 
         // Una pasada del filtro sobre los puntos de dentro de la curva: cada uno, w de su camino hacia la media de sus vecinos.

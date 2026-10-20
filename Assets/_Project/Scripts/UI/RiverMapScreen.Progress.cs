@@ -1666,7 +1666,7 @@ namespace AF.UI
 
         // Revisión de FX12: el tope de vértices de cada pieza de la ruta del frente (el agua y la orla, con las mismas secciones). Si
         // con todos los pasos de la curva (lo que pide cada pieza en el vidrio de su línea, a la escala de la vista) el frente entero
-        // cabe en FrontCurveMaxVertices, sin tope (el de una malla); si no, se reparte según lo que pide cada pieza. Sin trazo curvo
+        // cabe en FrontCurveMaxVertices, sin tope (el de una malla); si no, se reparte según lo que pide cada pieza (FX14: con un mínimo por pieza, FrontMinSections). Sin trazo curvo
         // (la Cuenca), sin tope, como desde FX11. Solo asigna si la ruta tiene más piezas que ninguna antes.
         private void FitFrontBudgets(RiverMap map, RiverStopRoute route)
         {
@@ -1684,25 +1684,59 @@ namespace AF.UI
                 RiverLine line = map.Lines[piece.Line];
                 int demand = piece.Line < _glass.Count ? Glass(piece.Line).CurveDemand(piece.S0, piece.S1) : 0;
                 _frontCoreBudget[i] = demand; // de momento, lo que pide
-                total += demand * (RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core)
-                    + RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing));
+                total += demand * FrontSectionVertices(line, piece);
             }
 
+            if (total <= FrontCurveMaxVertices)
+            {
+                for (int i = 0; i < path.Count; i++)
+                {
+                    _frontCoreBudget[i] = RiverRibbonGraphic.MaxVertices;
+                    _frontCasingBudget[i] = RiverRibbonGraphic.MaxVertices;
+                }
+
+                return;
+            }
+
+            // FX14: cada pieza se queda primero con lo que pide hasta FrontMinSections secciones (una pieza corta, como la punta
+            // del Beni con el 300, dibuja todos sus pasos y no se queda sin sitio ni para su plan) y el resto del tope se reparte
+            // según lo que pide de más cada una. La suma no pasa de FrontCurveMaxVertices.
+            int reserved = 0;
+            int rest = 0;
+            for (int i = 0; i < path.Count; i++)
+            {
+                RiverPathPiece piece = path[i];
+                int vertices = FrontSectionVertices(map.Lines[piece.Line], piece);
+                int floor = Mathf.Min(_frontCoreBudget[i], FrontMinSections);
+                reserved += floor * vertices;
+                rest += (_frontCoreBudget[i] - floor) * vertices;
+            }
+
+            int left = Mathf.Max(0, FrontCurveMaxVertices - reserved);
             for (int i = 0; i < path.Count; i++)
             {
                 RiverPathPiece piece = path[i];
                 RiverLine line = map.Lines[piece.Line];
-                if (total <= FrontCurveMaxVertices)
-                {
-                    _frontCoreBudget[i] = RiverRibbonGraphic.MaxVertices;
-                    _frontCasingBudget[i] = RiverRibbonGraphic.MaxVertices;
-                    continue;
-                }
-
-                int sections = Mathf.Max(4, (int)((long)FrontCurveMaxVertices * _frontCoreBudget[i] / total));
+                int demand = _frontCoreBudget[i];
+                int floor = Mathf.Min(demand, FrontMinSections);
+                int extra = rest > 0 ? (int)((long)left * (demand - floor) / rest) : 0;
+                int sections = Mathf.Max(4, floor + extra);
                 _frontCoreBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core);
                 _frontCasingBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing);
             }
+        }
+
+        /// <summary>
+        /// FX14: secciones que una pieza del frente con trazo curvo y tope recibe, como mínimo, de lo que pide antes de repartir el
+        /// resto del tope (<see cref="FrontCurveMaxVertices"/>) [P].
+        /// </summary>
+        public const int FrontMinSections = 24;
+
+        // Vértices de una sección de la pieza del frente: el agua y la orla.
+        private static int FrontSectionVertices(RiverLine line, RiverPathPiece piece)
+        {
+            return RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core)
+                + RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing);
         }
 
         // La cinta i del frente (el agua, en el lienzo dinámico, debajo de las boyas) y su orla (en el estático, con las del lleno:
