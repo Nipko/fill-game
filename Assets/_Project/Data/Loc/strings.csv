@@ -89,7 +89,7 @@ next,Siguiente,Next,Próximo,Botón principal de la pantalla de victoria (02 §6
 no_canoes_infinite,Canoas infinitas 1 h · {price},,,Botón de Sin canoas: Canoas infinitas 1 h (04 §7.3; af_infinite_canoes_1h). {price}: precio de la tienda tal cual.,32,aprobado_es,,,"Clave derivada [P]. Antes, «… {0}» con string.Format.",
 no_canoes_next,Tu próxima canoa vuelve en,,,Texto sobre el cronómetro de Sin canoas (04 §7.3); el cronómetro mm:ss va aparte.,28,aprobado_es,,,Clave derivada [P].,
 no_canoes_refill,Llenar canoas · {n}/{n},,,"Botón de Sin canoas: llenar las canoas por semillas (04 §7.3); la etiqueta de precio va al lado. {n}: canoes_max, sin separador.",24,aprobado_es,,,"Clave derivada [P]. Antes, «… {0}/{0}» con string.Format.",
-no_canoes_title,Sin canoas,,,Título de Sin canoas (04 §7.3).,20,borrador,,,[P] El nombre de la pantalla está pendiente (glosario §6.4; P14).,
+no_canoes_title,Sin canoas,,,Título de Sin canoas (04 §7.3).,20,borrador,,,Aprobado por el dueño: la pantalla sigue llamándose «Sin canoas» (P14 de D-008; D-029).,
 no_canoes_video,Canoa extra · Ver video,,,Botón de Sin canoas: canoa extra por video (04 §7.3).,24,aprobado_es,,,Clave derivada [P].,
 patterns_toggle,Patrones de fruta,Fruit patterns,Padrões de fruta,Cabecera de la sección Patrones de fruta de Ajustes: patrón al 20 % e icono de fruta en cada dosis (02 §12; glosario §10).,24,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
 pause,Pausa,Pause,Pausa,Título del menú de pausa.,12,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
