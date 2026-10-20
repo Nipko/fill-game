@@ -64,6 +64,7 @@ todo va en **`AF.Economy`**, junto a la Canasta, porque sus hitos pagan con `Wal
 | `Assets/_Project/Scripts/Economy/BasketConfig.cs` | `eco_basket_cycle` y `eco_basket_seeds`. |
 | `Assets/_Project/Scripts/Economy/BasketRules.cs` | `BasketRules.For`, `HitSix`, el contenido de la Canasta grande (constante [P], Q-C12) y `BasketContents` (valor). |
 | `Assets/_Project/Scripts/Economy/StreakRules.cs` | `StreakOutcome` (valor) y `StreakRules` (`OnVictory`, `OnHardFail`, `RollDay`) sobre el `StreakRecord` de A4 (`StreakRecord.cs`, `IStreakStore.cs`, `InMemoryStreakStore.cs`). |
+| `Assets/_Project/Scripts/Economy/StreakService.cs` (A5) | `StreakService` (`ApplyWin`, `ApplyHardFail`, `ApplySkip`, `Peek`): une las reglas, el `IStreakStore` (`Load` al empezar, `Save` antes de pagar), el reloj y `Wallet.Apply`; devuelve `StreakServiceResult` (lo pagado y los eventos `StreakServiceEvents`) y `StreakSnapshot` (HUD y sonda). Tests: `StreakServiceTests.cs` |
 | `Assets/_Project/Scripts/Economy/EconomyJsonLite.cs` | Lector mínimo de los dos JSON de RC (un objeto plano y una lista de cadenas): `AF.Economy` no ve `AF.Levels` ni los internos de `AF.Save`. |
 | `Assets/_Project/Tests/EditMode/StreakBasketConfigTests.cs`, `BasketRulesTests.cs`, `StreakRulesTests.cs` | Tests (EditMode; el asmdef `AF.Tests.EditMode` ya referencia `AF.Economy`). |
 
@@ -141,17 +142,23 @@ comodines con unidades, en el orden `undo`, `hint`, `reveal`, `extra_cuia`, `shu
 | E29 | `Scripts/GameFlow/FailResolve.cs` | Tras `Transaction.HardFail`: `RollDay` + `OnHardFail(level, campaign)`; `FailOutcome` lleva `ShieldUsed` y `StreakBroken`. Absorbe E19 (`campaign: !IsDaily`) |
 | E30 | `Scripts/GameFlow/LevelFlow.Victory.cs` | En `ResolveWin`, tras `Transaction.Win`: `RollDay` + `OnVictory(level, !IsDaily)`; con `FreeDoubleHarvest`, `Transaction.DoubleHarvest` sin vídeo y `_harvestDoubled` = true (el botón x2 no se ofrece, Q-C9); las transacciones del hito; `BasketRules.For(level, live_unlock_level_daily)` y sus transacciones. El x2 gratis del río no pasa por la compuerta `ads_rv_double_harvest_from_level` (Q-C14): hoy `Wallet.Apply` rechazaría `Transaction.DoubleHarvest` con `NotUnlocked` si esa clave subiera por RC por encima de `streak_unlock_level`, así que el enganche añade a `Transaction`/`Wallet` una variante del x2 del río sin esa compuerta (E35) |
 | E34 | `Scripts/GameFlow/LevelFlow.Funnel.cs` / `Scripts/Boosters/SkipBooster.cs` (B3) | Al confirmar el Salto del Boto en un nivel `10k` de campaña: `BasketRules.For(level, live_unlock_level_daily)` y sus transacciones, igual que en la victoria (K9). Sin `OnVictory` ni `OnHardFail` |
-| E35 | `Scripts/Economy/Transaction.cs`, `Wallet.cs` | El x2 del río crecido (p. ej. `Transaction.DoubleHarvestRiver(level, tier)` [P]) con `source = double_harvest` y sin la compuerta de nivel del vídeo (Q-C14) |
+| E35 | `Scripts/Economy/Transaction.cs`, `Wallet.cs` | El x2 del río crecido, `Transaction.DoubleHarvestRiver(level, tier)` [P], con `source = double_harvest` y sin la compuerta de nivel del vídeo (Q-C14). Parche probado `spark-enganches/S4-wallet.diff`: también cambia `StreakOutcome.AppendTransactions` (único punto donde se crea el x2 del río) para usar la variante; sin el parche, `StreakService` paga el x2 con `Transaction.DoubleHarvest`, que la cartera rechaza solo si RC sube `ads_rv_double_harvest_from_level` por encima del nivel |
 | E31 | `Scripts/GameFlow/LevelFlow.Funnel.cs` | `Fail()` pasa `campaign: !IsDaily` (E19) y el resultado de la Crecida al oyente (toast de la hoja, consuelo de TiTino) |
 | E32 | `Scripts/UI/GameBootstrap.cs` | Crear `StreakRules` con el adaptador del perfil, `StreakConfig` y `BasketConfig` (en un parcial nuevo `GameBootstrap.Streak.cs` con un único `SetUpStreak()`) |
 | E33 | `Scripts/GameFlow/SlothContext.cs` | `SlothVictoryFacts`: `streak` = `StreakOutcome.Wins` y `streakMilestone` = `MilestonePaid` (banco `streak` de TiTino, d.6) |
 | E25 | (vista del Reto) | Ya anotado: sin barra de la Crecida en el Reto (Q-C2) |
 
-## 6.1 Nota para B1b
+### 6.1 Nota para B1b
 
 La vista previa del premio del hito 6 (barra del HUD, réplica en la victoria) calcula `BasketRules.HitSix` con el **nivel en que
 caerá el hito**: el nivel actual + (6 − `wins`) − 1 victorias más. No con el `max_level` de ahora, que puede caer en otra decena y
 mostrar otro comodín.
+
+- La fórmula solo vale con `wins` ≤ 5. Con `wins` de 6 a 9, el siguiente 6 cae después de vaciar la barra en el 10 (dentro de
+  10 − `wins` + 6 victorias) y, si el hito 6 ya se cobró hoy (`streak_hits_once_per_day`), puede no pagarse: la vista previa no
+  promete un premio que la regla de una vez al día no daría (mira `StreakSnapshot.HitPaid(6)`).
+- La vista previa se recalcula en cada cambio del estado (victoria, fallo duro, cambio de día) y también tras un Salto del Boto,
+  que mueve el nivel actual sin tocar la barra.
 
 ## 7. Huecos y preguntas (Q-C1-Q-C14) [P]
 
