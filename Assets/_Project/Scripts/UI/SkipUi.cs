@@ -56,7 +56,7 @@ namespace AF.UI
             _panel = ModalKit.Card("Panel", _root, art, out _surface);
             ModalKit.Header(_panel, art, SkipText.ConfirmTitle, out _header);
             _close = ModalKit.Close("CloseButton", _panel, art, onCancel);
-            _rosa = UiBuilder.Image("Rosa", _panel, art.Rosa, Color.white);
+            _rosa = UiBuilder.Image("Rosa", _panel, null, Color.white); // el sprite, al abrirla: las mascotas se pintan solo si hacen falta
             _rosa.preserveAspect = true;
             _body = ModalKit.Line("Body", _panel, SkipText.Tagline, 17f, Palette.FamilyWood.Base);
             _warning = ModalKit.Line("ExtraCuia", _panel, SkipText.ConfirmExtraCuia, 15f, Palette.UiRedWarning);
@@ -87,6 +87,11 @@ namespace AF.UI
         /// <summary>Abre la confirmación con el precio de <paramref name="offer"/> y, si <paramref name="losesExtraCuia"/>, el aviso.</summary>
         public void Show(SkipOffer offer, bool losesExtraCuia, float canvasW, float canvasH)
         {
+            if (_rosa.sprite == null)
+            {
+                _rosa.sprite = _art.Rosa;
+            }
+
             _root.gameObject.SetActive(true);
             _root.SetAsLastSibling(); // encima del modal y de la pausa
             float width = Mathf.Min(328f, canvasW - 32f);
@@ -136,20 +141,23 @@ namespace AF.UI
         /// <summary>Distancia desde el borde de arriba del lienzo (dp), bajo la cabecera del nivel [P].</summary>
         public const float TopDp = 132f;
 
+        private readonly ProceduralArt _art;
         private readonly RectTransform _root;
         private readonly Button _button;
+        private readonly Image _rosa;
         private readonly TextMeshProUGUI _label;
         private int _price = -1;
 
         public SkipBanner(Transform parent, ProceduralArt art, Action onTap)
         {
+            _art = art;
             _button = UiBuilder.BareButton("SkipBanner", parent, onTap);
             _root = (RectTransform)_button.transform;
             Image plate = UiBuilder.Sliced("Plate", _root, art.RoundedRect, Palette.FamilyWood.Base);
             UiBuilder.Stretch(plate.rectTransform);
-            Image rosa = UiBuilder.Image("Rosa", _root, art.Rosa, Color.white);
-            rosa.preserveAspect = true;
-            UiBuilder.Place(rosa.rectTransform, 8f, 6f, 48f, 36f);
+            _rosa = UiBuilder.Image("Rosa", _root, null, Color.white); // el sprite, al enseñarlo (las mascotas, solo si hacen falta)
+            _rosa.preserveAspect = true;
+            UiBuilder.Place(_rosa.rectTransform, 8f, 6f, 48f, 36f);
             _label = UiBuilder.Label("Label", _root, TextStyle.PlainBold, string.Empty, 15f, Palette.Cream, TextAlignmentOptions.MidlineLeft);
             _label.textWrappingMode = TextWrappingModes.Normal;
             UiBuilder.AutoSize(_label, UiBuilder.MinTextSp, 15f);
@@ -174,6 +182,11 @@ namespace AF.UI
         /// <summary>Muestra la franja con <paramref name="price"/>; solo compone el texto si el precio cambió.</summary>
         public void Show(int price, float canvasW)
         {
+            if (_rosa.sprite == null)
+            {
+                _rosa.sprite = _art.Rosa;
+            }
+
             if (price != _price)
             {
                 _price = price;
