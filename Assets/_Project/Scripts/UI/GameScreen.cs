@@ -9,6 +9,7 @@ using AF.Core.Session;
 using AF.Economy;
 using AF.GameFlow;
 using AF.Levels;
+using AF.Localization;
 using AF.Presentation;
 using TMPro;
 using UnityEngine;
@@ -464,12 +465,11 @@ namespace AF.UI
             _scrim = UiBuilder.Image("StatusScrim", _hud, art.StatusScrim, Color.white);
             _badge = UiBuilder.Image("LevelBadge", _hud, art.BadgePlate, Color.white);
             _levelText = UiBuilder.Label("LevelTitle", _badge.transform, TextStyle.Badge, UiText.Level(1), 26f, Palette.Cream, TextAlignmentOptions.Center);
-            // Guía 3.5: 26 dp, mínimo 20, nunca se recorta. En español cabe siempre a 20 o más. Pendiente de rediseño (revisión
-            // de L4; pregunta al dueño): en otros idiomas (en-XA, «[Ñívél 100 ··]») no cabe en la placa ni a 20 sp, y la placa no
-            // puede crecer a lo ancho (la columna del saldo va pegada) ni a lo alto (la fila del HUD); bajar el mínimo a 12 sp
-            // contradice la guía 3.5 (D-003), así que se queda en 20 hasta que el dueño decida (PseudoLocOverflowTests lo apunta
-            // aparte, sin dar la compuerta por fallida: LocInventory.KnownIssues).
-            UiBuilder.AutoSize(_levelText, 20f, 26f);
+            // Guía 3.5: 26 dp, mínimo 20, nunca se recorta; fuera del español (en-XA, «[Ñívél 100 ··]») no cabe en la placa ni a
+            // 20 sp, y la placa no crece (la columna del saldo va pegada; la fila del HUD no se rediseña). Decidido el 2026-10-19
+            // (D-030, pregunta 8 b): fuera del español, solo cuando no cabe a 20 sp baja hasta 12 sp (02 §12); en español sigue
+            // a 20 sp o más, sin cambio visual (DC19; FitLevelBadge).
+            UiBuilder.AutoSize(_levelText, BadgeMinSp, BadgeMaxSp);
 
             // Volver a la orilla: disco de 40 dp (familia Madera) con píldora «Reiniciar» en un área de 60 × 48 (guía 3.5).
             _restart = UiBuilder.Relief("RestartButton", _hud, art.DiscWood, OnHudRestart);
@@ -955,6 +955,7 @@ namespace AF.UI
             _introDelayMs = -1f;
             BuildBoard(flow);
             _levelText.text = UiText.Level(level);
+            FitLevelBadge();
             AudioBoard.LevelLoaded(flow.Level, flow.Session.Current); // AU1-AU2: el lecho del mundo (nocturno en Muy difícil) y su ambiente
             _pressPreview = -1;
             _shownBoard = flow.Session.Current;
@@ -2594,6 +2595,50 @@ namespace AF.UI
             UiBuilder.Place(_scrim.rectTransform, 0f, 0f, w, _safeTop + 40f);
             LayoutBackdrop(0f, 0f, false);
         }
+
+        /// <summary>Tamaño de la insignia del nivel (guía 3.5): 26 sp.</summary>
+        internal const float BadgeMaxSp = 26f;
+
+        /// <summary>Mínimo de la insignia del nivel en español (guía 3.5): 20 sp.</summary>
+        internal const float BadgeMinSp = 20f;
+
+        /// <summary>
+        /// Mínimo de la insignia del nivel cuando su texto no cabe a <see cref="BadgeMinSp"/> (fuera del español; D-030, pregunta
+        /// 8 b): 12 sp, el mínimo de 02 §12.
+        /// </summary>
+        internal const float BadgeFallbackMinSp = 12f;
+
+        // La insignia del nivel con su texto de ahora (D-030, pregunta 8 b): entre 20 y 26 sp si cabe a 20 o más; fuera del
+        // español, si su tinta se sale de la caja incluso a 20 sp, entre 12 y 26 sp; nunca se recorta. En español (es-419) no baja
+        // nunca de 20 sp (DC19: «sin cambio visual»; D-030 habla solo de otros idiomas), aunque al 130 %, del 100 en adelante,
+        // la tinta llena la caja y en algunos números («Nivel 700») se sale unos dp (pendiente del dueño). Mide la tinta
+        // (textBounds, con 1 dp de margen, como la compuerta de L4) al cargar el nivel, nunca por fotograma.
+        private void FitLevelBadge()
+        {
+            UiBuilder.AutoSize(_levelText, BadgeMinSp, BadgeMaxSp);
+            string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
+            if (string.Equals(locale, LocLocale.SpanishLatinAmerica, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            float width = _levelText.rectTransform.rect.width;
+            if (width <= 0f)
+            {
+                return;
+            }
+
+            _levelText.ForceMeshUpdate();
+            float ink = _levelText.textBounds.size.x;
+            if (_levelText.fontSize <= _levelText.fontSizeMin + 0.01f && ink > width + BadgeInkToleranceDp)
+            {
+                UiBuilder.AutoSize(_levelText, BadgeFallbackMinSp, BadgeMaxSp);
+                _levelText.ForceMeshUpdate();
+            }
+        }
+
+        // Margen de la tinta de la insignia sobre su caja antes de bajar de 20 sp (dp; el de LocInventory.Tolerance).
+        private const float BadgeInkToleranceDp = 1f;
 
         private void LayoutHud()
         {
