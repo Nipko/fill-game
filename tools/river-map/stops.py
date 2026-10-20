@@ -743,6 +743,10 @@ SOURCE_SHORT_FIELDS = frozenset({"names", "why"})
 EVIDENCE = ("V", "E")
 REQUIRED_COLUMNS = ("key", "es-419", "context", "max_chars", "status", "notes", "args")
 GENERATED = "Fila generada por tools/river-map/stops.py --write-texts (M1.1t): no se edita a mano."
+# Columnas de los otros idiomas que la regeneración conserva (T2-Q1, decisión del dueño del 2026-10-20): la traducción y su
+# estado de cada fila map.* se copian de facts.csv si el es-419 no cambió; si cambió, vuelven a vacío (08 §4.7: «si el
+# asesor cambia el español, los estados de los demás idiomas vuelven a vacío»). Las escribe tools/loc/apply_translations.py.
+PRESERVED_LOCALE_COLUMNS = ("en", "pt-BR", "status_en", "status_pt-BR")
 NO_CAPTURE = "Captura: ninguna todavía (la placa de llegada y el Mapa aún no existen en el cliente)."
 
 RE_MARKER = re.compile(r"\{([a-z][a-z0-9_]*)\}")
@@ -1371,6 +1375,27 @@ def _record_key(record: str) -> str:
     return fields[0] if fields else ""
 
 
+def preserve_locales(rows: dict, header: list[str], block_records: list[str]) -> dict:
+    """rows con las columnas de PRESERVED_LOCALE_COLUMNS de las filas map.* actuales cuyo es-419 sigue igual (T2-Q1)."""
+    cols = [c for c in PRESERVED_LOCALE_COLUMNS if c in header]
+    if not cols:
+        return rows
+    current = {}
+    for record in block_records:
+        fields = parse_csv_record(record)
+        if fields:
+            current[fields[0]] = dict(zip(header, fields))
+    out = {}
+    for key, row in rows.items():
+        have = current.get(key)
+        if have is not None and have.get("es-419", "") == row.get("es-419", "") and any(have.get(c, "") for c in cols):
+            row = dict(row)
+            for c in cols:
+                row[c] = have.get(c, "")
+        out[key] = row
+    return out
+
+
 def render_facts(current: str, rows: dict) -> tuple[str | None, list[str]]:
     """facts.csv con el bloque map.* regenerado: las demas filas y la cabecera quedan byte a byte como estaban."""
     records = split_csv_records(current)
@@ -1389,6 +1414,7 @@ def render_facts(current: str, rows: dict) -> tuple[str | None, list[str]]:
         return None, [f"{FACTS_REL}: el bloque {TEXT_PREFIX}* no es contiguo (hay otras filas entre las suyas)"]
     others = [r for r, k in zip(records[1:], keys) if not k.startswith(TEXT_PREFIX)]
     other_keys = [k for k in keys if not k.startswith(TEXT_PREFIX)]
+    rows = preserve_locales(rows, header, [records[1 + i] for i in block])
     generated = [format_csv_row([rows[k].get(col, "") for col in header]) for k in sorted(rows)]
     if not generated:
         return None, ["sin filas del Mapa que escribir"]
