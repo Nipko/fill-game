@@ -27,13 +27,22 @@ namespace AF.UI
     /// </summary>
     public sealed partial class GameBootstrap : ISkipActions
     {
-        private ProfileSkipStore? _skipStore;
+        private ISkipStore? _skipStore;
         private SkipConfirm? _skipConfirm;
         private SkipBanner? _skipBanner;
         private SkipRunner? _skipRunner;
 
         /// <summary>Almacén del Salto (null antes de <see cref="SetUpSkip"/>).</summary>
         public ISkipStore? SkipStore => _skipStore;
+
+        /// <summary>Almacén del Salto para los tests (gana al del progreso); <see cref="ResetSkipOverrides"/> lo limpia.</summary>
+        internal static ISkipStore? SkipStoreOverride { get; set; }
+
+        /// <summary>Limpia los ganchos de test del Salto.</summary>
+        internal static void ResetSkipOverrides()
+        {
+            SkipStoreOverride = null;
+        }
 
         /// <summary>Confirmación del Salto (tests).</summary>
         internal SkipConfirm? SkipConfirmView => _skipConfirm;
@@ -62,7 +71,7 @@ namespace AF.UI
                 return false;
             }
 
-            _skipStore = new ProfileSkipStore(profile, batch);
+            _skipStore = CreateSkipStore(profile, batch, _progress);
             flow.UseSkip(_skipStore);
             Transform layer = screen.Pause.Root.parent; // el lienzo de la pantalla del nivel, donde viven la pausa y la confirmación
             _skipBanner = new SkipBanner(layer, screen.CardArt, () => PressSkip());
@@ -76,6 +85,26 @@ namespace AF.UI
             _skipRunner = runner;
             _skipRunner.Bind(this);
             return true;
+        }
+
+        /// <summary>
+        /// El almacén del Salto: el de los tests (<see cref="SkipStoreOverride"/>); si el progreso es el de un test en memoria
+        /// (<c>LaunchOptions.ProgressStoreOverride</c> con <see cref="MemoryProgressStore"/>), uno en memoria enganchado a él, para
+        /// que el Mapa vea el salto; si no, <see cref="ProfileSkipStore"/> sobre el mismo perfil y lote que el progreso.
+        /// </summary>
+        internal static ISkipStore CreateSkipStore(Profile profile, ProfileSaveBatch batch, IProgressStore? progress)
+        {
+            if (SkipStoreOverride != null)
+            {
+                return SkipStoreOverride;
+            }
+
+            if (progress is MemoryProgressStore memory)
+            {
+                return new MemorySkipStore(memory);
+            }
+
+            return new ProfileSkipStore(profile, batch);
         }
 
         /// <inheritdoc />
