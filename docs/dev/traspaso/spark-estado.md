@@ -8,7 +8,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ## 2026-10-20 · T2 · Decisiones del dueño sobre las preguntas de la traducción con IA
 
-El dueño respondió, literal: «las preguntas t2 hagamos lo recomendado». Se aplica la opción recomendada de cada una:
+El dueño respondió, literal: «las preguntas t2 hagamos lo recomendado». Se aplica la opción recomendada de cada una. T2-Q6 y T2-Q7 salieron después, de la revisión de T2, y también se resuelven con la opción recomendada:
 
 | Id | Pregunta | Decisión (la recomendada) |
 |---|---|---|
@@ -17,6 +17,8 @@ El dueño respondió, literal: «las preguntas t2 hagamos lo recomendado». Se a
 | T2-Q3 | Lugares, países, ciudades y ríos, comodines (Marea, Morpho, Luciérnaga), mecánicas y fauna sin EN/PT en el glosario | (a) Se añaden al glosario: los exónimos habituales de países, ciudades y ríos, y propuestas para comodines, mecánicas y fauna, con lo cultural en `pendiente_asesor` / propuesta. Va como **parche probado** de `Data/Loc/glossary.csv` y del glosario §10. Las traducciones que dependen de esos nombres, en un archivo aparte que se aplica con ese parche |
 | T2-Q4 | Términos que se tradujeron sin entrada en el glosario: Cosecha doble (Double Harvest / Colheita dupla), Aguas estancadas (Still waters / Águas paradas), Muestrario (Samples / Mostruário) y «Sobre la Amazonía» (About the Amazon / Sobre a Amazônia) | (a) Pasan al glosario, en el mismo parche que T2-Q3 |
 | T2-Q5 | `LocReleaseGate.Evaluate` no exige `revisado_nativo` en un build de release, aunque 08 §4.7 lo pide | (a) Se añade la regla: en release, una cadena de UI en `en` o `pt-BR` sin `revisado_nativo` es aviso o bloqueo, con el mismo nivel que los demás avisos de la puerta (D-018, Q5-A). Va como **parche probado** |
+| T2-Q6 | Frases de `facts.csv` con el español aún en `pendiente_asesor` (08 §4.7: una traducción solo vale con `aprobado_es`; `FactCatalogTests` exige los estados vacíos) | (a) **Retener**: la entrega de `facts.csv` queda guardada y se aplica cuando el asesor apruebe el español. El script no escribe filas por debajo de `aprobado_es` y detecta un español cambiado |
+| T2-Q7 | «Amazonía» / «the Amazon» / «a Amazônia» y regiones (trópico americano, América tropical, alta Amazonia…) sin entrada en el glosario; el glosario §1 evita la cadena «Amazon» por la marca de Amazon.com | (a) Se dejan **vacías** y anotadas en `pendientes.csv`, hasta que el dueño decida con el asesor la entrada del glosario |
 
 ## 2026-10-19 · R0-R11 juntas: verificación completa VERDE · Bloque (d) (R8-R11) listo para integrar
 
