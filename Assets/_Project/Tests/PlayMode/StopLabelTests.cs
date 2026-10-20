@@ -576,7 +576,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator Level131_TheScreenChangesTheRows_ThePlateIsPlacedAgain()
         {
             var narrow = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp
-            var wide = new Vector4(1800f, 2340f, 96f, 48f); // 600 × 780 dp
+            var wide = new Vector4(1800f, 1920f, 96f, 48f); // 600 × 640 dp (DC3: un lienzo de más de 360 dp de ancho mide 640 de alto)
             var probes = new List<string>();
             Application.LogCallback capture = CaptureProbes(probes, "stop_label_off");
             Application.logMessageReceived += capture;

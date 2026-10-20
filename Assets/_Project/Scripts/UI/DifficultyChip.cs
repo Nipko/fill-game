@@ -369,8 +369,11 @@ namespace AF.UI
             }
 
             _compact = compact;
-            _text.fontSize = compact ? CompactTextDp : TextDp;
-            _ribbonText.fontSize = compact ? RibbonTextDp * CompactRibbonScale : RibbonTextDp;
+            // Con la escala de texto de 02 §12 (UiBuilder.Label la aplica al crear la etiqueta): la compacta, a 12 sp × escala, nunca
+            // a 12 dp con la fuente al 130 % (en 16:9 a 360 × 640 dp sale en los tableros de 2 filas; tarea DC3).
+            float scale = UiBuilder.TextScale;
+            _text.fontSize = (compact ? CompactTextDp : TextDp) * scale;
+            _ribbonText.fontSize = (compact ? RibbonTextDp * CompactRibbonScale : RibbonTextDp) * scale;
             _pill.pixelsPerUnitMultiplier = compact ? (ProceduralArt.LabelPillDp + ProceduralArt.LabelPillShadowDp) / (CompactPillDp + CompactShadowDp) : 1f;
             if (Visible)
             {

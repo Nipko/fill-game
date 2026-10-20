@@ -295,10 +295,10 @@ namespace AF.Tests.PlayMode
     }
 
     /// <summary>
-    /// Los repliegues de L4 que las cadenas de la compuerta (<see cref="PseudoLocOverflowTests"/>, a 438 dp de ancho) no alcanzan
+    /// Los repliegues de L4 que las cadenas de la compuerta (<see cref="PseudoLocOverflowTests"/>, a 360 dp de ancho desde DC3) no alcanzan
     /// (revisión de L4): la ranura de la bandeja que llega a <see cref="BoosterTray.SlotMaxDp"/> y pone su etiqueta en dos líneas
     /// con el glifo más pequeño, y la píldora «Reiniciar» que crece hacia la izquierda y, si no basta, en dos líneas. Se fuerzan
-    /// con una etiqueta larga (a 438 dp) y con en-XA a 360 dp de ancho (<see cref="HudLabelTests.Screen780"/>, el teléfono de
+    /// con una etiqueta larga (a 438 dp, <see cref="LongLabelSetup.Screen438"/>) y con en-XA a 360 dp de ancho (<see cref="HudLabelTests.Screen780"/>, el teléfono de
     /// 02 §5), al 100 % y al 130 %. Mira que la etiqueta quede en las líneas que tocan, a 12 sp (× escala) o más y sin salirse
     /// (<see cref="LocInventory.ProblemsOf"/>), que el glifo no baje de <see cref="BoosterTray.LabelMinIconDp"/> ni pise la
     /// tinta de la etiqueta, que la bandeja no salga de la pantalla (<see cref="BoosterTray.TrayEdgeDp"/>) y que la píldora no
@@ -309,7 +309,7 @@ namespace AF.Tests.PlayMode
     {
         // Etiquetas largas forzadas (dp a 12 sp con Nunito ExtraBold): «Deshacer la jugada» mide unos 109 y no cabe ni en la
         // ranura de 104; sus dos palabras (53) caben cada una en una línea también al 130 %. «Reiniciar el nivel» mide unos 94:
-        // al 100 % cabe en una línea de la píldora ensanchada (hasta unos 115 dp a 438 de ancho); al 130 %, no.
+        // al 100 % cabe en una línea de la píldora ensanchada (hasta unos 115 dp a 438 de ancho, LongLabelSetup.Screen438); al 130 %, no.
         internal const string LongUndo = "Deshacer la jugada";
         internal const string LongRestart = "Reiniciar el nivel";
 
@@ -331,7 +331,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator Tray_LongLabel_WidestSlotThenTwoLines([Values(100, 130)] int percent)
         {
             float scale = percent / 100f;
-            yield return LongLabelSetup.LoadLevel100(LocLocale.SourceLocale, scale, HudLabelTests.Screen640);
+            yield return LongLabelSetup.LoadLevel100(LocLocale.SourceLocale, scale, LongLabelSetup.Screen438);
             GameScreen view = GameBootstrap.Current!.View!;
             BoosterTray tray = view.Tray;
             tray.UndoLabel.text = LongUndo;
@@ -354,13 +354,15 @@ namespace AF.Tests.PlayMode
         public IEnumerator Restart_LongLabel_GrowsLeftThenTwoLines([Values(100, 130)] int percent)
         {
             float scale = percent / 100f;
-            yield return LongLabelSetup.LoadLevel100(LocLocale.SourceLocale, scale, HudLabelTests.Screen640);
+            yield return LongLabelSetup.LoadLevel100(LocLocale.SourceLocale, scale, LongLabelSetup.Screen438);
             GameScreen view = GameBootstrap.Current!.View!;
             view.RestartLabel.text = LongRestart;
             view.RelayoutForTests();
             yield return null;
 
-            LongLabelSetup.AssertRestart(view, scale, percent == 100 ? 1 : 2);
+            // Al 130 %, en el lienzo de 438,9 × 640 dp (DC3), la píldora en dos líneas roza (0,6 dp) el sitio al que sube la cuia
+            // de arriba al seleccionarla: el mismo pendiente que RestartPill_360_KnownIssues. Sin ese margen, nada se cruza.
+            LongLabelSetup.AssertRestart(view, scale, percent == 100 ? 1 : 2, percent == 100);
         }
 
         [UnityTest]
@@ -575,7 +577,8 @@ namespace AF.Tests.PlayMode
 
     /// <summary>
     /// Capturas de <see cref="LongLabelLayoutTests"/> (<c>Logs/snapshots/&lt;idioma&gt;/l4r_*.png</c>): en-XA a 360 dp de ancho y
-    /// las etiquetas forzadas a 438, al 100 % y al 130 %. Las de 16:9 (a 438) se recortan a 1080 × 1920 px, la pantalla simulada
+    /// las etiquetas forzadas a 438, al 100 % y al 130 %. Las de 438 dp (<see cref="LongLabelSetup.Screen438"/>) se recortan a
+    /// 1080 × 1575 px, la pantalla simulada
     /// (<see cref="SnapshotKit.SaveTop"/>, como DC18). Explícito: necesita gráficos.
     /// </summary>
     [Explicit("Capturas de los repliegues de L4; necesita dispositivo gráfico.")]
@@ -609,12 +612,12 @@ namespace AF.Tests.PlayMode
         public IEnumerator Capture_Forced_438([Values(100, 130)] int percent)
         {
             string dir = SnapshotKit.Prepare(LocLocale.SourceLocale);
-            yield return LongLabelSetup.LoadLevel100(LocLocale.SourceLocale, percent / 100f, HudLabelTests.Screen640);
+            yield return LongLabelSetup.LoadLevel100(LocLocale.SourceLocale, percent / 100f, LongLabelSetup.Screen438);
             GameScreen view = GameBootstrap.Current!.View!;
             view.Tray.UndoLabel.text = LongLabelLayoutTests.LongUndo;
             view.RestartLabel.text = LongLabelLayoutTests.LongRestart;
             view.RelayoutForTests();
-            yield return Take(dir, "l4r_" + percent.ToString(CultureInfo.InvariantCulture) + "_forzada_l100", HudLabelTests.Screen640);
+            yield return Take(dir, "l4r_" + percent.ToString(CultureInfo.InvariantCulture) + "_forzada_l100", LongLabelSetup.Screen438);
         }
 
         // Guarda la captura con solo las filas de la pantalla simulada (16:9: 1080 × 1920 px; a 360 × 780 dp, la captura entera).
@@ -631,6 +634,14 @@ namespace AF.Tests.PlayMode
     /// <summary>Carga y comprobaciones de <see cref="LongLabelLayoutTests"/>.</summary>
     internal static class LongLabelSetup
     {
+        /// <summary>
+        /// Pantalla ancha y baja de 1080 × 1575 px (438,9 × 640 dp; zona segura de 32 dp arriba y 24 abajo) para las etiquetas
+        /// forzadas: antes de DC3 el 16:9 (<see cref="HudLabelTests.Screen640"/>) daba un lienzo de 438,75 × 780 dp con sitio para
+        /// que la ranura y la píldora crecieran; desde DC3 (D-028) el 16:9 mide 360 × 640 dp, y este lienzo conserva el ancho que
+        /// prueban estos repliegues.
+        /// </summary>
+        internal static readonly Vector4 Screen438 = new Vector4(1080f, 1575f, 79f, 40f);
+
         // Lo que sube una cuia al seleccionarla (guía 6.1: 16 dp, con el rebote hasta 17,6).
         private const float LiftDp = 17.6f;
 

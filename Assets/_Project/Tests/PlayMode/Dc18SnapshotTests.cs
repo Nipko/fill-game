@@ -16,7 +16,7 @@ namespace AF.Tests.PlayMode
 {
     /// <summary>
     /// Capturas de DC18 (P12 de D-006, opción c; D-030: 3 filas al cargar con T generadas ≥ 13; <c>[Explicit]</c>, no forman parte
-    /// de la suite), en 16:9 (1080 × 1920 px, <see cref="HudLabelTests.Screen640"/>; GameScreen lo maqueta en 438,75 × 780 dp):
+    /// de la suite), en 16:9 (1080 × 1920 px, <see cref="HudLabelTests.Screen640"/>; GameScreen lo maqueta en 360 × 640 dp desde DC3):
     /// <list type="bullet">
     /// <item><description><c>dc18_l374_13_16x9</c>: el 374 (13 cuias de 5 dosis), que en este lienzo iba en 2 filas (7/6) y ahora va
     /// en 3 (5/4/4);</description></item>
@@ -54,7 +54,7 @@ namespace AF.Tests.PlayMode
 
         // Niveles de 14 cuias de los mundos 7-9: el 640 (matapí) es el primero en el que el buscador llega a Aguas estancadas con
         // el rescate a la venta (camino de 1 vertido; 694, 344 y 345 no llegan); los demás, de respaldo.
-        private static readonly int[] FourteenCandidates = { 640, 694, 344, 345, 343, 369, 378, 335, 580, 600, 620, 660, 680, 700 };
+        internal static readonly int[] FourteenCandidates = { 640, 694, 344, 345, 343, 369, 378, 335, 580, 600, 620, 660, 680, 700 };
 
         [UnityTest]
         public IEnumerator Capture14PlusTwo_In16x9()
@@ -117,7 +117,7 @@ namespace AF.Tests.PlayMode
 
         // Camino de vertidos útiles hasta el primer Aguas estancadas con el rescate a la venta, en profundidad y probando antes
         // los vertidos a una cuia vacía (así se llenan antes de tiempo); null si no lo encuentra (solo tests: asigna).
-        private static Pour[]? FindRescuableStuck(LevelFlow flow)
+        internal static Pour[]? FindRescuableStuck(LevelFlow flow)
         {
             var seen = new HashSet<BoardState>();
             var trail = new List<Pour>();
@@ -185,7 +185,7 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Playing), "nivel " + level);
-            Assert.That(boot.View!.CanvasWidth, Is.EqualTo(438.75f).Within(0.01f), "16:9");
+            Assert.That(boot.View!.CanvasWidth, Is.EqualTo(360f).Within(0.01f), "16:9 (360 × 640 dp desde DC3)");
             PlayModeHelpers.Step(boot, 400);
             Debug.Log("DC18: nivel " + level + " en " + boot.View.CanvasWidth + " dp de ancho");
         }

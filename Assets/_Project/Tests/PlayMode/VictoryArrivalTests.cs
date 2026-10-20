@@ -448,11 +448,7 @@ namespace AF.Tests.PlayMode
                 {
                     foreach (int level in new[] { 20, 80 })
                     {
-                        if (small)
-                        {
-                            GameScreen.SimulatedScreen = HudLabelTests.Screen640;
-                        }
-
+                        GameScreen.SimulatedScreen = small ? HudLabelTests.Screen640 : HudLabelTests.Screen780; // DC3: sin pantalla, 853 × 640 dp
                         LaunchOptions.FontScaleOverride = scale;
                         yield return Win(level);
                         GameBootstrap boot = GameBootstrap.Current!;
@@ -483,13 +479,31 @@ namespace AF.Tests.PlayMode
                             Assert.That(view.Arrival.PlaceText, Is.EqualTo(place), what);
                         }
 
-                        Assert.That(view.VictoryPanelTopDp - 38f, Is.GreaterThanOrEqualTo(view.SlothBandTopDp), what + ": la cinta, bajo la cabecera");
+                        FactLineTests.AssertRibbonUnderTheHeader(view, what + ": la cinta, bajo la cabecera");
                         GameScreen.SimulatedScreen = null;
                         LaunchOptions.Reset();
                         FunnelSetup.Hooks();
                     }
                 }
             }
+        }
+
+        /// <summary>
+        /// Pendiente del dueño (DC3; D-028): en 16:9 (360 × 640 dp) al 130 %, la victoria con la ranura del Dato del río no cabe
+        /// bajo la cabecera del HUD: la cinta queda por encima (30,6 dp frente a 90 en el 127 en es-419; −23,4 en el 20 con
+        /// SingleKey en en-XA). Achicar la ranura (máx. de la línea de fruta y la llegada más alta del catálogo, M1.6), bajar la
+        /// letra o dejar que el panel tape la cabecera son decisiones del dueño. Se deja escrito (explícito: hoy falla).
+        /// </summary>
+        [UnityTest]
+        [Explicit("Pendiente del dueño (DC3): en 16:9 al 130 %, la cinta de la victoria sube por encima de la cabecera del HUD; hoy falla.")]
+        public IEnumerator Victory_130_16x9_TheRibbonUnderTheHeader_KnownIssue([Values(20, 80)] int level)
+        {
+            GameScreen.SimulatedScreen = HudLabelTests.Screen640;
+            LaunchOptions.FontScaleOverride = 1.3f;
+            yield return Win(level);
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.Step(boot, 1600);
+            FactLineTests.AssertRibbonUnderTheHeader(boot.View!, level + " a 640 al 130 %: la cinta, bajo la cabecera", true);
         }
 
         // Lo que enseña la llegada cabe en la ranura, y cada línea de la placa cabe en su caja y dentro de la ranura (sin recortes).

@@ -26,7 +26,9 @@ namespace AF.UI
     /// crecen, y Puñado y Balsa van una debajo de otra si a media anchura no caben). Pendiente del dueño (revisión de A1): al
     /// 130 %, en la rama B (unos 559 dp), el panel tapa la parte de abajo de las cuias de un tablero de una fila aunque el
     /// tablero suba hasta su tope (en el 31, el 36 % a 360 × 780 y el 50 % en 16:9), contra 02 §7 («el tablero queda entero a
-    /// la vista»); al 100 % queda entero. Compactarlo sin bajar de 12 sp × 1,3, sin partir un precio y sin renunciar a que los
+    /// la vista»); al 100 % queda entero. Cifras de antes de DC3 (16:9 a 438,75 × 780 dp): desde DC3 (D-028) el 16:9 mide
+    /// 360 × 640 dp; el panel de la rama B mide 405 dp al 100 % (tapa el 25 % de las cuias del 31) y 597 dp al 130 %, más que
+    /// los 576 entre las zonas seguras (MinTextSizeTests lo registra; pendiente del dueño). Compactarlo sin bajar de 12 sp × 1,3, sin partir un precio y sin renunciar a que los
     /// CTA crezcan con la letra (07 §7.8) no llega a los 47 dp (360 × 780) y 79 dp (16:9) que faltan para no tapar las cuias:
     /// a media anchura, las etiquetas de Puñado y Balsa no caben en sus dos líneas a 15,6 dp (<c>OfferFits</c>) y el aire entre
     /// bloques da unos 15 dp. MinTextSizeTests registra cuánto tapa.

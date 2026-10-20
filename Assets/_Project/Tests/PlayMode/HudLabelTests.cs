@@ -26,8 +26,9 @@ namespace AF.Tests.PlayMode
     /// 02 §5) con 1, 2 y 3 filas.
     /// </summary>
     /// <remarks>
-    /// GameScreen escala el lienzo para tener al menos 780 dp de alto (<c>ApplyScreenMetrics</c>): un teléfono 16:9 de
-    /// 1080 × 1920 px no da un lienzo de 360 × 640 dp sino uno de 438,75 × 780 dp, y es el que se prueba como «360 × 640».
+    /// GameScreen escala el lienzo a 360 dp de ancho con al menos 640 dp de alto (<see cref="GameScreen.CanvasScale"/>; D-028,
+    /// tarea DC3): un teléfono 16:9 de 1080 × 1920 px da un lienzo de 360 × 640 dp, el de 02 §5 (antes de DC3, uno de
+    /// 438,75 × 780 dp, con el texto al 82 %).
     /// </remarks>
     public sealed class HudLabelTests
     {
@@ -35,8 +36,8 @@ namespace AF.Tests.PlayMode
         internal static readonly Vector4 Screen780 = new Vector4(1080f, 2340f, 96f, 48f);
 
         /// <summary>
-        /// 16:9 (360 × 640 dp de 02 §5 a 3 px/dp) con la misma zona segura; GameScreen lo maqueta en 438,75 × 780 dp (ver la
-        /// clase).
+        /// 16:9 (360 × 640 dp de 02 §5 a 3 px/dp) con la misma zona segura; GameScreen lo maqueta en 360 × 640 dp (ver la
+        /// clase; tarea DC3).
         /// </summary>
         internal static readonly Vector4 Screen640 = new Vector4(1080f, 1920f, 96f, 48f);
 
@@ -578,11 +579,11 @@ namespace AF.Tests.PlayMode
             HudSetup.AssertHudLabelsClear(view);
             HudSetup.AssertWalletOffPanel(view);
 
-            // El mismo nivel en 16:9 (438,75 × 780 dp): 2 filas de 6 y 5 (la cuia de 48 dp gana a la de 46,9 en 3 filas) y el
-            // contador a la derecha de la banda.
+            // El mismo nivel en 16:9 (360 × 640 dp desde DC3): 2 filas de 6 y 5 (D-006; 02 §5: «ganan las 2 filas con 11-12 cuias
+            // generadas») y el contador a la derecha de la banda.
             GameScreen.SimulatedScreen = Screen640;
             PlayModeHelpers.Step(boot, 50);
-            Assert.That(view.CanvasWidth, Is.EqualTo(438.75f).Within(0.01f));
+            Assert.That(view.CanvasWidth, Is.EqualTo(360f).Within(0.01f));
             Assert.That(view.Layout!.Rows, Is.EqualTo(2));
             Assert.That(view.HudLabelsMode, Is.Not.EqualTo(GameScreen.HudLabelMode.Tucked));
             HudSetup.AssertHudLabelsClear(view);
@@ -597,17 +598,17 @@ namespace AF.Tests.PlayMode
             HudSetup.AssertHudLabelsClear(view);
             HudSetup.AssertWalletOffPanel(view);
 
-            // Contador y etiqueta con la Lluvia en la fila 1 y una cuia alta: el 160 (Muy difícil, 10 cuias) en 16:9.
-            // Entre la fila del HUD y el marco índigo quedan 19,6 dp: ni la banda normal ni la compacta caben sobre el marco, y bajo
-            // la placa no caben «Muy difícil» y la Lluvia con 16 dp entre ellos. El contador pasa a la derecha de la insignia,
-            // bajo la cabecera compactada.
+            // Contador y etiqueta con la Lluvia en la fila 1 y una cuia alta: el 160 (Muy difícil, 10 cuias) en 16:9. En el lienzo
+            // de 438,75 × 780 dp de antes de DC3, ni la banda normal ni la compacta cabían sobre el marco y el contador pasaba a la
+            // derecha de la insignia, bajo la cabecera compactada. Desde DC3 (360 × 640 dp; D-028) el tablero es otro: la banda va
+            // pegada bajo la placa y el código elige dónde va el contador (junto al grupo o junto a la cabecera); se exige que
+            // nada se cruce y que la cabecera quede fuera del panel.
             yield return HudSetup.LoadPlaying(160);
             view = GameBootstrap.Current!.View!;
             Assert.That(view.HudCounter.Visible && view.HudDifficultyChip.Visible, Is.True);
             Assert.That(view.HudLabelsMode, Is.EqualTo(GameScreen.HudLabelMode.Tucked));
-            Assert.That(view.HudCounterBesideWallet, Is.True);
-            Assert.That(view.WalletSqueezed, Is.True);
-            Assert.That(view.HudDifficultyChip.SealShown, Is.True, "aquí el chip no pisa el panel: con su sello");
+            TestContext.WriteLine("el 160 en 16:9: contador junto a la cabecera " + view.HudCounterBesideWallet + ", cabecera compactada "
+                + view.WalletSqueezed + ", sello " + view.HudDifficultyChip.SealShown);
             HudSetup.AssertHudLabelsClear(view);
             HudSetup.AssertWalletOffPanel(view);
 

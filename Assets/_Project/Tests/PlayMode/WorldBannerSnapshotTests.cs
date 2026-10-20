@@ -49,7 +49,7 @@ namespace AF.Tests.PlayMode
             yield return ExitAt(dir, WorldBannerView.ExitMs * WorldBannerView.DiveEnd * 0.5f, "69e_banner_l41_dive");
             yield return ExitAt(dir, WorldBannerView.ExitMs - WorldBannerView.FadeTailMs + 30f, "69j_banner_l41_fade");
 
-            // 16:9 (1080 × 1920 px; GameScreen lo maqueta en 438,75 × 780 dp).
+            // 16:9 (1080 × 1920 px; GameScreen lo maqueta en 360 × 640 dp desde DC3).
             GameScreen.SimulatedScreen = HudLabelTests.Screen640;
             yield return Capture(dir, 41, 1400, "69h_banner_l41_16x9");
             GameScreen.SimulatedScreen = HudLabelTests.Screen780;

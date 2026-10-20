@@ -580,6 +580,7 @@ namespace AF.Tests.PlayMode
         /// <summary>El 43 real con su tarjeta del estreno: la cierra con un toque y salta la intro; queda en PLAYING.</summary>
         internal static IEnumerator Load43()
         {
+            GameScreen.SimulatedScreen ??= HudLabelTests.Screen780; // DC3: sin pantalla simulada, el Editor da un lienzo de 853 × 640 dp
             LaunchOptions.LevelCardsOverride = true;
             LaunchOptions.BannerArtSyncOverride = true;
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));

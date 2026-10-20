@@ -54,7 +54,15 @@ namespace AF.UI
         /// <summary>Ancho de referencia del lienzo (dp).</summary>
         public const float ReferenceWidth = 360f;
 
-        /// <summary>Alto de referencia del lienzo (dp; 19,5:9).</summary>
+        /// <summary>
+        /// Alto mínimo del lienzo (dp; 16:9 de 02 §5). El lienzo mide 360 dp de ancho y, si así quedaran menos de 640 dp de alto,
+        /// manda el alto (<see cref="CanvasScale"/>): en 16:9 mide 360 × 640 dp y 1 dp de lienzo es 1 dp físico, así que el texto
+        /// no baja de 12 sp físicos (02 §12; pregunta 19 de GDD.md §6.3, (a); D-028, tarea DC3). En 19,5:9 y 20:9, 360 × 780 y
+        /// 360 × 800, como antes.
+        /// </summary>
+        public const float MinHeight = 640f;
+
+        /// <summary>Alto del lienzo en la pantalla de referencia (dp; 19,5:9: 1080 × 2340 px a 3 px/dp).</summary>
         public const float ReferenceHeight = 780f;
 
         /// <summary>Zona segura superior mínima (02 §5).</summary>
@@ -2444,9 +2452,7 @@ namespace AF.UI
         {
             ReadScreen(out _screenW, out _screenH, out _safeArea);
 
-            // Lienzo de al menos 360 × 780 dp (02 §5): 360 de ancho en 19,5:9 y 20:9 (360 × 800).
-            float scale = Mathf.Min(_screenW / ReferenceWidth, _screenH / ReferenceHeight);
-            scale = Mathf.Max(0.01f, scale);
+            float scale = CanvasScale(_screenW, _screenH);
             _scaler.scaleFactor = scale;
             _art.ScreenScale = scale;
             _canvasW = _screenW / scale;
@@ -3213,6 +3219,23 @@ namespace AF.UI
             rt.pivot = pivot;
             rt.anchoredPosition = new Vector2(x, -yTop);
             rt.sizeDelta = new Vector2(w, h);
+        }
+
+        /// <summary>
+        /// Escala del lienzo del juego (px por dp) para una pantalla de <paramref name="width"/> × <paramref name="height"/> px,
+        /// como en <see cref="LobbyScreen"/>: 360 dp de ancho y, si así quedaran menos de <see cref="MinHeight"/> dp de alto,
+        /// manda el alto (D-028, tarea DC3). Antes era min(ancho / 360, alto / 780): en 16:9 el lienzo medía 438,75 × 780 dp y el
+        /// texto de 12 sp salía a 9,8 sp físicos.
+        /// </summary>
+        public static float CanvasScale(int width, int height)
+        {
+            float scale = width / ReferenceWidth;
+            if (height / scale < MinHeight)
+            {
+                scale = height / MinHeight;
+            }
+
+            return Mathf.Max(0.01f, scale);
         }
 
         internal static void ReadScreen(out int width, out int height, out Rect safeArea)

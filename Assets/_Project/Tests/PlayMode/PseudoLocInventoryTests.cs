@@ -18,7 +18,7 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// Inventario de desbordes en en-XA (D-018, nivel 2; propuesta de idiomas §3.7 y §3.8; tarea L2b): con la
     /// pseudolocalización (el español alargado un 35 % y entre corchetes; <see cref="LocPseudo"/>), a 360 × 640 dp (la pantalla
-    /// 16:9 de 02 §5, que <c>GameScreen</c> maqueta en 438,75 × 780 dp; <see cref="HudLabelTests.Screen640"/>) y con la fuente al
+    /// 16:9 de 02 §5, que <c>GameScreen</c> maqueta en 360 × 640 dp desde DC3; <see cref="HudLabelTests.Screen640"/>) y con la fuente al
     /// 100 %, recorre las pantallas de <see cref="PseudoLocWalk"/> (el inicio con el botón Jugar de un nivel Difícil y su cinta,
     /// la tarjeta previa, el banner de mundo, la bandeja de comodines, la victoria, Aguas estancadas en las ramas A, B y C,
     /// ¿Seguro? y Nivel fallido) y <b>lista</b> sin fallar cada texto visible que se sale de su caja o, en la cinta «×3»/«×4», de
@@ -170,7 +170,7 @@ namespace AF.Tests.PlayMode
         public string Write(string dir, string fileName)
         {
             var sb = new StringBuilder();
-            sb.Append("# Inventario de textos (L2b y L4): ").Append(_locale).Append(", 360 × 640 dp (lienzo de 438,75 × 780 dp), fuente al ")
+            sb.Append("# Inventario de textos (L2b y L4): ").Append(_locale).Append(", 360 × 640 dp (lienzo de 360 × 640 dp desde DC3), fuente al ")
                 .Append(Mathf.RoundToInt(Scale * 100f).ToString(CultureInfo.InvariantCulture)).Append(" %\n");
             sb.Append("# Textos visibles mirados: ").Append(Scanned.ToString(CultureInfo.InvariantCulture))
                 .Append("; con problemas: ").Append(_lines.Count.ToString(CultureInfo.InvariantCulture)).Append('\n');

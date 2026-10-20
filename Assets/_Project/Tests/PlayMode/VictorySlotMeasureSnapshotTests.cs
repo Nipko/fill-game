@@ -22,7 +22,7 @@ namespace AF.Tests.PlayMode
     /// Llegada; pregunta 11 del plan): con las cadenas del peor caso (90 caracteres en es-419 y 117 en en, pt-BR y en-XA) y una
     /// llegada maqueta con los elementos de 02 §6 (fila de 28 dp con el agua, la canoa y la mini cuia; bienvenida; placa
     /// «{lugar} · {país} · río {río}»; placa del dato con el retrato de 40 dp), a 360 × 780 y 360 × 640 dp (esta, 1080 × 1920
-    /// px, que GameScreen maqueta en 438,75 × 780 dp; <see cref="HudLabelTests.Screen640"/>), al 100 % y al 130 %, en la
+    /// px, que GameScreen maqueta en 360 × 640 dp desde DC3; <see cref="HudLabelTests.Screen640"/>), al 100 % y al 130 %, en la
     /// victoria del 39 (chip del 40 y Cosecha doble). Mide el alto de la línea de fruta (H), el de la llegada completa y el
     /// de la llegada compacta de la opción (a) de la pregunta 11 (la fila del agua y una sola placa con el retrato, el lugar a
     /// 12 sp y el dato a 14, o a 12 como mínimo), el de la llegada ceñida a la forma de la línea de fruta (el lugar en la fila
@@ -175,7 +175,7 @@ namespace AF.Tests.PlayMode
         {
             GameScreen.ReadScreen(out int width, out int height, out Rect safe);
             Canvas canvas = view.Canvas;
-            float k = Mathf.Max(0.01f, Mathf.Min(width / GameScreen.ReferenceWidth, height / GameScreen.ReferenceHeight));
+            float k = GameScreen.CanvasScale(width, height);
             float canvasW = width / k;
             float bottomDp = height / k;
             float captureDp = SnapshotKit.Height / k; // la cámara de las capturas pinta 1080 × 2340 px con la escala del lienzo
