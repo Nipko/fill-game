@@ -53,7 +53,7 @@ namespace AF.UI
     {
         /// <summary>
         /// Cada cuánto se vuelve a preguntar a los anuncios si hay video de <c>rv_reveal</c> mientras la ranura lo ofrecería (sin
-        /// stock ni saldo) [P]: preguntar crea la cadena de la fecha del contador diario, así que no se hace en cada fotograma
+        /// stock; D-028) [P]: preguntar crea la cadena de la fecha del contador diario, así que no se hace en cada fotograma
         /// (08 §5.4); el tope (3 al día) y la espera (60 s) no cambian más deprisa.
         /// </summary>
         internal const float RevealVideoPollMs = 500f;
@@ -442,7 +442,8 @@ namespace AF.UI
         }
 
         // Insignia y habilitado de Revelar (BoosterTray.SetRevealBadge, que solo repinta si algo cambió). El video solo se
-        // consulta sin stock ni saldo, que es cuando el botón lo pone, y en cada fotograma como mucho cada RevealVideoPollMs
+        // consulta sin stock, que es cuando el botón lo pone (aunque haya saldo: video primero, como Marea; D-028, GDD §6.3
+        // pregunta 23 a), y en cada fotograma como mucho cada RevealVideoPollMs
         // (pollNow: en los avisos del flujo, en el acto). Sin ocultas, la ranura solo espera a que la luciérnaga salga de ella y
         // se vaya: gris y sin precio (revisión de la captura 67a, que enseñaba «120» en rojo). Y cuando no se puede usar ni se
         // está eligiendo (fuera de PLAYING: intro, tarjeta previa; o con el bloqueo pendiente), igual que la Cuia extra: gris,
@@ -476,7 +477,7 @@ namespace AF.UI
             bool selecting = flow.RevealSelecting;
             bool spent = flow.Session.HiddenCount == 0;
             bool idle = !available && !selecting;
-            bool offersVideo = available && !spent && stock == 0 && seeds < price && _services != null;
+            bool offersVideo = available && !spent && stock == 0 && _services != null;
             if (!offersVideo)
             {
                 _revealVideoReady = false;

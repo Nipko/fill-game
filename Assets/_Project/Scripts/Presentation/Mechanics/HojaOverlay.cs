@@ -12,7 +12,8 @@ namespace AF.Presentation.Mechanics
     /// la fruta llave grande en el centro, algo girada, sobre un medallón pulido apaisado (<see cref="ProceduralArt.FruitFlight"/>;
     /// ni el medallón es un disco ni la fruta va derecha, para que el conjunto no se lea como un ojo). Su silueta es
     /// alargada y con puntas para no confundirse con la hoja redonda de la Hoja escudo (02 §9.1; glosario §6.3). Es un estado,
-    /// no un resaltado: no se ilumina al seleccionar (D-002), no lleva dedo guía (D-002, P5) y al tocarla como origen solo se
+    /// no un resaltado: no se ilumina al seleccionar (D-002), no se resalta como destino (el dedo guía del primer uso, en el 43, es una ayuda explícita del tutorial aparte, en
+    /// AF.UI: D-028 con P5 y D-029; tarea DC7) y al tocarla como origen solo se
     /// sacude la cuia (<c>CuiaView.Shake</c>).
     /// </summary>
     /// <remarks>
@@ -340,6 +341,28 @@ namespace AF.Presentation.Mechanics
                 Vector2 c = TiedKeyU;
                 float w = Mathf.Max(ProceduralArt.HojaBadgeWidthU * TiedBadgeScale, ProceduralArt.HojaAtadaSwatchU);
                 float h = Mathf.Max(ProceduralArt.HojaBadgeHeightU * TiedBadgeScale, ProceduralArt.HojaAtadaSwatchU);
+                return new Rect(c.x - (0.5f * w), c.y - (0.5f * h), w, h);
+            }
+        }
+
+        /// <summary>
+        /// Hoja sin atar, cerrada: rectángulo de la ficha de la llave (el medallón y la fruta; u: x desde el eje, y desde el pie);
+        /// <see cref="Rect.zero"/> sin ficha a la vista o en la Hoja atada. Lo usa el dedo guía del estreno (DC7) para no taparla.
+        /// </summary>
+        public Rect KeyRectU
+        {
+            get
+            {
+                if (_tied || !Visible || !_badge.gameObject.activeSelf || _u <= 0f)
+                {
+                    return Rect.zero;
+                }
+
+                RectTransform rt = _badge.rectTransform;
+                Vector2 c = rt.anchoredPosition / _u;
+                float s = Mathf.Abs(rt.localScale.y);
+                float w = Mathf.Max(ProceduralArt.HojaBadgeWidthU, FruitU) * s;
+                float h = Mathf.Max(ProceduralArt.HojaBadgeHeightU, FruitU) * s;
                 return new Rect(c.x - (0.5f * w), c.y - (0.5f * h), w, h);
             }
         }

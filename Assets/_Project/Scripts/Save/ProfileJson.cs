@@ -13,7 +13,9 @@ namespace AF.Save
     /// Al leer, una clave que falta toma el default de <see cref="Profile"/> y una desconocida se ignora; un tipo
     /// equivocado es un archivo corrupto (<see cref="FormatException"/>), salvo en lo que no es progreso ni economía:
     /// <c>settings</c>, <c>sloth</c> y <c>progress.map_seen_level</c> toman su default ante un valor ausente o inválido
-    /// (un ajuste nunca hace corrupto un perfil), y <c>map_seen_level</c> queda recortado a [0, <c>max_level</c>].
+    /// (un ajuste nunca hace corrupto un perfil), y <c>map_seen_level</c> queda recortado a [0, <c>max_level</c>]; igual
+    /// <c>progress.undo_tip_seen</c> (DC23), que sin la clave o con otro tipo queda en «no visto». <c>fauna</c>
+    /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta.
     /// </summary>
     public static class ProfileJson
     {
@@ -122,6 +124,7 @@ namespace AF.Save
             progress.Set("skipped_levels", IntList(p.Progress.SkippedLevels));
             progress.Set("content_version", JsonNode.FromString(p.Progress.ContentVersion));
             progress.Set("map_seen_level", JsonNode.FromInt(p.Progress.ClampedMapSeenLevel));
+            progress.Set("undo_tip_seen", JsonNode.FromBool(p.Progress.UndoTipSeen));
             root.Set("progress", progress);
 
             root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
@@ -166,6 +169,20 @@ namespace AF.Save
             stats.Set("rv_watched", JsonNode.FromInt(p.Stats.RvWatched));
             stats.Set("sessions", JsonNode.FromInt(p.Stats.Sessions));
             root.Set("stats", stats);
+
+            JsonNode sighted = JsonNode.NewArray();
+            IReadOnlyList<FaunaSighting> seen = p.Fauna.Sighted;
+            for (int i = 0; i < seen.Count; i++)
+            {
+                JsonNode entry = JsonNode.NewObject();
+                entry.Set("species_id", JsonNode.FromString(seen[i].SpeciesId));
+                entry.Set("level", JsonNode.FromInt(seen[i].Level));
+                sighted.Add(entry);
+            }
+
+            JsonNode fauna = JsonNode.NewObject();
+            fauna.Set("sighted", sighted);
+            root.Set("fauna", fauna);
             return root;
         }
 
@@ -232,6 +249,7 @@ namespace AF.Save
                 g.ContentVersion = ReadString(progress, "content_version", g.ContentVersion);
                 g.MapSeenLevel = TolerantInt(progress, "map_seen_level", g.MapSeenLevel);
                 g.MapSeenLevel = g.ClampedMapSeenLevel;
+                g.UndoTipSeen = TolerantBool(progress, "undo_tip_seen", g.UndoTipSeen);
             }
 
             JsonNode? levelState = Section(root, "level_state");
@@ -275,7 +293,41 @@ namespace AF.Save
                 t.Sessions = ReadInt(stats, "sessions", t.Sessions);
             }
 
+            JsonNode? fauna = TolerantSection(root, "fauna");
+            if (fauna != null)
+            {
+                ReadFauna(fauna, p.Fauna);
+            }
+
             return p;
+        }
+
+        // fauna.sighted (esquema 2; DC15): una entrada que no es un objeto {species_id, level} válido se descarta; si una especie
+        // se repite, gana su nivel más bajo; el orden ordinal lo pone FaunaData.
+        private static void ReadFauna(JsonNode node, FaunaData fauna)
+        {
+            JsonNode? sighted = node.Get("sighted");
+            if (sighted == null || sighted.Kind != JsonKind.Array)
+            {
+                return;
+            }
+
+            IReadOnlyList<JsonNode> items = sighted.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                JsonNode item = items[i];
+                if (item.Kind != JsonKind.Object)
+                {
+                    continue;
+                }
+
+                string? id = TolerantString(item, "species_id");
+                JsonNode? levelNode = item.Get("level");
+                if (FaunaData.IsSpeciesId(id) && levelNode != null && TryInt(levelNode, out int level) && level >= 1)
+                {
+                    fauna.Merge(new FaunaSighting(id!, level));
+                }
+            }
         }
 
         private static JsonNode LevelStateNode(LevelStateData s)
