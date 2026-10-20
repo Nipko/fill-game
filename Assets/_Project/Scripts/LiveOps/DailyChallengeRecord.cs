@@ -69,7 +69,7 @@ namespace AF.LiveOps
         }
 
         // Mismos campos que AF.GameFlow.LevelStateSnapshot.Copy (GameFlow no es visible desde aquí);
-        // DailyChallengeRecordTests comprueba por reflexión que no falta ninguno.
+        // DailyChallengeStoreTests.Record_CloneCopiesEveryProperty comprueba por reflexión que no falta ninguno.
         internal static LevelStateData CopyState(LevelStateData state)
         {
             var copy = new LevelStateData
@@ -170,7 +170,9 @@ namespace AF.LiveOps
 
         /// <summary>
         /// <c>offline_claims</c> [P]: cobros pagados sin red desde la última reconciliación. Solo los usa la rama (b) de R-Q12
-        /// (<see cref="DailyReconcileMode.VoidOfflineAfterServerDate"/>); la reconciliación la vacía en las dos ramas.
+        /// (<see cref="DailyReconcileMode.VoidOfflineAfterServerDate"/>); la reconciliación la vacía en las dos ramas. Acotada a los
+        /// cobros de los últimos <see cref="DailyChallengeRules.OfflineClaimsMaxDays"/> días [P]: sin red durante meses no crece
+        /// sin límite (una entrada por día cobrado).
         /// </summary>
         public List<DailyClaimEntry> OfflineClaims { get; } = new List<DailyClaimEntry>();
 
@@ -187,6 +189,28 @@ namespace AF.LiveOps
         public bool IsPending(string dateKey)
         {
             return IndexOf(PendingClaims, dateKey) >= 0;
+        }
+
+        /// <summary>
+        /// La fecha <paramref name="dateKey"/> (<c>yyyy-MM-dd</c>) tiene su sello en el mes guardado (<see cref="StampsMonth"/> y
+        /// <see cref="StampDays"/>). False si la clave no es una fecha o el sello se quitó al anular el cobro (nota §7.2).
+        /// </summary>
+        public bool IsStamped(string? dateKey)
+        {
+            if (StampsMonth == null || StampsMonth.Length != 7 || dateKey == null || dateKey.Length != 10
+                || string.CompareOrdinal(dateKey, 0, StampsMonth, 0, 7) != 0 || dateKey[7] != '-')
+            {
+                return false;
+            }
+
+            int tens = dateKey[8] - '0';
+            int units = dateKey[9] - '0';
+            if (tens < 0 || tens > 3 || units < 0 || units > 9)
+            {
+                return false;
+            }
+
+            return StampDays.Contains(tens * 10 + units);
         }
 
         /// <summary>Copia independiente (listas y partida incluidas).</summary>

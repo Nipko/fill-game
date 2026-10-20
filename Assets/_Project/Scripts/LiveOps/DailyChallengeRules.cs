@@ -146,6 +146,13 @@ namespace AF.LiveOps
         /// <summary>Único valor de <c>live_daily_streak7_reward</c> que se sabe pagar: 1 Pororoca al stock (04 §2.4; 08 §9).</summary>
         public const string ShuffleReward = "shuffle";
 
+        /// <summary>
+        /// Días que se recuerdan los cobros sin red (<see cref="DailyChallengeRecord.OfflineClaims"/>) [P]: un mes, el de los sellos
+        /// (R-Q5). Al cobrar sin red se olvidan los de fecha ≤ <c>fecha − 31 días</c>. Solo afecta a la rama (b) de R-Q12: un cobro
+        /// olvidado ya no se puede anular al reconciliar.
+        /// </summary>
+        public const int OfflineClaimsMaxDays = 31;
+
         private const string DateFormat = "yyyy'-'MM'-'dd";
         private const string MonthFormat = "yyyy'-'MM";
 
@@ -220,6 +227,7 @@ namespace AF.LiveOps
             else if (!online)
             {
                 record.OfflineClaims.Add(entry);
+                TrimOfflineClaims(record, date);
             }
 
             record.InProgress = null;
@@ -263,6 +271,11 @@ namespace AF.LiveOps
             DateTime serverDate = (_clock.UtcNow + offset + _clock.LocalOffset).Date;
             string serverToday = ClockExtensions.FormatDateKey(serverDate);
             DailyChallengeRecord record = _store.Load();
+            if (record.PendingClaims.Count == 0 && record.OfflineClaims.Count == 0)
+            {
+                // Nada que reconciliar: no se escribe el perfil (revisión de R7b).
+                return new DailyReconcileResult(true, 0, 0, 0, 0, 0, 0, null);
+            }
 
             int count = record.PendingClaims.Count + record.OfflineClaims.Count;
             var toPay = new DailyClaimEntry[record.PendingClaims.Count];
@@ -371,6 +384,24 @@ namespace AF.LiveOps
             }
 
             return date;
+        }
+
+        // Las entradas se añaden en orden creciente de fecha (cada cobro es de una fecha posterior a LastClaimedDate): las viejas van
+        // delante.
+        private static void TrimOfflineClaims(DailyChallengeRecord record, DateTime claimed)
+        {
+            DateTime oldestKept = claimed.AddDays(-(OfflineClaimsMaxDays - 1));
+            int drop = 0;
+            while (drop < record.OfflineClaims.Count
+                && (!TryParseDateKey(record.OfflineClaims[drop].DateKey, out DateTime d) || d < oldestKept))
+            {
+                drop++;
+            }
+
+            if (drop > 0)
+            {
+                record.OfflineClaims.RemoveRange(0, drop);
+            }
         }
 
         // La racha de streak días seguidos que acaba en date, cortada en la última fecha anulada que cae dentro de ella (ese día
