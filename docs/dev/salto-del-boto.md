@@ -89,6 +89,10 @@ Canasta no se repaga (el Salto ya no se ofrece en un nivel `≤ max_level`).
 
 ## 4. Riesgos y pendientes
 
+- **Choque con `B7-bootstrap.diff`:** `B3-ui.diff` y `B7-bootstrap.diff` insertan una línea en el mismo punto de `GameBootstrap.cs`,
+  justo después de `SetUpStreak();`. Se resuelve a mano dejando primero `SetUpSkip();` y después `ConnectTelemetry();`.
+- **Rehecho sobre FX16a/FX16b** (`e11b424`): `B3-ui.diff` se regeneró sobre el `StuckModal.cs` nuevo; la rama D usa las medidas de la
+  disposición compacta (`FitCtaLabelCompact`, `PlaceButton`, `HeightOf`, `gap`), como la Cuia de rescate.
 - **Alto del panel de Aguas estancadas:** la rama D suma unos 70 dp. El caso ya registrado de 16:9 al 130 % (rama B por encima
   de la zona segura, `MinTextSizeTests.Stuck_130_16x9_InsideTheSafeArea_KnownIssue`, explícito) empeora si coinciden B y D.
   No se mide aún la rama D en `MinTextSizeTests` (archivo de test existente: no se toca).

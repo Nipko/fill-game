@@ -36,6 +36,10 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 - Sin parche de `Profile`/`ProfileJson` (ya guardan `since_last_skip` y `skipped_levels`) ni de `RiverMapScreen*` (ya pinta a Rosa con
   `max_level` + `skipped_levels`).
 - Prueba: `git apply` de 1 y 2 sobre la rama, `unity-compile`, EditMode y PlayMode (`StuckModalSkipTests`, `SkipPlayModeTests`).
+- **Choque con `B7-bootstrap.diff`:** `B3-ui.diff` y `B7-bootstrap.diff` insertan una línea en el mismo punto de `GameBootstrap.cs`,
+  justo después de `SetUpStreak();`. Se resuelve a mano dejando primero `SetUpSkip();` y después `ConnectTelemetry();`.
+- **Rehecho sobre FX16a/FX16b** (`e11b424`): `B3-ui.diff` se regeneró sobre el `StuckModal.cs` nuevo; la rama D usa las medidas de la
+  disposición compacta (`FitCtaLabelCompact`, `PlaceButton`, `HeightOf`, `gap`), como la Cuia de rescate.
 
 ### Verificación
 
