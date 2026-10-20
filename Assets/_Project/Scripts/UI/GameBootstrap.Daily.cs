@@ -53,7 +53,8 @@ namespace AF.UI
 
         /// <summary>
         /// Último día del Reto cerrado sin victoria (<see cref="DailyChallengeService.DayEnded"/>: el <c>fail</c> del día, una vez y
-        /// solo si no se ganó; R-Q15 a), o null. Lo escribirá la sonda <c>af_daily_challenge</c> de R10 (<c>DailyProbeFormat</c>).
+        /// solo si no se ganó; R-Q15 a), o null. La sonda <c>AF_STATE daily_challenge</c> lo escribe al recibirlo (R10,
+        /// <see cref="DevProbe.DailyDayEnd"/>).
         /// </summary>
         public DailyPlayEnd? LastDailyDayEnd { get; private set; }
 
@@ -151,7 +152,7 @@ namespace AF.UI
             var service = new DailyChallengeService(store, rules, clock, config, pool);
             service.DayEnded += OnDailyDayEnded; // antes del primer DiscardStale: el fail del día que se cierra al abrir (R-Q15 a)
             service.DiscardStale();
-            rules.Reconcile();
+            DevProbe.DailyEarn(rules.Reconcile().SeedsPaid); // R10: semillas de los cobros pendientes que se confirman al abrir
 
             GameServices? services = _ads != null && _store != null && _storeLedger != null
                 ? new GameServices(dailyWallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: ProfileLocked, deviceLocale: _deviceLocale, settings: profile.Settings)
@@ -244,7 +245,8 @@ namespace AF.UI
 
         private void OnDailyDayEnded(DailyPlayEnd end)
         {
-            LastDailyDayEnd = end; // R10: AF_STATE daily_challenge con DailyProbeFormat
+            LastDailyDayEnd = end;
+            DevProbe.DailyDayEnd(end); // R10: AF_STATE daily_challenge result=fail, una vez por día (R-Q15)
         }
 
         private void OnDailyCardTap(DailyCardState state)
