@@ -53,6 +53,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.ResetDailyOverrides();
             HomeSloth.ManualTickForTests = false;
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
@@ -401,6 +402,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator ContentEnd_DoesNotSpendTheGreetingBehindTheModal_ItComesWhenItCloses()
         {
+            GameBootstrap.DailyPoolDisabledOverride = true; // sin el Reto: con él, «Jugar · Reto del río» abre el Reto (D-032, punto 6)
             // El catálogo de la escena acaba en el 700 (C1b): con el 701, «Jugar» abre «El río sigue creciendo» (06 §9). El 701 no
             // tiene parada en los datos del Mapa (paradas 0-69): la ventanita enseña la del 700 (LobbyScreen.StopLevel).
             ManualClock clock = At(0, 8);
