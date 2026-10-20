@@ -752,6 +752,9 @@ namespace AF.UI
                     _rosa[i] = NewRosa("SkippedRosa_" + i);
                 }
 
+                // El hito y el rótulo de la naciente, encima de Rosa y de la canoa: que la canoa no tape la meta (revisión de FX13).
+                SourceBuild(dynamicLayer, _rosaLayer);
+
                 // Rótulos fijos de orientación (propuesta del Mapa §3.1): en el marco, encima del mapa y por debajo de «Volver a
                 // la canoa». No giran con «Norte arriba».
                 Transform frame = _frame.transform;
@@ -1892,6 +1895,8 @@ namespace AF.UI
             {
                 _buoysAhead.SetBuoys(_buoyLocal, _buoyState, _buoyCount, radius);
             }
+
+            PlaceSource(space, radius); // el hito y el rótulo de la naciente (revisión de FX13)
         }
 
         // Boya i de la fila corta de un tramo sin largo a la escala de la vista: una fila horizontal de 10, centrada bajo la parada
@@ -2034,6 +2039,7 @@ namespace AF.UI
                 }
             }
 
+            SourceTexts(); // map_source_name, el rótulo de la naciente (revisión de FX13)
             if (_andesLabel != null && _atlanticLabel != null)
             {
                 _andesLabel.text = UiText.MapLabelAndes;

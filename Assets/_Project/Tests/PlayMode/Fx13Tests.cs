@@ -53,12 +53,12 @@ namespace AF.Tests.PlayMode
             yield return LoadAt(695);
             GameBootstrap boot = GameBootstrap.Current!;
 
-            // El inicio en el 695: «Faltan 6 niveles para Nevado Mismi».
+            // El inicio en el 695: «Faltan 6 niveles para El nevado Mismi».
             LobbyScreen lobby = boot.Lobby!;
             Assert.That(boot.App!.PlayLevel, Is.EqualTo(695));
             Assert.That(boot.App.PlayLevelAvailable, Is.True, "premisa: el 695 está publicado (C1b)");
             Assert.That(lobby.StopRemainingShown, Is.True, "«Faltan…» hacia la naciente en el inicio");
-            Assert.That(lobby.StopRemainingText, Is.EqualTo("Faltan 6 niveles para Nevado Mismi"));
+            Assert.That(lobby.StopRemainingText, Is.EqualTo("Faltan 6 niveles para El nevado Mismi"));
 
             Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True, "el Mapa se abre desde el inicio");
             yield return null;
@@ -87,6 +87,7 @@ namespace AF.Tests.PlayMode
                 Assert.That(map.StopRemainingShown, Is.True, where + ": «Faltan…» en el Mapa");
                 Assert.That(map.StopRemainingText, Is.EqualTo(UiText.MapStopRemaining(701 - play, UiText.MapSourceName)), where);
                 Assert.That(RiverJourney.LevelsLeft(play), Is.EqualTo(701 - play), where);
+                AssertSource(map, source, where); // revisión de FX13: el hito y el rótulo de la naciente, desde la llegada a Tambo
 
                 if (max == 690)
                 {
@@ -121,6 +122,23 @@ namespace AF.Tests.PlayMode
                 Assert.That(map.CanoeInView, Is.True, where + ": la canoa, a la vista");
             }
 
+            // Antes de la llegada a Tambo, el Mapa de siempre: sin hito ni rótulo de la naciente.
+            Reopen(boot, new MemoryProgressStore(686, 685, 685), 686);
+            Assert.That(map.SourceMarkShown, Is.False, "jugando el 686: aún no");
+            Assert.That(map.SourceLabelShown, Is.False);
+
+            // En la Cuenca, el hito y el rótulo también se ven, encima de la canoa, sin que la canoa los pise (revisión de FX13).
+            Reopen(boot, new MemoryProgressStore(695, 694, 694), 695);
+            map.SetView(MapView.Basin);
+            for (int t = 0; t < 2000; t += 16)
+            {
+                map.Tick(16f);
+            }
+
+            Assert.That(map.View, Is.EqualTo(MapView.Basin));
+            AssertSource(map, source, "Cuenca, jugando el 695");
+            Assert.That(map.SourceLayer!.GetSiblingIndex(), Is.GreaterThan(map.Canoe.transform.GetSiblingIndex()), "encima de la canoa");
+
             // El 700 ganado: la canoa en la naciente (también CanoeAt, el de «ponerse al día»).
             Assert.That(RiverMapScreen.TryCanoePoint(data, routes, 700, out Vector2 at700), Is.True);
             Assert.That(Vector2.Distance(at700, source), Is.LessThan(Near), "con el 700, en la naciente");
@@ -151,6 +169,13 @@ namespace AF.Tests.PlayMode
             Vector2 source = RiverMapScreen.PlacePoint(data, new RiverMapPlace(cauce, 0f));
             Assert.That(Vector2.Distance(map.CanoeShownMapPoint, tambo), Is.LessThan(Near), "sale de Tambo");
             Fx10Tests.AssertPlatesFit(map, "fin de contenido del 700, al abrir");
+
+            // Revisión de FX13: la cabecera nombra el mundo de la última parada y la meta, nunca el mundo 10 (el del 701, que el
+            // Mapa no tiene); y la naciente se ve desde el principio del viaje.
+            Assert.That(map.Title, Is.EqualTo(UiText.MapWorldQuestion(9, UiText.MapSourceName)));
+            Assert.That(map.Title, Is.EqualTo("Ucayali · El nevado Mismi"));
+            Assert.That(map.Title, Does.Not.Contain(UiText.WorldName(10)), "sin world_w10_name");
+            AssertSource(map, source, "fin de contenido del 700, al abrir");
 
             map.Tick(16f);
             Canvas.ForceUpdateCanvases();
@@ -203,6 +228,32 @@ namespace AF.Tests.PlayMode
             Assert.That(map.CatchUpArrivals, Is.EqualTo(0), "sin stop_arrive: la naciente no está en el catálogo");
             Assert.That(map.CardOpen, Is.False, "sin tarjeta de parada");
             Assert.That(map.StopRemainingShown, Is.False, "nada que jugar: sin «Faltan…»");
+            Assert.That(map.Title, Does.Not.Contain(UiText.WorldName(10)), "al acabar, tampoco el mundo 10");
+            AssertSource(map, source, "fin de contenido del 700, al acabar");
+        }
+
+        // El hito de la naciente en su punto, mayor que una boya, y su rótulo (map_source_name) a la vista, sin pisar el hito ni
+        // la canoa, dentro del mapa (revisión de FX13).
+        internal static void AssertSource(RiverMapScreen map, Vector2 source, string where)
+        {
+            Assert.That(map.SourceMarkShown, Is.True, where + ": el hito de la naciente");
+            Vector2 local = map.Space.ToLocal(source);
+            Assert.That(Vector2.Distance(map.SourceMarkLocal, local), Is.LessThan(0.01f), where + ": el hito, en la naciente");
+            float buoy = map.Buoys!.Radius;
+            Assert.That(map.SourceMarkRadius, Is.EqualTo(RiverMapScreen.SourceMarkScale * Mathf.Max(buoy, RiverMapScreen.BuoyRadiusMinDp)).Within(1e-4f), where);
+            Assert.That(map.SourceMarkRadius, Is.GreaterThan(buoy), where + ": mayor que una boya");
+            Assert.That(map.SourceLabelShown, Is.True, where + ": el rótulo");
+            Assert.That(map.SourceLabelText, Is.EqualTo(UiText.MapSourceName), where);
+            RectTransform rt = map.SourceLabel!.rectTransform;
+            var box = new Rect(rt.anchoredPosition - (rt.sizeDelta * 0.5f), rt.sizeDelta);
+            Assert.That(box.Overlaps(map.CanoeBoxLocal), Is.False, where + ": el rótulo no pisa la canoa");
+            float gap = map.SourceLabelBelow ? local.y - box.yMax : box.yMin - local.y;
+            Assert.That(gap, Is.GreaterThanOrEqualTo(map.SourceMarkRadius), where + ": el rótulo no pisa el hito");
+            Vector2 content = map.ContentSize;
+            Assert.That(box.xMin, Is.GreaterThanOrEqualTo(0f), where + ": dentro del mapa");
+            Assert.That(box.xMax, Is.LessThanOrEqualTo(content.x), where);
+            Assert.That(box.yMax, Is.LessThanOrEqualTo(0f), where);
+            Assert.That(box.yMin, Is.GreaterThanOrEqualTo(-content.y), where);
         }
 
         // El perfil en el nivel «play» (max y map_seen_level en play − 1) y la app en el inicio.

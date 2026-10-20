@@ -1152,10 +1152,24 @@ namespace AF.UI
         {
             RiverStopCatalog stops = _stops!;
             RiverStop? first = stops.FirstStopOfWorld(_world);
-            string? questionKey = first?.WorldQuestion;
-            string question = questionKey != null ? Loc.Fact(questionKey) : string.Empty;
-            _title.text = question.Length > 0 ? UiText.MapWorldQuestion(_world, question) : UiText.WorldName(_world);
-            _answered = question.Length > 0 && WorldQuestionAnswered(stops, _world, _progress!.MaxLevel);
+            int sourceWorld = SourceTitleWorld(stops, _world);
+            if (sourceWorld > 0)
+            {
+                // Más allá de la última parada (el fin de contenido del 700: el 701 es del mundo 10, sin paradas en el Mapa), la
+                // cabecera nombra el mundo de la última parada y la meta del viaje, la naciente (revisión de FX13; D-013, viñeta
+                // del 2026-10-19: sin parada nueva): «Ucayali · El nevado Mismi», nunca un mundo que el Mapa no tiene.
+                string source = UiText.MapSourceName;
+                _title.text = source.Length > 0 ? UiText.MapWorldQuestion(sourceWorld, source) : UiText.WorldName(sourceWorld);
+                _answered = false;
+            }
+            else
+            {
+                string? questionKey = first?.WorldQuestion;
+                string question = questionKey != null ? Loc.Fact(questionKey) : string.Empty;
+                _title.text = question.Length > 0 ? UiText.MapWorldQuestion(_world, question) : UiText.WorldName(_world);
+                _answered = question.Length > 0 && WorldQuestionAnswered(stops, _world, _progress!.MaxLevel);
+            }
+
             _check.gameObject.SetActive(_answered);
 
             // «Faltan N» hacia la parada siguiente o, tras la última, hacia la naciente (FX13), con su nombre en el idioma (en
@@ -1165,6 +1179,23 @@ namespace AF.UI
             _remainingLabel.text = _remainingReady ? UiText.MapStopRemaining(RiverJourney.LevelsLeft(_playLevel), place) : string.Empty;
             _remaining.gameObject.SetActive(_remainingReady);
             _playLabel.text = UiText.PlayLevel(_playLevel);
+        }
+
+        /// <summary>
+        /// Mundo de la cabecera del Mapa abierto en el mundo <paramref name="world"/> más allá de la última parada del catálogo
+        /// <paramref name="stops"/> (el fin de contenido del 700 abre en el 701, del mundo 10, que no tiene paradas): el de la
+        /// última parada si el último tramo va a la naciente (<see cref="RiverStopCatalog.HeadsToSource"/>; revisión de FX13);
+        /// 0 si <paramref name="world"/> tiene paradas o no hay meta. Sin asignaciones.
+        /// </summary>
+        public static int SourceTitleWorld(RiverStopCatalog stops, int world)
+        {
+            if (stops.Count == 0 || !stops.HeadsToSource || stops.FirstStopOfWorld(world) != null)
+            {
+                return 0;
+            }
+
+            RiverStop last = stops.At(stops.Count - 1)!;
+            return world > last.World ? last.World : 0;
         }
 
         /// <summary>

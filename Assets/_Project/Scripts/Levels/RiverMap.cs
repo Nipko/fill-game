@@ -540,8 +540,8 @@ namespace AF.Levels
         public const string Format = "af-river-map/1";
 
         /// <summary>
-        /// Id de la línea del cauce (<c>main</c>): va de la naciente del Mismi (s = 0; quebrada Carhuasanta en
-        /// <c>rio-amazonas.json</c>) al Atlántico. La meta del último tramo es su primer punto (tarea FX13).
+        /// Id de la línea del cauce (id <c>amazonas</c>, <see cref="RiverLineKind.Main"/>): va de la naciente del Mismi (s = 0;
+        /// quebrada Carhuasanta en <c>rio-amazonas.json</c>) al Atlántico. La meta del último tramo es su primer punto (tarea FX13).
         /// </summary>
         public const string CauceLineId = "amazonas";
 

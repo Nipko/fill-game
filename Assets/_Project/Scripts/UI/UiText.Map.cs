@@ -103,7 +103,7 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// <c>map_source_name</c> [P] (tarea FX13; D-013, viñeta del 2026-10-19): «Nevado Mismi», la naciente a la que apunta el
+        /// <c>map_source_name</c> [P] (tarea FX13; D-013, viñeta del 2026-10-19): «El nevado Mismi», la naciente a la que apunta el
         /// último tramo tras la última parada. No es una parada: solo el <c>{place}</c> de <see cref="MapStopRemaining(int, string)"/>.
         /// Pendiente del asesor.
         /// </summary>

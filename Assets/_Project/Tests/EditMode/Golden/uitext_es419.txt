@@ -143,7 +143,7 @@ UiText.MapLabelAndes	Andes ↑
 UiText.MapLabelAtlantic	Océano Atlántico ↓
 UiText.MapNorthUp	Norte arriba
 UiText.MapOpen	Ver mapa
-UiText.MapSourceName	Nevado Mismi
+UiText.MapSourceName	El nevado Mismi
 UiText.MapViewBasin	Cuenca
 UiText.MapViewWorld	Mundo
 UiText.Music	Música

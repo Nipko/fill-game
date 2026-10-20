@@ -15,10 +15,11 @@ namespace AF.Tests.PlayMode
     /// <list type="bullet">
     /// <item><description><c>fx13_map_695</c> y <c>fx13_map_695_cuenca</c>: el Mapa desde el inicio jugando el 695 (max 694), en
     /// las vistas Mundo y Cuenca: el frente y sus 10 boyas de Tambo a la naciente (4 encendidas), la canoa a 0,4 del tramo y
-    /// «Faltan 6 niveles para Nevado Mismi»;</description></item>
+    /// «Faltan 6 niveles para El nevado Mismi», con el hito y el rótulo de la naciente (revisión de FX13);</description></item>
     /// <item><description><c>fx13_map_fin_contenido_700_abre</c>, <c>fx13_map_fin_contenido_700_medio</c> y
     /// <c>fx13_map_fin_contenido_700</c>: el Mapa del fin de contenido tras ganar el 700, al abrir (la canoa en Tambo), a medio
-    /// viaje y al acabar (la canoa en la naciente, con el tramo lleno).</description></item>
+    /// viaje y al acabar (la canoa en la naciente, con el tramo lleno), con la cabecera «Ucayali · El nevado Mismi» y el hito
+    /// y el rótulo de la naciente.</description></item>
     /// </list>
     /// Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.Fx13SnapshotTests</c> sin
     /// <c>-nographics</c>; los PNG quedan en <c>Logs/snapshots/es-419/</c>.
@@ -53,7 +54,7 @@ namespace AF.Tests.PlayMode
             Finish(map);
             yield return null;
             Assert.That(map.FrontStop, Is.EqualTo(70));
-            Assert.That(map.StopRemainingText, Is.EqualTo("Faltan 6 niveles para Nevado Mismi"));
+            Assert.That(map.StopRemainingText, Is.EqualTo("Faltan 6 niveles para El nevado Mismi"));
             SnapshotKit.Save(dir, "fx13_map_695");
             map.SetView(MapView.Basin);
             map.Tick(16f);

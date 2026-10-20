@@ -659,6 +659,8 @@ namespace AF.UI
                 _labelWritten[i] = at;
             }
 
+            UprightSourceLabel(upright, counter); // el rótulo de la naciente, como los países (revisión de FX13)
+
             // El punto de cada placa (y su línea guía), con el giro: solo se ven con el norte arriba.
             if (_pins != null && _pins.canvasRenderer.GetAlpha() != u)
             {

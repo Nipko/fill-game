@@ -757,9 +757,9 @@ namespace AF.Levels
 
         /// <summary>
         /// La meta tras la última parada (tarea FX13; decisión del dueño del 2026-10-19, en D-013: «que el último tramo (691-700)
-        /// apunte a la naciente (el Mismi) como meta, sin parada nueva»): si la última parada está en el cauce
-        /// (<see cref="RiverMap.CauceLineId"/>, <c>main</c>, que va de la naciente del Mismi, s = 0, al Atlántico), una ruta de ella
-        /// a s = 0 por el cauce, río arriba, con los puntos de paso y las bocas que haya por el camino (ninguno con las paradas
+        /// apunte a la naciente (el Mismi) como meta, sin parada nueva»): si la última parada está en la línea del cauce (id
+        /// <c>amazonas</c>, <see cref="RiverMap.CauceLineId"/>; <see cref="RiverLineKind.Main"/>; va de la naciente del Mismi, s = 0,
+        /// al Atlántico), una ruta de ella a s = 0 por el cauce, río arriba, con los puntos de paso y las bocas que haya por el camino (ninguno con las paradas
         /// 0-69). Null si la última parada no está en el cauce o ya está en la naciente. La misma condición, sin el Mapa, es
         /// <see cref="RiverStopCatalog.HeadsToSource"/>. Asigna solo aquí, al cargar.
         /// </summary>
