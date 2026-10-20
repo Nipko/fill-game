@@ -506,6 +506,25 @@ namespace AF.Tests.PlayMode
             FactLineTests.AssertRibbonUnderTheHeader(boot.View!, level + " a 640 al 130 %: la cinta, bajo la cabecera", true);
         }
 
+        /// <summary>
+        /// Lo que sí cabe en 16:9 (DC3; revisión): en es-419 al 100 %, a 1080 × 1920 px (360 × 640 dp), la cinta de la victoria
+        /// del 20 y del 80 (con su llegada en la ranura) queda bajo la cabecera del HUD. Estricto: aquí no hay tolerancia.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Victory_100_16x9_Es419_TheRibbonUnderTheHeader([Values(20, 80)] int level)
+        {
+            GameScreen.SimulatedScreen = HudLabelTests.Screen640;
+            LaunchOptions.FontScaleOverride = 1f;
+            yield return Win(level);
+            GameBootstrap boot = GameBootstrap.Current!;
+            PlayModeHelpers.Step(boot, 1600);
+            GameScreen view = boot.View!;
+            Assert.That(Loc.Locale, Is.EqualTo(LocLocale.SpanishLatinAmerica), "condición del test");
+            Assert.That(view.CardCanvasHeight, Is.EqualTo(GameScreen.MinHeight).Within(0.01f), "360 × 640 dp");
+            Assert.That(view.VictorySlot.ContentDp, Is.GreaterThan(0f), "con la ranura del Dato del río");
+            FactLineTests.AssertRibbonUnderTheHeader(view, level + " a 640 al 100 % en es-419: la cinta, bajo la cabecera", true);
+        }
+
         // Lo que enseña la llegada cabe en la ranura, y cada línea de la placa cabe en su caja y dentro de la ranura (sin recortes).
         internal static void AssertFits(GameScreen view, string what)
         {

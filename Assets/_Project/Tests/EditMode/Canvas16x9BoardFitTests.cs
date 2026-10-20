@@ -31,10 +31,13 @@ namespace AF.Tests.EditMode
 
         [TestCase(1080, 1920, 3f, 360f, 640f)] // 16:9 (02 §5), el caso de la pregunta 19
         [TestCase(720, 1280, 2f, 360f, 640f)] // 16:9 a 2 px/dp
+        [TestCase(1080, 2160, 3f, 360f, 720f)] // 18:9: antes 390 × 780 (revisión de DC3: también cambia)
+        [TestCase(1080, 2280, 3f, 360f, 760f)] // 19:9: antes 369,2 × 780
+        [TestCase(1440, 2960, 4f, 360f, 740f)] // 18,5:9: antes 379,7 × 780
         [TestCase(1080, 2340, 3f, 360f, 780f)] // 19,5:9: igual que antes
         [TestCase(1080, 2400, 3f, 360f, 800f)] // 20:9: igual que antes
         [TestCase(720, 1600, 2f, 360f, 800f)]
-        [TestCase(1536, 2048, 3.2f, 480f, 640f)] // tableta 4:3: manda el alto (el tablero se centra a 480 dp, 02 §5)
+        [TestCase(1536, 2048, 3.2f, 480f, 640f)] // tableta 4:3: manda el alto (el tablero se centra a 480 dp, 02 §5); antes 584 × 780
         public void CanvasScale_360Wide_AtLeast640High(int widthPx, int heightPx, float scale, float canvasW, float canvasH)
         {
             float k = GameScreen.CanvasScale(widthPx, heightPx);

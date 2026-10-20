@@ -791,7 +791,7 @@ namespace AF.Tests.PlayMode
                 + " dp; tablero subido " + shift.ToString("0.0") + " de " + room.ToString("0.0") + " dp; cuias de " + mouth.ToString("0.0") + " a "
                 + foot.ToString("0.0") + " dp: " + (whole ? "el tablero, entero sobre el panel" : "el panel tapa " + covered.ToString("0.0") + " dp de las cuias ("
                 + (100f * covered / Mathf.Max(1f, foot - mouth)).ToString("0") + " %)") + ".");
-            // En 16:9, desde DC3 (lienzo de 360 × 640 dp; D-028), ya al 100 % el panel de la rama B (405 dp) tapa la parte de abajo de
+            // En 16:9, desde DC3 (lienzo de 360 × 640 dp; D-028), ya al 100 % el panel de la rama B (413 dp con Puñado y Balsa a 56 dp) tapa la parte de abajo de
             // las cuias del 31 aunque el tablero suba hasta su tope: se registra, como al 130 % (conflicto de 02 §7 con el lienzo de
             // 16:9, pendiente del dueño; open issue de DC3).
             if (scale <= 1f && view.CardCanvasHeight > GameScreen.MinHeight + 0.5f)

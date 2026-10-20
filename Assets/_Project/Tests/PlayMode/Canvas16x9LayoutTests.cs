@@ -36,6 +36,9 @@ namespace AF.Tests.PlayMode
         /// <summary>16:9 a 2 px/dp (720 × 1280 px) con la zona segura de <see cref="HudLabelTests.Screen640"/> a esa densidad.</summary>
         internal static readonly Vector4 Screen640At2x = new Vector4(720f, 1280f, 64f, 32f);
 
+        /// <summary>18:9 a 3 px/dp (1080 × 2160 px; 360 × 720 dp) con la zona segura de <see cref="HudLabelTests.Screen640"/>.</summary>
+        internal static readonly Vector4 Screen720 = new Vector4(1080f, 2160f, 96f, 48f);
+
         [SetUp]
         public void SetUp()
         {
@@ -103,6 +106,18 @@ namespace AF.Tests.PlayMode
             Assert.That(view.StuckVisible, Is.True);
             AssertTexts(view, (int)screen.x, "Aguas estancadas" + at, 4);
             AssertInsideSafeArea(view, view.Stuck.Panel, "Aguas estancadas" + at);
+
+            // Puñado y Balsa (revisión de DC3; 02 §12: las cajas crecen): botones de 56 dp o más, con 6 dp de aire sobre y bajo la
+            // tinta de su etiqueta.
+            StuckModal stuck = view.Stuck;
+            Assert.That(stuck.HandfulButton.gameObject.activeInHierarchy && stuck.BalsaButton.gameObject.activeInHierarchy, Is.True, "Puñado y Balsa en la rama B");
+            foreach ((string name, Button button, TextMeshProUGUI label) in new[] { ("Puñado", stuck.HandfulButton, stuck.HandfulLabel), ("Balsa", stuck.BalsaButton, stuck.BalsaLabel) })
+            {
+                float h = ((RectTransform)button.transform).rect.height;
+                TestContext.WriteLine("AF_DC3 " + name + at + ": botón de " + h.ToString("0.0") + " dp, cara de " + stuck.OfferFaceDp.ToString("0.0") + " dp");
+                Assert.That(h, Is.GreaterThanOrEqualTo(StuckModal.OfferMinHeightDp - 0.01f), name + at + ": el botón mide 56 dp o más");
+                LongLabelSetup.AssertOfferAir(label, stuck.OfferFaceDp, 1f, name + at);
+            }
         }
 
         [UnityTest]
@@ -148,6 +163,26 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Layout!.Rows, Is.EqualTo(3), "13 generadas: 3 filas (P12 de D-006, c)");
             AssertLayout(view, "el 374 (13 cuias, 3 filas) a 360 × 640");
             AssertTexts(view, 1080, "el 374 a 360 × 640", 3);
+        }
+
+        /// <summary>
+        /// Los altos intermedios (revisión de DC3): el cambio de escala toca toda pantalla más ancha que 360:780, no solo 16:9. En
+        /// 18:9 (1080 × 2160 px) el lienzo pasa de 390 × 780 a 360 × 720 dp; el nivel 1 y el 374 (3 filas) sin solapes, dentro de
+        /// la zona segura y con el texto a 12 sp físicos o más.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator Layout_18x9_360x720_Level1AndThreeRows([Values(1, 374)] int level)
+        {
+            GameScreen.SimulatedScreen = Screen720;
+            yield return LoadPlaying(level);
+            GameScreen view = GameBootstrap.Current!.View!;
+            Assert.That(view.Canvas.GetComponent<CanvasScaler>().scaleFactor, Is.EqualTo(3f).Within(1e-4f), "ancho / 360");
+            Assert.That(view.CanvasWidth, Is.EqualTo(360f).Within(0.01f));
+            Assert.That(view.CardCanvasHeight, Is.EqualTo(720f).Within(0.01f), "18:9: 360 × 720 dp");
+            Assert.That(view.Layout!.Rows, Is.EqualTo(level == 1 ? 1 : 3));
+            string at = "el nivel " + level + " a 360 × 720 (18:9)";
+            AssertLayout(view, at);
+            AssertTexts(view, 1080, at, 3);
         }
 
         [UnityTest]
@@ -244,7 +279,8 @@ namespace AF.Tests.PlayMode
 
         /// <summary>
         /// Todos los textos a la vista del lienzo del juego (activos, con texto, opacos y dentro de la pantalla): su tamaño en sp
-        /// físicos (tamaño × escala del lienzo / (ancho / 360), los px por dp de un teléfono de 360 dp) no baja de 12 (02 §12).
+        /// físicos (tamaño × su escala real en pantalla, <c>lossyScale</c>, / (ancho / 360), los px por dp de un teléfono de 360 dp)
+        /// no baja de 12 (02 §12).
         /// </summary>
         internal static void AssertTexts(GameScreen view, int widthPx, string where, int atLeast)
         {
@@ -273,7 +309,9 @@ namespace AF.Tests.PlayMode
                 }
 
                 seen++;
-                float physical = t.fontSize * t.canvas.rootCanvas.scaleFactor / pxPerDp;
+                // Con la escala real del texto: lossyScale incluye el scaleFactor del lienzo y la de los padres (la columna
+                // compactada de la cabecera, WalletBar.SetScale; el precio de la bandeja, BoosterTray.PlacePrice; los pops).
+                float physical = t.fontSize * Mathf.Abs(t.rectTransform.lossyScale.y) / pxPerDp;
                 if (physical < UiBuilder.MinTextSp - 0.01f)
                 {
                     issues.Add(where + ": «" + t.text.Replace(NewLine, " / ") + "» (" + PathOf(t.transform) + ") a " + physical.ToString("0.00") + " sp físicos");

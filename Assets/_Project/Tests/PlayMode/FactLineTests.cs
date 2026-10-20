@@ -713,19 +713,19 @@ namespace AF.Tests.PlayMode
             VictorySetup.WinToVictoryScreen(boot);
         }
 
-        /// <summary>La línea de fruta que se ve cabe en H y en la ranura, cada etiqueta en su caja y nada por debajo de 12 sp.</summary>
         /// <summary>
         /// La cinta de la victoria (38 dp sobre el panel) bajo la cabecera del HUD. En 16:9, desde DC3 (lienzo de 360 × 640 dp;
         /// D-028), la ranura del Dato del río sube el panel por encima de la cabecera al 130 % (ranura de 212-266 dp: la cinta en
         /// 30,6 dp en el 127 en es-419, −3,4 en el 39 y −23,4 en el 20 con SingleKey en en-XA, frente a 90) y, con Cosecha doble y
-        /// el chip del 40, ya al 100 % en en-XA (73 dp en el 39). Se registra en vez de fallar: pendiente del dueño (open issue de
-        /// DC3), exigido en <c>VictoryArrivalTests.Victory_130_16x9_TheRibbonUnderTheHeader_KnownIssue</c>. Con
-        /// <paramref name="strict"/>, siempre se exige.
+        /// el chip del 40, ya al 100 % en en-XA (73 dp en el 39). Solo esos casos medidos se registran en vez de fallar (pendiente
+        /// del dueño, open issue de DC3; exigido en <c>VictoryArrivalTests.Victory_130_16x9_TheRibbonUnderTheHeader_KnownIssue</c>):
+        /// a 640 dp, con la escala de texto por encima del 100 % o en en-XA con la Cosecha doble y el chip del siguiente nivel. En
+        /// es-419 al 100 % (y en 19,5:9 y 20:9) siempre se exige, como con <paramref name="strict"/>.
         /// </summary>
         internal static void AssertRibbonUnderTheHeader(GameScreen view, string what, bool strict = false)
         {
             float ribbon = view.VictoryPanelTopDp - 38f;
-            if (!strict && view.CardCanvasHeight <= GameScreen.MinHeight + 0.5f && ribbon < view.SlothBandTopDp)
+            if (!strict && ribbon < view.SlothBandTopDp && RibbonOverTheHeaderIsKnown(view))
             {
                 TestContext.WriteLine(what + ": en 16:9 la cinta queda en " + ribbon.ToString("0.0") + " dp, "
                     + (view.SlothBandTopDp - ribbon).ToString("0.0") + " dp por encima de la cabecera del HUD (pendiente del dueño, DC3).");
@@ -735,6 +735,19 @@ namespace AF.Tests.PlayMode
             Assert.That(ribbon, Is.GreaterThanOrEqualTo(view.SlothBandTopDp), what);
         }
 
+        // Los casos medidos y registrados en DC3 (AssertRibbonUnderTheHeader): a 640 dp, al 130 % o en en-XA con la Cosecha doble y
+        // el chip del siguiente nivel.
+        private static bool RibbonOverTheHeaderIsKnown(GameScreen view)
+        {
+            if (view.CardCanvasHeight > GameScreen.MinHeight + 0.5f)
+            {
+                return false;
+            }
+
+            return UiBuilder.TextScale > 1.01f || (Loc.Locale == LocLocale.Pseudo && view.DoubleHarvestShown && view.NextChip.Visible);
+        }
+
+        /// <summary>La línea de fruta que se ve cabe en H y en la ranura, cada etiqueta en su caja y nada por debajo de 12 sp.</summary>
         internal static void AssertFits(GameScreen view, string what)
         {
             FactLine line = view.FruitLine!;

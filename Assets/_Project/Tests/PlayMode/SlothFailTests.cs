@@ -478,7 +478,6 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.View!.Failed.Visible, Is.True);
         }
 
-        // Tras un reinicio, espera (hasta 6 s) a que salga el aviso de TiTino.
         // Espera al aviso de TiTino como WaitForNotice, sin exigirlo: true si sale.
         private static bool NoticeShows(GameBootstrap boot)
         {
@@ -491,6 +490,7 @@ namespace AF.Tests.PlayMode
             return view.SlothNoticeVisible;
         }
 
+        // Tras un reinicio, espera (hasta 6 s) a que salga el aviso de TiTino.
         private static SlothNoticeCard WaitForNotice(GameBootstrap boot, string at)
         {
             GameScreen view = boot.View!;

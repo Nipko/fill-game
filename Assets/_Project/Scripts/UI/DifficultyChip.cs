@@ -80,7 +80,7 @@ namespace AF.UI
         public static readonly Color RivetColor = Palette.Hex(0xD9A441);
 
         private const float PillTopDp = (HeightDp - ProceduralArt.LabelPillDp) * 0.5f;
-        private const float RibbonTextDp = 16f;
+        internal const float RibbonTextDp = 16f;
         private const float RibbonTopDp = 4f;
         private const float TextGapDp = 5f;
         private const float EndPadDp = 12f;
@@ -94,7 +94,7 @@ namespace AF.UI
         private const float CompactEndPadDp = 8f;
         private const float CompactShadowDp = ProceduralArt.LabelPillShadowDp * CompactPillDp / ProceduralArt.LabelPillDp;
         private const float CompactPillTopDp = (CompactHeightDp - CompactPillDp) * 0.5f;
-        private const float CompactRibbonScale = 0.75f;
+        internal const float CompactRibbonScale = 0.75f;
 
         private static Sprite? s_ribbon;
 
@@ -206,6 +206,9 @@ namespace AF.UI
 
         /// <summary>Tamaño del texto de la píldora (dp).</summary>
         public float TextSize => _text.fontSize;
+
+        /// <summary>Tamaño del texto de la cinta «×n» (dp).</summary>
+        internal float RibbonTextSize => _ribbonText.fontSize;
 
         /// <summary>Crea el chip, oculto, bajo <paramref name="parent"/>.</summary>
         public static DifficultyChip Create(Transform parent, ProceduralArt art)
