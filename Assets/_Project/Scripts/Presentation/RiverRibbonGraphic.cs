@@ -69,8 +69,12 @@ namespace AF.Presentation
         public bool[] Mouth { get; }
 
         /// <summary>
-        /// Revisión de FX14: si la curva pasa por cada ancla a ≤ <see cref="RiverRibbonGraphic.CurveStopAnchorDp"/> (una parada, el
-        /// nudo de sus líneas finas) en vez de a ≤ <see cref="RiverRibbonGraphic.CurveAnchorWidths"/> anchos.
+        /// Revisión de FX14: si cada ancla es ajustada (una parada, el nudo de sus líneas finas): la curva pasa a ≤
+        /// <see cref="RiverRibbonGraphic.CurveStopAnchorDp"/> del ancla que queda tras juntar las de menos de
+        /// <see cref="RiverRibbonGraphic.CurveAnchorMergeWidths"/> anchos, en vez de a ≤
+        /// <see cref="RiverRibbonGraphic.CurveAnchorWidths"/> anchos. Esa ancla lleva el punto de la boca, si se junta con una, o el
+        /// de la primera de las que se juntan (una boya antes que la parada): entonces la holgura se mide desde ese punto, y la
+        /// parada puede quedar del eje dibujado hasta su distancia a él más esa holgura.
         /// </summary>
         public bool[] Tight { get; }
 
@@ -265,8 +269,11 @@ namespace AF.Presentation
 
         /// <summary>
         /// Revisión de FX14: con el trazo curvo, lo más que la curva pasa de un ancla ajustada (<see cref="RibbonAnchors.Tight"/>:
-        /// una parada), en dp [P]. Con <see cref="CurveAnchorWidths"/> anchos (3,6 dp a 8 dp de ancho) la parada de Tambo quedaba al
-        /// borde del agua en el fin de contenido del 700 y se leía como una parada en la orilla.
+        /// una parada), en dp [P], medido desde el punto del ancla que queda tras juntar las de menos de
+        /// <see cref="CurveAnchorMergeWidths"/> anchos: el de la parada si va sola; el de la boca (o de la boya de antes) si se junta
+        /// con una, y entonces la parada puede quedar algo más lejos (<see cref="RibbonAnchors.Tight"/>). Con
+        /// <see cref="CurveAnchorWidths"/> anchos (3,6 dp a 8 dp de ancho) la parada de Tambo quedaba al borde del agua en el fin
+        /// de contenido del 700 y se leía como una parada en la orilla.
         /// </summary>
         public const float CurveStopAnchorDp = 1f;
 
@@ -496,7 +503,9 @@ namespace AF.Presentation
         /// <summary>
         /// Con el trazo curvo (FX12), los sitios de la línea por los que la curva tiene que pasar: las bocas de los afluentes
         /// (<see cref="MouthAnchors"/>, en la punta de cada afluente) y, en el Mapa, lo que se coloca sobre la polilínea (las paradas,
-        /// las boyas y la canoa; <see cref="MergeAnchors"/>). La curva pasa a ≤ <see cref="CurveAnchorWidths"/> anchos de cada uno.
+        /// las boyas y la canoa; <see cref="MergeAnchors"/>). La curva pasa a ≤ <see cref="CurveAnchorWidths"/> anchos de cada uno
+        /// (de las ajustadas, a ≤ <see cref="CurveStopAnchorDp"/>), medidos desde el ancla que queda tras juntar las de menos de
+        /// <see cref="CurveAnchorMergeWidths"/> anchos (<see cref="RibbonAnchors.Tight"/>).
         /// El objeto es de quien llama (no se copia); <see cref="SetLine"/> lo quita.
         /// </summary>
         public void SetAnchors(RibbonAnchors? anchors)
