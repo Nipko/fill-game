@@ -2976,3 +2976,11 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 11. **Secuencia del nivel 10:** Victoria (con la Canasta) → libreta → Mapa → Inicio (como mucho 4 pantallas, ≤ 30 s). Siguen siendo pantallas aparte: el Mapa del 10, del 1.000 y del fin de contenido; «El río sigue creciendo»; banner de mundo, tarjeta previa y Fruta nueva; Sin canoas, AD_GATE y el pre-prompt de push; la libreta. El panel no es un takeover: `TakeoverQueue` aplica el orden de 06 §4.7 solo al entrar al Inicio.
 
 **Qué cambia en el GDD** (lo lleva B4/B1b): 06 §4.2, §2.3, §4.4 y §4.7; 05 §2.3 y §3 (nueva corrida [sim]); 02 §6; 08 §4.3 (`calendar`, `entitlements.frames`), §8.2 (`af_calendar_claim`) y §9 (`eco_calendar_table_v2`).
+
+### D-033, añadido del 2026-10-20: preguntas de B1a (con la regla «si tienen recomendada, vamos con esa»)
+
+- **Estado:** aplicadas por el integrador con la regla del dueño del 2026-10-19 («si tienen recomendadas vamos con esas»); el dueño puede cambiarlas.
+- **B1a-Q1:** la fusión en la nube (B8) de los campos nuevos de `daily`: `shield_available` por AND, `streak_hits` por unión y `streak_seeds` por máximo.
+- **B1a-Q2:** un cambio que solo toca `streak` actualiza `economy_ts`.
+- **Q-C2:** el Reto del río no lleva la Cosecha doble gratis del río crecido (se apoya en 06 §4.3, frente a una lectura literal de 04 §2.8); se anota en 04 §2.8.
+- Las Q-C1-Q-C14 [P] de `docs/dev/crecida-canasta.md` §7 quedan con su (a), como las implementó B1a.
