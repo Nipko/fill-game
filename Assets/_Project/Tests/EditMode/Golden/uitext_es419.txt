@@ -219,6 +219,7 @@ UiText.TutorialTinaja	La tinaja no deja ver: solo ves la fruta de arriba, y la d
 UiText.TutorialTinajaScoop	Saca el agua con su cuia chica:\nle caben dos dosis.
 UiText.TutorialTinajaTip	Si sacas dos veces, la primera dosis queda debajo.
 UiText.Undo	Deshacer
+UiText.VictoryPerfect	¡Perfecto!
 UiText.WorldSeparator	 · 
 WorldBanner(1)	Mundo 1: Estuario · Brasil (Pará) · Amazonas / Tocantins
 WorldBanner(10)	Mundo 10: Alto Negro · Venezuela / Brasil · Negro, Casiquiare

@@ -1212,6 +1212,7 @@ namespace AF.UI
                 _doubleSub.text = UiText.DoubleHarvestGain(flow.HarvestBase);
             }
 
+            VictoryTitleShown(flow); // «¡Perfecto!» o el de siempre (DC14), antes de que LayoutVictory mida el título
             LayoutVictory();
             StartHarvestCount(0, flow.HarvestSeeds, HarvestCountDelayMs);
             ShiftBoard(ShiftToClear(_victoryPanelY - RibbonRiseDp, 8f), true);
