@@ -1,0 +1,1544 @@
+diff --git a/Packages/com.amazonfill.core/Runtime/AF.Core/Session/LevelSession.cs b/Packages/com.amazonfill.core/Runtime/AF.Core/Session/LevelSession.cs
+index af5a3e5..4eec42e 100644
+--- a/Packages/com.amazonfill.core/Runtime/AF.Core/Session/LevelSession.cs
++++ b/Packages/com.amazonfill.core/Runtime/AF.Core/Session/LevelSession.cs
+@@ -158,7 +158,7 @@ public int RevealedLayers(int cuia)
+         /// <summary>
+         /// Vertido <paramref name="index"/> del historial, del primero (0) al último (<c>AppliedPours − 1</c>).
+         /// Rehacerlos desde <see cref="Initial"/> con el mismo <see cref="PourMode"/> reconstruye <see cref="Current"/>
+-        /// (02 R8).
++        /// (02 R8), salvo tras una Pororoca (<see cref="ApplyShuffle"/>), que vacía el historial y cambia el tablero.
+         /// </summary>
+         public Pour GetAppliedPour(int index)
+         {
+@@ -291,6 +291,62 @@ public int RevealAll()
+             return total;
+         }
+ 
++        /// <summary>
++        /// Pororoca (04 §2.4; 02 §14 «Vacía el historial de Marea (nuevo tablero); conserva stock»): revela todas las dosis
++        /// ocultas del nivel (<see cref="RevealAll"/>, 04 §2.4 a) y pone <paramref name="shuffled"/> como tablero actual, con el
++        /// historial de Marea vacío. <see cref="Initial"/> no cambia: Volver a la orilla vuelve al tablero del nivel (misma
++        /// semilla, 04 §2.7) con lo revelado visible (I5) [P]. Recalcula <see cref="Status"/>. El barajado, los topes y el cobro
++        /// son de otras capas (AF.Solver y el cliente). False, sin cambiar nada, si la partida no está en
++        /// <see cref="LevelStatus.Playing"/> (04 §2.4: no se usa en el bloqueo).
++        /// </summary>
++        /// <remarks>
++        /// Tras una Pororoca, <see cref="Current"/> ya no sale de rehacer el historial desde <see cref="Initial"/>: quien guarde la
++        /// partida (02 R8) anota el punto de la ola y la vuelve a dar al rehacer (el barajado es determinista).
++        /// </remarks>
++        /// <exception cref="ArgumentException"><paramref name="shuffled"/> no es un barajado de este tablero: otro número de
++        /// cuias, otra capacidad en alguna, otro <c>U_c</c> o dosis ocultas.</exception>
++        public bool ApplyShuffle(BoardState shuffled)
++        {
++            if (shuffled == null)
++            {
++                throw new ArgumentNullException(nameof(shuffled));
++            }
++
++            BoardState current = Current;
++            if (shuffled.Count != current.Count || shuffled.HasHidden)
++            {
++                throw new ArgumentException("La Pororoca conserva las cuias y deja todo revelado (04 §2.4).", nameof(shuffled));
++            }
++
++            for (int i = 0; i < current.Count; i++)
++            {
++                if (shuffled.CuiaAt(i).Capacity != current.CuiaAt(i).Capacity)
++                {
++                    throw new ArgumentException("La Pororoca conserva la capacidad de cada cuia (04 §2.4).", nameof(shuffled));
++                }
++            }
++
++            for (int color = Cuia.MinColor; color <= Cuia.MaxColor; color++)
++            {
++                if (shuffled.UnitsTable[color] != current.UnitsTable[color])
++                {
++                    throw new ArgumentException("La Pororoca conserva los colores (04 §2.4: U_c no cambia).", nameof(shuffled));
++                }
++            }
++
++            if (Status != LevelStatus.Playing)
++            {
++                return false;
++            }
++
++            RevealAll();
++            _previous.Clear();
++            _pours.Clear();
++            Current = shuffled;
++            Status = Evaluate(shuffled);
++            return true;
++        }
++
+         /// <summary>
+         /// Restaura capas ya reveladas de la cuia <paramref name="cuia"/> (02 R8: la máscara de revelado es parte del estado
+         /// persistente; 02 T6): hace OR de <paramref name="layers"/> (bit k = la dosis oculta inicial <c>[cuia, k]</c>) en
+diff --git a/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle.meta b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle.meta
+new file mode 100644
+index 0000000..9d6d93c
+--- /dev/null
++++ b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle.meta
+@@ -0,0 +1,8 @@
++fileFormatVersion: 2
++guid: 61b7afba2d6755641b2dd011077ee3fd
++folderAsset: yes
++DefaultImporter:
++  externalObjects: {}
++  userData: 
++  assetBundleName: 
++  assetBundleVariant: 
+diff --git a/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/ShuffleOptions.cs b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/ShuffleOptions.cs
+new file mode 100644
+index 0000000..e8c7256
+--- /dev/null
++++ b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/ShuffleOptions.cs
+@@ -0,0 +1,118 @@
++#nullable enable
++using System;
++using AF.Core.Rules;
++
++namespace AF.Solver.Shuffle
++{
++    /// <summary>
++    /// Parámetros de la Pororoca · Barajar (GDD 04 §2.4; 03 §16 y la tabla de usos del solver de 03 §5; 08 §9): la holgura del
++    /// par (<c>shuffle_par_slack</c> = 2), el presupuesto del A* de verificación (<c>shuffle_budget_nodes</c> = 40.000) con
++    /// <c>w</c> = 2, los intentos de reconstrucción inversa (20) y los de «Permutar + verificar» [P], el kill-switch de los
++    /// fútiles y el modo de vertido. Los valores del cliente vienen de Remote Config (08 §9): aquí solo están sus defaults, para
++    /// los tests y las herramientas.
++    /// </summary>
++    /// <remarks><c>default(ShuffleOptions)</c> no es válido: usa el constructor o <see cref="Default"/>.</remarks>
++    public readonly struct ShuffleOptions
++    {
++        /// <summary><c>shuffle_par_slack</c> (08 §9: 2, rango 1-3): par nuevo ≤ par actual + holgura.</summary>
++        public const int DefaultParSlack = 2;
++
++        /// <summary><c>shuffle_budget_nodes</c> (08 §9: 40.000; 03 §5, «Pororoca (verificación del par tras barajar)»).</summary>
++        public const int DefaultBudgetNodes = 40000;
++
++        /// <summary>Peso del A* de verificación (03 §5: w = 2, como Morpho).</summary>
++        public const int DefaultWeight = 2;
++
++        /// <summary>Intentos de reconstrucción inversa antes de Permutar (04 §2.4: «si en 20 intentos no se cumple»).</summary>
++        public const int DefaultInverseAttempts = 20;
++
++        /// <summary>
++        /// Intentos de «Permutar + verificar» [P]: 04 §2.4 no los cuenta; se usan los mismos 20 que la reconstrucción
++        /// (<c>docs/dev/pororoca.md</c>, P-2).
++        /// </summary>
++        public const int DefaultPermuteAttempts = 20;
++
++        /// <summary>Movimientos inversos mínimos (03 §16 y 04 §2.4: k = max(12, 3 × colores restantes)).</summary>
++        public const int MinInverseMoves = 12;
++
++        /// <summary>Movimientos inversos por color restante (k = max(12, 3 × colores restantes)).</summary>
++        public const int InverseMovesPerColor = 3;
++
++        /// <summary>Crea unas opciones.</summary>
++        /// <param name="parSlack">Holgura del par (≥ 0; 08 §9: 1-3).</param>
++        /// <param name="budgetNodes">Estados expandidos de cada A* de verificación (≥ 1).</param>
++        /// <param name="weight">Peso del A* (1-16).</param>
++        /// <param name="futileRuleEnabled">Valor de <c>futile_rule_enabled</c> (02 R16): el A* excluye los fútiles.</param>
++        /// <param name="pourMode">Modo de vertido de la partida (<c>rules_pour_mode</c>; D-005: <c>run</c>).</param>
++        /// <param name="inverseAttempts">Intentos de reconstrucción inversa (≥ 0).</param>
++        /// <param name="permuteAttempts">Intentos de Permutar + verificar (≥ 0).</param>
++        public ShuffleOptions(
++            int parSlack,
++            int budgetNodes,
++            int weight = DefaultWeight,
++            bool futileRuleEnabled = true,
++            PourMode pourMode = PourMode.Run,
++            int inverseAttempts = DefaultInverseAttempts,
++            int permuteAttempts = DefaultPermuteAttempts)
++        {
++            if (parSlack < 0)
++            {
++                throw new ArgumentOutOfRangeException(nameof(parSlack), parSlack, "La holgura del par no puede ser negativa.");
++            }
++
++            if (budgetNodes < 1)
++            {
++                throw new ArgumentOutOfRangeException(nameof(budgetNodes), budgetNodes, "El presupuesto debe ser al menos 1.");
++            }
++
++            if (weight < 1 || weight > Search.SolverOptions.MaxWeight)
++            {
++                throw new ArgumentOutOfRangeException(nameof(weight), weight, "El peso va de 1 a 16.");
++            }
++
++            if (!PourModes.IsDefined(pourMode))
++            {
++                throw new ArgumentOutOfRangeException(nameof(pourMode), pourMode, "Modo de vertido desconocido: Single o Run.");
++            }
++
++            if (inverseAttempts < 0 || permuteAttempts < 0)
++            {
++                throw new ArgumentOutOfRangeException(nameof(inverseAttempts), inverseAttempts, "Los intentos no pueden ser negativos.");
++            }
++
++            ParSlack = parSlack;
++            BudgetNodes = budgetNodes;
++            Weight = weight;
++            FutileRuleEnabled = futileRuleEnabled;
++            PourMode = pourMode;
++            InverseAttempts = inverseAttempts;
++            PermuteAttempts = permuteAttempts;
++        }
++
++        /// <summary>Los defaults de 08 §9 y 04 §2.4, en <c>run</c> y con la regla de fútiles.</summary>
++        public static ShuffleOptions Default => new ShuffleOptions(DefaultParSlack, DefaultBudgetNodes);
++
++        /// <summary>Holgura del par.</summary>
++        public int ParSlack { get; }
++
++        /// <summary>Presupuesto de cada A*.</summary>
++        public int BudgetNodes { get; }
++
++        /// <summary>Peso del A*.</summary>
++        public int Weight { get; }
++
++        /// <summary>Si el A* excluye los vertidos fútiles.</summary>
++        public bool FutileRuleEnabled { get; }
++
++        /// <summary>Modo de vertido.</summary>
++        public PourMode PourMode { get; }
++
++        /// <summary>Intentos de reconstrucción inversa.</summary>
++        public int InverseAttempts { get; }
++
++        /// <summary>Intentos de Permutar + verificar.</summary>
++        public int PermuteAttempts { get; }
++
++        internal bool IsValid => BudgetNodes >= 1 && Weight >= 1 && PourModes.IsDefined(PourMode);
++    }
++}
+diff --git a/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/ShuffleOptions.cs.meta b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/ShuffleOptions.cs.meta
+new file mode 100644
+index 0000000..558ff0d
+--- /dev/null
++++ b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/ShuffleOptions.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 73e9622b6cdfd6641ab9654d2376dd44
+\ No newline at end of file
+diff --git a/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/ShuffleResult.cs b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/ShuffleResult.cs
+new file mode 100644
+index 0000000..1b06e59
+--- /dev/null
++++ b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/ShuffleResult.cs
+@@ -0,0 +1,85 @@
++#nullable enable
++using AF.Core.Board;
++
++namespace AF.Solver.Shuffle
++{
++    /// <summary>
++    /// Cómo salió el tablero de la Pororoca: el parámetro <c>method</c> de <c>af_shuffle_result</c> (04 §11: <c>inverse</c>,
++    /// <c>permute</c> o <c>failed</c>).
++    /// </summary>
++    public enum ShuffleMethod
++    {
++        /// <summary>Reconstrucción inversa verificada (04 §2.4, primer camino).</summary>
++        Inverse = 0,
++
++        /// <summary>Permutar + verificar (04 §2.4, respaldo tras 20 intentos inversos).</summary>
++        Permute = 1,
++
++        /// <summary>Ningún camino dio un tablero válido: «La ola no pudo remover el río» y no se cobra (04 §2.4).</summary>
++        Failed = 2,
++    }
++
++    /// <summary>Por qué la Pororoca no se puede usar en un tablero, antes de barajar (04 §2.4 b y d).</summary>
++    public enum ShuffleBlock
++    {
++        /// <summary>Se puede barajar.</summary>
++        None = 0,
++
++        /// <summary>El tablero lleva Lluvia o Piraña, con estado temporal: la Pororoca se deshabilita (04 §2.4 d; D-007) [P].</summary>
++        TemporalMechanic = 1,
++
++        /// <summary>Quedan menos de 2 colores movibles: «Hay poca agua libre para la ola» (04 §2.4 b).</summary>
++        LowWater = 2,
++
++        /// <summary>
++        /// Hay dosis ocultas y <c>shuffle_reveals_murky</c> está apagado: la ola no puede revelar y la reconstrucción no puede
++        /// garantizar el vertido seguro (04 §2.4 a; 02 T6) [P].
++        /// </summary>
++        HiddenWithoutReveal = 3,
++    }
++
++    /// <summary>
++    /// Resultado de <see cref="Shuffler.Shuffle"/> (04 §2.4 y §11): el tablero nuevo, el método, el par antes y después
++    /// (<c>par_before</c>, <c>par_after</c>) y los intentos (<c>tries</c>).
++    /// </summary>
++    public readonly struct ShuffleResult
++    {
++        internal ShuffleResult(ShuffleMethod method, ShuffleBlock block, BoardState? board, int parBefore, int parAfter, int tries, int revealed)
++        {
++            Method = method;
++            Block = block;
++            Board = board;
++            ParBefore = parBefore;
++            ParAfter = parAfter;
++            Tries = tries;
++            Revealed = revealed;
++        }
++
++        /// <summary>Método (<c>af_shuffle_result.method</c>).</summary>
++        public ShuffleMethod Method { get; }
++
++        /// <summary>Si no se barajó porque el tablero no lo admite (<see cref="ShuffleBlock.None"/> en otro caso).</summary>
++        public ShuffleBlock Block { get; }
++
++        /// <summary>
++        /// Tablero barajado, sin dosis ocultas (la ola las revela, 04 §2.4 a), o null si falló. Las cuias fijas son las del
++        /// tablero de partida (reveladas) y las movibles conservan su capacidad, su mecánica y su número de dosis vacías.
++        /// </summary>
++        public BoardState? Board { get; }
++
++        /// <summary>Longitud de la solución del A* (w = 2) desde el tablero de partida; −1 si no la encontró en el presupuesto.</summary>
++        public int ParBefore { get; }
++
++        /// <summary>Longitud de la solución del A* desde el tablero barajado; −1 si falló.</summary>
++        public int ParAfter { get; }
++
++        /// <summary>Intentos usados: inversos más permutaciones (<c>af_shuffle_result.tries</c>).</summary>
++        public int Tries { get; }
++
++        /// <summary>Dosis ocultas que tenía el tablero de partida (las que la ola revela: <c>revealed_murky</c>).</summary>
++        public int Revealed { get; }
++
++        /// <summary>Hay tablero nuevo.</summary>
++        public bool Succeeded => Board != null;
++    }
++}
+diff --git a/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/ShuffleResult.cs.meta b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/ShuffleResult.cs.meta
+new file mode 100644
+index 0000000..3e1a1bd
+--- /dev/null
++++ b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/ShuffleResult.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: c80d8395b585c314dbb84ab0e6216fe5
+\ No newline at end of file
+diff --git a/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/Shuffler.cs b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/Shuffler.cs
+new file mode 100644
+index 0000000..8760d0a
+--- /dev/null
++++ b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/Shuffler.cs
+@@ -0,0 +1,623 @@
++#nullable enable
++using System;
++using AF.Core.Board;
++using AF.Core.Determinism;
++using AF.Core.Mechanics;
++using AF.Core.Rules;
++using AF.Solver.Collections;
++using AF.Solver.Generation;
++using AF.Solver.Search;
++
++namespace AF.Solver.Shuffle
++{
++    /// <summary>
++    /// Pororoca · Barajar (GDD 04 §2.4; 03 §16; 03 §5, tabla de usos del solver; research/02 Complemento 4.4 [E]): baraja las
++    /// cuias no fijas conservando colores, número de vacíos y capacidades por cuia, y comprueba con un A* acotado que el par
++    /// nuevo no pasa del actual más la holgura (<c>shuffle_par_slack</c> = 2).
++    /// </summary>
++    /// <remarks>
++    /// <list type="number">
++    /// <item><description><b>La ola revela</b> (04 §2.4 a, g; 02 T6): se trabaja sobre el tablero con todas sus dosis ocultas
++    /// visibles (Aguas turbias y la Tinaja), así que el tablero devuelto no tiene ocultas. Quien llama decide si se puede revelar
++    /// (<c>shuffle_reveals_murky</c>): <see cref="Check"/>.</description></item>
++    /// <item><description><b>Cuias fijas</b> (04 §2.4 y b, g): las selladas (R5), las que llevan Barro y las que aún tienen una
++    /// mecánica (Hoja o Brote cerrados, Liana atada, Matapi con su contenido, Flor cerrada, Hoja atada [P], la Tinaja y su cuia
++    /// colgada); se tratan como selladas. Una mecánica que ya se abrió o se soltó deja la cuia normal (02 R16 para D-007), así que
++    /// entra en la ola; la cuia suelta de la tinaja también (como Cuia chica normal). El Remolino participa normalmente (04
++    /// §2.4 c): sus dos cuias conservan la pareja. La Cuia extra se conserva como vacío (e).</description></item>
++    /// <item><description><b>Reconstrucción inversa</b> (03 §16): las dosis de las cuias movibles forman un estado resuelto
++    /// parcial (cada color reunido en la cuia movible más pequeña que lo aloja, del color con más dosis al de menos y, a
++    /// igualdad, del de id menor) sobre el que se dan hasta k = max(12, 3 × colores movibles) movimientos inversos legales
++    /// (<see cref="InverseMoves"/>, los mismos del generador, que nunca vuelcan una monocolor entera en una vacía) al azar entre
++    /// los no visitados, y se toma el estado válido más profundo del paseo [P]: los mismos vacíos que ahora, ninguna cuia movible
++    /// llena y monocolor (sellada o no; 04 §2.4) y distinto del tablero actual (03 §16). Las mecánicas de las cuias movibles (el
++    /// Remolino) no entran en el paseo, que se da sobre cuias normales de la misma capacidad: el A* las verifica después con
++    /// las reglas completas del núcleo.</description></item>
++    /// <item><description><b>Verificación</b> (04 §2.4; 03 §5): A* con <c>shuffle_budget_nodes</c> (40.000) y w = 2 sobre el
++    /// tablero entero, con las reglas de <see cref="BoardRules"/> y sin poda de fútiles si hay Tinaja
++    /// (<see cref="SolverOptions.ForLevel"/>); el tablero vale si resuelve y su longitud es ≤ la del tablero de partida más la
++    /// holgura. Si el A* no resuelve el tablero de partida dentro del presupuesto (par desconocido), basta con que resuelva el
++    /// nuevo [P].</description></item>
++    /// <item><description><b>Respaldo</b> (04 §2.4): tras <see cref="ShuffleOptions.InverseAttempts"/> intentos inversos (o si
++    /// los colores movibles no caben en un estado resuelto), Permutar + verificar: las dosis movibles se barajan (Fisher-Yates)
++    /// y se reparten en las mismas cuias con el mismo número de dosis cada una, hasta
++    /// <see cref="ShuffleOptions.PermuteAttempts"/> veces, con los mismos filtros y la misma verificación. Si nada sale,
++    /// <see cref="ShuffleMethod.Failed"/>.</description></item>
++    /// </list>
++    /// <para><b>Determinismo:</b> solo enteros y el PRNG del núcleo. El intento inverso <c>t</c> (1..20) usa
++    /// <c>Prng.SubSeed(semilla, 0x5A0F0000 + t)</c> y la permutación <c>t</c>, <c>Prng.SubSeed(semilla, 0x5A0F1000 + t)</c>; la
++    /// semilla de una partida sale de <see cref="SeedFor"/>.</para>
++    /// <para><b>Sin asignaciones</b> en el bucle (regla dura 2): búferes propios que solo crecen y el A* por su ruta sin solución
++    /// (<c>SolveLength</c>). Solo se asigna el <see cref="BoardState"/> del resultado. No es seguro entre hilos: una instancia
++    /// por hilo.</para>
++    /// </remarks>
++    public sealed class Shuffler
++    {
++        private const ulong InverseStream = 0x5A0F0000UL;
++        private const ulong PermuteStream = 0x5A0F1000UL;
++        private const int Width = BoardState.MaxCuias;
++
++        private readonly Prng _rng = new Prng(0UL);
++        private readonly AStarSolver _solver;
++        private readonly int[] _units = new int[CuiaRules.UnitsTableLength];
++        private readonly int[] _colorDoses = new int[CuiaRules.UnitsTableLength];
++        private readonly int[] _colorOrder = new int[CuiaRules.UnitsTableLength];
++        private readonly Cuia[] _board = new Cuia[Width];
++        private readonly Cuia[] _candidate = new Cuia[Width];
++        private readonly int[] _movable = new int[Width];
++        private readonly bool[] _used = new bool[Width];
++        private readonly Cuia[] _current = new Cuia[Width];
++        private readonly Cuia[] _currentCanon = new Cuia[Width];
++        private readonly Cuia[] _resolved = new Cuia[Width];
++        private readonly Cuia[] _sub = new Cuia[Width];
++        private readonly Cuia[] _best = new Cuia[Width];
++        private readonly Cuia[] _scratch = new Cuia[Width];
++        private readonly Cuia[] _pair = new Cuia[2];
++        private readonly InverseMove[] _moves = new InverseMove[InverseMoves.MaxMoves];
++        private readonly int[] _candidates = new int[InverseMoves.MaxMoves];
++        private readonly int[] _doses = new int[Width * Cuia.MaxCapacity];
++        private readonly StateSet _visited = new StateSet(128);
++
++        private int _width;
++        private int _movableCount;
++        private int _empties;
++        private int _parBefore;
++        private int _parAfter;
++        private int _tries;
++
++        /// <summary>Crea un barajador con su propio A* (espacio inicial para 4.096 estados; crece solo).</summary>
++        public Shuffler()
++        {
++            _solver = new AStarSolver();
++        }
++
++        /// <summary>
++        /// Semilla de la ola (determinista, sin reloj): la del nivel (<paramref name="levelSeed"/>, p. ej.
++        /// <c>amazonfill:v1:m02:v1:n0030</c>) con el hash canónico del tablero <b>revelado</b> y el ordinal de la Pororoca en el
++        /// nivel. Así, rehacer el historial guardado (02 R8) vuelve a dar la misma ola aunque las capas que se vieron se restauren
++        /// después, y dos Pororocas del mismo nivel sobre el mismo tablero no dan lo mismo. Asigna (no es del bucle caliente).
++        /// </summary>
++        public static ulong SeedFor(string levelSeed, BoardState board, int ordinal)
++        {
++            if (levelSeed == null)
++            {
++                throw new ArgumentNullException(nameof(levelSeed));
++            }
++
++            if (board == null)
++            {
++                throw new ArgumentNullException(nameof(board));
++            }
++
++            var revealed = new Cuia[board.Count];
++            for (int i = 0; i < revealed.Length; i++)
++            {
++                Cuia cuia = board[i];
++                revealed[i] = cuia.WithRevealed(cuia.HiddenMask);
++            }
++
++            BoardCanon.Sort(revealed, 0, revealed.Length);
++            ulong hash = BoardCanon.Hash(revealed, 0, revealed.Length);
++            return Prng.SubSeed(Prng.SeedFrom(levelSeed), unchecked(hash + (ulong)ordinal));
++        }
++
++        /// <summary>
++        /// Si la ola se puede usar en <paramref name="board"/> (04 §2.4 b, d y a): con Lluvia o Piraña, nunca; con menos de 2 colores
++        /// movibles, tampoco («Hay poca agua libre para la ola»); con dosis ocultas, solo si <paramref name="revealsHidden"/>
++        /// (<c>shuffle_reveals_murky</c>). No mira el estado de la partida (bloqueo, victoria) ni los topes: eso es del cliente.
++        /// </summary>
++        public static ShuffleBlock Check(BoardState board, bool revealsHidden)
++        {
++            if (board == null)
++            {
++                throw new ArgumentNullException(nameof(board));
++            }
++
++            if (HasTemporalMechanic(board))
++            {
++                return ShuffleBlock.TemporalMechanic;
++            }
++
++            if (board.HasHidden && !revealsHidden)
++            {
++                return ShuffleBlock.HiddenWithoutReveal;
++            }
++
++            return MovableColors(board) < 2 ? ShuffleBlock.LowWater : ShuffleBlock.None;
++        }
++
++        /// <summary>El tablero lleva una mecánica con estado temporal (Lluvia o Piraña, 04 §2.4 d).</summary>
++        public static bool HasTemporalMechanic(BoardState board)
++        {
++            if (board == null)
++            {
++                throw new ArgumentNullException(nameof(board));
++            }
++
++            for (int i = 0; i < board.Count; i++)
++            {
++                MechanicType type = board[i].Mechanic;
++                if (type == MechanicType.Lluvia || type == MechanicType.Pirana)
++                {
++                    return true;
++                }
++            }
++
++            return false;
++        }
++
++        /// <summary>
++        /// La cuia <paramref name="index"/> queda fija con la ola (04 §2.4 y b, g): sellada, con Barro o con una mecánica que no
++        /// sea el Remolino. Mira la cuia con sus ocultas reveladas.
++        /// </summary>
++        public static bool IsFixed(BoardState board, int index)
++        {
++            if (board == null)
++            {
++                throw new ArgumentNullException(nameof(board));
++            }
++
++            Cuia cuia = board[index];
++            return IsFixedCuia(cuia.WithRevealed(cuia.HiddenMask), board.UnitsTable);
++        }
++
++        /// <summary>Colores distintos con alguna dosis en las cuias movibles (04 §2.4 b: «si quedan &lt;2 colores movibles»).</summary>
++        public static int MovableColors(BoardState board)
++        {
++            if (board == null)
++            {
++                throw new ArgumentNullException(nameof(board));
++            }
++
++            int seen = 0;
++            int[] units = board.UnitsTable;
++            for (int i = 0; i < board.Count; i++)
++            {
++                Cuia cuia = board[i];
++                cuia = cuia.WithRevealed(cuia.HiddenMask);
++                if (IsFixedCuia(cuia, units))
++                {
++                    continue;
++                }
++
++                for (int k = 0; k < cuia.Count; k++)
++                {
++                    seen |= 1 << cuia.ColorAt(k);
++                }
++            }
++
++            int colors = 0;
++            for (; seen != 0; seen &= seen - 1)
++            {
++                colors++;
++            }
++
++            return colors;
++        }
++
++        /// <summary>
++        /// Baraja <paramref name="current"/> con la semilla <paramref name="seed"/> (<see cref="SeedFor"/>). Con
++        /// <see cref="ShuffleMethod.Failed"/> no hay tablero (y quien llama no cobra: 04 §2.4). No mira los topes ni el estado de
++        /// la partida.
++        /// </summary>
++        /// <exception cref="ArgumentException"><paramref name="options"/> es <c>default</c>.</exception>
++        public ShuffleResult Shuffle(BoardState current, ulong seed, ShuffleOptions options)
++        {
++            if (current == null)
++            {
++                throw new ArgumentNullException(nameof(current));
++            }
++
++            if (!options.IsValid)
++            {
++                throw new ArgumentException("Opciones no válidas: usa el constructor de ShuffleOptions o ShuffleOptions.Default.", nameof(options));
++            }
++
++            int revealed = current.HiddenCount;
++            ShuffleBlock block = HasTemporalMechanic(current) ? ShuffleBlock.TemporalMechanic : ShuffleBlock.None;
++            if (block != ShuffleBlock.None)
++            {
++                return new ShuffleResult(ShuffleMethod.Failed, block, null, -1, -1, 0, revealed);
++            }
++
++            ShuffleMethod method = ShuffleInto(current, seed, options, out block);
++            if (method == ShuffleMethod.Failed)
++            {
++                return new ShuffleResult(method, block, null, _parBefore, -1, _tries, revealed);
++            }
++
++            var cuias = new Cuia[_width];
++            Array.Copy(_candidate, cuias, _width);
++            return new ShuffleResult(method, ShuffleBlock.None, new BoardState(cuias), _parBefore, _parAfter, _tries, revealed);
++        }
++
++        /// <summary>
++        /// El barajado sin el resultado: deja el tablero nuevo en <see cref="_candidate"/> (las <see cref="_width"/> primeras) y
++        /// el par y los intentos en sus campos. No asigna memoria una vez calentado (lo miden los tests del bucle caliente).
++        /// </summary>
++        internal ShuffleMethod ShuffleInto(BoardState current, ulong seed, ShuffleOptions options, out ShuffleBlock block)
++        {
++            _tries = 0;
++            _parBefore = -1;
++            _parAfter = -1;
++            block = ShuffleBlock.None;
++            Load(current);
++            int colors = MovableColorsLoaded();
++            if (colors < 2)
++            {
++                block = ShuffleBlock.LowWater;
++                return ShuffleMethod.Failed;
++            }
++
++            SolverOptions solve = new SolverOptions(options.BudgetNodes, options.Weight, options.FutileRuleEnabled, options.PourMode).ForLevel(current);
++            _parBefore = Solve(_board, solve);
++            int moves = Math.Max(ShuffleOptions.MinInverseMoves, ShuffleOptions.InverseMovesPerColor * colors);
++            if (BuildResolved())
++            {
++                for (int t = 1; t <= options.InverseAttempts; t++)
++                {
++                    _tries++;
++                    _rng.Reseed(Prng.SubSeed(seed, InverseStream + (ulong)t));
++                    if (Walk(moves, options.PourMode) && Verify(solve, options.ParSlack))
++                    {
++                        return ShuffleMethod.Inverse;
++                    }
++                }
++            }
++
++            for (int t = 1; t <= options.PermuteAttempts; t++)
++            {
++                _tries++;
++                _rng.Reseed(Prng.SubSeed(seed, PermuteStream + (ulong)t));
++                if (Permute() && Verify(solve, options.ParSlack))
++                {
++                    return ShuffleMethod.Permute;
++                }
++            }
++
++            return ShuffleMethod.Failed;
++        }
++
++        private static bool IsFixedCuia(Cuia cuia, int[] units)
++        {
++            if (cuia.HasMechanic && cuia.Mechanic != MechanicType.Remolino)
++            {
++                return true;
++            }
++
++            if (CuiaRules.IsSealed(cuia, units))
++            {
++                return true;
++            }
++
++            for (int k = 0; k < cuia.Count; k++)
++            {
++                if (cuia.ColorAt(k) == Cuia.MudColor)
++                {
++                    return true;
++                }
++            }
++
++            return false;
++        }
++
++        // Cuia normal de la misma capacidad y las mismas dosis (sin mecánica): la del paseo inverso.
++        private static Cuia Plain(Cuia cuia)
++        {
++            Cuia plain = Cuia.Empty(cuia.Capacity);
++            for (int k = 0; k < cuia.Count; k++)
++            {
++                plain = plain.AddOnTop(cuia.ColorAt(k), 1);
++            }
++
++            return plain;
++        }
++
++        // Las dosis de content sobre la cuia shape vaciada (conserva su capacidad y su mecánica: el Remolino y su pareja).
++        private static Cuia Refill(Cuia shape, Cuia content)
++        {
++            Cuia cuia = shape.Count > 0 ? shape.RemoveTop(shape.Count) : shape;
++            for (int k = 0; k < content.Count; k++)
++            {
++                cuia = cuia.AddOnTop(content.ColorAt(k), 1);
++            }
++
++            return cuia;
++        }
++
++        // El tablero revelado, U_c, las cuias movibles (en orden de pantalla) con su contenido normal y su forma canónica, los
++        // vacíos movibles y las dosis movibles por color.
++        private void Load(BoardState current)
++        {
++            _width = current.Count;
++            Array.Copy(current.UnitsTable, _units, CuiaRules.UnitsTableLength);
++            Array.Clear(_colorDoses, 0, _colorDoses.Length);
++            _movableCount = 0;
++            _empties = 0;
++            for (int i = 0; i < _width; i++)
++            {
++                Cuia cuia = current.CuiaAt(i);
++                cuia = cuia.WithRevealed(cuia.HiddenMask);
++                _board[i] = cuia;
++                if (IsFixedCuia(cuia, _units))
++                {
++                    continue;
++                }
++
++                int j = _movableCount++;
++                _movable[j] = i;
++                _current[j] = Plain(cuia);
++                _empties += cuia.IsEmpty ? 1 : 0;
++                for (int k = 0; k < cuia.Count; k++)
++                {
++                    _colorDoses[cuia.ColorAt(k)]++;
++                }
++            }
++
++            Array.Copy(_current, _currentCanon, _movableCount);
++            BoardCanon.Sort(_currentCanon, 0, _movableCount);
++        }
++
++        private int MovableColorsLoaded()
++        {
++            int colors = 0;
++            for (int c = Cuia.MinColor; c <= Cuia.MaxColor; c++)
++            {
++                colors += _colorDoses[c] > 0 ? 1 : 0;
++            }
++
++            return colors;
++        }
++
++        // Estado resuelto parcial (03 §16): cada color en la cuia movible libre más pequeña que lo aloja, del color con más
++        // dosis al de menos (a igualdad, el de id menor), y en la misma cuia a igualdad de capacidad la de índice menor. False si
++        // algún color no cabe en ninguna (entonces solo queda Permutar).
++        private bool BuildResolved()
++        {
++            int n = 0;
++            for (int c = Cuia.MinColor; c <= Cuia.MaxColor; c++)
++            {
++                if (_colorDoses[c] == 0)
++                {
++                    continue;
++                }
++
++                int at = n++;
++                while (at > 0 && Before(c, _colorOrder[at - 1]))
++                {
++                    _colorOrder[at] = _colorOrder[at - 1];
++                    at--;
++                }
++
++                _colorOrder[at] = c;
++            }
++
++            for (int j = 0; j < _movableCount; j++)
++            {
++                _used[j] = false;
++                _resolved[j] = Cuia.Empty(_current[j].Capacity);
++            }
++
++            for (int o = 0; o < n; o++)
++            {
++                int color = _colorOrder[o];
++                int doses = _colorDoses[color];
++                int pick = -1;
++                for (int j = 0; j < _movableCount; j++)
++                {
++                    int cap = _resolved[j].Capacity;
++                    if (!_used[j] && cap >= doses && (pick < 0 || cap < _resolved[pick].Capacity))
++                    {
++                        pick = j;
++                    }
++                }
++
++                if (pick < 0)
++                {
++                    return false;
++                }
++
++                _used[pick] = true;
++                _resolved[pick] = _resolved[pick].AddOnTop(color, doses);
++            }
++
++            return true;
++        }
++
++        private bool Before(int a, int b)
++        {
++            return _colorDoses[a] > _colorDoses[b] || (_colorDoses[a] == _colorDoses[b] && a < b);
++        }
++
++        // Paseo inverso de hasta moves pasos desde el estado resuelto, al azar entre los movimientos no visitados; deja en
++        // _candidate el tablero entero del estado válido más profundo. False si el paseo no pasó por ninguno.
++        private bool Walk(int moves, PourMode mode)
++        {
++            int m = _movableCount;
++            Array.Copy(_resolved, _sub, m);
++            _visited.Reset(m);
++            AddVisited(_sub);
++            int bestDepth = 0;
++            for (int step = 0; step < moves; step++)
++            {
++                int count = InverseMoves.Collect(_sub, 0, m, _units, mode, _moves, _pair);
++                int open = 0;
++                for (int k = 0; k < count; k++)
++                {
++                    Array.Copy(_sub, _scratch, m);
++                    InverseMoves.Apply(_scratch, 0, _moves[k]);
++                    BoardCanon.Sort(_scratch, 0, m);
++                    if (!_visited.Contains(_scratch, 0, BoardCanon.Hash(_scratch, 0, m)))
++                    {
++                        _candidates[open++] = k;
++                    }
++                }
++
++                if (open == 0)
++                {
++                    break; // el paseo muere (03 §1, hecho 3)
++                }
++
++                InverseMoves.Apply(_sub, 0, _moves[_candidates[_rng.NextInt(open)]]);
++                AddVisited(_sub);
++                if (IsValidSub(_sub))
++                {
++                    Array.Copy(_sub, _best, m);
++                    bestDepth = step + 1;
++                }
++            }
++
++            if (bestDepth == 0)
++            {
++                return false;
++            }
++
++            Compose(_best);
++            return true;
++        }
++
++        // Permutar (04 §2.4): las dosis movibles barajadas (Fisher-Yates) y repartidas en las mismas cuias, con el mismo número
++        // de dosis cada una; deja el tablero en _candidate si pasa los filtros.
++        private bool Permute()
++        {
++            int m = _movableCount;
++            int total = 0;
++            for (int j = 0; j < m; j++)
++            {
++                Cuia cuia = _current[j];
++                for (int k = 0; k < cuia.Count; k++)
++                {
++                    _doses[total++] = cuia.ColorAt(k);
++                }
++            }
++
++            for (int i = total - 1; i > 0; i--)
++            {
++                int r = _rng.NextInt(i + 1);
++                int tmp = _doses[i];
++                _doses[i] = _doses[r];
++                _doses[r] = tmp;
++            }
++
++            int next = 0;
++            for (int j = 0; j < m; j++)
++            {
++                Cuia cuia = Cuia.Empty(_current[j].Capacity);
++                int count = _current[j].Count;
++                for (int k = 0; k < count; k++)
++                {
++                    cuia = cuia.AddOnTop(_doses[next++], 1);
++                }
++
++                _sub[j] = cuia;
++            }
++
++            if (!IsValidSub(_sub))
++            {
++                return false;
++            }
++
++            Compose(_sub);
++            return true;
++        }
++
++        // Filtros de 04 §2.4 y 03 §16 sobre las cuias movibles: los mismos vacíos, ninguna llena y monocolor y distinto del
++        // tablero actual (en forma canónica).
++        private bool IsValidSub(Cuia[] sub)
++        {
++            int m = _movableCount;
++            int empties = 0;
++            for (int j = 0; j < m; j++)
++            {
++                Cuia cuia = sub[j];
++                if (cuia.IsEmpty)
++                {
++                    empties++;
++                }
++                else if (cuia.IsFull && cuia.IsMonocolor)
++                {
++                    return false;
++                }
++            }
++
++            if (empties != _empties)
++            {
++                return false;
++            }
++
++            Array.Copy(sub, _scratch, m);
++            BoardCanon.Sort(_scratch, 0, m);
++            for (int j = 0; j < m; j++)
++            {
++                if (_scratch[j].Packed != _currentCanon[j].Packed)
++                {
++                    return true;
++                }
++            }
++
++            return false; // el mismo tablero que ahora (03 §16)
++        }
++
++        private void Compose(Cuia[] sub)
++        {
++            Array.Copy(_board, _candidate, _width);
++            for (int j = 0; j < _movableCount; j++)
++            {
++                int position = _movable[j];
++                _candidate[position] = Refill(_board[position], sub[j]);
++            }
++        }
++
++        // El candidato vale si el A* lo resuelve con par ≤ par de partida + holgura (o, sin par de partida, si lo resuelve).
++        private bool Verify(SolverOptions solve, int slack)
++        {
++            if (BoardRules.IsWon(_candidate, 0, _width, _units))
++            {
++                return false;
++            }
++
++            int par = Solve(_candidate, solve);
++            if (par < 0 || (_parBefore >= 0 && par > _parBefore + slack))
++            {
++                return false;
++            }
++
++            _parAfter = par;
++            return true;
++        }
++
++        private int Solve(Cuia[] cuias, SolverOptions solve)
++        {
++            SolveStatus status = _solver.SolveLength(cuias, 0, _width, _units, solve, out int length, out _, out _);
++            return status == SolveStatus.Solved ? length : -1;
++        }
++
++        private void AddVisited(Cuia[] sub)
++        {
++            int m = _movableCount;
++            Array.Copy(sub, _scratch, m);
++            BoardCanon.Sort(_scratch, 0, m);
++            _visited.Add(_scratch, 0, BoardCanon.Hash(_scratch, 0, m));
++        }
++    }
++}
+diff --git a/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/Shuffler.cs.meta b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/Shuffler.cs.meta
+new file mode 100644
+index 0000000..012cea8
+--- /dev/null
++++ b/Packages/com.amazonfill.core/Runtime/AF.Solver/Shuffle/Shuffler.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 2304bc34f2b80d145bff666228e120c7
+\ No newline at end of file
+diff --git a/Packages/com.amazonfill.core/Tests/Editor/AF.Core.Tests/LevelSessionShuffleTests.cs b/Packages/com.amazonfill.core/Tests/Editor/AF.Core.Tests/LevelSessionShuffleTests.cs
+new file mode 100644
+index 0000000..cf74017
+--- /dev/null
++++ b/Packages/com.amazonfill.core/Tests/Editor/AF.Core.Tests/LevelSessionShuffleTests.cs
+@@ -0,0 +1,95 @@
++#nullable enable
++using System;
++using AF.Core.Board;
++using AF.Core.Session;
++using NUnit.Framework;
++
++namespace AF.Core.Tests
++{
++    /// <summary>
++    /// <see cref="LevelSession.ApplyShuffle"/> (Pororoca, 04 §2.4; 02 §14 «Vacía el historial de Marea (nuevo tablero); conserva
++    /// stock»; 02 T6): la ola revela todo, vacía el historial, recalcula el estado y Volver a la orilla vuelve al tablero del
++    /// nivel [P]. El barajado en sí es de AF.Solver (<c>ShufflerTests</c>). Test compartido (NUnit 3.5, C# 9).
++    /// </summary>
++    [TestFixture]
++    public sealed class LevelSessionShuffleTests
++    {
++        private static Cuia C(int capacity, params int[] colorsBottomToTop)
++        {
++            return Cuia.Create(capacity, colorsBottomToTop);
++        }
++
++        private static BoardState Start()
++        {
++            return new BoardState(new[]
++            {
++                Cuia.Create(4, new[] { 1, 2, 1, 2 }, 0b0011), C(4, 2, 1, 2, 1), Cuia.Empty(4), Cuia.Empty(4),
++            });
++        }
++
++        // Un barajado posible de Start() revelado: mismas cuias y colores, otro reparto.
++        private static BoardState Shuffled()
++        {
++            return new BoardState(new[] { C(4, 2, 2, 1, 1), C(4, 1, 1, 2, 2), Cuia.Empty(4), Cuia.Empty(4) });
++        }
++
++        [Test]
++        public void ApplyShuffle_EmptiesTheUndoHistory_02_14()
++        {
++            var session = new LevelSession(Start(), true);
++            Assert.That(session.TryPour(1, 2, out _), Is.True);
++            Assert.That(session.CanUndo, Is.True);
++
++            Assert.That(session.ApplyShuffle(Shuffled()), Is.True);
++
++            Assert.That(session.CanUndo, Is.False);
++            Assert.That(session.AppliedPours, Is.EqualTo(0));
++            Assert.That(session.Undo(), Is.False);
++            Assert.That(session.Current.Equals(Shuffled()), Is.True);
++            Assert.That(session.Status, Is.EqualTo(LevelStatus.Playing));
++        }
++
++        [Test]
++        public void ApplyShuffle_RevealsEverything_AndRestartKeepsItRevealed_04_2_4_a_I5()
++        {
++            var session = new LevelSession(Start(), true);
++            Assert.That(session.HiddenCount, Is.EqualTo(2));
++
++            session.ApplyShuffle(Shuffled());
++
++            Assert.That(session.HiddenCount, Is.EqualTo(0));
++            Assert.That(session.RevealedLayers(0), Is.EqualTo(0b0011));
++            session.Restart();
++            Assert.That(session.Current.Equals(session.Initial), Is.False, "el inicial con lo revelado visible");
++            Assert.That(session.Current[0].HiddenMask, Is.EqualTo(0));
++            Assert.That(session.Current[0].ColorAt(0), Is.EqualTo(1));
++            Assert.That(session.Current[1].Packed, Is.EqualTo(Start()[1].Packed), "Volver a la orilla vuelve al tablero del nivel [P]");
++        }
++
++        [Test]
++        public void ApplyShuffle_OutsidePlaying_ChangesNothing_04_2_4()
++        {
++            // Ganado: toda cuia vacía o sellada.
++            var won = new LevelSession(new BoardState(new[] { C(4, 1, 1, 1, 1), Cuia.Empty(4) }), true);
++            Assert.That(won.Status, Is.EqualTo(LevelStatus.Won));
++
++            Assert.That(won.ApplyShuffle(new BoardState(new[] { C(4, 1, 1, 1, 1), Cuia.Empty(4) })), Is.False);
++            Assert.That(won.Status, Is.EqualTo(LevelStatus.Won));
++        }
++
++        [Test]
++        public void ApplyShuffle_RejectsABoardThatIsNotAShuffleOfThisOne_04_2_4()
++        {
++            var session = new LevelSession(Start(), true);
++
++            Assert.That(() => session.ApplyShuffle(new BoardState(new[] { C(4, 2, 2, 1, 1), C(4, 1, 1, 2, 2), Cuia.Empty(4) })),
++                Throws.TypeOf<ArgumentException>(), "otro número de cuias");
++            Assert.That(() => session.ApplyShuffle(new BoardState(new[] { C(4, 2, 2, 1, 1), C(4, 1, 1, 2, 2), Cuia.Empty(4), Cuia.Empty(5) })),
++                Throws.TypeOf<ArgumentException>(), "otra capacidad");
++            Assert.That(() => session.ApplyShuffle(new BoardState(new[] { C(4, 2, 2, 1, 1), C(4, 1, 1, 2, 3), Cuia.Empty(4), Cuia.Empty(4) })),
++                Throws.TypeOf<ArgumentException>(), "otros colores");
++            Assert.That(() => session.ApplyShuffle(Start()), Throws.TypeOf<ArgumentException>(), "con ocultas");
++            Assert.That(session.Current.Equals(Start()), Is.True);
++        }
++    }
++}
+diff --git a/Packages/com.amazonfill.core/Tests/Editor/AF.Core.Tests/LevelSessionShuffleTests.cs.meta b/Packages/com.amazonfill.core/Tests/Editor/AF.Core.Tests/LevelSessionShuffleTests.cs.meta
+new file mode 100644
+index 0000000..0aa0154
+--- /dev/null
++++ b/Packages/com.amazonfill.core/Tests/Editor/AF.Core.Tests/LevelSessionShuffleTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 3b2b7c56993ac1043a149fca442b4f4b
+\ No newline at end of file
+diff --git a/Packages/com.amazonfill.core/Tests/Editor/AF.Solver.Tests/ShufflerTests.cs b/Packages/com.amazonfill.core/Tests/Editor/AF.Solver.Tests/ShufflerTests.cs
+new file mode 100644
+index 0000000..97819e7
+--- /dev/null
++++ b/Packages/com.amazonfill.core/Tests/Editor/AF.Solver.Tests/ShufflerTests.cs
+@@ -0,0 +1,352 @@
++#nullable enable
++using AF.Core.Board;
++using AF.Core.Mechanics;
++using AF.Core.Rules;
++using AF.Solver.Search;
++using AF.Solver.Shuffle;
++using NUnit.Framework;
++
++namespace AF.Solver.Tests
++{
++    /// <summary>
++    /// Pororoca · Barajar (04 §2.4; 03 §16; 03 §5): reconstrucción inversa sobre las cuias no fijas, verificación con A*
++    /// (<c>shuffle_par_slack</c> = 2, <c>shuffle_budget_nodes</c> = 40.000, w = 2), respaldo Permutar + verificar, cuias fijas
++    /// (selladas, Barro y mecánicas, salvo el Remolino), Lluvia y Piraña deshabilitadas, la ola que revela y el determinismo.
++    /// Test compartido (NUnit 3.5, C# 9); la medida de asignaciones está en <c>DotnetOnly/ShuffleAllocationTests</c>.
++    /// </summary>
++    [TestFixture]
++    public sealed class ShufflerTests
++    {
++        private const string LevelSeed = "amazonfill:v1:m02:v1:n0030";
++
++        private static Cuia C(int capacity, params int[] colorsBottomToTop)
++        {
++            return Cuia.Create(capacity, colorsBottomToTop);
++        }
++
++        // Nivel 30 típico: 6 frutas de 4 en cuias de 4 y 2 vacíos (03 §11, tramo 11-30).
++        private static BoardState Level30()
++        {
++            return new BoardState(new[]
++            {
++                C(4, 1, 2, 3, 4), C(4, 5, 6, 1, 2), C(4, 3, 4, 5, 6), C(4, 6, 5, 4, 3), C(4, 2, 1, 6, 5), C(4, 4, 3, 2, 1),
++                Cuia.Empty(4), Cuia.Empty(4),
++            });
++        }
++
++        // A medio jugar: la fruta 1 ya sellada y el resto revuelto con un vacío.
++        private static BoardState WithSealed()
++        {
++            return new BoardState(new[]
++            {
++                C(4, 1, 1, 1, 1), C(4, 2, 3, 2, 3), C(4, 3, 2, 4, 4), C(4, 4, 4, 3, 2), Cuia.Empty(4),
++            });
++        }
++
++        private static int Par(BoardState board)
++        {
++            var solver = new AStarSolver();
++            SolveResult result = solver.Solve(board, new SolverOptions(ShuffleOptions.DefaultBudgetNodes, ShuffleOptions.DefaultWeight, true, PourMode.Run).ForLevel(board));
++            return result.IsSolved ? result.MoveCount : -1;
++        }
++
++        private static int Empties(BoardState board)
++        {
++            int n = 0;
++            for (int i = 0; i < board.Count; i++)
++            {
++                n += board[i].IsEmpty ? 1 : 0;
++            }
++
++            return n;
++        }
++
++        [Test]
++        public void Shuffle_KeepsColorsCapacitiesAndEmpties_04_2_4()
++        {
++            BoardState board = Level30();
++            var shuffler = new Shuffler();
++
++            ShuffleResult result = shuffler.Shuffle(board, Shuffler.SeedFor(LevelSeed, board, 0), ShuffleOptions.Default);
++
++            Assert.That(result.Succeeded, Is.True);
++            BoardState shuffled = result.Board!;
++            Assert.That(shuffled.Count, Is.EqualTo(board.Count));
++            for (int i = 0; i < board.Count; i++)
++            {
++                Assert.That(shuffled[i].Capacity, Is.EqualTo(board[i].Capacity), "capacidad de la cuia " + i);
++            }
++
++            for (int color = Cuia.MinColor; color <= Cuia.MaxColor; color++)
++            {
++                Assert.That(shuffled.UnitsOf(color), Is.EqualTo(board.UnitsOf(color)), "U_c del color " + color);
++            }
++
++            Assert.That(Empties(shuffled), Is.EqualTo(Empties(board)));
++            Assert.That(shuffled.CanonicalHash(), Is.Not.EqualTo(board.CanonicalHash()), "03 §16: nunca el mismo tablero");
++            Assert.That(result.Method, Is.EqualTo(ShuffleMethod.Inverse));
++        }
++
++        [Test]
++        public void Shuffle_NewParIsWithinTheSlack_AndNoCuiaIsFullMonocolor_04_2_4()
++        {
++            BoardState board = Level30();
++            var shuffler = new Shuffler();
++            for (int ordinal = 0; ordinal < 6; ordinal++)
++            {
++                ShuffleResult result = shuffler.Shuffle(board, Shuffler.SeedFor(LevelSeed, board, ordinal), ShuffleOptions.Default);
++
++                Assert.That(result.Succeeded, Is.True, "ordinal " + ordinal);
++                BoardState shuffled = result.Board!;
++                Assert.That(result.ParBefore, Is.EqualTo(Par(board)));
++                Assert.That(result.ParAfter, Is.EqualTo(Par(shuffled)));
++                Assert.That(result.ParAfter, Is.LessThanOrEqualTo(result.ParBefore + ShuffleOptions.DefaultParSlack));
++                for (int i = 0; i < shuffled.Count; i++)
++                {
++                    Assert.That(!shuffled[i].IsEmpty && shuffled[i].IsFull && shuffled[i].IsMonocolor, Is.False, "cuia " + i + " llena y monocolor");
++                }
++            }
++        }
++
++        [Test]
++        public void Shuffle_IsDeterministic_PerSeed()
++        {
++            BoardState board = Level30();
++            ulong seed = Shuffler.SeedFor(LevelSeed, board, 0);
++
++            ShuffleResult a = new Shuffler().Shuffle(board, seed, ShuffleOptions.Default);
++            var reused = new Shuffler();
++            reused.Shuffle(WithSealed(), 99UL, ShuffleOptions.Default); // un barajador usado antes da lo mismo
++            ShuffleResult b = reused.Shuffle(board, seed, ShuffleOptions.Default);
++
++            Assert.That(b.Board!.Equals(a.Board), Is.True);
++            Assert.That(b.Tries, Is.EqualTo(a.Tries));
++            Assert.That(b.ParAfter, Is.EqualTo(a.ParAfter));
++        }
++
++        [Test]
++        public void SeedFor_DependsOnTheLevel_TheRevealedBoardAndTheOrdinal()
++        {
++            BoardState board = Level30();
++            BoardState hidden = new BoardState(new[]
++            {
++                Cuia.Create(4, new[] { 1, 2, 3, 4 }, 0b0011), C(4, 5, 6, 1, 2), C(4, 3, 4, 5, 6), C(4, 6, 5, 4, 3), C(4, 2, 1, 6, 5),
++                C(4, 4, 3, 2, 1), Cuia.Empty(4), Cuia.Empty(4),
++            });
++
++            Assert.That(Shuffler.SeedFor(LevelSeed, hidden, 0), Is.EqualTo(Shuffler.SeedFor(LevelSeed, board, 0)), "lo oculto no cambia la ola");
++            Assert.That(Shuffler.SeedFor(LevelSeed, board, 1), Is.Not.EqualTo(Shuffler.SeedFor(LevelSeed, board, 0)));
++            Assert.That(Shuffler.SeedFor("amazonfill:v1:m02:v1:n0031", board, 0), Is.Not.EqualTo(Shuffler.SeedFor(LevelSeed, board, 0)));
++        }
++
++        [Test]
++        public void SealedCuias_StayFixed_04_2_4()
++        {
++            BoardState board = WithSealed();
++
++            ShuffleResult result = new Shuffler().Shuffle(board, Shuffler.SeedFor(LevelSeed, board, 0), ShuffleOptions.Default);
++
++            Assert.That(result.Succeeded, Is.True);
++            Assert.That(result.Board![0].Packed, Is.EqualTo(board[0].Packed));
++            Assert.That(Shuffler.IsFixed(board, 0), Is.True);
++            Assert.That(Shuffler.IsFixed(board, 1), Is.False);
++        }
++
++        [Test]
++        public void MechanicCuias_StayFixed_ButRemolinoTakesPart_04_2_4_b_c()
++        {
++            // Hoja cerrada, Matapi con contenido y Barro quedan fijos; el Remolino entra en la ola con su pareja. U_c = 4 por fruta
++            // (una dosis de 2 en el Matapi y una de 3 sobre el Barro).
++            var cuias = new[]
++            {
++                C(4, 1, 2, 3, 1), C(4, 2, 3, 1, 2), C(4, 3, 1),
++                Cuia.Empty(4).WithMechanic(MechanicType.Hoja, key: 1, flags: Cuia.FlagClosed),
++                C(4, 2).WithMechanic(MechanicType.Matapi),
++                C(4, Cuia.MudColor, 3),
++                Cuia.Empty(4).WithMechanic(MechanicType.Remolino, pairId: 0), Cuia.Empty(4).WithMechanic(MechanicType.Remolino, pairId: 0),
++            };
++            var board = new BoardState(cuias);
++
++            Assert.That(Shuffler.IsFixed(board, 3), Is.True, "Hoja cerrada");
++            Assert.That(Shuffler.IsFixed(board, 4), Is.True, "Matapi");
++            Assert.That(Shuffler.IsFixed(board, 5), Is.True, "Barro");
++            Assert.That(Shuffler.IsFixed(board, 6), Is.False, "Remolino");
++            ShuffleResult result = new Shuffler().Shuffle(board, 7UL, ShuffleOptions.Default);
++            Assert.That(result.Succeeded, Is.True);
++            for (int i = 3; i <= 5; i++)
++            {
++                Assert.That(result.Board![i].Packed, Is.EqualTo(board[i].Packed), "cuia fija " + i);
++            }
++
++            Assert.That(result.Board![6].Mechanic, Is.EqualTo(MechanicType.Remolino));
++            Assert.That(result.Board![7].Mechanic, Is.EqualTo(MechanicType.Remolino));
++            Assert.That(result.Board![7].MechanicPairId, Is.EqualTo(0));
++        }
++
++        [Test]
++        public void LluviaOrPirana_DisableTheWave_04_2_4_d()
++        {
++            BoardState rain = new BoardState(new[]
++            {
++                C(4, 1, 2, 1, 2), C(4, 2, 1, 2, 1), C(4, 10, 10).WithMechanic(MechanicType.Lluvia, key: 10, n: 2, k: 3), Cuia.Empty(4),
++            });
++            BoardState pirana = new BoardState(new[]
++            {
++                C(4, 1, 2, 1, 2), C(4, 2, 1, 2, 1), Cuia.Empty(4).WithMechanic(MechanicType.Pirana, k: 3), Cuia.Empty(4),
++            });
++
++            Assert.That(Shuffler.Check(rain, true), Is.EqualTo(ShuffleBlock.TemporalMechanic));
++            Assert.That(Shuffler.Check(pirana, true), Is.EqualTo(ShuffleBlock.TemporalMechanic));
++            ShuffleResult result = new Shuffler().Shuffle(rain, 1UL, ShuffleOptions.Default);
++            Assert.That(result.Method, Is.EqualTo(ShuffleMethod.Failed));
++            Assert.That(result.Block, Is.EqualTo(ShuffleBlock.TemporalMechanic));
++            Assert.That(result.Board, Is.Null);
++        }
++
++        [Test]
++        public void LessThanTwoMovableColors_IsLowWater_04_2_4_b()
++        {
++            BoardState board = new BoardState(new[] { C(4, 1, 1, 1, 1), C(4, 2, 2), C(4, 2, 2), Cuia.Empty(4) });
++
++            Assert.That(Shuffler.MovableColors(board), Is.EqualTo(1));
++            Assert.That(Shuffler.Check(board, true), Is.EqualTo(ShuffleBlock.LowWater));
++            ShuffleResult result = new Shuffler().Shuffle(board, 1UL, ShuffleOptions.Default);
++            Assert.That(result.Block, Is.EqualTo(ShuffleBlock.LowWater));
++            Assert.That(result.Succeeded, Is.False);
++        }
++
++        [Test]
++        public void HiddenDoses_AreRevealedByTheWave_04_2_4_a()
++        {
++            BoardState board = new BoardState(new[]
++            {
++                Cuia.Create(4, new[] { 1, 2, 3, 4 }, 0b0011), C(4, 5, 6, 1, 2), Cuia.Create(4, new[] { 3, 4, 5, 6 }, 0b0001),
++                C(4, 6, 5, 4, 3), C(4, 2, 1, 6, 5), C(4, 4, 3, 2, 1), Cuia.Empty(4), Cuia.Empty(4),
++            });
++
++            Assert.That(Shuffler.Check(board, false), Is.EqualTo(ShuffleBlock.HiddenWithoutReveal));
++            Assert.That(Shuffler.Check(board, true), Is.EqualTo(ShuffleBlock.None));
++            ShuffleResult result = new Shuffler().Shuffle(board, Shuffler.SeedFor(LevelSeed, board, 0), ShuffleOptions.Default);
++
++            Assert.That(result.Succeeded, Is.True);
++            Assert.That(result.Revealed, Is.EqualTo(3));
++            Assert.That(result.Board!.HasHidden, Is.False);
++        }
++
++        [Test]
++        public void Tinaja_AndItsHangingCuia_StayFixed_04_2_4_g()
++        {
++            var cuias = new[]
++            {
++                Cuia.Create(5, new[] { 1, 2, 3 }, 0b011).WithMechanic(MechanicType.Tinaja),
++                Cuia.Empty(2).WithMechanic(MechanicType.Cucharon),
++                C(4, 1, 2, 3, 1), C(4, 2, 3, 2), C(4, 3, 1), Cuia.Empty(4), Cuia.Empty(4),
++            };
++            var board = new BoardState(cuias);
++
++            ShuffleResult result = new Shuffler().Shuffle(board, Shuffler.SeedFor(LevelSeed, board, 0), ShuffleOptions.Default);
++
++            Assert.That(Shuffler.IsFixed(board, 0), Is.True);
++            Assert.That(Shuffler.IsFixed(board, 1), Is.True);
++            Assert.That(result.Revealed, Is.EqualTo(2));
++            Assert.That(result.Succeeded, Is.True);
++            Assert.That(result.Board![0].Mechanic, Is.EqualTo(MechanicType.Tinaja));
++            Assert.That(result.Board![0].HasHidden, Is.False, "la ola revela todas sus capas (04 §2.4 g)");
++            Assert.That(result.Board![0].Count, Is.EqualTo(3));
++            Assert.That(result.Board![1].Packed, Is.EqualTo(board[1].Packed));
++        }
++
++        [Test]
++        public void WithoutInverseAttempts_FallsBackToPermute_04_2_4()
++        {
++            BoardState board = Level30();
++            var options = new ShuffleOptions(ShuffleOptions.DefaultParSlack, ShuffleOptions.DefaultBudgetNodes, inverseAttempts: 0);
++
++            ShuffleResult result = new Shuffler().Shuffle(board, Shuffler.SeedFor(LevelSeed, board, 0), options);
++
++            Assert.That(result.Method, Is.EqualTo(ShuffleMethod.Permute));
++            Assert.That(result.Board!.CanonicalHash(), Is.Not.EqualTo(board.CanonicalHash()));
++            Assert.That(Empties(result.Board!), Is.EqualTo(Empties(board)));
++            Assert.That(result.ParAfter, Is.LessThanOrEqualTo(result.ParBefore + ShuffleOptions.DefaultParSlack));
++        }
++
++        [Test]
++        public void WhenNothingVerifies_ItFails_WithoutABoard_04_2_4()
++        {
++            // Presupuesto de 1 estado: el A* no resuelve nada y ningún candidato se verifica.
++            BoardState board = Level30();
++            var options = new ShuffleOptions(ShuffleOptions.DefaultParSlack, 1, inverseAttempts: 3, permuteAttempts: 3);
++
++            ShuffleResult result = new Shuffler().Shuffle(board, 5UL, options);
++
++            Assert.That(result.Method, Is.EqualTo(ShuffleMethod.Failed));
++            Assert.That(result.Board, Is.Null);
++            Assert.That(result.Tries, Is.EqualTo(6));
++            Assert.That(result.ParBefore, Is.EqualTo(-1));
++        }
++
++        [Test]
++        public void UnknownStartingPar_TheNewBoardOnlyHasToBeSolvable_P3()
++        {
++            // P-3 (docs/dev/pororoca.md): con 12 estados el A* no resuelve el tablero de partida (par desconocido) y sí el barajado
++            // de la semilla 1 (caso buscado a mano en dotnet; si el barajador cambia, se vuelve a buscar).
++            BoardState board = Level30();
++            var options = new ShuffleOptions(ShuffleOptions.DefaultParSlack, 12);
++
++            ShuffleResult result = new Shuffler().Shuffle(board, 1UL, options);
++
++            Assert.That(result.ParBefore, Is.EqualTo(-1));
++            Assert.That(result.Succeeded, Is.True);
++            Assert.That(result.ParAfter, Is.GreaterThan(0));
++        }
++
++        [Test]
++        public void OpenedOrReleasedMechanics_TakePartInTheWave_04_2_4_b_g()
++        {
++            // 04 §2.4 b: solo quedan fijas las cuias «con la mecánica cerrada»; la Hoja que cayó y la cuia que bajó del jirau son
++            // normales (WithoutMechanic) y entran en la ola.
++            var hoja = new BoardState(new[]
++            {
++                Cuia.Empty(4).WithMechanic(MechanicType.Hoja, key: 1, flags: Cuia.FlagClosed), C(4, 2, 1, 1), C(4, 1, 2, 2), C(4, 2, 1),
++            });
++            var session = new AF.Core.Session.LevelSession(hoja, true);
++            Assert.That(Shuffler.IsFixed(hoja, 0), Is.True);
++            Assert.That(session.TryPour(1, 0, out _), Is.True);
++            Assert.That(session.Current[0].HasMechanic, Is.False);
++            Assert.That(Shuffler.IsFixed(session.Current, 0), Is.False, "Hoja abierta");
++
++            var tinaja = new BoardState(new[]
++            {
++                C(4, 2, 2, 2), C(4, 1, 1, 1), Cuia.Create(5, new[] { 1, 2 }, 0b01).WithMechanic(MechanicType.Tinaja),
++                Cuia.Empty(2).WithMechanic(MechanicType.Cucharon), Cuia.Empty(4),
++            });
++            var scoop = new AF.Core.Session.LevelSession(tinaja, true);
++            Assert.That(Shuffler.IsFixed(tinaja, 3), Is.True, "cuia colgada");
++            Assert.That(scoop.TryPour(2, 3, out _), Is.True);
++            Assert.That(scoop.TryPour(2, 3, out _), Is.True);
++            Assert.That(scoop.Current[3].HasMechanic, Is.False);
++            Assert.That(Shuffler.IsFixed(scoop.Current, 3), Is.False, "la cuia suelta, como Cuia chica normal");
++            Assert.That(Shuffler.IsFixed(scoop.Current, 2), Is.True, "la tinaja vacía, inerte, sigue fija");
++        }
++
++        [Test]
++        public void MixedCapacities_AreKeptPerCuia_04_2_4()
++        {
++            // Cuia chica de 2 y Cuia alta de 5 con su fruta abundante (02 §8).
++            var board = new BoardState(new[]
++            {
++                C(5, 1, 2, 1, 3, 1), C(4, 2, 1, 3, 2), C(4, 3, 2, 3, 1), Cuia.Empty(2), Cuia.Empty(5),
++            });
++
++            ShuffleResult result = new Shuffler().Shuffle(board, Shuffler.SeedFor(LevelSeed, board, 0), ShuffleOptions.Default);
++
++            Assert.That(result.Succeeded, Is.True);
++            for (int i = 0; i < board.Count; i++)
++            {
++                Assert.That(result.Board![i].Capacity, Is.EqualTo(board[i].Capacity));
++            }
++
++            Assert.That(result.ParAfter, Is.LessThanOrEqualTo(result.ParBefore + ShuffleOptions.DefaultParSlack));
++        }
++    }
++}
+diff --git a/Packages/com.amazonfill.core/Tests/Editor/AF.Solver.Tests/ShufflerTests.cs.meta b/Packages/com.amazonfill.core/Tests/Editor/AF.Solver.Tests/ShufflerTests.cs.meta
+new file mode 100644
+index 0000000..4552348
+--- /dev/null
++++ b/Packages/com.amazonfill.core/Tests/Editor/AF.Solver.Tests/ShufflerTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: f5c743cd008ddd2468067ed5a9851aba
+\ No newline at end of file
+diff --git a/dotnet/AF.Core.Tests/DotnetOnly/ShuffleAllocationTests.cs b/dotnet/AF.Core.Tests/DotnetOnly/ShuffleAllocationTests.cs
+new file mode 100644
+index 0000000..35d6478
+--- /dev/null
++++ b/dotnet/AF.Core.Tests/DotnetOnly/ShuffleAllocationTests.cs
+@@ -0,0 +1,100 @@
++#nullable enable
++using System.Diagnostics;
++using AF.Core.Board;
++using AF.Solver.Shuffle;
++using NUnit.Framework;
++
++namespace AF.Core.Tests.DotnetOnly
++{
++    /// <summary>
++    /// Pororoca sin asignaciones en el bucle (CLAUDE.md, regla dura 2; .claude/rules/core.md: «Bucle caliente (… Pororoca …)»):
++    /// el barajado entero (A* de partida, paseos inversos, permutaciones y A* de verificación) no asigna una vez calentado; solo
++    /// asigna el <see cref="BoardState"/> del resultado en <see cref="Shuffler.Shuffle"/>. Y un tope de tiempo orientativo del
++    /// peor caso medido aquí (03 §5: «&lt;50 ms [E]» por llamada de A*). Solo dotnet por <see cref="AllocationMeter"/> y
++    /// <c>[NonParallelizable]</c>.
++    /// </summary>
++    [TestFixture]
++    [NonParallelizable]
++    public sealed class ShuffleAllocationTests
++    {
++        private static Cuia C(int capacity, params int[] colorsBottomToTop)
++        {
++            return Cuia.Create(capacity, colorsBottomToTop);
++        }
++
++        private static BoardState Level30()
++        {
++            return new BoardState(new[]
++            {
++                C(4, 1, 2, 3, 4), C(4, 5, 6, 1, 2), C(4, 3, 4, 5, 6), C(4, 6, 5, 4, 3), C(4, 2, 1, 6, 5), C(4, 4, 3, 2, 1),
++                Cuia.Empty(4), Cuia.Empty(4),
++            });
++        }
++
++        // K = 10 con 1 vacío (banda 3 del Reto, 03 §16): el caso más caro del cliente.
++        private static BoardState K10()
++        {
++            return new BoardState(new[]
++            {
++                C(4, 1, 2, 3, 4), C(4, 5, 6, 7, 8), C(4, 9, 10, 1, 2), C(4, 3, 4, 5, 6), C(4, 7, 8, 9, 10), C(4, 2, 1, 4, 3),
++                C(4, 6, 5, 8, 7), C(4, 10, 9, 2, 1), C(4, 4, 3, 6, 5), C(4, 8, 7, 10, 9), Cuia.Empty(4),
++            });
++        }
++
++        [Test]
++        public void ShuffleInto_DoesNotAllocate_OnceWarm()
++        {
++            BoardState board = Level30();
++            var shuffler = new Shuffler();
++            ShuffleOptions options = ShuffleOptions.Default;
++            int inverse = 0;
++
++            AllocationReading inverseRun = AllocationMeter.Measure(() =>
++            {
++                for (int seed = 1; seed <= 8; seed++)
++                {
++                    inverse += shuffler.ShuffleInto(board, (ulong)seed, options, out _) == ShuffleMethod.Inverse ? 1 : 0;
++                }
++            }, 1);
++
++            var permuteOnly = new ShuffleOptions(ShuffleOptions.DefaultParSlack, ShuffleOptions.DefaultBudgetNodes, inverseAttempts: 0);
++            int permuted = 0;
++            AllocationReading permuteRun = AllocationMeter.Measure(() =>
++            {
++                for (int seed = 1; seed <= 8; seed++)
++                {
++                    permuted += shuffler.ShuffleInto(board, (ulong)seed, permuteOnly, out _) == ShuffleMethod.Permute ? 1 : 0;
++                }
++            }, 1);
++
++            Assert.That(inverse, Is.GreaterThan(0));
++            Assert.That(permuted, Is.GreaterThan(0));
++            Assert.That(inverseRun.Bytes, Is.EqualTo(0), inverseRun.Describe("Pororoca inversa"));
++            Assert.That(permuteRun.Bytes, Is.EqualTo(0), permuteRun.Describe("Pororoca permutar"));
++        }
++
++        [Test]
++        public void Shuffle_WorstCaseHere_StaysWellUnderASecond()
++        {
++            // Orientativo (no es la cifra del móvil): 03 §5 estima <50 ms por A* en gama media; aquí se pide que la ola entera,
++            // con todos sus intentos, no pase de 1 s en el peor de 20 semillas.
++            BoardState board = K10();
++            var shuffler = new Shuffler();
++            shuffler.Shuffle(board, 1UL, ShuffleOptions.Default);
++            long worst = 0;
++            int ok = 0;
++            for (int seed = 1; seed <= 20; seed++)
++            {
++                var watch = Stopwatch.StartNew();
++                ShuffleResult result = shuffler.Shuffle(board, (ulong)seed, ShuffleOptions.Default);
++                watch.Stop();
++                worst = System.Math.Max(worst, watch.ElapsedMilliseconds);
++                ok += result.Succeeded ? 1 : 0;
++            }
++
++            TestContext.WriteLine("Pororoca K=10, E=1: " + ok + "/20 con tablero, peor " + worst + " ms");
++            Assert.That(ok, Is.GreaterThan(0));
++            Assert.That(worst, Is.LessThan(1000));
++        }
++    }
++}

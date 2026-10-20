@@ -6,6 +6,35 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-20 · B2 · Pororoca (`spark/t5-b2`): HECHA · verificación completa VERDE · lista para integrar
+
+- **Rama:** `spark/t5-b2`, desde `origin/integracion-fase1-fase2` en `9982bdc` (con B1a). Sin empujar (el encargo de B2 dice «no hagas push»).
+- **Nota de diseño:** `docs/dev/pororoca.md` (qué va en la rama y qué en parches, el algoritmo, el flujo, la vista, las [P] P-1 a P-19 y los hallazgos para el GDD).
+- **Commits:** `eaad940` (código de la rama: `ShuffleBooster`, `IShuffleListener`, `ProceduralArt.Shuffle`, `ShuffleText`, `ShuffleConfirm`, `ShuffleIntroCard`, `ShuffleWaveFx`, `IShuffleActions` y `ShuffleBoosterTests`, con sus `.meta`) y el de la nota, los parches y esta entrada.
+- **Revisión (code-reviewer):** 1.ª ronda, CAMBIOS NECESARIOS (faltaban commit, parches y `.meta`; la contradicción 03 §9 / 04 §2.4; tres tests). Arreglado (P-16 y P-17; tests `UnknownStartingPar…`, `OpenedOrReleasedMechanics…` y `MurkyLevel_Firefly_Shuffle_Resume…`; el cobro comprobado; la placa de la tarjeta sin raycast y el bloqueador de la ola con `HitArea`). 2.ª ronda: **APROBADO**, condicionado al commit y a la verificación completa, hechos abajo.
+- **Enganches para el integrador** (en `docs/dev/traspaso/spark-enganches/`, LF; `git apply --check` OK). Se aplican **después de fusionar `spark/t5-b2`** y **en este orden**:
+  1. `B2-solver.diff`: `Packages/com.amazonfill.core/` (`AF.Solver/Shuffle/` nuevo con `Shuffler`, `ShuffleOptions` y `ShuffleResult`; `LevelSession.ApplyShuffle`; `ShufflerTests` y `LevelSessionShuffleTests`) y `dotnet/AF.Core.Tests/DotnetOnly/ShuffleAllocationTests.cs`, con los `.meta` que generó Unity.
+  2. `B2-flow.diff`: `Boosters/ShuffleWave.cs` y `GameFlow/LevelFlow.Shuffle.cs` (nuevos); ganchos de una línea en `LevelFlow.cs` (`Load` y `BeginAttempt`); `LevelFlow.Resume.cs` (rehacer con las olas, `RestoreShuffle`, `WriteHistory`); `LevelStateSnapshot.cs` (marca `*` en V, marcas `o` y `p`; h2 sin versión nueva); `Economy/Wallet.cs` (`ShufflesToday` y `daily.shuffles_today` al cobrar); `Tests/EditMode/ShuffleFlowTests.cs`.
+  3. `B2-ui.diff`: `BoosterTray.cs` ✱ (ranura Barajar entre Pista y Revelar, globo, latido, `PaintShuffle`); `GameScreen.cs` ✱ (6 ganchos `Shuffle*`); `GameScreen.Shuffle.cs` y `GameBootstrap.Shuffle.cs` (nuevos); `DailyChallengeScreen.cs` (la Pororoca en el Reto); `Tests/PlayMode/ShufflePlayModeTests.cs` (nuevo), `PlayModeHelpers.cs` (`NoShuffleUnlessSet`, P-19) y `LocTablesTests.cs` (`ShuffleText.AllKeys`).
+  4. `B2-strings.csv`: 8 filas para `strings.csv` (`shuffle`, `shuffle_confirm`, `shuffle_confirm_yes`, `shuffle_failed`, `shuffle_low_water`, `shuffle_name`, `shuffle_tagline` y `shuffle_unsupported`), solo `es-419` y `pendiente_asesor`, en orden ordinal. Sin ellas falla `LocTablesTests.EveryUiTextKey_Exists_AndEveryStringsRow_IsUsed`.
+- **Verificación:**
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`eaad940`, sin parches) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos; 981 (975 + 6); 103/103 |
+  | rama | `unity-compile -Architecture arm64`; EditMode; PlayMode (`-TimeoutSec 3600`) | OK; **3.368 (3.365 + 3), 0 fallos** (387 s); **1.589 (1.382 + 207), 0 fallos** (2.226 s) |
+  | temporal en `9982bdc` + rama + los 3 parches + las 8 filas | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos; **1.002 (996 + 6)**; 103/103 |
+  | temporal | `unity-compile`; EditMode; PlayMode | OK; **3.399 (3.396 + 3), 0 fallos** (282 s); **1.593 (1.386 + 207), 0 fallos** (1.863 s) |
+
+  `econ_sim` no se ejecutó: no se toca la economía (los precios y topes son los de 08 §9). `IntroArtTests.FruitFlight…10ms` no falló en ninguna pasada.
+- **Decisiones [P]** (con la recomendada; detalle en `pororoca.md` §5): P-1 a P-19. Las que piden al dueño: **P-4** (tope «1 por nivel» en todos los intentos y al salir y volver), **P-5** (Volver a la orilla vuelve al tablero del nivel), **P-6** (sin hoja con el stock), **P-10** (la ola en el hilo principal: medir en el teléfono el peor caso, la que falla), **P-13** (Tinaja con dosis: habilitada y medir en `level-qa`), **P-16** (03 §9 frente a 04 §2.4 en la ola que falla) y **P-18** (bandeja de 5 ranuras en 360 dp: «Shuffle», «Embaralhar», y «Desfazer» y «Revelar» en pt-BR al 130 %, no caben a 12 sp; EN y PT-BR de `shuffle` quedan vacíos).
+- **Riesgos:**
+  - P-18 es de interfaz: en en y pt-BR la ranura sale sin etiqueta hasta decidirlo.
+  - Con P-19 (`GameScreen.ShuffleOverride`, solo vista), los tests PlayMode que no tratan de la Pororoca corren sin ella; la bandeja de 5 ranuras desde el 30 la cubre `ShufflePlayModeTests`.
+  - La analítica (`af_shuffle_result`, `af_booster_used`) sale solo como sonda `AF_STATE shuffle` hasta B7.
+
+---
+
 ## 2026-10-20 · S2 = B1a · Crecida + Hoja escudo + Canasta (`spark/t5-b1a`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/t5-b1a`, desde `a759597`. Fusiona `origin/integracion-fase1-fase2` (`815b2e5`) en `7fbc1cd`.
