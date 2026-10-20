@@ -1803,8 +1803,8 @@ namespace AF.UI
         internal bool StopLabelOnDock => _stopLabel.Visible && _stopLabelSpot == StopLabelSpot.Dock;
 
         /// <summary>
-        /// Sitio del rótulo, como lo cuenta la sonda <c>stop_label</c>: <c>horizon</c>, <c>plate</c> (clavada al marco y
-        /// centrada), <c>plate_side</c> (clavada al marco, de lado) o <c>dock</c> (sobre el muelle; tests).
+        /// Sitio del rótulo, como lo cuenta la sonda <c>stop_label</c>: <c>plate</c> (clavada al marco y centrada),
+        /// <c>plate_side</c> (clavada al marco, de lado) o <c>dock</c> (sobre el muelle; tests).
         /// </summary>
         internal string StopLabelMode => _stopLabelSpot == StopLabelSpot.Side ? "plate_side" : _stopLabelSpot == StopLabelSpot.Dock ? "dock" : "plate";
 
