@@ -6,6 +6,18 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-20 · T2 · Decisiones del dueño sobre las preguntas de la traducción con IA
+
+El dueño respondió, literal: «las preguntas t2 hagamos lo recomendado». Se aplica la opción recomendada de cada una:
+
+| Id | Pregunta | Decisión (la recomendada) |
+|---|---|---|
+| T2-Q1 | El bloque `map.*` de `facts.csv`: `tools/river-map/stops.py` escribe `en` y `pt-BR` vacíos al regenerar | (a) `stops.py` conserva las columnas `en` y `pt-BR` y sus estados. Va como **parche probado**, porque `tools/river-map/**` es del integrador (encargo §3.2). Se traducen las frases `map.*` que solo usan nombres del glosario |
+| T2-Q2 | Las 8 claves de P14 (glosario §10: EN/PT a la espera del dueño) | (a) Se aprueban sus textos y se aplica `strings_p14.csv` |
+| T2-Q3 | Lugares, países, ciudades y ríos, comodines (Marea, Morpho, Luciérnaga), mecánicas y fauna sin EN/PT en el glosario | (a) Se añaden al glosario: los exónimos habituales de países, ciudades y ríos, y propuestas para comodines, mecánicas y fauna, con lo cultural en `pendiente_asesor` / propuesta. Va como **parche probado** de `Data/Loc/glossary.csv` y del glosario §10. Las traducciones que dependen de esos nombres, en un archivo aparte que se aplica con ese parche |
+| T2-Q4 | Términos que se tradujeron sin entrada en el glosario: Cosecha doble (Double Harvest / Colheita dupla), Aguas estancadas (Still waters / Águas paradas), Muestrario (Samples / Mostruário) y «Sobre la Amazonía» (About the Amazon / Sobre a Amazônia) | (a) Pasan al glosario, en el mismo parche que T2-Q3 |
+| T2-Q5 | `LocReleaseGate.Evaluate` no exige `revisado_nativo` en un build de release, aunque 08 §4.7 lo pide | (a) Se añade la regla: en release, una cadena de UI en `en` o `pt-BR` sin `revisado_nativo` es aviso o bloqueo, con el mismo nivel que los demás avisos de la puerta (D-018, Q5-A). Va como **parche probado** |
+
 ## 2026-10-19 · R0-R11 juntas: verificación completa VERDE · Bloque (d) (R8-R11) listo para integrar
 
 - **Qué hay:** la rama principal (R0-R10) más R11, la nota con la tabla de días de 729 corregida (`09b11cd`) y los usos `--days 0-728`.
