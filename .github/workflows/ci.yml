@@ -1,0 +1,295 @@
+# CI de Amazon Fill (paso s30 del plan de instalacion; GDD 08 sec. 12.1; bloque B10 de la tanda 5).
+# Aprobado por el dueno en D-033 (Q-T5: lo crea build-release, sin secretos propios, y el dueno aprueba el merge;
+# Q-T7: cobertura >= 80 % con coverlet solo en dotnet test). Reglas: .claude/rules/ci.md.
+#
+#   core          cada PR y main: dotnet build -warnaserror, dotnet test y tools/validate_schema.py. Sin Unity ni
+#                 licencia (unos 3-5 min).
+#   coverage      cobertura >= 80 % de lineas sobre AF.Core y AF.Solver (coverlet.msbuild), en main y en los PR que
+#                 tocan el nucleo o dotnet/: instrumentado, dotnet test tarda unas 13 veces mas (19 min frente a 1,5 en
+#                 el escritorio Ryzen 9 9900X), asi que no va en cada PR.
+#   changes       decide si el PR toca Unity (Assets, Packages, ProjectSettings, ci, workflows) o el nucleo.
+#   unity-tests   EditMode + PlayMode (game-ci/unity-test-runner) en PR listos (no borradores) que tocan Unity y en main.
+#   build-android solo en main (o a mano): AAB sin firma de release con AF.EditorTools.BuildRelease, IL2CPP ARM64 y
+#                 Managed Stripping High, y las compuertas size-gate (<= 80 MB), check-16kb y check-manifest.
+#
+# Licencia Personal: solo los secretos UNITY_EMAIL y UNITY_PASSWORD (los crea el dueno; aqui solo se referencian) y
+# los jobs de Unity en serie (concurrency unity-personal-seat). Sin keystore: el AAB va firmado con la clave de
+# depuracion de Unity y nunca se sube a Google Play (CLAUDE.md, reglas duras 5 y 6).
+#
+# Identidad del build: hasta el dictamen de marca no hay applicationId definitivo, asi que el job construye un ENSAYO
+# (-afRehearsal: configuracion de release con com.amazonfill.dev) y lo comprueba como build de prueba
+# (check-manifest -Mode dev). Cuando el dueno cree la variable de repositorio AF_RELEASE_APPLICATION_ID (no es un
+# secreto), el job construye el release con ese ID y la compuerta pasa a -Mode release, que rechaza com.amazonfill.dev.
+
+name: CI
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+  TESTINGPLATFORM_TELEMETRY_OPTOUT: 1
+  DOTNET_NOLOGO: 1
+
+jobs:
+  core:
+    name: core (dotnet + esquema)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          lfs: false
+
+      - uses: actions/setup-dotnet@v4.3.1
+        with:
+          global-json-file: global.json
+
+      - uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.14'
+
+      - name: jsonschema
+        run: python -m pip install --disable-pip-version-check jsonschema==4.26.0
+
+      - name: dotnet build (sin avisos)
+        run: dotnet build dotnet/AmazonFill.slnx -warnaserror
+
+      - name: dotnet test
+        run: dotnet test dotnet/AmazonFill.slnx --no-build
+
+      - name: validate_schema
+        run: python tools/validate_schema.py
+
+      - name: validate_schema no cambia el ejemplo de 08 sec. 4.1
+        run: git diff --exit-code -- tools/out/schema_example_08_4_1.json
+
+  coverage:
+    name: cobertura (>= 80 % en AF.Core y AF.Solver)
+    needs: [core, changes]
+    if: needs.changes.outputs.core == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          lfs: false
+
+      - uses: actions/setup-dotnet@v4.3.1
+        with:
+          global-json-file: global.json
+
+      - name: dotnet test con cobertura
+        # Umbral, ensamblados y salida: PropertyGroup condicionado de dotnet/AF.Core.Tests/AF.Core.Tests.csproj.
+        run: dotnet test dotnet/AmazonFill.slnx -p:CollectCoverage=true
+
+      - name: Informe de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: coverage-cobertura
+          path: dotnet/artifacts/coverage/
+          retention-days: 7
+          if-no-files-found: ignore
+
+  changes:
+    name: rutas tocadas
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      unity: ${{ steps.diff.outputs.unity }}
+      core: ${{ steps.diff.outputs.core }}
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          lfs: false
+          fetch-depth: 1
+
+      - id: diff
+        name: Rutas tocadas
+        env:
+          EVENT: ${{ github.event_name }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          set -uo pipefail
+          all_true() { { echo "unity=true"; echo "core=true"; } >> "$GITHUB_OUTPUT"; exit 0; }
+          [ "$EVENT" = "pull_request" ] || all_true
+          git fetch --no-tags --depth=1 origin "$BASE" "$HEAD" || all_true
+          files="$(git diff --name-only "$BASE" "$HEAD")" || all_true
+          if printf '%s\n' "$files" | grep -Eq '^(Assets/|Packages/|ProjectSettings/|ci/|\.github/workflows/)'; then
+            echo "unity=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "unity=false" >> "$GITHUB_OUTPUT"
+          fi
+          if printf '%s\n' "$files" | grep -Eq '^(Packages/com\.amazonfill\.core/|dotnet/|global\.json|\.github/workflows/)'; then
+            echo "core=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "core=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  unity-tests:
+    name: Unity EditMode + PlayMode
+    needs: [core, changes]
+    if: >-
+      needs.changes.outputs.unity == 'true' &&
+      (github.event_name != 'pull_request' || github.event.pull_request.draft == false)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    concurrency:
+      group: unity-personal-seat
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          lfs: false
+
+      - name: Lista de objetos LFS
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+
+      - name: Cache de LFS
+        uses: actions/cache@v4.2.3
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+          restore-keys: lfs-
+
+      - name: git lfs pull
+        run: git lfs pull
+
+      - name: Cache de Library (tests)
+        uses: actions/cache@v4.2.3
+        with:
+          path: Library
+          key: Library-tests-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/**', 'Assets/**') }}
+          restore-keys: Library-tests-
+
+      - name: Tests de Unity
+        uses: game-ci/unity-test-runner@v4.4.0
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          testMode: all
+          cliVersion: v0.1.72
+          artifactsPath: artifacts
+
+      - name: Resultados de los tests
+        if: always()
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: unity-test-results
+          path: artifacts
+          retention-days: 7
+          if-no-files-found: ignore
+
+  build-android:
+    name: Build Android + compuertas
+    needs: unity-tests
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    concurrency:
+      group: unity-personal-seat
+      cancel-in-progress: false
+    env:
+      AF_RELEASE_APPLICATION_ID: ${{ vars.AF_RELEASE_APPLICATION_ID }}
+      BUNDLETOOL_VERSION: 1.17.2
+      # sha256 de bundletool-all-1.17.2.jar (el mismo archivo que trae el modulo Android de Unity 6000.3.25f1).
+      BUNDLETOOL_SHA256: 2d4ad908faea64047c1cc9cb747e6aa667c6ab192e09607bd16b67246a8cd6ae
+    steps:
+      - name: Espacio en disco (la imagen Android de Unity ocupa mucho)
+        run: sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/.ghcup /opt/hostedtoolcache/CodeQL /usr/share/swift
+
+      - uses: actions/checkout@v4.2.2
+        with:
+          lfs: false
+
+      - name: Lista de objetos LFS
+        run: git lfs ls-files -l | cut -d' ' -f1 | sort > .lfs-assets-id
+
+      - name: Cache de LFS
+        uses: actions/cache@v4.2.3
+        with:
+          path: .git/lfs
+          key: lfs-${{ hashFiles('.lfs-assets-id') }}
+          restore-keys: lfs-
+
+      - name: git lfs pull
+        run: git lfs pull
+
+      - name: Cache de Library (Android)
+        uses: actions/cache@v4.2.3
+        with:
+          path: Library
+          key: Library-android-${{ hashFiles('Packages/packages-lock.json', 'ProjectSettings/**', 'Assets/**') }}
+          restore-keys: Library-android-
+
+      - name: Identidad del build
+        id: identity
+        run: |
+          if [ -n "${AF_RELEASE_APPLICATION_ID}" ]; then
+            echo "params=-afApplicationId ${AF_RELEASE_APPLICATION_ID}" >> "$GITHUB_OUTPUT"
+            echo "mode=release" >> "$GITHUB_OUTPUT"
+            echo "Release con applicationId ${AF_RELEASE_APPLICATION_ID}."
+          else
+            echo "params=-afRehearsal" >> "$GITHUB_OUTPUT"
+            echo "mode=dev" >> "$GITHUB_OUTPUT"
+            echo "Sin AF_RELEASE_APPLICATION_ID: ensayo con com.amazonfill.dev (no es un release)."
+          fi
+
+      - name: Build Android (AAB sin firma de release)
+        uses: game-ci/unity-builder@v6.0.0
+        env:
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: Android
+          cliVersion: v0.1.72
+          customImage: unityci/editor:ubuntu-6000.3.25f1-android-3
+          buildMethod: AF.EditorTools.BuildRelease.BuildAndroid
+          androidExportType: androidAppBundle
+          androidVersionCode: ${{ github.run_number }}
+          customParameters: ${{ steps.identity.outputs.params }}
+
+      - uses: actions/setup-java@v4.7.1
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: bundletool (version fijada y sha256 comprobado)
+        run: |
+          set -euo pipefail
+          jar="$RUNNER_TEMP/bundletool-all-${BUNDLETOOL_VERSION}.jar"
+          curl -fsSL -o "$jar" "https://github.com/google/bundletool/releases/download/${BUNDLETOOL_VERSION}/bundletool-all-${BUNDLETOOL_VERSION}.jar"
+          echo "${BUNDLETOOL_SHA256}  $jar" | sha256sum -c -
+          echo "BUNDLETOOL_JAR=$jar" >> "$GITHUB_ENV"
+
+      - name: Compuerta de tamano (<= 80 MB, bundletool get-size total)
+        run: pwsh -NoProfile -File ci/size-gate.ps1 build/Android -RequireBundletool -Breakdown
+
+      - name: Compuerta de 16 KB
+        env:
+          CHECK16_REQUIRE_ZIPALIGN: '1'
+        run: bash ci/check-16kb.sh build/Android/*.aab
+
+      - name: Compuerta del manifiesto (target/min, permisos, billing, appCategory, ID, IL2CPP ARM64)
+        run: pwsh -NoProfile -File ci/check-manifest.ps1 build/Android -Mode ${{ steps.identity.outputs.mode }}
+
+      - name: AAB
+        uses: actions/upload-artifact@v4.6.2
+        with:
+          name: android-aab-${{ steps.identity.outputs.mode }}
+          path: build/Android/*.aab
+          retention-days: 7
