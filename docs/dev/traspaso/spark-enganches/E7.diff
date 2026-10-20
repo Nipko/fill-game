@@ -64,7 +64,7 @@ index e6d2141..d5e81ac 100644
              ModalKit.Size(_panel, _surface, _art, (_canvasW - width) * 0.5f, Mathf.Max(8f, Mathf.Round((_canvasH - y) * 0.45f)), width, y);
 diff --git a/Assets/_Project/Tests/PlayMode/NoCanoesDailyLinkTests.cs b/Assets/_Project/Tests/PlayMode/NoCanoesDailyLinkTests.cs
 new file mode 100644
-index 0000000..d7865e4
+index 0000000..d72a055
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/NoCanoesDailyLinkTests.cs
 @@ -0,0 +1,142 @@
@@ -158,7 +158,7 @@ index 0000000..d7865e4
 +        [UnityTest]
 +        public IEnumerator WithoutTheRetoInTheBuild_NoLine()
 +        {
-+            GameBootstrap.DailyPoolOverride = null;
++            GameBootstrap.DailyPoolDisabledOverride = true; // sin pool aunque la escena lo traiga (E3): D-008
 +            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(NoCanoesProfile()));
 +            GameBootstrap boot = GameBootstrap.Current!;
 +            PlayModeHelpers.TakeClock(boot);

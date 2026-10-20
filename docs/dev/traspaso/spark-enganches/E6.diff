@@ -1,5 +1,5 @@
 diff --git a/Assets/_Project/Scripts/UI/GameScreen.cs b/Assets/_Project/Scripts/UI/GameScreen.cs
-index 475e057..dff4ce4 100644
+index ac1cf24..23babe9 100644
 --- a/Assets/_Project/Scripts/UI/GameScreen.cs
 +++ b/Assets/_Project/Scripts/UI/GameScreen.cs
 @@ -229,6 +229,7 @@ public sealed partial class GameScreen : ILevelFlowListener
@@ -46,10 +46,10 @@ index 475e057..dff4ce4 100644
          /// <inheritdoc />
 diff --git a/Assets/_Project/Tests/PlayMode/DailyTeaserVictoryTests.cs b/Assets/_Project/Tests/PlayMode/DailyTeaserVictoryTests.cs
 new file mode 100644
-index 0000000..acc8fd0
+index 0000000..4b30684
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/DailyTeaserVictoryTests.cs
-@@ -0,0 +1,166 @@
+@@ -0,0 +1,168 @@
 +#nullable enable
 +using System.Collections;
 +using AF.GameFlow;
@@ -66,8 +66,8 @@ index 0000000..acc8fd0
 +    /// <summary>
 +    /// Enganche E6 en la escena (<c>GameScreen.OnVictoryScreen</c>; 06 §2.2, nivel 7; 02 §13): la victoria real del 7 lleva la
 +    /// tarjeta de 2 s del Reto del río, que no toca el flujo de la victoria (Cosecha, Siguiente, Inicio y el paso al 8), no tapa
-+    /// la cinta, el panel ni sus botones, y se va sola o con la victoria. Sin el Reto en el build (sin <c>SetUpDaily</c> con
-+    /// pool), ni la victoria del 8, no sale. Simula E2 con <see cref="GameBootstrap.SetUpDaily"/> y el pool sintético.
++    /// la cinta, el panel ni sus botones, y se va sola o con la victoria. Sin el Reto en el build (sin pool:
++    /// <c>DailyPoolDisabledOverride</c>), ni la victoria del 8, no sale. Simula E2 con <see cref="GameBootstrap.SetUpDaily"/> y el pool sintético.
 +    /// </summary>
 +    public sealed class DailyTeaserVictoryTests
 +    {
@@ -149,8 +149,10 @@ index 0000000..acc8fd0
 +        [UnityTest]
 +        public IEnumerator Victory7_WithoutTheRetoInTheBuild_NoTeaser()
 +        {
++            GameBootstrap.DailyPoolDisabledOverride = true; // sin pool aunque la escena lo traiga (E3): D-008
 +            GameBootstrap boot = null!;
 +            yield return Load(7, false, b => boot = b);
++            Assert.That(boot.DailyInBuild, Is.False);
 +            VictorySetup.WinToVictoryScreen(boot);
 +            PlayModeHelpers.Step(boot, (int)DailyTeaserCard.DelayMs + 48);
 +            DailyTeaserCard? teaser = boot.View!.DailyTeaser;
