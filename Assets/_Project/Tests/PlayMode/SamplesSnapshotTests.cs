@@ -21,7 +21,12 @@ namespace AF.Tests.PlayMode
     /// su filo de luz bajo el velo, sin reflejo bajo la línea del agua, y «Nivel 71» en la cabecera), <c>12n_card_belem</c> (Belém
     /// con sus cinco frutas: el açaí de la serie y las que debutaron allí), <c>12o_map_miradores_l10</c> (max 10, la vista Mundo
     /// encuadrada en los tres «?» del estuario, con zoom: antes de guardar comprueba que los tres, con su área táctil de 48 dp,
-    /// quedan dentro de la zona del mapa a ≥ 8 dp del marco) y <c>12p_card_mirador</c> (la tarjeta de la isla de Marajó). Cada
+    /// quedan dentro de la zona del mapa a ≥ 8 dp del marco) y <c>12p_card_mirador</c> (la tarjeta de la isla de Marajó). Con
+    /// <see cref="CaptureTheStopCardSources"/> (DC10; D-028, pregunta 57 a), la línea «Fuente: …» con los datos reales:
+    /// <c>dc10_card_&lt;parada&gt;_fuente_&lt;780|640&gt;[_130]</c>, la tarjeta de Manaos («Fuente: Wikipedia») y la de Amacayacu
+    /// (la fuente más larga del Mapa, «Parques Nacionales Naturales de Colombia»), a 360 × 780 y a 360 × 640 dp, al 100 % y al
+    /// 130 %, con max 110; antes de guardar comprueba que la línea quede dentro de la placa, bajo el dato y a ≥ 12 sp, y la placa a
+    /// ≥ 8 dp por encima de «Jugar» (revisión de DC10); las de 640 se guardan a 1080 × 1920 px, la pantalla simulada entera. Cada
     /// captura escribe su línea <c>AF_MAP</c>.
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.SamplesSnapshotTests</c>
     /// sin <c>-nographics</c>); los PNG quedan en <c>Logs/snapshots/es-419/</c>.
@@ -73,6 +78,36 @@ namespace AF.Tests.PlayMode
             });
         }
 
+        [UnityTest]
+        public IEnumerator CaptureTheStopCardSources()
+        {
+            string dir = SnapshotKit.Prepare();
+            foreach ((Vector4 screen, string size) in new[] { (HudLabelTests.Screen780, "780"), (HudLabelTests.Screen640, "640") })
+            {
+                foreach ((float scale, string suffix) in new[] { (1f, string.Empty), (UiBuilder.MaxTextScale, "_130") })
+                {
+                    foreach ((int n, string id) in new[] { (5, "manaos"), (10, "amacayacu") })
+                    {
+                        GameScreen.SimulatedScreen = screen;
+                        LaunchOptions.FontScaleOverride = scale;
+                        string name = "dc10_card_" + id + "_fuente_" + size + suffix;
+                        yield return Shot(dir, 111, name, m => Assert.That(m.OpenStopCard(n), Is.True, name), (int)screen.y, m =>
+                        {
+                            StopCard card = m.Card!;
+                            Assert.That(card.SourceText, Is.Not.Empty, name);
+                            StopCardTests.AssertSourceInsideThePlate(m, card, scale, name);
+                            StopCardTests.AssertClearOfPlay(m, card, name);
+                            Debug.Log("AF_MAP " + name + ": fuente «" + card.SourceText + "» a "
+                                + card.SourceLabel.fontSize.ToString("F1", CultureInfo.InvariantCulture) + " sp, "
+                                + StopCardTests.CanvasRect(card.SourceLabel.rectTransform, m.Canvas) + " en la placa "
+                                + StopCardTests.CanvasRect(card.PanelRect, m.Canvas));
+                        });
+                        LaunchOptions.Reset();
+                    }
+                }
+            }
+        }
+
         // Los tres «?» del estuario, enteros y con su área táctil dentro de la zona del mapa, a ≥ 8 dp del marco y sin que los
         // tape nada de lo fijo en el marco (rótulos, «Volver a la canoa» y la ventanita de casa: su parte libre, también a ≥ 8 dp).
         internal static void AssertViewpointsInView(RiverMapScreen map)
@@ -101,6 +136,13 @@ namespace AF.Tests.PlayMode
 
         private static IEnumerator Shot(string dir, int playLevel, string name, Action<RiverMapScreen>? before, Action<RiverMapScreen>? check = null)
         {
+            return Shot(dir, playLevel, name, before, SnapshotKit.Height, check);
+        }
+
+        // Con heightPx < SnapshotKit.Height (360 × 640 dp: 1080 × 1920 px), solo las filas de arriba: la pantalla simulada entera,
+        // sin la franja de fondo que en ese teléfono no existe (SnapshotKit.SaveTop; revisión de DC10).
+        private static IEnumerator Shot(string dir, int playLevel, string name, Action<RiverMapScreen>? before, int heightPx, Action<RiverMapScreen>? check)
+        {
             yield return MapMarkersTests.OpenApp(playLevel);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
@@ -110,7 +152,7 @@ namespace AF.Tests.PlayMode
             map.Tick(16f);
             yield return SnapshotKit.Wait(0.2f);
             check?.Invoke(map);
-            SnapshotKit.Save(dir, name);
+            SnapshotKit.SaveTop(dir, name, heightPx);
             StopCard? card = map.Card;
             Debug.Log("AF_MAP " + name + ": muestras " + map.SamplesEarned.ToString(CultureInfo.InvariantCulture) + "/"
                 + map.SamplesTotal.ToString(CultureInfo.InvariantCulture) + ", datos " + map.FactsSeen.ToString(CultureInfo.InvariantCulture) + "/"

@@ -21,8 +21,10 @@ namespace AF.Tests.PlayMode
     /// <summary>
     /// TiTino en la victoria (tarea TI6a; propuesta de TiTino d.4 y paso 6a de (i); 02 §6, fila TiTino; 07 §5.4; T6-A; D-016):
     /// <list type="bullet">
-    /// <item>la caja: ≥ 104 dp, gesto y bocadillo; 56-103, solo el gesto; menos o con 3 filas, nada; TiTino se encoge para caber
-    /// entero con todo lo que mueve su gesto;</item>
+    /// <item>la caja: ≥ 104 dp, gesto y bocadillo; 56-103, solo el gesto; menos, nada; TiTino se encoge para caber entero con
+    /// todo lo que mueve su gesto. Con la victoria con vista (el default; DC2, pregunta 53 a de D-028) la caja es la franja de la
+    /// cabecera a la cinta sin el héroe del sitio (SlothVictoryBandTests) y las filas no cuentan; sin ella, la de TI6a, y con 3
+    /// filas no sale;</item>
     /// <item>SlothHito por defecto: en 40, 60, 80 y 140 habla si cabe (y la llegada va sin dato) y, si no, el hito lleva su dato;
     /// con los mensajes apagados, solo el gesto; con <c>ui_sloth_enabled</c> apagado, nada;</item>
     /// <item>tiempos: la rama empieza a entrar al abrirse la pantalla de victoria (la fila 0,80 [P]: 07 §5.4 dice 0,60, pero
@@ -31,17 +33,16 @@ namespace AF.Tests.PlayMode
     /// deslizar ni fundidos;</item>
     /// <item>TiTino se va en todas las salidas de la victoria: el nivel siguiente y «El río sigue creciendo» tras AD_GATE;</item>
     /// <item>ninguna intersección de TiTino ni del bocadillo con la cinta, las cuias (con su elevación), el saldo, el panel (la
-    /// Cosecha, la ranura y los botones) ni la cabecera, a 360 × 640 y 360 × 780, con 1 y 3 filas, al 100 % y al 130 %, en
-    /// todos los fotogramas de la victoria; con 3 filas no sale;</item>
+    /// Cosecha, la ranura y los botones), la cabecera ni el héroe del sitio, a 360 × 640 y 360 × 780, con 1 y 3 filas, al 100 %
+    /// y al 130 %, en todos los fotogramas de la victoria;</item>
     /// <item>sin toques: ningún gráfico es <c>raycastTarget</c>.</item>
     /// </list>
     /// <para>Salvo <see cref="RealHitos_SpeakIfItFits_ElseTheArrivalKeepsItsFact"/>, que mide los hitos del catálogo real con
     /// la ranura y sin ella, las victorias van sin la ranura del Dato del río (<see cref="GameScreen.ArrivalDisabledForTests"/> y
     /// <see cref="GameScreen.FactLineDisabledForTests"/>) y con tableros de una fila: son las únicas en las que la caja da para
-    /// TiTino. En los hitos reales (40, 60, 80 y 140, tableros de 2 filas), ShiftToClear sube las cuias hasta la cabecera para
-    /// despejar el panel de victoria y la caja mide 0 dp a 360 × 780 y a 360 × 640, con la ranura y también sin ella: hoy, en el
-    /// juego real, TiTino no sale en sus hitos (medido en TI6a; decisión pendiente del dueño, con las medidas en el informe de
-    /// la tarea y en <see cref="GameScreen.SlothBoxUnclampedDp"/>).</para>
+    /// TiTino en TI6a. En los hitos reales (40, 60, 80 y 140, tableros de 2 filas), ShiftToClear sube las cuias hasta la cabecera
+    /// y la caja de TI6a medía 0 dp (<see cref="GameScreen.SlothBoxUnclampedDp"/>); desde DC2 (pregunta 53 a de D-028), con la
+    /// victoria con vista, TiTino usa la franja de la cabecera a la cinta y sale en sus hitos (SlothVictoryBandTests).</para>
     /// </summary>
     public sealed class SlothVictoryTests
     {
@@ -537,16 +538,27 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator ThreeRows_NoSloth_AndTheHitoKeepsItsFact()
+        public IEnumerator ThreeRows_WithoutTheView_NoSloth_AndTheHitoKeepsItsFact()
         {
-            yield return WinPack(FifteenCuiaPack(40), 40);
-            GameScreen view = GameBootstrap.Current!.View!;
-            PlayModeHelpers.Step(GameBootstrap.Current, 1600);
-            TestContext.WriteLine("caja en el 40 de 3 filas: " + F(view.SlothBoxDp) + " dp");
-            Assert.That(view.Layout!.Rows, Is.EqualTo(3));
-            Assert.That(view.SlothView.Visible, Is.False, "con 3 filas TiTino no sale");
-            Assert.That(view.SlothCouldSpeak, Is.False);
-            Assert.That(view.CurrentVictoryLine.ArrivalFact, Is.True, "el hito lleva su dato");
+            // Sin la victoria con vista (ui_victory_view apagada), la caja de TI6a: con 3 filas TiTino no sale. Con la vista (el
+            // default), sí: SlothVictoryBandTests (DC2).
+            GameScreen.VictoryViewOverride = false;
+            try
+            {
+                yield return WinPack(FifteenCuiaPack(40), 40);
+                GameScreen view = GameBootstrap.Current!.View!;
+                PlayModeHelpers.Step(GameBootstrap.Current, 1600);
+                TestContext.WriteLine("caja en el 40 de 3 filas sin la vista: " + F(view.SlothBoxDp) + " dp");
+                Assert.That(view.Layout!.Rows, Is.EqualTo(3));
+                Assert.That(view.VictoryViewOn, Is.False);
+                Assert.That(view.SlothView.Visible, Is.False, "con 3 filas TiTino no sale");
+                Assert.That(view.SlothCouldSpeak, Is.False);
+                Assert.That(view.CurrentVictoryLine.ArrivalFact, Is.True, "el hito lleva su dato");
+            }
+            finally
+            {
+                GameScreen.VictoryViewOverride = null;
+            }
         }
 
         [UnityTest]
@@ -684,11 +696,9 @@ namespace AF.Tests.PlayMode
                         TestContext.WriteLine("AF_SLOTH_BOX " + at + ": caja " + F(box) + " dp (sin el tope de la cabecera " + F(view.SlothBoxUnclampedDp)
                             + " dp), TiTino " + sloth.Mode + " a " + F(sloth.SizeDp) + " dp, bocadillo " + sloth.BubbleLines + " líneas a "
                             + F(sloth.BubbleFontDp) + " dp");
-                        if (threeRows)
-                        {
-                            Assert.That(sloth.Visible, Is.False, at + ": con 3 filas no sale");
-                        }
-                        else if (box >= GameScreen.SlothSpeakBoxDp)
+                        // Con la victoria con vista (el default; DC2), también con 3 filas: la caja va de la cabecera a la cinta.
+                        Assert.That(view.VictoryViewOn, Is.True, at);
+                        if (box >= GameScreen.SlothSpeakBoxDp)
                         {
                             // ≥ 104 dp: gesto y bocadillo, si la frase cabe (SlothCanSpeak la mide antes del árbitro).
                             Assert.That(sloth.Visible, Is.True, at);
@@ -711,9 +721,9 @@ namespace AF.Tests.PlayMode
                             Assert.That(sloth.Visible, Is.False, at + ": menos de 56 dp, no sale");
                         }
 
-                        if (!threeRows && !small && scale < 1.01f)
+                        if (!small && scale < 1.01f)
                         {
-                            // La referencia: a 360 × 780 y al 100 %, con una fila, la caja da para el bocadillo y TiTino habla.
+                            // La referencia: a 360 × 780 y al 100 %, con una fila o con 3, la caja da para el bocadillo y TiTino habla.
                             Assert.That(box, Is.GreaterThanOrEqualTo(GameScreen.SlothSpeakBoxDp), at);
                             Assert.That(spoke, Is.True, at + ": con una fila a 780 y al 100 %, habla");
                         }
@@ -747,8 +757,9 @@ namespace AF.Tests.PlayMode
 
         /// <summary>
         /// Ni TiTino (sus piezas a la vista) ni su bocadillo se cruzan con la cinta, el panel de victoria (la Cosecha, la ranura y
-        /// los botones), los botones, el saldo ni las cuias con su elevación (donde están ahora), y no suben por encima del pie de
-        /// la cabecera. Sin TiTino a la vista, no hay nada que comprobar.
+        /// los botones), los botones, el saldo ni las cuias con su elevación (donde están ahora; en la victoria con vista, desde que
+        /// el tablero se empieza a ir, no), ni, en la victoria con vista, con el héroe del sitio del fondo (DC2), y no suben por
+        /// encima del pie de la cabecera. Sin TiTino a la vista, no hay nada que comprobar.
         /// </summary>
         internal static void AssertNoIntersection(GameScreen view, string at)
         {
@@ -770,10 +781,22 @@ namespace AF.Tests.PlayMode
             AddIfActive(others, "Cosecha doble", view.DoubleHarvestButton.transform, space);
             AddIfActive(others, "saldo: semillas", view.WalletBar.SeedsRect, space);
             AddIfActive(others, "saldo: canoas", view.WalletBar.CanoesRect, space);
-            others.Add(("cabecera", Rect.MinMaxRect(-1000f, -1000f, 1000f, view.SlothBandTopDp)));
+            others.Add(("cabecera", Rect.MinMaxRect(-1000f, -1000f, 1000f, view.SlothHeaderBottomDp)));
+            Rect hero = view.HeroRect;
+            if (view.VictoryViewOn && hero.width > 0f && hero.height > 0f)
+            {
+                others.Add(("héroe del sitio", hero)); // victoria con vista (DC2)
+            }
+
+            // Con la victoria con vista ya empezada, las cuias se van (o ya se fueron) con el tablero (M2.2) y TiTino usa la franja
+            // de la cabecera a la cinta (DC2): no cuentan. Con 10 cuias o menos la vista empieza al abrirse la victoria y la rama de
+            // TiTino entra a la vez (la fila 0,80): durante el fundido del tablero (≤ 250 ms) se cruza con las cuias y el panel del
+            // tablero, que se desvanecen, solapamiento marcado [P; DC2] en GameScreen.SlothShowVictory para que DC1 lo lleve a
+            // 07 §5.4. Con 11-16 cuias TiTino espera a la vista: nunca se cruza con las cuias a la vista.
+            bool boardLeaving = view.VictoryViewOn && view.VictoryViewWaitMs < 0f;
             BoardLayoutResult layout = view.Layout!;
             float shift = view.BoardContainer.anchoredPosition.y;
-            for (int i = 0; i < view.Views.Length; i++)
+            for (int i = 0; i < (boardLeaving ? 0 : view.Views.Length); i++)
             {
                 CuiaView cuia = view.Views[i];
                 float half = (layout.CuiaWidth * 0.5f) + 2f;

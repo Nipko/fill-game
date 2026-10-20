@@ -163,13 +163,13 @@ namespace AF.Presentation
 
         /// <summary>
         /// Con el trazo suave (<see cref="SetSmooth"/>), separación mínima entre los puntos de la línea que dibuja la cinta, en anchos
-        /// de la cinta en pantalla (M5.1c) [P]: 12 dp en la clase 1 (8 dp) y 7,5 dp en la clase 2 (5 dp) de la vista Mundo.
+        /// de la cinta en pantalla (M5.1c, ratificado por el dueño: D-029): 12 dp en la clase 1 (8 dp) y 7,5 dp en la clase 2 (5 dp) de la vista Mundo.
         /// </summary>
         public const float SpacingWidths = 1.5f;
 
         /// <summary>
         /// Con el trazo suave, una unión cuyo inglete mediría más de estos medios anchos (un giro de más de 74°) va en bisel
-        /// (M5.1c) [P].
+        /// (M5.1c, ratificado por el dueño: D-029).
         /// </summary>
         public const float BevelMiter = 1.25f;
 

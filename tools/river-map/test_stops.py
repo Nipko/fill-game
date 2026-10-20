@@ -15,6 +15,8 @@ paises de los rotulos, y los fixtures de las rutas (parada desplazada 20 km y ca
 la comprueba geometry.py --check desde M5.1, en test_geometry.py).
 M4.5a: las paradas 201-420 (k = 20-41) de paradas_201_700, con sus kinds, banderas (EC, BO y PE), preguntas, kits w06-w07,
 rutas por el Napo y el Madeira (teotonio en el viaje del 300), y sus textos; y los fixtures de los cruces nuevos.
+DC9 (D-028, pregunta 57 a): las filas <clave del dato>.source (generacion, dato sin fuente, varias fuentes y los fallos
+de source_short: sin nombre corto, demasiado largo, id desconocido o sin uso, vacio, sin why y Belen).
 Solo biblioteca estandar.
 """
 from __future__ import annotations
@@ -597,6 +599,23 @@ def _drop_override(sid: str, field: str):
     return mutate
 
 
+def _set_short(sid: str, name):
+    """Nombre corto de una fuente en source_short.names de overrides.json (DC9)."""
+    def mutate(src: dict, ov: dict) -> None:
+        ov["source_short"]["names"][sid] = name
+    return mutate
+
+
+def _drop_short(sid: str):
+    def mutate(src: dict, ov: dict) -> None:
+        del ov["source_short"]["names"][sid]
+    return mutate
+
+
+def _drop_short_why(src: dict, ov: dict) -> None:
+    del ov["source_short"]["why"]
+
+
 def _unknown_country(src: dict, ov: dict) -> None:
     # Las paradas del Peru (k = 14-21, 31-41 y 56-69) pasan a un pais «XX» sin entrada en COUNTRY_NAMES, con sus banderas y
     # sus cruces de pais coherentes: validate() no se queja y falla solo el nombre del pais.
@@ -763,6 +782,19 @@ FIXTURES = [
      "map.country.bo.dato_01: 91 caracteres y el maximo es 90"),
     ("arrival_text vacio", _override_field("nuevo_rocafuerte", "arrival_text", " "),
      "map.country.ec.dato_01: clave sin texto"),
+    # Fuente del dato (DC9; D-028, pregunta 57 a): source_short de overrides.json.
+    ("fuente sin nombre corto", _drop_short("MR-F38"),
+     "map.stop.tarapoto.dato_01: su fuente MR-F38 no tiene nombre corto en overrides.json"),
+    ("nombre corto de 41 caracteres", _set_short("MR-F38", "Ministerio de Ambiente y Desarrollo, Colo"),
+     "map.stop.tarapoto.dato_01.source: 41 caracteres y el maximo es 40"),
+    ("nombre corto de una fuente que no existe", _set_short("XX-F1", "Fuente X"),
+     "source_short.names lleva 'XX-F1', que no esta en rio-amazonas.json"),
+    # CR-F62 es la segunda fuente [E] de belem.dato_01, cuya primera es [V]: no la nombra ninguna fila .source.
+    ("nombre corto que no nombra ninguna fila", _set_short("CR-F62", "Wikipedia"),
+     "source_short.names lleva 'CR-F62', que no es la fuente de ningun dato con fila .source"),
+    ("nombre corto vacio", _set_short("MR-F38", " "), "source_short.names['MR-F38'] tiene que ser un nombre"),
+    ("source_short sin why", _drop_short_why, "source_short sin why con [P]"),
+    ("nombre corto con Belen", _set_short("CR-F28", "Belén"), "map.stop.itaya.dato_01.source: 'Belen' cae en el veto"),
 ]
 
 
@@ -871,6 +903,10 @@ class TextBlockTests(unittest.TestCase):
         # Lugares de las claves de 201-700 (map.stop.<lugar>.*), los unicos con cifras en args (M4.5a y M4.5b).
         cls.stops_201 = {k.split(".")[2] for s in cls.doc["stops"] if s["n"] >= 20
                          for k in [s["arrival_fact"], *s["facts"]] if k.startswith("map.stop.")}
+        # Filas .source de DC9 (D-028, pregunta 57 a): <clave del dato>.source de cada dato de llegada y «Otro dato». No
+        # basta con endswith(".source"): map.myth.source es un dato (su fila .source es map.myth.source.source).
+        cls.source_rows = {k + stops.SOURCE_SUFFIX for s in cls.doc["stops"] for k in [s["arrival_fact"], *s["facts"]]
+                           if k is not None}
 
     def test_header_of_l2b_utf8_without_bom_with_lf(self):
         self.assertEqual(self.HEADER, self.header)
@@ -894,8 +930,10 @@ class TextBlockTests(unittest.TestCase):
         # Los datos de los puntos de paso con texto final en la investigacion (M4.5a: el de teotonio).
         passing_facts = {p["fact"] for p in river_map["passing"] if p["fact"] in self.table}
         self.assertEqual({"map.stop.teotonio.dato_01"}, passing_facts)
-        self.assertEqual(sorted(set(cited) | map_keys | passing_facts), sorted(block),
-                         "el bloque tiene justo las claves que citan river_stops_v1.json y river_map_v1.json")
+        # DC9 (D-028, pregunta 57 a): una fila .source por dato de llegada y «Otro dato» (todos tienen fuente con URL).
+        self.assertEqual(128, len(self.source_rows), "68 datos de llegada, map.myth.source y 59 «Otro dato»")
+        self.assertEqual(sorted(set(cited) | map_keys | passing_facts | self.source_rows), sorted(block),
+                         "el bloque tiene justo las claves que citan river_stops_v1.json y river_map_v1.json, y las .source")
 
     def test_rows_are_ordinal_and_the_block_is_contiguous(self):
         keys = [r[0] for r in self.rows[1:]]
@@ -919,11 +957,13 @@ class TextBlockTests(unittest.TestCase):
                 if re.search(r"\[(V|E)\]", row["notes"]):
                     # 08 §4.5: cada etiqueta [V] o [E] lleva a una fuente con URL.
                     self.assertRegex(row["context"], r"https?://", "fila [V] o [E] sin URL en su contexto")
-                if not (".dato_" in key or key.startswith(("map.general.", "map.myth."))):
-                    self.assertTrue(row["notes"].startswith("[P] "), "nombres, rios, paises y preguntas sin [V] ni [E]")
+                if key in self.source_rows or not (".dato_" in key or key.startswith(("map.general.", "map.myth."))):
+                    self.assertTrue(row["notes"].startswith("[P] "),
+                                    "nombres, rios, paises, preguntas y nombres cortos de fuente sin [V] ni [E]")
                 self.assertIn("no se edita a mano", row["notes"])
                 self.assertTrue(row["context"])
-                expected_max = ("90" if ".dato_" in key or key.startswith(("map.general.", "map.myth.")) else
+                expected_max = ("40" if key in self.source_rows else
+                                "90" if ".dato_" in key or key.startswith(("map.general.", "map.myth.")) else
                                 "50" if key.endswith(".question") else "32")
                 self.assertEqual(expected_max, row["max_chars"])
                 self.assertLessEqual(len(row["es-419"]), int(row["max_chars"]))
@@ -1020,7 +1060,8 @@ class TextBlockTests(unittest.TestCase):
         self.assertEqual("¿Cómo cabe tanta vida en un solo parque?", t["map.world.w08.question"])
         self.assertEqual("¿Por qué el río dibuja tantas curvas?", t["map.world.w09.question"])
         self.assertEqual(8, sum(k.startswith("map.world.") for k in t))
-        self.assertEqual(128, sum(".dato_" in k or k.startswith("map.general.") for k in t if k.startswith("map.")),
+        self.assertEqual(128, sum(".dato_" in k or k.startswith("map.general.") for k in t
+                                  if k.startswith("map.") and k not in self.source_rows),
                          "68 datos de llegada (sin map.myth.source), 59 «Otro dato» y el del punto de paso teotonio")
 
     def test_rivers_are_only_the_name_of_the_river(self):
@@ -1213,7 +1254,8 @@ class TextBlockTests(unittest.TestCase):
         self.assertEqual("n=274690", row["args"])
         self.assertIn("Marcadores: {n}", row["context"])
         self.assertEqual([f"map.stop.sandoval.dato_0{i}" for i in (4, 5, 6, 7)],
-                         [k for k in sorted(t) if k.startswith("map.stop.sandoval.dato_0") and k > "map.stop.sandoval.dato_03"],
+                         [k for k in sorted(t) if k.startswith("map.stop.sandoval.dato_0") and k > "map.stop.sandoval.dato_03"
+                          and k not in self.source_rows],
                          "los cuatro candidatos de Para de la pregunta 50 (a) en la tarjeta de la parada 32")
 
     def test_passing_point_teotonio_with_its_name_and_fact(self):
@@ -1399,7 +1441,7 @@ class FactsCheckTests(unittest.TestCase):
     def test_check_passes_on_the_committed_table(self):
         proc = self.check(FACTS_PATH.read_bytes())
         self.assertEqual(0, proc.returncode, proc.stdout.decode("ascii", "replace"))
-        self.assertIn(b"308 textos map.* validos", proc.stdout)
+        self.assertIn(b"436 textos map.* validos", proc.stdout, "308 y las 128 filas .source de DC9")
 
     def test_edited_row_is_drift(self):
         # Solo en la fila del Mapa: desde F1F2, la linea 14 del Agua del Tapajos (fact.*, antes del bloque) tambien la nombra.
@@ -1437,6 +1479,98 @@ class FactsCheckTests(unittest.TestCase):
             proc = run_stops("--check", "--facts", str(Path(tmp) / "no_existe.csv"))
         self.assertEqual(1, proc.returncode)
         self.assertIn(b"falta", proc.stdout)
+
+
+class SourceRowTests(unittest.TestCase):
+    """DC9 (D-028, pregunta 57 a): una fila <clave del dato>.source por dato del Mapa con fuente, con el nombre corto de
+    source_short de overrides.json; de varias fuentes, la primera [V] o, sin ninguna [V], la primera."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.source = load_json(SOURCE_PATH)
+        cls.overrides = load_json(OVERRIDES_PATH)
+        cls.fuentes = {f["id"]: f for f in cls.source["fuentes"]}
+        cls.names = cls.overrides["source_short"]["names"]
+        rows = facts_rows(FACTS_PATH.read_bytes())
+        cls.table = {r[0]: dict(zip(rows[0], r)) for r in rows[1:]}
+        cls.doc = json.loads(STOPS_PATH.read_text(encoding="utf-8"))
+        records = {r["k"]: r for r in cls.source["paradas_1_200"] + cls.source["paradas_201_700"]}
+        cls.datos = {}
+        for s in cls.doc["stops"]:
+            if s["arrival_fact"] is not None:
+                cls.datos[s["arrival_fact"]] = records[0 if s["n"] == 1 else s["n"]]["dato_del_nivel"]
+            otros = {o["clave"]: o for o in records[s["n"]].get("otros_datos", [])}
+            for k in s["facts"]:
+                cls.datos[k] = otros[k]
+
+    def test_one_source_row_per_fact_with_its_short_name(self):
+        self.assertEqual(128, len(self.datos))
+        for key, dato in self.datos.items():
+            with self.subTest(key=key):
+                sid = stops.source_of(dato, self.fuentes)
+                self.assertIsNotNone(sid, "todo dato del Mapa tiene fuente con URL")
+                row = self.table[key + stops.SOURCE_SUFFIX]
+                url = self.fuentes[sid]["url"]
+                self.assertEqual(self.names[sid], row["es-419"])
+                self.assertEqual(("", "", "", ""), (row["en"], row["pt-BR"], row["status_en"], row["status_pt-BR"]),
+                                 "nombre propio sin traducir: el traductor lo copia al revisar la fila")
+                self.assertEqual("pendiente_asesor", row["status"])
+                self.assertEqual("40", row["max_chars"])
+                self.assertEqual("", row["args"])
+                self.assertTrue(row["notes"].startswith(f"[P] Nombre corto de la fuente {sid} ({url})"))
+                self.assertIn(url, row["context"])
+                self.assertIn("map_card_source", row["context"])
+                self.assertIn("D-028, pregunta 57 a", row["context"])
+
+    def test_manaos_card_has_its_source(self):
+        # DC10 quita el [Ignore] de ManaosCard_ShowsTheSourceOfItsFact (StopCardTests): el dato de llegada de Manaos.
+        self.assertEqual("Wikipedia", self.table["map.stop.manaos.dato_02.source"]["es-419"])
+
+    def test_several_sources_take_the_first_verified(self):
+        t = self.table
+        # [E] wp_tipos y [V] rios_villamizar: la [V], aunque sea la segunda.
+        self.assertEqual("rios_villamizar", stops.source_of(self.datos["map.general.dato_negra"], self.fuentes))
+        self.assertEqual("WIT Transactions", t["map.general.dato_negra.source"]["es-419"])
+        self.assertIn("El dato cita 2 fuentes (wp_tipos, rios_villamizar)", t["map.general.dato_negra.source"]["context"])
+        # [V] y [V]: la primera.
+        self.assertEqual("Agência FAPESP", t["map.stop.santarem.dato_01.source"]["es-419"])
+        # [E] y [E]: la primera (MR-F03, no MR-F24).
+        self.assertIn("MR-F03 [E]", t["map.stop.manaos.dato_02.source"]["context"])
+        # Una sola fuente: sin la regla en el contexto.
+        self.assertNotIn("El dato cita", t["map.stop.tarapoto.dato_01.source"]["context"])
+
+    def test_source_of_rule(self):
+        fuentes = {"a": {"etiqueta": "E", "url": "https://a"}, "b": {"etiqueta": "V", "url": "https://b"},
+                   "c": {"etiqueta": "V", "url": None}, "d": {"etiqueta": "E", "url": "https://d"}}
+        self.assertEqual("b", stops.source_of({"fuente": "a, b"}, fuentes))
+        self.assertEqual("a", stops.source_of({"fuente": "a, d"}, fuentes))
+        self.assertEqual("d", stops.source_of({"fuente": "c, d"}, fuentes), "una fuente sin URL no cuenta")
+        self.assertIsNone(stops.source_of({"fuente": ""}, fuentes))
+        self.assertIsNone(stops.source_of({}, fuentes))
+        self.assertIsNone(stops.source_of({"fuente": "c"}, fuentes), "solo con una fuente sin URL")
+        self.assertIsNone(stops.source_of({"fuente": "zz"}, fuentes), "con una fuente que no existe")
+
+    def test_fact_without_source_has_no_source_row(self):
+        # La tarjeta no enseña la línea: sin fuente (o solo con una sin URL), sin fila .source; --check ya falla por el
+        # dato sin fuente (08 §4.5), pero no pide un nombre corto que no hace falta.
+        src = copy.deepcopy(self.source)
+        rec = next(r for r in src["paradas_1_200"] if r["k"] == 2)
+        rec["dato_del_nivel"]["fuente"] = ""
+        doc, rows, errors = stops.build_all(src, copy.deepcopy(self.overrides), WorldTable.from_cs())
+        self.assertIn("map.stop.alter_do_chao.dato_01", rows)
+        self.assertNotIn("map.stop.alter_do_chao.dato_01.source", rows)
+        self.assertTrue(any("map.stop.alter_do_chao.dato_01: dato sin fuente" in e for e in errors), errors)
+        self.assertFalse(any("nombre corto" in e for e in errors if "alter_do_chao" in e), errors)
+
+    def test_short_names_fit_the_card_and_are_used(self):
+        self.assertEqual(40, stops.SOURCE_MAX_CHARS, "48 de map_card_source menos «Fuente: »")
+        self.assertIn("[P]", self.overrides["source_short"]["why"])
+        used = {stops.source_of(d, self.fuentes) for d in self.datos.values()}
+        self.assertEqual(sorted(used), sorted(self.names), "un nombre corto por fuente que nombra alguna fila")
+        self.assertEqual(sorted(self.names), list(self.names), "ids en orden ordinal")
+        for sid, name in self.names.items():
+            with self.subTest(sid=sid):
+                self.assertLessEqual(len(name), stops.SOURCE_MAX_CHARS)
 
 
 class MapScopeTests(unittest.TestCase):

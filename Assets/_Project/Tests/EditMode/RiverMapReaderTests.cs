@@ -178,7 +178,7 @@ namespace AF.Tests.EditMode
             Assert.That(map.Lines[santarem.Path[1].Line].Id, Is.EqualTo("amazonas"));
             Assert.That(santarem.Path[1].S1, Is.LessThan(santarem.Path[1].S0), "río arriba, s decrece");
             Assert.That(santarem.Via, Is.EqualTo(new[] { "breves", "gurupa", "boca_del_xingu", "monte_alegre" }));
-            // Santarém está en la confluencia: se ancla en la boca del Tapajós (geometry.confluence_s [P], revisión de M5.1) y
+            // Santarém está en la confluencia: se ancla en la boca del Tapajós (geometry.confluence_s, revisión de M5.1; D-030, 1 a) y
             // al llegar se llena.
             Assert.That(santarem.Mouths.Count, Is.EqualTo(2));
             Assert.That(map.Lines[santarem.Mouths[0]].Id, Is.EqualTo("xingu"));
