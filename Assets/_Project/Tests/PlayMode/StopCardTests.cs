@@ -376,16 +376,26 @@ namespace AF.Tests.PlayMode
 
             Assert.That(rim && body, Is.True, "la silueta con su filo de luz, encima del agua");
 
-            // «Nivel 71» en la fila de la cabecera, a la derecha del ←, centrado con él en vertical; nada debajo del fondo.
+            // «Nivel 71» en la fila de la cabecera, a la derecha del ←, centrado con él en vertical; debajo del fondo, solo lo de B14
+            // (06 §4.5): la Canasta con que se llega (la del 70: 50 semillas y 3 Mareas) y, en el cierre del mundo 3, el Premio.
             var texts = new List<TextMeshProUGUI>(card.Texts());
-            Assert.That(texts.Count, Is.EqualTo(1), "solo «Nivel 71»");
+            Assert.That(texts[0].text, Is.EqualTo(UiText.Level(71)), "primero «Nivel 71»");
+            Assert.That(card.BasketShown, Is.True);
+            Assert.That(card.Basket.Level, Is.EqualTo(70));
+            Assert.That(card.PrizeText, Is.EqualTo("Premio del mundo · faltan 22"));
+            Assert.That(texts.Count, Is.EqualTo(1 + 1 + card.BasketItemCount + 1), "«Nivel 71», «Canasta», sus cantidades y el Premio");
             Rect level = CanvasRect(card.FutureLevelRect, map.Canvas);
             Rect close = CanvasRect((RectTransform)card.CloseButton.transform, map.Canvas);
             Rect panel = CanvasRect(card.PanelRect, map.Canvas);
             Assert.That(level.xMin, Is.GreaterThanOrEqualTo(close.xMax), "a la derecha del ←");
             Assert.That(level.center.y, Is.EqualTo(close.center.y).Within(1f), "centrado con el ← en vertical");
             Assert.That(level.yMax, Is.LessThanOrEqualTo(window.yMin), "encima del fondo");
-            Assert.That(panel.yMax - window.yMax, Is.LessThanOrEqualTo(StopCard.PadDp + 4f), "sin fila debajo del fondo");
+            for (int i = 1; i < texts.Count; i++)
+            {
+                Rect row = CanvasRect(texts[i].rectTransform, map.Canvas);
+                Assert.That(row.yMin, Is.GreaterThanOrEqualTo(window.yMax), texts[i].name + ": debajo del fondo");
+                Assert.That(row.yMax, Is.LessThanOrEqualTo(panel.yMax + 0.5f), texts[i].name + ": dentro de la placa");
+            }
             Assert.That(texts[0].fontSize, Is.GreaterThanOrEqualTo(UiBuilder.MinTextSp - 0.01f));
 
             // Al volver a una alcanzada, el héroe ya no va en silueta y el fondo, a todo color.
@@ -753,7 +763,8 @@ namespace AF.Tests.PlayMode
             Assert.That(StopCard.TintNameKey(15), Is.Null);
         }
 
-        // Ni precios ni semillas (Q10-A): ningún texto con moneda o «semilla» y ninguna imagen del icono de semillas.
+        // Ni precios ni semillas (Q10-A): ningún texto con moneda o «semilla» y ninguna imagen del icono de semillas, salvo en la
+        // fila de la Canasta de una parada futura, que enseña su contenido (06 §4.5; B14): es contenido, no un precio ni una oferta.
         internal static void AssertNoPrices(RectTransform root, ProceduralArt art, string where)
         {
             foreach (TextMeshProUGUI text in root.GetComponentsInChildren<TextMeshProUGUI>(false))
@@ -768,6 +779,11 @@ namespace AF.Tests.PlayMode
             Sprite seed = art.IconSeed;
             foreach (Image image in root.GetComponentsInChildren<Image>(false))
             {
+                if (image.name.StartsWith("BasketIcon", StringComparison.Ordinal))
+                {
+                    continue; // la Canasta de una parada futura (StopCard.Meta.cs)
+                }
+
                 Assert.That(image.sprite, Is.Not.SameAs(seed), where + ": " + image.name + " sin el icono de semillas");
             }
         }

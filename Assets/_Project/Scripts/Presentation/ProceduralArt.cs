@@ -132,6 +132,13 @@ namespace AF.Presentation
         /// <summary>Sombra de contacto de la cuia sobre la repisa (guía 4.1): elipse negra suave.</summary>
         public Sprite ContactShadow { get; }
 
+        /// <summary>
+        /// Skin con la que se construyen las cuias nuevas (tarea B14; 07 §4.6): la que el jugador lleva puesta, que fija la UI desde
+        /// el perfil (Q-M8 (a)). <see cref="CuiaView"/> la lee al crearse; cambiarla no repinta las cuias que ya hay. Base por
+        /// defecto.
+        /// </summary>
+        public CuiaSkin CuiaSkin { get; set; } = CuiaSkin.Base;
+
         /// <summary>Agua base del mundo (07 §2.1).</summary>
         public Color Water => _water;
 

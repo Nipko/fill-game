@@ -107,6 +107,23 @@ namespace AF.UI
         private RiverStop? _victoryViewStop;
         private string _victoryViewWater = string.Empty;
         private Season _victoryViewSeason;
+        private Color _victoryViewLight = Color.white;
+
+        /// <summary>
+        /// Solo tests y capturas: false apaga la luz de la dificultad (B14) y vuelve el velo del 15 % de Muy difícil del paso 1, para
+        /// comparar. En el juego, siempre true.
+        /// </summary>
+        internal static bool DifficultyLightEnabled { get; set; } = true;
+
+        /// <summary>
+        /// Luz de la dificultad del fondo para la etiqueta <paramref name="label"/> (<see cref="StopBackdrop.DifficultyLightOf"/>;
+        /// 07 §7.7 [P]; tarea B14): la noche de Muy difícil o la tarde de Difícil; blanco sin etiqueta o con
+        /// <see cref="DifficultyLightEnabled"/> apagado.
+        /// </summary>
+        internal static Color DifficultyLightFor(string? label)
+        {
+            return DifficultyLightEnabled ? StopBackdrop.DifficultyLightOf(label) : Color.white;
+        }
 
         // ms de la celebración en curso (StopTick, antes del Tick del flujo, como la ola de saltos de las cuias): en la victoria,
         // lo que ya pasó de la ola. Vuelve a 0 con cada carga.
@@ -255,10 +272,11 @@ namespace AF.UI
             RiverStop? stop = StopForLevel(RiverStops, flow.LevelNumber, MapConfig.UiBgPerStop);
             string water = flow.Level.WaterBase;
             Season season = SeasonFor(Seasons, flow.LevelNumber);
+            Color light = DifficultyLightFor(flow.Level.DifficultyLabel); // B14: noche de Muy difícil y tarde de Difícil (07 §7.7 [P])
             RiverStop? before = _stopBackdrop.Stop;
             // Sin parada antes ni después no cambia nada visible, aunque cambie el agua del mundo (sin catálogo), salvo la luz de
-            // la temporada (SE2).
-            bool same = season == _stopBackdrop.Season
+            // la temporada (SE2) y la de la dificultad (B14).
+            bool same = season == _stopBackdrop.Season && light == _stopBackdrop.Light
                 && ((before == null && stop == null)
                     || (ReferenceEquals(before, stop) && string.Equals(_stopBackdrop.Water, water, System.StringComparison.Ordinal)));
             bool fade = _stopLoadedOnce && !flow.ReduceMotion && !same;
@@ -268,7 +286,7 @@ namespace AF.UI
                 _stopBackdrop.Prewarm(stop, water); // el primer uso, fuera de build_ms (FX4; sonda warm_ms)
             }
 
-            _stopBackdrop.Apply(stop, water, fade, MapConfig.StopCrossfadeMs, season);
+            _stopBackdrop.Apply(stop, water, fade, MapConfig.StopCrossfadeMs, season, light);
             _lastStopChange = same ? StopChangeSame : (_stopBackdrop.Fading ? StopChangeFade : StopChangeCut);
             ApplyStopLut();
             EmitStopProbe(flow);
@@ -295,12 +313,15 @@ namespace AF.UI
             _victoryViewStop = null;
             _victoryViewWater = flow.Level.WaterBase;
             _victoryViewSeason = _stopBackdrop.Season;
+            _victoryViewLight = _stopBackdrop.Light;
             if (_victoryViewArrival)
             {
                 int next = won + 1;
+                LevelDefinition? nextLevel = flow.Catalog.Find(next);
                 _victoryViewStop = StopForLevel(stops, next, MapConfig.UiBgPerStop);
-                _victoryViewWater = flow.Catalog.Find(next)?.WaterBase ?? flow.Level.WaterBase;
+                _victoryViewWater = nextLevel?.WaterBase ?? flow.Level.WaterBase;
                 _victoryViewSeason = SeasonFor(Seasons, next); // la luz de la temporada del nivel siguiente (SE2)
+                _victoryViewLight = DifficultyLightFor(nextLevel?.DifficultyLabel); // y la de su dificultad (B14), como la temporada
             }
 
             // Tras la ola de saltos (02 §6; 07 §5.4): con más de 10 cuias sigue saltando al abrirse la victoria (la última cuia
@@ -324,7 +345,7 @@ namespace AF.UI
             LayoutStopBackdrop(); // sin hueco: bajo el panel que se va, la banda del agua
             if (_victoryViewArrival)
             {
-                _stopBackdrop.Apply(_victoryViewStop, _victoryViewWater, !cut, VictoryViewFadeMs, _victoryViewSeason);
+                _stopBackdrop.Apply(_victoryViewStop, _victoryViewWater, !cut, VictoryViewFadeMs, _victoryViewSeason, _victoryViewLight);
                 ApplyStopLut();
             }
 
@@ -453,6 +474,7 @@ namespace AF.UI
             AppendJsonString(sb, "code", b.Code);
             AppendJsonString(sb, "change", _lastStopChange);
             AppendJsonString(sb, "season", SeasonTable.Letter(b.Season)); // SE2
+            AppendJsonString(sb, "light", StopBackdrop.DifficultyLightName(b.Light)); // B14: night, afternoon o null
             _lastStopProbe = sb.ToString();
             _probe.Event("stop", _lastStopProbe);
         }

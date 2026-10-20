@@ -131,6 +131,13 @@ namespace AF.Presentation
         private readonly CuiaOverlay?[] _overlays = new CuiaOverlay?[(int)MechanicTypes.Last + 1];
         private CuiaOverlay? _overlay;
         private bool _boardBound;
+        private CuiaSkin _skin = CuiaSkin.Base;
+        private RectTransform _skinLayer = null!;
+        private Image _skinRim = null!;
+        private Image _skinFoot = null!;
+        private Image _skinBand = null!;
+        private Image _skinBandB = null!;
+        private Image _skinHandle = null!;
 
         private float _u = 24f;
         private float _liftMs = 120f;
@@ -312,6 +319,7 @@ namespace AF.Presentation
             _star.rectTransform.anchoredPosition = new Vector2(0f, (HeightU + 0.1f) * _u);
             _star.rectTransform.sizeDelta = new Vector2(40f, 40f);
             PlaceCapAtRest();
+            LayoutSkin();
             _shownShadow = -1f;
             UpdateShadow();
         }
@@ -942,6 +950,7 @@ namespace AF.Presentation
             _back.enabled = !hide;
             _front.enabled = !hide;
             _marks.enabled = !hide;
+            _skinLayer.gameObject.SetActive(!hide); // la skin es de la cuia de vidrio, no de la vasija de barro
         }
 
         private CuiaOverlay? EnsureOverlay(MechanicType type)
@@ -1387,6 +1396,7 @@ namespace AF.Presentation
 
             _marks = NewImage("DoseMarks", _body, art.CuiaMarks(capacity, _glassPpu), Color.white);
             Stretch(_marks.rectTransform);
+            BuildSkinParts(art); // borde, pie, banda y asa de la skin (B14), sobre el vidrio y bajo los overlays y la tapa
             _bodyFront = OverlayParts.NewAnchor("BodyFront", _body); // sobre las marcas de dosis y bajo la tapa
 
             _cap = NewImage("SealCap", _body, art.SealCap, Color.white);
@@ -1409,6 +1419,121 @@ namespace AF.Presentation
 
             _slotFront = OverlayParts.NewAnchor("SlotFront", _root); // overlays en la ranura, delante del cuerpo
             _host = new CuiaOverlayHost(index, capacity, _slotBack, _bodyBack, _bodyFront, _slotFront, art, fx);
+            ApplySkin(art.CuiaSkin);
+        }
+
+        // ============================================================================================ skin (B14)
+
+        /// <summary>Skin que lleva la cuia (07 §4.6; <see cref="ApplySkin"/>).</summary>
+        public CuiaSkin Skin => _skin;
+
+        /// <summary>Capa de la skin (borde, pie, banda y asa), o sus piezas apagadas con la base (tests y capturas).</summary>
+        public RectTransform SkinLayer => _skinLayer;
+
+        /// <summary>Borde de la skin (<c>rim_{skin}</c>; tests).</summary>
+        public Image SkinRim => _skinRim;
+
+        /// <summary>Pie de la skin (<c>foot_{skin}</c>; tests).</summary>
+        public Image SkinFoot => _skinFoot;
+
+        /// <summary>Banda del hombro (o su mitad izquierda; tests).</summary>
+        public Image SkinBand => _skinBand;
+
+        /// <summary>Mitad derecha de la banda bicolor (tests).</summary>
+        public Image SkinBandB => _skinBandB;
+
+        /// <summary>Asa decorativa (tests).</summary>
+        public Image SkinHandle => _skinHandle;
+
+        /// <summary>Vidrio trasero (tests: su tinte).</summary>
+        public Image GlassBackImage => _back;
+
+        /// <summary>Tapa de sellado (tests: su tinte).</summary>
+        public Image CapImage => _cap;
+
+        /// <summary>
+        /// Pinta la cuia con <paramref name="skin"/> (arte provisional por código; 07 §4.6): el borde, el pie, la banda del hombro (y
+        /// el asa) en su color, el vidrio con su tinte (≤ 8 %) y la tapa con el suyo. La cavidad, el líquido, las marcas de dosis y
+        /// el brillo no cambian. Con la base, el vidrio horneado tal cual. Sin asignaciones salvo la primera vez.
+        /// </summary>
+        public void ApplySkin(CuiaSkin skin)
+        {
+            _skin = skin ?? CuiaSkin.Base;
+            bool on = !_skin.IsBase;
+            _skinRim.gameObject.SetActive(on);
+            _skinFoot.gameObject.SetActive(on);
+            _skinBand.gameObject.SetActive(on && _skin.HasBand);
+            _skinBandB.gameObject.SetActive(on && _skin.HasBand && _skin.BandBicolor);
+            _skinHandle.gameObject.SetActive(on && _skin.HasHandle);
+            _skinRim.color = _skin.Rim;
+            _skinFoot.color = _skin.Foot;
+            _skinBand.color = _skin.Band;
+            _skinBandB.color = _skin.BandB;
+            _skinHandle.color = _skin.Handle;
+            Color glass = _skin.GlassMultiplier;
+            _back.color = glass;
+            _front.color = glass;
+            _cap.color = _skin.Cap;
+            LayoutSkin();
+        }
+
+        private void BuildSkinParts(ProceduralArt art)
+        {
+            _skinLayer = NewRect("Skin", _body, Vector2.zero, Vector2.one, new Vector2(0.5f, 0f));
+            _skinLayer.offsetMin = Vector2.zero;
+            _skinLayer.offsetMax = Vector2.zero;
+            _skinFoot = SkinPiece("SkinFoot", art);
+            _skinRim = SkinPiece("SkinRim", art);
+            _skinBand = SkinPiece("SkinBand", art);
+            _skinBandB = SkinPiece("SkinBandB", art);
+            _skinHandle = SkinPiece("SkinHandle", art);
+        }
+
+        private Image SkinPiece(string name, ProceduralArt art)
+        {
+            Image img = NewImage(name, _skinLayer, art.RoundedRect, Color.white);
+            img.type = Image.Type.Sliced;
+            SetAnchors(img.rectTransform, new Vector2(0.5f, 0f), new Vector2(0.5f, 0f), new Vector2(0.5f, 0f));
+            img.gameObject.SetActive(false);
+            return img;
+        }
+
+        // Las piezas en u (CuiaGeometry): el pie de 1,60 × 0,30 u, el borde de 1,10 × 0,25 u en el labio, la banda de 0,12 u justo
+        // por encima de la cavidad (en el hombro, D-006: 4,60-5,00 u en la estándar; nunca cubre la cavidad) y el asa de 0,12 ×
+        // 0,40 u en el hombro derecho.
+        private void LayoutSkin()
+        {
+            if (_skinLayer == null || _skin.IsBase)
+            {
+                return;
+            }
+
+            float u = _u;
+            float corner = ProceduralArt.RoundedRectRadiusPx / Mathf.Max(0.5f, 0.06f * u);
+            float top = CuiaGeometry.CavityTopU(Capacity);
+            PlaceSkin(_skinFoot, 0f, 0f, 2f * CuiaGeometry.FootHalfWidthU * u, CuiaGeometry.FootTopU * u, corner);
+            PlaceSkin(_skinRim, 0f, CuiaGeometry.LipU(Capacity) * u, 2f * CuiaGeometry.RimHalfWidthU * u, CuiaGeometry.RimU * u, corner);
+            float bandW = 1.90f * u;
+            float bandY = (top + 0.04f) * u;
+            float bandH = 0.12f * u;
+            if (_skin.BandBicolor)
+            {
+                PlaceSkin(_skinBand, -bandW * 0.25f, bandY, bandW * 0.5f, bandH, corner);
+                PlaceSkin(_skinBandB, bandW * 0.25f, bandY, bandW * 0.5f, bandH, corner);
+            }
+            else
+            {
+                PlaceSkin(_skinBand, 0f, bandY, bandW, bandH, corner);
+            }
+
+            PlaceSkin(_skinHandle, 0.97f * u, (top + 0.02f) * u, 0.12f * u, 0.40f * u, corner);
+        }
+
+        private static void PlaceSkin(Image img, float x, float y, float w, float h, float ppuMultiplier)
+        {
+            img.rectTransform.anchoredPosition = new Vector2(x, y);
+            img.rectTransform.sizeDelta = new Vector2(w, h);
+            img.pixelsPerUnitMultiplier = ppuMultiplier;
         }
 
         private static RectTransform NewRect(string name, Transform parent, Vector2 anchorMin, Vector2 anchorMax, Vector2 pivot)
