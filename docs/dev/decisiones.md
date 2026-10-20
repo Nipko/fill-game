@@ -2894,3 +2894,49 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Herramientas y datos** (Spark, R2-R5): `tools/level-generator/specs/daily_v1.json`, `tools/level-generator/Daily/`, `tools/level-qa/Daily/` y `tools/level-qa/fixtures/daily/`, `tools/out/daily_sample/`, `tools/out/daily_sample_report.md`, `tools/out/daily_pool_v1_report.md` y `Assets/_Project/Data/Daily/daily_pool_v1.json`.
 - **Cliente** (Spark, R6-R11): `Assets/_Project/Scripts/LiveOps/`, `Scripts/Levels/DailyPool*.cs`, `Scripts/Platform/IServerDate.cs`, `FakeServerDate.cs` y `ClockSecurityConfig.cs`, `Scripts/GameFlow/LevelFlow.Daily.cs`, `Scripts/UI/DailyChallenge*.cs`, `DailyStampCalendar.cs`, `DailyLevelStateStore.cs`, `DailyText.cs`, `GameBootstrap.Daily.cs` y `DevProbe.Daily.cs`, y sus tests (`Scripts/LiveOps/Tests/`, `Tests/EditMode/Daily*.cs` y `Tests/PlayMode/Daily*.cs`).
 - **Documentación:** este registro, `docs/dev/reto-del-rio.md` (nota de diseño), `docs/dev/traspaso/spark-estado.md`, los capítulos de «Qué cambia en el GDD», `docs/dev/prototipo-v0.md` (sondas), `docs/dev/traspaso/README.md` y `CLAUDE.md` (E12).
+
+## D-033 · Tanda 5: respuestas del 2026-10-20 a las preguntas del plan (Q-N, Q-M, Q-E y Q-T)
+
+- **Fecha:** 2026-10-20. Registrada el 2026-10-20 por el integrador (escritorio).
+- **Estado:** decidida por el dueño en el chat el 2026-10-20, con el formulario de las 29 preguntas abiertas de `docs/dev/plan-tanda5.md` §5 (la recomendada venía marcada en cada una): «Q-N1: a · Q-N2: a · Q-N4: a · Q-N5: a · Q-N6: a · Q-N8: a · Q-M1: a · Q-M2: a · Q-M3: a · Q-M4: a · Q-M5: a · Q-M6: a · Q-M7: a · Q-M8: a · Q-M9: a · Q-M10: a · Q-E1: a · Q-E2: a · Q-E3: a · Q-E4: a · Q-E5: a · Q-E6: a · Q-T1: a · Q-T2: a · Q-T3: a · Q-T4: a · Q-T5: a · Q-T6: a · Q-T7: a». Q-N3, Q-N7 y Q-T8 están retiradas (el canon ya las decide; plan §5).
+- **Aprobaciones explícitas de la regla 4 de `CLAUDE.md`** (el formulario las marcaba como tales): el paquete `com.unity.mobile.notifications` y el permiso Android `POST_NOTIFICATIONS` (Q-M5); que los agentes creen `.github/workflows/ci.yml` (s30, sin secretos, lo hace build-release y el dueño aprueba el merge; Q-T5); coverlet solo para `dotnet test` (Q-T7). La versión exacta de cada paquete la propone quien lo integre y se anota aquí antes del merge. El permiso `INTERNET` sigue pendiente de su propia decisión: esto no lo aprueba.
+
+**Decisión.**
+
+| Id | Decisión |
+|---|---|
+| Q-N1 | `anim_speed_factor_late` = 1,0 (D-006); se corrigen 08 §9 y 02 §4 |
+| Q-N2 | V3: desde el 31 el generador produce siempre una variante `minus_color` para el alivio con Cuia extra |
+| Q-N4 | Un solo ajuste «Alto contraste», con el patrón al 35 % (07 §3); se corrige 02 §12 |
+| Q-N5 | El doble toque no tiene función (C3) |
+| Q-N6 | El elenco de unas 50 especies va a la 1.1; la 1.0 sale con los 11 miquitos |
+| Q-N8 | Curación de 1-200: los agentes preparan informes y el dueño decide en `curation_*.json` |
+| Q-M1 | Bitácora «1 de 3» (D-029 #17 B): se diseña ya; el tech-lead propone 3 premios de igual valor y el dueño lo aprueba antes de B4 |
+| Q-M2 | Panel único de premios de la victoria (D-029 #18 B): se diseña ya; propuesta del tech-lead aprobada por el dueño antes de B1b y B4 |
+| Q-M3 | `calendar` = `{cycle, next_day, last_claim_date}` [P], anotado en 08 §4.3 |
+| Q-M4 | Sesión = arranque en frío o vuelta tras ≥ 30 min en segundo plano |
+| Q-M5 | Notificaciones push nativas con `com.unity.mobile.notifications` y `POST_NOTIFICATIONS` (aprobado) |
+| Q-M6 | Marco de país del día 30: se guarda como derecho y se enseña en la 1.1 |
+| Q-M7 | Frutas en 321-700: en la 1.0 solo el dato de llegada; series nuevas en la 1.1 |
+| Q-M8 | La skin ganada se pone sola, con aviso, y se cambia en el Mercado |
+| Q-M9 | `streak` = `{wins, river_full}`; los hitos pagados hoy y las semillas del día, en `daily` con nombres [P]; un solo `shield_available` (en `daily`); la Canasta sin bloque, deducida de `max_level`; se anota en 08 §4.3 |
+| Q-M10 | La Crecida vive en AF.Economy, junto a la Canasta |
+| Q-E1 | Ningún comodín antes del nivel (gana 04 §1); se corrige GDD.md §6.1 #4 |
+| Q-E2 | El icono de oferta del inicio llega con la primera oferta temporal (1.1/1.2); B5 deja el hueco |
+| Q-E3 | `geo_tier`: región del dispositivo (`IDeviceLocale`) y, cuando llegue el IAP, el país de la tienda |
+| Q-E4 | Tarjeta de Canoas del 31: «Canoas: si te rindes o sales del nivel, pierdes una. Vuelven solas cada 25 minutos.» [P] |
+| Q-E5 | «Restaurar compras» oculto hasta el adaptador real de IAP |
+| Q-E6 | El Mercado abre ya con semillas, Mochila, Sin anuncios, Cántaro y Canoas 1 h (sin arte de skins) |
+| Q-T1 | Bus mínimo `AF.Events` sin motor: publican GameFlow y Economy, consume Analytics |
+| Q-T2 | Unity Localization 1.5.13 espera a la decisión de Addressables y PAD |
+| Q-T3 | País del perfil legal sin servidor: SIM, luego región del teléfono; si no, perfil `default` con el tratamiento más estricto |
+| Q-T4 | Compras de 13-17: doble confirmación en el juego + autenticación de Google Play (a confirmar con el abogado) |
+| Q-T5 | Los agentes crean `ci.yml` (s30, sin secretos) con build-release; el dueño aprueba el merge |
+| Q-T6 | Managed Stripping High ya, con `link.xml` y un build de prueba |
+| Q-T7 | Cobertura ≥ 80 % medida con coverlet solo en `dotnet test` |
+
+**Alternativas descartadas.** Las opciones (b) y (c) de cada fila de `docs/dev/plan-tanda5.md` §5.
+
+**Cómo revertir.** Con una decisión nueva que sustituya la fila. Ninguna tiene coste para el jugador mientras no se publique la 1.0; Q-M5, Q-T5 y Q-T7 se revierten quitando el paquete, el permiso o el workflow.
+
+**Qué cambia en el GDD** (lo lleva cada bloque al implementarlo): 08 §9 y 02 §4 (Q-N1), 02 §12 (Q-N4), 08 §4.3 (Q-M3, Q-M9), GDD.md §6.1 #4 (Q-E1), 06 §4.2 y §4.7 con los diseños aprobados (Q-M1, Q-M2), 08 §6 y §13 (Q-M5, Q-T5, Q-T6, Q-T7).

@@ -647,3 +647,18 @@ El dueño pidió (literal): «luego de esta ola 7, tenemos mas? podemos trabajar
 ### S2 · El primer bloque grande (rama `spark/t5-<bloque>`)
 Cuando termines S1, empieza **sin esperar** el bloque del plan que más acerque la 1.0 y que: (a) no dependa de nada bloqueado, (b) no tenga preguntas abiertas sin recomendada, y (c) toque lo mínimo los archivos del escritorio. Mismas reglas de siempre (secciones 1-3): tus archivos nuevos en tu rama; lo que toque archivos compartidos, como parches probados en `docs/dev/traspaso/spark-enganches/`; revisión, verificación completa y entrada en `spark-estado.md` por cada tarea. Avisa en el estado cuando un bloque esté listo para integrar.
 
+
+---
+
+## 12. Encargo siguiente (2026-10-20): la tanda 5, bloques del Spark
+
+El dueño respondió las 29 preguntas de `docs/dev/plan-tanda5.md` §5, todas con la opción (a), la recomendada: queda registrado en **D-033** (`docs/dev/decisiones.md`). Incluye tres aprobaciones explícitas de la regla 4: `com.unity.mobile.notifications` + `POST_NOTIFICATIONS` (Q-M5), `ci.yml` de s30 (Q-T5) y coverlet para `dotnet test` (Q-T7). El permiso `INTERNET` **no** está aprobado.
+
+**Reparto.** El Spark hace, en este orden y en ramas `spark/t5-<bloque>` desde `origin/integracion-fase1-fase2` (con B1a ya integrado): **B2 → B3 → B6 → B7 → B5 → B8 → B13**, y **B4** cuando el dueño apruebe el diseño de la Bitácora «1 de 3» y del panel único de la victoria (Q-M1 y Q-M2; los prepara el tech-lead en el escritorio y se anotarán en D-033). El escritorio hace B1b, B9, B10, B11, B12 y B14.
+
+**Reglas** (las de siempre, secciones 1-3 y 11):
+- Tus archivos nuevos van en tu rama; lo que toque archivos compartidos o del escritorio (✱ en el plan §4: `GameScreen*`, `BoosterTray`, `AppFlow`, `RiverMapScreen*`, `StopBackdrop`, el HUD), como parche probado en `docs/dev/traspaso/spark-enganches/`; los textos nuevos, en un CSV aparte con la clave, `es` y el estado `pendiente_asesor`.
+- `Packages/com.amazonfill.core/` (la reconstrucción inversa de la Pororoca en AF.Solver, B2) sigue siendo del integrador: entrégalo como parche probado con sus tests NUnit y el bucle caliente sin asignaciones (regla dura 2).
+- **B6:** con Q-M5 aprobado, deja la lógica y `INotificationScheduler` con su implementación falsa, y prepara la implementación real con `com.unity.mobile.notifications` como parche aparte (manifiesto, versión propuesta y `POST_NOTIFICATIONS`): el integrador la aplica tras anotar la versión en D-033. No toques `Packages/manifest.json` en tu rama.
+- **B7:** el bus mínimo `AF.Events` (Q-T1, sin motor) va dentro de B7.
+- Por cada bloque: revisión (code-reviewer), arreglos, verificación completa de `CLAUDE.md` y entrada en `spark-estado.md` con «listo para integrar». Si un bloque deja algo sin decidir, apúntalo como pregunta con opciones y una recomendada, sin inventarlo.
