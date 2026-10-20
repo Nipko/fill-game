@@ -19,7 +19,7 @@
 ## 3. Descrição completa (≤ 4.000) · traducción con IA, pendiente del revisor nativo
 
 ```text
-Despeje a água de uma cuia para outra até que cada uma fique com uma só cor. Simples e relaxante. Em Tintalú, cada cor é uma fruta da bacia amazônica: açaí, buriti, taperebá, camu-camu e mais dez tingem a água do rio.
+Despeje a água de uma cuia para outra até que cada uma fique com uma só cor. Simples e relaxante. Em Tintalú, cada cor vem de uma fruta ou da água de um rio da bacia amazônica: açaí, buriti, taperebá, camu-camu…
 
 Suba o rio a partir do Estuário, no Brasil, por nove mundos em cinco países: Brasil, Colômbia, Peru, Equador e Bolívia. No Mapa do Rio, a canoa do Capi avança de parada em parada, e o rio de vidro se enche com a água real de cada lugar.
 
@@ -90,7 +90,7 @@ Boas-vindas ao rio. A primeira versão de Tintalú: suba o rio por nove mundos, 
 | # | Texto PT-BR | Estado |
 |---|---|---|
 | 1 | Classifique as águas da Amazônia | canon 07 §10.2 · pendiente de revisión |
-| 2 | 14 frutas, 14 cores | canon 07 §10.2 |
+| 2 | 14 frutas, 14 cores | canon 07 §10.2 · Q-B13-23 |
 | 3 | Veja o rio ganhar cor | canon 07 §10.2 |
 | 4 | Suba o Amazonas até onde ele nasce | **propuesta [P] de B13** (07 §10.2: «pendiente del traductor»); Q-B13-6 |
 | 5 | Difícil de verdade, sempre justo | canon 07 §10.2 |

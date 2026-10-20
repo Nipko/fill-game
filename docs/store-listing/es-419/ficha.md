@@ -27,7 +27,7 @@
 ## 3. Descripción completa (≤ 4.000)
 
 ```text
-Vierte el agua de una cuia a otra hasta que cada una quede de un solo color. Así de simple, así de relajante. En Tintalú, cada color es una fruta de la cuenca amazónica: açaí, aguaje, taperebá, camu camu y diez más tiñen el agua del río.
+Vierte el agua de una cuia a otra hasta que cada una quede de un solo color. Así de simple, así de relajante. En Tintalú, cada color sale de una fruta o del agua de un río de la cuenca amazónica: açaí, aguaje, taperebá, camu camu…
 
 Remonta el río desde el Estuario, en Brasil, por nueve mundos de cinco países: Brasil, Colombia, Perú, Ecuador y Bolivia. En el Mapa del río, la canoa de Capi avanza parada a parada y el río de vidrio se llena con el agua real de cada lugar.
 
@@ -70,7 +70,7 @@ La campaña se juega sin conexión. Los videos opcionales y las compras sí nece
 
 Tintalú es gratis, con anuncios y compras opcionales. Puedes quitar los anuncios entre niveles con «Sin anuncios».
 
-[PENDIENTE: dueño] Revisión cultural de [nombre del asesor cultural], con su consentimiento para nombrarle.
+[PENDIENTE: dueño] Revisión cultural de [nombre del asesor cultural], con su consentimiento para que aparezca su nombre.
 
 Juego independiente inspirado en la cuenca amazónica; sin relación con Amazon.com, Inc.
 ```
@@ -96,12 +96,12 @@ Sin género («te da la bienvenida», nunca «¡Bienvenido!»), como `map_countr
 
 ## 6. Textos de las 8 capturas (07 §10.2)
 
-El arte y la composición están en `../assets-tienda.md`. Texto corto superpuesto, ≤ 32 caracteres recomendado [P].
+El arte y la composición están en `../assets-tienda.md`. Texto corto superpuesto, ≤ 36 caracteres [P]: el del texto canónico más largo (la captura 4 en ES, 36). La captura 2 tiene una pregunta abierta (Q-B13-23).
 
 | # | Texto ES-419 | Estado |
 |---|---|---|
 | 1 | Ordena el agua del Amazonas | canon 07 §10.2 · pendiente de revisión |
-| 2 | 14 frutas, 14 colores | canon 07 §10.2 |
+| 2 | 14 frutas, 14 colores | canon 07 §10.2 · Q-B13-23 |
 | 3 | Mira cómo se tiñe el río | canon 07 §10.2 |
 | 4 | Remonta el Amazonas hasta donde nace | canon 07 §10.2 [P] · pendiente de revisión |
 | 5 | Difícil de verdad, justo siempre | canon 07 §10.2 |

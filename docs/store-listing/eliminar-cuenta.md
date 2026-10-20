@@ -2,7 +2,7 @@
 
 - **Estado:** borrador del bloque B13 (2026-10-20). Textos de la página pública que exige la política de eliminación de cuentas de Google Play: sin ella no se completa Data Safety (08 §13.1 #2 y #7). Lo revisa el abogado (`[PENDIENTE: abogado]`); EN y PT-BR son traducción con IA, pendiente del revisor nativo.
 - **URL:** 08 §11 fija `https://<dominio del estudio>/tintalu/eliminar-cuenta`; 08 §13.1 #2 la pone en el dominio canónico (`tintalu.com` [P]). `[PENDIENTE: dueño]` (Q-B13-1). Rutas de las otras lenguas, propuesta [P]: `/tintalu/en/delete-account` y `/tintalu/pt-br/excluir-conta`.
-- **Qué hace por detrás (08 §11):** pide el ID de jugador visible en Ajustes y ejecuta el mismo flujo que la app: `deleteAccount` (Cloud Function) borra `users/{uid}` y `rewards/*` del UID, conserva el libro mayor de compras anonimizado el plazo fiscal y elimina el usuario de Firebase Auth; analítica recibe `af_account_delete` con `source = web`, sin identificadores. La partida de Saved Games y los datos del teléfono los borra el cliente la próxima vez que se abra (pregunta Q-B13-21: cómo se verifica que quien pide el borrado es el dueño del ID).
+- **Qué hace por detrás (08 §11):** pide el ID de jugador visible en Ajustes y ejecuta el mismo flujo que la app: `deleteAccount` (Cloud Function) borra `users/{uid}` y `rewards/*` del UID, conserva el libro mayor de compras anonimizado el plazo fiscal y elimina el usuario de Firebase Auth; analítica recibe `af_account_delete` con `source = web`, sin identificadores. 08 §11 dice que el cliente borra el snapshot `af_main` de Saved Games y los datos del teléfono, pero no qué pasa cuando el borrado llega por la web y el juego no está instalado: que el cliente los borre la próxima vez que se abra es **propuesta [P] de B13**, no canon (Q-B13-22). Cómo se verifica que quien pide el borrado es el dueño del ID: Q-B13-21.
 - Hosting, formulario y backend: fuera de este bloque (necesitan dominio, cuentas y `functions/`, que no existen todavía).
 
 ## es-419
@@ -17,7 +17,7 @@ Puedes borrar tu cuenta de Tintalú y los datos asociados en cualquier momento.
 1. Escribe tu **ID de jugador**. Lo ves en Tintalú › Ajustes.
 2. Toca «Eliminar mi cuenta» y confirma.
 
-**Qué se borra:** tu cuenta, tu progreso y tus semillas en la nube, tus recompensas registradas y tu partida guardada en Google Play Juegos. Si el juego sigue instalado en tu teléfono, también se borran sus datos la próxima vez que lo abras.
+**Qué se borra:** tu cuenta, tu progreso y tus semillas en la nube y tus recompensas registradas. Tu partida guardada en Google Play Juegos y los datos del juego en tu teléfono: `[PENDIENTE: abogado]`, según Q-B13-22. Propuesta [P]: «Se borran la próxima vez que abras el juego. También puedes borrar tu perfil de Google Play Juegos desde la app de Google Play Juegos.»
 
 **Qué se conserva:** el historial de compras, **sin ningún dato que te identifique**, durante `[PENDIENTE: abogado — plazo]` por obligaciones fiscales. Las compras **no se reembolsan** y no se pueden recuperar.
 
@@ -39,7 +39,7 @@ You can delete your Tintalú account and its data at any time.
 1. Enter your **player ID**. You can find it in Tintalú › Settings.
 2. Tap "Delete my account" and confirm.
 
-**What is deleted:** your account, your progress and seeds in the cloud, your recorded rewards and your saved game in Google Play Games. If the game is still on your phone, its data is also deleted the next time you open it.
+**What is deleted:** your account, your progress and seeds in the cloud, and your recorded rewards. Your saved game in Google Play Games and the game data on your phone: `[PENDIENTE: abogado]`, per Q-B13-22. Proposal [P]: "They are deleted the next time you open the game. You can also delete your Google Play Games profile in the Google Play Games app."
 
 **What is kept:** your purchase history, **with nothing that identifies you**, for `[PENDIENTE: abogado — period]` for tax purposes. Purchases **are not refunded** and cannot be recovered.
 
@@ -61,7 +61,7 @@ Você pode excluir sua conta do Tintalú e os dados associados a qualquer moment
 1. Digite o seu **ID de jogador**. Ele aparece em Tintalú › Configurações.
 2. Toque em "Excluir minha conta" e confirme.
 
-**O que é excluído:** sua conta, seu progresso e suas sementes na nuvem, suas recompensas registradas e seu jogo salvo no Google Play Games. Se o jogo ainda estiver no seu celular, os dados dele também são apagados na próxima vez que você o abrir.
+**O que é excluído:** sua conta, seu progresso e suas sementes na nuvem e suas recompensas registradas. Seu jogo salvo no Google Play Games e os dados do jogo no seu celular: `[PENDIENTE: abogado]`, conforme Q-B13-22. Proposta [P]: «São apagados na próxima vez que você abrir o jogo. Você também pode excluir seu perfil do Google Play Games no app Google Play Games.»
 
 **O que é mantido:** o histórico de compras, **sem nenhum dado que identifique você**, por `[PENDIENTE: abogado — prazo]` por obrigações fiscais. As compras **não são reembolsadas** e não podem ser recuperadas.
 

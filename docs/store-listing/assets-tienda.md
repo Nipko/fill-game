@@ -61,7 +61,7 @@ Las medidas de Google Play que no están en el GDD van marcadas [NV]: el artista
 | # | Qué muestra (07 §10.2) | es-419 | en | pt-BR | Depende de |
 |---|---|---|---|---|---|
 | 1 | Gameplay real en Manaos: una cuia vertiendo Açaí con el Encuentro de las Aguas detrás | Ordena el agua del Amazonas | Sort the waters of the Amazon | Classifique as águas da Amazônia | Fondo de Manaos final; asesor |
-| 2 | Tablero del Estuario con 5 cuias, iconos de fruta visibles | 14 frutas, 14 colores | 14 fruits, 14 colors | 14 frutas, 14 cores | Fondo del Estuario; patrones activados |
+| 2 | Tablero del Estuario con 5 cuias, iconos de fruta visibles | 14 frutas, 14 colores | 14 fruits, 14 colors | 14 frutas, 14 cores | Fondo del Estuario; patrones activados; texto pendiente de Q-B13-23 |
 | 3 | Llenar y teñir a mitad (frutas cayendo) | Mira cómo se tiñe el río | Watch the river take color | Veja o rio ganhar cor | Miquitos finales (pendientes del asesor; glosario §3.3) |
 | 4 | Mapa del río con la forma real de la cuenca, el río de vidrio a medio llenar, la canoa con la bandera izada y las paradas (D-013) | Remonta el Amazonas hasta donde nace | Follow the Amazon to its source [P] | Suba o Amazonas até onde ele nasce [P] | Arte final del Mapa (ola 8); EN y PT, propuesta B13 (Q-B13-6) |
 | 5 | Nivel Difícil con el badge de la rana dardo y una Marea usada en el bloqueo | Difícil de verdad, justo siempre | Honest hard levels | Difícil de verdade, sempre justo | Badge final |
@@ -69,13 +69,13 @@ Las medidas de Google Play que no están en el GDD van marcadas [NV]: el artista
 | 7 | TiTino en su rama celebrando; al fondo, Capi trayendo una cuia y Rosa saltando (D-013) | TiTino te acompaña | Meet TiTino | TiTino te acompanha | Condiciones de D-016 |
 | 8 | Reto del río + Bitácora del río + Canasta abierta con su contenido visible | Juega sin wifi, vuelve cada día | Play offline, come back daily | Jogue offline, volte todo dia | Bitácora «1 de 3» (D-033) y Canasta en el juego |
 
-Longitud del texto superpuesto: ≤ 36 caracteres en las tres lenguas [P] (hoy el más largo es «Classifique as águas da Amazônia», 32, y «Suba o Amazonas até onde ele nasce», 34).
+Longitud del texto superpuesto: ≤ 36 caracteres en las tres lenguas [P], el mismo límite que las fichas: el texto canónico más largo es el de la captura 4 en ES, «Remonta el Amazonas hasta donde nace» (36); en PT-BR, «Suba o Amazonas até onde ele nasce» (34). La captura 2 («14 frutas, 14 colores») tiene una pregunta abierta: Q-B13-23.
 
 ## 5. Vídeo de la ficha (07 §10.3)
 
 - **Formato:** 30 s con los primeros 15 s autosuficientes para recortar [P]; vertical 1080 × 1920 y horizontal 1920 × 1080; sin voz; música: el tema de menú (07 §10.3). Pregunta 8 de 07 (30 s con corte a 15 s, o solo 15-20 s) sigue abierta.
 - **Publicación:** Play pide un enlace de YouTube, público o no listado, sin anuncios ni restricción de edad [NV]; el canal lo decide el dueño (`docs/legal/marca.md` §4: @Tintalu está ocupado) `[PENDIENTE: dueño]`.
-- **Música:** solo una pista con cesión total para anuncios y tráilers (07 §9.5). El audio actual es CC0 (`LICENSES.md`); el tema de menú con licencia final aún no existe.
+- **Música:** solo una pista con cesión total para anuncios y tráilers (07 §9.5). El tema de menú actual (`mus_menu`, `music/menu.wav`) es CC0 de la entrega 1: **no se usa en el vídeo** hasta que exista la pista con cesión total (`README.md` §3 bis).
 
 | Segundo | Plano | Qué pasa (07 §10.3) | Texto en pantalla |
 |---|---|---|---|

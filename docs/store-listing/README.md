@@ -30,14 +30,14 @@ Encargo: `docs/dev/plan-tanda5.md` §4, fila B13 (equipo Spark, 2026-10-20; rama
 |---|---|---|---|
 | Título (30) | 21 | 26 | 25 |
 | Descripción corta (80) | 78 | **74** | 73 |
-| Descripción completa (4.000) | 2.481 | 2.346 | 2.437 |
+| Descripción completa (4.000) | 2.487 | 2.346 | 2.431 |
 | Novedades (500) | 143 | 145 | 134 |
 
 El glosario §1.3 dice que la descripción corta EN mide 77; medida aquí (NFC, sin comillas), mide 74. Solo cambia la cifra, no el texto. Lo anota el integrador cuando toque el glosario.
 
 ## 3. Preguntas para el dueño (y el abogado)
 
-Cada una con sus opciones; la recomendada va primero y marcada.
+Cada una con sus opciones; la recomendada va primero y marcada. Son 23 (Q-B13-1 a Q-B13-23).
 
 | Id | Pregunta | Opciones (recomendada: **a**) | Afecta a |
 |---|---|---|---|
@@ -62,14 +62,21 @@ Cada una con sus opciones; la recomendada va primero y marcada.
 | Q-B13-19 | Retención de Firebase Analytics (08 §13.3: «la configurada en Firebase») | **(a)** la mínima que permita el panel [NV], por minimización (LGPD; 05 §7); (b) la máxima, para cohortes largas | Data Safety, política |
 | Q-B13-20 | Unity IAP 5.4.x necesita Unity Authentication (08 §7, fila 9), y 08 §13.3 no tiene fila para ella | **(a)** quien integre el IAP confirma con la guía de Unity qué datos trata y se añade la fila a Data Safety y a la política; el GDD la recoge en 08 §13.3; (b) tratarla como parte de la fila de Unity IAP | Data Safety, política |
 | Q-B13-21 | Cómo sabe la página web que quien pide el borrado es el dueño del ID (08 §11 solo pide el ID de jugador visible en Ajustes) | **(a)** que el ID de Ajustes sea un código largo y aleatorio distinto del UID, más una confirmación en la página [P]; (b) borrado por correo, atendido a mano; (c) el ID tal cual | Web, `deleteAccount`, B8 |
+| Q-B13-22 | Cómo se borran la partida de Play Games (`af_main`) y los datos del teléfono cuando el borrado llega por la web y el juego no está instalado (08 §11 solo dice que los borra el cliente) | **(a)** decirle al jugador que se borran la próxima vez que abra el juego y que puede borrar él mismo su perfil de Play Games (08 §13.3, fila Play Games), como el borrador; (b) que el servidor los borre (pide un acceso a Saved Games que el diseño no tiene); (c) no decir nada en la página | Web, política, Data Safety, B8 |
+| Q-B13-23 | La captura 2 del canon dice «14 frutas, 14 colores» (07 §10.2), pero la paleta son 12 frutas y 2 aguas de río (glosario §9), y la 1.0 usa como mucho 12 colores por nivel (K_ruta ≤ 12; los 14 solo en el evento Encuentro de las Aguas) | **(a)** «14 colores de frutas y ríos» / «14 colors from fruit and rivers» / «14 cores de frutas e rios» [P], que es verdad y cabe en 36; (b) «12 frutas, 2 ríos, 14 colores»; (c) dejar el canon | Captura 2; 07 §10.2 |
 
 Ya tienen dueño fuera de este bloque y no se repiten aquí: Crashlytics y Analytics antes del consentimiento (08 pregunta 6, abogado), la segunda fuente de edad en Brasil (05 §7, fase 5), el plazo fiscal del libro mayor (08 §11, abogado), la pregunta 8 de 07 (vídeo de 30 s o de 15-20 s) y la 3 de 07 (icono A como control).
+
+## 3 bis. Hallazgos del audio
+
+- **Música:** toda la música `mus_*` del manifiesto (lechos, percusión y nocturnos de los mundos 1-9, y `mus_menu`, `music/menu.wav`, el tema de menú que 07 §10.3 pone en el vídeo) es **CC0** de la entrega 1, no el encargo original con cesión total de 07 §9.5. Recomendación [P]: **el vídeo de la ficha y los creativos no la usan** hasta que haya una pista con cesión total.
+- `amb_w01_fauna_02` lleva voces humanas de una favela de Río de Janeiro, contra 07 §9.5 y §9.1, y el autor del manifiesto usa la marca («Tintalú Sound Design»): detalle en `LICENSES.md` §2.
 
 ## 4. Enganches para el integrador (no aplicados en esta rama)
 
 1. **`Assets/_Project/Data/Loc/strings.csv`:** las 16 filas de `strings-creditos.csv` (`credits_*`), ya en orden ordinal y con la cabecera de 08 §4.7, cuando exista la pantalla de Créditos. Se prueba con los tests de las tablas de textos.
 2. **Glosario §1.3:** la cifra de la descripción corta EN (77 → 74; sección 2).
-3. **GDD, según lo que decida el dueño:** 07 §10.2 (Q-B13-5, Q-B13-6), 08 §11 (Q-B13-1, Q-B13-21), 08 §13.3 (Q-B13-20).
+3. **GDD, según lo que decida el dueño:** 07 §10.2 (Q-B13-5, Q-B13-6, Q-B13-23), 08 §11 (Q-B13-1, Q-B13-21, Q-B13-22), 08 §13.3 (Q-B13-20).
 4. **`docs/dev/traspaso/spark-estado.md`:** la entrada de B13 («listo para integrar»), que el coordinador de la tanda escribe al integrar.
 
 ## 5. Lo que este bloque no hace

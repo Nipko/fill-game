@@ -30,7 +30,7 @@
 | RR-12 | Volver a la orilla desde la pausa en el 35 con Crecida activa | Mismo tablero (misma semilla), gratis, sin gastar canoa ni romper la Crecida | glosario §5.1 | — |
 | RR-13 | Fallar 3 veces seguidas el mismo nivel del 31+ | Al cuarto intento, «El río bajó»: el tablero aliviado, con aviso | 03; 08 §9 (`relief_after_fails` = 3) | — |
 | RR-14 | Abrir el 40 (primer Difícil), el 60 (primer Muy difícil) y el 100 (Aguas turbias); usar la Luciérnaga | Etiqueta antes de jugar; en Aguas turbias, al menos un vertido seguro; la Luciérnaga revela las capas de una cuia | glosario §6; 02 §10 | — |
-| RR-15 | Jugar el primer nivel de cada mecánica de la 1.0 (14, 27, 43, 63, 83, 103, 123, 143, 163, 183) | Tarjeta de desbloqueo con su texto; la mecánica funciona y la Marea la deshace | 02 §9.1; 07 §5.6 | — |
+| RR-15 | Jugar el primer nivel de cada mecánica de la 1.0 (14, 27, 43, 63, 83, 103, 123, 143, 163, 183 y, si entra en la 1.0, la Tinaja del 323, que es condicional: 02 §9.1; D-019) | Tarjeta de desbloqueo con su texto; la mecánica funciona y la Marea la deshace | 02 §9.1; 07 §5.6 | — |
 
 ## C. HUD y pantallas
 
@@ -78,7 +78,7 @@
 |---|---|---|---|---|
 | RR-36 | Primer nivel del día (ganar o perder) | La victoria lleva «Bitácora · elige tu premio»; 3 tarjetas; un toque sella; cerrar sin elegir la deja pendiente | D-033 #4 y #5 | B4 |
 | RR-37 | Ignorar la Bitácora y volver al Inicio; volver otra vez en la misma sesión | La libreta sale sola una vez; no hay otro takeover en la sesión (`ui_max_takeovers_per_session` = 1) | D-033 #5; 08 §9 | B4 |
-| RR-38 | Adelantar el reloj del teléfono un día y volver | No se sellan dos casillas en el mismo día; con deriva > 24 h, el premio queda «pendiente de validar» | 08 §10.1; D-033 #6 | B4; B8 |
+| RR-38 | Adelantar el reloj del teléfono un día y volver | No se sellan dos casillas en el mismo día; con deriva > 24 h, el premio queda «pendiente de validar» | 08 §10.1 | B4; B8 |
 | RR-39 | Casillas 7, 14, 21 y 30 | La Canasta, la Canasta grande y el marco van fijos en las tres opciones | D-033 #2 | B4 |
 
 ## H. Reto del río
@@ -120,7 +120,7 @@
 | RR-57 | Dejar el Reto sin jugar y la Crecida en riesgo; cerrar la app | Notificaciones locales del catálogo de 06 §8.3 que nombran algo real (Reto listo, Crecida), nunca entre las 22:00 y las 9:00, como mucho 1 al día en D0-D7; se cancelan al abrir; tocarla abre su pantalla | 06 §8.2; 08 Desviaciones 2 y 8 | B6 |
 | RR-58 | Mandar la app a segundo plano a mitad de un vertido (botón de inicio y llamada entrante); matar la app y abrirla | Al volver, el vertido está aplicado o no, nunca a medias; tras matarla, el mismo tablero y el mismo saldo (guardado por vertido) | 08 §11; §14.3 | — |
 | RR-59 | Jugar en el teléfono A hasta el 30; abrir con la misma cuenta de Play Games en el B (que iba por el 20) | Gana el de mayor `max_level`; los consumibles no se suman; las compras se reacreditan | 08 §11 | B8; PGS; Firebase |
-| RR-60 | Ajustes › «Eliminar cuenta y datos»; luego, la página web con el ID de jugador de otra instalación | Dos pasos de confirmación con el aviso de que las compras no se reembolsan; el juego vuelve a la primera ejecución; la web hace lo mismo | 08 §11; `docs/store-listing/eliminar-cuenta.md` | B8; Firebase; web |
+| RR-60 | (a) En una instalación con una cuenta de prueba, Ajustes › «Eliminar cuenta y datos». (b) En una segunda instalación con otra cuenta de prueba, apuntar su ID de jugador de Ajustes y borrarla desde la página web. (c) Caso negativo, **pendiente de Q-B13-21**: intentar borrar desde la web con un ID ajeno o inventado | (a) Dos pasos de confirmación con el aviso de que las compras no se reembolsan; el juego vuelve a la primera ejecución. (b) La web borra esa cuenta de prueba y no toca la primera; Saved Games y los datos del teléfono, según Q-B13-22. (c) Según Q-B13-21: sin la verificación, el borrado no procede | 08 §11; `docs/store-listing/eliminar-cuenta.md` | B8; Firebase; web |
 
 ## Fuera de esta lista (08 §14.3, otras fases)
 

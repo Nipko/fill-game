@@ -14,12 +14,12 @@
 
 > Sort river water by Amazonian fruit colors. Relaxing sort puzzle, offline.
 
-77 caracteres. Canon del glosario §1.3.
+74 caracteres, medidos en NFC (el glosario §1.3 dice 77). Canon del glosario §1.3.
 
 ## 3. Full description (≤ 4.000) · traducción con IA, pendiente del revisor nativo
 
 ```text
-Pour water from one cuia to another until each one holds a single color. Simple and relaxing. In Tintalú, every color is a fruit from the Amazon basin: açaí, aguaje, hog plum, camu camu and ten more tint the river water.
+Pour water from one cuia to another until each one holds a single color. Simple and relaxing. In Tintalú, every color comes from a fruit or from the water of a river in the Amazon basin: açaí, aguaje, hog plum, camu camu…
 
 Travel upriver from the Estuary in Brazil through nine worlds in five countries: Brazil, Colombia, Peru, Ecuador and Bolivia. On the River Map, Capi's canoe moves from stop to stop, and the glass river fills with the real water of each place.
 
@@ -55,7 +55,7 @@ For every eye
 Turn on fruit patterns: each color has its own design, so you never rely on color alone.
 
 Learn as you play
-Every stop on the Map brings a River fact, and the fruit fact sheets tell where each color comes from. In Settings, the Amazon section lists the source of every fact.
+Every stop on the Map brings a River fact, and the fruit fact sheets tell where each color comes from. In Settings, the About section lists the source of every fact.
 
 Play offline
 The campaign works without a connection. Optional videos and purchases need internet.
@@ -69,7 +69,7 @@ Independent game inspired by the Amazon basin; not affiliated with Amazon.com, I
 
 Notas:
 - **Taperebá** sale como «hog plum», su nombre EN del glosario §9; los demás tintes citados conservan su nombre (glosario §9).
-- «Frutas del río» (`fact_sheet_title`) y «Sobre la Amazonía» (`settings_about_amazon`) no tienen EN en el glosario §10 («pendiente del traductor»): aquí van descritos sin nombre propio («the fruit fact sheets», «the Amazon section»). Cuando el traductor fije su EN, se cambian.
+- «Frutas del río» (`fact_sheet_title`) y «Sobre la Amazonía» (`settings_about_amazon`) no tienen EN en el glosario §10 («pendiente del traductor»): aquí van descritos sin nombre propio («the fruit fact sheets», «the About section»). Cuando el traductor fije su EN, se cambian.
 - **Pendiente de revisión** (asesor): Morpho, Pororoca, Firefly, Boto Leap (no se cita), TiTino, Capi, Rosa, «river dolphin» por boto (glosario §12, `fauna.river_dolphin`), «Estuary».
 - `[PENDIENTE: abogado]`: la línea de independencia en inglés es traducción propuesta [P] de la de 08 §13.1 #5.
 
@@ -88,7 +88,7 @@ Welcome to the river. The first version of Tintalú: travel upriver through nine
 | # | Texto EN | Estado |
 |---|---|---|
 | 1 | Sort the waters of the Amazon | canon 07 §10.2 · pendiente de revisión |
-| 2 | 14 fruits, 14 colors | canon 07 §10.2 |
+| 2 | 14 fruits, 14 colors | canon 07 §10.2 · Q-B13-23 |
 | 3 | Watch the river take color | canon 07 §10.2 |
 | 4 | Follow the Amazon to its source | **propuesta [P] de B13** (07 §10.2: «pendiente del traductor»); Q-B13-6 |
 | 5 | Honest hard levels | canon 07 §10.2 |
