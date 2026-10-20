@@ -553,6 +553,17 @@ namespace AF.UI
         /// </summary>
         public static void ComputeFill(RiverMap map, RiverRoutes routes, int maxLevel, float[] from)
         {
+            ComputeFill(map, routes, maxLevel, from, false);
+        }
+
+        /// <summary>
+        /// Como <see cref="ComputeFill(RiverMap, RiverRoutes, int, float[])"/>; con <paramref name="frontAhead"/> y
+        /// <paramref name="maxLevel"/> justo en una llegada (10k, k ≥ 1), el tramo de esa llegada cuenta como alcanzado y el
+        /// frente es el siguiente, aún vacío (<see cref="FrontAheadStop"/>: el primer fotograma del viaje del fin de contenido,
+        /// revisión de FX13). Sin asignaciones.
+        /// </summary>
+        public static void ComputeFill(RiverMap map, RiverRoutes routes, int maxLevel, float[] from, bool frontAhead)
+        {
             if (map == null || routes == null || from == null)
             {
                 throw new ArgumentNullException(map == null ? nameof(map) : routes == null ? nameof(routes) : nameof(from));
@@ -570,7 +581,9 @@ namespace AF.UI
             }
 
             int max = Mathf.Clamp(maxLevel, 0, WorldTable.LastLevel);
-            int front = FrontStopOf(max);
+            int ahead = frontAhead ? FrontAheadStop(routes, max) : -1;
+            int front = ahead >= 0 ? ahead : FrontStopOf(max);
+            float frontFill = ahead >= 0 ? 0f : RiverJourney.LegFill(max);
             int reached = Mathf.Min(front - 1, routes.LegCount - 1);
             for (int n = 0; n <= reached; n++)
             {
@@ -593,8 +606,26 @@ namespace AF.UI
             RiverStopRoute? frontRoute = routes.At(front);
             if (frontRoute != null)
             {
-                FillMouths(map, routes, frontRoute, RiverJourney.LegFill(max), from);
+                FillMouths(map, routes, frontRoute, frontFill, from);
             }
+        }
+
+        /// <summary>
+        /// El tramo siguiente a la llegada de <paramref name="maxLevel"/> (10k, k ≥ 1) si tiene ruta (<see cref="RiverRoutes.At"/>,
+        /// con la meta tras la última parada), o −1: el frente con que arranca el viaje del fin de contenido (revisión de FX13: con
+        /// el tramo de la llegada, sin largo en Mundo en Tambo, el primer fotograma enseñaba sus 10 boyas en la fila corta bajo la
+        /// parada antes de saltar al tramo de la naciente). Sin asignaciones.
+        /// </summary>
+        public static int FrontAheadStop(RiverRoutes routes, int maxLevel)
+        {
+            int per = RiverStopCatalog.LevelsPerStop;
+            if (routes == null || maxLevel < per || maxLevel % per != 0 || maxLevel >= WorldTable.LastLevel)
+            {
+                return -1;
+            }
+
+            int next = (maxLevel / per) + 1;
+            return routes.At(next) != null ? next : -1;
         }
 
         /// <summary>
@@ -666,7 +697,8 @@ namespace AF.UI
             _progressMap = map;
             _progressLevel = max;
             _progressBuilds++;
-            ComputeFill(map, routes, max, _fillFrom);
+            bool ahead = FrontAheadNow(max);
+            ComputeFill(map, routes, max, _fillFrom, ahead);
             IReadOnlyList<RiverLine> lines = map.Lines;
             for (int i = 0; i < _fill.Count; i++)
             {
@@ -675,7 +707,7 @@ namespace AF.UI
                 ShowRibbon(_fillCasing[i], used, used ? _fillFrom[i] : 1f, 1f);
             }
 
-            BuildFront(map, routes, max);
+            BuildFront(map, routes, max, ahead);
             if (BuildSilhouettes(map, routes, max) && _silhouettesPlaced)
             {
                 ReplaceSilhouettes(); // «ponerse al día» cruzó una gran parada: las placas, cada una junto a la de su mundo (FX8)
@@ -1508,13 +1540,15 @@ namespace AF.UI
 
         // El tramo del frente hasta LegFill de su longitud real (una cinta por tramo de la ruta, sin saltar puntos, como el vidrio
         // y el lleno) y sus 10 boyas, a (i + 1) / 10 de la ruta.
-        private void BuildFront(RiverMap map, RiverRoutes routes, int max)
+        // Con «ahead» (FrontAheadNow), el tramo siguiente a la llegada de max, vacío.
+        private void BuildFront(RiverMap map, RiverRoutes routes, int max, bool ahead)
         {
-            int stop = FrontStopOf(max);
+            int next = ahead ? FrontAheadStop(routes, max) : -1;
+            int stop = next >= 0 ? next : FrontStopOf(max);
             RiverStopRoute? route = routes.At(stop);
             _frontCount = 0;
             _frontStop = route != null ? stop : -1;
-            _frontFraction = route != null ? RiverJourney.LegFill(max) : 0f;
+            _frontFraction = route != null ? (next >= 0 ? 0f : RiverJourney.LegFill(max)) : 0f;
             if (route != null)
             {
                 IReadOnlyList<RiverPathPiece> path = route.Path;

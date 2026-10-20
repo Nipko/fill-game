@@ -1271,9 +1271,12 @@ namespace AF.UI
             }
 
             float rowTop = playTop - GapDp - rowH;
-            UiBuilder.Place(_viewSwitch.rectTransform, 16f, rowTop, switchW, rowH);
-            _viewWorld.Place(16f + SwitchPadDp, rowTop, SegmentDp, rowH);
-            _viewBasin.Place(16f + SwitchPadDp + SegmentDp, rowTop, SegmentDp, rowH);
+            // Sin «Faltan…» (el fin de contenido, nada que jugar), el conmutador, del mismo ancho, va centrado en la fila: a la
+            // izquierda dejaba un hueco a su derecha en la estampa final (revisión de FX13).
+            float switchX = _remainingReady ? 16f : (w - switchW) * 0.5f;
+            UiBuilder.Place(_viewSwitch.rectTransform, switchX, rowTop, switchW, rowH);
+            _viewWorld.Place(switchX + SwitchPadDp, rowTop, SegmentDp, rowH);
+            _viewBasin.Place(switchX + SwitchPadDp + SegmentDp, rowTop, SegmentDp, rowH);
             UiBuilder.Place(_remaining, remainingX, rowTop, remainingW, rowH);
             UiBuilder.Place(_remainingLabel.rectTransform, RemainingLabelXDp, RowPadDp, labelW, rowH - (2f * RowPadDp));
 

@@ -103,6 +103,12 @@ namespace AF.UI
         public const float GuideAboveDp = 27f;
 
         /// <summary>
+        /// En la meta (la canoa en la naciente; revisión de FX13), el guía va encima de la canoa a este tanto (dp) del mástil de
+        /// popa, hacia la proa [P], para que el mástil y sus banderas no lo tapen.
+        /// </summary>
+        public const float GuideMastClearDp = 24f;
+
+        /// <summary>
         /// Parada en que Rosa salta con sus parientes: la 12, los lagos de Tarapoto, niveles 121-130 (D-013, punto 6; propuesta
         /// del Mapa §2.1 y §6.1).
         /// </summary>
@@ -2610,6 +2616,7 @@ namespace AF.UI
                 out _guideRoute, out _guideFraction, out Vector2 foot, out float mastH);
             _canoeFacing = facing;
             _canoe.rectTransform.anchoredPosition = canoe;
+            FadeSourceUnderCanoe(canoe); // revisión de FX13: el hito de la naciente no se pinta sobre la canoa que llega a él
             _guideShown = true;
             _guideId = GuideAt(_map!, _routes!, _stops!, _canoeX);
 
@@ -2684,8 +2691,13 @@ namespace AF.UI
             {
                 route = -1;
                 fraction = 0f;
-                guideLocal = canoe + new Vector2(0f, GuideAboveDp);
-                guideMap = new Vector2(canoeMap.x, canoeMap.y - (GuideAboveDp / dpu));
+                // En la meta (la naciente, con el 700 ganado; revisión de FX13), sin agua por delante: encima de la canoa pero
+                // GuideMastClearDp por delante del mástil de popa, hacia la proa, para que el mástil y las banderas no lo tapen.
+                RiverStopRoute? goal = _routes!.Goal;
+                bool atGoal = goal != null && level >= goal.N * RiverStopCatalog.LevelsPerStop;
+                float side = atGoal ? facing * (GuideMastClearDp - (ProceduralArt.MapCanoeWidthDp * SternFraction)) : 0f;
+                guideLocal = canoe + new Vector2(side, GuideAboveDp);
+                guideMap = new Vector2(canoeMap.x + (side / dpu), canoeMap.y - (GuideAboveDp / dpu));
             }
 
             float dx = guideLocal.x - canoe.x;

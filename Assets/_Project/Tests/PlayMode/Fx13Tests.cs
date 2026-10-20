@@ -177,7 +177,15 @@ namespace AF.Tests.PlayMode
             Assert.That(map.Title, Does.Not.Contain(UiText.WorldName(10)), "sin world_w10_name");
             AssertSource(map, source, "fin de contenido del 700, al abrir");
 
+            // Revisión de FX13 (ronda 2): desde el fotograma 0, el frente es ya el tramo de la naciente, vacío, con sus 10 boyas
+            // sobre él (antes salía el tramo de Tambo, sin largo en Mundo: sus 10 boyas en la fila corta bajo la parada).
+            AssertGoalBuoysOnLeg(map, data, routes.Goal!, "fin de contenido del 700, fotograma 0");
+            Assert.That(map.FrontFraction, Is.EqualTo(0f), "fotograma 0: el tramo de la naciente, aún vacío");
+            Assert.That(map.FrontPieceCount, Is.EqualTo(0));
+            Assert.That(map.SourceMarkAlpha, Is.EqualTo(1f).Within(1e-3f), "fotograma 0: la canoa, lejos del hito");
+
             map.Tick(16f);
+            AssertGoalBuoysOnLeg(map, data, routes.Goal!, "fin de contenido del 700, primer Tick");
             Canvas.ForceUpdateCanvases();
             float fill = map.FrontFraction;
             float distance = Vector2.Distance(map.CanoeShownMapPoint, source);
@@ -230,6 +238,53 @@ namespace AF.Tests.PlayMode
             Assert.That(map.StopRemainingShown, Is.False, "nada que jugar: sin «Faltan…»");
             Assert.That(map.Title, Does.Not.Contain(UiText.WorldName(10)), "al acabar, tampoco el mundo 10");
             AssertSource(map, source, "fin de contenido del 700, al acabar");
+
+            // Revisión de FX13 (ronda 2): con la canoa en la naciente, el hito no se pinta sobre su casco y el guía va
+            // GuideMastClearDp por delante del mástil, para que el mástil no lo tape.
+            Assert.That(map.SourceMarkAlpha, Is.EqualTo(0f).Within(1e-3f), "al acabar: el hito, bajo la canoa, no se ve");
+            Vector2 guide = map.Space.ToLocal(map.GuideMapPoint);
+            Assert.That(map.Mast, Is.Not.Null);
+            Assert.That(map.Mast!.gameObject.activeInHierarchy, Is.True, "premisa: la canoa lleva banderas");
+            Assert.That(Mathf.Abs(guide.x - map.Mast.rectTransform.anchoredPosition.x),
+                Is.EqualTo(RiverMapScreen.GuideMastClearDp).Within(0.5f), "al acabar: el guía, apartado del mástil");
+
+            // Sin «Faltan…», el conmutador Mundo/Cuenca va centrado en la fila (revisión de FX13, ronda 2).
+            Rect capsule = StopCardTests.CanvasRect(map.ViewSwitch.rectTransform, map.Canvas);
+            Assert.That(capsule.center.x, Is.EqualTo(map.CanvasWidth * 0.5f).Within(0.5f), "el conmutador, centrado");
+        }
+
+        // Las 10 boyas del tramo de la meta (Tambo → naciente), en Mundo, a 2 px o menos de la polilínea del tramo y no en la
+        // fila corta (revisión de FX13, ronda 2).
+        internal static void AssertGoalBuoysOnLeg(RiverMapScreen map, RiverMap data, RiverStopRoute goal, string where)
+        {
+            const int samples = 400;
+            const float maxPx = 2f;
+            Assert.That(map.FrontStop, Is.EqualTo(goal.N), where + ": el frente, el tramo de la meta");
+            Assert.That(map.BuoyCount, Is.EqualTo(10), where);
+            Assert.That(map.BuoysCompact, Is.False, where + ": las boyas, sobre el tramo y no en la fila corta");
+            const float pxPerDp = 1080f / 360f; // el teléfono de las pruebas (Fx10Tests.Phone): 1080 × 2340 px, 360 × 780 dp
+            for (int i = 0; i < 10; i++)
+            {
+                Vector2 b = map.BuoyLocalPoint(i);
+                float best = float.MaxValue;
+                Vector2 prev = map.Space.ToLocal(RiverMapScreen.RoutePoint(data, goal, 0f));
+                for (int k = 1; k <= samples; k++)
+                {
+                    Vector2 next = map.Space.ToLocal(RiverMapScreen.RoutePoint(data, goal, k / (float)samples));
+                    best = Mathf.Min(best, SegmentDistance(b, prev, next));
+                    prev = next;
+                }
+
+                Assert.That(best * pxPerDp, Is.LessThanOrEqualTo(maxPx), where + ": la boya del " + map.BuoyLevel(i) + " a " + (best * pxPerDp) + " px del tramo");
+            }
+        }
+
+        private static float SegmentDistance(Vector2 p, Vector2 a, Vector2 b)
+        {
+            Vector2 ab = b - a;
+            float len = ab.sqrMagnitude;
+            float t = len > 0f ? Mathf.Clamp01(Vector2.Dot(p - a, ab) / len) : 0f;
+            return Vector2.Distance(p, a + (ab * t));
         }
 
         // El hito de la naciente en su punto, mayor que una boya, y su rótulo (map_source_name) a la vista, sin pisar el hito ni

@@ -17,7 +17,7 @@ namespace AF.UI
     /// <item><description><b>El hito</b> [P]: en el punto real de la naciente (s = 0 del cauce), un disco de
     /// <see cref="SourceMarkScale"/> veces el radio de las boyas, crema con aro azul petróleo, distinto de las boyas (la del 700
     /// queda debajo). Va encima de la canoa, para que la canoa no tape la meta (en la Cuenca, el tramo es un trazo
-    /// diminuto).</description></item>
+    /// diminuto), pero se desvanece cuando la canoa llega a él (<see cref="SourceFadeDp"/>).</description></item>
     /// <item><description><b>El rótulo</b> [P]: <c>map_source_name</c> («El nevado Mismi», pendiente del asesor) en crema con
     /// contorno, <see cref="SourceLabelSp"/> sp, con su borde izquierdo junto al hito y a <see cref="SourceLabelGapDp"/> dp por
     /// encima de él (hacia dentro del mapa, que la naciente cae cerca del borde izquierdo); si ahí pisa la canoa con su mástil y
@@ -41,6 +41,13 @@ namespace AF.UI
         /// <summary>Pasos de <see cref="SourceLabelGapDp"/> que se aleja el rótulo de la naciente buscando sitio libre [P].</summary>
         public const int SourceLabelTries = 4;
 
+        /// <summary>
+        /// Distancia (dp) entre la canoa y el hito de la naciente, más allá del radio del hito, en la que el hito pasa de no verse a
+        /// verse entero [P] (revisión de FX13): media canoa. Con la canoa en la naciente (el fin de contenido del 700), el hito no
+        /// se pinta sobre su casco; la meta la marcan la canoa y el rótulo.
+        /// </summary>
+        public const float SourceFadeDp = ProceduralArt.MapCanoeWidthDp * 0.5f;
+
         /// <summary>Aro del hito de la naciente: <c>panel_alto</c>, el azul petróleo del canto de las boyas por ganar.</summary>
         public static readonly Color SourceMarkRim = Palette.Panel.Top;
 
@@ -62,6 +69,9 @@ namespace AF.UI
 
         /// <summary>Radio del hito de la naciente (dp).</summary>
         public float SourceMarkRadius => _sourceMark != null ? _sourceMark.Radius : 0f;
+
+        /// <summary>Opacidad del hito de la naciente (0 con la canoa encima; <see cref="SourceFadeDp"/>).</summary>
+        public float SourceMarkAlpha => _sourceMark != null ? _sourceMark.canvasRenderer.GetAlpha() : 0f;
 
         /// <summary>Se ve el rótulo de la naciente.</summary>
         public bool SourceLabelShown => _sourceShown && _sourceLabel != null && _sourceLabel.gameObject.activeSelf;
@@ -164,6 +174,10 @@ namespace AF.UI
             float r = SourceMarkScale * Mathf.Max(buoyRadius, BuoyRadiusMinDp);
             _sourceLocal = p;
             _sourceMark.SetMark(p, r);
+            if (_hasCanoe)
+            {
+                FadeSourceUnderCanoe(_canoe.rectTransform.anchoredPosition);
+            }
             if (!labelOn)
             {
                 return;
@@ -204,6 +218,25 @@ namespace AF.UI
             }
 
             rt.anchoredPosition = at;
+        }
+
+        // El hito de la naciente se desvanece bajo la canoa (revisión de FX13: en la llegada final se veía un círculo blanco
+        // pegado al casco): opaco a SourceFadeDp o más del borde del hito, invisible con la canoa en él. Lo llaman la colocación
+        // de la canoa (cada fotograma del viaje) y la del hito. Sin asignaciones.
+        private void FadeSourceUnderCanoe(Vector2 canoeLocal)
+        {
+            if (_sourceMark == null || !_sourceShown)
+            {
+                return;
+            }
+
+            float d = Vector2.Distance(canoeLocal, _sourceLocal) - _sourceMark.Radius;
+            float a = Mathf.Clamp01(d / SourceFadeDp);
+            CanvasRenderer cr = _sourceMark.canvasRenderer;
+            if (Mathf.Abs(cr.GetAlpha() - a) > 0.001f)
+            {
+                cr.SetAlpha(a);
+            }
         }
 
         // La canoa con su mástil y sus banderas y el guía, como quedan con max_level (las cajas, en coordenadas locales). False
