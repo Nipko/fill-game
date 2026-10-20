@@ -44,6 +44,10 @@ namespace AF.Tests.PlayMode
             if (boot != null)
             {
                 PlayModeHelpers.TakeClock(boot);
+                if (boot.RiverMapView != null)
+                {
+                    boot.RiverMapView.ProgressReduceMotion = false;
+                }
             }
 
             LaunchOptions.Reset();
@@ -222,6 +226,104 @@ namespace AF.Tests.PlayMode
             StringAssert.Contains("\"by\":\"touch\"", journey[1]);
             StringAssert.Contains("\"elapsed_ms\":", journey[1]);
             StringAssert.DoesNotContain("\"elapsed_ms\":0,", journey[1]);
+        }
+
+        [UnityTest]
+        public IEnumerator ContentEndJourney_ClosedHalfway_TheProbeSaysClose()
+        {
+            var journey = new List<string>();
+            void OnLog(string message, string stack, LogType type)
+            {
+                if (message.StartsWith("AF_STATE {\"event\":\"map_journey\"", StringComparison.Ordinal))
+                {
+                    journey.Add(message);
+                }
+            }
+
+            GameBootstrap.ContentEndMapOverride = true;
+            MapArtRule.ForceProvisional = true;
+            Application.logMessageReceived += OnLog;
+            try
+            {
+                yield return Fx10Tests.OpenContentEnd();
+                RiverMapScreen map = GameBootstrap.Current!.RiverMapView!;
+                Assert.That(map.ContentEndJourney, Is.True);
+                Assert.That(map.CatchingUp, Is.True);
+                map.Tick(300f);
+                Assert.That(map.CatchingUp, Is.True, "a medias");
+                map.Close();
+                Assert.That(map.CatchingUp, Is.False, "cerrar a medias lo completa");
+                Assert.That(map.CatchUpCompletedByTouch, Is.True, "lo que faltaba, como saltado");
+            }
+            finally
+            {
+                Application.logMessageReceived -= OnLog;
+            }
+
+            if (!DevProbe.Enabled)
+            {
+                Assert.That(journey, Is.Empty);
+                yield break;
+            }
+
+            Assert.That(journey.Count, Is.EqualTo(2), string.Join("\n", journey));
+            StringAssert.Contains("\"phase\":\"start\"", journey[0]);
+            StringAssert.Contains("\"elapsed_ms\":0,\"by\":null", journey[0]);
+            StringAssert.Contains("\"phase\":\"end\"", journey[1]);
+            StringAssert.Contains("\"by\":\"close\"", journey[1]);
+            StringAssert.Contains("\"elapsed_ms\":", journey[1]);
+            StringAssert.DoesNotContain("\"elapsed_ms\":0,", journey[1]);
+        }
+
+        [UnityTest]
+        public IEnumerator ContentEndJourney_WithReduceMotion_NoJourney_TheProbeSaysReduce()
+        {
+            var journey = new List<string>();
+            void OnLog(string message, string stack, LogType type)
+            {
+                if (message.StartsWith("AF_STATE {\"event\":\"map_journey\"", StringComparison.Ordinal))
+                {
+                    journey.Add(message);
+                }
+            }
+
+            GameBootstrap.ContentEndMapOverride = true;
+            MapArtRule.ForceProvisional = true;
+            yield return FactLineTests.Win(Fx10Tests.ContentEndLevel);
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            map.ProgressReduceMotion = true;
+            Application.logMessageReceived += OnLog;
+            try
+            {
+                Assert.That(boot.PressNext(), Is.True);
+                for (int elapsed = 0; elapsed < 10000 && boot.App!.Screen == AppScreen.Level; elapsed += PlayModeHelpers.FrameMs)
+                {
+                    PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+                }
+
+                Assert.That(map.Visible, Is.True, "el Mapa del fin de contenido");
+                Assert.That(map.ContentEndJourney, Is.True);
+                Assert.That(map.CatchingUp, Is.False, "07 §7.8: sin viaje");
+                Assert.That(map.CatchUpFading, Is.True, "el estado final entra con su fundido");
+            }
+            finally
+            {
+                Application.logMessageReceived -= OnLog;
+            }
+
+            if (!DevProbe.Enabled)
+            {
+                Assert.That(journey, Is.Empty);
+                yield break;
+            }
+
+            // Sin viaje también sale la pareja start/end (by = reduce, elapsed_ms 0): así el logcat dice siempre cómo acabó.
+            Assert.That(journey.Count, Is.EqualTo(2), string.Join("\n", journey));
+            StringAssert.Contains("\"phase\":\"start\"", journey[0]);
+            StringAssert.Contains("\"from\":690,\"to\":700", journey[0]);
+            StringAssert.Contains("\"phase\":\"end\"", journey[1]);
+            StringAssert.Contains("\"elapsed_ms\":0,\"by\":\"reduce\"", journey[1]);
         }
 
         [UnityTest]
