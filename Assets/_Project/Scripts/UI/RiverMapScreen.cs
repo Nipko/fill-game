@@ -665,13 +665,14 @@ namespace AF.UI
 
             _canvas.Canvas.gameObject.SetActive(true);
             EnsureGeometry(map);
-            ApplyLineAnchors(map, routes, stops, progress.MaxLevel); // FX12: el río dibujado pasa por lo que se coloca sobre él
             _hasCanoe = TryCanoePoint(map, routes, progress.MaxLevel, out _canoeMap);
             _canoe.sprite = _art.MapCanoe;
             _canoe.gameObject.SetActive(_hasCanoe);
             ApplyTexts(playAvailable);
             MapView view = MapView.World;
             ModesOpen(source);
+            // FX12: el río dibujado pasa por lo que se coloca sobre él (FX14: tras ModesOpen).
+            ApplyLineAnchors(map, routes, stops, progress.MaxLevel, progress.MapSeenLevel);
             SequenceOpen(source, ref view);
             NorthUpOpen();
             ProgressOpen(progress);
@@ -899,11 +900,12 @@ namespace AF.UI
         private RiverMap? _lineAnchorsMap;
         private int _lineAnchorsMax = -1;
         private int _lineAnchorsWorld = -1;
+        private int _lineAnchorsFirstLeg = -1;
 
         /// <summary>
         /// Anclas de la curva de la línea <paramref name="line"/> (<see cref="RiverRibbonGraphic.SetAnchors"/>) en esta apertura: las
-        /// bocas de sus afluentes y los sitios de la línea donde se coloca algo (las paradas, las boyas de los tramos hasta el del
-        /// frente y, así, la canoa), para que el río dibujado pase por ellos. Null sin línea.
+        /// bocas de sus afluentes y los sitios de la línea donde se coloca algo (las paradas, las boyas de los tramos por los que pasa
+        /// la canoa al abrir hasta el del frente y, así, la canoa; FX14), para que el río dibujado pase por ellos. Null sin línea.
         /// </summary>
         internal RibbonAnchors? LineAnchors(RiverLine? line)
         {
@@ -911,28 +913,33 @@ namespace AF.UI
         }
 
         // Revisión de FX12: el trazo curvo del Mundo pasa por lo que se coloca sobre las líneas, que va sobre la polilínea (los datos y
-        // el cursor no cambian): cada parada de los mundos abiertos (su sitio, como sus mini cuias), las 10 boyas de cada tramo hasta
-        // el del frente con max_level, el de la meta incluido (la canoa va en una de ellas o en una parada y, al ponerse al día, de
-        // una a otra), la naciente cuando se ve su hito (FX13) y las bocas de
-        // los afluentes (RiverRibbonGraphic.MouthAnchors). Son anclas de la curva: pasa a ≤ CurveAnchorWidths anchos de cada una. Se
-        // fijan en el vidrio y el lleno de cada línea (el frente, en BuildFront) para que todas sus cintas sigan la misma curva.
-        // Asigna: al abrir, si cambian el Mapa, max_level o el mundo.
-        private void ApplyLineAnchors(RiverMap map, RiverRoutes routes, RiverStopCatalog stops, int maxLevel)
+        // el cursor no cambian): cada parada de los mundos abiertos (su sitio, como sus mini cuias), las 10 boyas de los tramos que
+        // se ven o recorre la canoa en esta apertura, el de la meta incluido (FX14: desde el de la canoa al empezar «ponerse al día»,
+        // BuoyAnchorFirstLeg, hasta el del frente con max_level; la canoa va en una de ellas o en una parada y, al ponerse al día, de
+        // una a otra), la naciente cuando se ve su hito (FX13) y las bocas de los afluentes (RiverRibbonGraphic.MouthAnchors). Son
+        // anclas de la curva: pasa a ≤ CurveAnchorWidths anchos de cada una. Se fijan en el vidrio y el lleno de cada línea (el
+        // frente, en BuildFront) para que todas sus cintas sigan la misma curva. Asigna: al abrir, si cambian el Mapa, max_level, el
+        // mundo o ese primer tramo.
+        private void ApplyLineAnchors(RiverMap map, RiverRoutes routes, RiverStopCatalog stops, int maxLevel, int seenLevel)
         {
             int max = Mathf.Clamp(maxLevel, 0, WorldTable.LastLevel);
-            if (!ReferenceEquals(map, _lineAnchorsMap) || max != _lineAnchorsMax || _world != _lineAnchorsWorld)
+            int front = Mathf.Min(FrontStopOf(max), routes.LegCount - 1);
+            int firstLeg = Mathf.Min(BuoyAnchorFirstLeg(max, seenLevel), front);
+            if (!ReferenceEquals(map, _lineAnchorsMap) || max != _lineAnchorsMax || _world != _lineAnchorsWorld
+                || firstLeg != _lineAnchorsFirstLeg)
             {
                 _lineAnchorsMap = map;
                 _lineAnchorsMax = max;
                 _lineAnchorsWorld = _world;
-                var lists = new List<(float S, Vector2 Point)>?[map.Lines.Count];
+                _lineAnchorsFirstLeg = firstLeg;
+                var lists = new List<(float S, Vector2 Point, bool Tight)>?[map.Lines.Count];
                 for (int n = 0; n < routes.Count; n++)
                 {
                     RiverStopRoute? route = routes.At(n);
                     RiverStop? stop = stops.At(n);
                     if (route != null && stop != null && stop.World <= _world) // las de los mundos abiertos, como sus mini cuias
                     {
-                        AddAnchor(map, lists, route.At);
+                        AddAnchor(map, lists, route.At, true); // revisión de FX14: la parada, a ≤ CurveStopAnchorDp
                     }
                 }
 
@@ -941,16 +948,15 @@ namespace AF.UI
                 RiverStopRoute? goal = routes.Goal;
                 if (goal != null && SourceMarkDue(routes, max))
                 {
-                    AddAnchor(map, lists, goal.At);
+                    AddAnchor(map, lists, goal.At, true);
                 }
 
-                int front = Mathf.Min(FrontStopOf(max), routes.LegCount - 1);
-                for (int n = 1; n <= front; n++)
+                for (int n = Mathf.Max(1, firstLeg); n <= front; n++)
                 {
                     RiverStopRoute? route = routes.At(n);
                     for (int i = 0; route != null && i < BuoysPerLeg; i++)
                     {
-                        AddAnchor(map, lists, RoutePlace(map, route, (i + 1) / (float)BuoysPerLeg));
+                        AddAnchor(map, lists, RoutePlace(map, route, (i + 1) / (float)BuoysPerLeg), false);
                     }
                 }
 
@@ -971,14 +977,30 @@ namespace AF.UI
             ProgressAnchors(map);
         }
 
-        private static void AddAnchor(RiverMap map, List<(float S, Vector2 Point)>?[] lists, RiverMapPlace place)
+        /// <summary>
+        /// FX14: el primer tramo cuyas boyas son anclas de la curva al abrir con <paramref name="maxLevel"/> y lo visto
+        /// <paramref name="seenLevel"/>: el de la canoa al empezar «ponerse al día» (<see cref="RiverJourney.CatchUpFrom"/>, con el
+        /// viaje del fin de contenido; ModesOpen ya ha corrido), así que van ancladas las boyas que se ven o por las que pasa la canoa
+        /// en esta apertura: las de ese tramo hasta el del frente. Las de los tramos de antes no se ven (solo las del frente) y
+        /// dejaban la curva llena de anclas cada pocos dp, que la obligaban a seguir los codos cerrados de los datos (un codo
+        /// cerrado del Amazonas cerca de Tambo en el 691-700). Las paradas siguen siendo anclas.
+        /// </summary>
+        private int BuoyAnchorFirstLeg(int maxLevel, int seenLevel)
+        {
+            int max = Mathf.Clamp(maxLevel, 0, WorldTable.LastLevel);
+            int seen = Mathf.Clamp(seenLevel, 0, max);
+            return FrontStopOf(RiverJourney.CatchUpFrom(ModesCatchUpSeen(seen), max));
+        }
+
+        private static void AddAnchor(RiverMap map, List<(float S, Vector2 Point, bool Tight)>?[] lists, RiverMapPlace place,
+            bool tight)
         {
             if (place.Line < 0 || place.Line >= lists.Length)
             {
                 return;
             }
 
-            (lists[place.Line] ??= new List<(float S, Vector2 Point)>()).Add((place.S, PlacePoint(map, place)));
+            (lists[place.Line] ??= new List<(float S, Vector2 Point, bool Tight)>()).Add((place.S, PlacePoint(map, place), tight));
         }
 
         /// <summary>

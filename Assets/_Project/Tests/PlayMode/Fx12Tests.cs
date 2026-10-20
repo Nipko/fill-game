@@ -19,7 +19,7 @@ namespace AF.Tests.PlayMode
     /// Tarea FX12 (observación 1 de la prueba de la parte A de la ola 7 en el teléfono): en la vista Mundo los ríos se veían como
     /// líneas quebradas. Desde FX12, las cintas del Mundo siguen la curva de Catmull-Rom centrípeta que pasa por los puntos del
     /// trazo suave (<see cref="RiverRibbonGraphic.SetCurve"/>), solo al dibujar. Aquí, con el Mapa abierto desde el inicio a tamaño
-    /// de teléfono (360 × 780 dp) y <c>max_level</c> 58, 120 y 300, en el Mundo:
+    /// de teléfono (360 × 780 dp) y <c>max_level</c> 58, 120, 300, 690, 694 y 699, en el Mundo:
     /// <list type="bullet">
     /// <item><description>lo que se ve de cada codo entre dos cuerdas seguidas de cada cinta dibujada (vidrio, lleno, frente y sus
     /// orlas): su flecha frente a la curva, que depende del largo de las cuerdas (<see cref="CornerSagittaDp"/>), no pasa de
@@ -34,6 +34,9 @@ namespace AF.Tests.PlayMode
     /// anchos del eje dibujado del vidrio de su línea;</description></item>
     /// <item><description>en la Cuenca, ninguna cinta lleva la curva (sus capturas no cambian).</description></item>
     /// </list>
+    /// FX14: también con <c>max_level</c> 690, 694 y 699 y en el fin de contenido del 700 (el tramo de la meta, cerca de Tambo), y
+    /// ahí, además, sin codos cerrados: el radio del eje dibujado no baja del medio ancho de fuera de la cinta
+    /// (<see cref="MaxBendRatio"/>, <see cref="Bends"/>; con 58, 120 y 300, solo el registro).
     /// Lo mismo (codos y agua sobre el vidrio) en las cintas del viaje del banner del 41 y del 81, que también llevan la curva.
     /// Las capturas son las de <see cref="Fx12SnapshotTests"/>.
     /// </summary>
@@ -95,6 +98,8 @@ namespace AF.Tests.PlayMode
         {
             GameScreen.SimulatedScreen = null;
             GameScreen.BannerTravelOverride = null;
+            GameBootstrap.ContentEndMapOverride = null;
+            MapArtRule.ForceProvisional = null;
             LaunchOptions.Reset();
             UnityEngine.Rendering.OnDemandRendering.renderFrameInterval = 1;
         }
@@ -113,7 +118,7 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
             RiverMapScreen map = boot.RiverMapView!;
             yield return null;
-            foreach (int max in new[] { 58, 120, 300 })
+            foreach (int max in new[] { 58, 120, 300, 690, 694, 699 })
             {
                 if (max != 58)
                 {
@@ -128,6 +133,8 @@ namespace AF.Tests.PlayMode
                 Assert.That(map.View, Is.EqualTo(MapView.World));
                 CheckWorld(map, boot.RiverMapData!, "max " + max);
                 CheckMarkers(map, boot.RiverMapData!, boot.RiverRoutes!, "max " + max);
+                CheckBends(map, boot.RiverMapData!, "max " + max, max >= 690); // FX14: el tramo de la meta (691-700), sin codos cerrados
+                CheckStopsOnTheAxis(map, boot.RiverMapData!, boot.RiverRoutes!, "max " + max, max >= 690);
 
                 map.SetView(MapView.Basin);
                 map.Tick(16f);
@@ -139,6 +146,180 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(s_failures, Is.Empty, string.Join(" | ", s_failures));
+        }
+
+        /// <summary>
+        /// Revisión de FX14: «ponerse al día» normal (lo visto por debajo de <c>max_level</c>) que cruza de un tramo a otro, el caso
+        /// que cambia la regla de las boyas ancladas (<c>BuoyAnchorFirstLeg</c>: desde el tramo de la canoa al empezar): abierto en
+        /// el Mundo desde el inicio con lo visto 55 y max 62 (la llegada del 60) y con 685 y 692 (la de Tambo, al tramo de la meta),
+        /// en varios fotogramas del viaje, las paradas, las boyas y la canoa quedan sobre el río dibujado
+        /// (<see cref="MaxMarkerApartWidths"/>).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CatchUpAcrossALeg_WorldView_TheCanoeAndTheBuoysStayOnTheDrawnRiver()
+        {
+            s_failures.Clear();
+            GameScreen.SimulatedScreen = Fx10Tests.Phone;
+            Profile profile = Wallet.NewProfile(new ManualClock(T0));
+            profile.Progress.NextLevel = 59;
+            profile.Progress.MaxLevel = 58;
+            profile.Progress.MapSeenLevel = 58;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+            RiverMapScreen map = boot.RiverMapView!;
+            yield return null;
+            foreach ((int seen, int max) in new[] { (55, 62), (685, 692) })
+            {
+                string at = "ponerse al día de " + seen + " a " + max;
+                map.Close();
+                map.Open(MapOpenSource.Lobby, boot.RiverMapData!, boot.RiverRoutes!, boot.RiverStops!,
+                    new MemoryProgressStore(max + 1, max, seen), max, false);
+                Assert.That(map.View, Is.EqualTo(MapView.World), at + ": premisa, abre en el Mundo");
+                Assert.That(map.CatchingUp, Is.True, at + ": premisa, «ponerse al día»");
+                int firstLeg = map.FrontStop;
+                int checks = 0;
+                bool canoe = false;
+                for (int frame = 0; frame < 2000 && (map.CatchingUp || map.CatchUpFading); frame++)
+                {
+                    map.Tick(16f);
+                    if (frame % 8 != 0)
+                    {
+                        continue;
+                    }
+
+                    Canvas.ForceUpdateCanvases();
+                    string where = at + ", fotograma " + frame + " (tramo " + map.FrontStop + ")";
+                    string? off = MarkersOffTheRiver(map, boot.RiverMapData!, boot.RiverRoutes!, where, out var what);
+                    Expect(off == null, where + ": las paradas, las boyas y la canoa, sobre el río dibujado: " + off);
+                    canoe |= what.Contains("canoa");
+                    checks++;
+                }
+
+                Assert.That(map.CatchingUp, Is.False, at + ": el viaje terminó");
+                Assert.That(map.FrontStop, Is.GreaterThan(firstLeg), at + ": premisa, el viaje cruza de un tramo a otro");
+                Assert.That(checks, Is.GreaterThanOrEqualTo(5), at + ": fotogramas comprobados");
+                Assert.That(canoe, Is.True, at + ": la canoa, comprobada");
+                map.Tick(16f);
+                Canvas.ForceUpdateCanvases();
+                CheckMarkers(map, boot.RiverMapData!, boot.RiverRoutes!, at + ", al acabar");
+            }
+
+            Assert.That(s_failures, Is.Empty, string.Join(" | ", s_failures));
+        }
+
+        /// <summary>
+        /// FX14: en la vista Mundo del fin de contenido, tras ganar el 700 y acabar el viaje a la naciente (la canoa en ella, el tramo
+        /// de la meta lleno), lo mismo que con <c>max_level</c> 690-699: los codos, el agua sobre el vidrio, las bocas, lo que se
+        /// coloca sobre la línea y ningún codo cerrado (<see cref="CheckBends"/>).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator ContentEnd700_WorldView_RibbonsAreSmooth_WithNoTightBend_AndTheMarkersOnTheRiver()
+        {
+            s_failures.Clear();
+            GameBootstrap.ContentEndMapOverride = true;
+            MapArtRule.ForceProvisional = true;
+            GameScreen.SimulatedScreen = Fx10Tests.Phone;
+            yield return Fx10Tests.OpenContentEnd();
+            GameBootstrap boot = GameBootstrap.Current!;
+            RiverMapScreen map = boot.RiverMapView!;
+            Assert.That(map.Source, Is.EqualTo(MapOpenSource.ContentEnd));
+            for (int t = 0; t < 30000 && (map.CatchingUp || map.CatchUpFading); t += 16)
+            {
+                map.Tick(16f);
+            }
+
+            map.SetView(MapView.World);
+            map.Tick(16f);
+            Canvas.ForceUpdateCanvases();
+            Assert.That(map.FrontStop, Is.EqualTo(70), "premisa: el tramo de la meta");
+            Assert.That(map.FrontFraction, Is.EqualTo(1f), "premisa: lleno hasta la naciente");
+            const string at = "fin de contenido del 700";
+            CheckWorld(map, boot.RiverMapData!, at);
+            CheckMarkers(map, boot.RiverMapData!, boot.RiverRoutes!, at);
+            CheckBends(map, boot.RiverMapData!, at, true);
+            CheckStopsOnTheAxis(map, boot.RiverMapData!, boot.RiverRoutes!, at, true);
+            Assert.That(s_failures, Is.Empty, string.Join(" | ", s_failures));
+        }
+
+        /// <summary>
+        /// Lo más que el medio ancho de fuera de una cinta del Mundo (el agua y su orla) puede pasar del radio de su eje dibujado en
+        /// un codo (<see cref="Bends"/>), en el tramo de la meta (FX14): con más de 1, el borde de dentro del codo se pliega y hace
+        /// pico, como el codo del Amazonas entre Puerto Prado y Tambo que vio FX13 (1,32 en el lleno). 1,05 deja que el radio se
+        /// quede un 5 % por debajo, que a 4,5 dp de medio ancho de fuera es un pliegue de 0,2 dp, menos de 1 px a 3 px/dp.
+        /// </summary>
+        public const float MaxBendRatio = 1.05f;
+
+        // FX14: el codo más cerrado de las cintas dibujadas del Mundo (Bends). Con «strict», no pasa de MaxBendRatio; si no, solo el
+        // registro (con max 120 y 300 hay codos más cerrados en otros sitios, de antes de FX14).
+        private static void CheckBends(RiverMapScreen map, RiverMap data, string at, bool strict)
+        {
+            var worst = new Corner();
+            foreach (RiverRibbonGraphic ribbon in Ribbons(map, data))
+            {
+                Bends(ribbon, worst);
+            }
+
+            Debug.Log("AF_FX14 " + at + ": el codo más cerrado, medio ancho de fuera / radio = " + worst.Value.ToString("0.00", CultureInfo.InvariantCulture)
+                + " (" + worst.At + ")");
+            if (strict)
+            {
+                Expect(worst.Value <= MaxBendRatio, at + ": un codo cerrado, " + worst.At);
+            }
+        }
+
+        /// <summary>
+        /// El codo más cerrado del eje dibujado de la cinta, en «worst» como medio ancho de fuera (el agua y su orla) / radio: con
+        /// más de 1, el borde de dentro del codo se pliega y hace pico. El radio, en cada sección, el del círculo por los puntos del
+        /// eje a un medio ancho de fuera (a lo largo de las secciones) antes y después de ella; en las puntas, no se mide.
+        /// </summary>
+        internal static void Bends(RiverRibbonGraphic ribbon, Corner worst)
+        {
+            float dp = ribbon.Space.DpPerUnit;
+            float half = (0.5f * ribbon.WidthDp) + RiverRibbonGraphic.CasingRimDp;
+            int n = ribbon.LastSectionPointCount;
+            if (n < 3)
+            {
+                return;
+            }
+
+            var arcs = new float[n];
+            for (int k = 1; k < n; k++)
+            {
+                arcs[k] = arcs[k - 1] + ((ribbon.LastSectionPoint(k) - ribbon.LastSectionPoint(k - 1)).magnitude * dp);
+            }
+
+            for (int k = 1; k + 1 < n; k++)
+            {
+                if (arcs[k] < half || arcs[n - 1] - arcs[k] < half)
+                {
+                    continue;
+                }
+
+                Vector2 p = ribbon.LastSectionPoint(k) * dp;
+                Vector2 a = AxisAt(ribbon, arcs, arcs[k] - half) * dp;
+                Vector2 b = AxisAt(ribbon, arcs, arcs[k] + half) * dp;
+                Vector2 u = p - a;
+                Vector2 v = b - p;
+                float cross = Mathf.Abs((u.x * v.y) - (u.y * v.x));
+                float product = u.magnitude * v.magnitude * (b - a).magnitude;
+                float ratio = product > 1e-6f ? 2f * cross * half / product : 0f; // medio ancho / radio
+                worst.Take(ratio, ribbon, k);
+            }
+        }
+
+        // El punto del eje dibujado (secciones de la cinta) en el arco «arc» (dp desde la primera).
+        private static Vector2 AxisAt(RiverRibbonGraphic ribbon, float[] arcs, float arc)
+        {
+            int k = 0;
+            while (k + 2 < arcs.Length && arcs[k + 1] < arc)
+            {
+                k++;
+            }
+
+            float d = arcs[k + 1] - arcs[k];
+            float t = d > 0f ? Mathf.Clamp01((arc - arcs[k]) / d) : 0f;
+            return Vector2.Lerp(ribbon.LastSectionPoint(k), ribbon.LastSectionPoint(k + 1), t);
         }
 
         [UnityTest]
@@ -409,6 +590,50 @@ namespace AF.Tests.PlayMode
         /// dibujado de ese vidrio. Las boyas y la canoa, en la línea cuya polilínea pasa por ellas (en una boca, la de eje más cerca).
         /// </summary>
         public const float MaxMarkerApartWidths = 0.5f;
+
+        /// <summary>
+        /// Revisión de FX14: lo más que el punto real de una parada (el nudo de sus líneas finas) queda del eje dibujado del vidrio de
+        /// su línea en la vista Mundo, en dp [P]. Con <see cref="RiverRibbonGraphic.CurveAnchorWidths"/> anchos (0,45; 3,6 dp a
+        /// 8 dp de ancho) la parada de Tambo quedaba al borde del agua en el fin de contenido del 700; las paradas son anclas con
+        /// <see cref="RiverRibbonGraphic.CurveStopAnchorDp"/> de holgura.
+        /// </summary>
+        public const float MaxStopApartDp = 1.5f;
+
+        // Revisión de FX14: cada parada, a ≤ MaxStopApartDp del eje dibujado del vidrio de su línea. Con «strict», se exige (el tramo
+        // de la meta); si no, solo el registro.
+        private static void CheckStopsOnTheAxis(RiverMapScreen map, RiverMap data, RiverRoutes routes, string at, bool strict)
+        {
+            float worst = 0f;
+            string worstAt = "ninguna";
+            int checkedCount = 0;
+            for (int i = 0; i < map.StopMarkerCount; i++)
+            {
+                int n = map.StopMarkerStop(i);
+                RiverStopRoute? route = routes.At(n);
+                if (route == null || route.At.Line < 0 || route.At.Line >= data.Lines.Count)
+                {
+                    continue;
+                }
+
+                RiverRibbonGraphic glass = map.Glass(route.At.Line);
+                if (!glass.gameObject.activeSelf || glass.LastSectionPointCount < 2)
+                {
+                    continue;
+                }
+
+                checkedCount++;
+                float apart = DistanceToSections(glass, RiverMapScreen.PlacePoint(data, route.At)) * glass.Space.DpPerUnit;
+                if (apart > worst)
+                {
+                    worst = apart;
+                    worstAt = "parada " + n + " en " + glass.name + ", a " + apart.ToString("0.00", CultureInfo.InvariantCulture) + " dp";
+                }
+            }
+
+            Debug.Log("AF_FX14 " + at + ": " + checkedCount + " paradas; la más apartada del eje dibujado, " + worstAt);
+            Assert.That(checkedCount, Is.GreaterThan(0), at + ": hay paradas sobre las líneas");
+            Expect(!strict || worst <= MaxStopApartDp, at + ": las paradas, sobre el eje dibujado: " + worstAt);
+        }
 
         private static void CheckMarkers(RiverMapScreen map, RiverMap data, RiverRoutes routes, string at)
         {

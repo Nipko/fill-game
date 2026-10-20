@@ -51,11 +51,12 @@ namespace AF.Presentation
     /// </summary>
     public sealed class RibbonAnchors
     {
-        public RibbonAnchors(float[] s, Vector2[] points, bool[]? mouth = null)
+        public RibbonAnchors(float[] s, Vector2[] points, bool[]? mouth = null, bool[]? tight = null)
         {
             S = s;
             Points = points;
             Mouth = mouth ?? new bool[s.Length];
+            Tight = tight ?? new bool[s.Length];
         }
 
         /// <summary>s de cada boca en la línea, de menor a mayor.</summary>
@@ -66,6 +67,12 @@ namespace AF.Presentation
 
         /// <summary>Si cada ancla es la boca de un afluente (si no, un sitio de la polilínea donde se coloca algo).</summary>
         public bool[] Mouth { get; }
+
+        /// <summary>
+        /// Revisión de FX14: si la curva pasa por cada ancla a ≤ <see cref="RiverRibbonGraphic.CurveStopAnchorDp"/> (una parada, el
+        /// nudo de sus líneas finas) en vez de a ≤ <see cref="RiverRibbonGraphic.CurveAnchorWidths"/> anchos.
+        /// </summary>
+        public bool[] Tight { get; }
 
         /// <summary>Anclas.</summary>
         public int Count => S.Length;
@@ -249,6 +256,20 @@ namespace AF.Presentation
         /// </summary>
         public const float CurveAnchorMergeWidths = 0.3f;
 
+        /// <summary>
+        /// Con el trazo curvo, vueltas como mucho de las anclas a su sitio (FX14) [P]: la vuelta de cada una mueve las de alrededor,
+        /// así que se repite hasta que todas quedan a ≤ <see cref="CurveAnchorWidths"/> (o se acaban las vueltas: entonces se
+        /// recortan).
+        /// </summary>
+        public const int CurveAnchorPasses = 4;
+
+        /// <summary>
+        /// Revisión de FX14: con el trazo curvo, lo más que la curva pasa de un ancla ajustada (<see cref="RibbonAnchors.Tight"/>:
+        /// una parada), en dp [P]. Con <see cref="CurveAnchorWidths"/> anchos (3,6 dp a 8 dp de ancho) la parada de Tambo quedaba al
+        /// borde del agua en el fin de contenido del 700 y se leía como una parada en la orilla.
+        /// </summary>
+        public const float CurveStopAnchorDp = 1f;
+
         // Con el trazo curvo, un paso de la curva no va a menos de esto (dp) de una sección del plan: una cuerda de nada.
         private const float CurveMinGapDp = 0.5f;
 
@@ -321,6 +342,7 @@ namespace AF.Presentation
         private bool _curve;
         private bool[] _keptFixed = Array.Empty<bool>();
         private bool[] _keptMouth = Array.Empty<bool>();
+        private bool[] _keptTight = Array.Empty<bool>();
         private Vector2[] _keptOrigin = Array.Empty<Vector2>();
         private RibbonAnchors? _anchors;
         private Vector2[] _keptPoint = Array.Empty<Vector2>();
@@ -572,33 +594,36 @@ namespace AF.Presentation
         /// Las anclas de <paramref name="mouths"/> y los sitios <paramref name="places"/> (s en la línea y su punto, sobre la polilínea:
         /// lo que se coloca sobre ella), juntos y de menor a mayor s; en la misma s, primero la boca. Asigna (al abrir el Mapa).
         /// </summary>
-        public static RibbonAnchors MergeAnchors(RibbonAnchors? mouths, System.Collections.Generic.List<(float S, Vector2 Point)>? places)
+        public static RibbonAnchors MergeAnchors(RibbonAnchors? mouths,
+            System.Collections.Generic.List<(float S, Vector2 Point, bool Tight)>? places)
         {
             int nm = mouths != null ? mouths.Count : 0;
             int np = places != null ? places.Count : 0;
-            var all = new System.Collections.Generic.List<(float S, int Order, Vector2 Point)>(nm + np);
+            var all = new System.Collections.Generic.List<(float S, int Order, Vector2 Point, bool Tight)>(nm + np);
             for (int i = 0; i < nm; i++)
             {
-                all.Add((mouths!.S[i], i, mouths.Points[i]));
+                all.Add((mouths!.S[i], i, mouths.Points[i], mouths.Tight[i]));
             }
 
             for (int i = 0; i < np; i++)
             {
-                all.Add((places![i].S, nm + i, places[i].Point));
+                all.Add((places![i].S, nm + i, places[i].Point, places[i].Tight));
             }
 
             all.Sort((x, y) => x.S != y.S ? x.S.CompareTo(y.S) : x.Order.CompareTo(y.Order));
             var s = new float[all.Count];
             var points = new Vector2[all.Count];
             var isMouth = new bool[all.Count];
+            var tight = new bool[all.Count];
             for (int i = 0; i < all.Count; i++)
             {
                 s[i] = all[i].S;
                 points[i] = all[i].Point;
                 isMouth[i] = all[i].Order < nm && mouths!.Mouth[all[i].Order];
+                tight[i] = all[i].Tight;
             }
 
-            return new RibbonAnchors(s, points, isMouth);
+            return new RibbonAnchors(s, points, isMouth, tight);
         }
 
         // Los arreglos de los puntos de la curva, para los de la línea y sus anclas (solo crecen).
@@ -611,6 +636,7 @@ namespace AF.Presentation
                 _keptPoint = new Vector2[size];
                 _keptFixed = new bool[size];
                 _keptMouth = new bool[size];
+                _keptTight = new bool[size];
                 _keptOrigin = new Vector2[size];
             }
         }
@@ -1330,6 +1356,7 @@ namespace AF.Presentation
             float[]? anchors = _anchors?.S;
             Vector2[]? targets = _anchors?.Points;
             bool[]? isMouth = _anchors?.Mouth;
+            bool[]? isTight = _anchors?.Tight;
             float merge = CurveAnchorMergeWidths * WidthDp / dp;
             int m = anchors != null ? anchors.Length : 0;
             float length = cursor.Length;
@@ -1361,11 +1388,14 @@ namespace AF.Presentation
                                 _keptPoint[c0 - 1] = targets![a];
                                 _keptMouth[c0 - 1] = true;
                             }
+
+                            _keptTight[c0 - 1] |= isTight![a];
                         }
                         else
                         {
                             AddKept(anchorArc, targets![a], true); // la boca de los datos o el sitio de lo que se coloca ahí
                             _keptMouth[_keptCount - 1] = isMouth![a];
+                            _keptTight[_keptCount - 1] |= isTight![a];
                         }
                     }
 
@@ -1410,32 +1440,26 @@ namespace AF.Presentation
             }
 
             // Cada ancla vuelve hasta CurveAnchorWidths anchos de su sitio (la boca cae dentro de la cinta sin forzar un codo en ella),
-            // y los puntos de alrededor con ella, cada vez menos hasta CurveAnchorReach separaciones; las puntas no se mueven.
+            // y los puntos de alrededor con ella, cada vez menos hasta CurveAnchorReach separaciones; las puntas no se mueven. FX14:
+            // hasta CurveAnchorPasses vueltas, mientras alguna siga más lejos.
             float reach = CurveAnchorReach * units;
             float slack = CurveAnchorWidths * WidthDp / dp;
+            float tightSlack = Mathf.Min(slack, CurveStopAnchorDp / dp); // revisión de FX14: las paradas
+            int pulls = 0;
+            while (pulls < CurveAnchorPasses && PullAnchors(count, reach, slack, tightSlack))
+            {
+                pulls++;
+            }
+
+            // FX14: cada ancla, a ≤ «slack» de su sitio pase lo que pase: la vuelta de un ancla mueve las de alrededor, y con varias
+            // seguidas (las boyas de un tramo corto, cada pocos dp) la del medio podía acabar más lejos (la boya del 112 a 6,4 dp).
             for (int k = 1; k < count - 1; k++)
             {
-                if (!_keptFixed[k])
+                Vector2 shift = _keptPoint[k] - _keptOrigin[k];
+                float most = _keptTight[k] ? tightSlack : slack;
+                if (_keptFixed[k] && shift.sqrMagnitude > most * most)
                 {
-                    continue;
-                }
-
-                Vector2 back = _keptOrigin[k] - _keptPoint[k];
-                float away = back.magnitude;
-                if (away <= slack)
-                {
-                    continue;
-                }
-
-                back *= 1f - (slack / away);
-                for (int j = k; j > 0 && _keptArc[k] - _keptArc[j] < reach; j--)
-                {
-                    _keptPoint[j] += back * Falloff((_keptArc[k] - _keptArc[j]) / reach);
-                }
-
-                for (int j = k + 1; j < count - 1 && _keptArc[j] - _keptArc[k] < reach; j++)
-                {
-                    _keptPoint[j] += back * Falloff((_keptArc[j] - _keptArc[k]) / reach);
+                    _keptPoint[k] = _keptOrigin[k] + (shift * (most / shift.magnitude));
                 }
             }
 
@@ -1457,6 +1481,42 @@ namespace AF.Presentation
                     Subdivide(cursor, k, 0f, p0, 1f, _keptPoint[k + 1], 0);
                 }
             }
+        }
+
+        // Cada ancla vuelve hasta «slack» de su sitio (la boca cae dentro de la cinta sin forzar un codo en ella), y los puntos de
+        // alrededor con ella, cada vez menos hasta «reach» de arco; las puntas no se mueven. Devuelve si movió alguna.
+        private bool PullAnchors(int count, float reach, float looseSlack, float tightSlack)
+        {
+            bool moved = false;
+            for (int k = 1; k < count - 1; k++)
+            {
+                if (!_keptFixed[k])
+                {
+                    continue;
+                }
+
+                float slack = _keptTight[k] ? tightSlack : looseSlack;
+                Vector2 back = _keptOrigin[k] - _keptPoint[k];
+                float away = back.magnitude;
+                if (away <= slack * 1.0001f)
+                {
+                    continue;
+                }
+
+                moved = true;
+                back *= 1f - (slack / away);
+                for (int j = k; j > 0 && _keptArc[k] - _keptArc[j] < reach; j--)
+                {
+                    _keptPoint[j] += back * Falloff((_keptArc[k] - _keptArc[j]) / reach);
+                }
+
+                for (int j = k + 1; j < count - 1 && _keptArc[j] - _keptArc[k] < reach; j++)
+                {
+                    _keptPoint[j] += back * Falloff((_keptArc[j] - _keptArc[k]) / reach);
+                }
+            }
+
+            return moved;
         }
 
         // Una pasada del filtro sobre los puntos de dentro de la curva: cada uno, w de su camino hacia la media de sus vecinos.
@@ -1489,6 +1549,7 @@ namespace AF.Presentation
             _keptArc[c] = arc;
             _keptPoint[c] = point;
             _keptMouth[c] = false;
+            _keptTight[c] = false;
             _keptFixed[c] = anchor;
             _keptCount = c + 1;
         }
