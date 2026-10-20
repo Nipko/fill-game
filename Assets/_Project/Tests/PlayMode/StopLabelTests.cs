@@ -565,10 +565,10 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Revisión final de FX4, (1): board. El número de filas solo cambia a mitad de nivel si cambia la pantalla (con 11-14
-        // cuias, 2 o 3 filas según el ancho del lienzo; D-006); «+1 cuia» no lo cambia. En el 131, de 360 a 600 dp de ancho
-        // pasa de 3 filas a 2 con la placa a la vista, y al revés, de 2 a 3 con el rótulo sobre el horizonte: en los dos casos
-        // se oculta con stop_label_off y board, y no vuelve.
+        // Revisión final de FX4, (1): board. El número de filas solo cambia a mitad de nivel si cambia la pantalla (con 11-12
+        // cuias, 2 o 3 filas según el ancho del lienzo; con 13-16, siempre 3: P12 de D-006 c); «+1 cuia» no lo cambia. En el
+        // 131, de 360 a 600 dp de ancho pasa de 3 filas a 2 con la placa a la vista, y al revés, de 2 a 3 con el rótulo sobre el
+        // horizonte: en los dos casos se oculta con stop_label_off y board, y no vuelve.
         [UnityTest]
         public IEnumerator Level131_TheScreenChangesTheRows_HidesItWithBoard()
         {
