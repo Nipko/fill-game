@@ -30,7 +30,7 @@ const string Usage = """
       dotnet run --project tools/level-generator -- --registry <campaign.json> --out <registro.json> [--variant a|b] [--check]
       dotnet run --project tools/level-generator -- --parity [--report tools/out/parity_report.md]
       dotnet run --project tools/level-generator -- --seasons <campaign.json> [<campaign.json> ...] --out <tabla.json> [--until <nivel>] [--check]
-      dotnet run --project tools/level-generator -c Release -- --daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-729] --out <carpeta> [--report <informe.md>] [--check] [--threads n]
+      dotnet run --project tools/level-generator -c Release -- --daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <informe.md>] [--check] [--threads n]
       dotnet run --project tools/level-generator -c Release -- --self-test [tinaja|seasons|variants|registry|curation|holgura|daily]
       dotnet run --project tools/level-generator -- --help
 
@@ -109,7 +109,7 @@ const string Usage = """
       sin entrada para el nivel (o con otra celda), "pendiente". Codigo 2 si esta mal formado, decide un nivel fuera de
       la especificacion o decide un nivel del rango que no es reto, hito ni primer tablero de estreno; las decisiones de
       la especificacion fuera de --levels se ignoran (--self-test curation).
-    --daily: pool del Reto del rio (03 sec. 16; docs/dev/reto-del-rio.md): un tablero por banda (1-3) y dia (0-729) desde
+    --daily: pool del Reto del rio (03 sec. 16; docs/dev/reto-del-rio.md): un tablero por banda (1-3) y dia (0-728) desde
       la semilla amazonfill:v1:daily:b{b}:d{ddd}, sin mecanicas ni alivio, en <carpeta>/<pack_id>.json (daily_pool_v1.json;
       af-level/1, kind daily) y, con --report, el informe. --bands y --days: listas con rangos (p. ej. 0-9,100); por defecto
       todas. --threads: hilos (el pack no depende de ellos). Con --check no escribe: falla si el pack del disco difiere. La

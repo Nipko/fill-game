@@ -17,7 +17,7 @@ ejecuciones den los mismos bytes.
 | `--parity [--report <md>]` | Paridad de las métricas con el prototipo (03 §17-§18; 09 R26) | `tools/out/parity_report.md` |
 | `--spec <campaign.json> [--levels a-b] [--variant a\|b] --out <carpeta> [--report <md>] [--curation <md> [--decisions <json>]] [--check]` | Genera la campaña (03 §2); sin `--levels`, todos los niveles de la especificación; `--curation`, el informe de curación para el dueño (P7a), con su decisión de `--decisions` | `Assets/_Project/Data/Levels/mundo_0N_v1.json`, `tools/out/campaign_v1_report.md` y `tools/out/curation_wNN.md` |
 | `--seasons <campaign.json> [...] --out <tabla.json> [--until <nivel>] [--check]` | Tabla de temporada del cliente (pregunta 32 b), hasta el último nivel publicado | `Assets/_Project/Data/Levels/seasons_v1.json` |
-| `--daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-729] --out <carpeta> [--report <md>] [--check] [--threads n]` | Pool del Reto del río (03 §16): un tablero por banda y día | `<carpeta>/daily_pool_v1.json` y el informe (la muestra: `tools/out/daily_sample/` y `tools/out/daily_sample_report.md`) |
+| `--daily --spec <daily_v1.json> [--bands 1,2,3] [--days 0-728] --out <carpeta> [--report <md>] [--check] [--threads n]` | Pool del Reto del río (03 §16): un tablero por banda y día | `<carpeta>/daily_pool_v1.json` y el informe (la muestra: `tools/out/daily_sample/` y `tools/out/daily_sample_report.md`) |
 | `--self-test [tinaja\|seasons\|variants\|registry\|curation\|holgura\|daily]` | Pruebas de la herramienta sin proyecto de tests (sin nombre, todas) | PASS / FAIL por consola |
 
 Códigos de salida: 0 = correcto; 1 = alguna comprobación falla; 2 = uso incorrecto o especificación ilegible.
@@ -756,10 +756,10 @@ vacíos, su ventana de `bot_fail`, su fuente de candidatos (y el respaldo de B1)
 `campaign_v2.json` (`tints_from`), sin copiarlos.
 
 ```
-dotnet run --project tools/level-generator -c Release -- --daily --spec tools/level-generator/specs/daily_v1.json --bands 1,2,3 --days 0-729 --out <carpeta> [--report <informe.md>] [--check] [--threads n]
+dotnet run --project tools/level-generator -c Release -- --daily --spec tools/level-generator/specs/daily_v1.json --bands 1,2,3 --days 0-728 --out <carpeta> [--report <informe.md>] [--check] [--threads n]
 ```
 
-- Un tablero por banda (1-3) y día (0-729), con id `d{b}_n{nnnn}` y semilla `amazonfill:v1:daily:b{b}:d{ddd}` (`Daily/DailyIds.cs`).
+- Un tablero por banda (1-3) y día (0-728), con id `d{b}_n{nnnn}` y semilla `amazonfill:v1:daily:b{b}:d{ddd}` (`Daily/DailyIds.cs`).
 - Sin mecánicas, sin ocultos y sin alivio (`relief` vacío), en `<carpeta>/daily_pool_v1.json` (af-level/1, `kind` daily).
 - `Daily/DailyRunner.cs` genera los candidatos con las fuentes de `AF.Solver` y `Generation/` sin cambiarlas, y acepta el
   primero en la ventana del bot que A* resuelve con par ≥ 2K. `Daily/DailyTints.cs` pone los tintes,

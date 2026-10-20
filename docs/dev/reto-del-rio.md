@@ -119,7 +119,7 @@ Salieron de esta nota (R-Q1b, R-Q11-R-Q14) y de la revisión de R7b (R-Q12b, R-Q
 
 | Módulo | Archivo | Qué contiene | Tarea | Fuente |
 |---|---|---|---|---|
-| `AF.Levels` | `Scripts/Levels/DailyPool.cs` | Tableros por banda (1-3) y día (0-729): `Find(band, day)` y `FindById(id)`, sin asignaciones en la consulta (arrays por banda y tabla por id construida al leer) | R6 | 08 §2.2, fila AF.Levels |
+| `AF.Levels` | `Scripts/Levels/DailyPool.cs` | Tableros por banda (1-3) y día (0-728): `Find(band, day)` y `FindById(id)`, sin asignaciones en la consulta (arrays por banda y tabla por id construida al leer) | R6 | 08 §2.2, fila AF.Levels |
 | `AF.Levels` | `Scripts/Levels/DailyPoolReader.cs` | Lee `daily_pool_v1.json` con `Levels/Json/JsonParser`. Rechaza con `LevelFormatException`: `kind` ≠ `daily`; `slot` incoherente con `id`/`seed`; bandas incompletas o días repetidos; `pack_schema` > `LevelPackReader.SupportedPackSchema`. Construye `LevelDefinition` con su constructor `internal` (mismo ensamblado); no reutiliza `LevelPackReader.ReadLevel`, que exige `level` y `difficulty` | R6 | 08 §4.1, filas `kind`, `seed`, `level`, `difficulty`; esquema, `allOf` de `daily` |
 | `AF.LiveOps` | `Scripts/LiveOps/AF.LiveOps.asmdef` | `noEngineReferences: true`, `autoReferenced: false` | R7a | 08 §2.2; 08 §3 |
 | `AF.LiveOps` | `DailyChallengeConfig.cs` | Las 9 claves de la sección 11, con `[RemoteConfigKey]` y defaults compilados, al estilo de `EconomyConfig` | R7a | 08 §9 |
@@ -272,7 +272,7 @@ public static class DailyCalendar
     public static readonly DateTime Epoch = new DateTime(2026, 1, 1);   // 03 §16
     public const int PoolDays = DailyPool.Days;                          // 729 (R-Q2b; 03 §16 dice 730)
     public static int DaysSinceEpoch(DateTime localDate);                // puede ser negativo
-    public static int PoolDay(DateTime localDate, int offset);           // módulo positivo, 0-729
+    public static int PoolDay(DateTime localDate, int offset);           // módulo positivo, 0-728
     public static int BandFor(int maxLevel, IReadOnlyList<int> thresholds);   // [41, 201] → 1/2/3
     public static bool IsUnlocked(int maxLevel, DailyChallengeConfig config);
 }
@@ -427,11 +427,11 @@ En este orden:
 "daily_challenge": {
   "last_date": "2026-10-19",
   "result": "win",
-  "streak_days": 6,
+  "streak_days": 5,
   "last_claimed_date": "2026-10-19",
   "pending": [],
   "offline_claims": [],
-  "stamps": { "month": "2026-10", "days": [1, 2, 5, 19] },
+  "stamps": { "month": "2026-10", "days": [15, 16, 17, 18, 19] },
   "in_progress": null
 }
 ```

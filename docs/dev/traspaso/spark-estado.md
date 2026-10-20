@@ -6,6 +6,18 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-19 · R0-R11 juntas (`spark-int`): verificación casi completa; PlayMode pendiente por la licencia (4.ª caída)
+
+- **Qué hay:** la rama principal (R0-R10) más R11, la nota con la tabla de días de 729 corregida (`09b11cd`) y los usos `--days 0-728`.
+- **Resultados** (worktree `spark-int`):
+  - `dotnet build -warnaserror` OK y `dotnet test` 981;
+  - `validate_schema.py` 103/103;
+  - `unity-compile` OK;
+  - EditMode **3.057** (3.053 + 3, 1 fallo: el de tiempo de `IntroArtTests.FruitFlight…`, inestable y ajeno).
+- **PlayMode: sin veredicto (código 6, licencia).** Hacia las 19:15 vuelve el 404 de derechos (`com.unity.editor.headless`). Es la 4.ª caída, de nuevo unas 2 h después de la última revisión del dueño.
+- **Por separado sí hay PlayMode en verde:** R10 sobre R9 (1.354) y R11 sobre la integración con R5 (1.373). Falta la combinación de las dos.
+- **Por eso no se empuja todavía.** En cuanto vuelva la licencia: PlayMode de `spark-int`, luego avance rápido de `spark/reto-del-rio` y push.
+
 ## 2026-10-19 · R11 · Capturas y prueba de punta a punta: HECHA (APROBADO en 2.ª ronda; arreglo del sello en `171b404`)
 
 - **Commit:** `41d5beb` en `spark/reto-del-rio-r11` (sale de la integración `8327d23`), más el arreglo del sello en curso.
