@@ -523,6 +523,11 @@ Las R-Q1 a R-Q10 de la sección 5 del encargo, decididas por el dueño el 2026-1
 | E18 | Punto 1 corregido por el integrador (encargo §9); queda el punto 2 | Encargo §3.3 |
 | E19 | Pendiente, para cuando exista la Crecida | `Scripts/GameFlow/LevelFlow.Funnel.cs`, `FailResolve.cs` |
 | E20 | Pendiente (limpieza) | `Scripts/Levels/LevelDefinition.cs`, `LevelCatalog.cs` |
+| E21 | Pendiente · parche abajo (R9) | `Scripts/UI/GameScreen.cs` (`OnIntroStarted`) |
+| E22 | Opcional · parche abajo (R9) | `Scripts/UI/GameBootstrap.cs` (`PressAndroidBack`) |
+| E23 | Pendiente · parche abajo (R9) | `Scripts/UI/GameBootstrap.cs` (`OnApplicationPause`) |
+| E24 | Pendiente · parche abajo (R9/R10) | `Scripts/UI/DevProbe.cs` |
+| E25 | Para cuando exista la Crecida | barra de la Crecida en la vista del Reto |
 
 ### E1 · Inicio: la tarjeta del Reto (pendiente; parche en R12)
 
@@ -725,3 +730,66 @@ Las R-Q1 a R-Q10 de la sección 5 del encargo, decididas por el dueño el 2026-1
   - Después, `DailyPackFor` (en `LevelFlow.Daily.cs`) se reduce a `LevelCatalog.ForBoard(board, effectiveLevel)`.
 - **Por qué:** quita el paso por un JSON interno que no cumple el esquema af-level/1 (lo señaló la revisión de R8).
 - **Prueba:** `DailyLevelFlowTests` tal cual, con la comprobación «same».
+
+### E21 · Rótulo «Nivel N · intento k» en el Reto (pendiente; R9)
+
+- **Archivo:** `Assets/_Project/Scripts/UI/GameScreen.cs`, en `OnIntroStarted` (línea ~996).
+- **Parche:**
+  ```diff
+                   StartIntro(flow, durationMs, isShort);
+  -                if (isShort)
+  +                if (isShort && !flow.IsDaily)
+                   {
+                       // 02 §2 (INTRO): «En reintento muestra Nivel N · intento k», …
+  ```
+- **Por qué:** en el Reto, cada Volver a la orilla enseña «Nivel {nivel efectivo} · intento k», y 06 §4.1 pide la cabecera «Reto del río» sin «Nivel N». Hasta que se aplique, el defecto se ve en el teléfono.
+- **Prueba:** en `DailyChallengeTests.Restart_IsFreeAndUnlimited_SameBoard`, tras `PressRestart()` y un fotograma, `Assert.That(daily.View!.BannerText, Is.Null.Or.Not.Contains("Nivel"))`. En la campaña, el test de reintento que ya existe sigue viendo «Nivel N · intento k».
+
+### E22 · Atrás con el Reto abierto (opcional; R9)
+
+- **Archivo:** `Assets/_Project/Scripts/UI/GameBootstrap.cs`, en `PressAndroidBack()`, justo después del bloque del Mapa del río (`if (_mapScreen != null && _mapScreen.Visible) { … }`) y antes de `if (_app.Screen == AppScreen.Level)`.
+- **Parche:**
+  ```diff
+  +            // Reto del río (R9): Atrás cierra su calendario como «Inicio»; con el tablero del Reto en juego no hace nada, como en un
+  +            // nivel (02 §3; 04 §6.6). HandleBack devuelve false si no hay calendario abierto.
+  +            if (_dailyScreen != null && _dailyScreen.IsOpen)
+  +            {
+  +                return _dailyScreen.HandleBack();
+  +            }
+  +
+               if (_app.Screen == AppScreen.Level)
+  ```
+- **Por qué:** con el Reto abierto, AppFlow sigue en Lobby, así que sin la guarda Atrás caería en `PressBack()` del inicio, que está oculto. Con ella, Atrás solo cierra el calendario; en el tablero no hace nada, como en la campaña.
+- **Prueba:** `AndroidBack_DoesNothingOnTheBoard_ButClosesTheCalendar` cubre la lógica de `HandleBack`. Con el enganche, `boot.PressAndroidBack()` da false con el tablero y true con el calendario, y el inicio sigue oculto mientras se juega.
+
+### E23 · Volver de segundo plano en el Reto (pendiente; R9)
+
+- **Archivo:** `Assets/_Project/Scripts/UI/GameBootstrap.cs`, en `OnApplicationPause` (al volver de segundo plano), justo después del bloque `if (_flow != null && _screen != null && InLevel) { … }`.
+- **Parche:**
+  ```diff
+  +            // Reto del río (R9; 02 §14): su vista salta al modelo y la selección se limpia, como la de campaña.
+  +            if (_dailyScreen?.Flow != null && _dailyScreen.View != null)
+  +            {
+  +                _dailyScreen.View.SnapToModel();
+  +                _dailyScreen.View.SettleReveal();
+  +                _dailyScreen.View.IdleHintBackFromBackground();
+  +                _dailyScreen.Flow.ClearSelection();
+  +            }
+  ```
+- **Por qué:** `InLevel` es false durante el Reto (AppFlow está en Lobby). Sin esto, al volver de segundo plano la vista del Reto se queda a mitad de animación, con la cuia seleccionada y sin reiniciar la cuenta de la pista por inactividad (02 §14; 02 §3.4; 04 §2.3). La persistencia no cambia: `PersistNow` ya guarda el lote del perfil.
+- **Prueba:** test PlayMode que abre el Reto, toca una cuia (queda seleccionada), llama a `boot.SendMessage("OnApplicationPause", false)` y afirma `daily.Flow.Selected == -1` y `daily.View.IsViewIdle`.
+
+### E24 · Las sondas de partida del Reto, marcadas (pendiente; R9-R10)
+
+- **Archivo:** `Assets/_Project/Scripts/UI/DevProbe.cs` (prohibido para el Spark; `DevProbe` es `sealed`).
+- **Parche:** justo después de cada una de las cuatro líneas `sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));` (hoy en las líneas 92 `AnimSkipped`, 361 `FormatState`, 488 `FormatFunnel` y 585 `FormatVictory`):
+  ```diff
+  +            AppendDailyBoard(sb, flow);
+  ```
+  `AppendDailyBoard` ya está en `DevProbe.Daily.cs` (R10): en el Reto añade `,"daily":"d{b}_n{nnnn}"`; en la campaña no añade nada.
+- **Por qué:** la vista del Reto usa su propia `DevProbe`, pero las líneas `load`, `ready`, `pour`… salen con `"level"` igual al nivel efectivo (`max_level + 1`), que no es un nivel de campaña. Con la marca se distinguen por adb (08 §8.2 pide `level_name = d{b}_n{nnnn}` para el Reto). Las líneas `Event` de `GameScreen*.cs` (`idle_hint`, `hint`, `tinaja_tip`) quedan sin marca; basta la línea `load`.
+- **Prueba:** en PlayMode, abrir el Reto y comprobar que `load`, `ready` y `pour` llevan `"daily":"…"`, y que en la campaña no aparece. Documentarlo en `docs/dev/prototipo-v0.md` (E12), por si algún script de adb da por hecho que `level` es ≥ 1.
+
+### E25 · Sin barra de la Crecida en el Reto (para cuando exista)
+
+- **Qué:** cuando exista la barra de la Crecida en la vista de partida, ocultarla con la misma guarda que E21 (`flow.IsDaily`). 06 §4.1 pide el tablero del Reto sin barra de Crecida, y 06 §4.3 dice que el Reto no la toca. Va junto con E19. En el código, `DailyChallengeScreen.cs` lo anota como «E21»: la numeración correcta es E25.
