@@ -47,6 +47,12 @@ namespace AF.UI
         private FlowPhase _dailyPhaseSeen;
         private readonly List<string> _sessionProbeLines = new List<string>(4);
 
+        // La reconstrucción por idioma (RebuildUi) recarga la escena con el mismo perfil en memoria: no es un arranque en frío y no
+        // cuenta otra sesión. El contador y su almacén siguen vivos de una escena a otra con ese perfil.
+        private static Profile? s_sessionsProfile;
+        private static SessionTracker? s_carriedSessions;
+        private static ISessionStore? s_carriedSessionStore;
+
         /// <summary>Almacén de sesiones para los tests (gana al del perfil); <see cref="ResetSessionOverrides"/> lo limpia.</summary>
         internal static ISessionStore? SessionStoreOverride { get; set; }
 
@@ -82,11 +88,15 @@ namespace AF.UI
             NotificationSchedulerOverride = null;
             PrePromptOverride = null;
             SessionServerOverride = null;
+            s_sessionsProfile = null;
+            s_carriedSessions = null;
+            s_carriedSessionStore = null;
         }
 
         /// <summary>
         /// Crea los servicios de B6 y cuenta el arranque en frío (con su Regalo de regreso y la recogida de avisos). Devuelve false,
-        /// sin crear nada, antes del arranque o en release sin almacenes en el perfil. Una segunda llamada no hace nada.
+        /// sin crear nada, antes del arranque o en release sin almacenes en el perfil. Una segunda llamada no hace nada. Tras la
+        /// reconstrucción por idioma (el mismo perfil en memoria) sigue la misma sesión: no cuenta otra.
         /// </summary>
         public bool SetUpSessions()
         {
@@ -104,27 +114,14 @@ namespace AF.UI
                 return false;
             }
 
-            ISessionStore? sessionStore = SessionStoreOverride;
-            IPushSettingsStore? pushStore = PushSettingsStoreOverride;
-            if (sessionStore == null || pushStore == null)
+            if (!CreateSessionStores(profile, batch, Debug.isDebugBuild, out ISessionStore? sessionStore, out IPushSettingsStore? pushStore, out bool inMemory))
             {
-                ISessionStore? profileSessions = null;
-                IPushSettingsStore? profilePush = null;
-                CreateProfileSessionStores(profile, batch, ref profileSessions, ref profilePush);
-                sessionStore ??= profileSessions;
-                pushStore ??= profilePush;
+                return false; // release sin B6-profile: sin sesiones ni avisos, sin aviso
             }
 
-            if (sessionStore == null || pushStore == null)
+            if (inMemory)
             {
-                if (!Debug.isDebugBuild)
-                {
-                    return false; // release sin B6-profile: sin sesiones ni avisos, sin aviso
-                }
-
                 Debug.LogWarning(LogPrefix + "Sesiones y settings.push en memoria (sin B6-profile): se pierden al cerrar la app.");
-                sessionStore ??= new InMemorySessionStore();
-                pushStore ??= new InMemoryPushSettingsStore();
             }
 
             IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
@@ -136,18 +133,25 @@ namespace AF.UI
 
             _notificationScheduler = scheduler ?? new FakeNotificationScheduler(clock);
             _sessionClock = clock;
-            _sessionStore = sessionStore;
-            _sessions = new SessionTracker(sessionStore, clock);
+            bool rebuilt = ReferenceEquals(s_sessionsProfile, profile) && s_carriedSessions != null && s_carriedSessionStore != null;
+            _sessionStore = rebuilt ? s_carriedSessionStore : sessionStore;
+            _sessions = rebuilt ? s_carriedSessions : new SessionTracker(sessionStore!, clock);
+            s_sessionsProfile = profile;
+            s_carriedSessions = _sessions;
+            s_carriedSessionStore = _sessionStore;
             _comebackService = new ComebackService(wallet, null, SessionServerOverride ?? FakeServerDate.Offline());
-            _push = new PushPermissionService(pushStore, _notificationScheduler);
+            _push = new PushPermissionService(pushStore!, _notificationScheduler);
             _push.Reported += OnPushPromptReported;
             _notifications = new NotificationService(_notificationScheduler, _push, new LocNotificationTexts());
             _prePrompt = PrePromptOverride ?? (Debug.isDebugBuild ? new SimulatedPushPrePrompt() : null);
             _campaignPhaseSeen = _flow.Phase;
             _dailyPhaseSeen = _dailyScreen?.Flow?.Phase ?? FlowPhase.Loading;
 
-            SessionStart start = _sessions.OnColdStart();
-            OnSessionStarted(in start);
+            if (!rebuilt)
+            {
+                SessionStart start = _sessions!.OnColdStart();
+                OnSessionStarted(in start);
+            }
 
             SessionRunner runner = gameObject.GetComponent<SessionRunner>();
             if (runner == null)
@@ -238,6 +242,45 @@ namespace AF.UI
                     OnVictoryShown(_progress?.MaxLevel ?? 0); // el Reto no cambia max_level
                 }
             }
+        }
+
+        /// <summary>
+        /// Los almacenes de B6 sobre <paramref name="profile"/>: los de los tests (<see cref="SessionStoreOverride"/> y
+        /// <see cref="PushSettingsStoreOverride"/>), si no los del perfil (<see cref="CreateProfileSessionStores"/>, B6-bootstrap con
+        /// B6-profile) y, sin ellos, unos en memoria solo si <paramref name="debugBuild"/> (<paramref name="inMemory"/> = true). En
+        /// release sin almacenes del perfil devuelve false.
+        /// </summary>
+        internal static bool CreateSessionStores(
+            Profile profile, ProfileSaveBatch batch, bool debugBuild, out ISessionStore? sessions, out IPushSettingsStore? push, out bool inMemory)
+        {
+            inMemory = false;
+            sessions = SessionStoreOverride;
+            push = PushSettingsStoreOverride;
+            if (sessions == null || push == null)
+            {
+                ISessionStore? profileSessions = null;
+                IPushSettingsStore? profilePush = null;
+                CreateProfileSessionStores(profile, batch, ref profileSessions, ref profilePush);
+                sessions ??= profileSessions;
+                push ??= profilePush;
+            }
+
+            if (sessions != null && push != null)
+            {
+                return true;
+            }
+
+            if (!debugBuild)
+            {
+                sessions = null;
+                push = null;
+                return false;
+            }
+
+            sessions ??= new InMemorySessionStore();
+            push ??= new InMemoryPushSettingsStore();
+            inMemory = true;
+            return true;
         }
 
         /// <summary>
