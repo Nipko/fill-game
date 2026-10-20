@@ -9,6 +9,7 @@ using AF.Core.Session;
 using AF.Economy;
 using AF.GameFlow;
 using AF.Levels;
+using AF.Localization;
 using AF.Presentation;
 using TMPro;
 using UnityEngine;
@@ -466,8 +467,8 @@ namespace AF.UI
             _levelText = UiBuilder.Label("LevelTitle", _badge.transform, TextStyle.Badge, UiText.Level(1), 26f, Palette.Cream, TextAlignmentOptions.Center);
             // Guía 3.5: 26 dp, mínimo 20, nunca se recorta; fuera del español (en-XA, «[Ñívél 100 ··]») no cabe en la placa ni a
             // 20 sp, y la placa no crece (la columna del saldo va pegada; la fila del HUD no se rediseña). Decidido el 2026-10-19
-            // (D-030, pregunta 8 b): solo cuando no cabe a 20 sp baja hasta 12 sp (02 §12); en español al 100 % sigue igual
-            // (FitLevelBadge).
+            // (D-030, pregunta 8 b): fuera del español, solo cuando no cabe a 20 sp baja hasta 12 sp (02 §12); en español sigue
+            // a 20 sp o más, sin cambio visual (DC19; FitLevelBadge).
             UiBuilder.AutoSize(_levelText, BadgeMinSp, BadgeMaxSp);
 
             // Volver a la orilla: disco de 40 dp (familia Madera) con píldora «Reiniciar» en un área de 60 × 48 (guía 3.5).
@@ -2606,13 +2607,20 @@ namespace AF.UI
         /// </summary>
         internal const float BadgeFallbackMinSp = 12f;
 
-        // La insignia del nivel con su texto de ahora (D-030, pregunta 8 b): entre 20 y 26 sp si cabe a 20 o más (en español al
-        // 100 %, siempre: sin cambio), y si su tinta se sale de la caja incluso a 20 sp (otros idiomas; en español al 130 %, del
-        // 100 en adelante), entre 12 y 26 sp; nunca se recorta. Mide la tinta (textBounds, con 1 dp de margen, como la compuerta
-        // de L4) al cargar el nivel, nunca por fotograma.
+        // La insignia del nivel con su texto de ahora (D-030, pregunta 8 b): entre 20 y 26 sp si cabe a 20 o más; fuera del
+        // español, si su tinta se sale de la caja incluso a 20 sp, entre 12 y 26 sp; nunca se recorta. En español (es-419) no baja
+        // nunca de 20 sp (DC19: «sin cambio visual»; D-030 habla solo de otros idiomas), aunque al 130 %, del 100 en adelante,
+        // la tinta llena la caja y en algunos números («Nivel 700») se sale unos dp (pendiente del dueño). Mide la tinta
+        // (textBounds, con 1 dp de margen, como la compuerta de L4) al cargar el nivel, nunca por fotograma.
         private void FitLevelBadge()
         {
             UiBuilder.AutoSize(_levelText, BadgeMinSp, BadgeMaxSp);
+            string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
+            if (string.Equals(locale, LocLocale.SpanishLatinAmerica, StringComparison.Ordinal))
+            {
+                return;
+            }
+
             float width = _levelText.rectTransform.rect.width;
             if (width <= 0f)
             {
