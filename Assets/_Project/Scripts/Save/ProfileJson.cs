@@ -166,6 +166,11 @@ namespace AF.Save
             stats.Set("rv_watched", JsonNode.FromInt(p.Stats.RvWatched));
             stats.Set("sessions", JsonNode.FromInt(p.Stats.Sessions));
             root.Set("stats", stats);
+            if (p.DailyChallenge != null)
+            {
+                root.Set("daily_challenge", DailyChallengeNode(p.DailyChallenge)); // E4: la clave falta hasta el primer guardado del Reto
+            }
+
             return root;
         }
 
@@ -275,6 +280,8 @@ namespace AF.Save
                 t.Sessions = ReadInt(stats, "sessions", t.Sessions);
             }
 
+            JsonNode? dailyChallenge = Section(root, "daily_challenge");
+            p.DailyChallenge = dailyChallenge == null ? null : ReadDailyChallenge(dailyChallenge);
             return p;
         }
 
@@ -310,6 +317,118 @@ namespace AF.Save
             s.History = ReadString(node, "history", s.History) ?? throw new FormatException("level_state.history no puede ser null.");
             s.Stuck = ReadBool(node, "stuck", s.Stuck);
             return s;
+        }
+
+        // daily_challenge (E4; nota del Reto §10). Es economía (last_claimed_date impide cobrar dos veces la misma fecha): un tipo
+        // equivocado es corrupción, como en wallet, y también una entrada de pending u offline_claims sin date o una in_progress
+        // sin date o sin id. Los rangos no se validan aquí: streak_days ≥ 0, stamps.days en 1-31, el formato yyyy-MM de
+        // stamps.month y yyyy-MM-dd de las fechas los interpreta AF.LiveOps (DailyChallengeRecord.IsStamped ignora un mes o un
+        // día que no casan; una fecha mal formada nunca coincide con la de hoy), igual que level_state no valida su semilla.
+        private static JsonNode DailyChallengeNode(DailyChallengeData d)
+        {
+            JsonNode node = JsonNode.NewObject();
+            node.Set("last_date", JsonNode.FromString(d.LastDate));
+            node.Set("result", JsonNode.FromString(d.Result));
+            node.Set("streak_days", JsonNode.FromInt(d.StreakDays));
+            node.Set("last_claimed_date", JsonNode.FromString(d.LastClaimedDate));
+            node.Set("pending", ClaimList(d.Pending));
+            node.Set("offline_claims", ClaimList(d.OfflineClaims));
+            JsonNode stamps = JsonNode.NewObject();
+            stamps.Set("month", JsonNode.FromString(d.StampsMonth));
+            stamps.Set("days", IntList(d.StampDays));
+            node.Set("stamps", stamps);
+            if (d.InProgress == null)
+            {
+                node.Set("in_progress", JsonNode.Null);
+            }
+            else
+            {
+                JsonNode play = JsonNode.NewObject();
+                play.Set("date", JsonNode.FromString(d.InProgress.Date));
+                play.Set("band", JsonNode.FromInt(d.InProgress.Band));
+                play.Set("id", JsonNode.FromString(d.InProgress.Id));
+                play.Set("level_state", LevelStateNode(d.InProgress.LevelState));
+                node.Set("in_progress", play);
+            }
+
+            return node;
+        }
+
+        private static DailyChallengeData ReadDailyChallenge(JsonNode node)
+        {
+            var d = new DailyChallengeData();
+            d.LastDate = ReadString(node, "last_date", d.LastDate);
+            d.Result = ReadString(node, "result", d.Result);
+            d.StreakDays = ReadInt(node, "streak_days", d.StreakDays);
+            d.LastClaimedDate = ReadString(node, "last_claimed_date", d.LastClaimedDate);
+            ReadClaimList(node, "pending", d.Pending);
+            ReadClaimList(node, "offline_claims", d.OfflineClaims);
+            JsonNode? stamps = Section(node, "stamps");
+            if (stamps != null)
+            {
+                d.StampsMonth = ReadString(stamps, "month", d.StampsMonth);
+                ReadIntList(stamps, "days", d.StampDays);
+            }
+
+            JsonNode? play = Section(node, "in_progress");
+            if (play != null)
+            {
+                // Sin date o sin id la partida no se puede reanudar ni descartar con su fecha: corrupción, como date en pending.
+                var inProgress = new DailyInProgressData();
+                inProgress.Date = ReadString(play, "date", null)
+                    ?? throw new FormatException("daily_challenge.in_progress.date falta o es null.");
+                inProgress.Band = ReadInt(play, "band", inProgress.Band);
+                inProgress.Id = ReadString(play, "id", null)
+                    ?? throw new FormatException("daily_challenge.in_progress.id falta o es null.");
+                JsonNode? state = Section(play, "level_state");
+                inProgress.LevelState = state == null ? new LevelStateData() : ReadLevelState(state);
+                d.InProgress = inProgress;
+            }
+
+            return d;
+        }
+
+        private static JsonNode ClaimList(List<DailyClaimData> claims)
+        {
+            JsonNode array = JsonNode.NewArray();
+            for (int i = 0; i < claims.Count; i++)
+            {
+                JsonNode claim = JsonNode.NewObject();
+                claim.Set("date", JsonNode.FromString(claims[i].Date));
+                claim.Set("streak", JsonNode.FromInt(claims[i].Streak));
+                array.Add(claim);
+            }
+
+            return array;
+        }
+
+        private static void ReadClaimList(JsonNode parent, string key, List<DailyClaimData> target)
+        {
+            target.Clear();
+            JsonNode? node = parent.Get(key);
+            if (node == null || node.IsNull)
+            {
+                return;
+            }
+
+            if (node.Kind != JsonKind.Array)
+            {
+                throw new FormatException("'" + key + "' debe ser una lista JSON.");
+            }
+
+            IReadOnlyList<JsonNode> items = node.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].Kind != JsonKind.Object)
+                {
+                    throw new FormatException("'" + key + "' debe ser una lista de objetos {date, streak}.");
+                }
+
+                var claim = new DailyClaimData();
+                claim.Date = ReadString(items[i], "date", null) ?? throw new FormatException("'" + key + "': falta date.");
+                claim.Streak = ReadInt(items[i], "streak", claim.Streak);
+                target.Add(claim);
+            }
         }
 
         // settings y sloth: lo ausente o inválido toma el default, campo a campo.

@@ -73,12 +73,25 @@ namespace AF.Tests.EditMode.Daily
         }
 
         [Test]
-        public void Csv_DoesNotRedefineProjectKeys_AndReusedKeysExist()
+        public void Csv_RowsAreInStringsCsv_E5_AndReusedKeysExist()
         {
             LocCatalog project = LocTables.FromProjectFiles();
-            foreach (string key in DailyText.NewKeys)
+            string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
+            IReadOnlyList<LocCsvRow> rows = ReadCsvRows(out string daily);
+            for (int i = 1; i < rows.Count; i++)
             {
-                Assert.That(project.Strings.IndexOf(key), Is.EqualTo(-1), key + " ya está en strings.csv: no es nueva");
+                // E5: la misma fila, tal cual (las filas del Reto se insertaron en orden ordinal por clave).
+                string key = rows[i].Fields[0];
+                Assert.That(project.Strings.IndexOf(key), Is.GreaterThanOrEqualTo(0), key + " falta en strings.csv (E5)");
+            }
+
+            string[] lines = daily.Substring(daily.IndexOf('\n') + 1).Split('\n');
+            foreach (string line in lines)
+            {
+                if (line.Length > 0)
+                {
+                    Assert.That(strings.Contains(line + "\n"), Is.True, "fila distinta en strings.csv: " + line);
+                }
             }
 
             foreach (string key in DailyText.ReusedKeys)
@@ -88,7 +101,7 @@ namespace AF.Tests.EditMode.Daily
         }
 
         [Test]
-        public void Csv_AppendedToStringsCsv_ParsesWithTheLocReader()
+        public void StringsCsv_WithTheRetoRows_ParsesWithTheLocReader()
         {
             Assert.That(() => TestCatalog(), Throws.Nothing);
             LocCatalog catalog = TestCatalog();
@@ -129,9 +142,9 @@ namespace AF.Tests.EditMode.Daily
         }
 
         [Test]
-        public void DailyText_KeysNotYetInStringsCsv_FallBackLikeLoc_DevMarksReleaseEmpty()
+        public void DailyText_KeysMissingFromTheTable_FallBackLikeLoc_DevMarksReleaseEmpty()
         {
-            LocCatalog project = LocTables.FromProjectFiles();
+            LocCatalog project = CatalogWithoutTheRetoRows();
             var date = new DateTime(2026, 10, 19);
 
             Loc.Configure(project, LocLocale.SourceLocale, true); // desarrollo: «[clave]»
@@ -314,14 +327,28 @@ namespace AF.Tests.EditMode.Daily
             return LocCsv.Parse(text, "spark-strings-reto.csv");
         }
 
-        // Tabla de prueba propia: las del proyecto y, detrás, las filas del Reto (sin su cabecera), como hará E5.
+        // Tablas del proyecto: con E5, strings.csv ya trae las filas del Reto.
         private static LocCatalog TestCatalog()
+        {
+            return LocTables.FromProjectFiles();
+        }
+
+        // strings.csv sin las filas nuevas del Reto: para probar el respaldo de Loc con claves que faltan.
+        private static LocCatalog CatalogWithoutTheRetoRows()
         {
             string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
             string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile);
             ReadCsvRows(out string daily);
-            string rows = daily.Substring(daily.IndexOf('\n') + 1);
-            return LocCatalog.Parse(strings.EndsWith("\n", StringComparison.Ordinal) ? strings + rows : strings + "\n" + rows, facts);
+            string kept = strings;
+            foreach (string line in daily.Substring(daily.IndexOf('\n') + 1).Split('\n'))
+            {
+                if (line.Length > 0)
+                {
+                    kept = kept.Replace(line + "\n", "");
+                }
+            }
+
+            return LocCatalog.Parse(kept, facts);
         }
 
         private sealed class Fixture

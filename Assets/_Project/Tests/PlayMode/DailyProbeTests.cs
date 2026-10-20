@@ -448,15 +448,12 @@ namespace AF.Tests.PlayMode
             return DateTime.SpecifyKind(bogota - Bogota, DateTimeKind.Utc);
         }
 
-        // Tabla propia: strings.csv y facts.csv del proyecto más las filas del Reto (sin su cabecera), como hará E5.
+        // Tablas del proyecto: con E5, strings.csv ya trae las filas del Reto (docs/dev/traspaso/spark-strings-reto.csv).
         private static LocTableTexts TestTables()
         {
             string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, AF.Localization.LocCatalog.StringsFile);
             string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, AF.Localization.LocCatalog.FactsFile);
-            string daily = AF.Localization.LocCsv.Decode(
-                System.IO.File.ReadAllBytes(LocTables.ProjectPath("docs/dev/traspaso/spark-strings-reto.csv")), "spark-strings-reto.csv");
-            string rows = daily.Substring(daily.IndexOf('\n') + 1);
-            return new LocTableTexts(strings.EndsWith("\n", StringComparison.Ordinal) ? strings + rows : strings + "\n" + rows, facts);
+            return new LocTableTexts(strings, facts);
         }
     }
 }

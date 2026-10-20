@@ -22,7 +22,7 @@ namespace AF.Tests.PlayMode
     /// <c>level_state</c> ni estadísticas de campaña (la Crecida aún no existe en el cliente: se comprueba que no hay barra),
     /// salir sin ganar (R-Q9) y la reanudación el mismo día y el descarte otro día (R-Q4). Simula el enganche E2 llamando a
     /// <see cref="GameBootstrap.SetUpDaily"/> tras el arranque, con el pool, el almacén y el reloj del test, y una tabla de
-    /// textos propia (las tablas del proyecto más <c>docs/dev/traspaso/spark-strings-reto.csv</c>, como hará E5).
+    /// textos del proyecto (con E5, <c>strings.csv</c> ya trae las filas de <c>docs/dev/traspaso/spark-strings-reto.csv</c>).
     /// </summary>
     public sealed class DailyChallengeTests
     {
@@ -116,7 +116,7 @@ namespace AF.Tests.PlayMode
             Assert.That(calendar.StampedDays, Is.EqualTo(new[] { 19 }));
             Assert.That(calendar.RewardShown, Is.True);
             Assert.That(calendar.RewardText, Is.EqualTo("+60"));
-            Assert.That(calendar.DoubleHarvestShown, Is.False, "Cosecha doble del Reto: falta el enganche E9");
+            Assert.That(calendar.DoubleHarvestShown, Is.EqualTo(daily.DoubleHarvestOffered), "Cosecha doble del Reto (E9): con premio confirmado y video");
             Assert.That(calendar.TitleText, Is.EqualTo("Reto del río · 19 oct"));
 
             // Premio: 60 semillas. Nada de campaña: canoas, max_level, next_level, level_state, levels_won, fails_hard.
@@ -173,15 +173,16 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Card_HiddenWithoutPool()
+        public IEnumerator Card_WithoutTestPool_UsesTheScenePool_E3()
         {
-            GameBootstrap.DailyPoolOverride = null; // sin E3: la escena no trae el pool
+            GameBootstrap.DailyPoolOverride = null; // con E3 la escena trae daily_pool_v1.json
             yield return Boot();
             GameBootstrap boot = GameBootstrap.Current!;
 
-            Assert.That(boot.DailyPoolAsset, Is.Null);
-            Assert.That(boot.DailyCard!.Visible, Is.False);
-            Assert.That(boot.RefreshDailyCard(), Is.EqualTo(DailyCardState.Hidden));
+            Assert.That(boot.DailyPoolAsset, Is.Not.Null);
+            Assert.That(boot.DailyService!.Pool, Is.Not.Null);
+            Assert.That(boot.DailyCard!.Visible, Is.True);
+            Assert.That(boot.RefreshDailyCard(), Is.EqualTo(DailyCardState.Play));
         }
 
         [UnityTest]
@@ -489,15 +490,12 @@ namespace AF.Tests.PlayMode
             return DateTime.SpecifyKind(bogota - Bogota, DateTimeKind.Utc);
         }
 
-        // Tabla propia: strings.csv y facts.csv del proyecto más las filas del Reto (sin su cabecera), como hará E5.
+        // Tablas del proyecto: con E5, strings.csv ya trae las filas del Reto (docs/dev/traspaso/spark-strings-reto.csv).
         private static LocTableTexts TestTables()
         {
             string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, AF.Localization.LocCatalog.StringsFile);
             string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, AF.Localization.LocCatalog.FactsFile);
-            string daily = AF.Localization.LocCsv.Decode(
-                System.IO.File.ReadAllBytes(LocTables.ProjectPath("docs/dev/traspaso/spark-strings-reto.csv")), "spark-strings-reto.csv");
-            string rows = daily.Substring(daily.IndexOf('\n') + 1);
-            return new LocTableTexts(strings.EndsWith("\n", StringComparison.Ordinal) ? strings + rows : strings + "\n" + rows, facts);
+            return new LocTableTexts(strings, facts);
         }
     }
 }

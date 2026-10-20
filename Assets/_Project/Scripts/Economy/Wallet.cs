@@ -167,7 +167,8 @@ namespace AF.Economy
                         return Reject(transaction, RejectReason.NotUnlocked);
                     }
 
-                    seedsDelta = Config.WinReward(transaction.Tier);
+                    // La de campaña dobla la Cosecha de la etiqueta; la del Reto (E9) trae las semillas del premio del día.
+                    seedsDelta = transaction.Seeds > 0 ? transaction.Seeds : Config.WinReward(transaction.Tier);
                     break;
                 case TransactionKind.Earn:
                 case TransactionKind.Purchase:

@@ -90,6 +90,7 @@ namespace AF.UI
             sb.Clear();
             sb.Append("AF_STATE {\"event\":\"af_anim_skipped\",\"anim\":\"").Append(anim).Append('"');
             sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
+            AppendDailyBoard(sb, flow); // E24: en el Reto, ,"daily":"d{b}_n{nnnn}" (DevProbe.Daily.cs)
             sb.Append(",\"at_ms\":").Append(atMs.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"duration_cfg_ms\":").Append(durationCfgMs.ToString(CultureInfo.InvariantCulture)).Append('}');
             Write(sb.ToString());
@@ -359,6 +360,7 @@ namespace AF.UI
             sb.Append("AF_STATE {\"event\":\"").Append(evt).Append('"');
             sb.Append(",\"t\":").Append(((long)(Time.realtimeSinceStartupAsDouble * 1000.0)).ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
+            AppendDailyBoard(sb, flow); // E24: en el Reto, ,"daily":"d{b}_n{nnnn}" (DevProbe.Daily.cs)
             sb.Append(",\"pour_mode\":\"").Append(PourModes.ToKey(flow.Session.PourMode)).Append('"');
             sb.Append(",\"phase\":\"").Append(FlowPhaseNames.Of(flow.Phase)).Append('"');
             sb.Append(",\"status\":\"").Append(StatusName(flow)).Append('"');
@@ -486,6 +488,7 @@ namespace AF.UI
             sb.Append("AF_STATE {\"event\":\"").Append(evt).Append('"');
             sb.Append(",\"t\":").Append(((long)(Time.realtimeSinceStartupAsDouble * 1000.0)).ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
+            AppendDailyBoard(sb, flow); // E24: en el Reto, ,"daily":"d{b}_n{nnnn}" (DevProbe.Daily.cs)
             sb.Append(",\"phase\":\"").Append(FlowPhaseNames.Of(flow.Phase)).Append('"');
             sb.Append(",\"seeds\":").Append((wallet?.Seeds ?? 0).ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"canoes\":").Append(canoes.Count.ToString(CultureInfo.InvariantCulture));
@@ -583,6 +586,7 @@ namespace AF.UI
             sb.Append("AF_STATE {\"event\":\"").Append(evt).Append('"');
             AppendTime(sb);
             sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
+            AppendDailyBoard(sb, flow); // E24: en el Reto, ,"daily":"d{b}_n{nnnn}" (DevProbe.Daily.cs)
             sb.Append(",\"phase\":\"").Append(FlowPhaseNames.Of(flow.Phase)).Append('"');
             sb.Append(",\"harvest\":").Append(flow.HarvestSeeds.ToString(CultureInfo.InvariantCulture));
             sb.Append(",\"harvest_base\":").Append(flow.HarvestBase.ToString(CultureInfo.InvariantCulture));
