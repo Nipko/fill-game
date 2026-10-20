@@ -92,6 +92,7 @@ namespace AF.Tests.PlayMode
         {
             // Sin saltar la intro: los 3 Morphos ya están al cargar (LOADING), y nada de TiTino ni avisos durante «Llenar y teñir»
             // ni con la tropa en la rama (guion de la intro §14).
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780; // DC3: sin pantalla simulada, el Editor da un lienzo de 853 × 640 dp
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(500));
             yield return PlayModeHelpers.LoadGame(Level, new MemoryProgressStore(Level, Level - 1));
             GameBootstrap boot = GameBootstrap.Current!;
@@ -121,6 +122,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator Gift_Once_TheFirstSpentWithThePresentationInView_NotOnRestartNorOnReopen()
         {
             var store = new MemoryProfileStore(FunnelSetup.Profile(500));
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780; // DC3: sin pantalla simulada, el Editor da un lienzo de 853 × 640 dp
             yield return Load(store);
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -175,6 +177,7 @@ namespace AF.Tests.PlayMode
         {
             // hint_unlock_level movido por Remote Config (14): el 12 no tiene ranura Pista, así que TiTino no presenta un botón
             // que no está [P]. Se prueba en el intento nuevo tras Volver a la orilla, con la configuración ya cambiada.
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780; // DC3: sin pantalla simulada, el Editor da un lienzo de 853 × 640 dp
             yield return Load(new MemoryProfileStore(FunnelSetup.Profile(500)));
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;
@@ -193,6 +196,29 @@ namespace AF.Tests.PlayMode
             Assert.That(view.TutorialShownCount, Is.EqualTo(1), "solo la del primer intento");
         }
 
+        // 16:9 desde DC3 (360 × 640 dp; D-028): en el 12 (2 filas) la franja mide 4,1 dp y el muelle no da para la tarjeta, así que
+        // la instrucción sale como aviso de texto (el tutorial no se pierde; GameScreen.Cards.cs, sonda «toast»). True si salió así
+        // (y lo comprueba); false si salió TiTino. Pendiente del dueño (open issue de DC3).
+        private static bool AsToastIn16x9(GameBootstrap boot, string at)
+        {
+            GameScreen view = boot.View!;
+            for (int t = 0; t < 6000 && !view.TutorialSlothVisible && view.ToastText == null; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            if (view.TutorialSlothVisible)
+            {
+                return false;
+            }
+
+            Assert.That(view.ToastText, Is.Not.Null, at + ": sin sitio para TiTino, la instrucción como aviso de texto");
+            Assert.That(view.LastTutorialProbe, Does.Contain("\"mode\":\"toast\""), at);
+            TestContext.WriteLine("AF_TUTORIAL " + at + ": sin sitio para TiTino (franja " + (view.Layout!.PanelY - view.TopRowDp - 48f).ToString("0.0")
+                + " dp; muelle " + (view.TrayTopDp - view.Layout.PanelBottom).ToString("0.0") + " dp): aviso de texto «" + view.ToastText + "»");
+            return true;
+        }
+
         [UnityTest]
         public IEnumerator NoIntersection_640And780_100And130_AndNoTouches()
         {
@@ -206,6 +232,13 @@ namespace AF.Tests.PlayMode
                     yield return Load(new MemoryProfileStore(FunnelSetup.Profile(500)));
                     GameBootstrap boot = GameBootstrap.Current!;
                     GameScreen view = boot.View!;
+                    if (small && AsToastIn16x9(boot, at))
+                    {
+                        LaunchOptions.Reset();
+                        TutorialSlothTests.Hooks();
+                        continue;
+                    }
+
                     SlothNoticeCard card = TutorialSlothTests.WaitForInstruction(boot, at);
                     LogPlace(view, card, at);
                     AssertPlace(view, card, at);
@@ -247,6 +280,14 @@ namespace AF.Tests.PlayMode
                     yield return Load(new MemoryProfileStore(FunnelSetup.Profile(500)));
                     GameBootstrap boot = GameBootstrap.Current!;
                     GameScreen view = boot.View!;
+                    if (small && AsToastIn16x9(boot, at))
+                    {
+                        LaunchOptions.Reset();
+                        GameScreen.TutorialBandOverrideDp = null;
+                        TutorialSlothTests.Hooks();
+                        continue;
+                    }
+
                     SlothNoticeCard card = TutorialSlothTests.WaitForInstruction(boot, at);
                     LogPlace(view, card, at);
                     Assert.That(view.TutorialSlothOnDock, Is.True, at + ": franja < 64 dp, sobre el muelle");

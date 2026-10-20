@@ -325,6 +325,7 @@ namespace AF.UI
 
         private RectTransform? _markerLayer;
         private LeaderLinesGraphic? _leaders;
+        private LeaderLinesGraphic? _leaderLines;
         private RectTransform? _canoeGear;
         private Image? _mast;
         private Image? _guide;
@@ -474,6 +475,12 @@ namespace AF.UI
         {
             return _markers[i].HasLeader;
         }
+
+        /// <summary>Revisión de FX14 (para los tests): las líneas finas de las mini cuias, en el lienzo estático, debajo de los ríos.</summary>
+        internal LeaderLinesGraphic LeaderLines => _leaderLines!;
+
+        /// <summary>Revisión de FX14 (para los tests): los puntos reales de las líneas finas, encima, con las mini cuias.</summary>
+        internal LeaderLinesGraphic LeaderDots => _leaders!;
 
         /// <summary>El centro de la mini cuia <paramref name="i"/> cae dentro de la zona visible del mapa (vista Mundo).</summary>
         public bool StopMarkerInView(int i)
@@ -898,6 +905,18 @@ namespace AF.UI
                 FillTopLeft((RectTransform)leadersGo.transform);
                 _leaders = leadersGo.GetComponent<LeaderLinesGraphic>();
                 _leaders.raycastTarget = false;
+                _leaders.DrawLines = false;
+
+                // Revisión de FX14: las líneas, debajo de los ríos (en el lienzo estático, entre la tierra y el vidrio); los puntos
+                // reales, encima (arriba). Con la curva suavizada, una línea que se metía en el agua corría por dentro del cauce y
+                // parecía un borde doble; así el río la tapa donde lo cruza o lo recorre.
+                var linesGo = new GameObject("LeaderLines", typeof(RectTransform), typeof(CanvasRenderer), typeof(LeaderLinesGraphic));
+                linesGo.transform.SetParent(_staticLayer, false);
+                linesGo.transform.SetSiblingIndex(_glassLayer.GetSiblingIndex());
+                FillTopLeft((RectTransform)linesGo.transform);
+                _leaderLines = linesGo.GetComponent<LeaderLinesGraphic>();
+                _leaderLines.raycastTarget = false;
+                _leaderLines.DrawDots = false;
 
                 _canoeGear = UiBuilder.Rect("CanoeGear", dynamicLayer);
                 FillTopLeft(_canoeGear);
@@ -986,6 +1005,11 @@ namespace AF.UI
             if (_markerLayer!.gameObject.activeSelf != world)
             {
                 _markerLayer.gameObject.SetActive(world);
+            }
+
+            if (_leaderLines!.gameObject.activeSelf != world)
+            {
+                _leaderLines.gameObject.SetActive(world);
             }
 
             PlaceCanoeGear(space);
@@ -1744,6 +1768,7 @@ namespace AF.UI
             }
 
             _leaders!.Reserve(_markers.Count);
+            _leaderLines!.Reserve(_markers.Count);
         }
 
         private StopMarker NewMarker(int index)
@@ -1968,6 +1993,7 @@ namespace AF.UI
             }
 
             _leaders!.Clear();
+            _leaderLines!.Clear();
             for (int i = 0; i < n; i++)
             {
                 StopMarker m = _markers[i];
@@ -1975,6 +2001,7 @@ namespace AF.UI
                 if (m.HasLeader && LeaderFoot(m.Shown, m.Real, out Vector2 foot))
                 {
                     _leaders.Add(foot, m.Real);
+                    _leaderLines.Add(foot, m.Real);
                 }
 
                 if (m.Root.anchoredPosition != m.Shown)
@@ -1989,6 +2016,7 @@ namespace AF.UI
             }
 
             _leaders.Commit();
+            _leaderLines.Commit();
         }
 
         // Una mini cuia suelta: en su punto real si no pisa nada; si no, en el sitio libre más cercano (anillos de MarkerShiftStepDp
@@ -3449,7 +3477,8 @@ namespace AF.UI
 
         /// <summary>
         /// Las líneas finas del abanico de mini cuias hasta su punto real, con un punto en él (crema con canto oscuro), en una sola
-        /// malla sin textura. Solo se reconstruye al recolocar; sin raycast.
+        /// malla sin textura. Solo se reconstruye al recolocar; sin raycast. Revisión de FX14: dos instancias, las líneas debajo de
+        /// los ríos (<see cref="DrawDots"/> false) y los puntos encima (<see cref="DrawLines"/> false).
         /// </summary>
         [RequireComponent(typeof(CanvasRenderer))]
         internal sealed class LeaderLinesGraphic : MaskableGraphic
@@ -3460,6 +3489,12 @@ namespace AF.UI
 
             /// <summary>Líneas dibujadas.</summary>
             public int Count => _count;
+
+            /// <summary>Dibuja las líneas (con su canto).</summary>
+            public bool DrawLines { get; set; } = true;
+
+            /// <summary>Dibuja el punto real de cada línea (con su canto).</summary>
+            public bool DrawDots { get; set; } = true;
 
             /// <summary>Prepara sitio para <paramref name="capacity"/> líneas (asigna solo si crece).</summary>
             public void Reserve(int capacity)
@@ -3498,16 +3533,23 @@ namespace AF.UI
             protected override void OnPopulateMesh(VertexHelper vh)
             {
                 vh.Clear();
-                for (int i = 0; i < _count; i++)
+                for (int i = 0; DrawLines && i < _count; i++)
                 {
                     Segment(vh, _from[i], _to[i], (LeaderWidthDp * 0.5f) + 0.6f, LeaderRim);
                 }
 
                 for (int i = 0; i < _count; i++)
                 {
-                    Segment(vh, _from[i], _to[i], LeaderWidthDp * 0.5f, LeaderColor);
-                    Disc(vh, _to[i], LeaderDotDp + 0.8f, LeaderRim);
-                    Disc(vh, _to[i], LeaderDotDp, LeaderColor);
+                    if (DrawLines)
+                    {
+                        Segment(vh, _from[i], _to[i], LeaderWidthDp * 0.5f, LeaderColor);
+                    }
+
+                    if (DrawDots)
+                    {
+                        Disc(vh, _to[i], LeaderDotDp + 0.8f, LeaderRim);
+                        Disc(vh, _to[i], LeaderDotDp, LeaderColor);
+                    }
                 }
             }
 

@@ -483,9 +483,8 @@ namespace AF.Tests.EditMode
                 RiverStop stop = Stops.At(n)!;
                 StopBackdrop.SkyOf(stop, out Color top, out Color horizon, out float aTop, out float aHorizon);
                 Assert.That(aTop, Is.LessThanOrEqualTo(StopBackdrop.SkyMaxAlpha), "parada " + n + ": arriba, alfa ≤ 0,5");
-                bool twilight = n == 9 || n == 19;
-                Assert.That(aHorizon, Is.LessThanOrEqualTo(twilight ? StopBackdrop.SkyLowMaxAlpha : StopBackdrop.SkyMaxAlpha),
-                    "parada " + n + ": en el horizonte, ≤ 0,5; hasta 0,7 [P] solo con dusk y dawn (y solo en el tercio de abajo)");
+                Assert.That(aHorizon, Is.LessThanOrEqualTo(StopBackdrop.SkyMaxAlpha),
+                    "parada " + n + ": en el horizonte, alfa ≤ 0,5 también con dusk y dawn (D-030, pregunta 18 b)");
                 if (stop.World == 1)
                 {
                     Assert.That(aTop + aHorizon, Is.EqualTo(0f), "el mundo 1 va sin tinte (el panorama ya es su alba)");
@@ -507,6 +506,39 @@ namespace AF.Tests.EditMode
                 Assert.That(v, Is.GreaterThanOrEqualTo(0.55f), "parada " + n + ": V medio");
                 Assert.That(s, Is.GreaterThanOrEqualTo(0.30f), "parada " + n + ": S medio");
             }
+        }
+
+        // D-030, pregunta 18 (b): ninguna luz pasa de alfa 0,5 en ningún punto del cielo, ni en el tercio de abajo del atardecer
+        // de la 9 ni del alba de la 19. Mira los vértices del cielo que se pinta, no solo SkyOf.
+        [Test]
+        public void TheSkyTint_NeverPassesSkyMaxAlpha_WithAnyLight()
+        {
+            Assert.That(StopBackdrop.SkyMaxAlpha, Is.LessThanOrEqualTo(0.5f), "plan del Mapa, M1.4, punto 1a");
+            Assert.That(StopBackdrop.SkyLowMaxAlpha, Is.LessThanOrEqualTo(StopBackdrop.SkyMaxAlpha), "el tercio de abajo, con el mismo tope");
+            float vertexMax = (Mathf.Round(StopBackdrop.SkyMaxAlpha * 255f) / 255f) + 1e-6f; // el vértice guarda el alfa en un byte (128/255)
+            int twilight = 0;
+            for (int n = 0; n < Stops.Count; n++)
+            {
+                RiverStop stop = Stops.At(n)!;
+                StopBackdrop.SkyOf(stop, out _, out _, out float aTop, out float aHorizon);
+                Assert.That(aTop, Is.LessThanOrEqualTo(StopBackdrop.SkyMaxAlpha), "parada " + n + ": arriba");
+                Assert.That(aHorizon, Is.LessThanOrEqualTo(StopBackdrop.SkyMaxAlpha), "parada " + n + ": en el horizonte");
+                Show(n);
+                StopShapeGraphic sky = _b.SkyGraphic;
+                for (int i = 0; i < sky.VertexCount; i++)
+                {
+                    Assert.That(sky.ColorAt(i).a, Is.LessThanOrEqualTo(vertexMax), "parada " + n + ", vértice " + i);
+                }
+
+                string? lut = stop.Backdrop.Lut;
+                if (lut == StopBackdrop.LutDusk || lut == StopBackdrop.LutDawn)
+                {
+                    twilight++;
+                    Assert.That(sky.IsEmpty, Is.False, "parada " + n + ": el atardecer y el alba llevan tinte");
+                }
+            }
+
+            Assert.That(twilight, Is.EqualTo(2), "el atardecer de la 9 y el alba de la 19");
         }
 
         [Test]

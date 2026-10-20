@@ -567,15 +567,16 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Revisión final de FX4, (1), con DC24: el número de filas solo cambia a mitad de nivel si cambia la pantalla (con 11-14
-        // cuias, 2 o 3 filas según el ancho del lienzo; D-006); «+1 cuia» no lo cambia. En el 131, de 360 a 600 dp de ancho pasa
-        // de 3 filas a 2 con la placa a la vista, y al revés: como la placa es la misma con cualquier número de filas, se vuelve a
-        // colocar con el tablero nuevo, clavada al marco y sin roce con la fila 1, y sigue a la vista (sin stop_label_off).
+        // Revisión final de FX4, (1), con DC24: el número de filas solo cambia a mitad de nivel si cambia la pantalla (con 11-12
+        // cuias, 2 o 3 filas según el ancho del lienzo; con 13-16, siempre 3: P12 de D-006 c); «+1 cuia» no lo cambia. En el 131,
+        // de 360 a 600 dp de ancho pasa de 3 filas a 2 con la placa a la vista, y al revés: como la placa es la misma con cualquier
+        // número de filas, se vuelve a colocar con el tablero nuevo, clavada al marco y sin roce con la fila 1, y sigue a la vista
+        // (sin stop_label_off).
         [UnityTest]
         public IEnumerator Level131_TheScreenChangesTheRows_ThePlateIsPlacedAgain()
         {
             var narrow = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp
-            var wide = new Vector4(1800f, 2340f, 96f, 48f); // 600 × 780 dp
+            var wide = new Vector4(1800f, 1920f, 96f, 48f); // 600 × 640 dp (DC3: un lienzo de más de 360 dp de ancho mide 640 de alto)
             var probes = new List<string>();
             Application.LogCallback capture = CaptureProbes(probes, "stop_label_off");
             Application.logMessageReceived += capture;

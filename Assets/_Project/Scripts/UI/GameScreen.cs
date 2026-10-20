@@ -9,6 +9,7 @@ using AF.Core.Session;
 using AF.Economy;
 using AF.GameFlow;
 using AF.Levels;
+using AF.Localization;
 using AF.Presentation;
 using TMPro;
 using UnityEngine;
@@ -53,7 +54,15 @@ namespace AF.UI
         /// <summary>Ancho de referencia del lienzo (dp).</summary>
         public const float ReferenceWidth = 360f;
 
-        /// <summary>Alto de referencia del lienzo (dp; 19,5:9).</summary>
+        /// <summary>
+        /// Alto mínimo del lienzo (dp; 16:9 de 02 §5). El lienzo mide 360 dp de ancho y, si así quedaran menos de 640 dp de alto,
+        /// manda el alto (<see cref="CanvasScale"/>): en 16:9 mide 360 × 640 dp y 1 dp de lienzo es 1 dp físico, así que el texto
+        /// no baja de 12 sp físicos (02 §12; pregunta 19 de GDD.md §6.3, (a); D-028, tarea DC3). En 19,5:9 y 20:9, 360 × 780 y
+        /// 360 × 800, como antes.
+        /// </summary>
+        public const float MinHeight = 640f;
+
+        /// <summary>Alto del lienzo en la pantalla de referencia (dp; 19,5:9: 1080 × 2340 px a 3 px/dp).</summary>
         public const float ReferenceHeight = 780f;
 
         /// <summary>Zona segura superior mínima (02 §5).</summary>
@@ -465,12 +474,11 @@ namespace AF.UI
             _scrim = UiBuilder.Image("StatusScrim", _hud, art.StatusScrim, Color.white);
             _badge = UiBuilder.Image("LevelBadge", _hud, art.BadgePlate, Color.white);
             _levelText = UiBuilder.Label("LevelTitle", _badge.transform, TextStyle.Badge, UiText.Level(1), 26f, Palette.Cream, TextAlignmentOptions.Center);
-            // Guía 3.5: 26 dp, mínimo 20, nunca se recorta. En español cabe siempre a 20 o más. Pendiente de rediseño (revisión
-            // de L4; pregunta al dueño): en otros idiomas (en-XA, «[Ñívél 100 ··]») no cabe en la placa ni a 20 sp, y la placa no
-            // puede crecer a lo ancho (la columna del saldo va pegada) ni a lo alto (la fila del HUD); bajar el mínimo a 12 sp
-            // contradice la guía 3.5 (D-003), así que se queda en 20 hasta que el dueño decida (PseudoLocOverflowTests lo apunta
-            // aparte, sin dar la compuerta por fallida: LocInventory.KnownIssues).
-            UiBuilder.AutoSize(_levelText, 20f, 26f);
+            // Guía 3.5: 26 dp, mínimo 20, nunca se recorta; fuera del español (en-XA, «[Ñívél 100 ··]») no cabe en la placa ni a
+            // 20 sp, y la placa no crece (la columna del saldo va pegada; la fila del HUD no se rediseña). Decidido el 2026-10-19
+            // (D-030, pregunta 8 b): fuera del español, solo cuando no cabe a 20 sp baja hasta 12 sp (02 §12); en español sigue
+            // a 20 sp o más, sin cambio visual (DC19; FitLevelBadge).
+            UiBuilder.AutoSize(_levelText, BadgeMinSp, BadgeMaxSp);
 
             // Volver a la orilla: disco de 40 dp (familia Madera) con píldora «Reiniciar» en un área de 60 × 48 (guía 3.5).
             _restart = UiBuilder.Relief("RestartButton", _hud, art.DiscWood, OnHudRestart);
@@ -960,6 +968,7 @@ namespace AF.UI
             _introDelayMs = -1f;
             BuildBoard(flow);
             _levelText.text = UiText.Level(level);
+            FitLevelBadge();
             AudioBoard.LevelLoaded(flow.Level, flow.Session.Current); // AU1-AU2: el lecho del mundo (nocturno en Muy difícil) y su ambiente
             _pressPreview = -1;
             _shownBoard = flow.Session.Current;
@@ -2460,9 +2469,7 @@ namespace AF.UI
         {
             ReadScreen(out _screenW, out _screenH, out _safeArea);
 
-            // Lienzo de al menos 360 × 780 dp (02 §5): 360 de ancho en 19,5:9 y 20:9 (360 × 800).
-            float scale = Mathf.Min(_screenW / ReferenceWidth, _screenH / ReferenceHeight);
-            scale = Mathf.Max(0.01f, scale);
+            float scale = CanvasScale(_screenW, _screenH);
             _scaler.scaleFactor = scale;
             _art.ScreenScale = scale;
             _canvasW = _screenW / scale;
@@ -2611,6 +2618,50 @@ namespace AF.UI
             UiBuilder.Place(_scrim.rectTransform, 0f, 0f, w, _safeTop + 40f);
             LayoutBackdrop(0f, 0f, false);
         }
+
+        /// <summary>Tamaño de la insignia del nivel (guía 3.5): 26 sp.</summary>
+        internal const float BadgeMaxSp = 26f;
+
+        /// <summary>Mínimo de la insignia del nivel en español (guía 3.5): 20 sp.</summary>
+        internal const float BadgeMinSp = 20f;
+
+        /// <summary>
+        /// Mínimo de la insignia del nivel cuando su texto no cabe a <see cref="BadgeMinSp"/> (fuera del español; D-030, pregunta
+        /// 8 b): 12 sp, el mínimo de 02 §12.
+        /// </summary>
+        internal const float BadgeFallbackMinSp = 12f;
+
+        // La insignia del nivel con su texto de ahora (D-030, pregunta 8 b): entre 20 y 26 sp si cabe a 20 o más; fuera del
+        // español, si su tinta se sale de la caja incluso a 20 sp, entre 12 y 26 sp; nunca se recorta. En español (es-419) no baja
+        // nunca de 20 sp (DC19: «sin cambio visual»; D-030 habla solo de otros idiomas), aunque al 130 %, del 100 en adelante,
+        // la tinta llena la caja y en algunos números («Nivel 700») se sale unos dp (pendiente del dueño). Mide la tinta
+        // (textBounds, con 1 dp de margen, como la compuerta de L4) al cargar el nivel, nunca por fotograma.
+        private void FitLevelBadge()
+        {
+            UiBuilder.AutoSize(_levelText, BadgeMinSp, BadgeMaxSp);
+            string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
+            if (string.Equals(locale, LocLocale.SpanishLatinAmerica, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            float width = _levelText.rectTransform.rect.width;
+            if (width <= 0f)
+            {
+                return;
+            }
+
+            _levelText.ForceMeshUpdate();
+            float ink = _levelText.textBounds.size.x;
+            if (_levelText.fontSize <= _levelText.fontSizeMin + 0.01f && ink > width + BadgeInkToleranceDp)
+            {
+                UiBuilder.AutoSize(_levelText, BadgeFallbackMinSp, BadgeMaxSp);
+                _levelText.ForceMeshUpdate();
+            }
+        }
+
+        // Margen de la tinta de la insignia sobre su caja antes de bajar de 20 sp (dp; el de LocInventory.Tolerance).
+        private const float BadgeInkToleranceDp = 1f;
 
         private void LayoutHud()
         {
@@ -3185,6 +3236,23 @@ namespace AF.UI
             rt.pivot = pivot;
             rt.anchoredPosition = new Vector2(x, -yTop);
             rt.sizeDelta = new Vector2(w, h);
+        }
+
+        /// <summary>
+        /// Escala del lienzo del juego (px por dp) para una pantalla de <paramref name="width"/> × <paramref name="height"/> px,
+        /// como en <see cref="LobbyScreen"/>: 360 dp de ancho y, si así quedaran menos de <see cref="MinHeight"/> dp de alto,
+        /// manda el alto (D-028, tarea DC3). Antes era min(ancho / 360, alto / 780): en 16:9 el lienzo medía 438,75 × 780 dp y el
+        /// texto de 12 sp salía a 9,8 sp físicos.
+        /// </summary>
+        public static float CanvasScale(int width, int height)
+        {
+            float scale = width / ReferenceWidth;
+            if (height / scale < MinHeight)
+            {
+                scale = height / MinHeight;
+            }
+
+            return Mathf.Max(0.01f, scale);
         }
 
         internal static void ReadScreen(out int width, out int height, out Rect safeArea)

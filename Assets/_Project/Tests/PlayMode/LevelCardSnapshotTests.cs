@@ -63,7 +63,7 @@ namespace AF.Tests.PlayMode
             yield return Capture(dir, 100, "63b_debut_murky_l100_130", 1.3f);
             yield return Capture(dir, 183, "64b_debut_pirana_l183_130", 1.3f);
 
-            // 16:9 (1080 × 1920 px; GameScreen lo maqueta en 438,75 × 780 dp).
+            // 16:9 (1080 × 1920 px; GameScreen lo maqueta en 360 × 640 dp desde DC3).
             GameScreen.SimulatedScreen = HudLabelTests.Screen640;
             yield return Capture(dir, 40, "60c_card_hard_l40_16x9");
             yield return Capture(dir, 100, "63c_debut_murky_l100_16x9_130", 1.3f);

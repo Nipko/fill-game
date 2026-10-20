@@ -284,6 +284,50 @@ namespace AF.Tests.PlayMode
             AssertMiniCuiasClear(boot.RiverMapView!, "306");
         }
 
+        /// <summary>
+        /// Revisión de FX14: las líneas finas de las mini cuias en abanico van en el lienzo estático, debajo del vidrio de los ríos
+        /// (el río las tapa donde lo cruzan o lo recorren), y sus puntos reales, encima, con las mini cuias: dos dibujos con las
+        /// mismas líneas, uno sin puntos y otro sin líneas (nada se dibuja dos veces). Fuera del Mundo (en la Cuenca), las líneas se
+        /// apagan con las mini cuias.
+        /// </summary>
+        [UnityTest]
+        public IEnumerator LeaderLines_GoUnderTheRivers_TheirDotsOnTop_AndOffInTheBasin()
+        {
+            yield return OpenApp(121); // mundo 4: Leticia y su atardecer, en abanico con su línea
+            RiverMapScreen map = CurrentMap();
+            Assert.That(map.View, Is.EqualTo(MapView.World));
+            int fanned = 0;
+            for (int i = 0; i < map.StopMarkerCount; i++)
+            {
+                fanned += map.StopMarkerHasLeader(i) ? 1 : 0;
+            }
+
+            Assert.That(fanned, Is.GreaterThan(0), "premisa: hay mini cuias con su línea");
+            RiverMapScreen.LeaderLinesGraphic lines = map.LeaderLines;
+            RiverMapScreen.LeaderLinesGraphic dots = map.LeaderDots;
+            Assert.That(lines, Is.Not.SameAs(dots));
+            Assert.That(lines.transform.parent, Is.SameAs(map.StaticLayer), "las líneas, en el lienzo estático");
+            Assert.That(map.GlassLayer.parent, Is.SameAs(map.StaticLayer));
+            Assert.That(lines.transform.GetSiblingIndex(), Is.LessThan(map.GlassLayer.GetSiblingIndex()), "las líneas, debajo del vidrio");
+            Assert.That(dots.transform.IsChildOf(map.StaticLayer), Is.False, "los puntos, fuera del lienzo estático (encima)");
+            Assert.That(lines.DrawLines && !lines.DrawDots, Is.True, "debajo, solo las líneas");
+            Assert.That(dots.DrawDots && !dots.DrawLines, Is.True, "encima, solo los puntos");
+            Assert.That(lines.Count, Is.GreaterThan(0), "con líneas");
+            Assert.That(lines.Count, Is.EqualTo(dots.Count), "las mismas líneas y puntos");
+            Assert.That(lines.gameObject.activeInHierarchy && dots.gameObject.activeInHierarchy, Is.True, "en el Mundo, las dos");
+
+            map.SetView(MapView.Basin);
+            map.Tick(16f);
+            Assert.That(map.View, Is.EqualTo(MapView.Basin));
+            Assert.That(lines.gameObject.activeInHierarchy, Is.False, "en la Cuenca, sin las líneas");
+            Assert.That(dots.gameObject.activeInHierarchy, Is.False, "en la Cuenca, sin los puntos");
+
+            map.SetView(MapView.World);
+            map.Tick(16f);
+            Assert.That(lines.gameObject.activeInHierarchy && dots.gameObject.activeInHierarchy, Is.True, "de vuelta al Mundo, las dos");
+            Assert.That(lines.Count, Is.EqualTo(dots.Count), "de vuelta al Mundo, las mismas");
+        }
+
         [UnityTest]
         public IEnumerator HomeWindow_SaysAbout1480Km_InWorld3_AndTappingItGoesToGuajara()
         {

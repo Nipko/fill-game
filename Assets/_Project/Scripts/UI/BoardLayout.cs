@@ -88,9 +88,11 @@ namespace AF.UI
 
     /// <summary>
     /// Layout del tablero (GDD 02 §5; 07 §4.1 y §7.4; guía visual v2, 3.2; D-006, punto 4, como Magic Sort: propuesta §3.3 y
-    /// ficha §2.1). Filas: 1 con T ≤ 5; 2 con T = 6-10 (⌈T/2⌉ arriba); con T = 11-14, 2 filas (hasta 7 por fila) o 3
-    /// (reparto ⌈restantes/filas⌉ de arriba abajo: 4/4/3, 4/4/4, 5/4/4, 5/5/4), la que dé la cuia más ancha, a igualdad 2
-    /// [P]; 3 con T = 15-16 (5/5/5 y 6/5/5). El número de filas se decide al cargar el nivel con las T cuias generadas y no
+    /// ficha §2.1). Filas: 1 con T ≤ 5; 2 con T = 6-10 (⌈T/2⌉ arriba); con T = 11-12, 2 filas (6/5 y 6/6) o 3 (reparto
+    /// ⌈restantes/filas⌉ de arriba abajo: 4/4/3, 4/4/4), la que dé la cuia más ancha, a igualdad 2 [P]; 3 con T = 13-16
+    /// (5/4/4, 5/5/4, 5/5/5 y 6/5/5) en cualquier lienzo: con T + 2 (Cuia extra y Cuia de rescate) por encima de
+    /// <see cref="MaxTwoRowWithAdded"/>, 2 filas dejarían una de 8 (P12 de D-006, opción c, D-030). El número de filas se
+    /// decide al cargar el nivel con las T cuias generadas y no
     /// cambia a mitad de nivel: Cuia extra, Cuia de rescate o Balsa van a la derecha de la fila más corta (a igualdad, la
     /// de más abajo [P]), ninguna cuia cambia de fila y solo se recalcula el ancho. Ranura = (ancho − 24) / cuias de la
     /// fila más larga; cuia_w = clamp(0,70 × ranura, 28, tope(T)), con tope(T) = 64 / 56 / 48 dp para T ≤ 3 / 4-5 / ≥ 6
@@ -181,6 +183,19 @@ namespace AF.UI
         public const float MinBlockSlack = 27f;
 
         /// <summary>
+        /// Cuias añadidas a mitad de nivel con las que se dimensionan las filas al cargar: Cuia extra y Cuia de rescate (P12 de
+        /// D-006, «T + 2»).
+        /// </summary>
+        public const int AddedCuiasForRows = 2;
+
+        /// <summary>
+        /// Máximo de cuias en pantalla (generadas + <see cref="AddedCuiasForRows"/>) que aún caben en 2 filas: con más, 2 filas
+        /// dejarían una de 8 cuias (ranura de 42 dp en 16:9, &lt; 48 dp de 02 §3.3), así que el nivel se carga en 3 (P12 de
+        /// D-006, opción c, decidida el 2026-10-19 en D-030: T generadas ≥ 13).
+        /// </summary>
+        public const int MaxTwoRowWithAdded = 14;
+
+        /// <summary>
         /// Tope del ancho de la cuia para T = <paramref name="count"/> cuias del tablero en pantalla, incluidas Cuia extra y
         /// Cuia de rescate (02 R1): 64 dp con T ≤ 3, 56 con T = 4-5 y 48 con T ≥ 6 (D-004; 02 §5). Si T cambia a mitad de
         /// nivel, el ancho se recalcula con el T nuevo (02 §4.1, re-layout de 300 ms); las filas, no (D-006).
@@ -191,8 +206,10 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// Filas para <paramref name="generatedCount"/> cuias generadas (D-006): 1 con T ≤ 5, 2 con 6-10, 2 o 3 con 11-14 (la
-        /// que dé la cuia más ancha con este lienzo; a igualdad, 2 [P]) y 3 con 15-16.
+        /// Filas para <paramref name="generatedCount"/> cuias generadas (D-006): 1 con T ≤ 5, 2 con 6-10, 2 o 3 con 11-12 (la
+        /// que dé la cuia más ancha con este lienzo; a igualdad, 2 [P]) y 3 con 13-16 en cualquier lienzo, porque T + 2 pasa de
+        /// <see cref="MaxTwoRowWithAdded"/> (P12 de D-006, opción c; D-030). Las filas no cambian a mitad de nivel (D-006,
+        /// punto 4).
         /// </summary>
         public static int RowsFor(int generatedCount, float heightU, float canvasWidth, float boardTop, float boardBottom)
         {
@@ -206,7 +223,8 @@ namespace AF.UI
                 return 2;
             }
 
-            if (generatedCount >= 15)
+            // P12 de D-006 (c): con Cuia extra y Cuia de rescate, 2 filas dejarían una de 8; se carga en 3 (T ≥ 13).
+            if (generatedCount + AddedCuiasForRows > MaxTwoRowWithAdded)
             {
                 return 3;
             }

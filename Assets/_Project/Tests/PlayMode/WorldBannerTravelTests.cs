@@ -178,7 +178,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator Travel_FitsTheSafeArea_At100And130_In780_16x9_AndTheCutout()
         {
             // El viaje es un caso más de la regla del banner: la fuente hasta el 130 % sin desbordes ni recortes (02 §12; D-015,
-            // pregunta 43; T52) en 360 × 780 dp, en 16:9 (02 §5; GameScreen lo maqueta en 438,75 × 780 dp) y con el recorte de 48 dp
+            // pregunta 43; T52) en 360 × 780 dp, en 16:9 (02 §5; GameScreen lo maqueta en 360 × 640 dp desde DC3) y con el recorte de 48 dp
             // arriba. La tarjeta con viaje crece (la pregunta, la franja de 112 dp y «Ver mapa»): dentro de la zona segura, sin
             // solapes, a ≥ 12 sp y con los textos enteros, en el 41, el 81 y el 141.
             var report = new System.Text.StringBuilder();

@@ -147,7 +147,7 @@ namespace AF.Tests.PlayMode
             yield return CaptureBanner(dir, 41, 1f, "90b_banner_l41_100");
             yield return CaptureBanner(dir, 41, 1.3f, "90_banner_l41_130");
             yield return CaptureBanner(dir, 141, 1.3f, "90d_banner_l141_130");
-            GameScreen.SimulatedScreen = HudLabelTests.Screen640; // 16:9 (1080 × 1920 px): 438,75 × 780 dp
+            GameScreen.SimulatedScreen = HudLabelTests.Screen640; // 16:9 (1080 × 1920 px): 360 × 640 dp desde DC3
             yield return CaptureBanner(dir, 41, 1.3f, "90c_banner_l41_130_16x9");
         }
 

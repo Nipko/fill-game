@@ -26,21 +26,39 @@ namespace AF.UI
     /// crecen, y Puñado y Balsa van una debajo de otra si a media anchura no caben). Pendiente del dueño (revisión de A1): al
     /// 130 %, en la rama B (unos 559 dp), el panel tapa la parte de abajo de las cuias de un tablero de una fila aunque el
     /// tablero suba hasta su tope (en el 31, el 36 % a 360 × 780 y el 50 % en 16:9), contra 02 §7 («el tablero queda entero a
-    /// la vista»); al 100 % queda entero. Compactarlo sin bajar de 12 sp × 1,3, sin partir un precio y sin renunciar a que los
+    /// la vista»); al 100 % queda entero. Cifras de antes de DC3 (16:9 a 438,75 × 780 dp): desde DC3 (D-028) el 16:9 mide
+    /// 360 × 640 dp; el panel de la rama B mide 413 dp al 100 % (tapa 40,7 dp, el 31 %, de las cuias del 31; 405 dp y el 25 %
+    /// antes de que Puñado y Balsa crecieran a 56 dp en la revisión de DC3) y 597 dp al 130 %, más que los 576 entre las zonas
+    /// seguras (MinTextSizeTests lo registra; pendiente del dueño). Compactarlo sin bajar de 12 sp × 1,3, sin partir un precio y sin renunciar a que los
     /// CTA crezcan con la letra (07 §7.8) no llega a los 47 dp (360 × 780) y 79 dp (16:9) que faltan para no tapar las cuias:
     /// a media anchura, las etiquetas de Puñado y Balsa no caben en sus dos líneas a 15,6 dp (<c>OfferFits</c>) y el aire entre
     /// bloques da unos 15 dp. MinTextSizeTests registra cuánto tapa.
     /// </summary>
     internal sealed class StuckModal
     {
-        // Etiqueta de las ofertas (Puñado y Balsa): 7 dp de aire a cada lado y el 95 % del alto de la cara, en dos líneas.
-        private const float OfferLabelInsetDp = 14f;
+        // Etiqueta de las ofertas (Puñado y Balsa) para decidir si van en una fila: en dos líneas, en el 95 % del alto de la cara
+        // de siempre (la de sus sprites por la escala de texto).
         private const float OfferLabelFace = 0.95f;
+
+        /// <summary>
+        /// Alto mínimo de los botones de Puñado y Balsa (dp; <see cref="ModalKit.HeightOf"/>) [P] (revisión de DC3; 02 §12: las
+        /// cajas crecen): a 360 × 640 dp sus dos líneas llegaban al canto de una cara de 40 dp, con unos 2 dp de aire.
+        /// </summary>
+        internal const float OfferMinHeightDp = 56f;
+
+        /// <summary>Aire mínimo arriba y abajo de la etiqueta de Puñado y Balsa al 100 % (dp) [P] (revisión de DC3).</summary>
+        internal const float OfferLabelAirDp = 6f;
+
+        /// <summary>Aire a cada lado de la etiqueta de Puñado y Balsa (dp) [P] (revisión de DC3; antes 7).</summary>
+        internal const float OfferLabelSideDp = 8f;
+
+        // Lo que el alto colocado de un botón con relieve (ModalKit.HeightOf) queda por debajo del de su relieve estirado.
+        private const float ReliefHeightTrimDp = 6f;
 
         /// <summary>
         /// Aire mínimo arriba y abajo de la etiqueta de Puñado y Balsa con la escala de texto (dp) [P] (revisión de L4; guía 5.x:
         /// botones con aire interior): por encima del 100 %, la cara crece a lo alto lo que necesitan las líneas de la etiqueta a
-        /// su tamaño más 2 × este aire, y la etiqueta va en la cara menos ese aire. Al 100 %, como siempre (OfferLabelFace).
+        /// su tamaño más 2 × este aire, y la etiqueta va en la cara menos ese aire. Al 100 %, con <see cref="OfferLabelAirDp"/>.
         /// </summary>
         internal const float OfferLabelPadDp = 8f;
 
@@ -333,32 +351,31 @@ namespace AF.UI
                 float x = 16f;
                 float w = both && !stacked ? half : inner;
 
-                // Con la escala de texto, las dos caras crecen a lo alto hasta que sus etiquetas, a su tamaño, dejan
-                // OfferLabelPadDp de aire arriba y abajo (las dos igual de altas; revisión de L4).
+                // Las dos caras crecen a lo alto hasta que el botón mide OfferMinHeightDp y sus etiquetas, a su tamaño, dejan
+                // OfferLabelAirDp de aire arriba y abajo (OfferLabelPadDp con la escala de texto; revisión de L4) y
+                // OfferLabelSideDp a los lados; las dos igual de altas (revisión de DC3).
                 bool roomy = UiBuilder.TextScale > 1f;
-                if (roomy)
+                float pad = roomy ? OfferLabelPadDp : OfferLabelAirDp;
+                float minFace = OfferMinFace(_handful);
+                if (handful)
                 {
-                    float face = 0f;
-                    if (handful)
-                    {
-                        face = Mathf.Max(face, OfferFaceFor(_handfulLabel, w));
-                    }
-
-                    if (balsa)
-                    {
-                        face = Mathf.Max(face, OfferFaceFor(_balsaLabel, w));
-                    }
-
-                    ModalKit.StretchToFace(_handful, face);
-                    ModalKit.StretchToFace(_balsa, face);
+                    minFace = Mathf.Max(minFace, OfferFaceFor(_handfulLabel, w, pad, roomy));
                 }
+
+                if (balsa)
+                {
+                    minFace = Mathf.Max(minFace, OfferFaceFor(_balsaLabel, w, pad, roomy));
+                }
+
+                ModalKit.StretchToFace(_handful, minFace);
+                ModalKit.StretchToFace(_balsa, minFace);
                 for (int i = 0; i < view.Offers.Count; i++)
                 {
                     ReliefParts card = view.Offers[i] == StuckOffer.Handful ? _handful : _balsa;
                     TextMeshProUGUI label = view.Offers[i] == StuckOffer.Handful ? _handfulLabel : _balsaLabel;
                     ModalKit.Place(card, x, y, w);
                     float face = ModalKit.FaceHeightOf(card);
-                    label.rectTransform.sizeDelta = new Vector2(-OfferLabelInsetDp, roomy ? face - (2f * OfferLabelPadDp) : face * OfferLabelFace);
+                    label.rectTransform.sizeDelta = new Vector2(-2f * OfferLabelSideDp, face - (2f * pad));
                     label.rectTransform.anchoredPosition = new Vector2(0f, -(face * 0.5f));
                     if (stacked && i < view.Offers.Count - 1)
                     {
@@ -403,22 +420,41 @@ namespace AF.UI
             ModalKit.Size(_panel, _surface, _art, (canvasW - _width) * 0.5f, top, _width, Height);
         }
 
-        // La etiqueta de una oferta (Puñado o Balsa) cabe en un botón de width dp a su tamaño mínimo (12 sp), en su caja.
+        // La etiqueta de una oferta (Puñado o Balsa) cabe en dos líneas en un botón de width dp a su tamaño mínimo (12 sp): en el
+        // 95 % de la cara de siempre (la de sus sprites por la escala de texto, sin el estirado de un Show anterior), con
+        // OfferLabelSideDp a cada lado. Si no, las ofertas van una debajo de otra.
         private static bool OfferFits(ReliefParts card, TextMeshProUGUI label, float width)
         {
-            return UiBuilder.MinTextHeight(label, width - OfferLabelInsetDp) <= (ModalKit.FaceHeightOf(card) * OfferLabelFace) + 0.01f;
+            float face = card.Sprites.FaceHeightDp * Mathf.Max(1f, UiBuilder.TextScale);
+            return UiBuilder.MinTextHeight(label, width - (2f * OfferLabelSideDp)) <= (face * OfferLabelFace) + 0.01f;
         }
 
-        // Alto de cara que necesita la etiqueta de una oferta en un botón de width dp, a su tamaño (TextMeshPro mide con el
-        // autoajuste a su máximo), con OfferLabelPadDp de aire arriba y abajo.
-        private static float OfferFaceFor(TextMeshProUGUI label, float width)
+        // Cara de una oferta con la que el botón mide OfferMinHeightDp (ModalKit.HeightOf: el relieve estirado menos
+        // ReliefHeightTrimDp), y nunca menos que la de la escala de texto.
+        private static float OfferMinFace(ReliefParts card)
+        {
+            float k = Mathf.Max(1f, UiBuilder.TextScale);
+            if (card.Sprites.HeightDp > 0f)
+            {
+                k = Mathf.Max(k, (OfferMinHeightDp + ReliefHeightTrimDp) / card.Sprites.HeightDp);
+            }
+
+            return card.Sprites.FaceHeightDp * k;
+        }
+
+        // Alto de cara que necesita la etiqueta de una oferta en un botón de width dp, con pad dp de aire arriba y abajo y
+        // OfferLabelSideDp a los lados: con la escala de texto (roomy), a su tamaño (TextMeshPro mide con el autoajuste a su
+        // máximo; revisión de L4); al 100 %, a su tamaño mínimo (12 sp), y el autoajuste la deja entre 12 y 14 sp en su caja.
+        private static float OfferFaceFor(TextMeshProUGUI label, float width, float pad, bool roomy)
         {
             if (string.IsNullOrEmpty(label.text))
             {
                 return 0f;
             }
 
-            return Mathf.Ceil(label.GetPreferredValues(label.text, width - OfferLabelInsetDp, float.PositiveInfinity).y) + (2f * OfferLabelPadDp);
+            float textW = width - (2f * OfferLabelSideDp);
+            float need = roomy ? label.GetPreferredValues(label.text, textW, float.PositiveInfinity).y : UiBuilder.MinTextHeight(label, textW);
+            return Mathf.Ceil(need) + (2f * pad);
         }
 
         private void OnUndo(IGameActions actions)

@@ -188,6 +188,7 @@ namespace AF.Tests.PlayMode
             _dir = Path.Combine(Application.temporaryCachePath, "af_undo_tip_" + Guid.NewGuid().ToString("N"));
             var local = new LocalProfileStore(_dir);
             local.Save(FunnelSetup.Profile(0));
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780; // DC3: sin pantalla simulada, el Editor da un lienzo de 853 × 640 dp
             yield return Load(5, local);
             GameBootstrap boot = GameBootstrap.Current!;
             ProfileSaveBatch batch = boot.SaveBatch!;

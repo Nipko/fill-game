@@ -362,6 +362,20 @@ namespace AF.Tests.PlayMode
                     GameBootstrap boot = GameBootstrap.Current!;
                     GameScreen view = boot.View!;
                     Assert.That(boot.PressRestart(), Is.True);
+                    if (small && !NoticeShows(boot))
+                    {
+                        // 16:9 desde DC3 (360 × 640 dp; D-028): el 9 (2 filas) no deja sitio ni en la franja ni sobre el muelle y el
+                        // aviso no sale (la regla de siempre: si no cabe, no sale). Pendiente del dueño (open issue de DC3).
+                        Assert.That(view.SlothNoticeVisible, Is.False, at);
+                        TestContext.WriteLine("AF_SLOTH_RESTART " + at + ": no cabe y no sale (franja " + F(view.Layout!.PanelY - view.TopRowDp - 48f)
+                            + " dp; muelle " + F(view.TrayTopDp - view.Layout.PanelBottom) + " dp)");
+                        LaunchOptions.Reset();
+                        FunnelSetup.Hooks();
+                        MapArtRule.ForceProvisional = true;
+                        GameScreen.SlothRestartNoticeOverride = true;
+                        continue;
+                    }
+
                     SlothNoticeCard card = WaitForNotice(boot, at);
                     TestContext.WriteLine("AF_SLOTH_RESTART " + at + ": " + (view.SlothNoticeOnDock ? "muelle" : "panorama") + ", " + card.Lines
                         + " líneas, " + F(card.Height) + " dp, " + F(card.Label.fontSize) + " dp de texto");
@@ -462,6 +476,18 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.LevelFailed));
             Assert.That(boot.Flow.Attempt.FailsLevel == 1, Is.EqualTo(first), "primer fallo del nivel");
             Assert.That(boot.View!.Failed.Visible, Is.True);
+        }
+
+        // Espera al aviso de TiTino como WaitForNotice, sin exigirlo: true si sale.
+        private static bool NoticeShows(GameBootstrap boot)
+        {
+            GameScreen view = boot.View!;
+            for (int t = 0; t < 6000 && !view.SlothNoticeVisible; t += PlayModeHelpers.FrameMs)
+            {
+                PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            }
+
+            return view.SlothNoticeVisible;
         }
 
         // Tras un reinicio, espera (hasta 6 s) a que salga el aviso de TiTino.

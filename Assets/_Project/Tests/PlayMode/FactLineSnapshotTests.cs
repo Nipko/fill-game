@@ -92,7 +92,7 @@ namespace AF.Tests.PlayMode
                     Assert.That(view.FruitLine!.Alpha, Is.EqualTo(1f), name);
                     Assert.That(view.FruitLine.Sealed, Is.EqualTo(level == 100 || singleKey), name);
                     Assert.That(view.Arrival!.Stacked, Is.EqualTo(singleKey), name);
-                    Assert.That(view.VictoryPanelTopDp - 38f, Is.GreaterThanOrEqualTo(view.SlothBandTopDp), name + ": la cinta, bajo la cabecera");
+                    FactLineTests.AssertRibbonUnderTheHeader(view, name + ": la cinta, bajo la cabecera");
                     FactLine line = view.FruitLine;
                     Debug.Log("AF_FACT " + name + ": " + line.ShownFactId + ", línea " + F(line.ShownHeightDp) + " dp (H " + F(line.BlockHeightDp)
                         + ", cabecera " + F(line.HeaderHeightDp) + (line.HeaderWrapped ? " en dos filas" : string.Empty) + ", texto "
