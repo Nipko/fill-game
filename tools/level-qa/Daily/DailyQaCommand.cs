@@ -1,40 +1,30 @@
 // level-qa --daily (R4 del encargo docs/dev/traspaso/spark-reto-del-rio.md): QA del pool del Reto del río.
 //   dotnet run --project tools/level-qa -c Release -- --daily <daily_pool_v1.json> [--spec <daily_v1.json>] [--partial] [--no-reproduce]
 //   dotnet run --project tools/level-qa -- --self-test daily
-// Program.cs despacha aquí antes de su --self-test genérico (que rechazaría "daily") y de la lectura de argumentos de la
-// campaña. Las comprobaciones, en Daily/DailyChecks.cs (QA-DAILY-*).
+// Program.cs despacha aquí antes de su --self-test genérico (que rechazaría "daily"; el --self-test sin nombre también
+// ejecuta el de aquí). Las comprobaciones, en Daily/DailyChecks.cs (QA-DAILY-*).
 //   - --spec: por defecto tools/level-generator/specs/daily_v1.json; los tintes y los pares de riesgo, de su tints_from.
 //   - --partial: valida una muestra (p. ej. tools/out/daily_sample): los días que faltan no fallan, pero sale siempre el aviso
 //     QA-DAILY-DAYS «muestra parcial … no es el pool completo». El tamaño (QA-DAILY-SIZE) se mira siempre. Sin --partial, el
 //     pack tiene que traer las 3 bandas × 729 días (R-Q2b).
 //   - --no-reproduce: salta QA-DAILY-REPRO (aviso); nunca en el CI.
-//   - Reproducción: ejecuta «dotnet run --project tools/level-generator -c Release -- --daily --spec <spec> --bands <las del
-//     pack> --days <los del pack> --out <carpeta temporal>» desde la raíz del repositorio (RepoRoot: la carpeta con
-//     tools/level-generator/level-generator.csproj y el esquema, buscada hacia arriba desde el directorio de trabajo y desde
-//     el del ejecutable), con la especificación en ruta absoluta y un tiempo límite (ReproTimeout); compara cada tablero
-//     entero (igualdad profunda del JSON: 03 §17 #10 pide el mismo tablero, no solo el mismo hash). level-qa no puede
-//     enlazar tools/level-generator/Daily/ sin tocar su .csproj (archivo existente, fuera de lo permitido en el Spark): el
-//     enganche para el integrador es enlazarlos, como Generation/*.cs, y entonces llamar a DailyRunner en memoria.
-//   - Daily/Shared/DailySpec.cs y DailyIds.cs son copias exactas de tools/level-generator/Daily/ por la misma razón;
-//     --self-test daily falla si dejan de ser idénticas byte a byte.
+//   - Reproducción (QA-DAILY-REPRO): regenera en memoria, sin proceso hijo, las bandas y los días del pack con el código de
+//     generación del generador, enlazado en level-qa.csproj (tools/level-generator/Daily/*.cs salvo DailyCommand*.cs:
+//     DailySpec, DailyIds, DailyRunner, DailyTints, DailyPackWriter y DailyReport), y compara cada tablero entero (igualdad
+//     profunda del JSON: 03 §17 #10 pide el mismo tablero, no solo el mismo hash).
 // Imprime ASCII. Códigos: 0 = sin fallos (los avisos no fallan); 1 = algún fallo; 2 = uso, especificación o pack ilegibles.
-using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
-using System.Text;
 using System.Text.Json.Nodes;
 using AmazonFill.Tools.LevelGenerator.Campaign;
 using AmazonFill.Tools.LevelGenerator.Daily;
+using AmazonFill.Tools.LevelGenerator.Generation;
 
 namespace AmazonFill.Tools.LevelQa.Daily;
 
 internal static class DailyQaCommand
 {
     public const string DefaultSpec = "tools/level-generator/specs/daily_v1.json";
-    public const string GeneratorProject = "tools/level-generator";
-
-    /// <summary>Tiempo límite del generador en QA-DAILY-REPRO: el pool completo tarda segundos; 15 min con margen para compilar.</summary>
-    public static readonly TimeSpan ReproTimeout = TimeSpan.FromMinutes(15);
     public const string FixtureDir = "tools/level-qa/fixtures/daily";
 
     public static int Run(string[] args)
@@ -97,7 +87,7 @@ internal static class DailyQaCommand
         }
 
         var sw = Stopwatch.StartNew();
-        List<DailyIssue> issues = RunChecks(read, spec!, tints!, specPath ?? DefaultSpec, partial, reproduce, schema: true);
+        List<DailyIssue> issues = RunChecks(read, spec!, tints!, partial, reproduce, schema: true);
         int failures = issues.Count(i => !i.Warning);
         Console.WriteLine(AsciiText.Of(string.Create(CultureInfo.InvariantCulture,
             $"{pack.Replace('\\', '/')}: {read.Levels.Count} tableros, {read.Bytes} bytes{(partial ? ", muestra parcial (--partial)" : "")}, {failures} fallo(s)")));
@@ -148,7 +138,7 @@ internal static class DailyQaCommand
         }
     }
 
-    public static List<DailyIssue> RunChecks(DailyQaPack pack, DailySpec spec, CampaignSpec tints, string specPath, bool partial, bool reproduce, bool schema)
+    public static List<DailyIssue> RunChecks(DailyQaPack pack, DailySpec spec, CampaignSpec tints, bool partial, bool reproduce, bool schema)
     {
         var issues = new List<DailyIssue>();
         if (schema)
@@ -167,7 +157,7 @@ internal static class DailyQaCommand
         issues.AddRange(DailyChecks.Repetition(pack));
         if (reproduce)
         {
-            issues.AddRange(Reproduce(pack, specPath));
+            issues.AddRange(Reproduce(pack, spec, tints));
         }
         else
         {
@@ -177,8 +167,11 @@ internal static class DailyQaCommand
         return issues;
     }
 
-    /// <summary>QA-DAILY-REPRO: el generador, en un proceso hijo, con las bandas y los días del pack.</summary>
-    private static IEnumerable<DailyIssue> Reproduce(DailyQaPack pack, string specPath)
+    /// <summary>
+    /// QA-DAILY-REPRO: regenera en memoria, con el DailyRunner y el DailyPackWriter del generador (enlazados), las bandas y los
+    /// días del pack, y compara cada tablero entero con el regenerado.
+    /// </summary>
+    private static IEnumerable<DailyIssue> Reproduce(DailyQaPack pack, DailySpec spec, CampaignSpec tints)
     {
         List<DailyQaLevel> slots = pack.Levels.Where(l => l.Band is int b && l.Day is int d && DailyIds.Problem(b, d) is null).ToList();
         if (slots.Count == 0)
@@ -186,153 +179,53 @@ internal static class DailyQaCommand
             return [new DailyIssue("QA-DAILY-REPRO", "-", "ningun tablero con slot valido que regenerar")];
         }
 
-        string bands = Ranges(slots.Select(l => l.Band!.Value));
-        string days = Ranges(slots.Select(l => l.Day!.Value));
-        string? root = RepoRoot();
-        if (root is null)
+        List<int> bands = slots.Select(l => l.Band!.Value).Distinct().Order().ToList();
+        List<int> days = slots.Select(l => l.Day!.Value).Distinct().Order().ToList();
+        var dailyTints = new DailyTints(tints, spec);
+        DailyRun run = DailyRunner.Run(spec, dailyTints, bands, days, Environment.ProcessorCount);
+        var issues = new List<DailyIssue>();
+
+        // Lo que haría fallar al generador (y no escribir el pack): un día sin tablero en la ventana (R-Q11 (a)) o un tablero
+        // que no cumple lo que promete el pack.
+        foreach (string e in run.Errors)
         {
-            return [new DailyIssue("QA-DAILY-REPRO", "-", $"no encuentro la raiz del repositorio ({GeneratorProject}/level-generator.csproj) para regenerar el pool")];
+            issues.Add(new DailyIssue("QA-DAILY-REPRO", "-", "el generador falla: " + e));
         }
 
-        string outDir = Path.Combine(Path.GetTempPath(), "af-daily-qa-" + Guid.NewGuid().ToString("N"));
-        try
+        foreach (DailyBoard b in run.Boards)
         {
-            (int? code, string output) = RunDotnet(root, "run", "--project", Path.Combine(root, GeneratorProject), "-c", "Release", "--", "--daily",
-                "--spec", Path.GetFullPath(specPath), "--bands", bands, "--days", days, "--out", outDir);
-            if (code is null)
+            if (DailyPackWriter.CheckBoard(b) is string problem)
             {
-                return [new DailyIssue("QA-DAILY-REPRO", "-", "no se pudo ejecutar dotnet para regenerar el pool")];
-            }
-
-            if (code == TimedOut)
-            {
-                return [new DailyIssue("QA-DAILY-REPRO", "-", string.Create(CultureInfo.InvariantCulture, $"el generador no termina en {ReproTimeout.TotalMinutes:0} min (se detuvo)"))];
-            }
-
-            string regenerated = Directory.Exists(outDir) ? Directory.GetFiles(outDir, "*.json").FirstOrDefault() ?? "" : "";
-            if (code != 0 || regenerated.Length == 0)
-            {
-                string detail = string.Join(" | ", output.Split('\n').Select(l => l.Trim()).Where(l => l.Length > 0).TakeLast(3));
-                return [new DailyIssue("QA-DAILY-REPRO", "-", $"el generador sale con {code}: {detail}")];
-            }
-
-            JsonNode regen = JsonNode.Parse(File.ReadAllBytes(regenerated))!;
-            var byId = regen["levels"]!.AsArray().Where(x => x is not null).ToDictionary(x => x!["id"]!.GetValue<string>(), x => x!.AsObject(), StringComparer.Ordinal);
-            var issues = new List<DailyIssue>();
-            foreach (DailyQaLevel lv in slots)
-            {
-                string id = DailyIds.Id(lv.Band!.Value, lv.Day!.Value);
-                if (!byId.TryGetValue(id, out JsonObject? r))
-                {
-                    issues.Add(new DailyIssue("QA-DAILY-REPRO", lv.Name, $"el generador no da {id}"));
-                    continue;
-                }
-
-                if (!JsonNode.DeepEquals(lv.Json, r))
-                {
-                    string[] diff = lv.Json.Select(kv => kv.Key).Union(r.Select(kv => kv.Key), StringComparer.Ordinal)
-                        .Where(k => !JsonNode.DeepEquals(lv.Json[k], r[k])).ToArray();
-                    issues.Add(new DailyIssue("QA-DAILY-REPRO", lv.Name, $"la semilla no reproduce el tablero: difieren {string.Join(", ", diff)}"));
-                }
-            }
-
-            return issues;
-        }
-        finally
-        {
-            try
-            {
-                if (Directory.Exists(outDir))
-                {
-                    Directory.Delete(outDir, recursive: true);
-                }
-            }
-            catch (IOException)
-            {
-                // Carpeta temporal: si no se puede borrar, se queda.
-            }
-        }
-    }
-
-    /// <summary>«0-9,20,30-31»: los valores distintos en orden, en rangos.</summary>
-    public static string Ranges(IEnumerable<int> values)
-    {
-        List<int> v = values.Distinct().Order().ToList();
-        var parts = new List<string>();
-        for (int i = 0; i < v.Count;)
-        {
-            int j = i;
-            while (j + 1 < v.Count && v[j + 1] == v[j] + 1)
-            {
-                j++;
-            }
-
-            parts.Add(i == j ? v[i].ToString(CultureInfo.InvariantCulture) : string.Create(CultureInfo.InvariantCulture, $"{v[i]}-{v[j]}"));
-            i = j + 1;
-        }
-
-        return string.Join(",", parts);
-    }
-
-    /// <summary>Código que devuelve <see cref="RunDotnet"/> si el proceso pasa de <see cref="ReproTimeout"/>.</summary>
-    private const int TimedOut = int.MinValue;
-
-    /// <summary>
-    /// Raíz del repositorio: la primera carpeta, hacia arriba desde el directorio de trabajo y después desde el del ejecutable,
-    /// que tiene tools/level-generator/level-generator.csproj y schemas/af-level-1.schema.json.
-    /// </summary>
-    public static string? RepoRoot()
-    {
-        foreach (string start in new[] { Environment.CurrentDirectory, AppContext.BaseDirectory })
-        {
-            for (DirectoryInfo? d = new DirectoryInfo(start); d is not null; d = d.Parent)
-            {
-                if (File.Exists(Path.Combine(d.FullName, GeneratorProject, "level-generator.csproj"))
-                    && File.Exists(Path.Combine(d.FullName, "schemas", "af-level-1.schema.json")))
-                {
-                    return d.FullName;
-                }
+                issues.Add(new DailyIssue("QA-DAILY-REPRO", b.Id, "el generador rechaza su tablero: " + problem));
             }
         }
 
-        return null;
-    }
-
-    private static (int? Code, string Output) RunDotnet(string workingDirectory, params string[] args)
-    {
-        var psi = new ProcessStartInfo("dotnet")
+        if (run.Boards.Count == 0)
         {
-            WorkingDirectory = workingDirectory,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            UseShellExecute = false,
-            StandardOutputEncoding = Encoding.UTF8,
-            StandardErrorEncoding = Encoding.UTF8,
-        };
-        foreach (string a in args)
-        {
-            psi.ArgumentList.Add(a);
+            return issues.Count > 0 ? issues : [new DailyIssue("QA-DAILY-REPRO", "-", "el generador no da ningun tablero")];
         }
 
-        try
+        // El mismo texto que escribe el generador (DailyCommand: PackWriter.Bytes de DailyPackWriter.Write), leído de vuelta.
+        JsonNode regen = JsonNode.Parse(PackWriter.Bytes(DailyPackWriter.Write(spec, dailyTints, run.Boards)))!;
+        var byId = regen["levels"]!.AsArray().Where(x => x is not null).ToDictionary(x => x!["id"]!.GetValue<string>(), x => x!.AsObject(), StringComparer.Ordinal);
+        foreach (DailyQaLevel lv in slots)
         {
-            using Process p = Process.Start(psi)!;
-            Task<string> err = p.StandardError.ReadToEndAsync();
-            Task<string> output = p.StandardOutput.ReadToEndAsync();
-            if (!p.WaitForExit(ReproTimeout))
+            string id = DailyIds.Id(lv.Band!.Value, lv.Day!.Value);
+            if (!byId.TryGetValue(id, out JsonObject? r))
             {
-                p.Kill(entireProcessTree: true);
-                p.WaitForExit();
-                return (TimedOut, "");
+                issues.Add(new DailyIssue("QA-DAILY-REPRO", lv.Name, $"el generador no da {id}"));
+                continue;
             }
 
-            p.WaitForExit();
-            return (p.ExitCode, output.Result + err.Result);
+            if (!JsonNode.DeepEquals(lv.Json, r))
+            {
+                string[] diff = lv.Json.Select(kv => kv.Key).Union(r.Select(kv => kv.Key), StringComparer.Ordinal)
+                    .Where(k => !JsonNode.DeepEquals(lv.Json[k], r[k])).ToArray();
+                issues.Add(new DailyIssue("QA-DAILY-REPRO", lv.Name, $"la semilla no reproduce el tablero: difieren {string.Join(", ", diff)}"));
+            }
         }
-        catch (Win32Exception)
-        {
-            return (null, "");
-        }
+
+        return issues;
     }
 
     /// <summary>
@@ -397,19 +290,8 @@ internal static class DailyQaCommand
             return 2;
         }
 
-        // Copias exactas del lector del generador.
-        foreach (string name in new[] { "DailySpec.cs", "DailyIds.cs" })
-        {
-            string original = Path.Combine("tools/level-generator/Daily", name);
-            string copy = Path.Combine("tools/level-qa/Daily/Shared", name);
-            Check(File.Exists(original) && File.Exists(copy) && File.ReadAllBytes(original).AsSpan().SequenceEqual(File.ReadAllBytes(copy)),
-                $"tools/level-qa/Daily/Shared/{name} es identico a tools/level-generator/Daily/{name}");
-        }
-
-        Check(Ranges([5, 0, 1, 2, 9, 3, 11, 10]) == "0-3,5,9-11", "rangos de --bands/--days para el generador: 0-3,5,9-11");
         Check(DailyChecks.Size(DailyChecks.MaxBytes).Any(i => !i.Warning) && !DailyChecks.Size(DailyChecks.MaxBytes - 1).Any(),
             "QA-DAILY-SIZE: 2 MB falla y 2 MB - 1 pasa (se mira siempre, tambien con --partial)");
-        Check(RepoRoot() is string root && File.Exists(Path.Combine(root, GeneratorProject, "level-generator.csproj")), $"raiz del repositorio para QA-DAILY-REPRO: {RepoRoot() ?? "no encontrada"}");
 
         // El fixture válido: sin fallos como muestra parcial (con reproducción y esquema) y con el aviso de muestra parcial.
         string valid = FixtureDir + "/" + ValidFixture;
@@ -420,7 +302,7 @@ internal static class DailyQaCommand
         }
         else
         {
-            List<DailyIssue> vi = RunChecks(vp, spec!, tints!, DefaultSpec, partial: true, reproduce: true, schema: true);
+            List<DailyIssue> vi = RunChecks(vp, spec!, tints!, partial: true, reproduce: true, schema: true);
             List<DailyIssue> vf = vi.Where(i => !i.Warning).ToList();
             Check(vf.Count == 0, $"{ValidFixture} con --partial: 0 fallos ({string.Join("; ", vf.Select(i => i.Check + " " + i.Board + ": " + i.Message))})");
             Check(vi.Any(i => i.Warning && i.Check == "QA-DAILY-DAYS" && i.Message.Contains("no es el pool completo", StringComparison.Ordinal)),
@@ -463,7 +345,7 @@ internal static class DailyQaCommand
                 File.WriteAllText(tmp, packJson.ToJsonString());
                 try
                 {
-                    List<DailyIssue> hi = RunChecks(DailyChecks.Read(tmp, out _)!, spec, tints!, DefaultSpec, partial: true, reproduce: false, schema: false);
+                    List<DailyIssue> hi = RunChecks(DailyChecks.Read(tmp, out _)!, spec, tints!, partial: true, reproduce: false, schema: false);
                     hf = hi.Where(i => !i.Warning).ToList();
                     if (hf.Count == 0)
                     {
@@ -504,7 +386,7 @@ internal static class DailyQaCommand
                 continue;
             }
 
-            List<DailyIssue> issues = RunChecks(p, spec!, tints!, DefaultSpec, partial, reproduce, schema: true);
+            List<DailyIssue> issues = RunChecks(p, spec!, tints!, partial, reproduce, schema: true);
             var ids = issues.Where(i => !i.Warning).Select(i => i.Check).Distinct().Order(StringComparer.Ordinal).ToList();
             DailyIssue? hit = issues.FirstOrDefault(i => !i.Warning && i.Check == expected);
             string[] extra = ids.Where(i => i != expected && !tolerated.Contains(i)).ToArray();
