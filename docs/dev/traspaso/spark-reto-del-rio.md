@@ -598,3 +598,36 @@ R0-R4 y R6 están en `integracion-fase1-fase2` (`fcbbd94` y `0d844cf`): revisado
 6. Opcional: incluye `daily` en el `--self-test` sin nombre del generador y de level-qa.
 
 **Corrección del encargo §3.3, punto 1:** el despacho de `--daily` en `tools/level-generator/Program.cs` va antes del `--self-test` genérico (que rechazaría «daily»), no antes de `--parity`. Lo que hiciste es lo correcto.
+
+### Bloques (b)-(d) integrados (2026-10-20)
+
+R5, R7a, R7b, R8, R9, R10 y R11 están en `integracion-fase1-fase2` (`d54700b` y `d23df57`): revisados sin bloqueantes y verificados en el escritorio x64. EditMode 3.057 (3.054 + 3), PlayMode 1.383 (1.216 + 167) y dotnet test 981; el pool se reproduce byte a byte y `level-qa --daily` da 0 fallos. Haz `git merge origin/integracion-fase1-fase2` en tu rama.
+
+**R12 lo hace el integrador** cuando terminen los carriles de la ola 7, que tocan los mismos archivos (inicio, `GameBootstrap`, escena, perfil y `strings.csv`).
+
+**Pendiente para ti:**
+1. Commitea el parche completo de E16 en el repositorio (por ejemplo, como sección de `spark-parches-docs.md`): la ruta de `spark-estado.md` apunta a una carpeta temporal de tu equipo.
+2. Prepara la clase y el parche exacto de E6 (la tarjeta de la victoria del 7), que aún faltan.
+3. Corrige en `DailyChallengeScreen.cs` la referencia «E21», que debe ser «E25».
+4. Opcional: incluye `daily` en el `--self-test` sin nombre de level-qa y documenta `--daily` en su README (E17, tras E16).
+
+---
+
+## 10. Encargo siguiente (2026-10-20): cierre del Reto y traducción con IA
+
+El dueño pidió (literal): «si hay algo de lo que nos falta terminar y podamos pasarle a spark para hacerlo seria excelente». El integrador está aplicando R12 (bloque (e)). Sigue con esto, en ramas `spark/…` nuevas desde `origin/integracion-fase1-fase2`, con las mismas reglas de las secciones 1-3 y el mismo flujo (revisión, arreglos, verificación completa y entrada en `spark-estado.md`). Si algo exige tocar archivos de la sección 3.2, entrégalo como parche probado en `docs/dev/traspaso/spark-enganches/`, como hiciste con R12.
+
+### T1 · Cerrar lo que quedó del Reto (rama `spark/reto-cierre`)
+1. **E16:** level-qa enlaza `../level-generator/Daily/*.cs`, reproduce el pool en memoria y borra `Daily/Shared/`; regenera el parche sobre la versión actual y aplícalo en tu rama si todo lo que toca es tuyo (tools/level-qa), con su `--self-test daily` y `level-qa --daily` del pool publicado en verde. Documenta `--daily` en el README de level-qa (E17) e incluye `daily` en su `--self-test` sin nombre.
+2. **E6:** la tarjeta de 2 s tras ganar el nivel 7 («Desde el nivel 10, un tablero nuevo cada día»; 06 §2.3/§4.1). Clase y prueba en archivos propios; el gancho en `GameScreen.OnVictoryScreen` (`flow.LevelNumber == 7`) y la clave de texto nueva [P] `pendiente_asesor` van como parche probado.
+3. **E7:** en Sin canoas, «Mientras esperas: Jugar el Reto del río» y `af_no_canoes_choice = daily_challenge` (06 §4.1; 08 §8.2). Igual: lo tuyo en archivos propios y el gancho en `NoCanoesScreen.cs`/AppFlow como parche probado.
+4. Corrige la referencia «E21» → «E25» de `DailyChallengeScreen.cs`.
+
+### T2 · Traducción con IA a inglés y portugués de Brasil (rama `spark/traduccion-ia`)
+Decisión del dueño: D-022, pregunta 51 (b): «traducción con ia», con revisión nativa después (y D-018, Q5-A y Q12-A). Reglas: `.claude/rules/localizacion.md` (sobre todo: lo cultural sale del glosario y del asesor; una traducción que falta queda vacía; nunca se mezclan idiomas) y el glosario `docs/gdd/00-glosario.md` §10 y `Data/Loc/glossary.csv`.
+1. **Alcance:** las columnas `en` y `pt-BR` vacías de `Data/Loc/strings.csv` (la interfaz; hoy unas 153 y 154 claves) y, si las reglas lo permiten, de `Data/Loc/facts.csv`. No traduzcas las filas que genera `tools/river-map/stops.py` (bloque `map.*`) salvo que la herramienta ya conserve las columnas de otros idiomas al regenerar: compruébalo y, si no, déjalas y anótalo como pregunta. Lo cultural (fauna, flora, pueblos, lugares y frutas) solo con el nombre del glosario; si el glosario no lo tiene, déjalo vacío y anótalo.
+2. **Estado:** usa el valor de estado por idioma que prevean las reglas o el contrato 32 para «traducido por IA, sin revisión nativa». Si no existe ninguno que encaje, **para** esa parte y anótalo como pregunta para el dueño, con opciones; no inventes un valor nuevo.
+3. **Respeta** `max_chars`, los marcadores (`{n}`, `{name}`…), los plurales y las reglas de cifras de D-018 (Q8-A). Comprueba con las pruebas que ya existen (`LocTablesTests`, `PseudoLocOverflowTests`, los goldens y las capturas en en-XA al 130 %) y, si hace falta, añade una que mida el texto en `en` y `pt-BR` contra su caja.
+4. **Entrega sin chocar:** los carriles de la ola 7 siguen añadiendo filas a `strings.csv`. No edites `strings.csv` ni `facts.csv` en tu rama: entrega las traducciones en `docs/dev/traspaso/spark-traducciones/` (un CSV por tabla con `clave,en,pt-BR` y las columnas de estado) y un script nuevo en Python (biblioteca estándar, por ejemplo `tools/loc/apply_translations.py`, con `--check` y `--self-test`) que las vuelque sobre las tablas por clave, sin tocar ninguna otra columna ni el orden. El integrador lo aplicará al cerrar la ola 7.
+5. **Informe:** cuántas claves traducidas por idioma, cuántas vacías y por qué, y cuántos avisos de `LocReleaseGate` quedarían.
+
