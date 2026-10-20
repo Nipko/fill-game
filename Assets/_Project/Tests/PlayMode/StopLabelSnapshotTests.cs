@@ -13,8 +13,9 @@ namespace AF.Tests.PlayMode
 {
     /// <summary>
     /// Capturas del rótulo del lugar (tarea M2.3; D-013, punto 8; propuesta del Mapa §10.5, punto 5): <c>18_stop_label_l31</c>
-    /// (el 31, 2 filas: «Floresta Nacional do Tapajós · Brasil» sobre el horizonte, en la franja del panorama, con la silueta
-    /// provisional de la parada) y <c>18b_stop_label_3filas</c> (el 131, 11 cuias en 3 filas: «El río frontera · Colombia y
+    /// (el 31, 2 filas: «Floresta Nacional do Tapajós · Brasil» como placa clavada al marco, bajo el héroe de la parada; D-030,
+    /// pregunta 9 (b); tarea DC24), <c>18i_stop_label_1fila</c> (lo mismo con 1 fila: el 31 con un paquete de prueba de 5 cuias)
+    /// y <c>18b_stop_label_3filas</c> (el 131, 11 cuias en 3 filas: «El río frontera · Colombia y
     /// Perú» como placa bajo el HUD, con aire sobre las cuias de la fila 1), con el rótulo ya entrado; y, de la tarea FX4
     /// (observación 3 de la prueba de la ola 2 en el teléfono: la placa y la cuia elevada se rozaban),
     /// <c>18c_stop_label_l171</c> (el 171: la Hoja de la cuia 1 no deja sitio sobre toda la fila 1, así que la placa va a la
@@ -54,7 +55,11 @@ namespace AF.Tests.PlayMode
         public IEnumerator CaptureStopLabels()
         {
             string dir = SnapshotKit.Prepare();
-            yield return Capture(dir, 31, "18_stop_label_l31", "horizon");
+            yield return Capture(dir, 31, "18_stop_label_l31", "plate");
+            LaunchOptions.LevelPackJsonOverride = StopLabelTests.OneRowPack31();
+            yield return Capture(dir, 31, "18i_stop_label_1fila", "plate");
+            LaunchOptions.LevelPackJsonOverride = null;
+            Assert.That(File.Exists(Path.Combine(dir, "18i_stop_label_1fila.png")), Is.True);
             yield return Capture(dir, 131, "18b_stop_label_3filas", "plate");
             Assert.That(File.Exists(Path.Combine(dir, "18b_stop_label_3filas.png")), Is.True);
             yield return Capture(dir, 171, "18c_stop_label_l171", "plate_side");
@@ -137,32 +142,28 @@ namespace AF.Tests.PlayMode
             BoardLayoutResult l = view.Layout!;
 
             // La fila 1 como la mide FX4 al colocar la placa: lo más alto de sus cuias en reposo, corchos y piezas de las
-            // mecánicas incluidos (sobre el horizonte no se mide); de lado, además, el tramo libre en el que se centró.
-            string rowOne = "sin medir (horizonte)";
-            if (mode != "horizon")
+            // mecánicas incluidos; de lado, además, el tramo libre en el que se centró.
+            float top = float.MaxValue;
+            int at = -1;
+            for (int i = 0; i < view.Views.Length && i < l.RowOf.Length; i++)
             {
-                float top = float.MaxValue;
-                int at = -1;
-                for (int i = 0; i < view.Views.Length && i < l.RowOf.Length; i++)
+                float rest = view.StopLabelRestTopOf(i);
+                if (l.RowOf[i] == 0 && !float.IsNaN(rest) && rest < top)
                 {
-                    float rest = view.StopLabelRestTopOf(i);
-                    if (l.RowOf[i] == 0 && !float.IsNaN(rest) && rest < top)
-                    {
-                        top = rest;
-                        at = i;
-                    }
-                }
-
-                rowOne = at < 0 ? "sin medir" : top.ToString("0.0", inv) + " dp (cuia " + at.ToString(inv) + ")";
-                Vector2 free = view.StopLabelSideSpan;
-                if (!float.IsNaN(free.x))
-                {
-                    rowOne += ", tramo libre de lado " + free.x.ToString("0.0", inv) + "-" + free.y.ToString("0.0", inv) + " dp";
+                    top = rest;
+                    at = i;
                 }
             }
 
+            string rowOne = at < 0 ? "sin medir" : top.ToString("0.0", inv) + " dp (cuia " + at.ToString(inv) + ")";
+            Vector2 free = view.StopLabelSideSpan;
+            if (!float.IsNaN(free.x))
+            {
+                rowOne += ", tramo libre de lado " + free.x.ToString("0.0", inv) + "-" + free.y.ToString("0.0", inv) + " dp";
+            }
+
             Debug.Log("AF_STOP_LABEL " + name + ": " + r.ToString("0.0") + (view.StopLabelView.Visible ? "" : " (oculta)") + ", horizonte "
-                + view.HorizonY.ToString("0.0", inv) + " dp, HUD "
+                + view.HorizonY.ToString("0.0", inv) + " dp, héroe " + view.HeroRect.ToString("0.0") + ", HUD "
                 + view.HudBottomDp.ToString("0.0", inv) + " dp, canto interior del marco "
                 + (l.PanelY + view.PanelFrameDp).ToString("0.0", inv) + " dp, lo más alto de la fila 1 "
                 + rowOne + ", "
