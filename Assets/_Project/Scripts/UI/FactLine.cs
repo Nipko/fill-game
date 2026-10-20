@@ -275,8 +275,15 @@ namespace AF.UI
         /// </summary>
         public float OffsetDp { get; private set; }
 
-        /// <summary>Tamaño del texto que se enseña (dp, con la escala de texto): <see cref="VictoryLineSlot.TextSp"/> o menos si no cabía.</summary>
+        /// <summary>Tamaño del texto que se enseña (dp, con la escala de texto): <see cref="BodySp"/> o menos si no cabía.</summary>
         public float TextSizeDp { get; private set; }
+
+        /// <summary>
+        /// Cuerpo de partida del texto de la línea (sp, sin la escala de texto): <see cref="VictoryLineSlot.TextSp"/> (14) o, en la
+        /// victoria compacta de 16:9 (D-032, punto 2; <c>GameScreen.VictoryCompact</c>), <see cref="UiBuilder.MinTextSp"/> (12).
+        /// Lo fija la pantalla antes de medir y de colocar; las medidas de <see cref="NeedDp"/> lo llevan en su caché.
+        /// </summary>
+        public float BodySp { get; set; } = VictoryLineSlot.TextSp;
 
         /// <summary>Con Reducir movimiento en la victoria de ahora.</summary>
         public bool ReduceMotion => _reduceMotion;
@@ -359,7 +366,7 @@ namespace AF.UI
             {
                 NeedEntry e = _needs[i];
                 if (ReferenceEquals(e.Schedule, schedule) && ReferenceEquals(e.Catalog, catalog) && e.Unapproved == unapproved && e.Locale == locale
-                    && Mathf.Approximately(e.Scale, textScale) && Mathf.Approximately(e.Width, widthDp))
+                    && Mathf.Approximately(e.Scale, textScale) && Mathf.Approximately(e.Width, widthDp) && Mathf.Approximately(e.Body, BodySp))
                 {
                     return e.Height;
                 }
@@ -368,7 +375,7 @@ namespace AF.UI
             var watch = System.Diagnostics.Stopwatch.StartNew();
             float headerSize = HeaderSp * textScale;
             float avail = widthDp - IconDp - IconGapDp - ChevronReserveDp; // como en Arrange: el chevrón, siempre reservado
-            float textSize = VictoryLineSlot.TextSp * textScale;
+            float textSize = BodySp * textScale;
             float textLine = LineHeight(headerSize);
             float need = 0f;
             IReadOnlyList<FactSeries> series = schedule.Catalog.Series;
@@ -390,7 +397,7 @@ namespace AF.UI
 
             NeedMs = watch.Elapsed.TotalMilliseconds;
             NeedMeasureCount++;
-            _needs.Add(new NeedEntry(schedule, catalog, unapproved, locale, textScale, widthDp, need));
+            _needs.Add(new NeedEntry(schedule, catalog, unapproved, locale, textScale, widthDp, BodySp, need));
             return need;
         }
 
@@ -688,10 +695,11 @@ namespace AF.UI
             SetActive(_chevron, Opens);
             UiBuilder.Place(_chevron!.rectTransform, w - ChevronDp, off + Mathf.Round((HeaderHeightDp - ChevronDp) * 0.5f), ChevronDp, ChevronDp);
 
-            // El texto, a todo el ancho bajo la cabecera: 14 sp, o menos si una línea real no cabe en H (nunca menos de 12 sp).
+            // El texto, a todo el ancho bajo la cabecera: 14 sp (12 en la victoria compacta, BodySp), o menos si una línea real no
+            // cabe en H (nunca menos de 12 sp).
             float top = off + HeaderHeightDp;
             float room = block - HeaderHeightDp - VictoryLineSlot.BottomDp;
-            float size = VictoryLineSlot.TextSp * scale;
+            float size = BodySp * scale;
             float min = UiBuilder.MinTextSp * scale;
             float h = Height(BodyText, size, w);
             while (h > room + 0.5f && size > min)
@@ -799,7 +807,7 @@ namespace AF.UI
 
         private readonly struct NeedEntry
         {
-            public NeedEntry(FactSchedule schedule, LocCatalog catalog, bool unapproved, string locale, float scale, float width, float height)
+            public NeedEntry(FactSchedule schedule, LocCatalog catalog, bool unapproved, string locale, float scale, float width, float body, float height)
             {
                 Schedule = schedule;
                 Catalog = catalog;
@@ -807,6 +815,7 @@ namespace AF.UI
                 Locale = locale;
                 Scale = scale;
                 Width = width;
+                Body = body;
                 Height = height;
             }
 
@@ -821,6 +830,8 @@ namespace AF.UI
             public float Scale { get; }
 
             public float Width { get; }
+
+            public float Body { get; }
 
             public float Height { get; }
         }

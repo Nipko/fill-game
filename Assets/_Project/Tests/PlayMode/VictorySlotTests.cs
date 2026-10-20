@@ -190,6 +190,7 @@ namespace AF.Tests.PlayMode
             foreach (string locale in new[] { LocLocale.SpanishLatinAmerica, LocLocale.Pseudo })
             {
                 float nextWithout = -1f;
+                int compactWithout = -1;
                 foreach (bool withProvider in new[] { false, true })
                 {
                     LaunchOptions.FontScaleOverride = 1.3f;
@@ -216,6 +217,7 @@ namespace AF.Tests.PlayMode
                     {
                         Assert.That(slot.ReserveDp, Is.EqualTo(0f));
                         nextWithout = view.NextTopDp;
+                        compactWithout = view.VictoryCompact;
                         continue;
                     }
 
@@ -231,8 +233,16 @@ namespace AF.Tests.PlayMode
                             "en-XA (117 caracteres) mide más que es-419 a la misma escala");
                     }
 
-                    Assert.That(slot.ReserveDp, Is.EqualTo(expected + VictoryLineSlot.RuleGapDp + VictoryLineSlot.RuleDp + VictoryLineSlot.RuleBelowDp));
-                    Assert.That(nextWithout - view.NextTopDp, Is.EqualTo(slot.ReserveDp).Within(0.01f), "Siguiente sube lo que mide la reserva");
+                    // Con los huecos del escalón de la victoria compacta de ahora (D-032; en 16:9 al 130 %, los justos).
+                    Assert.That(slot.ReserveDp, Is.EqualTo(slot.ReserveFor(expected)));
+                    if (compactWithout == view.VictoryCompact)
+                    {
+                        Assert.That(nextWithout - view.NextTopDp, Is.EqualTo(slot.ReserveDp).Within(0.01f), "Siguiente sube lo que mide la reserva");
+                    }
+                    else
+                    {
+                        Assert.That(view.VictoryCompact, Is.GreaterThan(compactWithout), "la ranura solo puede compactar más");
+                    }
                 }
 
                 LaunchOptions.Reset();

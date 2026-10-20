@@ -30,6 +30,7 @@ namespace AF.Tests.PlayMode
         [TearDown]
         public void TearDown()
         {
+            GameBootstrap.ResetDailyOverrides();
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
@@ -122,6 +123,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator AfterTheLastLevel_PlayOpensTheRiverKeepsGrowing()
         {
+            GameBootstrap.DailyPoolDisabledOverride = true; // sin el Reto: con él, «Jugar · Reto del río» abre el Reto (D-032, punto 6)
             // El catálogo de la escena acaba en el 700 (tutorial_v0 y mundo_02..09_v1, desde C1b): el 701 aún no está publicado.
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(701)));
             GameBootstrap boot = GameBootstrap.Current!;

@@ -121,7 +121,8 @@ namespace AF.UI
             _stopArriveSent = false;
             ArrivalStrip? strip = _arrival;
             bool arrival = strip != null && strip.Stop != null && (strip.Kind == ArrivalKind.Arrival || strip.Kind == ArrivalKind.Place);
-            ShowVictoryMap(arrival && RiverMapOpenable);
+            // En la fila de la victoria compacta (D-032, punto 2; escalón 3) «Ver mapa» no cabe: no sale [P].
+            ShowVictoryMap(arrival && RiverMapOpenable && _victoryCompact < VictoryCompactRow);
             LayoutVictoryMap();
         }
 

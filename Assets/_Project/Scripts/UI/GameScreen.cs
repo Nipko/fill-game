@@ -327,6 +327,9 @@ namespace AF.UI
         private float _victoryPanelDp = 218f;
         private float _victoryCtaTopDp = 84f;
         private float _victoryHomeTopDp = 152f;
+        private readonly TextMeshProUGUI _nextLabel;
+        private readonly TextMeshProUGUI _homeLabel;
+        private readonly float _nextLabelDp;
         private bool _doubleShown;
         private int _harvestFrom;
         private int _harvestTo = -1;
@@ -552,6 +555,8 @@ namespace AF.UI
             ModalKit.StretchForTextScale(_next);
             TextMeshProUGUI nextLabel = UiBuilder.Label("Label", _next.Face, TextStyle.CtaLeaf, UiText.Next, 22f, Palette.Cream, TextAlignmentOptions.Center);
             UiBuilder.PlaceCtaLabel(nextLabel.rectTransform, ModalKit.FaceHeightOf(_next));
+            _nextLabel = nextLabel;
+            _nextLabelDp = nextLabel.fontSize;
             _next.Relief.Bind(_next.Face, _next.Base, _next.FaceImage, art.CtaLeaf, null, null, nextLabel);
 
             // «Inicio» [P] (06 §4.7; D-008 punto 3): secundario de madera (07 §7.3) bajo Siguiente; vuelve a la pantalla de inicio.
@@ -561,6 +566,7 @@ namespace AF.UI
             TextMeshProUGUI homeLabel = UiBuilder.Label("Label", _home.Face, TextStyle.PillWood, UiText.Home, 18f, Palette.Cream, TextAlignmentOptions.Center);
             UiBuilder.PlaceCtaLabel(homeLabel.rectTransform, art.CtaWood);
             UiBuilder.AutoSize(homeLabel, 14f, 18f);
+            _homeLabel = homeLabel;
             _home.Relief.Bind(_home.Face, _home.Base, _home.FaceImage, art.CtaWood, null, null, homeLabel);
 
             // Cosecha (02 §6; D-008 punto 3; guía 12): «Cosecha» y la semilla con +20, +60 u +80, que cuenta hacia arriba en
@@ -2703,16 +2709,20 @@ namespace AF.UI
             float panelW = Mathf.Min(328f, w - 32f);
             float nextW = Mathf.Min(w - 48f, Mathf.Min(312f, panelW - 16f));
 
+            // Victoria compacta (D-032, punto 2; GameScreen.Victory.cs): el escalón más bajo con el que la victoria más alta posible
+            // de esta pantalla, idioma y escala cabe bajo la cabecera del HUD. En 360 × 780, y en 16:9 con sitio, el 0 (la de siempre).
+            int compact = ChooseVictoryCompact();
+
             // Con el título en dos líneas la cinta crece hacia abajo (su borde de arriba sigue a RibbonRiseDp sobre el panel) y
             // todo lo del panel (la Cosecha, Siguiente, Inicio y la ranura del Dato del río) baja lo mismo; el panel crece.
-            _ribbonHeightDp = LayoutRibbonTitle();
+            _ribbonHeightDp = LayoutRibbonTitle(compact >= VictoryCompactMargins);
             float y = VictoryHarvestTopDp + (_ribbonHeightDp - RibbonHeightDp);
             UiBuilder.Place(_harvestRow, 0f, y, panelW, VictoryHarvestDp);
             float mid = panelW * 0.5f;
             UiBuilder.Place(_harvestLabel.rectTransform, 16f, 0f, mid - 22f, VictoryHarvestDp);
             UiBuilder.Place(_harvestSeed.rectTransform, mid - 2f, 6f, 32f, 32f);
             UiBuilder.Place(_harvestValue.rectTransform, mid + 34f, 0f, mid - 50f, VictoryHarvestDp);
-            y += VictoryHarvestDp + 4f;
+            y += VictoryHarvestDp + VictoryHarvestGapDp(compact);
 
             // Tras la Cosecha doble, mientras espera a avanzar solo (D-011, punto 4), Inicio y la Cosecha doble quedan inactivos,
             // también al recolocar la pantalla (LayoutHud); Siguiente sigue activo y puede adelantar el avance.
@@ -2731,17 +2741,41 @@ namespace AF.UI
 
             LabelsVictoryReserve(ref y); // el chip del nivel siguiente colgado de Siguiente: Siguiente e Inicio bajan, el panel crece
             _victoryCtaTopDp = y;
-            UiBuilder.Place((RectTransform)_next.Button.transform, (panelW - nextW) / 2f, y, nextW, ModalKit.HeightOf(_next));
+            ApplyNextStretch(compact >= VictoryCompactRow); // en la fila del escalón 3, Siguiente con el alto que pide su etiqueta
+            float nextH = ModalKit.HeightOf(_next);
             UiBuilder.SetEnabled(_next.Button, true);
             UiBuilder.SetEnabled(_home.Button, !autoNext);
-            float homeW = Mathf.Min(VictoryHomeWidthDp, nextW);
-            // Con la escala de texto, Siguiente crece en alto (ModalKit.StretchForTextScale; tarea L4) e Inicio baja lo mismo.
-            float nextGrow = Mathf.Max(0f, ModalKit.HeightOf(_next) - Mathf.Max(48f, _art.CtaLeaf.HeightDp - 6f));
-            _victoryHomeTopDp = y + VictoryHomeBelowCtaDp + nextGrow;
-            UiBuilder.Place((RectTransform)_home.Button.transform, (panelW - homeW) / 2f, _victoryHomeTopDp, homeW, 48f);
-            float bottom = _victoryHomeTopDp + 48f;
+            float bottom;
+            float rowX = (panelW - nextW) / 2f;
+            if (compact >= VictoryCompactRow)
+            {
+                // Victoria compacta, escalón 3 (D-032, punto 2) [P]: «Inicio» a la izquierda de «Siguiente», en su misma fila y
+                // centrado a lo alto con él; «Siguiente» se queda con el resto del ancho y su etiqueta se ajusta (14-22 sp × la
+                // escala, nunca menos de 12). Sin «Ver mapa» (ArrivalVictoryShown): no cabe en la fila.
+                float homeW = VictoryRowHomeWidthDp(nextW);
+                float nextX = rowX + homeW + VictoryRowGapDp;
+                float nextRowW = nextW - homeW - VictoryRowGapDp;
+                SetNextLabelFit(true);
+                UiBuilder.Place((RectTransform)_next.Button.transform, nextX, y, nextRowW, nextH);
+                _victoryNextCenterX = nextX + (nextRowW * 0.5f);
+                _victoryHomeTopDp = y + Mathf.Max(0f, (nextH - 48f) * 0.5f);
+                UiBuilder.Place((RectTransform)_home.Button.transform, rowX, _victoryHomeTopDp, homeW, 48f);
+                bottom = y + Mathf.Max(nextH, 48f);
+            }
+            else
+            {
+                SetNextLabelFit(false);
+                UiBuilder.Place((RectTransform)_next.Button.transform, rowX, y, nextW, nextH);
+                _victoryNextCenterX = panelW * 0.5f;
+                float homeW = Mathf.Min(VictoryHomeWidthDp, nextW);
+                // Con la escala de texto, Siguiente crece en alto (ModalKit.StretchForTextScale; tarea L4) e Inicio baja lo mismo.
+                _victoryHomeTopDp = y + VictoryHomeBelowCtaDp + VictoryNextGrowDp;
+                UiBuilder.Place((RectTransform)_home.Button.transform, (panelW - homeW) / 2f, _victoryHomeTopDp, homeW, 48f);
+                bottom = _victoryHomeTopDp + 48f;
+            }
+
             SlotReserveBelowHome(ref bottom); // la ranura del Dato del río bajo Inicio: Siguiente sube una vez y el panel crece
-            _victoryPanelDp = bottom + 18f;
+            _victoryPanelDp = bottom + VictoryFrameDp(compact);
 
             _victoryPanelY = _canvasH - _safeBottom - 8f - _victoryPanelDp;
             UiBuilder.Place(_victoryPanel, (w - panelW) / 2f, _victoryPanelY, panelW, _victoryPanelDp);
@@ -2760,12 +2794,13 @@ namespace AF.UI
         // de 256 × 42 dp de la cinta de 72; si ni a 22 cabe en una línea, en dos a 22 sp (nunca menos) con el interlineado
         // apretado, y la cinta crece a lo alto lo que haga falta, hasta RibbonTallDp. Devuelve el alto de la cinta. Mide al
         // colocar, nunca por fotograma.
-        private float LayoutRibbonTitle()
+        private float LayoutRibbonTitle(bool compact)
         {
             const float boxW = RibbonWidthDp - 88f;
             TextMeshProUGUI title = _ribbonTitle;
+            float min = RibbonTitleMinDp(compact);
             title.enableAutoSizing = true;
-            title.fontSizeMin = _ribbonTitleMinDp;
+            title.fontSizeMin = min;
             title.fontSizeMax = _ribbonTitleMaxDp;
             title.textWrappingMode = TextWrappingModes.NoWrap;
             title.lineSpacing = 0f;
@@ -2776,7 +2811,7 @@ namespace AF.UI
             }
 
             title.enableAutoSizing = false;
-            title.fontSize = _ribbonTitleMinDp;
+            title.fontSize = min;
             title.textWrappingMode = TextWrappingModes.Normal;
             title.lineSpacing = RibbonTitleLineSpacing;
             float need = Mathf.Ceil(title.GetPreferredValues(title.text, boxW, float.PositiveInfinity).y) + 1f;
