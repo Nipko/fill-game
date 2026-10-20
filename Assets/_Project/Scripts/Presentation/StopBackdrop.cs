@@ -158,9 +158,18 @@ namespace AF.Presentation
         /// (cielo, panorama y banda por encima del panel, sin HUD, follaje ni panel), ΔE00 medio ≥ 5 frente al fondo sin
         /// temporada y ≥ 8 frente a B en la misma parada, con 2 y 3 filas y en las paradas con luz propia (revisión de SE2;
         /// D-030, pregunta 13 b). Lo vigila <c>SeasonVisibilitySnapshotTests</c> (capturas con gráficos: si se retoca una LUT de
-        /// temporada, el tinte del cielo o el agua, hay que volver a pasarlo). Se multiplica con la de la parada.
+        /// temporada, el tinte del cielo o el agua, hay que volver a pasarlo). Se multiplica con la de la parada; en las paradas
+        /// con luz propia, la A es <see cref="TwilightHighWaterLut"/>.
         /// </summary>
         public static readonly Color HighWaterLut = new Color(0.76f, 1f, 0.9f, 1f);
+
+        /// <summary>
+        /// LUT de la temporada A en las paradas con luz propia (<c>dusk</c> y <c>dawn</c>; revisión de DC21, D-003) [P]: la misma
+        /// luz fresca de la crecida, pero hacia el azul y sin el verde de <see cref="HighWaterLut"/>, que sobre el melocotón del
+        /// atardecer daba un cielo oliva (se leía como un error de color). El azul entero y casi el mismo brillo (luminancia
+        /// 0,89 frente a 0,94); los tonos cálidos siguen ≥ S 0,30 (VA-03). Se multiplica con la de la parada.
+        /// </summary>
+        public static readonly Color TwilightHighWaterLut = new Color(0.8f, 0.9f, 1f, 1f);
 
         /// <summary>
         /// LUT de la temporada B, aguas bajas (07 §2.1; D-009, punto 6) [P]: luz dorada y seca de la vaciante; el canal rojo
@@ -290,7 +299,7 @@ namespace AF.Presentation
         /// <summary>
         /// Agua de la banda y de las piezas por código con la temporada (<see cref="SeasonWater"/>; el preset sin ella; DC21).
         /// </summary>
-        public Color SeasonWaterColor => SeasonWater(_waterColor, SeasonLutOf(_season));
+        public Color SeasonWaterColor => SeasonWater(_waterColor, SeasonLutOf(_stop, _season));
 
         /// <summary>
         /// Luz del fondo: la de la parada (<see cref="LutOf"/>: <see cref="DuskLut"/> en <c>dusk</c>, <see cref="DawnLut"/> en
@@ -415,6 +424,21 @@ namespace AF.Presentation
         }
 
         /// <summary>
+        /// LUT de la temporada <paramref name="season"/> en la parada <paramref name="stop"/>: la de <see cref="SeasonLutOf(Season)"/>,
+        /// salvo la A en las paradas con luz propia (<c>dusk</c> y <c>dawn</c>), que es <see cref="TwilightHighWaterLut"/>
+        /// (revisión de DC21). Es la que llevan el panorama, el cielo, el héroe y el agua de esa parada.
+        /// </summary>
+        public static Color SeasonLutOf(RiverStop? stop, Season season)
+        {
+            if (season == Season.HighWater && LutOf(stop) != Color.white)
+            {
+                return TwilightHighWaterLut;
+            }
+
+            return SeasonLutOf(season);
+        }
+
+        /// <summary>
         /// Agua <paramref name="water"/> con la LUT de temporada <paramref name="seasonLut"/> (DC21; D-030, pregunta 13 b): el agua
         /// por la LUT, pero solo hasta donde el agua y sus ondas (<see cref="RippleColor"/>) quedan a ≤
         /// <see cref="SeasonWaterMaxDeltaE"/> del preset (VA-23: ΔE00 ≤ 5); si la LUT entera se pasa, la mezcla más fuerte que
@@ -480,11 +504,11 @@ namespace AF.Presentation
 
         /// <summary>
         /// Luz del fondo de <paramref name="stop"/> en la temporada <paramref name="season"/>: la de la parada por la de la
-        /// temporada (<see cref="LutColor"/> tras <see cref="Apply"/>).
+        /// temporada en esa parada (<see cref="SeasonLutOf(RiverStop, Season)"/>; <see cref="LutColor"/> tras <see cref="Apply"/>).
         /// </summary>
         public static Color LutOf(RiverStop? stop, Season season)
         {
-            return LutOf(stop) * SeasonLutOf(season);
+            return LutOf(stop) * SeasonLutOf(stop, season);
         }
 
         /// <summary>
@@ -590,7 +614,7 @@ namespace AF.Presentation
                 _root.gameObject.SetActive(stop != null);
             }
 
-            Color seasonLut = SeasonLutOf(season);
+            Color seasonLut = SeasonLutOf(stop, season);
             _front.Compose(stop, SeasonWater(_waterColor, seasonLut), _lut, seasonLut, _heroSource, _shape, _heroSprite);
             if (_laidOut && stop != null)
             {
