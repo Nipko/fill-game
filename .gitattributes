@@ -33,6 +33,9 @@
 *.py            text eol=lf diff=python
 *.ps1           text eol=lf
 *.sh            text eol=lf
+# Parches de traspaso (docs/dev/traspaso): con CRLF, git apply no casa con los .cs en LF
+*.patch         text eol=lf
+*.diff          text eol=lf
 *.js            text eol=lf
 *.mjs           text eol=lf
 *.ts            text eol=lf
