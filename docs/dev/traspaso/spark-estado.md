@@ -6,6 +6,53 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-20 · S1 · Auditoría de la 1.0 y plan de la tanda 5 (`spark/auditoria-1-0`): HECHA · lista para integrar (solo documentación)
+
+- **Rama:** `spark/auditoria-1-0`, desde `origin/integracion-fase1-fase2` en `a759597`.
+- **Commits:**
+  - `ee5bf2e`: el plan;
+  - `81c4fd2` y `8c8354e`: la revisión.
+- **Archivo:** `docs/dev/plan-tanda5.md`.
+- **Qué contiene:**
+  - las piezas de la 1.0 en cuatro áreas (núcleo y partida; meta y liveops; economía y monetización; técnica y publicación), con su estado (hecha / a medias / sin empezar) y la evidencia en código y tests;
+  - lo que bloquean el dueño o terceros;
+  - la tanda 5 en 14 bloques de 1-3 días (B1a, B1b, B2-B14), con sus choques con el escritorio;
+  - las preguntas, cada una con su opción recomendada;
+  - una sección «Fuera de la tanda 5»;
+  - hallazgos para el GDD.
+- **Método:** cuatro auditorías de solo lectura sobre el código y los tests reales, y después la síntesis.
+- **Verificación:**
+  - `python tools/econ_sim.py --runs 300 | diff --strip-trailing-cr -q - tools/out/econ_B.md` → idéntico;
+  - `python tools/validate_schema.py` → 103/103;
+  - sin builds, por ser solo documentación.
+- **code-reviewer:**
+  - primera ronda CAMBIOS NECESARIOS:
+    - preguntas que reabrían D-020 y D-029 sin decirlo;
+    - B1 con preguntas abiertas;
+    - piezas sin bloque;
+    - citas erróneas;
+    - faltaba esta entrada;
+  - segunda ronda **APROBADO** (con esta entrada).
+- **Resumen de la auditoría:**
+  - El núcleo y el meta del Mapa están completos, igual que la lógica de cliente del embudo de D-008, con anuncios y compras simulados.
+  - Faltan, con el canon cerrado:
+    - Crecida + Hoja escudo, Canasta, Bitácora, Pororoca, Salto del Boto;
+    - notificaciones (la lógica) y regalo de regreso;
+    - Mercado y ofertas;
+    - `AF.RemoteConfig` y `AF.Analytics`;
+    - nube y fusión, consentimiento y edad;
+    - accesibilidad (TalkBack, escala de fuente, Reducir movimiento, Alto contraste);
+    - compuertas de release.
+  - Todo lo «online» real está bloqueado por el dueño: SDK, `INTERNET`, cuentas, Addressables y PAD, secretos, keystore y marca.
+- **S2 elegido: B1a** (reglas de la Crecida + Hoja escudo + Canasta: perfil, RC, sonda y tests, en archivos nuevos). Cumple los tres criterios del encargo §11:
+  - (a) no depende de nada bloqueado;
+  - (b) sus preguntas (Q-M9, esquema del perfil; Q-M10, módulo) tienen opción recomendada;
+  - (c) no toca los archivos que el escritorio está cambiando ahora. Sus ganchos van a `FailResolve`, `LevelFlow.Victory`, `Profile` y `SlothContext`, como parches probados, porque son archivos de §3.2.
+- **Pendiente del dueño:**
+  - **antes de cerrar B1a:** Q-M9 y Q-M10. Si no llegan, B1a avanza con las recomendadas, marcadas [P];
+  - **antes de B1b y B4:** Q-M2 (diseño del panel único de premios, D-029 #18);
+  - **el resto de las preguntas:** en `docs/dev/plan-tanda5.md` §5.
+
 ## 2026-10-20 · T2 · Traducción con IA a inglés y portugués (`spark/traduccion-ia`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/traduccion-ia`, desde `origin/integracion-fase1-fase2` (`e7475d2`).
