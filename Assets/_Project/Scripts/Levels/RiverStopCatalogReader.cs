@@ -29,7 +29,8 @@ namespace AF.Levels
     /// </list>
     /// Cada error es una <see cref="LevelFormatException"/> con la ruta del valor (por ejemplo, <c>stops[3].bg.kit</c>). Que las
     /// claves de texto existan en <c>facts.csv</c> y midan lo que deben no lo comprueba el lector, sino un test contra la tabla de
-    /// textos. Los campos opcionales <c>at</c> y <c>leg</c> (desde M2.6) no se leen todavía.
+    /// textos. De los campos opcionales <c>at</c> y <c>leg</c> (desde M2.6) solo se lee <c>at.line</c> (<see cref="RiverStop.AtLine"/>,
+    /// FX13); el resto, <see cref="RiverMapReader.ReadRoutes"/>.
     /// </summary>
     public static class RiverStopCatalogReader
     {
@@ -322,8 +323,13 @@ namespace AF.Levels
             }
 
             RiverStopBackdrop backdrop = ReadBackdrop(node, at, world);
+
+            // De at solo la línea (FX13: ¿la última parada está en el cauce?); su s y el leg los lee RiverMapReader.ReadRoutes.
+            JsonValue? atNode = node.Get("at");
+            JsonValue? atLine = atNode != null && atNode.Kind == JsonKind.Object ? atNode.Get("line") : null;
+            string? line = atLine != null && atLine.Kind == JsonKind.String ? atLine.AsString() : null;
             return new RiverStop(n, world, id, kind, country, countryName, kmFromSea, kmHome.Value, sample, flag, arrival, facts, question,
-                answers.AsBool(), backdrop);
+                answers.AsBool(), backdrop, line);
         }
 
         private static string[] ReadFacts(JsonValue node, string at)

@@ -539,6 +539,12 @@ namespace AF.Levels
         /// <summary>Formato que lee este cliente.</summary>
         public const string Format = "af-river-map/1";
 
+        /// <summary>
+        /// Id de la línea del cauce (id <c>amazonas</c>, <see cref="RiverLineKind.Main"/>): va de la naciente del Mismi (s = 0;
+        /// quebrada Carhuasanta en <c>rio-amazonas.json</c>) al Atlántico. La meta del último tramo es su primer punto (tarea FX13).
+        /// </summary>
+        public const string CauceLineId = "amazonas";
+
         private readonly RiverLine[] _lines;
         private readonly RiverInset[] _insets;
         private readonly RiverMapLabel[] _labels;
@@ -687,24 +693,65 @@ namespace AF.Levels
         public IReadOnlyList<int> Mouths => _mouths;
     }
 
-    /// <summary>Rutas de todas las paradas, en orden de n (las lee <see cref="RiverMapReader.ReadRoutes"/>). Inmutable.</summary>
+    /// <summary>
+    /// Rutas de todas las paradas, en orden de n (las lee <see cref="RiverMapReader.ReadRoutes"/>), y, tras la última, la
+    /// <see cref="Goal"/>: el tramo hacia la naciente del Mismi (tarea FX13; decisión del dueño del 2026-10-19 en D-013). Inmutable.
+    /// </summary>
     public sealed class RiverRoutes
     {
-        private readonly RiverStopRoute[] _routes;
+        /// <summary>Id de la ruta de la meta (<see cref="Goal"/>): la naciente, que no es una parada del catálogo.</summary>
+        public const string SourceGoalId = "naciente";
 
-        /// <summary>Crea la tabla.</summary>
+        private readonly RiverStopRoute[] _routes;
+        private readonly RiverStopRoute? _goal;
+
+        /// <summary>Crea la tabla, sin meta.</summary>
         public RiverRoutes(RiverStopRoute[] routes)
+            : this(routes, null)
         {
-            _routes = routes;
         }
 
-        /// <summary>Paradas con ruta.</summary>
+        /// <summary>Crea la tabla con la meta <paramref name="goal"/> tras la última parada (su n es el número de paradas).</summary>
+        public RiverRoutes(RiverStopRoute[] routes, RiverStopRoute? goal)
+        {
+            if (goal != null && goal.N != routes.Length)
+            {
+                throw new ArgumentException("La meta va justo tras la última parada (n = " + routes.Length + ").", nameof(goal));
+            }
+
+            _routes = routes;
+            _goal = goal;
+        }
+
+        /// <summary>Paradas con ruta (sin la meta).</summary>
         public int Count => _routes.Length;
 
-        /// <summary>Ruta de la parada k = <paramref name="n"/>, o null. Sin asignaciones.</summary>
+        /// <summary>
+        /// Tramos del viaje: <see cref="Count"/> más la meta si la hay. El tramo n es el que se recorre jugando los niveles
+        /// 10(n − 1) + 1 … 10n.
+        /// </summary>
+        public int LegCount => _goal != null ? _routes.Length + 1 : _routes.Length;
+
+        /// <summary>
+        /// La meta del último tramo (tarea FX13; D-013, viñeta del 2026-10-19): con la última parada en el cauce, el tramo que se
+        /// juega tras ella va de esa parada a la naciente del Mismi, el primer punto del cauce (s = 0). Con las paradas 0-69
+        /// (niveles 1-700), de Tambo a la naciente en 691-700. No es una parada: ni tarjeta, ni mini cuia, ni llegada. Null si no
+        /// la hay.
+        /// </summary>
+        public RiverStopRoute? Goal => _goal;
+
+        /// <summary>
+        /// Ruta del tramo <paramref name="n"/>: la de la parada k = n, la <see cref="Goal"/> en n = <see cref="Count"/>, o null.
+        /// Sin asignaciones.
+        /// </summary>
         public RiverStopRoute? At(int n)
         {
-            return n >= 0 && n < _routes.Length ? _routes[n] : null;
+            if (n >= 0 && n < _routes.Length)
+            {
+                return _routes[n];
+            }
+
+            return n == _routes.Length ? _goal : null;
         }
     }
 }

@@ -139,6 +139,15 @@ namespace AF.UI
             return _modesReplayFrom >= 0 ? Math.Min(seen, _modesReplayFrom) : seen;
         }
 
+        // El primer fotograma del viaje del fin de contenido (revisión de FX13): arranca en la llegada del principio del último
+        // tramo (690 con el 700) y enseña ya ese tramo, vacío, con sus 10 boyas en su sitio (FrontAheadStop), y no el de la
+        // llegada entero (el de Tambo, sin largo en Mundo, salía en la fila corta bajo la parada y saltaba al tramo de la naciente
+        // en el fotograma siguiente). Solo mientras dura el viaje y en su nivel de partida.
+        private bool FrontAheadNow(int level)
+        {
+            return _modesReplayFrom >= 0 && _catchUp && level == _catchFrom && level == _modesReplayFrom;
+        }
+
         // En el viaje del fin de contenido, la llegada ya vista al final del tramo vuelve a llenar su mini cuia (sin stop_arrive).
         private bool ModesReplaysArrival(int level)
         {
