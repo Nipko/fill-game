@@ -47,11 +47,6 @@ namespace AF.Tests.PlayMode
                 TestContext.WriteLine("AF_L4 aviso de contenido: " + note);
             }
 
-            foreach (string known in inventory.KnownIssues)
-            {
-                TestContext.WriteLine("AF_L4 pendiente del dueño: " + known);
-            }
-
             Assert.That(inventory.Scanned, Is.GreaterThan(80), "textos visibles mirados");
             Assert.That(inventory.Lines, Is.Empty, "textos que se salen o bajan de 12 sp en en-XA al " + percent + " %:\n" + string.Join("\n", inventory.Lines));
         }
@@ -486,18 +481,27 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// La insignia del nivel en en-XA (revisión de L4; pendiente del dueño): «[Ñívél 100 ··]» no cabe en la placa a 20 sp, el
-        /// mínimo de la guía 3.5 (D-003), y la placa no puede crecer (la columna del saldo va pegada). Se deja escrito (explícito:
-        /// hoy falla) para cuando el dueño decida entre rediseñar la placa o bajar el mínimo de la guía en otros idiomas.
+        /// La insignia del nivel en cada idioma (D-030, pregunta 8 b; antes LevelBadge_EnXA_KnownIssue, explícito): la placa no
+        /// crece, así que fuera del español el texto baja de 20 sp lo justo para caber, nunca por debajo de 12 sp (× escala; 02
+        /// §12) ni recortado; en español al 100 % sigue a 20 sp o más (guía 3.5: sin cambio). Al 130 %, «Nivel 100» ya no cabía
+        /// a 26 dp ni en español (su tinta se salía 2-4 dp de la caja de 106): ahora baja lo justo, como en los otros idiomas.
+        /// Con el 100 (4 ranuras en la bandeja) y el 700, el número más largo del juego.
         /// </summary>
         [UnityTest]
-        [Explicit("Pendiente del dueño (revisión de L4): la insignia del nivel en otros idiomas necesita rediseño; hoy falla.")]
-        public IEnumerator LevelBadge_EnXA_KnownIssue([Values(100, 130)] int percent)
+        public IEnumerator LevelBadge_FitsAt12OrMore([Values(LocLocale.SpanishLatinAmerica, LocLocale.English, LocLocale.PortugueseBrazil, LocLocale.Pseudo)] string locale,
+            [Values(100, 130)] int percent, [Values(100, 700)] int level)
         {
             float scale = percent / 100f;
-            yield return LongLabelSetup.LoadLevel100(LocLocale.Pseudo, scale, HudLabelTests.Screen640);
+            yield return LongLabelSetup.LoadLevel(level, locale, scale, HudLabelTests.Screen640);
             TextMeshProUGUI title = GameBootstrap.Current!.View!.LevelTitle;
-            Assert.That(title.fontSize, Is.GreaterThanOrEqualTo((LocInventory.BadgeMinSp * scale) - 0.01f), "la insignia a 20 sp (× escala) o más");
+            TestContext.WriteLine("AF_DC19 " + locale + " al " + percent + " %: «" + title.text + "» a " + (title.fontSize / scale).ToString("0.##", CultureInfo.InvariantCulture) + " sp");
+            Assert.That(title.text, Does.Contain(level.ToString(CultureInfo.InvariantCulture)), "la insignia del " + level);
+            Assert.That(title.fontSize, Is.GreaterThanOrEqualTo((LocInventory.BadgeMinSp * scale) - 0.01f), "la insignia a 12 sp (× escala) o más");
+            if (locale == LocLocale.SpanishLatinAmerica && percent == 100)
+            {
+                Assert.That(title.fontSize, Is.GreaterThanOrEqualTo(GameScreen.BadgeMinSp - 0.01f), "en español al 100 %, a 20 sp o más");
+            }
+
             Assert.That(new LocInventory(Loc.Locale, scale).ProblemsOf(title), Is.Empty, "«" + title.text + "» cabe en la placa");
         }
 
