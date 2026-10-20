@@ -908,7 +908,7 @@ Las R-Q1 a R-Q10 de la sección 5 del encargo, decididas por el dueño el 2026-1
 ### E16 · `level-qa.csproj` enlaza `tools/level-generator/Daily/` (APLICADO en `spark/reto-cierre`, `c7ec205`; el texto de abajo es el plan original)
 
 - **Archivos:** `tools/level-qa/level-qa.csproj`; `tools/level-qa/Daily/DailyQaCommand.cs` y `DailyChecks.cs` (comentarios); borrar `tools/level-qa/Daily/Shared/DailySpec.cs` y `DailyIds.cs`.
-- **Parche completo** (probado): `C:\Users\nir_l\AppData\Local\Temp\claude\C--Users-nir-l-projects-fill-game\f846b4a6-1ce3-41af-a4ae-c95773cc7080\scratchpad\E16-short.diff` (carpeta temporal de la sesión: si se pierde, lo esencial es esto). Lo esencial:
+- **Parche completo:** `docs/dev/traspaso/spark-enganches/E16.diff` (idéntico a `c7ec205`, aplicado en `spark/reto-cierre`). Lo de abajo es el plan original:
   ```diff
   --- a/tools/level-qa/level-qa.csproj
   +++ b/tools/level-qa/level-qa.csproj
@@ -944,8 +944,8 @@ Las R-Q1 a R-Q10 de la sección 5 del encargo, decididas por el dueño el 2026-1
 
 ### E17 · `level-qa`: documentar `daily` (APLICADO: `752bb55` y `e5061f2`: README con `--daily` y `daily` en el `--self-test` sin nombre)
 
-- **Archivos:** `tools/level-qa/Program.cs` (hecho) y `tools/level-qa/README.md` (pendiente).
-- **Hecho:** en `Usage`, `--daily <daily_pool_v1.json> [--spec <daily_v1.json>] [--partial] [--no-reproduce]` y `--self-test [key2|reglas|variante|daily]`; el mensaje de error con «key2, reglas, variante o daily». El `--self-test` sin nombre de level-qa solo ejecuta `key2`, así que no se le suma `daily`.
+- **Archivos:** `tools/level-qa/Program.cs` y `tools/level-qa/README.md` (los dos hechos; el README y el `--self-test` sin nombre con `daily`, en `e5061f2`).
+- **Hecho:** en `Usage`, `--daily <daily_pool_v1.json> [--spec <daily_v1.json>] [--partial] [--no-reproduce]` y `--self-test [key2|reglas|variante|daily]`; el mensaje de error con «key2, reglas, variante o daily». Desde `e5061f2`, el `--self-test` sin nombre de level-qa ejecuta `key2` y `daily` y sale con el código mayor.
 - **Pendiente:** `--daily` en `tools/level-qa/README.md`. Va con E16: el texto tiene que describir QA-DAILY-REPRO tal como quede (en memoria con E16; hoy, proceso hijo).
 - **Prueba:** `dotnet run --project tools/level-qa -- --self-test bogus` → el mensaje de uso nombra «daily» (comprobado).
 
