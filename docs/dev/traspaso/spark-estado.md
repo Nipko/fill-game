@@ -6,6 +6,64 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-19 · R11 · Capturas y prueba de punta a punta: en revisión (2.ª ronda)
+
+- **Commit:** `41d5beb` en `spark/reto-del-rio-r11` (sale de la integración `8327d23`), más el arreglo del sello en curso.
+- **Archivos:**
+  - nuevo `Assets/_Project/Tests/PlayMode/DailyChallengeSnapshotTests.cs`: `[Explicit]`, `SnapshotKit`, 360 × 780 dp y 16:9, es-419 y en-XA;
+  - arreglos en `DailyChallengeCard.cs` (título de 192 dp y estado en dos líneas) y `DailyStampCalendar.cs` (el sello que cae, por encima de las casillas vecinas; la caja del +60, de 42 dp).
+- **Cómo se lanzan:** sin `-nographics` (`unity-test.ps1` lo fuerza):
+  ```
+  unity test . --mode PlayMode --architecture arm64 --filter AF.Tests.PlayMode.DailyChallengeSnapshotTests --output Logs/r11-snap.xml --non-interactive -- -logFile Logs/r11-snap.log
+  ```
+  - Los PNG van a `Logs/snapshots/es-419/` y `Logs/snapshots/en-XA/` (ignorado por git).
+  - Cada captura deja en el log una línea `AF_FIT` por texto visible. Hoy dicen «0 textos fuera de su caja» en es-419, es-419 16:9, en-XA y en-XA 16:9.
+  - Los textos salen de `strings.csv` + `facts.csv` + `docs/dev/traspaso/spark-strings-reto.csv`, como hará E5.
+- **Verificación:** capturas 4/4; EditMode 3.057 (3.053 + 3, 1 fallo del test inestable `IntroArtTests`); PlayMode **1.373** (1.206 + 167 omitidos: los 4 `[Explicit]` nuevos), 0 fallos.
+
+### Capturas y qué revisar (40 PNG: 10 × 2 formatos × 2 idiomas; los de 16:9 llevan `_16x9`)
+
+| Archivo | Qué muestra | Qué revisar |
+|---|---|---|
+| `r11_01_card_play` | Inicio con la tarjeta «Reto del río · 19 oct», Jugar, 1 ola, 0/7 | La fecha corta por región; que el título no toque el sello. **En 16:9 la tarjeta queda pegada al bocadillo de TiTino (0-3 px): requisito de E1** |
+| `r11_02_header` | Partida del Reto | Cabecera «Reto del río», sin «Nivel N» ni barra de Crecida. Ajeno: en en-XA, «Reiniciar» se sale del botón (`GameScreen`) |
+| `r11_03_card_continue` | Tarjeta «Seguir» tras salir sin ganar | R-Q16 (a) |
+| `r11_04_calendar_falling` | Octubre con sellos previos y el del 19 a media caída | Que el sello caiga **centrado en su casilla** (bloqueante de la revisión, en arreglo); el contador del HUD ya marca 60 antes del «+60» |
+| `r11_05_calendar_reward` | El sello posado y «+60» con la semilla | El «+60» queda algo a la izquierda del centro [P] |
+| `r11_06_card_sealed` | Tarjeta «Sellado», 1/7 | El sello verde de los CTA con el aro crema (sin rojo; guía v2 §7) |
+| `r11_07_calendar_month` | Calendario abierto desde la tarjeta sellada | Sin premio ni sello que cae; el hueco del «+60» queda reservado |
+| `r11_08_calendar_pending` | Victoria con el servidor +48 h | «Premio pendiente de validar», sin +60, sello translúcido |
+| `r11_09_card_pending` | Tarjeta «Pendiente de validar» | En en-XA, en dos líneas sin pisar la racha; ¿se lee bien el sello pendiente (disco claro)? |
+| `r11_10_calendar_pororoca_locked` | Racha de 7 (del 12 al 19), +60 y «+1 Pororoca · se desbloquea en el nivel 30» | R-Q14 (a); en 16:9 el panel tapa la parte de arriba de la bandeja de comodines con el velo |
+
+- **Además:** no hay cabecera de días de la semana en el calendario ([P] de R9); en el inicio de estas capturas no sale la pastilla de Canoas, por el perfil de prueba (`Wallet.NewProfile`), no por el Reto.
+- **E1 (requisito nuevo):** en 16:9, dejar al menos 8 dp bajo el bocadillo de TiTino, o subir o compactar la tarjeta. Se comprueba con `r11_01_card_play_16x9`.
+
+## 2026-10-19 · R10 · Sondas de desarrollo y analítica: HECHA
+
+- **Commits:** `a99fe5d`, `b1c0a9b` (fusión de R9), `83e43dc` (los `.meta` que generó Unity) y `4025c1a` (arreglos de la revisión), en `spark/reto-del-rio-r10`; fusionados con `--no-ff` en `spark/reto-del-rio` (`8ab5346`).
+- **Archivos:**
+  - nuevo `Scripts/UI/DevProbe.Daily.cs`, un parcial de `DevProbe` que escribe por `DevProbe.Write` solo con `DevProbe.Enabled`;
+  - cambios en `GameBootstrap.Daily.cs`, `DailyChallengeScreen.cs` y `DailyChallengeCard.cs` (archivos del Spark);
+  - nuevo `Tests/PlayMode/DailyProbeTests.cs` (10 tests).
+- **Sondas:**
+  - `daily_challenge`: `win` al reclamar (nunca con `NoReward`); `fail` desde `DayEnded`, una vez por día;
+  - `level_start`: al terminar Llenar y teñir, o al reanudar sin intro; una vez por partida ([P]: Volver a la orilla no lo repite);
+  - `earn_virtual_currency`: al cobrar, y al abrir la app si se confirman cobros pendientes;
+  - `daily_card`: en cada recálculo de la tarjeta.
+  - `t_ms` es lo jugado desde que se abrió, y null si se reanudó [P]. La Pororoca no tiene evento (08 §8.2 no lo define).
+- **Verificación** (worktree `spark-r10`): compila; EditMode 3.040 (3.036 + 3, 1 fallo del test inestable); **PlayMode 1.354 (1.195 + 159), 0 fallos**; el revisor, `DailyProbeTests` 10/10.
+- **code-reviewer:** primera ronda CAMBIOS NECESARIOS (`level_start` salía antes de la intro, contra 08 §8.2, y faltaban tests); segunda ronda **APROBADO**.
+- **E10:** no hace falta (todo sale de archivos del Spark). Queda E24 (`DevProbe.cs`, `AppendDailyBoard`).
+- **Texto propuesto para `docs/dev/prototipo-v0.md` (E12):**
+  > **Sondas del Reto del río** (R10; `DevProbe.Daily.cs`, formato en `AF.LiveOps/DailyProbeFormat.cs`). Solo en builds de desarrollo, como `AF_STATE` de una línea, con claves e identificadores:
+  > - `{"event":"daily_card","t":…,"state":"hidden|in_progress|pending_validation|sealed|play","date":"AAAA-MM-DD","band":0-3,"day":…,"board":"d{b}_n{nnnn}"|null,"streak":n,"override":id|null,"override_ignored":bool}`: cada vez que se recalcula la tarjeta del inicio. Con la tarjeta oculta, `band` 0 y `board` null.
+  > - `{"event":"level_start","t":…,"level_name":"d{b}_n{nnnn}","variant":"base","band":b}`: al terminar Llenar y teñir, o al reanudar sin intro; una vez por partida. Las líneas de partida (`load`, `ready`, `pour`…) llevan en `level` el nivel efectivo del Reto; con E24, además, `"daily":"d{b}_n{nnnn}"`.
+  > - `{"event":"daily_challenge","t":…,"date":…,"result":"win|fail","t_ms":n|null,"murky_bonus":false,"streak_days":n}`: `win` al reclamar el premio; `fail` una vez por día, al descartar la partida de un día no ganado (R-Q15).
+  > - `{"event":"earn_virtual_currency","t":…,"virtual_currency_name":"seeds","source":"daily_challenge","value":n}`: las semillas del premio, pagadas ahora.
+  >
+  > Para seguirlo: `adb logcat -s Unity | grep -E '"event":"(daily_card|level_start|daily_challenge|earn_virtual_currency)"'`.
+
 ## 2026-10-19 · R5, decisiones (R-Q12b, R-Q15, R-Q16), formato de sondas y R9 fusionados: verificación completa VERDE
 
 - **Qué entra** en `spark/reto-del-rio`, por avance rápido desde `spark/reto-del-rio-int`:
