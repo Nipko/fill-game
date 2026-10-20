@@ -143,8 +143,8 @@ namespace AF.GameFlow
         /// prioridad tutorial &gt; Fruta nueva &gt; miquito &gt; rótulo (D-023, punto 39; 02 §4.2; 07 §6.4; guion de la intro
         /// §14), así que en el 2 sale solo la instrucción y el taperebá se queda sin tarjeta, como el açaí y el aguaje en el 1. La
         /// fila del 2 de 06 §2.2 («Tarjeta "Fruta nueva: Taperebá"») y la lista de 06 §4.5 (que empieza en el 1) chocan con esa
-        /// regla: contradicción registrada para el dueño en la entrega de TU1a, pendiente de que el carril de documentación alinee
-        /// 06. Sin asignaciones.
+        /// regla: la contradicción, registrada en la entrega de TU1a, la decidió el dueño con (a), sin «Fruta nueva» en el 1 ni en el 2
+        /// (pregunta 55, D-029), y el carril de documentación alinea 06. Sin asignaciones.
         /// </summary>
         public static int FruitNewAt(int level, bool firstAttempt)
         {
