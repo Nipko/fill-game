@@ -18,15 +18,17 @@ namespace AF.UI
     /// <item><b>Pose por la hora local</b> (<see cref="BasePoseFor"/>, del <see cref="IClock"/> del juego): de día,
     /// <c>sloth_idle</c> o, en las horas de sol, <c>sloth_sunbathe</c>; de noche, <c>sloth_sleep</c>. Se mira cada
     /// <see cref="PoseCheckMs"/> ms: si la hora cambia con el inicio abierto, cambia la pose.</item>
-    /// <item><b>Saludos</b> (<see cref="SlothLines.ForHome"/>): al volver tras ≥ 3 días, el de regreso; en la primera apertura del
-    /// día entre las 06:00 y las 12:00, el de la mañana; como mucho uno al día entre los dos (<c>sloth.last_greeting_date</c>),
-    /// con <c>sloth_wave</c> y, si hay voz, su frase en el bocadillo. Se decide una vez por visita al inicio, cuando la ventanita
-    /// se ve con el inicio delante (<see cref="AppScreen.Lobby"/>; con «El río sigue creciendo» abierto, espera a que se cierre
-    /// para no gastar el saludo del día detrás del modal); en cada visita se apunta <c>sloth.last_seen_date</c> y se guarda el
-    /// perfil si algo cambió. Justo después del bocadillo del Mapa del 10 (D-028, pregunta 60 b), el saludo que tocaba no sale
-    /// ni se gasta y esa visita no apunta nada: queda para la visita siguiente al inicio. Durante <c>sloth_wave</c>, el rig baja hasta <see cref="WaveDropDp"/> dp para que el marco no
-    /// corte la garra que saluda. Colgado, se agarra a la rama pintada de la embaúba de la ventanita y la rama del rig no se
-    /// pinta (si no, se verían dos ramas y una bajaría con él); tumbado o en ovillo, sobre la rama del rig, más abajo.</item>
+    /// <item><b>Saludos</b> (<see cref="SlothLines.ForHome"/>): al volver tras ≥ 3 días, el de regreso; en la primera
+    /// apertura dentro de la franja de 06:00 a 12:00 (D-030, pregunta 17 b: abrir a las 05:30 no lo gasta), el de la
+    /// mañana; como mucho uno al día entre los dos (<c>sloth.last_greeting_date</c>), con <c>sloth_wave</c> y, si hay voz,
+    /// su frase en el bocadillo. Se decide una vez por visita al inicio, cuando la ventanita se ve con el inicio delante
+    /// (<see cref="AppScreen.Lobby"/>; con «El río sigue creciendo» abierto, espera a que se cierre para no gastar el
+    /// saludo del día detrás del modal); en cada visita se apunta <c>sloth.last_seen_date</c> y se guarda el perfil si algo
+    /// cambió. Justo después del bocadillo del Mapa del 10 (D-028, pregunta 60 b), el saludo que tocaba no sale ni se gasta
+    /// y esa visita no apunta nada: queda para la visita siguiente al inicio. Durante <c>sloth_wave</c>, el rig baja hasta
+    /// <see cref="WaveDropDp"/> dp para que el marco no corte la garra que saluda. Colgado, se agarra a la rama pintada de
+    /// la embaúba de la ventanita y la rama del rig no se pinta (si no, se verían dos ramas y una bajaría con él); tumbado
+    /// o en ovillo, sobre la rama del rig, más abajo.</item>
     /// <item><b>Toque</b> (<see cref="Tap"/>): <c>sloth_look</c> y, como mucho una vez por sesión, un «Dato del perezoso»
     /// (<see cref="UiText.SlothFact"/>: en release, solo los aprobados por el asesor). Tocarlo no lo cuida ni da premios (d.7).
     /// El dato sale en su <b>tarjeta</b>, nunca en el bocadillo (D-013, punto 6: «su bocadillo (≤ 50 caracteres) queda para sus

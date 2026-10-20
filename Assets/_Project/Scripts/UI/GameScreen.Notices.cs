@@ -65,9 +65,10 @@ namespace AF.UI
     /// <para><b>El rótulo del lugar</b> (<see cref="StopLabel"/>; D-013, punto 8; propuesta del Mapa §10.5, punto 5): entra en la
     /// cola al habilitarse el toque (<c>OnIntroFinished</c>) en los niveles de <see cref="StopLabelRule"/> (31, 51, 71, 91, 101,
     /// 121, 131, 151, 161, 171, 181 y 191 en 1-200), solo en el primer intento y nunca al reanudar; como la tarjeta del miquito,
-    /// sale cuando la tropa se ha ido de la rama, y mientras se ve aparta las etiquetas del HUD. Con 1-2 filas va sobre el
-    /// horizonte; con 3, como placa bajo el HUD. Lo ocultan y lo descartan lo mismo que al aviso: un modal del embudo, otro
-    /// intento, otro nivel y la celebración. Sonda <c>AF_STATE stop_label</c>.</para>
+    /// sale cuando la tropa se ha ido de la rama, y mientras se ve aparta las etiquetas del HUD. Va siempre como placa, con
+    /// cualquier número de filas (D-030, pregunta 9 (b); tarea DC24: con 1-2 filas, sobre el horizonte tapaba el héroe del sitio).
+    /// Lo ocultan y lo descartan lo mismo que al aviso: un modal del embudo, otro intento, otro nivel y la celebración. Sonda
+    /// <c>AF_STATE stop_label</c>.</para>
     /// <para><b>La placa y la fila 1</b> (observación 3 de la prueba de la ola 2 en el teléfono; tarea FX4) [P]: con la placa a
     /// la vista, nada de la fila 1 queda bajo ella, ni elevado. Al enseñarla se mide lo más alto de cada cuia de la fila 1 en
     /// reposo, con su corcho y lo que su mecánica asoma sobre la boca, y lo que ocupa a lo ancho (los gráficos visibles de su
@@ -90,7 +91,8 @@ namespace AF.UI
     /// <see cref="StopLabel.LiftReachDp"/>), la placa se oculta en el acto y se descarta, como el aviso ante un modal
     /// (<c>reason</c> = <c>lift</c>; también si ya estaba elevada al llegarle el turno). Sobre el muelle, si después sale debajo
     /// una burbuja «Te faltan {n}», se oculta igual (<c>reason</c> = <c>bubble</c>); y con el rótulo a la vista, si cambia el
-    /// tablero y ya no cabe, <c>no_room</c>, o si cambia el número de filas, <c>board</c>.</para>
+    /// tablero (también el número de filas, al cambiar la pantalla) se vuelve a colocar con las mismas reglas y, si ya no cabe,
+    /// <c>no_room</c>.</para>
     /// <para>Fuera de la cola, con su propia duración: el cartel (<c>_banner</c>) con «El río bajó» (04 §2.7) y el rótulo del
     /// intento. La cola se vacía al cargar un nivel, al empezar otro intento (<c>OnRestart</c>) y al empezar la celebración
     /// (<c>OnCelebrationStarted</c>); al volver de segundo plano (<c>SnapToModel</c>) no se toca: un aviso no es una animación
@@ -211,9 +213,8 @@ namespace AF.UI
         private int _stopLabelLevel; // nivel cuyo rótulo ya entró en la cola en esta visita (0: ninguno)
         private BoardLayoutResult? _stopLabelLayout; // tablero y lienzo con los que se colocó el rótulo a la vista
         private float _stopLabelCanvasW;
-        private float _stopLabelHorizon;
         private float _stopLabelShift;
-        private StopLabelSpot _stopLabelSpot; // dónde va la placa (3 filas)
+        private StopLabelSpot _stopLabelSpot; // dónde va la placa
         private readonly float[] _stopLabelRestTop = new float[BoardState.MaxCuias]; // lo más alto de cada cuia de la fila 1
         private readonly float[] _stopLabelRestLeft = new float[BoardState.MaxCuias]; // y lo que ocupa a lo ancho (dp)
         private readonly float[] _stopLabelRestRight = new float[BoardState.MaxCuias];
@@ -1306,7 +1307,7 @@ namespace AF.UI
         internal static bool? StopLabelsOverride { get; set; }
 
         /// <summary>
-        /// Dónde puede ir la placa del rótulo (3 filas), por orden: clavada al marco, de lado y sobre el muelle (tarea FX4).
+        /// Dónde puede ir la placa del rótulo, por orden: clavada al marco, de lado y sobre el muelle (tarea FX4).
         /// </summary>
         [Flags]
         internal enum StopLabelSpot
@@ -1389,7 +1390,7 @@ namespace AF.UI
             }
         }
 
-        // El rótulo, por ReadMs de su texto (D-011): con 1 o 2 filas, sobre el horizonte; con 3, como placa bajo el HUD.
+        // El rótulo, por ReadMs de su texto (D-011), como placa con cualquier número de filas (DC24).
         private void ShowStopLabelNow(string text, RiverStop stop)
         {
             BoardLayoutResult? l = _layout;
@@ -1400,18 +1401,11 @@ namespace AF.UI
 
             int ms = NoticeTiming.ReadMs(text);
             _stopLabelSpot = StopLabelSpot.None;
-            if (l.Rows >= 3)
+            _stopLabel.BeginPlate(text, ms);
+            if (!PlaceStopLabelPlate(l))
             {
-                _stopLabel.BeginPlate(text, ms);
-                if (!PlaceStopLabelPlate(l))
-                {
-                    HideStopLabelFor("no_room"); // ni bajo el HUD (centrada o de lado) ni sobre el muelle: no sale y pasa el siguiente
-                    return;
-                }
-            }
-            else
-            {
-                _stopLabel.ShowOnHorizon(text, ms, _canvasW, _horizonY, BoardTop + StopLabel.HudGapDp, StopLabelHorizonLimit(l));
+                HideStopLabelFor("no_room"); // ni clavada al marco (centrada o de lado) ni sobre el muelle: no sale y pasa el siguiente
+                return;
             }
 
             RememberStopLabelPlace(l);
@@ -1422,7 +1416,7 @@ namespace AF.UI
             }
         }
 
-        // La placa (3 filas), en el primer sitio donde cabe: clavada al marco y centrada, por encima de lo más alto de la fila 1
+        // La placa, en el primer sitio donde cabe: clavada al marco y centrada, por encima de lo más alto de la fila 1
         // en reposo; a esa altura, de lado; o sobre el muelle. Devuelve false si no cabe en ninguno.
         private bool PlaceStopLabelPlate(BoardLayoutResult l)
         {
@@ -1546,7 +1540,7 @@ namespace AF.UI
             return true;
         }
 
-        // Lo más alto de la placa (3 filas): clavada al marco, PlateOverFrameDp sobre el canto interior de su barra de arriba (tal
+        // Lo más alto de la placa: clavada al marco, PlateOverFrameDp sobre el canto interior de su barra de arriba (tal
         // como se dibuja, con el desplazamiento del tablero), sin subir del pie de la fila del HUD.
         private float StopLabelPlateTop(BoardLayoutResult l)
         {
@@ -1780,7 +1774,7 @@ namespace AF.UI
         /// </summary>
         internal bool StopLabelRowOneLifted()
         {
-            if (!_stopLabel.Visible || !_stopLabel.OnPlate || _stopLabelSpot == StopLabelSpot.Dock)
+            if (!_stopLabel.Visible || _stopLabelSpot == StopLabelSpot.Dock)
             {
                 return false;
             }
@@ -1806,14 +1800,13 @@ namespace AF.UI
         internal float TrayTopDp => TrayTop;
 
         /// <summary>La placa del rótulo va sobre el muelle (tests).</summary>
-        internal bool StopLabelOnDock => _stopLabel.Visible && _stopLabel.OnPlate && _stopLabelSpot == StopLabelSpot.Dock;
+        internal bool StopLabelOnDock => _stopLabel.Visible && _stopLabelSpot == StopLabelSpot.Dock;
 
         /// <summary>
-        /// Sitio del rótulo, como lo cuenta la sonda <c>stop_label</c>: <c>horizon</c>, <c>plate</c> (clavada al marco y
-        /// centrada), <c>plate_side</c> (clavada al marco, de lado) o <c>dock</c> (sobre el muelle; tests).
+        /// Sitio del rótulo, como lo cuenta la sonda <c>stop_label</c>: <c>plate</c> (clavada al marco y centrada),
+        /// <c>plate_side</c> (clavada al marco, de lado) o <c>dock</c> (sobre el muelle; tests).
         /// </summary>
-        internal string StopLabelMode => !_stopLabel.OnPlate ? "horizon"
-            : _stopLabelSpot == StopLabelSpot.Side ? "plate_side" : _stopLabelSpot == StopLabelSpot.Dock ? "dock" : "plate";
+        internal string StopLabelMode => _stopLabelSpot == StopLabelSpot.Side ? "plate_side" : _stopLabelSpot == StopLabelSpot.Dock ? "dock" : "plate";
 
         /// <summary>Lo que ocupa a lo ancho cada cuia de la fila 1 al colocar la placa (x: izquierda, y: derecha, dp; tests).</summary>
         internal Vector2 StopLabelRestSpanOf(int index)
@@ -1851,21 +1844,14 @@ namespace AF.UI
             _probe.Event("stop_label_off", sb.ToString());
         }
 
-        // Lo más bajo del rótulo sobre el horizonte (1-2 filas): el canto de arriba del panel, con su aire.
-        private float StopLabelHorizonLimit(BoardLayoutResult l)
-        {
-            return l.PanelY - _boardShift - StopLabel.CuiaGapDp;
-        }
-
         private void RememberStopLabelPlace(BoardLayoutResult l)
         {
             _stopLabelLayout = l;
             _stopLabelCanvasW = _canvasW;
-            _stopLabelHorizon = _horizonY;
             _stopLabelShift = _boardShift;
         }
 
-        // Con el rótulo a la vista, si cambian el tablero, el lienzo, el horizonte o el desplazamiento del tablero, se vuelve a
+        // Con el rótulo a la vista, si cambian el tablero, el lienzo o el desplazamiento del tablero, se vuelve a
         // colocar (mide su texto solo entonces). Cada fotograma, desde TickNotices; sin asignaciones.
         private void KeepStopLabelPlaced()
         {
@@ -1882,33 +1868,20 @@ namespace AF.UI
                 return;
             }
 
-            if (_stopLabelSpot == StopLabelSpot.Dock && _stopLabel.OnPlate && _stopLabel.Rect.yMax > StopLabelDockLimit() + 0.01f)
+            if (_stopLabelSpot == StopLabelSpot.Dock && _stopLabel.Rect.yMax > StopLabelDockLimit() + 0.01f)
             {
                 HideStopLabelFor("bubble");
                 return;
             }
 
-            if (ReferenceEquals(l, _stopLabelLayout) && _stopLabelCanvasW == _canvasW && _stopLabelHorizon == _horizonY
-                && _stopLabelShift == _boardShift)
+            if (ReferenceEquals(l, _stopLabelLayout) && _stopLabelCanvasW == _canvasW && _stopLabelShift == _boardShift)
             {
                 return;
             }
 
-            if (l.Rows >= 3 && _stopLabel.OnPlate)
+            if (!PlaceStopLabelPlate(l))
             {
-                if (!PlaceStopLabelPlate(l))
-                {
-                    HideStopLabelFor("no_room"); // con el tablero nuevo no cabe en ningún sitio
-                    return;
-                }
-            }
-            else if (l.Rows < 3 && !_stopLabel.OnPlate)
-            {
-                _stopLabel.PlaceOnHorizon(_canvasW, _horizonY, BoardTop + StopLabel.HudGapDp, StopLabelHorizonLimit(l));
-            }
-            else
-            {
-                HideStopLabelFor("board"); // otro número de filas con el rótulo a la vista (otro tablero): no se cambia de forma a medias
+                HideStopLabelFor("no_room"); // con el tablero nuevo (también con otro número de filas) no cabe en ningún sitio
                 return;
             }
 

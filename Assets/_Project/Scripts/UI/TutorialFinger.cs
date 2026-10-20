@@ -3,6 +3,7 @@ using AF.Core.Board;
 using AF.Core.Rules;
 using AF.GameFlow;
 using AF.Presentation;
+using AF.Presentation.Mechanics;
 using AF.Solver.Murky;
 using AF.Solver.Search;
 using UnityEngine;
@@ -114,6 +115,12 @@ namespace AF.UI
         /// (el 1, T = 3) la flecha baja hasta dejarlo, para no pisar el marco (revisión de DC6; D-003 y D-004).
         /// </summary>
         public const float ArrowCeilingAirDp = 6f;
+
+        /// <summary>
+        /// Aire entre la punta de la flecha y el borde de abajo de la ficha de la fruta de la hoja del destino (dp) [P]: en el
+        /// estreno de la Hoja (43) la flecha se para en la boca de la cuia y deja ver qué fruta pide la hoja (revisión de DC7).
+        /// </summary>
+        public const float ArrowKeyAirDp = 6f;
 
         private readonly ProceduralArt _art;
         private readonly RectTransform _root;
@@ -493,7 +500,7 @@ namespace AF.UI
             // La flecha, a ArrowAboveRimU sobre las bocas, pero con la punta a ArrowCeilingAirDp del borde del panel.
             float arrowMax = CeilingY - (0.5f * ProceduralArt.FingerArrowHeadHeightDp) - ArrowCeilingAirDp;
             _srcRim = RimOf(src, arrowMax);
-            _dstRim = RimOf(dst, arrowMax);
+            _dstRim = RimOf(dst, Mathf.Min(arrowMax, KeyFloorOf(dst)));
 
             // Lo alto del arco: la mano entera (no solo la yema) a ArcHandAirDp sobre la boca más alta por la que pasa, aunque
             // pise el marco del panel mientras viaja (y sin bajar de los dos toques).
@@ -560,6 +567,25 @@ namespace AF.UI
         {
             float u = Mathf.Max(1f, view.Unit);
             return view.FootPosition + view.BodyOffset + new Vector2(0f, view.HeightU * TapHeightFraction * u);
+        }
+
+        // Con la ficha de la llave de una Hoja cerrada sobre la boca, lo más alto a que puede llegar la punta de la flecha: su
+        // lado de arriba a ArrowKeyAirDp bajo el borde de abajo de la ficha, como con el marco del panel (DC7). Sin ficha, sin límite.
+        private static float KeyFloorOf(CuiaView view)
+        {
+            if (!(view.Overlay is HojaOverlay hoja))
+            {
+                return float.PositiveInfinity;
+            }
+
+            Rect key = hoja.KeyRectU;
+            if (key.height <= 0f)
+            {
+                return float.PositiveInfinity;
+            }
+
+            float u = Mathf.Max(1f, view.Unit);
+            return view.FootPosition.y + view.BodyOffset.y + (key.yMin * u) - (0.5f * ProceduralArt.FingerArrowHeadHeightDp) - ArrowKeyAirDp;
         }
 
         private static Vector2 RimOf(CuiaView view, float maxY)

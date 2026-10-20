@@ -131,6 +131,7 @@ namespace AF.Save.Tests
             p.Progress.SkippedLevels.Add(71);
             p.Progress.ContentVersion = "1.0.0";
             p.Progress.MapSeenLevel = 80;
+            p.Progress.UndoTipSeen = true;
             p.LevelState = new LevelStateData
             {
                 Level = 88,
@@ -223,7 +224,8 @@ namespace AF.Save.Tests
                     + p.Daily.RescuesToday + "," + p.Daily.AfRescueShown + "," + p.Daily.AfRescueDeclinedDays + ","
                     + p.Daily.AfRescueHiddenUntil?.Ticks + "," + p.Daily.ShufflesToday + "," + p.Daily.ShieldAvailable,
                 "progress=" + p.Progress.MaxLevel + "," + p.Progress.NextLevel + "," + p.Progress.SinceLastSkip + ",["
-                    + string.Join(",", p.Progress.SkippedLevels) + "]," + p.Progress.ContentVersion + "," + p.Progress.MapSeenLevel,
+                    + string.Join(",", p.Progress.SkippedLevels) + "]," + p.Progress.ContentVersion + "," + p.Progress.MapSeenLevel
+                    + "," + p.Progress.UndoTipSeen,
                 "entitlements=" + p.Entitlements.NoAds + "," + p.Entitlements.StarterBought + ",[" + string.Join(",", p.Entitlements.Skins) + "]",
                 "settings=" + p.Settings.Patterns + "," + p.Settings.Language + "," + p.Settings.SlothMessages + "," + p.Settings.IdleHint
                     + "," + p.Settings.Sound + "," + p.Settings.Music + "," + p.Settings.Haptics,

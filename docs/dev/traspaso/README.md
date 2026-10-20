@@ -38,6 +38,7 @@ Escrito por la sesión de Claude Code del portátil (Windows 11 ARM64) para la s
 >   6. **Presupuesto de los pasos (FX6):** ganar el 280 a ritmo normal no saca `step_budget`.
 >   7. **Si entran:** la LUT de temporada en un ciclo B (SE2) y los overlays de la Tinaja (TJ2; hasta C1b solo en los tests).
 >   8. **Regresión:** 1-12 seguidos, 41, 63, 100, 143, 183 y 243, sin excepciones en logcat.
+> - **Dedo guía de los estrenos (DC7, ola 7; D-028 y D-029):** en el teléfono solo se puede probar el dedo del 43 (la fruta de la hoja → la cuia con hoja; sonda `AF_STATE tutorial_finger` con `"lesson":"hoja"`). El dedo del 323 (tinaja → su cuia y, después, su cuia → destino; `tinaja_scoop` y `tinaja_pour`) **no se ve en el teléfono** hasta que se publique la Tinaja (variante «a», con la compuerta de PF1 en verde; `LevelCatalog.PublishedVariant` sigue en la «b», sin tinaja en el 323): hasta entonces lo cubren los tests con el pack de la «a» (`DebutFingerTests`, EditMode y PlayMode).
 > - **Fallo por comprobar (M3.5, visto al revisar M4.2):** al rehacer las siluetas durante «ponerse al día», `BuildSilhouettes` reutiliza la caja de la silueta de un mundo para otro sin recolocarla: se vio «Mundo 3 · Manaos · Nivel 41» en el sitio del mundo 2, junto a Santarém. Hay que reproducirlo y, si se confirma, arreglarlo en una tarea del carril del Mapa.
 >
 > *Estado del 2026-10-16* (tanda 4, **ola 4 cerrada en `8e1d65c`**; plan y notas de la tanda en la sesión del escritorio):

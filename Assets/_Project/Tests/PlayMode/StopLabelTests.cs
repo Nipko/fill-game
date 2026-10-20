@@ -21,16 +21,19 @@ namespace AF.Tests.PlayMode
 {
     /// <summary>
     /// Rótulo del lugar en la escena real (tarea M2.3; D-013, punto 8; propuesta del Mapa §10.5, punto 5; reglas de los avisos de
-    /// D-011): en el 31 no sale durante la intro, entra en la cola al habilitarse el toque y sale cuando la tropa se va, sobre el
-    /// horizonte (2 filas), con «Floresta Nacional do Tapajós · Brasil», durante <see cref="NoticeTiming.ReadMs(string)"/> (3.035
+    /// D-011): en el 31 no sale durante la intro, entra en la cola al habilitarse el toque y sale cuando la tropa se va, como
+    /// placa clavada al marco también con 2 filas (D-030, pregunta 9 (b); tarea DC24), sin tapar el héroe del sitio ni el HUD,
+    /// con «Floresta Nacional do Tapajós · Brasil», durante <see cref="NoticeTiming.ReadMs(string)"/> (3.035
     /// ms), sin capturar toques, apartando las etiquetas del HUD y con su sonda <c>AF_STATE stop_label</c>; un aviso que llega con
     /// el rótulo a la vista espera a que se vaya, y el rótulo espera al aviso que se ve; un modal del embudo lo oculta y en el
     /// reintento no vuelve, ni tras Volver a la orilla (visto o aún en la cola) ni al volver al 31 desde el inicio sin fallos; al
     /// reanudar no sale; en el 131 (3 filas) va como placa bajo el HUD, con aire sobre las cuias de la
-    /// fila 1; en el 32 y con <c>ui_stop_label</c> apagada no sale; y sin asignaciones por fotograma con el rótulo a la vista.
+    /// fila 1, y con 1 fila (un paquete de prueba de 5 cuias en el 31), también como placa y sin tapar el héroe; en el 32 y con
+    /// <c>ui_stop_label</c> apagada no sale; y sin asignaciones por fotograma con el rótulo a la vista.
     /// De FX4 y su revisión: la placa y la fila 1 (clavada al marco, de lado o sobre el muelle), la elevación, la burbuja, el
-    /// «no sale» y su sonda <c>stop_label_off</c>; de su revisión final, volver a colocarla con «+1 cuia» (o <c>no_room</c>), el
-    /// rótulo del horizonte con «+1 cuia», <c>board</c> al cambiar la pantalla y la medida de la fila 1 a mitad de un vertido.
+    /// «no sale» y su sonda <c>stop_label_off</c>; de su revisión final, volver a colocarla con «+1 cuia» (o <c>no_room</c>), también
+    /// con 2 filas, al cambiar la pantalla (y con ella el número de filas; DC24: ya no se oculta con <c>board</c>) y la medida de
+    /// la fila 1 a mitad de un vertido.
     /// </summary>
     public sealed class StopLabelTests
     {
@@ -53,7 +56,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Level31_AfterTheIntro_ShowsOverTheHorizon_ForItsReadingTime()
+        public IEnumerator Level31_AfterTheIntro_ShowsAsAPlate_ForItsReadingTime()
         {
             yield return Load(31);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -73,18 +76,17 @@ namespace AF.Tests.PlayMode
             Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
             StepUntilShown(boot);
             Assert.That(label.Text, Is.EqualTo(Label31));
-            Assert.That(label.OnPlate, Is.False, "8 cuias en 2 filas: sobre el horizonte");
-            Assert.That(view.Layout!.Rows, Is.EqualTo(2));
+            Assert.That(view.Layout!.Rows, Is.EqualTo(2), "8 cuias en 2 filas");
+            Assert.That(view.StopLabelMode, Is.EqualTo("plate"), "con 2 filas, también como placa clavada al marco (DC24)");
             Assert.That(label.DurationMs, Is.EqualTo(3035f), "1.000 + 55 × 37 caracteres (D-011)");
             Assert.That(label.DurationMs, Is.EqualTo((float)NoticeTiming.ReadMs(Label31)));
 
-            // Sobre el horizonte: el borde de arriba 28 dp por encima (o bajo la fila del HUD), centrado, sin bajar al panel.
-            Rect r = label.Rect;
-            Assert.That(r.yMin, Is.EqualTo(Mathf.Max(view.HorizonY - StopLabel.AboveHorizonDp, view.HudBottomDp + StopLabel.HudGapDp)).Within(0.01f));
-            Assert.That(r.yMin, Is.GreaterThanOrEqualTo(view.HudBottomDp), "bajo la fila del HUD");
-            Assert.That(r.yMax, Is.LessThanOrEqualTo(view.Layout.PanelY + 0.01f), "no baja al panel");
-            Assert.That(r.center.x, Is.EqualTo(view.CanvasWidth * 0.5f).Within(0.01f));
-            Assert.That(label.Label.fontSize, Is.GreaterThanOrEqualTo(UiBuilder.MinTextSp - 0.01f));
+            // La placa: clavada al marco, centrada sobre toda la fila 1, una línea a 14 sp, sin tapar el héroe ni el HUD.
+            AssertPlateClearsRowOne(boot, 31, false, "");
+            AssertPlateClearOfHeroAndHud(view, "31");
+            Assert.That(label.Label.fontSize, Is.EqualTo(StopLabel.PlateTextSp).Within(0.01f), "con 2 filas hay sitio: 14 sp");
+            Assert.That(label.Label.isTextOverflowing, Is.False);
+            Assert.That(label.Rect.height, Is.EqualTo(Mathf.Ceil((label.Label.fontSize * StopLabel.PlateHeightEm) - 0.01f)).Within(0.01f), "una línea");
 
             // No captura toques y aparta las etiquetas del HUD mientras se ve.
             Assert.That(label.BlocksRaycasts, Is.False);
@@ -111,7 +113,8 @@ namespace AF.Tests.PlayMode
             StringAssert.Contains("\"id\":\"flona_tapajos\"", probe);
             StringAssert.Contains("\"text\":\"" + Label31 + "\"", probe);
             StringAssert.Contains("\"ms\":3035", probe);
-            StringAssert.Contains("\"mode\":\"horizon\"", probe);
+            StringAssert.Contains("\"mode\":\"plate\"", probe);
+            StringAssert.Contains("\"rows\":2", probe);
 
             // Se va a los 3.035 ms y no vuelve.
             for (int k = 0; k < 4000 && label.Visible; k += PlayModeHelpers.FrameMs)
@@ -305,7 +308,6 @@ namespace AF.Tests.PlayMode
             StepUntilShown(boot);
             BoardLayoutResult l = view.Layout!;
             Assert.That(l.Rows, Is.EqualTo(3), "11 cuias");
-            Assert.That(label.OnPlate, Is.True);
             Assert.That(label.Text, Is.EqualTo("El río frontera · Colombia y Perú"));
             Rect r = label.Rect;
             float frameInner = l.PanelY + view.PanelFrameDp; // canto interior de la barra de arriba del marco (sin desplazar)
@@ -364,7 +366,6 @@ namespace AF.Tests.PlayMode
                 BoardLayoutResult l = view.Layout!;
                 string mode = side ? "plate_side" : "plate";
                 Assert.That(l.Rows, Is.EqualTo(3), level + ": 11 cuias");
-                Assert.That(label.OnPlate, Is.True);
                 Assert.That(label.Text, Is.EqualTo(text));
                 Assert.That(view.StopLabelMode, Is.EqualTo(mode), level + ": sitio de la placa");
                 Assert.That(view.StopLabelOnDock, Is.False, level + ": no va sobre el muelle");
@@ -527,11 +528,11 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Revisión final de FX4, (1): «+1 cuia» en un nivel de 10 cuias con el rótulo sobre el horizonte (el 121) no cambia el
-        // número de filas (D-006: 5/6, siguen 2), así que el rótulo se vuelve a colocar sobre el horizonte, sin bajar al panel
-        // nuevo, y sigue a la vista (no sale board).
+        // Revisión final de FX4, (1), con DC24: «+1 cuia» en un nivel de 10 cuias en 2 filas (el 121) no cambia el número de filas
+        // (D-006: 5/6, siguen 2); la placa se vuelve a colocar, clavada al marco del panel nuevo, sin roce con la fila 1 ni con el
+        // héroe, y sigue a la vista.
         [UnityTest]
-        public IEnumerator Level121_ExtraCuiaOverTheHorizon_TheRowsStay_ItStaysOverTheHorizon()
+        public IEnumerator Level121_ExtraCuiaWithTwoRows_ThePlateIsPlacedAgain()
         {
             var probes = new List<string>();
             Application.LogCallback capture = CaptureProbes(probes, "stop_label_off");
@@ -546,17 +547,18 @@ namespace AF.Tests.PlayMode
                 StepUntilShown(boot);
                 Assert.That(view.Views.Length, Is.EqualTo(10), "condición del test");
                 Assert.That(view.Layout!.Rows, Is.EqualTo(2), "condición del test");
-                Assert.That(view.StopLabelMode, Is.EqualTo("horizon"));
+                Assert.That(view.StopLabelMode, Is.EqualTo("plate"));
+                AssertPlateClearsRowOne(boot, 121, false, " antes de «+1 cuia»");
+                AssertPlateClearOfHeroAndHud(view, "121 antes de «+1 cuia»");
                 Assert.That(boot.PressExtraCuia(), Is.True);
                 PlayModeHelpers.Step(boot, 700);
                 BoardLayoutResult l = view.Layout!;
                 Assert.That(view.Views.Length, Is.EqualTo(11));
                 Assert.That(l.Rows, Is.EqualTo(2), "de 10 a 11 cuias las filas no cambian (D-006)");
                 Assert.That(label.Visible, Is.True, "sigue a la vista");
-                Assert.That(label.OnPlate, Is.False);
-                Rect r = label.Rect;
-                Assert.That(r.yMin, Is.EqualTo(Mathf.Max(view.HorizonY - StopLabel.AboveHorizonDp, view.HudBottomDp + StopLabel.HudGapDp)).Within(0.01f));
-                Assert.That(r.yMax, Is.LessThanOrEqualTo(l.PanelY + 0.01f), "no baja al panel nuevo");
+                Assert.That(view.StopLabelMode, Is.EqualTo("plate"));
+                AssertPlateClearsRowOne(boot, 121, false, " tras «+1 cuia»");
+                AssertPlateClearOfHeroAndHud(view, "121 tras «+1 cuia»");
                 Assert.That(probes.Count, Is.EqualTo(0), string.Join("\n", probes));
             }
             finally
@@ -565,12 +567,13 @@ namespace AF.Tests.PlayMode
             }
         }
 
-        // Revisión final de FX4, (1): board. El número de filas solo cambia a mitad de nivel si cambia la pantalla (con 11-12
-        // cuias, 2 o 3 filas según el ancho del lienzo; con 13-16, siempre 3: P12 de D-006 c); «+1 cuia» no lo cambia. En el
-        // 131, de 360 a 600 dp de ancho pasa de 3 filas a 2 con la placa a la vista, y al revés, de 2 a 3 con el rótulo sobre el
-        // horizonte: en los dos casos se oculta con stop_label_off y board, y no vuelve.
+        // Revisión final de FX4, (1), con DC24: el número de filas solo cambia a mitad de nivel si cambia la pantalla (con 11-12
+        // cuias, 2 o 3 filas según el ancho del lienzo; con 13-16, siempre 3: P12 de D-006 c); «+1 cuia» no lo cambia. En el 131,
+        // de 360 a 600 dp de ancho pasa de 3 filas a 2 con la placa a la vista, y al revés: como la placa es la misma con cualquier
+        // número de filas, se vuelve a colocar con el tablero nuevo, clavada al marco y sin roce con la fila 1, y sigue a la vista
+        // (sin stop_label_off).
         [UnityTest]
-        public IEnumerator Level131_TheScreenChangesTheRows_HidesItWithBoard()
+        public IEnumerator Level131_TheScreenChangesTheRows_ThePlateIsPlacedAgain()
         {
             var narrow = new Vector4(1080f, 2340f, 96f, 48f); // 360 × 780 dp
             var wide = new Vector4(1800f, 2340f, 96f, 48f); // 600 × 780 dp
@@ -591,14 +594,14 @@ namespace AF.Tests.PlayMode
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
                 Assert.That(view.CanvasWidth, Is.EqualTo(600f).Within(0.01f), "condición del test");
                 Assert.That(view.Layout!.Rows, Is.EqualTo(2), "condición del test: 600 dp de ancho, 2 filas");
-                Assert.That(label.Visible, Is.False, "otro número de filas: se oculta en el acto");
-                Assert.That(probes.Count, Is.EqualTo(1), string.Join("\n", probes));
-                StringAssert.Contains("\"level\":131,\"reason\":\"board\"", probes[0]);
-                PlayModeHelpers.Step(boot, 3000);
-                Assert.That(label.Visible, Is.False, "descartado: no vuelve");
-                Assert.That(probes.Count, Is.EqualTo(1));
+                PlayModeHelpers.Step(boot, 700); // el re-layout
+                Assert.That(label.Visible, Is.True, "otro número de filas: se vuelve a colocar");
+                Assert.That(view.StopLabelMode, Is.EqualTo("plate"));
+                AssertPlateClearsRowOne(boot, 131, false, " a 600 dp (2 filas)");
+                AssertPlateClearOfHeroAndHud(view, "131 a 600 dp (2 filas)");
+                Assert.That(probes.Count, Is.EqualTo(0), string.Join("\n", probes));
 
-                // Del horizonte (2 filas) a 3 filas.
+                // De 2 filas a 3.
                 probes.Clear();
                 yield return Load(131);
                 boot = GameBootstrap.Current!;
@@ -609,16 +612,16 @@ namespace AF.Tests.PlayMode
                 boot.TapAnywhere();
                 StepUntilShown(boot);
                 Assert.That(view.Layout!.Rows, Is.EqualTo(2), "condición del test");
-                Assert.That(view.StopLabelMode, Is.EqualTo("horizon"), "condición del test");
+                Assert.That(view.StopLabelMode, Is.EqualTo("plate"), "con 2 filas, también como placa");
+                StringAssert.Contains("\"rows\":2", view.LastStopLabelProbe);
                 GameScreen.SimulatedScreen = narrow;
                 PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
                 Assert.That(view.Layout!.Rows, Is.EqualTo(3), "condición del test: 360 dp de ancho, 3 filas");
-                Assert.That(label.Visible, Is.False, "otro número de filas: se oculta en el acto");
-                Assert.That(probes.Count, Is.EqualTo(1), string.Join("\n", probes));
-                StringAssert.Contains("\"level\":131,\"reason\":\"board\"", probes[0]);
-                PlayModeHelpers.Step(boot, 3000);
-                Assert.That(label.Visible, Is.False, "descartado: no vuelve");
-                Assert.That(probes.Count, Is.EqualTo(1));
+                PlayModeHelpers.Step(boot, 700);
+                Assert.That(label.Visible, Is.True, "otro número de filas: se vuelve a colocar");
+                Assert.That(view.StopLabelMode, Is.EqualTo("plate"));
+                AssertPlateClearsRowOne(boot, 131, false, " a 360 dp (3 filas)");
+                Assert.That(probes.Count, Is.EqualTo(0), string.Join("\n", probes));
             }
             finally
             {
@@ -782,6 +785,63 @@ namespace AF.Tests.PlayMode
             }
 
             return under;
+        }
+
+        // DC24 (D-030, pregunta 9 (b)): con 1 fila (un paquete de prueba de 5 cuias en el 31, con su parada y su héroe), la placa
+        // también va clavada al marco, centrada sobre la fila 1 y a 14 sp, sin tapar el héroe del sitio ni el HUD.
+        [UnityTest]
+        public IEnumerator OneRow_ThePlateIsPinnedToTheFrame_ClearOfTheHero()
+        {
+            LaunchOptions.LevelPackJsonOverride = OneRowPack31();
+            yield return Load(31);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            StopLabel label = view.StopLabelView;
+            boot.TapAnywhere();
+            StepUntilShown(boot);
+            PlayModeHelpers.Step(boot, 400);
+            Assert.That(view.Layout!.Rows, Is.EqualTo(1), "condición del test: 5 cuias, 1 fila");
+            Assert.That(label.Text, Is.EqualTo(Label31));
+            Assert.That(view.StopLabelMode, Is.EqualTo("plate"));
+            StringAssert.Contains("\"mode\":\"plate\"", view.LastStopLabelProbe);
+            StringAssert.Contains("\"rows\":1", view.LastStopLabelProbe);
+            Assert.That(label.Label.fontSize, Is.EqualTo(StopLabel.PlateTextSp).Within(0.01f), "con 1 fila hay sitio: 14 sp");
+            Assert.That(label.Label.isTextOverflowing, Is.False);
+            Assert.That(label.Rect.height, Is.EqualTo(Mathf.Ceil((label.Label.fontSize * StopLabel.PlateHeightEm) - 0.01f)).Within(0.01f), "una línea");
+            Assert.That(label.DurationMs, Is.EqualTo((float)NoticeTiming.ReadMs(Label31)), "el mismo tiempo en pantalla (D-011)");
+            AssertPlateClearsRowOne(boot, 31, false, " (1 fila)");
+            AssertPlateClearOfHeroAndHud(view, "31 (1 fila)");
+        }
+
+        // DC24: la placa no tapa el héroe del sitio (su rectángulo del panorama, StopBackdrop.HeroRect, que no está vacío en las
+        // paradas del rótulo) ni el HUD de arriba (el pie de su fila y los bordes que se ven de los discos y de las píldoras). Del
+        // héroe cuenta lo que se ve, sobre el canto de arriba del panel: en un lienzo ancho (600 dp) el horizonte escala con el
+        // ancho y baja de ese canto, y el panel, opaco, ya tapa la parte de abajo del héroe. En 360 × 780 dp el héroe queda entero
+        // sobre el panel (con 1-2 filas, el horizonte va 64 dp por encima, o en su mínimo de 118 dp).
+        internal static void AssertPlateClearOfHeroAndHud(GameScreen view, string at)
+        {
+            Rect plate = view.StopLabelView.Rect;
+            Rect hero = view.HeroRect;
+            float panelTop = view.Layout!.PanelY;
+            TestContext.WriteLine(at + ": placa " + plate + ", héroe " + hero + ", horizonte " + view.HorizonY + ", panel " + panelTop);
+            Assert.That(hero.width, Is.GreaterThan(0f), at + ": condición del test: la parada tiene héroe");
+            if (Mathf.Approximately(view.CanvasWidth, 360f))
+            {
+                Assert.That(hero.yMax, Is.LessThanOrEqualTo(panelTop + 0.01f), at + ": a 360 dp, el héroe entero sobre el panel");
+            }
+
+            Rect seen = Rect.MinMaxRect(hero.xMin, hero.yMin, hero.xMax, Mathf.Min(hero.yMax, panelTop));
+            Assert.That(plate.Overlaps(seen), Is.False, at + ": la placa no tapa el héroe del sitio");
+            Assert.That(plate.yMin, Is.GreaterThanOrEqualTo(view.HudBottomDp - 0.01f), at + ": bajo la fila del HUD");
+            Assert.That(plate.yMin, Is.GreaterThanOrEqualTo(view.FruitNewPlateHudBottom() - 0.01f), at + ": bajo lo que se ve del HUD");
+        }
+
+        // El 31 con 5 cuias en 1 fila (paquete de prueba, mundo 2): la parada del 31 (FLONA do Tapajós) y su rótulo.
+        internal static string OneRowPack31()
+        {
+            string[] ids = { "guanabana", "cupuacu", "tapereba" };
+            int[][] board = { new[] { 1, 2, 3, 1 }, new[] { 2, 3, 1, 2 }, new[] { 3, 1, 2, 3 }, new int[0], new int[0] };
+            return PlayModeHelpers.BoardPack(2, "w02_tapajos", "clear", 31, ids, board);
         }
 
         // Revisión de FX4, (b): una cuia de la fila 1 bajo la placa ya elevada cuando le llega el turno al rótulo (espera detrás

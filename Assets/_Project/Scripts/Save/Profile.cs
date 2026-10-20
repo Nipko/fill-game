@@ -18,7 +18,9 @@ namespace AF.Save
     /// álbum, sonido…) llega con su sistema. <c>settings</c>, <c>sloth</c> y <c>map_seen_level</c> entran con el esquema 1
     /// sin migrar, porque aún no se ha publicado (08 §4.3; D-013 punto 14 y D-016 punto 4). El esquema 2 añade <c>fauna</c>
     /// [P] (los avistamientos de la tarjeta «¡Miquito a la vista!», Q11 del guion de la intro; D-029; tarea DC15), con su paso
-    /// de migración 1 → 2 (<see cref="ProfileMigrations"/>).
+    /// de migración 1 → 2 (<see cref="ProfileMigrations"/>), y <c>progress.undo_tip_seen</c> [P] (el tooltip de Marea, una vez
+    /// en la vida; D-030, pregunta 15 (b); tarea DC23), que entra en el mismo esquema 2 sin paso propio porque aún no se ha
+    /// publicado.
     /// <para>
     /// Es un contenedor de datos: las reglas (topes, precios, regeneración de canoas, reinicio diario) viven en
     /// <c>AF.Economy</c>, <c>AF.Ads</c> y <c>AF.Boosters</c>, que lo mutan y lo guardan con <see cref="IProfileStore"/>.
@@ -209,7 +211,7 @@ namespace AF.Save
         public bool ShieldAvailable { get; set; }
     }
 
-    /// <summary><c>progress</c> (08 §4.3; 04 §10.1).</summary>
+    /// <summary><c>progress</c> (08 §4.3; 04 §10.1; <c>map_seen_level</c>, D-013, y <c>undo_tip_seen</c> [P], DC23).</summary>
     public sealed class ProgressData
     {
         /// <summary><c>max_level</c>: nivel más alto superado (0 = ninguno).</summary>
@@ -252,6 +254,30 @@ namespace AF.Save
             }
 
             MapSeenLevel = ClampMapSeen(Math.Max(MapSeenLevel, other.MapSeenLevel), MaxLevel);
+        }
+
+        /// <summary>
+        /// <c>undo_tip_seen</c> [P] (esquema 2; D-030, pregunta 15 (b); tarea DC23): el tooltip de Marea del tutorial ya salió
+        /// («Marea · Deshacer», 04 §2.1; 02 §13 y 06 §2.2, fila del 3). Sale una sola vez en la vida: se apunta al mostrarse, en
+        /// el 3 tras el primer vertido que no acerca o, si no salió allí, al inicio del 5. False por defecto (también en un perfil
+        /// sin la clave: el esquema 2 aún no se ha publicado y entra sin migración); en la fusión de la nube basta con que uno
+        /// de los dos lo haya visto (<see cref="MergeUndoTipSeen"/>).
+        /// </summary>
+        public bool UndoTipSeen { get; set; }
+
+        /// <summary>
+        /// Fusión de 08 §11 (<c>ResolveConflict</c>): sobre el progreso del perfil ganador, <c>undo_tip_seen</c> queda visto si
+        /// lo vio cualquiera de los dos (un tooltip del tutorial no vuelve a salir por perder un conflicto) [P].
+        /// </summary>
+        /// <param name="other">El progreso del otro perfil (el perdedor).</param>
+        public void MergeUndoTipSeen(ProgressData other)
+        {
+            if (other == null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            UndoTipSeen = UndoTipSeen || other.UndoTipSeen;
         }
 
         private static int ClampMapSeen(int value, int maxLevel)

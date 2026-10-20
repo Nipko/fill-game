@@ -218,7 +218,12 @@ namespace AF.Tests.PlayMode
             {
                 Assert.That(view.SlothBoxDp, Is.GreaterThanOrEqualTo(GameScreen.SlothSpeakBoxDp), at);
                 Assert.That(sloth.BubbleShown, Is.True, at + ": el bocadillo, a la vista");
-                string key = level == 60 ? "sloth_line_milestone_02" : "sloth_line_milestone_01";
+                // Con el perfil nuevo (sin frase vista del momento), el fin de mundo rota con el número de mundo (D-030, pregunta
+                // 16 b): el 40, la de siempre; el 80, la 1.ª alternativa; el 140, la 2.ª.
+                string key = level == 60 ? "sloth_line_milestone_02"
+                    : level == 80 ? "sloth_line_milestone_03"
+                    : level == 140 ? "sloth_line_milestone_04"
+                    : "sloth_line_milestone_01";
                 Assert.That(sloth.BubbleText, Is.EqualTo(Loc.T(key)), at);
                 Assert.That(view.LastSlothLine.Key, Is.EqualTo(key), at);
                 Assert.That(line.ArrivalFact, Is.False, at + ": la llegada va sin dato");

@@ -13,7 +13,8 @@ namespace AF.Save
     /// Al leer, una clave que falta toma el default de <see cref="Profile"/> y una desconocida se ignora; un tipo
     /// equivocado es un archivo corrupto (<see cref="FormatException"/>), salvo en lo que no es progreso ni economía:
     /// <c>settings</c>, <c>sloth</c> y <c>progress.map_seen_level</c> toman su default ante un valor ausente o inválido
-    /// (un ajuste nunca hace corrupto un perfil), y <c>map_seen_level</c> queda recortado a [0, <c>max_level</c>]. <c>fauna</c>
+    /// (un ajuste nunca hace corrupto un perfil), y <c>map_seen_level</c> queda recortado a [0, <c>max_level</c>]; igual
+    /// <c>progress.undo_tip_seen</c> (DC23), que sin la clave o con otro tipo queda en «no visto». <c>fauna</c>
     /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta.
     /// </summary>
     public static class ProfileJson
@@ -123,6 +124,7 @@ namespace AF.Save
             progress.Set("skipped_levels", IntList(p.Progress.SkippedLevels));
             progress.Set("content_version", JsonNode.FromString(p.Progress.ContentVersion));
             progress.Set("map_seen_level", JsonNode.FromInt(p.Progress.ClampedMapSeenLevel));
+            progress.Set("undo_tip_seen", JsonNode.FromBool(p.Progress.UndoTipSeen));
             root.Set("progress", progress);
 
             root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
@@ -247,6 +249,7 @@ namespace AF.Save
                 g.ContentVersion = ReadString(progress, "content_version", g.ContentVersion);
                 g.MapSeenLevel = TolerantInt(progress, "map_seen_level", g.MapSeenLevel);
                 g.MapSeenLevel = g.ClampedMapSeenLevel;
+                g.UndoTipSeen = TolerantBool(progress, "undo_tip_seen", g.UndoTipSeen);
             }
 
             JsonNode? levelState = Section(root, "level_state");

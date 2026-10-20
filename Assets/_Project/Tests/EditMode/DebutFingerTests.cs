@@ -33,6 +33,13 @@ namespace AF.Tests.EditMode
             Assert.That(TutorialInstruction.FingerFor(1, null), Is.EqualTo(FingerLesson.FirstPour), "el tutorial sigue igual");
             Assert.That(TutorialInstruction.FingerFor(2, null), Is.EqualTo(FingerLesson.PartialRun));
             Assert.That(TutorialInstruction.FingerFor(12, null), Is.EqualTo(FingerLesson.None), "el 12, sin dedo (D-028, 61 a)");
+
+            // HasFinger con el estreno dice lo mismo; HasFinger por número de nivel es solo el del tutorial (sin los estrenos).
+            Assert.That(TutorialInstruction.HasFinger(43, TutorialInstruction.HojaIntroMechanic), Is.True);
+            Assert.That(TutorialInstruction.HasFinger(TinajaTutorial.DebutLevel, TinajaTutorial.IntroMechanic), Is.True);
+            Assert.That(TutorialInstruction.HasFinger(43, null) || TutorialInstruction.HasFinger(283, "hoja_atada"), Is.False);
+            Assert.That(TutorialInstruction.HasFinger(1, null) && TutorialInstruction.HasFinger(2, null), Is.True);
+            Assert.That(TutorialInstruction.HasFinger(43), Is.False, "por número de nivel, sin los estrenos");
         }
 
         [Test]
@@ -141,7 +148,13 @@ namespace AF.Tests.EditMode
             // Seguro en todas las realidades: tras él, SafeMoves aún encuentra vertidos seguros (o es victoria).
             BoardState after = PourRules.Apply(next, pour.Source, pour.Target, PourModes.Default);
             SolverOptions options = SafeMoves.ForPipeline(PourModes.Default, after);
-            Assert.That(after.IsWon() || (new SafeMoves().Find(after, options, board) == RealityStatus.Ok), Is.True);
+            if (!after.IsWon())
+            {
+                var check = new SafeMoves();
+                Assert.That(check.Find(after, options, board), Is.EqualTo(RealityStatus.Ok));
+                Assert.That(check.Outcome, Is.EqualTo(SafeMovesOutcome.Found), "quedan vertidos seguros");
+                Assert.That(check.Count, Is.GreaterThan(0));
+            }
             TestContext.WriteLine("AF_FINGER 323: paso 1 " + scoopPour.Source + "→" + scoopPour.Target + "; paso 2 " + pour.Source
                 + "→" + pour.Target + " (" + pour.Amount + "); elegirlos, " + step1Ms.ToString("0.0") + " y " + step2Ms.ToString("0.0")
                 + " ms en el Editor (por eso va en un hilo: GameScreen.Cards)");
