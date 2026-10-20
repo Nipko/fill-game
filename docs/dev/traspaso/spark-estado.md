@@ -67,6 +67,12 @@ Detalle en la nota §3 (todas con la recomendada aplicada):
 - **Q-S8:** textos sin canon («¿Saltar el nivel?», «Perderás la Cuia extra de este nivel»), `pendiente_asesor`.
 - **Q-S9:** `skip_min_level`: 05 dice «mínimo 31», 08 §9 da 20-31; el cliente solo exige ≥ 1 (el revisor sugiere no bajar de `rescue_min_level`).
 - Nueva (revisor): ¿se enseña al jugador la Canasta que paga el salto de un 10k? Hoy solo sale en la sonda.
+- **Q-S1, consecuencia:** `since_last_skip` ya no se usa; corregir 02 §2, 04 §6.1-§6.2 y el ejemplo de 08 §4.3, y avisar a B7
+  (`af_skip_used.since_last_skip` = nivel − último salto) y a B8 (fusión en la nube).
+- **Q-S6, consecuencia:** toca la tabla de 04 §6.5.
+- **Pendiente:** medir el primer pintado de Rosa con `MascotsMainMs` (tope de 8 ms, 08 §5.4).
+- **Retoque tras la aprobación:** el banner sin saldo se enseña en gris con «Te faltan {n} semillas» (clave existente
+  `stuck_rescue_missing`, sin texto nuevo) y no responde al toque.
 
 ### Riesgos
 

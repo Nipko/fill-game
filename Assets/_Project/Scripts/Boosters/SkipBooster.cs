@@ -10,7 +10,7 @@ namespace AF.Boosters
     /// Cifras del Salto del Boto con los <b>defaults compilados</b> de la tabla única de 08 §9 (fila
     /// <c>skip_seed_price / skip_min_fails / skip_min_gap_levels / skip_min_level</c>; 04 §2.6 y §12; dirección 9). El precio
     /// (<c>skip_seed_price</c>) es de <see cref="EconomyConfig"/>, como el resto de precios en semillas; aquí van las tres
-    /// condiciones. <c>SkipConfigTests</c> las contrasta con 08 §9. Va aparte de <see cref="BoosterConfig"/> para no tocar ese
+    /// condiciones. <c>SkipBoosterTests.EveryDefault_IsTheOneOfThe08_9Table</c> las contrasta con 08 §9. Va aparte de <see cref="BoosterConfig"/> para no tocar ese
     /// archivo (bloque B3 de la tanda 5; nota <c>docs/dev/salto-del-boto.md</c>).
     /// </summary>
     public sealed class SkipConfig

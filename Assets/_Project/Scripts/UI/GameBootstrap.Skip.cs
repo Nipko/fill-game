@@ -201,7 +201,7 @@ namespace AF.UI
                 return;
             }
 
-            banner.Show(offer.Price, screen.CanvasWidth);
+            banner.Show(offer.Price, offer.Missing, screen.CanvasWidth); // sin saldo, en gris con «Te faltan» (04 §1)
         }
 
         private static bool BannerPhase(LevelFlow flow)

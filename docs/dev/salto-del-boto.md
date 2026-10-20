@@ -78,6 +78,15 @@ Canasta no se repaga (el Salto ya no se ofrece en un nivel `≤ max_level`).
 | Q-S8 | Textos sin canon: el título de la confirmación, el aviso de la Cuia extra y el CTA | (a) «¿Saltar el nivel?», «Perderás la Cuia extra de este nivel» y «Saltar nivel» (la clave `skip` del glosario §10, con sus traducciones) · (b) otros que proponga el asesor | **(a)** [P], `pendiente_asesor` |
 | Q-S9 | `skip_min_level`: 05 (tabla de compuertas) dice «con mínimo 31 en RC»; 08 §9 da el rango 20-31 | (a) se corrige 05 a «20-31» o 08 §9 a «31»: lo decide el dueño; el cliente solo exige ≥ 1 y no aplica rangos (eso es de Remote Config) · (b) el cliente fuerza ≥ 31 | **(a)** [P]; el revisor sugiere además que el cliente no baje de `rescue_min_level` (la compuerta «nada de pago ligado al fallo antes del 31», dirección 10) |
 
+### Decisiones para el dueño tras la revisión final
+
+- **Q-S1:** con (a), `progress.since_last_skip` ya no se usa (se escribe a 0 y no se lee). Hay que corregir 02 §2 (`last_skip_level`),
+  04 §6.1-§6.2 (`since_last_skip ≥ 10`) y el ejemplo de 08 §4.3, y avisar a B7 (el parámetro `since_last_skip` de `af_skip_used` es
+  ahora «nivel − último salto») y a B8 (la fusión en la nube: `skipped_levels` por unión; `since_last_skip` deja de importar).
+- **Q-S6:** partir `stuck_skip` toca la tabla de textos de 04 §6.5.
+- **Pendiente:** medir el primer pintado de Rosa (su sprite procedural se crea al enseñar la confirmación, el banner o la pausa) con
+  `MascotsMainMs`, con su tope de 8 ms (08 §5.4).
+
 ## 4. Riesgos y pendientes
 
 - **Alto del panel de Aguas estancadas:** la rama D suma unos 70 dp. El caso ya registrado de 16:9 al 130 % (rama B por encima
@@ -87,4 +96,6 @@ Canasta no se repaga (el Salto ya no se ofrece en un nivel `≤ max_level`).
 - **Remote Config:** `SkipConfig.Defaults` hasta que haya lector (como `StreakConfig`).
 - **Tests con progreso en memoria** (`LaunchOptions.ProgressStoreOverride`): el arranque usa `MemorySkipStore`, que apunta el
   salto y `next_level` en el `MemoryProgressStore` pero no sube su `max_level` (no tiene cómo).
+- **Banner sin saldo:** se enseña en gris, sin respuesta al toque y con «Te faltan {n} semillas» (`stuck_rescue_missing`, la misma de
+  los demás comodines; 04 §1); sin texto nuevo.
 - **Arte:** Rosa sale con el sprite procedural del Mapa (`ProceduralArt.Rosa`); el icono definitivo es del artista.

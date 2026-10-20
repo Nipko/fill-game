@@ -76,6 +76,9 @@ namespace AF.UI
         /// <summary>Se ve el aviso de la Cuia extra (04 §2.6 c).</summary>
         public bool WarnsExtraCuia => _warning.gameObject.activeSelf;
 
+        /// <summary>Sprite de Rosa (null hasta el primer <see cref="Show"/>; tests).</summary>
+        internal Sprite? RosaSprite => _rosa.sprite;
+
         /// <summary>Precio que muestra el CTA.</summary>
         public int PriceShown => _price.Value;
 
@@ -131,7 +134,9 @@ namespace AF.UI
     /// Banner del Salto del Boto en la entrada del nivel (04 §2.6, «Inventario y HUD»: «como banner en la pantalla previa del
     /// nivel cuando es elegible ("Rosa puede llevarte río arriba · 300")»). [P] (nota §3, Q-S3): una franja de madera con Rosa,
     /// arriba del tablero, mientras la opción se ofrece y el intento aún no empezó (tarjeta previa, intro o tablero sin vertidos);
-    /// un toque abre la confirmación. No tapa el tablero ni captura toques fuera de su franja.
+    /// un toque abre la confirmación. Sin saldo, en gris y con «Te faltan {n} semillas» debajo (04 §1, «Sin stock (solo
+    /// semillas)»: como los demás comodines con precio) y sin respuesta al toque. No tapa el tablero ni captura toques fuera de
+    /// su franja.
     /// </summary>
     internal sealed class SkipBanner
     {
@@ -146,7 +151,9 @@ namespace AF.UI
         private readonly Button _button;
         private readonly Image _rosa;
         private readonly TextMeshProUGUI _label;
+        private readonly TextMeshProUGUI _missing;
         private int _price = -1;
+        private int _missingShown = -1;
 
         public SkipBanner(Transform parent, ProceduralArt art, Action onTap)
         {
@@ -161,6 +168,9 @@ namespace AF.UI
             _label = UiBuilder.Label("Label", _root, TextStyle.PlainBold, string.Empty, 15f, Palette.Cream, TextAlignmentOptions.MidlineLeft);
             _label.textWrappingMode = TextWrappingModes.Normal;
             UiBuilder.AutoSize(_label, UiBuilder.MinTextSp, 15f);
+            _missing = UiBuilder.Label("Missing", _root, TextStyle.PlainBold, string.Empty, 13f, Palette.Cream, TextAlignmentOptions.MidlineLeft);
+            UiBuilder.AutoSize(_missing, UiBuilder.MinTextSp, 13f);
+            _missing.gameObject.SetActive(false);
             _root.gameObject.SetActive(false);
         }
 
@@ -171,6 +181,15 @@ namespace AF.UI
         /// <summary>Texto mostrado (tests).</summary>
         public string Text => _label.text;
 
+        /// <summary>«Te faltan {n} semillas» si la franja va en gris, o null (tests).</summary>
+        public string? MissingText => _missing.gameObject.activeSelf ? _missing.text : null;
+
+        /// <summary>Responde al toque (con saldo).</summary>
+        public bool Interactable => _button.interactable;
+
+        /// <summary>Sprite de Rosa (null hasta el primer <see cref="Show"/>; tests).</summary>
+        internal Sprite? RosaSprite => _rosa.sprite;
+
         public void Hide()
         {
             if (_root.gameObject.activeSelf)
@@ -179,8 +198,11 @@ namespace AF.UI
             }
         }
 
-        /// <summary>Muestra la franja con <paramref name="price"/>; solo compone el texto si el precio cambió.</summary>
-        public void Show(int price, float canvasW)
+        /// <summary>
+        /// Muestra la franja con <paramref name="price"/> y, si <paramref name="missing"/> &gt; 0, en gris con «Te faltan {n}
+        /// semillas» (sin respuesta al toque). Solo compone los textos si cambian.
+        /// </summary>
+        public void Show(int price, int missing, float canvasW)
         {
             if (_rosa.sprite == null)
             {
@@ -193,9 +215,23 @@ namespace AF.UI
                 _label.text = SkipText.Banner(price);
             }
 
+            bool poor = missing > 0;
+            if (poor && missing != _missingShown)
+            {
+                _missingShown = missing;
+                _missing.text = UiText.MissingSeeds(missing);
+            }
+
+            _missing.gameObject.SetActive(poor);
+            UiBuilder.SetEnabled(_button, !poor);
+            _rosa.color = poor ? new Color(1f, 1f, 1f, 0.5f) : Color.white;
             float width = Mathf.Min(328f, canvasW - 32f);
             UiBuilder.Place(_root, (canvasW - width) * 0.5f, TopDp, width, HeightDp);
-            UiBuilder.Place(_label.rectTransform, 64f, 0f, width - 76f, HeightDp);
+            UiBuilder.Place(_label.rectTransform, 64f, poor ? 2f : 0f, width - 76f, poor ? 26f : HeightDp);
+            if (poor)
+            {
+                UiBuilder.Place(_missing.rectTransform, 64f, 26f, width - 76f, 20f);
+            }
             if (!_root.gameObject.activeSelf)
             {
                 _root.gameObject.SetActive(true);
