@@ -26,8 +26,11 @@ namespace AF.UI
         /// <summary>Ancho de la tarjeta (dp).</summary>
         public const float WidthDp = 296f;
 
-        /// <summary>Alto de la tarjeta (dp; el área táctil es la tarjeta entera, ≥ 48 dp, 07 §7.8).</summary>
-        public const float HeightDp = 84f;
+        /// <summary>
+        /// Alto de la tarjeta (dp; el área táctil es la tarjeta entera, ≥ 48 dp, 07 §7.8): 100 para que el título y el estado
+        /// quepan en dos líneas cada uno (en-XA al 130 %, revisión de R12).
+        /// </summary>
+        public const float HeightDp = 100f;
 
         /// <summary>Olas del icono de la banda (una por banda, 1-3).</summary>
         public const int MaxWaves = 3;
@@ -62,23 +65,25 @@ namespace AF.UI
             ModalKit.Size(_root, surface, art, 0f, 0f, WidthDp, HeightDp);
 
             _bandPlate = UiBuilder.Image("BandPlate", _root, art.RoundedRect, Palette.WaterClear);
-            UiBuilder.Place(_bandPlate.rectTransform, 14f, 14f, 56f, 56f);
+            UiBuilder.Place(_bandPlate.rectTransform, 14f, (HeightDp - 56f) * 0.5f, 56f, 56f);
             for (int i = 0; i < MaxWaves; i++)
             {
                 _waves[i] = UiBuilder.Image("Wave" + (i + 1), _bandPlate.transform, WaveSprite(), Palette.Cream);
             }
 
             _title = UiBuilder.Label("Title", _root, TextStyle.PlainBold, string.Empty, 17f, Palette.UiInk, TextAlignmentOptions.MidlineLeft);
-            // El título no pasa por debajo del sello (esquina superior derecha, StampSlotDp): revisión de R11 (en-XA).
-            UiBuilder.Place(_title.rectTransform, 80f, 12f, WidthDp - StampSlotDp - 80f, 28f);
+            // El título no pasa por debajo del sello (esquina superior derecha, StampSlotDp): revisión de R11 (en-XA). Hasta dos
+            // líneas: «Reto del río · {fecha}» largo (en-XA al 130 %, 360 × 640) baja de línea en vez de salirse (revisión de R12).
+            UiBuilder.Place(_title.rectTransform, 80f, 8f, WidthDp - StampSlotDp - 80f, 44f);
+            _title.textWrappingMode = TextWrappingModes.Normal;
             UiBuilder.AutoSize(_title, UiBuilder.MinTextSp, 17f);
             _state = UiBuilder.Label("State", _root, TextStyle.PlainBold, string.Empty, 15f, Palette.UiGreenButton, TextAlignmentOptions.MidlineLeft);
             // Hasta dos líneas: un estado largo (Pendiente de validar en en-XA) baja de línea en vez de pisar la racha (R11).
-            UiBuilder.Place(_state.rectTransform, 80f, 41f, 132f, 34f);
+            UiBuilder.Place(_state.rectTransform, 80f, 56f, 132f, 36f);
             _state.textWrappingMode = TextWrappingModes.Normal;
             UiBuilder.AutoSize(_state, UiBuilder.MinTextSp, 15f);
             _streak = UiBuilder.Label("Streak", _root, TextStyle.PlainBold, string.Empty, 15f, Palette.UiWood, TextAlignmentOptions.MidlineRight);
-            UiBuilder.Place(_streak.rectTransform, 212f, 44f, 52f, 26f);
+            UiBuilder.Place(_streak.rectTransform, 212f, 61f, 52f, 26f);
             UiBuilder.AutoSize(_streak, UiBuilder.MinTextSp, 15f);
 
             _stamp = UiBuilder.Image("Stamp", _root, art.Disc, DailyStampCalendar.StampColor);

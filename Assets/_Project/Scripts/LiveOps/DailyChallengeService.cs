@@ -104,6 +104,9 @@ namespace AF.LiveOps
         /// <summary>Reglas del premio (racha mostrada, último cobro, reconciliación).</summary>
         public DailyChallengeRules Rules { get; }
 
+        /// <summary>Configuración del Reto (08 §9) con la que se creó el servicio.</summary>
+        public DailyChallengeConfig Config => _config;
+
         /// <summary>El pool, o null.</summary>
         public DailyPool? Pool { get; }
 
