@@ -2942,6 +2942,13 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 ---
 
+### D-032, añadido del 2026-10-20: límites de 16:9 al integrar FX16a y FX16b
+
+- **Estado:** aplicadas con la recomendada por la regla del dueño del 2026-10-19 («si tienen recomendadas vamos con esas»), **provisionales hasta la prueba en el teléfono**: si allí molestan, el dueño elige otra opción.
+- **Aguas estancadas en 16:9 (FX16a):** se acepta como límite conocido («si no cabe, no sale», como los puntos 3 y 4 de esta decisión) que el panel compacto tape parte del tablero en el 31 rama B al 130 % (46,9 dp de 131,7 en es-419) y la tercera fila en el 640. Lo registra el explícito `StuckCompactTests.Stuck_16x9_NoCuiaCovered_KnownIssue`. Alternativas si molesta en el teléfono: (c) un modal más bajo con Puñado y Balsa plegados tras «Más opciones» (la siguiente recomendada); (b) reducir el tablero mientras el modal esté abierto, con tope de 28 dp por cuia; (d) dejar que el tablero suba sobre la cabecera del HUD.
+- **«Ver mapa» en el escalón 3 de la victoria compacta (FX16b):** no sale cuando no cabe en la fila (solo pasa en en-XA al 130 %, en las llegadas del 20 y el 80); el Mapa sigue en el inicio y en la pausa. Se anota en 06 §4.5 y 02 §6.
+- **«Siguiente» en el escalón 3 (FX16b):** con «Ver mapa» va más estrecho, con la misma altura y el mismo canto derecho [P] (se aparta de Q7-A de D-017 solo a lo ancho).
+
 ## D-033 · Tanda 5: respuestas del 2026-10-20 a las preguntas del plan (Q-N, Q-M, Q-E y Q-T)
 
 - **Fecha:** 2026-10-20. Registrada el 2026-10-20 por el integrador (escritorio).
