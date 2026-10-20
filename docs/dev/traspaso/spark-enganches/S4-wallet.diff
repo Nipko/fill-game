@@ -1,17 +1,21 @@
 diff --git a/Assets/_Project/Scripts/Economy/StreakRules.cs b/Assets/_Project/Scripts/Economy/StreakRules.cs
-index 44bb776..b5cefeb 100644
+index bfc6c97..804318b 100644
 --- a/Assets/_Project/Scripts/Economy/StreakRules.cs
 +++ b/Assets/_Project/Scripts/Economy/StreakRules.cs
-@@ -151,7 +151,8 @@ public string? MilestoneRewardValue
+@@ -151,9 +151,10 @@ public string? MilestoneRewardValue
  
          /// <summary>
          /// Añade a <paramref name="into"/> lo que la cartera debe aplicar, en orden: la Cosecha doble del río crecido
 -        /// (<see cref="Transaction.DoubleHarvest"/> con la etiqueta <paramref name="winTier"/> de la victoria), las semillas del
+-        /// hito 3 (<see cref="SeedSource.Streak"/>), la Canasta del hito 6 (sus semillas también con <see cref="SeedSource.Streak"/>,
+-        /// porque cuentan en el tope: Q-C13) y la Cuia extra del hito 10. Nada en un fallo duro ni en un evento que no contó.
 +        /// (<see cref="Transaction.DoubleHarvestRiver"/>, sin la compuerta del vídeo, con la etiqueta <paramref name="winTier"/>
-+        /// de la victoria), las semillas del
-         /// hito 3 (<see cref="SeedSource.Streak"/>), la Canasta del hito 6 (sus semillas también con <see cref="SeedSource.Streak"/>,
-         /// porque cuentan en el tope: Q-C13) y la Cuia extra del hito 10. Nada en un fallo duro ni en un evento que no contó.
++        /// de la victoria), las semillas del hito 3 (<see cref="SeedSource.Streak"/>), la Canasta del hito 6 (sus semillas también
++        /// con <see cref="SeedSource.Streak"/>, porque cuentan en el tope: Q-C13) y la Cuia extra del hito 10. Nada en un fallo
++        /// duro ni en un evento que no contó.
          /// </summary>
+         public void AppendTransactions(List<Transaction> into, RewardTier winTier)
+         {
 @@ -169,7 +170,7 @@ public void AppendTransactions(List<Transaction> into, RewardTier winTier)
  
              if (FreeDoubleHarvest)
@@ -22,7 +26,7 @@ index 44bb776..b5cefeb 100644
  
              if (HitSeeds > 0)
 diff --git a/Assets/_Project/Scripts/Economy/StreakService.cs b/Assets/_Project/Scripts/Economy/StreakService.cs
-index c8e317a..31e0950 100644
+index 50aee53..7ecadc0 100644
 --- a/Assets/_Project/Scripts/Economy/StreakService.cs
 +++ b/Assets/_Project/Scripts/Economy/StreakService.cs
 @@ -61,9 +61,8 @@ internal StreakServiceResult(StreakOutcome streak)
@@ -38,7 +42,7 @@ index c8e317a..31e0950 100644
          public TransactionResult? DoubleHarvest { get; internal set; }
  
 diff --git a/Assets/_Project/Scripts/Economy/Transaction.cs b/Assets/_Project/Scripts/Economy/Transaction.cs
-index a1dbad4..bfcb832 100644
+index a1dbad4..29abde6 100644
 --- a/Assets/_Project/Scripts/Economy/Transaction.cs
 +++ b/Assets/_Project/Scripts/Economy/Transaction.cs
 @@ -254,6 +254,12 @@ private Transaction(TransactionKind kind)
@@ -66,7 +70,7 @@ index a1dbad4..bfcb832 100644
 +        /// (<c>ads_rv_cap_double_harvest</c>, cosa de <c>AF.Ads</c>). Solo la pide la Crecida
 +        /// (<see cref="StreakOutcome.AppendTransactions"/>), que ya decidió si toca.
 +        /// </summary>
-+        public static Transaction DoubleHarvestRiver(int level, RewardTier tier)
++        internal static Transaction DoubleHarvestRiver(int level, RewardTier tier)
 +        {
 +            return new Transaction(TransactionKind.DoubleHarvest)
 +            {
@@ -195,3 +199,37 @@ index 0000000..c126b89
 +fileFormatVersion: 2
 +guid: 6c6bfad8e860cdd4ab2a45fe08d354f7
 \ No newline at end of file
+diff --git a/Assets/_Project/Tests/EditMode/StreakServiceTests.cs b/Assets/_Project/Tests/EditMode/StreakServiceTests.cs
+index 649fd00..ed51df0 100644
+--- a/Assets/_Project/Tests/EditMode/StreakServiceTests.cs
++++ b/Assets/_Project/Tests/EditMode/StreakServiceTests.cs
+@@ -224,29 +224,6 @@ public void AMilestoneTheWalletRejects_StaysPaidToday_AndIsNotPaidAgain()
+             Assert.That(fx.Store.Persisted.HitsToday, Is.EqualTo(new[] { 3 }));
+         }
+ 
+-        // ---- x2 del río con la compuerta del vídeo por encima (Q-C14; sin el parche S4-wallet) ----
+-
+-        [Test]
+-        public void RiverDouble_WithoutTheS4Patch_IsRejectedByTheVideoGate()
+-        {
+-            // Q-C14: sin el parche S4-wallet (E35), Wallet.Apply rechaza Transaction.DoubleHarvest por debajo de
+-            // ads_rv_double_harvest_from_level. S4-wallet quita este test: con él, el x2 del río se paga
+-            // (RiverDoubleHarvestTests.StreakService_PaysTheRiverDouble_EvenWithTheVideoGateAboveTheLevel).
+-            EconomyConfig gate = EconomyConfig.Defaults;
+-            gate.AdsRvDoubleHarvestFromLevel = 40;
+-            var fx = new Fx(Record(Today, 1, river: true), economy: new EconomyFixture(config: gate));
+-
+-            StreakServiceResult r = fx.Service.ApplyWin(26, true, 25, RewardTier.Normal);
+-
+-            Assert.That(r.FreeDoubleHarvest, Is.True);
+-            Assert.That(r.DoubleHarvest, Is.Not.Null);
+-            Assert.That(r.DoubleHarvest!.Reason, Is.EqualTo(RejectReason.NotUnlocked));
+-            Assert.That(r.Has(StreakServiceEvents.FreeDoubleHarvest), Is.False);
+-            Assert.That(r.DoubleHarvestSeeds, Is.EqualTo(0));
+-            Assert.That(r.AllApplied, Is.False);
+-            Assert.That(fx.Wallet.Seeds, Is.EqualTo(0));
+-        }
+-
+         // ---- Comodín del hito 6 con max_level (Q-C5 (a)) ----
+ 
+         [Test]

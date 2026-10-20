@@ -193,6 +193,11 @@ namespace AF.Economy
     /// la Crecida (ni suma, ni rompe, ni x2, y el estado guardado se conserva), pero no la Canasta de nivel, que no es de la
     /// Crecida (K1). Se usa desde el hilo principal.
     /// </para>
+    /// <para>
+    /// <b>No es reentrante:</b> <see cref="ApplyWin"/> y <see cref="ApplySkip"/> reutilizan una lista interna de transacciones
+    /// mientras pagan. Un oyente de <see cref="Wallet.Changed"/> (que salta dentro de <see cref="Wallet.Apply"/>) no debe llamar
+    /// a este servicio; si necesita reaccionar, que lo haga después de que vuelva la llamada en curso.
+    /// </para>
     /// </summary>
     public sealed class StreakService
     {
@@ -265,12 +270,16 @@ namespace AF.Economy
         /// </summary>
         /// <param name="level">Nivel ganado (≥ 1).</param>
         /// <param name="isCampaign">Campaña (false en el Reto del río y los eventos: ni Crecida ni Canasta, C1 y Q-C2).</param>
-        /// <param name="maxLevelBefore"><c>max_level</c> antes de esta victoria (para no pagar dos veces la Canasta de un nivel rejugado).</param>
+        /// <param name="maxLevelBefore">
+        /// <c>max_level</c> antes de esta victoria: el enganche E30 lo lee <b>antes</b> de <c>_progress.SaveWin</c>. Sirve para no
+        /// pagar dos veces la Canasta de un nivel rejugado y para el comodín del hito 6
+        /// (<c>BasketRules.HitSix(Math.Max(level, maxLevelBefore))</c>, Q-C5 (a)).
+        /// </param>
         /// <param name="tier">Etiqueta de la victoria (la Cosecha doble dobla la de esa etiqueta).</param>
         public StreakServiceResult ApplyWin(int level, bool isCampaign, int maxLevelBefore, RewardTier tier)
         {
             StreakRules rules = Rules();
-            StreakOutcome outcome = rules.OnVictory(level, isCampaign);
+            StreakOutcome outcome = rules.OnVictory(level, isCampaign, maxLevelBefore);
             var result = new StreakServiceResult(outcome);
             if (outcome.Counted)
             {
@@ -338,7 +347,9 @@ namespace AF.Economy
         /// <summary>
         /// Salto del Boto confirmado en el nivel <paramref name="level"/> (E34; K9; 04 §2.6): si es un <c>10k</c> de campaña, paga
         /// su Canasta de nivel con <c>source = basket</c>, igual que la victoria. No toca la Crecida (ni la avanza ni la rompe,
-        /// C11): no lee ni guarda el almacén. Fuera de campaña no hace nada.
+        /// C11): no lee ni guarda el almacén. Fuera de campaña no hace nada. No pide <c>max_level</c>, a diferencia de
+        /// <see cref="ApplyWin"/>: el Salto del Boto solo se ofrece en el nivel actual, el siguiente a <c>max_level</c>, así que
+        /// el nivel saltado siempre se supera por primera vez.
         /// </summary>
         public StreakServiceResult ApplySkip(int level, bool isCampaign)
         {

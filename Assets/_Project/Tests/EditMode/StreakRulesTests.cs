@@ -270,6 +270,26 @@ namespace AF.Tests.EditMode
             Assert.That(six.CappedSeeds, Is.EqualTo(30));
         }
 
+        [Test]
+        public void HitSix_TakesTheMaxOfLevelAndProgress()
+        {
+            // Q-C5 (a): el primer múltiplo de 10 mayor que max_level tras la victoria. 06 §4.5 no deja rejugar: aquí se fuerza.
+            StreakRules replayed = NewRules();
+            replayed.Record.Wins = 5;
+            StreakOutcome six = replayed.OnVictory(32, true, 45);
+            Assert.That(six.Milestone, Is.EqualTo(6));
+            Assert.That(six.Basket, Is.EqualTo(BasketRules.HitSix(45, BasketConfig.Defaults)), "Canasta del 50, no la del 40");
+            Assert.That(six.Basket.Stock, Is.EqualTo(StockDelta.Of(BoosterKind.Undo, 3)));
+
+            StreakRules withProgress = NewRules();
+            withProgress.Record.Wins = 5;
+            StreakRules withoutProgress = NewRules();
+            withoutProgress.Record.Wins = 5;
+            BasketContents expected = withoutProgress.OnVictory(32, true).Basket;
+            Assert.That(expected.Level, Is.EqualTo(40));
+            Assert.That(withProgress.OnVictory(32, true, 31).Basket, Is.EqualTo(expected), "sin rejugar, el progreso no cambia nada");
+        }
+
         // ---- Hoja escudo y fallo duro (04 §6.2 failHard; 05 §2.4 on_hard_fail; Q-C6; Q-C7) ----
 
         [Test]
