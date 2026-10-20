@@ -500,7 +500,7 @@ namespace AF.Tests.EditMode
                 keys.Add(product.NameKey);
             }
 
-            // Las 30 frases de TiTino (TI3): las claves las da AF.GameFlow.SlothLines y las pinta UiText.TrySlothLine.
+            // Las 38 frases de TiTino (TI3 y DC25): las claves las da AF.GameFlow.SlothLines y las pinta UiText.TrySlothLine.
             keys.AddRange(UiText.SlothLineKeys);
 
             // Las del Reto del río (R9; enganche E5): las pinta AF.UI.DailyText.

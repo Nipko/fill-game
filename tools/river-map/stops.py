@@ -34,11 +34,16 @@ status_pt-BR, notes y args):
   queda intacta y la fila dice que es otra redaccion, acortada en M4.5a para que la llegada quepa en la ranura de la
   victoria; n = 22 y 30); args con las cifras que el texto escribe como {n} (Q8-A): la fuente las da en
   dato_del_nivel.args, con las reglas de LocArgs.TryParse;
+- desde DC9 (D-028, pregunta 57 a), <clave del dato>.source por cada dato de llegada y «Otro dato» con fuente: el nombre
+  corto de su fuente (source_short.names de overrides.json [P]; 40 caracteres, los 48 de map_card_source menos
+  «Fuente: »); con varias fuentes, la primera [V] o, sin ninguna [V], la primera (source_of); sin fuente con URL, sin
+  fila. Nombre propio: en y pt-BR vacios, como las demas filas, y el traductor lo copia tal cual;
 - el contexto dice donde sale cada texto: en los hitos de TiTino (fin de mundo salvo el 10, primer Dificil 40 y primer
   Muy dificil 60; D-022, punto 1), el dato de llegada del 10k sale en la victoria siguiente;
 - --check falla si el bloque no esta al dia (desfase), si una clave citada no tiene fila con texto, si un texto pasa de su
   limite, lleva una cifra con separador o decimales o cae en el veto de Belen, si un rio no es solo el nombre del rio
-  (parentesis, «río» o minuscula), si una fila con [V] o [E] no cita ninguna URL o si un dato [V] no tiene fuente [V].
+  (parentesis, «río» o minuscula), si una fila con [V] o [E] no cita ninguna URL o si un dato [V] no tiene fuente [V]; y
+  (DC9) si la fuente de una fila .source no tiene nombre corto o source_short lleva un id desconocido o sin uso.
 
 Conversion (paradas_1_200 y paradas_201_700 -> stops[n]; plan del Mapa, M1.1, M4.5a y M4.5b):
 - paradas_1_200 cubre k = 0..19 (niveles 1-200, D-013 punto 3) y paradas_201_700, con el mismo registro mas sitio y
@@ -728,6 +733,13 @@ MAX_ARG_DECIMALS = 9       # LocNumber.MaxDecimals: LocArgs.TryParse rechaza un 
 ARG_INT_MIN, ARG_INT_MAX = -(2 ** 63), 2 ** 63 - 1   # long de C#: LocArgs.TryParse rechaza un entero fuera de rango
 SEPARATOR_ARG = "sep"      # LocFormat.SeparatorName: el marcador de corte, sin valor
 TEXT_STATUS = "pendiente_asesor"   # lo cultural nace pendiente del asesor (07 §8.2)
+# Fuente del dato (D-028, pregunta 57 a): fila <clave del dato>.source con el nombre corto de su fuente, que la tarjeta de la
+# parada enseña con map_card_source («Fuente: {source}», max_chars 48 en strings.csv; StopCard.SourceSuffix). El nombre
+# corto cabe en esos 48 con «Fuente: » (8 caracteres): 40 [P]. La etiqueta envuelve en lineas (TextWrappingModes.Normal)
+# y la tarjeta mide su alto, asi que el tope es el de la tabla, no el de una linea.
+SOURCE_SUFFIX = ".source"
+SOURCE_MAX_CHARS = 48 - len("Fuente: ")
+SOURCE_SHORT_FIELDS = frozenset({"names", "why"})
 EVIDENCE = ("V", "E")
 REQUIRED_COLUMNS = ("key", "es-419", "context", "max_chars", "status", "notes", "args")
 GENERATED = "Fila generada por tools/river-map/stops.py --write-texts (M1.1t): no se edita a mano."
@@ -920,17 +932,68 @@ def _sources_text(dato: dict, fuentes: dict, key: str) -> tuple[str, list[str]]:
         if not (isinstance(url, str) and url.startswith(("https://", "http://"))):
             errors.append(f"{key}: la fuente {sid!r} no tiene URL")
         tags.append(f.get("etiqueta"))
-        nombre = f.get("nombre")
-        if isinstance(nombre, str) and has_belen(nombre):
-            # El veto de D-013 (punto 11) vale para todas las columnas: de una fuente con «Belén» en el titulo (CR-F28,
-            # la pagina del distrito) queda su id y su URL, que la identifican.
-            nombre = "título omitido por el veto de D-013, punto 11"
-        parts.append(f"{sid} [{f.get('etiqueta')}]: {nombre}, {url}")
+        # El veto de D-013 (punto 11) vale para todas las columnas: de una fuente con «Belén» en el titulo (CR-F28, la
+        # pagina del distrito) queda su id y su URL, que la identifican.
+        parts.append(f"{sid} [{f.get('etiqueta')}]: {_source_title(sid, f)}, {url}")
     if etiqueta == "V" and len(tags) == len(ids) and "V" not in tags:
         errors.append(f"{key}: dato [V] sin ninguna fuente [V] ({', '.join(ids)})")
     label = "Fuente" if len(parts) == 1 else "Fuentes"
     return f"{label} " + "; ".join(parts) + ".", errors
 
+
+def source_ids(dato: dict) -> list[str]:
+    """Ids de las fuentes de un dato, en su orden («MR-F38, wp_tipos» -> ["MR-F38", "wp_tipos"])."""
+    raw = dato.get("fuente")
+    return [p.strip() for p in raw.split(",") if p.strip()] if isinstance(raw, str) else []
+
+
+def _has_url(f) -> bool:
+    return isinstance(f, dict) and isinstance(f.get("url"), str) and f["url"].startswith(("https://", "http://"))
+
+
+def source_of(dato: dict, fuentes: dict) -> str | None:
+    """La fuente que nombra la fila .source de un dato (D-028, pregunta 57 a): de sus fuentes que existen y tienen URL, la
+    primera [V]; si ninguna es [V], la primera. None si el dato no tiene ninguna (sin fila: la tarjeta no enseña la linea)."""
+    ids = [sid for sid in source_ids(dato) if _has_url(fuentes.get(sid))]
+    verified = [sid for sid in ids if fuentes[sid].get("etiqueta") == "V"]
+    return (verified or ids or [None])[0]
+
+
+def _source_title(sid: str, f: dict) -> str:
+    """Titulo de la fuente para el contexto; el de una fuente con «Belén» (CR-F28) se omite: quedan su id y su URL."""
+    nombre = f.get("nombre")
+    if isinstance(nombre, str) and has_belen(nombre):
+        return "título omitido por el veto de D-013, punto 11"
+    return str(nombre)
+
+
+def source_short_names(overrides: dict, fuentes: dict) -> tuple[dict, list[str]]:
+    """source_short de overrides.json: {"why": "... [P] ...", "names": {id de fuente: nombre corto}}. Falla con un campo
+    desconocido, sin why o sin [P], con un id que no esta en fuentes o con un nombre vacio o con espacios a los lados."""
+    raw = overrides.get("source_short")
+    if raw is None:
+        return {}, []
+    if not isinstance(raw, dict):
+        return {}, ["overrides.json: «source_short» tiene que ser un objeto {why, names}"]
+    errors: list[str] = []
+    unknown = sorted(set(raw) - SOURCE_SHORT_FIELDS)
+    if unknown:
+        errors.append(f"overrides.json: source_short lleva campos desconocidos {unknown} (admitidos: names y why)")
+    why = raw.get("why")
+    if not (isinstance(why, str) and "[P]" in why):
+        errors.append("overrides.json: source_short sin why con [P] (nombres cortos pendientes del asesor y del dueno)")
+    names = raw.get("names", {})
+    if not isinstance(names, dict):
+        return {}, errors + ["overrides.json: source_short.names tiene que ser un objeto {id de fuente: nombre corto}"]
+    clean: dict = {}
+    for sid, name in names.items():
+        if sid not in fuentes:
+            errors.append(f"overrides.json: source_short.names lleva {sid!r}, que no esta en rio-amazonas.json, fuentes")
+        elif not (isinstance(name, str) and name.strip()) or name != name.strip():
+            errors.append(f"overrides.json: source_short.names[{sid!r}] tiene que ser un nombre sin espacios a los lados")
+        else:
+            clean[sid] = name
+    return clean, errors
 
 def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[str]]:
     """Filas del bloque map.* de facts.csv para un documento ya valido: {clave: {columna: valor}}."""
@@ -939,6 +1002,9 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
     fuentes = {f.get("id"): f for f in source.get("fuentes", []) if isinstance(f, dict)}
     rotulos = [r.get("nombre") for r in source.get("rotulos_de_pais", []) if isinstance(r, dict)]
     over = overrides.get("stops") if isinstance(overrides.get("stops"), dict) else {}
+    short_names, errs = source_short_names(overrides, fuentes)
+    errors.extend(errs)
+    used_short: set = set()
     stops = doc["stops"]
     rows: dict = {}
 
@@ -965,6 +1031,30 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
         return f"parada {s['n']} del Mapa del río (niveles {a}-{b}, mundo {s['world']})"
 
     by_n = {s["n"]: s for s in stops}
+
+    def add_source(key: str, dato: dict, shown: str) -> None:
+        """Fila <clave del dato>.source (D-028, pregunta 57 a): el nombre corto de su fuente, de source_short de
+        overrides.json. Sin fuente con URL, sin fila (la tarjeta no enseña la línea)."""
+        sid = source_of(dato, fuentes)
+        if sid is None:
+            return
+        f = fuentes[sid]
+        name = short_names.get(sid)
+        if name is None:
+            errors.append(f"{key}: su fuente {sid} no tiene nombre corto en overrides.json (source_short.names; D-028, "
+                          "pregunta 57 a)")
+            return
+        used_short.add(sid)
+        ids = source_ids(dato)
+        rule = (f" El dato cita {len(ids)} fuentes ({', '.join(ids)}): va la primera [V] o, sin ninguna [V], la primera "
+                f"(D-028, pregunta 57 a)." if len(ids) > 1 else "")
+        context = (f"Nombre corto de la fuente del dato {key} ({shown}): {{source}} de map_card_source («Fuente: "
+                   f"{{source}}»), al pie del dato en la tarjeta de la parada del Mapa del río (06 §4.5; propuesta del "
+                   f"Mapa §7; D-028, pregunta 57 a). Es un nombre propio y no se traduce: en y pt-BR lo copian tal cual "
+                   f"al revisar la fila.{rule} Nombre corto: tools/river-map/overrides.json (source_short). Fuente "
+                   f"{sid} [{f.get('etiqueta')}]: {_source_title(sid, f)}, {f['url']}. {NO_CAPTURE}")
+        add(key + SOURCE_SUFFIX, name, SOURCE_MAX_CHARS, context,
+            f"[P] Nombre corto de la fuente {sid} ({f['url']}), de overrides.json (source_short; D-028, pregunta 57 a).")
 
     def titino_milestone(s: dict) -> str | None:
         """Por que la victoria del 10n, la que llega a la parada s, es un hito de TiTino (T6-A), o None si no lo es."""
@@ -1138,6 +1228,7 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
         context = (f"{shown}. Es también el fact_id de af_river_fact_shown (02 §6; 08 §4.5 y §8.2).{cifras} Lugar del "
                    f"dato: {names.get(holder)}.{origin} {sources} {NO_CAPTURE}")
         add(key, text, FACT_MAX_CHARS, context, f"[{dato.get('etiqueta')}] Dato del Mapa del río.{rewritten}", args)
+        add_source(key, dato, f"dato de llegada a la {where(s)}, {names[n]}")
 
     # «Otro dato» de la tarjeta (facts[]; M2.6 con los de M2.7): 90 caracteres, con su fuente y su URL.
     for s in stops:
@@ -1161,6 +1252,7 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                        f"af_river_fact_shown.{cifras} Origen: {o.get('origen')}. Fuentes reabiertas el {o.get('releida')} "
                        f"(R5). {sources}{nota} {NO_CAPTURE}")
             add(key, o.get("texto"), FACT_MAX_CHARS, context, f"[{o.get('etiqueta')}] «Otro dato» del Mapa del río.", args)
+            add_source(key, o, f"«Otro dato» de la {where(s)}, {names[n]}")
 
     # Nombres de los puntos de paso y de los miradores de river_map_v1.json (map.stop.<id>.name por convencion; M2.6) y,
     # desde M4.5a, los de los viajes de entrada de 201-1.000 que llevan id (teotonio, en el del 300), con su id.
@@ -1254,6 +1346,10 @@ def build_texts(doc: dict, source: dict, overrides: dict) -> tuple[dict, list[st
                    f"(pregunta_del_mundo). {NO_CAPTURE}")
         add(key, q.get("texto"), QUESTION_MAX_CHARS, context, "[P] Pregunta del Mapa del río (D-013).")
 
+    # Un nombre corto que no nombra ningun dato sobra (como una parada de overrides.json que no existe).
+    for sid in sorted(set(short_names) - used_short):
+        errors.append(f"overrides.json: source_short.names lleva {sid!r}, que no es la fuente de ningun dato con fila .source")
+
     for key in cited_keys(doc):
         if key not in rows:
             errors.append(f"{key}: citada en river_stops_v1.json y sin texto en el bloque")
@@ -1334,7 +1430,10 @@ def check_facts(path: Path, rows: dict, doc: dict) -> list[str]:
         if key in table and not table[key].get("es-419", "").strip():
             errors.append(f"{key}: citada en river_stops_v1.json y sin texto es-419 en {_rel(path)}")
     # Los nombres que cita river_map_v1.json por convencion (puntos de paso, miradores y paises de los rotulos; M2.6).
+    # Las filas .source (D-028) no las cita ningun JSON: si faltan, lo dice el desfase de abajo.
     for key in sorted(set(rows) - set(cited_keys(doc))):
+        if key.endswith(SOURCE_SUFFIX) and key[:-len(SOURCE_SUFFIX)] in rows:
+            continue
         if not table.get(key, {}).get("es-419", "").strip():
             errors.append(f"{key}: citada en river_map_v1.json y sin fila con texto es-419 en {_rel(path)}")
     expected, errs = render_facts(current, rows)

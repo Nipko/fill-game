@@ -11,8 +11,8 @@ namespace AF.GameFlow
     /// (<c>ads_rv_double_harvest_from_level</c>), la Cosecha doble por video (<c>rv_double_harvest</c>; 04 §2.8); y
     /// «Siguiente» → AD_GATE (<see cref="IAdGate"/>) → N + 1. Sin auto-avance por tiempo (<c>victory_autonext_s</c> = 0); tras
     /// cobrar la Cosecha doble, la vista avanza sola por el mismo camino que «Siguiente» (D-011, punto 4), y AD_GATE no enseña
-    /// el intersticial porque <c>AdPolicy</c> lo bloquea tras un recompensado. Sin el calificativo «¡Perfecto!» (pregunta
-    /// 10.2 #25 abierta).
+    /// el intersticial porque <c>AdPolicy</c> lo bloquea tras un recompensado. El calificativo «¡Perfecto!» (<see cref="IsPerfect"/>;
+    /// Magic Sort §10.2 #25, A, D-029; tarea DC14) sale solo si el intento ganado no llevó la Cuia de rescate.
     /// </summary>
     public sealed partial class LevelFlow
     {
@@ -20,6 +20,7 @@ namespace AF.GameFlow
         private int _harvest;
         private RewardTier _harvestTier;
         private bool _harvestDoubled;
+        private bool _perfect;
 
         /// <summary>Anuncios de la cadencia de intersticiales (AD_GATE); null = sin anuncios (tests del flujo).</summary>
         public IAdGate? AdGate { get; set; }
@@ -35,6 +36,17 @@ namespace AF.GameFlow
 
         /// <summary>La Cosecha ya se dobló en esta victoria.</summary>
         public bool HarvestDoubled => _harvestDoubled;
+
+        /// <summary>
+        /// La última victoria es «¡Perfecto!» (Magic Sort §10.2 #25, recomendada A; D-029; tarea DC14): en el intento ganado el
+        /// tablero no llevaba la Cuia de rescate, ni la de «Continuar: +1 cuia» ni la de la Balsa de rescate. Se evalúa por
+        /// intento con las cuias añadidas del nivel en curso (<see cref="LevelAttempt.Rescues"/>), que persisten al reiniciar y
+        /// se olvidan al salir del nivel: tras un rescate, Volver a la orilla sigue con esa cuia en el tablero y no es perfecto
+        /// [P] (si el dueño quiere contar solo el intento, haría falta un indicador por intento que se ponga a cero al reiniciar);
+        /// salir al inicio y volver a entrar empieza sin ella. La Cuia extra, Marea, Morpho y la Luciérnaga no lo quitan, porque
+        /// la pregunta solo nombra la Cuia de rescate [P]. False fuera de una victoria.
+        /// </summary>
+        public bool IsPerfect => _perfect;
 
         /// <summary>
         /// Victorias de campaña (<c>stats.levels_won</c>; <see cref="IProgressStore.LevelsWon"/>), contando la de ahora desde su
@@ -124,9 +136,10 @@ namespace AF.GameFlow
             {
                 SaveBatch?.RequireDurable();
                 StateStore?.Clear();
+                _perfect = _attempt.Rescues == 0; // antes de nada: el intento ganado, con sus cuias añadidas (DC14)
                 _attempt.Won();
                 _progress.SaveWin(LevelNumber, LevelNumber + 1);
-                ResetHarvest();
+                ResetHarvest(_perfect);
                 RewardTiers.TryParse(Level.DifficultyLabel, out _harvestTier);
                 if (_wallet != null)
                 {
@@ -144,8 +157,9 @@ namespace AF.GameFlow
             _listener.OnWin();
         }
 
-        private void ResetHarvest()
+        private void ResetHarvest(bool perfect = false)
         {
+            _perfect = perfect;
             _harvestBase = 0;
             _harvest = 0;
             _harvestTier = RewardTier.Normal;

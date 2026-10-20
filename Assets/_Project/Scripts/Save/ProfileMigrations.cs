@@ -12,9 +12,10 @@ namespace AF.Save
     /// <see cref="TargetSchema"/>. <see cref="LocalProfileStore"/> escribe <c>profile.bak</c> antes de migrar y, si un paso
     /// lanza una excepción, conserva el archivo anterior sin tocarlo.
     /// <para>
-    /// Hoy el esquema es 1 y no hay pasos. Para publicar el esquema 2: subir <see cref="Profile.CurrentSchema"/>, adaptar
-    /// <see cref="Profile"/> y <see cref="ProfileJson"/>, y registrar en <see cref="Current"/> el paso
-    /// <c>Step(1, MigrateV1ToV2)</c>, con su test de ida (documento v1 → v2).
+    /// Pasos de esta build: <c>1 → 2</c> (<see cref="MigrateV1ToV2"/>, tarea DC15: <c>fauna.sighted</c>, Q11 del guion de la
+    /// intro, D-029). Para un esquema nuevo: subir <see cref="Profile.CurrentSchema"/>, adaptar <see cref="Profile"/> y
+    /// <see cref="ProfileJson"/>, y registrar en <see cref="Current"/> el paso <c>Step(n, MigrateVnToVn1)</c>, con su test
+    /// de ida (documento vn → vn+1).
     /// </para>
     /// </summary>
     public sealed class ProfileMigrations
@@ -22,7 +23,7 @@ namespace AF.Save
         private readonly Dictionary<int, Action<JsonNode>> _steps = new Dictionary<int, Action<JsonNode>>();
 
         /// <summary>Las migraciones de esta build: hasta <see cref="Profile.CurrentSchema"/>.</summary>
-        public static ProfileMigrations Current { get; } = new ProfileMigrations(Profile.CurrentSchema);
+        public static ProfileMigrations Current { get; } = new ProfileMigrations(Profile.CurrentSchema, Step(1, MigrateV1ToV2));
 
         /// <summary>Crea un juego de migraciones hasta <paramref name="targetSchema"/>.</summary>
         /// <param name="targetSchema">Esquema final.</param>
@@ -45,6 +46,24 @@ namespace AF.Save
 
                 _steps.Add(from, steps[i].Value ?? throw new ArgumentNullException(nameof(steps)));
             }
+        }
+
+        /// <summary>
+        /// Paso <c>1 → 2</c> (DC15; Q11 del guion de la intro, D-029): añade <c>fauna</c> con <c>sighted</c> vacío si el documento
+        /// no lo trae, al final de la raíz. No toca ninguna otra clave (nada se pierde) y no depende de nada más que del
+        /// documento (determinista). Si ya hay un <c>fauna</c> (un documento a medio escribir por otra build), se deja tal cual:
+        /// la lectura es tolerante.
+        /// </summary>
+        internal static void MigrateV1ToV2(JsonNode root)
+        {
+            if (root.Get("fauna") != null)
+            {
+                return;
+            }
+
+            JsonNode fauna = JsonNode.NewObject();
+            fauna.Set("sighted", JsonNode.NewArray());
+            root.Set("fauna", fauna);
         }
 
         /// <summary>Esquema al que llegan las migraciones.</summary>

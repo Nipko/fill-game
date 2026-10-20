@@ -340,7 +340,10 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Level8_StaysWithCapi_AndOtherLevels_NoInstruction([Values(8, 4, 5, 7, 13)] int level)
         {
-            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
+            // El 5 solo trae el respaldo del tooltip de Marea si no salió en el 3 (DC23; UndoTipTests): aquí ya salió.
+            Profile profile = FunnelSetup.Profile(0);
+            profile.Progress.UndoTipSeen = true;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
             yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));
             GameBootstrap boot = GameBootstrap.Current!;
             GameScreen view = boot.View!;

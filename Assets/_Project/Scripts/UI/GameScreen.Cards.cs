@@ -2,13 +2,16 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Text;
+using System.Threading;
 using AF.Boosters;
 using AF.Core.Board;
 using AF.Core.Mechanics;
+using AF.Core.Rules;
 using AF.Core.Session;
 using AF.GameFlow;
 using AF.Levels;
 using AF.Presentation;
+using AF.Solver.Murky;
 using AF.Solver.Search;
 using UnityEngine;
 
@@ -58,13 +61,15 @@ namespace AF.UI
     /// sobre el muelle, una burbuja «Te faltan {n}» que sale debajo). Sobre el muelle va a ≥ 8 dp del marco del tablero y a ≥ 12
     /// dp del marco de Marea, y si tapa el poste, el poste se funde con ella. En el 3 es el tooltip de Marea, «Marea · Deshacer:
     /// toca para devolver el agua» (04 §2.1), que no sale tras la intro sino tras el primer vertido que no acerca a la solución
-    /// (02 §13 y 06 §2.2, «la primera vez que un vertido aleja de la solución»; 04 §2.1, «tras ejecutarlo»), medido con el solver,
-    /// y solo la primera vez en la sesión de juego (ni en los reintentos) [P]. Con TiTino señalando el botón: sobre el muelle,
+    /// (02 §13 y 06 §2.2, «la primera vez que un vertido aleja de la solución»; 04 §2.1, «tras ejecutarlo»), medido con el solver
+    /// (D-029, pregunta 56 a), y una sola vez en la vida (D-030, pregunta 15 (b); tarea DC23): se apunta en el perfil al mostrarse
+    /// (<c>progress.undo_tip_seen</c> [P], por <see cref="UndoTipShown"/>, que guarda en segundo plano) y, apuntado
+    /// (<see cref="UndoTipSeen"/>), no vuelve ni en el 3, ni en sus reintentos, ni en el 5, aunque se cierre la app. Si no salió
+    /// en el 3, sale al inicio del 5 (02 §13: «o al inicio del nivel 5 si no ocurrió»), al habilitarse el toque tras la intro, en
+    /// el mismo sitio y con la misma cola (<see cref="TutorialInstruction.UndoTipFor"/>). Con TiTino señalando el botón: sobre el muelle,
     /// pegada a la bandeja si cabe (aunque la franja mida ≥ 64 dp: prioridad de 04 §2.1 [P], pregunta para el dueño), con el
     /// retrato hacia el botón y una cola cuya punta queda en el eje del botón de Marea, a <see cref="TutorialTailUndoAirDp"/> dp
-    /// de su marco; en 1-10 Marea es ilimitada, así que su primer uso no descuenta. El respaldo de 02 §13 («o al inicio del
-    /// nivel 5 si no ocurrió») y «la primera vez» entre sesiones necesitan guardar en el perfil que ya salió (migración y
-    /// aprobación del dueño, como los avistamientos de <see cref="SightingRule"/>): aún no están, pregunta para el dueño.
+    /// de su marco; en 1-10 Marea es ilimitada, así que su primer uso no descuenta.
     /// Sin TiTino (<c>ui_sloth_enabled</c> apagado o, en release,
     /// sin su arte) o si la tarjeta no cabe, la instrucción sale como aviso de texto (<c>_toast</c>): el tutorial no se pierde [P]. El ajuste «Mensajes de TiTino» no la quita: es la instrucción del
     /// tutorial, no una frase de su banco [P]. El 8 sigue siendo de Capi (su aviso de la Cuia extra). En el 12 (tarea TU1b; 04
@@ -76,6 +81,40 @@ namespace AF.UI
     /// la ranura pasa a «+3»). Sonda <c>AF_STATE tutorial</c> con el nivel, la clave, la duración, el sitio (<c>band</c>,
     /// <c>dock</c> o <c>toast</c>), si es el tooltip de Marea (<c>undo</c>) o la presentación de Morpho (<c>hint</c>) y si la cola
     /// señala su botón, a ≤ <see cref="TutorialPointToleranceDp"/> dp de su eje (<c>over_undo</c> y <c>over_hint</c>).</para>
+    /// <para><b>Dedo guía</b> (tarea DC6; D-028, pregunta 61 (a) «con P5»; 02 §13, filas 1 y 2; 06 §2.2; 02 §4, D-002: ayuda
+    /// explícita que solo señala el vertido de la lección): en el 1 y el 2 (<see cref="TutorialInstruction.FingerFor"/>), solo
+    /// en el primer intento (ni tras Volver a la orilla ni al reanudar, que va sin intro) [P], el <see cref="TutorialFinger"/> va
+    /// del origen al destino del vertido de la lección, en bucle y sin capturar toques. Sale tras la intro, cuando la tropa ya se
+    /// fue, sin el rótulo del intento y con la vista quieta, como la instrucción de TiTino, que es la tarjeta de prioridad 1 del
+    /// nivel (02 l. 280: dedo guía → «Fruta nueva» → miquito): no añade otra tarjeta. El vertido lo elige
+    /// <see cref="TutorialFinger.TryChoose"/> con el solver sobre el tablero del momento (el pack no guarda la solución): en el
+    /// 1, el primero de la solución; en el 2, el vertido parcial de la lección (una racha de 3 sobre un hueco de 2) en cuanto es
+    /// legal, que en su tablero inicial, lleno, no lo es: sale tras el primer vertido que lo deja posible. Se va al hacer ese
+    /// vertido; si el jugador hace otro, se va y no vuelve en ese intento [P] (en el 1, también si vierte antes de que salga:
+    /// ya pasaron los dos primeros toques). Deshacer con Marea no es otro vertido [P]: con el dedo a la vista, se va (sonda con
+    /// <c>reason</c> <c>undo</c>) y vuelve a esperar su momento sobre el tablero deshecho (en el 2, a que la lección vuelva a ser
+    /// legal: tras deshacer el primer vertido, al siguiente que la deje posible); si ya se fue por otro vertido, deshacer no lo
+    /// trae. En el 2, al salir el dedo, la instrucción de TiTino («Hay dos cuias vacías…»), que habla del tablero de antes del
+    /// primer vertido, se va con su fundido normal si sigue a la vista [P]: las dos ayudas no compiten y la de TiTino no queda
+    /// desmentida por el tablero. Un modal del embudo lo oculta hasta que se vuelve a jugar; otro intento, la victoria u
+    /// otro nivel lo retiran. Con Reducir movimiento, mano fija sobre el origen y flecha al destino. El 12 no lleva dedo (D-028,
+    /// 61 a): la presentación de TiTino con la cola sobre «Pista» hace de guía. Sonda <c>AF_STATE tutorial_finger</c> (nivel,
+    /// <c>visible</c>, <c>from</c>, <c>to</c>, <c>amount</c>, <c>lesson</c>, <c>reduce</c> y <c>reason</c>) en cada cambio, y
+    /// <c>AF_LAYOUT level</c> otra vez al salir, con el rectángulo <c>tutorial_finger</c> de la mano.</para>
+    /// <para><b>Dedo guía de los estrenos de la Hoja y de la Tinaja</b> (tarea DC7; D-028 con P5 y D-029, la recomendada «sí, con
+    /// el componente de DC6»; 02 §9.1 M1 y M13): el mismo componente y las mismas reglas (primer intento, sin capturar toques, se
+    /// va al hacerlo o con otro vertido, Reducir movimiento y la sonda), por el <c>intro_mechanic</c> del nivel
+    /// (<see cref="TutorialInstruction.FingerFor(int, string)"/>), tras la tarjeta del estreno y la intro:
+    /// <list type="bullet">
+    /// <item><description>Hoja (43): un vertido de la fruta de la hoja a la cuia con hoja, en cuanto es legal (el A*, como en el
+    /// 2); <c>lesson</c> = <c>hoja</c>.</description></item>
+    /// <item><description>Tinaja (323, variante «a»): primero tinaja → su cuia (<c>tinaja_scoop</c>) y, hecho, cuando la vista
+    /// queda quieta tras el gesto de sacar (TJ3), su cuia → destino (<c>tinaja_pour</c>). Los dos, vertidos seguros en todas las
+    /// realidades (<see cref="SafeMoves"/>, como Morpho): el dedo no sabe lo que guarda la tinaja. Sacar sin el dedo cuenta como
+    /// el paso 1; deshacer con el paso 2 a la vista vuelve al 1 [P].</description></item>
+    /// </list>
+    /// Mientras Morpho piensa o se ve, o mientras se elige con la Luciérnaga, el dedo se oculta; con el dedo a la vista no pulsa
+    /// la pista por inactividad (las ayudas no compiten) [P]. Los niveles siguientes con Hoja o Tinaja no lo llevan.</para>
     /// </remarks>
     public sealed partial class GameScreen : ILevelCardListener
     {
@@ -273,6 +312,7 @@ namespace AF.UI
             }
 
             TickTutorialAfterPour(); // el tooltip de Marea del 3, tras el primer vertido que no acerca (TU1a)
+            TickTutorialFinger(dtMs); // el dedo guía del 1 y el 2 (DC6)
 
             LevelFlow? flow = _flow;
             bool inCard = flow != null && flow.HasLevel && flow.Phase == FlowPhase.LevelCard;
@@ -321,6 +361,7 @@ namespace AF.UI
             _cardLayoutSent = false;
             _tutorialAfterPour = null; // el tooltip de Marea que esperaba un vertido era del nivel anterior (TU1a)
             _undoTutorialDue = false;
+            EndTutorialFinger(FingerState.Off, null); // las vistas son nuevas: nada del dedo del nivel anterior (DC6)
             _levelCard.HideNow();
             BannerLevelLoaded();
         }
@@ -336,6 +377,12 @@ namespace AF.UI
             if (_cardsBuilt)
             {
                 BannerLayoutIds(ids, rects);
+            }
+
+            if (_finger != null && _finger.Shown)
+            {
+                ids.Add("tutorial_finger"); // la mano del dedo guía del 1 y el 2 (DC6), donde está al emitir
+                rects.Add(_finger.Hand.rectTransform);
             }
         }
 
@@ -512,7 +559,8 @@ namespace AF.UI
         private int _undoWatchDistance = UndoTutorialUnknown;
         private bool _undoTutorialDue;
 
-        // El tooltip de Marea ya salió en esta sesión de juego: «la primera vez» (02 §13), nunca en los reintentos [P].
+        // El tooltip de Marea ya salió en esta pantalla (sin perfil enganchado, la única memoria; con perfil, la de esta sesión
+        // mientras el guardado va en segundo plano).
         private bool _undoTutorialDone;
 
         // Solver de la distancia del tooltip de Marea (perezoso: solo en el 3, al cambiar el número de vertidos).
@@ -544,8 +592,21 @@ namespace AF.UI
         /// <summary>El tooltip de Marea del 3 espera aún al primer vertido que no acerca a la solución (tests).</summary>
         internal bool TutorialWaitsForPour => _tutorialAfterPour != null;
 
-        /// <summary>El tooltip de Marea ya salió en esta sesión de juego y no vuelve (tests).</summary>
-        internal bool UndoTutorialDone => _undoTutorialDone;
+        /// <summary>
+        /// Lee <c>progress.undo_tip_seen</c> del perfil (D-030, pregunta 15 (b); DC23): el tooltip de Marea ya salió alguna vez. Lo
+        /// engancha GameBootstrap; null (tests sin perfil) = solo la memoria de esta pantalla. Se lee al habilitarse el toque tras
+        /// la intro del 3 y del 5 y al enseñar el tooltip, nunca por fotograma.
+        /// </summary>
+        internal System.Func<bool>? UndoTipSeen { get; set; }
+
+        /// <summary>
+        /// El tooltip de Marea acaba de salir (en la tarjeta de TiTino o como aviso de texto): GameBootstrap apunta
+        /// <c>progress.undo_tip_seen</c> y guarda el perfil en un lote, en segundo plano (D-012; DC23).
+        /// </summary>
+        internal System.Action? UndoTipShown { get; set; }
+
+        /// <summary>El tooltip de Marea ya salió (en esta pantalla o, con perfil, alguna vez: «una sola vez en la vida») y no vuelve (tests).</summary>
+        internal bool UndoTutorialDone => _undoTutorialDone || (UndoTipSeen?.Invoke() ?? false);
 
         /// <summary>
         /// La instrucción a la vista señala el botón de Marea con la cola de la tarjeta de TiTino, a ≤
@@ -581,10 +642,11 @@ namespace AF.UI
 
         // Al habilitarse el toque tras la intro (OnIntroFinished), la instrucción del nivel (TutorialInstruction.KeyFor) entra la
         // primera en la cola de avisos; sale cuando la tropa se ha ido y sin el rótulo del intento (PumpNotices).
-        // En el 3, el tooltip de Marea no entra aún: espera al primer vertido que no acerca a la solución (TickTutorialAfterPour),
-        // y solo hasta que salga una vez en esta sesión de juego.
+        // En el 3, el tooltip de Marea no entra aún: espera al primer vertido que no acerca a la solución (TickTutorialAfterPour);
+        // si no salió allí, entra en el 5, tras la intro. Solo hasta que salga una vez en la vida (progress.undo_tip_seen; DC23).
         private void MaybeShowTutorial(LevelFlow flow)
         {
+            ArmTutorialFinger(flow); // el dedo guía del 1 y el 2 (DC6), aparte de la tarjeta de TiTino
             _tutorialAfterPour = null;
             _undoTutorialDue = false;
             if (!flow.HasLevel || !(TutorialSlothOverride ?? true))
@@ -592,10 +654,14 @@ namespace AF.UI
                 return;
             }
 
-            string? key = TutorialInstruction.KeyFor(flow.LevelNumber);
-            if (key == null)
+            int level = flow.LevelNumber;
+            UndoTipMoment undoTip = TutorialInstruction.IsUndoTipLevel(level)
+                ? TutorialInstruction.UndoTipFor(level, UndoTutorialDone)
+                : UndoTipMoment.None;
+            string? key = undoTip != UndoTipMoment.None ? TutorialInstruction.UndoKey : TutorialInstruction.KeyFor(level);
+            if (key == null || (TutorialInstruction.PointsAtUndo(level) && undoTip == UndoTipMoment.None))
             {
-                return;
+                return; // sin instrucción; o, en el 3, el tooltip ya salió alguna vez («una sola vez en la vida»; DC23)
             }
 
             string text = UiText.TutorialInstructionText(key);
@@ -609,13 +675,8 @@ namespace AF.UI
                 return; // la presentación de Morpho, solo con su ranura en la bandeja (hint_unlock_level movido por Remote Config) [P]
             }
 
-            if (TutorialInstruction.PointsAtUndo(flow.LevelNumber))
+            if (undoTip == UndoTipMoment.AfterPour)
             {
-                if (_undoTutorialDone)
-                {
-                    return; // «la primera vez» (02 §13): ni en los reintentos ni al volver a jugar el 3 [P]
-                }
-
                 // 02 §13 y 04 §2.1: tras el vertido que empeora la posición, medido con el solver desde el tablero del intento.
                 _tutorialAfterPour = text;
                 LevelSession session = flow.Session;
@@ -703,13 +764,19 @@ namespace AF.UI
             LevelFlow? flow = _flow;
             bool hasLevel = flow != null && flow.HasLevel;
             TutorialTarget target = !hasLevel ? TutorialTarget.None
-                : TutorialInstruction.PointsAtUndo(flow!.LevelNumber) ? TutorialTarget.Undo
+                : TutorialInstruction.IsUndoTipLevel(flow!.LevelNumber) ? TutorialTarget.Undo
                 : TutorialInstruction.PointsAtHint(flow!.LevelNumber) ? TutorialTarget.Hint
                 : TutorialTarget.None;
             _tutorialTarget = target;
             if (target == TutorialTarget.Undo)
             {
+                // Se apunta al mostrarse, también si sale como aviso de texto: una sola vez en la vida (DC23).
+                bool first = !_undoTutorialDone;
                 _undoTutorialDone = true;
+                if (first)
+                {
+                    UndoTipShown?.Invoke();
+                }
             }
 
             SlothArt? art = SlothEnabled ? _art.SlothRigArt() : null;
@@ -857,16 +924,499 @@ namespace AF.UI
             int level = _flow?.LevelNumber ?? 0;
             var sb = new StringBuilder(128);
             sb.Append("\"level\":").Append(level.ToString(CultureInfo.InvariantCulture));
-            AppendJsonString(sb, "key", TutorialInstruction.KeyFor(level));
+            bool undoTip = TutorialInstruction.IsUndoTipLevel(level);
+            AppendJsonString(sb, "key", undoTip ? TutorialInstruction.UndoKey : TutorialInstruction.KeyFor(level));
             sb.Append(",\"ms\":").Append(ms.ToString(CultureInfo.InvariantCulture));
             AppendJsonString(sb, "mode", mode);
             bool over = mode != "toast" && _tutorialOverTarget;
-            sb.Append(",\"undo\":").Append(TutorialInstruction.PointsAtUndo(level) ? "true" : "false");
+            sb.Append(",\"undo\":").Append(undoTip ? "true" : "false");
             sb.Append(",\"over_undo\":").Append(over && _tutorialTarget == TutorialTarget.Undo ? "true" : "false");
             sb.Append(",\"hint\":").Append(TutorialInstruction.PointsAtHint(level) ? "true" : "false");
             sb.Append(",\"over_hint\":").Append(over && _tutorialTarget == TutorialTarget.Hint ? "true" : "false");
             _lastTutorialProbe = sb.ToString();
             _probe.Event("tutorial", _lastTutorialProbe);
+        }
+
+        // ------------------------------------------------------------------ Dedo guía del tutorial (DC6)
+
+        // El dedo guía del 1 y el 2 (null hasta el primero), su estado en el intento y el vertido que señala.
+        private TutorialFinger? _finger;
+        private FingerState _fingerState;
+        private FingerLesson _fingerLesson;
+        private Pour _fingerPour;
+
+        // Vigilancia del intento: los vertidos aplicados y el tablero con los que se miró por última vez, y el tablero para el
+        // que ya se buscó el vertido (el solver, solo al cambiar el tablero).
+        private int _fingerWatchPours;
+        private BoardState? _fingerWatchBoard;
+        private BoardState? _fingerChosenFor;
+        private bool _fingerHasChoice;
+        private AStarSolver? _fingerSolver;
+        private string? _lastFingerProbe;
+        private int _fingerShown;
+
+        // El estreno de la Tinaja (DC7): el paso (1, sacar de la tinaja a su cuia; 2, de su cuia a otra), la tinaja, su cuia y
+        // la búsqueda de los vertidos seguros en un hilo (SafeMoves, como Morpho: el dedo no sabe lo que guarda la tinaja).
+        private int _fingerStep;
+        private int _fingerTinaja = -1;
+        private int _fingerScoop = -1;
+        private FingerSafeJob? _fingerJob;
+
+        // Del dedo en el intento: apagado (sin dedo o retirado), esperando su momento (también tras deshacer con el dedo a la
+        // vista [P]), a la vista (o suspendido), hecho (el jugador hizo el vertido) o cancelado (hizo otro: no vuelve en ese
+        // intento [P]).
+        private enum FingerState
+        {
+            Off = 0,
+            Armed = 1,
+            Showing = 2,
+            Done = 3,
+            Cancelled = 4,
+        }
+
+        /// <summary>
+        /// Solo tests: enciende o apaga el dedo guía del 1 y el 2 (null = encendido, como en el juego). Los tests PlayMode que no
+        /// tratan de él lo apagan (<c>PlayModeHelpers</c>), para que sus niveles 1 y 2 y sus capturas sigan como antes de DC6; los
+        /// que lo prueban (<c>TutorialFingerTests</c>) lo encienden y lo vuelven a null en su TearDown.
+        /// </summary>
+        internal static bool? TutorialFingerOverride { get; set; }
+
+        /// <summary>El dedo guía (tests y capturas; null si aún no salió ninguno).</summary>
+        internal TutorialFinger? TutorialFingerView => _finger;
+
+        /// <summary>El dedo guía se ve ahora (tests).</summary>
+        internal bool TutorialFingerVisible => _finger != null && _finger.Shown && _fingerState == FingerState.Showing;
+
+        /// <summary>El dedo guía espera su momento en este intento (tras la intro, la tropa y, en el 2, la lección legal; tests).</summary>
+        internal bool TutorialFingerArmed => _fingerState == FingerState.Armed;
+
+        /// <summary>El jugador hizo el vertido del dedo guía en este intento (tests).</summary>
+        internal bool TutorialFingerFollowed => _fingerState == FingerState.Done;
+
+        /// <summary>El dedo guía se fue por otro vertido y no vuelve en este intento (tests).</summary>
+        internal bool TutorialFingerCancelled => _fingerState == FingerState.Cancelled;
+
+        /// <summary>El vertido que señala o señaló el dedo guía en este intento (tests).</summary>
+        internal Pour TutorialFingerPour => _fingerPour;
+
+        /// <summary>Veces que salió el dedo guía desde que se creó la pantalla (tests).</summary>
+        internal int TutorialFingerShownCount => _fingerShown;
+
+        /// <summary>La lección del dedo guía de este intento (<see cref="FingerLesson.None"/> sin dedo; tests).</summary>
+        internal FingerLesson TutorialFingerLesson => _fingerState == FingerState.Off ? FingerLesson.None : _fingerLesson;
+
+        /// <summary>El paso del dedo guía del estreno de la Tinaja (1: tinaja → su cuia; 2: su cuia → destino; DC7; tests).</summary>
+        internal int TutorialFingerStep => _fingerStep;
+
+        /// <summary>Campos de la última sonda <c>AF_STATE tutorial_finger</c> (null si no salió ninguna o sin sonda; tests).</summary>
+        internal string? LastTutorialFingerProbe => _lastFingerProbe;
+
+        // Al habilitarse el toque tras la intro (MaybeShowTutorial): en el 1 y el 2, solo en el primer intento [P], el dedo queda
+        // esperando su momento (TickTutorialFinger). Al reanudar no pasa por aquí (sin intro).
+        private void ArmTutorialFinger(LevelFlow flow)
+        {
+            EndTutorialFinger(FingerState.Off, null);
+            if (!flow.HasLevel || !(TutorialFingerOverride ?? true))
+            {
+                return;
+            }
+
+            FingerLesson lesson = TutorialInstruction.FingerFor(flow.LevelNumber, flow.Level.IntroMechanic);
+            if (lesson == FingerLesson.None || _introRetry)
+            {
+                return; // sin dedo en este nivel, o un reintento: no en los reintentos del mismo nivel [P]
+            }
+
+            LevelSession session = flow.Session;
+            _fingerTinaja = -1;
+            _fingerScoop = -1;
+            if (lesson == FingerLesson.HojaKey && IndexOfMechanic(session.Current, MechanicType.Hoja) < 0)
+            {
+                return; // el estreno de la Hoja sin hoja en el tablero (mech_enabled.hoja apagada): sin dedo (DC7)
+            }
+
+            if (lesson == FingerLesson.TinajaScoop)
+            {
+                _fingerTinaja = IndexOfMechanic(session.Current, MechanicType.Tinaja);
+                _fingerScoop = IndexOfMechanic(session.Current, MechanicType.Cucharon);
+                if (_fingerTinaja < 0 || _fingerScoop < 0)
+                {
+                    return; // sin la pareja colgada (mech_enabled.tinaja apagada): sin dedo (DC7)
+                }
+
+            }
+
+            _fingerStep = 1;
+            _fingerLesson = lesson;
+            _fingerState = FingerState.Armed;
+            _fingerPour = default;
+            _fingerWatchPours = session.AppliedPours;
+            _fingerWatchBoard = session.Current;
+            _fingerChosenFor = null;
+            _fingerHasChoice = false;
+        }
+
+        // Cada fotograma (CardsTick): sigue el intento y enseña, mueve, suspende o retira el dedo. Sin asignaciones salvo al
+        // buscar el vertido (el solver, solo cuando cambia el tablero mientras espera) y en las sondas (solo en desarrollo).
+        private void TickTutorialFinger(float dtMs)
+        {
+            if (_fingerState != FingerState.Armed && _fingerState != FingerState.Showing)
+            {
+                return;
+            }
+
+            LevelFlow? flow = _flow;
+            if (flow == null || !flow.HasLevel)
+            {
+                EndTutorialFinger(FingerState.Off, null);
+                return;
+            }
+
+            FlowPhase phase = flow.Phase;
+            if (phase == FlowPhase.Intro || phase == FlowPhase.LevelCard || phase == FlowPhase.Loading)
+            {
+                EndTutorialFinger(FingerState.Off, "attempt"); // otro intento (Volver a la orilla): no vuelve [P]
+                return;
+            }
+
+            if (phase == FlowPhase.Celebration || phase == FlowPhase.VictoryScreen || phase == FlowPhase.AdGate)
+            {
+                EndTutorialFinger(FingerState.Off, "level_end");
+                return;
+            }
+
+            LevelSession session = flow.Session;
+            int pours = session.AppliedPours;
+            BoardState current = session.Current;
+            if (pours != _fingerWatchPours || !ReferenceEquals(current, _fingerWatchBoard))
+            {
+                if (pours < _fingerWatchPours)
+                {
+                    // Deshizo con Marea: no es otro vertido [P]. Con el dedo a la vista, se va y vuelve a esperar sobre el tablero
+                    // deshecho (en el 2, a que la lección vuelva a ser legal); esperando, sigue esperando.
+                    if (_fingerState == FingerState.Showing)
+                    {
+                        EndTutorialFinger(FingerState.Armed, "undo");
+                    }
+
+                    if (_fingerLesson == FingerLesson.TinajaScoop)
+                    {
+                        // El estreno de la Tinaja: lo último que se pudo hacer fue sacar (otro vertido lo habría retirado), así
+                        // que, deshecho, vuelve al paso 1 (DC7) [P].
+                        _fingerStep = 1;
+                    }
+
+                    _fingerWatchPours = pours;
+                    _fingerWatchBoard = current;
+                    return;
+                }
+
+                bool onePour = pours == _fingerWatchPours + 1;
+                Pour last = onePour ? session.GetAppliedPour(pours - 1) : default;
+                if (_fingerState == FingerState.Showing)
+                {
+                    bool followed = onePour && last.Source == _fingerPour.Source && last.Target == _fingerPour.Target;
+                    if (followed && _fingerLesson == FingerLesson.TinajaScoop && _fingerStep == 1)
+                    {
+                        // Sacó, como señalaba: el dedo se va y espera, con la vista quieta tras el gesto de sacar (TJ3), para
+                        // señalar el paso 2, de su cuia a un destino (02 §9.1 M13; DC7).
+                        EndTutorialFinger(FingerState.Armed, "followed");
+                        _fingerStep = 2;
+                        _fingerPour = default;
+                        _fingerWatchPours = pours;
+                        _fingerWatchBoard = current;
+                        return;
+                    }
+
+                    EndTutorialFinger(followed ? FingerState.Done : FingerState.Cancelled, followed ? "followed" : "other_pour");
+                    return;
+                }
+
+                if (_fingerLesson == FingerLesson.TinajaScoop)
+                {
+                    // Esperando en el estreno de la Tinaja: sacar sin el dedo hace el paso 1 y verter de su cuia, el 2; otro
+                    // vertido lo retira y no vuelve en el intento, como en el 1 [P] (DC7).
+                    if (onePour && _fingerStep == 1 && last.Source == _fingerTinaja && last.Target == _fingerScoop)
+                    {
+                        _fingerStep = 2;
+                        _fingerWatchPours = pours;
+                        _fingerWatchBoard = current;
+                        return;
+                    }
+
+                    bool selfPour = onePour && _fingerStep == 2 && last.Source == _fingerScoop;
+                    EndTutorialFinger(selfPour ? FingerState.Done : FingerState.Cancelled, selfPour ? "self" : "other_pour");
+                    return;
+                }
+
+                if (_fingerLesson == FingerLesson.FirstPour && pours > _fingerWatchPours)
+                {
+                    // En el 1 el dedo enseña los dos primeros toques: si ya vertió antes de que saliera, sobra [P].
+                    EndTutorialFinger(FingerState.Cancelled, "other_pour");
+                    return;
+                }
+
+                if (onePour && _fingerWatchBoard != null && IsFingerLessonPour(_fingerWatchBoard, last, session.PourMode))
+                {
+                    EndTutorialFinger(FingerState.Done, "self"); // hizo el vertido de la lección sin el dedo (el parcial o la hoja)
+                    return;
+                }
+
+                _fingerWatchPours = pours;
+                _fingerWatchBoard = current;
+            }
+
+            // Retenido también mientras otra ayuda explícita señala o elige (Morpho pensando o a la vista, su tarjeta o la
+            // selección de la Luciérnaga; el 43 y el 323 las tienen): las dos no compiten (DC7) [P].
+            bool held = phase != FlowPhase.Playing || flow.IsResolving || session.Status != LevelStatus.Playing
+                || flow.RevealSelecting || flow.HintThinking || (_morphoFx != null && _morphoFx.Active)
+                || (_hintCard != null && _hintCard.Visible);
+            if (_fingerState == FingerState.Showing)
+            {
+                TutorialFinger finger = _finger!;
+                LeaveStaleTutorialCard();
+                finger.CeilingY = FingerCeilingY();
+                bool wasShown = finger.Shown;
+                finger.Suspend(held, _views);
+                finger.Tick(dtMs, _views);
+                if (wasShown != finger.Shown)
+                {
+                    EmitFingerProbe(finger.Shown, finger.Shown ? "resume" : "held");
+                }
+
+                return;
+            }
+
+            // En el estreno de la Tinaja la búsqueda va en un hilo y empieza ya (durante la intro, el gesto de sacar…), para que
+            // esté lista cuando la vista quede quieta.
+            bool tinajaReady = _fingerLesson == FingerLesson.TinajaScoop && PumpFingerJob(flow, session, current);
+
+            // Esperando: tras la intro, con la tropa ya ida, sin el rótulo del intento y con la vista quieta (como la instrucción).
+            if (held || _intro.TroopVisible || _banner.Visible || !IsViewIdle)
+            {
+                return;
+            }
+
+            if (!ReferenceEquals(_fingerChosenFor, current))
+            {
+                if (_fingerLesson == FingerLesson.TinajaScoop)
+                {
+                    if (!tinajaReady)
+                    {
+                        return; // la búsqueda aún corre: el dedo sale en cuanto termine
+                    }
+
+                    _fingerChosenFor = current;
+                    _fingerHasChoice = _fingerJob!.Found;
+                    _fingerPour = _fingerJob.Pour;
+                }
+                else
+                {
+                    _fingerChosenFor = current;
+                    _fingerSolver ??= new AStarSolver();
+                    _fingerHasChoice = TutorialFinger.TryChoose(_fingerLesson, current, session.PourMode, session.FutileRuleEnabled,
+                        _fingerSolver, out _fingerPour);
+                }
+            }
+
+            if (!_fingerHasChoice)
+            {
+                return; // en el 2 (o en el 43), la lección aún no es legal: espera al vertido que la deja posible
+            }
+
+            _finger ??= new TutorialFinger(_mechanicFrontLayer, _art);
+            _finger.CeilingY = FingerCeilingY();
+            _finger.Show(_fingerPour.Source, _fingerPour.Target, _views, flow.ReduceMotion);
+            if (!_finger.Active)
+            {
+                EndTutorialFinger(FingerState.Off, null);
+                return;
+            }
+
+            _fingerState = FingerState.Showing;
+            _fingerShown++;
+            LeaveStaleTutorialCard();
+            EmitFingerProbe(true, "show");
+            if (DevProbe.Enabled)
+            {
+                EmitLevelLayout(); // AF_LAYOUT level otra vez, con tutorial_finger
+            }
+        }
+
+        // El borde interior de arriba del panel del tablero, en las coordenadas del dedo (las del contenedor del tablero, hacia
+        // arriba): ni la flecha de Reducir movimiento ni lo alto del arco lo pasan (revisión de DC6). Sin tablero, sin límite.
+        private float FingerCeilingY()
+        {
+            BoardLayoutResult? l = _layout;
+            return l == null ? float.PositiveInfinity : -(l.PanelY + PanelFrameDp);
+        }
+
+        // En el 2, con el dedo a la vista, la instrucción de TiTino («Hay dos cuias vacías…») habla del tablero de antes del
+        // primer vertido: si sigue a la vista, se va con su fundido normal (revisión de DC6) [P]. Sin asignaciones.
+        private void LeaveStaleTutorialCard()
+        {
+            if (_fingerLesson == FingerLesson.PartialRun && TutorialSlothVisible)
+            {
+                _slothNotice!.Leave();
+            }
+        }
+
+        // Retira el dedo y deja el estado del intento en state; con reason, la sonda (solo si estaba a la vista o esperando; al
+        // deshacer, solo si estaba a la vista).
+        private void EndTutorialFinger(FingerState state, string? reason)
+        {
+            bool wasShown = _finger != null && _finger.Shown && _fingerState == FingerState.Showing;
+            bool wasLive = _fingerState == FingerState.Armed || _fingerState == FingerState.Showing;
+            _finger?.Hide();
+            _fingerState = state;
+            _fingerChosenFor = null;
+            _fingerHasChoice = false;
+            if (reason != null && wasLive && (wasShown || state == FingerState.Done || state == FingerState.Cancelled))
+            {
+                EmitFingerProbe(false, reason);
+            }
+        }
+
+        // El estreno de la Tinaja: lanza la búsqueda del vertido del paso de ahora sobre current si no hay una para él (y la de
+        // antes ya terminó: una sola a la vez, cada una con su SafeMoves) y dice si su resultado ya está. Sin asignaciones salvo al
+        // lanzarla (el encargo al ThreadPool, una vez por paso).
+        private bool PumpFingerJob(LevelFlow flow, LevelSession session, BoardState current)
+        {
+            FingerSafeJob job = _fingerJob ??= new FingerSafeJob();
+            int state = Volatile.Read(ref job.State);
+            if (state == FingerSafeJob.Running)
+            {
+                return false;
+            }
+
+            if (state == FingerSafeJob.Done && ReferenceEquals(job.For, current) && job.Step == _fingerStep && job.Scoop == _fingerScoop)
+            {
+                return true;
+            }
+
+            job.For = current;
+            job.Reference = session.Initial;
+            job.Step = _fingerStep;
+            job.Scoop = _fingerScoop;
+            job.Mode = session.PourMode;
+            job.Futile = session.FutileRuleEnabled;
+            job.LevelKey = flow.LevelNumber;
+            job.Found = false;
+            job.Pour = default;
+            Volatile.Write(ref job.State, FingerSafeJob.Running);
+            if (!ThreadPool.QueueUserWorkItem(FingerSafeJob.RunCallback, job))
+            {
+                Volatile.Write(ref job.State, FingerSafeJob.Done); // sin hilo: sin dedo en este paso
+            }
+
+            return false;
+        }
+
+        // La búsqueda de los vertidos seguros del estreno de la Tinaja (TutorialFinger.TryChooseTinaja) en el ThreadPool: unos
+        // 120-150 ms en el Editor con el 323, demasiado para el hilo principal en un teléfono (08 §5.4). Una instancia por
+        // pantalla, con su SafeMoves (no es seguro entre hilos) y una búsqueda a la vez; los BoardState son inmutables. El hilo
+        // principal escribe las entradas antes de marcarla Running y lee la salida después de verla Done.
+        private sealed class FingerSafeJob
+        {
+            public const int Idle = 0;
+            public const int Running = 1;
+            public const int Done = 2;
+
+            public static readonly WaitCallback RunCallback = Run;
+
+            public readonly SafeMoves Safe = new SafeMoves();
+            public int State;
+            public BoardState? For;
+            public BoardState? Reference;
+            public int Step;
+            public int Scoop;
+            public PourMode Mode;
+            public bool Futile;
+            public int LevelKey;
+            public bool Found;
+            public Pour Pour;
+            private int _memoLevel = int.MinValue;
+
+            private static void Run(object? state)
+            {
+                var job = (FingerSafeJob)state!;
+                try
+                {
+                    if (job.LevelKey != job._memoLevel)
+                    {
+                        job.Safe.ClearMemo(); // el memo no crece entre niveles
+                        job._memoLevel = job.LevelKey;
+                    }
+
+                    job.Found = TutorialFinger.TryChooseTinaja(job.Step, job.Scoop, job.For!, job.Reference!, job.Mode, job.Futile,
+                        job.Safe, out job.Pour);
+                }
+                catch (System.Exception)
+                {
+                    job.Found = false; // sin dedo en este paso; el juego sigue
+                }
+
+                Volatile.Write(ref job.State, Done);
+            }
+        }
+
+        // El vertido last, hecho sobre before, es el de la lección que se espera (el parcial del 2 o la hoja del 43).
+        private bool IsFingerLessonPour(BoardState before, Pour last, PourMode mode)
+        {
+            return _fingerLesson == FingerLesson.HojaKey
+                ? TutorialInstruction.IsHojaLesson(before, last.Source, last.Target)
+                : _fingerLesson == FingerLesson.PartialRun && TutorialInstruction.IsPartialRunLesson(before, last.Source, last.Target, mode);
+        }
+
+        // La primera cuia del tablero con la mecánica type, o −1.
+        private static int IndexOfMechanic(BoardState board, MechanicType type)
+        {
+            for (int i = 0; i < board.Count; i++)
+            {
+                if (board[i].Mechanic == type)
+                {
+                    return i;
+                }
+            }
+
+            return -1;
+        }
+
+        // La lección en la sonda: first (el 1), partial (el 2), hoja (el 43), tinaja_scoop y tinaja_pour (los dos pasos del 323).
+        private string FingerLessonProbeName()
+        {
+            switch (_fingerLesson)
+            {
+                case FingerLesson.PartialRun: return "partial";
+                case FingerLesson.HojaKey: return "hoja";
+                case FingerLesson.TinajaScoop: return _fingerStep == 2 ? "tinaja_pour" : "tinaja_scoop";
+                default: return "first";
+            }
+        }
+
+        // AF_STATE tutorial_finger: nivel, si se ve, el vertido (origen, destino y dosis), la lección (first, partial, hoja, tinaja_scoop o tinaja_pour), Reducir
+        // movimiento y el motivo (show, held, resume, followed, self, other_pour, undo, attempt o level_end). Solo con la sonda y en
+        // los cambios, nunca por fotograma.
+        private void EmitFingerProbe(bool visible, string reason)
+        {
+            if (!DevProbe.Enabled)
+            {
+                return;
+            }
+
+            CultureInfo inv = CultureInfo.InvariantCulture;
+            bool hasPour = _fingerPour.Amount > 0;
+            var sb = new StringBuilder(160);
+            sb.Append("\"level\":").Append((_flow?.LevelNumber ?? 0).ToString(inv));
+            sb.Append(",\"visible\":").Append(visible ? "true" : "false");
+            sb.Append(",\"from\":").Append((hasPour ? _fingerPour.Source : -1).ToString(inv));
+            sb.Append(",\"to\":").Append((hasPour ? _fingerPour.Target : -1).ToString(inv));
+            sb.Append(",\"amount\":").Append(_fingerPour.Amount.ToString(inv));
+            AppendJsonString(sb, "lesson", FingerLessonProbeName());
+            sb.Append(",\"reduce\":").Append(_finger != null && _finger.ReduceMotion ? "true" : "false");
+            AppendJsonString(sb, "reason", reason);
+            _lastFingerProbe = sb.ToString();
+            _probe.Event("tutorial_finger", _lastFingerProbe);
         }
     }
 }

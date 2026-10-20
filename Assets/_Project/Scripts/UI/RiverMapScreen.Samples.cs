@@ -485,7 +485,7 @@ namespace AF.UI
             }
 
             StopCard card = EnsureCard();
-            card.Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
+            card.Layout(_canvasW, _canvasH, _safeTop, _safeBottom, CardClearBottom());
             card.ShowStop(stop, StopReached(stop, _progress.MaxLevel), StopWater(stop), Fauna, FruitSeries, StopCardSeason(stop));
             EmitLayout();
             return true;
@@ -500,10 +500,17 @@ namespace AF.UI
             }
 
             StopCard card = EnsureCard();
-            card.Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
+            card.Layout(_canvasW, _canvasH, _safeTop, _safeBottom, CardClearBottom());
             card.ShowViewpoint(_viewpoints[i].Data);
             EmitLayout();
             return true;
+        }
+
+        // Borde de arriba de «Jugar» (dp desde arriba del lienzo): la tarjeta acaba por encima, si cabe (revisión de DC10); 0 sin él.
+        private float CardClearBottom()
+        {
+            var play = (RectTransform)_play.Button.transform;
+            return play.gameObject.activeSelf ? -play.anchoredPosition.y : 0f;
         }
 
         /// <summary>Toca el «?» del mirador <paramref name="i"/> (tests y <c>adb</c>: lo mismo que su área táctil).</summary>
@@ -755,7 +762,7 @@ namespace AF.UI
 
             if (_card != null)
             {
-                _card.Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
+                _card.Layout(_canvasW, _canvasH, _safeTop, _safeBottom, CardClearBottom());
             }
         }
 

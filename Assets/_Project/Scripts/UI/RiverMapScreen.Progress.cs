@@ -245,6 +245,13 @@ namespace AF.UI
         private int _frontStop = -1;
         private float _frontFraction;
         private int _frontCount;
+
+        // Revisión de FX12: la ruta del frente, la pieza de su ruta de cada cinta del frente y el tope de vértices de cada pieza de la
+        // ruta (el agua y la orla), repartido según lo que pide cada una con el trazo curvo (FitFrontBudgets). Solo crecen.
+        private RiverStopRoute? _frontRoute;
+        private int[] _frontPathIndex = Array.Empty<int>();
+        private int[] _frontCoreBudget = Array.Empty<int>();
+        private int[] _frontCasingBudget = Array.Empty<int>();
         private int _buoyCount;
         private float _fadeMs;
         private float _fadeElapsed;
@@ -553,6 +560,17 @@ namespace AF.UI
         /// </summary>
         public static void ComputeFill(RiverMap map, RiverRoutes routes, int maxLevel, float[] from)
         {
+            ComputeFill(map, routes, maxLevel, from, false);
+        }
+
+        /// <summary>
+        /// Como <see cref="ComputeFill(RiverMap, RiverRoutes, int, float[])"/>; con <paramref name="frontAhead"/> y
+        /// <paramref name="maxLevel"/> justo en una llegada (10k, k ≥ 1), el tramo de esa llegada cuenta como alcanzado y el
+        /// frente es el siguiente, aún vacío (<see cref="FrontAheadStop"/>: el primer fotograma del viaje del fin de contenido,
+        /// revisión de FX13). Sin asignaciones.
+        /// </summary>
+        public static void ComputeFill(RiverMap map, RiverRoutes routes, int maxLevel, float[] from, bool frontAhead)
+        {
             if (map == null || routes == null || from == null)
             {
                 throw new ArgumentNullException(map == null ? nameof(map) : routes == null ? nameof(routes) : nameof(from));
@@ -570,8 +588,10 @@ namespace AF.UI
             }
 
             int max = Mathf.Clamp(maxLevel, 0, WorldTable.LastLevel);
-            int front = FrontStopOf(max);
-            int reached = Mathf.Min(front - 1, routes.Count - 1);
+            int ahead = frontAhead ? FrontAheadStop(routes, max) : -1;
+            int front = ahead >= 0 ? ahead : FrontStopOf(max);
+            float frontFill = ahead >= 0 ? 0f : RiverJourney.LegFill(max);
+            int reached = Mathf.Min(front - 1, routes.LegCount - 1);
             for (int n = 0; n <= reached; n++)
             {
                 RiverStopRoute? route = routes.At(n);
@@ -593,8 +613,26 @@ namespace AF.UI
             RiverStopRoute? frontRoute = routes.At(front);
             if (frontRoute != null)
             {
-                FillMouths(map, routes, frontRoute, RiverJourney.LegFill(max), from);
+                FillMouths(map, routes, frontRoute, frontFill, from);
             }
+        }
+
+        /// <summary>
+        /// El tramo siguiente a la llegada de <paramref name="maxLevel"/> (10k, k ≥ 1) si tiene ruta (<see cref="RiverRoutes.At"/>,
+        /// con la meta tras la última parada), o −1: el frente con que arranca el viaje del fin de contenido (revisión de FX13: con
+        /// el tramo de la llegada, sin largo en Mundo en Tambo, el primer fotograma enseñaba sus 10 boyas en la fila corta bajo la
+        /// parada antes de saltar al tramo de la naciente). Sin asignaciones.
+        /// </summary>
+        public static int FrontAheadStop(RiverRoutes routes, int maxLevel)
+        {
+            int per = RiverStopCatalog.LevelsPerStop;
+            if (routes == null || maxLevel < per || maxLevel % per != 0 || maxLevel >= WorldTable.LastLevel)
+            {
+                return -1;
+            }
+
+            int next = (maxLevel / per) + 1;
+            return routes.At(next) != null ? next : -1;
         }
 
         /// <summary>
@@ -666,7 +704,8 @@ namespace AF.UI
             _progressMap = map;
             _progressLevel = max;
             _progressBuilds++;
-            ComputeFill(map, routes, max, _fillFrom);
+            bool ahead = FrontAheadNow(max);
+            ComputeFill(map, routes, max, _fillFrom, ahead);
             IReadOnlyList<RiverLine> lines = map.Lines;
             for (int i = 0; i < _fill.Count; i++)
             {
@@ -675,7 +714,7 @@ namespace AF.UI
                 ShowRibbon(_fillCasing[i], used, used ? _fillFrom[i] : 1f, 1f);
             }
 
-            BuildFront(map, routes, max);
+            BuildFront(map, routes, max, ahead);
             if (BuildSilhouettes(map, routes, max) && _silhouettesPlaced)
             {
                 ReplaceSilhouettes(); // «ponerse al día» cruzó una gran parada: las placas, cada una junto a la de su mundo (FX8)
@@ -751,6 +790,9 @@ namespace AF.UI
                 {
                     _rosa[i] = NewRosa("SkippedRosa_" + i);
                 }
+
+                // El hito y el rótulo de la naciente, encima de Rosa y de la canoa: que la canoa no tape la meta (revisión de FX13).
+                SourceBuild(dynamicLayer, _rosaLayer);
 
                 // Rótulos fijos de orientación (propuesta del Mapa §3.1): en el marco, encima del mapa y por debajo de «Volver a
                 // la canoa». No giran con «Norte arriba».
@@ -850,6 +892,17 @@ namespace AF.UI
             StartFades(Mathf.Clamp(progress.MapSeenLevel, 0, max));
         }
 
+        // FX12: las anclas de la curva de cada línea (ApplyLineAnchors) en el lleno y su orla, como en el vidrio.
+        partial void ProgressAnchors(RiverMap map)
+        {
+            for (int i = 0; i < _fill.Count; i++)
+            {
+                RiverLine? line = i < map.Lines.Count ? map.Lines[i] : null;
+                _fill[i].SetAnchors(LineAnchors(line));
+                _fillCasing[i].SetAnchors(LineAnchors(line));
+            }
+        }
+
         partial void ProgressSpace(MapSpace space)
         {
             if (_map == null || _fillLayer == null)
@@ -867,6 +920,18 @@ namespace AF.UI
             {
                 FitRibbon(_front[i], space);
                 FitRibbon(_frontCasing[i], space);
+            }
+
+            // FX12: el tope del frente, repartido otra vez a la escala de la vista nueva (el vidrio ya la tiene).
+            if (_frontRoute != null)
+            {
+                FitFrontBudgets(_map!, _frontRoute);
+                for (int i = 0; i < _frontCount; i++)
+                {
+                    int piece = _frontPathIndex[i];
+                    _front[i].SetVertexBudget(_frontCoreBudget[piece]);
+                    _frontCasing[i].SetVertexBudget(_frontCasingBudget[piece]);
+                }
             }
 
             PlaceBuoys(space);
@@ -1503,13 +1568,15 @@ namespace AF.UI
 
         // El tramo del frente hasta LegFill de su longitud real (una cinta por tramo de la ruta, sin saltar puntos, como el vidrio
         // y el lleno) y sus 10 boyas, a (i + 1) / 10 de la ruta.
-        private void BuildFront(RiverMap map, RiverRoutes routes, int max)
+        // Con «ahead» (FrontAheadNow), el tramo siguiente a la llegada de max, vacío.
+        private void BuildFront(RiverMap map, RiverRoutes routes, int max, bool ahead)
         {
-            int stop = FrontStopOf(max);
+            int next = ahead ? FrontAheadStop(routes, max) : -1;
+            int stop = next >= 0 ? next : FrontStopOf(max);
             RiverStopRoute? route = routes.At(stop);
             _frontCount = 0;
             _frontStop = route != null ? stop : -1;
-            _frontFraction = route != null ? RiverJourney.LegFill(max) : 0f;
+            _frontFraction = route != null ? (next >= 0 ? 0f : RiverJourney.LegFill(max)) : 0f;
             if (route != null)
             {
                 IReadOnlyList<RiverPathPiece> path = route.Path;
@@ -1526,8 +1593,9 @@ namespace AF.UI
                 // siquiera los 400 enteros por pieza bastan (la del Amazonas pide 360 de agua y 504 de orla). El frente solo se
                 // rehace al cambiar su llenado (una vez por boya, ≤ 10 por apertura), y solo la pieza que cambia. Es una desviación provisional
                 // [P] del «≤ 400 vértices» del frente de la propuesta del Mapa §11.4, anotada allí y pendiente del dueño: el frente del
-                // 300 pide 2.534 vértices entre agua y orla en Mundo (medido; lo acota Fx11Tests).
-                const int budget = RiverRibbonGraphic.MaxVertices;
+                // 300 pide 2.534 vértices entre agua y orla en Mundo. Con el trazo curvo de FX12 pediría 5.764 con todos los pasos de la
+                // curva; FitFrontBudgets lo deja en FrontCurveMaxVertices (el tope de FX11).
+                FitFrontBudgets(map, route);
                 float left = _frontFraction * total;
                 for (int i = 0; i < path.Count && left > 0f; i++)
                 {
@@ -1543,8 +1611,16 @@ namespace AF.UI
                     left -= length;
                     int k = _frontCount++;
                     float end = piece.S0 + ((piece.S1 - piece.S0) * t);
-                    SetFrontPiece(FrontRibbonAt(k), line, budget, piece.S0, end);
-                    SetFrontPiece(_frontCasing[k], line, budget, piece.S0, end);
+                    if (_frontPathIndex.Length <= k)
+                    {
+                        Array.Resize(ref _frontPathIndex, Mathf.Max(8, k * 2)); // solo crece
+                    }
+
+                    _frontPathIndex[k] = i;
+                    SetFrontPiece(FrontRibbonAt(k), line, _frontCoreBudget[i], piece.S0, end);
+                    SetFrontPiece(_frontCasing[k], line, _frontCasingBudget[i], piece.S0, end);
+                    _front[k].SetAnchors(LineAnchors(line)); // FX12: la misma curva que el vidrio
+                    _frontCasing[k].SetAnchors(LineAnchors(line));
 
                     // FX11: el espacio y el ancho de la vista al montarla. ProgressSpace solo ajusta las cintas que ya había al
                     // cambiar de vista; si «ponerse al día» llega a un tramo con más piezas que el de partida (en el 41, el de la
@@ -1569,6 +1645,7 @@ namespace AF.UI
                 }
             }
 
+            _frontRoute = route;
             _frontStopMap = route != null ? PlacePoint(map, route.At) : Vector2.zero;
             for (int i = 0; i < BuoysPerLeg; i++)
             {
@@ -1577,6 +1654,55 @@ namespace AF.UI
             }
 
             RefreshBuoyStates();
+        }
+
+        /// <summary>
+        /// Tope de vértices del frente entero (el agua y la orla de todas sus piezas) en la vista Mundo con el trazo curvo [P]: el de
+        /// <c>Fx11Tests</c> (FX11, pendiente del dueño). Revisión de FX12: con todos los pasos de la curva, el frente del 300 pedía
+        /// 5.764; FitFrontBudgets lo reparte entre las piezas y cada una elige los pasos que caben con la tolerancia más fina que
+        /// pueda (<see cref="RiverRibbonGraphic.CurveBudgetToleranceDp"/>), sin salirse de la curva del vidrio.
+        /// </summary>
+        public const int FrontCurveMaxVertices = 3000;
+
+        // Revisión de FX12: el tope de vértices de cada pieza de la ruta del frente (el agua y la orla, con las mismas secciones). Si
+        // con todos los pasos de la curva (lo que pide cada pieza en el vidrio de su línea, a la escala de la vista) el frente entero
+        // cabe en FrontCurveMaxVertices, sin tope (el de una malla); si no, se reparte según lo que pide cada pieza. Sin trazo curvo
+        // (la Cuenca), sin tope, como desde FX11. Solo asigna si la ruta tiene más piezas que ninguna antes.
+        private void FitFrontBudgets(RiverMap map, RiverStopRoute route)
+        {
+            IReadOnlyList<RiverPathPiece> path = route.Path;
+            if (_frontCoreBudget.Length < path.Count)
+            {
+                _frontCoreBudget = new int[path.Count];
+                _frontCasingBudget = new int[path.Count];
+            }
+
+            int total = 0;
+            for (int i = 0; i < path.Count; i++)
+            {
+                RiverPathPiece piece = path[i];
+                RiverLine line = map.Lines[piece.Line];
+                int demand = piece.Line < _glass.Count ? Glass(piece.Line).CurveDemand(piece.S0, piece.S1) : 0;
+                _frontCoreBudget[i] = demand; // de momento, lo que pide
+                total += demand * (RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core)
+                    + RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing));
+            }
+
+            for (int i = 0; i < path.Count; i++)
+            {
+                RiverPathPiece piece = path[i];
+                RiverLine line = map.Lines[piece.Line];
+                if (total <= FrontCurveMaxVertices)
+                {
+                    _frontCoreBudget[i] = RiverRibbonGraphic.MaxVertices;
+                    _frontCasingBudget[i] = RiverRibbonGraphic.MaxVertices;
+                    continue;
+                }
+
+                int sections = Mathf.Max(4, (int)((long)FrontCurveMaxVertices * _frontCoreBudget[i] / total));
+                _frontCoreBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core);
+                _frontCasingBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing);
+            }
         }
 
         // La cinta i del frente (el agua, en el lienzo dinámico, debajo de las boyas) y su orla (en el estático, con las del lleno:
@@ -1651,6 +1777,7 @@ namespace AF.UI
             {
                 ribbon.SetSpace(space);
                 ribbon.SetWidth(RibbonWidthDp(_view, ribbon.Line.Class));
+                ribbon.SetCurve(_view == MapView.World); // FX12: la misma curva que el vidrio
             }
         }
 
@@ -1886,6 +2013,8 @@ namespace AF.UI
             {
                 _buoysAhead.SetBuoys(_buoyLocal, _buoyState, _buoyCount, radius);
             }
+
+            PlaceSource(space, radius); // el hito y el rótulo de la naciente (revisión de FX13)
         }
 
         // Boya i de la fila corta de un tramo sin largo a la escala de la vista: una fila horizontal de 10, centrada bajo la parada
@@ -2028,6 +2157,7 @@ namespace AF.UI
                 }
             }
 
+            SourceTexts(); // map_source_name, el rótulo de la naciente (revisión de FX13)
             if (_andesLabel != null && _atlanticLabel != null)
             {
                 _andesLabel.text = UiText.MapLabelAndes;
@@ -2162,7 +2292,7 @@ namespace AF.UI
         /// </summary>
         public static bool RouteClimbs(RiverRoutes routes, int line)
         {
-            for (int n = 0; n < routes.Count; n++)
+            for (int n = 0; n < routes.LegCount; n++)
             {
                 RiverStopRoute? route = routes.At(n);
                 if (route == null)

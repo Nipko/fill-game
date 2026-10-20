@@ -11,8 +11,8 @@ namespace AF.GameFlow
     /// del tutorial con TiTino de 1, 2, 3 y 6 ocupa su nivel, <see cref="TutorialInstruction"/>, tarea TU1a). Los niveles
     /// con banner salen de la única regla que los decide, <see cref="WorldBanners"/> (11, 41, 81, 141…; el 1 no lo lleva por
     /// decisión del dueño, pero ya está ocupado por la Fruta nueva y el tutorial). Regla pura y determinista: no guarda nada
-    /// (persistir los avistamientos y emitir <c>af_fauna_sighted</c> exige migrar el perfil y la aprobación del dueño, Q11; PR
-    /// aparte). Solo en el primer intento del nivel: los reintentos ya la vieron. Decide también en qué niveles sale la tarjeta
+    /// (el avistamiento, <c>fauna.sighted</c> y <c>af_fauna_sighted</c>, Q11, D-029, DC15, se apunta cuando la tarjeta sale a la
+    /// vista, en GameScreen.PumpNotices → SightingShown). Solo en el primer intento del nivel: los reintentos ya la vieron. Decide también en qué niveles sale la tarjeta
     /// «Fruta nueva» y de qué tinte (<see cref="FruitNewAt"/>; 06 §4.5; tarea F5). Los niveles ocupados por estrenos salen de la
     /// especificación de la campaña (<see cref="OccupiedDebutLevels"/>, con las variantes de capacidad 18, 22 y 160 y los estrenos
     /// aún sin tarjeta, hoy solo la Tinaja en el 323) más los hitos de 02 §13 (propuesta de Frutas §3.3).
@@ -143,8 +143,8 @@ namespace AF.GameFlow
         /// prioridad tutorial &gt; Fruta nueva &gt; miquito &gt; rótulo (D-023, punto 39; 02 §4.2; 07 §6.4; guion de la intro
         /// §14), así que en el 2 sale solo la instrucción y el taperebá se queda sin tarjeta, como el açaí y el aguaje en el 1. La
         /// fila del 2 de 06 §2.2 («Tarjeta "Fruta nueva: Taperebá"») y la lista de 06 §4.5 (que empieza en el 1) chocan con esa
-        /// regla: contradicción registrada para el dueño en la entrega de TU1a, pendiente de que el carril de documentación alinee
-        /// 06. Sin asignaciones.
+        /// regla: la contradicción, registrada en la entrega de TU1a, la decidió el dueño con (a), sin «Fruta nueva» en el 1 ni en el 2
+        /// (pregunta 55, D-029), y el carril de documentación alinea 06. Sin asignaciones.
         /// </summary>
         public static int FruitNewAt(int level, bool firstAttempt)
         {

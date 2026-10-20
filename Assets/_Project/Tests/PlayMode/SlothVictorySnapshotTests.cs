@@ -23,13 +23,15 @@ namespace AF.Tests.PlayMode
     /// que no es hito (solo el gesto);</item>
     /// <item><c>ti6a_l44_sinfruta_780_100</c>: una victoria que no es hito y va sin línea de fruta (como 261-300 y 321-700), en
     /// la que le toca la frase de 1 de cada 4 (D-016, punto 5);</item>
-    /// <item><c>ti6a_l40_3filas_{780|640}_100</c>: con 3 filas no sale y el hito lleva su dato;</item>
+    /// <item><c>ti6a_l40_3filas_{780|640}_100</c>: con 3 filas; desde DC2, con la victoria con vista, TiTino sale en la franja
+    /// de la cabecera a la cinta;</item>
     /// <item><c>ti6a_real_l{40|60|80|140}_{780|640}_100</c>: los hitos del catálogo real tal como los ve el juego (con la ranura
     /// del Dato del río), con su caja medida; y <c>ti6a_real_l…_sinranura</c>, los mismos sin la ranura.</item>
     /// </list>
     /// Salvo en las del catálogo real con la ranura, la victoria va sin la ranura del Dato del río
-    /// (<see cref="SlothVictoryTests.NoSlot"/>). En los hitos reales (2 filas) la caja de TiTino mide 0 dp a 360 × 780 y a
-    /// 360 × 640, con la ranura y sin ella: TiTino no sale (decisión pendiente del dueño; TI6a).
+    /// (<see cref="SlothVictoryTests.NoSlot"/>). En TI6a, en los hitos reales (2 filas), la caja de TiTino medía 0 dp; desde DC2
+    /// (pregunta 53 a de D-028), con la victoria con vista, su caja es la franja de la cabecera a la cinta y sale (capturas
+    /// <c>dc2_*</c>, <see cref="SlothVictoryBandSnapshotTests"/>).
     /// Cada captura comprueba que TiTino no se cruza con nada (<see cref="SlothVictoryTests.AssertNoIntersection"/>) y escribe
     /// una línea <c>AF_SLOTH</c> con la caja, el modo, el tamaño y el bocadillo. Explícito: necesita gráficos (<c>unity test
     /// &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.SlothVictorySnapshotTests</c> sin <c>-nographics</c>).
@@ -101,8 +103,8 @@ namespace AF.Tests.PlayMode
                 string name = "ti6a_l40_3filas_" + (small ? "640" : "780") + "_100";
                 yield return Capture(name, SlothVictoryTests.FifteenCuiaPack(40), 40, small, 1f, 1600);
                 GameScreen view = GameBootstrap.Current!.View!;
-                Assert.That(view.SlothView.Visible, Is.False, name + ": con 3 filas no sale");
-                Assert.That(view.CurrentVictoryLine.ArrivalFact, Is.True, name + ": el hito lleva su dato");
+                // Desde DC2, con la victoria con vista, TiTino sale también con 3 filas (la franja de la cabecera a la cinta).
+                Assert.That(view.SlothView.Visible, Is.True, name + ": con la vista, TiTino sale");
                 Release();
             }
         }

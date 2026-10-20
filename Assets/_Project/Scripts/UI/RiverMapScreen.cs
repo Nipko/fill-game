@@ -250,6 +250,7 @@ namespace AF.UI
         private int _playLevel = 1;
         private bool _answered;
         private bool _remainingReady;
+        private bool _nothingToPlay;
         private bool _dragging;
         private float _activeMs;
         private float _openedAt;
@@ -664,6 +665,7 @@ namespace AF.UI
 
             _canvas.Canvas.gameObject.SetActive(true);
             EnsureGeometry(map);
+            ApplyLineAnchors(map, routes, stops, progress.MaxLevel); // FX12: el río dibujado pasa por lo que se coloca sobre él
             _hasCanoe = TryCanoePoint(map, routes, progress.MaxLevel, out _canoeMap);
             _canoe.sprite = _art.MapCanoe;
             _canoe.gameObject.SetActive(_hasCanoe);
@@ -812,7 +814,8 @@ namespace AF.UI
         /// <summary>
         /// Dónde está la canoa con <paramref name="maxLevel"/> niveles ganados (D-013, punto 3; propuesta del Mapa §3.4): en un
         /// <c>10k</c>, en la parada k recién alcanzada; si no, a (max mod 10) / 10 de la ruta de la parada siguiente, por el agua.
-        /// Más allá del catálogo, en su última parada. False sin rutas. Sin asignaciones.
+        /// Tras la última parada, por la ruta de la meta (<see cref="RiverRoutes.Goal"/>: la naciente del Mismi, FX13); más allá,
+        /// en la meta o, sin ella, en la última parada. False sin rutas. Sin asignaciones.
         /// </summary>
         public static bool TryCanoePoint(RiverMap map, RiverRoutes routes, int maxLevel, out Vector2 point)
         {
@@ -832,7 +835,7 @@ namespace AF.UI
                 return true;
             }
 
-            RiverStopRoute at = routes.At(Mathf.Min(arrived, routes.Count - 1))!;
+            RiverStopRoute at = routes.At(Mathf.Min(arrived, routes.LegCount - 1))!; // tras la última parada, la naciente (FX13)
             point = PlacePoint(map, at.At);
             return true;
         }
@@ -850,6 +853,15 @@ namespace AF.UI
         /// </summary>
         public static Vector2 RoutePoint(RiverMap map, RiverStopRoute route, float fraction)
         {
+            return PlacePoint(map, RoutePlace(map, route, fraction));
+        }
+
+        /// <summary>
+        /// La línea y la s del punto de <see cref="RoutePoint"/> (el sitio sobre la línea donde se coloca una boya o la canoa). Sin
+        /// asignaciones.
+        /// </summary>
+        public static RiverMapPlace RoutePlace(RiverMap map, RiverStopRoute route, float fraction)
+        {
             IReadOnlyList<RiverPathPiece> path = route.Path;
             float total = 0f;
             for (int i = 0; i < path.Count; i++)
@@ -860,7 +872,7 @@ namespace AF.UI
 
             if (total <= 0f)
             {
-                return PlacePoint(map, route.At);
+                return route.At;
             }
 
             float target = Mathf.Clamp01(fraction) * total;
@@ -872,14 +884,101 @@ namespace AF.UI
                 if (target <= length || i == path.Count - 1)
                 {
                     float t = length > 0f ? Mathf.Clamp01(target / length) : 1f;
-                    line.PointAt(piece.S0 + ((piece.S1 - piece.S0) * t), out float x, out float y);
-                    return new Vector2(x, y);
+                    return new RiverMapPlace(piece.Line, piece.S0 + ((piece.S1 - piece.S0) * t));
                 }
 
                 target -= length;
             }
 
-            return PlacePoint(map, route.At);
+            return route.At;
+        }
+
+        // Revisión de FX12: las anclas de la curva de cada línea en esta apertura (las bocas de sus afluentes y lo que se coloca sobre
+        // ella), para qué Mapa y qué max_level.
+        private RibbonAnchors[] _lineAnchors = Array.Empty<RibbonAnchors>();
+        private RiverMap? _lineAnchorsMap;
+        private int _lineAnchorsMax = -1;
+        private int _lineAnchorsWorld = -1;
+
+        /// <summary>
+        /// Anclas de la curva de la línea <paramref name="line"/> (<see cref="RiverRibbonGraphic.SetAnchors"/>) en esta apertura: las
+        /// bocas de sus afluentes y los sitios de la línea donde se coloca algo (las paradas, las boyas de los tramos hasta el del
+        /// frente y, así, la canoa), para que el río dibujado pase por ellos. Null sin línea.
+        /// </summary>
+        internal RibbonAnchors? LineAnchors(RiverLine? line)
+        {
+            return line != null && line.Index < _lineAnchors.Length ? _lineAnchors[line.Index] : null;
+        }
+
+        // Revisión de FX12: el trazo curvo del Mundo pasa por lo que se coloca sobre las líneas, que va sobre la polilínea (los datos y
+        // el cursor no cambian): cada parada de los mundos abiertos (su sitio, como sus mini cuias), las 10 boyas de cada tramo hasta
+        // el del frente con max_level, el de la meta incluido (la canoa va en una de ellas o en una parada y, al ponerse al día, de
+        // una a otra), la naciente cuando se ve su hito (FX13) y las bocas de
+        // los afluentes (RiverRibbonGraphic.MouthAnchors). Son anclas de la curva: pasa a ≤ CurveAnchorWidths anchos de cada una. Se
+        // fijan en el vidrio y el lleno de cada línea (el frente, en BuildFront) para que todas sus cintas sigan la misma curva.
+        // Asigna: al abrir, si cambian el Mapa, max_level o el mundo.
+        private void ApplyLineAnchors(RiverMap map, RiverRoutes routes, RiverStopCatalog stops, int maxLevel)
+        {
+            int max = Mathf.Clamp(maxLevel, 0, WorldTable.LastLevel);
+            if (!ReferenceEquals(map, _lineAnchorsMap) || max != _lineAnchorsMax || _world != _lineAnchorsWorld)
+            {
+                _lineAnchorsMap = map;
+                _lineAnchorsMax = max;
+                _lineAnchorsWorld = _world;
+                var lists = new List<(float S, Vector2 Point)>?[map.Lines.Count];
+                for (int n = 0; n < routes.Count; n++)
+                {
+                    RiverStopRoute? route = routes.At(n);
+                    RiverStop? stop = stops.At(n);
+                    if (route != null && stop != null && stop.World <= _world) // las de los mundos abiertos, como sus mini cuias
+                    {
+                        AddAnchor(map, lists, route.At);
+                    }
+                }
+
+                // FX13: el tramo de la meta (691-700, de Tambo a la naciente; RiverRoutes.Goal) también lleva sus boyas, y la
+                // naciente, su hito y la canoa del fin de contenido, desde que se ve (SourceMarkDue).
+                RiverStopRoute? goal = routes.Goal;
+                if (goal != null && SourceMarkDue(routes, max))
+                {
+                    AddAnchor(map, lists, goal.At);
+                }
+
+                int front = Mathf.Min(FrontStopOf(max), routes.LegCount - 1);
+                for (int n = 1; n <= front; n++)
+                {
+                    RiverStopRoute? route = routes.At(n);
+                    for (int i = 0; route != null && i < BuoysPerLeg; i++)
+                    {
+                        AddAnchor(map, lists, RoutePlace(map, route, (i + 1) / (float)BuoysPerLeg));
+                    }
+                }
+
+                _lineAnchors = new RibbonAnchors[map.Lines.Count];
+                for (int i = 0; i < map.Lines.Count; i++)
+                {
+                    RibbonAnchors? mouths = RiverRibbonGraphic.MouthAnchorsOf(map, map.Lines[i]);
+                    _lineAnchors[i] = RiverRibbonGraphic.MergeAnchors(mouths, lists[i]);
+                }
+            }
+
+            for (int i = 0; i < _glass.Count; i++)
+            {
+                RiverLine? line = i < map.Lines.Count ? map.Lines[i] : null;
+                _glass[i].SetAnchors(LineAnchors(line));
+            }
+
+            ProgressAnchors(map);
+        }
+
+        private static void AddAnchor(RiverMap map, List<(float S, Vector2 Point)>?[] lists, RiverMapPlace place)
+        {
+            if (place.Line < 0 || place.Line >= lists.Length)
+            {
+                return;
+            }
+
+            (lists[place.Line] ??= new List<(float S, Vector2 Point)>()).Add((place.S, PlacePoint(map, place)));
         }
 
         /// <summary>
@@ -920,6 +1019,46 @@ namespace AF.UI
                 y1 = Mathf.Max(y1, canoe.y);
             }
 
+            return BoxZoom(map, x0, y0, x1, y1, viewW, viewH, out center);
+        }
+
+        /// <summary>
+        /// Zoom de la vista Mundo [P] en el tramo de la meta (tarea FX13: de la última parada a la naciente, jugando 691-700 y en
+        /// el fin de contenido del 700): la caja de su salida, de la naciente y de la canoa, como <see cref="WorldZoom"/>. Así la
+        /// canoa y el agua del tramo se ven a la vez, también en el viaje final (el mundo 10 del 701 no tiene paradas).
+        /// </summary>
+        public static float GoalZoom(RiverMap map, RiverStopRoute goal, bool hasCanoe, Vector2 canoe, float viewW, float viewH,
+            out Vector2 center)
+        {
+            Vector2 a = RoutePoint(map, goal, 0f);
+            Vector2 b = PlacePoint(map, goal.At);
+            float x0 = Mathf.Min(a.x, b.x);
+            float y0 = Mathf.Min(a.y, b.y);
+            float x1 = Mathf.Max(a.x, b.x);
+            float y1 = Mathf.Max(a.y, b.y);
+            if (hasCanoe)
+            {
+                x0 = Mathf.Min(x0, canoe.x);
+                y0 = Mathf.Min(y0, canoe.y);
+                x1 = Mathf.Max(x1, canoe.x);
+                y1 = Mathf.Max(y1, canoe.y);
+            }
+
+            return BoxZoom(map, x0, y0, x1, y1, viewW, viewH, out center);
+        }
+
+        /// <summary>
+        /// El tramo del frente con <paramref name="maxLevel"/> niveles ganados es el de la meta (<see cref="RiverRoutes.Goal"/>;
+        /// 691-700 con las paradas 0-69). Sin asignaciones.
+        /// </summary>
+        public static bool OnGoalLeg(RiverRoutes routes, int maxLevel)
+        {
+            return routes.Goal != null && FrontStopOf(maxLevel) == routes.Goal.N;
+        }
+
+        // La caja (x0, y0)-(x1, y1) ocupa WorldFill de la zona, entre WorldZoomMin y WorldZoomMax; vacía, el centro del Mapa.
+        private static float BoxZoom(RiverMap map, float x0, float y0, float x1, float y1, float viewW, float viewH, out Vector2 center)
+        {
             if (x0 > x1)
             {
                 center = new Vector2(map.Width * 0.5f, map.Height * 0.5f);
@@ -960,6 +1099,7 @@ namespace AF.UI
                 bool used = i < lines.Count;
                 ribbon.gameObject.SetActive(used);
                 ribbon.SetLine(used ? lines[i] : null);
+                ribbon.SetAnchors(RiverRibbonGraphic.MouthAnchorsOf(map, used ? lines[i] : null)); // FX12: las bocas de sus afluentes
                 if (used)
                 {
                     ribbon.gameObject.name = "Glass_" + lines[i].Id;
@@ -1012,7 +1152,10 @@ namespace AF.UI
             Vector2 center;
             if (view == MapView.World)
             {
-                _zoom = WorldZoom(map, _routes, _stops, _world, _hasCanoe, _canoeMap, _viewW, _viewH, out center);
+                RiverStopRoute? goal = _routes.Goal;
+                _zoom = goal != null && _progress != null && OnGoalLeg(_routes, _progress.MaxLevel)
+                    ? GoalZoom(map, goal, _hasCanoe, _canoeMap, _viewW, _viewH, out center) // FX13: el tramo hasta la naciente
+                    : WorldZoom(map, _routes, _stops, _world, _hasCanoe, _canoeMap, _viewW, _viewH, out center);
                 SamplesFrame(ref _zoom, ref center);
             }
             else
@@ -1034,6 +1177,7 @@ namespace AF.UI
                 {
                     ribbon.SetSpace(space);
                     ribbon.SetWidth(RibbonWidthDp(view, ribbon.Line.Class));
+                    ribbon.SetCurve(view == MapView.World); // FX12: en el Mundo, el zoom deja ver las esquinas
                 }
             }
 
@@ -1106,20 +1250,51 @@ namespace AF.UI
         {
             RiverStopCatalog stops = _stops!;
             RiverStop? first = stops.FirstStopOfWorld(_world);
-            string? questionKey = first?.WorldQuestion;
-            string question = questionKey != null ? Loc.Fact(questionKey) : string.Empty;
-            _title.text = question.Length > 0 ? UiText.MapWorldQuestion(_world, question) : UiText.WorldName(_world);
-            _answered = question.Length > 0 && WorldQuestionAnswered(stops, _world, _progress!.MaxLevel);
+            int sourceWorld = SourceTitleWorld(stops, _world);
+            if (sourceWorld > 0)
+            {
+                // Más allá de la última parada (el fin de contenido del 700: el 701 es del mundo 10, sin paradas en el Mapa), la
+                // cabecera nombra solo el mundo de la última parada (revisión de FX13; D-013, viñeta del 2026-10-19: sin parada
+                // nueva): «Ucayali», nunca un mundo que el Mapa no tiene. La meta ya la nombran el hito y el rótulo de la naciente;
+                // map_world_question es la de la pregunta del mundo y no se reutiliza con otro sentido (.claude/rules/localizacion.md).
+                _title.text = UiText.WorldName(sourceWorld);
+                _answered = false;
+            }
+            else
+            {
+                string? questionKey = first?.WorldQuestion;
+                string question = questionKey != null ? Loc.Fact(questionKey) : string.Empty;
+                _title.text = question.Length > 0 ? UiText.MapWorldQuestion(_world, question) : UiText.WorldName(_world);
+                _answered = question.Length > 0 && WorldQuestionAnswered(stops, _world, _progress!.MaxLevel);
+            }
+
             _check.gameObject.SetActive(_answered);
 
-            // «Faltan N» hacia la parada siguiente, con su nombre en el idioma (en release, sin el visto bueno del asesor es «»).
-            RiverStop? current = stops.StopOf(_playLevel);
-            RiverStop? next = current != null ? stops.At(current.N + 1) : null;
-            string place = next != null ? UiText.StopName(next) : string.Empty;
-            _remainingReady = playAvailable && next != null && place.Length > 0;
+            // «Faltan N» hacia la parada siguiente o, tras la última, hacia la naciente (FX13), con su nombre en el idioma (en
+            // release, sin el visto bueno del asesor es «»).
+            string place = UiText.NextPlaceName(stops, stops.StopOf(_playLevel));
+            _remainingReady = playAvailable && place.Length > 0;
+            _nothingToPlay = !playAvailable;
             _remainingLabel.text = _remainingReady ? UiText.MapStopRemaining(RiverJourney.LevelsLeft(_playLevel), place) : string.Empty;
             _remaining.gameObject.SetActive(_remainingReady);
             _playLabel.text = UiText.PlayLevel(_playLevel);
+        }
+
+        /// <summary>
+        /// Mundo de la cabecera del Mapa abierto en el mundo <paramref name="world"/> más allá de la última parada del catálogo
+        /// <paramref name="stops"/> (el fin de contenido del 700 abre en el 701, del mundo 10, que no tiene paradas): el de la
+        /// última parada (la cabecera lo nombra solo, sin pregunta) si el último tramo va a la naciente (<see cref="RiverStopCatalog.HeadsToSource"/>; revisión de FX13);
+        /// 0 si <paramref name="world"/> tiene paradas o no hay meta. Sin asignaciones.
+        /// </summary>
+        public static int SourceTitleWorld(RiverStopCatalog stops, int world)
+        {
+            if (stops.Count == 0 || !stops.HeadsToSource || stops.FirstStopOfWorld(world) != null)
+            {
+                return 0;
+            }
+
+            RiverStop last = stops.At(stops.Count - 1)!;
+            return world > last.World ? last.World : 0;
         }
 
         /// <summary>
@@ -1195,9 +1370,13 @@ namespace AF.UI
             }
 
             float rowTop = playTop - GapDp - rowH;
-            UiBuilder.Place(_viewSwitch.rectTransform, 16f, rowTop, switchW, rowH);
-            _viewWorld.Place(16f + SwitchPadDp, rowTop, SegmentDp, rowH);
-            _viewBasin.Place(16f + SwitchPadDp + SegmentDp, rowTop, SegmentDp, rowH);
+            // Sin nada que jugar (el fin de contenido: sin «Faltan…» ni nivel publicado), el conmutador, del mismo ancho, va
+            // centrado en la fila [P]: a la izquierda dejaba un hueco a su derecha en la estampa final (revisión de FX13). Con
+            // nivel que jugar va a la izquierda, como siempre, aunque «Faltan…» no salga (un nombre sin el visto bueno del asesor).
+            float switchX = _nothingToPlay ? (w - switchW) * 0.5f : 16f;
+            UiBuilder.Place(_viewSwitch.rectTransform, switchX, rowTop, switchW, rowH);
+            _viewWorld.Place(switchX + SwitchPadDp, rowTop, SegmentDp, rowH);
+            _viewBasin.Place(switchX + SwitchPadDp + SegmentDp, rowTop, SegmentDp, rowH);
             UiBuilder.Place(_remaining, remainingX, rowTop, remainingW, rowH);
             UiBuilder.Place(_remainingLabel.rectTransform, RemainingLabelXDp, RowPadDp, labelW, rowH - (2f * RowPadDp));
 
@@ -1353,6 +1532,8 @@ namespace AF.UI
 
         /// <summary>M3.4: la vista cambió de escala.</summary>
         partial void ProgressSpace(MapSpace space);
+
+        partial void ProgressAnchors(RiverMap map);
 
         /// <summary>M3.4: cada fotograma con el Mapa abierto; <paramref name="animating"/> = true pide 60 fps.</summary>
         partial void ProgressTick(float dtMs, ref bool animating);

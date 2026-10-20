@@ -2087,6 +2087,27 @@ namespace AF.UI
         /// <summary>Cintas de agua activas (las líneas llenas que entran en la franja).</summary>
         public int WaterCount => ActiveCount(_core);
 
+        /// <summary>Cintas de cada clase (vidrio, orla del agua y agua), una por línea del Mapa (tests: FX12).</summary>
+        public int RibbonSlotCount => _glass.Count;
+
+        /// <summary>Cinta de vidrio de la línea <paramref name="i"/> (tests: FX12).</summary>
+        public RiverRibbonGraphic GlassRibbon(int i)
+        {
+            return _glass[i];
+        }
+
+        /// <summary>Orla del agua de la línea <paramref name="i"/> (tests: FX12).</summary>
+        public RiverRibbonGraphic CasingRibbon(int i)
+        {
+            return _casing[i];
+        }
+
+        /// <summary>Agua de la línea <paramref name="i"/> (tests: FX12).</summary>
+        public RiverRibbonGraphic CoreRibbon(int i)
+        {
+            return _core[i];
+        }
+
         /// <summary>Vértices de la tierra en la última malla.</summary>
         public int LandVertexCount => _land.LastVertexCount;
 
@@ -2198,6 +2219,10 @@ namespace AF.UI
                 SetupRibbon(_glass[i], visible ? line : null, RibbonLook.Glass, sA, sB, space);
                 SetupRibbon(_casing[i], filled ? line : null, RibbonLook.Water, filled ? from : 1f, sB, space);
                 SetupRibbon(_core[i], filled ? line : null, RibbonLook.Water, filled ? from : 1f, sB, space);
+                RibbonAnchors? anchors = RiverRibbonGraphic.MouthAnchorsOf(map, line); // FX12: las bocas de los afluentes, como en el Mapa
+                _glass[i].SetAnchors(visible ? anchors : null);
+                _casing[i].SetAnchors(filled ? anchors : null);
+                _core[i].SetAnchors(filled ? anchors : null);
                 if (visible)
                 {
                     _glass[i].SetGlassBodyAlpha(RiverMapScreen.MapGlassBodyAlpha);
@@ -3017,6 +3042,7 @@ namespace AF.UI
             ribbon.SetFill(s0, s1);
             ribbon.SetSpace(space);
             ribbon.SetWidth(RiverMapScreen.RibbonWidthDp(MapView.World, line!.Class));
+            ribbon.SetCurve(true); // FX12: como en la vista Mundo
         }
 
         private static RiverRibbonGraphic NewRibbon(string name, RectTransform parent, RibbonPart part)

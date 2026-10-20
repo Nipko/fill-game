@@ -16,8 +16,9 @@ namespace AF.Tests.EditMode
     /// La lógica de gestos y frases de TiTino (<see cref="SlothLines"/>, <see cref="SlothContext"/> y <see cref="SlothSession"/>;
     /// D-016, puntos 4 y 5; propuesta de TiTino d.4-d.7, d.10 y e.4; tarea TI3): topes y su orden (d.6, punto 5), los tres hitos,
     /// una línea por victoria (T6-A), el banco más específico, la repetición, el fallo, el reinicio, los saludos, los mensajes
-    /// apagados, misma entrada con mismo resultado y cero asignaciones; y los textos: 30 frases (≤ 50 caracteres en ES y ≤ 85
-    /// en EN y PT-BR), 11 datos del perezoso, todo <c>pendiente_asesor</c> y ningún id con «TiTino».
+    /// apagados, misma entrada con mismo resultado y cero asignaciones; los mini-bancos de las frases fijas y el saludo de la
+    /// mañana en la primera apertura dentro de la franja (D-030, preguntas 16 b y 17 b; tarea DC25); y los textos: 38 frases
+    /// (≤ 50 caracteres en ES y ≤ 85 en EN y PT-BR), 11 datos del perezoso, todo <c>pendiente_asesor</c> y ningún id con «TiTino».
     /// </summary>
     public sealed class SlothLinesTests
     {
@@ -71,7 +72,7 @@ namespace AF.Tests.EditMode
         public void Banks_HaveTheSizesOfE4_AndTheMomentsOfTheProfile()
         {
             Assert.That(SlothLines.MomentCount, Is.EqualTo(SlothData.MomentCount));
-            int[] sizes = { 8, 2, 5, 2, 4, 4, 3, 2 };
+            int[] sizes = { 8, 2, 5, 2, 6, 6, 3, 6 }; // las 30 de e.4 y las 8 alternativas de D-030 (pregunta 16 b)
             for (int m = 0; m < SlothData.MomentCount; m++)
             {
                 var moment = (SlothMoment)m;
@@ -84,12 +85,12 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(new List<string>(SlothLines.AllKeys).Count, Is.EqualTo(30), "las 30 frases de e.4");
+            Assert.That(new List<string>(SlothLines.AllKeys).Count, Is.EqualTo(38), "las 30 frases de e.4 y las 8 alternativas de D-030");
             Assert.Throws<ArgumentOutOfRangeException>(() => SlothLines.KeyOf(SlothMoment.Hard, 2));
         }
 
         [Test]
-        public void ThirtyLines_InStringsCsv_Es50_EnAndPt85_PendingTheAdvisor()
+        public void ThirtyEightLines_InStringsCsv_Es50_EnAndPt85_PendingTheAdvisor()
         {
             LocTable strings = LocSetUpFixture.Catalog.Strings;
             foreach (string key in SlothLines.AllKeys)
@@ -242,11 +243,15 @@ namespace AF.Tests.EditMode
         {
             SlothContext ctx = Ctx(lines: 4, previous: true); // con el tope y la pantalla anterior con frase
             var spoke = new VictoryLine(true, false, null, false, null, true, true);
-            foreach (int level in new[] { 40, 80, 140, 200, 300, 1000 })
+            // Sin frase vista del momento, el fin de mundo rota con el número de mundo (D-030, pregunta 16 b): el 40 (mundo 2), la
+            // de siempre; el 80, la 1.ª alternativa; el 140, la 2.ª; y vuelta a empezar.
+            int[] worldEnds = { 40, 80, 140, 200, 300, 1000 };
+            string[] expected = { "sloth_line_milestone_01", "sloth_line_milestone_03", "sloth_line_milestone_04", "sloth_line_milestone_01", "sloth_line_milestone_03", "sloth_line_milestone_04" };
+            for (int i = 0; i < worldEnds.Length; i++)
             {
-                SlothLine line = Victory(level, spoke, ctx, Win(winCount: 1));
-                Assert.That(line.Gesture, Is.EqualTo(SlothGesture.CheerBig), level.ToString());
-                Assert.That(line.Key, Is.EqualTo("sloth_line_milestone_01"), "fin de mundo: " + level);
+                SlothLine line = Victory(worldEnds[i], spoke, ctx, Win(winCount: 1));
+                Assert.That(line.Gesture, Is.EqualTo(SlothGesture.CheerBig), worldEnds[i].ToString());
+                Assert.That(line.Key, Is.EqualTo(expected[i]), "fin de mundo: " + worldEnds[i]);
             }
 
             Assert.That(Victory(60, spoke, ctx, Win(winCount: 1)).Key, Is.EqualTo("sloth_line_milestone_02"), "primer Muy difícil");
@@ -422,7 +427,7 @@ namespace AF.Tests.EditMode
             var spoke = new VictoryLine(true, false, null, false, null, true, true);
             SlothContext v = after.WithVictory(Win(winCount: 21));
             SlothLine end = SlothLines.ForVictory(80, in spoke, in v);
-            Assert.That(end.Key, Is.EqualTo("sloth_line_milestone_01"));
+            Assert.That(end.Key, Is.EqualTo("sloth_line_milestone_03"), "el 80, sin frase vista del momento: la 1.ª alternativa (D-030, 16 b)");
             session.Record(in end, in v);
             Assert.That(session.LinesThisSession, Is.EqualTo(5), "el fin de mundo cuenta, aunque pase el tope");
 
@@ -518,7 +523,8 @@ namespace AF.Tests.EditMode
         private static void AssertSame(in SlothLine x, in SlothLine y, string what)
         {
             Assert.That(x.Screen == y.Screen && x.Gesture == y.Gesture && x.Moment == y.Moment && x.Index == y.Index
-                && string.Equals(x.Key, y.Key, StringComparison.Ordinal) && x.Arg == y.Arg && x.Greeting == y.Greeting, Is.True, what);
+                && string.Equals(x.Key, y.Key, StringComparison.Ordinal) && x.Arg == y.Arg && x.Greeting == y.Greeting
+                && x.Deferred == y.Deferred, Is.True, what);
         }
 
         // ------------------------------------------------------------------------------------------- fallo y reinicio
@@ -598,8 +604,10 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(SlothLines.ForHome(Ctx().WithHome(new SlothHomeFacts("2026-10-15", 8, "2026-10-15", null, 58))).Greeting, Is.False,
-                "no es la primera apertura del día");
+            Assert.That(SlothLines.ForHome(Ctx().WithHome(new SlothHomeFacts("2026-10-15", 8, "2026-10-15", "2026-10-15", 58))).Greeting, Is.False,
+                "ya hubo saludo hoy");
+            Assert.That(SlothLines.ForHome(Ctx().WithHome(new SlothHomeFacts("2026-10-15", 8, "2026-10-15", null, 58))).Key, Is.EqualTo("sloth_line_return_04"),
+                "ya abrió hoy, pero fuera de la franja: es la primera apertura dentro de ella (D-030, pregunta 17 b)");
             Assert.That(SlothLines.ForHome(Ctx().WithHome(new SlothHomeFacts("2026-10-15", 8, null, null, 58))).Key, Is.EqualTo("sloth_line_return_04"),
                 "primera apertura de la vida, por la mañana");
 
@@ -626,10 +634,10 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Home_Morning_IsTheFirstOpeningOfTheDay_OnlyIfItFallsFrom6To12()
+        public void Home_Morning_IsTheFirstOpeningWithinTheBand_NotTheFirstOfTheDay()
         {
-            // Lectura [P] de d.7 y d.10 (ver SlothLines.ForHome): la primera apertura del día, si cae entre las 06:00 y las
-            // 12:00. Abrir a las 05:30 apunta la apertura sin saludo; a las 07:00 del mismo día ya no es la primera.
+            // D-030, pregunta 17 b: «la primera apertura dentro de la franja». Abrir a las 05:30 apunta la apertura sin saludo; a
+            // las 07:00 del mismo día sale el de la mañana; y no dos veces el mismo día.
             var data = new SlothData { LastSeenDate = "2026-10-14" };
             var early = new SlothSession(data, true);
             SlothContext c1 = early.Context.WithHome(early.HomeFacts("2026-10-15", 5, 58));
@@ -642,7 +650,116 @@ namespace AF.Tests.EditMode
             var later = new SlothSession(data, true);
             SlothContext c2 = later.Context.WithHome(later.HomeFacts("2026-10-15", 7, 58));
             SlothLine seven = SlothLines.ForHome(in c2);
-            Assert.That(seven.Greeting || seven.Gesture != SlothGesture.None, Is.False, "a las 07:00 ya no es la primera apertura del día");
+            Assert.That(seven.Greeting, Is.True, "a las 07:00, la primera apertura dentro de la franja");
+            Assert.That(seven.Gesture, Is.EqualTo(SlothGesture.Wave));
+            Assert.That(seven.Key, Is.EqualTo("sloth_line_return_04"), "e.4, n.º 25");
+            later.Record(in seven, in c2);
+            Assert.That(data.LastGreetingDate, Is.EqualTo("2026-10-15"));
+
+            var third = new SlothSession(data, true);
+            SlothContext c3 = third.Context.WithHome(third.HomeFacts("2026-10-15", 9, 58));
+            SlothLine nine = SlothLines.ForHome(in c3);
+            Assert.That(nine.Greeting || nine.Gesture != SlothGesture.None, Is.False, "no dos veces el mismo día");
+
+            // El regreso tras ≥ 3 días no cambia: a las 05:30 sale el de regreso (y gasta el saludo del día).
+            var away = new SlothData { LastSeenDate = "2026-10-10" };
+            var back = new SlothSession(away, true);
+            SlothContext c4 = back.Context.WithHome(back.HomeFacts("2026-10-15", 5, 58));
+            SlothLine ret = SlothLines.ForHome(in c4);
+            Assert.That(ret.Greeting && ret.Index >= 0 && ret.Index <= 2, Is.True, "el de regreso, a cualquier hora");
+            back.Record(in ret, in c4);
+            var after = new SlothSession(away, true);
+            Assert.That(SlothLines.ForHome(after.Context.WithHome(after.HomeFacts("2026-10-15", 7, 58))).Greeting, Is.False,
+                "nunca el de la mañana el día del de regreso");
+        }
+
+        // ------------------------------------------------------------------------------------------- mini-bancos (D-030, 16 b)
+
+        [Test]
+        public void FixedLines_AreMiniBanksOfThree_ThatNeverRepeatTheLast()
+        {
+            // Morning: tres mañanas seguidas, las tres frases del mini-banco de la n.º 25, sin repetir, y vuelta a la de siempre.
+            var data = new SlothData { LastSeenDate = "2026-10-14" };
+            string[] mornings = { "sloth_line_return_04", "sloth_line_return_05", "sloth_line_return_06", "sloth_line_return_04" };
+            for (int d = 0; d < mornings.Length; d++)
+            {
+                var session = new SlothSession(data, true);
+                string today = new DateTime(2026, 10, 15).AddDays(d).ToString("yyyy'-'MM'-'dd", System.Globalization.CultureInfo.InvariantCulture);
+                SlothContext c = session.Context.WithHome(session.HomeFacts(today, 8, 58));
+                SlothLine line = SlothLines.ForHome(in c);
+                Assert.That(line.Key, Is.EqualTo(mornings[d]), today);
+                session.Record(in line, in c);
+            }
+
+            // La n.º 21 (Crecida rota), en el fallo y en el aviso del reinicio: rota igual.
+            var crecida = new SlothData();
+            string[] broken = { "sloth_line_streak_04", "sloth_line_streak_05", "sloth_line_streak_06", "sloth_line_streak_04" };
+            for (int i = 0; i < broken.Length; i++)
+            {
+                var session = new SlothSession(crecida, true, true, true, 1, 4);
+                SlothLine line;
+                SlothContext c;
+                if (i % 2 == 0)
+                {
+                    c = session.Context.WithFail(new SlothFailFacts(true, true, 3, true));
+                    line = SlothLines.ForFail(45, in c);
+                }
+                else
+                {
+                    c = session.Context.WithRestart(new SlothRestartFacts(true, false, true));
+                    line = SlothLines.ForRestartNotice(27, in c);
+                }
+
+                Assert.That(line.Key, Is.EqualTo(broken[i]), i.ToString());
+                session.Record(in line, in c);
+            }
+
+            // El primer Muy difícil: la de siempre y, si la última vista del momento fuera ella, la alternativa siguiente.
+            var spoke = new VictoryLine(true, false, null, false, null, true, true);
+            int[] last = NewLast();
+            Assert.That(Victory(60, spoke, Ctx(last: last), Win(winCount: 1)).Key, Is.EqualTo("sloth_line_milestone_02"));
+            last[(int)SlothMoment.Milestone] = 1;
+            Assert.That(Victory(60, spoke, Ctx(last: last), Win(winCount: 1)).Key, Is.EqualTo("sloth_line_milestone_05"));
+            last[(int)SlothMoment.Milestone] = 4;
+            Assert.That(Victory(60, spoke, Ctx(last: last), Win(winCount: 1)).Key, Is.EqualTo("sloth_line_milestone_06"));
+            last[(int)SlothMoment.Milestone] = 5;
+            Assert.That(Victory(60, spoke, Ctx(last: last), Win(winCount: 1)).Key, Is.EqualTo("sloth_line_milestone_02"));
+        }
+
+        [Test]
+        public void WorldEnds_InARow_NeverRepeat_EvenWithTheFirstVeryHardInBetween()
+        {
+            // El recorrido real: los 12 fines de mundo (40-1.000) con el primer Muy difícil (60) entre el 40 y el 80, que comparte
+            // momento; con el tope de la sesión y la pantalla anterior con frase, como en el peor caso (habla siempre).
+            var data = new SlothData();
+            var spoke = new VictoryLine(true, false, null, false, null, true, true);
+            string? previousWorldEnd = null;
+            int worldEnds = 0;
+            for (int level = 11; level <= WorldTable.LastLevel; level++)
+            {
+                if (!SlothLines.IsWorldEnd(level) && level != SlothLines.FirstVeryHardLevel)
+                {
+                    continue;
+                }
+
+                var session = new SlothSession(data, true, true, true, 4, 4);
+                SlothContext c = session.Context.WithVictory(Win(winCount: 1));
+                SlothLine line = SlothLines.ForVictory(level, in spoke, in c);
+                Assert.That(line.Speaks && line.Moment == SlothMoment.Milestone, Is.True, level.ToString());
+                session.Record(in line, in c);
+                if (level == SlothLines.FirstVeryHardLevel)
+                {
+                    Assert.That(line.Key, Is.EqualTo("sloth_line_milestone_02"));
+                    continue;
+                }
+
+                Assert.That(line.Index == 0 || line.Index == 2 || line.Index == 3, Is.True, level + ": del mini-banco de la n.º 29");
+                Assert.That(line.Key, Is.Not.EqualTo(previousWorldEnd), level + ": dos fines de mundo seguidos no repiten");
+                previousWorldEnd = line.Key;
+                worldEnds++;
+            }
+
+            Assert.That(worldEnds, Is.EqualTo(12), "los fines de mundo 2-13 (el 10 no: lo cuenta el Mapa)");
         }
 
         [Test]

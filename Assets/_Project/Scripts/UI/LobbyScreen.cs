@@ -146,7 +146,6 @@ namespace AF.UI
         private RiverStopCatalog? _riverStops;
         private SeasonTable? _seasons;
         private RiverStop? _currentStop;
-        private RiverStop? _nextStop;
         private bool _remainingReady;
         private bool _commerceOpen;
         private int _stopLevelShown = -1;
@@ -963,17 +962,17 @@ namespace AF.UI
             int stopLevel = StopLevel(stops, level, app.Catalog.LastLevel);
             bool inRange = stops != null && stopLevel >= 1 && stopLevel <= WorldTable.LastLevel;
             _currentStop = inRange ? stops!.StopOf(stopLevel) : null;
-            _nextStop = _currentStop != null ? stops!.At(_currentStop.N + 1) : null;
             RiverStop? backdrop = inRange ? GameScreen.StopForLevel(stops, stopLevel, MapConfig.UiBgPerStop) : null;
             LevelDefinition? def = app.Catalog.Find(stopLevel);
             Season season = stopLevel >= 1 && stopLevel <= WorldTable.LastLevel ? GameScreen.SeasonFor(_seasons, stopLevel) : Season.None;
             _stopBackdrop.Apply(backdrop, def != null ? def.WaterBase : app.Catalog.WaterBase, false, 0f, season);
             ApplyStopLut();
 
-            // «Faltan N»: solo con la parada siguiente en el catálogo y con su nombre en el idioma (en release, un nombre sin el
-            // visto bueno del asesor es «» y la línea no sale).
-            string place = _nextStop != null ? UiText.StopName(_nextStop) : string.Empty;
-            _remainingReady = _nextStop != null && place.Length > 0;
+            // «Faltan N»: hacia la parada siguiente del catálogo o, tras la última, hacia la naciente (FX13), con su nombre en el
+            // idioma (en release, un nombre sin el visto bueno del asesor es «» y la línea no sale). Con la parada prestada del
+            // último nivel publicado (el 701 en el fin de contenido), no hay «Faltan…».
+            string place = _currentStop != null && stopLevel == level ? UiText.NextPlaceName(stops!, _currentStop) : string.Empty;
+            _remainingReady = place.Length > 0;
             _remainingLabel.text = _remainingReady ? UiText.MapStopRemaining(RiverJourney.LevelsLeft(level), place) : string.Empty;
             LayoutRemaining();
             ApplyStopVisibility();

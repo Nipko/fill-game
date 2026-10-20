@@ -290,6 +290,20 @@ namespace AF.UI
             _root.SetAsLastSibling(); // dentro de la capa de avisos: sigue detrás de la capa de vertido
         }
 
+        /// <summary>
+        /// Adelanta la salida: el aviso se va ya con su fundido normal (desde el alfa de ahora, como mucho
+        /// <see cref="FadeMs"/>), sin cortarse. Idempotente y sin asignaciones; oculto, no hace nada (el dedo guía del 2, DC6).
+        /// </summary>
+        public void Leave()
+        {
+            if (_leftMs < 0f)
+            {
+                return;
+            }
+
+            _leftMs = Mathf.Min(_leftMs, Mathf.Max(1f, _group.alpha * FadeMs));
+        }
+
         public void Hide()
         {
             _leftMs = -1f;
