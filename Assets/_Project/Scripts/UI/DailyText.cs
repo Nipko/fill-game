@@ -67,6 +67,12 @@ namespace AF.UI
             /// <summary>Cosecha doble (clave existente <c>double_harvest</c>), oculta hasta el enganche E9.</summary>
             public const string DoubleHarvest = "double_harvest";
 
+            /// <summary>Presentación del Reto tras ganar el 7: «Desde el nivel {level}, un tablero nuevo cada día» (E6; <see cref="DailyTeaserCard"/>).</summary>
+            public const string Teaser = DailyTeaserCard.TextKey;
+
+            /// <summary>Línea de Sin canoas: «Mientras esperas: Jugar el Reto del río» (E7; <see cref="NoCanoesDailyLink"/>).</summary>
+            public const string NoCanoesDaily = NoCanoesDailyLink.TextKey;
+
             /// <summary>Prefijo de los meses abreviados: <c>month_short_01</c> … <c>month_short_12</c>.</summary>
             public const string MonthShortPrefix = "month_short_";
         }
@@ -77,7 +83,7 @@ namespace AF.UI
             "month_short_07", "month_short_08", "month_short_09", "month_short_10", "month_short_11", "month_short_12",
         };
 
-        /// <summary>Todas las claves nuevas del Reto (las que van a <c>spark-strings-reto.csv</c>).</summary>
+        /// <summary>Las claves nuevas del Reto ya integradas en <c>strings.csv</c> (enganche E5; filas en <c>spark-strings-reto.csv</c>).</summary>
         public static readonly string[] NewKeys =
         {
             Keys.Title, Keys.CardTitle, Keys.DateShort, Keys.Streak, Keys.Continue, Keys.Sealed, Keys.Pending, Keys.RewardSeeds,
@@ -85,6 +91,13 @@ namespace AF.UI
             "month_short_01", "month_short_02", "month_short_03", "month_short_04", "month_short_05", "month_short_06",
             "month_short_07", "month_short_08", "month_short_09", "month_short_10", "month_short_11", "month_short_12",
         };
+
+        /// <summary>
+        /// Claves de E6 y E7 (la tarjeta del 7 y la línea de Sin canoas), con sus filas en <c>spark-strings-reto.csv</c>, que entran
+        /// en <c>strings.csv</c> con el enganche E5b (<c>docs/dev/traspaso/spark-enganches/E5b.diff</c>, que también las suma a
+        /// <c>LocTablesTests.UiTextKeys</c>). Cuando E5b esté integrado, pasan a <see cref="NewKeys"/>.
+        /// </summary>
+        public static readonly string[] E5bKeys = { Keys.Teaser, Keys.NoCanoesDaily };
 
         /// <summary>Claves que ya existen en <c>strings.csv</c> y se reutilizan con su mismo sentido.</summary>
         public static readonly string[] ReusedKeys = { Keys.Play, Keys.Home, Keys.DoubleHarvest };

@@ -36,11 +36,12 @@ namespace AF.Tests.EditMode
         // Tipos: la marca y lo que no se traduce, personajes, monedas, comodines (nombre temático y etiqueta), mecánicas,
         // modificadores (Aguas turbias, que no es una de las 12 mecánicas: glosario §6.2), tintes, mundos y los términos de UI
         // del §10 que nombran algo del juego.
-        private static readonly string[] Kinds = { "booster", "brand", "character", "currency", "mechanic", "modifier", "tint", "ui", "world" };
+        // T2-Q3 (2026-10-20): «fauna» y «place», los nombres de fauna, lugares, países y ríos que citan los textos, con su EN y PT.
+        private static readonly string[] Kinds = { "booster", "brand", "character", "currency", "fauna", "mechanic", "modifier", "place", "tint", "ui", "world" };
 
         // Lo cultural nace pendiente del asesor (.claude/rules/localizacion.md; 07 §8.2): todas las filas de estos tipos llevan
         // la marca en las notas, salvo las variantes de capacidad de la cuia (término de marca, glosario §4).
-        private static readonly string[] CulturalKinds = { "character", "mechanic", "tint", "world" };
+        private static readonly string[] CulturalKinds = { "character", "fauna", "mechanic", "place", "tint", "world" };
 
         private static readonly string[] NotCultural = { "mechanic.alta", "mechanic.chica" };
 
@@ -240,7 +241,7 @@ namespace AF.Tests.EditMode
                 Assert.That(glossary.ContainsKey(term), Is.True, "falta " + term);
             }
 
-            Assert.That(marked, Is.EqualTo(14 + 13 + 4 + 13 + CulturalBoosters.Length), "14 tintes, 13 mecánicas sin las de capacidad, 4 personajes (Capi, Rosa, TiTino y los Miquitos), 13 mundos y los comodines culturales");
+            Assert.That(marked, Is.EqualTo(14 + 13 + 4 + 13 + CulturalBoosters.Length + RowsOfKind(glossary, "fauna") + RowsOfKind(glossary, "place")), "14 tintes, 13 mecánicas sin las de capacidad, 4 personajes (Capi, Rosa, TiTino y los Miquitos), 13 mundos y los comodines culturales");
         }
 
         [Test]

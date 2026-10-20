@@ -1,7 +1,7 @@
 // Comprobaciones QA-DAILY-* del pool del Reto del río (R4 del encargo docs/dev/traspaso/spark-reto-del-rio.md; 03 §16 y §17;
 // nota de diseño docs/dev/reto-del-rio.md §13 y §1.6). Las reglas por banda (K, vacíos, capacidad, ventana del bot, paleta y
 // tope de pares, agua por mundo) salen de la especificación (tools/level-generator/specs/daily_v1.json, con el mismo lector
-// que el generador: Daily/Shared/), nunca de la cabecera del pack ni del código.
+// que el generador, enlazado: Shared/Daily/), nunca de la cabecera del pack ni del código.
 //   - Esquema (QA-DAILY-SCHEMA): python tools/validate_schema.py --pack, con Checks/GateChecks.Schema de la compuerta de
 //     campaña (.NET no trae validador de JSON Schema y level-qa no usa NuGet). Sin Python o sin jsonschema, falla.
 //   - El tablero se mide sobre caps y cuias (colores + vacíos, 02 R1): attrs, murky y hidden solo los mira QA-DAILY-MECH, para
@@ -9,8 +9,8 @@
 //   - Bot x40 (MetricsEngine.BotFail, enlazado del generador) con la semilla del tablero y su ventana con la tolerancia de 1e-9
 //     del generador: FALLO (R-Q11 (a): la ventana es compuerta). Pares de riesgo contra el tope de la banda: FALLO, salvo con
 //     max_risk_pairs "libre" (R-Q1b (a): B3), que no pone tope.
-//   - Reproducción (QA-DAILY-REPRO, 03 §17 #10): DailyQaCommand ejecuta el generador (--daily en un proceso hijo, a una
-//     carpeta temporal) con las bandas y los días del pack y compara cada tablero entero (igualdad profunda del JSON). level-qa no enlaza tools/level-generator/Daily/ (su .csproj no se toca en el Spark: enganche).
+//   - Reproducción (QA-DAILY-REPRO, 03 §17 #10): DailyQaCommand regenera en memoria las bandas y los días del pack con el
+//     DailyRunner y el DailyPackWriter del generador (enlazados) y compara cada tablero entero (igualdad profunda del JSON).
 //   - Anti-repetición (#9, Campaign/BoardShape.cs como la campaña) y trampas tempranas (#3, el tope por etiqueta de
 //     SlotGenerator.EarlyTrapCap) solo como aviso (R-Q10).
 using System.Collections.Concurrent;

@@ -1,0 +1,142 @@
+diff --git a/tools/river-map/stops.py b/tools/river-map/stops.py
+index 1db8f13..262c6ac 100644
+--- a/tools/river-map/stops.py
++++ b/tools/river-map/stops.py
+@@ -731,6 +731,10 @@ def build(source: dict, overrides: dict, wt: WorldTable, geo: "geometry.Geometry
+ EVIDENCE = ("V", "E")
+ REQUIRED_COLUMNS = ("key", "es-419", "context", "max_chars", "status", "notes", "args")
+ GENERATED = "Fila generada por tools/river-map/stops.py --write-texts (M1.1t): no se edita a mano."
++# Columnas de los otros idiomas que la regeneración conserva (T2-Q1, decisión del dueño del 2026-10-20): la traducción y su
++# estado de cada fila map.* se copian de facts.csv si el es-419 no cambió; si cambió, vuelven a vacío (08 §4.7: «si el
++# asesor cambia el español, los estados de los demás idiomas vuelven a vacío»). Las escribe tools/loc/apply_translations.py.
++PRESERVED_LOCALE_COLUMNS = ("en", "pt-BR", "status_en", "status_pt-BR")
+ NO_CAPTURE = "Captura: ninguna todavía (la placa de llegada y el Mapa aún no existen en el cliente)."
+ 
+ RE_MARKER = re.compile(r"\{([a-z][a-z0-9_]*)\}")
+@@ -1275,6 +1279,27 @@ def _record_key(record: str) -> str:
+     return fields[0] if fields else ""
+ 
+ 
++def preserve_locales(rows: dict, header: list[str], block_records: list[str]) -> dict:
++    """rows con las columnas de PRESERVED_LOCALE_COLUMNS de las filas map.* actuales cuyo es-419 sigue igual (T2-Q1)."""
++    cols = [c for c in PRESERVED_LOCALE_COLUMNS if c in header]
++    if not cols:
++        return rows
++    current = {}
++    for record in block_records:
++        fields = parse_csv_record(record)
++        if fields:
++            current[fields[0]] = dict(zip(header, fields))
++    out = {}
++    for key, row in rows.items():
++        have = current.get(key)
++        if have is not None and have.get("es-419", "") == row.get("es-419", "") and any(have.get(c, "") for c in cols):
++            row = dict(row)
++            for c in cols:
++                row[c] = have.get(c, "")
++        out[key] = row
++    return out
++
++
+ def render_facts(current: str, rows: dict) -> tuple[str | None, list[str]]:
+     """facts.csv con el bloque map.* regenerado: las demas filas y la cabecera quedan byte a byte como estaban."""
+     records = split_csv_records(current)
+@@ -1293,6 +1318,7 @@ def render_facts(current: str, rows: dict) -> tuple[str | None, list[str]]:
+         return None, [f"{FACTS_REL}: el bloque {TEXT_PREFIX}* no es contiguo (hay otras filas entre las suyas)"]
+     others = [r for r, k in zip(records[1:], keys) if not k.startswith(TEXT_PREFIX)]
+     other_keys = [k for k in keys if not k.startswith(TEXT_PREFIX)]
++    rows = preserve_locales(rows, header, [records[1 + i] for i in block])
+     generated = [format_csv_row([rows[k].get(col, "") for col in header]) for k in sorted(rows)]
+     if not generated:
+         return None, ["sin filas del Mapa que escribir"]
+diff --git a/tools/river-map/test_stops_preserve.py b/tools/river-map/test_stops_preserve.py
+new file mode 100644
+index 0000000..702a082
+--- /dev/null
++++ b/tools/river-map/test_stops_preserve.py
+@@ -0,0 +1,85 @@
++# -*- coding: utf-8 -*-
++"""test_stops_preserve.py - stops.py conserva las traducciones del bloque map.* al regenerarlo (T2-Q1).
++
++Ejecutar desde la raiz del repositorio:
++    py -3.14 -m unittest discover -s tools/river-map -p "test_*.py"
++
++Cubre: render_facts copia en, pt-BR, status_en y status_pt-BR de una fila map.* cuyo es-419 no cambió; las vuelve a vacío
++si el es-419 cambió (08 §4.7); no inventa nada para una fila nueva; deja intactas las filas de fuera del bloque; y el
++bloque real de facts.csv sigue al día con --check (lo regenera igual que está). Solo biblioteca estandar.
++"""
++from __future__ import annotations
++
++import sys
++import unittest
++from pathlib import Path
++
++HERE = Path(__file__).resolve().parent
++sys.path.insert(0, str(HERE))
++
++import stops  # noqa: E402
++
++HEADER = "key,es-419,en,pt-BR,context,max_chars,status,status_en,status_pt-BR,notes,args\n"
++COLS = HEADER.strip().split(",")
++
++
++def row(key: str, es: str) -> dict:
++    return {"key": key, "es-419": es, "en": "", "pt-BR": "", "context": "ctx", "max_chars": "90",
++            "status": "pendiente_asesor", "status_en": "", "status_pt-BR": "", "notes": "generada", "args": ""}
++
++
++def parse(text: str) -> dict:
++    out = {}
++    for record in stops.split_csv_records(text)[1:]:
++        fields = stops.parse_csv_record(record)
++        out[fields[0]] = dict(zip(COLS, fields))
++    return out
++
++
++class PreserveTests(unittest.TestCase):
++    CURRENT = (HEADER
++               + "fact.x.01,Fruta,Fruit,Fruta,ctx,90,pendiente_asesor,traducido,traducido,n,\n"
++               + "map.a.dato_01,Dato A,Fact A,Dado A,ctx,90,pendiente_asesor,traducido,revisado_nativo,generada,\n"
++               + "map.b.dato_01,Dato B viejo,Old B,B velho,ctx,90,pendiente_asesor,traducido,traducido,generada,\n"
++               + "tint.x.name,X,X,X,ctx,24,pendiente_asesor,traducido,traducido,n,\n")
++
++    def render(self, rows: dict) -> dict:
++        text, errors = stops.render_facts(self.CURRENT, rows)
++        self.assertEqual(errors, [])
++        return parse(text)
++
++    def test_the_marker_exists(self):
++        self.assertEqual(stops.PRESERVED_LOCALE_COLUMNS, ("en", "pt-BR", "status_en", "status_pt-BR"))
++
++    def test_same_spanish_keeps_translation_and_status(self):
++        got = self.render({"map.a.dato_01": row("map.a.dato_01", "Dato A")})
++        a = got["map.a.dato_01"]
++        self.assertEqual((a["en"], a["pt-BR"], a["status_en"], a["status_pt-BR"]), ("Fact A", "Dado A", "traducido", "revisado_nativo"))
++        self.assertEqual(a["notes"], "generada", "las demas columnas salen de la fuente")
++
++    def test_changed_spanish_resets_to_empty(self):
++        got = self.render({"map.b.dato_01": row("map.b.dato_01", "Dato B nuevo")})
++        b = got["map.b.dato_01"]
++        self.assertEqual((b["es-419"], b["en"], b["pt-BR"], b["status_en"], b["status_pt-BR"]), ("Dato B nuevo", "", "", "", ""))
++
++    def test_new_row_has_no_translation(self):
++        got = self.render({"map.c.dato_01": row("map.c.dato_01", "Dato C")})
++        self.assertEqual(got["map.c.dato_01"]["en"], "")
++        self.assertNotIn("map.a.dato_01", got, "una fila que la fuente ya no da desaparece, como antes")
++
++    def test_rows_outside_the_block_are_byte_identical(self):
++        text, _ = stops.render_facts(self.CURRENT, {"map.a.dato_01": row("map.a.dato_01", "Dato A")})
++        for line in self.CURRENT.splitlines(keepends=True):
++            if line.startswith(("fact.", "tint.", "key,")):
++                self.assertIn(line, text)
++
++    def test_rendering_twice_is_stable(self):
++        rows = {"map.a.dato_01": row("map.a.dato_01", "Dato A"), "map.b.dato_01": row("map.b.dato_01", "Dato B viejo")}
++        once, _ = stops.render_facts(self.CURRENT, rows)
++        twice, _ = stops.render_facts(once, rows)
++        self.assertEqual(once, twice)
++        self.assertEqual(once, self.CURRENT, "con el mismo es-419, regenerar no cambia ni un byte")
++
++
++if __name__ == "__main__":
++    unittest.main()

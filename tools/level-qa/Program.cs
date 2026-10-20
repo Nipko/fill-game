@@ -48,7 +48,8 @@ const string Usage = """
     --variant a|b (P7b): la variante de una especificacion con respaldos, la misma del --variant del generador (por
     defecto la publicada, published_variant; b = la salida B de D-019, sin la Tinaja, de campaign_v2.json): el
     calendario de las comprobaciones y la regeneracion de QA-REPRO y QA-BAND-Q salen de ella.
-    --self-test [key2]: genera el estreno de cada variante de la 1.0 de tools/level-generator/specs/sample_variants.json,
+    --self-test (sin nombre): key2 y daily, con el codigo mayor de los dos.
+    --self-test key2: genera el estreno de cada variante de la 1.0 de tools/level-generator/specs/sample_variants.json,
     lo escribe a un pack temporal y comprueba que este lector lo lee (tambien la key2 de la Flor y el relief) con el mismo
     tablero y el mismo hash que el generador; la Flor sin key2 no se construye. Sale con 0, 1 (algun FAIL) o 2.
     --self-test reglas: prueba en positivo y en negativo el tope de mecanicas por nivel (QA-MECH-COUNT: retos desde el 301 y
@@ -62,9 +63,9 @@ const string Usage = """
     comodidad pura en el 327 da QA-MECH-CELL; con b, al reves; --variant c y --variant b con campaign_v1 salen con 2.
     Sale con 0, 1 (algun FAIL) o 2.
     --daily (Reto del rio, 03 sec. 16): QA del pool (QA-DAILY-*) con la especificacion tools/level-generator/specs/
-    daily_v1.json (o --spec), el mismo lector que el generador: esquema, slot, id y semilla, 730 dias por banda, K, vacios y
+    daily_v1.json (o --spec), el mismo lector que el generador: esquema, slot, id y semilla, 729 dias por banda, K, vacios y
     capacidad, paleta y tope de pares por banda, sin mecanicas ni alivio, A*, par >= 2K, ventana del bot, <= 14 cuias,
-    < 2 MB y QA-DAILY-REPRO (regenera los dias del pack con el generador, en un proceso hijo, y compara cada tablero
+    < 2 MB y QA-DAILY-REPRO (regenera en memoria los dias del pack con el codigo del generador y compara cada tablero
     entero); la anti-repeticion y las trampas tempranas, solo aviso (R-Q10). --partial: una muestra (los dias que faltan no
     fallan; avisa de que no es el pool completo). --no-reproduce salta QA-DAILY-REPRO; nunca en el CI.
     --self-test daily: el fixture valido y los malos de tools/level-qa/fixtures/daily/ (cada uno falla con su id), los
@@ -118,11 +119,14 @@ if (args[0] == "--self-test")
         return RulesSelfTest.Run();
     }
 
-    return VariantsSelfTest.RunPackReadBack("level-qa PackReader", path =>
+    int key2 = VariantsSelfTest.RunPackReadBack("level-qa PackReader", path =>
     {
         QaLevel level = PackReader.Read(path).Levels[0];
         return (level.Board, [.. level.Relief.Select(r => r.Board)]);
     });
+
+    // E17 (Spark): el --self-test sin nombre suma el del Reto del río (--self-test daily).
+    return args.Length == 2 ? key2 : Math.Max(key2, AmazonFill.Tools.LevelQa.Daily.DailyQaCommand.Run(["--self-test", "daily"]));
 }
 
 var packages = new List<string>();

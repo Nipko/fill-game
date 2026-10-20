@@ -31,4 +31,11 @@
     <!-- SeasonTableWriter (la tabla de temporada del generador) no lo usa la compuerta: se queda fuera. -->
     <Compile Include="../level-generator/Generation/*.cs" Exclude="../level-generator/Generation/SeasonTableWriter.cs" LinkBase="Shared/Generation" />
   </ItemGroup>
+
+  <!-- Reto del río (modo diario de level-qa): el mismo lector de la especificación (DailySpec), los mismos ids y semillas (DailyIds)
+       y la misma generación (DailyRunner, DailyTints y DailyPackWriter) que el generador, enlazados, para que QA-DAILY-REPRO
+       regenere el pool en memoria. La entrada de la línea de comandos del generador (DailyCommand*.cs) se queda fuera. -->
+  <ItemGroup>
+    <Compile Include="../level-generator/Daily/*.cs" Exclude="../level-generator/Daily/DailyCommand*.cs" LinkBase="Shared/Daily" />
+  </ItemGroup>
 </Project>

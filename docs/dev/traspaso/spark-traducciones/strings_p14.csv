@@ -1,0 +1,9 @@
+key,es-419,en,pt-BR,status_en,status_pt-BR
+giveup_confirm_canoe,{n:plural:Perderás {} canoa|Perderás {} canoas},{n:plural:You'll lose {} canoe|You'll lose {} canoes},{n:plural:Você perderá {} canoa|Você perderá {} canoas},traducido,traducido
+giveup_confirm_title,¿Seguro?,Are you sure?,Tem certeza?,traducido,traducido
+level_failed,Nivel fallido,Level failed,Nível não concluído,traducido,traducido
+level_failed_reward,{n:plural:Premio: {} semilla|Premio: {} semillas},{n:plural:Reward: {} seed|Reward: {} seeds},{n:plural:Prêmio: {} semente|Prêmio: {} sementes},traducido,traducido
+quit_confirm_canoe,{n:plural:Perderás {} canoa|Perderás {} canoas},{n:plural:You'll lose {} canoe|You'll lose {} canoes},{n:plural:Você perderá {} canoa|Você perderá {} canoas},traducido,traducido
+quit_confirm_title,¿Salir del nivel?,Quit the level?,Sair do nível?,traducido,traducido
+retry,Reintentar,Retry,Tentar de novo,traducido,traducido
+stuck_give_up,Rendirse,Give up,Desistir,traducido,traducido
