@@ -28,8 +28,10 @@ namespace AF.Tests.PlayMode
     /// <item><description>el agua y la orla del lleno y del frente quedan a ≤ 2 dp del eje del vidrio de su línea en todo su
     /// largo (sus secciones y el punto medio de cada paso);</description></item>
     /// <item><description>la boca de cada afluente sigue cayendo sobre su anfitrión: la punta dibujada del afluente queda del eje
-    /// dibujado del anfitrión a no más que del de cuerdas de antes de FX12, de su polilínea (las bocas de los datos que no caen en
-    /// ella) o de medio ancho del anfitrión;</description></item>
+    /// dibujado del anfitrión a no más que del de cuerdas de antes de FX12 o de medio ancho del anfitrión (con
+    /// <see cref="MouthRoundingDp"/>); las bocas de los datos que no caen en la polilínea del anfitrión se anotan en el registro;</description></item>
+    /// <item><description>lo que se coloca sobre la línea (las paradas, las boyas y la canoa) queda a ≤ <see cref="MaxMarkerApartWidths"/>
+    /// anchos del eje dibujado del vidrio de su línea;</description></item>
     /// <item><description>en la Cuenca, ninguna cinta lleva la curva (sus capturas no cambian).</description></item>
     /// </list>
     /// Lo mismo (codos y agua sobre el vidrio) en las cintas del viaje del banner del 41 y del 81, que también llevan la curva.
@@ -71,6 +73,9 @@ namespace AF.Tests.PlayMode
 
         /// <summary>Distancia máxima del agua (y su orla) al eje del vidrio de su línea, en dp.</summary>
         public const float MaxWaterApartDp = 2f;
+
+        /// <summary>Redondeo con el que se compara la boca de un afluente con la de antes de FX12, en dp.</summary>
+        public const float MouthRoundingDp = 0.1f;
 
         private static readonly DateTime T0 = new DateTime(2026, 10, 16, 15, 0, 0, DateTimeKind.Utc);
 
@@ -122,6 +127,7 @@ namespace AF.Tests.PlayMode
                 Canvas.ForceUpdateCanvases();
                 Assert.That(map.View, Is.EqualTo(MapView.World));
                 CheckWorld(map, boot.RiverMapData!, "max " + max);
+                CheckMarkers(map, boot.RiverMapData!, boot.RiverRoutes!, "max " + max);
 
                 map.SetView(MapView.Basin);
                 map.Tick(16f);
@@ -254,7 +260,26 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(world.Count, Is.GreaterThan(3), at + ": cintas dibujadas");
-            CheckCorners(world, at, "; zoom " + map.Zoom.ToString("0.00", CultureInfo.InvariantCulture));
+
+            // Las cintas con todos los pasos de la curva, con los umbrales de los codos. Las del frente que no caben en su tope
+            // (RiverMapScreen.FrontCurveMaxVertices, el de FX11) eligen los pasos con una tolerancia de la escala de
+            // RiverRibbonGraphic.CurveBudgetToleranceDp (≤ 1,75 dp, sin saltarlos a ciegas) y quedan, como todas, a ≤ 2 dp del vidrio.
+            var full = new System.Collections.Generic.List<RiverRibbonGraphic>();
+            foreach (RiverRibbonGraphic ribbon in world)
+            {
+                if (ribbon.LastCurveToleranceDp == 0f)
+                {
+                    full.Add(ribbon);
+                    continue;
+                }
+
+                Debug.Log("AF_FX12 " + at + ": " + ribbon.name + " con su tope, tolerancia de la curva "
+                    + ribbon.LastCurveToleranceDp.ToString("0.00", CultureInfo.InvariantCulture) + " dp");
+                Expect(ribbon.name.StartsWith("Front", StringComparison.Ordinal) && ribbon.LastCurveToleranceDp > 0f,
+                    at + ": " + ribbon.name + " con todos los pasos de la curva o, el frente, con una tolerancia de la escala");
+            }
+
+            CheckCorners(full, at, "; zoom " + map.Zoom.ToString("0.00", CultureInfo.InvariantCulture));
 
             // Lo más que la curva se aparta de los puntos de la línea (solo el registro: los datos no cambian, la canoa y las paradas
             // van sobre la polilínea).
@@ -353,7 +378,17 @@ namespace AF.Tests.PlayMode
                 float drawn = DistanceToSections(host, tip) * dp;
                 float polyline = DistanceToPolyline(host.Cursor!, tip) * dp;
                 float chords = DistanceToSections(Chords(host), tip) * dp;
-                float allowed = Mathf.Max(Mathf.Max(chords, polyline) + (RiverRibbonGraphic.CurveAnchorWidths * host.WidthDp), 0.5f * host.WidthDp);
+                // Revisión de FX12: ninguna boca más lejos que con las cuerdas de antes de FX12 ni fuera de la cinta del anfitrión (con
+                // 0,1 dp de redondeo); la curva pasa por la punta del afluente (la boca de los datos), aunque no caiga en la polilínea.
+                float allowed = Mathf.Max(chords, 0.5f * host.WidthDp) + MouthRoundingDp;
+                if (polyline > 0.5f * host.WidthDp)
+                {
+                    Debug.Log("AF_FX12 " + at + ": la boca de los datos de " + line.Id + " no cae sobre " + data.Lines[mouth.Line].Id + ": su punta, a "
+                        + polyline.ToString("0.00", CultureInfo.InvariantCulture) + " dp de la polilínea ("
+                        + (polyline / map.Zoom).ToString("0.00", CultureInfo.InvariantCulture) + " dp a 1×); el eje dibujado, a "
+                        + drawn.ToString("0.00", CultureInfo.InvariantCulture) + " dp");
+                }
+
                 float extra = drawn - allowed;
                 if (extra > mouthWorst)
                 {
@@ -366,6 +401,103 @@ namespace AF.Tests.PlayMode
 
             Debug.Log("AF_FX12 " + at + ": la boca más apartada de su anfitrión dibujado, " + mouthAt);
             Expect(mouthWorst <= 0f, at + ": las bocas, sobre su anfitrión: " + mouthAt);
+        }
+
+        /// <summary>
+        /// Lo que se coloca sobre la línea, sobre el río dibujado: cada parada (su punto real), cada boya (si no van en la fila corta
+        /// bajo la parada) y la canoa quedan a no más de <see cref="MaxMarkerApartWidths"/> del ancho del vidrio de su línea del eje
+        /// dibujado de ese vidrio. Las boyas y la canoa, en la línea cuya polilínea pasa por ellas (en una boca, la de eje más cerca).
+        /// </summary>
+        public const float MaxMarkerApartWidths = 0.5f;
+
+        private static void CheckMarkers(RiverMapScreen map, RiverMap data, RiverRoutes routes, string at)
+        {
+            var points = new System.Collections.Generic.List<(Vector2 Point, int Line, string What)>();
+            for (int i = 0; i < map.StopMarkerCount; i++)
+            {
+                int n = map.StopMarkerStop(i);
+                RiverStopRoute? route = routes.At(n);
+                if (route != null)
+                {
+                    points.Add((RiverMapScreen.PlacePoint(data, route.At), route.At.Line, "parada " + n));
+                }
+            }
+
+            if (!map.BuoysCompact)
+            {
+                for (int i = 0; i < map.BuoyCount; i++)
+                {
+                    points.Add((map.BuoyMapPoint(i), -1, "boya " + map.BuoyLevel(i)));
+                }
+            }
+
+            if (map.HasCanoe)
+            {
+                points.Add((map.CanoeMapPoint, -1, "canoa"));
+            }
+
+            float worst = float.MinValue;
+            string worstAt = string.Empty;
+            int checkedCount = 0;
+            foreach ((Vector2 point, int lineIndex, string what) in points)
+            {
+                int line = lineIndex;
+                float best = float.MaxValue;
+                if (line < 0)
+                {
+                    // La línea que pasa por el punto (en una boca, dos: la de eje dibujado más cerca).
+                    float onLine = float.MaxValue;
+                    for (int i = 0; i < data.Lines.Count; i++)
+                    {
+                        RiverRibbonGraphic g = map.Glass(i);
+                        if (!g.gameObject.activeSelf || g.LastSectionPointCount < 2)
+                        {
+                            continue;
+                        }
+
+                        float d = DistanceToPolyline(g.Cursor!, point) * g.Space.DpPerUnit;
+                        float drawnD = DistanceToSections(g, point) * g.Space.DpPerUnit;
+                        if (d < onLine - 0.01f || (d <= onLine + 0.01f && drawnD < best))
+                        {
+                            onLine = Mathf.Min(onLine, d);
+                            best = drawnD;
+                            line = i;
+                        }
+                    }
+                }
+
+                if (line < 0)
+                {
+                    continue;
+                }
+
+                RiverRibbonGraphic glass = map.Glass(line);
+                if (!glass.gameObject.activeSelf || glass.LastSectionPointCount < 2)
+                {
+                    continue;
+                }
+
+                checkedCount++;
+                float dp = glass.Space.DpPerUnit;
+                float drawn = DistanceToSections(glass, point) * dp;
+                float extra = drawn - (MaxMarkerApartWidths * glass.WidthDp);
+                if (extra > 0f)
+                {
+                    Debug.Log("AF_FX12 " + at + ": " + what + " a " + drawn.ToString("0.00", CultureInfo.InvariantCulture) + " dp del eje de "
+                        + glass.name + " (antes de FX12, " + (DistanceToSections(Chords(glass), point) * dp).ToString("0.00", CultureInfo.InvariantCulture) + ")");
+                }
+
+                if (extra > worst)
+                {
+                    worst = extra;
+                    worstAt = what + " en " + glass.name + ", a " + drawn.ToString("0.00", CultureInfo.InvariantCulture) + " dp de su eje dibujado (ancho "
+                        + glass.WidthDp.ToString("0.0", CultureInfo.InvariantCulture) + " dp)";
+                }
+            }
+
+            Debug.Log("AF_FX12 " + at + ": " + checkedCount + " paradas, boyas y canoa; la más apartada, " + worstAt);
+            Assert.That(checkedCount, Is.GreaterThan(0), at + ": hay paradas sobre las líneas");
+            Expect(worst <= 0f, at + ": las paradas, las boyas y la canoa, sobre el río dibujado: " + worstAt);
         }
 
         // Las cintas dibujadas del Mapa: el vidrio, el lleno y su orla, y el frente y su orla (las activas con malla).
@@ -442,7 +574,7 @@ namespace AF.Tests.PlayMode
         }
 
         // Lo más que se aparta la cinta (sus secciones y el punto medio de cada paso) del eje dibujado del vidrio, en dp.
-        private static float ApartDp(RiverRibbonGraphic ribbon, RiverRibbonGraphic glass)
+        internal static float ApartDp(RiverRibbonGraphic ribbon, RiverRibbonGraphic glass)
         {
             float worst = 0f;
             int n = ribbon.LastSectionPointCount;

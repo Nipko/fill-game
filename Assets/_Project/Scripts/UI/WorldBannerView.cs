@@ -2219,7 +2219,7 @@ namespace AF.UI
                 SetupRibbon(_glass[i], visible ? line : null, RibbonLook.Glass, sA, sB, space);
                 SetupRibbon(_casing[i], filled ? line : null, RibbonLook.Water, filled ? from : 1f, sB, space);
                 SetupRibbon(_core[i], filled ? line : null, RibbonLook.Water, filled ? from : 1f, sB, space);
-                float[]? anchors = RiverRibbonGraphic.MouthAnchorsOf(map, line); // FX12: las bocas de los afluentes, como en el Mapa
+                RibbonAnchors? anchors = RiverRibbonGraphic.MouthAnchorsOf(map, line); // FX12: las bocas de los afluentes, como en el Mapa
                 _glass[i].SetAnchors(visible ? anchors : null);
                 _casing[i].SetAnchors(filled ? anchors : null);
                 _core[i].SetAnchors(filled ? anchors : null);

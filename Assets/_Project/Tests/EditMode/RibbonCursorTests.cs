@@ -703,11 +703,11 @@ namespace AF.Tests.EditMode
         [Test]
         public void Curve_PassesNearItsAnchors()
         {
-            // FX12: la curva pasa a ≤ CurveAnchorWidths anchos de cada ancla (las bocas de los afluentes), así que la punta del
-            // afluente cae dentro de la cinta de su anfitrión.
-            float[][] anchors = RiverRibbonGraphic.MouthAnchors(_map);
+            // FX12: la curva pasa a ≤ CurveAnchorWidths anchos de cada ancla (la punta de cada afluente, la boca de los datos), así
+            // que la punta del afluente cae dentro de la cinta de su anfitrión.
+            RibbonAnchors[] anchors = RiverRibbonGraphic.MouthAnchors(_map);
             RiverLine amazonas = _map.Line("amazonas")!;
-            Assert.That(anchors[amazonas.Index].Length, Is.GreaterThan(3), "el cauce recibe afluentes");
+            Assert.That(anchors[amazonas.Index].Count, Is.GreaterThan(3), "el cauce recibe afluentes");
             var space = new MapSpace(Basin * 4f, Vector2.zero);
             RiverRibbonGraphic ribbon = Ribbon(amazonas, RibbonLook.Glass);
             ribbon.SetSpace(space);
@@ -716,12 +716,12 @@ namespace AF.Tests.EditMode
             ribbon.SetCurve(true);
             ribbon.SetAnchors(anchors[amazonas.Index]);
             Mesh(ribbon);
-            var cursor = new PolylineCursor(amazonas);
             float limit = (RiverRibbonGraphic.CurveAnchorWidths * 8f) + RiverRibbonGraphic.CurveToleranceDp + 0.05f;
-            foreach (float s in anchors[amazonas.Index])
+            RibbonAnchors mouths = anchors[amazonas.Index];
+            for (int k = 0; k < mouths.Count; k++)
             {
-                float gap = DistanceToSections(ribbon, cursor.PointAtS(s)) * space.DpPerUnit;
-                Assert.That(gap, Is.LessThanOrEqualTo(limit), "la boca en s " + s);
+                float gap = DistanceToSections(ribbon, mouths.Points[k]) * space.DpPerUnit;
+                Assert.That(gap, Is.LessThanOrEqualTo(limit), "la boca en s " + mouths.S[k]);
             }
         }
 

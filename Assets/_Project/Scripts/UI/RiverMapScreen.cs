@@ -664,6 +664,7 @@ namespace AF.UI
 
             _canvas.Canvas.gameObject.SetActive(true);
             EnsureGeometry(map);
+            ApplyLineAnchors(map, routes, stops, progress.MaxLevel); // FX12: el río dibujado pasa por lo que se coloca sobre él
             _hasCanoe = TryCanoePoint(map, routes, progress.MaxLevel, out _canoeMap);
             _canoe.sprite = _art.MapCanoe;
             _canoe.gameObject.SetActive(_hasCanoe);
@@ -851,6 +852,15 @@ namespace AF.UI
         /// </summary>
         public static Vector2 RoutePoint(RiverMap map, RiverStopRoute route, float fraction)
         {
+            return PlacePoint(map, RoutePlace(map, route, fraction));
+        }
+
+        /// <summary>
+        /// La línea y la s del punto de <see cref="RoutePoint"/> (el sitio sobre la línea donde se coloca una boya o la canoa). Sin
+        /// asignaciones.
+        /// </summary>
+        public static RiverMapPlace RoutePlace(RiverMap map, RiverStopRoute route, float fraction)
+        {
             IReadOnlyList<RiverPathPiece> path = route.Path;
             float total = 0f;
             for (int i = 0; i < path.Count; i++)
@@ -861,7 +871,7 @@ namespace AF.UI
 
             if (total <= 0f)
             {
-                return PlacePoint(map, route.At);
+                return route.At;
             }
 
             float target = Mathf.Clamp01(fraction) * total;
@@ -873,14 +883,92 @@ namespace AF.UI
                 if (target <= length || i == path.Count - 1)
                 {
                     float t = length > 0f ? Mathf.Clamp01(target / length) : 1f;
-                    line.PointAt(piece.S0 + ((piece.S1 - piece.S0) * t), out float x, out float y);
-                    return new Vector2(x, y);
+                    return new RiverMapPlace(piece.Line, piece.S0 + ((piece.S1 - piece.S0) * t));
                 }
 
                 target -= length;
             }
 
-            return PlacePoint(map, route.At);
+            return route.At;
+        }
+
+        // Revisión de FX12: las anclas de la curva de cada línea en esta apertura (las bocas de sus afluentes y lo que se coloca sobre
+        // ella), para qué Mapa y qué max_level.
+        private RibbonAnchors[] _lineAnchors = Array.Empty<RibbonAnchors>();
+        private RiverMap? _lineAnchorsMap;
+        private int _lineAnchorsMax = -1;
+        private int _lineAnchorsWorld = -1;
+
+        /// <summary>
+        /// Anclas de la curva de la línea <paramref name="line"/> (<see cref="RiverRibbonGraphic.SetAnchors"/>) en esta apertura: las
+        /// bocas de sus afluentes y los sitios de la línea donde se coloca algo (las paradas, las boyas de los tramos hasta el del
+        /// frente y, así, la canoa), para que el río dibujado pase por ellos. Null sin línea.
+        /// </summary>
+        internal RibbonAnchors? LineAnchors(RiverLine? line)
+        {
+            return line != null && line.Index < _lineAnchors.Length ? _lineAnchors[line.Index] : null;
+        }
+
+        // Revisión de FX12: el trazo curvo del Mundo pasa por lo que se coloca sobre las líneas, que va sobre la polilínea (los datos y
+        // el cursor no cambian): cada parada de los mundos abiertos (su sitio, como sus mini cuias), las 10 boyas de cada tramo hasta
+        // el del frente con max_level (la canoa va en una de ellas o en una parada y, al ponerse al día, de una a otra) y las bocas de
+        // los afluentes (RiverRibbonGraphic.MouthAnchors). Son anclas de la curva: pasa a ≤ CurveAnchorWidths anchos de cada una. Se
+        // fijan en el vidrio y el lleno de cada línea (el frente, en BuildFront) para que todas sus cintas sigan la misma curva.
+        // Asigna: al abrir, si cambian el Mapa, max_level o el mundo.
+        private void ApplyLineAnchors(RiverMap map, RiverRoutes routes, RiverStopCatalog stops, int maxLevel)
+        {
+            int max = Mathf.Clamp(maxLevel, 0, WorldTable.LastLevel);
+            if (!ReferenceEquals(map, _lineAnchorsMap) || max != _lineAnchorsMax || _world != _lineAnchorsWorld)
+            {
+                _lineAnchorsMap = map;
+                _lineAnchorsMax = max;
+                _lineAnchorsWorld = _world;
+                var lists = new List<(float S, Vector2 Point)>?[map.Lines.Count];
+                for (int n = 0; n < routes.Count; n++)
+                {
+                    RiverStopRoute? route = routes.At(n);
+                    RiverStop? stop = stops.At(n);
+                    if (route != null && stop != null && stop.World <= _world) // las de los mundos abiertos, como sus mini cuias
+                    {
+                        AddAnchor(map, lists, route.At);
+                    }
+                }
+
+                int front = Mathf.Min(FrontStopOf(max), routes.Count - 1);
+                for (int n = 1; n <= front; n++)
+                {
+                    RiverStopRoute? route = routes.At(n);
+                    for (int i = 0; route != null && i < BuoysPerLeg; i++)
+                    {
+                        AddAnchor(map, lists, RoutePlace(map, route, (i + 1) / (float)BuoysPerLeg));
+                    }
+                }
+
+                _lineAnchors = new RibbonAnchors[map.Lines.Count];
+                for (int i = 0; i < map.Lines.Count; i++)
+                {
+                    RibbonAnchors? mouths = RiverRibbonGraphic.MouthAnchorsOf(map, map.Lines[i]);
+                    _lineAnchors[i] = RiverRibbonGraphic.MergeAnchors(mouths, lists[i]);
+                }
+            }
+
+            for (int i = 0; i < _glass.Count; i++)
+            {
+                RiverLine? line = i < map.Lines.Count ? map.Lines[i] : null;
+                _glass[i].SetAnchors(LineAnchors(line));
+            }
+
+            ProgressAnchors(map);
+        }
+
+        private static void AddAnchor(RiverMap map, List<(float S, Vector2 Point)>?[] lists, RiverMapPlace place)
+        {
+            if (place.Line < 0 || place.Line >= lists.Length)
+            {
+                return;
+            }
+
+            (lists[place.Line] ??= new List<(float S, Vector2 Point)>()).Add((place.S, PlacePoint(map, place)));
         }
 
         /// <summary>
@@ -1432,6 +1520,8 @@ namespace AF.UI
 
         /// <summary>M3.4: la vista cambió de escala.</summary>
         partial void ProgressSpace(MapSpace space);
+
+        partial void ProgressAnchors(RiverMap map);
 
         /// <summary>M3.4: cada fotograma con el Mapa abierto; <paramref name="animating"/> = true pide 60 fps.</summary>
         partial void ProgressTick(float dtMs, ref bool animating);
