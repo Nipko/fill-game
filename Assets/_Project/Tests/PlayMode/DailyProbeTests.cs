@@ -36,7 +36,7 @@ namespace AF.Tests.PlayMode
             "^AF_STATE \\{\"event\":\"level_start\",\"t\":\\d+,\"level_name\":\"(d[1-3]_n\\d{4})\",\"variant\":\"base\",\"band\":(\\d)\\}$");
 
         private static readonly Regex WinRx = new Regex(
-            "^AF_STATE \\{\"event\":\"daily_challenge\",\"t\":\\d+,\"date\":\"2026-10-19\",\"result\":\"win\",\"t_ms\":(\\d+),"
+            "^AF_STATE \\{\"event\":\"daily_challenge\",\"t\":\\d+,\"date\":\"2026-10-19\",\"result\":\"win\",\"t_ms\":(\\d+|null),"
             + "\"murky_bonus\":false,\"streak_days\":1\\}$");
 
         private static readonly Regex EarnRx = new Regex(
@@ -87,19 +87,30 @@ namespace AF.Tests.PlayMode
 
             Assert.That(boot.PressDailyCard(), Is.True);
             DailyChallengeScreen daily = boot.DailyScreen!;
-            Assert.That(Count("level_start"), Is.EqualTo(1), "al empezar la partida");
+            Assert.That(Count("level_start"), Is.EqualTo(0), "aún en Llenar y teñir");
+            ToPlaying(boot, daily);
+            Assert.That(Count("level_start"), Is.EqualTo(1), "al terminar Llenar y teñir (08 §8.2)");
             Match start = LevelStartRx.Match(Only("level_start"));
             Assert.That(start.Success, Is.True, Only("level_start"));
             Assert.That(start.Groups[1].Value, Is.EqualTo(today), "level_name = id del tablero de hoy (d{b}_n{nnnn})");
             Assert.That(start.Groups[2].Value, Is.EqualTo("1"), "banda 1 con max_level 25");
             Assert.That(Count("daily_challenge"), Is.EqualTo(0));
 
+            // «Volver a la orilla» repite la intro, pero no es una partida nueva: no repite level_start.
+            PourFirstMove(boot, daily);
+            Assert.That(daily.Actions.PressRestart(), Is.True);
+            Step(boot, Frame);
+            ToPlaying(boot, daily);
+            Assert.That(Count("level_start"), Is.EqualTo(1), "una vez por partida");
+
             Win(boot, daily);
             Assert.That(daily.LastClaimOutcome, Is.EqualTo(ClaimOutcome.Confirmed));
+            Assert.That(Count("level_start"), Is.EqualTo(1));
             Assert.That(Count("daily_challenge"), Is.EqualTo(1));
             Assert.That(Count("earn_virtual_currency"), Is.EqualTo(1));
             Match win = WinRx.Match(Only("daily_challenge"));
             Assert.That(win.Success, Is.True, Only("daily_challenge"));
+            Assert.That(win.Groups[1].Value, Is.Not.EqualTo("null"), "t_ms medido: la partida no se reanudó");
             Assert.That(long.Parse(win.Groups[1].Value), Is.GreaterThan(0L), "t_ms: lo jugado desde que se abrió");
             Assert.That(EarnRx.IsMatch(Only("earn_virtual_currency")), Is.True, Only("earn_virtual_currency"));
             int iStart = IndexOf("level_start");
@@ -115,6 +126,96 @@ namespace AF.Tests.PlayMode
             Assert.That(Count("daily_challenge"), Is.EqualTo(1));
             Assert.That(Count("earn_virtual_currency"), Is.EqualTo(1));
             Assert.That(boot.DailyCard!.LastProbe, Does.Contain("\"state\":\"sealed\"").And.Contain("\"streak\":1"));
+        }
+
+        [UnityTest]
+        public IEnumerator Resumed_TheWinHasNullTMs_AndOneLevelStart()
+        {
+            yield return Boot();
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.PressDailyCard(), Is.True);
+            DailyChallengeScreen daily = boot.DailyScreen!;
+            ToPlaying(boot, daily);
+            PourFirstMove(boot, daily);
+            Assert.That(daily.Actions.PressQuit(), Is.True, "pausa › Salir");
+            Step(boot, Frame);
+            Assert.That(boot.DailyCard!.State, Is.EqualTo(DailyCardState.InProgress));
+
+            _lines.Clear();
+            Assert.That(boot.PressDailyCard(), Is.True, "Seguir");
+            daily = boot.DailyScreen!;
+            Assert.That(daily.Resumed, Is.True);
+            Win(boot, daily);
+            Assert.That(daily.LastClaimOutcome, Is.EqualTo(ClaimOutcome.Confirmed));
+            Assert.That(Count("level_start"), Is.EqualTo(1), "la reanudada también empieza una vez");
+            Match win = WinRx.Match(Only("daily_challenge"));
+            Assert.That(win.Success, Is.True, Only("daily_challenge"));
+            Assert.That(win.Groups[1].Value, Is.EqualTo("null"), "t_ms: lo jugado antes de salir no se guarda");
+            Assert.That(Count("earn_virtual_currency"), Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator PendingValidation_WritesWin_ButNoEarn()
+        {
+            GameBootstrap.DailyServerOverride = FakeServerDate.Online(TimeSpan.FromHours(48));
+            yield return Boot();
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(Count("earn_virtual_currency"), Is.EqualTo(0), "fuera de la deriva no se reconcilia");
+            Assert.That(boot.PressDailyCard(), Is.True);
+            DailyChallengeScreen daily = boot.DailyScreen!;
+            Win(boot, daily);
+            Assert.That(daily.LastClaimOutcome, Is.EqualTo(ClaimOutcome.Pending));
+            Assert.That(WinRx.IsMatch(Only("daily_challenge")), Is.True, Only("daily_challenge"));
+            Assert.That(Count("earn_virtual_currency"), Is.EqualTo(0), "pendiente de validar: aún sin semillas (08 §10.1)");
+        }
+
+        [UnityTest]
+        public IEnumerator Reconcile_AtStartUp_WritesOneEarn_AndNoDailyChallenge()
+        {
+            _store = new InMemoryDailyChallengeStore(new DailyChallengeRecord
+            {
+                LastClaimedDate = "2026-10-18", LastDate = "2026-10-18", Result = DailyResult.Win, StreakDays = 1,
+                StampsMonth = "2026-10", StampDays = { 18 }, PendingClaims = { new DailyClaimEntry("2026-10-18", 1) },
+            });
+            GameBootstrap.DailyStoreOverride = _store;
+            GameBootstrap.DailyServerOverride = FakeServerDate.Online(TimeSpan.Zero);
+            yield return Boot();
+
+            Assert.That(_store.Load().PendingClaims.Count, Is.EqualTo(0), "el cobro pendiente se confirmó");
+            Assert.That(Count("earn_virtual_currency"), Is.EqualTo(1));
+            Assert.That(EarnRx.IsMatch(Only("earn_virtual_currency")), Is.True, Only("earn_virtual_currency"));
+            Assert.That(Count("daily_challenge"), Is.EqualTo(0), "reconciliar no es un resultado del día");
+        }
+
+        [UnityTest]
+        public IEnumerator Reconcile_AtStartUp_NothingPending_WritesNoEarn()
+        {
+            GameBootstrap.DailyServerOverride = FakeServerDate.Online(TimeSpan.Zero);
+            yield return Boot();
+            Assert.That(Count("earn_virtual_currency"), Is.EqualTo(0));
+            Assert.That(Count("daily_challenge"), Is.EqualTo(0));
+        }
+
+        [UnityTest]
+        public IEnumerator AppOpen_OnANewDay_WritesTheFailOfYesterday()
+        {
+            yield return Boot();
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.PressDailyCard(), Is.True);
+            DailyChallengeScreen daily = boot.DailyScreen!;
+            ToPlaying(boot, daily);
+            PourFirstMove(boot, daily);
+            Assert.That(daily.Actions.PressQuit(), Is.True);
+            Step(boot, Frame);
+
+            // Se cierra la app con la partida reanudable y se abre al día siguiente: SetUpDaily la descarta (R-Q4, R-Q15).
+            _store.Reopen();
+            _clock.Advance(TimeSpan.FromDays(1));
+            _lines.Clear();
+            yield return Boot();
+            Assert.That(Count("daily_challenge"), Is.EqualTo(1));
+            Assert.That(FailRx.IsMatch(Only("daily_challenge")), Is.True, Only("daily_challenge"));
+            Assert.That(IndexOf("daily_challenge"), Is.LessThan(IndexOf("daily_card")), "antes de pintar la tarjeta");
         }
 
         [UnityTest]

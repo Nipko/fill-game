@@ -113,6 +113,8 @@ namespace AF.UI
         private DailyLevelStateStore? _stateStore;
         private float _msCarry;
         private double _playMs;
+        private string? _levelStartBoard;
+        private int _levelStartBand;
         private bool _won;
         private bool _calendarFromCard;
 
@@ -209,6 +211,8 @@ namespace AF.UI
             GameScreen view = EnsureView();
             view.Bind(flow, _context.Services);
             view.SetVisible(true);
+            _levelStartBoard = play.BoardId; // level_start pendiente: sale al terminar Llenar y teñir (08 §8.2), una vez por partida
+            _levelStartBand = play.Band;
             Resumed = saved != null && flow.ResumeDaily(saved);
             if (!Resumed)
             {
@@ -220,7 +224,11 @@ namespace AF.UI
                 flow.StartDaily();
             }
 
-            DevProbe.DailyLevelStart(play.BoardId, play.Band); // R10: level_start con level_name d{b}_n{nnnn} (08 §8.2)
+            if (Resumed && flow.Phase != FlowPhase.Intro)
+            {
+                ProbeLevelStart(); // reanudada sin intro: no hay Llenar y teñir que esperar
+            }
+
             ApplyHeader();
             return true;
         }
@@ -269,7 +277,8 @@ namespace AF.UI
 
         /// <summary>
         /// Salir (pausa › Salir, la X de Nivel fallido, Atrás): sin ganar, <see cref="LevelFlow.ExitDaily"/> (sin canoa ni fallo, 04
-        /// §7.1; <c>result = fail</c>, R-Q9); ya ganado, solo se cierra. Vuelve al inicio. False si no hay nada abierto.
+        /// §7.1). Con R-Q16 salir no es un resultado: la partida queda reanudable el mismo día y el <c>fail</c> lo informa el servicio si
+        /// el día termina sin victoria (R-Q15). Ya ganado, solo se cierra. Vuelve al inicio. False si no hay nada abierto.
         /// </summary>
         public bool Exit()
         {
@@ -346,6 +355,7 @@ namespace AF.UI
         public void OnIntroFinished(bool skipped)
         {
             RequireView().OnIntroFinished(skipped);
+            ProbeLevelStart();
         }
 
         /// <inheritdoc />
@@ -534,6 +544,20 @@ namespace AF.UI
         /// </summary>
         public long? PlayTimeMs => Resumed ? (long?)null : (long)_playMs;
 
+        // R10: AF_STATE level_start (level_name d{b}_n{nnnn}, 08 §8.2) al terminar Llenar y teñir, o al reanudar sin intro; una vez
+        // por partida abierta: «Volver a la orilla» repite la intro pero no la escribe otra vez [P].
+        private void ProbeLevelStart()
+        {
+            string? board = _levelStartBoard;
+            if (board == null)
+            {
+                return;
+            }
+
+            _levelStartBoard = null;
+            DevProbe.DailyLevelStart(board, _levelStartBand);
+        }
+
         // R10: AF_STATE daily_challenge result=win (nada sin premio: rejugada de un día cobrado o reloj atrasado) y, si se pagó ahora,
         // earn_virtual_currency source=daily_challenge. La Pororoca de la racha no tiene evento en 08 §8.2: no se inventa.
         private void ProbeWin(in DailyClaimReport claim)
@@ -571,6 +595,7 @@ namespace AF.UI
             _flow = null;
             _stateStore = null;
             _calendarFromCard = false;
+            _levelStartBoard = null; // salir durante la intro: la partida no llegó a empezar
             _calendar.Hide();
             _view?.SetVisible(false);
             _onClosed();
