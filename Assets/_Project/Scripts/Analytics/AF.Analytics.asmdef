@@ -1,0 +1,17 @@
+{
+  "name": "AF.Analytics",
+  "rootNamespace": "AF.Analytics",
+  "references": [
+    "AF.Events",
+    "AF.RemoteConfig"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}
