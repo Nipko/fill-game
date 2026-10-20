@@ -46,10 +46,10 @@ namespace AF.UI
         public const int Columns = 7;
 
         /// <summary>
-        /// El enganche E9 (Cosecha doble del Reto en <c>Transaction</c>/<c>Wallet</c>) ya está: hasta entonces false y el botón no
-        /// se enseña. Cuando el integrador aplique E9, se pone a true junto con la acción del botón.
+        /// El enganche E9 (Cosecha doble del Reto: <c>Transaction.DoubleHarvestDaily</c> en <c>AF.Economy</c> y
+        /// <c>DailyChallengeScreen.PressDoubleHarvest</c>) ya está aplicado.
         /// </summary>
-        public const bool DoubleHarvestHookReady = false;
+        public const bool DoubleHarvestHookReady = true;
 
         private const float PanelW = 312f;
         private const float Cell = 36f;
@@ -274,6 +274,17 @@ namespace AF.UI
             _double.Button.gameObject.SetActive(offerDouble);
             Layout();
             _canvas.Canvas.gameObject.SetActive(true);
+        }
+
+        /// <summary>
+        /// Tras la Cosecha doble del Reto (E9): el premio pasa a <paramref name="totalSeeds"/> («+120») y el botón se va (una vez por
+        /// victoria, como en la campaña).
+        /// </summary>
+        public void ShowDoubled(int totalSeeds)
+        {
+            _reward.text = DailyText.RewardSeeds(totalSeeds);
+            _double.Button.gameObject.SetActive(false);
+            Layout();
         }
 
         /// <summary>Oculta el calendario.</summary>

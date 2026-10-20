@@ -1,0 +1,2097 @@
+diff --git a/Assets/_Project/Data/Loc/strings.csv b/Assets/_Project/Data/Loc/strings.csv
+index d1ede12..ed76da7 100644
+--- a/Assets/_Project/Data/Loc/strings.csv
++++ b/Assets/_Project/Data/Loc/strings.csv
+@@ -7,6 +7,18 @@ cancel,Cancelar,,,Cancelar la compra simulada (B1-4).,16,borrador,,,[P],
+ content_end_eta,Río arriba llegan 100 niveles nuevos en {n:plural:{} día|unos {} días}.,,,"Texto de «El río sigue creciendo» (06 §9). {n}: días estimados (next_batch_eta_days), sin separador; con 1, «en 1 día».",56,borrador,,,[P] Pendiente de aprobación (P14).,
+ content_end_title,El río sigue creciendo,,,Título de la pantalla de final de contenido (06 §9; 08 §6.2).,24,aprobado_es,,,Clave derivada [P].,
+ currency,Semillas,Seeds,Sementes,Nombre del contador de semillas para el lector de pantalla (glosario §2.1).,16,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
++daily_card_continue,Seguir,,,"Estado de la tarjeta del Reto con una partida empezada hoy: tocar la reanuda (R-Q4; nota §8, estado 2).",14,borrador,,,"[P] Nombre del estado sin decisión del dueño (nota §8: «Seguir» [P]).",
++daily_card_pending,Pendiente de validar,,,"Estado de la tarjeta del Reto con el premio de hoy pendiente de la hora del servidor (06 §4.1 «Anti-reloj»; 08 §10.1).",22,borrador,,,"[P] Tarea R9.",
++daily_card_sealed,Sellado,,,"Estado de la tarjeta del Reto con el sello de hoy ya puesto (06 §4.1: Jugar / Sellado). Tocar abre el calendario del mes.",14,borrador,,,"[P] Tarea R9.",
++daily_card_title,Reto del río · {date},,,"Título de la tarjeta del Reto en el inicio y del calendario de sellos (06 §4.1 «Pantalla»: «Reto del río · {fecha corta}»). {date}: fecha corta de daily_date_short.",32,borrador,,,"[P] Tarea R9 del Spark.",
++daily_challenge,Reto del río,River Challenge,Desafio do Rio,"Nombre del sistema (glosario §10, ID daily_challenge): cabecera del tablero del Reto, en la insignia donde la campaña pone «Nivel N» (06 §4.1 «Pantalla»; tarea R9).",16,borrador,traducido,traducido,"EN y PT-BR del glosario §10. Sustituye a level_n en la partida del Reto: el nivel efectivo nunca se enseña.",
++daily_date_short,{day} {month},,,"Fecha corta de la tarjeta y del calendario del Reto (06 §4.1). {day}: día del mes, sin separador (1-31); {month}: mes abreviado de month_short_MM. El orden lo decide cada idioma (p. ej. en: {month} {day}).",13,borrador,,,"[P] Tarea R9. Formato de la región vía Loc (08 §2.2).",
++daily_reward_seeds,+{n},,,"Premio del Reto en el calendario de sellos, junto al icono de semilla (06 §4.1: «+60»). {n}: semillas pagadas, con separador de miles.",8,borrador,,,"[P] Tarea R9.",
++daily_streak,{n}/{total},,,"Racha del Reto en la tarjeta del inicio (06 §4.1: «{n}/7»). {n}: días seguidos ganados que se muestran (0-7, nota §7.3); {total}: 7, los días que dan la Pororoca.",11,borrador,,,"[P] Tarea R9.",
++daily_streak_reward,+1 Pororoca,,,"Línea del calendario cuando la victoria cierra una racha de 7 días (06 §4.1; R-Q7; 04 §2.4). Pororoca: nombre del comodín (glosario).",24,borrador,,,"[P] Tarea R9. Desde el nivel que desbloquea la Pororoca; antes, daily_streak_reward_locked (R-Q14 a).",
++daily_streak_reward_locked,+1 Pororoca · se desbloquea en el nivel {level},,,"Línea del calendario cuando la victoria cierra una racha de 7 antes del nivel que desbloquea la Pororoca (R-Q14 a: entra en el stock y espera; 04 §2.4). {level}: nivel de desbloqueo (shuffle_unlock_level, 30), sin separador.",47,borrador,,,"[P] Tarea R9; decisión del dueño R-Q14 (a).",
++daily_win_no_reward,Sin premio: esta fecha ya se reclamó,,,"Línea del calendario al ganar un Reto sin premio: la fecha es ≤ la última reclamada (ya se cobró, el reloj va hacia atrás o el cobro se anuló al reconciliar; 06 §4.1 «Anti-reloj»). Neutra: no dice que haya sello.",40,borrador,,,"[P] Texto sin decisión del dueño.",
++daily_win_pending,Premio pendiente de validar,,,"Línea del calendario al ganar con el premio pendiente de la hora del servidor (06 §4.1; 08 §10.1): las semillas llegan al reconectar.",36,borrador,,,"[P] Tarea R9.",
+ difficulty_hard,Difícil,Hard,Difícil,"Chip de dificultad del botón Jugar, de la tarjeta previa y del HUD (glosario §6.1; 02 §10).",16,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
+ difficulty_subtitle_hard,Aguas bravas,,,Subtítulo temático de Difícil bajo el chip (glosario §6.1; 02 §10); se apaga con ui_show_difficulty_subtitles.,12,pendiente_asesor,,,Clave derivada [P]. Pendiente del asesor cultural (07 §8.2).,
+ difficulty_subtitle_very_hard,Noche de jaguar,,,Subtítulo temático de Muy difícil (glosario §6.1; 02 §10). Nombra fauna (jaguar).,16,pendiente_asesor,,,Clave derivada [P]. Pendiente del asesor cultural (07 §8.2).,
+@@ -84,6 +96,18 @@ map_stop_remaining,{n:plural:Falta {} nivel para {place}|Faltan {} niveles para
+ map_view_basin,Cuenca,,,"Pestaña de la vista Cuenca del Mapa del río (D-013, punto 5): toda la cuenca.",10,pendiente_asesor,,,"Glosario §10 (P-M2, D-023). [P] Solo en ES; pendiente del traductor y del asesor cultural (07 §8.2). Tarea M1.5.",
+ map_view_world,Mundo,,,"Pestaña de la vista Mundo del Mapa del río (D-013, punto 5): el tramo del mundo actual.",10,pendiente_asesor,,,"Glosario §10 (P-M2, D-023). [P] Solo en ES; pendiente del traductor y del asesor cultural (07 §8.2). Tarea M1.5.",
+ map_world_question,{world} · {question},,,"Cabecera del Mapa del río con la pregunta del mundo y, al responderse, el icono ✓ (procedural: nunca en el texto). {world}: nombre del mundo (world_wNN_name); {question}: la pregunta (map.world.wNN.question de facts.csv, ≤ 50 caracteres).",80,pendiente_asesor,,,Glosario §10 (D-013; propuesta del Mapa §6.4). [P] Solo en ES; pendiente del traductor y del asesor cultural (07 §8.2). Tarea M1.5.,
++month_short_01,ene,,,"Mes abreviado (enero) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9.",
++month_short_02,feb,,,"Mes abreviado (febrero) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9.",
++month_short_03,mar,,,"Mes abreviado (marzo) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9.",
++month_short_04,abr,,,"Mes abreviado (abril) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9.",
++month_short_05,may,,,"Mes abreviado (mayo) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9.",
++month_short_06,jun,,,"Mes abreviado (junio) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9.",
++month_short_07,jul,,,"Mes abreviado (julio) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9.",
++month_short_08,ago,,,"Mes abreviado (agosto) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9.",
++month_short_09,sept,,,"Mes abreviado (septiembre) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9. «sept» como en es-419 (CLDR); «sep» también vale.",
++month_short_10,oct,,,"Mes abreviado (octubre) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9.",
++month_short_11,nov,,,"Mes abreviado (noviembre) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9.",
++month_short_12,dic,,,"Mes abreviado (diciembre) dentro de daily_date_short.",5,borrador,,,"[P] Tarea R9.",
+ music,Música,Music,Música,"Fila de Ajustes (07 §9.3 y §9.4; tarea AU1): interruptor del ajuste settings.music, activado por defecto (audio_music_default_on); apagado, se calla el lecho del mundo. Glosario §10 (sound / music / haptics). Captura: Ajustes en Logs/snapshots/es-419/ (SettingsSnapshotTests).",16,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
+ next,Siguiente,Next,Próximo,Botón principal de la pantalla de victoria (02 §6).,20,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
+ no_canoes_infinite,Canoas infinitas 1 h · {price},,,Botón de Sin canoas: Canoas infinitas 1 h (04 §7.3; af_infinite_canoes_1h). {price}: precio de la tienda tal cual.,32,aprobado_es,,,"Clave derivada [P]. Antes, «… {0}» con string.Format.",
+diff --git a/Assets/_Project/Scenes/Game.unity b/Assets/_Project/Scenes/Game.unity
+index dba1e5d..51137f9 100644
+--- a/Assets/_Project/Scenes/Game.unity
++++ b/Assets/_Project/Scenes/Game.unity
+@@ -119,7 +119,7 @@ NavMeshSettings:
+     debug:
+       m_Flags: 0
+   m_NavMeshData: {fileID: 0}
+---- !u!1 &629732892
++--- !u!1 &385492837
+ GameObject:
+   m_ObjectHideFlags: 0
+   m_CorrespondingSourceObject: {fileID: 0}
+@@ -127,8 +127,8 @@ GameObject:
+   m_PrefabAsset: {fileID: 0}
+   serializedVersion: 6
+   m_Component:
+-  - component: {fileID: 629732894}
+-  - component: {fileID: 629732893}
++  - component: {fileID: 385492839}
++  - component: {fileID: 385492838}
+   m_Layer: 0
+   m_Name: Main Camera
+   m_TagString: MainCamera
+@@ -136,13 +136,13 @@ GameObject:
+   m_NavMeshLayer: 0
+   m_StaticEditorFlags: 0
+   m_IsActive: 1
+---- !u!20 &629732893
++--- !u!20 &385492838
+ Camera:
+   m_ObjectHideFlags: 0
+   m_CorrespondingSourceObject: {fileID: 0}
+   m_PrefabInstance: {fileID: 0}
+   m_PrefabAsset: {fileID: 0}
+-  m_GameObject: {fileID: 629732892}
++  m_GameObject: {fileID: 385492837}
+   m_Enabled: 1
+   serializedVersion: 2
+   m_ClearFlags: 2
+@@ -187,13 +187,13 @@ Camera:
+   m_OcclusionCulling: 1
+   m_StereoConvergence: 10
+   m_StereoSeparation: 0.022
+---- !u!4 &629732894
++--- !u!4 &385492839
+ Transform:
+   m_ObjectHideFlags: 0
+   m_CorrespondingSourceObject: {fileID: 0}
+   m_PrefabInstance: {fileID: 0}
+   m_PrefabAsset: {fileID: 0}
+-  m_GameObject: {fileID: 629732892}
++  m_GameObject: {fileID: 385492837}
+   serializedVersion: 2
+   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+   m_LocalPosition: {x: 0, y: 0, z: -10}
+@@ -202,7 +202,7 @@ Transform:
+   m_Children: []
+   m_Father: {fileID: 0}
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+---- !u!1 &1160968651
++--- !u!1 &735507052
+ GameObject:
+   m_ObjectHideFlags: 0
+   m_CorrespondingSourceObject: {fileID: 0}
+@@ -210,8 +210,8 @@ GameObject:
+   m_PrefabAsset: {fileID: 0}
+   serializedVersion: 6
+   m_Component:
+-  - component: {fileID: 1160968653}
+-  - component: {fileID: 1160968652}
++  - component: {fileID: 735507054}
++  - component: {fileID: 735507053}
+   m_Layer: 0
+   m_Name: GameBootstrap
+   m_TagString: Untagged
+@@ -219,19 +219,20 @@ GameObject:
+   m_NavMeshLayer: 0
+   m_StaticEditorFlags: 0
+   m_IsActive: 1
+---- !u!114 &1160968652
++--- !u!114 &735507053
+ MonoBehaviour:
+   m_ObjectHideFlags: 0
+   m_CorrespondingSourceObject: {fileID: 0}
+   m_PrefabInstance: {fileID: 0}
+   m_PrefabAsset: {fileID: 0}
+-  m_GameObject: {fileID: 1160968651}
++  m_GameObject: {fileID: 735507052}
+   m_Enabled: 1
+   m_EditorHideFlags: 0
+   m_Script: {fileID: 11500000, guid: 17ad91b0fbf16ef46b38de9ac0465128, type: 3}
+   m_Name: 
+   m_EditorClassIdentifier: AF.UI::AF.UI.GameBootstrap
+   audioClips: {fileID: 11400000, guid: c7b83b6fb310014418b00a3385faa35d, type: 2}
++  dailyPool: {fileID: 4900000, guid: c5b58cdda4d7836468b41b74ec2db285, type: 3}
+   levelPack: {fileID: 4900000, guid: 961393508034dd0418fafcb0d5cc7453, type: 3}
+   extraLevelPacks:
+   - {fileID: 4900000, guid: 622bd2353a0c56949880dbf47acca73b, type: 3}
+@@ -249,13 +250,13 @@ MonoBehaviour:
+   seasonTable: {fileID: 4900000, guid: 3dd8350c1acfb784783ea6204d654eeb, type: 3}
+   stringsTable: {fileID: 4900000, guid: 6f5a537a7f41abb4097ddc5c05466eda, type: 3}
+   factsTable: {fileID: 4900000, guid: cd2bff306e218e4409459aa2f540e853, type: 3}
+---- !u!4 &1160968653
++--- !u!4 &735507054
+ Transform:
+   m_ObjectHideFlags: 0
+   m_CorrespondingSourceObject: {fileID: 0}
+   m_PrefabInstance: {fileID: 0}
+   m_PrefabAsset: {fileID: 0}
+-  m_GameObject: {fileID: 1160968651}
++  m_GameObject: {fileID: 735507052}
+   serializedVersion: 2
+   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+   m_LocalPosition: {x: 0, y: 0, z: 0}
+@@ -264,7 +265,7 @@ Transform:
+   m_Children: []
+   m_Father: {fileID: 0}
+   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+---- !u!1 &1673105865
++--- !u!1 &801238569
+ GameObject:
+   m_ObjectHideFlags: 0
+   m_CorrespondingSourceObject: {fileID: 0}
+@@ -272,9 +273,9 @@ GameObject:
+   m_PrefabAsset: {fileID: 0}
+   serializedVersion: 6
+   m_Component:
+-  - component: {fileID: 1673105868}
+-  - component: {fileID: 1673105867}
+-  - component: {fileID: 1673105866}
++  - component: {fileID: 801238572}
++  - component: {fileID: 801238571}
++  - component: {fileID: 801238570}
+   m_Layer: 0
+   m_Name: EventSystem
+   m_TagString: Untagged
+@@ -282,13 +283,13 @@ GameObject:
+   m_NavMeshLayer: 0
+   m_StaticEditorFlags: 0
+   m_IsActive: 1
+---- !u!114 &1673105866
++--- !u!114 &801238570
+ MonoBehaviour:
+   m_ObjectHideFlags: 0
+   m_CorrespondingSourceObject: {fileID: 0}
+   m_PrefabInstance: {fileID: 0}
+   m_PrefabAsset: {fileID: 0}
+-  m_GameObject: {fileID: 1673105865}
++  m_GameObject: {fileID: 801238569}
+   m_Enabled: 1
+   m_EditorHideFlags: 0
+   m_Script: {fileID: 11500000, guid: 01614664b831546d2ae94a42149d80ac, type: 3}
+@@ -313,13 +314,13 @@ MonoBehaviour:
+   m_PointerBehavior: 0
+   m_CursorLockBehavior: 0
+   m_ScrollDeltaPerTick: 6
+---- !u!114 &1673105867
++--- !u!114 &801238571
+ MonoBehaviour:
+   m_ObjectHideFlags: 0
+   m_CorrespondingSourceObject: {fileID: 0}
+   m_PrefabInstance: {fileID: 0}
+   m_PrefabAsset: {fileID: 0}
+-  m_GameObject: {fileID: 1673105865}
++  m_GameObject: {fileID: 801238569}
+   m_Enabled: 1
+   m_EditorHideFlags: 0
+   m_Script: {fileID: 11500000, guid: 76c392e42b5098c458856cdf6ecaaaa1, type: 3}
+@@ -328,13 +329,13 @@ MonoBehaviour:
+   m_FirstSelected: {fileID: 0}
+   m_sendNavigationEvents: 1
+   m_DragThreshold: 10
+---- !u!4 &1673105868
++--- !u!4 &801238572
+ Transform:
+   m_ObjectHideFlags: 0
+   m_CorrespondingSourceObject: {fileID: 0}
+   m_PrefabInstance: {fileID: 0}
+   m_PrefabAsset: {fileID: 0}
+-  m_GameObject: {fileID: 1673105865}
++  m_GameObject: {fileID: 801238569}
+   serializedVersion: 2
+   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+   m_LocalPosition: {x: 0, y: 0, z: 0}
+@@ -347,6 +348,6 @@ Transform:
+ SceneRoots:
+   m_ObjectHideFlags: 0
+   m_Roots:
+-  - {fileID: 629732894}
+-  - {fileID: 1673105868}
+-  - {fileID: 1160968653}
++  - {fileID: 385492839}
++  - {fileID: 801238572}
++  - {fileID: 735507054}
+diff --git a/Assets/_Project/Scripts/Economy/Transaction.cs b/Assets/_Project/Scripts/Economy/Transaction.cs
+index 8b7de02..a1dbad4 100644
+--- a/Assets/_Project/Scripts/Economy/Transaction.cs
++++ b/Assets/_Project/Scripts/Economy/Transaction.cs
+@@ -231,8 +231,8 @@ private Transaction(TransactionKind kind)
+         public SeedSink Sink { get; private set; }
+ 
+         /// <summary>
+-        /// Semillas explícitas: las ganadas (<see cref="TransactionKind.Earn"/>, <see cref="TransactionKind.Purchase"/>) o el
+-        /// precio cotizado del rescate. 0 en el resto.
++        /// Semillas explícitas: las ganadas (<see cref="TransactionKind.Earn"/>, <see cref="TransactionKind.Purchase"/>), las de la
++        /// Cosecha doble del Reto del río (<see cref="DoubleHarvestDaily"/>) o el precio cotizado del rescate. 0 en el resto.
+         /// </summary>
+         public int Seeds { get; private set; }
+ 
+@@ -269,6 +269,21 @@ public static Transaction DoubleHarvest(int level, RewardTier tier)
+             return new Transaction(TransactionKind.DoubleHarvest) { Level = RequireLevel(level), Tier = tier, Source = SeedSource.DoubleHarvest };
+         }
+ 
++        /// <summary>
++        /// Cosecha doble del Reto del río (04 §2.8; 06 §4.1, «Premio»: «Cosecha doble disponible»; enganche E9): otras
++        /// <paramref name="seeds"/> semillas, las del premio del Reto recién cobrado (60 → 120 [P]), con <c>source</c> =
++        /// <c>double_harvest</c>. <paramref name="level"/> es el nivel efectivo del Reto (<c>max_level</c> + 1): como la de
++        /// campaña, se rechaza antes de <c>ads_rv_double_harvest_from_level</c> (11). El tope diario (<c>ads_rv_cap_double_harvest</c>,
++        /// 5, compartido con la campaña: es la misma ubicación <c>rv_double_harvest</c>) y el cooldown son cosa de <c>AF.Ads</c>.
++        /// </summary>
++        public static Transaction DoubleHarvestDaily(int seeds, int level)
++        {
++            return new Transaction(TransactionKind.DoubleHarvest)
++            {
++                Level = RequireLevel(level), Seeds = RequirePositive(seeds, nameof(seeds)), Source = SeedSource.DoubleHarvest,
++            };
++        }
++
+         /// <summary>
+         /// Semillas de una fuente sin cantidad fija en la economía (Crecida, Bitácora, Canasta, Reto del río, compras,
+         /// devoluciones…). Las victorias y la Cosecha doble van por <see cref="Win"/> y <see cref="DoubleHarvest"/>.
+diff --git a/Assets/_Project/Scripts/Economy/Wallet.cs b/Assets/_Project/Scripts/Economy/Wallet.cs
+index d82eb49..0a4c4b9 100644
+--- a/Assets/_Project/Scripts/Economy/Wallet.cs
++++ b/Assets/_Project/Scripts/Economy/Wallet.cs
+@@ -167,7 +167,8 @@ public TransactionResult Apply(Transaction transaction)
+                         return Reject(transaction, RejectReason.NotUnlocked);
+                     }
+ 
+-                    seedsDelta = Config.WinReward(transaction.Tier);
++                    // La de campaña dobla la Cosecha de la etiqueta; la del Reto (E9) trae las semillas del premio del día.
++                    seedsDelta = transaction.Seeds > 0 ? transaction.Seeds : Config.WinReward(transaction.Tier);
+                     break;
+                 case TransactionKind.Earn:
+                 case TransactionKind.Purchase:
+diff --git a/Assets/_Project/Scripts/LiveOps/ProfileDailyChallengeStore.cs b/Assets/_Project/Scripts/LiveOps/ProfileDailyChallengeStore.cs
+new file mode 100644
+index 0000000..2a8ed02
+--- /dev/null
++++ b/Assets/_Project/Scripts/LiveOps/ProfileDailyChallengeStore.cs
+@@ -0,0 +1,163 @@
++#nullable enable
++using System;
++using AF.Save;
++
++namespace AF.LiveOps
++{
++    /// <summary>
++    /// <see cref="IDailyChallengeStore"/> del juego (enganche E4; 08 §4.3 con R-Q4, R-Q5 y R-Q16; nota del Reto §10): el bloque
++    /// <c>daily_challenge</c> del mismo <see cref="Profile"/> que la cartera, guardado con el mismo <see cref="IProfileStore"/>
++    /// (en el juego, el lote <c>ProfileSaveBatch</c>, por su vía síncrona, como la cartera). Así el registro de un cobro y su
++    /// pago salen en la misma escritura del perfil y nunca se cobra dos veces la misma fecha (<see cref="IDailyChallengeStore"/>).
++    /// Mismo patrón que <c>AF.GameFlow.ProfileLevelStateStore</c>: <see cref="Save"/> no lanza por un fallo de escritura; el
++    /// cambio queda en el perfil en memoria (<see cref="PendingSave"/>) y sale con el siguiente guardado del perfil o con
++    /// <see cref="Flush"/>.
++    /// <para>
++    /// <see cref="Load"/> devuelve el registro vivo, leído del perfil al crear el almacén; <see cref="Save"/> lo copia al perfil
++    /// (<see cref="ToData"/>) y lo guarda. Lo que se cambie en el registro sin <see cref="Save"/> no llega al perfil.
++    /// </para>
++    /// </summary>
++    public sealed class ProfileDailyChallengeStore : IDailyChallengeStore
++    {
++        private readonly Profile _profile;
++        private readonly IProfileStore _store;
++        private DailyChallengeRecord _live;
++
++        /// <summary>Crea el almacén sobre <paramref name="profile"/>, que se guarda en <paramref name="store"/>.</summary>
++        public ProfileDailyChallengeStore(Profile profile, IProfileStore store)
++        {
++            _profile = profile ?? throw new ArgumentNullException(nameof(profile));
++            _store = store ?? throw new ArgumentNullException(nameof(store));
++            _live = FromData(profile.DailyChallenge);
++        }
++
++        /// <inheritdoc />
++        public bool PendingSave { get; private set; }
++
++        /// <summary>Guardados pedidos (diagnóstico).</summary>
++        public int SaveCount { get; private set; }
++
++        /// <inheritdoc />
++        public DailyChallengeRecord Load()
++        {
++            return _live;
++        }
++
++        /// <inheritdoc />
++        public void Save(DailyChallengeRecord record)
++        {
++            _live = record ?? throw new ArgumentNullException(nameof(record));
++            _profile.DailyChallenge = ToData(record);
++            Persist();
++        }
++
++        /// <inheritdoc />
++        public bool Flush()
++        {
++            if (PendingSave)
++            {
++                Persist();
++            }
++
++            return !PendingSave;
++        }
++
++        /// <summary>Registro del Reto a partir del bloque del perfil (un registro vacío si es null).</summary>
++        public static DailyChallengeRecord FromData(DailyChallengeData? data)
++        {
++            var record = new DailyChallengeRecord();
++            if (data == null)
++            {
++                return record;
++            }
++
++            record.LastDate = data.LastDate;
++            record.Result = ParseResult(data.Result);
++            record.StreakDays = data.StreakDays;
++            record.LastClaimedDate = data.LastClaimedDate;
++            for (int i = 0; i < data.Pending.Count; i++)
++            {
++                record.PendingClaims.Add(new DailyClaimEntry(data.Pending[i].Date, data.Pending[i].Streak));
++            }
++
++            for (int i = 0; i < data.OfflineClaims.Count; i++)
++            {
++                record.OfflineClaims.Add(new DailyClaimEntry(data.OfflineClaims[i].Date, data.OfflineClaims[i].Streak));
++            }
++
++            record.StampsMonth = data.StampsMonth;
++            record.StampDays.AddRange(data.StampDays);
++            if (data.InProgress != null)
++            {
++                record.InProgress = new DailyPlayInProgress
++                {
++                    DateKey = data.InProgress.Date,
++                    Band = data.InProgress.Band,
++                    BoardId = data.InProgress.Id,
++                    State = DailyPlayInProgress.CopyState(data.InProgress.LevelState),
++                };
++            }
++
++            return record;
++        }
++
++        /// <summary>Bloque del perfil con una copia independiente de <paramref name="record"/>.</summary>
++        public static DailyChallengeData ToData(DailyChallengeRecord record)
++        {
++            if (record == null)
++            {
++                throw new ArgumentNullException(nameof(record));
++            }
++
++            var data = new DailyChallengeData
++            {
++                LastDate = record.LastDate,
++                Result = record.Result == DailyResult.None ? null : record.Result.ToId(),
++                StreakDays = record.StreakDays,
++                LastClaimedDate = record.LastClaimedDate,
++                StampsMonth = record.StampsMonth,
++            };
++            for (int i = 0; i < record.PendingClaims.Count; i++)
++            {
++                data.Pending.Add(new DailyClaimData { Date = record.PendingClaims[i].DateKey, Streak = record.PendingClaims[i].StreakDays });
++            }
++
++            for (int i = 0; i < record.OfflineClaims.Count; i++)
++            {
++                data.OfflineClaims.Add(new DailyClaimData { Date = record.OfflineClaims[i].DateKey, Streak = record.OfflineClaims[i].StreakDays });
++            }
++
++            data.StampDays.AddRange(record.StampDays);
++            if (record.InProgress != null)
++            {
++                data.InProgress = new DailyInProgressData
++                {
++                    Date = record.InProgress.DateKey,
++                    Band = record.InProgress.Band,
++                    Id = record.InProgress.BoardId,
++                    LevelState = DailyPlayInProgress.CopyState(record.InProgress.State),
++                };
++            }
++
++            return data;
++        }
++
++        /// <summary><c>win</c>, <c>fail</c> o <c>abandon</c>; cualquier otro valor (o null) es <see cref="DailyResult.None"/>.</summary>
++        public static DailyResult ParseResult(string? id)
++        {
++            switch (id)
++            {
++                case "win": return DailyResult.Win;
++                case "fail": return DailyResult.Fail;
++                case "abandon": return DailyResult.Abandon;
++                default: return DailyResult.None;
++            }
++        }
++
++        private void Persist()
++        {
++            SaveCount++;
++            PendingSave = !_store.TrySave(_profile);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/LiveOps/ProfileDailyChallengeStore.cs.meta b/Assets/_Project/Scripts/LiveOps/ProfileDailyChallengeStore.cs.meta
+new file mode 100644
+index 0000000..3b8a000
+--- /dev/null
++++ b/Assets/_Project/Scripts/LiveOps/ProfileDailyChallengeStore.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: d0182efca17f9614fa739c1dd35b1769
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/LiveOps/Tests/ProfileDailyChallengeStoreTests.cs b/Assets/_Project/Scripts/LiveOps/Tests/ProfileDailyChallengeStoreTests.cs
+new file mode 100644
+index 0000000..47d4029
+--- /dev/null
++++ b/Assets/_Project/Scripts/LiveOps/Tests/ProfileDailyChallengeStoreTests.cs
+@@ -0,0 +1,321 @@
++#nullable enable
++using System;
++using System.Collections.Generic;
++using System.IO;
++using System.Reflection;
++using AF.Economy;
++using AF.Platform;
++using AF.Save;
++using NUnit.Framework;
++
++namespace AF.LiveOps.Tests
++{
++    /// <summary>
++    /// Enganche E4: el bloque <c>daily_challenge</c> del perfil (08 §4.3 con R-Q4, R-Q5 y R-Q16; nota del Reto §10) y
++    /// <see cref="ProfileDailyChallengeStore"/>. Ida y vuelta del JSON del perfil con el bloque completo, lectura de un perfil sin
++    /// el bloque, tipos equivocados como corrupción, el registro y la cartera en el mismo perfil (un cobro y su pago en la misma
++    /// escritura; reabrir no vuelve a cobrar) y el patrón Save + PendingSave + Flush.
++    /// </summary>
++    public sealed class ProfileDailyChallengeStoreTests
++    {
++        private static readonly TimeSpan Bogota = TimeSpan.FromHours(-5);
++
++        private static readonly string BlockJson = string.Join("\n", new[]
++        {
++            "  \"daily_challenge\": {",
++            "    \"last_date\": \"2026-10-19\",",
++            "    \"result\": \"win\",",
++            "    \"streak_days\": 6,",
++            "    \"last_claimed_date\": \"2026-10-19\",",
++            "    \"pending\": [",
++            "      {",
++            "        \"date\": \"2026-10-17\",",
++            "        \"streak\": 4",
++            "      }",
++            "    ],",
++            "    \"offline_claims\": [",
++            "      {",
++            "        \"date\": \"2026-10-18\",",
++            "        \"streak\": 5",
++            "      }",
++            "    ],",
++            "    \"stamps\": {",
++            "      \"month\": \"2026-10\",",
++            "      \"days\": [1, 2, 5, 19]",
++            "    },",
++            "    \"in_progress\": {",
++            "      \"date\": \"2026-10-19\",",
++            "      \"band\": 2,",
++            "      \"id\": \"d2_n0291\",",
++            "      \"level_state\": {",
++            "        \"level\": 41,",
++            "        \"seed\": \"amazonfill:daily:v1:b2:n0291\",",
++            "        \"variant\": \"base\",",
++            "        \"fails_level\": 1,",
++            "        \"pours\": 7,",
++            "        \"extra_cuias\": 0,",
++            "        \"rescues_level\": 0,",
++            "        \"undo_free\": 2,",
++            "        \"revealed_cuias\": [3],",
++            "        \"history\": \"0>1,2>3\",",
++            "        \"stuck\": false",
++            "      }",
++            "    }",
++            "  }",
++        });
++
++        [Test]
++        public void NewProfile_HasNoBlock_AndAnEmptyRecord()
++        {
++            Profile profile = NewProfile();
++
++            Assert.That(profile.DailyChallenge, Is.Null);
++            Assert.That(ProfileJson.Serialize(profile).Contains("daily_challenge"), Is.False, "la clave falta hasta el primer guardado");
++
++            var store = new ProfileDailyChallengeStore(profile, new MemoryProfileStore());
++            DailyChallengeRecord record = store.Load();
++            Assert.That(record, Is.Not.Null);
++            Assert.That(record.LastClaimedDate, Is.Null);
++            Assert.That(record.StreakDays, Is.EqualTo(0));
++            Assert.That(record.Result, Is.EqualTo(DailyResult.None));
++            Assert.That(record.InProgress, Is.Null);
++            Assert.That(store.Load(), Is.SameAs(record), "el registro vivo");
++        }
++
++        [Test]
++        public void FullBlock_IsWrittenWithTheNoteKeys_AndRoundTripsExactly()
++        {
++            Profile profile = NewProfile();
++            var store = new ProfileDailyChallengeStore(profile, new MemoryProfileStore());
++            store.Save(FullRecord());
++
++            string json = ProfileJson.Serialize(profile);
++            StringAssert.Contains(BlockJson + "\n}\n", json, "al final del perfil, con las claves de la nota §10");
++
++            Profile copy = ProfileJson.Deserialize(json);
++            Assert.That(ProfileJson.Serialize(copy), Is.EqualTo(json));
++            AssertFull(ProfileDailyChallengeStore.FromData(copy.DailyChallenge));
++            Assert.That(profile.Clone().DailyChallenge, Is.Not.Null.And.Not.SameAs(profile.DailyChallenge));
++        }
++
++        [Test]
++        public void MissingKeys_TakeDefaults()
++        {
++            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 1, \"daily_challenge\": {\"last_claimed_date\": \"2026-10-19\"}}");
++
++            DailyChallengeRecord r = ProfileDailyChallengeStore.FromData(p.DailyChallenge);
++            Assert.That(r.LastClaimedDate, Is.EqualTo("2026-10-19"));
++            Assert.That(r.LastDate, Is.Null);
++            Assert.That(r.Result, Is.EqualTo(DailyResult.None));
++            Assert.That(r.StreakDays, Is.EqualTo(0));
++            Assert.That(r.PendingClaims, Is.Empty);
++            Assert.That(r.OfflineClaims, Is.Empty);
++            Assert.That(r.StampsMonth, Is.Null);
++            Assert.That(r.StampDays, Is.Empty);
++            Assert.That(r.InProgress, Is.Null);
++
++            Profile none = ProfileJson.Deserialize("{\"profile_schema\": 1, \"daily_challenge\": null}");
++            Assert.That(none.DailyChallenge, Is.Null);
++            Assert.That(ProfileDailyChallengeStore.ParseResult("perdido"), Is.EqualTo(DailyResult.None), "un result desconocido no da premio");
++        }
++
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": []}")]
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"streak_days\": \"6\"}}")]
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"last_claimed_date\": 20261019}}")]
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"pending\": [\"2026-10-17\"]}}")]
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"pending\": {\"date\": \"2026-10-17\"}}}")]
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"offline_claims\": [{\"streak\": 1}]}}")]
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"stamps\": {\"days\": [1, \"2\"]}}}")]
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"in_progress\": {\"date\": null}}}")]
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"in_progress\": {\"id\": \"d1_n0001\"}}}")]
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"in_progress\": {\"date\": \"2026-10-19\"}}}")]
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"in_progress\": {\"date\": \"2026-10-19\", \"id\": null}}}")]
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"in_progress\": {\"date\": \"2026-10-19\", \"id\": \"d2_n0001\", \"band\": \"2\"}}}")]
++        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"in_progress\": {\"date\": \"2026-10-19\", \"id\": \"d1\", \"level_state\": {\"seed\": null}}}}")]
++        public void WrongTypes_AreFormatErrors(string json)
++        {
++            Assert.Throws<FormatException>(() => ProfileJson.Deserialize(json));
++        }
++
++        [Test]
++        public void Save_WritesTheProfile_AndAReopenedStoreReadsTheSameRecord()
++        {
++            Profile profile = NewProfile();
++            var disk = new MemoryProfileStore();
++            var store = new ProfileDailyChallengeStore(profile, disk);
++            DailyChallengeRecord r = FullRecord();
++            store.Save(r);
++
++            Assert.That(disk.SaveCount, Is.EqualTo(1));
++            Assert.That(store.PendingSave, Is.False);
++            Assert.That(store.Load(), Is.SameAs(r));
++            r.StampDays.Add(20); // sin Save no llega al perfil
++            Assert.That(profile.DailyChallenge!.StampDays, Is.EqualTo(new[] { 1, 2, 5, 19 }), "el perfil guarda una copia");
++
++            Profile reopened = disk.Load().Profile!;
++            AssertFull(new ProfileDailyChallengeStore(reopened, disk).Load());
++        }
++
++        [Test]
++        public void FailedWrite_StaysPendingInTheProfile_UntilFlush()
++        {
++            Profile profile = NewProfile();
++            var disk = new FailingProfileStore { Fail = true };
++            var store = new ProfileDailyChallengeStore(profile, disk);
++            DailyChallengeRecord r = store.Load();
++            r.LastClaimedDate = "2026-10-19";
++
++            Assert.DoesNotThrow(() => store.Save(r));
++            Assert.That(store.PendingSave, Is.True);
++            Assert.That(profile.DailyChallenge!.LastClaimedDate, Is.EqualTo("2026-10-19"), "el cambio sigue en el perfil en memoria");
++            Assert.That(store.Flush(), Is.False);
++
++            disk.Fail = false;
++            Assert.That(store.Flush(), Is.True);
++            Assert.That(store.PendingSave, Is.False);
++            Assert.That(ProfileJson.Deserialize(disk.Json!).DailyChallenge!.LastClaimedDate, Is.EqualTo("2026-10-19"));
++            Assert.That(store.Flush(), Is.True, "nada pendiente");
++        }
++
++        [Test]
++        public void ClaimAndPayment_LiveInTheSameProfile_AndAReopenNeverPaysTwice()
++        {
++            var clock = new ManualClock(Utc(new DateTime(2026, 10, 19, 10, 0, 0)), Bogota);
++            var disk = new MemoryProfileStore();
++            Profile profile = Wallet.NewProfile(clock);
++            var wallet = new Wallet(profile, disk, clock);
++            var store = new ProfileDailyChallengeStore(profile, disk);
++            var rules = new DailyChallengeRules(store, wallet, clock, FakeServerDate.Offline(), DailyChallengeConfig.Defaults);
++            int seeds = wallet.Seeds;
++
++            Assert.That(rules.Claim("2026-10-19"), Is.EqualTo(ClaimOutcome.Confirmed));
++            Assert.That(wallet.Seeds, Is.EqualTo(seeds + 60));
++
++            // Lo que está en disco lleva a la vez el registro y el pago.
++            Profile reopened = disk.Load().Profile!;
++            Assert.That(reopened.Wallet.Seeds, Is.EqualTo(seeds + 60));
++            Assert.That(reopened.DailyChallenge!.LastClaimedDate, Is.EqualTo("2026-10-19"));
++            Assert.That(reopened.DailyChallenge.StreakDays, Is.EqualTo(1));
++            Assert.That(reopened.DailyChallenge.StampsMonth, Is.EqualTo("2026-10"));
++            Assert.That(reopened.DailyChallenge.StampDays, Is.EqualTo(new[] { 19 }));
++
++            var wallet2 = new Wallet(reopened, disk, clock);
++            var store2 = new ProfileDailyChallengeStore(reopened, disk);
++            var rules2 = new DailyChallengeRules(store2, wallet2, clock, FakeServerDate.Offline(), DailyChallengeConfig.Defaults);
++            Assert.That(rules2.Claim("2026-10-19"), Is.Not.EqualTo(ClaimOutcome.Confirmed), "la misma fecha no se cobra dos veces");
++            Assert.That(wallet2.Seeds, Is.EqualTo(seeds + 60));
++        }
++
++        [Test]
++        public void Mapping_CoversEveryProperty()
++        {
++            AssertCovers(typeof(DailyChallengeData), "LastDate", "Result", "StreakDays", "LastClaimedDate", "Pending", "OfflineClaims", "StampsMonth", "StampDays", "InProgress");
++            AssertCovers(typeof(DailyClaimData), "Date", "Streak");
++            AssertCovers(typeof(DailyInProgressData), "Date", "Band", "Id", "LevelState");
++            AssertCovers(typeof(DailyChallengeRecord), "LastDate", "Result", "StreakDays", "LastClaimedDate", "PendingClaims", "OfflineClaims", "StampsMonth", "StampDays", "InProgress");
++
++            DailyChallengeRecord back = ProfileDailyChallengeStore.FromData(ProfileDailyChallengeStore.ToData(FullRecord()));
++            AssertFull(back);
++            foreach (DailyResult result in new[] { DailyResult.None, DailyResult.Win, DailyResult.Fail, DailyResult.Abandon })
++            {
++                var r = new DailyChallengeRecord { Result = result };
++                Assert.That(ProfileDailyChallengeStore.FromData(ProfileDailyChallengeStore.ToData(r)).Result, Is.EqualTo(result));
++            }
++
++            Assert.That(ProfileDailyChallengeStore.ToData(new DailyChallengeRecord()).Result, Is.Null, "none se guarda como null");
++        }
++
++        private static DailyChallengeRecord FullRecord()
++        {
++            var r = new DailyChallengeRecord
++            {
++                LastDate = "2026-10-19", Result = DailyResult.Win, StreakDays = 6, LastClaimedDate = "2026-10-19", StampsMonth = "2026-10",
++                InProgress = new DailyPlayInProgress { DateKey = "2026-10-19", Band = 2, BoardId = "d2_n0291" },
++            };
++            r.PendingClaims.Add(new DailyClaimEntry("2026-10-17", 4));
++            r.OfflineClaims.Add(new DailyClaimEntry("2026-10-18", 5));
++            r.StampDays.AddRange(new[] { 1, 2, 5, 19 });
++            LevelStateData s = r.InProgress.State;
++            s.Level = 41;
++            s.Seed = "amazonfill:daily:v1:b2:n0291";
++            s.FailsLevel = 1;
++            s.Pours = 7;
++            s.UndoFree = 2;
++            s.RevealedCuias.Add(3);
++            s.History = "0>1,2>3";
++            return r;
++        }
++
++        private static void AssertFull(DailyChallengeRecord r)
++        {
++            Assert.That(r.LastDate, Is.EqualTo("2026-10-19"));
++            Assert.That(r.Result, Is.EqualTo(DailyResult.Win));
++            Assert.That(r.StreakDays, Is.EqualTo(6));
++            Assert.That(r.LastClaimedDate, Is.EqualTo("2026-10-19"));
++            Assert.That(r.PendingClaims, Is.EqualTo(new[] { new DailyClaimEntry("2026-10-17", 4) }));
++            Assert.That(r.OfflineClaims, Is.EqualTo(new[] { new DailyClaimEntry("2026-10-18", 5) }));
++            Assert.That(r.StampsMonth, Is.EqualTo("2026-10"));
++            Assert.That(r.StampDays, Is.EqualTo(new[] { 1, 2, 5, 19 }));
++            Assert.That(r.InProgress, Is.Not.Null);
++            Assert.That(r.InProgress!.DateKey, Is.EqualTo("2026-10-19"));
++            Assert.That(r.InProgress.Band, Is.EqualTo(2));
++            Assert.That(r.InProgress.BoardId, Is.EqualTo("d2_n0291"));
++            Assert.That(r.InProgress.State.Level, Is.EqualTo(41));
++            Assert.That(r.InProgress.State.Seed, Is.EqualTo("amazonfill:daily:v1:b2:n0291"));
++            Assert.That(r.InProgress.State.FailsLevel, Is.EqualTo(1));
++            Assert.That(r.InProgress.State.Pours, Is.EqualTo(7));
++            Assert.That(r.InProgress.State.UndoFree, Is.EqualTo(2));
++            Assert.That(r.InProgress.State.RevealedCuias, Is.EqualTo(new[] { 3 }));
++            Assert.That(r.InProgress.State.History, Is.EqualTo("0>1,2>3"));
++            Assert.That(r.IsStamped("2026-10-19"), Is.True);
++        }
++
++        private static void AssertCovers(Type type, params string[] mapped)
++        {
++            var set = new HashSet<string>(mapped);
++            foreach (PropertyInfo p in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
++            {
++                Assert.That(set.Contains(p.Name), Is.True, type.Name + "." + p.Name + " no está en la conversión del perfil");
++            }
++        }
++
++        private static Profile NewProfile()
++        {
++            return Profile.CreateNew(new ManualClock(Utc(new DateTime(2026, 10, 19, 10, 0, 0)), Bogota), 5);
++        }
++
++        private static DateTime Utc(DateTime bogota)
++        {
++            return DateTime.SpecifyKind(bogota - Bogota, DateTimeKind.Utc);
++        }
++
++        private sealed class FailingProfileStore : IProfileStore
++        {
++            public bool Fail { get; set; }
++
++            public string? Json { get; private set; }
++
++            public ProfileLoadResult Load()
++            {
++                return Json == null
++                    ? new ProfileLoadResult(ProfileLoadStatus.NotFound, null)
++                    : new ProfileLoadResult(ProfileLoadStatus.Loaded, ProfileJson.Deserialize(Json));
++            }
++
++            public void Save(Profile profile)
++            {
++                if (Fail)
++                {
++                    throw new IOException("disco lleno (test)");
++                }
++
++                Json = ProfileJson.Serialize(profile);
++            }
++
++            public void Delete()
++            {
++                Json = null;
++            }
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/LiveOps/Tests/ProfileDailyChallengeStoreTests.cs.meta b/Assets/_Project/Scripts/LiveOps/Tests/ProfileDailyChallengeStoreTests.cs.meta
+new file mode 100644
+index 0000000..aee86b6
+--- /dev/null
++++ b/Assets/_Project/Scripts/LiveOps/Tests/ProfileDailyChallengeStoreTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 90a8cea36184afb41bc2b5cd86f3b9c3
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/Save/Profile.cs b/Assets/_Project/Scripts/Save/Profile.cs
+index 8ed84df..8c78d8f 100644
+--- a/Assets/_Project/Scripts/Save/Profile.cs
++++ b/Assets/_Project/Scripts/Save/Profile.cs
+@@ -72,6 +72,15 @@ public sealed class Profile
+         /// <summary><c>stats</c>: contadores agregados (nunca por nivel: eso va a analítica, 08 §4.3).</summary>
+         public StatsData Stats { get; } = new StatsData();
+ 
++        /// <summary>
++        /// <c>daily_challenge</c> (08 §4.3 ampliado por R-Q4, R-Q5 y R-Q16; nota del Reto §10; enganche E4): el registro del Reto
++        /// del río, o null si nunca se guardó (entonces la clave no se escribe). Vive en el mismo perfil que <see cref="Wallet"/>
++        /// para que el registro del cobro y el pago salgan en la misma escritura (nunca dos pagos por la misma fecha). Las reglas
++        /// las aplica <c>AF.LiveOps</c> (<c>ProfileDailyChallengeStore</c>); aquí solo se guardan. Entra con el esquema 1 sin
++        /// migrar, porque aún no se ha publicado (08 §4.3).
++        /// </summary>
++        public DailyChallengeData? DailyChallenge { get; set; }
++
+         /// <summary>
+         /// Perfil de primera ejecución: <c>created_at</c> = ahora, 0 semillas (el GDD no fija otro saldo inicial),
+         /// <paramref name="initialCanoes"/> canoas, stock vacío, sin nivel en curso y el nivel 1 como siguiente
+@@ -544,6 +553,67 @@ public sealed class AdsData
+         public int LevelsSinceInterstitial { get; set; }
+     }
+ 
++    /// <summary>
++    /// <c>daily_challenge</c> (08 §4.3; nota del Reto §10): <c>last_date</c>, <c>result</c> y <c>streak_days</c> de 08 §4.3;
++    /// <c>last_claimed_date</c>, <c>pending</c> y <c>stamps</c> (R-Q5); <c>offline_claims</c> [P] e <c>in_progress</c> [P]
++    /// (R-Q4 y R-Q16). Solo datos: el significado lo da <c>AF.LiveOps.DailyChallengeRecord</c>.
++    /// </summary>
++    public sealed class DailyChallengeData
++    {
++        /// <summary><c>last_date</c>: fecha local (<c>yyyy-MM-dd</c>) del último resultado, o null.</summary>
++        public string? LastDate { get; set; }
++
++        /// <summary><c>result</c>: <c>win</c>, <c>fail</c> o <c>abandon</c> (08 §8.2), o null si aún no hay resultado.</summary>
++        public string? Result { get; set; }
++
++        /// <summary><c>streak_days</c>: días seguidos ganados y cobrados.</summary>
++        public int StreakDays { get; set; }
++
++        /// <summary><c>last_claimed_date</c>: última fecha cobrada (<c>yyyy-MM-dd</c>), o null.</summary>
++        public string? LastClaimedDate { get; set; }
++
++        /// <summary><c>pending</c>: cobros pendientes de validar, <c>[{date, streak}]</c>.</summary>
++        public List<DailyClaimData> Pending { get; } = new List<DailyClaimData>();
++
++        /// <summary><c>offline_claims</c> [P]: cobros pagados sin red, <c>[{date, streak}]</c> (los acota AF.LiveOps).</summary>
++        public List<DailyClaimData> OfflineClaims { get; } = new List<DailyClaimData>();
++
++        /// <summary><c>stamps.month</c>: mes de los sellos (<c>yyyy-MM</c>), o null.</summary>
++        public string? StampsMonth { get; set; }
++
++        /// <summary><c>stamps.days</c>: días sellados de <see cref="StampsMonth"/> (1-31).</summary>
++        public List<int> StampDays { get; } = new List<int>();
++
++        /// <summary><c>in_progress</c> [P]: partida del Reto en curso, o null.</summary>
++        public DailyInProgressData? InProgress { get; set; }
++    }
++
++    /// <summary>Elemento de <c>daily_challenge.pending</c> y <c>offline_claims</c>: <c>{date, streak}</c>.</summary>
++    public sealed class DailyClaimData
++    {
++        /// <summary><c>date</c>: fecha cobrada (<c>yyyy-MM-dd</c>).</summary>
++        public string Date { get; set; } = "";
++
++        /// <summary><c>streak</c>: <c>streak_days</c> tras ese cobro.</summary>
++        public int Streak { get; set; }
++    }
++
++    /// <summary><c>daily_challenge.in_progress</c> [P]: <c>{date, band, id, level_state}</c> (<c>level_state</c> como en 04 §10.1).</summary>
++    public sealed class DailyInProgressData
++    {
++        /// <summary><c>date</c>: fecha local de inicio (<c>yyyy-MM-dd</c>).</summary>
++        public string Date { get; set; } = "";
++
++        /// <summary><c>band</c>: banda 1-3, congelada al empezar.</summary>
++        public int Band { get; set; }
++
++        /// <summary><c>id</c>: tablero <c>d{b}_n{nnnn}</c> (03 §16).</summary>
++        public string Id { get; set; } = "";
++
++        /// <summary><c>level_state</c>: estado de la partida, con el formato de 04 §10.1.</summary>
++        public LevelStateData LevelState { get; set; } = new LevelStateData();
++    }
++
+     /// <summary><c>stats</c> (08 §4.3).</summary>
+     public sealed class StatsData
+     {
+diff --git a/Assets/_Project/Scripts/Save/ProfileJson.cs b/Assets/_Project/Scripts/Save/ProfileJson.cs
+index 716a23d..2109ed2 100644
+--- a/Assets/_Project/Scripts/Save/ProfileJson.cs
++++ b/Assets/_Project/Scripts/Save/ProfileJson.cs
+@@ -166,6 +166,11 @@ internal static JsonNode ToNode(Profile p)
+             stats.Set("rv_watched", JsonNode.FromInt(p.Stats.RvWatched));
+             stats.Set("sessions", JsonNode.FromInt(p.Stats.Sessions));
+             root.Set("stats", stats);
++            if (p.DailyChallenge != null)
++            {
++                root.Set("daily_challenge", DailyChallengeNode(p.DailyChallenge)); // E4: la clave falta hasta el primer guardado del Reto
++            }
++
+             return root;
+         }
+ 
+@@ -275,6 +280,8 @@ internal static Profile FromNode(JsonNode root)
+                 t.Sessions = ReadInt(stats, "sessions", t.Sessions);
+             }
+ 
++            JsonNode? dailyChallenge = Section(root, "daily_challenge");
++            p.DailyChallenge = dailyChallenge == null ? null : ReadDailyChallenge(dailyChallenge);
+             return p;
+         }
+ 
+@@ -312,6 +319,118 @@ private static LevelStateData ReadLevelState(JsonNode node)
+             return s;
+         }
+ 
++        // daily_challenge (E4; nota del Reto §10). Es economía (last_claimed_date impide cobrar dos veces la misma fecha): un tipo
++        // equivocado es corrupción, como en wallet, y también una entrada de pending u offline_claims sin date o una in_progress
++        // sin date o sin id. Los rangos no se validan aquí: streak_days ≥ 0, stamps.days en 1-31, el formato yyyy-MM de
++        // stamps.month y yyyy-MM-dd de las fechas los interpreta AF.LiveOps (DailyChallengeRecord.IsStamped ignora un mes o un
++        // día que no casan; una fecha mal formada nunca coincide con la de hoy), igual que level_state no valida su semilla.
++        private static JsonNode DailyChallengeNode(DailyChallengeData d)
++        {
++            JsonNode node = JsonNode.NewObject();
++            node.Set("last_date", JsonNode.FromString(d.LastDate));
++            node.Set("result", JsonNode.FromString(d.Result));
++            node.Set("streak_days", JsonNode.FromInt(d.StreakDays));
++            node.Set("last_claimed_date", JsonNode.FromString(d.LastClaimedDate));
++            node.Set("pending", ClaimList(d.Pending));
++            node.Set("offline_claims", ClaimList(d.OfflineClaims));
++            JsonNode stamps = JsonNode.NewObject();
++            stamps.Set("month", JsonNode.FromString(d.StampsMonth));
++            stamps.Set("days", IntList(d.StampDays));
++            node.Set("stamps", stamps);
++            if (d.InProgress == null)
++            {
++                node.Set("in_progress", JsonNode.Null);
++            }
++            else
++            {
++                JsonNode play = JsonNode.NewObject();
++                play.Set("date", JsonNode.FromString(d.InProgress.Date));
++                play.Set("band", JsonNode.FromInt(d.InProgress.Band));
++                play.Set("id", JsonNode.FromString(d.InProgress.Id));
++                play.Set("level_state", LevelStateNode(d.InProgress.LevelState));
++                node.Set("in_progress", play);
++            }
++
++            return node;
++        }
++
++        private static DailyChallengeData ReadDailyChallenge(JsonNode node)
++        {
++            var d = new DailyChallengeData();
++            d.LastDate = ReadString(node, "last_date", d.LastDate);
++            d.Result = ReadString(node, "result", d.Result);
++            d.StreakDays = ReadInt(node, "streak_days", d.StreakDays);
++            d.LastClaimedDate = ReadString(node, "last_claimed_date", d.LastClaimedDate);
++            ReadClaimList(node, "pending", d.Pending);
++            ReadClaimList(node, "offline_claims", d.OfflineClaims);
++            JsonNode? stamps = Section(node, "stamps");
++            if (stamps != null)
++            {
++                d.StampsMonth = ReadString(stamps, "month", d.StampsMonth);
++                ReadIntList(stamps, "days", d.StampDays);
++            }
++
++            JsonNode? play = Section(node, "in_progress");
++            if (play != null)
++            {
++                // Sin date o sin id la partida no se puede reanudar ni descartar con su fecha: corrupción, como date en pending.
++                var inProgress = new DailyInProgressData();
++                inProgress.Date = ReadString(play, "date", null)
++                    ?? throw new FormatException("daily_challenge.in_progress.date falta o es null.");
++                inProgress.Band = ReadInt(play, "band", inProgress.Band);
++                inProgress.Id = ReadString(play, "id", null)
++                    ?? throw new FormatException("daily_challenge.in_progress.id falta o es null.");
++                JsonNode? state = Section(play, "level_state");
++                inProgress.LevelState = state == null ? new LevelStateData() : ReadLevelState(state);
++                d.InProgress = inProgress;
++            }
++
++            return d;
++        }
++
++        private static JsonNode ClaimList(List<DailyClaimData> claims)
++        {
++            JsonNode array = JsonNode.NewArray();
++            for (int i = 0; i < claims.Count; i++)
++            {
++                JsonNode claim = JsonNode.NewObject();
++                claim.Set("date", JsonNode.FromString(claims[i].Date));
++                claim.Set("streak", JsonNode.FromInt(claims[i].Streak));
++                array.Add(claim);
++            }
++
++            return array;
++        }
++
++        private static void ReadClaimList(JsonNode parent, string key, List<DailyClaimData> target)
++        {
++            target.Clear();
++            JsonNode? node = parent.Get(key);
++            if (node == null || node.IsNull)
++            {
++                return;
++            }
++
++            if (node.Kind != JsonKind.Array)
++            {
++                throw new FormatException("'" + key + "' debe ser una lista JSON.");
++            }
++
++            IReadOnlyList<JsonNode> items = node.Items;
++            for (int i = 0; i < items.Count; i++)
++            {
++                if (items[i].Kind != JsonKind.Object)
++                {
++                    throw new FormatException("'" + key + "' debe ser una lista de objetos {date, streak}.");
++                }
++
++                var claim = new DailyClaimData();
++                claim.Date = ReadString(items[i], "date", null) ?? throw new FormatException("'" + key + "': falta date.");
++                claim.Streak = ReadInt(items[i], "streak", claim.Streak);
++                target.Add(claim);
++            }
++        }
++
+         // settings y sloth: lo ausente o inválido toma el default, campo a campo.
+         private static void ReadSettings(JsonNode node, SettingsData s)
+         {
+diff --git a/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs b/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
+index daef9b1..f490421 100644
+--- a/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
++++ b/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
+@@ -1,5 +1,6 @@
+ #nullable enable
+ using System;
++using AF.Ads;
+ using AF.Boosters;
+ using AF.Core.Rules;
+ using AF.Economy;
+@@ -204,6 +205,7 @@ public bool Open(int maxLevel)
+             _playMs = 0d;
+             LastClaim = null;
+             LastClaimOutcome = null;
++            HarvestDoubled = false;
+             ExitedWithoutWin = false;
+             _calendar.Hide();
+             _calendarFromCard = false;
+@@ -320,10 +322,74 @@ public bool GoHome()
+             return true;
+         }
+ 
+-        /// <summary>Cosecha doble del Reto: no hace nada hasta el enganche E9 (<see cref="DailyStampCalendar.DoubleHarvestHookReady"/>).</summary>
++        /// <summary>
++        /// Tope de la Cosecha doble del Reto (E9): el premio más alto que puede pagar el Reto,
++        /// <c>live_daily_challenge_reward.seeds</c> × <c>murky_bonus_mult</c> (08 §9; 60 × 2). Un premio mayor no se dobla.
++        /// </summary>
++        public int MaxDoubleHarvestSeeds
++        {
++            get
++            {
++                DailyChallengeReward reward = _service.Config.LiveDailyChallengeReward;
++                return reward.Seeds * Math.Max(1, reward.MurkyBonusMult);
++            }
++        }
++
++        /// <summary>La Cosecha doble del Reto ya se cobró en esta victoria (E9).</summary>
++        public bool HarvestDoubled { get; private set; }
++
++        /// <summary>
++        /// La Cosecha doble del Reto se ofrece (E9; 04 §2.8; 06 §4.1): tras ganar con el premio <b>confirmado</b> y pagado (nunca
++        /// con «pendiente de validar» ni sin premio), una vez por victoria, desde <c>ads_rv_double_harvest_from_level</c> (el nivel
++        /// efectivo del Reto) y con video disponible en <c>rv_double_harvest</c> (reglas, tope diario de 5 compartido con la
++        /// campaña, cooldown y fill de <c>AF.Ads</c>): sin anuncio el botón no aparece (02 §6).
++        /// </summary>
++        public bool DoubleHarvestOffered
++        {
++            get
++            {
++                LevelFlow? flow = _flow;
++                GameServices? services = _context.Services;
++                DailyClaimReport? claim = LastClaim;
++                return DailyStampCalendar.DoubleHarvestHookReady && _won && !HarvestDoubled && flow != null && services != null
++                    && LastClaimOutcome == ClaimOutcome.Confirmed && claim.HasValue && claim.Value.Outcome == ClaimOutcome.Confirmed
++                    && claim.Value.SeedsPaid > 0 && claim.Value.SeedsPaid <= MaxDoubleHarvestSeeds
++                    && flow.LevelNumber >= _context.DailyWallet.Config.AdsRvDoubleHarvestFromLevel
++                    && services.RewardedReady(AdPlacement.DoubleHarvest);
++            }
++        }
++
++        /// <summary>
++        /// «Cosecha doble» del calendario (E9): el anuncio simulado de <c>rv_double_harvest</c> y, solo si se vio entero, otras
++        /// tantas semillas como el premio del día con <see cref="Transaction.DoubleHarvestDaily"/>. False si no se ofrece.
++        /// </summary>
+         public bool PressDoubleHarvest()
+         {
+-            return false;
++            if (!DoubleHarvestOffered)
++            {
++                return false;
++            }
++
++            int seeds = LastClaim!.Value.SeedsPaid;
++            int level = _flow!.LevelNumber;
++            _context.Services!.Ads.ShowRewarded(AdPlacement.DoubleHarvest, r =>
++            {
++                if (!r.IsRewarded || HarvestDoubled)
++                {
++                    return;
++                }
++
++                TransactionResult result = _context.DailyWallet.Apply(Transaction.DoubleHarvestDaily(seeds, level));
++                if (!result.IsApplied)
++                {
++                    return;
++                }
++
++                HarvestDoubled = true;
++                DevProbe.DailyEarn(result.SeedsDelta, DailyProbeFormat.DoubleHarvestSourceId); // 08 §8.2: source = double_harvest
++                _calendar.ShowDoubled(seeds + result.SeedsDelta);
++            });
++            return true;
+         }
+ 
+         /// <summary>
+@@ -401,7 +467,7 @@ public void OnVictoryScreen()
+             // desbloquea, el calendario lo dice.
+             LevelFlow? flow = _flow;
+             int shuffleUnlock = flow != null && flow.LevelNumber < flow.Boosters.ShuffleUnlockLevel ? flow.Boosters.ShuffleUnlockLevel : 0;
+-            _calendar.Show(_context.Clock.LocalDate(), _context.DailyStore.Load(), LastClaim, true, shuffleUnlock);
++            _calendar.Show(_context.Clock.LocalDate(), _context.DailyStore.Load(), LastClaim, DoubleHarvestOffered, shuffleUnlock);
+         }
+ 
+         /// <inheritdoc />
+diff --git a/Assets/_Project/Scripts/UI/DailyStampCalendar.cs b/Assets/_Project/Scripts/UI/DailyStampCalendar.cs
+index 22329d0..f42e367 100644
+--- a/Assets/_Project/Scripts/UI/DailyStampCalendar.cs
++++ b/Assets/_Project/Scripts/UI/DailyStampCalendar.cs
+@@ -46,10 +46,10 @@ public sealed class DailyStampCalendar
+         public const int Columns = 7;
+ 
+         /// <summary>
+-        /// El enganche E9 (Cosecha doble del Reto en <c>Transaction</c>/<c>Wallet</c>) ya está: hasta entonces false y el botón no
+-        /// se enseña. Cuando el integrador aplique E9, se pone a true junto con la acción del botón.
++        /// El enganche E9 (Cosecha doble del Reto: <c>Transaction.DoubleHarvestDaily</c> en <c>AF.Economy</c> y
++        /// <c>DailyChallengeScreen.PressDoubleHarvest</c>) ya está aplicado.
+         /// </summary>
+-        public const bool DoubleHarvestHookReady = false;
++        public const bool DoubleHarvestHookReady = true;
+ 
+         private const float PanelW = 312f;
+         private const float Cell = 36f;
+@@ -276,6 +276,17 @@ public void Show(DateTime date, DailyChallengeRecord record, DailyClaimReport? c
+             _canvas.Canvas.gameObject.SetActive(true);
+         }
+ 
++        /// <summary>
++        /// Tras la Cosecha doble del Reto (E9): el premio pasa a <paramref name="totalSeeds"/> («+120») y el botón se va (una vez por
++        /// victoria, como en la campaña).
++        /// </summary>
++        public void ShowDoubled(int totalSeeds)
++        {
++            _reward.text = DailyText.RewardSeeds(totalSeeds);
++            _double.Button.gameObject.SetActive(false);
++            Layout();
++        }
++
+         /// <summary>Oculta el calendario.</summary>
+         public void Hide()
+         {
+diff --git a/Assets/_Project/Scripts/UI/DevProbe.cs b/Assets/_Project/Scripts/UI/DevProbe.cs
+index 3701021..ce80dae 100644
+--- a/Assets/_Project/Scripts/UI/DevProbe.cs
++++ b/Assets/_Project/Scripts/UI/DevProbe.cs
+@@ -90,6 +90,7 @@ public void AnimSkipped(string anim, LevelFlow flow, int atMs, int durationCfgMs
+             sb.Clear();
+             sb.Append("AF_STATE {\"event\":\"af_anim_skipped\",\"anim\":\"").Append(anim).Append('"');
+             sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
++            AppendDailyBoard(sb, flow); // E24: en el Reto, ,"daily":"d{b}_n{nnnn}" (DevProbe.Daily.cs)
+             sb.Append(",\"at_ms\":").Append(atMs.ToString(CultureInfo.InvariantCulture));
+             sb.Append(",\"duration_cfg_ms\":").Append(durationCfgMs.ToString(CultureInfo.InvariantCulture)).Append('}');
+             Write(sb.ToString());
+@@ -359,6 +360,7 @@ private static void AppendAttr(StringBuilder sb, string name, int value, bool al
+             sb.Append("AF_STATE {\"event\":\"").Append(evt).Append('"');
+             sb.Append(",\"t\":").Append(((long)(Time.realtimeSinceStartupAsDouble * 1000.0)).ToString(CultureInfo.InvariantCulture));
+             sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
++            AppendDailyBoard(sb, flow); // E24: en el Reto, ,"daily":"d{b}_n{nnnn}" (DevProbe.Daily.cs)
+             sb.Append(",\"pour_mode\":\"").Append(PourModes.ToKey(flow.Session.PourMode)).Append('"');
+             sb.Append(",\"phase\":\"").Append(FlowPhaseNames.Of(flow.Phase)).Append('"');
+             sb.Append(",\"status\":\"").Append(StatusName(flow)).Append('"');
+@@ -486,6 +488,7 @@ public void Funnel(string evt, LevelFlow flow, AF.IAP.StoreLedger? ledger = null
+             sb.Append("AF_STATE {\"event\":\"").Append(evt).Append('"');
+             sb.Append(",\"t\":").Append(((long)(Time.realtimeSinceStartupAsDouble * 1000.0)).ToString(CultureInfo.InvariantCulture));
+             sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
++            AppendDailyBoard(sb, flow); // E24: en el Reto, ,"daily":"d{b}_n{nnnn}" (DevProbe.Daily.cs)
+             sb.Append(",\"phase\":\"").Append(FlowPhaseNames.Of(flow.Phase)).Append('"');
+             sb.Append(",\"seeds\":").Append((wallet?.Seeds ?? 0).ToString(CultureInfo.InvariantCulture));
+             sb.Append(",\"canoes\":").Append(canoes.Count.ToString(CultureInfo.InvariantCulture));
+@@ -583,6 +586,7 @@ public void Victory(string evt, LevelFlow flow, bool doubleOffered)
+             sb.Append("AF_STATE {\"event\":\"").Append(evt).Append('"');
+             AppendTime(sb);
+             sb.Append(",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture));
++            AppendDailyBoard(sb, flow); // E24: en el Reto, ,"daily":"d{b}_n{nnnn}" (DevProbe.Daily.cs)
+             sb.Append(",\"phase\":\"").Append(FlowPhaseNames.Of(flow.Phase)).Append('"');
+             sb.Append(",\"harvest\":").Append(flow.HarvestSeeds.ToString(CultureInfo.InvariantCulture));
+             sb.Append(",\"harvest_base\":").Append(flow.HarvestBase.ToString(CultureInfo.InvariantCulture));
+diff --git a/Assets/_Project/Scripts/UI/Editor/GameSceneBuilder.cs b/Assets/_Project/Scripts/UI/Editor/GameSceneBuilder.cs
+index 5eaf731..d116bfb 100644
+--- a/Assets/_Project/Scripts/UI/Editor/GameSceneBuilder.cs
++++ b/Assets/_Project/Scripts/UI/Editor/GameSceneBuilder.cs
+@@ -63,6 +63,9 @@ public static class GameSceneBuilder
+         /// <summary>Paradas del Mapa del río (<c>af-river-stops/1</c>; D-013; 08 §4.5; las genera <c>tools/river-map/stops.py</c>).</summary>
+         public const string RiverStopsPath = "Assets/_Project/Data/Map/river_stops_v1.json";
+ 
++        /// <summary>Pool del Reto del río (<c>kind: daily</c>, af-level/1; 06 §4.1; 08 §6.2; lo genera <c>tools/level-generator --daily</c>; enganche E3).</summary>
++        public const string DailyPoolPath = "Assets/_Project/Data/Daily/daily_pool_v1.json";
++
+         /// <summary>Geometría del Mapa del río (<c>af-river-map/1</c>; D-013; 08 §4.5; la genera <c>tools/river-map/geometry.py</c>; tarea M3.3).</summary>
+         public const string RiverMapPath = "Assets/_Project/Data/Map/river_map_v1.json";
+ 
+@@ -163,6 +166,13 @@ private static int Run()
+             }
+ 
+             bootstrap.ConfigureRiverStops(stops);
++            TextAsset? dailyPool = AssetDatabase.LoadAssetAtPath<TextAsset>(DailyPoolPath);
++            if (dailyPool == null)
++            {
++                Debug.LogWarning(LogPrefix + "no existe el pool del Reto del río " + DailyPoolPath + ": el juego seguirá sin el Reto (tarjeta oculta).");
++            }
++
++            bootstrap.ConfigureDailyPool(dailyPool);
+             TextAsset? riverMap = AssetDatabase.LoadAssetAtPath<TextAsset>(RiverMapPath);
+             if (riverMap == null)
+             {
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
+index 79413b5..2fa68ad 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
+@@ -21,10 +21,10 @@ namespace AF.UI
+     /// <c>_lobby.Bind(_app, _services);</c>. Sin esa llamada no hay Reto (D-008: oculto mientras no exista).</item>
+     /// <item><b>E3</b>: <c>GameSceneBuilder</c> asigna <c>Data/Daily/daily_pool_v1.json</c> con <see cref="ConfigureDailyPool"/> al
+     /// campo serializado <see cref="dailyPool"/>, que declara este parcial. Sin pool la tarjeta queda oculta.</item>
+-    /// <item><b>E4</b>: el bloque <c>daily_challenge</c> del perfil (<c>ProfileDailyChallengeStore</c>) se conecta con
+-    /// <see cref="DailyStoreFactory"/>. Hasta entonces, en desarrollo se usa un almacén en memoria (se pierde al cerrar la app y,
+-    /// por eso, la garantía de «nunca dos pagos» de <see cref="IDailyChallengeStore"/> solo vale dentro de la sesión) y en release
+-    /// la tarjeta queda oculta.</item>
++    /// <item><b>E4</b>: el bloque <c>daily_challenge</c> del perfil (<see cref="ProfileDailyChallengeStore"/>) se conecta con
++    /// <see cref="DailyStoreFactory"/> (por defecto, <see cref="CreateProfileDailyStore"/>). Si alguien lo deja en null, en
++    /// desarrollo se usa un almacén en memoria (se pierde al cerrar la app y, por eso, la garantía de «nunca dos pagos» de
++    /// <see cref="IDailyChallengeStore"/> solo vale dentro de la sesión) y en release la tarjeta queda oculta.</item>
+     /// </list>
+     /// La tarjeta va en un lienzo propio encima del inicio (orden <see cref="DailyCardSortingOrder"/>), centrada sobre «Jugar»
+     /// [P]; con el enganche E1 pasará a <c>LobbyScreen</c>.
+@@ -68,10 +68,20 @@ public sealed partial class GameBootstrap
+         internal static IServerDate? DailyServerOverride { get; set; }
+ 
+         /// <summary>
+-        /// Almacén del bloque <c>daily_challenge</c> sobre el perfil (enganche E4): lo pone el integrador con la implementación de
+-        /// <c>AF.Save</c>. Recibe el perfil y su almacén (el lote de guardado), los mismos que la cartera.
++        /// Almacén del bloque <c>daily_challenge</c> sobre el perfil (enganche E4): por defecto <see cref="ProfileDailyChallengeStore"/>
++        /// (<see cref="CreateProfileDailyStore"/>). Recibe el perfil y su almacén (el lote de guardado), los mismos que la cartera.
+         /// </summary>
+-        public static Func<Profile, IProfileStore, IDailyChallengeStore>? DailyStoreFactory { get; set; }
++        public static Func<Profile, IProfileStore, IDailyChallengeStore>? DailyStoreFactory { get; set; } = CreateProfileDailyStore;
++
++        /// <summary>
++        /// E4: el registro del Reto en el bloque <c>daily_challenge</c> del mismo perfil que la cartera, guardado por la vía síncrona
++        /// del lote (<see cref="ProfileSaveBatch.Durable"/>), la misma que la cartera del Reto: el registro de un cobro está en disco
++        /// antes del pago, y si esa escritura falla, los dos salen juntos en la siguiente (<see cref="IDailyChallengeStore"/>).
++        /// </summary>
++        public static IDailyChallengeStore CreateProfileDailyStore(Profile profile, IProfileStore store)
++        {
++            return new ProfileDailyChallengeStore(profile, store is ProfileSaveBatch batch ? batch.Durable : store);
++        }
+ 
+         /// <summary>Pool del Reto de la escena (null hasta E3).</summary>
+         public TextAsset? DailyPoolAsset => dailyPool;
+@@ -135,13 +145,13 @@ public bool SetUpDaily()
+                     store = new InMemoryDailyChallengeStore();
+                     if (pool != null)
+                     {
+-                        Debug.LogWarning(LogPrefix + "Reto del río con el registro en memoria (falta el enganche E4): se pierde al cerrar la app.");
++                        Debug.LogWarning(LogPrefix + "Reto del río con el registro en memoria (sin DailyStoreFactory): se pierde al cerrar la app.");
+                     }
+                 }
+                 else
+                 {
+                     store = new InMemoryDailyChallengeStore();
+-                    pool = null; // release sin E4: sin registro en el perfil no se puede pagar una sola vez por fecha; la tarjeta, oculta
++                    pool = null; // release sin DailyStoreFactory: sin registro en el perfil no se puede pagar una sola vez por fecha; la tarjeta, oculta
+                 }
+             }
+ 
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index 031c2b3..f125bce 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -907,6 +907,13 @@ public bool PressAndroidBack()
+                 return _mapScreen.CloseTopSheet() || CloseRiverMap(); // primero la tarjeta de la parada y el Muestrario (M4.1)
+             }
+ 
++            // Reto del río (E22): Atrás cierra su calendario como «Inicio»; con el tablero del Reto en juego no hace nada, como en un
++            // nivel (02 §3; 04 §6.6). HandleBack devuelve false si no hay calendario abierto.
++            if (_dailyScreen != null && _dailyScreen.IsOpen)
++            {
++                return _dailyScreen.HandleBack();
++            }
++
+             if (_app.Screen == AppScreen.Level)
+             {
+                 return false;
+@@ -1588,6 +1595,7 @@ private IEnumerator Start()
+                 ContentEndMapAvailable = RiverMapAvailable && (ContentEndMapOverride ?? true), // el Mapa del fin de contenido (M4.3)
+             };
+             _lobby.Bind(_app, _services);
++            SetUpDaily(); // Reto del río (E2; GameBootstrap.Daily.cs): pool, servicio, tarjeta del inicio y partida
+ 
+             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
+             if (requested <= 0 && !rebuilt)
+@@ -1724,6 +1732,16 @@ private void OnApplicationPause(bool paused)
+                 _flow.ClearSelection();
+             }
+ 
++            // Reto del río (E23; 02 §14): su vista salta al modelo y la selección se limpia, como la de campaña (InLevel es false
++            // durante el Reto: AppFlow sigue en el inicio).
++            if (_dailyScreen?.Flow != null && _dailyScreen.View != null)
++            {
++                _dailyScreen.View.SnapToModel();
++                _dailyScreen.View.SettleReveal();
++                _dailyScreen.View.IdleHintBackFromBackground();
++                _dailyScreen.Flow.ClearSelection();
++            }
++
+             // MO3 (02 §3.4; 04 §2.3): el tiempo fuera de la app no es inactividad en el tablero; la cuenta de la pista por
+             // inactividad empieza de cero, como tras un toque.
+             _screen?.IdleHintBackFromBackground();
+diff --git a/Assets/_Project/Scripts/UI/GameScreen.cs b/Assets/_Project/Scripts/UI/GameScreen.cs
+index 475e057..ac1cf24 100644
+--- a/Assets/_Project/Scripts/UI/GameScreen.cs
++++ b/Assets/_Project/Scripts/UI/GameScreen.cs
+@@ -993,7 +993,7 @@ public void OnIntroStarted(int durationMs, bool isShort)
+             else
+             {
+                 StartIntro(flow, durationMs, isShort);
+-                if (isShort)
++                if (isShort && !flow.IsDaily) // E21: el Reto no enseña «Nivel N» (06 §4.1: cabecera «Reto del río»)
+                 {
+                     // 02 §2 (INTRO): «En reintento muestra Nivel N · intento k», con k = fails_level + 1, como el rótulo
+                     // «Level N» que baja al reintentar en Magic Sort (ficha §4.1). Reintentar desde Nivel fallido, Volver a la
+diff --git a/Assets/_Project/Tests/EditMode/Daily/DailyUiLogicTests.cs b/Assets/_Project/Tests/EditMode/Daily/DailyUiLogicTests.cs
+index 76c682c..c9ada36 100644
+--- a/Assets/_Project/Tests/EditMode/Daily/DailyUiLogicTests.cs
++++ b/Assets/_Project/Tests/EditMode/Daily/DailyUiLogicTests.cs
+@@ -73,12 +73,25 @@ public void Csv_HasTheExactHeader_AndEveryNewKey_WithContextMaxCharsAndDraftStat
+         }
+ 
+         [Test]
+-        public void Csv_DoesNotRedefineProjectKeys_AndReusedKeysExist()
++        public void Csv_RowsAreInStringsCsv_E5_AndReusedKeysExist()
+         {
+             LocCatalog project = LocTables.FromProjectFiles();
+-            foreach (string key in DailyText.NewKeys)
++            string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
++            IReadOnlyList<LocCsvRow> rows = ReadCsvRows(out string daily);
++            for (int i = 1; i < rows.Count; i++)
+             {
+-                Assert.That(project.Strings.IndexOf(key), Is.EqualTo(-1), key + " ya está en strings.csv: no es nueva");
++                // E5: la misma fila, tal cual (las filas del Reto se insertaron en orden ordinal por clave).
++                string key = rows[i].Fields[0];
++                Assert.That(project.Strings.IndexOf(key), Is.GreaterThanOrEqualTo(0), key + " falta en strings.csv (E5)");
++            }
++
++            string[] lines = daily.Substring(daily.IndexOf('\n') + 1).Split('\n');
++            foreach (string line in lines)
++            {
++                if (line.Length > 0)
++                {
++                    Assert.That(strings.Contains(line + "\n"), Is.True, "fila distinta en strings.csv: " + line);
++                }
+             }
+ 
+             foreach (string key in DailyText.ReusedKeys)
+@@ -88,7 +101,7 @@ public void Csv_DoesNotRedefineProjectKeys_AndReusedKeysExist()
+         }
+ 
+         [Test]
+-        public void Csv_AppendedToStringsCsv_ParsesWithTheLocReader()
++        public void StringsCsv_WithTheRetoRows_ParsesWithTheLocReader()
+         {
+             Assert.That(() => TestCatalog(), Throws.Nothing);
+             LocCatalog catalog = TestCatalog();
+@@ -129,9 +142,9 @@ public void DailyText_WithTheTestTable_FormatsTheCardTexts()
+         }
+ 
+         [Test]
+-        public void DailyText_KeysNotYetInStringsCsv_FallBackLikeLoc_DevMarksReleaseEmpty()
++        public void DailyText_KeysMissingFromTheTable_FallBackLikeLoc_DevMarksReleaseEmpty()
+         {
+-            LocCatalog project = LocTables.FromProjectFiles();
++            LocCatalog project = CatalogWithoutTheRetoRows();
+             var date = new DateTime(2026, 10, 19);
+ 
+             Loc.Configure(project, LocLocale.SourceLocale, true); // desarrollo: «[clave]»
+@@ -314,14 +327,28 @@ private static IReadOnlyList<LocCsvRow> ReadCsvRows(out string text)
+             return LocCsv.Parse(text, "spark-strings-reto.csv");
+         }
+ 
+-        // Tabla de prueba propia: las del proyecto y, detrás, las filas del Reto (sin su cabecera), como hará E5.
++        // Tablas del proyecto: con E5, strings.csv ya trae las filas del Reto.
+         private static LocCatalog TestCatalog()
++        {
++            return LocTables.FromProjectFiles();
++        }
++
++        // strings.csv sin las filas nuevas del Reto: para probar el respaldo de Loc con claves que faltan.
++        private static LocCatalog CatalogWithoutTheRetoRows()
+         {
+             string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
+             string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile);
+             ReadCsvRows(out string daily);
+-            string rows = daily.Substring(daily.IndexOf('\n') + 1);
+-            return LocCatalog.Parse(strings.EndsWith("\n", StringComparison.Ordinal) ? strings + rows : strings + "\n" + rows, facts);
++            string kept = strings;
++            foreach (string line in daily.Substring(daily.IndexOf('\n') + 1).Split('\n'))
++            {
++                if (line.Length > 0)
++                {
++                    kept = kept.Replace(line + "\n", "");
++                }
++            }
++
++            return LocCatalog.Parse(kept, facts);
+         }
+ 
+         private sealed class Fixture
+diff --git a/Assets/_Project/Tests/EditMode/DailyDoubleHarvestTests.cs b/Assets/_Project/Tests/EditMode/DailyDoubleHarvestTests.cs
+new file mode 100644
+index 0000000..585050c
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/DailyDoubleHarvestTests.cs
+@@ -0,0 +1,64 @@
++#nullable enable
++using System;
++using AF.Economy;
++using NUnit.Framework;
++
++namespace AF.Tests.EditMode
++{
++    /// <summary>
++    /// Enganche E9: la Cosecha doble del Reto del río (<see cref="Transaction.DoubleHarvestDaily"/>; 04 §2.8; 06 §4.1, «Premio»).
++    /// Paga otra vez las semillas del premio del día con <c>source</c> = <c>double_harvest</c>, se rechaza antes de
++    /// <c>ads_rv_double_harvest_from_level</c> (11) sin tocar nada, y la de campaña sigue doblando la Cosecha de la etiqueta.
++    /// </summary>
++    public sealed class DailyDoubleHarvestTests
++    {
++        [Test]
++        public void DoubleHarvestDaily_PaysThePrizeAgain_WithDoubleHarvestSource()
++        {
++            var fx = new EconomyFixture();
++            fx.Wallet.Apply(Transaction.Earn(SeedSource.DailyChallenge, 60));
++
++            TransactionResult doubled = fx.Wallet.Apply(Transaction.DoubleHarvestDaily(60, 26));
++
++            Assert.That(doubled.IsApplied, Is.True);
++            Assert.That(doubled.SeedsDelta, Is.EqualTo(60), "60 → 120 [P]");
++            Assert.That(doubled.Transaction.Kind, Is.EqualTo(TransactionKind.DoubleHarvest));
++            Assert.That(doubled.Transaction.Source.ToId(), Is.EqualTo("double_harvest"));
++            Assert.That(fx.Wallet.Seeds, Is.EqualTo(120));
++        }
++
++        [Test]
++        public void DoubleHarvestDaily_Before11_IsRejectedWithoutEffects()
++        {
++            var fx = new EconomyFixture();
++            fx.Wallet.Apply(Transaction.Earn(SeedSource.DailyChallenge, 60));
++            string before = fx.Json;
++
++            TransactionResult early = fx.Wallet.Apply(Transaction.DoubleHarvestDaily(60, 10));
++
++            Assert.That(early.Status, Is.EqualTo(TransactionStatus.Rejected));
++            Assert.That(early.Reason, Is.EqualTo(RejectReason.NotUnlocked));
++            Assert.That(fx.Json, Is.EqualTo(before));
++            Assert.That(fx.Wallet.Apply(Transaction.DoubleHarvestDaily(60, 11)).IsApplied, Is.True, "desde el 11");
++        }
++
++        [Test]
++        public void DoubleHarvestDaily_RefusesNonPositiveSeedsAndLevels()
++        {
++            Assert.Throws<ArgumentOutOfRangeException>(() => Transaction.DoubleHarvestDaily(0, 26));
++            Assert.Throws<ArgumentOutOfRangeException>(() => Transaction.DoubleHarvestDaily(-60, 26));
++            Assert.Throws<ArgumentOutOfRangeException>(() => Transaction.DoubleHarvestDaily(60, 0));
++        }
++
++        [Test]
++        public void CampaignDoubleHarvest_StillDoublesTheLabelHarvest()
++        {
++            var fx = new EconomyFixture();
++
++            TransactionResult doubled = fx.Wallet.Apply(Transaction.DoubleHarvest(11, RewardTier.VeryHard));
++
++            Assert.That(doubled.SeedsDelta, Is.EqualTo(80), "80 → 160 (04 §2.8)");
++            Assert.That(doubled.Transaction.Seeds, Is.EqualTo(0));
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/EditMode/DailyDoubleHarvestTests.cs.meta b/Assets/_Project/Tests/EditMode/DailyDoubleHarvestTests.cs.meta
+new file mode 100644
+index 0000000..8e062d1
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/DailyDoubleHarvestTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 7ddbedf8bb60a3e4e91d0b7b2d04a420
+\ No newline at end of file
+diff --git a/Assets/_Project/Tests/EditMode/LocTablesTests.cs b/Assets/_Project/Tests/EditMode/LocTablesTests.cs
+index d2390e2..55ee219 100644
+--- a/Assets/_Project/Tests/EditMode/LocTablesTests.cs
++++ b/Assets/_Project/Tests/EditMode/LocTablesTests.cs
+@@ -503,6 +503,9 @@ internal static List<string> UiTextKeys()
+             // Las 30 frases de TiTino (TI3): las claves las da AF.GameFlow.SlothLines y las pinta UiText.TrySlothLine.
+             keys.AddRange(UiText.SlothLineKeys);
+ 
++            // Las del Reto del río (R9; enganche E5): las pinta AF.UI.DailyText.
++            keys.AddRange(DailyText.NewKeys);
++
+             return keys;
+         }
+ 
+diff --git a/Assets/_Project/Tests/PlayMode/DailyChallengeSnapshotTests.cs b/Assets/_Project/Tests/PlayMode/DailyChallengeSnapshotTests.cs
+index 9672c4c..b496837 100644
+--- a/Assets/_Project/Tests/PlayMode/DailyChallengeSnapshotTests.cs
++++ b/Assets/_Project/Tests/PlayMode/DailyChallengeSnapshotTests.cs
+@@ -37,7 +37,7 @@ namespace AF.Tests.PlayMode
+     /// 30» (R-Q14 a).</item>
+     /// </list>
+     /// Textos: la tabla propia de <see cref="DailyChallengeTests"/> (las tablas del proyecto más
+-    /// <c>docs/dev/traspaso/spark-strings-reto.csv</c>, como hará E5), así que es-419 muestra el texto real. Cada captura deja en el
++    /// <c>docs/dev/traspaso/spark-strings-reto.csv</c>, ya en <c>strings.csv</c> con E5), así que es-419 muestra el texto real. Cada captura deja en el
+     /// log una línea <c>AF_FIT</c> por texto visible que no cabe en su caja. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode
+     /// PlayMode --architecture arm64 --filter AF.Tests.PlayMode.DailyChallengeSnapshotTests</c> sin <c>-nographics</c>.
+     /// </summary>
+@@ -336,15 +336,12 @@ private static DateTime Utc(DateTime bogota)
+             return DateTime.SpecifyKind(bogota - Bogota, DateTimeKind.Utc);
+         }
+ 
+-        // Tabla propia: strings.csv y facts.csv del proyecto más las filas del Reto (sin su cabecera), como hará E5.
++        // Tablas del proyecto: con E5, strings.csv ya trae las filas del Reto (docs/dev/traspaso/spark-strings-reto.csv).
+         private static LocTableTexts TestTables()
+         {
+             string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, LocCatalog.StringsFile);
+             string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, LocCatalog.FactsFile);
+-            string daily = LocCsv.Decode(
+-                System.IO.File.ReadAllBytes(LocTables.ProjectPath("docs/dev/traspaso/spark-strings-reto.csv")), "spark-strings-reto.csv");
+-            string rows = daily.Substring(daily.IndexOf('\n') + 1);
+-            return new LocTableTexts(strings.EndsWith("\n", StringComparison.Ordinal) ? strings + rows : strings + "\n" + rows, facts);
++            return new LocTableTexts(strings, facts);
+         }
+     }
+ }
+diff --git a/Assets/_Project/Tests/PlayMode/DailyChallengeTests.cs b/Assets/_Project/Tests/PlayMode/DailyChallengeTests.cs
+index e67aec1..6c83f4d 100644
+--- a/Assets/_Project/Tests/PlayMode/DailyChallengeTests.cs
++++ b/Assets/_Project/Tests/PlayMode/DailyChallengeTests.cs
+@@ -22,7 +22,7 @@ namespace AF.Tests.PlayMode
+     /// <c>level_state</c> ni estadísticas de campaña (la Crecida aún no existe en el cliente: se comprueba que no hay barra),
+     /// salir sin ganar (R-Q9) y la reanudación el mismo día y el descarte otro día (R-Q4). Simula el enganche E2 llamando a
+     /// <see cref="GameBootstrap.SetUpDaily"/> tras el arranque, con el pool, el almacén y el reloj del test, y una tabla de
+-    /// textos propia (las tablas del proyecto más <c>docs/dev/traspaso/spark-strings-reto.csv</c>, como hará E5).
++    /// textos del proyecto (con E5, <c>strings.csv</c> ya trae las filas de <c>docs/dev/traspaso/spark-strings-reto.csv</c>).
+     /// </summary>
+     public sealed class DailyChallengeTests
+     {
+@@ -116,7 +116,7 @@ public IEnumerator Card_Play_ThenWinTheBoard_StampFallsWithPlus60_WithoutCampaig
+             Assert.That(calendar.StampedDays, Is.EqualTo(new[] { 19 }));
+             Assert.That(calendar.RewardShown, Is.True);
+             Assert.That(calendar.RewardText, Is.EqualTo("+60"));
+-            Assert.That(calendar.DoubleHarvestShown, Is.False, "Cosecha doble del Reto: falta el enganche E9");
++            Assert.That(calendar.DoubleHarvestShown, Is.EqualTo(daily.DoubleHarvestOffered), "Cosecha doble del Reto (E9): con premio confirmado y video");
+             Assert.That(calendar.TitleText, Is.EqualTo("Reto del río · 19 oct"));
+ 
+             // Premio: 60 semillas. Nada de campaña: canoas, max_level, next_level, level_state, levels_won, fails_hard.
+@@ -173,15 +173,16 @@ public IEnumerator Card_HiddenBeforeLevel10()
+         }
+ 
+         [UnityTest]
+-        public IEnumerator Card_HiddenWithoutPool()
++        public IEnumerator Card_WithoutTestPool_UsesTheScenePool_E3()
+         {
+-            GameBootstrap.DailyPoolOverride = null; // sin E3: la escena no trae el pool
++            GameBootstrap.DailyPoolOverride = null; // con E3 la escena trae daily_pool_v1.json
+             yield return Boot();
+             GameBootstrap boot = GameBootstrap.Current!;
+ 
+-            Assert.That(boot.DailyPoolAsset, Is.Null);
+-            Assert.That(boot.DailyCard!.Visible, Is.False);
+-            Assert.That(boot.RefreshDailyCard(), Is.EqualTo(DailyCardState.Hidden));
++            Assert.That(boot.DailyPoolAsset, Is.Not.Null);
++            Assert.That(boot.DailyService!.Pool, Is.Not.Null);
++            Assert.That(boot.DailyCard!.Visible, Is.True);
++            Assert.That(boot.RefreshDailyCard(), Is.EqualTo(DailyCardState.Play));
+         }
+ 
+         [UnityTest]
+@@ -489,15 +490,12 @@ private static DateTime Utc(DateTime bogota)
+             return DateTime.SpecifyKind(bogota - Bogota, DateTimeKind.Utc);
+         }
+ 
+-        // Tabla propia: strings.csv y facts.csv del proyecto más las filas del Reto (sin su cabecera), como hará E5.
++        // Tablas del proyecto: con E5, strings.csv ya trae las filas del Reto (docs/dev/traspaso/spark-strings-reto.csv).
+         private static LocTableTexts TestTables()
+         {
+             string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, AF.Localization.LocCatalog.StringsFile);
+             string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, AF.Localization.LocCatalog.FactsFile);
+-            string daily = AF.Localization.LocCsv.Decode(
+-                System.IO.File.ReadAllBytes(LocTables.ProjectPath("docs/dev/traspaso/spark-strings-reto.csv")), "spark-strings-reto.csv");
+-            string rows = daily.Substring(daily.IndexOf('\n') + 1);
+-            return new LocTableTexts(strings.EndsWith("\n", StringComparison.Ordinal) ? strings + rows : strings + "\n" + rows, facts);
++            return new LocTableTexts(strings, facts);
+         }
+     }
+ }
+diff --git a/Assets/_Project/Tests/PlayMode/DailyHooksTests.cs b/Assets/_Project/Tests/PlayMode/DailyHooksTests.cs
+new file mode 100644
+index 0000000..8a71e76
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/DailyHooksTests.cs
+@@ -0,0 +1,434 @@
++#nullable enable
++using System;
++using System.Collections;
++using System.Collections.Generic;
++using AF.Ads;
++using AF.Core.Rules;
++using AF.Economy;
++using AF.GameFlow;
++using AF.LiveOps;
++using AF.Platform;
++using AF.Save;
++using AF.Solver.Search;
++using AF.UI;
++using NUnit.Framework;
++using UnityEngine;
++using UnityEngine.TestTools;
++
++namespace AF.Tests.PlayMode
++{
++    /// <summary>
++    /// Enganches del Reto del río aplicados (R12): E2 (<c>SetUpDaily</c> en el arranque), E3 (el pool de la escena), E4 (el bloque
++    /// <c>daily_challenge</c> del perfil), E5 (los textos en <c>strings.csv</c>), E9 (Cosecha doble solo con premio confirmado), E21
++    /// (sin «Nivel N · intento k»), E22 (Atrás), E23 (volver de segundo plano) y E24 (las sondas de partida marcadas con el tablero).
++    /// El primer test usa la escena tal cual (pool real, almacén del perfil y tablas de la escena); los demás, el pool sintético
++    /// (<see cref="DailyPlayTestPool"/>) y un almacén en memoria, como <see cref="DailyChallengeTests"/>.
++    /// </summary>
++    public sealed class DailyHooksTests
++    {
++        private const int MaxLevel = 25;
++        private const int Frame = PlayModeHelpers.FrameMs;
++        private static readonly TimeSpan Bogota = TimeSpan.FromHours(-5);
++        private static readonly DateTime Monday = new DateTime(2026, 10, 19, 10, 0, 0); // hora local de Bogotá
++
++        private ManualClock _clock = null!;
++        private MemoryProfileStore _profiles = null!;
++        private readonly List<string> _lines = new List<string>();
++
++        [SetUp]
++        public void SetUp()
++        {
++            _clock = new ManualClock(Utc(Monday), Bogota);
++            _profiles = new MemoryProfileStore(ProfileAt(MaxLevel));
++            LaunchOptions.ClockOverride = _clock;
++            _lines.Clear();
++            Application.logMessageReceived += OnLog;
++        }
++
++        [TearDown]
++        public void TearDown()
++        {
++            Application.logMessageReceived -= OnLog;
++            GameBootstrap.ResetDailyOverrides();
++            GameScreen.SimulatedScreen = null;
++            LaunchOptions.Reset();
++            LocSetUpFixture.ConfigureEs419();
++        }
++
++        [UnityTest]
++        public IEnumerator E2_E3_E4_E5_TheSceneStartsTheReto_WithItsPool_AndTheWinIsSavedInTheProfile()
++        {
++            yield return Boot(callSetUp: false);
++            GameBootstrap boot = GameBootstrap.Current!;
++
++            Assert.That(boot.DailyService, Is.Not.Null, "E2: SetUpDaily en el arranque");
++            Assert.That(boot.DailyPoolAsset, Is.Not.Null, "E3: el pool en la escena");
++            Assert.That(boot.DailyPoolAsset!.name, Is.EqualTo("daily_pool_v1"));
++            Assert.That(boot.DailyService!.Pool, Is.Not.Null);
++            DailyChallengeCard card = boot.DailyCard!;
++            Assert.That(card.Visible, Is.True);
++            Assert.That(card.State, Is.EqualTo(DailyCardState.Play));
++            Assert.That(card.TitleText, Is.EqualTo("Reto del río · 19 oct"), "E5: los textos de la tabla de la escena");
++            Assert.That(card.StreakText, Is.EqualTo("0/7"));
++            Profile profile = boot.Profile!;
++            int seeds = profile.Wallet.Seeds;
++
++            Assert.That(boot.PressDailyCard(), Is.True);
++            DailyChallengeScreen daily = boot.DailyScreen!;
++            Assert.That(daily.Flow!.DailyBoardId, Does.StartWith("d1_n"), "banda 1 con max_level 25");
++            Win(boot, daily);
++            Assert.That(daily.LastClaimOutcome, Is.EqualTo(ClaimOutcome.Confirmed));
++
++            // E4: el registro y el pago, en el mismo perfil y en la misma escritura.
++            Assert.That(profile.Wallet.Seeds, Is.EqualTo(seeds + 60));
++            Assert.That(profile.DailyChallenge, Is.Not.Null);
++            Assert.That(profile.DailyChallenge!.LastClaimedDate, Is.EqualTo("2026-10-19"));
++            Assert.That(profile.DailyChallenge.InProgress, Is.Null);
++            Profile onDisk = ProfileJson.Deserialize(_profiles.Json!);
++            Assert.That(onDisk.Wallet.Seeds, Is.EqualTo(seeds + 60));
++            Assert.That(onDisk.DailyChallenge!.LastClaimedDate, Is.EqualTo("2026-10-19"));
++            Assert.That(onDisk.DailyChallenge.StreakDays, Is.EqualTo(1));
++            Assert.That(onDisk.DailyChallenge.StampDays, Is.EqualTo(new[] { 19 }));
++            Assert.That(onDisk.DailyChallenge.Result, Is.EqualTo("win"));
++        }
++
++        [UnityTest]
++        public IEnumerator E9_DoubleHarvest_AfterAConfirmedWin_PaysThePrizeAgainOnce()
++        {
++            var ads = new ImmediateAdPresenter();
++            LaunchOptions.AdPresenterOverride = ads;
++            yield return BootSynthetic();
++            GameBootstrap boot = GameBootstrap.Current!;
++            int seeds = boot.Profile!.Wallet.Seeds;
++
++            Assert.That(boot.PressDailyCard(), Is.True);
++            DailyChallengeScreen daily = boot.DailyScreen!;
++            Win(boot, daily);
++            StepUntil(boot, () => daily.Calendar.Visible, 20000, "calendario de sellos");
++            daily.Calendar.Settle();
++            Assert.That(daily.LastClaimOutcome, Is.EqualTo(ClaimOutcome.Confirmed));
++            Assert.That(daily.DoubleHarvestOffered, Is.True);
++            Assert.That(daily.Calendar.DoubleHarvestShown, Is.True, "con premio confirmado y video (06 §4.1)");
++            Assert.That(daily.Calendar.RewardText, Is.EqualTo("+60"));
++
++            _lines.Clear();
++            daily.Calendar.DoubleHarvestButton.onClick.Invoke();
++            Assert.That(ads.Last!.Placement, Is.EqualTo(AdPlacement.DoubleHarvest));
++            Assert.That(Find("\"event\":\"earn_virtual_currency\""), Does.Contain("\"source\":\"double_harvest\",\"value\":60}"),
++                "08 §8.2: earn_virtual_currency con source = double_harvest");
++            Assert.That(boot.Profile.Wallet.Seeds, Is.EqualTo(seeds + 120), "60 → 120");
++            Assert.That(daily.HarvestDoubled, Is.True);
++            Assert.That(daily.Calendar.RewardText, Is.EqualTo("+120"));
++            Assert.That(daily.Calendar.DoubleHarvestShown, Is.False, "una vez por victoria");
++            Assert.That(daily.PressDoubleHarvest(), Is.False);
++            Assert.That(boot.Profile.Daily.RvDoubleHarvest, Is.EqualTo(1), "cuenta para el tope diario de rv_double_harvest");
++        }
++
++        [UnityTest]
++        public IEnumerator E9_VideoClosedEarly_PaysNothing()
++        {
++            LaunchOptions.AdPresenterOverride = new ImmediateAdPresenter(SimulatedAdClose.ClosedEarly);
++            yield return BootSynthetic();
++            GameBootstrap boot = GameBootstrap.Current!;
++
++            Assert.That(boot.PressDailyCard(), Is.True);
++            DailyChallengeScreen daily = boot.DailyScreen!;
++            Win(boot, daily);
++            StepUntil(boot, () => daily.Calendar.Visible, 20000, "calendario de sellos");
++            daily.Calendar.Settle();
++            Assert.That(daily.LastClaimOutcome, Is.EqualTo(ClaimOutcome.Confirmed));
++            Assert.That(daily.Calendar.DoubleHarvestShown, Is.True);
++            int seeds = boot.Profile!.Wallet.Seeds;
++            int watched = boot.Profile.Daily.RvDoubleHarvest;
++            _lines.Clear();
++
++            daily.Calendar.DoubleHarvestButton.onClick.Invoke();
++
++            Assert.That(boot.Profile.Wallet.Seeds, Is.EqualTo(seeds), "sin el video entero no se paga (02 §6)");
++            Assert.That(daily.HarvestDoubled, Is.False);
++            Assert.That(daily.Calendar.RewardText, Is.EqualTo("+60"));
++            Assert.That(boot.Profile.Daily.RvDoubleHarvest, Is.EqualTo(watched), "no cuenta para el tope diario");
++            Assert.That(_lines.Exists(l => l.Contains("\"source\":\"double_harvest\"")), Is.False);
++        }
++
++        [UnityTest]
++        public IEnumerator E9_NoDoubleHarvest_WhenTheDailyCapIsReached()
++        {
++            LaunchOptions.AdPresenterOverride = new ImmediateAdPresenter();
++            Profile profile = ProfileAt(MaxLevel);
++            profile.Daily.DateLocal = "2026-10-19";
++            profile.Daily.RvDoubleHarvest = 5; // ads_rv_cap_double_harvest (08 §9), compartido con la campaña
++            profile.Daily.RvTotal = 5;
++            _profiles = new MemoryProfileStore(profile);
++            yield return BootSynthetic();
++            GameBootstrap boot = GameBootstrap.Current!;
++
++            Assert.That(boot.PressDailyCard(), Is.True);
++            DailyChallengeScreen daily = boot.DailyScreen!;
++            Win(boot, daily);
++            StepUntil(boot, () => daily.Calendar.Visible, 20000, "calendario de sellos");
++            daily.Calendar.Settle();
++            Assert.That(daily.LastClaimOutcome, Is.EqualTo(ClaimOutcome.Confirmed));
++            Assert.That(daily.DoubleHarvestOffered, Is.False, "tope diario agotado");
++            Assert.That(daily.Calendar.DoubleHarvestShown, Is.False);
++            Assert.That(daily.PressDoubleHarvest(), Is.False);
++        }
++
++        [UnityTest]
++        public IEnumerator E9_NoDoubleHarvest_OnASecondWinOfTheSameDay_NoReward()
++        {
++            LaunchOptions.AdPresenterOverride = new ImmediateAdPresenter();
++            yield return BootSynthetic();
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.PressDailyCard(), Is.True);
++            DailyChallengeScreen daily = boot.DailyScreen!;
++            Win(boot, daily);
++            StepUntil(boot, () => daily.Calendar.Visible, 20000, "calendario de sellos");
++            daily.Calendar.Settle();
++            daily.Calendar.HomeButton.onClick.Invoke();
++            Step(boot, Frame);
++            int seeds = boot.Profile!.Wallet.Seeds;
++
++            // Sellado: la tarjeta abre el calendario; el tablero se vuelve a jugar desde el calendario o reabriendo el Reto.
++            Assert.That(boot.DailyScreen!.Open(MaxLevel), Is.True, "reintentos ilimitados el mismo día (06 §4.1)");
++            Win(boot, daily);
++            StepUntil(boot, () => daily.Calendar.Visible, 20000, "calendario de sellos");
++            daily.Calendar.Settle();
++            Assert.That(daily.LastClaimOutcome, Is.EqualTo(ClaimOutcome.NoReward));
++            Assert.That(daily.DoubleHarvestOffered, Is.False, "sin premio no hay Cosecha doble");
++            Assert.That(daily.Calendar.DoubleHarvestShown, Is.False);
++            Assert.That(daily.PressDoubleHarvest(), Is.False);
++            Assert.That(boot.Profile.Wallet.Seeds, Is.EqualTo(seeds));
++        }
++
++        [UnityTest]
++        public IEnumerator E9_NoDoubleHarvest_WhenThePrizeIsPendingValidation()
++        {
++            LaunchOptions.AdPresenterOverride = new ImmediateAdPresenter();
++            GameBootstrap.DailyServerOverride = FakeServerDate.Online(TimeSpan.FromHours(48));
++            yield return BootSynthetic();
++            GameBootstrap boot = GameBootstrap.Current!;
++            int seeds = boot.Profile!.Wallet.Seeds;
++
++            Assert.That(boot.PressDailyCard(), Is.True);
++            DailyChallengeScreen daily = boot.DailyScreen!;
++            Win(boot, daily);
++            StepUntil(boot, () => daily.Calendar.Visible, 20000, "calendario de sellos");
++            daily.Calendar.Settle();
++            Assert.That(daily.LastClaimOutcome, Is.EqualTo(ClaimOutcome.Pending));
++            Assert.That(daily.DoubleHarvestOffered, Is.False);
++            Assert.That(daily.Calendar.DoubleHarvestShown, Is.False);
++            Assert.That(daily.PressDoubleHarvest(), Is.False);
++            Assert.That(boot.Profile.Wallet.Seeds, Is.EqualTo(seeds));
++        }
++
++        [UnityTest]
++        public IEnumerator E21_RestartInTheReto_ShowsNoLevelAttemptBanner()
++        {
++            yield return BootSynthetic();
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.PressDailyCard(), Is.True);
++            DailyChallengeScreen daily = boot.DailyScreen!;
++            ToPlaying(boot, daily);
++            PourFirstMove(boot, daily);
++
++            Assert.That(daily.Actions.PressRestart(), Is.True);
++            Step(boot, Frame);
++            Assert.That(daily.View!.BannerText, Is.Null.Or.Not.Contains("Nivel"), "06 §4.1: nunca «Nivel N» en el Reto");
++            Assert.That(daily.View.LevelTitle.text, Is.EqualTo("Reto del río"));
++        }
++
++        [UnityTest]
++        public IEnumerator E22_AndroidBack_DoesNothingOnTheBoard_AndClosesTheCalendar()
++        {
++            yield return BootSynthetic();
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.PressDailyCard(), Is.True);
++            DailyChallengeScreen daily = boot.DailyScreen!;
++            ToPlaying(boot, daily);
++
++            Assert.That(boot.PressAndroidBack(), Is.False, "con el tablero en juego, nada (02 §3)");
++            Assert.That(daily.IsOpen, Is.True);
++            Assert.That(boot.Lobby!.Visible, Is.False, "el inicio sigue oculto");
++
++            Win(boot, daily);
++            StepUntil(boot, () => daily.Calendar.Visible, 20000, "calendario de sellos");
++            Assert.That(boot.PressAndroidBack(), Is.True, "Atrás cierra el calendario como «Inicio»");
++            Step(boot, Frame);
++            Assert.That(daily.IsOpen, Is.False);
++            Assert.That(boot.Lobby.Visible, Is.True);
++        }
++
++        [UnityTest]
++        public IEnumerator E23_BackFromBackground_SnapsTheRetoView_AndClearsTheSelection()
++        {
++            yield return BootSynthetic();
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.PressDailyCard(), Is.True);
++            DailyChallengeScreen daily = boot.DailyScreen!;
++            ToPlaying(boot, daily);
++            LevelFlow flow = daily.Flow!;
++            SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
++            Pour move = solution.GetMove(0);
++            daily.Actions.TapCuia(move.Source);
++            Assert.That(flow.Selected, Is.EqualTo(move.Source), "cuia seleccionada");
++
++            boot.SendMessage("OnApplicationPause", false);
++
++            Assert.That(flow.Selected, Is.EqualTo(-1), "02 §14: la selección se limpia");
++            Assert.That(daily.View!.IsViewIdle, Is.True, "la vista salta al modelo");
++        }
++
++        [UnityTest]
++        public IEnumerator E24_TheRetoBoardLines_CarryTheDailyBoardId()
++        {
++            yield return BootSynthetic();
++            GameBootstrap boot = GameBootstrap.Current!;
++            _lines.Clear();
++            Assert.That(boot.PressDailyCard(), Is.True);
++            DailyChallengeScreen daily = boot.DailyScreen!;
++            string board = daily.Flow!.DailyBoardId!;
++            ToPlaying(boot, daily);
++            PourFirstMove(boot, daily);
++
++            string marker = ",\"daily\":\"" + board + "\"";
++            Assert.That(Find("\"event\":\"load\""), Does.Contain(marker));
++            Assert.That(Find("\"event\":\"ready\""), Does.Contain(marker));
++            Assert.That(Find("\"event\":\"pour\""), Does.Contain(marker));
++        }
++
++        [UnityTest]
++        public IEnumerator E24_CampaignLines_CarryNoDailyMark()
++        {
++            LaunchOptions.ProfileStoreOverride = _profiles;
++            yield return PlayModeHelpers.LoadGame(26, new MemoryProgressStore(26, MaxLevel));
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            PlayModeHelpers.Step(boot, 3000);
++
++            string load = Find("\"event\":\"load\"");
++            Assert.That(load, Does.Contain("\"level\":26"));
++            foreach (string line in _lines)
++            {
++                Assert.That(line, Does.Not.Contain("\"daily\":"), "en la campaña no hay marca del Reto: " + line);
++            }
++        }
++
++        // ---- Ayudas ----
++
++        private IEnumerator BootSynthetic()
++        {
++            GameBootstrap.DailyPoolOverride = DailyPlayTestPool.Full;
++            GameBootstrap.DailyStoreOverride = new InMemoryDailyChallengeStore();
++            yield return Boot(callSetUp: true);
++        }
++
++        private IEnumerator Boot(bool callSetUp)
++        {
++            yield return PlayModeHelpers.LoadApp(_profiles);
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
++            PlayModeHelpers.TakeClock(boot);
++            if (callSetUp)
++            {
++                Assert.That(boot.SetUpDaily(), Is.True, "ya lo hizo el arranque (E2): no hace nada");
++            }
++
++            boot.DailyRunner!.enabled = false;
++            Step(boot, Frame);
++        }
++
++        private void OnLog(string condition, string stackTrace, LogType type)
++        {
++            if (condition.StartsWith("AF_STATE ", StringComparison.Ordinal))
++            {
++                _lines.Add(condition);
++            }
++        }
++
++        private string Find(string fragment)
++        {
++            foreach (string line in _lines)
++            {
++                if (line.Contains(fragment))
++                {
++                    return line;
++                }
++            }
++
++            Assert.Fail("no hay ninguna línea con " + fragment);
++            return "";
++        }
++
++        private static void Step(GameBootstrap boot, int ms)
++        {
++            for (int t = 0; t < ms; t += Frame)
++            {
++                boot.TickDaily(Frame);
++            }
++        }
++
++        private static void StepUntil(GameBootstrap boot, Func<bool> done, int maxMs, string what)
++        {
++            for (int t = 0; t < maxMs; t += Frame)
++            {
++                if (done())
++                {
++                    return;
++                }
++
++                boot.TickDaily(Frame);
++            }
++
++            Assert.That(done(), Is.True, "tiempo agotado: " + what);
++        }
++
++        private static void ToPlaying(GameBootstrap boot, DailyChallengeScreen daily)
++        {
++            LevelFlow flow = daily.Flow!;
++            daily.Actions.TapAnywhere(); // salta la intro
++            StepUntil(boot, () => flow.Phase == FlowPhase.Playing && flow.AcceptsBoardInput, 10000, "fin de la intro del Reto");
++        }
++
++        private static void PourFirstMove(GameBootstrap boot, DailyChallengeScreen daily)
++        {
++            LevelFlow flow = daily.Flow!;
++            SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
++            Assert.That(solution.IsSolved && solution.MoveCount >= 2, Is.True);
++            Pour move = solution.GetMove(0);
++            daily.Actions.TapCuia(move.Source);
++            daily.Actions.TapCuia(move.Target);
++            Step(boot, 1000);
++        }
++
++        private static void Win(GameBootstrap boot, DailyChallengeScreen daily)
++        {
++            ToPlaying(boot, daily);
++            LevelFlow flow = daily.Flow!;
++            SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
++            Assert.That(solution.IsSolved, Is.True);
++            for (int i = 0; i < solution.MoveCount; i++)
++            {
++                Pour move = solution.GetMove(i);
++                StepUntil(boot, () => flow.AcceptsBoardInput, 5000, "tablero listo para el vertido " + i);
++                daily.Actions.TapCuia(move.Source);
++                daily.Actions.TapCuia(move.Target);
++            }
++
++            StepUntil(boot, () => daily.Won, 10000, "victoria del Reto");
++        }
++
++        private static Profile ProfileAt(int maxLevel)
++        {
++            Profile profile = Wallet.NewProfile(new ManualClock(Utc(Monday), Bogota));
++            profile.Progress.MaxLevel = maxLevel;
++            profile.Progress.NextLevel = maxLevel + 1;
++            return profile;
++        }
++
++        private static DateTime Utc(DateTime bogota)
++        {
++            return DateTime.SpecifyKind(bogota - Bogota, DateTimeKind.Utc);
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/PlayMode/DailyHooksTests.cs.meta b/Assets/_Project/Tests/PlayMode/DailyHooksTests.cs.meta
+new file mode 100644
+index 0000000..06289ee
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/DailyHooksTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: d5836048f00b83b46b23700349e6be8b
+\ No newline at end of file
+diff --git a/Assets/_Project/Tests/PlayMode/DailyProbeTests.cs b/Assets/_Project/Tests/PlayMode/DailyProbeTests.cs
+index bf46fa1..daa7adb 100644
+--- a/Assets/_Project/Tests/PlayMode/DailyProbeTests.cs
++++ b/Assets/_Project/Tests/PlayMode/DailyProbeTests.cs
+@@ -448,15 +448,12 @@ private static DateTime Utc(DateTime bogota)
+             return DateTime.SpecifyKind(bogota - Bogota, DateTimeKind.Utc);
+         }
+ 
+-        // Tabla propia: strings.csv y facts.csv del proyecto más las filas del Reto (sin su cabecera), como hará E5.
++        // Tablas del proyecto: con E5, strings.csv ya trae las filas del Reto (docs/dev/traspaso/spark-strings-reto.csv).
+         private static LocTableTexts TestTables()
+         {
+             string strings = LocTables.ReadProjectFile(LocTables.StringsAssetPath, AF.Localization.LocCatalog.StringsFile);
+             string facts = LocTables.ReadProjectFile(LocTables.FactsAssetPath, AF.Localization.LocCatalog.FactsFile);
+-            string daily = AF.Localization.LocCsv.Decode(
+-                System.IO.File.ReadAllBytes(LocTables.ProjectPath("docs/dev/traspaso/spark-strings-reto.csv")), "spark-strings-reto.csv");
+-            string rows = daily.Substring(daily.IndexOf('\n') + 1);
+-            return new LocTableTexts(strings.EndsWith("\n", StringComparison.Ordinal) ? strings + rows : strings + "\n" + rows, facts);
++            return new LocTableTexts(strings, facts);
+         }
+     }
+ }

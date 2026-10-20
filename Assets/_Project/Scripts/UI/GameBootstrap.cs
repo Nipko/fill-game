@@ -907,6 +907,13 @@ namespace AF.UI
                 return _mapScreen.CloseTopSheet() || CloseRiverMap(); // primero la tarjeta de la parada y el Muestrario (M4.1)
             }
 
+            // Reto del río (E22): Atrás cierra su calendario como «Inicio»; con el tablero del Reto en juego no hace nada, como en un
+            // nivel (02 §3; 04 §6.6). HandleBack devuelve false si no hay calendario abierto.
+            if (_dailyScreen != null && _dailyScreen.IsOpen)
+            {
+                return _dailyScreen.HandleBack();
+            }
+
             if (_app.Screen == AppScreen.Level)
             {
                 return false;
@@ -1588,6 +1595,7 @@ namespace AF.UI
                 ContentEndMapAvailable = RiverMapAvailable && (ContentEndMapOverride ?? true), // el Mapa del fin de contenido (M4.3)
             };
             _lobby.Bind(_app, _services);
+            SetUpDaily(); // Reto del río (E2; GameBootstrap.Daily.cs): pool, servicio, tarjeta del inicio y partida
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
             if (requested <= 0 && !rebuilt)
@@ -1722,6 +1730,16 @@ namespace AF.UI
                 _screen.SnapToModel();
                 _screen.SettleReveal();
                 _flow.ClearSelection();
+            }
+
+            // Reto del río (E23; 02 §14): su vista salta al modelo y la selección se limpia, como la de campaña (InLevel es false
+            // durante el Reto: AppFlow sigue en el inicio).
+            if (_dailyScreen?.Flow != null && _dailyScreen.View != null)
+            {
+                _dailyScreen.View.SnapToModel();
+                _dailyScreen.View.SettleReveal();
+                _dailyScreen.View.IdleHintBackFromBackground();
+                _dailyScreen.Flow.ClearSelection();
             }
 
             // MO3 (02 §3.4; 04 §2.3): el tiempo fuera de la app no es inactividad en el tablero; la cuenta de la pista por

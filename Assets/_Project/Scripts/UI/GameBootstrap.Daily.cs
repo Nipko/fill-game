@@ -21,10 +21,10 @@ namespace AF.UI
     /// <c>_lobby.Bind(_app, _services);</c>. Sin esa llamada no hay Reto (D-008: oculto mientras no exista).</item>
     /// <item><b>E3</b>: <c>GameSceneBuilder</c> asigna <c>Data/Daily/daily_pool_v1.json</c> con <see cref="ConfigureDailyPool"/> al
     /// campo serializado <see cref="dailyPool"/>, que declara este parcial. Sin pool la tarjeta queda oculta.</item>
-    /// <item><b>E4</b>: el bloque <c>daily_challenge</c> del perfil (<c>ProfileDailyChallengeStore</c>) se conecta con
-    /// <see cref="DailyStoreFactory"/>. Hasta entonces, en desarrollo se usa un almacén en memoria (se pierde al cerrar la app y,
-    /// por eso, la garantía de «nunca dos pagos» de <see cref="IDailyChallengeStore"/> solo vale dentro de la sesión) y en release
-    /// la tarjeta queda oculta.</item>
+    /// <item><b>E4</b>: el bloque <c>daily_challenge</c> del perfil (<see cref="ProfileDailyChallengeStore"/>) se conecta con
+    /// <see cref="DailyStoreFactory"/> (por defecto, <see cref="CreateProfileDailyStore"/>). Si alguien lo deja en null, en
+    /// desarrollo se usa un almacén en memoria (se pierde al cerrar la app y, por eso, la garantía de «nunca dos pagos» de
+    /// <see cref="IDailyChallengeStore"/> solo vale dentro de la sesión) y en release la tarjeta queda oculta.</item>
     /// </list>
     /// La tarjeta va en un lienzo propio encima del inicio (orden <see cref="DailyCardSortingOrder"/>), centrada sobre «Jugar»
     /// [P]; con el enganche E1 pasará a <c>LobbyScreen</c>.
@@ -68,10 +68,20 @@ namespace AF.UI
         internal static IServerDate? DailyServerOverride { get; set; }
 
         /// <summary>
-        /// Almacén del bloque <c>daily_challenge</c> sobre el perfil (enganche E4): lo pone el integrador con la implementación de
-        /// <c>AF.Save</c>. Recibe el perfil y su almacén (el lote de guardado), los mismos que la cartera.
+        /// Almacén del bloque <c>daily_challenge</c> sobre el perfil (enganche E4): por defecto <see cref="ProfileDailyChallengeStore"/>
+        /// (<see cref="CreateProfileDailyStore"/>). Recibe el perfil y su almacén (el lote de guardado), los mismos que la cartera.
         /// </summary>
-        public static Func<Profile, IProfileStore, IDailyChallengeStore>? DailyStoreFactory { get; set; }
+        public static Func<Profile, IProfileStore, IDailyChallengeStore>? DailyStoreFactory { get; set; } = CreateProfileDailyStore;
+
+        /// <summary>
+        /// E4: el registro del Reto en el bloque <c>daily_challenge</c> del mismo perfil que la cartera, guardado por la vía síncrona
+        /// del lote (<see cref="ProfileSaveBatch.Durable"/>), la misma que la cartera del Reto: el registro de un cobro está en disco
+        /// antes del pago, y si esa escritura falla, los dos salen juntos en la siguiente (<see cref="IDailyChallengeStore"/>).
+        /// </summary>
+        public static IDailyChallengeStore CreateProfileDailyStore(Profile profile, IProfileStore store)
+        {
+            return new ProfileDailyChallengeStore(profile, store is ProfileSaveBatch batch ? batch.Durable : store);
+        }
 
         /// <summary>Pool del Reto de la escena (null hasta E3).</summary>
         public TextAsset? DailyPoolAsset => dailyPool;
@@ -135,13 +145,13 @@ namespace AF.UI
                     store = new InMemoryDailyChallengeStore();
                     if (pool != null)
                     {
-                        Debug.LogWarning(LogPrefix + "Reto del río con el registro en memoria (falta el enganche E4): se pierde al cerrar la app.");
+                        Debug.LogWarning(LogPrefix + "Reto del río con el registro en memoria (sin DailyStoreFactory): se pierde al cerrar la app.");
                     }
                 }
                 else
                 {
                     store = new InMemoryDailyChallengeStore();
-                    pool = null; // release sin E4: sin registro en el perfil no se puede pagar una sola vez por fecha; la tarjeta, oculta
+                    pool = null; // release sin DailyStoreFactory: sin registro en el perfil no se puede pagar una sola vez por fecha; la tarjeta, oculta
                 }
             }
 
