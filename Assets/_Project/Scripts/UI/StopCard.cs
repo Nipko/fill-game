@@ -90,7 +90,7 @@ namespace AF.UI
         /// </summary>
         public const float SceneFitMinDp = 72f;
 
-        /// <summary>Aire mínimo entre el borde de abajo de la placa y el de arriba de «Jugar» del Mapa (dp; revisión de DC10).</summary>
+        /// <summary>Aire mínimo entre el borde de abajo de la placa y el de arriba de «Jugar» del Mapa (dp) [P] (revisión de DC10).</summary>
         public const float ClearOfBelowDp = 8f;
 
         /// <summary>Escala de la mini cuia de la tarjeta sobre la del Mapa (20 × 32 dp) [P].</summary>

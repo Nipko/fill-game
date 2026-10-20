@@ -26,7 +26,7 @@ namespace AF.Tests.PlayMode
     /// <c>dc10_card_&lt;parada&gt;_fuente_&lt;780|640&gt;[_130]</c>, la tarjeta de Manaos («Fuente: Wikipedia») y la de Amacayacu
     /// (la fuente más larga del Mapa, «Parques Nacionales Naturales de Colombia»), a 360 × 780 y a 360 × 640 dp, al 100 % y al
     /// 130 %, con max 110; antes de guardar comprueba que la línea quede dentro de la placa, bajo el dato y a ≥ 12 sp, y la placa a
-    /// ≥ 8 dp por encima de «Jugar» (revisión de DC10). Cada
+    /// ≥ 8 dp por encima de «Jugar» (revisión de DC10); las de 640 se guardan a 1080 × 1920 px, la pantalla simulada entera. Cada
     /// captura escribe su línea <c>AF_MAP</c>.
     /// Explícito: necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.SamplesSnapshotTests</c>
     /// sin <c>-nographics</c>); los PNG quedan en <c>Logs/snapshots/es-419/</c>.
@@ -91,7 +91,7 @@ namespace AF.Tests.PlayMode
                         GameScreen.SimulatedScreen = screen;
                         LaunchOptions.FontScaleOverride = scale;
                         string name = "dc10_card_" + id + "_fuente_" + size + suffix;
-                        yield return Shot(dir, 111, name, m => Assert.That(m.OpenStopCard(n), Is.True, name), m =>
+                        yield return Shot(dir, 111, name, m => Assert.That(m.OpenStopCard(n), Is.True, name), (int)screen.y, m =>
                         {
                             StopCard card = m.Card!;
                             Assert.That(card.SourceText, Is.Not.Empty, name);
@@ -136,6 +136,13 @@ namespace AF.Tests.PlayMode
 
         private static IEnumerator Shot(string dir, int playLevel, string name, Action<RiverMapScreen>? before, Action<RiverMapScreen>? check = null)
         {
+            return Shot(dir, playLevel, name, before, SnapshotKit.Height, check);
+        }
+
+        // Con heightPx < SnapshotKit.Height (360 × 640 dp: 1080 × 1920 px), solo las filas de arriba: la pantalla simulada entera,
+        // sin la franja de fondo que en ese teléfono no existe (SnapshotKit.SaveTop; revisión de DC10).
+        private static IEnumerator Shot(string dir, int playLevel, string name, Action<RiverMapScreen>? before, int heightPx, Action<RiverMapScreen>? check)
+        {
             yield return MapMarkersTests.OpenApp(playLevel);
             GameBootstrap boot = GameBootstrap.Current!;
             RiverMapScreen map = boot.RiverMapView!;
@@ -145,7 +152,7 @@ namespace AF.Tests.PlayMode
             map.Tick(16f);
             yield return SnapshotKit.Wait(0.2f);
             check?.Invoke(map);
-            SnapshotKit.Save(dir, name);
+            SnapshotKit.SaveTop(dir, name, heightPx);
             StopCard? card = map.Card;
             Debug.Log("AF_MAP " + name + ": muestras " + map.SamplesEarned.ToString(CultureInfo.InvariantCulture) + "/"
                 + map.SamplesTotal.ToString(CultureInfo.InvariantCulture) + ", datos " + map.FactsSeen.ToString(CultureInfo.InvariantCulture) + "/"
