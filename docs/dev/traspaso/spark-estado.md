@@ -6,6 +6,29 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-19 · R5, decisiones (R-Q12b, R-Q15, R-Q16), formato de sondas y R9 fusionados: verificación completa VERDE
+
+- **Qué entra** en `spark/reto-del-rio`, por avance rápido desde `spark/reto-del-rio-int`:
+  - **R5** (`71593ae`, `fbbb935`, `c266a46`, `c903537`, `d1fbe7e`, `0f436ef`): el pool publicado, 729 días × 3 bandas = 2.187 tableros, 1.430.135 bytes. code-reviewer: **APROBADO** (dos rondas).
+  - **Rama de decisiones** (`42555cf`, `8115b74`, `f816d1c`, `e46348c`, `d0a9019`): R-Q16, R-Q15, R-Q12b y `DailyProbeFormat`. code-reviewer: **APROBADO** (dos rondas).
+  - **R9** (`373c6e2`, `b0ada3a`, `0e7c276`, `fbb9893`, `896d894`, `b9a9e8c`, `d107d7e`): las pantallas. Los dos commits «Enganche:» son los asmdef de §3.3. code-reviewer: **APROBADO** (dos rondas).
+  - La nota, al día (`85fe0a3`), y los enganches E21-E25 (`8327d23`).
+- **Verificación** (worktree `spark-int`, `8327d23`):
+
+  | Comando | Resultado |
+  |---|---|
+  | `dotnet build dotnet/AmazonFill.slnx -warnaserror` | código 0 |
+  | `dotnet test dotnet/AmazonFill.slnx` | 981 (975 + 6) |
+  | `python tools/validate_schema.py` | 103/103 |
+  | `level-generator --self-test` (todas) | todo PASS |
+  | `level-qa --daily Assets/_Project/Data/Daily/daily_pool_v1.json` | 2.187 tableros, **0 fallos**, 1.678 avisos (R-Q10) |
+  | `unity-compile.ps1 -Architecture arm64` | OK |
+  | `unity-test.ps1 -Mode EditMode … -TimeoutSec 3600` | **3.057 (3.054 + 3 omitidos)**, 0 fallos |
+  | `unity-test.ps1 -Mode PlayMode … -TimeoutSec 3600` | **1.369 (1.206 + 163 omitidos)**, 0 fallos (41 min) |
+
+- **Recuentos de referencia del Spark desde aquí:** EditMode 3.057; PlayMode 1.369. Los del integrador tras el bloque (a) eran 2.861 y 1.359.
+- **Bloque (d)** (R8-R11, partida y pantallas): R8 y R9 están dentro; faltan R10 (sondas, en arreglos de revisión) y R11 (capturas, en curso).
+
 ## 2026-10-19 · ⚠ La licencia de Unity falla por 3.ª vez (pendiente del dueño)
 
 - **Hacia las 16:45** los batchmode nuevos vuelven a salir con el código 6: `Found 0 entitlement groups`, `'com.unity.editor.headless' was not found`, `No valid Unity Editor license found`. Los que ya estaban en marcha (el PlayMode de `spark/reto-del-rio` y el de `spark-r9`) siguen corriendo.
