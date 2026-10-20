@@ -1242,7 +1242,10 @@ namespace AF.UI
             {
                 _dailyTeaser ??= new DailyTeaserCard(_victoryOverlay, _art);
                 bool inBuild = GameBootstrap.Current != null && GameBootstrap.Current.DailyInBuild;
-                _dailyTeaser.Show(flow.LevelNumber, inBuild, _canvasW, bandTop, bandBottom, _victoryPanelY - RibbonRiseDp);
+                // La cima de las cuias ya desplazadas, no bandBottom: con la victoria con vista (DC2), bandBottom es el pie de la
+                // caja de TiTino, pegado a la cinta, y la tarjeta la pisaría.
+                float cuiasTop = Mathf.Max(bandTop, CuiasTopDp() - _boardShiftTarget);
+                _dailyTeaser.Show(flow.LevelNumber, inBuild, _canvasW, bandTop, cuiasTop, _victoryPanelY - RibbonRiseDp);
             }
         }
 
