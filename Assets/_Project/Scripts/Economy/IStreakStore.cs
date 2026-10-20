@@ -11,7 +11,17 @@ namespace AF.Economy
     /// <para>
     /// <see cref="Load"/> aplica antes el cambio de día local (solo hacia delante; 06 §4.3 <c>on_app_open</c>): repone la Hoja
     /// escudo y pone a cero los hitos y las semillas de hoy, sin tocar la racha ni el río crecido (sin expiración por reloj, 04 §8).
-    /// Por eso el almacén lleva su reloj: las reglas no reinician nada a mano.
+    /// Por eso el almacén lleva su reloj: las reglas no reinician nada a mano. También recorta lo que no puede salir de las reglas
+    /// (<see cref="StreakRecord.Normalize"/>).
+    /// </para>
+    /// <para>
+    /// <b>Uso obligatorio:</b> el servicio de la Crecida llama a <see cref="Load"/> al empezar cada fin de nivel (y cada operación
+    /// sobre la Crecida) y no guarda el registro de un nivel a otro. Aun así, otro módulo (la cartera, los anuncios, las compras)
+    /// puede pasar <c>daily</c> al día siguiente entre ese <see cref="Load"/> y el <see cref="Save"/> (medianoche). Entonces
+    /// <see cref="Save"/> aplica la <b>regla conservadora</b> de <see cref="StreakRecord.MergeDay"/>: del registro del día anterior
+    /// solo cuenta lo que cambió desde la carga (un hito nuevo queda pagado también hoy, el aumento de semillas cuenta para el tope
+    /// de hoy y un escudo gastado gasta el de hoy); en ese borde puede pagar de menos, nunca dos veces. La racha y el río crecido se
+    /// escriben siempre.
     /// </para>
     /// <para>
     /// <b>Requisito de la implementación del juego:</b> la Crecida y la cartera (<see cref="Wallet"/>) tienen que vivir en el
