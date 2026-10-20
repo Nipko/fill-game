@@ -412,6 +412,19 @@ namespace AF.Tests.PlayMode
 
         private static void CheckMarkers(RiverMapScreen map, RiverMap data, RiverRoutes routes, string at)
         {
+            string? off = MarkersOffTheRiver(map, data, routes, at, out _);
+            Expect(off == null, at + ": las paradas, las boyas y la canoa, sobre el río dibujado: " + off);
+        }
+
+        /// <summary>
+        /// Como <see cref="CheckMarkers"/>, con el hito de la naciente si se ve (FX13): null si todo queda a ≤
+        /// <see cref="MaxMarkerApartWidths"/> anchos del eje dibujado del vidrio de su línea; si no, lo más apartado.
+        /// <paramref name="checkedWhat"/>: lo comprobado, por clase («boya» ×N, «canoa», «hito»), para que quien llama vea que estaba.
+        /// </summary>
+        internal static string? MarkersOffTheRiver(RiverMapScreen map, RiverMap data, RiverRoutes routes, string at,
+            out System.Collections.Generic.List<string> checkedWhat)
+        {
+            checkedWhat = new System.Collections.Generic.List<string>();
             var points = new System.Collections.Generic.List<(Vector2 Point, int Line, string What)>();
             for (int i = 0; i < map.StopMarkerCount; i++)
             {
@@ -434,6 +447,12 @@ namespace AF.Tests.PlayMode
             if (map.HasCanoe)
             {
                 points.Add((map.CanoeMapPoint, -1, "canoa"));
+            }
+
+            RiverStopRoute? goal = routes.Goal;
+            if (map.SourceMarkShown && goal != null)
+            {
+                points.Add((RiverMapScreen.PlacePoint(data, goal.At), goal.At.Line, "hito de la naciente"));
             }
 
             float worst = float.MinValue;
@@ -478,6 +497,7 @@ namespace AF.Tests.PlayMode
                 }
 
                 checkedCount++;
+                checkedWhat.Add(what.StartsWith("boya ", StringComparison.Ordinal) ? "boya" : what.StartsWith("parada ", StringComparison.Ordinal) ? "parada" : what);
                 float dp = glass.Space.DpPerUnit;
                 float drawn = DistanceToSections(glass, point) * dp;
                 float extra = drawn - (MaxMarkerApartWidths * glass.WidthDp);
@@ -497,7 +517,7 @@ namespace AF.Tests.PlayMode
 
             Debug.Log("AF_FX12 " + at + ": " + checkedCount + " paradas, boyas y canoa; la más apartada, " + worstAt);
             Assert.That(checkedCount, Is.GreaterThan(0), at + ": hay paradas sobre las líneas");
-            Expect(worst <= 0f, at + ": las paradas, las boyas y la canoa, sobre el río dibujado: " + worstAt);
+            return worst <= 0f ? null : worstAt;
         }
 
         // Las cintas dibujadas del Mapa: el vidrio, el lleno y su orla, y el frente y su orla (las activas con malla).

@@ -109,6 +109,13 @@ namespace AF.UI
         public const float GuideMastClearDp = 24f;
 
         /// <summary>
+        /// En el tramo de la meta (revisión final de FX13), el centro del guía queda al menos a este tanto (dp) más el radio de las
+        /// boyas de la vista de cualquier boya del frente, apartado en perpendicular al cauce [P], para que no tape las boyas que
+        /// «Faltan N» invita a contar.
+        /// </summary>
+        public const float GuideBuoyClearDp = 12f;
+
+        /// <summary>
         /// Parada en que Rosa salta con sus parientes: la 12, los lagos de Tarapoto, niveles 121-130 (D-013, punto 6; propuesta
         /// del Mapa §2.1 y §6.1).
         /// </summary>
@@ -2712,9 +2719,43 @@ namespace AF.UI
                 facing = dx > 0f ? 1f : -1f;
             }
 
+            guideLocal = ClearGoalBuoys(space, route, fraction, guideLocal);
             float fh = ProceduralArt.MapFlagHeightDp * CanoeFlagScale;
             mastH = flags > 0 ? (2f * MastPadDp) + (flags * (fh + CanoeFlagGapDp)) : 0f;
             mastFoot = canoe + new Vector2(-facing * ProceduralArt.MapCanoeWidthDp * SternFraction, 2f);
+        }
+
+        // Revisión final de FX13: en el tramo de la meta (691-700; las boyas que «Faltan N» invita a contar), el guía que nada por
+        // el agua no se pinta sobre una boya: va apartado del cauce, en perpendicular (hacia arriba en el contenido), a
+        // GuideBuoyClearDp más el radio de las boyas de la vista, y así queda al menos a eso de todas (van sobre el cauce). Siempre
+        // a la misma distancia, para que no salte al pasar junto a una boya en el viaje final. Solo se mueve el dibujo:
+        // GuideMapPoint sigue en el agua. Sin asignaciones.
+        private Vector2 ClearGoalBuoys(MapSpace space, int route, float fraction, Vector2 guideLocal)
+        {
+            RiverMap? map = _map;
+            RiverStopRoute? goal = _routes?.Goal;
+            if (map == null || goal == null || route != goal.N || _frontStop != goal.N || _buoyCount <= 0)
+            {
+                return guideLocal;
+            }
+
+            float clear = GuideBuoyClearDp + (_view == MapView.World ? BuoyRadiusWorldDp : BuoyRadiusBasinDp);
+            Vector2 a = space.ToLocal(RoutePoint(map, goal, Mathf.Clamp01(fraction - 0.02f)));
+            Vector2 b = space.ToLocal(RoutePoint(map, goal, Mathf.Clamp01(fraction + 0.02f)));
+            Vector2 t = b - a;
+            if (t.sqrMagnitude < 1e-6f)
+            {
+                return guideLocal;
+            }
+
+            t.Normalize();
+            var n = new Vector2(-t.y, t.x);
+            if (n.y < 0f)
+            {
+                n = -n;
+            }
+
+            return guideLocal + (n * clear);
         }
 
         /// <summary>

@@ -18,7 +18,7 @@ namespace AF.Tests.PlayMode
     /// «Faltan 6 niveles para El nevado Mismi», con el hito y el rótulo de la naciente (revisión de FX13);</description></item>
     /// <item><description><c>fx13_map_fin_contenido_700_abre</c>, <c>fx13_map_fin_contenido_700_medio</c> y
     /// <c>fx13_map_fin_contenido_700</c>: el Mapa del fin de contenido tras ganar el 700, al abrir (la canoa en Tambo), a medio
-    /// viaje y al acabar (la canoa en la naciente, con el tramo lleno), con la cabecera «Ucayali · El nevado Mismi» y el hito
+    /// viaje y al acabar (la canoa en la naciente, con el tramo lleno), con la cabecera «Ucayali» y el hito
     /// y el rótulo de la naciente.</description></item>
     /// </list>
     /// Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.Fx13SnapshotTests</c> sin

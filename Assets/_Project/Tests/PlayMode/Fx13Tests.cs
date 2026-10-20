@@ -122,6 +122,16 @@ namespace AF.Tests.PlayMode
                 Assert.That(map.CanoeInView, Is.True, where + ": la canoa, a la vista");
             }
 
+            // FX12 en el tramo de la meta: en Mundo, jugando el 695, las 10 boyas, la canoa y el hito, sobre la curva dibujada.
+            Reopen(boot, new MemoryProgressStore(695, 694, 694), 695);
+            AssertOnTheDrawnRiver(map, data, routes, "Mundo, jugando el 695");
+            AssertGuideClearOfBuoys(map, "Mundo, jugando el 695", true);
+
+            // Con nivel que jugar, el conmutador Mundo/Cuenca sigue a la izquierda (el centrado es solo del fin de contenido).
+            Canvas.ForceUpdateCanvases();
+            Rect capsule = StopCardTests.CanvasRect(map.ViewSwitch.rectTransform, map.Canvas);
+            Assert.That(capsule.center.x, Is.LessThan((map.CanvasWidth * 0.5f) - 1f), "jugando el 695: el conmutador, a la izquierda");
+
             // Antes de la llegada a Tambo, el Mapa de siempre: sin hito ni rótulo de la naciente.
             Reopen(boot, new MemoryProgressStore(686, 685, 685), 686);
             Assert.That(map.SourceMarkShown, Is.False, "jugando el 686: aún no");
@@ -137,6 +147,7 @@ namespace AF.Tests.PlayMode
 
             Assert.That(map.View, Is.EqualTo(MapView.Basin));
             AssertSource(map, source, "Cuenca, jugando el 695");
+            AssertGuideClearOfBuoys(map, "Cuenca, jugando el 695", false);
             Assert.That(map.SourceLayer!.GetSiblingIndex(), Is.GreaterThan(map.Canoe.transform.GetSiblingIndex()), "encima de la canoa");
 
             // El 700 ganado: la canoa en la naciente (también CanoeAt, el de «ponerse al día»).
@@ -170,10 +181,11 @@ namespace AF.Tests.PlayMode
             Assert.That(Vector2.Distance(map.CanoeShownMapPoint, tambo), Is.LessThan(Near), "sale de Tambo");
             Fx10Tests.AssertPlatesFit(map, "fin de contenido del 700, al abrir");
 
-            // Revisión de FX13: la cabecera nombra el mundo de la última parada y la meta, nunca el mundo 10 (el del 701, que el
-            // Mapa no tiene); y la naciente se ve desde el principio del viaje.
-            Assert.That(map.Title, Is.EqualTo(UiText.MapWorldQuestion(9, UiText.MapSourceName)));
-            Assert.That(map.Title, Is.EqualTo("Ucayali · El nevado Mismi"));
+            // Revisión de FX13: la cabecera nombra solo el mundo de la última parada, nunca el mundo 10 (el del 701, que el Mapa
+            // no tiene), sin map_world_question (es la de la pregunta del mundo); la meta la nombran el hito y su rótulo, que se
+            // ven desde el principio del viaje.
+            Assert.That(map.Title, Is.EqualTo(UiText.WorldName(9)));
+            Assert.That(map.Title, Is.EqualTo("Ucayali"));
             Assert.That(map.Title, Does.Not.Contain(UiText.WorldName(10)), "sin world_w10_name");
             AssertSource(map, source, "fin de contenido del 700, al abrir");
 
@@ -248,9 +260,59 @@ namespace AF.Tests.PlayMode
             Assert.That(Mathf.Abs(guide.x - map.Mast.rectTransform.anchoredPosition.x),
                 Is.EqualTo(RiverMapScreen.GuideMastClearDp).Within(0.5f), "al acabar: el guía, apartado del mástil");
 
-            // Sin «Faltan…», el conmutador Mundo/Cuenca va centrado en la fila (revisión de FX13, ronda 2).
+            // Sin nada que jugar, el conmutador Mundo/Cuenca va centrado en la fila (revisión de FX13, ronda 2; solo en este caso).
             Rect capsule = StopCardTests.CanvasRect(map.ViewSwitch.rectTransform, map.Canvas);
             Assert.That(capsule.center.x, Is.EqualTo(map.CanvasWidth * 0.5f).Within(0.5f), "el conmutador, centrado");
+
+            // FX12 en el tramo de la meta: al acabar el viaje, en Mundo, las 10 boyas, la canoa y el hito, sobre la curva dibujada.
+            AssertOnTheDrawnRiver(map, data, routes, "Mundo, fin de contenido del 700 al acabar");
+        }
+
+        // Revisión final de FX13: en el tramo de la meta, el guía (que nada por el agua) no se pinta sobre ninguna boya del frente:
+        // su centro, a ≥ GuideBuoyClearDp del de cada una.
+        // Con onLeg false (la Cuenca, con el tramo diminuto), el guía puede esperar encima de la canoa (GuideRoute −1): entonces no
+        // nada por el tramo y no se comprueba.
+        private static void AssertGuideClearOfBuoys(RiverMapScreen map, string where, bool onLeg)
+        {
+            Assert.That(map.GuideShown, Is.True, where + ": premisa, el guía a la vista");
+            Debug.Log("FX13 " + where + ": el guía en la ruta " + map.GuideRoute);
+            if (!onLeg && map.GuideRoute != 70)
+            {
+                return;
+            }
+
+            Assert.That(map.GuideRoute, Is.EqualTo(70), where + ": premisa, el guía nada por el tramo de la meta");
+            Vector2 guide = map.GuideImage!.rectTransform.anchoredPosition;
+            for (int i = 0; i < map.BuoyCount; i++)
+            {
+                float d = Vector2.Distance(map.Space.ToLocal(map.BuoyMapPoint(i)), guide);
+                Assert.That(d, Is.GreaterThanOrEqualTo(RiverMapScreen.GuideBuoyClearDp - 0.01f),
+                    where + ": el guía, apartado de la boya del " + map.BuoyLevel(i));
+            }
+        }
+
+        // Revisión final de FX13 (con la de FX12): en la vista Mundo, las 10 boyas del tramo de la meta, la canoa y el hito de la
+        // naciente quedan a ≤ Fx12Tests.MaxMarkerApartWidths anchos del eje de la curva dibujada del vidrio (el río suave de FX12),
+        // no solo de la polilínea (AssertGoalBuoysOnLeg): la curva se ancla también en el tramo de la meta y en la naciente.
+        private static void AssertOnTheDrawnRiver(RiverMapScreen map, RiverMap data, RiverRoutes routes, string where)
+        {
+            map.SetView(MapView.World);
+            map.Tick(16f);
+            Canvas.ForceUpdateCanvases();
+            Assert.That(map.View, Is.EqualTo(MapView.World), where);
+            Assert.That(map.BuoysCompact, Is.False, where + ": las boyas, sobre el tramo y no en la fila corta");
+            Assert.That(map.FrontStop, Is.EqualTo(70), where + ": el tramo de la meta");
+            string? off = Fx12Tests.MarkersOffTheRiver(map, data, routes, where, out System.Collections.Generic.List<string> seen);
+            Assert.That(off, Is.Null, where + ": lo más apartado del río dibujado, " + off);
+            int buoys = 0;
+            foreach (string what in seen)
+            {
+                buoys += what == "boya" ? 1 : 0;
+            }
+
+            Assert.That(buoys, Is.EqualTo(10), where + ": las 10 boyas comprobadas");
+            Assert.That(seen, Does.Contain("canoa"), where + ": la canoa comprobada");
+            Assert.That(seen, Does.Contain("hito de la naciente"), where + ": el hito comprobado");
         }
 
         // Las 10 boyas del tramo de la meta (Tambo → naciente), en Mundo, a 2 px o menos de la polilínea del tramo y no en la

@@ -104,7 +104,9 @@ namespace AF.UI
 
         /// <summary>
         /// <c>map_source_name</c> [P] (tarea FX13; D-013, viñeta del 2026-10-19): «El nevado Mismi», la naciente a la que apunta el
-        /// último tramo tras la última parada. No es una parada: solo el <c>{place}</c> de <see cref="MapStopRemaining(int, string)"/>.
+        /// último tramo tras la última parada. No es una parada (ni tarjeta, ni mini cuia, ni llegada). Sale en dos sitios: el
+        /// <c>{place}</c> de <see cref="MapStopRemaining(int, string)"/> (en el inicio y en el Mapa) y el rótulo del hito de la
+        /// naciente en el Mapa (<c>RiverMapScreen</c>, parcial de la naciente). La cabecera del fin de contenido no lo lleva.
         /// Pendiente del asesor.
         /// </summary>
         public static string MapSourceName => Loc.T(Keys.MapSourceName);

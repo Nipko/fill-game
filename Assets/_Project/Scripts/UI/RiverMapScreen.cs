@@ -250,6 +250,7 @@ namespace AF.UI
         private int _playLevel = 1;
         private bool _answered;
         private bool _remainingReady;
+        private bool _nothingToPlay;
         private bool _dragging;
         private float _activeMs;
         private float _openedAt;
@@ -911,7 +912,8 @@ namespace AF.UI
 
         // Revisión de FX12: el trazo curvo del Mundo pasa por lo que se coloca sobre las líneas, que va sobre la polilínea (los datos y
         // el cursor no cambian): cada parada de los mundos abiertos (su sitio, como sus mini cuias), las 10 boyas de cada tramo hasta
-        // el del frente con max_level (la canoa va en una de ellas o en una parada y, al ponerse al día, de una a otra) y las bocas de
+        // el del frente con max_level, el de la meta incluido (la canoa va en una de ellas o en una parada y, al ponerse al día, de
+        // una a otra), la naciente cuando se ve su hito (FX13) y las bocas de
         // los afluentes (RiverRibbonGraphic.MouthAnchors). Son anclas de la curva: pasa a ≤ CurveAnchorWidths anchos de cada una. Se
         // fijan en el vidrio y el lleno de cada línea (el frente, en BuildFront) para que todas sus cintas sigan la misma curva.
         // Asigna: al abrir, si cambian el Mapa, max_level o el mundo.
@@ -934,7 +936,15 @@ namespace AF.UI
                     }
                 }
 
-                int front = Mathf.Min(FrontStopOf(max), routes.Count - 1);
+                // FX13: el tramo de la meta (691-700, de Tambo a la naciente; RiverRoutes.Goal) también lleva sus boyas, y la
+                // naciente, su hito y la canoa del fin de contenido, desde que se ve (SourceMarkDue).
+                RiverStopRoute? goal = routes.Goal;
+                if (goal != null && SourceMarkDue(routes, max))
+                {
+                    AddAnchor(map, lists, goal.At);
+                }
+
+                int front = Mathf.Min(FrontStopOf(max), routes.LegCount - 1);
                 for (int n = 1; n <= front; n++)
                 {
                     RiverStopRoute? route = routes.At(n);
@@ -1244,10 +1254,10 @@ namespace AF.UI
             if (sourceWorld > 0)
             {
                 // Más allá de la última parada (el fin de contenido del 700: el 701 es del mundo 10, sin paradas en el Mapa), la
-                // cabecera nombra el mundo de la última parada y la meta del viaje, la naciente (revisión de FX13; D-013, viñeta
-                // del 2026-10-19: sin parada nueva): «Ucayali · El nevado Mismi», nunca un mundo que el Mapa no tiene.
-                string source = UiText.MapSourceName;
-                _title.text = source.Length > 0 ? UiText.MapWorldQuestion(sourceWorld, source) : UiText.WorldName(sourceWorld);
+                // cabecera nombra solo el mundo de la última parada (revisión de FX13; D-013, viñeta del 2026-10-19: sin parada
+                // nueva): «Ucayali», nunca un mundo que el Mapa no tiene. La meta ya la nombran el hito y el rótulo de la naciente;
+                // map_world_question es la de la pregunta del mundo y no se reutiliza con otro sentido (.claude/rules/localizacion.md).
+                _title.text = UiText.WorldName(sourceWorld);
                 _answered = false;
             }
             else
@@ -1264,6 +1274,7 @@ namespace AF.UI
             // release, sin el visto bueno del asesor es «»).
             string place = UiText.NextPlaceName(stops, stops.StopOf(_playLevel));
             _remainingReady = playAvailable && place.Length > 0;
+            _nothingToPlay = !playAvailable;
             _remainingLabel.text = _remainingReady ? UiText.MapStopRemaining(RiverJourney.LevelsLeft(_playLevel), place) : string.Empty;
             _remaining.gameObject.SetActive(_remainingReady);
             _playLabel.text = UiText.PlayLevel(_playLevel);
@@ -1272,7 +1283,7 @@ namespace AF.UI
         /// <summary>
         /// Mundo de la cabecera del Mapa abierto en el mundo <paramref name="world"/> más allá de la última parada del catálogo
         /// <paramref name="stops"/> (el fin de contenido del 700 abre en el 701, del mundo 10, que no tiene paradas): el de la
-        /// última parada si el último tramo va a la naciente (<see cref="RiverStopCatalog.HeadsToSource"/>; revisión de FX13);
+        /// última parada (la cabecera lo nombra solo, sin pregunta) si el último tramo va a la naciente (<see cref="RiverStopCatalog.HeadsToSource"/>; revisión de FX13);
         /// 0 si <paramref name="world"/> tiene paradas o no hay meta. Sin asignaciones.
         /// </summary>
         public static int SourceTitleWorld(RiverStopCatalog stops, int world)
@@ -1359,9 +1370,10 @@ namespace AF.UI
             }
 
             float rowTop = playTop - GapDp - rowH;
-            // Sin «Faltan…» (el fin de contenido, nada que jugar), el conmutador, del mismo ancho, va centrado en la fila: a la
-            // izquierda dejaba un hueco a su derecha en la estampa final (revisión de FX13).
-            float switchX = _remainingReady ? 16f : (w - switchW) * 0.5f;
+            // Sin nada que jugar (el fin de contenido: sin «Faltan…» ni nivel publicado), el conmutador, del mismo ancho, va
+            // centrado en la fila [P]: a la izquierda dejaba un hueco a su derecha en la estampa final (revisión de FX13). Con
+            // nivel que jugar va a la izquierda, como siempre, aunque «Faltan…» no salga (un nombre sin el visto bueno del asesor).
+            float switchX = _nothingToPlay ? (w - switchW) * 0.5f : 16f;
             UiBuilder.Place(_viewSwitch.rectTransform, switchX, rowTop, switchW, rowH);
             _viewWorld.Place(switchX + SwitchPadDp, rowTop, SegmentDp, rowH);
             _viewBasin.Place(switchX + SwitchPadDp + SegmentDp, rowTop, SegmentDp, rowH);

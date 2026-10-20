@@ -177,17 +177,16 @@ namespace AF.Tests.EditMode
         }
 
         // Revisión de FX13: el fin de contenido del 700 abre en el 701 (mundo 10, sin paradas en el Mapa); la cabecera nombra el
-        // mundo de la última parada (9, Ucayali) y la naciente, nunca el mundo 10.
+        // mundo de la última parada (9, Ucayali), solo, nunca el mundo 10.
         [Test]
-        public void SourceTitle_BeyondTheLastStop_NamesTheLastStopWorld_AndTheSource()
+        public void SourceTitle_BeyondTheLastStop_NamesTheLastStopWorld()
         {
             RiverStopCatalog stops = Stops;
             Assert.That(stops.At(stops.Count - 1)!.World, Is.EqualTo(9), "premisa: Tambo, en el mundo 9");
             Assert.That(RiverMapScreen.SourceTitleWorld(stops, 10), Is.EqualTo(9), "el 701, más allá de Tambo");
             Assert.That(RiverMapScreen.SourceTitleWorld(stops, 9), Is.EqualTo(0), "el mundo 9 tiene paradas: su pregunta, como siempre");
             Assert.That(RiverMapScreen.SourceTitleWorld(stops, 1), Is.EqualTo(0));
-            Assert.That(UiText.MapWorldQuestion(9, UiText.MapSourceName), Is.EqualTo("Ucayali · El nevado Mismi"));
-            Assert.That(UiText.MapWorldQuestion(9, UiText.MapSourceName), Does.Not.Contain(UiText.WorldName(10)));
+            Assert.That(UiText.WorldName(9), Is.EqualTo("Ucayali"));
 
             // Sin meta (la última parada fuera del cauce), nada cambia.
             var first20 = new RiverStop[20];
