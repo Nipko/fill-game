@@ -1,6 +1,6 @@
 diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Events.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.Events.cs
 new file mode 100644
-index 0000000..7e46e4f
+index 00000000..d28ea3fd
 --- /dev/null
 +++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Events.cs
 @@ -0,0 +1,142 @@
@@ -64,7 +64,7 @@ index 0000000..7e46e4f
 +            }
 +
 +            Events.Publish(new LevelStarted(
-+                LevelNumber, EventLevelName, EventVariant, 0, _attempt.FailsLevel + 1, _level.World, DifficultyId(_level), _level.IsMurky));
++                LevelNumber, EventLevelName, EventVariant, _level.Band ?? string.Empty, _attempt.FailsLevel + 1, _level.World, DifficultyId(_level), _level.IsMurky));
 +        }
 +
 +        // Undo: una Marea más en el intento.
@@ -148,7 +148,7 @@ index 0000000..7e46e4f
 +}
 diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Events.cs.meta b/Assets/_Project/Scripts/GameFlow/LevelFlow.Events.cs.meta
 new file mode 100644
-index 0000000..9b9e6ba
+index 00000000..9b9e6ba5
 --- /dev/null
 +++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Events.cs.meta
 @@ -0,0 +1,2 @@
@@ -156,7 +156,7 @@ index 0000000..9b9e6ba
 +guid: ecbb7c667ba3dbe4b9c9aa5de776327a
 \ No newline at end of file
 diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Funnel.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.Funnel.cs
-index 8d14f6f..ed93186 100644
+index 8d14f6ff..ed93186b 100644
 --- a/Assets/_Project/Scripts/GameFlow/LevelFlow.Funnel.cs
 +++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Funnel.cs
 @@ -494,6 +494,7 @@ private void Fail(FailKind kind)
@@ -168,7 +168,7 @@ index 8d14f6f..ed93186 100644
          }
  
 diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Victory.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.Victory.cs
-index a4435e7..a26070d 100644
+index a4435e78..a26070d8 100644
 --- a/Assets/_Project/Scripts/GameFlow/LevelFlow.Victory.cs
 +++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Victory.cs
 @@ -156,6 +156,8 @@ private void ResolveWin()
@@ -181,7 +181,7 @@ index a4435e7..a26070d 100644
          }
  
 diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.cs
-index 8e69c31..d8870d6 100644
+index 8e69c31d..d8870d6f 100644
 --- a/Assets/_Project/Scripts/GameFlow/LevelFlow.cs
 +++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.cs
 @@ -481,6 +481,8 @@ public bool Undo()
@@ -203,7 +203,7 @@ index 8e69c31..d8870d6 100644
          }
 diff --git a/Assets/_Project/Tests/EditMode/TelemetryHooksTests.cs b/Assets/_Project/Tests/EditMode/TelemetryHooksTests.cs
 new file mode 100644
-index 0000000..d6588e5
+index 00000000..15b6dea6
 --- /dev/null
 +++ b/Assets/_Project/Tests/EditMode/TelemetryHooksTests.cs
 @@ -0,0 +1,155 @@
@@ -302,7 +302,7 @@ index 0000000..d6588e5
 +            Assert.That(s.LevelName, Is.EqualTo(rig.Flow.Level.Id));
 +            Assert.That(s.Variant, Is.EqualTo("base"));
 +            Assert.That(s.Attempt, Is.EqualTo(1));
-+            Assert.That(s.Band, Is.EqualTo(0));
++            Assert.That(s.Band, Is.EqualTo(rig.Flow.Level.Band ?? string.Empty), "difficulty.band (Q-B7-23 a)");
 +            LevelStateTests.Win(rig.Flow);
 +            LevelWon w = rec.Won!.Value;
 +            Assert.That(w.Level, Is.EqualTo(12));
@@ -364,7 +364,7 @@ index 0000000..d6588e5
 +}
 diff --git a/Assets/_Project/Tests/EditMode/TelemetryHooksTests.cs.meta b/Assets/_Project/Tests/EditMode/TelemetryHooksTests.cs.meta
 new file mode 100644
-index 0000000..4d9e266
+index 00000000..4d9e2661
 --- /dev/null
 +++ b/Assets/_Project/Tests/EditMode/TelemetryHooksTests.cs.meta
 @@ -0,0 +1,2 @@

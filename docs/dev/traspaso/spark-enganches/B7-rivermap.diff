@@ -1,6 +1,6 @@
 diff --git a/Assets/_Project/Scripts/UI/RiverMapScreen.Analytics.cs b/Assets/_Project/Scripts/UI/RiverMapScreen.Analytics.cs
 new file mode 100644
-index 0000000..d3bd378
+index 00000000..d3bd378f
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/RiverMapScreen.Analytics.cs
 @@ -0,0 +1,17 @@
@@ -23,7 +23,7 @@ index 0000000..d3bd378
 +}
 diff --git a/Assets/_Project/Scripts/UI/RiverMapScreen.Analytics.cs.meta b/Assets/_Project/Scripts/UI/RiverMapScreen.Analytics.cs.meta
 new file mode 100644
-index 0000000..2236f23
+index 00000000..2236f23a
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/RiverMapScreen.Analytics.cs.meta
 @@ -0,0 +1,2 @@
@@ -31,7 +31,7 @@ index 0000000..2236f23
 +guid: 1916a97a5f2f0214cba02288758e0005
 \ No newline at end of file
 diff --git a/Assets/_Project/Scripts/UI/RiverMapScreen.CatchUp.cs b/Assets/_Project/Scripts/UI/RiverMapScreen.CatchUp.cs
-index fc59110..41ae53f 100644
+index fc591108..41ae53fb 100644
 --- a/Assets/_Project/Scripts/UI/RiverMapScreen.CatchUp.cs
 +++ b/Assets/_Project/Scripts/UI/RiverMapScreen.CatchUp.cs
 @@ -427,6 +427,7 @@ private void SendCatchUpArrival(int level, bool skipped)
@@ -43,7 +43,7 @@ index fc59110..41ae53f 100644
      }
  }
 diff --git a/Assets/_Project/Scripts/UI/RiverMapScreen.Sequence.cs b/Assets/_Project/Scripts/UI/RiverMapScreen.Sequence.cs
-index 14277ea..cf0623a 100644
+index 14277ea3..cf0623ad 100644
 --- a/Assets/_Project/Scripts/UI/RiverMapScreen.Sequence.cs
 +++ b/Assets/_Project/Scripts/UI/RiverMapScreen.Sequence.cs
 @@ -563,6 +563,7 @@ private void ReportL10Fact()

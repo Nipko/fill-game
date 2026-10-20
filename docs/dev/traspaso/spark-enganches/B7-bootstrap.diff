@@ -1,5 +1,5 @@
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
-index 2e33886..a82fc01 100644
+index 573da86f..a8a430fd 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
 @@ -162,9 +162,10 @@ public bool SetUpDaily()
@@ -16,7 +16,7 @@ index 2e33886..a82fc01 100644
              var service = new DailyChallengeService(store, rules, clock, config, pool);
              service.DayEnded += OnDailyDayEnded; // antes del primer DiscardStale: el fail del día que se cierra al abrir (R-Q15 a)
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Streak.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Streak.cs
-index e3864fd..ba56e8a 100644
+index e3864fdb..ba56e8a7 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Streak.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Streak.cs
 @@ -203,7 +203,8 @@ public int TickStreakProbe()
@@ -31,7 +31,7 @@ index e3864fd..ba56e8a 100644
          /// <summary>
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
 new file mode 100644
-index 0000000..22438b3
+index 00000000..22438b34
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
 @@ -0,0 +1,232 @@
@@ -269,7 +269,7 @@ index 0000000..22438b3
 +}
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs.meta b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs.meta
 new file mode 100644
-index 0000000..ef202a1
+index 00000000..ef202a10
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs.meta
 @@ -0,0 +1,2 @@
@@ -277,10 +277,10 @@ index 0000000..ef202a1
 +guid: 71b3609166c55a0468daf378ac138eb0
 \ No newline at end of file
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
-index 9953143..900fef7 100644
+index 007f9074..271105f7 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
-@@ -980,6 +980,7 @@ public bool OpenRiverMap(MapOpenSource source)
+@@ -988,6 +988,7 @@ public bool OpenRiverMap(MapOpenSource source)
  
              int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
              _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
@@ -288,7 +288,7 @@ index 9953143..900fef7 100644
              _skipNextDelta = true;
              return true;
          }
-@@ -1002,6 +1003,7 @@ public bool CloseRiverMap()
+@@ -1010,6 +1011,7 @@ public bool CloseRiverMap()
              }
  
              _probe?.MapClose(stats, progress?.MapSeenLevel ?? 0);
@@ -296,7 +296,7 @@ index 9953143..900fef7 100644
              if (_app != null && _app.Screen != AppScreen.Level)
              {
                  _lobby?.SetCommerceOpen(HomeWindowCovered); // la ventanita de casa vuelve con el inicio a la vista (revisión de M4.2)
-@@ -1506,7 +1508,8 @@ private IEnumerator Start()
+@@ -1514,7 +1516,8 @@ private IEnumerator Start()
              // hilo principal. La cartera guarda por batch.Durable: cada mutación espera al escritor y escribe en síncrono.
              var batch = new ProfileSaveBatch(store);
              _saveBatch = batch;
@@ -306,7 +306,7 @@ index 9953143..900fef7 100644
              IProgressStore progress = LaunchOptions.ProgressStoreOverride ?? new ProfileProgressStore(profile, batch);
              _progress = progress;
  
-@@ -1539,9 +1542,10 @@ private IEnumerator Start()
+@@ -1547,9 +1550,10 @@ private IEnumerator Start()
                  batch);
              ISimulatedPurchasePresenter purchasePresenter = new BatchedPurchasePresenter(
                  LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art)), batch);
@@ -320,7 +320,7 @@ index 9953143..900fef7 100644
              _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
                  mapProgress: progress);
  
-@@ -1578,7 +1582,8 @@ private IEnumerator Start()
+@@ -1586,7 +1590,8 @@ private IEnumerator Start()
              BuildFruitSheet(); // F4: la ficha de una fruta, desde la línea de la victoria y desde Ajustes (GameBootstrap.Fruit.cs)
  
              // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
@@ -330,7 +330,7 @@ index 9953143..900fef7 100644
              {
                  AdGate = new InterstitialGate(_ads, _probe, _wallet), // AD_GATE tras «Siguiente» (B2-4)
                  StateStore = new ProfileLevelStateStore(profile, batch), // nivel en curso tras cada vertido (B2-5)
-@@ -1603,6 +1608,7 @@ private IEnumerator Start()
+@@ -1611,6 +1616,7 @@ private IEnumerator Start()
              _lobby.Bind(_app, _services);
              SetUpDaily(); // Reto del río (E2; GameBootstrap.Daily.cs): pool, servicio, tarjeta del inicio y partida
              SetUpStreak(); // Crecida, Hoja escudo y Canasta (E32; GameBootstrap.Streak.cs): el servicio, inyectado en el flujo
@@ -338,7 +338,7 @@ index 9953143..900fef7 100644
  
              int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
              if (requested <= 0 && !rebuilt)
-@@ -1724,6 +1730,7 @@ private void Update()
+@@ -1732,6 +1738,7 @@ private void Update()
  
          private void OnApplicationPause(bool paused)
          {
@@ -348,7 +348,7 @@ index 9953143..900fef7 100644
                  PersistNow("segundo plano");
 diff --git a/Assets/_Project/Tests/PlayMode/TelemetryBootTests.cs b/Assets/_Project/Tests/PlayMode/TelemetryBootTests.cs
 new file mode 100644
-index 0000000..122f2fc
+index 00000000..122f2fc3
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/TelemetryBootTests.cs
 @@ -0,0 +1,97 @@
@@ -451,7 +451,7 @@ index 0000000..122f2fc
 +}
 diff --git a/Assets/_Project/Tests/PlayMode/TelemetryBootTests.cs.meta b/Assets/_Project/Tests/PlayMode/TelemetryBootTests.cs.meta
 new file mode 100644
-index 0000000..ba19e8e
+index 00000000..ba19e8e9
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/TelemetryBootTests.cs.meta
 @@ -0,0 +1,2 @@

@@ -1,5 +1,5 @@
 diff --git a/Assets/_Project/Scripts/GameFlow/AppFlow.cs b/Assets/_Project/Scripts/GameFlow/AppFlow.cs
-index cd56b7d..0e05e60 100644
+index cd56b7d8..0e05e602 100644
 --- a/Assets/_Project/Scripts/GameFlow/AppFlow.cs
 +++ b/Assets/_Project/Scripts/GameFlow/AppFlow.cs
 @@ -428,6 +428,7 @@ public bool ExitToLobby()

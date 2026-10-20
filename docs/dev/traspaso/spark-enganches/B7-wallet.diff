@@ -1,5 +1,5 @@
 diff --git a/Assets/_Project/Scripts/Economy/Wallet.cs b/Assets/_Project/Scripts/Economy/Wallet.cs
-index cd87459..97678db 100644
+index cd87459a..97678db8 100644
 --- a/Assets/_Project/Scripts/Economy/Wallet.cs
 +++ b/Assets/_Project/Scripts/Economy/Wallet.cs
 @@ -1,6 +1,7 @@

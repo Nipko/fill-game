@@ -1,6 +1,6 @@
 diff --git a/Assets/_Project/Scripts/UI/GameScreen.Analytics.cs b/Assets/_Project/Scripts/UI/GameScreen.Analytics.cs
 new file mode 100644
-index 0000000..38de556
+index 00000000..38de556a
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/GameScreen.Analytics.cs
 @@ -0,0 +1,16 @@
@@ -22,7 +22,7 @@ index 0000000..38de556
 +}
 diff --git a/Assets/_Project/Scripts/UI/GameScreen.Analytics.cs.meta b/Assets/_Project/Scripts/UI/GameScreen.Analytics.cs.meta
 new file mode 100644
-index 0000000..4f5a25e
+index 00000000..4f5a25e2
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/GameScreen.Analytics.cs.meta
 @@ -0,0 +1,2 @@
@@ -30,10 +30,10 @@ index 0000000..4f5a25e
 +guid: 331a97ed05a45d348b3928a43982dd51
 \ No newline at end of file
 diff --git a/Assets/_Project/Scripts/UI/GameScreen.Arrival.cs b/Assets/_Project/Scripts/UI/GameScreen.Arrival.cs
-index 0c51ba9..f7edc73 100644
+index 1256badf..eecaf267 100644
 --- a/Assets/_Project/Scripts/UI/GameScreen.Arrival.cs
 +++ b/Assets/_Project/Scripts/UI/GameScreen.Arrival.cs
-@@ -277,6 +277,7 @@ private void SendStopArrive(ArrivalStrip strip)
+@@ -304,6 +304,7 @@ private void SendStopArrive(ArrivalStrip strip)
              StopArriveCount++;
              LastStopArriveSkipped = strip.Skipped;
              _probe.StopArrive(strip.Level, stop, strip.Skipped);
@@ -42,7 +42,7 @@ index 0c51ba9..f7edc73 100644
              _actions.MarkMapSeen(strip.Level);
          }
 diff --git a/Assets/_Project/Scripts/UI/GameScreen.Notices.cs b/Assets/_Project/Scripts/UI/GameScreen.Notices.cs
-index 5e9de65..fa71fd3 100644
+index 5e9de659..fa71fd31 100644
 --- a/Assets/_Project/Scripts/UI/GameScreen.Notices.cs
 +++ b/Assets/_Project/Scripts/UI/GameScreen.Notices.cs
 @@ -1178,6 +1178,7 @@ private void ShowFruitNewNow(int fruit)
@@ -54,10 +54,10 @@ index 5e9de65..fa71fd3 100644
  
          /// <summary>
 diff --git a/Assets/_Project/Scripts/UI/GameScreen.Victory.cs b/Assets/_Project/Scripts/UI/GameScreen.Victory.cs
-index 9f75c69..6673c6c 100644
+index 4276dc6f..1cd274ce 100644
 --- a/Assets/_Project/Scripts/UI/GameScreen.Victory.cs
 +++ b/Assets/_Project/Scripts/UI/GameScreen.Victory.cs
-@@ -612,6 +612,7 @@ private void SendRiverFactShown(LevelFlow flow)
+@@ -1055,6 +1055,7 @@ private void SendRiverFactShown(LevelFlow flow)
              LastRiverFactId = factId;
              LastRiverFactDismissedMs = dismissedMs;
              _probe.RiverFactShown(flow.LevelNumber, factId, dismissedMs);
@@ -67,7 +67,7 @@ index 9f75c69..6673c6c 100644
          /// <summary>
 diff --git a/Assets/_Project/Scripts/UI/UiAnalytics.cs b/Assets/_Project/Scripts/UI/UiAnalytics.cs
 new file mode 100644
-index 0000000..290fde7
+index 00000000..290fde7b
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/UiAnalytics.cs
 @@ -0,0 +1,59 @@
@@ -132,7 +132,7 @@ index 0000000..290fde7
 +}
 diff --git a/Assets/_Project/Scripts/UI/UiAnalytics.cs.meta b/Assets/_Project/Scripts/UI/UiAnalytics.cs.meta
 new file mode 100644
-index 0000000..6220983
+index 00000000..62209835
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/UiAnalytics.cs.meta
 @@ -0,0 +1,2 @@

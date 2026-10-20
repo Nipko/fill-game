@@ -1,5 +1,5 @@
 diff --git a/Assets/_Project/Scripts/Economy/AF.Economy.asmdef b/Assets/_Project/Scripts/Economy/AF.Economy.asmdef
-index b862454..a18be22 100644
+index b8624544..a18be229 100644
 --- a/Assets/_Project/Scripts/Economy/AF.Economy.asmdef
 +++ b/Assets/_Project/Scripts/Economy/AF.Economy.asmdef
 @@ -3,7 +3,8 @@
@@ -13,7 +13,7 @@ index b862454..a18be22 100644
    "includePlatforms": [],
    "excludePlatforms": [],
 diff --git a/Assets/_Project/Scripts/GameFlow/AF.GameFlow.asmdef b/Assets/_Project/Scripts/GameFlow/AF.GameFlow.asmdef
-index 86d4bfd..30d4ab3 100644
+index 86d4bfd6..30d4ab30 100644
 --- a/Assets/_Project/Scripts/GameFlow/AF.GameFlow.asmdef
 +++ b/Assets/_Project/Scripts/GameFlow/AF.GameFlow.asmdef
 @@ -7,7 +7,8 @@
@@ -27,7 +27,7 @@ index 86d4bfd..30d4ab3 100644
    "includePlatforms": [],
    "excludePlatforms": [],
 diff --git a/Assets/_Project/Scripts/UI/AF.UI.asmdef b/Assets/_Project/Scripts/UI/AF.UI.asmdef
-index 498fb55..136c748 100644
+index 498fb559..136c7484 100644
 --- a/Assets/_Project/Scripts/UI/AF.UI.asmdef
 +++ b/Assets/_Project/Scripts/UI/AF.UI.asmdef
 @@ -17,6 +17,12 @@
@@ -44,7 +44,7 @@ index 498fb55..136c748 100644
      "Unity.InputSystem",
      "Unity.TextMeshPro"
 diff --git a/Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef b/Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef
-index 5f5d8a8..0eb3694 100644
+index 5f5d8a8a..0eb3694b 100644
 --- a/Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef
 +++ b/Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef
 @@ -21,7 +21,11 @@
@@ -61,7 +61,7 @@ index 5f5d8a8..0eb3694 100644
    "includePlatforms": [
      "Editor"
 diff --git a/Assets/_Project/Tests/PlayMode/AF.Tests.PlayMode.asmdef b/Assets/_Project/Tests/PlayMode/AF.Tests.PlayMode.asmdef
-index 4ed932a..2820ec3 100644
+index 4ed932ae..2820ec30 100644
 --- a/Assets/_Project/Tests/PlayMode/AF.Tests.PlayMode.asmdef
 +++ b/Assets/_Project/Tests/PlayMode/AF.Tests.PlayMode.asmdef
 @@ -22,7 +22,11 @@
