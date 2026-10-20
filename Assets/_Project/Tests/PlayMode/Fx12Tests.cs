@@ -134,6 +134,7 @@ namespace AF.Tests.PlayMode
                 CheckWorld(map, boot.RiverMapData!, "max " + max);
                 CheckMarkers(map, boot.RiverMapData!, boot.RiverRoutes!, "max " + max);
                 CheckBends(map, boot.RiverMapData!, "max " + max, max >= 690); // FX14: el tramo de la meta (691-700), sin codos cerrados
+                CheckStopsOnTheAxis(map, boot.RiverMapData!, boot.RiverRoutes!, "max " + max, max >= 690);
 
                 map.SetView(MapView.Basin);
                 map.Tick(16f);
@@ -142,6 +143,66 @@ namespace AF.Tests.PlayMode
                 {
                     Assert.That(ribbon.Curve, Is.False, "max " + max + ", Cuenca: " + ribbon.name + " sin curva");
                 }
+            }
+
+            Assert.That(s_failures, Is.Empty, string.Join(" | ", s_failures));
+        }
+
+        /// <summary>
+        /// Revisión de FX14: «ponerse al día» normal (lo visto por debajo de <c>max_level</c>) que cruza de un tramo a otro, el caso
+        /// que cambia la regla de las boyas ancladas (<c>BuoyAnchorFirstLeg</c>: desde el tramo de la canoa al empezar): abierto en
+        /// el Mundo desde el inicio con lo visto 55 y max 62 (la llegada del 60) y con 685 y 692 (la de Tambo, al tramo de la meta),
+        /// en varios fotogramas del viaje, las paradas, las boyas y la canoa quedan sobre el río dibujado
+        /// (<see cref="MaxMarkerApartWidths"/>).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CatchUpAcrossALeg_WorldView_TheCanoeAndTheBuoysStayOnTheDrawnRiver()
+        {
+            s_failures.Clear();
+            GameScreen.SimulatedScreen = Fx10Tests.Phone;
+            Profile profile = Wallet.NewProfile(new ManualClock(T0));
+            profile.Progress.NextLevel = 59;
+            profile.Progress.MaxLevel = 58;
+            profile.Progress.MapSeenLevel = 58;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.True);
+            RiverMapScreen map = boot.RiverMapView!;
+            yield return null;
+            foreach ((int seen, int max) in new[] { (55, 62), (685, 692) })
+            {
+                string at = "ponerse al día de " + seen + " a " + max;
+                map.Close();
+                map.Open(MapOpenSource.Lobby, boot.RiverMapData!, boot.RiverRoutes!, boot.RiverStops!,
+                    new MemoryProgressStore(max + 1, max, seen), max, false);
+                Assert.That(map.View, Is.EqualTo(MapView.World), at + ": premisa, abre en el Mundo");
+                Assert.That(map.CatchingUp, Is.True, at + ": premisa, «ponerse al día»");
+                int firstLeg = map.FrontStop;
+                int checks = 0;
+                bool canoe = false;
+                for (int frame = 0; frame < 2000 && (map.CatchingUp || map.CatchUpFading); frame++)
+                {
+                    map.Tick(16f);
+                    if (frame % 8 != 0)
+                    {
+                        continue;
+                    }
+
+                    Canvas.ForceUpdateCanvases();
+                    string where = at + ", fotograma " + frame + " (tramo " + map.FrontStop + ")";
+                    string? off = MarkersOffTheRiver(map, boot.RiverMapData!, boot.RiverRoutes!, where, out var what);
+                    Expect(off == null, where + ": las paradas, las boyas y la canoa, sobre el río dibujado: " + off);
+                    canoe |= what.Contains("canoa");
+                    checks++;
+                }
+
+                Assert.That(map.CatchingUp, Is.False, at + ": el viaje terminó");
+                Assert.That(map.FrontStop, Is.GreaterThan(firstLeg), at + ": premisa, el viaje cruza de un tramo a otro");
+                Assert.That(checks, Is.GreaterThanOrEqualTo(5), at + ": fotogramas comprobados");
+                Assert.That(canoe, Is.True, at + ": la canoa, comprobada");
+                map.Tick(16f);
+                Canvas.ForceUpdateCanvases();
+                CheckMarkers(map, boot.RiverMapData!, boot.RiverRoutes!, at + ", al acabar");
             }
 
             Assert.That(s_failures, Is.Empty, string.Join(" | ", s_failures));
@@ -177,6 +238,7 @@ namespace AF.Tests.PlayMode
             CheckWorld(map, boot.RiverMapData!, at);
             CheckMarkers(map, boot.RiverMapData!, boot.RiverRoutes!, at);
             CheckBends(map, boot.RiverMapData!, at, true);
+            CheckStopsOnTheAxis(map, boot.RiverMapData!, boot.RiverRoutes!, at, true);
             Assert.That(s_failures, Is.Empty, string.Join(" | ", s_failures));
         }
 
@@ -528,6 +590,50 @@ namespace AF.Tests.PlayMode
         /// dibujado de ese vidrio. Las boyas y la canoa, en la línea cuya polilínea pasa por ellas (en una boca, la de eje más cerca).
         /// </summary>
         public const float MaxMarkerApartWidths = 0.5f;
+
+        /// <summary>
+        /// Revisión de FX14: lo más que el punto real de una parada (el nudo de sus líneas finas) queda del eje dibujado del vidrio de
+        /// su línea en la vista Mundo, en dp [P]. Con <see cref="RiverRibbonGraphic.CurveAnchorWidths"/> anchos (0,45; 3,6 dp a
+        /// 8 dp de ancho) la parada de Tambo quedaba al borde del agua en el fin de contenido del 700; las paradas son anclas con
+        /// <see cref="RiverRibbonGraphic.CurveStopAnchorDp"/> de holgura.
+        /// </summary>
+        public const float MaxStopApartDp = 1.5f;
+
+        // Revisión de FX14: cada parada, a ≤ MaxStopApartDp del eje dibujado del vidrio de su línea. Con «strict», se exige (el tramo
+        // de la meta); si no, solo el registro.
+        private static void CheckStopsOnTheAxis(RiverMapScreen map, RiverMap data, RiverRoutes routes, string at, bool strict)
+        {
+            float worst = 0f;
+            string worstAt = "ninguna";
+            int checkedCount = 0;
+            for (int i = 0; i < map.StopMarkerCount; i++)
+            {
+                int n = map.StopMarkerStop(i);
+                RiverStopRoute? route = routes.At(n);
+                if (route == null || route.At.Line < 0 || route.At.Line >= data.Lines.Count)
+                {
+                    continue;
+                }
+
+                RiverRibbonGraphic glass = map.Glass(route.At.Line);
+                if (!glass.gameObject.activeSelf || glass.LastSectionPointCount < 2)
+                {
+                    continue;
+                }
+
+                checkedCount++;
+                float apart = DistanceToSections(glass, RiverMapScreen.PlacePoint(data, route.At)) * glass.Space.DpPerUnit;
+                if (apart > worst)
+                {
+                    worst = apart;
+                    worstAt = "parada " + n + " en " + glass.name + ", a " + apart.ToString("0.00", CultureInfo.InvariantCulture) + " dp";
+                }
+            }
+
+            Debug.Log("AF_FX14 " + at + ": " + checkedCount + " paradas; la más apartada del eje dibujado, " + worstAt);
+            Assert.That(checkedCount, Is.GreaterThan(0), at + ": hay paradas sobre las líneas");
+            Expect(!strict || worst <= MaxStopApartDp, at + ": las paradas, sobre el eje dibujado: " + worstAt);
+        }
 
         private static void CheckMarkers(RiverMapScreen map, RiverMap data, RiverRoutes routes, string at)
         {

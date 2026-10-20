@@ -671,7 +671,8 @@ namespace AF.UI
             ApplyTexts(playAvailable);
             MapView view = MapView.World;
             ModesOpen(source);
-            ApplyLineAnchors(map, routes, stops, progress.MaxLevel, progress.MapSeenLevel); // FX12: el río dibujado pasa por lo que se coloca sobre él (FX14: tras ModesOpen)
+            // FX12: el río dibujado pasa por lo que se coloca sobre él (FX14: tras ModesOpen).
+            ApplyLineAnchors(map, routes, stops, progress.MaxLevel, progress.MapSeenLevel);
             SequenceOpen(source, ref view);
             NorthUpOpen();
             ProgressOpen(progress);
@@ -931,14 +932,14 @@ namespace AF.UI
                 _lineAnchorsMax = max;
                 _lineAnchorsWorld = _world;
                 _lineAnchorsFirstLeg = firstLeg;
-                var lists = new List<(float S, Vector2 Point)>?[map.Lines.Count];
+                var lists = new List<(float S, Vector2 Point, bool Tight)>?[map.Lines.Count];
                 for (int n = 0; n < routes.Count; n++)
                 {
                     RiverStopRoute? route = routes.At(n);
                     RiverStop? stop = stops.At(n);
                     if (route != null && stop != null && stop.World <= _world) // las de los mundos abiertos, como sus mini cuias
                     {
-                        AddAnchor(map, lists, route.At);
+                        AddAnchor(map, lists, route.At, true); // revisión de FX14: la parada, a ≤ CurveStopAnchorDp
                     }
                 }
 
@@ -947,7 +948,7 @@ namespace AF.UI
                 RiverStopRoute? goal = routes.Goal;
                 if (goal != null && SourceMarkDue(routes, max))
                 {
-                    AddAnchor(map, lists, goal.At);
+                    AddAnchor(map, lists, goal.At, true);
                 }
 
                 for (int n = Mathf.Max(1, firstLeg); n <= front; n++)
@@ -955,7 +956,7 @@ namespace AF.UI
                     RiverStopRoute? route = routes.At(n);
                     for (int i = 0; route != null && i < BuoysPerLeg; i++)
                     {
-                        AddAnchor(map, lists, RoutePlace(map, route, (i + 1) / (float)BuoysPerLeg));
+                        AddAnchor(map, lists, RoutePlace(map, route, (i + 1) / (float)BuoysPerLeg), false);
                     }
                 }
 
@@ -991,14 +992,15 @@ namespace AF.UI
             return FrontStopOf(RiverJourney.CatchUpFrom(ModesCatchUpSeen(seen), max));
         }
 
-        private static void AddAnchor(RiverMap map, List<(float S, Vector2 Point)>?[] lists, RiverMapPlace place)
+        private static void AddAnchor(RiverMap map, List<(float S, Vector2 Point, bool Tight)>?[] lists, RiverMapPlace place,
+            bool tight)
         {
             if (place.Line < 0 || place.Line >= lists.Length)
             {
                 return;
             }
 
-            (lists[place.Line] ??= new List<(float S, Vector2 Point)>()).Add((place.S, PlacePoint(map, place)));
+            (lists[place.Line] ??= new List<(float S, Vector2 Point, bool Tight)>()).Add((place.S, PlacePoint(map, place), tight));
         }
 
         /// <summary>
