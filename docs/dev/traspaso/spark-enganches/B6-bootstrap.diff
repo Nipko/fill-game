@@ -1,0 +1,160 @@
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.SessionsProfile.cs b/Assets/_Project/Scripts/UI/GameBootstrap.SessionsProfile.cs
+new file mode 100644
+index 0000000..893fa8e
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.SessionsProfile.cs
+@@ -0,0 +1,23 @@
++#nullable enable
++using AF.GameFlow;
++using AF.LiveOps;
++using AF.Save;
++
++namespace AF.UI
++{
++    /// <summary>
++    /// Los almacenes de B6 sobre el perfil (parche B6-bootstrap; necesita B6-profile, que trae <see cref="ProfileSessionStore"/> y
++    /// <see cref="ProfilePushSettingsStore"/>): implementa el gancho <c>CreateProfileSessionStores</c> de
++    /// <c>GameBootstrap.Sessions.cs</c>.
++    /// </summary>
++    public sealed partial class GameBootstrap
++    {
++        // El mismo perfil que la cartera y la vía síncrona del lote (ProfileSaveBatch.Durable), la misma que la cartera:
++        // stats.last_seen_at llega al disco antes que el Regalo de regreso, y una ausencia nunca se cobra dos veces.
++        static partial void CreateProfileSessionStores(Profile profile, ProfileSaveBatch batch, ref ISessionStore? sessions, ref IPushSettingsStore? push)
++        {
++            sessions = new ProfileSessionStore(profile, batch.Durable);
++            push = new ProfilePushSettingsStore(profile, batch.Durable);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.SessionsProfile.cs.meta b/Assets/_Project/Scripts/UI/GameBootstrap.SessionsProfile.cs.meta
+new file mode 100644
+index 0000000..2d6a680
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.SessionsProfile.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 005f600cba8f50e4e9d9157bafada68a
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index 9953143..26420c5 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -1603,6 +1603,7 @@ private IEnumerator Start()
+             _lobby.Bind(_app, _services);
+             SetUpDaily(); // Reto del río (E2; GameBootstrap.Daily.cs): pool, servicio, tarjeta del inicio y partida
+             SetUpStreak(); // Crecida, Hoja escudo y Canasta (E32; GameBootstrap.Streak.cs): el servicio, inyectado en el flujo
++            SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
+ 
+             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
+             if (requested <= 0 && !rebuilt)
+diff --git a/Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef b/Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef
+index 5f5d8a8..80a4e78 100644
+--- a/Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef
++++ b/Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef
+@@ -13,6 +13,7 @@
+     "AF.Platform",
+     "AF.Save",
+     "AF.Economy",
++    "AF.LiveOps",
+     "AF.Boosters",
+     "AF.Ads",
+     "AF.IAP",
+diff --git a/Assets/_Project/Tests/EditMode/GameBootstrapSessionsTests.cs b/Assets/_Project/Tests/EditMode/GameBootstrapSessionsTests.cs
+new file mode 100644
+index 0000000..c9753d8
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/GameBootstrapSessionsTests.cs
+@@ -0,0 +1,83 @@
++#nullable enable
++using System;
++using AF.Economy;
++using AF.GameFlow;
++using AF.LiveOps;
++using AF.Platform;
++using AF.Save;
++using AF.UI;
++using NUnit.Framework;
++
++namespace AF.Tests.EditMode
++{
++    /// <summary>
++    /// Arranque de B6 (parche B6-bootstrap, con B6-profile): <see cref="GameBootstrap.CreateSessionStores"/> con los almacenes de los
++    /// tests, con los del perfil en desarrollo y en release, y una sesión con su Regalo de regreso en el mismo perfil que la cartera.
++    /// </summary>
++    public sealed class GameBootstrapSessionsTests
++    {
++        private static readonly DateTime T0 = new DateTime(2026, 10, 20, 15, 0, 0, DateTimeKind.Utc);
++
++        [TearDown]
++        public void TearDown()
++        {
++            GameBootstrap.ResetSessionOverrides();
++        }
++
++        [Test]
++        public void WithTheTestStores_UsesThem()
++        {
++            var profile = Wallet.NewProfile(new ManualClock(T0));
++            var batch = new ProfileSaveBatch(new MemoryProfileStore());
++            var sessions = new InMemorySessionStore();
++            var push = new InMemoryPushSettingsStore();
++            GameBootstrap.SessionStoreOverride = sessions;
++            GameBootstrap.PushSettingsStoreOverride = push;
++
++            Assert.That(GameBootstrap.CreateSessionStores(profile, batch, false, out ISessionStore? s, out IPushSettingsStore? p, out bool inMemory), Is.True);
++            Assert.That(s, Is.SameAs(sessions));
++            Assert.That(p, Is.SameAs(push));
++            Assert.That(inMemory, Is.False);
++        }
++
++        [Test]
++        public void WithTheProfileStores_DevelopmentAndRelease_UseTheProfile()
++        {
++            var clock = new ManualClock(T0);
++            Profile profile = Wallet.NewProfile(clock);
++            var disk = new MemoryProfileStore();
++            var batch = new ProfileSaveBatch(disk);
++
++            Assert.That(GameBootstrap.CreateSessionStores(profile, batch, true, out ISessionStore? dev, out _, out bool devInMemory), Is.True);
++            Assert.That(GameBootstrap.CreateSessionStores(profile, batch, false, out ISessionStore? release, out IPushSettingsStore? push, out bool releaseInMemory), Is.True);
++            Assert.That(devInMemory || releaseInMemory, Is.False, "B6-bootstrap: los almacenes son los del perfil");
++            Assert.That(dev, Is.InstanceOf<ProfileSessionStore>());
++            Assert.That(push, Is.InstanceOf<ProfilePushSettingsStore>());
++
++            new SessionTracker(release!, clock).OnColdStart();
++            Assert.That(profile.Stats.Sessions, Is.EqualTo(1));
++            Assert.That(disk.Load().Profile!.Stats.Sessions, Is.EqualTo(1), "guardado por la vía síncrona del lote");
++            Assert.That(disk.Load().Profile!.Stats.LastSeenAt, Is.EqualTo(T0));
++        }
++
++        [Test]
++        public void ASessionAfterAWeek_PaysTheGiftInTheSameProfile()
++        {
++            var clock = new ManualClock(T0);
++            Profile profile = Wallet.NewProfile(clock);
++            profile.Stats.LastSeenAt = T0.AddDays(-7);
++            var disk = new MemoryProfileStore();
++            var batch = new ProfileSaveBatch(disk);
++            var wallet = new Wallet(profile, batch.Durable, clock);
++            GameBootstrap.CreateSessionStores(profile, batch, false, out ISessionStore? sessions, out _, out _);
++            SessionStart start = new SessionTracker(sessions!, clock).OnColdStart();
++            ComebackOutcome outcome = new ComebackService(wallet).OnSessionStart(in start, 0);
++
++            Assert.That(outcome.Granted, Is.True);
++            Profile saved = disk.Load().Profile!;
++            Assert.That(saved.Wallet.Seeds, Is.EqualTo(ComebackGift.Default.Seeds));
++            Assert.That(saved.Stock.ExtraCuia, Is.EqualTo(1));
++            Assert.That(saved.Stats.LastSeenAt, Is.EqualTo(T0));
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/EditMode/GameBootstrapSessionsTests.cs.meta b/Assets/_Project/Tests/EditMode/GameBootstrapSessionsTests.cs.meta
+new file mode 100644
+index 0000000..ee8a361
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/GameBootstrapSessionsTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 6ca9ef498ca1d7646a19dd312b346659
+\ No newline at end of file

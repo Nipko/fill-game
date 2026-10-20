@@ -1,0 +1,475 @@
+diff --git a/Assets/_Project/Scripts/LiveOps/ProfileSessionStore.cs b/Assets/_Project/Scripts/LiveOps/ProfileSessionStore.cs
+new file mode 100644
+index 0000000..6b91fc1
+--- /dev/null
++++ b/Assets/_Project/Scripts/LiveOps/ProfileSessionStore.cs
+@@ -0,0 +1,123 @@
++#nullable enable
++using System;
++using AF.Save;
++
++namespace AF.LiveOps
++{
++    /// <summary>
++    /// <see cref="ISessionStore"/> del juego (parche B6-profile): <c>stats.sessions</c>, <c>stats.last_seen_at</c> y
++    /// <c>stats.last_win_at</c> [P] del mismo <see cref="Profile"/> que la cartera, guardado con el mismo <see cref="IProfileStore"/>
++    /// (en el juego, la vía síncrona del lote, <c>ProfileSaveBatch.Durable</c>). Así <c>last_seen_at</c> = la vuelta llega al disco
++    /// antes que el Regalo de regreso, en el mismo archivo, y una ausencia nunca se cobra dos veces (<see cref="ComebackService"/>).
++    /// Como <see cref="ProfileDailyChallengeStore"/>, <see cref="Save"/> no lanza por un fallo de escritura: el cambio sigue en el
++    /// perfil en memoria y sale con el siguiente guardado.
++    /// </summary>
++    public sealed class ProfileSessionStore : ISessionStore
++    {
++        private readonly Profile _profile;
++        private readonly IProfileStore _store;
++        private readonly SessionRecord _live;
++
++        /// <summary>Crea el almacén sobre <paramref name="profile"/>, que se guarda en <paramref name="store"/>.</summary>
++        public ProfileSessionStore(Profile profile, IProfileStore store)
++        {
++            _profile = profile ?? throw new ArgumentNullException(nameof(profile));
++            _store = store ?? throw new ArgumentNullException(nameof(store));
++            _live = new SessionRecord
++            {
++                Sessions = Math.Max(0, profile.Stats.Sessions),
++                LastSeenAt = profile.Stats.LastSeenAt,
++                LastWinAt = profile.Stats.LastWinAt,
++            };
++        }
++
++        /// <summary>El último guardado no llegó al disco.</summary>
++        public bool PendingSave { get; private set; }
++
++        /// <inheritdoc />
++        public SessionRecord Load()
++        {
++            return _live;
++        }
++
++        /// <inheritdoc />
++        public void Save(SessionRecord record)
++        {
++            if (record == null)
++            {
++                throw new ArgumentNullException(nameof(record));
++            }
++
++            if (!ReferenceEquals(record, _live))
++            {
++                _live.Sessions = record.Sessions;
++                _live.LastSeenAt = record.LastSeenAt;
++                _live.LastWinAt = record.LastWinAt;
++            }
++
++            _profile.Stats.Sessions = _live.Sessions;
++            _profile.Stats.LastSeenAt = _live.LastSeenAt;
++            _profile.Stats.LastWinAt = _live.LastWinAt;
++            PendingSave = !_store.TrySave(_profile);
++        }
++    }
++
++    /// <summary>
++    /// <see cref="IPushSettingsStore"/> del juego (parche B6-profile): <c>settings.push</c> del perfil (08 §4.3), con el mismo
++    /// <see cref="IProfileStore"/>. <see cref="Save"/> no lanza por un fallo de escritura.
++    /// </summary>
++    public sealed class ProfilePushSettingsStore : IPushSettingsStore
++    {
++        private readonly Profile _profile;
++        private readonly IProfileStore _store;
++        private readonly PushSettingsRecord _live;
++
++        /// <summary>Crea el almacén sobre <paramref name="profile"/>, que se guarda en <paramref name="store"/>.</summary>
++        public ProfilePushSettingsStore(Profile profile, IProfileStore store)
++        {
++            _profile = profile ?? throw new ArgumentNullException(nameof(profile));
++            _store = store ?? throw new ArgumentNullException(nameof(store));
++            PushSettingsData push = profile.Settings.Push;
++            _live = new PushSettingsRecord
++            {
++                PrePromptShown = push.PrePromptShown,
++                Granted = push.Granted,
++                PrePromptAt = push.PrePromptAt,
++                SecondPromptShown = push.SecondPromptShown,
++            };
++        }
++
++        /// <summary>El último guardado no llegó al disco.</summary>
++        public bool PendingSave { get; private set; }
++
++        /// <inheritdoc />
++        public PushSettingsRecord Load()
++        {
++            return _live;
++        }
++
++        /// <inheritdoc />
++        public void Save(PushSettingsRecord record)
++        {
++            if (record == null)
++            {
++                throw new ArgumentNullException(nameof(record));
++            }
++
++            if (!ReferenceEquals(record, _live))
++            {
++                _live.PrePromptShown = record.PrePromptShown;
++                _live.Granted = record.Granted;
++                _live.PrePromptAt = record.PrePromptAt;
++                _live.SecondPromptShown = record.SecondPromptShown;
++            }
++
++            PushSettingsData push = _profile.Settings.Push;
++            push.PrePromptShown = _live.PrePromptShown;
++            push.Granted = _live.Granted;
++            push.PrePromptAt = _live.PrePromptAt;
++            push.SecondPromptShown = _live.SecondPromptShown;
++            PendingSave = !_store.TrySave(_profile);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/LiveOps/ProfileSessionStore.cs.meta b/Assets/_Project/Scripts/LiveOps/ProfileSessionStore.cs.meta
+new file mode 100644
+index 0000000..87ab937
+--- /dev/null
++++ b/Assets/_Project/Scripts/LiveOps/ProfileSessionStore.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: c03033d10baea4d4b860813e4ee4fcfa
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/LiveOps/Tests/ProfileSessionStoreTests.cs b/Assets/_Project/Scripts/LiveOps/Tests/ProfileSessionStoreTests.cs
+new file mode 100644
+index 0000000..d15c1fb
+--- /dev/null
++++ b/Assets/_Project/Scripts/LiveOps/Tests/ProfileSessionStoreTests.cs
+@@ -0,0 +1,141 @@
++#nullable enable
++using System;
++using AF.Economy;
++using AF.Platform;
++using AF.Save;
++using NUnit.Framework;
++
++namespace AF.LiveOps.Tests
++{
++    /// <summary>
++    /// Parche B6-profile: <c>settings.push</c> y <c>stats.last_seen_at</c> / <c>last_win_at</c> [P] en el perfil (08 §4.3), su ida
++    /// y vuelta por <see cref="ProfileJson"/> y los almacenes <see cref="ProfileSessionStore"/> y <see cref="ProfilePushSettingsStore"/>.
++    /// </summary>
++    public sealed class ProfileSessionStoreTests
++    {
++        private static readonly DateTime T0 = new DateTime(2026, 10, 20, 15, 0, 0, DateTimeKind.Utc);
++
++        [Test]
++        public void ANewProfile_WritesNoneOfTheNewKeys()
++        {
++            Profile p = Wallet.NewProfile(new ManualClock(T0));
++            string json = ProfileJson.Serialize(p);
++            StringAssert.DoesNotContain("\"push\"", json, "settings.push solo cuando deja su default");
++            StringAssert.DoesNotContain("last_seen_at", json);
++            StringAssert.DoesNotContain("last_win_at", json);
++            StringAssert.Contains("\"sessions\":0", json.Replace(" ", ""));
++        }
++
++        [Test]
++        public void TheNewKeys_RoundTrip()
++        {
++            Profile p = Wallet.NewProfile(new ManualClock(T0));
++            p.Stats.Sessions = 7;
++            p.Stats.LastSeenAt = T0.AddDays(-8);
++            p.Stats.LastWinAt = T0.AddDays(-9);
++            p.Settings.Push.PrePromptShown = true;
++            p.Settings.Push.PrePromptAt = T0.AddDays(-20);
++            p.Settings.Push.SecondPromptShown = true;
++            p.Settings.Push.Granted = true;
++
++            string json = ProfileJson.Serialize(p);
++            StringAssert.Contains("\"push\"", json);
++            StringAssert.Contains("\"pre_prompt_shown\"", json);
++            StringAssert.Contains("\"granted\"", json);
++            Profile back = ProfileJson.Deserialize(json);
++            Assert.That(back.Stats.Sessions, Is.EqualTo(7));
++            Assert.That(back.Stats.LastSeenAt, Is.EqualTo(T0.AddDays(-8)));
++            Assert.That(back.Stats.LastWinAt, Is.EqualTo(T0.AddDays(-9)));
++            Assert.That(back.Settings.Push.PrePromptShown, Is.True);
++            Assert.That(back.Settings.Push.PrePromptAt, Is.EqualTo(T0.AddDays(-20)));
++            Assert.That(back.Settings.Push.SecondPromptShown, Is.True);
++            Assert.That(back.Settings.Push.Granted, Is.True);
++            Assert.That(ProfileJson.Serialize(back), Is.EqualTo(json), "estable");
++        }
++
++        [Test]
++        public void BadValues_TakeTheirDefault_WithoutCorruptingTheProfile()
++        {
++            Profile p = Wallet.NewProfile(new ManualClock(T0));
++            p.Stats.LastSeenAt = T0.AddHours(1);
++            p.Settings.Push.Granted = true;
++            string json = ProfileJson.Serialize(p)
++                .Replace(ProfileJsonTimestamp(T0.AddHours(1)), "ayer")
++                .Replace("\"granted\": true", "\"granted\": \"sí\"")
++                .Replace("\"granted\":true", "\"granted\":\"sí\"");
++            Profile back = ProfileJson.Deserialize(json);
++            Assert.That(back.Stats.LastSeenAt, Is.Null);
++            Assert.That(back.Settings.Push.Granted, Is.False);
++        }
++
++        [Test]
++        public void SessionStore_WritesStatsAndSaves()
++        {
++            var clock = new ManualClock(T0);
++            Profile p = Wallet.NewProfile(clock);
++            p.Stats.Sessions = 3;
++            var disk = new MemoryProfileStore();
++            var store = new ProfileSessionStore(p, disk);
++            var tracker = new SessionTracker(store, clock);
++            tracker.OnColdStart();
++            Assert.That(p.Stats.Sessions, Is.EqualTo(4));
++            Assert.That(p.Stats.LastSeenAt, Is.EqualTo(T0));
++            Assert.That(disk.SaveCount, Is.EqualTo(1));
++            tracker.OnVictory();
++            Assert.That(p.Stats.LastWinAt, Is.EqualTo(T0));
++            Assert.That(ProfileJson.Deserialize(disk.Json!).Stats.Sessions, Is.EqualTo(4));
++            Assert.That(store.PendingSave, Is.False);
++        }
++
++        [Test]
++        public void PushStore_WritesSettingsPushAndSaves()
++        {
++            Profile p = Wallet.NewProfile(new ManualClock(T0));
++            var disk = new MemoryProfileStore();
++            var store = new ProfilePushSettingsStore(p, disk);
++            PushSettingsRecord r = store.Load();
++            r.PrePromptShown = true;
++            r.PrePromptAt = T0;
++            store.Save(r);
++            Assert.That(p.Settings.Push.PrePromptShown, Is.True);
++            Assert.That(ProfileJson.Deserialize(disk.Json!).Settings.Push.PrePromptAt, Is.EqualTo(T0));
++
++            var copy = new PushSettingsRecord { Granted = true };
++            store.Save(copy);
++            Assert.That(store.Load().Granted, Is.True, "otra instancia se copia en el registro vivo");
++            Assert.That(store.Load().PrePromptShown, Is.False);
++        }
++
++        [Test]
++        public void TheComeback_IsPaidAfterLastSeenIsOnDisk_InTheSameProfile()
++        {
++            var clock = new ManualClock(T0);
++            Profile p = Wallet.NewProfile(clock);
++            p.Stats.LastSeenAt = T0.AddDays(-8);
++            var disk = new MemoryProfileStore();
++            var wallet = new Wallet(p, disk, clock);
++            var tracker = new SessionTracker(new ProfileSessionStore(p, disk), clock);
++            SessionStart start = tracker.OnColdStart();
++            ComebackOutcome o = new ComebackService(wallet).OnSessionStart(in start, 0);
++            Assert.That(o.Granted, Is.True);
++
++            // Al reabrir con lo que quedó en disco, la ausencia ya no cuenta.
++            Profile reopened = ProfileJson.Deserialize(disk.Json!);
++            Assert.That(reopened.Stats.LastSeenAt, Is.EqualTo(T0));
++            Assert.That(reopened.Wallet.Seeds, Is.EqualTo(p.Wallet.Seeds));
++            var tracker2 = new SessionTracker(new ProfileSessionStore(reopened, disk), clock);
++            SessionStart again = tracker2.OnColdStart();
++            Assert.That(new ComebackService(new Wallet(reopened, disk, clock)).OnSessionStart(in again, 0).Granted, Is.False);
++        }
++
++        private static string ProfileJsonTimestamp(DateTime t)
++        {
++            Profile probe = Wallet.NewProfile(new ManualClock(t));
++            string json = ProfileJson.Serialize(probe);
++            int i = json.IndexOf("\"created_at\"", StringComparison.Ordinal);
++            int open = json.IndexOf('"', json.IndexOf(':', i) + 1);
++            int close = json.IndexOf('"', open + 1);
++            return json.Substring(open + 1, close - open - 1);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/LiveOps/Tests/ProfileSessionStoreTests.cs.meta b/Assets/_Project/Scripts/LiveOps/Tests/ProfileSessionStoreTests.cs.meta
+new file mode 100644
+index 0000000..5d051cb
+--- /dev/null
++++ b/Assets/_Project/Scripts/LiveOps/Tests/ProfileSessionStoreTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 7da34812909173841b2b5ab70fcf4f32
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/Save/Profile.cs b/Assets/_Project/Scripts/Save/Profile.cs
+index a26889f..7b1c68b 100644
+--- a/Assets/_Project/Scripts/Save/Profile.cs
++++ b/Assets/_Project/Scripts/Save/Profile.cs
+@@ -21,7 +21,8 @@ namespace AF.Save
+     /// de migración 1 → 2 (<see cref="ProfileMigrations"/>), y <c>progress.undo_tip_seen</c> [P] (el tooltip de Marea, una vez
+     /// en la vida; D-030, pregunta 15 (b); tarea DC23), que entra en el mismo esquema 2 sin paso propio porque aún no se ha
+     /// publicado. La Crecida (B1a; Q-M9 (a) [P]) añade <c>streak</c> (omitido mientras es null) y <c>daily.streak_hits</c> y
+-    /// <c>daily.streak_seeds</c> (omitidos en su default), también sin migrar.
++    /// <c>daily.streak_seeds</c> (omitidos en su default), también sin migrar. B6 añade <c>settings.push</c> (omitido en su default)
++    /// y <c>stats.last_seen_at</c> y <c>stats.last_win_at</c> [P] (omitidos mientras son null), sin migrar.
+     /// <para>
+     /// Es un contenedor de datos: las reglas (topes, precios, regeneración de canoas, reinicio diario) viven en
+     /// <c>AF.Economy</c>, <c>AF.Ads</c> y <c>AF.Boosters</c>, que lo mutan y lo guardan con <see cref="IProfileStore"/>.
+@@ -413,8 +414,8 @@ public enum PatternsSetting
+ 
+     /// <summary>
+     /// <c>settings</c> (08 §4.3): solo los ajustes que ya existen en el juego (<c>sound</c>, <c>music</c> y <c>haptics</c> desde
+-    /// AU1); <c>push</c> llega con su sistema. Un valor que falta o no es válido en el archivo toma el default (los ajustes nunca
+-    /// hacen corrupto un perfil).
++    /// AU1) y <c>push</c> (B6; <see cref="PushSettingsData"/>). Un valor que falta o no es válido en el archivo toma el default (los
++    /// ajustes nunca hacen corrupto un perfil).
+     /// </summary>
+     public sealed class SettingsData
+     {
+@@ -480,6 +481,13 @@ public string Language
+         /// <summary><c>idle_hint</c> [P]: la pista por inactividad (04 §2.3), que se puede apagar en Ajustes. Default true.</summary>
+         public bool IdleHint { get; set; } = true;
+ 
++        /// <summary>
++        /// <c>push</c> (08 §4.3: <c>pre_prompt_shown</c> y <c>granted</c>; B6): el pre-prompt y el permiso de los avisos, con
++        /// <c>pre_prompt_at</c> y <c>second_prompt_shown</c> [P] para el segundo pre-prompt de 06 §8.1. Las reglas son de
++        /// <c>AF.LiveOps</c> (<c>PushPermissionService</c>).
++        /// </summary>
++        public PushSettingsData Push { get; } = new PushSettingsData();
++
+         /// <summary>
+         /// Forma canónica de <paramref name="value"/> si vale para <see cref="Language"/> (<see cref="LanguageAuto"/> o uno de
+         /// <see cref="Languages"/>, sin distinguir mayúsculas), o null si no vale.
+@@ -534,6 +542,29 @@ internal static bool TryParsePatterns(string text, out PatternsSetting value)
+         }
+     }
+ 
++    /// <summary>
++    /// <c>settings.push</c> (08 §4.3; B6, nota <c>docs/dev/sesiones-notificaciones.md</c> §3): <c>pre_prompt_shown</c> y
++    /// <c>granted</c> con los nombres del GDD, y <c>pre_prompt_at</c> y <c>second_prompt_shown</c> [P]. Se escribe solo si alguno
++    /// deja su default (como <c>streak</c>), y se lee tolerante, campo a campo.
++    /// </summary>
++    public sealed class PushSettingsData
++    {
++        /// <summary><c>pre_prompt_shown</c>: el primer pre-prompt ya salió.</summary>
++        public bool PrePromptShown { get; set; }
++
++        /// <summary><c>granted</c>: el jugador quiere avisos y el sistema los deja enseñar (último estado conocido).</summary>
++        public bool Granted { get; set; }
++
++        /// <summary><c>pre_prompt_at</c> [P]: cuándo salió el primer pre-prompt, UTC.</summary>
++        public DateTime? PrePromptAt { get; set; }
++
++        /// <summary><c>second_prompt_shown</c> [P]: ya salió el segundo y último pre-prompt.</summary>
++        public bool SecondPromptShown { get; set; }
++
++        /// <summary>Todos los campos en su default (entonces no se escribe).</summary>
++        public bool IsDefault => !PrePromptShown && !Granted && !PrePromptAt.HasValue && !SecondPromptShown;
++    }
++
+     /// <summary>
+     /// <c>sloth</c> [P] (D-016 punto 4; propuesta de TiTino d.7 y d.10): la última frase vista de cada momento, para no
+     /// repetirla nunca seguida, y las fechas locales del último saludo y de la última apertura, para los topes de 1 saludo
+@@ -707,8 +738,20 @@ public sealed class StatsData
+         /// <summary><c>rv_watched</c>.</summary>
+         public int RvWatched { get; set; }
+ 
+-        /// <summary><c>sessions</c>.</summary>
++        /// <summary><c>sessions</c>: sesiones empezadas (B6; Q-M4 (a) de D-033: arranque en frío o vuelta tras 30 min o más fuera).</summary>
+         public int Sessions { get; set; }
++
++        /// <summary>
++        /// <c>last_seen_at</c> [P] (B6): la última vez que la app estuvo en primer plano, UTC; null si nunca se apuntó. Mide los días
++        /// sin sesión del Regalo de regreso (06 §9). Se omite mientras es null.
++        /// </summary>
++        public DateTime? LastSeenAt { get; set; }
++
++        /// <summary>
++        /// <c>last_win_at</c> [P] (B6): la última victoria (campaña o Reto), UTC; null si no se sabe. La usa el aviso «Crecida te
++        /// espera» (06 §8.3). Se omite mientras es null.
++        /// </summary>
++        public DateTime? LastWinAt { get; set; }
+     }
+ 
+     /// <summary>
+diff --git a/Assets/_Project/Scripts/Save/ProfileJson.cs b/Assets/_Project/Scripts/Save/ProfileJson.cs
+index aac65ec..3d8c257 100644
+--- a/Assets/_Project/Scripts/Save/ProfileJson.cs
++++ b/Assets/_Project/Scripts/Save/ProfileJson.cs
+@@ -164,6 +164,18 @@ internal static JsonNode ToNode(Profile p)
+             settings.Set("language", JsonNode.FromString(p.Settings.Language));
+             settings.Set("sloth_messages", JsonNode.FromBool(p.Settings.SlothMessages));
+             settings.Set("idle_hint", JsonNode.FromBool(p.Settings.IdleHint));
++            if (!p.Settings.Push.IsDefault)
++            {
++                // B6: settings.push (08 §4.3) solo cuando deja su default, para no cambiar los perfiles que aún no lo usan.
++                PushSettingsData push = p.Settings.Push;
++                JsonNode pushNode = JsonNode.NewObject();
++                pushNode.Set("pre_prompt_shown", JsonNode.FromBool(push.PrePromptShown));
++                pushNode.Set("granted", JsonNode.FromBool(push.Granted));
++                pushNode.Set("pre_prompt_at", Timestamp(push.PrePromptAt));
++                pushNode.Set("second_prompt_shown", JsonNode.FromBool(push.SecondPromptShown));
++                settings.Set("push", pushNode);
++            }
++
+             root.Set("settings", settings);
+ 
+             JsonNode lastLine = JsonNode.NewArray();
+@@ -189,6 +201,16 @@ internal static JsonNode ToNode(Profile p)
+             stats.Set("rescues", JsonNode.FromInt(p.Stats.Rescues));
+             stats.Set("rv_watched", JsonNode.FromInt(p.Stats.RvWatched));
+             stats.Set("sessions", JsonNode.FromInt(p.Stats.Sessions));
++            if (p.Stats.LastSeenAt.HasValue)
++            {
++                stats.Set("last_seen_at", Timestamp(p.Stats.LastSeenAt)); // B6 [P]
++            }
++
++            if (p.Stats.LastWinAt.HasValue)
++            {
++                stats.Set("last_win_at", Timestamp(p.Stats.LastWinAt)); // B6 [P]
++            }
++
+             root.Set("stats", stats);
+ 
+             JsonNode sighted = JsonNode.NewArray();
+@@ -333,6 +355,8 @@ internal static Profile FromNode(JsonNode root)
+                 t.Rescues = ReadInt(stats, "rescues", t.Rescues);
+                 t.RvWatched = ReadInt(stats, "rv_watched", t.RvWatched);
+                 t.Sessions = ReadInt(stats, "sessions", t.Sessions);
++                t.LastSeenAt = TolerantTimestamp(stats, "last_seen_at"); // B6 [P]: una hora mal escrita no hace corrupto el perfil
++                t.LastWinAt = TolerantTimestamp(stats, "last_win_at");
+             }
+ 
+             JsonNode? fauna = TolerantSection(root, "fauna");
+@@ -540,6 +564,14 @@ private static void ReadSettings(JsonNode node, SettingsData s)
+             s.Haptics = TolerantBool(node, "haptics", s.Haptics);
+             s.SlothMessages = TolerantBool(node, "sloth_messages", s.SlothMessages);
+             s.IdleHint = TolerantBool(node, "idle_hint", s.IdleHint);
++            JsonNode? push = TolerantSection(node, "push");
++            if (push != null)
++            {
++                s.Push.PrePromptShown = TolerantBool(push, "pre_prompt_shown", s.Push.PrePromptShown);
++                s.Push.Granted = TolerantBool(push, "granted", s.Push.Granted);
++                s.Push.PrePromptAt = TolerantTimestamp(push, "pre_prompt_at");
++                s.Push.SecondPromptShown = TolerantBool(push, "second_prompt_shown", s.Push.SecondPromptShown);
++            }
+         }
+ 
+         private static void ReadSloth(JsonNode node, SlothData s)
+@@ -781,6 +813,25 @@ private static bool TolerantBool(JsonNode parent, string key, bool fallback)
+             return node != null && node.Kind == JsonKind.String ? node.AsString() : null;
+         }
+ 
++        /// <summary>Hora <paramref name="key"/>, o null si falta, es null o está mal escrita (sin error; B6).</summary>
++        private static DateTime? TolerantTimestamp(JsonNode parent, string key)
++        {
++            string? text = TolerantString(parent, key);
++            if (text == null)
++            {
++                return null;
++            }
++
++            try
++            {
++                return ParseTimestamp(text);
++            }
++            catch (FormatException)
++            {
++                return null;
++            }
++        }
++
+         private static bool TryInt(JsonNode node, out int value)
+         {
+             if (node.Kind == JsonKind.Number
