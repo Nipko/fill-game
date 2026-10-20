@@ -1,0 +1,96 @@
+diff --git a/Assets/_Project/Editor/CI/LocReleaseGate.cs b/Assets/_Project/Editor/CI/LocReleaseGate.cs
+index edfcb52..f91d821 100644
+--- a/Assets/_Project/Editor/CI/LocReleaseGate.cs
++++ b/Assets/_Project/Editor/CI/LocReleaseGate.cs
+@@ -40,6 +40,9 @@ internal LocReleaseReport(string applicationId, bool development, List<string> p
+     /// <item><description>un idioma ofrecido tiene la UI incompleta: alguna clave de <c>strings.csv</c> sin texto en ese idioma.
+     /// Los idiomas ofrecidos son las columnas de idioma de <c>strings.csv</c> (es-419, en y pt-BR en la tanda 1): la tabla declara
+     /// los idiomas del juego [P]. en-XA no es una columna y nunca se ofrece en release;</description></item>
++    /// <item><description>una cadena de UI de un idioma ofrecido distinto del español tiene texto pero no está en
++    /// <c>revisado_nativo</c> (08 §4.7; D-018, Q5-A: nunca traducción automática sin revisión en algo que vea el jugador; T2-Q5).
++    /// Una traducción con IA en <c>traducido</c> vale para los builds de prueba, no para un release;</description></item>
+     /// <item><description>hay texto cultural (fruta, fauna, flora, lugar o pueblo) sin <c>aprobado_es</c>: toda fila de
+     /// <c>facts.csv</c> (los textos largos son de fruta, fauna y del Mapa) y toda fila de <c>strings.csv</c> en
+     /// <c>pendiente_asesor</c> (el estado con el que nace lo cultural; regla 9 de la propuesta de idiomas).</description></item>
+@@ -92,6 +95,30 @@ public static LocReleaseReport Evaluate(LocCatalog catalog, string applicationId
+                 }
+             }
+ 
++            for (int l = 0; l < offered.Count; l++)
++            {
++                string locale = offered[l];
++                if (locale == LocLocale.SourceLocale)
++                {
++                    continue;
++                }
++
++                var unreviewed = new List<string>();
++                for (int r = 0; r < strings.Count; r++)
++                {
++                    if (strings.TextAt(r, locale).Length > 0 && strings.StatusAt(r, locale) != LocStatus.NativeReviewed)
++                    {
++                        unreviewed.Add(strings.KeyAt(r));
++                    }
++                }
++
++                if (unreviewed.Count > 0)
++                {
++                    problems.Add("UI sin " + LocStatusNames.NativeReviewed + " en " + locale + ": claves de " + strings.File + ": "
++                        + unreviewed.Count.ToString(CultureInfo.InvariantCulture) + " (" + List(unreviewed, MaxKeysPerLocale) + ").");
++                }
++            }
++
+             for (int r = 0; r < strings.Count; r++)
+             {
+                 LocStatus status = strings.StatusAt(r, LocLocale.SourceLocale);
+diff --git a/Assets/_Project/Tests/EditMode/LocReleaseGateTests.cs b/Assets/_Project/Tests/EditMode/LocReleaseGateTests.cs
+index 1aa645d..74a867c 100644
+--- a/Assets/_Project/Tests/EditMode/LocReleaseGateTests.cs
++++ b/Assets/_Project/Tests/EditMode/LocReleaseGateTests.cs
+@@ -79,6 +79,46 @@ public void CulturalTextWithoutApprovedEs_ReleaseId_Blocks()
+             }));
+         }
+ 
++        /// <summary>
++        /// T2-Q5 (08 §4.7; D-018, Q5-A): en un idioma ofrecido distinto del español, una cadena de UI con texto que no está en
++        /// <c>revisado_nativo</c> (la traducción con IA en <c>traducido</c>, o un estado vacío o en borrador) para un release, con
++        /// una línea por idioma y sus claves; en desarrollo solo avisa. El español no tiene columna de estado por idioma.
++        /// </summary>
++        [Test]
++        public void UiWithoutNativeReview_ReleaseId_Blocks_DevelopmentId_OnlyWarns()
++        {
++            string strings = Header
++                + "back,Volver,Back,Voltar,Botón Volver.,12,aprobado_es,traducido,revisado_nativo,,\n"
++                + "next,Siguiente,Next,Próximo,Botón Siguiente.,12,aprobado_es,revisado_nativo,traducido,,\n"
++                + "play,Jugar,Play,Jogar,Botón Jugar.,12,aprobado_es,traducido,traducido,,\n";
++
++            LocReleaseReport report = LocReleaseGate.Evaluate(LocCatalog.Parse(strings, CleanFacts), ReleaseId);
++
++            Assert.That(report.Blocks, Is.True);
++            Assert.That(report.Problems, Is.EqualTo(new[]
++            {
++                "UI sin revisado_nativo en en: claves de strings.csv: 2 (back, play).",
++                "UI sin revisado_nativo en pt-BR: claves de strings.csv: 2 (next, play).",
++            }));
++
++            LocReleaseReport dev = LocReleaseGate.Evaluate(LocCatalog.Parse(strings, CleanFacts), ProjectSetup.ApplicationId);
++            Assert.That(dev.Problems, Is.EqualTo(report.Problems));
++            Assert.That(dev.Blocks, Is.False);
++        }
++
++        [Test]
++        public void UiWithoutNativeReview_EmptyCellsCountOnlyAsIncomplete()
++        {
++            // Una celda vacía ya es «UI incompleta»: no cuenta otra vez como sin revisión.
++            string strings = Header
++                + "back,Volver,Back,,Botón Volver.,12,aprobado_es,revisado_nativo,,,\n"
++                + "play,Jugar,Play,Jogar,Botón Jugar.,12,aprobado_es,revisado_nativo,revisado_nativo,,\n";
++
++            LocReleaseReport report = LocReleaseGate.Evaluate(LocCatalog.Parse(strings, CleanFacts), ReleaseId);
++
++            Assert.That(report.Problems, Is.EqualTo(new[] { "UI incompleta en pt-BR: claves de strings.csv sin texto: 1 (back)." }));
++        }
++
+         [Test]
+         public void ApprovedFacts_UntranslatedOrHalfTranslated_DoNotBlock()
+         {
