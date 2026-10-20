@@ -486,16 +486,40 @@ namespace AF.Tests.PlayMode
         /// §12) ni recortado; en español al 100 % sigue a 20 sp o más (guía 3.5: sin cambio). Al 130 %, «Nivel 100» ya no cabía
         /// a 26 dp ni en español (su tinta se salía 2-4 dp de la caja de 106): ahora baja lo justo, como en los otros idiomas.
         /// Con el 100 (4 ranuras en la bandeja) y el 700, el número más largo del juego.
+        /// <para>en y pt-BR aún no tienen la UI completa, así que la escena no los ofrece y vuelve a es-419 al arrancar
+        /// (<see cref="LocLocale.IsOffered"/>; revisión de DC19: así estos casos repetían el de es-419). Se fuerzan como en
+        /// <see cref="VictorySlotMeasureSnapshotTests"/>: la escena arranca en la pantalla de inicio, el test cambia el idioma con
+        /// <see cref="Loc.SetLocale"/> y abre el nivel con Jugar, de modo que la insignia se escribe y se ajusta
+        /// (<c>FitLevelBadge</c>) ya en ese idioma; y el test exige el texto de <c>level_n</c> de esa columna de strings.csv.</para>
         /// </summary>
         [UnityTest]
         public IEnumerator LevelBadge_FitsAt12OrMore([Values(LocLocale.SpanishLatinAmerica, LocLocale.English, LocLocale.PortugueseBrazil, LocLocale.Pseudo)] string locale,
             [Values(100, 130)] int percent, [Values(100, 700)] int level)
         {
             float scale = percent / 100f;
-            yield return LongLabelSetup.LoadLevel(level, locale, scale, HudLabelTests.Screen640);
+            bool forced = locale == LocLocale.English || locale == LocLocale.PortugueseBrazil;
+            if (forced)
+            {
+                yield return LongLabelSetup.LoadLevelFromLobby(level, locale, scale, HudLabelTests.Screen640);
+            }
+            else
+            {
+                yield return LongLabelSetup.LoadLevel(level, locale, scale, HudLabelTests.Screen640);
+            }
+
+            Assert.That(Loc.Locale, Is.EqualTo(locale), "la partida en " + locale);
             TextMeshProUGUI title = GameBootstrap.Current!.View!.LevelTitle;
+            string number = level.ToString(CultureInfo.InvariantCulture);
             TestContext.WriteLine("AF_DC19 " + locale + " al " + percent + " %: «" + title.text + "» a " + (title.fontSize / scale).ToString("0.##", CultureInfo.InvariantCulture) + " sp");
-            Assert.That(title.text, Does.Contain(level.ToString(CultureInfo.InvariantCulture)), "la insignia del " + level);
+            if (locale == LocLocale.Pseudo)
+            {
+                Assert.That(title.text, Does.Contain(number).And.Not.EqualTo("Nivel " + number), "la insignia del " + level + " en en-XA");
+            }
+            else
+            {
+                Assert.That(title.text, Is.EqualTo(BadgeText(locale) + number), "la insignia del " + level + " en " + locale + " (level_n de strings.csv)");
+            }
+
             Assert.That(title.fontSize, Is.GreaterThanOrEqualTo((LocInventory.BadgeMinSp * scale) - 0.01f), "la insignia a 12 sp (× escala) o más");
             if (locale == LocLocale.SpanishLatinAmerica && percent == 100)
             {
@@ -503,6 +527,17 @@ namespace AF.Tests.PlayMode
             }
 
             Assert.That(new LocInventory(Loc.Locale, scale).ProblemsOf(title), Is.Empty, "«" + title.text + "» cabe en la placa");
+        }
+
+        // level_n de strings.csv sin {n}, por idioma: «Nivel {n}», «Level {n}», «Nível {n}».
+        private static string BadgeText(string locale)
+        {
+            if (locale == LocLocale.English)
+            {
+                return "Level ";
+            }
+
+            return locale == LocLocale.PortugueseBrazil ? "Nível " : "Nivel ";
         }
 
         /// <summary>
@@ -607,6 +642,33 @@ namespace AF.Tests.PlayMode
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0));
             yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));
             GameBootstrap boot = GameBootstrap.Current!;
+            boot.TapAnywhere();
+            yield return PlayModeHelpers.WaitFor(() => boot.Flow!.Phase == FlowPhase.Playing && boot.View!.IsViewIdle, "el " + level + " en juego");
+            yield return SnapshotKit.Wait(0.3f);
+        }
+
+        /// <summary>
+        /// El nivel <paramref name="level"/> en juego en <paramref name="locale"/> aunque la escena no ofrezca ese idioma (en y
+        /// pt-BR mientras no tengan la UI completa): arranca en la pantalla de inicio con el progreso en ese nivel, cambia el
+        /// idioma con <see cref="Loc.SetLocale"/> (un estado que el juego no alcanza hasta completar sus columnas) y abre el nivel
+        /// con Jugar, así que la cabecera del nivel se construye ya en ese idioma. Sin semillas, como <see cref="LoadLevel"/>.
+        /// </summary>
+        public static IEnumerator LoadLevelFromLobby(int level, string locale, float scale, Vector4 screen)
+        {
+            FunnelSetup.Hooks();
+            LaunchOptions.FontScaleOverride = scale;
+            GameScreen.SimulatedScreen = screen;
+            LaunchOptions.LevelCardsOverride = false;
+            Profile profile = FunnelSetup.Profile(0);
+            profile.Progress.NextLevel = level;
+            profile.Progress.MaxLevel = level - 1;
+            profile.Progress.MapSeenLevel = level - 1;
+            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby), "la pantalla de inicio con el " + level + " por jugar");
+            Loc.SetLocale(locale);
+            Assert.That(boot.PressPlay(), Is.True, "Jugar · Nivel " + level);
+            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(level), "el " + level + " desde el inicio");
             boot.TapAnywhere();
             yield return PlayModeHelpers.WaitFor(() => boot.Flow!.Phase == FlowPhase.Playing && boot.View!.IsViewIdle, "el " + level + " en juego");
             yield return SnapshotKit.Wait(0.3f);
