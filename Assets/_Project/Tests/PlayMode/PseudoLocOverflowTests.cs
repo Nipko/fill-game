@@ -753,8 +753,19 @@ namespace AF.Tests.PlayMode
         {
             TextMeshProUGUI title = view.VictoryRibbonTitle;
             string problems = new LocInventory(Loc.Locale, scale).ProblemsOf(title);
-            Assert.That(title.textInfo.lineCount, Is.EqualTo(lines), "cinta: líneas de «" + title.text + "»");
-            Assert.That(title.fontSize, Is.GreaterThanOrEqualTo((22f * scale) - 0.01f), "cinta: 22 sp (× escala) o más");
+            // En la victoria compacta de 16:9 (D-032, escalón 1 o más) el título baja en una línea hasta 16 sp antes de pasar a dos.
+            bool compact = view.VictoryCompact >= GameScreen.VictoryCompactMargins;
+            float min = compact ? GameScreen.RibbonTitleCompactMinSp : 22f;
+            if (compact)
+            {
+                Assert.That(title.textInfo.lineCount, Is.InRange(1, lines), "cinta: líneas de «" + title.text + "» (compacta)");
+            }
+            else
+            {
+                Assert.That(title.textInfo.lineCount, Is.EqualTo(lines), "cinta: líneas de «" + title.text + "»");
+            }
+
+            Assert.That(title.fontSize, Is.GreaterThanOrEqualTo((min * scale) - 0.01f), "cinta: " + min + " sp (× escala) o más");
             Assert.That(problems, Is.Empty, "cinta: el título no se sale de su caja");
             AssertNoBrokenWord(title, "cinta");
 
