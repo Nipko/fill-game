@@ -17,7 +17,7 @@ namespace AF.UI
     /// creó con el estado que tenía (jugar o seguir abre la partida; sellado o pendiente, el calendario del mes [P]).
     /// <para>Gráficos provisionales por código (D-003, «Selva brillante premium»: madera y luz; <c>docs/art/direccion-visual-v2.md</c>):
     /// la superficie de madera de los modales, una placa de agua con las olas dibujadas por código (<see cref="WaveSprite"/>) y un
-    /// sello rojo de heliconia cuando el día está sellado. Sin arte nuevo ni paquetes.</para>
+    /// sello verde hoja (el de los CTA, <see cref="DailyStampCalendar.StampColor"/>; nunca rojo, guía v2 §7) cuando el día está sellado. Sin arte nuevo ni paquetes.</para>
     /// <para>Se construye bajo un padre cualquiera: hoy, el lienzo propio que crea <c>GameBootstrap.SetUpDaily</c> encima del
     /// inicio; con el enganche E1, dentro de <c>LobbyScreen</c>. <see cref="Refresh"/> asigna textos (no por fotograma).</para>
     /// </summary>
@@ -75,7 +75,7 @@ namespace AF.UI
             UiBuilder.Place(_streak.rectTransform, 212f, 44f, 52f, 26f);
             UiBuilder.AutoSize(_streak, UiBuilder.MinTextSp, 15f);
 
-            _stamp = UiBuilder.Image("Stamp", _root, art.Disc, Palette.Heliconia);
+            _stamp = UiBuilder.Image("Stamp", _root, art.Disc, DailyStampCalendar.StampColor);
             UiBuilder.Place(_stamp.rectTransform, WidthDp - 40f, 8f, 28f, 28f);
             Image ring = UiBuilder.Image("Ring", _stamp.transform, art.Ring, Palette.Cream);
             UiBuilder.Stretch(ring.rectTransform);
@@ -212,7 +212,8 @@ namespace AF.UI
             _streak.text = DailyText.Streak(service.Rules.StreakShown(), DailyChallengeRules.StreakLength);
             bool stamped = state == DailyCardState.Sealed || state == DailyCardState.PendingValidation;
             _stamp.gameObject.SetActive(stamped);
-            _stamp.color = state == DailyCardState.PendingValidation ? new Color(Palette.Heliconia.r, Palette.Heliconia.g, Palette.Heliconia.b, 0.45f) : Palette.Heliconia;
+            Color stampColor = DailyStampCalendar.StampColor;
+            _stamp.color = state == DailyCardState.PendingValidation ? new Color(stampColor.r, stampColor.g, stampColor.b, 0.45f) : stampColor;
             _root.gameObject.SetActive(true);
             return state;
         }
