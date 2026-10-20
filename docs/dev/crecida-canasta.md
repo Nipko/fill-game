@@ -126,7 +126,8 @@ Alias retirados que no se usan: `eco_streak_rewards`, `streak_daily_cap_seeds`, 
 
 `streak_fail` y `streak_state` son **solo sondas de desarrollo** (logcat), no eventos de 08 §8.2: si algún día van a analítica,
 primero hay que darlos de alta en esa taxonomía única. Hasta que exista `AF.Analytics`, cada evento de la tabla sale como línea `AF_STATE {"event":…}` en builds de desarrollo (formato de
-`DevProbe`, tope de 960 bytes). Lo implementa la ola 3 (`StreakProbeFormat` [P]); aquí solo se fija qué sale:
+`DevProbe`, tope de 960 bytes). Lo implementa A7: `Scripts/Economy/StreakProbeFormat.cs` (sin motor; tests
+`StreakProbeFormatTests`) y `Scripts/UI/DevProbe.Streak.cs`; el formato exacto está al final de esta sección. Qué sale:
 
 | Línea | Parámetros | Cuándo |
 |---|---|---|
@@ -135,11 +136,34 @@ primero hay que darlos de alta en esa taxonomía única. Hasta que exista `AF.An
 | `af_basket_open` | `level`, `contents_json` | Canasta de nivel (Q-C13) |
 | `earn_virtual_currency` | `source ∈ {streak, basket, double_harvest}`, `value` | Hito 3 y Canasta del hito 6 (`streak`), Canasta de nivel (`basket`), x2 del río crecido (`double_harvest`); lo emite `Wallet.Apply` |
 | `streak_fail` [P] | `level`, `wins_before`, `river_full_before`, `shield_used`, `streak_broken`, `river_ended` | Cada fallo duro de campaña desde el 25 (para cruzar con `af_level_fail`) |
-| `streak_state` [P] | `wins`, `river_full`, `shield`, `hits`, `seeds_today`, `day` | Tras cada cambio del estado (victoria, fallo duro, cambio de día) |
+| `streak_state` [P] | `cause`, `level`, `wins`, `river_full`, `shield`, `hits`, `seeds_today`, `date`, `enabled`, `active`, `free_double_next` | Al arrancar y tras cada cambio del estado (victoria, fallo duro, cambio de día) |
 
 `af_level_fail` (08 §8.2) toma `streak_broken` y `shield_used` de `StreakOutcome` (Q-C7). `contents_json` [P] es estable:
 `{"kind":"normal","seeds":50,"undo":3}`, con `kind` ∈ {`normal`, `grand`, `streak`}, `seeds` siempre y después solo los
 comodines con unidades, en el orden `undo`, `hint`, `reveal`, `extra_cuia`, `shuffle`.
+
+**Formato de la sonda (A7).** Todas son `AF_STATE {"event":…,"t":…,…}` en una línea, con los campos en este orden y solo en
+builds de desarrollo. Los nombres de las líneas reflejan los eventos de 08 §8.2 sin el prefijo `af_` (como `daily_challenge` en
+el Reto): `streak_milestone`, `streak_shield_used` y `basket_open`. `streak_fail`, `streak_state` y `free_double_harvest` son
+solo de la sonda [P]. `reward_value` y `contents_json` salen como cadenas JSON (con las comillas escapadas), igual que los
+parámetros de analítica.
+- `streak_state`: `cause` (`start` al crear el servicio, `day` al cambiar el día local, `win` o `hard_fail` tras un evento que
+  contó), `level` (el nivel consultado con `StreakService.Peek`: el siguiente de la campaña, `max_level` + 1), `wins`,
+  `river_full`, `shield`, `hits` (lista creciente de los hitos pagados hoy), `seeds_today`, `date` (`yyyy-MM-dd` o null),
+  `enabled` (`biz_feature_win_streak`), `active` (hay barra en ese nivel) y `free_double_next` (la siguiente victoria lleva el x2
+  del río).
+- `streak_fail`: `level`, `wins_before`, `river_full_before`, `shield_used`, `streak_broken`, `river_ended`.
+- `streak_shield_used`: `level`, `streak_at_use` (la barra que salvó la hoja).
+- `free_double_harvest`: `level`, `seeds` (las que entraron por la Cosecha doble del río crecido).
+- `streak_milestone`: `level`, `milestone`, `reward_type`, `reward_value` (solo con el hito pagado).
+- `basket_open`: `level`, `contents_json` (Canasta de nivel, en la victoria o en el Salto del Boto).
+
+Un resultado del servicio sale siempre en el orden `streak_fail`, `streak_shield_used`, `free_double_harvest`,
+`streak_milestone`, `basket_open` y, si cambió el estado, `streak_state`. La sonda no toca `GameScreen`: `StreakProbeRunner`
+(un componente que añade `SetUpStreak`, solo en desarrollo) mira cada fotograma si `LevelFlow.LastStreakResult` es otro objeto
+y, si lo es, escribe sus líneas, después de las líneas `victory` o `level_failed` de la vista (en ese fotograma o en el
+siguiente). `earn_virtual_currency` de la Crecida y la Canasta no sale aquí: la tabla lo deja a `Wallet.Apply`, con el sumidero
+de analítica (B7).
 
 ## 6. Enganches previstos (E26+; parches probados en `docs/dev/traspaso/spark-enganches/` en la ola 3)
 
@@ -153,7 +177,7 @@ comodines con unidades, en el orden `undo`, `hint`, `reveal`, `extra_cuia`, `shu
 | E34 | `Scripts/Boosters/SkipBooster.cs` / `Scripts/GameFlow/LevelFlow.Funnel.cs` (B3) | Al confirmar el Salto del Boto, `LevelFlow.OnSkipStreak()` (ya en `LevelFlow.Streak.cs`), que llama a `StreakService.ApplySkip(level, true)`: paga la Canasta de nivel si es un `10k` de campaña (K9), igual que en la victoria, y no toca la Crecida. Fuera de campaña (Reto) o con el nivel ya superado (`level <= max_level`) devuelve null. **Contrato:** B3 lo llama **dentro del mismo `using (Saves())` en el que guarda el salto y antes de guardarlo**: dentro, para que la Canasta y el progreso salgan en una sola escritura del perfil (`OnSkipStreak` pide `SaveBatch.RequireDurable()`); antes, porque compara con el `max_level` anterior al salto |
 | E35 | `Scripts/Economy/Transaction.cs`, `Wallet.cs` | El x2 del río crecido, `Transaction.DoubleHarvestRiver(level, tier)` [P] (`internal`: solo lo pide la Crecida; los tests lo ven por `Scripts/Economy/AssemblyInfo.cs`, `InternalsVisibleTo("AF.Tests.EditMode")`), con `source = double_harvest`, la marca `Transaction.RiverFull` y sin la compuerta de nivel del vídeo (Q-C14). Parche probado `spark-enganches/S4-wallet.diff`: también cambia `StreakOutcome.AppendTransactions` (único punto donde se crea el x2 del río) para usar la variante y quita de `StreakServiceTests` el test del rechazo sin parche. **Se aplica después de fusionar `spark/t5-b1a`**, porque reescribe archivos de la rama (`StreakRules.cs`, `StreakService.cs`, `StreakServiceTests.cs`). Sin el parche, `StreakService` paga el x2 con `Transaction.DoubleHarvest`, que la cartera rechaza solo si RC sube `ads_rv_double_harvest_from_level` por encima del nivel. El nombre `RiverFull` se queda; la Temporada de lluvias (04 §2.8) podría reutilizar la misma marca como una Cosecha doble `Free` sin compuerta [P] |
 | E31 | `Scripts/GameFlow/LevelFlow.Funnel.cs` (el mismo punto de E29, parche `S2-flow.diff`) | `Fail()` pasa `isCampaign = !IsDaily` (E19; el Reto no cuenta) y el resultado de la Crecida llega al oyente por `LevelFlow.LastStreakResult`, ya escrito cuando se llama a `OnFailResolved` (toast de la hoja, consuelo de TiTino). El fallo blando no llama a la Crecida: `LastStreakResult` queda en null |
-| E32 | `Scripts/UI/GameBootstrap.cs` | Crear el `StreakService` con `ProfileStreakStore` (S1, sobre el mismo perfil y el mismo `IProfileStore`/lote que la cartera), la `Wallet` de campaña, el `IClock` y `live_unlock_level_daily` (de `DailyChallengeConfig`), más `StreakConfig` y `BasketConfig`, e inyectarlo con `LevelFlow.UseStreak(service)` (en un parcial nuevo `GameBootstrap.Streak.cs` con un único `SetUpStreak()`, A7). La vista lee `LevelFlow.LastStreakResult` |
+| E32 | `Scripts/UI/GameBootstrap.cs` (parche `S3-bootstrap.diff`, A7; **necesita S1**: orden S1 → S4 → S2 → S5 → S3) | `GameBootstrap.Streak.cs` (parcial nuevo, A7) crea el `StreakService` con `SetUpStreak()`: el almacén, la `Wallet` de campaña (`batch.Durable`), el `IClock` de `Start` (`LaunchOptions.ClockOverride` o el del sistema) y `live_unlock_level_daily` de `DailyChallengeConfig` (la del Reto ya creado, o su default), con `StreakConfig.Defaults` y `BasketConfig.Defaults` (aún no hay `AF.RemoteConfig`), y lo inyecta con `LevelFlow.UseStreak(service)` en el flujo de campaña (el del Reto no lo lleva: no cuenta). El parche añade en `Start`, justo después de `SetUpDaily();`, la llamada `SetUpStreak();` (antes de `_app.Start`, para que el nivel reanudado ya tenga el servicio), y el archivo `GameBootstrap.StreakProfile.cs`, que implementa el método parcial `CreateProfileStreakStore` con `new ProfileStreakStore(profile, batch.Durable, clock)` (S1): el mismo perfil y la misma vía síncrona del lote que la cartera. Sin el parche, el método parcial no tiene cuerpo: en desarrollo, almacén en memoria (con aviso) y en release, sin Crecida. Tests: `GameBootstrapStreakTests` (el parche cambia sus dos últimos para el almacén del perfil y la victoria en una sola escritura). La vista lee `LevelFlow.LastStreakResult`; las sondas, `DevProbe.Streak.cs` (§5) |
 | E33 | `Scripts/GameFlow/SlothContext.cs` | `SlothVictoryFacts`: `streak` = `LastStreakResult.Streak.Wins` y `streakMilestone` = `LastStreakResult.Streak.MilestonePaid` (el `StreakServiceResult` del `StreakService`; banco `streak` de TiTino, d.6) |
 | E25 | (vista del Reto) | Ya anotado: sin barra de la Crecida en el Reto (Q-C2) |
 
