@@ -24,6 +24,12 @@ namespace AF.Economy
     /// escriben siempre.
     /// </para>
     /// <para>
+    /// <b>Coste de ese borde para el jugador:</b> si el día cambia entre <see cref="Load"/> y un fallo duro, y el registro trae
+    /// la Hoja escudo de ayer ya gastada, las reglas ven «sin hoja» y rompen la Crecida (barra a 0 y río crecido apagado), aunque
+    /// la hoja de hoy esté libre; el <see cref="Save"/> no la gasta (no cambió desde la carga), pero la barra ya se perdió. Es una
+    /// ventana de milisegundos (lo que tarda un fin de nivel), así que se acepta en lugar de recargar a mitad de la operación.
+    /// </para>
+    /// <para>
     /// <b>Requisito de la implementación del juego:</b> la Crecida y la cartera (<see cref="Wallet"/>) tienen que vivir en el
     /// <b>mismo</b> <c>Profile</c> y guardarse con el mismo <c>IProfileStore</c> (el lote <c>ProfileSaveBatch</c>, como la cartera).
     /// La garantía de «cada hito se paga una vez por día» (<c>streak_hits_once_per_day</c>) se apoya en eso: el hito se apunta en

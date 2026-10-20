@@ -14,7 +14,11 @@ namespace AF.Economy
     /// </summary>
     public sealed class StreakRecord
     {
-        /// <summary><c>streak.wins</c>: la racha de la Crecida (0-10; vuelve a 0 al pagar el hito 10, 05 §2.4).</summary>
+        /// <summary>
+        /// <c>streak.wins</c>: la racha de la Crecida, de 0 a 9 entre un evento y otro. El 10 es solo transitorio: dentro de
+        /// <c>StreakRules.OnVictory</c> la barra llega a 10, paga el hito y vuelve a 0 en la misma llamada (05 §2.4), así que
+        /// nunca se guarda un 10 (<see cref="Normalize"/> lo admite para no tocar un archivo de otra build).
+        /// </summary>
         public int Wins { get; set; }
 
         /// <summary>
@@ -70,16 +74,47 @@ namespace AF.Economy
             return true;
         }
 
+        /// <summary>Hito 3 de la Crecida: semillas (<c>streak_milestones["3"]</c>, 08 §9; 05 §2.4).</summary>
+        public const int HitSeeds = 3;
+
+        /// <summary>Hito 6: la Canasta (<c>streak_milestones["6"]</c> = <c>chest</c>; 06 §4.3).</summary>
+        public const int HitBasket = 6;
+
+        /// <summary>Hito 10: Cuia extra + río crecido; la barra vuelve a 0 (<c>streak_milestones["10"]</c>; 05 §2.4).</summary>
+        public const int HitRiver = 10;
+
         /// <summary>
-        /// Tope de <see cref="Wins"/>: la barra tiene 10 marcas y vuelve a 0 al pagar el hito 10 (06 §4.3; 05 §2.4).
+        /// Los hitos de la Crecida en orden creciente (3, 6 y 10: las claves de <c>streak_milestones</c>, 08 §9). Única lista: la
+        /// usan <see cref="Normalize"/>, <c>StreakRules</c> y <c>StreakMilestones.TryParse</c>. Solo el premio del 3 es
+        /// configurable; si Remote Config cambiara los hitos, cambiaría esta lista [P].
         /// </summary>
-        public const int MaxWins = 10;
+        public static readonly IReadOnlyList<int> Milestones = Array.AsReadOnly(new[] { HitSeeds, HitBasket, HitRiver });
+
+        /// <summary>
+        /// Tope de <see cref="Wins"/>: la barra tiene 10 marcas (el último hito) y vuelve a 0 al pagar el hito 10 (06 §4.3; 05 §2.4).
+        /// </summary>
+        public const int MaxWins = HitRiver;
+
+        /// <summary>
+        /// <paramref name="wins"/> es uno de los <see cref="Milestones"/>. No asigna memoria.
+        /// </summary>
+        public static bool IsMilestone(int wins)
+        {
+            for (int i = 0; i < Milestones.Count; i++)
+            {
+                if (Milestones[i] == wins)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         /// <summary>
         /// Recorta lo que no puede salir de las reglas (un archivo editado a mano o de otra build): <see cref="Wins"/> a
-        /// [0, <see cref="MaxWins"/>], <see cref="SeedsToday"/> a ≥ 0 y <see cref="HitsToday"/> a los hitos 3, 6 y 10 del default
-        /// de <c>streak_milestones</c> (08 §9), sin repetir y en orden creciente. Si Remote Config cambiara los hitos, esta lista
-        /// tendría que seguirlo [P]. Devuelve si cambió algo.
+        /// [0, <see cref="MaxWins"/>], <see cref="SeedsToday"/> a ≥ 0 y <see cref="HitsToday"/> a los <see cref="Milestones"/> (3, 6 y
+        /// 10, las claves de <c>streak_milestones</c>, 08 §9), sin repetir y en orden creciente. Devuelve si cambió algo.
         /// </summary>
         public bool Normalize()
         {
@@ -97,29 +132,45 @@ namespace AF.Economy
                 changed = true;
             }
 
-            bool has3 = false, has6 = false, has10 = false;
-            for (int i = 0; i < HitsToday.Count; i++)
+            // Canónica: solo hitos de Milestones, sin repetir y en el orden de Milestones (creciente).
+            bool canonical = true;
+            int next = 0;
+            for (int i = 0; i < HitsToday.Count && canonical; i++)
             {
                 int hit = HitsToday[i];
-                has3 |= hit == 3;
-                has6 |= hit == 6;
-                has10 |= hit == 10;
-            }
+                while (next < Milestones.Count && Milestones[next] != hit)
+                {
+                    next++;
+                }
 
-            int count = (has3 ? 1 : 0) + (has6 ? 1 : 0) + (has10 ? 1 : 0);
-            bool canonical = HitsToday.Count == count;
-            if (canonical)
-            {
-                int k = 0;
-                canonical = (!has3 || HitsToday[k++] == 3) && (!has6 || HitsToday[k++] == 6) && (!has10 || HitsToday[k] == 10);
+                canonical = next < Milestones.Count;
+                next++;
             }
 
             if (!canonical)
             {
+                // Sin asignar: se marca qué hitos había (como mucho Milestones.Count, que cabe en un int) y se reescribe.
+                int present = 0;
+                for (int i = 0; i < HitsToday.Count; i++)
+                {
+                    for (int m = 0; m < Milestones.Count; m++)
+                    {
+                        if (Milestones[m] == HitsToday[i])
+                        {
+                            present |= 1 << m;
+                        }
+                    }
+                }
+
                 HitsToday.Clear();
-                if (has3) HitsToday.Add(3);
-                if (has6) HitsToday.Add(6);
-                if (has10) HitsToday.Add(10);
+                for (int m = 0; m < Milestones.Count; m++)
+                {
+                    if ((present & (1 << m)) != 0)
+                    {
+                        HitsToday.Add(Milestones[m]);
+                    }
+                }
+
                 changed = true;
             }
 

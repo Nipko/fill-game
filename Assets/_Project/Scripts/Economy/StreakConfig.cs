@@ -53,7 +53,7 @@ namespace AF.Economy
         public static bool TryParse(string? json, out StreakMilestones result)
         {
             result = Default;
-            if (!EconomyJsonLite.TryReadFlatObject(json, out List<FlatMember> members) || members.Count != 3)
+            if (!EconomyJsonLite.TryReadFlatObject(json, out List<FlatMember> members) || members.Count != StreakRecord.Milestones.Count)
             {
                 return false;
             }
@@ -64,9 +64,10 @@ namespace AF.Economy
             for (int i = 0; i < members.Count; i++)
             {
                 FlatMember m = members[i];
-                switch (m.Key)
+                // Las claves son los hitos de StreakRecord.Milestones, escritos en decimal sin signo ni ceros a la izquierda.
+                switch (MilestoneKey(m.Key))
                 {
-                    case "3":
+                    case StreakRecord.HitSeeds:
                         if (m.IsString || !int.TryParse(m.Value, NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture, out int seeds))
                         {
                             return false;
@@ -74,10 +75,10 @@ namespace AF.Economy
 
                         hit3 = seeds;
                         break;
-                    case "6":
+                    case StreakRecord.HitBasket:
                         hit6 = m.IsString && string.Equals(m.Value, Hit6Value, StringComparison.Ordinal);
                         break;
-                    case "10":
+                    case StreakRecord.HitRiver:
                         hit10 = m.IsString && string.Equals(m.Value, Hit10Value, StringComparison.Ordinal);
                         break;
                     default:
@@ -98,6 +99,24 @@ namespace AF.Economy
 
             result = parsed;
             return true;
+        }
+
+        /// <summary>
+        /// El hito de <see cref="StreakRecord.Milestones"/> que nombra <paramref name="key"/> (<c>"3"</c>, <c>"6"</c> o <c>"10"</c>,
+        /// exactamente), o 0 si no es ninguno.
+        /// </summary>
+        private static int MilestoneKey(string key)
+        {
+            for (int i = 0; i < StreakRecord.Milestones.Count; i++)
+            {
+                int hit = StreakRecord.Milestones[i];
+                if (string.Equals(key, hit.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal))
+                {
+                    return hit;
+                }
+            }
+
+            return 0;
         }
 
         /// <inheritdoc />

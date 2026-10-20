@@ -121,9 +121,9 @@ namespace AF.Economy
 
                 switch (Milestone)
                 {
-                    case 3: return "seeds";
-                    case 6: return StreakMilestones.Hit6Value;
-                    case 10: return StreakMilestones.Hit10Value;
+                    case StreakRecord.HitSeeds: return "seeds";
+                    case StreakRecord.HitBasket: return StreakMilestones.Hit6Value;
+                    case StreakRecord.HitRiver: return StreakMilestones.Hit10Value;
                     default: return null;
                 }
             }
@@ -141,9 +141,9 @@ namespace AF.Economy
 
                 switch (Milestone)
                 {
-                    case 3: return HitSeeds.ToString(CultureInfo.InvariantCulture);
-                    case 6: return Basket.ContentsJson();
-                    case 10: return ExtraCuia ? "1" : "0";
+                    case StreakRecord.HitSeeds: return HitSeeds.ToString(CultureInfo.InvariantCulture);
+                    case StreakRecord.HitBasket: return Basket.ContentsJson();
+                    case StreakRecord.HitRiver: return ExtraCuia ? "1" : "0";
                     default: return null;
                 }
             }
@@ -270,34 +270,34 @@ namespace AF.Economy
 
             o.FreeDoubleHarvest = s.RiverFull;
             s.Wins += 1;
-            if (s.Wins == 3)
+            if (s.Wins == StreakRecord.HitSeeds)
             {
-                o.Milestone = 3;
-                if (Payable(3))
+                o.Milestone = StreakRecord.HitSeeds;
+                if (Payable(StreakRecord.HitSeeds))
                 {
                     int paid = PayCapped(Config.StreakMilestones.Hit3Seeds, ref o);
                     o.HitSeeds = paid;
-                    MarkPaid(3, ref o);
+                    MarkPaid(StreakRecord.HitSeeds, ref o);
                 }
             }
-            else if (s.Wins == 6)
+            else if (s.Wins == StreakRecord.HitBasket)
             {
-                o.Milestone = 6;
-                if (Payable(6))
+                o.Milestone = StreakRecord.HitBasket;
+                if (Payable(StreakRecord.HitBasket))
                 {
                     BasketContents basket = BasketRules.HitSix(level, Basket);
                     int paid = PayCapped(basket.Seeds, ref o);
                     o.Basket = basket.WithSeeds(paid);
-                    MarkPaid(6, ref o);
+                    MarkPaid(StreakRecord.HitBasket, ref o);
                 }
             }
-            else if (s.Wins >= 10)
+            else if (s.Wins >= StreakRecord.HitRiver)
             {
-                o.Milestone = 10;
-                if (Payable(10))
+                o.Milestone = StreakRecord.HitRiver;
+                if (Payable(StreakRecord.HitRiver))
                 {
                     o.ExtraCuia = true;
-                    MarkPaid(10, ref o);
+                    MarkPaid(StreakRecord.HitRiver, ref o);
                 }
 
                 s.RiverFull = true;
