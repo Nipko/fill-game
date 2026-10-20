@@ -82,7 +82,9 @@ Canasta de nivel. `LevelFlow.Funnel.cs` (`Fail`, tras `FailResolve.Resolve`, que
 `OnHardFailStreak`, que llama a `ApplyHardFail` solo en el fallo duro, **antes** de `ILevelFlowListener.OnFailResolved`;
 `FailResolve` y `FailOutcome` no cambian. La vista lee `LevelFlow.LastStreakResult` en `OnFailResolved` (y en `OnWin`): de
 `LastStreakResult.Streak` salen `streak_broken` y `shield_used` de `af_level_fail` (Q-C7) y el toast de la hoja. El Salto del
-Boto llama a `LevelFlow.OnSkipStreak`, que llama a `ApplySkip` (E34). El servicio no es reentrante: un oyente de `Wallet.Changed` no debe llamarlo.
+Boto llama a `LevelFlow.OnSkipStreak`, que llama a `ApplySkip` (E34). Los tests del flujo que necesitan las llamadas van dentro de S2 (`StreakFlowHookTests`); el de
+integración con el perfil (`ProfileSaveBatch`, `ProfileStreakStore` y la cartera: una escritura por victoria y por fallo duro)
+necesita también S1 y va en `spark-enganches/S5-flow-profile.diff`, que se aplica después de S1 y S2. El servicio no es reentrante: un oyente de `Wallet.Changed` no debe llamarlo.
 
 ## 3. Perfil (Q-M9 (a); lo implementa A4)
 
