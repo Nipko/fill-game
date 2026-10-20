@@ -555,8 +555,9 @@ namespace AF.UI
 
         /// <summary>
         /// Revelar · Luciérnaga de la bandeja (04 §2.5; tarea T14), en un lote de guardado: con stock, el modo de selección
-        /// pagando con él; sin stock y con <c>reveal_seed_price</c> semillas (120), pagando con ellas; sin saldo y con video
-        /// (<c>rv_reveal</c>), el anuncio (<see cref="PressRevealVideo"/>); sin nada, el aviso «Te faltan {n} semillas» [P], sin
+        /// pagando con él; sin stock y con video (<c>rv_reveal</c>: fill, tope y espera), el anuncio
+        /// (<see cref="PressRevealVideo"/>), aunque haya saldo (D-028, GDD §6.3 pregunta 23 a: video primero, como Marea); sin
+        /// video y con <c>reveal_seed_price</c> semillas (120), pagando con ellas; sin nada, el aviso «Te faltan {n} semillas» [P], sin
         /// cobrar (el precio en rojo y «Te faltan {n}» ya se ven en la ranura, como en la Cuia extra). Abrir la selección no cobra:
         /// el cobro llega al tocar la cuia, después de aplicar y guardar (T10; 04 §2.5 d). Con la selección abierta, otro toque en
         /// el botón la cancela sin coste [P].
@@ -590,16 +591,17 @@ namespace AF.UI
                     return flow.BeginRevealSelection(RevealPayment.Stock);
                 }
 
+                // D-028 (GDD §6.3, pregunta 23 a): sin stock, primero el video, como Marea; las semillas solo sin video.
+                if (PressRevealVideo())
+                {
+                    return true;
+                }
+
                 int price = flow.RevealPrice;
                 int missing = flow.Wallet?.Missing(price) ?? price;
                 if (missing == 0)
                 {
                     return flow.BeginRevealSelection(RevealPayment.Seeds);
-                }
-
-                if (PressRevealVideo())
-                {
-                    return true;
                 }
 
                 _screen?.ShowRevealMissing(missing);
@@ -905,6 +907,13 @@ namespace AF.UI
             if (_mapScreen != null && _mapScreen.Visible)
             {
                 return _mapScreen.CloseTopSheet() || CloseRiverMap(); // primero la tarjeta de la parada y el Muestrario (M4.1)
+            }
+
+            // Reto del río (E22): Atrás cierra su calendario como «Inicio»; con el tablero del Reto en juego no hace nada, como en un
+            // nivel (02 §3; 04 §6.6). HandleBack devuelve false si no hay calendario abierto.
+            if (_dailyScreen != null && _dailyScreen.IsOpen)
+            {
+                return _dailyScreen.HandleBack();
             }
 
             if (_app.Screen == AppScreen.Level)
@@ -1540,6 +1549,9 @@ namespace AF.UI
             _screen.SetVisible(false);
             Fauna = LoadFauna();
             _screen.Fauna = Fauna; // la especie de miquito de cada intro (guion de la intro §4.3)
+            _screen.SightingShown = RecordSighting; // el avistamiento en el perfil y af_fauna_sighted (DC15; GameBootstrap.Fauna.cs)
+            _screen.UndoTipSeen = ReadUndoTipSeen; // el tooltip de Marea, una vez en la vida (DC23; GameBootstrap.UndoTip.cs)
+            _screen.UndoTipShown = RecordUndoTip;
             RiverStops = LoadRiverStops(riverStops);
             _screen.RiverStops = RiverStops; // paradas del Mapa del río (D-013): fondo, llegada y rótulo del lugar
             _screen.RiverGeometry = TryRiverGeometry; // la geometría del Mapa para el viaje de mundo del banner (M3.6)
@@ -1559,6 +1571,7 @@ namespace AF.UI
             _mapScreen.LevelWater = level => _app?.Catalog.Find(level)?.WaterBase; // el agua del fondo de la tarjeta (M4.1)
             _mapScreen.L10SequenceEnded = () => MarkMapSeen(L10SequenceRule.Level); // la secuencia del Mapa del 10 no se repite (M4.2)
             _mapScreen.L10SlothVoice = () => _screen == null || _screen.SlothVoice; // su bocadillo, solo con voz (D-016, punto 4)
+            _mapScreen.L10BubbleSaid = () => _screen?.SlothSession.RecordMapIntro(); // el saludo del inicio se aplaza (D-028, 60 b)
             _settingsScreen = new SettingsScreen(transform, _art, _probe, l => ChooseLanguage(l), p => ChoosePatterns(p), m => ChooseSlothMessages(m), () => CloseSettings());
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
             _settingsScreen.IdleHintToggled = on => ChooseIdleHint(on); // MO3: Pista por inactividad
@@ -1588,6 +1601,7 @@ namespace AF.UI
                 ContentEndMapAvailable = RiverMapAvailable && (ContentEndMapOverride ?? true), // el Mapa del fin de contenido (M4.3)
             };
             _lobby.Bind(_app, _services);
+            SetUpDaily(); // Reto del río (E2; GameBootstrap.Daily.cs): pool, servicio, tarjeta del inicio y partida
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
             if (requested <= 0 && !rebuilt)
@@ -1722,6 +1736,16 @@ namespace AF.UI
                 _screen.SnapToModel();
                 _screen.SettleReveal();
                 _flow.ClearSelection();
+            }
+
+            // Reto del río (E23; 02 §14): su vista salta al modelo y la selección se limpia, como la de campaña (InLevel es false
+            // durante el Reto: AppFlow sigue en el inicio).
+            if (_dailyScreen?.Flow != null && _dailyScreen.View != null)
+            {
+                _dailyScreen.View.SnapToModel();
+                _dailyScreen.View.SettleReveal();
+                _dailyScreen.View.IdleHintBackFromBackground();
+                _dailyScreen.Flow.ClearSelection();
             }
 
             // MO3 (02 §3.4; 04 §2.3): el tiempo fuera de la app no es inactividad en el tablero; la cuenta de la pista por

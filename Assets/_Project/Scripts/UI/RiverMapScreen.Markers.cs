@@ -103,6 +103,19 @@ namespace AF.UI
         public const float GuideAboveDp = 27f;
 
         /// <summary>
+        /// En la meta (la canoa en la naciente; revisión de FX13), el guía va encima de la canoa a este tanto (dp) del mástil de
+        /// popa, hacia la proa [P], para que el mástil y sus banderas no lo tapen.
+        /// </summary>
+        public const float GuideMastClearDp = 24f;
+
+        /// <summary>
+        /// En el tramo de la meta (revisión final de FX13), el centro del guía queda al menos a este tanto (dp) más el radio de las
+        /// boyas de la vista de cualquier boya del frente, apartado en perpendicular al cauce [P], para que no tape las boyas que
+        /// «Faltan N» invita a contar.
+        /// </summary>
+        public const float GuideBuoyClearDp = 12f;
+
+        /// <summary>
         /// Parada en que Rosa salta con sus parientes: la 12, los lagos de Tarapoto, niveles 121-130 (D-013, punto 6; propuesta
         /// del Mapa §2.1 y §6.1).
         /// </summary>
@@ -764,10 +777,10 @@ namespace AF.UI
                 return PlacePoint(map, routes.At(0)!.At);
             }
 
-            RiverStopRoute? route = s < routes.Count ? routes.At(s) : null;
+            RiverStopRoute? route = routes.At(s); // tras la última parada, la meta: la naciente (FX13)
             if (route == null)
             {
-                return PlacePoint(map, routes.At(routes.Count - 1)!.At);
+                return PlacePoint(map, routes.At(routes.LegCount - 1)!.At);
             }
 
             return RoutePoint(map, route, Mathf.Clamp01((x - (per * (s - 1))) / per));
@@ -798,7 +811,7 @@ namespace AF.UI
                 return guideTo;
             }
 
-            RiverStopRoute? route = s < routes.Count ? routes.At(s) : null;
+            RiverStopRoute? route = routes.At(s);
             float relay = 0.5f;
             RiverPassingPoint? point = map.PassingPoint(BannerTravel.RelayPassingId);
             if (route != null && point != null)
@@ -2610,6 +2623,7 @@ namespace AF.UI
                 out _guideRoute, out _guideFraction, out Vector2 foot, out float mastH);
             _canoeFacing = facing;
             _canoe.rectTransform.anchoredPosition = canoe;
+            FadeSourceUnderCanoe(canoe); // revisión de FX13: el hito de la naciente no se pinta sobre la canoa que llega a él
             _guideShown = true;
             _guideId = GuideAt(_map!, _routes!, _stops!, _canoeX);
 
@@ -2684,8 +2698,13 @@ namespace AF.UI
             {
                 route = -1;
                 fraction = 0f;
-                guideLocal = canoe + new Vector2(0f, GuideAboveDp);
-                guideMap = new Vector2(canoeMap.x, canoeMap.y - (GuideAboveDp / dpu));
+                // En la meta (la naciente, con el 700 ganado; revisión de FX13), sin agua por delante: encima de la canoa pero
+                // GuideMastClearDp por delante del mástil de popa, hacia la proa, para que el mástil y las banderas no lo tapen.
+                RiverStopRoute? goal = _routes!.Goal;
+                bool atGoal = goal != null && level >= goal.N * RiverStopCatalog.LevelsPerStop;
+                float side = atGoal ? facing * (GuideMastClearDp - (ProceduralArt.MapCanoeWidthDp * SternFraction)) : 0f;
+                guideLocal = canoe + new Vector2(side, GuideAboveDp);
+                guideMap = new Vector2(canoeMap.x + (side / dpu), canoeMap.y - (GuideAboveDp / dpu));
             }
 
             float dx = guideLocal.x - canoe.x;
@@ -2700,9 +2719,43 @@ namespace AF.UI
                 facing = dx > 0f ? 1f : -1f;
             }
 
+            guideLocal = ClearGoalBuoys(space, route, fraction, guideLocal);
             float fh = ProceduralArt.MapFlagHeightDp * CanoeFlagScale;
             mastH = flags > 0 ? (2f * MastPadDp) + (flags * (fh + CanoeFlagGapDp)) : 0f;
             mastFoot = canoe + new Vector2(-facing * ProceduralArt.MapCanoeWidthDp * SternFraction, 2f);
+        }
+
+        // Revisión final de FX13: en el tramo de la meta (691-700; las boyas que «Faltan N» invita a contar), el guía que nada por
+        // el agua no se pinta sobre una boya: va apartado del cauce, en perpendicular (hacia arriba en el contenido), a
+        // GuideBuoyClearDp más el radio de las boyas de la vista, y así queda al menos a eso de todas (van sobre el cauce). Siempre
+        // a la misma distancia, para que no salte al pasar junto a una boya en el viaje final. Solo se mueve el dibujo:
+        // GuideMapPoint sigue en el agua. Sin asignaciones.
+        private Vector2 ClearGoalBuoys(MapSpace space, int route, float fraction, Vector2 guideLocal)
+        {
+            RiverMap? map = _map;
+            RiverStopRoute? goal = _routes?.Goal;
+            if (map == null || goal == null || route != goal.N || _frontStop != goal.N || _buoyCount <= 0)
+            {
+                return guideLocal;
+            }
+
+            float clear = GuideBuoyClearDp + (_view == MapView.World ? BuoyRadiusWorldDp : BuoyRadiusBasinDp);
+            Vector2 a = space.ToLocal(RoutePoint(map, goal, Mathf.Clamp01(fraction - 0.02f)));
+            Vector2 b = space.ToLocal(RoutePoint(map, goal, Mathf.Clamp01(fraction + 0.02f)));
+            Vector2 t = b - a;
+            if (t.sqrMagnitude < 1e-6f)
+            {
+                return guideLocal;
+            }
+
+            t.Normalize();
+            var n = new Vector2(-t.y, t.x);
+            if (n.y < 0f)
+            {
+                n = -n;
+            }
+
+            return guideLocal + (n * clear);
         }
 
         /// <summary>
@@ -2720,7 +2773,7 @@ namespace AF.UI
             int s = x <= 0f ? 1 : Mathf.CeilToInt((x / per) - 1e-4f);
             float f = x <= 0f ? 0f : Mathf.Clamp01((x - (per * (s - 1))) / per);
             float left = lead;
-            for (int guard = 0; guard < 4 && s < routes.Count; guard++, s++, f = 0f)
+            for (int guard = 0; guard < 4 && s < routes.LegCount; guard++, s++, f = 0f)
             {
                 RiverStopRoute? leg = routes.At(s);
                 if (leg == null)

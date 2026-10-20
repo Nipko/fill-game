@@ -11,7 +11,8 @@ namespace AF.UI
     /// <c>strings.csv</c>: las 11 claves del glosario (<c>map_stop_remaining</c>, <c>map_arrived</c>, <c>map_home_distance</c>,
     /// <c>map_country_welcome</c>, <c>map_world_question</c>, <c>map_next_world</c>, <c>map_samples</c>, <c>map_north_up</c>,
     /// <c>map_back_to_canoe</c>, <c>map_hito_preview</c> y <c>stop_label</c>), las 10 de P-M2 y el término <c>river_map</c> del
-    /// glosario §7.1 (el botón de la pausa, M4.3). Parcial de <see cref="UiText"/>.
+    /// glosario §7.1 (el botón de la pausa, M4.3), más <c>map_source_name</c>, la naciente del último tramo (FX13). Parcial de
+    /// <see cref="UiText"/>.
     /// <list type="bullet">
     /// <item>Los nombres de las paradas, de los países y de los ríos son textos largos de <c>facts.csv</c> (claves por convención
     /// de <see cref="RiverStop"/>, 08 §4.5; su bloque lo genera <c>tools/river-map/stops.py</c>) y salen por
@@ -99,6 +100,42 @@ namespace AF.UI
         public static string MapStopRemaining(int levels, string place)
         {
             return Format(Keys.MapStopRemaining, LocArgs.OfDigits("n", NonNegative(levels)).And("place", place));
+        }
+
+        /// <summary>
+        /// <c>map_source_name</c> [P] (tarea FX13; D-013, viñeta del 2026-10-19): «El nevado Mismi», la naciente a la que apunta el
+        /// último tramo tras la última parada. No es una parada (ni tarjeta, ni mini cuia, ni llegada). Sale en dos sitios: el
+        /// <c>{place}</c> de <see cref="MapStopRemaining(int, string)"/> (en el inicio y en el Mapa) y el rótulo del hito de la
+        /// naciente en el Mapa (<c>RiverMapScreen</c>, parcial de la naciente). La cabecera del fin de contenido no lo lleva.
+        /// Pendiente del asesor.
+        /// </summary>
+        public static string MapSourceName => Loc.T(Keys.MapSourceName);
+
+        /// <summary>
+        /// Lugar de «Faltan N» jugando en la parada <paramref name="current"/>: el nombre de la parada siguiente del catálogo
+        /// <paramref name="stops"/> o, tras la última si está en el cauce (<see cref="RiverStopCatalog.HeadsToSource"/>: niveles
+        /// 691-700 con las paradas 0-69), la naciente (<see cref="MapSourceName"/>; tarea FX13). «» sin parada en juego, fuera del
+        /// catálogo o tras una última parada fuera del cauce (en release, también con un nombre sin el visto bueno del asesor).
+        /// </summary>
+        public static string NextPlaceName(RiverStopCatalog stops, RiverStop? current)
+        {
+            if (stops == null)
+            {
+                throw new ArgumentNullException(nameof(stops));
+            }
+
+            if (current == null)
+            {
+                return string.Empty;
+            }
+
+            RiverStop? next = stops.At(current.N + 1);
+            if (next != null)
+            {
+                return StopName(next);
+            }
+
+            return current.N == stops.Count - 1 && stops.HeadsToSource ? MapSourceName : string.Empty;
         }
 
         /// <summary><see cref="MapStopRemaining(int, string)"/> hacia la parada <paramref name="next"/>.</summary>
@@ -350,6 +387,9 @@ namespace AF.UI
 
             /// <summary><c>map_samples</c> [P] (glosario §10).</summary>
             public const string MapSamples = "map_samples";
+
+            /// <summary><c>map_source_name</c> [P] (FX13; D-013, viñeta del 2026-10-19).</summary>
+            public const string MapSourceName = "map_source_name";
 
             /// <summary><c>map_stop_remaining</c> [P] (glosario §10).</summary>
             public const string MapStopRemaining = "map_stop_remaining";

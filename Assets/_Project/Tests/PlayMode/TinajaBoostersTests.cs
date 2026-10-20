@@ -243,7 +243,8 @@ namespace AF.Tests.PlayMode
             LevelFlow flow = boot.Flow!;
             GameScreen view = boot.View!;
             Assert.That(view.Tray.RevealShown, Is.True);
-            Assert.That(view.Tray.RevealPriceShown, Is.EqualTo(120), "sin stock, el precio");
+            Assert.That(view.Tray.RevealShowsVideo, Is.True, "sin stock y con video, el video aunque haya saldo (D-028)");
+            Assert.That(view.Tray.RevealPriceShown, Is.EqualTo(0));
 
             // Sacar dos veces enseña las dos capas de debajo (R7): ya no queda nada oculto.
             for (int i = 0; i < 2; i++)

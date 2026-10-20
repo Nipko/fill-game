@@ -21,7 +21,7 @@ namespace AF.Presentation.Mechanics
     /// límite que la nube de la Lluvia (<see cref="LluviaOverlay.RiseTopMaxDp"/>): el pie de la fila de arriba queda 16 + 24 =
     /// 40 dp sobre lo alto de la cuia (<c>BoardLayout</c>) y, con la cuia más ancha de los tableros de dos o más filas (48 dp,
     /// u = 24), 1,0 u son 24 dp. Ese peor caso roza 1 dp la madera de la repisa de la fila de arriba, que acaba 17 dp bajo su
-    /// pie (16 + 24 − 17 = 23 dp) [P, pendiente del dueño: 1,0 u rozando la repisa o 0,9 u sin rozarla]. En la fila de arriba
+    /// pie (16 + 24 − 17 = 23 dp); el dueño decidió 1,0 u, rozando la repisa (pregunta 38 (3), D-020). En la fila de arriba
     /// no pasa del canto interior del marco del panel (<see cref="LluviaOverlay.CloudTopMaxDp"/>, 24 dp). En todo el paso Open
     /// nada sube más: el capullo se hincha a lo ancho y después encoge más deprisa de lo que sube, y las hojitas abiertas no
     /// pasan de <see cref="TopAboveRimU"/>.</para>

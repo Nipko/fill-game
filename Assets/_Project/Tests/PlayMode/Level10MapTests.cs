@@ -29,7 +29,8 @@ namespace AF.Tests.PlayMode
     /// <item>un toque la salta; «Jugar · Nivel 11» abre el 11 y «←» deja el inicio;</item>
     /// <item>sin voz de TiTino, sin bocadillo (solo el gesto); nunca una frase <c>sloth_line_*</c>;</item>
     /// <item>las sondas <c>map_open</c> con <c>source</c> <c>l10</c> y <c>river_fact_shown</c> con el dato;</item>
-    /// <item>(revisión de M4.2) el saludo del día de TiTino en el inicio no se gasta debajo del Mapa: se decide al cerrarlo; la
+    /// <item>(revisión de M4.2) el saludo del día de TiTino en el inicio no se gasta debajo del Mapa: se decide al cerrarlo (y,
+    /// tras el bocadillo, se aplaza a la visita siguiente: D-028, pregunta 60 b; ver <c>Level10MapGreetingTests</c>); la
     /// placa del mundo de destino se ve entera toda la secuencia, sin pisar la canoa en Belém; y el pico del bocadillo llega a
     /// ≤ 8 dp de la cabeza de TiTino.</item>
     /// </list>
@@ -281,11 +282,12 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator HomeGreeting_IsNotSpentUnderTheSequence_ButWhenTheMapCloses()
+        public IEnumerator HomeGreeting_IsNotSpentUnderTheSequence_NorAfterTheBubble_ButOnTheNextVisit()
         {
             // Revisión de M4.2: el primer arranque tras ganar el 10, con el saludo de regreso pendiente (7 días sin abrir). La
             // ventanita de casa del inicio no se ve bajo el Mapa, así que TiTino no decide su saludo del día (como mucho 1;
-            // D-016, punto 5) mientras dura la secuencia, y sí al cerrar el Mapa, en la misma visita.
+            // D-016, punto 5) mientras dura la secuencia, sino al cerrar el Mapa, en la misma visita. D-028 (pregunta 60 b): tras
+            // el bocadillo map_l10_intro, ese saludo no sale ni se gasta; sale en la visita siguiente al inicio.
             HomeSloth.ManualTickForTests = true;
             var clock = new ManualClock(T0);
             Profile profile = ProfileWonTen();
@@ -303,6 +305,7 @@ namespace AF.Tests.PlayMode
             // Bajo la secuencia: la ventanita no se ve y TiTino no saluda, aunque su reloj avance.
             yield return null;
             yield return null;
+            Tick(map, 16);
             for (int t = 0; t < 1000; t += 16)
             {
                 sloth.Tick(16f);
@@ -314,10 +317,11 @@ namespace AF.Tests.PlayMode
             Assert.That(sloth.GreetingDecisions, Is.EqualTo(0), "el saludo del día no se decide debajo del Mapa");
             Assert.That(sloth.BubbleShown, Is.False);
             Assert.That(boot.Profile!.Sloth.LastGreetingDate, Is.Not.EqualTo(clock.LocalDateKey()), "ni se gasta el de hoy");
-            Assert.That(boot.View!.SlothSession.LinesThisSession, Is.EqualTo(0), "ninguna frase de TiTino en el inicio");
-            Assert.That(boot.View.SlothSession.PreviousScreenSpoke, Is.False);
+            Assert.That(map.L10WithBubble, Is.True, "el bocadillo map_l10_intro");
+            Assert.That(boot.View!.SlothSession.LinesThisSession, Is.EqualTo(0), "el bocadillo no gasta frases de la sesión (D-028)");
+            Assert.That(boot.View.SlothSession.PreviousScreenSpoke, Is.True, "pero cuenta como pantalla en la que TiTino habló");
 
-            // Se salta y se cierra el Mapa con «←»: la ventanita vuelve y TiTino saluda en esa misma visita.
+            // Se salta y se cierra el Mapa con «←»: la ventanita vuelve y el saludo se decide en esa misma visita, aplazado.
             Assert.That(map.SkipL10Sequence(), Is.True);
             map.BackButton.onClick.Invoke();
             Assert.That(map.Visible, Is.False);
@@ -325,11 +329,21 @@ namespace AF.Tests.PlayMode
             Assert.That(lobby.HomeWindow.Visible, Is.True, "la ventanita, de vuelta con el inicio a la vista");
             sloth.Tick(16f);
             Assert.That(sloth.GreetingDecisions, Is.EqualTo(1), "el saludo se decide al cerrar el Mapa");
-            Assert.That(sloth.LastGreeting.Greeting, Is.True, "el de regreso, a la vista");
-            Assert.That(boot.Profile.Sloth.LastGreetingDate, Is.EqualTo(clock.LocalDateKey()));
+            Assert.That(sloth.LastGreeting.Deferred, Is.True, "tras el bocadillo, aplazado (D-028, pregunta 60 b)");
+            Assert.That(sloth.LastGreeting.Greeting, Is.False, "no sale");
+            Assert.That(sloth.BubbleShown, Is.False);
+            Assert.That(boot.Profile.Sloth.LastGreetingDate, Is.Not.EqualTo(clock.LocalDateKey()), "ni se gasta");
             yield return null;
             Assert.That(lobby.HomeWindow.Visible, Is.True, "y sigue a la vista");
             Assert.That(sloth.GreetingDecisions, Is.EqualTo(1), "una vez");
+
+            // La visita siguiente al inicio: el de regreso, con su frase.
+            sloth.EndVisit();
+            sloth.BeginVisit();
+            sloth.Tick(16f);
+            Assert.That(sloth.GreetingDecisions, Is.EqualTo(2));
+            Assert.That(sloth.LastGreeting.Greeting, Is.True, "el de regreso, a la vista");
+            Assert.That(boot.Profile.Sloth.LastGreetingDate, Is.EqualTo(clock.LocalDateKey()));
         }
 
         [UnityTest]

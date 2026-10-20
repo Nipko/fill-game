@@ -2,6 +2,8 @@
 
 > **Decidida el 2026-10-13: D-013** (`docs/dev/decisiones.md`). El dueño aceptó la recomendación de cada pregunta de la sección 16 («Nos vamos por las recomendadas y necesitamos seguir avanzando»), con T1-A y T6-A de TiTino y Q1-A de Frutas del río, y el lote de documentación de la sección 15 se aplicó ese día al GDD (T50). Un choque con Frutas del río y con T6 quedó como pregunta 45 de `docs/GDD.md` §6.3. Desde entonces manda el GDD; este documento queda como material de apoyo y como plan de implementación (secciones 11-13). Lo que no se tocó: `tools/level-generator/specs/campaign_v1.json` (el hito 80, «Lago de Tefé» [P]), que cambia la fase F1 con su `--check`.
 >
+> **Decididas el 2026-10-19 (D-030), tres preguntas de la implementación sin recomendación:** (1) las paradas en una confluencia (revisión de M5.1) se quedan ancladas en la boca del afluente, a ≤ 5 km (`CONFLUENCE_KM`), para que el Tapajós y el Manu se llenen al llegar (08 §4.5); (9) el rótulo del lugar va siempre como placa, también con 1-2 filas (§10.5, punto 5; 07 §2.1); y (18) el cielo del fondo por parada no pasa de opacidad 0,5 en ningún punto, tampoco en el tercio de abajo con alba o atardecer, como pedía la tarea M1.4 del plan de implementación del Mapa (punto 1a; el plan vive fuera del repositorio, D-023): si el alba de la parada 19 deja de distinguirse del atardecer de la 9, se mide y se anota para el dueño.
+>
 > **Documento de apoyo, no canon.** Manda el GDD (`docs/GDD.md` y `docs/gdd/00-09`). Nada de este archivo cambia reglas, números, claves, nombres ni versiones hasta que el dueño decida y se editen los capítulos que toque (lista en la sección 15). Lo marcado [P] es propuesta. La decisión se registraría como **D-013** [P]: D-012 ya está registrada en la rama `paso2/registrar-d007-d009`.
 >
 > **Todo nombre, dato y texto de este documento queda «pendiente de revisión del asesor cultural» (07 §8.2).** «TiTino» queda además pendiente de la búsqueda de marca del abogado.
@@ -1298,7 +1300,7 @@ Primer plano: el agua base del mundo (W1 blanca, W2 clara, W3 negra, W4 y W5 bla
 4. **Si algún día pesa demasiado** (hoy no: 10.7), la salida es la opción (b): un catálogo por mundo, cargado y descargado por ruta (`Resources/AF/Stops/w0N`), con su propia tarea y sus días.
 5. **Rótulo del lugar** [P, de C] (Q6), en el primer nivel de cada parada:
    - **Texto:** «Lagos de Tarapoto · Colombia», en Baloo 2 crema con contorno. El de la parada 15 dice «Río Itaya · Perú», **nunca «Belén»** (07 §8.1).
-   - **Dónde:** sobre el horizonte en los tableros de 1-2 filas; en los de 3 filas, como placa bajo el HUD, en el sitio de los avisos.
+   - **Dónde:** como placa bajo el HUD, en el sitio de los avisos, en todos los tableros (decisión del dueño del 2026-10-19: D-030, pregunta 9 (b); antes, sobre el horizonte en los de 1-2 filas, donde tapaba el héroe del sitio durante sus 3 s).
    - **Reglas de D-011:** dura 1.000 ms + 55 ms por carácter, entre 3 y 7 s; sale cuando se habilita el toque, nunca durante la carga, la tarjeta ni la intro; uno cada vez; sin capturar toques.
    - **No sale** si el nivel tiene banner, Fruta nueva, tarjeta de miquito, estreno o tutorial. En 1-200 sale en 31, 51, 71, 91, 101, 121, 131, 151, 161, 171, 181 y 191.
 6. **En los niveles 11, 41, 81 y 141,** el banner de D-012 ya presenta el sitio con su fondo.

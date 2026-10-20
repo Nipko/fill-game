@@ -565,7 +565,8 @@ namespace AF.Presentation
         /// <summary>
         /// La fruta lanzada viaja en horizontal a unos 700 dp/s (dp/ms)… Pasa del tope de 250 dp/s de la suelta de la rama
         /// (guion §4.4; 07 §5.1, fase d): con el calendario del dosel y la mano en el margen, no se llega a las columnas de
-        /// dentro de otra forma. Excepción pendiente del dueño (revisión de TL1).
+        /// dentro de otra forma. Excepción aceptada por el dueño (D-030, 3 a): hasta ~1.150 dp/s, siempre de lado y por
+        /// debajo del hombro.
         /// </summary>
         public const float SideThrowDpPerMs = 0.7f;
 

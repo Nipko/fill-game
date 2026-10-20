@@ -631,3 +631,19 @@ Decisión del dueño: D-022, pregunta 51 (b): «traducción con ia», con revisi
 4. **Entrega sin chocar:** los carriles de la ola 7 siguen añadiendo filas a `strings.csv`. No edites `strings.csv` ni `facts.csv` en tu rama: entrega las traducciones en `docs/dev/traspaso/spark-traducciones/` (un CSV por tabla con `clave,en,pt-BR` y las columnas de estado) y un script nuevo en Python (biblioteca estándar, por ejemplo `tools/loc/apply_translations.py`, con `--check` y `--self-test`) que las vuelque sobre las tablas por clave, sin tocar ninguna otra columna ni el orden. El integrador lo aplicará al cerrar la ola 7.
 5. **Informe:** cuántas claves traducidas por idioma, cuántas vacías y por qué, y cuántos avisos de `LocReleaseGate` quedarían.
 
+---
+
+## 11. Encargo siguiente (2026-10-20): qué le falta a la 1.0 y el primer bloque grande
+
+El dueño pidió (literal): «luego de esta ola 7, tenemos mas? podemos trabajar desde ya o debemos esperar? si se puede lanzar ya dejemoslo para que lo haga spark inicie con algo grande». El plan de la tanda 4 termina con la ola 7 (en cierre en el escritorio) y la ola 8 (arte final del Mapa y de TiTino, bloqueada por el artista; M5.1 ya está hecha). Lo que falta para la 1.0 no está planificado: esta sección es el arranque de la tanda 5.
+
+### S1 · Auditoría de la 1.0 frente al cliente (rama `spark/auditoria-1-0`, solo documentación)
+1. Recorre el GDD (`docs/GDD.md` §2, §6 y §7 y `docs/gdd/00-09`, sobre todo 02, 04, 05, 06 y 08) y lista **todas las piezas de la 1.0** (pantallas, sistemas, metajuego, economía, tienda, anuncios, analítica, guardado en la nube, notificaciones, accesibilidad, rendimiento, publicación…).
+2. Para cada una, mira el código de `integracion-fase1-fase2` y di si está **hecha**, **a medias** (qué falta) o **sin empezar**, con archivos y pruebas como evidencia. No te fíes de los comentarios: busca la implementación y los tests.
+3. Separa lo que está **bloqueado por el dueño o por terceros** (SDK de anuncios, compras, Firebase y Play Games: necesitan cuentas, el permiso `INTERNET` y su aprobación; Addressables y PAD: la decisión del espacio del AAB; el arte; el asesor; el abogado; el CI con secretos) de lo que **se puede hacer ya con el canon del GDD**.
+4. Con lo que se puede hacer ya, propón la **tanda 5** en bloques grandes e independientes (de 1-3 días cada uno), con sus tareas, archivos y dependencias, y di cuáles chocan con los archivos que el escritorio está tocando ahora (lienzo 16:9 en `GameScreen`, fondos en `StopBackdrop`, traducciones en `strings.csv`, el final del 700 en el Mapa y `AppFlow`).
+5. Escríbelo en `docs/dev/plan-tanda5.md` (y una entrada en `spark-estado.md`). Si el GDD deja algo sin decidir, no lo inventes: apúntalo como pregunta con opciones y una recomendada.
+
+### S2 · El primer bloque grande (rama `spark/t5-<bloque>`)
+Cuando termines S1, empieza **sin esperar** el bloque del plan que más acerque la 1.0 y que: (a) no dependa de nada bloqueado, (b) no tenga preguntas abiertas sin recomendada, y (c) toque lo mínimo los archivos del escritorio. Mismas reglas de siempre (secciones 1-3): tus archivos nuevos en tu rama; lo que toque archivos compartidos, como parches probados en `docs/dev/traspaso/spark-enganches/`; revisión, verificación completa y entrada en `spark-estado.md` por cada tarea. Avisa en el estado cuando un bloque esté listo para integrar.
+

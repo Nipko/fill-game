@@ -412,6 +412,8 @@ No copiamos: las cartas que salen de cofres al azar (research/09; 06 §4.6). Aqu
 | F13 | ¿Algo nuevo a mitad de los mundos largos (6-11)? | A) Un segundo gesto de la misma especie a mitad de mundo. B) Invitados opcionales (b.6). C) Nada | **A** en la 1.1 y **B** después. Rellena el hueco 421-700 sin arte nuevo |
 | F14 | Mundo 4 | A) Churuco (se cuelga de la cola; esqueleto nuevo). B) Tití cuellinegro (reutiliza esqueleto; se parece al sauim) | **A.** Es el gesto más vistoso y llega pronto (nivel 81) |
 
+**Estado (2026-10-19, D-029 de `docs/dev/decisiones.md`).** El dueño aceptó la recomendación de las que seguían abiertas: **F7 → A**, la página Fauna, cuando lo dé el asesor (glosario §3.3 y 06 §4.6 llevan una nota hasta entonces); **F9 → A**, microinteracciones con la fauna del fondo (≤ 2 animales por mundo, fuera del panel, sin economía, midiendo los toques erróneos en las cuias), al backlog: la especifica el tech-lead con la fauna del fondo; **F10 → A**, la fauna no reacciona al sellar; **F11 → A**, el tucuxi salta en las celebraciones y Rosa asoma y exhala, con el asesor (nota en 07 §6.2; el código, cuando lo dé); **F13 → A en la 1.1** (09 §1.2) y B después. F8 es Q11 del guion (A, tarea DC15) y F12 es Q9; las demás las cubría ya el guion.
+
 ---
 
 ## 6. Choques con el canon (para editar el GDD si el dueño aprueba)

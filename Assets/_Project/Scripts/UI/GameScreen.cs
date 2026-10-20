@@ -993,7 +993,7 @@ namespace AF.UI
             else
             {
                 StartIntro(flow, durationMs, isShort);
-                if (isShort)
+                if (isShort && !flow.IsDaily) // E21: el Reto no enseña «Nivel N» (06 §4.1: cabecera «Reto del río»)
                 {
                     // 02 §2 (INTRO): «En reintento muestra Nivel N · intento k», con k = fails_level + 1, como el rótulo
                     // «Level N» que baja al reintentar en Magic Sort (ficha §4.1). Reintentar desde Nivel fallido, Volver a la
@@ -1212,6 +1212,7 @@ namespace AF.UI
                 _doubleSub.text = UiText.DoubleHarvestGain(flow.HarvestBase);
             }
 
+            VictoryTitleShown(flow); // «¡Perfecto!» o el de siempre (DC14), antes de que LayoutVictory mida el título
             LayoutVictory();
             StartHarvestCount(0, flow.HarvestSeeds, HarvestCountDelayMs);
             ShiftBoard(ShiftToClear(_victoryPanelY - RibbonRiseDp, 8f), true);

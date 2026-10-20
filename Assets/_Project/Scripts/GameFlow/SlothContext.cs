@@ -261,8 +261,10 @@ namespace AF.GameFlow
         /// <param name="previousScreenSpoke">La pantalla anterior con TiTino tuvo frase.</param>
         /// <param name="lastLine"><c>sloth.last_line</c> (<see cref="SlothData.LastLine"/>; se copia y no se guarda la referencia), o null si
         /// no hay perfil. Los momentos que falten valen <see cref="SlothData.NoLine"/>.</param>
+        /// <param name="previousScreenMapIntro">La pantalla anterior fue el Mapa del 10 con el bocadillo <c>map_l10_intro</c>
+        /// (<see cref="SlothSession.RecordMapIntro"/>; D-028, pregunta 60 b): en el inicio, el saludo del día se aplaza.</param>
         public SlothContext(bool enabled, bool messages, bool failEnabled, int winLineEveryN, int linesPerSessionMax, int linesThisSession,
-            bool previousScreenSpoke, int[]? lastLine)
+            bool previousScreenSpoke, int[]? lastLine, bool previousScreenMapIntro = false)
         {
             Enabled = enabled;
             Messages = messages;
@@ -270,7 +272,8 @@ namespace AF.GameFlow
             WinLineEveryN = winLineEveryN;
             LinesPerSessionMax = linesPerSessionMax;
             LinesThisSession = linesThisSession;
-            PreviousScreenSpoke = previousScreenSpoke;
+            PreviousScreenSpoke = previousScreenSpoke || previousScreenMapIntro;
+            PreviousScreenMapIntro = previousScreenMapIntro;
             _lastWin = LineAt(lastLine, SlothMoment.Win);
             _lastHard = LineAt(lastLine, SlothMoment.Hard);
             _lastFail = LineAt(lastLine, SlothMoment.Fail);
@@ -315,6 +318,13 @@ namespace AF.GameFlow
 
         /// <summary>La pantalla anterior con TiTino tuvo frase.</summary>
         public bool PreviousScreenSpoke { get; }
+
+        /// <summary>
+        /// La pantalla anterior fue el Mapa del 10 con el bocadillo <c>map_l10_intro</c> (D-028, pregunta 60 b): cuenta como
+        /// pantalla con frase (<see cref="PreviousScreenSpoke"/>) pero no gasta ninguna de las de la sesión, y en el inicio el
+        /// saludo del día no sale ni se gasta (<see cref="SlothLine.Deferred"/>).
+        /// </summary>
+        public bool PreviousScreenMapIntro { get; }
 
         /// <summary>Datos de la victoria (<see cref="WithVictory"/>).</summary>
         public SlothVictoryFacts Victory { get; }
@@ -392,7 +402,8 @@ namespace AF.GameFlow
     public readonly struct SlothLine
     {
         /// <summary>Crea el resultado (solo <see cref="SlothLines"/> y los tests).</summary>
-        public SlothLine(SlothScreen screen, SlothGesture gesture, SlothMoment moment, int index, string? key, int arg, bool greeting)
+        public SlothLine(SlothScreen screen, SlothGesture gesture, SlothMoment moment, int index, string? key, int arg, bool greeting,
+            bool deferred = false)
         {
             Screen = screen;
             Gesture = gesture;
@@ -401,6 +412,7 @@ namespace AF.GameFlow
             Key = key;
             Arg = arg;
             Greeting = greeting;
+            Deferred = deferred;
         }
 
         /// <summary>Pantalla decidida.</summary>
@@ -424,6 +436,13 @@ namespace AF.GameFlow
         /// <summary>En el inicio, es el saludo del día (de regreso o de la mañana): cuenta para el tope de 1 al día.</summary>
         public bool Greeting { get; }
 
+        /// <summary>
+        /// En el inicio, el saludo del día tocaba pero se aplaza porque TiTino acaba de presentarse en el Mapa del 10 (D-028,
+        /// pregunta 60 b): no sale, y ni <c>sloth.last_greeting_date</c> ni <c>sloth.last_seen_date</c> se escriben, para que le
+        /// toque en la visita siguiente al inicio.
+        /// </summary>
+        public bool Deferred { get; }
+
         /// <summary>TiTino dice una frase.</summary>
         public bool Speaks => Key != null;
     }
@@ -431,7 +450,8 @@ namespace AF.GameFlow
     /// <summary>
     /// Estado de TiTino durante una sesión (D-016, punto 5): los interruptores, las frases dichas, si la pantalla anterior tuvo
     /// frase y el <c>sloth</c> del perfil. Da el <see cref="Context"/> de cada decisión y apunta el resultado con
-    /// <see cref="Record"/> (también las pantallas sin frase, que cortan la racha de «dos pantallas seguidas»).
+    /// <see cref="Record"/> (también las pantallas sin frase, que cortan la racha de «dos pantallas seguidas»). El bocadillo del
+    /// Mapa del 10 se apunta aparte, con <see cref="RecordMapIntro"/>.
     /// </summary>
     public sealed class SlothSession
     {
@@ -476,9 +496,12 @@ namespace AF.GameFlow
         /// <summary>La última pantalla apuntada tuvo frase.</summary>
         public bool PreviousScreenSpoke { get; private set; }
 
+        /// <summary>La última pantalla apuntada fue el Mapa del 10 con su bocadillo (<see cref="RecordMapIntro"/>).</summary>
+        public bool PreviousScreenMapIntro { get; private set; }
+
         /// <summary>Contexto de ahora, sin datos de ningún momento.</summary>
         public SlothContext Context => new SlothContext(Enabled, Messages, FailEnabled, WinLineEveryN, LinesPerSessionMax, LinesThisSession,
-            PreviousScreenSpoke, _data.LastLine);
+            PreviousScreenSpoke, _data.LastLine, PreviousScreenMapIntro);
 
         /// <summary>Datos del inicio con lo guardado en <c>sloth</c> (<c>last_seen_date</c> y <c>last_greeting_date</c>).</summary>
         public SlothHomeFacts HomeFacts(string today, int hour, int nextLevel)
@@ -494,6 +517,7 @@ namespace AF.GameFlow
         public void Record(in SlothLine line, in SlothContext context)
         {
             PreviousScreenSpoke = line.Speaks;
+            PreviousScreenMapIntro = false;
             if (line.Speaks)
             {
                 LinesThisSession++;
@@ -504,7 +528,7 @@ namespace AF.GameFlow
                 }
             }
 
-            if (line.Screen == SlothScreen.Home && SlothData.IsDateKey(context.Home.Today))
+            if (line.Screen == SlothScreen.Home && !line.Deferred && SlothData.IsDateKey(context.Home.Today))
             {
                 _data.LastSeenDate = context.Home.Today;
                 if (line.Greeting)
@@ -512,6 +536,19 @@ namespace AF.GameFlow
                     _data.LastGreetingDate = context.Home.Today;
                 }
             }
+        }
+
+        /// <summary>
+        /// Apunta el bocadillo <c>map_l10_intro</c> del Mapa del 10 (D-028, pregunta 60 b de GDD §6.3): no es una
+        /// <c>sloth_line_*</c> y no gasta ninguna de las <c>ui_sloth_lines_per_session_max</c> frases de la sesión ni toca
+        /// <c>sloth.last_line</c>, pero cuenta como pantalla en la que TiTino habló (D-016, punto 5: nunca en dos pantallas
+        /// seguidas). Si la pantalla siguiente es el inicio, el saludo del día se aplaza a la visita siguiente
+        /// (<see cref="SlothLine.Deferred"/>).
+        /// </summary>
+        public void RecordMapIntro()
+        {
+            PreviousScreenSpoke = true;
+            PreviousScreenMapIntro = true;
         }
     }
 }

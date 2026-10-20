@@ -417,10 +417,18 @@ namespace AF.Tests.PlayMode
         public IEnumerator EnXA_Victory_RibbonTitle([Values(100, 130)] int percent)
         {
             // La victoria del 11 en en-XA a 360 × 640 (guía 5.5; revisión de L4): «[¡Ñívél çómplétádó! ······]» cabe en una línea
-            // al 100 %; al 130 % no cabe a 22 sp × 1,3 y va en dos, con la hoja más alta (hasta 88 dp) y la Cosecha debajo.
+            // al 100 %; al 130 % no cabe a 22 sp × 1,3 y va en dos, con la hoja más alta (hasta 88 dp) y la Cosecha debajo. Desde
+            // DC14, la victoria sin la Cuia de rescate dice «¡Perfecto!» (en una línea a los dos tamaños): el título de siempre se
+            // pone a mano y se recoloca, como en Victory_LongTitle_TwoLinesTallerLeaf.
             float scale = percent / 100f;
             yield return LongLabelSetup.LoadVictory11(LocLocale.Pseudo, scale);
-            LongLabelSetup.AssertRibbon(GameBootstrap.Current!.View!, scale, percent == 100 ? 1 : 2);
+            GameScreen view = GameBootstrap.Current!.View!;
+            Assert.That(view.VictoryRibbonTitle.text, Is.EqualTo(UiText.VictoryPerfect), "sin rescate: «¡Perfecto!» (DC14)");
+            LongLabelSetup.AssertRibbon(view, scale, 1);
+            view.VictoryRibbonTitle.text = UiText.LevelComplete;
+            view.RelayoutForTests();
+            yield return null;
+            LongLabelSetup.AssertRibbon(view, scale, percent == 100 ? 1 : 2);
         }
 
         [UnityTest]

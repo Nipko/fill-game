@@ -209,7 +209,7 @@ namespace AF.Save.Tests
         public void NewerSchema_IsNotOverwritten()
         {
             var store = new LocalProfileStore(_dir);
-            const string future = "{\"profile_schema\": 2, \"wallet\": {\"seeds\": 5000}}";
+            const string future = "{\"profile_schema\": 3, \"wallet\": {\"seeds\": 5000}}";
             File.WriteAllText(store.MainPath, future, Utf8NoBom);
 
             ProfileLoadResult result = store.Load();
@@ -225,9 +225,9 @@ namespace AF.Save.Tests
         [Test]
         public void OlderSchema_IsMigratedInMemory_AfterBackingItUp()
         {
-            // Esquema 0 sintético con una clave renombrada: la build real no tiene pasos todavía (esquema 1).
+            // Esquema 0 sintético con una clave renombrada, seguido del paso real 1 → 2 de la build (DC15).
             const string v0 = "{\"profile_schema\": 0, \"coins\": 7}";
-            var migrations = new ProfileMigrations(1, ProfileMigrations.Step(0, RenameCoinsToSeeds));
+            var migrations = new ProfileMigrations(2, ProfileMigrations.Step(0, RenameCoinsToSeeds), ProfileMigrations.Step(1, ProfileMigrations.MigrateV1ToV2));
             var store = new LocalProfileStore(_dir, migrations);
             File.WriteAllText(store.MainPath, v0, Utf8NoBom);
 
@@ -248,7 +248,7 @@ namespace AF.Save.Tests
         public void FailedMigration_KeepsThePreviousProfile_AndBlocksWrites()
         {
             const string v0 = "{\"profile_schema\": 0, \"coins\": 7}";
-            var migrations = new ProfileMigrations(1, ProfileMigrations.Step(0, _ => throw new InvalidOperationException("paso roto")));
+            var migrations = new ProfileMigrations(2, ProfileMigrations.Step(0, _ => throw new InvalidOperationException("paso roto")), ProfileMigrations.Step(1, ProfileMigrations.MigrateV1ToV2));
             var store = new LocalProfileStore(_dir, migrations);
             File.WriteAllText(store.MainPath, v0, Utf8NoBom);
 
@@ -308,7 +308,7 @@ namespace AF.Save.Tests
         {
             Assert.Throws<ArgumentException>(() => new LocalProfileStore("perfil"));
             Assert.Throws<ArgumentException>(() => new LocalProfileStore(""));
-            Assert.Throws<ArgumentException>(() => new LocalProfileStore(_dir, new ProfileMigrations(2)));
+            Assert.Throws<ArgumentException>(() => new LocalProfileStore(_dir, new ProfileMigrations(Profile.CurrentSchema + 1)));
             Assert.That(ProfileMigrations.Current.TargetSchema, Is.EqualTo(Profile.CurrentSchema));
         }
 
@@ -642,7 +642,7 @@ namespace AF.Save.Tests
                     File.WriteAllBytes(path, bytes);
                     break;
                 case "wrong-type":
-                    File.WriteAllText(path, "{\"profile_schema\": 1, \"wallet\": {\"seeds\": \"mil\"}}", Utf8NoBom);
+                    File.WriteAllText(path, "{\"profile_schema\": 2, \"wallet\": {\"seeds\": \"mil\"}}", Utf8NoBom);
                     break;
                 default:
                     throw new ArgumentException(corruption);

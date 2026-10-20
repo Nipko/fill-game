@@ -17,7 +17,7 @@ namespace AF.Tests.EditMode
     /// Textos del sistema del Mapa del río (D-013; glosario §10; P-M2 de D-023; tarea M1.5) en <c>strings.csv</c> y su acceso
     /// tipado (<c>UiText.Map.cs</c>):
     /// <list type="bullet">
-    /// <item>las 21 claves (las 11 del glosario y las 10 de P-M2) y ninguna <c>map_*</c> más, todas <c>pendiente_asesor</c>,
+    /// <item>las 22 claves (las 11 del glosario, las 10 de P-M2 y la naciente de FX13) y ninguna <c>map_*</c> más, todas <c>pendiente_asesor</c>,
     /// solo en ES, con contexto y <c>max_chars</c>;</item>
     /// <item>el plural de <c>map_stop_remaining</c> con 0, 1, 2 y 21, y las cifras con la región de <see cref="Loc"/>;</item>
     /// <item>las longitudes: los textos con las 70 paradas reales (1-700, M4.5b) caben en su <c>max_chars</c>, la presentación
@@ -42,6 +42,9 @@ namespace AF.Tests.EditMode
             "map_card_other_fact", "map_card_source", "map_facts_count", "map_l10_intro",
         };
 
+        /// <summary>La de FX13: la naciente del último tramo (D-013, viñeta del 2026-10-19).</summary>
+        private static readonly string[] Fx13Keys = { "map_source_name" };
+
         private static RiverStopCatalog? s_stops;
         private LocStateSnapshot _loc;
 
@@ -65,13 +68,14 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Keys_AreTheElevenOfTheGlossaryAndTheTenOfPM2_AndNoOtherMapKey()
+        public void Keys_AreTheElevenOfTheGlossary_TheTenOfPM2_AndTheSourceOfFx13_AndNoOtherMapKey()
         {
             var expected = new List<string>(GlossaryKeys);
             expected.AddRange(PM2Keys);
+            expected.AddRange(Fx13Keys);
             expected.Sort(StringComparer.Ordinal);
-            Assert.That(expected, Has.Count.EqualTo(21));
-            Assert.That(new HashSet<string>(expected), Has.Count.EqualTo(21), "sin repetidas");
+            Assert.That(expected, Has.Count.EqualTo(22));
+            Assert.That(new HashSet<string>(expected), Has.Count.EqualTo(22), "sin repetidas");
 
             LocTable strings = LocSetUpFixture.Catalog.Strings;
             var found = new List<string>();
@@ -84,7 +88,7 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(found, Is.EqualTo(expected), "las 21 claves del Mapa, en orden ordinal, y ninguna map_* más");
+            Assert.That(found, Is.EqualTo(expected), "las 22 claves del Mapa, en orden ordinal, y ninguna map_* más");
 
             var typed = new List<string>();
             foreach (FieldInfo f in typeof(UiText.Keys).GetFields(BindingFlags.Public | BindingFlags.Static))
@@ -137,6 +141,62 @@ namespace AF.Tests.EditMode
         {
             Assert.That(UiText.MapStopRemaining(1000, "Iquitos"), Is.EqualTo("Faltan 1000 niveles para Iquitos"));
             Assert.That(UiText.MapStopRemaining(-3, "Iquitos"), Is.EqualTo("Faltan 0 niveles para Iquitos"), "un negativo se escribe 0");
+        }
+
+        // FX13 (D-013, viñeta del 2026-10-19): tras la última parada (Tambo, 691-700), «Faltan N» va hacia la naciente del Mismi.
+        [Test]
+        public void NextPlace_IsTheNextStop_AndAfterTheLastStop_TheSourceOfTheMismi()
+        {
+            RiverStopCatalog stops = Stops;
+            Assert.That(stops.At(69)!.AtLine, Is.EqualTo(RiverMap.CauceLineId), "Tambo, en el cauce (at.line)");
+            Assert.That(stops.HeadsToSource, Is.True, "tras Tambo, la naciente");
+            Assert.That(UiText.NextPlaceName(stops, stops.StopOf(685)), Is.EqualTo("El Tambo"), "681-690: hacia Tambo (69)");
+            Assert.That(UiText.NextPlaceName(stops, stops.StopOf(690)), Is.EqualTo("El Tambo"));
+            Assert.That(UiText.MapSourceName, Is.EqualTo("El nevado Mismi"));
+            Assert.That(UiText.NextPlaceName(stops, stops.StopOf(691)), Is.EqualTo(UiText.MapSourceName), "691-700: hacia la naciente");
+            Assert.That(UiText.NextPlaceName(stops, stops.StopOf(700)), Is.EqualTo(UiText.MapSourceName));
+            Assert.That(UiText.NextPlaceName(stops, null), Is.Empty, "sin parada en juego");
+
+            // «Faltan N» = 10 · (k + 1) − p + 1 (RiverJourney.LevelsLeft): 6 en el 695 y 1 en el 700.
+            Assert.That(UiText.MapStopRemaining(6, UiText.NextPlaceName(stops, stops.StopOf(695))), Is.EqualTo("Faltan 6 niveles para El nevado Mismi"));
+            Assert.That(UiText.MapStopRemaining(1, UiText.NextPlaceName(stops, stops.StopOf(700))), Is.EqualTo("Falta 1 nivel para El nevado Mismi"));
+
+            // Un catálogo que acaba fuera del cauce (las paradas 0-19, la última en el Marañón): sin meta y sin «Faltan…» tras ella,
+            // como el Mapa, que no tiene ruta hasta la naciente (RiverMapReader.SourceGoal).
+            var first20 = new RiverStop[20];
+            for (int k = 0; k < first20.Length; k++)
+            {
+                first20[k] = stops.At(k)!;
+            }
+
+            var truncated = new RiverStopCatalog("test", first20);
+            Assert.That(truncated.At(19)!.AtLine, Is.EqualTo("maranon"));
+            Assert.That(truncated.HeadsToSource, Is.False);
+            Assert.That(UiText.NextPlaceName(truncated, truncated.StopOf(195)), Is.Empty);
+            Assert.That(UiText.NextPlaceName(truncated, truncated.StopOf(185)), Is.EqualTo(UiText.StopName(truncated.At(19)!)));
+        }
+
+        // Revisión de FX13: el fin de contenido del 700 abre en el 701 (mundo 10, sin paradas en el Mapa); la cabecera nombra el
+        // mundo de la última parada (9, Ucayali), solo, nunca el mundo 10.
+        [Test]
+        public void SourceTitle_BeyondTheLastStop_NamesTheLastStopWorld()
+        {
+            RiverStopCatalog stops = Stops;
+            Assert.That(stops.At(stops.Count - 1)!.World, Is.EqualTo(9), "premisa: Tambo, en el mundo 9");
+            Assert.That(RiverMapScreen.SourceTitleWorld(stops, 10), Is.EqualTo(9), "el 701, más allá de Tambo");
+            Assert.That(RiverMapScreen.SourceTitleWorld(stops, 9), Is.EqualTo(0), "el mundo 9 tiene paradas: su pregunta, como siempre");
+            Assert.That(RiverMapScreen.SourceTitleWorld(stops, 1), Is.EqualTo(0));
+            Assert.That(UiText.WorldName(9), Is.EqualTo("Ucayali"));
+
+            // Sin meta (la última parada fuera del cauce), nada cambia.
+            var first20 = new RiverStop[20];
+            for (int k = 0; k < first20.Length; k++)
+            {
+                first20[k] = stops.At(k)!;
+            }
+
+            var truncated = new RiverStopCatalog("test", first20);
+            Assert.That(RiverMapScreen.SourceTitleWorld(truncated, 3), Is.EqualTo(0));
         }
 
         [Test]
@@ -288,6 +348,11 @@ namespace AF.Tests.EditMode
             }
 
             foreach (string key in PM2Keys)
+            {
+                yield return key;
+            }
+
+            foreach (string key in Fx13Keys)
             {
                 yield return key;
             }

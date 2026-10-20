@@ -12,52 +12,36 @@ namespace AF.UI
     /// M2.3), en el primer nivel de cada parada (<see cref="AF.GameFlow.StopLabelRule"/>). Sale por la cola de avisos de GameScreen
     /// (GameScreen.Notices.cs), uno cada vez, y dura lo que se tarda en leerlo (<see cref="AF.GameFlow.NoticeTiming"/>, D-011), con
     /// una entrada y una salida de <see cref="FadeMs"/> ms. No captura toques (<see cref="CanvasGroup.blocksRaycasts"/> = false y
-    /// ningún gráfico es <c>raycastTarget</c>). Dos formas [P]:
-    /// <list type="bullet">
-    /// <item><description><b>Sobre el horizonte</b> (tableros de 1 y 2 filas): Baloo 2 ExtraBold de <see cref="TextSp"/> sp en
-    /// crema con el contorno de 2,5 dp y la sombra de madera de la insignia del nivel (<see cref="TextStyle.Badge"/>), centrado a
-    /// lo ancho, con su borde de arriba <see cref="AboveHorizonDp"/> dp sobre el horizonte del panorama (nunca a menos de
-    /// <see cref="HudGapDp"/> dp del pie de la fila del HUD) y sin bajar del canto de arriba del panel: en la franja del panorama,
-    /// donde se ve el sitio. El contorno oscuro separa la letra de cualquier cielo o héroe (<see cref="ContrastPairs"/>).</description></item>
-    /// <item><description><b>Placa bajo el HUD</b> (tableros de 3 filas, que no dejan franja: el panel empieza bajo el HUD): una
-    /// placa de madera oscura con canto de <c>madera_contorno</c>, ajustada al texto (Baloo 2 ExtraBold de <see cref="PlateTextSp"/>
-    /// sp en crema con contorno, <see cref="TextStyle.ModalTitle"/>; de alto <see cref="PlateHeightEm"/> veces el texto, con la
-    /// tinta centrada), clavada al marco del panel (su borde de arriba <see cref="PlateOverFrameDp"/> dp por encima del canto
-    /// interior del marco: 3 dp dentro de la madera; nunca sobre la fila del HUD) y al menos <see cref="PlateCuiaGapDp"/> dp
-    /// por encima de lo más alto de la fila 1 en reposo (los corchos y las piezas de las mecánicas que asoman sobre la boca,
-    /// como el medallón de la Hoja): monta sobre la barra de arriba del marco, con aire sobre las cuias y sin tapar sus bocas.
-    /// Si no cabe, el texto se encoge, nunca por debajo de 12 sp (02 §12).
-    /// <b>Arreglos de la prueba de la ola 2 en el teléfono (observación 3; tarea FX4)</b> [P]: con la placa a la vista, nada de
-    /// la fila 1 puede quedar bajo ella. Entre la placa clavada al marco y la cuia elevada no caben ni 12 sp (en 360 × 780 dp
-    /// quedan ~12 dp, y la placa de una línea a 12 sp mide 17 + <see cref="PlateLiftAirDp"/> de aire), así que al elevar una
-    /// cuia de la fila 1 que quede bajo la placa, esta se oculta en el acto y se descarta, como el aviso ante un modal
+    /// ningún gráfico es <c>raycastTarget</c>). Una sola forma, la <b>placa</b>, con cualquier número de filas (D-030, pregunta 9
+    /// (b); tarea DC24: con 1-2 filas, el rótulo sobre el horizonte tapaba el héroe del sitio durante 3 s, observación 1 de la
+    /// prueba de la ola 2): una placa de madera oscura con canto de <c>madera_contorno</c>, ajustada al texto (Baloo 2 ExtraBold
+    /// de <see cref="PlateTextSp"/> sp en crema con contorno, <see cref="TextStyle.ModalTitle"/>; de alto
+    /// <see cref="PlateHeightEm"/> veces el texto, con la tinta centrada), clavada al marco del panel (su borde de arriba
+    /// <see cref="PlateOverFrameDp"/> dp por encima del canto interior del marco: 3 dp dentro de la madera; nunca sobre la fila
+    /// del HUD) y al menos <see cref="PlateCuiaGapDp"/> dp por encima de lo más alto de la fila 1 en reposo (los corchos y las
+    /// piezas de las mecánicas que asoman sobre la boca, como el medallón de la Hoja): monta sobre la barra de arriba del marco,
+    /// con aire sobre las cuias y sin tapar sus bocas. Con 1-2 filas el panel empieza más abajo y el héroe del panorama queda por
+    /// encima de él (el horizonte va 64 dp sobre el canto del panel y el héroe baja como mucho 32 dp de él; 07 §2.1), así que la
+    /// placa, que empieza dentro de la barra de arriba del marco, no lo tapa. Si no cabe, el texto se encoge, nunca por
+    /// debajo de 12 sp (02 §12).
+    /// <para><b>Arreglos de la prueba de la ola 2 en el teléfono (observación 3; tarea FX4)</b> [P]: con la placa a la vista,
+    /// nada de la fila 1 puede quedar bajo ella. Entre la placa clavada al marco y la cuia elevada no caben ni 12 sp (en 360 ×
+    /// 780 dp quedan ~12 dp, y la placa de una línea a 12 sp mide 17 + <see cref="PlateLiftAirDp"/> de aire), así que al elevar
+    /// una cuia de la fila 1 que quede bajo la placa, esta se oculta en el acto y se descarta, como el aviso ante un modal
     /// (GameScreen.Notices.cs). Si ni en reposo cabe a 12 sp sobre toda la fila 1 (la Hoja en la fila 1, como en el 171: su
     /// medallón sube 0,70 u sobre la boca), va a la misma altura pero de lado, centrada en el tramo libre más ancho de la fila 1
     /// (con <see cref="PlateSideAirDp"/> dp a cada lado de lo que asoma); si en ningún tramo cabe en una línea a 12 sp, va sobre
     /// el muelle, bajo el panel y por encima de la bandeja, como la tarjeta del miquito; si tampoco cabe ahí, no sale (nunca
-    /// se recorta el texto).</description></item>
-    /// </list>
+    /// se recorta el texto).</para>
     /// El texto se mide al enseñarlo y al cambiar de sitio, nunca por fotograma (sin asignaciones en <see cref="Tick"/>).
     /// </summary>
     internal sealed class StopLabel
     {
-        /// <summary>El borde de arriba del rótulo, sobre el horizonte del panorama (dp; plan del Mapa, M2.3) [P].</summary>
-        public const float AboveHorizonDp = 28f;
-
-        /// <summary>Texto del rótulo sobre el horizonte (sp; plan del Mapa, M2.3) [P].</summary>
-        public const float TextSp = 18f;
-
-        /// <summary>Texto de la placa bajo el HUD (sp) [P].</summary>
+        /// <summary>Texto de la placa (sp) [P].</summary>
         public const float PlateTextSp = 14f;
 
         /// <summary>Margen a cada lado del lienzo (dp).</summary>
         public const float SideDp = 16f;
-
-        /// <summary>Aire entre el pie de la fila del HUD y el rótulo sobre el horizonte (dp) [P].</summary>
-        public const float HudGapDp = 2f;
-
-        /// <summary>Aire entre el rótulo sobre el horizonte y el canto de arriba del panel (dp) [P].</summary>
-        public const float CuiaGapDp = 2f;
 
         /// <summary>
         /// Lo que la placa monta sobre el marco del panel, desde su canto interior tal como lo cuenta <c>PanelFrameDp</c> (dp;
@@ -114,13 +98,11 @@ namespace AF.UI
         private readonly CanvasGroup _group;
         private readonly Image _edge;
         private readonly Image _plate;
-        private readonly TextMeshProUGUI _horizonText;
         private readonly TextMeshProUGUI _plateText;
         private readonly float _plateMaxSize;
         private readonly float _plateMinSize;
         private float _leftMs = -1f;
         private float _totalMs;
-        private bool _onPlate;
         private Rect _rect;
 
         public StopLabel(Transform parent, ProceduralArt art)
@@ -139,7 +121,6 @@ namespace AF.UI
             _plate.rectTransform.offsetMin = new Vector2(PlateEdgeDp, PlateEdgeDp);
             _plate.rectTransform.offsetMax = new Vector2(-PlateEdgeDp, -PlateEdgeDp);
 
-            _horizonText = NewText("Text", TextStyle.Badge, TextSp);
             _plateText = NewText("PlateText", TextStyle.ModalTitle, PlateTextSp);
             _plateMaxSize = _plateText.fontSizeMax; // PlateTextSp y 12 sp con la escala de texto (A1)
             _plateMinSize = _plateText.fontSizeMin;
@@ -152,10 +133,7 @@ namespace AF.UI
         public bool Visible => _root.gameObject.activeSelf;
 
         /// <summary>Texto del rótulo («Floresta Nacional do Tapajós · Brasil»).</summary>
-        public string Text => Label.text;
-
-        /// <summary>Va como placa bajo el HUD (3 filas); si no, sobre el horizonte.</summary>
-        public bool OnPlate => _onPlate;
+        public string Text => _plateText.text;
 
         /// <summary>Duración del rótulo a la vista, con sus fundidos (ms; tests).</summary>
         public float DurationMs => _totalMs;
@@ -169,67 +147,39 @@ namespace AF.UI
         /// <summary>El rótulo bloquea los toques (siempre false: los deja pasar; tests).</summary>
         public bool BlocksRaycasts => _group.blocksRaycasts;
 
-        /// <summary>Rectángulo del rótulo (la placa o la caja del texto), en dp desde arriba a la izquierda del lienzo.</summary>
+        /// <summary>Rectángulo de la placa, en dp desde arriba a la izquierda del lienzo.</summary>
         public Rect Rect => _rect;
 
-        /// <summary>El texto que se ve (el de la placa o el del horizonte; tests).</summary>
-        public TextMeshProUGUI Label => _onPlate ? _plateText : _horizonText;
+        /// <summary>El texto de la placa (tests).</summary>
+        public TextMeshProUGUI Label => _plateText;
 
         /// <summary>Raíz del rótulo (tests de capas).</summary>
         public RectTransform Root => _root;
 
         /// <summary>
-        /// Pares texto / fondo de la comprobación ≥ 4,5:1 (WCAG 1.4.3; criterio de M2.3): el crema sobre el contorno de la letra
-        /// (lo que la separa del cielo o del héroe sobre el horizonte) y sobre la madera de la placa.
+        /// Pares texto / fondo de la comprobación ≥ 4,5:1 (WCAG 1.4.3; criterio de M2.3): el crema sobre la madera de la placa.
         /// </summary>
         public static (string Name, Color Text, Color Background)[] ContrastPairs()
         {
             return new[]
             {
-                ("rótulo sobre el horizonte: crema sobre su contorno", (Color)Palette.Cream, Palette.FamilyWood.Outline),
-                ("placa bajo el HUD: crema sobre la madera", (Color)Palette.Cream, Palette.FamilyWood.Deep),
+                ("placa: crema sobre la madera", (Color)Palette.Cream, Palette.FamilyWood.Deep),
             };
         }
 
         /// <summary>
-        /// Enseña <paramref name="text"/> durante <paramref name="ms"/> ms sobre el horizonte: centrado a lo ancho de un lienzo de
-        /// <paramref name="canvasW"/> dp, con su borde de arriba <see cref="AboveHorizonDp"/> dp sobre <paramref name="horizonY"/>
-        /// y no más arriba de <paramref name="minTop"/> (el pie de la fila del HUD + <see cref="HudGapDp"/>); su borde de abajo no
-        /// pasa de <paramref name="maxBottom"/> (el canto de arriba del panel − <see cref="CuiaGapDp"/>): si ahí no llega, sube lo
-        /// justo (sin pasar de <paramref name="minTop"/>), y si ni así cabe, el texto se encoge (12 sp como mucho).
-        /// </summary>
-        public void ShowOnHorizon(string text, float ms, float canvasW, float horizonY, float minTop, float maxBottom)
-        {
-            Begin(text, ms, false);
-            PlaceOnHorizon(canvasW, horizonY, minTop, maxBottom);
-        }
-
-        /// <summary>Vuelve a colocar el rótulo sobre el horizonte (cambio de lienzo o de tablero con el rótulo a la vista).</summary>
-        public void PlaceOnHorizon(float canvasW, float horizonY, float minTop, float maxBottom)
-        {
-            float width = Mathf.Max(0f, canvasW - (2f * SideDp));
-            float height = Mathf.Ceil(_horizonText.GetPreferredValues(_horizonText.text, width, float.PositiveInfinity).y);
-
-            // Con el panel muy arriba (un lienzo apaisado), sube lo justo para no entrar en él, sin pasar del HUD.
-            float top = Mathf.Max(Mathf.Min(horizonY - AboveHorizonDp, maxBottom - height), minTop);
-            if (top + height > maxBottom)
-            {
-                float min = Mathf.Ceil(UiBuilder.MinTextHeight(_horizonText, width));
-                height = Mathf.Max(min, maxBottom - top);
-            }
-
-            SetRect(SideDp, top, width, height);
-            UiBuilder.Stretch(_horizonText.rectTransform);
-        }
-
-        /// <summary>
-        /// Empieza a enseñar <paramref name="text"/> durante <paramref name="ms"/> ms como placa bajo el HUD, sin colocarla: quien
+        /// Empieza a enseñar <paramref name="text"/> durante <paramref name="ms"/> ms como placa, sin colocarla: quien
         /// la enseña la coloca después con <see cref="PlaceAsPlate"/> en el primer sitio donde quepa (clavada al marco, de lado o
         /// sobre el muelle; GameScreen.Notices.cs) o, si no cabe en ninguno, la oculta.
         /// </summary>
         public void BeginPlate(string text, float ms)
         {
-            Begin(text, ms, true);
+            _plateText.text = text;
+            _leftMs = ms;
+            _totalMs = Mathf.Max(1f, ms);
+            _group.alpha = 0f;
+            _root.gameObject.SetActive(true);
+            _root.SetAsLastSibling();
         }
 
         /// <summary>
@@ -327,7 +277,6 @@ namespace AF.UI
         {
             graphics.Add(_edge);
             graphics.Add(_plate);
-            graphics.Add(_horizonText);
             graphics.Add(_plateText);
         }
 
@@ -338,21 +287,6 @@ namespace AF.UI
             UiBuilder.AutoSize(t, UiBuilder.MinTextSp, size);
             UiBuilder.Stretch(t.rectTransform);
             return t;
-        }
-
-        private void Begin(string text, float ms, bool plate)
-        {
-            _onPlate = plate;
-            _edge.gameObject.SetActive(plate);
-            _plate.gameObject.SetActive(plate);
-            _plateText.gameObject.SetActive(plate);
-            _horizonText.gameObject.SetActive(!plate);
-            Label.text = text;
-            _leftMs = ms;
-            _totalMs = Mathf.Max(1f, ms);
-            _group.alpha = 0f;
-            _root.gameObject.SetActive(true);
-            _root.SetAsLastSibling();
         }
 
         private void SetRect(float left, float top, float width, float height)

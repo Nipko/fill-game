@@ -16,7 +16,11 @@ namespace AF.Save
     /// del GDD. El bloque <c>ads</c> y <c>daily.af_rescue_hidden_until</c> no están en 08 §4.3: los nombres salen del
     /// pseudocódigo de 05 §6.3 y de la regla de 48 h de 05 §4.1 [P]. El resto de 08 §4.3 (consentimiento, uid, calendario,
     /// álbum, sonido…) llega con su sistema. <c>settings</c>, <c>sloth</c> y <c>map_seen_level</c> entran con el esquema 1
-    /// sin migrar, porque aún no se ha publicado (08 §4.3; D-013 punto 14 y D-016 punto 4).
+    /// sin migrar, porque aún no se ha publicado (08 §4.3; D-013 punto 14 y D-016 punto 4). El esquema 2 añade <c>fauna</c>
+    /// [P] (los avistamientos de la tarjeta «¡Miquito a la vista!», Q11 del guion de la intro; D-029; tarea DC15), con su paso
+    /// de migración 1 → 2 (<see cref="ProfileMigrations"/>), y <c>progress.undo_tip_seen</c> [P] (el tooltip de Marea, una vez
+    /// en la vida; D-030, pregunta 15 (b); tarea DC23), que entra en el mismo esquema 2 sin paso propio porque aún no se ha
+    /// publicado.
     /// <para>
     /// Es un contenedor de datos: las reglas (topes, precios, regeneración de canoas, reinicio diario) viven en
     /// <c>AF.Economy</c>, <c>AF.Ads</c> y <c>AF.Boosters</c>, que lo mutan y lo guardan con <see cref="IProfileStore"/>.
@@ -27,8 +31,11 @@ namespace AF.Save
     /// </summary>
     public sealed class Profile
     {
-        /// <summary>Versión del esquema que escribe esta build (08 §4.4: solo avanza).</summary>
-        public const int CurrentSchema = 1;
+        /// <summary>
+        /// Versión del esquema que escribe esta build (08 §4.4: solo avanza). 2 desde DC15: <c>fauna.sighted</c>, con el paso
+        /// 1 → 2 de <see cref="ProfileMigrations"/>.
+        /// </summary>
+        public const int CurrentSchema = 2;
 
         /// <summary><c>profile_schema</c>: siempre <see cref="CurrentSchema"/> en memoria (las migraciones van antes).</summary>
         public int ProfileSchema => CurrentSchema;
@@ -71,6 +78,21 @@ namespace AF.Save
 
         /// <summary><c>stats</c>: contadores agregados (nunca por nivel: eso va a analítica, 08 §4.3).</summary>
         public StatsData Stats { get; } = new StatsData();
+
+        /// <summary>
+        /// <c>fauna</c> [P] (esquema 2; Q11 del guion de la intro, D-029; tarea DC15): las especies de miquito cuya tarjeta
+        /// «¡Miquito a la vista!» ya vio el jugador. Lo necesitan el Cuaderno de campo (1.1) y el puente en el Mapa del río.
+        /// </summary>
+        public FaunaData Fauna { get; } = new FaunaData();
+
+        /// <summary>
+        /// <c>daily_challenge</c> (08 §4.3 ampliado por R-Q4, R-Q5 y R-Q16; nota del Reto §10; enganche E4): el registro del Reto
+        /// del río, o null si nunca se guardó (entonces la clave no se escribe). Vive en el mismo perfil que <see cref="Wallet"/>
+        /// para que el registro del cobro y el pago salgan en la misma escritura (nunca dos pagos por la misma fecha). Las reglas
+        /// las aplica <c>AF.LiveOps</c> (<c>ProfileDailyChallengeStore</c>); aquí solo se guardan. Entra sin subir el esquema (va
+        /// en el 2, el de <c>fauna</c>, y la migración 1 → 2 la conserva) porque aún no se ha publicado (08 §4.3).
+        /// </summary>
+        public DailyChallengeData? DailyChallenge { get; set; }
 
         /// <summary>
         /// Perfil de primera ejecución: <c>created_at</c> = ahora, 0 semillas (el GDD no fija otro saldo inicial),
@@ -198,7 +220,7 @@ namespace AF.Save
         public bool ShieldAvailable { get; set; }
     }
 
-    /// <summary><c>progress</c> (08 §4.3; 04 §10.1).</summary>
+    /// <summary><c>progress</c> (08 §4.3; 04 §10.1; <c>map_seen_level</c>, D-013, y <c>undo_tip_seen</c> [P], DC23).</summary>
     public sealed class ProgressData
     {
         /// <summary><c>max_level</c>: nivel más alto superado (0 = ninguno).</summary>
@@ -241,6 +263,30 @@ namespace AF.Save
             }
 
             MapSeenLevel = ClampMapSeen(Math.Max(MapSeenLevel, other.MapSeenLevel), MaxLevel);
+        }
+
+        /// <summary>
+        /// <c>undo_tip_seen</c> [P] (esquema 2; D-030, pregunta 15 (b); tarea DC23): el tooltip de Marea del tutorial ya salió
+        /// («Marea · Deshacer», 04 §2.1; 02 §13 y 06 §2.2, fila del 3). Sale una sola vez en la vida: se apunta al mostrarse, en
+        /// el 3 tras el primer vertido que no acerca o, si no salió allí, al inicio del 5. False por defecto (también en un perfil
+        /// sin la clave: el esquema 2 aún no se ha publicado y entra sin migración); en la fusión de la nube basta con que uno
+        /// de los dos lo haya visto (<see cref="MergeUndoTipSeen"/>).
+        /// </summary>
+        public bool UndoTipSeen { get; set; }
+
+        /// <summary>
+        /// Fusión de 08 §11 (<c>ResolveConflict</c>): sobre el progreso del perfil ganador, <c>undo_tip_seen</c> queda visto si
+        /// lo vio cualquiera de los dos (un tooltip del tutorial no vuelve a salir por perder un conflicto) [P].
+        /// </summary>
+        /// <param name="other">El progreso del otro perfil (el perdedor).</param>
+        public void MergeUndoTipSeen(ProgressData other)
+        {
+            if (other == null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            UndoTipSeen = UndoTipSeen || other.UndoTipSeen;
         }
 
         private static int ClampMapSeen(int value, int maxLevel)
@@ -544,6 +590,67 @@ namespace AF.Save
         public int LevelsSinceInterstitial { get; set; }
     }
 
+    /// <summary>
+    /// <c>daily_challenge</c> (08 §4.3; nota del Reto §10): <c>last_date</c>, <c>result</c> y <c>streak_days</c> de 08 §4.3;
+    /// <c>last_claimed_date</c>, <c>pending</c> y <c>stamps</c> (R-Q5); <c>offline_claims</c> [P] e <c>in_progress</c> [P]
+    /// (R-Q4 y R-Q16). Solo datos: el significado lo da <c>AF.LiveOps.DailyChallengeRecord</c>.
+    /// </summary>
+    public sealed class DailyChallengeData
+    {
+        /// <summary><c>last_date</c>: fecha local (<c>yyyy-MM-dd</c>) del último resultado, o null.</summary>
+        public string? LastDate { get; set; }
+
+        /// <summary><c>result</c>: <c>win</c>, <c>fail</c> o <c>abandon</c> (08 §8.2), o null si aún no hay resultado.</summary>
+        public string? Result { get; set; }
+
+        /// <summary><c>streak_days</c>: días seguidos ganados y cobrados.</summary>
+        public int StreakDays { get; set; }
+
+        /// <summary><c>last_claimed_date</c>: última fecha cobrada (<c>yyyy-MM-dd</c>), o null.</summary>
+        public string? LastClaimedDate { get; set; }
+
+        /// <summary><c>pending</c>: cobros pendientes de validar, <c>[{date, streak}]</c>.</summary>
+        public List<DailyClaimData> Pending { get; } = new List<DailyClaimData>();
+
+        /// <summary><c>offline_claims</c> [P]: cobros pagados sin red, <c>[{date, streak}]</c> (los acota AF.LiveOps).</summary>
+        public List<DailyClaimData> OfflineClaims { get; } = new List<DailyClaimData>();
+
+        /// <summary><c>stamps.month</c>: mes de los sellos (<c>yyyy-MM</c>), o null.</summary>
+        public string? StampsMonth { get; set; }
+
+        /// <summary><c>stamps.days</c>: días sellados de <see cref="StampsMonth"/> (1-31).</summary>
+        public List<int> StampDays { get; } = new List<int>();
+
+        /// <summary><c>in_progress</c> [P]: partida del Reto en curso, o null.</summary>
+        public DailyInProgressData? InProgress { get; set; }
+    }
+
+    /// <summary>Elemento de <c>daily_challenge.pending</c> y <c>offline_claims</c>: <c>{date, streak}</c>.</summary>
+    public sealed class DailyClaimData
+    {
+        /// <summary><c>date</c>: fecha cobrada (<c>yyyy-MM-dd</c>).</summary>
+        public string Date { get; set; } = "";
+
+        /// <summary><c>streak</c>: <c>streak_days</c> tras ese cobro.</summary>
+        public int Streak { get; set; }
+    }
+
+    /// <summary><c>daily_challenge.in_progress</c> [P]: <c>{date, band, id, level_state}</c> (<c>level_state</c> como en 04 §10.1).</summary>
+    public sealed class DailyInProgressData
+    {
+        /// <summary><c>date</c>: fecha local de inicio (<c>yyyy-MM-dd</c>).</summary>
+        public string Date { get; set; } = "";
+
+        /// <summary><c>band</c>: banda 1-3, congelada al empezar.</summary>
+        public int Band { get; set; }
+
+        /// <summary><c>id</c>: tablero <c>d{b}_n{nnnn}</c> (03 §16).</summary>
+        public string Id { get; set; } = "";
+
+        /// <summary><c>level_state</c>: estado de la partida, con el formato de 04 §10.1.</summary>
+        public LevelStateData LevelState { get; set; } = new LevelStateData();
+    }
+
     /// <summary><c>stats</c> (08 §4.3).</summary>
     public sealed class StatsData
     {
@@ -561,5 +668,171 @@ namespace AF.Save
 
         /// <summary><c>sessions</c>.</summary>
         public int Sessions { get; set; }
+    }
+
+    /// <summary>
+    /// Un avistamiento de <see cref="FaunaData.Sighted"/>: la especie (<c>species_id</c>, el id del catálogo de fauna, p. ej.
+    /// <c>saimiri_collinsi</c>; glosario §11) y el nivel en que su tarjeta salió a la vista por primera vez (<c>level</c>, ≥ 1).
+    /// </summary>
+    public sealed class FaunaSighting
+    {
+        /// <summary>Crea el avistamiento.</summary>
+        /// <exception cref="ArgumentException"><paramref name="speciesId"/> no es un id de especie (<see cref="FaunaData.IsSpeciesId"/>).</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="level"/> &lt; 1.</exception>
+        public FaunaSighting(string speciesId, int level)
+        {
+            if (!FaunaData.IsSpeciesId(speciesId))
+            {
+                throw new ArgumentException("Id de especie no válido: '" + speciesId + "'.", nameof(speciesId));
+            }
+
+            if (level < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(level), "El nivel de un avistamiento es >= 1.");
+            }
+
+            SpeciesId = speciesId;
+            Level = level;
+        }
+
+        /// <summary><c>species_id</c>: id de la especie en el catálogo de fauna.</summary>
+        public string SpeciesId { get; }
+
+        /// <summary><c>level</c>: nivel en que su tarjeta salió a la vista por primera vez.</summary>
+        public int Level { get; }
+    }
+
+    /// <summary>
+    /// <c>fauna</c> [P] (esquema 2; Q11 del guion de la intro, D-029; tarea DC15). <c>sighted</c>: una entrada por especie cuya
+    /// tarjeta «¡Miquito a la vista!» salió a la vista, con su primer nivel, en orden ordinal por <c>species_id</c>
+    /// (<see cref="StringComparer.Ordinal"/>: determinista, no depende del orden en que se vieron). Apuntar una especie ya vista
+    /// no cambia nada (<see cref="RecordSighting"/> devuelve false). Se apunta al mostrar la tarjeta, no al llegar la tropa: sin
+    /// tarjeta no hay avistamiento. Una entrada que no es válida en el archivo se descarta (un avistamiento nunca hace corrupto
+    /// un perfil).
+    /// </summary>
+    public sealed class FaunaData
+    {
+        /// <summary>Largo máximo de un id de especie (los del catálogo no pasan de 30 caracteres).</summary>
+        public const int MaxSpeciesIdLength = 64;
+
+        private readonly List<FaunaSighting> _sighted = new List<FaunaSighting>();
+
+        /// <summary><c>sighted</c>: las especies vistas, en orden ordinal por id.</summary>
+        public IReadOnlyList<FaunaSighting> Sighted => _sighted;
+
+        /// <summary>
+        /// true si <paramref name="text"/> vale como id de especie: de 1 a <see cref="MaxSpeciesIdLength"/> caracteres
+        /// <c>a-z</c>, <c>0-9</c> o <c>_</c> (el nombre científico en minúsculas con guiones bajos; glosario §11).
+        /// </summary>
+        public static bool IsSpeciesId(string? text)
+        {
+            if (text == null || text.Length == 0 || text.Length > MaxSpeciesIdLength)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < text.Length; i++)
+            {
+                char c = text[i];
+                if (!((c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c == '_'))
+                {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        /// <summary>true si la tarjeta de <paramref name="speciesId"/> ya salió a la vista.</summary>
+        public bool HasSighted(string speciesId)
+        {
+            return IndexOf(speciesId ?? throw new ArgumentNullException(nameof(speciesId))) >= 0;
+        }
+
+        /// <summary>El avistamiento de <paramref name="speciesId"/>, o null si aún no se vio.</summary>
+        public FaunaSighting? Find(string speciesId)
+        {
+            int i = IndexOf(speciesId ?? throw new ArgumentNullException(nameof(speciesId)));
+            return i >= 0 ? _sighted[i] : null;
+        }
+
+        /// <summary>
+        /// Apunta que la tarjeta de <paramref name="speciesId"/> salió a la vista en el nivel <paramref name="level"/>. Devuelve
+        /// true la primera vez (la lista crece, en su sitio ordinal) y false si la especie ya estaba (nada cambia: se conserva su
+        /// primer nivel).
+        /// </summary>
+        /// <exception cref="ArgumentException"><paramref name="speciesId"/> no es un id de especie.</exception>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="level"/> &lt; 1.</exception>
+        public bool RecordSighting(string speciesId, int level)
+        {
+            var sighting = new FaunaSighting(speciesId, level);
+            int i = IndexOf(speciesId);
+            if (i >= 0)
+            {
+                return false;
+            }
+
+            _sighted.Insert(~i, sighting);
+            return true;
+        }
+
+        /// <summary>
+        /// Fusión de 08 §11 (<c>ResolveConflict</c>, como <c>merged.album = union(...)</c>): sobre la fauna del perfil ganador,
+        /// la unión de las especies de los dos, con el nivel más bajo de cada una.
+        /// </summary>
+        /// <param name="other">La fauna del otro perfil (el perdedor).</param>
+        public void MergeSightings(FaunaData other)
+        {
+            if (other == null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            for (int k = 0; k < other._sighted.Count; k++)
+            {
+                Merge(other._sighted[k]);
+            }
+        }
+
+        /// <summary>Lectura del archivo: una entrada en su sitio; si la especie se repite, gana el nivel más bajo.</summary>
+        internal void Merge(FaunaSighting sighting)
+        {
+            int i = IndexOf(sighting.SpeciesId);
+            if (i < 0)
+            {
+                _sighted.Insert(~i, sighting);
+            }
+            else if (sighting.Level < _sighted[i].Level)
+            {
+                _sighted[i] = sighting;
+            }
+        }
+
+        // Búsqueda binaria ordinal: el índice, o el complemento del sitio donde iría (como List<T>.BinarySearch).
+        private int IndexOf(string speciesId)
+        {
+            int lo = 0;
+            int hi = _sighted.Count - 1;
+            while (lo <= hi)
+            {
+                int mid = lo + ((hi - lo) >> 1);
+                int cmp = string.CompareOrdinal(_sighted[mid].SpeciesId, speciesId);
+                if (cmp == 0)
+                {
+                    return mid;
+                }
+
+                if (cmp < 0)
+                {
+                    lo = mid + 1;
+                }
+                else
+                {
+                    hi = mid - 1;
+                }
+            }
+
+            return ~lo;
+        }
     }
 }

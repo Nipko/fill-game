@@ -33,8 +33,8 @@ namespace AF.UI
     /// parte); el fondo del tablero de la parada en pequeño (el panorama con <see cref="StopBackdrop"/>: cielo, banda de agua del
     /// mundo, piezas por código y héroe, a la escala de la tarjeta); el dato (el de llegada y, con «Otro dato»
     /// (<c>map_card_other_fact</c>), los demás de la parada, uno cada vez) con su fuente (<c>map_card_source</c>, «Fuente: …»,
-    /// bajo el dato, si la fila <c>&lt;clave del dato&gt;.source</c> [P] tiene texto; ver <see cref="SourceSuffix"/>: el contrato
-    /// de esa etiqueta está pendiente y hoy ningún dato la tiene); el miquito del tramo (su retrato y su nombre,
+    /// bajo el dato, si la fila <c>&lt;clave del dato&gt;.source</c> tiene texto; ver <see cref="SourceSuffix"/>; D-028, pregunta
+    /// 57 a: la genera <c>tools/river-map/stops.py</c>); el miquito del tramo (su retrato y su nombre,
     /// <c>fauna.&lt;id&gt;.name</c>, solo con su arte de tarjeta) y sus frutas (icono y nombre, <c>tint.&lt;id&gt;.name</c>;
     /// <see cref="CardTints"/>): primero la de la serie de Frutas del río que corre en sus niveles (D-022; 02 §6, fila «Dato del
     /// río»; 06 §4.4: ahí queda a la vista la línea de fruta que el dato de llegada desplaza en el <c>10k</c>; calendario
@@ -84,6 +84,15 @@ namespace AF.UI
         /// <summary>Alto mínimo del fondo en la tarjeta (dp) [P], si la tarjeta no cabe en la pantalla.</summary>
         public const float SceneMinDp = 64f;
 
+        /// <summary>
+        /// Alto mínimo del fondo (dp) [P] al recortarlo para que la placa no llegue a «Jugar» del Mapa (revisión de DC10): por
+        /// debajo, la placa vuelve a centrarse en toda la pantalla (el velo tapa «Jugar») y el texto nunca baja de 12 sp.
+        /// </summary>
+        public const float SceneFitMinDp = 72f;
+
+        /// <summary>Aire mínimo entre el borde de abajo de la placa y el de arriba de «Jugar» del Mapa (dp) [P] (revisión de DC10).</summary>
+        public const float ClearOfBelowDp = 8f;
+
         /// <summary>Escala de la mini cuia de la tarjeta sobre la del Mapa (20 × 32 dp) [P].</summary>
         public const float SampleScale = 1.5f;
 
@@ -109,14 +118,13 @@ namespace AF.UI
         public const float GapDp = 10f;
 
         /// <summary>
-        /// Final de la clave de la fuente de un dato [P]: la fila <c>&lt;clave del dato&gt;.source</c> de <c>facts.csv</c> con el
-        /// nombre corto de la fuente tal cual («Ramsar», «SINCHI»; <c>map_card_source</c>, 06 §4.5 y propuesta del Mapa §7: «el
-        /// dato con su fuente»). <b>Pendiente</b>: ni 08 §4.7 ni el glosario §10-§11 fijan dónde va esa etiqueta (una fila de
-        /// <c>facts.csv</c> con esta u otra forma, o un campo de <c>river_stops_v1.json</c> derivado de <c>fuente</c> /
-        /// <c>fuentes</c> de los datos de origen), y el bloque <c>map.*</c> de <c>facts.csv</c> es solo de
-        /// <c>tools/river-map/stops.py</c>, que aún no la genera: hasta que el dueño fije el contrato y el carril del Mapa la genere,
-        /// ningún dato tiene fuente y la línea no sale (la tarjeta la enseña en cuanto exista la fila; lo prueba
-        /// <c>StopCardTests</c> con un catálogo de prueba).
+        /// Final de la clave de la fuente de un dato: la fila <c>&lt;clave del dato&gt;.source</c> de <c>facts.csv</c> con el
+        /// nombre corto de la fuente tal cual («Wikipedia», «Acta Amazonica»; <c>map_card_source</c>, 06 §4.5 y propuesta del
+        /// Mapa §7: «el dato con su fuente»). Contrato fijado por el dueño en D-028 (pregunta 57 a): la fila la genera
+        /// <c>tools/river-map/stops.py --write-texts</c> (el bloque <c>map.*</c> de <c>facts.csv</c> es solo suyo) con el nombre
+        /// corto de <c>tools/river-map/overrides.json</c> (<c>source_short</c>) de la primera fuente [V] del dato o, sin ninguna
+        /// [V], de la primera. Un dato sin esa fila no enseña la línea. Lo prueba <c>StopCardTests</c> con los datos reales
+        /// (Manaos y Amacayacu, la fuente más larga) y con un catálogo de prueba.
         /// </summary>
         public const string SourceSuffix = ".source";
 
@@ -203,6 +211,7 @@ namespace AF.UI
         private float _canvasH = 780f;
         private float _safeTop;
         private float _safeBottom;
+        private float _clearBottom;
 
         /// <summary>
         /// Construye la tarjeta bajo <paramref name="parent"/> (estirada a él), oculta. <paramref name="onClosed"/> se llama al
@@ -609,7 +618,7 @@ namespace AF.UI
             return into.Count;
         }
 
-        /// <summary>Nombre corto de la fuente del dato <paramref name="factKey"/> (fila <see cref="SourceSuffix"/> [P]), o «».</summary>
+        /// <summary>Nombre corto de la fuente del dato <paramref name="factKey"/> (fila <see cref="SourceSuffix"/>; D-028), o «».</summary>
         public static string SourceOf(string factKey)
         {
             return string.IsNullOrEmpty(factKey) ? string.Empty : Loc.Fact(factKey + SourceSuffix);
@@ -741,7 +750,7 @@ namespace AF.UI
 
             _factIndex = (_factIndex + 1) % _factKeys.Count;
             ApplyFact();
-            Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
+            Layout(_canvasW, _canvasH, _safeTop, _safeBottom, _clearBottom);
         }
 
         // ============================================================================================ composición
@@ -829,7 +838,7 @@ namespace AF.UI
                 _fruitNames[i].gameObject.SetActive(on);
             }
 
-            Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
+            Layout(_canvasW, _canvasH, _safeTop, _safeBottom, _clearBottom);
         }
 
         private void ApplyFact()
@@ -1111,14 +1120,18 @@ namespace AF.UI
 
         /// <summary>
         /// Coloca la tarjeta en un lienzo de <paramref name="canvasW"/> × <paramref name="canvasH"/> dp con sus zonas seguras: la
-        /// placa centrada, con lo que se ve de arriba abajo; si no cabe, el fondo se encoge (hasta <see cref="SceneMinDp"/>).
+        /// placa centrada, con lo que se ve de arriba abajo; si no cabe, el fondo se encoge (hasta <see cref="SceneMinDp"/>). Con
+        /// <paramref name="clearBottom"/> &gt; 0 (el borde de arriba, en dp desde arriba del lienzo, de lo que hay debajo: «Jugar» del
+        /// Mapa), la placa acaba al menos <see cref="ClearOfBelowDp"/> por encima, recortando antes el fondo (hasta
+        /// <see cref="SceneFitMinDp"/>); si ni así cabe, se centra en toda la pantalla como sin él (revisión de DC10).
         /// </summary>
-        public void Layout(float canvasW, float canvasH, float safeTop, float safeBottom)
+        public void Layout(float canvasW, float canvasH, float safeTop, float safeBottom, float clearBottom = 0f)
         {
             _canvasW = canvasW;
             _canvasH = canvasH;
             _safeTop = safeTop;
             _safeBottom = safeBottom;
+            _clearBottom = clearBottom;
             if (!Visible)
             {
                 return;
@@ -1129,9 +1142,24 @@ namespace AF.UI
             float available = canvasH - safeTop - safeBottom - (2f * SideDp);
             float sceneFull = inner * (SceneSkyDp + SceneWaterDp) / SceneWorldWidthDp;
             float rest = ContentHeight(inner, 0f);
-            float scene = _sceneWindow.gameObject.activeSelf ? Mathf.Clamp(available - rest, SceneMinDp, sceneFull) : 0f;
+            bool hasScene = _sceneWindow.gameObject.activeSelf;
+            float region = available;
+            float sceneRoom = available - rest;
+            if (clearBottom > 0f)
+            {
+                // Encima de «Jugar»: si cabe con el fondo a SceneFitMinDp (o entero, si es menor), la placa se queda en esa franja.
+                float above = clearBottom - ClearOfBelowDp - safeTop - SideDp;
+                float need = rest + (hasScene ? Mathf.Min(SceneFitMinDp, sceneFull) : 0f);
+                if (above < available && above >= need)
+                {
+                    region = above;
+                    sceneRoom = Mathf.Floor(above - rest); // en dp enteros: la placa (redondeada hacia arriba) no se pasa
+                }
+            }
+
+            float scene = hasScene ? Mathf.Clamp(sceneRoom, SceneMinDp, sceneFull) : 0f;
             float panelH = ContentHeight(inner, scene);
-            float top = safeTop + SideDp + Mathf.Max(0f, (available - panelH) * 0.5f);
+            float top = safeTop + SideDp + Mathf.Max(0f, (region - panelH) * 0.5f);
             UiBuilder.Place(_panel.rectTransform, SideDp, top, panelW, panelH);
 
             // Cabecera: ←, la mini cuia (o el «?») y la placa del lugar.
