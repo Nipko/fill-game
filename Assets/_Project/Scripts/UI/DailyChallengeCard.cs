@@ -131,6 +131,12 @@ namespace AF.UI
         public string StreakText => _streak.text;
 
         /// <summary>
+        /// Última línea <c>AF_STATE daily_card</c> que escribió <see cref="Refresh"/> (tests y <c>adb</c>; R10), o null fuera de
+        /// desarrollo o antes del primer recálculo.
+        /// </summary>
+        public string? LastProbe { get; private set; }
+
+        /// <summary>
         /// Ola de las bandas, dibujada por código (una vez por sesión): un trazo sinusoidal blanco con bordes suaves de 48 × 16 px,
         /// que se tiñe con el color de la imagen.
         /// </summary>
@@ -188,6 +194,7 @@ namespace AF.UI
 
             DailyCardState state = service.CardState(maxLevel);
             _shown = state;
+            Probe(state, service, clock, maxLevel);
             if (state == DailyCardState.Hidden)
             {
                 _band = 0;
@@ -244,6 +251,38 @@ namespace AF.UI
                     UiBuilder.Place(_waves[i].rectTransform, 8f, top + (gap * i), waveW, waveH);
                 }
             }
+        }
+
+        // R10: AF_STATE daily_card en cada recálculo: el estado, el slot de hoy (banda y día; con la partida de hoy, su banda
+        // congelada, R-Q3), el tablero que se jugaría o se reanuda, la racha mostrada y la sustitución pedida o ignorada
+        // (daily_overrides). Oculta: sin slot ni tablero.
+        private void Probe(DailyCardState state, DailyChallengeService service, IClock clock, int maxLevel)
+        {
+            if (!DevProbe.Enabled)
+            {
+                return;
+            }
+
+            DailySlot? slot = null;
+            string? board = null;
+            AF.Levels.DailyPool? pool = service.Pool;
+            if (state != DailyCardState.Hidden && pool != null)
+            {
+                DailySlot today = service.TodaySlot(maxLevel);
+                DailyPlayInProgress? resumable = service.Resumable;
+                if (resumable != null)
+                {
+                    slot = new DailySlot(resumable.Band, today.Day, today.OverrideId, today.RequestedOverrideId);
+                    board = resumable.BoardId;
+                }
+                else
+                {
+                    slot = today;
+                    board = today.Board(pool)?.Id;
+                }
+            }
+
+            LastProbe = DevProbe.DailyCard(state, clock.LocalDateKey(), slot, board, service.Rules.StreakShown());
         }
 
         private void OnTap()
