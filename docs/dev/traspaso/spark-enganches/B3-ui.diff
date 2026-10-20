@@ -49,7 +49,7 @@ index a06be05..8e41fd8 100644
          {
              _pause.Hide();
 diff --git a/Assets/_Project/Scripts/UI/PauseMenu.cs b/Assets/_Project/Scripts/UI/PauseMenu.cs
-index cc2ca09..b6f4f49 100644
+index cc2ca09..2bf013d 100644
 --- a/Assets/_Project/Scripts/UI/PauseMenu.cs
 +++ b/Assets/_Project/Scripts/UI/PauseMenu.cs
 @@ -1,7 +1,9 @@
@@ -92,7 +92,7 @@ index cc2ca09..b6f4f49 100644
              _resume = ModalKit.Cta("ResumeButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, UiText.KeepPlaying, 21f, onResume, out _);
              _map = ModalKit.Cta("MapButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.RiverMap, 18f, onMap, out _);
 +            _skip = ModalKit.Cta("SkipButton", _panel, art.CtaWood, TextStyle.PillWood, SkipText.Option, 18f, onSkip ?? (() => { }), out _skipLabel);
-+            _skipRosa = UiBuilder.Image("Rosa", _skip.Face, art.Rosa, Color.white);
++            _skipRosa = UiBuilder.Image("Rosa", _skip.Face, null, Color.white); // el sprite, al enseñarlo (las mascotas, solo si hacen falta)
 +            _skipRosa.preserveAspect = true;
 +            _skipPrice = new PriceTag("Price", _skip.Face, art);
 +            _skip.Button.gameObject.SetActive(false);
@@ -121,7 +121,7 @@ index cc2ca09..b6f4f49 100644
          {
              _root.gameObject.SetActive(true);
              float width = Mathf.Min(300f, canvasW - 48f);
-@@ -86,6 +102,20 @@ public void Show(bool canRestart, bool canMap, float canvasW, float canvasH)
+@@ -86,6 +102,25 @@ public void Show(bool canRestart, bool canMap, float canvasW, float canvasH)
                  y += ModalKit.HeightOf(_map) + 8f;
              }
  
@@ -129,6 +129,11 @@ index cc2ca09..b6f4f49 100644
 +            _skip.Button.gameObject.SetActive(canSkip);
 +            if (canSkip)
 +            {
++                if (_skipRosa.sprite == null)
++                {
++                    _skipRosa.sprite = _art.Rosa;
++                }
++
 +                UiBuilder.SetEnabled(_skip.Button, skip.CanUse);
 +                _skipPrice.Set(skip.Price, 0, !skip.CanUse);
 +                ModalKit.FitCtaLabel(_skip, _skipLabel, inner, _skipPrice.Width + 76f, 20f - ((_skipPrice.Width + 12f) * 0.5f));
@@ -142,7 +147,7 @@ index cc2ca09..b6f4f49 100644
              _restart.Button.gameObject.SetActive(canRestart);
              if (canRestart)
              {
-@@ -107,6 +137,12 @@ public void VisibleButtons(List<string> ids, List<RectTransform> rects)
+@@ -107,6 +142,12 @@ public void VisibleButtons(List<string> ids, List<RectTransform> rects)
                  ids.Add("pause_map");
                  rects.Add((RectTransform)_map.Button.transform);
              }
