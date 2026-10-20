@@ -17,8 +17,7 @@ namespace AF.Tests.PlayMode
     /// (con 1.000 semillas: rama A, el rescate a la venta con el −50 %), <c>fx16a_l640_A_&lt;pct&gt;_16x9</c> (14 cuias en 3
     /// filas, con 5.000 semillas) y <c>fx16a_l640_B_&lt;pct&gt;_16x9</c> (sin semillas), recortadas a los 1.920 px de arriba de la
     /// captura de <see cref="SnapshotKit"/>. Las de antes de FX16a, con el sufijo <c>_antes</c>, las genera este mismo test
-    /// con <c>StuckModal.RegularOnlyForTests</c>: el panel en la disposición de siempre y el tablero sin reducir, como en
-    /// 815b2e5. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
+    /// con <c>StuckModal.RegularOnlyForTests</c>: el panel en la disposición de siempre, como en 815b2e5. Necesitan gráficos: <c>unity test &lt;repo&gt; --mode PlayMode --filter
     /// AF.Tests.PlayMode.StuckCompactSnapshotTests</c> sin <c>-nographics</c>; los PNG quedan en
     /// <c>Logs/snapshots/&lt;locale&gt;/</c>.
     /// </summary>
@@ -98,8 +97,8 @@ namespace AF.Tests.PlayMode
             yield return SnapshotKit.Wait(0.3f);
             SnapshotKit.SaveTop(dir, name, Crop);
             SnapshotKit.LogBoard(name, boot);
-            Debug.Log("FX16a: " + name + " en " + SnapshotKit.Locale + ": panel de " + boot.View!.Stuck.Height.ToString("0.0") + " dp; tablero a escala "
-                + boot.View.BoardScale.ToString("0.000") + ".");
+            Debug.Log("FX16a: " + name + " en " + SnapshotKit.Locale + ": panel de " + boot.View!.Stuck.Height.ToString("0.0") + " dp ("
+                + (boot.View.Stuck.Compact ? "compacto" : "de siempre") + "); tablero subido " + boot.View.BoardContainer.anchoredPosition.y.ToString("0.0") + " dp.");
         }
     }
 }

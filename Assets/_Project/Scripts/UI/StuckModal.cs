@@ -33,11 +33,10 @@ namespace AF.UI
     /// caben sin partir su precio, a media anchura o con el ancho repartido según su etiqueta (en tres líneas como mucho, cuatro
     /// con la escala de texto; 64 dp de alto mínimo y 10 dp de aire a los lados). Ningún texto baja de 12 sp ni ningún botón de
     /// 48 dp, y el panel cabe siempre entre las zonas seguras (la rama B medía 597 dp al 130 %, más que los 576 dp entre ellas).
-    /// Si ni así quedan las cuias enteras sobre el panel con el tablero subido hasta su tope, <c>GameScreen.FitBoardToStuck</c>
-    /// reduce el tablero mientras el modal esté abierto (cifras en <c>StuckCompactTests</c>: en el 31, la rama B mide 362 dp al
-    /// 100 % y 423 al 130 % en es-419, con el tablero a 1 y a 0,67; en el 640, de 3 filas, a 0,73 y 0,68 en la rama A y a 0,46
-    /// y 0,28 en la rama B). A 360 × 780 no cambia nada: al 130 %, la rama B (597 dp) sigue tapando la parte de abajo de las
-    /// cuias de un tablero de una fila (pendiente desde la revisión de A1: 02 §7 frente a 02 §12).
+    /// El tablero sube lo justo y no cambia de tamaño (04 §6.6). Si ni así quedan las cuias enteras sobre el panel (el 640, de 3
+    /// filas, en las ramas A y B, y la rama B del 31 al 130 %; cifras en <c>StuckCompactTests</c>), el panel tapa parte de
+    /// ellas: pendiente del dueño (FX16a). A 360 × 780 no cambia nada: al 130 %, la rama B (597 dp) sigue tapando la parte de
+    /// abajo de las cuias de un tablero de una fila (pendiente desde la revisión de A1: 02 §7 frente a 02 §12).
     /// </para>
     /// </summary>
     internal sealed class StuckModal
@@ -85,8 +84,8 @@ namespace AF.UI
         internal const float CompactBottomGapDp = 4f;
 
         /// <summary>
-        /// Aire a cada lado de la etiqueta de Puñado y Balsa en la disposición compacta (dp) [P] (FX16a; revisión: de 10 a 12 dp
-        /// a los lados, para que con un texto más largo el botón no quede apretado).
+        /// Aire a cada lado de la etiqueta de Puñado y Balsa en la disposición compacta (dp) [P] (FX16a; revisión de FX16a: de 6 a
+        /// 10 dp a los lados, para que con un texto más largo el botón no quede apretado).
         /// </summary>
         internal const float OfferCompactSideDp = 10f;
 
@@ -187,7 +186,7 @@ namespace AF.UI
 
         /// <summary>
         /// Solo para las capturas «antes» de FX16a (<c>StuckCompactSnapshotTests</c>): el panel siempre en la disposición de
-        /// siempre y el tablero sin reducir (<c>GameScreen.FitBoardToStuck</c>), como antes de la tarea.
+        /// siempre, como antes de la tarea.
         /// </summary>
         internal static bool RegularOnlyForTests { get; set; }
 

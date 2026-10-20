@@ -40,8 +40,8 @@ namespace AF.Tests.PlayMode
     /// <item><description>la etiqueta de los CTA con precio no se encoge con la escala (la etiqueta de precio se mide) y
     /// Aguas estancadas deja el tablero entero sobre el panel a 360 × 780 al 100 % (al 130 %, el tablero sube hasta su tope y
     /// lo que el panel tapa se registra: conflicto de 02 §7 con 02 §12, pendiente del dueño); en 16:9, al 100 % y al 130 %, en
-    /// todas las ramas, el panel no tapa ninguna cuia del 31: va compacto si hace falta y, si ni así, el tablero se reduce
-    /// mientras el modal esté abierto (tarea FX16a; <see cref="StuckCompactTests"/>).</description></item>
+    /// todas las ramas, el panel cabe en la zona segura (va compacto si hace falta) y al 100 % no tapa ninguna cuia del 31; al
+    /// 130 %, lo que la rama B aún tapa se registra (tarea FX16a, pendiente del dueño; <see cref="StuckCompactTests"/>).</description></item>
     /// </list>
     /// La pregunta 48 (b) (Revelar sin medios: sin aviso, responde la burbuja) se prueba en <c>PhoneFixesTests</c> y
     /// <c>LuciernagaTests</c>.
@@ -168,14 +168,18 @@ namespace AF.Tests.PlayMode
             StuckContext ctx = boot.Flow!.BuildStuckContext(false, true, GeoTier.T3);
             foreach ((string name, StuckContext variant) in StuckVariants(ctx))
             {
-                // Como al abrirlo: el panel en su sitio y el tablero ajustado a él (GameScreen.FitBoardToStuck; FX16a).
+                // Como al abrirlo: el panel en su sitio y el tablero subido lo justo (GameScreen.FitBoardToStuck; FX16a).
                 view.ShowStuckVariant(StuckModalModel.Build(variant, boot.Flow.Boosters));
                 AssertStuck(view, scale, "Aguas estancadas, " + name + " " + at);
                 if (view.CardCanvasHeight <= GameScreen.MinHeight + 0.5f)
                 {
-                    // En 16:9, al 100 % y al 130 %, ninguna variante tapa las cuias (02 §7; FX16a).
+                    // En 16:9 al 100 %, ninguna variante tapa las cuias (02 §7; FX16a); al 130 %, lo que tapa se registra
+                    // (pendiente del dueño; StuckCompactTests).
                     float covered = StuckCompactTests.CoveredDp(view, "Aguas estancadas, " + name + " " + at);
-                    Assert.That(covered, Is.LessThanOrEqualTo(0.05f), "Aguas estancadas, " + name + " " + at + ": ninguna cuia tapada (02 §7; FX16a)");
+                    if (scale <= 1f)
+                    {
+                        Assert.That(covered, Is.LessThanOrEqualTo(0.05f), "Aguas estancadas, " + name + " " + at + ": ninguna cuia tapada (02 §7; FX16a)");
+                    }
                 }
             }
 
@@ -212,10 +216,10 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// En 16:9 (360 × 640 dp) al 130 %, el panel de Aguas estancadas de la rama B cabe entre las zonas seguras y no tapa
-        /// ninguna cuia del 31 (tarea FX16a, decisión del dueño del 2026-10-20: compactarlo; antes
-        /// <c>Stuck_130_16x9_InsideTheSafeArea_KnownIssue</c>, explícito: el panel medía 597 dp, más que los 576 entre las zonas
-        /// seguras, y subía 21 dp por encima de la de arriba).
+        /// En 16:9 (360 × 640 dp) al 130 %, el panel de Aguas estancadas de la rama B cabe entre las zonas seguras (tarea FX16a,
+        /// decisión del dueño del 2026-10-20: compactarlo; antes <c>Stuck_130_16x9_InsideTheSafeArea_KnownIssue</c>, explícito:
+        /// el panel medía 597 dp, más que los 576 entre las zonas seguras, y subía 21 dp por encima de la de arriba). Lo que aún
+        /// tapa de las cuias del 31 se registra (pendiente del dueño; <see cref="StuckCompactTests"/>).
         /// </summary>
         [UnityTest]
         public IEnumerator Stuck_130_16x9_InsideTheSafeArea()
@@ -773,7 +777,7 @@ namespace AF.Tests.PlayMode
         }
 
         // Aguas estancadas y el tablero (02 §7 y 04 §6.6: «el tablero entero a la vista y atenuado; sube lo justo para que el
-        // panel no lo tape»; 07 §5.5), con la geometría de verdad del tablero (su desplazamiento y, en 16:9, su escala:
+        // panel no lo tape»; 07 §5.5), con la geometría de verdad del tablero (por sus transformadas:
         // StuckCompactTests.BoardToCanvasY). Al 100 %, en estos tableros de una fila, el tablero queda entero sobre el panel (con
         // los 12 dp de aire de ShiftToClear). A cualquier escala, o queda entero o ha subido hasta su tope (las cuias elevadas,
         // bajo la cabecera): es la regla de hoy, la que ya se da al 100 % con 2 y 3 filas. A 360 × 780 al 130 % el panel crece
@@ -804,12 +808,15 @@ namespace AF.Tests.PlayMode
                 + (100f * covered / Mathf.Max(1f, foot - mouth)).ToString("0") + " %)") + ".");
             // En 16:9 (360 × 640 dp desde DC3; D-028), el panel de la rama B (413 dp al 100 % y 597 al 130 % en la disposición de
             // siempre) tapaba la parte de abajo de las cuias del 31 aunque el tablero subiera hasta su tope; desde FX16a, al 100 %
-            // y al 130 %, no tapa ninguna cuia (02 §7): va compacto y, si ni así cabe bajo las cuias (la rama B al 130 %), el
-            // tablero se reduce mientras el modal esté abierto. A 360 × 780, al 100 %, el tablero entero sobre el panel; al 130 %,
-            // se registra lo que tapa (conflicto de 02 §7 con 02 §12, pendiente del dueño desde A1).
+            // no tapa ninguna cuia (02 §7): va compacto. Al 130 %, ni compacto cabe bajo las cuias del 31 subidas hasta su tope:
+            // se registra lo que tapa (pendiente del dueño; StuckCompactTests). A 360 × 780, al 100 %, el tablero entero sobre el
+            // panel; al 130 %, se registra lo que tapa (conflicto de 02 §7 con 02 §12, pendiente del dueño desde A1).
             if (view.CardCanvasHeight <= GameScreen.MinHeight + 0.5f)
             {
-                Assert.That(covered, Is.LessThanOrEqualTo(0.05f), where + ": ninguna cuia tapada (02 §7; FX16a)");
+                if (scale <= 1f)
+                {
+                    Assert.That(covered, Is.LessThanOrEqualTo(0.05f), where + ": ninguna cuia tapada (02 §7; FX16a)");
+                }
             }
             else if (scale <= 1f)
             {
