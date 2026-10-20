@@ -56,8 +56,8 @@ namespace AF.LiveOps
     /// <item><b>Primero:</b> nunca en el arranque en frío; en la primera victoria de la sesión <c>push_preprompt_session</c> (2) o
     /// posterior con <c>push_preprompt_min_level</c> (10) ya superado antes de esa victoria. Si la 2.ª sesión empieza antes del 10,
     /// se espera a la primera victoria posterior al 10; la del 10 nunca (su secuencia, 06 §2.3).</item>
-    /// <item><b>Segundo y último</b> (si el primero no acabó en avisos): en la primera victoria con la Crecida en 3 o más (el hito 3)
-    /// o a partir de 7 días del primero, lo que ocurra antes [P: también en una victoria].</item>
+    /// <item><b>Segundo y último</b> (si el primero no acabó en avisos): en la victoria que alcanza el hito 3 de la Crecida (la deja
+    /// justo en 3) después del primero, o en la primera victoria a partir de 7 días del primero, lo que ocurra antes [P].</item>
     /// <item>Después, solo el acceso de Ajustes (<see cref="PushPermissionService.SetFromSettings"/>).</item>
     /// </list>
     /// Con los avisos ya concedidos, o bloqueados en el teléfono (el diálogo nativo ya no saldría), no hay pre-prompt [P].
@@ -100,7 +100,9 @@ namespace AF.LiveOps
                 return PrePromptKind.None;
             }
 
-            if (moment.StreakWins >= SecondAtStreakWins)
+            // «Al alcanzar el hito 3»: la victoria que deja la Crecida justo en 3, después del primero (no una racha que ya estaba en 3
+            // o más al rechazar).
+            if (moment.StreakWins == SecondAtStreakWins && (!record.PrePromptAt.HasValue || moment.NowUtc > record.PrePromptAt.Value))
             {
                 return PrePromptKind.Second;
             }

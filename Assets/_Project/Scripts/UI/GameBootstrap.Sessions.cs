@@ -27,9 +27,10 @@ namespace AF.UI
     /// <item><b>B6-notifications-real</b> (aparte; con el paquete <c>com.unity.mobile.notifications</c>, Q-M5): implementa
     /// <see cref="CreatePlatformScheduler"/> con el programador de Android. Sin él, <see cref="FakeNotificationScheduler"/>.</item>
     /// </list>
-    /// Sin B6-profile: en desarrollo, almacenes en memoria (se pierden al cerrar la app); en release no hay sesiones ni avisos. El
-    /// pre-prompt es el simulado (<see cref="SimulatedPushPrePrompt"/>, «Ahora no»), solo en desarrollo, hasta que la UI tenga su
-    /// tarjeta; en release no sale. Las cifras son las de 08 §9 (<see cref="PushConfig.Defaults"/> y <see cref="ComebackConfig.Defaults"/>).
+    /// Sin B6-profile: en desarrollo, almacenes en memoria (se pierden al cerrar la app); en release no hay sesiones ni avisos. Hasta
+    /// que la UI tenga la tarjeta del pre-prompt no sale ninguno (el simulado, <see cref="SimulatedPushPrePrompt"/>, solo con
+    /// <see cref="PrePromptOverride"/>). El disparador está en la entrada a la pantalla de victoria; con la tarjeta real se mueve a
+    /// Siguiente o Inicio (B6-Q16). Las cifras son las de 08 §9 (<see cref="PushConfig.Defaults"/> y <see cref="ComebackConfig.Defaults"/>).
     /// </summary>
     public sealed partial class GameBootstrap
     {
@@ -143,7 +144,9 @@ namespace AF.UI
             _push = new PushPermissionService(pushStore!, _notificationScheduler);
             _push.Reported += OnPushPromptReported;
             _notifications = new NotificationService(_notificationScheduler, _push, new LocNotificationTexts());
-            _prePrompt = PrePromptOverride ?? (Debug.isDebugBuild ? new SimulatedPushPrePrompt() : null);
+            // Sin la tarjeta real no hay pre-prompt: el simulado solo con PrePromptOverride (tests), para no gastar los pre-prompts
+            // del perfil de pruebas (revisión de B6).
+            _prePrompt = PrePromptOverride;
             _campaignPhaseSeen = _flow.Phase;
             _dailyPhaseSeen = _dailyScreen?.Flow?.Phase ?? FlowPhase.Loading;
 
@@ -388,6 +391,7 @@ namespace AF.UI
                 CurrentLevel = maxLevel + 1,
                 CurrentWorldName = WorldName(WorldTable.WorldOf(Math.Max(1, maxLevel + 1))),
                 ComebackSeeds = _comebackService?.Config.LiveComebackGift.Seeds ?? ComebackGift.Default.Seeds,
+                ComebackGiftDays = _comebackService?.Config.LiveComebackGift.Days ?? ComebackGift.Default.Days,
             };
 
             DailyChallengeService? daily = _dailyService;
@@ -448,6 +452,11 @@ namespace AF.UI
         /// <summary>Los textos de los avisos con <c>Loc</c> (D-018): vacío si la clave no está en la tabla (entonces no se avisa).</summary>
         private sealed class LocNotificationTexts : INotificationTexts
         {
+            public bool Has(string key)
+            {
+                return Loc.Has(key);
+            }
+
             public string Resolve(string key, IReadOnlyList<NotificationArg> args)
             {
                 if (!Loc.Has(key))

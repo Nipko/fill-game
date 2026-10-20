@@ -19,8 +19,9 @@ namespace AF.LiveOps
     /// contenido; Regreso a los 7, 14, 30 y 60 días.</item>
     /// <item><b>Horas silenciosas</b> (<c>push_quiet_hours</c>, 22-09 local): un aviso que cae dentro se mueve al final de la franja
     /// (09:00) [P].</item>
-    /// <item><b>Un aviso por día</b> (<c>push_daily_cap_d0_d7</c> = 1): si coinciden, gana la prioridad de 06 §8.2 (Regreso primero
-    /// [P]); el resto del día se descarta.</item>
+    /// <item><b>Un aviso por día</b> (<c>push_daily_cap_d0_d7</c> = 1): si coinciden, gana el Regreso, luego los puntuales y luego
+    /// los diarios, cada grupo con la prioridad de 06 §8.2 [P] (B6-Q9 (b)); un puntual que pierde su día pasa una vez al siguiente
+    /// [P]; el resto se descarta.</item>
     /// <item><b>Sin abrir 7 días</b> (<c>push_weekly_cap_lapsed</c> = 3): desde el día 7, como mucho 3 por semana, en días alternos
     /// [P] (el Regreso cuenta para el tope pero no espera al día alterno).</item>
     /// <item><b>Parar a los 30 días</b>, salvo el Regreso (06 §8.2).</item>
@@ -59,6 +60,15 @@ namespace AF.LiveOps
         /// <summary>El plan para <paramref name="context"/>, ordenado por hora.</summary>
         public IReadOnlyList<PlannedNotification> Plan(NotificationContext context)
         {
+            return Plan(context, null);
+        }
+
+        /// <summary>
+        /// El plan, contando solo los avisos cuyo texto existe en el idioma del jugador (<paramref name="hasText"/>, por clave): uno sin
+        /// texto no gasta el cupo del día. La variante del Regreso sin texto usa la del D7 [P].
+        /// </summary>
+        public IReadOnlyList<PlannedNotification> Plan(NotificationContext context, Predicate<string>? hasText)
+        {
             if (context == null)
             {
                 throw new ArgumentNullException(nameof(context));
@@ -71,6 +81,26 @@ namespace AF.LiveOps
 
             AddRecurring(context, nowLocal, today, candidates);
             AddOneOffs(context, nowLocal, candidates);
+            if (hasText != null)
+            {
+                string d7 = NotificationType.ComebackD7.BodyKey();
+                for (int i = candidates.Count - 1; i >= 0; i--)
+                {
+                    Candidate c = candidates[i];
+                    if (hasText(c.BodyKey))
+                    {
+                        continue;
+                    }
+
+                    if (c.Type.IsComeback() && c.BodyKey != d7 && hasText(d7))
+                    {
+                        candidates[i] = new Candidate(c.Type, c.Local, c.Args, c.Day, d7);
+                        continue;
+                    }
+
+                    candidates.RemoveAt(i);
+                }
+            }
 
             // Horas silenciosas, y nada en el pasado.
             for (int i = candidates.Count - 1; i >= 0; i--)
@@ -94,21 +124,7 @@ namespace AF.LiveOps
             }
 
             // Prioridad dentro del día, luego hora y tipo (orden total: el plan no depende del orden de entrada).
-            candidates.Sort((a, b) =>
-            {
-                if (a.Day != b.Day)
-                {
-                    return a.Day.CompareTo(b.Day);
-                }
-
-                int p = b.Type.Priority().CompareTo(a.Type.Priority());
-                if (p != 0)
-                {
-                    return p;
-                }
-
-                return a.Local != b.Local ? a.Local.CompareTo(b.Local) : ((int)a.Type).CompareTo((int)b.Type);
-            });
+            candidates.Sort(Compare);
 
             var plan = new List<PlannedNotification>();
             int dayCap = _config.PushDailyCapD0D7;
@@ -128,6 +144,7 @@ namespace AF.LiveOps
 
                 if (usedToday >= dayCap)
                 {
+                    Carry(candidates, i, c);
                     continue;
                 }
 
@@ -142,12 +159,13 @@ namespace AF.LiveOps
 
                     if (usedThisWeek >= weekCap)
                     {
+                        Carry(candidates, i, c);
                         continue;
                     }
 
-                    if (!c.Type.IsComeback() && (c.Day - LapsedFromDay) % 2 != 0)
+                    if (!c.Type.IsComeback() && !c.Type.IsOneOff() && (c.Day - LapsedFromDay) % 2 != 0)
                     {
-                        continue; // días alternos sin abrir [P]
+                        continue; // días alternos sin abrir, para los diarios [P]
                     }
 
                     usedThisWeek++;
@@ -160,6 +178,42 @@ namespace AF.LiveOps
 
             plan.Sort((a, b) => a.FireAtUtc != b.FireAtUtc ? a.FireAtUtc.CompareTo(b.FireAtUtc) : a.Id.CompareTo(b.Id));
             return plan;
+        }
+
+        // Prioridad dentro del día, luego hora y tipo.
+        private static int Compare(Candidate a, Candidate b)
+        {
+            if (a.Day != b.Day)
+            {
+                return a.Day.CompareTo(b.Day);
+            }
+
+            int p = b.Type.Priority().CompareTo(a.Type.Priority());
+            if (p != 0)
+            {
+                return p;
+            }
+
+            return a.Local != b.Local ? a.Local.CompareTo(b.Local) : ((int)a.Type).CompareTo((int)b.Type);
+        }
+
+        // Un aviso puntual que pierde su día (contra el Regreso o por el tope) pasa una vez al día siguiente, a la misma hora [P]
+        // (revisión de B6: Nuevos niveles cae por defecto el mismo día que el Regreso D14).
+        private static void Carry(List<Candidate> candidates, int index, in Candidate c)
+        {
+            if (!c.Type.IsOneOff() || c.Carried || c.Day + 1 >= StopAfterDays)
+            {
+                return;
+            }
+
+            var moved = new Candidate(c.Type, c.Local.AddDays(1), c.Args, c.Day + 1, c.BodyKey, true);
+            int pos = index + 1;
+            while (pos < candidates.Count && Compare(candidates[pos], moved) <= 0)
+            {
+                pos++;
+            }
+
+            candidates.Insert(pos, moved);
         }
 
         private static void AddRecurring(NotificationContext context, DateTime nowLocal, DateTime today, List<Candidate> candidates)
@@ -190,7 +244,7 @@ namespace AF.LiveOps
         private static void AddOneOffs(NotificationContext context, DateTime nowLocal, List<Candidate> candidates)
         {
             TimeSpan offset = context.LocalOffset;
-            if (context.StreakActive && context.StreakWins >= PushPrePromptRules.SecondAtStreakWins && context.LastWinAt.HasValue
+            if (context.StreakActive && context.StreakWins >= AF.Economy.StreakRecord.HitSeeds && context.LastWinAt.HasValue
                 && context.StreakReminderHours > 0)
             {
                 DateTime at = context.LastWinAt.Value + TimeSpan.FromHours(context.StreakReminderHours) + offset;
@@ -224,6 +278,11 @@ namespace AF.LiveOps
 
             for (int i = 0; i < ComebackDays.Count; i++)
             {
+                if (ComebackDays[i] < context.ComebackGiftDays)
+                {
+                    continue; // el aviso nombra el regalo: antes de live_comeback_gift.days no lo hay (06 §8.2, «Estado real»)
+                }
+
                 var type = (NotificationType)((int)NotificationType.ComebackD7 + i);
                 NotificationArg seeds = NotificationArg.Number("seeds", context.ComebackSeeds);
                 NotificationArg level = NotificationArg.Digits("level", Math.Max(1, context.CurrentLevel));
@@ -272,9 +331,10 @@ namespace AF.LiveOps
 
         private readonly struct Candidate
         {
-            public Candidate(NotificationType type, DateTime local, IReadOnlyList<NotificationArg> args, int day, string? bodyKey = null)
+            public Candidate(NotificationType type, DateTime local, IReadOnlyList<NotificationArg> args, int day, string? bodyKey = null, bool carried = false)
             {
                 Type = type;
+                Carried = carried;
                 BodyKey = bodyKey ?? type.BodyKey();
                 Local = local;
                 Args = args;
@@ -290,6 +350,8 @@ namespace AF.LiveOps
             public int Day { get; }
 
             public string BodyKey { get; }
+
+            public bool Carried { get; }
         }
     }
 }

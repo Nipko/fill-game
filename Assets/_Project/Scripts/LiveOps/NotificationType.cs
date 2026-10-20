@@ -66,8 +66,10 @@ namespace AF.LiveOps
         };
 
         // 06 §8.2, «Prioridad si coinciden»: premio > evento > Reto listo > Bitácora > Crecida te espera > canoas llenas > nuevos
-        // niveles. El Regreso no figura: va el primero [P] (es el aviso del regalo de 06 §9). Mayor = antes.
-        private static readonly int[] Priorities = { 60, 60, 50, 40, 30, 20, 100, 100, 100, 100 };
+        // niveles, aplicada dentro de cada grupo. El Regreso no figura: va el primero [P] (es el aviso del regalo de 06 §9). Los
+        // puntuales (Crecida, canoas, nuevos niveles) ganan a los diarios (Reto listo, Racha, Bitácora) el día que caen [P]
+        // (B6-Q9 (b)): con el Reto diario cada día, si no, no saldrían nunca. Mayor = antes.
+        private static readonly int[] Priorities = { 30, 30, 20, 60, 50, 40, 100, 100, 100, 100 };
 
         /// <summary>Todos los tipos, en orden.</summary>
         public static IReadOnlyList<NotificationType> All { get; } = Array.AsReadOnly(new[]
@@ -93,6 +95,15 @@ namespace AF.LiveOps
         public static int Priority(this NotificationType type)
         {
             return Priorities[Index(type)];
+        }
+
+        /// <summary>
+        /// Es un aviso puntual (Crecida te espera, Canoas llenas, Nuevos niveles): cae una vez a su hora y no espera al día alterno
+        /// sin abrir [P].
+        /// </summary>
+        public static bool IsOneOff(this NotificationType type)
+        {
+            return type == NotificationType.StreakWaiting || type == NotificationType.CanoesFull || type == NotificationType.NewLevels;
         }
 
         /// <summary>Es un aviso de Regreso (06 §9): no se para a los 30 días y gana a los demás.</summary>

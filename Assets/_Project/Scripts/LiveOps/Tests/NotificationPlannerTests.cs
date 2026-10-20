@@ -57,8 +57,9 @@ namespace AF.LiveOps.Tests
                 Assert.That(perDay[p.DayIndex], Is.LessThanOrEqualTo(1), "push_daily_cap_d0_d7 = 1 (día " + p.DayIndex + ")");
             }
 
-            Assert.That(Find(plan, 2)!.Type, Is.EqualTo(NotificationType.DailyReady), "Reto listo gana a Bitácora y a Crecida");
-            Assert.That(plan.CountOf(NotificationType.StreakWaiting), Is.EqualTo(0));
+            Assert.That(Find(plan, 2)!.Type, Is.EqualTo(NotificationType.StreakWaiting), "el puntual gana al diario el día que cae [P] (B6-Q9)");
+            Assert.That(Find(plan, 1)!.Type, Is.EqualTo(NotificationType.DailyReady), "Reto listo gana a la Bitácora");
+            Assert.That(plan.CountOf(NotificationType.StreakWaiting), Is.EqualTo(1));
             Assert.That(plan.CountOf(NotificationType.LogbookPending), Is.EqualTo(0));
         }
 
@@ -252,6 +253,53 @@ namespace AF.LiveOps.Tests
         }
 
         [Test]
+        public void WithTheDefaults_TheOneOffsStillGoOut_OverTheDailyReady()
+        {
+            // Revisión de B6: con el Reto desbloqueado (cada día tiene Reto listo), Nuevos niveles con la eta de 08 §9 (14) y Crecida
+            // te espera tienen que salir.
+            NotificationContext c = Context(Today.AddHours(21));
+            c.DailyUnlocked = true;
+            c.ContentEnd = true;
+            c.NextBatchEtaDays = 14;
+            c.NextWorldName = "Alto Negro";
+            c.CurrentWorldName = "Ucayali";
+            c.StreakActive = true;
+            c.StreakWins = 5;
+            c.LastWinAt = Utc(Today.AddHours(20));
+            IReadOnlyList<PlannedNotification> plan = Plan(c);
+            Assert.That(plan.CountOf(NotificationType.StreakWaiting), Is.EqualTo(1));
+            Assert.That(Find(plan, 14)!.Type, Is.EqualTo(NotificationType.ComebackD14), "el día 14 gana el Regreso");
+            Assert.That(Find(plan, 15)!.Type, Is.EqualTo(NotificationType.NewLevels), "Nuevos niveles pasa al día siguiente [P]");
+            c.NextBatchEtaDays = 10; // día 10: sin abrir y día «impar» desde el 7; el puntual no espera al alterno
+            plan = Plan(c);
+            Assert.That(Find(plan, 10)!.Type, Is.EqualTo(NotificationType.NewLevels));
+            c.NextBatchEtaDays = 3;
+            Assert.That(Find(Plan(c), 3)!.Type, Is.EqualTo(NotificationType.NewLevels), "gana al Reto listo de ese día");
+        }
+
+        [Test]
+        public void Comeback_IsNotAnnounced_BeforeTheGiftDays()
+        {
+            NotificationContext c = Context(Today.AddHours(15));
+            c.ComebackGiftDays = 10;
+            IReadOnlyList<PlannedNotification> plan = Plan(c);
+            Assert.That(plan.CountOf(NotificationType.ComebackD7), Is.EqualTo(0), "a los 7 días aún no hay regalo que nombrar");
+            Assert.That(plan.CountOf(NotificationType.ComebackD14), Is.EqualTo(1));
+        }
+
+        [Test]
+        public void ANoticeWithoutText_DoesNotSpendTheDay()
+        {
+            NotificationContext c = Context(Today.AddHours(21));
+            c.DailyUnlocked = true;
+            c.LogbookUnlocked = true;
+            c.LogbookReward = "x";
+            IReadOnlyList<PlannedNotification> plan = new NotificationPlanner().Plan(c, key => key != "push_daily_ready");
+            Assert.That(plan.CountOf(NotificationType.DailyReady), Is.EqualTo(0));
+            Assert.That(Find(plan, 1)!.Type, Is.EqualTo(NotificationType.LogbookPending), "el siguiente del día ocupa el hueco");
+        }
+
+        [Test]
         public void ThePlan_IsDeterministic_WithUniqueIds()
         {
             NotificationContext c = Context(Today.AddHours(21));
@@ -290,10 +338,11 @@ namespace AF.LiveOps.Tests
 
             Assert.That(seen.Count, Is.EqualTo(NotificationTypes.Count));
             Assert.That(NotificationTypes.TryParse("league_closes", out _), Is.False, "los de la 1.2 no están");
-            Assert.That(NotificationType.ComebackD7.Priority(), Is.GreaterThan(NotificationType.DailyReady.Priority()));
-            Assert.That(NotificationType.DailyReady.Priority(), Is.GreaterThan(NotificationType.LogbookPending.Priority()));
-            Assert.That(NotificationType.LogbookPending.Priority(), Is.GreaterThan(NotificationType.StreakWaiting.Priority()));
+            // Regreso > puntuales (Crecida > canoas > nuevos niveles) > diarios (Reto listo > Bitácora) [P] (B6-Q9 (b)).
+            Assert.That(NotificationType.ComebackD7.Priority(), Is.GreaterThan(NotificationType.StreakWaiting.Priority()));
             Assert.That(NotificationType.StreakWaiting.Priority(), Is.GreaterThan(NotificationType.CanoesFull.Priority()));
+            Assert.That(NotificationType.NewLevels.Priority(), Is.GreaterThan(NotificationType.DailyReady.Priority()));
+            Assert.That(NotificationType.DailyReady.Priority(), Is.GreaterThan(NotificationType.LogbookPending.Priority()));
             Assert.That(NotificationType.CanoesFull.Priority(), Is.GreaterThan(NotificationType.NewLevels.Priority()));
         }
 
@@ -323,7 +372,12 @@ namespace AF.LiveOps.Tests
 
             texts.Missing.Add("push_daily_ready");
             int withoutDaily = service.OnBackground(c);
-            Assert.That(withoutDaily, Is.EqualTo(Plan(c).Count - Plan(c).CountOf(NotificationType.DailyReady)), "sin texto en el idioma, sin aviso");
+            Assert.That(withoutDaily, Is.EqualTo(new NotificationPlanner().Plan(c, k => k != "push_daily_ready").Count), "sin texto en el idioma, sin aviso");
+            foreach (LocalNotification n in scheduler.Scheduled)
+            {
+                Assert.That(n.Type, Is.Not.EqualTo("daily_ready"));
+            }
+
             texts.Missing.Clear();
             texts.Missing.Add("push_comeback_d14");
             service.OnBackground(c);
@@ -409,6 +463,11 @@ namespace AF.LiveOps.Tests
         private sealed class FakeTexts : INotificationTexts
         {
             public HashSet<string> Missing { get; } = new HashSet<string>();
+
+            public bool Has(string key)
+            {
+                return !Missing.Contains(key);
+            }
 
             public string Resolve(string key, IReadOnlyList<NotificationArg> args)
             {

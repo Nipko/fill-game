@@ -36,11 +36,11 @@ Lo marcado **[P]** es una propuesta del Spark con la opción recomendada de la p
 
 - **Campos:** `pre_prompt_shown` y `granted` (08 §4.3), más **[P] `pre_prompt_at`** y **[P] `second_prompt_shown`** para el segundo pre-prompt (B6-Q2). El bloque solo se escribe si deja su default.
 - **Primero:** en la primera victoria (de campaña o del Reto) de la sesión `push_preprompt_session` (2) o posterior, con `push_preprompt_min_level` (10) ya superado **antes** de esa victoria. Así la victoria del nivel 10 nunca lo lleva (su secuencia, 06 §2.3). Si la 2.ª sesión empieza antes del 10, espera a la primera victoria posterior. Nunca en el arranque en frío.
-- **Segundo y último** (si el primero no acabó en avisos): en la primera victoria con la Crecida en 3 o más (el hito 3) o desde 7 días después del primero, lo que llegue antes. «Rechazar» es «Ahora no» o negar el diálogo nativo [P].
+- **Segundo y último** (si el primero no acabó en avisos): en la victoria que **alcanza** el hito 3 de la Crecida (la deja justo en 3) después del primero, o en la primera victoria desde 7 días después del primero, lo que llegue antes. Una racha que ya estaba en 3 o más al rechazar no cuenta (revisión de B6). «Rechazar» es «Ahora no» o negar el diálogo nativo [P].
 - **Después:** solo el acceso de Ajustes (`PushPermissionService.SetFromSettings`). Encenderlo pide el diálogo nativo si hace falta; si el teléfono lo tiene bloqueado, no cambia nada y la UI debe explicar cómo activarlo allí (`settings_notifications_blocked`). Apagarlo cancela los avisos programados.
 - El diálogo nativo (`POST_NOTIFICATIONS`, Android 13+) solo sale tras «Avísame» o desde Ajustes.
 - **`granted`** = el jugador dijo que sí y el sistema lo permite. Al abrir, se baja a false si el teléfono ya no los deja; nunca se sube solo (B6-Q3). En Android 12 o anterior no hay diálogo nativo, pero tampoco se avisa antes de «Avísame».
-- **Pre-prompt simulado** (`SimulatedPushPrePrompt`): no dibuja nada y por defecto contesta «Ahora no», para que un build sin la tarjeta real nunca llegue al diálogo nativo sin el toque del jugador. En release no hay pre-prompt hasta que la UI tenga su tarjeta (B6-Q16).
+- **Pre-prompt simulado** (`SimulatedPushPrePrompt`): no dibuja nada y por defecto contesta «Ahora no», para que nunca llegue al diálogo nativo sin el toque del jugador. El arranque solo lo usa con `GameBootstrap.PrePromptOverride` (tests): hasta que la UI tenga su tarjeta no sale ningún pre-prompt, ni en desarrollo, para no gastar los del perfil de pruebas (revisión de B6). El disparador está hoy en la entrada a la pantalla de victoria; con la tarjeta se mueve a Siguiente o Inicio (B6-Q16).
 - `af_push_prompt` (08 §8.2): `step` ∈ {`pre`, `native`}; `result` [P] ∈ {`accepted`, `declined`} / {`granted`, `denied`}; más `origin` [P] ∈ {`first`, `second`, `settings`} (B6-Q17). Hasta que exista `AF.Analytics` (B7), lo escucha la sonda.
 
 ## 4. Planificador de avisos (06 §8.2-§8.3)
@@ -59,12 +59,13 @@ Lo marcado **[P]** es una propuesta del Spark con la opción recomendada de la p
 
 Reglas:
 1. **Horas silenciosas** (`push_quiet_hours` = 22-09, hora local del dispositivo): un aviso que cae dentro se mueve a las 09:00 [P] (B6-Q11).
-2. **Un aviso por día** (`push_daily_cap_d0_d7` = 1) en todo el plan [P] (B6-Q12). Si coinciden, gana la prioridad de 06 §8.2 (premio > evento > Reto listo > Bitácora > Crecida > canoas > nuevos niveles) y el Regreso va primero [P]. Consecuencia, literal del GDD: con el Reto desbloqueado, la Crecida, las canoas y los nuevos niveles solo salen el día en que no hay Reto listo (sobre todo hoy, tras jugar el Reto) (B6-Q9).
-3. **Sin abrir 7 días** (`push_weekly_cap_lapsed` = 3): desde el día 7, como mucho 3 por semana, en días alternos desde el 7 [P]; el Regreso cuenta para el tope pero no espera al día alterno (B6-Q10).
+2. **Un aviso por día** (`push_daily_cap_d0_d7` = 1) en todo el plan [P] (B6-Q12). Si coinciden, gana el Regreso, luego los puntuales (Crecida > canoas > nuevos niveles) y luego los diarios (Reto listo > Bitácora): la prioridad de 06 §8.2 dentro de cada grupo [P] (B6-Q9 (b)). Un puntual que pierde su día (contra el Regreso o por un tope) pasa una vez al día siguiente, a la misma hora [P]. Así, con los valores por defecto, Nuevos niveles (día 14, el del Regreso D14) sale el día 15.
+3. **Sin abrir 7 días** (`push_weekly_cap_lapsed` = 3): desde el día 7, como mucho 3 por semana; los diarios, en días alternos desde el 7 [P]; el Regreso y los puntuales cuentan para el tope pero no esperan al día alterno (B6-Q10).
 4. **Parar a los 30 días**, salvo el Regreso (06 §8.2).
 5. **Determinista**: el mismo contexto da el mismo plan; ids estables (`(tipo + 1) × 1000 + día`).
 6. El desfase local se toma fijo al planificar (un cambio de horario a mitad de plan mueve los avisos una hora) [P].
-7. Un aviso sin texto en el idioma del jugador no se programa (D-018: nunca otro idioma). La variante D14/D30/D60 sin traducir usa el texto del D7.
+7. Un aviso sin texto en el idioma del jugador no se programa (D-018: nunca otro idioma) y no gasta el cupo del día: el planificador lo quita antes de los topes. La variante D14/D30/D60 sin traducir usa el texto del D7.
+8. El Regreso no se avisa antes de `live_comeback_gift.days`: nombra el regalo (06 §8.2, «Estado real»).
 
 `NotificationContext` lo rellena el arranque (`GameBootstrap.BuildNotificationContext`) con cada fuente única: el Reto (`DailyChallengeService` y `daily_challenge`), la Crecida (`StreakService`), las canoas (`Wallet`), el fin de contenido (el catálogo y `GameConfig`) y los nombres de mundo (`world_wNN_name`). La Bitácora queda apagada hasta B4.
 
@@ -143,14 +144,14 @@ Lo que el integrador debería anotar en el GDD: 08 §4.3 (`settings.push.pre_pro
 | B6-Q6 | `source` de `earn_virtual_currency` para el regalo | (a) `event`, de la lista actual de 08 §8.2 (`af_comeback_gift` ya lo distingue); (b) añadir `comeback` a 08 §8.2 y a `SeedSource` (parche de `AF.Economy`) | (a) |
 | B6-Q7 | «Crecida te espera» dice «una victoria más» aunque falten más (06 §8.2, «Estado real») | (a) texto con `{left}` y plural; (b) avisar solo cuando falta 1 (racha 5 o 9); (c) el texto literal | (a) |
 | B6-Q8 | Título de los avisos y nombre del canal de Android | (a) «TiTino» y «Avisos del río»; (b) el nombre del juego (tras el dictamen de marca) | (a) |
-| B6-Q9 | Con 1 aviso al día y la prioridad de 06 §8.2, el Reto listo diario tapa a Crecida, canoas y nuevos niveles | (a) literal del GDD; (b) los avisos puntuales ganan a los diarios el día que caen | (a) |
+| B6-Q9 | Con 1 aviso al día y la prioridad literal de 06 §8.2, el Reto listo de cada día (prioridad mayor) haría que **Nuevos niveles no saliera nunca** y que Crecida te espera casi nunca saliera (tipos de la 1.0, 06 §11; 08 Desviación 8) | (a) literal del GDD (esos avisos se pierden); (b) los puntuales ganan a los diarios el día que caen y, si pierden contra el Regreso o un tope, pasan una vez al día siguiente; (c) entender «coinciden» como la misma franja horaria | (b) (cambiada tras la revisión) |
 | B6-Q10 | Reparto de los 3 por semana sin abrir | (a) días alternos desde el 7, el Regreso incluido; (b) días fijos (7, 10, 13…) | (a) |
 | B6-Q11 | Un aviso que cae en las horas silenciosas | (a) se mueve a las 09:00; (b) se descarta | (a) |
 | B6-Q12 | ¿`push_daily_cap_d0_d7` vale después del día 7 desde la instalación? | (a) sí, 1 al día siempre («igual a la frecuencia de apertura»); (b) sin tope diario desde el día 8 | (a) |
 | B6-Q13 | Hora de «Reto listo» (franja 09:30-11:00) | (a) 09:30, y hoy nada si ya pasó; (b) una hora al azar de la franja (rompe el determinismo) | (a) |
 | B6-Q14 | «Crecida te espera» cuando ya pasaron las 36 h al salir | (a) nada; (b) avisar pronto | (a) |
-| B6-Q15 | Anti-reloj del regalo | (a) con la hora del servidor y un desfase > `sec_clock_max_drift_h`, sin regalo esa sesión; (b) sin comprobación | (a) |
-| B6-Q16 | Cuándo sale la tarjeta del pre-prompt | (a) tras el panel de la victoria, al pulsar Siguiente o Inicio, como pantalla aparte (D-033 #11) y antes de la Mochila (06 §8.1); (b) dentro del panel | (a) (UI fuera de B6) |
+| B6-Q15 | Anti-reloj del regalo | (a) con la hora del servidor y un desfase > `sec_clock_max_drift_h`, sin regalo esa sesión, y **ese regalo se pierde** (`last_seen_at` ya avanzó); sin red, adelantar el reloj 7 días y volverlo a poner repite el regalo; (b) dejarlo «pendiente de validar» como el Reto (08 §10.1), con un campo más en el perfil; (c) sin comprobación | (a) |
+| B6-Q16 | Cuándo sale la tarjeta del pre-prompt | (a) tras el panel de la victoria, al pulsar Siguiente o Inicio, como pantalla aparte (D-033 #11) y antes de la Mochila (06 §8.1); el disparador de `TickSessions` (hoy, la entrada a la victoria) se mueve allí con la tarjeta; (b) dentro del panel | (a) (UI fuera de B6) |
 | B6-Q17 | Valores de `af_push_prompt` | (a) `result` ∈ {`accepted`, `declined`, `granted`, `denied`} y `origin` ∈ {`first`, `second`, `settings`}; (b) solo `step` y `result` | (a) |
 | B6-Q18 | Valores de `type` de `af_push_sent` / `af_push_open` | (a) los de la sección 4 (`daily_ready`…`comeback_d60`); (b) otros | (a) |
 

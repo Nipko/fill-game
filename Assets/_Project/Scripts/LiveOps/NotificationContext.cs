@@ -190,6 +190,9 @@ namespace AF.LiveOps
         /// <summary>Semillas del Regalo de regreso (<c>live_comeback_gift.seeds</c>; marcador <c>{seeds}</c>).</summary>
         public int ComebackSeeds { get; set; } = 200;
 
+        /// <summary>Días sin sesión desde los que hay regalo (<c>live_comeback_gift.days</c>): el Regreso no se avisa antes.</summary>
+        public int ComebackGiftDays { get; set; } = 7;
+
         /// <summary>
         /// Hora UTC en que las canoas llegan a su tope si se sale ahora, o null si ya están llenas, son infinitas o no se regeneran:
         /// el siguiente +1 (<see cref="CanoesStatus.NextRegenAt"/>) más un intervalo por cada canoa que falte después.

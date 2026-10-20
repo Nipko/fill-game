@@ -136,6 +136,9 @@ namespace AF.LiveOps.Tests
             PushConfig config = PushConfig.Defaults;
             Assert.That(Due(record, config, new PrePromptMoment(3, 20, 2, T0.AddDays(6))), Is.EqualTo(PrePromptKind.None));
             Assert.That(Due(record, config, new PrePromptMoment(3, 20, 3, T0.AddDays(1))), Is.EqualTo(PrePromptKind.Second), "hito 3");
+            Assert.That(Due(record, config, new PrePromptMoment(3, 20, 4, T0.AddDays(1))), Is.EqualTo(PrePromptKind.None),
+                "una racha ya pasada de 3 no es «alcanzar el hito 3»");
+            Assert.That(Due(record, config, new PrePromptMoment(3, 20, 3, T0)), Is.EqualTo(PrePromptKind.None), "no en el mismo instante del primero");
             Assert.That(Due(record, config, new PrePromptMoment(3, 20, 0, T0.AddDays(7))), Is.EqualTo(PrePromptKind.Second), "7 días");
             Assert.That(Due(record, config, new PrePromptMoment(3, 20, 0, T0.AddDays(-30))), Is.EqualTo(PrePromptKind.None), "reloj atrasado");
 
@@ -188,6 +191,17 @@ namespace AF.LiveOps.Tests
             Assert.That(f.Store.Load().Granted, Is.False, "rechazó el diálogo nativo");
             Assert.That(f.Events, Is.EqualTo(new[] { "pre/declined/first", "pre/accepted/second", "native/denied/second" }));
             Assert.That(f.Service.OnVictory(new PrePromptMoment(5, 50, 3, T0.AddDays(20)), f.Presenter), Is.EqualTo(PrePromptKind.None));
+        }
+
+        [Test]
+        public void AStreakAlreadyAbove3AtTheFirst_DoesNotBringTheSecondAtTheNextWin()
+        {
+            var f = new Fixture();
+            Assert.That(f.Service.OnVictory(new PrePromptMoment(2, 30, 5, T0), f.Presenter), Is.EqualTo(PrePromptKind.First));
+            Assert.That(f.Service.OnVictory(new PrePromptMoment(2, 31, 6, T0.AddMinutes(3)), f.Presenter), Is.EqualTo(PrePromptKind.None),
+                "minutos después, con la racha en 6: no (revisión de B6)");
+            Assert.That(f.Service.OnVictory(new PrePromptMoment(3, 40, 3, T0.AddDays(2)), f.Presenter), Is.EqualTo(PrePromptKind.Second),
+                "tras romperse, al volver a llegar a 3");
         }
 
         [Test]

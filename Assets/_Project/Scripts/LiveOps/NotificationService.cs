@@ -13,6 +13,9 @@ namespace AF.LiveOps
     {
         /// <summary>El texto de <paramref name="key"/> con <paramref name="args"/>, o vacío si no hay traducción (entonces no se avisa).</summary>
         string Resolve(string key, IReadOnlyList<NotificationArg> args);
+
+        /// <summary>La clave tiene texto en el idioma del jugador.</summary>
+        bool Has(string key);
     }
 
     /// <summary>Lo que se supo al volver a abrir (<see cref="NotificationService.OnForeground"/>).</summary>
@@ -76,16 +79,11 @@ namespace AF.LiveOps
             }
 
             string title = _texts.Resolve(NotificationTypes.TitleKey, Array.Empty<NotificationArg>());
-            IReadOnlyList<PlannedNotification> plan = _planner.Plan(context);
+            IReadOnlyList<PlannedNotification> plan = _planner.Plan(context, _texts.Has);
             for (int i = 0; i < plan.Count; i++)
             {
                 PlannedNotification p = plan[i];
                 string body = _texts.Resolve(p.BodyKey, p.Args);
-                if (body.Length == 0 && p.Type.IsComeback() && p.BodyKey != NotificationType.ComebackD7.BodyKey())
-                {
-                    body = _texts.Resolve(NotificationType.ComebackD7.BodyKey(), p.Args); // sin la variante en este idioma, la del D7 [P]
-                }
-
                 if (body.Length == 0 || title.Length == 0)
                 {
                     continue;
