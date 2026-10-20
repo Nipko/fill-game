@@ -19,8 +19,9 @@ namespace AF.GameFlow
     /// nunca frase en dos pantallas seguidas &gt; una sola línea de texto por victoria &gt; hito o 1 de cada N. Única excepción:
     /// el fin de mundo (salvo el 10) habla siempre. En todos los momentos, nunca la misma frase que la última vista del mismo
     /// momento (<c>sloth.last_line</c>) cuando el banco da otra. La frase fija de un estreno que repetiría la última del momento
-    /// cede al banco siguiente (streak &gt; win). Las frases fijas sin alternativa (la del fin de mundo, la del primer Muy
-    /// difícil, el saludo de la mañana y la n.º 21) se repiten [P] (pendiente del dueño).</para>
+    /// cede al banco siguiente (streak &gt; win). Las frases fijas (la del fin de mundo, la del primer Muy difícil, el saludo de
+    /// la mañana y la n.º 21) son mini-bancos de 3 (D-030, pregunta 16 b): la de siempre y 2 alternativas [P], que rotan sin
+    /// repetir la última vista del momento (<see cref="FixedLine"/>).</para>
     /// <para><b>Fallo, reinicio e inicio:</b> <see cref="ForFail"/>, <see cref="ForRestartNotice"/> y <see cref="ForHome"/>.
     /// Con <c>settings.sloth_messages</c> apagado, solo gestos; con <c>ui_sloth_enabled</c> apagado, nada.</para>
     /// </summary>
@@ -85,16 +86,30 @@ namespace AF.GameFlow
         private static readonly string[] StreakKeys =
         {
             "sloth_line_streak_01", "sloth_line_streak_02", "sloth_line_streak_03", "sloth_line_streak_04",
+            "sloth_line_streak_05", "sloth_line_streak_06",
         };
 
         private static readonly string[] ReturnKeys =
         {
             "sloth_line_return_01", "sloth_line_return_02", "sloth_line_return_03", "sloth_line_return_04",
+            "sloth_line_return_05", "sloth_line_return_06",
         };
 
         private static readonly string[] DebutKeys = { "sloth_line_debut_01", "sloth_line_debut_02", "sloth_line_debut_03" };
 
-        private static readonly string[] MilestoneKeys = { "sloth_line_milestone_01", "sloth_line_milestone_02" };
+        // Las alternativas [P] de las frases fijas (D-030, pregunta 16 b) van al final de su banco, con número ordinal: los índices
+        // viejos no cambian y sloth.last_line del perfil sigue valiendo.
+        private static readonly string[] MilestoneKeys =
+        {
+            "sloth_line_milestone_01", "sloth_line_milestone_02", "sloth_line_milestone_03", "sloth_line_milestone_04",
+            "sloth_line_milestone_05", "sloth_line_milestone_06",
+        };
+
+        // Mini-bancos de las frases fijas (índices de su banco): la de siempre primero y sus 2 alternativas [P].
+        private static readonly int[] MilestoneWorldSet = { MilestoneWorldIndex, 2, 3 };       // n.º 29
+        private static readonly int[] MilestoneVeryHardSet = { MilestoneVeryHardIndex, 4, 5 }; // n.º 30
+        private static readonly int[] ReturnMorningSet = { ReturnMorningIndex, 4, 5 };         // n.º 25
+        private static readonly int[] StreakBrokenSet = { StreakBrokenIndex, 4, 5 };           // n.º 21
 
         // Bancos en el orden de SlothMoment (y de sloth.last_line).
         private static readonly string[][] Banks = { WinKeys, HardKeys, FailKeys, RestartKeys, StreakKeys, ReturnKeys, DebutKeys, MilestoneKeys };
@@ -110,7 +125,8 @@ namespace AF.GameFlow
         /// <summary>Número de momentos (= <see cref="SlothData.MomentCount"/>).</summary>
         public static int MomentCount => Banks.Length;
 
-        /// <summary>Número de frases del banco de <paramref name="moment"/> (win 8, hard 2, fail 5, restart 2, streak 4, return 4, debut 3, milestone 2).</summary>
+        /// <summary>Número de frases del banco de <paramref name="moment"/> (win 8, hard 2, fail 5, restart 2, streak 6, return 6, debut 3, milestone 6: las 30 de e.4 y las 8 alternativas de
+        /// D-030, pregunta 16 b).</summary>
         public static int BankSize(SlothMoment moment)
         {
             return Bank(moment).Length;
@@ -129,7 +145,7 @@ namespace AF.GameFlow
             return bank[index];
         }
 
-        /// <summary>Las 30 claves de las frases, banco a banco (tests y tabla de textos).</summary>
+        /// <summary>Las 38 claves de las frases (las 30 de e.4 y las 8 alternativas de D-030), banco a banco (tests y tabla de textos).</summary>
         public static IEnumerable<string> AllKeys
         {
             get
@@ -207,8 +223,12 @@ namespace AF.GameFlow
                     return GestureOnly(SlothScreen.Victory, gesture);
                 }
 
-                int milestone = level == FirstVeryHardLevel ? MilestoneVeryHardIndex : MilestoneWorldIndex;
-                return Speak(SlothScreen.Victory, gesture, SlothMoment.Milestone, milestone, 0);
+                // Mini-banco de 3 (D-030, pregunta 16 b): el fin de mundo rota con el número de mundo (el 40, la de siempre; el
+                // 80, la 1.ª alternativa; el 140, la 2.ª...), así que dos fines de mundo seguidos no repiten aunque el primer Muy
+                // difícil (que comparte momento) se meta entre los dos.
+                return level == FirstVeryHardLevel
+                    ? FixedLine(SlothScreen.Victory, gesture, SlothMoment.Milestone, MilestoneVeryHardSet, 0, in c)
+                    : FixedLine(SlothScreen.Victory, gesture, SlothMoment.Milestone, MilestoneWorldSet, WorldTable.WorldOf(level) - 2, in c);
             }
 
             // Una sola línea de texto por victoria (T6-A): con la ranura ocupada (llegada, dato o fruta), solo el gesto. En el 10,
@@ -290,7 +310,7 @@ namespace AF.GameFlow
 
             if (f.StreakBroken)
             {
-                return Speak(SlothScreen.Fail, SlothGesture.Encourage, SlothMoment.Streak, StreakBrokenIndex, 0);
+                return FixedLine(SlothScreen.Fail, SlothGesture.Encourage, SlothMoment.Streak, StreakBrokenSet, 0, in c);
             }
 
             return Pick(SlothScreen.Fail, SlothGesture.Encourage, SlothMoment.Fail, AllOf(FailKeys), NonNegative(level) + NonNegative(f.FailsHard), in c, 0);
@@ -318,7 +338,7 @@ namespace AF.GameFlow
 
             if (r.StreakBroken)
             {
-                return Speak(SlothScreen.Restart, SlothGesture.Encourage, SlothMoment.Streak, StreakBrokenIndex, 0);
+                return FixedLine(SlothScreen.Restart, SlothGesture.Encourage, SlothMoment.Streak, StreakBrokenSet, 0, in c);
             }
 
             return Pick(SlothScreen.Restart, SlothGesture.Encourage, SlothMoment.Restart, AllOf(RestartKeys), level, in c, 0);
@@ -326,15 +346,15 @@ namespace AF.GameFlow
 
         /// <summary>
         /// El inicio (d.7 y d.10): como mucho un saludo al día (<c>sloth.last_greeting_date</c>), con <c>sloth_wave</c>. Primero el
-        /// de regreso, tras ≥ 3 días sin abrir (<c>sloth.last_seen_date</c>; frases 22-24); si no, en la primera apertura del día
-        /// entre las 06:00 y las 12:00, el de la mañana (n.º 25), nunca el mismo día que el de regreso. Con los topes de la
-        /// sesión; sin frase, solo el saludo con la mano. Lee <see cref="SlothContext.Home"/>.
+        /// de regreso, tras ≥ 3 días sin abrir (<c>sloth.last_seen_date</c>; frases 22-24); si no, en la primera apertura dentro de
+        /// la franja de 06:00 a 12:00, el de la mañana (el mini-banco de la n.º 25), nunca el mismo día que el de regreso. Con los
+        /// topes de la sesión; sin frase, solo el saludo con la mano. Lee <see cref="SlothContext.Home"/>.
         /// <para>Justo después del bocadillo del Mapa del 10 (<see cref="SlothContext.PreviousScreenMapIntro"/>; D-028, pregunta 60 b),
         /// el saludo que tocaba no sale ni se gasta (<see cref="SlothLine.Deferred"/>): queda para la visita siguiente.</para>
-        /// <para>«Primera apertura del día entre las 06:00 y las 12:00» (d.7 y d.10) se lee [P] (pendiente del dueño) como «la
-        /// primera apertura del día, si cae entre las 06:00 y las 12:00»: se mira <c>sloth.last_seen_date</c>, que se apunta en
-        /// cada inicio aunque no haya saludo, así que quien abre a las 05:30 y otra vez a las 07:00 del mismo día no tiene el de
-        /// la mañana. La otra lectura («la primera apertura dentro de esa franja») se basaría en <c>sloth.last_greeting_date</c>.</para>
+        /// <para>«Primera apertura del día entre las 06:00 y las 12:00» (d.7 y d.10) se lee como «la primera apertura dentro de esa
+        /// franja» (D-030, pregunta 17 b): la hora está en [06:00, 12:00) y hoy aún no hubo saludo (<c>sloth.last_greeting_date</c>),
+        /// sin mirar <c>sloth.last_seen_date</c>; quien abre a las 05:30 y otra vez a las 07:00 del mismo día tiene el saludo a
+        /// las 07:00.</para>
         /// </summary>
         public static SlothLine ForHome(in SlothContext c)
         {
@@ -351,7 +371,7 @@ namespace AF.GameFlow
 
             bool seen = TryDayNumber(h.LastSeenDate, out int lastSeen);
             bool returning = seen && today - lastSeen >= ReturnAfterDays;
-            bool morning = (!seen || lastSeen != today) && h.Hour >= MorningFromHour && h.Hour < MorningToHour;
+            bool morning = h.Hour >= MorningFromHour && h.Hour < MorningToHour; // hoy sin saludo: ya mirado arriba (D-030, 17 b)
             if (!returning && !morning)
             {
                 return Nothing(SlothScreen.Home);
@@ -371,7 +391,8 @@ namespace AF.GameFlow
 
             if (!returning)
             {
-                return new SlothLine(SlothScreen.Home, SlothGesture.Wave, SlothMoment.Return, ReturnMorningIndex, ReturnKeys[ReturnMorningIndex], 0, true);
+                SlothLine good = FixedLine(SlothScreen.Home, SlothGesture.Wave, SlothMoment.Return, ReturnMorningSet, 0, in c);
+                return new SlothLine(SlothScreen.Home, SlothGesture.Wave, SlothMoment.Return, good.Index, good.Key, 0, true);
             }
 
             uint back = Bit(0) | Bit(2);
@@ -462,6 +483,24 @@ namespace AF.GameFlow
             }
 
             return GestureOnly(screen, gesture);
+        }
+
+        // Frase fija con su mini-banco (D-030, pregunta 16 b): si la última vista del momento es una del mini-banco, la siguiente
+        // (en rueda); si no, la de la posición seed (0 = la de siempre). Así nunca repite la última del momento.
+        private static SlothLine FixedLine(SlothScreen screen, SlothGesture gesture, SlothMoment moment, int[] set, int seed, in SlothContext c)
+        {
+            int last = c.LastLineOf(moment);
+            int pick = NonNegative(seed) % set.Length;
+            for (int i = 0; i < set.Length; i++)
+            {
+                if (set[i] == last)
+                {
+                    pick = (i + 1) % set.Length;
+                    break;
+                }
+            }
+
+            return Speak(screen, gesture, moment, set[pick], 0);
         }
 
         private static SlothLine Speak(SlothScreen screen, SlothGesture gesture, SlothMoment moment, int index, int arg)

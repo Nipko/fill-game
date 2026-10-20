@@ -9,8 +9,8 @@ namespace AF.UI
     /// Textos de TiTino (D-016, puntos 4 y 5; glosario §10; propuesta de TiTino e.3, e.4 y g.3; tarea TI3). Parcial de
     /// <see cref="UiText"/>:
     /// <list type="bullet">
-    /// <item>de <c>strings.csv</c>, sus 30 frases (<c>sloth_line_&lt;momento&gt;_&lt;nn&gt;</c>, las claves de
-    /// <see cref="SlothLines"/>) y la fila de Ajustes «Mensajes de TiTino» (<c>settings_sloth_messages</c>);</item>
+    /// <item>de <c>strings.csv</c>, sus 38 frases (las 30 de e.4 y las 8 alternativas de D-030;
+    /// <c>sloth_line_&lt;momento&gt;_&lt;nn&gt;</c>, las claves de <see cref="SlothLines"/>) y la fila de Ajustes «Mensajes de TiTino» (<c>settings_sloth_messages</c>);</item>
     /// <item>de <c>facts.csv</c> (<see cref="Loc.Fact(string)"/>), los 11 datos del perezoso
     /// (<c>fauna.bradypus_variegatus.dato_&lt;nn&gt;</c>; pregunta 49, (a), D-022).</item>
     /// </list>
@@ -22,7 +22,7 @@ namespace AF.UI
         /// <summary><c>settings_sloth_messages</c> [P] (glosario §10): la fila «Mensajes de TiTino» de Ajustes (02 §12).</summary>
         public static string SettingsSlothMessages => Loc.T(Keys.SettingsSlothMessages);
 
-        /// <summary>Las 30 claves de las frases de TiTino (tests: todas en <c>strings.csv</c>).</summary>
+        /// <summary>Las 38 claves de las frases de TiTino (tests: todas en <c>strings.csv</c>).</summary>
         public static IEnumerable<string> SlothLineKeys => SlothLines.AllKeys;
 
         /// <summary>Las 11 claves de los datos del perezoso en <c>facts.csv</c>.</summary>
