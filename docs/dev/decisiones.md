@@ -2996,3 +2996,9 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **La app no se crea en Play Console hasta el dictamen favorable del abogado de marcas** (08 §13.1 #1 tal cual, sin cambios en el GDD), y ningún AAB se sube a Play (regla dura 6).
 
 **Cómo revertir.** Con una decisión nueva del dueño que cambie 08 §13.1 #1.
+
+### D-033, añadido del 2026-10-20: merge de B10 y versión de coverlet
+
+- **Merge del CI aprobado por el dueño** (Q-T5): «Apruebo el merge de B10 con el ci.yml en integración y main. Yo creo los secretos UNITY_EMAIL y UNITY_PASSWORD en GitHub.» La variable de repositorio `AF_RELEASE_APPLICATION_ID` se crea solo tras el dictamen de marca (D-034); sin ella, el job de build construye un ensayo con la identidad de prueba.
+- **coverlet** (Q-T7): `coverlet.msbuild` **10.0.1**, solo en `dotnet/AF.Core.Tests` y activo con `-p:CollectCoverage=true`; cobertura medida el 2026-10-20: 92,09 % de líneas (AF.Core 93,34 %, AF.Solver 90,34 %).
+- **Stripping High** (Q-T6): AAB de ensayo de 46,13 MB con `Assets/Plugins/link.xml`. Pendientes de B10: el margen inferior de «Cancelar» en `StoreSheet` (parche en `docs/dev/traspaso/b10-storesheet-safe-area.patch`) y el retroceso predictivo, desactivado hasta probar Atrás en el teléfono con Android 16 (`docs/dev/traspaso/b10-safe-area-y-retroceso.md`).
