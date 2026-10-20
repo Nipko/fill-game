@@ -386,6 +386,9 @@ namespace AF.UI
         /// <summary>Capa del lienzo estático (M3.4 añade aquí el lleno).</summary>
         internal RectTransform StaticLayer => _staticLayer;
 
+        /// <summary>Capa del vidrio de las líneas, en el lienzo estático (para los tests).</summary>
+        internal RectTransform GlassLayer => _glassLayer;
+
         /// <summary>Capa del lienzo dinámico (M3.4 y M3.5 añaden aquí el frente y los marcadores).</summary>
         internal RectTransform DynamicLayer => _dynamicLayer;
 
@@ -917,7 +920,9 @@ namespace AF.UI
         // se ven o recorre la canoa en esta apertura, el de la meta incluido (FX14: desde el de la canoa al empezar «ponerse al día»,
         // BuoyAnchorFirstLeg, hasta el del frente con max_level; la canoa va en una de ellas o en una parada y, al ponerse al día, de
         // una a otra), la naciente cuando se ve su hito (FX13) y las bocas de los afluentes (RiverRibbonGraphic.MouthAnchors). Son
-        // anclas de la curva: pasa a ≤ CurveAnchorWidths anchos de cada una. Se fijan en el vidrio y el lleno de cada línea (el
+        // anclas de la curva: pasa a ≤ CurveAnchorWidths anchos de cada una y, de las paradas y la naciente (ajustadas, revisión de
+        // FX14), a ≤ CurveStopAnchorDp; las dos holguras, desde el ancla que queda tras juntar las de menos de
+        // CurveAnchorMergeWidths anchos (la boca, si hay una; RibbonAnchors.Tight). Se fijan en el vidrio y el lleno de cada línea (el
         // frente, en BuildFront) para que todas sus cintas sigan la misma curva. Asigna: al abrir, si cambian el Mapa, max_level, el
         // mundo o ese primer tramo.
         private void ApplyLineAnchors(RiverMap map, RiverRoutes routes, RiverStopCatalog stops, int maxLevel, int seenLevel)

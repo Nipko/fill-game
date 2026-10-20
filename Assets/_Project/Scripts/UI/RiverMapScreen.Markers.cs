@@ -476,6 +476,12 @@ namespace AF.UI
             return _markers[i].HasLeader;
         }
 
+        /// <summary>Revisión de FX14 (para los tests): las líneas finas de las mini cuias, en el lienzo estático, debajo de los ríos.</summary>
+        internal LeaderLinesGraphic LeaderLines => _leaderLines!;
+
+        /// <summary>Revisión de FX14 (para los tests): los puntos reales de las líneas finas, encima, con las mini cuias.</summary>
+        internal LeaderLinesGraphic LeaderDots => _leaders!;
+
         /// <summary>El centro de la mini cuia <paramref name="i"/> cae dentro de la zona visible del mapa (vista Mundo).</summary>
         public bool StopMarkerInView(int i)
         {

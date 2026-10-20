@@ -251,7 +251,9 @@ namespace AF.Tests.PlayMode
         public const float MaxBendRatio = 1.05f;
 
         // FX14: el codo más cerrado de las cintas dibujadas del Mundo (Bends). Con «strict», no pasa de MaxBendRatio; si no, solo el
-        // registro (con max 120 y 300 hay codos más cerrados en otros sitios, de antes de FX14).
+        // registro. Con max 120 queda un pliegue en el Amazonas (1,71, Glass_amazonas cerca de (2507, 1109)) que ya estaba antes de
+        // FX14: medido con el código de tanda4/o7-fx13 (1ffb262), da lo mismo y en los mismos puntos. Pendiente para una tarea
+        // posterior; con 58 y 300, el peor es el Takutu (0,98 y 0,99, de los datos).
         private static void CheckBends(RiverMapScreen map, RiverMap data, string at, bool strict)
         {
             var worst = new Corner();
@@ -595,16 +597,22 @@ namespace AF.Tests.PlayMode
         /// Revisión de FX14: lo más que el punto real de una parada (el nudo de sus líneas finas) queda del eje dibujado del vidrio de
         /// su línea en la vista Mundo, en dp [P]. Con <see cref="RiverRibbonGraphic.CurveAnchorWidths"/> anchos (0,45; 3,6 dp a
         /// 8 dp de ancho) la parada de Tambo quedaba al borde del agua en el fin de contenido del 700; las paradas son anclas con
-        /// <see cref="RiverRibbonGraphic.CurveStopAnchorDp"/> de holgura.
+        /// <see cref="RiverRibbonGraphic.CurveStopAnchorDp"/> de holgura, medida desde el ancla que queda tras juntar las de menos de
+        /// <see cref="RiverRibbonGraphic.CurveAnchorMergeWidths"/> anchos (si la parada se junta con una boca o con una boya de
+        /// antes, desde el punto de esa: puede quedar algo más lejos; <see cref="RibbonAnchors.Tight"/>).
         /// </summary>
         public const float MaxStopApartDp = 1.5f;
 
         // Revisión de FX14: cada parada, a ≤ MaxStopApartDp del eje dibujado del vidrio de su línea. Con «strict», se exige (el tramo
-        // de la meta); si no, solo el registro.
+        // de la meta); si no, solo el registro. También se anotan las paradas que comparten ancla con una boca o una boya (a menos
+        // de CurveAnchorMergeWidths anchos de arco), cuya holgura se mide desde el punto de la otra, y la peor de las que van solas.
         private static void CheckStopsOnTheAxis(RiverMapScreen map, RiverMap data, RiverRoutes routes, string at, bool strict)
         {
             float worst = 0f;
             string worstAt = "ninguna";
+            float alone = 0f;
+            string aloneAt = "ninguna";
+            var shared = new System.Text.StringBuilder();
             int checkedCount = 0;
             for (int i = 0; i < map.StopMarkerCount; i++)
             {
@@ -622,15 +630,43 @@ namespace AF.Tests.PlayMode
                 }
 
                 checkedCount++;
-                float apart = DistanceToSections(glass, RiverMapScreen.PlacePoint(data, route.At)) * glass.Space.DpPerUnit;
+                float dp = glass.Space.DpPerUnit;
+                float apart = DistanceToSections(glass, RiverMapScreen.PlacePoint(data, route.At)) * dp;
+                string where = "parada " + n + " en " + glass.name + ", a " + apart.ToString("0.00", CultureInfo.InvariantCulture) + " dp";
                 if (apart > worst)
                 {
                     worst = apart;
-                    worstAt = "parada " + n + " en " + glass.name + ", a " + apart.ToString("0.00", CultureInfo.InvariantCulture) + " dp";
+                    worstAt = where;
+                }
+
+                // La boca o la boya (anclas no ajustadas) de su línea a menos de CurveAnchorMergeWidths anchos de arco: comparten ancla.
+                RibbonAnchors? anchors = map.LineAnchors(data.Lines[route.At.Line]);
+                float merge = RiverRibbonGraphic.CurveAnchorMergeWidths * glass.WidthDp;
+                string? with = null;
+                for (int j = 0; anchors != null && glass.Cursor != null && j < anchors.Count; j++)
+                {
+                    float arcDp = Mathf.Abs(anchors.S[j] - route.At.S) * glass.Cursor.Length * dp;
+                    if (!anchors.Tight[j] && arcDp < merge)
+                    {
+                        with = (anchors.Mouth[j] ? "boca" : "boya") + " a " + arcDp.ToString("0.00", CultureInfo.InvariantCulture) + " dp de arco";
+                        break;
+                    }
+                }
+
+                if (with != null)
+                {
+                    shared.Append(shared.Length > 0 ? "; " : string.Empty).Append(where).Append(" (").Append(with).Append(')');
+                }
+                else if (apart > alone)
+                {
+                    alone = apart;
+                    aloneAt = where;
                 }
             }
 
-            Debug.Log("AF_FX14 " + at + ": " + checkedCount + " paradas; la más apartada del eje dibujado, " + worstAt);
+            Debug.Log("AF_FX14 " + at + ": " + checkedCount + " paradas; la más apartada del eje dibujado, " + worstAt
+                + "; de las que van solas, " + aloneAt + "; las que comparten ancla con una boca o una boya: "
+                + (shared.Length > 0 ? shared.ToString() : "ninguna"));
             Assert.That(checkedCount, Is.GreaterThan(0), at + ": hay paradas sobre las líneas");
             Expect(!strict || worst <= MaxStopApartDp, at + ": las paradas, sobre el eje dibujado: " + worstAt);
         }
