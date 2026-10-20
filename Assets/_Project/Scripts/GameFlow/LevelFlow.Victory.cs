@@ -41,7 +41,8 @@ namespace AF.GameFlow
         /// La última victoria es «¡Perfecto!» (Magic Sort §10.2 #25, recomendada A; D-029; tarea DC14): en el intento ganado el
         /// tablero no llevaba la Cuia de rescate, ni la de «Continuar: +1 cuia» ni la de la Balsa de rescate. Se evalúa por
         /// intento con las cuias añadidas del nivel en curso (<see cref="LevelAttempt.Rescues"/>), que persisten al reiniciar y
-        /// se olvidan al salir del nivel: tras un rescate, Volver a la orilla sigue con esa cuia en el tablero y no es perfecto;
+        /// se olvidan al salir del nivel: tras un rescate, Volver a la orilla sigue con esa cuia en el tablero y no es perfecto
+        /// [P] (si el dueño quiere contar solo el intento, haría falta un indicador por intento que se ponga a cero al reiniciar);
         /// salir al inicio y volver a entrar empieza sin ella. La Cuia extra, Marea, Morpho y la Luciérnaga no lo quitan, porque
         /// la pregunta solo nombra la Cuia de rescate [P]. False fuera de una victoria.
         /// </summary>
