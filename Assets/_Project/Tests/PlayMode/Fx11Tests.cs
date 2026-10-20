@@ -145,6 +145,22 @@ namespace AF.Tests.PlayMode
                 water += map.FrontRibbon(i).LastVertexCount;
                 casing += map.FrontCasingRibbon(i).LastVertexCount;
                 most = Mathf.Max(most, Mathf.Max(map.FrontRibbon(i).LastVertexCount, map.FrontCasingRibbon(i).LastVertexCount));
+                RiverRibbonGraphic fr = map.FrontRibbon(i);
+                RiverRibbonGraphic fc = map.FrontCasingRibbon(i);
+                Debug.Log("FX11 frente del 300 en " + at + ", pieza " + i + " (" + fr.Line!.Id + "): "
+                    + ((fr.FillEnd - fr.FillStart) * fr.Cursor!.Length * fr.Space.DpPerUnit).ToString("0", System.Globalization.CultureInfo.InvariantCulture)
+                    + " dp, " + fr.LastSectionPointCount + " secciones, " + fr.LastVertexCount + " + " + fc.LastVertexCount
+                    + " vértices, tolerancia de la curva " + fr.LastCurveToleranceDp.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture)
+                    + " y " + fc.LastCurveToleranceDp.ToString("0.00", System.Globalization.CultureInfo.InvariantCulture) + " dp");
+
+                // FX12: con el tope, el agua y su orla siguen sobre el vidrio de su línea (≤ 2 dp) y nunca uno de cada tantos pasos.
+                if (view == MapView.World)
+                {
+                    RiverRibbonGraphic glass = map.Glass(fr.Line.Index);
+                    float apart = Mathf.Max(Fx12Tests.ApartDp(fr, glass), Fx12Tests.ApartDp(fc, glass));
+                    Assert.That(apart, Is.LessThanOrEqualTo(Fx12Tests.MaxWaterApartDp), at + ", pieza " + i + ": el agua, sobre el vidrio");
+                    Assert.That(fr.LastCurveToleranceDp >= 0f && fc.LastCurveToleranceDp >= 0f, Is.True, at + ", pieza " + i + ": sin saltar pasos de la curva a ciegas");
+                }
             }
 
             Debug.Log("FX11 frente del 300 en " + at + ": " + water + " vértices de agua y " + casing + " de orla (" + (water + casing)
@@ -155,12 +171,10 @@ namespace AF.Tests.PlayMode
 
         // El frente del 300 (agua y orla) en Mundo, medido el 2026-10-19: 1.028 vértices de agua y 1.506 de orla (2.534; la pieza
         // más cara, la orla del Amazonas, 504); en Cuenca, 724. Tope con margen; anotado en la propuesta del Mapa §11.4. Con la primera
-        // versión de FX12 (trazo curvo en Mundo, codos de hasta 25° y 0,75 dp), 2.886. Desde la revisión de FX12 (codos de ≤ 10° y
-        // flecha de ≤ 0,3 dp, que es lo que deja de verse como esquina), 5.764 en Mundo (2.326 de agua y 3.438 de orla; la pieza más
-        // cara, 1.314): no cabe en 3.000 con ningún reparto medido (el más barato con esa calidad, 4.088, aparta la curva de la
-        // polilínea hasta 6 dp en la canoa). Tope provisional [P] de 6.500, pendiente del dueño (anotado en la propuesta §11.4):
-        // el frente solo se rehace una vez por boya (≤ 10 por apertura).
-        private const int FrontMeasuredMaxVertices = 6500;
+        // versión de FX12 (trazo curvo en Mundo, codos de hasta 25° y 0,75 dp), 2.886. Con todos los pasos de la curva de la revisión
+        // de FX12 (codos de ≤ 10° y flecha de ≤ 0,3 dp) pediría 5.764; desde la segunda revisión de FX12, el Mapa reparte este tope
+        // entre las piezas (RiverMapScreen.FrontCurveMaxVertices) y cada una elige los pasos de la curva que caben, sobre el vidrio.
+        private const int FrontMeasuredMaxVertices = 3000;
 
         // Al abrir, en cada fotograma y al acabar. Devuelve las piezas del frente al abrir y las más que tuvo.
         private static (int Open, int Most) CatchUpAndCheck(RiverMapScreen map, string at)

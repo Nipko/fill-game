@@ -245,6 +245,13 @@ namespace AF.UI
         private int _frontStop = -1;
         private float _frontFraction;
         private int _frontCount;
+
+        // Revisión de FX12: la ruta del frente, la pieza de su ruta de cada cinta del frente y el tope de vértices de cada pieza de la
+        // ruta (el agua y la orla), repartido según lo que pide cada una con el trazo curvo (FitFrontBudgets). Solo crecen.
+        private RiverStopRoute? _frontRoute;
+        private int[] _frontPathIndex = Array.Empty<int>();
+        private int[] _frontCoreBudget = Array.Empty<int>();
+        private int[] _frontCasingBudget = Array.Empty<int>();
         private int _buoyCount;
         private float _fadeMs;
         private float _fadeElapsed;
@@ -781,8 +788,6 @@ namespace AF.UI
                 bool used = i < lines.Count;
                 ResetFillRibbon(_fill[i], used ? lines[i] : null);
                 ResetFillRibbon(_fillCasing[i], used ? lines[i] : null);
-                _fill[i].SetAnchors(RiverRibbonGraphic.MouthAnchorsOf(map, used ? lines[i] : null)); // FX12: la misma curva que el vidrio
-                _fillCasing[i].SetAnchors(RiverRibbonGraphic.MouthAnchorsOf(map, used ? lines[i] : null));
                 if (used)
                 {
                     _fill[i].gameObject.name = "Fill_" + lines[i].Id;
@@ -852,6 +857,17 @@ namespace AF.UI
             StartFades(Mathf.Clamp(progress.MapSeenLevel, 0, max));
         }
 
+        // FX12: las anclas de la curva de cada línea (ApplyLineAnchors) en el lleno y su orla, como en el vidrio.
+        partial void ProgressAnchors(RiverMap map)
+        {
+            for (int i = 0; i < _fill.Count; i++)
+            {
+                RiverLine? line = i < map.Lines.Count ? map.Lines[i] : null;
+                _fill[i].SetAnchors(LineAnchors(line));
+                _fillCasing[i].SetAnchors(LineAnchors(line));
+            }
+        }
+
         partial void ProgressSpace(MapSpace space)
         {
             if (_map == null || _fillLayer == null)
@@ -869,6 +885,18 @@ namespace AF.UI
             {
                 FitRibbon(_front[i], space);
                 FitRibbon(_frontCasing[i], space);
+            }
+
+            // FX12: el tope del frente, repartido otra vez a la escala de la vista nueva (el vidrio ya la tiene).
+            if (_frontRoute != null)
+            {
+                FitFrontBudgets(_map!, _frontRoute);
+                for (int i = 0; i < _frontCount; i++)
+                {
+                    int piece = _frontPathIndex[i];
+                    _front[i].SetVertexBudget(_frontCoreBudget[piece]);
+                    _frontCasing[i].SetVertexBudget(_frontCasingBudget[piece]);
+                }
             }
 
             PlaceBuoys(space);
@@ -1528,9 +1556,9 @@ namespace AF.UI
                 // siquiera los 400 enteros por pieza bastan (la del Amazonas pide 360 de agua y 504 de orla). El frente solo se
                 // rehace al cambiar su llenado (una vez por boya, ≤ 10 por apertura), y solo la pieza que cambia. Es una desviación provisional
                 // [P] del «≤ 400 vértices» del frente de la propuesta del Mapa §11.4, anotada allí y pendiente del dueño: el frente del
-                // 300 pide 2.534 vértices entre agua y orla en Mundo y, con el trazo curvo de la revisión de FX12, 5.764 (medido; lo
-                // acota Fx11Tests con un tope provisional [P] de 6.500, pendiente del dueño).
-                const int budget = RiverRibbonGraphic.MaxVertices;
+                // 300 pide 2.534 vértices entre agua y orla en Mundo. Con el trazo curvo de FX12 pediría 5.764 con todos los pasos de la
+                // curva; FitFrontBudgets lo deja en FrontCurveMaxVertices (el tope de FX11).
+                FitFrontBudgets(map, route);
                 float left = _frontFraction * total;
                 for (int i = 0; i < path.Count && left > 0f; i++)
                 {
@@ -1546,10 +1574,16 @@ namespace AF.UI
                     left -= length;
                     int k = _frontCount++;
                     float end = piece.S0 + ((piece.S1 - piece.S0) * t);
-                    SetFrontPiece(FrontRibbonAt(k), line, budget, piece.S0, end);
-                    SetFrontPiece(_frontCasing[k], line, budget, piece.S0, end);
-                    _front[k].SetAnchors(RiverRibbonGraphic.MouthAnchorsOf(map, line)); // FX12: la misma curva que el vidrio
-                    _frontCasing[k].SetAnchors(RiverRibbonGraphic.MouthAnchorsOf(map, line));
+                    if (_frontPathIndex.Length <= k)
+                    {
+                        Array.Resize(ref _frontPathIndex, Mathf.Max(8, k * 2)); // solo crece
+                    }
+
+                    _frontPathIndex[k] = i;
+                    SetFrontPiece(FrontRibbonAt(k), line, _frontCoreBudget[i], piece.S0, end);
+                    SetFrontPiece(_frontCasing[k], line, _frontCasingBudget[i], piece.S0, end);
+                    _front[k].SetAnchors(LineAnchors(line)); // FX12: la misma curva que el vidrio
+                    _frontCasing[k].SetAnchors(LineAnchors(line));
 
                     // FX11: el espacio y el ancho de la vista al montarla. ProgressSpace solo ajusta las cintas que ya había al
                     // cambiar de vista; si «ponerse al día» llega a un tramo con más piezas que el de partida (en el 41, el de la
@@ -1574,6 +1608,7 @@ namespace AF.UI
                 }
             }
 
+            _frontRoute = route;
             _frontStopMap = route != null ? PlacePoint(map, route.At) : Vector2.zero;
             for (int i = 0; i < BuoysPerLeg; i++)
             {
@@ -1582,6 +1617,55 @@ namespace AF.UI
             }
 
             RefreshBuoyStates();
+        }
+
+        /// <summary>
+        /// Tope de vértices del frente entero (el agua y la orla de todas sus piezas) en la vista Mundo con el trazo curvo [P]: el de
+        /// <c>Fx11Tests</c> (FX11, pendiente del dueño). Revisión de FX12: con todos los pasos de la curva, el frente del 300 pedía
+        /// 5.764; FitFrontBudgets lo reparte entre las piezas y cada una elige los pasos que caben con la tolerancia más fina que
+        /// pueda (<see cref="RiverRibbonGraphic.CurveBudgetToleranceDp"/>), sin salirse de la curva del vidrio.
+        /// </summary>
+        public const int FrontCurveMaxVertices = 3000;
+
+        // Revisión de FX12: el tope de vértices de cada pieza de la ruta del frente (el agua y la orla, con las mismas secciones). Si
+        // con todos los pasos de la curva (lo que pide cada pieza en el vidrio de su línea, a la escala de la vista) el frente entero
+        // cabe en FrontCurveMaxVertices, sin tope (el de una malla); si no, se reparte según lo que pide cada pieza. Sin trazo curvo
+        // (la Cuenca), sin tope, como desde FX11. Solo asigna si la ruta tiene más piezas que ninguna antes.
+        private void FitFrontBudgets(RiverMap map, RiverStopRoute route)
+        {
+            IReadOnlyList<RiverPathPiece> path = route.Path;
+            if (_frontCoreBudget.Length < path.Count)
+            {
+                _frontCoreBudget = new int[path.Count];
+                _frontCasingBudget = new int[path.Count];
+            }
+
+            int total = 0;
+            for (int i = 0; i < path.Count; i++)
+            {
+                RiverPathPiece piece = path[i];
+                RiverLine line = map.Lines[piece.Line];
+                int demand = piece.Line < _glass.Count ? Glass(piece.Line).CurveDemand(piece.S0, piece.S1) : 0;
+                _frontCoreBudget[i] = demand; // de momento, lo que pide
+                total += demand * (RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core)
+                    + RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing));
+            }
+
+            for (int i = 0; i < path.Count; i++)
+            {
+                RiverPathPiece piece = path[i];
+                RiverLine line = map.Lines[piece.Line];
+                if (total <= FrontCurveMaxVertices)
+                {
+                    _frontCoreBudget[i] = RiverRibbonGraphic.MaxVertices;
+                    _frontCasingBudget[i] = RiverRibbonGraphic.MaxVertices;
+                    continue;
+                }
+
+                int sections = Mathf.Max(4, (int)((long)FrontCurveMaxVertices * _frontCoreBudget[i] / total));
+                _frontCoreBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Core);
+                _frontCasingBudget[i] = sections * RiverRibbonGraphic.SectionVertices(line, piece.S0, piece.S1, RibbonPart.Casing);
+            }
         }
 
         // La cinta i del frente (el agua, en el lienzo dinámico, debajo de las boyas) y su orla (en el estático, con las del lleno:
