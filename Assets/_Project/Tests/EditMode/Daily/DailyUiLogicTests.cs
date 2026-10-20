@@ -24,12 +24,13 @@ namespace AF.Tests.EditMode.Daily
     public sealed class DailyUiLogicTests
     {
         private const string CsvPath = "docs/dev/traspaso/spark-strings-reto.csv";
+
         /// <summary>
         /// Claves del Spark de E6 y E7 cuyas filas entran en <c>strings.csv</c> con el enganche E5b
         /// (<c>docs/dev/traspaso/spark-enganches/E5b.diff</c>): hasta aplicarlo faltan enteras; aplicado, tienen que estar tal cual,
         /// como las demás. Con E5b integrado, esta lista se vacía.
         /// </summary>
-        private static readonly string[] PendingE5bKeys = { DailyText.Keys.Teaser, DailyText.Keys.NoCanoesDaily };
+        private static readonly string[] PendingE5bKeys = DailyText.E5bKeys;
 
         private const string Header = "key,es-419,en,pt-BR,context,max_chars,status,status_en,status_pt-BR,notes,args";
 
@@ -76,7 +77,12 @@ namespace AF.Tests.EditMode.Daily
                 Assert.That(keys.Contains(key), Is.True, "falta " + key + " en " + CsvPath);
             }
 
-            Assert.That(keys.Count, Is.EqualTo(DailyText.NewKeys.Length), "ninguna fila sobra");
+            foreach (string key in DailyText.E5bKeys)
+            {
+                Assert.That(keys.Contains(key), Is.True, "falta " + key + " (E5b) en " + CsvPath);
+            }
+
+            Assert.That(keys.Count, Is.EqualTo(DailyText.NewKeys.Length + DailyText.E5bKeys.Length), "ninguna fila sobra");
         }
 
         [Test]
@@ -124,6 +130,11 @@ namespace AF.Tests.EditMode.Daily
             foreach (string key in DailyText.NewKeys)
             {
                 Assert.That(catalog.Strings.IndexOf(key), Is.GreaterThanOrEqualTo(0), key);
+            }
+
+            foreach (string key in DailyText.E5bKeys)
+            {
+                Assert.That(catalog.Strings.IndexOf(key), Is.GreaterThanOrEqualTo(0), key + " (E5b o la fila del Spark detrás)");
             }
         }
 
