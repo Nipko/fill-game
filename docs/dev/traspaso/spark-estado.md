@@ -20,6 +20,98 @@ El dueño respondió, literal: «las preguntas t2 hagamos lo recomendado». Se a
 | T2-Q6 | Frases de `facts.csv` con el español aún en `pendiente_asesor` (08 §4.7: una traducción solo vale con `aprobado_es`; `FactCatalogTests` exige los estados vacíos) | (a) **Retener**: la entrega de `facts.csv` queda guardada y se aplica cuando el asesor apruebe el español. El script no escribe filas por debajo de `aprobado_es` y detecta un español cambiado |
 | T2-Q7 | «Amazonía» / «the Amazon» / «a Amazônia» y regiones (trópico americano, América tropical, alta Amazonia…) sin entrada en el glosario; el glosario §1 evita la cadena «Amazon» por la marca de Amazon.com | (a) Se dejan **vacías** y anotadas en `pendientes.csv`, hasta que el dueño decida con el asesor la entrada del glosario |
 
+## 2026-10-19 · Entrega final: R0-R12 en `spark/reto-del-rio`, verificación completa VERDE
+
+Verificación en `spark-int`, sobre la rama con la parte del Spark de R12 (`ac54d82`) y los parches guardados (`bb5b163`, `fa5209e`):
+
+| Comando | Resultado |
+|---|---|
+| `dotnet build dotnet/AmazonFill.slnx -warnaserror` | código 0 |
+| `dotnet test dotnet/AmazonFill.slnx` | 981 (975 + 6) |
+| `python tools/validate_schema.py` | 103/103 |
+| `unity-compile.ps1 -Architecture arm64` | OK |
+| `unity-test.ps1 -Mode EditMode … -TimeoutSec 3600` | **3.058 (3.055 + 3 omitidos), 0 fallos** |
+| `unity-test.ps1 -Mode PlayMode … -TimeoutSec 3600` | **1.383 (1.216 + 167 omitidos), 0 fallos** (39 min) |
+| Capturas de R11 (`DailyChallengeSnapshotTests`, sin `-nographics`) | 4/4; `AF_FIT` = 0 textos fuera de su caja en es-419, es-419 16:9, en-XA y en-XA 16:9; `AF_STAMP` = desvío 0,00 dp |
+
+- **Recuentos de referencia del Spark para el integrador:**
+  - sin los enganches: EditMode **3.058**, PlayMode **1.383**;
+  - con los enganches aplicados (R12): EditMode 3.082 y PlayMode 1.394.
+- **Bloques listos para integrar:**
+  - (a) ya integrado;
+  - (b) el pool;
+  - (c) lógica;
+  - (d) partida y pantallas;
+  - (e) los enganches, con sus parches en `docs/dev/traspaso/spark-enganches/` y en `docs/dev/traspaso/spark-parches-docs.md`.
+- **Fuera de alcance o pendiente:**
+  - E1, E6 y E7 sin preparar (motivo en la entrada de R12);
+  - E16 por regenerar;
+  - E19, E20 y E25, para más adelante.
+  - Las capturas son de prueba; falta la prueba en el teléfono, que necesita los enganches aplicados en la integración.
+
+## 2026-10-19 · R12 · Enganches para el integrador: parches exactos y PROBADOS · Bloque (e) listo
+
+**Probados contra:** `origin/integracion-fase1-fase2` en **`bc65242`**, con `spark/reto-del-rio` fusionada (R0-R11 y la parte del Spark de R12). Worktree temporal `r12-full`, no empujado, HEAD `c4ba4a1`.
+
+### Dónde están y en qué orden se aplican
+
+Carpeta **`docs/dev/traspaso/spark-enganches/`**: diffs unificados con LF fijado (`.gitattributes` propio).
+
+1. Fusiona `spark/reto-del-rio`. Ya trae la parte del Spark de R12 (`ac54d82`): la tarjeta con el título en dos líneas y 100 dp, los `max_chars` del CSV, `DailyUiLogicTests` con la regla `VisibleLength`, y `DailyProbeFormat.EarnSeeds` con `source` (para E9) y `DailyChallengeService.Config`.
+2. Aplica **`R12-all.diff`**: todos los enganches juntos, 26 archivos. `git apply --check` da OK sobre `ac54d82`.
+
+   O bien, uno a uno y en este orden:
+   - `E4.diff`;
+   - `E2.diff`, `E22.diff` y `E23.diff` (los tres tocan `GameBootstrap.cs`);
+   - `E3.diff` y `E3-scene.diff`;
+   - `E5.diff` y `E5-fix.diff`;
+   - `E9.diff`;
+   - `E21.diff` y `E24.diff`;
+   - `E-tests.diff`.
+3. **Mejor que aplicar `E3-scene.diff`:** regenera `Game.unity` con `AF.UI.Editor.GameSceneBuilder.CreateGameScene` tras aplicar `E3.diff`. El diff de la escena solo añade `dailyPool` (el guid del `.meta` del pool) y renumera los fileID.
+4. Después, que Unity genere los `.meta` de los archivos nuevos (`ProfileDailyChallengeStoreTests.cs`, `DailyDoubleHarvestTests.cs`, `DailyHooksTests.cs` y `ProfileDailyChallengeStore.cs`) y commitéalos tal cual.
+
+### Qué hace cada uno
+
+| # | Archivos | Qué |
+|---|---|---|
+| E2 | `GameBootstrap.cs` | `SetUpDaily();` tras `_lobby.Bind(_app, _services);` |
+| E3 | `Editor/GameSceneBuilder.cs` (+ `Game.unity` regenerada) | `DailyPoolPath` y `ConfigureDailyPool(dailyPool)` tras `ConfigureRiverStops`; aviso si falta el pool |
+| E4 | `Save/Profile.cs`, `Save/ProfileJson.cs`, nuevo `LiveOps/ProfileDailyChallengeStore.cs`, `GameBootstrap.Daily.cs` (fábrica por defecto) | Bloque `daily_challenge` (nota §10). Se omite mientras es null, así que el golden del perfil no cambia. `CurrentSchema` 1, sin migración (08 §4.3). Un tipo equivocado o un `in_progress` sin `date` o `id` es corrupción. El almacén usa el mismo `Profile` y el mismo lote (`ProfileSaveBatch.Durable`) que la cartera del Reto: nunca dos pagos. 17 tests |
+| E5 | `Data/Loc/strings.csv`, `LocTablesTests` (+ tests del Reto) | Las 24 filas de `spark-strings-reto.csv` en orden ordinal (`data-json.md`); `LocTablesTests` añade `DailyText.NewKeys`; los tests del Reto leen ya `strings.csv` |
+| E9 | `Economy/Transaction.cs`, `Wallet.cs`, `DailyChallengeScreen.cs`, `DailyStampCalendar.cs`, tests | `Transaction.DoubleHarvestDaily(seeds, level)` [P en la firma: lleva el nivel para el mínimo `ads_rv_double_harvest_from_level` = 11]. Solo con el premio confirmado, una vez por victoria, con el tope diario y el cooldown de `rv_double_harvest` de AF.Ads (compartidos con la campaña [P]) y como mucho seeds × `murky_bonus_mult` (120). Paga solo si el anuncio se vio entero. Sonda `earn_virtual_currency` `source=double_harvest` |
+| E21 | `GameScreen.cs` | `if (isShort && !flow.IsDaily)`: el Reto no enseña «Nivel N · intento k» |
+| E22 | `GameBootstrap.cs` (opcional) | Atrás cierra el calendario del Reto; con el tablero en juego no hace nada |
+| E23 | `GameBootstrap.cs` | Al volver de segundo plano, la vista del Reto salta al modelo, limpia la selección y reinicia la pista por inactividad |
+| E24 | `DevProbe.cs` | `AppendDailyBoard(sb, flow);` tras las 4 líneas `"level"`: el Reto añade `"daily":"d{b}_n{nnnn}"` |
+| tests | nuevo `Tests/PlayMode/DailyHooksTests.cs` (+ ajustes en `DailyChallengeTests`) | E2, E3, E4, E5, E9, E21-E24 de punta a punta con la escena real: el pool real, el almacén del perfil y las tablas |
+
+### Verificación (r12-full, con todo aplicado)
+
+| Comando | Resultado |
+|---|---|
+| `dotnet build -warnaserror` | código 0 |
+| `dotnet test` | 981 (975 + 6) |
+| `validate_schema.py` | 103/103 |
+| `unity-compile.ps1 -Architecture arm64` | OK |
+| EditMode | **3.082** (3.078 + 3; 1 fallo, el inestable `IntroArtTests.FruitFlight…`) |
+| PlayMode | **1.394 (1.227 + 167), 0 fallos**; `PseudoLocOverflowTests` en-XA 130 % pasa tras el arreglo de la tarjeta |
+| Capturas de R11 | 31 PNG, `AF_FIT` sin ningún texto fuera de su caja (es-419 a 780 no salió por un error del entorno con la ruta larga; se repite en `spark-int`) |
+
+- **code-reviewer:** primera ronda CAMBIOS NECESARIOS (faltaban la sonda `double_harvest` y el test del anuncio cerrado antes de tiempo, y PlayMode tenía un fallo real). Segunda ronda **APROBADO**.
+
+### Lo que no se preparó
+
+- **E1** (`LobbyScreen`, opcional): no hace falta, porque la tarjeta va en su propio lienzo desde `GameBootstrap.Daily.cs`. Requisito si se mueve: en 16:9, al menos 8 dp bajo el bocadillo de TiTino (`r11_01_card_play_16x9`).
+- **E6** (tarjeta de 2 s tras ganar el 7): falta una clave de texto nueva y el diseño de la tarjeta. Punto de enganche: `GameScreen.OnVictoryScreen` con `flow.LevelNumber == 7`.
+- **E7** (Sin canoas, opcional): necesita una clave nueva, `af_no_canoes_choice = daily_challenge` y un flujo nuevo en AppFlow.
+- **E16** (level-qa enlaza `Daily/`): el parche probado en el bloque (a) quedó desfasado tras R5. Hay que regenerarlo sobre la versión actual (descripción en su ficha).
+
+### Para el dueño (E11; no bloquean)
+
+- El Reto comparte con la campaña el tope de 5 al día y el cooldown de la Cosecha doble [P].
+- Cuando exista la Crecida: ¿la Cosecha doble sin video del «río crecido» (04 §2.8) vale también en el Reto? Va con E19 y E25.
+
 ## 2026-10-19 · R0-R11 juntas: verificación completa VERDE · Bloque (d) (R8-R11) listo para integrar
 
 - **Qué hay:** la rama principal (R0-R10) más R11, la nota con la tabla de días de 729 corregida (`09b11cd`) y los usos `--days 0-728`.
@@ -612,30 +704,30 @@ Las R-Q1 a R-Q10 de la sección 5 del encargo, decididas por el dueño el 2026-1
 
 | # | Estado | Archivo |
 |---|---|---|
-| E1 | Pendiente · parche en R12 | `Scripts/UI/LobbyScreen.cs` |
-| E2 | Pendiente · parche en R12 | `Scripts/UI/GameBootstrap.cs` |
-| E3 | Pendiente · parche en R12 | `Scripts/UI/Editor/GameSceneBuilder.cs` |
-| E4 | Pendiente · parche en R12 | `Scripts/Save/Profile.cs`, `ProfileJson.cs`, `ProfileMigrations.cs` |
-| E5 | Pendiente · filas en R9-R12 | `Data/Loc/strings.csv` |
-| E6 | Pendiente · parche en R12 | Victoria del nivel 7 |
-| E7 | Pendiente (opcional) · parche en R12 | `Scripts/UI/NoCanoesScreen.cs` |
+| E1 | Opcional · no preparado (la tarjeta va en su lienzo; requisito de 16:9 en R12) | `Scripts/UI/LobbyScreen.cs` |
+| E2 | **Parche probado** (R12, `spark-enganches/E2.diff`) | `Scripts/UI/GameBootstrap.cs` |
+| E3 | **Parche probado** (R12, `E3.diff` + regenerar escena) | `Scripts/UI/Editor/GameSceneBuilder.cs` |
+| E4 | **Parche probado** (R12, `E4.diff`) | `Scripts/Save/Profile.cs`, `ProfileJson.cs`, `ProfileMigrations.cs` |
+| E5 | **Parche probado** (R12, `E5.diff` + `E5-fix.diff`) | `Data/Loc/strings.csv` |
+| E6 | No preparado: falta clave y diseño (R12) | Victoria del nivel 7 |
+| E7 | Opcional · no preparado (R12) | `Scripts/UI/NoCanoesScreen.cs` |
 | E8 | **Ya no hace falta** | (iba en `Scripts/GameFlow/LevelFlow*.cs`) |
-| E9 | Pendiente · parche en R12 | `Scripts/Economy/Transaction.cs`, `Wallet.cs` |
-| E10 | Pendiente · parche en R12 | `Scripts/UI/DevProbe.cs` (si hace falta) |
-| E11 | Pendiente | `docs/dev/decisiones.md`, `docs/gdd/03`, `05`, `06`, `08` |
-| E12 | Pendiente · texto en R12 | `docs/dev/prototipo-v0.md`, `docs/dev/traspaso/README.md`, `CLAUDE.md` |
+| E9 | **Parche probado** (R12, `E9.diff`) | `Scripts/Economy/Transaction.cs`, `Wallet.cs` |
+| E10 | **Ya no hace falta** (R10 sale de archivos del Spark) | `Scripts/UI/DevProbe.cs` (si hace falta) |
+| E11 | **Parches probados** (`spark-parches-docs.md`, 12 diffs, aplican sobre `bc65242`) | `docs/dev/decisiones.md`, `docs/gdd/03`, `05`, `06`, `08` |
+| E12 | **Parches probados** (`spark-parches-docs.md`) | `docs/dev/prototipo-v0.md`, `docs/dev/traspaso/README.md`, `CLAUDE.md` |
 | E13 | Opcional | `Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef` |
 | E14 | Opcional | `Scripts/Levels/LevelPackReader.cs`, `DailyPoolReader.cs` |
 | E15 | **Aplicado** (`752bb55`) | `tools/level-generator/Program.cs`, `README.md` |
-| E16 | Pendiente · parche probado | `tools/level-qa/level-qa.csproj` y `tools/level-qa/Daily/` |
+| E16 | Pendiente · el parche del bloque (a) quedó desfasado tras R5: regenerar | `tools/level-qa/level-qa.csproj` y `tools/level-qa/Daily/` |
 | E17 | **Aplicado en parte** (`752bb55`); queda el README | `tools/level-qa/Program.cs`, `README.md` |
 | E18 | Punto 1 corregido por el integrador (encargo §9); queda el punto 2 | Encargo §3.3 |
 | E19 | Pendiente, para cuando exista la Crecida | `Scripts/GameFlow/LevelFlow.Funnel.cs`, `FailResolve.cs` |
 | E20 | Pendiente (limpieza) | `Scripts/Levels/LevelDefinition.cs`, `LevelCatalog.cs` |
-| E21 | Pendiente · parche abajo (R9) | `Scripts/UI/GameScreen.cs` (`OnIntroStarted`) |
-| E22 | Opcional · parche abajo (R9) | `Scripts/UI/GameBootstrap.cs` (`PressAndroidBack`) |
-| E23 | Pendiente · parche abajo (R9) | `Scripts/UI/GameBootstrap.cs` (`OnApplicationPause`) |
-| E24 | Pendiente · parche abajo (R9/R10) | `Scripts/UI/DevProbe.cs` |
+| E21 | **Parche probado** (R12, `E21.diff`) | `Scripts/UI/GameScreen.cs` (`OnIntroStarted`) |
+| E22 | **Parche probado** (R12, `E22.diff`; opcional) | `Scripts/UI/GameBootstrap.cs` (`PressAndroidBack`) |
+| E23 | **Parche probado** (R12, `E23.diff`) | `Scripts/UI/GameBootstrap.cs` (`OnApplicationPause`) |
+| E24 | **Parche probado** (R12, `E24.diff`) | `Scripts/UI/DevProbe.cs` |
 | E25 | Para cuando exista la Crecida | barra de la Crecida en la vista del Reto |
 
 ### E1 · Inicio: la tarjeta del Reto (pendiente; parche en R12)

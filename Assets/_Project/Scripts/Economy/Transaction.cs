@@ -231,8 +231,8 @@ namespace AF.Economy
         public SeedSink Sink { get; private set; }
 
         /// <summary>
-        /// Semillas explícitas: las ganadas (<see cref="TransactionKind.Earn"/>, <see cref="TransactionKind.Purchase"/>) o el
-        /// precio cotizado del rescate. 0 en el resto.
+        /// Semillas explícitas: las ganadas (<see cref="TransactionKind.Earn"/>, <see cref="TransactionKind.Purchase"/>), las de la
+        /// Cosecha doble del Reto del río (<see cref="DoubleHarvestDaily"/>) o el precio cotizado del rescate. 0 en el resto.
         /// </summary>
         public int Seeds { get; private set; }
 
@@ -267,6 +267,21 @@ namespace AF.Economy
         public static Transaction DoubleHarvest(int level, RewardTier tier)
         {
             return new Transaction(TransactionKind.DoubleHarvest) { Level = RequireLevel(level), Tier = tier, Source = SeedSource.DoubleHarvest };
+        }
+
+        /// <summary>
+        /// Cosecha doble del Reto del río (04 §2.8; 06 §4.1, «Premio»: «Cosecha doble disponible»; enganche E9): otras
+        /// <paramref name="seeds"/> semillas, las del premio del Reto recién cobrado (60 → 120 [P]), con <c>source</c> =
+        /// <c>double_harvest</c>. <paramref name="level"/> es el nivel efectivo del Reto (<c>max_level</c> + 1): como la de
+        /// campaña, se rechaza antes de <c>ads_rv_double_harvest_from_level</c> (11). El tope diario (<c>ads_rv_cap_double_harvest</c>,
+        /// 5, compartido con la campaña: es la misma ubicación <c>rv_double_harvest</c>) y el cooldown son cosa de <c>AF.Ads</c>.
+        /// </summary>
+        public static Transaction DoubleHarvestDaily(int seeds, int level)
+        {
+            return new Transaction(TransactionKind.DoubleHarvest)
+            {
+                Level = RequireLevel(level), Seeds = RequirePositive(seeds, nameof(seeds)), Source = SeedSource.DoubleHarvest,
+            };
         }
 
         /// <summary>

@@ -1,0 +1,271 @@
+diff --git a/Assets/_Project/Scripts/Economy/Transaction.cs b/Assets/_Project/Scripts/Economy/Transaction.cs
+index 8b7de02..a1dbad4 100644
+--- a/Assets/_Project/Scripts/Economy/Transaction.cs
++++ b/Assets/_Project/Scripts/Economy/Transaction.cs
+@@ -231,8 +231,8 @@ private Transaction(TransactionKind kind)
+         public SeedSink Sink { get; private set; }
+ 
+         /// <summary>
+-        /// Semillas explícitas: las ganadas (<see cref="TransactionKind.Earn"/>, <see cref="TransactionKind.Purchase"/>) o el
+-        /// precio cotizado del rescate. 0 en el resto.
++        /// Semillas explícitas: las ganadas (<see cref="TransactionKind.Earn"/>, <see cref="TransactionKind.Purchase"/>), las de la
++        /// Cosecha doble del Reto del río (<see cref="DoubleHarvestDaily"/>) o el precio cotizado del rescate. 0 en el resto.
+         /// </summary>
+         public int Seeds { get; private set; }
+ 
+@@ -269,6 +269,21 @@ public static Transaction DoubleHarvest(int level, RewardTier tier)
+             return new Transaction(TransactionKind.DoubleHarvest) { Level = RequireLevel(level), Tier = tier, Source = SeedSource.DoubleHarvest };
+         }
+ 
++        /// <summary>
++        /// Cosecha doble del Reto del río (04 §2.8; 06 §4.1, «Premio»: «Cosecha doble disponible»; enganche E9): otras
++        /// <paramref name="seeds"/> semillas, las del premio del Reto recién cobrado (60 → 120 [P]), con <c>source</c> =
++        /// <c>double_harvest</c>. <paramref name="level"/> es el nivel efectivo del Reto (<c>max_level</c> + 1): como la de
++        /// campaña, se rechaza antes de <c>ads_rv_double_harvest_from_level</c> (11). El tope diario (<c>ads_rv_cap_double_harvest</c>,
++        /// 5, compartido con la campaña: es la misma ubicación <c>rv_double_harvest</c>) y el cooldown son cosa de <c>AF.Ads</c>.
++        /// </summary>
++        public static Transaction DoubleHarvestDaily(int seeds, int level)
++        {
++            return new Transaction(TransactionKind.DoubleHarvest)
++            {
++                Level = RequireLevel(level), Seeds = RequirePositive(seeds, nameof(seeds)), Source = SeedSource.DoubleHarvest,
++            };
++        }
++
+         /// <summary>
+         /// Semillas de una fuente sin cantidad fija en la economía (Crecida, Bitácora, Canasta, Reto del río, compras,
+         /// devoluciones…). Las victorias y la Cosecha doble van por <see cref="Win"/> y <see cref="DoubleHarvest"/>.
+diff --git a/Assets/_Project/Scripts/Economy/Wallet.cs b/Assets/_Project/Scripts/Economy/Wallet.cs
+index d82eb49..0a4c4b9 100644
+--- a/Assets/_Project/Scripts/Economy/Wallet.cs
++++ b/Assets/_Project/Scripts/Economy/Wallet.cs
+@@ -167,7 +167,8 @@ public TransactionResult Apply(Transaction transaction)
+                         return Reject(transaction, RejectReason.NotUnlocked);
+                     }
+ 
+-                    seedsDelta = Config.WinReward(transaction.Tier);
++                    // La de campaña dobla la Cosecha de la etiqueta; la del Reto (E9) trae las semillas del premio del día.
++                    seedsDelta = transaction.Seeds > 0 ? transaction.Seeds : Config.WinReward(transaction.Tier);
+                     break;
+                 case TransactionKind.Earn:
+                 case TransactionKind.Purchase:
+diff --git a/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs b/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
+index daef9b1..f490421 100644
+--- a/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
++++ b/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
+@@ -1,5 +1,6 @@
+ #nullable enable
+ using System;
++using AF.Ads;
+ using AF.Boosters;
+ using AF.Core.Rules;
+ using AF.Economy;
+@@ -204,6 +205,7 @@ public bool Open(int maxLevel)
+             _playMs = 0d;
+             LastClaim = null;
+             LastClaimOutcome = null;
++            HarvestDoubled = false;
+             ExitedWithoutWin = false;
+             _calendar.Hide();
+             _calendarFromCard = false;
+@@ -320,10 +322,74 @@ public bool GoHome()
+             return true;
+         }
+ 
+-        /// <summary>Cosecha doble del Reto: no hace nada hasta el enganche E9 (<see cref="DailyStampCalendar.DoubleHarvestHookReady"/>).</summary>
++        /// <summary>
++        /// Tope de la Cosecha doble del Reto (E9): el premio más alto que puede pagar el Reto,
++        /// <c>live_daily_challenge_reward.seeds</c> × <c>murky_bonus_mult</c> (08 §9; 60 × 2). Un premio mayor no se dobla.
++        /// </summary>
++        public int MaxDoubleHarvestSeeds
++        {
++            get
++            {
++                DailyChallengeReward reward = _service.Config.LiveDailyChallengeReward;
++                return reward.Seeds * Math.Max(1, reward.MurkyBonusMult);
++            }
++        }
++
++        /// <summary>La Cosecha doble del Reto ya se cobró en esta victoria (E9).</summary>
++        public bool HarvestDoubled { get; private set; }
++
++        /// <summary>
++        /// La Cosecha doble del Reto se ofrece (E9; 04 §2.8; 06 §4.1): tras ganar con el premio <b>confirmado</b> y pagado (nunca
++        /// con «pendiente de validar» ni sin premio), una vez por victoria, desde <c>ads_rv_double_harvest_from_level</c> (el nivel
++        /// efectivo del Reto) y con video disponible en <c>rv_double_harvest</c> (reglas, tope diario de 5 compartido con la
++        /// campaña, cooldown y fill de <c>AF.Ads</c>): sin anuncio el botón no aparece (02 §6).
++        /// </summary>
++        public bool DoubleHarvestOffered
++        {
++            get
++            {
++                LevelFlow? flow = _flow;
++                GameServices? services = _context.Services;
++                DailyClaimReport? claim = LastClaim;
++                return DailyStampCalendar.DoubleHarvestHookReady && _won && !HarvestDoubled && flow != null && services != null
++                    && LastClaimOutcome == ClaimOutcome.Confirmed && claim.HasValue && claim.Value.Outcome == ClaimOutcome.Confirmed
++                    && claim.Value.SeedsPaid > 0 && claim.Value.SeedsPaid <= MaxDoubleHarvestSeeds
++                    && flow.LevelNumber >= _context.DailyWallet.Config.AdsRvDoubleHarvestFromLevel
++                    && services.RewardedReady(AdPlacement.DoubleHarvest);
++            }
++        }
++
++        /// <summary>
++        /// «Cosecha doble» del calendario (E9): el anuncio simulado de <c>rv_double_harvest</c> y, solo si se vio entero, otras
++        /// tantas semillas como el premio del día con <see cref="Transaction.DoubleHarvestDaily"/>. False si no se ofrece.
++        /// </summary>
+         public bool PressDoubleHarvest()
+         {
+-            return false;
++            if (!DoubleHarvestOffered)
++            {
++                return false;
++            }
++
++            int seeds = LastClaim!.Value.SeedsPaid;
++            int level = _flow!.LevelNumber;
++            _context.Services!.Ads.ShowRewarded(AdPlacement.DoubleHarvest, r =>
++            {
++                if (!r.IsRewarded || HarvestDoubled)
++                {
++                    return;
++                }
++
++                TransactionResult result = _context.DailyWallet.Apply(Transaction.DoubleHarvestDaily(seeds, level));
++                if (!result.IsApplied)
++                {
++                    return;
++                }
++
++                HarvestDoubled = true;
++                DevProbe.DailyEarn(result.SeedsDelta, DailyProbeFormat.DoubleHarvestSourceId); // 08 §8.2: source = double_harvest
++                _calendar.ShowDoubled(seeds + result.SeedsDelta);
++            });
++            return true;
+         }
+ 
+         /// <summary>
+@@ -401,7 +467,7 @@ public void OnVictoryScreen()
+             // desbloquea, el calendario lo dice.
+             LevelFlow? flow = _flow;
+             int shuffleUnlock = flow != null && flow.LevelNumber < flow.Boosters.ShuffleUnlockLevel ? flow.Boosters.ShuffleUnlockLevel : 0;
+-            _calendar.Show(_context.Clock.LocalDate(), _context.DailyStore.Load(), LastClaim, true, shuffleUnlock);
++            _calendar.Show(_context.Clock.LocalDate(), _context.DailyStore.Load(), LastClaim, DoubleHarvestOffered, shuffleUnlock);
+         }
+ 
+         /// <inheritdoc />
+diff --git a/Assets/_Project/Scripts/UI/DailyStampCalendar.cs b/Assets/_Project/Scripts/UI/DailyStampCalendar.cs
+index 22329d0..f42e367 100644
+--- a/Assets/_Project/Scripts/UI/DailyStampCalendar.cs
++++ b/Assets/_Project/Scripts/UI/DailyStampCalendar.cs
+@@ -46,10 +46,10 @@ public sealed class DailyStampCalendar
+         public const int Columns = 7;
+ 
+         /// <summary>
+-        /// El enganche E9 (Cosecha doble del Reto en <c>Transaction</c>/<c>Wallet</c>) ya está: hasta entonces false y el botón no
+-        /// se enseña. Cuando el integrador aplique E9, se pone a true junto con la acción del botón.
++        /// El enganche E9 (Cosecha doble del Reto: <c>Transaction.DoubleHarvestDaily</c> en <c>AF.Economy</c> y
++        /// <c>DailyChallengeScreen.PressDoubleHarvest</c>) ya está aplicado.
+         /// </summary>
+-        public const bool DoubleHarvestHookReady = false;
++        public const bool DoubleHarvestHookReady = true;
+ 
+         private const float PanelW = 312f;
+         private const float Cell = 36f;
+@@ -276,6 +276,17 @@ public void Show(DateTime date, DailyChallengeRecord record, DailyClaimReport? c
+             _canvas.Canvas.gameObject.SetActive(true);
+         }
+ 
++        /// <summary>
++        /// Tras la Cosecha doble del Reto (E9): el premio pasa a <paramref name="totalSeeds"/> («+120») y el botón se va (una vez por
++        /// victoria, como en la campaña).
++        /// </summary>
++        public void ShowDoubled(int totalSeeds)
++        {
++            _reward.text = DailyText.RewardSeeds(totalSeeds);
++            _double.Button.gameObject.SetActive(false);
++            Layout();
++        }
++
+         /// <summary>Oculta el calendario.</summary>
+         public void Hide()
+         {
+diff --git a/Assets/_Project/Tests/EditMode/DailyDoubleHarvestTests.cs b/Assets/_Project/Tests/EditMode/DailyDoubleHarvestTests.cs
+new file mode 100644
+index 0000000..585050c
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/DailyDoubleHarvestTests.cs
+@@ -0,0 +1,64 @@
++#nullable enable
++using System;
++using AF.Economy;
++using NUnit.Framework;
++
++namespace AF.Tests.EditMode
++{
++    /// <summary>
++    /// Enganche E9: la Cosecha doble del Reto del río (<see cref="Transaction.DoubleHarvestDaily"/>; 04 §2.8; 06 §4.1, «Premio»).
++    /// Paga otra vez las semillas del premio del día con <c>source</c> = <c>double_harvest</c>, se rechaza antes de
++    /// <c>ads_rv_double_harvest_from_level</c> (11) sin tocar nada, y la de campaña sigue doblando la Cosecha de la etiqueta.
++    /// </summary>
++    public sealed class DailyDoubleHarvestTests
++    {
++        [Test]
++        public void DoubleHarvestDaily_PaysThePrizeAgain_WithDoubleHarvestSource()
++        {
++            var fx = new EconomyFixture();
++            fx.Wallet.Apply(Transaction.Earn(SeedSource.DailyChallenge, 60));
++
++            TransactionResult doubled = fx.Wallet.Apply(Transaction.DoubleHarvestDaily(60, 26));
++
++            Assert.That(doubled.IsApplied, Is.True);
++            Assert.That(doubled.SeedsDelta, Is.EqualTo(60), "60 → 120 [P]");
++            Assert.That(doubled.Transaction.Kind, Is.EqualTo(TransactionKind.DoubleHarvest));
++            Assert.That(doubled.Transaction.Source.ToId(), Is.EqualTo("double_harvest"));
++            Assert.That(fx.Wallet.Seeds, Is.EqualTo(120));
++        }
++
++        [Test]
++        public void DoubleHarvestDaily_Before11_IsRejectedWithoutEffects()
++        {
++            var fx = new EconomyFixture();
++            fx.Wallet.Apply(Transaction.Earn(SeedSource.DailyChallenge, 60));
++            string before = fx.Json;
++
++            TransactionResult early = fx.Wallet.Apply(Transaction.DoubleHarvestDaily(60, 10));
++
++            Assert.That(early.Status, Is.EqualTo(TransactionStatus.Rejected));
++            Assert.That(early.Reason, Is.EqualTo(RejectReason.NotUnlocked));
++            Assert.That(fx.Json, Is.EqualTo(before));
++            Assert.That(fx.Wallet.Apply(Transaction.DoubleHarvestDaily(60, 11)).IsApplied, Is.True, "desde el 11");
++        }
++
++        [Test]
++        public void DoubleHarvestDaily_RefusesNonPositiveSeedsAndLevels()
++        {
++            Assert.Throws<ArgumentOutOfRangeException>(() => Transaction.DoubleHarvestDaily(0, 26));
++            Assert.Throws<ArgumentOutOfRangeException>(() => Transaction.DoubleHarvestDaily(-60, 26));
++            Assert.Throws<ArgumentOutOfRangeException>(() => Transaction.DoubleHarvestDaily(60, 0));
++        }
++
++        [Test]
++        public void CampaignDoubleHarvest_StillDoublesTheLabelHarvest()
++        {
++            var fx = new EconomyFixture();
++
++            TransactionResult doubled = fx.Wallet.Apply(Transaction.DoubleHarvest(11, RewardTier.VeryHard));
++
++            Assert.That(doubled.SeedsDelta, Is.EqualTo(80), "80 → 160 (04 §2.8)");
++            Assert.That(doubled.Transaction.Seeds, Is.EqualTo(0));
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/EditMode/DailyDoubleHarvestTests.cs.meta b/Assets/_Project/Tests/EditMode/DailyDoubleHarvestTests.cs.meta
+new file mode 100644
+index 0000000..8e062d1
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/DailyDoubleHarvestTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 7ddbedf8bb60a3e4e91d0b7b2d04a420
+\ No newline at end of file

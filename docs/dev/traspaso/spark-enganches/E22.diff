@@ -1,0 +1,18 @@
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index 4d8b364..bb9f00f 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -907,6 +907,13 @@ public bool PressAndroidBack()
+                 return _mapScreen.CloseTopSheet() || CloseRiverMap(); // primero la tarjeta de la parada y el Muestrario (M4.1)
+             }
+ 
++            // Reto del río (E22): Atrás cierra su calendario como «Inicio»; con el tablero del Reto en juego no hace nada, como en un
++            // nivel (02 §3; 04 §6.6). HandleBack devuelve false si no hay calendario abierto.
++            if (_dailyScreen != null && _dailyScreen.IsOpen)
++            {
++                return _dailyScreen.HandleBack();
++            }
++
+             if (_app.Screen == AppScreen.Level)
+             {
+                 return false;

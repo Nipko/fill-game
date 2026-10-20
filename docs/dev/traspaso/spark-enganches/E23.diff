@@ -1,0 +1,21 @@
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index bb9f00f..f125bce 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -1732,6 +1732,16 @@ private void OnApplicationPause(bool paused)
+                 _flow.ClearSelection();
+             }
+ 
++            // Reto del río (E23; 02 §14): su vista salta al modelo y la selección se limpia, como la de campaña (InLevel es false
++            // durante el Reto: AppFlow sigue en el inicio).
++            if (_dailyScreen?.Flow != null && _dailyScreen.View != null)
++            {
++                _dailyScreen.View.SnapToModel();
++                _dailyScreen.View.SettleReveal();
++                _dailyScreen.View.IdleHintBackFromBackground();
++                _dailyScreen.Flow.ClearSelection();
++            }
++
+             // MO3 (02 §3.4; 04 §2.3): el tiempo fuera de la app no es inactividad en el tablero; la cuenta de la pista por
+             // inactividad empieza de cero, como tras un toque.
+             _screen?.IdleHintBackFromBackground();

@@ -106,6 +106,19 @@ namespace AF.LiveOps.Tests
         }
 
         [Test]
+        public void EarnSeeds_DoubleHarvestSource_IsTheEconomyId()
+        {
+            Assert.That(
+                _format.EarnSeeds(302, 60, DailyProbeFormat.DoubleHarvestSourceId),
+                Is.EqualTo("AF_STATE {\"event\":\"earn_virtual_currency\",\"t\":302,\"virtual_currency_name\":\"seeds\","
+                    + "\"source\":\"double_harvest\",\"value\":60}"));
+            Assert.That(DailyProbeFormat.DoubleHarvestSourceId, Is.EqualTo(AF.Economy.EconomyIds.ToId(AF.Economy.SeedSource.DoubleHarvest)), "04 §11");
+            Assert.That(DailyProbeFormat.SeedSourceId, Is.EqualTo(AF.Economy.EconomyIds.ToId(AF.Economy.SeedSource.DailyChallenge)), "04 §11");
+            Assert.That(_format.EarnSeeds(302, 0, DailyProbeFormat.DoubleHarvestSourceId), Is.Null);
+            Assert.Throws<ArgumentException>(() => _format.EarnSeeds(302, 60, "win"));
+        }
+
+        [Test]
         public void Card_Play_WithAnIgnoredOverride()
         {
             var slot = new DailySlot(1, 291, null, "d1_n9999");
