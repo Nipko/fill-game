@@ -2940,3 +2940,39 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Cómo revertir.** Con una decisión nueva que sustituya la fila. Ninguna tiene coste para el jugador mientras no se publique la 1.0; Q-M5, Q-T5 y Q-T7 se revierten quitando el paquete, el permiso o el workflow.
 
 **Qué cambia en el GDD** (lo lleva cada bloque al implementarlo): 08 §9 y 02 §4 (Q-N1), 02 §12 (Q-N4), 08 §4.3 (Q-M3, Q-M9), GDD.md §6.1 #4 (Q-E1), 06 §4.2 y §4.7 con los diseños aprobados (Q-M1, Q-M2), 08 §6 y §13 (Q-M5, Q-T5, Q-T6, Q-T7).
+
+### D-033, añadido del 2026-10-20: diseño de la Bitácora «1 de 3» y del panel único de la victoria (Q-M1 y Q-M2)
+
+- **Estado:** decidido por el dueño en el chat el 2026-10-20: «Bitácora y panel de la victoria: acepto las 11 recomendadas (1 a, 2 a, 3 sí, 4 sí, 5 sí, 6 sí, 7 sí, 8 a, 9 sí, 10 sí, 11 sí).» La propuesta la preparó el tech-lead sobre 02 §6, 05 §2.2-§2.3, 06 §2.3 y §4.2-§4.7 y 08 §4.3, §8.2 y §9. Desbloquea B4 y B1b.
+
+**Bitácora «1 de 3».**
+1. **Tasa de valor:** la de la Bitácora, `eco_calendar_locked_booster_seeds` (Marea = 30; cualquier otro comodín = 100; 06 §4.2, regla 1).
+2. **Retoque de la tabla** (cambia cifras [sim]; se regenera `tools/out/econ_B.md`): las casillas 1, 3, 8, 9 y 15 pasan de 50 a 60 semillas; las 2, 10, 17, 19 y 27, de «3 Marea» a «3 Marea + 30»; las 20, 26 y 28 bajan de 150 a 100, y el día 30, de 650 a 600. Los totales del ciclo no cambian (3.000 semillas, 15 Marea, 3 Morpho, 3 Cuia extra, 1 Luciérnaga, 2 Canastas y 1 Canasta grande); el peso de los hitos baja del 53 % [E] al 51,7 %. Opciones de cada casilla, en orden fijo semillas / comodín / mezcla:
+
+| Casillas | Valor | Semillas | Comodín | Mezcla |
+|---|---|---|---|---|
+| 1, 3, 8, 9, 15 y 2, 10, 17, 19, 27 | 60 | 60 | 2 Marea | 1 Marea + 30 |
+| 5, 11, 13, 16, 18, 20, 22, 24, 26, 28 y 4, 12, 25 | 100 | 100 | 1 Morpho | 2 Marea + 40 |
+| 6, 23 | 100 | 100 | 1 Cuia extra | 2 Marea + 40 |
+| 29 | 100 | 100 | 1 Luciérnaga | 1 Morpho |
+| 7 | 250 + Canasta | 250 | 2 Morpho + 50 | 5 Marea + 100 |
+| 14 | 400 | 400 | 300 + 1 Cuia extra | 2 Morpho + 1 Cuia extra + 100 |
+| 21 | 400 + Canasta | 400 | 2 Cuia extra + 2 Morpho | 1 Cuia extra + 1 Morpho + 200 |
+| 30 | 600 + Canasta grande + marco | 600 | 2 Cuia extra + 1 Morpho + 300 | 3 Morpho + 300 |
+
+   En los hitos 7, 14, 21 y 30 la Canasta, la Canasta grande y el marco van fijos en las tres opciones.
+3. **Comodín bloqueado:** se sustituye por el siguiente desbloqueado del mismo valor (Morpho → Cuia extra → «2 Marea + 40»); nunca dos opciones iguales.
+4. **Elección:** la casilla de hoy pulsa; al tocarla salen 3 tarjetas; un toque sella, sin confirmación [P]. Cerrar sin elegir la deja pendiente; nunca se elige sola.
+5. **Cuándo se cobra:** al terminar el primer nivel del día (campaña o Reto, se gane o se pierda). Ese día la victoria lleva la fila «Bitácora · elige tu premio», que abre la libreta encima y vuelve. Si se ignora, la libreta sale sola al volver al Inicio, como el único takeover de la sesión (`ui_max_takeovers_per_session` = 1).
+6. **Perfil:** solo `calendar` = `{cycle, next_day, last_claim_date}` [P] (Q-M3); la elección no se guarda y las casillas pasadas enseñan solo el sello. Cobro y avance de `next_day` en la misma transacción (`Wallet.Apply`) y la misma escritura.
+7. **Marco de país:** derecho en `entitlements.frames` [P], junto a `entitlements.skins` (08 §4.3); el del mundo en que está el jugador; se enseña en la 1.1 (Q-M6).
+- **Remote Config:** clave nueva `eco_calendar_table_v2` [P] (30 casillas × 3 opciones y el canon); la v1 queda de respaldo. **Analítica:** `af_calendar_claim` suma `choice` (`seeds`/`booster`/`mix`) y `cycle` [P]; `reward_value` es el valor equivalente.
+- **econ_sim:** `CALENDAR` con la tabla retocada y `--calendar-pick canon|seeds|booster|mix` (por defecto `canon`); de paso, modelar las Canastas de los días 7, 21 y 30, que hoy faltan. Peor caso «siempre semillas»: +850 semillas por ciclo (estimación, no [sim]).
+
+**Panel único de la victoria.**
+8. **La Canasta se abre sola dentro del panel**, sin toque (cambia «se abre con un toque» de 06 §2.3): su contenido vuela al saldo y a la bandeja.
+9. **Un toque en Siguiente** con animaciones pendientes las completa, enseña el estado final 250 ms [P] y sigue (D-011); sin auto-avance (`victory_autonext_s` = 0).
+10. **Orden del panel:** título → Cosecha +N → hasta 3 barras (Crecida desde el 25; Canasta · {sitio} k/10; tercera barra rotativa con prioridad skin ganada > Bitácora lista > Reto) → Cosecha doble → Siguiente e Inicio → Dato del río. En 16:9 compacto (FX16b): escalón ≥ 2, Crecida y Canasta a media anchura [P]; escalón 3, 2 barras y chevron [P]. Tiempos: celebración 900 ms → Cosecha 0-400 ms → Crecida 400-900 ms → Canasta 900-1.500 ms; Siguiente a 1,40 s.
+11. **Secuencia del nivel 10:** Victoria (con la Canasta) → libreta → Mapa → Inicio (como mucho 4 pantallas, ≤ 30 s). Siguen siendo pantallas aparte: el Mapa del 10, del 1.000 y del fin de contenido; «El río sigue creciendo»; banner de mundo, tarjeta previa y Fruta nueva; Sin canoas, AD_GATE y el pre-prompt de push; la libreta. El panel no es un takeover: `TakeoverQueue` aplica el orden de 06 §4.7 solo al entrar al Inicio.
+
+**Qué cambia en el GDD** (lo lleva B4/B1b): 06 §4.2, §2.3, §4.4 y §4.7; 05 §2.3 y §3 (nueva corrida [sim]); 02 §6; 08 §4.3 (`calendar`, `entitlements.frames`), §8.2 (`af_calendar_claim`) y §9 (`eco_calendar_table_v2`).
