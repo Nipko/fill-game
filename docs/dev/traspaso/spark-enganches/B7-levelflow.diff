@@ -1,0 +1,373 @@
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Events.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.Events.cs
+new file mode 100644
+index 0000000..7e46e4f
+--- /dev/null
++++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Events.cs
+@@ -0,0 +1,142 @@
++#nullable enable
++using System;
++using System.Globalization;
++using System.Text;
++using AF.Economy;
++using AF.Events;
++using AF.Levels;
++
++namespace AF.GameFlow
++{
++    /// <summary>
++    /// Eventos de dominio del nivel por el bus (08 §2.1, principio 3; D-033, Q-T1 (a); bloque B7, parche B7-levelflow):
++    /// <see cref="LevelStarted"/> al terminar Llenar y teñir, <see cref="LevelWon"/> en el instante lógico de la victoria,
++    /// <see cref="LevelFailed"/> en cada fallo (duro o blando, 04 §5.2) y <see cref="LevelAbandoned"/> al salir de un nivel sin
++    /// resolver (pausa › «Salir» en 1-30). <c>AF.Analytics</c> los traduce a <c>level_start</c>, <c>af_level_win</c>,
++    /// <c>af_level_fail</c>, <c>level_end</c> y <c>af_level_abandon</c> (08 §8.2). Solo en la campaña: la partida del Reto (su
++    /// propio <see cref="LevelFlow"/>) no publica nada aquí; su analítica sigue en sus sondas [P] (nota B7, Q-B7-9).
++    /// </summary>
++    public sealed partial class LevelFlow
++    {
++        private DateTime _eventsStartUtc;
++        private int _eventsUndoUsed;
++        private bool _eventsStarted;
++
++        /// <summary>Bus de eventos (null = sin bus: tests del flujo y la partida del Reto).</summary>
++        public EventBus? Events { get; set; }
++
++        // id del nivel de 08 §4.1 y variante servida (base o el tipo de relief[], 08 §4.1).
++        private string EventLevelName => _level?.Id ?? string.Empty;
++
++        private string EventVariant => _level != null && _attempt.ReliefIndex >= 0 && _attempt.ReliefIndex < _level.Relief.Count
++            ? _level.Relief[_attempt.ReliefIndex].Type
++            : "base";
++
++        private long EventTimeMs => _eventsStarted ? Math.Max(0L, (long)(_clock.UtcNow - _eventsStartUtc).TotalMilliseconds) : 0L;
++
++        /// <summary>Etiqueta del nivel para la analítica: <c>normal</c>, <c>hard</c> o <c>very_hard</c> (08 §8.1, <c>difficulty</c>).</summary>
++        public static string DifficultyId(LevelDefinition level)
++        {
++            RewardTiers.TryParse(level.DifficultyLabel, out RewardTier tier);
++            switch (tier)
++            {
++                case RewardTier.Hard: return "hard";
++                case RewardTier.VeryHard: return "very_hard";
++                default: return "normal";
++            }
++        }
++
++        // FinishIntro: empieza el intento (level_start, 08 §8.2: «al terminar Llenar y teñir»).
++        private void PublishLevelStarted()
++        {
++            _eventsStartUtc = _clock.UtcNow;
++            _eventsUndoUsed = 0;
++            _eventsStarted = true;
++            if (Events == null || IsDaily || _level == null)
++            {
++                return;
++            }
++
++            Events.Publish(new LevelStarted(
++                LevelNumber, EventLevelName, EventVariant, 0, _attempt.FailsLevel + 1, _level.World, DifficultyId(_level), _level.IsMurky));
++        }
++
++        // Undo: una Marea más en el intento.
++        private void CountUndoForEvents()
++        {
++            _eventsUndoUsed++;
++        }
++
++        // ResolveWin, después de la Crecida (el x2 del río ya está en la Cosecha).
++        private void PublishLevelWon()
++        {
++            if (Events == null || IsDaily || _level == null)
++            {
++                return;
++            }
++
++            int pours = _session?.AppliedPours ?? 0;
++            Events.Publish(new LevelWon(
++                LevelNumber, EventLevelName, pours, _level.Par, _eventsUndoUsed, BoostersJson(), EventTimeMs, _harvest, _harvestDoubled,
++                !_perfect));
++        }
++
++        // Fail: el resultado de FailResolve y, en el duro, el de la Crecida (LastStreakResult).
++        private void PublishLevelFailed(FailOutcome outcome)
++        {
++            if (Events == null || IsDaily || _level == null)
++            {
++                return;
++            }
++
++            bool hard = outcome.Kind == FailKind.Hard;
++            bool broken = hard && LastStreakResult != null && LastStreakResult.Streak.StreakBroken;
++            bool shield = hard && LastStreakResult != null && LastStreakResult.Streak.ShieldUsed;
++            int relief = FailResolve.ChooseRelief(_level, _attempt, _boosters);
++            bool reliefServed = relief >= 0 && relief != _attempt.ReliefIndex;
++            Events.Publish(new LevelFailed(
++                LevelNumber, EventLevelName, hard, outcome.CanoeLost, broken, shield, reliefServed, _session?.AppliedPours ?? 0, EventTimeMs));
++        }
++
++        /// <summary>
++        /// <see cref="LevelAbandoned"/> (<c>af_level_abandon</c>, 08 §8.2) si el nivel sigue sin resolver (intro, tarjeta previa,
++        /// tablero o Aguas estancadas); en la victoria, Nivel fallido o Sin canoas no hay abandono. Lo llama <see cref="AppFlow"/>
++        /// al salir al inicio con <paramref name="reason"/> <c>map</c> [P]. Devuelve si publicó.
++        /// </summary>
++        public bool PublishAbandonIfUnresolved(string reason)
++        {
++            bool unresolved = Phase == FlowPhase.Intro || Phase == FlowPhase.LevelCard || Phase == FlowPhase.Playing || Phase == FlowPhase.StuckModal;
++            if (Events == null || IsDaily || _level == null || !unresolved || IsResolvingWin)
++            {
++                return false;
++            }
++
++            Events.Publish(new LevelAbandoned(LevelNumber, EventLevelName, _session?.AppliedPours ?? 0, EventTimeMs, reason));
++            return true;
++        }
++
++        // boosters_json [P]: los comodines del intento con unidades, en el orden de BoosterKinds (undo, extra_cuia…), solo los > 0.
++        private string BoostersJson()
++        {
++            var sb = new StringBuilder("{");
++            Append(sb, "undo", _eventsUndoUsed);
++            Append(sb, "extra_cuia", _attempt.ExtraCuias);
++            return sb.Append('}').ToString();
++        }
++
++        private static void Append(StringBuilder sb, string id, int n)
++        {
++            if (n <= 0)
++            {
++                return;
++            }
++
++            if (sb.Length > 1)
++            {
++                sb.Append(',');
++            }
++
++            sb.Append('"').Append(id).Append("\":").Append(n.ToString(CultureInfo.InvariantCulture));
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Events.cs.meta b/Assets/_Project/Scripts/GameFlow/LevelFlow.Events.cs.meta
+new file mode 100644
+index 0000000..9b9e6ba
+--- /dev/null
++++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Events.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: ecbb7c667ba3dbe4b9c9aa5de776327a
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Funnel.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.Funnel.cs
+index 8d14f6f..ed93186 100644
+--- a/Assets/_Project/Scripts/GameFlow/LevelFlow.Funnel.cs
++++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Funnel.cs
+@@ -494,6 +494,7 @@ private void Fail(FailKind kind)
+         {
+             FailOutcome outcome = FailResolve.Resolve(_attempt, kind, LevelNumber, _wallet);
+             OnHardFailStreak(kind); // Crecida y Hoja escudo, antes de avisar a la vista (E29, E31; LevelFlow.Streak.cs)
++            PublishLevelFailed(outcome); // af_level_fail y, si es duro, level_end por el bus (B7; LevelFlow.Events.cs)
+             _listener.OnFailResolved(outcome);
+         }
+ 
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Victory.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.Victory.cs
+index a4435e7..a26070d 100644
+--- a/Assets/_Project/Scripts/GameFlow/LevelFlow.Victory.cs
++++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Victory.cs
+@@ -156,6 +156,8 @@ private void ResolveWin()
+                 AdGate?.RecordWin(LevelNumber);
+             }
+ 
++            PublishLevelWon(); // af_level_win y level_end por el bus (B7; LevelFlow.Events.cs)
++
+             _listener.OnWin();
+         }
+ 
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.cs
+index 8e69c31..d8870d6 100644
+--- a/Assets/_Project/Scripts/GameFlow/LevelFlow.cs
++++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.cs
+@@ -481,6 +481,8 @@ public bool Undo()
+                     return false;
+                 }
+ 
++                CountUndoForEvents(); // undo_used de af_level_win (B7; LevelFlow.Events.cs)
++
+                 bool fromModal = Phase == FlowPhase.StuckModal;
+                 Pour undone = _session.GetAppliedPour(_session.AppliedPours - 1);
+                 _taps.Clear();
+@@ -617,6 +619,7 @@ private void FinishIntro(bool skipped)
+         {
+             Phase = FlowPhase.Playing;
+             _phaseMs = 0;
++            PublishLevelStarted(); // level_start por el bus (B7; LevelFlow.Events.cs)
+             _listener.OnIntroFinished(skipped);
+             EvaluateStatus();
+         }
+diff --git a/Assets/_Project/Tests/EditMode/TelemetryHooksTests.cs b/Assets/_Project/Tests/EditMode/TelemetryHooksTests.cs
+new file mode 100644
+index 0000000..d6588e5
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/TelemetryHooksTests.cs
+@@ -0,0 +1,155 @@
++#nullable enable
++using System.Collections.Generic;
++using AF.Analytics;
++using AF.Economy;
++using AF.Events;
++using AF.GameFlow;
++using NUnit.Framework;
++
++namespace AF.Tests.EditMode
++{
++    /// <summary>
++    /// Los ganchos del bloque B7 (parches B7-wallet y B7-levelflow): <c>Wallet.Apply</c> publica <c>SeedsEarned</c> y
++    /// <c>SeedsSpent</c>; <c>LevelFlow</c>, el inicio, la victoria, el fallo y el abandono del nivel; <c>biz_feature_lives</c>
++    /// apaga las canoas; y <see cref="AnalyticsService"/> los convierte en los eventos de 08 §8.2 sin violar el catálogo.
++    /// </summary>
++    public sealed class TelemetryHooksTests
++    {
++        private sealed class Recorder
++        {
++            public readonly List<string> Seen = new List<string>();
++            public LevelStarted? Started;
++            public LevelWon? Won;
++            public LevelFailed? Failed;
++
++            public Recorder(EventBus bus)
++            {
++                bus.Subscribe<SeedsEarned>(e => Seen.Add("earn:" + e.Source + ":" + e.Value + ":" + e.Balance));
++                bus.Subscribe<SeedsSpent>(e => Seen.Add("spend:" + e.ItemName + ":" + e.Value + ":" + e.Balance));
++                bus.Subscribe<LevelStarted>(e =>
++                {
++                    Started = e;
++                    Seen.Add("start:" + e.Level);
++                });
++                bus.Subscribe<LevelWon>(e =>
++                {
++                    Won = e;
++                    Seen.Add("win:" + e.Level);
++                });
++                bus.Subscribe<LevelFailed>(e =>
++                {
++                    Failed = e;
++                    Seen.Add("fail:" + (e.Hard ? "hard" : "soft") + ":" + e.Level);
++                });
++                bus.Subscribe<LevelAbandoned>(e => Seen.Add("abandon:" + e.Reason + ":" + e.Level));
++            }
++        }
++
++        [Test]
++        public void WalletApply_PublishesEarnAndSpend_WithSourceAndSink()
++        {
++            var fx = new EconomyFixture(seeds: 500);
++            var bus = new EventBus();
++            var rec = new Recorder(bus);
++            fx.Wallet.Events = bus;
++            Assert.That(fx.Wallet.Apply(Transaction.Win(12, RewardTier.Hard)).IsApplied, Is.True);
++            Assert.That(fx.Wallet.Apply(Transaction.Buy(SeedSink.UndoRefill)).IsApplied, Is.True);
++            Assert.That(fx.Wallet.Apply(Transaction.Earn(SeedSource.Basket, 50)).IsApplied, Is.True);
++            Assert.That(fx.Wallet.Apply(Transaction.Rescue(31, 300)).IsApplied, Is.True);
++            Assert.That(fx.Wallet.Apply(Transaction.GrantStock(BoosterKind.Hint, 1)).IsApplied, Is.True, "sin semillas: nada");
++            Assert.That(fx.Wallet.Apply(Transaction.Buy(SeedSink.Shuffle)).IsApplied, Is.False, "rechazada: nada");
++            Assert.That(rec.Seen, Is.EqualTo(new[]
++            {
++                "earn:hard:60:560", "spend:undo_refill:30:530", "earn:basket:50:580", "spend:continue_cuia:300:280",
++            }));
++        }
++
++        [Test]
++        public void LivesOff_TheCanoesDoNotCount()
++        {
++            var fx = new EconomyFixture();
++            for (int i = 0; i < 5; i++)
++            {
++                fx.Wallet.Apply(Transaction.HardFail(31)); // 5/5 → 0/5
++            }
++
++            Assert.That(fx.Wallet.CanStartLevel(31), Is.False, "con canoas, a 0/5 no se empieza el 31");
++            fx.Wallet.LivesEnabled = false;
++            Assert.That(fx.Wallet.CanoesActive(31), Is.False);
++            Assert.That(fx.Wallet.CanStartLevel(31), Is.True, "biz_feature_lives = false: como antes del 31");
++        }
++
++        [Test]
++        public void LevelFlow_PublishesStartWinAndTheHarvest()
++        {
++            var rig = new StreakFlowRig(offset: 10);
++            var bus = new EventBus();
++            var rec = new Recorder(bus);
++            rig.Flow.Events = bus;
++            rig.Economy.Wallet.Events = bus;
++            rig.Start(12);
++            Assert.That(rec.Started.HasValue, Is.True);
++            LevelStarted s = rec.Started!.Value;
++            Assert.That(s.LevelName, Is.EqualTo(rig.Flow.Level.Id));
++            Assert.That(s.Variant, Is.EqualTo("base"));
++            Assert.That(s.Attempt, Is.EqualTo(1));
++            Assert.That(s.Band, Is.EqualTo(0));
++            LevelStateTests.Win(rig.Flow);
++            LevelWon w = rec.Won!.Value;
++            Assert.That(w.Level, Is.EqualTo(12));
++            Assert.That(w.Pours, Is.GreaterThan(0));
++            Assert.That(w.RewardSeeds, Is.EqualTo(rig.Flow.HarvestSeeds));
++            Assert.That(w.Rescued, Is.False);
++            Assert.That(w.BoostersJson, Is.EqualTo("{}"));
++            Assert.That(rec.Seen, Is.EqualTo(new[] { "start:12", "earn:win:" + rig.Flow.HarvestSeeds + ":" + rig.Economy.Wallet.Seeds, "win:12" }));
++            Assert.That(rig.Flow.PublishAbandonIfUnresolved("map"), Is.False, "ganado: no es abandono");
++        }
++
++        [Test]
++        public void LevelFlow_PublishesTheHardFail_AndTheAbandon()
++        {
++            var rig = new StreakFlowRig(offset: 4);
++            var bus = new EventBus();
++            var rec = new Recorder(bus);
++            rig.Flow.Events = bus;
++            rig.Start(10);
++            LevelStateTests.GetStuck(rig.Flow);
++            Assert.That(rig.Flow.Restart(), Is.True, "el pie del modal en 1-30: fallo duro sin canoa");
++            LevelFailed f = rec.Failed!.Value;
++            Assert.That(f.Hard, Is.True);
++            Assert.That(f.CanoeLost, Is.False);
++            Assert.That(f.Pours, Is.GreaterThan(0));
++            Assert.That(rig.Flow.TapAnywhere(), Is.True);
++            Assert.That(rec.Started!.Value.Attempt, Is.EqualTo(2), "el segundo intento");
++            Assert.That(rig.Flow.PublishAbandonIfUnresolved("map"), Is.True);
++            Assert.That(rec.Seen, Is.EqualTo(new[] { "start:10", "fail:hard:10", "start:10", "abandon:map:10" }));
++        }
++
++        [Test]
++        public void TheAnalytics_TurnsTheFlowIntoThe08_2Events()
++        {
++            var rig = new StreakFlowRig(offset: 10);
++            var bus = new EventBus();
++            var analytics = new AnalyticsService(bus);
++            var sink = new FakeAnalyticsSink();
++            analytics.AddSink(sink);
++            rig.Flow.Events = bus;
++            rig.Economy.Wallet.Events = bus;
++            rig.Start(12);
++            LevelStateTests.Win(rig.Flow);
++            Assert.That(sink.Names, Is.EqualTo(new[] { "level_start", "earn_virtual_currency", "af_level_win", "level_end" }));
++            Assert.That(sink.Last("level_end")!.Find("level_name")!.Value.Text, Is.EqualTo(rig.Flow.Level.Id));
++            Assert.That(analytics.Violations, Is.Empty);
++        }
++
++        [Test]
++        public void WithoutABus_NothingChanges()
++        {
++            var rig = new StreakFlowRig(offset: 10);
++            rig.Start(12);
++            LevelStateTests.Win(rig.Flow);
++            Assert.That(rig.Flow.PublishAbandonIfUnresolved("map"), Is.False);
++            Assert.That(rig.Economy.Wallet.Seeds, Is.EqualTo(rig.Flow.HarvestSeeds + rig.Flow.LastStreakResult!.BasketSeeds));
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/EditMode/TelemetryHooksTests.cs.meta b/Assets/_Project/Tests/EditMode/TelemetryHooksTests.cs.meta
+new file mode 100644
+index 0000000..4d9e266
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/TelemetryHooksTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 947305253cc585a4fab155525e69886d
+\ No newline at end of file

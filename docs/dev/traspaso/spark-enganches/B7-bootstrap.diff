@@ -1,0 +1,460 @@
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
+index 2e33886..a82fc01 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Daily.cs
+@@ -162,9 +162,10 @@ public bool SetUpDaily()
+                 }
+             }
+ 
+-            DailyChallengeConfig config = DailyChallengeConfig.Defaults;
++            DailyChallengeConfig config = ActiveRcConfigs?.Daily ?? DailyChallengeConfig.Defaults; // Remote Config (B7)
+             IServerDate server = DailyServerOverride ?? FakeServerDate.Offline();
+-            Wallet dailyWallet = LevelFlow.CreateDailyWallet(profile, batch.Durable, clock);
++            Wallet dailyWallet = LevelFlow.CreateDailyWallet(profile, batch.Durable, clock, ActiveRcConfigs?.Economy);
++            ConnectWallet(dailyWallet); // earn/spend del Reto por el bus y biz_feature_lives (B7; GameBootstrap.Telemetry.cs)
+             var rules = new DailyChallengeRules(store, dailyWallet, clock, server, config);
+             var service = new DailyChallengeService(store, rules, clock, config, pool);
+             service.DayEnded += OnDailyDayEnded; // antes del primer DiscardStale: el fail del día que se cierra al abrir (R-Q15 a)
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Streak.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Streak.cs
+index e3864fd..ba56e8a 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Streak.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Streak.cs
+@@ -203,7 +203,8 @@ public int TickStreakProbe()
+                 inMemory = true;
+             }
+ 
+-            return new StreakService(store, wallet, clock, basketUnlockLevel, StreakConfigOverride, BasketConfigOverride);
++            return new StreakService(
++                store, wallet, clock, basketUnlockLevel, StreakConfigOverride ?? ActiveRcConfigs?.Streak, BasketConfigOverride ?? ActiveRcConfigs?.Basket);
+         }
+ 
+         /// <summary>
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
+new file mode 100644
+index 0000000..22438b3
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
+@@ -0,0 +1,232 @@
++#nullable enable
++using System;
++using AF.Ads;
++using AF.Analytics;
++using AF.Analytics.Adapters;
++using AF.Analytics.Unity;
++using AF.Economy;
++using AF.Events;
++using AF.GameFlow;
++using AF.IAP;
++using AF.Levels;
++using AF.Platform;
++using AF.RemoteConfig;
++using AF.RemoteConfig.Binding;
++using UnityEngine;
++
++namespace AF.UI
++{
++    /// <summary>
++    /// Remote Config, bus y analítica del arranque (bloque B7, parche B7-bootstrap; 08 §2.2-§2.3, §8 y §9):
++    /// <list type="number">
++    /// <item><see cref="SetUpTelemetry"/>, antes de la cartera: el bus (<see cref="EventBus"/>), Remote Config con los defaults
++    /// compilados y la caché del proveedor (hoy el falso: <see cref="FakeRemoteConfigBackend"/>, sin red), las clases de cifras
++    /// enlazadas (<see cref="RcConfigBinder"/>; <see cref="ActiveRcConfigs"/>), la sesión y <see cref="AnalyticsService"/> con
++    /// el sumidero de logcat (<c>AF_EVENT</c>, solo desarrollo).</item>
++    /// <item>Las cifras van a la cartera, el flujo, los anuncios, la tienda, el Reto y la Crecida; los anuncios y la tienda se
++    /// envuelven con los adaptadores de analítica (<see cref="WrapAds"/>, <see cref="WrapStore"/>).</item>
++    /// <item><see cref="ConnectTelemetry"/>, con todo construido: el bus a la cartera y al flujo de campaña, la analítica a las
++    /// pantallas y <c>biz_feature_lives</c> a la cartera.</item>
++    /// </list>
++    /// Consentimiento: aún no hay pantalla ni sumidero real (Firebase), así que la recogida se queda apagada
++    /// (<see cref="AnalyticsService.CollectionEnabled"/> = false; 08 §2.3) y solo escriben los sumideros locales [P].
++    /// </summary>
++    public sealed partial class GameBootstrap
++    {
++        // La sesión es del proceso (arranque en frío; D-033, Q-M4): la reconstrucción por idioma no empieza otra.
++        private static SessionTracker? s_session;
++
++        private EventBus? _events;
++        private RemoteConfigService? _rc;
++        private RcConfigs? _rcConfigs;
++        private AnalyticsService? _analytics;
++        private IClock? _telemetryClock;
++
++        /// <summary>Las cifras de Remote Config del último arranque (las leen los métodos estáticos de la Crecida).</summary>
++        internal static RcConfigs? ActiveRcConfigs { get; private set; }
++
++        /// <summary>Proveedor de Remote Config para los tests (por defecto, el falso vacío). <see cref="ResetTelemetryOverrides"/>.</summary>
++        internal static IRemoteConfigBackend? RemoteConfigBackendOverride { get; set; }
++
++        /// <summary>Sumidero de analítica añadido para los tests. <see cref="ResetTelemetryOverrides"/> lo limpia.</summary>
++        internal static IAnalyticsSink? AnalyticsSinkOverride { get; set; }
++
++        /// <summary>El bus de eventos de la sesión.</summary>
++        public EventBus? Events => _events;
++
++        /// <summary>La analítica de la sesión.</summary>
++        public AnalyticsService? Analytics => _analytics;
++
++        /// <summary>Remote Config de la sesión.</summary>
++        public RemoteConfigService? Rc => _rc;
++
++        /// <summary>Las cifras enlazadas de la sesión.</summary>
++        public RcConfigs? RcSettings => _rcConfigs;
++
++        /// <summary>La sesión de analítica en curso.</summary>
++        public static SessionTracker? Session => s_session;
++
++        /// <summary>Limpia los ganchos de test de Remote Config y de analítica.</summary>
++        internal static void ResetTelemetryOverrides()
++        {
++            RemoteConfigBackendOverride = null;
++            AnalyticsSinkOverride = null;
++            ActiveRcConfigs = null;
++        }
++
++        private void SetUpTelemetry(IClock clock)
++        {
++            _telemetryClock = clock;
++            _events = new EventBus
++            {
++                HandlerFailed = (type, e) => Debug.LogError(LogPrefix + "Un oyente de " + type.Name + " falló: " + e.Message),
++            };
++
++            _rc = new RemoteConfigService(null, RemoteConfigBackendOverride ?? new FakeRemoteConfigBackend());
++            _rc.ActivateCached(); // 08 §2.3: RC.LoadDefaults(); RC.ActivateCached(); el fetch llega con Firebase
++            AF.RemoteConfig.RC.Use(_rc);
++            _rcConfigs = RcConfigBinder.Bind(_rc, Application.version);
++            ActiveRcConfigs = _rcConfigs;
++            for (int i = 0; i < _rcConfigs.Errors.Count; i++)
++            {
++                Debug.LogWarning(LogPrefix + "Remote Config: " + _rcConfigs.Errors[i]);
++            }
++
++            s_session ??= new SessionTracker(clock.UtcNow);
++            _analytics = new AnalyticsService(_events, new CommonSource(this));
++            _analytics.AddSink(new LogcatAnalyticsSink());
++            if (AnalyticsSinkOverride != null)
++            {
++                _analytics.AddSink(AnalyticsSinkOverride);
++            }
++        }
++
++        private IAdService WrapAds(IAdService inner)
++        {
++            return _analytics != null ? new AnalyticsAdService(inner, _analytics) : inner;
++        }
++
++        private IStoreService WrapStore(IStoreService inner)
++        {
++            return _analytics != null ? new AnalyticsStoreService(inner, _analytics) : inner;
++        }
++
++        private void ConnectTelemetry()
++        {
++            if (_events == null || _rcConfigs == null)
++            {
++                return;
++            }
++
++            ConnectWallet(_wallet);
++            if (_flow != null)
++            {
++                _flow.Events = _events;
++            }
++
++            if (_screen != null)
++            {
++                _screen.Analytics = _analytics;
++            }
++
++            if (_mapScreen != null)
++            {
++                _mapScreen.Analytics = _analytics;
++            }
++        }
++
++        // La cartera de campaña y la del Reto: earn/spend por el bus y el kill switch de las Canoas (biz_feature_lives).
++        private void ConnectWallet(Wallet? wallet)
++        {
++            if (wallet == null || _events == null || _rcConfigs == null)
++            {
++                return;
++            }
++
++            wallet.Events = _events;
++            wallet.LivesEnabled = _rcConfigs.Gates.Feature(BizFeature.Lives);
++        }
++
++        // OnApplicationPause: la sesión (Q-M4).
++        private void TelemetryPause(bool paused)
++        {
++            SessionTracker? session = s_session;
++            IClock? clock = _telemetryClock;
++            if (session == null || clock == null)
++            {
++                return;
++            }
++
++            if (paused)
++            {
++                session.Pause(clock.UtcNow);
++            }
++            else
++            {
++                session.Resume(clock.UtcNow);
++            }
++        }
++
++        private void TrackMapOpen(MapOpenSource source, RiverStop? stop, int world)
++        {
++            UiAnalytics.MapOpen(_analytics, source, stop, world);
++        }
++
++        private void TrackMapClose(in MapCloseStats stats)
++        {
++            UiAnalytics.MapClose(_analytics, stats);
++        }
++
++        // Los comunes de 08 §8.1 en cada envío; lo de un nivel solo con la pantalla de nivel delante.
++        private sealed class CommonSource : ICommonParamsSource
++        {
++            private readonly GameBootstrap _boot;
++
++            public CommonSource(GameBootstrap boot)
++            {
++                _boot = boot;
++            }
++
++            public void Fill(CommonParams p)
++            {
++                LevelFlow? flow = _boot._flow;
++                AppFlow? app = _boot._app;
++                if (flow != null && flow.HasLevel && app != null && app.Screen == AppScreen.Level)
++                {
++                    LevelDefinition level = flow.Level;
++                    p.Level = flow.LevelNumber;
++                    p.World = level.World;
++                    p.Difficulty = LevelFlow.DifficultyId(level);
++                    p.Murky = level.IsMurky;
++                    p.Attempt = flow.Attempt.FailsLevel + 1;
++                }
++
++                Wallet? wallet = _boot._wallet;
++                if (wallet != null)
++                {
++                    p.SeedsBalance = wallet.Seeds;
++                    CanoesStatus canoes = wallet.Canoes;
++                    p.Canoes = canoes.IsInfinite ? -1 : canoes.Count;
++                }
++
++                if (_boot._streakService != null && app != null)
++                {
++                    p.Streak = _boot._streakService.Peek(app.PlayLevel, true).Wins;
++                }
++
++                // geo_tier: null hasta Q-E3 (B5; región del dispositivo y país de la tienda); el T3 fijo de GameServices no es un dato.
++                p.NoAds = _boot._profile?.Entitlements.NoAds;
++                p.AppVersion = Application.version;
++                RemoteConfigService? rc = _boot._rc;
++                if (rc != null)
++                {
++                    p.ContentVersion = rc.Get<string>("content_version");
++                    p.RcVariant = rc.Variant;
++                }
++
++                p.SessionId = s_session?.Id;
++                p.Net = Application.internetReachability == NetworkReachability.NotReachable ? "offline" : "online";
++            }
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs.meta b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs.meta
+new file mode 100644
+index 0000000..ef202a1
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 71b3609166c55a0468daf378ac138eb0
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index 9953143..900fef7 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -980,6 +980,7 @@ public bool OpenRiverMap(MapOpenSource source)
+ 
+             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
+             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
++            TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)
+             _skipNextDelta = true;
+             return true;
+         }
+@@ -1002,6 +1003,7 @@ public bool CloseRiverMap()
+             }
+ 
+             _probe?.MapClose(stats, progress?.MapSeenLevel ?? 0);
++            TrackMapClose(stats); // af_map_close (B7)
+             if (_app != null && _app.Screen != AppScreen.Level)
+             {
+                 _lobby?.SetCommerceOpen(HomeWindowCovered); // la ventanita de casa vuelve con el inicio a la vista (revisión de M4.2)
+@@ -1506,7 +1508,8 @@ private IEnumerator Start()
+             // hilo principal. La cartera guarda por batch.Durable: cada mutación espera al escritor y escribe en síncrono.
+             var batch = new ProfileSaveBatch(store);
+             _saveBatch = batch;
+-            _wallet = new Wallet(profile, batch.Durable, clock);
++            SetUpTelemetry(clock); // Remote Config, bus y analítica antes de la cartera (B7; GameBootstrap.Telemetry.cs)
++            _wallet = new Wallet(profile, batch.Durable, clock, _rcConfigs?.Economy);
+             IProgressStore progress = LaunchOptions.ProgressStoreOverride ?? new ProfileProgressStore(profile, batch);
+             _progress = progress;
+ 
+@@ -1539,9 +1542,10 @@ private IEnumerator Start()
+                 batch);
+             ISimulatedPurchasePresenter purchasePresenter = new BatchedPurchasePresenter(
+                 LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art)), batch);
+-            _ads = AdController.Create(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()), profile, batch, clock, firstRun);
+-            _storeLedger = new StoreLedger(profile, _wallet, batch, clock);
+-            _store = new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency);
++            _ads = AdController.Create(
++                WrapAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill())), profile, batch, clock, firstRun, _rcConfigs?.Ads);
++            _storeLedger = new StoreLedger(profile, _wallet, batch, clock, _rcConfigs?.Store);
++            _store = WrapStore(new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency));
+             _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
+                 mapProgress: progress);
+ 
+@@ -1578,7 +1582,8 @@ private IEnumerator Start()
+             BuildFruitSheet(); // F4: la ficha de una fruta, desde la línea de la victoria y desde Ajustes (GameBootstrap.Fruit.cs)
+ 
+             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
+-            _flow = new LevelFlow(catalog, progress, _screen, LaunchOptions.ResolveTapSwitchSelection(), LaunchOptions.ResolvePourMode(), _wallet)
++            _flow = new LevelFlow(
++                catalog, progress, _screen, LaunchOptions.ResolveTapSwitchSelection(), LaunchOptions.ResolvePourMode(), _wallet, _rcConfigs?.Boosters)
+             {
+                 AdGate = new InterstitialGate(_ads, _probe, _wallet), // AD_GATE tras «Siguiente» (B2-4)
+                 StateStore = new ProfileLevelStateStore(profile, batch), // nivel en curso tras cada vertido (B2-5)
+@@ -1603,6 +1608,7 @@ private IEnumerator Start()
+             _lobby.Bind(_app, _services);
+             SetUpDaily(); // Reto del río (E2; GameBootstrap.Daily.cs): pool, servicio, tarjeta del inicio y partida
+             SetUpStreak(); // Crecida, Hoja escudo y Canasta (E32; GameBootstrap.Streak.cs): el servicio, inyectado en el flujo
++            ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
+ 
+             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
+             if (requested <= 0 && !rebuilt)
+@@ -1724,6 +1730,7 @@ private void Update()
+ 
+         private void OnApplicationPause(bool paused)
+         {
++            TelemetryPause(paused); // la sesión de la analítica: nueva tras ≥ 30 min fuera (B7; D-033, Q-M4)
+             if (paused)
+             {
+                 PersistNow("segundo plano");
+diff --git a/Assets/_Project/Tests/PlayMode/TelemetryBootTests.cs b/Assets/_Project/Tests/PlayMode/TelemetryBootTests.cs
+new file mode 100644
+index 0000000..122f2fc
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/TelemetryBootTests.cs
+@@ -0,0 +1,97 @@
++#nullable enable
++using System.Collections;
++using System.Collections.Generic;
++using AF.Analytics;
++using AF.Core.Rules;
++using AF.Core.Session;
++using AF.GameFlow;
++using AF.RemoteConfig;
++using AF.Solver.Search;
++using AF.UI;
++using NUnit.Framework;
++using UnityEngine;
++using UnityEngine.TestTools;
++
++namespace AF.Tests.PlayMode
++{
++    /// <summary>
++    /// El arranque con Remote Config y analítica (bloque B7, parche B7-bootstrap): la caché de Remote Config llega a la cartera,
++    /// y un nivel ganado en la escena real sale por la analítica (<c>level_start</c>, <c>earn_virtual_currency</c>,
++    /// <c>af_level_win</c>, <c>level_end</c>), con los parámetros comunes y la línea <c>AF_EVENT</c> del sumidero de logcat.
++    /// </summary>
++    public sealed class TelemetryBootTests
++    {
++        private readonly List<string> _lines = new List<string>();
++        private FakeAnalyticsSink _sink = null!;
++
++        [SetUp]
++        public void SetUp()
++        {
++            _sink = new FakeAnalyticsSink();
++            GameBootstrap.AnalyticsSinkOverride = _sink;
++            GameBootstrap.RemoteConfigBackendOverride = new FakeRemoteConfigBackend().Set("eco_reward_normal", "25").StoreFetched();
++            _lines.Clear();
++            Application.logMessageReceived += OnLog;
++        }
++
++        [TearDown]
++        public void TearDown()
++        {
++            Application.logMessageReceived -= OnLog;
++            GameBootstrap.ResetTelemetryOverrides();
++            LaunchOptions.Reset();
++            AF.RemoteConfig.RC.Reset();
++        }
++
++        [UnityTest]
++        public IEnumerator TheBoot_ReadsRemoteConfig_AndAWonLevelReachesTheAnalytics()
++        {
++            yield return PlayModeHelpers.LoadGame(3, new MemoryProgressStore(3, 2));
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.Analytics, Is.Not.Null);
++            Assert.That(boot.Rc!.Source, Is.EqualTo(RcSource.Cached), "08 §2.3: la caché se activa al arrancar");
++            Assert.That(boot.RcSettings!.Errors, Is.Empty);
++            Assert.That(boot.Flow!.Wallet!.Config.EcoRewardNormal, Is.EqualTo(25), "eco_reward_normal de Remote Config en la cartera");
++            Assert.That(AF.RemoteConfig.RC.Get<int>("eco_reward_normal"), Is.EqualTo(25));
++            Assert.That(GameBootstrap.Session, Is.Not.Null);
++
++            LevelFlow flow = boot.Flow!;
++            boot.TapAnywhere();
++            SolveResult solution = new AStarSolver().Solve(flow.Session.Current, SolverOptions.ForPipeline(flow.Session.PourMode));
++            Assert.That(solution.IsSolved, Is.True);
++            for (int i = 0; i < solution.MoveCount; i++)
++            {
++                Pour move = solution.GetMove(i);
++                boot.TapCuia(move.Source);
++                boot.TapCuia(move.Target);
++            }
++
++            Assert.That(flow.Session.Status, Is.EqualTo(LevelStatus.Won));
++            yield return PlayModeHelpers.WaitFor(() => _sink.Last("level_end") != null, "level_end");
++
++            var names = new List<string>(_sink.Names);
++            int start = names.IndexOf("level_start");
++            Assert.That(start, Is.GreaterThanOrEqualTo(0), string.Join(",", names));
++            Assert.That(names.GetRange(start, 4), Is.EqualTo(new[] { "level_start", "earn_virtual_currency", "af_level_win", "level_end" }));
++            AnalyticsEvent earn = _sink.Last("earn_virtual_currency")!;
++            Assert.That(earn.Find("value")!.Value.Long, Is.EqualTo(25));
++            Assert.That(earn.Find("source")!.Value.Text, Is.EqualTo("win"));
++            AnalyticsEvent win = _sink.Last("af_level_win")!;
++            Assert.That(win.Find("level")!.Value.Long, Is.EqualTo(3), "común: el nivel en curso");
++            Assert.That(win.Find("session_id")!.Value.Text, Is.EqualTo(GameBootstrap.Session!.Id));
++            Assert.That(win.Find("app_version")!.Value.Text, Is.EqualTo(Application.version));
++            Assert.That(boot.Analytics!.Violations, Is.Empty);
++            Assert.That(boot.Analytics.CollectionEnabled, Is.False, "sin consentimiento todavía (08 §2.3)");
++            Assert.That(_lines.Exists(l => l.StartsWith("AF_EVENT {\"event\":\"af_level_win\"", System.StringComparison.Ordinal)), Is.True,
++                "el sumidero de logcat, con su prefijo");
++        }
++
++        private void OnLog(string condition, string stackTrace, LogType type)
++        {
++            if (condition.StartsWith("AF_EVENT ", System.StringComparison.Ordinal))
++            {
++                _lines.Add(condition);
++            }
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/PlayMode/TelemetryBootTests.cs.meta b/Assets/_Project/Tests/PlayMode/TelemetryBootTests.cs.meta
+new file mode 100644
+index 0000000..ba19e8e
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/TelemetryBootTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: d45756a02fdd21f498f6d14aad8700b9
+\ No newline at end of file

@@ -1,0 +1,75 @@
+diff --git a/Assets/_Project/Scripts/Economy/Wallet.cs b/Assets/_Project/Scripts/Economy/Wallet.cs
+index cd87459..97678db 100644
+--- a/Assets/_Project/Scripts/Economy/Wallet.cs
++++ b/Assets/_Project/Scripts/Economy/Wallet.cs
+@@ -1,6 +1,7 @@
+ #nullable enable
+ using System;
+ using System.IO;
++using AF.Events;
+ using AF.Platform;
+ using AF.Save;
+ 
+@@ -55,9 +56,22 @@ public Wallet(Profile profile, IProfileStore store, IClock clock, EconomyConfig?
+             Stock = new BoosterStock(_profile.Stock);
+         }
+ 
+-        /// <summary>Se aplicó una transacción que cambió el perfil (después de guardarlo). Para la UI y, más adelante, la analítica.</summary>
++        /// <summary>Se aplicó una transacción que cambió el perfil (después de guardarlo). Para la UI.</summary>
+         public event Action<TransactionResult>? Changed;
+ 
++        /// <summary>
++        /// Bus de eventos (08 §2.1, principio 3; D-033, Q-T1 (a); bloque B7): cada transacción aplicada que mueve semillas publica
++        /// <see cref="SeedsEarned"/> (<c>earn_virtual_currency</c>, con la fuente de la transacción) o <see cref="SeedsSpent"/>
++        /// (<c>spend_virtual_currency</c>, con el sumidero), después de <see cref="Changed"/>. Null = sin bus.
++        /// </summary>
++        public EventBus? Events { get; set; }
++
++        /// <summary>
++        /// <c>biz_feature_lives</c> (08 §9; bloque B7): con false, las canoas no cuentan en ningún nivel, como antes del 31 (ni se
++        /// gastan ni bloquean el inicio) [P]. True por defecto.
++        /// </summary>
++        public bool LivesEnabled { get; set; } = true;
++
+         /// <summary>Cifras con las que trabaja la cartera.</summary>
+         public EconomyConfig Config { get; }
+ 
+@@ -92,7 +106,7 @@ public static Profile NewProfile(IClock clock, EconomyConfig? config = null)
+         /// <summary>Las canoas cuentan en este nivel (desde <c>rescue_min_level</c>; antes no se muestran ni se gastan).</summary>
+         public bool CanoesActive(int level)
+         {
+-            return level >= Config.RescueMinLevel;
++            return LivesEnabled && level >= Config.RescueMinLevel;
+         }
+ 
+         /// <summary>
+@@ -324,9 +338,29 @@ public TransactionResult Apply(Transaction transaction)
+             var result = new TransactionResult(
+                 transaction, TransactionStatus.Applied, RejectReason.None, seedsDelta, Seeds, 0, canoeDelta < 0, true, saved);
+             Changed?.Invoke(result);
++            PublishSeeds(transaction, seedsDelta);
+             return result;
+         }
+ 
++        // earn_virtual_currency / spend_virtual_currency (08 §8.2) por el bus: la fuente o el sumidero de la transacción.
++        private void PublishSeeds(Transaction transaction, int seedsDelta)
++        {
++            EventBus? bus = Events;
++            if (bus == null || seedsDelta == 0)
++            {
++                return;
++            }
++
++            if (seedsDelta > 0)
++            {
++                bus.Publish(new SeedsEarned(transaction.Source.ToId(), seedsDelta, Seeds));
++            }
++            else
++            {
++                bus.Publish(new SeedsSpent(transaction.Sink.ToId(), -seedsDelta, Seeds));
++            }
++        }
++
+         /// <summary>Reintenta un guardado pendiente. Devuelve si no queda nada por guardar.</summary>
+         public bool Flush()
+         {

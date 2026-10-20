@@ -1,0 +1,56 @@
+diff --git a/Assets/_Project/Scripts/UI/RiverMapScreen.Analytics.cs b/Assets/_Project/Scripts/UI/RiverMapScreen.Analytics.cs
+new file mode 100644
+index 0000000..d3bd378
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/RiverMapScreen.Analytics.cs
+@@ -0,0 +1,17 @@
++#nullable enable
++using AF.Analytics;
++
++namespace AF.UI
++{
++    /// <summary>
++    /// Analítica del Mapa del río (bloque B7, parche B7-rivermap): las llegadas al ponerse al día y el Dato del río de la
++    /// secuencia del 10 (<c>af_stop_arrive</c> con <c>view</c> = <c>map</c> y <c>af_river_fact_shown</c>, 08 §8.2), en los mismos
++    /// puntos que sus sondas. <c>af_map_open</c> y <c>af_map_close</c> salen del arranque (parche B7-bootstrap), donde se abre y
++    /// se cierra el Mapa. Null (por defecto) = sin analítica.
++    /// </summary>
++    public sealed partial class RiverMapScreen
++    {
++        /// <summary>El servicio de analítica (lo pone el arranque).</summary>
++        public AnalyticsService? Analytics { get; set; }
++    }
++}
+diff --git a/Assets/_Project/Scripts/UI/RiverMapScreen.Analytics.cs.meta b/Assets/_Project/Scripts/UI/RiverMapScreen.Analytics.cs.meta
+new file mode 100644
+index 0000000..2236f23
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/RiverMapScreen.Analytics.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 1916a97a5f2f0214cba02288758e0005
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/UI/RiverMapScreen.CatchUp.cs b/Assets/_Project/Scripts/UI/RiverMapScreen.CatchUp.cs
+index fc59110..41ae53f 100644
+--- a/Assets/_Project/Scripts/UI/RiverMapScreen.CatchUp.cs
++++ b/Assets/_Project/Scripts/UI/RiverMapScreen.CatchUp.cs
+@@ -427,6 +427,7 @@ private void SendCatchUpArrival(int level, bool skipped)
+             _lastCatchArrivalSkipped = skipped;
+             _lastCatchArrivalLevel = level;
+             _probe.StopArrive(level, stop, skipped, true);
++            UiAnalytics.StopArrive(Analytics, level, stop, skipped, true); // af_stop_arrive en el Mapa (B7)
+         }
+     }
+ }
+diff --git a/Assets/_Project/Scripts/UI/RiverMapScreen.Sequence.cs b/Assets/_Project/Scripts/UI/RiverMapScreen.Sequence.cs
+index 14277ea..cf0623a 100644
+--- a/Assets/_Project/Scripts/UI/RiverMapScreen.Sequence.cs
++++ b/Assets/_Project/Scripts/UI/RiverMapScreen.Sequence.cs
+@@ -563,6 +563,7 @@ private void ReportL10Fact()
+ 
+             _seqFactReported = true;
+             _probe.RiverFactShown(L10SequenceRule.Level, _seqFactKey, _seqPlateShownMs);
++            UiAnalytics.RiverFactShown(Analytics, _seqFactKey, _seqPlateShownMs); // af_river_fact_shown del 10 (B7)
+         }
+ 
+         // Al abrir el Mapa: ninguna secuencia en marcha ni piezas a la vista.

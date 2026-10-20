@@ -1,0 +1,79 @@
+diff --git a/Assets/_Project/Scripts/Economy/AF.Economy.asmdef b/Assets/_Project/Scripts/Economy/AF.Economy.asmdef
+index b862454..a18be22 100644
+--- a/Assets/_Project/Scripts/Economy/AF.Economy.asmdef
++++ b/Assets/_Project/Scripts/Economy/AF.Economy.asmdef
+@@ -3,7 +3,8 @@
+   "rootNamespace": "AF.Economy",
+   "references": [
+     "AF.Platform",
+-    "AF.Save"
++    "AF.Save",
++    "AF.Events"
+   ],
+   "includePlatforms": [],
+   "excludePlatforms": [],
+diff --git a/Assets/_Project/Scripts/GameFlow/AF.GameFlow.asmdef b/Assets/_Project/Scripts/GameFlow/AF.GameFlow.asmdef
+index 86d4bfd..30d4ab3 100644
+--- a/Assets/_Project/Scripts/GameFlow/AF.GameFlow.asmdef
++++ b/Assets/_Project/Scripts/GameFlow/AF.GameFlow.asmdef
+@@ -7,7 +7,8 @@
+     "AF.Platform",
+     "AF.Save",
+     "AF.Economy",
+-    "AF.Boosters"
++    "AF.Boosters",
++    "AF.Events"
+   ],
+   "includePlatforms": [],
+   "excludePlatforms": [],
+diff --git a/Assets/_Project/Scripts/UI/AF.UI.asmdef b/Assets/_Project/Scripts/UI/AF.UI.asmdef
+index 498fb55..136c748 100644
+--- a/Assets/_Project/Scripts/UI/AF.UI.asmdef
++++ b/Assets/_Project/Scripts/UI/AF.UI.asmdef
+@@ -17,6 +17,12 @@
+     "AF.Localization",
+     "AF.Audio",
+     "AF.Audio.Unity",
++    "AF.Events",
++    "AF.RemoteConfig",
++    "AF.RemoteConfig.Binding",
++    "AF.Analytics",
++    "AF.Analytics.Unity",
++    "AF.Analytics.Adapters",
+     "UnityEngine.UI",
+     "Unity.InputSystem",
+     "Unity.TextMeshPro"
+diff --git a/Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef b/Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef
+index 5f5d8a8..0eb3694 100644
+--- a/Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef
++++ b/Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef
+@@ -21,7 +21,11 @@
+     "AF.Audio",
+     "AF.Audio.Unity",
+     "AF.Audio.Editor",
+-    "Unity.TextMeshPro"
++    "Unity.TextMeshPro",
++    "AF.Events",
++    "AF.RemoteConfig",
++    "AF.RemoteConfig.Binding",
++    "AF.Analytics"
+   ],
+   "includePlatforms": [
+     "Editor"
+diff --git a/Assets/_Project/Tests/PlayMode/AF.Tests.PlayMode.asmdef b/Assets/_Project/Tests/PlayMode/AF.Tests.PlayMode.asmdef
+index 4ed932a..2820ec3 100644
+--- a/Assets/_Project/Tests/PlayMode/AF.Tests.PlayMode.asmdef
++++ b/Assets/_Project/Tests/PlayMode/AF.Tests.PlayMode.asmdef
+@@ -22,7 +22,11 @@
+     "UnityEditor.TestRunner",
+     "Unity.TextMeshPro",
+     "Unity.InputSystem",
+-    "Unity.InputSystem.TestFramework"
++    "Unity.InputSystem.TestFramework",
++    "AF.Events",
++    "AF.RemoteConfig",
++    "AF.RemoteConfig.Binding",
++    "AF.Analytics"
+   ],
+   "includePlatforms": [],
+   "excludePlatforms": [],
