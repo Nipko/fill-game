@@ -112,6 +112,7 @@ namespace AF.RemoteConfig.Tests
             Assert.That(c.Streak.StreakMilestones.Hit3Seeds, Is.EqualTo(250));
             Assert.That(c.Basket.EcoBasketCycle, Is.EqualTo(new[] { "hint", "undo3" }));
             Assert.That(c.ClockSecurity.SecClockMaxDriftH, Is.EqualTo(36));
+            Assert.That(c.Daily.ClockSecurity.SecClockMaxDriftH, Is.EqualTo(36), "la copia del Reto, con la misma clave");
         }
 
         [Test]
@@ -153,6 +154,10 @@ namespace AF.RemoteConfig.Tests
             Assert.That(rv.Ads.BizInterstitialsEnabled, Is.True);
             Assert.That(rv.Daily.BizFeatureDailyChallenge, Is.False);
             Assert.That(rv.Streak.BizFeatureWinStreak, Is.False);
+
+            RcConfigs noRescue = Bind("biz_feature_rescue", "false");
+            Assert.That(noRescue.Boosters.RescueMaxPerLevel, Is.EqualTo(0), "biz_feature_rescue: sin Cuia de rescate [P]");
+            Assert.That(Bind().Boosters.RescueMaxPerLevel, Is.EqualTo(1));
         }
 
         // Los valores de las propiedades con [RemoteConfigKey], como texto comparable.

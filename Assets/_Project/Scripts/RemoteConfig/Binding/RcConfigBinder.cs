@@ -188,6 +188,15 @@ namespace AF.RemoteConfig.Binding
             ads.BizInterstitialsEnabled = gates.InterstitialsEnabled;
             ads.BizRewardedEnabled = gates.RewardedEnabled;
             store.BizIapEnabled = gates.IapEnabled;
+
+            // El Reto lleva su propia copia del anti-reloj (DailyChallengeConfig.ClockSecurity): la misma clave única.
+            daily.ClockSecurity.SecClockMaxDriftH = clock.SecClockMaxDriftH;
+
+            // biz_feature_rescue (08 §9) [P]: sin Cuia de rescate; el resto de kill switches se aplican donde vive su sistema.
+            if (!gates.Feature(BizFeature.Rescue))
+            {
+                boosters.RescueMaxPerLevel = 0;
+            }
             return new RcConfigs(rc, gates, economy, boosters, ads, store, daily, streak, basket, clock, errors);
         }
 
