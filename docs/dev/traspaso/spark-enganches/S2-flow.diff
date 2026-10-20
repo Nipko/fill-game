@@ -11,7 +11,7 @@ index 3da2817..8d14f6f 100644
          }
  
 diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Victory.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.Victory.cs
-index 5ef923f..1c13903 100644
+index 5ef923f..a4435e7 100644
 --- a/Assets/_Project/Scripts/GameFlow/LevelFlow.Victory.cs
 +++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Victory.cs
 @@ -138,6 +138,7 @@ private void ResolveWin()
@@ -30,15 +30,24 @@ index 5ef923f..1c13903 100644
                  AdGate?.RecordWin(LevelNumber);
              }
  
+@@ -164,6 +166,7 @@ private void ResetHarvest(bool perfect = false)
+             _harvest = 0;
+             _harvestTier = RewardTier.Normal;
+             _harvestDoubled = false;
++            ResetStreakResult(); // LevelFlow.Streak.cs: al cargar un nivel, el resultado de la Crecida del anterior ya no vale
+         }
+     }
+ }
 diff --git a/Assets/_Project/Tests/EditMode/StreakFlowHookTests.cs b/Assets/_Project/Tests/EditMode/StreakFlowHookTests.cs
 new file mode 100644
-index 0000000..011d889
+index 0000000..18609fb
 --- /dev/null
 +++ b/Assets/_Project/Tests/EditMode/StreakFlowHookTests.cs
-@@ -0,0 +1,213 @@
+@@ -0,0 +1,330 @@
 +#nullable enable
 +using AF.Economy;
 +using AF.GameFlow;
++using AF.Levels;
 +using NUnit.Framework;
 +
 +namespace AF.Tests.EditMode
@@ -164,7 +173,17 @@ index 0000000..011d889
 +            Assert.That(r.Has(StreakServiceEvents.ShieldUsed), Is.True);
 +            Assert.That(r.Has(StreakServiceEvents.StreakFail), Is.True);
 +            Assert.That(rig.Store.Current.Wins, Is.EqualTo(1));
++            Assert.That(rig.Store.Current.RiverFull, Is.False, "el río no cambia (no estaba crecido)");
 +            Assert.That(rig.Store.Current.ShieldAvailable, Is.False);
++
++            // Con el río crecido, la hoja también lo protege.
++            var river = new StreakFlowRig(offset: 20, initial: new StreakRecord { Wins = 1, RiverFull = true });
++            river.Start(26);
++            LevelStateTests.GetStuck(river.Flow);
++            Assert.That(river.Flow.Restart(), Is.True);
++            Assert.That(river.Flow.LastStreakResult!.Streak.ShieldUsed, Is.True);
++            Assert.That(river.Store.Current.Wins, Is.EqualTo(1));
++            Assert.That(river.Store.Current.RiverFull, Is.True, "C9: el río sigue crecido");
 +        }
 +
 +        [Test]
@@ -196,7 +215,8 @@ index 0000000..011d889
 +            var win = new StreakDailyRig(maxLevel: 29, initial: initial);
 +            int seeds = win.CampaignWallet.Seeds;
 +            win.Flow.StartDaily();
-+            win.Flow.TapAnywhere();
++            Assert.That(win.Flow.TapAnywhere(), Is.True);
++            Assert.That(win.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
 +            LevelStateTests.Win(win.Flow);
 +            StreakServiceResult r = win.Flow.LastStreakResult!;
 +            Assert.That(r.Streak.Counted, Is.False);
@@ -209,7 +229,8 @@ index 0000000..011d889
 +
 +            var fail = new StreakDailyRig(maxLevel: 29, board: TestPacks.Tutorial.Find(6), initial: initial);
 +            fail.Flow.StartDaily();
-+            fail.Flow.TapAnywhere();
++            Assert.That(fail.Flow.TapAnywhere(), Is.True);
++            Assert.That(fail.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
 +            LevelStateTests.GetStuck(fail.Flow);
 +            Assert.That(fail.Flow.PressRestart(), Is.True);
 +            StreakServiceResult f = fail.Flow.LastStreakResult!;
@@ -246,6 +267,110 @@ index 0000000..011d889
 +            dry.WinAndShowVictory();
 +            Assert.That(dry.Flow.HarvestDoubled, Is.False);
 +            Assert.That(dry.Flow.DoubleHarvestOffered, Is.True, "sin río crecido, el x2 por vídeo sigue (04 §2.8)");
++        }
++
++        [Test]
++        public void SoftFail_LeavesTheStreakAlone()
++        {
++            // C11 y 04 §5.2: Volver a la orilla desde la cabecera con ≥ restart_confirm_min_pours vertidos es fallo blando: no
++            // llama a la Crecida (ni gasta la hoja, ni rompe la barra, ni apaga el río) ni escribe su almacén.
++            var rig = new StreakFlowRig(offset: 0, maxLevel: 30, initial: new StreakRecord { Wins = 2, RiverFull = true }, pack: SoftPack());
++            rig.Start(31);
++            Assert.That(rig.Flow.PeekStreak()!.Value.ShieldAvailable, Is.True);
++            int writes = rig.Store.WriteCount;
++            PourBackAndForth(rig.Flow, rig.Flow.Boosters.RestartConfirmMinPours);
++            Assert.That(rig.Flow.RestartNeedsConfirm, Is.True);
++            Assert.That(rig.Flow.PressRestart(), Is.True);
++            Assert.That(rig.Listener.Saw("fail:Soft:1"), Is.True);
++            Assert.That(rig.Flow.LastStreakResult, Is.Null, "el fallo blando no llama a la Crecida");
++            Assert.That(rig.Store.Current.Wins, Is.EqualTo(2));
++            Assert.That(rig.Store.Current.ShieldAvailable, Is.True);
++            Assert.That(rig.Store.Current.RiverFull, Is.True);
++            Assert.That(rig.Store.WriteCount, Is.EqualTo(writes));
++        }
++
++        [Test]
++        public void HardFailFrom31_GiveUpThenQuit_FirstSpendsTheShield_ThenBreaksTheStreak()
++        {
++            // D-008 desde el 31 (camino FailToLevelFailed): «Rendirse» → ¿Seguro? → confirmar, y luego Pausa › «Salir». El 36 es
++            // el tablero 6 del tutorial (desplazado 30), con canoas.
++            var rig = new StreakFlowRig(offset: 30, maxLevel: 35, initial: new StreakRecord { Wins = 2 });
++            rig.Start(36);
++            Assert.That(rig.Flow.CanoeAtStake, Is.True);
++            LevelStateTests.GetStuck(rig.Flow);
++            Assert.That(rig.Flow.PressGiveUp(), Is.True);
++            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.GiveUpConfirm));
++            Assert.That(rig.Flow.LastStreakResult, Is.Null, "¿Seguro? aún no es fallo");
++            Assert.That(rig.Flow.ConfirmGiveUp(), Is.True);
++            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed));
++            StreakServiceResult first = rig.Flow.LastStreakResult!;
++            Assert.That(first.Streak.ShieldUsed, Is.True);
++            Assert.That(first.Streak.StreakBroken, Is.False);
++            Assert.That(rig.Store.Current.Wins, Is.EqualTo(2));
++            Assert.That(rig.Store.Current.ShieldAvailable, Is.False);
++
++            Assert.That(rig.Flow.PressRetry(), Is.True);
++            Assert.That(rig.Flow.TapAnywhere(), Is.True);
++            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
++            Assert.That(rig.Flow.ConfirmQuit(), Is.True);
++            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed));
++            StreakServiceResult second = rig.Flow.LastStreakResult!;
++            Assert.That(second.Streak.ShieldUsed, Is.False);
++            Assert.That(second.Streak.StreakBroken, Is.True, "sin hoja: la barra vuelve a 0");
++            Assert.That(rig.Store.Current.Wins, Is.EqualTo(0));
++        }
++
++        [Test]
++        public void HardFailFrom31_GiveUpWithoutACanoeAtStake_StillCounts()
++        {
++            // Con Canoas infinitas «Rendirse» va directo a Nivel fallido (D-008, paso 2 [P]): sigue siendo fallo duro.
++            var rig = new StreakFlowRig(offset: 30, maxLevel: 35, initial: new StreakRecord { Wins = 1 });
++            Assert.That(rig.Economy.Wallet.Apply(Transaction.InfiniteCanoesFor(System.TimeSpan.FromHours(1))).IsApplied, Is.True);
++            rig.Start(36);
++            Assert.That(rig.Flow.CanoeAtStake, Is.False);
++            LevelStateTests.GetStuck(rig.Flow);
++            Assert.That(rig.Flow.PressGiveUp(), Is.True);
++            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed), "sin ¿Seguro?");
++            Assert.That(rig.Flow.LastStreakResult!.Streak.ShieldUsed, Is.True);
++            Assert.That(rig.Store.Current.ShieldAvailable, Is.False);
++        }
++
++        [Test]
++        public void LoadingALevel_ClearsTheLastResult()
++        {
++            var rig = new StreakFlowRig(offset: 22);
++            rig.Start(25);
++            LevelStateTests.Win(rig.Flow);
++            Assert.That(rig.Flow.LastStreakResult, Is.Not.Null);
++            rig.Start(26);
++            Assert.That(rig.Flow.LastStreakResult, Is.Null);
++        }
++
++        // Nivel 31 de prueba (como el de FailResolveTests, sin relief): 2 colores, 2 cuias mezcladas y 2 vacías.
++        private static LevelPack SoftPack()
++        {
++            return LevelPackReader.Read(TestPacks.MinimalPack(
++                "{ \"id\": \"m02_v1_n0031\", \"level\": 31, \"world\": 2, \"lap\": 1, \"water_base\": \"white\", "
++                + "\"palette\": [\"acai\", \"aguaje\"], \"units_per_color\": 4, \"caps\": [4, 4, 4, 4], "
++                + "\"cuias\": [[1, 1, 2, 2], [2, 2, 1, 1], [], []], \"attrs\": [null, null, null, null], \"murky\": false, \"hidden\": [], "
++                + "\"difficulty\": { \"par\": 3 } }"));
++        }
++
++        // 0 → 2 y luego 2 ↔ 3 hasta n vertidos (como FailResolveTests).
++        private static void PourBackAndForth(LevelFlow flow, int n)
++        {
++            Assert.That(flow.TapCuia(0).Kind, Is.EqualTo(TapKind.Selected));
++            Assert.That(flow.TapCuia(2).Kind, Is.EqualTo(TapKind.Poured));
++            int from = 2;
++            int to = 3;
++            while (flow.Session.AppliedPours < n)
++            {
++                Assert.That(flow.TapCuia(from).Kind, Is.EqualTo(TapKind.Selected));
++                Assert.That(flow.TapCuia(to).Kind, Is.EqualTo(TapKind.Poured));
++                int t = from;
++                from = to;
++                to = t;
++            }
 +        }
 +    }
 +}

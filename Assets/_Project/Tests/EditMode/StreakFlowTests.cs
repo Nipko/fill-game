@@ -102,6 +102,49 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Skip_InsideTheSkipBatch_PaysTheBasket_AndTheProgressInOneWrite()
+        {
+            // Contrato de OnSkipStreak para B3: dentro del mismo using (Saves()) en el que se guarda el salto y antes de
+            // guardarlo. La Canasta (cartera) y el progreso van al mismo perfil por el mismo ProfileSaveBatch: una escritura.
+            // El guardado del salto aún no existe (B3): aquí lo representa SaveWin(20, 21).
+            var clock = new ManualClock(EconomyFixture.T0, TimeSpan.FromHours(-5));
+            Profile profile = Wallet.NewProfile(clock);
+            profile.Wallet.Seeds = 7;
+            profile.Progress.MaxLevel = 19;
+            profile.Progress.NextLevel = 20;
+            var disk = new MemoryProfileStore();
+            var batch = new ProfileSaveBatch(disk);
+            var wallet = new Wallet(profile, batch, clock);
+            var progress = new ProfileProgressStore(profile, batch);
+            var flow = new LevelFlow(
+                LevelCatalog.Create(new[] { TestPacks.Tutorial }, 10), progress, new RecordingListener(), GameConfig.TapSwitchSelection,
+                PourModes.Default, wallet)
+            {
+                SaveBatch = batch,
+            };
+            flow.UseStreak(new StreakService(new InMemoryStreakStore(clock), wallet, clock, 10));
+            flow.Load(20);
+            flow.TapAnywhere();
+            Assert.That(flow.Phase, Is.EqualTo(FlowPhase.Playing));
+
+            int writes = batch.WriteCount;
+            StreakServiceResult? result;
+            using (batch.Begin())
+            {
+                result = flow.OnSkipStreak();
+                progress.SaveWin(20, 21);
+                Assert.That(batch.WriteCount, Is.EqualTo(writes), "nada sale antes de cerrar el lote del salto");
+            }
+
+            Assert.That(result, Is.Not.Null);
+            Assert.That(result!.BasketSeeds, Is.EqualTo(50));
+            Assert.That(batch.WriteCount, Is.EqualTo(writes + 1), "la Canasta y el progreso, en una sola escritura");
+            Profile saved = disk.Load().Profile!;
+            Assert.That(saved.Wallet.Seeds, Is.EqualTo(57));
+            Assert.That(saved.Progress.MaxLevel, Is.EqualTo(20));
+        }
+
+        [Test]
         public void TheDaily_HasNoBarAndNoSkip()
         {
             // 06 §4.3 («si not nivel.es_campana: return»), Q-C2 (a), 04 §2.6 e: en el Reto ni barra ni Salto ni Canasta, también
@@ -120,7 +163,8 @@ namespace AF.Tests.EditMode
     /// <summary>Flujo de campaña con el tutorial desplazado (<c>af_level_offset</c>), la cartera y un <see cref="StreakService"/> en memoria.</summary>
     internal sealed class StreakFlowRig
     {
-        public StreakFlowRig(int offset, int maxLevel = 0, StreakRecord? initial = null, int seeds = 0, bool inject = true)
+        public StreakFlowRig(
+            int offset, int maxLevel = 0, StreakRecord? initial = null, int seeds = 0, bool inject = true, LevelPack? pack = null)
         {
             Economy = new EconomyFixture(seeds);
             Store = new InMemoryStreakStore(Economy.Clock, initial);
@@ -128,7 +172,7 @@ namespace AF.Tests.EditMode
             Progress = new MemoryProgressStore(maxLevel + 1, maxLevel);
             Listener = new RecordingListener();
             Flow = new LevelFlow(
-                LevelCatalog.Create(new[] { TestPacks.Tutorial }, offset), Progress, Listener, GameConfig.TapSwitchSelection, PourModes.Default,
+                LevelCatalog.Create(new[] { pack ?? TestPacks.Tutorial }, offset), Progress, Listener, GameConfig.TapSwitchSelection, PourModes.Default,
                 Economy.Wallet);
             if (inject)
             {

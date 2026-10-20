@@ -19,7 +19,8 @@ namespace AF.GameFlow
     /// hoja).</description></item>
     /// </list>
     /// El Salto del Boto (E34, B3) aún no existe en el cliente: cuando llegue, llama a <see cref="OnSkipStreak"/> al confirmarse,
-    /// antes de guardar el salto en el progreso.
+    /// <b>dentro del mismo <c>using (Saves())</c> en el que guarda el salto y antes de guardarlo</b>: así la Canasta y el progreso
+    /// salen en una sola escritura del perfil y la comparación con <c>max_level</c> ve el valor anterior al salto.
     /// <para>
     /// <b>El Reto del río no cuenta</b> (06 §4.3 «si not nivel.es_campana: return»; C1, Q-C2 (a)): en un flujo de
     /// <see cref="CreateDaily"/> (<see cref="IsDaily"/>) el servicio recibe <c>isCampaign = false</c>, así que ni suma, ni rompe,
@@ -70,9 +71,11 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Salto del Boto confirmado en el nivel cargado (E34; K9; 04 §2.6): si es un <c>10k</c> de campaña superado por primera
-        /// vez, paga su Canasta de nivel; no toca la Crecida (C11). Lo llama el Salto (B3) <b>antes</b> de guardar el salto en el
-        /// progreso, porque compara con el <c>max_level</c> de ahora para no pagar dos veces la Canasta de un nivel ya superado
-        /// (K8). Devuelve el resultado (también en <see cref="LastStreakResult"/>), o null sin servicio, sin nivel, en el Reto
+        /// vez, paga su Canasta de nivel; no toca la Crecida (C11). Contrato para el Salto (B3): llamarlo <b>dentro del mismo
+        /// <c>using (Saves())</c> en el que guarda el salto y antes de guardarlo</b>. Dentro, porque así la Canasta y el progreso
+        /// salen en una sola escritura del perfil (y este método pide <see cref="ProfileSaveBatch.RequireDurable"/>: es fin de
+        /// nivel, T-D); antes, porque compara con el <c>max_level</c> de ahora para no pagar dos veces la Canasta de un nivel ya
+        /// superado (K8). Devuelve el resultado (también en <see cref="LastStreakResult"/>), o null sin servicio, sin nivel, en el Reto
         /// (no hay Salto: 04 §2.6 e) o con el nivel ya superado.
         /// </summary>
         public StreakServiceResult? OnSkipStreak()
@@ -85,6 +88,7 @@ namespace AF.GameFlow
 
             using (Saves())
             {
+                SaveBatch?.RequireDurable();
                 _lastStreak = _streak.ApplySkip(LevelNumber, true);
             }
 
@@ -105,11 +109,17 @@ namespace AF.GameFlow
 
             StreakServiceResult result = _streak.ApplyWin(LevelNumber, !IsDaily, maxLevelBefore, _harvestTier);
             _lastStreak = result;
-            if (result.Has(StreakServiceEvents.FreeDoubleHarvest))
+            if (result.Has(StreakServiceEvents.FreeDoubleHarvest) && _harvestBase > 0)
             {
                 _harvestDoubled = true;
                 _harvest += result.DoubleHarvestSeeds;
             }
+        }
+
+        // Al cargar un nivel (ResetHarvest, desde Load; parche S2): el resultado del nivel anterior ya no vale.
+        private void ResetStreakResult()
+        {
+            _lastStreak = null;
         }
 
         // E29/E31: en Fail, tras FailResolve.Resolve (Transaction.HardFail ya aplicado) y antes de avisar a la vista. Solo el
