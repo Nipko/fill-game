@@ -6,7 +6,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
-## 2026-10-19 · R11 · Capturas y prueba de punta a punta: en revisión (2.ª ronda)
+## 2026-10-19 · R11 · Capturas y prueba de punta a punta: HECHA (APROBADO en 2.ª ronda; arreglo del sello en `171b404`)
 
 - **Commit:** `41d5beb` en `spark/reto-del-rio-r11` (sale de la integración `8327d23`), más el arreglo del sello en curso.
 - **Archivos:**
@@ -28,7 +28,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 | `r11_01_card_play` | Inicio con la tarjeta «Reto del río · 19 oct», Jugar, 1 ola, 0/7 | La fecha corta por región; que el título no toque el sello. **En 16:9 la tarjeta queda pegada al bocadillo de TiTino (0-3 px): requisito de E1** |
 | `r11_02_header` | Partida del Reto | Cabecera «Reto del río», sin «Nivel N» ni barra de Crecida. Ajeno: en en-XA, «Reiniciar» se sale del botón (`GameScreen`) |
 | `r11_03_card_continue` | Tarjeta «Seguir» tras salir sin ganar | R-Q16 (a) |
-| `r11_04_calendar_falling` | Octubre con sellos previos y el del 19 a media caída | Que el sello caiga **centrado en su casilla** (bloqueante de la revisión, en arreglo); el contador del HUD ya marca 60 antes del «+60» |
+| `r11_04_calendar_falling` | Octubre con sellos previos y el del 19 a media caída | Que el sello caiga **centrado en su casilla** (arreglado en `171b404`; `AF_STAMP`: desvío 0,00 dp); el contador del HUD ya marca 60 antes del «+60» |
 | `r11_05_calendar_reward` | El sello posado y «+60» con la semilla | El «+60» queda algo a la izquierda del centro [P] |
 | `r11_06_card_sealed` | Tarjeta «Sellado», 1/7 | El sello verde de los CTA con el aro crema (sin rojo; guía v2 §7) |
 | `r11_07_calendar_month` | Calendario abierto desde la tarjeta sellada | Sin premio ni sello que cae; el hueco del «+60» queda reservado |
