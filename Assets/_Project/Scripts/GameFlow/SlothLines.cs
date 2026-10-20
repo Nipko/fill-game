@@ -51,7 +51,8 @@ namespace AF.GameFlow
         /// <summary>Hora local hasta la que hay saludo de la mañana, sin incluirla (12:00; d.7).</summary>
         public const int MorningToHour = 12;
 
-        /// <summary>Primer Muy difícil: su frase es <c>sloth_line_milestone_02</c> (e.4, n.º 30).</summary>
+        /// <summary>Primer Muy difícil: su frase es la n.º 30 de e.4 (<c>sloth_line_milestone_02</c>) o una de sus 2
+        /// alternativas [P] (mini-banco <c>MilestoneVeryHardSet</c>; D-030, 16 b).</summary>
         public const int FirstVeryHardLevel = 60;
 
         // Índices fijos de los bancos (0 = _01), con su número de e.4.
