@@ -1,0 +1,14 @@
+{
+  "name": "AF.RemoteConfig",
+  "rootNamespace": "AF.RemoteConfig",
+  "references": [],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}
