@@ -87,7 +87,7 @@ namespace AF.UI
     /// de nivel, y aquí sería el nivel efectivo, que no es un lugar del Mapa). El kit del mundo del día (R-Q2: rota por los
     /// mundos 1-9 según la fecha) queda pendiente de que <c>GameScreen</c> acepte un mundo en lugar de un nivel;</item>
     /// <item>la Crecida aún no existe en el cliente: no hay barra que quitar (cuando llegue a <see cref="GameScreen"/>, hará falta
-    /// el enganche E21 para ocultarla con <see cref="LevelFlow.IsDaily"/>).</item>
+    /// el enganche E25 para ocultarla con <see cref="LevelFlow.IsDaily"/>).</item>
     /// </list>
     /// Resultado (R7b): la victoria llama a <see cref="DailyChallengeService.ClaimWin"/> (que reclama la fecha de inicio, R-Q3);
     /// salir sin ganar, a <see cref="LevelFlow.ExitDaily"/>, que avisa con <see cref="DailyPlayOutcome.Exit"/> y aquí se registra con

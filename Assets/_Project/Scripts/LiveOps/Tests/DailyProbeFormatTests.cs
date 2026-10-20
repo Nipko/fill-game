@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using System.IO;
 using NUnit.Framework;
 
 namespace AF.LiveOps.Tests
@@ -8,6 +9,21 @@ namespace AF.LiveOps.Tests
     public sealed class DailyProbeFormatTests
     {
         private readonly DailyProbeFormat _format = new DailyProbeFormat();
+
+        [Test]
+        public void NoCanoesChoice_DailyChallenge()
+        {
+            // E7: af_no_canoes_choice con choice = daily_challenge (04 §11: choice ∈ {wait, ad, seeds_refill, iap_infinite,
+            // daily_challenge, map}; 08 §8.2 remite al capítulo 4).
+            Assert.That(
+                _format.NoCanoesChoice(77),
+                Is.EqualTo("AF_STATE {\"event\":\"no_canoes_choice\",\"t\":77,\"choice\":\"daily_challenge\"}"));
+            string chapter04 = File.ReadAllText(Path.Combine(LiveOpsTestFiles.RepoRoot, "docs", "gdd", "04-comodines-vidas-rescate.md"));
+            int row = chapter04.IndexOf("| `af_no_canoes_choice` |", StringComparison.Ordinal);
+            Assert.That(row, Is.GreaterThanOrEqualTo(0), "la fila de 04 §11");
+            string line = chapter04.Substring(row, chapter04.IndexOf('\n', row) - row);
+            Assert.That(line, Does.Contain(DailyProbeFormat.NoCanoesDailyChoice), "el valor de choice sale de 04 §11");
+        }
 
         [Test]
         public void DailyChallenge_Win()

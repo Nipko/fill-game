@@ -67,6 +67,12 @@ namespace AF.UI
             /// <summary>Cosecha doble (clave existente <c>double_harvest</c>), oculta hasta el enganche E9.</summary>
             public const string DoubleHarvest = "double_harvest";
 
+            /// <summary>Presentación del Reto tras ganar el 7: «Desde el nivel {level}, un tablero nuevo cada día» (E6; <see cref="DailyTeaserCard"/>).</summary>
+            public const string Teaser = DailyTeaserCard.TextKey;
+
+            /// <summary>Línea de Sin canoas: «Mientras esperas: Jugar el Reto del río» (E7; <see cref="NoCanoesDailyLink"/>).</summary>
+            public const string NoCanoesDaily = NoCanoesDailyLink.TextKey;
+
             /// <summary>Prefijo de los meses abreviados: <c>month_short_01</c> … <c>month_short_12</c>.</summary>
             public const string MonthShortPrefix = "month_short_";
         }
@@ -81,7 +87,7 @@ namespace AF.UI
         public static readonly string[] NewKeys =
         {
             Keys.Title, Keys.CardTitle, Keys.DateShort, Keys.Streak, Keys.Continue, Keys.Sealed, Keys.Pending, Keys.RewardSeeds,
-            Keys.StreakReward, Keys.StreakRewardLocked, Keys.NoReward, Keys.WinPending,
+            Keys.StreakReward, Keys.StreakRewardLocked, Keys.NoReward, Keys.WinPending, Keys.Teaser, Keys.NoCanoesDaily,
             "month_short_01", "month_short_02", "month_short_03", "month_short_04", "month_short_05", "month_short_06",
             "month_short_07", "month_short_08", "month_short_09", "month_short_10", "month_short_11", "month_short_12",
         };

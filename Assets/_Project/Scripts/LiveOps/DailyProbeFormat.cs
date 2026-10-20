@@ -18,7 +18,8 @@ namespace AF.LiveOps
     /// y <c>band</c> = la banda del Reto (1-3) [P];</item>
     /// <item><c>earn_virtual_currency</c>: <c>virtual_currency_name</c> = <c>seeds</c>, <c>source</c> = <c>daily_challenge</c>,
     /// <c>value</c>;</item>
-    /// <item><c>daily_card</c>: el estado de la tarjeta del inicio (nota §8), para jugar con <c>adb</c>.</item>
+    /// <item><c>daily_card</c>: el estado de la tarjeta del inicio (nota §8), para jugar con <c>adb</c>;</item>
+    /// <item><c>no_canoes_choice</c> (<c>af_no_canoes_choice</c>): <c>choice</c> = <c>daily_challenge</c>, desde Sin canoas (E7).</item>
     /// </list>
     /// </summary>
     public sealed class DailyProbeFormat
@@ -133,6 +134,22 @@ namespace AF.LiveOps
             sb.Append(",\"override\":");
             AppendId(sb, slot?.RequestedOverrideId);
             sb.Append(",\"override_ignored\":").Append(slot.HasValue && slot.Value.IsOverrideIgnored ? "true" : "false");
+            return End(sb);
+        }
+
+        /// <summary>Valor de <c>choice</c> de <c>af_no_canoes_choice</c> para «Jugar el Reto del río» (04 §11; 08 §8.2).</summary>
+        public const string NoCanoesDailyChoice = "daily_challenge";
+
+        /// <summary>
+        /// Línea <c>AF_STATE no_canoes_choice</c> (<c>af_no_canoes_choice</c> de 04 §11 y 08 §8.2) con <c>choice</c> =
+        /// <see cref="NoCanoesDailyChoice"/>: el jugador sin canoas eligió jugar el Reto (enganche E7). Las demás elecciones de
+        /// la pantalla (<c>wait</c>, <c>ad</c>, <c>seeds_refill</c>, <c>iap_infinite</c>, <c>map</c>) no son del Reto y no salen de
+        /// aquí.
+        /// </summary>
+        public string NoCanoesChoice(long t)
+        {
+            StringBuilder sb = Begin("no_canoes_choice", t);
+            sb.Append(",\"choice\":\"").Append(NoCanoesDailyChoice).Append('"');
             return End(sb);
         }
 

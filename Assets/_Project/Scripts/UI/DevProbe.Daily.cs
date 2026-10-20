@@ -20,7 +20,9 @@ namespace AF.UI
     /// (<see cref="DailyEarn"/>). La Pororoca de la racha no tiene evento: 08 §8.2 solo define <c>earn_virtual_currency</c> para
     /// semillas y no hay uno de stock de comodines (no se inventa);</item>
     /// <item><c>daily_card</c>: el estado de la tarjeta del inicio cada vez que se recalcula, con la sustitución pedida
-    /// (<c>override</c>) y si se ignoró (<c>override_ignored</c>), para jugar con <c>adb</c> (<see cref="DailyCard"/>).</item>
+    /// (<c>override</c>) y si se ignoró (<c>override_ignored</c>), para jugar con <c>adb</c> (<see cref="DailyCard"/>);</item>
+    /// <item><c>no_canoes_choice</c> (<c>af_no_canoes_choice</c>) con <c>choice = daily_challenge</c>, al elegir el Reto en Sin
+    /// canoas (<see cref="DailyNoCanoesChoice"/>; E7).</item>
     /// </list>
     /// Estáticas: las llaman <c>GameBootstrap.Daily.cs</c> y <c>DailyChallengeScreen.cs</c>, que no comparten instancia de la sonda.
     /// Solo en el hilo principal (un único <see cref="DailyProbeFormat"/>). Solo claves e identificadores, nunca texto visible.
@@ -58,6 +60,12 @@ namespace AF.UI
         public static string? DailyCard(DailyCardState state, string dateKey, DailySlot? slot, string? boardId, int streakShown)
         {
             return Enabled ? WriteDaily(s_daily.Card(NowMs(), state, dateKey, slot, boardId, streakShown)) : null;
+        }
+
+        /// <summary><c>AF_STATE no_canoes_choice</c> con <c>choice = daily_challenge</c> (<c>af_no_canoes_choice</c>; E7).</summary>
+        public static string? DailyNoCanoesChoice()
+        {
+            return Enabled ? WriteDaily(s_daily.NoCanoesChoice(NowMs())) : null;
         }
 
         /// <summary>
