@@ -15,7 +15,9 @@ namespace AF.Save
     /// <c>settings</c>, <c>sloth</c> y <c>progress.map_seen_level</c> toman su default ante un valor ausente o inválido
     /// (un ajuste nunca hace corrupto un perfil), y <c>map_seen_level</c> queda recortado a [0, <c>max_level</c>]; igual
     /// <c>progress.undo_tip_seen</c> (DC23), que sin la clave o con otro tipo queda en «no visto». <c>fauna</c>
-    /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta.
+    /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta. <c>streak</c> y
+    /// <c>daily_challenge</c> se omiten mientras son null, y <c>daily.streak_hits</c> y <c>daily.streak_seeds</c> en su default
+    /// (vacía y 0): son economía y un tipo equivocado en ellos es corrupción.
     /// </summary>
     public static class ProfileJson
     {
@@ -115,6 +117,16 @@ namespace AF.Save
             daily.Set("af_rescue_hidden_until", Timestamp(d.AfRescueHiddenUntil));
             daily.Set("shuffles_today", JsonNode.FromInt(d.ShufflesToday));
             daily.Set("shield_available", JsonNode.FromBool(d.ShieldAvailable));
+            if (d.StreakHits.Count > 0)
+            {
+                daily.Set("streak_hits", IntList(d.StreakHits)); // Crecida (Q-M9 (a)): la clave falta en su default
+            }
+
+            if (d.StreakSeeds != 0)
+            {
+                daily.Set("streak_seeds", JsonNode.FromInt(d.StreakSeeds));
+            }
+
             root.Set("daily", daily);
 
             JsonNode progress = JsonNode.NewObject();
@@ -126,6 +138,15 @@ namespace AF.Save
             progress.Set("map_seen_level", JsonNode.FromInt(p.Progress.ClampedMapSeenLevel));
             progress.Set("undo_tip_seen", JsonNode.FromBool(p.Progress.UndoTipSeen));
             root.Set("progress", progress);
+
+            if (p.Streak != null)
+            {
+                // Crecida (Q-M9 (a)): tras progress, como en 08 §4.3; la clave falta hasta el primer guardado.
+                JsonNode streak = JsonNode.NewObject();
+                streak.Set("wins", JsonNode.FromInt(p.Streak.Wins));
+                streak.Set("river_full", JsonNode.FromBool(p.Streak.RiverFull));
+                root.Set("streak", streak);
+            }
 
             root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
 
@@ -242,6 +263,10 @@ namespace AF.Save
                 d.AfRescueHiddenUntil = ReadTimestamp(daily, "af_rescue_hidden_until");
                 d.ShufflesToday = ReadInt(daily, "shuffles_today", d.ShufflesToday);
                 d.ShieldAvailable = ReadBool(daily, "shield_available", d.ShieldAvailable);
+                // Como el resto de listas y enteros del perfil: "streak_hits": null se lee como vacía y "streak_seeds": null es
+                // corrupción (ReadIntList y ReadInt). Los rangos (hitos 3/6/10, semillas >= 0) los recorta AF.Economy.
+                ReadIntList(daily, "streak_hits", d.StreakHits);
+                d.StreakSeeds = ReadInt(daily, "streak_seeds", d.StreakSeeds);
             }
 
             JsonNode? progress = Section(root, "progress");
@@ -256,6 +281,17 @@ namespace AF.Save
                 g.MapSeenLevel = TolerantInt(progress, "map_seen_level", g.MapSeenLevel);
                 g.MapSeenLevel = g.ClampedMapSeenLevel;
                 g.UndoTipSeen = TolerantBool(progress, "undo_tip_seen", g.UndoTipSeen);
+            }
+
+            // streak (Crecida; Q-M9 (a)): es economía (sus hitos pagan), así que un tipo equivocado es corrupción, como en wallet.
+            // Los rangos (wins 0-10) no se validan aquí: los interpreta AF.Economy, igual que daily_challenge.
+            JsonNode? streakNode = Section(root, "streak");
+            if (streakNode != null)
+            {
+                var streak = new StreakData();
+                streak.Wins = ReadInt(streakNode, "wins", streak.Wins);
+                streak.RiverFull = ReadBool(streakNode, "river_full", streak.RiverFull);
+                p.Streak = streak;
             }
 
             JsonNode? levelState = Section(root, "level_state");
