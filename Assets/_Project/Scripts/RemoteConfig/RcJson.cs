@@ -437,6 +437,10 @@ namespace AF.RemoteConfig
 
                 string text = _s.Substring(start, _i - start);
                 double value = double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
+                if (double.IsInfinity(value) || double.IsNaN(value))
+                {
+                    throw new FormatException("número no finito en " + start.ToString(CultureInfo.InvariantCulture));
+                }
                 return new RcJson(RcJsonKind.Number, text: text, number: value);
             }
 

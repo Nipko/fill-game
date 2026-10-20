@@ -194,7 +194,13 @@ namespace AF.Analytics
 
         private void OnLevelStarted(LevelStarted e)
         {
-            Log(AnalyticsEvent.Create("level_start").Add("level_name", e.LevelName).Add("variant", e.Variant).Add("band", e.Band));
+            AnalyticsEvent start = AnalyticsEvent.Create("level_start").Add("level_name", e.LevelName).Add("variant", e.Variant);
+            if (e.Band.Length > 0)
+            {
+                start.Add("band", e.Band); // Q-B7-23 (a) [P]
+            }
+
+            Log(start);
         }
 
         private void OnLevelWon(LevelWon e)

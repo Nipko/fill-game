@@ -93,38 +93,13 @@ namespace AF.RemoteConfig.Tests
         [Test]
         public void EveryRemoteConfigKey_OfTheClient_IsInTheDefaults()
         {
-            // Los ensamblados con clases de cifras (las 8 de 08 §9 que llevan [RemoteConfigKey]; nota §2).
-            var assemblies = new List<Assembly>();
-            foreach (Type known in new[]
-            {
-                typeof(AF.Economy.EconomyConfig), typeof(AF.Boosters.BoosterConfig), typeof(AF.Ads.AdsConfig), typeof(AF.IAP.StoreConfig),
-                typeof(AF.LiveOps.DailyChallengeConfig), typeof(ClockSecurityConfig),
-            })
-            {
-                if (!assemblies.Contains(known.Assembly))
-                {
-                    assemblies.Add(known.Assembly);
-                }
-            }
-
             int count = 0;
-            foreach (Assembly asm in assemblies)
+            foreach (KeyValuePair<string, KeyValuePair<Type, List<string>>> t in RemoteConfigKeyScan.Types())
             {
-                Type[] types = asm.GetTypes();
-                foreach (Type type in types)
+                foreach (string key in t.Value.Value)
                 {
-                    foreach (PropertyInfo property in type.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.Static))
-                    {
-                        var attribute = property.GetCustomAttribute<RemoteConfigKeyAttribute>();
-                        if (attribute == null)
-                        {
-                            continue;
-                        }
-
-                        count++;
-                        Assert.That(RemoteConfigDefaults.Compiled.Find(attribute.Key), Is.Not.Null,
-                            type.Name + "." + property.Name + ": «" + attribute.Key + "» no está en RemoteConfigDefaults.json");
-                    }
+                    count++;
+                    Assert.That(RemoteConfigDefaults.Compiled.Find(key), Is.Not.Null, t.Key + ": «" + key + "» no está en RemoteConfigDefaults.json");
                 }
             }
 

@@ -23,10 +23,13 @@ namespace AF.RemoteConfig.Tests
     /// </summary>
     public sealed class RcConfigBinderTests
     {
-        private static readonly Type[] ConfigTypes =
+        // Clases con [RemoteConfigKey] que el binder aún no enlaza, con su motivo (nombre simple del tipo). Si una de estas llega
+        // a esta rama sin entrada en RcConfigBinder.BoundKeys, la prueba la acepta; si llega una que no está aquí ni enlazada,
+        // falla: toda clase de cifras se enlaza o se declara aquí (nota §2.3).
+        private static readonly Dictionary<string, string> NotBoundYet = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            typeof(EconomyConfig), typeof(BoosterConfig), typeof(AdsConfig), typeof(StoreConfig), typeof(DailyChallengeConfig),
-            typeof(StreakConfig), typeof(BasketConfig), typeof(ClockSecurityConfig),
+            { "ShuffleConfig", "B2 (AF.Boosters, 5 claves): se enlaza al fusionar B2 en la integración" },
+            { "SkipConfig", "B3 (Salto del Boto): se enlaza al fusionar B3 en la integración" },
         };
 
         private static RcSnapshot With(params string[] kv)
@@ -61,25 +64,29 @@ namespace AF.RemoteConfig.Tests
         }
 
         [Test]
-        public void EveryRemoteConfigKeyProperty_IsBound_AndNothingElse()
+        public void EveryTypeWithRemoteConfigKeys_IsBound_OrDeclaredAsNotBoundYet()
         {
-            foreach (Type type in ConfigTypes)
+            var bound = 0;
+            foreach (KeyValuePair<string, KeyValuePair<Type, List<string>>> t in RemoteConfigKeyScan.Types())
             {
-                var keys = new List<string>();
-                foreach (PropertyInfo p in type.GetProperties(BindingFlags.Public | BindingFlags.Instance))
+                Type type = t.Value.Key;
+                if (RcConfigBinder.BoundKeys.TryGetValue(type, out IReadOnlyList<string>? boundKeys))
                 {
-                    RemoteConfigKeyAttribute? a = p.GetCustomAttribute<RemoteConfigKeyAttribute>();
-                    if (a != null)
-                    {
-                        keys.Add(a.Key);
-                    }
+                    Assert.That(NotBoundYet.ContainsKey(type.Name), Is.False, type.Name + " ya está enlazada: quítala de NotBoundYet");
+                    var keys = new List<string>(t.Value.Value);
+                    var expected = new List<string>(boundKeys);
+                    keys.Sort(StringComparer.Ordinal);
+                    expected.Sort(StringComparer.Ordinal);
+                    Assert.That(expected, Is.EqualTo(keys), type.Name + ": cada [RemoteConfigKey] enlazada, y nada más");
+                    bound++;
+                    continue;
                 }
 
-                var bound = new List<string>(RcConfigBinder.BoundKeys[type]);
-                keys.Sort(StringComparer.Ordinal);
-                bound.Sort(StringComparer.Ordinal);
-                Assert.That(bound, Is.EqualTo(keys), type.Name);
+                Assert.That(NotBoundYet.ContainsKey(type.Name), Is.True,
+                    t.Key + " tiene [RemoteConfigKey] y RcConfigBinder no la enlaza: añádela a RcConfigBinder o a NotBoundYet con su motivo");
             }
+
+            Assert.That(bound, Is.EqualTo(RcConfigBinder.BoundKeys.Count), "cada clase del binder está entre las descubiertas");
         }
 
         [Test]

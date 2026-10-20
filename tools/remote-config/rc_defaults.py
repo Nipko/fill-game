@@ -133,6 +133,8 @@ def _interp_price_tier(keys, types, cell):
 
 
 def _interp_league(keys, types, cell):
+    if len(keys) != 6:
+        raise GddError("league_bucket_size: se esperaban 6 claves y hay %d" % len(keys))
     # «50 / 20 / `{…}` / tablas 06 §6 y §5.2 / 40»: seis claves y cinco valores; «tablas 06 §6 y §5.2» son los premios de
     # la Liga (06 §6) y de la Regata (06 §5.2), que quedan pendientes.
     points = json.loads('{"normal":10,"hard":20,"very_hard":30,"daily":20,"trail":10}')
@@ -143,25 +145,26 @@ def _interp_league(keys, types, cell):
     ]
 
 
+# Primera clave de la fila → (texto exacto de la celda de tipo, texto exacto de la de default, función).
 INTERPRETATIONS = {
-    "biz_country_enabled": ("CO, PE, MX = true; resto false", _interp_country_bool),
-    "biz_legal_profile_by_country": (
+    "biz_country_enabled": ("map país→bool", "CO, PE, MX = true; resto false", _interp_country_bool),
+    "biz_legal_profile_by_country": ("map país→string", 
         "BR `br_lgpd_eca` · CO `co_1581` · PE `pe_29733` · MX `mx_lfpdppp` · EEE/UK/CH `ump` · resto `default`",
         _interp_legal_profile),
-    "biz_ua_paid_enabled_by_country": ("todos false / false", _interp_ua_paid),
-    "biz_kpi_targets": ("01 §KPIs / 09 tabla 6.1", _interp_pending_all),
-    "mech_debut_level.{chica,alta,hoja,matapi,liana,remolino,barro,lluvia,brote,pirana,tinaja}": (
+    "biz_ua_paid_enabled_by_country": ("map país→bool / bool", "todos false / false", _interp_ua_paid),
+    "biz_kpi_targets": ("json", "01 §KPIs / 09 tabla 6.1", _interp_pending_all),
+    "mech_debut_level.{chica,alta,hoja,matapi,liana,remolino,barro,lluvia,brote,pirana,tinaja}": ("int", 
         "chica 14, alta 27, hoja 43, matapi 63, liana 83, remolino 103, barro 123, lluvia 143, brote 163, pirana 183, tinaja 323",
         _interp_mech_debut),
-    "ads_rv_cap_<placement>": (
+    "ads_rv_cap_<placement>": ("int", 
         "double_harvest 5 · undo_refill 4 · hint 3 · reveal 3 · extra_canoe 3 · daily_chest 1 (ubicación apagada en 1.0: "
         "`eco_calendar_double_ad_enabled`)",
         _interp_rv_cap),
-    "ads_rv_cooldown_s_<placement>": ("60 (extra_canoe 90)", _interp_rv_cooldown),
-    "eco_calendar_table_v1": (
+    "ads_rv_cooldown_s_<placement>": ("int", "60 (extra_canoe 90)", _interp_rv_cooldown),
+    "eco_calendar_table_v1": ("json", 
         "tabla 05 §2.3 (≈3.000 semillas + 12 entradas de comodín + 2 Canastas + 1 Canasta grande)", _interp_pending_all),
-    "eco_price_tier_<country>": ("tabla 05 §4.2 / \"B-2026-10-06e\"", _interp_price_tier),
-    "league_bucket_size": (
+    "eco_price_tier_<country>": ("string", "tabla 05 §4.2 / \"B-2026-10-06e\"", _interp_price_tier),
+    "league_bucket_size": ("int / int / json / json / json / int", 
         "50 / 20 / `{\"normal\":10,\"hard\":20,\"very_hard\":30,\"daily\":20,\"trail\":10}` / tablas 06 §6 y §5.2 / 40",
         _interp_league),
 }
@@ -186,13 +189,21 @@ def section_9(text: str) -> str:
 def table_rows(section: str):
     """Filas de la tabla: [(primera celda, tipo, default)] en el orden de 08 §9."""
     rows = []
+    stray = []
     for line in section.split("\n"):
+        if not line.startswith("|"):
+            continue
+        if line.startswith("| Clave |") or line.startswith("|---"):
+            continue  # cabecera y separador
         if not line.startswith("| `"):
+            stray.append(line[:80])  # una fila de la tabla sin clave entre comillas invertidas: no se salta en silencio
             continue
         cells = line.split("|")
         if len(cells) != 8:
             raise GddError("fila con %d celdas (se esperan 6): %s" % (len(cells) - 2, line[:80]))
         rows.append((cells[1].strip(), cells[2].strip(), cells[3].strip()))
+    if stray:
+        raise GddError("%d filas de 08 §9 no empiezan por una clave entre comillas invertidas: %s" % (len(stray), " | ".join(stray)))
     if len(rows) < 100:
         raise GddError("solo %d filas en 08 §9: ¿cambió el formato de la tabla?" % len(rows))
     return rows
@@ -291,12 +302,19 @@ def read_params(gdd_text: str):
         keys, first = expand_keys(key_cell)
         types = _types(type_cell)
         if first in INTERPRETATIONS:
-            expected, fn = INTERPRETATIONS[first]
+            expected_type, expected, fn = INTERPRETATIONS[first]
+            if type_cell != expected_type:
+                raise GddError(
+                    "08 §9 cambió el tipo de «%s»: era «%s» y ahora es «%s»; revisa su interpretación en rc_defaults.py"
+                    % (first, expected_type, type_cell))
             if default_cell != expected:
                 raise GddError(
                     "08 §9 cambió el default de «%s»: era «%s» y ahora es «%s»; revisa su interpretación en rc_defaults.py"
                     % (first, expected, default_cell))
-            rows = fn(keys, types, default_cell)
+            try:
+                rows = fn(keys, types, default_cell)
+            except (IndexError, KeyError, ValueError) as e:
+                raise GddError("«%s»: la interpretación no casa con las claves de la fila (%s)" % (first, e))
         else:
             if len(types) not in (1, len(keys)):
                 raise GddError("%s: %d tipos para %d claves" % (first, len(types), len(keys)))
@@ -379,7 +397,7 @@ def _read(path: Path):
 # Autoprueba
 
 
-def self_test() -> int:
+def self_test(gdd_path: Path = GDD_08) -> int:
     failures = []
 
     def check(name, cond):
@@ -417,6 +435,11 @@ def self_test() -> int:
         ("| `b_<x>` | int | 1 | — | 05 | x |\n", "plantilla sin sufijos"),
         ("| `k_000` | int | 1 | — | 05 | x |\n", "clave repetida"),
         ("| `biz_country_enabled` | map país→bool | CO = true | — | 01 | x |\n", "interpretación con otro texto"),
+        ("| `biz_country_enabled` | json | CO, PE, MX = true; resto false | — | 01 | x |\n", "interpretación con otro tipo"),
+        ("| `league_bucket_size` / `regatta_bucket_size` | int / int / json / json / json / int | 50 / 20 / "
+         "`{\"normal\":10,\"hard\":20,\"very_hard\":30,\"daily\":20,\"trail\":10}` / tablas 06 §6 y §5.2 / 40 | — | 06 | x |\n",
+         "interpretación con menos claves"),
+        ("| clave sin comillas | int | 1 | — | 05 | x |\n", "fila sin clave entre comillas"),
     ]:
         try:
             read_params(doc(bad))
@@ -425,7 +448,7 @@ def self_test() -> int:
             pass
 
     # La tabla real: se lee entera, cada interpretación se usa y ninguna clave sale dos veces.
-    real = read_params(GDD_08.read_text(encoding="utf-8"))
+    real = read_params(gdd_path.read_text(encoding="utf-8"))
     keys = [k for k, _, _, _ in real]
     check("tabla real leída", len(keys) > 150)
     check("claves únicas", len(keys) == len(set(keys)))
@@ -437,7 +460,7 @@ def self_test() -> int:
     check("pendiente con texto", d["eco_calendar_table_v1"][1] is None and d["eco_calendar_table_v1"][2].startswith("tabla 05"))
     check("biz_feature_lives", d["biz_feature_lives"] == ("bool", True, None))
     check("ni una plantilla en las claves", not any("<" in k or "{" in k for k in keys))
-    j, cs = generate(GDD_08.read_text(encoding="utf-8"))
+    j, cs = generate(gdd_path.read_text(encoding="utf-8"))
     check("JSON con LF y salto final", "\r" not in j and j.endswith("}\n"))
     check("C# con el JSON", '""format""' in cs)
 
@@ -460,7 +483,10 @@ def main(argv) -> int:
     ap.add_argument("--out-cs", default=str(OUT_CS))
     args = ap.parse_args(argv)
     if args.self_test:
-        return self_test()
+        if not Path(args.gdd).is_file():
+            print("ERROR: no existe " + args.gdd, file=sys.stderr)
+            return 1
+        return self_test(Path(args.gdd))
     try:
         j, cs = generate(Path(args.gdd).read_text(encoding="utf-8"))
     except GddError as e:

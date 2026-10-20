@@ -80,7 +80,7 @@ namespace AF.Analytics.Tests
             var sink = new FakeAnalyticsSink();
             var analytics = new AnalyticsService(bus);
             analytics.AddSink(sink);
-            bus.Publish(new LevelStarted(12, "m01_v1_n0012", "base", 0, 1, 1, "normal", false));
+            bus.Publish(new LevelStarted(12, "m01_v1_n0012", "base", "comfort", 1, 1, "normal", false));
             bus.Publish(new SeedsEarned("win", 20, 20));
             bus.Publish(new LevelWon(12, "m01_v1_n0012", 18, 15, 2, "{\"undo\":2}", 41000, 20, false, false));
             bus.Publish(new SeedsSpent("continue_cuia", 300, 40));
@@ -93,7 +93,7 @@ namespace AF.Analytics.Tests
                 "level_end", "af_level_fail", "af_level_abandon",
             }));
             Assert.That(analytics.Violations, Is.Empty);
-            Assert.That(sink.Events[0].ToJson(), Is.EqualTo("{\"event\":\"level_start\",\"level_name\":\"m01_v1_n0012\",\"variant\":\"base\",\"band\":0}"));
+            Assert.That(sink.Events[0].ToJson(), Is.EqualTo("{\"event\":\"level_start\",\"level_name\":\"m01_v1_n0012\",\"variant\":\"base\",\"band\":\"comfort\"}"));
             Assert.That(sink.Events[1].ToJson(), Is.EqualTo("{\"event\":\"earn_virtual_currency\",\"virtual_currency_name\":\"seeds\",\"source\":\"win\",\"value\":20}"));
             Assert.That(sink.Events[2].ToJson(), Is.EqualTo(
                 "{\"event\":\"af_level_win\",\"pours\":18,\"par\":15,\"pours_over_par\":3,\"undo_used\":2,\"boosters_json\":\"{\\\"undo\\\":2}\","

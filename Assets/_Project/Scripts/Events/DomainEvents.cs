@@ -15,12 +15,12 @@ namespace AF.Events
     public readonly struct LevelStarted
     {
         /// <summary>Crea el evento.</summary>
-        public LevelStarted(int level, string levelName, string variant, int band, int attempt, int world, string difficulty, bool murky)
+        public LevelStarted(int level, string levelName, string variant, string band, int attempt, int world, string difficulty, bool murky)
         {
             Level = level;
             LevelName = levelName ?? throw new ArgumentNullException(nameof(levelName));
             Variant = variant ?? throw new ArgumentNullException(nameof(variant));
-            Band = band;
+            Band = band ?? string.Empty;
             Attempt = attempt;
             World = world;
             Difficulty = difficulty ?? throw new ArgumentNullException(nameof(difficulty));
@@ -36,8 +36,12 @@ namespace AF.Events
         /// <summary><c>base</c>, <c>plus_empty</c> o <c>minus_color</c> (la variante <c>relief[]</c> servida).</summary>
         public string Variant { get; }
 
-        /// <summary>Banda del Reto (1-3); 0 en la campaña.</summary>
-        public int Band { get; }
+        /// <summary>
+        /// <c>band</c> de <c>level_start</c> [P] (nota, Q-B7-23 (a)): en la campaña, <c>difficulty.band</c> del nivel (03 §12:
+        /// <c>comfort</c>, <c>challenge</c>, <c>recovery</c> o <c>milestone</c>); en el Reto, su banda (<c>1</c>-<c>3</c>);
+        /// vacío si el paquete no la trae (no se envía).
+        /// </summary>
+        public string Band { get; }
 
         /// <summary>Intento del nivel, desde 1.</summary>
         public int Attempt { get; }

@@ -198,7 +198,7 @@ namespace AF.RemoteConfig.Tests
             Assert.That(n["a"]!.Items[1].Number, Is.EqualTo(-25.0));
             Assert.That(n["a"]!.Items[0].IsInteger, Is.True);
             Assert.That(n["a"]!.Items[1].IsInteger, Is.False);
-            foreach (string bad in new[] { "", "{", "[1,]", "{\"a\":1,\"a\":2}", "01", "1 2", "{a:1}", "\"\\x\"", "tru", "[1}" })
+            foreach (string bad in new[] { "", "{", "[1,]", "{\"a\":1,\"a\":2}", "01", "1 2", "{a:1}", "\"\\x\"", "tru", "[1}", "1e999", "[-1e400]" })
             {
                 Assert.That(RcJson.TryParse(bad, out _, out string? error), Is.False, bad);
                 Assert.That(error, Is.Not.Null.And.Not.Empty, bad);

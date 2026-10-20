@@ -83,7 +83,11 @@ cobertura compara esa tabla con los atributos. Un valor que no se entiende deja 
 `Errors`; una clase que no pasa su `Validate()` vuelve entera a `Defaults` [P] (Q-B7-7). El Reto recibe la misma
 `sec_clock_max_drift_h` en su copia (`DailyChallengeConfig.ClockSecurity`).
 
-`SkipConfig` (rama de B3) no está aquí: al fusionarse B3, añadir su tabla a `RcConfigBinder` (son 4 líneas por clave).
+`ShuffleConfig` (B2, `AF.Boosters`, 5 claves) y `SkipConfig` (B3) no están aquí: llegan con sus ramas. Al fusionarlas, hay que
+añadir su tabla a `RcConfigBinder` (una línea por clave) y quitarlas de `NotBoundYet`. `RcConfigBinderTests` descubre por
+reflexión, en los tests, **todos** los tipos con `[RemoteConfigKey]` de los ensamblados de cifras (`RemoteConfigKeyScan`). Cada
+uno tiene que estar enlazado, con exactamente sus claves, o en la lista explícita `NotBoundYet` con su motivo; si no, la prueba
+falla.
 
 ### 2.4 `biz_maintenance_*`, `biz_min_app_version` y `biz_feature_*` (08 §9)
 
@@ -156,6 +160,11 @@ orden**:
 
 Los `.meta` de los archivos nuevos van dentro de cada parche (los generó Unity en el worktree de prueba).
 
+**Al aplicarlos:**
+- con `git apply` dentro del repositorio, o con `git -c core.autocrlf=false apply` (los parches van en LF y el árbol, también);
+- `B7-bootstrap.diff` choca con `B3-ui.diff` en `GameBootstrap.cs`, justo después de `SetUpStreak();`. Los dos añaden ahí su
+  línea. Se resuelve a mano dejando `SetUpSkip();` y después `ConnectTelemetry();` (el bus se conecta con todo ya construido).
+
 Cómo se prueban: `TelemetryHooksTests` (EditMode: la cartera publica con su fuente y sumidero; las canoas con `lives` apagado;
 inicio, victoria, fallo duro, segundo intento y abandono del flujo; la cadena del flujo a 08 §8.2 sin violaciones) y
 `TelemetryBootTests` (PlayMode: la escena real arranca con la caché de RC en la cartera, un nivel ganado da `level_start`,
@@ -172,7 +181,7 @@ recogida apagada y la línea `AF_EVENT` en el log).
 | Q-B7-4 | Cómo se escribe «resto» en los mapas por país de 08 §9 | (a) la clave `"*"`; (b) un objeto `{"default":…, "by_country":{…}}`; (c) la lista ISO completa (inventaría países) |
 | Q-B7-5 | `ads_rv_cooldown_s_<placement>` = «60 (extra_canoe 90)» no nombra los placements | (a) los seis de la fila `ads_rv_cap_<placement>` (como `AdsConfig`); (b) solo los cinco de la 1.0 (sin `daily_chest`) |
 | Q-B7-6 | Defaults que remiten a otra tabla (`eco_calendar_table_v1`, `biz_kpi_*`, `league_prizes`, `regatta_prizes`, `eco_price_tier_<country>`) | (a) `null` + `pending`, y cada bloque transcribe la suya a 08 §9 cuando la implemente (B4 la Bitácora, con `eco_calendar_table_v2` de D-033); (b) transcribirlas ya desde 05 §2.3, 05 §4.2, 06 §5.2/§6, 01 y 09 |
-| Q-B7-7 | Un valor remoto fuera de rango | (a) la clase entera vuelve a `Defaults` y se anota; (b) solo esa clave vuelve a su default. Además: varias `Validate()` no comprueban todos los rangos de 08 §9 (p. ej. `eco_reward_*` 15-30 / 45-90 / 60-120 en `EconomyConfig`); se propone completarlas en sus bloques |
+| Q-B7-7 | Un valor remoto que no pasa `Validate()` | (a) la clase entera vuelve a `Defaults` y se anota; (b) solo esa clave vuelve a su default. **Ojo:** las `Validate()` no comprueban los rangos de 08 §9, solo lo que cada clase valida (p. ej. `EconomyConfig` no limita `eco_reward_*` a 15-30 / 45-90 / 60-120): un valor fuera del rango de 08 §9 que `Validate()` acepte se usa tal cual. Se propone completarlas en sus bloques, o que el generador copie la columna «Rango» al JSON y el binder la aplique |
 | Q-B7-8 | `biz_maintenance_message` es «string»; Remote Config lleva claves, nunca texto (`.claude/rules/localizacion.md`) | (a) es una clave de `strings.csv`; vacía = aviso genérico; (b) texto libre por idioma |
 | Q-B7-9 | Analítica del Reto (`level_start` con `d{b}_n{nnnn}`, `af_daily_challenge`) | (a) sigue como sonda `AF_STATE` (R10) y su gancho va en un parche aparte sobre `DailyChallengeScreen`; (b) que el `LevelFlow` del Reto publique también por el bus |
 | Q-B7-10 | `af_level_win.double_harvest` | (a) el estado en el instante de la victoria (el x2 del río crecido); la Cosecha doble por vídeo sale como `earn_virtual_currency` `double_harvest`; (b) enviar `af_level_win` al salir de la victoria, con el x2 final |
@@ -187,6 +196,7 @@ recogida apagada y la línea `AF_EVENT` en el log).
 | Q-B7-19 | `rc_variant` | (a) `biz_experiment_tag` tal cual (08 §9); (b) además la condición de Firebase |
 | Q-B7-20 | Consentimiento sin pantalla | (a) recogida apagada hasta B8/consentimiento; los sumideros locales escriben; (b) encendida en desarrollo |
 | Q-B7-22 | 04 §11: «los eventos de tablero añaden además `pours` y `t_ms`», que no están en las celdas de cada evento | (a) añadirlos al catálogo de los eventos de comodines y del modal (`af_booster_*`, `af_hint_result`, `af_shuffle_result`, `af_stuck_*`, `af_rescue_unsolvable`, `af_skip_used`) al engancharlos, y anotarlo en 08 §8.2; (b) seguir la letra de las celdas |
+| Q-B7-23 | `level_start.band` (08 §8.2) en la campaña | (a) mandar `difficulty.band` del nivel (03 §12: `comfort`, `challenge`, `recovery`, `milestone`), y en el Reto su banda (`1`-`3`); sin banda en el paquete, no se manda; (b) no mandarlo en la campaña (solo el Reto) |
 | Q-B7-21 | Cómo llega el JSON al cliente | (a) compilado como constante (`RemoteConfigDefaults.Generated.cs`, mismo generador; el test exige que sea el archivo byte a byte); (b) `TextAsset` en la escena (pide tocar `GameSceneBuilder` y regenerar `Game.unity`) |
 
 ## 7. Para el integrador (sin aplicar)
