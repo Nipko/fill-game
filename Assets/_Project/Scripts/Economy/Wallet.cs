@@ -162,7 +162,8 @@ namespace AF.Economy
                     seedsDelta = Config.WinReward(transaction.Tier);
                     break;
                 case TransactionKind.DoubleHarvest:
-                    if (transaction.Level < Config.AdsRvDoubleHarvestFromLevel)
+                    // La del río crecido no es la ubicación de vídeo: sin su compuerta (Q-C14 (a), E35).
+                    if (!transaction.RiverFull && transaction.Level < Config.AdsRvDoubleHarvestFromLevel)
                     {
                         return Reject(transaction, RejectReason.NotUnlocked);
                     }

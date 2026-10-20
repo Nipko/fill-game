@@ -254,6 +254,12 @@ namespace AF.Economy
         /// <summary>SKU de la compra (05 §4.1), o null.</summary>
         public string? Sku { get; private set; }
 
+        /// <summary>
+        /// Cosecha doble del río crecido (<see cref="DoubleHarvestRiver"/>): sin anuncio y sin la compuerta
+        /// <c>ads_rv_double_harvest_from_level</c> (Q-C14 (a) [P]).
+        /// </summary>
+        public bool RiverFull { get; private set; }
+
         /// <summary>Cosecha de una victoria en el nivel <paramref name="level"/>: 20, 60 u 80 según la etiqueta (05 §2.1).</summary>
         public static Transaction Win(int level, RewardTier tier)
         {
@@ -267,6 +273,22 @@ namespace AF.Economy
         public static Transaction DoubleHarvest(int level, RewardTier tier)
         {
             return new Transaction(TransactionKind.DoubleHarvest) { Level = RequireLevel(level), Tier = tier, Source = SeedSource.DoubleHarvest };
+        }
+
+        /// <summary>
+        /// Cosecha doble del río crecido (04 §2.8: «durante río crecido… se aplica sin video»; 05 §2.4; nota
+        /// <c>docs/dev/crecida-canasta.md</c> C8, Q-C1 (a) y Q-C14 (a) [P], enganche E35): otra Cosecha igual a la de la victoria,
+        /// con <c>source</c> = <c>double_harvest</c>. A diferencia de <see cref="DoubleHarvest"/>, no pasa por la compuerta
+        /// <c>ads_rv_double_harvest_from_level</c>: no es la ubicación de vídeo <c>rv_double_harvest</c> y no gasta su tope
+        /// (<c>ads_rv_cap_double_harvest</c>, cosa de <c>AF.Ads</c>). Solo la pide la Crecida
+        /// (<see cref="StreakOutcome.AppendTransactions"/>), que ya decidió si toca.
+        /// </summary>
+        internal static Transaction DoubleHarvestRiver(int level, RewardTier tier)
+        {
+            return new Transaction(TransactionKind.DoubleHarvest)
+            {
+                Level = RequireLevel(level), Tier = tier, Source = SeedSource.DoubleHarvest, RiverFull = true,
+            };
         }
 
         /// <summary>

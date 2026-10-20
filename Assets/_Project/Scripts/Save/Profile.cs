@@ -20,7 +20,8 @@ namespace AF.Save
     /// [P] (los avistamientos de la tarjeta «¡Miquito a la vista!», Q11 del guion de la intro; D-029; tarea DC15), con su paso
     /// de migración 1 → 2 (<see cref="ProfileMigrations"/>), y <c>progress.undo_tip_seen</c> [P] (el tooltip de Marea, una vez
     /// en la vida; D-030, pregunta 15 (b); tarea DC23), que entra en el mismo esquema 2 sin paso propio porque aún no se ha
-    /// publicado.
+    /// publicado. La Crecida (B1a; Q-M9 (a) [P]) añade <c>streak</c> (omitido mientras es null) y <c>daily.streak_hits</c> y
+    /// <c>daily.streak_seeds</c> (omitidos en su default), también sin migrar.
     /// <para>
     /// Es un contenedor de datos: las reglas (topes, precios, regeneración de canoas, reinicio diario) viven en
     /// <c>AF.Economy</c>, <c>AF.Ads</c> y <c>AF.Boosters</c>, que lo mutan y lo guardan con <see cref="IProfileStore"/>.
@@ -93,6 +94,17 @@ namespace AF.Save
         /// en el 2, el de <c>fauna</c>, y la migración 1 → 2 la conserva) porque aún no se ha publicado (08 §4.3).
         /// </summary>
         public DailyChallengeData? DailyChallenge { get; set; }
+
+        /// <summary>
+        /// <c>streak</c> (08 §4.3 con Q-M9 (a) [P] del plan de la tanda 5; 06 §4.3; 05 §2.4): la Crecida, <c>{wins, river_full}</c>,
+        /// o null si nunca se guardó (entonces la clave no se escribe). El <c>shield_available</c> de 08 §4.3 no está aquí: hay uno
+        /// solo, el de <c>daily</c> (04 §10.1), junto a los hitos y las semillas de hoy (<see cref="DailyData.StreakHits"/> y
+        /// <see cref="DailyData.StreakSeeds"/>), que se reinician con <c>date_local</c>. Vive en el mismo perfil que
+        /// <see cref="Wallet"/> para que el apunte de un hito y su pago salgan en la misma escritura (un hito nunca se paga dos veces
+        /// el mismo día). Las reglas las aplica <c>AF.Economy</c> (<c>ProfileStreakStore</c>); aquí solo se guardan. Entra sin subir
+        /// el esquema (va en el 2, y la migración 1 → 2 la conserva) porque aún no se ha publicado (08 §4.3).
+        /// </summary>
+        public StreakData? Streak { get; set; }
 
         /// <summary>
         /// Perfil de primera ejecución: <c>created_at</c> = ahora, 0 semillas (el GDD no fija otro saldo inicial),
@@ -169,7 +181,8 @@ namespace AF.Save
 
     /// <summary>
     /// <c>daily</c>: contadores del día local, con las claves de 04 §10.1 más <c>interstitials_today</c> (tope diario de
-    /// intersticiales, 05 §6.3). Al cambiar <c>date_local</c> los pone a cero quien aplica la regla de cada uno.
+    /// intersticiales, 05 §6.3) y los de la Crecida <c>streak_hits</c> y <c>streak_seeds</c> [P] (06 §4.3; Q-M9 (a)).
+    /// Al cambiar <c>date_local</c> los pone a cero quien aplica la regla de cada uno.
     /// </summary>
     public sealed class DailyData
     {
@@ -216,8 +229,36 @@ namespace AF.Save
         /// <summary><c>shuffles_today</c>: Pororocas usadas hoy.</summary>
         public int ShufflesToday { get; set; }
 
-        /// <summary><c>shield_available</c>: Hoja escudo disponible hoy.</summary>
+        /// <summary>
+        /// <c>shield_available</c>: Hoja escudo disponible hoy (1 por día local, <c>streak_shield_per_day</c>; 06 §4.3). Es el único
+        /// <c>shield_available</c> del perfil: el bloque <c>streak</c> no lleva otro (Q-M9 (a) [P]).
+        /// </summary>
         public bool ShieldAvailable { get; set; }
+
+        /// <summary>
+        /// <c>streak_hits</c> [P] (Q-M9 (a)): hitos de la Crecida ya pagados hoy (p. ej. <c>[3, 6]</c>; cada hito se paga una vez por
+        /// día local, <c>streak_hits_once_per_day</c>, 06 §4.3). Vacía por defecto; vacía, la clave no se escribe.
+        /// </summary>
+        public List<int> StreakHits { get; } = new List<int>();
+
+        /// <summary>
+        /// <c>streak_seeds</c> [P] (Q-M9 (a)): semillas de los hitos pagadas hoy que cuentan para el tope diario
+        /// (<c>streak_daily_cap</c>, 600; 06 §4.3). 0 por defecto; con 0, la clave no se escribe.
+        /// </summary>
+        public int StreakSeeds { get; set; }
+    }
+
+    /// <summary>
+    /// <c>streak</c> (08 §4.3 con Q-M9 (a) [P]): la Crecida que no es del día. Solo datos: el significado lo da
+    /// <c>AF.Economy.StreakRecord</c>.
+    /// </summary>
+    public sealed class StreakData
+    {
+        /// <summary><c>wins</c>: la racha (vuelve a 0 al pagar el hito 10 y tras un fallo duro no escudado; 05 §2.4).</summary>
+        public int Wins { get; set; }
+
+        /// <summary><c>river_full</c>: río crecido, hasta el siguiente fallo duro no escudado (08 §4.3; 05 §2.4).</summary>
+        public bool RiverFull { get; set; }
     }
 
     /// <summary><c>progress</c> (08 §4.3; 04 §10.1; <c>map_seen_level</c>, D-013, y <c>undo_tip_seen</c> [P], DC23).</summary>
