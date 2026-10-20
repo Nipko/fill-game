@@ -4,6 +4,15 @@ back_home,Volver al inicio,Back to home,Voltar ao início,traducido,traducido
 cancel,Cancelar,Cancel,Cancelar,traducido,traducido
 content_end_eta,Río arriba llegan 100 niveles nuevos en {n:plural:{} día|unos {} días}.,100 new levels are coming upriver in {n:plural:{} day|about {} days}.,100 níveis novos chegam rio acima em {n:plural:{} dia|cerca de {} dias}.,traducido,traducido
 content_end_title,El río sigue creciendo,The river keeps growing,O rio continua crescendo,traducido,traducido
+daily_card_continue,Seguir,Continue,Continuar,traducido,traducido
+daily_card_pending,Pendiente de validar,Pending check,Aguardando validação,traducido,traducido
+daily_card_sealed,Sellado,Sealed,Selado,traducido,traducido
+daily_card_title,Reto del río · {date},River Challenge · {date},Desafio do Rio · {date},traducido,traducido
+daily_date_short,{day} {month},{month} {day},{day} {month},traducido,traducido
+daily_reward_seeds,+{n},+{n},+{n},traducido,traducido
+daily_streak,{n}/{total},{n}/{total},{n}/{total},traducido,traducido
+daily_win_no_reward,Sin premio: esta fecha ya se reclamó,No reward: this date was already claimed,Sem prêmio: esta data já foi resgatada,traducido,traducido
+daily_win_pending,Premio pendiente de validar,Reward pending check,Prêmio aguardando validação,traducido,traducido
 double_harvest,Cosecha doble: x2 por video,Double Harvest: x2 for a video,Colheita dupla: x2 por vídeo,traducido,traducido
 double_harvest_delta,+{n} → +{doubled},+{n} → +{doubled},+{n} → +{doubled},traducido,traducido
 extra_cuia_gift,Capi te trae una cuia más para este nivel. La próxima la encuentras en tu Canasta,Capi brings you one more cuia for this level. You'll find the next one in your Basket,Capi traz mais uma cuia para este nível. A próxima você encontra na sua Cesta,traducido,traducido
@@ -20,6 +29,18 @@ iap_simulated_purchase,Compra simulada,Simulated purchase,Compra simulada,traduc
 keep_playing,Seguir jugando,Keep playing,Continuar jogando,traducido,traducido
 language_name_en_xa,Pseudolocalización (en-XA),Pseudolocalization (en-XA),Pseudolocalização (en-XA),traducido,traducido
 level_attempt,Nivel {n} · intento {attempt},Level {n} · attempt {attempt},Nível {n} · tentativa {attempt},traducido,traducido
+month_short_01,ene,Jan,jan,traducido,traducido
+month_short_02,feb,Feb,fev,traducido,traducido
+month_short_03,mar,Mar,mar,traducido,traducido
+month_short_04,abr,Apr,abr,traducido,traducido
+month_short_05,may,May,mai,traducido,traducido
+month_short_06,jun,Jun,jun,traducido,traducido
+month_short_07,jul,Jul,jul,traducido,traducido
+month_short_08,ago,Aug,ago,traducido,traducido
+month_short_09,sept,Sep,set,traducido,traducido
+month_short_10,oct,Oct,out,traducido,traducido
+month_short_11,nov,Nov,nov,traducido,traducido
+month_short_12,dic,Dec,dez,traducido,traducido
 no_canoes_infinite,Canoas infinitas 1 h · {price},Endless Canoes 1 h · {price},Canoas infinitas 1 h · {price},traducido,traducido
 no_canoes_next,Tu próxima canoa vuelve en,Your next canoe returns in,Sua próxima canoa volta em,traducido,traducido
 no_canoes_refill,Llenar canoas · {n}/{n},Refill canoes · {n}/{n},Encher canoas · {n}/{n},traducido,traducido
@@ -39,7 +60,6 @@ reward_line,Premio: {n},Reward: {n},Prêmio: {n},traducido,traducido
 ribbon,×{n},×{n},×{n},traducido,traducido
 river_lowered_color,El río bajó: esta vez hay un color menos,The river dropped: one color fewer this time,O rio baixou: desta vez há uma cor a menos,traducido,traducido
 river_lowered_cuia,El río bajó: esta vez hay una cuia más,The river dropped: one more cuia this time,O rio baixou: desta vez há uma cuia a mais,traducido,traducido
-settings_about_amazon,Sobre la Amazonía,About the Amazon,Sobre a Amazônia,traducido,traducido
 settings_idle_hint,Pista por inactividad,Hint when idle,Dica por inatividade,traducido,traducido
 settings_language_auto,Automático,Automatic,Automático,traducido,traducido
 settings_patterns_auto,Automático,Automatic,Automático,traducido,traducido
@@ -56,8 +76,8 @@ stuck_balsa_499,"Balsa de rescate
 {price}",traducido,traducido
 stuck_balsa_499_content,"Todo para seguir: semillas, una cuia y canoas infinitas","All you need to go on: seeds, a cuia and endless canoes","Tudo para seguir: sementes, uma cuia e canoas infinitas",traducido,traducido
 stuck_pack_199,"Puñado de semillas
-{seeds} · {price}","Handful
-{seeds} · {price}","Punhado
+{seeds} · {price}","Handful of seeds
+{seeds} · {price}","Punhado de sementes
 {seeds} · {price}",traducido,traducido
 stuck_rescue_cta,Continuar: +1 cuia,Continue: +1 cuia,Continuar: +1 cuia,traducido,traducido
 stuck_rescue_discount,Primer rescate del día: –50 %,First rescue today: –50%,Primeiro resgate do dia: –50%,traducido,traducido

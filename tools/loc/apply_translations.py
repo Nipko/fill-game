@@ -19,11 +19,22 @@ El archivo de traducciones va en UTF-8 sin BOM, LF, RFC 4180 y en orden ordinal 
 nombre: strings*.csv va a strings.csv y facts*.csv a facts.csv.
 
 Uso (desde la raíz del repositorio):
-    python tools/loc/apply_translations.py                 # aplica strings.csv y facts.csv de la carpeta de entrega
+    python tools/loc/apply_translations.py                 # aplica strings.csv y strings_p14.csv de la carpeta de entrega
     python tools/loc/apply_translations.py --check         # no escribe; código 1 si aplicar cambiaría algo o hay conflictos
-    python tools/loc/apply_translations.py <archivos.csv>  # solo esos archivos (por ejemplo, strings_mapa.csv o strings_p14.csv)
+    python tools/loc/apply_translations.py <archivos.csv>  # solo esos archivos (strings_mapa.csv, strings_glosario.csv, facts*.csv)
     python tools/loc/apply_translations.py --self-test     # pruebas propias, en memoria
-Opciones: --loc-dir <carpeta de las tablas> (por defecto Assets/_Project/Data/Loc).
+Opciones: --loc-dir <carpeta de las tablas> (por defecto Assets/_Project/Data/Loc; la raíz del repositorio es la que la
+contiene, para las comprobaciones de los parches).
+
+Entregas que piden un parche (docs/dev/traspaso/spark-enganches/ y spark-traducciones/), comprobado antes de escribir:
+- *glosario*.csv: los nombres nuevos de glosario.diff (glossary.csv con el en de booster.undo);
+- strings_mapa*.csv: MapTextTests.patch (la prueba ya no exige en y pt-BR vacíos en las claves del Mapa);
+- facts_mapa*.csv y cualquier fila map.*: stops-preserve.diff (tools/river-map/stops.py conserva en, pt-BR y sus estados).
+
+Retención (T2-Q6; 08 §4.7: «una traducción solo vale con status en aprobado_es»; FactCatalogTests exige los estados vacíos
+mientras el español no esté aprobado): en facts.csv, una fila con status por debajo de aprobado_es no se escribe; sale como
+«RETENIDA» (aviso, no conflicto) y se aplicará cuando el asesor apruebe el español. Si entonces el español cambió, la
+comprobación del es-419 la convierte en conflicto.
 
 Qué hace y qué no:
 - Cambia solo las celdas en, pt-BR, status_en y status_pt-BR de las filas citadas. Las demás filas, las demás columnas, el
@@ -31,8 +42,8 @@ Qué hace y qué no:
   crudo, comillas incluidas).
 - Nunca pisa una celda ya rellena: si la tabla ya tiene un texto o un estado distinto del entregado, es un conflicto; si es
   el mismo, no hace nada (aplicar dos veces da lo mismo).
-- Nunca escribe en las filas map.* de facts.csv: las regenera solo tools/river-map/stops.py, con en y pt-BR vacíos (08 §4.5),
-  y una traducción ahí se perdería en la siguiente regeneración.
+- Nunca escribe en las filas map.* de facts.csv mientras tools/river-map/stops.py las regenere con en y pt-BR vacíos (08
+  §4.5): sin stops-preserve.diff, una traducción ahí se perdería en la siguiente regeneración.
 - Comprueba cada traducción como LocTablesTests: los mismos marcadores con nombre que es-419 (también {sep}), las llaves
   parejas y la longitud visible ≤ max_chars × 1,3 (la regla de VisibleLength).
 - Una clave que ya no existe en la tabla es un aviso (se salta), no un conflicto.
@@ -54,7 +65,11 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 DEFAULT_LOC = REPO / "Assets" / "_Project" / "Data" / "Loc"
 DEFAULT_DIR = REPO / "docs" / "dev" / "traspaso" / "spark-traducciones"
-DEFAULT_FILES = ("strings.csv", "facts.csv")
+DEFAULT_FILES = ("strings.csv", "strings_p14.csv")
+STATUS_ORDER = {"": 0, "borrador": 1, "pendiente_asesor": 2, "aprobado_es": 3}
+STOPS_MARKER = "PRESERVED_LOCALE_COLUMNS"  # lo añade stops-preserve.diff a tools/river-map/stops.py
+MAP_TEST_OLD = 'Is.Empty, key + " (" + locale + "): pendiente del traductor"'  # lo quita MapTextTests.patch
+GLOSSARY_MARKER = "booster.undo"  # glosario.diff le da en
 
 TABLE_HEADER = ["key", "es-419", "en", "pt-BR", "context", "max_chars", "status", "status_en", "status_pt-BR", "notes", "args"]
 TR_HEADER = ["key", "es-419", "en", "pt-BR", "status_en", "status_pt-BR"]
@@ -211,6 +226,7 @@ class Result:
     changes: list[str] = field(default_factory=list)
     conflicts: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
+    retained: list[str] = field(default_factory=list)
 
 
 def read_translations(text: str, name: str) -> tuple[list[dict], list[str]]:
@@ -240,7 +256,7 @@ def read_translations(text: str, name: str) -> tuple[list[dict], list[str]]:
     return out, errors
 
 
-def apply(table_text: str, table_name: str, translations: list[dict], tr_name: str) -> Result:
+def apply(table_text: str, table_name: str, translations: list[dict], tr_name: str, map_ok: bool = False) -> Result:
     res = Result()
     records = split_records(table_text, table_name)
     header = [unquote(f) for f in records[0]]
@@ -263,12 +279,17 @@ def apply(table_text: str, table_name: str, translations: list[dict], tr_name: s
             continue
         fields = records[index[key]]
         values = {c: unquote(fields[col[c]]) for c in header}
-        if key.startswith(GENERATED_PREFIX) and table_name.startswith("facts"):
-            res.conflicts.append(f"{tr_name} {key}: fila del bloque map.*, que regenera solo tools/river-map/stops.py")
+        if key.startswith(GENERATED_PREFIX) and table_name.startswith("facts") and not map_ok:
+            res.conflicts.append(f"{tr_name} {key}: fila del bloque map.*, que tools/river-map/stops.py regenera con en y pt-BR "
+                                 "vacíos (falta stops-preserve.diff)")
             continue
         if tr["es-419"] != values["es-419"]:
             res.conflicts.append(f"{tr_name} {key}: el es-419 de la tabla cambió desde la traducción "
                                  f"(tabla «{values['es-419']}», traducción «{tr['es-419']}»)")
+            continue
+        if table_name.startswith("facts") and STATUS_ORDER.get(values["status"], 0) < STATUS_ORDER["aprobado_es"]:
+            if any(tr[loc] for loc in LOCALES):
+                res.retained.append(f"{tr_name} {key}: español en «{values['status'] or 'sin estado'}»; se aplicará con aprobado_es")
             continue
         try:
             max_chars = int(values["max_chars"] or "0")
@@ -307,7 +328,37 @@ def target_of(path: Path) -> str | None:
     return None
 
 
+def requirement_errors(name: str, repo: Path) -> list[str]:
+    """Lo que pide una entrega antes de aplicarse (el parche que la acompaña)."""
+    errs = []
+
+    def text(rel: str) -> str:
+        try:
+            return (repo / rel).read_text(encoding="utf-8")
+        except OSError:
+            return ""
+
+    if "glosario" in name:
+        rows = list(csv.reader(io.StringIO(text("Assets/_Project/Data/Loc/glossary.csv"), newline="")))
+        if not any(r and r[0] == GLOSSARY_MARKER and len(r) > 3 and r[3] for r in rows):
+            errs.append(f"{name}: necesita glosario.diff aplicado (glossary.csv sin el en de {GLOSSARY_MARKER})")
+    if name.startswith("strings_mapa") and MAP_TEST_OLD in text("Assets/_Project/Tests/EditMode/MapTextTests.cs"):
+        errs.append(f"{name}: necesita MapTextTests.patch aplicado (la prueba aún exige en y pt-BR vacíos)")
+    if name.startswith("facts_mapa") and STOPS_MARKER not in text("tools/river-map/stops.py"):
+        errs.append(f"{name}: necesita stops-preserve.diff aplicado (stops.py no conserva en y pt-BR del bloque map.*)")
+    return errs
+
+
+def repo_of(loc_dir: Path) -> Path:
+    """La raíz del repositorio: la carpeta que contiene Assets/_Project/Data/Loc."""
+    p = loc_dir.resolve()
+    return p.parents[3] if len(p.parents) > 3 else p
+
+
 def run(files: list[Path], loc_dir: Path, check: bool, out=sys.stdout) -> int:
+    repo = repo_of(loc_dir)
+    stops = repo / "tools" / "river-map" / "stops.py"
+    map_ok = stops.exists() and STOPS_MARKER in stops.read_text(encoding="utf-8")
     tables: dict[str, str] = {}
     pending: dict[str, list[tuple[list[dict], str]]] = {}
     errors: list[str] = []
@@ -328,19 +379,21 @@ def run(files: list[Path], loc_dir: Path, check: bool, out=sys.stdout) -> int:
             return 2
         rows, errs = read_translations(tr_text, f.name)
         errors.extend(errs)
+        errors.extend(requirement_errors(f.name, repo))
         pending.setdefault(target, []).append((rows, f.name))
     new_tables: dict[str, str] = {}
-    total_changes, conflicts, warnings = 0, list(errors), []
+    total_changes, conflicts, warnings, retained = 0, list(errors), [], []
     for target, batches in pending.items():
         text = tables[target]
         for rows, name in batches:
             try:
-                res = apply(text, target, rows, name)
+                res = apply(text, target, rows, name, map_ok)
             except CsvError as e:
                 conflicts.append(str(e))
                 continue
             conflicts.extend(res.conflicts)
             warnings.extend(res.warnings)
+            retained.extend(res.retained)
             total_changes += len(res.changes)
             if res.text is not None:
                 text = res.text
@@ -348,6 +401,9 @@ def run(files: list[Path], loc_dir: Path, check: bool, out=sys.stdout) -> int:
             new_tables[target] = text
     for w in warnings:
         print(f"AVISO {w}", file=out)
+    if retained:
+        print(f"RETENIDAS {len(retained)} filas de facts.csv con el español sin aprobar (T2-Q6; 08 §4.7); la primera: "
+              f"{retained[0]}", file=out)
     for c in conflicts:
         print(f"CONFLICTO {c}", file=out)
     if conflicts:
@@ -474,6 +530,45 @@ def self_test() -> int:
         bad = dpath / "otros.csv"
         bad.write_bytes(T.encode())
         case("nombre sin tabla: 2", run([bad], dpath, False, sink) == 2)
+    # 11. Retención de facts.csv (T2-Q6): por debajo de aprobado_es no se escribe; con aprobado_es, sí.
+    facts2 = (H + "fact.x.01,Mide 35 m,,,ctx,90,pendiente_asesor,,,,\n"
+              + "fact.x.02,Pesa 4 kg,,,ctx,90,aprobado_es,,,,\n"
+              + "map.stop.x.dato_01,Dato,,,ctx,90,aprobado_es,,,generado,\n")
+    rows11, _ = read_translations(tr([["fact.x.01", "Mide 35 m", "It's 35 m", "Mede 35 m", "traducido", "traducido"],
+                                      ["fact.x.02", "Pesa 4 kg", "It weighs 4 kg", "", "traducido", ""]]), "facts.csv")
+    r11 = apply(facts2, "facts.csv", rows11, "facts.csv")
+    case("facts en pendiente_asesor: retenida, sin escribir", len(r11.retained) == 1 and "fact.x.01" in r11.retained[0]
+         and "fact.x.01,Mide 35 m,,,ctx" in (r11.text or ""))
+    case("facts en aprobado_es: se escribe", r11.changes == ["fact.x.02 (en)"] and not r11.conflicts)
+    r11b = apply(H + "fact.x.01,Mide 35 m,,,ctx,90,pendiente_asesor,,,,\n", "facts.csv", rows11[:1], "facts.csv")
+    case("solo retenidas: nada que escribir ni conflicto", r11b.text is None and not r11b.conflicts and r11b.retained)
+    case("strings no se retiene (borrador se escribe)", apply(table, "strings.csv", rows, "t.csv").changes)
+    # 12. map.*: solo con stops-preserve.diff.
+    rows12, _ = read_translations(tr([["map.stop.x.dato_01", "Dato", "Fact", "", "traducido", ""]]), "facts_mapa.csv")
+    case("map.* sin el parche: conflicto", apply(facts2, "facts.csv", rows12, "facts_mapa.csv").conflicts)
+    case("map.* con el parche: se escribe", apply(facts2, "facts.csv", rows12, "facts_mapa.csv", True).changes == ["map.stop.x.dato_01 (en)"])
+    # 13. Entregas que piden un parche.
+    with tempfile.TemporaryDirectory() as d:
+        repo = Path(d)
+        (repo / "Assets/_Project/Data/Loc").mkdir(parents=True)
+        (repo / "Assets/_Project/Tests/EditMode").mkdir(parents=True)
+        (repo / "tools/river-map").mkdir(parents=True)
+        glossary = repo / "Assets/_Project/Data/Loc/glossary.csv"
+        mtest = repo / "Assets/_Project/Tests/EditMode/MapTextTests.cs"
+        stops = repo / "tools/river-map/stops.py"
+        glossary.write_text("term,kind,es-419,en,pt-BR,notes\nbooster.undo,booster,Marea,,,n\n", encoding="utf-8")
+        mtest.write_text("Assert.That(strings.TextAt(r, locale), " + MAP_TEST_OLD + ");\n", encoding="utf-8")
+        stops.write_text("# stops\n", encoding="utf-8")
+        case("glosario sin el parche: error", requirement_errors("strings_glosario.csv", repo))
+        case("strings_mapa sin el parche: error", requirement_errors("strings_mapa.csv", repo))
+        case("facts_mapa sin el parche: error", requirement_errors("facts_mapa.csv", repo))
+        case("strings.csv no pide nada", not requirement_errors("strings.csv", repo))
+        glossary.write_text("term,kind,es-419,en,pt-BR,notes\nbooster.undo,booster,Marea,Tide,Maré,n\n", encoding="utf-8")
+        mtest.write_text("// parcheado\n", encoding="utf-8")
+        stops.write_text(STOPS_MARKER + " = ()\n", encoding="utf-8")
+        case("con los tres parches: sin errores", not requirement_errors("strings_glosario.csv", repo)
+             and not requirement_errors("strings_mapa.csv", repo) and not requirement_errors("facts_mapa.csv", repo))
+        case("la raíz sale de --loc-dir", repo_of(repo / "Assets/_Project/Data/Loc") == repo.resolve())
     failed = [n for n, ok in checks if not ok]
     for n, ok in checks:
         print(("PASS " if ok else "FAIL ") + n)

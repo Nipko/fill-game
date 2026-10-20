@@ -1,0 +1,64 @@
+key,es-419,en,pt-BR,status_en,status_pt-BR
+daily_streak_reward,+1 Pororoca,+1 Pororoca,+1 Pororoca,traducido,traducido
+daily_streak_reward_locked,+1 Pororoca · se desbloquea en el nivel {level},+1 Pororoca · unlocks at level {level},+1 Pororoca · desbloqueia no nível {level},traducido,traducido
+difficulty_subtitle_hard,Aguas bravas,Rough Waters,Águas bravas,traducido,traducido
+difficulty_subtitle_very_hard,Noche de jaguar,Jaguar Night,Noite da Onça,traducido,traducido
+firefly_gift,+1 Luciérnaga,+1 Firefly,+1 Vaga-lume,traducido,traducido
+firefly_line,Una luciérnaga ilumina las de una cuia,A firefly lights up the ones in a cuia,Um vaga-lume ilumina as de uma cuia,traducido,traducido
+hint_no_exit,"Desde aquí no hay salida:
+la Marea o la orilla","No way out from here:
+the Tide or the shore","Daqui não há saída:
+a Maré ou a margem",traducido,traducido
+hint_no_safe_pour,"No veo un vertido seguro:
+la luciérnaga ilumina una cuia","I don't see a safe pour:
+the firefly lights up a cuia","Não vejo um despejo seguro:
+o vaga-lume ilumina uma cuia",traducido,traducido
+hint_no_safe_pour_tinaja,"No veo un vertido seguro:
+la luciérnaga ilumina la tinaja","I don't see a safe pour:
+the firefly lights up the water jar","Não vejo um despejo seguro:
+o vaga-lume ilumina a talha",traducido,traducido
+hint_unsupported,La morpho no conoce este tramo todavía,The morpho doesn't know this stretch yet,A morpho ainda não conhece este trecho,traducido,traducido
+iap_af_skin_m02_name,Pack Cuia de Santarém,Santarém Cuia Pack,Pacote Cuia de Santarém,traducido,traducido
+iap_af_skin_m03_name,Pack Cuia del Encuentro,Meeting of Waters Cuia Pack,Pacote Cuia do Encontro,traducido,traducido
+reveal_gift_toast,+1 Luciérnaga,+1 Firefly,+1 Vaga-lume,traducido,traducido
+stuck_undo,Deshacer · Marea,Undo · Tide,Desfazer · Maré,traducido,traducido
+stuck_unsolvable,Ni una cuia más salva este tramo. Prueba la Marea o vuelve a la orilla.,Not even one more cuia saves this stretch. Try the Tide or go back to shore.,Nem mais uma cuia salva este trecho. Tente a Maré ou volte à margem.,traducido,traducido
+tutorial_alta,Esta agua tiene cinco dosis: solo cabe en la cuia alta,This water has five doses: it only fits in the tall cuia,Esta água tem cinco doses: só cabe na cuia alta,traducido,traducido
+tutorial_barro,El barro acepta cualquier fruta; el primer vertido lo lava… y entierra lo que hay debajo.,Mud accepts any fruit; the first pour washes it away… and buries what's underneath.,O barro aceita qualquer fruta; o primeiro despejo o lava… e enterra o que está embaixo.,traducido,traducido
+tutorial_brote,El brote está cerrado: vierte más camu camu encima para que germine.,The sprout is closed: pour more camu camu on top so it germinates.,O broto está fechado: despeje mais camu-camu em cima para ele germinar.,traducido,traducido
+tutorial_brote_n2,"Este brote tiene dos hojas: cada dosis de su fruta abre una, y con las dos germina.","This sprout has two leaves: each dose of its fruit opens one, and with both it germinates.","Este broto tem duas folhas: cada dose da sua fruta abre uma, e com as duas ele germina.",traducido,traducido
+tutorial_chica,"Esta cuia chica solo guarda dos dosis: úsala para apartar, no para terminar","This small cuia only holds two doses: use it to set aside, not to finish","Esta cuia pequena só guarda duas doses: use-a para separar, não para terminar",traducido,traducido
+tutorial_flor,"La flor se abre cuando selles cuias de sus dos frutas: con una sola, solo se entreabre.","The flower opens when you seal cuias of its two fruits: with just one, it only half opens.","A flor se abre quando você selar cuias das suas duas frutas: com uma só, ela só se entreabre.",traducido,traducido
+tutorial_hoja,Esta hoja solo deja pasar aguaje. Vierte aguaje para abrirla.,This leaf only lets aguaje through. Pour aguaje to open it.,,traducido,
+tutorial_hoja_atada,"La hoja atada nunca cae: solo recibe su fruta, pero también puedes verter desde ella.","The tied leaf never falls: it only takes its fruit, but you can also pour from it.","A palha atada nunca cai: só recebe sua fruta, mas você também pode despejar dela.",traducido,traducido
+tutorial_liana,La liana se suelta cuando selles una cuia de taperebá.,The vine comes loose when you seal a cuia of hog plum.,,traducido,
+tutorial_liana_n,Las cuentas de la liana dicen cuántas cuias debes sellar para que se suelte.,The vine's beads tell how many cuias you must seal for it to come loose.,,traducido,
+tutorial_lluvia,La lluvia llena esta cuia cada tres vertidos: deja arriba el agua o saca la fruta antes de que la tape.,The rain fills this cuia every three pours: leave water on top or take the fruit out before it's covered.,A chuva enche esta cuia a cada três despejos: deixe água em cima ou tire a fruta antes que ela a cubra.,traducido,traducido
+tutorial_matapi,Lo que entra al matapi no sale. Llénalo con una sola fruta.,What goes into the matapi doesn't come out. Fill it with a single fruit.,,traducido,
+tutorial_morpho,¿Atascado? La morpho conoce el río,Stuck? The morpho knows the river,Travou? A morpho conhece o rio,traducido,traducido
+tutorial_pirana,"Cada cuatro vertidos, la piraña muerde la cuia que acabas de llenar. Sellarla a tiempo evita el mordisco.","Every four pours, the piranha bites the cuia you just filled. Sealing it in time stops the bite.","A cada quatro despejos, a piranha morde a cuia que você acabou de encher. Selá-la a tempo evita a mordida.",traducido,traducido
+tutorial_remolino,Las dos cuias del remolino están unidas por debajo: lo que viertes en una aparece en el fondo de la otra.,The whirlpool's two cuias are joined underneath: what you pour into one appears at the bottom of the other.,As duas cuias do redemoinho estão ligadas por baixo: o que você despeja em uma aparece no fundo da outra.,traducido,traducido
+tutorial_undo,Marea · Deshacer: toca para devolver el agua,Tide · Undo: tap to bring the water back,Maré · Desfazer: toque para devolver a água,traducido,traducido
+world_w01_country,Brasil (Pará),Brazil (Pará),Brasil (Pará),traducido,traducido
+world_w02_country,Brasil (Pará),Brazil (Pará),Brasil (Pará),traducido,traducido
+world_w02_river,Tapajós,Tapajós,Tapajós,traducido,traducido
+world_w03_river,Negro + Solimões,Negro + Solimões,Negro + Solimões,traducido,traducido
+world_w04_country,Colombia,Colombia,Colômbia,traducido,traducido
+world_w05_country,Perú,Peru,Peru,traducido,traducido
+world_w05_river,Marañón-Ucayali,Marañón-Ucayali,Marañón-Ucayali,traducido,traducido
+world_w06_country,Ecuador,Ecuador,Equador,traducido,traducido
+world_w06_river,Napo + lagunas negras de Cuyabeno,Napo + Cuyabeno blackwater lagoons,Napo + lagoas negras de Cuyabeno,traducido,traducido
+world_w07_country,Perú,Peru,Peru,traducido,traducido
+world_w07_river,Tambopata / Madre de Dios,Tambopata / Madre de Dios,Tambopata / Madre de Dios,traducido,traducido
+world_w08_country,Bolivia,Bolivia,Bolívia,traducido,traducido
+world_w08_river,"Beni / Mamoré, Iténez","Beni / Mamoré, Iténez","Beni / Mamoré, Iténez",traducido,traducido
+world_w09_country,Perú,Peru,Peru,traducido,traducido
+world_w09_river,"Ucayali, Shanay-Timpishka","Ucayali, Shanay-Timpishka","Ucayali, Shanay-Timpishka",traducido,traducido
+world_w10_country,Venezuela / Brasil,Venezuela / Brazil,Venezuela / Brasil,traducido,traducido
+world_w10_river,"Negro, Casiquiare","Negro, Casiquiare","Negro, Casiquiare",traducido,traducido
+world_w11_country,Guyana / Surinam / Guayana Francesa,Guyana / Suriname / French Guiana,Guiana / Suriname / Guiana Francesa,traducido,traducido
+world_w11_river,"Takutu / Branco, Maroni","Takutu / Branco, Maroni","Takutu / Branco, Maroni",traducido,traducido
+world_w12_country,Venezuela / Colombia,Venezuela / Colombia,Venezuela / Colômbia,traducido,traducido
+world_w12_river,"Caroní, Caño Cristales (vecinos del Orinoco)","Caroní, Caño Cristales (Orinoco neighbors)","Caroní, Caño Cristales (vizinhos do Orinoco)",traducido,traducido
+world_w13_country,Perú (Andes),Peru (Andes),Peru (Andes),traducido,traducido
+world_w13_river,Marañón alto,Upper Marañón,Alto Marañón,traducido,traducido

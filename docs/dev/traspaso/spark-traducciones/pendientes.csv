@@ -1,48 +1,30 @@
 key,tabla,idioma,motivo
-difficulty_subtitle_hard,strings,en,cultural: subtítulo temático sin EN/PT en el glosario §6.1
-difficulty_subtitle_hard,strings,pt-BR,cultural: subtítulo temático sin EN/PT en el glosario §6.1
-difficulty_subtitle_very_hard,strings,en,cultural: subtítulo temático con fauna (jaguar) sin EN/PT en el glosario §6.1
-difficulty_subtitle_very_hard,strings,pt-BR,cultural: subtítulo temático con fauna (jaguar) sin EN/PT en el glosario §6.1
+fact.acai.01,facts,en,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
+fact.acai.01,facts,pt-BR,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
 fact.acai.02,facts,en,"cultural: lugares (Pará, Amapá, Amazonas)"
 fact.acai.02,facts,pt-BR,"cultural: lugares (Pará, Amapá, Amazonas)"
 fact.acai.07,facts,en,cultural: comida regional (harina de yuca)
 fact.acai.07,facts,pt-BR,cultural: comida regional (harina de yuca)
+fact.acai.08,facts,en,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
+fact.acai.08,facts,pt-BR,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
 fact.acai.09,facts,en,cultural: término local (peconha)
 fact.acai.09,facts,pt-BR,cultural: término local (peconha)
 fact.acai.10,facts,en,cultural: término local («rasas»)
 fact.acai.10,facts,pt-BR,cultural: término local («rasas»)
 fact.acai.11,facts,en,"cultural: lugares (Belém, Ver-o-Peso)"
 fact.acai.11,facts,pt-BR,"cultural: lugares (Belém, Ver-o-Peso)"
-fact.acai.12,facts,en,cultural: lugar (Pará)
-fact.acai.12,facts,pt-BR,cultural: lugar (Pará)
-fact.acai.13,facts,en,"cultural: fauna (tucanes, loros, guacamayos)"
-fact.acai.13,facts,pt-BR,"cultural: fauna (tucanes, loros, guacamayos)"
 fact.acai.15,facts,en,"cultural: lugares y nombres locales (Colombia, Pacífico, Perú)"
 fact.acai.15,facts,pt-BR,"cultural: lugares y nombres locales (Colombia, Pacífico, Perú)"
 fact.acai.16,facts,en,cultural: pueblo o lengua (tupí)
 fact.acai.16,facts,pt-BR,cultural: pueblo o lengua (tupí)
-fact.acai.19,facts,en,cultural: lugar (Brasil)
-fact.acai.19,facts,pt-BR,cultural: lugar (Brasil)
-fact.acai.20,facts,en,"cultural: lugares (Pará, Brasil)"
-fact.acai.20,facts,pt-BR,"cultural: lugares (Pará, Brasil)"
-fact.acai.tag,facts,en,cultural: lugar (Pará)
-fact.acai.tag,facts,pt-BR,cultural: lugar (Pará)
+fact.acai.17,facts,en,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
+fact.acai.17,facts,pt-BR,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
 fact.agua_negro.04,facts,en,"cultural: lugares (Colombia, Guainía)"
 fact.agua_negro.04,facts,pt-BR,"cultural: lugares (Colombia, Guainía)"
-fact.agua_negro.05,facts,en,"cultural: lugares (Casiquiare, Orinoco)"
-fact.agua_negro.05,facts,pt-BR,"cultural: lugares (Casiquiare, Orinoco)"
-fact.agua_negro.06,facts,en,cultural: lugar (Casiquiare)
-fact.agua_negro.06,facts,pt-BR,cultural: lugar (Casiquiare)
-fact.agua_negro.07,facts,en,cultural: lugar (Solimões)
-fact.agua_negro.07,facts,pt-BR,cultural: lugar (Solimões)
 fact.agua_negro.09,facts,en,cultural: lugar (Amazonas)
 fact.agua_negro.09,facts,pt-BR,cultural: lugar (Amazonas)
 fact.agua_negro.10,facts,en,"cultural: lugares (Manaos, Solimões, Amazonas)"
 fact.agua_negro.10,facts,pt-BR,"cultural: lugares (Manaos, Solimões, Amazonas)"
-fact.agua_negro.12,facts,en,cultural: lugar (Solimões)
-fact.agua_negro.12,facts,pt-BR,cultural: lugar (Solimões)
-fact.agua_negro.13,facts,en,cultural: lugar (Brasil)
-fact.agua_negro.13,facts,pt-BR,cultural: lugar (Brasil)
 fact.agua_negro.14,facts,en,cultural: lugar (Anavilhanas)
 fact.agua_negro.14,facts,pt-BR,cultural: lugar (Anavilhanas)
 fact.agua_negro.17,facts,en,cultural: fauna (tetra cardenal)
@@ -57,6 +39,8 @@ fact.agua_tapajos.04,facts,en,"cultural: lugares (Pará, Amazonas, Santarém)"
 fact.agua_tapajos.04,facts,pt-BR,"cultural: lugares (Pará, Amazonas, Santarém)"
 fact.agua_tapajos.05,facts,en,cultural: lugar (Juruena)
 fact.agua_tapajos.05,facts,pt-BR,cultural: lugar (Juruena)
+fact.agua_tapajos.07,facts,en,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
+fact.agua_tapajos.07,facts,pt-BR,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
 fact.agua_tapajos.09,facts,en,"cultural: lugares (Santarém, Amazonas)"
 fact.agua_tapajos.09,facts,pt-BR,"cultural: lugares (Santarém, Amazonas)"
 fact.agua_tapajos.10,facts,en,cultural: lugar (Amazonas)
@@ -79,22 +63,16 @@ fact.aguaje.01,facts,en,cultural: lugar (Brasil)
 fact.aguaje.01,facts,pt-BR,cultural: lugar (Brasil)
 fact.aguaje.03,facts,en,"cultural: lugares y nombres locales (Perú, Colombia, Brasil)"
 fact.aguaje.03,facts,pt-BR,"cultural: lugares y nombres locales (Perú, Colombia, Brasil)"
-fact.aguaje.04,facts,en,cultural: lugar (Perú)
-fact.aguaje.04,facts,pt-BR,cultural: lugar (Perú)
 fact.aguaje.12,facts,en,"cultural: nombres locales («posheco», «shambo»)"
 fact.aguaje.12,facts,pt-BR,"cultural: nombres locales («posheco», «shambo»)"
 fact.aguaje.13,facts,en,cultural: bebida regional (aguajina) y lugar (Amazonia peruana)
 fact.aguaje.13,facts,pt-BR,cultural: bebida regional (aguajina) y lugar (Amazonia peruana)
-fact.aguaje.16,facts,en,"cultural: fauna (sachavaca, tapir)"
-fact.aguaje.16,facts,pt-BR,"cultural: fauna (sachavaca, tapir)"
-fact.aguaje.17,facts,en,cultural: fauna (guacamayo azul y amarillo)
-fact.aguaje.17,facts,pt-BR,cultural: fauna (guacamayo azul y amarillo)
 fact.aguaje.18,facts,en,cultural: lugar (Brasil) y término local (seda do buriti)
 fact.aguaje.18,facts,pt-BR,cultural: lugar (Brasil) y término local (seda do buriti)
+fact.araza.01,facts,en,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
+fact.araza.01,facts,pt-BR,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
 fact.araza.02,facts,en,"cultural: lugares (Marañón, Ucayali, Perú)"
 fact.araza.02,facts,pt-BR,"cultural: lugares (Marañón, Ucayali, Perú)"
-fact.araza.03,facts,en,"cultural: lugares (Loreto, Marañón)"
-fact.araza.03,facts,pt-BR,"cultural: lugares (Loreto, Marañón)"
 fact.araza.11,facts,en,"cultural: lugares (Colombia, Caquetá, Putumayo, Guaviare)"
 fact.araza.11,facts,pt-BR,"cultural: lugares (Colombia, Caquetá, Putumayo, Guaviare)"
 fact.araza.12,facts,en,"cultural: lugares (Manaos, Iquitos)"
@@ -103,24 +81,18 @@ fact.araza.13,facts,en,"cultural: lugares (Brasil, Ecuador)"
 fact.araza.13,facts,pt-BR,"cultural: lugares (Brasil, Ecuador)"
 fact.araza.14,facts,en,cultural: fruta sin glosario (feijoa)
 fact.araza.14,facts,pt-BR,cultural: fruta sin glosario (feijoa)
+fact.bacaba.01,facts,en,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
+fact.bacaba.01,facts,pt-BR,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
 fact.bacaba.02,facts,en,"cultural: lugares (Acre, Amapá, Colombia, Guayanas)"
 fact.bacaba.02,facts,pt-BR,"cultural: lugares (Acre, Amapá, Colombia, Guayanas)"
-fact.bacaba.11,facts,en,cultural: lugar (Belém)
-fact.bacaba.11,facts,pt-BR,cultural: lugar (Belém)
 fact.bacaba.12,facts,en,cultural: comida regional (harina de yuca)
 fact.bacaba.12,facts,pt-BR,cultural: comida regional (harina de yuca)
-fact.bacaba.15,facts,en,"cultural: fauna (paca, agutí)"
-fact.bacaba.15,facts,pt-BR,"cultural: fauna (paca, agutí)"
-fact.bacaba.16,facts,en,"cultural: fauna (tucanes, loros, tapires, venados)"
-fact.bacaba.16,facts,pt-BR,"cultural: fauna (tucanes, loros, tapires, venados)"
 fact.bacaba.17,facts,en,cultural: lugar (Colombia) y nombres locales
 fact.bacaba.17,facts,pt-BR,cultural: lugar (Colombia) y nombres locales
 fact.bacaba.19,facts,en,"cultural: lugares (Bacabal, Maranhão, Brasil)"
 fact.bacaba.19,facts,pt-BR,"cultural: lugares (Bacabal, Maranhão, Brasil)"
-fact.bacaba.20,facts,en,cultural: lugar (Pará)
-fact.bacaba.20,facts,pt-BR,cultural: lugar (Pará)
-fact.cacao.03,facts,en,cultural: lugar (Ecuador)
-fact.cacao.03,facts,pt-BR,cultural: lugar (Ecuador)
+fact.cacao.02,facts,en,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
+fact.cacao.02,facts,pt-BR,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
 fact.cacao.04,facts,en,cultural: lugar (Centroamérica)
 fact.cacao.04,facts,pt-BR,cultural: lugar (Centroamérica)
 fact.cacao.13,facts,en,"cultural: pueblos y lenguas (maya, náhuatl)"
@@ -129,22 +101,16 @@ fact.cacao.15,facts,en,cultural: lugar (África occidental)
 fact.cacao.15,facts,pt-BR,cultural: lugar (África occidental)
 fact.cacao.16,facts,en,"cultural: lugares (Bahía, Brasil)"
 fact.cacao.16,facts,pt-BR,"cultural: lugares (Bahía, Brasil)"
+fact.camu_camu.01,facts,en,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
+fact.camu_camu.01,facts,pt-BR,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
 fact.camu_camu.02,facts,en,"cultural: lugares (Ucayali, Amazonas, Perú)"
 fact.camu_camu.02,facts,pt-BR,"cultural: lugares (Ucayali, Amazonas, Perú)"
-fact.camu_camu.14,facts,en,cultural: lugar (Iquitos)
-fact.camu_camu.14,facts,pt-BR,cultural: lugar (Iquitos)
-fact.camu_camu.15,facts,en,cultural: lugar (Perú)
-fact.camu_camu.15,facts,pt-BR,cultural: lugar (Perú)
 fact.camu_camu.16,facts,en,"cultural: fauna (gamitana, tambaqui) y lugar (Brasil)"
 fact.camu_camu.16,facts,pt-BR,"cultural: fauna (gamitana, tambaqui) y lugar (Brasil)"
 fact.camu_camu.18,facts,en,cultural: lugar (Brasil) y nombres locales
 fact.camu_camu.18,facts,pt-BR,cultural: lugar (Brasil) y nombres locales
 fact.camu_camu.19,facts,en,"cultural: lugares (Japón, Perú)"
 fact.camu_camu.19,facts,pt-BR,"cultural: lugares (Japón, Perú)"
-fact.camu_camu.20,facts,en,cultural: lugar (Perú)
-fact.camu_camu.20,facts,pt-BR,cultural: lugar (Perú)
-fact.cupuacu.02,facts,en,"cultural: lugares (Brasil, Colombia, Perú, Bolivia)"
-fact.cupuacu.02,facts,pt-BR,"cultural: lugares (Brasil, Colombia, Perú, Bolivia)"
 fact.cupuacu.03,facts,en,cultural: lengua (tupí)
 fact.cupuacu.03,facts,pt-BR,cultural: lengua (tupí)
 fact.cupuacu.04,facts,en,"cultural: lugares (Pará, Maranhão, Brasil)"
@@ -155,10 +121,8 @@ fact.cupuacu.18,facts,en,"cultural: lugares (Caquetá, Colombia, Brasil)"
 fact.cupuacu.18,facts,pt-BR,"cultural: lugares (Caquetá, Colombia, Brasil)"
 fact.cupuacu.19,facts,en,"cultural: lugares (Presidente Figueiredo, Amazonas, Brasil)"
 fact.cupuacu.19,facts,pt-BR,"cultural: lugares (Presidente Figueiredo, Amazonas, Brasil)"
-fact.cupuacu.20,facts,en,cultural: lugar (Brasil)
-fact.cupuacu.20,facts,pt-BR,cultural: lugar (Brasil)
-fact.guanabana.02,facts,en,"cultural: lugares (México, Venezuela, Perú, Bolivia, Kew)"
-fact.guanabana.02,facts,pt-BR,"cultural: lugares (México, Venezuela, Perú, Bolivia, Kew)"
+fact.guanabana.15,facts,en,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
+fact.guanabana.15,facts,pt-BR,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
 fact.guanabana.16,facts,en,"cultural: lugares (Brasil, Filipinas, Indonesia) y nombres locales"
 fact.guanabana.16,facts,pt-BR,"cultural: lugares (Brasil, Filipinas, Indonesia) y nombres locales"
 fact.guanabana.17,facts,en,cultural: lengua (taíno) y lugar (Antillas)
@@ -167,14 +131,10 @@ fact.guanabana.18,facts,en,"cultural: lugares (Caribe, Sudamérica)"
 fact.guanabana.18,facts,pt-BR,"cultural: lugares (Caribe, Sudamérica)"
 fact.guanabana.19,facts,en,"cultural: lugares (Asia, África)"
 fact.guanabana.19,facts,pt-BR,"cultural: lugares (Asia, África)"
-fact.jenipapo.01,facts,en,cultural: lugar (Brasil)
-fact.jenipapo.01,facts,pt-BR,cultural: lugar (Brasil)
 fact.jenipapo.02,facts,en,"cultural: lugares (México, Caribe, Argentina, Paraguay)"
 fact.jenipapo.02,facts,pt-BR,"cultural: lugares (México, Caribe, Argentina, Paraguay)"
 fact.jenipapo.03,facts,en,cultural: lugares y nombres locales
 fact.jenipapo.03,facts,pt-BR,cultural: lugares y nombres locales
-fact.jenipapo.06,facts,en,cultural: lugar (Brasil)
-fact.jenipapo.06,facts,pt-BR,cultural: lugar (Brasil)
 fact.jenipapo.13,facts,en,cultural: lugar (Estados Unidos)
 fact.jenipapo.13,facts,pt-BR,cultural: lugar (Estados Unidos)
 fact.jenipapo.15,facts,en,cultural: lugar (Puerto Rico)
@@ -185,16 +145,10 @@ fact.lulo.01,facts,en,"cultural: lugares (Andes, Ecuador) y nombre local (naranj
 fact.lulo.01,facts,pt-BR,"cultural: lugares (Andes, Ecuador) y nombre local (naranjilla)"
 fact.lulo.02,facts,en,cultural: nombre local (naranjilla)
 fact.lulo.02,facts,pt-BR,cultural: nombre local (naranjilla)
-fact.lulo.03,facts,en,"cultural: lugares (Colombia, Ecuador, Perú, Andes)"
-fact.lulo.03,facts,pt-BR,"cultural: lugares (Colombia, Ecuador, Perú, Andes)"
 fact.lulo.04,facts,en,"cultural: lugares (Ecuador, Napo, Pastaza, Morona Santiago)"
 fact.lulo.04,facts,pt-BR,"cultural: lugares (Ecuador, Napo, Pastaza, Morona Santiago)"
 fact.lulo.05,facts,en,cultural: lugar (Quito)
 fact.lulo.05,facts,pt-BR,cultural: lugar (Quito)
-fact.lulo.09,facts,en,cultural: lugar (Colombia)
-fact.lulo.09,facts,pt-BR,cultural: lugar (Colombia)
-fact.lulo.15,facts,en,"cultural: lugares (Colombia, Ecuador)"
-fact.lulo.15,facts,pt-BR,"cultural: lugares (Colombia, Ecuador)"
 fact.lulo.16,facts,en,cultural: lugar (Cali) y bebida regional (lulada)
 fact.lulo.16,facts,pt-BR,cultural: lugar (Cali) y bebida regional (lulada)
 fact.lulo.17,facts,en,cultural: fruta sin glosario (cocona)
@@ -203,8 +157,6 @@ fact.lulo.18,facts,en,"cultural: lugares (Puyo, Palora, Ecuador)"
 fact.lulo.18,facts,pt-BR,"cultural: lugares (Puyo, Palora, Ecuador)"
 fact.lulo.19,facts,en,"cultural: lugares (Nueva York, Ecuador)"
 fact.lulo.19,facts,pt-BR,"cultural: lugares (Nueva York, Ecuador)"
-fact.lulo.20,facts,en,cultural: lugar (Andes)
-fact.lulo.20,facts,pt-BR,cultural: lugar (Andes)
 fact.rio_amazonas.01,facts,en,cultural: lugar (Amazonas)
 fact.rio_amazonas.01,facts,pt-BR,cultural: lugar (Amazonas)
 fact.rio_amazonas.02,facts,en,"cultural: lugares (Amazonas, Andes)"
@@ -213,8 +165,6 @@ fact.rio_amazonas.03,facts,en,"cultural: lugares (Marañón, Ucayali, Mamoré)"
 fact.rio_amazonas.03,facts,pt-BR,"cultural: lugares (Marañón, Ucayali, Mamoré)"
 fact.rio_amazonas.04,facts,en,"cultural: lugares (Solimões, Madeira)"
 fact.rio_amazonas.04,facts,pt-BR,"cultural: lugares (Solimões, Madeira)"
-fact.rio_amazonas.10,facts,en,cultural: lugar (Atlántico)
-fact.rio_amazonas.10,facts,pt-BR,cultural: lugar (Atlántico)
 fact.rio_amazonas.14,facts,en,"cultural: lugares (Amazonas, Brasil)"
 fact.rio_amazonas.14,facts,pt-BR,"cultural: lugares (Amazonas, Brasil)"
 fact.rio_amazonas.17,facts,en,cultural: fauna (dorado) y lugar (Andes)
@@ -225,60 +175,34 @@ fact.rio_amazonas.20,facts,en,cultural: lugar (Andes)
 fact.rio_amazonas.20,facts,pt-BR,cultural: lugar (Andes)
 fact.rio_amazonas.name,facts,en,cultural: lugar (Amazonas) sin EN/PT en el glosario
 fact.rio_amazonas.name,facts,pt-BR,cultural: lugar (Amazonas) sin EN/PT en el glosario
-fact.rio_napo.01,facts,en,"cultural: lugares (Napo, Andes, Ecuador)"
-fact.rio_napo.01,facts,pt-BR,"cultural: lugares (Napo, Andes, Ecuador)"
 fact.rio_napo.02,facts,en,cultural: lugar (Cotopaxi)
 fact.rio_napo.02,facts,pt-BR,cultural: lugar (Cotopaxi)
 fact.rio_napo.03,facts,en,"cultural: lugares (Perú, Amazonas, Iquitos)"
 fact.rio_napo.03,facts,pt-BR,"cultural: lugares (Perú, Amazonas, Iquitos)"
-fact.rio_napo.04,facts,en,cultural: lugar (Perú)
-fact.rio_napo.04,facts,pt-BR,cultural: lugar (Perú)
-fact.rio_napo.05,facts,en,"cultural: lugares (Ecuador, Perú)"
-fact.rio_napo.05,facts,pt-BR,"cultural: lugares (Ecuador, Perú)"
-fact.rio_napo.08,facts,en,"cultural: lugares (Andes, Napo)"
-fact.rio_napo.08,facts,pt-BR,"cultural: lugares (Andes, Napo)"
-fact.rio_napo.09,facts,en,cultural: lugar (Perú)
-fact.rio_napo.09,facts,pt-BR,cultural: lugar (Perú)
 fact.rio_napo.12,facts,en,"cultural: lugares (Cuyabeno, Aguarico, Napo)"
 fact.rio_napo.12,facts,pt-BR,"cultural: lugares (Cuyabeno, Aguarico, Napo)"
 fact.rio_napo.13,facts,en,"cultural: lugares (Cuyabeno, Laguna Grande)"
 fact.rio_napo.13,facts,pt-BR,"cultural: lugares (Cuyabeno, Laguna Grande)"
-fact.rio_napo.14,facts,en,cultural: lugar (Cuyabeno)
-fact.rio_napo.14,facts,pt-BR,cultural: lugar (Cuyabeno)
-fact.rio_napo.16,facts,en,"cultural: fauna (manatíes, caimanes, anacondas) y lugar (Cuyabeno)"
-fact.rio_napo.16,facts,pt-BR,"cultural: fauna (manatíes, caimanes, anacondas) y lugar (Cuyabeno)"
 fact.rio_napo.17,facts,en,cultural: fauna (tití pigmeo) y lugar (Cuyabeno)
 fact.rio_napo.17,facts,pt-BR,cultural: fauna (tití pigmeo) y lugar (Cuyabeno)
 fact.rio_napo.18,facts,en,"cultural: pueblos (siona, secoya, cofán, kichwa, shuar)"
 fact.rio_napo.18,facts,pt-BR,"cultural: pueblos (siona, secoya, cofán, kichwa, shuar)"
-fact.rio_napo.19,facts,en,cultural: lugar (Cuyabeno)
-fact.rio_napo.19,facts,pt-BR,cultural: lugar (Cuyabeno)
-fact.rio_napo.20,facts,en,"cultural: lugares (Cuyabeno, Ecuador, Napo)"
-fact.rio_napo.20,facts,pt-BR,"cultural: lugares (Cuyabeno, Ecuador, Napo)"
-fact.rio_napo.name,facts,en,"cultural: lugares (Napo, Cuyabeno) sin EN/PT en el glosario"
-fact.rio_napo.name,facts,pt-BR,"cultural: lugares (Napo, Cuyabeno) sin EN/PT en el glosario"
+fact.tapereba.01,facts,en,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
+fact.tapereba.01,facts,pt-BR,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
 fact.tapereba.02,facts,en,cultural: lugares y nombres locales
 fact.tapereba.02,facts,pt-BR,cultural: lugares y nombres locales
 fact.tapereba.03,facts,en,"cultural: lugares (Amazonia de Brasil, Nordeste) y lengua (tupí)"
 fact.tapereba.03,facts,pt-BR,"cultural: lugares (Amazonia de Brasil, Nordeste) y lengua (tupí)"
 fact.tapereba.06,facts,en,"cultural: lugares (Acre, Perú, Bolivia)"
 fact.tapereba.06,facts,pt-BR,"cultural: lugares (Acre, Perú, Bolivia)"
-fact.tapereba.07,facts,en,cultural: lugar (Perú)
-fact.tapereba.07,facts,pt-BR,cultural: lugar (Perú)
 fact.tapereba.13,facts,en,"cultural: fauna (tapires, sajinos, venados)"
 fact.tapereba.13,facts,pt-BR,"cultural: fauna (tapires, sajinos, venados)"
 fact.tapereba.14,facts,en,cultural: fauna (pacú)
 fact.tapereba.14,facts,pt-BR,cultural: fauna (pacú)
 fact.tapereba.15,facts,en,cultural: lugar (Acre) y nombres locales
 fact.tapereba.15,facts,pt-BR,cultural: lugar (Acre) y nombres locales
-fact.tapereba.17,facts,en,cultural: lugar (Belém)
-fact.tapereba.17,facts,pt-BR,cultural: lugar (Belém)
 fact.tapereba.20,facts,en,"cultural: lugares (Bahía, Brasil)"
 fact.tapereba.20,facts,pt-BR,"cultural: lugares (Bahía, Brasil)"
-fact.tapereba.tag,facts,en,cultural: fauna (tapires)
-fact.tapereba.tag,facts,pt-BR,cultural: fauna (tapires)
-fact.urucum.01,facts,en,cultural: lugar (Brasil)
-fact.urucum.01,facts,pt-BR,cultural: lugar (Brasil)
 fact.urucum.02,facts,en,"cultural: lugares (México, Sudamérica, Kew)"
 fact.urucum.02,facts,pt-BR,"cultural: lugares (México, Sudamérica, Kew)"
 fact.urucum.03,facts,en,"cultural: lugares (India, Kenia, Filipinas)"
@@ -299,8 +223,8 @@ fact.urucum.19,facts,en,cultural: lengua (taíno) y lugar (Antillas)
 fact.urucum.19,facts,pt-BR,cultural: lengua (taíno) y lugar (Antillas)
 fact.urucum.20,facts,en,"cultural: comidas regionales (colorau, recado rojo)"
 fact.urucum.20,facts,pt-BR,"cultural: comidas regionales (colorau, recado rojo)"
-fact_sheet_title,strings,en,glosario: el término fact_sheet_title de glossary.csv no tiene EN ni PT (GlossaryTableTests exige el valor del glosario)
-fact_sheet_title,strings,pt-BR,glosario: el término fact_sheet_title de glossary.csv no tiene EN ni PT (GlossaryTableTests exige el valor del glosario)
+fact_sheet_title,strings,en,"glosario §10: «pendiente del traductor»; GlossaryTableTests exige el §10 del GDD, que solo puede cambiar el dueño (texto propuesto en el informe)"
+fact_sheet_title,strings,pt-BR,"glosario §10: «pendiente del traductor»; GlossaryTableTests exige el §10 del GDD, que solo puede cambiar el dueño (texto propuesto en el informe)"
 fauna.bradypus_variegatus.dato_05,facts,en,"cultural: fauna (oso hormiguero, armadillo)"
 fauna.bradypus_variegatus.dato_05,facts,pt-BR,"cultural: fauna (oso hormiguero, armadillo)"
 fauna.bradypus_variegatus.dato_09,facts,en,cultural: lugar (Brasil) y flora (embaúba)
@@ -312,727 +236,383 @@ fauna_mico_argentatus_dato,facts,pt-BR,cultural: lugar (Alter do Chão)
 fauna_saguinus_bicolor_dato,facts,en,cultural: lugar (Manaos: el glosario solo fija el nombre del mundo)
 fauna_saguinus_bicolor_dato,facts,pt-BR,cultural: lugar (Manaos: el glosario solo fija el nombre del mundo)
 fauna_sighted_card,strings,pt-BR,glosario §10: PT pendiente del asesor (evitar «macaco»)
-firefly_gift,strings,en,cultural: Luciérnaga (comodín con nombre propio: glossary.csv pide decidir término a término; sin EN/PT)
-firefly_gift,strings,pt-BR,cultural: Luciérnaga (comodín con nombre propio: glossary.csv pide decidir término a término; sin EN/PT)
-firefly_line,strings,en,"cultural: luciérnaga (comodín con nombre propio, sin EN/PT en el glosario)"
-firefly_line,strings,pt-BR,"cultural: luciérnaga (comodín con nombre propio, sin EN/PT en el glosario)"
-hint_no_exit,strings,en,"cultural: Marea (comodín con nombre propio, sin EN/PT en el glosario)"
-hint_no_exit,strings,pt-BR,"cultural: Marea (comodín con nombre propio, sin EN/PT en el glosario)"
-hint_no_safe_pour,strings,en,cultural: luciérnaga (sin EN/PT en el glosario)
-hint_no_safe_pour,strings,pt-BR,cultural: luciérnaga (sin EN/PT en el glosario)
-hint_no_safe_pour_tinaja,strings,en,cultural: luciérnaga (sin EN/PT en el glosario)
-hint_no_safe_pour_tinaja,strings,pt-BR,cultural: luciérnaga (sin EN/PT en el glosario)
-hint_unsupported,strings,en,"cultural: morpho (comodín con nombre propio, sin EN/PT en el glosario)"
-hint_unsupported,strings,pt-BR,"cultural: morpho (comodín con nombre propio, sin EN/PT en el glosario)"
-iap_af_skin_m02_name,strings,en,cultural: lugar (Santarém) sin EN/PT en el glosario
-iap_af_skin_m02_name,strings,pt-BR,cultural: lugar (Santarém) sin EN/PT en el glosario
-iap_af_skin_m03_name,strings,en,cultural: «Cuia del Encuentro» sin EN/PT en el glosario
-iap_af_skin_m03_name,strings,pt-BR,cultural: «Cuia del Encuentro» sin EN/PT en el glosario
-iap_af_skin_m04_name,strings,en,cultural: objeto (totuma) sin EN/PT en el glosario
-iap_af_skin_m04_name,strings,pt-BR,cultural: objeto (totuma) sin EN/PT en el glosario
-map.country.bo.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.bo.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.bo.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.bo.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.br.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.br.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.co.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.co.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.co.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.co.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.ec.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.ec.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.ec.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.ec.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.gf.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.gf.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.gy.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.gy.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.pe.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.pe.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.pe.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.pe.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.sr.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.sr.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.ve.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.country.ve.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.general.dato_negra,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.general.dato_negra,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.myth.source,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.myth.source,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.allpahuayo.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.allpahuayo.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.allpahuayo_mishana.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.allpahuayo_mishana.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.allpahuayo_mishana.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.allpahuayo_mishana.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.alter_do_chao.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.alter_do_chao.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.alter_do_chao.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.alter_do_chao.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.alter_do_chao.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.alter_do_chao.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.alto_madre_de_dios.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.alto_madre_de_dios.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.alto_madre_de_dios.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.alto_madre_de_dios.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.amacayacu.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.amacayacu.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.amacayacu.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.amacayacu.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.amacayacu.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.amacayacu.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.anavilhanas.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.anavilhanas.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.anavilhanas.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.anavilhanas.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.anavilhanas.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.anavilhanas.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.atalaya.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.atalaya.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.atalaya.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.atalaya.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.atalaya.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.atalaya.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.atalaya.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.atalaya.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.atalaya.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.atalaya.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.atalaya.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.atalaya.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.belem.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.belem.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.belem.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.belem.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.belem.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.belem.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.belem.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.belem.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_amazonas.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_amazonas.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_coca.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_coca.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_coca.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_coca.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_coca.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_coca.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_madeira.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_madeira.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_napo.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_napo.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_purus.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_purus.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_xingu.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_del_xingu.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_manu.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_manu.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_manu.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_manu.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_manu.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_manu.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_manu.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_manu.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_manu.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.boca_manu.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.bolognesi.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.bolognesi.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.bolognesi.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.bolognesi.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.bolognesi.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.bolognesi.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.bolognesi.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.bolognesi.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.bolognesi.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.bolognesi.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.bolognesi.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.bolognesi.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.breves.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.breves.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.caballococha.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.caballococha.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.coari.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.coari.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_guacamayos.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_guacamayos.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_guacamayos.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_guacamayos.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.dato_05,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.dato_05,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.dato_06,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.dato_06,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.collpa_tambopata.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana_fosiles.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana_fosiles.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana_fosiles.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.contamana_fosiles.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno_igapo.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno_igapo.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno_igapo.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.cuyabeno_igapo.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.el_coca.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.el_coca.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.el_coca.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.el_coca.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.el_coca.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.el_coca.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.encontro.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.encontro.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.encontro.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.encontro.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.encontro.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.encontro.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.estuario.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.estuario.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.flona_tapajos.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.flona_tapajos.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.flona_tapajos.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.flona_tapajos.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.flona_tapajos.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.flona_tapajos.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.flona_tapajos.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.flona_tapajos.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.fonte_boa.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.fonte_boa.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.guayaramerin.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.guayaramerin.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.guayaramerin.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.guayaramerin.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.guayaramerin.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.guayaramerin.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.guayaramerin.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.guayaramerin.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.gurupa.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.gurupa.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.iquitos.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.iquitos.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.iquitos.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.iquitos.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.iquitos.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.iquitos.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.isla_de_marajo.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.isla_de_marajo.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.itacoatiara.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.itacoatiara.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.itaya.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.itaya.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.itaya.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.itaya.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.itaya.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.itaya.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.jenaro_herrera.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.jenaro_herrera.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.jenaro_herrera.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.jenaro_herrera.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.jenaro_herrera.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.jenaro_herrera.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.jenaro_herrera.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.jenaro_herrera.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.leticia.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.leticia.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.leticia.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.leticia.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.leticia.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.leticia.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.leticia_atardecer.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.leticia_atardecer.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.leticia_atardecer.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.leticia_atardecer.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.llanos_de_moxos.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.llanos_de_moxos.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.llanos_de_moxos.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.llanos_de_moxos.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.llanos_de_moxos.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.llanos_de_moxos.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.llanos_de_moxos.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.llanos_de_moxos.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.llanos_de_moxos.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.llanos_de_moxos.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.llanos_de_moxos.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.llanos_de_moxos.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.macapa_y_la_linea_del_ecuador.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.macapa_y_la_linea_del_ecuador.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.dato_05,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.dato_05,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.dato_06,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.dato_06,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi_selva.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi_selva.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi_selva.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.madidi_selva.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manaos.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manaos.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manaos.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manaos.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manaos.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manaos.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manaos.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manaos.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manaos.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manaos.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manaos.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manaos.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu_cochas.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu_cochas.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu_cochas.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.manu_cochas.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.mazan.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.mazan.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.mazan.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.mazan.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.mazan.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.mazan.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.misahualli.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.misahualli.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.misahualli.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.misahualli.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.misahualli.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.misahualli.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.monte_alegre.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.monte_alegre.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.moxos_bufeos.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.moxos_bufeos.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.moxos_bufeos.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.moxos_bufeos.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.nauta.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.nauta.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.nauta.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.nauta.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.nauta.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.nauta.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.dato_05,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.dato_05,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff_cascada.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff_cascada.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff_cascada.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.noel_kempff_cascada.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.nuevo_rocafuerte.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.nuevo_rocafuerte.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.nuevo_rocafuerte.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.nuevo_rocafuerte.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.obidos.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.obidos.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_alba.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_alba.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_alba.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_alba.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_samiria.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_samiria.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_samiria.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_samiria.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_samiria.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_samiria.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_samiria.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_samiria.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_samiria.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pacaya_samiria.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.parintins.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.parintins.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pebas.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pebas.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pucallpa.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pucallpa.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pucallpa.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pucallpa.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pucallpa.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pucallpa.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pucallpa.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pucallpa.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pucallpa.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.pucallpa.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_heath.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_heath.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_heath.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_heath.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_heath.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_heath.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado_astilleros.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado_astilleros.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado_astilleros.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_maldonado_astilleros.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_narino.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_narino.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_narino.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_narino.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_narino.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_narino.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_prado.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_prado.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_prado.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_prado.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_prado.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_prado.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_prado.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_prado.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_prado.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_prado.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_prado.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.puerto_prado.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena_ucayali.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena_ucayali.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena_ucayali.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.requena_ucayali.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.dato_05,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.dato_05,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.dato_06,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.dato_06,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta_beni.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta_beni.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta_beni.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta_beni.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta_castanos.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta_castanos.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta_castanos.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.riberalta_castanos.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rio_frontera.country,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rio_frontera.country,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rio_frontera.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rio_frontera.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rio_frontera.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rio_frontera.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rio_frontera.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rio_frontera.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rurrenabaque.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rurrenabaque.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rurrenabaque.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rurrenabaque.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rurrenabaque.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rurrenabaque.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rurrenabaque.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rurrenabaque.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rurrenabaque_orillas.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rurrenabaque_orillas.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rurrenabaque_orillas.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.rurrenabaque_orillas.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_05,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_05,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_06,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_06,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_07,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.dato_07,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval_aguajal.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval_aguajal.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval_aguajal.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.sandoval_aguajal.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santa_clotilde.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santa_clotilde.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santa_clotilde.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santa_clotilde.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santa_clotilde.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santa_clotilde.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santarem.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santarem.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santarem.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santarem.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santarem.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santarem.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santo_antonio_do_ica.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.santo_antonio_do_ica.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tabatinga.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tabatinga.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tambo.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tambo.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tambo.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tambo.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tambopata_nidos.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tambopata_nidos.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tambopata_nidos.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tambopata_nidos.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tamshiyacu.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tamshiyacu.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tarapoto.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tarapoto.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tarapoto.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tarapoto.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tarapoto.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tarapoto.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tarapoto.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tarapoto.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tefe.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tefe.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tefe.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tefe.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tefe.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tefe.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tefe.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tefe.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tefe.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tefe.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.teotonio.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.teotonio.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.teotonio.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.teotonio.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.trinidad.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.trinidad.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.trinidad.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.trinidad.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.trinidad.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.trinidad.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.trinidad.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.trinidad.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tuichi.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tuichi.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tuichi.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.tuichi.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.ucayali_medio.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.ucayali_medio.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.ucayali_medio.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.ucayali_medio.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.urubamba.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.urubamba.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.urubamba.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.urubamba.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha_garzas.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha_garzas.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha_garzas.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yarinacocha_garzas.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni.dato_01,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni.dato_01,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni.dato_02,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni.dato_02,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni.dato_03,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni.dato_03,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni.dato_04,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni.dato_04,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni_dosel.name,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni_dosel.name,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni_dosel.river,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.stop.yasuni_dosel.river,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w02.question,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w02.question,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w03.question,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w03.question,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w04.question,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w04.question,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w05.question,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w05.question,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w06.question,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w06.question,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w07.question,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w07.question,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w08.question,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w08.question,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w09.question,facts,en,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map.world.w09.question,facts,pt-BR,bloque map.*: lo regenera tools/river-map/stops.py con en y pt-BR vacíos
-map_label_andes,strings,en,cultural: lugar (Andes) sin EN/PT en el glosario
-map_label_andes,strings,pt-BR,cultural: lugar (Andes) sin EN/PT en el glosario
-map_label_atlantic,strings,en,cultural: lugar (océano Atlántico) sin EN/PT en el glosario
-map_label_atlantic,strings,pt-BR,cultural: lugar (océano Atlántico) sin EN/PT en el glosario
-reveal_gift_toast,strings,en,cultural: Luciérnaga (sin EN/PT en el glosario)
-reveal_gift_toast,strings,pt-BR,cultural: Luciérnaga (sin EN/PT en el glosario)
-stuck_undo,strings,en,"cultural: Marea (comodín con nombre propio, sin EN/PT en el glosario)"
-stuck_undo,strings,pt-BR,"cultural: Marea (comodín con nombre propio, sin EN/PT en el glosario)"
-stuck_unsolvable,strings,en,"cultural: Marea (comodín con nombre propio, sin EN/PT en el glosario)"
-stuck_unsolvable,strings,pt-BR,"cultural: Marea (comodín con nombre propio, sin EN/PT en el glosario)"
-tutorial_alta,strings,en,cultural: Cuia alta (mecánica sin EN/PT en el glosario)
-tutorial_alta,strings,pt-BR,cultural: Cuia alta (mecánica sin EN/PT en el glosario)
-tutorial_barro,strings,en,cultural: Barro (mecánica sin EN/PT en el glosario §6.5)
-tutorial_barro,strings,pt-BR,cultural: Barro (mecánica sin EN/PT en el glosario §6.5)
-tutorial_brote,strings,en,cultural: Brote (mecánica sin EN/PT en el glosario §6.5)
-tutorial_brote,strings,pt-BR,cultural: Brote (mecánica sin EN/PT en el glosario §6.5)
-tutorial_brote_n2,strings,en,cultural: Brote de dos hojas (mecánica sin EN/PT en el glosario)
-tutorial_brote_n2,strings,pt-BR,cultural: Brote de dos hojas (mecánica sin EN/PT en el glosario)
-tutorial_chica,strings,en,cultural: Cuia chica (mecánica sin EN/PT en el glosario; «small cuia» solo es la cuia de la Tinaja)
-tutorial_chica,strings,pt-BR,cultural: Cuia chica (mecánica sin EN/PT en el glosario; «small cuia» solo es la cuia de la Tinaja)
-tutorial_flor,strings,en,cultural: Flor de vitória-régia (sin EN/PT en el glosario)
-tutorial_flor,strings,pt-BR,cultural: Flor de vitória-régia (sin EN/PT en el glosario)
-tutorial_hoja,strings,en,cultural: nombre de mecánica sin forma EN en el glosario §6.5
-tutorial_hoja_atada,strings,en,cultural: Hoja atada (sin EN/PT en el glosario)
-tutorial_hoja_atada,strings,pt-BR,cultural: Hoja atada (sin EN/PT en el glosario)
-tutorial_liana,strings,en,cultural: nombre de mecánica sin forma EN en el glosario §6.5
-tutorial_liana_n,strings,en,cultural: nombre de mecánica sin forma EN en el glosario §6.5
-tutorial_lluvia,strings,en,cultural: Lluvia (mecánica sin EN/PT en el glosario §6.5)
-tutorial_lluvia,strings,pt-BR,cultural: Lluvia (mecánica sin EN/PT en el glosario §6.5)
-tutorial_matapi,strings,en,cultural: nombre de mecánica sin forma EN en el glosario §6.5
-tutorial_morpho,strings,en,"cultural: morpho (comodín con nombre propio, sin EN/PT en el glosario)"
-tutorial_morpho,strings,pt-BR,"cultural: morpho (comodín con nombre propio, sin EN/PT en el glosario)"
-tutorial_pirana,strings,en,"cultural: Piraña (fauna, mecánica sin EN/PT en el glosario §6.5)"
-tutorial_pirana,strings,pt-BR,"cultural: Piraña (fauna, mecánica sin EN/PT en el glosario §6.5)"
-tutorial_remolino,strings,en,cultural: Remolino (mecánica sin EN/PT en el glosario §6.5; PT sin elegir)
-tutorial_remolino,strings,pt-BR,cultural: Remolino (mecánica sin EN/PT en el glosario §6.5; PT sin elegir)
-tutorial_undo,strings,en,"cultural: Marea (comodín con nombre propio, sin EN/PT en el glosario)"
-tutorial_undo,strings,pt-BR,"cultural: Marea (comodín con nombre propio, sin EN/PT en el glosario)"
-world_w01_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w01_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w01_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w01_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
-world_w02_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w02_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w02_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w02_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
-world_w03_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w03_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w03_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w03_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
-world_w04_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w04_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w04_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w04_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
-world_w05_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w05_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w05_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w05_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
-world_w06_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w06_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w06_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w06_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
-world_w07_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w07_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w07_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w07_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
-world_w08_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w08_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w08_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w08_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
-world_w09_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w09_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w09_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w09_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
-world_w10_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w10_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w10_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w10_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
-world_w11_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w11_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w11_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w11_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
-world_w12_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w12_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w12_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w12_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
-world_w13_country,strings,en,cultural: país sin EN/PT en el glosario §8
-world_w13_country,strings,pt-BR,cultural: país sin EN/PT en el glosario §8
-world_w13_river,strings,en,cultural: río sin EN/PT en el glosario §8
-world_w13_river,strings,pt-BR,cultural: río sin EN/PT en el glosario §8
+iap_af_skin_m04_name,strings,en,cultural: objeto (totuma) sin EN/PT en el glosario ni en glosario.diff
+iap_af_skin_m04_name,strings,pt-BR,cultural: objeto (totuma) sin EN/PT en el glosario ni en glosario.diff
+map.country.co.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.country.co.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.country.ec.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.country.ec.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.country.pe.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.country.pe.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.myth.source,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.myth.source,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.allpahuayo_mishana.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.allpahuayo_mishana.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.allpahuayo_mishana.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.allpahuayo_mishana.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.alter_do_chao.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.alter_do_chao.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.alter_do_chao.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.alter_do_chao.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.amacayacu.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.amacayacu.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.amacayacu.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.amacayacu.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.amacayacu.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.amacayacu.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.anavilhanas.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.anavilhanas.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.anavilhanas.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.anavilhanas.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.atalaya.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.atalaya.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.atalaya.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.atalaya.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.atalaya.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.atalaya.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.atalaya.dato_04,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.atalaya.dato_04,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.atalaya.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.atalaya.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.belem.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.belem.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.belem.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.belem.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_amazonas.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_amazonas.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_coca.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_coca.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_coca.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_coca.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_coca.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_coca.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_madeira.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_madeira.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_purus.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_purus.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_xingu.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_del_xingu.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_manu.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_manu.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_manu.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_manu.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_manu.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_manu.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_manu.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.boca_manu.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.bolognesi.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.bolognesi.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.bolognesi.dato_04,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.bolognesi.dato_04,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.bolognesi.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.bolognesi.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.breves.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.breves.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.caballococha.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.caballococha.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.coari.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.coari.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.collpa_tambopata.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.collpa_tambopata.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.collpa_tambopata.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.collpa_tambopata.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.collpa_tambopata.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.collpa_tambopata.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.contamana.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.contamana.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.contamana.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.contamana.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.contamana.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.contamana.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.contamana.dato_04,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.contamana.dato_04,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.contamana.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.contamana.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.contamana_fosiles.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.contamana_fosiles.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.el_coca.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.el_coca.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.flona_tapajos.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.flona_tapajos.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.flona_tapajos.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.flona_tapajos.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.fonte_boa.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.fonte_boa.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.guayaramerin.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.guayaramerin.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.guayaramerin.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.guayaramerin.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.gurupa.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.gurupa.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.iquitos.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.iquitos.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.isla_de_marajo.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.isla_de_marajo.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.itacoatiara.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.itacoatiara.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.itaya.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.itaya.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.itaya.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.itaya.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.itaya.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.itaya.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.jenaro_herrera.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.jenaro_herrera.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.jenaro_herrera.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.jenaro_herrera.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.jenaro_herrera.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.jenaro_herrera.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.leticia.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.leticia.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.leticia.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.leticia.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.leticia.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.leticia.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.leticia_atardecer.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.leticia_atardecer.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.leticia_atardecer.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.leticia_atardecer.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.llanos_de_moxos.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.llanos_de_moxos.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.llanos_de_moxos.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.llanos_de_moxos.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.llanos_de_moxos.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.llanos_de_moxos.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.llanos_de_moxos.dato_04,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.llanos_de_moxos.dato_04,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.llanos_de_moxos.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.llanos_de_moxos.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.macapa_y_la_linea_del_ecuador.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.macapa_y_la_linea_del_ecuador.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.madidi.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.madidi.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manaos.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manaos.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manaos.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manaos.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manaos.dato_04,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manaos.dato_04,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manaos.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manaos.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu.dato_04,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu.dato_04,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu_cochas.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu_cochas.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu_cochas.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.manu_cochas.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.mazan.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.mazan.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.mazan.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.mazan.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.misahualli.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.misahualli.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.misahualli.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.misahualli.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.monte_alegre.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.monte_alegre.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.moxos_bufeos.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.moxos_bufeos.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.nauta.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.nauta.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.nauta.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.nauta.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.noel_kempff.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.noel_kempff.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.noel_kempff.dato_04,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.noel_kempff.dato_04,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.noel_kempff_cascada.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.noel_kempff_cascada.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.nuevo_rocafuerte.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.nuevo_rocafuerte.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.obidos.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.obidos.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pacaya_alba.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pacaya_alba.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pacaya_samiria.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pacaya_samiria.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pacaya_samiria.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pacaya_samiria.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pacaya_samiria.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pacaya_samiria.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.parintins.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.parintins.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pebas.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pebas.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pucallpa.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pucallpa.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pucallpa.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pucallpa.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pucallpa.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pucallpa.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pucallpa.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.pucallpa.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_heath.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_heath.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_heath.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_heath.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_maldonado.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_maldonado.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_maldonado.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_maldonado.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_maldonado.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_maldonado.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_maldonado.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_maldonado.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_narino.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_narino.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_narino.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_narino.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_narino.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_narino.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_prado.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_prado.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_prado.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_prado.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_prado.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_prado.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_prado.dato_04,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_prado.dato_04,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_prado.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_prado.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_prado.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.puerto_prado.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.requena.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.requena.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.requena.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.requena.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.requena.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.requena.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.requena.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.requena.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.requena_ucayali.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.requena_ucayali.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.riberalta.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.riberalta.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.riberalta.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.riberalta.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.riberalta.dato_05,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.riberalta.dato_05,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.riberalta.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.riberalta.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.riberalta_beni.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.riberalta_beni.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.riberalta_castanos.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.riberalta_castanos.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.rio_frontera.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.rio_frontera.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.rio_frontera.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.rio_frontera.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.rurrenabaque.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.rurrenabaque.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.rurrenabaque.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.rurrenabaque.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.rurrenabaque.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.rurrenabaque.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.rurrenabaque_orillas.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.rurrenabaque_orillas.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.dato_04,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.dato_04,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.dato_05,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.dato_05,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.dato_07,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.dato_07,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval_aguajal.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.sandoval_aguajal.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.santa_clotilde.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.santa_clotilde.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.santarem.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.santarem.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.santarem.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.santarem.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.santo_antonio_do_ica.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.santo_antonio_do_ica.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tabatinga.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tabatinga.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tambo.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tambo.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tambo.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tambo.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tamshiyacu.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tamshiyacu.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tarapoto.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tarapoto.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tarapoto.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tarapoto.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tarapoto.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tarapoto.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tefe.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tefe.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tefe.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tefe.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tefe.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tefe.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tefe.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tefe.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tefe.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.tefe.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.teotonio.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.teotonio.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.teotonio.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.teotonio.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.trinidad.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.trinidad.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.trinidad.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.trinidad.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.trinidad.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.trinidad.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.urubamba.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.urubamba.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.urubamba.river,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.urubamba.river,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yarinacocha.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yarinacocha.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yarinacocha.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yarinacocha.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yarinacocha.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yarinacocha.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yarinacocha.dato_04,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yarinacocha.dato_04,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yarinacocha.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yarinacocha.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yarinacocha_garzas.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yarinacocha_garzas.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yasuni.dato_01,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yasuni.dato_01,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yasuni.dato_02,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yasuni.dato_02,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yasuni.dato_03,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yasuni.dato_03,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yasuni.dato_04,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yasuni.dato_04,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yasuni.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yasuni.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yasuni_dosel.name,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.stop.yasuni_dosel.name,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.world.w05.question,facts,en,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+map.world.w05.question,facts,pt-BR,"bloque map.*: lugares, fauna o términos locales sin glosario (ni en glosario.diff), o «Amazonas/Amazonia» (T2-Q7)"
+settings_about_amazon,strings,en,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
+settings_about_amazon,strings,pt-BR,Q7 (T2-Q7): región o «Amazonia/amazónico» sin glosario; el glosario §1 evita la cadena «Amazon» (decide el dueño con el asesor)
+world_w01_river,strings,en,"Q7: «Amazonas» (cadena «Amazon», decide el dueño)"
+world_w01_river,strings,pt-BR,"Q7: «Amazonas» (cadena «Amazon», decide el dueño)"
+world_w03_country,strings,en,"Q7: «Amazonas» (estado; cadena «Amazon», decide el dueño)"
+world_w03_country,strings,pt-BR,"Q7: «Amazonas» (estado; cadena «Amazon», decide el dueño)"
+world_w04_river,strings,en,"Q7: «Amazonas» (cadena «Amazon», decide el dueño)"
+world_w04_river,strings,pt-BR,"Q7: «Amazonas» (cadena «Amazon», decide el dueño)"
