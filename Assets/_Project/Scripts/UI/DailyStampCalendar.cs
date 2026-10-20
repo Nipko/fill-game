@@ -116,7 +116,7 @@ namespace AF.UI
             Image seed = UiBuilder.Image("Seed", _rewardRow, art.IconSeed, Color.white);
             UiBuilder.Place(seed.rectTransform, 0f, 4f, 28f, 28f);
             _reward = UiBuilder.Label("Amount", _rewardRow, TextStyle.Badge, string.Empty, 26f, Palette.Cream, TextAlignmentOptions.MidlineLeft);
-            UiBuilder.Place(_reward.rectTransform, 34f, 0f, 120f, 36f);
+            UiBuilder.Place(_reward.rectTransform, 34f, -3f, 120f, 42f); // el contorno de Badge sube y baja 3 dp (R11)
             _status = ModalKit.Line("Status", _panel, string.Empty, 15f, Palette.UiInk);
 
             _double = ModalKit.Cta("DoubleHarvest", _panel, art.CtaWood, TextStyle.CtaWater, DailyText.DoubleHarvestLabel, 18f, onDoubleHarvest, out _);
@@ -230,6 +230,7 @@ namespace AF.UI
                     _fallingDay = month.Day;
                     _dropMs = 0f;
                     Image stamp = _stamps[_fallingDay - 1];
+                    _cells[_fallingDay - 1].transform.SetAsLastSibling(); // el sello que cae, por encima de los casilleros vecinos (R11)
                     stamp.gameObject.SetActive(true);
                     stamp.rectTransform.localScale = Vector3.one * 2.4f;
                     stamp.color = WithAlpha(StampColor, 0f);

@@ -32,6 +32,9 @@ namespace AF.UI
         /// <summary>Olas del icono de la banda (una por banda, 1-3).</summary>
         public const int MaxWaves = 3;
 
+        // Hueco del sello a la derecha del título (dp): el sello de 28 dp a 12 del borde, más 4 de aire.
+        private const float StampSlotDp = 44f;
+
         private static Sprite? s_wave;
 
         private readonly Action<DailyCardState> _onTap;
@@ -66,10 +69,13 @@ namespace AF.UI
             }
 
             _title = UiBuilder.Label("Title", _root, TextStyle.PlainBold, string.Empty, 17f, Palette.UiInk, TextAlignmentOptions.MidlineLeft);
-            UiBuilder.Place(_title.rectTransform, 80f, 12f, 200f, 28f);
+            // El título no pasa por debajo del sello (esquina superior derecha, StampSlotDp): revisión de R11 (en-XA).
+            UiBuilder.Place(_title.rectTransform, 80f, 12f, WidthDp - StampSlotDp - 80f, 28f);
             UiBuilder.AutoSize(_title, UiBuilder.MinTextSp, 17f);
             _state = UiBuilder.Label("State", _root, TextStyle.PlainBold, string.Empty, 15f, Palette.UiGreenButton, TextAlignmentOptions.MidlineLeft);
-            UiBuilder.Place(_state.rectTransform, 80f, 44f, 132f, 26f);
+            // Hasta dos líneas: un estado largo (Pendiente de validar en en-XA) baja de línea en vez de pisar la racha (R11).
+            UiBuilder.Place(_state.rectTransform, 80f, 41f, 132f, 34f);
+            _state.textWrappingMode = TextWrappingModes.Normal;
             UiBuilder.AutoSize(_state, UiBuilder.MinTextSp, 15f);
             _streak = UiBuilder.Label("Streak", _root, TextStyle.PlainBold, string.Empty, 15f, Palette.UiWood, TextAlignmentOptions.MidlineRight);
             UiBuilder.Place(_streak.rectTransform, 212f, 44f, 52f, 26f);
