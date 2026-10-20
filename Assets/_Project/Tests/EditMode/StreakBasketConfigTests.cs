@@ -157,6 +157,20 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void TheJsonReader_DecodesUnicodeEscapes()
+        {
+            Assert.That(BasketConfig.TryParseCycle("[\"\\u0068int\",\"undo\\u0033\"]", out IReadOnlyList<string> cycle), Is.True);
+            Assert.That(cycle, Is.EqualTo(new[] { "hint", "undo3" }), "\\u0068 = h, \\u0033 = 3");
+            Assert.That(StreakMilestones.TryParse("{\"\\u0033\":300,\"6\":\"\\u0063hest\",\"10\":\"extra_cuia+rio_crecido\"}", out StreakMilestones m), Is.True);
+            Assert.That(m.Hit3Seeds, Is.EqualTo(300));
+
+            foreach (string bad in new[] { "[\"\\u00\"]", "[\"\\u00zz\"]", "[\"\\x41\"]", "[\"hint\\\"]" })
+            {
+                Assert.That(BasketConfig.TryParseCycle(bad, out _), Is.False, bad);
+            }
+        }
+
+        [Test]
         public void BasketCycle_ReadsTokens_AndRejectsUnknownOnes()
         {
             Assert.That(BasketConfig.TryParseCycle("[\"undo3\",\"hint\",\"extra_cuia\",\"undo3\",\"hint\"]", out IReadOnlyList<string> cycle), Is.True);

@@ -377,7 +377,42 @@ namespace AF.Tests.EditMode
 
             Assert.That(rules.RollDay(Day(40)), Is.True, "días sin jugar: la barra sigue (no expira por reloj)");
             Assert.That(rules.Record.Wins, Is.EqualTo(3));
-            Assert.Throws<ArgumentException>(() => rules.RollDay(""));
+            foreach (string bad in new[] { "", "2026-1-07", "2026/10/07", "20261007xx", "2026-10-0a", " 2026-10-07", "2026-10-071" })
+            {
+                Assert.Throws<ArgumentException>(() => rules.RollDay(bad), "«" + bad + "»");
+            }
+
+            Assert.Throws<ArgumentException>(() => rules.RollDay(null!));
+            Assert.That(rules.Record.DateLocal, Is.EqualTo("2026-11-10"), "una clave rechazada no cambia nada");
+            Assert.That(StreakRules.IsDayKey("2026-10-07"), Is.True);
+        }
+
+        [Test]
+        public void ALevelBelowOne_Throws()
+        {
+            StreakRules rules = NewRules();
+
+            Assert.Throws<ArgumentOutOfRangeException>(() => rules.OnVictory(0, true));
+            Assert.Throws<ArgumentOutOfRangeException>(() => rules.OnVictory(-1, false));
+            Assert.Throws<ArgumentOutOfRangeException>(() => rules.OnHardFail(0, true));
+            Assert.That(rules.Record.Wins, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void IsDayKey_DoesNotAllocate()
+        {
+            string key = Day(3);
+            int sink = 0;
+            TestDelegate call = () =>
+            {
+                for (int i = 0; i < 100; i++)
+                {
+                    sink += StreakRules.IsDayKey(key) ? 1 : 0;
+                }
+            };
+            call();
+            Assert.That(call, Is.Not.AllocatingGCMemory());
+            Assert.That(sink, Is.GreaterThan(0));
         }
 
         [Test]

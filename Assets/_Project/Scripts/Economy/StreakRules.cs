@@ -216,12 +216,12 @@ namespace AF.Economy
         /// semillas de hoy a 0. La barra y el río crecido no se tocan: no expiran por reloj (04 §8). El día solo avanza: con un
         /// día anterior (reloj atrasado) no se repone nada. Devuelve si cambió algo.
         /// </summary>
-        /// <exception cref="ArgumentException"><paramref name="todayKey"/> vacío.</exception>
+        /// <exception cref="ArgumentException"><paramref name="todayKey"/> no tiene la forma <c>yyyy-MM-dd</c>.</exception>
         public bool RollDay(string todayKey)
         {
-            if (string.IsNullOrEmpty(todayKey))
+            if (!IsDayKey(todayKey))
             {
-                throw new ArgumentException("Falta el día local (yyyy-MM-dd).", nameof(todayKey));
+                throw new ArgumentException("El día local debe ser yyyy-MM-dd.", nameof(todayKey));
             }
 
             // Una sola hoja aunque streak_shield_per_day valga 2 (Q-C6 (a)); el rango 1-2 de 08 §9 nunca da 0.
@@ -386,6 +386,29 @@ namespace AF.Economy
             Record.SeedsToday += paid;
             o.CappedSeeds += amount - paid;
             return paid;
+        }
+
+        /// <summary>
+        /// <paramref name="key"/> tiene la forma <c>yyyy-MM-dd</c>: 10 caracteres, guiones en las posiciones 4 y 7 y dígitos en el
+        /// resto (la comparación ordinal de <see cref="StreakRecord.RollOver"/> solo vale con esa forma). No asigna memoria.
+        /// </summary>
+        public static bool IsDayKey(string? key)
+        {
+            if (key == null || key.Length != 10)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < 10; i++)
+            {
+                char c = key[i];
+                if (i == 4 || i == 7 ? c != '-' : c < '0' || c > '9')
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
 
         private static int RequireLevel(int level)

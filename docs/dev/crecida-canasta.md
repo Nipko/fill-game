@@ -34,20 +34,22 @@ aquí solo se describe su forma (§3).
 
 | # | Regla | Fuente |
 |---|---|---|
-| K1 | Cada 10 niveles de **campaña** (10, 20, 30…), desde `live_unlock_level_daily` (10). | 06 §4.4; 05 §2.1; 08 §9 (`live_unlock_level_daily`: «Desbloquea … Canasta») |
+| K1 | Cada 10 niveles de **campaña** (10, 20, 30…), desde `live_unlock_level_daily` (10), al **superar** el nivel `10k`: ganándolo o saltándolo con el Salto del Boto (K9). | 06 §4.4; 05 §2.1; 08 §9 (`live_unlock_level_daily`: «Desbloquea … Canasta») |
 | K2 | Nivel 10: solo 50 semillas. | 06 §4.4; 05 §2.1 |
 | K3 | 20, 30, 40…: 50 semillas (`eco_basket_seeds`) + 1 comodín de `eco_basket_cycle` = `["undo3","hint","extra_cuia","undo3","hint"]`, con índice `(L/10 − 2) mod 5`: 20 → 3 Marea, 30 → Morpho, 40 → Cuia extra, 50 → 3 Marea, 60 → Morpho, y se repite. Así salen Cuia extra en 40 y 90 de cada 100 y Morpho en 30, 60, 80, 110… | 06 §4.4; 04 §3 (columna «Gratis»); 08 §9 |
 | K4 | `undo3` = 3 Mareas al stock (`stock.undo` += 3). | 06 §4.4 («3 Marea»); 04 §2.1 |
 | K5 | Cada 100 niveles (100, 200…): **Canasta grande** = 150 semillas + 1 Cuia extra + 1 Morpho + 3 Marea. Sustituye a la normal de ese nivel (Q-C4). | GDD.md §6.1 #13 (decidida el 2026-10-06); 06 §4.4 |
 | K6 | Contenido determinista por nivel y visible antes de abrir; nunca comprable ni abrible con semillas; sin probabilidades. | 06 §4.4; 08 §9 (`eco_basket_cycle`: IARC «ítems aleatorios: no») |
 | K7 | Pago con `Wallet.Apply`: `Transaction.Earn(SeedSource.Basket, n)` + `Transaction.GrantStock(…)`. | 08 §2.2 (`AF.Economy`: toda mutación por `Wallet.Apply`) |
-| K8 | Sin estado propio: la Canasta de nivel se deduce de `max_level` (la del nivel ganado se paga en su victoria). | 06 §4.5 («sin estado nuevo salvo un campo»); Q-M9 (a) |
+| K8 | Sin estado propio: la Canasta de nivel se deduce de `max_level` y `skipped_levels`. La del nivel `10k` se paga al superarlo: en su victoria (E30) o en su Salto del Boto (K9, E34). El Mapa del río (06 §4.5: «las cobradas llevan una marca») deduce la marca de cobrada igual, con `max_level` y `skipped_levels`, sin campo nuevo. | 06 §4.5 («sin estado nuevo salvo un campo»); Q-M9 (a) |
+| K9 | Un nivel `10k` saltado con el Salto del Boto **también paga su Canasta**: el salto marca el nivel como superado «sin recompensa (0 semillas, sin avance ni rotura de la Crecida, cuenta para la Canasta de cada 10 niveles)». Se paga el mismo `BasketRules.For(10k, live_unlock_level_daily)` (la función es pura: no distingue victoria de salto), con `source = basket`. El salto no toca la Crecida (C11), así que no hay hito 6 por saltar. Enganche E34 (B3). | 04 §2.6 («Función exacta»); 04 §5.2 (fila Salto del Boto) |
 
 **Ojo con `tools/econ_sim.py`:** su ciclo de la Canasta de nivel usa `BASKET_CYCLE[(k − 1) % 5]` con `k = L/10`, que da Marea en
-el 10 y Morpho en el 20: va **un hueco por detrás** de 06 §4.4 y 04 §3 (y da comodín en el 10). El cliente sigue al GDD. Además,
-la simulación da el comodín del hito 6 con un contador propio (`streak_chests`), y el cliente lo deduce de `max_level` (Q-C3).
-Para el integrador (hallazgo para 05 §3): decidir si se corrige la simulación; el efecto en `econ_B.md` es pequeño (un comodín
-cambia de sitio en el ciclo) y aquí no se toca `tools/`. Tampoco se copia de la simulación que la hoja escudo del día se dé solo
+el 10 y Morpho en el 20: va **un hueco por detrás** de 06 §4.4 y 04 §3 (y da comodín en el 10). No es un hallazgo nuevo: 05 §3.4
+ya lo recoge entre lo que la simulación no modela («entrega ya en la Canasta del nivel 10 el primer comodín del ciclo»). El
+cliente sigue al GDD. La simulación tampoco modela la Canasta grande, y 05 §3.4 pide volver a correr el script cuando se apruebe:
+ya está decidida (GDD.md §6.1 #13). Esa corrida queda **pendiente** (no se hace aquí: no se toca `tools/`). Además, la simulación
+da el comodín del hito 6 con un contador propio (`streak_chests`), y el cliente lo deduce de `max_level` (Q-C3). Tampoco se copia de la simulación que la hoja escudo del día se dé solo
 si el nivel ya era ≥ 25 al empezar el día (`start_day`): el GDD la repone en cada cambio de día (C12).
 
 ## 2. Módulos (Q-M10 (a): todo en `AF.Economy`)
@@ -112,7 +114,8 @@ Alias retirados que no se usan: `eco_streak_rewards`, `streak_daily_cap_seeds`, 
 
 ## 5. Analítica como sonda (08 §8.2; el sumidero real llega con B7)
 
-Hasta que exista `AF.Analytics`, cada evento sale como línea `AF_STATE {"event":…}` en builds de desarrollo (formato de
+`streak_fail` y `streak_state` son **solo sondas de desarrollo** (logcat), no eventos de 08 §8.2: si algún día van a analítica,
+primero hay que darlos de alta en esa taxonomía única. Hasta que exista `AF.Analytics`, cada evento de la tabla sale como línea `AF_STATE {"event":…}` en builds de desarrollo (formato de
 `DevProbe`, tope de 960 bytes). Lo implementa la ola 3 (`StreakProbeFormat` [P]); aquí solo se fija qué sale:
 
 | Línea | Parámetros | Cuándo |
@@ -136,20 +139,28 @@ comodines con unidades, en el orden `undo`, `hint`, `reveal`, `extra_cuia`, `shu
 | E27 | `Scripts/Save/ProfileJson.cs` (A4) | Leer y escribir `streak` (omitido si es null) y `daily.streak_hits` / `streak_seeds` |
 | E28 | `Scripts/Save/DailyCounters.cs` (A4) | `RollOver` pone `StreakHits` y `StreakSeeds` a 0 |
 | E29 | `Scripts/GameFlow/FailResolve.cs` | Tras `Transaction.HardFail`: `RollDay` + `OnHardFail(level, campaign)`; `FailOutcome` lleva `ShieldUsed` y `StreakBroken`. Absorbe E19 (`campaign: !IsDaily`) |
-| E30 | `Scripts/GameFlow/LevelFlow.Victory.cs` | En `ResolveWin`, tras `Transaction.Win`: `RollDay` + `OnVictory(level, !IsDaily)`; con `FreeDoubleHarvest`, `Transaction.DoubleHarvest` sin vídeo y `_harvestDoubled` = true (el botón x2 no se ofrece, Q-C9); las transacciones del hito; `BasketRules.For(level, live_unlock_level_daily)` y sus transacciones |
+| E30 | `Scripts/GameFlow/LevelFlow.Victory.cs` | En `ResolveWin`, tras `Transaction.Win`: `RollDay` + `OnVictory(level, !IsDaily)`; con `FreeDoubleHarvest`, `Transaction.DoubleHarvest` sin vídeo y `_harvestDoubled` = true (el botón x2 no se ofrece, Q-C9); las transacciones del hito; `BasketRules.For(level, live_unlock_level_daily)` y sus transacciones. El x2 gratis del río no pasa por la compuerta `ads_rv_double_harvest_from_level` (Q-C14): hoy `Wallet.Apply` rechazaría `Transaction.DoubleHarvest` con `NotUnlocked` si esa clave subiera por RC por encima de `streak_unlock_level`, así que el enganche añade a `Transaction`/`Wallet` una variante del x2 del río sin esa compuerta (E35) |
+| E34 | `Scripts/GameFlow/LevelFlow.Funnel.cs` / `Scripts/Boosters/SkipBooster.cs` (B3) | Al confirmar el Salto del Boto en un nivel `10k` de campaña: `BasketRules.For(level, live_unlock_level_daily)` y sus transacciones, igual que en la victoria (K9). Sin `OnVictory` ni `OnHardFail` |
+| E35 | `Scripts/Economy/Transaction.cs`, `Wallet.cs` | El x2 del río crecido (p. ej. `Transaction.DoubleHarvestRiver(level, tier)` [P]) con `source = double_harvest` y sin la compuerta de nivel del vídeo (Q-C14) |
 | E31 | `Scripts/GameFlow/LevelFlow.Funnel.cs` | `Fail()` pasa `campaign: !IsDaily` (E19) y el resultado de la Crecida al oyente (toast de la hoja, consuelo de TiTino) |
 | E32 | `Scripts/UI/GameBootstrap.cs` | Crear `StreakRules` con el adaptador del perfil, `StreakConfig` y `BasketConfig` (en un parcial nuevo `GameBootstrap.Streak.cs` con un único `SetUpStreak()`) |
 | E33 | `Scripts/GameFlow/SlothContext.cs` | `SlothVictoryFacts`: `streak` = `StreakOutcome.Wins` y `streakMilestone` = `MilestonePaid` (banco `streak` de TiTino, d.6) |
 | E25 | (vista del Reto) | Ya anotado: sin barra de la Crecida en el Reto (Q-C2) |
 
-## 7. Huecos y preguntas (Q-C1-Q-C13) [P]
+## 6.1 Nota para B1b
+
+La vista previa del premio del hito 6 (barra del HUD, réplica en la victoria) calcula `BasketRules.HitSix` con el **nivel en que
+caerá el hito**: el nivel actual + (6 − `wins`) − 1 victorias más. No con el `max_level` de ahora, que puede caer en otra decena y
+mostrar otro comodín.
+
+## 7. Huecos y preguntas (Q-C1-Q-C14) [P]
 
 Todas con recomendada (la primera). Ninguna reabre una decisión del dueño.
 
 | Id | Hueco | Opciones (recomendada primero) |
 |---|---|---|
 | Q-C1 | Cómo se cobra el x2 del río crecido | **(a)** se aplica solo al ganar, sin botón, con el estado anterior a la victoria (la que paga el hito 10 no lo lleva, como `econ_sim`); (b) un botón «x2 gratis» que hay que tocar |
-| Q-C2 | El Reto del río y el río crecido | **(a)** el Reto no suma ni rompe la Crecida y **no** lleva el x2 gratis del río (su Cosecha doble es la de vídeo); (b) el x2 gratis vale también en el Reto (la pregunta del dueño anotada en `spark-estado.md`, E19/E25) |
+| Q-C2 | El Reto del río y el río crecido | **(a)** el Reto no suma ni rompe la Crecida y **no** lleva el x2 gratis del río (su Cosecha doble es la de vídeo); (b) el x2 gratis vale también en el Reto (la pregunta del dueño anotada en `spark-estado.md`, E19/E25). **Ojo:** la (a) se aparta de una lectura literal de 04 §2.8, que dice «durante río crecido… se aplica sin video» sin limitarlo a la campaña; la (a) lo apoya en 06 §4.3 («el Reto del río y los eventos no la tocan») |
 | Q-C3 | Qué comodín trae la Canasta del hito 6 | **(b)** el de la **próxima Canasta de nivel**, deducido de `max_level`, sin estado nuevo; (a) un contador propio de Canastas del hito, como `streak_chests` de `econ_sim` (campo nuevo en el perfil) |
 | Q-C4 | La Canasta grande y la normal del mismo nivel | **(a)** la grande sustituye a la normal de 100, 200… y ocupa su ranura (el ciclo no se desplaza: 110 sigue siendo Morpho); (b) se pagan las dos |
 | Q-C5 | «Próxima Canasta de nivel» para el hito 6 | **(a)** la del primer múltiplo de 10 mayor que `max_level` tras la victoria (como mínimo el 20); si es un múltiplo de 100, el comodín del ciclo en esa ranura (`undo3` en el 100), nunca la grande; (b) la grande entera |
@@ -161,10 +172,11 @@ Todas con recomendada (la primera). Ninguna reabre una decisión del dueño.
 | Q-C11 | `biz_feature_win_streak` = false, o `streak_unlock_level` subido por encima del nivel actual | **(a)** se congela: no suma ni rompe, sin x2 del río y sin barra; el estado guardado se conserva; (b) se borra |
 | Q-C12 | Dónde vive el contenido de la Canasta grande | **(a)** constante [P] en `BasketRules` (GDD.md §6.1 #13), sin clave de RC; (b) clave nueva (alta en 08 §9) |
 | Q-C13 | Analítica de las dos Canastas | **(a)** `af_basket_open` solo para la de nivel; la del hito 6 va en `af_streak_milestone` (`reward_type` = `chest`, `reward_value` = `contents_json`) y sus 50 semillas con `source = streak` (cuentan en el tope); si en la misma victoria hay las dos (p. ej. hito 6 al ganar el 30), se pagan las dos; (b) `af_basket_open` también para la del hito |
+| Q-C14 | El x2 gratis del río frente a `ads_rv_double_harvest_from_level` (11; si RC lo subiera por encima de `streak_unlock_level`, `Wallet.Apply` lo rechazaría con `NotUnlocked`) | **(a)** el x2 del río no pasa por esa compuerta: es la Cosecha doble sin anuncio de 04 §2.8, no la ubicación de vídeo (E35); (b) se respeta la compuerta y, por debajo de ella, no hay x2 del río |
 
 ## 8. Hallazgos para el GDD (los lleva el integrador)
 
 - **08 §4.3:** `streak` sin `shield_available` y con `{wins, river_full}`; `daily.streak_hits` y `daily.streak_seeds` [P] (Q-M9, Q-C8).
 - **08 §2.2:** quitar «Crecida» de la fila de `AF.LiveOps` (Q-M10).
-- **05 §3 / `tools/econ_sim.py`:** el ciclo de la Canasta de nivel va un hueco por detrás de 06 §4.4 y 04 §3, y la hoja del día depende del nivel al empezar el día (§1.2).
+- **05 §3 / `tools/econ_sim.py`:** el desfase del ciclo de la Canasta ya está en 05 §3.4. Quedan pendientes volver a correr la simulación con la Canasta grande (05 §3.4; GDD.md §6.1 #13) y la hoja del día, que depende del nivel al empezar el día (§1.2).
 - **Glosario:** falta la entrada «Canasta grande» (GDD.md §6.1 #13; plan §6).
