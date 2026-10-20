@@ -41,6 +41,8 @@ namespace AF.UI
         private readonly ReliefParts _infinite;
         private readonly TextMeshProUGUI _infiniteLabel;
         private readonly Button _home;
+        private readonly NoCanoesDailyLink _daily; // E7: «Mientras esperas: Jugar el Reto del río» (04 §7.3)
+        private bool _dailyShown;
         private readonly char[] _buf = new char[64];
         private long _timerShown = long.MinValue;
         private int _key = int.MinValue;
@@ -65,6 +67,7 @@ namespace AF.UI
             _refillNote = ModalKit.Line("RefillNote", _panel, string.Empty, 13f, Palette.UiRedWarning);
             _infinite = ModalKit.Cta("InfiniteButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 16f, onInfinite, out _infiniteLabel);
             _home = ModalKit.Link("HomeButton", _panel, UiText.BackHome, onHome, out _);
+            _daily = new NoCanoesDailyLink(_panel);
             _root.gameObject.SetActive(false);
         }
 
@@ -81,6 +84,9 @@ namespace AF.UI
 
         public Button HomeButton => _home;
 
+        /// <summary>«Mientras esperas: Jugar el Reto del río» (E7; tests).</summary>
+        public NoCanoesDailyLink DailyLink => _daily;
+
         public Button CloseButton => _close.Button;
 
         public string TimerText => _timer.text;
@@ -94,6 +100,7 @@ namespace AF.UI
             _canvasH = canvasH;
             _key = int.MinValue;
             _timerShown = long.MinValue;
+            _dailyShown = NoCanoesDailyLink.Available; // se mira al abrir: con Sin canoas delante, el Reto de hoy no cambia
             Refresh(services);
         }
 
@@ -136,7 +143,7 @@ namespace AF.UI
             int missing = services?.Wallet.Missing(price) ?? price;
             bool refillOn = services != null && services.Wallet.Config.CanoesRefillSeedsEnabled;
             bool infiniteOn = services == null || !services.PurchasesBlocked; // perfil en solo lectura: sin compras (08 §4.4)
-            int key = ((video ? 1 : 0) * 397) ^ (missing * 7) ^ ((refillOn ? 1 : 0) * 13) ^ ((infiniteOn ? 1 : 0) * 8191) ^ canoes.Max;
+            int key = ((video ? 1 : 0) * 397) ^ (missing * 7) ^ ((refillOn ? 1 : 0) * 13) ^ ((infiniteOn ? 1 : 0) * 8191) ^ canoes.Max ^ ((_dailyShown ? 1 : 0) * 131071);
             if (key == _key)
             {
                 return false;
@@ -153,6 +160,7 @@ namespace AF.UI
             Add(ids, rects, "extra_canoe_video", _video.Button);
             Add(ids, rects, "refill_canoes", _refill.Button);
             Add(ids, rects, "infinite_canoes", _infinite.Button);
+            Add(ids, rects, NoCanoesDailyLink.LayoutId, _daily.Button);
             Add(ids, rects, "home", _home);
         }
 
@@ -207,6 +215,7 @@ namespace AF.UI
                 ModalKit.Place(_infinite, 16f, y, inner);
                 y += ModalKit.HeightOf(_infinite) + 6f;
             }
+            y += _daily.Layout(_dailyShown, 16f, y, inner); // 04 §7.3: la línea del Reto, encima de «Volver»
             UiBuilder.Place((RectTransform)_home.transform, (width - 220f) * 0.5f, y, 220f, 48f);
             y += 48f + 8f;
             ModalKit.Size(_panel, _surface, _art, (_canvasW - width) * 0.5f, Mathf.Max(8f, Mathf.Round((_canvasH - y) * 0.45f)), width, y);

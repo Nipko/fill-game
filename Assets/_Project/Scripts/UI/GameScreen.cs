@@ -229,6 +229,7 @@ namespace AF.UI
         private readonly GiveUpConfirm _giveUp;
         private readonly LevelFailedScreen _failed;
         private readonly NoCanoesPanel _noCanoes;
+        private DailyTeaserCard? _dailyTeaser; // Reto del río tras ganar el 7 (E6): se crea en la primera victoria del 7
         private readonly RectTransform _topLayer;
         private readonly ReliefParts _pauseButton;
         private readonly WalletBar _walletBar;
@@ -762,6 +763,9 @@ namespace AF.UI
         /// <summary>Sin canoas (tests).</summary>
         internal NoCanoesPanel NoCanoes => _noCanoes;
 
+        /// <summary>Tarjeta del Reto del río de la victoria del 7 (E6; null hasta esa victoria; tests).</summary>
+        internal DailyTeaserCard? DailyTeaser => _dailyTeaser;
+
         /// <summary>Menú de pausa (tests).</summary>
         internal PauseMenu Pause => _pause;
 
@@ -911,6 +915,7 @@ namespace AF.UI
             TickRelayout(dtMs);
             _banner.Tick(dtMs);
             _toast.Tick(dtMs);
+            _dailyTeaser?.Tick(dtMs);
             _sighting.Tick(dtMs);
             _fruitNew.Tick(dtMs);
             _stopLabel.Tick(dtMs);
@@ -1230,6 +1235,15 @@ namespace AF.UI
             SlotVictoryShown(flow);
             StopVictoryShown(flow);
             ArrivalVictoryShown(flow);
+
+            // Reto del río (E6; 06 §2.2, nivel 7; 02 §13): la tarjeta de 2 s «Desde el nivel 10, un tablero nuevo cada día», sobre
+            // las cuias y bajo la cinta, sin toques; no cambia nada de esta victoria. Solo con el Reto en el build (D-008).
+            if (flow.LevelNumber == DailyTeaserCard.TeaserLevel || _dailyTeaser != null)
+            {
+                _dailyTeaser ??= new DailyTeaserCard(_victoryOverlay, _art);
+                bool inBuild = GameBootstrap.Current != null && GameBootstrap.Current.DailyInBuild;
+                _dailyTeaser.Show(flow.LevelNumber, inBuild, _canvasW, bandTop, bandBottom, _victoryPanelY - RibbonRiseDp);
+            }
         }
 
         /// <inheritdoc />
