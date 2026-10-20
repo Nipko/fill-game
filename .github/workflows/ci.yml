@@ -16,6 +16,9 @@
 # los jobs de Unity en serie (concurrency unity-personal-seat). Sin keystore: el AAB va firmado con la clave de
 # depuracion de Unity y nunca se sube a Google Play (CLAUDE.md, reglas duras 5 y 6).
 #
+# Cola de unity-personal-seat: GitHub guarda un solo job en espera por grupo; si llega otro, el que esperaba se
+# cancela (sale "cancelled" en el PR y se relanza a mano). Es el precio de no pedir dos asientos Personal a la vez.
+#
 # Identidad del build: hasta el dictamen de marca no hay applicationId definitivo, asi que el job construye un ENSAYO
 # (-afRehearsal: configuracion de release con com.amazonfill.dev) y lo comprueba como build de prueba
 # (check-manifest -Mode dev). Cuando el dueno cree la variable de repositorio AF_RELEASE_APPLICATION_ID (no es un
@@ -126,8 +129,9 @@ jobs:
           set -uo pipefail
           all_true() { { echo "unity=true"; echo "core=true"; } >> "$GITHUB_OUTPUT"; exit 0; }
           [ "$EVENT" = "pull_request" ] || all_true
-          git fetch --no-tags --depth=1 origin "$BASE" "$HEAD" || all_true
-          files="$(git diff --name-only "$BASE" "$HEAD")" || all_true
+          # Contra el punto de bifurcacion del PR (BASE...HEAD), no contra la punta de main.
+          git fetch --no-tags --depth=200 origin "$BASE" "$HEAD" || all_true
+          files="$(git diff --name-only "$BASE...$HEAD")" || all_true
           if printf '%s\n' "$files" | grep -Eq '^(Assets/|Packages/|ProjectSettings/|ci/|\.github/workflows/)'; then
             echo "unity=true" >> "$GITHUB_OUTPUT"
           else

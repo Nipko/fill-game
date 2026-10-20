@@ -41,7 +41,7 @@
     <PackageReference Include="NUnit3TestAdapter" Version="6.3.0" />
     <!--
       Cobertura (D-033, Q-T7: coverlet solo para dotnet test). Inactiva por defecto: solo mide con
-      -p:CollectCoverage=true (compuerta del job core de .github/workflows/ci.yml); la configuración va en el
+      -p:CollectCoverage=true (compuerta del job coverage de .github/workflows/ci.yml); la configuración va en el
       PropertyGroup condicionado de arriba. No llega a Unity: este proyecto no lo compila Unity.
     -->
     <PackageReference Include="coverlet.msbuild" Version="10.0.1">
