@@ -176,7 +176,9 @@ namespace AF.UI
         /// Escalón de la victoria compacta de la última maquetación (D-032, punto 2; 0 = la de siempre, hasta
         /// <see cref="VictoryCompactMax"/>): el más bajo con el que la victoria más alta posible de esta pantalla, idioma y escala
         /// (cinta con el título más alto, Cosecha doble, el chip del nivel siguiente y la ranura) deja la cinta bajo la cabecera
-        /// del HUD. No depende de lo que lleve cada victoria, así que «Siguiente» queda en el mismo sitio en todas (Q7-A).
+        /// del HUD. No depende de lo que lleve cada victoria, así que «Siguiente» queda a la misma altura en todas (Q7-A); en el
+        /// escalón 3, en la victoria con «Ver mapa», va más estrecho y empieza más a la derecha, con el mismo canto derecho [P]
+        /// (PlaceVictoryRow).
         /// </summary>
         internal int VictoryCompact => _victoryCompact;
 
@@ -466,7 +468,8 @@ namespace AF.UI
         // La fila del escalón 3 (D-032, punto 2) [P]: «Inicio» a la izquierda de «Siguiente», en su misma fila y centrado a lo alto con
         // él, y, con la llegada (ArrivalVictoryShown), «Ver mapa» entre los dos; «Siguiente» se queda con el resto del ancho y su
         // etiqueta se ajusta (14-22 sp × la escala, nunca menos de 12). La fila no cambia de alto con «Ver mapa», así que «Siguiente»
-        // queda a la misma altura en todas las victorias (Q7-A). Devuelve el pie de la fila.
+        // queda a la misma altura en todas las victorias (Q7-A) y con el mismo canto derecho; con «Ver mapa», más estrecho y desplazado
+        // a la derecha (su centro y el chip del nivel siguiente también) [P] (D-032, punto 2). Devuelve el pie de la fila.
         private float PlaceVictoryRow(float rowX, float y, float nextW, float nextH)
         {
             float homeW = 0f;

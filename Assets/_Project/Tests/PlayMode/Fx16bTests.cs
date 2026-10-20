@@ -24,9 +24,10 @@ namespace AF.Tests.PlayMode
     /// en es-419 y en en-XA, en las victorias que midió DC3 (el 127, el 34, el 39 con la Cosecha doble y el chip del 40, y el 20
     /// con SingleKey) y en las del 20 y el 80 con su llegada, la cinta, la ranura del Dato del río y «Siguiente» quedan bajo la
     /// cabecera del HUD; ningún texto de la victoria baja de 12 sp × la escala, ningún botón de 48 dp, «Inicio» y «Siguiente» no
-    /// se pisan, nada se sale del panel y «Siguiente» queda en el mismo sitio en todas las victorias de cada idioma y escala
-    /// (Q7-A). La compactación va por escalones y solo cuando hace falta: en es-419 al 100 % no hay ninguno, y a 360 × 780 dp
-    /// ninguno en ningún caso («sin cambiar 360 × 780»).</description></item>
+    /// se pisan, nada se sale del panel y «Siguiente» queda a la misma altura en todas las victorias de cada idioma y escala
+    /// (Q7-A; en el escalón 3, con «Ver mapa», más estrecho y con el mismo canto derecho [P]). La compactación va por escalones y
+    /// solo cuando hace falta: en es-419 al 100 % con la política del Dato del río por defecto no hay ninguno (con SingleKey, que no
+    /// es la de por defecto, sí), y a 360 × 780 dp ninguno en ningún caso («sin cambiar 360 × 780»).</description></item>
     /// <item><description>El botón del inicio tras acabar el contenido (punto 6): con el Reto del río desbloqueado, «Jugar · Reto
     /// del río» (<c>play_daily</c>), que abre el Reto; sin él, «Jugar» (<c>play</c>), que abre «El río sigue creciendo», como
     /// antes; también tras ganar el 700.</description></item>
@@ -131,7 +132,7 @@ namespace AF.Tests.PlayMode
 
                 if (!singleKey)
                 {
-                    // Q7-A: «Siguiente» en el mismo sitio en todas las victorias de este idioma y esta escala (SingleKey cambia la ranura).
+                    // Q7-A: «Siguiente» a la misma altura en todas las victorias de este idioma y esta escala (SingleKey cambia la ranura).
                     if (next < 0f)
                     {
                         next = view.NextTopDp;
@@ -139,7 +140,7 @@ namespace AF.Tests.PlayMode
                     }
                     else
                     {
-                        Assert.That(view.NextTopDp, Is.EqualTo(next).Within(0.01f), what + ": Siguiente en el mismo sitio");
+                        Assert.That(view.NextTopDp, Is.EqualTo(next).Within(0.01f), what + ": Siguiente a la misma altura");
                         Assert.That(step, Is.EqualTo(compact), what + ": el mismo escalón");
                     }
                 }
@@ -222,6 +223,8 @@ namespace AF.Tests.PlayMode
             }
 
             AssertCompactVictory(view, "20 en es-419 al 130 % a 640");
+            float nextTop20 = view.NextTopDp;
+            float nextRight20 = next.anchoredPosition.x + next.rect.width;
 
             // En el 39, el chip del 40 cuelga sobre el centro de «Siguiente».
             yield return FactLineTests.Win(39, null, LocLocale.SpanishLatinAmerica, 1.3f, true);
@@ -232,6 +235,13 @@ namespace AF.Tests.PlayMode
             next = (RectTransform)view.NextButton.transform;
             Assert.That(view.VictoryNextCenterXDp, Is.EqualTo(next.anchoredPosition.x + (next.rect.width * 0.5f)).Within(0.01f), "el chip, sobre Siguiente");
             AssertCompactVictory(view, "39 en es-419 al 130 % a 640");
+
+            // Q7-A en el escalón 3: «Siguiente» a la misma altura y con el mismo canto derecho en la victoria con «Ver mapa» (el 20) y
+            // en la de sin él (el 39); con «Ver mapa» empieza más a la derecha y es más estrecho [P] (D-032, punto 2).
+            Assert.That(view.VictoryCompact, Is.EqualTo(GameScreen.VictoryCompactRow), "39 en es-419 al 130 % a 640: la fila");
+            Assert.That(view.VictoryMapShown, Is.False, "el 39, sin llegada");
+            Assert.That(view.NextTopDp, Is.EqualTo(nextTop20).Within(0.01f), "Siguiente a la misma altura en el 20 y el 39");
+            Assert.That(next.anchoredPosition.x + next.rect.width, Is.EqualTo(nextRight20).Within(0.01f), "Siguiente con el mismo canto derecho en el 20 y el 39");
         }
 
         // El marco del panel de victoria (dp) y el aire mínimo del texto de la línea de fruta dentro de él (revisión de FX16b).
@@ -355,6 +365,47 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.ContentEnd), "«El río sigue creciendo», como antes");
             Assert.That(lobby.OverlayVisible, Is.True);
             Assert.That(lobby.OverlayTitle, Is.EqualTo(UiText.ContentEndTitle));
+        }
+
+        // Con el día de hoy ya sellado o pendiente de validar, «Jugar · Reto del río» abre lo que abriría su tarjeta: el calendario
+        // de sellos (D-032, punto 6), nunca «El río sigue creciendo» ni el 701 (revisión de FX16b).
+        [UnityTest]
+        public IEnumerator AfterTheContent_WithTodaySealedOrPending_JugarRetoDelRio_OpensTheCalendar([Values(true, false)] bool sealedDay)
+        {
+            const string today = "2026-10-20";
+            LaunchOptions.ClockOverride = new ManualClock(new DateTime(2026, 10, 20, 15, 0, 0, DateTimeKind.Utc), TimeSpan.FromHours(-5));
+            var record = new DailyChallengeRecord { StreakDays = 1 };
+            if (sealedDay)
+            {
+                record.LastClaimedDate = today;
+                record.StampsMonth = "2026-10";
+                record.StampDays.Add(20);
+            }
+            else
+            {
+                record.PendingClaims.Add(new DailyClaimEntry(today, 1));
+            }
+
+            GameBootstrap.DailyPoolOverride = DailyPlayTestPool.Full;
+            GameBootstrap.DailyStoreOverride = new InMemoryDailyChallengeStore(record);
+            yield return LoadAfter700();
+            GameBootstrap boot = GameBootstrap.Current!;
+            LobbyScreen lobby = boot.Lobby!;
+            DailyCardState expected = sealedDay ? DailyCardState.Sealed : DailyCardState.PendingValidation;
+            Assert.That(boot.DailyService!.CardState(700), Is.EqualTo(expected), "el día de hoy, " + (sealedDay ? "sellado" : "pendiente de validar"));
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(lobby.PlayMode, Is.EqualTo(PlayButtonMode.Daily));
+            Assert.That(lobby.PlayLabel, Is.EqualTo(UiText.PlayDaily));
+
+            Assert.That(boot.PressPlay(), Is.True);
+            PlayModeHelpers.Step(boot, PlayModeHelpers.FrameMs);
+            DailyChallengeScreen daily = boot.DailyScreen!;
+            Assert.That(daily.Calendar.Visible, Is.True, "el calendario de sellos, como su tarjeta");
+            Assert.That(daily.IsOpen, Is.True);
+            Assert.That(daily.Flow, Is.Null, "ningún tablero del Reto: hoy ya se jugó");
+            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Lobby), "nunca «El río sigue creciendo»");
+            Assert.That(lobby.OverlayVisible, Is.False);
+            Assert.That(boot.Flow!.HasLevel && boot.Flow.LevelNumber > 700, Is.False, "ningún 701");
         }
 
         [UnityTest]
