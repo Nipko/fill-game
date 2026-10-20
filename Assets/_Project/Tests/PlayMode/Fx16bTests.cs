@@ -100,6 +100,18 @@ namespace AF.Tests.PlayMode
                     VictoryArrivalTests.AssertFits(view, what);
                 }
 
+                // «Ver mapa» con la llegada (D-013; 06 §4.5): siempre fuera de la fila; en la fila del escalón 3, si «Siguiente» conserva
+                // sitio para su etiqueta (si no, no sale: pregunta abierta de D-032).
+                bool arrival = view.Arrival != null && view.Arrival.Stop != null
+                    && (view.Arrival.Kind == ArrivalKind.Arrival || view.Arrival.Kind == ArrivalKind.Place);
+                if (arrival && view.RiverMapOpenable)
+                {
+                    TestContext.WriteLine(what + ": «Ver mapa» " + (view.VictoryMapShown ? "sale" : "NO sale (no cabe en la fila)"));
+                    Assert.That(view.VictoryMapShown, Is.EqualTo(view.VictoryCompact < GameScreen.VictoryCompactRow || view.VictoryRowFitsMap()),
+                        what + ": «Ver mapa» sale si cabe");
+                    Assert.That(view.VictoryMapDropped, Is.EqualTo(!view.VictoryMapShown), what);
+                }
+
                 if (view.FruitLine != null && view.FruitLine.Shown)
                 {
                     FactLineTests.AssertFits(view, what);
@@ -167,7 +179,7 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
-        public IEnumerator Victory16x9_RowStep_HomeLeftOfNext_WithoutVerMapa_AndTheChipOverNext()
+        public IEnumerator Victory16x9_RowStep_HomeLeftOfNext_VerMapaBetween_AndTheChipOverNext()
         {
             yield return FactLineTests.Win(20, null, LocLocale.SpanishLatinAmerica, 1.3f, true);
             GameBootstrap boot = GameBootstrap.Current!;
@@ -180,13 +192,36 @@ namespace AF.Tests.PlayMode
             Assert.That(Mathf.Abs((-home.anchoredPosition.y + (home.rect.height * 0.5f)) - (-next.anchoredPosition.y + (next.rect.height * 0.5f))),
                 Is.LessThan(0.6f), "en la misma fila, centrados a lo alto");
             Assert.That(view.Arrival!.Kind, Is.Not.EqualTo(ArrivalKind.None), "con su llegada");
-            Assert.That(view.VictoryMapShown, Is.False, "«Ver mapa» no cabe en la fila: no sale [P]");
+            Assert.That(view.RiverMapOpenable, Is.True, "con el Mapa");
+
+            // «Ver mapa» (D-013; 06 §4.5), entre «Inicio» y «Siguiente», en la misma fila: la fila no cambia de alto.
+            Assert.That(view.VictoryMapShown, Is.True, "es-419 al 130 % a 640: «Ver mapa» cabe en la fila");
+            RectTransform map = (RectTransform)view.VictoryMapButton.transform;
+            Assert.That(home.anchoredPosition.x + home.rect.width, Is.LessThanOrEqualTo(map.anchoredPosition.x + 0.01f), "Inicio a la izquierda de Ver mapa");
+            Assert.That(map.anchoredPosition.x + map.rect.width, Is.LessThanOrEqualTo(next.anchoredPosition.x + 0.01f), "Ver mapa a la izquierda de Siguiente");
+            Assert.That(Mathf.Abs((-map.anchoredPosition.y + (map.rect.height * 0.5f)) - (-next.anchoredPosition.y + (next.rect.height * 0.5f))),
+                Is.LessThan(0.6f), "Ver mapa en la misma fila");
+            Assert.That(map.rect.height, Is.GreaterThanOrEqualTo(48f - 0.01f));
             Assert.That(view.VictoryNextCenterXDp, Is.EqualTo(next.anchoredPosition.x + (next.rect.width * 0.5f)).Within(0.01f));
             float nextFace = ((RectTransform)view.NextButton.transform).rect.height;
             Assert.That(nextFace, Is.GreaterThanOrEqualTo(48f));
-            TextMeshProUGUI label = view.NextButton.GetComponentInChildren<TextMeshProUGUI>(true);
-            label.ForceMeshUpdate();
-            Assert.That(label.isTextOverflowing, Is.False, "«Siguiente» cabe en su botón");
+            foreach (Button b in new[] { view.NextButton, view.HomeButton, view.VictoryMapButton })
+            {
+                TextMeshProUGUI label = b.GetComponentInChildren<TextMeshProUGUI>(true);
+                label.ForceMeshUpdate();
+                if (b == view.NextButton)
+                {
+                    Assert.That(label.isTextOverflowing, Is.False, "«Siguiente» cabe en su botón");
+                }
+
+                // A lo ancho, en una línea y a su tamaño más pequeño (el autoajuste no baja de ahí; los secundarios de madera tienen 48 dp
+                // de alto en todas las victorias: su alto no cambia aquí).
+                float wide = UiBuilder.MinTextWidth(label);
+                Assert.That(wide, Is.LessThanOrEqualTo(label.rectTransform.rect.width + 0.5f), "«" + label.text + "» cabe a lo ancho en su botón");
+                Assert.That(label.fontSize, Is.GreaterThanOrEqualTo((UiBuilder.MinTextSp * UiBuilder.TextScale) - 0.01f), "«" + label.text + "» ≥ 12 sp");
+            }
+
+            AssertCompactVictory(view, "20 en es-419 al 130 % a 640");
 
             // En el 39, el chip del 40 cuelga sobre el centro de «Siguiente».
             yield return FactLineTests.Win(39, null, LocLocale.SpanishLatinAmerica, 1.3f, true);
@@ -198,6 +233,10 @@ namespace AF.Tests.PlayMode
             Assert.That(view.VictoryNextCenterXDp, Is.EqualTo(next.anchoredPosition.x + (next.rect.width * 0.5f)).Within(0.01f), "el chip, sobre Siguiente");
             AssertCompactVictory(view, "39 en es-419 al 130 % a 640");
         }
+
+        // El marco del panel de victoria (dp) y el aire mínimo del texto de la línea de fruta dentro de él (revisión de FX16b).
+        private const float FruitTextFrameDp = 8f;
+        private const float FruitTextAirDp = 8f;
 
         // Lo de la victoria compacta (D-032, punto 2): la cinta, la ranura y Siguiente bajo la cabecera; nada se sale del panel;
         // ningún texto bajo 12 sp × la escala ni botón bajo 48 dp; Inicio y Siguiente sin pisarse.
@@ -238,6 +277,28 @@ namespace AF.Tests.PlayMode
                 }
 
                 rects.Add(r);
+            }
+
+            // El texto de la línea de fruta (sin placa propia) a 8 dp o más del borde interior del panel (su marco, 8 dp): 16 dp del
+            // canto, también cuando la ranura se ensancha en el escalón 2 (FactLine.InsetDp).
+            if (view.FruitLine != null && view.FruitLine.Shown && view.FruitLine.Root != null)
+            {
+                RectTransform panel = view.VictoryPanelRect;
+                Rect pr = panel.rect;
+                foreach (TextMeshProUGUI t in view.FruitLine.Root.GetComponentsInChildren<TextMeshProUGUI>(false))
+                {
+                    if (string.IsNullOrEmpty(t.text) || !t.enabled)
+                    {
+                        continue;
+                    }
+
+                    t.ForceMeshUpdate();
+                    Bounds b = t.textBounds;
+                    Vector3 lo = panel.InverseTransformPoint(t.rectTransform.TransformPoint(b.min));
+                    Vector3 hi = panel.InverseTransformPoint(t.rectTransform.TransformPoint(b.max));
+                    float air = Mathf.Min(lo.x - pr.xMin, pr.xMax - hi.x) - FruitTextFrameDp;
+                    Assert.That(air, Is.GreaterThanOrEqualTo(FruitTextAirDp - 0.5f), what + ": «" + t.name + "» de la línea de fruta, a " + air + " dp del marco");
+                }
             }
 
             float min = (UiBuilder.MinTextSp * UiBuilder.TextScale) - 0.01f;

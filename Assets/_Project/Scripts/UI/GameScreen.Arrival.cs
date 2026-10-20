@@ -46,6 +46,8 @@ namespace AF.UI
         private CanvasGroup? _victoryMapGroup;
         private bool _victoryMapShown;
         private bool _victoryMapBuilt;
+        private bool _victoryMapDropped;
+        private TextMeshProUGUI? _victoryMapLabel;
 
         /// <summary>Hueco entre «Inicio» y «Ver mapa» cuando comparten la fila (dp) [P].</summary>
         internal const float VictoryMapGapDp = 8f;
@@ -77,6 +79,13 @@ namespace AF.UI
         /// <summary>«Ver mapa» está en la victoria de ahora (con una llegada y el Mapa en la escena).</summary>
         internal bool VictoryMapShown => _victoryMapShown;
 
+        /// <summary>
+        /// En la última victoria había llegada y Mapa, pero «Ver mapa» no salió: en la fila del escalón 3 de la victoria compacta
+        /// (D-032, punto 2) «Siguiente» no tenía sitio para su etiqueta con él (<see cref="VictoryRowFitsMap"/>). Pendiente del dueño
+        /// (pregunta abierta de D-032; tests).
+        /// </summary>
+        internal bool VictoryMapDropped => _victoryMapDropped;
+
         /// <summary>Opacidad de «Ver mapa» (la de «Inicio»).</summary>
         internal float VictoryMapAlpha => _victoryMapGroup != null ? _victoryMapGroup.alpha : 0f;
 
@@ -101,6 +110,7 @@ namespace AF.UI
             TextMeshProUGUI label = UiBuilder.Label("Label", _victoryMap.Face, TextStyle.PillWood, UiText.MapOpen, VictoryMapSp, Palette.Cream, TextAlignmentOptions.Center);
             UiBuilder.PlaceCtaLabel(label.rectTransform, _art.CtaWood);
             UiBuilder.AutoSize(label, UiBuilder.MinTextSp, VictoryMapSp);
+            _victoryMapLabel = label;
             _victoryMap.Relief.Bind(_victoryMap.Face, _victoryMap.Base, _victoryMap.FaceImage, _art.CtaWood, null, null, label);
             _victoryMap.Button.gameObject.SetActive(false);
             _victoryMapBuilt = true;
@@ -109,6 +119,7 @@ namespace AF.UI
         partial void ArrivalLevelLoaded(LevelFlow flow)
         {
             _stopArriveSent = false;
+            _victoryMapDropped = false;
             ShowVictoryMap(false);
             // De F3 (la línea de fruta), no de la llegada: calienta las medidas de la ranura del Dato del río al cargar el nivel, para
             // que la primera victoria no las pague (~20 ms; FactLineTests.Measures_AreMadeWhenTheLevelLoads_NotAtTheVictory). No la
@@ -121,8 +132,18 @@ namespace AF.UI
             _stopArriveSent = false;
             ArrivalStrip? strip = _arrival;
             bool arrival = strip != null && strip.Stop != null && (strip.Kind == ArrivalKind.Arrival || strip.Kind == ArrivalKind.Place);
-            // En la fila de la victoria compacta (D-032, punto 2; escalón 3) «Ver mapa» no cabe: no sale [P].
-            ShowVictoryMap(arrival && RiverMapOpenable && _victoryCompact < VictoryCompactRow);
+            // En la fila de la victoria compacta (D-032, punto 2; escalón 3) «Ver mapa» va entre «Inicio» y «Siguiente» si
+            // «Siguiente» conserva sitio para su etiqueta (VictoryRowFitsMap); si no, no sale: pregunta abierta al dueño (D-032).
+            bool want = arrival && RiverMapOpenable;
+            bool row = _victoryCompact >= VictoryCompactRow;
+            bool show = want && (!row || VictoryRowFitsMap());
+            _victoryMapDropped = want && !show;
+            ShowVictoryMap(show);
+            if (row)
+            {
+                RelayoutVictoryRow();
+            }
+
             LayoutVictoryMap();
         }
 
@@ -194,14 +215,19 @@ namespace AF.UI
                 return;
             }
 
+            LevelFlow? flow = _flow;
+            UiBuilder.SetEnabled(_victoryMap.Button, _autoNextMs < 0f && flow != null && flow.Phase == FlowPhase.VictoryScreen);
+            if (_victoryCompact >= VictoryCompactRow)
+            {
+                return; // en la fila del escalón 3 ya lo colocó PlaceVictoryRow
+            }
+
             RectTransform next = (RectTransform)_next.Button.transform;
             float x = next.anchoredPosition.x;
             float rowW = next.sizeDelta.x;
             float half = Mathf.Floor((rowW - VictoryMapGapDp) * 0.5f);
             UiBuilder.Place((RectTransform)_home.Button.transform, x, _victoryHomeTopDp, half, 48f);
             UiBuilder.Place((RectTransform)_victoryMap.Button.transform, x + rowW - half, _victoryHomeTopDp, half, 48f);
-            LevelFlow? flow = _flow;
-            UiBuilder.SetEnabled(_victoryMap.Button, _autoNextMs < 0f && flow != null && flow.Phase == FlowPhase.VictoryScreen);
         }
 
         // «Ver mapa» (M4.3): completa la franja (su stop_arrive y lo visto del Mapa hasta el 10k: el Mapa no repite la llegada al

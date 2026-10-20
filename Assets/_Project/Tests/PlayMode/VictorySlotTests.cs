@@ -190,7 +190,8 @@ namespace AF.Tests.PlayMode
             foreach (string locale in new[] { LocLocale.SpanishLatinAmerica, LocLocale.Pseudo })
             {
                 float nextWithout = -1f;
-                int compactWithout = -1;
+                float bottomWithout = -1f;
+                float belowWithout = -1f;
                 foreach (bool withProvider in new[] { false, true })
                 {
                     LaunchOptions.FontScaleOverride = 1.3f;
@@ -217,7 +218,9 @@ namespace AF.Tests.PlayMode
                     {
                         Assert.That(slot.ReserveDp, Is.EqualTo(0f));
                         nextWithout = view.NextTopDp;
-                        compactWithout = view.VictoryCompact;
+                        bottomWithout = view.VictoryPanelBottomDp;
+                        belowWithout = view.VictoryPanelBottomDp - view.NextTopDp;
+                        Assert.That(belowWithout, Is.EqualTo(BelowNextDp(view)).Within(0.01f), "sin ranura: bajo Siguiente, sus botones y el marco");
                         continue;
                     }
 
@@ -235,18 +238,27 @@ namespace AF.Tests.PlayMode
 
                     // Con los huecos del escalón de la victoria compacta de ahora (D-032; en 16:9 al 130 %, los justos).
                     Assert.That(slot.ReserveDp, Is.EqualTo(slot.ReserveFor(expected)));
-                    if (compactWithout == view.VictoryCompact)
-                    {
-                        Assert.That(nextWithout - view.NextTopDp, Is.EqualTo(slot.ReserveDp).Within(0.01f), "Siguiente sube lo que mide la reserva");
-                    }
-                    else
-                    {
-                        Assert.That(view.VictoryCompact, Is.GreaterThan(compactWithout), "la ranura solo puede compactar más");
-                    }
+                    // El panel va anclado abajo: «Siguiente» sube lo que mide la reserva más lo que cambien, con el escalón, los botones
+                    // bajo él y el marco (en el mismo escalón, solo la reserva; D-032, punto 2).
+                    Assert.That(view.VictoryPanelBottomDp, Is.EqualTo(bottomWithout).Within(0.01f), "el pie del panel no se mueve");
+                    float expectedRise = BelowNextDp(view) + slot.ReserveDp - belowWithout;
+                    Assert.That(nextWithout - view.NextTopDp, Is.EqualTo(expectedRise).Within(0.01f), "Siguiente sube la reserva y lo que compacta el escalón");
+                    Assert.That(expectedRise, Is.LessThanOrEqualTo(slot.ReserveDp + 0.01f), "compactar nunca sube Siguiente más que la reserva");
                 }
 
                 LaunchOptions.Reset();
             }
+        }
+
+        // Lo que va bajo el canto de arriba de «Siguiente» sin contar la ranura (dp): en el escalón 3 de la victoria compacta, la
+        // fila de «Inicio» y «Siguiente»; si no, «Siguiente» e «Inicio» debajo; más el marco de abajo del escalón (D-032, punto 2).
+        private static float BelowNextDp(GameScreen view)
+        {
+            float frame = view.VictoryCompact >= GameScreen.VictoryCompactMargins ? GameScreen.VictoryFrameCompactDp : GameScreen.VictoryFrameDp0;
+            float buttons = view.VictoryCompact >= GameScreen.VictoryCompactRow
+                ? Mathf.Max(((RectTransform)view.NextButton.transform).rect.height, 48f)
+                : view.HomeBottomDp - view.NextTopDp;
+            return buttons + frame;
         }
 
         [UnityTest]

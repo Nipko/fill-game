@@ -2749,18 +2749,9 @@ namespace AF.UI
             float rowX = (panelW - nextW) / 2f;
             if (compact >= VictoryCompactRow)
             {
-                // Victoria compacta, escalón 3 (D-032, punto 2) [P]: «Inicio» a la izquierda de «Siguiente», en su misma fila y
-                // centrado a lo alto con él; «Siguiente» se queda con el resto del ancho y su etiqueta se ajusta (14-22 sp × la
-                // escala, nunca menos de 12). Sin «Ver mapa» (ArrivalVictoryShown): no cabe en la fila.
-                float homeW = VictoryRowHomeWidthDp(nextW);
-                float nextX = rowX + homeW + VictoryRowGapDp;
-                float nextRowW = nextW - homeW - VictoryRowGapDp;
-                SetNextLabelFit(true);
-                UiBuilder.Place((RectTransform)_next.Button.transform, nextX, y, nextRowW, nextH);
-                _victoryNextCenterX = nextX + (nextRowW * 0.5f);
-                _victoryHomeTopDp = y + Mathf.Max(0f, (nextH - 48f) * 0.5f);
-                UiBuilder.Place((RectTransform)_home.Button.transform, rowX, _victoryHomeTopDp, homeW, 48f);
-                bottom = y + Mathf.Max(nextH, 48f);
+                // Victoria compacta, escalón 3 (D-032, punto 2) [P]: «Inicio» (y «Ver mapa», con la llegada) a la izquierda de
+                // «Siguiente», en su misma fila (GameScreen.Victory.cs, PlaceVictoryRow).
+                bottom = PlaceVictoryRow(rowX, y, nextW, nextH);
             }
             else
             {

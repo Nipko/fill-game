@@ -285,6 +285,14 @@ namespace AF.UI
         /// </summary>
         public float BodySp { get; set; } = VictoryLineSlot.TextSp;
 
+        /// <summary>
+        /// Margen interior de la línea a cada lado dentro de la ranura (dp; 0 en la de siempre). En la victoria compacta de 16:9 la
+        /// ranura va a 8 dp del canto del panel (D-032, punto 2, escalón 2), justo el ancho de su marco, y la línea de fruta, que no
+        /// tiene placa propia, se queda con <see cref="VictoryLineSlot.SideDp"/> dp desde el canto, como siempre: su texto no toca
+        /// el marco. Lo fija la pantalla antes de medir y de colocar; <see cref="NeedDp"/> mide con el ancho que queda.
+        /// </summary>
+        public float InsetDp { get; set; }
+
         /// <summary>Con Reducir movimiento en la victoria de ahora.</summary>
         public bool ReduceMotion => _reduceMotion;
 
@@ -359,6 +367,7 @@ namespace AF.UI
                 return 0f;
             }
 
+            widthDp = Mathf.Max(0f, widthDp - (2f * InsetDp)); // el ancho que le queda a la línea dentro de la ranura
             string locale = Loc.IsConfigured ? Loc.Locale : LocLocale.SourceLocale;
             LocCatalog catalog = Loc.Catalog;
             bool unapproved = Loc.ShowUnapproved;
@@ -404,10 +413,11 @@ namespace AF.UI
         /// <inheritdoc />
         public void Layout(RectTransform content, float widthDp, float heightDp)
         {
-            _width = widthDp;
+            float inset = Mathf.Min(InsetDp, Mathf.Max(0f, widthDp * 0.5f));
+            _width = widthDp - (2f * inset);
             _height = heightDp;
             Build(content);
-            UiBuilder.Place(_root!, 0f, 0f, widthDp, heightDp);
+            UiBuilder.Place(_root!, inset, 0f, _width, heightDp);
             if (Shown)
             {
                 Arrange();

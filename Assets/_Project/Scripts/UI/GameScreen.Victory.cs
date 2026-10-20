@@ -107,8 +107,9 @@ namespace AF.UI
         internal const int VictoryCompactText = 2;
 
         /// <summary>
-        /// Escalón 3 (D-032, punto 2) [P]: además, «Inicio» va a la izquierda de «Siguiente», en su misma fila, y «Ver mapa» no sale
-        /// (no cabe en la fila; el Mapa sigue en el inicio y en la pausa); «Siguiente» crece en alto solo lo que pide su etiqueta
+        /// Escalón 3 (D-032, punto 2) [P]: además, «Inicio» va a la izquierda de «Siguiente», en su misma fila, con «Ver mapa» entre
+        /// los dos en la victoria con llegada si «Siguiente» conserva sitio para su etiqueta (<see cref="VictoryRowFitsMap"/>; si no,
+        /// no sale: pregunta abierta al dueño en D-032); «Siguiente» crece en alto solo lo que pide su etiqueta
         /// (no la escala de texto entera) y el chip del nivel siguiente deja <see cref="NextChipRowCompactDp"/> dp sobre él.
         /// </summary>
         internal const int VictoryCompactRow = 3;
@@ -142,6 +143,12 @@ namespace AF.UI
 
         /// <summary>Margen de la ranura a cada lado desde el escalón 2 (dp) [P]; en la de siempre, <see cref="VictoryLineSlot.SideDp"/>.</summary>
         internal const float VictorySlotCompactSideDp = 8f;
+
+        /// <summary>
+        /// Margen interior de la línea de fruta a cada lado desde el escalón 2 (dp): lo que la ranura se acerca al canto, para que el
+        /// texto, sin placa propia, quede a <see cref="VictoryLineSlot.SideDp"/> dp del canto, como siempre (8 dp de aire dentro del marco).
+        /// </summary>
+        internal const float FruitLineCompactInsetDp = VictoryLineSlot.SideDp - VictorySlotCompactSideDp;
 
         /// <summary>Hueco entre «Inicio» y «Siguiente» en la fila del escalón 3 (dp) [P].</summary>
         internal const float VictoryRowGapDp = 8f;
@@ -228,6 +235,7 @@ namespace AF.UI
             if (_fruitLine != null)
             {
                 _fruitLine.BodySp = body;
+                _fruitLine.InsetDp = level >= VictoryCompactText ? FruitLineCompactInsetDp : 0f;
             }
         }
 
@@ -394,8 +402,105 @@ namespace AF.UI
         // VictoryRowHomeMinDp y VictoryRowHomeMaxShare de la fila.
         private float VictoryRowHomeWidthDp(float rowW)
         {
-            float need = Mathf.Ceil(UiBuilder.MinTextWidth(_homeLabel)) + 24f + 2f;
+            float need = Mathf.Ceil(UiBuilder.MinTextWidth(_homeLabel)) + CtaLabelPadDp;
             return Mathf.Clamp(need, VictoryRowHomeMinDp, Mathf.Floor(rowW * VictoryRowHomeMaxShare));
+        }
+
+        // Lo que pide de ancho un botón para su etiqueta: los 24 dp de sus márgenes (UiBuilder.PlaceCtaLabel) y 2 de holgura.
+        private const float CtaLabelPadDp = 24f + 2f;
+
+        // Ancho de una sola línea del texto de ahora de label a sizeDp (dp), sin el autoajuste; deja la etiqueta como estaba. Mide
+        // con TextMeshPro al colocar, nunca por fotograma.
+        private static float LabelWidthAt(TMPro.TextMeshProUGUI label, float sizeDp)
+        {
+            bool auto = label.enableAutoSizing;
+            float size = label.fontSize;
+            label.enableAutoSizing = false;
+            label.fontSize = sizeDp;
+            float w = label.GetPreferredValues(label.text, float.PositiveInfinity, float.PositiveInfinity).x;
+            label.fontSize = size;
+            label.enableAutoSizing = auto;
+            return w;
+        }
+
+        /// <summary>
+        /// Lo menos que mide de ancho cada botón secundario («Inicio» y «Ver mapa») en la fila del escalón 3 con la llegada, si la
+        /// fila deja ese sitio (dp) [P]; si no, cada uno lo que pide su etiqueta, y nunca menos de 48.
+        /// </summary>
+        internal const float VictoryRowPairMinDp = 72f;
+
+        // Anchos de la fila del escalón 3 con «Ver mapa» (D-032, punto 2): «Inicio» y «Ver mapa» a la izquierda, del mismo ancho si
+        // cabe (lo que pida la etiqueta más larga de las dos a 12 sp × la escala, al menos VictoryRowPairMinDp) o cada uno el suyo, y
+        // «Siguiente» con el resto. false si «Siguiente» no tiene sitio para su etiqueta a NextRowMinSp × la escala.
+        private bool VictoryRowMapWidths(float rowW, out float homeW, out float mapW)
+        {
+            float scale = UiBuilder.TextScale;
+            float homeNeed = Mathf.Max(48f, Mathf.Ceil(UiBuilder.MinTextWidth(_homeLabel)) + CtaLabelPadDp);
+            float mapNeed = _victoryMapLabel != null
+                ? Mathf.Max(48f, Mathf.Ceil(LabelWidthAt(_victoryMapLabel, UiBuilder.MinTextSp * scale)) + CtaLabelPadDp)
+                : 48f;
+            float nextNeed = Mathf.Max(48f, Mathf.Ceil(LabelWidthAt(_nextLabel, Mathf.Max(UiBuilder.MinTextSp, NextRowMinSp) * scale)) + CtaLabelPadDp);
+            float pair = Mathf.Max(VictoryRowPairMinDp, Mathf.Max(homeNeed, mapNeed));
+            if (rowW - (2f * pair) - (2f * VictoryRowGapDp) >= nextNeed)
+            {
+                homeW = pair;
+                mapW = pair;
+                return true;
+            }
+
+            homeW = homeNeed;
+            mapW = mapNeed;
+            return rowW - homeW - mapW - (2f * VictoryRowGapDp) >= nextNeed;
+        }
+
+        /// <summary>
+        /// Con la llegada, en el escalón 3, «Ver mapa» cabe en la fila de «Inicio» y «Siguiente» (D-032, punto 2): «Siguiente» tiene
+        /// sitio para su etiqueta a <see cref="NextRowMinSp"/> sp × la escala. Mide con TextMeshPro; al colocar, nunca por fotograma.
+        /// </summary>
+        internal bool VictoryRowFitsMap()
+        {
+            float nextW = Mathf.Min(_canvasW - 48f, Mathf.Min(312f, VictoryPanelWidthDp - 16f));
+            return VictoryRowMapWidths(nextW, out _, out _);
+        }
+
+        // La fila del escalón 3 (D-032, punto 2) [P]: «Inicio» a la izquierda de «Siguiente», en su misma fila y centrado a lo alto con
+        // él, y, con la llegada (ArrivalVictoryShown), «Ver mapa» entre los dos; «Siguiente» se queda con el resto del ancho y su
+        // etiqueta se ajusta (14-22 sp × la escala, nunca menos de 12). La fila no cambia de alto con «Ver mapa», así que «Siguiente»
+        // queda a la misma altura en todas las victorias (Q7-A). Devuelve el pie de la fila.
+        private float PlaceVictoryRow(float rowX, float y, float nextW, float nextH)
+        {
+            float homeW = 0f;
+            float mapW = 0f;
+            bool map = _victoryMapShown && VictoryRowMapWidths(nextW, out homeW, out mapW);
+            if (!map)
+            {
+                homeW = VictoryRowHomeWidthDp(nextW);
+            }
+
+            float left = homeW + VictoryRowGapDp + (map ? mapW + VictoryRowGapDp : 0f);
+            float nextX = rowX + left;
+            float nextRowW = nextW - left;
+            SetNextLabelFit(true);
+            UiBuilder.Place((RectTransform)_next.Button.transform, nextX, y, nextRowW, nextH);
+            _victoryNextCenterX = nextX + (nextRowW * 0.5f);
+            _victoryHomeTopDp = y + Mathf.Max(0f, (nextH - 48f) * 0.5f);
+            UiBuilder.Place((RectTransform)_home.Button.transform, rowX, _victoryHomeTopDp, homeW, 48f);
+            if (map)
+            {
+                UiBuilder.Place((RectTransform)_victoryMap.Button.transform, rowX + homeW + VictoryRowGapDp, _victoryHomeTopDp, mapW, 48f);
+            }
+
+            return y + Mathf.Max(nextH, 48f);
+        }
+
+        // Vuelve a colocar la fila del escalón 3 cuando «Ver mapa» entra o sale tras LayoutVictory (ArrivalVictoryShown), y el chip
+        // del nivel siguiente sobre el nuevo centro de «Siguiente».
+        private void RelayoutVictoryRow()
+        {
+            float panelW = VictoryPanelWidthDp;
+            float nextW = Mathf.Min(_canvasW - 48f, Mathf.Min(312f, panelW - 16f));
+            PlaceVictoryRow((panelW - nextW) / 2f, _victoryCtaTopDp, nextW, ModalKit.HeightOf(_next));
+            LabelsLayoutVictory();
         }
 
         // La etiqueta de «Siguiente»: de tamaño fijo (la de siempre) o, en la fila del escalón 3, ajustada de 22 sp a
