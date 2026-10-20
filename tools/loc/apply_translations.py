@@ -47,6 +47,8 @@ Qué hace y qué no:
 - Comprueba cada traducción como LocTablesTests: los mismos marcadores con nombre que es-419 (también {sep}), las llaves
   parejas y la longitud visible ≤ max_chars × 1,3 (la regla de VisibleLength).
 - Una clave que ya no existe en la tabla es un aviso (se salta), no un conflicto.
+- Lo aplicado a strings.csv se aplica igual a sus copias (MIRRORS: docs/dev/traspaso/spark-strings-reto.csv, cuyas filas
+  DailyUiLogicTests exige idénticas a las de la tabla), solo en las claves que tienen.
 - Si hay algún conflicto o error, no escribe nada en ninguna tabla.
 Códigos: 0 OK (con --check: nada que aplicar) · 1 conflictos o errores (con --check: también si aplicar cambiaría algo) ·
 2 argumentos o archivos que no se pueden leer.
@@ -70,6 +72,9 @@ STATUS_ORDER = {"": 0, "borrador": 1, "pendiente_asesor": 2, "aprobado_es": 3}
 STOPS_MARKER = "PRESERVED_LOCALE_COLUMNS"  # lo añade stops-preserve.diff a tools/river-map/stops.py
 MAP_TEST_OLD = 'Is.Empty, key + " (" + locale + "): pendiente del traductor"'  # lo quita MapTextTests.patch
 GLOSSARY_MARKER = "booster.undo"  # glosario.diff le da en
+# Copias de filas de strings.csv que las pruebas exigen idénticas a la tabla (DailyUiLogicTests, E5: «la misma fila, tal
+# cual»): las mismas celdas se aplican también ahí, con las mismas reglas, solo en las claves que tienen.
+MIRRORS = {"strings.csv": ("docs/dev/traspaso/spark-strings-reto.csv",)}
 
 TABLE_HEADER = ["key", "es-419", "en", "pt-BR", "context", "max_chars", "status", "status_en", "status_pt-BR", "notes", "args"]
 TR_HEADER = ["key", "es-419", "en", "pt-BR", "status_en", "status_pt-BR"]
@@ -399,6 +404,31 @@ def run(files: list[Path], loc_dir: Path, check: bool, out=sys.stdout) -> int:
                 text = res.text
         if text != tables[target]:
             new_tables[target] = text
+    mirrors: dict[Path, str] = {}
+    for target, batches in pending.items():
+        for rel in MIRRORS.get(target, ()):
+            path = repo / rel
+            if not path.exists():
+                continue
+            try:
+                original = decode(path.read_bytes(), path.name)
+            except CsvError as e:
+                conflicts.append(str(e))
+                continue
+            mtext = original
+            for rows, name in batches:
+                try:
+                    keys = {unquote(f[0]) for f in split_records(mtext, path.name)[1:]}
+                    res = apply(mtext, path.name, [r for r in rows if r["key"] in keys], name, map_ok)
+                except CsvError as e:
+                    conflicts.append(str(e))
+                    continue
+                conflicts.extend(f"{c} (copia {rel})" for c in res.conflicts)
+                total_changes += len(res.changes)
+                if res.text is not None:
+                    mtext = res.text
+            if mtext != original:
+                mirrors[path] = mtext
     for w in warnings:
         print(f"AVISO {w}", file=out)
     if retained:
@@ -411,13 +441,17 @@ def run(files: list[Path], loc_dir: Path, check: bool, out=sys.stdout) -> int:
         return 1
     if check:
         if total_changes:
-            print(f"FAIL --check: aplicar cambiaría {total_changes} celdas de texto en {', '.join(sorted(new_tables))}", file=out)
+            where = sorted(new_tables) + sorted(p.name for p in mirrors)
+            print(f"FAIL --check: aplicar cambiaría {total_changes} celdas de texto en {', '.join(where)}", file=out)
             return 1
         print("OK --check: las traducciones ya están en las tablas (nada que aplicar)", file=out)
         return 0
     for target, text in new_tables.items():
         (loc_dir / target).write_bytes(text.encode("utf-8"))
-    print(f"OK {total_changes} traducciones aplicadas" + (f" en {', '.join(sorted(new_tables))}" if new_tables else " (nada que aplicar)"), file=out)
+    for path, text in mirrors.items():
+        path.write_bytes(text.encode("utf-8"))
+    where = sorted(new_tables) + sorted(p.name for p in mirrors)
+    print(f"OK {total_changes} celdas aplicadas" + (f" en {', '.join(where)}" if where else " (nada que aplicar)"), file=out)
     return 0
 
 
@@ -569,6 +603,26 @@ def self_test() -> int:
         case("con los tres parches: sin errores", not requirement_errors("strings_glosario.csv", repo)
              and not requirement_errors("strings_mapa.csv", repo) and not requirement_errors("facts_mapa.csv", repo))
         case("la raíz sale de --loc-dir", repo_of(repo / "Assets/_Project/Data/Loc") == repo.resolve())
+    # 14. La copia de strings.csv (MIRRORS) recibe las mismas celdas, solo en sus claves.
+    with tempfile.TemporaryDirectory() as d:
+        repo = Path(d)
+        loc = repo / "Assets/_Project/Data/Loc"
+        loc.mkdir(parents=True)
+        (repo / "docs/dev/traspaso").mkdir(parents=True)
+        (loc / "strings.csv").write_bytes(table.encode())
+        (loc / "facts.csv").write_bytes(facts.encode())
+        mirror = repo / MIRRORS["strings.csv"][0]
+        mirror_text = H + 'a_key,"Hola, mundo",,,"ctx, con coma",20,borrador,,,"nota ""citada""",\n'
+        mirror.write_bytes(mirror_text.encode())
+        tfile = repo / "strings_t.csv"
+        tfile.write_bytes(tr([["a_key", "Hola, mundo", "Hello, world", "", "traducido", ""],
+                              ["c_key", "Dos\nlíneas", "Two\nlines", "", "traducido", ""]]).encode())
+        sink = io.StringIO()
+        case("con copia: --check antes cuenta la copia", run([tfile], loc, True, sink) == 1 and "spark-strings-reto.csv" in sink.getvalue())
+        case("con copia: aplica", run([tfile], loc, False, io.StringIO()) == 0)
+        table_row = next(ln for ln in (loc / "strings.csv").read_text(encoding="utf-8").split("\n") if ln.startswith("a_key,"))
+        case("la fila de la copia es idéntica a la de la tabla", mirror.read_text(encoding="utf-8").split("\n")[1] == table_row)
+        case("con copia: --check después, 0", run([tfile], loc, True, io.StringIO()) == 0)
     failed = [n for n, ok in checks if not ok]
     for n, ok in checks:
         print(("PASS " if ok else "FAIL ") + n)
