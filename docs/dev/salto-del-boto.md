@@ -49,7 +49,8 @@ Rama `spark/t5-b3`, desde `origin/integracion-fase1-fase2` `9982bdc` (con B1a in
    con «Te faltan»), `PauseMenu.cs` (el botón con Rosa y el precio), `GameScreen.cs` (pasa `flow.SkipOffer` a la pausa y su
    acción) y `GameBootstrap.cs` (`SetUpSkip();` tras `SetUpStreak();`); añade `SkipPlayModeTests`.
 3. `B3-strings.csv`: las 6 claves nuevas (`stuck_skip`, `skip_tagline`, `skip_confirm_title`, `skip_confirm_extra_cuia`,
-   `skip_confirm_cta`, `skip_banner`) con `es-419`, `context`, `max_chars` y `pendiente_asesor`; `en` y `pt-BR` vacías. No toca
+   `skip`, `skip_banner`) con `es-419`, `context`, `max_chars` y `pendiente_asesor`; `en` y `pt-BR` solo donde las da el glosario
+   (`skip`, §10; `stuck_skip`, §12), vacías en el resto. No toca
    `strings.csv`.
 
 **Perfil:** no hace falta parche. `Profile.cs` y `ProfileJson.cs` ya guardan `progress.since_last_skip` y
@@ -67,15 +68,15 @@ Canasta no se repaga (el Salto ya no se ofrece en un nivel `≤ max_level`).
 
 | Id | Pregunta | Opciones | Recomendada |
 |---|---|---|---|
-| Q-S1 | 02 §2 dice `last_skip_level = N`; 04 §6.1-§6.2 y 08 §4.3 usan el contador `since_last_skip`. ¿Con qué se mide el hueco? | (a) `last_skip_level` = el mayor de `skipped_levels` por debajo de N, sin campo nuevo; hueco = N − `last_skip_level` (N si no hay salto); `since_last_skip` se pone a 0 al saltar (04 §6.2) y no se lee; `af_skip_used.since_last_skip` = ese hueco · (b) `since_last_skip` como contador que sube con cada nivel superado (parche de `ResolveWin`), y el primer salto pide 10 niveles superados · (c) campo nuevo `progress.last_skip_level` | **(a)** [P]: sin campo nuevo, a prueba de la fusión de la nube (unión de `skipped_levels`) |
+| Q-S1 | 02 §2 dice `last_skip_level = N`; 04 §6.1-§6.2 y 08 §4.3 usan el contador `since_last_skip`. ¿Con qué se mide el hueco? | (a) `last_skip_level` = el mayor de `skipped_levels` por debajo de N, sin campo nuevo; hueco = N − `last_skip_level` (N si no hay salto); `since_last_skip` se pone a 0 al saltar (04 §6.2) y no se lee; `af_skip_used.since_last_skip` = ese hueco · (b) `since_last_skip` como contador que sube con cada nivel superado (parche de `ResolveWin`), y el primer salto pide 10 niveles superados · (c) campo nuevo `progress.last_skip_level` | **(a)** [P]: sin campo nuevo, a prueba de la fusión de la nube (unión de `skipped_levels`). Con (a), `since_last_skip` queda escrito pero sin leer, y el ejemplo de 08 §4.3 (`max_level` 87, `since_last_skip` 14, `skipped_levels` [63]) no casa con «nivel − último salto» (daría 24): el GDD se corrige en uno u otro sentido |
 | Q-S2 | «≥10 niveles desde el último salto»: ¿se puede saltar el 50 tras saltar el 40? | (a) sí: N − último ≥ 10 («máximo 1 cada 10 niveles», glosario §5.1) · (b) no: 10 niveles superados entre medias (el 51) | **(a)** [P] |
 | Q-S3 | El banner «en la pantalla previa del nivel»: ¿dónde y cuándo? La tarjeta previa (LEVEL_CARD) solo sale en los niveles con etiqueta o estreno, y nunca al reintentar | (a) una franja de madera con Rosa arriba del tablero mientras la opción se ofrece y el intento no empezó (tarjeta previa, intro o tablero sin vertidos); un toque abre la confirmación · (b) solo dentro de la tarjeta previa cuando sale · (c) en el inicio, junto a «Jugar» | **(a)** [P] |
 | Q-S4 | ¿Y si no hay nivel siguiente (fin del contenido) o no quedan canoas para empezarlo (las infinitas caducaron a mitad)? | (a) el Salto no se ofrece · (b) se ofrece y lleva a «El río sigue creciendo» o a Sin canoas (parche de `AppFlow`) | **(a)** [P]: casos raros, y `AppFlow` es del escritorio |
 | Q-S5 | La animación de Rosa (1,5 s, 04 §2.6 «VFX / SFX»; `rosa_jump`, `sfx_skip`) y el dato del boto al llegar | (a) esperan al arte y al audio: hoy el siguiente nivel entra con su intro de siempre · (b) una transición provisional de 1,5 s por código | **(a)** [P] |
 | Q-S6 | `stuck_skip` de 04 §6.5 es «Salto del Boto · 300 · Rosa te lleva río arriba, al siguiente nivel» en una cadena | (a) se parte: la etiqueta «Salto del Boto», el precio en su etiqueta de semillas (como «Continuar: +1 cuia») y la línea `skip_tagline` debajo · (b) la cadena entera en el botón | **(a)** [P]: sin cifras en el texto, y la línea se reutiliza en la confirmación |
 | Q-S7 | ¿En qué pantallas se puede saltar? | (a) Aguas estancadas, la pausa (INTRO y PLAYING) y el banner; no en ¿Seguro?, Nivel fallido ni Sin canoas · (b) también en Nivel fallido | **(a)** [P]: lo que nombra 04 §2.6 |
-| Q-S8 | Textos sin canon: el título de la confirmación, el aviso de la Cuia extra y el CTA | (a) «¿Saltar el nivel?», «Perderás la Cuia extra de este nivel» y «Saltar nivel» (glosario §10) · (b) otros que proponga el asesor | **(a)** [P], `pendiente_asesor` |
-| Q-S9 | `skip_min_level`: 05 (tabla de compuertas) dice «con mínimo 31 en RC»; 08 §9 da el rango 20-31 | (a) se corrige 05 a «20-31» o 08 §9 a «31»: lo decide el dueño; el cliente solo exige ≥ 1 y no aplica rangos (eso es de Remote Config) · (b) el cliente fuerza ≥ 31 | **(a)** [P] |
+| Q-S8 | Textos sin canon: el título de la confirmación, el aviso de la Cuia extra y el CTA | (a) «¿Saltar el nivel?», «Perderás la Cuia extra de este nivel» y «Saltar nivel» (la clave `skip` del glosario §10, con sus traducciones) · (b) otros que proponga el asesor | **(a)** [P], `pendiente_asesor` |
+| Q-S9 | `skip_min_level`: 05 (tabla de compuertas) dice «con mínimo 31 en RC»; 08 §9 da el rango 20-31 | (a) se corrige 05 a «20-31» o 08 §9 a «31»: lo decide el dueño; el cliente solo exige ≥ 1 y no aplica rangos (eso es de Remote Config) · (b) el cliente fuerza ≥ 31 | **(a)** [P]; el revisor sugiere además que el cliente no baje de `rescue_min_level` (la compuerta «nada de pago ligado al fallo antes del 31», dirección 10) |
 
 ## 4. Riesgos y pendientes
 

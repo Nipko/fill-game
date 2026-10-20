@@ -149,6 +149,45 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void AnAppliedExtraCuia_IsLostWithoutRefund_AndTheConfirmationKnows()
+        {
+            var rig = new ProfileRig(TestPacks.Campaign, 0, seeds: 1000, maxLevel: 40);
+            rig.ForceFails(41, 5);
+            Assert.That(rig.Flow.TapAnywhere(), Is.True);
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(rig.Flow.SkipLosesExtraCuia, Is.False);
+            TransactionResult? extra = rig.Flow.UseExtraCuia();
+            Assert.That(extra.HasValue && extra.Value.IsApplied, Is.True, "«+1 cuia» aplicada");
+            Assert.That(rig.Flow.SkipLosesExtraCuia, Is.True, "04 §2.6 c: aviso en la confirmación");
+            int stock = rig.Wallet.Stock.Get(BoosterKind.ExtraCuia);
+            int seeds = rig.Wallet.Seeds;
+            Assert.That(rig.Flow.Skip()!.Value.Applied, Is.True);
+            Assert.That(rig.Wallet.Stock.Get(BoosterKind.ExtraCuia), Is.EqualTo(stock), "sin reembolso");
+            Assert.That(rig.Wallet.Seeds, Is.EqualTo(seeds - 300), "sin reembolso");
+            Assert.That(rig.Flow.Attempt.ExtraCuias, Is.Zero, "el 42 empieza sin la cuia");
+            Assert.That(rig.Flow.SkipLosesExtraCuia, Is.False);
+        }
+
+        [Test]
+        public void WithoutANextLevel_OrCanoesToStartIt_TheSkipIsHidden()
+        {
+            // El 40 es el último del catálogo (tutorial con desplazamiento 30): no hay adónde llevar al jugador (Q-S4).
+            var rig = new ProfileRig(new[] { TestPacks.Tutorial }, 30, seeds: 1000, maxLevel: 39);
+            rig.ForceFails(40, 5);
+            Assert.That(rig.Flow.SkipOffer.State, Is.EqualTo(SkipState.Hidden), "sin nivel siguiente");
+            rig.ForceFails(39, 5); // ya superado (max_level = 39): tampoco
+            Assert.That(rig.Flow.SkipOffer.State, Is.EqualTo(SkipState.Hidden));
+
+            // Sin canoas para empezar el siguiente (las infinitas caducaron a mitad): tampoco (Q-S4).
+            var poor = new ProfileRig(TestPacks.Campaign, 0, seeds: 1000, maxLevel: 39);
+            poor.ForceFails(40, 5);
+            Assert.That(poor.Flow.SkipOffer.State, Is.EqualTo(SkipState.Ready));
+            poor.Profile.Wallet.Canoes.Count = 0;
+            Assert.That(poor.Wallet.CanStartLevel(41), Is.False);
+            Assert.That(poor.Flow.SkipOffer.State, Is.EqualTo(SkipState.Hidden));
+        }
+
+        [Test]
         public void MemorySkipStore_MarksTheMapProgress()
         {
             var progress = new MemoryProgressStore(nextLevel: 36, maxLevel: 35);

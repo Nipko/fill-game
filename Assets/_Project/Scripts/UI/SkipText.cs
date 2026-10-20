@@ -28,8 +28,8 @@ namespace AF.UI
             /// <summary>«Perderás la Cuia extra de este nivel» [P] (04 §2.6 c: aviso en la confirmación).</summary>
             public const string ConfirmExtraCuia = "skip_confirm_extra_cuia";
 
-            /// <summary>«Saltar nivel»: CTA de la confirmación (glosario §10, <c>skip</c>; el precio va en su etiqueta).</summary>
-            public const string ConfirmCta = "skip_confirm_cta";
+            /// <summary>«Saltar nivel»: CTA de la confirmación, con la clave del glosario §10 (<c>skip</c>); el precio va en su etiqueta.</summary>
+            public const string ConfirmCta = "skip";
 
             /// <summary>«Rosa puede llevarte río arriba · {price}»: banner de la entrada del nivel (04 §2.6, «Inventario y HUD»).</summary>
             public const string Banner = "skip_banner";

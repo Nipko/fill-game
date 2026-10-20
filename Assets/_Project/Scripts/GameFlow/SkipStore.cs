@@ -52,9 +52,14 @@ namespace AF.GameFlow
         /// <inheritdoc />
         public void SaveSkip(int level, int nextLevel)
         {
-            if (level < 1 || nextLevel < 1)
+            if (level < 1)
             {
                 throw new ArgumentOutOfRangeException(nameof(level), level, "Los niveles empiezan en 1.");
+            }
+
+            if (nextLevel < 1)
+            {
+                throw new ArgumentOutOfRangeException(nameof(nextLevel), nextLevel, "Los niveles empiezan en 1.");
             }
 
             ProgressData progress = _profile.Progress;
