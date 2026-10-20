@@ -39,8 +39,9 @@ namespace AF.Tests.PlayMode
     /// 130 %, la tapa entera);</description></item>
     /// <item><description>la etiqueta de los CTA con precio no se encoge con la escala (la etiqueta de precio se mide) y
     /// Aguas estancadas deja el tablero entero sobre el panel a 360 × 780 al 100 % (al 130 %, el tablero sube hasta su tope y
-    /// lo que el panel tapa se registra: conflicto de 02 §7 con 02 §12, pendiente del dueño); en 16:9, al 100 % y al 130 %, el
-    /// panel va compacto y no tapa ninguna cuia del 31 (tarea FX16a; <see cref="StuckCompactTests"/>).</description></item>
+    /// lo que el panel tapa se registra: conflicto de 02 §7 con 02 §12, pendiente del dueño); en 16:9, al 100 % y al 130 %, en
+    /// todas las ramas, el panel no tapa ninguna cuia del 31: va compacto si hace falta y, si ni así, el tablero se reduce
+    /// mientras el modal esté abierto (tarea FX16a; <see cref="StuckCompactTests"/>).</description></item>
     /// </list>
     /// La pregunta 48 (b) (Revelar sin medios: sin aviso, responde la burbuja) se prueba en <c>PhoneFixesTests</c> y
     /// <c>LuciernagaTests</c>.
@@ -167,16 +168,14 @@ namespace AF.Tests.PlayMode
             StuckContext ctx = boot.Flow!.BuildStuckContext(false, true, GeoTier.T3);
             foreach ((string name, StuckContext variant) in StuckVariants(ctx))
             {
-                view.Stuck.Show(StuckModalModel.Build(variant, boot.Flow.Boosters), boot.Services, view.CanvasWidth, view.StuckRoomDp);
-                view.Stuck.Place(view.CanvasWidth, view.CardCanvasHeight - view.CardSafeBottom - view.Stuck.BottomGapDp - view.Stuck.Height);
+                // Como al abrirlo: el panel en su sitio y el tablero ajustado a él (GameScreen.FitBoardToStuck; FX16a).
+                view.ShowStuckVariant(StuckModalModel.Build(variant, boot.Flow.Boosters));
                 AssertStuck(view, scale, "Aguas estancadas, " + name + " " + at);
                 if (view.CardCanvasHeight <= GameScreen.MinHeight + 0.5f)
                 {
-                    // En 16:9, con el tablero subido como lo dejó la rama B: al 100 %, ninguna variante tapa las cuias; al 130 %, la
-                    // que las tape va compacta y se registra (FX16a; pendiente del dueño).
+                    // En 16:9, al 100 % y al 130 %, ninguna variante tapa las cuias (02 §7; FX16a).
                     float covered = StuckCompactTests.CoveredDp(view, "Aguas estancadas, " + name + " " + at);
-                    Assert.That(covered <= 0.05f || (scale > 1f && view.Stuck.Compact), Is.True,
-                        "Aguas estancadas, " + name + " " + at + ": ninguna cuia tapada (02 §7)");
+                    Assert.That(covered, Is.LessThanOrEqualTo(0.05f), "Aguas estancadas, " + name + " " + at + ": ninguna cuia tapada (02 §7; FX16a)");
                 }
             }
 
@@ -774,19 +773,20 @@ namespace AF.Tests.PlayMode
         }
 
         // Aguas estancadas y el tablero (02 §7 y 04 §6.6: «el tablero entero a la vista y atenuado; sube lo justo para que el
-        // panel no lo tape»; 07 §5.5). Al 100 %, en estos tableros de una fila, el tablero queda entero sobre el panel (con los
-        // 12 dp de aire de ShiftToClear). A cualquier escala, o queda entero o ha subido hasta su tope (las cuias elevadas, bajo
-        // la cabecera): es la regla de hoy, la que ya se da al 100 % con 2 y 3 filas. Al 130 % el panel crece con la escala (02
-        // §12) y tapa la parte de abajo de las cuias: se registra cuánto (conflicto de 02 §7 con 02 §12, pendiente del dueño;
-        // revisión de A1).
+        // panel no lo tape»; 07 §5.5), con la geometría de verdad del tablero (su desplazamiento y, en 16:9, su escala:
+        // StuckCompactTests.BoardToCanvasY). Al 100 %, en estos tableros de una fila, el tablero queda entero sobre el panel (con
+        // los 12 dp de aire de ShiftToClear). A cualquier escala, o queda entero o ha subido hasta su tope (las cuias elevadas,
+        // bajo la cabecera): es la regla de hoy, la que ya se da al 100 % con 2 y 3 filas. A 360 × 780 al 130 % el panel crece
+        // con la escala (02 §12) y tapa la parte de abajo de las cuias: se registra cuánto (conflicto de 02 §7 con 02 §12,
+        // pendiente del dueño; revisión de A1).
         private static void AssertBoardOverThePanel(GameScreen view, float scale, string where)
         {
             Canvas.ForceUpdateCanvases();
             BoardLayoutResult l = view.Layout!;
             float shift = view.BoardContainer.anchoredPosition.y;
             Rect panel = VictorySetup.CanvasRect(view.Stuck.Panel, Root(view));
-            float boardBottom = l.PanelBottom - shift;
-            float foot = l.RowFootY[l.Rows - 1] - shift;
+            float boardBottom = StuckCompactTests.BoardToCanvasY(view, l.PanelBottom);
+            float foot = StuckCompactTests.BoardToCanvasY(view, l.RowFootY[l.Rows - 1]);
             float highest = float.MaxValue;
             for (int i = 0; i < view.Views.Length; i++)
             {
@@ -794,7 +794,8 @@ namespace AF.Tests.PlayMode
             }
 
             float room = Mathf.Max(0f, highest - (view.TopRowDp + 48f));
-            float mouth = highest + CuiaView.LiftDp - shift;
+            float top = StuckCompactTests.BoardToCanvasY(view, highest);
+            float mouth = StuckCompactTests.BoardToCanvasY(view, highest + CuiaView.LiftDp);
             float covered = Mathf.Clamp(foot - panel.yMin, 0f, foot - mouth);
             bool whole = panel.yMin >= boardBottom + 12f - 0.05f;
             TestContext.WriteLine(where + ": panel de " + panel.height.ToString("0.0") + " dp desde " + panel.yMin.ToString("0.0")
@@ -802,25 +803,20 @@ namespace AF.Tests.PlayMode
                 + foot.ToString("0.0") + " dp: " + (whole ? "el tablero, entero sobre el panel" : "el panel tapa " + covered.ToString("0.0") + " dp de las cuias ("
                 + (100f * covered / Mathf.Max(1f, foot - mouth)).ToString("0") + " %)") + ".");
             // En 16:9 (360 × 640 dp desde DC3; D-028), el panel de la rama B (413 dp al 100 % y 597 al 130 % en la disposición de
-            // siempre) tapaba la parte de abajo de las cuias del 31 aunque el tablero subiera hasta su tope; desde FX16a va compacto
-            // y al 100 % no tapa ninguna cuia (02 §7); al 130 %, la rama B (con Puñado, Balsa y su línea) ni compacta cabe bajo
-            // las cuias y se registra lo que tapa (pendiente del dueño; StuckCompactTests.Stuck_31_B130_16x9_NoCuiaCovered_KnownIssue).
-            // A 360 × 780, al 100 %, el tablero entero sobre el panel; al 130 %, se registra lo que tapa (conflicto de 02 §7 con
-            // 02 §12, pendiente del dueño desde A1).
-            if (view.CardCanvasHeight <= GameScreen.MinHeight + 0.5f && scale <= 1f)
+            // siempre) tapaba la parte de abajo de las cuias del 31 aunque el tablero subiera hasta su tope; desde FX16a, al 100 %
+            // y al 130 %, no tapa ninguna cuia (02 §7): va compacto y, si ni así cabe bajo las cuias (la rama B al 130 %), el
+            // tablero se reduce mientras el modal esté abierto. A 360 × 780, al 100 %, el tablero entero sobre el panel; al 130 %,
+            // se registra lo que tapa (conflicto de 02 §7 con 02 §12, pendiente del dueño desde A1).
+            if (view.CardCanvasHeight <= GameScreen.MinHeight + 0.5f)
             {
                 Assert.That(covered, Is.LessThanOrEqualTo(0.05f), where + ": ninguna cuia tapada (02 §7; FX16a)");
-            }
-            else if (view.CardCanvasHeight <= GameScreen.MinHeight + 0.5f)
-            {
-                Assert.That(covered <= 0.05f || view.Stuck.Compact, Is.True, where + ": si tapa alguna cuia, el panel va compacto (FX16a)");
             }
             else if (scale <= 1f)
             {
                 Assert.That(whole, Is.True, where + ": el tablero entero sobre el panel (02 §7)");
             }
 
-            Assert.That(whole || shift >= room - 0.05f, Is.True, where + ": o entero sobre el panel o subido hasta su tope");
+            Assert.That(whole || top <= view.TopRowDp + 48f + 0.05f, Is.True, where + ": o entero sobre el panel o subido hasta su tope");
         }
 
         // Tamaño (dp) de la etiqueta de un CTA con precio, ya ajustada por TextMeshPro: entera, sin desbordes, ≥ 12 sp por la

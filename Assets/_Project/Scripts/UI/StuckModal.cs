@@ -30,14 +30,14 @@ namespace AF.UI
     /// desde DC3, D-028), si la disposición de siempre taparía alguna cuia con el tablero subido hasta su tope, el panel se
     /// rearma con menos aire, las líneas en su alto justo, Marea a 48 dp y el rescate a 56 dp (04 §6.6, wireframe A), los CTA
     /// sin el estirado de la escala de texto (crecen solo lo que pide su etiqueta a 12 sp) y Puñado y Balsa en una fila si
-    /// caben sin partir su precio (con los 56 dp y el aire de la revisión de DC3). Ningún
-    /// texto baja de 12 sp ni ningún botón de 48 dp, y el panel cabe siempre entre las zonas seguras (la rama B medía 597 dp
-    /// al 130 %, más que los 576 dp entre ellas). En el 31 (una fila): la rama B mide 354 dp al 100 % (413 antes; tapaba
-    /// 40,7 dp de las cuias) y no tapa ninguna cuia, ni la rama A al 100 % ni al 130 %. Pendientes del dueño (FX16a; cifras en
-    /// <c>StuckCompactTests</c>): al 130 %, la rama B compacta (478 dp en es-419) aún tapa 101,6 dp de los 131,7 de las cuias del 31, y en el
-    /// 640 (14 cuias en 3 filas) el tablero solo sube 13,5 dp y el panel tapa la tercera fila entera. A 360 × 780 no cambia
-    /// nada: al 130 %, la rama B (597 dp) sigue tapando la parte de abajo de las cuias de un tablero de una fila (pendiente
-    /// desde la revisión de A1: 02 §7 frente a 02 §12).
+    /// caben sin partir su precio, a media anchura o con el ancho repartido según su etiqueta (en tres líneas como mucho, cuatro
+    /// con la escala de texto; 64 dp de alto mínimo y 10 dp de aire a los lados). Ningún texto baja de 12 sp ni ningún botón de
+    /// 48 dp, y el panel cabe siempre entre las zonas seguras (la rama B medía 597 dp al 130 %, más que los 576 dp entre ellas).
+    /// Si ni así quedan las cuias enteras sobre el panel con el tablero subido hasta su tope, <c>GameScreen.FitBoardToStuck</c>
+    /// reduce el tablero mientras el modal esté abierto (cifras en <c>StuckCompactTests</c>: en el 31, la rama B mide 362 dp al
+    /// 100 % y 423 al 130 % en es-419, con el tablero a 1 y a 0,67; en el 640, de 3 filas, a 0,73 y 0,68 en la rama A y a 0,46
+    /// y 0,28 en la rama B). A 360 × 780 no cambia nada: al 130 %, la rama B (597 dp) sigue tapando la parte de abajo de las
+    /// cuias de un tablero de una fila (pendiente desde la revisión de A1: 02 §7 frente a 02 §12).
     /// </para>
     /// </summary>
     internal sealed class StuckModal
@@ -84,8 +84,17 @@ namespace AF.UI
         /// <summary>Aire entre el panel y la zona segura de abajo en la disposición compacta (dp) [P] (FX16a).</summary>
         internal const float CompactBottomGapDp = 4f;
 
-        /// <summary>Aire a cada lado de la etiqueta de Puñado y Balsa en la disposición compacta (dp) [P] (FX16a).</summary>
-        internal const float OfferCompactSideDp = 6f;
+        /// <summary>
+        /// Aire a cada lado de la etiqueta de Puñado y Balsa en la disposición compacta (dp) [P] (FX16a; revisión: de 10 a 12 dp
+        /// a los lados, para que con un texto más largo el botón no quede apretado).
+        /// </summary>
+        internal const float OfferCompactSideDp = 10f;
+
+        /// <summary>
+        /// Alto mínimo de Puñado y Balsa cuando van en una fila en la disposición compacta (dp) [P] (FX16a; revisión: los dos
+        /// igual de altos, a 64 dp, con la etiqueta centrada en vertical y al menos <see cref="OfferLabelAirDp"/> de aire).
+        /// </summary>
+        internal const float OfferCompactRowMinHeightDp = 64f;
 
         // Disposición compacta (FX16a) [P]: aire sobre la cabecera y entre botones (dp).
         private const float CompactTopDp = 8f;
@@ -175,6 +184,12 @@ namespace AF.UI
             _restart = ModalKit.Cta("RestartModalButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.StuckRestart, 18f, () => actions.PressRestart(), out _restartLabel);
             _giveUp = ModalKit.Link("GiveUpButton", _panel, UiText.StuckGiveUp, () => actions.PressGiveUp(), out _);
         }
+
+        /// <summary>
+        /// Solo para las capturas «antes» de FX16a (<c>StuckCompactSnapshotTests</c>): el panel siempre en la disposición de
+        /// siempre y el tablero sin reducir (<c>GameScreen.FitBoardToStuck</c>), como antes de la tarea.
+        /// </summary>
+        internal static bool RegularOnlyForTests { get; set; }
 
         /// <summary>Panel.</summary>
         public RectTransform Panel => _panel;
@@ -278,7 +293,7 @@ namespace AF.UI
         public void Show(StuckModalView view, GameServices? services, float canvasW, float roomDp = float.PositiveInfinity)
         {
             Lay(view, services, canvasW, false);
-            if (Height + RegularBottomGapDp > roomDp + 0.01f)
+            if (!RegularOnlyForTests && Height + RegularBottomGapDp > roomDp + 0.01f)
             {
                 Lay(view, services, canvasW, true);
             }
@@ -287,7 +302,7 @@ namespace AF.UI
         // Disposición del panel: la de siempre o, con compact, la compacta (tarea FX16a; 02 §7: «el tablero queda entero a la
         // vista» en 16:9): menos aire, las líneas en su alto justo, los CTA sin el estirado de la escala de texto (crecen solo lo
         // que pide su etiqueta a 12 sp; Marea a 48 dp y el rescate a 56) y Puñado y Balsa en una fila si sus etiquetas caben
-        // a media anchura en tres líneas como mucho sin partir su precio (con los 56 dp y el aire de la revisión de DC3).
+        // sin partir su precio en tres líneas como mucho (cuatro con la escala de texto), a media anchura o repartida (OfferRowSplit).
         // Ningún texto baja de 12 sp ni ningún botón de 48 dp.
         private void Lay(StuckModalView view, GameServices? services, float canvasW, bool compact)
         {
@@ -442,38 +457,63 @@ namespace AF.UI
                 _handfulLabel.text = UiText.StuckPackLine(services?.HandfulSeeds ?? 1000, handfulPrice);
                 _balsaLabel.text = UiText.StuckBalsaLine(balsaPrice);
                 // Las dos en una fila; si a media anchura alguna etiqueta no cabe ni a 12 sp (con la escala de texto: 02 §12), una
-                // debajo de la otra, a lo ancho (la caja crece; pregunta 36 (a); A1). En la compacta, en una fila si a media
-                // anchura cada etiqueta cabe a 12 sp en tres líneas como mucho y sin partir su precio (FX16a).
+                // debajo de la otra, a lo ancho (la caja crece; pregunta 36 (a); A1). En la compacta, en una fila si cada etiqueta
+                // cabe a 12 sp en su ancho sin partir su precio y en tres líneas como mucho (cuatro con la escala de texto):
+                // primero a media anchura y, si no, con el ancho repartido según lo que pide cada etiqueta (OfferRowSplit; FX16a).
                 bool both = handful && balsa;
                 float side = compact ? OfferCompactSideDp : OfferLabelSideDp;
-                bool fits = compact
-                    ? OfferRowFits(_handfulLabel, half - (2f * side), handfulPrice) && OfferRowFits(_balsaLabel, half - (2f * side), balsaPrice)
-                    : OfferFits(_handful, _handfulLabel, half) && OfferFits(_balsa, _balsaLabel, half);
-                bool stacked = both && !fits;
+                float handfulW = inner;
+                float balsaW = inner;
+                bool stacked = false;
+                if (both)
+                {
+                    handfulW = half;
+                    balsaW = half;
+                    if (compact)
+                    {
+                        if (!OfferRowFits(_handfulLabel, half - (2f * side), handfulPrice) || !OfferRowFits(_balsaLabel, half - (2f * side), balsaPrice))
+                        {
+                            stacked = !OfferRowSplit(_handfulLabel, handfulPrice, _balsaLabel, balsaPrice, inner - 8f, side, out handfulW);
+                            balsaW = inner - 8f - handfulW;
+                        }
+                    }
+                    else
+                    {
+                        stacked = !OfferFits(_handful, _handfulLabel, half) || !OfferFits(_balsa, _balsaLabel, half);
+                    }
+
+                    if (stacked)
+                    {
+                        handfulW = inner;
+                        balsaW = inner;
+                    }
+                }
+
                 float x = 16f;
-                float w = both && !stacked ? half : inner;
 
                 // Las dos caras crecen a lo alto hasta que el botón mide OfferMinHeightDp y sus etiquetas, a su tamaño, dejan
                 // OfferLabelAirDp de aire arriba y abajo (OfferLabelPadDp con la escala de texto; revisión de L4) y
-                // OfferLabelSideDp a los lados; las dos igual de altas (revisión de DC3). En la compacta, el mismo alto mínimo y
-                // el mismo aire, pero medidas a 12 sp (sin el estirado de la escala de texto) y con OfferCompactSideDp a los lados.
+                // OfferLabelSideDp a los lados; las dos igual de altas (revisión de DC3). En la compacta, medidas a 12 sp (sin el
+                // estirado de la escala de texto), con OfferLabelAirDp arriba y abajo, OfferCompactSideDp a los lados y, en una
+                // fila, OfferCompactRowMinHeightDp de alto mínimo (revisión de FX16a).
                 bool roomy = !compact && UiBuilder.TextScale > 1f;
-                float pad = UiBuilder.TextScale > 1f ? OfferLabelPadDp : OfferLabelAirDp;
-                float minFace = compact ? _handful.Sprites.FaceHeightDp * MinK(_handful, OfferMinHeightDp) : OfferMinFace(_handful);
+                float pad = !compact && UiBuilder.TextScale > 1f ? OfferLabelPadDp : OfferLabelAirDp;
+                float minHeight = both && !stacked ? OfferCompactRowMinHeightDp : OfferMinHeightDp;
+                float minFace = compact ? _handful.Sprites.FaceHeightDp * MinK(_handful, minHeight) : OfferMinFace(_handful);
                 if (handful)
                 {
-                    minFace = Mathf.Max(minFace, OfferFaceFor(_handfulLabel, w - (2f * side), pad, roomy));
+                    minFace = Mathf.Max(minFace, OfferFaceFor(_handfulLabel, handfulW - (2f * side), pad, roomy));
                 }
 
                 if (balsa)
                 {
-                    minFace = Mathf.Max(minFace, OfferFaceFor(_balsaLabel, w - (2f * side), pad, roomy));
+                    minFace = Mathf.Max(minFace, OfferFaceFor(_balsaLabel, balsaW - (2f * side), pad, roomy));
                 }
 
                 if (compact)
                 {
-                    Stretch(_handful, minFace / Mathf.Max(1f, _handful.Sprites.FaceHeightDp), OfferMinHeightDp);
-                    Stretch(_balsa, minFace / Mathf.Max(1f, _balsa.Sprites.FaceHeightDp), OfferMinHeightDp);
+                    Stretch(_handful, minFace / Mathf.Max(1f, _handful.Sprites.FaceHeightDp), minHeight);
+                    Stretch(_balsa, minFace / Mathf.Max(1f, _balsa.Sprites.FaceHeightDp), minHeight);
                 }
                 else
                 {
@@ -483,8 +523,10 @@ namespace AF.UI
 
                 for (int i = 0; i < view.Offers.Count; i++)
                 {
-                    ReliefParts card = view.Offers[i] == StuckOffer.Handful ? _handful : _balsa;
-                    TextMeshProUGUI label = view.Offers[i] == StuckOffer.Handful ? _handfulLabel : _balsaLabel;
+                    bool isHandful = view.Offers[i] == StuckOffer.Handful;
+                    ReliefParts card = isHandful ? _handful : _balsa;
+                    TextMeshProUGUI label = isHandful ? _handfulLabel : _balsaLabel;
+                    float w = isHandful ? handfulW : balsaW;
                     PlaceButton(card, x, y, w);
                     float face = FaceOf(card);
                     label.rectTransform.sizeDelta = new Vector2(-2f * side, face - (2f * pad));
@@ -572,12 +614,14 @@ namespace AF.UI
         }
 
         // Disposición compacta: la etiqueta de una oferta va a media anchura si a 12 sp, en textW dp, ocupa como mucho una línea
-        // más que las dos de su plantilla y el corte entre palabras (el de TextMeshPro: en cada línea, tantas como quepan) no
+        // más que las dos de su plantilla (dos más con la escala de texto: al 130 %, en dos columnas ahorran unos 70 dp, lo que
+        // pide la rama B del 31; FX16a) y el corte entre palabras (el de TextMeshPro: en cada línea, tantas como quepan) no
         // parte su precio (price, tal cual lo da la tienda; puede llevar espacios, como «COP 3.900»). Solo mide.
         private static bool OfferRowFits(TextMeshProUGUI label, float textW, string price)
         {
             float plain = UiBuilder.MinTextHeight(label, float.PositiveInfinity);
-            if (UiBuilder.MinTextHeight(label, textW) > (plain * 1.5f) + 0.5f)
+            float lines = UiBuilder.TextScale > 1f ? 2f : 1.5f;
+            if (UiBuilder.MinTextHeight(label, textW) > (plain * lines) + 0.5f)
             {
                 return false;
             }
@@ -628,6 +672,39 @@ namespace AF.UI
             }
 
             return true;
+        }
+
+        // Disposición compacta: Puñado y Balsa en una fila de rowW dp (sin el hueco entre los dos) con el ancho repartido según lo
+        // que pide cada etiqueta (FX16a): de 4 en 4 dp, del 35 % al 65 % para el Puñado, el reparto en que las dos caben
+        // (OfferRowFits) con la etiqueta más baja y, a igualdad, el más cercano a la mitad. Solo mide; false si no hay ninguno.
+        private static bool OfferRowSplit(TextMeshProUGUI handful, string handfulPrice, TextMeshProUGUI balsa, string balsaPrice, float rowW, float side,
+            out float handfulW)
+        {
+            handfulW = rowW * 0.5f;
+            float best = float.PositiveInfinity;
+            float bestOff = float.PositiveInfinity;
+            bool found = false;
+            for (float w = Mathf.Ceil(rowW * 0.35f); w <= rowW * 0.65f; w += 4f)
+            {
+                float hw = w - (2f * side);
+                float bw = rowW - w - (2f * side);
+                if (!OfferRowFits(handful, hw, handfulPrice) || !OfferRowFits(balsa, bw, balsaPrice))
+                {
+                    continue;
+                }
+
+                float tall = Mathf.Max(UiBuilder.MinTextHeight(handful, hw), UiBuilder.MinTextHeight(balsa, bw));
+                float off = Mathf.Abs(w - (rowW * 0.5f));
+                if (tall < best - 0.5f || (tall <= best + 0.5f && off < bestOff))
+                {
+                    best = Mathf.Min(best, tall);
+                    bestOff = off;
+                    handfulW = w;
+                    found = true;
+                }
+            }
+
+            return found;
         }
 
         // Disposición compacta: cuánto se estira a lo alto un CTA (por el alto de sus sprites) para que su etiqueta, a su tamaño

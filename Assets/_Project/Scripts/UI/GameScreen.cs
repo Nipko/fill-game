@@ -311,6 +311,9 @@ namespace AF.UI
         private float _boardShiftFrom;
         private float _boardShiftTarget;
         private float _boardShiftAnim = -1f;
+        private float _boardScale = 1f;
+        private float _boardScaleFrom = 1f;
+        private float _boardScaleTarget = 1f;
         private float _confettiDelay = -1f;
         private AF.Audio.SeedTicker _seedTicker; // AU1: sfx_seeds_tick de la Cosecha
         private bool _restartProbePending;
@@ -433,6 +436,7 @@ namespace AF.UI
 
             // ---- Tablero (capas 4-7): se desplaza entero con ShiftToClear. ----
             _board = UiBuilder.Rect("Board", _root);
+            _board.pivot = new Vector2(0f, 1f); // la escala del tablero con Aguas estancadas, desde su origen (SetBoardShift)
             _panelShadow = UiBuilder.Sliced("PanelShadow", _board, art.SoftShadow, new Color(1f, 1f, 1f, 0.35f));
             _panelFill = UiBuilder.Image("PanelFill", _board, art.PanelFill, Color.white);
             _panelInner = UiBuilder.Sliced("PanelInnerShadow", _board, art.PanelInnerShadow, Color.white);
@@ -507,6 +511,7 @@ namespace AF.UI
             // pausa (capa superior) [P], como el origen que vierte (D-006). Sin Graphic propio, alineada con el tablero (sigue a
             // ShiftToClear) y vacía casi siempre (SyncLiftFront). ----
             _liftFront = UiBuilder.Rect("LiftFront", _root);
+            _liftFront.pivot = new Vector2(0f, 1f); // sigue al tablero también en su escala (SetBoardShift)
 
             _ambientNearParent = UiBuilder.Rect("AmbientNearHost", _root);
             _ambient = new AmbientLayer(_ambientFarParent, _ambientNearParent, art);
@@ -525,6 +530,7 @@ namespace AF.UI
             // vecinas, del marco del panel, del HUD, del polen y de los avisos, como Magic Sort (t = 250: el origen tapa el
             // rótulo del nivel). Sin Graphic ni raycast; alineada con el tablero (sigue a ShiftToClear) y vacía en reposo. ----
             _pourFront = UiBuilder.Rect("PourFront", _root);
+            _pourFront.pivot = new Vector2(0f, 1f); // sigue al tablero también en su escala (SetBoardShift)
 
             _confettiLayer = UiBuilder.Rect("Burst", _root);
             _confetti = new ConfettiLayer(_confettiLayer, art, GameConfig.AnimConfettiMaxParticles);
@@ -1315,7 +1321,7 @@ namespace AF.UI
             if (phase == FlowPhase.GiveUpConfirm)
             {
                 ShowFunnelBackdrop();
-                ShiftBoard(ShiftToClear(_stuckPanelY, 12f), false);
+                FitBoardToStuck(false);
                 FunnelModalShowing(phase, flow);
                 _giveUp.Show(StuckModalModel.BuildGiveUpConfirm(StuckContext(flow)), _canvasW, _canvasH);
                 EmitFunnelLayout(GiveUpConfirmLayout);
@@ -1353,7 +1359,7 @@ namespace AF.UI
             _stuckBalsaOk = flow.BalsaShownThisBlock
                 || (_services != null && !_services.PurchasesBlocked && _services.StoreLedger.CanOfferBalsa(flow.LevelNumber));
             ShowStuckView(true);
-            ShiftBoard(ShiftToClear(_stuckPanelY, 12f), true); // 07 §5.5: las cuias siguen visibles sobre el modal
+            FitBoardToStuck(true); // 07 §5.5: las cuias siguen visibles sobre el modal
             _stuckAnim = 0f;
             ApplyStuckAnim(0f);
             SyncChrome();
@@ -1508,6 +1514,24 @@ namespace AF.UI
             {
                 _stuck.Place(_canvasW, _stuckPanelY);
             }
+
+            if (!layout)
+            {
+                // Rearmado con el modal abierto (tras una compra o una recarga): el alto del panel pudo cambiar (FX16a).
+                FitBoardToStuck(true);
+            }
+        }
+
+        /// <summary>
+        /// Rearma Aguas estancadas con <paramref name="view"/> (otra rama del mismo bloqueo; tests de legibilidad), lo coloca en
+        /// su sitio y ajusta el tablero a él como al abrirlo (<see cref="FitBoardToStuck"/>).
+        /// </summary>
+        internal void ShowStuckVariant(StuckModalView view)
+        {
+            _stuck.Show(view, _services, _canvasW, StuckRoomDp);
+            _stuckPanelY = _canvasH - _safeBottom - _stuck.BottomGapDp - _stuck.Height;
+            _stuck.Place(_canvasW, _stuckPanelY);
+            FitBoardToStuck(false);
         }
 
         // Tablero atenuado detrás del embudo (Nivel fallido, y ¿Seguro? reabierto sin pasar por el modal).
@@ -2488,6 +2512,21 @@ namespace AF.UI
             LayoutHud();
             LayoutBoard();
 
+            // Con Aguas estancadas abierto (o ¿Seguro? delante), el panel se rearma con el lienzo y la zona segura nuevos (la
+            // disposición compacta y su alto dependen de ellos: StuckRoomDp) y el tablero se vuelve a ajustar (FX16a).
+            if (!initial && _flow != null && _flow.HasLevel)
+            {
+                if (_flow.Phase == FlowPhase.StuckModal && _stuck.Panel.gameObject.activeSelf)
+                {
+                    ShowStuckView(true);
+                    FitBoardToStuck(false);
+                }
+                else if (_flow.Phase == FlowPhase.GiveUpConfirm)
+                {
+                    FitBoardToStuck(false);
+                }
+            }
+
             if (!initial && _flow != null && _flow.HasLevel)
             {
                 EmitLevelLayout();
@@ -3159,17 +3198,66 @@ namespace AF.UI
         /// <summary>Aire mínimo entre el pie de las cuias y el panel de Aguas estancadas compacto (dp) [P] (tarea FX16a).</summary>
         internal const float StuckCuiaGapDp = 2f;
 
-        private void ShiftBoard(float target, bool animate)
+        /// <summary>
+        /// Con Aguas estancadas abierto, el tablero sube lo justo para que el panel no lo tape (<see cref="ShiftToClear"/>; 07
+        /// §5.5). En los lienzos más bajos que <see cref="StuckModal.CompactCanvasBelowDp"/> (el 16:9), si ni subido hasta su
+        /// tope ni con el panel compacto quedan las cuias enteras sobre el panel (el 640, de 3 filas, o la rama B del 31 al
+        /// 130 %), además se reduce mientras el modal esté abierto, hasta que las cuias quepan entre el borde de abajo del HUD
+        /// y el panel, con <see cref="StuckCuiaGapDp"/> de aire (tarea FX16a; 02 §7: «el tablero queda entero a la vista»), con
+        /// la curva de subida (0,25 s, ease-out) y de vuelta a su tamaño al cerrarlo (<see cref="HideOverlays"/>). Con el modal
+        /// abierto el tablero no se toca, así que el mínimo de 48 dp de las cuias no se aplica.
+        /// </summary>
+        private void FitBoardToStuck(bool animate)
+        {
+            float shift = ShiftToClear(_stuckPanelY, 12f);
+            float scale = 1f;
+            if (_layout != null && _views.Length > 0 && _canvasH < StuckModal.CompactCanvasBelowDp - 0.5f && !StuckModal.RegularOnlyForTests)
+            {
+                float highestTop = float.MaxValue;
+                float lowestFoot = float.MinValue;
+                for (int i = 0; i < _views.Length; i++)
+                {
+                    highestTop = Mathf.Min(highestTop, _layout.FootY[i] - (_views[i].HeightU * _views[i].Unit) - CuiaView.LiftDp);
+                    lowestFoot = Mathf.Max(lowestFoot, _layout.FootY[i]);
+                }
+
+                float floor = _stuckPanelY - StuckCuiaGapDp;
+                if (lowestFoot - shift > floor + 0.01f && lowestFoot > highestTop)
+                {
+                    // Con la escala alrededor del centro del lienzo (c; SetBoardShift), un punto a y dp desde arriba queda en
+                    // c + scale · (y − c) − shift: el pie más bajo, en floor, y lo más alto (con la elevación), en BoardTop.
+                    scale = Mathf.Clamp((floor - BoardTop) / (lowestFoot - highestTop), MinStuckBoardScale, 1f);
+                    float c = _canvasH * 0.5f;
+                    shift = c + (scale * (lowestFoot - c)) - floor;
+                }
+            }
+
+            ShiftBoard(shift, animate, scale);
+        }
+
+        /// <summary>
+        /// Escala mínima del tablero con Aguas estancadas abierto en 16:9 (<see cref="FitBoardToStuck"/>) [P] (FX16a): la que
+        /// piden la rama B del 640 al 130 % (0,28) y la del 31 en en-XA al 130 % (0,22), con margen. Pendiente del dueño si ese
+        /// tamaño vale o se prefiere otra disposición para esos casos.
+        /// </summary>
+        internal const float MinStuckBoardScale = 0.2f;
+
+        /// <summary>Escala del tablero: 1, salvo con Aguas estancadas abierto en 16:9 (<see cref="FitBoardToStuck"/>; tests).</summary>
+        internal float BoardScale => _boardScale;
+
+        private void ShiftBoard(float target, bool animate, float scale = 1f)
         {
             _boardShiftTarget = target;
-            if (!animate || Mathf.Approximately(_boardShift, target))
+            _boardScaleTarget = scale;
+            if (!animate || (Mathf.Approximately(_boardShift, target) && Mathf.Approximately(_boardScale, scale)))
             {
                 _boardShiftAnim = -1f;
-                SetBoardShift(target);
+                SetBoardShift(target, scale);
                 return;
             }
 
             _boardShiftFrom = _boardShift;
+            _boardScaleFrom = _boardScale;
             _boardShiftAnim = 0f;
         }
 
@@ -3182,19 +3270,30 @@ namespace AF.UI
 
             _boardShiftAnim += dtMs;
             float t = Mathf.Clamp01(_boardShiftAnim / PanelSlideMs);
-            SetBoardShift(Mathf.Lerp(_boardShiftFrom, _boardShiftTarget, Ease.Out(t)));
+            float e = Ease.Out(t);
+            SetBoardShift(Mathf.Lerp(_boardShiftFrom, _boardShiftTarget, e), Mathf.Lerp(_boardScaleFrom, _boardScaleTarget, e));
             if (t >= 1f)
             {
                 _boardShiftAnim = -1f;
             }
         }
 
-        private void SetBoardShift(float shift)
+        private void SetBoardShift(float shift, float scale)
         {
             _boardShift = shift;
-            _board.anchoredPosition = new Vector2(0f, shift);
-            _pourFront.anchoredPosition = new Vector2(0f, shift); // la capa de vertido sigue al tablero
-            _liftFront.anchoredPosition = new Vector2(0f, shift); // y la de la cuia elevada
+            _boardScale = scale;
+
+            // La escala va alrededor del centro del lienzo maquetado (_canvasW × _canvasH; FitBoardToStuck). Los contenedores
+            // tienen el pivote arriba a la izquierda (el origen de las coordenadas del tablero), así que la posición solo depende
+            // del lienzo maquetado y no del rect de la pantalla, que puede cambiar después (p. ej., al pintar en otra cámara).
+            var size = new Vector3(scale, scale, 1f);
+            var at = new Vector2((1f - scale) * _canvasW * 0.5f, shift - ((1f - scale) * _canvasH * 0.5f));
+            _board.anchoredPosition = at;
+            _board.localScale = size;
+            _pourFront.anchoredPosition = at; // la capa de vertido sigue al tablero
+            _pourFront.localScale = size;
+            _liftFront.anchoredPosition = at; // y la de la cuia elevada
+            _liftFront.localScale = size;
             UpdateScoopCeiling();
         }
 
