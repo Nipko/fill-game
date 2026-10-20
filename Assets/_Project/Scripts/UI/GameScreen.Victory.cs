@@ -41,6 +41,8 @@ namespace AF.UI
     /// Con <see cref="HitoLinePolicy.SlothHito"/> (el default desde TI6a, T6-A) la línea es entonces suya. Fuera de sus hitos
     /// habla en 1 de cada <c>ui_sloth_win_line_every_n</c> victorias si la ranura va vacía (D-016, punto 5;
     /// <see cref="SlothFactsFor"/>); mientras TiTino está a la vista, la garza del fondo se funde (<see cref="HeronFadeMs"/>).</item>
+    /// <item>El título de la cinta (tarea DC14; D-029): «¡Perfecto!» si el intento ganado no llevó la Cuia de rescate y, si no,
+    /// el de siempre (<see cref="VictoryTitleShown"/>).</item>
     /// </list>
     /// </summary>
     public sealed partial class GameScreen
@@ -276,6 +278,21 @@ namespace AF.UI
 
         /// <summary>Ancho de la ranura (dp): el del panel de victoria menos sus márgenes.</summary>
         internal float VictorySlotWidthDp => Mathf.Min(328f, _canvasW - 32f) - (2f * VictoryLineSlot.SideDp);
+
+        /// <summary>
+        /// Título de la cinta en esta victoria (tarea DC14; Magic Sort §10.2 #25, recomendada A; D-029): «¡Perfecto!»
+        /// (<c>victory_perfect</c>) si el intento ganado no llevó la Cuia de rescate (<see cref="LevelFlow.IsPerfect"/>); si no,
+        /// «¡Nivel completado!». Sustituye al título, sin línea nueva: la ranura del Dato del río y la franja de TiTino no cambian
+        /// y la cinta lo mide como siempre (LayoutRibbonTitle, en una o dos líneas). Se fija en cada victoria, antes de colocarla.
+        /// </summary>
+        private void VictoryTitleShown(LevelFlow flow)
+        {
+            string title = UiText.VictoryTitle(flow.IsPerfect);
+            if (!string.Equals(_ribbonTitle.text, title, StringComparison.Ordinal))
+            {
+                _ribbonTitle.text = title;
+            }
+        }
 
         /// <summary>
         /// Registra un proveedor de la ranura (M1.6 y F3, desde sus ganchos de construcción, y los tests). La reserva entra en

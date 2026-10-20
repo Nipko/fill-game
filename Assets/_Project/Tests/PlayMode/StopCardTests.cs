@@ -164,6 +164,7 @@ namespace AF.Tests.PlayMode
                         Assert.That(card.SourceText, Is.Not.Empty, at + ": el dato de llegada, con su fuente");
                         Assert.That(card.SourceText, Is.EqualTo(UiText.MapCardSource(StopCard.SourceOf(factKey))), at);
                         AssertSourceInsideThePlate(map, card, textScale, at);
+                        AssertClearOfPlay(map, card, at);
                     }
                 }
             }
@@ -769,6 +770,16 @@ namespace AF.Tests.PlayMode
             {
                 Assert.That(image.sprite, Is.Not.SameAs(seed), where + ": " + image.name + " sin el icono de semillas");
             }
+        }
+
+        // La placa acaba al menos StopCard.ClearOfBelowDp por encima de «Jugar» del Mapa, con el fondo a ≥ SceneFitMinDp (revisión de
+        // DC10: al 130 % a 360 × 640, la de Amacayacu tapaba el canto de arriba de «Jugar · Nivel 111»).
+        internal static void AssertClearOfPlay(RiverMapScreen map, StopCard card, string where)
+        {
+            Rect panel = CanvasRect(card.PanelRect, map.Canvas);
+            Rect play = CanvasRect((RectTransform)map.PlayButton.transform, map.Canvas);
+            Assert.That(panel.yMax, Is.LessThanOrEqualTo(play.yMin - StopCard.ClearOfBelowDp + 0.5f), where + ": por encima de «Jugar»");
+            Assert.That(card.SceneRect.rect.height, Is.GreaterThanOrEqualTo(StopCard.SceneFitMinDp - 0.5f), where + ": el fondo, a su mínimo o más");
         }
 
         // La línea de la fuente, dentro de la placa, bajo el dato, ≥ 12 sp, sin recortes y con contraste ≥ 4,5:1 sobre la madera oscura.

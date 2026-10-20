@@ -84,6 +84,15 @@ namespace AF.UI
         /// <summary>Alto mínimo del fondo en la tarjeta (dp) [P], si la tarjeta no cabe en la pantalla.</summary>
         public const float SceneMinDp = 64f;
 
+        /// <summary>
+        /// Alto mínimo del fondo (dp) [P] al recortarlo para que la placa no llegue a «Jugar» del Mapa (revisión de DC10): por
+        /// debajo, la placa vuelve a centrarse en toda la pantalla (el velo tapa «Jugar») y el texto nunca baja de 12 sp.
+        /// </summary>
+        public const float SceneFitMinDp = 72f;
+
+        /// <summary>Aire mínimo entre el borde de abajo de la placa y el de arriba de «Jugar» del Mapa (dp) [P] (revisión de DC10).</summary>
+        public const float ClearOfBelowDp = 8f;
+
         /// <summary>Escala de la mini cuia de la tarjeta sobre la del Mapa (20 × 32 dp) [P].</summary>
         public const float SampleScale = 1.5f;
 
@@ -202,6 +211,7 @@ namespace AF.UI
         private float _canvasH = 780f;
         private float _safeTop;
         private float _safeBottom;
+        private float _clearBottom;
 
         /// <summary>
         /// Construye la tarjeta bajo <paramref name="parent"/> (estirada a él), oculta. <paramref name="onClosed"/> se llama al
@@ -740,7 +750,7 @@ namespace AF.UI
 
             _factIndex = (_factIndex + 1) % _factKeys.Count;
             ApplyFact();
-            Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
+            Layout(_canvasW, _canvasH, _safeTop, _safeBottom, _clearBottom);
         }
 
         // ============================================================================================ composición
@@ -828,7 +838,7 @@ namespace AF.UI
                 _fruitNames[i].gameObject.SetActive(on);
             }
 
-            Layout(_canvasW, _canvasH, _safeTop, _safeBottom);
+            Layout(_canvasW, _canvasH, _safeTop, _safeBottom, _clearBottom);
         }
 
         private void ApplyFact()
@@ -1110,14 +1120,18 @@ namespace AF.UI
 
         /// <summary>
         /// Coloca la tarjeta en un lienzo de <paramref name="canvasW"/> × <paramref name="canvasH"/> dp con sus zonas seguras: la
-        /// placa centrada, con lo que se ve de arriba abajo; si no cabe, el fondo se encoge (hasta <see cref="SceneMinDp"/>).
+        /// placa centrada, con lo que se ve de arriba abajo; si no cabe, el fondo se encoge (hasta <see cref="SceneMinDp"/>). Con
+        /// <paramref name="clearBottom"/> &gt; 0 (el borde de arriba, en dp desde arriba del lienzo, de lo que hay debajo: «Jugar» del
+        /// Mapa), la placa acaba al menos <see cref="ClearOfBelowDp"/> por encima, recortando antes el fondo (hasta
+        /// <see cref="SceneFitMinDp"/>); si ni así cabe, se centra en toda la pantalla como sin él (revisión de DC10).
         /// </summary>
-        public void Layout(float canvasW, float canvasH, float safeTop, float safeBottom)
+        public void Layout(float canvasW, float canvasH, float safeTop, float safeBottom, float clearBottom = 0f)
         {
             _canvasW = canvasW;
             _canvasH = canvasH;
             _safeTop = safeTop;
             _safeBottom = safeBottom;
+            _clearBottom = clearBottom;
             if (!Visible)
             {
                 return;
@@ -1128,9 +1142,24 @@ namespace AF.UI
             float available = canvasH - safeTop - safeBottom - (2f * SideDp);
             float sceneFull = inner * (SceneSkyDp + SceneWaterDp) / SceneWorldWidthDp;
             float rest = ContentHeight(inner, 0f);
-            float scene = _sceneWindow.gameObject.activeSelf ? Mathf.Clamp(available - rest, SceneMinDp, sceneFull) : 0f;
+            bool hasScene = _sceneWindow.gameObject.activeSelf;
+            float region = available;
+            float sceneRoom = available - rest;
+            if (clearBottom > 0f)
+            {
+                // Encima de «Jugar»: si cabe con el fondo a SceneFitMinDp (o entero, si es menor), la placa se queda en esa franja.
+                float above = clearBottom - ClearOfBelowDp - safeTop - SideDp;
+                float need = rest + (hasScene ? Mathf.Min(SceneFitMinDp, sceneFull) : 0f);
+                if (above < available && above >= need)
+                {
+                    region = above;
+                    sceneRoom = Mathf.Floor(above - rest); // en dp enteros: la placa (redondeada hacia arriba) no se pasa
+                }
+            }
+
+            float scene = hasScene ? Mathf.Clamp(sceneRoom, SceneMinDp, sceneFull) : 0f;
             float panelH = ContentHeight(inner, scene);
-            float top = safeTop + SideDp + Mathf.Max(0f, (available - panelH) * 0.5f);
+            float top = safeTop + SideDp + Mathf.Max(0f, (region - panelH) * 0.5f);
             UiBuilder.Place(_panel.rectTransform, SideDp, top, panelW, panelH);
 
             // Cabecera: ←, la mini cuia (o el «?») y la placa del lugar.
