@@ -157,7 +157,7 @@ namespace AF.Tests.EditMode
             Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
             Assert.That(rig.Flow.SkipLosesExtraCuia, Is.False);
             TransactionResult? extra = rig.Flow.UseExtraCuia();
-            Assert.That(extra.HasValue && extra.Value.IsApplied, Is.True, "«+1 cuia» aplicada");
+            Assert.That(extra != null && extra.IsApplied, Is.True, "«+1 cuia» aplicada");
             Assert.That(rig.Flow.SkipLosesExtraCuia, Is.True, "04 §2.6 c: aviso en la confirmación");
             int stock = rig.Wallet.Stock.Get(BoosterKind.ExtraCuia);
             int seeds = rig.Wallet.Seeds;
