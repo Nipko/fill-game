@@ -15,18 +15,22 @@ namespace AF.Tests.PlayMode
     /// Vigila que la temporada del ciclo se vea en lo que el tablero deja a la vista (tarea DC21; D-030, pregunta 13 b; SE2;
     /// D-009, punto 6; pregunta 32 b, D-020; 07 §2.1): la LUT de temporada, que es la única señal de la temporada (sin cartel),
     /// llega al panorama, al cielo de la parada y a la banda de agua, y en la zona visible del fondo el ΔE00 medio tiene que
-    /// llegar a <see cref="MinVsNone"/> frente al fondo sin temporada y a <see cref="MinAVsB"/> entre las dos temporadas en la
-    /// misma parada. Por nivel, tres capturas: sin temporada (<see cref="GameScreen.SeasonLutEnabled"/> apagado), con la A y con
-    /// la B (<see cref="GameScreen.SeasonOverride"/>), en 41 y 61 (2 filas), en las paradas con luz propia (91, Leticia al
-    /// atardecer; 191, Pacaya-Samiria al alba) y en un nivel de 3 filas (151).
+    /// llegar a <see cref="MinVsNone"/> frente al fondo sin temporada con cada una de las dos (A y B, las dos forzadas: así se
+    /// vigila también la que no es la del ciclo) y a <see cref="MinAVsB"/> entre las dos temporadas en la misma parada. Por
+    /// nivel, tres capturas: sin temporada (<see cref="GameScreen.SeasonLutEnabled"/> apagado), con la A y con la B
+    /// (<see cref="GameScreen.SeasonOverride"/>), en 41 y 61 (2 filas), en las paradas con luz propia (91, Leticia al
+    /// atardecer; 191, Pacaya-Samiria al alba, que también tiene 3 filas) y en un nivel de 3 filas (151).
     /// <para><b>Zona medida</b>: las filas de la captura por encima del panel (<c>StopPanelRect</c>), y en ellas solo los
     /// píxeles de fondo a la vista: los que cambian (algún canal ≥ <see cref="MaskMin"/> de 255) al repetir la captura sin
     /// temporada sin el panorama ni el fondo de la parada. Así quedan fuera el HUD, el follaje, la garza y el panel, que se
     /// pintan encima, sin cajas fijas que dependan de la maquetación, y entran el cielo, el panorama y la banda de agua aunque
     /// la temporada no los cambie. ΔE00 medio píxel a píxel en una rejilla de <see cref="Step"/> px. Cada nivel escribe su línea
     /// <c>AF_SEASON_VIS</c> con las cifras, las filas del tablero y la zona medida.</para>
-    /// <para>Con 3 filas el panel puede empezar casi bajo el HUD (DC21: si no se llega sin tocar el tablero, se mide y se anota):
-    /// si la zona tiene menos de <see cref="MinRows"/> filas de captura, se mide, se escribe y no se exige la cifra. Explícito:
+    /// <para>Cada nivel tiene que dejar muestras de fondo a la vista (si no, falla: la máscara o la maquetación se rompieron).
+    /// Con 3 filas el panel puede empezar casi bajo el HUD (DC21: si no se llega sin tocar el tablero, se mide y se anota): solo
+    /// en un tablero de 3 filas con una zona de menos de <see cref="MinRows"/> filas de captura se mide, se escribe y no se exige
+    /// la cifra; el 151 tiene que superar <see cref="MinRows"/> (si una maquetación nueva lo deja por debajo, el test falla y hay
+    /// que elegir otro nivel de 3 filas o anotarlo). Explícito:
     /// necesita gráficos (<c>unity test &lt;repo&gt; --mode PlayMode --filter AF.Tests.PlayMode.SeasonVisibilitySnapshotTests</c>
     /// sin <c>-nographics</c>); las capturas quedan en <c>Logs/snapshots/es-419/</c> (<c>season_vis_l&lt;n&gt;_off|a|b</c>).</para>
     /// </summary>
@@ -39,8 +43,14 @@ namespace AF.Tests.PlayMode
         /// <summary>ΔE00 medio mínimo entre la A y la B en la misma parada (revisión de SE2; DC21).</summary>
         public const float MinAVsB = 8f;
 
-        /// <summary>Filas de captura (de 2340) por debajo de las cuales la zona visible no basta para exigir las cifras.</summary>
+        /// <summary>
+        /// Filas de captura (de 2340) por debajo de las cuales la zona visible de un tablero de 3 filas no basta para exigir las
+        /// cifras.
+        /// </summary>
         public const int MinRows = 30;
+
+        // El nivel de 3 filas medido (DC21): su zona sobre el panel tiene que llegar a MinRows.
+        private const int ThreeRowsLevel = 151;
 
         private const int MaskMin = 3;
         private const int Step = 3;
@@ -58,7 +68,7 @@ namespace AF.Tests.PlayMode
         public IEnumerator TheSeasonShows_InTheVisibleSkyAndStrip()
         {
             string dir = SnapshotKit.Prepare();
-            int[] levels = { 41, 61, 91, 191, 151 };
+            int[] levels = { 41, 61, 91, 191, ThreeRowsLevel };
             bool twoRows = false;
             bool threeRows = false;
             var failures = new System.Text.StringBuilder();
@@ -73,10 +83,11 @@ namespace AF.Tests.PlayMode
                 Assert.That(off, Is.Not.Null);
                 Assert.That(a, Is.Not.Null);
                 Assert.That(b, Is.Not.Null);
-                Assert.That(a!.Rows, Is.EqualTo(off!.Rows), "el mismo tablero (" + level + ")");
+                Assert.That(a!.Rows, Is.EqualTo(off!.Rows), "el mismo tablero (" + level + ", A)");
+                Assert.That(b!.Rows, Is.EqualTo(off.Rows), "el mismo tablero (" + level + ", B)");
                 twoRows |= off.Rows == 2;
                 threeRows |= off.Rows == 3;
-                Measure(level, off, a, b!, failures);
+                Measure(level, off, a, b, failures);
             }
 
             Assert.That(twoRows, Is.True, "algún nivel medido tiene 2 filas");
@@ -155,22 +166,39 @@ namespace AF.Tests.PlayMode
             float mOffA = count > 0 ? (float)(offA / count) : 0f;
             float mOffB = count > 0 ? (float)(offB / count) : 0f;
             float mAb = count > 0 ? (float)(ab / count) : 0f;
-            float natural = off.Natural == Season.LowWater ? mOffB : mOffA;
-            bool enough = rows >= MinRows && count > 0;
+            bool enough = rows >= MinRows || off.Rows != 3;
             Debug.Log("AF_SEASON_VIS " + level + " (parada " + off.Stop + ", " + off.Rows + " filas, temporada del ciclo "
                 + (SeasonTable.Letter(off.Natural) ?? "-") + "): ΔE00 medio sin temporada / A " + mOffA.ToString("0.00", ci)
                 + ", sin temporada / B " + mOffB.ToString("0.00", ci) + ", A / B " + mAb.ToString("0.00", ci) + "; zona: filas 0-"
                 + rows + " px de " + h + " (sobre el panel), " + count + " de " + grid + " muestras ("
                 + (grid > 0 ? 100d * count / grid : 0d).ToString("0", ci) + " %, rejilla de " + Step + " px)"
-                + (enough ? string.Empty : "; zona demasiado pequeña: se anota y no se exige"));
+                + (enough ? string.Empty : "; zona demasiado pequeña con 3 filas: se anota y no se exige"));
+            if (count == 0)
+            {
+                failures.Append(level).Append(": ninguna muestra de fondo a la vista (¿la máscara o la maquetación?); ");
+                return;
+            }
+
+            if (level == ThreeRowsLevel && rows < MinRows)
+            {
+                failures.Append(level).Append(": la zona sobre el panel tiene ").Append(rows).Append(" filas < ").Append(MinRows)
+                    .Append(" (el nivel de 3 filas tiene que medirse); ");
+            }
+
             if (!enough)
             {
                 return;
             }
 
-            if (natural < MinVsNone)
+            if (mOffA < MinVsNone)
             {
-                failures.Append(level).Append(": sin temporada / la del ciclo ").Append(natural.ToString("0.00", ci)).Append(" < ")
+                failures.Append(level).Append(": sin temporada / A ").Append(mOffA.ToString("0.00", ci)).Append(" < ")
+                    .Append(MinVsNone.ToString("0", ci)).Append("; ");
+            }
+
+            if (mOffB < MinVsNone)
+            {
+                failures.Append(level).Append(": sin temporada / B ").Append(mOffB.ToString("0.00", ci)).Append(" < ")
                     .Append(MinVsNone.ToString("0", ci)).Append("; ");
             }
 
