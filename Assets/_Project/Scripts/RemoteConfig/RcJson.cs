@@ -436,8 +436,9 @@ namespace AF.RemoteConfig
                 }
 
                 string text = _s.Substring(start, _i - start);
-                double value = double.Parse(text, NumberStyles.Float, CultureInfo.InvariantCulture);
-                if (double.IsInfinity(value) || double.IsNaN(value))
+                // Mono lanza OverflowException con 1e999 y CoreCLR da infinito: TryParse y la comprobación cubren los dos.
+                if (!double.TryParse(text, NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
+                    || double.IsInfinity(value) || double.IsNaN(value))
                 {
                     throw new FormatException("número no finito en " + start.ToString(CultureInfo.InvariantCulture));
                 }
