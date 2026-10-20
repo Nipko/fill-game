@@ -105,8 +105,10 @@ namespace AF.Tests.PlayMode
             Assert.That(map.BuoysDrawn, Is.EqualTo(10));
             Assert.That(map.Buoys!.DrawnCount, Is.EqualTo(8), "las encendidas, detrás de la canoa");
             Assert.That(map.BuoysAhead!.DrawnCount, Is.EqualTo(2), "las del 59 y el 60, encima");
-            Assert.That(front.LastVertexCount, Is.InRange(1, RiverRibbonGraphic.FrontMaxVertices), "el frente, ≤ 400 vértices");
-            Assert.That(map.FrontCasingRibbon(0).LastVertexCount, Is.InRange(1, RiverRibbonGraphic.FrontMaxVertices), "su orla, ≤ 400 vértices");
+            // El frente de una sola pieza (el Negro) cabe en la cifra de referencia de §11.4 (FrontMaxVertices), aunque desde la
+            // revisión de FX11 el Mapa no la aplica (sin saltar puntos); el tramo del 300 la supera y lo acota Fx11Tests.
+            Assert.That(front.LastVertexCount, Is.InRange(1, RiverRibbonGraphic.FrontMaxVertices), "el frente de una pieza, dentro de la cifra de §11.4");
+            Assert.That(map.FrontCasingRibbon(0).LastVertexCount, Is.InRange(1, RiverRibbonGraphic.FrontMaxVertices), "su orla, dentro de la cifra de §11.4");
         }
 
         [UnityTest]
