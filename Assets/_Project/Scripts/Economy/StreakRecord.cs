@@ -70,6 +70,142 @@ namespace AF.Economy
             return true;
         }
 
+        /// <summary>
+        /// Tope de <see cref="Wins"/>: la barra tiene 10 marcas y vuelve a 0 al pagar el hito 10 (06 §4.3; 05 §2.4).
+        /// </summary>
+        public const int MaxWins = 10;
+
+        /// <summary>
+        /// Recorta lo que no puede salir de las reglas (un archivo editado a mano o de otra build): <see cref="Wins"/> a
+        /// [0, <see cref="MaxWins"/>], <see cref="SeedsToday"/> a ≥ 0 y <see cref="HitsToday"/> a los hitos 3, 6 y 10 del default
+        /// de <c>streak_milestones</c> (08 §9), sin repetir y en orden creciente. Si Remote Config cambiara los hitos, esta lista
+        /// tendría que seguirlo [P]. Devuelve si cambió algo.
+        /// </summary>
+        public bool Normalize()
+        {
+            bool changed = false;
+            int wins = Wins < 0 ? 0 : Wins > MaxWins ? MaxWins : Wins;
+            if (wins != Wins)
+            {
+                Wins = wins;
+                changed = true;
+            }
+
+            if (SeedsToday < 0)
+            {
+                SeedsToday = 0;
+                changed = true;
+            }
+
+            bool has3 = false, has6 = false, has10 = false;
+            for (int i = 0; i < HitsToday.Count; i++)
+            {
+                int hit = HitsToday[i];
+                has3 |= hit == 3;
+                has6 |= hit == 6;
+                has10 |= hit == 10;
+            }
+
+            int count = (has3 ? 1 : 0) + (has6 ? 1 : 0) + (has10 ? 1 : 0);
+            bool canonical = HitsToday.Count == count;
+            if (canonical)
+            {
+                int k = 0;
+                canonical = (!has3 || HitsToday[k++] == 3) && (!has6 || HitsToday[k++] == 6) && (!has10 || HitsToday[k] == 10);
+            }
+
+            if (!canonical)
+            {
+                HitsToday.Clear();
+                if (has3) HitsToday.Add(3);
+                if (has6) HitsToday.Add(6);
+                if (has10) HitsToday.Add(10);
+                changed = true;
+            }
+
+            return changed;
+        }
+
+        /// <summary>
+        /// Lleva los campos del día de <paramref name="record"/> (lo que guarda quien juega) a <paramref name="current"/> (el estado
+        /// del día que hay ahora en el almacén), sabiendo que <paramref name="record"/> salió de <paramref name="loaded"/> (lo que
+        /// entregó el último <c>Load</c>). No toca <see cref="Wins"/> ni <see cref="RiverFull"/>. Devuelve si cambió
+        /// <paramref name="current"/>.
+        /// <list type="bullet">
+        /// <item>Si <paramref name="record"/> es de un día posterior al de <paramref name="current"/>, este pasa antes a ese día
+        /// (<see cref="RollOver"/>) y luego, como si fuera del mismo día, se copian los campos.</item>
+        /// <item>Del mismo día: se copian <see cref="ShieldAvailable"/>, <see cref="HitsToday"/> y <see cref="SeedsToday"/>.</item>
+        /// <item>De un día anterior (cargado antes de medianoche y guardado cuando otro módulo ya pasó el día): <b>regla
+        /// conservadora</b>, solo se aplica lo que cambió desde la carga: los hitos nuevos se suman a los de hoy, el aumento de
+        /// semillas se suma a las de hoy y un escudo gastado gasta el de hoy. Lo que ya estaba gastado ayer no niega nada hoy. En
+        /// el borde de medianoche puede pagar de menos (un hito pagado ayer cuenta también hoy), nunca dos veces. Si
+        /// <paramref name="loaded"/> no es del mismo día que <paramref name="record"/>, se compara con un día vacío (escudo
+        /// disponible, sin hitos, 0 semillas): todo lo del registro cuenta como nuevo.</item>
+        /// </list>
+        /// </summary>
+        public static bool MergeDay(StreakRecord current, StreakRecord loaded, StreakRecord record)
+        {
+            if (current == null)
+            {
+                throw new ArgumentNullException(nameof(current));
+            }
+
+            if (loaded == null)
+            {
+                throw new ArgumentNullException(nameof(loaded));
+            }
+
+            if (record == null)
+            {
+                throw new ArgumentNullException(nameof(record));
+            }
+
+            bool changed = record.DateLocal != null && current.RollOver(record.DateLocal);
+            if (string.Equals(record.DateLocal, current.DateLocal, StringComparison.Ordinal))
+            {
+                if (current.ShieldAvailable != record.ShieldAvailable || current.SeedsToday != record.SeedsToday
+                    || !SameList(current.HitsToday, record.HitsToday))
+                {
+                    current.ShieldAvailable = record.ShieldAvailable;
+                    current.SeedsToday = record.SeedsToday;
+                    current.HitsToday.Clear();
+                    current.HitsToday.AddRange(record.HitsToday);
+                    changed = true;
+                }
+
+                return changed;
+            }
+
+            // Registro de un día anterior: solo el cambio desde la carga.
+            bool sameDay = string.Equals(loaded.DateLocal, record.DateLocal, StringComparison.Ordinal);
+            bool loadedShield = !sameDay || loaded.ShieldAvailable;
+            int loadedSeeds = sameDay ? loaded.SeedsToday : 0;
+            for (int i = 0; i < record.HitsToday.Count; i++)
+            {
+                int hit = record.HitsToday[i];
+                if ((!sameDay || !loaded.HitsToday.Contains(hit)) && !current.HitsToday.Contains(hit))
+                {
+                    current.HitsToday.Add(hit);
+                    changed = true;
+                }
+            }
+
+            int seeds = record.SeedsToday - loadedSeeds;
+            if (seeds > 0)
+            {
+                current.SeedsToday = current.SeedsToday > int.MaxValue - seeds ? int.MaxValue : current.SeedsToday + seeds;
+                changed = true;
+            }
+
+            if (loadedShield && !record.ShieldAvailable && current.ShieldAvailable)
+            {
+                current.ShieldAvailable = false;
+                changed = true;
+            }
+
+            return changed;
+        }
+
         /// <summary>Copia independiente.</summary>
         public StreakRecord Clone()
         {
@@ -83,6 +219,24 @@ namespace AF.Economy
             };
             copy.HitsToday.AddRange(HitsToday);
             return copy;
+        }
+
+        private static bool SameList(List<int> a, List<int> b)
+        {
+            if (a.Count != b.Count)
+            {
+                return false;
+            }
+
+            for (int i = 0; i < a.Count; i++)
+            {
+                if (a[i] != b[i])
+                {
+                    return false;
+                }
+            }
+
+            return true;
         }
     }
 }

@@ -1,9 +1,9 @@
 diff --git a/Assets/_Project/Scripts/Economy/ProfileStreakStore.cs b/Assets/_Project/Scripts/Economy/ProfileStreakStore.cs
 new file mode 100644
-index 0000000..a6a9f58
+index 0000000..2b1364e
 --- /dev/null
 +++ b/Assets/_Project/Scripts/Economy/ProfileStreakStore.cs
-@@ -0,0 +1,171 @@
+@@ -0,0 +1,172 @@
 +#nullable enable
 +using System;
 +using AF.Platform;
@@ -24,11 +24,13 @@ index 0000000..a6a9f58
 +    /// <see cref="Flush"/>.
 +    /// <para>
 +    /// <see cref="Load"/> pasa antes <c>daily</c> al día local del reloj con <see cref="DailyCounters.RollOver"/> (el bloque
-+    /// entero, solo hacia delante) y vuelve a leer el perfil en el estado vivo: así ve el cambio de día que haya hecho otro módulo.
-+    /// <see cref="Save"/> copia el estado al perfil. Los campos del día solo se escriben si <see cref="StreakRecord.DateLocal"/> es
-+    /// el día de <c>daily</c>: un estado de un día posterior pasa antes <c>daily</c> a ese día (entero), y uno de un día anterior
-+    /// (leído antes de medianoche) no pisa los contadores de hoy; la racha y el río crecido se escriben siempre. Si cambia algún
-+    /// campo de <c>daily</c>, <c>economy_ts</c> pasa a ahora (08 §4.3).
++    /// entero, solo hacia delante; si cambia, <c>economy_ts</c> pasa a ahora), vuelve a leer el perfil en el estado vivo, lo recorta
++    /// (<see cref="StreakRecord.Normalize"/>) y recuerda lo que entregó. <see cref="Save"/> escribe siempre la racha y el río
++    /// crecido, y lleva los campos del día a <c>daily</c> con <see cref="StreakRecord.MergeDay"/>: si el registro es del día de
++    /// <c>daily</c>, se copian; si es de un día posterior, <c>daily</c> pasa antes a ese día (entero); si es de un día anterior
++    /// (cargado antes de medianoche y guardado después de que otro módulo pasara el día), se aplica a hoy solo lo que cambió desde
++    /// esa carga: hitos nuevos, aumento de semillas y escudo gastado (regla conservadora: puede pagar de menos en el borde de
++    /// medianoche, nunca dos veces). Si cambia algún campo de <c>daily</c>, <c>economy_ts</c> pasa a ahora (08 §4.3).
 +    /// </para>
 +    /// </summary>
 +    public sealed class ProfileStreakStore : IStreakStore
@@ -37,6 +39,7 @@ index 0000000..a6a9f58
 +        private readonly IProfileStore _store;
 +        private readonly IClock _clock;
 +        private StreakRecord _live = new StreakRecord();
++        private StreakRecord _loaded;
 +
 +        /// <summary>Crea el almacén sobre <paramref name="profile"/>, que se guarda en <paramref name="store"/>.</summary>
 +        public ProfileStreakStore(Profile profile, IProfileStore store, IClock clock)
@@ -45,6 +48,7 @@ index 0000000..a6a9f58
 +            _store = store ?? throw new ArgumentNullException(nameof(store));
 +            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
 +            ReadInto(profile, _live);
++            _loaded = _live.Clone();
 +        }
 +
 +        /// <inheritdoc />
@@ -56,8 +60,13 @@ index 0000000..a6a9f58
 +        /// <inheritdoc />
 +        public StreakRecord Load()
 +        {
-+            DailyCounters.RollOver(_profile.Daily, _clock.LocalDateKey());
++            if (DailyCounters.RollOver(_profile.Daily, _clock.LocalDateKey()))
++            {
++                _profile.EconomyTs = _clock.UtcNow;
++            }
++
 +            ReadInto(_profile, _live);
++            _loaded = _live.Clone();
 +            return _live;
 +        }
 +
@@ -65,11 +74,12 @@ index 0000000..a6a9f58
 +        public void Save(StreakRecord record)
 +        {
 +            _live = record ?? throw new ArgumentNullException(nameof(record));
-+            if (WriteTo(_profile, record))
++            if (WriteTo(_profile, _loaded, record))
 +            {
 +                _profile.EconomyTs = _clock.UtcNow;
 +            }
 +
++            _loaded = record.Clone(); // otro Save del mismo registro no vuelve a sumar lo ya aplicado
 +            Persist();
 +        }
 +
@@ -86,7 +96,8 @@ index 0000000..a6a9f58
 +
 +        /// <summary>
 +        /// Copia en <paramref name="record"/> la Crecida de <paramref name="profile"/>: <c>streak</c> (0 y false si es null) y los
-+        /// campos del día de <c>daily</c>, con su <c>date_local</c>. No cambia el perfil.
++        /// campos del día de <c>daily</c>, con su <c>date_local</c>, recortados con <see cref="StreakRecord.Normalize"/> (un valor
++        /// fuera de rango en el archivo no llega a las reglas). No cambia el perfil.
 +        /// </summary>
 +        public static void ReadInto(Profile profile, StreakRecord record)
 +        {
@@ -109,19 +120,25 @@ index 0000000..a6a9f58
 +            record.HitsToday.Clear();
 +            record.HitsToday.AddRange(daily.StreakHits);
 +            record.SeedsToday = daily.StreakSeeds;
++            record.Normalize();
 +        }
 +
 +        /// <summary>
-+        /// Escribe <paramref name="record"/> en <paramref name="profile"/> (con copias: el perfil no comparte listas con el estado).
-+        /// <c>streak</c> siempre; los campos del día, solo si <see cref="StreakRecord.DateLocal"/> es el día de <c>daily</c> después
-+        /// de pasar <c>daily</c> a ese día cuando es posterior (<see cref="DailyCounters.RollOver"/>). Devuelve si cambió algún campo
-+        /// de <c>daily</c>.
++        /// Escribe <paramref name="record"/>, que salió de <paramref name="loaded"/>, en <paramref name="profile"/> (con copias: el
++        /// perfil no comparte listas con el registro). <c>streak</c> siempre; los campos del día, con
++        /// <see cref="StreakRecord.MergeDay"/>, después de pasar <c>daily</c> entero al día del registro cuando es posterior
++        /// (<see cref="DailyCounters.RollOver"/>). Devuelve si cambió algún campo de <c>daily</c>.
 +        /// </summary>
-+        public static bool WriteTo(Profile profile, StreakRecord record)
++        public static bool WriteTo(Profile profile, StreakRecord loaded, StreakRecord record)
 +        {
 +            if (profile == null)
 +            {
 +                throw new ArgumentNullException(nameof(profile));
++            }
++
++            if (loaded == null)
++            {
++                throw new ArgumentNullException(nameof(loaded));
 +            }
 +
 +            if (record == null)
@@ -133,39 +150,23 @@ index 0000000..a6a9f58
 +
 +            DailyData daily = profile.Daily;
 +            bool changed = record.DateLocal != null && DailyCounters.RollOver(daily, record.DateLocal);
-+            if (!string.Equals(record.DateLocal, daily.DateLocal, StringComparison.Ordinal))
++            var current = new StreakRecord
 +            {
-+                return changed; // estado de un día anterior: no pisa los contadores de hoy
-+            }
-+
-+            if (daily.ShieldAvailable != record.ShieldAvailable || daily.StreakSeeds != record.SeedsToday || !SameHits(daily, record))
++                DateLocal = daily.DateLocal,
++                ShieldAvailable = daily.ShieldAvailable,
++                SeedsToday = daily.StreakSeeds,
++            };
++            current.HitsToday.AddRange(daily.StreakHits);
++            if (StreakRecord.MergeDay(current, loaded, record))
 +            {
-+                daily.ShieldAvailable = record.ShieldAvailable;
-+                daily.StreakSeeds = record.SeedsToday;
++                daily.ShieldAvailable = current.ShieldAvailable;
++                daily.StreakSeeds = current.SeedsToday;
 +                daily.StreakHits.Clear();
-+                daily.StreakHits.AddRange(record.HitsToday);
++                daily.StreakHits.AddRange(current.HitsToday);
 +                changed = true;
 +            }
 +
 +            return changed;
-+        }
-+
-+        private static bool SameHits(DailyData daily, StreakRecord record)
-+        {
-+            if (daily.StreakHits.Count != record.HitsToday.Count)
-+            {
-+                return false;
-+            }
-+
-+            for (int i = 0; i < record.HitsToday.Count; i++)
-+            {
-+                if (daily.StreakHits[i] != record.HitsToday[i])
-+                {
-+                    return false;
-+                }
-+            }
-+
-+            return true;
 +        }
 +
 +        private void Persist()
@@ -207,7 +208,7 @@ index 922ddfa..d47a632 100644
          }
      }
 diff --git a/Assets/_Project/Scripts/Save/Profile.cs b/Assets/_Project/Scripts/Save/Profile.cs
-index fce57d5..b3da32c 100644
+index fce57d5..a26889f 100644
 --- a/Assets/_Project/Scripts/Save/Profile.cs
 +++ b/Assets/_Project/Scripts/Save/Profile.cs
 @@ -20,7 +20,8 @@ namespace AF.Save
@@ -238,16 +239,17 @@ index fce57d5..b3da32c 100644
          /// <summary>
          /// Perfil de primera ejecución: <c>created_at</c> = ahora, 0 semillas (el GDD no fija otro saldo inicial),
          /// <paramref name="initialCanoes"/> canoas, stock vacío, sin nivel en curso y el nivel 1 como siguiente
-@@ -169,7 +181,7 @@ public sealed class StockData
+@@ -169,7 +181,8 @@ public sealed class StockData
  
      /// <summary>
      /// <c>daily</c>: contadores del día local, con las claves de 04 §10.1 más <c>interstitials_today</c> (tope diario de
 -    /// intersticiales, 05 §6.3). Al cambiar <c>date_local</c> los pone a cero quien aplica la regla de cada uno.
-+    /// intersticiales, 05 §6.3) y los de la Crecida <c>streak_hits</c> y <c>streak_seeds</c> [P] (06 §4.3; Q-M9 (a)). Al cambiar <c>date_local</c> los pone a cero quien aplica la regla de cada uno.
++    /// intersticiales, 05 §6.3) y los de la Crecida <c>streak_hits</c> y <c>streak_seeds</c> [P] (06 §4.3; Q-M9 (a)).
++    /// Al cambiar <c>date_local</c> los pone a cero quien aplica la regla de cada uno.
      /// </summary>
      public sealed class DailyData
      {
-@@ -216,8 +228,36 @@ public sealed class DailyData
+@@ -216,8 +229,36 @@ public sealed class DailyData
          /// <summary><c>shuffles_today</c>: Pororocas usadas hoy.</summary>
          public int ShufflesToday { get; set; }
  
@@ -286,7 +288,7 @@ index fce57d5..b3da32c 100644
  
      /// <summary><c>progress</c> (08 §4.3; 04 §10.1; <c>map_seen_level</c>, D-013, y <c>undo_tip_seen</c> [P], DC23).</summary>
 diff --git a/Assets/_Project/Scripts/Save/ProfileJson.cs b/Assets/_Project/Scripts/Save/ProfileJson.cs
-index 033a03f..35acb39 100644
+index 033a03f..aac65ec 100644
 --- a/Assets/_Project/Scripts/Save/ProfileJson.cs
 +++ b/Assets/_Project/Scripts/Save/ProfileJson.cs
 @@ -15,7 +15,9 @@ namespace AF.Save
@@ -333,16 +335,18 @@ index 033a03f..35acb39 100644
              root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
  
              JsonNode entitlements = JsonNode.NewObject();
-@@ -242,6 +263,8 @@ internal static Profile FromNode(JsonNode root)
+@@ -242,6 +263,10 @@ internal static Profile FromNode(JsonNode root)
                  d.AfRescueHiddenUntil = ReadTimestamp(daily, "af_rescue_hidden_until");
                  d.ShufflesToday = ReadInt(daily, "shuffles_today", d.ShufflesToday);
                  d.ShieldAvailable = ReadBool(daily, "shield_available", d.ShieldAvailable);
++                // Como el resto de listas y enteros del perfil: "streak_hits": null se lee como vacía y "streak_seeds": null es
++                // corrupción (ReadIntList y ReadInt). Los rangos (hitos 3/6/10, semillas >= 0) los recorta AF.Economy.
 +                ReadIntList(daily, "streak_hits", d.StreakHits);
 +                d.StreakSeeds = ReadInt(daily, "streak_seeds", d.StreakSeeds);
              }
  
              JsonNode? progress = Section(root, "progress");
-@@ -258,6 +281,17 @@ internal static Profile FromNode(JsonNode root)
+@@ -258,6 +283,17 @@ internal static Profile FromNode(JsonNode root)
                  g.UndoTipSeen = TolerantBool(progress, "undo_tip_seen", g.UndoTipSeen);
              }
  
@@ -362,10 +366,10 @@ index 033a03f..35acb39 100644
  
 diff --git a/Assets/_Project/Tests/EditMode/StreakProfileTests.cs b/Assets/_Project/Tests/EditMode/StreakProfileTests.cs
 new file mode 100644
-index 0000000..6b91838
+index 0000000..d931cfc
 --- /dev/null
 +++ b/Assets/_Project/Tests/EditMode/StreakProfileTests.cs
-@@ -0,0 +1,446 @@
+@@ -0,0 +1,539 @@
 +#nullable enable
 +using System;
 +using System.Collections.Generic;
@@ -538,6 +542,7 @@ index 0000000..6b91838
 +            Assert.That(r.DateLocal, Is.EqualTo("2026-10-19"));
 +            Assert.That(p.Daily.DateLocal, Is.EqualTo("2026-10-19"));
 +            Assert.That(p.Streak, Is.Null, "leer no crea el bloque");
++            Assert.That(p.EconomyTs, Is.EqualTo(clock.UtcNow), "el cambio de día muta daily: economy_ts (08 §4.3)");
 +
 +            Profile full = FullProfile();
 +            full.Daily.RvHint = 2;
@@ -580,7 +585,7 @@ index 0000000..6b91838
 +            p.Daily.RvTotal = 3;
 +            var record = new StreakRecord { Wins = 1, DateLocal = "2026-10-20", ShieldAvailable = false };
 +
-+            Assert.That(ProfileStreakStore.WriteTo(p, record), Is.True);
++            Assert.That(ProfileStreakStore.WriteTo(p, new StreakRecord(), record), Is.True);
 +
 +            Assert.That(p.Daily.DateLocal, Is.EqualTo("2026-10-20"));
 +            Assert.That(p.Daily.RvTotal, Is.EqualTo(0));
@@ -622,13 +627,105 @@ index 0000000..6b91838
 +            Profile p = NewProfile();
 +            var store = new ProfileStreakStore(p, new MemoryProfileStore(), clock);
 +            StreakRecord r = store.Load();
-+            store.Save(r); // primer guardado del día: sin cambios en daily
-+            Assert.That(p.EconomyTs, Is.Null);
++            DateTime? afterRollOver = p.EconomyTs;
++            Assert.That(afterRollOver, Is.EqualTo(clock.UtcNow), "el cambio de día de Load sí cuenta");
++            clock.Set(clock.UtcNow.AddMinutes(5));
++            Assert.That(store.Load(), Is.SameAs(r));
++            Assert.That(p.EconomyTs, Is.EqualTo(afterRollOver), "mismo día: Load no muta nada");
++            store.Save(r); // sin cambios en daily
++            Assert.That(p.EconomyTs, Is.EqualTo(afterRollOver));
 +
 +            r.Wins = 2;
 +            store.Save(r);
-+            Assert.That(p.EconomyTs, Is.Null, "streak no es wallet, stock ni daily");
++            Assert.That(p.EconomyTs, Is.EqualTo(afterRollOver), "streak no es wallet, stock ni daily");
 +            Assert.That(p.Streak!.Wins, Is.EqualTo(2));
++        }
++
++        [Test]
++        public void StaleRecord_HitPaidAfterTheWalletPassedTheDay_IsNotPaidAgainToday()
++        {
++            // (a) Load a las 23:59; la cartera pasa daily al día siguiente al pagar; el hito 3 se guarda con el registro de ayer.
++            var clock = Clock(new DateTime(2026, 10, 19, 23, 59, 0));
++            var disk = new MemoryProfileStore();
++            Profile profile = Wallet.NewProfile(clock);
++            var wallet = new Wallet(profile, disk, clock);
++            var store = new ProfileStreakStore(profile, disk, clock);
++            StreakRecord r = store.Load();
++            r.Wins = 3;
++
++            clock.Set(Utc(new DateTime(2026, 10, 20, 0, 0, 30)));
++            wallet.Apply(Transaction.Earn(SeedSource.Streak, 300));
++            Assert.That(profile.Daily.DateLocal, Is.EqualTo("2026-10-20"), "la cartera pasó el día");
++            r.HitsToday.Add(3);
++            r.SeedsToday += 300;
++            store.Save(r);
++
++            Assert.That(profile.Daily.StreakHits, Is.EqualTo(new[] { 3 }), "el hito 3 cuenta como pagado hoy");
++            Assert.That(profile.Daily.StreakSeeds, Is.EqualTo(300));
++            StreakRecord again = new ProfileStreakStore(disk.Load().Profile!, disk, clock).Load();
++            Assert.That(again.HitsToday, Is.EqualTo(new[] { 3 }), "no se vuelve a pagar hoy, tampoco al reabrir");
++            Assert.That(again.Wins, Is.EqualTo(3));
++        }
++
++        [Test]
++        public void StaleRecord_ShieldSpentAfterAnotherModulePassedTheDay_LeavesNoSecondShield()
++        {
++            // (b) El escudo se gasta con el registro de ayer: no queda un segundo escudo hoy.
++            var clock = Clock(new DateTime(2026, 10, 19, 23, 59, 0));
++            Profile p = NewProfile();
++            p.Streak = new StreakData { Wins = 4 };
++            var store = new ProfileStreakStore(p, new MemoryProfileStore(), clock);
++            StreakRecord r = store.Load();
++            Assert.That(r.ShieldAvailable, Is.True);
++
++            clock.Set(Utc(new DateTime(2026, 10, 20, 0, 0, 30)));
++            DailyCounters.RollOver(p.Daily, clock.LocalDateKey()); // los anuncios o las compras pasan el día
++            r.ShieldAvailable = false;
++            store.Save(r);
++
++            Assert.That(p.Daily.ShieldAvailable, Is.False, "no hay segundo escudo hoy");
++            Assert.That(store.Load().ShieldAvailable, Is.False);
++            Assert.That(p.Streak!.Wins, Is.EqualTo(4));
++        }
++
++        [Test]
++        public void StaleRecord_ShieldSpentYesterday_DoesNotDenyTodaysShield()
++        {
++            // (c) El registro ya llevaba el escudo de ayer gastado al cargarse: el de hoy sigue disponible.
++            var clock = Clock(new DateTime(2026, 10, 19, 23, 59, 0));
++            Profile p = FullProfile(); // 2026-10-19, escudo gastado, hitos [3, 6], 350 semillas
++            var store = new ProfileStreakStore(p, new MemoryProfileStore(), clock);
++            StreakRecord r = store.Load();
++
++            clock.Set(Utc(new DateTime(2026, 10, 20, 0, 0, 30)));
++            DailyCounters.RollOver(p.Daily, clock.LocalDateKey());
++            r.Wins = 8;
++            store.Save(r);
++
++            Assert.That(p.Daily.ShieldAvailable, Is.True, "el escudo de hoy no se niega");
++            Assert.That(p.Daily.StreakHits, Is.Empty, "los hitos de ayer no cuentan hoy");
++            Assert.That(p.Daily.StreakSeeds, Is.EqualTo(0));
++            Assert.That(p.Streak!.Wins, Is.EqualTo(8));
++        }
++
++        [Test]
++        public void Load_ClampsOutOfRangeValuesFromTheFile()
++        {
++            var clock = Clock(new DateTime(2026, 10, 19, 10, 0, 0));
++            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"streak\": {\"wins\": 15, \"river_full\": true},"
++                + " \"daily\": {\"date_local\": \"2026-10-19\", \"streak_hits\": [6, 3, 3, 7], \"streak_seeds\": -3}}");
++            Assert.That(p.Daily.StreakHits, Is.EqualTo(new[] { 6, 3, 3, 7 }), "AF.Save guarda lo que lee; recorta AF.Economy");
++
++            StreakRecord r = new ProfileStreakStore(p, new MemoryProfileStore(), clock).Load();
++
++            Assert.That(r.Wins, Is.EqualTo(10));
++            Assert.That(r.RiverFull, Is.True);
++            Assert.That(r.HitsToday, Is.EqualTo(new[] { 3, 6 }));
++            Assert.That(r.SeedsToday, Is.EqualTo(0));
++            var direct = new StreakRecord();
++            p.Streak!.Wins = -4;
++            ProfileStreakStore.ReadInto(p, direct);
++            Assert.That(direct.Wins, Is.EqualTo(0));
 +        }
 +
 +        [Test]
@@ -732,7 +829,7 @@ index 0000000..6b91838
 +
 +            Profile back = NewProfile();
 +            back.Daily.DateLocal = "2026-10-19";
-+            ProfileStreakStore.WriteTo(back, r);
++            ProfileStreakStore.WriteTo(back, new StreakRecord(), r);
 +            Assert.That(ProfileJson.Serialize(back), Is.EqualTo(ProfileJson.Serialize(WithCreatedAt(FullProfile(), back.CreatedAt))));
 +            Assert.That(back.Daily.StreakHits, Is.Not.SameAs(r.HitsToday));
 +        }
