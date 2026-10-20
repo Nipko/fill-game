@@ -160,6 +160,75 @@ Packs de muestra de las variantes (P5; `pack_schema` 3, niveles 241-320), con su
 dotnet run --project tools/level-qa -c Release -- tools/out/sample_variants/mundo_06_v1.json tools/out/sample_variants/mundo_07_v1.json --spec tools/level-generator/specs/sample_variants.json
 ```
 
+## Reto del río: `--daily` (R4 del encargo del Spark; 03 §16-§17)
+
+QA del pool del Reto del río (`daily_challenge`; nota de diseño `docs/dev/reto-del-rio.md` §13), en `Daily/` (`DailyQaCommand.cs`
+y `DailyChecks.cs`). Las reglas de cada banda (K por día, vacíos, capacidad, ventana del bot, paleta, tope de pares y agua del
+mundo del día) salen de la especificación del generador, `tools/level-generator/specs/daily_v1.json`, nunca de la cabecera
+del pack. El lector de la especificación, los ids y las semillas y la generación son **el mismo código del generador**:
+`level-qa.csproj` enlaza `tools/level-generator/Daily/*.cs` salvo `DailyCommand*.cs` (la línea de comandos del generador),
+igual que `Campaign/`, `Metrics/` y `Generation/`.
+
+```
+dotnet run --project tools/level-qa -c Release -- --daily Assets/_Project/Data/Daily/daily_pool_v1.json
+dotnet run --project tools/level-qa -c Release -- --daily tools/out/daily_sample/daily_pool_v1.json --partial
+```
+
+Opciones: `--spec <daily_v1.json>` (por defecto la de arriba; los tintes y los pares de riesgo, de su `tints_from`),
+`--partial` (una muestra: los días que faltan no fallan, pero sale siempre el aviso QA-DAILY-DAYS «no es el pool completo»;
+el tamaño se mira igual) y `--no-reproduce` (salta QA-DAILY-REPRO y lo deja como aviso; nunca en el CI). Sin `--partial`, el
+pack tiene que traer las 3 bandas × 729 días (R-Q2b).
+
+- **QA-DAILY-REPRO** (03 §17 #10) regenera **en memoria**, sin proceso hijo, las bandas y los días del pack con
+  `DailyRunner` y `DailyPackWriter` y compara cada tablero entero con el regenerado (igualdad profunda del JSON: el mismo
+  tablero, no solo el mismo hash). Si el generador no puede dar un día (ninguno en la ventana del bot, R-Q11 (a)) o rechaza su
+  tablero (`DailyPackWriter.CheckBoard`), también es un fallo de QA-DAILY-REPRO. El pool publicado (2.187 tableros) tarda
+  unos 25 s en Release.
+- **QA-DAILY-SCHEMA** lanza `python tools/validate_schema.py --pack`, como QA-SCHEMA: sin Python 3 con `jsonschema`, falla.
+- La anti-repetición (03 §17 #9) y las trampas tempranas (03 §17 #3) solo dan **aviso** (R-Q10): el pool publicado da 0
+  fallos y unos 1.700 avisos de esas dos comprobaciones.
+
+| Id | Qué comprueba |
+|---|---|
+| QA-DAILY-SCHEMA | el esquema `af-level/1` (03 §17 #11) |
+| QA-DAILY-HEADER | `kind` daily y `pack_id` de la especificación; paletas en el pool y K entre `k_min` y `k_max` |
+| QA-DAILY-STRUCT | tablero legible y válido (`BoardBuilder` y `LevelValidation` de AF.Core) |
+| QA-DAILY-SLOT | `slot {band 1-3, day 0-728}` coherente con el `id` `d{b}_n{nnnn}` y la `seed` `amazonfill:v1:daily:b{b}:d{ddd}` |
+| QA-DAILY-DAYS | 729 días por banda, sin huecos ni duplicados |
+| QA-DAILY-SHAPE | K del día (`k_by_day`), vacíos de la banda, cuias de 4 llenas o vacías |
+| QA-DAILY-CUIAS-14 | como mucho 14 cuias (02 R1) |
+| QA-DAILY-PALETTE | paleta = tintes presentes, con debut dentro del tramo de la banda (R-Q1) |
+| QA-DAILY-RISK | `risk_pairs` recalculado y dentro del tope de la banda (B3 libre: R-Q1b (a)) |
+| QA-DAILY-MECH | sin mecánicas ni ocultos (03 §16) |
+| QA-DAILY-FIELDS | sin `level`, `difficulty`, `solution`, `safe_path` ni `qa` |
+| QA-DAILY-RELIEF | `relief` vacío |
+| QA-DAILY-WATER | mundo y `water_base` del día (R-Q2) |
+| QA-DAILY-ASTAR | resoluble con A* (03 §17 #1) |
+| QA-DAILY-PAR | par ≥ 2K (03 §17 #2) |
+| QA-DAILY-BOT | `bot_fail` ×40 con la semilla del tablero dentro de la ventana de la banda: compuerta (R-Q11 (a)) |
+| QA-DAILY-REPRO | la semilla reproduce el tablero (arriba) |
+| QA-DAILY-SIZE | pack < 2 MB sin comprimir, también con `--partial` |
+| QA-DAILY-REPEAT-SHAPE | aviso: forma distinta de la de los 200 días anteriores de su banda, con la vuelta del ciclo |
+| QA-DAILY-REPEAT-HAMMING | aviso: Hamming ≥ 25 % con los 20 días anteriores de su banda |
+| QA-DAILY-EARLY-TRAPS | aviso: trampas tempranas dentro del tope de la etiqueta que da el bot |
+
+Códigos de salida: 0 = sin fallos (los avisos no fallan); 1 = algún fallo; 2 = uso, especificación o pack ilegibles.
+
+### `--self-test daily`
+
+```
+dotnet run --project tools/level-qa -c Release -- --self-test daily
+```
+
+Pasa el fixture válido de `fixtures/daily/` (`daily_valido.json`, con `--partial`, reproducción y esquema: 0 fallos y el aviso
+de muestra parcial; sin `--partial`, QA-DAILY-DAYS) y cada fixture malo (`QA-DAILY-<id>__<caso>.json`), que tiene que fallar con
+su id y solo con las comprobaciones que su cambio arrastra; además, el tope de tamaño, B3 sin tope de pares, y que las
+trampas tempranas, la anti-repetición (también con dos días casi iguales y con la vuelta del ciclo, 728 → 0) solo avisan.
+Sale con 0 si todo pasa, 1 si algo falla y 2 si no encuentra la especificación; tarda unos 20 s.
+
+**`--self-test` sin nombre** ejecuta `key2` y `daily` y sale con el código mayor de los dos. `reglas` y `variante` se lanzan
+por su nombre.
+
 ## Comprobaciones
 
 Cada comprobación tiene un id estable; la consola imprime `FAIL [ID] nivel N: motivo`.

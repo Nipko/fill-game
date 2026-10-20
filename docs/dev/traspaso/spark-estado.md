@@ -6,6 +6,42 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-20 · T1 · Cierre del Reto (`spark/reto-cierre`): HECHA · verificación completa VERDE · lista para integrar
+
+- **Rama:** `spark/reto-cierre`, desde `origin/integracion-fase1-fase2` (`e7475d2`). Fusiona `27a7e9f` (R12 integrado) en `fea96b7`.
+- **Commits:**
+  - `c7ec205`: E16;
+  - `e5061f2`: E17 («Enganche:»);
+  - `bac87a7`: E6, E7 y E21 → E25;
+  - `3094557`: los parches;
+  - `906e78a`: tablas de prueba, `DailyPoolDisabledOverride` y orden de la sonda;
+  - `e68a9dd`: `DailyText.E5bKeys`;
+  - `053eecc`: E5b, E6 y E7 regenerados sobre la base nueva;
+  - `b1b4628`: ajuste de `FunnelPlayModeTests` en `E7.diff`.
+- **Qué hace:**
+  - **E16 (aplicado):** level-qa enlaza `../level-generator/Daily/*.cs` (salvo `DailyCommand*.cs`), reproduce el pool en memoria con `DailyRunner` y `DailyPackWriter`, y borra `Daily/Shared/`.
+  - **E17 (aplicado):** el README de level-qa documenta `--daily`, y su `--self-test` sin nombre ejecuta key2 y daily.
+  - **E6, E7 y E5b:** lo del Spark va en la rama; lo de archivos ajenos, como parches probados (fichas en «Enganches para el integrador»).
+  - **E21 → E25:** corregida la referencia en `DailyChallengeScreen.cs`.
+- **Verificación:**
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama | `dotnet build -warnaserror`, `dotnet test`, `validate_schema.py` | 0 avisos; 981 (975 + 6); 103/103 |
+  | rama | `level-qa --self-test` (sin nombre y `daily`); `--daily` del pool publicado | todo PASS; 2.187 tableros, **0 fallos**, 1.678 avisos |
+  | rama (`e68a9dd`) | `unity-compile`, EditMode, PlayMode | OK; **3.083** (3.079 + 3; 1 fallo, el inestable `IntroArtTests`); **1.404 (1.237 + 167), 0 fallos** |
+  | worktree temporal con E5b + E6 + E7, sin `b1b4628` | EditMode, PlayMode | 3.083 (3.080 + 3), 0 fallos; 1.411, **2 fallos** en `FunnelPlayModeTests` del 31, los que arregla `b1b4628` |
+  | ídem, con `b1b4628` | `unity-compile` + PlayMode | OK; **1.411 (1.244 + 167), 0 fallos** (25 min), tras la revisión de la licencia por el dueño |
+
+- **code-reviewer:**
+  - primera ronda CAMBIOS NECESARIOS: base vieja (tablas duplicadas con E5 y «sin pool» con E3);
+  - segunda ronda: código, tests y parches bien; un solo bloqueante, de documentación (esta entrada);
+  - tercera ronda: **APROBADO** (a falta de Unity, que después salió en verde).
+- **[P] para el dueño:** los de E6 y E7, en sus fichas (recomendación: aceptarlos).
+- **Para el integrador:**
+  - los parches aplican con `git apply --check` sobre la rama y sobre `origin/integracion-fase1-fase2` en `cb0f96f`;
+  - `tools/level-generator/README.md:777` aún dice que QA-DAILY-REPRO regenera «en un proceso hijo»; con E16 es en memoria (archivo del integrador).
+
 ## 2026-10-19 · Entrega final: R0-R12 en `spark/reto-del-rio`, verificación completa VERDE
 
 Verificación en `spark-int`, sobre la rama con la parte del Spark de R12 (`ac54d82`) y los parches guardados (`bb5b163`, `fa5209e`):
@@ -695,8 +731,9 @@ Las R-Q1 a R-Q10 de la sección 5 del encargo, decididas por el dueño el 2026-1
 | E3 | **Parche probado** (R12, `E3.diff` + regenerar escena) | `Scripts/UI/Editor/GameSceneBuilder.cs` |
 | E4 | **Parche probado** (R12, `E4.diff`) | `Scripts/Save/Profile.cs`, `ProfileJson.cs`, `ProfileMigrations.cs` |
 | E5 | **Parche probado** (R12, `E5.diff` + `E5-fix.diff`) | `Data/Loc/strings.csv` |
-| E6 | No preparado: falta clave y diseño (R12) | Victoria del nivel 7 |
-| E7 | Opcional · no preparado (R12) | `Scripts/UI/NoCanoesScreen.cs` |
+| E5b | **Parche probado** (T1, `spark-enganches/E5b.diff`): las 2 filas de E6 y E7 | `Data/Loc/strings.csv`, `LocTablesTests` |
+| E6 | **Parche probado** (T1, `spark-enganches/E6.diff`; necesita E5b) | `Scripts/UI/GameScreen.cs` |
+| E7 | **Parche probado** (T1, `spark-enganches/E7.diff`; necesita E5b) | `Scripts/UI/NoCanoesScreen.cs`, `FunnelPlayModeTests.cs` |
 | E8 | **Ya no hace falta** | (iba en `Scripts/GameFlow/LevelFlow*.cs`) |
 | E9 | **Parche probado** (R12, `E9.diff`) | `Scripts/Economy/Transaction.cs`, `Wallet.cs` |
 | E10 | **Ya no hace falta** (R10 sale de archivos del Spark) | `Scripts/UI/DevProbe.cs` (si hace falta) |
@@ -705,8 +742,8 @@ Las R-Q1 a R-Q10 de la sección 5 del encargo, decididas por el dueño el 2026-1
 | E13 | Opcional | `Assets/_Project/Tests/EditMode/AF.Tests.EditMode.asmdef` |
 | E14 | Opcional | `Scripts/Levels/LevelPackReader.cs`, `DailyPoolReader.cs` |
 | E15 | **Aplicado** (`752bb55`) | `tools/level-generator/Program.cs`, `README.md` |
-| E16 | Pendiente · el parche del bloque (a) quedó desfasado tras R5: regenerar | `tools/level-qa/level-qa.csproj` y `tools/level-qa/Daily/` |
-| E17 | **Aplicado en parte** (`752bb55`); queda el README | `tools/level-qa/Program.cs`, `README.md` |
+| E16 | **Aplicado en la rama** `spark/reto-cierre` (`c7ec205`; registro en `spark-enganches/E16.diff`) | `tools/level-qa/level-qa.csproj` y `tools/level-qa/Daily/` |
+| E17 | **Aplicado** (`752bb55` y, en `spark/reto-cierre`, `e5061f2`) | `tools/level-qa/Program.cs`, `README.md` |
 | E18 | Punto 1 corregido por el integrador (encargo §9); queda el punto 2 | Encargo §3.3 |
 | E19 | Pendiente, para cuando exista la Crecida | `Scripts/GameFlow/LevelFlow.Funnel.cs`, `FailResolve.cs` |
 | E20 | Pendiente (limpieza) | `Scripts/Levels/LevelDefinition.cs`, `LevelCatalog.cs` |
@@ -752,19 +789,55 @@ Las R-Q1 a R-Q10 de la sección 5 del encargo, decididas por el dueño el 2026-1
 - **Por qué:** 08 §4.7; `.claude/rules/localizacion.md`.
 - **Prueba:** los tests de localización que ya validan `strings.csv`.
 
-### E6 · Tarjeta de 2 s tras ganar el 7 (pendiente; parche en R12)
+### E5b · Las dos filas de texto de E6 y E7 (parche probado; T1)
 
-- **Archivo:** la victoria del nivel 7 (punto exacto en R12).
-- **Qué:** llamar a la clase nueva con «Desde el nivel 10, un tablero nuevo cada día».
-- **Por qué:** 06 §2.2; 02 §13.
-- **Prueba:** PlayMode, ganar el 7.
+- **Archivos:** `Assets/_Project/Data/Loc/strings.csv` y `LocTablesTests`.
+  - En `strings.csv`, las filas `daily_teaser` y `no_canoes_daily`, en orden ordinal e idénticas a `spark-strings-reto.csv`.
+  - En `LocTablesTests`, `keys.AddRange(DailyText.E5bKeys)` en `UiTextKeys`.
+- **Parche:** `docs/dev/traspaso/spark-enganches/E5b.diff`.
+- **Orden:** va **antes o junto con E6 y E7**. Sin E5b, en release `daily_teaser` y `no_canoes_daily` salen vacíos. Con E5b integrado, las claves de `DailyText.E5bKeys` pasan a `DailyText.NewKeys`.
+- **Prueba:** `LocTablesTests` y `DailyUiLogicTests` en EditMode. `Csv_RowsAreInStringsCsv_E5…` admite que falten las dos a la vez (sin E5b) o que estén las dos; nunca una sola.
 
-### E7 · Sin canoas (opcional; parche en R12)
+### E6 · Tarjeta de 2 s tras ganar el 7 (parche probado; T1)
 
-- **Archivo:** `Assets/_Project/Scripts/UI/NoCanoesScreen.cs`.
-- **Qué:** la línea «Mientras esperas: Jugar el Reto del río» y `af_no_canoes_choice = daily_challenge`.
-- **Por qué:** 04 §7.3; 04 §11.
-- **Prueba:** PlayMode con 0 canoas.
+- **Lo del Spark** (en la rama):
+  - `Scripts/UI/DailyTeaserCard.cs`, con la placa clara del aviso, sin rojo y sin capturar toques;
+  - `Tests/PlayMode/DailyTeaserCardTests.cs`;
+  - el texto `daily_teaser` = «Desde el nivel {level}, un tablero nuevo cada día» (06 §2.2, fila 7; 02 §13), con `{level}` = `live_unlock_level_daily`.
+- **Parche:** `docs/dev/traspaso/spark-enganches/E6.diff`.
+  - En `Scripts/UI/GameScreen.cs`, cuatro puntos: el campo `_dailyTeaser`, `_dailyTeaser?.Tick(dtMs)`, el acceso `internal DailyTeaser` y un bloque al final de `OnVictoryScreen` con `flow.LevelNumber == 7`.
+  - El test nuevo `DailyTeaserVictoryTests.cs`, sin `.meta`: lo genera Unity al integrarlo.
+- **Prueba:** `DailyTeaserVictoryTests`.
+  - La victoria real del 7 la enseña a los 900 ms y durante 2 s.
+  - Siguiente e Inicio siguen activos, y Siguiente lleva al 8.
+  - Pulsar Siguiente la quita.
+  - No sale sin el Reto en el build (`DailyPoolDisabledOverride`) ni en la victoria del 8.
+- **[P] para el dueño (recomendación: aceptarlos):**
+  - sale en cada victoria del 7 que se vea, sin guardar nada en el perfil;
+  - a los 900 ms, centrada sobre las cuias;
+  - solo con el Reto en el build y con `live_unlock_level_daily` > 7;
+  - no entra en la cola de avisos de D-011;
+  - `daily_teaser` va en `pendiente_asesor` porque lo pide el encargo §10 T1.2, aunque el texto no es cultural: el dueño puede bajarlo a `borrador`.
+
+### E7 · Sin canoas: «Mientras esperas: Jugar el Reto del río» (parche probado; T1)
+
+- **Lo del Spark** (en la rama):
+  - `Scripts/UI/NoCanoesDailyLink.cs`;
+  - en `GameBootstrap.Daily.cs`: `DailyInBuild`, `NoCanoesDailyAvailable`, `PressNoCanoesDaily()` y `LastNoCanoesChoice`;
+  - la sonda `AF_STATE no_canoes_choice` con `choice=daily_challenge` (04 §11; 08 §8.2), en `DailyProbeFormat.NoCanoesChoice`;
+  - `Tests/PlayMode/NoCanoesDailyTests.cs`.
+- **Parche:** `docs/dev/traspaso/spark-enganches/E7.diff`.
+  - En `NoCanoesScreen.cs`: el enlace bajo el panel, encima de «Volver al inicio», y el id `daily_challenge` en `VisibleButtons` y en la clave del layout.
+  - El test nuevo `NoCanoesDailyLinkTests.cs`, sin `.meta`.
+  - **Un test existente**, `FunnelPlayModeTests.AssertNoCanoesLayout`: añade `daily_challenge` entre `infinite_canoes` y `home` cuando el enlace se ve (`b1b4628`). Hace falta porque, con la escena con pool (E3), el 31 muestra el enlace.
+- **Prueba:**
+  - `NoCanoesDailyLinkTests`: Sin canoas desde el inicio, desde Nivel fallido en el 31 y sin Reto en el build;
+  - `NoCanoesDailyTests`;
+  - `FunnelPlayModeTests` del 31.
+- **[P] para el dueño (recomendación: aceptarlos):**
+  - solo se ofrece con la tarjeta en «Jugar» o «Seguir» (con el día sellado o pendiente, la tarjeta abriría el calendario);
+  - el toque sale por el camino de «Volver al inicio» y abre el tablero de hoy;
+  - sin el chevron «›» del wireframe.
 
 ### E8 · Modo Reto en `LevelFlow` (ya no hace falta)
 
@@ -833,10 +906,10 @@ Las R-Q1 a R-Q10 de la sección 5 del encargo, decididas por el dueño el 2026-1
 - **Por qué:** encargo §9, punto 6.
 - **Prueba:** `dotnet run --project tools/level-generator -c Release -- --self-test` → 435 PASS, 0 FAIL, exit 0, con «daily».
 
-### E16 · `level-qa.csproj` enlaza `tools/level-generator/Daily/` (pendiente; parche probado)
+### E16 · `level-qa.csproj` enlaza `tools/level-generator/Daily/` (APLICADO en `spark/reto-cierre`, `c7ec205`; el texto de abajo es el plan original)
 
 - **Archivos:** `tools/level-qa/level-qa.csproj`; `tools/level-qa/Daily/DailyQaCommand.cs` y `DailyChecks.cs` (comentarios); borrar `tools/level-qa/Daily/Shared/DailySpec.cs` y `DailyIds.cs`.
-- **Parche completo** (probado): `C:\Users\nir_l\AppData\Local\Temp\claude\C--Users-nir-l-projects-fill-game\f846b4a6-1ce3-41af-a4ae-c95773cc7080\scratchpad\E16-short.diff` (carpeta temporal de la sesión: si se pierde, lo esencial es esto). Lo esencial:
+- **Parche completo:** `docs/dev/traspaso/spark-enganches/E16.diff` (idéntico a `c7ec205`, aplicado en `spark/reto-cierre`). Lo de abajo es el plan original:
   ```diff
   --- a/tools/level-qa/level-qa.csproj
   +++ b/tools/level-qa/level-qa.csproj
@@ -870,10 +943,10 @@ Las R-Q1 a R-Q10 de la sección 5 del encargo, decididas por el dueño el 2026-1
 - **Por qué:** una sola copia de `DailySpec` y `DailyIds`; QA-DAILY-REPRO sin proceso hijo ni tope de 15 min.
 - **Prueba:** `dotnet build tools/level-qa -warnaserror` y `dotnet run --project tools/level-qa -- --self-test daily` (todo PASS).
 
-### E17 · `level-qa`: documentar `daily` (APLICADO EN PARTE en `752bb55`)
+### E17 · `level-qa`: documentar `daily` (APLICADO: `752bb55` y `e5061f2`: README con `--daily` y `daily` en el `--self-test` sin nombre)
 
-- **Archivos:** `tools/level-qa/Program.cs` (hecho) y `tools/level-qa/README.md` (pendiente).
-- **Hecho:** en `Usage`, `--daily <daily_pool_v1.json> [--spec <daily_v1.json>] [--partial] [--no-reproduce]` y `--self-test [key2|reglas|variante|daily]`; el mensaje de error con «key2, reglas, variante o daily». El `--self-test` sin nombre de level-qa solo ejecuta `key2`, así que no se le suma `daily`.
+- **Archivos:** `tools/level-qa/Program.cs` y `tools/level-qa/README.md` (los dos hechos; el README y el `--self-test` sin nombre con `daily`, en `e5061f2`).
+- **Hecho:** en `Usage`, `--daily <daily_pool_v1.json> [--spec <daily_v1.json>] [--partial] [--no-reproduce]` y `--self-test [key2|reglas|variante|daily]`; el mensaje de error con «key2, reglas, variante o daily». Desde `e5061f2`, el `--self-test` sin nombre de level-qa ejecuta `key2` y `daily` y sale con el código mayor.
 - **Pendiente:** `--daily` en `tools/level-qa/README.md`. Va con E16: el texto tiene que describir QA-DAILY-REPRO tal como quede (en memoria con E16; hoy, proceso hijo).
 - **Prueba:** `dotnet run --project tools/level-qa -- --self-test bogus` → el mensaje de uso nombra «daily» (comprobado).
 
