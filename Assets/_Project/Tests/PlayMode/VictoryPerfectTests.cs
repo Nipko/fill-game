@@ -100,7 +100,8 @@ namespace AF.Tests.PlayMode
         {
             TMPro.TextMeshProUGUI title = view.VictoryRibbonTitle;
             title.ForceMeshUpdate();
-            Assert.That(title.fontSize, Is.GreaterThanOrEqualTo((22f * scale) - 0.01f), what + ": 22 sp (× escala) o más");
+            float min = view.VictoryCompact >= GameScreen.VictoryCompactMargins ? GameScreen.RibbonTitleCompactMinSp : 22f; // D-032
+            Assert.That(title.fontSize, Is.GreaterThanOrEqualTo((min * scale) - 0.01f), what + ": " + min + " sp (× escala) o más");
             Assert.That(new LocInventory(Loc.Locale, scale).ProblemsOf(title), Is.Empty, what + ": el título no se sale de su caja");
             Assert.That(title.textInfo.lineCount, Is.InRange(1, 2), what + ": en una o dos líneas");
         }

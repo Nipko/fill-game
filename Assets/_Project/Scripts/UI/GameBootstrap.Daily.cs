@@ -190,6 +190,7 @@ namespace AF.UI
 
             _dailyRunner = runner;
             _dailyRunner.Bind(this);
+            _lobby.DailyUnlocked = () => DailyPlayUnlocked; // «Jugar · Reto del río» tras acabar el contenido (D-032, punto 6)
             _dailyCardShown = false;
             RefreshDailyCard();
             return true;
@@ -265,6 +266,27 @@ namespace AF.UI
         /// del inicio, ni la presentación del 7 (<see cref="DailyTeaserCard"/>, E6), ni la línea de Sin canoas (E7): D-008.
         /// </summary>
         public bool DailyInBuild => _dailyService?.Pool != null;
+
+        /// <summary>
+        /// El Reto del río está desbloqueado: en el build (<see cref="DailyInBuild"/>), con su interruptor y desde
+        /// <c>live_unlock_level_daily</c> (<see cref="DailyChallengeService.IsAvailable"/>). Con el contenido acabado, el botón Jugar
+        /// del inicio lo abre (D-032, punto 6). Sin asignaciones.
+        /// </summary>
+        public bool DailyPlayUnlocked => _dailyService != null && _dailyScreen != null && _progress != null && _dailyService.IsAvailable(_progress.MaxLevel);
+
+        // «Jugar · Reto del río» (D-032, punto 6): con el inicio a la vista, recalcula la tarjeta (descarta la partida de otro día,
+        // R-Q4) y abre lo que abriría ella: el tablero de hoy (Jugar o Seguir) o, con el día sellado o pendiente, el calendario.
+        private bool PressPlayDaily()
+        {
+            if (_dailyService == null || _progress == null || _app == null || _app.Screen != AppScreen.Lobby)
+            {
+                return false;
+            }
+
+            _dailyCardShown = false;
+            RefreshDailyCard();
+            return OpenDaily(_dailyService.CardState(_progress.MaxLevel));
+        }
 
         /// <summary>
         /// Sin canoas ofrece «Mientras esperas: Jugar el Reto del río» (E7; 04 §7.3; 04 §7.1: el Reto no requiere canoas): el Reto

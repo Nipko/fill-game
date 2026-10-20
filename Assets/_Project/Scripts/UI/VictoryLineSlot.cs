@@ -96,6 +96,15 @@ namespace AF.UI
         /// <summary>Del filete al contenido [P].</summary>
         public const float RuleBelowDp = 4f;
 
+        /// <summary>
+        /// Del pie de lo de encima al filete en la victoria compacta de 16:9 (D-032, punto 2; <see cref="Tight"/>) [P]: el aire de
+        /// <see cref="RuleGapDp"/> se queda en lo justo para que el filete no toque el botón.
+        /// </summary>
+        public const float TightRuleGapDp = 2f;
+
+        /// <summary>Del filete al contenido en la victoria compacta de 16:9 (<see cref="Tight"/>) [P].</summary>
+        public const float TightRuleBelowDp = 2f;
+
         /// <summary>Cabecera de la línea de fruta: icono de 32 dp y «Dato del río · Açaí 3/20» (02 §6; F3).</summary>
         public const float HeaderDp = 32f;
 
@@ -145,6 +154,19 @@ namespace AF.UI
         private float _dismissedMs = -1f;
         private float _sheetMs;
         private bool _shown;
+
+        /// <summary>
+        /// Huecos de la victoria compacta de 16:9 (D-032, punto 2; lo fija <c>GameScreen</c> antes de reservar y colocar): del pie
+        /// de lo de encima al filete <see cref="TightRuleGapDp"/> y del filete al contenido <see cref="TightRuleBelowDp"/>, en vez
+        /// de <see cref="RuleGapDp"/> y <see cref="RuleBelowDp"/>.
+        /// </summary>
+        public bool Tight { get; set; }
+
+        /// <summary>
+        /// Cuerpo del texto del peor caso sintético (sp, sin la escala de texto): <see cref="TextSp"/> o, en la victoria compacta
+        /// de 16:9 (D-032, punto 2), <see cref="UiBuilder.MinTextSp"/>. Va en la caché de <see cref="ContentHeightFor"/>.
+        /// </summary>
+        public float BodySp { get; set; } = TextSp;
 
         /// <summary>Hay algún proveedor activo: la ranura se reserva (<see cref="IVictoryLineProvider.SlotActive"/>).</summary>
         public bool Reserved
@@ -300,15 +322,16 @@ namespace AF.UI
             for (int i = 0; i < _cache.Count; i++)
             {
                 CacheEntry e = _cache[i];
-                if (e.Locale == locale && Mathf.Approximately(e.Scale, textScale) && Mathf.Approximately(e.Width, widthDp))
+                if (e.Locale == locale && Mathf.Approximately(e.Scale, textScale) && Mathf.Approximately(e.Width, widthDp)
+                    && Mathf.Approximately(e.Body, BodySp))
                 {
                     return e.Height;
                 }
             }
 
-            float text = MeasureText(WorstCaseText(locale), TextSp * textScale, widthDp);
+            float text = MeasureText(WorstCaseText(locale), BodySp * textScale, widthDp);
             float height = Mathf.Max(MinContentDp, Mathf.Ceil(HeaderDp + text + BottomDp));
-            _cache.Add(new CacheEntry(locale, textScale, widthDp, height));
+            _cache.Add(new CacheEntry(locale, textScale, widthDp, BodySp, height));
             return height;
         }
 
@@ -316,6 +339,14 @@ namespace AF.UI
         public static float ReserveOf(float contentDp)
         {
             return RuleGapDp + RuleDp + RuleBelowDp + contentDp;
+        }
+
+        /// <summary>
+        /// Como <see cref="ReserveOf"/>, con los huecos de ahora (<see cref="Tight"/>: los de la victoria compacta de 16:9).
+        /// </summary>
+        public float ReserveFor(float contentDp)
+        {
+            return Tight ? TightRuleGapDp + RuleDp + TightRuleBelowDp + contentDp : ReserveOf(contentDp);
         }
 
         /// <summary>
@@ -340,11 +371,19 @@ namespace AF.UI
         {
             RectTransform root = _root!;
             _contentDp = contentDp;
-            _reserveDp = ReserveOf(contentDp);
+            _reserveDp = ReserveFor(contentDp);
             root.gameObject.SetActive(true);
             UiBuilder.Place(root, x, top, widthDp, _reserveDp);
+            float gap = Tight ? TightRuleGapDp : RuleGapDp;
+            if (_rule != null)
+            {
+                UiBuilder.Place(_rule.rectTransform, 0f, gap, 0f, RuleDp);
+                _rule.rectTransform.anchorMax = new Vector2(1f, 1f); // a todo el ancho de la ranura, como en Build
+                _rule.rectTransform.sizeDelta = new Vector2(0f, RuleDp);
+            }
+
             RectTransform content = _content!;
-            UiBuilder.Place(content, 0f, RuleGapDp + RuleDp + RuleBelowDp, widthDp, contentDp);
+            UiBuilder.Place(content, 0f, _reserveDp - contentDp, widthDp, contentDp);
             for (int i = 0; i < _providers.Count; i++)
             {
                 if (_providers[i].SlotActive)
@@ -463,11 +502,12 @@ namespace AF.UI
 
         private readonly struct CacheEntry
         {
-            public CacheEntry(string locale, float scale, float width, float height)
+            public CacheEntry(string locale, float scale, float width, float body, float height)
             {
                 Locale = locale;
                 Scale = scale;
                 Width = width;
+                Body = body;
                 Height = height;
             }
 
@@ -476,6 +516,8 @@ namespace AF.UI
             public float Scale { get; }
 
             public float Width { get; }
+
+            public float Body { get; }
 
             public float Height { get; }
         }

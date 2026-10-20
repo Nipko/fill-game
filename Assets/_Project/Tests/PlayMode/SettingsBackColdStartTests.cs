@@ -48,6 +48,7 @@ namespace AF.Tests.PlayMode
         /// <inheritdoc />
         public override void TearDown()
         {
+            GameBootstrap.ResetDailyOverrides();
             Application.logMessageReceived -= OnLog;
 
             // El módulo de UI y la acción de Atrás usan el Input System de prueba: se apagan antes de restaurarlo.
@@ -113,6 +114,7 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Back_IsOnePathForTheLobbySheets_AndReturnsFromTheRiverKeepsGrowing()
         {
+            GameBootstrap.DailyPoolDisabledOverride = true; // sin el Reto: con él, «Jugar · Reto del río» abre el Reto (D-032, punto 6)
             // Más allá del último nivel publicado: «Jugar» abre «El río sigue creciendo» (06 §9), una hoja del inicio.
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(SettingsScreenTests.ProfileAt(9999)));
             GameBootstrap boot = GameBootstrap.Current!;

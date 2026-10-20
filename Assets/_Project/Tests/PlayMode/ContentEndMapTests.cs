@@ -46,6 +46,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             GameBootstrap.ContentEndMapOverride = null;
+            GameBootstrap.ResetDailyOverrides();
             MapArtRule.ForceProvisional = null;
             GameScreen.SimulatedScreen = null;
             RiverMapScreen? map = GameBootstrap.Current != null ? GameBootstrap.Current.RiverMapView : null;
@@ -219,6 +220,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator PlayFromTheLobby_WithTheContentOver_OpensTheScreenAlone()
         {
+            // Sin el Reto del río en el build: con él desbloqueado, el botón es «Jugar · Reto del río» y abre el Reto (D-032,
+            // punto 6; Fx16bTests).
+            GameBootstrap.DailyPoolDisabledOverride = true;
             Profile profile = Wallet.NewProfile(new ManualClock(T0));
             profile.Progress.NextLevel = 701;
             profile.Progress.MaxLevel = 700;
@@ -226,6 +230,7 @@ namespace AF.Tests.PlayMode
             yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(profile));
             GameBootstrap boot = GameBootstrap.Current!;
             Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(boot.Lobby!.PlayLabel, Is.EqualTo(UiText.Play), "«Jugar» a secas, no «Jugar · Nivel 701» (D-032, punto 6)");
             Assert.That(boot.PressPlay(), Is.True);
             Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.ContentEnd));
             Assert.That(boot.App.ContentEndMapDue, Is.False, "solo al ganar el último nivel publicado");
