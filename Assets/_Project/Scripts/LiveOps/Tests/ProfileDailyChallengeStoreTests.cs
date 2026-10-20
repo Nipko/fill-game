@@ -101,7 +101,7 @@ namespace AF.LiveOps.Tests
         [Test]
         public void MissingKeys_TakeDefaults()
         {
-            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 1, \"daily_challenge\": {\"last_claimed_date\": \"2026-10-19\"}}");
+            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"daily_challenge\": {\"last_claimed_date\": \"2026-10-19\"}}");
 
             DailyChallengeRecord r = ProfileDailyChallengeStore.FromData(p.DailyChallenge);
             Assert.That(r.LastClaimedDate, Is.EqualTo("2026-10-19"));
@@ -114,24 +114,50 @@ namespace AF.LiveOps.Tests
             Assert.That(r.StampDays, Is.Empty);
             Assert.That(r.InProgress, Is.Null);
 
-            Profile none = ProfileJson.Deserialize("{\"profile_schema\": 1, \"daily_challenge\": null}");
+            Profile none = ProfileJson.Deserialize("{\"profile_schema\": 2, \"daily_challenge\": null}");
             Assert.That(none.DailyChallenge, Is.Null);
             Assert.That(ProfileDailyChallengeStore.ParseResult("perdido"), Is.EqualTo(DailyResult.None), "un result desconocido no da premio");
         }
 
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": []}")]
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"streak_days\": \"6\"}}")]
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"last_claimed_date\": 20261019}}")]
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"pending\": [\"2026-10-17\"]}}")]
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"pending\": {\"date\": \"2026-10-17\"}}}")]
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"offline_claims\": [{\"streak\": 1}]}}")]
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"stamps\": {\"days\": [1, \"2\"]}}}")]
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"in_progress\": {\"date\": null}}}")]
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"in_progress\": {\"id\": \"d1_n0001\"}}}")]
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"in_progress\": {\"date\": \"2026-10-19\"}}}")]
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"in_progress\": {\"date\": \"2026-10-19\", \"id\": null}}}")]
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"in_progress\": {\"date\": \"2026-10-19\", \"id\": \"d2_n0001\", \"band\": \"2\"}}}")]
-        [TestCase("{\"profile_schema\": 1, \"daily_challenge\": {\"in_progress\": {\"date\": \"2026-10-19\", \"id\": \"d1\", \"level_state\": {\"seed\": null}}}}")]
+        [Test]
+        public void SchemaOneProfile_KeepsTheBlock_AfterTheMigrationToSchemaTwo()
+        {
+            // El bloque entró sin subir el esquema; la migración 1 → 2 de la ola 7 (fauna, DC15) no debe perderlo.
+            string dir = Path.Combine(Path.GetTempPath(), "af-daily-migration-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(dir);
+            try
+            {
+                File.WriteAllText(Path.Combine(dir, LocalProfileStore.FileName),
+                    "{\"profile_schema\": 1, \"daily_challenge\": {\"last_claimed_date\": \"2026-10-19\", \"streak_days\": 3}}");
+
+                ProfileLoadResult loaded = new LocalProfileStore(dir).Load();
+
+                Assert.That(loaded.Migrated, Is.True);
+                Assert.That(loaded.Profile, Is.Not.Null);
+                Assert.That(loaded.Profile!.DailyChallenge, Is.Not.Null);
+                Assert.That(loaded.Profile.DailyChallenge!.LastClaimedDate, Is.EqualTo("2026-10-19"));
+                Assert.That(loaded.Profile.DailyChallenge.StreakDays, Is.EqualTo(3));
+                Assert.That(loaded.Profile.Fauna.Sighted, Is.Empty);
+            }
+            finally
+            {
+                Directory.Delete(dir, true);
+            }
+        }
+
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": []}")]
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": {\"streak_days\": \"6\"}}")]
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": {\"last_claimed_date\": 20261019}}")]
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": {\"pending\": [\"2026-10-17\"]}}")]
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": {\"pending\": {\"date\": \"2026-10-17\"}}}")]
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": {\"offline_claims\": [{\"streak\": 1}]}}")]
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": {\"stamps\": {\"days\": [1, \"2\"]}}}")]
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": {\"in_progress\": {\"date\": null}}}")]
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": {\"in_progress\": {\"id\": \"d1_n0001\"}}}")]
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": {\"in_progress\": {\"date\": \"2026-10-19\"}}}")]
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": {\"in_progress\": {\"date\": \"2026-10-19\", \"id\": null}}}")]
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": {\"in_progress\": {\"date\": \"2026-10-19\", \"id\": \"d2_n0001\", \"band\": \"2\"}}}")]
+        [TestCase("{\"profile_schema\": 2, \"daily_challenge\": {\"in_progress\": {\"date\": \"2026-10-19\", \"id\": \"d1\", \"level_state\": {\"seed\": null}}}}")]
         public void WrongTypes_AreFormatErrors(string json)
         {
             Assert.Throws<FormatException>(() => ProfileJson.Deserialize(json));
