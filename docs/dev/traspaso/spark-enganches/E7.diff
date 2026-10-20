@@ -1,0 +1,212 @@
+diff --git a/Assets/_Project/Scripts/UI/NoCanoesScreen.cs b/Assets/_Project/Scripts/UI/NoCanoesScreen.cs
+index e6d2141..d5e81ac 100644
+--- a/Assets/_Project/Scripts/UI/NoCanoesScreen.cs
++++ b/Assets/_Project/Scripts/UI/NoCanoesScreen.cs
+@@ -41,6 +41,8 @@ internal sealed class NoCanoesPanel
+         private readonly ReliefParts _infinite;
+         private readonly TextMeshProUGUI _infiniteLabel;
+         private readonly Button _home;
++        private readonly NoCanoesDailyLink _daily; // E7: «Mientras esperas: Jugar el Reto del río» (04 §7.3)
++        private bool _dailyShown;
+         private readonly char[] _buf = new char[64];
+         private long _timerShown = long.MinValue;
+         private int _key = int.MinValue;
+@@ -65,6 +67,7 @@ public NoCanoesPanel(Transform parent, ProceduralArt art, Action onVideo, Action
+             _refillNote = ModalKit.Line("RefillNote", _panel, string.Empty, 13f, Palette.UiRedWarning);
+             _infinite = ModalKit.Cta("InfiniteButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 16f, onInfinite, out _infiniteLabel);
+             _home = ModalKit.Link("HomeButton", _panel, UiText.BackHome, onHome, out _);
++            _daily = new NoCanoesDailyLink(_panel);
+             _root.gameObject.SetActive(false);
+         }
+ 
+@@ -81,6 +84,9 @@ public NoCanoesPanel(Transform parent, ProceduralArt art, Action onVideo, Action
+ 
+         public Button HomeButton => _home;
+ 
++        /// <summary>«Mientras esperas: Jugar el Reto del río» (E7; tests).</summary>
++        public NoCanoesDailyLink DailyLink => _daily;
++
+         public Button CloseButton => _close.Button;
+ 
+         public string TimerText => _timer.text;
+@@ -94,6 +100,7 @@ public void Show(GameServices? services, float canvasW, float canvasH)
+             _canvasH = canvasH;
+             _key = int.MinValue;
+             _timerShown = long.MinValue;
++            _dailyShown = NoCanoesDailyLink.Available; // se mira al abrir: con Sin canoas delante, el Reto de hoy no cambia
+             Refresh(services);
+         }
+ 
+@@ -136,7 +143,7 @@ public bool Refresh(GameServices? services)
+             int missing = services?.Wallet.Missing(price) ?? price;
+             bool refillOn = services != null && services.Wallet.Config.CanoesRefillSeedsEnabled;
+             bool infiniteOn = services == null || !services.PurchasesBlocked; // perfil en solo lectura: sin compras (08 §4.4)
+-            int key = ((video ? 1 : 0) * 397) ^ (missing * 7) ^ ((refillOn ? 1 : 0) * 13) ^ ((infiniteOn ? 1 : 0) * 8191) ^ canoes.Max;
++            int key = ((video ? 1 : 0) * 397) ^ (missing * 7) ^ ((refillOn ? 1 : 0) * 13) ^ ((infiniteOn ? 1 : 0) * 8191) ^ canoes.Max ^ ((_dailyShown ? 1 : 0) * 131071);
+             if (key == _key)
+             {
+                 return false;
+@@ -153,6 +160,7 @@ public void VisibleButtons(List<string> ids, List<RectTransform> rects)
+             Add(ids, rects, "extra_canoe_video", _video.Button);
+             Add(ids, rects, "refill_canoes", _refill.Button);
+             Add(ids, rects, "infinite_canoes", _infinite.Button);
++            Add(ids, rects, NoCanoesDailyLink.LayoutId, _daily.Button);
+             Add(ids, rects, "home", _home);
+         }
+ 
+@@ -207,6 +215,7 @@ private void Layout(GameServices? services, bool video, int price, int missing,
+                 ModalKit.Place(_infinite, 16f, y, inner);
+                 y += ModalKit.HeightOf(_infinite) + 6f;
+             }
++            y += _daily.Layout(_dailyShown, 16f, y, inner); // 04 §7.3: la línea del Reto, encima de «Volver»
+             UiBuilder.Place((RectTransform)_home.transform, (width - 220f) * 0.5f, y, 220f, 48f);
+             y += 48f + 8f;
+             ModalKit.Size(_panel, _surface, _art, (_canvasW - width) * 0.5f, Mathf.Max(8f, Mathf.Round((_canvasH - y) * 0.45f)), width, y);
+diff --git a/Assets/_Project/Tests/PlayMode/NoCanoesDailyLinkTests.cs b/Assets/_Project/Tests/PlayMode/NoCanoesDailyLinkTests.cs
+new file mode 100644
+index 0000000..d7865e4
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/NoCanoesDailyLinkTests.cs
+@@ -0,0 +1,142 @@
++#nullable enable
++using System.Collections;
++using System.Collections.Generic;
++using AF.GameFlow;
++using AF.LiveOps;
++using AF.Save;
++using AF.UI;
++using NUnit.Framework;
++using UnityEngine;
++using UnityEngine.TestTools;
++
++namespace AF.Tests.PlayMode
++{
++    /// <summary>
++    /// Enganche E7 en la escena (<c>NoCanoesPanel</c>; 04 §7.3): Sin canoas lleva «Mientras esperas: Jugar el Reto del río»
++    /// encima de «Volver al inicio», en el inicio y en el nivel, con su id en <c>AF_LAYOUT</c>; tocarlo abre el Reto y registra
++    /// <c>af_no_canoes_choice</c> = <c>daily_challenge</c> (04 §11). Sin el Reto en el build no sale. Simula E2 con
++    /// <see cref="GameBootstrap.SetUpDaily"/> y el pool sintético.
++    /// </summary>
++    public sealed class NoCanoesDailyLinkTests
++    {
++        [SetUp]
++        public void SetUp()
++        {
++            FunnelSetup.Hooks();
++            LaunchOptions.LocTablesOverride = DailyTestTables.Texts();
++            GameBootstrap.DailyPoolOverride = DailyPlayTestPool.Full;
++            GameBootstrap.DailyStoreOverride = new InMemoryDailyChallengeStore();
++        }
++
++        [TearDown]
++        public void TearDown()
++        {
++            GameBootstrap.ResetDailyOverrides();
++            LaunchOptions.Reset();
++            LocSetUpFixture.ConfigureEs419();
++        }
++
++        [UnityTest]
++        public IEnumerator Lobby_TheLineSitsAboveBackHome_AndOpensTheReto()
++        {
++            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(NoCanoesProfile()));
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            Assert.That(boot.SetUpDaily(), Is.True);
++            boot.DailyRunner!.enabled = false;
++            boot.Lobby!.CanoesButton.onClick.Invoke();
++            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.NoCanoes));
++
++            NoCanoesPanel panel = boot.Lobby.NoCanoes;
++            NoCanoesDailyLink link = panel.DailyLink;
++            Assert.That(link.Visible, Is.True);
++            Assert.That(link.Text, Is.EqualTo("Mientras esperas: Jugar el Reto del río"), "04 §7.3");
++            AssertAboveHome(panel);
++
++            link.Button.onClick.Invoke();
++            Assert.That(boot.DailyScreen!.IsOpen, Is.True, "abre el tablero de hoy");
++            Assert.That(boot.LastNoCanoesChoice, Is.EqualTo("daily_challenge"));
++            Assert.That(boot.App.Screen, Is.EqualTo(AppScreen.Lobby));
++            Assert.That(panel.Visible, Is.False);
++            Assert.That(boot.Profile!.Wallet.Canoes.Count, Is.EqualTo(0), "sin canoas (04 §7.1)");
++        }
++
++        [UnityTest]
++        public IEnumerator Level_TheLineIsInLevelFailedsNoCanoesToo()
++        {
++            LaunchOptions.LevelOffsetOverride = 25;
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(0, 1));
++            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            Assert.That(boot.SetUpDaily(), Is.True);
++            boot.DailyRunner!.enabled = false;
++            boot.TapAnywhere();
++            FunnelSetup.GetStuck(boot);
++            boot.PressGiveUp();
++            boot.ConfirmGiveUp();
++            boot.PressRetry();
++            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.NoCanoes));
++            NoCanoesPanel panel = boot.View!.NoCanoes;
++            Assert.That(panel.DailyLink.Visible, Is.True);
++            AssertAboveHome(panel);
++            panel.DailyLink.Button.onClick.Invoke();
++            Assert.That(boot.DailyScreen!.IsOpen, Is.True);
++            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
++        }
++
++        [UnityTest]
++        public IEnumerator WithoutTheRetoInTheBuild_NoLine()
++        {
++            GameBootstrap.DailyPoolOverride = null;
++            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(NoCanoesProfile()));
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            boot.SetUpDaily();
++            boot.Lobby!.CanoesButton.onClick.Invoke();
++            NoCanoesPanel panel = boot.Lobby.NoCanoes;
++            Assert.That(panel.Visible, Is.True);
++            Assert.That(panel.DailyLink.Visible, Is.False);
++            var ids = new List<string>();
++            panel.VisibleButtons(ids, new List<RectTransform>());
++            Assert.That(ids, Has.No.Member(NoCanoesDailyLink.LayoutId));
++            Assert.That(ids, Has.Member("home"));
++        }
++
++        // La línea va justo encima de «Volver al inicio», sin pisarlo ni pisar el botón de arriba, y en AF_LAYOUT antes que «home».
++        private static void AssertAboveHome(NoCanoesPanel panel)
++        {
++            var ids = new List<string>();
++            var rects = new List<RectTransform>();
++            panel.VisibleButtons(ids, rects);
++            int daily = ids.IndexOf(NoCanoesDailyLink.LayoutId);
++            int home = ids.IndexOf("home");
++            Assert.That(daily, Is.GreaterThanOrEqualTo(0), "AF_LAYOUT con daily_challenge");
++            Assert.That(home, Is.EqualTo(daily + 1));
++            Rect d = World(rects[daily]);
++            Assert.That(d.yMin, Is.GreaterThanOrEqualTo(World(rects[home]).yMax - 0.01f), "encima de «Volver al inicio»");
++            for (int i = 0; i < rects.Count; i++)
++            {
++                if (i != daily)
++                {
++                    Assert.That(d.Overlaps(World(rects[i])), Is.False, "no pisa " + ids[i]);
++                }
++            }
++        }
++
++        private static Rect World(RectTransform rt)
++        {
++            var c = new Vector3[4];
++            rt.GetWorldCorners(c);
++            return Rect.MinMaxRect(c[0].x, c[0].y, c[2].x, c[2].y);
++        }
++
++        private static Profile NoCanoesProfile()
++        {
++            Profile profile = FunnelSetup.Profile(500, 0);
++            profile.Progress.MaxLevel = 30;
++            profile.Progress.NextLevel = 31;
++            return profile;
++        }
++    }
++}
