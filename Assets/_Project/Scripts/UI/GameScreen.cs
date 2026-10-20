@@ -1315,7 +1315,7 @@ namespace AF.UI
             if (phase == FlowPhase.GiveUpConfirm)
             {
                 ShowFunnelBackdrop();
-                ShiftBoard(ShiftToClear(_stuckPanelY, 12f), false);
+                FitBoardToStuck(false);
                 FunnelModalShowing(phase, flow);
                 _giveUp.Show(StuckModalModel.BuildGiveUpConfirm(StuckContext(flow)), _canvasW, _canvasH);
                 EmitFunnelLayout(GiveUpConfirmLayout);
@@ -1353,7 +1353,7 @@ namespace AF.UI
             _stuckBalsaOk = flow.BalsaShownThisBlock
                 || (_services != null && !_services.PurchasesBlocked && _services.StoreLedger.CanOfferBalsa(flow.LevelNumber));
             ShowStuckView(true);
-            ShiftBoard(ShiftToClear(_stuckPanelY, 12f), true); // 07 §5.5: las cuias siguen visibles sobre el modal
+            FitBoardToStuck(true); // 07 §5.5: las cuias siguen visibles sobre el modal
             _stuckAnim = 0f;
             ApplyStuckAnim(0f);
             SyncChrome();
@@ -1480,7 +1480,7 @@ namespace AF.UI
         {
             LevelFlow flow = RequireFlow();
             StuckModalView view = StuckModalModel.Build(StuckContext(flow), flow.Boosters);
-            _stuck.Show(view, _services, _canvasW);
+            _stuck.Show(view, _services, _canvasW, StuckRoomDp);
             _stuckSeedsShown = _services?.Wallet.Seeds ?? 0;
             _stuckUndoShown = flow.UndoStatus.Stock + (flow.UndoStatus.FreeLeft * 1000);
             if (_services != null && _stuckBalsaOk && !flow.BalsaShownThisBlock)
@@ -1503,11 +1503,29 @@ namespace AF.UI
             }
 
             UiBuilder.SetEnabled(_stuck.UndoButton, view.Undo != StuckUndoKind.Undo || flow.CanUndo);
-            _stuckPanelY = _canvasH - _safeBottom - 8f - _stuck.Height;
+            _stuckPanelY = _canvasH - _safeBottom - _stuck.BottomGapDp - _stuck.Height;
             if (layout || _stuckAnim < 0f)
             {
                 _stuck.Place(_canvasW, _stuckPanelY);
             }
+
+            if (!layout)
+            {
+                // Rearmado con el modal abierto (tras una compra o una recarga): el alto del panel pudo cambiar (FX16a).
+                FitBoardToStuck(true);
+            }
+        }
+
+        /// <summary>
+        /// Rearma Aguas estancadas con <paramref name="view"/> (otra rama del mismo bloqueo; tests de legibilidad), lo coloca en
+        /// su sitio y ajusta el tablero a él como al abrirlo (<see cref="FitBoardToStuck"/>).
+        /// </summary>
+        internal void ShowStuckVariant(StuckModalView view)
+        {
+            _stuck.Show(view, _services, _canvasW, StuckRoomDp);
+            _stuckPanelY = _canvasH - _safeBottom - _stuck.BottomGapDp - _stuck.Height;
+            _stuck.Place(_canvasW, _stuckPanelY);
+            FitBoardToStuck(false);
         }
 
         // Tablero atenuado detrás del embudo (Nivel fallido, y ¿Seguro? reabierto sin pasar por el modal).
@@ -2488,6 +2506,21 @@ namespace AF.UI
             LayoutHud();
             LayoutBoard();
 
+            // Con Aguas estancadas abierto (o ¿Seguro? delante), el panel se rearma con el lienzo y la zona segura nuevos (la
+            // disposición compacta y su alto dependen de ellos: StuckRoomDp) y el tablero se vuelve a ajustar (FX16a).
+            if (!initial && _flow != null && _flow.HasLevel)
+            {
+                if (_flow.Phase == FlowPhase.StuckModal && _stuck.Panel.gameObject.activeSelf)
+                {
+                    ShowStuckView(true);
+                    FitBoardToStuck(false);
+                }
+                else if (_flow.Phase == FlowPhase.GiveUpConfirm)
+                {
+                    FitBoardToStuck(false);
+                }
+            }
+
             if (!initial && _flow != null && _flow.HasLevel)
             {
                 EmitLevelLayout();
@@ -2685,7 +2718,7 @@ namespace AF.UI
 
             // Paneles anclados abajo (07 §5.4, §5.5, §7.5), con los CTA en la zona del pulgar (02 §3.3).
             float panelW = Mathf.Min(328f, w - 32f);
-            _stuckPanelY = _canvasH - _safeBottom - 8f - _stuck.Height;
+            _stuckPanelY = _canvasH - _safeBottom - _stuck.BottomGapDp - _stuck.Height;
             _stuck.Place(w, _stuckPanelY);
 
             LayoutVictory();
@@ -3126,6 +3159,48 @@ namespace AF.UI
             float needed = _layout.PanelBottom - (panelTop - gap);
             float room = highestTop - BoardTop;
             return Mathf.Clamp(needed, 0f, Mathf.Max(0f, room));
+        }
+
+        /// <summary>
+        /// Alto que le queda a Aguas estancadas, con su aire de abajo, para no tapar ninguna cuia con el tablero subido hasta su
+        /// tope (<see cref="ShiftToClear"/>): del pie más bajo de las cuias, más <see cref="StuckCuiaGapDp"/>, a la zona segura
+        /// de abajo. Solo en los lienzos más bajos que <see cref="StuckModal.CompactCanvasBelowDp"/> (el 16:9; tarea FX16a): en
+        /// los demás, sin límite (el panel no cambia).
+        /// </summary>
+        internal float StuckRoomDp
+        {
+            get
+            {
+                if (_layout == null || _views.Length == 0 || _canvasH >= StuckModal.CompactCanvasBelowDp - 0.5f)
+                {
+                    return float.PositiveInfinity;
+                }
+
+                float highestTop = float.MaxValue;
+                float lowestFoot = float.MinValue;
+                for (int i = 0; i < _views.Length; i++)
+                {
+                    highestTop = Mathf.Min(highestTop, _layout.FootY[i] - (_views[i].HeightU * _views[i].Unit) - CuiaView.LiftDp);
+                    lowestFoot = Mathf.Max(lowestFoot, _layout.FootY[i]);
+                }
+
+                float lift = Mathf.Max(0f, highestTop - BoardTop);
+                return _canvasH - _safeBottom - (lowestFoot - lift + StuckCuiaGapDp);
+            }
+        }
+
+        /// <summary>Aire mínimo entre el pie de las cuias y el panel de Aguas estancadas compacto (dp) [P] (tarea FX16a).</summary>
+        internal const float StuckCuiaGapDp = 2f;
+
+        /// <summary>
+        /// Con Aguas estancadas abierto (o ¿Seguro? delante), el tablero sube lo justo para que el panel no lo tape, sin pasar
+        /// del borde de abajo del HUD (<see cref="ShiftToClear"/>; 04 §6.6: «sube lo justo para que el panel no lo tape»; 07
+        /// §5.5). El tablero no cambia de tamaño: en 16:9, lo que el panel compacto aún tapa en los tableros que no caben (el 640,
+        /// de 3 filas, y la rama B del 31 al 130 %) es una pregunta del dueño (tarea FX16a; <c>StuckCompactTests</c>).
+        /// </summary>
+        private void FitBoardToStuck(bool animate)
+        {
+            ShiftBoard(ShiftToClear(_stuckPanelY, 12f), animate);
         }
 
         private void ShiftBoard(float target, bool animate)
