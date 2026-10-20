@@ -1,7 +1,9 @@
 #nullable enable
 using System;
+using AF.Core.Rules;
 using AF.Economy;
 using AF.GameFlow;
+using AF.Levels;
 using AF.Platform;
 using AF.Save;
 using AF.UI;
@@ -11,8 +13,8 @@ namespace AF.Tests.EditMode
 {
     /// <summary>
     /// Arranque de la Crecida (B1a, A7; E32): <see cref="GameBootstrap.CreateStreakService"/> con el almacén de los tests, con el
-    /// de memoria en desarrollo y sin nada en release mientras no esté el parche S1/S3 (<c>ProfileStreakStore</c>). El parche
-    /// <c>S3-bootstrap.diff</c> cambia los dos últimos tests: con S1, el almacén es el del perfil en los dos casos.
+    /// del perfil (<c>ProfileStreakStore</c>, S1) en desarrollo y en release, y la victoria con la Crecida en una sola escritura del
+    /// perfil. Versión del parche <c>S3-bootstrap.diff</c> (sin él, los dos últimos tests comprueban el respaldo en memoria).
     /// </summary>
     public sealed class GameBootstrapStreakTests
     {
@@ -83,23 +85,49 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void WithoutTheProfileStore_DevelopmentFallsBackToMemory()
+        public void WithTheProfileStore_DevelopmentAndRelease_UseTheProfile()
         {
             var fx = new Fx();
 
-            StreakService? service = fx.Create(true, out bool inMemory);
+            StreakService? dev = fx.Create(true, out bool devInMemory);
+            StreakService? release = fx.Create(false, out bool releaseInMemory);
 
-            Assert.That(service, Is.Not.Null);
-            Assert.That(inMemory, Is.True, "sin S1: el estado, en memoria (se pierde al cerrar la app)");
+            Assert.That(dev, Is.Not.Null);
+            Assert.That(release, Is.Not.Null, "con S1 (ProfileStreakStore), también en release");
+            Assert.That(devInMemory || releaseInMemory, Is.False, "S3: el almacén es el del perfil, no el de memoria");
+
+            release!.ApplyWin(25, true, 24, RewardTier.Normal);
+            Assert.That(fx.Profile.Streak, Is.Not.Null, "la Crecida, en el bloque streak del mismo perfil");
+            Assert.That(fx.Profile.Streak!.Wins, Is.EqualTo(1));
+            Assert.That(fx.Disk.Load().Profile!.Streak!.Wins, Is.EqualTo(1), "guardada por el lote (vía síncrona, fuera de un lote abierto)");
         }
 
         [Test]
-        public void WithoutTheProfileStore_ReleaseHasNoStreak()
+        public void WithTheProfileStore_AWinAndItsStreakGoOutInOneWrite()
         {
             var fx = new Fx();
+            fx.Profile.Progress.MaxLevel = 24;
+            fx.Profile.Progress.NextLevel = 25;
+            var progress = new ProfileProgressStore(fx.Profile, fx.Batch);
+            var flow = new LevelFlow(
+                LevelCatalog.Create(new[] { TestPacks.Tutorial }, 20), progress, new RecordingListener(), GameConfig.TapSwitchSelection,
+                PourModes.Default, fx.Wallet)
+            {
+                SaveBatch = fx.Batch,
+            };
+            flow.UseStreak(fx.Create(false, out _));
 
-            Assert.That(fx.Create(false, out bool inMemory), Is.Null, "sin S1, en release no hay Crecida");
-            Assert.That(inMemory, Is.False);
+            flow.Load(25);
+            Assert.That(flow.TapAnywhere(), Is.True);
+            int writes = fx.Batch.WriteCount;
+            LevelStateTests.Win(flow);
+
+            Assert.That(flow.LastStreakResult!.Streak.Counted, Is.True);
+            Assert.That(fx.Batch.WriteCount, Is.EqualTo(writes + 1), "E32: la victoria, la Cosecha y la Crecida, en una sola escritura");
+            Profile saved = fx.Disk.Load().Profile!;
+            Assert.That(saved.Progress.MaxLevel, Is.EqualTo(25));
+            Assert.That(saved.Streak!.Wins, Is.EqualTo(1));
+            Assert.That(saved.Wallet.Seeds, Is.EqualTo(flow.HarvestBase));
         }
     }
 }
