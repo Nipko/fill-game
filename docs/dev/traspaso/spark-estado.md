@@ -6,6 +6,55 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-20 · T5 · B13 · Borradores de publicación (`spark/t5-b13`): HECHA · lista para integrar (solo documentación)
+
+- **Rama:** `spark/t5-b13`, desde `origin/integracion-fase1-fase2` en `9982bdc`. Commits `76d442b`, `9180887` y `b2577df` (revisión).
+- **Qué entrega.** Todo es borrador: lo que firma el abogado o decide el dueño va como `[PENDIENTE: dueño]` o `[PENDIENTE: abogado]`, sin datos inventados.
+  - En `docs/store-listing/`:
+    - `README.md`, con el índice, las longitudes medidas en NFC, las preguntas Q-B13-1..23, los hallazgos de audio en «3 bis» y los enganches del GDD;
+    - las fichas de Play en `es-419`, `en` y `pt-BR` (Méx. con OXXO y Bra. con Pix, pendientes de Q-B13-17);
+    - `data-safety.md`, `iarc.md` (ClassInd 14 esperado), `privacidad.md` (anexos de Méx. y LGPD) y `eliminar-cuenta.md`;
+    - la plantilla `app-ads.txt`;
+    - `assets-tienda.md`, el encargo de arte para el artista;
+    - `creditos.md`, más las 16 claves `credits_*` en `strings-creditos.csv`.
+  - En la raíz, `LICENSES.md`.
+  - En `docs/qa/`, `regresion-release.md`, con 60 casos y su fuente.
+- **Longitudes en NFC** (título 30 / corta 80 / larga 4.000 / novedades 500 / texto de captura ≤ 36 [P]):
+  - es-419: 21 / 78 / 2.487 / 143 / 36;
+  - en: 26 / 74 / 2.346 / 145 / 31;
+  - pt-BR: 25 / 73 / 2.431 / 134 / 34.
+- **Verificación:**
+  - `python tools/validate_schema.py`: 103/103;
+  - `dotnet build -warnaserror` y `dotnet test`: 0 avisos y 981 (975 + 6). Los pasó el revisor en la primera ronda;
+  - `git diff --check` limpio;
+  - no toca el GDD, `Assets/` ni `tools/`.
+- **code-reviewer:**
+  - 1.ª ronda, CAMBIOS NECESARIOS:
+    - «cada color es una fruta» (son 12 frutas y 2 aguas);
+    - el 77 en lugar de 74;
+    - el límite de las capturas contradictorio;
+    - un mecanismo de borrado inventado;
+  - 2.ª ronda: **APROBADO**.
+- **Para el integrador:**
+  - pasar las filas `credits_*` a `strings.csv` cuando exista la pantalla de Créditos;
+  - corregir el glosario §1.3 (la descripción corta EN mide 74, no 77);
+  - llevar al GDD lo que decida el dueño (07 §10.2, 08 §11, 08 §13.3).
+
+### Preguntas y hallazgos para el dueño (no bloquean lo entregado)
+
+Las 23 preguntas, con sus opciones y la recomendada, están en `docs/store-listing/README.md` §3. Las que más pesan:
+
+| Id | Pregunta | Recomendada |
+|---|---|---|
+| Q-B13-1, -2, -3 | Dominio de la página de borrado, titular legal en Play y correos de contacto, privacidad y DPO | Los fijan el dueño y el abogado; ninguna forma de «Amazon» |
+| Q-B13-5 | El texto de las capturas va «en papel marfil» (07 §10.2), que choca con D-003 (sin papel) | Placa de madera clara o de vidrio del kit de UI |
+| Q-B13-9 | `com.unity.modules.unityanalytics` está en `Packages/manifest.json` | build-release comprueba en B10 que esté apagado en release |
+| Q-B13-20 | Unity IAP 5.4.x necesita Unity Authentication, que no tiene fila en 08 §13.3 | Quien integre IAP la confirma y se añade la fila |
+| Q-B13-21 | El borrado por web solo pide el ID visible: quien conozca el ID de otro puede borrar su cuenta (hueco de 08 §11) | ID largo, aleatorio y distinto del UID, con confirmación y límite de peticiones |
+| Q-B13-22 | Cómo se borra la partida de Play Games si el borrado llega por web sin el juego instalado | Decir que se borra al abrir el juego, o que el jugador puede borrar su perfil de Play Games |
+| Q-B13-23 | La captura 2, «14 frutas, 14 colores» (07 §10.2), frente a 12 frutas + 2 aguas y ≤ 12 colores por nivel en la 1.0 | «14 colores de frutas y ríos» [P] |
+| — | Audio: toda la música `mus_*`, incluido `music/menu.wav` (el del vídeo), es CC0, frente al encargo original con cesión total (07 §9.5). `amb_w01_fauna_02` lleva voces humanas y es de Río de Janeiro. El autor «Tintalú Sound Design» usa la marca | El vídeo y los creativos no usan esa música hasta que haya una pista con cesión total; decidir si se mantiene el encargo original; revisarlo con el asesor y el abogado |
+
 ## 2026-10-20 · S2 = B1a · Crecida + Hoja escudo + Canasta (`spark/t5-b1a`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/t5-b1a`, desde `a759597`. Fusiona `origin/integracion-fase1-fase2` (`815b2e5`) en `7fbc1cd`.
