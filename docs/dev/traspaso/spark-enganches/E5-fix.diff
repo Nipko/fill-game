@@ -1,0 +1,14 @@
+diff --git a/Assets/_Project/Tests/EditMode/LocTablesTests.cs b/Assets/_Project/Tests/EditMode/LocTablesTests.cs
+index d2390e2..55ee219 100644
+--- a/Assets/_Project/Tests/EditMode/LocTablesTests.cs
++++ b/Assets/_Project/Tests/EditMode/LocTablesTests.cs
+@@ -503,6 +503,9 @@ internal static List<string> UiTextKeys()
+             // Las 30 frases de TiTino (TI3): las claves las da AF.GameFlow.SlothLines y las pinta UiText.TrySlothLine.
+             keys.AddRange(UiText.SlothLineKeys);
+ 
++            // Las del Reto del río (R9; enganche E5): las pinta AF.UI.DailyText.
++            keys.AddRange(DailyText.NewKeys);
++
+             return keys;
+         }
+ 

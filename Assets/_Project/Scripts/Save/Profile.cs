@@ -73,6 +73,15 @@ namespace AF.Save
         public StatsData Stats { get; } = new StatsData();
 
         /// <summary>
+        /// <c>daily_challenge</c> (08 §4.3 ampliado por R-Q4, R-Q5 y R-Q16; nota del Reto §10; enganche E4): el registro del Reto
+        /// del río, o null si nunca se guardó (entonces la clave no se escribe). Vive en el mismo perfil que <see cref="Wallet"/>
+        /// para que el registro del cobro y el pago salgan en la misma escritura (nunca dos pagos por la misma fecha). Las reglas
+        /// las aplica <c>AF.LiveOps</c> (<c>ProfileDailyChallengeStore</c>); aquí solo se guardan. Entra con el esquema 1 sin
+        /// migrar, porque aún no se ha publicado (08 §4.3).
+        /// </summary>
+        public DailyChallengeData? DailyChallenge { get; set; }
+
+        /// <summary>
         /// Perfil de primera ejecución: <c>created_at</c> = ahora, 0 semillas (el GDD no fija otro saldo inicial),
         /// <paramref name="initialCanoes"/> canoas, stock vacío, sin nivel en curso y el nivel 1 como siguiente
         /// (08 §2.3: la primera vez se entra directamente al nivel 1).
@@ -542,6 +551,67 @@ namespace AF.Save
 
         /// <summary><c>levels_since_interstitial</c>: niveles completados desde el último intersticial.</summary>
         public int LevelsSinceInterstitial { get; set; }
+    }
+
+    /// <summary>
+    /// <c>daily_challenge</c> (08 §4.3; nota del Reto §10): <c>last_date</c>, <c>result</c> y <c>streak_days</c> de 08 §4.3;
+    /// <c>last_claimed_date</c>, <c>pending</c> y <c>stamps</c> (R-Q5); <c>offline_claims</c> [P] e <c>in_progress</c> [P]
+    /// (R-Q4 y R-Q16). Solo datos: el significado lo da <c>AF.LiveOps.DailyChallengeRecord</c>.
+    /// </summary>
+    public sealed class DailyChallengeData
+    {
+        /// <summary><c>last_date</c>: fecha local (<c>yyyy-MM-dd</c>) del último resultado, o null.</summary>
+        public string? LastDate { get; set; }
+
+        /// <summary><c>result</c>: <c>win</c>, <c>fail</c> o <c>abandon</c> (08 §8.2), o null si aún no hay resultado.</summary>
+        public string? Result { get; set; }
+
+        /// <summary><c>streak_days</c>: días seguidos ganados y cobrados.</summary>
+        public int StreakDays { get; set; }
+
+        /// <summary><c>last_claimed_date</c>: última fecha cobrada (<c>yyyy-MM-dd</c>), o null.</summary>
+        public string? LastClaimedDate { get; set; }
+
+        /// <summary><c>pending</c>: cobros pendientes de validar, <c>[{date, streak}]</c>.</summary>
+        public List<DailyClaimData> Pending { get; } = new List<DailyClaimData>();
+
+        /// <summary><c>offline_claims</c> [P]: cobros pagados sin red, <c>[{date, streak}]</c> (los acota AF.LiveOps).</summary>
+        public List<DailyClaimData> OfflineClaims { get; } = new List<DailyClaimData>();
+
+        /// <summary><c>stamps.month</c>: mes de los sellos (<c>yyyy-MM</c>), o null.</summary>
+        public string? StampsMonth { get; set; }
+
+        /// <summary><c>stamps.days</c>: días sellados de <see cref="StampsMonth"/> (1-31).</summary>
+        public List<int> StampDays { get; } = new List<int>();
+
+        /// <summary><c>in_progress</c> [P]: partida del Reto en curso, o null.</summary>
+        public DailyInProgressData? InProgress { get; set; }
+    }
+
+    /// <summary>Elemento de <c>daily_challenge.pending</c> y <c>offline_claims</c>: <c>{date, streak}</c>.</summary>
+    public sealed class DailyClaimData
+    {
+        /// <summary><c>date</c>: fecha cobrada (<c>yyyy-MM-dd</c>).</summary>
+        public string Date { get; set; } = "";
+
+        /// <summary><c>streak</c>: <c>streak_days</c> tras ese cobro.</summary>
+        public int Streak { get; set; }
+    }
+
+    /// <summary><c>daily_challenge.in_progress</c> [P]: <c>{date, band, id, level_state}</c> (<c>level_state</c> como en 04 §10.1).</summary>
+    public sealed class DailyInProgressData
+    {
+        /// <summary><c>date</c>: fecha local de inicio (<c>yyyy-MM-dd</c>).</summary>
+        public string Date { get; set; } = "";
+
+        /// <summary><c>band</c>: banda 1-3, congelada al empezar.</summary>
+        public int Band { get; set; }
+
+        /// <summary><c>id</c>: tablero <c>d{b}_n{nnnn}</c> (03 §16).</summary>
+        public string Id { get; set; } = "";
+
+        /// <summary><c>level_state</c>: estado de la partida, con el formato de 04 §10.1.</summary>
+        public LevelStateData LevelState { get; set; } = new LevelStateData();
     }
 
     /// <summary><c>stats</c> (08 §4.3).</summary>

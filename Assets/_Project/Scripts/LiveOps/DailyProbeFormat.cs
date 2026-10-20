@@ -27,6 +27,12 @@ namespace AF.LiveOps
         /// <summary>Valor de <c>source</c> de <c>earn_virtual_currency</c> para el premio del Reto (08 §8.2).</summary>
         public const string SeedSourceId = "daily_challenge";
 
+        /// <summary>
+        /// Valor de <c>source</c> de <c>earn_virtual_currency</c> para la Cosecha doble del Reto (08 §8.2; el mismo id que
+        /// <c>AF.Economy.SeedSource.DoubleHarvest</c>, 04 §11).
+        /// </summary>
+        public const string DoubleHarvestSourceId = "double_harvest";
+
         private readonly StringBuilder _sb = new StringBuilder(256);
 
         /// <summary>
@@ -102,6 +108,21 @@ namespace AF.LiveOps
         /// </summary>
         public string? EarnSeeds(long t, int value)
         {
+            return EarnSeeds(t, value, SeedSourceId);
+        }
+
+        /// <summary>
+        /// Línea <c>AF_STATE earn_virtual_currency</c> con otra fuente del Reto: <see cref="DoubleHarvestSourceId"/> para la Cosecha
+        /// doble (o <see cref="SeedSourceId"/>). Null si <paramref name="value"/> ≤ 0.
+        /// </summary>
+        /// <exception cref="System.ArgumentException"><paramref name="source"/> no es <see cref="SeedSourceId"/> ni <see cref="DoubleHarvestSourceId"/>.</exception>
+        public string? EarnSeeds(long t, int value, string source)
+        {
+            if (source != SeedSourceId && source != DoubleHarvestSourceId)
+            {
+                throw new System.ArgumentException("Fuente del Reto desconocida: '" + source + "'.", nameof(source));
+            }
+
             if (value <= 0)
             {
                 return null;
@@ -109,7 +130,7 @@ namespace AF.LiveOps
 
             StringBuilder sb = Begin("earn_virtual_currency", t);
             sb.Append(",\"virtual_currency_name\":\"seeds\"");
-            sb.Append(",\"source\":\"").Append(SeedSourceId).Append('"');
+            sb.Append(",\"source\":\"").Append(source).Append('"');
             sb.Append(",\"value\":").Append(value.ToString(CultureInfo.InvariantCulture));
             return End(sb);
         }

@@ -1,0 +1,12 @@
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index 031c2b3..4d8b364 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -1588,6 +1588,7 @@ private IEnumerator Start()
+                 ContentEndMapAvailable = RiverMapAvailable && (ContentEndMapOverride ?? true), // el Mapa del fin de contenido (M4.3)
+             };
+             _lobby.Bind(_app, _services);
++            SetUpDaily(); // Reto del río (E2; GameBootstrap.Daily.cs): pool, servicio, tarjeta del inicio y partida
+ 
+             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
+             if (requested <= 0 && !rebuilt)

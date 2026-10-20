@@ -1,5 +1,6 @@
 #nullable enable
 using System;
+using AF.Ads;
 using AF.Boosters;
 using AF.Core.Rules;
 using AF.Economy;
@@ -204,6 +205,7 @@ namespace AF.UI
             _playMs = 0d;
             LastClaim = null;
             LastClaimOutcome = null;
+            HarvestDoubled = false;
             ExitedWithoutWin = false;
             _calendar.Hide();
             _calendarFromCard = false;
@@ -320,10 +322,74 @@ namespace AF.UI
             return true;
         }
 
-        /// <summary>Cosecha doble del Reto: no hace nada hasta el enganche E9 (<see cref="DailyStampCalendar.DoubleHarvestHookReady"/>).</summary>
+        /// <summary>
+        /// Tope de la Cosecha doble del Reto (E9): el premio más alto que puede pagar el Reto,
+        /// <c>live_daily_challenge_reward.seeds</c> × <c>murky_bonus_mult</c> (08 §9; 60 × 2). Un premio mayor no se dobla.
+        /// </summary>
+        public int MaxDoubleHarvestSeeds
+        {
+            get
+            {
+                DailyChallengeReward reward = _service.Config.LiveDailyChallengeReward;
+                return reward.Seeds * Math.Max(1, reward.MurkyBonusMult);
+            }
+        }
+
+        /// <summary>La Cosecha doble del Reto ya se cobró en esta victoria (E9).</summary>
+        public bool HarvestDoubled { get; private set; }
+
+        /// <summary>
+        /// La Cosecha doble del Reto se ofrece (E9; 04 §2.8; 06 §4.1): tras ganar con el premio <b>confirmado</b> y pagado (nunca
+        /// con «pendiente de validar» ni sin premio), una vez por victoria, desde <c>ads_rv_double_harvest_from_level</c> (el nivel
+        /// efectivo del Reto) y con video disponible en <c>rv_double_harvest</c> (reglas, tope diario de 5 compartido con la
+        /// campaña, cooldown y fill de <c>AF.Ads</c>): sin anuncio el botón no aparece (02 §6).
+        /// </summary>
+        public bool DoubleHarvestOffered
+        {
+            get
+            {
+                LevelFlow? flow = _flow;
+                GameServices? services = _context.Services;
+                DailyClaimReport? claim = LastClaim;
+                return DailyStampCalendar.DoubleHarvestHookReady && _won && !HarvestDoubled && flow != null && services != null
+                    && LastClaimOutcome == ClaimOutcome.Confirmed && claim.HasValue && claim.Value.Outcome == ClaimOutcome.Confirmed
+                    && claim.Value.SeedsPaid > 0 && claim.Value.SeedsPaid <= MaxDoubleHarvestSeeds
+                    && flow.LevelNumber >= _context.DailyWallet.Config.AdsRvDoubleHarvestFromLevel
+                    && services.RewardedReady(AdPlacement.DoubleHarvest);
+            }
+        }
+
+        /// <summary>
+        /// «Cosecha doble» del calendario (E9): el anuncio simulado de <c>rv_double_harvest</c> y, solo si se vio entero, otras
+        /// tantas semillas como el premio del día con <see cref="Transaction.DoubleHarvestDaily"/>. False si no se ofrece.
+        /// </summary>
         public bool PressDoubleHarvest()
         {
-            return false;
+            if (!DoubleHarvestOffered)
+            {
+                return false;
+            }
+
+            int seeds = LastClaim!.Value.SeedsPaid;
+            int level = _flow!.LevelNumber;
+            _context.Services!.Ads.ShowRewarded(AdPlacement.DoubleHarvest, r =>
+            {
+                if (!r.IsRewarded || HarvestDoubled)
+                {
+                    return;
+                }
+
+                TransactionResult result = _context.DailyWallet.Apply(Transaction.DoubleHarvestDaily(seeds, level));
+                if (!result.IsApplied)
+                {
+                    return;
+                }
+
+                HarvestDoubled = true;
+                DevProbe.DailyEarn(result.SeedsDelta, DailyProbeFormat.DoubleHarvestSourceId); // 08 §8.2: source = double_harvest
+                _calendar.ShowDoubled(seeds + result.SeedsDelta);
+            });
+            return true;
         }
 
         /// <summary>
@@ -401,7 +467,7 @@ namespace AF.UI
             // desbloquea, el calendario lo dice.
             LevelFlow? flow = _flow;
             int shuffleUnlock = flow != null && flow.LevelNumber < flow.Boosters.ShuffleUnlockLevel ? flow.Boosters.ShuffleUnlockLevel : 0;
-            _calendar.Show(_context.Clock.LocalDate(), _context.DailyStore.Load(), LastClaim, true, shuffleUnlock);
+            _calendar.Show(_context.Clock.LocalDate(), _context.DailyStore.Load(), LastClaim, DoubleHarvestOffered, shuffleUnlock);
         }
 
         /// <inheritdoc />

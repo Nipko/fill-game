@@ -56,6 +56,15 @@ namespace AF.UI
             return Enabled ? WriteDaily(s_daily.EarnSeeds(NowMs(), seeds)) : null;
         }
 
+        /// <summary>
+        /// <c>AF_STATE earn_virtual_currency</c> con la fuente <paramref name="source"/> (<see cref="DailyProbeFormat.DoubleHarvestSourceId"/>
+        /// para la Cosecha doble del Reto); nada si <paramref name="seeds"/> ≤ 0.
+        /// </summary>
+        public static string? DailyEarn(int seeds, string source)
+        {
+            return Enabled ? WriteDaily(s_daily.EarnSeeds(NowMs(), seeds, source)) : null;
+        }
+
         /// <summary><c>AF_STATE daily_card</c>: el estado recalculado de la tarjeta del inicio.</summary>
         public static string? DailyCard(DailyCardState state, string dateKey, DailySlot? slot, string? boardId, int streakShown)
         {
