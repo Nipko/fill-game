@@ -36,7 +36,7 @@ La raíz **es** el proyecto Unity; Unity solo importa `Assets/` y `Packages/`.
 - `.claude/`: `agents/` (7 subagentes), `rules/` (reglas por ruta), `skills/` (`unity-cli`, `unity-pipeline`), `settings.json` (permisos aprobados por el dueño el 2026-10-06; el 2026-10-09 pasó todas las reglas «ask» a «allow» para trabajar sin avisos: solo quedan las «deny». Las reglas duras de este archivo siguen valiendo aunque nada pida confirmación).
 - **Pendiente (no crear a mano):**
   - `.github/workflows/`: s30 y s32;
-  - `functions/`: Cloud Functions, más adelante.
+  - `infra/`: backend en AWS (D-035; CDK v2 en TypeScript, las 5 funciones con DynamoDB, la web y el CDN), según `docs/dev/plan-backend-aws.md`. Los agentes solo validan sin credenciales (`npm ci`, lint, typecheck, tests, `cdk synth`); despliega el dueño. Firebase se queda con Auth anónimo, Analytics, Crashlytics y Remote Config.
 - Estructura de `Assets/_Project/`: GDD 08 §3, con `Scripts/Core` y `Scripts/Solver` sustituidos por el paquete.
 
 ## Comandos de verificación (obligatorios antes de dar una tarea por terminada)
