@@ -235,11 +235,19 @@ Implementada en la rama `tanda5/b1b` sobre la lógica de B1a, con el diseño del
   D-033: Crecida 400-900 ms, Canasta 900-1.500 ms; el premio pagado salta en lugar de su línea y vuela al saldo o a la bandeja; las
   semillas no se ven en el saldo hasta que llegan (D-011). Un toque en Siguiente con animaciones pendientes las completa, espera
   250 ms (Inicio y la Cosecha doble, inactivos) y sigue.
+- **Los hitos de TiTino sin barras** (B1b-Q10 (c), decisión del dueño; `GameScreen.StreakYieldToSloth`, `VictoryBars.Barless`): en
+  un hito de TiTino (`VictoryLineArbiter.IsSlothHito`: 40, 60, 80, 140…; D-016, T6-A), si con las barras su frase no cabe y sin ellas
+  sí, la victoria se coloca sin barras (el escalón de la victoria compacta se elige sin ellas) y TiTino habla como antes de B1b. Su
+  secuencia sigue sin dibujarse: suenan el hito y la Canasta que se abre, su contenido vuela al saldo y a la bandeja desde el sitio de
+  las barras y las semillas se ven al llegar (D-011); la Crecida avanza igual. Si ni sin barras cabe su frase (16:9 con la ranura y el
+  héroe; 130 % con el héroe), las barras se quedan, porque quitarlas no le daría la voz. A 360 × 780 con la ranura, en el 60, el 80 y
+  el 140 la franja vuelve de 56 a 124 dp.
 - **Modal**: `stuck_shield_ready` / `stuck_shield_used` sobre el pie, desde el 25 (también en 25-30), con `stuck_show_shield_status`.
 - **Tarjeta del 25**: tarjeta de estreno (`LevelCardInfo.ForStreak`, ID `win_streak`) al cargar `streak_unlock_level`, no al reintentar.
 - **Inicio**: widget lateral silencioso (barra y hoja, sin cifra) a la derecha, desde el 25.
 
-Preguntas abiertas (todas con recomendada, la (a)):
+Preguntas (todas con recomendada, la (a); Q1-Q9 y Q11 aplicadas con ella y Q10 decidida por el dueño: D-033, añadido del
+2026-10-20, «preguntas de B1b»):
 
 | Id | Hueco | Opciones |
 |---|---|---|
@@ -252,5 +260,5 @@ Preguntas abiertas (todas con recomendada, la (a)):
 | B1b-Q7 | El contenido de la Canasta antes de abrirla (06 §4.4: «visible antes de abrir») | **(a)** en el Mapa (B14); en la barra, solo al abrirse; (b) también en la barra, atenuado (no cabe en 16:9) |
 | B1b-Q8 | El aviso de la hoja (`shield_toast`) | **(a)** al volver a jugar tras la intro del mismo nivel; (b) en el acto, encima de Nivel fallido |
 | B1b-Q9 | La tercera barra rotativa (skin ganada > Bitácora > Reto) y el chevron | **(a)** el hueco (`VictoryBarsPlan.Extra`) y la regla del chevron, sin barra hasta B4 (la Bitácora) y sin skin ni Reto hasta que se defina qué enseñan; (b) la del Reto ya |
-| B1b-Q10 | Con las barras, la franja de TiTino a 360 × 780 con la ranura baja a 56 dp (< 104) en sus tres hitos (60, 80, 140): no habla, hace el gesto y el hito lleva su dato. Se aparta de T6-A / D-016 («en esos tres hitos habla él») | **(a)** aceptarlo como límite hasta el arte final (el dato no se pierde; regla de 02 §6 cuando TiTino no puede hablar); (b) en los hitos de TiTino, las barras en una fila a media anchura y sin la pista (≈ 20 dp; aún no llega a 104); (c) en esos tres hitos, sin barras (lo pagado llega al saldo sin animarse) |
+| B1b-Q10 | Con las barras, la franja de TiTino a 360 × 780 con la ranura baja a 56 dp (< 104) en sus tres hitos (60, 80, 140): no habla, hace el gesto y el hito lleva su dato. Se aparta de T6-A / D-016 («en esos tres hitos habla él») | **(a)** aceptarlo como límite hasta el arte final (el dato no se pierde; regla de 02 §6 cuando TiTino no puede hablar); (b) en los hitos de TiTino, las barras en una fila a media anchura y sin la pista (≈ 20 dp; aún no llega a 104); (c) en esos tres hitos, sin barras (lo pagado llega al saldo sin animarse). **Decidida por el dueño: (c)**, «sin barras de la Crecida y la Canasta en los hitos de TiTino (60, 80 y 140) cuando no cabe su frase; TiTino habla como dice D-016. La Canasta del 60 se abre y su contenido va al saldo sin barra.» Hecho en `tanda5/b1b-q10` (arriba, «Los hitos de TiTino sin barras») |
 | B1b-Q11 | Siguiente con animaciones pendientes (D-033, punto 9) | **(a)** la espera de 250 ms solo si hay un premio pendiente (hito pagado o Canasta que se abre); si solo sube el agua, el toque la completa y sigue en el acto; (b) siempre que haya cualquier animación pendiente |

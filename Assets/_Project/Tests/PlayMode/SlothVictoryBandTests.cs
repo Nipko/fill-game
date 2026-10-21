@@ -1,8 +1,11 @@
 #nullable enable
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using AF.Economy;
 using AF.GameFlow;
 using AF.Localization;
+using AF.Platform;
 using AF.Presentation;
 using AF.UI;
 using NUnit.Framework;
@@ -26,7 +29,11 @@ namespace AF.Tests.PlayMode
     /// <item>las reglas de 54 (a), ratificadas, no cambian: con ≥ 104 dp, gesto y bocadillo; con 56-103, solo el gesto; la rama
     /// entra con la pantalla de victoria (la fila 0,80) y «Siguiente» sale a los 1,40 s; con 11-16 cuias, la vista y TiTino
     /// esperan a que acabe la ola de saltos [P]; con Reducir movimiento, sin animación nueva;</item>
-    /// <item>el héroe con el que se decide la caja (antes de que el fondo cambie a la parada de la llegada) es el que se ve.</item>
+    /// <item>el héroe con el que se decide la caja (antes de que el fondo cambie a la parada de la llegada) es el que se ve;</item>
+    /// <item>B1b-Q10 (c), decisión del dueño (D-033, añadido del 2026-10-20): en sus hitos, si con las barras de la Crecida y la
+    /// Canasta su frase no cabe y sin ellas sí, la victoria va sin barras y TiTino habla (D-016); la Canasta del 10k se abre igual
+    /// y su contenido vuela al saldo, que lo enseña al llegar (D-011), y la Crecida avanza aunque no se dibuje. Si ni sin barras
+    /// cabe, se quedan (<see cref="GameScreen.VictoryBarsYieldTried"/>).</item>
     /// </list>
     /// Cada victoria escribe una línea <c>AF_SLOTH_BAND</c> con el alto de la franja (para DC1, que lleva las cifras a 07 §5.4).
     /// </summary>
@@ -47,6 +54,7 @@ namespace AF.Tests.PlayMode
             MapArtRule.ForceProvisional = null;
             GameScreen.SimulatedScreen = null;
             GameScreen.VictoryViewOverride = null;
+            GameBootstrap.ResetStreakOverrides();
             LaunchOptions.Reset();
         }
 
@@ -115,6 +123,96 @@ namespace AF.Tests.PlayMode
             Assert.That(view.Layout!.Rows, Is.EqualTo(3));
             string at = "40 de 3 filas a 360 × " + height + " al " + (scale > 1.01f ? "130" : "100") + " %" + (slot ? " con" : " sin") + " ranura";
             AssertBandVictory(at, true, height == 780 && scale < 1.01f, (scale < 1.01f && height == 780) || !slot); // 640 con ranura: DC3
+        }
+
+        // ------------------------------------------------------------------------------------------- B1b-Q10 (c)
+
+        [UnityTest]
+        public IEnumerator TitinoHitos_WithoutBars_WhenHisLineDoesNotFitWithThem([Values(60, 80, 140)] int level, [Values(780, 640)] int height,
+            [Values(1f, 1.3f)] float scale)
+        {
+            // Con la ranura del Dato del río (el default) y la Crecida en 4 (la victoria la deja en 5, sin hito): a 360 × 780 al
+            // 100 %, con las barras la franja de TiTino bajaba de 124 a 56 dp (< 104) en los tres; desde B1b-Q10 (c) la victoria va
+            // sin barras y TiTino habla. Donde ni sin barras cabe su frase (16:9 con la ranura; 130 % con el héroe), se quedan.
+            UseStreak(4);
+            GameScreen.SimulatedScreen = height == 640 ? HudLabelTests.Screen640 : HudLabelTests.Screen780;
+            LaunchOptions.FontScaleOverride = scale;
+            yield return VictoryArrivalTests.Win(level);
+            GameBootstrap boot = GameBootstrap.Current!;
+            GameScreen view = boot.View!;
+            VictoryBars bars = view.VictoryBarsView;
+            string at = "nivel " + level + " a 360 × " + height + " al " + (scale > 1.01f ? "130" : "100") + " % con ranura";
+            Assert.That(view.VictoryBarsPossible, Is.True, at + ": premisa: la campaña lleva barras");
+            Assert.That(bars.Plan.Streak && bars.Plan.Basket, Is.True, at + ": premisa: la Crecida y la Canasta");
+            Assert.That(bars.Plan.BasketOpens, Is.True, at + ": la Canasta del " + level + " se abre igual, con barras o sin ellas");
+            StreakSnapshot? after = boot.Flow!.PeekStreak();
+            Assert.That(after.HasValue && after.Value.Wins == 5, Is.True, at + ": la Crecida avanza (4 → 5) aunque su barra no se dibuje");
+            bool main = height == 780 && scale < 1.01f;
+            if (main)
+            {
+                Assert.That(view.VictoryBarsYielded, Is.True, at + ": con las barras no cabía su frase; sin ellas sí (B1b-Q10 c)");
+            }
+
+            int paid = bars.Plan.PaidSeeds;
+            Assert.That(paid, Is.GreaterThan(0), at + ": premisa: la Canasta paga semillas");
+            int wallet = boot.Services!.Wallet.Seeds;
+            if (view.VictoryBarsYielded)
+            {
+                Assert.That(view.CurrentVictoryLine.SlothSpeaks, Is.True, at + ": sin barras, TiTino habla");
+                Assert.That(bars.Root.gameObject.activeSelf, Is.True, at + ": la secuencia sigue (Barless)");
+                Assert.That(bars.StreakRect.gameObject.activeSelf || bars.BasketRect.gameObject.activeSelf, Is.False, at + ": sin filas");
+                Assert.That(bars.Height, Is.EqualTo(0f), at + ": las barras no ocupan alto");
+            }
+
+            // La Canasta se abre a los 1.200 ms y su contenido vuela al saldo y a la bandeja; el saldo enseña sus semillas al llegar.
+            int flying = 0;
+            for (int ms = 0; ms <= 1700; ms += PlayModeHelpers.FrameMs)
+            {
+                if (ms < (int)VictoryBars.BasketOpenMs)
+                {
+                    Assert.That(view.WalletBar.SeedsShown, Is.LessThanOrEqualTo(wallet - paid), at + " a los " + ms + " ms: lo de la Canasta aún no se ve (D-011)");
+                }
+
+                flying = Mathf.Max(flying, bars.FlyingCount);
+                PlayModeHelpers.TickExact(boot, PlayModeHelpers.FrameMs);
+                int t = ms + PlayModeHelpers.FrameMs;
+                if (t >= (int)VictoryBars.BasketOpenMs && t < (int)(VictoryBars.BasketOpenMs + VictoryBars.FlyMs))
+                {
+                    // Mientras la Canasta se abre (con barras, la tira salta en lugar de su línea): sin barras, la tira no se ve.
+                    Assert.That(bars.Bursting, Is.EqualTo(!view.VictoryBarsYielded), at + " a los " + t + " ms: la tira, solo con barras");
+                }
+            }
+
+            Assert.That(flying, Is.GreaterThan(0), at + ": su contenido vuela");
+            Assert.That(bars.Pending, Is.False, at);
+            Assert.That(bars.PendingSeeds, Is.EqualTo(0), at);
+            Assert.That(view.WalletBar.SeedsShown, Is.EqualTo(boot.Services.Wallet.Seeds), at + ": ya se ve todo lo cobrado");
+            VictoryLine line = view.CurrentVictoryLine;
+            TestContext.WriteLine(at + ": barras " + (view.VictoryBarsYielded ? "cedidas a TiTino" : view.VictoryBarsYieldTried ? "probadas sin ellas, se quedan" : "con TiTino")
+                + ", caja " + SlothVictoryTests.F(view.SlothBoxDp) + " dp, habla " + line.SlothSpeaks + ", dato de llegada " + line.ArrivalFact);
+            AssertBarsYieldRule(view, line, level, at);
+            if (main)
+            {
+                Assert.That(view.SlothBoxDp, Is.GreaterThanOrEqualTo(GameScreen.SlothSpeakBoxDp), at + ": la franja vuelve a medir ≥ 104 dp");
+                Assert.That(view.SlothView.BubbleShown, Is.True, at + ": dice su frase");
+                Assert.That(view.SlothView.Mode, Is.EqualTo(SlothVictoryMode.Speak), at);
+                Assert.That(line.ArrivalFact, Is.False, at + ": la llegada va sin dato (el dato, al 10k+1; T6-A)");
+            }
+
+            Fx16bTests.AssertCompactVictory(view, at);
+        }
+
+        [UnityTest]
+        public IEnumerator NotATitinoHito_TheBarsStay()
+        {
+            // El 70 (10k sin hito de TiTino) a 360 × 780 con la ranura: lo de B1b, con barras (la Canasta se abre en su barra).
+            UseStreak(4);
+            yield return VictoryArrivalTests.Win(70);
+            GameScreen view = GameBootstrap.Current!.View!;
+            Assert.That(VictoryLineArbiter.IsSlothHito(70), Is.False, "premisa");
+            Assert.That(view.VictoryBarsYielded || view.VictoryBarsYieldTried, Is.False, "fuera de sus hitos no se prueba");
+            Assert.That(view.VictoryBarsView.Height, Is.GreaterThan(0f), "las barras, en el panel");
+            Assert.That(view.VictoryBarsView.BasketRect.gameObject.activeSelf, Is.True);
         }
 
         // ------------------------------------------------------------------------------------------- tiempos
@@ -291,6 +389,7 @@ namespace AF.Tests.PlayMode
             Assert.That(view.VictoryViewOn, Is.True, at + ": la victoria con vista");
             Assert.That(view.BoardAlpha, Is.EqualTo(0f), at + ": el tablero ya se fue");
             decided.AssertSeen(view, at + " a los 1,6 s");
+            AssertBarsYieldRule(view, line, GameBootstrap.Current!.Flow!.LevelNumber, at);
             if (mustShow)
             {
                 Assert.That(view.SlothBoxDp, Is.GreaterThanOrEqualTo(SlothVictory.GestureBoxDp), at + ": la franja da para TiTino");
@@ -326,17 +425,10 @@ namespace AF.Tests.PlayMode
                 }
             }
 
-            if (mustSpeak && view.VictoryBarsView.Root.gameObject.activeSelf && view.SlothBoxDp < GameScreen.SlothSpeakBoxDp)
+            if (mustSpeak)
             {
-                // Límite de B1b (pregunta B1b-Q10 [P]): las barras de la Crecida y la Canasta del panel único (D-033, punto 10) suben
-                // la cinta y, a 360 × 780 con la ranura, la franja de TiTino baja de 104 dp: hace el gesto y el hito lleva su dato
-                // (la regla de 02 §6 cuando TiTino no puede hablar).
-                TestContext.WriteLine(at + ": franja de " + view.SlothBoxDp + " dp con las barras: TiTino no habla (B1b-Q10)");
-                Assert.That(line.SlothSpeaks, Is.False, at);
-                Assert.That(line.ArrivalFact, Is.True, at + ": sin la frase de TiTino, el hito lleva su dato");
-            }
-            else if (mustSpeak)
-            {
+                // B1b-Q10 (c), decisión del dueño: si con las barras de la Crecida y la Canasta (D-033, punto 10) su frase no cabe, la
+                // victoria de su hito va sin ellas y TiTino habla, como antes de B1b (a 360 × 780 con la ranura: 60, 80 y 140).
                 Assert.That(view.SlothBoxDp, Is.GreaterThanOrEqualTo(GameScreen.SlothSpeakBoxDp), at + ": la franja mide ≥ 104 dp");
                 Assert.That(line.SlothSpeaks, Is.True, at + ": TiTino habla en su hito");
                 Assert.That(sloth.BubbleShown, Is.True, at);
@@ -345,6 +437,44 @@ namespace AF.Tests.PlayMode
             // TiTino cuelga arriba de su caja, como en TI6a (SlothVictory.Place): con la vista, bajo la cabecera o bajo el héroe.
             Assert.That(sloth.RootY - (SlothVictory.RigUpS * sloth.SizeDp), Is.EqualTo(view.SlothBandTopDp + SlothVictory.InsetDp).Within(0.6f),
                 at + ": TiTino arriba de su caja");
+        }
+
+        // B1b-Q10 (c): en un hito de TiTino con voz, si las barras ocupan el panel es que TiTino habla con ellas o que se probó
+        // quitarlas y ni así cabía su frase; si se quitaron, habla y no queda ninguna fila.
+        private static void AssertBarsYieldRule(GameScreen view, VictoryLine line, int level, string at)
+        {
+            VictoryBars bars = view.VictoryBarsView;
+            if (view.VictoryBarsYielded)
+            {
+                Assert.That(VictoryLineArbiter.IsSlothHito(level), Is.True, at + ": solo en sus hitos");
+                Assert.That(line.SlothSpeaks, Is.True, at + ": sin barras, TiTino habla (B1b-Q10 c)");
+                Assert.That(bars.StreakRect.gameObject.activeSelf || bars.BasketRect.gameObject.activeSelf, Is.False, at + ": sin filas");
+                Assert.That(bars.Height, Is.EqualTo(0f), at);
+                return;
+            }
+
+            if (view.VictoryBarsYieldTried)
+            {
+                // Se probó sin barras y ni así cabía su frase: las barras vuelven enteras, con sus filas.
+                Assert.That(bars.StreakRect.gameObject.activeSelf, Is.EqualTo(bars.Plan.Streak), at + ": la Crecida, de vuelta");
+                Assert.That(bars.BasketRect.gameObject.activeSelf, Is.EqualTo(bars.Plan.Basket), at + ": la Canasta, de vuelta");
+                Assert.That(bars.Height, Is.GreaterThan(0f), at + ": las barras, de vuelta en el panel");
+            }
+
+            bool barsShown = bars.Root.gameObject.activeSelf && bars.Height > 0f;
+            if (barsShown && VictoryLineArbiter.IsSlothHito(level) && view.SlothVoice && view.SlothEnabled && !line.SlothSpeaks)
+            {
+                Assert.That(view.VictoryBarsYieldTried, Is.True, at + ": con barras no habla: se probó sin ellas y tampoco cabía (B1b-Q10 c)");
+            }
+        }
+
+        /// <summary>La Crecida en <paramref name="wins"/> con el reloj fijo del 2026-10-08, 10:00 en Bogotá (también las capturas).</summary>
+        internal static void UseStreak(int wins)
+        {
+            var clock = new ManualClock(new DateTime(2026, 10, 8, 15, 0, 0, DateTimeKind.Utc), TimeSpan.FromHours(-5));
+            LaunchOptions.ClockOverride = clock;
+            GameBootstrap.StreakStoreOverride = new InMemoryStreakStore(clock,
+                new StreakRecord { DateLocal = "2026-10-08", Wins = wins, ShieldAvailable = true });
         }
 
         // Héroe y caja con los que se decidió la victoria (GameScreen.SlothDecided*), leídos antes del primer tick.
@@ -453,6 +583,7 @@ namespace AF.Tests.PlayMode
             SlothVictoryTests.NoSlot(false);
             SnapshotKit.Release();
             MapArtRule.ForceProvisional = null;
+            GameBootstrap.ResetStreakOverrides();
             LaunchOptions.Reset();
         }
 
@@ -467,7 +598,7 @@ namespace AF.Tests.PlayMode
                     {
                         SlothVictoryTests.NoSlot(!slot);
                         string name = "dc2_real_l" + level + "_" + (small ? "640" : "780") + (slot ? string.Empty : "_sinranura");
-                        yield return Capture(name, null, level, small, 1f, !small);
+                        yield return Capture(name, null, level, small, 1f, !small, !small || !slot); // 640 con ranura: DC3
                     }
                 }
             }
@@ -479,16 +610,43 @@ namespace AF.Tests.PlayMode
             foreach (bool small in new[] { false, true })
             {
                 SlothVictoryTests.NoSlot(false);
-                yield return Capture("dc2_3filas_" + (small ? "640" : "780"), SlothVictoryTests.FifteenCuiaPack(40), 40, small, 1f, !small);
+                yield return Capture("dc2_3filas_" + (small ? "640" : "780"), SlothVictoryTests.FifteenCuiaPack(40), 40, small, 1f, !small, !small);
                 SlothVictoryTests.NoSlot(true);
-                yield return Capture("dc2_3filas_" + (small ? "640" : "780") + "_sinranura", SlothVictoryTests.FifteenCuiaPack(40), 40, small, 1f, false);
+                yield return Capture("dc2_3filas_" + (small ? "640" : "780") + "_sinranura", SlothVictoryTests.FifteenCuiaPack(40), 40, small, 1f, false, true);
                 SlothVictoryTests.NoSlot(false);
-                yield return Capture("dc2_real_l40_" + (small ? "640" : "780") + "_130", null, 40, small, 1.3f, false);
-                yield return Capture("dc2_real_l60_" + (small ? "640" : "780") + "_130", null, 60, small, 1.3f, false);
+                yield return Capture("dc2_real_l40_" + (small ? "640" : "780") + "_130", null, 40, small, 1.3f, false, false);
+                yield return Capture("dc2_real_l60_" + (small ? "640" : "780") + "_130", null, 60, small, 1.3f, false, false);
             }
         }
 
-        private static IEnumerator Capture(string name, string? json, int level, bool small, float scale, bool mustSpeak)
+        /// <summary>
+        /// B1b-Q10 (c): el hito 60 a 360 × 780 con la ranura y la Crecida en 4, sin barras: <c>q10_l60_780_vuelo</c> a los 1,30 s
+        /// (la Canasta abierta y su contenido volando al saldo y a la bandeja) y <c>q10_l60_780</c> a los 1,60 s (TiTino con su
+        /// frase).
+        /// </summary>
+        [UnityTest]
+        public IEnumerator CaptureHito60WithoutBars()
+        {
+            FunnelSetup.Hooks();
+            MapArtRule.ForceProvisional = true;
+            string dir = SnapshotKit.Prepare(LocLocale.SpanishLatinAmerica);
+            GameScreen.SimulatedScreen = HudLabelTests.Screen780;
+            SlothVictoryBandTests.UseStreak(4);
+            yield return VictoryArrivalTests.Win(60);
+            GameBootstrap boot = GameBootstrap.Current!;
+            SnapshotKit.Attach(boot);
+            Assert.That(boot.View!.VictoryBarsYielded, Is.True, "premisa: el 60 va sin barras");
+            PlayModeHelpers.TickExact(boot, 1300);
+            Assert.That(boot.View.VictoryBarsView.FlyingCount, Is.GreaterThan(0), "a los 1,30 s, lo de la Canasta vuela");
+            yield return SnapshotKit.Wait(0.2f);
+            SnapshotKit.Save(dir, "q10_l60_780_vuelo");
+            PlayModeHelpers.TickExact(boot, 300);
+            Assert.That(boot.View.SlothView.BubbleShown, Is.True, "a los 1,60 s, TiTino con su frase");
+            yield return SnapshotKit.Wait(0.2f);
+            SnapshotKit.Save(dir, "q10_l60_780");
+        }
+
+        private static IEnumerator Capture(string name, string? json, int level, bool small, float scale, bool mustSpeak, bool mustShow)
         {
             FunnelSetup.Hooks();
             MapArtRule.ForceProvisional = true;
@@ -505,7 +663,7 @@ namespace AF.Tests.PlayMode
             }
 
             SnapshotKit.Attach(GameBootstrap.Current!);
-            SlothVictoryBandTests.AssertBand(name, mustSpeak, scale < 1.01f);
+            SlothVictoryBandTests.AssertBand(name, mustSpeak, mustShow);
             yield return SnapshotKit.Wait(0.2f);
 
             // A 360 × 640 (1080 × 1920 px, 16:9), solo la pantalla simulada: GameScreen la maqueta arriba de la captura y lo de

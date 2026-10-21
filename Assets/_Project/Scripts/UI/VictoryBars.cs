@@ -436,6 +436,32 @@ namespace AF.UI
         /// <summary>Se ve el chevron (tests).</summary>
         public bool ChevronShown => _chevron.gameObject.activeSelf;
 
+        /// <summary>
+        /// Sin barras, pero con su secuencia (B1b-Q10 (c), decisión del dueño: los hitos de TiTino en que su frase no cabe con
+        /// ellas): <see cref="Layout"/> no enseña las filas ni ocupa alto, y la secuencia sigue igual sin dibujarse: suenan el hito
+        /// y la Canasta que se abre, su contenido vuela al saldo y a la bandeja desde el sitio de las barras y las semillas se ven al
+        /// llegar (D-011). Lo decide la victoria (<c>GameScreen.StreakYieldToSloth</c>) antes de colocarla; <see cref="Hide"/> lo apaga.
+        /// </summary>
+        public bool Barless { get; set; }
+
+        /// <summary>Premios volando ahora al saldo o a la bandeja (tests).</summary>
+        internal int FlyingCount
+        {
+            get
+            {
+                int n = 0;
+                for (int i = 0; i < _flyers.Length; i++)
+                {
+                    if (_flyers[i].Busy)
+                    {
+                        n++;
+                    }
+                }
+
+                return n;
+            }
+        }
+
         /// <summary>Alto del bloque colocado, con su hueco de abajo (dp; 0 sin barras).</summary>
         public float Height { get; private set; }
 
@@ -523,6 +549,7 @@ namespace AF.UI
         /// <summary>Oculta el bloque (fuera de la victoria).</summary>
         public void Hide()
         {
+            Barless = false;
             _root.gameObject.SetActive(false);
             _ms = -1f;
             _bursting = null;
@@ -570,6 +597,22 @@ namespace AF.UI
                 return 0f;
             }
 
+            if (Barless)
+            {
+                // Sin filas ni alto: el bloque queda en su sitio con 0 dp de alto, de donde despega lo que vuela (B1b-Q10 (c)).
+                _streak.Root.gameObject.SetActive(false);
+                _basket.Root.gameObject.SetActive(false);
+                _chevron.gameObject.SetActive(false);
+                Half = false;
+                UiBuilder.Place(_streak.Root, 0f, 0f, width, 0f);
+                UiBuilder.Place(_basket.Root, 0f, 0f, width, 0f);
+                UiBuilder.Place(_root, x, y, width, 0f);
+                Height = 0f;
+                return 0f;
+            }
+
+            _streak.Root.gameObject.SetActive(_plan.Streak); // de vuelta tras Barless (StreakYieldToSloth lo prueba y lo deshace)
+            _basket.Root.gameObject.SetActive(_plan.Basket);
             int visible = VictoryBarsRule.Visible(compact, bars);
             Half = (ForceHalf || VictoryBarsRule.HalfWidth(compact, bars)) && _plan.Streak && _plan.Basket;
             bool chevron = VictoryBarsRule.Chevron(compact, bars);
@@ -744,12 +787,21 @@ namespace AF.UI
             float rowW = row.Root.sizeDelta.x;
             float y = -rowPos.y + ((row.LineHeight - lineH) * 0.5f);
             float x = Mathf.Clamp(rowPos.x + ((rowW - w) * 0.5f), 0f, Mathf.Max(0f, _width - w)); // sobre su fila
+            if (Barless)
+            {
+                y = -lineH * 0.5f; // sin barras, centrada en el sitio de las barras (entre la Cosecha y lo de debajo) y sin verse
+            }
+
             _burst.Place(x, y, w, lineH);
-            _burst.Root.gameObject.SetActive(true);
+            _burst.Root.gameObject.SetActive(!Barless);
             _burst.Root.SetAsLastSibling();
-            row.SetTextAlpha(0f);
             _bursting = row;
-            if (Half && w > rowW)
+            if (!Barless)
+            {
+                row.SetTextAlpha(0f);
+            }
+
+            if (!Barless && Half && w > rowW)
             {
                 // A media anchura, si el premio no cabe en su mitad, la otra fila apaga su texto mientras salta (no se pisan).
                 _burstOther = ReferenceEquals(row, _streak) ? _basket : _streak;
