@@ -37,8 +37,9 @@ namespace AF.Backend.Firebase
     /// desarrollo) o sin backend (release). El archivo lo coloca el dueño (regla dura 5; <c>docs/dev/firebase-cliente.md</c>).
     /// </para>
     /// <para>
-    /// App Check se configura con Play Integrity <b>antes</b> de tocar Firebase (lo exige el SDK) y sin refresco automático: el
-    /// cliente solo pide tokens de uso limitado (Q-AWS-4 (a)). La recogida de Analytics no se enciende aquí: el manifiesto
+    /// App Check se configura <b>antes</b> de tocar Firebase (lo exige el SDK) y sin refresco automático: el cliente solo pide tokens
+    /// de uso limitado (Q-AWS-4 (a)). Proveedor (D-039, añadido del 2026-10-21): el de depuración en <c>DEVELOPMENT_BUILD</c> y
+    /// Play Integrity en release. La recogida de Analytics no se enciende aquí: el manifiesto
     /// (<c>Assets/Plugins/Android/LauncherManifest.xml</c>) la deja apagada hasta el consentimiento.
     /// </para>
     /// Solo desde el hilo principal. Nunca escribe en los logs (UID y tokens).
@@ -148,8 +149,14 @@ namespace AF.Backend.Firebase
         {
             try
             {
-                // Antes que cualquier otra llamada a Firebase (lo exige App Check). Por debajo, Play Integrity (Q-AWS-4 (a)).
+                // Antes que cualquier otra llamada a Firebase (lo exige App Check; D-039, añadido del 2026-10-21): en los builds de
+                // desarrollo, el proveedor de depuración (el SDK de Android escribe en logcat el secreto que el dueño registra en la
+                // consola; docs/dev/firebase-cliente.md §4); en release, Play Integrity (Q-AWS-4 (a)), que no escribe nada.
+#if DEVELOPMENT_BUILD
+                FirebaseAppCheck.SetAppCheckProviderFactory(DebugAppCheckProviderFactory.Instance);
+#else
                 FirebaseAppCheck.SetAppCheckProviderFactory(PlayIntegrityProviderFactory.Instance);
+#endif
                 FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task =>
                 {
                     if (task.IsFaulted || task.IsCanceled)

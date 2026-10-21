@@ -17,6 +17,10 @@
          INTERNET lo aprobo el dueno en D-036 (2026-10-20; lo anade Unity con ForceInternetPermission en Auto).
          ACCESS_NETWORK_STATE lo aprobo el dueno en D-037 (2026-10-21; lo anade Unity al leer
          Application.internetReachability para el comun net de la analitica, 08 sec. 8.1).
+         android.permission.WAKE_LOCK y com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE los
+         aprobo el dueno en D-039 y su anadido del 2026-10-21 (los trae Firebase Analytics, play-services-measurement;
+         el segundo es el Install Referrer de Play). AD_ID, ACCESS_ADSERVICES_ATTRIBUTION, ACCESS_ADSERVICES_AD_ID y
+         READ_GSERVICES se quitan en Assets/Plugins/Android/LauncherManifest.xml y siguen fuera de la lista blanca.
          android.permission.POST_NOTIFICATIONS esta aprobado en D-033 (Q-M5) junto con el paquete
          com.unity.mobile.notifications, pero todavia NO esta en la lista blanca: entra en $BasePermissions
          en la misma tarea que integre ese paquete (mientras tanto falla con una pista; un build de prueba
@@ -85,7 +89,9 @@ $NetworkStatePermission = 'android.permission.ACCESS_NETWORK_STATE'   # aprobado
 # Aprobado en D-033 (Q-M5) con com.unity.mobile.notifications; se anade a $BasePermissions al integrar ese paquete
 # (y solo ese: SCHEDULE_EXACT_ALARM, USE_EXACT_ALARM y RECEIVE_BOOT_COMPLETED siguen fuera de la lista blanca).
 $NotificationsPermission = 'android.permission.POST_NOTIFICATIONS'
-$BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission)
+$WakeLockPermission = 'android.permission.WAKE_LOCK'   # aprobado: D-039 (Firebase Analytics)
+$InstallReferrerPermission = 'com.google.android.finsky.permission.BIND_GET_INSTALL_REFERRER_SERVICE'   # aprobado: D-039, anadido del 2026-10-21 (Install Referrer de Play)
+$BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission, $WakeLockPermission, $InstallReferrerPermission)
 
 function Stop-WithCode {
     param([int]$Code, [string]$Message)
@@ -335,6 +341,12 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         @{ Name = 'xml: release correcto';                       Fmt = 'xml'; Text = $okXml; Prof = 'release'; Fails = 0 }
         @{ Name = 'xml: ACCESS_NETWORK_STATE aprobado (D-037)';  Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', $NetworkStatePermission); Prof = 'release'; Fails = 0 }
         @{ Name = 'xml: ACCESS_NETWORK_STATE como sdk-23';       Fmt = 'xml'; Text = $okXml.Replace('<uses-permission android:name="android.permission.VIBRATE"/>', '<uses-permission-sdk-23 android:name="android.permission.ACCESS_NETWORK_STATE"/>'); Prof = 'release'; Fails = 0 }
+        @{ Name = 'xml: WAKE_LOCK aprobado (D-039)';             Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', $WakeLockPermission); Prof = 'release'; Fails = 0 }
+        @{ Name = 'xml: INSTALL_REFERRER aprobado (D-039)';      Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', $InstallReferrerPermission); Prof = 'release'; Fails = 0 }
+        @{ Name = 'xml: AD_ID sigue fuera (D-039)';              Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'com.google.android.gms.permission.AD_ID'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: ACCESS_ADSERVICES_AD_ID sigue fuera';    Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.ACCESS_ADSERVICES_AD_ID'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: ACCESS_ADSERVICES_ATTRIBUTION fuera';    Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.ACCESS_ADSERVICES_ATTRIBUTION'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: READ_GSERVICES sigue fuera';             Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'com.google.android.providers.gsf.permission.READ_GSERVICES'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: ACCESS_WIFI_STATE sigue fuera';          Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.ACCESS_WIFI_STATE'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: targetSdk 35';                           Fmt = 'xml'; Text = $okXml.Replace('targetSdkVersion="36"', 'targetSdkVersion="35"'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: minSdk 24';                              Fmt = 'xml'; Text = $okXml.Replace('minSdkVersion="26"', 'minSdkVersion="24"'); Prof = 'release'; Fails = 1 }
@@ -355,6 +367,7 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         @{ Name = 'aapt2: build de prueba correcto';             Fmt = 'tree'; Text = $okTree; Prof = 'dev'; Fails = 0 }
         @{ Name = 'aapt2: sin ACCESS_NETWORK_STATE tambien vale'; Fmt = 'tree'; Text = ((($okTree -split "`n") | Where-Object { $_ -notmatch 'line=37|ACCESS_NETWORK_STATE' }) -join "`n"); Prof = 'dev'; Fails = 0 }
         @{ Name = 'aapt2: id provisional y debuggable en release'; Fmt = 'tree'; Text = $okTree; Prof = 'release'; Fails = 2 }
+        @{ Name = 'aapt2: WAKE_LOCK e INSTALL_REFERRER (D-039)'; Fmt = 'tree'; Text = $okTree.Replace('"android.permission.VIBRATE"', '"' + $WakeLockPermission + '"').Replace('"android.permission.ACCESS_NETWORK_STATE"', '"' + $InstallReferrerPermission + '"'); Prof = 'dev'; Fails = 0 }
         @{ Name = 'aapt2: permiso RECORD_AUDIO';                 Fmt = 'tree'; Text = $okTree.Replace('"android.permission.VIBRATE"', '"android.permission.RECORD_AUDIO"'); Prof = 'dev'; Fails = 1 }
         @{ Name = 'aapt2: targetSdk 37 con -TargetSdk 36';       Fmt = 'tree'; Text = $okTree.Replace('(0x01010270)=36', '(0x01010270)=37'); Prof = 'dev'; Fails = 1 }
         @{ Name = 'aapt2: appCategory 3';                        Fmt = 'tree'; Text = $okTree.Replace('(0x01010545)=0', '(0x01010545)=3'); Prof = 'dev'; Fails = 1 }

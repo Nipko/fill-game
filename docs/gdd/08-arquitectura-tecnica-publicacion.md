@@ -503,7 +503,7 @@ Mecánica: Addressables for Android (`com.unity.addressables.android`) mapea gru
 
 ## 7. Lista de SDKs
 
-Nueve integraciones de terceros frente a los 30 rastreadores y 20 permisos de Magic Sort (research/09 §Técnico [V]); cada una tiene fila en Data Safety (sección 13.3). Sin SDK de atribución en 1.0 (se añade uno solo al activar UA pagada en US, fase 3; pregunta abierta 2). Sin Facebook SDK: Meta entra solo como adaptador de MAX. **Sin Firebase Messaging en 1.0** (Desviación 2): todos los push de 1.0 son locales, incluidos los que el capítulo 6 §8.2 clasifica como remotos; FCM entra en 1.2 con su fila en Data Safety.
+Nueve integraciones de terceros frente a los 30 rastreadores y 20 permisos de Magic Sort (research/09 §Técnico [V]); cada una tiene fila en Data Safety (sección 13.3). Sin SDK de atribución en 1.0 (se añade uno solo al activar UA pagada en US, fase 3; pregunta abierta 2); el Install Referrer de Play que usa Firebase Analytics (permiso `BIND_GET_INSTALL_REFERRER_SERVICE`) es un servicio de la propia Play Store, no un SDK de atribución aparte (D-039, añadido del 2026-10-21). Sin Facebook SDK: Meta entra solo como adaptador de MAX. **Sin Firebase Messaging en 1.0** (Desviación 2): todos los push de 1.0 son locales, incluidos los que el capítulo 6 §8.2 clasifica como remotos; FCM entra en 1.2 con su fila en Data Safety.
 
 Versiones fijadas el 2026-10-06 con setup/b §5 y su tabla final [V] (fuente primaria enlazada en el informe); cualquier cambio de versión entra por PR revisado por el dueño (`.claude/rules/sdk.md`).
 
@@ -931,9 +931,9 @@ Pistas y tránsito: interna (equipo, minutos) → cerrada (20-50 testers LatAm, 
 | SDK | Datos recogidos | Finalidad | Compartido con terceros | Eliminación |
 |---|---|---|---|---|
 | AppLovin MAX + adaptadores (AdMob, Unity Ads, Meta, Mintegral) | ID de publicidad, IP aproximada, interacciones con anuncios, diagnóstico | Publicidad, análisis de fraude | Sí (redes de la mediación) | Reinicio del ID de publicidad por el usuario; sin vínculo con el UID |
-| Firebase Analytics | ID de instancia, interacciones en la app, país, modelo | Analítica | No | Retención configurada en Firebase; `resetAnalyticsData()` al eliminar la cuenta |
-| Firebase Crashlytics | Registros de fallos, estado del dispositivo | Diagnóstico | No | Retención de 90 días de Firebase |
-| Firebase Remote Config / Auth / App Check | ID de instancia, UID anónimo, token de integridad | Funcionalidad, seguridad | No | **En app y web**: `deleteAccount` borra el usuario de Firebase Auth (sección 11) |
+| Firebase Analytics | ID de instancia, interacciones en la app, país, modelo y origen de la instalación (Install Referrer de Play, permiso `BIND_GET_INSTALL_REFERRER_SERVICE`; D-039, añadido del 2026-10-21). Sin ID de publicidad: `AD_ID`, `ACCESS_ADSERVICES_AD_ID` y `ACCESS_ADSERVICES_ATTRIBUTION` se quitan del manifiesto hasta MAX (D-039); recogida apagada hasta el consentimiento (sección 2.3) | Analítica | No | Retención configurada en Firebase; `resetAnalyticsData()` al eliminar la cuenta |
+| Firebase Crashlytics | Registros de fallos, estado del dispositivo (sin UID) | Diagnóstico | No | Retención de 90 días de Firebase |
+| Firebase Remote Config / Auth / App Check | ID de instancia, UID anónimo, token de integridad (Play Integrity en release; `READ_GSERVICES` de reCAPTCHA se quita del manifiesto, D-039) | Funcionalidad, seguridad | No | **En app y web**: `deleteAccount` borra el usuario de Firebase Auth (sección 11) |
 | Backend propio (AWS, `sa-east-1`; D-035) | UID anónimo, tokens de compra (como hash) y su libro mayor, nonces de recompensa, veredicto de integridad, código de borrado (como hash) e IP en los logs de acceso de la API | Funcionalidad, seguridad y prevención de fraude | No (AWS es encargado del tratamiento) | **En app y web** (`deleteAccount`, sección 11); libro mayor anonimizado el plazo fiscal; recompensas 30 días; logs de acceso con la IP, 30 días (D-035, añadido de F1-F2a) [E, lo revisa el abogado] |
 | Unity IAP / Play Billing | Historial de compras (token) | Funcionalidad | Procesado por Google Play | Gestionado por Google Play |
 | Play Games Services | ID de jugador, datos de partida guardada | Funcionalidad | No | **En app y web**: el cliente borra el snapshot `af_main`; el jugador puede además borrar su perfil de Play Games |

@@ -179,7 +179,8 @@ namespace AF.Backend.Firebase
 
     /// <summary>
     /// Token de App Check de <b>uso limitado</b> (Q-AWS-4 (a); contrato v1, <c>integrityHeader</c>): uno nuevo por petición con
-    /// <c>integrity: true</c>, que la API verifica en AWS y solo acepta una vez. Por debajo, Play Integrity (<see cref="FirebaseBoot"/>).
+    /// <c>integrity: true</c>, que la API verifica en AWS y solo acepta una vez. Por debajo, Play Integrity en release y el proveedor de
+    /// depuración en los builds de desarrollo (<see cref="FirebaseBoot"/>; D-039, añadido del 2026-10-21).
     /// </summary>
     public sealed class AppCheckIntegrityTokenProvider : IIntegrityTokenProvider
     {
