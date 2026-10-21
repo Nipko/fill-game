@@ -165,6 +165,10 @@ namespace AF.Boosters
 
         /// <summary>La Hoja escudo de hoy sigue disponible (<c>daily.shield_available</c>).</summary>
         public bool ShieldAvailable;
+        /// <summary>
+        /// Salto del Boto (rama D, 04 §6.1 <c>skip_eligible</c>; <see cref="SkipBooster"/>): oculto, listo o en gris con lo que falta.
+        /// </summary>
+        public SkipOffer Skip;
     }
 
     /// <summary>El modal Aguas estancadas ya decidido (04 §6.2 <c>buildStuckModal</c>; wireframes A-C de §6.6).</summary>
@@ -172,11 +176,12 @@ namespace AF.Boosters
     {
         internal StuckModalView(StuckCanoeLine canoeLine, StuckUndoKind undo, int undoBadge, bool undoUnlimited, bool undoVideo,
             bool undoVideoFirst, int undoRefillPrice, int undoRefillMissing, StuckRescueKind rescue, int price, int basePrice, int missing,
-            IReadOnlyList<StuckOffer> offers, StuckFooter footer, bool unsolvable, StuckShieldLine shieldLine = StuckShieldLine.None, int shieldWins = 0)
+            IReadOnlyList<StuckOffer> offers, StuckFooter footer, bool unsolvable, StuckShieldLine shieldLine = StuckShieldLine.None, int shieldWins = 0, SkipOffer skip = default)
         {
             ShieldLine = shieldLine;
             ShieldWins = shieldLine == StuckShieldLine.None ? 0 : shieldWins;
             Unsolvable = unsolvable;
+            Skip = skip;
             CanoeLine = canoeLine;
             Undo = undo;
             UndoBadge = undoBadge;
@@ -246,6 +251,12 @@ namespace AF.Boosters
 
         /// <summary>La barra que se perdería (el {n} de <c>stuck_shield_used</c>); 0 sin línea.</summary>
         public int ShieldWins { get; }
+
+        /// <summary>
+        /// Salto del Boto (rama D; 04 §6.2 <c>opts.add(SKIP(price=300))</c>, tras el rescate y las ofertas, antes del pie): oculto
+        /// antes del 31 y si no es elegible; en gris con «Te faltan {n} semillas» sin saldo (04 §1).
+        /// </summary>
+        public SkipOffer Skip { get; }
     }
 
     /// <summary>¿Seguro? [P] (paso 2 del embudo de D-008; 04 §6.2 <c>buildGiveUpConfirm</c>).</summary>
@@ -290,10 +301,10 @@ namespace AF.Boosters
 
     /// <summary>
     /// Árbol de decisión de Aguas estancadas (GDD 04 §6.2 y §6.3, con el embudo de D-008): ramas C (1-30), A (con saldo),
-    /// A' (2.º bloqueo: sin rescate), B (sin saldo, Puñado y Balsa en el orden de la geo), E (sin fill: solo semillas), F (no
-    /// cumple: sin rescate, con la recarga gratis de +1 [P]), G (última canoa) y H (Canoas infinitas: sin línea de canoa).
-    /// El Salto del Boto (rama D) llega con su sistema. La línea de la Hoja escudo (04 §6.5 y §6.6; tarea B1b) sale sobre el pie
-    /// en 1-30 y desde el 31 (<see cref="ShieldLineFor"/>). Sin motor: solo decide qué se ve.
+    /// A' (2.º bloqueo: sin rescate), B (sin saldo, Puñado y Balsa en el orden de la geo), D (Salto del Boto, con el contexto
+    /// de <see cref="SkipBooster"/>; también en A' y F «si elegible»), E (sin fill: solo semillas), F (no cumple: sin rescate,
+    /// con la recarga gratis de +1 [P]), G (última canoa) y H (Canoas infinitas: sin línea de canoa). La línea de la Hoja escudo
+    /// (04 §6.5 y §6.6; tarea B1b) sale sobre el pie en 1-30 y desde el 31 (<see cref="ShieldLineFor"/>). Sin motor: solo decide qué se ve.
     /// </summary>
     public static class StuckModalModel
     {
@@ -347,7 +358,8 @@ namespace AF.Boosters
 
             return new StuckModalView(CanoeLine(ctx), undo, badge, ctx.UndoUnlimited, ctx.UndoAdReady, videoFirst, ctx.UndoRefillPrice,
                 refillMissing, rescue, ctx.RescuePrice, ctx.RescueBasePrice, missing, offers, StuckFooter.GiveUp,
-                ctx.RescueCheck == RescueCheck.Unsolvable && ctx.RescuesLevel < ctx.RescueMaxPerLevel, ShieldLineFor(ctx, config), ctx.StreakWins);
+                ctx.RescueCheck == RescueCheck.Unsolvable && ctx.RescuesLevel < ctx.RescueMaxPerLevel, ShieldLineFor(ctx, config), ctx.StreakWins,
+                ctx.Skip); // rama D
         }
 
         /// <summary>

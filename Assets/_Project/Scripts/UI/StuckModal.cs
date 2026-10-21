@@ -19,6 +19,9 @@ namespace AF.UI
     /// <item><description>regla 0: Marea primero («Deshacer · Marea» con su cupo) o su recarga, video y semillas en una fila;</description></item>
     /// <item><description>desde el 31, «Continuar: +1 cuia» con su precio (300 con el 600 tachado el primero del día), o en
     /// gris con «Te faltan {n} semillas» y, debajo, Puñado y Balsa en el orden de la geo;</description></item>
+    /// <item><description>rama D (bloque B3): «Salto del Boto» con su precio (300) y «Rosa te lleva río arriba, al siguiente
+    /// nivel», tras el rescate y las ofertas (04 §6.2), o en gris con «Te faltan {n} semillas»; un toque abre la confirmación
+    /// (<see cref="ISkipActions"/>, en <c>GameBootstrap.Skip.cs</c>);</description></item>
     /// <item><description>pie: «Volver a la orilla (gratis)» como botón en 1-30 y el enlace «Rendirse» [P] desde el 31.</description></item>
     /// </list>
     /// Se rearma con <see cref="Show"/> cada vez que cambia el contexto (p. ej. tras comprar un Puñado: mismo precio, saldo
@@ -142,6 +145,10 @@ namespace AF.UI
         private readonly TextMeshProUGUI _balsaLabel;
         private readonly TextMeshProUGUI _balsaNote;
         private readonly TextMeshProUGUI _shieldLine;
+        private readonly ReliefParts _skip;
+        private readonly TextMeshProUGUI _skipLabel;
+        private readonly PriceTag _skipPrice;
+        private readonly TextMeshProUGUI _skipNote;
         private readonly ReliefParts _restart;
         private readonly TextMeshProUGUI _restartLabel;
         private readonly Button _giveUp;
@@ -184,6 +191,10 @@ namespace AF.UI
             // Línea de la Hoja escudo sobre el pie (04 §6.5 y §6.6, wireframes A y D; tarea B1b): hasta dos líneas, sin toques.
             _shieldLine = ModalKit.Line("ShieldLine", _panel, string.Empty, 14f, Palette.FamilyWood.Base);
             _shieldLine.gameObject.SetActive(false);
+            // Rama D (bloque B3): estilo secundario (madera), 3.ª opción (04 §6.6 wireframe D).
+            _skip = ModalKit.Cta("SkipButton", _panel, art.CtaWood, TextStyle.PillWood, SkipText.Option, 18f, () => (actions as ISkipActions)?.PressSkip(), out _skipLabel);
+            _skipPrice = new PriceTag("Price", _skip.Face, art);
+            _skipNote = ModalKit.Line("SkipNote", _panel, string.Empty, 13f, Palette.FamilyWood.Base);
 
             _restart = ModalKit.Cta("RestartModalButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.StuckRestart, 18f, () => actions.PressRestart(), out _restartLabel);
             _giveUp = ModalKit.Link("GiveUpButton", _panel, UiText.StuckGiveUp, () => actions.PressGiveUp(), out _);
@@ -249,6 +260,15 @@ namespace AF.UI
         /// <summary>Balsa de rescate.</summary>
         public Button BalsaButton => _balsa.Button;
 
+        /// <summary>«Salto del Boto» (rama D).</summary>
+        public Button SkipButton => _skip.Button;
+
+        /// <summary>Línea bajo «Salto del Boto» («Rosa te lleva…» o «Te faltan {n} semillas»), o null.</summary>
+        public string? SkipNoteText => _skipNote.gameObject.activeSelf ? _skipNote.text : null;
+
+        /// <summary>Precio que muestra «Salto del Boto» (0 si no se ofrece).</summary>
+        public int SkipPriceShown => _skip.Button.gameObject.activeSelf ? _skipPrice.Value : 0;
+
         /// <summary>Pie en 1-30: «Volver a la orilla (gratis)».</summary>
         public Button RestartButton => _restart.Button;
 
@@ -289,6 +309,7 @@ namespace AF.UI
                 rects.Add(_balsaNote.rectTransform);
             }
 
+            Add(ids, rects, "skip", _skip.Button);
             Add(ids, rects, "restart_modal", _restart.Button);
             Add(ids, rects, "give_up", _giveUp);
         }
@@ -558,6 +579,37 @@ namespace AF.UI
                 }
 
                 y += compact ? 0f : 6f;
+            }
+
+            // Rama D: Salto del Boto, tras el rescate y las ofertas (04 §6.2), con su precio; sin saldo, en gris y «Te faltan».
+            bool skip = view.Skip.Offered;
+            _skip.Button.gameObject.SetActive(skip);
+            _skipNote.gameObject.SetActive(skip);
+            if (skip)
+            {
+                bool ready = view.Skip.CanUse;
+                UiBuilder.SetEnabled(_skip.Button, ready);
+                _skipPrice.Set(view.Skip.Price, 0, !ready);
+                // Como el rescate: la etiqueta a la izquierda del precio, con la medida de la disposición (compacta o de siempre; FX16a).
+                float inset = _skipPrice.Width + 36f;
+                float shift = -(_skipPrice.Width + 12f) * 0.5f;
+                if (compact)
+                {
+                    FitCtaLabelCompact(_skip, _skipLabel, inner, inset, shift);
+                }
+                else
+                {
+                    ModalKit.FitCtaLabel(_skip, _skipLabel, inner, inset, shift);
+                }
+
+                PlaceButton(_skip, 16f, y, inner);
+                float face = FaceOf(_skip);
+                _skipPrice.PlaceAt(inner - _skipPrice.Width - 12f, (face - _skipPrice.Height) * 0.5f);
+                y += HeightOf(_skip);
+                _skipNote.text = ready ? SkipText.Tagline : UiText.MissingSeeds(view.Skip.Missing);
+                _skipNote.color = ready ? (Color)Palette.FamilyWood.Base : (Color)Palette.UiRedWarning;
+                y += ModalKit.PlaceLine(_skipNote, 16f, y, inner, compact ? 0f : 18f) + lineAir;
+                y += gap;
             }
 
             // Línea de la Hoja escudo (04 §6.6, wireframes A y D: sobre el pie; tarea B1b), en su alto justo en la compacta (FX16a).

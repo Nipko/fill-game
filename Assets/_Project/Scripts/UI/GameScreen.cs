@@ -623,7 +623,7 @@ namespace AF.UI
             UiBuilder.Place(pauseIcon.rectTransform, 7f, 7f, 26f, 26f);
             _pauseButton.Relief.Bind(_pauseButton.Face, _pauseButton.Base, _pauseButton.FaceImage, art.DiscWood, pauseIcon, null, null);
             _walletBar = new WalletBar(_topLayer, art);
-            _pause = new PauseMenu(_root, art, OnResume, OnPauseMap, OnPauseRestart, OnPauseQuit);
+            _pause = new PauseMenu(_root, art, OnResume, OnPauseMap, OnPauseRestart, OnPauseQuit, OnPauseSkip);
             _confirm = new QuitConfirm(_root, art, OnConfirm, OnConfirmCancel, OnConfirmUndo);
             _banner = new Toast("RiverLowered", _root, art, 18f);
             _toast = new Toast("Toast", _noticeLayer, art, 15f);
@@ -1916,7 +1916,7 @@ namespace AF.UI
             }
 
             flow.ClearSelection();
-            _pause.Show(flow.CanRestart, PauseMapOffered, _canvasW, _canvasH);
+            _pause.Show(flow.CanRestart, PauseMapOffered, _canvasW, _canvasH, flow.SkipOffer);
             EmitPauseLayout();
         }
 
@@ -1962,6 +1962,15 @@ namespace AF.UI
         private void OnResume()
         {
             _pause.Hide();
+        }
+
+        // Pausa › «Salto del Boto» (04 §2.6; bloque B3): la confirmación de GameBootstrap.Skip.cs, que cierra la pausa.
+        private void OnPauseSkip()
+        {
+            if (_actions is ISkipActions skip)
+            {
+                skip.PressSkip();
+            }
         }
 
         private void OnPauseRestart()

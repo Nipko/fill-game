@@ -147,6 +147,7 @@ namespace AF.GameFlow
 
                 StreakServiceResult? streak = OnSkipStreak(); // E34: dentro del lote y antes de guardar el salto
                 _skipStore!.SaveSkip(level, level + 1);
+                OnSkipSkins(level); // B14: el salto del nivel que cierra un mundo también da su skin
                 StateStore?.Clear();
                 _lastSkip = new SkipResult(level, fails, offer.LevelsSinceLastSkip, tag, paid, streak);
                 Load(level + 1); // LOADING(N+1), con fails_level = 0 (nivel nuevo), en la misma escritura

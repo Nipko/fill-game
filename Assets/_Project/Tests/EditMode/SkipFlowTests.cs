@@ -104,6 +104,28 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void SkippingTheWorldClose_GivesItsSkin_InTheSameWrite()
+        {
+            // Nota de B14 en D-033: el Salto supera el nivel (cuenta para max_level), así que el 40 saltado da la skin del mundo 2.
+            var rig = new ProfileRig(TestPacks.Campaign, 0, seeds: 1000, maxLevel: 39);
+            var skins = new SkinService(rig.Profile, rig.Batch.Durable);
+            rig.Flow.UseSkins(skins);
+            rig.ForceFails(40, 5);
+            int serial = rig.Flow.SkinUnlockSerial;
+            int writes = rig.Batch.WriteCount;
+
+            Assert.That(rig.Flow.Skip()!.Value.Applied, Is.True);
+
+            Assert.That(rig.Batch.WriteCount, Is.EqualTo(writes + 1), "el salto y la skin: una escritura");
+            Assert.That(rig.Flow.SkinUnlockSerial, Is.EqualTo(serial + 1));
+            Assert.That(rig.Flow.LatestSkinUnlock!.SkinId, Is.EqualTo("af_skin_m02"));
+            Assert.That(rig.Flow.SkinUnlockLoad, Is.LessThan(rig.Flow.LoadSerial), "el aviso sale en el nivel siguiente, ya cargado");
+            Profile saved = rig.Disk.Load().Profile!;
+            Assert.That(saved.Entitlements.Skins, Does.Contain("af_skin_m02"));
+            Assert.That(saved.Entitlements.SkinEquipped, Is.EqualTo("af_skin_m02"), "Q-M8 (a): se pone sola");
+        }
+
+        [Test]
         public void TheGap_IsTenLevelsFromTheLastSkip()
         {
             var rig = new ProfileRig(TestPacks.Campaign, 0, seeds: 2000, maxLevel: 40);
