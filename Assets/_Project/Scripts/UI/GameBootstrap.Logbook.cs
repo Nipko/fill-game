@@ -48,6 +48,11 @@ namespace AF.UI
         /// <summary>Origen de la sonda <c>takeover</c> al entrar al inicio.</summary>
         public const string TakeoverSourceLobby = "lobby";
 
+        // La reconstrucción por idioma (RebuildUi) recarga la escena con el mismo perfil en memoria: no es una sesión nueva, así
+        // que la cola (su cupo y lo visto) pasa a la escena nueva, como las sesiones de B6.
+        private static Profile? s_takeoversProfile;
+        private static TakeoverQueue? s_carriedTakeovers;
+
         private LoginCalendarService? _logbook;
         private LogbookScreen? _logbookScreen;
         private LogbookCard? _logbookCard;
@@ -65,6 +70,13 @@ namespace AF.UI
 
         /// <summary>Almacén de la Bitácora para los tests (gana a <see cref="LogbookStoreFactory"/>).</summary>
         internal static ILoginCalendarStore? LogbookStoreOverride { get; set; }
+
+        /// <summary>
+        /// Los tests apagan la Bitácora con false (<see cref="SetUpLogbook"/> no crea nada): los que no tratan de ella entran al
+        /// inicio sin la libreta encima, como antes de que existiera (<c>PlayModeHelpers.NoLogbookUnlessSet</c>, parche
+        /// B4-3-bootstrap). Null o true: como en el juego. Los que la prueban la encienden y la vuelven a null en su TearDown.
+        /// </summary>
+        internal static bool? LogbookOverride { get; set; }
 
         /// <summary>
         /// Almacén del bloque <c>calendar</c> sobre el perfil (B4-1-profile): recibe el perfil y su almacén (el lote de guardado),
@@ -108,6 +120,11 @@ namespace AF.UI
                 return true;
             }
 
+            if (LogbookOverride == false)
+            {
+                return false;
+            }
+
             Profile? profile = _profile;
             ProfileSaveBatch? batch = _saveBatch;
             if (profile == null || batch == null || _progress == null || _wallet == null || _art == null || _app == null || _lobby == null)
@@ -134,8 +151,11 @@ namespace AF.UI
             _logbookScreen = new LogbookScreen(transform, _art, OnLogbookChoose, OnLogbookClose);
             _logbookCardCanvas = new OverlayCanvas("LogbookCardCanvas", transform, LogbookCardSortingOrder);
             _logbookCard = new LogbookCard(_logbookCardCanvas.Root, _art, () => OpenLogbook(LogbookOpenSource.Card));
-            _takeovers = new TakeoverQueue();
-            _takeovers.Register(TakeoverKind.Logbook, LogbookPending);
+            bool sameSession = ReferenceEquals(s_takeoversProfile, profile) && s_carriedTakeovers != null;
+            _takeovers = sameSession ? s_carriedTakeovers! : new TakeoverQueue();
+            s_takeoversProfile = profile;
+            s_carriedTakeovers = _takeovers;
+            _takeovers.Register(TakeoverKind.Logbook, LogbookPending); // la función de esta escena, no la de la anterior
             if (_flow != null)
             {
                 _flow.LevelPlayed += OnLevelPlayedLogbook;

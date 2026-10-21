@@ -39,6 +39,7 @@ namespace AF.Tests.PlayMode
             _clock = new ManualClock(Utc(Tuesday), Bogota);
             _profiles = new MemoryProfileStore(ProfileAt(MaxLevel));
             LaunchOptions.ClockOverride = _clock;
+            GameBootstrap.LogbookOverride = true;
             _lines.Clear();
             Application.logMessageReceived += OnLog;
         }
@@ -48,6 +49,7 @@ namespace AF.Tests.PlayMode
         {
             Application.logMessageReceived -= OnLog;
             GameBootstrap.ResetLogbookOverrides();
+            GameBootstrap.LogbookOverride = null;
             LaunchOptions.Reset();
             LocSetUpFixture.ConfigureEs419();
         }
@@ -135,9 +137,11 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator TheLevel10Sequence_OpensTheNotebookBeforeTheMap_WithoutSpendingTheQuota()
         {
-            yield return Boot(playedToday: true, maxLevel: 10);
+            // El 10 se acaba de ganar: el día jugado se apunta después de entrar al inicio (sin takeover al cargar la escena).
+            yield return Boot(playedToday: false, maxLevel: 10);
             GameBootstrap boot = GameBootstrap.Current!;
-            boot.LogbookRunner!.enabled = false;
+            Assert.That(boot.OpenLogbookBeforeL10Map(), Is.False, "sin nivel terminado hoy no hay página que sellar: el Mapa, directo");
+            boot.Logbook!.Record.PlayedDate = "2026-10-20";
             Assert.That(boot.OpenLogbookBeforeL10Map(), Is.True);
             LogbookScreen screen = boot.LogbookScreen!;
             Assert.That(screen.Source, Is.EqualTo(LogbookOpenSource.L10));
