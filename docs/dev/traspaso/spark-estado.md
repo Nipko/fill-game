@@ -6,6 +6,122 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-21 · B8 · Nube sin SDK + integridad + anti-fraude local + «Eliminar cuenta» en local (`spark/t5-b8`): HECHA · verificación completa VERDE en `920ec25f`; tras la última fusión, solo .NET y parches · lista para integrar
+
+- **Rama:** `spark/t5-b8`, desde `9eb593c`. Fusiona `origin/integracion-fase1-fase2` cinco veces, sin conflictos:
+  - `d994e586` (B14 y B1b) en `e8c90ebd`;
+  - `eb863f54` (B1b-Q10) en `89127c19`;
+  - `803e9723` (B2, B3, B6 y B13) en `ab0ba8f8`;
+  - `d933dcde` (backend F2) en `920ec25f`;
+  - `ef78baad` (D-035 en el GDD, F3-1 `AF.Backend`, Firebase dev) en `e2748569`.
+  - **Por instrucción del coordinador, no se fusiona más.**
+  - Empujada, sin `--force`.
+- **Nota de diseño:** `docs/dev/nube-integridad.md`. Recoge:
+  - los 8 casos de la fusión, la firma, el anti-reloj, la revocación y «Eliminar cuenta»;
+  - lo que queda para el integrador, los SDK y Functions (§8);
+  - los parches (§9);
+  - las preguntas Q-B8-1 a Q-B8-11.
+- **Commits** (del más antiguo al más reciente):
+  - `76d5945e`: la nube sin SDK, en archivos nuevos:
+    - `ICloudSave` / `FakeCloudSave`;
+    - `CloudMerge`, con los 8 casos;
+    - `ProfileHmac`;
+    - `IDeviceIdentity`;
+    - `GuardedClock`;
+    - el diálogo de dos pasos de «Eliminar cuenta y datos», con sus tests EditMode;
+  - `8aab10fa`: los arreglos de la revisión:
+    - id por instalación (`InstallIdentity`, Q-B8-3 (b));
+    - el borrado local va antes que la nube;
+    - el texto del caso 8;
+  - `4dbf5345`: la nota, los tres parches y `B8-strings.csv`;
+  - las fusiones `e8c90ebd`, `89127c19`, `ab0ba8f8`, `920ec25f` y `e2748569`;
+  - y el commit de esta entrada, con `B8-loc.diff` y la nota puesta al día (Q-B8-11).
+- **En la rama** (archivos nuevos, en `Assets/_Project/Scripts/`):
+  - `Save/ICloudSave.cs`, `FakeCloudSave.cs`, `CloudMerge.cs` y `ProfileHmac.cs`;
+  - `Platform/IDeviceIdentity.cs` y `GuardedClock.cs`;
+  - en `UI/`:
+    - `InstallIdentity.cs`, `DeleteAccountDialog.cs` y `AccountText.cs`;
+    - `SettingsScreen.Account.cs`, `GameBootstrap.Account.cs` y `DevProbe.Account.cs`;
+  - sus tests EditMode.
+  - Ningún archivo del escritorio cambia en la rama.
+  - `InstallIdentity.cs.meta` es el `.meta` que Unity generó para `UnityDeviceIdentity.cs`, renombrado con el archivo en `8aab10fa`: conserva su GUID.
+- **Parches** (`docs/dev/traspaso/spark-enganches/`, en LF, en este orden; detalle en la nota §9):
+  1. `B8-profile.diff`: `Profile.cs` y `ProfileJson.cs` (campos nuevos), la firma, la identidad, `CloudMerge.Fields` y `CloudSync`;
+  2. `B8-economy.diff`: `Canoes`, `Wallet`, `Transaction`, `ProfileStreakStore` y `LocalRevocation`;
+  3. `B8-ui.diff`: `SettingsScreen`, `GameBootstrap*` (`GameBootstrap.Cloud.cs`) y `AccountAndCloudTests`;
+  4. **`B8-loc.diff`** (nuevo en esta entrada; sustituye a copiar `B8-strings.csv` a mano):
+     - las 9 claves van a `strings.csv`, en su sitio por orden ordinal;
+     - las claves de `AccountText.Keys` se registran en `LocTablesTests.UiTextKeys`, como hicieron B3 y B6;
+     - sin esto, `EveryUiTextKey_Exists_AndEveryStringsRow_IsUsed` falla.
+  - Sobre `ef78baad` (lo último fusionado), los cuatro aplican con `git -c core.autocrlf=false apply` en un worktree temporal, y después pasan `apply -R --check`. **No hubo que regenerar ninguno**: B6-profile toca `Profile.cs` y `ProfileJson.cs` en otros puntos.
+- **Revisión (code-reviewer):** CAMBIOS NECESARIOS en la 1.ª ronda, arreglados en `8aab10fa`:
+  - la huella del HMAC sale de un id aleatorio por instalación en `PlayerPrefs`, no de `SystemInfo.deviceUniqueIdentifier` (Q-B8-3 cambia a (b): sin identificador del dispositivo ni fila nueva de Data Safety);
+  - «Eliminar» borra primero el perfil y `PlayerPrefs`, y solo después la nube;
+  - el diálogo exige su cancelación explícita;
+  - Q-B8-5 cambia a (b): un perfil sin firma o migrado sigue las reglas de siempre.
+  - Tras eso, la rama se dio por aprobada («Retoca B8 tras la revisión»). `B8-loc.diff` y Q-B8-11 son de esta entrada y no tuvieron ronda propia.
+- **Verificación** (`-Architecture arm64 -TimeoutSec 3600`; tiempos reales). Como mucho hubo 2 Unity a la vez; el otro era de otro agente.
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`e2748569`, con D-035 y F3-1) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py`; `git apply` y `apply -R --check` de los cuatro en un temporal | 0 avisos y 0 errores; **1.002 (996 + 6), 0 fallos** (2 min 27 s); 103/103; los cuatro aplican. **Unity no se verificó en este estado**: compile y EditMode empezaron y se cortaron por instrucción del coordinador (cierre sin más rondas) |
+  | rama (`ab0ba8f8`) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos y 0 errores; **1.002 (996 + 6), 0 fallos** (8 min 46 s, con Unity en paralelo); 103/103, código 0 |
+  | rama (`920ec25f`) | `dotnet build -warnaserror`; `validate_schema.py` | 0 avisos y 0 errores; 103/103. `dotnet test` no se repite: entre `ab0ba8f8` y `920ec25f` no cambia nada en `dotnet/`, `Packages/`, `tools/` ni `schemas/` |
+  | rama (`920ec25f`) | `unity-compile`; EditMode; PlayMode | 0 (34 s); **3.581 (3.578 + 3), 0 fallos** (5,0 min); **1.703 (1.466 + 237), 0 fallos** (33,4 min) |
+  | temporal: `920ec25f` + profile, economy y ui | compile; EditMode; PlayMode | 0 (125 s); **3.618 (3.615 + 3), 0 fallos** (5,5 min); **1.706 (1.469 + 237), 0 fallos** (33,0 min) |
+  | idem + `B8-loc.diff` | EditMode; PlayMode con filtro (`AccountAndCloudTests`, `PseudoLocOverflowTests`) | **3.618 (3.615 + 3), 0 fallos** (5,3 min); **5/5** (58 s) |
+
+  Antes de la fusión de B2, B3 y B6 (`e8c90ebd`), en la rama: 0 avisos; 981 (975 + 6); 103/103. El worktree temporal se borró al terminar.
+
+- **Lo que trae `ef78baad` y no se probó en Unity con B8:**
+  - `AF.Backend` (F3-1), con `RestoreLedger`, `Account` y `VerifyPurchase`;
+  - `Platform/ServerDateTracker.cs`, un `IServerDate` real.
+  - No hay choque de nombres ni de texto: los parches aplican y `dotnet build` pasa. Aun así, el integrador debe pasar compile, EditMode y PlayMode con los cuatro parches aplicados.
+  - En EditMode cabe esperar 1 fallo que no es de B8: `AF.Backend.Tests.ContractExamplesTests.ValidExamplesRoundTrip`. El lector de F3-1 no admite la clave `tombstones` del ejemplo de F2c; sale igual en la rama de B7 sin parches (ver la entrada de B7).
+
+### Preguntas para el dueño (B8; se avanzó con la recomendada, [P])
+
+| Id | Pregunta | Recomendada |
+|---|---|---|
+| Q-B8-1 | `applied_purchases` por unión (08 §11): una compra del que pierde el conflicto queda «aplicada», pero su saldo se pierde | (a) unión, aplicada porque es canon; **se recomienda cambiar 08 §11 a (b)**: la lista del ganador, y `restoreLedger` vuelve a acreditar lo que falte |
+| Q-B8-2 | De qué sale la clave del HMAC | (a) de `device_first`: un blob de otro teléfono se puede comprobar |
+| Q-B8-3 | El id del que sale la huella | (b) un id aleatorio por instalación (`af_install_id`), cambiada tras la revisión |
+| Q-B8-4 | Qué es `locale` | (a) el idioma de la UI resuelto en cada arranque |
+| Q-B8-5 | ¿Un perfil sin firma o migrado es «coherente»? | (b) sí, cambiada tras la revisión: así no se pierde progreso con una nube de un esquema anterior |
+| Q-B8-6 / Q-B8-7 | `daily` con fechas distintas; empate total | Gana el bloque del día más reciente; en el empate, el local |
+| Q-B8-8 / Q-B8-9 | Revocar Sin anuncios; orden de `ApplyLedger` | Se quita el derecho; orden ordinal de token |
+| Q-B8-10 | ¿Se guarda la sospecha para la fusión? | (a) solo medir (08 §10.1: sin castigo automático) |
+| **Q-B8-11** (nueva) | Con B6 integrado, cómo se fusionan `settings.push` y `stats.last_seen_at` / `last_win_at`. Hoy se quedan los del ganador | (a) la propuesta de B6: máximo en las fechas, «o» en los pre-prompts y `granted` del dispositivo. **Sin aplicar**: una línea por campo en `CloudMerge.MergeFields` con su caso en `CloudMergeTests` |
+
+Cierra además B1a-Q1 y B1a-Q2 (D-033, (a)) y Q-S1 de B3 (`skipped_levels` por unión, ya en `CloudMerge`).
+
+### Riesgos y pendientes
+
+- **Play Games (dueño):**
+  - un marcador de «borrado pendiente» antes de `CloudSync.AtStartup`;
+  - el `ICloudSave` real;
+  - las subidas periódicas.
+- **Backend (D-035: AWS; antes «Functions»):**
+  - `restoreLedger` → `LocalRevocation.ApplyLedger`;
+  - el SSV → `RegisterProvisional` / `Confirm` / `ExpireStale`;
+  - `deleteAccount`;
+  - un `IServerDate` real.
+  - Los nombres de 08 §10-§11 pueden cambiar con D-035; la interfaz local no depende de ellos.
+  - **Nuevo con F3-1:** `ServerDateTracker` (un `IServerDate` real) y el cliente `AF.Backend` ya existen. El paso siguiente es pasar `ServerDateTracker` a `GuardedClock` en lugar de `FakeServerDate.Offline()`, y `RestoreLedger` / `Account` a `LocalRevocation` y a «Eliminar cuenta».
+- **B7:**
+  - `RevocationConfig.SecSsvGraceH` ← `sec_ssv_grace_h`;
+  - `af_save_sync` y `af_account_delete` a la analítica (hoy son sondas `AF_STATE`).
+- **Integrador:** `ProfileSaveBatch.Delete()` podría dejar el lote cerrado. Hoy, un callback entre «Eliminar» y la recarga podría volver a escribir `profile.json`.
+- **Teléfono:**
+  - comprobar `SHA256` / `HMACSHA256` con IL2CPP y el stripping High (B10): `AF_STATE profile_integrity` = `valid` tras un guardado;
+  - probar el flujo de «Eliminar cuenta y datos».
+- **GDD:**
+  - anotar en 08 §4.3 `voided_purchases`, `pending_rewards` e `integrity.fraud_flag` [P];
+  - anotar en 08 §11 los 8 casos.
+- **Textos:** las 9 claves nacen `pendiente_asesor`, sin `en` ni `pt-BR`.
+
+---
+
 ## 2026-10-20 · T5 · B13 · Borradores de publicación (`spark/t5-b13`): HECHA · lista para integrar (solo documentación)
 
 - **Rama:** `spark/t5-b13`, desde `origin/integracion-fase1-fase2` en `9982bdc`. Commits `76d442b`, `9180887` y `b2577df` (revisión).

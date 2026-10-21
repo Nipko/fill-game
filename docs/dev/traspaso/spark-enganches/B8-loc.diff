@@ -1,0 +1,47 @@
+diff --git a/Assets/_Project/Data/Loc/strings.csv b/Assets/_Project/Data/Loc/strings.csv
+index 0d608057..2180d998 100644
+--- a/Assets/_Project/Data/Loc/strings.csv
++++ b/Assets/_Project/Data/Loc/strings.csv
+@@ -25,6 +25,14 @@ daily_streak_reward_locked,+1 Pororoca · se desbloquea en el nivel {level},+1 P
+ daily_teaser,"Desde el nivel {level}, un tablero nuevo cada día","From level {level}, a new board every day","A partir do nível {level}, um tabuleiro novo por dia","Tarjeta de 2 s que presenta el Reto del río en la pantalla de victoria del nivel 7 (06 §2.2, fila 7; 02 §13): placa de madera clara sobre las cuias, sin toques. {level}: nivel que desbloquea el Reto (live_unlock_level_daily, hoy 10), con cifras de la región.",56,pendiente_asesor,traducido,traducido,"[P] Enganche E6 del Spark. Texto de 06 §2.2 con el 10 como marcador. pendiente_asesor porque lo pide el encargo del Spark (§10, T1.2); el texto no nombra fauna, flora, pueblos ni lugares: el dueño puede bajarlo a borrador.",
+ daily_win_no_reward,Sin premio: esta fecha ya se reclamó,No reward: this date was already claimed,Sem prêmio: esta data já foi resgatada,"Línea del calendario al ganar un Reto sin premio: la fecha es ≤ la última reclamada (ya se cobró, el reloj va hacia atrás o el cobro se anuló al reconciliar; 06 §4.1 «Anti-reloj»). Neutra: no dice que haya sello.",40,borrador,traducido,traducido,"[P] Texto sin decisión del dueño.",
+ daily_win_pending,Premio pendiente de validar,Reward pending check,Prêmio aguardando validação,"Línea del calendario al ganar con el premio pendiente de la hora del servidor (06 §4.1; 08 §10.1): las semillas llegan al reconectar.",36,borrador,traducido,traducido,"[P] Tarea R9.",
++delete_account_body,"Se borrarán tu progreso, tus semillas y tus comodines de este teléfono y de la nube.",,,"Paso 1 de «Eliminar cuenta y datos»: lo que se borra (08 §11: snapshot af_main, profile.json, profile.bak y PlayerPrefs). Línea bajo el título, en madera.",90,pendiente_asesor,,,"[P] Bloque B8: el GDD no da el texto.",
++delete_account_confirm_body,No se puede deshacer. El juego volverá a empezar desde el nivel 1.,,,"Paso 2: lo que pasa al confirmar (08 §11: el cliente vuelve al estado de primera ejecución).",80,pendiente_asesor,,,"[P] Bloque B8.",
++delete_account_confirm_cta,Eliminar,,,"Paso 2: el botón de madera que borra; la X conserva.",16,pendiente_asesor,,,"[P] Bloque B8.",
++delete_account_confirm_title,¿Eliminar todo?,,,"Título del paso 2 de «Eliminar cuenta y datos» (08 §11: confirmación en dos pasos).",20,pendiente_asesor,,,"[P] Bloque B8.",
++delete_account_continue,Continuar,,,"Paso 1: botón de madera que pasa al segundo paso.",16,pendiente_asesor,,,"[P] Bloque B8.",
++delete_account_failed,No se pudo eliminar. Inténtalo de nuevo.,,,"Paso 2: aviso en rojo si el borrado local falla (error de disco); el diálogo sigue abierto y no se borra nada.",48,pendiente_asesor,,,"[P] Bloque B8.",
++delete_account_keep,Conservar mis datos,,,"Paso 1: botón principal (Hoja), que cierra sin borrar; la X hace lo mismo.",24,pendiente_asesor,,,"[P] Bloque B8.",
++delete_account_no_refund,Las compras no se reembolsan.,,,"Paso 1: aviso en rojo bajo la línea principal (08 §11: «aviso de que las compras no se reembolsan»).",40,pendiente_asesor,,,"[P] Bloque B8: el GDD pide el aviso sin dar el texto. A confirmar con el abogado (política de reembolsos de Play).",
+ difficulty_hard,Difícil,Hard,Difícil,"Chip de dificultad del botón Jugar, de la tarjeta previa y del HUD (glosario §6.1; 02 §10).",16,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
+ difficulty_subtitle_hard,Aguas bravas,Rough Waters,Águas bravas,Subtítulo temático de Difícil bajo el chip (glosario §6.1; 02 §10); se apaga con ui_show_difficulty_subtitles.,12,pendiente_asesor,traducido,traducido,Clave derivada [P]. Pendiente del asesor cultural (07 §8.2).,
+ difficulty_subtitle_very_hard,Noche de jaguar,Jaguar Night,Noite da Onça,Subtítulo temático de Muy difícil (glosario §6.1; 02 §10). Nombra fauna (jaguar).,16,pendiente_asesor,traducido,traducido,Clave derivada [P]. Pendiente del asesor cultural (07 §8.2).,
+@@ -175,6 +183,7 @@ river_lowered_cuia,El río bajó: esta vez hay una cuia más,The river dropped:
+ river_map,Mapa del río,River Map,Mapa do Rio,"Botón del menú de pausa que abre el Mapa del río encima del nivel, sin salir de él (02 §5; D-013, punto 7; 04 §5.2).",20,aprobado_es,traducido,traducido,"Término del glosario §7.1 (river_map), con su EN y su PT-BR. Tarea M4.3.",
+ settings,Ajustes,Settings,Configurações,Botón de Ajustes del inicio (glosario §10).,16,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
+ settings_about_amazon,Sobre la Amazonía,,,"Cabecera de la sección de Ajustes con la lista de Frutas del río (07 §8.2: «una sección Sobre la Amazonía en Ajustes con la fuente de cada Dato del río»; D-017 Q4-A: Ajustes › «Sobre la Amazonía» › «Frutas del río»). Debajo, fact_sheet_title y una ficha por fruta. Nunito Bold de 17 sp, como Idioma y Patrones de fruta. Capturas (FruitSheetSnapshotTests): Logs/snapshots/es-419/f4_07_settings_about_780_100.png y Logs/snapshots/en-XA/f4_07b_settings_about_top_640_130.png.",24,borrador,,,[P] Tarea F4. Sin clave en el glosario §10: pendiente de registrarla (decide el dueño).,
++settings_delete_account,Eliminar cuenta y datos,,,"Enlace al final de Ajustes y título del primer paso de la confirmación (08 §11, fila «Eliminación de cuenta»: Ajustes › «Eliminar cuenta y datos»). Habla el juego.",28,pendiente_asesor,,,"Bloque B8. Texto literal de 08 §11; lo usa también la ficha de Play (08 §13.1 #7).",
+ settings_idle_hint,Pista por inactividad,Hint when idle,Dica por inatividade,"Fila de Ajustes (02 §3.4 y §12; 04 §2.3; 07 §7.8; tarea MO3): interruptor del ajuste settings.idle_hint [P], activado por defecto; apagado equivale a hint_idle_delay_s = 0 en el dispositivo (tras 12 s sin toques ninguna cuia pulsa) y no afecta a Morpho. Captura: Ajustes en Logs/snapshots/es-419/ (SettingsSnapshotTests).",24,borrador,traducido,traducido,"[P] Tarea MO3. El nombre es el de 02 §12 y 07 §7.8. EN y PT-BR, pendientes del traductor (no están en el glosario §10).",
+ settings_language_auto,Automático,Automatic,Automático,Opción de Ajustes › Idioma: el idioma del teléfono (settings.language = auto; D-018 Q7-A). Va junto al nombre de cada idioma.,16,borrador,traducido,traducido,[P] Tarea L3.,
+ settings_notifications,Avisos,,,"Fila de Ajustes que enciende y apaga los avisos (06 §8.1: «después, solo un acceso en Ajustes»; settings.push).",20,pendiente_asesor,,,"[P] B6: el GDD no da el texto. La fila la pinta la UI de Ajustes (SettingsScreen, del escritorio).",
+diff --git a/Assets/_Project/Tests/EditMode/LocTablesTests.cs b/Assets/_Project/Tests/EditMode/LocTablesTests.cs
+index fd3b5331..b1b2a285 100644
+--- a/Assets/_Project/Tests/EditMode/LocTablesTests.cs
++++ b/Assets/_Project/Tests/EditMode/LocTablesTests.cs
+@@ -544,6 +544,15 @@ internal static List<string> UiTextKeys()
+             // La Pororoca del Spark (bloque B2; B2-strings.csv): las pinta AF.UI.ShuffleText.
+             keys.AddRange(ShuffleText.AllKeys);
+ 
++            // B8: «Eliminar cuenta y datos» (Ajustes y su diálogo de dos pasos), que pinta AF.UI.AccountText.
++            foreach (FieldInfo f in typeof(AccountText.Keys).GetFields(BindingFlags.Public | BindingFlags.Static))
++            {
++                if (f.IsLiteral && f.FieldType == typeof(string))
++                {
++                    keys.Add((string)f.GetValue(null)!);
++                }
++            }
++
+             return keys;
+         }
+ 

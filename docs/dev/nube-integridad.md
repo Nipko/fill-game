@@ -132,6 +132,7 @@ pudo eliminar» y no se borra nada más. Sonda: `AF_STATE af_account_delete` con
 | Q-B8-9 | Orden de `ApplyLedger` cuando hay que acreditar y retirar a la vez | (a) orden ordinal de token, lo que toque a cada uno · (b) primero acreditar y luego retirar | **(a)** [P]: determinista; con (b) se retiraría más |
 
 | Q-B8-10 | ¿Se guarda la sospecha de un perfil editado para la fusión? Hoy se mide (`fraud_flag`) y la primera escritura lo vuelve a firmar: editar sin red, jugar y conectar después gana como coherente | (a) solo medir (como hoy) · (b) un indicador persistente en `integrity` que la fusión trate como no coherente | **(a)** [P] (08 §10.1: sin castigo automático; la economía de semillas es autoritativa en cliente) |
+| Q-B8-11 | Con B6 integrado, ¿cómo se fusionan `settings.push` y `stats.last_seen_at` / `last_win_at`? Hoy se quedan los del ganador | (a) `last_seen_at` y `last_win_at` por máximo; `pre_prompt_shown` y `second_prompt_shown` por «o»; `pre_prompt_at` el más antiguo; `granted` el del dispositivo (propuesta de B6) · (b) todo del ganador (como hoy) | **(a)**, **sin aplicar**: llegó con la fusión de B6 tras la revisión de B8; es una línea por campo en `CloudMerge.MergeFields` con su caso en `CloudMergeTests` |
 
 Preguntas de otros bloques que este cierra:
 - **B1a-Q1** (D-033, (a)): aplicada en `CloudMerge.MergeDaily`.
@@ -140,7 +141,8 @@ Preguntas de otros bloques que este cierra:
 
 ## 8. Lo que queda para el integrador o para los SDK
 
-- Aplicar los parches en orden (§9) y copiar las claves de `B8-strings.csv` a `strings.csv`.
+- Aplicar los parches en orden (§9), con `B8-loc.diff` para los textos (en vez de copiar `B8-strings.csv` a mano).
+- Con B6 ya integrado: `CloudMerge` no fusiona `settings.push` ni `stats.last_seen_at` / `last_win_at` (se quedan los del ganador). B6 propone `last_seen_at` y `last_win_at` por máximo y `pre_prompt_shown` / `second_prompt_shown` por «o», con `granted` del dispositivo [P]: pendiente de decidir (Q-B8-11).
 - Con Play Games (dueño): un marcador persistente de «borrado pendiente» que se procese antes de `CloudSync.AtStartup` (si el `Delete`
   de la nube falla, el arranque siguiente descargaría la cuenta borrada); la implementación real de `ICloudSave` y las subidas periódicas (cada `save_cloud_interval_levels` niveles,
   tras cada compra y al pasar a segundo plano), con `CloudSync.Upload`; esperar el `Load` asíncrono en el arranque.
@@ -164,7 +166,10 @@ Preguntas de otros bloques que este cierra:
 3. **`B8-ui.diff`** (necesita el 1): `SettingsScreen.cs`, `GameBootstrap.cs`, `GameBootstrap.Streak.cs` y `GameBootstrap.Daily.cs`, y una línea de
    `ResumeTests.cs` y de `SyncSaveTests.cs` (el almacén del lote es ahora `SigningProfileStore`: comprueban su `Inner`); añade
    `UI/GameBootstrap.Cloud.cs` y `Tests/PlayMode/AccountAndCloudTests.cs` (con sus .meta).
-4. **`B8-strings.csv`**: 9 claves a `strings.csv`.
+4. **`B8-strings.csv`**: 9 claves a `strings.csv`. Desde que `LocTablesTests.EveryUiTextKey_Exists_AndEveryStringsRow_IsUsed` exige que
+   toda fila la use la UI (y `strings.csv` va en orden ordinal de clave), copiarlas a mano no basta: **`B8-loc.diff`** (necesita el 3)
+   las mete en su sitio y registra las claves de `AccountText.Keys` en `LocTablesTests.UiTextKeys`, como B3 y B6. Aplicar `B8-loc.diff`
+   en vez de copiar el CSV.
 
-Prueba: `git apply` de 1, 2 y 3 sobre la rama, `unity-compile`, EditMode (`ProfileB8Tests`, `WalletB8Tests`) y PlayMode
-(`AccountAndCloudTests`).
+Prueba: `git apply` de 1, 2, 3 y `B8-loc.diff` sobre la rama, `unity-compile`, EditMode (`ProfileB8Tests`, `WalletB8Tests`, `LocTablesTests`) y
+PlayMode (`AccountAndCloudTests`, `PseudoLocOverflowTests`).
