@@ -88,7 +88,7 @@ describe('rewardedSsv: event_id de un solo uso', () => {
   });
 
   it('si la primera vez falló al escribir la recompensa, el reintento la escribe', async () => {
-    db.failNext = { command: 'Put', table: TABLES.AF_TABLE_REWARDS, error: new Error('boom') };
+    db.failNext = { command: 'TransactWrite', error: new Error('boom') };
     expect((await call(UID, N1, 'ev-1')).status).toBe(500);
     expect((await call(UID, N1, 'ev-1')).body).toEqual({ status: 'ok' });
   });

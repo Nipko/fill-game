@@ -7,6 +7,7 @@ import {
   GetCommand,
   PutCommand,
   QueryCommand,
+  TransactWriteCommand,
   UpdateCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
@@ -38,6 +39,27 @@ export function conditionalFailed(): Error {
   return e;
 }
 
+/** Transacción cancelada como la devuelve DynamoDB: un motivo por elemento, en orden. */
+export function transactionCanceled(codes: string[]): Error {
+  const e = new Error('Transaction cancelled') as Error & { CancellationReasons: Array<{ Code: string }> };
+  e.name = 'TransactionCanceledException';
+  e.CancellationReasons = codes.map((Code) => ({ Code }));
+  return e;
+}
+
+type TxItem = {
+  Put?: { TableName: string; Item: Item; ConditionExpression?: string; ExpressionAttributeValues?: Item };
+  ConditionCheck?: { TableName: string; Key: Item; ConditionExpression: string; ExpressionAttributeValues?: Item };
+};
+
+/** Las condiciones que usan las transacciones de las Lambdas (y solo esas). */
+function txConditionHolds(cond: string | undefined, cur: Item | undefined, values: Item | undefined): boolean {
+  if (cond === undefined) return true;
+  if (cond === 'attribute_not_exists(#k) OR #t <= :now') return !cur || Number(cur.ttl) <= Number(values?.[':now']);
+  if (/^attribute_not_exists\([#a-z_]+\)$/.test(cond)) return !cur;
+  throw new Error(`Condición no soportada en MemDb: ${cond}`);
+}
+
 export class MemDb {
   readonly tables = new Map<string, Map<string, Item>>();
   // Región y credenciales de mentira: el envío está simulado y nunca sale a la red.
@@ -49,11 +71,20 @@ export class MemDb {
   unprocessedOnce = new Set<string>();
   /** Si se pone, la siguiente operación de este tipo lanza este error. */
   failNext: { command: string; table?: string; error: Error } | undefined;
+  /** Si se pone, se ejecuta una vez justo antes de la siguiente operación de ese tipo (para simular carreras). */
+  hookNext: { command: string; table?: string; fn: () => void } | undefined;
+  /** Claves que el GSI by_uid no enseña en la próxima consulta (consistencia eventual del índice). */
+  hiddenFromIndexOnce = new Set<string>();
 
   constructor() {
     const m = mockClient(DynamoDBDocumentClient);
     this.mock = m;
     const guard = (command: string, table?: string): void => {
+      if (this.hookNext?.command === command && (this.hookNext.table === undefined || this.hookNext.table === table)) {
+        const fn = this.hookNext.fn;
+        this.hookNext = undefined;
+        fn();
+      }
       if (this.failNext?.command === command && (this.failNext.table === undefined || this.failNext.table === table)) {
         const e = this.failNext.error;
         this.failNext = undefined;
@@ -82,7 +113,7 @@ export class MemDb {
         const cur = t.get(key);
         if (i.ConditionExpression && cur && cur.uid !== i.ExpressionAttributeValues?.[':u']) throw conditionalFailed();
         t.delete(key);
-        return Promise.resolve({});
+        return Promise.resolve((i as { ReturnValues?: string }).ReturnValues === 'ALL_OLD' && cur ? { Attributes: structuredClone(cur) } : {});
       },
     );
     m.on(UpdateCommand).callsFake(
@@ -117,12 +148,25 @@ export class MemDb {
         throw new Error(`UpdateExpression no soportada en MemDb: ${i.UpdateExpression}`);
       },
     );
+    m.on(TransactWriteCommand).callsFake((i: { TransactItems: TxItem[] }) => {
+      guard('TransactWrite');
+      const codes = i.TransactItems.map((it) => {
+        const op = it.Put ?? it.ConditionCheck;
+        if (!op) throw new Error('MemDb: solo Put y ConditionCheck en transacciones');
+        const key = it.Put ? { [PK[op.TableName]]: it.Put.Item[PK[op.TableName]] } : it.ConditionCheck!.Key;
+        return txConditionHolds(op.ConditionExpression, this.get(op.TableName, key), op.ExpressionAttributeValues) ? 'None' : 'ConditionalCheckFailed';
+      });
+      if (codes.some((c) => c !== 'None')) throw transactionCanceled(codes);
+      for (const it of i.TransactItems) if (it.Put) this.put(it.Put.TableName, it.Put.Item);
+      return Promise.resolve({});
+    });
     m.on(QueryCommand).callsFake(
       (i: { TableName: string; IndexName?: string; ExpressionAttributeValues: Item }) => {
         guard('Query', i.TableName);
         if (i.IndexName !== 'by_uid') throw new Error('MemDb solo consulta by_uid');
+        const pk = PK[i.TableName];
         const items = [...this.table(i.TableName).values()]
-          .filter((it) => it.uid === i.ExpressionAttributeValues[':u'])
+          .filter((it) => it.uid === i.ExpressionAttributeValues[':u'] && !this.hiddenFromIndexOnce.delete(String(it[pk])))
           .sort((a, b) => Number(a.ts ?? 0) - Number(b.ts ?? 0))
           .map((it) => structuredClone(it));
         return Promise.resolve({ Items: items });
