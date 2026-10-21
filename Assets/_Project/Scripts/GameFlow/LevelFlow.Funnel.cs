@@ -315,8 +315,8 @@ namespace AF.GameFlow
 
         /// <summary>
         /// «Rendirse» [P] desde el 31 (D-008, paso 1 → 2): abre ¿Seguro?; sin canoa en juego (Canoas infinitas, o 0 canoas si
-        /// las infinitas caducaron a mitad de nivel: <see cref="CanoeAtStake"/>) no hay nada que confirmar y pasa directo al
-        /// fallo duro y a Nivel fallido.
+        /// las infinitas caducaron a mitad de nivel, o <c>biz_feature_lives</c> apagado: <see cref="CanoeAtStake"/>) no hay nada
+        /// que confirmar y pasa directo al fallo duro y a Nivel fallido.
         /// </summary>
         public bool PressGiveUp()
         {
