@@ -6,6 +6,146 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-21 · B12 · Consentimiento y edad, con implementaciones falsas (`spark/t5-b12`): HECHA · verificación completa VERDE · lista para integrar
+
+- **Rama:** `spark/t5-b12`, desde `origin/integracion-fase1-fase2` en `4a9a42a0`.
+  - Sin fusiones: la integración no se movió durante el bloque (`git fetch` antes de la verificación final).
+  - Empujada, sin `--force`.
+- **Nota:** `docs/dev/consentimiento.md`. Recoge:
+  - qué hace;
+  - los archivos y los parches;
+  - lo que queda para los SDK;
+  - las preguntas Q-B12-1 a Q-B12-16;
+  - los hallazgos para el GDD;
+  - las sugerencias abiertas de la revisión (§6).
+- **Canon:**
+  - 08 §2.3 (arranque), §4.3 (`profile.consent`), §7 («Consentimiento»), §8.1-§8.2 (`consent_profile`, `af_consent` y `af_settings_change`) y §9 (las 5 claves `consent_*` y `biz_*`);
+  - 05 §7;
+  - 06 §2.1, regla 3;
+  - Q-T3 (a) y Q-T4 (a) de D-033.
+- **Qué hace:**
+  - **Pantalla de edad neutral:** tres bandas iguales y ninguna marcada.
+    - `<13`: bloqueo en la 1.0 («Pide a un adulto que instale el juego», sin sesión de juego).
+    - `13-17`: `npa`, contenido G y doble confirmación de compras.
+    - `18+`: normal.
+  - **Consentimiento propio:** finalidades separadas y «Rechazar todo» al mismo nivel que «Aceptar todo».
+    - Perfil legal por SIM → región → `default` estricto.
+    - UMP decide los anuncios en el EEE, el Reino Unido y Suiza.
+  - `profile.consent` como prueba LGPD.
+  - **Flags:**
+    - a la analítica, con la recogida apagada hasta decidir (B7);
+    - a los anuncios: TFCD, `npa`, G y sin inicializar hasta decidir;
+    - a la tienda: sin compras con `<13` o sin decidir, falla cerrada.
+  - **Compras de 13-17:** segunda confirmación con el precio de la tienda antes de la hoja de Google Play. No se confirma lo que no se puede comprar.
+  - **Ajustes:**
+    - «Privacidad y datos», que cambia o retira, y con UMP reabre su mensaje;
+    - «Corregir mi edad», una vez.
+  - **Textos legales:** [P], en `borrador` con la nota «pendiente del abogado» (Q-B12-5).
+  - Sin SDK, sin paquetes, sin permisos (la SIM se lee sin `READ_PHONE_STATE`) y sin red.
+- **Commits** (del más antiguo al más reciente):
+  - `ac8e84bd`: la lógica sin motor, los decoradores, el lector de Remote Config, las pantallas, Ajustes, la sonda y los tests;
+  - `1a9d401f`: los parches y la nota;
+  - `ed31a5a8`, `aea499f4` y `8008af94`: los arreglos de las revisiones 1, 2 y 3;
+  - `9ecacbd0`, `4ebfdb95` y `06f20442`: los parches regenerados tras cada revisión;
+  - el commit de esta entrada.
+- **En la rama** (archivos nuevos; ningún archivo del escritorio cambia):
+  - `Scripts/Platform/ConsentModel.cs`, `ConsentConfig.cs`, `ConsentPolicy.cs` y `ConsentFlow.cs`;
+  - `Scripts/Ads/ConsentAdService.cs` y `Scripts/IAP/ConsentStoreService.cs`;
+  - `Scripts/RemoteConfig/Binding/ConsentConfigBinder.cs`;
+  - `Scripts/UI/ConsentText.cs`, `ConsentScreen.cs`, `AndroidSimCountry.cs`, `SettingsScreen.Consent.cs`, `GameBootstrap.Consent.cs` y `DevProbe.Consent.cs`;
+  - tests: `Tests/EditMode/ConsentTests.cs`, `Scripts/Ads/Tests/ConsentAdServiceTests.cs`, `Scripts/IAP/Tests/ConsentStoreTests.cs` y `Tests/PlayMode/ConsentScreenTests.cs`.
+- **Parches** (`docs/dev/traspaso/spark-enganches/`, en LF, en este orden, con `git -c core.autocrlf=false apply`):
+  1. `B12-profile.diff`: `Profile.Consent`, `ProfileJson` (tolerante), `ProfileConsentStore` y `ProfileConsentTests`.
+  2. `B12-rc.diff`: `[RemoteConfigKey]` en `ConsentConfig`, `RcConfigBinder.BoundKeys`, `RcConfigs.Consent` y `RcConfigBinderTests`.
+  3. `B12-ui.diff` (necesita el 1 y el 2):
+     - en `GameBootstrap.cs`:
+       - envolver anuncios y tienda;
+       - `BlockedAtBoot`, `SetUpConsent` y `StartConsentAtBoot`/`WaitConsentAtBoot` antes de `AppFlow.Start`;
+       - el Atrás;
+       - las filas de Ajustes;
+     - `GameBootstrap.Consent.cs`, con `_rcConfigs.Consent`;
+     - `GameBootstrap.Sessions.cs` (`ConsentHoldsSession`);
+     - el comentario de `GameBootstrap.Telemetry.cs`;
+     - `SettingsScreen.cs`;
+     - `PlayModeHelpers.cs`: `ConsentEnabledOverride ??= false` y `LoadAppWithConsent`;
+     - `ConsentBootTests` (PlayMode, la escena real).
+  4. `B12-loc.diff`: 23 claves en `strings.csv`, por orden ordinal, y `ConsentText.AllKeys` en `LocTablesTests.UiTextKeys`.
+  - Sin parche de `AppFlow`: el paso «Consent» de 08 §2.2 corre con `AppFlow` en `Boot` (nota §2.2).
+- **Choques con B8** (`spark/t5-b8`, sin integrar):
+  - `SettingsScreen.EmitLayout`: la suma de `n`, a mano: `+ AccountLayoutCount + ConsentLayoutCount`;
+  - `LocTablesTests` y `ProfileJson` tocan puntos distintos;
+  - `CloudMerge` (B8) debería conservar el `consent` del dispositivo (Q-B12-8).
+- **Revisión** (skill `code-review` con las reglas de `.claude/agents/code-reviewer.md`; el subagente no estaba disponible):
+  - **1.ª ronda: 10 hallazgos, arreglados:**
+    - UMP forzaba `npa`;
+    - el país desconocido no era estricto;
+    - `<13` desde Ajustes dejaba la sesión viva; ahora recarga la escena y para en `BlockedAtBoot`;
+    - sin enlace de UMP en Ajustes;
+    - la doble confirmación antes de `CheckPurchasable`;
+    - una confirmación tapada se quedaba colgada;
+    - el perfil y la versión de la corrección no coincidían con `af_consent`;
+    - una sola fuente de `ConsentConfig`;
+    - la tienda falla cerrada;
+    - código muerto.
+  - **2.ª ronda: 10 hallazgos, arreglados:**
+    - un perfil legal distinto vuelve a preguntar;
+    - 13-17 con UMP sin la restricción;
+    - la sonda `npa`/`ump`;
+    - los flags una vez por decisión;
+    - la tienda recomprueba los flags al responder;
+    - los textos con quién habla y la captura pendiente (Q-B12-16);
+    - el texto de `consent_ads_ump`.
+  - **3.ª ronda: 1 bloqueante y 6 menores, arreglados:**
+    - la línea de anuncios sigue a los flags;
+    - `Flags` con el perfil y el país de ahora;
+    - Play Games solo decidido;
+    - las claves de país en mayúsculas;
+    - sin avisos con la edad pendiente;
+    - la tabla de la nota.
+  - **4.ª ronda: APROBADO**, con 8 sugerencias que quedan en la nota §6, la más relevante:
+    - `ConsentHoldsSession` no cubre el segundo de la pantalla de arranque de quien debe volver a decidir.
+- **Verificación** (ARM64, `-Architecture arm64`; un solo Unity a la vez):
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`06f20442` + entrada) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos y 0 errores; **1.002 (996 + 6), 0 fallos**; 103/103, sin cambios en `tools/out/schema_example_08_4_1.json` |
+  | rama | `unity-compile`; EditMode; PlayMode | 0; **3.821 (3.818 + 3), 0 fallos** (4,9 min); **1.726 (1.489 + 237), 0 fallos** (34,5 min) |
+  | rama + los cuatro parches | `unity-compile`; EditMode; PlayMode | 0; **3.830 (3.826 + 3) y 1 fallo de tiempo** (`IntroArtTests.FruitFlight…GeneratedWithin10ms`), que relanzado con filtro da 9/9 (no es de B12); **1.733 (1.496 + 237), 0 fallos** (34,5 min) |
+
+- **Preguntas para el dueño** (se avanzó con la recomendada; detalle y opciones en la nota §4):
+
+  | Id | Pregunta | Recomendada |
+  |---|---|---|
+  | Q-B12-1 | Pantalla de edad: tres botones o año de nacimiento | (a) tres botones |
+  | Q-B12-2 | ¿Repetir la edad al subir los textos? | (a) no, solo las finalidades |
+  | Q-B12-3 | Bloqueo `<13` definitivo | (a) sí |
+  | Q-B12-4 | Diagnóstico sin interruptor | (a) sí, pendiente del abogado |
+  | Q-B12-5 | Estado «pendiente del abogado» | (a) `borrador` + nota |
+  | Q-B12-6 | Doble confirmación: una pantalla más | (a) |
+  | Q-B12-7 | Analítica con 13-17 | (a) se puede aceptar |
+  | Q-B12-8 | `consent` en la nube | (a) es del dispositivo |
+  | Q-B12-9 | Analítica en UMP | (a) en la pantalla propia |
+  | Q-B12-10 | `consent.age_band_corrected` | anotarlo en 08 §4.3 |
+  | Q-B12-11 | `af_settings_change.value` | `choices` o `age` |
+  | Q-B12-12 | El encargo dice que `INTERNET` no está aprobado; D-036 sí lo aprobó | sin efecto en B12 |
+  | Q-B12-13 | Lo más estricto sin país | (a) `default` + `npa` sin elección |
+  | Q-B12-14 | Extraer `OptionRow` | (a) al integrar |
+  | Q-B12-15 | Otro perfil legal: volver a preguntar | (a) sí |
+  | Q-B12-16 | Capturas de los textos nuevos | (a) el integrador con `SnapshotKit` |
+
+- **Riesgos:**
+  - **Legal:**
+    - todos los textos son borradores sin el abogado;
+    - la autenticación de Google Play no se puede forzar desde el cliente [NV];
+    - Play Age Signals sin implementar;
+    - la neutralidad de la pantalla de edad la valida el abogado.
+  - **SDK:** pasar los flags reales a MAX (TFCD, `npa`, G, el formulario de UMP) y al sumidero de Firebase [NV].
+  - **Sesión:** la del arranque en frío se cuenta antes de la pantalla de edad (`stats.sessions`) [P].
+  - **Bloqueo:** con `<13`, la recarga de la escena reutiliza `RebuildUi`, cuyo `PersistNow` pone «idioma» en el log.
+  - **Ajustes en el teléfono:** probar la fila de Privacidad al 130 % y en 16:9 (sin capturas en el Spark).
+
+---
+
 ## 2026-10-20 · B7 · `AF.RemoteConfig` + `AF.Analytics` con implementaciones falsas, y el bus `AF.Events` (`spark/t5-b7`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/t5-b7`, desde `9eb593c`. Fusiona `origin/integracion-fase1-fase2` cinco veces: `e11b4246` en `5a39eae0`, `d994e586` (B14) en `e058645f`, `eb863f54` (B1b-Q10) en `513acee9`, `803e9723` (B2, B3, B6 y B13) en `671646f9` y `d933dcde` (backend F2) en `4df8a380`. Sin conflictos, salvo esta misma entrada de `spark-estado.md` (se dejan las dos). Empujada.

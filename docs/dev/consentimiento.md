@@ -63,7 +63,7 @@ Bloque B12 de `docs/dev/plan-tanda5.md` §4, con las decisiones Q-T3 (a) y Q-T4 
 
 | Banda | Analítica | Anuncios | TFCD | Compras | Play Games | RC personalizado |
 |---|---|---|---|---|---|---|
-| sin decidir | no | `npa`, sin inicializar | no | no | — | no |
+| sin decidir | no | `npa`, sin inicializar | no | no | no | no |
 | `<13` | no | `npa`, sin inicializar | **sí** | no | no | no |
 | `13-17` (con `biz_under18_no_personalization`, el default) | según decisión | `npa` siempre, también en el EEE | no | sí, con doble confirmación | sí | no |
 | `13-17` sin `biz_under18_no_personalization` | según decisión | como 18+ (interruptor o UMP) | no | sí, sin doble confirmación | sí | sí |
@@ -232,3 +232,21 @@ Se avanzó con la recomendada, marcada [P] en el código.
 - **05 §7**, fila «GDPR / UMP»: dice «UMP SDK del plugin GMA», y 08 §7 #2 lo sustituyó por la automatización de UMP de MAX (sin plugin GMA desde el 2026-10-06).
 - **05 §7**, fila «Lei 14.852/2024»: dice «PIN opcional de compras», y Q-T4 (a) lo sustituye por la doble confirmación + Google Play.
 - **08 §2.2**: `AF.Ads` y `AF.Analytics` dependen de «Consent», que no tiene fila. En el código, el consentimiento vive en `AF.Platform` (`ConsentPolicy`, `ConsentFlow`), como pedía el plan B12 (`S/Platform/Consent*.cs`). Proponer la fila o cambiar «Consent» por «Platform».
+
+---
+
+## 6. Sugerencias de la revisión que quedan abiertas
+
+La 4.ª revisión dio APROBADO. Estas sugerencias no bloquean; se pueden aplicar al integrar.
+
+1. **`ConsentHoldsSession`**: hoy solo retiene la sesión en los pasos Edad, Finalidades y Bloqueo.
+   - Durante el segundo de la pantalla de arranque de quien debe volver a decidir (textos nuevos u otro perfil legal), el flujo está en `None`: pasar a segundo plano en ese instante programaría avisos.
+   - Arreglo propuesto: `ConsentBlocked || (ConsentEnabled && flow != null && !flow.Flags.Decided)`.
+   - Falta además una prueba que llame a `SessionsPaused(true)` con la pantalla de edad abierta y compruebe que no se programa nada.
+2. **`ConsentPolicy.Flags`**: el perfil actual y el país son parámetros opcionales con valores permisivos. Conviene hacerlos obligatorios antes de que los lean los adaptadores de Play Games o de Remote Config personalizado.
+3. **Una sola fuente para «decide UMP»**: `ConsentPolicy.AdsByUmp(perfil, banda, config, país conocido)`, usada por `Flags` y por `ConsentFlow.AdsByUmp`. Además, unir las ramas 13-17 y 18+ de `Flags`.
+4. **`biz_legal_profile_by_country`**: con las claves en mayúsculas, «br» y «BR» chocan en silencio. Hay que anotar el duplicado como error.
+5. **`RcConfigs.Consent`**: pasarlo por el constructor, como `ClockSecurity`, en lugar de un setter `internal`.
+6. **El `context` de `consent_purpose_ads`** dice «solo con 18+ fuera de UMP». También sale con 13-17 si `biz_under18_no_personalization` está apagado, y nunca sale sin país.
+7. **Q-B12-14**: extraer `OptionRow`.
+8. **`PersistNow`**: escribe «idioma» también cuando `RebuildUi` recarga por el bloqueo.
