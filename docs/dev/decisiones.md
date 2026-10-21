@@ -3306,3 +3306,11 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Q-B5-10:** un solo cupo, el de la `TakeoverQueue` de B4 (`TakeoverQueueBudget`). Aplicada al integrar.
 - **Con D-033 ya decididas:** Q-E2, Q-E3, Q-E5 («Restaurar compras» oculto), Q-E6, Q-M4 y Q-M8.
 - **Sin conectar:** `VerifiedStoreService` (F3-3) en el Mercado, con F3-5.
+
+### D-033, añadido del 2026-10-21: respuestas del dueño a tres preguntas de B4 y B8
+
+- **Estado:** decididas por el dueño en el chat (formulario), con la recomendada en las tres.
+- **Q-B1 (B4):** «hoy ya terminaste un nivel» se guarda como `played_date` dentro de `calendar`, que queda `{cycle, next_day, last_claim_date, played_date}` [P]. Matiza el punto 6 del diseño aprobado de la Bitácora. Se anota en 08 §4.3.
+- **Q-B8-1 (B8):** al fusionar dos perfiles, `applied_purchases` es **la lista del perfil ganador**, y `restoreLedger` (el servidor) devuelve las compras que falten para reacreditarlas. Cambia 08 §11, que decía «unión». Se implementa en `CloudMerge` con su test.
+- **Q-B15 (B4):** se regeneran `tools/out/econ_A.md` y `econ_B_tramos.md`, que ya no se reproducían antes de B4, en una tarea aparte; antes de darlas por buenas se enseñan al dueño las cifras [sim] que cambien.
+- **Q-B3 (B4):** Marea = 30 semillas en la tasa de la Bitácora, como fijó D-033 (tasa (a)); se corrige 06 §4.2 donde diga 10.
