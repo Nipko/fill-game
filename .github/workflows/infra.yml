@@ -1,0 +1,84 @@
+# CI de infra/ (backend en AWS con CDK v2; D-035, tarea F1-6 de docs/dev/plan-backend-aws.md sec. 4 y sec. 9).
+# Reglas: .claude/rules/ci.md.
+#
+#   infra   en los PR y en main que tocan infra/ (o este workflow): npm ci, lint, typecheck, vitest y la sintesis
+#           de dev y de prod (cdk synth --all, con cdk-nag como plugin de validacion). Unos 2-4 min.
+#
+# Sin credenciales ni despliegue: ningun secreto, ninguna variable AWS_*, permissions solo de lectura (sin id-token,
+# asi que tampoco hay OIDC hacia AWS). La sintesis no consulta la cuenta (fromLookup esta prohibido en infra/) y
+# cdk.json desactiva telemetria, avisos e informe de version. Despliega el duenno desde su equipo (infra/README.md).
+
+name: infra
+
+on:
+  pull_request:
+    paths:
+      - 'infra/**'
+      - '.github/workflows/infra.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'infra/**'
+      - '.github/workflows/infra.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  NPM_CONFIG_AUDIT: 'false'
+  NPM_CONFIG_FUND: 'false'
+  NPM_CONFIG_UPDATE_NOTIFIER: 'false'
+
+jobs:
+  infra:
+    name: infra (lint, tipos, tests y synth dev/prod)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: infra
+    steps:
+      - uses: actions/checkout@v4.2.2
+        with:
+          lfs: false
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4.4.0
+        with:
+          # Node 24: el runtime de las Lambdas (engines de infra/package.json pide >= 22.18).
+          node-version: '24'
+          cache: npm
+          cache-dependency-path: infra/package-lock.json
+
+      - name: Sin credenciales de AWS en el entorno
+        run: |
+          set -uo pipefail
+          found=0
+          for v in AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_SESSION_TOKEN AWS_PROFILE AWS_ROLE_ARN AWS_WEB_IDENTITY_TOKEN_FILE AWS_CONTAINER_CREDENTIALS_FULL_URI AWS_CONTAINER_CREDENTIALS_RELATIVE_URI; do
+            if [ -n "${!v:-}" ]; then echo "::error::$v esta definida: este job valida sin credenciales."; found=1; fi
+          done
+          exit "$found"
+
+      - name: npm ci
+        run: npm ci
+
+      - name: lint
+        run: npm run lint
+
+      - name: typecheck
+        run: npm run typecheck
+
+      - name: tests (vitest)
+        run: npm test
+
+      - name: synth dev (cdk-nag)
+        run: npm run synth -- --all --quiet -c env=dev
+
+      # Desde F2c, prod exige -c firebaseAppIds; el CI sintetiza con un id de app de ejemplo, que no es real.
+      - name: synth prod (cdk-nag)
+        run: npm run synth -- --all --quiet -c env=prod -c firebaseAppIds=1:123456789:android:0123456789abcdef

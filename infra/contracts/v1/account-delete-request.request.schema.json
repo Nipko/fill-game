@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/account-delete-request.request.schema.json",
+  "title": "delete-request (web): petición",
+  "description": "Primer paso del borrado por web (08 §11; Q-B13-21): el código de Ajustes, nunca el UID.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "code"
+  ],
+  "properties": {
+    "code": {
+      "$ref": "common.schema.json#/$defs/accountCode"
+    }
+  }
+}

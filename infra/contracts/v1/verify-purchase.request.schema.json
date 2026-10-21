@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/verify-purchase.request.schema.json",
+  "title": "verifyPurchase: petición",
+  "description": "08 §10.3. El UID sale del ID token; el token de integridad va en la cabecera X-Firebase-AppCheck.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "token",
+    "sku"
+  ],
+  "properties": {
+    "token": {
+      "$ref": "common.schema.json#/$defs/purchaseToken"
+    },
+    "sku": {
+      "$ref": "common.schema.json#/$defs/sku"
+    },
+    "obfuscated_account_id": {
+      "description": "Lo que el cliente pasó a setObfuscatedAccountId (08 §10.1). Opcional: el servidor lo contrasta con el de Play.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 64
+    }
+  }
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/error.schema.json",
+  "title": "Error de la API v1",
+  "description": "Cuerpo de cualquier respuesta 4xx o 5xx. Nunca lleva el UID ni el token.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "error"
+  ],
+  "properties": {
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "code",
+        "message"
+      ],
+      "properties": {
+        "code": {
+          "type": "string",
+          "enum": [
+            "bad_request",
+            "unauthorized",
+            "integrity_failed",
+            "token_belongs_to_other_user",
+            "bad_signature",
+            "code_not_found",
+            "request_expired",
+            "rate_limited",
+            "not_implemented",
+            "upstream_error",
+            "internal_error"
+          ]
+        },
+        "message": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "retry_after_s": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 86400
+        }
+      }
+    }
+  }
+}

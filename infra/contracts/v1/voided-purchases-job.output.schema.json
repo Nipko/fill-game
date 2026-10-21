@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/voided-purchases-job.output.schema.json",
+  "title": "voidedPurchasesJob: resultado",
+  "description": "Resumen de una ejecución (08 §10.1; plan F2-7). not_implemented solo mientras la función es un esqueleto. Un fallo lanza error: el Scheduler reintenta y luego lo manda a la DLQ.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "ok",
+        "not_implemented"
+      ]
+    },
+    "pages": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "voided": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "tombstones": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Lápidas nuevas (F2c): anulaciones de tokens que aún no estaban en el libro mayor."
+    },
+    "cursor_ms": {
+      "$ref": "common.schema.json#/$defs/epochMs"
+    }
+  }
+}
