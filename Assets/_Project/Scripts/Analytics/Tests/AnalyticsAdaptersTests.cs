@@ -100,6 +100,44 @@ namespace AF.Analytics.Tests
             Assert.That(AnalyticsStoreService.ContextId(PurchaseContext.Piggy), Is.EqualTo("piggy"));
         }
 
+        [Test]
+        public void TheVerifiedStore_LogsALivePurchaseOnce_AndALateCreditWithoutContext()
+        {
+            // F3-5: con la tienda verificada, af_iap_result sigue saliendo una vez por compra abierta (por su resultado) y, para lo que
+            // se acredita después desde la cola (IsLive false), sale ok sin context (la cola no lo guarda: no se inventa) y purchase.
+            (AnalyticsService analytics, FakeAnalyticsSink sink) = NewAnalytics();
+            var clock = new ManualClock(new DateTime(2026, 10, 20, 15, 0, 0, DateTimeKind.Utc), TimeSpan.FromHours(-5));
+            Profile profile = Wallet.NewProfile(clock);
+            var store = new MemoryProfileStore();
+            var wallet = new Wallet(profile, store, clock);
+            var ledger = new StoreLedger(profile, wallet, store, clock);
+            StoreCatalog catalog = ledger.Catalog;
+            var backend = new AF.Backend.FakeBackendClient(clock) { GrantFor = r => CatalogGrants.For(catalog, r.Sku) };
+            var verified = new VerifiedStoreService(ledger, new FakeBillingClient(catalog, "USD", null, clock), backend, clock);
+            var service = new AnalyticsStoreService(verified, analytics);
+
+            PurchaseResult? live = null;
+            service.Purchase(new PurchaseRequest("af_coins_2", PurchaseContext.Shop), r => live = r);
+            Assert.That(live!.IsPurchased, Is.True);
+            Assert.That(sink.Names, Is.EqualTo(new[] { "af_iap_result", "purchase" }), "una vez: los eventos de la verificación en vivo no se repiten");
+
+            sink.Clear();
+            backend.FailNext(new AF.Backend.BackendError(AF.Backend.BackendErrorKind.Network));
+            PurchaseResult? pending = null;
+            service.Purchase(new PurchaseRequest("af_coins_3", PurchaseContext.Stuck, 31), r => pending = r);
+            Assert.That(pending!.Status, Is.EqualTo(PurchaseStatus.Pending));
+            Assert.That(sink.Names, Is.EqualTo(new[] { "af_iap_result" }));
+            Assert.That(sink.Events[0].Find("result")!.Value.Text, Is.EqualTo("pending"));
+
+            sink.Clear();
+            clock.Advance(TimeSpan.FromHours(1));
+            verified.Pump();
+            Assert.That(wallet.Seeds, Is.EqualTo(1000 + catalog.Get("af_coins_3").Content.Seeds), "acreditada una vez, tarde");
+            Assert.That(sink.Names, Is.EqualTo(new[] { "af_iap_result", "purchase" }));
+            Assert.That(sink.Events[0].ToJson(), Is.EqualTo("{\"event\":\"af_iap_result\",\"sku\":\"af_coins_3\",\"result\":\"ok\"}"));
+            Assert.That(analytics.Violations, Is.Empty);
+        }
+
         // Una compra cancelada de verdad, con el presentador que dice que no.
         private static PurchaseResult PurchaseResultFor(AnalyticsStoreService service, string sku, bool confirm)
         {

@@ -2,8 +2,10 @@
 using System;
 using System.Collections.Generic;
 using AF.Ads;
+using AF.Backend.Verification;
 using AF.Boosters;
 using AF.Economy;
+using AF.GameFlow;
 using AF.IAP;
 using AF.LiveOps;
 using AF.Platform;
@@ -14,7 +16,8 @@ namespace AF.RemoteConfig.Binding
     /// Las clases de cifras del cliente leídas de Remote Config (bloque B7; nota <c>docs/dev/remote-config-analytics.md</c> §2):
     /// cada propiedad con <c>[RemoteConfigKey]</c> de <see cref="EconomyConfig"/>, <see cref="BoosterConfig"/>,
     /// <see cref="AdsConfig"/>, <see cref="StoreConfig"/>, <see cref="OffersConfig"/>, <see cref="DailyChallengeConfig"/>, <see cref="StreakConfig"/>,
-    /// <see cref="BasketConfig"/> y <see cref="ClockSecurityConfig"/> toma el valor de su clave en unos valores congelados
+    /// <see cref="BasketConfig"/>, <see cref="ClockSecurityConfig"/>, <see cref="VerificationQueueConfig"/> y <see cref="RevocationConfig"/>
+    /// (F3-5), <see cref="TakeoverConfig"/> y <see cref="LoginCalendarConfig"/> (B4) toma el valor de su clave en unos valores congelados
     /// (<see cref="RcSnapshot"/>). Con los defaults compilados sale exactamente <c>X.Defaults</c> (lo prueba
     /// <c>RcConfigBinderTests</c>).
     /// <para>
@@ -161,6 +164,31 @@ namespace AF.RemoteConfig.Binding
             I<ClockSecurityConfig>("sec_clock_max_drift_h", (c, v) => c.SecClockMaxDriftH = v),
         };
 
+        // F3-5: la cola de verificación de compras (08 §10.3) y la revocación del SSV (08 §10.2).
+        private static readonly Entry<VerificationQueueConfig>[] VerificationEntries =
+        {
+            I<VerificationQueueConfig>("sec_purchase_deferred_ack_h", (c, v) => c.SecPurchaseDeferredAckH = v),
+        };
+
+        private static readonly Entry<RevocationConfig>[] RevocationEntries =
+        {
+            I<RevocationConfig>("sec_ssv_grace_h", (c, v) => c.SecSsvGraceH = v),
+        };
+
+        // B4: la cola de takeovers (rango de 08 §9: solo 1) y la Bitácora del río. La tasa va antes que la tabla, que se valida con
+        // ella; eco_calendar_table_v2 aún no tiene default en 08 §9 (pending): sin valor remoto queda la tabla compilada (Q-B4).
+        private static readonly Entry<TakeoverConfig>[] TakeoverEntries =
+        {
+            I<TakeoverConfig>("ui_max_takeovers_per_session", (c, v) => c.UiMaxTakeoversPerSession = v),
+        };
+
+        private static readonly Entry<LoginCalendarConfig>[] LoginCalendarEntries =
+        {
+            B<LoginCalendarConfig>("biz_feature_login_calendar", (c, v) => c.BizFeatureLoginCalendar = v),
+            Txt<LoginCalendarConfig>("eco_calendar_locked_booster_seeds", (c, text) => c.EcoCalendarLockedBoosterSeeds = ValueRate(text)),
+            OptionalTxt<LoginCalendarConfig>("eco_calendar_table_v2", (c, text) => c.EcoCalendarTableV2 = CalendarTable(text, c.EcoCalendarLockedBoosterSeeds)),
+        };
+
         /// <summary>Las claves que lee cada clase, en orden (para los tests de cobertura).</summary>
         public static IReadOnlyDictionary<Type, IReadOnlyList<string>> BoundKeys { get; } = new Dictionary<Type, IReadOnlyList<string>>
         {
@@ -173,6 +201,10 @@ namespace AF.RemoteConfig.Binding
             { typeof(StreakConfig), KeysOf(StreakEntries) },
             { typeof(BasketConfig), KeysOf(BasketEntries) },
             { typeof(ClockSecurityConfig), KeysOf(ClockEntries) },
+            { typeof(VerificationQueueConfig), KeysOf(VerificationEntries) },
+            { typeof(RevocationConfig), KeysOf(RevocationEntries) },
+            { typeof(TakeoverConfig), KeysOf(TakeoverEntries) },
+            { typeof(LoginCalendarConfig), KeysOf(LoginCalendarEntries) },
         };
 
         /// <summary>
@@ -197,6 +229,10 @@ namespace AF.RemoteConfig.Binding
             StreakConfig streak = Fill(new StreakConfig(), StreakEntries, rc, errors, c => c.Validate(), () => StreakConfig.Defaults);
             BasketConfig basket = Fill(new BasketConfig(), BasketEntries, rc, errors, c => c.Validate(), () => BasketConfig.Defaults);
             ClockSecurityConfig clock = Fill(new ClockSecurityConfig(), ClockEntries, rc, errors, c => c.Validate(), () => ClockSecurityConfig.Defaults);
+            VerificationQueueConfig verification = Fill(new VerificationQueueConfig(), VerificationEntries, rc, errors, c => c.Validate(), () => VerificationQueueConfig.Defaults);
+            RevocationConfig revocation = Fill(new RevocationConfig(), RevocationEntries, rc, errors, c => c.Validate(), () => RevocationConfig.Defaults);
+            TakeoverConfig takeovers = Fill(new TakeoverConfig(), TakeoverEntries, rc, errors, c => c.Validate(), () => TakeoverConfig.Defaults);
+            LoginCalendarConfig calendar = Fill(new LoginCalendarConfig(), LoginCalendarEntries, rc, errors, c => c.Validate(), () => LoginCalendarConfig.Defaults);
 
             // Compuertas de negocio (08 §9): el mantenimiento apaga anuncios e IAP; la versión mínima, las compras.
             ads.BizAdsEnabled = gates.AdsEnabled;
@@ -212,7 +248,14 @@ namespace AF.RemoteConfig.Binding
             {
                 boosters.RescueMaxPerLevel = 0;
             }
-            return new RcConfigs(rc, gates, economy, boosters, ads, store, offers, daily, streak, basket, clock, errors);
+            return new RcConfigs(rc, gates, economy, boosters, ads, store, offers, daily, streak, basket, clock, errors)
+            {
+                Verification = verification,
+                Revocation = revocation,
+                Takeovers = takeovers,
+                LoginCalendar = calendar,
+                BackendSwitch = new RcBackendSwitch(rc),
+            };
         }
 
         /// <summary>Atajo: <see cref="Bind"/> con los valores vigentes de <paramref name="service"/>.</summary>
@@ -272,6 +315,28 @@ namespace AF.RemoteConfig.Binding
 
         // JSON como texto, para los lectores propios de cada módulo (StreakMilestones, BasketConfig, DailyOverrides).
         private static Entry<T> Txt<T>(string key, Action<T, string> set) => new Entry<T>(key, (c, rc) => set(c, rc.Get<string>(key)));
+
+        // Como Txt, para una clave sin default compilado en 08 §9 (pending): sin valor remoto se queda el default del código.
+        private static Entry<T> OptionalTxt<T>(string key, Action<T, string> set) => new Entry<T>(key, (c, rc) =>
+        {
+            if (rc.TryGet(key, out string text))
+            {
+                set(c, text);
+            }
+        });
+
+        private static LoginCalendarValueRate ValueRate(string json)
+        {
+            if (!LoginCalendarValueRate.TryParse(json, out LoginCalendarValueRate rate))
+            {
+                throw new FormatException("eco_calendar_locked_booster_seeds no válido");
+            }
+
+            return rate;
+        }
+
+        // FormatException si no vale: se queda la tabla compilada (Q-B4).
+        private static LoginCalendarTable CalendarTable(string json, LoginCalendarValueRate rate) => LoginCalendarTable.Parse(json, rate);
 
         private static IReadOnlyList<TItem> Pairs<TItem>(RcJson json, Func<int, int, TItem> make)
         {
@@ -452,5 +517,45 @@ namespace AF.RemoteConfig.Binding
 
         /// <summary>Lo que no se pudo leer (clave: motivo), en orden; vacío si todo vino bien.</summary>
         public IReadOnlyList<string> Errors { get; }
+
+        /// <summary>Cola de verificación de compras (<c>sec_purchase_deferred_ack_h</c>; F3-5).</summary>
+        public VerificationQueueConfig Verification { get; internal set; } = VerificationQueueConfig.Defaults;
+
+        /// <summary>Revocación local del SSV (<c>sec_ssv_grace_h</c>; F3-5).</summary>
+        public RevocationConfig Revocation { get; internal set; } = RevocationConfig.Defaults;
+
+        /// <summary>Cola de takeovers (<c>ui_max_takeovers_per_session</c>; B4).</summary>
+        public TakeoverConfig Takeovers { get; internal set; } = TakeoverConfig.Defaults;
+
+        /// <summary>Bitácora del río (B4).</summary>
+        public LoginCalendarConfig LoginCalendar { get; internal set; } = LoginCalendarConfig.Defaults;
+
+        /// <summary><c>biz_backend_enabled</c> de estos valores (<see cref="RcBackendSwitch"/>; B7 y F3-5).</summary>
+        public IBackendSwitch BackendSwitch { get; internal set; } = new AF.IAP.BackendSwitch();
+    }
+
+    /// <summary>
+    /// <see cref="IBackendSwitch"/> desde Remote Config (B7; D-033, añadido de B7: «basta un adaptador en <c>AF.RemoteConfig.Binding</c>
+    /// que lea <c>biz_backend_enabled</c> del <c>RcSnapshot</c>»): el interruptor de corte del backend (08 §9, <c>bool</c>, <c>true</c>
+    /// [P]) con los valores congelados de la sesión. Si la clave no se puede leer, el default compilado
+    /// (<see cref="AF.IAP.BackendSwitch.Default"/>).
+    /// </summary>
+    public sealed class RcBackendSwitch : IBackendSwitch
+    {
+        private readonly bool _enabled;
+
+        /// <summary>Lee <c>biz_backend_enabled</c> de <paramref name="rc"/>.</summary>
+        public RcBackendSwitch(RcSnapshot rc)
+        {
+            if (rc == null)
+            {
+                throw new ArgumentNullException(nameof(rc));
+            }
+
+            _enabled = rc.TryGet(AF.IAP.BackendSwitch.Key, out bool on) ? on : AF.IAP.BackendSwitch.Default;
+        }
+
+        /// <inheritdoc />
+        public bool BizBackendEnabled => _enabled;
     }
 }
