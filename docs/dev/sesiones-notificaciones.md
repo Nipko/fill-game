@@ -98,6 +98,16 @@ Aplicar con `git apply` desde la raíz, en este orden:
 3. **`B6-notifications-real.diff`** (aparte; **no** entra en las pruebas generales). Antes, el integrador anota la versión en D-033. Ver la sección 8.
 4. **Textos:** las filas de `B6-strings.csv` a `strings.csv`. Sin ellas los avisos no se programan, porque falta su texto.
 
+**Choques conocidos con otros bloques:**
+- `B3-ui.diff`, `B6-bootstrap.diff` y `B7-bootstrap.diff` añaden cada uno una línea justo después de `SetUpStreak();` en `GameBootstrap.cs`. El integrador lo resuelve a mano con este orden: `SetUpSkip();` (B3), después `SetUpSessions();` (B6) y después `ConnectTelemetry();` (B7).
+- **Riesgo con B8** (en curso):
+  - `B8-profile.diff` toca `Profile.cs` y `ProfileJson.cs` en otros puntos. Hoy aplica (`--check`) encima de B6-profile.
+  - Su integridad y su fusión en la nube tienen que cubrir `settings.push` y `stats.last_seen_at` / `last_win_at`.
+  - Propuesta para la fusión [P]:
+    - `last_seen_at` y `last_win_at`, por máximo;
+    - `pre_prompt_shown` y `second_prompt_shown`, por OR;
+    - `granted`, el del dispositivo.
+
 Lo que el integrador debería anotar en el GDD: 08 §4.3 (`settings.push.pre_prompt_at` y `second_prompt_shown`, `stats.last_seen_at` y `last_win_at`); 08 §8.2 (`result` y `origin` de `af_push_prompt`, valores de `type`); 06 §8.3 (texto con `{left}` de «Crecida te espera», textos del D14/D30/D60); 06 §8.2 (los [P] de la sección 4).
 
 ## 8. La implementación real (`B6-notifications-real.diff`)
