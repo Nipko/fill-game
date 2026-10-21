@@ -32,7 +32,7 @@ La raíz **es** el proyecto Unity; Unity solo importa `Assets/` y `Packages/`.
   - `Data/Loc/`: tablas de textos `strings.csv`, `facts.csv` y `glossary.csv` (08 §4.7, contrato 32; reglas en `.claude/rules/localizacion.md`);
   - `Data/Content/`: calendarios de contenido, como `frutas_del_rio_v1.json` (08 §4.6, contrato 31);
   - `Data/Map/`: `river_map_v1.json` y `river_stops_v1.json` (08 §4.5, contratos 29 y 30), generados por `tools/river-map/`: no los edites a mano.
-- `scripts/`: `unity-compile.ps1`, `unity-test.ps1`. `ci/`: `size-gate.ps1`, `check-16kb.sh`.
+- `scripts/`: `unity-compile.ps1`, `unity-test.ps1`. `ci/`: `size-gate.ps1`, `check-16kb.sh`, `check-manifest.ps1`.
 - `.claude/`: `agents/` (7 subagentes), `rules/` (reglas por ruta), `skills/` (`unity-cli`, `unity-pipeline`), `settings.json` (permisos aprobados por el dueño el 2026-10-06; el 2026-10-09 pasó todas las reglas «ask» a «allow» para trabajar sin avisos: solo quedan las «deny». Las reglas duras de este archivo siguen valiendo aunque nada pida confirmación).
 - **Pendiente (no crear a mano):**
   - `.github/workflows/`: s30 y s32;
@@ -57,8 +57,9 @@ python tools/river-map/geometry.py --check            # cuando exista
 python -m unittest discover -s tools/river-map -p "test_*.py"
 python docs/research/mapa-del-rio/generar_mapa.py --check
 pwsh -NoProfile -File scripts/unity-compile.ps1       # ¿compila Unity? errores: solo las 30 primeras líneas "error CS"
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 3.359 hoy en integracion-fase1-fase2 (3.356 + 3 omitidos); dotnet test: 981 (975 + 6 omitidos)
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.589 (1.382 + 207 explícitos de capturas); antes de cada PR que toque Unity
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 3.367 hoy en integracion-fase1-fase2 (3.364 + 3 omitidos); dotnet test: 981 (975 + 6 omitidos)
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.655 (1.425 + 230 explícitos: capturas y los 16 KnownIssue de FX16a); antes de cada PR que toque Unity
+                                                      # tarda 30-40 min: el límite por defecto en PlayMode es -TimeoutSec 3600 (a 900 s no da veredicto)
 ```
 - Las pruebas de `tools/` van como fixtures (`tools/level-generator/specs/tests/`, `tools/level-qa/fixtures/`) y como un modo `--self-test` en la propia herramienta; `tools/river-map/` suma sus `test_*.py` (unittest). No hay proyectos de tests de `tools/` en `dotnet/AmazonFill.slnx`.
 - Los scripts de Unity lanzan `unity test <proyecto> --mode <Mode> --architecture arm64 ...` (respaldo: `Unity.exe -batchmode -runTests`). Códigos: 0 verde · 1 errores de compilación · 2 argumentos · 3 no encuentra el proyecto Unity (¿carpeta equivocada?) · 4 falta CLI o Editor · 5 proyecto abierto en un Editor · 6 sin veredicto (lee el log; no reintentes a ciegas) · 8 tests fallidos.
@@ -69,7 +70,7 @@ pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.589 (1.382 + 
   unity run <repo> --architecture arm64 --log-file Logs/smoke-android-N.log --no-tail --timeout 5400 --non-interactive -- -nographics -buildTarget Android -executeMethod AF.EditorTools.BuildSmoke.BuildAndroid
   ```
   `BuildSmoke` deja `Builds/Android/smoke.aab` y `smoke.apk` (ignorados por git); códigos 0 OK · 2 Player Settings distintos · 3 sin módulo Android · 4 build fallido.
-- Compuertas de build: `pwsh -NoProfile -File ci/size-gate.ps1 <aab>` (≤ 80 MB) y `bash ci/check-16kb.sh <aab|apk>`.
+- Compuertas de build: `pwsh -NoProfile -File ci/size-gate.ps1 <aab>` (≤ 80 MB) y `bash ci/check-16kb.sh <aab|apk>`; manifiesto fusionado (targetSdk/minSdk, permisos, appCategory, applicationId, solo arm64-v8a): `pwsh -NoProfile -File ci/check-manifest.ps1 <aab|apk> -Mode dev|release` (`dev` para `dev.apk` y el ensayo `BuildRelease.BuildAndroid -afRehearsal`).
 - Informa siempre los comandos ejecutados y su resultado. Nunca digas "verde" sin haberlo ejecutado.
 
 ## Estado y pendientes del dueño

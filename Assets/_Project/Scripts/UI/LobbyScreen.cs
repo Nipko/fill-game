@@ -164,6 +164,7 @@ namespace AF.UI
         private float _playTop;
 
         private int _playLevelShown = -1;
+        private PlayButtonMode _playModeShown = PlayButtonMode.Level;
         private string _labelShown = string.Empty;
         private int _seedsShown = -1;
         private int _canoesVisibleShown = -1;
@@ -424,6 +425,45 @@ namespace AF.UI
         /// <summary>Texto del botón Jugar.</summary>
         public string PlayLabel => _playLabel.text;
 
+        /// <summary>
+        /// El Reto del río está desbloqueado (lo da <c>GameBootstrap</c> al crearlo: en el build, con su interruptor y desde
+        /// <c>live_unlock_level_daily</c>); null o false = sin Reto. Decide el botón Jugar tras acabar el contenido (D-032,
+        /// punto 6; <see cref="PlayModeFor"/>).
+        /// </summary>
+        public Func<bool>? DailyUnlocked { get; set; }
+
+        /// <summary>Lo que dice y hace el botón Jugar ahora (<see cref="PlayModeFor"/>).</summary>
+        public PlayButtonMode PlayMode => _playModeShown;
+
+        /// <summary>
+        /// Qué es el botón Jugar del inicio (D-032, punto 6): con el nivel de <c>next_level</c> publicado, «Jugar · Nivel {n}»; tras
+        /// acabar el contenido (el siguiente nivel aún no está publicado), «Jugar · Reto del río» si el Reto está desbloqueado
+        /// (y al tocarlo, el Reto) y, si no, «Jugar» a secas (y al tocarlo, «El río sigue creciendo», como antes).
+        /// </summary>
+        public static PlayButtonMode PlayModeFor(bool levelAvailable, bool dailyUnlocked)
+        {
+            if (levelAvailable)
+            {
+                return PlayButtonMode.Level;
+            }
+
+            return dailyUnlocked ? PlayButtonMode.Daily : PlayButtonMode.ContentEnd;
+        }
+
+        /// <summary>El texto del botón Jugar para <paramref name="mode"/> y el nivel <paramref name="level"/> (claves de la tabla).</summary>
+        public static string PlayLabelFor(PlayButtonMode mode, int level)
+        {
+            switch (mode)
+            {
+                case PlayButtonMode.Daily:
+                    return UiText.PlayDaily;
+                case PlayButtonMode.ContentEnd:
+                    return UiText.Play;
+                default:
+                    return UiText.PlayLevel(level);
+            }
+        }
+
         /// <summary>Contador de canoas (botón: con 0/5 abre Sin canoas).</summary>
         public Button CanoesButton => _canoes;
 
@@ -649,10 +689,14 @@ namespace AF.UI
             }
 
             int level = app.PlayLevel;
-            if (level != _playLevelShown)
+            Func<bool>? daily = DailyUnlocked;
+            bool available = app.PlayLevelAvailable;
+            PlayButtonMode mode = PlayModeFor(available, !available && daily != null && daily());
+            if (level != _playLevelShown || mode != _playModeShown)
             {
                 _playLevelShown = level;
-                _playLabel.text = UiText.PlayLevel(level);
+                _playModeShown = mode;
+                _playLabel.text = PlayLabelFor(mode, level);
             }
 
             if (level != _stopLevelShown)
@@ -1131,5 +1175,18 @@ namespace AF.UI
             rt.anchoredPosition = new Vector2(x, -yTop);
             rt.sizeDelta = new Vector2(w, h);
         }
+    }
+
+    /// <summary>Qué dice y hace el botón Jugar del inicio (D-032, punto 6; <see cref="LobbyScreen.PlayModeFor"/>).</summary>
+    public enum PlayButtonMode
+    {
+        /// <summary>«Jugar · Nivel {n}»: abre ese nivel (o Sin canoas).</summary>
+        Level = 0,
+
+        /// <summary>«Jugar» tras acabar el contenido, sin el Reto: abre «El río sigue creciendo».</summary>
+        ContentEnd = 1,
+
+        /// <summary>«Jugar · Reto del río» tras acabar el contenido, con el Reto desbloqueado: abre el Reto.</summary>
+        Daily = 2,
     }
 }

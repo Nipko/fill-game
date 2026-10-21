@@ -841,6 +841,14 @@ namespace AF.UI
             }
 
             NoteFirstTouch(AppScreen.Lobby);
+
+            // Tras acabar el contenido, con el Reto del río desbloqueado, «Jugar · Reto del río» abre el Reto como su tarjeta (D-032,
+            // punto 6); sin él, «Jugar» abre «El río sigue creciendo», como siempre (AppFlow.PressPlay).
+            if (!_app.PlayLevelAvailable && DailyPlayUnlocked)
+            {
+                return PressPlayDaily();
+            }
+
             return _app.PressPlay();
         }
 

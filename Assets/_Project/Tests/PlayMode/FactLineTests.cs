@@ -333,7 +333,7 @@ namespace AF.Tests.PlayMode
                     }
 
                     shown++;
-                    shrunk += line.TextSizeDp < (VictoryLineSlot.TextSp * scale) - 0.01f ? 1 : 0;
+                    shrunk += line.TextSizeDp < (line.BodySp * scale) - 0.01f ? 1 : 0; // 14 sp, o 12 en la victoria compacta (D-032)
                     wrapped += line.HeaderWrapped ? 1 : 0;
                     Assert.That(line.ShownFactId, Is.EqualTo(schedule.FactIdFor(level)), what);
                     Assert.That(line.BodyText, Is.Not.Empty, what);
@@ -347,7 +347,7 @@ namespace AF.Tests.PlayMode
                     + line.NeedDp(scale, view.VictorySlotWidthDp) + ", medida en " + line.NeedMs.ToString("0.0") + " ms); sin línea: " + string.Join(", ", without));
                 Assert.That(shown + without.Count, Is.EqualTo(200));
                 Assert.That(shown, Is.GreaterThanOrEqualTo(180), "casi todas: solo faltan los 10k con dato de llegada");
-                Assert.That(shrunk, Is.EqualTo(0), "H es el de la línea más alta: ninguna baja de 14 sp");
+                Assert.That(shrunk, Is.EqualTo(0), "H es el de la línea más alta: ninguna baja de su cuerpo (14 sp; 12 en la victoria compacta, D-032)");
                 foreach (int level in without)
                 {
                     Assert.That(level % 10 == 0 && level >= 20 && stops.ArrivalOnWin(level)?.ArrivalFact != null, Is.True,
@@ -714,37 +714,17 @@ namespace AF.Tests.PlayMode
         }
 
         /// <summary>
-        /// La cinta de la victoria (38 dp sobre el panel) bajo la cabecera del HUD. En 16:9, desde DC3 (lienzo de 360 × 640 dp;
-        /// D-028), la ranura del Dato del río sube el panel por encima de la cabecera al 130 % (ranura de 212-266 dp: la cinta en
-        /// 30,6 dp en el 127 en es-419, −3,4 en el 39 y −23,4 en el 20 con SingleKey en en-XA, frente a 90) y, con Cosecha doble y
-        /// el chip del 40, ya al 100 % en en-XA (73 dp en el 39). Solo esos casos medidos se registran en vez de fallar (pendiente
-        /// del dueño, open issue de DC3; exigido en <c>VictoryArrivalTests.Victory_130_16x9_TheRibbonUnderTheHeader_KnownIssue</c>):
-        /// a 640 dp, con la escala de texto por encima del 100 % o en en-XA con la Cosecha doble y el chip del siguiente nivel. En
-        /// es-419 al 100 % (y en 19,5:9 y 20:9) siempre se exige, como con <paramref name="strict"/>.
+        /// La cinta de la victoria (38 dp sobre el panel) bajo la cabecera del HUD, siempre. Hasta FX16b, en 16:9 (lienzo de 360 ×
+        /// 640 dp; DC3, D-028) la ranura del Dato del río subía el panel por encima de la cabecera al 130 % y en en-XA con la
+        /// Cosecha doble y el chip del 40, y esos casos se registraban en vez de fallar; desde la victoria compacta (D-032, punto
+        /// 2; <c>GameScreen.VictoryCompact</c>) caben y se exigen como los demás. <paramref name="strict"/> se conserva por los
+        /// que lo pasan; ya no cambia nada.
         /// </summary>
         internal static void AssertRibbonUnderTheHeader(GameScreen view, string what, bool strict = false)
         {
             float ribbon = view.VictoryPanelTopDp - 38f;
-            if (!strict && ribbon < view.SlothBandTopDp && RibbonOverTheHeaderIsKnown(view))
-            {
-                TestContext.WriteLine(what + ": en 16:9 la cinta queda en " + ribbon.ToString("0.0") + " dp, "
-                    + (view.SlothBandTopDp - ribbon).ToString("0.0") + " dp por encima de la cabecera del HUD (pendiente del dueño, DC3).");
-                return;
-            }
-
-            Assert.That(ribbon, Is.GreaterThanOrEqualTo(view.SlothBandTopDp), what);
-        }
-
-        // Los casos medidos y registrados en DC3 (AssertRibbonUnderTheHeader): a 640 dp, al 130 % o en en-XA con la Cosecha doble y
-        // el chip del siguiente nivel.
-        private static bool RibbonOverTheHeaderIsKnown(GameScreen view)
-        {
-            if (view.CardCanvasHeight > GameScreen.MinHeight + 0.5f)
-            {
-                return false;
-            }
-
-            return UiBuilder.TextScale > 1.01f || (Loc.Locale == LocLocale.Pseudo && view.DoubleHarvestShown && view.NextChip.Visible);
+            Assert.That(ribbon, Is.GreaterThanOrEqualTo(view.SlothBandTopDp), what + " (escalón " + view.VictoryCompact + ")");
+            Assert.That(ribbon, Is.GreaterThanOrEqualTo(view.SlothHeaderBottomDp - 0.01f), what + ": bajo el pie de la cabecera del HUD");
         }
 
         /// <summary>La línea de fruta que se ve cabe en H y en la ranura, cada etiqueta en su caja y nada por debajo de 12 sp.</summary>

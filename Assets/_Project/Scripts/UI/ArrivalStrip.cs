@@ -80,6 +80,14 @@ namespace AF.UI
         /// <summary>Dato: Nunito Regular de 14 sp, nunca menos de 12 (02 §6).</summary>
         public const float FactSp = VictoryLineSlot.TextSp;
 
+        /// <summary>
+        /// Cuerpo del dato que se mide y se enseña ahora (sp, sin la escala de texto): <see cref="FactSp"/> (14) o, en la victoria
+        /// compacta de 16:9 (D-032, punto 2; <c>GameScreen.VictoryCompact</c>), <see cref="UiBuilder.MinTextSp"/> (12). Lo fija la
+        /// pantalla antes de medir y de colocar; <see cref="NeedDp"/> lo lleva en su caché. La bienvenida y el lugar no cambian
+        /// (ya van a <see cref="PlaceSp"/>, el mínimo).
+        /// </summary>
+        public float BodySp { get; set; } = FactSp;
+
         /// <summary>Entre las líneas de la placa [P].</summary>
         public const float LineGapDp = 2f;
 
@@ -460,7 +468,8 @@ namespace AF.UI
             for (int i = 0; i < _needs.Count; i++)
             {
                 NeedEntry e = _needs[i];
-                if (ReferenceEquals(e.Stops, stops) && e.Locale == locale && Mathf.Approximately(e.Scale, textScale) && Mathf.Approximately(e.Width, widthDp))
+                if (ReferenceEquals(e.Stops, stops) && e.Locale == locale && Mathf.Approximately(e.Scale, textScale) && Mathf.Approximately(e.Width, widthDp)
+                    && Mathf.Approximately(e.Body, BodySp))
                 {
                     return e.Height;
                 }
@@ -476,7 +485,7 @@ namespace AF.UI
                 }
             }
 
-            _needs.Add(new NeedEntry(stops, locale, textScale, widthDp, need));
+            _needs.Add(new NeedEntry(stops, locale, textScale, widthDp, BodySp, need));
             return need;
         }
 
@@ -515,7 +524,7 @@ namespace AF.UI
             {
                 case ArrivalKind.Arrival:
                     {
-                        float block = Lines(welcome, place, textW, textScale) + Measure(_measureBody, fact, FactSp * textScale, textW);
+                        float block = Lines(welcome, place, textW, textScale) + Measure(_measureBody, fact, BodySp * textScale, textW);
                         return Mathf.Ceil(RowDp + GapDp + pads + Mathf.Max(PortraitDp, block));
                     }
 
@@ -526,7 +535,7 @@ namespace AF.UI
                     }
 
                 case ArrivalKind.Deferred:
-                    return Mathf.Ceil(pads + Mathf.Max(PortraitDp, Measure(_measureBody, fact, FactSp * textScale, textW)));
+                    return Mathf.Ceil(pads + Mathf.Max(PortraitDp, Measure(_measureBody, fact, BodySp * textScale, textW)));
 
                 default:
                     return 0f;
@@ -978,7 +987,7 @@ namespace AF.UI
 
             y = PlaceLine(_welcomeLabel!, row ? WelcomeText : string.Empty, textX, y, textW, scale);
             y = PlaceLine(_placeLabel!, row ? PlaceText : string.Empty, textX, y, textW, scale);
-            SetLine(_factLabel!, fact ? FactText : string.Empty, FactSp * scale, textX, y, textW);
+            SetLine(_factLabel!, fact ? FactText : string.Empty, BodySp * scale, textX, y, textW);
         }
 
         // Brillo vertical del vidrio de la mini cuia (a la izquierda de la cavidad, como el del vidrio provisional), encima del
@@ -1151,12 +1160,13 @@ namespace AF.UI
 
         private readonly struct NeedEntry
         {
-            public NeedEntry(RiverStopCatalog stops, string locale, float scale, float width, float height)
+            public NeedEntry(RiverStopCatalog stops, string locale, float scale, float width, float body, float height)
             {
                 Stops = stops;
                 Locale = locale;
                 Scale = scale;
                 Width = width;
+                Body = body;
                 Height = height;
             }
 
@@ -1167,6 +1177,8 @@ namespace AF.UI
             public float Scale { get; }
 
             public float Width { get; }
+
+            public float Body { get; }
 
             public float Height { get; }
         }

@@ -467,7 +467,7 @@ namespace AF.UI
             // la Cosecha doble de encima quedan ≈ 12 dp.
             if (_nextChip.Visible)
             {
-                y += NextChipRowDp;
+                y += NextChipRowFor(_victoryCompact);
             }
         }
 
@@ -484,9 +484,9 @@ namespace AF.UI
                 return;
             }
 
-            // LayoutVictory ya bajó Siguiente lo que reservó LabelsVictoryReserve: el chip, centrado sobre su canto.
-            float panelW = Mathf.Min(328f, _canvasW - 32f);
-            _nextChip.PlaceCentered(panelW * 0.5f, _victoryCtaTopDp - NextChipHangDp); // creado tras Siguiente: va delante
+            // LayoutVictory ya bajó Siguiente lo que reservó LabelsVictoryReserve: el chip, centrado sobre su canto (en la fila de la
+            // victoria compacta, sobre el centro de «Siguiente», D-032).
+            _nextChip.PlaceCentered(_victoryNextCenterX, _victoryCtaTopDp - NextChipHangDp); // creado tras Siguiente: va delante
         }
 
         partial void LabelsTick(float dtMs)

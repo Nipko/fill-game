@@ -1,0 +1,12 @@
+<!--
+  Excepciones de Managed Stripping High (GDD 08 §5.4 y §3; D-033, Q-T6; bloque B10 de la tanda 5).
+  Solo lo que se crea por reflexión y el linker de IL2CPP no puede ver. El código del juego (AF.*) no usa reflexión
+  (lectores JSON propios: AF.Levels y AF.Save), así que no se preserva.
+  - Unity.InputSystem: crea layouts, procesadores e interacciones por nombre (InputSystem.RegisterLayout y cadenas como
+    "processors=..."); la acción de Atrás de Android (Escape) depende de ello.
+  Cuando lleguen los SDK (Firebase, IAP, MAX), sus entradas van aquí con la guía de cada SDK (08 §5.4).
+  Si un SDK falla por reflexión con High, se vuelve a Medium (08 §16.3, punto 3).
+-->
+<linker>
+  <assembly fullname="Unity.InputSystem" preserve="all" />
+</linker>
