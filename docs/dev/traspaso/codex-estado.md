@@ -153,3 +153,10 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - Las salidas del diff y el ensamblado se guardaron fuera del repositorio. Ningún nuevo deploy autorizado ni ejecutado; se pedirá el sí del dueño después del diff final. Secretos reales sin cargar.
 
 - El dueño informó haber completado la verificación de Google Cloud; al comprobar el resultado, la consola estaba en otra sesión de Google. Se alineó con la cuenta empresarial activa en Firebase y Google volvió a exigir verificación de identidad para esa cuenta. Pantalla dejada al dueño, sin introducir ni leer credenciales. No se creó ningún proyecto en la sesión distinta ni se autorizó un deploy.
+
+### Cuenta empresarial: cupo comprobado y bloqueo real — 2026-10-21
+
+- El dueño aclaró que la cuenta empresarial se abrió para verificarla y eligió revisar su cupo antes de crear Firebase. El formulario iniciado en la cuenta personal no se envió: ningún proyecto ni cuenta de Analytics creados y ningún acceso de propietario concedido. Esa vía no se continúa.
+- Verificada la sesión empresarial en Google Cloud. El formulario Proyecto nuevo muestra 12 proyectos restantes en la cuota. No se solicitó aumento ni se borró ningún recurso.
+- El selector Recurso superior solo ofrece Sin organización y muestra expresamente que falta resourcemanager.projects.create para crear allí. Esto explica el bloqueo de creación observado; no se atribuye ya a falta de cupo.
+- Pendiente identificar quién administra Workspace/Cloud Identity y el recurso de organización/carpeta donde se debe crear dev. La asignación de permisos, si hiciera falta, se revisará y confirmará antes de aplicarla. Sin cambios de IAM en Google Cloud, proyecto Firebase sin crear y redeploy AWS aún sin autorización.
