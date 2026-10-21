@@ -78,7 +78,7 @@ namespace AF.Boosters
     /// <summary>Pie del modal (04 §6.2; D-008).</summary>
     public enum StuckFooter
     {
-        /// <summary>1-30: «Volver a la orilla (gratis)», botón (rama C).</summary>
+        /// <summary>1-30, y desde el 31 con <c>biz_feature_lives</c> apagado (D-038): «Volver a la orilla (gratis)», botón (rama C).</summary>
         RestartFree = 0,
 
         /// <summary>Desde el 31: «Rendirse» [P], enlace que lleva a ¿Seguro? (o a Nivel fallido con Canoas infinitas).</summary>
@@ -93,6 +93,12 @@ namespace AF.Boosters
 
         /// <summary><c>rescue_min_level</c> (31).</summary>
         public int RescueMinLevel;
+
+        /// <summary>
+        /// <c>biz_feature_lives</c> apagado en un nivel desde el 31 (D-038): sin canoas, el pie es el de 1-30 («Volver a la
+        /// orilla (gratis)», rama C) en lugar de «Rendirse», y no hay ¿Seguro? ni línea de canoa. El rescate no cambia.
+        /// </summary>
+        public bool LivesOff;
 
         /// <summary>Marea ilimitada (1-10).</summary>
         public bool UndoUnlimited;
@@ -357,7 +363,7 @@ namespace AF.Boosters
             }
 
             return new StuckModalView(CanoeLine(ctx), undo, badge, ctx.UndoUnlimited, ctx.UndoAdReady, videoFirst, ctx.UndoRefillPrice,
-                refillMissing, rescue, ctx.RescuePrice, ctx.RescueBasePrice, missing, offers, StuckFooter.GiveUp,
+                refillMissing, rescue, ctx.RescuePrice, ctx.RescueBasePrice, missing, offers, ctx.LivesOff ? StuckFooter.RestartFree : StuckFooter.GiveUp,
                 ctx.RescueCheck == RescueCheck.Unsolvable && ctx.RescuesLevel < ctx.RescueMaxPerLevel, ShieldLineFor(ctx, config), ctx.StreakWins,
                 ctx.Skip); // rama D
         }
@@ -374,11 +380,12 @@ namespace AF.Boosters
 
         /// <summary>
         /// ¿Hay ¿Seguro? tras «Rendirse»? Solo con una canoa en juego: desde el 31, sin Canoas infinitas y con alguna canoa
-        /// (04 §6.2; D-008, paso 2). Si no, «Rendirse» pasa directo a Nivel fallido.
+        /// (04 §6.2; D-008, paso 2). Si no, «Rendirse» pasa directo a Nivel fallido. Con <c>biz_feature_lives</c> apagado no hay
+        /// «Rendirse» ni ¿Seguro? (D-038).
         /// </summary>
         public static bool GiveUpNeedsConfirm(StuckContext ctx)
         {
-            return ctx.Level >= ctx.RescueMinLevel && !ctx.InfiniteCanoes && ctx.Canoes > 0;
+            return ctx.Level >= ctx.RescueMinLevel && !ctx.LivesOff && !ctx.InfiniteCanoes && ctx.Canoes > 0;
         }
 
         /// <summary>
@@ -417,7 +424,7 @@ namespace AF.Boosters
 
         private static StuckCanoeLine CanoeLine(StuckContext ctx)
         {
-            if (ctx.Level < ctx.RescueMinLevel || ctx.InfiniteCanoes || ctx.Canoes <= 0)
+            if (ctx.Level < ctx.RescueMinLevel || ctx.LivesOff || ctx.InfiniteCanoes || ctx.Canoes <= 0)
             {
                 return StuckCanoeLine.None; // sin canoa en juego no se anuncia ninguna pérdida
             }

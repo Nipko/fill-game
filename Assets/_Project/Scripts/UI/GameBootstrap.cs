@@ -819,7 +819,7 @@ namespace AF.UI
 
         /// <summary>
         /// Pausa › «Salir» (D-008): desde el 31, ya confirmado, fallo duro y Nivel fallido (−1 canoa si hay una en juego); en
-        /// 1-30, al inicio sin coste.
+        /// 1-30, y desde el 31 con <c>biz_feature_lives</c> apagado (D-038), al inicio sin coste.
         /// </summary>
         public bool PressQuit()
         {

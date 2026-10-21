@@ -419,7 +419,8 @@ namespace AF.GameFlow
 
         /// <summary>
         /// Salir del nivel al inicio (06 §4.7): X de Nivel fallido, «Volver al inicio» de Sin canoas o pausa › «Salir» en 1-30
-        /// (sin coste; D-008). Desde el 31, «Salir» pasa antes por el fallo duro y Nivel fallido (<see cref="LevelFlow.ConfirmQuit"/>).
+        /// (sin coste; D-008), y desde el 31 con <c>biz_feature_lives</c> apagado (D-038). Si no, desde el 31 «Salir» pasa antes
+        /// por el fallo duro y Nivel fallido (<see cref="LevelFlow.ConfirmQuit"/>).
         /// </summary>
         public bool ExitToLobby()
         {

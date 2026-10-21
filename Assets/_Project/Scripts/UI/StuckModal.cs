@@ -22,7 +22,8 @@ namespace AF.UI
     /// <item><description>rama D (bloque B3): «Salto del Boto» con su precio (300) y «Rosa te lleva río arriba, al siguiente
     /// nivel», tras el rescate y las ofertas (04 §6.2), o en gris con «Te faltan {n} semillas»; un toque abre la confirmación
     /// (<see cref="ISkipActions"/>, en <c>GameBootstrap.Skip.cs</c>);</description></item>
-    /// <item><description>pie: «Volver a la orilla (gratis)» como botón en 1-30 y el enlace «Rendirse» [P] desde el 31.</description></item>
+    /// <item><description>pie: «Volver a la orilla (gratis)» como botón en 1-30 (y desde el 31 con <c>biz_feature_lives</c>
+    /// apagado, D-038) y el enlace «Rendirse» [P] desde el 31.</description></item>
     /// </list>
     /// Se rearma con <see cref="Show"/> cada vez que cambia el contexto (p. ej. tras comprar un Puñado: mismo precio, saldo
     /// nuevo). El alto depende de las opciones (<see cref="Height"/>) y de la escala de texto (02 §12: las líneas y los CTA

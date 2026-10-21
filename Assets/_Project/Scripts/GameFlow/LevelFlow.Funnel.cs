@@ -49,15 +49,25 @@ namespace AF.GameFlow
         /// </summary>
         public bool BalsaShownThisBlock => _balsaShown;
 
-        /// <summary>Desde este nivel hay canoas, rescate y el embudo de D-008 (<c>rescue_min_level</c>).</summary>
+        /// <summary>
+        /// Desde este nivel (<c>rescue_min_level</c>, 31) hay rescate (Cuia y Balsa de rescate, con su propio interruptor
+        /// <c>biz_feature_rescue</c>) y, con las canoas encendidas, el embudo de D-008 (<see cref="CanoeFunnel"/>).
+        /// </summary>
         public bool CanoesLevel => LevelNumber >= RescueMinLevel;
 
         /// <summary>
         /// Las canoas cuentan en este nivel (<see cref="Wallet.CanoesActive"/>): desde el 31 y con <c>biz_feature_lives</c>
-        /// encendido (08 §9). Es lo que enseña la barra de la cartera; sin cartera, false. El embudo de D-008 (fallo duro al
-        /// salir, ¿Seguro?, Nivel fallido) y el rescate siguen <see cref="CanoesLevel"/>.
+        /// encendido (08 §9). Es lo que enseña la barra de la cartera; sin cartera, false.
         /// </summary>
         public bool CanoesActive => _wallet != null && _wallet.CanoesActive(LevelNumber);
+
+        /// <summary>
+        /// El embudo de D-008 con canoas rige en este nivel: «Rendirse», ¿Seguro?, Nivel fallido y «Salir» como fallo duro. Desde
+        /// el 31 (<see cref="CanoesLevel"/>) salvo con <c>biz_feature_lives</c> apagado (<see cref="Wallet.LivesEnabled"/>):
+        /// entonces todo funciona como en 1-30 (D-038): salir es gratis y no es fallo, y el pie del modal es «Volver a la orilla
+        /// (gratis)» de la rama C. El rescate sigue <see cref="CanoesLevel"/>. Sin cartera cuenta como encendido.
+        /// </summary>
+        public bool CanoeFunnel => CanoesLevel && (_wallet == null || _wallet.LivesEnabled);
 
         /// <summary>
         /// Hay una canoa en juego: con las canoas activas (<see cref="CanoesActive"/>: desde el 31, con cartera y con
@@ -79,8 +89,11 @@ namespace AF.GameFlow
             }
         }
 
-        /// <summary>Salir del nivel con el menú es fallo duro y lleva a Nivel fallido (desde el 31; D-008, P16).</summary>
-        public bool QuitIsHardFail => CanoesLevel;
+        /// <summary>
+        /// Salir del nivel con el menú es fallo duro y lleva a Nivel fallido (desde el 31; D-008, P16), salvo con
+        /// <c>biz_feature_lives</c> apagado, donde sale gratis como en 1-30 (D-038): <see cref="CanoeFunnel"/>.
+        /// </summary>
+        public bool QuitIsHardFail => CanoeFunnel;
 
         /// <summary>Salir del nivel con el menú cuesta una canoa: fallo duro con una canoa en juego (<see cref="CanoeAtStake"/>).</summary>
         public bool QuitCostsCanoe => QuitIsHardFail && CanoeAtStake;
@@ -124,6 +137,7 @@ namespace AF.GameFlow
             {
                 Level = LevelNumber,
                 RescueMinLevel = RescueMinLevel,
+                LivesOff = CanoesLevel && !CanoeFunnel, // D-038: el pie de 1-30
                 UndoUnlimited = undo.Unlimited,
                 UndoFree = undo.FreeLeft,
                 UndoStock = undo.Stock,
@@ -315,13 +329,14 @@ namespace AF.GameFlow
 
         /// <summary>
         /// «Rendirse» [P] desde el 31 (D-008, paso 1 → 2): abre ¿Seguro?; sin canoa en juego (Canoas infinitas, o 0 canoas si
-        /// las infinitas caducaron a mitad de nivel, o <c>biz_feature_lives</c> apagado: <see cref="CanoeAtStake"/>) no hay nada
-        /// que confirmar y pasa directo al fallo duro y a Nivel fallido.
+        /// las infinitas caducaron a mitad de nivel: <see cref="CanoeAtStake"/>) no hay nada que confirmar y pasa directo al
+        /// fallo duro y a Nivel fallido. Con <c>biz_feature_lives</c> apagado no hay «Rendirse» (D-038): el pie es el de 1-30
+        /// (<see cref="LevelFlow.Restart"/>) y devuelve false, como en 1-30.
         /// </summary>
         public bool PressGiveUp()
         {
             LastFunnelError = null;
-            if (Phase != FlowPhase.StuckModal || !CanoesLevel)
+            if (Phase != FlowPhase.StuckModal || !CanoeFunnel)
             {
                 return false;
             }
@@ -393,7 +408,8 @@ namespace AF.GameFlow
         /// <summary>
         /// Pausa › «Salir» confirmado desde el 31 («¿Salir del nivel? Perderás 1 canoa», aprobado: P14 de D-008, D-029; sin la línea de canoa si no
         /// hay canoa en juego, <see cref="CanoeAtStake"/>): fallo duro, también con 0 vertidos (P16 de D-008, aprobada: D-029), y Nivel fallido, cuya
-        /// X lleva al inicio. En 1-30 no es fallo: devuelve false y la salida la hace <see cref="AppFlow.ExitToLobby"/> sin coste.
+        /// X lleva al inicio. En 1-30, y desde el 31 con <c>biz_feature_lives</c> apagado (D-038), no es fallo: devuelve false y
+        /// la salida la hace <see cref="AppFlow.ExitToLobby"/> sin coste.
         /// </summary>
         public bool ConfirmQuit()
         {
