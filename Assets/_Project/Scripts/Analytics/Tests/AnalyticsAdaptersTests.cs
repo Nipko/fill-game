@@ -92,6 +92,9 @@ namespace AF.Analytics.Tests
             Assert.That(analytics.Violations, Is.Empty);
 
             Assert.That(AnalyticsStoreService.ResultId(PurchaseStatus.AlreadyOwned), Is.EqualTo("failed"));
+            Assert.That(AnalyticsStoreService.ResultId(PurchaseStatus.Failed), Is.EqualTo("failed"));
+            Assert.That(AnalyticsStoreService.ResultId(PurchaseStatus.Pending), Is.EqualTo("pending"), "F3-3: pagada, sin verificar (08 §8.2)");
+            Assert.That(AnalyticsStoreService.ResultId(PurchaseStatus.VerifyFailed), Is.EqualTo("verify_failed"), "F3-3: rechazada por el servidor");
             Assert.That(AnalyticsStoreService.ContextId(PurchaseContext.NoCanoes), Is.EqualTo("no_canoes"));
             Assert.That(AnalyticsStoreService.ContextId(PurchaseContext.StarterWindow), Is.EqualTo("starter_window"));
             Assert.That(AnalyticsStoreService.ContextId(PurchaseContext.Piggy), Is.EqualTo("piggy"));

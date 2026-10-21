@@ -95,8 +95,9 @@ namespace AF.Analytics.Adapters
 
         /// <summary>
         /// <c>result</c> de <c>af_iap_result</c> (08 §8.2: <c>ok</c>, <c>cancel</c>, <c>pending</c>, <c>failed</c>,
-        /// <c>verify_failed</c>, <c>deferred_ack</c>): lo que no se pudo comprar por otra causa (ya lo tiene, no se vende ahora,
-        /// tienda apagada o compra en curso) cuenta como <c>failed</c> [P].
+        /// <c>verify_failed</c>, <c>deferred_ack</c>): pagada y aún sin verificar es <c>pending</c>, rechazada por el servidor es
+        /// <c>verify_failed</c> (08 §10.3, F3-3); lo que no se pudo comprar por otra causa (ya lo tiene, no se vende ahora, tienda
+        /// apagada o compra en curso) cuenta como <c>failed</c> [P].
         /// </summary>
         public static string ResultId(PurchaseStatus status)
         {
@@ -104,6 +105,8 @@ namespace AF.Analytics.Adapters
             {
                 case PurchaseStatus.Purchased: return "ok";
                 case PurchaseStatus.Cancelled: return "cancel";
+                case PurchaseStatus.Pending: return "pending";
+                case PurchaseStatus.VerifyFailed: return "verify_failed";
                 default: return "failed";
             }
         }

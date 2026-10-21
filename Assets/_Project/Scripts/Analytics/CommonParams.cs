@@ -89,7 +89,7 @@ namespace AF.Analytics
             Bool(e, "no_ads", NoAds);
             Str(e, "app_version", AppVersion);
             Str(e, "content_version", ContentVersion);
-            Str(e, "rc_variant", RcVariant);
+            Str(e, "rc_variant", string.IsNullOrEmpty(RcVariant) ? null : RcVariant); // sin cohorte («», el default de 08 §9): no se envía
             Str(e, "session_id", SessionId);
             Str(e, "net", Net);
         }

@@ -53,15 +53,23 @@ namespace AF.GameFlow
         public bool CanoesLevel => LevelNumber >= RescueMinLevel;
 
         /// <summary>
-        /// Hay una canoa en juego: desde el 31, con cartera, sin Canoas infinitas y con alguna canoa (0 si, por ejemplo, las
-        /// infinitas caducaron a mitad de nivel). Es lo que cobra el fallo duro (<see cref="Transaction.HardFail"/>); sin canoa
-        /// en juego no se anuncia ninguna pérdida y «Rendirse» pasa directo a Nivel fallido (D-008, paso 2 [P]).
+        /// Las canoas cuentan en este nivel (<see cref="Wallet.CanoesActive"/>): desde el 31 y con <c>biz_feature_lives</c>
+        /// encendido (08 §9). Es lo que enseña la barra de la cartera; sin cartera, false. El embudo de D-008 (fallo duro al
+        /// salir, ¿Seguro?, Nivel fallido) y el rescate siguen <see cref="CanoesLevel"/>.
+        /// </summary>
+        public bool CanoesActive => _wallet != null && _wallet.CanoesActive(LevelNumber);
+
+        /// <summary>
+        /// Hay una canoa en juego: con las canoas activas (<see cref="CanoesActive"/>: desde el 31, con cartera y con
+        /// <c>biz_feature_lives</c>), sin Canoas infinitas y con alguna canoa (0 si, por ejemplo, las infinitas caducaron a mitad
+        /// de nivel). Es lo que cobra el fallo duro (<see cref="Transaction.HardFail"/>); sin canoa en juego no se anuncia ninguna
+        /// pérdida y «Rendirse» pasa directo a Nivel fallido (D-008, paso 2 [P]).
         /// </summary>
         public bool CanoeAtStake
         {
             get
             {
-                if (_wallet == null || !CanoesLevel)
+                if (_wallet == null || !CanoesActive)
                 {
                     return false;
                 }
@@ -124,7 +132,7 @@ namespace AF.GameFlow
                 Seeds = _wallet?.Seeds ?? 0,
                 UndoRefillPrice = _wallet?.Price(SeedSink.UndoRefill) ?? EconomyConfig.Defaults.UndoRefillSeedPrice,
                 UndoRefillAmount = _wallet?.Config.UndoRefillAmount ?? EconomyConfig.Defaults.UndoRefillAmount,
-                Canoes = canoes.Count,
+                Canoes = CanoesActive ? canoes.Count : 0, // con biz_feature_lives apagado no hay canoa en juego: sin línea de canoa
                 InfiniteCanoes = canoes.IsInfinite,
                 RescuesLevel = _attempt.Rescues,
                 RescueMaxPerLevel = _boosters.RescueMaxPerLevel,

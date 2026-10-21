@@ -17,6 +17,7 @@ namespace AF.Analytics.Tests
         private sealed class FixedCommon : ICommonParamsSource
         {
             public int Calls;
+            public string? RcVariant = "exp_a";
 
             public void Fill(CommonParams p)
             {
@@ -33,7 +34,7 @@ namespace AF.Analytics.Tests
                 p.NoAds = false;
                 p.AppVersion = "1.0";
                 p.ContentVersion = "1.0.0";
-                p.RcVariant = "";
+                p.RcVariant = RcVariant;
                 p.SessionId = "s1";
                 p.Net = "offline";
             }
@@ -142,6 +143,23 @@ namespace AF.Analytics.Tests
             analytics.AddSink(sink);
             analytics.Log(AnalyticsEvent.Create("af_shop_view").Add("tab", "seeds").Add("from", "lobby"));
             Assert.That(sink.Events[0].Common, Is.Empty);
+        }
+
+        [Test]
+        public void AnEmptyRcVariant_IsNotSent_LikeANullCommon()
+        {
+            // biz_experiment_tag vale «» por defecto (08 §9): sin cohorte no viaja rc_variant, como los demás comunes nulos.
+            var common = new FixedCommon { RcVariant = "" };
+            var sink = new FakeAnalyticsSink();
+            var analytics = new AnalyticsService(null, common);
+            analytics.AddSink(sink);
+            analytics.Log(AnalyticsEvent.Create("af_shop_view").Add("tab", "seeds").Add("from", "lobby"));
+            Assert.That(sink.Events[0].Find("rc_variant"), Is.Null);
+            Assert.That(sink.Events[0].Find("session_id")!.Value.Text, Is.EqualTo("s1"), "los demás comunes sí van");
+
+            common.RcVariant = "exp_a";
+            analytics.Log(AnalyticsEvent.Create("af_shop_view").Add("tab", "seeds").Add("from", "lobby"));
+            Assert.That(sink.Events[1].Find("rc_variant")!.Value.Text, Is.EqualTo("exp_a"));
         }
 
         [Test]
