@@ -92,3 +92,5 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - Configurados `af-dev` y `af-prod` con una sesión compartida de IAM Identity Center en `sa-east-1`, rol `AdministratorAccess` y región predeterminada `sa-east-1`. Configuración solo en el archivo local de AWS, fuera del repositorio, conservando los perfiles anteriores; sin claves de acceso IAM.
 - Iniciado `aws sso login --profile af-dev`; pendiente de que el dueño complete el acceso y MFA en el navegador. Todavía no se verificó la identidad efectiva de los perfiles mediante la CLI.
 - Bootstrap en ambas regiones de dev, diff y deploy siguen pendientes. Sin recursos desplegados ni cambios en `infra/`.
+
+- Acceso SSO completado correctamente. Verificados ambos perfiles con STS: cada uno coincide con su cuenta esperada y utiliza el rol de Identity Center autorizado. No se imprimieron identificadores ni ARNs. La sesión compartida permite acceder a ambos perfiles; no se usaron claves IAM.
