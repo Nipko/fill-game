@@ -43,13 +43,17 @@ namespace AF.Backend.Verification
     /// <summary>Una compra a la espera de que el servidor la verifique.</summary>
     public sealed class PendingVerification
     {
-        internal PendingVerification(VerifyPurchaseRequest request, DateTime firstQueuedUtc, int attempts, DateTime nextAttemptUtc, string? lastError)
+        internal PendingVerification(
+            VerifyPurchaseRequest request, DateTime firstQueuedUtc, int attempts, DateTime nextAttemptUtc, string? lastError,
+            int? clientSeeds = null, DateTime? deferredAckUtc = null)
         {
             Request = request;
             FirstQueuedUtc = firstQueuedUtc;
             Attempts = attempts;
             NextAttemptUtc = nextAttemptUtc;
             LastError = lastError;
+            ClientSeeds = clientSeeds;
+            DeferredAckUtc = deferredAckUtc;
         }
 
         public VerifyPurchaseRequest Request { get; }
@@ -58,7 +62,7 @@ namespace AF.Backend.Verification
         /// Desde cuándo cuenta el plazo de <c>sec_purchase_deferred_ack_h</c>: la hora de la compra si se conoce (Play la reembolsa
         /// a los 3 días de la compra, no de entrar en la cola) o, si no, la de entrar en la cola.
         /// </summary>
-        public DateTime FirstQueuedUtc { get; }
+        public DateTime FirstQueuedUtc { get; internal set; }
 
         /// <summary>Intentos fallidos.</summary>
         public int Attempts { get; internal set; }
@@ -66,8 +70,24 @@ namespace AF.Backend.Verification
         /// <summary>No se reintenta antes de este instante.</summary>
         public DateTime NextAttemptUtc { get; internal set; }
 
-        /// <summary>Último error (<see cref="BackendError.ToString"/>: sin tokens).</summary>
+        /// <summary>Último error (<see cref="BackendError.ToString"/>: sin tokens), o <c>pending</c> si el servidor respondió así.</summary>
         public string? LastError { get; internal set; }
+
+        /// <summary>
+        /// Semillas que solo conoce el cliente y que la compra acredita: las del Cántaro (<c>af_piggy</c>; el servidor responde
+        /// semillas 0 y el ítem <c>piggy</c>, D-035, añadido de F2-3 a F2-8 [P]). Null en el resto.
+        /// </summary>
+        public int? ClientSeeds { get; }
+
+        /// <summary>
+        /// Cuándo se hizo el <c>acknowledge</c> local por vencer <c>sec_purchase_deferred_ack_h</c> (<c>deferred_ack</c>, 08 §10.3), o
+        /// null. Una compra así sigue en la cola y se sigue reintentando sin plazo: no se acredita hasta que el servidor la verifique
+        /// (D-035, añadido de F3-1 y F3-2).
+        /// </summary>
+        public DateTime? DeferredAckUtc { get; internal set; }
+
+        /// <summary>Ya se hizo el <c>acknowledge</c> local (<see cref="DeferredAckUtc"/>).</summary>
+        public bool IsDeferredAck => DeferredAckUtc.HasValue;
 
         public override string ToString() => "PendingVerification(" + Request.Sku + ", intentos " + Attempts + ")";
     }
@@ -75,7 +95,7 @@ namespace AF.Backend.Verification
     /// <summary>
     /// Cola local de verificaciones de compra de 08 §10.3: «error de red → cola local con backoff; a las 72 h acknowledge local +
     /// <c>deferred_ack</c> [P]» (08 §10.1, fila «Compra falsa»), con el plazo de <c>sec_purchase_deferred_ack_h</c> (08 §9). Es solo el estado y sus reglas, sin red ni guardado: la procesa
-    /// <see cref="VerificationQueueRunner"/> y la guarda quien la tenga (F3-3 la pondrá en el perfil con <see cref="ToJson"/>).
+    /// <see cref="VerificationQueueRunner"/> y la guarda quien la tenga (F3-3: <c>AF.IAP.VerifiedStoreService</c>, en el perfil con <see cref="ToJson"/>).
     /// Los <c>purchaseToken</c> viajan dentro del JSON: no va a los logs.
     /// </summary>
     public sealed class VerificationQueue
@@ -108,7 +128,8 @@ namespace AF.Backend.Verification
         /// no se encola dos veces). <paramref name="purchasedUtc"/> es la hora de la compra si se conoce: el plazo cuenta desde ella
         /// (si es posterior a <paramref name="nowUtc"/>, se usa <paramref name="nowUtc"/>).
         /// </summary>
-        public bool Enqueue(VerifyPurchaseRequest request, DateTime nowUtc, DateTime? purchasedUtc = null)
+        /// <param name="clientSeeds">Semillas que solo conoce el cliente (<see cref="PendingVerification.ClientSeeds"/>), o null.</param>
+        public bool Enqueue(VerifyPurchaseRequest request, DateTime nowUtc, DateTime? purchasedUtc = null, int? clientSeeds = null)
         {
             if (request == null)
             {
@@ -120,6 +141,11 @@ namespace AF.Backend.Verification
                 return false;
             }
 
+            if (clientSeeds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(clientSeeds));
+            }
+
             DateTime now = Utc(nowUtc);
             DateTime start = now;
             if (purchasedUtc.HasValue && Utc(purchasedUtc.Value) < now)
@@ -127,11 +153,14 @@ namespace AF.Backend.Verification
                 start = purchasedUtc.Value;
             }
 
-            _entries.Add(new PendingVerification(request, start, 0, now, null));
+            _entries.Add(new PendingVerification(request, start, 0, now, null, clientSeeds));
             return true;
         }
 
         public bool Contains(string token) => Find(token) != null;
+
+        /// <summary>La entrada de <paramref name="token"/>, o null.</summary>
+        public PendingVerification? Get(string token) => Find(token);
 
         public bool Remove(string token)
         {
@@ -155,10 +184,50 @@ namespace AF.Backend.Verification
             return due;
         }
 
-        /// <summary>¿Cumplió ya el plazo de <see cref="DeferredAckAfter"/>?</summary>
+        /// <summary>
+        /// ¿Cumplió ya el plazo de <see cref="DeferredAckAfter"/> sin <c>acknowledge</c> local? Una entrada con
+        /// <see cref="PendingVerification.IsDeferredAck"/> ya no vence: se sigue reintentando.
+        /// </summary>
         public bool IsExpired(PendingVerification entry, DateTime nowUtc)
         {
-            return Utc(nowUtc) - (entry ?? throw new ArgumentNullException(nameof(entry))).FirstQueuedUtc >= DeferredAckAfter;
+            if (entry == null)
+            {
+                throw new ArgumentNullException(nameof(entry));
+            }
+
+            return !entry.IsDeferredAck && Utc(nowUtc) - entry.FirstQueuedUtc >= DeferredAckAfter;
+        }
+
+        /// <summary>
+        /// Anota el <c>acknowledge</c> local de <paramref name="token"/> (<c>deferred_ack</c>): la entrada sigue en la cola, sin plazo,
+        /// para que un reintento la verifique (D-035, añadido de F3-1 y F3-2: no se acredita hasta entonces). Se puede volver a
+        /// intentar ya.
+        /// </summary>
+        public void MarkDeferredAck(string token, DateTime nowUtc)
+        {
+            PendingVerification entry = Find(token) ?? throw new ArgumentException("El token no está en la cola.", nameof(token));
+            if (!entry.DeferredAckUtc.HasValue)
+            {
+                entry.DeferredAckUtc = Utc(nowUtc);
+            }
+        }
+
+        /// <summary>
+        /// El servidor respondió <c>pending</c> (Play aún no la da por pagada; 08 §10.3): no se acredita y se vuelve a preguntar con
+        /// la espera de <see cref="Policy"/>. El plazo de <see cref="DeferredAckAfter"/> vuelve a contar desde ahora, porque el
+        /// servidor sí respondió (y una compra pendiente no se puede reconocer).
+        /// </summary>
+        public void RecordPending(string token, DateTime nowUtc)
+        {
+            PendingVerification entry = Find(token) ?? throw new ArgumentException("El token no está en la cola.", nameof(token));
+            DateTime now = Utc(nowUtc);
+            entry.Attempts++;
+            entry.LastError = "pending";
+            entry.NextAttemptUtc = now + Policy.DelayFor(entry.Attempts);
+            if (!entry.IsDeferredAck)
+            {
+                entry.FirstQueuedUtc = now;
+            }
         }
 
         /// <summary>
@@ -206,6 +275,16 @@ namespace AF.Backend.Verification
                     node.Set("last_error", JsonNode.FromString(e.LastError));
                 }
 
+                if (e.ClientSeeds.HasValue)
+                {
+                    node.Set("client_seeds", JsonNode.FromLong(e.ClientSeeds.Value));
+                }
+
+                if (e.DeferredAckUtc.HasValue)
+                {
+                    node.Set("deferred_ack_ms", JsonNode.FromLong(ToMs(e.DeferredAckUtc.Value)));
+                }
+
                 entries.Add(node);
             }
 
@@ -241,13 +320,17 @@ namespace AF.Backend.Verification
                 long attempts = er.RequiredInteger("attempts", 0, int.MaxValue);
                 long next = er.RequiredInteger("next_ms", 0, long.MaxValue / 2);
                 string? lastError = er.OptionalString("last_error");
+                long? clientSeeds = er.OptionalInteger("client_seeds", 0, int.MaxValue);
+                long? deferredAck = er.OptionalInteger("deferred_ack_ms", 0, long.MaxValue / 2);
                 if (queue.Find(token) != null)
                 {
                     continue;
                 }
 
                 queue._entries.Add(new PendingVerification(
-                    new VerifyPurchaseRequest(token, sku, oaid), FromMs(first), (int)attempts, FromMs(next), lastError));
+                    new VerifyPurchaseRequest(token, sku, oaid), FromMs(first), (int)attempts, FromMs(next), lastError,
+                    clientSeeds.HasValue ? (int)clientSeeds.Value : (int?)null,
+                    deferredAck.HasValue ? FromMs(deferredAck.Value) : (DateTime?)null));
             }
 
             return queue;

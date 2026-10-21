@@ -10,23 +10,30 @@ namespace AF.Backend.Verification
     public enum VerificationOutcomeKind
     {
         /// <summary>
-        /// El servidor respondió <c>ok</c>, <c>duplicate</c> o <c>pending</c> (ver <see cref="VerificationOutcome.Response"/>). Una
-        /// <c>pending</c> también sale de la cola: Unity IAP mantiene la transacción y quien use la cola (F3-3) la vuelve a encolar
-        /// cuando Play la entregue de nuevo (08 §10.3: «reintento en cada arranque»).
+        /// El servidor respondió <c>ok</c>, <c>duplicate</c> o <c>pending</c> (ver <see cref="VerificationOutcome.Response"/>). Con
+        /// <c>ok</c> y <c>duplicate</c> la compra sale de la cola; con <c>pending</c> se queda y se vuelve a preguntar más tarde
+        /// (<see cref="VerificationQueue.RecordPending"/>; 08 §10.3: «reintento en cada arranque»), sin acreditar nada.
         /// </summary>
         Answered = 0,
 
-        /// <summary>Error definitivo (<see cref="VerificationQueue.IsDefinitive"/>): no se reintenta.</summary>
+        /// <summary>Error definitivo (<see cref="VerificationQueue.IsDefinitive"/>): sale de la cola y no se reintenta.</summary>
         Rejected = 1,
 
         /// <summary>
-        /// Cumplió <c>sec_purchase_deferred_ack_h</c> sin respuesta: toca <c>acknowledge</c> local y <c>deferred_ack</c> (08 §10.3).
-        /// Si además se acredita lo decide F3-3 (pregunta abierta al dueño).
+        /// Cumplió <c>sec_purchase_deferred_ack_h</c> sin respuesta: toca <c>acknowledge</c> local y <c>deferred_ack</c> (08 §10.3). La
+        /// compra se queda en la cola (<see cref="PendingVerification.IsDeferredAck"/>) y se sigue reintentando: no se acredita hasta
+        /// que el servidor la verifique (D-035, añadido de F3-1 y F3-2).
         /// </summary>
         DeferredAck = 2,
+
+        /// <summary>
+        /// Fallo pasajero (sin red, 401, 403, 429, 5xx, respuesta ilegible…): la compra se queda en la cola con su espera
+        /// (<see cref="VerificationQueue.RecordFailure"/>). Ver <see cref="VerificationOutcome.Error"/>.
+        /// </summary>
+        Retrying = 3,
     }
 
-    /// <summary>Resultado de una compra que sale de la cola.</summary>
+    /// <summary>Resultado de una compra de la cola.</summary>
     public sealed class VerificationOutcome
     {
         internal VerificationOutcome(VerificationOutcomeKind kind, PendingVerification entry, VerifyPurchaseResponse? response, BackendError? error)
@@ -44,15 +51,16 @@ namespace AF.Backend.Verification
         /// <summary>Respuesta del servidor (con <see cref="VerificationOutcomeKind.Answered"/>).</summary>
         public VerifyPurchaseResponse? Response { get; }
 
-        /// <summary>Último error (con <see cref="VerificationOutcomeKind.Rejected"/>).</summary>
+        /// <summary>El error (con <see cref="VerificationOutcomeKind.Rejected"/> y <see cref="VerificationOutcomeKind.Retrying"/>).</summary>
         public BackendError? Error { get; }
     }
 
     /// <summary>
-    /// Procesa la <see cref="VerificationQueue"/>: en cada <see cref="Pump"/> saca las que cumplieron 72 h
-    /// (<see cref="VerificationOutcomeKind.DeferredAck"/>) y manda las que tocan, una petición por compra como mucho a la vez. Qué se
-    /// acredita con cada resultado lo decide quien lo use (F3-3: <c>Wallet.Apply</c> y <c>applied_purchases</c>).
-    /// <c>onChanged</c> avisa cada vez que la cola cambia, para guardarla.
+    /// Procesa la <see cref="VerificationQueue"/>: en cada <see cref="Pump"/> anota el <c>acknowledge</c> local de las que cumplieron
+    /// 72 h (<see cref="VerificationOutcomeKind.DeferredAck"/>, una sola vez por compra) y manda las que tocan, una petición por compra
+    /// como mucho a la vez. Qué se acredita con cada resultado lo decide quien lo use (F3-3: <c>AF.IAP.VerifiedStoreService</c>, con
+    /// <c>Wallet.Apply</c> y <c>applied_purchases</c>). <c>onOutcome</c> recibe cada resultado con la cola ya actualizada (para que lo
+    /// que acredite se guarde junto con la cola) y después <c>onChanged</c> avisa de que la cola cambió, para guardarla.
     /// </summary>
     public sealed class VerificationQueueRunner
     {
@@ -75,8 +83,15 @@ namespace AF.Backend.Verification
         /// <summary>Peticiones en vuelo.</summary>
         public int InFlight => _inFlight.Count;
 
-        /// <summary>Saca las vencidas y manda las que tocan. Se puede llamar a menudo (al arrancar, al volver a primer plano…).</summary>
-        public void Pump()
+        /// <summary>¿Está en vuelo la petición de <paramref name="token"/>?</summary>
+        public bool IsInFlight(string token) => _inFlight.Contains(token);
+
+        /// <summary>
+        /// Anota las vencidas y, con <paramref name="send"/>, manda las que tocan. Se puede llamar a menudo (al arrancar, al volver a
+        /// primer plano…). Sin <paramref name="send"/> (backend apagado con <c>biz_backend_enabled</c> [P]) no hay red, pero el plazo
+        /// del <c>acknowledge</c> local sigue corriendo: Play reembolsa sola una compra sin reconocer a los 3 días.
+        /// </summary>
+        public void Pump(bool send = true)
         {
             DateTime now = _clock.UtcNow;
             var expired = new List<PendingVerification>();
@@ -91,18 +106,23 @@ namespace AF.Backend.Verification
 
             for (int i = 0; i < expired.Count; i++)
             {
-                _queue.Remove(expired[i].Request.Token);
-                _onChanged?.Invoke();
+                _queue.MarkDeferredAck(expired[i].Request.Token, now);
                 _onOutcome(new VerificationOutcome(VerificationOutcomeKind.DeferredAck, expired[i], null, null));
+                _onChanged?.Invoke();
+            }
+
+            if (!send)
+            {
+                return;
             }
 
             List<PendingVerification> due = _queue.Due(now);
             for (int i = 0; i < due.Count; i++)
             {
                 PendingVerification entry = due[i];
-                if (!_inFlight.Add(entry.Request.Token))
+                if (!_queue.Contains(entry.Request.Token) || !_inFlight.Add(entry.Request.Token))
                 {
-                    continue;
+                    continue; // una respuesta síncrona anterior pudo sacarla de la cola
                 }
 
                 _client.VerifyPurchase(entry.Request, result => OnResult(entry, result));
@@ -120,9 +140,18 @@ namespace AF.Backend.Verification
 
             if (result.IsOk)
             {
-                _queue.Remove(token);
+                VerifyPurchaseResponse response = result.Value!;
+                if (response.Status == VerifyStatus.Pending)
+                {
+                    _queue.RecordPending(token, _clock.UtcNow);
+                }
+                else
+                {
+                    _queue.Remove(token);
+                }
+
+                _onOutcome(new VerificationOutcome(VerificationOutcomeKind.Answered, entry, response, null));
                 _onChanged?.Invoke();
-                _onOutcome(new VerificationOutcome(VerificationOutcomeKind.Answered, entry, result.Value, null));
                 return;
             }
 
@@ -130,12 +159,13 @@ namespace AF.Backend.Verification
             if (VerificationQueue.IsDefinitive(error))
             {
                 _queue.Remove(token);
-                _onChanged?.Invoke();
                 _onOutcome(new VerificationOutcome(VerificationOutcomeKind.Rejected, entry, null, error));
+                _onChanged?.Invoke();
                 return;
             }
 
             _queue.RecordFailure(token, error, _clock.UtcNow);
+            _onOutcome(new VerificationOutcome(VerificationOutcomeKind.Retrying, entry, null, error));
             _onChanged?.Invoke();
         }
     }

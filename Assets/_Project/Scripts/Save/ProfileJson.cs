@@ -151,6 +151,15 @@ namespace AF.Save
             }
 
             root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
+            if (p.AppliedPurchases.Count > 0)
+            {
+                root.Set("applied_purchases", StringList(p.AppliedPurchases)); // F3-3: falta mientras está vacía
+            }
+
+            if (p.PurchaseQueue != null)
+            {
+                root.Set("purchase_queue", PurchaseQueueNode(p.PurchaseQueue)); // F3-3 [P]: falta si nunca se guardó
+            }
 
             JsonNode entitlements = JsonNode.NewObject();
             entitlements.Set("no_ads", JsonNode.FromBool(p.Entitlements.NoAds));
@@ -345,6 +354,21 @@ namespace AF.Save
             JsonNode? levelState = Section(root, "level_state");
             p.LevelState = levelState == null ? null : ReadLevelState(levelState);
 
+            // applied_purchases (F3-3) es dinero: un tipo equivocado es corrupción, como en wallet. Los repetidos, una vez.
+            ReadStringList(root, "applied_purchases", p.AppliedPurchases);
+            for (int i = p.AppliedPurchases.Count - 1; i > 0; i--)
+            {
+                if (p.AppliedPurchases.IndexOf(p.AppliedPurchases[i]) < i)
+                {
+                    p.AppliedPurchases.RemoveAt(i);
+                }
+            }
+
+            // purchase_queue (F3-3 [P]): AF.Save no la interpreta; si no es un objeto, se descarta (las compras sin terminar
+            // vuelven con Unity IAP al arrancar y nada se acredita sin el servidor).
+            JsonNode? queue = TolerantSection(root, "purchase_queue");
+            p.PurchaseQueue = queue == null ? null : JsonText.Write(queue);
+
             JsonNode? entitlements = Section(root, "entitlements");
             if (entitlements != null)
             {
@@ -412,6 +436,20 @@ namespace AF.Save
             JsonNode? dailyChallenge = Section(root, "daily_challenge");
             p.DailyChallenge = dailyChallenge == null ? null : ReadDailyChallenge(dailyChallenge);
             return p;
+        }
+
+        // purchase_queue (F3-3 [P]): el JSON de la cola como objeto anidado; si el texto no es un objeto JSON, se descarta.
+        private static JsonNode PurchaseQueueNode(string json)
+        {
+            try
+            {
+                JsonNode node = JsonText.Parse(json);
+                return node.Kind == JsonKind.Object ? node : JsonNode.Null;
+            }
+            catch (FormatException)
+            {
+                return JsonNode.Null;
+            }
         }
 
         // fauna.sighted (esquema 2; DC15): una entrada que no es un objeto {species_id, level} válido se descarta; si una especie

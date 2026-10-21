@@ -170,7 +170,7 @@ namespace AF.Backend.Tests
         }
 
         [Test]
-        public void RunnerAnswersAndRemoves()
+        public void RunnerRemovesTheAnsweredOnesAndKeepsThePendingOnes()
         {
             var fx = new RunnerFixture();
             fx.Queue.Enqueue(Purchase("tok-1"), T0);
@@ -178,12 +178,34 @@ namespace AF.Backend.Tests
             fx.Backend.MarkPending("tok-2");
             fx.Runner.Pump();
 
-            Assert.That(fx.Queue.Count, Is.EqualTo(0));
             Assert.That(fx.Outcomes, Has.Count.EqualTo(2));
             Assert.That(fx.Outcomes[0].Kind, Is.EqualTo(VerificationOutcomeKind.Answered));
             Assert.That(fx.Outcomes[0].Response!.Status, Is.EqualTo(VerifyStatus.Ok));
             Assert.That(fx.Outcomes[1].Response!.Status, Is.EqualTo(VerifyStatus.Pending));
             Assert.That(fx.Changes, Is.EqualTo(2));
+            Assert.That(fx.Queue.Count, Is.EqualTo(1), "pending se queda en la cola (08 §10.3: reintento)");
+            Assert.That(fx.Queue.Entries[0].Request.Token, Is.EqualTo("tok-2"));
+            Assert.That(fx.Queue.Entries[0].LastError, Is.EqualTo("pending"));
+
+            fx.Runner.Pump();
+            Assert.That(fx.Backend.Calls["verifyPurchase"], Is.EqualTo(2), "no se vuelve a preguntar antes de la espera");
+            fx.Backend.ClearPending("tok-2");
+            fx.Clock.Advance(TimeSpan.FromSeconds(30));
+            fx.Runner.Pump();
+            Assert.That(fx.Queue.Count, Is.EqualTo(0));
+            Assert.That(fx.Outcomes[2].Response!.Status, Is.EqualTo(VerifyStatus.Ok));
+        }
+
+        [Test]
+        public void PendingRestartsTheDeadline()
+        {
+            var queue = new VerificationQueue();
+            queue.Enqueue(Purchase(), T0);
+            queue.RecordPending("tok-1", T0.AddHours(70));
+            Assert.That(queue.Entries[0].FirstQueuedUtc, Is.EqualTo(T0.AddHours(70)), "el servidor respondió: el plazo vuelve a contar");
+            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(100)), Is.False);
+            Assert.That(queue.Entries[0].Attempts, Is.EqualTo(1));
+            Assert.That(queue.Entries[0].NextAttemptUtc, Is.EqualTo(T0.AddHours(70).AddSeconds(30)));
         }
 
         [Test]
@@ -199,34 +221,92 @@ namespace AF.Backend.Tests
             Assert.That(fx.Queue.Count, Is.EqualTo(1));
             Assert.That(fx.Queue.Entries[0].Request.Token, Is.EqualTo("tok-1"));
             Assert.That(fx.Queue.Entries[0].Attempts, Is.EqualTo(1));
-            Assert.That(fx.Outcomes, Has.Count.EqualTo(1));
-            Assert.That(fx.Outcomes[0].Kind, Is.EqualTo(VerificationOutcomeKind.Rejected));
-            Assert.That(fx.Outcomes[0].Entry.Request.Token, Is.EqualTo("tok-2"));
+            Assert.That(fx.Outcomes, Has.Count.EqualTo(2));
+            Assert.That(fx.Outcomes[0].Kind, Is.EqualTo(VerificationOutcomeKind.Retrying));
+            Assert.That(fx.Outcomes[0].Entry.Request.Token, Is.EqualTo("tok-1"));
+            Assert.That(fx.Outcomes[0].Error!.HttpStatus, Is.EqualTo(503));
+            Assert.That(fx.Outcomes[1].Kind, Is.EqualTo(VerificationOutcomeKind.Rejected));
+            Assert.That(fx.Outcomes[1].Entry.Request.Token, Is.EqualTo("tok-2"));
 
             fx.Runner.Pump();
             Assert.That(fx.Backend.Calls["verifyPurchase"], Is.EqualTo(2), "no se reintenta antes de la espera");
             fx.Clock.Advance(TimeSpan.FromSeconds(30));
             fx.Runner.Pump();
             Assert.That(fx.Queue.Count, Is.EqualTo(0));
-            Assert.That(fx.Outcomes[1].Kind, Is.EqualTo(VerificationOutcomeKind.Answered));
+            Assert.That(fx.Outcomes[2].Kind, Is.EqualTo(VerificationOutcomeKind.Answered));
         }
 
         [Test]
-        public void RunnerDefersTheAckAfter72Hours()
+        public void RunnerDefersTheAckAfter72HoursOnceAndKeepsRetrying()
         {
             var fx = new RunnerFixture();
             fx.Queue.Enqueue(Purchase("tok-1"), T0);
             fx.Backend.FailNext(BackendError.Network("offline"), 1000);
-            for (int i = 0; i < 100 && fx.Queue.Count > 0; i++)
+            int deferredAt = -1;
+            for (int i = 0; i < 100; i++)
             {
                 fx.Runner.Pump();
+                if (deferredAt < 0 && fx.Outcomes.Exists(o => o.Kind == VerificationOutcomeKind.DeferredAck))
+                {
+                    deferredAt = i;
+                }
+
                 fx.Clock.Advance(TimeSpan.FromHours(1));
             }
 
+            Assert.That(deferredAt, Is.EqualTo(72), "se anota en el primer Pump a las 72 h");
+            Assert.That(fx.Outcomes.FindAll(o => o.Kind == VerificationOutcomeKind.DeferredAck), Has.Count.EqualTo(1), "una sola vez");
+            Assert.That(fx.Outcomes.TrueForAll(o => o.Kind != VerificationOutcomeKind.Answered), Is.True, "nunca se acredita sin respuesta");
+            Assert.That(fx.Queue.Count, Is.EqualTo(1), "D-035: sigue en la cola hasta que el servidor la verifique");
+            Assert.That(fx.Queue.Entries[0].IsDeferredAck, Is.True);
+            Assert.That(fx.Queue.Entries[0].DeferredAckUtc, Is.EqualTo(T0.AddHours(72)));
+
+            int calls = fx.Backend.Calls["verifyPurchase"];
+            Assert.That(calls, Is.GreaterThan(10), "se reintenta también después del deferred_ack");
+            var fresh = new FakeBackendClient(fx.Clock);
+            var outcomes = new List<VerificationOutcome>();
+            var runner = new VerificationQueueRunner(fx.Queue, fresh, fx.Clock, outcomes.Add);
+            fx.Clock.Advance(TimeSpan.FromHours(6));
+            runner.Pump();
+            Assert.That(outcomes, Has.Count.EqualTo(1));
+            Assert.That(outcomes[0].Kind, Is.EqualTo(VerificationOutcomeKind.Answered));
+            Assert.That(outcomes[0].Entry.IsDeferredAck, Is.True, "quien acredita sabe que ya se reconoció en local");
             Assert.That(fx.Queue.Count, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void WithoutSendTheRunnerOnlyDefersTheAck()
+        {
+            var fx = new RunnerFixture();
+            fx.Queue.Enqueue(Purchase("tok-1"), T0);
+            fx.Runner.Pump(send: false);
+            Assert.That(fx.Backend.Calls.ContainsKey("verifyPurchase"), Is.False, "biz_backend_enabled = false: sin red");
+            fx.Clock.Advance(TimeSpan.FromHours(72));
+            fx.Runner.Pump(send: false);
             Assert.That(fx.Outcomes, Has.Count.EqualTo(1));
             Assert.That(fx.Outcomes[0].Kind, Is.EqualTo(VerificationOutcomeKind.DeferredAck));
-            Assert.That(fx.Clock.UtcNow - T0, Is.EqualTo(TimeSpan.FromHours(73)), "sale en el primer Pump tras las 72 h");
+            Assert.That(fx.Queue.Count, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void DeferredAckAndClientSeedsSurviveTheJson()
+        {
+            var queue = new VerificationQueue();
+            queue.Enqueue(Purchase("tok-1", "af_piggy"), T0, clientSeeds: 1500);
+            queue.Enqueue(Purchase("tok-2"), T0);
+            queue.MarkDeferredAck("tok-2", T0.AddHours(72));
+            Assert.That(() => queue.Enqueue(Purchase("tok-3"), T0, clientSeeds: -1), Throws.InstanceOf<ArgumentOutOfRangeException>());
+
+            Assert.That(VerificationQueue.TryFromJson(queue.ToJson(), out VerificationQueue? back, out string? error), Is.True, error);
+            Assert.That(back!.Get("tok-1")!.ClientSeeds, Is.EqualTo(1500));
+            Assert.That(back.Get("tok-1")!.IsDeferredAck, Is.False);
+            Assert.That(back.Get("tok-2")!.ClientSeeds, Is.Null);
+            Assert.That(back.Get("tok-2")!.DeferredAckUtc, Is.EqualTo(T0.AddHours(72)));
+            Assert.That(back.IsExpired(back.Get("tok-2")!, T0.AddHours(500)), Is.False, "ya reconocida: no vuelve a vencer");
+            Assert.That(back.IsExpired(back.Get("tok-1")!, T0.AddHours(500)), Is.True);
+            Assert.That(back.Due(T0.AddHours(500)), Has.Count.EqualTo(1), "la reconocida se sigue intentando; la vencida espera su deferred_ack");
+            Assert.That(back.Due(T0.AddHours(500))[0].Request.Token, Is.EqualTo("tok-2"));
+            Assert.That(back.ToJson(), Is.EqualTo(queue.ToJson()));
         }
 
         [Test]
@@ -249,9 +329,15 @@ namespace AF.Backend.Tests
             Assert.That(outcomes, Is.Empty, "una en vuelo no vence hasta que responda");
 
             client.Held[0](BackendResult<VerifyPurchaseResponse>.Fail(BackendError.Network("x")));
-            runner.Pump();
             Assert.That(outcomes, Has.Count.EqualTo(1));
-            Assert.That(outcomes[0].Kind, Is.EqualTo(VerificationOutcomeKind.DeferredAck));
+            Assert.That(outcomes[0].Kind, Is.EqualTo(VerificationOutcomeKind.Retrying));
+            runner.Pump();
+            Assert.That(outcomes, Has.Count.EqualTo(2));
+            Assert.That(outcomes[1].Kind, Is.EqualTo(VerificationOutcomeKind.DeferredAck));
+            Assert.That(client.Held, Has.Count.EqualTo(1), "tras el fallo espera su turno");
+            clock.Advance(TimeSpan.FromSeconds(30));
+            runner.Pump();
+            Assert.That(client.Held, Has.Count.EqualTo(2), "la reconocida en local se vuelve a mandar");
         }
 
         private sealed class RunnerFixture

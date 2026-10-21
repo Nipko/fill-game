@@ -760,12 +760,15 @@ Cliente:  Unity IAP → OnPurchaseComplete(product) → estado "verifying"; UI m
 Servidor: purchases.products.get(packageName, sku, token)
           if purchaseState != PURCHASED (PENDING) → {status:"pending"} (no conceder)
           if ya en users/{uid}/purchases/{token} → {status:"duplicate"}
-          acknowledge (y consume si consumible) → escribir libro mayor {sku, ts, price, currency, country}
+          acknowledge (el servidor no consume: consume el cliente tras acreditar; D-035) → escribir libro mayor {sku, ts, price, currency, country}
           actualizar users/{uid}/entitlements (no_ads, pass_until, skins)
           → {status:"ok", grant:{seeds, items}}
-Cliente:  ok → Wallet.Apply; applied_purchases += token; Save.Local+Cloud
-          pending → Unity IAP mantiene la transacción; reintento en cada arranque
-          error de red → cola local con backoff; a las 72 h acknowledge local + deferred_ack [P]
+Cliente:  ok → si token_hash ∉ applied_purchases: Wallet.Apply(grant); applied_purchases += token_hash; Save.Local+Cloud; consumir (consumibles)
+          duplicate → lo mismo con el contenido del catálogo, solo si token_hash ∉ applied_purchases; consumir (consumibles)
+          pending → no se concede; Unity IAP mantiene la transacción; reintento con backoff y en cada arranque
+          400 / 409 → no se concede ni se consume (consumir también reconoce y Play ya no la reembolsaría)
+          error de red → cola local con backoff; a las 72 h acknowledge local + deferred_ack [P], sin acreditar:
+                         se acredita cuando el servidor la verifique en un reintento o en restoreLedger (D-035, F3-1 y F3-2)
 ```
 
 ## 11. Guardado local y en la nube
