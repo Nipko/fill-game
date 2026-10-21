@@ -3111,3 +3111,27 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
   - Las demás, con la (a): P-1 (Hoja atada y Flor cerrada, fijas), P-2 (20 intentos de Permutar), P-3 (detalles de la reconstrucción), P-7 (globo con Lluvia o Piraña), P-8 (VFX simplificado), P-9 (tarjeta del 30), P-11 (semilla y `*` en el historial h2), P-12, P-14 (también en el Reto), P-15 («Seguir»), P-17 (Remolino) y P-19 (tests PlayMode sin la Pororoca por defecto).
   - Hallazgos para el GDD: 04 §2.4 (P-2, P-4, P-5, P-7, P-15), 04 §10.1 y 08 §4.3 (marcas `*`, `o` y `p` del historial), 03 §9 frente a 04 §2.4 (P-16) y 08 §8.2 (`af_shuffle_result`, solo como sonda hasta B7).
 - **Orden del arranque** (B3, B6 y B14 insertan tras `SetUpStreak();`): `SetUpStreak(); SetUpMeta(); SetUpSkip(); SetUpSessions();`. `ConnectTelemetry();` de B7, cuando llegue, va después de `SetUpSessions();` (el choque con `B7-bootstrap.diff` que avisan B3 y B6).
+
+## D-035 · Backend híbrido: Firebase en el cliente móvil y AWS para la infraestructura propia
+
+- **Fecha:** 2026-10-20. Registrada el 2026-10-20 por el integrador.
+- **Estado:** decidida por el dueño en el chat: «Vamos con el híbrido: Firebase para Auth anónimo, Analytics, Crashlytics y Remote Config; AWS para la web, el CDN de contenido, las 5 funciones con DynamoDB y la 1.2. Infraestructura como código en infra/ y yo despliego. Registra D-035, propone CDK o Terraform y prepara el plan.» Sustituye en parte a 08 §2.4, §10, §11, §12.1 y §15.3 y a la dirección 20 en lo que dicen de Cloud Functions y Firestore.
+
+**Contexto.** El GDD ponía todo el servidor en Firebase: Auth anónimo, cinco Cloud Functions (`rewardedSsv`, `verifyPurchase`, `restoreLedger`, `voidedPurchasesJob`, `deleteAccount`), el libro mayor `users/{uid}/purchases`, App Check con Play Integrity, Remote Config, Analytics y Crashlytics, y en la 1.2 Firestore, ligas y `rcProposalJob` con BigQuery. El juego no tiene servidor de juego: el backend solo valida dinero, identidad y borrado. El dueño tiene acceso a AWS y quiere montar ahí la infraestructura propia. Ninguna de esas piezas de servidor estaba escrita todavía (B8 hace la nube «sin SDK»), así que el cambio es barato ahora.
+
+**Decisión.**
+| Pieza | Dónde |
+|---|---|
+| Auth anónimo (UID estable), Analytics, Crashlytics y Remote Config | **Firebase** (Firebase Unity SDK 13.17.0, sin cambios de versión) |
+| Web `tintalu.com`: política, términos, borrado de cuenta y `app-ads.txt` | **AWS** (S3 + CloudFront) |
+| CDN del contenido remoto (Addressables: packs 701+, arte de mundos) | **AWS** (S3 + CloudFront) |
+| Las 5 funciones de la 1.0 y el libro mayor de compras | **AWS** (funciones sin servidor y DynamoDB); autorizan con el token de Firebase Auth (JWT) y verifican Play Integrity en el servidor, en lugar de App Check |
+| 1.2: guardado multiplataforma, ligas, eventos y datos para propuestas de Remote Config | **AWS** |
+| Partida en la nube de Android (Play Games Saved Games) | Google, sin cambios |
+| Infraestructura | **Como código en `infra/`**; los agentes la escriben y la validan sin credenciales; **el dueño despliega** con su sesión. Ningún agente ve claves de AWS ni de Firebase |
+
+**Pendiente de aprobar por el dueño (regla 4 de `CLAUDE.md`):** la herramienta de infraestructura como código (propuesta en `docs/dev/plan-backend-aws.md`), la región, los servicios concretos y su coste, y los paquetes nuevos del cliente si hicieran falta (el cliente de Firebase Functions deja de usarse; las llamadas pasan a HTTPS).
+
+**Qué cambia en el GDD** (cuando se apruebe el plan): 08 §2.2 (`AF.Backend`), §2.4 (`functions/` → `infra/` y el código de las funciones), §7 (lista de SDK: sin el módulo Functions), §10.1-§10.3 (App Check → verificación de Play Integrity en el servidor), §11 (libro mayor y borrado en DynamoDB), §12.1 (despliegue), §13.3 (Data Safety: AWS como encargado del tratamiento), §15.3 y 01 (coste por versión).
+
+**Cómo revertir.** Con una decisión nueva. Mientras no haya nada desplegado, sin coste; después, migrando el libro mayor.
