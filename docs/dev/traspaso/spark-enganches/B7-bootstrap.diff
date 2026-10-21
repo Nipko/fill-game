@@ -277,7 +277,7 @@ index 00000000..ef202a10
 +guid: 71b3609166c55a0468daf378ac138eb0
 \ No newline at end of file
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
-index 60054986..9a2ea8a3 100644
+index 18b365f3..eaa9dea1 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
 @@ -988,6 +988,7 @@ public bool OpenRiverMap(MapOpenSource source)
@@ -330,15 +330,15 @@ index 60054986..9a2ea8a3 100644
              {
                  AdGate = new InterstitialGate(_ads, _probe, _wallet), // AD_GATE tras «Siguiente» (B2-4)
                  StateStore = new ProfileLevelStateStore(profile, batch), // nivel en curso tras cada vertido (B2-5)
-@@ -1612,6 +1617,7 @@ private IEnumerator Start()
-             SetUpDaily(); // Reto del río (E2; GameBootstrap.Daily.cs): pool, servicio, tarjeta del inicio y partida
-             SetUpStreak(); // Crecida, Hoja escudo y Canasta (E32; GameBootstrap.Streak.cs): el servicio, inyectado en el flujo
+@@ -1614,6 +1619,7 @@ private IEnumerator Start()
              SetUpMeta(); // B14: skins por hito, álbum de frutas, la Canasta en el Mapa y «Datos del río» (GameBootstrap.Meta.cs)
+             SetUpSkip(); // Salto del Boto (B3; GameBootstrap.Skip.cs): el almacén en el perfil, la confirmación y el banner
+             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
 +            ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
  
              int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
              if (requested <= 0 && !rebuilt)
-@@ -1733,6 +1739,7 @@ private void Update()
+@@ -1735,6 +1741,7 @@ private void Update()
  
          private void OnApplicationPause(bool paused)
          {

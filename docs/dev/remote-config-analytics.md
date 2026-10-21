@@ -83,8 +83,8 @@ cobertura compara esa tabla con los atributos. Un valor que no se entiende deja 
 `Errors`; una clase que no pasa su `Validate()` vuelve entera a `Defaults` [P] (Q-B7-7). El Reto recibe la misma
 `sec_clock_max_drift_h` en su copia (`DailyChallengeConfig.ClockSecurity`).
 
-`ShuffleConfig` (B2, `AF.Boosters`, 5 claves) y `SkipConfig` (B3) no están aquí: llegan con sus ramas. Al fusionarlas, hay que
-añadir su tabla a `RcConfigBinder` (una línea por clave) y quitarlas de `NotBoundYet`. `RcConfigBinderTests` descubre por
+`ShuffleConfig` (B2, `AF.Boosters`, 5 claves) y `SkipConfig` (B3) no están aquí todavía. Ya están en la integración (`803e9723`) y en esta rama, que
+las fusionó; falta añadir su tabla a `RcConfigBinder` (una línea por clave) y quitarlas de `NotBoundYet`. `RcConfigBinderTests` descubre por
 reflexión, en los tests, **todos** los tipos con `[RemoteConfigKey]` de todo ensamblado cargado que referencie el de
 `RemoteConfigKeyAttribute` (`AF.Platform`), más ese mismo, salvo los de pruebas (`RemoteConfigKeyScan`); una aserción exige que
 estén al menos los 6 ensamblados de cifras de hoy, para que el escaneo no salga vacío en silencio. Cada
@@ -157,17 +157,16 @@ orden**:
 | 4 | `B7-appflow.diff` | `GameFlow/AppFlow.cs` | `ExitToLobby` publica el abandono si el nivel sigue sin resolver |
 | 5 | `B7-gamescreen.diff` | `UI/UiAnalytics.cs`, `UI/GameScreen.Analytics.cs` (nuevos), `GameScreen.Arrival.cs`, `GameScreen.Victory.cs`, `GameScreen.Notices.cs` | Una línea junto a cada sonda: `af_stop_arrive`, `af_river_fact_shown`, `af_fruit_discovered` |
 | 6 | `B7-rivermap.diff` | `UI/RiverMapScreen.Analytics.cs` (nuevo), `RiverMapScreen.CatchUp.cs`, `RiverMapScreen.Sequence.cs` | Idem en el Mapa |
-| 7 | `B7-bootstrap.diff` | `UI/GameBootstrap.Telemetry.cs` (nuevo), `GameBootstrap.cs`, `GameBootstrap.Daily.cs`, `GameBootstrap.Streak.cs`, `Tests/PlayMode/TelemetryBootTests.cs` (nuevo) | `SetUpTelemetry` antes de la cartera; las cifras de RC a la cartera, el flujo, los anuncios, la tienda, el Reto y la Crecida; los envoltorios de anuncios y tienda; `ConnectTelemetry` tras `SetUpMeta` (B14); `af_map_open`/`close`; la sesión en `OnApplicationPause` |
+| 7 | `B7-bootstrap.diff` | `UI/GameBootstrap.Telemetry.cs` (nuevo), `GameBootstrap.cs`, `GameBootstrap.Daily.cs`, `GameBootstrap.Streak.cs`, `Tests/PlayMode/TelemetryBootTests.cs` (nuevo) | `SetUpTelemetry` antes de la cartera; las cifras de RC a la cartera, el flujo, los anuncios, la tienda, el Reto y la Crecida; los envoltorios de anuncios y tienda; `ConnectTelemetry` tras `SetUpSessions` (la última `SetUp*`); `af_map_open`/`close`; la sesión en `OnApplicationPause` |
 | 8 | `B7-gdd.diff` | `docs/gdd/08-…md` §9, `docs/gdd/02-…md` §4, el JSON y su C# regenerados | D-033, Q-N1: `anim_speed_factor_late` = 1,0 en el GDD (el código ya usa 1,0) |
 
 Los `.meta` de los archivos nuevos van dentro de cada parche (los generó Unity en el worktree de prueba).
 
 **Al aplicarlos:**
 - con `git apply` dentro del repositorio, o con `git -c core.autocrlf=false apply` (los parches van en LF y el árbol, también);
-- desde la fusión de `d994e586` (B14), `ConnectTelemetry();` va justo después de `SetUpMeta();`, la última llamada `SetUp*` de
-  `Start` (el parche se regeneró por eso); el bus se conecta con todo ya construido;
-- `B7-bootstrap.diff` choca con `B3-ui.diff` y `B6-bootstrap.diff` en `GameBootstrap.cs`, que añaden su línea tras `SetUpStreak();`
-  y, por tanto, en el mismo bloque. Se resuelve a mano dejando `ConnectTelemetry();` la última, tras todas las `SetUp*`.
+- desde la fusión de `803e9723` (con B14, B3 y B6 ya integrados), `ConnectTelemetry();` va justo después de `SetUpSessions();`,
+  la última llamada `SetUp*` de `Start` (el parche se regeneró por eso): el bus se conecta con todo ya construido. Si se añade
+  otra `SetUp*` en ese bloque, `ConnectTelemetry();` sigue siendo la última.
 
 Cómo se prueban: `TelemetryHooksTests` (EditMode: la cartera publica con su fuente y sumidero; las canoas con `lives` apagado;
 inicio, victoria, fallo duro, segundo intento y abandono del flujo; la cadena del flujo a 08 §8.2 sin violaciones) y
