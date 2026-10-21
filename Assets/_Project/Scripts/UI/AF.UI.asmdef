@@ -25,7 +25,9 @@
     "AF.Analytics.Adapters",
     "UnityEngine.UI",
     "Unity.InputSystem",
-    "Unity.TextMeshPro"
+    "Unity.TextMeshPro",
+    "AF.Backend",
+    "AF.Backend.Unity"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

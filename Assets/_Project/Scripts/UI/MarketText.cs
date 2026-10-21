@@ -76,6 +76,21 @@ namespace AF.UI
             /// su propia clave porque va en una fila del Mercado junto al botón).
             /// </summary>
             public const string WorldPrize = "market_skin_prize";
+
+            /// <summary>
+            /// «Pendiente de confirmar» (F3-5; 08 §10.3) [P]: una compra cobrada que el servidor aún no verificó (o pendiente de pago en
+            /// Play), en su fila del Mercado y bajo Puñado y Balsa en Aguas estancadas. No se acreditó nada todavía.
+            /// </summary>
+            public const string PurchasePending = "iap_pending_confirm";
+
+            /// <summary>«No se pudo confirmar la compra» (F3-5; <c>verify_failed</c>) [P]: el servidor la rechazó; no se cobró en el juego.</summary>
+            public const string PurchaseFailed = "iap_verify_failed";
+
+            /// <summary>
+            /// «Las compras no están disponibles ahora» (F3-5) [P]: el Mercado abierto con el backend apagado (<c>biz_backend_enabled</c>) o
+            /// sin backend en este build (release sin URL): no se vende nada.
+            /// </summary>
+            public const string StoreUnavailable = "market_store_unavailable";
         }
 
         /// <summary>
@@ -86,7 +101,8 @@ namespace AF.UI
         {
             Keys.Title, Keys.TabSeeds, Keys.TabBoosters, Keys.TabCuias, Keys.TabNoAds, Keys.SeedsAmount, Keys.StarterContent,
             Keys.StarterLeft, Keys.NoAdsContent, Keys.NoAdsOwned, Keys.PiggyContent, Keys.PiggyLocked, Keys.PiggyFull, Keys.PiggyFills,
-            Keys.CanoesContent, Keys.SkinEquip, Keys.SkinEquipped, Keys.NotNow, Keys.WorldPrize,
+            Keys.CanoesContent, Keys.SkinEquip, Keys.SkinEquipped, Keys.NotNow, Keys.WorldPrize, Keys.PurchasePending, Keys.PurchaseFailed,
+            Keys.StoreUnavailable,
         };
 
         /// <summary>«Mercado».</summary>
@@ -175,6 +191,26 @@ namespace AF.UI
 
         /// <summary>«Ahora no».</summary>
         public static string NotNow => Loc.T(Keys.NotNow);
+
+        /// <summary>«Pendiente de confirmar».</summary>
+        public static string PurchasePending => Loc.T(Keys.PurchasePending);
+
+        /// <summary>«No se pudo confirmar la compra».</summary>
+        public static string PurchaseFailed => Loc.T(Keys.PurchaseFailed);
+
+        /// <summary>«Las compras no están disponibles ahora».</summary>
+        public static string StoreUnavailable => Loc.T(Keys.StoreUnavailable);
+
+        /// <summary>La nota de <paramref name="kind"/>, o null sin nota.</summary>
+        public static string? PurchaseNote(PurchaseNoteKind kind)
+        {
+            switch (kind)
+            {
+                case PurchaseNoteKind.Pending: return PurchasePending;
+                case PurchaseNoteKind.Failed: return PurchaseFailed;
+                default: return null;
+            }
+        }
 
         /// <summary>«Premio del mundo · faltan {n}».</summary>
         public static string WorldPrize(int levelsLeft)

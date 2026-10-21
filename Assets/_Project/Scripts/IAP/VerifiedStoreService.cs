@@ -43,15 +43,25 @@ namespace AF.IAP
     /// <summary>Un cambio en la verificación de una compra. No lleva el token ni el UID: se puede registrar.</summary>
     public sealed class PurchaseVerificationEvent
     {
-        internal PurchaseVerificationEvent(string sku, PurchaseVerificationState state, BackendError? error, int unknownGrantItems)
+        internal PurchaseVerificationEvent(
+            string sku, PurchaseVerificationState state, BackendError? error, int unknownGrantItems, bool isLive, int creditedPiggySeeds = 0)
         {
             Sku = sku;
             State = state;
             Error = error;
             UnknownGrantItems = unknownGrantItems;
+            IsLive = isLive;
+            CreditedPiggySeeds = creditedPiggySeeds;
         }
 
         public string Sku { get; }
+
+        /// <summary>
+        /// Es de la compra que el jugador acaba de abrir y cuyo <c>onDone</c> aún no se llamó (F3-5): su resultado llega también por
+        /// <see cref="IStoreService.Purchase"/>. False: una compra que vuelve de la cola o del arranque (<see cref="VerifiedStoreService.Resume"/>,
+        /// <see cref="VerifiedStoreService.Pump"/>), que solo se conoce por este evento (la analítica y la UI la tratan aparte).
+        /// </summary>
+        public bool IsLive { get; }
 
         public PurchaseVerificationState State { get; }
 
@@ -60,6 +70,13 @@ namespace AF.IAP
 
         /// <summary>Ítems del <c>grant</c> que este cliente no conoce y no acreditó.</summary>
         public int UnknownGrantItems { get; }
+
+        /// <summary>
+        /// Con <see cref="PurchaseVerificationState.Credited"/>: las semillas del Cántaro (<c>af_piggy</c>) que entraron en la cartera, las
+        /// de la compra (o <c>eco_piggy_min_buy</c> si no se conocían) y no las que haya ahora en el Cántaro; 0 en el resto. Con ellas
+        /// <see cref="PiggyJar.OnCreditedLater"/> resta solo lo acreditado (D-035, añadido de F3-5).
+        /// </summary>
+        public int CreditedPiggySeeds { get; }
 
         public override string ToString() => "PurchaseVerification(" + Sku + ", " + State + ")";
     }
@@ -193,10 +210,11 @@ namespace AF.IAP
                 return;
             }
 
-            if (product.Kind != ProductKind.Consumable && IsQueued(product.Sku))
+            if ((product.Kind != ProductKind.Consumable || product.Content.PiggySeeds) && IsQueued(product.Sku))
             {
                 // Una Mochila, Sin anuncios o una skin ya pagada que espera al servidor: no se cobra otra (el segundo af_starter
-                // daría 400 y Play tardaría 3 días en reembolsarlo).
+                // daría 400 y Play tardaría 3 días en reembolsarlo). Tampoco otro Cántaro: el pendiente se lleva lo que guarda y el
+                // Cántaro no se vacía hasta acreditarlo (Q-B5-12); otro cobraría las mismas semillas dos veces (F3-5).
                 onDone(new PurchaseResult(request, product, PurchaseStatus.Pending));
                 return;
             }
@@ -253,7 +271,7 @@ namespace AF.IAP
                     if (_ledger.Flush())
                     {
                         _billing.Finish(t.Sku, t.Token, Consumes(product));
-                        Raise(t.Sku, PurchaseVerificationState.AlreadyApplied);
+                        Raise(t.Sku, PurchaseVerificationState.AlreadyApplied, false);
                     }
 
                     continue;
@@ -297,7 +315,7 @@ namespace AF.IAP
                 case BillingResultKind.Pending:
                     // Play aún no la cobró: nada que verificar. Cuando la cobre, vuelve como compra sin terminar (Resume).
                     IsPurchasing = false;
-                    Raise(product.Sku, PurchaseVerificationState.Pending);
+                    Raise(product.Sku, PurchaseVerificationState.Pending, true);
                     onDone(new PurchaseResult(request, product, PurchaseStatus.Pending));
                     return;
             }
@@ -318,7 +336,7 @@ namespace AF.IAP
                 OnQueueChanged(); // el token, guardado antes de preguntar: si la app se cierra, la compra sigue en la cola
             }
 
-            Raise(product.Sku, PurchaseVerificationState.Verifying);
+            Raise(product.Sku, PurchaseVerificationState.Verifying, true);
             Pump();
 
             // Sin respuesta ya y sin petición en vuelo (backend apagado, o la entrada esperaba su turno): queda en la cola.
@@ -336,6 +354,7 @@ namespace AF.IAP
 
             // Lo que se acredite sale en la misma escritura que la cola ya actualizada.
             _ledger.Profile.PurchaseQueue = _queue.ToJson();
+            bool live = _waiting.ContainsKey(token);
             switch (outcome.Kind)
             {
                 case VerificationOutcomeKind.Answered:
@@ -344,17 +363,17 @@ namespace AF.IAP
                 case VerificationOutcomeKind.Rejected:
                     // 400 o 409: ni acreditar ni consumir ni confirmar (plan §9, F2c). No se reenvía en esta sesión.
                     _rejectedThisSession.Add(token);
-                    Raise(sku, PurchaseVerificationState.Rejected, outcome.Error);
+                    Raise(sku, PurchaseVerificationState.Rejected, live, outcome.Error);
                     Complete(token, PurchaseStatus.VerifyFailed, null);
                     return;
                 case VerificationOutcomeKind.DeferredAck:
                     // 72 h sin respuesta: acknowledge local para que Play no la reembolse; NO se acredita (D-035, F3-1 y F3-2).
                     _billing.AcknowledgeLocal(sku, token);
-                    Raise(sku, PurchaseVerificationState.DeferredAck);
+                    Raise(sku, PurchaseVerificationState.DeferredAck, live);
                     Complete(token, PurchaseStatus.Pending, null);
                     return;
                 default:
-                    Raise(sku, PurchaseVerificationState.Queued, outcome.Error);
+                    Raise(sku, PurchaseVerificationState.Queued, live, outcome.Error);
                     Complete(token, PurchaseStatus.Pending, null);
                     return;
             }
@@ -362,9 +381,10 @@ namespace AF.IAP
 
         private void OnAnswered(string token, string sku, StoreProduct? product, PendingVerification entry, VerifyPurchaseResponse response)
         {
+            bool live = _waiting.ContainsKey(token);
             if (response.Status == VerifyStatus.Pending)
             {
-                Raise(sku, PurchaseVerificationState.Pending);
+                Raise(sku, PurchaseVerificationState.Pending, live);
                 Complete(token, PurchaseStatus.Pending, null);
                 return;
             }
@@ -374,12 +394,11 @@ namespace AF.IAP
             {
                 // La respuesta no es de esta compra (o el SKU ya no existe): no se acredita ni se termina; vuelve a la cola.
                 Requeue(entry, "token_hash");
-                Raise(sku, PurchaseVerificationState.CreditFailed);
+                Raise(sku, PurchaseVerificationState.CreditFailed, live);
                 Complete(token, PurchaseStatus.Failed, null);
                 return;
             }
 
-            bool live = _waiting.ContainsKey(token);
             VerifiedCredit credit = _ledger.CreditVerified(
                 product,
                 hash,
@@ -391,7 +410,7 @@ namespace AF.IAP
             {
                 // Sin acreditar no se termina: vuelve a la cola, con su contexto, y se reintenta con espera.
                 Requeue(entry, "credit");
-                Raise(sku, PurchaseVerificationState.CreditFailed, null, credit.UnknownItems);
+                Raise(sku, PurchaseVerificationState.CreditFailed, live, null, credit.UnknownItems);
                 Complete(token, PurchaseStatus.Failed, credit.Transaction);
                 return;
             }
@@ -405,12 +424,12 @@ namespace AF.IAP
 
             if (credit.Kind == VerifiedCreditKind.Credited)
             {
-                Raise(sku, PurchaseVerificationState.Credited, null, credit.UnknownItems);
+                Raise(sku, PurchaseVerificationState.Credited, live, null, credit.UnknownItems, credit.PiggySeeds);
                 Complete(token, PurchaseStatus.Purchased, credit.Transaction);
             }
             else
             {
-                Raise(sku, PurchaseVerificationState.AlreadyApplied);
+                Raise(sku, PurchaseVerificationState.AlreadyApplied, live);
                 Complete(token, PurchaseStatus.AlreadyOwned, null);
             }
         }
@@ -424,6 +443,40 @@ namespace AF.IAP
                 _ledger.Profile.PurchaseQueue = _queue.ToJson();
             }
         }
+
+        /// <summary>
+        /// ¿Espera al servidor (en la cola o con su respuesta en vuelo) la compra cuyo <c>token_hash</c> es <paramref name="tokenHash"/>?
+        /// Lo usa <see cref="LedgerRestore"/> (F3-5) para no acreditar desde el libro mayor una compra de este dispositivo que la cola
+        /// acreditará con su contexto (las semillas del Cántaro). No es un camino caliente.
+        /// </summary>
+        public bool IsAwaitingServer(string tokenHash)
+        {
+            if (tokenHash == null)
+            {
+                throw new ArgumentNullException(nameof(tokenHash));
+            }
+
+            for (int i = 0; i < _queue.Entries.Count; i++)
+            {
+                if (string.Equals(PurchaseTokenHash.Of(_queue.Entries[i].Request.Token), tokenHash, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            foreach (string token in _waiting.Keys)
+            {
+                if (string.Equals(PurchaseTokenHash.Of(token), tokenHash, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>El registro de la tienda (perfil, cartera y catálogo) sobre el que acredita.</summary>
+        internal StoreLedger Ledger => _ledger;
 
         private bool IsQueued(string sku)
         {
@@ -456,9 +509,10 @@ namespace AF.IAP
             waiting.OnDone(new PurchaseResult(waiting.Request, waiting.Product, status, transaction));
         }
 
-        private void Raise(string sku, PurchaseVerificationState state, BackendError? error = null, int unknownItems = 0)
+        private void Raise(
+            string sku, PurchaseVerificationState state, bool live, BackendError? error = null, int unknownItems = 0, int piggySeeds = 0)
         {
-            VerificationChanged?.Invoke(new PurchaseVerificationEvent(sku, state, error, unknownItems));
+            VerificationChanged?.Invoke(new PurchaseVerificationEvent(sku, state, error, unknownItems, live, piggySeeds));
         }
 
         private string? AccountId()

@@ -3339,3 +3339,36 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Estado:** decidido por el dueño en el chat (formulario), con la recomendada: «Canon «1 Marea + 30»».
 - **Contexto:** con la tasa de valor de la Bitácora (Marea = 30 semillas por unidad; Q-B3), el canon «3 Marea + 30» de esas cinco casillas valía 120, pero sus tres opciones (60 semillas, 2 Marea, 1 Marea + 30) valen 60.
 - **Decisión:** el canon de las casillas 2, 10, 17, 19 y 27 pasa a **«1 Marea + 30»** (vale 60, igual que la opción de mezcla). El ciclo pasa de 15 a 5 Mareas sueltas; las semillas del ciclo no cambian. Se ponen al día la tabla compilada del cliente y el default de `eco_calendar_table_v2` (08 §9), `CALENDAR` de `tools/econ_sim.py`, las simulaciones `tools/out/econ_*.md` y las cifras [sim] del GDD que dependan de ellas, y las tablas de 05 §2.3 y 06 §4.2.
+- **Aplicada (rama `tanda5/bitacora-canon`):** `LoginCalendarTable.Default` y sus tests (5 Mareas sueltas en el canon; el canon de cada casilla vale lo mismo que sus opciones), `CALENDAR` de `tools/econ_sim.py`, 05 §2.1, §2.3 y §3.1, 06 §4.2 (con la suma de verificación de las Mareas), 08 §9 (`eco_calendar_table_v2` y, de paso, `eco_calendar_locked_booster_seeds` como tasa de valor que sustituye el comodín bloqueado) y `docs/GDD.md` (versión 1.22 y convención [sim]). El default de `eco_calendar_table_v2` en `RemoteConfigDefaults.json` sigue en `null` con su `pending` (la tabla compilada del cliente es el respaldo; `rc_defaults.py --check` idéntico). **Ninguna cifra [sim] cambia:** `econ_B.md`, `econ_A.md`, `econ_B_tramos.md` y `econ_variants.md` se reproducen byte a byte con el canon nuevo, porque el simulador cuenta 3 Mareas sueltas como una unidad `undo` y su inventario de Marea nunca está vacío en un bloqueo que pide Marea (las Canastas lo llenan de sobra; 0 llamadas al anuncio de Marea en 300 corridas por perfil), así que las 10 Mareas menos por ciclo (unas 3,3 unidades `undo`) no cambian ninguna decisión ni la secuencia aleatoria de las corridas. El peso de los hitos (51,7 %) y las 3.000 semillas no cambian. De paso, 05 §3.6 y su pregunta abierta 2 dejan de proponer «Cuia extra y Morpho ofrecidos antes del nivel» (Q-E1).
+
+### D-035, añadido del 2026-10-21: preguntas de F3-5, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `backend/f3-5` (revisión APROBADO). El dueño puede cambiarlas.
+- **«Eliminar cuenta» sin servidor** (sin red o con `biz_backend_enabled` apagado): no se borra nada, se muestra «No se pudo eliminar» y se puede reintentar.
+- **`account_code` en la fusión con la nube:** manda el del dispositivo; tras reinstalar se pide otro (se anota en la tabla de 08 §11).
+- **Cántaro acreditado tarde:** se resta solo lo acreditado, para no perder lo que entró en el Cántaro después de la compra (la recomendada; sustituye la (a) que aplicó F3-5 de vaciarlo entero).
+- **Cántaro devuelto por `restoreLedger` o anulado:** se usa `eco_piggy_min_buy` [P].
+- **Intervalo de `Pump`:** 5 s [P].
+- **Textos de las 5 claves nuevas** (`iap_pending_confirm`, `iap_verify_failed`, `market_store_unavailable`, `settings_account_code`, `settings_account_code_unavailable`): aprobados en es-419; se piden EN y PT-BR.
+- **Banda de edad** hasta que llegue B12 (Spark): se trata como 13 o más, con el `TODO(B12)` en `PlayerUnder13()`.
+
+## D-039 · Integración del Firebase Unity SDK 13.17.0 (F3-6)
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** aprobado por el dueño en el chat: «Apruebo integrar el Firebase Unity SDK 13.17.0 con solo Auth, App Check, Analytics, Crashlytics y Remote Config (sin Functions), detrás de sus interfaces y con implementaciones falsas en el editor (F3-6). El google-services.json de dev lo coloco yo fuera del repo.» Y en el formulario: los paquetes se descargan y se versionan (Git LFS, referenciados por `file:` en `Packages/manifest.json`); si Firebase Analytics añade `com.google.android.gms.permission.AD_ID`, se quita del manifiesto fusionado (`tools:remove`) hasta que lleguen los anuncios de MAX; `WAKE_LOCK` se aprueba si aparece.
+
+**Decisión.**
+- Paquetes (descargados por el integrador el 2026-10-21 de `https://dl.google.com/games/registry/unity/<paquete>/<paquete>-<versión>.tgz`), con su SHA-256:
+  - `com.google.external-dependency-manager-1.2.189.tgz`: `67087dbbb5f26746f5e2456159558de35ac14162a4ece7632d3ed3bdc0bfc175`
+  - `com.google.firebase.analytics-13.17.0.tgz`: `8f857d19e09794f6f50921d0af419cbcd86dfb94e53586a9f41270728ae1f8f8`
+  - `com.google.firebase.app-13.17.0.tgz`: `d74830478ed10eab56d848d92484e23b3aa9b27cbd1c843c21745be04f57eaa5`
+  - `com.google.firebase.app-check-13.17.0.tgz`: `976a99eab31448dbf77aebedabc65fb6d51bd0ccedc9e5fdf228776a41a256ea`
+  - `com.google.firebase.auth-13.17.0.tgz`: `14df2538229dc129a35c6509a799970bf998f32386beba080b4567e8f8b80092`
+  - `com.google.firebase.crashlytics-13.17.0.tgz`: `0911e76db75e0a6410493e3db2e609b619ab0386cd7e9d66689406c3c7ec5658`
+  - `com.google.firebase.remote-config-13.17.0.tgz`: `1862f969c6a1f78496796379a7d703deeb877fb5b687b9ed9dd06ba5fa8a16ee`
+- Solo `app`, `auth`, `app-check`, `analytics`, `crashlytics` y `remote-config`, más EDM4U 1.2.189 (lo trae Firebase; 08 §7 #4). **Sin** `functions` ni `firestore`.
+- Cada SDK, detrás de su interfaz con implementación falsa en el editor (08 §2.1, principio 6); los reales solo en `UNITY_ANDROID && !UNITY_EDITOR`. La recogida de Analytics sigue apagada hasta el consentimiento (B12).
+- `google-services.json` lo coloca el dueño en una ruta ignorada por git; **ningún agente lo lee, lo crea, lo imprime ni lo commitea** (regla 5).
+- Permisos: `WAKE_LOCK` aprobado si lo añade el SDK; `AD_ID` se quita hasta MAX. Cualquier otro permiso nuevo para la integración y se pregunta.
+
+**Cómo revertir.** Quitando los paquetes de `manifest.json` y las implementaciones reales; las interfaces y las falsas siguen.

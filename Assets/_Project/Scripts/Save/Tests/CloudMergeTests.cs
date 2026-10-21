@@ -41,6 +41,29 @@ namespace AF.Save.Tests
         }
 
         [Test]
+        public void AccountCode_RoundTrips_AndIsAlwaysTheDevicesInTheMerge()
+        {
+            // F3-5 [P] (08 §4.3 account_code; Q-B13-21): el código de borrado lo guarda el perfil y falta mientras no se pide; en la
+            // fusión manda el del dispositivo (el de la nube puede estar invalidado: el servidor rota en cada petición).
+            Profile none = At(40, T0, 300);
+            Assert.That(ProfileJson.Serialize(none), Does.Not.Contain("account_code"));
+            none.AccountCode = "3HZ7M2Q9XK4T8VB1NC6DRF0WPE";
+            Profile back = ProfileJson.Deserialize(ProfileJson.Serialize(none));
+            Assert.That(back.AccountCode, Is.EqualTo("3HZ7M2Q9XK4T8VB1NC6DRF0WPE"));
+
+            Profile local = At(40, T0, 100);
+            Profile cloud = At(50, T0, 900);
+            cloud.AccountCode = "0AAAAAAAAAAAAAAAAAAAAAAAAA";
+            CloudMergeResult won = CloudMerge.Resolve(local, cloud);
+            Assert.That(won.Winner, Is.EqualTo(CloudMergeWinner.Cloud));
+            Assert.That(won.Merged.AccountCode, Is.Null, "tras reinstalar, el cliente pide otro (08 §11)");
+
+            local.AccountCode = "1BBBBBBBBBBBBBBBBBBBBBBBBB";
+            Assert.That(CloudMerge.Resolve(local, cloud).Merged.AccountCode, Is.EqualTo("1BBBBBBBBBBBBBBBBBBBBBBBBB"));
+            Assert.That(CloudMerge.Resolve(local, null).Merged.AccountCode, Is.EqualTo("1BBBBBBBBBBBBBBBBBBBBBBBBB"));
+        }
+
+        [Test]
         public void Case2_Identical_NothingToDo()
         {
             Profile local = At(40, T0, 300);

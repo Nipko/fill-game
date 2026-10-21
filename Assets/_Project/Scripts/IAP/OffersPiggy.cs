@@ -36,8 +36,8 @@ namespace AF.IAP
     /// <c>eco_piggy_fill</c> (+15 / +30 / +40 por victoria normal, Difícil y Muy difícil), hasta <c>eco_piggy_cap</c> (3.000,
     /// «¡Lleno!»). El Reto del río no lo llena [P] (Q-B5-5);</description></item>
     /// <item><description>se puede comprar desde <c>eco_piggy_min_buy</c> (1.000): da exactamente lo acumulado
-    /// (<see cref="StoreLedger"/> con <see cref="PurchaseRequest.PiggySeeds"/>); al comprarlo se vacía y vuelve a llenarse («1 compra
-    /// por llenado»).</description></item>
+    /// (<see cref="StoreLedger"/> con <see cref="PurchaseRequest.PiggySeeds"/>); al acreditarse se le resta lo acreditado (se vacía si
+    /// no entró nada desde la compra) y vuelve a llenarse («1 compra por llenado»).</description></item>
     /// </list>
     /// Las semillas del Cántaro no son de la cartera hasta comprarlo: no pasan por <c>Wallet.Apply</c> al llenarse (06 §4.4 no lo cuenta
     /// como fuente; 05 §2.1 tampoco). Sin asignaciones al consultarlo.
@@ -139,9 +139,10 @@ namespace AF.IAP
 
         /// <summary>
         /// Terminó una compra del Cántaro: solo con <see cref="PurchaseStatus.Purchased"/> (acreditada: <c>Wallet.Apply</c> ya sumó
-        /// lo acumulado) se vacía y vuelve a llenarse desde 0. Con <see cref="PurchaseStatus.Pending"/> (sin verificar, o el pago en
-        /// efectivo de Play aún sin pagar) no se vacía: el Cántaro guarda lo suyo hasta que la compra se acredite [P] (Q-B5-12; lo
-        /// conecta F3-5 con la tienda verificada). Con cualquier otro resultado no cambia nada. Devuelve si se vació.
+        /// <see cref="PurchaseRequest.PiggySeeds"/>) se le restan esas semillas, así que se vacía y vuelve a llenarse desde 0 (y, si algo
+        /// entró mientras la compra seguía abierta, lo conserva, como <see cref="OnCreditedLater"/>). Con
+        /// <see cref="PurchaseStatus.Pending"/> (sin verificar, o el pago en efectivo de Play aún sin pagar) no cambia: el Cántaro guarda
+        /// lo suyo hasta que la compra se acredite [P] (Q-B5-12). Con cualquier otro resultado no cambia nada. Devuelve si se acreditó.
         /// </summary>
         public bool OnPurchaseResult(PurchaseResult result)
         {
@@ -156,12 +157,49 @@ namespace AF.IAP
                 return false;
             }
 
-            OffersRecord r = _state.Record;
-            r.PiggySeeds = 0;
-            r.PiggyCap = StoreConfig.EcoPiggyCap;
-            r.PiggyFullCardShown = false;
-            _state.Persist();
+            Withdraw(result.Request.PiggySeeds);
             return true;
+        }
+
+        /// <summary>
+        /// Una compra del Cántaro que quedó pendiente (Q-B5-12) se acreditó después, desde la cola de verificación (F3-5: al volver a
+        /// primer plano, en el siguiente arranque o con el <c>Pump</c> periódico): se le restan solo las <paramref name="creditedSeeds"/>
+        /// que entraron en la cartera (<see cref="PurchaseVerificationEvent.CreditedPiggySeeds"/>) y se conserva lo que entró en el
+        /// Cántaro después de la compra (D-035, añadido de F3-5: sustituye vaciarlo entero). Con otro <paramref name="sku"/> no hace
+        /// nada. Devuelve si cambió el Cántaro.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException"><paramref name="creditedSeeds"/> es negativo.</exception>
+        public bool OnCreditedLater(string sku, int creditedSeeds)
+        {
+            if (creditedSeeds < 0)
+            {
+                throw new ArgumentOutOfRangeException(nameof(creditedSeeds));
+            }
+
+            if (!string.Equals(sku, StoreCatalog.Piggy, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            Withdraw(creditedSeeds);
+            return true;
+        }
+
+        // Resta lo acreditado de lo que hay (con el tope en vigor; nunca por debajo de 0). La tarjeta «¡Lleno!» vuelve a salir cuando
+        // se llene otra vez.
+        private void Withdraw(int creditedSeeds)
+        {
+            OffersRecord r = _state.Record;
+            int cap = StoreConfig.EcoPiggyCap;
+            int left = Math.Max(0, Seeds - Math.Max(0, creditedSeeds));
+            r.PiggySeeds = left;
+            r.PiggyCap = cap;
+            if (left < cap)
+            {
+                r.PiggyFullCardShown = false;
+            }
+
+            _state.Persist();
         }
     }
 }

@@ -8,8 +8,16 @@ namespace AF.Analytics.Adapters
     /// <summary>
     /// Analítica de compras (08 §8.2: <c>af_iap_result</c> al terminar cada compra y <c>purchase</c> con la compra acreditada)
     /// como envoltorio de un <see cref="IStoreService"/>, sin tocar <c>AF.IAP</c>. <c>af_iap_offer_shown</c> lo emite la vista
-    /// al enseñar la oferta (<see cref="OfferShown"/>). Sin verificación de servidor en la fase 2: no hay
-    /// <c>transaction_id</c>, que no se inventa [P]; <c>value</c> es el precio local de la tienda y <c>items</c>, el SKU.
+    /// al enseñar la oferta (<see cref="OfferShown"/>). No hay <c>transaction_id</c>, que no se inventa [P] (el <c>purchaseToken</c> no
+    /// va a la analítica); <c>value</c> es el precio local de la tienda y <c>items</c>, el SKU.
+    /// <para>
+    /// Con la tienda verificada (<see cref="VerifiedStoreService"/>, F3-5) también escucha
+    /// <see cref="VerifiedStoreService.VerificationChanged"/>: lo que se resuelve fuera de una compra abierta (desde la cola de 72 h, al
+    /// volver a primer plano o en el siguiente arranque; <see cref="PurchaseVerificationEvent.IsLive"/> false) sale como
+    /// <c>af_iap_result</c> sin <c>context</c> (la cola no lo guarda: no se inventa): <c>ok</c> (y <c>purchase</c>) al acreditarse,
+    /// <c>verify_failed</c> si el servidor la rechaza y <c>deferred_ack</c> al cumplir el plazo sin respuesta. Lo de una compra abierta
+    /// sale una sola vez, con su resultado, por <see cref="Purchase"/>.
+    /// </para>
     /// </summary>
     public sealed class AnalyticsStoreService : IStoreService
     {
@@ -21,6 +29,10 @@ namespace AF.Analytics.Adapters
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
             _analytics = analytics ?? throw new ArgumentNullException(nameof(analytics));
+            if (inner is VerifiedStoreService verified)
+            {
+                verified.VerificationChanged += OnVerificationChanged;
+            }
         }
 
         /// <inheritdoc />
@@ -76,6 +88,44 @@ namespace AF.Analytics.Adapters
                 .Add("currency", price.Currency)
                 .Add("items", sku)
                 .Add("context", context));
+        }
+
+        /// <summary>
+        /// <c>af_iap_result</c> de una compra que se resuelve fuera de una compra abierta (público para las pruebas). Lo de una compra
+        /// abierta (<see cref="PurchaseVerificationEvent.IsLive"/>) no sale aquí: ya sale con su resultado.
+        /// </summary>
+        public void OnVerificationChanged(PurchaseVerificationEvent e)
+        {
+            if (e == null || e.IsLive)
+            {
+                return;
+            }
+
+            string? result;
+            switch (e.State)
+            {
+                case PurchaseVerificationState.Credited: result = "ok"; break;
+                case PurchaseVerificationState.Rejected: result = "verify_failed"; break;
+                case PurchaseVerificationState.DeferredAck: result = "deferred_ack"; break;
+                default: result = null; break; // verifying, pending, en cola, ya aplicada: nada nuevo que contar
+            }
+
+            if (result == null)
+            {
+                return;
+            }
+
+            _analytics.Log(AnalyticsEvent.Create("af_iap_result").Add("sku", e.Sku).Add("result", result));
+            if (e.State != PurchaseVerificationState.Credited)
+            {
+                return;
+            }
+
+            LocalPrice price = _inner.PriceOf(e.Sku);
+            _analytics.Log(AnalyticsEvent.Create("purchase")
+                .Add("value", (double)price.Amount)
+                .Add("currency", price.Currency)
+                .Add("items", e.Sku));
         }
 
         /// <summary><c>context</c> de 08 §8.2 (<c>stuck</c>, <c>no_canoes</c>, <c>shop</c>, <c>starter_window</c>, <c>noads_prompt</c>, <c>piggy</c>).</summary>

@@ -318,6 +318,7 @@ namespace AF.UI
         private PourTimings _timings;
         private int _stuckSeedsShown = -1;
         private int _stuckUndoShown = -1;
+        private int _stuckNotesShown = -1; // F3-5: la versión de las notas de compra con la que se armó el modal
         private bool _stuckBalsaOk;
         private bool _attemptBanner;
         private FlowPhase _chromePhase = FlowPhase.Loading;
@@ -1505,9 +1506,15 @@ namespace AF.UI
         internal void ShowStuckView(bool layout)
         {
             LevelFlow flow = RequireFlow();
+            if (layout)
+            {
+                _services?.PurchaseNotes.ClearFailures(); // F3-5: «No se pudo confirmar» es de la compra de antes, no de este bloqueo
+            }
+
             StuckModalView view = StuckModalModel.Build(StuckContext(flow), flow.Boosters);
             _stuck.Show(view, _services, _canvasW, StuckRoomDp);
             _stuckSeedsShown = _services?.Wallet.Seeds ?? 0;
+            _stuckNotesShown = _services?.PurchaseNotes.Version ?? 0;
             _stuckUndoShown = flow.UndoStatus.Stock + (flow.UndoStatus.FreeLeft * 1000);
             if (_services != null && _stuckBalsaOk && !flow.BalsaShownThisBlock)
             {
@@ -1570,7 +1577,9 @@ namespace AF.UI
         {
             bool undoAd = _services != null && _services.RewardedReady(AdPlacement.UndoRefill);
             StuckContext ctx = flow.BuildStuckContext(undoAd, _stuckBalsaOk, _services?.Geo ?? GeoTier.T3);
-            ctx.PurchasesBlocked = _services != null && _services.PurchasesBlocked;
+            // Sin compras con el perfil en solo lectura (08 §4.4) ni con la tienda que no vende (biz_iap_enabled, o el backend apagado o
+            // ausente en este build: F3-5, que no las podría acreditar).
+            ctx.PurchasesBlocked = _services != null && (_services.PurchasesBlocked || !_services.Store.IsAvailable);
             return ctx;
         }
 
@@ -1794,9 +1803,10 @@ namespace AF.UI
                 // Tras comprar un Puñado o recargar Marea, el modal se rearma con el saldo nuevo y el mismo precio.
                 int seeds = _services?.Wallet.Seeds ?? 0;
                 int undo = flow.UndoStatus.Stock + (flow.UndoStatus.FreeLeft * 1000);
-                if (seeds != _stuckSeedsShown || undo != _stuckUndoShown)
+                int notes = _services?.PurchaseNotes.Version ?? 0;
+                if (seeds != _stuckSeedsShown || undo != _stuckUndoShown || notes != _stuckNotesShown)
                 {
-                    ShowStuckView(false);
+                    ShowStuckView(false); // también con una nota de compra nueva (F3-5: pendiente, rechazada o acreditada)
                 }
             }
             else if (flow.Phase == FlowPhase.NoCanoes && _noCanoes.Refresh(_services))

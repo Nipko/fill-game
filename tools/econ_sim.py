@@ -143,7 +143,8 @@ def band_of(level: int) -> str:
 # simulador cuenta la Marea de 3 deshacer, así que 3 Mareas = 1 unidad "undo"), "hint", "cuia" y "reveal" (el del día 29 se
 # modela como hint). Lo fijo va igual en las tres opciones: "basket" (días 7 y 21: eco_basket_seeds + el comodín de la
 # próxima Canasta de nivel, la regla del hito 6 de la Crecida; Q-B7 de B4) y "grand" (día 30: la Canasta grande, 06 §4.2,
-# regla 2). El marco de país del 30 no da semillas.
+# regla 2). El marco de país del 30 no da semillas. Canon de las casillas 2, 10, 17, 19 y 27: «1 Marea + 30» (D-033, añadido
+# del 2026-10-21; vale 60, como sus opciones).
 CalendarReward = Tuple[int, Dict[str, int]]
 
 
@@ -155,7 +156,7 @@ _V60 = (_cal(60), _cal(undo=2), _cal(30, undo=1))
 _V100 = (_cal(100), _cal(hint=1), _cal(40, undo=2))
 CALENDAR: List[Tuple[CalendarReward, Tuple[CalendarReward, CalendarReward, CalendarReward], Optional[str]]] = [
     (_cal(60), _V60, None),                       # 1
-    (_cal(30, undo=3), _V60, None),               # 2
+    (_cal(30, undo=1), _V60, None),               # 2
     (_cal(60), _V60, None),                       # 3
     (_cal(hint=1), _V100, None),                  # 4
     (_cal(100), _V100, None),                     # 5
@@ -163,16 +164,16 @@ CALENDAR: List[Tuple[CalendarReward, Tuple[CalendarReward, CalendarReward, Calen
     (_cal(250), (_cal(250), _cal(50, hint=2), _cal(100, undo=5)), "basket"),    # 7
     (_cal(60), _V60, None),                       # 8
     (_cal(60), _V60, None),                       # 9
-    (_cal(30, undo=3), _V60, None),               # 10
+    (_cal(30, undo=1), _V60, None),               # 10
     (_cal(100), _V100, None),                     # 11
     (_cal(hint=1), _V100, None),                  # 12
     (_cal(100), _V100, None),                     # 13
     (_cal(300, cuia=1), (_cal(400), _cal(300, cuia=1), _cal(100, hint=2, cuia=1)), None),  # 14
     (_cal(60), _V60, None),                       # 15
     (_cal(100), _V100, None),                     # 16
-    (_cal(30, undo=3), _V60, None),               # 17
+    (_cal(30, undo=1), _V60, None),               # 17
     (_cal(100), _V100, None),                     # 18
-    (_cal(30, undo=3), _V60, None),               # 19
+    (_cal(30, undo=1), _V60, None),               # 19
     (_cal(100), _V100, None),                     # 20
     (_cal(400), (_cal(400), _cal(cuia=2, hint=2), _cal(200, cuia=1, hint=1)), "basket"),  # 21
     (_cal(100), _V100, None),                     # 22
@@ -180,14 +181,14 @@ CALENDAR: List[Tuple[CalendarReward, Tuple[CalendarReward, CalendarReward, Calen
     (_cal(100), _V100, None),                     # 24
     (_cal(hint=1), _V100, None),                  # 25
     (_cal(100), _V100, None),                     # 26
-    (_cal(30, undo=3), _V60, None),               # 27
+    (_cal(30, undo=1), _V60, None),               # 27
     (_cal(100), _V100, None),                     # 28
     (_cal(reveal=1), (_cal(100), _cal(reveal=1), _cal(hint=1)), None),          # 29
     (_cal(600), (_cal(600), _cal(300, cuia=2, hint=1), _cal(300, hint=3)), "grand"),  # 30
 ]
 CALENDAR_PICKS = ("canon", "seeds", "booster", "mix")
 assert sum(c[0][0] for c in CALENDAR) == 3000, "La Bitácora debe sumar 3.000 semillas en el canon (dirección 12; D-033)"
-assert sum(c[0][1].get("undo", 0) for c in CALENDAR) == 15, "15 Marea en el canon (D-033)"
+assert sum(c[0][1].get("undo", 0) for c in CALENDAR) == 5, "5 Marea sueltas en el canon (D-033, añadido del 2026-10-21)"
 # Canasta grande (06 §4.2, regla 2; GDD.md §6.1 #13): 150 semillas + 1 Cuia extra + 1 Morpho + 3 Marea.
 CALENDAR_GRAND = _cal(150, cuia=1, hint=1, undo=3)
 

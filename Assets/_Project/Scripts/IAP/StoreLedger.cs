@@ -296,6 +296,7 @@ namespace AF.IAP
 
             ProductContent content = product.Content;
             int unknownItems = 0;
+            long piggyCredited = 0;
             Transaction transaction;
             try
             {
@@ -317,6 +318,7 @@ namespace AF.IAP
                         else if (item.Id == GrantItemIds.Piggy)
                         {
                             seeds = checked(seeds + piggySeeds);
+                            piggyCredited = checked(piggyCredited + piggySeeds);
                         }
                         else if (item.Id == GrantItemIds.InfiniteCanoesMinutes)
                         {
@@ -335,6 +337,7 @@ namespace AF.IAP
                 else
                 {
                     seeds = content.PiggySeeds ? piggySeeds : content.Seeds;
+                    piggyCredited = content.PiggySeeds ? piggySeeds : 0;
                     stock = content.Stock;
                     canoesMinutes = (long)content.InfiniteCanoes.TotalMinutes;
                     rescue = content.AppliesRescue;
@@ -394,7 +397,7 @@ namespace AF.IAP
             }
 
             PendingSave = Wallet.PendingSave;
-            return new VerifiedCredit(VerifiedCreditKind.Credited, result, unknownItems);
+            return new VerifiedCredit(VerifiedCreditKind.Credited, result, unknownItems, checked((int)piggyCredited));
         }
 
         /// <summary>Guarda ya el perfil (la cola de verificación cambió).</summary>
@@ -471,11 +474,12 @@ namespace AF.IAP
     /// <summary>Resultado de <see cref="StoreLedger.CreditVerified"/>.</summary>
     internal sealed class VerifiedCredit
     {
-        public VerifiedCredit(VerifiedCreditKind kind, TransactionResult? transaction, int unknownItems)
+        public VerifiedCredit(VerifiedCreditKind kind, TransactionResult? transaction, int unknownItems, int piggySeeds = 0)
         {
             Kind = kind;
             Transaction = transaction;
             UnknownItems = unknownItems;
+            PiggySeeds = piggySeeds;
         }
 
         public VerifiedCreditKind Kind { get; }
@@ -484,6 +488,9 @@ namespace AF.IAP
 
         /// <summary>Ítems del <c>grant</c> que este cliente no conoce (no se acreditaron).</summary>
         public int UnknownItems { get; }
+
+        /// <summary>Semillas del Cántaro (<c>af_piggy</c>) que entraron en la cartera con esta acreditación (0 si ninguna).</summary>
+        public int PiggySeeds { get; }
 
         /// <summary>El hash queda en <c>applied_purchases</c> (acreditada ahora o antes): se puede terminar la compra en la tienda.</summary>
         public bool IsSettled => Kind != VerifiedCreditKind.Rejected;
