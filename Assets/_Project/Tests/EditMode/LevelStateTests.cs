@@ -421,6 +421,28 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void AreYouSure_ReopenedWithLivesOff_ReopensTheStuckModalWithThe1To30Footer()
+        {
+            // ¿Seguro? guardado con las canoas encendidas; biz_feature_lives llega apagado al volver (D-038): sin el embudo con
+            // canoas no hay ¿Seguro?, así que se reabre Aguas estancadas, con el pie de 1-30 y sin cobrar ni contar nada.
+            var rig = new Rig(offset: 25, seeds: 1000);
+            rig.Start(31);
+            GetStuck(rig.Flow);
+            Assert.That(rig.Flow.PressGiveUp(), Is.True);
+            StringAssert.StartsWith("h2|G|", rig.Store.Load()!.History);
+
+            Rig again = rig.Reopen();
+            again.Economy.Wallet.LivesEnabled = false;
+            Assert.That(again.Flow.Resume(rig.Store.Load()!), Is.True);
+            Assert.That(again.Flow.Phase, Is.EqualTo(FlowPhase.StuckModal));
+            Assert.That(StuckModalModel.Build(again.Flow.BuildStuckContext(false, false, GeoTier.T3), again.Flow.Boosters).Footer,
+                Is.EqualTo(StuckFooter.RestartFree));
+            Assert.That(again.Flow.RescueOffered, Is.True, "el rescate no cambia");
+            Assert.That(again.Economy.Wallet.Canoes.Count, Is.EqualTo(5));
+            Assert.That(again.Flow.Attempt.FailsLevel, Is.EqualTo(0));
+        }
+
+        [Test]
         public void AreYouSure_AndLevelFailed_Reopen_AndTheCanoeIsChargedOnlyOnce()
         {
             var rig = new Rig(offset: 25, seeds: 1000);

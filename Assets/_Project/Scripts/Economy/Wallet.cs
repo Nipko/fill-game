@@ -68,7 +68,8 @@ namespace AF.Economy
 
         /// <summary>
         /// <c>biz_feature_lives</c> (08 §9; bloque B7): con false, las canoas no cuentan en ningún nivel, como antes del 31 (ni se
-        /// gastan ni bloquean el inicio) [P]. True por defecto.
+        /// gastan ni bloquean el inicio), y desde el 31 el embudo de D-008 funciona como en 1-30 (D-038; lo decide
+        /// <c>LevelFlow.CanoeFunnel</c>). True por defecto.
         /// </summary>
         public bool LivesEnabled { get; set; } = true;
 

@@ -1989,7 +1989,7 @@ namespace AF.UI
         }
 
         // D-008: desde el 31 «Salir» pregunta «¿Salir del nivel? Perderás 1 canoa» [P] (sin la línea de canoa si no hay canoa
-        // en juego: Canoas infinitas o 0 canoas); en 1-30 sale sin coste.
+        // en juego: Canoas infinitas o 0 canoas); en 1-30, y desde el 31 con biz_feature_lives apagado (D-038), sale sin coste.
         private void OnPauseQuit()
         {
             _pause.Hide();

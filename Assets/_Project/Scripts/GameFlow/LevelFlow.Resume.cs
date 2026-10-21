@@ -182,7 +182,8 @@ namespace AF.GameFlow
                 phase = SavedPhase.Playing;
             }
 
-            if ((phase == SavedPhase.GiveUpConfirm || phase == SavedPhase.LevelFailed) && !CanoesLevel)
+            // Sin el embudo con canoas (1-30, o desde el 31 con biz_feature_lives apagado: D-038) no hay ¿Seguro? ni Nivel fallido.
+            if ((phase == SavedPhase.GiveUpConfirm || phase == SavedPhase.LevelFailed) && !CanoeFunnel)
             {
                 phase = stuck ? SavedPhase.StuckModal : SavedPhase.Playing;
             }

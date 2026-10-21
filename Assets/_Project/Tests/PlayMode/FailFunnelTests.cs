@@ -222,6 +222,44 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator Level31_WithLivesOff_EverythingWorksAsIn1To30()
+        {
+            // D-038: con biz_feature_lives apagado, desde el 31 el embudo es el de 1-30: sin canoas en la barra ni en el modal,
+            // el pie de Aguas estancadas es «Volver a la orilla (gratis)» (reinicio directo, sin ¿Seguro? ni Nivel fallido) y
+            // «Salir» desde la pausa sale gratis al inicio, sin aviso y sin contar como fallo. El rescate no cambia.
+            LaunchOptions.LevelOffsetOverride = 25;
+            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1000));
+            yield return PlayModeHelpers.LoadGame(31, new MemoryProgressStore(31, 30));
+            GameBootstrap boot = GameBootstrap.Current!;
+            boot.Wallet!.LivesEnabled = false; // lo que deja ConnectWallet con biz_feature_lives = false (08 §9)
+            PlayModeHelpers.TakeClock(boot);
+            boot.TapAnywhere();
+            GameScreen view = boot.View!;
+            FunnelSetup.GetStuck(boot);
+            Assert.That(view.Stuck.CanoeLineText, Is.Null, "sin línea de canoa");
+            Assert.That(view.Stuck.RestartButton.gameObject.activeInHierarchy, Is.True, "el pie de 1-30 (rama C)");
+            Assert.That(view.Stuck.GiveUpButton.gameObject.activeSelf, Is.False, "sin «Rendirse»");
+            Assert.That(view.Stuck.RescueButton.gameObject.activeInHierarchy, Is.True, "el rescate no cambia");
+            Assert.That(view.WalletBar.CanoesShown, Is.EqualTo(-1), "la barra no enseña canoas");
+
+            view.Stuck.RestartButton.onClick.Invoke();
+            Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.Intro), "reinicio directo");
+            Assert.That(view.GiveUp.Visible, Is.False);
+            Assert.That(view.Failed.Visible, Is.False);
+            Assert.That(boot.Wallet.Canoes.Count, Is.EqualTo(5));
+            Assert.That(boot.Flow.Attempt.FailsLevel, Is.EqualTo(1), "rama C: fallo duro sin canoa, como en 1-30");
+
+            PlayModeHelpers.Step(boot, 1000);
+            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            view.PauseButton.onClick.Invoke();
+            view.Pause.QuitButton.onClick.Invoke();
+            Assert.That(view.Confirm.Visible, Is.False, "sin «¿Salir del nivel?»: sale sin coste ni pregunta");
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            Assert.That(boot.Flow.Attempt.FailsLevel, Is.EqualTo(1), "salir no suma a fails_level");
+            Assert.That(boot.Wallet.Canoes.Count, Is.EqualTo(5));
+        }
+
+        [UnityTest]
         public IEnumerator RestartWithEightPours_AsksForConfirmation_WithAnUndoShortcut()
         {
             yield return PlayModeHelpers.LoadGame(2, new MemoryProgressStore(2, 1));
