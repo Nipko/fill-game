@@ -55,6 +55,122 @@ Las 23 preguntas, con sus opciones y la recomendada, están en `docs/store-listi
 | Q-B13-23 | La captura 2, «14 frutas, 14 colores» (07 §10.2), frente a 12 frutas + 2 aguas y ≤ 12 colores por nivel en la 1.0 | «14 colores de frutas y ríos» [P] |
 | — | Audio: toda la música `mus_*`, incluido `music/menu.wav` (el del vídeo), es CC0, frente al encargo original con cesión total (07 §9.5). `amb_w01_fauna_02` lleva voces humanas y es de Río de Janeiro. El autor «Tintalú Sound Design» usa la marca | El vídeo y los creativos no usan esa música hasta que haya una pista con cesión total; decidir si se mantiene el encargo original; revisarlo con el asesor y el abogado |
 
+## 2026-10-20 · B6 · Sesiones, Regalo de regreso y notificaciones, solo la lógica (`spark/t5-b6`): HECHA · verificación completa VERDE · lista para integrar
+
+- **Rama:** `spark/t5-b6`, desde `9e5d13f`. En `c4322199` fusiona `origin/integracion-fase1-fase2` (`dbbba004`, con FX16a y FX16b). Empujada.
+- **Nota de diseño:** `docs/dev/sesiones-notificaciones.md`. Recoge las reglas, los parches, los riesgos del programador real y las preguntas B6-Q1 a B6-Q18.
+- **Commits** (del más antiguo al más reciente):
+  - `a387b0af`: lógica sin motor y tests;
+  - `c08b4c50`: fábrica de almacenes, sin sesión nueva al reconstruir la UI;
+  - `93020e1d`: la nota, el CSV y el gancho del programador real;
+  - `db587c6f`: los `.meta`;
+  - `eec488f7`: B6-profile y B6-bootstrap;
+  - `fb8fc1de`: B6-notifications-real;
+  - `50a3b0a1`: los arreglos de la revisión;
+  - `2ceb2364`: el caso pendiente;
+  - `c4322199`: la fusión;
+  - y el commit de esta entrada.
+- **En la rama** (todo archivo nuevo):
+  - `Scripts/Platform/INotificationScheduler.cs` y `FakeNotificationScheduler.cs`;
+  - en `Scripts/LiveOps/`:
+    - sesiones: `SessionRecord` y `SessionTracker`;
+    - regalo: `ComebackConfig`, `ComebackRules` y `ComebackService`;
+    - `PushConfig`;
+    - pre-prompt: `PushSettingsRecord`, `PushPrePromptRules`, `PushPermissionService` e `IPushPrePromptPresenter`, con `SimulatedPushPrePrompt`;
+    - avisos: `NotificationType`, `NotificationContext`, `NotificationPlanner` y `NotificationService`;
+    - `SessionProbeFormat`;
+  - sus tests EditMode, en `Scripts/LiveOps/Tests/`;
+  - `Scripts/UI/GameBootstrap.Sessions.cs` y `SessionRunner.cs`, que no se llaman hasta B6-bootstrap;
+  - `docs/dev/traspaso/spark-enganches/B6-strings.csv`, con 21 claves en `pendiente_asesor`.
+- **Parches** (`docs/dev/traspaso/spark-enganches/`, en LF). Los tres pasan `git -c core.autocrlf=false apply --check` tras la fusión:
+  1. **`B6-profile.diff`:**
+     - `Profile.cs` y `ProfileJson.cs`: `settings.push`, que se escribe solo fuera de su default, y `stats.last_seen_at` y `stats.last_win_at` [P], que se omiten mientras son null. Lectura tolerante y sin migración;
+     - añade `LiveOps/ProfileSessionStore.cs` y `ProfileSessionStoreTests.cs`.
+  2. **`B6-bootstrap.diff`** (después del 1):
+     - `SetUpSessions();` en `GameBootstrap.Start`, tras `SetUpStreak();`;
+     - `GameBootstrap.SessionsProfile.cs`;
+     - `"AF.LiveOps"` en `AF.Tests.EditMode.asmdef`;
+     - `GameBootstrapSessionsTests.cs`.
+  3. **`B6-notifications-real.diff`** (aparte; no se aplica en las pruebas generales). Antes, anotar la versión en D-033. Trae:
+     - el manifiesto;
+     - `AF.UI.asmdef`, con la referencia y el `versionDefines` `AF_MOBILE_NOTIFICATIONS`;
+     - `AndroidNotificationScheduler.cs`;
+     - `GameBootstrap.Notifications.cs`.
+  4. **Textos:** las filas de `B6-strings.csv`, a `strings.csv`. Sin ellas no se programa ningún aviso.
+- **Choque con B3 y B7 en `GameBootstrap.cs`.** `B3-ui.diff`, `B6-bootstrap.diff` y `B7-bootstrap.diff` añaden cada uno una línea justo después de `SetUpStreak();`. El integrador lo resuelve a mano con este orden:
+  ```
+  SetUpStreak();
+  SetUpSkip();        // B3
+  SetUpSessions();    // B6
+  ConnectTelemetry(); // B7
+  ```
+- **Riesgo con B8** (en curso). `B8-profile.diff`, en `spark-t5-b8`, toca `Profile.cs` y `ProfileJson.cs` en otros puntos:
+  - Lo probé: aplica (`--check`) encima de B6-profile en el worktree temporal. No hay choque de texto hoy, pero puede haberlo si B8 cambia.
+  - Choque de sentido:
+    - la firma o integridad del perfil y la fusión en la nube de B8 tienen que cubrir `settings.push` y `stats.last_seen_at` / `last_win_at`;
+    - propuesta para la fusión: `last_seen_at` y `last_win_at` por máximo, y `pre_prompt_shown` / `second_prompt_shown` por OR. `granted` sería el del dispositivo, no el de la nube [P].
+- **Revisión (code-reviewer):**
+  - 1.ª ronda: CAMBIOS NECESARIOS, con 2 bloqueantes, ya arreglados en `50a3b0a1`:
+    - Nuevos niveles no salía nunca con el Reto desbloqueado, y Crecida casi nunca. Ahora el orden es Regreso > avisos puntuales > avisos diarios, y un puntual que pierde su día pasa una vez al siguiente;
+    - el segundo pre-prompt salía con una racha que ya estaba en 3 o más. Ahora sale solo en la victoria que alcanza el hito 3 después del primero.
+  - Sugerencias aplicadas:
+    - un aviso sin texto no gasta el cupo del día;
+    - el Regreso no se avisa antes de `live_comeback_gift.days`;
+    - el arranque no usa el pre-prompt simulado: no gasta los pre-prompts del perfil de pruebas.
+  - 2.ª ronda: **APROBADO**.
+- **Verificación** (`-Architecture arm64 -TimeoutSec 3600`; como mucho 2 Unity a la vez):
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`50a3b0a1`) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos; 981 (975 + 6), 0 fallos; 103/103, código 0 |
+  | rama (`50a3b0a1`) | `unity-compile`; EditMode; PlayMode | 0; **3.423 (3.420 + 3), 0 fallos** (64 nuevos de B6); **1.589 (1.382 + 207), 0 fallos** |
+  | temporal con B6-profile + B6-bootstrap (`50a3b0a1`) | compile; EditMode; PlayMode | 0; **3.432 (3.429 + 3), 0 fallos**; **1.589: 1 fallo, `WorldBannerTravelTests.Travel_MeshesBuildIn8ms` (8,0004 ms frente a un tope de 8 ms, el inestable)**; relanzado con filtro, 13/13 |
+  | temporal con el real sin la línea del manifiesto | compile | 0, con los `.meta` del diff; luego revertido |
+  | rama tras la fusión (`c4322199`) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py`; compile; EditMode | 0 avisos; 981 (975 + 6); código 0; 0; **3.431 (3.428 + 3), 0 fallos**. PlayMode no se repite: la fusión solo trae cambios del escritorio (FX16a/b, BuildRelease) que no tocan el código de B6 |
+
+- **Versión para D-033:** `com.unity.mobile.notifications` **2.4.3**.
+  - El repositorio no fija ninguna (08 §7 y §15 solo nombran «Mobile Notifications»).
+  - Es la que declara el Editor 6000.3.25f1 instalado (`Editor/Data/Resources/PackageManager/Editor/manifest.json`: `version` y `minimumVersion` 2.4.3). Es un archivo local; no se navegó.
+- **Cómo comprobar `POST_NOTIFICATIONS`** tras aplicar el parche real y hacer el APK de desarrollo:
+  - `aapt2 dump permissions Builds/Android/dev.apk`, o `bundletool dump manifest` en el AAB;
+  - debe listar `android.permission.POST_NOTIFICATIONS`;
+  - y **no** `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM` ni `RECEIVE_BOOT_COMPLETED`.
+  - En Project Settings › Mobile Notifications: «Schedule at exact time» en `Never`, «Reschedule on Device Restart» apagado y nada que pida el permiso al arrancar.
+  - En el teléfono: que no salga ningún diálogo en el arranque en frío.
+- **Riesgos del programador real** (detalle en la nota §8):
+  - el cuerpo del `#if` no está compilado sin el paquete;
+  - faltan los iconos (arte);
+  - `af_push_sent` es aproximado;
+  - hay que pasar `ci/check-16kb.sh` y `ci/size-gate.ps1`.
+
+### Preguntas para el dueño (B6; se avanzó con la recomendada, marcada [P])
+
+| Id | Pregunta | Recomendada |
+|---|---|---|
+| B6-Q9 | Con 1 aviso al día y la prioridad literal de 06 §8.2, el Reto listo de cada día haría que Nuevos niveles no saliera nunca y que Crecida te espera casi nunca saliera | (b): Regreso > puntuales (Crecida > canoas > nuevos niveles) > diarios (Reto > Bitácora); un puntual que pierde su día pasa una vez al siguiente |
+| B6-Q1 | Con qué se miden los días sin sesión | `stats.last_seen_at` nuevo, en periodos de 24 h |
+| B6-Q2 | Qué guarda `settings.push` para el segundo pre-prompt | `pre_prompt_at` + `second_prompt_shown`; sale en la victoria que alcanza el hito 3 después del primero o desde 7 días después |
+| B6-Q3 | ¿Se avisa antes de «Avísame»? | No; `granted` solo se baja al abrir |
+| B6-Q4 | «Racha de Retos» en la 1.0 | Sí, como variante del Reto listo |
+| B6-Q5 | Días del Regreso | D7, D14, D30 y D60; los textos de D14, D30 y D60 son propuestos |
+| B6-Q6 | `source` de las semillas del regalo | `event` |
+| B6-Q7 | «Una victoria más» aunque falten más | Texto con `{left}` y plural |
+| B6-Q8 | Título y canal de Android | «TiTino» y «Avisos del río» |
+| B6-Q10 | Reparto sin abrir | 3 por semana; los diarios en días alternos |
+| B6-Q11 | Aviso en horas silenciosas | Se mueve a las 09:00 |
+| B6-Q12 | Tope diario después del día 7 | 1 al día siempre |
+| B6-Q13 | Hora del Reto listo | 09:30 |
+| B6-Q14 | Crecida con las 36 h ya pasadas | Sin aviso |
+| B6-Q15 | Anti-reloj del regalo | Con un desfase mayor que `sec_clock_max_drift_h`, sin regalo, y ese regalo se pierde. Sin red, cambiar el reloj lo repite |
+| B6-Q16 | Cuándo sale la tarjeta del pre-prompt | Tras el panel de la victoria y antes de la Mochila; el disparador se mueve ahí con la tarjeta (UI de otro bloque) |
+| B6-Q17 | Valores de `af_push_prompt` | `result` ∈ {`accepted`, `declined`, `granted`, `denied`}; `origin` ∈ {`first`, `second`, `settings`} |
+| B6-Q18 | Valores de `type` de los avisos | `daily_ready` … `comeback_d60` |
+
+- **Caso pendiente:**
+  - Si el primer pre-prompt sale en la victoria que deja la Crecida en 3, y después se gana un Reto que no mueve la racha, el segundo saldría en esa victoria.
+  - Para cerrarlo haría falta guardar la racha del primero (otro campo [P]).
+- **Falta UI** (fuera de B6): la tarjeta del pre-prompt, la fila «Avisos» de Ajustes y el aviso del Regalo de regreso (`GameBootstrap.LastComeback`).
+
 ## 2026-10-20 · S2 = B1a · Crecida + Hoja escudo + Canasta (`spark/t5-b1a`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/t5-b1a`, desde `a759597`. Fusiona `origin/integracion-fase1-fase2` (`815b2e5`) en `7fbc1cd`.
