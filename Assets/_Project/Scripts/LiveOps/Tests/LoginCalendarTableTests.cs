@@ -13,10 +13,11 @@ namespace AF.LiveOps.Tests
     public sealed class LoginCalendarTableTests
     {
         // D-033, punto 2: por casilla, el canon y las tres opciones (semillas / comodín / mezcla), en el JSON estable del cliente.
+        // Canon de las casillas 2, 10, 17, 19 y 27: «1 Marea + 30» (D-033, añadido del 2026-10-21; antes «3 Marea + 30»).
         private static readonly string[][] D033 =
         {
             new[] { "{\"seeds\":60}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },                   // 1
-            new[] { "{\"seeds\":30,\"undo\":3}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },        // 2
+            new[] { "{\"seeds\":30,\"undo\":1}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },        // 2
             new[] { "{\"seeds\":60}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },                   // 3
             new[] { "{\"hint\":1}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                    // 4
             new[] { "{\"seeds\":100}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                 // 5
@@ -24,16 +25,16 @@ namespace AF.LiveOps.Tests
             new[] { "{\"seeds\":250}", "{\"seeds\":250}", "{\"seeds\":50,\"hint\":2}", "{\"seeds\":100,\"undo\":5}" },   // 7
             new[] { "{\"seeds\":60}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },                   // 8
             new[] { "{\"seeds\":60}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },                   // 9
-            new[] { "{\"seeds\":30,\"undo\":3}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },        // 10
+            new[] { "{\"seeds\":30,\"undo\":1}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },        // 10
             new[] { "{\"seeds\":100}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                 // 11
             new[] { "{\"hint\":1}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                    // 12
             new[] { "{\"seeds\":100}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                 // 13
             new[] { "{\"seeds\":300,\"extra_cuia\":1}", "{\"seeds\":400}", "{\"seeds\":300,\"extra_cuia\":1}", "{\"seeds\":100,\"hint\":2,\"extra_cuia\":1}" }, // 14
             new[] { "{\"seeds\":60}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },                   // 15
             new[] { "{\"seeds\":100}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                 // 16
-            new[] { "{\"seeds\":30,\"undo\":3}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },        // 17
+            new[] { "{\"seeds\":30,\"undo\":1}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },        // 17
             new[] { "{\"seeds\":100}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                 // 18
-            new[] { "{\"seeds\":30,\"undo\":3}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },        // 19
+            new[] { "{\"seeds\":30,\"undo\":1}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },        // 19
             new[] { "{\"seeds\":100}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                 // 20
             new[] { "{\"seeds\":400}", "{\"seeds\":400}", "{\"hint\":2,\"extra_cuia\":2}", "{\"seeds\":200,\"hint\":1,\"extra_cuia\":1}" }, // 21
             new[] { "{\"seeds\":100}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                 // 22
@@ -41,7 +42,7 @@ namespace AF.LiveOps.Tests
             new[] { "{\"seeds\":100}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                 // 24
             new[] { "{\"hint\":1}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                    // 25
             new[] { "{\"seeds\":100}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                 // 26
-            new[] { "{\"seeds\":30,\"undo\":3}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },        // 27
+            new[] { "{\"seeds\":30,\"undo\":1}", "{\"seeds\":60}", "{\"undo\":2}", "{\"seeds\":30,\"undo\":1}" },        // 27
             new[] { "{\"seeds\":100}", "{\"seeds\":100}", "{\"hint\":1}", "{\"seeds\":40,\"undo\":2}" },                 // 28
             new[] { "{\"reveal\":1}", "{\"seeds\":100}", "{\"reveal\":1}", "{\"hint\":1}" },                             // 29
             new[] { "{\"seeds\":600}", "{\"seeds\":600}", "{\"seeds\":300,\"hint\":1,\"extra_cuia\":2}", "{\"seeds\":300,\"hint\":3}" }, // 30
@@ -81,10 +82,11 @@ namespace AF.LiveOps.Tests
         [Test]
         public void TheCycleTotals_DoNotChange()
         {
-            // D-033, punto 2: «3.000 semillas, 15 Marea, 3 Morpho, 3 Cuia extra, 1 Luciérnaga, 2 Canastas y 1 Canasta grande».
+            // D-033, punto 2: «3.000 semillas, 3 Morpho, 3 Cuia extra, 1 Luciérnaga, 2 Canastas y 1 Canasta grande»; Marea sueltas:
+            // 5 (añadido del 2026-10-21: «El ciclo pasa de 15 a 5 Mareas sueltas; las semillas del ciclo no cambian»).
             LoginCalendarTable table = LoginCalendarTable.Default;
             Assert.That(table.CanonSeeds(), Is.EqualTo(LoginCalendarTable.CanonSeedsPerCycle).And.EqualTo(3000));
-            Assert.That(table.CanonUnits(BoosterKind.Undo), Is.EqualTo(15));
+            Assert.That(table.CanonUnits(BoosterKind.Undo), Is.EqualTo(5));
             Assert.That(table.CanonUnits(BoosterKind.Hint), Is.EqualTo(3));
             Assert.That(table.CanonUnits(BoosterKind.ExtraCuia), Is.EqualTo(3));
             Assert.That(table.CanonUnits(BoosterKind.Reveal), Is.EqualTo(1));
@@ -130,6 +132,7 @@ namespace AF.LiveOps.Tests
             for (int day = 1; day <= LoginCalendarTable.Days; day++)
             {
                 LoginCalendarCell cell = table.Cell(day);
+                Assert.That(cell.Canon.Value(rate), Is.EqualTo(expected[day - 1]), "canon de la casilla " + day + " (D-033, añadido del 2026-10-21)");
                 for (int c = 0; c < LoginCalendarTable.Choices; c++)
                 {
                     Assert.That(cell.Option((LoginCalendarChoice)c).Value(rate), Is.EqualTo(expected[day - 1]), "casilla " + day + ", opción " + c);
@@ -159,10 +162,10 @@ namespace AF.LiveOps.Tests
         public void Parse_AcceptsAnyKeyOrderAndSpaces_AndMissingExtras()
         {
             string json = LoginCalendarTable.Default.Format()
-                .Replace("\"canon\":{\"seeds\":30,\"undo\":3}", "\"canon\" : { \"undo\" : 3 , \"seeds\" : 30 }")
+                .Replace("\"canon\":{\"seeds\":30,\"undo\":1}", "\"canon\" : { \"undo\" : 1 , \"seeds\" : 30 }")
                 .Replace(",\"extras\":[]", string.Empty);
             LoginCalendarTable table = LoginCalendarTable.Parse(json, LoginCalendarValueRate.Default);
-            Assert.That(table.Cell(2).Canon.ToJson(), Is.EqualTo("{\"seeds\":30,\"undo\":3}"));
+            Assert.That(table.Cell(2).Canon.ToJson(), Is.EqualTo("{\"seeds\":30,\"undo\":1}"));
             Assert.That(table.Cell(1).Extras, Is.EqualTo(LoginCalendarExtras.None));
             Assert.That(table.Format(), Is.EqualTo(LoginCalendarTable.Default.Format()));
         }

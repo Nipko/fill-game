@@ -360,7 +360,8 @@ namespace AF.LiveOps
 
         /// <summary>
         /// La tabla de D-033 (añadido del 2026-10-20, punto 2), con el canon retocado: 1, 3, 8, 9 y 15 → 60; 2, 10, 17, 19 y 27 →
-        /// «3 Marea + 30»; 20, 26 y 28 → 100; 30 → 600 (+ Canasta grande + marco). Cada llamada devuelve otra instancia.
+        /// «1 Marea + 30» (añadido del 2026-10-21: vale 60, como sus opciones); 20, 26 y 28 → 100; 30 → 600 (+ Canasta grande +
+        /// marco). Cada llamada devuelve otra instancia.
         /// </summary>
         public static LoginCalendarTable Default => BuildDefault();
 
@@ -737,11 +738,11 @@ namespace AF.LiveOps
             const BoosterKind Reveal = BoosterKind.Reveal;
             switch (day)
             {
-                // Valor 60: 60 | 2 Marea | 1 Marea + 30. Canon: 60 (1, 3, 8, 9, 15) o 3 Marea + 30 (2, 10, 17, 19, 27).
+                // Valor 60: 60 | 2 Marea | 1 Marea + 30. Canon: 60 (1, 3, 8, 9, 15) o 1 Marea + 30 (2, 10, 17, 19, 27; D-033, añadido del 2026-10-21).
                 case 1: case 3: case 8: case 9: case 15:
                     return new LoginCalendarCell(day, S(60), S(60), LoginCalendarReward.Of(Undo, 2), LoginCalendarReward.Of(Undo, 1, 30), LoginCalendarExtras.None);
                 case 2: case 10: case 17: case 19: case 27:
-                    return new LoginCalendarCell(day, LoginCalendarReward.Of(Undo, 3, 30), S(60), LoginCalendarReward.Of(Undo, 2), LoginCalendarReward.Of(Undo, 1, 30), LoginCalendarExtras.None);
+                    return new LoginCalendarCell(day, LoginCalendarReward.Of(Undo, 1, 30), S(60), LoginCalendarReward.Of(Undo, 2), LoginCalendarReward.Of(Undo, 1, 30), LoginCalendarExtras.None);
 
                 // Valor 100: 100 | 1 Morpho | 2 Marea + 40. Canon: 100 (5, 11, 13, 16, 18, 20, 22, 24, 26, 28) o 1 Morpho (4, 12, 25).
                 case 5: case 11: case 13: case 16: case 18: case 20: case 22: case 24: case 26: case 28:
