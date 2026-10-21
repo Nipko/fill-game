@@ -144,12 +144,15 @@ namespace AF.Platform
 
                 case AgeBand.Teen:
                 {
+                    // Con biz_under18_no_personalization apagado, 13-17 como 18+ (también con UMP), salvo TFCD.
                     bool strict = config.BizUnder18NoPersonalization;
                     bool decided = !NeedsPrompt(record, config);
+                    bool ump = string.Equals(record.Profile, LegalProfiles.Ump, StringComparison.Ordinal);
                     return new ConsentFlags(
                         decided: decided, blocked: false, band: AgeBand.Teen, profile: record.Profile, analytics: decided && record.Analytics,
-                        adsPersonalized: decided && !strict && record.AdsPersonalized, childDirected: false, purchasesAllowed: decided,
-                        purchaseDoubleConfirm: strict, playGamesAllowed: true, rcPersonalization: decided && !strict);
+                        adsPersonalized: decided && !strict && !ump && record.AdsPersonalized, childDirected: false, purchasesAllowed: decided,
+                        purchaseDoubleConfirm: strict, playGamesAllowed: true, rcPersonalization: decided && !strict,
+                        adsByUmp: decided && !strict && ump);
                 }
 
                 default:

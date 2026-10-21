@@ -63,7 +63,8 @@ namespace AF.UI
             sb.Append(",\"decided\":").Append(flags.Decided ? "true" : "false");
             sb.Append(",\"blocked\":").Append(flags.Blocked ? "true" : "false");
             sb.Append(",\"analytics\":").Append(flags.AnalyticsEnabled ? "true" : "false");
-            sb.Append(",\"npa\":").Append(flags.AdsPersonalized ? "false" : "true");
+            sb.Append(",\"npa\":").Append(!flags.AdsPersonalized && !flags.AdsByUmp ? "true" : "false"); // como ConsentAdService
+            sb.Append(",\"ump\":").Append(flags.AdsByUmp ? "true" : "false");
             sb.Append(",\"tfcd\":").Append(flags.ChildDirected ? "true" : "false");
             sb.Append(",\"rating\":\"").Append(flags.MaxAdContentRating).Append('"');
             sb.Append(",\"purchases\":").Append(flags.PurchasesAllowed ? "true" : "false");

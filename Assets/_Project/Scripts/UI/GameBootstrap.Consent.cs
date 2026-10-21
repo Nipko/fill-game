@@ -36,6 +36,8 @@ namespace AF.UI
         private ConsentFlow? _consentFlow;
         private ConsentScreen? _consentScreen;
         private ConsentAdService? _consentAds;
+        private ConsentRecord? _appliedConsent;
+        private bool _consentApplied;
         private ConsentStoreService? _consentStore;
         private string? _consentCountry;
         private CountrySource _consentCountrySource;
@@ -226,7 +228,8 @@ namespace AF.UI
             ConsentBlocked = true;
             _consentScreen?.ShowBlocked();
             ProbeConsent();
-            RebuildUi();
+            RebuildUi(); // el perfil en memoria viaja al arranque siguiente (también si no se pudo guardar: perfil en solo lectura)
+            s_rebuildReopenSettings = false; // la marca del cambio de idioma: con el bloqueo, Ajustes no se vuelve a abrir
         }
 
         /// <summary>Atrás de Android con la pantalla abierta: la consume (y la cierra si se puede). False si no estaba abierta.</summary>
@@ -435,6 +438,14 @@ namespace AF.UI
                 return;
             }
 
+            // Una vez por decisión: ReportConsent ya los aplica antes del evento y el cierre del paso no los repite.
+            if (_consentApplied && ReferenceEquals(_appliedConsent, flow.Record))
+            {
+                return;
+            }
+
+            _consentApplied = true;
+            _appliedConsent = flow.Record;
             ConsentFlags flags = flow.Flags;
             _analytics?.SetCollectionEnabled(flags.AnalyticsEnabled);
             _consentAds?.Apply(flags);

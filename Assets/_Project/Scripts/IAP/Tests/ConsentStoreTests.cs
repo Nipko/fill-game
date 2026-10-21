@@ -139,6 +139,23 @@ namespace AF.IAP.Tests
         }
 
         [Test]
+        public void Teen_IfTheFlagsChangeWhileConfirming_ItDoesNotBuy()
+        {
+            var fx = new StoreFixture();
+            var held = new HeldConfirmation();
+            var store = new ConsentStoreService(fx.Service) { Confirmation = held };
+            store.Apply(FlagsFor(AgeBand.Teen));
+
+            PurchaseResult? result = null;
+            store.Purchase(new PurchaseRequest("af_coins_2"), r => result = r);
+            store.Apply(FlagsFor(AgeBand.Under13)); // la edad se corrigió a <13 con la confirmación abierta
+            held.Answer!(true);
+
+            Assert.That(result!.Status, Is.EqualTo(PurchaseStatus.StoreUnavailable));
+            Assert.That(fx.Presenter.Presented, Is.EqualTo(0));
+        }
+
+        [Test]
         public void Teen_WithPersonalizationAllowedByRemoteConfig_HasNoSecondConfirmation()
         {
             var fx = new StoreFixture();

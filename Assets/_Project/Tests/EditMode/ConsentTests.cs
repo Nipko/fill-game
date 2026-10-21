@@ -393,6 +393,31 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void AnotherLegalProfile_AsksForTheChoicesAgain_WithTheProfileOfNow()
+        {
+            var store = new MemoryConsentStore(Record(AgeBand.Adult, analytics: true, ads: false, profile: LegalProfiles.Ump));
+            var flow = new ConsentFlow(ConsentConfig.Defaults, store, Clock(), LegalProfiles.BrLgpdEca);
+
+            Assert.That(flow.StartBoot(), Is.EqualTo(ConsentStep.Choices), "decidió en el EEE y ahora está en Brasil");
+            Assert.That(flow.OffersAdsChoice, Is.True);
+            flow.Choose(ConsentAnswer.RejectAll);
+
+            Assert.That(store.Record!.Profile, Is.EqualTo(LegalProfiles.BrLgpdEca));
+            Assert.That(store.Record!.AgeBand, Is.EqualTo(AgeBand.Adult), "la banda se conserva");
+            Assert.That(flow.Flags.AdsByUmp, Is.False, "fuera del EEE, sin UMP: npa");
+        }
+
+        [Test]
+        public void Teen_WithPersonalizationAllowed_IsLikeAnAdult_AlsoWithUmp()
+        {
+            var config = ConsentConfig.Defaults;
+            config.BizUnder18NoPersonalization = false;
+            ConsentFlags f = ConsentPolicy.Flags(Record(AgeBand.Teen, profile: LegalProfiles.Ump), config);
+            Assert.That(f.AdsByUmp, Is.True);
+            Assert.That(f.PurchaseDoubleConfirm, Is.False);
+        }
+
+        [Test]
         public void AtBoot_TheScreenCannotBeClosedWithoutDeciding()
         {
             var flow = new ConsentFlow(ConsentConfig.Defaults, new MemoryConsentStore(), Clock(), LegalProfiles.Co1581);

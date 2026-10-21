@@ -100,9 +100,9 @@ namespace AF.Platform
     /// El recorrido de la edad y el consentimiento, sin motor (08 §2.3; 05 §7; 06 §2.1, regla 3), que pinta <c>AF.UI.ConsentScreen</c>:
     /// <list type="bullet">
     /// <item><b>Arranque</b> (<see cref="StartBoot"/>): con el bloqueo guardado, <see cref="ConsentStep.Blocked"/>; con una decisión
-    /// vigente, <see cref="ConsentStep.Done"/> sin enseñar nada; si no, la edad (si no se había declarado) y después las finalidades.
-    /// Al subir <c>consent_text_version</c> se vuelven a pedir las finalidades, no la edad [P]. Elegir <c>&lt;13</c> bloquea, se
-    /// guarda y no se vuelve a preguntar.</item>
+    /// vigente del mismo perfil legal, <see cref="ConsentStep.Done"/> sin enseñar nada; si no, la edad (si no se había declarado) y
+    /// después las finalidades. Al subir <c>consent_text_version</c> o cambiar el perfil legal del país se vuelven a pedir las
+    /// finalidades, no la edad [P]. Elegir <c>&lt;13</c> bloquea, se guarda y no se vuelve a preguntar.</item>
     /// <item><b>Cambiar</b> (<see cref="BeginChange"/>, desde Ajustes): las finalidades con lo guardado marcado; guardar avisa
     /// <c>changed</c>; cerrar no cambia nada.</item>
     /// <item><b>Corregir la edad</b> (<see cref="BeginAgeCorrection"/>, desde Ajustes, una vez): la pantalla neutral otra vez; una banda
@@ -184,7 +184,10 @@ namespace AF.Platform
                 return Go(ConsentStep.Blocked);
             }
 
-            if (!ConsentPolicy.NeedsPrompt(record, _config))
+            // Con otro perfil legal que el de la decisión (el país cambió: otra SIM, un viaje), las finalidades se vuelven a pedir con
+            // el perfil de ahora, conservando la banda [P] (Q-B12-15): los flags siempre salen del perfil del país actual.
+            bool otherProfile = record != null && !string.Equals(record.Profile, _profile, StringComparison.Ordinal);
+            if (!ConsentPolicy.NeedsPrompt(record, _config) && !otherProfile)
             {
                 Band = record!.AgeBand;
                 return Go(ConsentStep.Done);

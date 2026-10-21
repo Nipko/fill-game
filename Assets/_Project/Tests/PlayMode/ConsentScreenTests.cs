@@ -233,8 +233,14 @@ namespace AF.Tests.PlayMode
             string line = DevProbe.FormatConsentState(1234, "done", flags, LegalProfiles.Co1581, "CO", CountrySource.Sim);
             Assert.That(line, Is.EqualTo(
                 "AF_STATE {\"event\":\"consent\",\"t\":1234,\"step\":\"done\",\"profile\":\"co_1581\",\"country\":\"CO\",\"country_source\":\"sim\","
-                + "\"age_band\":\"13-17\",\"decided\":true,\"blocked\":false,\"analytics\":true,\"npa\":true,\"tfcd\":false,\"rating\":\"G\","
-                + "\"purchases\":true,\"double_confirm\":true}"));
+                + "\"age_band\":\"13-17\",\"decided\":true,\"blocked\":false,\"analytics\":true,\"npa\":true,\"ump\":false,\"tfcd\":false,"
+                + "\"rating\":\"G\",\"purchases\":true,\"double_confirm\":true}"));
+
+            ConsentFlags ump = ConsentPolicy.Flags(
+                new ConsentRecord(LegalProfiles.Ump, 1, new DateTime(2026, 10, 21, 0, 0, 0, DateTimeKind.Utc), true, false, AgeBand.Adult),
+                ConsentConfig.Defaults);
+            StringAssert.Contains("\"npa\":false,\"ump\":true", DevProbe.FormatConsentState(1, "done", ump, LegalProfiles.Ump, "DE", CountrySource.Sim),
+                "la sonda dice lo mismo que recibe MAX: con UMP no se fuerza npa");
         }
     }
 }

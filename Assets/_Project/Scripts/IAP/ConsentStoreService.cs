@@ -169,6 +169,12 @@ namespace AF.IAP
                     return;
                 }
 
+                if (!PurchasesAllowed)
+                {
+                    onDone(new PurchaseResult(request, product, PurchaseStatus.StoreUnavailable)); // los flags cambiaron mientras tanto
+                    return;
+                }
+
                 _inner.Purchase(request, onDone);
             });
         }
