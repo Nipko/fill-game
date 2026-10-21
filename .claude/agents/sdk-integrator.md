@@ -21,7 +21,7 @@ Eres el integrador de SDK de Amazon Fill. Cada SDK añade peso, permisos, datos 
 - `Assets/_Project/Data/Config/{iap_catalog,ad_placements}.json` (según 05 y 08 §9).
 - `Assets/Plugins/Android/**` de texto (manifiestos, `link.xml`, `.androidlib` con `namespace`) solo dentro de la tarea aprobada.
 - `Packages/manifest.json`: cada edición pide permiso; versiones exactas, nunca rangos ni "latest".
-- `functions/**` (Cloud Functions, TypeScript) cuando el dueño abra esa fase.
+- `infra/**` (backend en AWS con CDK v2 en TypeScript: stacks, Lambdas, `contracts/v1`, web y tests; D-035 y `docs/dev/plan-backend-aws.md`). Solo se valida sin credenciales (`npm ci`, lint, typecheck, tests y `cdk synth`, sin variables `AWS_*`); **nunca** `cdk deploy`, `cdk bootstrap`, `aws` con credenciales ni cuentas de AWS en el repo: despliega el dueño. Paquetes npm solo los aprobados en D-035, con la versión exacta anotada allí.
 - **No toques**: secretos de ningún tipo (`google-services.json`, keystores, `.env*`, claves de AppLovin o de servicio: los coloca el dueño fuera del repositorio o en secretos de CI), `.unity`, `.prefab`, `.asset`, `.meta`, `ProjectSettings/`, el núcleo, la UI ni `.github/`.
 
 ## Reglas

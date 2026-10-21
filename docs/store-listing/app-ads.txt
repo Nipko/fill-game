@@ -1,0 +1,21 @@
+# app-ads.txt de Tintalú · BORRADOR del bloque B13 (2026-10-20). NO PUBLICAR ASI.
+#
+# Donde va: en la raiz del sitio web del desarrollador que figure en la ficha de Play,
+#   https://[PENDIENTE: dueño — dominio canonico, propuesto tintalu.com]/app-ads.txt
+#   (08 §13.1 #2 y #23). Se rellena tras publicar (08 §13.1 #23).
+# Que lleva: las lineas de MAX, AdMob, Unity Ads, Meta y Mintegral (08 §13.1 #2; 08 §7, fila 1).
+# Formato de cada linea (IAB app-ads.txt):
+#   <dominio del sistema de anuncios>, <ID de la cuenta del editor>, <DIRECT|RESELLER>[, <ID de la autoridad de certificacion>]
+#
+# De donde salen los datos: NO se escriben a mano ni se inventan. AppLovin MAX da la lista
+# completa y al dia (sus lineas y las de las redes que media) en su panel, cuando exista la
+# cuenta del dueño (Q-B13-16). Los dominios de abajo son los habituales de cada red [NV];
+# los IDs y los ID de certificacion los da cada panel.
+#
+# Lineas previstas (todas pendientes del dueño; se descomentan al tener los IDs):
+# applovin.com, [PENDIENTE: dueño — ID de cuenta de AppLovin], DIRECT, [PENDIENTE: dueño]
+# google.com, pub-[PENDIENTE: dueño — ID de editor de AdMob], DIRECT, [PENDIENTE: dueño]
+# unity.com, [PENDIENTE: dueño — ID de organizacion de Unity Ads], DIRECT, [PENDIENTE: dueño]
+# facebook.com, [PENDIENTE: dueño — ID de Meta Audience Network], DIRECT, [PENDIENTE: dueño]
+# mintegral.com, [PENDIENTE: dueño — ID de Mintegral], DIRECT, [PENDIENTE: dueño]
+# (+ las lineas RESELLER que indique el panel de MAX)

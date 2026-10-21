@@ -137,6 +137,7 @@ namespace AF.GameFlow
                 StreakActive = streak.HasValue && streak.Value.Active,
                 StreakWins = streak.HasValue ? streak.Value.Wins : 0,
                 ShieldAvailable = streak.HasValue && streak.Value.ShieldAvailable,
+                Skip = SkipOffer, // rama D (LevelFlow.Skip.cs; bloque B3)
             };
         }
 

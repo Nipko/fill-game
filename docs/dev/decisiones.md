@@ -3073,3 +3073,84 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 - **B1b-Q10, decidida por el dueño en el chat:** «B1b-Q10: (c) sin barras de la Crecida y la Canasta en los hitos de TiTino (60, 80 y 140) cuando no cabe su frase; TiTino habla como dice D-016. La Canasta del 60 se abre y su contenido va al saldo sin barra.» D-016 (T6-A) no cambia.
 - **B1b-Q1-Q9 y Q11**, aplicadas con su recomendada (a) por la regla del dueño del 2026-10-19 (detalle en `docs/dev/crecida-canasta.md` §9): barras a media anchura antes de compactar lo demás, también en los escalones 0 y 1; se acepta que las barras lleven es-419 al 100 % en 16:9 y en-XA al 130 % en 360 × 780 al escalón 1 (matiza D-032); si ni el último escalón cabe, las barras no salen; la línea de la Hoja escudo también en 25-30 (se corrige el pseudocódigo de 04 §6.2); con la barra a 0 y el río crecido, sin línea; el hito 10 deja la barra en 10/10 en la victoria y se vacía en el HUD siguiente; el contenido de la Canasta antes de abrirla se ve en el Mapa (B14) y en la barra solo al abrirse; el aviso de la hoja sale al volver a jugar tras la intro; la tercera barra rotativa queda como hueco hasta B4; la espera de 250 ms solo con un premio pendiente.
+
+### D-033, añadido del 2026-10-20: preguntas de B13, B6, B3 y B2 del Spark (confirmadas con la recomendada)
+
+- **Confirmación del dueño (2026-10-20, en el chat):** «las preguntas dejemos las recomendadas». Quedan decididas con su recomendada todas las de este añadido: B2-P4, P5, P6, P10, P13, P16 (se corrige 03 §9) y P18; B3-Q-S1 y Q-S9 (mínimo 31 siempre: el rango de 08 §9 pasa a 31-40), la Canasta de un `10k` saltado con aviso en el nivel siguiente; B6-Q1 a Q18 (Q9: Regreso > puntuales > diarios); y Q-B13-1 a Q-B13-23 (Q-B13-21: código largo y aleatorio distinto del UID, con confirmación y límite de peticiones; Q-B13-5: placa de madera clara o de vidrio de D-003). El estado de abajo, «pendientes de confirmar», queda como historia.
+
+- **Estado:** **pendientes de confirmar por el dueño.** El Spark avanzó con la recomendada de cada una, marcada [P] en el código y en su nota; el integrador las registra aquí al fusionarlas (rama `integra/spark-t5b`) y **no las da por decididas**. Mientras el dueño no diga otra cosa, se mantiene la recomendada.
+- **B13 (borradores de publicación; ahora los revisa y completa Codex, D-034):** las 23 preguntas Q-B13-1 a Q-B13-23, con sus opciones y la recomendada, están en `docs/store-listing/README.md` §3. Las de más peso:
+  - Q-B13-1, -2 y -3: dominio de la página de borrado, titular legal en Play y correos; los fijan el dueño y el abogado, sin ninguna forma de «Amazon».
+  - Q-B13-5: el texto de las capturas «en papel marfil» (07 §10.2) choca con D-003; recomendada: placa de madera clara o de vidrio del kit de UI.
+  - Q-B13-21: el borrado por web solo con el ID visible permite borrar la cuenta de otro; recomendada: ID largo y aleatorio distinto del UID, con confirmación y límite de peticiones.
+  - Q-B13-23: «14 frutas, 14 colores» frente a 12 frutas + 2 aguas; recomendada: «14 colores de frutas y ríos».
+  - Audio: la música `mus_*` (también `music/menu.wav`, la del vídeo) es CC0 frente al encargo con cesión total de 07 §9.5; `amb_w01_fauna_02` lleva voces humanas; el autor «Tintalú Sound Design» usa la marca. Recomendada: el vídeo y los creativos no usan esa música hasta tener una pista con cesión total.
+- **B6 (sesiones, Regalo de regreso y avisos; `docs/dev/sesiones-notificaciones.md`):**
+  - **B6-Q9:** orden con 1 aviso al día: Regreso > puntuales (Crecida > canoas > nuevos niveles) > diarios (Reto > Bitácora); un puntual que pierde su día pasa una vez al siguiente [P]. Matiza la prioridad literal de 06 §8.2, con la que Nuevos niveles no saldría nunca.
+  - **B6-Q1:** días sin sesión con `stats.last_seen_at` nuevo, en periodos de 24 h. **B6-Q2:** `settings.push` guarda `pre_prompt_at` y `second_prompt_shown`; el segundo pre-prompt sale en la victoria que alcanza el hito 3 después del primero o desde 7 días después. **B6-Q3:** no se avisa antes de «Avísame».
+  - **B6-Q4:** «Racha de Retos» en la 1.0, como variante del Reto listo. **B6-Q5:** Regreso en D7, D14, D30 y D60 (textos de D14-D60 propuestos). **B6-Q6:** `source = event` para las semillas del regalo. **B6-Q7:** «Crecida te espera» con `{left}` y plural (06 §8.3 dice siempre «una victoria más»). **B6-Q8:** título «TiTino» y canal «Avisos del río». **B6-Q10:** 3 avisos por semana sin abrir, los diarios en días alternos. **B6-Q11:** un aviso en horas silenciosas pasa a las 09:00. **B6-Q12:** 1 al día siempre después del día 7. **B6-Q13:** Reto listo a las 09:30. **B6-Q14:** sin aviso de Crecida si ya pasaron las 36 h. **B6-Q15:** anti-reloj del regalo con `sec_clock_max_drift_h` (sin red, cambiar el reloj lo repite). **B6-Q16:** la tarjeta del pre-prompt, tras el panel de la victoria y antes de la Mochila. **B6-Q17 y Q18:** valores de `af_push_prompt` (`result`, `origin`) y de `type` de los avisos.
+  - **Caso pendiente:** el segundo pre-prompt saldría en un Reto ganado que no mueve una racha que ya estaba en 3 cuando salió el primero; cerrarlo exige guardar la racha del primero (otro campo [P]).
+  - **Fusión en la nube (B8):** `last_seen_at` y `last_win_at` por máximo, `pre_prompt_shown` y `second_prompt_shown` por OR, y `granted` del dispositivo [P].
+  - **`com.unity.mobile.notifications`:** el parche aparte `B6-notifications-real.diff` propone la **2.4.3** (la que declara el Editor 6000.3.25f1). El paquete y `POST_NOTIFICATIONS` están aprobados (Q-M5), pero **no se aplicó en esta integración**: queda para una tarea propia (manifiesto, `versionDefines` `AF_MOBILE_NOTIFICATIONS`, `AndroidNotificationScheduler`, iconos del arte, y comprobar que no entran `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM` ni `RECEIVE_BOOT_COMPLETED`).
+  - Falta UI (fuera de B6): la tarjeta del pre-prompt, la fila «Avisos» de Ajustes y el aviso del Regalo de regreso; sus claves ya están en `strings.csv`.
+  - Integrador: `push_streak_waiting` lleva sus borradores EN y PT-BR con estado `traducido` (la tabla no admite `borrador` con texto); siguen siendo borradores para el revisor nativo.
+- **B3 (Salto del Boto; `docs/dev/salto-del-boto.md` §3):**
+  - **Q-S1:** el hueco se mide con el mayor de `skipped_levels` (sin campo nuevo); `since_last_skip` se escribe a 0 y no se lee. Consecuencia: corregir 02 §2, 04 §6.1-§6.2 y el ejemplo de 08 §4.3, y avisar a B7 (`af_skip_used.since_last_skip` = nivel − último salto) y a B8 (unión de `skipped_levels`).
+  - **Q-S2:** N − último ≥ 10 (tras saltar el 40, el 50 ya puede). **Q-S3:** banner como franja con Rosa sobre el tablero mientras el intento no empezó. **Q-S4:** sin nivel siguiente o sin canoas para empezarlo, no se ofrece. **Q-S5:** la animación de Rosa (1,5 s) y su sonido esperan al arte y al audio. **Q-S6:** `stuck_skip` partido en etiqueta + precio + `skip_tagline` (toca la tabla de 04 §6.5). **Q-S7:** se ofrece en Aguas estancadas, la pausa y el banner; no en ¿Seguro?, Nivel fallido ni Sin canoas. **Q-S8:** «¿Saltar el nivel?», «Perderás la Cuia extra de este nivel» y «Saltar nivel», `pendiente_asesor`. **Q-S9:** `skip_min_level`: 05 dice «mínimo 31» y 08 §9 da 20-31; el cliente solo exige ≥ 1 (el revisor sugiere no bajar de `rescue_min_level`).
+  - **Nueva del revisor:** ¿se enseña al jugador la Canasta que paga el salto de un `10k`? Hoy solo sale en la sonda. Opciones: (a) sí, con el aviso de la Canasta de la victoria en el nivel siguiente (recomendada del integrador); (b) solo el ✓ del Mapa.
+  - **Nota de B14, resuelta al integrar:** el Salto llama a `SkinService.ApplyLevelPassed` en el mismo lote (`LevelFlow.OnSkipSkins`; test `SkipFlowTests.SkippingTheWorldClose_GivesItsSkin_InTheSameWrite`) y el aviso «{skin} · puesta» sale en el nivel siguiente. La marca de Canasta cobrada del Mapa se deduce de `max_level ≥ 10k` y **es correcta** en un `10k` saltado, porque el Salto paga su Canasta (E34 y K9; `SkipFlowTests.SkippingA10k_PaysItsBasket_AndEverythingGoesOutInOneWrite`): no hace falta cambio.
+  - **Riesgo:** la rama D suma ~70 dp al panel de Aguas estancadas; el caso de 16:9 al 130 % con las ramas B y D a la vez está sin medir.
+- **B2 (Pororoca; `docs/dev/pororoca.md` §5):** P-1 a P-19 con la (a). Las que piden al dueño:
+  - **P-4:** «1 por nivel» cuenta en todos los intentos del nivel y al salir y volver (a); (b) por intento; (c) se pierde al salir, como la Cuia extra.
+  - **P-5:** Volver a la orilla tras una Pororoca vuelve al tablero del nivel, sin devolver el tope (a); (b) al tablero barajado.
+  - **P-6:** la hoja de confirmación solo al pagar con semillas (a); (b) también con el stock.
+  - **P-10:** la ola en el hilo principal (a), y medir en el teléfono el peor caso (la ola que falla: hasta 41 A* de 40.000 nodos); (b) en un hilo de trabajo.
+  - **P-13:** con la Tinaja con dosis, habilitada y medir en `level-qa` (a); (b) deshabilitada mientras tenga dosis.
+  - **P-16:** la ola que falla sigue 04 §2.4: aviso, sin cobro, se puede reintentar (a); (b) 03 §9: se desactiva en el nivel. Hay que corregir uno de los dos capítulos.
+  - **P-18:** con 5 ranuras en 360 dp, «Shuffle», «Embaralhar», y «Desfazer» y «Revelar» en pt-BR al 130 %, no caben a 12 sp: (a) decidir una etiqueta corta en en y pt-BR (p. ej. «Mix» y «Misturar») o la bandeja de 5 sin etiquetas; hasta entonces EN y PT-BR de `shuffle` quedan vacíos; (b) bajar de 12 sp (rompe 02 §12).
+  - Las demás, con la (a): P-1 (Hoja atada y Flor cerrada, fijas), P-2 (20 intentos de Permutar), P-3 (detalles de la reconstrucción), P-7 (globo con Lluvia o Piraña), P-8 (VFX simplificado), P-9 (tarjeta del 30), P-11 (semilla y `*` en el historial h2), P-12, P-14 (también en el Reto), P-15 («Seguir»), P-17 (Remolino) y P-19 (tests PlayMode sin la Pororoca por defecto).
+  - Hallazgos para el GDD: 04 §2.4 (P-2, P-4, P-5, P-7, P-15), 04 §10.1 y 08 §4.3 (marcas `*`, `o` y `p` del historial), 03 §9 frente a 04 §2.4 (P-16) y 08 §8.2 (`af_shuffle_result`, solo como sonda hasta B7).
+- **Orden del arranque** (B3, B6 y B14 insertan tras `SetUpStreak();`): `SetUpStreak(); SetUpMeta(); SetUpSkip(); SetUpSessions();`. `ConnectTelemetry();` de B7, cuando llegue, va después de `SetUpSessions();` (el choque con `B7-bootstrap.diff` que avisan B3 y B6).
+
+## D-035 · Backend híbrido: Firebase en el cliente móvil y AWS para la infraestructura propia
+
+- **Fecha:** 2026-10-20. Registrada el 2026-10-20 por el integrador.
+- **Estado:** decidida por el dueño en el chat: «Vamos con el híbrido: Firebase para Auth anónimo, Analytics, Crashlytics y Remote Config; AWS para la web, el CDN de contenido, las 5 funciones con DynamoDB y la 1.2. Infraestructura como código en infra/ y yo despliego. Registra D-035, propone CDK o Terraform y prepara el plan.» Sustituye en parte a 08 §2.4, §10, §11, §12.1 y §15.3 y a la dirección 20 en lo que dicen de Cloud Functions y Firestore.
+
+**Contexto.** El GDD ponía todo el servidor en Firebase: Auth anónimo, cinco Cloud Functions (`rewardedSsv`, `verifyPurchase`, `restoreLedger`, `voidedPurchasesJob`, `deleteAccount`), el libro mayor `users/{uid}/purchases`, App Check con Play Integrity, Remote Config, Analytics y Crashlytics, y en la 1.2 Firestore, ligas y `rcProposalJob` con BigQuery. El juego no tiene servidor de juego: el backend solo valida dinero, identidad y borrado. El dueño tiene acceso a AWS y quiere montar ahí la infraestructura propia. Ninguna de esas piezas de servidor estaba escrita todavía (B8 hace la nube «sin SDK»), así que el cambio es barato ahora.
+
+**Decisión.**
+| Pieza | Dónde |
+|---|---|
+| Auth anónimo (UID estable), Analytics, Crashlytics y Remote Config | **Firebase** (Firebase Unity SDK 13.17.0, sin cambios de versión) |
+| Web `tintalu.com`: política, términos, borrado de cuenta y `app-ads.txt` | **AWS** (S3 + CloudFront) |
+| CDN del contenido remoto (Addressables: packs 701+, arte de mundos) | **AWS** (S3 + CloudFront) |
+| Las 5 funciones de la 1.0 y el libro mayor de compras | **AWS** (funciones sin servidor y DynamoDB); autorizan con el token de Firebase Auth (JWT) y verifican Play Integrity en el servidor, en lugar de App Check |
+| 1.2: guardado multiplataforma, ligas, eventos y datos para propuestas de Remote Config | **AWS** |
+| Partida en la nube de Android (Play Games Saved Games) | Google, sin cambios |
+| Infraestructura | **Como código en `infra/`**; los agentes la escriben y la validan sin credenciales; **el dueño despliega** con su sesión. Ningún agente ve claves de AWS ni de Firebase |
+
+**Pendiente de aprobar por el dueño (regla 4 de `CLAUDE.md`):** la herramienta de infraestructura como código (propuesta en `docs/dev/plan-backend-aws.md`), la región, los servicios concretos y su coste, y los paquetes nuevos del cliente si hicieran falta (el cliente de Firebase Functions deja de usarse; las llamadas pasan a HTTPS).
+
+**Qué cambia en el GDD** (cuando se apruebe el plan): 08 §2.2 (`AF.Backend`), §2.4 (`functions/` → `infra/` y el código de las funciones), §7 (lista de SDK: sin el módulo Functions), §10.1-§10.3 (App Check → verificación de Play Integrity en el servidor), §11 (libro mayor y borrado en DynamoDB), §12.1 (despliegue), §13.3 (Data Safety: AWS como encargado del tratamiento), §15.3 y 01 (coste por versión).
+
+**Cómo revertir.** Con una decisión nueva. Mientras no haya nada desplegado, sin coste; después, migrando el libro mayor.
+
+### D-035, añadido del 2026-10-20: respuestas del dueño al plan del backend (Q-AWS-1 a Q-AWS-12)
+
+- **Estado:** decididas por el dueño en el chat, tras el formulario de `docs/dev/plan-backend-aws.md` §10: «sigamos las recomendaciones». Todas con la opción (a):
+  - **Q-AWS-1:** AWS CDK v2 en TypeScript (herramienta aprobada).
+  - **Q-AWS-2:** `sdk-integrator` pasa de `functions/**` a `infra/**`; `build-release` lleva `.github/workflows/infra.yml`.
+  - **Q-AWS-3:** dos cuentas de AWS (dev y prod) en Organizations, con IAM Identity Center.
+  - **Q-AWS-4:** integridad con el token de App Check de uso limitado, verificado en AWS contra el JWKS de App Check (sin paquete nuevo). Reinterpreta «Play Integrity en lugar de App Check» de D-035: por debajo sigue siendo Play Integrity.
+  - **Q-AWS-5:** `sa-east-1` para datos, API y funciones; `us-east-1` solo para ACM y WAF de CloudFront y para Budgets.
+  - **Q-AWS-6:** AWS Budgets de 10 USD al mes en dev y 50 en prod, con avisos al 50, 80 y 100 %.
+  - **Q-AWS-7:** la clave JSON de la cuenta de servicio de Google, en Secrets Manager, la carga el dueño; federación sin claves (WIF) como mejora en la 1.1.
+  - **Q-AWS-8:** el arte de los mundos sigue en Play Asset Delivery (08 §6.2); CloudFront solo para `levels_remote` y el catálogo. Corrige la fila «CDN del contenido remoto» de D-035.
+  - **Q-AWS-9:** dev con los dominios de AWS; `tintalu.com` público solo tras el dictamen de marca.
+  - **Q-AWS-10:** límites de peticiones de API Gateway y en DynamoDB en la 1.0; WAF solo si hay abuso.
+  - **Q-AWS-11:** `af_account_delete` con `source = web` solo como métrica de CloudWatch.
+  - **Q-AWS-12:** contrato nuevo en `docs/GDD.md` §7: `infra/contracts/v1` es la fuente única de la API.
+- **Paquetes npm de `infra/` aprobados** (regla 4), con versión exacta fijada por el integrador tras comprobarla (al menos dos semanas de antigüedad) y anotada aquí: `aws-cdk-lib`, `aws-cdk`, `constructs`, `cdk-nag`, `typescript`, `esbuild`, `vitest`, `eslint`, `typescript-eslint`, `@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`, `@aws-sdk/client-secrets-manager`, `jose`, `ajv`, `aws-sdk-client-mock`.
+- **Límites de los agentes y `CLAUDE.md`** se amplían en consecuencia (F0-3).
+- **Versiones exactas fijadas por el integrador** (registro de npm consultado el 2026-10-20; todas con al menos dos semanas, dentro de la versión mayor vigente y con sus dependencias entre pares compatibles): `aws-cdk-lib` 2.272.0, `aws-cdk` 2.1144.0, `constructs` 10.8.1, `cdk-nag` 3.0.2, `typescript` **5.9.3** (no la 7.x: `typescript-eslint` 8.71.1 exige `<6.1.0`), `esbuild` 0.28.2, `vitest` 5.0.3, `eslint` 10.12.0, `typescript-eslint` 8.71.1, `@aws-sdk/client-dynamodb` 3.1146.0, `@aws-sdk/lib-dynamodb` 3.1146.0, `@aws-sdk/client-secrets-manager` 3.1146.0, `jose` 6.2.12, `ajv` 8.20.0, `aws-sdk-client-mock` 4.1.0, y de tipos `@types/node` 24.19.1 (como el runtime `nodejs24.x` de Lambda) y `@types/aws-lambda` 8.10.164. Se fijan sin rangos en `infra/package.json` y con `package-lock.json`. Node local del escritorio: 22.20.0 (vale para CDK y vitest; el runtime de Lambda lo confirma F0-R).

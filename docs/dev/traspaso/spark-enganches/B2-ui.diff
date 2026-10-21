@@ -1,0 +1,1038 @@
+diff --git a/Assets/_Project/Scripts/UI/BoosterTray.cs b/Assets/_Project/Scripts/UI/BoosterTray.cs
+index ccbb0b7..bb3c478 100644
+--- a/Assets/_Project/Scripts/UI/BoosterTray.cs
++++ b/Assets/_Project/Scripts/UI/BoosterTray.cs
+@@ -26,7 +26,7 @@ internal enum TraySlot
+         /// <summary>[Pista · Morpho] (MO2).</summary>
+         Hint = 2,
+ 
+-        /// <summary>[Barajar · Pororoca]: aún no está en el cliente (tanda siguiente); su hueco ya está en el orden.</summary>
++        /// <summary>[Barajar · Pororoca] desde el nivel 30 (bloque B2; 04 §2.4).</summary>
+         Shuffle = 3,
+ 
+         /// <summary>[Revelar · Luciérnaga]: solo en niveles con ocultas, siempre la última.</summary>
+@@ -207,6 +207,7 @@ internal sealed class BoosterTray
+         private readonly Slot _undo;
+         private readonly Slot _extra;
+         private readonly Slot _hint;
++        private readonly Slot _shuffle;
+         private readonly Slot _reveal;
+         private readonly Slot[] _order;
+         private readonly Slot[] _activeBuf = new Slot[5];
+@@ -218,6 +219,8 @@ internal sealed class BoosterTray
+         private GameServices? _services;
+         private Action? _onReveal;
+         private Action? _onHint;
++        private Action? _onShuffle;
++        private Slot? _tipSlot;
+         private int _key = int.MinValue;
+         private int _revealKey = int.MinValue;
+         private int _refreshRepaints;
+@@ -250,9 +253,11 @@ public BoosterTray(Transform hud, ProceduralArt art, Action onUndo, Action onExt
+             _hint = new Slot("HintButton", hud, art, art.IconMorpho, art.IconMorphoDisabled, UiText.HintLabel, () => _onHint?.Invoke());
+             _hint.GlyphMinTopDp = HintGlyphMinTopDp;
+             _hint.SetActive(false);
++            _shuffle = new Slot("ShuffleButton", hud, art, art.IconWave, art.IconWaveDisabled, ShuffleText.Label, () => _onShuffle?.Invoke());
++            _shuffle.SetActive(false);
+             _reveal = new Slot("RevealButton", hud, art, art.IconFirefly, art.IconFireflyDisabled, UiText.RevealLabel, () => _onReveal?.Invoke());
+             _reveal.SetActive(false);
+-            _order = new[] { _undo, _extra, _hint, _reveal }; // 07 §7.4, sin Pororoca (TraySlot.Shuffle) todavía
++            _order = new[] { _undo, _extra, _hint, _shuffle, _reveal }; // 07 §7.4: Marea, Cuia extra, Pista, Pororoca (B2) y Revelar
+ 
+             // Globo de Pista sin hint_supported (04 §2.3 b): placa clara con texto de tinta, sobre la ranura; no captura toques.
+             _tip = UiBuilder.Rect("HintTooltip", hud);
+@@ -308,7 +313,8 @@ public static float WidthFor(int slots)
+ 
+         /// <summary>Ranuras que existen ahora, como máscara de bits de <see cref="TraySlot"/> (tests).</summary>
+         public int ActiveMask => (_undo.Active ? 1 << (int)TraySlot.Undo : 0) | (_extra.Active ? 1 << (int)TraySlot.ExtraCuia : 0)
+-            | (_hint.Active ? 1 << (int)TraySlot.Hint : 0) | (_reveal.Active ? 1 << (int)TraySlot.Reveal : 0);
++            | (_hint.Active ? 1 << (int)TraySlot.Hint : 0) | (_shuffle.Active ? 1 << (int)TraySlot.Shuffle : 0)
++            | (_reveal.Active ? 1 << (int)TraySlot.Reveal : 0);
+ 
+         /// <summary>Botón de Marea.</summary>
+         public Button UndoButton => _undo.Parts.Button;
+@@ -385,6 +391,33 @@ public static float WidthFor(int slots)
+         /// <summary>La ranura de Revelar existe en el nivel (<see cref="SetRevealVisible"/>).</summary>
+         public bool RevealShown => _reveal.Active;
+ 
++        /// <summary>Botón Barajar · Pororoca (bloque B2).</summary>
++        public Button ShuffleButton => _shuffle.Parts.Button;
++
++        /// <summary>La ranura de la Pororoca existe (desde el nivel 30).</summary>
++        public bool ShuffleShown => _shuffle.Active;
++
++        /// <summary>Insignias de la Pororoca (el «+N» del stock).</summary>
++        public string ShuffleBadgeText => _shuffle.BadgeText;
++
++        /// <summary>Precio que enseña la ranura de la Pororoca (0 sin precio).</summary>
++        public int ShufflePriceShown => _shuffle.PriceShown;
++
++        /// <summary>La ranura de la Pororoca enseña «Te faltan {n}».</summary>
++        public bool ShuffleShowsMissing => _shuffle.MissingShown;
++
++        /// <summary>Texto de «Te faltan {n}» de la Pororoca (vacío si no se ve).</summary>
++        public string ShuffleMissingText => _shuffle.MissingText;
++
++        /// <summary>Placa de «Te faltan {n}» de la Pororoca.</summary>
++        public RectTransform ShuffleMissingRect => _shuffle.MissingRect;
++
++        /// <summary>La ranura de la Pororoca se ve habilitada.</summary>
++        public bool ShuffleLooksEnabled => _shuffle.Parts.Relief.Interactable;
++
++        /// <summary>Etiqueta de la ranura de la Pororoca.</summary>
++        public TextMeshProUGUI ShuffleLabel => _shuffle.Label;
++
+         /// <summary>Ranuras visibles.</summary>
+         public int SlotCount => _slots;
+ 
+@@ -575,6 +608,7 @@ public bool TryGetMissingTop(out float top)
+             _undo.MinMissingTop(ref top);
+             _extra.MinMissingTop(ref top);
+             _hint.MinMissingTop(ref top);
++            _shuffle.MinMissingTop(ref top);
+             _reveal.MinMissingTop(ref top);
+             if (_tip.gameObject.activeInHierarchy)
+             {
+@@ -614,13 +648,14 @@ public void Tick(float dtMs)
+             if (_tip.gameObject.activeSelf)
+             {
+                 _tipMs -= dtMs;
+-                if (_tipMs <= 0f || !_hint.Parts.Button.gameObject.activeInHierarchy)
++                if (_tipMs <= 0f || !(_tipSlot ?? _hint).Parts.Button.gameObject.activeInHierarchy)
+                 {
+                     HideHintTooltip();
+                 }
+             }
+ 
+             _hint.TickMissingPulse(dtMs);
++            _shuffle.TickMissingPulse(dtMs);
+             _reveal.TickMissingPulse(dtMs);
+         }
+ 
+@@ -654,6 +689,7 @@ public bool ShowHintTooltip()
+             }
+ 
+             string text = UiText.HintUnsupported;
++            _tipSlot = _hint;
+             _tipText.text = text;
+             _tipMs = NoticeTiming.ReadMs(text.Length);
+             _tip.gameObject.SetActive(true);
+@@ -662,6 +698,41 @@ public bool ShowHintTooltip()
+             return true;
+         }
+ 
++        /// <summary>Acción del botón Barajar (la pone <c>GameScreen.Shuffle.cs</c>; bloque B2).</summary>
++        public void SetShuffleAction(Action onShuffle)
++        {
++            _onShuffle = onShuffle ?? throw new ArgumentNullException(nameof(onShuffle));
++        }
++
++        /// <summary>
++        /// El mismo globo que Pista, sobre la ranura de la Pororoca, con <paramref name="text"/> (04 §2.4 b: «Hay poca agua libre
++        /// para la ola»; bloque B2). False si la ranura no se ve.
++        /// </summary>
++        public bool ShowShuffleTooltip(string text)
++        {
++            if (!_shuffle.Active || !_shuffle.Parts.Button.gameObject.activeInHierarchy)
++            {
++                return false;
++            }
++
++            _tipSlot = _shuffle;
++            _tipText.text = text;
++            _tipMs = NoticeTiming.ReadMs(text.Length);
++            _tip.gameObject.SetActive(true);
++            _tip.SetAsLastSibling();
++            PlaceHintTooltip();
++            return true;
++        }
++
++        /// <summary>Late la burbuja «Te faltan {n}» de la Pororoca, como la de Pista (bloque B2). Sin asignaciones.</summary>
++        public bool PulseShuffleMissing(int missing, bool reduceMotion)
++        {
++            return _shuffle.PulseMissing(missing, reduceMotion);
++        }
++
++        /// <summary>Texto del globo a la vista (vacío si no se ve; tests).</summary>
++        public string TooltipText => _tip.gameObject.activeSelf ? _tipText.text : string.Empty;
++
+         /// <summary>Oculta el globo de Pista.</summary>
+         public void HideHintTooltip()
+         {
+@@ -693,7 +764,7 @@ private void PlaceHintTooltip()
+             float textH = Mathf.Ceil(_tipText.GetPreferredValues(_tipText.text, textW, float.PositiveInfinity).y);
+             float w = textW + (2f * TooltipPadXDp);
+             float h = textH + (2f * TooltipPadYDp);
+-            var slot = (RectTransform)_hint.Parts.Button.transform;
++            var slot = (RectTransform)(_tipSlot ?? _hint).Parts.Button.transform;
+             float slotX = slot.anchoredPosition.x;
+             float slotTop = -slot.anchoredPosition.y;
+             float x = Mathf.Clamp(slotX + ((_slotW - w) * 0.5f), TrayEdgeDp, _canvasW - TrayEdgeDp - w);
+@@ -704,6 +775,7 @@ private void PlaceHintTooltip()
+             _undo.MinMissingTop(ref bubbles);
+             _extra.MinMissingTop(ref bubbles);
+             _hint.MinMissingTop(ref bubbles);
++            _shuffle.MinMissingTop(ref bubbles);
+             _reveal.MinMissingTop(ref bubbles);
+             if (!float.IsPositiveInfinity(bubbles))
+             {
+@@ -875,6 +947,7 @@ public void SetVisible(bool visible)
+             _undo.SetVisible(visible);
+             _extra.SetVisible(visible);
+             _hint.SetVisible(visible);
++            _shuffle.SetVisible(visible);
+             _reveal.SetVisible(visible);
+         }
+ 
+@@ -1006,6 +1079,7 @@ public void Refresh(int seedsPending = 0)
+             UndoStatus undo = flow.UndoStatus;
+             ExtraCuiaOffer extra = flow.ExtraCuia;
+             HintOffer hint = flow.Hint;
++            ShuffleOffer shuffle = flow.Shuffle;
+             bool video = UndoVideo(undo);
+             int seeds = Math.Max(0, (_services?.Wallet.Seeds ?? 0) - Math.Max(0, seedsPending));
+             bool hintVideo = HintVideo(hint, seeds);
+@@ -1013,7 +1087,7 @@ public void Refresh(int seedsPending = 0)
+             int key = Hash(undo.Unlimited ? 1 : 0, undo.FreeLeft, undo.Stock, video ? 1 : 0, undoEnabled ? 1 : 0, (int)extra.State, extra.Stock, extra.Missing, seeds);
+ 
+             // Pista (MO2): estado, stock, precio y video; nunca los ms del enfriamiento, que cambian en cada fotograma.
+-            key = Hash(key, (int)hint.State, hint.Stock, hint.Price, hintVideo ? 1 : 0, 0, 0, 0, 0);
++            key = Hash(key, (int)hint.State, hint.Stock, hint.Price, hintVideo ? 1 : 0, (int)shuffle.State, shuffle.Stock, shuffle.Price, 0);
+             if (key == _key)
+             {
+                 return;
+@@ -1023,11 +1097,13 @@ public void Refresh(int seedsPending = 0)
+             _refreshRepaints++;
+             bool showExtra = extra.State != ExtraCuiaState.Hidden;
+             bool showHint = hint.State != HintState.Hidden;
+-            if (showExtra != _extra.Active || showHint != _hint.Active)
++            bool showShuffle = shuffle.Shown && GameScreen.ShuffleOverride != false; // sin ella en los tests que no la tratan
++            if (showExtra != _extra.Active || showHint != _hint.Active || showShuffle != _shuffle.Active)
+             {
+                 _extra.SetActive(showExtra);
+                 _hint.SetActive(showHint);
+-                if (!showHint)
++                _shuffle.SetActive(showShuffle);
++                if (!showHint || !showShuffle)
+                 {
+                     HideHintTooltip();
+                 }
+@@ -1099,9 +1175,42 @@ public void Refresh(int seedsPending = 0)
+                 PaintHint(hint, seeds, hintVideo);
+             }
+ 
++            if (showShuffle)
++            {
++                PaintShuffle(shuffle, seeds);
++            }
++
+             LayoutMissing();
+         }
+ 
++        // Pororoca · Barajar (bloque B2; 04 §2.4; 04 §1.1: el stock se gasta antes que las semillas): lista, «+N» con stock o el
++        // precio (300), en rojo con «Te faltan {n}» sin saldo; gris y sin precio si ya se usó en el nivel o hoy, fuera de PLAYING
++        // (también en el modal de bloqueo) o con poca agua, con el stock si lo hay. Con poca agua o con Lluvia o Piraña el toque
++        // llega (el globo de 04 §2.4 b), como Pista sin hint_supported.
++        private void PaintShuffle(ShuffleOffer offer, int seeds)
++        {
++            bool ready = offer.State == ShuffleState.Ready;
++            bool explain = offer.State == ShuffleState.LowWater || offer.State == ShuffleState.Unsupported;
++            UiBuilder.SetEnabled(_shuffle.Parts.Button, ready);
++            if (explain)
++            {
++                _shuffle.Parts.Button.interactable = true; // gris, pero el toque enseña el globo
++            }
++
++            if (!ready || offer.Stock > 0)
++            {
++                _shuffle.ShowBadge(null, false);
++                _shuffle.ShowStockBadge(offer.Stock);
++                _shuffle.HidePrice();
++            }
++            else
++            {
++                _shuffle.ShowBadge(null, false);
++                _shuffle.ShowStockBadge(0);
++                _shuffle.ShowPrice(offer.Price, Math.Max(0, offer.Price - seeds));
++            }
++        }
++
+         // Pista · Morpho (04 §2.3; 04 §1.1: el stock se gasta antes que las semillas): lista (o pensando), «+N» con stock; si no, el
+         // precio; sin saldo y con rv_hint, «+1» con el icono de video; sin nada, el precio en rojo con «Te faltan {n}» (el mismo
+         // orden que cobra GameBootstrap.PressHint). Pulsada mientras Morpho piensa. Gris sin vertido legal, fuera de PLAYING y en
+diff --git a/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs b/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
+index f4a266e..3c82009 100644
+--- a/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
++++ b/Assets/_Project/Scripts/UI/DailyChallengeScreen.cs
+@@ -703,7 +703,7 @@ private GameScreen RequireView()
+         /// Nivel fallido salen del Reto. No hay canoas, Cuia de rescate, Balsa, rendición, Mapa, ficha de fruta ni Siguiente; los
+         /// videos (Marea, Morpho) quedan fuera del prototipo del Reto [P].
+         /// </summary>
+-        internal sealed class DailyGameActions : IGameActions
++        internal sealed class DailyGameActions : IGameActions, IShuffleActions
+         {
+             private readonly DailyChallengeScreen _owner;
+ 
+@@ -787,6 +787,20 @@ public bool PressReveal()
+                 return false; // el Reto no lleva dosis ocultas (03 §16): la Luciérnaga no aparece
+             }
+ 
++            public bool PressShuffle()
++            {
++                // La Pororoca también en el Reto (06 §4.1: los comodines de la campaña; bloque B2), con los mismos topes: el de
++                // hoy va en daily.shuffles_today del mismo perfil.
++                LevelFlow? flow = Flow;
++                if (flow == null || !flow.HasLevel || !flow.Shuffle.CanUse)
++                {
++                    return false;
++                }
++
++                _owner._view?.SettleReveal();
++                return flow.UseShuffle().HasValue;
++            }
++
+             public bool PressRevealVideo()
+             {
+                 return false;
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Shuffle.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Shuffle.cs
+new file mode 100644
+index 0000000..8456370
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Shuffle.cs
+@@ -0,0 +1,30 @@
++#nullable enable
++using AF.Boosters;
++using AF.GameFlow;
++
++namespace AF.UI
++{
++    /// <summary>
++    /// Pororoca · Barajar desde la bandeja de la campaña (bloque B2; 04 §2.4): <see cref="IShuffleActions"/> sin tocar
++    /// <c>GameBootstrap.cs</c> ni <see cref="IGameActions"/>. La hoja de confirmación ya la pidió la pantalla
++    /// (<c>GameScreen.Shuffle.cs</c>). El cobro, los topes y el guardado son de <c>LevelFlow.UseShuffle</c>, en su propio lote de
++    /// guardado; aquí se termina antes el revelado de la Luciérnaga en marcha, como en Marea y la Cuia extra. Las cifras son las
++    /// de 08 §9 (<see cref="ShuffleConfig.Defaults"/>): aún no hay <c>AF.RemoteConfig</c>.
++    /// </summary>
++    public sealed partial class GameBootstrap : IShuffleActions
++    {
++        /// <inheritdoc />
++        public bool PressShuffle()
++        {
++            LevelFlow? flow = InLevel ? _flow : null;
++            if (flow == null || !flow.HasLevel || !flow.Shuffle.CanUse)
++            {
++                return false;
++            }
++
++            _screen?.SettleReveal();
++            ShuffleOutcome? outcome = flow.UseShuffle();
++            return outcome.HasValue;
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Shuffle.cs.meta b/Assets/_Project/Scripts/UI/GameBootstrap.Shuffle.cs.meta
+new file mode 100644
+index 0000000..1b2de49
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Shuffle.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 4ea77c09c0fd2a043935c7f2f91dbd35
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/UI/GameScreen.Shuffle.cs b/Assets/_Project/Scripts/UI/GameScreen.Shuffle.cs
+new file mode 100644
+index 0000000..b745062
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameScreen.Shuffle.cs
+@@ -0,0 +1,353 @@
++#nullable enable
++using System.Collections.Generic;
++using System.Globalization;
++using AF.Boosters;
++using AF.Core.Board;
++using AF.GameFlow;
++using AF.Presentation;
++using UnityEngine;
++
++namespace AF.UI
++{
++    /// <summary>
++    /// Parcial de la Pororoca · Barajar (bloque B2; 04 §2.4 y §4; 07 §7.4), con los ganchos <c>Shuffle*</c> de GameScreen.cs:
++    /// <list type="bullet">
++    /// <item><description><b>Bandeja</b>: la ranura Barajar desde el nivel 30, entre Pista y Revelar (la pinta
++    /// <see cref="BoosterTray"/> con <c>LevelFlow.Shuffle</c>). El toque: con poca agua, Lluvia o Piraña, el globo que lo dice
++    /// (04 §2.4 b y d); sin saldo, el latido de «Te faltan {n}»; con semillas y ≥ 200 [P], la hoja de confirmación de una línea
++    /// (<see cref="ShuffleConfirm"/>); con el stock, la ola sin preguntar [P].</description></item>
++    /// <item><description><b>La ola</b> (<see cref="OnShuffled"/>, con el tablero ya aplicado, guardado y cobrado): 1,2 s, no
++    /// saltable (<see cref="ShuffleWaveFx"/>, que captura los toques). Las cuias que cambian se elevan y, al pasar el frente por
++    /// su centro, bajan con su contenido nuevo; las selladas y las fijas no se mueven y quedan delante; una fija que solo se
++    /// revela (la tinaja) cambia sin elevarse. Sonido <c>sfx_shuffle</c>. Simplificación [P] frente a 04 §2.4: el líquido no
++    /// gira dentro de cada cuia (P-8 de <c>docs/dev/pororoca.md</c>).</description></item>
++    /// <item><description><b>Falla</b> (<see cref="OnShuffleFailed"/>): «La ola no pudo remover el río» por la cola de avisos;
++    /// no se cobró nada.</description></item>
++    /// <item><description><b>Tarjeta del 30</b> (<see cref="ShuffleIntroCard"/>): al habilitarse el toque del primer nivel 30,
++    /// con la vista quieta, una vez (<c>LevelFlow.ShuffleCardDue</c>); un toque la cierra.</description></item>
++    /// </list>
++    /// Sonda de desarrollo <c>AF_STATE {"event":"shuffle",…}</c> con la fase, el método, el par antes y después, los intentos,
++    /// las capas reveladas y la vía de pago (04 §11, <c>af_shuffle_result</c> y <c>af_booster_used</c>). Sin asignaciones por
++    /// fotograma.
++    /// </summary>
++    public sealed partial class GameScreen : IShuffleListener
++    {
++        private readonly Vector3[] _shuffleCorners = new Vector3[4];
++        private readonly float[] _shuffleCenters = new float[BoardState.MaxCuias];
++        private ShuffleConfirm _shuffleConfirm = null!;
++        private ShuffleIntroCard _shuffleCard = null!;
++        private ShuffleWaveFx _shuffleWave = null!;
++        private BoardState? _shuffleTarget;
++        private int _shufflePending;
++
++        /// <summary>
++        /// Gancho de los tests PlayMode: null (el juego) = con la Pororoca; false = sin ella en la vista (la ranura no existe, la
++        /// bandeja no la pinta y la tarjeta del 30 no sale; el flujo y sus cifras no cambian), para que las pruebas que miden la bandeja de 1-4 ranuras, sus avisos o las capturas sigan como antes de B2
++        /// (<c>PlayModeHelpers.NoShuffleUnlessSet</c>). Los tests de la Pororoca la encienden y la vuelven a null en su TearDown.
++        /// </summary>
++        internal static bool? ShuffleOverride { get; set; }
++
++        /// <summary>Hoja de confirmación (tests y capturas).</summary>
++        internal ShuffleConfirm ShuffleConfirm => _shuffleConfirm;
++
++        /// <summary>Tarjeta del nivel 30 (tests y capturas).</summary>
++        internal ShuffleIntroCard ShuffleCard => _shuffleCard;
++
++        /// <summary>La ola (tests y capturas).</summary>
++        internal ShuffleWaveFx ShuffleWave => _shuffleWave;
++
++        /// <summary>Cuias que la ola aún no ha cambiado (máscara de bits; 0 sin ola).</summary>
++        internal int ShufflePendingMask => _shufflePending;
++
++        /// <inheritdoc />
++        public void OnShuffled(ShuffleOutcome outcome, ShufflePayment payment)
++        {
++            LevelFlow flow = RequireFlow();
++            _shuffleConfirm.Hide();
++            _animator.SnapAll();
++            ClearLifts();
++            BoardState target = flow.Session.Current;
++            BoardState shown = _shownBoard ?? target;
++            _shuffleTarget = target;
++            _shufflePending = 0;
++            float top = float.PositiveInfinity;
++            float bottom = float.NegativeInfinity;
++            int n = Mathf.Min(_views.Length, target.Count);
++            for (int i = 0; i < n; i++)
++            {
++                CuiaView view = _views[i];
++                view.Body.GetWorldCorners(_shuffleCorners);
++                Vector3 bl = _root.InverseTransformPoint(_shuffleCorners[0]);
++                Vector3 tr = _root.InverseTransformPoint(_shuffleCorners[2]);
++                Rect r = _root.rect;
++                _shuffleCenters[i] = (0.5f * (bl.x + tr.x)) - r.xMin;
++                top = Mathf.Min(top, r.yMax - tr.y);
++                bottom = Mathf.Max(bottom, r.yMax - bl.y);
++                Cuia before = i < shown.Count ? shown[i] : target[i];
++                if (before.Packed == target[i].Packed)
++                {
++                    continue; // fija o igual: no se mueve (04 §2.4: «las selladas no se mueven»)
++                }
++
++                _shufflePending |= 1 << i;
++                if (before.WithRevealed(before.HiddenMask).Packed != target[i].Packed)
++                {
++                    SetLift(i, true); // las cuias no selladas se elevan (04 §2.4 VFX)
++                }
++            }
++
++            if (float.IsPositiveInfinity(top))
++            {
++                top = 0.3f * _canvasH;
++                bottom = 0.7f * _canvasH;
++            }
++
++            _shuffleWave.Play(0f, _canvasW, top - 24f, bottom + 8f, flow.ReduceMotion);
++            AF.Audio.AudioCues.Play(AF.Audio.SfxId.Shuffle);
++            ShuffleProbe("shuffled", flow, outcome, ShuffleBooster.SourceId(payment));
++            LabelsBoardChanged(flow);
++            RevealBoardChanged(flow);
++        }
++
++        /// <inheritdoc />
++        public void OnShuffleFailed(ShuffleOutcome outcome)
++        {
++            LevelFlow flow = RequireFlow();
++            _shuffleConfirm.Hide();
++            ShowToast(ShuffleText.Failed);
++            ShuffleProbe("failed", flow, outcome, null);
++        }
++
++        /// <summary>Termina en el acto la ola en marcha: todas las cuias quedan con su contenido nuevo (otro nivel, el modal…).</summary>
++        internal void SettleShuffle()
++        {
++            FinishShuffleWave();
++        }
++
++        partial void ShuffleBuild()
++        {
++            _tray.SetShuffleAction(OnTrayShuffle);
++            _shuffleConfirm = new ShuffleConfirm(_root, _art, OnShuffleConfirm, OnShuffleCancel);
++            _shuffleCard = new ShuffleIntroCard(_root, _art, OnShuffleCardDismissed);
++            _shuffleWave = new ShuffleWaveFx(_root, _art);
++        }
++
++        partial void ShuffleLayout()
++        {
++            if (_shuffleConfirm.Visible)
++            {
++                _shuffleConfirm.Show(_shuffleConfirm.Price, _canvasW, _canvasH);
++            }
++
++            if (_shuffleCard.Visible)
++            {
++                _shuffleCard.Show(_canvasW, _canvasH, _flow?.ReduceMotion ?? false);
++            }
++        }
++
++        partial void ShuffleTick(float dtMs)
++        {
++            LevelFlow? flow = _flow;
++            if (_shuffleWave.Playing)
++            {
++                bool done = _shuffleWave.Tick(dtMs);
++                float front = done ? float.PositiveInfinity : _shuffleWave.FrontX;
++                PaintShufflePassed(front);
++                if (done)
++                {
++                    FinishShuffleWave();
++                }
++            }
++
++            _shuffleCard.Tick(dtMs);
++            if (flow == null || !flow.HasLevel)
++            {
++                return;
++            }
++
++            if (_shuffleConfirm.Visible && !flow.AcceptsBoardInput)
++            {
++                _shuffleConfirm.Hide(); // el tablero dejó de estar en juego: la hoja no cobra nada
++            }
++
++            if (ShuffleOverride != false && flow.ShuffleCardDue && flow.AcceptsBoardInput && flow.Phase == FlowPhase.Playing && _animator.IsIdle
++                && !_shuffleCard.Visible && !_shuffleWave.Playing)
++            {
++                _shuffleCard.Show(_canvasW, _canvasH, flow.ReduceMotion);
++                flow.MarkShuffleCardShown(); // una vez: también si la app se cierra con la tarjeta abierta
++                ShuffleProbe("card", flow, null, null);
++                EmitLevelLayout();
++            }
++        }
++
++        partial void ShuffleLevelLoaded(LevelFlow flow)
++        {
++            _shuffleWave.Stop();
++            _shuffleTarget = null;
++            _shufflePending = 0;
++            _shuffleConfirm.Hide();
++            _shuffleCard.Hide();
++        }
++
++        partial void ShuffleBoardChanged(LevelFlow flow)
++        {
++            if (_shuffleWave.Playing && !ReferenceEquals(flow.Session.Current, _shuffleTarget))
++            {
++                FinishShuffleWave(); // otra cosa cambió el tablero: la ola termina ya
++            }
++        }
++
++        partial void ShuffleLayoutIds(List<string> ids, List<RectTransform> rects)
++        {
++            if (_tray.ShuffleShown)
++            {
++                ids.Add("shuffle");
++                rects.Add((RectTransform)_tray.ShuffleButton.transform);
++            }
++
++            _shuffleConfirm.VisibleButtons(ids, rects);
++            _shuffleCard.VisibleButtons(ids, rects);
++        }
++
++        // Toque en Barajar (04 §2.4).
++        private void OnTrayShuffle()
++        {
++            LevelFlow? flow = _flow;
++            if (flow == null || !flow.HasLevel || _shuffleWave.Playing || flow.IsResolving)
++            {
++                return;
++            }
++
++            ShuffleOffer offer = flow.Shuffle;
++            switch (offer.State)
++            {
++                case ShuffleState.LowWater:
++                    _tray.ShowShuffleTooltip(ShuffleText.LowWater);
++                    ShuffleProbe("denied", flow, null, offer.DeniedReason);
++                    return;
++                case ShuffleState.Unsupported:
++                    _tray.ShowShuffleTooltip(ShuffleText.Unsupported);
++                    ShuffleProbe("denied", flow, null, offer.DeniedReason);
++                    return;
++                case ShuffleState.Ready:
++                    break;
++                default:
++                    ShuffleProbe("denied", flow, null, offer.DeniedReason);
++                    return;
++            }
++
++            if (!offer.CanUse)
++            {
++                _tray.PulseShuffleMissing(offer.Missing, flow.ReduceMotion);
++                ShuffleProbe("denied", flow, null, offer.DeniedReason);
++                return;
++            }
++
++            if (offer.NeedsConfirmation)
++            {
++                flow.ClearSelection();
++                _shuffleConfirm.Show(offer.Price, _canvasW, _canvasH);
++                ShuffleProbe("confirm", flow, null, null);
++                EmitLevelLayout();
++                return;
++            }
++
++            (_actions as IShuffleActions)?.PressShuffle();
++        }
++
++        private void OnShuffleConfirm()
++        {
++            _shuffleConfirm.Hide();
++            (_actions as IShuffleActions)?.PressShuffle();
++            EmitLevelLayout();
++        }
++
++        private void OnShuffleCancel()
++        {
++            _shuffleConfirm.Hide();
++            LevelFlow? flow = _flow;
++            if (flow != null && flow.HasLevel)
++            {
++                ShuffleProbe("cancel", flow, null, null);
++            }
++
++            EmitLevelLayout();
++        }
++
++        private void OnShuffleCardDismissed()
++        {
++            _shuffleCard.Hide();
++            EmitLevelLayout();
++        }
++
++        // Las cuias cuyo centro ya cruzó el frente bajan con su contenido nuevo.
++        private void PaintShufflePassed(float front)
++        {
++            BoardState? target = _shuffleTarget;
++            if (target == null || _shufflePending == 0)
++            {
++                return;
++            }
++
++            int n = Mathf.Min(_views.Length, target.Count);
++            for (int i = 0; i < n; i++)
++            {
++                int bit = 1 << i;
++                if ((_shufflePending & bit) == 0 || _shuffleCenters[i] > front)
++                {
++                    continue;
++                }
++
++                _shufflePending &= ~bit;
++                _animator.ShowContent(i, target[i], target.IsSealed(i));
++                SetLift(i, false);
++            }
++        }
++
++        private void FinishShuffleWave()
++        {
++            if (_shuffleWave.Playing)
++            {
++                _shuffleWave.Stop();
++            }
++
++            PaintShufflePassed(float.PositiveInfinity);
++            if (_shuffleTarget != null)
++            {
++                _shownBoard = _shuffleTarget;
++            }
++
++            _shuffleTarget = null;
++            _shufflePending = 0;
++        }
++
++        // DevProbe.Event("shuffle", …): fase, nivel, método, par, intentos, revelado y vía o motivo (solo en desarrollo).
++        private void ShuffleProbe(string phase, LevelFlow flow, ShuffleOutcome? outcome, string? detail)
++        {
++            if (!DevProbe.Enabled || !flow.HasLevel)
++            {
++                return;
++            }
++
++            var json = new System.Text.StringBuilder(160);
++            json.Append("\"phase\":\"").Append(phase).Append("\",\"level\":").Append(flow.LevelNumber.ToString(CultureInfo.InvariantCulture))
++                .Append(",\"used_level\":").Append(flow.ShufflesUsed.ToString(CultureInfo.InvariantCulture))
++                .Append(",\"used_today\":").Append(flow.ShufflesToday.ToString(CultureInfo.InvariantCulture));
++            if (outcome.HasValue)
++            {
++                ShuffleOutcome o = outcome.Value;
++                json.Append(",\"method\":\"").Append(o.MethodId).Append("\",\"par_before\":").Append(o.ParBefore.ToString(CultureInfo.InvariantCulture))
++                    .Append(",\"par_after\":").Append(o.ParAfter.ToString(CultureInfo.InvariantCulture))
++                    .Append(",\"tries\":").Append(o.Tries.ToString(CultureInfo.InvariantCulture))
++                    .Append(",\"revealed_murky\":").Append(o.Revealed.ToString(CultureInfo.InvariantCulture));
++            }
++
++            if (detail != null)
++            {
++                json.Append(",\"detail\":\"").Append(detail).Append('"');
++            }
++
++            _probe.Event("shuffle", json.ToString());
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/UI/GameScreen.Shuffle.cs.meta b/Assets/_Project/Scripts/UI/GameScreen.Shuffle.cs.meta
+new file mode 100644
+index 0000000..f0b87f0
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameScreen.Shuffle.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 107237364b86b9845b7d86fc2becf016
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/UI/GameScreen.cs b/Assets/_Project/Scripts/UI/GameScreen.cs
+index a06be05..e631a1b 100644
+--- a/Assets/_Project/Scripts/UI/GameScreen.cs
++++ b/Assets/_Project/Scripts/UI/GameScreen.cs
+@@ -638,6 +638,7 @@ public GameScreen(Transform host, ProceduralArt art, DevProbe probe, IGameAction
+             CardsBuild();
+             RevealBuild();
+             HintBuild();
++            ShuffleBuild();
+             ArrivalBuild();
+             ApplyScreenMetrics(true);
+         }
+@@ -937,6 +938,7 @@ public void Tick(float dtMs)
+             CardsTick(dtMs);
+             RevealTick(dtMs);
+             HintTick(dtMs);
++            ShuffleTick(dtMs);
+             StopTick(dtMs);
+             ArrivalTick(dtMs);
+             SlotTick(dtMs);
+@@ -982,6 +984,7 @@ public void OnLevelLoaded(int level)
+             CardsLevelLoaded(flow);
+             RevealLevelLoaded(flow);
+             HintLevelLoaded(flow);
++            ShuffleLevelLoaded(flow);
+             StopLevelLoaded(flow);
+             ArrivalLevelLoaded(flow);
+             _levelLayoutDeferred = false;
+@@ -1028,6 +1031,7 @@ public void OnIntroStarted(int durationMs, bool isShort)
+             // El tablero del intento ya es el de la sesión (OnRestart avisa antes de reiniciarla: ahí aún es el viejo).
+             LabelsBoardChanged(flow);
+             RevealBoardChanged(flow);
++            ShuffleBoardChanged(flow);
+         }
+ 
+         /// <inheritdoc />
+@@ -1103,6 +1107,7 @@ public void OnTap(TapResult result)
+                     _probe.State("pour", flow, result.Tapped, result.Pour);
+                     LabelsBoardChanged(flow);
+                     RevealBoardChanged(flow);
++                    ShuffleBoardChanged(flow);
+                     break;
+             }
+         }
+@@ -1157,6 +1162,7 @@ public void OnUndo(Pour undone, bool fromStuckModal)
+             AudioBoard.Music(flow.Level, after); // AU1-AU2: la Marea puede quitar una capa
+             LabelsBoardChanged(flow);
+             RevealBoardChanged(flow);
++            ShuffleBoardChanged(flow);
+         }
+ 
+         /// <inheritdoc />
+@@ -1334,6 +1340,7 @@ public void OnResumed(FlowPhase phase)
+ 
+             LabelsBoardChanged(flow);
+             RevealBoardChanged(flow);
++            ShuffleBoardChanged(flow);
+         }
+ 
+         /// <inheritdoc />
+@@ -1377,6 +1384,7 @@ public void OnCuiaAdded(int index, AddedCuiaKind kind)
+             _probe.Funnel(kind == AddedCuiaKind.Rescue ? "rescue" : "extra_cuia", flow);
+             LabelsBoardChanged(flow);
+             RevealBoardChanged(flow);
++            ShuffleBoardChanged(flow);
+         }
+ 
+         /// <inheritdoc />
+@@ -2462,6 +2470,7 @@ private void EmitLevelLayout()
+             _layoutRects.Add((RectTransform)_pauseButton.Button.transform);
+             CardsLayoutIds(_layoutIds, _layoutRects);
+             RevealLayoutIds(_layoutIds, _layoutRects);
++            ShuffleLayoutIds(_layoutIds, _layoutRects);
+             _probe.Layout("level", RequireFlow().LevelNumber, _views, _layoutIds.ToArray(), _layoutRects.ToArray());
+         }
+ 
+@@ -2693,6 +2702,7 @@ private void LayoutHud()
+             CardsLayout();
+             RevealLayout();
+             HintLayout();
++            ShuffleLayout();
+         }
+ 
+         // Panel de victoria de arriba abajo según lo que ofrece (con o sin Cosecha doble), con la cinta, los rayos y el velo
+@@ -3366,6 +3376,24 @@ private static RectTransform HitLayer(string name, Transform parent)
+         // Morpho: al final de OnLevelLoaded, tras RevealLevelLoaded.
+         partial void HintLevelLoaded(LevelFlow flow);
+ 
++        // Pororoca · Barajar (GameScreen.Shuffle.cs; bloque B2): al final del constructor, después de HintBuild.
++        partial void ShuffleBuild();
++
++        // Pororoca: al final de LayoutHud, tras HintLayout.
++        partial void ShuffleLayout();
++
++        // Pororoca: en cada Tick, tras HintTick.
++        partial void ShuffleTick(float dtMs);
++
++        // Pororoca: al final de OnLevelLoaded, tras HintLevelLoaded.
++        partial void ShuffleLevelLoaded(LevelFlow flow);
++
++        // Pororoca: en los mismos puntos que RevealBoardChanged, justo después.
++        partial void ShuffleBoardChanged(LevelFlow flow);
++
++        // Pororoca: botones visibles para AF_LAYOUT (EmitLevelLayout, tras RevealLayoutIds).
++        partial void ShuffleLayoutIds(List<string> ids, List<RectTransform> rects);
++
+         // Embudo (GameScreen.Funnel.cs): justo antes de abrir ¿Seguro? (GiveUpConfirm) o Nivel fallido (LevelFailed), para
+         // colorear sus cabeceras.
+         partial void FunnelModalShowing(FlowPhase phase, LevelFlow flow);
+diff --git a/Assets/_Project/Tests/EditMode/LocTablesTests.cs b/Assets/_Project/Tests/EditMode/LocTablesTests.cs
+index d58b701..cfa5a9a 100644
+--- a/Assets/_Project/Tests/EditMode/LocTablesTests.cs
++++ b/Assets/_Project/Tests/EditMode/LocTablesTests.cs
+@@ -509,6 +509,9 @@ internal static List<string> UiTextKeys()
+             // E6 y E7 del Spark (enganche E5b): la tarjeta del 7 y la línea de Sin canoas.
+             keys.AddRange(DailyText.E5bKeys);
+ 
++            // La Pororoca del Spark (bloque B2; B2-strings.csv): las pinta AF.UI.ShuffleText.
++            keys.AddRange(ShuffleText.AllKeys);
++
+             return keys;
+         }
+ 
+diff --git a/Assets/_Project/Tests/PlayMode/PlayModeHelpers.cs b/Assets/_Project/Tests/PlayMode/PlayModeHelpers.cs
+index 9c51492..46845bc 100644
+--- a/Assets/_Project/Tests/PlayMode/PlayModeHelpers.cs
++++ b/Assets/_Project/Tests/PlayMode/PlayModeHelpers.cs
+@@ -98,6 +98,21 @@ public static void NoLevelCardsUnlessSet()
+             NoL10SequenceUnlessSet();
+             NoContentEndMapUnlessSet();
+             NoIdleHintUnlessSet();
++            NoShuffleUnlessSet();
++        }
++
++        /// <summary>
++        /// Apaga la Pororoca (bloque B2) si el test no la fijó (<see cref="GameScreen.ShuffleOverride"/> = null): los tests que no
++        /// tratan de ella juegan desde el 30 con la bandeja de antes (sin la ranura Barajar, sus avisos ni la tarjeta del 30), y
++        /// sus capturas como antes. Los que la prueban (<c>ShufflePlayModeTests</c>) la encienden y la vuelven a null en su
++        /// TearDown.
++        /// </summary>
++        public static void NoShuffleUnlessSet()
++        {
++            if (GameScreen.ShuffleOverride == null)
++            {
++                GameScreen.ShuffleOverride = false;
++            }
+         }
+ 
+         /// <summary>
+diff --git a/Assets/_Project/Tests/PlayMode/ShufflePlayModeTests.cs b/Assets/_Project/Tests/PlayMode/ShufflePlayModeTests.cs
+new file mode 100644
+index 0000000..6547b44
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/ShufflePlayModeTests.cs
+@@ -0,0 +1,165 @@
++#nullable enable
++using System.Collections;
++using AF.Ads;
++using AF.Boosters;
++using AF.Core.Board;
++using AF.Economy;
++using AF.GameFlow;
++using AF.Save;
++using AF.UI;
++using NUnit.Framework;
++using UnityEngine;
++using UnityEngine.TestTools;
++using UnityEngine.UI;
++
++namespace AF.Tests.PlayMode
++{
++    /// <summary>
++    /// Pororoca · Barajar en la escena (bloque B2; 04 §2.4 y §4; 07 §7.4): la ranura Barajar desde el 30, entre Pista y Revelar;
++    /// la tarjeta del primer 30, que se cierra con un toque; la hoja de confirmación con 300 semillas; la ola de 1,2 s que captura
++    /// los toques y cambia cada cuia al pasar; el cobro y el tope de 1 por nivel; con el stock, sin hoja.
++    /// </summary>
++    public sealed class ShufflePlayModeTests
++    {
++        [SetUp]
++        public void SetUp()
++        {
++            FunnelSetup.Hooks();
++            GameScreen.ShuffleOverride = true;
++        }
++
++        [TearDown]
++        public void TearDown()
++        {
++            GameScreen.SimulatedScreen = null;
++            GameScreen.ShuffleOverride = null;
++            LaunchOptions.Reset();
++        }
++
++        private static IEnumerator Level30(int seeds, int stock)
++        {
++            Profile profile = FunnelSetup.Profile(seeds);
++            profile.Stock.Shuffle = stock;
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
++            yield return PlayModeHelpers.LoadGame(30, new MemoryProgressStore(30, 29));
++        }
++
++        private static void Click(Button button)
++        {
++            button.onClick.Invoke();
++        }
++
++        [UnityTest]
++        public IEnumerator Level30_Card_Confirm_Wave_AndTheLevelCap()
++        {
++            yield return Level30(1000, 0);
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            GameScreen view = boot.View!;
++            boot.TapAnywhere();
++            PlayModeHelpers.Step(boot, 100);
++
++            // La tarjeta del 30 (04 §4), una vez; un toque la cierra.
++            Assert.That(view.ShuffleCard.Visible, Is.True, "tarjeta de la Pororoca en el primer 30");
++            Assert.That(boot.Flow!.ShuffleCardDue, Is.False);
++            Click(view.ShuffleCard.Root.GetComponentInChildren<Button>());
++            Assert.That(view.ShuffleCard.Visible, Is.False);
++
++            // La ranura, cuarta tras Marea, Cuia extra y Pista (07 §7.4).
++            Assert.That(view.Tray.ShuffleShown, Is.True);
++            Assert.That(view.Tray.SlotCount, Is.EqualTo(4));
++            Assert.That(view.Tray.ShufflePriceShown, Is.EqualTo(300));
++
++            BoardState before = boot.Flow.Session.Current;
++            Click(view.Tray.ShuffleButton);
++            Assert.That(view.ShuffleConfirm.Visible, Is.True, "04 §2.4: hoja de una línea con ≥ 200 semillas");
++            Assert.That(view.ShuffleConfirm.Price, Is.EqualTo(300));
++            Assert.That(boot.Wallet!.Seeds, Is.EqualTo(1000), "abrir la hoja no cobra");
++
++            Click(view.ShuffleConfirm.ConfirmButton);
++            Assert.That(view.ShuffleConfirm.Visible, Is.False);
++            Assert.That(boot.Wallet.Seeds, Is.EqualTo(700));
++            BoardState after = boot.Flow.Session.Current;
++            Assert.That(after.Equals(before), Is.False);
++            Assert.That(view.ShuffleWave.Playing, Is.True, "la ola de 1,2 s");
++            Assert.That(view.ShufflePendingMask, Is.Not.EqualTo(0));
++
++            PlayModeHelpers.Step(boot, (int)ShuffleWaveFx.DurationMs + 64);
++            Assert.That(view.ShuffleWave.Playing, Is.False);
++            Assert.That(view.ShufflePendingMask, Is.EqualTo(0));
++            for (int i = 0; i < after.Count; i++)
++            {
++                Assert.That(view.Views[i].ShownCuia.Packed, Is.EqualTo(after[i].Packed), "cuia " + i + " pintada con la ola");
++            }
++
++            Assert.That(boot.Flow.Shuffle.State, Is.EqualTo(ShuffleState.UsedLevel));
++            Assert.That(view.Tray.ShuffleLooksEnabled, Is.False, "1 por nivel");
++        }
++
++        [UnityTest]
++        public IEnumerator WithStock_NoSheet_TheWaveGoesStraightAway()
++        {
++            yield return Level30(0, 1);
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            GameScreen view = boot.View!;
++            boot.Flow!.MarkShuffleCardShown();
++            boot.TapAnywhere();
++            PlayModeHelpers.Step(boot, 100);
++            Assert.That(view.ShuffleCard.Visible, Is.False);
++            Assert.That(view.Tray.ShuffleBadgeText, Does.Contain("+1"));
++
++            Click(view.Tray.ShuffleButton);
++
++            Assert.That(view.ShuffleConfirm.Visible, Is.False);
++            Assert.That(view.ShuffleWave.Playing, Is.True);
++            Assert.That(boot.Wallet!.Stock.Get(BoosterKind.Shuffle), Is.EqualTo(0));
++            PlayModeHelpers.Step(boot, (int)ShuffleWaveFx.DurationMs + 64);
++            Assert.That(view.ShuffleWave.Playing, Is.False);
++        }
++
++        [UnityTest]
++        public IEnumerator Level106_FiveSlots_MissingNotices_DoNotOverlap()
++        {
++            // 07 §7.4: con las 5 ranuras miden 56 dp. Nivel 106 con 50 semillas y sin video: Cuia extra, Pista, Barajar y Revelar
++            // enseñan a la vez «Te faltan {n}», estrechos a su paso de ranura, a 12 sp y sin pisarse.
++            LaunchOptions.AdFillOverride = FakeAdFill.NoFill;
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(50));
++            yield return PlayModeHelpers.LoadGame(106, new MemoryProgressStore(106, 105));
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            boot.TapAnywhere();
++            PlayModeHelpers.Step(boot, 1000);
++            BoosterTray tray = boot.View!.Tray;
++
++            Assert.That(tray.SlotCount, Is.EqualTo(5));
++            Assert.That(tray.SlotWidth, Is.GreaterThanOrEqualTo(BoosterTray.FiveSlotsDp));
++            Assert.That(tray.ShuffleShowsMissing, Is.True);
++            Assert.That(tray.ShuffleMissingText, Is.EqualTo("Te faltan 250"));
++            Assert.That(tray.RevealShowsMissing, Is.True);
++            Assert.That(WorldRect(tray.ShuffleMissingRect).Overlaps(WorldRect(tray.RevealMissingRect)), Is.False, "Barajar y Revelar");
++            Assert.That(WorldRect(tray.ShuffleMissingRect).Overlaps(WorldRect(tray.HintMissingRect)), Is.False, "Pista y Barajar");
++        }
++
++        private static Rect WorldRect(RectTransform rt)
++        {
++            var corners = new Vector3[4];
++            rt.GetWorldCorners(corners);
++            return Rect.MinMaxRect(corners[0].x, corners[0].y, corners[2].x, corners[2].y);
++        }
++
++        [UnityTest]
++        public IEnumerator Level29_HasNoShuffleSlot()
++        {
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(FunnelSetup.Profile(1000));
++            yield return PlayModeHelpers.LoadGame(29, new MemoryProgressStore(29, 28));
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            boot.TapAnywhere();
++            PlayModeHelpers.Step(boot, 100);
++
++            Assert.That(boot.View!.Tray.ShuffleShown, Is.False);
++            Assert.That(boot.View.ShuffleCard.Visible, Is.False);
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/PlayMode/ShufflePlayModeTests.cs.meta b/Assets/_Project/Tests/PlayMode/ShufflePlayModeTests.cs.meta
+new file mode 100644
+index 0000000..c041bfa
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/ShufflePlayModeTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 213d2ac4b457d6a4395437240331dc7f
+\ No newline at end of file

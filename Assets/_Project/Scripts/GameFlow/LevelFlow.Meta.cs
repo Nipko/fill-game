@@ -11,9 +11,9 @@ namespace AF.GameFlow
     /// <item><description><b>Skins por hito</b> (06 §4.5; D-033, Q-M8 (a)): <c>ResolveWin</c> llama a <see cref="OnWinSkins"/>
     /// dentro del mismo lote del perfil, así el derecho, la skin puesta y la victoria salen en la misma escritura;
     /// <see cref="LastSkinUnlock"/> es lo ganado (lo lee la vista para el aviso «{skin} · puesta» y la sonda
-    /// <c>af_skin_unlock</c>). El Salto del Boto (B3), cuando llegue, también debe llamar a
-    /// <see cref="SkinService.ApplyLevelPassed"/> al superar un nivel así; hoy, si falta, la recupera <see cref="SkinService.Backfill"/>
-    /// en el siguiente arranque.</description></item>
+    /// <c>af_skin_unlock</c>). El Salto del Boto (B3) la da igual al saltar el nivel que cierra el mundo
+    /// (<see cref="OnSkipSkins"/>, en el mismo lote que el salto); si faltara, la recupera <see cref="SkinService.Backfill"/> en
+    /// el siguiente arranque.</description></item>
     /// <item><description><b>Álbum de frutas</b> (08 §4.3 y §8.2): <c>Load</c> llama a <see cref="OnLoadAlbum"/> con el tablero
     /// inicial; <see cref="LastFruitsDiscovered"/> son los tintes nuevos de esta carga (la sonda <c>af_fruit_discovered</c>). El
     /// Reto del río no cuenta: es la campaña la que llena el Cuaderno [P].</description></item>
@@ -44,6 +44,12 @@ namespace AF.GameFlow
 
         /// <summary>Skins ganadas en este flujo (sube con cada <see cref="LatestSkinUnlock"/>).</summary>
         public int SkinUnlockSerial { get; private set; }
+
+        /// <summary>
+        /// <see cref="LoadSerial"/> cuando se ganó <see cref="LatestSkinUnlock"/>: el aviso sale en la carga siguiente. En una
+        /// victoria es la del nivel ganado; en un Salto del Boto, la de antes de cargar el nivel siguiente, que ya es la siguiente.
+        /// </summary>
+        public int SkinUnlockLoad { get; private set; }
 
         /// <summary>Cargas de nivel de este flujo (sube con cada <c>Load</c>): quien espera «la pantalla siguiente» la compara.</summary>
         public int LoadSerial { get; private set; }
@@ -76,6 +82,22 @@ namespace AF.GameFlow
             {
                 LatestSkinUnlock = _lastSkinUnlock;
                 SkinUnlockSerial++;
+                SkinUnlockLoad = LoadSerial;
+            }
+        }
+
+        // En Skip (LevelFlow.Skip.cs), dentro del lote y antes de cargar el nivel siguiente: un nivel saltado también se supera
+        // (cuenta para max_level), así que también cierra el mundo y da su skin (nota de B14 en D-033). La carga siguiente limpia
+        // LastSkinUnlock; el aviso lo lleva LatestSkinUnlock.
+        private void OnSkipSkins(int level)
+        {
+            SkinUnlock? unlock = _skins?.ApplyLevelPassed(level, !IsDaily);
+            if (unlock != null)
+            {
+                _lastSkinUnlock = unlock;
+                LatestSkinUnlock = unlock;
+                SkinUnlockSerial++;
+                SkinUnlockLoad = LoadSerial;
             }
         }
 

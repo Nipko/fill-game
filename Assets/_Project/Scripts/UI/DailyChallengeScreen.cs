@@ -703,7 +703,7 @@ namespace AF.UI
         /// Nivel fallido salen del Reto. No hay canoas, Cuia de rescate, Balsa, rendición, Mapa, ficha de fruta ni Siguiente; los
         /// videos (Marea, Morpho) quedan fuera del prototipo del Reto [P].
         /// </summary>
-        internal sealed class DailyGameActions : IGameActions
+        internal sealed class DailyGameActions : IGameActions, IShuffleActions
         {
             private readonly DailyChallengeScreen _owner;
 
@@ -785,6 +785,20 @@ namespace AF.UI
             public bool PressReveal()
             {
                 return false; // el Reto no lleva dosis ocultas (03 §16): la Luciérnaga no aparece
+            }
+
+            public bool PressShuffle()
+            {
+                // La Pororoca también en el Reto (06 §4.1: los comodines de la campaña; bloque B2), con los mismos topes: el de
+                // hoy va en daily.shuffles_today del mismo perfil.
+                LevelFlow? flow = Flow;
+                if (flow == null || !flow.HasLevel || !flow.Shuffle.CanUse)
+                {
+                    return false;
+                }
+
+                _owner._view?.SettleReveal();
+                return flow.UseShuffle().HasValue;
             }
 
             public bool PressRevealVideo()

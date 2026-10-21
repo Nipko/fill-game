@@ -22,7 +22,8 @@ namespace AF.Save
     /// en la vida; D-030, pregunta 15 (b); tarea DC23), que entra en el mismo esquema 2 sin paso propio porque aún no se ha
     /// publicado. La Crecida (B1a; Q-M9 (a) [P]) añade <c>streak</c> (omitido mientras es null) y <c>daily.streak_hits</c> y
     /// <c>daily.streak_seeds</c> (omitidos en su default), también sin migrar. B14 añade, igual, <c>entitlements.skin_equipped</c> y
-    /// <c>entitlements.frames</c> [P] (omitidos en su default) y <c>album.fruits</c> (sin tintes, sin bloque).
+    /// <c>entitlements.frames</c> [P] (omitidos en su default) y <c>album.fruits</c> (sin tintes, sin bloque). B6 añade <c>settings.push</c>
+    /// (omitido en su default) y <c>stats.last_seen_at</c> y <c>stats.last_win_at</c> [P] (omitidos mientras son null), sin migrar.
     /// <para>
     /// Es un contenedor de datos: las reglas (topes, precios, regeneración de canoas, reinicio diario) viven en
     /// <c>AF.Economy</c>, <c>AF.Ads</c> y <c>AF.Boosters</c>, que lo mutan y lo guardan con <see cref="IProfileStore"/>.
@@ -532,8 +533,8 @@ namespace AF.Save
 
     /// <summary>
     /// <c>settings</c> (08 §4.3): solo los ajustes que ya existen en el juego (<c>sound</c>, <c>music</c> y <c>haptics</c> desde
-    /// AU1); <c>push</c> llega con su sistema. Un valor que falta o no es válido en el archivo toma el default (los ajustes nunca
-    /// hacen corrupto un perfil).
+    /// AU1) y <c>push</c> (B6; <see cref="PushSettingsData"/>). Un valor que falta o no es válido en el archivo toma el default (los
+    /// ajustes nunca hacen corrupto un perfil).
     /// </summary>
     public sealed class SettingsData
     {
@@ -600,6 +601,13 @@ namespace AF.Save
         public bool IdleHint { get; set; } = true;
 
         /// <summary>
+        /// <c>push</c> (08 §4.3: <c>pre_prompt_shown</c> y <c>granted</c>; B6): el pre-prompt y el permiso de los avisos, con
+        /// <c>pre_prompt_at</c> y <c>second_prompt_shown</c> [P] para el segundo pre-prompt de 06 §8.1. Las reglas son de
+        /// <c>AF.LiveOps</c> (<c>PushPermissionService</c>).
+        /// </summary>
+        public PushSettingsData Push { get; } = new PushSettingsData();
+
+        /// <summary>
         /// Forma canónica de <paramref name="value"/> si vale para <see cref="Language"/> (<see cref="LanguageAuto"/> o uno de
         /// <see cref="Languages"/>, sin distinguir mayúsculas), o null si no vale.
         /// </summary>
@@ -651,6 +659,29 @@ namespace AF.Save
                     return false;
             }
         }
+    }
+
+    /// <summary>
+    /// <c>settings.push</c> (08 §4.3; B6, nota <c>docs/dev/sesiones-notificaciones.md</c> §3): <c>pre_prompt_shown</c> y
+    /// <c>granted</c> con los nombres del GDD, y <c>pre_prompt_at</c> y <c>second_prompt_shown</c> [P]. Se escribe solo si alguno
+    /// deja su default (como <c>streak</c>), y se lee tolerante, campo a campo.
+    /// </summary>
+    public sealed class PushSettingsData
+    {
+        /// <summary><c>pre_prompt_shown</c>: el primer pre-prompt ya salió.</summary>
+        public bool PrePromptShown { get; set; }
+
+        /// <summary><c>granted</c>: el jugador quiere avisos y el sistema los deja enseñar (último estado conocido).</summary>
+        public bool Granted { get; set; }
+
+        /// <summary><c>pre_prompt_at</c> [P]: cuándo salió el primer pre-prompt, UTC.</summary>
+        public DateTime? PrePromptAt { get; set; }
+
+        /// <summary><c>second_prompt_shown</c> [P]: ya salió el segundo y último pre-prompt.</summary>
+        public bool SecondPromptShown { get; set; }
+
+        /// <summary>Todos los campos en su default (entonces no se escribe).</summary>
+        public bool IsDefault => !PrePromptShown && !Granted && !PrePromptAt.HasValue && !SecondPromptShown;
     }
 
     /// <summary>
@@ -826,8 +857,20 @@ namespace AF.Save
         /// <summary><c>rv_watched</c>.</summary>
         public int RvWatched { get; set; }
 
-        /// <summary><c>sessions</c>.</summary>
+        /// <summary><c>sessions</c>: sesiones empezadas (B6; Q-M4 (a) de D-033: arranque en frío o vuelta tras 30 min o más fuera).</summary>
         public int Sessions { get; set; }
+
+        /// <summary>
+        /// <c>last_seen_at</c> [P] (B6): la última vez que la app estuvo en primer plano, UTC; null si nunca se apuntó. Mide los días
+        /// sin sesión del Regalo de regreso (06 §9). Se omite mientras es null.
+        /// </summary>
+        public DateTime? LastSeenAt { get; set; }
+
+        /// <summary>
+        /// <c>last_win_at</c> [P] (B6): la última victoria (campaña o Reto), UTC; null si no se sabe. La usa el aviso «Crecida te
+        /// espera» (06 §8.3). Se omite mientras es null.
+        /// </summary>
+        public DateTime? LastWinAt { get; set; }
     }
 
     /// <summary>

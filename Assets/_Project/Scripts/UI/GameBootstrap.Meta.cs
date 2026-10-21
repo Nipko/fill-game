@@ -142,7 +142,7 @@ namespace AF.UI
                 SkinUnlockCount++;
                 _probe?.SkinUnlock(unlock.SkinId, unlock.Source, unlock.Level, unlock.Equipped);
                 _skinToastPending = unlock;
-                _skinToastLoad = flow.LoadSerial;
+                _skinToastLoad = flow.SkinUnlockLoad; // el aviso, en la carga siguiente a la victoria o al salto
             }
 
             // El aviso sale en la pantalla siguiente (el nivel siguiente, con sus cuias ya con la skin, o el inicio), no sobre la

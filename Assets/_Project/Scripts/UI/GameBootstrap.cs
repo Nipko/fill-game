@@ -1612,6 +1612,8 @@ namespace AF.UI
             SetUpDaily(); // Reto del río (E2; GameBootstrap.Daily.cs): pool, servicio, tarjeta del inicio y partida
             SetUpStreak(); // Crecida, Hoja escudo y Canasta (E32; GameBootstrap.Streak.cs): el servicio, inyectado en el flujo
             SetUpMeta(); // B14: skins por hito, álbum de frutas, la Canasta en el Mapa y «Datos del río» (GameBootstrap.Meta.cs)
+            SetUpSkip(); // Salto del Boto (B3; GameBootstrap.Skip.cs): el almacén en el perfil, la confirmación y el banner
+            SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
             if (requested <= 0 && !rebuilt)
