@@ -3314,3 +3314,8 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Q-B8-1 (B8):** al fusionar dos perfiles, `applied_purchases` es **la lista del perfil ganador**, y `restoreLedger` (el servidor) devuelve las compras que falten para reacreditarlas. Cambia 08 §11, que decía «unión». Se implementa en `CloudMerge` con su test.
 - **Q-B15 (B4):** se regeneran `tools/out/econ_A.md` y `econ_B_tramos.md`, que ya no se reproducían antes de B4, en una tarea aparte; antes de darlas por buenas se enseñan al dueño las cifras [sim] que cambien.
 - **Q-B3 (B4):** Marea = 30 semillas en la tasa de la Bitácora, como fijó D-033 (tasa (a)); se corrige 06 §4.2 donde diga 10.
+
+### D-038, añadido del 2026-10-21: la Balsa con las canoas apagadas
+
+- **Estado:** decidido por el dueño en el chat: «Balsa con las canoas apagadas: quita las Canoas infinitas de su contenido y de la línea del modal (queda «semillas y una cuia»), sin cambiar el precio; anótalo en D-038 y en 04 §6 y §7.2.»
+- **Decisión.** Con `biz_feature_lives = false`, la Balsa de rescate no incluye las Canoas infinitas: su contenido y la línea del modal de Aguas estancadas quedan en «semillas y una cuia». **El precio no cambia.** Con el interruptor en su default, la Balsa no cambia.
