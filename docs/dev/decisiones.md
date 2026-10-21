@@ -3176,3 +3176,15 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Concurrencia reservada:** no en la 1.0 (las cuentas nuevas suelen tener límite de 10).
 - **HSTS de 2 años con `includeSubDomains`:** se confirma en F5-1, antes de fijar el dominio de prod.
 - **Rutas propuestas:** `/v1/purchases/verify`, `/v1/ledger/restore`, `/v1/ssv` (GET y POST hasta verificar el formato de MAX), `/v1/account/code`, `/v1/account/delete`, `/v1/account/delete-request` y `/v1/account/delete-confirm`, en `infra/contracts/v1/index.json`.
+
+### D-035, añadido del 2026-10-21: preguntas de las 5 funciones (F2-3 a F2-8), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño («sigamos las recomendaciones»); integradas en `ae8c8ea` (rama `backend/f2b`, revisión final APROBADO sobre `d7d367a`). El dueño puede cambiarlas.
+- **`af_piggy` y cifras de los packs:** el servidor devuelve semillas 0 más el ítem `piggy` (el cliente acredita lo acumulado) y los packs con los defaults de 08 §9; se aceptan los ids `rescue_cuia` e `infinite_canoes_min` [P].
+- **Consumibles:** el servidor solo hace `acknowledge`; el consumo lo hace Unity IAP en el cliente (F3-3). Se corrige 08 §10.3 («y consume si consumible»).
+- **Cuenta ofuscada:** en prod se exigirá en cuanto F3-3 llame a `setObfuscatedAccountId = UID`; hasta entonces se acepta con aviso y métrica.
+- **Token anotado a otro UID** (cuenta borrada o reinstalación sin Play Games): se mantiene el 409; los no consumibles se recuperan desde Play.
+- **Compras de prueba en prod:** se conceden y se marcan `test`.
+- **Límites [P]:** 100 recompensas SSV por UID y día, 30 verificaciones por UID y hora, 10 códigos por UID y día, 5 `delete-request` por código y hora y 10 `delete-confirm` por token y 5 minutos.
+- **Supuestos [NV]** que se confirman en F0-R o F4-2: firma S2S de MAX = hex(SHA-256(`event_id` + clave)) (usar una firma que cubra todos los parámetros si MAX la ofrece); formato del token de App Check; `products.get` sin precio (el libro mayor no guarda `price_micros` ni `currency`; desviación del plan §2 y de 08 §10.3).
+- **Endurecimiento pendiente** (tarea F2c, de la revisión): exigir `-c firebaseAppIds` en el synth de prod; lápida `voided` para anulaciones de tokens aún no verificados; hacer cumplir `af_starter` una vez por cuenta en el servidor; cerrar las carreras residuales del borrado (condición en el Put del libro mayor o segunda pasada de `eraseAccount`). Y actualizar `aws-cdk-lib` cuando una versión corrija el aviso de `brace-expansion` (cambio de versión: lo aprueba el dueño).
