@@ -5,9 +5,10 @@ import { CATALOG, grantFor } from '../../functions/shared/catalog.ts';
 import type { FirebaseAdmin } from '../../functions/shared/firebaseAdmin.ts';
 import type { IntegrityVerifier } from '../../functions/shared/integrity.ts';
 import type { PlayApi, ProductPurchase } from '../../functions/shared/playApi.ts';
-import { DELETED_MARK_TTL_S } from '../../functions/shared/rateLimit.ts';
+import { DELETED_MARK_TTL_S, markDeleted } from '../../functions/shared/rateLimit.ts';
+import { uidHash } from '../../functions/shared/log.ts';
 import { LIMITS, createHandler as deleteHandler } from '../../functions/delete-account/handler.ts';
-import { createHandler as ssvHandler } from '../../functions/rewarded-ssv/handler.ts';
+import { SSV_DAILY_LIMIT, createHandler as ssvHandler } from '../../functions/rewarded-ssv/handler.ts';
 import { expectedEventToken } from '../../functions/rewarded-ssv/maxSignature.ts';
 import { VERIFY_HOURLY_LIMIT, createHandler as verifyHandler } from '../../functions/verify-purchase/handler.ts';
 import { MapSecrets, NOW, OTHER_UID, UID, httpEvent, res } from './fixtures.ts';
@@ -61,6 +62,29 @@ describe('rewardedSsv: event_id de un solo uso', () => {
     expect(counter()).toBe(1);
     expect((await call(UID, N1, 'ev-1')).body).toEqual({ status: 'duplicate' });
     expect(counter()).toBe(1);
+  });
+
+  it('al llegar al límite, 429 y el reintento idéntico sigue en 429, sin fila en rewards', async () => {
+    for (let i = 0; i < SSV_DAILY_LIMIT; i++) {
+      const nonce = `6f1c2a4e-8b3d-4f5a-9c7e-${i.toString(16).padStart(12, '0')}`;
+      expect((await call(UID, nonce, `e${i}`)).status).toBe(200);
+    }
+    expect((await call(UID, N2, 'e-tope')).status).toBe(429);
+    expect((await call(UID, N2, 'e-tope')).status).toBe(429);
+    expect((await call(UID, N2, 'e-tope')).status).toBe(429);
+    expect(db.get(TABLES.AF_TABLE_REWARDS, { nonce: N2 })).toBeUndefined();
+    // Al día siguiente, el reintento de MAX sí pasa.
+    now = NOW + 86_400_000;
+    expect((await call(UID, N2, 'e-tope')).body).toEqual({ status: 'ok' });
+  });
+
+  it('UID borrado hace menos de 2 h: 200 sin escribir en rewards', async () => {
+    await markDeleted(db.client, TABLES.AF_TABLE_RATE_LIMITS, uidHash(UID), NOW);
+    const r = await call(UID, N1, 'ev-1');
+    expect(r.status).toBe(200);
+    expect(r.body).toEqual({ status: 'duplicate' });
+    expect(db.get(TABLES.AF_TABLE_REWARDS, { nonce: N1 })).toBeUndefined();
+    expect((await call(OTHER_UID, N2, 'ev-2')).body).toEqual({ status: 'ok' });
   });
 
   it('si la primera vez falló al escribir la recompensa, el reintento la escribe', async () => {

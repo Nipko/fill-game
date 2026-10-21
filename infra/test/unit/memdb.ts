@@ -98,6 +98,10 @@ export class MemDb {
           t.set(key, next);
           return Promise.resolve({ Attributes: { count: next.count, ttl: next.ttl } });
         }
+        if (i.UpdateExpression === 'SET counted = :t') {
+          t.set(key, { [pk]: key, ...(cur ?? {}), counted: v[':t'] });
+          return Promise.resolve({});
+        }
         if (i.UpdateExpression.startsWith('SET #s = :voided')) {
           if (!cur || cur.state === 'voided') throw conditionalFailed();
           t.set(key, { ...cur, state: 'voided', voided_at: v[':at'], voided_reason: v[':r'], voided_source: v[':src'] });

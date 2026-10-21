@@ -3,7 +3,7 @@
 // Manager. Anota rewards/{nonce} = {uid, placement, network, ts} con TTL de 30 días; un nonce repetido responde
 // 200 duplicate sin escribir (idempotente: MAX reintenta si no recibe 200). El cliente confirma sus nonces
 // pendientes con restoreLedger.
-import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { epochS, isConditionalCheckFailed } from '../shared/ddb.ts';
 import type { Env } from '../shared/env.ts';
@@ -13,7 +13,7 @@ import type { HttpEvent, HttpHandler } from '../shared/http.ts';
 import { json, withErrors } from '../shared/http.ts';
 import { sha256hex } from '../shared/crypto.ts';
 import { log, uidHash } from '../shared/log.ts';
-import { enforce } from '../shared/rateLimit.ts';
+import { enforce, isDeleted } from '../shared/rateLimit.ts';
 import { lazy, realDdb, realSecrets } from '../shared/runtime.ts';
 import type { SecretSource } from '../shared/secrets.ts';
 import { parseSsvQuery } from '../shared/validate.ts';
@@ -47,9 +47,15 @@ export function createHandler(getDeps: () => RewardedSsvDeps): HttpHandler {
 
     // La firma [NV] solo cubre event_id: cada event_id vale para un único (uid, nonce). Un reintento de MAX con
     // los mismos valores sigue (y acaba en duplicate); un event_id ya usado con otro uid o nonce → 403.
+    // Cuenta borrada hace menos de 2 h: 200 sin escribir (MAX no reintenta y no queda el UID en rewards).
+    if (await isDeleted(deps.ddb, rateLimitsTable, uidHash(params.uid), nowMs)) {
+      log.info('ssv_deleted_uid', fields);
+      return json(200, { status: 'duplicate' });
+    }
+
     const binding = sha256hex(`${params.uid}|${params.nonce}`);
     const eventKey = `ssv_event#${sha256hex(params.eventId ?? '')}`;
-    let firstTime = true;
+    let counted = false;
     try {
       await deps.ddb.send(
         new PutCommand({
@@ -62,16 +68,27 @@ export function createHandler(getDeps: () => RewardedSsvDeps): HttpHandler {
     } catch (e) {
       if (!isConditionalCheckFailed(e)) throw e;
       const prev = (await deps.ddb.send(new GetCommand({ TableName: rateLimitsTable, Key: { key: eventKey }, ConsistentRead: true })))
-        .Item as { binding?: string } | undefined;
+        .Item as { binding?: string; counted?: boolean } | undefined;
       if (prev?.binding !== binding) {
         log.warn('ssv_event_reused', fields);
         throw new HttpError(403, 'bad_signature', 'Firma ya usada.');
       }
-      firstTime = false;
+      counted = prev.counted === true;
     }
-    // Después de la firma (un tercero sin la clave no gasta el cupo de un UID) y solo la primera vez (los
-    // reintentos de MAX no gastan cupo).
-    if (firstTime) await enforce(deps.ddb, rateLimitsTable, `ssv#${uidHash(params.uid)}`, SSV_DAILY_LIMIT, 86_400, nowMs);
+    // Límite por UID, después de la firma (un tercero sin la clave no gasta el cupo de un UID). Un reintento de MAX
+    // solo se lo salta si la llamada anterior lo pasó (marca `counted`); si aquella dio 429, el reintento vuelve a
+    // pasar por el límite y sigue en 429.
+    if (!counted) {
+      await enforce(deps.ddb, rateLimitsTable, `ssv#${uidHash(params.uid)}`, SSV_DAILY_LIMIT, 86_400, nowMs);
+      await deps.ddb.send(
+        new UpdateCommand({
+          TableName: rateLimitsTable,
+          Key: { key: eventKey },
+          UpdateExpression: 'SET counted = :t',
+          ExpressionAttributeValues: { ':t': true },
+        }),
+      );
+    }
 
     try {
       await deps.ddb.send(
