@@ -387,10 +387,10 @@ index 01e55502..d629f3f2 100644
          {
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.MarketProfile.cs b/Assets/_Project/Scripts/UI/GameBootstrap.MarketProfile.cs
 new file mode 100644
-index 00000000..2cea3bdb
+index 00000000..ea4f45a6
 --- /dev/null
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.MarketProfile.cs
-@@ -0,0 +1,20 @@
+@@ -0,0 +1,21 @@
 +#nullable enable
 +using AF.GameFlow;
 +using AF.IAP;
@@ -400,8 +400,9 @@ index 00000000..2cea3bdb
 +{
 +    /// <summary>
 +    /// Enganche B5-profile (bloque B5): el Cántaro y las ofertas se guardan en los bloques <c>piggy</c> y <c>offers</c> del mismo
-+    /// perfil que la cartera, por la vía síncrona del lote (<see cref="ProfileSaveBatch.Durable"/>): el Cántaro y la compra que lo
-+    /// vacía salen juntos en disco. Implementa el gancho de <c>GameBootstrap.Market.cs</c>.
++    /// perfil que la cartera, por la vía síncrona del lote (<see cref="ProfileSaveBatch.Durable"/>), como la cartera. Comprar el
++    /// Cántaro son dos escrituras seguidas (la cartera acredita y después el Cántaro se vacía): el riesgo, en
++    /// <c>docs/dev/mercado.md</c> §8. Implementa el gancho de <c>GameBootstrap.Market.cs</c>.
 +    /// </summary>
 +    public sealed partial class GameBootstrap
 +    {

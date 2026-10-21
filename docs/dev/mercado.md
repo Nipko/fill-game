@@ -26,12 +26,12 @@ Fuentes: GDD 05 §4.1, §4.2, §5 y §10; 06 §2.1, §2.2, §4.5 y §4.7; 08 §4
 - Se ve y empieza a llenarse en `eco_piggy_from_level` (20). Cada victoria **de campaña** desde ese nivel le suma `eco_piggy_fill` (+15 / +30 / +40 por normal, Difícil y Muy difícil) hasta `eco_piggy_cap` (3.000, «¡Lleno!»). El Reto del río no lo llena [P] (Q-B5-5). La misma victoria no suma dos veces (`piggy.last_level`).
 - Se compra desde `eco_piggy_min_buy` (1.000) y da exactamente lo acumulado (`PurchaseRequest.PiggySeeds`; `StoreLedger` lo acredita con `Wallet.Apply`). Al acreditarse (`Purchased`) se vacía y vuelve a llenarse. Con `Pending` no se vacía (Q-B5-12).
 - El tope en vigor es siempre `eco_piggy_cap`: si Remote Config lo baja por debajo de lo guardado, el Cántaro queda lleno con el tope nuevo y se vende el tope.
-- **Icono:** bajo el saldo de semillas del inicio [P] (Q-B5-7), con lo que guarda; lleno, «¡Lleno!» con un punto. Un toque abre su tarjeta (05 §5: «≥ 1.000 y toque en el icono»), con el botón activo desde 1.000; no gasta el cupo de takeovers.
+- **Icono:** en la esquina de arriba a la derecha del inicio, bajo Ajustes [P] (Q-B5-7), donde no tapa los saldos ni la ventanita de casa de TiTino; con lo que guarda; lleno, «¡Lleno!» con un punto. Solo con la tienda encendida. Un toque abre su tarjeta (05 §5: «≥ 1.000 y toque en el icono»), con el botón activo desde 1.000; no gasta el cupo de takeovers, pero si está lleno cuenta como su tarjeta de ese llenado.
 
 ### 1.3 Las tarjetas de oferta (`AF.IAP.OfferScheduler`, `AF.UI.OfferCard`)
 `offer_scheduler` de 05 §5, decidido en la victoria de campaña:
 - **Nunca** en la primera sesión (06 §2.1, regla 1; sesión = Q-M4 (a), el `SessionTracker` de B6), ni con la tienda apagada o el perfil bloqueado.
-- **Cupo:** una por sesión (`ui_max_takeovers_per_session` = 1), compartido con la Bitácora cuando se integre B4 (Q-B5-10).
+- **Cupo:** una por sesión (`ui_max_takeovers_per_session` = 1), compartido con la Bitácora cuando se integre B4 (Q-B5-10). Sobrevive a la reconstrucción por idioma (la misma sesión de B6).
 - **Prioridad** de 05 §5: Mochila → Sin anuncios → Cántaro lleno → skin del mundo.
 - **Dónde** [P] (Q-B5-6): la Mochila («tarjeta en la pantalla de victoria», contrato 11) y el Cántaro lleno («HUD de victoria») salen encima de la victoria a los 1,5 s, cuando aparece «Siguiente» (D-033, punto 10); Sin anuncios («tras la pantalla de victoria») y la skin («fuera del nivel») salen al volver al inicio. Si el jugador deja la victoria antes (o el juego pasa solo al nivel siguiente tras la Cosecha doble, D-011), la tarjeta no sale o se quita.
 
@@ -51,7 +51,8 @@ Los **intersticiales vistos** se cuentan por el contador del día de `AF.Ads` (`
 
 ### 1.5 Analítica (08 §8.2)
 - `af_shop_view {tab, from = lobby}` al abrir el Mercado [P] (`from`: Q-B5-15).
-- `af_iap_offer_shown` con `context = shop` por cada fila comprable al abrir o cambiar de pestaña; en las tarjetas, `starter_window`, `noads_prompt` y `piggy`, y `shop` en la de skin [P] (Q-B5-14).
+- `af_iap_offer_shown` con `context = shop` por cada fila que se puede comprar ahora, al abrir o cambiar de pestaña; en las tarjetas con el botón activo, `starter_window`, `noads_prompt` y `piggy`, y `shop` en la de skin [P] (Q-B5-14).
+- `geo_tier` como propiedad de usuario (08 §8.1), al crear el Mercado.
 - `af_piggy {state ∈ unlocked, shown_full, bought; seeds_inside}`; `af_skin_unlock {skin_id, source = iap}`.
 - `af_iap_result` y `purchase` ya los emite `AnalyticsStoreService` (B7).
 - Sonda de desarrollo: `AF_STATE` `market_open`, `market_closed`, `piggy_fill`, `offer_shown`, `offer_declined` y `skin_selected`; `AF_LAYOUT` de `market`, `offer_card` y `lobby_market`.
@@ -62,7 +63,7 @@ Claves nuevas en `AF.IAP.OffersConfig`, con sus defaults y rangos: `eco_starter_
 ## 3. Perfil (08 §4.3)
 - `piggy` = `{seeds, cap}` (canon) más `last_level` y `full_card` [P]. Es dinero: un tipo equivocado es corrupción, como `wallet`.
 - `offers` [P] = `{starter_first_seen_at, starter_reminders, noads_card_date, noads_declines, interstitials_seen, skin_cards}`. No es dinero: un valor que no vale toma su default.
-- Los dos faltan hasta el primer uso y entran sin migrar (aún no se ha publicado). Se guardan por la vía síncrona del lote (`ProfileSaveBatch.Durable`), como la cartera: el vaciado del Cántaro y la compra salen juntos en disco. El llenado es otra escritura en la victoria (no la hay si ya estaba lleno).
+- Los dos faltan hasta el primer uso y entran sin migrar (aún no se ha publicado). Se guardan por la vía síncrona del lote (`ProfileSaveBatch.Durable`), como la cartera. Comprar el Cántaro son dos escrituras seguidas: la cartera acredita (dentro de la tienda) y después el Cántaro se vacía (riesgo en §8). El llenado es otra escritura en la victoria (no la hay si ya estaba lleno).
 
 ## 4. Archivos
 
@@ -73,7 +74,7 @@ Claves nuevas en `AF.IAP.OffersConfig`, con sus defaults y rangos: `eco_starter_
 
 **Parches** (`docs/dev/traspaso/spark-enganches/`, LF; aplicar en este orden con `git apply`; los `.meta` de los archivos nuevos van dentro, tal como los generó Unity):
 1. `B5-loc.diff`: las 19 claves nuevas en `strings.csv`, en su sitio por orden ordinal (`shop`, `no_ads` y `market_tab_seeds` con el texto del glosario y su EN y PT-BR; el resto `pendiente_asesor`, sin traducir), y `MarketText.AllKeys` en `LocTablesTests.UiTextKeys`.
-2. `B5-rc.diff`: `OffersConfig` en `RcConfigBinder` (`RcConfigs.Offers`, por el constructor) con su test en `RcConfigBinderTests`, y `GameBootstrap.MarketRc.cs`. **Sin este parche, `RcConfigBinderTests.EveryTypeWithRemoteConfigKeys_IsBound_OrDeclaredAsNotBoundYet` falla en la rama** (la clase nueva tiene `[RemoteConfigKey]`).
+2. `B5-rc.diff`: los `[RemoteConfigKey]` de `OffersConfig` y su enlace en `RcConfigBinder` (`RcConfigs.Offers`, por el constructor), con su test en `RcConfigBinderTests`, y `GameBootstrap.MarketRc.cs`. Los atributos van en el parche, junto al enlace, para que la rama sola no deje una clase de cifras sin enlazar.
 3. `B5-profile.diff`: `Profile.Piggy`/`Offers` y `ProfileJson`, `IAP/ProfileOffersStore.cs` con `IAP/Tests/ProfileOffersStoreTests.cs`, y `GameBootstrap.MarketProfile.cs`.
 4. `B5-bootstrap.diff`: en `GameBootstrap.cs`, `SetUpMarket();` tras `SetUpSessions();`, el Mercado y la tarjeta en `CommerceOpen` y Atrás (`PressMarketBack`); `geo_tier` desde la región del teléfono en `GameServices` (también en `GameBootstrap.Daily.cs`) y en el común de la analítica (`GameBootstrap.Telemetry.cs`); `Tests/PlayMode/MarketHooksTests.cs` (necesita B5-profile).
 
@@ -115,5 +116,6 @@ Q-E2 (a): no hay icono de oferta temporal en el inicio en la 1.0; el hueco queda
 ## 8. Riesgos
 - El arte es provisional (por código): el icono del Mercado (semilla), el del Cántaro (disco de barro) y las filas.
 - El llenado del Cántaro es una escritura aparte de la de la victoria: si la app se cierra entre las dos, se pierde ese llenado (≤ 40 semillas).
+- Comprar el Cántaro: si la app se cierra justo entre la escritura de la cartera y la del Cántaro, las semillas quedan acreditadas y el Cántaro sigue lleno (se podría volver a comprar). Hacerlo en una sola escritura exige tocar `FakeStoreService`/`VerifiedStoreService` (sdk-integrator): con F3-5, que el ítem `piggy` del `grant` vacíe el Cántaro dentro de la misma transacción (Q-B5-12).
 - Sin capturas de pantalla ni prueba en el teléfono.
 - Los textos nuevos nacen `pendiente_asesor` y sin EN ni PT-BR (salvo los tres del glosario).
