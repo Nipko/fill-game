@@ -3068,3 +3068,8 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **B14-Q6:** al arrancar, las skins de los mundos ya cerrados se dan sin ponerse, sin aviso y sin `af_skin_unlock` (perfiles anteriores).
 - **B14-Q7:** el álbum de frutas solo lo llena la campaña.
 - **Nota para B3 (Salto del Boto):** debe llamar a `SkinService.ApplyLevelPassed`, y la marca de Canasta cobrada se deduce de `max_level ≥ 10k`, así que un `10k` saltado saldría marcado: revisarlo en B3.
+
+### D-033, añadido del 2026-10-20: preguntas de B1b
+
+- **B1b-Q10, decidida por el dueño en el chat:** «B1b-Q10: (c) sin barras de la Crecida y la Canasta en los hitos de TiTino (60, 80 y 140) cuando no cabe su frase; TiTino habla como dice D-016. La Canasta del 60 se abre y su contenido va al saldo sin barra.» D-016 (T6-A) no cambia.
+- **B1b-Q1-Q9 y Q11**, aplicadas con su recomendada (a) por la regla del dueño del 2026-10-19 (detalle en `docs/dev/crecida-canasta.md` §9): barras a media anchura antes de compactar lo demás, también en los escalones 0 y 1; se acepta que las barras lleven es-419 al 100 % en 16:9 y en-XA al 130 % en 360 × 780 al escalón 1 (matiza D-032); si ni el último escalón cabe, las barras no salen; la línea de la Hoja escudo también en 25-30 (se corrige el pseudocódigo de 04 §6.2); con la barra a 0 y el río crecido, sin línea; el hito 10 deja la barra en 10/10 en la victoria y se vacía en el HUD siguiente; el contenido de la Canasta antes de abrirla se ve en el Mapa (B14) y en la barra solo al abrirse; el aviso de la hoja sale al volver a jugar tras la intro; la tercera barra rotativa queda como hueco hasta B4; la espera de 250 ms solo con un premio pendiente.
