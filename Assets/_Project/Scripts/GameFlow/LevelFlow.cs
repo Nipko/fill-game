@@ -483,6 +483,8 @@ namespace AF.GameFlow
                     return false;
                 }
 
+                CountUndoForEvents(); // undo_used de af_level_win (B7; LevelFlow.Events.cs)
+
                 bool fromModal = Phase == FlowPhase.StuckModal;
                 Pour undone = _session.GetAppliedPour(_session.AppliedPours - 1);
                 _taps.Clear();
@@ -620,6 +622,7 @@ namespace AF.GameFlow
         {
             Phase = FlowPhase.Playing;
             _phaseMs = 0;
+            PublishLevelStarted(); // level_start por el bus (B7; LevelFlow.Events.cs)
             _listener.OnIntroFinished(skipped);
             EvaluateStatus();
         }

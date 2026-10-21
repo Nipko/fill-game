@@ -157,6 +157,8 @@ namespace AF.GameFlow
                 AdGate?.RecordWin(LevelNumber);
             }
 
+            PublishLevelWon(); // af_level_win y level_end por el bus (B7; LevelFlow.Events.cs)
+
             _listener.OnWin();
         }
 

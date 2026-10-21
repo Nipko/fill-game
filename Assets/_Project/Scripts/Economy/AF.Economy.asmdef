@@ -3,7 +3,8 @@
   "rootNamespace": "AF.Economy",
   "references": [
     "AF.Platform",
-    "AF.Save"
+    "AF.Save",
+    "AF.Events"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

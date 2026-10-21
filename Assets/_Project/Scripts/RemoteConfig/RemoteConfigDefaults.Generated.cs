@@ -54,6 +54,10 @@ namespace AF.RemoteConfig
       ""type"": ""string"",
       ""default"": """"
     },
+    ""biz_backend_enabled"": {
+      ""type"": ""bool"",
+      ""default"": true
+    },
     ""biz_iap_enabled"": {
       ""type"": ""bool"",
       ""default"": true
@@ -321,7 +325,7 @@ namespace AF.RemoteConfig
     },
     ""anim_speed_factor_late"": {
       ""type"": ""float"",
-      ""default"": 0.8
+      ""default"": 1.0
     },
     ""anim_fast_from_level"": {
       ""type"": ""int"",
@@ -1087,10 +1091,6 @@ namespace AF.RemoteConfig
     ""sec_ssv_grace_h"": {
       ""type"": ""int"",
       ""default"": 24
-    },
-    ""sec_appcheck_enforce"": {
-      ""type"": ""bool"",
-      ""default"": true
     },
     ""sec_purchase_deferred_ack_h"": {
       ""type"": ""int"",

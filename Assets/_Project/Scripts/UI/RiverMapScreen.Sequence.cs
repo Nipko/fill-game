@@ -563,6 +563,7 @@ namespace AF.UI
 
             _seqFactReported = true;
             _probe.RiverFactShown(L10SequenceRule.Level, _seqFactKey, _seqPlateShownMs);
+            UiAnalytics.RiverFactShown(Analytics, _seqFactKey, _seqPlateShownMs); // af_river_fact_shown del 10 (B7)
         }
 
         // Al abrir el Mapa: ninguna secuencia en marcha ni piezas a la vista.

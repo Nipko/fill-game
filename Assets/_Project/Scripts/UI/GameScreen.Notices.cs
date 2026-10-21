@@ -1178,6 +1178,7 @@ namespace AF.UI
             AF.Audio.AudioCues.PlayFruit(AF.Audio.SfxId.FruitNew, tint); // AU1: tarjeta «Fruta nueva»
             AF.Audio.AudioCues.Stinger(AF.Audio.StingerId.FruitNew); // AU3: su remate, como los otros (tras la toada, con Música, −8 dB)
             EmitFruitNewProbe(fruit, (int)_fruitNew.DurationMs, FruitNewMode);
+            UiAnalytics.FruitDiscovered(Analytics, SightingRule.FruitDebutTints[fruit]); // af_fruit_discovered (B7)
         }
 
         /// <summary>

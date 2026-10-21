@@ -428,6 +428,7 @@ namespace AF.GameFlow
                 return false;
             }
 
+            _level.PublishAbandonIfUnresolved("map"); // af_level_abandon por el bus si se sale sin resolver (B7)
             _level.LeaveLevel(); // el nivel deja de estar en curso; recuerda fails_level y la variante (B2-5)
             Go(AppScreen.Lobby);
             return true;

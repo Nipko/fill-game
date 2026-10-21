@@ -1082,6 +1082,7 @@ namespace AF.UI
             LastRiverFactId = factId;
             LastRiverFactDismissedMs = dismissedMs;
             _probe.RiverFactShown(flow.LevelNumber, factId, dismissedMs);
+            UiAnalytics.RiverFactShown(Analytics, factId, dismissedMs); // af_river_fact_shown (B7)
         }
 
         /// <summary>

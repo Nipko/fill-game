@@ -207,7 +207,8 @@ namespace AF.UI
                 inMemory = true;
             }
 
-            return new StreakService(store, wallet, clock, basketUnlockLevel, StreakConfigOverride, BasketConfigOverride);
+            return new StreakService(
+                store, wallet, clock, basketUnlockLevel, StreakConfigOverride ?? ActiveRcConfigs?.Streak, BasketConfigOverride ?? ActiveRcConfigs?.Basket);
         }
 
         /// <summary>

@@ -988,6 +988,7 @@ namespace AF.UI
 
             int clamped = Mathf.Clamp(play, 1, WorldTable.LastLevel);
             _probe?.MapOpen(source, play, stops.StopOf(clamped), map.World, map.View, map.Zoom);
+            TrackMapOpen(source, stops.StopOf(clamped), map.World); // af_map_open (B7)
             _skipNextDelta = true;
             return true;
         }
@@ -1010,6 +1011,7 @@ namespace AF.UI
             }
 
             _probe?.MapClose(stats, progress?.MapSeenLevel ?? 0);
+            TrackMapClose(stats); // af_map_close (B7)
             if (_app != null && _app.Screen != AppScreen.Level)
             {
                 _lobby?.SetCommerceOpen(HomeWindowCovered); // la ventanita de casa vuelve con el inicio a la vista (revisión de M4.2)
@@ -1514,7 +1516,8 @@ namespace AF.UI
             // hilo principal. La cartera guarda por batch.Durable: cada mutación espera al escritor y escribe en síncrono.
             var batch = new ProfileSaveBatch(store);
             _saveBatch = batch;
-            _wallet = new Wallet(profile, batch.Durable, clock);
+            SetUpTelemetry(clock); // Remote Config, bus y analítica antes de la cartera (B7; GameBootstrap.Telemetry.cs)
+            _wallet = new Wallet(profile, batch.Durable, clock, _rcConfigs?.Economy);
             IProgressStore progress = LaunchOptions.ProgressStoreOverride ?? new ProfileProgressStore(profile, batch);
             _progress = progress;
 
@@ -1547,9 +1550,10 @@ namespace AF.UI
                 batch);
             ISimulatedPurchasePresenter purchasePresenter = new BatchedPurchasePresenter(
                 LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art)), batch);
-            _ads = AdController.Create(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill()), profile, batch, clock, firstRun);
-            _storeLedger = new StoreLedger(profile, _wallet, batch, clock);
-            _store = new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency);
+            _ads = AdController.Create(
+                WrapAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill())), profile, batch, clock, firstRun, _rcConfigs?.Ads);
+            _storeLedger = new StoreLedger(profile, _wallet, batch, clock, _rcConfigs?.Store);
+            _store = WrapStore(new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency));
             _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
                 mapProgress: progress);
 
@@ -1586,7 +1590,8 @@ namespace AF.UI
             BuildFruitSheet(); // F4: la ficha de una fruta, desde la línea de la victoria y desde Ajustes (GameBootstrap.Fruit.cs)
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
-            _flow = new LevelFlow(catalog, progress, _screen, LaunchOptions.ResolveTapSwitchSelection(), LaunchOptions.ResolvePourMode(), _wallet)
+            _flow = new LevelFlow(
+                catalog, progress, _screen, LaunchOptions.ResolveTapSwitchSelection(), LaunchOptions.ResolvePourMode(), _wallet, _rcConfigs?.Boosters)
             {
                 AdGate = new InterstitialGate(_ads, _probe, _wallet), // AD_GATE tras «Siguiente» (B2-4)
                 StateStore = new ProfileLevelStateStore(profile, batch), // nivel en curso tras cada vertido (B2-5)
@@ -1614,6 +1619,7 @@ namespace AF.UI
             SetUpMeta(); // B14: skins por hito, álbum de frutas, la Canasta en el Mapa y «Datos del río» (GameBootstrap.Meta.cs)
             SetUpSkip(); // Salto del Boto (B3; GameBootstrap.Skip.cs): el almacén en el perfil, la confirmación y el banner
             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
+            ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
             if (requested <= 0 && !rebuilt)
@@ -1735,6 +1741,7 @@ namespace AF.UI
 
         private void OnApplicationPause(bool paused)
         {
+            TelemetryPause(paused); // la sesión de la analítica: nueva tras ≥ 30 min fuera (B7; D-033, Q-M4)
             if (paused)
             {
                 PersistNow("segundo plano");

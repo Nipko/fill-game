@@ -7,7 +7,8 @@
     "AF.Platform",
     "AF.Save",
     "AF.Economy",
-    "AF.Boosters"
+    "AF.Boosters",
+    "AF.Events"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

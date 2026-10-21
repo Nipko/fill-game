@@ -17,6 +17,12 @@
     "AF.Localization",
     "AF.Audio",
     "AF.Audio.Unity",
+    "AF.Events",
+    "AF.RemoteConfig",
+    "AF.RemoteConfig.Binding",
+    "AF.Analytics",
+    "AF.Analytics.Unity",
+    "AF.Analytics.Adapters",
     "UnityEngine.UI",
     "Unity.InputSystem",
     "Unity.TextMeshPro"

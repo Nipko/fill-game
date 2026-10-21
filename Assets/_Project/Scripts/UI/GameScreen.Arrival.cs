@@ -304,6 +304,7 @@ namespace AF.UI
             StopArriveCount++;
             LastStopArriveSkipped = strip.Skipped;
             _probe.StopArrive(strip.Level, stop, strip.Skipped);
+            UiAnalytics.StopArrive(Analytics, strip.Level, stop, strip.Skipped, false); // af_stop_arrive (B7)
             ArrivalMapSeenCount++;
             _actions.MarkMapSeen(strip.Level);
         }
