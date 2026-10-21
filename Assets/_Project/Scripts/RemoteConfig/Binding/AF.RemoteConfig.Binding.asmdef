@@ -1,0 +1,27 @@
+{
+  "name": "AF.RemoteConfig.Binding",
+  "rootNamespace": "AF.RemoteConfig.Binding",
+  "references": [
+    "AF.RemoteConfig",
+    "AF.Core",
+    "AF.Solver",
+    "AF.Levels",
+    "AF.Platform",
+    "AF.Save",
+    "AF.Economy",
+    "AF.Boosters",
+    "AF.Ads",
+    "AF.IAP",
+    "AF.Localization",
+    "AF.LiveOps"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}

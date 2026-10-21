@@ -1,0 +1,52 @@
+diff --git a/Assets/_Project/Data/Config/RemoteConfigDefaults.json b/Assets/_Project/Data/Config/RemoteConfigDefaults.json
+index 08203c1c..57945994 100644
+--- a/Assets/_Project/Data/Config/RemoteConfigDefaults.json
++++ b/Assets/_Project/Data/Config/RemoteConfigDefaults.json
+@@ -311,7 +311,7 @@
+     },
+     "anim_speed_factor_late": {
+       "type": "float",
+-      "default": 0.8
++      "default": 1.0
+     },
+     "anim_fast_from_level": {
+       "type": "int",
+diff --git a/Assets/_Project/Scripts/RemoteConfig/RemoteConfigDefaults.Generated.cs b/Assets/_Project/Scripts/RemoteConfig/RemoteConfigDefaults.Generated.cs
+index a6ee4cd6..fa8a52b1 100644
+--- a/Assets/_Project/Scripts/RemoteConfig/RemoteConfigDefaults.Generated.cs
++++ b/Assets/_Project/Scripts/RemoteConfig/RemoteConfigDefaults.Generated.cs
+@@ -321,7 +321,7 @@ internal static class RemoteConfigDefaultsData
+     },
+     ""anim_speed_factor_late"": {
+       ""type"": ""float"",
+-      ""default"": 0.8
++      ""default"": 1.0
+     },
+     ""anim_fast_from_level"": {
+       ""type"": ""int"",
+diff --git a/docs/gdd/02-nucleo-reglas-ux.md b/docs/gdd/02-nucleo-reglas-ux.md
+index 4e1e88d7..fa0ac6cf 100644
+--- a/docs/gdd/02-nucleo-reglas-ux.md
++++ b/docs/gdd/02-nucleo-reglas-ux.md
+@@ -210,7 +210,7 @@ ### 3.4 Pista por inactividad
+ 
+ ## 4. Feedback y *juice*: duraciones
+ 
+-Ningún líder publica tiempos (research/01 §3 [E]; research/09 §Arte [E]). Desde D-006 (decisión del dueño del 2026-10-08), la selección y el vertido copian los tiempos medidos en Magic Sort (`docs/research/magic-sort/ficha-magic-sort.md` §2.4 y §2.6). Los valores siguientes son **[P]**. Las horquillas estimadas de research/01 §3 [E] (elevación 0,15-0,25 s, traslado 0,25-0,35 s, caudal 0,3-0,5 s por 1-2 dosis, retorno 0,25 s) y de research/06 §2 [E] (0,4-0,7 s por vertido y onda amortiguada 0,5-0,8 s) se conservan como referencia histórica. Varias quedan por debajo de lo medido: el caudal con 2 dosis, el retorno y el vertido completo. Con la elevación pasa al revés: la medida, 100 ms, queda por debajo de su horquilla. Todas las duraciones se multiplican por `anim_speed_factor_early` / `anim_speed_factor_late` (1,0 en niveles 1-20; 0,8 desde el 21 [P]) y por `anim_reduce_motion_factor` (0,5) si el jugador activa "Reducir movimiento" (claves `anim_*` del cap. 08 §9).
++Ningún líder publica tiempos (research/01 §3 [E]; research/09 §Arte [E]). Desde D-006 (decisión del dueño del 2026-10-08), la selección y el vertido copian los tiempos medidos en Magic Sort (`docs/research/magic-sort/ficha-magic-sort.md` §2.4 y §2.6). Los valores siguientes son **[P]**. Las horquillas estimadas de research/01 §3 [E] (elevación 0,15-0,25 s, traslado 0,25-0,35 s, caudal 0,3-0,5 s por 1-2 dosis, retorno 0,25 s) y de research/06 §2 [E] (0,4-0,7 s por vertido y onda amortiguada 0,5-0,8 s) se conservan como referencia histórica. Varias quedan por debajo de lo medido: el caudal con 2 dosis, el retorno y el vertido completo. Con la elevación pasa al revés: la medida, 100 ms, queda por debajo de su horquilla. Todas las duraciones se multiplican por `anim_speed_factor_early` / `anim_speed_factor_late` (1,0 en todos los niveles: D-033, Q-N1, con los tiempos medidos de D-006) y por `anim_reduce_motion_factor` (0,5) si el jugador activa "Reducir movimiento" (claves `anim_*` del cap. 08 §9).
+ 
+ ### 4.1 Tabla de animaciones de juego
+ 
+diff --git a/docs/gdd/08-arquitectura-tecnica-publicacion.md b/docs/gdd/08-arquitectura-tecnica-publicacion.md
+index fb86ae13..0b947c05 100644
+--- a/docs/gdd/08-arquitectura-tecnica-publicacion.md
++++ b/docs/gdd/08-arquitectura-tecnica-publicacion.md
+@@ -631,7 +631,7 @@ ## 9. Parámetros Remote Config consolidados
+ | `anim_tint_skip_alarm_pct` | float | 0.40 | — | 07 | Umbral de alarma de `af_anim_skipped` |
+ | `anim_pour_dose_ms` / `anim_pour_tail_ms` | int | 280 / 80 | 80-300 / 50-120 | 02 | Caudal por dosis y cola (sección 5.2; D-006: ≈ 285 ms por dosis en Magic Sort) |
+ | `anim_lift_ms` / `anim_travel_ms` / `anim_return_ms` | int | 100 / 300 / 300 | — | 02 | Duraciones base del vertido (02 §4.1; D-006) |
+-| `anim_speed_factor_early` / `anim_speed_factor_late` / `anim_fast_from_level` | float / float / int | 1.0 / 0.8 / 21 | 0.7-1.2 / 0.6-1.0 / 11-30 | 02 | Velocidad global de animación |
++| `anim_speed_factor_early` / `anim_speed_factor_late` / `anim_fast_from_level` | float / float / int | 1.0 / 1.0 / 21 | 0.7-1.2 / 0.6-1.0 / 11-30 | 02 | Velocidad global de animación (D-033, Q-N1: 1,0 también desde el 21, con los tiempos de Magic Sort de D-006) |
+ | `anim_celebration_ms` | int | 900 | 600-1200 | 02 | Celebración de victoria |
+ | `anim_river_lowered_banner_ms` | int | 2000 | 1500-2500 | 04 | Banner "El río bajó" al servir `relief[0]` (dirección 7) |
+ | `anim_confetti_max_particles` | int | 60 | 20-120 | 07 | Densidad en gama baja |

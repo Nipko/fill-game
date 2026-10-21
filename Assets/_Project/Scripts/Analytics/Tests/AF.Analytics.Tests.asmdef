@@ -1,0 +1,34 @@
+{
+  "name": "AF.Analytics.Tests",
+  "rootNamespace": "AF.Analytics.Tests",
+  "references": [
+    "AF.Analytics",
+    "AF.Analytics.Unity",
+    "AF.Analytics.Adapters",
+    "AF.Events",
+    "AF.RemoteConfig",
+    "AF.Platform",
+    "AF.Save",
+    "AF.Economy",
+    "AF.Ads",
+    "AF.IAP",
+    "AF.Localization",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}

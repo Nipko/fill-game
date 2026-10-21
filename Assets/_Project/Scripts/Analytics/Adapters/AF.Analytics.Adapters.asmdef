@@ -1,0 +1,23 @@
+{
+  "name": "AF.Analytics.Adapters",
+  "rootNamespace": "AF.Analytics.Adapters",
+  "references": [
+    "AF.Analytics",
+    "AF.Events",
+    "AF.Platform",
+    "AF.Save",
+    "AF.Economy",
+    "AF.Ads",
+    "AF.IAP",
+    "AF.Localization"
+  ],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": false,
+  "precompiledReferences": [],
+  "autoReferenced": false,
+  "defineConstraints": [],
+  "versionDefines": [],
+  "noEngineReferences": true
+}

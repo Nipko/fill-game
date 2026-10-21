@@ -1,0 +1,36 @@
+{
+  "name": "AF.RemoteConfig.Tests",
+  "rootNamespace": "AF.RemoteConfig.Tests",
+  "references": [
+    "AF.RemoteConfig",
+    "AF.RemoteConfig.Binding",
+    "AF.Core",
+    "AF.Solver",
+    "AF.Levels",
+    "AF.Platform",
+    "AF.Save",
+    "AF.Economy",
+    "AF.Boosters",
+    "AF.Ads",
+    "AF.IAP",
+    "AF.Localization",
+    "AF.LiveOps",
+    "UnityEngine.TestRunner",
+    "UnityEditor.TestRunner"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "overrideReferences": true,
+  "precompiledReferences": [
+    "nunit.framework.dll"
+  ],
+  "autoReferenced": false,
+  "defineConstraints": [
+    "UNITY_INCLUDE_TESTS"
+  ],
+  "versionDefines": [],
+  "noEngineReferences": false
+}
