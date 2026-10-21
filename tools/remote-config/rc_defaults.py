@@ -148,23 +148,23 @@ def _interp_league(keys, types, cell):
 # Primera clave de la fila → (texto exacto de la celda de tipo, texto exacto de la de default, función).
 INTERPRETATIONS = {
     "biz_country_enabled": ("map país→bool", "CO, PE, MX = true; resto false", _interp_country_bool),
-    "biz_legal_profile_by_country": ("map país→string", 
+    "biz_legal_profile_by_country": ("map país→string",
         "BR `br_lgpd_eca` · CO `co_1581` · PE `pe_29733` · MX `mx_lfpdppp` · EEE/UK/CH `ump` · resto `default`",
         _interp_legal_profile),
     "biz_ua_paid_enabled_by_country": ("map país→bool / bool", "todos false / false", _interp_ua_paid),
     "biz_kpi_targets": ("json", "01 §KPIs / 09 tabla 6.1", _interp_pending_all),
-    "mech_debut_level.{chica,alta,hoja,matapi,liana,remolino,barro,lluvia,brote,pirana,tinaja}": ("int", 
+    "mech_debut_level.{chica,alta,hoja,matapi,liana,remolino,barro,lluvia,brote,pirana,tinaja}": ("int",
         "chica 14, alta 27, hoja 43, matapi 63, liana 83, remolino 103, barro 123, lluvia 143, brote 163, pirana 183, tinaja 323",
         _interp_mech_debut),
-    "ads_rv_cap_<placement>": ("int", 
+    "ads_rv_cap_<placement>": ("int",
         "double_harvest 5 · undo_refill 4 · hint 3 · reveal 3 · extra_canoe 3 · daily_chest 1 (ubicación apagada en 1.0: "
         "`eco_calendar_double_ad_enabled`)",
         _interp_rv_cap),
     "ads_rv_cooldown_s_<placement>": ("int", "60 (extra_canoe 90)", _interp_rv_cooldown),
-    "eco_calendar_table_v1": ("json", 
+    "eco_calendar_table_v1": ("json",
         "tabla 05 §2.3 (≈3.000 semillas + 12 entradas de comodín + 2 Canastas + 1 Canasta grande)", _interp_pending_all),
     "eco_price_tier_<country>": ("string", "tabla 05 §4.2 / \"B-2026-10-06e\"", _interp_price_tier),
-    "league_bucket_size": ("int / int / json / json / json / int", 
+    "league_bucket_size": ("int / int / json / json / json / int",
         "50 / 20 / `{\"normal\":10,\"hard\":20,\"very_hard\":30,\"daily\":20,\"trail\":10}` / tablas 06 §6 y §5.2 / 40",
         _interp_league),
 }

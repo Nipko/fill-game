@@ -107,6 +107,18 @@ namespace AF.RemoteConfig.Tests
         }
 
         [Test]
+        public void TheScan_SeesAtLeastTheSixAssembliesOfToday()
+        {
+            IReadOnlyList<System.Reflection.Assembly> scanned = RemoteConfigKeyScan.Assemblies();
+            foreach (System.Reflection.Assembly known in RemoteConfigKeyScan.Known())
+            {
+                Assert.That(scanned, Has.Member(known), known.GetName().Name + ": el escaneo no puede salir vacío en silencio");
+            }
+
+            Assert.That(RemoteConfigKeyScan.Known().Count, Is.EqualTo(6));
+        }
+
+        [Test]
         public void Parse_RejectsWhatIsNotTheFormat()
         {
             Assert.Throws<FormatException>(() => RemoteConfigDefaults.Parse("{}"));

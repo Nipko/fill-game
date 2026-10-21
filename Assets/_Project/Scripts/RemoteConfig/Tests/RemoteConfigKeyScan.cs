@@ -13,8 +13,8 @@ namespace AF.RemoteConfig.Tests
     /// </summary>
     internal static class RemoteConfigKeyScan
     {
-        /// <summary>Los ensamblados que se recorren.</summary>
-        public static IReadOnlyList<Assembly> Assemblies()
+        /// <summary>Los ensamblados de las clases de cifras de hoy: el escaneo tiene que verlos todos (mínimo).</summary>
+        public static IReadOnlyList<Assembly> Known()
         {
             var assemblies = new List<Assembly>();
             foreach (Type known in new[]
@@ -26,6 +26,42 @@ namespace AF.RemoteConfig.Tests
                 if (!assemblies.Contains(known.Assembly))
                 {
                     assemblies.Add(known.Assembly);
+                }
+            }
+
+            return assemblies;
+        }
+
+        /// <summary>
+        /// Los ensamblados que se recorren: el de <see cref="RemoteConfigKeyAttribute"/> y todos los cargados que lo referencian
+        /// (así entra solo, por ejemplo, AF.GameFlow cuando <c>GameConfig</c> lleve sus claves), menos los de pruebas
+        /// (<c>*.Tests</c> y <c>AF.Tests.*</c>), que no son cifras del cliente.
+        /// </summary>
+        public static IReadOnlyList<Assembly> Assemblies()
+        {
+            Assembly attributeAsm = typeof(RemoteConfigKeyAttribute).Assembly;
+            string attributeName = attributeAsm.GetName().Name;
+            var assemblies = new List<Assembly> { attributeAsm };
+            foreach (Assembly asm in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                if (asm == attributeAsm || asm.IsDynamic)
+                {
+                    continue;
+                }
+
+                string name = asm.GetName().Name;
+                if (name.EndsWith(".Tests", StringComparison.Ordinal) || name.StartsWith("AF.Tests", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                foreach (AssemblyName reference in asm.GetReferencedAssemblies())
+                {
+                    if (string.Equals(reference.Name, attributeName, StringComparison.Ordinal))
+                    {
+                        assemblies.Add(asm);
+                        break;
+                    }
                 }
             }
 

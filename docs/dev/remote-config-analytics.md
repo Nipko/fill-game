@@ -85,7 +85,9 @@ cobertura compara esa tabla con los atributos. Un valor que no se entiende deja 
 
 `ShuffleConfig` (B2, `AF.Boosters`, 5 claves) y `SkipConfig` (B3) no están aquí: llegan con sus ramas. Al fusionarlas, hay que
 añadir su tabla a `RcConfigBinder` (una línea por clave) y quitarlas de `NotBoundYet`. `RcConfigBinderTests` descubre por
-reflexión, en los tests, **todos** los tipos con `[RemoteConfigKey]` de los ensamblados de cifras (`RemoteConfigKeyScan`). Cada
+reflexión, en los tests, **todos** los tipos con `[RemoteConfigKey]` de todo ensamblado cargado que referencie el de
+`RemoteConfigKeyAttribute` (`AF.Platform`), más ese mismo, salvo los de pruebas (`RemoteConfigKeyScan`); una aserción exige que
+estén al menos los 6 ensamblados de cifras de hoy, para que el escaneo no salga vacío en silencio. Cada
 uno tiene que estar enlazado, con exactamente sus claves, o en la lista explícita `NotBoundYet` con su motivo; si no, la prueba
 falla.
 
