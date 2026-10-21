@@ -142,3 +142,12 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - WebUrl: https://d15n2u2htrstr6.cloudfront.net
 - CdnUrl: https://d1a7tqws4dhu0f.cloudfront.net
 - Sin cambios de código en infra/, sin dominio propio ni recursos del juego en prod. Firebase dev y carga de secretos reales no realizados; las funciones desplegadas siguen siendo los esqueletos del encargo. El presupuesto es un aviso y no bloquea el gasto.
+
+## Actualización con funciones reales y Firebase dev — 2026-10-21 (en curso)
+
+- A petición del dueño, pull de origin/integracion-fase1-fase2 en el worktree de codex/aws-dev: avance rápido hasta e80c3930. Checkout principal sin cambio de rama. Entraron funciones reales, CI y endurecimiento F2c del integrador; no se editó infra/.
+- npm ci completado; lint y typecheck correctos; 14 archivos de test, 219 pruebas aprobadas. Sesión SSO af-dev comprobada contra la cuenta esperada sin imprimir identificadores.
+- Diff preliminar con --no-change-set: solo AfDevApi cambia; los otros cinco stacks no tienen diferencias. Cambian código/configuración de las cinco funciones y cinco políticas IAM. Nuevas acciones: ConditionCheckItem para verifyPurchase, rewardedSsv y deleteAccount; BatchGetItem para restoreLedger; GetItem para rewardedSsv. Recursos de tablas/índices ajustados según F2c y ninguna declaración Allow de esas políticas usa Resource '*'. Sin sustitución de tablas ni cambio de presupuesto o distribución. Falta el diff final con los identificadores de Firebase realmente creados.
+- El dueño confirmó aceptar las Condiciones de Firebase en este paso. Formulario preparado con nombre amazon-fill-dev. La consola rechazó el ID canónico y el alternativo con sufijo de la empresa; el ID sugerido por Firebase, fill-dev-78702, pasó validación, pero el proyecto aún no se ha creado.
+- Selector de organización/recurso superior de Firebase vacío. Al comprobar Google Cloud apareció una verificación de identidad de la organización; se dejó abierta para que el dueño introduzca la contraseña directamente. No se accedió a contraseñas ni códigos. Creación/configuración de Firebase y deploy aún pendientes.
+- Las salidas del diff y el ensamblado se guardaron fuera del repositorio. Ningún nuevo deploy autorizado ni ejecutado; se pedirá el sí del dueño después del diff final. Secretos reales sin cargar.
