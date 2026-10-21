@@ -3154,3 +3154,14 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Paquetes npm de `infra/` aprobados** (regla 4), con versión exacta fijada por el integrador tras comprobarla (al menos dos semanas de antigüedad) y anotada aquí: `aws-cdk-lib`, `aws-cdk`, `constructs`, `cdk-nag`, `typescript`, `esbuild`, `vitest`, `eslint`, `typescript-eslint`, `@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`, `@aws-sdk/client-secrets-manager`, `jose`, `ajv`, `aws-sdk-client-mock`.
 - **Límites de los agentes y `CLAUDE.md`** se amplían en consecuencia (F0-3).
 - **Versiones exactas fijadas por el integrador** (registro de npm consultado el 2026-10-20; todas con al menos dos semanas, dentro de la versión mayor vigente y con sus dependencias entre pares compatibles): `aws-cdk-lib` 2.272.0, `aws-cdk` 2.1144.0, `constructs` 10.8.1, `cdk-nag` 3.0.2, `typescript` **5.9.3** (no la 7.x: `typescript-eslint` 8.71.1 exige `<6.1.0`), `esbuild` 0.28.2, `vitest` 5.0.3, `eslint` 10.12.0, `typescript-eslint` 8.71.1, `@aws-sdk/client-dynamodb` 3.1146.0, `@aws-sdk/lib-dynamodb` 3.1146.0, `@aws-sdk/client-secrets-manager` 3.1146.0, `jose` 6.2.12, `ajv` 8.20.0, `aws-sdk-client-mock` 4.1.0, y de tipos `@types/node` 24.19.1 (como el runtime `nodejs24.x` de Lambda) y `@types/aws-lambda` 8.10.164. Se fijan sin rangos en `infra/package.json` y con `package-lock.json`. Node local del escritorio: 22.20.0 (vale para CDK y vitest; el runtime de Lambda lo confirma F0-R).
+
+## D-036 · Aprobación del permiso Android INTERNET
+
+- **Fecha:** 2026-10-20.
+- **Estado:** aprobado expresamente por el dueño en este chat: «si aprobemos», en respuesta a la propuesta de aprobar únicamente `INTERNET`.
+
+**Decisión.** Se aprueba el permiso Android `android.permission.INTERNET` para los servicios de red previstos del juego: anuncios, compras, Firebase y guardado en la nube. Sustituye el estado pendiente de este permiso en los registros anteriores; D-033 no lo había aprobado.
+
+**Alcance.** Esta aprobación no autoriza por sí sola instalar o aprobar SDK, paquetes o versiones, crear cuentas, desplegar servicios ni publicar la app. Las aprobaciones previas de otros componentes conservan su propio alcance. No se cambia `ForceInternetPermission`, el manifiesto ni la configuración de Unity en esta tarea: según el estado documentado, Unity ya añade el permiso automáticamente.
+
+**Cómo revertir.** Mediante una nueva decisión del dueño y evaluación del efecto sobre los servicios de red antes de modificar el permiso en la app.
