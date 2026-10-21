@@ -8,7 +8,7 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ## 2026-10-20 · B7 · `AF.RemoteConfig` + `AF.Analytics` con implementaciones falsas, y el bus `AF.Events` (`spark/t5-b7`): HECHA · verificación completa VERDE · lista para integrar
 
-- **Rama:** `spark/t5-b7`, desde `9eb593c`. Fusiona `origin/integracion-fase1-fase2` tres veces, sin conflictos: `e11b4246` en `5a39eae0`, `d994e586` en `e058645f` y `eb863f54` (B1b-Q10 y DC3) en `513acee9`. Empujada.
+- **Rama:** `spark/t5-b7`, desde `9eb593c`. Fusiona `origin/integracion-fase1-fase2` cinco veces: `e11b4246` en `5a39eae0`, `d994e586` (B14) en `e058645f`, `eb863f54` (B1b-Q10) en `513acee9`, `803e9723` (B2, B3, B6 y B13) en `671646f9` y `d933dcde` (backend F2) en `4df8a380`. Sin conflictos, salvo esta misma entrada de `spark-estado.md` (se dejan las dos). Empujada.
 - **Nota de diseño:** `docs/dev/remote-config-analytics.md`. Recoge qué hay, cómo se lee 08 §9, el bus, la analítica, los ocho parches y las preguntas Q-B7-1 a Q-B7-23.
 - **Commits** (del más antiguo al más reciente):
   - `b7f0cdc5`: el generador `tools/remote-config/rc_defaults.py` (+ `test_rc_defaults.py`), `RemoteConfigDefaults.json` (251 claves) y su copia en C#;
@@ -23,8 +23,9 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
   - `a464e272`: los parches regenerados sobre `e11b424`;
   - `493e4d35`: `RcJson` rechaza los no finitos también en Mono;
   - `60eec9b2`: el escaneo de `[RemoteConfigKey]` recorre todo ensamblado que referencie `AF.Platform` (con un mínimo de 6);
-  - `03f47cf4`: `B7-bootstrap.diff` regenerado (ver «Parches»);
-  - las fusiones `e058645f` y `513acee9`;
+  - `03f47cf4` y `3ab28fde`: `B7-bootstrap.diff` regenerado (ver «Parches»);
+  - `e4ecfd7c`: `ComebackConfig` y `PushConfig` (B6) en `NotBoundYet`;
+  - las fusiones `e058645f`, `513acee9`, `671646f9` y `4df8a380`;
   - y el commit de esta entrada.
 - **En la rama** (todo archivo nuevo; ningún archivo existente cambia):
   - `Scripts/Events/`;
@@ -33,13 +34,12 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
   - `Data/Config/RemoteConfigDefaults.json` (generado);
   - `tools/remote-config/`.
 - **Parches** (`docs/dev/traspaso/spark-enganches/B7-*.diff`, en LF; el detalle y el orden de compilación están en la nota §5): `B7-asmdef`, `B7-wallet`, `B7-levelflow`, `B7-appflow`, `B7-gamescreen`, `B7-rivermap`, `B7-bootstrap` y `B7-gdd`.
-  - Sobre `d994e586`, `B7-bootstrap.diff` ya no aplicaba: B14 añadió `SetUpMeta();` tras `SetUpStreak();` en `GameBootstrap.Start`.
-    - **Regenerado** en `03f47cf4`: `ConnectTelemetry();` va ahora tras `SetUpMeta();`.
+  - `B7-bootstrap.diff` se **regeneró dos veces**, porque la línea de `ConnectTelemetry();` va tras la última `SetUp*` de `GameBootstrap.Start`:
+    - `03f47cf4`: tras `SetUpMeta();` (B14, en `d994e586`);
+    - `3ab28fde`: tras `SetUpSessions();`, con B3 (`SetUpSkip();`) y B6 (`SetUpSessions();`) ya integrados en `803e9723`. Ya no hay choque a mano con `B3-ui` ni `B6-bootstrap`: los dos están aplicados en la integración.
     - Los otros siete parches no cambian.
-  - Sobre `eb863f54` (lo último de la integración), los ocho aplican con `git -c core.autocrlf=false apply` en un worktree temporal desde la rama fusionada. Tras aplicarlos, también pasan `apply -R --check`.
-- **Choque con B3 y B6 en `GameBootstrap.cs`** (actualiza lo anotado en B6):
-  - `B3-ui.diff` y `B6-bootstrap.diff` añaden su línea tras `SetUpStreak();`, y `B7-bootstrap.diff` añade la suya tras `SetUpMeta();`. Las tres caen en el mismo bloque.
-  - El integrador lo resuelve a mano: `ConnectTelemetry();` queda la última, tras todas las `SetUp*`.
+  - Sobre `d933dcde` (lo último de la integración), los ocho pasan `git -c core.autocrlf=false apply --check` y, aplicados en un worktree temporal, también `apply -R --check`.
+- **Arreglo tras la fusión de B6** (`e4ecfd7c`, solo el test): `ComebackConfig` y `PushConfig` (B6, `AF.LiveOps`) tienen `[RemoteConfigKey]`; van a `NotBoundYet` con su motivo, como `ShuffleConfig` (B2) y `SkipConfig` (B3). Las cuatro están ya en la integración: falta su tabla en `RcConfigBinder` y pasarlas a su sistema (ver «Riesgos»).
 - **Revisión (code-reviewer):**
   - 1.ª ronda: CAMBIOS NECESARIOS, arreglados en `7697f094`:
     - `TryGet` sin excepción por desbordamiento;
@@ -56,13 +56,17 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
   | Dónde | Comando | Resultado |
   |---|---|---|
   | rama (`60eec9b2`, antes de fusionar `d994e586`) | PlayMode | **1.655 (1.425 + 230), 0 fallos**, 30,8 min |
-  | rama (`513acee9`) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos y 0 errores (6 s); 981 (975 + 6), 0 fallos (2 min 16 s); 103/103, código 0 |
-  | rama (`513acee9`) | `rc_defaults.py --check`; `unittest` de `tools/remote-config` | «identico (251 claves)», código 0; 4 tests OK y `--self-test` OK |
-  | rama (`513acee9`) | `unity-compile`; EditMode; PlayMode | 0 (24 s); **3.473 (3.470 + 3), 0 fallos** (5,1 min); **1.698 (1.461 + 237), 0 fallos** (39,5 min, con otro Unity en paralelo) |
-  | temporal: `e058645f` + los ocho parches | compile; EditMode; PlayMode | 0 (116 s); **3.479 (3.476 + 3), 0 fallos** (4,9 min); **1.685 (1.449 + 236), 0 fallos** (32,8 min) |
-  | temporal: `513acee9` + los ocho parches | compile; EditMode; PlayMode | 0 (158 s); **3.479 (3.476 + 3), 0 fallos** (5,1 min; `TelemetryHooksTests` 6/6); **1.699 (1.462 + 237), 0 fallos** (32,0 min; `TelemetryBootTests` 1/1) |
+  | rama (`513acee9`) | compile; EditMode; PlayMode | 0 (24 s); **3.473 (3.470 + 3), 0 fallos** (5,1 min); **1.698 (1.461 + 237), 0 fallos** (39,5 min) |
+  | temporal: `513acee9` + los ocho parches | compile; EditMode; PlayMode | 0 (158 s); **3.479 (3.476 + 3), 0 fallos** (5,1 min); **1.699 (1.462 + 237), 0 fallos** (32,0 min) |
+  | rama (`e4ecfd7c`, con B2, B3, B6 y B13) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos y 0 errores; **1.002 (996 + 6), 0 fallos** (8 min 35 s, con Unity en paralelo); 103/103, código 0 |
+  | rama (`e4ecfd7c`) | `rc_defaults.py --check`; `unittest` de `tools/remote-config` | «identico (251 claves)», código 0; 4 tests OK y `--self-test` OK |
+  | rama (`e4ecfd7c`) | `unity-compile`; EditMode; PlayMode | 0 (33 s); **3.617 (3.614 + 3), 0 fallos** (5,9 min); **1.703 (1.466 + 237), 0 fallos** (33,0 min) |
+  | temporal: `671646f9` + los ocho parches (`B7-bootstrap` regenerado) | compile; EditMode | 0 (231 s); 3.623: **1 fallo**, `RcConfigBinderTests.EveryTypeWithRemoteConfigKeys_IsBound_OrDeclaredAsNotBoundYet`: `ComebackConfig` (B6) tiene `[RemoteConfigKey]` y no estaba ni enlazada ni en `NotBoundYet`. Arreglado en `e4ecfd7c` (ver abajo) |
+  | idem | PlayMode | 1.704: **1 fallo**, `PseudoLocOverflowTests.EnXA_360x640_NoTextOverflows(100)` («Tiempo agotado esperando: victoria», 180 s), con otro Unity y `dotnet test` en paralelo |
+  | idem, con el test de `e4ecfd7c` | EditMode; PlayMode con filtro (`PseudoLocOverflowTests`, `TelemetryBootTests`) | **3.623 (3.620 + 3), 0 fallos** (4,8 min); **3/3** (53 s): el fallo era de carga, no de B7 |
+  | rama tras fusionar `d933dcde` (`4df8a380`) | `dotnet build -warnaserror`; `validate_schema.py`; `rc_defaults.py --check`; `git apply --check` de los ocho | 0 avisos; 103/103; idéntico; los ocho aplican. Unity no se repite: esa fusión solo trae `infra/`, `.github/`, `ci/check-manifest.ps1`, `CLAUDE.md` y `docs/dev` (0 archivos en `Assets/`, `Packages/`, `ProjectSettings/`, `dotnet/`, `tools/`, `schemas/` y `docs/gdd/`) |
 
-  Los worktrees temporales se borraron al terminar.
+  Antes (sobre `e058645f`, sin B2/B3/B6): temporal con los ocho, 0; 3.479 (3.476 + 3); 1.685 (1.449 + 236), todo sin fallos; y 981 (975 + 6) en `dotnet test`. Los worktrees temporales se borraron al terminar.
 
 ### [P] y preguntas para el dueño (B7; se avanzó con la recomendada, la (a))
 
@@ -101,8 +105,8 @@ Lo marcado [P] está en la nota:
   - `af_level_load` y `af_error`;
   - el `level_end` del Salto (B3);
   - lo nuevo de B14 (skins, álbum, Datos del río) y de B8 (`af_save_sync`, `af_account_delete`).
-- **Integración con B2, B3 y B8:**
-  - `ShuffleConfig` y `SkipConfig` entran en `RcConfigBinder` y salen de `NotBoundYet` al fusionarlos (el test de cobertura lo exige);
+- **Cifras de B2, B3 y B6 sin Remote Config todavía:** `ShuffleConfig`, `SkipConfig`, `ComebackConfig` y `PushConfig` ya están en la integración, pero usan sus `Defaults`. Falta su tabla en `RcConfigBinder` (una línea por clave), sacarlas de `NotBoundYet` y pasarlas a su sistema en `GameBootstrap.Telemetry.cs`. Es un retoque pequeño de B7 tras integrarlo; el test de cobertura avisa de cualquier clase nueva.
+- **Integración con B8:**
   - B8 pide enlazar `sec_ssv_grace_h` con `RevocationConfig.SecSsvGraceH`.
 - **Sin pantalla todavía:** «Actualiza Tintalú» y el aviso de mantenimiento (UI del escritorio y textos nuevos).
 - **`CLAUDE.md`**, para el integrador (nota §7): las carpetas nuevas, `RemoteConfigDefaults.json` como generado y los dos comandos de `tools/remote-config/`.
