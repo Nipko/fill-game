@@ -72,7 +72,7 @@ namespace AF.LiveOps.Tests
             seen.Sort(StringComparer.Ordinal);
             var expected = new List<string>(KeysIn08_9) { NewKeyOfD033 };
             expected.Sort(StringComparer.Ordinal);
-            Assert.That(seen, Is.EqualTo(expected), "las claves de la nota §9, ni una más");
+            Assert.That(seen, Is.EqualTo(expected), "las claves de la nota docs/dev/bitacora.md §5, ni una más");
             Assert.That(table.ContainsKey("eco_calendar_table_v1"), Is.True, "la v1 sigue en 08 §9 de respaldo (D-033)");
         }
 

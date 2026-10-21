@@ -7,7 +7,7 @@ namespace AF.LiveOps
     /// <summary>
     /// Cifras de la Bitácora del río (<c>login_calendar</c>; 06 §4.2; 05 §2.3) con los defaults compilados de la tabla única de
     /// 08 §9 y sus nombres exactos, más la clave nueva [P] de D-033 (añadido del 2026-10-20, «Remote Config: clave nueva
-    /// <c>eco_calendar_table_v2</c>»), que aún no está en 08 §9: la da de alta el integrador (nota <c>docs/dev/bitacora.md</c> §9).
+    /// <c>eco_calendar_table_v2</c>»), que aún no está en 08 §9: la da de alta el integrador (nota <c>docs/dev/bitacora.md</c> §5 y §7).
     /// No usa los alias retirados. Cuando exista <c>AF.RemoteConfig</c>, sus valores se copiarán en una instancia; hasta entonces se
     /// usa <see cref="Defaults"/>.
     /// <list type="bullet">
