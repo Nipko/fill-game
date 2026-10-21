@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/common.schema.json",
+  "title": "Definiciones comunes del contrato v1",
+  "$defs": {
+    "sku": {
+      "description": "SKU del catálogo IAP (05 §4): prefijo af_.",
+      "type": "string",
+      "pattern": "^af_[a-z0-9_]{1,60}$"
+    },
+    "purchaseToken": {
+      "description": "purchaseToken de Google Play Billing, tal cual.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 4096,
+      "pattern": "^[A-Za-z0-9._:-]+$"
+    },
+    "tokenHash": {
+      "description": "SHA-256 del purchaseToken en hexadecimal en minúsculas (plan §2: PK de purchases). El cliente compara applied_purchases por este hash.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "nonce": {
+      "description": "Nonce de una recompensa por anuncio: UUID v4 en minúsculas (08 §10.2).",
+      "type": "string",
+      "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$"
+    },
+    "firebaseUid": {
+      "description": "UID de Firebase Auth.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9]{1,128}$"
+    },
+    "placement": {
+      "description": "Id del emplazamiento de anuncio (ad_placements.json).",
+      "type": "string",
+      "pattern": "^[a-z0-9_]{1,40}$"
+    },
+    "accountCode": {
+      "description": "Código de borrado por web (Q-B13-21): 128 bits aleatorios en Base32 de Crockford, 26 caracteres en mayúsculas sin guiones; el primero va de 0 a 7 porque 26 × 5 = 130 bits. Distinto del UID; el servidor solo guarda su hash. La web normaliza (mayúsculas, sin espacios ni guiones, I y L → 1, O → 0) antes de enviarlo.",
+      "type": "string",
+      "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
+    },
+    "requestToken": {
+      "description": "Token de confirmación del borrado por web: 256 bits aleatorios en base64url sin relleno, válido 5 minutos (plan F2-8).",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9_-]{43}$"
+    },
+    "epochMs": {
+      "description": "Instante en milisegundos desde 1970-01-01 UTC.",
+      "type": "integer",
+      "minimum": 0
+    }
+  }
+}

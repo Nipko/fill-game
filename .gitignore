@@ -101,6 +101,15 @@ __pycache__/
 node_modules/
 
 # ---------------------------------------------------------------------------
+# Backend en AWS (infra/, D-035): dependencias y salidas de CDK y de los tests
+# ---------------------------------------------------------------------------
+/infra/node_modules/
+/infra/cdk.out/
+/infra/.cdk.staging/
+/infra/coverage/
+/infra/*.tsbuildinfo
+
+# ---------------------------------------------------------------------------
 # Secretos: nunca en git (firmas, licencias, configuraciones de Firebase, entorno)
 # ---------------------------------------------------------------------------
 *.jks
