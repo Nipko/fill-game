@@ -40,11 +40,12 @@ namespace AF.UI
         public const float LogbookCardGapDp = 8f;
 
         /// <summary>
-        /// Nivel desde el que la Bitácora puede dar una Luciérnaga: <c>lvl_murky_from_level</c> (08 §9), el estreno de Aguas
-        /// turbias, donde se regala la primera (04 §2.5). Antes, la Luciérnaga se sustituye (D-033, punto 3; Q-B5). Sin copia
-        /// propia: la única del cliente hasta <c>AF.RemoteConfig</c> es <see cref="DevBench.MurkyFromLevel"/>.
+        /// Nivel desde el que la Bitácora puede dar una Luciérnaga: el default de <c>lvl_murky_from_level</c> = 100 (08 §9), el
+        /// estreno de Aguas turbias, donde se regala la primera (04 §2.5). Antes, la Luciérnaga se sustituye (D-033, punto 3;
+        /// Q-B5). El cliente no declara aún esa clave (la otra copia, <c>DevBench.MurkyFromLevel</c>, solo existe en desarrollo):
+        /// cuando llegue <c>AF.RemoteConfig</c>, las dos leen su valor (Q-B5).
         /// </summary>
-        public const int LogbookRevealUnlockLevel = DevBench.MurkyFromLevel;
+        public const int LogbookRevealUnlockLevel = 100;
 
         /// <summary>Origen de la sonda <c>takeover</c> al entrar al inicio.</summary>
         public const string TakeoverSourceLobby = "lobby";
@@ -157,9 +158,9 @@ namespace AF.UI
             {
                 service = new LoginCalendarService(store, _wallet, clock, DailyChallengeConfig.Defaults.LiveUnlockLevelDaily, LogbookConfigOverride);
             }
-            catch (InvalidOperationException e)
+            catch (Exception e) when (e is InvalidOperationException || e is OverflowException || e is ArgumentException)
             {
-                // Una tabla y una tasa que no cuadran (por ejemplo, una tasa nueva de Remote Config sin su tabla): la Bitácora no
+                // Una tabla y una tasa que no cuadran (o que desbordan) (por ejemplo, una tasa nueva de Remote Config sin su tabla): la Bitácora no
                 // existe en esta sesión, pero el arranque sigue (SetUpMeta y el resto van después).
                 Debug.LogError(LogPrefix + "Bitácora del río apagada: " + e.Message);
                 _logbookFailed = true; // una vez por escena: otra llamada no lo vuelve a intentar ni a registrar
@@ -292,6 +293,12 @@ namespace AF.UI
             {
                 _logbookDay = today;
                 DevProbe.LogbookState(LoginCalendarProbeFormat.CauseDay, LogbookState, service.Record);
+                if (screen.Visible && _progress != null)
+                {
+                    // Medianoche con la libreta abierta: la de hoy (sin las tarjetas de ayer ni su casilla pulsando).
+                    int maxLevel = _progress.MaxLevel;
+                    screen.Show(service.Peek(maxLevel, LogbookUnlocks(maxLevel), LogbookWorld(maxLevel)), screen.Source);
+                }
             }
 
             bool lobby = LogbookLobbyClear && !screen.Visible;

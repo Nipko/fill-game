@@ -50,7 +50,6 @@ namespace AF.Tests.PlayMode
             Application.logMessageReceived -= OnLog;
             GameBootstrap.ResetLogbookOverrides();
             GameBootstrap.LogbookOverride = null;
-            LocSetUpFixture.ConfigureEs419();
             LaunchOptions.Reset();
             LocSetUpFixture.ConfigureEs419();
         }
@@ -203,6 +202,17 @@ namespace AF.Tests.PlayMode
             Assert.That(screen.Choosing, Is.False, "las tarjetas no se quedan muertas");
             Assert.That(screen.StatusText, Is.EqualTo("Termina un nivel hoy para sellar la página"));
             Assert.That(boot.Logbook!.Record.NextDay, Is.EqualTo(1));
+
+            // Y sin tocar nada: al pasar el día con la libreta abierta, se rehace sola en el fotograma siguiente.
+            boot.Logbook.Record.PlayedDate = "2026-10-21";
+            screen.Show(boot.Logbook.Peek(MaxLevel, LoginCalendarUnlocks.All, 1), LogbookOpenSource.Card);
+            Assert.That(screen.PressToday(), Is.True);
+            _clock.Advance(TimeSpan.FromDays(1));
+            Step(boot, Frame);
+            Assert.That(screen.Visible, Is.True);
+            Assert.That(screen.Choosing, Is.False, "sin las tarjetas de ayer");
+            Assert.That(screen.TodayPulsing, Is.False);
+            Assert.That(screen.StatusText, Is.EqualTo("Termina un nivel hoy para sellar la página"));
         }
 
         [UnityTest]
