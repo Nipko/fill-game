@@ -662,3 +662,15 @@ El dueño respondió las 29 preguntas de `docs/dev/plan-tanda5.md` §5, todas co
 - **B6:** con Q-M5 aprobado, deja la lógica y `INotificationScheduler` con su implementación falsa, y prepara la implementación real con `com.unity.mobile.notifications` como parche aparte (manifiesto, versión propuesta y `POST_NOTIFICATIONS`): el integrador la aplica tras anotar la versión en D-033. No toques `Packages/manifest.json` en tu rama.
 - **B7:** el bus mínimo `AF.Events` (Q-T1, sin motor) va dentro de B7.
 - Por cada bloque: revisión (code-reviewer), arreglos, verificación completa de `CLAUDE.md` y entrada en `spark-estado.md` con «listo para integrar». Si un bloque deja algo sin decidir, apúntalo como pregunta con opciones y una recomendada, sin inventarlo.
+
+---
+
+## 13. Encargo siguiente (2026-10-21): B12, B11 y B9
+
+**B10 ya está hecho** en el escritorio (compuertas de release, stripping High, `ci.yml` y coverlet; integrado en `9eb593c`): no lo empieces. Tu lista de la sección 12 (B2, B3, B6, B7, B5, B8 y B4) está entregada; B8, B4 y B5 se están integrando ahora en el escritorio. Sigue, en este orden y en ramas `spark/t5-<bloque>` desde `origin/integracion-fase1-fase2` (haz pull antes: trae el backend de AWS, D-035 a D-038 y el GDD 1.19), con las mismas reglas de las secciones 1-3, 11 y 12:
+
+1. **B12 · Consentimiento y edad** (plan §4, 2,5 días), con implementaciones falsas: pantalla de edad neutral con bandas `<13` (bloqueado en la 1.0), `13-17` y `18+`; consentimiento por país (Q-T3 (a): SIM, luego región, si no el perfil más estricto); `profile.consent`; los flags hacia anuncios, analítica (B7: la recogida sigue apagada hasta el consentimiento) e IAP; compras de 13-17 con doble confirmación + autenticación de Google Play (Q-T4 (a)); cambio desde Ajustes. Los textos legales, [P] y `pendiente` del abogado. Choca con `AppFlow` y `SettingsScreen`: parches probados.
+2. **B11 · Tutorial, Sin canoas y contenido** (1,5 días): lo de la fila B11 del plan, con Q-N2 (a) (variante `minus_color` desde el 31 en `tools/level-generator`, regenerando lo que toque con sus `--check`) y Q-E4 (a) (texto de la tarjeta de Canoas del 31). Ojo con **D-038** (con `biz_feature_lives` apagado, desde el 31 todo como antes del 31): el escritorio lo está implementando en `LevelFlow`/`FailResolve`; si B11 toca Sin canoas o el embudo, parte de la integración que traiga D-038 y no lo deshagas.
+3. **B9 · Accesibilidad** (3 días): Reducir movimiento y Alto contraste al 35 % (Q-N4 (a)), escala de fuente del sistema, C9 (mantener pulsado), test del simulador de daltonismo y TalkBack completo (02 §12). Choca con `GameScreen`: parches probados.
+
+Por cada bloque: revisión (code-reviewer), arreglos, verificación completa de `CLAUDE.md` y entrada en `spark-estado.md` con «listo para integrar». Lo que no esté decidido, como pregunta con opciones y una recomendada.
