@@ -221,3 +221,34 @@ Todas con recomendada (la primera). Ninguna reabre una decisión del dueño.
 - **08 §2.2:** quitar «Crecida» de la fila de `AF.LiveOps` (Q-M10).
 - **05 §3 / `tools/econ_sim.py`:** el desfase del ciclo de la Canasta ya está en 05 §3.4. Quedan pendientes volver a correr la simulación con la Canasta grande (05 §3.4; GDD.md §6.1 #13) y la hoja del día, que depende del nivel al empezar el día (§1.2).
 - **Glosario:** falta la entrada «Canasta grande» (GDD.md §6.1 #13; plan §6).
+
+## 9. La interfaz (B1b) y sus preguntas [P]
+
+Implementada en la rama `tanda5/b1b` sobre la lógica de B1a, con el diseño del panel único de la victoria de D-033 (añadido del
+2026-10-20, puntos 8-11):
+
+- **Barra del HUD** (`Scripts/UI/StreakBar.cs`; 02 §5; 07 §7.4): x = 348-356 y y = 120-560 a 360 × 780 (en 16:9, de la cabecera + 32
+  al fin del tablero − 60), muescas en 3, 6 y 10, la Hoja escudo al pie; sale en T (`OnIntroFinished` o al reanudar) y no está en la
+  intro (D-030, 4 c). El río crecido, con el agua más clara [P].
+- **Barras de la victoria** (`Scripts/UI/VictoryBars.cs`, `GameScreen.Streak.cs`): «Crecida {n}/10» con el chip del hito (el pagado o
+  el siguiente que el día aún pagaría, nota §6.1) y «Canasta · {sitio} k/10» (sin sitio si no cabe en una línea a 12 sp). Tiempos de
+  D-033: Crecida 400-900 ms, Canasta 900-1.500 ms; el premio pagado salta en lugar de su línea y vuela al saldo o a la bandeja; las
+  semillas no se ven en el saldo hasta que llegan (D-011). Un toque en Siguiente con animaciones pendientes las completa, espera
+  250 ms (Inicio y la Cosecha doble, inactivos) y sigue.
+- **Modal**: `stuck_shield_ready` / `stuck_shield_used` sobre el pie, desde el 25 (también en 25-30), con `stuck_show_shield_status`.
+- **Tarjeta del 25**: tarjeta de estreno (`LevelCardInfo.ForStreak`, ID `win_streak`) al cargar `streak_unlock_level`, no al reintentar.
+- **Inicio**: widget lateral silencioso (barra y hoja, sin cifra) a la derecha, desde el 25.
+
+Preguntas abiertas (todas con recomendada, la (a)):
+
+| Id | Hueco | Opciones |
+|---|---|---|
+| B1b-Q1 | Las barras en la victoria compacta: D-033 las pone a media anchura desde el escalón 2 | **(a)** a media anchura antes de compactar lo demás (también en los escalones 0 y 1) cuando a lo ancho no caben: así 360 × 780 no compacta en es-419 (medido) y 16:9 compacta lo menos posible; (b) a lo ancho hasta el escalón 2, como dice D-033 (360 × 780 al 130 % compacta) |
+| B1b-Q2 | Con las barras, es-419 al 100 % en 16:9 pasa al escalón 1 (márgenes justos; 476 de 480 dp) y en-XA al 130 % a 360 × 780 también: D-032 decía que no compactaban | **(a)** aceptarlo (solo márgenes); (b) barras más bajas (sin pista) |
+| B1b-Q3 | Ni el último escalón cabe con las barras (solo en-XA al 130 % en 16:9) | **(a)** no salen («si no cabe, no sale», como «Ver mapa»; lo pagado llega al saldo); (b) una sola barra |
+| B1b-Q4 | La línea del escudo en 25-30: el pseudocódigo de 04 §6.2 sale del modal antes de `shield_line` en 1-30, pero 04 §4 dice que la línea «ya es conocida desde el 25» | **(a)** enseñarla también en 25-30 (hecho) y corregir 04 §6.2; (b) solo desde el 31 |
+| B1b-Q5 | Barra a 0 con el río crecido: el fallo duro apaga el río sin gastar la hoja; 04 §6.5 no tiene texto | **(a)** sin línea; (b) una clave nueva («este fallo apaga el río crecido») |
+| B1b-Q6 | El hito 10 en la victoria | **(a)** la barra llega a 10/10 y se vacía en el HUD del nivel siguiente; (b) se vacía en la propia victoria |
+| B1b-Q7 | El contenido de la Canasta antes de abrirla (06 §4.4: «visible antes de abrir») | **(a)** en el Mapa (B14); en la barra, solo al abrirse; (b) también en la barra, atenuado (no cabe en 16:9) |
+| B1b-Q8 | El aviso de la hoja (`shield_toast`) | **(a)** al volver a jugar tras la intro del mismo nivel; (b) en el acto, encima de Nivel fallido |
+| B1b-Q9 | La tercera barra rotativa (skin ganada > Bitácora > Reto) y el chevron | **(a)** el hueco (`VictoryBarsPlan.Extra`) y la regla del chevron, sin barra hasta B4 (la Bitácora) y sin skin ni Reto hasta que se defina qué enseñan; (b) la del Reto ya |

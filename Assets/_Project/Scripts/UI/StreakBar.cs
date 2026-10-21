@@ -9,7 +9,7 @@ namespace AF.UI
     /// <summary>
     /// Barra vertical de la Crecida en el borde derecho del tablero (tarea B1b; 02 §5, fila «Barra de la Crecida»; 07 §7.4: x =
     /// 348-356, y = 120-560 a 360 × 780; 06 §4.3, «HUD»): 8 dp de ancho, el agua sube de abajo arriba un escalón por victoria (10
-    /// marcas, muescas en los hitos 3 y 6; el 10 es el tope), y la Hoja escudo, si queda la de hoy, como hoja de vitória-régia al
+    /// marcas, muescas en los hitos 3, 6 y 10), y la Hoja escudo, si queda la de hoy, como hoja de vitória-régia al
     /// pie. Visible desde <c>streak_unlock_level</c> (<see cref="StreakSnapshot.Active"/>) y, en cada nivel, desde T, al habilitarse
     /// el toque: durante la intro no está y la tropa lateral puede pasar por su franja (D-030, pregunta 4 (c); D-021). Sin raycast
     /// y sin asignaciones (solo cambia al cambiar el estado).

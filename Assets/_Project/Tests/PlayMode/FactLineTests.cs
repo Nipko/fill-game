@@ -509,7 +509,9 @@ namespace AF.Tests.PlayMode
                 Assert.That(v.VictorySlot.Built, Is.True);
             });
             GameScreen view = GameBootstrap.Current!.View!;
-            Assert.That(atLoad, Is.EqualTo(1), "la línea más alta del calendario, una vez");
+            // Desde B1b la elección del escalón de la victoria compacta prueba también las barras de la Crecida y la Canasta, y puede
+            // medir la línea a más de un cuerpo: lo que importa es que se mide al cargar y la victoria no vuelve a medir.
+            Assert.That(atLoad, Is.GreaterThanOrEqualTo(1), "la línea más alta del calendario, al cargar");
             Assert.That(view.FruitLine!.NeedMeasureCount, Is.EqualTo(atLoad), "la victoria no vuelve a medir");
             Assert.That(view.FruitLine.Shown, Is.True);
             string? perf = new DevProbe().FormatSlotMeasure(3, Loc.Locale, UiBuilder.TextScale, view.SlotWarmMs, view.FruitLine.NeedMs, view.VictorySlot.ContentDp);
@@ -531,6 +533,8 @@ namespace AF.Tests.PlayMode
             Assert.That(view.FruitLine.ProgressText, Is.EqualTo("Açaí · 10/20"));
             float nextWithout = view.NextTopDp;
             view.NextButton.onClick.Invoke();
+            // B1b (D-033, punto 9): la Canasta del 10 se abre a los 1,2-1,5 s; el toque la completa y Siguiente va a los 250 ms.
+            PlayModeHelpers.Step(boot, (int)GameScreen.NextHoldMs + 2 * PlayModeHelpers.FrameMs);
             Assert.That(view.RiverFactShownCount, Is.EqualTo(1));
             Assert.That(view.LastRiverFactId, Is.EqualTo("acai.10"));
 

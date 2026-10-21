@@ -403,6 +403,12 @@ namespace AF.UI
         /// <summary>Texto de la barra de la Canasta (tests).</summary>
         internal string BasketText => _basket.Label.text;
 
+        /// <summary>Opacidad del texto de la barra de la Crecida (tests: vuelve a 1 tras el salto de un premio).</summary>
+        internal float StreakTextAlpha => _streak.Label.color.a;
+
+        /// <summary>Opacidad del texto de la barra de la Canasta (tests).</summary>
+        internal float BasketTextAlpha => _basket.Label.color.a;
+
         /// <summary>Lo lleno de la pista de la Crecida ahora (0-1; tests).</summary>
         internal float StreakFill => _streak.Fill01;
 
@@ -435,6 +441,12 @@ namespace AF.UI
 
         /// <summary>Quedan animaciones por terminar (un toque en Siguiente las completa y espera 250 ms; D-033, punto 9).</summary>
         public bool Pending => _ms >= 0f && _ms < _endMs;
+
+        /// <summary>
+        /// Lo pendiente lleva un premio (un hito pagado o la Canasta que se abre): un toque en Siguiente lo completa y enseña el
+        /// estado final 250 ms antes de seguir (D-033, punto 9) [P]; si solo sube el agua, Siguiente la completa y sigue en el acto.
+        /// </summary>
+        public bool PendingReward => Pending && (_plan.StreakPaid || _plan.BasketOpens);
 
         /// <summary>Semillas de las barras que aún no llegaron al saldo (D-011: nada se da por ganado antes de que se vea).</summary>
         public int PendingSeeds => _root.gameObject.activeSelf && _ms >= 0f ? Mathf.Max(0, _plan.PaidSeeds - _landedSeeds) : 0;
@@ -497,7 +509,10 @@ namespace AF.UI
                 _basket.SetTextAlpha(1f);
             }
 
-            _endMs = _plan.Basket ? (_plan.BasketOpens ? BasketEndMs : BasketOpenMs) : (_plan.StreakPaid ? StreakEndMs + FlyMs : StreakEndMs);
+            // El final: lo último que pasa, el agua de la Canasta o el aterrizaje del último premio que vuela (D-011: el saldo lo enseña al llegar).
+            float streakEnd = _plan.StreakPaid ? StreakEndMs + FlightMs(_plan.StreakReward.Count) : StreakEndMs;
+            float basketEnd = _plan.Basket ? (_plan.BasketOpens ? Mathf.Max(BasketEndMs, BasketOpenMs + FlightMs(_plan.BasketReward.Count)) : BasketOpenMs) : 0f;
+            _endMs = Mathf.Max(streakEnd, basketEnd);
             _ms = 0f;
             if (_reduce)
             {
@@ -525,7 +540,9 @@ namespace AF.UI
         /// </summary>
         public float Collapse()
         {
-            Complete();
+            _ms = -1f; // sin animación ni sonido: lo pagado ya cuenta en el saldo
+            _landedSeeds = _plan.PaidSeeds;
+            EndBurst();
             _root.gameObject.SetActive(false);
             Height = 0f;
             return 0f;
@@ -765,7 +782,6 @@ namespace AF.UI
             {
                 _bursting.SetTextAlpha(1f);
                 _bursting = null;
-            _burstOther = null;
             }
 
             if (_burstOther != null)
@@ -775,6 +791,12 @@ namespace AF.UI
             }
 
             _burst.Root.gameObject.SetActive(false);
+        }
+
+        // Del salto de una tira de n premios al aterrizaje del último (ms): su retraso de 120 + 40 por premio y el vuelo.
+        private static float FlightMs(int n)
+        {
+            return 120f + (40f * Mathf.Max(0, Mathf.Min(n, 5) - 1)) + FlyMs;
         }
 
         private Flyer? FreeFlyer()

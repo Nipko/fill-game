@@ -42,6 +42,7 @@ namespace AF.UI
         private float _nextHoldMs = -1f;
         private bool _victoryBarsDropped;
         private bool _shieldToastPending;
+        private int _shieldToastLevel;
         private readonly float[] _worstBars = new float[2 * (VictoryCompactMax + 1)]; // a lo ancho y, detrás, en una fila
         private string? _worstBarsLocale;
         private float _worstBarsScale = -1f;
@@ -75,8 +76,13 @@ namespace AF.UI
             _canvasCenter = CanvasCenterDp;
         }
 
-        private void StreakLevelLoaded()
+        private void StreakLevelLoaded(int level)
         {
+            if (level != _shieldToastLevel)
+            {
+                _shieldToastPending = false; // el aviso de la hoja es del nivel en que cubrió el fallo
+            }
+
             _streakBar.SetVisible(false);
             _victoryBars.Hide();
             _nextHoldMs = -1f;
@@ -121,6 +127,7 @@ namespace AF.UI
             {
                 AF.Audio.AudioCues.Play(AF.Audio.SfxId.StreakShield); // la hoja que se despliega (07 §9.2)
                 _shieldToastPending = true;
+                _shieldToastLevel = flow.LevelNumber;
             }
         }
 
@@ -172,11 +179,19 @@ namespace AF.UI
                 return;
             }
 
-            if (_victoryBars.Pending)
+            if (_victoryBars.Pending && !_victoryBars.PendingReward)
+            {
+                _victoryBars.Complete(); // solo subía el agua: al estado final y adelante (B1b-Q11)
+            }
+            else if (_victoryBars.PendingReward)
             {
                 _victoryBars.Complete();
                 _nextHoldMs = NextHoldMs;
-                _probe.Victory("next_hold", RequireFlow(), false);
+                // Mientras espera, Inicio y la Cosecha doble no responden, como tras la Cosecha doble (D-011, punto 4): nada puede
+                // abrir un vídeo que acabaría fuera de la victoria.
+                UiBuilder.SetEnabled(_home.Button, false);
+                UiBuilder.SetEnabled(_double.Button, false);
+                _probe.Victory("next_hold", RequireFlow(), _doubleShown);
                 return;
             }
 

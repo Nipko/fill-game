@@ -974,7 +974,7 @@ namespace AF.UI
             StopLabelLevelLoaded(level);
             _attemptBanner = false;
             _introDelayMs = -1f;
-            StreakLevelLoaded(); // fuera la barra del HUD (sale en T) y las de la victoria anterior (B1b)
+            StreakLevelLoaded(level); // fuera la barra del HUD (sale en T) y las de la victoria anterior (B1b)
             BuildBoard(flow);
             _levelText.text = UiText.Level(level);
             FitLevelBadge();
@@ -2776,7 +2776,7 @@ namespace AF.UI
 
             // Tras la Cosecha doble, mientras espera a avanzar solo (D-011, punto 4), Inicio y la Cosecha doble quedan inactivos,
             // también al recolocar la pantalla (LayoutHud); Siguiente sigue activo y puede adelantar el avance.
-            bool autoNext = _autoNextMs >= 0f;
+            bool autoNext = _autoNextMs >= 0f || _nextHoldMs >= 0f; // también en la espera de 250 ms de Siguiente (B1b)
             _double.Button.gameObject.SetActive(_doubleShown);
             UiBuilder.SetEnabled(_double.Button, !autoNext);
             if (_doubleShown)
@@ -2986,7 +2986,7 @@ namespace AF.UI
         // esté inactivo (LayoutVictory).
         private void OnVictoryHome()
         {
-            if (_autoNextMs < 0f)
+            if (_autoNextMs < 0f && _nextHoldMs < 0f)
             {
                 LevelFlow flow = RequireFlow();
                 _victoryBars.Complete(); // lo de las barras llega al saldo antes de salir (D-033, punto 9)

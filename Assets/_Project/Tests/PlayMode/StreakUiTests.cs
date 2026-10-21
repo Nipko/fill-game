@@ -159,6 +159,7 @@ namespace AF.Tests.PlayMode
             Assert.That(bars.Plan.BasketCount, Is.EqualTo(10));
             Assert.That(bars.Pending, Is.True, "aún suben");
             Fx16bTests.AssertCompactVictory(view, "30 a 360 × 640");
+            Assert.That(bars.Half, Is.True, "a 360 × 640 en es-419, la Crecida y la Canasta en una fila");
 
             PlayModeHelpers.Step(boot, 700); // Siguiente ya entró (600 ms); la Canasta, aún no
             Assert.That(bars.Pending, Is.True);
@@ -168,12 +169,34 @@ namespace AF.Tests.PlayMode
             Assert.That(bars.PendingSeeds, Is.EqualTo(0), "todo lo pagado, en el saldo");
             Assert.That(view.NextHoldPending, Is.True);
             Assert.That(boot.Flow!.Phase, Is.EqualTo(FlowPhase.VictoryScreen), "enseña el estado final 250 ms");
+            Assert.That(view.HomeButton.interactable, Is.False, "mientras espera, Inicio no responde");
+            Assert.That(!view.DoubleHarvestShown || !view.DoubleHarvestButton.interactable, Is.True, "ni la Cosecha doble (no abre un vídeo fuera de la victoria)");
+            Assert.That(bars.StreakTextAlpha, Is.EqualTo(1f).Within(0.001f), "los textos vuelven tras el salto del premio");
+            Assert.That(bars.BasketTextAlpha, Is.EqualTo(1f).Within(0.001f));
             view.NextButton.onClick.Invoke(); // un segundo toque no hace nada
             PlayModeHelpers.Step(boot, 200);
             Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.VictoryScreen));
             PlayModeHelpers.Step(boot, 100);
             Assert.That(view.NextHoldPending, Is.False);
             Assert.That(boot.Flow.LevelNumber == 31 || boot.Flow.Phase != FlowPhase.VictoryScreen, Is.True, "y sigue por el camino de Siguiente");
+        }
+
+        [UnityTest]
+        public IEnumerator Victory_HalfWidth_AWidePrize_HidesTheOtherLabelOnlyWhileItJumps()
+        {
+            UseStore(Record(5, true));
+            GameScreen.SimulatedScreen = HudLabelTests.Screen640;
+            yield return Win(30); // hito 6 (su Canasta) y la Canasta del 30: dos premios que saltan a media anchura
+            GameBootstrap boot = GameBootstrap.Current!;
+            VictoryBars bars = boot.View!.VictoryBarsView;
+            Assert.That(bars.Half, Is.True);
+            PlayModeHelpers.Step(boot, 950); // salta el premio del hito 6
+            Assert.That(bars.Bursting, Is.True);
+            PlayModeHelpers.Step(boot, 1500);
+            Assert.That(bars.Bursting, Is.False);
+            Assert.That(bars.StreakTextAlpha, Is.EqualTo(1f).Within(0.001f), "la Crecida, otra vez a la vista");
+            Assert.That(bars.BasketTextAlpha, Is.EqualTo(1f).Within(0.001f), "la Canasta, otra vez a la vista");
+            Assert.That(bars.PendingSeeds, Is.EqualTo(0));
         }
 
         [UnityTest]
