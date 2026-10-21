@@ -218,7 +218,16 @@ de cada fixture enumera sus reglas.
   por capacidad y mecánica y por origen), la definición de 03 §7 [P].
 - `Relief.cs`: variantes de alivio de 03 §13 (`plus_empty` sin resolver, con par null; `minus_color` = la eliminación
   resoluble de par más alto con A* a 100.000). Se publican las dos [P] en el orden de 03 §13, si cumplen el criterio de
-  level-qa (03 §17 #8). Nunca se quita un color que sea llave o contenido de una mecánica [P]. Con la tinaja, `plus_empty`
+  level-qa (03 §17 #8). **Segunda pasada (Q-N2 (a) de D-033; tarea B11; V3):** desde el 31 se publica siempre una
+  `minus_color` para el alivio con la Cuia extra (04 §2.2, caso b): si la primera pasada no deja ninguna que cumpla, se repite
+  la misma regla con A* w = 1 a `Relief.MinusColorSecondBudget` (2.000.000) [P]. El par sigue siendo el óptimo exacto, así
+  que level-qa lo recalcula con ese presupuesto (`Relief.MinusColorBudget`) y da el mismo número, y los niveles que ya tenían
+  `minus_color` no cambian. Con ella, 17 de los 18 niveles de 31-700 que solo tenían `plus_empty` (118, 200, 358, 392, 395,
+  423, 483, 540, 578, 580, 615, 618, 620, 660, 672, 679 y 700) la llevan; en el 358, el 615, el 618, el 672 y el 679, con 2
+  vacíos libres, pasa a `relief[0]` por la regla de orden de 03 §13. El 680 (hito de 14 cuias con K = 13) no tiene ninguna
+  que baje el fallo del bot 0,20 y sigue solo con `plus_empty` (pregunta Q-B11-3 de `docs/dev/tutorial-b11.md`). En la
+  variante «a» de 301-700 (`tools/out/salida_a/`) la ganan el 309, 329, 335, 338, 340, 352, 358, 378 y 395 del mundo 7 y los
+  mismos de los mundos 8 y 9 salvo el 580 (que en la «a» ya la tenía), y queda sin ella solo el 680. Nunca se quita un color que sea llave o contenido de una mecánica [P]. Con la tinaja, `plus_empty`
   llega a 13 cuias con la pareja (el tope de 12 del nivel más su cuia vacía; decisión del dueño del 2026-10-18, D-027;
   `Superposition.TinajaReliefMaxCuias`), y level-qa aplica el mismo tope en QA-RELIEF-VALID.
 - `Parity.cs` (`--parity`): sobre los 40 niveles de `tools/out/levels_proto.json` y `tools/out_inverse/levels_proto.json`
@@ -488,14 +497,15 @@ curación y la b en `tools/out/salida_b/`): los bytes de cada pack no cambian co
 
 | Pack | Niveles | Bytes | SHA-256 | Tiempo (s) |
 |---|---|---|---|---|
-| `salida_a/mundo_07_v1.json` (a) | 120 | 173.002 | `347846ec92f9b0991b74c0ade72a605a235af5d51b5d09c4cec6ab1cb18bdb44` | 1.025 · 1.047 |
-| `salida_a/mundo_08_v1.json` (a) | 140 | 201.608 | `c3e8c7bf3465285b1ab519ea4eb248f6b8c1780837179d7560d0f73d3f6c2ac9` | 405 · 423 |
-| `salida_a/mundo_09_v1.json` (a) | 140 | 200.770 | `ddf2ffb8433b6958b7edd05f5798770413adfc583f852b5cc6aa020112533872` | 625 · 704 |
-| `mundo_07_v1.json` (b, publicada) | 120 | 174.986 | `348e0939d1a32042a362d58a8ce2e7ff2f694705bf49f2287c043cb1686a4106` | 440 · 456 |
-| `mundo_08_v1.json` (b, publicada) | 140 | 201.051 | `a5e8422b8712d8ed29be22667a1912398b0051530dbb027ce9f529dc9ddda19f` | 402 · 425 |
-| `mundo_09_v1.json` (b, publicada) | 140 | 199.466 | `e49492d72b6f5ca0e20108971fc7d54a957a77ff1114c13d41a77034966ed12c` | 622 · 681 |
+| `salida_a/mundo_07_v1.json` (a) | 120 | 176.122 | `96b45544f0972d53c0853abf4beda9f8552b8f9c8a4e50e347ef05473099705f` | 1.025 · 1.047 |
+| `salida_a/mundo_08_v1.json` (a) | 140 | 202.589 | `24755327569c7ac1f64a5ea1c2d1cdfdadbcd290be84762106912008595e866e` | 405 · 423 |
+| `salida_a/mundo_09_v1.json` (a) | 140 | 203.664 | `cc31a9346c928dc1a6901e988db19157dd78601eb2d76a051f438ba24ee9da44` | 625 · 704 |
+| `mundo_07_v1.json` (b, publicada) | 120 | 175.924 | `f5b3415b8daf5c145f3491afa6e321d2e492208f1248b3feed3e6d21765b395c` | 440 · 456 |
+| `mundo_08_v1.json` (b, publicada) | 140 | 202.032 | `0b22801f518b68714fc30443860f5f4042fcf4459b9551671f010bc8e25f2985` | 402 · 425 |
+| `mundo_09_v1.json` (b, publicada) | 140 | 202.712 | `5212a11194e7d70cfc7f78fe3787e6eccc6cbfae264c84926b956808f338fb4a` | 622 · 681 |
 
-Todos `pack_schema` 3. Tiempos del equipo de escritorio x64 (AMD Ryzen 9 9900X, Release, 24 hilos), con los seis
+Bytes y hashes tras la segunda pasada de `minus_color` de B11 (Q-N2 (a); antes de B11: 173.002, 201.608 y 200.770 en la «a»
+y 174.986, 201.051 y 199.466 en la «b»; los tiempos son los de GEN79). Todos `pack_schema` 3. Tiempos del equipo de escritorio x64 (AMD Ryzen 9 9900X, Release, 24 hilos), con los seis
 generadores a la vez: la primera ejecución y la última (en la b, la de `--check`), de unos 6 a 17 minutos cada uno y unos 17
 minutos los seis juntos. La variante a sola, en serie, son unos 20 minutos (la propuesta: 629, 201 y 385 s). Determinismo: tres ejecuciones de cada pack (la primera, una segunda en otra carpeta y la
 última, con el generador final, en el repositorio) dan los mismos bytes, y coinciden con los hashes de la propuesta en las variantes a de los tres mundos y en la b del mundo 7

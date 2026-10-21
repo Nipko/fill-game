@@ -11,7 +11,7 @@ Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/
 | `QA-SEALED` | ninguna cuia sellada al inicio (03 sec. 17 #5) | 0 |
 | `QA-STUCK` | atascado(S0) = false (02 sec. 9.2 regla 1) | 0 |
 | `QA-VALID` | resto de LevelValidation de AF.Core (mecanicas, Barro, Aguas turbias) | 0 |
-| `QA-PAR` | par recalculado (A* w = 1, run) igual al publicado; par >= 2K; dentro del par objetivo del rango +-30 % (03 sec. 17 #1-#2) | 0 |
+| `QA-PAR` | par recalculado (A* w = 1, run) igual al publicado; par >= 2K; dentro del par objetivo del rango +-30 % (03 sec. 17 #1-#2), salvo los tableros de estreno de la Tinaja (K <= 6; D-027) | 0 |
 | `QA-TINT-DEBUT` | cada tinte con debut anterior o igual al nivel (03 sec. 17 #4) | 0 |
 | `QA-KMAX` | K <= k_max y >= k_min de la cabecera (03 sec. 17 #4) | 0 |
 | `QA-RISK` | risk_pairs recalculado igual al publicado y <= max_risk_pairs (03 sec. 4.5) | 0 |
@@ -36,8 +36,8 @@ Generado por `dotnet run --project tools/level-qa -c Release -- Assets/_Project/
 | `QA-LABEL-ACCURACY` | aviso: acierto de etiqueta por ciclo < 60 % (c.7) | 0 |
 | `QA-HITO-14` | K = 13 solo en un hito con K = 13 en el k_plan de la especificacion, con 14 cuias de 4: 13 colores + 1 vacio de holgura (capacidad - unidades = 4, sin el Barro; puede ir repartido en cuias a medias), sin capacidades, cueva de la Pirana ni Tinaja (03 sec. 1, 11-12; d.5.1 [P]); las 14 cuias con K <= 12 (la cueva de la Pirana) no son de esta comprobacion y el tope, de QA-STRUCT | 0 |
 | `QA-RELIEF-MIN` | relief con al menos una variante desde el nivel 31 (03 sec. 13; 08 sec. 4.1) | 0 |
-| `QA-RELIEF-VALID` | cada variante es un tablero valido (BoardBuilder y LevelValidation; con tinaja, su forma: una, su cuia contigua y en la misma fila, <= 12 cuias, T4 y combinaciones) | 0 |
-| `QA-RELIEF-MINUS` | minus_color resoluble (A* a 100.000) con el par entero publicado y sin el color removed, que nunca es una fruta de la tinaja (03 sec. 13; propuesta de la tinaja c.3 punto 4) | 0 |
+| `QA-RELIEF-VALID` | cada variante es un tablero valido (BoardBuilder y LevelValidation; con tinaja, su forma: una, su cuia contigua y en la misma fila, <= 13 cuias (D-027), T4 y combinaciones) | 0 |
+| `QA-RELIEF-MINUS` | minus_color resoluble (A* w = 1 a 2.000.000: la segunda pasada del generador, Q-N2 (a); la primera, a 100.000) con el par entero publicado y sin el color removed, que nunca es una fruta de la tinaja (03 sec. 13; propuesta de la tinaja c.3 punto 4) | 0 |
 | `QA-RELIEF-PLUS` | plus_empty = el tablero base con exactamente un vacio de 4 mas (al final; con tinaja, en la ranura que deja la pareja en la misma fila) (03 sec. 13) | 0 |
 | `QA-RELIEF-BOT` | bot_fail de la variante recalculado; baja >= 0,20, o con base < 0,20 par menor (minus_color) o el vacio extra (plus_empty) (03 sec. 17 #8) | 0 |
 | `QA-RELIEF-MASK` | variante de un nivel con tinaja: la conserva y su hidden es la mascara (todas sus capas menos la boca); variante sin tinaja: sin hidden (08 sec. 4.1) | 0 |
