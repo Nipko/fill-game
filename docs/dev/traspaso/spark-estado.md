@@ -6,6 +6,205 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-21 · B5 · Mercado, ofertas y Cántaro con la tienda falsa (`spark/t5-b5`): HECHA · verificación completa VERDE (rama y rama + parches) · lista para integrar
+
+- **Rama:** `spark/t5-b5` (local `spark/t5-b5-agent`), desde `origin/integracion-fase1-fase2` en `0d5965cc`. Fusiona la integración **una sola vez**, al final: `0c0c725a` (arreglos de B7 y D-037) en `a06760fa`, sin conflictos. Empujada sin `--force`.
+- **Nota del bloque:** `docs/dev/mercado.md` (qué hace, Remote Config, perfil, archivos, parches, cambios para el GDD, pendientes para el integrador, preguntas Q-B5-1 a Q-B5-15 y riesgos).
+- **Decisiones del dueño aplicadas (D-033, todas (a)):** Q-E2 (sin icono de oferta temporal en el inicio en la 1.0: hueco libre), Q-E3 (`geo_tier` por la región del teléfono), Q-E5 («Restaurar compras» oculto), Q-E6 (Mercado ya, sin vender skins hasta el arte), Q-M4 (sesiones de B6) y Q-M8 (la pestaña Cuias elige la skin puesta con `SkinService.Select`).
+- **Commits:** `130da1de` (Mercado, ofertas y Cántaro), `99d52282` (tests y parches), `b2a1715f`, `74a5fb72`, `a6746ba7`, `b4da97ab` y `4723395c` (cinco rondas de revisión), `1c357d7d` y `b0280303` (nota), `a06760fa` (la fusión), `9c381717` (parches regenerados sobre ella) y el de esta entrada.
+- **En la rama** (todo archivo nuevo; ningún archivo del escritorio cambia):
+  - `Scripts/IAP/`: `OffersConfig.cs` (las 6 claves de 08 §9 y `OfferRules`), `OffersRecord.cs`, `OffersPiggy.cs` (`PiggyJar`), `OffersScheduler.cs` (`offer_scheduler` de 05 §5) y `OffersTakeover.cs` (cupo de un takeover por sesión); tests en `IAP/Tests/OffersTests.cs`.
+  - `Scripts/UI/`: `MarketScreen.cs`, `MarketModel.cs`, `MarketText.cs`, `MarketLobbyIcons.cs`, `OfferCard.cs`, `GeoTierRule.cs`, `GameBootstrap.Market.cs` y `MarketRunner.cs`.
+  - Tests: `Tests/EditMode/MarketModelTests.cs`, `Tests/PlayMode/MarketTests.cs` y `MarketSnapshotTests.cs` (explícito: capturas `b5_01` … `b5_07`).
+- **Parches** (`docs/dev/traspaso/spark-enganches/`, LF, en este orden; los `.meta` de los archivos nuevos van dentro, como los generó Unity; los cuatro pasan `git apply --check` sobre `9c381717`):
+  1. `B5-loc.diff`: 19 claves nuevas en `strings.csv`, en su sitio por orden ordinal (`shop`, `no_ads` y `market_tab_seeds` con el texto del glosario y EN/PT-BR; el resto `pendiente_asesor`), cada una con su captura de referencia; `MarketText.AllKeys` en `LocTablesTests.UiTextKeys`.
+  2. `B5-rc.diff`: los `[RemoteConfigKey]` de `OffersConfig` y su enlace en `RcConfigBinder` (`RcConfigs.Offers`), con su test; `GameBootstrap.MarketRc.cs`.
+  3. `B5-profile.diff`: `piggy` (`{seeds, cap}` + `last_level`, `full_card` [P]) y `offers` [P] en `Profile`/`ProfileJson`; `IAP/ProfileOffersStore.cs` con sus tests; `GameBootstrap.MarketProfile.cs`.
+  4. `B5-bootstrap.diff`: `SetUpMarket();` tras `SetUpSessions();`; el Mercado y la tarjeta en `CommerceOpen`; Atrás (`PressMarketBack`); `geo_tier` por la región en `GameServices` (inicio y Reto) y en la analítica (común y propiedad de usuario); `Tests/PlayMode/MarketHooksTests.cs`.
+- **Revisión:** skill `code-review` con las reglas de `.claude/agents/code-reviewer.md` (no había herramienta para lanzar el subagente). Cinco rondas con CAMBIOS NECESARIOS y la sexta **APROBADO**. Lo arreglado, entre otras cosas: el Cántaro con el tope en vigor y sin vaciarse con una compra pendiente; recordatorios de la Mochila y tarjeta de skin que esperan cupo en vez de perderse; Sin anuncios y la skin en el inicio (Q-B5-6); ninguna tarjeta con la salida de la victoria en marcha (Cosecha doble, «Siguiente»); cupo que sobrevive al cambio de idioma; Cántaro solo con la tienda encendida y movido bajo Ajustes (tapaba la ventanita de TiTino); `geo_tier` sin leer extensiones BCP 47; analítica `af_shop_view`, `af_piggy`, `af_skin_unlock` e `af_iap_offer_shown` solo de lo comprable; `AF_LAYOUT` y sonda de compras; claves propias (`market_tab_seeds`, `market_skin_prize`); plurales; día sin `created_at`; y los tests de cada regla. Sugerencias no aplicadas (no bloquean): enviar `unlocked` cuando el Cántaro aparezca en vez de en la victoria del 19 (anotado en la nota §8) y una aserción sin el gancho de `VictoryLeaving`.
+- **Verificación** (`-Architecture arm64`; un solo Unity mío a la vez):
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`9c381717`) | `dotnet build dotnet/AmazonFill.slnx -warnaserror` | 0 avisos, 0 errores |
+  | rama | `dotnet test dotnet/AmazonFill.slnx` | 1.002 (996 + 6 omitidos), 0 fallos (2 min 9 s) |
+  | rama | `python tools/validate_schema.py` | 103/103 PASS; `schema_example_08_4_1.json` sin cambios |
+  | rama | `unity-compile.ps1` | 0 |
+  | rama | `unity-test.ps1 -Mode EditMode` | **3.805 (3.802 + 3 omitidos), 0 fallos** (4,8 min) |
+  | rama | `unity-test.ps1 -Mode PlayMode` | **1.734 (1.494 + 240 omitidos), 0 fallos** (34,4 min) |
+  | worktree temporal: `9c381717` + los cuatro parches (borrado al acabar) | compile; EditMode; PlayMode | 0; **3.811 (3.808 + 3), 0 fallos**; **1.740 (1.500 + 240), 0 fallos** (32,5 min) |
+  | rama + parches | `MarketSnapshotTests` (explícito, con gráficos: `unity test … -- -force-d3d11`) | 3/3; las 7 capturas revisadas a ojo |
+
+  El fallo conocido `AF.Backend.Tests.ContractExamplesTests.ValidExamplesRoundTrip` («tombstones») ya no sale: lo arregló `0d342bab` en la integración.
+- **Preguntas para el dueño** (se aplicó la recomendada, [P]; detalle en la nota §7): Q-B5-1 venta de skins apagada hasta el arte final; Q-B5-2 ninguna tarjeta de pago salvo la Mochila antes del 31 (05 §10); Q-B5-3 las 48 h desde la primera tarjeta; Q-B5-4 recordatorios en la primera victoria desde el 15 / el 19 con cupo; Q-B5-5 el Reto no llena el Cántaro; Q-B5-6 Mochila y Cántaro en la victoria, Sin anuncios y skin en el inicio; Q-B5-7 Cántaro bajo Ajustes; Q-B5-8 campos nuevos del perfil; Q-B5-9 fusión en la nube de `piggy` y `offers` (B8); Q-B5-10 cupo compartido con la `TakeoverQueue` de B4; Q-B5-11 lista T1 de «Europa occidental»; Q-B5-12 Cántaro con compra pendiente; Q-B5-13 la skin comprada se pone; Q-B5-14 contexto analítico de la tarjeta de skin; Q-B5-15 `from` de `af_shop_view`.
+- **Para el integrador** (nota §6): con B4, un `ITakeoverBudget` sobre su `TakeoverQueue`; con B8, `piggy` y `offers` en `CloudMerge`; con F3-5, vaciar el Cántaro cuando se acredite una compra pendiente. Para el GDD, la nota §5 (08 §4.3 y §8.2; 05 §5 y §10).
+- **Riesgos:** arte provisional (icono del Mercado, Cántaro, filas); comprar el Cántaro y llenarlo son escrituras aparte de la cartera y de la victoria (nota §8); sin prueba en el teléfono; textos nuevos sin EN ni PT-BR salvo los del glosario.
+
+---
+
+## 2026-10-21 · B4 · Bitácora del río «1 de 3» + cola de takeovers + pantalla 2 del 10 (`spark/t5-b4`): HECHA · verificación completa VERDE · lista para integrar
+
+- **Rama:** `spark/t5-b4`, desde `origin/integracion-fase1-fase2` en `d994e586` (avance rápido desde `dbbba004`, la base del trabajo a medias). Recupera los archivos sin commitear que quedaron en el worktree `spark-t5-b4` y los termina en otro worktree (el agente no podía usar aquel), así que la rama local `spark/t5-b4` de ese worktree sigue en `dbbba004` con los archivos sueltos: se pueden borrar. No hizo falta fusionar B1a (ya está en la integración) ni B6. Al final fusiona `origin/integracion-fase1-fase2` en `e65995af` (con B2, B3, B6 y el backend) en `0c183672`, y `B4-3` se regenera sobre ella; después, `ef78baad` (backend de D-035 y el GDD al día) en `da9efb23`, sin conflictos y con los tres parches aplicables.
+- **Nota del bloque:** `docs/dev/bitacora.md` (reglas, pantallas, cola, perfil, analítica, RC, `econ_sim`, parches y Q-B1 a Q-B16).
+- **Commits** (del más antiguo al más reciente): `9ec7d5b7` (lógica, libreta, tarjeta y arranque), `81a7a0a2` (tests y `B4-strings.csv`; la sustitución nunca repite una opción), `8955ec7a` (la cola sobrevive al cambio de idioma; `LogbookOverride` para los tests), `10f66534` (`econ_sim` «1 de 3», `econ_B.md` y `econ_variants.md`), `5a70c5e0` (la nota), `51f2ce05` (los parches), `73d04afd`, `5050805b` y `c315705d` (las tres rondas de revisión), `8a3dc25f` (esta entrada), `0c183672` (la fusión), `66612d2e` (B4-3 regenerado y Q-B16), `68ab470c` (verificación), `da9efb23` (segunda fusión) y el de esta puesta al día.
+- **En la rama** (todo archivo nuevo, salvo `tools/econ_sim.py`, `tools/econ_variants.py` y sus dos salidas, que el encargo §12 asigna a B4):
+  - `Scripts/LiveOps/LoginCalendarTable.cs`, `LoginCalendarRules.cs`, `LoginCalendarRecord.cs`, `LoginCalendarService.cs`, `LoginCalendarConfig.cs` y `LoginCalendarProbeFormat.cs`, con sus tests en `Scripts/LiveOps/Tests/LoginCalendar*Tests.cs`;
+  - `Scripts/GameFlow/TakeoverQueue.cs` y `LevelFlow.Calendar.cs` (el aviso de nivel terminado, sin llamar hasta B4-2), con `Tests/EditMode/TakeoverQueueTests.cs`;
+  - `Scripts/UI/LogbookScreen.cs`, `LogbookCard.cs`, `LogbookText.cs`, `GameBootstrap.Logbook.cs`, `LogbookRunner.cs` y `DevProbe.Logbook.cs` (sin llamar hasta B4-3), con `Tests/PlayMode/LogbookScreenTests.cs` y `LogbookBootstrapTests.cs`;
+  - `docs/dev/traspaso/spark-enganches/B4-strings.csv`: 20 claves `logbook_*`; `logbook_item_hint` y `logbook_item_reveal` en `pendiente_asesor` (fauna); `logbook_item_grand_basket` sin EN ni PT-BR (glosario, pregunta abierta 8).
+- **Parches** (`docs/dev/traspaso/spark-enganches/`, LF; los tres pasan `git apply --check` sobre la rama; orden y detalle en la nota §7):
+  1. **`B4-1-profile.diff`:** `Profile.Calendar` (`CalendarData`) y `ProfileJson` (`calendar` tras `streak`, omitido mientras es null); `LiveOps/ProfileLoginCalendarStore.cs` y sus tests; `LogbookStoreFactory` = `CreateProfileLogbookStore`.
+  2. **`B4-2-flow.diff`:** `OnLevelPlayedCalendar(true)` en `LevelFlow.ResolveWin` y `OnFailCalendar(kind)` en `LevelFlow.Fail`; `Tests/EditMode/LevelPlayedHookTests.cs`.
+  3. **`B4-3-bootstrap.diff`:** en `GameBootstrap.cs`, `SetUpLogbook();` entre `SetUpSkip();` y `SetUpSessions();`, la libreta antes del Mapa del 10 y Atrás de Android; `NoLogbookUnlessSet()` en `PlayModeHelpers.cs`; `Tests/PlayMode/LogbookHooksTests.cs`.
+  4. **Textos:** las filas de `B4-strings.csv` a `strings.csv`.
+  - **Choques:** los parches están regenerados sobre `e65995af` (B2, B3 y B6 ya integrados); B7 (`ConnectTelemetry();`) va después de `SetUpLogbook();`. B8 tiene que cubrir `calendar` en la integridad y la fusión del perfil (propuesta [P]: el registro con más avance y la unión de los marcos). El aviso «Bitácora sin sellar» de B6 sigue sin conectar (Q-B16).
+- **Revisión (skill `code-review`, con las reglas de `.claude/agents/code-reviewer.md`; no había herramienta para lanzar el subagente):**
+  - 1.ª ronda: CAMBIOS NECESARIOS. Verificación sin registrar (esta entrada); tests de la victoria del Reto, de la fila de la victoria, del cambio de idioma y del Mapa del 10 sin condición; `played_date` contra la letra de D-033, punto 6 (Q-B1). Sugerencias: arranque frágil con una tasa de RC que no cuadra, Atrás, medianoche, día 30, copia de `lvl_murky_from_level`, doc de «Salir». Todo arreglado en `73d04afd`.
+  - 2.ª ronda: CAMBIOS NECESARIOS. La constante de la Luciérnaga dependía de `DevBench`, que solo existe en desarrollo: el build de release no habría compilado. Arreglado en `5050805b`, con la medianoche resuelta en el fotograma y el desbordamiento de la tasa.
+  - 3.ª ronda: **APROBADO**. Sugerencias aplicadas en `c315705d`: desbloqueo con `max_level` ≥ nivel (la Luciérnaga ya no se adelanta al regalo del 100), lo recibido no se borra a medianoche, `catch` más estrecho y un test que ata la constante a 08 §9 y a `DevBench`.
+- **Verificación** (`-Architecture arm64`; como mucho un Unity mío a la vez, con el de otro agente en marcha):
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama fusionada (`66612d2e`) | `dotnet build dotnet/AmazonFill.slnx -warnaserror` | 0 avisos, 0 errores |
+  | rama fusionada | `dotnet test dotnet/AmazonFill.slnx` | 1.002 (996 + 6 omitidos), 0 fallos |
+  | rama fusionada | `python tools/validate_schema.py` | 103/103 PASS, código 0; `schema_example_08_4_1.json` sin cambios |
+  | rama fusionada | `python tools/econ_sim.py --runs 300 \| diff --strip-trailing-cr -q - tools/out/econ_B.md` | idéntico (tras regenerarlo en `10f66534`) |
+  | rama fusionada | `unity-compile.ps1` | 0 |
+  | rama fusionada | `unity-test.ps1 -Mode EditMode` | **3.581 (3.578 + 3 omitidos), 0 fallos** (43 de B4) |
+  | rama fusionada | `unity-test.ps1 -Mode PlayMode` | **1.721 (1.484 + 237 omitidos), 0 fallos** (18 de B4); 34 min |
+  | rama fusionada + B4-1 + B4-2 + B4-3 (aplicados en el worktree y revertidos al acabar) | compile; EditMode; PlayMode | 0; **3.587 (3.584 + 3), 0 fallos**; **1.724 (1.487 + 237), 0 fallos**; 32 min |
+  | tras la 2.ª fusión (`da9efb23`) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema`; compile; EditMode; PlayMode `Logbook` | 0 avisos; 1.002 (996 + 6); 103/103; 0; **3.652 (3.648 + 3 omitidos), 1 fallo ajeno a B4**: `AF.Backend.Tests.ContractExamplesTests.ValidExamplesRoundTrip` («voided-purchases-job.output.json: clave no admitida 'tombstones'»), del backend recién integrado (el ejemplo del contrato y el lector C# no coinciden; B4 no toca `Scripts/Backend` ni los contratos); 18/18. Los tres parches siguen pasando `--check` |
+  | antes de la fusión (`c315705d`) | EditMode; PlayMode | 3.437 (3.434 + 3); 1.702 (1.466 + 236); 0 fallos. Con los parches, en un worktree temporal: 3.442 y 1.699, 0 fallos. En pasadas intermedias fallaron una vez, por tiempo y con dos Unity a la vez, `WorldBannerTests.Banner_TimeoutAndWaitMs_UseTheRealClock`, `IntroArtTests.FruitFlight_…Within10ms` y `TranslatedLocaleOverflowTests` (pt-BR, 130 %), ajenos a B4: los tres pasaron relanzados |
+
+- **Lo marcado [P]** y las **preguntas para el dueño** (Q-B1 a Q-B16, con su recomendada aplicada): `docs/dev/bitacora.md` §8. Las que más pesan:
+  - **Q-B1** (`played_date` en `calendar`): va contra la letra de D-033, punto 6, y cambia 08 §4.3: **que el dueño la confirme antes de integrar B4-1**.
+  - **Q-B3** (cuánto vale una Marea): D-033, punto 1, contra 06 §4.2, regla 1, y la clave `undo3`. Implementada la de D-033 (30 por Marea); con `econ_sim`, «siempre comodín» deja al casual con más bloqueos (96 % frente al 69 % del canon).
+  - **Q-B11:** la fila «Bitácora · elige tu premio» del panel de la victoria la dibuja el escritorio (B1b) con `LogbookVictoryRowDue` y `OpenLogbookFromVictory()`.
+- **Para el GDD** (lo anota el integrador; texto en la nota §7): 06 §4.2 y §2.3; 05 §2.3 y §3 (cifras [sim] nuevas: saldo final del casual 1.912 → 2.227, casual con bloqueo sin recursos 74 % → 69 %, `bitacora` del medio 3.577 → 3.974…); 08 §4.3 (`calendar`), §8.2 (`af_calendar_claim` con `choice` y `cycle`) y §9 (`eco_calendar_table_v2`).
+- **Riesgos:**
+  - `econ_A.md` y `econ_B_tramos.md` ya no se reproducían antes de B4 (Q-B15).
+  - Tres pruebas de tiempo real fallaron una vez en pasadas intermedias (tabla de arriba): son inestables con dos Unity a la vez y pasaron relanzadas. Las pasadas finales no tuvieron fallos.
+  - El aviso «Bitácora sin sellar» de B6 sigue apagado hasta conectar su contexto (Q-B16).
+  - El arte de la libreta y de la tarjeta es provisional (por código).
+  - Sin capturas de B4 en `Logs/snapshots/` ni prueba en el teléfono.
+
+## 2026-10-21 · B8 · Nube sin SDK + integridad + anti-fraude local + «Eliminar cuenta» en local (`spark/t5-b8`): HECHA · verificación completa VERDE en `920ec25f`; tras la última fusión, solo .NET y parches · lista para integrar
+
+- **Rama:** `spark/t5-b8`, desde `9eb593c`. Fusiona `origin/integracion-fase1-fase2` cinco veces, sin conflictos:
+  - `d994e586` (B14 y B1b) en `e8c90ebd`;
+  - `eb863f54` (B1b-Q10) en `89127c19`;
+  - `803e9723` (B2, B3, B6 y B13) en `ab0ba8f8`;
+  - `d933dcde` (backend F2) en `920ec25f`;
+  - `ef78baad` (D-035 en el GDD, F3-1 `AF.Backend`, Firebase dev) en `e2748569`.
+  - **Por instrucción del coordinador, no se fusiona más.**
+  - Empujada, sin `--force`.
+- **Nota de diseño:** `docs/dev/nube-integridad.md`. Recoge:
+  - los 8 casos de la fusión, la firma, el anti-reloj, la revocación y «Eliminar cuenta»;
+  - lo que queda para el integrador, los SDK y Functions (§8);
+  - los parches (§9);
+  - las preguntas Q-B8-1 a Q-B8-11.
+- **Commits** (del más antiguo al más reciente):
+  - `76d5945e`: la nube sin SDK, en archivos nuevos:
+    - `ICloudSave` / `FakeCloudSave`;
+    - `CloudMerge`, con los 8 casos;
+    - `ProfileHmac`;
+    - `IDeviceIdentity`;
+    - `GuardedClock`;
+    - el diálogo de dos pasos de «Eliminar cuenta y datos», con sus tests EditMode;
+  - `8aab10fa`: los arreglos de la revisión:
+    - id por instalación (`InstallIdentity`, Q-B8-3 (b));
+    - el borrado local va antes que la nube;
+    - el texto del caso 8;
+  - `4dbf5345`: la nota, los tres parches y `B8-strings.csv`;
+  - las fusiones `e8c90ebd`, `89127c19`, `ab0ba8f8`, `920ec25f` y `e2748569`;
+  - y el commit de esta entrada, con `B8-loc.diff` y la nota puesta al día (Q-B8-11).
+- **En la rama** (archivos nuevos, en `Assets/_Project/Scripts/`):
+  - `Save/ICloudSave.cs`, `FakeCloudSave.cs`, `CloudMerge.cs` y `ProfileHmac.cs`;
+  - `Platform/IDeviceIdentity.cs` y `GuardedClock.cs`;
+  - en `UI/`:
+    - `InstallIdentity.cs`, `DeleteAccountDialog.cs` y `AccountText.cs`;
+    - `SettingsScreen.Account.cs`, `GameBootstrap.Account.cs` y `DevProbe.Account.cs`;
+  - sus tests EditMode.
+  - Ningún archivo del escritorio cambia en la rama.
+  - `InstallIdentity.cs.meta` es el `.meta` que Unity generó para `UnityDeviceIdentity.cs`, renombrado con el archivo en `8aab10fa`: conserva su GUID.
+- **Parches** (`docs/dev/traspaso/spark-enganches/`, en LF, en este orden; detalle en la nota §9):
+  1. `B8-profile.diff`: `Profile.cs` y `ProfileJson.cs` (campos nuevos), la firma, la identidad, `CloudMerge.Fields` y `CloudSync`;
+  2. `B8-economy.diff`: `Canoes`, `Wallet`, `Transaction`, `ProfileStreakStore` y `LocalRevocation`;
+  3. `B8-ui.diff`: `SettingsScreen`, `GameBootstrap*` (`GameBootstrap.Cloud.cs`) y `AccountAndCloudTests`;
+  4. **`B8-loc.diff`** (nuevo en esta entrada; sustituye a copiar `B8-strings.csv` a mano):
+     - las 9 claves van a `strings.csv`, en su sitio por orden ordinal;
+     - las claves de `AccountText.Keys` se registran en `LocTablesTests.UiTextKeys`, como hicieron B3 y B6;
+     - sin esto, `EveryUiTextKey_Exists_AndEveryStringsRow_IsUsed` falla.
+  - Sobre `ef78baad` (lo último fusionado), los cuatro aplican con `git -c core.autocrlf=false apply` en un worktree temporal, y después pasan `apply -R --check`. **No hubo que regenerar ninguno**: B6-profile toca `Profile.cs` y `ProfileJson.cs` en otros puntos.
+- **Revisión (code-reviewer):** CAMBIOS NECESARIOS en la 1.ª ronda, arreglados en `8aab10fa`:
+  - la huella del HMAC sale de un id aleatorio por instalación en `PlayerPrefs`, no de `SystemInfo.deviceUniqueIdentifier` (Q-B8-3 cambia a (b): sin identificador del dispositivo ni fila nueva de Data Safety);
+  - «Eliminar» borra primero el perfil y `PlayerPrefs`, y solo después la nube;
+  - el diálogo exige su cancelación explícita;
+  - Q-B8-5 cambia a (b): un perfil sin firma o migrado sigue las reglas de siempre.
+  - Tras eso, la rama se dio por aprobada («Retoca B8 tras la revisión»). `B8-loc.diff` y Q-B8-11 son de esta entrada y no tuvieron ronda propia.
+- **Verificación** (`-Architecture arm64 -TimeoutSec 3600`; tiempos reales). Como mucho hubo 2 Unity a la vez; el otro era de otro agente.
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`e2748569`, con D-035 y F3-1) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py`; `git apply` y `apply -R --check` de los cuatro en un temporal | 0 avisos y 0 errores; **1.002 (996 + 6), 0 fallos** (2 min 27 s); 103/103; los cuatro aplican. **Unity no se verificó en este estado**: compile y EditMode empezaron y se cortaron por instrucción del coordinador (cierre sin más rondas) |
+  | rama (`ab0ba8f8`) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos y 0 errores; **1.002 (996 + 6), 0 fallos** (8 min 46 s, con Unity en paralelo); 103/103, código 0 |
+  | rama (`920ec25f`) | `dotnet build -warnaserror`; `validate_schema.py` | 0 avisos y 0 errores; 103/103. `dotnet test` no se repite: entre `ab0ba8f8` y `920ec25f` no cambia nada en `dotnet/`, `Packages/`, `tools/` ni `schemas/` |
+  | rama (`920ec25f`) | `unity-compile`; EditMode; PlayMode | 0 (34 s); **3.581 (3.578 + 3), 0 fallos** (5,0 min); **1.703 (1.466 + 237), 0 fallos** (33,4 min) |
+  | temporal: `920ec25f` + profile, economy y ui | compile; EditMode; PlayMode | 0 (125 s); **3.618 (3.615 + 3), 0 fallos** (5,5 min); **1.706 (1.469 + 237), 0 fallos** (33,0 min) |
+  | idem + `B8-loc.diff` | EditMode; PlayMode con filtro (`AccountAndCloudTests`, `PseudoLocOverflowTests`) | **3.618 (3.615 + 3), 0 fallos** (5,3 min); **5/5** (58 s) |
+
+  Antes de la fusión de B2, B3 y B6 (`e8c90ebd`), en la rama: 0 avisos; 981 (975 + 6); 103/103. El worktree temporal se borró al terminar.
+
+- **Lo que trae `ef78baad` y no se probó en Unity con B8:**
+  - `AF.Backend` (F3-1), con `RestoreLedger`, `Account` y `VerifyPurchase`;
+  - `Platform/ServerDateTracker.cs`, un `IServerDate` real.
+  - No hay choque de nombres ni de texto: los parches aplican y `dotnet build` pasa. Aun así, el integrador debe pasar compile, EditMode y PlayMode con los cuatro parches aplicados.
+  - En EditMode cabe esperar 1 fallo que no es de B8: `AF.Backend.Tests.ContractExamplesTests.ValidExamplesRoundTrip`. El lector de F3-1 no admite la clave `tombstones` del ejemplo de F2c; sale igual en la rama de B7 sin parches (ver la entrada de B7).
+
+### Preguntas para el dueño (B8; se avanzó con la recomendada, [P])
+
+| Id | Pregunta | Recomendada |
+|---|---|---|
+| Q-B8-1 | `applied_purchases` por unión (08 §11): una compra del que pierde el conflicto queda «aplicada», pero su saldo se pierde | (a) unión, aplicada porque es canon; **se recomienda cambiar 08 §11 a (b)**: la lista del ganador, y `restoreLedger` vuelve a acreditar lo que falte |
+| Q-B8-2 | De qué sale la clave del HMAC | (a) de `device_first`: un blob de otro teléfono se puede comprobar |
+| Q-B8-3 | El id del que sale la huella | (b) un id aleatorio por instalación (`af_install_id`), cambiada tras la revisión |
+| Q-B8-4 | Qué es `locale` | (a) el idioma de la UI resuelto en cada arranque |
+| Q-B8-5 | ¿Un perfil sin firma o migrado es «coherente»? | (b) sí, cambiada tras la revisión: así no se pierde progreso con una nube de un esquema anterior |
+| Q-B8-6 / Q-B8-7 | `daily` con fechas distintas; empate total | Gana el bloque del día más reciente; en el empate, el local |
+| Q-B8-8 / Q-B8-9 | Revocar Sin anuncios; orden de `ApplyLedger` | Se quita el derecho; orden ordinal de token |
+| Q-B8-10 | ¿Se guarda la sospecha para la fusión? | (a) solo medir (08 §10.1: sin castigo automático) |
+| **Q-B8-11** (nueva) | Con B6 integrado, cómo se fusionan `settings.push` y `stats.last_seen_at` / `last_win_at`. Hoy se quedan los del ganador | (a) la propuesta de B6: máximo en las fechas, «o» en los pre-prompts y `granted` del dispositivo. **Sin aplicar**: una línea por campo en `CloudMerge.MergeFields` con su caso en `CloudMergeTests` |
+
+Cierra además B1a-Q1 y B1a-Q2 (D-033, (a)) y Q-S1 de B3 (`skipped_levels` por unión, ya en `CloudMerge`).
+
+### Riesgos y pendientes
+
+- **Play Games (dueño):**
+  - un marcador de «borrado pendiente» antes de `CloudSync.AtStartup`;
+  - el `ICloudSave` real;
+  - las subidas periódicas.
+- **Backend (D-035: AWS; antes «Functions»):**
+  - `restoreLedger` → `LocalRevocation.ApplyLedger`;
+  - el SSV → `RegisterProvisional` / `Confirm` / `ExpireStale`;
+  - `deleteAccount`;
+  - un `IServerDate` real.
+  - Los nombres de 08 §10-§11 pueden cambiar con D-035; la interfaz local no depende de ellos.
+  - **Nuevo con F3-1:** `ServerDateTracker` (un `IServerDate` real) y el cliente `AF.Backend` ya existen. El paso siguiente es pasar `ServerDateTracker` a `GuardedClock` en lugar de `FakeServerDate.Offline()`, y `RestoreLedger` / `Account` a `LocalRevocation` y a «Eliminar cuenta».
+- **B7:**
+  - `RevocationConfig.SecSsvGraceH` ← `sec_ssv_grace_h`;
+  - `af_save_sync` y `af_account_delete` a la analítica (hoy son sondas `AF_STATE`).
+- **Integrador:** `ProfileSaveBatch.Delete()` podría dejar el lote cerrado. Hoy, un callback entre «Eliminar» y la recarga podría volver a escribir `profile.json`.
+- **Teléfono:**
+  - comprobar `SHA256` / `HMACSHA256` con IL2CPP y el stripping High (B10): `AF_STATE profile_integrity` = `valid` tras un guardado;
+  - probar el flujo de «Eliminar cuenta y datos».
+- **GDD:**
+  - anotar en 08 §4.3 `voided_purchases`, `pending_rewards` e `integrity.fraud_flag` [P];
+  - anotar en 08 §11 los 8 casos.
+- **Textos:** las 9 claves nacen `pendiente_asesor`, sin `en` ni `pt-BR`.
+
+---
+
 ## 2026-10-20 · B7 · `AF.RemoteConfig` + `AF.Analytics` con implementaciones falsas, y el bus `AF.Events` (`spark/t5-b7`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/t5-b7`, desde `9eb593c`. Fusiona `origin/integracion-fase1-fase2` cinco veces: `e11b4246` en `5a39eae0`, `d994e586` (B14) en `e058645f`, `eb863f54` (B1b-Q10) en `513acee9`, `803e9723` (B2, B3, B6 y B13) en `671646f9` y `d933dcde` (backend F2) en `4df8a380`. Sin conflictos, salvo esta misma entrada de `spark-estado.md` (se dejan las dos). Empujada.

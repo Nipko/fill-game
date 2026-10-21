@@ -22,7 +22,7 @@ def run(rescue=(600,600,600), hit3=300, cal_scale=1.0, win=(20,60,80), first_mul
     e["reward_normal"], e["reward_hard"], e["reward_very_hard"] = win
     e["rescue_first_day_mult"] = first_mult
     backup = list(m.CALENDAR)
-    m.CALENDAR[:] = [(int(round(s * cal_scale)), it) for s, it in backup]
+    m.CALENDAR[:] = m.scale_calendar(backup, cal_scale)
     out = {n: m.aggregate([m.Sim(p, e, random.Random(2026 * 1000 + i)).run() for i in range(runs)], e)
            for n, p in m.PROFILES.items()}
     m.CALENDAR[:] = backup

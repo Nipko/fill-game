@@ -3270,3 +3270,39 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Decisión.** Con el interruptor de 08 §9 `biz_feature_lives` en `false`, en los niveles 31 y siguientes el embudo de D-008 se comporta como en 1-30: no hay canoas (ni en la barra, ni en el modal, ni en los avisos), salir del nivel es gratis, no es fallo duro, no suma a `fails_level` y no abre ¿Seguro? ni Nivel fallido; «Rendirse» hace lo mismo que en 1-30. El rescate (Cuia y Balsa de rescate) no cambia: lo gobierna su propio interruptor, `biz_feature_rescue`. Con el interruptor en su valor por defecto, nada cambia. Sustituye la regla [P] aplicada en `tanda5/b7-fixes` (`d47ac8fe`), donde salir seguía siendo fallo duro y «Rendirse» iba directo a Nivel fallido.
 
 **Cómo revertir.** Con una decisión nueva.
+
+### D-033, añadido del 2026-10-21: preguntas de B8, B4 y B5 del Spark, con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas en `integra/spark-t5c` con `spark/t5-b8`, `spark/t5-b4` y `spark/t5-b5` y sus parches. El dueño puede cambiarlas. Detalle y opciones en `docs/dev/nube-integridad.md` (B8), `docs/dev/bitacora.md` §8 (B4) y `docs/dev/mercado.md` §7 (B5).
+
+**B8 (nube sin SDK, integridad, anti-fraude local y «Eliminar cuenta»).**
+- **Q-B8-1:** `applied_purchases` por unión (08 §11, canon). La nota recomienda cambiar 08 §11 a «la lista del ganador + `restoreLedger`»: **pendiente del dueño** (no se aplica sin su decisión). Con F3-3 la lista guarda el `token_hash`; se escribe en orden ordinal y sin repetidos.
+- **Q-B8-2:** la clave del HMAC sale de `integrity.device_first`.
+- **Q-B8-3:** la huella sale de un id aleatorio por instalación (`af_install_id` en `PlayerPrefs`): sin identificador del dispositivo ni fila nueva de Data Safety.
+- **Q-B8-4:** `locale` = el idioma de la UI resuelto en cada arranque.
+- **Q-B8-5:** un perfil sin firma o migrado es coherente.
+- **Q-B8-6 / Q-B8-7:** `daily` con fechas distintas, el bloque del día más reciente; empate total, el local.
+- **Q-B8-8 / Q-B8-9:** revocar Sin anuncios quita el derecho; `ApplyLedger` en orden ordinal de token.
+- **Q-B8-10:** la sospecha solo se mide (08 §10.1: sin castigo automático).
+- **Q-B8-11:** con B6, `stats.last_seen_at` y `last_win_at` por máximo; en `settings.push`, «o» en los pre-prompts, máximo en `pre_prompt_at` y `granted` del dispositivo. Aplicada en `CloudMerge` al integrar.
+- **Del integrador:** `purchase_queue` es solo local también en la nube de B8 (no se compara, no sube, no entra en la firma; D-035, añadido de F3-3). La fusión cubre además `entitlements.frames` y `album.fruits` por unión (B14), `calendar` (B4) y `offers` (B5). «Eliminar cuenta» deja preparado `GameBootstrap.ServerAccountDelete` para `IBackendClient.DeleteAccount` (F3-5) sin conectarlo; Ajustes no enseña el UID y el identificador para la web será el código de `GetAccountCode` (Q-B13-21). `RevocationConfig` (`sec_ssv_grace_h`) queda en `NotBoundYet` hasta que `LocalRevocation` llegue al arranque.
+
+**B4 (Bitácora del río «1 de 3», cola de takeovers y pantalla 2 del 10).**
+- **Q-B1:** `played_date` dentro de `calendar` (a). **Ojo:** va contra la letra de D-033, punto 6 («solo `calendar` = `{cycle, next_day, last_claim_date}`»); se aplica por la regla y se anota en 08 §4.3 [P]. Opciones: (a) `played_date` en `calendar` (aplicada); (b) solo en memoria (cerrar la app antes de sellar obliga a jugar otro nivel); (c) un campo en `daily`. **El dueño debe confirmarla.**
+- **Q-B2:** la pantalla 2 del 10 es la libreta sola con las 3 tarjetas de la casilla 1; la Canasta, en la victoria.
+- **Q-B3:** 30 semillas por Marea, como D-033 (06 §4.2 y `undo3` dicen 10): el dueño confirma con los datos de `econ_sim`.
+- **Q-B4:** la 1.0 lee `eco_calendar_table_v2` (fila nueva [P] en 08 §9) y, si falta o no vale, la tabla compilada; la v1 no se lee.
+- **Q-B5:** la Luciérnaga bloqueada sigue la cadena Morpho → Cuia extra → «2 Marea + 40»; se desbloquea con `max_level` ≥ 100 (constante hasta que `lvl_murky_from_level` llegue a `BoosterConfig`).
+- **Q-B6:** marco de país `frame_wNN` por mundo. **Q-B7:** Canasta de los días 7 y 21 = `eco_basket_seeds` + el comodín de la próxima Canasta de nivel. **Q-B8:** `reward_type` según lo recibido; `choice` la tarjeta tocada; `reward_value` sin lo fijo (08 §8.2 al día). **Q-B9:** si ya se abrió la libreta en la sesión, no sale sola. **Q-B10:** sesiones de la cola con su reloj de 30 min. **Q-B12:** tarjeta encima de la del Reto con sus tres estados. **Q-B13:** sin «Duplicar con video» en la 1.0. **Q-B14:** `econ_sim` da la Bitácora desde el día 1.
+- **Q-B11:** la fila «Bitácora · elige tu premio» la dibuja el escritorio en la tercera barra de `VictoryBars` con `LogbookVictoryRowDue` y `OpenLogbookFromVictory()`. **Pendiente (tarea aparte):** la barra aún no existe; hasta entonces la libreta sale sola al volver al Inicio (punto 5).
+- **Q-B15:** regenerar `econ_A.md` y `econ_B_tramos.md` aparte: **pendiente del visto bueno del dueño**.
+- **Q-B16:** el aviso «Bitácora sin sellar» de B6 se conecta en una tarea aparte con un texto sin premio; hasta entonces, apagado.
+- **Fusión [P] (del integrador, propuesta de la nota):** `calendar` el registro con más avance (`cycle`, `next_day`) y `played_date` por máximo.
+- **Del integrador:** `TakeoverConfig` y `LoginCalendarConfig` quedan en `NotBoundYet` (falta su tabla en `RcConfigBinder`).
+
+**B5 (Mercado, ofertas y Cántaro con la tienda falsa).**
+- **Q-B5-1:** venta de skins apagada hasta el arte final. **Q-B5-2:** ninguna tarjeta de pago salvo la Mochila antes de `rescue_min_level`. **Q-B5-3:** las 48 h de la Mochila desde su primera tarjeta. **Q-B5-4:** recordatorios en la primera victoria desde el 15 y desde el 19, con cupo. **Q-B5-5:** el Reto no llena el Cántaro. **Q-B5-6:** Mochila y Cántaro en la victoria; Sin anuncios y skin al volver al inicio. **Q-B5-7:** Cántaro en el inicio bajo Ajustes. **Q-B5-8:** `piggy.last_level`, `piggy.full_card` y `offers` [P] en 08 §4.3. **Q-B5-11:** lista T1 de la nota. **Q-B5-12:** el Cántaro con una compra pendiente no se vacía hasta acreditarse (F3-5 lo vacía al acreditar). **Q-B5-13:** la skin comprada se pone. **Q-B5-14:** contexto `shop` de la tarjeta de skin. **Q-B5-15:** `from` = `lobby`.
+- **Q-B5-9:** `piggy` del ganador; `offers` con listas unidas y contadores por máximo. Aplicada en `CloudMerge` al integrar; de las fechas, la primera vista de la Mochila más antigua (para no alargar sus 48 h) y la última tarjeta Sin anuncios más reciente [P].
+- **Q-B5-10:** un solo cupo, el de la `TakeoverQueue` de B4 (`TakeoverQueueBudget`). Aplicada al integrar.
+- **Con D-033 ya decididas:** Q-E2, Q-E3, Q-E5 («Restaurar compras» oculto), Q-E6, Q-M4 y Q-M8.
+- **Sin conectar:** `VerifiedStoreService` (F3-3) en el Mercado, con F3-5.

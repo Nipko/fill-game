@@ -101,7 +101,7 @@ namespace AF.UI
                 return false;
             }
 
-            IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
+            IClock clock = _capsClock ?? LaunchOptions.ClockOverride ?? SystemClock.Instance; // B8: el de los topes diarios
             int basketUnlock = _dailyService?.Config.LiveUnlockLevelDaily ?? DailyChallengeConfig.Defaults.LiveUnlockLevelDaily;
             StreakService? service = CreateStreakService(profile, batch, wallet, clock, basketUnlock, Debug.isDebugBuild, out bool inMemory);
             if (service == null)

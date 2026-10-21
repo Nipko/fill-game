@@ -163,6 +163,7 @@ INTERPRETATIONS = {
     "ads_rv_cooldown_s_<placement>": ("int", "60 (extra_canoe 90)", _interp_rv_cooldown),
     "eco_calendar_table_v1": ("json",
         "tabla 05 §2.3 (≈3.000 semillas + 12 entradas de comodín + 2 Canastas + 1 Canasta grande)", _interp_pending_all),
+    "eco_calendar_table_v2": ("json", "tabla «1 de 3» de D-033 (añadido del 2026-10-20, punto 2)", _interp_pending_all),
     "eco_price_tier_<country>": ("string", "tabla 05 §4.2 / \"B-2026-10-06e\"", _interp_price_tier),
     "league_bucket_size": ("int / int / json / json / json / int",
         "50 / 20 / `{\"normal\":10,\"hard\":20,\"very_hard\":30,\"daily\":20,\"trail\":10}` / tablas 06 §6 y §5.2 / 40",

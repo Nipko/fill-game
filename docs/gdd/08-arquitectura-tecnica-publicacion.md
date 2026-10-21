@@ -273,7 +273,7 @@ Extiende el esquema de inventario del capítulo 4 §10.1 (que se mantiene tal cu
   "progress": { "max_level": 87, "world": 4, "since_last_skip": 0, "skipped_levels": [63],
                 "content_version": "1.0.0", "map_seen_level": 80 },
   "streak": { "wins": 4, "river_full": false },
-  "calendar": { "cycle": 1, "next_day": 6, "last_claim_date": "2026-10-05" },
+  "calendar": { "cycle": 1, "next_day": 6, "last_claim_date": "2026-10-05", "played_date": "2026-10-06" },
   "daily_challenge": { "last_date": "2026-10-05", "result": "win", "streak_days": 5,
                        "last_claimed_date": "2026-10-05", "pending": [], "offline_claims": [],
                        "stamps": { "month": "2026-10", "days": [1,2,3,4,5] }, "in_progress": null },
@@ -561,7 +561,7 @@ Consentimiento: UMP cubre solo EEE/Reino Unido/Suiza y estados de EE. UU. (resea
 | `spend_virtual_currency` (Firebase) | `virtual_currency_name = seeds`, `item_name ∈ {undo_refill, extra_cuia, hint, shuffle, reveal, skip, continue_cuia, canoes_refill, skin_*}`, `value` | Todo sumidero | Sumideros reales; ratio de presión realizado (cap. 4 §11) |
 | `af_wallet_snapshot` | `seeds`, `stock_json`, `max_level`, `days_since_install` | Primera sesión de cada día | Saldo medio al cerrar tramos 50/100/200 y "bloqueados sin recursos" (research/04 C1 §5 [E]) |
 | `af_basket_open` | `level`, `contents_json` | Canasta cada 10 niveles | Valor entregado (cap. 5) |
-| `af_calendar_claim` | `day`, `reward_type`, `reward_value`, `days_missed_before` | Bitácora del río | Reclamo ≥70 % de DAU (cap. 1 §3.1) |
+| `af_calendar_claim` | `day`, `reward_type ∈ {seeds, booster, mix}`, `reward_value` (valor equivalente de la opción), `days_missed_before`, `choice ∈ {seeds, booster, mix}` [P], `cycle` [P] (D-033, Bitácora «1 de 3») | Bitácora del río | Reclamo ≥70 % de DAU (cap. 1 §3.1) |
 | `af_piggy` | `state ∈ {unlocked, shown_full, bought}`, `seeds_inside` | Cántaro | Conversión de alcancía (cap. 05) |
 | `af_daily_challenge` | `date`, `result ∈ {win, fail, abandon}`, `t_ms`, `murky_bonus (bool)`, `streak_days` | Reto del río: `win` al reclamar el premio; `fail` una vez por día y solo si ese día termina sin victoria (R-Q9 y R-Q15, D-031). En la 1.0 no se emite `abandon`: salir sin ganar deja la partida reanudable el mismo día (R-Q16) | Participación diaria (cap. 06) |
 | `af_river_fact_shown` | `fact_id`, `dismissed_ms` | Dato del río | Lectura del contenido educativo. Con D-013, el `fact_id` del dato de llegada es su clave de contenido (`map.stop.<lugar>.dato_NN`, `map.country.<iso2>.dato_NN`, `map.myth.<tema>`; glosario §10); el de la línea de fruta (Frutas del río, D-017) es `<sujeto>.<kk>` (`acai.03`, o `rio_napo.03` en una serie de río [P]; sección 4.6); `dismissed_ms` es el tiempo hasta el toque en «Siguiente» (lectura probable ≥ 4.000 ms en una línea de ≈ 70 caracteres [P]) |
@@ -708,7 +708,8 @@ Fuente única: `Assets/_Project/Data/Config/RemoteConfigDefaults.json` (defaults
 | `ads_rv_max_wait_fill_ms` | int | 1500 | 500-3000 | 08 | Espera máxima de carga antes de ocultar el botón de video |
 | `ads_ilr_to_firebase` | bool | true | — | 08 | Enviar `ad_impression` con valor desde MAX |
 | `eco_reward_normal` / `eco_reward_hard` / `eco_reward_very_hard` | int | 20 / 60 / 80 | 15-30 / 45-90 / 60-120 | 05 | Ingreso por victoria (dirección 12) |
-| `eco_calendar_table_v1` | json | tabla 05 §2.3 (≈3.000 semillas + 12 entradas de comodín + 2 Canastas + 1 Canasta grande) | suma 2.500-3.500 | 05 | Bitácora del río (dirección 12); reemplazable sin build |
+| `eco_calendar_table_v1` | json | tabla 05 §2.3 (≈3.000 semillas + 12 entradas de comodín + 2 Canastas + 1 Canasta grande) | suma 2.500-3.500 | 05 | Bitácora del río (dirección 12); reemplazable sin build. Desde la Bitácora «1 de 3» (D-033) queda de respaldo: la 1.0 no la lee |
+| `eco_calendar_table_v2` | json | tabla «1 de 3» de D-033 (añadido del 2026-10-20, punto 2) | suma del canon 2.500-3.500 | 05 | [P] 30 casillas × 3 opciones (semillas, comodín o mezcla) y el canon; 3.000 semillas, 15 Marea, 3 Morpho, 3 Cuia extra, 1 Luciérnaga, 2 Canastas y 1 Canasta grande por ciclo. Bitácora del río «1 de 3» (B4; formato en `LoginCalendarTable`); si falta o no vale, la tabla compilada (Q-B4 (a)); reemplazable sin build |
 | `eco_calendar_locked_booster_seeds` / `eco_calendar_double_ad_enabled` | json / bool | `{"undo3":30,"other":100}` / **false** (1.1: true) | — | 06 | Conversión de comodines bloqueados; ubicación `rv_daily_chest` (doblar el premio de la Bitácora con video) **apagada en 1.0** (incidencia 13; 05 §6.2 y 09 §3.1 la sitúan en 1.1: cinco ubicaciones de recompensados en 1.0) |
 | `eco_basket_cycle` | json | `["undo3","hint","extra_cuia","undo3","hint"]` | — | 06 | Canasta cada 10 niveles: ciclo **determinista y visible** antes de abrir (dirección 15; IARC "ítems aleatorios: no"); sin probabilidades |
 | `eco_basket_seeds` | int | 50 | 30-50 | 05 | Semillas de cada Canasta (también la primera) |

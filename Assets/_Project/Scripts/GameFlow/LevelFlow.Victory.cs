@@ -154,6 +154,7 @@ namespace AF.GameFlow
 
                 OnWinStreak(maxLevelBefore); // Crecida, x2 del río y Canasta, en el mismo lote (E30)
                 OnWinSkins(); // skin por hito, puesta (B14; LevelFlow.Meta.cs), en el mismo lote
+                OnLevelPlayedCalendar(true); // Bitácora: el nivel del día (B4; LevelFlow.Calendar.cs), en el mismo lote
                 AdGate?.RecordWin(LevelNumber);
             }
 

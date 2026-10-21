@@ -862,6 +862,11 @@
       "default": null,
       "pending": "tabla 05 §2.3 (≈3.000 semillas + 12 entradas de comodín + 2 Canastas + 1 Canasta grande)"
     },
+    "eco_calendar_table_v2": {
+      "type": "json",
+      "default": null,
+      "pending": "tabla «1 de 3» de D-033 (añadido del 2026-10-20, punto 2)"
+    },
     "eco_calendar_locked_booster_seeds": {
       "type": "json",
       "default": {

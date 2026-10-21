@@ -34,8 +34,10 @@ namespace AF.UI
     /// no afecta a Morpho), en <see cref="IdleHintSlot"/>, tras «Mensajes de TiTino».</item>
     /// <item><b>Sobre la Amazonía</b> (tarea F4; D-017 Q4-A; 07 §8.2), al final: «Frutas del río» con una ficha por serie del
     /// calendario, que abre su ficha (<see cref="FruitSheet"/>), en <see cref="AboutSlot"/> (<c>SettingsScreen.About.cs</c>).</item>
+    /// <item><b>Eliminar cuenta y datos</b> (bloque B8; 08 §11), al final: un enlace que abre la confirmación en dos pasos, en
+    /// <see cref="AccountSlot"/> (<c>SettingsScreen.Account.cs</c>).</item>
     /// </list>
-    /// Sin Eliminar cuenta: no existe (D-008: lo que no existe se oculta). Elegir llama a quien
+    /// Elegir llama a quien
     /// la abre (<c>GameBootstrap</c>), que guarda el perfil y aplica: el idioma reconstruye la UI volviendo al inicio, con esta
     /// pantalla otra vez abierta (FXT); los patrones y la pista por inactividad, al momento; los mensajes de TiTino, desde su
     /// siguiente aparición. Escala de la fuente
@@ -187,6 +189,7 @@ namespace AF.UI
             // «Sobre la Amazonía» (F4), oculto hasta que haya algo que enseñar (SettingsScreen.About.cs).
             AboutSlot = HiddenSlot("AboutSlot");
             BuildAbout();
+            BuildAccount(); // «Eliminar cuenta y datos» (B8; SettingsScreen.Account.cs), al final de la lista
 
             // Fundidos de los bordes del visor (revisión de AU1), encima del contenido y sin recibir toques: abajo mientras quede
             // lista por debajo y arriba en cuanto se ha desplazado, para que el corte no parezca un fallo (D-003).
@@ -578,6 +581,9 @@ namespace AF.UI
                 y = LayoutAbout(y + SectionGapDp, w, inner, rowH, titleH, s);
             }
 
+            // Eliminar cuenta y datos (B8), lo último de la lista.
+            y = LayoutAccount(y + SectionGapDp, inner, rowH, s);
+
             // La tarjeta crece con el contenido hasta el alto libre entre las zonas seguras; si no cabe, el contenido se desplaza
             // (empieza arriba cada vez que se coloca). El visor deja abajo el mismo margen interior de 16 dp que la cabecera arriba:
             // lo que se corta, se corta dentro de la crema y nunca pisa el marco de madera (revisión de AU1; D-003).
@@ -678,7 +684,7 @@ namespace AF.UI
                 return;
             }
 
-            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + AboutLayoutCount;
+            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + AboutLayoutCount + AccountLayoutCount;
             var ids = new string[n];
             var rects = new RectTransform[n];
             ids[0] = "close";
@@ -703,6 +709,7 @@ namespace AF.UI
             rects[k] = _idleRow.Root;
             AudioLayoutIds(ids, rects, k + 1); // sound, music y haptics (AU1)
             AboutLayoutIds(ids, rects, k + 1 + AudioRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
+            AccountLayoutIds(ids, rects, k + 1 + AudioRowCount + AboutLayoutCount); // delete_account (B8)
 
             _probe.Layout("settings", 0, null, ids, rects);
         }

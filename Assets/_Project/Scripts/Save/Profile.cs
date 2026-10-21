@@ -115,11 +115,38 @@ namespace AF.Save
         public StreakData? Streak { get; set; }
 
         /// <summary>
+        /// <c>calendar</c> (08 §4.3 con Q-M3 (a) [P]; D-033, añadido del 2026-10-20, punto 6; parche B4-1-profile): la Bitácora del
+        /// río, o null si nunca se guardó (entonces la clave no se escribe). Vive en el mismo perfil que <see cref="Wallet"/> para
+        /// que el avance de <c>next_day</c> y el cobro salgan en la misma escritura (una casilla nunca se cobra dos veces). Las reglas
+        /// las aplica <c>AF.LiveOps</c> (<c>ProfileLoginCalendarStore</c>); aquí solo se guardan. Entra sin subir el esquema, como
+        /// <see cref="Streak"/>, porque aún no se ha publicado (08 §4.3).
+        /// </summary>
+        public CalendarData? Calendar { get; set; }
+
+        /// <summary>
+        /// <c>piggy</c> (08 §4.3: <c>{seeds, cap}</c>; 05 §4.1), más <c>last_level</c> y <c>full_card</c> [P] (bloque B5): el Cántaro,
+        /// o null si nunca se guardó (entonces la clave no se escribe; se guarda con <c>offers</c> desde el primer cambio de cualquiera
+        /// de los dos). Vive en el mismo perfil que <see cref="Wallet"/>; las reglas
+        /// las aplica <c>AF.IAP</c> (<c>PiggyJar</c> y <c>ProfileOffersStore</c>). Entra sin migrar: aún no se ha publicado.
+        /// </summary>
+        public PiggyData? Piggy { get; set; }
+
+        /// <summary>
+        /// <c>offers</c> [P] (bloque B5; 05 §5): lo que el planificador de ofertas recuerda (la primera vista de la Mochila y sus
+        /// recordatorios, la tarjeta Sin anuncios, los intersticiales vistos y las tarjetas de skin), o null si nunca se guardó. No es
+        /// dinero: al leerlo, un valor que no vale toma su default. Entra sin migrar: aún no se ha publicado.
+        /// </summary>
+        public OffersData? Offers { get; set; }
+
+        /// <summary>
         /// <c>applied_purchases</c> (08 §4.3 y §10.3; 04 §10.1): las compras con dinero ya acreditadas, por su <c>token_hash</c> (SHA-256
         /// del <c>purchaseToken</c> en hexadecimal en minúsculas, como el libro mayor del servidor; contrato v1). Una compra cuyo hash
         /// está aquí no se vuelve a acreditar nunca (F3-3: <c>AF.IAP.VerifiedStoreService</c>). Vive en el mismo perfil que
         /// <see cref="Wallet"/> para que el apunte y lo acreditado salgan en la misma escritura. En la fusión de 08 §11 es la unión
-        /// (<see cref="MergeAppliedPurchases"/>). La clave falta mientras está vacía (entra sin migrar: aún no se ha publicado).
+        /// (<see cref="MergeAppliedPurchases"/>; en <c>CloudMerge</c>, B8, la unión en orden ordinal). La clave falta mientras está vacía
+        /// (entra sin migrar: aún no se ha publicado); se escribe en orden ordinal y sin repetidos, para que la firma de B8 no dependa
+        /// del orden. La cartera (B8, <c>Transaction.Purchase</c> con token) apunta aquí el identificador que le pasen: con F3-3 es el
+        /// <c>token_hash</c>.
         /// </summary>
         public List<string> AppliedPurchases { get; } = new List<string>();
 
@@ -169,6 +196,42 @@ namespace AF.Save
                 }
             }
         }
+
+        /// <summary>
+        /// <c>first_app_version</c> (08 §4.3; bloque B8): versión de la app con la que se creó el perfil (p. ej. <c>1.0.0</c>), o null
+        /// en un perfil anterior a B8 (no se inventa: queda null). La escribe una vez <see cref="ProfileIdentity.StampFirstRun"/>.
+        /// </summary>
+        public string? FirstAppVersion { get; set; }
+
+        /// <summary>
+        /// <c>locale</c> (08 §4.3; bloque B8): idioma del juego con el que se juega (<c>es-419</c>, <c>pt-BR</c>, <c>en</c>), el de la
+        /// UI resuelto en este arranque [P] (Q-B8-4); null hasta el primer arranque con B8. Lo pone al día
+        /// <see cref="ProfileIdentity.UpdateLocale"/> en cada arranque. No es un ajuste: el ajuste es <c>settings.language</c>.
+        /// </summary>
+        public string? Locale { get; set; }
+
+        /// <summary>
+        /// <c>country_first</c> (08 §4.3; bloque B8): país del primer arranque en ISO 3166-1 alfa-2 (<c>CO</c>), de la región del
+        /// teléfono (Q-T3 (a): la SIM aún no llega al cliente) [P]; null si el teléfono no da región. Se escribe una vez y nunca cambia.
+        /// </summary>
+        public string? CountryFirst { get; set; }
+
+        /// <summary>
+        /// <c>voided_purchases</c> [P] (08 §10.1, fila «Compra falsa o recibo reutilizado»: el cliente retira semillas o derechos de
+        /// lo que el libro mayor marca <c>voided</c>): los tokens ya retirados, para no retirarlos dos veces (tampoco tras una fusión,
+        /// que los une). Vacía, la clave no se escribe.
+        /// </summary>
+        public List<string> VoidedPurchases { get; } = new List<string>();
+
+        /// <summary>
+        /// <c>pending_rewards</c> [P] (08 §10.1 y §10.2: concesión provisional de un recompensado hasta que el servidor confirme su
+        /// <c>nonce</c>; sin confirmar en <c>sec_ssv_grace_h</c>, se revoca): lo concedido y aún sin confirmar. Vacía, la clave no se
+        /// escribe. En la 1.0 sin servidor nada se apunta aquí (todo sale confirmado; nota B8 §5).
+        /// </summary>
+        public List<ProvisionalRewardData> PendingRewards { get; } = new List<ProvisionalRewardData>();
+
+        /// <summary><c>integrity</c> (08 §4.3): la firma del perfil, la huella del dispositivo que lo creó y el contador de fraude.</summary>
+        public IntegrityData Integrity { get; } = new IntegrityData();
 
         /// <summary>
         /// Perfil de primera ejecución: <c>created_at</c> = ahora, 0 semillas (el GDD no fija otro saldo inicial),
@@ -323,6 +386,64 @@ namespace AF.Save
 
         /// <summary><c>river_full</c>: río crecido, hasta el siguiente fallo duro no escudado (08 §4.3; 05 §2.4).</summary>
         public bool RiverFull { get; set; }
+    }
+
+    /// <summary>
+    /// <c>calendar</c> (08 §4.3 con Q-M3 (a) [P]; D-033, añadido del 2026-10-20, punto 6): la Bitácora del río,
+    /// <c>{cycle, next_day, last_claim_date}</c>, más <c>played_date</c> [P] (Q-B1 de B4). Solo datos: el significado lo da
+    /// <c>AF.LiveOps.LoginCalendarRecord</c>; los marcos de país ganados van en <see cref="EntitlementsData.Frames"/>.
+    /// </summary>
+    public sealed class CalendarData
+    {
+        /// <summary><c>cycle</c>: ciclo en curso (1 el primero).</summary>
+        public int Cycle { get; set; } = 1;
+
+        /// <summary><c>next_day</c>: la casilla que toca sellar (1-30).</summary>
+        public int NextDay { get; set; } = 1;
+
+        /// <summary><c>last_claim_date</c>: día local del último sello (<c>yyyy-MM-dd</c>), o null.</summary>
+        public string? LastClaimDate { get; set; }
+
+        /// <summary><c>played_date</c> [P]: último día local con un nivel terminado (<c>yyyy-MM-dd</c>), o null.</summary>
+        public string? PlayedDate { get; set; }
+    }
+
+    /// <summary><c>piggy</c> (08 §4.3; bloque B5). Solo datos: el significado lo da <c>AF.IAP.PiggyJar</c>.</summary>
+    public sealed class PiggyData
+    {
+        /// <summary><c>seeds</c>: semillas acumuladas.</summary>
+        public int Seeds { get; set; }
+
+        /// <summary><c>cap</c>: el tope con que se llena (<c>eco_piggy_cap</c>).</summary>
+        public int Cap { get; set; }
+
+        /// <summary><c>last_level</c> [P]: último nivel de campaña cuya victoria lo llenó.</summary>
+        public int LastLevel { get; set; }
+
+        /// <summary><c>full_card</c> [P]: ya salió la tarjeta «¡Lleno!» de este llenado.</summary>
+        public bool FullCard { get; set; }
+    }
+
+    /// <summary><c>offers</c> [P] (bloque B5). Solo datos: el significado lo da <c>AF.IAP.OfferScheduler</c>.</summary>
+    public sealed class OffersData
+    {
+        /// <summary><c>starter_first_seen_at</c>: primera tarjeta de la Mochila de inicio (UTC), o null.</summary>
+        public DateTime? StarterFirstSeenAt { get; set; }
+
+        /// <summary><c>starter_reminders</c>: niveles de los recordatorios de la Mochila ya enseñados.</summary>
+        public List<int> StarterReminders { get; } = new List<int>();
+
+        /// <summary><c>noads_card_date</c>: día local (<c>yyyy-MM-dd</c>) de la última tarjeta Sin anuncios, o null.</summary>
+        public string? NoAdsCardDate { get; set; }
+
+        /// <summary><c>noads_declines</c>: tarjetas Sin anuncios cerradas sin comprar.</summary>
+        public int NoAdsDeclines { get; set; }
+
+        /// <summary><c>interstitials_seen</c>: intersticiales vistos (con tope en el del disparador de Sin anuncios).</summary>
+        public int InterstitialsSeen { get; set; }
+
+        /// <summary><c>skin_cards</c>: mundos cuya tarjeta de skin ya salió.</summary>
+        public List<int> SkinCards { get; } = new List<int>();
     }
 
     /// <summary><c>progress</c> (08 §4.3; 04 §10.1; <c>map_seen_level</c>, D-013, y <c>undo_tip_seen</c> [P], DC23).</summary>
@@ -896,6 +1017,56 @@ namespace AF.Save
 
         /// <summary><c>level_state</c>: estado de la partida, con el formato de 04 §10.1.</summary>
         public LevelStateData LevelState { get; set; } = new LevelStateData();
+    }
+
+    /// <summary>
+    /// <c>integrity</c> (08 §4.3: <c>{hmac, device_first}</c>; bloque B8). Solo datos: firmar y comprobar es de
+    /// <see cref="ProfileIntegrity"/>. Todo en su default, la clave no se escribe.
+    /// </summary>
+    public sealed class IntegrityData
+    {
+        /// <summary>
+        /// <c>hmac</c>: HMAC-SHA-256 del perfil sin este campo (<see cref="ProfileIntegrity.Sign"/>), en 64 hexadecimales; null si
+        /// nunca se firmó (un perfil anterior a B8).
+        /// </summary>
+        public string? Hmac { get; set; }
+
+        /// <summary>
+        /// <c>device_first</c>: huella del dispositivo que creó el perfil (<see cref="ProfileHmac.DeviceFingerprint"/>, nunca el id en
+        /// claro), de la que sale la clave del HMAC [P] (Q-B8-2); null hasta la primera firma. No cambia al restaurar en otro teléfono.
+        /// </summary>
+        public string? DeviceFirst { get; set; }
+
+        /// <summary>
+        /// <c>fraud_flag</c> [P] (04 §10.2; 08 §10.2: <c>fraud_flag++</c> al revocar una recompensa sin confirmar): cuántas
+        /// revocaciones lleva el perfil. Solo se mide (08 §10.1: sin castigo automático).
+        /// </summary>
+        public int FraudFlag { get; set; }
+
+        /// <summary>Todo en su default (la clave no se escribe).</summary>
+        public bool IsEmpty => Hmac == null && DeviceFirst == null && FraudFlag == 0;
+    }
+
+    /// <summary>
+    /// Elemento de <c>pending_rewards</c> [P] (08 §10.2): una recompensa por anuncio concedida en provisional, con su
+    /// <c>nonce</c>, la ubicación, cuándo se dio y lo que se dio (semillas y comodines), para poder revocarla tal cual.
+    /// </summary>
+    public sealed class ProvisionalRewardData
+    {
+        /// <summary><c>nonce</c>: el de <c>custom_data = placement|nonce</c> (08 §10.2); único.</summary>
+        public string Nonce { get; set; } = "";
+
+        /// <summary><c>placement</c>: la ubicación (<c>rv_undo_refill</c>…).</summary>
+        public string Placement { get; set; } = "";
+
+        /// <summary><c>granted_at</c>: cuándo se concedió (UTC).</summary>
+        public DateTime GrantedAt { get; set; }
+
+        /// <summary><c>seeds</c>: semillas concedidas.</summary>
+        public int Seeds { get; set; }
+
+        /// <summary><c>stock</c>: comodines concedidos, con las claves de <c>stock</c>.</summary>
+        public StockData Stock { get; } = new StockData();
     }
 
     /// <summary><c>stats</c> (08 §4.3).</summary>

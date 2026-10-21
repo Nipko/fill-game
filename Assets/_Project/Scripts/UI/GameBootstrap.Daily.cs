@@ -164,7 +164,7 @@ namespace AF.UI
 
             DailyChallengeConfig config = ActiveRcConfigs?.Daily ?? DailyChallengeConfig.Defaults; // Remote Config (B7)
             IServerDate server = DailyServerOverride ?? FakeServerDate.Offline();
-            Wallet dailyWallet = LevelFlow.CreateDailyWallet(profile, batch.Durable, clock, ActiveRcConfigs?.Economy);
+            Wallet dailyWallet = LevelFlow.CreateDailyWallet(profile, batch.Durable, _capsClock ?? clock, ActiveRcConfigs?.Economy); // B8: anti-reloj de canoas y topes; las reglas, con el del dispositivo
             ConnectWallet(dailyWallet); // earn/spend del Reto por el bus y biz_feature_lives (B7; GameBootstrap.Telemetry.cs)
             var rules = new DailyChallengeRules(store, dailyWallet, clock, server, config);
             var service = new DailyChallengeService(store, rules, clock, config, pool);
@@ -173,7 +173,7 @@ namespace AF.UI
             DevProbe.DailyEarn(rules.Reconcile().SeedsPaid); // R10: semillas de los cobros pendientes que se confirman al abrir
 
             GameServices? services = _ads != null && _store != null && _storeLedger != null
-                ? new GameServices(dailyWallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: ProfileLocked, deviceLocale: _deviceLocale, settings: profile.Settings)
+                ? new GameServices(dailyWallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: ProfileLocked, deviceLocale: _deviceLocale, settings: profile.Settings)
                 : null;
             var context = new DailyPlayContext(
                 store, clock, progress, dailyWallet, services, batch, profile.Settings,

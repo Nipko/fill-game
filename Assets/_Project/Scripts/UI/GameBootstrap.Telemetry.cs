@@ -119,6 +119,11 @@ namespace AF.UI
             }
 
             ConnectWallet(_wallet);
+            if (_analytics != null && _services != null)
+            {
+                _analytics.SetUserProperty("geo_tier", GeoTierRule.IdOf(_services.Geo)); // 08 §8.1, propiedad de usuario (Q-E3 (a), B5)
+            }
+
             if (_flow != null)
             {
                 _flow.Events = _events;
@@ -214,7 +219,9 @@ namespace AF.UI
                     p.Streak = _boot._streakService.Peek(app.PlayLevel, true).Wins;
                 }
 
-                // geo_tier: null hasta Q-E3 (B5; región del dispositivo y país de la tienda); el T3 fijo de GameServices no es un dato.
+                // geo_tier (Q-E3 (a), B5): el de GameServices, de la región del teléfono; con el IAP real, el país de la tienda.
+                GameServices? services = _boot._services;
+                p.GeoTier = services != null ? GeoTierRule.IdOf(services.Geo) : null;
                 p.NoAds = _boot._profile?.Entitlements.NoAds;
                 p.AppVersion = Application.version;
                 RemoteConfigService? rc = _boot._rc;

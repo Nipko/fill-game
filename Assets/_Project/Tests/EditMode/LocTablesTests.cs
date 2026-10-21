@@ -544,6 +544,27 @@ namespace AF.Tests.EditMode
             // La Pororoca del Spark (bloque B2; B2-strings.csv): las pinta AF.UI.ShuffleText.
             keys.AddRange(ShuffleText.AllKeys);
 
+            // B8: «Eliminar cuenta y datos» (Ajustes y su diálogo de dos pasos), que pinta AF.UI.AccountText.
+            foreach (FieldInfo f in typeof(AccountText.Keys).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (f.IsLiteral && f.FieldType == typeof(string))
+                {
+                    keys.Add((string)f.GetValue(null)!);
+                }
+            }
+
+            // B4: la Bitácora del río (tarjeta del inicio y libreta), que pinta AF.UI.LogbookText.
+            foreach (FieldInfo f in typeof(LogbookText.Keys).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (f.IsLiteral && f.FieldType == typeof(string))
+                {
+                    keys.Add((string)f.GetValue(null)!);
+                }
+            }
+
+            // B5: el Mercado, sus tarjetas de oferta y el Cántaro (B5-loc.diff): los pinta AF.UI.MarketText.
+            keys.AddRange(MarketText.AllKeys);
+
             return keys;
         }
 

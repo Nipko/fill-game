@@ -1,0 +1,10 @@
+key,es-419,en,pt-BR,context,max_chars,status,status_en,status_pt-BR,notes,args
+settings_delete_account,Eliminar cuenta y datos,,,"Enlace al final de Ajustes y título del primer paso de la confirmación (08 §11, fila «Eliminación de cuenta»: Ajustes › «Eliminar cuenta y datos»). Habla el juego.",28,pendiente_asesor,,,"Bloque B8. Texto literal de 08 §11; lo usa también la ficha de Play (08 §13.1 #7).",
+delete_account_body,"Se borrarán tu progreso, tus semillas y tus comodines de este teléfono y de la nube.",,,"Paso 1 de «Eliminar cuenta y datos»: lo que se borra (08 §11: snapshot af_main, profile.json, profile.bak y PlayerPrefs). Línea bajo el título, en madera.",90,pendiente_asesor,,,"[P] Bloque B8: el GDD no da el texto.",
+delete_account_no_refund,Las compras no se reembolsan.,,,"Paso 1: aviso en rojo bajo la línea principal (08 §11: «aviso de que las compras no se reembolsan»).",40,pendiente_asesor,,,"[P] Bloque B8: el GDD pide el aviso sin dar el texto. A confirmar con el abogado (política de reembolsos de Play).",
+delete_account_keep,Conservar mis datos,,,"Paso 1: botón principal (Hoja), que cierra sin borrar; la X hace lo mismo.",24,pendiente_asesor,,,"[P] Bloque B8.",
+delete_account_continue,Continuar,,,"Paso 1: botón de madera que pasa al segundo paso.",16,pendiente_asesor,,,"[P] Bloque B8.",
+delete_account_confirm_title,¿Eliminar todo?,,,"Título del paso 2 de «Eliminar cuenta y datos» (08 §11: confirmación en dos pasos).",20,pendiente_asesor,,,"[P] Bloque B8.",
+delete_account_confirm_body,No se puede deshacer. El juego volverá a empezar desde el nivel 1.,,,"Paso 2: lo que pasa al confirmar (08 §11: el cliente vuelve al estado de primera ejecución).",80,pendiente_asesor,,,"[P] Bloque B8.",
+delete_account_confirm_cta,Eliminar,,,"Paso 2: el botón de madera que borra; la X conserva.",16,pendiente_asesor,,,"[P] Bloque B8.",
+delete_account_failed,No se pudo eliminar. Inténtalo de nuevo.,,,"Paso 2: aviso en rojo si el borrado local falla (error de disco); el diálogo sigue abierto y no se borra nada.",48,pendiente_asesor,,,"[P] Bloque B8.",

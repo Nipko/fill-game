@@ -917,6 +917,12 @@ namespace AF.UI
                 return _mapScreen.CloseTopSheet() || CloseRiverMap(); // primero la tarjeta de la parada y el Muestrario (M4.1)
             }
 
+            // La libreta de la Bitácora (B4-3), sobre el inicio o la victoria: Atrás es «Cerrar» (en la secuencia del 10, «Seguir»).
+            if (PressLogbookBack())
+            {
+                return true;
+            }
+
             // Reto del río (E22): Atrás cierra su calendario como «Inicio»; con el tablero del Reto en juego no hace nada, como en un
             // nivel (02 §3; 04 §6.6). HandleBack devuelve false si no hay calendario abierto.
             if (_dailyScreen != null && _dailyScreen.IsOpen)
@@ -924,9 +930,22 @@ namespace AF.UI
                 return _dailyScreen.HandleBack();
             }
 
+            // Mercado y tarjeta de oferta (B5): Atrás cierra la tarjeta como «Ahora no» (también encima de la victoria) y el Mercado
+            // como su X. Con la hoja de compra delante no llega aquí (arriba).
+            if (PressMarketBack())
+            {
+                return true;
+            }
+
             if (_app.Screen == AppScreen.Level)
             {
                 return false;
+            }
+
+            // «Eliminar cuenta y datos» (B8), encima de Ajustes: Atrás lo cierra sin borrar y deja Ajustes abierta.
+            if (DeleteAccountOpen)
+            {
+                return CancelDeleteAccount();
             }
 
             if (_settingsScreen != null && _settingsScreen.Visible)
@@ -1338,7 +1357,7 @@ namespace AF.UI
                 // La secuencia del Mapa del 10 (06 §2.3; P-M4; M4.2): tras «Siguiente» en la victoria del 10 o, si se pulsó Inicio o
                 // se cerró la app, en la primera entrada al inicio con max_level ≥ 10 y map_seen_level < 10. Al acabarla se anota lo
                 // visto hasta el 10: no se repite.
-                if (_app.L10MapDue)
+                if (_app.L10MapDue && !OpenLogbookBeforeL10Map()) // B4-3: Victoria → libreta → Mapa → Inicio (D-033, punto 11)
                 {
                     OpenRiverMap(MapOpenSource.L10);
                 }
@@ -1371,8 +1390,8 @@ namespace AF.UI
         private bool InLevel => _app == null || _app.Screen == AppScreen.Level;
 
         // Hay una pantalla de pago delante: la hoja «Compra simulada» o un anuncio (y lo que lo rodea; propuesta del personaje
-        // d.11). Las ofertas que vengan (Mochila de inicio, Mercado) se suman aquí. Sin asignar memoria.
-        private bool CommerceOpen => (_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible);
+        // d.11). Con B5, también el Mercado y las tarjetas de oferta (MarketCommerceOpen). Sin asignar memoria.
+        private bool CommerceOpen => (_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible) || MarketCommerceOpen;
 
         // La ventanita de casa del inicio no sale (LobbyScreen.SetCommerceOpen): con una pantalla de pago delante (D-013, punto 6)
         // o con el Mapa del río encima, que es opaco (revisión de M4.2). Con el Mapa, TiTino no se ve: su saludo del día (como
@@ -1489,6 +1508,7 @@ namespace AF.UI
             {
                 bool migrateLegacy = LaunchOptions.ProfileStoreOverride == null && LaunchOptions.ProfileDirectoryOverride == null;
                 profile = LoadProfile(store, clock, migrateLegacy, out firstRun, out _profileStatus);
+                VerifyBootProfile(profile); // B8 (GameBootstrap.Cloud.cs): la firma tal como se leyó, antes de los extras de desarrollo
                 if (LaunchOptions.ApplyDevWallet(profile, clock))
                 {
                     store.TrySave(profile); // extras af_seeds y af_canoes de los builds de desarrollo [P] (B2-6)
@@ -1498,6 +1518,9 @@ namespace AF.UI
                 {
                     store.TrySave(profile); // extra af_max_level de los builds de desarrollo [P] (M3.3)
                 }
+
+                // B8 (GameBootstrap.Cloud.cs): la firma del perfil y la fusión con la nube, antes de crear ningún servicio.
+                profile = SyncProfileAtBoot(profile, store, IsLocked(_profileStatus));
             }
 
             bool locked = IsLocked(_profileStatus);
@@ -1509,15 +1532,17 @@ namespace AF.UI
             _deviceLocale = LaunchOptions.DeviceLocaleOverride ?? AndroidDeviceLocale.ForPlatform();
             _deviceTag = _deviceLocale.LanguageTag ?? string.Empty;
             LocResolution locale = SetUpTexts(profile.Settings.Language, _deviceTag);
+            StampProfileIdentity(profile, firstRun, locale, _deviceTag); // B8: first_app_version, country_first y locale (08 §4.3)
 
             // Cartera, progreso, nivel en curso, anuncios y tienda guardan el mismo perfil por el lote: dentro de una acción del
             // jugador (vertido, victoria, rescate, rendición, compra, anuncio) el perfil se escribe una sola vez (revisión B2-5).
             // Con el perfil en disco (LocalProfileStore), el lote escribe en segundo plano (T-D): el vertido solo serializa en el
             // hilo principal. La cartera guarda por batch.Durable: cada mutación espera al escritor y escribe en síncrono.
-            var batch = new ProfileSaveBatch(store);
+            var batch = new ProfileSaveBatch(SigningStore(store)); // B8: cada escritura lleva integrity.hmac (08 §4.3)
             _saveBatch = batch;
             SetUpTelemetry(clock); // Remote Config, bus y analítica antes de la cartera (B7; GameBootstrap.Telemetry.cs)
-            _wallet = new Wallet(profile, batch.Durable, clock, _rcConfigs?.Economy);
+            IClock capsClock = CreateCapsClock(clock); // B8: anti-reloj de canoas y topes diarios (08 §10.1; 04 §7.1)
+            _wallet = new Wallet(profile, batch.Durable, capsClock, _rcConfigs?.Economy);
             // La cartera, al bus y con biz_feature_lives nada más crearse: lo que gane o gaste el arranque (el Regalo de regreso
             // de SetUpSessions, en el arranque en frío) llega a la analítica. ConnectTelemetry la vuelve a conectar (solo asigna).
             ConnectWallet(_wallet);
@@ -1554,10 +1579,10 @@ namespace AF.UI
             ISimulatedPurchasePresenter purchasePresenter = new BatchedPurchasePresenter(
                 LaunchOptions.PurchasePresenterOverride ?? (_storeSheet = new StoreSheet(transform, _art)), batch);
             _ads = AdController.Create(
-                WrapAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill())), profile, batch, clock, firstRun, _rcConfigs?.Ads);
-            _storeLedger = new StoreLedger(profile, _wallet, batch, clock, _rcConfigs?.Store);
+                WrapAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill())), profile, batch, capsClock, firstRun, _rcConfigs?.Ads);
+            _storeLedger = new StoreLedger(profile, _wallet, batch, capsClock, _rcConfigs?.Store);
             _store = WrapStore(new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency));
-            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
+            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
                 mapProgress: progress);
 
             _screen = new GameScreen(transform, _art, _probe, this);
@@ -1591,6 +1616,7 @@ namespace AF.UI
             _settingsScreen.AudioToggled = (key, on) => ChooseAudio(key, on); // AU1: Sonido, Música y Vibración
             _settingsScreen.IdleHintToggled = on => ChooseIdleHint(on); // MO3: Pista por inactividad
             BuildFruitSheet(); // F4: la ficha de una fruta, desde la línea de la victoria y desde Ajustes (GameBootstrap.Fruit.cs)
+            SetUpAccount(); // B8: «Eliminar cuenta y datos» en Ajustes, en dos pasos (GameBootstrap.Account.cs)
 
             // rules_pour_mode (D-005): se resuelve una vez al arrancar y se aplica en cada carga de nivel.
             _flow = new LevelFlow(
@@ -1621,7 +1647,9 @@ namespace AF.UI
             SetUpStreak(); // Crecida, Hoja escudo y Canasta (E32; GameBootstrap.Streak.cs): el servicio, inyectado en el flujo
             SetUpMeta(); // B14: skins por hito, álbum de frutas, la Canasta en el Mapa y «Datos del río» (GameBootstrap.Meta.cs)
             SetUpSkip(); // Salto del Boto (B3; GameBootstrap.Skip.cs): el almacén en el perfil, la confirmación y el banner
+            SetUpLogbook(); // Bitácora del río y cola de takeovers (B4-3; GameBootstrap.Logbook.cs): tarjeta, libreta y takeover
             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
+            SetUpMarket(); // B5 (GameBootstrap.Market.cs): el Mercado, las ofertas y el Cántaro, con las sesiones de B6
             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
@@ -1975,6 +2003,7 @@ namespace AF.UI
         {
             ProfileLoadResult result = store.Load();
             status = result.Status;
+            s_bootLoadMigrated = result.Migrated; // B8: un perfil migrado no se puede comprobar con su firma (GameBootstrap.Cloud.cs)
             if (result.Error != null)
             {
                 Debug.LogWarning(LogPrefix + "perfil (" + result.Status + "): " + result.Error);
