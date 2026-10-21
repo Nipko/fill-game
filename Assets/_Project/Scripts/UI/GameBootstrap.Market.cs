@@ -72,6 +72,11 @@ namespace AF.UI
         private int _iconsPiggySeeds = -1;
         private bool _iconsPiggyFull;
 
+        // La reconstrucción por idioma (RebuildUi) recarga la escena con el mismo perfil y sigue la misma sesión (B6): el cupo de
+        // takeovers ya gastado sigue gastado.
+        private static Profile? s_marketProfile;
+        private static ITakeoverBudget? s_carriedBudget;
+
         /// <summary>Almacén de <c>piggy</c> y <c>offers</c> para los tests (gana al del perfil); <see cref="ResetMarketOverrides"/>.</summary>
         internal static IOffersStore? OffersStoreOverride { get; set; }
 
@@ -112,6 +117,8 @@ namespace AF.UI
             OffersConfigOverride = null;
             TakeoverBudgetOverride = null;
             SkinSalesOverride = null;
+            s_marketProfile = null;
+            s_carriedBudget = null;
         }
 
         /// <summary>
@@ -159,7 +166,14 @@ namespace AF.UI
 
             config ??= OffersConfig.Defaults;
             IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
-            ITakeoverBudget budget = TakeoverBudgetOverride ?? new SessionTakeoverBudget(() => _sessions?.Current?.Number ?? 1);
+            ITakeoverBudget? budget = TakeoverBudgetOverride;
+            if (budget == null)
+            {
+                bool rebuilt = ReferenceEquals(s_marketProfile, profile) && s_carriedBudget != null;
+                budget = rebuilt ? s_carriedBudget! : new SessionTakeoverBudget(() => GameBootstrap.Current?._sessions?.Current?.Number ?? 1);
+                s_marketProfile = profile;
+                s_carriedBudget = budget;
+            }
             _offersStore = store;
             _offersState = new OffersState(store);
             _piggy = new PiggyJar(_offersState, config, _storeLedger.Config);
@@ -190,6 +204,7 @@ namespace AF.UI
             _marketIcons = new MarketLobbyIcons(transform, _art, () => OpenMarket(MarketTab.Seeds), () => PressPiggy());
             _marketPhaseSeen = _flow.Phase;
             _interstitialsTodaySeen = _ads.Ledger.InterstitialsToday;
+            _analytics?.SetUserProperty("geo_tier", GeoTierRule.IdOf(_services?.Geo ?? AF.Boosters.GeoTier.T3)); // 08 §8.1 (Q-E3 (a))
 
             MarketRunner runner = gameObject.GetComponent<MarketRunner>();
             if (runner == null)
@@ -224,7 +239,6 @@ namespace AF.UI
             }
 
             market.Open(tab, OnMarketClosed);
-            _lobby?.SetCommerceOpen(HomeWindowCoveredByMarket());
             MarketProbe("market_open", "\"tab\":\"" + MarketTabId(market.Tab) + "\"");
             _analytics?.Log(AnalyticsEvent.Create("af_shop_view").Add("tab", MarketTabId(market.Tab)).Add("from", "lobby")); // 08 §8.2 [P] from
             return true;
@@ -241,7 +255,7 @@ namespace AF.UI
         public bool PressPiggy()
         {
             PiggyJar? piggy = _piggy;
-            if (piggy == null || _offerCard == null || _store == null || !LobbyClear() || !piggy.VisibleAt((_progress?.MaxLevel ?? 0) + 1))
+            if (piggy == null || _offerCard == null || !OfferReady() || !LobbyClear() || !piggy.VisibleAt((_progress?.MaxLevel ?? 0) + 1))
             {
                 return false;
             }
@@ -303,7 +317,6 @@ namespace AF.UI
                         // El nivel siguiente ya entró (el avance solo tras la Cosecha doble, D-011): la tarjeta no se queda encima.
                         _offerCard.Dismiss();
                         _offerFromVictory = false;
-                        _lobby?.SetCommerceOpen(HomeWindowCoveredByMarket());
                     }
                 }
             }
@@ -466,7 +479,6 @@ namespace AF.UI
 
             LastOfferShown = kind;
             _offerFromVictory = false;
-            _lobby?.SetCommerceOpen(true);
             if (kind == OfferKind.PiggyFull && offers.Piggy.IsFull)
             {
                 LogPiggy("shown_full", offers.Piggy.Seeds);
@@ -474,9 +486,9 @@ namespace AF.UI
 
             card.Present(sku, MarketText.ProductName(sku), icon, iconColor, body, note, store.PriceOf(sku).ToString(), buyEnabled,
                 buy => OnOfferCardClosed(kind, sku, context, level, buy), () => !store.IsPurchasing && !ProfileLocked);
-            if (store is AF.Analytics.Adapters.AnalyticsStoreService analytics)
+            if (buyEnabled && store is AF.Analytics.Adapters.AnalyticsStoreService analytics)
             {
-                analytics.OfferShown(sku, context); // af_iap_offer_shown (08 §8.2)
+                analytics.OfferShown(sku, context); // af_iap_offer_shown (08 §8.2): solo lo que se puede comprar
             }
 
             MarketProbe("offer_shown", "\"kind\":\"" + OfferScheduler.IdOf(kind) + "\",\"sku\":\"" + sku + "\",\"takeover\":" + (takeover ? "true" : "false"));
@@ -492,7 +504,6 @@ namespace AF.UI
         private void OnOfferCardClosed(OfferKind kind, string sku, PurchaseContext context, int level, bool buy)
         {
             _offerFromVictory = false;
-            _lobby?.SetCommerceOpen(HomeWindowCoveredByMarket());
             OfferScheduler? offers = _offers;
             IStoreService? store = _store;
             if (offers == null || store == null)
@@ -513,7 +524,6 @@ namespace AF.UI
             store.Purchase(request, result =>
             {
                 offers.Piggy.OnPurchaseResult(result);
-                _probe?.Purchase(result, _wallet);
                 if (result.Status == PurchaseStatus.Cancelled)
                 {
                     offers.RecordDeclined(kind); // cancelar la hoja de compra también es no comprar (Sin anuncios: cuenta un rechazo)
@@ -523,8 +533,10 @@ namespace AF.UI
             });
         }
 
+        // Fin de una compra del Mercado o de una tarjeta: la sonda (AF_STATE purchase), la skin comprada y la analítica.
         private void OnMarketPurchased(PurchaseResult result)
         {
+            _probe?.Purchase(result, _wallet);
             if (result.Product.Content.GrantsSkin && result.IsPurchased)
             {
                 _analytics?.Log(AnalyticsEvent.Create("af_skin_unlock").Add("skin_id", result.Product.Sku).Add("source", "iap")); // 08 §8.2
@@ -574,13 +586,7 @@ namespace AF.UI
 
         private void OnMarketClosed()
         {
-            _lobby?.SetCommerceOpen(HomeWindowCoveredByMarket());
             MarketProbe("market_closed", null);
-        }
-
-        private bool HomeWindowCoveredByMarket()
-        {
-            return HomeWindowCovered || MarketCommerceOpen;
         }
 
         // El inicio a la vista sin nada encima (como la tarjeta del Reto).
@@ -611,10 +617,11 @@ namespace AF.UI
             bool lobby = LobbyClear();
             int max = _progress.MaxLevel;
             bool market = lobby && MarketAvailable;
-            bool piggyShown = lobby && piggy.VisibleAt(max + 1);
+            bool piggyShown = lobby && OfferReady() && piggy.VisibleAt(max + 1); // sin tienda no hay Cántaro que comprar (D-008)
             int seeds = piggy.Seeds;
             bool full = piggy.IsFull;
-            bool measured = lobby && (icons.Remeasure() | icons.TargetsMoved(_lobby.HomeTabRect, _lobby.SeedsRect));
+            var settings = (RectTransform)_lobby.SettingsButton.transform;
+            bool measured = lobby && (icons.Remeasure() | icons.TargetsMoved(_lobby.HomeTabRect, settings));
             if (lobby == _iconsShown && market == _iconsMarket && piggyShown == _iconsPiggy && seeds == _iconsPiggySeeds && full == _iconsPiggyFull && !measured)
             {
                 return;
@@ -631,7 +638,7 @@ namespace AF.UI
                 return;
             }
 
-            icons.Sync(market, piggyShown, seeds, full, _lobby.HomeTabRect, _lobby.SeedsRect);
+            icons.Sync(market, piggyShown, seeds, full, _lobby.HomeTabRect, settings);
             if (DevProbe.Enabled && _probe != null && (market || piggyShown))
             {
                 var ids = new List<string>(2);

@@ -282,9 +282,9 @@ namespace AF.UI
                 _logShown = false;
                 for (int i = 0; i < _model.Count; i++)
                 {
-                    if (_model[i].Action == MarketAction.Buy || _model[i].Action == MarketAction.BuyLocked)
+                    if (_model[i].Action == MarketAction.Buy && storeOn)
                     {
-                        _deps.OfferShown?.Invoke(_model[i].Id);
+                        _deps.OfferShown?.Invoke(_model[i].Id); // solo lo que se puede comprar ahora
                     }
                 }
             }

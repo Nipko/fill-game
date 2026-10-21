@@ -276,6 +276,101 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.Profile!.Entitlements.NoAds, Is.False);
         }
 
+        private static void JarWith(int seeds)
+        {
+            var store = new InMemoryOffersStore();
+            store.Save(new OffersRecord { PiggySeeds = seeds, PiggyCap = 3000 });
+            GameBootstrap.OffersStoreOverride = store;
+        }
+
+        [UnityTest]
+        public IEnumerator Piggy_UnlocksAfterWinning19_AndSaysSoToTheAnalytics()
+        {
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
+            yield return LoadLevel(19);
+            GameBootstrap boot = Boot();
+            PlayModeHelpers.TakeClock(boot);
+            VictorySetup.WinToVictoryScreen(boot);
+            boot.TickMarket(16f);
+            AnalyticsEvent piggy = sink.Last("af_piggy")!;
+            Assert.That(piggy, Is.Not.Null, "08 §8.2: af_piggy");
+            Assert.That(piggy.Find("state")!.Value.Text, Is.EqualTo("unlocked"));
+            Assert.That(boot.Piggy!.Seeds, Is.EqualTo(0), "el 19 aún no lo llena");
+        }
+
+        [UnityTest]
+        public IEnumerator Market_BuysTheJar_ItEmpties_AndTheAnalyticsSaysBought()
+        {
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
+            JarWith(1500);
+            yield return LoadLobby(ProfileAt(26));
+            GameBootstrap boot = Boot();
+            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
+            MarketScreen market = boot.Market!;
+            Assert.That(market.Rows[0].Id, Is.EqualTo("af_piggy"));
+            Assert.That(market.Rows[0].Action, Is.EqualTo(MarketAction.Buy));
+            Assert.That(market.PressRow(0), Is.True);
+            Assert.That(boot.Profile!.Wallet.Seeds, Is.EqualTo(1500), "exactamente lo acumulado (05 §4.1)");
+            Assert.That(boot.Piggy!.Seeds, Is.EqualTo(0), "se vacía y vuelve a llenarse");
+            AnalyticsEvent bought = sink.Last("af_piggy")!;
+            Assert.That(bought.Find("state")!.Value.Text, Is.EqualTo("bought"));
+            Assert.That(bought.Find("seeds_inside")!.Value.Long, Is.EqualTo(1500));
+        }
+
+        [UnityTest]
+        public IEnumerator FullJar_ShowsItsCardOnTheVictory_Once()
+        {
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
+            SecondSession();
+            LaunchOptions.ClockOverride = new ManualClock(T0); // día 1: Sin anuncios aún no toca
+            JarWith(3000);
+            yield return LoadLevel(35);
+            GameBootstrap boot = Boot();
+            PlayModeHelpers.TakeClock(boot);
+            VictorySetup.WinToVictoryScreen(boot);
+            boot.TickMarket(16f);
+            boot.TickMarket(GameBootstrap.OfferCardDelayMs + 16f);
+            OfferCard card = boot.OfferCardView!;
+            Assert.That(card.Visible, Is.True, "05 §5: «1 tarjeta al llenarse», en el HUD de victoria");
+            Assert.That(card.Sku, Is.EqualTo("af_piggy"));
+            Assert.That(boot.LastOfferShown, Is.EqualTo(OfferKind.PiggyFull));
+            Assert.That(sink.Last("af_piggy")!.Find("state")!.Value.Text, Is.EqualTo("shown_full"));
+            Assert.That(card.BuyButton.GetComponent<ReliefButton>().Interactable, Is.True);
+        }
+
+        [UnityTest]
+        public IEnumerator SkinCard_WithSkinSales_ComesOnTheLobby_AndABoughtSkinIsPutOn()
+        {
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
+            GameBootstrap.SkinSalesOverride = true; // Q-B5-1: la venta de skins, encendida para la prueba
+            SecondSession();
+            LaunchOptions.ClockOverride = new ManualClock(T0); // día 1: Sin anuncios aún no toca
+            yield return LoadLevel(41);
+            GameBootstrap boot = Boot();
+            PlayModeHelpers.TakeClock(boot);
+            VictorySetup.WinToVictoryScreen(boot);
+            boot.TickMarket(16f);
+            boot.TickMarket(GameBootstrap.OfferCardDelayMs + 16f);
+            OfferCard card = boot.OfferCardView!;
+            Assert.That(card.Visible, Is.False, "la skin, «fuera del nivel» (05 §5): en el inicio [P]");
+            Assert.That(boot.PressHome(), Is.True);
+            boot.TickMarket(16f);
+            Assert.That(card.Visible, Is.True);
+            Assert.That(card.Sku, Is.EqualTo("af_skin_m03"));
+
+            card.BuyButton.onClick.Invoke();
+            Assert.That(boot.Profile!.Entitlements.Skins, Does.Contain("af_skin_m03"));
+            Assert.That(boot.Skins!.Equipped, Is.EqualTo("af_skin_m03"), "Q-B5-13: la comprada se pone, como la ganada");
+            Assert.That(boot.Art!.CuiaSkin, Is.SameAs(CuiaSkin.Encuentro));
+            AnalyticsEvent unlock = sink.Last("af_skin_unlock")!;
+            Assert.That(unlock.Find("source")!.Value.Text, Is.EqualTo("iap"));
+            Assert.That(unlock.Find("skin_id")!.Value.Text, Is.EqualTo("af_skin_m03"));
+        }
+
         [UnityTest]
         public IEnumerator PiggyIcon_OpensItsCard_LockedBelow1000_AndBackClosesIt()
         {
