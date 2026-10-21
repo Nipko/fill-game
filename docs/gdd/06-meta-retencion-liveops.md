@@ -338,9 +338,9 @@ El paquete de niveles se descarga por Addressables al anunciarse (fast-follow) p
 |---|---|---|---|
 | Reto del río, Bitácora, Crecida, Canasta, Mapa, Cuaderno de campo, Travesía, Encuentro de las Aguas, Temporada de lluvias | No | Pool local + Remote Config + guardado en nube (PGS Saved Games + Firebase Auth anónimo) | 0 |
 | Cosecha doble y demás rewarded | Sí, mínimo | Función `rewardedSsv` en AWS con el callback S2S de MAX (D-035; 08 §10.2) | ≈ 0 [E] |
-| Premios de evento en semillas (reclamo) | Sí, mínimo | Función del backend en AWS (D-035) que valida el reclamo contra el estado archivado | 0-5 |
-| Regata, Liga del río | Gestionado | Unity Leaderboards + Cloud Code + Cloud Scheduler | 0-10 (1.2: 15-40 en total) |
-| Aldea, Prestar una canoa, Río de la aldea | Sí | Backend propio en AWS (D-035, que resuelve la P2 de 09 §3.3 frente a Firestore + Functions o Nakama; servicios por decidir) + 0,5 FTE | 100-300 |
+| Premios de evento en semillas (reclamo) | Sí, mínimo | Función del backend en AWS (D-035; no es una de las 5 de la 1.0: llega con los eventos, por decidir) que valida el reclamo contra el estado archivado | 0-5 |
+| Regata, Liga del río | Gestionado | Unity Leaderboards + Cloud Code + Cloud Scheduler (con D-035 la 1.2 va a AWS; si Unity Leaderboards y Cloud Code se mantienen o se sustituyen queda por decidir) | 0-10 (1.2: 15-40 en total) |
+| Aldea, Prestar una canoa, Río de la aldea | Sí | Backend propio en AWS (D-035 según el plan del backend, P2 de 09 §3.3, frente a Firestore + Functions o Nakama; para la 2.0 lo confirma el dueño; servicios por decidir) + 0,5 FTE | 100-300 |
 
 Fuente: research/06 C6.1-C6.3 [V]/[E]. Regla de diseño offline: progreso en cliente con reconciliación "última escritura gana" por campo y máximo para contadores; valor económico concedido o confirmado en servidor (research/06 C6 [V]).
 
@@ -372,7 +372,7 @@ El diseño "competición + logro personal" (todos los participantes con ≥50 pu
 | Mensajes predefinidos | 12 frases localizadas automáticamente al idioma de quien lee (ventaja frente al chat libre en una comunidad ES/PT/EN): "Gracias", "¿Alguien me presta una canoa?", "¡Buena remada!", "Voy por el nivel {n}", "Vamos por el río de la aldea"… + 8 emojis de fauna; límite 20 mensajes/día por jugador |
 | Río de la aldea | Evento cooperativo de 72 h (sección 5.2) |
 | Moderación | Expulsión por el líder; abandono libre; reporte solo de nombre de Aldea (generado) y de comportamiento (spam de peticiones) |
-| Backend | En AWS (D-035; servicios por decidir), en lugar de Firestore con agregados en Functions o Nakama (research/06 C6.3 [E]); 0,5 FTE live-ops/backend |
+| Backend | En AWS (D-035 según el plan del backend; para la 2.0 lo confirma el dueño; servicios por decidir), en lugar de Firestore con agregados en Functions o Nakama (research/06 C6.3 [E]); 0,5 FTE live-ops/backend |
 
 Magic Sort cobra 13+ en iOS por "Messaging and Chat" y las reseñas elogian equipos que regalan vidas (research/magic-sort/c §2.2 [V]): copiamos la generosidad y eliminamos el chat libre.
 
