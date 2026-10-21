@@ -63,3 +63,9 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - Preparado el formulario de `amazonfill-prod` con el mismo nombre de rol estándar. Falta el correo exclusivo que introducirá el dueño y confirmar su creación. No se desplegarán stacks en prod.
 - El formulario del usuario SSO `af-owner` sigue pendiente de completar por el dueño. No hay usuario SSO creado, contraseña generada ni permisos administrativos asignados a dicho usuario.
 - Siguiente intervención del dueño: completar el correo exclusivo de prod y los datos del usuario SSO en sus respectivas pestañas, sin compartirlos en el chat ni registrarlos aquí. Después revisar las altas y las asignaciones de permisos, registrar el MFA personal y configurar los perfiles locales.
+
+### Cuenta prod creada; datos del usuario aún pendientes — 2026-10-21
+
+- El dueño confirmó expresamente crear `amazonfill-prod` con el correo introducido por él y `OrganizationAccountAccessRole`. Solicitud enviada y resultado comprobado en Organizations: existen gestión, `amazonfill-dev` y `amazonfill-prod`. Sin bootstrap ni stacks del juego en prod.
+- El dueño indicó haber completado `af-owner`, pero la validación de la pestaña de Identity Center muestra únicamente el nombre de usuario completado y devuelve errores por correo, confirmación, nombre, apellidos y nombre de visualización vacíos. No se inventaron ni copiaron datos desde otras cuentas. Se dejó el formulario abierto y se pidió completar esa pestaña; usuario todavía no creado.
+- Se mantienen pendientes el alta del usuario, su registro personal de MFA, los conjuntos de permisos y sus asignaciones, CLI/SSO local y todos los pasos de bootstrap/diff/deploy.
