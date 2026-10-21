@@ -270,14 +270,10 @@ namespace AF.IAP
                 return new VerifiedCredit(VerifiedCreditKind.AlreadyApplied, null, 0);
             }
 
-            if (IsOwned(product))
+            // La Mochila (1 por cuenta) la hace cumplir el servidor (F2c): si respondió ok o duplicate, ya la reconoció y Play no la
+            // reembolsará, así que se acredita aunque la marca local ya esté puesta (p. ej. traída de otro perfil).
+            if (IsOwned(product) && product.Kind != ProductKind.OncePerAccount)
             {
-                if (product.Kind == ProductKind.OncePerAccount)
-                {
-                    // Otra Mochila con la marca ya puesta: no se anota (no se terminará en la tienda) ni se acredita.
-                    return new VerifiedCredit(VerifiedCreditKind.OwnedOncePerAccount, null, 0);
-                }
-
                 _profile.AppliedPurchases.Add(tokenHash);
                 Save();
                 return new VerifiedCredit(VerifiedCreditKind.AlreadyOwned, null, 0);
@@ -454,9 +450,6 @@ namespace AF.IAP
 
         /// <summary>La cartera la rechazó (desbordamiento): no cambió nada.</summary>
         Rejected = 3,
-
-        /// <summary>Ya tenía la Mochila (1 por cuenta): no se anota ni se acredita; la compra no se termina en la tienda.</summary>
-        OwnedOncePerAccount = 4,
     }
 
     /// <summary>Resultado de <see cref="StoreLedger.CreditVerified"/>.</summary>
@@ -477,6 +470,6 @@ namespace AF.IAP
         public int UnknownItems { get; }
 
         /// <summary>El hash queda en <c>applied_purchases</c> (acreditada ahora o antes): se puede terminar la compra en la tienda.</summary>
-        public bool IsSettled => Kind != VerifiedCreditKind.Rejected && Kind != VerifiedCreditKind.OwnedOncePerAccount;
+        public bool IsSettled => Kind != VerifiedCreditKind.Rejected;
     }
 }

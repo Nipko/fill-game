@@ -577,20 +577,26 @@ namespace AF.IAP.Tests
         }
 
         [Test]
-        public void AnotherStarterWhenItIsAlreadyOwned_IsNeitherCreditedNorConsumed()
+        public void AStarterVerifiedByTheServer_IsCreditedEvenIfTheLocalMarkIsSet()
         {
+            // El servidor manda en «1 por cuenta» (F2c): con ok ya la reconoció y Play no la reembolsará.
             var fx = new VerifiedStoreFixture();
             fx.Profile.Entitlements.StarterBought = true;
-            fx.Billing.AddUnfinished("af_starter", "second.starter");
+            fx.Billing.AddUnfinished("af_starter", "starter.token");
 
             fx.Service.Resume();
 
             Assert.That(fx.VerifyCalls, Is.EqualTo(1));
-            Assert.That(fx.Wallet.Seeds, Is.EqualTo(0));
-            Assert.That(fx.Profile.AppliedPurchases, Is.Empty);
-            Assert.That(fx.Billing.IsUnfinished("second.starter"), Is.True, "no se consume: Play aún podría reembolsarla");
-            fx.Service.Resume();
-            Assert.That(fx.VerifyCalls, Is.EqualTo(1), "no se repite en la misma sesión");
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(500));
+            Assert.That(fx.Stock(BoosterKind.Hint), Is.EqualTo(3));
+            Assert.That(fx.Profile.Entitlements.StarterBought, Is.True);
+            Assert.That(fx.Profile.HasAppliedPurchase(PurchaseTokenHash.Of("starter.token")), Is.True);
+            Assert.That(fx.Billing.Consumed, Is.EqualTo(new[] { "starter.token" }));
+
+            VerifiedStoreFixture again = fx.Reopen();
+            again.Service.Resume();
+            Assert.That(fx.VerifyCalls, Is.EqualTo(1), "terminada: no se vuelve a preguntar al arrancar");
+            Assert.That(again.Wallet.Seeds, Is.EqualTo(500));
         }
 
         [Test]

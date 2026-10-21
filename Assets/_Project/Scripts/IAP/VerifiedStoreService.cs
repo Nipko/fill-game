@@ -387,15 +387,6 @@ namespace AF.IAP
                 response.Status == VerifyStatus.Ok ? response.Entitlements : null,
                 entry.ClientSeeds,
                 live);
-            if (credit.Kind == VerifiedCreditKind.OwnedOncePerAccount)
-            {
-                // Ya tenía la Mochila (1 por cuenta): ni se acredita ni se consume, como con el 400 (Play aún podría reembolsarla).
-                _rejectedThisSession.Add(token);
-                Raise(sku, PurchaseVerificationState.Rejected);
-                Complete(token, PurchaseStatus.AlreadyOwned, null);
-                return;
-            }
-
             if (!credit.IsSettled)
             {
                 // Sin acreditar no se termina: vuelve a la cola, con su contexto, y se reintenta con espera.
