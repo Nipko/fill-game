@@ -16,7 +16,7 @@ Bloque B12 de `docs/dev/plan-tanda5.md` §4, con las decisiones Q-T3 (a) y Q-T4 
 
 1. Se cortan la pantalla de arranque y el resto de la carga.
 2. Si no hay una decisión vigente, se abre la **pantalla de edad neutral**, y después la de **consentimiento**. Va antes del nivel 1 (06 §2.1, regla 3).
-3. Hay una decisión vigente cuando `profile.consent` existe, tiene banda y su `text_version` es ≥ `consent_text_version`.
+3. Hay una decisión vigente cuando `profile.consent` existe, tiene banda, su `text_version` es ≥ `consent_text_version` y su perfil legal es el del país de ahora. Con otro perfil (otra SIM, un viaje) se vuelven a pedir las finalidades con el perfil actual, conservando la banda [P] (Q-B12-15): los flags siempre salen del perfil del país actual.
 4. Los flags se aplican antes de `AppFlow.Start`, a:
    - la analítica: `AnalyticsService.SetCollectionEnabled` (08 §2.3: «siempre ANTES de GameFlow.Go»);
    - los anuncios: `ConsentAdService`, el «MAX» sin inicializar hasta la decisión;
@@ -70,7 +70,9 @@ Bloque B12 de `docs/dev/plan-tanda5.md` §4, con las decisiones Q-T3 (a) y Q-T4 
 | `18+` con `ump` | según decisión | UMP (sin forzar `npa`) | no | sí | sí | sí |
 
 - `maxAdContentRating` = G en todas las bandas (05 §7, D-029).
-- Con `biz_under18_no_personalization` = false, 13-17 se trata como 18+ salvo TFCD.
+- Con `biz_under18_no_personalization` = false, 13-17 se trata como 18+ salvo TFCD, también con UMP.
+- Los flags se aplican una vez por decisión: antes de enviar `af_consent` y, si no hubo evento, al cerrar el paso.
+- La sonda `AF_STATE consent` escribe `npa` como lo recibe el proveedor de anuncios y añade `ump`.
 - Al subir `consent_text_version` se vuelven a pedir las finalidades, no la edad [P] (Q-B12-2). Mientras tanto, todo sigue apagado.
 
 ### 1.6 Compras de 13-17 (Q-T4 (a))
@@ -214,6 +216,8 @@ Se avanzó con la recomendada, marcada [P] en el código.
 | Q-B12-12 | El encargo dice que `INTERNET` no está aprobado, pero D-036 (2026-10-20) lo aprobó | — | Sin efecto en B12: no usa red. Corregir el encargo o D-036 |
 | Q-B12-13 | ¿Qué es «el tratamiento más estricto» de Q-T3 (a) sin país? | (a) perfil `default` + `npa` sin elección (la analítica se puede aceptar); (b) solo el perfil `default`, con la misma pantalla que un país conocido; (c) tratarlo como el EEE (UMP) | **(a)**, aplicada: un teléfono sin SIM ni región puede estar en el EEE, y sin UMP no hay base para personalizar. Con (c), MAX enseñaría UMP fuera del EEE |
 | Q-B12-14 | La UI de la doble confirmación y de las finalidades duplica la fila marcable de Ajustes (`SettingsScreen.OptionRow`, privada) | (a) extraer `OptionRow` a una clase interna común de AF.UI al integrar (toca `SettingsScreen.cs`); (b) dejarlo | **(a)**, para el integrador: la rama no toca `SettingsScreen.cs` |
+| Q-B12-15 | Si cambia el perfil legal del país (otra SIM, un viaje), ¿se vuelve a preguntar? | (a) sí, las finalidades con el perfil de ahora y la banda guardada; (b) no: vale el perfil de la primera decisión | **(a)**, aplicada: una decisión del EEE (UMP) no puede valer en Brasil, donde hace falta la pantalla propia (LGPD). Riesgo: un teléfono que pierde la SIM a ratos volvería a preguntar |
+| Q-B12-16 | Capturas de referencia de los textos nuevos (`.claude/rules/localizacion.md`) | (a) las saca el integrador con `SnapshotKit` (es-419 y en-XA al 130 %), con una prueba de capturas para la edad, el consentimiento, el bloqueo y la doble confirmación; (b) a mano en el teléfono | **(a)**: en el Spark, las pruebas de capturas fallan en batchmode sin GPU (`RenderTexture.Create failed`). El `context` de cada clave lo dice |
 
 ---
 

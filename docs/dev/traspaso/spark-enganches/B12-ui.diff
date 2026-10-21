@@ -1,8 +1,8 @@
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
-index 1d135e14..b87de905 100644
+index f74d294a..4decdf75 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
-@@ -139,12 +139,8 @@ private void SetUpConsent(IClock clock, IConsentStore store)
+@@ -141,12 +141,8 @@ private void SetUpConsent(IClock clock, IConsentStore store)
                  return;
              }
  
@@ -168,7 +168,7 @@ index 79bcd977..caf0b481 100644
          }
 diff --git a/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs b/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs
 new file mode 100644
-index 00000000..6c0e45a3
+index 00000000..5ee415b2
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs
 @@ -0,0 +1,254 @@
@@ -360,7 +360,7 @@ index 00000000..6c0e45a3
 +        {
 +            var presenter = new ImmediatePurchasePresenter();
 +            LaunchOptions.PurchasePresenterOverride = presenter;
-+            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.BrLgpdEca, 1, T0, true, false, AgeBand.Teen)));
++            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, false, AgeBand.Teen)));
 +            yield return PlayModeHelpers.LoadAppWithConsent(store);
 +            GameBootstrap boot = GameBootstrap.Current!;
 +            Assert.That(boot.ConsentAds!.NonPersonalized, Is.True, "13-17: npa");
