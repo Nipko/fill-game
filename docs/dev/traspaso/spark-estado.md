@@ -171,6 +171,91 @@ Las 23 preguntas, con sus opciones y la recomendada, están en `docs/store-listi
   - Para cerrarlo haría falta guardar la racha del primero (otro campo [P]).
 - **Falta UI** (fuera de B6): la tarjeta del pre-prompt, la fila «Avisos» de Ajustes y el aviso del Regalo de regreso (`GameBootstrap.LastComeback`).
 
+## 2026-10-20 · B3 · Salto del Boto (`spark/t5-b3`): HECHA · verificación completa · lista para integrar
+
+- **Rama:** `spark/t5-b3`, desde `origin/integracion-fase1-fase2` `9982bdc` (con B1a). Sin push (lo pidió el encargo de esta tanda).
+- **Nota de diseño:** `docs/dev/salto-del-boto.md` (reglas S1-S10, reparto, preguntas Q-S1-Q-S9, riesgos).
+- **Commits:** `d8f1fb4` (lógica, vista y tests en archivos nuevos), `62963e9` (almacén según el progreso), `e9440f7` (nota y parches),
+  `28a6876` y `bd4be8d` (revisión: el Reto sin Salto, la Cuia extra, la clave `skip`), `ad2ce8b` (.meta y B3-ui.diff regenerado),
+  y los dos del arreglo de las mascotas (Rosa se pinta al enseñarla; B3-ui.diff regenerado, `e79f624`).
+- **Archivos nuevos:** `Scripts/Boosters/SkipBooster.cs`; `Scripts/GameFlow/SkipStore.cs` y `LevelFlow.Skip.cs`; `Scripts/UI/SkipText.cs`,
+  `SkipUi.cs`, `GameBootstrap.Skip.cs`, `SkipRunner.cs` y `DevProbe.Skip.cs`; tests EditMode `SkipBoosterTests`, `SkipFlowTests`,
+  `SkipProbeTests` y `SkipDailyTests`.
+- **E34 cumplido:** `LevelFlow.Skip()` llama a `OnSkipStreak()` dentro de su `using (Saves())`, tras el cobro y **antes** de
+  `ISkipStore.SaveSkip`; el cobro, la Canasta del 10k, el salto y el `level_state` del nivel siguiente salen en **una** escritura
+  (`SkipFlowTests.SkippingA10k_PaysItsBasket_AndEverythingGoesOutInOneWrite`). El nivel saltado **cuenta para `max_level`** (sin
+  `stats.levels_won`), como pedía el aviso del revisor de B1a.
+- **Revisión (code-reviewer):** 1.ª ronda CAMBIOS NECESARIOS (sin test del Reto, sin test del aviso de la Cuia extra, clave del CTA fuera
+  del glosario, faltaba Unity con los parches); arreglado. 2.ª ronda: solo faltaba commitear el .meta y el B3-ui.diff regenerado (hecho en
+  `ad2ce8b`); «aprobado sin otra ronda de código» con PlayMode completo en verde.
+
+### Enganches para el integrador (en este orden, en LF, en `docs/dev/traspaso/spark-enganches/`)
+
+1. `B3-model.diff`: `StuckModalModel.cs` (`StuckContext.Skip`, `StuckModalView.Skip`: la rama D) y `LevelFlow.Funnel.cs`
+   (`BuildStuckContext` rellena `Skip = SkipOffer`); añade `Tests/EditMode/StuckModalSkipTests.cs` (+ .meta).
+2. `B3-ui.diff` (necesita el 1): `StuckModal.cs` (la opción con precio y «Rosa te lleva…» o «Te faltan»), `PauseMenu.cs` (botón con Rosa y
+   precio), `GameScreen.cs` (pasa `flow.SkipOffer` y `OnPauseSkip`), `GameBootstrap.cs` (`SetUpSkip();` tras `SetUpStreak();`); añade
+   `Tests/PlayMode/SkipPlayModeTests.cs` (+ .meta).
+3. `B3-strings.csv`: 6 claves (`stuck_skip`, `skip_tagline`, `skip_confirm_title`, `skip_confirm_extra_cuia`, `skip`, `skip_banner`), a
+   copiar en `strings.csv`; `pendiente_asesor`.
+- Sin parche de `Profile`/`ProfileJson` (ya guardan `since_last_skip` y `skipped_levels`) ni de `RiverMapScreen*` (ya pinta a Rosa con
+  `max_level` + `skipped_levels`).
+- Prueba: `git apply` de 1 y 2 sobre la rama, `unity-compile`, EditMode y PlayMode (`StuckModalSkipTests`, `SkipPlayModeTests`).
+- **Choque con `B7-bootstrap.diff`:** `B3-ui.diff` y `B7-bootstrap.diff` insertan una línea en el mismo punto de `GameBootstrap.cs`,
+  justo después de `SetUpStreak();`. Se resuelve a mano dejando primero `SetUpSkip();` y después `ConnectTelemetry();`.
+- **Rehecho sobre FX16a/FX16b** (`e11b424`): `B3-ui.diff` se regeneró sobre el `StuckModal.cs` nuevo; la rama D usa las medidas de la
+  disposición compacta (`FitCtaLabelCompact`, `PlaceButton`, `HeightOf`, `gap`), como la Cuia de rescate.
+
+### Verificación
+
+| Dónde | Comando | Resultado |
+|---|---|---|
+| rama | `dotnet build dotnet/AmazonFill.slnx -warnaserror` | 0 avisos, 0 errores |
+| rama | `dotnet test dotnet/AmazonFill.slnx` | 981 (975 + 6 omitidos), 0 fallos |
+| rama | `python tools/validate_schema.py` | 103/103 PASS, sin cambios en `tools/out/` |
+| rama | `unity-compile.ps1 -Architecture arm64` | OK (código 0) |
+| rama | EditMode (`-TimeoutSec 3600`) | **3.384 (3.381 + 3 omitidos), 0 fallos** |
+| rama | PlayMode (`-TimeoutSec 3600`) | 1.589 (1.380 + 207 omitidos), **2 fallos de tiempo** con otro Editor (B2) en marcha: `WorldBannerTests.Banner_TimeoutAndWaitMs_UseTheRealClock` y `WorldBannerTravelTests.Travel_MeshesBuildIn8ms` (10,63 ms > 8); relanzados con filtro: **30/30 verdes** |
+| worktree temporal con B3-model + B3-ui | `git apply` de los dos | aplican limpios |
+| ídem | `unity-compile.ps1` | OK |
+| ídem | EditMode | **3.389 (3.386 + 3 omitidos), 0 fallos** |
+| ídem | PlayMode | 1.ª pasada: 1 fallo real, `WorldBannerTests.Banner_NotOnRetryNorResume` (`MascotsBuilt`): la confirmación, el banner y la pausa pintaban a Rosa al arrancar; arreglado en `e5519fa` y `e79f624` (Rosa solo al enseñarlos). 2.ª pasada: **1.590 (1.383 + 207 omitidos), 0 fallos** |
+| rama tras el arreglo | `unity-compile.ps1` | OK |
+| retoques tras la aprobación (`cabddef`, `a82a97e`) | rama: `dotnet build`/`test`, `validate_schema`, compile, EditMode, PlayMode | 0 avisos; 981 (975 + 6); 103/103; OK; **3.384 (3.381 + 3), 0 fallos**; **1.589 (1.382 + 207), 0 fallos** |
+| ídem | worktree con B3-model + B3-ui: compile, EditMode, PlayMode | OK; **3.389 (3.386 + 3), 0 fallos**; **1.590 (1.383 + 207), 0 fallos** (`SkipPlayModeTests` en verde) |
+| tras fusionar `e11b424` (FX16a/FX16b; `c975184`, `be82d8d`) | rama: `dotnet build`/`test`, `validate_schema`, compile, EditMode, PlayMode | 0 avisos; 981 (975 + 6); 103/103; OK; **3.392 (3.389 + 3), 0 fallos**; **1.655 (1.425 + 230), 0 fallos** |
+| ídem | worktree con B3-model + B3-ui regenerado: `apply --check` en orden, compile, EditMode, PlayMode | aplican; OK; **3.397 (3.394 + 3), 0 fallos**; **1.656 (1.426 + 230), 0 fallos** (`SkipPlayModeTests` en verde) |
+
+### Decisiones [P] y preguntas para el dueño
+
+Detalle en la nota §3 (todas con la recomendada aplicada):
+- **Q-S1:** `last_skip_level` se deduce del mayor de `skipped_levels` (sin campo nuevo); `since_last_skip` se pone a 0 y no se lee. El ejemplo
+  de 08 §4.3 no casa con ninguna lectura: hay que corregir el GDD.
+- **Q-S2:** hueco N − último ≥ 10 (salto en el 40 → el 50 ya puede).
+- **Q-S3:** banner como franja con Rosa sobre el tablero mientras el intento no empezó (tarjeta, intro o sin vertidos).
+- **Q-S4:** sin nivel siguiente o sin canoas para empezarlo, el Salto no se ofrece.
+- **Q-S5:** la animación de Rosa (1,5 s) y su sonido esperan al arte y al audio.
+- **Q-S6:** `stuck_skip` partido en etiqueta + precio + `skip_tagline`.
+- **Q-S7:** se ofrece en Aguas estancadas, en la pausa y en el banner; no en ¿Seguro?, Nivel fallido ni Sin canoas.
+- **Q-S8:** textos sin canon («¿Saltar el nivel?», «Perderás la Cuia extra de este nivel»), `pendiente_asesor`.
+- **Q-S9:** `skip_min_level`: 05 dice «mínimo 31», 08 §9 da 20-31; el cliente solo exige ≥ 1 (el revisor sugiere no bajar de `rescue_min_level`).
+- Nueva (revisor): ¿se enseña al jugador la Canasta que paga el salto de un 10k? Hoy solo sale en la sonda.
+- **Q-S1, consecuencia:** `since_last_skip` ya no se usa; corregir 02 §2, 04 §6.1-§6.2 y el ejemplo de 08 §4.3, y avisar a B7
+  (`af_skip_used.since_last_skip` = nivel − último salto) y a B8 (fusión en la nube).
+- **Q-S6, consecuencia:** toca la tabla de 04 §6.5.
+- **Pendiente:** medir el primer pintado de Rosa con `MascotsMainMs` (tope de 8 ms, 08 §5.4).
+- **Retoque tras la aprobación:** el banner sin saldo se enseña en gris con «Te faltan {n} semillas» (clave existente
+  `stuck_rescue_missing`, sin texto nuevo) y no responde al toque.
+
+### Riesgos
+
+- La rama D suma ~70 dp al panel de Aguas estancadas: el caso conocido de 16:9 al 130 % empeora si coinciden B y D (sin medir).
+- `af_skip_used` solo en la sonda de desarrollo hasta B7; `SkipConfig.Defaults` hasta el lector de Remote Config.
+- Sugerencias del revisor no hechas: id del banner en la AF_LAYOUT `level` (toca `GameScreen`), «Te faltan N» en la pausa sin saldo,
+  rama D en un test de tamaños.
+
+---
+
 ## 2026-10-20 · S2 = B1a · Crecida + Hoja escudo + Canasta (`spark/t5-b1a`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/t5-b1a`, desde `a759597`. Fusiona `origin/integracion-fase1-fase2` (`815b2e5`) en `7fbc1cd`.
