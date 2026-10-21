@@ -3214,3 +3214,25 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Identificadores públicos de dev:** proyecto `fill-dev-e75a2` (el id `amazon-fill-dev` no estaba disponible); app Android `com.amazonfill.dev` con id `1:528273757148:android:45d5cf0ddb2e3021c93519`. Auth anónimo activado; App Check con Play Integrity registrado **sin enforcement**; Analytics activado (cuenta dedicada, ubicación EE. UU.); plan Spark sin coste.
 - **AWS dev** (`AfDevApi`) ya autoriza con emisor y audiencia `fill-dev-e75a2` y admite ese id de app. Mientras `infra/lib/config.ts` siga con el default `amazon-fill-dev`, **todo despliegue de dev debe pasar** `-c firebaseProjectId=fill-dev-e75a2 -c firebaseAppIds=1:528273757148:android:45d5cf0ddb2e3021c93519`; se cambiará el default de dev en la próxima tarea de `infra/`.
 - **Pendiente para prod:** crear Firebase prod en la cuenta empresarial (con el permiso del administrador) o decidir otra cosa; prod sigue sin bootstrap ni stacks.
+
+### D-033, añadido del 2026-10-21: preguntas de B7 (Remote Config, analítica y bus `AF.Events`), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada, la (a), por la regla del dueño; integradas con `spark/t5-b7` (`17046f38`; revisión del Spark en `d2889a40`) y sus parches B7-*. El dueño puede cambiarlas. Detalle y opciones en `docs/dev/remote-config-analytics.md` §6.
+- **Q-T1:** bus mínimo `AF.Events` sin motor; las interfaces de escucha que ya existían siguen.
+- **Q-B7-1:** `AF.RemoteConfig` sin dependencias. Ver Q-B7-24 abajo: con D-035, `AF.Backend` es el cliente de la API en AWS, no Firebase.
+- **Q-B7-2:** `AF.Events` sin dependencias; lo referencian Economy, GameFlow, Analytics y UI. Se añade su fila a 08 §2.2 en esta integración.
+- **Q-B7-3:** dos ensamblados de composición (`AF.RemoteConfig.Binding` y `AF.Analytics.Adapters`) que solo usa `AF.UI`; se añade su fila a 08 §2.2 en esta integración.
+- **Q-B7-4 / Q-B7-5:** «resto» en los mapas por país = la clave `"*"`; `ads_rv_cooldown_s_<placement>` para los seis placements de `ads_rv_cap_<placement>`.
+- **Q-B7-6:** los defaults que remiten a otra tabla (`eco_calendar_table_v1`, `biz_kpi_*`, premios de liga y regata, `eco_price_tier_<country>`) quedan `null` + `pending`; cada bloque transcribe la suya a 08 §9.
+- **Q-B7-7:** un valor remoto que no pasa `Validate()` devuelve la clase entera a `Defaults`. Ojo: las `Validate()` no comprueban los rangos de 08 §9; completarlas en sus bloques.
+- **Q-B7-8:** `biz_maintenance_message` es una clave de `strings.csv` (vacía = aviso genérico).
+- **Q-B7-9:** la analítica del Reto sigue como sonda `AF_STATE` (R10); su gancho, en un parche aparte.
+- **Q-B7-10 a Q-B7-13:** `af_level_win.double_harvest` = estado en la victoria; `af_level_abandon.reason` solo `map`; los comunes de 08 §8.1 a todos los eventos, sin los null; `boosters_json` con `undo` y `extra_cuia`.
+- **Q-B7-14:** `biz_feature_lives` apagado = las canoas no cuentan; `biz_feature_rescue` apagado = sin Cuia de rescate; los demás, al llegar su sistema.
+- **Q-B7-15:** `anim_speed_factor_late` = 1,0. El GDD ya lo traía (integración de D-035), así que `B7-gdd.diff` no se aplicó: solo se regeneró el JSON.
+- **Q-B7-16 a Q-B7-21:** `AF_EVENT {json}` en logcat solo en desarrollo y en el Editor; `session_id` GUID; booleanos `true`/`false`; `rc_variant` = `biz_experiment_tag`; recogida apagada hasta el consentimiento (los sumideros locales escriben); el JSON compilado como constante.
+- **Q-B7-22 / Q-B7-23:** `pours` y `t_ms` se añaden a los eventos de comodines y del modal al engancharlos; `level_start.band` = `difficulty.band` del nivel.
+- **[P] de la nota:** el formato `af-rc-defaults/1`, las interpretaciones de las diez celdas no literales de 08 §9, la congelación por `RcSnapshot`, la validación contra el catálogo, el sumidero `AF_EVENT` y la sesión.
+- **Ajustes del integrador por D-035:** los defaults se regeneran desde 08 §9 actual (entra `biz_backend_enabled` = true, sale `sec_appcheck_enforce`; siguen 251 claves). `VerificationQueueConfig` (F3-1, `sec_purchase_deferred_ack_h`) queda en `NotBoundYet` del test del binder hasta que F3-3 conecte el backend en el arranque.
+- **Q-B7-24 (nueva, del integrador):** 08 §2.2 sigue diciendo que `AF.RemoteConfig` depende de `Backend`, pero con D-035 `AF.Backend` es el cliente de la API propia en AWS y Remote Config va con Firebase en el cliente. Opciones: (a) **recomendada, aplicada en el código:** `AF.RemoteConfig` sin dependencias (o solo `Platform`, para `IServerDate`) y corregir esa celda de 08 §2.2 en la próxima edición del GDD; (b) que `AF.RemoteConfig` referencie `AF.Backend`.
+- **Pendientes de B7 tras integrar:** enlazar en `RcConfigBinder` `ShuffleConfig`, `SkipConfig`, `ComebackConfig`, `PushConfig` y `VerificationQueueConfig` (hoy usan sus `Defaults`) y `sec_ssv_grace_h` con B8; los ganchos que faltan (`af_boot`, `af_consent`, comodines, modal, canoas, Reto, Ajustes, `af_level_load`, `af_error`…); las pantallas «Actualiza Tintalú» y de mantenimiento.
