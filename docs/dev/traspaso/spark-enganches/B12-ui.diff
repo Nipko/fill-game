@@ -1,3 +1,22 @@
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
+index 1d135e14..b87de905 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Consent.cs
+@@ -139,12 +139,8 @@ private void SetUpConsent(IClock clock, IConsentStore store)
+                 return;
+             }
+ 
+-            var errors = new List<string>();
+-            _consentConfig = _rc != null ? ConsentConfigBinder.Bind(_rc.Freeze(), errors) : ConsentConfig.Defaults;
+-            for (int i = 0; i < errors.Count; i++)
+-            {
+-                Debug.LogWarning(LogPrefix + "Remote Config: " + errors[i]);
+-            }
++            // Las cifras ya enlazadas con el resto (RcConfigBinder; sus errores ya salieron en SetUpTelemetry): una sola fuente.
++            _consentConfig = _rcConfigs?.Consent ?? ConsentConfig.Defaults;
+ 
+             _consentCountry = ConsentCountry.Resolve(SimCountryOverride ?? AndroidSimCountry.ForPlatform(), _deviceLocale, out _consentCountrySource);
+             string profile = _consentConfig.ProfileFor(_consentCountry);
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
 index b89ff9cb..8a0b40f9 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
@@ -149,10 +168,10 @@ index 79bcd977..caf0b481 100644
          }
 diff --git a/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs b/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs
 new file mode 100644
-index 00000000..562b3a32
+index 00000000..6c0e45a3
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/ConsentBootTests.cs
-@@ -0,0 +1,197 @@
+@@ -0,0 +1,254 @@
 +#nullable enable
 +using System;
 +using System.Collections;
@@ -243,26 +262,83 @@ index 00000000..562b3a32
 +        {
 +            var store = new MemoryProfileStore();
 +            yield return PlayModeHelpers.LoadAppWithConsent(store);
-+            GameBootstrap boot = GameBootstrap.Current!;
-+            boot.ConsentView!.AgeButton(AgeBand.Under13).onClick.Invoke();
-+            yield return null;
-+            yield return null;
-+
-+            Assert.That(boot.ConsentBlocked, Is.True);
-+            Assert.That(boot.ConsentView.View, Is.EqualTo(ConsentView.Blocked));
-+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Boot), "no se crea sesión de juego");
-+            Assert.That(boot.Analytics!.CollectionEnabled, Is.False);
-+            Assert.That(boot.ConsentAds!.ChildDirected, Is.True, "TFCD");
-+            Assert.That(boot.ConsentStore!.PurchasesAllowed, Is.False);
++            GameBootstrap first = GameBootstrap.Current!;
++            first.ConsentView!.AgeButton(AgeBand.Under13).onClick.Invoke();
++            yield return null; // el arranque, que espera la decisión, aplica los flags y bloquea
++            Assert.That(first.ConsentBlocked, Is.True);
++            Assert.That(first.Analytics!.CollectionEnabled, Is.False);
++            Assert.That(first.ConsentAds!.ChildDirected, Is.True, "TFCD antes de bloquear (08 §7)");
++            Assert.That(first.ConsentStore!.PurchasesAllowed, Is.False);
 +            Assert.That(store.Load().Profile!.Consent!.AgeBand, Is.EqualTo(AgeBand.Under13));
++
++            // La escena se recarga y el arranque se para en el bloqueo, antes de crear el juego (sin sesión, audio ni avisos).
++            yield return PlayModeHelpers.WaitFor(
++                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.ConsentBlocked,
++                "el arranque bloqueado tras elegir <13");
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.ConsentView!.View, Is.EqualTo(ConsentView.Blocked));
++            Assert.That(boot.App, Is.Null, "no se crea sesión de juego");
++            Assert.That(boot.Ads, Is.Null);
++            Assert.That(boot.Store, Is.Null);
++            Assert.That(boot.PressAndroidBack(), Is.False);
++            Assert.That(boot.ConsentView.Visible, Is.True);
 +
 +            yield return PlayModeHelpers.LoadAppWithConsent(store);
 +            boot = GameBootstrap.Current!;
 +            Assert.That(boot.ConsentBlocked, Is.True, "en cualquier arranque posterior (08 §7)");
 +            Assert.That(boot.ConsentView!.View, Is.EqualTo(ConsentView.Blocked));
 +            Assert.That(boot.App, Is.Null, "el arranque se para antes de crear el juego");
-+            Assert.That(boot.Ads, Is.Null);
-+            Assert.That(boot.Store, Is.Null);
++        }
++
++        [UnityTest]
++        public IEnumerator Settings_CorrectingTo13_Blocks_WithoutTheSession()
++        {
++            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, true, AgeBand.Teen)));
++            yield return PlayModeHelpers.LoadAppWithConsent(store);
++            GameBootstrap first = GameBootstrap.Current!;
++            Assert.That(first.PressSettings(), Is.True);
++            first.SettingsView!.AgeButton!.onClick.Invoke();
++            first.ConsentView!.AgeButton(AgeBand.Under13).onClick.Invoke();
++
++            yield return PlayModeHelpers.WaitFor(
++                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.ConsentBlocked,
++                "el arranque bloqueado tras corregir a <13");
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.App, Is.Null, "la sesión de juego no sigue debajo");
++            Assert.That(boot.ConsentView!.View, Is.EqualTo(ConsentView.Blocked));
++            ConsentRecord saved = store.Load().Profile!.Consent!;
++            Assert.That(saved.AgeBand, Is.EqualTo(AgeBand.Under13));
++            Assert.That(saved.AgeBandCorrected, Is.True);
++        }
++
++        [UnityTest]
++        public IEnumerator UnknownCountry_IsStrict_AndUmp_LeavesTheAdsToUmp()
++        {
++            GameBootstrap.SimCountryOverride = ManualSimCountry.None;
++            LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("es-419");
++            yield return PlayModeHelpers.LoadAppWithConsent(new MemoryProfileStore());
++            GameBootstrap boot = GameBootstrap.Current!;
++            Assert.That(boot.ConsentCountryCode, Is.Null);
++            boot.ConsentView!.AgeButton(AgeBand.Adult).onClick.Invoke();
++            Assert.That(boot.ConsentView.AdsToggleShown, Is.False, "Q-T3 (a): sin país, lo más estricto");
++            Assert.That(boot.ConsentView.AdsLineText, Is.EqualTo(ConsentText.T(ConsentText.Keys.AdsStrict)));
++            boot.ConsentView.AcceptAllButton.onClick.Invoke();
++            yield return PlayModeHelpers.WaitFor(() => boot.App!.Screen != AppScreen.Boot, "la primera pantalla");
++            Assert.That(boot.ConsentAds!.NonPersonalized, Is.True);
++
++            LaunchOptions.Reset();
++            GameBootstrap.SimCountryOverride = new ManualSimCountry("DE");
++            LaunchOptions.ClockOverride = new ManualClock(T0, TimeSpan.Zero);
++            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Ump, 1, T0, true, false, AgeBand.Adult)));
++            yield return PlayModeHelpers.LoadAppWithConsent(store);
++            boot = GameBootstrap.Current!;
++            Assert.That(boot.ConsentAds!.UmpDecides, Is.True);
++            Assert.That(boot.ConsentAds.NonPersonalized, Is.False, "en el EEE decide UMP (08 §7 #2)");
++            Assert.That(boot.PressSettings(), Is.True);
++            boot.SettingsView!.PrivacyButton!.onClick.Invoke();
++            Assert.That(boot.ConsentView!.AdsOptionsShown, Is.True, "revocación en Ajustes (05 §7)");
++            boot.ConsentView.AdsOptionsButton.onClick.Invoke();
++            Assert.That(boot.ConsentAds.PrivacyOptionsRequests, Is.EqualTo(1));
 +        }
 +
 +        [UnityTest]

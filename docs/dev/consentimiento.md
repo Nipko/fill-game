@@ -24,9 +24,9 @@ Bloque B12 de `docs/dev/plan-tanda5.md` §4, con las decisiones Q-T3 (a) y Q-T4 
 5. **Banda `<13`** (`consent_under13_policy` = `block`):
    - se guarda y se aplica en cualquier arranque posterior;
    - sale la pantalla «Pide a un adulto que instale el juego», sin botones;
-   - la app no arranca (`AppFlow` se queda en `Boot`; no se crea sesión de juego);
-   - flags: TFCD, sin analítica, sin compras, sin Play Games ni Remote Config personalizado (08 §7);
-   - si ya estaba guardada, el arranque se para antes de crear la cartera, los anuncios y la tienda (`BlockedAtBoot`).
+   - flags, antes de bloquear: TFCD, sin analítica, sin compras, sin Play Games ni Remote Config personalizado (08 §7);
+   - la escena se recarga (como al cambiar de idioma, `RebuildUi`), y el arranque siguiente se para en `BlockedAtBoot` antes de crear los anuncios, la tienda, las pantallas, las sesiones y el audio: no se crea sesión de juego ni se programan avisos locales;
+   - si ya estaba guardada, el arranque se para ahí mismo, sin recargar.
 
 ### 1.2 Pantalla de edad neutral
 
@@ -44,19 +44,20 @@ Bloque B12 de `docs/dev/plan-tanda5.md` §4, con las decisiones Q-T3 (a) y Q-T4 
 - «Rechazar todo» y «Aceptar todo» van uno al lado del otro, con el mismo botón de madera y el mismo tamaño: «Rechazar» al mismo nivel que «Aceptar». Debajo, «Guardar mi elección».
 - **Anuncios personalizados** solo se ofrecen con 18+ y fuera de UMP:
   - con 13-17 (`biz_under18_no_personalization`), una línea dice que no son personalizados;
-  - con el perfil `ump` (EEE, Reino Unido y Suiza), una línea dice que los decide el aviso de Google, el de UMP que muestra MAX al inicializarse (08 §7 #2).
+  - sin país conocido, una línea dice que no son personalizados (Q-T3 (a), el tratamiento más estricto; Q-B12-13);
+  - con el perfil `ump` (EEE, Reino Unido y Suiza), una línea dice que los decide el aviso de Google, el de UMP que muestra MAX al inicializarse (08 §7 #2). El juego no fuerza `npa`: deciden las cadenas TCF de UMP (`ConsentFlags.AdsByUmp`, `ConsentAdService.UmpDecides`). Desde Ajustes, la línea es un enlace, «Elegir los anuncios en el aviso de Google», que vuelve a abrir el mensaje de UMP para cambiar o retirar el consentimiento (`ShowPrivacyOptions`; con MAX, su formulario de privacidad [NV]).
 - **Registro (prueba LGPD)**: `profile.consent` con el perfil legal, `text_version`, la fecha, las dos finalidades y la banda. Se guarda en el acto.
 
 ### 1.4 País y perfil legal (Q-T3 (a))
 
 1. País de la SIM: `TelephonyManager.getSimCountryIso()` por el JNI de Unity. Sin permiso: no necesita `READ_PHONE_STATE`. En `AndroidSimCountry`.
 2. Si no, la región del teléfono, la de `IDeviceLocale` (`es-CO` → CO; `es-419` no es un país).
-3. Si no, ningún país, y el perfil es `default`, el más estricto.
+3. Si no, ningún país: el perfil es `default` **y** no se ofrecen anuncios personalizados (`npa` sin elección). Ese es «el tratamiento más estricto» de Q-T3 (a) [P] (Q-B12-13).
 - El perfil sale de `biz_legal_profile_by_country`:
   - la entrada del país;
   - si no la hay, la de su grupo (`EEE` para los 30 del EEE; `UK` para `GB`);
   - si no, `"*"`.
-- Todos los perfiles que no son `ump` ven la misma pantalla propia, con todo apagado al abrir: ese es «el tratamiento más estricto».
+- Todos los perfiles que no son `ump` ven la misma pantalla propia, con todo apagado al abrir. Un país conocido sin entrada propia (EE. UU., Argentina…) cae en `"*"` = `default` y sí elige los anuncios personalizados.
 
 ### 1.5 Flags (`ConsentPolicy`)
 
@@ -65,7 +66,8 @@ Bloque B12 de `docs/dev/plan-tanda5.md` §4, con las decisiones Q-T3 (a) y Q-T4 
 | sin decidir | no | `npa`, sin inicializar | no | no | — | no |
 | `<13` | no | `npa`, sin inicializar | **sí** | no | no | no |
 | `13-17` | según decisión | `npa` siempre | no | sí, con doble confirmación | sí | no |
-| `18+` | según decisión | según decisión | no | sí | sí | sí |
+| `18+` | según decisión | según decisión (sin país: `npa`) | no | sí | sí | sí |
+| `18+` con `ump` | según decisión | UMP (sin forzar `npa`) | no | sí | sí | sí |
 
 - `maxAdContentRating` = G en todas las bandas (05 §7, D-029).
 - Con `biz_under18_no_personalization` = false, 13-17 se trata como 18+ salvo TFCD.
@@ -81,7 +83,11 @@ Bloque B12 de `docs/dev/plan-tanda5.md` §4, con las decisiones Q-T3 (a) y Q-T4 
 
 **Autenticación de Google Play.** La pide Play según sus ajustes y los de Family Link: el cliente no la puede forzar [NV, a confirmar con el abogado]. Con la tienda falsa, la hoja «Compra simulada» hace sus veces.
 
-**Sin compras** (`<13` o sin decidir): `StoreUnavailable`, sin abrir nada, e `IsAvailable` = false.
+**Sin compras** (`<13` o sin decidir): `StoreUnavailable`, sin abrir nada, e `IsAvailable` = false. La tienda falla cerrada: hasta el primer `Apply`, ninguna compra.
+
+**Nunca se confirma lo imposible.** Antes de la segunda confirmación se pregunta a `StoreLedger.CheckPurchasable` (`Precheck`):
+- un producto ya comprado o que no se vende ahora (la Mochila, la Balsa antes del 31…) responde su estado sin pedir confirmación con precio;
+- si otra vista tapa la confirmación, se responde «no» y la compra nunca se queda colgada.
 
 ### 1.7 Ajustes
 
@@ -94,7 +100,7 @@ Sección nueva tras «Pista por inactividad», con dos enlaces:
   - elegir la misma banda no gasta la corrección;
   - una banda distinta se guarda con `age_band_corrected` [P];
   - pasar a 13-17 apaga los anuncios personalizados;
-  - pasar a `<13` bloquea: Ajustes se cierra y queda la pantalla del bloqueo;
+  - pasar a `<13` bloquea: la escena se recarga y el arranque se para en el bloqueo, sin sesión de juego (como en 1.1);
   - tras usarla, el enlace desaparece.
 
 ### 1.8 Analítica
@@ -150,11 +156,11 @@ Se aplican en este orden, con `git -c core.autocrlf=false apply`.
    - la tabla en `RcConfigBinder.BoundKeys`;
    - `RcConfigs.Consent`;
    - la comprobación en `RcConfigBinderTests`.
-3. **`B12-ui.diff`** (necesita el 1: `ProfileConsentStore`):
+3. **`B12-ui.diff`** (necesita el 1, `ProfileConsentStore`, y el 2, `RcConfigs.Consent`):
    - en `GameBootstrap.cs`, las llamadas de `GameBootstrap.Consent.cs`:
      - envolver anuncios y tienda (`WrapConsentAds` y `WrapConsentStore`, por dentro de los adaptadores de analítica de B7: un «Cancelar» de la doble confirmación sale en `af_iap_result`);
      - `BlockedAtBoot` tras crear el arte;
-     - `SetUpConsent` tras `ConnectTelemetry`;
+     - `SetUpConsent` tras `ConnectTelemetry`, con las cifras de `_rcConfigs.Consent` (una sola fuente; por eso el 3 necesita también el 2);
      - `StartConsentAtBoot` y `WaitConsentAtBoot` antes de `AppFlow.Start`: sin pantalla que enseñar no hay ningún `yield`;
      - `ConsentBack` en el Atrás;
      - `RefreshConsentRows` al abrir Ajustes;
@@ -164,7 +170,7 @@ Se aplican en este orden, con `git -c core.autocrlf=false apply`.
      - `GameBootstrap.ConsentEnabledOverride ??= false`, para que los tests de siempre arranquen como antes;
      - `LoadAppWithConsent`;
    - `ConsentBootTests` (PlayMode, la escena real).
-4. **`B12-loc.diff`**: las 21 claves en `strings.csv`, en su sitio por orden ordinal, y `ConsentText.AllKeys` en `LocTablesTests.UiTextKeys`.
+4. **`B12-loc.diff`**: las 23 claves en `strings.csv`, en su sitio por orden ordinal, y `ConsentText.AllKeys` en `LocTablesTests.UiTextKeys`.
 
 **Sin parche de `AppFlow`.** El estado «Consent» de 08 §2.2 (`Boot → Consent → Lobby`) es el paso de `ConsentFlow` mientras `AppFlow` sigue en `Boot`:
 - en `Boot`, `GameBootstrap.Update` no hace nada y descarta el Atrás, que es lo que pide la pantalla del arranque;
@@ -206,6 +212,8 @@ Se avanzó con la recomendada, marcada [P] en el código.
 | Q-B12-10 | Nombre del campo nuevo | `consent.age_band_corrected` (bool) [P] | Anotarlo en 08 §4.3 |
 | Q-B12-11 | `af_settings_change.value` con `key = consent` | (a) `choices` o `age`; (b) los valores nuevos | **(a)** [P] |
 | Q-B12-12 | El encargo dice que `INTERNET` no está aprobado, pero D-036 (2026-10-20) lo aprobó | — | Sin efecto en B12: no usa red. Corregir el encargo o D-036 |
+| Q-B12-13 | ¿Qué es «el tratamiento más estricto» de Q-T3 (a) sin país? | (a) perfil `default` + `npa` sin elección (la analítica se puede aceptar); (b) solo el perfil `default`, con la misma pantalla que un país conocido; (c) tratarlo como el EEE (UMP) | **(a)**, aplicada: un teléfono sin SIM ni región puede estar en el EEE, y sin UMP no hay base para personalizar. Con (c), MAX enseñaría UMP fuera del EEE |
+| Q-B12-14 | La UI de la doble confirmación y de las finalidades duplica la fila marcable de Ajustes (`SettingsScreen.OptionRow`, privada) | (a) extraer `OptionRow` a una clase interna común de AF.UI al integrar (toca `SettingsScreen.cs`); (b) dejarlo | **(a)**, para el integrador: la rama no toca `SettingsScreen.cs` |
 
 ---
 
