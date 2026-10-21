@@ -33,8 +33,9 @@ namespace AF.Save
         Tie = 4,
 
         /// <summary>
-        /// Caso 8: solo uno de los dos cuadra con su firma (<c>integrity.hmac</c>): gana el coherente (08 §10.1: «en conflicto con
-        /// la nube gana el blob coherente»), sin nada del otro.
+        /// Caso 8: uno de los dos está manipulado (su <c>integrity.hmac</c> no cuadra) y el otro no: gana el coherente (08 §10.1: «en
+        /// conflicto con la nube gana el blob coherente»), sin nada del otro. Quien llama decide qué es coherente
+        /// (<c>ProfileIntegrity.IsCoherent</c>: todo salvo una firma que no cuadra en un perfil sin migrar) [P].
         /// </summary>
         Integrity = 5,
     }
@@ -113,7 +114,7 @@ namespace AF.Save
     /// <c>undo_tip_seen</c> por «o»; <c>skipped_levels</c> por unión (B3, Q-S1); <c>stats</c> por máximo [P]; <c>ads.last_iap</c>
     /// por máximo [P]. Con el parche del perfil de B8, también <c>applied_purchases</c> por unión (08 §11) y lo demás de
     /// <c>integrity</c> (<see cref="MergeAddedFields"/>).</item>
-    /// <item><b>Integridad</b>: si solo uno cuadra con su firma, gana ese, sin unir nada del otro (un blob manipulado no aporta
+    /// <item><b>Integridad</b>: si uno está manipulado (su firma no cuadra) y el otro no, gana el otro, sin unir nada del otro (un blob manipulado no aporta
     /// derechos ni compras) [P].</item>
     /// </list>
     /// Lo demás (<c>settings</c>, <c>sloth</c>, <c>streak</c>, <c>daily_challenge</c>, <c>level_state</c>, <c>progress</c>

@@ -60,6 +60,11 @@ namespace AF.UI
                 throw new ArgumentNullException(nameof(onConfirm));
             }
 
+            if (onCancel == null)
+            {
+                throw new ArgumentNullException(nameof(onCancel));
+            }
+
             _root = UiBuilder.Rect("DeleteAccountDialog", parent);
             ModalKit.Dim("Dim", _root, 0.55f); // captura los toques: Ajustes no se toca con el diálogo abierto
             _panel = ModalKit.Card("Panel", _root, art, out _surface);

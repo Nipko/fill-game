@@ -9,7 +9,7 @@ namespace AF.Platform
     /// secreto ni seguridad real (08 §10.1, «Ingeniería inversa del binario»: ninguna clave secreta en el cliente): solo hace que
     /// editar <c>profile.json</c> a mano deje un perfil que no cuadra. El perfil nunca guarda este valor en claro: guarda su huella
     /// (<c>integrity.device_first</c>, <c>AF.Save.ProfileHmac.DeviceFingerprint</c>). En el teléfono lo da <c>AF.UI</c> con
-    /// <c>SystemInfo.deviceUniqueIdentifier</c> (necesita el motor); el editor y los tests usan <see cref="ManualDeviceIdentity"/>.
+    /// <c>InstallIdentity</c> (un id aleatorio por instalación en <c>PlayerPrefs</c>; Q-B8-3); el editor y los tests usan <see cref="ManualDeviceIdentity"/>.
     /// </summary>
     public interface IDeviceIdentity
     {

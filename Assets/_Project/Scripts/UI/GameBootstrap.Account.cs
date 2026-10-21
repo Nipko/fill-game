@@ -17,10 +17,10 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item><see cref="SetUpAccount"/> crea el diálogo de dos pasos (<see cref="DeleteAccountDialog"/>) encima de Ajustes y le
     /// da la fila «Eliminar cuenta y datos» (<see cref="SettingsScreen.DeleteAccountPressed"/>).</item>
-    /// <item>«Eliminar» (<see cref="ConfirmDeleteAccount"/>) hace la parte del cliente de 08 §11: borra el snapshot
-    /// <c>af_main</c> de la nube (<see cref="ICloudSave"/>; sin Play Games, la falsa sin sesión, que no hace nada),
-    /// <c>profile.json</c> y <c>profile.bak</c> (<see cref="IProfileStore.Delete"/>, por el lote, que antes cancela el escritor de
-    /// segundo plano para que nada vuelva a escribir el perfil) y <c>PlayerPrefs</c>, y vuelve al estado de primera ejecución
+    /// <item>«Eliminar» (<see cref="ConfirmDeleteAccount"/>) hace la parte del cliente de 08 §11: borra <c>profile.json</c> y
+    /// <c>profile.bak</c> (<see cref="IProfileStore.Delete"/>, por el lote, que antes cancela el escritor de segundo plano para que
+    /// nada vuelva a escribir el perfil), <c>PlayerPrefs</c> y, si eso salió bien, el snapshot <c>af_main</c> de la nube
+    /// (<see cref="ICloudSave"/>; sin Play Games, la falsa sin sesión, que no hace nada), y vuelve al estado de primera ejecución
     /// recargando la escena sin el perfil de la sesión (el arranque siguiente no encuentra perfil: entra al nivel 1, 08 §2.3).
     /// La parte del servidor (<c>deleteAccount</c>: <c>users/{uid}</c>, <c>rewards/*</c>, el libro mayor anonimizado y el usuario
     /// de Auth) llega con Functions y App Check [P]; hoy no hay UID.</item>
@@ -161,23 +161,12 @@ namespace AF.UI
             return true;
         }
 
-        // Parte del cliente de 08 §11: nube, perfil y PlayerPrefs. La nube se pide primero; su resultado no bloquea el borrado local
-        // (sin red, el snapshot se queda y lo borra deleteAccount en el servidor cuando exista) [P].
+        // Parte del cliente de 08 §11: perfil, PlayerPrefs y nube. Primero lo local: si falla, no se borra nada (tampoco la nube).
+        // El resultado de la nube no bloquea: sin red, el snapshot se queda (y lo borrará deleteAccount, o el marcador de borrado
+        // pendiente que llega con Play Games: nota B8 §8) [P].
         private bool DeleteAccountData(out string? error)
         {
             error = null;
-            ICloudSave? cloud = _cloudSave;
-            if (cloud != null && cloud.HasSession)
-            {
-                cloud.Delete(result =>
-                {
-                    if (result != CloudWriteResult.Ok)
-                    {
-                        Debug.LogWarning(LogPrefix + "no se pudo borrar el snapshot " + CloudSaveNames.Snapshot + " de la nube: " + result);
-                    }
-                });
-            }
-
             try
             {
                 if (FailAccountDeleteForTests)
@@ -216,6 +205,18 @@ namespace AF.UI
             {
                 PlayerPrefs.DeleteAll();
                 PlayerPrefs.Save();
+            }
+
+            ICloudSave? cloud = _cloudSave;
+            if (cloud != null && cloud.HasSession)
+            {
+                cloud.Delete(result =>
+                {
+                    if (result != CloudWriteResult.Ok)
+                    {
+                        Debug.LogWarning(LogPrefix + "no se pudo borrar el snapshot " + CloudSaveNames.Snapshot + " de la nube: " + result);
+                    }
+                });
             }
 
             return true;
