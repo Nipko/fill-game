@@ -12,7 +12,7 @@ index a8a430fd..d31e8974 100644
              var context = new DailyPlayContext(
                  store, clock, progress, dailyWallet, services, batch, profile.Settings,
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
-index 2c89b77b..2ffa8d3b 100644
+index b89ff9cb..ff1e794a 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
 @@ -119,6 +119,11 @@ private void ConnectTelemetry()
@@ -39,7 +39,7 @@ index 2c89b77b..2ffa8d3b 100644
                  p.AppVersion = Application.version;
                  RemoteConfigService? rc = _boot._rc;
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
-index eaa9dea1..2156fa8f 100644
+index 010305e5..64b75d9f 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
 @@ -924,6 +924,13 @@ public bool PressAndroidBack()
@@ -67,7 +67,7 @@ index eaa9dea1..2156fa8f 100644
  
          // La ventanita de casa del inicio no sale (LobbyScreen.SetCommerceOpen): con una pantalla de pago delante (D-013, punto 6)
          // o con el Mapa del río encima, que es opaco (revisión de M4.2). Con el Mapa, TiTino no se ve: su saludo del día (como
-@@ -1554,7 +1561,7 @@ private IEnumerator Start()
+@@ -1557,7 +1564,7 @@ private IEnumerator Start()
                  WrapAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill())), profile, batch, clock, firstRun, _rcConfigs?.Ads);
              _storeLedger = new StoreLedger(profile, _wallet, batch, clock, _rcConfigs?.Store);
              _store = WrapStore(new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency));
@@ -76,7 +76,7 @@ index eaa9dea1..2156fa8f 100644
                  mapProgress: progress);
  
              _screen = new GameScreen(transform, _art, _probe, this);
-@@ -1619,6 +1626,7 @@ private IEnumerator Start()
+@@ -1622,6 +1629,7 @@ private IEnumerator Start()
              SetUpMeta(); // B14: skins por hito, álbum de frutas, la Canasta en el Mapa y «Datos del río» (GameBootstrap.Meta.cs)
              SetUpSkip(); // Salto del Boto (B3; GameBootstrap.Skip.cs): el almacén en el perfil, la confirmación y el banner
              SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales

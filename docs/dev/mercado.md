@@ -117,5 +117,6 @@ Q-E2 (a): no hay icono de oferta temporal en el inicio en la 1.0; el hueco queda
 - El arte es provisional (por código): el icono del Mercado (semilla), el del Cántaro (disco de barro) y las filas.
 - El llenado del Cántaro es una escritura aparte de la de la victoria: si la app se cierra entre las dos, se pierde ese llenado (≤ 40 semillas).
 - Comprar el Cántaro: si la app se cierra justo entre la escritura de la cartera y la del Cántaro, las semillas quedan acreditadas y el Cántaro sigue lleno (se podría volver a comprar). Hacerlo en una sola escritura exige tocar `FakeStoreService`/`VerifiedStoreService` (sdk-integrator): con F3-5, que el ítem `piggy` del `grant` vacíe el Cántaro dentro de la misma transacción (Q-B5-12).
-- Sin capturas de pantalla ni prueba en el teléfono.
+- `af_piggy` `unlocked` sale solo en la victoria del 19 y con la tienda encendida: si en ese momento estaba apagada, ese jugador no lo envía nunca.
+- Capturas de referencia: `MarketSnapshotTests` (explícito; `b5_01` … `b5_07` en `Logs/snapshots/es-419/`), revisadas a ojo con los cuatro parches aplicados. Sin prueba en el teléfono.
 - Los textos nuevos nacen `pendiente_asesor` y sin EN ni PT-BR (salvo los tres del glosario).

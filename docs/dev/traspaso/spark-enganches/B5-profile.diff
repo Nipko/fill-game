@@ -92,10 +92,10 @@ index 00000000..1d677775
 \ No newline at end of file
 diff --git a/Assets/_Project/Scripts/IAP/Tests/ProfileOffersStoreTests.cs b/Assets/_Project/Scripts/IAP/Tests/ProfileOffersStoreTests.cs
 new file mode 100644
-index 00000000..c3bd5d58
+index 00000000..038f307a
 --- /dev/null
 +++ b/Assets/_Project/Scripts/IAP/Tests/ProfileOffersStoreTests.cs
-@@ -0,0 +1,120 @@
+@@ -0,0 +1,121 @@
 +#nullable enable
 +using System;
 +using AF.Economy;
@@ -163,7 +163,7 @@ index 00000000..c3bd5d58
 +        public void Piggy_IsMoney_AWrongTypeIsCorruption_ButOffersFallBack()
 +        {
 +            var fx = new StoreFixture();
-+            new ProfileOffersStore(fx.Profile, fx.Store).Save(new OffersRecord { PiggySeeds = 100, NoAdsDeclines = 1 });
++            new ProfileOffersStore(fx.Profile, fx.Store).Save(new OffersRecord { PiggySeeds = 100, PiggyLastLevel = 87, PiggyFullCardShown = true, NoAdsDeclines = 1 });
 +            string json = ProfileJson.Serialize(fx.Profile);
 +
 +            Assert.Throws<FormatException>(() => ProfileJson.Deserialize(json.Replace("\"seeds\": 100", "\"seeds\": \"100\"")));
@@ -173,8 +173,9 @@ index 00000000..c3bd5d58
 +            Assert.That(tolerant.Offers.StarterReminders, Is.EqualTo(new[] { 15 }));
 +            Assert.That(tolerant.Piggy!.Seeds, Is.EqualTo(100));
 +
-+            Profile notMoney = ProfileJson.Deserialize(json.Replace("\"full_card\": false", "\"full_card\": 1")
-+                .Replace("\"last_level\": 0", "\"last_level\": \"20\""));
++            Assert.That(json, Does.Contain("\"full_card\": true").And.Contain("\"last_level\": 87"));
++            Profile notMoney = ProfileJson.Deserialize(json.Replace("\"full_card\": true", "\"full_card\": 1")
++                .Replace("\"last_level\": 87", "\"last_level\": \"20\""));
 +            Assert.That(notMoney.Piggy!.FullCard, Is.False, "last_level y full_card no son dinero: su default, sin corrupción");
 +            Assert.That(notMoney.Piggy.LastLevel, Is.EqualTo(0));
 +            Assert.That(notMoney.Piggy.Seeds, Is.EqualTo(100));
