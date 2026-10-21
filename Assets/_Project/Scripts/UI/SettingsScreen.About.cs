@@ -122,6 +122,7 @@ namespace AF.UI
             UiBuilder.AutoSize(_aboutTitle, MinTextSp, SectionSp);
             _fruitsTitle = UiBuilder.Label("FruitsTitle", AboutSlot, TextStyle.Body, UiText.FactSheetTitle, FruitsTitleSp, FruitSheet.SoftInk, TextAlignmentOptions.MidlineLeft);
             UiBuilder.AutoSize(_fruitsTitle, MinTextSp, FruitsTitleSp);
+            BuildRiverFacts(); // «Datos del río» con su fuente (B14; SettingsScreen.RiverFacts.cs)
         }
 
         // Las fichas de la lista con el calendario y el progreso de ahora (al abrir Ajustes).
@@ -158,7 +159,9 @@ namespace AF.UI
                 _fruitTiles[i].Button.gameObject.SetActive(i < _fruitCount);
             }
 
-            AboutSlot.gameObject.SetActive(_fruitCount > 0);
+            _fruitsTitle.gameObject.SetActive(_fruitCount > 0);
+            RefreshRiverFacts(); // B14: los datos de llegada vistos, con su fuente
+            AboutSlot.gameObject.SetActive(_fruitCount > 0 || _riverFactCount > 0);
         }
 
         // Coloca la sección desde y (contenido desplazable) y devuelve dónde acaba; sin la sección, y tal cual.
@@ -173,6 +176,14 @@ namespace AF.UI
             float local = 0f;
             PlaceTitle(_aboutTitle, 16f, local, inner, titleH, s);
             local += titleH + FruitsTitleGapDp;
+            if (_fruitCount == 0)
+            {
+                // Sin frutas que enseñar, solo «Datos del río» (B14).
+                local = LayoutRiverFacts(top, local, inner, s);
+                UiBuilder.Place(AboutSlot, 0f, top, w, local);
+                return top + local;
+            }
+
             float subH = Mathf.Round((FruitsTitleSp * s) + 8f);
             _fruitsTitle.fontSizeMax = FruitsTitleSp * s;
             _fruitsTitle.fontSizeMin = MinTextSp;
@@ -214,6 +225,11 @@ namespace AF.UI
             }
 
             local -= RowGapDp;
+            if (_riverFactCount > 0)
+            {
+                local = LayoutRiverFacts(top, local + SectionGapDp, inner, s); // B14: «Datos del río», tras las frutas
+            }
+
             UiBuilder.Place(AboutSlot, 0f, top, w, local);
             return top + local;
         }
@@ -249,10 +265,19 @@ namespace AF.UI
             }
 
             yield return _aboutTitle;
-            yield return _fruitsTitle;
+            if (_fruitCount > 0)
+            {
+                yield return _fruitsTitle;
+            }
+
             for (int i = 0; i < _fruitCount; i++)
             {
                 yield return _fruitTiles[i].Label;
+            }
+
+            foreach (TextMeshProUGUI t in RiverFactTexts())
+            {
+                yield return t;
             }
         }
 

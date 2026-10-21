@@ -137,6 +137,7 @@ UiText.LevelComplete	¡Nivel completado!
 UiText.LevelFailed	Nivel fallido
 UiText.MapBackToCanoe	Volver a la canoa
 UiText.MapBackToLevel	Volver al nivel
+UiText.MapCardBasket	Canasta
 UiText.MapCardOtherFact	Otro dato
 UiText.MapL10Intro	Yo vivo aquí, donde el río entra al mar.
 UiText.MapLabelAndes	Andes ↑
@@ -182,6 +183,7 @@ UiText.SettingsLanguageAuto	Automático
 UiText.SettingsPatternsAuto	Automático
 UiText.SettingsPatternsOff	Nunca
 UiText.SettingsPatternsOn	Siempre
+UiText.SettingsRiverFacts	Datos del río
 UiText.SettingsSlothMessages	Mensajes de TiTino
 UiText.SimulatedAdClose	Cerrar
 UiText.SimulatedAdInterstitial	intersticial

@@ -30,7 +30,7 @@ namespace AF.Tests.PlayMode
     /// <item>las mini cuias de las paradas, tocables a ≥ 48 dp, llenas del agua del sitio las alcanzadas (con canto crema las que
     /// faltan) y en abanico en el Trapecio; todas las que se ven, a ≥ 48 dp entre centros y sin pisar la canoa con su mástil ni el
     /// guía (en el 121, el 141 y el 306); la baliza de los cierres de mundo, encendida y con su halo en el 40, el 80 y el 140, sin
-    /// que la tape la canoa; sin «Premio del mundo»;</item>
+    /// que la tape la canoa; con B14, el «Premio del mundo · faltan N» solo bajo el cierre del mundo con skin sin ganar;</item>
     /// <item>la casa de TiTino en Guajará y, fuera de la vista, la ventanita con «Casa · a unos 1.480 km» en el mundo 3 (la píldora
     /// bajo el retrato, a ≥ 8 dp de toda mini cuia), que lleva a la casa; <c>sloth_sleep</c> a los 30 s sin toques; cero
     /// asignaciones con el Mapa quieto.</item>
@@ -160,10 +160,16 @@ namespace AF.Tests.PlayMode
             Assert.That(map.StopMarkerBeaconHaloShown(7), Is.False, "la apagada, sin halo");
             Assert.That(map.StopMarkerHasBeacon(5), Is.False, "Manaos no cierra el mundo");
 
-            // Sin «Premio del mundo» (ni ningún otro texto nuevo en el Mapa).
+            // B14 (06 §4.5): el «Premio del mundo · faltan N» va bajo el cierre del mundo con skin aún sin ganar (Tefé, el 80:
+            // faltan 22), y en ningún otro sitio del Mapa.
+            Assert.That(map.PrizeMarker, Is.EqualTo(7), "tefe");
+            Assert.That(map.PrizeText, Is.EqualTo("Premio del mundo · faltan 22"));
             foreach (TMP_Text text in map.Canvas.GetComponentsInChildren<TMP_Text>(true))
             {
-                StringAssert.DoesNotContain("Premio", text.text, text.name);
+                if (text.text.Contains("Premio"))
+                {
+                    Assert.That(text.transform.IsChildOf(map.StopMarkerButton(7).transform), Is.True, text.name);
+                }
             }
 
             // En la Cuenca, a 1×, las mini cuias no caben: no se pintan. La canoa, el guía y la casa, sí.

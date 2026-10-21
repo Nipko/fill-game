@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using AF.Economy;
 using AF.GameFlow;
 using AF.Levels;
 using AF.Localization;
@@ -486,7 +487,13 @@ namespace AF.UI
 
             StopCard card = EnsureCard();
             card.Layout(_canvasW, _canvasH, _safeTop, _safeBottom, CardClearBottom());
-            card.ShowStop(stop, StopReached(stop, _progress.MaxLevel), StopWater(stop), Fauna, FruitSeries, StopCardSeason(stop));
+            // B14 (06 §4.5): una parada futura enseña su Canasta y, el cierre de un mundo con skin, «Premio del mundo · faltan N».
+            int max = Mathf.Clamp(_progress.MaxLevel, 0, WorldTable.LastLevel);
+            int prizeLeft = PrizeLevelsLeft(stop, max);
+            string? prize = prizeLeft >= 0 ? UiText.MapWorldPrize(prizeLeft) : null;
+            CuiaSkin? prizeSkin = prizeLeft >= 0 && SkinRewards.TryForWorld(stop.World, out SkinMilestone skin) ? CuiaSkin.For(skin.SkinId) : null;
+            card.ShowStop(stop, StopReached(stop, _progress.MaxLevel), StopWater(stop), Fauna, FruitSeries, StopCardSeason(stop),
+                BasketOf(stop), prize, prizeSkin);
             EmitLayout();
             return true;
         }
@@ -594,6 +601,7 @@ namespace AF.UI
             _samplesTabLabel!.text = UiText.MapSamples(_samplesEarned, _samplesTotal);
             _samplesSlot.gameObject.SetActive(_samplesTab != null && _samplesTotal > 0);
             BuildViewpoints(max);
+            BuildPassing(max); // B14: los puntos de paso ya recorridos (RiverMapScreen.Meta.cs)
         }
 
         partial void SamplesSpace(MapSpace space)
@@ -609,6 +617,8 @@ namespace AF.UI
                 ViewpointMarker v = _viewpoints[i];
                 v.Root.anchoredPosition = space.ToLocal(new Vector2(v.Data.X, v.Data.Y));
             }
+
+            PlacePassing(space); // B14
         }
 
         partial void SamplesFrame(ref float zoom, ref Vector2 center)
@@ -787,6 +797,8 @@ namespace AF.UI
                     }
                 }
             }
+
+            PassingLayoutIds(ids, rects); // B14: los puntos de paso a la vista
 
             if (SamplesSheetOpen)
             {

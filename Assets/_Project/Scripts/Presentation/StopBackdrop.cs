@@ -177,6 +177,20 @@ namespace AF.Presentation
         /// </summary>
         public static readonly Color LowWaterLut = new Color(1f, 0.88f, 0.7f, 1f);
 
+        /// <summary>
+        /// LUT de la noche de Muy difícil (07 §7.7, columna «Fondo»: «variante noche de la pintura del mundo (LUT de research/02
+        /// C3.4) [P]»; tarea B14) [P]: luz de luna, fría y baja (luminancia ≈ 0,72, más oscura que el velo del 15 % del paso 1, al
+        /// que sustituye), con el azul entero para que el cielo siga siendo cielo. Se multiplica con la de la parada y la de la
+        /// temporada. La cifra es provisional hasta la prueba en el teléfono (pregunta B14-Q5).
+        /// </summary>
+        public static readonly Color NightLut = new Color(0.66f, 0.72f, 0.98f, 1f);
+
+        /// <summary>
+        /// LUT de la luz de tarde de Difícil (07 §7.7: «el Difícil puede llevar una luz de tarde [P]; sin barra ni texto»; tarea B14)
+        /// [P]: cálida y algo baja (luminancia ≈ 0,92), con el rojo entero. Se multiplica con la de la parada y la de la temporada.
+        /// </summary>
+        public static readonly Color AfternoonLut = new Color(1f, 0.92f, 0.78f, 1f);
+
         // Cielo por mundo (07 §2.1, columna «Hora del día» [P]): arriba, en el horizonte, y su opacidad arriba y abajo.
         private static readonly Color NoonTop = Palette.Hex(0x3FA7E0);
         private static readonly Color NoonHorizon = Palette.Hex(0xBDE8F2);
@@ -239,6 +253,7 @@ namespace AF.Presentation
         private string _water = string.Empty;
         private Color _waterColor = Palette.WaterWhite;
         private Season _season;
+        private Color _light = Color.white;
         private Color _lut = Color.white;
         private Color _lutFrom = Color.white;
         private string _heroSource = HeroNone;
@@ -299,7 +314,38 @@ namespace AF.Presentation
         /// <summary>
         /// Agua de la banda y de las piezas por código con la temporada (<see cref="SeasonWater"/>; el preset sin ella; DC21).
         /// </summary>
-        public Color SeasonWaterColor => SeasonWater(_waterColor, SeasonLutOf(_stop, _season));
+        public Color SeasonWaterColor => SeasonWater(_waterColor, SeasonLutOf(_stop, _season) * _light);
+
+        /// <summary>Luz de la dificultad con que se compuso el fondo (blanco sin ella; <see cref="DifficultyLightOf"/>).</summary>
+        public Color Light => _light;
+
+        /// <summary>
+        /// Luz de la dificultad del nivel con la etiqueta <paramref name="label"/> (07 §7.7 [P]; tarea B14): <see cref="NightLut"/> en
+        /// Muy difícil («variante noche de la pintura del mundo», LUT de research/02 C3.4), <see cref="AfternoonLut"/> en Difícil («el
+        /// Difícil puede llevar una luz de tarde»; «la señal de dificultad es la luz, no la altura del agua») y blanco en las demás.
+        /// </summary>
+        public static Color DifficultyLightOf(string? label)
+        {
+            if (label == LevelDefinition.LabelVeryHard)
+            {
+                return NightLut;
+            }
+
+            return label == LevelDefinition.LabelHard ? AfternoonLut : Color.white;
+        }
+
+        /// <summary>
+        /// Nombre de la luz de <paramref name="light"/> para la sonda: <c>night</c>, <c>afternoon</c> o null (sin luz de dificultad).
+        /// </summary>
+        public static string? DifficultyLightName(Color light)
+        {
+            if (light == NightLut)
+            {
+                return "night";
+            }
+
+            return light == AfternoonLut ? "afternoon" : null;
+        }
 
         /// <summary>
         /// Luz del fondo: la de la parada (<see cref="LutOf"/>: <see cref="DuskLut"/> en <c>dusk</c>, <see cref="DawnLut"/> en
@@ -567,8 +613,19 @@ namespace AF.Presentation
         /// </summary>
         public void Apply(RiverStop? stop, string worldWater, bool crossfade, float fadeMs, Season season = Season.None)
         {
+            Apply(stop, worldWater, crossfade, fadeMs, season, Color.white);
+        }
+
+        /// <summary>
+        /// Como <see cref="Apply(RiverStop, string, bool, float, Season)"/> con la luz de la dificultad <paramref name="light"/>
+        /// (<see cref="DifficultyLightOf"/>; 07 §7.7 [P], tarea B14): va sobre la de la parada y la de la temporada en
+        /// <see cref="LutColor"/> (el panorama y el héroe) y, con la de la temporada, en el tinte del cielo y en el agua (esta, solo
+        /// hasta <see cref="SeasonWaterMaxDeltaE"/> del preset: VA-23). Blanco = sin luz de dificultad.
+        /// </summary>
+        public void Apply(RiverStop? stop, string worldWater, bool crossfade, float fadeMs, Season season, Color light)
+        {
             string water = worldWater ?? string.Empty;
-            if (ReferenceEquals(stop, _stop) && string.Equals(water, _water, StringComparison.Ordinal) && season == _season)
+            if (ReferenceEquals(stop, _stop) && string.Equals(water, _water, StringComparison.Ordinal) && season == _season && light == _light)
             {
                 BuildMs = 0d;
                 return;
@@ -582,7 +639,8 @@ namespace AF.Presentation
             _water = water;
             _waterColor = Palette.WaterBase(water);
             _season = season;
-            _lut = LutOf(stop, season);
+            _light = light;
+            _lut = LutOf(stop, season) * light;
             ResolveHero(stop);
 
             if (crossfade && fadeMs > 0f && showing)
@@ -614,7 +672,7 @@ namespace AF.Presentation
                 _root.gameObject.SetActive(stop != null);
             }
 
-            Color seasonLut = SeasonLutOf(stop, season);
+            Color seasonLut = SeasonLutOf(stop, season) * light;
             _front.Compose(stop, SeasonWater(_waterColor, seasonLut), _lut, seasonLut, _heroSource, _shape, _heroSprite);
             if (_laidOut && stop != null)
             {
