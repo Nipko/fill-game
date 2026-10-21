@@ -178,6 +178,24 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Matrix_From31_WithLivesOff_AndInfiniteCanoes_LivesOffWins()
+        {
+            // Canoas infinitas activas con biz_feature_lives apagado: manda D-038 (pie de 1-30, sin Nivel fallido).
+            var fx = new FunnelFixture(offset: 30, maxLevel: 35);
+            fx.Wallet.Apply(Transaction.InfiniteCanoesFor(TimeSpan.FromHours(1)));
+            fx.Wallet.LivesEnabled = false;
+            fx.StartPlaying(36);
+            Assert.That(fx.Flow.QuitIsHardFail, Is.False);
+            fx.GetStuck();
+            StuckContext ctx = fx.Flow.BuildStuckContext(false, false, GeoTier.T3);
+            Assert.That(StuckModalModel.Build(ctx, fx.Flow.Boosters).Footer, Is.EqualTo(StuckFooter.RestartFree));
+            Assert.That(fx.Flow.PressGiveUp(), Is.False);
+            Assert.That(fx.Flow.PressRestart(), Is.True);
+            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.Intro));
+            Assert.That(fx.Listener.Saw("phase:LevelFailed"), Is.False);
+        }
+
+        [Test]
         public void Matrix_From31_WithLivesOn_TheFunnelDoesNotChange()
         {
             // D-038: con biz_feature_lives en su default (true), el embudo de D-008 sigue igual.

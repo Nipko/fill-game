@@ -442,6 +442,48 @@ namespace AF.Tests.EditMode
             Assert.That(again.Flow.Attempt.FailsLevel, Is.EqualTo(0));
         }
 
+        [TestCase(false)]
+        [TestCase(true)]
+        public void LevelFailed_ReopenedWithLivesOff_StartsTheNextAttempt_WithoutCountingTheFailAgain(bool byQuit)
+        {
+            // Nivel fallido guardado con las canoas encendidas (tras «Rendirse» o tras «Salir»); biz_feature_lives llega apagado
+            // al volver (D-038). El fallo duro ya se resolvió: se empieza el intento siguiente, como el reinicio directo de la
+            // rama C, sin otro af_level_fail ni otro fails_level (ni reabrir Aguas estancadas ni seguir el intento fallado).
+            var rig = new Rig(offset: 25, seeds: 1000);
+            rig.Start(31);
+            if (byQuit)
+            {
+                Assert.That(rig.Flow.ConfirmQuit(), Is.True);
+            }
+            else
+            {
+                GetStuck(rig.Flow);
+                Assert.That(rig.Flow.PressGiveUp(), Is.True);
+                Assert.That(rig.Flow.ConfirmGiveUp(), Is.True);
+            }
+
+            Assert.That(rig.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed));
+            Assert.That(rig.Flow.Attempt.FailsLevel, Is.EqualTo(1));
+            Assert.That(rig.Economy.Wallet.Canoes.Count, Is.EqualTo(4));
+            StringAssert.StartsWith("h2|F|", rig.Store.Load()!.History);
+
+            Rig again = rig.Reopen();
+            again.Economy.Wallet.LivesEnabled = false;
+            Assert.That(again.Flow.Resume(rig.Store.Load()!), Is.True);
+            Assert.That(again.Flow.Phase, Is.EqualTo(FlowPhase.Intro), "el intento siguiente, con la intro corta");
+            Assert.That(again.Listener.Saw("restart:modal"), Is.True);
+            Assert.That(again.Flow.Session.AppliedPours, Is.EqualTo(0));
+            Assert.That(again.Flow.Session.Current.Equals(again.Flow.Session.Initial), Is.True, "tablero desde el principio");
+            Assert.That(again.Flow.Attempt.FailsLevel, Is.EqualTo(1), "el fallo ya contado no se vuelve a contar");
+            Assert.That(again.Economy.Wallet.Canoes.Count, Is.EqualTo(4));
+
+            Assert.That(again.Flow.TapAnywhere(), Is.True);
+            Assert.That(again.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
+            Assert.That(again.Flow.Attempt.FailsLevel, Is.EqualTo(1));
+            Assert.That(again.Listener.Events.Exists(e => e.StartsWith("fail:", System.StringComparison.Ordinal)), Is.False, "sin otro fallo");
+            Assert.That(again.Store.Load()!.FailsLevel, Is.EqualTo(1));
+        }
+
         [Test]
         public void AreYouSure_AndLevelFailed_Reopen_AndTheCanoeIsChargedOnlyOnce()
         {

@@ -137,7 +137,7 @@ namespace AF.GameFlow
             {
                 Level = LevelNumber,
                 RescueMinLevel = RescueMinLevel,
-                LivesOff = CanoesLevel && !CanoeFunnel, // D-038: desde el 31 con biz_feature_lives apagado, el pie de 1-30
+                LivesOff = CanoesLevel && !CanoeFunnel, // D-038: el pie de 1-30
                 UndoUnlimited = undo.Unlimited,
                 UndoFree = undo.FreeLeft,
                 UndoStock = undo.Stock,
