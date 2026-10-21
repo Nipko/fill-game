@@ -512,6 +512,35 @@ namespace AF.Tests.EditMode
             // B14: los nombres de las skins de la 1.0 (skin_<id>_name), que pinta el aviso «{skin} · puesta».
             keys.AddRange(UiText.SkinNameKeys);
 
+            // B3: los textos del Salto del Boto, que pinta AF.UI.SkipText.
+            foreach (FieldInfo f in typeof(SkipText.Keys).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (f.IsLiteral && f.FieldType == typeof(string))
+                {
+                    keys.Add((string)f.GetValue(null)!);
+                }
+            }
+
+            // B6: el título y el cuerpo de cada aviso local (AF.LiveOps.NotificationTypes) y el pre-prompt (PrePromptRequest).
+            keys.Add(AF.LiveOps.NotificationTypes.TitleKey);
+            foreach (AF.LiveOps.NotificationType type in AF.LiveOps.NotificationTypes.All)
+            {
+                keys.Add(AF.LiveOps.NotificationTypes.BodyKey(type));
+            }
+
+            keys.Add(AF.LiveOps.PrePromptRequest.BodyKey);
+            keys.Add(AF.LiveOps.PrePromptRequest.AcceptKey);
+            keys.Add(AF.LiveOps.PrePromptRequest.DeclineKey);
+
+            // B6, con la UI pendiente (docs/dev/sesiones-notificaciones.md): el canal de Android (lo usa el programador real,
+            // B6-notifications-real), la fila «Avisos» de Ajustes y el aviso del Regalo de regreso. Se quitan de aquí cuando su
+            // pantalla los pinte.
+            keys.AddRange(new[]
+            {
+                "push_channel_name", "push_channel_description", "settings_notifications", "settings_notifications_blocked",
+                "comeback_streak_line", "comeback_logbook_line", "comeback_reminder_line",
+            });
+
             return keys;
         }
 
