@@ -47,3 +47,12 @@ Siguiente paso: el dueño completa el acceso de AWS y la instalación de CLI v2.
 - AWS CLI v2 sigue sin aparecer en las rutas habituales; configuración local de perfiles, bootstrap, diff y deploy siguen pendientes. El acceso root a la consola no sustituye el usuario SSO ni los perfiles locales.
 
 Próximos pasos: completar los correos de las cuentas directamente en la consola, confirmar las operaciones de acceso en su paso final, crear dev/prod, activar Identity Center de organización en la región preparada, configurar usuario y MFA, y asignar los conjuntos de permisos según el encargo. Cada ampliación de acceso requiere confirmación en su pantalla; cada deploy espera el sí del dueño tras el diff. Las cuentas prod y gestión no reciben stacks del juego.
+
+### Identity Center activo y primer intento de cuenta dev — 2026-10-21
+
+- El dueño confirmó expresamente habilitar Identity Center en región única y crear `amazonfill-dev` con el rol estándar `OrganizationAccountAccessRole`.
+- Identity Center: instancia de organización creada y confirmada en `sa-east-1`, directorio interno y clave propiedad de AWS. El primer intento usó un formulario anterior a la creación de Organizations y devolvió «The AWS account is already a member of an organization»; se actualizó la página y la activación correcta se completó en la organización existente, sin duplicarla.
+- Política de MFA guardada y verificada: solicitar MFA en cada inicio de sesión; exigir registro de un dispositivo al primer acceso. Se permiten aplicaciones de autenticación y claves de seguridad/autenticadores integrados. Esto confirma la política, no que el dueño ya haya registrado su dispositivo.
+- Cuenta dev: solicitud enviada tras confirmación; AWS la rechazó con `EMAIL_ALREADY_EXISTS`. **Dev no creada.** Formulario preparado de nuevo con el mismo nombre y rol, pendiente de un correo exclusivo no registrado que el dueño introduce directamente en la consola. No se registró ni reutilizó el correo rechazado fuera de la consola.
+- Usuario SSO: formulario preparado con nombre `af-owner` y envío de instrucciones de contraseña por correo, sin generar ni mostrar contraseñas. Falta que el dueño complete sus datos en la consola, revisar y confirmar el alta. Usuario aún no creado, sin grupos ni asignaciones de cuentas.
+- Cuenta prod, conjuntos de permisos, MFA personal, perfiles locales, bootstrap, diff y despliegue siguen pendientes. No se han concedido permisos administrativos a usuarios SSO.
