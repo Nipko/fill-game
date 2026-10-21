@@ -777,12 +777,12 @@ Servidor: tope de 30 verificaciones por uid y hora [P]
           acknowledge si falta (el servidor no consume)
           escritura condicional en el libro mayor {token_hash, uid, sku, order_id, ts, country, state:"ok"}
           → {status:"ok", grant:{seeds, items}, entitlements}
-Cliente:  ok → Wallet.Apply; applied_purchases += token; Save.Local+Cloud; después Unity IAP consume los consumibles
-          duplicate → no acredita si ya está en applied_purchases; si no (se perdió el ok), acredita al restaurar (restoreLedger)
-          pending → Unity IAP mantiene la transacción; reintento en cada arranque
-          400 → no concede ni consume la transacción (consumir también reconoce y Play ya no la reembolsaría)
-          error de red → cola local con backoff; a las sec_purchase_deferred_ack_h (72 h) acknowledge local + deferred_ack [P],
-                         sin acreditar hasta que el servidor la verifique (restoreLedger o reintento)
+Cliente:  ok → si token_hash ∉ applied_purchases: Wallet.Apply(grant); applied_purchases += token_hash; Save.Local+Cloud; consumir (consumibles)
+          duplicate → lo mismo con el contenido del catálogo, solo si token_hash ∉ applied_purchases; consumir (consumibles)
+          pending → no se concede; Unity IAP mantiene la transacción; reintento con backoff y en cada arranque
+          400 / 409 → no se concede ni se consume (consumir también reconoce y Play ya no la reembolsaría)
+          error de red → cola local con backoff; a las 72 h acknowledge local + deferred_ack [P], sin acreditar:
+                         se acredita cuando el servidor la verifique en un reintento o en restoreLedger (D-035, F3-1 y F3-2)
 ```
 
 ## 11. Guardado local y en la nube

@@ -18,7 +18,9 @@ namespace AF.Backend
     /// <item><c>account/code</c>: un código nuevo en cada llamada (deterministas, del formato del contrato).</item>
     /// <item><c>account/delete</c>: vacía el estado; idempotente.</item>
     /// </list>
-    /// <see cref="FailNext"/> hace fallar las llamadas siguientes con el error que se pida. Responde antes de volver.
+    /// <see cref="FailNext"/> hace fallar las llamadas siguientes con el error que se pida. Responde antes de volver, salvo
+    /// <c>verifyPurchase</c> con <see cref="HoldVerifyResponses"/> (el servidor ya decidió, pero la respuesta llega cuando se suelta:
+    /// para las carreras de F3-3).
     /// </summary>
     public sealed class FakeBackendClient : IBackendClient
     {
@@ -30,6 +32,7 @@ namespace AF.Backend
         private readonly HashSet<string> _pendingTokens = new HashSet<string>(StringComparer.Ordinal);
         private readonly HashSet<string> _confirmedNonces = new HashSet<string>(StringComparer.Ordinal);
         private readonly Queue<BackendError> _failures = new Queue<BackendError>();
+        private readonly List<Action> _heldVerify = new List<Action>();
         private int _codeCounter;
 
         /// <param name="clock">Para el <c>ts</c> de las compras; sin reloj, 0.</param>
@@ -46,6 +49,18 @@ namespace AF.Backend
 
         /// <summary>Derechos que devuelve con <c>ok</c> (null: no los manda).</summary>
         public Func<VerifyPurchaseRequest, Entitlements?> EntitlementsFor { get; set; } = _ => null;
+
+        /// <summary>Peticiones de <c>verifyPurchase</c> recibidas, en orden (llevan el token: solo para tests).</summary>
+        public List<VerifyPurchaseRequest> VerifyRequests { get; } = new List<VerifyPurchaseRequest>();
+
+        /// <summary>Retiene las respuestas de <c>verifyPurchase</c> hasta <see cref="ReleaseVerifyResponses"/>.</summary>
+        public bool HoldVerifyResponses { get; set; }
+
+        /// <summary>Respuestas de <c>verifyPurchase</c> retenidas.</summary>
+        public int HeldVerifyResponses => _heldVerify.Count;
+
+        /// <summary>Cambia las respuestas 200 de <c>verifyPurchase</c> antes de entregarlas (respuestas que no cuadran), o null.</summary>
+        public Func<VerifyPurchaseResponse, VerifyPurchaseResponse>? RewriteVerify { get; set; }
 
         /// <summary>Llamadas recibidas por operación (<see cref="BackendOperation.Name"/>).</summary>
         public Dictionary<string, int> Calls { get; } = new Dictionary<string, int>(StringComparer.Ordinal);
@@ -70,6 +85,25 @@ namespace AF.Backend
             for (int i = 0; i < times; i++)
             {
                 _failures.Enqueue(error);
+            }
+        }
+
+        /// <summary>Olvida los fallos pedidos con <see cref="FailNext"/> que aún no se usaron.</summary>
+        public void ClearFailures() => _failures.Clear();
+
+        /// <summary>Entrega las respuestas retenidas de <c>verifyPurchase</c>, en orden o en el inverso.</summary>
+        public void ReleaseVerifyResponses(bool reverse = false)
+        {
+            var held = new List<Action>(_heldVerify);
+            _heldVerify.Clear();
+            if (reverse)
+            {
+                held.Reverse();
+            }
+
+            for (int i = 0; i < held.Count; i++)
+            {
+                held[i]();
             }
         }
 
@@ -119,27 +153,49 @@ namespace AF.Backend
                 throw new ArgumentNullException(nameof(request));
             }
 
-            if (Begin(BackendOperation.VerifyPurchase, onDone))
+            if (onDone == null)
             {
+                throw new ArgumentNullException(nameof(onDone));
+            }
+
+            VerifyRequests.Add(request);
+            BackendResult<VerifyPurchaseResponse>? result = null;
+            if (!Begin(BackendOperation.VerifyPurchase, (BackendResult<VerifyPurchaseResponse> r) => result = r))
+            {
+                result = BackendResult<VerifyPurchaseResponse>.Ok(Verify(request));
+            }
+
+            if (result!.IsOk && RewriteVerify != null)
+            {
+                result = BackendResult<VerifyPurchaseResponse>.Ok(RewriteVerify(result.Value!));
+            }
+
+            if (HoldVerifyResponses)
+            {
+                BackendResult<VerifyPurchaseResponse> held = result;
+                _heldVerify.Add(() => onDone(held));
                 return;
             }
 
+            onDone(result);
+        }
+
+        private VerifyPurchaseResponse Verify(VerifyPurchaseRequest request)
+        {
             if (_pendingTokens.Contains(request.Token))
             {
-                onDone(BackendResult<VerifyPurchaseResponse>.Ok(VerifyPurchaseResponse.Pending()));
-                return;
+                return VerifyPurchaseResponse.Pending();
             }
 
             string hash = PurchaseTokenHash.Of(request.Token);
             if (_ledger.ContainsKey(hash))
             {
-                onDone(BackendResult<VerifyPurchaseResponse>.Ok(VerifyPurchaseResponse.Duplicate(hash)));
-                return;
+                return VerifyPurchaseResponse.Duplicate(hash);
             }
 
             _ledger[hash] = new LedgerEntry(request.Sku, NowMs());
             _ledgerOrder.Add(hash);
-            onDone(BackendResult<VerifyPurchaseResponse>.Ok(VerifyPurchaseResponse.Ok(hash, GrantFor(request), EntitlementsFor(request))));
+            return VerifyPurchaseResponse.Ok(hash, GrantFor(request), EntitlementsFor(request));
         }
 
         public void RestoreLedger(RestoreLedgerRequest request, Action<BackendResult<RestoreLedgerResponse>> onDone)

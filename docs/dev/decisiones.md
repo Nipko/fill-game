@@ -3236,3 +3236,15 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Ajustes del integrador por D-035:** los defaults se regeneran desde 08 §9 actual (entra `biz_backend_enabled` = true, sale `sec_appcheck_enforce`; siguen 251 claves). `VerificationQueueConfig` (F3-1, `sec_purchase_deferred_ack_h`) queda en `NotBoundYet` del test del binder hasta que F3-3 conecte el backend en el arranque.
 - **Q-B7-24 (nueva, del integrador):** 08 §2.2 sigue diciendo que `AF.RemoteConfig` depende de `Backend`, pero con D-035 `AF.Backend` es el cliente de la API propia en AWS y Remote Config va con Firebase en el cliente. Opciones: (a) **recomendada, aplicada en el código:** `AF.RemoteConfig` sin dependencias (o solo `Platform`, para `IServerDate`) y corregir esa celda de 08 §2.2 en la próxima edición del GDD; (b) que `AF.RemoteConfig` referencie `AF.Backend`.
 - **Pendientes de B7 tras integrar:** enlazar en `RcConfigBinder` `ShuffleConfig`, `SkipConfig`, `ComebackConfig`, `PushConfig` y `VerificationQueueConfig` (hoy usan sus `Defaults`) y `sec_ssv_grace_h` con B8; los ganchos que faltan (`af_boot`, `af_consent`, comodines, modal, canoas, Reto, Ajustes, `af_level_load`, `af_error`…); las pantallas «Actualiza Tintalú» y de mantenimiento.
+
+### D-035, añadido del 2026-10-21: preguntas de F3-3 (compra verificada en el cliente), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `backend/f3-3` (revisión final APROBADO sobre `fd162926`). El dueño puede cambiarlas.
+- **`purchase_queue` [P]:** la cola de compras pendientes es solo local (lleva `purchaseToken` en claro); la fusión de 08 §11 conserva la del dispositivo y no viaja en la nube.
+- **Balsa acreditada tarde** (por la cola o al reabrir): la Cuia de rescate se pierde; el resto se acredita [P].
+- **Unity IAP 5.4.4 [NV]:** si no permite reconocer un consumible sin consumirlo, se vuelve a decidir el `deferred_ack` al integrar el SDK (F3-6).
+- **`biz_backend_enabled`:** ya dado de alta en 08 §9 (`bool`, `true` [P]); en el cliente es `IBackendSwitch` con default `true` hasta que B7 lo lea de Remote Config.
+- **Cántaro recuperado sin sus semillas** (cierre entre el cobro y el primer guardado): se acredita con `eco_piggy_min_buy` [P].
+- **Conectar `VerifiedStoreService` al juego** (`Resume` al arrancar y al volver a primer plano, `Pump` periódico y la UI de `Pending` y `VerifyFailed`): tarea de unity-gameplay-dev junto con F3-5.
+- **Ejemplos `GPA.…` de `applied_purchases`** en 08 §4.3 y 04 §10.1: pasan a `token_hash` en la próxima tarea de documentación.
+- **Mochila con la marca local puesta:** se acredita la que el servidor verifica; el servidor hace cumplir «una por cuenta» (F2c).

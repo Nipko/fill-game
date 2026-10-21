@@ -239,7 +239,7 @@ namespace AF.Backend.Contract
 
         public long? CursorMs { get; }
 
-        /// <summary>Lápidas nuevas (F2c): anulaciones de tokens que aún no estaban en el libro mayor.</summary>
+        /// <summary><c>tombstones</c> (F2c): lápidas nuevas, anulaciones de tokens que aún no estaban en el libro mayor.</summary>
         public long? Tombstones { get; }
 
         public string ToJson()
