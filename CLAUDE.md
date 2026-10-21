@@ -4,7 +4,7 @@ Puzzle móvil de ordenar agua (*water-sort*) con temática amazónica, **Android
 
 ## Fuentes de verdad (en este orden)
 1. **GDD**: `docs/GDD.md` (§2 decisiones, §6 preguntas abiertas, §7 contratos) y `docs/gdd/00-09`. El GDD manda: si el código, una tarea o este archivo lo contradicen, **para y pregunta** citando capítulo y §. No inventes reglas, números ni nombres.
-2. **Contratos**: los 28 contratos canónicos de `docs/GDD.md` §7 fijan la fuente única de cada tema. Los más usados:
+2. **Contratos**: los 33 contratos canónicos de `docs/GDD.md` §7 (el 33, «API v1: `infra/contracts/v1`», D-035) fijan la fuente única de cada tema. Los más usados:
    - `docs/gdd/00-glosario.md`: nombres (§11, identificadores de código);
    - `docs/gdd/08-arquitectura-tecnica-publicacion.md` §9: **única** tabla de Remote Config con defaults;
    - `schemas/af-level-1.schema.json`: **única** copia del formato de nivel `af-level/1` (ejemplo canónico en 08 §4.1);
@@ -16,7 +16,7 @@ Puzzle móvil de ordenar agua (*water-sort*) con temática amazónica, **Android
 - **Unity 6000.3.25f1** (changeset `e1dba0a9aba4`), 6.3 LTS, Editor Windows ARM64, URP 2D, Shader Graph, IL2CPP ARM64, minSdk 26, targetSdk 36. Fuente: `ProjectSettings/ProjectVersion.txt`.
 - **C# 9 (`LangVersion 9.0`) y netstandard2.1** en todo lo que compila Unity. Nada de C# 10+: `namespace X;`, `global using`, `record struct`, `required`, `[1, 2]`, constructores primarios.
 - **.NET SDK 10.0.401** (`global.json`, `rollForward: latestFeature`) para `dotnet/` y `tools/`. Tests NUnit 3.14.0; los compartidos con Unity usan el subconjunto de NUnit 3.5 (solo `Assert.That`).
-- Python 3.14 con `jsonschema` (`tools/*.py` y `tools/river-map/test_schemas.py`); Node 24 (más adelante, `functions/`).
+- Python 3.14 con `jsonschema` (`tools/*.py` y `tools/river-map/test_schemas.py`); Node 22.18+ en local y Node 24 en las Lambdas (`infra/`, D-035).
 - Unity CLI en beta que se actualiza sola (`unity`; 1.0.0-beta.13 desde el 2026-10-07; los hooks de git la llaman por el alias estable `%LOCALAPPDATA%\Microsoft\WindowsApps\unity.exe`, no por la ruta versionada de WindowsApps) con `com.unity.pipeline` 0.8.0-exp.1 y las skills `.claude/skills/unity-cli` y `unity-pipeline`. **Sin MCP.** La CLI funciona para `run`, `test` y `recompile`; sus instaladores no (Hub MSIX): no instales nada con ella.
 - Editor: `C:\Program Files\Unity\Hub\Editor\6000.3.25f1\Editor\Unity.exe` (ARM64). .NET: `C:\Program Files\dotnet`.
 
@@ -57,7 +57,7 @@ python tools/river-map/geometry.py --check            # cuando exista
 python -m unittest discover -s tools/river-map -p "test_*.py"
 python docs/research/mapa-del-rio/generar_mapa.py --check
 pwsh -NoProfile -File scripts/unity-compile.ps1       # ¿compila Unity? errores: solo las 30 primeras líneas "error CS"
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 3.538 hoy en integra/spark-t5b (3.535 + 3 omitidos; con B6, B3 y B2 del Spark); dotnet test: 1.002 (996 + 6 omitidos)
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 3.609 hoy en integracion-fase1-fase2 (3.606 + 3 omitidos; con AF.Backend); dotnet test: 1.002 (996 + 6 omitidos)
 pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.703 (1.466 + 237 explícitos: capturas y los 16 KnownIssue de FX16a); antes de cada PR que toque Unity
                                                       # tarda 30-40 min: el límite por defecto en PlayMode es -TimeoutSec 3600 (a 900 s no da veredicto)
 ```

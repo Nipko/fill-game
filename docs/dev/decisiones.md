@@ -3188,3 +3188,29 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Límites [P]:** 100 recompensas SSV por UID y día, 30 verificaciones por UID y hora, 10 códigos por UID y día, 5 `delete-request` por código y hora y 10 `delete-confirm` por token y 5 minutos.
 - **Supuestos [NV]** que se confirman en F0-R o F4-2: firma S2S de MAX = hex(SHA-256(`event_id` + clave)) (usar una firma que cubra todos los parámetros si MAX la ofrece); formato del token de App Check; `products.get` sin precio (el libro mayor no guarda `price_micros` ni `currency`; desviación del plan §2 y de 08 §10.3).
 - **Endurecimiento pendiente** (tarea F2c, de la revisión): exigir `-c firebaseAppIds` en el synth de prod; lápida `voided` para anulaciones de tokens aún no verificados; hacer cumplir `af_starter` una vez por cuenta en el servidor; cerrar las carreras residuales del borrado (condición en el Put del libro mayor o segunda pasada de `eraseAccount`). Y actualizar `aws-cdk-lib` cuando una versión corrija el aviso de `brace-expansion` (cambio de versión: lo aprueba el dueño).
+
+### D-035, añadido del 2026-10-21: preguntas de F2c (endurecimiento), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `backend/f2c` (revisión final APROBADO sobre `923948d`). El dueño puede cambiarlas.
+- **`af_starter` reembolsado o con contracargo:** no se puede volver a comprar (la marca por cuenta es permanente).
+- **Errores del contrato v1:** la compra anulada y el segundo `af_starter` siguen como 400 `bad_request` con su mensaje, sin códigos nuevos.
+- **Filas de compras que escapen del borrado** (índice `by_uid` eventualmente consistente): se acepta como riesgo residual, vigilado con la métrica `EraseSecondPass` y una alarma en `ops-stack` más adelante.
+- **Reserva de `af_starter`:** 15 minutos [P].
+- **Riesgos residuales aceptados** (detalle en `infra/README.md`, «Riesgos residuales conocidos (F2c)»): más de 15 min entre reservar y escribir; borrado de la cuenta durante una compra (queda reconocida sin conceder).
+- **`infra.yml`** sintetiza prod con un id de app de ejemplo, porque prod exige `-c firebaseAppIds` desde F2c.
+- **Sugerencia pendiente** (no afecta al dinero): en `shared/integrity.ts`, una `TransactionConflict` al guardar la caché lanza 500 después de gastar el token de App Check de un solo uso; registrarla y seguir sin guardar.
+
+### D-035, añadido del 2026-10-21: preguntas de F3-1 y F3-2 (cliente AF.Backend), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `backend/f3-1` (revisión APROBADO sobre `a7a1bca`). El dueño puede cambiarlas.
+- **`deferred_ack` (08 §10.3):** al vencer el plazo solo se hace `acknowledge` local más `deferred_ack`; **no se acredita** hasta que el servidor verifique la compra en un `restoreLedger` o en un reintento (el plazo se mide con el reloj del dispositivo, que se puede adelantar). Se corrige 08 §10.3 en F3-3.
+- **URL de la API de dev (F4-2):** se escribe en `BackendEndpoints.Dev` en un commit (la URL de `execute-api` no es secreta).
+- **`biz_backend_enabled` [P]:** se añade a 08 §9 con la integración del GDD y se conecta en F3-3 como interruptor de corte.
+- **Riesgo para F3-3:** comprobar en el dispositivo que `SHA256.Create()` sobrevive al Managed Stripping High; si no, `SHA256Managed` o una entrada de `link.xml`.
+
+### D-035, añadido del 2026-10-21: Firebase dev en la cuenta personal del dueño
+
+- **Estado:** decisión del dueño en la sesión con Codex (registro en `docs/dev/traspaso/codex-estado.md`): crear Firebase dev desde su cuenta personal de Google, porque la cuenta empresarial no tiene permiso para crear proyectos (`resourcemanager.projects.create`) hasta que su administrador lo conceda.
+- **Identificadores públicos de dev:** proyecto `fill-dev-e75a2` (el id `amazon-fill-dev` no estaba disponible); app Android `com.amazonfill.dev` con id `1:528273757148:android:45d5cf0ddb2e3021c93519`. Auth anónimo activado; App Check con Play Integrity registrado **sin enforcement**; Analytics activado (cuenta dedicada, ubicación EE. UU.); plan Spark sin coste.
+- **AWS dev** (`AfDevApi`) ya autoriza con emisor y audiencia `fill-dev-e75a2` y admite ese id de app. Mientras `infra/lib/config.ts` siga con el default `amazon-fill-dev`, **todo despliegue de dev debe pasar** `-c firebaseProjectId=fill-dev-e75a2 -c firebaseAppIds=1:528273757148:android:45d5cf0ddb2e3021c93519`; se cambiará el default de dev en la próxima tarea de `infra/`.
+- **Pendiente para prod:** crear Firebase prod en la cuenta empresarial (con el permiso del administrador) o decidir otra cosa; prod sigue sin bootstrap ni stacks.

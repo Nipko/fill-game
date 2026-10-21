@@ -7,6 +7,11 @@
 // `infinite_canoes_min` (minutos de Canoas infinitas). [P] `af_piggy` concede las semillas acumuladas en el
 // Cántaro, que solo conoce el cliente: el servidor devuelve seeds = 0 y el ítem `piggy` (pregunta al dueño).
 // Si Remote Config cambia las cifras de los packs, este espejo no las ve (pregunta al dueño).
+//
+// `once_per_account` (af_starter, 05 §4.1) lo hace cumplir el servidor (F2c): verifyPurchase escribe, en la misma
+// transacción que la fila del libro mayor, la marca onceKey(sku, uid) en af-<env>-rate_limits (sin TTL; la borra
+// deleteAccount). Una segunda compra con otro token no concede (400) ni se reconoce: Play la reembolsa sola.
+import { sha256hex } from './crypto.ts';
 
 export interface GrantItem {
   readonly id: string;
@@ -70,4 +75,15 @@ export function grantFor(e: CatalogEntry, quantity: number): Grant {
   // Varias unidades solo tienen sentido en los consumibles; Sin anuncios, skins y la Mochila son una.
   const q = e.kind === 'consumable' ? Math.max(1, Math.floor(quantity)) : 1;
   return { seeds: e.grant.seeds * q, items: e.grant.items.map((i) => ({ id: i.id, count: i.count * q })) };
+}
+
+/** SKU que solo se pueden comprar una vez por cuenta (UID). */
+export const ONCE_PER_ACCOUNT_SKUS: readonly string[] = [...CATALOG.values()].filter((e) => e.kind === 'once_per_account').map((e) => e.sku);
+
+/**
+ * Clave de la marca «ya comprado» de un SKU `once_per_account` en af-<env>-rate_limits. Lleva el SHA-256 completo
+ * (no el uidHash corto de los logs: una colisión negaría una compra) y nunca el UID en claro.
+ */
+export function onceKey(sku: string, uid: string): string {
+  return `once#${sku}#${sha256hex(`af-once:${uid}`)}`;
 }

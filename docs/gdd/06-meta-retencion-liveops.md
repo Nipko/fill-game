@@ -337,10 +337,10 @@ El paquete de niveles se descarga por Addressables al anunciarse (fast-follow) p
 | Sistema | Servidor | Componente | Coste/mes [E] |
 |---|---|---|---|
 | Reto del río, Bitácora, Crecida, Canasta, Mapa, Cuaderno de campo, Travesía, Encuentro de las Aguas, Temporada de lluvias | No | Pool local + Remote Config + guardado en nube (PGS Saved Games + Firebase Auth anónimo) | 0 |
-| Cosecha doble y demás rewarded | Sí, mínimo | Cloud Function SSV de AdMob | 0 (cupo gratuito) |
-| Premios de evento en semillas (reclamo) | Sí, mínimo | Cloud Function que valida reclamo contra el estado archivado | 0-5 |
-| Regata, Liga del río | Gestionado | Unity Leaderboards + Cloud Code + Cloud Scheduler | 0-10 (1.2: 15-40 en total) |
-| Aldea, Prestar una canoa, Río de la aldea | Sí | Firestore + Functions (150-300) o Nakama autoalojado (60-120) + 0,5 FTE | 100-300 |
+| Cosecha doble y demás rewarded | Sí, mínimo | Función `rewardedSsv` en AWS con el callback S2S de MAX (D-035; 08 §10.2) | ≈ 0 [E] |
+| Premios de evento en semillas (reclamo) | Sí, mínimo | Función del backend en AWS (D-035; no es una de las 5 de la 1.0: llega con los eventos, por decidir) que valida el reclamo contra el estado archivado | 0-5 |
+| Regata, Liga del río | Gestionado | Unity Leaderboards + Cloud Code + Cloud Scheduler (con D-035 la 1.2 va a AWS; si Unity Leaderboards y Cloud Code se mantienen o se sustituyen queda por decidir) | 0-10 (1.2: 15-40 en total) |
+| Aldea, Prestar una canoa, Río de la aldea | Sí | Backend propio en AWS (D-035 según el plan del backend, P2 de 09 §3.3, frente a Firestore + Functions o Nakama; para la 2.0 lo confirma el dueño; servicios por decidir) + 0,5 FTE | 100-300 |
 
 Fuente: research/06 C6.1-C6.3 [V]/[E]. Regla de diseño offline: progreso en cliente con reconciliación "última escritura gana" por campo y máximo para contadores; valor económico concedido o confirmado en servidor (research/06 C6 [V]).
 
@@ -372,7 +372,7 @@ El diseño "competición + logro personal" (todos los participantes con ≥50 pu
 | Mensajes predefinidos | 12 frases localizadas automáticamente al idioma de quien lee (ventaja frente al chat libre en una comunidad ES/PT/EN): "Gracias", "¿Alguien me presta una canoa?", "¡Buena remada!", "Voy por el nivel {n}", "Vamos por el río de la aldea"… + 8 emojis de fauna; límite 20 mensajes/día por jugador |
 | Río de la aldea | Evento cooperativo de 72 h (sección 5.2) |
 | Moderación | Expulsión por el líder; abandono libre; reporte solo de nombre de Aldea (generado) y de comportamiento (spam de peticiones) |
-| Backend | Firestore (grupos, agregados en Functions) o Nakama (grupos, chat de frases, torneos) según research/06 C6.3 [E]; 0,5 FTE live-ops/backend |
+| Backend | En AWS (D-035 según el plan del backend; para la 2.0 lo confirma el dueño; servicios por decidir), en lugar de Firestore con agregados en Functions o Nakama (research/06 C6.3 [E]); 0,5 FTE live-ops/backend |
 
 Magic Sort cobra 13+ en iOS por "Messaging and Chat" y las reseñas elogian equipos que regalan vidas (research/magic-sort/c §2.2 [V]): copiamos la generosidad y eliminamos el chat libre.
 
@@ -428,7 +428,7 @@ Reglas: el regalo de regreso no incluye Cuia de rescate ni Continuar (research/0
 
 ## 10. Cadencia de contenido y calendario de live-ops
 
-**Niveles.** Lanzamiento con los niveles **1-700 instalados** en el AAB (`levels_install`, mundos 1-9; 08 §6.1-6.2, canon de entrega para este capítulo), que cubren los ≥600 jugables con QA completa de la dirección 17; los 150-200 primeros ajustados a mano; después +100 niveles cada 1-2 semanas por `levels_remote` (mundos 10-13, niveles 701-1.040, anunciados con `content_version`, sin build ni revisión de tienda) hasta completar la vuelta 1 (~8 semanas) y luego vueltas con variantes de luz y crecida (dirección 17; research/02 C3.4 [E]). Los paquetes `mundo_{nn}_v{vuelta}.json` se entregan por Addressables remoto (Unity CCD o Cloudflare R2) sin pasar por tienda; los fondos de los mundos 1-4 van install-time y el de Loreto (141-200) por Play Asset Delivery on-demand desde 1.0; los niveles 201-700 (mundos 6-9) usan el fondo "río genérico" hasta que lleguen sus packs por PAD, y ese mismo fondo es el respaldo si un pack no está descargado (dirección 16; research/02 C4.6 [V]; 08 §6.2). Magic Sort publica 100 niveles cada ~9 días (research/09 §Por qué ganó 5 [V]).
+**Niveles.** Lanzamiento con los niveles **1-700 instalados** en el AAB (`levels_install`, mundos 1-9; 08 §6.1-6.2, canon de entrega para este capítulo), que cubren los ≥600 jugables con QA completa de la dirección 17; los 150-200 primeros ajustados a mano; después +100 niveles cada 1-2 semanas por `levels_remote` (mundos 10-13, niveles 701-1.040, anunciados con `content_version`, sin build ni revisión de tienda) hasta completar la vuelta 1 (~8 semanas) y luego vueltas con variantes de luz y crecida (dirección 17; research/02 C3.4 [E]). Los paquetes `mundo_{nn}_v{vuelta}.json` se entregan por Addressables remoto (S3 + CloudFront de AWS, D-035; 08 §6.2) sin pasar por tienda; los fondos de los mundos 1-4 van install-time y el de Loreto (141-200) por Play Asset Delivery on-demand desde 1.0; los niveles 201-700 (mundos 6-9) usan el fondo "río genérico" hasta que lleguen sus packs por PAD, y ese mismo fondo es el respaldo si un pack no está descargado (dirección 16; research/02 C4.6 [V]; 08 §6.2). Magic Sort publica 100 niveles cada ~9 días (research/09 §Por qué ganó 5 [V]).
 
 **Eventos.** Un tipo nuevo cada 6-8 semanas desde 1.2; una instancia de evento temporal por semana en rotación; Temporada de lluvias y Travesía ancladas a fechas locales: Carnaval (feb), Día Mundial del Agua (22-mar), Día Mundial del Medio Ambiente (5-jun) o, previa revisión del asesor cultural, festas juninas / São João (24-jun, Belém: solo fogatas, banderines y comida, sin componente religioso), Día de la Amazonía (5-sep, Brasil), Çairé de Alter do Chão (sep), Halloween, Navidad, San Valentín (research/05 §Implicaciones 9 [E]; research/07 §1 [V] para Çairé). Ninguna ceremonia religiosa o ritual como ancla (dirección 15; glosario §0.3): se descarta Inti Raymi (fiesta incaica al sol, andina y ritual). Audio y arte de los eventos de Manaos: toada amazónica de estilo propio, sin referencia a Parintins ni a sus asociaciones (Garantido/Caprichoso, glosario §3.3); el mismo texto rige en 07 §2.2.
 

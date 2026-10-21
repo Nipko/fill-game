@@ -21,13 +21,20 @@ Otros directorios: `functions/` (código de las Lambdas), `contracts/v1/` (contr
 
 | Función | Rutas | Resumen |
 |---|---|---|
-| verifyPurchase | `POST /v1/purchases/verify` (JWT + integridad) | 30 por UID y hora [P]; `products.get` en Play; `pending` no concede; cancelada o inexistente → 400; cuenta ofuscada de otro UID → 409; `acknowledge` si falta; `PutItem` condicional en `purchases` (dos peticiones con el mismo token: una `ok`, la otra `duplicate`; token de otro UID → 409). Solo `ok` lleva `grant` (catálogo en `functions/shared/catalog.ts`, espejo de 05 §4.1 con los defaults de 08 §9) |
+| verifyPurchase | `POST /v1/purchases/verify` (JWT + integridad) | 30 por UID y hora [P]; `products.get` en Play; `pending` no concede; cancelada o inexistente → 400; cuenta ofuscada de otro UID → 409; token con lápida `voided` (anulado antes de verificarse) → 400 sin llamar a Play; `af_starter` (`once_per_account`): antes del `acknowledge` reserva la marca `once#` 15 minutos (`UpdateItem` condicional); si otro token de la cuenta ya la tiene, 400 **sin** `acknowledge` (Play la reembolsa a los 3 días; el cliente no debe consumir esa transacción); `acknowledge` si falta; transacción en `purchases` con `PutItem` condicional (dos peticiones con el mismo token: una `ok`, la otra `duplicate`; token de otro UID → 409), la comprobación de cuenta no borrada (si el borrado empezó entretanto → 401) y el paso de la reserva `once#` a marca permanente (sin `ttl`). Solo `ok` lleva `grant` (catálogo en `functions/shared/catalog.ts`, espejo de 05 §4.1 con los defaults de 08 §9) |
 | restoreLedger | `POST /v1/ledger/restore` (JWT) | Compras del UID por `by_uid` con su estado y los nonces pendientes que `rewards` tiene confirmados para ese UID |
-| rewardedSsv | `GET`/`POST /v1/ssv` (firma de MAX) | Firma [NV] → cada `event_id` queda atado a un único (UID, nonce): otro UID u otro nonce con la misma firma → 403 → límite de 100 por UID y día [P] (los reintentos de MAX no gastan cupo) → `PutItem` condicional en `rewards` (TTL 30 días); nonce repetido → 200 `duplicate` sin escribir |
-| voidedPurchasesJob | Scheduler, 03:00 UTC | `voidedpurchases.list` desde el checkpoint de `jobs` (con 24 h de solapamiento [P], como mucho 30 días atrás), marca `voided` en `purchases` (también las filas anonimizadas) y solo entonces avanza el checkpoint; un fallo lanza (reintentos y DLQ) |
-| deleteAccount | `POST /v1/account/code`, `/delete`, `/delete-request`, `/delete-confirm` | Código de 128 bits que rota (solo su hash; 10 al día por UID [P]); borrado por app con integridad; por web, código → token de 5 minutos (5 solicitudes por código y hora [P]) → borrado. El borrado es idempotente: primero una marca de cuenta borrada de 2 h en `rate_limits` (el ID token sigue valiendo hasta 1 h y, con ella, ni `/code` ni `verify` vuelven a escribir a nombre del UID), luego `rewards`, anonimiza `purchases` (quita `uid`), `integrity`, el usuario de Firebase Auth y, al final, `account_codes` |
+| rewardedSsv | `GET`/`POST /v1/ssv` (firma de MAX) | Firma [NV] → cada `event_id` queda atado a un único (UID, nonce): otro UID u otro nonce con la misma firma → 403 → límite de 100 por UID y día [P] (los reintentos de MAX no gastan cupo) → `PutItem` condicional en `rewards` (TTL 30 días), en transacción con la comprobación de cuenta no borrada; nonce repetido o cuenta borrada → 200 `duplicate` sin escribir |
+| voidedPurchasesJob | Scheduler, 03:00 UTC | `voidedpurchases.list` desde el checkpoint de `jobs` (con 24 h de solapamiento [P], como mucho 30 días atrás), marca `voided` en `purchases` (también las filas anonimizadas); si el token aún no está, deja una lápida `voided` sin `uid` (`tombstone: true`, `PutItem` condicional) para que `verifyPurchase` no lo conceda; solo entonces avanza el checkpoint; un fallo lanza (reintentos y DLQ) |
+| deleteAccount | `POST /v1/account/code`, `/delete`, `/delete-request`, `/delete-confirm` | Código de 128 bits que rota (solo su hash; 10 al día por UID [P]); borrado por app con integridad; por web, código → token de 5 minutos (5 solicitudes por código y hora [P]) → borrado. El borrado es idempotente: primero una marca de cuenta borrada de 2 h en `rate_limits` (el ID token sigue valiendo hasta 1 h y, con ella, ni `/code` ni `verify` vuelven a escribir a nombre del UID), luego `rewards`, anonimiza `purchases` (quita `uid`), `integrity` y las marcas `once#`, el usuario de Firebase Auth, una **segunda pasada** de lo mismo (lo escrito justo antes de la marca que el GSI aún no enseñaba) y, al final, `account_codes`. `verify`, el SSV y `/code` escriben en una transacción que exige que no haya marca, así que nada se escribe a nombre del UID después de ella. La caché de `integrity` también se escribe en transacción con la marca |
 
 Integridad (Q-AWS-4 a): token de App Check de uso limitado en `X-Firebase-AppCheck`, verificado con `jose` contra `https://firebaseappcheck.googleapis.com/v1/jwks`; cada token vale una vez (anti-replay en `rate_limits`) y el veredicto se guarda 24 h por UID en `integrity`. La variante (b), Play Integrity directo, está declarada y sin implementar. Los logs llevan el UID solo como hash y nunca tokens ni códigos.
+
+### Riesgos residuales conocidos (F2c)
+
+- **Borrado y GSI:** una fila de `purchases` o `rewards` escrita justo antes de la marca `deleted#` cuyo GSI `by_uid` tarde más en propagarse que la llamada a Firebase Auth se escapa de las dos pasadas y conserva el `uid` (en `rewards` caduca a los 30 días; en `purchases`, no). La métrica `EraseSecondPass` cuenta las veces que la segunda pasada encontró algo.
+- **Borrado durante una compra:** si la cuenta se borra entre el `acknowledge` y la escritura, la compra queda reconocida y no se concede (401). El usuario borró su cuenta.
+- **`af_starter`:** si pasan más de 15 minutos entre la reserva y la escritura (Play o DynamoDB lentos, reintentos) y otro token de la cuenta toma la reserva caducada, el primero queda reconocido sin conceder. Una reserva hecha justo cuando se borra la cuenta queda (sin el UID en claro) hasta que la borra el TTL. La marca es permanente: un `af_starter` reembolsado no se puede volver a comprar.
+- **Tokens del borrado por web:** las filas `kind: request` de `/delete-request` se escriben sin la transacción; una creada durante el borrado queda con el `uid` hasta su TTL de 5 minutos.
 
 ## Validar sin credenciales (agentes y CI)
 
@@ -39,7 +46,7 @@ npm run lint
 npm run typecheck
 npm test
 npx cdk synth -c env=dev
-npx cdk synth -c env=prod
+npx cdk synth -c env=prod -c firebaseAppIds=1:123456789:android:0123456789abcdef   # id de mentira para validar
 ```
 
 `cdk synth` aplica **cdk-nag** (AwsSolutions) como plugin de validación: cualquier hallazgo sin reconocer hace fallar la síntesis. Cada excepción está reconocida en el código con su motivo (`ack(...)` en `lib/`). La síntesis no hace búsquedas en la cuenta (`fromLookup` está prohibido) y `cdk.json` desactiva la telemetría, los avisos y el informe de versión de la CLI.
@@ -52,7 +59,7 @@ npx cdk synth -c env=prod
 | `account` | Para desplegar, **sí** (recomendado) | id de 12 dígitos | Fija la cuenta: CDK se niega a desplegar si el perfil apunta a otra |
 | `alertEmail` | Para recibir avisos | tu correo | Avisos de alarmas (SNS) y de presupuesto |
 | `firebaseProjectId` | No | `amazon-fill-dev` | Emisor y audiencia del JWT de Firebase Auth y audiencia del token de App Check; por defecto `amazon-fill-dev` / `amazon-fill-prod` (08 §15.3) |
-| `firebaseAppIds` | No | `1:<número>:android:<hash>` (varios, separados por comas) | Si se da, el token de App Check solo vale para esas apps de Firebase (Q-AWS-4) |
+| `firebaseAppIds` | En prod, **sí** (en dev, no) | `1:<número>:android:<hash>` (varios, separados por comas) | El token de App Check solo vale para esas apps de Firebase (Q-AWS-4). En prod la síntesis falla sin él (F2c): así solo las apps Android registradas emiten tokens válidos, no cualquier app del proyecto (web, iOS o una de pruebas). Además, la Lambda falla cerrada (500) si en prod le falta la lista. Se copia de la consola de Firebase (Configuración del proyecto → Tus apps → ID de la app); es público, no es un secreto |
 | `packageName` | En prod, **sí** para comprar | applicationId de la app | Paquete para la Google Play Developer API. En dev vale por defecto el provisional `com.amazonfill.dev`; en prod no tiene valor por defecto, solo se pasa **tras el dictamen de marca** y la síntesis rechaza el provisional (regla 6 de `CLAUDE.md`). Sin él, verifyPurchase y el job responden 500 (fallan cerrados) |
 | `domain` + `hostedZoneId` | No (los dos o ninguno) | dominio y zona de Route 53 | Web en `<dominio>` y `www.`, CDN en `cdn.`, API en `api.`; **solo prod y solo tras el dictamen de marca** (Q-AWS-9) |
 
@@ -138,6 +145,9 @@ En dev (y solo en dev: un test de stacks lo comprueba) las funciones llevan `AF_
 
 ## Prod
 
-Igual que dev con `-c env=prod`, el perfil `af-prod` y la cuenta de prod. En prod las tablas, los buckets, los secretos y los logs se **retienen** al borrar el stack, y `Data` y `Api` tienen protección contra la terminación. El dominio (`-c domain=… -c hostedZoneId=…`) y la web pública solo **tras el dictamen de marca** (D-034, Q-AWS-9; plan F5). El verificador falso de Play no existe en prod (un test lo comprueba). Para que las compras funcionen en prod hace falta `-c packageName=<applicationId definitivo>`, que solo existe tras el dictamen de marca.
+Igual que dev con `-c env=prod`, el perfil `af-prod` y la cuenta de prod. En prod las tablas, los buckets, los secretos y los logs se **retienen** al borrar el stack, y `Data` y `Api` tienen protección contra la terminación. El dominio (`-c domain=… -c hostedZoneId=…`) y la web pública solo **tras el dictamen de marca** (D-034, Q-AWS-9; plan F5). El verificador falso de Play no existe en prod (un test lo comprueba). Para que las compras funcionen en prod hace falta `-c packageName=<applicationId definitivo>`, que solo existe tras el dictamen de marca. La síntesis de prod exige `-c firebaseAppIds=<id de la app Android de prod>` (sin él falla con un mensaje que lo pide):
+```
+npx cdk synth -c env=prod -c firebaseAppIds=1:<número>:android:<hash>
+```
 
 Las referencias entre stacks son débiles (`Fn::GetStackOutput`, el valor por defecto de esta versión de CDK): CloudFormation no impide borrar `Data` o `Api` aunque otros stacks los usen. En prod lo frenan la retención y la protección contra la terminación; aun así, borra en orden inverso (`Ops`, `Cdn`, `Web`, `Api`, `Data`, `Global`).

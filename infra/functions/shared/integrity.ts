@@ -6,15 +6,15 @@
 // [NV] Formato del token de App Check (lo confirma F0-R/F4): JWT RS256 con `iss` =
 // https://firebaseappcheck.googleapis.com/<número de proyecto>, `aud` = ["projects/<número>",
 // "projects/<id>"], `sub` = id de la app de Firebase y, en los de uso limitado, `jti`.
-import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, TransactWriteCommand } from '@aws-sdk/lib-dynamodb';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { createRemoteJWKSet, errors as joseErrors, jwtVerify } from 'jose';
 import type { JWTVerifyGetKey } from 'jose';
 import { sha256hex } from './crypto.ts';
-import { epochS } from './ddb.ts';
+import { cancellationCodes, epochS } from './ddb.ts';
 import { UpstreamError, integrityFailed } from './errors.ts';
-import { log, metric } from './log.ts';
-import { consumeOnce } from './rateLimit.ts';
+import { log, metric, uidHash } from './log.ts';
+import { consumeOnce, notDeletedCheck } from './rateLimit.ts';
 
 export const APP_CHECK_JWKS_URL = 'https://firebaseappcheck.googleapis.com/v1/jwks';
 const APP_CHECK_ISSUER_RE = /^https:\/\/firebaseappcheck\.googleapis\.com\/(\d{1,20})$/;
@@ -178,10 +178,25 @@ export async function requireIntegrity(deps: IntegrityDeps, uid: string, token: 
     log.info('integrity_rejected', { variant: deps.verifier.variant, reason: 'replay' });
     throw integrityFailed('Token de integridad ya usado.');
   }
-  await deps.ddb.send(
-    new PutCommand({
-      TableName: deps.integrityTable,
-      Item: { uid, verdict: 'ok', variant: deps.verifier.variant, checked_at: nowMs, ttl: nowS + VERDICT_TTL_S },
-    }),
-  );
+  // F2c: la caché se escribe en una transacción que exige que el UID no esté marcado como borrado, para no dejar
+  // una fila con el uid en claro si el borrado ocurre a la vez. Si lo está, el token sigue siendo bueno (el borrado
+  // repetido por la app debe poder pasar), pero no se guarda nada: quien llama decide (verify y /code dan 401).
+  try {
+    await deps.ddb.send(
+      new TransactWriteCommand({
+        TransactItems: [
+          {
+            Put: {
+              TableName: deps.integrityTable,
+              Item: { uid, verdict: 'ok', variant: deps.verifier.variant, checked_at: nowMs, ttl: nowS + VERDICT_TTL_S },
+            },
+          },
+          notDeletedCheck(deps.rateLimitsTable, uidHash(uid), nowMs),
+        ],
+      }),
+    );
+  } catch (e) {
+    if (cancellationCodes(e)?.[1] !== 'ConditionalCheckFailed') throw e;
+    log.info('integrity_not_cached_deleted', { uid_hash: uidHash(uid) });
+  }
 }

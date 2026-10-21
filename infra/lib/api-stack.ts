@@ -57,6 +57,8 @@ const DDB_QUERY = ['dynamodb:Query'];
 const DDB_PUT = ['dynamodb:PutItem'];
 const DDB_UPDATE = ['dynamodb:UpdateItem'];
 const DDB_DELETE = ['dynamodb:DeleteItem'];
+/** ConditionCheck de TransactWriteItems (F2c: la marca de cuenta borrada, atómica con la escritura). */
+const DDB_CONDITION_CHECK = ['dynamodb:ConditionCheckItem'];
 
 export class ApiStack extends Stack {
   readonly api: HttpApi;
@@ -95,7 +97,7 @@ export class ApiStack extends Stack {
       Object.fromEntries(Object.entries(entries).map(([k, s]) => [`AF_SECRET_${k}`, s.secretArn]));
     // Paquete de la app en Play (solo con valor: en prod llega por -c packageName tras el dictamen de marca).
     const playEnv: Record<string, string> = config.packageName ? { AF_PACKAGE_NAME: config.packageName } : {};
-    // Ids de las apps de Firebase admitidos en el token de App Check (opcional, -c firebaseAppIds).
+    // Ids de las apps de Firebase admitidos en el token de App Check (-c firebaseAppIds: obligatorio en prod, opcional en dev).
     const appCheckEnv: Record<string, string> = config.firebaseAppIds.length > 0
       ? { AF_APPCHECK_APP_IDS: config.firebaseAppIds.join(',') }
       : {};
@@ -114,8 +116,9 @@ export class ApiStack extends Stack {
     });
     verifyPurchase.grantTable(tables.purchases, [...DDB_GET, ...DDB_PUT]);
     verifyPurchase.grantTable(tables.integrity, [...DDB_GET, ...DDB_PUT]);
-    // Anti-replay del token de integridad, límite por UID y marca de cuenta borrada.
-    verifyPurchase.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE]);
+    // Anti-replay del token de integridad, límite por UID, marca de cuenta borrada (también como ConditionCheck en
+    // la transacción del libro mayor) y marca once_per_account (F2c).
+    verifyPurchase.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE, ...DDB_CONDITION_CHECK]);
     verifyPurchase.grantSecret(this.secrets.playServiceAccount);
 
     const restoreLedger = new AfFunction(this, 'RestoreLedger', {
@@ -137,8 +140,8 @@ export class ApiStack extends Stack {
       },
     });
     rewardedSsv.grantTable(tables.rewards, DDB_PUT);
-    // Límite por UID y event_id de un solo uso.
-    rewardedSsv.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE]);
+    // Límite por UID, event_id de un solo uso y marca de cuenta borrada (ConditionCheck, F2c).
+    rewardedSsv.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE, ...DDB_CONDITION_CHECK]);
     rewardedSsv.grantSecret(this.secrets.maxSsvKey);
 
     const deleteAccount = new AfFunction(this, 'DeleteAccount', {
@@ -165,7 +168,9 @@ export class ApiStack extends Stack {
     deleteAccount.grantTable(tables.integrity, [...DDB_GET, ...DDB_PUT, ...DDB_DELETE]);
     deleteAccount.grantIndex(tables.accountCodes, BY_UID, DDB_QUERY);
     deleteAccount.grantTable(tables.accountCodes, [...DDB_GET, ...DDB_PUT, ...DDB_DELETE]);
-    deleteAccount.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE]);
+    // Límites, marca de cuenta borrada (también ConditionCheck al emitir el código) y borrar las marcas
+    // once_per_account del UID (F2c).
+    deleteAccount.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE, ...DDB_DELETE, ...DDB_CONDITION_CHECK]);
     deleteAccount.grantSecret(this.secrets.firebaseAdmin);
 
     const voidedJob = new AfFunction(this, 'VoidedPurchasesJob', {
@@ -180,7 +185,8 @@ export class ApiStack extends Stack {
         ...playEnv,
       },
     });
-    voidedJob.grantTable(tables.purchases, DDB_UPDATE);
+    // UpdateItem para marcar voided; PutItem condicional para la lápida de los tokens aún sin verificar (F2c).
+    voidedJob.grantTable(tables.purchases, [...DDB_PUT, ...DDB_UPDATE]);
     voidedJob.grantTable(tables.jobs, [...DDB_GET, ...DDB_PUT]);
     voidedJob.grantSecret(this.secrets.playServiceAccount);
     this.functions = {

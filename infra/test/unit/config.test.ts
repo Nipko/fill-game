@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { loadConfig } from '../../lib/config.ts';
 
-const ctx = (values: Record<string, unknown>) => ({ tryGetContext: (k: string) => values[k] });
+const APP = '1:123456789:android:0123456789abcdef';
+// En prod el contexto firebaseAppIds es obligatorio (F2c): los ctx de prod lo llevan salvo que se diga otra cosa.
+const ctx = (values: Record<string, unknown>) => {
+  const v = values.env === 'prod' && !('firebaseAppIds' in values) ? { firebaseAppIds: APP, ...values } : values;
+  return { tryGetContext: (k: string) => v[k] };
+};
 
 describe('loadConfig', () => {
   it('exige -c env=dev|prod', () => {
@@ -55,7 +60,11 @@ describe('loadConfig', () => {
     expect(() => loadConfig(ctx({ env: 'dev', packageName: 'no valido' }))).toThrow(/applicationId/);
   });
 
-  it('ids de app de Firebase para App Check: opcionales y validados', () => {
+  it('ids de app de Firebase para App Check: obligatorios en prod, opcionales en dev y validados', () => {
+    expect(() => loadConfig(ctx({ env: 'prod', firebaseAppIds: undefined }))).toThrow(/prod falta el contexto "firebaseAppIds"/);
+    expect(() => loadConfig(ctx({ env: 'prod', firebaseAppIds: '' }))).toThrow(/firebaseAppIds/);
+    expect(() => loadConfig(ctx({ env: 'prod', firebaseAppIds: ' , ' }))).toThrow(/firebaseAppIds/);
+    expect(loadConfig(ctx({ env: 'prod' })).firebaseAppIds).toEqual([APP]);
     expect(loadConfig(ctx({ env: 'dev' })).firebaseAppIds).toEqual([]);
     expect(loadConfig(ctx({ env: 'dev', firebaseAppIds: '1:123:android:abcdef, 1:123:android:0123456789' })).firebaseAppIds).toEqual([
       '1:123:android:abcdef',

@@ -72,11 +72,11 @@ flowchart LR
 
 | Tabla | Clave | Atributos | Notas |
 |---|---|---|---|
-| `purchases` (libro mayor) | PK `token_hash` (SHA-256 del `purchaseToken`) | `uid`, `sku`, `order_id`, `ts`, `price_micros`, `currency`, `country`, `state ∈ {ok, voided}`, `voided_at` | `PutItem` condicional = idempotencia (`duplicate`). GSI disperso `by_uid (uid, ts)` para `restoreLedger`. Al borrar la cuenta se quita `uid`: la fila sale del GSI y se conserva anonimizada el plazo fiscal |
+| `purchases` (libro mayor) | PK `token_hash` (SHA-256 del `purchaseToken`) | `uid`, `sku`, `order_id`, `ts`, `price_micros`, `currency`, `country`, `state ∈ {ok, voided}`, `voided_at` | `PutItem` condicional = idempotencia (`duplicate`), dentro de una transacción con la comprobación de cuenta no borrada (F2c). GSI disperso `by_uid (uid, ts)` para `restoreLedger`. Al borrar la cuenta se quita `uid`: la fila sale del GSI y se conserva anonimizada el plazo fiscal. Lápida `voided` sin `uid` (`tombstone: true`) para los tokens anulados en Play antes de verificarse (F2c): `verifyPurchase` responde 400 |
 | `rewards` | PK `nonce` | `uid`, `placement`, `network`, `ts`, `ttl` (30 días [P]) | La condición rechaza un nonce repetido; GSI `by_uid` |
 | `integrity` | PK `uid` | `verdict`, `ttl` (24 h) | Caché del veredicto |
 | `account_codes` | PK `code_hash` | `uid`, `created_at`; GSI `by_uid` | Borrado por web (Q-B13-21) |
-| `rate_limits` | PK `key` (hash de IP o de código + ventana) | `count`, `ttl` | Límite de peticiones |
+| `rate_limits` | PK `key` (hash de IP o de código + ventana) | `count`, `ttl` | Límite de peticiones; marcas de un solo uso, de cuenta borrada (`deleted#`, 2 h) y `once#<sku>#<hash del UID>` de los SKU `once_per_account` (`af_starter`; sin TTL, la borra el borrado de cuenta; F2c) |
 | `jobs` | PK `job` | `cursor` | Checkpoint de las compras anuladas |
 
 **Región recomendada: `sa-east-1` (São Paulo)** para la API, Lambda y DynamoDB; `us-east-1` solo para ACM y WAF de CloudFront y para Budgets. Motivo: los datos de Brasil se quedan en Brasil (LGPD) y la latencia es menor desde BR, CO y PE [E]. Cuesta unos 30-60 % más que `us-east-1` [NV], irrelevante con este volumen (§6).
@@ -230,6 +230,7 @@ Todas de `sdk-integrator`, en `infra/functions/**`, `infra/lib/**`, `infra/contr
 | F2-6 `rewardedSsv` | F2-1 | Firma o secreto de MAX; nonce repetido → 200 idempotente; `rewards` con TTL |
 | F2-7 `voidedPurchasesJob` | F2-3 | Scheduler, checkpoint, paginación, marca `voided`, reintento y DLQ |
 | F2-8 `deleteAccount` | F2-3 | App: JWT e integridad. Web: `delete-request` y `delete-confirm` (token de 5 min) con límite. Borra `rewards`, `integrity` y `account_codes`; quita `uid` del libro mayor; borra el usuario de Firebase Auth; idempotente. `GET /v1/account/code` crea el código de 128 bits y guarda su hash |
+| F2c Endurecimiento | F2-4 a F2-8 | `-c firebaseAppIds` obligatorio en prod (la Lambda falla cerrada sin él); lápida `voided` para anulaciones de tokens aún no verificados (400 en `verifyPurchase`); `af_starter` una vez por cuenta en el servidor (reserva atómica de 15 min de la marca `once#` antes del `acknowledge`; si es de otro token, 400 sin `acknowledge`: Play reembolsa a los 3 días; el cliente no consume esa transacción); escrituras de `verifyPurchase`, `rewardedSsv`, del código de borrado y de la caché de `integrity` en transacción con la marca `deleted#`; segunda pasada de limpieza al final de `eraseAccount`. Riesgos residuales en `infra/README.md` («Riesgos residuales conocidos») |
 
 ### F3 · Cliente (C# 9; las tareas con Editor, de dos en dos)
 
@@ -237,7 +238,7 @@ Todas de `sdk-integrator`, en `infra/functions/**`, `infra/lib/**`, `infra/contr
 |---|---|---|---|---|
 | F3-1 `AF.Backend` sin motor | sdk-integrator | `Scripts/Backend/**` | F2-2 | Interfaces, DTO, reintentos y el falso; tests EditMode que (de)serializan `infra/contracts/v1/examples/*.json`; asmdef sin motor |
 | F3-2 Transporte y `Date` | sdk-integrator | `Scripts/Backend/Unity/**`, `Scripts/Platform/**` | F3-1 | `UnityWebRequest` tras `IHttpTransport`; `Date` alimenta a `IServerDate`; sin UID en logs |
-| F3-3 Compra verificada | sdk-integrator | `Scripts/IAP/**` | F3-1 | Estados `verifying`, `ok`, `pending`, `duplicate` y error; cola de 72 h; `applied_purchases` |
+| F3-3 Compra verificada | sdk-integrator | `Scripts/IAP/**` | F3-1 | Estados `verifying`, `ok`, `pending`, `duplicate` y error; cola de 72 h; `applied_purchases`; con 400 (cancelada, anulada o segundo `af_starter`) no concede **ni consume** la transacción (consumir también reconoce y Play ya no la reembolsaría) |
 | F3-4 Confirmar o revocar SSV | unity-gameplay-dev | `Scripts/Economy/**`, `Tests/` | F3-1, B8 | Revocación tras `sec_ssv_grace_h` sin bajar de 0; `fraud_flag` |
 | F3-5 Ajustes: código y borrado | unity-gameplay-dev | `Scripts/UI/Settings*`, textos | F3-1, B8 | Enseña el código; el borrado llama al backend y luego al local; banda < 13 probada |
 | F3-6 Proveedores reales de tokens | sdk-integrator | `Scripts/Backend/**`, `Scripts/Save/**` | SDK de Firebase aprobado, `INTERNET`, Q-AWS-4 | Reales solo en `UNITY_ANDROID && !UNITY_EDITOR`; el Play Mode sigue con los falsos |

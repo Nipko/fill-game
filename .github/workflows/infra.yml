@@ -79,5 +79,6 @@ jobs:
       - name: synth dev (cdk-nag)
         run: npm run synth -- --all --quiet -c env=dev
 
+      # Desde F2c, prod exige -c firebaseAppIds; el CI sintetiza con un id de app de ejemplo, que no es real.
       - name: synth prod (cdk-nag)
-        run: npm run synth -- --all --quiet -c env=prod
+        run: npm run synth -- --all --quiet -c env=prod -c firebaseAppIds=1:123456789:android:0123456789abcdef

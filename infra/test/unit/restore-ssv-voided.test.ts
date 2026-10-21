@@ -165,7 +165,7 @@ describe('rewardedSsv', () => {
   });
 
   it('error de DynamoDB → 500 (MAX reintenta)', async () => {
-    db.failNext = { command: 'Put', table: TABLES.AF_TABLE_REWARDS, error: new Error('boom') };
+    db.failNext = { command: 'TransactWrite', table: TABLES.AF_TABLE_REWARDS, error: new Error('boom') };
     expect((await call(q())).status).toBe(500);
   });
 });
@@ -202,10 +202,13 @@ describe('voidedPurchasesJob', () => {
     ];
     const r = await run();
     expect(out(r), JSON.stringify(out.errors)).toBe(true);
-    expect(r).toEqual({ status: 'ok', pages: 2, voided: 2, cursor_ms: NOW });
+    expect(r).toEqual({ status: 'ok', pages: 2, voided: 2, tombstones: 1, cursor_ms: NOW });
     expect(play.calls[1].token).toBe('p2');
     expect(db.get(TABLES.AF_TABLE_PURCHASES, { token_hash: sha256hex('t1') })).toMatchObject({ state: 'voided', voided_at: 10, voided_reason: 1, voided_source: 0, uid: UID });
-    expect(db.get(TABLES.AF_TABLE_PURCHASES, { token_hash: sha256hex('ajeno') })).toBeUndefined();
+    // F2c: el token que aún no estaba en el libro mayor queda con una lápida voided sin uid.
+    expect(db.get(TABLES.AF_TABLE_PURCHASES, { token_hash: sha256hex('ajeno') })).toEqual({
+      token_hash: sha256hex('ajeno'), state: 'voided', tombstone: true, voided_at: 11, voided_reason: -1, voided_source: -1, created_at: NOW,
+    });
     expect(db.get(TABLES.AF_TABLE_JOBS, { job: JOB_ID })).toMatchObject({ cursor_ms: NOW });
   });
 
