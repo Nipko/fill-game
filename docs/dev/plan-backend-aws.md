@@ -168,7 +168,7 @@ Como referencia, el GDD estimaba Firestore + Functions en 150-300 USD al mes (09
 - **`AF.Backend.Unity`:** transporte con `UnityWebRequest`, sin paquete nuevo; pasa la cabecera `Date` a `IServerDate` (08 §10.1).
 - **HTTPS en lugar del SDK de Functions:** `FirebaseFunctions` sale de la lista de módulos (08 §15.3 #2).
 - **Tokens:** ID token con `FirebaseUser.TokenAsync(false)` (módulo Auth, ya aprobado). Integridad: (a) App Check `GetLimitedUseAppCheckTokenAsync` [NV en Unity 13.17.0], sin paquete nuevo; (b) la biblioteca Play Integrity para Unity (`com.google.play.integrity`, versión [NV]): **paquete nuevo, necesita aprobación**.
-- **Permiso `INTERNET`:** sigue pendiente del dueño; sin él no funciona ninguna llamada real.
+- **Permiso `INTERNET`:** aprobado por el dueño (D-036, 2026-10-20).
 - **Tanda 5:** **B7:** `sec_appcheck_enforce` deja de tener sentido en el cliente; se propone retirarla de 08 §9 y añadir `biz_backend_enabled` [P] como interruptor de corte; la URL base va compilada por entorno, nunca en RC. **B8:** sin cambios en lo hecho; F3 añade la revocación del SSV con los nonces confirmados, la llamada al backend en «Eliminar cuenta y datos» y el código de borrado en Ajustes en lugar del UID (Q-B13-21), con `profile.account_code` [P] en 08 §4.3. **B12:** sin bloqueo; las llamadas al backend son funcionales y no dependen del consentimiento; con la banda < 13 no hay IAP ni borrado remoto.
 
 ---
