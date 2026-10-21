@@ -3,9 +3,43 @@ using System;
 using System.Collections.Generic;
 using AF.Backend.Contract;
 using AF.Backend.Json;
+using AF.Platform;
 
 namespace AF.Backend.Verification
 {
+    /// <summary>
+    /// Cifras de la cola con el <b>default compilado</b> de la tabla única de 08 §9. <c>sec_purchase_deferred_ack_h</c>: horas sin
+    /// respuesta del servidor tras las que el cliente hace <c>acknowledge</c> local y marca <c>deferred_ack</c> (08 §10.1 y §10.3);
+    /// default 72, rango 48-72 (Play reembolsa sola una compra sin reconocer a los 3 días).
+    /// </summary>
+    public sealed class VerificationQueueConfig
+    {
+        /// <summary>Mínimo del rango de 08 §9.</summary>
+        public const int MinDeferredAckH = 48;
+
+        /// <summary>Máximo del rango de 08 §9.</summary>
+        public const int MaxDeferredAckH = 72;
+
+        /// <summary>Una instancia nueva con los defaults de 08 §9.</summary>
+        public static VerificationQueueConfig Defaults => new VerificationQueueConfig();
+
+        /// <summary><c>sec_purchase_deferred_ack_h</c> [P].</summary>
+        [RemoteConfigKey("sec_purchase_deferred_ack_h")]
+        public int SecPurchaseDeferredAckH { get; set; } = 72;
+
+        /// <summary>El plazo como intervalo.</summary>
+        public TimeSpan DeferredAckAfter => TimeSpan.FromHours(SecPurchaseDeferredAckH);
+
+        /// <exception cref="InvalidOperationException">Fuera de 48-72.</exception>
+        public void Validate()
+        {
+            if (SecPurchaseDeferredAckH < MinDeferredAckH || SecPurchaseDeferredAckH > MaxDeferredAckH)
+            {
+                throw new InvalidOperationException("VerificationQueueConfig: sec_purchase_deferred_ack_h debe estar entre 48 y 72.");
+            }
+        }
+    }
+
     /// <summary>Una compra a la espera de que el servidor la verifique.</summary>
     public sealed class PendingVerification
     {
@@ -20,7 +54,10 @@ namespace AF.Backend.Verification
 
         public VerifyPurchaseRequest Request { get; }
 
-        /// <summary>Cuándo entró en la cola: el plazo de 72 h cuenta desde aquí.</summary>
+        /// <summary>
+        /// Desde cuándo cuenta el plazo de <c>sec_purchase_deferred_ack_h</c>: la hora de la compra si se conoce (Play la reembolsa
+        /// a los 3 días de la compra, no de entrar en la cola) o, si no, la de entrar en la cola.
+        /// </summary>
         public DateTime FirstQueuedUtc { get; }
 
         /// <summary>Intentos fallidos.</summary>
@@ -37,26 +74,30 @@ namespace AF.Backend.Verification
 
     /// <summary>
     /// Cola local de verificaciones de compra de 08 §10.3: «error de red → cola local con backoff; a las 72 h acknowledge local +
-    /// <c>deferred_ack</c> [P]» (08 §10.1, fila «Compra falsa»). Es solo el estado y sus reglas, sin red ni guardado: la procesa
+    /// <c>deferred_ack</c> [P]» (08 §10.1, fila «Compra falsa»), con el plazo de <c>sec_purchase_deferred_ack_h</c> (08 §9). Es solo el estado y sus reglas, sin red ni guardado: la procesa
     /// <see cref="VerificationQueueRunner"/> y la guarda quien la tenga (F3-3 la pondrá en el perfil con <see cref="ToJson"/>).
     /// Los <c>purchaseToken</c> viajan dentro del JSON: no va a los logs.
     /// </summary>
     public sealed class VerificationQueue
     {
-        /// <summary>Plazo tras el que el cliente hace <c>acknowledge</c> local y marca <c>deferred_ack</c> (08 §10.1 y §10.3).</summary>
-        public static readonly TimeSpan DeferredAckAfter = TimeSpan.FromHours(72);
-
         private const int FormatVersion = 1;
         private static readonly DateTime Epoch = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
         private readonly List<PendingVerification> _entries = new List<PendingVerification>();
 
-        public VerificationQueue(RetryPolicy? policy = null)
+        /// <exception cref="InvalidOperationException"><paramref name="config"/> fuera del rango de 08 §9.</exception>
+        public VerificationQueue(VerificationQueueConfig? config = null, RetryPolicy? policy = null)
         {
+            VerificationQueueConfig c = config ?? VerificationQueueConfig.Defaults;
+            c.Validate();
+            DeferredAckAfter = c.DeferredAckAfter;
             Policy = policy ?? RetryPolicy.Queue;
         }
 
         public RetryPolicy Policy { get; }
+
+        /// <summary>Plazo tras el que el cliente hace <c>acknowledge</c> local y marca <c>deferred_ack</c> (<c>sec_purchase_deferred_ack_h</c>).</summary>
+        public TimeSpan DeferredAckAfter { get; }
 
         public IReadOnlyList<PendingVerification> Entries => _entries;
 
@@ -64,9 +105,10 @@ namespace AF.Backend.Verification
 
         /// <summary>
         /// Encola <paramref name="request"/> para intentarla ya. Si su token ya está, no hace nada y devuelve false (la misma compra
-        /// no se encola dos veces).
+        /// no se encola dos veces). <paramref name="purchasedUtc"/> es la hora de la compra si se conoce: el plazo cuenta desde ella
+        /// (si es posterior a <paramref name="nowUtc"/>, se usa <paramref name="nowUtc"/>).
         /// </summary>
-        public bool Enqueue(VerifyPurchaseRequest request, DateTime nowUtc)
+        public bool Enqueue(VerifyPurchaseRequest request, DateTime nowUtc, DateTime? purchasedUtc = null)
         {
             if (request == null)
             {
@@ -78,7 +120,14 @@ namespace AF.Backend.Verification
                 return false;
             }
 
-            _entries.Add(new PendingVerification(request, Utc(nowUtc), 0, Utc(nowUtc), null));
+            DateTime now = Utc(nowUtc);
+            DateTime start = now;
+            if (purchasedUtc.HasValue && Utc(purchasedUtc.Value) < now)
+            {
+                start = purchasedUtc.Value;
+            }
+
+            _entries.Add(new PendingVerification(request, start, 0, now, null));
             return true;
         }
 
@@ -90,7 +139,7 @@ namespace AF.Backend.Verification
             return entry != null && _entries.Remove(entry);
         }
 
-        /// <summary>Las que tocan ahora (su espera venció y no han cumplido las 72 h), por orden de llegada.</summary>
+        /// <summary>Las que tocan ahora (su espera venció y no han cumplido el plazo), por orden de llegada.</summary>
         public List<PendingVerification> Due(DateTime nowUtc)
         {
             DateTime now = Utc(nowUtc);
@@ -106,10 +155,10 @@ namespace AF.Backend.Verification
             return due;
         }
 
-        /// <summary>¿Cumplió ya las 72 h en la cola?</summary>
-        public static bool IsExpired(PendingVerification entry, DateTime nowUtc)
+        /// <summary>¿Cumplió ya el plazo de <see cref="DeferredAckAfter"/>?</summary>
+        public bool IsExpired(PendingVerification entry, DateTime nowUtc)
         {
-            return Utc(nowUtc) - entry.FirstQueuedUtc >= DeferredAckAfter;
+            return Utc(nowUtc) - (entry ?? throw new ArgumentNullException(nameof(entry))).FirstQueuedUtc >= DeferredAckAfter;
         }
 
         /// <summary>
@@ -127,7 +176,7 @@ namespace AF.Backend.Verification
         /// <summary>
         /// Un error tras el que no tiene sentido reintentar la misma petición: 400 <c>bad_request</c> (el cuerpo no vale) y 409
         /// <c>token_belongs_to_other_user</c> (el token es de otro UID). Los demás (red, 401, 403 de integridad, 429, 5xx, 501
-        /// mientras la función es un esqueleto, cuerpo ilegible) se reintentan hasta las 72 h.
+        /// mientras la función es un esqueleto, cuerpo ilegible) se reintentan hasta que vence el plazo.
         /// </summary>
         public static bool IsDefinitive(BackendError error)
         {
@@ -166,13 +215,13 @@ namespace AF.Backend.Verification
         }
 
         /// <summary>Lee lo que escribió <see cref="ToJson"/>. False si no se entiende (el llamador decide si empieza vacía).</summary>
-        public static bool TryFromJson(string? json, out VerificationQueue? queue, out string? error, RetryPolicy? policy = null)
+        public static bool TryFromJson(
+            string? json, out VerificationQueue? queue, out string? error, VerificationQueueConfig? config = null, RetryPolicy? policy = null)
         {
-            bool ok = ContractRules.TryRead(json, node => Read(node, policy), out queue, out error);
-            return ok;
+            return ContractRules.TryRead(json, node => Read(node, config, policy), out queue, out error);
         }
 
-        private static VerificationQueue Read(JsonNode node, RetryPolicy? policy)
+        private static VerificationQueue Read(JsonNode node, VerificationQueueConfig? config, RetryPolicy? policy)
         {
             var r = new ObjectReader(node, "verificationQueue", strict: false);
             if (r.RequiredInteger("v", 1, int.MaxValue) != FormatVersion)
@@ -180,7 +229,7 @@ namespace AF.Backend.Verification
                 throw new ContractException("verificationQueue: versión desconocida.");
             }
 
-            var queue = new VerificationQueue(policy);
+            var queue = new VerificationQueue(config, policy);
             JsonNode entries = r.RequiredArray("entries", 10000);
             for (int i = 0; i < entries.Items.Count; i++)
             {

@@ -66,10 +66,66 @@ namespace AF.Backend.Tests
         {
             var queue = new VerificationQueue();
             queue.Enqueue(Purchase(), T0);
-            Assert.That(VerificationQueue.DeferredAckAfter, Is.EqualTo(TimeSpan.FromHours(72)));
-            Assert.That(VerificationQueue.IsExpired(queue.Entries[0], T0.AddHours(72).AddTicks(-1)), Is.False);
-            Assert.That(VerificationQueue.IsExpired(queue.Entries[0], T0.AddHours(72)), Is.True);
+            Assert.That(queue.DeferredAckAfter, Is.EqualTo(TimeSpan.FromHours(72)));
+            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(72).AddTicks(-1)), Is.False);
+            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(72)), Is.True);
             Assert.That(queue.Due(T0.AddHours(72)), Is.Empty, "una vencida ya no se intenta");
+        }
+
+        [Test]
+        public void DeadlineComesFromRemoteConfigWithinItsRange()
+        {
+            var queue = new VerificationQueue(new VerificationQueueConfig { SecPurchaseDeferredAckH = 48 });
+            queue.Enqueue(Purchase(), T0);
+            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(48)), Is.True);
+            Assert.That(() => new VerificationQueue(new VerificationQueueConfig { SecPurchaseDeferredAckH = 47 }), Throws.InvalidOperationException);
+            Assert.That(() => new VerificationQueue(new VerificationQueueConfig { SecPurchaseDeferredAckH = 73 }), Throws.InvalidOperationException);
+        }
+
+        [Test]
+        public void DeadlineMatchesTheTableOf08Section9()
+        {
+            string chapter = System.IO.File.ReadAllText(System.IO.Path.Combine(
+                BackendTestFiles.RepoRoot, "docs", "gdd", "08-arquitectura-tecnica-publicacion.md"));
+            string? row = null;
+            foreach (string line in chapter.Split('\n'))
+            {
+                if (line.StartsWith("| ", StringComparison.Ordinal) && line.Contains("`sec_purchase_deferred_ack_h`"))
+                {
+                    row = line;
+                }
+            }
+
+            Assert.That(row, Is.Not.Null, "08 §9 debe tener sec_purchase_deferred_ack_h");
+            string[] cells = row!.Split('|');
+            string[] keys = cells[1].Split('/');
+            int index = -1;
+            for (int i = 0; i < keys.Length; i++)
+            {
+                if (keys[i].Trim() == "`sec_purchase_deferred_ack_h`")
+                {
+                    index = i;
+                }
+            }
+
+            Assert.That(index, Is.GreaterThanOrEqualTo(0));
+            Assert.That(cells[2].Split('/')[index].Trim(), Is.EqualTo("int"));
+            Assert.That(cells[3].Split('/')[index].Trim(), Is.EqualTo(VerificationQueueConfig.Defaults.SecPurchaseDeferredAckH.ToString(System.Globalization.CultureInfo.InvariantCulture)));
+            Assert.That(cells[4].Split('/')[index].Trim(), Is.EqualTo(VerificationQueueConfig.MinDeferredAckH + "-" + VerificationQueueConfig.MaxDeferredAckH));
+            var attribute = (RemoteConfigKeyAttribute?)Attribute.GetCustomAttribute(
+                typeof(VerificationQueueConfig).GetProperty(nameof(VerificationQueueConfig.SecPurchaseDeferredAckH))!, typeof(RemoteConfigKeyAttribute));
+            Assert.That(attribute!.Key, Is.EqualTo("sec_purchase_deferred_ack_h"));
+        }
+
+        [Test]
+        public void DeadlineCountsFromThePurchaseWhenKnown()
+        {
+            var queue = new VerificationQueue();
+            queue.Enqueue(Purchase("tok-1"), T0, purchasedUtc: T0.AddHours(-70));
+            queue.Enqueue(Purchase("tok-2"), T0, purchasedUtc: T0.AddHours(5));
+            Assert.That(queue.Entries[0].FirstQueuedUtc, Is.EqualTo(T0.AddHours(-70)));
+            Assert.That(queue.IsExpired(queue.Entries[0], T0.AddHours(2)), Is.True);
+            Assert.That(queue.Entries[1].FirstQueuedUtc, Is.EqualTo(T0), "una hora de compra futura no alarga el plazo");
         }
 
         [Test]

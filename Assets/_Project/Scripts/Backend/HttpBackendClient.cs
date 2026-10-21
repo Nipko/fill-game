@@ -74,7 +74,24 @@ namespace AF.Backend
         public void VerifyPurchase(VerifyPurchaseRequest request, Action<BackendResult<VerifyPurchaseResponse>> onDone)
         {
             string body = (request ?? throw new ArgumentNullException(nameof(request))).ToJson();
-            Start(BackendOperation.VerifyPurchase, body, VerifyPurchaseResponse.TryParse, onDone);
+            string expectedHash = PurchaseTokenHash.Of(request.Token);
+            Start<VerifyPurchaseResponse>(BackendOperation.VerifyPurchase, body, (string? json, out VerifyPurchaseResponse? value, out string? error) =>
+            {
+                if (!VerifyPurchaseResponse.TryParse(json, out value, out error))
+                {
+                    return false;
+                }
+
+                // ok y duplicate deben hablar de este token: un hash distinto es una respuesta equivocada (proxy, caché o bug).
+                if (value!.TokenHash != null && !string.Equals(value.TokenHash, expectedHash, StringComparison.Ordinal))
+                {
+                    value = null;
+                    error = "verifyPurchase.response: 'token_hash' no corresponde al token enviado.";
+                    return false;
+                }
+
+                return true;
+            }, onDone);
         }
 
         public void RestoreLedger(RestoreLedgerRequest request, Action<BackendResult<RestoreLedgerResponse>> onDone)
@@ -131,14 +148,33 @@ namespace AF.Backend
 
             public void Attempt(bool forceRefresh)
             {
-                _owner._auth.GetIdToken(forceRefresh, OnIdToken);
+                if (_done)
+                {
+                    return;
+                }
+
+                try
+                {
+                    _owner._auth.GetIdToken(forceRefresh, OnIdToken);
+                }
+                catch (Exception) when (!_done)
+                {
+                    // Un proveedor que lanza (SDK sin iniciar…) no puede dejar la llamada sin respuesta. Si ya respondimos, la
+                    // excepción es del llamador (su onDone) y sigue su curso.
+                    Finish(BackendResult<T>.Fail(new BackendError(BackendErrorKind.AuthUnavailable, detail: "auth_provider_threw")));
+                }
             }
 
             private void OnIdToken(TokenResult id)
             {
-                if (!id.IsOk)
+                if (_done)
                 {
-                    Finish(BackendResult<T>.Fail(new BackendError(BackendErrorKind.AuthUnavailable, detail: id.Failure)));
+                    return;
+                }
+
+                if (id == null || !id.IsOk)
+                {
+                    Finish(BackendResult<T>.Fail(new BackendError(BackendErrorKind.AuthUnavailable, detail: id?.Failure)));
                     return;
                 }
 
@@ -148,16 +184,28 @@ namespace AF.Backend
                     return;
                 }
 
-                _owner._integrity.GetLimitedUseToken(integrity =>
+                try
                 {
-                    if (!integrity.IsOk)
+                    _owner._integrity.GetLimitedUseToken(integrity =>
                     {
-                        Finish(BackendResult<T>.Fail(new BackendError(BackendErrorKind.IntegrityUnavailable, detail: integrity.Failure)));
-                        return;
-                    }
+                        if (_done)
+                        {
+                            return;
+                        }
 
-                    Send(id.Token!, integrity.Token);
-                });
+                        if (integrity == null || !integrity.IsOk)
+                        {
+                            Finish(BackendResult<T>.Fail(new BackendError(BackendErrorKind.IntegrityUnavailable, detail: integrity?.Failure)));
+                            return;
+                        }
+
+                        Send(id.Token!, integrity.Token);
+                    });
+                }
+                catch (Exception) when (!_done)
+                {
+                    Finish(BackendResult<T>.Fail(new BackendError(BackendErrorKind.IntegrityUnavailable, detail: "integrity_provider_threw")));
+                }
             }
 
             private void Send(string idToken, string? integrityToken)
@@ -178,7 +226,14 @@ namespace AF.Backend
                 }
 
                 var request = new HttpRequestData(_op.Method, _owner._baseUrl + _op.Path, headers, _body, _owner._timeoutSeconds);
-                _owner._transport.Send(request, OnResponse);
+                try
+                {
+                    _owner._transport.Send(request, OnResponse);
+                }
+                catch (Exception) when (!_done)
+                {
+                    OnResponse(HttpResponseData.NetworkFailure("transport_threw"));
+                }
             }
 
             private void OnResponse(HttpResponseData response)

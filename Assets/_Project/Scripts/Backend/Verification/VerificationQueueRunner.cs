@@ -9,13 +9,20 @@ namespace AF.Backend.Verification
     /// <summary>Qué pasó con una compra de la cola.</summary>
     public enum VerificationOutcomeKind
     {
-        /// <summary>El servidor respondió <c>ok</c>, <c>duplicate</c> o <c>pending</c> (ver <see cref="VerificationOutcome.Response"/>).</summary>
+        /// <summary>
+        /// El servidor respondió <c>ok</c>, <c>duplicate</c> o <c>pending</c> (ver <see cref="VerificationOutcome.Response"/>). Una
+        /// <c>pending</c> también sale de la cola: Unity IAP mantiene la transacción y quien use la cola (F3-3) la vuelve a encolar
+        /// cuando Play la entregue de nuevo (08 §10.3: «reintento en cada arranque»).
+        /// </summary>
         Answered = 0,
 
         /// <summary>Error definitivo (<see cref="VerificationQueue.IsDefinitive"/>): no se reintenta.</summary>
         Rejected = 1,
 
-        /// <summary>Cumplió 72 h sin respuesta: toca <c>acknowledge</c> local y <c>deferred_ack</c> (08 §10.3).</summary>
+        /// <summary>
+        /// Cumplió <c>sec_purchase_deferred_ack_h</c> sin respuesta: toca <c>acknowledge</c> local y <c>deferred_ack</c> (08 §10.3).
+        /// Si además se acredita lo decide F3-3 (pregunta abierta al dueño).
+        /// </summary>
         DeferredAck = 2,
     }
 
@@ -76,7 +83,7 @@ namespace AF.Backend.Verification
             for (int i = 0; i < _queue.Entries.Count; i++)
             {
                 PendingVerification e = _queue.Entries[i];
-                if (!_inFlight.Contains(e.Request.Token) && VerificationQueue.IsExpired(e, now))
+                if (!_inFlight.Contains(e.Request.Token) && _queue.IsExpired(e, now))
                 {
                     expired.Add(e);
                 }

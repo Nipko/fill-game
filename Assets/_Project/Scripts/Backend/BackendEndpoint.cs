@@ -60,7 +60,8 @@ namespace AF.Backend
                 return null;
             }
 
-            return trimmed.TrimEnd('/');
+            // Lo que sale del Uri ya validado (esquema, host y ruta), no el texto de entrada.
+            return uri.GetLeftPart(UriPartial.Path).TrimEnd('/');
         }
     }
 }

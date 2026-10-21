@@ -13,7 +13,8 @@ namespace AF.Backend.Tests
     {
         private const string BaseUrl = "https://api.example.test/dev";
         private const string Token = "opaque-token-example.AO-J1OzExample_Only-NotARealPurchaseToken0123456789";
-        private const string Hash = "3f0c6b0e2a5d4c1b9e8f7a6d5c4b3a291807f6e5d4c3b2a1908f7e6d5c4b3a29";
+        private static readonly string Hash = PurchaseTokenHash.Of(Token);
+        private const string OtherHash = "3f0c6b0e2a5d4c1b9e8f7a6d5c4b3a291807f6e5d4c3b2a1908f7e6d5c4b3a29";
         private const string ServerDate = "Wed, 21 Oct 2026 12:00:00 GMT";
 
         private FakeHttpTransport _http = null!;
@@ -320,6 +321,145 @@ namespace AF.Backend.Tests
                 Throws.InstanceOf<ArgumentException>());
             Assert.That(() => new HttpBackendClient("", _http, _auth, _integrity, _scheduler),
                 Throws.InstanceOf<ArgumentException>());
+        }
+
+        [Test]
+        public void TokenHashOfAnotherPurchase_IsAnInvalidResponse()
+        {
+            _http.Enqueue(200, VerifyPurchaseResponse.Duplicate(OtherHash).ToJson());
+            BackendResult<VerifyPurchaseResponse> r = Capture<VerifyPurchaseResponse>(cb => _client.VerifyPurchase(Purchase(), cb));
+
+            Assert.That(r.Error!.Kind, Is.EqualTo(BackendErrorKind.InvalidResponse));
+            Assert.That(r.Error.Detail, Does.Contain("token_hash"));
+        }
+
+        [Test]
+        public void ThrowingProviders_StillAnswerOnce()
+        {
+            var client = new HttpBackendClient(BaseUrl, _http, new ThrowingAuth(), _integrity, _scheduler);
+            BackendResult<AccountCodeResponse> a = Capture<AccountCodeResponse>(cb => client.GetAccountCode(cb));
+            Assert.That(a.Error!.Kind, Is.EqualTo(BackendErrorKind.AuthUnavailable));
+
+            client = new HttpBackendClient(BaseUrl, _http, _auth, new ThrowingIntegrity(), _scheduler);
+            BackendResult<DeleteAccountResponse> d = Capture<DeleteAccountResponse>(cb => client.DeleteAccount(cb));
+            Assert.That(d.Error!.Kind, Is.EqualTo(BackendErrorKind.IntegrityUnavailable));
+
+            client = new HttpBackendClient(BaseUrl, new ThrowingTransport(), _auth, _integrity, _scheduler,
+                retry: new RetryPolicy(1, TimeSpan.FromSeconds(1), TimeSpan.FromSeconds(1)));
+            BackendResult<AccountCodeResponse> t = Capture<AccountCodeResponse>(cb => client.GetAccountCode(cb));
+            Assert.That(t.Error!.Kind, Is.EqualTo(BackendErrorKind.Network));
+            Assert.That(_http.Requests, Is.Empty);
+        }
+
+        [Test]
+        public void ExceptionsFromTheCallerAreNotSwallowed()
+        {
+            _http.Enqueue(200, new AccountCodeResponse("3HZ7M2Q9XK4T8VB1NC6DRF0WPE").ToJson());
+            int calls = 0;
+            Assert.That(() => _client.GetAccountCode(_ =>
+            {
+                calls++;
+                throw new InvalidOperationException("del llamador");
+            }), Throws.InvalidOperationException);
+            Assert.That(calls, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void SynchronizationContextSchedulerPostsBackToItsContext()
+        {
+            SynchronizationContextForTests context = new SynchronizationContextForTests();
+            System.Threading.SynchronizationContext? previous = System.Threading.SynchronizationContext.Current;
+            System.Threading.SynchronizationContext.SetSynchronizationContext(context);
+            try
+            {
+                var scheduler = new SynchronizationContextScheduler();
+                int ran = 0;
+                scheduler.After(TimeSpan.Zero, () => ran++);
+                scheduler.After(TimeSpan.FromMilliseconds(20), () => ran++);
+                Assert.That(ran, Is.EqualTo(0), "nunca en la misma pila");
+                Assert.That(context.WaitForPosts(2, TimeSpan.FromSeconds(5)), Is.True, "las dos acciones vuelven al contexto");
+                context.RunAll();
+                Assert.That(ran, Is.EqualTo(2));
+            }
+            finally
+            {
+                System.Threading.SynchronizationContext.SetSynchronizationContext(previous);
+            }
+
+            System.Threading.SynchronizationContext.SetSynchronizationContext(null);
+            try
+            {
+                Assert.That(() => new SynchronizationContextScheduler(), Throws.InvalidOperationException);
+            }
+            finally
+            {
+                System.Threading.SynchronizationContext.SetSynchronizationContext(previous);
+            }
+        }
+
+        private sealed class SynchronizationContextForTests : System.Threading.SynchronizationContext
+        {
+            private readonly System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<System.Threading.SendOrPostCallback, object?>> _posts =
+                new System.Collections.Generic.List<System.Collections.Generic.KeyValuePair<System.Threading.SendOrPostCallback, object?>>();
+
+            public override void Post(System.Threading.SendOrPostCallback d, object? state)
+            {
+                lock (_posts)
+                {
+                    _posts.Add(new System.Collections.Generic.KeyValuePair<System.Threading.SendOrPostCallback, object?>(d, state));
+                    System.Threading.Monitor.PulseAll(_posts);
+                }
+            }
+
+            public bool WaitForPosts(int count, TimeSpan timeout)
+            {
+                DateTime until = DateTime.UtcNow + timeout;
+                lock (_posts)
+                {
+                    while (_posts.Count < count)
+                    {
+                        TimeSpan left = until - DateTime.UtcNow;
+                        if (left <= TimeSpan.Zero)
+                        {
+                            return false;
+                        }
+
+                        System.Threading.Monitor.Wait(_posts, left);
+                    }
+
+                    return true;
+                }
+            }
+
+            public void RunAll()
+            {
+                System.Collections.Generic.KeyValuePair<System.Threading.SendOrPostCallback, object?>[] posts;
+                lock (_posts)
+                {
+                    posts = _posts.ToArray();
+                    _posts.Clear();
+                }
+
+                foreach (var p in posts)
+                {
+                    p.Key(p.Value);
+                }
+            }
+        }
+
+        private sealed class ThrowingAuth : IAuthTokenProvider
+        {
+            public void GetIdToken(bool forceRefresh, Action<TokenResult> onDone) => throw new InvalidOperationException("SDK sin iniciar");
+        }
+
+        private sealed class ThrowingIntegrity : IIntegrityTokenProvider
+        {
+            public void GetLimitedUseToken(Action<TokenResult> onDone) => throw new InvalidOperationException("SDK sin iniciar");
+        }
+
+        private sealed class ThrowingTransport : IHttpTransport
+        {
+            public void Send(HttpRequestData request, Action<HttpResponseData> onDone) => throw new InvalidOperationException("roto");
         }
     }
 }

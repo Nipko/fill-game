@@ -80,6 +80,21 @@ namespace AF.Backend.Unity
                 timeout = request.TimeoutSeconds,
             };
 
+            try
+            {
+                Configure(uwr, request);
+            }
+            catch
+            {
+                uwr.Dispose();
+                throw;
+            }
+
+            return uwr;
+        }
+
+        private static void Configure(UnityWebRequest uwr, HttpRequestData request)
+        {
             if (request.Body != null)
             {
                 var upload = new UploadHandlerRaw(Encoding.UTF8.GetBytes(request.Body));
@@ -102,8 +117,6 @@ namespace AF.Backend.Unity
 
                 uwr.SetRequestHeader(header.Key, header.Value);
             }
-
-            return uwr;
         }
 
         private static HttpResponseData ToResponse(UnityWebRequest uwr)
