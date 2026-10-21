@@ -212,9 +212,9 @@ namespace AF.LiveOps
         /// <summary>
         /// Las tres opciones de <paramref name="cell"/> para el jugador, en orden semillas / comodín / mezcla, en
         /// <paramref name="into"/> (3 huecos): cada unidad bloqueada pasa al siguiente comodín desbloqueado del mismo valor (Morpho
-        /// → Cuia extra → «2 Marea + 40»; Luciérnaga → Morpho → Cuia extra → «2 Marea + 40» [P], Q-B5) y, si una opción queda igual
-        /// que otra anterior, la sustitución de esa opción da un paso más (D-033, punto 3: «nunca dos opciones iguales»). El valor
-        /// se conserva porque los cuatro sustitutos valen 100. Sin asignaciones.
+        /// → Cuia extra → «2 Marea + 40»; Luciérnaga → Morpho → Cuia extra → «2 Marea + 40» [P], Q-B5) y, si una opción sustituida
+        /// queda igual que otra (una sin nada bloqueado o una anterior), da un paso más en su cadena (D-033, punto 3: «nunca dos
+        /// opciones iguales»). El valor se conserva porque los cuatro sustitutos valen 100. Sin asignaciones.
         /// </summary>
         public static void ResolveOptions(LoginCalendarCell cell, LoginCalendarUnlocks unlocks, LoginCalendarReward[] into)
         {
@@ -228,20 +228,37 @@ namespace AF.LiveOps
                 throw new ArgumentException("Hacen falta 3 huecos.", nameof(into));
             }
 
+            // 1) Las opciones sin nada bloqueado quedan como en la tabla.
+            int decided = 0;
             for (int i = 0; i < LoginCalendarTable.Choices; i++)
             {
                 LoginCalendarReward option = cell.Option((LoginCalendarChoice)i);
-                LoginCalendarReward resolved = Substitute(option, unlocks, 0);
-                if (HasLocked(option, unlocks))
+                if (!HasLocked(option, unlocks))
                 {
-                    // Como mucho tantos pasos como la cadena más larga (Luciérnaga: 3).
-                    for (int step = 1; step <= 3 && CollidesWithEarlier(resolved, into, i); step++)
-                    {
-                        resolved = Substitute(option, unlocks, step);
-                    }
+                    into[i] = option;
+                    decided |= 1 << i;
+                }
+            }
+
+            // 2) Las demás, en orden: si la sustitución choca con una opción ya decidida (anterior o sin nada bloqueado), da otro
+            // paso de su cadena. Como mucho tantos pasos como la cadena más larga (Luciérnaga: 3). Si la cadena se acaba y aún
+            // choca (solo con la Cuia extra bloqueada, que con los defaults no ocurre: extra_cuia_unlock_level 8 < 10), queda así.
+            for (int i = 0; i < LoginCalendarTable.Choices; i++)
+            {
+                if ((decided & (1 << i)) != 0)
+                {
+                    continue;
+                }
+
+                LoginCalendarReward option = cell.Option((LoginCalendarChoice)i);
+                LoginCalendarReward resolved = Substitute(option, unlocks, 0);
+                for (int step = 1; step <= 3 && Collides(resolved, into, decided); step++)
+                {
+                    resolved = Substitute(option, unlocks, step);
                 }
 
                 into[i] = resolved;
+                decided |= 1 << i;
             }
         }
 
@@ -348,11 +365,11 @@ namespace AF.LiveOps
             return false;
         }
 
-        private static bool CollidesWithEarlier(LoginCalendarReward reward, LoginCalendarReward[] resolved, int count)
+        private static bool Collides(LoginCalendarReward reward, LoginCalendarReward[] resolved, int decided)
         {
-            for (int j = 0; j < count; j++)
+            for (int j = 0; j < LoginCalendarTable.Choices; j++)
             {
-                if (resolved[j].Equals(reward))
+                if ((decided & (1 << j)) != 0 && resolved[j].Equals(reward))
                 {
                     return true;
                 }

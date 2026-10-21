@@ -81,6 +81,9 @@ namespace AF.UI
         /// <summary>La tarjeta del inicio (null antes de <see cref="SetUpLogbook"/>).</summary>
         public LogbookCard? LogbookCard => _logbookCard;
 
+        /// <summary>Componente que avanza la Bitácora cada fotograma (null antes de <see cref="SetUpLogbook"/>).</summary>
+        public LogbookRunner? LogbookRunner => _logbookRunner;
+
         /// <summary>La cola de takeovers (null antes de <see cref="SetUpLogbook"/>).</summary>
         public TakeoverQueue? Takeovers => _takeovers;
 
