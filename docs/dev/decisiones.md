@@ -3351,3 +3351,24 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Intervalo de `Pump`:** 5 s [P].
 - **Textos de las 5 claves nuevas** (`iap_pending_confirm`, `iap_verify_failed`, `market_store_unavailable`, `settings_account_code`, `settings_account_code_unavailable`): aprobados en es-419; se piden EN y PT-BR.
 - **Banda de edad** hasta que llegue B12 (Spark): se trata como 13 o más, con el `TODO(B12)` en `PlayerUnder13()`.
+
+## D-039 · Integración del Firebase Unity SDK 13.17.0 (F3-6)
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** aprobado por el dueño en el chat: «Apruebo integrar el Firebase Unity SDK 13.17.0 con solo Auth, App Check, Analytics, Crashlytics y Remote Config (sin Functions), detrás de sus interfaces y con implementaciones falsas en el editor (F3-6). El google-services.json de dev lo coloco yo fuera del repo.» Y en el formulario: los paquetes se descargan y se versionan (Git LFS, referenciados por `file:` en `Packages/manifest.json`); si Firebase Analytics añade `com.google.android.gms.permission.AD_ID`, se quita del manifiesto fusionado (`tools:remove`) hasta que lleguen los anuncios de MAX; `WAKE_LOCK` se aprueba si aparece.
+
+**Decisión.**
+- Paquetes (descargados por el integrador el 2026-10-21 de `https://dl.google.com/games/registry/unity/<paquete>/<paquete>-<versión>.tgz`), con su SHA-256:
+  - `com.google.external-dependency-manager-1.2.189.tgz`: `67087dbbb5f26746f5e2456159558de35ac14162a4ece7632d3ed3bdc0bfc175`
+  - `com.google.firebase.analytics-13.17.0.tgz`: `8f857d19e09794f6f50921d0af419cbcd86dfb94e53586a9f41270728ae1f8f8`
+  - `com.google.firebase.app-13.17.0.tgz`: `d74830478ed10eab56d848d92484e23b3aa9b27cbd1c843c21745be04f57eaa5`
+  - `com.google.firebase.app-check-13.17.0.tgz`: `976a99eab31448dbf77aebedabc65fb6d51bd0ccedc9e5fdf228776a41a256ea`
+  - `com.google.firebase.auth-13.17.0.tgz`: `14df2538229dc129a35c6509a799970bf998f32386beba080b4567e8f8b80092`
+  - `com.google.firebase.crashlytics-13.17.0.tgz`: `0911e76db75e0a6410493e3db2e609b619ab0386cd7e9d66689406c3c7ec5658`
+  - `com.google.firebase.remote-config-13.17.0.tgz`: `1862f969c6a1f78496796379a7d703deeb877fb5b687b9ed9dd06ba5fa8a16ee`
+- Solo `app`, `auth`, `app-check`, `analytics`, `crashlytics` y `remote-config`, más EDM4U 1.2.189 (lo trae Firebase; 08 §7 #4). **Sin** `functions` ni `firestore`.
+- Cada SDK, detrás de su interfaz con implementación falsa en el editor (08 §2.1, principio 6); los reales solo en `UNITY_ANDROID && !UNITY_EDITOR`. La recogida de Analytics sigue apagada hasta el consentimiento (B12).
+- `google-services.json` lo coloca el dueño en una ruta ignorada por git; **ningún agente lo lee, lo crea, lo imprime ni lo commitea** (regla 5).
+- Permisos: `WAKE_LOCK` aprobado si lo añade el SDK; `AD_ID` se quita hasta MAX. Cualquier otro permiso nuevo para la integración y se pregunta.
+
+**Cómo revertir.** Quitando los paquetes de `manifest.json` y las implementaciones reales; las interfaces y las falsas siguen.
