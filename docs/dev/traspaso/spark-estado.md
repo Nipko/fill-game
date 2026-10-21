@@ -6,6 +6,112 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-20 · B7 · `AF.RemoteConfig` + `AF.Analytics` con implementaciones falsas, y el bus `AF.Events` (`spark/t5-b7`): HECHA · verificación completa VERDE · lista para integrar
+
+- **Rama:** `spark/t5-b7`, desde `9eb593c`. Fusiona `origin/integracion-fase1-fase2` tres veces, sin conflictos: `e11b4246` en `5a39eae0`, `d994e586` en `e058645f` y `eb863f54` (B1b-Q10 y DC3) en `513acee9`. Empujada.
+- **Nota de diseño:** `docs/dev/remote-config-analytics.md`. Recoge qué hay, cómo se lee 08 §9, el bus, la analítica, los ocho parches y las preguntas Q-B7-1 a Q-B7-23.
+- **Commits** (del más antiguo al más reciente):
+  - `b7f0cdc5`: el generador `tools/remote-config/rc_defaults.py` (+ `test_rc_defaults.py`), `RemoteConfigDefaults.json` (251 claves) y su copia en C#;
+  - `cebbd61a`: `AF.Events` y `AF.RemoteConfig` sin motor, con `AF.RemoteConfig.Binding` (las ocho clases de cifras, sin reflexión);
+  - `1632f08b`: `AF.Analytics` (catálogo de 08 §8.2 y 04 §11, comunes de 08 §8.1, consentimiento y sumideros), `AF.Analytics.Unity` (logcat `AF_EVENT`) y `AF.Analytics.Adapters` (anuncios e IAP);
+  - `46c0450d`: la sesión (Q-M4);
+  - `b8895a8d`: los `.meta`;
+  - `18f1e0db`: `biz_feature_rescue` y el anti-reloj del Reto en el binder;
+  - `7697f094`: los arreglos de la 1.ª revisión;
+  - `267da94c`: la nota y los ocho parches;
+  - `d2889a40`: los arreglos de la revisión final;
+  - `a464e272`: los parches regenerados sobre `e11b424`;
+  - `493e4d35`: `RcJson` rechaza los no finitos también en Mono;
+  - `60eec9b2`: el escaneo de `[RemoteConfigKey]` recorre todo ensamblado que referencie `AF.Platform` (con un mínimo de 6);
+  - `03f47cf4`: `B7-bootstrap.diff` regenerado (ver «Parches»);
+  - las fusiones `e058645f` y `513acee9`;
+  - y el commit de esta entrada.
+- **En la rama** (todo archivo nuevo; ningún archivo existente cambia):
+  - `Scripts/Events/`;
+  - `Scripts/RemoteConfig/`, con `Binding/` y `Tests/`;
+  - `Scripts/Analytics/`, con `Unity/`, `Adapters/` y `Tests/`;
+  - `Data/Config/RemoteConfigDefaults.json` (generado);
+  - `tools/remote-config/`.
+- **Parches** (`docs/dev/traspaso/spark-enganches/B7-*.diff`, en LF; el detalle y el orden de compilación están en la nota §5): `B7-asmdef`, `B7-wallet`, `B7-levelflow`, `B7-appflow`, `B7-gamescreen`, `B7-rivermap`, `B7-bootstrap` y `B7-gdd`.
+  - Sobre `d994e586`, `B7-bootstrap.diff` ya no aplicaba: B14 añadió `SetUpMeta();` tras `SetUpStreak();` en `GameBootstrap.Start`.
+    - **Regenerado** en `03f47cf4`: `ConnectTelemetry();` va ahora tras `SetUpMeta();`.
+    - Los otros siete parches no cambian.
+  - Sobre `eb863f54` (lo último de la integración), los ocho aplican con `git -c core.autocrlf=false apply` en un worktree temporal desde la rama fusionada. Tras aplicarlos, también pasan `apply -R --check`.
+- **Choque con B3 y B6 en `GameBootstrap.cs`** (actualiza lo anotado en B6):
+  - `B3-ui.diff` y `B6-bootstrap.diff` añaden su línea tras `SetUpStreak();`, y `B7-bootstrap.diff` añade la suya tras `SetUpMeta();`. Las tres caen en el mismo bloque.
+  - El integrador lo resuelve a mano: `ConnectTelemetry();` queda la última, tras todas las `SetUp*`.
+- **Revisión (code-reviewer):**
+  - 1.ª ronda: CAMBIOS NECESARIOS, arreglados en `7697f094`:
+    - `TryGet` sin excepción por desbordamiento;
+    - tope de `Violations`;
+    - referencias Q-B7.
+  - Revisión final: arreglos en `d2889a40`:
+    - la cobertura del binder por descubrimiento, en vez de una lista a mano;
+    - `band` en `level_start` (Q-B7-23);
+    - un generador más estricto con las celdas no literales;
+    - las notas de aplicación.
+  - `493e4d35` y `60eec9b2` endurecen dos puntos de esa revisión: los no finitos en Mono y el alcance del escaneo. **No tuvieron ronda de revisión propia**, así que el integrador puede pedir una pasada corta sobre ellos.
+- **Verificación** (`-Architecture arm64 -TimeoutSec 3600`; tiempos reales). Como mucho hubo 2 Unity a la vez; el otro era de otro agente.
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`60eec9b2`, antes de fusionar `d994e586`) | PlayMode | **1.655 (1.425 + 230), 0 fallos**, 30,8 min |
+  | rama (`513acee9`) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos y 0 errores (6 s); 981 (975 + 6), 0 fallos (2 min 16 s); 103/103, código 0 |
+  | rama (`513acee9`) | `rc_defaults.py --check`; `unittest` de `tools/remote-config` | «identico (251 claves)», código 0; 4 tests OK y `--self-test` OK |
+  | rama (`513acee9`) | `unity-compile`; EditMode; PlayMode | 0 (24 s); **3.473 (3.470 + 3), 0 fallos** (5,1 min); **1.698 (1.461 + 237), 0 fallos** (39,5 min, con otro Unity en paralelo) |
+  | temporal: `e058645f` + los ocho parches | compile; EditMode; PlayMode | 0 (116 s); **3.479 (3.476 + 3), 0 fallos** (4,9 min); **1.685 (1.449 + 236), 0 fallos** (32,8 min) |
+  | temporal: `513acee9` + los ocho parches | compile; EditMode; PlayMode | 0 (158 s); **3.479 (3.476 + 3), 0 fallos** (5,1 min; `TelemetryHooksTests` 6/6); **1.699 (1.462 + 237), 0 fallos** (32,0 min; `TelemetryBootTests` 1/1) |
+
+  Los worktrees temporales se borraron al terminar.
+
+### [P] y preguntas para el dueño (B7; se avanzó con la recomendada, la (a))
+
+Lo marcado [P] está en la nota:
+- el formato `af-rc-defaults/1`;
+- las interpretaciones de las diez celdas no literales de 08 §9;
+- los dos ensamblados de composición;
+- la congelación por `RcSnapshot`;
+- la validación contra el catálogo;
+- el sumidero `AF_EVENT`;
+- la sesión.
+
+| Id | Pregunta | Recomendada (aplicada) |
+|---|---|---|
+| Q-T1 | Bus `AF.Events` frente a las interfaces de escucha | (a) bus mínimo sin motor (D-033); las interfaces siguen |
+| Q-B7-1 / Q-B7-2 | `AF.RemoteConfig` → `Backend` (no existe) y `AF.Events` sin fila en 08 §2.2 | Sin dependencias hasta `AF.Backend`; añadir la fila de `AF.Events` a 08 §2.2 |
+| Q-B7-3 | Cómo leen RC y la analítica los módulos | Dos ensamblados de composición (`AF.RemoteConfig.Binding`, `AF.Analytics.Adapters`) que solo usa `AF.UI` |
+| Q-B7-4 / Q-B7-5 | «resto» en los mapas por país; los placements de `ads_rv_cooldown_s_<placement>` | La clave `"*"`; los seis de `ads_rv_cap_<placement>` |
+| Q-B7-6 | Defaults que remiten a otra tabla (`eco_calendar_table_v1`, `biz_kpi_*`, premios de liga y regata, `eco_price_tier_<country>`) | `null` + `pending`; cada bloque transcribe la suya a 08 §9 |
+| Q-B7-7 | Valor remoto que no pasa `Validate()` | La clase entera vuelve a `Defaults`. Ojo: las `Validate()` no comprueban los rangos de 08 §9 |
+| Q-B7-8 | `biz_maintenance_message` | Una clave de `strings.csv` |
+| Q-B7-9 | Analítica del Reto | Sigue como sonda `AF_STATE` (R10); su gancho va en un parche aparte |
+| Q-B7-10 a Q-B7-13 | `double_harvest`, `af_level_abandon.reason`, comunes y `boosters_json` | Estado en la victoria; solo `map`; a todos los eventos, sin los null; `undo` y `extra_cuia` |
+| Q-B7-14 | Qué apaga cada `biz_feature_<sistema>` | `lives` = canoas fuera; `rescue` = sin Cuia de rescate; los demás, con su sistema |
+| Q-B7-15 | `anim_speed_factor_late` = 1,0 (D-033, Q-N1) | Lo corrige `B7-gdd.diff`, que regenera el JSON |
+| Q-B7-16 a Q-B7-21 | Formato de logcat, `session_id`, booleanos, `rc_variant`, consentimiento sin pantalla y cómo llega el JSON | `AF_EVENT {json}` solo en desarrollo; GUID; `true`/`false`; `biz_experiment_tag`; recogida apagada; JSON compilado como constante |
+| Q-B7-22 / Q-B7-23 | `pours` y `t_ms` en los eventos de tablero; `level_start.band` en la campaña | Añadirlos al enganchar los comodines; mandar `difficulty.band` |
+
+### Riesgos y pendientes
+
+- **Ganchos pendientes** (el catálogo ya los admite). Se harán por zonas cuando el escritorio libere los archivos:
+  - `af_boot`, `af_consent` y `af_wallet_snapshot`;
+  - comodines, modal y canoas;
+  - Crecida y Canasta (hoy sondas de B1a) y Reto (R10);
+  - Ajustes, etiquetas, mundo y mecánicas;
+  - `af_level_load` y `af_error`;
+  - el `level_end` del Salto (B3);
+  - lo nuevo de B14 (skins, álbum, Datos del río) y de B8 (`af_save_sync`, `af_account_delete`).
+- **Integración con B2, B3 y B8:**
+  - `ShuffleConfig` y `SkipConfig` entran en `RcConfigBinder` y salen de `NotBoundYet` al fusionarlos (el test de cobertura lo exige);
+  - B8 pide enlazar `sec_ssv_grace_h` con `RevocationConfig.SecSsvGraceH`.
+- **Sin pantalla todavía:** «Actualiza Tintalú» y el aviso de mantenimiento (UI del escritorio y textos nuevos).
+- **`CLAUDE.md`**, para el integrador (nota §7): las carpetas nuevas, `RemoteConfigDefaults.json` como generado y los dos comandos de `tools/remote-config/`.
+- **Teléfono:**
+  - comprobar `AF_EVENT` en logcat con un build de desarrollo;
+  - comprobar que el stripping High (B10) no rompe el binder. El binder no usa reflexión; los tests sí.
+
+---
+
 ## 2026-10-20 · S2 = B1a · Crecida + Hoja escudo + Canasta (`spark/t5-b1a`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/t5-b1a`, desde `a759597`. Fusiona `origin/integracion-fase1-fase2` (`815b2e5`) en `7fbc1cd`.
