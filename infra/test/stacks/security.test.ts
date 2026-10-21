@@ -47,11 +47,26 @@ describe.each([
 
 describe('sin cuentas ni secretos en las plantillas', () => {
   it('sin -c account no aparece ningún id de cuenta de 12 dígitos', () => {
+    // Un id de cuenta aparece en un ARN (arn:<partición>:<servicio>:<región>:<cuenta>:...), en una clave
+    // Account/AccountId o como texto suelto de 12 dígitos. Los límites son hexadecimales para no confundirlo
+    // con los hashes de los assets (S3Key de las Lambdas), que pueden llevar 12 dígitos seguidos.
+    const patterns = [
+      /arn:aws[^:"]*:[^:"]*:[^:"]*:\d{12}:/,
+      /"Account(?:Id)?":"\d{12}"/,
+      /(?<![0-9A-Za-z])\d{12}(?![0-9A-Za-z])/,
+    ];
     for (const ctx of [DEV, PROD]) {
       for (const { name, json } of allTemplates(build(ctx))) {
-        expect(JSON.stringify(json), name).not.toMatch(/(?<![0-9])\d{12}(?![0-9])/);
+        const text = JSON.stringify(json);
+        for (const re of patterns) expect(text, `${name}: ${re}`).not.toMatch(re);
       }
     }
+    // El test detecta una cuenta de verdad (control): en el modo con dominio sí está.
+    const withAccount = allTemplates(build(PROD_DOMAIN)).map(({ json }) => JSON.stringify(json)).join(' ');
+    expect(patterns.some((re) => re.test(withAccount))).toBe(true);
+    // Y no salta con un hash de asset con 12 dígitos seguidos.
+    const assetLike = '{"S3Key":"0a1f759253389863dd4e5b6c7a8f9e0d1c2b3a4f5e6d7c8b9a0f1e2d3c4b5a6.zip"}';
+    expect(patterns.some((re) => re.test(assetLike))).toBe(false);
   });
 
   it('ningún valor de secreto en claro', () => {

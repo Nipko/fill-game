@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.invalid/af/v1/rewarded-ssv.request.schema.json",
   "title": "rewardedSsv: parámetros de la query del callback S2S",
-  "description": "08 §10.1 y §10.2: MAX llama con user_id = UID y custom_data = placement|nonce. El resto de parámetros (incluida la firma o el secreto) depende del formato de MAX, [NV] hasta F0-R: se admiten parámetros extra de texto y la Lambda (F2-6) fija cuáles exige.",
+  "description": "08 §10.1 y §10.2: MAX llama con user_id = UID y custom_data = placement|nonce. La firma va en event_id y event_token: la Lambda (F2-6) los exige y comprueba event_token = hex(SHA-256(event_id + clave S2S)) [NV: formato de MAX, functions/rewarded-ssv/maxSignature.ts]; sin ellos responde 403 bad_signature. Se admiten parámetros extra de texto porque los fija la URL configurada en el panel de MAX (infra/README.md).",
   "type": "object",
   "required": [
     "user_id",
@@ -20,6 +20,16 @@
     "network": {
       "type": "string",
       "maxLength": 64
+    },
+    "event_id": {
+      "description": "Macro {EVENT_ID} de MAX: id único del evento de recompensa [NV].",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9._:-]{1,256}$"
+    },
+    "event_token": {
+      "description": "Macro {EVENT_TOKEN} de MAX: SHA-256 en hexadecimal de event_id + clave S2S [NV].",
+      "type": "string",
+      "pattern": "^[0-9a-fA-F]{64}$"
     }
   },
   "additionalProperties": {

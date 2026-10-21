@@ -51,7 +51,8 @@ export interface AfSecrets {
   readonly maxSsvKey: Secret;
 }
 
-const DDB_READ = ['dynamodb:GetItem'];
+const DDB_GET = ['dynamodb:GetItem'];
+const DDB_BATCH_GET = ['dynamodb:BatchGetItem'];
 const DDB_QUERY = ['dynamodb:Query'];
 const DDB_PUT = ['dynamodb:PutItem'];
 const DDB_UPDATE = ['dynamodb:UpdateItem'];
@@ -87,11 +88,17 @@ export class ApiStack extends Stack {
       maxSsvKey: secret('MaxSsvKey', 'max-ssv-key', 'Clave de los callbacks S2S de AppLovin MAX.'),
     };
 
-    // ---- Funciones (una por pieza de 08 §2.4) con permisos mínimos ----
+    // ---- Funciones (una por pieza de 08 §2.4) con permisos mínimos: cada acción, solo sobre su tabla o índice ----
     const tableEnv = (entries: Record<string, { tableName: string }>): Record<string, string> =>
       Object.fromEntries(Object.entries(entries).map(([k, t]) => [`AF_TABLE_${k}`, t.tableName]));
     const secretEnv = (entries: Record<string, Secret>): Record<string, string> =>
       Object.fromEntries(Object.entries(entries).map(([k, s]) => [`AF_SECRET_${k}`, s.secretArn]));
+    // Paquete de la app en Play (solo con valor: en prod llega por -c packageName tras el dictamen de marca).
+    const playEnv: Record<string, string> = config.packageName ? { AF_PACKAGE_NAME: config.packageName } : {};
+    // Ids de las apps de Firebase admitidos en el token de App Check (opcional, -c firebaseAppIds).
+    const appCheckEnv: Record<string, string> = config.firebaseAppIds.length > 0
+      ? { AF_APPCHECK_APP_IDS: config.firebaseAppIds.join(',') }
+      : {};
 
     const verifyPurchase = new AfFunction(this, 'VerifyPurchase', {
       config,
@@ -99,12 +106,16 @@ export class ApiStack extends Stack {
       usesPlayVerifier: true,
       description: 'verifyPurchase (08 §10.3): verifica la compra en Play y la anota en el libro mayor.',
       environment: {
-        ...tableEnv({ PURCHASES: tables.purchases, INTEGRITY: tables.integrity }),
+        ...tableEnv({ PURCHASES: tables.purchases, INTEGRITY: tables.integrity, RATE_LIMITS: tables.rateLimits }),
         ...secretEnv({ PLAY: this.secrets.playServiceAccount }),
+        ...playEnv,
+        ...appCheckEnv,
       },
     });
-    verifyPurchase.grantTable(tables.purchases, [...DDB_READ, ...DDB_PUT, ...DDB_UPDATE]);
-    verifyPurchase.grantTable(tables.integrity, [...DDB_READ, ...DDB_PUT]);
+    verifyPurchase.grantTable(tables.purchases, [...DDB_GET, ...DDB_PUT]);
+    verifyPurchase.grantTable(tables.integrity, [...DDB_GET, ...DDB_PUT]);
+    // Anti-replay del token de integridad, límite por UID y marca de cuenta borrada.
+    verifyPurchase.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE]);
     verifyPurchase.grantSecret(this.secrets.playServiceAccount);
 
     const restoreLedger = new AfFunction(this, 'RestoreLedger', {
@@ -113,8 +124,8 @@ export class ApiStack extends Stack {
       description: 'restoreLedger (08 §11): libro mayor del UID y nonces de SSV confirmados.',
       environment: tableEnv({ PURCHASES: tables.purchases, REWARDS: tables.rewards }),
     });
-    restoreLedger.grantTable(tables.purchases, DDB_QUERY, [BY_UID]);
-    restoreLedger.grantTable(tables.rewards, DDB_READ);
+    restoreLedger.grantIndex(tables.purchases, BY_UID, DDB_QUERY);
+    restoreLedger.grantTable(tables.rewards, DDB_BATCH_GET);
 
     const rewardedSsv = new AfFunction(this, 'RewardedSsv', {
       config,
@@ -126,7 +137,8 @@ export class ApiStack extends Stack {
       },
     });
     rewardedSsv.grantTable(tables.rewards, DDB_PUT);
-    rewardedSsv.grantTable(tables.rateLimits, DDB_UPDATE);
+    // Límite por UID y event_id de un solo uso.
+    rewardedSsv.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE]);
     rewardedSsv.grantSecret(this.secrets.maxSsvKey);
 
     const deleteAccount = new AfFunction(this, 'DeleteAccount', {
@@ -143,13 +155,17 @@ export class ApiStack extends Stack {
           RATE_LIMITS: tables.rateLimits,
         }),
         ...secretEnv({ FIREBASE_ADMIN: this.secrets.firebaseAdmin }),
+        ...appCheckEnv,
       },
     });
-    deleteAccount.grantTable(tables.purchases, [...DDB_QUERY, ...DDB_UPDATE], [BY_UID]);
-    deleteAccount.grantTable(tables.rewards, [...DDB_QUERY, ...DDB_DELETE], [BY_UID]);
-    deleteAccount.grantTable(tables.integrity, [...DDB_READ, ...DDB_PUT, ...DDB_DELETE]);
-    deleteAccount.grantTable(tables.accountCodes, [...DDB_READ, ...DDB_QUERY, ...DDB_PUT, ...DDB_DELETE], [BY_UID]);
-    deleteAccount.grantTable(tables.rateLimits, DDB_UPDATE);
+    deleteAccount.grantIndex(tables.purchases, BY_UID, DDB_QUERY);
+    deleteAccount.grantTable(tables.purchases, DDB_UPDATE);
+    deleteAccount.grantIndex(tables.rewards, BY_UID, DDB_QUERY);
+    deleteAccount.grantTable(tables.rewards, DDB_DELETE);
+    deleteAccount.grantTable(tables.integrity, [...DDB_GET, ...DDB_PUT, ...DDB_DELETE]);
+    deleteAccount.grantIndex(tables.accountCodes, BY_UID, DDB_QUERY);
+    deleteAccount.grantTable(tables.accountCodes, [...DDB_GET, ...DDB_PUT, ...DDB_DELETE]);
+    deleteAccount.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE]);
     deleteAccount.grantSecret(this.secrets.firebaseAdmin);
 
     const voidedJob = new AfFunction(this, 'VoidedPurchasesJob', {
@@ -161,12 +177,12 @@ export class ApiStack extends Stack {
       environment: {
         ...tableEnv({ PURCHASES: tables.purchases, JOBS: tables.jobs }),
         ...secretEnv({ PLAY: this.secrets.playServiceAccount }),
+        ...playEnv,
       },
     });
-    voidedJob.grantTable(tables.purchases, [...DDB_READ, ...DDB_UPDATE]);
-    voidedJob.grantTable(tables.jobs, [...DDB_READ, ...DDB_PUT]);
+    voidedJob.grantTable(tables.purchases, DDB_UPDATE);
+    voidedJob.grantTable(tables.jobs, [...DDB_GET, ...DDB_PUT]);
     voidedJob.grantSecret(this.secrets.playServiceAccount);
-
     this.functions = {
       'verify-purchase': verifyPurchase,
       'restore-ledger': restoreLedger,

@@ -1,5 +1,7 @@
 {
   "user_id": "kT3x9QeVb2Rz8LmN4pWs7YcA1dF5",
   "custom_data": "rescue|6f1c2a4e-8b3d-4f5a-9c7e-1d2b3a4c5e6f",
-  "network": "applovin"
+  "network": "applovin",
+  "event_id": "ev-0123456789abcdef",
+  "event_token": "4782c286a2dd45cdaa4a5dd8173fbb4f148a2c04d04c63e82501c155b8b6c544"
 }
