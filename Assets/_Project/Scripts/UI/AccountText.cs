@@ -41,6 +41,15 @@ namespace AF.UI
 
             /// <summary>«No se pudo eliminar. Inténtalo de nuevo.»: si el borrado local falla [P].</summary>
             public const string Failed = "delete_account_failed";
+
+            /// <summary>
+            /// «Código para borrar tu cuenta en la web: {code}» (F3-5; 08 §11; Q-B13-21) [P]: en Ajustes, encima de «Eliminar cuenta y
+            /// datos», en lugar del UID. <c>{code}</c> = los 26 caracteres del código (Base32 de Crockford), que no se traducen.
+            /// </summary>
+            public const string Code = "settings_account_code";
+
+            /// <summary>«Sin conexión: el código para borrar la cuenta en la web aún no está disponible.» (F3-5) [P].</summary>
+            public const string CodeUnavailable = "settings_account_code_unavailable";
         }
 
         /// <summary>«Eliminar cuenta y datos».</summary>
@@ -69,5 +78,11 @@ namespace AF.UI
 
         /// <summary>«No se pudo eliminar. Inténtalo de nuevo.»</summary>
         public static string Failed => Loc.T(Keys.Failed);
+
+        /// <summary>«Código para borrar tu cuenta en la web: {code}».</summary>
+        public static string Code(string code) => Loc.T(Keys.Code, LocArgs.Of("code", code ?? string.Empty));
+
+        /// <summary>Sin el código (sin red o sin respuesta del servidor).</summary>
+        public static string CodeUnavailable => Loc.T(Keys.CodeUnavailable);
     }
 }

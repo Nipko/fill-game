@@ -145,6 +145,7 @@ namespace AF.UI
         private readonly ReliefParts _balsa;
         private readonly TextMeshProUGUI _balsaLabel;
         private readonly TextMeshProUGUI _balsaNote;
+        private readonly TextMeshProUGUI _purchaseNote;
         private readonly TextMeshProUGUI _shieldLine;
         private readonly ReliefParts _skip;
         private readonly TextMeshProUGUI _skipLabel;
@@ -188,6 +189,9 @@ namespace AF.UI
             _balsa = ModalKit.Cta("BalsaButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 14f, () => actions.PressBalsa(), out _balsaLabel);
             _balsaLabel.textWrappingMode = TextWrappingModes.Normal;
             _balsaNote = ModalKit.Line("BalsaNote", _panel, UiText.StuckBalsaContent, 12f, Palette.FamilyWood.Base);
+            // F3-5: «Pendiente de confirmar» o «No se pudo confirmar la compra» del Puñado o de la Balsa (tienda verificada).
+            _purchaseNote = ModalKit.Line("PurchaseNote", _panel, string.Empty, 13f, Palette.FamilyWood.Base);
+            _purchaseNote.gameObject.SetActive(false);
 
             // Línea de la Hoja escudo sobre el pie (04 §6.5 y §6.6, wireframes A y D; tarea B1b): hasta dos líneas, sin toques.
             _shieldLine = ModalKit.Line("ShieldLine", _panel, string.Empty, 14f, Palette.FamilyWood.Base);
@@ -255,6 +259,12 @@ namespace AF.UI
         /// <summary>Línea «Todo para seguir: semillas, una cuia y canoas infinitas» bajo la Balsa (tests; tarea FX5).</summary>
         internal TextMeshProUGUI BalsaNote => _balsaNote;
 
+        /// <summary>
+        /// La nota de compra bajo Puñado y Balsa («Pendiente de confirmar» o «No se pudo confirmar la compra»; F3-5), o null si no se
+        /// ve.
+        /// </summary>
+        public string? PurchaseNoteText => _purchaseNote.gameObject.activeSelf ? _purchaseNote.text : null;
+
         /// <summary>Puñado de semillas.</summary>
         public Button HandfulButton => _handful.Button;
 
@@ -308,6 +318,12 @@ namespace AF.UI
             {
                 ids.Add("balsa_note");
                 rects.Add(_balsaNote.rectTransform);
+            }
+
+            if (_purchaseNote.gameObject.activeInHierarchy)
+            {
+                ids.Add("purchase_note"); // F3-5: la nota de compra (un texto, no se toca)
+                rects.Add(_purchaseNote.rectTransform);
             }
 
             Add(ids, rects, "skip", _skip.Button);
@@ -482,6 +498,10 @@ namespace AF.UI
             _handful.Button.gameObject.SetActive(handful);
             _balsa.Button.gameObject.SetActive(balsa);
             _balsaNote.gameObject.SetActive(balsa);
+            string? purchaseNote = handful || balsa
+                ? MarketText.PurchaseNote(services?.PurchaseNotes.Of(StoreCatalog.Handful, StoreCatalog.Rescue) ?? PurchaseNoteKind.None)
+                : null;
+            _purchaseNote.gameObject.SetActive(purchaseNote != null);
             // D-038: con las canoas apagadas, la Balsa queda en «semillas y una cuia» (sin canoas infinitas; mismo precio).
             _balsaNote.text = services == null || services.BalsaGivesCanoes ? UiText.StuckBalsaContent : UiText.StuckBalsaContentNoCanoes;
             if (handful || balsa)
@@ -579,6 +599,14 @@ namespace AF.UI
                 if (balsa)
                 {
                     y += ModalKit.PlaceLine(_balsaNote, 16f, y, inner, compact ? 0f : 18f) + lineAir;
+                }
+
+                if (purchaseNote != null)
+                {
+                    bool failed = services != null && services.PurchaseNotes.Of(StoreCatalog.Handful, StoreCatalog.Rescue) == PurchaseNoteKind.Failed;
+                    _purchaseNote.text = purchaseNote;
+                    _purchaseNote.color = failed ? (Color)Palette.UiRedWarning : (Color)Palette.FamilyWood.Base;
+                    y += ModalKit.PlaceLine(_purchaseNote, 16f, y, inner, compact ? 0f : 18f) + lineAir;
                 }
 
                 y += compact ? 0f : 6f;

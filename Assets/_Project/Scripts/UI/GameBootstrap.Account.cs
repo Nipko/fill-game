@@ -17,15 +17,17 @@ namespace AF.UI
     /// <list type="bullet">
     /// <item><see cref="SetUpAccount"/> crea el diálogo de dos pasos (<see cref="DeleteAccountDialog"/>) encima de Ajustes y le
     /// da la fila «Eliminar cuenta y datos» (<see cref="SettingsScreen.DeleteAccountPressed"/>).</item>
-    /// <item>«Eliminar» (<see cref="ConfirmDeleteAccount"/>) hace la parte del cliente de 08 §11: borra <c>profile.json</c> y
+    /// <item>«Eliminar» (<see cref="ConfirmDeleteAccount"/>) pide primero el borrado en el servidor (F3-5; D-035: <c>POST
+    /// /v1/account/delete</c>, <see cref="ServerAccountDelete"/>, que conecta <c>GameBootstrap.Backend.cs</c> con
+    /// <c>AF.Backend.IBackendClient.DeleteAccount</c>) y, solo si el servidor lo confirma, hace la parte del cliente de 08 §11: borra <c>profile.json</c> y
     /// <c>profile.bak</c> (<see cref="IProfileStore.Delete"/>, por el lote, que antes cancela el escritor de segundo plano para que
     /// nada vuelva a escribir el perfil), <c>PlayerPrefs</c> y, si eso salió bien, el snapshot <c>af_main</c> de la nube
     /// (<see cref="ICloudSave"/>; sin Play Games, la falsa sin sesión, que no hace nada), y vuelve al estado de primera ejecución
     /// recargando la escena sin el perfil de la sesión (el arranque siguiente no encuentra perfil: entra al nivel 1, 08 §2.3).
-    /// La parte del servidor (D-035: <c>POST /v1/account/delete</c>, <c>AF.Backend.IBackendClient.DeleteAccount</c>) queda
-    /// preparada en <see cref="ServerAccountDelete"/>, sin conectar: AF.UI aún no crea el cliente del backend (F3-5). Ajustes no
-    /// enseña el UID: el identificador para borrar por la web será el código de borrado de <c>IBackendClient.GetAccountCode</c>
-    /// (Q-B13-21: aleatorio, distinto del UID y rotatorio), que llega con F3-5 [P].</item>
+    /// Si el servidor no lo confirma (sin red, <c>biz_backend_enabled</c> apagado), no se borra nada y el paso 2 dice «No se pudo
+    /// eliminar» [P]. Sin borrado remoto (banda &lt; 13, o un build sin backend: nada se mandó a ningún servidor) solo se borra lo
+    /// local. Ajustes no enseña el UID: enseña el código de borrado para la web de <c>IBackendClient.GetAccountCode</c> (Q-B13-21:
+    /// aleatorio, distinto del UID y rotatorio; <c>GameBootstrap.Backend.cs</c>).</item>
     /// <item>Sonda (solo en desarrollo): <c>AF_STATE af_account_delete</c> con <c>requested</c>, <c>confirmed</c>, <c>done</c>
     /// o <c>failed</c> (08 §8.2), y el <c>AF_LAYOUT delete_account</c> del diálogo.</item>
     /// </list>
@@ -47,21 +49,37 @@ namespace AF.UI
         /// </summary>
         internal static Action? WipePlayerPrefsForTests { get; set; }
 
+        /// <summary>La banda de edad para los tests: true = menor de 13 (sin borrado remoto ni código); null: la del jugador.</summary>
+        internal static bool? AgeUnder13Override { get; set; }
+
         /// <summary>Limpia los ganchos de test de la cuenta.</summary>
         internal static void ResetAccountOverrides()
         {
             CloudSaveOverride = null;
             FailAccountDeleteForTests = false;
             WipePlayerPrefsForTests = null;
+            ResetBackendOverrides();
         }
 
         /// <summary>
-        /// Borrado en el servidor (D-035; F3-5): quien conecte el backend le da aquí una llamada a
-        /// <c>IBackendClient.DeleteAccount</c>, que recibe una función para avisar si salió bien. Va después del borrado local y de la
-        /// nube, y su resultado no bloquea (como la nube: sin red, el servidor lo borra en el siguiente intento o por la web). Null
-        /// (hoy): no se llama a nada.
+        /// Borrado en el servidor (D-035; F3-5): <c>GameBootstrap.Backend.cs</c> le da una llamada a
+        /// <c>IBackendClient.DeleteAccount</c>, que recibe una función para avisar si salió bien. Va <b>antes</b> del borrado local (plan del
+        /// backend §9, F3-5: «el borrado llama al backend y luego al local»): si no sale bien, no se borra nada y se puede reintentar (el
+        /// borrado del servidor es idempotente). Null (un build sin backend): solo el borrado local.
         /// </summary>
         public Action<Action<bool>>? ServerAccountDelete { get; set; }
+
+        /// <summary>Hay un borrado en el servidor en vuelo (el paso 2 no admite otro toque).</summary>
+        public bool AccountDeleteInFlight { get; private set; }
+
+        /// <summary>
+        /// Hay borrado remoto y código para la web (plan del backend §7, B12: «con la banda &lt; 13 no hay IAP ni borrado remoto»).
+        /// </summary>
+        public bool RemoteAccountAllowed => !(AgeUnder13Override ?? PlayerUnder13());
+
+        // TODO(B12, lo hace el Spark; plan del backend §7, «B12: … con la banda < 13 no hay IAP ni borrado remoto»): leer la banda de
+        // edad de la pantalla neutral de 08 §2.3 cuando exista. Hasta entonces no hay banda: se trata como 13 o más.
+        private static bool PlayerUnder13() => false;
 
         /// <summary>La nube del guardado (null antes de <see cref="SetUpAccount"/>).</summary>
         public ICloudSave? CloudSave => _cloudSave;
@@ -155,20 +173,66 @@ namespace AF.UI
                 return false;
             }
 
+            if (AccountDeleteInFlight)
+            {
+                return true; // ya se pidió al servidor: se espera su respuesta
+            }
+
             _probe?.AccountDelete("confirmed");
+            Action<Action<bool>>? server = RemoteAccountAllowed ? ServerAccountDelete : null;
+            if (server == null)
+            {
+                FinishDeleteAccount(dialog);
+                return true;
+            }
+
+            AccountDeleteInFlight = true;
+            server(ok =>
+            {
+                AccountDeleteInFlight = false;
+                if (!enabled || _deleteAccountDialog != dialog)
+                {
+                    return; // la escena ya se fue
+                }
+
+                if (!ok)
+                {
+                    // El servidor no lo confirmó: no se borra nada aquí, para poder reintentar (idempotente) [P].
+                    Debug.LogWarning(LogPrefix + "el servidor no confirmó el borrado de la cuenta (deleteAccount): no se borra nada");
+                    _probe?.AccountDelete("failed");
+                    if (dialog.Visible)
+                    {
+                        dialog.ShowFailure();
+                        EmitDeleteAccountLayout();
+                    }
+
+                    return;
+                }
+
+                FinishDeleteAccount(dialog); // la cuenta ya no existe en el servidor: lo local se borra aunque se cerrara el diálogo
+            });
+            return true;
+        }
+
+        // Parte del cliente de 08 §11, tras el servidor (o sin él): si falla, sigue en el paso 2 con «No se pudo eliminar».
+        private void FinishDeleteAccount(DeleteAccountDialog dialog)
+        {
             if (!DeleteAccountData(out string? error))
             {
                 Debug.LogWarning(LogPrefix + "no se pudieron borrar los datos de la cuenta: " + error);
                 _probe?.AccountDelete("failed");
-                dialog.ShowFailure();
-                EmitDeleteAccountLayout();
-                return true;
+                if (dialog.Visible)
+                {
+                    dialog.ShowFailure();
+                    EmitDeleteAccountLayout();
+                }
+
+                return;
             }
 
             _probe?.AccountDelete("done");
             dialog.Hide();
             RestartAsFirstRun();
-            return true;
         }
 
         // Parte del cliente de 08 §11: perfil, PlayerPrefs y nube. Primero lo local: si falla, no se borra nada (tampoco la nube).
@@ -228,15 +292,6 @@ namespace AF.UI
                     }
                 });
             }
-
-            Action<Action<bool>>? server = ServerAccountDelete;
-            server?.Invoke(ok =>
-            {
-                if (!ok)
-                {
-                    Debug.LogWarning(LogPrefix + "el servidor no confirmó el borrado de la cuenta (deleteAccount)");
-                }
-            });
 
             return true;
         }

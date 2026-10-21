@@ -196,6 +196,7 @@ namespace AF.UI
             var deps = new MarketDeps(_store, _offers, _skinService, () => progress.MaxLevel, () => WorldTable.WorldOf(Math.Clamp(progress.MaxLevel + 1, 1, WorldTable.LastLevel)))
             {
                 PurchasesBlocked = ProfileLocked,
+                Notes = _services?.PurchaseNotes, // F3-5: «Pendiente de confirmar» y «No se pudo confirmar la compra» en cada fila
                 OfferShown = sku =>
                 {
                     if (storeService is AF.Analytics.Adapters.AnalyticsStoreService analytics)
@@ -255,8 +256,14 @@ namespace AF.UI
         }
 
         /// <summary>El Mercado se puede abrir: creado, con la tienda encendida y desde <c>max_level</c> ≥ 10.</summary>
-        public bool MarketAvailable => _market != null && _store != null && _store.IsAvailable && _progress != null
+        public bool MarketAvailable => _market != null && _store != null && (_store.IsAvailable || StoreDownForBackend) && _progress != null
             && _progress.MaxLevel >= MarketModel.FromMaxLevel;
+
+        /// <summary>
+        /// La tienda está encendida (<c>biz_iap_enabled</c>) pero no vende porque no hay backend con el que verificar (F3-5: apagado con
+        /// <c>biz_backend_enabled</c>, o un build sin backend): el Mercado se abre y lo dice («Las compras no están disponibles ahora»).
+        /// </summary>
+        internal bool StoreDownForBackend => _verifiedStore != null && _storeLedger != null && _storeLedger.Config.BizIapEnabled && !BackendReady;
 
         /// <summary>
         /// Toque en el Cántaro del inicio (05 §5: «≥ 1.000 y toque en el icono»): su tarjeta, con el botón activo desde
@@ -372,6 +379,13 @@ namespace AF.UI
             }
 
             SyncMarketIcons();
+
+            // F3-5: una nota de compra cambió (pendiente, rechazada o acreditada tarde) con el Mercado abierto: se rehace.
+            MarketScreen? market = _market;
+            if (market != null && market.Visible && _services != null && market.NotesShown != _services.PurchaseNotes.Version)
+            {
+                market.Refresh();
+            }
         }
 
         private void OnCampaignVictoryForMarket(LevelFlow flow)
@@ -611,6 +625,7 @@ namespace AF.UI
 
         private void OnMarketClosed()
         {
+            _services?.PurchaseNotes.ClearFailures(); // F3-5: «No se pudo confirmar la compra» es un aviso de una vez
             MarketProbe("market_closed", null);
         }
 

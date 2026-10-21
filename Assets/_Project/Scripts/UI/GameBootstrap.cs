@@ -881,6 +881,7 @@ namespace AF.UI
                 profile.Settings.SlothMessages);
             settings.MarkAudio(profile.Settings.Sound, profile.Settings.Music, profile.Settings.Haptics); // AU1
             settings.MarkIdleHint(profile.Settings.IdleHint); // MO3
+            ShowAccountCode(); // F3-5: el código de borrado para la web en lugar del UID (Q-B13-21; GameBootstrap.Backend.cs)
             _skipNextDelta = true;
             return true;
         }
@@ -1581,7 +1582,9 @@ namespace AF.UI
             _ads = AdController.Create(
                 WrapAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill())), profile, batch, capsClock, firstRun, _rcConfigs?.Ads);
             _storeLedger = new StoreLedger(profile, _wallet, batch, capsClock, _rcConfigs?.Store);
-            _store = WrapStore(new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency));
+            // F3-5: la compra verificada (F3-3) con el cliente del backend de este build (GameBootstrap.Backend.cs); la hoja «Compra
+            // simulada» sigue siendo la de la tienda de la plataforma simulada (FakeBillingClient) mientras no llegue Unity IAP.
+            _store = WrapStore(CreateStore(profile, _storeLedger, purchasePresenter, clock, capsClock, batch));
             _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
                 mapProgress: progress);
 
@@ -1651,6 +1654,7 @@ namespace AF.UI
             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
             SetUpMarket(); // B5 (GameBootstrap.Market.cs): el Mercado, las ofertas y el Cántaro, con las sesiones de B6
             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
+            ResumeBackend(false); // F3-5: compras sin terminar y restoreLedger tras la fusión con la nube (GameBootstrap.Backend.cs)
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
             if (requested <= 0 && !rebuilt)
@@ -1705,6 +1709,8 @@ namespace AF.UI
                 _backPresses = 0; // Atrás durante el arranque: aún no hay nada que cerrar
                 return;
             }
+
+            TickBackend(Time.unscaledDeltaTime * 1000f); // F3-5: la cola de verificación de compras, cada pocos segundos
 
             float dt = Mathf.Min(Time.unscaledDeltaTime * 1000f, MaxDeltaMs);
             if (_skipNextDelta)
@@ -1778,6 +1784,8 @@ namespace AF.UI
                 PersistNow("segundo plano");
                 return;
             }
+
+            ResumeBackend(true); // F3-5: lo que Play cobró mientras tanto vuelve como compra sin terminar (08 §10.3)
 
             // 02 §14: al volver de segundo plano la vista salta al modelo sin animar (también la luciérnaga en vuelo: la cuia
             // queda revelada) y la selección se limpia.
