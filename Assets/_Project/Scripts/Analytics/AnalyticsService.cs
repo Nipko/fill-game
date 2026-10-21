@@ -70,10 +70,14 @@ namespace AF.Analytics
         /// <summary>Eventos enviados (a algún sumidero).</summary>
         public int Sent { get; private set; }
 
-        /// <summary>Añade un sumidero.</summary>
+        /// <summary>Añade un sumidero; si recoge datos por su cuenta (<see cref="ICollectionAwareSink"/>), le dice el estado actual.</summary>
         public void AddSink(IAnalyticsSink sink)
         {
             _sinks.Add(sink ?? throw new ArgumentNullException(nameof(sink)));
+            if (sink is ICollectionAwareSink aware)
+            {
+                aware.SetCollectionEnabled(CollectionEnabled);
+            }
         }
 
         /// <summary>
@@ -83,6 +87,13 @@ namespace AF.Analytics
         public void SetCollectionEnabled(bool enabled)
         {
             CollectionEnabled = enabled;
+            for (int i = 0; i < _sinks.Count; i++)
+            {
+                if (_sinks[i] is ICollectionAwareSink aware)
+                {
+                    aware.SetCollectionEnabled(enabled);
+                }
+            }
         }
 
         /// <summary>Valida <paramref name="e"/>, le añade los comunes y lo entrega. False si el catálogo no lo admite.</summary>

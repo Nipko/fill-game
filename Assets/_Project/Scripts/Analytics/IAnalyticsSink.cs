@@ -5,8 +5,8 @@ using System.Collections.Generic;
 namespace AF.Analytics
 {
     /// <summary>
-    /// Destino de los eventos (08 §2.1, principio 6): Firebase Analytics más adelante, detrás de esta interfaz; hoy, el
-    /// sumidero de logcat de desarrollo (<c>AF.Analytics.Unity.LogcatAnalyticsSink</c>) y el falso de los tests
+    /// Destino de los eventos (08 §2.1, principio 6): Firebase Analytics en el teléfono (<c>AF.Analytics.Firebase.FirebaseAnalyticsSink</c>,
+    /// F3-6), el sumidero de logcat de desarrollo (<c>AF.Analytics.Unity.LogcatAnalyticsSink</c>) y el falso de los tests
     /// (<see cref="FakeAnalyticsSink"/>).
     /// </summary>
     public interface IAnalyticsSink
@@ -22,6 +22,17 @@ namespace AF.Analytics
 
         /// <summary>Fija una propiedad de usuario de 08 §8.1.</summary>
         void SetUserProperty(string name, string value);
+    }
+
+    /// <summary>
+    /// Sumidero que además recoge datos por su cuenta (Firebase Analytics: sesiones, primera apertura) y por eso tiene que saber si
+    /// hay consentimiento aunque no reciba eventos (08 §2.3: <c>Analytics.SetEnabled(profile.consent.analytics)</c>).
+    /// <see cref="AnalyticsService"/> se lo dice al añadirlo y en cada cambio.
+    /// </summary>
+    public interface ICollectionAwareSink
+    {
+        /// <summary>Enciende o apaga la recogida propia del sumidero.</summary>
+        void SetCollectionEnabled(bool enabled);
     }
 
     /// <summary>Sumidero falso: guarda lo que recibe, en orden.</summary>

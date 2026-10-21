@@ -5,6 +5,7 @@
     "AF.Analytics",
     "AF.Analytics.Unity",
     "AF.Analytics.Adapters",
+    "AF.Analytics.Firebase",
     "AF.Events",
     "AF.RemoteConfig",
     "AF.Platform",

@@ -13,13 +13,47 @@ namespace AF.Backend.Tests
     {
         private static readonly DateTime Now = new DateTime(2026, 10, 21, 12, 0, 0, DateTimeKind.Utc);
 
+        /// <summary>La URL del API de dev desplegado (D-035, añadido de F3-1 y F3-2; codex-estado.md, «Dev desplegado y comprobado»).</summary>
+        private const string ApprovedDevUrl = "https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com";
+
         [Test]
-        public void EndpointsAreEmptyInTheRepository()
+        public void EndpointsByEnvironment_TheEditorStaysOnTheFake()
         {
-            Assert.That(BackendEndpoints.Dev, Is.Empty, "sin URL real en el repositorio (F4-2 la pone el dueño)");
+            Assert.That(BackendEndpoints.Dev, Is.EqualTo(ApprovedDevUrl), "la URL aprobada (F3-6)");
+            Assert.That(BackendEndpoint.Normalize(BackendEndpoints.Dev), Is.EqualTo(ApprovedDevUrl), "https://host, sin barra ni consulta");
             Assert.That(BackendEndpoints.Prod, Is.Empty, "la de prod llega con F5-1");
             Assert.That(BackendEndpoints.IsDevelopment, Is.True, "el editor cuenta como desarrollo");
+            Assert.That(BackendEndpoints.IsEditor, Is.True);
+            Assert.That(BackendEndpoints.Current, Is.Empty, "el editor nunca llama al API: sin Firebase no hay tokens (08 §2.1, principio 6)");
             Assert.That(BackendEndpoints.Mode, Is.EqualTo(BackendMode.Fake));
+        }
+
+        [Test]
+        public void NoRealFirebaseInTheEditor()
+        {
+            Assert.That(Firebase.FirebaseBoot.IsConfigured, Is.False, "el editor (ARM64 o x64) no toca el SDK");
+            Assert.That(Firebase.FirebaseTokenProviders.TryGet(out Auth.IAuthTokenProvider? auth, out Auth.IIntegrityTokenProvider? integrity), Is.False);
+            Assert.That(auth, Is.Null);
+            Assert.That(integrity, Is.Null);
+            bool? ready = null;
+            Firebase.FirebaseBoot.WhenReady(ok => ready = ok);
+            Assert.That(ready, Is.False, "responde en el acto, sin arrancar nada");
+            Assert.That(Firebase.FirebaseBoot.State, Is.EqualTo(Firebase.FirebaseBootState.Unavailable));
+            Assert.That(Firebase.FirebaseBoot.Failure, Is.EqualTo("editor"));
+
+            TokenResultOf(new Firebase.FirebaseAuthTokenProvider(), out Auth.TokenResult? idToken);
+            Assert.That(idToken!.IsOk, Is.False);
+            Assert.That(idToken.Failure, Does.StartWith("firebase_unavailable"));
+            Auth.TokenResult? appCheck = null;
+            new Firebase.AppCheckIntegrityTokenProvider().GetLimitedUseToken(r => appCheck = r);
+            Assert.That(appCheck!.IsOk, Is.False);
+        }
+
+        private static void TokenResultOf(Auth.IAuthTokenProvider provider, out Auth.TokenResult? result)
+        {
+            Auth.TokenResult? got = null;
+            provider.GetIdToken(false, r => got = r);
+            result = got;
         }
 
         [Test]
@@ -39,11 +73,15 @@ namespace AF.Backend.Tests
         public void FactoryFollowsTheMode()
         {
             var clock = new ManualClock(Now);
-            Assert.That(BackendFactory.Create(clock, null, null, null), Is.InstanceOf<FakeBackendClient>());
-            Assert.That(BackendFactory.Create(BackendMode.Unavailable, "", clock, null, null, null), Is.InstanceOf<UnavailableBackendClient>());
-            Assert.That(BackendFactory.Create(BackendMode.Http, "https://abc.example", clock, null, null, null), Is.InstanceOf<UnavailableBackendClient>(),
-                "sin proveedores de tokens reales (F3-6) no se llama a la API");
-            Assert.That(BackendFactory.Create(BackendMode.Http, "https://abc.example", clock, new ServerDateTracker(clock),
+            Assert.That(BackendFactory.Create(clock, null, null, null), Is.InstanceOf<FakeBackendClient>(), "el editor, siempre con el falso");
+            Assert.That(BackendFactory.Create(BackendMode.Unavailable, "", false, clock, null, null, null), Is.InstanceOf<UnavailableBackendClient>());
+            Assert.That(BackendFactory.Create(BackendMode.Http, "https://abc.example", false, clock, null, null, null), Is.InstanceOf<UnavailableBackendClient>(),
+                "un release sin Firebase (sin tokens) no llama a la API ni concede nada");
+            Assert.That(BackendFactory.Create(BackendMode.Http, "https://abc.example", true, clock, null, null, null), Is.InstanceOf<FakeBackendClient>(),
+                "un build de desarrollo sin google-services.json sigue con el falso");
+            Assert.That(BackendFactory.Create(BackendMode.Http, "https://abc.example", false, clock, null, new Auth.FakeAuthTokenProvider(), null),
+                Is.InstanceOf<UnavailableBackendClient>(), "hacen falta los dos proveedores");
+            Assert.That(BackendFactory.Create(BackendMode.Http, "https://abc.example", false, clock, new ServerDateTracker(clock),
                 new Auth.FakeAuthTokenProvider(), new Auth.FakeIntegrityTokenProvider()), Is.InstanceOf<HttpBackendClient>());
         }
 
@@ -108,7 +146,14 @@ namespace AF.Backend.Tests
                 string text = File.ReadAllText(path);
                 Assert.That(text, Does.Not.Contain("Debug.Log"), Path.GetFileName(path) + ": el backend no escribe en los logs (UID y tokens)");
                 Assert.That(text, Does.Not.Contain("Console.Write"), Path.GetFileName(path));
-                Assert.That(text, Does.Not.Contain("amazonaws"), Path.GetFileName(path) + ": sin URL real en el repositorio");
+                if (Path.GetFileName(path) == "BackendSetup.cs")
+                {
+                    // La única URL real es la de dev, en BackendEndpoints.Dev (D-035, añadido de F3-1 y F3-2).
+                    Assert.That(text.Replace(ApprovedDevUrl, ""), Does.Not.Contain("amazonaws"), "solo la URL de dev aprobada");
+                    continue;
+                }
+
+                Assert.That(text, Does.Not.Contain("amazonaws"), Path.GetFileName(path) + ": la URL va solo en BackendEndpoints");
             }
         }
     }

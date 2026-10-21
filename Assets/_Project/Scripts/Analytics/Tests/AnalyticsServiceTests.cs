@@ -208,6 +208,50 @@ namespace AF.Analytics.Tests
             Assert.That(analytics.Sent, Is.EqualTo(3));
         }
 
+        private sealed class AwareSink : IAnalyticsSink, ICollectionAwareSink
+        {
+            public readonly List<bool> Changes = new List<bool>();
+
+            public bool RequiresConsent => true;
+
+            public void Send(AnalyticsEvent e)
+            {
+            }
+
+            public void SetUserProperty(string name, string value)
+            {
+            }
+
+            public void SetCollectionEnabled(bool enabled) => Changes.Add(enabled);
+        }
+
+        [Test]
+        public void ASinkThatCollectsOnItsOwn_FollowsTheConsent()
+        {
+            // Firebase Analytics recoge sesiones por su cuenta: se apaga al añadirlo y sigue cada cambio de consentimiento (08 §2.3; F3-6).
+            var analytics = new AnalyticsService();
+            var aware = new AwareSink();
+            analytics.AddSink(aware);
+            Assert.That(aware.Changes, Is.EqualTo(new[] { false }), "apagado hasta el consentimiento");
+            analytics.SetCollectionEnabled(true);
+            analytics.SetCollectionEnabled(false);
+            Assert.That(aware.Changes, Is.EqualTo(new[] { false, true, false }));
+
+            var late = new AwareSink();
+            analytics.SetCollectionEnabled(true);
+            analytics.AddSink(late);
+            Assert.That(late.Changes, Is.EqualTo(new[] { true }), "el que llega tarde recibe el estado vigente");
+        }
+
+        [Test]
+        public void NoFirebaseInTheEditor()
+        {
+            Assert.That(AF.Analytics.Firebase.FirebaseAnalyticsSink.TryCreate(), Is.Null, "el editor usa solo los sumideros locales (08 §2.1, principio 6)");
+            Assert.That(AF.Analytics.Firebase.CrashReporting.Start(), Is.False, "sin Crashlytics en el editor");
+            Assert.That(AF.Analytics.Firebase.FirebaseAnalyticsSink.BoolValue(true), Is.EqualTo(1L), "en Firebase, los booleanos van como 0/1 (Q-B7-18 (a))");
+            Assert.That(AF.Analytics.Firebase.FirebaseAnalyticsSink.BoolValue(false), Is.EqualTo(0L));
+        }
+
         [Test]
         public void TheLogcatLine_HasItsOwnPrefix_NotAfState()
         {

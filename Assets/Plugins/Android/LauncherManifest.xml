@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Manifiesto del lanzador de Amazon Fill (Custom Launcher Manifest de Unity: es la plantilla de
+  PlaybackEngines/AndroidPlayer/Apk/LauncherManifest.xml de 6000.3.25f1 mas lo de F3-6). Tiene la prioridad mas alta en la fusion
+  de manifiestos, asi que sus marcas tools: ganan a las de las bibliotecas.
+
+  - D-039: se quita com.google.android.gms.permission.AD_ID, que anade Firebase Analytics (play-services-measurement-api),
+    hasta que lleguen los anuncios de MAX. Lo comprueba ci/check-manifest.ps1 (AD_ID no esta en su lista blanca).
+  - 08 sec. 2.3 y sec. 7 (consentimiento antes que nada): Firebase Analytics arranca sin recoger nada, sin almacenamiento de
+    analitica ni de anuncios y sin ID de publicidad; AF.Analytics.Firebase.FirebaseAnalyticsSink lo enciende con el consentimiento.
+    Crashlytics arranca apagado y lo enciende el codigo en el arranque (AF.Analytics.Firebase.CrashReporting).
+-->
+<manifest
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:installLocation="preferExternal">
+    <supports-screens
+        android:smallScreens="true"
+        android:normalScreens="true"
+        android:largeScreens="true"
+        android:xlargeScreens="true"
+        android:anyDensity="true"/>
+
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove"/>
+
+    <application android:label="@string/app_name"
+                 android:icon="@mipmap/app_icon">
+        <meta-data android:name="firebase_analytics_collection_enabled" android:value="false"/>
+        <meta-data android:name="google_analytics_adid_collection_enabled" android:value="false"/>
+        <meta-data android:name="google_analytics_default_allow_analytics_storage" android:value="false"/>
+        <meta-data android:name="google_analytics_default_allow_ad_storage" android:value="false"/>
+        <meta-data android:name="google_analytics_default_allow_ad_user_data" android:value="false"/>
+        <meta-data android:name="google_analytics_default_allow_ad_personalization_signals" android:value="false"/>
+        <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false"/>
+    </application>
+</manifest>
