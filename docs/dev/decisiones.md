@@ -3250,3 +3250,14 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Conectar `VerifiedStoreService` al juego** (`Resume` al arrancar y al volver a primer plano, `Pump` periódico y la UI de `Pending` y `VerifyFailed`): tarea de unity-gameplay-dev junto con F3-5.
 - **Ejemplos `GPA.…` de `applied_purchases`** en 08 §4.3 y 04 §10.1: pasan a `token_hash` en la próxima tarea de documentación.
 - **Mochila con la marca local puesta:** se acredita la que el servidor verifica; el servidor hace cumplir «una por cuenta» (F2c).
+
+## D-037 · Aprobación del permiso Android ACCESS_NETWORK_STATE
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** aprobado por el dueño en el chat: «Apruebo el permiso ACCESS_NETWORK_STATE para el común net de la analítica (Q-B7-25 b); añádelo a la lista blanca de check-manifest.»
+
+**Decisión.** Se aprueba `android.permission.ACCESS_NETWORK_STATE`, que Unity añade al leer `Application.internetReachability`, para el parámetro común `net` de la analítica (08 §8.1; B7). Se añade a la lista blanca de `ci/check-manifest.ps1` y el común `net` vuelve a enviarse. Responde Q-B7-25 con la opción (b) y sustituye la (a) que se había aplicado al integrar B7 (`0d5965cc`).
+
+**Alcance.** No aprueba otros permisos, SDK, paquetes ni versiones.
+
+**Cómo revertir.** Con una decisión nueva: quitarlo de la lista blanca y dejar de leer la red en `GameBootstrap.Telemetry.cs`.
