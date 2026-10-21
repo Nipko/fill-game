@@ -652,7 +652,7 @@ Cuando termines S1, empieza **sin esperar** el bloque del plan que más acerque 
 
 ## 12. Encargo siguiente (2026-10-20): la tanda 5, bloques del Spark
 
-El dueño respondió las 29 preguntas de `docs/dev/plan-tanda5.md` §5, todas con la opción (a), la recomendada: queda registrado en **D-033** (`docs/dev/decisiones.md`). Incluye tres aprobaciones explícitas de la regla 4: `com.unity.mobile.notifications` + `POST_NOTIFICATIONS` (Q-M5), `ci.yml` de s30 (Q-T5) y coverlet para `dotnet test` (Q-T7). El permiso `INTERNET` **no** está aprobado.
+El dueño respondió las 29 preguntas de `docs/dev/plan-tanda5.md` §5, todas con la opción (a), la recomendada: queda registrado en **D-033** (`docs/dev/decisiones.md`). Incluye tres aprobaciones explícitas de la regla 4: `com.unity.mobile.notifications` + `POST_NOTIFICATIONS` (Q-M5), `ci.yml` de s30 (Q-T5) y coverlet para `dotnet test` (Q-T7). El permiso `INTERNET` **no** estaba aprobado entonces; **lo aprobó D-036 (2026-10-20)** (corregido al integrar B12, Q-B12-12).
 
 **Reparto.** El Spark hace, en este orden y en ramas `spark/t5-<bloque>` desde `origin/integracion-fase1-fase2` (con B1a ya integrado): **B2 → B3 → B6 → B7 → B5 → B8** (B13, los borradores de publicación, pasa a un agente Codex aparte: `docs/dev/traspaso/codex-publicacion.md`), y **B4**, cuyo diseño (Bitácora «1 de 3», panel de la victoria y cola de takeovers) ya aprobó el dueño: está en el añadido de D-033 del 2026-10-20. B4 incluye el retoque de `CALENDAR` en `tools/econ_sim.py` con `--calendar-pick`, las Canastas de los días 7, 21 y 30 y la regeneración de `tools/out/econ_B.md` y `econ_variants.md` (comprobación de `CLAUDE.md`). El escritorio hace B1b, B9, B10, B11, B12 y B14.
 

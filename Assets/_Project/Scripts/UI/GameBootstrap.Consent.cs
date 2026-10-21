@@ -340,7 +340,7 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// La edad o el consentimiento están pendientes o el juego está bloqueado: la sesión no cuenta y no se programan avisos locales
+        /// La edad o el consentimiento están pendientes (sin decisión vigente) o el juego está bloqueado: la sesión no cuenta y no se programan avisos locales
         /// al pasar a segundo plano (parche <c>B12-ui.diff</c> en <c>GameBootstrap.Sessions.cs</c>).
         /// </summary>
         internal bool ConsentHoldsSession
@@ -352,9 +352,10 @@ namespace AF.UI
                     return true;
                 }
 
+                // Sugerencia 1 de la revisión de B12 (nota §6), al integrar: sin decisión vigente, también durante el segundo de la
+                // pantalla de arranque de quien debe volver a decidir (textos nuevos u otro perfil legal), con el flujo aún en None.
                 ConsentFlow? flow = _consentFlow;
-                return ConsentEnabled && flow != null && flow.Mode == ConsentFlowMode.Boot
-                    && (flow.Step == ConsentStep.Age || flow.Step == ConsentStep.Choices || flow.Step == ConsentStep.Blocked);
+                return ConsentEnabled && flow != null && !flow.Flags.Decided;
             }
         }
 

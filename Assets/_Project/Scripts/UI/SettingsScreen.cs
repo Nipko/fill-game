@@ -100,7 +100,6 @@ namespace AF.UI
 
         private const float RowGapDp = 6f;
         private const float SectionGapDp = 12f;
-        private const float RadioDp = 20f;
 
         private static readonly PatternsSetting[] PatternOrder = { PatternsSetting.Auto, PatternsSetting.On, PatternsSetting.Off };
 
@@ -175,18 +174,18 @@ namespace AF.UI
             for (int i = 0; i < PatternOrder.Length; i++)
             {
                 PatternsSetting value = PatternOrder[i];
-                _patternRows[i] = new OptionRow(_content, art, "Patterns_" + DevProbe.PatternsKey(value), "patterns_" + DevProbe.PatternsKey(value),
+                _patternRows[i] = Option(_content, art, "Patterns_" + DevProbe.PatternsKey(value), "patterns_" + DevProbe.PatternsKey(value),
                     PatternLabel(value), () => _onPatterns(value));
             }
 
             // Mensajes de TiTino (TI3): una fila que se marca o se desmarca, en su hueco.
             SlothMessagesSlot = UiBuilder.Rect("SlothMessagesSlot", _content);
-            _slothRow = new OptionRow(SlothMessagesSlot, art, "SlothMessages", SlothMessagesId, UiText.SettingsSlothMessages,
+            _slothRow = Option(SlothMessagesSlot, art, "SlothMessages", SlothMessagesId, UiText.SettingsSlothMessages,
                 () => _onSlothMessages(!_slothMessages));
 
             // Pista por inactividad (MO3): una fila que se marca o se desmarca, en su hueco.
             IdleHintSlot = UiBuilder.Rect("IdleHintSlot", _content);
-            _idleRow = new OptionRow(IdleHintSlot, art, "IdleHint", IdleHintId, UiText.SettingsIdleHint, () => IdleHintToggled?.Invoke(!_idleHint));
+            _idleRow = Option(IdleHintSlot, art, "IdleHint", IdleHintId, UiText.SettingsIdleHint, () => IdleHintToggled?.Invoke(!_idleHint));
 
             // Privacidad (B12; SettingsScreen.Consent.cs), oculta hasta que GameBootstrap la enseñe.
             BuildConsent();
@@ -417,7 +416,7 @@ namespace AF.UI
 
             while (_languageRows.Count < _offered.Count)
             {
-                _languageRows.Add(new OptionRow(_languageGroup, _art, "Language_" + _languageRows.Count, string.Empty, string.Empty, null));
+                _languageRows.Add(Option(_languageGroup, _art, "Language_" + _languageRows.Count, string.Empty, string.Empty, null));
             }
 
             for (int i = 0; i < _languageRows.Count; i++)
@@ -776,107 +775,16 @@ namespace AF.UI
             }
         }
 
-        // Placa de una opción no elegida: crema (más clara que la tarjeta, la levanta; la madera oscura encima, 11,5:1) con un
-        // borde opaco de 2 dp de la madera base #7E5638 (5,1:1 sobre la madera clara de la tarjeta, ≥ 3:1 de WCAG 1.4.11 para
-        // el límite de un componente), para que se lea como botón y no como texto suelto (revisión de L3: el papel solo se
-        // separaba de la tarjeta un 3 % de luminancia y el primer borde, la madera oscura al 25 %, daba 1,56:1). Opaco y no con
-        // alfa: el proyecto está en Linear y la GPU mezcla en lineal (ColorMath.CompositeLinear), así que la madera oscura al
-        // 60 % quedaría en 2,2:1 en pantalla aunque en sRGB dé 3,3:1.
-        private static readonly Color OptionPlate = Palette.Cream;
-        private static readonly Color OptionBorder = Palette.FamilyWood.Base;
-        private const float OptionBorderDp = 2f;
-        private const float OptionRadiusDp = 12f;
+        // Placa y borde de una opción (OptionRow.cs; Q-B12-14 (a)): los usan también «Sobre la Amazonía» y la prueba de contraste.
+        private static readonly Color OptionPlate = OptionRow.Plate;
+        private static readonly Color OptionBorder = OptionRow.Border;
+        private const float OptionBorderDp = OptionRow.BorderDp;
+        private const float OptionRadiusDp = OptionRow.RadiusDp;
 
-        // Una opción: placa crema con borde de madera, o de hoja si está elegida, con su marca de radio a la izquierda (anillo,
-        // hueco y punto: el estado no depende solo del color) y el texto. Toda la fila es el área táctil (≥ 48 dp).
-        private sealed class OptionRow
+        // Una opción de Ajustes (OptionRow, común con la pantalla de consentimiento de B12): el cuerpo de Ajustes.
+        private static OptionRow Option(Transform parent, ProceduralArt art, string name, string id, string text, Action? onClick)
         {
-            private readonly Image _border;
-            private readonly Image _plate;
-            private readonly Image _ring;
-            private readonly Image _hole;
-            private readonly Image _dot;
-            private Action? _onClick;
-
-            public OptionRow(Transform parent, ProceduralArt art, string name, string id, string text, Action? onClick)
-            {
-                Id = id;
-                _onClick = onClick;
-                Button = UiBuilder.BareButton(name, parent, () => _onClick?.Invoke());
-                Root = (RectTransform)Button.transform;
-                _border = UiBuilder.Sliced("Border", Root, art.RoundedRect, OptionBorder);
-                UiBuilder.Stretch(_border.rectTransform);
-                _plate = UiBuilder.Sliced("Plate", Root, art.RoundedRect, OptionPlate);
-                UiBuilder.Stretch(_plate.rectTransform);
-                _border.pixelsPerUnitMultiplier = 24f / OptionRadiusDp;
-                _ring = Circle("Ring", art, RadioDp);
-                _hole = Circle("Hole", art, RadioDp - 6f);
-                _dot = Circle("Dot", art, 10f);
-                Label = UiBuilder.Label("Label", Root, TextStyle.PlainBold, text, OptionSp, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
-                UiBuilder.AutoSize(Label, MinTextSp + 1f, OptionSp);
-                SetSelected(false);
-            }
-
-            public string Id { get; private set; }
-
-            public Button Button { get; }
-
-            public RectTransform Root { get; }
-
-            public TextMeshProUGUI Label { get; }
-
-            public bool Selected { get; private set; }
-
-            public void Rebind(string id, string text, Action onClick)
-            {
-                Id = id;
-                Label.text = text;
-                _onClick = onClick;
-            }
-
-            public void SetSelected(bool selected)
-            {
-                Selected = selected;
-                Color plate = selected ? Palette.FamilyLeaf.Deep : OptionPlate;
-                Color ink = selected ? (Color)Palette.Cream : Palette.FamilyWood.Deep;
-                _plate.color = plate;
-                Label.color = ink;
-                _ring.color = ink;
-                _hole.color = plate;
-                _dot.color = ink;
-                _dot.gameObject.SetActive(selected);
-
-                // La elegida, verde llena hasta el borde y sin él; las demás, la placa dentro del borde.
-                float inset = selected ? 0f : OptionBorderDp;
-                _border.gameObject.SetActive(!selected);
-                _plate.rectTransform.offsetMin = new Vector2(inset, inset);
-                _plate.rectTransform.offsetMax = new Vector2(-inset, -inset);
-                _plate.pixelsPerUnitMultiplier = 24f / (OptionRadiusDp - inset);
-            }
-
-            public void Place(float x, float y, float w, float h, float s)
-            {
-                UiBuilder.Place(Root, x, y, w, h);
-                float r = h * 0.5f;
-                Center(_ring.rectTransform, 14f + (RadioDp * 0.5f), r, RadioDp);
-                Center(_hole.rectTransform, 14f + (RadioDp * 0.5f), r, RadioDp - 6f);
-                Center(_dot.rectTransform, 14f + (RadioDp * 0.5f), r, 10f);
-                Label.fontSizeMax = OptionSp * s;
-                Label.fontSizeMin = MinTextSp + 1f;
-                UiBuilder.Place(Label.rectTransform, 14f + RadioDp + 12f, 0f, w - (14f + RadioDp + 12f) - 12f, h);
-            }
-
-            private Image Circle(string name, ProceduralArt art, float d)
-            {
-                Image img = UiBuilder.Sliced(name, Root, art.RoundedRect, Color.white);
-                img.pixelsPerUnitMultiplier = 24f / (d * 0.5f);
-                return img;
-            }
-
-            private static void Center(RectTransform rt, float cx, float cy, float d)
-            {
-                UiBuilder.Place(rt, cx - (d * 0.5f), cy - (d * 0.5f), d, d);
-            }
+            return new OptionRow(parent, art, name, id, text, onClick, OptionSp, MinTextSp + 1f);
         }
     }
 }

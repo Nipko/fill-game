@@ -239,6 +239,8 @@ Se avanzó con la recomendada, marcada [P] en el código.
 
 La 4.ª revisión dio APROBADO. Estas sugerencias no bloquean; se pueden aplicar al integrar.
 
+**Al integrar (2026-10-21, D-033, añadido de B12):** aplicadas la 1 (con su test, `ConsentBootTests.ToDecideAgain_HoldsTheSession_AndBackgroundSchedulesNothing`) y la 7 (`Scripts/UI/OptionRow.cs`); las capturas de Q-B12-16, en `ConsentSnapshotTests`. Las demás siguen abiertas.
+
 1. **`ConsentHoldsSession`**: hoy solo retiene la sesión en los pasos Edad, Finalidades y Bloqueo.
    - Durante el segundo de la pantalla de arranque de quien debe volver a decidir (textos nuevos u otro perfil legal), el flujo está en `None`: pasar a segundo plano en ese instante programaría avisos.
    - Arreglo propuesto: `ConsentBlocked || (ConsentEnabled && flow != null && !flow.Flags.Decided)`.

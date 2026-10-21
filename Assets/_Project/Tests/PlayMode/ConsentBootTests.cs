@@ -36,6 +36,7 @@ namespace AF.Tests.PlayMode
         {
             LaunchOptions.Reset();
             GameBootstrap.ResetConsentOverrides();
+            GameBootstrap.ResetSessionOverrides();
         }
 
         private static Profile ProfileWith(ConsentRecord? consent, int nextLevel = 4)
@@ -167,6 +168,32 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.ConsentView!.AdsOptionsShown, Is.True, "revocación en Ajustes (05 §7)");
             boot.ConsentView.AdsOptionsButton.onClick.Invoke();
             Assert.That(boot.ConsentAds.PrivacyOptionsRequests, Is.EqualTo(1));
+        }
+
+        [UnityTest]
+        public IEnumerator ToDecideAgain_HoldsTheSession_AndBackgroundSchedulesNothing()
+        {
+            // Sugerencia 1 de la revisión de B12 (nota §6), aplicada al integrar: con una decisión que ya no vale (textos de una
+            // versión anterior), ni sesión ni avisos locales mientras se vuelve a decidir, aunque la app pase a segundo plano.
+            var scheduler = new FakeNotificationScheduler(new ManualClock(T0), PushPermission.Allowed);
+            GameBootstrap.NotificationSchedulerOverride = scheduler;
+            var store = new MemoryProfileStore(ProfileWith(new ConsentRecord(LegalProfiles.Co1581, 0, T0, true, true, AgeBand.Adult)));
+            yield return PlayModeHelpers.LoadAppWithConsent(store);
+            GameBootstrap boot = GameBootstrap.Current!;
+            Assert.That(boot.ConsentView!.Visible, Is.True, "textos nuevos: se vuelve a preguntar (Q-B12-2: solo las finalidades)");
+            Assert.That(boot.ConsentView.View, Is.EqualTo(ConsentView.Choices));
+            Assert.That(boot.ConsentHoldsSession, Is.True);
+            Assert.That(boot.Sessions, Is.Not.Null);
+
+            boot.SessionsPaused(true);
+            Assert.That(boot.Sessions!.InBackground, Is.False, "la sesión no cuenta");
+            Assert.That(scheduler.Scheduled, Is.Empty, "sin avisos locales hasta decidir (08 §7)");
+
+            boot.ConsentView.AcceptAllButton.onClick.Invoke();
+            yield return PlayModeHelpers.WaitFor(() => boot.App!.Screen != AppScreen.Boot, "la primera pantalla tras volver a decidir");
+            Assert.That(boot.ConsentHoldsSession, Is.False);
+            boot.SessionsPaused(true);
+            Assert.That(boot.Sessions.InBackground, Is.True, "decidido: la sesión vuelve a contar");
         }
 
         [UnityTest]

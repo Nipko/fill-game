@@ -3350,7 +3350,7 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Cántaro devuelto por `restoreLedger` o anulado:** se usa `eco_piggy_min_buy` [P].
 - **Intervalo de `Pump`:** 5 s [P].
 - **Textos de las 5 claves nuevas** (`iap_pending_confirm`, `iap_verify_failed`, `market_store_unavailable`, `settings_account_code`, `settings_account_code_unavailable`): aprobados en es-419; se piden EN y PT-BR.
-- **Banda de edad** hasta que llegue B12 (Spark): se trata como 13 o más, con el `TODO(B12)` en `PlayerUnder13()`.
+- **Banda de edad** hasta que llegue B12 (Spark): se trata como 13 o más, con el `TODO(B12)` en `PlayerUnder13()`. **Conectada al integrar B12 (2026-10-21):** `PlayerUnder13()` lee la banda guardada (`profile.consent.age_band`) o el bloqueo del arranque, y el `TODO` se quita (ver el añadido de D-033 de B12).
 
 ## D-039 · Integración del Firebase Unity SDK 13.17.0 (F3-6)
 
@@ -3372,3 +3372,28 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - Permisos: `WAKE_LOCK` aprobado si lo añade el SDK; `AD_ID` se quita hasta MAX. Cualquier otro permiso nuevo para la integración y se pregunta.
 
 **Cómo revertir.** Quitando los paquetes de `manifest.json` y las implementaciones reales; las interfaces y las falsas siguen.
+
+### D-033, añadido del 2026-10-21: preguntas de B12 (consentimiento y edad) del Spark, con la recomendada
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** decisión del dueño en el chat: «Integra B12 del Spark con sus parches y la verificación completa, y aplica sus 16 preguntas con la recomendada.» Integradas en `integra/spark-b12` con `spark/t5-b12` (`b5a18d0e`) y sus parches. Detalle y opciones en `docs/dev/consentimiento.md` §4. Completa Q-T3 (a) y Q-T4 (a) de D-033. **Los textos legales siguen [P], en `borrador` y con la nota «pendiente del abogado»**; lo que el abogado confirme puede cambiar las respuestas marcadas abajo.
+
+- **Q-B12-1:** la pantalla de edad neutral son **tres botones iguales**, uno por banda, sin ninguno marcado (no el año de nacimiento). Pendiente del abogado: la neutralidad para Google Play.
+- **Q-B12-2:** al subir `consent_text_version` **solo se vuelven a pedir las finalidades**; la banda guardada se conserva (08 §7 permite una sola corrección).
+- **Q-B12-3:** el bloqueo de `<13` **es definitivo** en el dispositivo: no se vuelve a preguntar ni con textos nuevos y no hay salida desde la pantalla (solo reinstalar).
+- **Q-B12-4:** el diagnóstico (Crashlytics) es una **línea informativa sin interruptor** (interés legítimo, 08 §2.3), pendiente de la pregunta 6 de 08 al abogado.
+- **Q-B12-5:** los textos legales van en `strings.csv` con el estado **`borrador`** y la nota «pendiente del abogado» (sin un estado nuevo en el contrato 32).
+- **Q-B12-6:** la doble confirmación es **una pantalla más**: el toque en «Comprar» del juego, una confirmación con el precio de la tienda y después la hoja de Google Play. Pendiente del abogado, con Q-T4.
+- **Q-B12-7:** con 13-17 **la analítica se ofrece** como finalidad que se puede aceptar (sin audiencias ni anuncios personalizados). Pendiente del abogado (ECA Digital).
+- **Q-B12-8:** `profile.consent` **es del dispositivo**: la fusión con la nube conserva el del local y un teléfono nuevo vuelve a preguntar. Aplicada en `CloudMerge` al integrar (`merged.Consent = local.Consent`, con test).
+- **Q-B12-9:** con el perfil `ump`, **la analítica en la pantalla propia y los anuncios por UMP**, hasta que el dueño configure UMP.
+- **Q-B12-10:** el campo nuevo se llama **`consent.age_band_corrected`** (bool) [P]; se anota en 08 §4.3.
+- **Q-B12-11:** `af_settings_change.value` con `key = consent` vale **`choices` o `age`** [P].
+- **Q-B12-12:** el encargo del Spark decía que `INTERNET` no estaba aprobado; **lo aprobó D-036** (2026-10-20). Sin efecto en B12 (no usa red); se corrige el encargo.
+- **Q-B12-13:** «el tratamiento más estricto» sin país es **el perfil `default` + `npa` sin elección** (la analítica se puede aceptar).
+- **Q-B12-14:** la fila marcable se **extrae a una clase común de AF.UI al integrar**: `OptionRow` (`Scripts/UI/OptionRow.cs`), usada por Ajustes y por las finalidades de la pantalla de consentimiento.
+- **Q-B12-15:** si cambia el perfil legal del país (otra SIM, un viaje), **se vuelve a preguntar** las finalidades con el perfil de ahora y la banda guardada.
+- **Q-B12-16:** las capturas de referencia de los textos nuevos las saca **el integrador con `SnapshotKit`** (es-419 y en-XA al 130 %): `ConsentSnapshotTests` (explícita) con la edad, las finalidades, el bloqueo, la doble confirmación y Ajustes (también en 16:9).
+
+- **Del integrador, al aplicar la nota §6 (sugerencias de la 4.ª revisión):** la 1 (`ConsentHoldsSession` retiene la sesión y los avisos mientras no haya una decisión vigente, también en el segundo de la pantalla de arranque de quien debe volver a decidir, con su test) y la 7 (Q-B12-14). Las demás (2-6 y 8) quedan abiertas para una tarea aparte.
+- **Orden de arranque (del integrador):** `SetUpConsent` va tras `ConnectTelemetry` y **antes** de `ResumeBackend` (F3-5), para que los flags guardados lleguen a la analítica, los anuncios y la tienda antes de reanudar las compras; el decorador de la tienda de B12 envuelve la tienda verificada de F3-5 (`WrapStore(WrapConsentStore(CreateStore(...)))`).

@@ -80,8 +80,8 @@ namespace AF.UI
         private readonly TextMeshProUGUI _body;
         private readonly ReliefParts[] _ageButtons = new ReliefParts[3];
         private readonly TextMeshProUGUI[] _ageLabels = new TextMeshProUGUI[3];
-        private readonly Toggle _adsToggle;
-        private readonly Toggle _analyticsToggle;
+        private readonly OptionRow _adsToggle;
+        private readonly OptionRow _analyticsToggle;
         private readonly TextMeshProUGUI _adsLine;
         private readonly TextMeshProUGUI _diagnostics;
         private readonly ReliefParts _reject;
@@ -119,8 +119,8 @@ namespace AF.UI
                 _ageButtons[i] = ModalKit.Cta(names[i], _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 18f, () => _onAge?.Invoke(band), out _ageLabels[i]);
             }
 
-            _adsToggle = new Toggle(_panel, art, "AdsToggle");
-            _analyticsToggle = new Toggle(_panel, art, "AnalyticsToggle");
+            _adsToggle = Purpose(_panel, art, "AdsToggle");
+            _analyticsToggle = Purpose(_panel, art, "AnalyticsToggle");
             _adsLine = ModalKit.Line("AdsLine", _panel, string.Empty, 15f, Palette.FamilyWood.Base);
             _diagnostics = ModalKit.Line("Diagnostics", _panel, string.Empty, 15f, Palette.FamilyWood.Base);
 
@@ -245,9 +245,9 @@ namespace AF.UI
             View = ConsentView.Choices;
             _title.text = ConsentText.T(ConsentText.Keys.Title);
             _body.text = ConsentText.T(ConsentText.Keys.Body);
-            _adsToggle.Bind(ConsentText.T(ConsentText.Keys.PurposeAds), () => _adsToggle.SetSelected(!_adsToggle.Selected));
+            _adsToggle.Rebind(string.Empty, ConsentText.T(ConsentText.Keys.PurposeAds), () => _adsToggle.SetSelected(!_adsToggle.Selected));
             _adsToggle.SetSelected(ads == ConsentAdsLine.Toggle && adsPersonalized);
-            _analyticsToggle.Bind(ConsentText.T(ConsentText.Keys.PurposeAnalytics), () => _analyticsToggle.SetSelected(!_analyticsToggle.Selected));
+            _analyticsToggle.Rebind(string.Empty, ConsentText.T(ConsentText.Keys.PurposeAnalytics), () => _analyticsToggle.SetSelected(!_analyticsToggle.Selected));
             _analyticsToggle.SetSelected(analytics);
             _adsLine.text = ConsentText.T(AdsLineKey(ads));
             _adsOptionsLabel.text = ConsentText.T(ConsentText.Keys.AdsUmpOptions);
@@ -493,7 +493,7 @@ namespace AF.UI
                 float rowH = RowDp * Mathf.Max(1f, UiBuilder.TextScale);
                 if (adsToggle)
                 {
-                    _adsToggle.Place(16f, y, inner, rowH);
+                    _adsToggle.Place(16f, y, inner, rowH, Mathf.Max(1f, UiBuilder.TextScale));
                     y += rowH + 8f;
                 }
                 else if (adsLink)
@@ -509,7 +509,7 @@ namespace AF.UI
                     y += ModalKit.PlaceLine(_adsLine, 16f, y, inner, 40f) + 8f;
                 }
 
-                _analyticsToggle.Place(16f, y, inner, rowH);
+                _analyticsToggle.Place(16f, y, inner, rowH, Mathf.Max(1f, UiBuilder.TextScale));
                 y += rowH + 8f;
                 y += ModalKit.PlaceLine(_diagnostics, 16f, y, inner, 40f) + 10f;
             }
@@ -547,94 +547,10 @@ namespace AF.UI
             ModalKit.Size(_panel, _surface, _art, Mathf.Round((cw - w) * 0.5f), top, w, y);
         }
 
-        /// <summary>
-        /// Fila que se marca o se desmarca (como las de Ajustes): placa crema con borde, o verde llena al marcarla, y una marca
-        /// redonda con su punto: el estado no depende solo del color (07 §7.8).
-        /// </summary>
-        private sealed class Toggle
+        // Una finalidad (OptionRow, la fila de Ajustes; Q-B12-14 (a)): frases largas, que parten en líneas, a 17 sp.
+        private static OptionRow Purpose(Transform parent, ProceduralArt art, string name)
         {
-            private const float MarkDp = 20f;
-            private static readonly Color Plate = Palette.Cream;
-            private static readonly Color Border = Palette.FamilyWood.Base;
-
-            private readonly Image _border;
-            private readonly Image _plate;
-            private readonly Image _ring;
-            private readonly Image _hole;
-            private readonly Image _dot;
-            private readonly TextMeshProUGUI _label;
-            private Action? _onClick;
-
-            public Toggle(Transform parent, ProceduralArt art, string name)
-            {
-                Button = UiBuilder.BareButton(name, parent, () => _onClick?.Invoke());
-                Root = (RectTransform)Button.transform;
-                _border = UiBuilder.Sliced("Border", Root, art.RoundedRect, Border);
-                UiBuilder.Stretch(_border.rectTransform);
-                _plate = UiBuilder.Sliced("Plate", Root, art.RoundedRect, Plate);
-                UiBuilder.Stretch(_plate.rectTransform);
-                _ring = Circle("Ring", art, MarkDp);
-                _hole = Circle("Hole", art, MarkDp - 6f);
-                _dot = Circle("Dot", art, 10f);
-                _label = UiBuilder.Label("Label", Root, TextStyle.PlainBold, string.Empty, 17f, Palette.FamilyWood.Deep, TextAlignmentOptions.MidlineLeft);
-                _label.textWrappingMode = TextWrappingModes.Normal;
-                UiBuilder.AutoSize(_label, UiBuilder.MinTextSp, 17f);
-                SetSelected(false);
-            }
-
-            public Button Button { get; }
-
-            public RectTransform Root { get; }
-
-            public bool Selected { get; private set; }
-
-            public void Bind(string text, Action onClick)
-            {
-                _label.text = text;
-                _onClick = onClick;
-            }
-
-            public void SetSelected(bool selected)
-            {
-                Selected = selected;
-                Color plate = selected ? Palette.FamilyLeaf.Deep : Plate;
-                Color ink = selected ? (Color)Palette.Cream : Palette.FamilyWood.Deep;
-                _plate.color = plate;
-                _label.color = ink;
-                _ring.color = ink;
-                _hole.color = plate;
-                _dot.color = ink;
-                _dot.gameObject.SetActive(selected);
-                float inset = selected ? 0f : 2f;
-                _border.gameObject.SetActive(!selected);
-                _plate.rectTransform.offsetMin = new Vector2(inset, inset);
-                _plate.rectTransform.offsetMax = new Vector2(-inset, -inset);
-            }
-
-            public void Place(float x, float y, float w, float h)
-            {
-                UiBuilder.Place(Root, x, y, w, h);
-                float cy = h * 0.5f;
-                float cx = 14f + (MarkDp * 0.5f);
-                Center(_ring.rectTransform, cx, cy, MarkDp);
-                Center(_hole.rectTransform, cx, cy, MarkDp - 6f);
-                Center(_dot.rectTransform, cx, cy, 10f);
-                _label.fontSizeMax = 17f * Mathf.Max(1f, UiBuilder.TextScale);
-                float left = 14f + MarkDp + 12f;
-                UiBuilder.Place(_label.rectTransform, left, 0f, w - left - 12f, h);
-            }
-
-            private Image Circle(string name, ProceduralArt art, float d)
-            {
-                Image img = UiBuilder.Sliced(name, Root, art.RoundedRect, Color.white);
-                img.pixelsPerUnitMultiplier = 24f / (d * 0.5f);
-                return img;
-            }
-
-            private static void Center(RectTransform rt, float cx, float cy, float d)
-            {
-                UiBuilder.Place(rt, cx - (d * 0.5f), cy - (d * 0.5f), d, d);
-            }
+            return new OptionRow(parent, art, name, string.Empty, string.Empty, null, 17f, UiBuilder.MinTextSp, wrap: true);
         }
     }
 }
