@@ -6,6 +6,42 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 
 ---
 
+## 2026-10-21 · B5 · Mercado, ofertas y Cántaro con la tienda falsa (`spark/t5-b5`): HECHA · verificación completa VERDE (rama y rama + parches) · lista para integrar
+
+- **Rama:** `spark/t5-b5` (local `spark/t5-b5-agent`), desde `origin/integracion-fase1-fase2` en `0d5965cc`. Fusiona la integración **una sola vez**, al final: `0c0c725a` (arreglos de B7 y D-037) en `a06760fa`, sin conflictos. Empujada sin `--force`.
+- **Nota del bloque:** `docs/dev/mercado.md` (qué hace, Remote Config, perfil, archivos, parches, cambios para el GDD, pendientes para el integrador, preguntas Q-B5-1 a Q-B5-15 y riesgos).
+- **Decisiones del dueño aplicadas (D-033, todas (a)):** Q-E2 (sin icono de oferta temporal en el inicio en la 1.0: hueco libre), Q-E3 (`geo_tier` por la región del teléfono), Q-E5 («Restaurar compras» oculto), Q-E6 (Mercado ya, sin vender skins hasta el arte), Q-M4 (sesiones de B6) y Q-M8 (la pestaña Cuias elige la skin puesta con `SkinService.Select`).
+- **Commits:** `130da1de` (Mercado, ofertas y Cántaro), `99d52282` (tests y parches), `b2a1715f`, `74a5fb72`, `a6746ba7`, `b4da97ab` y `4723395c` (cinco rondas de revisión), `1c357d7d` y `b0280303` (nota), `a06760fa` (la fusión), `9c381717` (parches regenerados sobre ella) y el de esta entrada.
+- **En la rama** (todo archivo nuevo; ningún archivo del escritorio cambia):
+  - `Scripts/IAP/`: `OffersConfig.cs` (las 6 claves de 08 §9 y `OfferRules`), `OffersRecord.cs`, `OffersPiggy.cs` (`PiggyJar`), `OffersScheduler.cs` (`offer_scheduler` de 05 §5) y `OffersTakeover.cs` (cupo de un takeover por sesión); tests en `IAP/Tests/OffersTests.cs`.
+  - `Scripts/UI/`: `MarketScreen.cs`, `MarketModel.cs`, `MarketText.cs`, `MarketLobbyIcons.cs`, `OfferCard.cs`, `GeoTierRule.cs`, `GameBootstrap.Market.cs` y `MarketRunner.cs`.
+  - Tests: `Tests/EditMode/MarketModelTests.cs`, `Tests/PlayMode/MarketTests.cs` y `MarketSnapshotTests.cs` (explícito: capturas `b5_01` … `b5_07`).
+- **Parches** (`docs/dev/traspaso/spark-enganches/`, LF, en este orden; los `.meta` de los archivos nuevos van dentro, como los generó Unity; los cuatro pasan `git apply --check` sobre `9c381717`):
+  1. `B5-loc.diff`: 19 claves nuevas en `strings.csv`, en su sitio por orden ordinal (`shop`, `no_ads` y `market_tab_seeds` con el texto del glosario y EN/PT-BR; el resto `pendiente_asesor`), cada una con su captura de referencia; `MarketText.AllKeys` en `LocTablesTests.UiTextKeys`.
+  2. `B5-rc.diff`: los `[RemoteConfigKey]` de `OffersConfig` y su enlace en `RcConfigBinder` (`RcConfigs.Offers`), con su test; `GameBootstrap.MarketRc.cs`.
+  3. `B5-profile.diff`: `piggy` (`{seeds, cap}` + `last_level`, `full_card` [P]) y `offers` [P] en `Profile`/`ProfileJson`; `IAP/ProfileOffersStore.cs` con sus tests; `GameBootstrap.MarketProfile.cs`.
+  4. `B5-bootstrap.diff`: `SetUpMarket();` tras `SetUpSessions();`; el Mercado y la tarjeta en `CommerceOpen`; Atrás (`PressMarketBack`); `geo_tier` por la región en `GameServices` (inicio y Reto) y en la analítica (común y propiedad de usuario); `Tests/PlayMode/MarketHooksTests.cs`.
+- **Revisión:** skill `code-review` con las reglas de `.claude/agents/code-reviewer.md` (no había herramienta para lanzar el subagente). Cinco rondas con CAMBIOS NECESARIOS y la sexta **APROBADO**. Lo arreglado, entre otras cosas: el Cántaro con el tope en vigor y sin vaciarse con una compra pendiente; recordatorios de la Mochila y tarjeta de skin que esperan cupo en vez de perderse; Sin anuncios y la skin en el inicio (Q-B5-6); ninguna tarjeta con la salida de la victoria en marcha (Cosecha doble, «Siguiente»); cupo que sobrevive al cambio de idioma; Cántaro solo con la tienda encendida y movido bajo Ajustes (tapaba la ventanita de TiTino); `geo_tier` sin leer extensiones BCP 47; analítica `af_shop_view`, `af_piggy`, `af_skin_unlock` e `af_iap_offer_shown` solo de lo comprable; `AF_LAYOUT` y sonda de compras; claves propias (`market_tab_seeds`, `market_skin_prize`); plurales; día sin `created_at`; y los tests de cada regla. Sugerencias no aplicadas (no bloquean): enviar `unlocked` cuando el Cántaro aparezca en vez de en la victoria del 19 (anotado en la nota §8) y una aserción sin el gancho de `VictoryLeaving`.
+- **Verificación** (`-Architecture arm64`; un solo Unity mío a la vez):
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`9c381717`) | `dotnet build dotnet/AmazonFill.slnx -warnaserror` | 0 avisos, 0 errores |
+  | rama | `dotnet test dotnet/AmazonFill.slnx` | 1.002 (996 + 6 omitidos), 0 fallos (2 min 9 s) |
+  | rama | `python tools/validate_schema.py` | 103/103 PASS; `schema_example_08_4_1.json` sin cambios |
+  | rama | `unity-compile.ps1` | 0 |
+  | rama | `unity-test.ps1 -Mode EditMode` | **3.805 (3.802 + 3 omitidos), 0 fallos** (4,8 min) |
+  | rama | `unity-test.ps1 -Mode PlayMode` | **1.734 (1.494 + 240 omitidos), 0 fallos** (34,4 min) |
+  | worktree temporal: `9c381717` + los cuatro parches (borrado al acabar) | compile; EditMode; PlayMode | 0; **3.811 (3.808 + 3), 0 fallos**; **1.740 (1.500 + 240), 0 fallos** (32,5 min) |
+  | rama + parches | `MarketSnapshotTests` (explícito, con gráficos: `unity test … -- -force-d3d11`) | 3/3; las 7 capturas revisadas a ojo |
+
+  El fallo conocido `AF.Backend.Tests.ContractExamplesTests.ValidExamplesRoundTrip` («tombstones») ya no sale: lo arregló `0d342bab` en la integración.
+- **Preguntas para el dueño** (se aplicó la recomendada, [P]; detalle en la nota §7): Q-B5-1 venta de skins apagada hasta el arte final; Q-B5-2 ninguna tarjeta de pago salvo la Mochila antes del 31 (05 §10); Q-B5-3 las 48 h desde la primera tarjeta; Q-B5-4 recordatorios en la primera victoria desde el 15 / el 19 con cupo; Q-B5-5 el Reto no llena el Cántaro; Q-B5-6 Mochila y Cántaro en la victoria, Sin anuncios y skin en el inicio; Q-B5-7 Cántaro bajo Ajustes; Q-B5-8 campos nuevos del perfil; Q-B5-9 fusión en la nube de `piggy` y `offers` (B8); Q-B5-10 cupo compartido con la `TakeoverQueue` de B4; Q-B5-11 lista T1 de «Europa occidental»; Q-B5-12 Cántaro con compra pendiente; Q-B5-13 la skin comprada se pone; Q-B5-14 contexto analítico de la tarjeta de skin; Q-B5-15 `from` de `af_shop_view`.
+- **Para el integrador** (nota §6): con B4, un `ITakeoverBudget` sobre su `TakeoverQueue`; con B8, `piggy` y `offers` en `CloudMerge`; con F3-5, vaciar el Cántaro cuando se acredite una compra pendiente. Para el GDD, la nota §5 (08 §4.3 y §8.2; 05 §5 y §10).
+- **Riesgos:** arte provisional (icono del Mercado, Cántaro, filas); comprar el Cántaro y llenarlo son escrituras aparte de la cartera y de la victoria (nota §8); sin prueba en el teléfono; textos nuevos sin EN ni PT-BR salvo los del glosario.
+
+---
+
 ## 2026-10-21 · B4 · Bitácora del río «1 de 3» + cola de takeovers + pantalla 2 del 10 (`spark/t5-b4`): HECHA · verificación completa VERDE · lista para integrar
 
 - **Rama:** `spark/t5-b4`, desde `origin/integracion-fase1-fase2` en `d994e586` (avance rápido desde `dbbba004`, la base del trabajo a medias). Recupera los archivos sin commitear que quedaron en el worktree `spark-t5-b4` y los termina en otro worktree (el agente no podía usar aquel), así que la rama local `spark/t5-b4` de ese worktree sigue en `dbbba004` con los archivos sueltos: se pueden borrar. No hizo falta fusionar B1a (ya está en la integración) ni B6. Al final fusiona `origin/integracion-fase1-fase2` en `e65995af` (con B2, B3, B6 y el backend) en `0c183672`, y `B4-3` se regenera sobre ella; después, `ef78baad` (backend de D-035 y el GDD al día) en `da9efb23`, sin conflictos y con los tres parches aplicables.
