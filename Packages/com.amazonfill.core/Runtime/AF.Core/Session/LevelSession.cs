@@ -158,7 +158,7 @@ namespace AF.Core.Session
         /// <summary>
         /// Vertido <paramref name="index"/> del historial, del primero (0) al último (<c>AppliedPours − 1</c>).
         /// Rehacerlos desde <see cref="Initial"/> con el mismo <see cref="PourMode"/> reconstruye <see cref="Current"/>
-        /// (02 R8).
+        /// (02 R8), salvo tras una Pororoca (<see cref="ApplyShuffle"/>), que vacía el historial y cambia el tablero.
         /// </summary>
         public Pour GetAppliedPour(int index)
         {
@@ -289,6 +289,62 @@ namespace AF.Core.Session
             }
 
             return total;
+        }
+
+        /// <summary>
+        /// Pororoca (04 §2.4; 02 §14 «Vacía el historial de Marea (nuevo tablero); conserva stock»): revela todas las dosis
+        /// ocultas del nivel (<see cref="RevealAll"/>, 04 §2.4 a) y pone <paramref name="shuffled"/> como tablero actual, con el
+        /// historial de Marea vacío. <see cref="Initial"/> no cambia: Volver a la orilla vuelve al tablero del nivel (misma
+        /// semilla, 04 §2.7) con lo revelado visible (I5) [P]. Recalcula <see cref="Status"/>. El barajado, los topes y el cobro
+        /// son de otras capas (AF.Solver y el cliente). False, sin cambiar nada, si la partida no está en
+        /// <see cref="LevelStatus.Playing"/> (04 §2.4: no se usa en el bloqueo).
+        /// </summary>
+        /// <remarks>
+        /// Tras una Pororoca, <see cref="Current"/> ya no sale de rehacer el historial desde <see cref="Initial"/>: quien guarde la
+        /// partida (02 R8) anota el punto de la ola y la vuelve a dar al rehacer (el barajado es determinista).
+        /// </remarks>
+        /// <exception cref="ArgumentException"><paramref name="shuffled"/> no es un barajado de este tablero: otro número de
+        /// cuias, otra capacidad en alguna, otro <c>U_c</c> o dosis ocultas.</exception>
+        public bool ApplyShuffle(BoardState shuffled)
+        {
+            if (shuffled == null)
+            {
+                throw new ArgumentNullException(nameof(shuffled));
+            }
+
+            BoardState current = Current;
+            if (shuffled.Count != current.Count || shuffled.HasHidden)
+            {
+                throw new ArgumentException("La Pororoca conserva las cuias y deja todo revelado (04 §2.4).", nameof(shuffled));
+            }
+
+            for (int i = 0; i < current.Count; i++)
+            {
+                if (shuffled.CuiaAt(i).Capacity != current.CuiaAt(i).Capacity)
+                {
+                    throw new ArgumentException("La Pororoca conserva la capacidad de cada cuia (04 §2.4).", nameof(shuffled));
+                }
+            }
+
+            for (int color = Cuia.MinColor; color <= Cuia.MaxColor; color++)
+            {
+                if (shuffled.UnitsTable[color] != current.UnitsTable[color])
+                {
+                    throw new ArgumentException("La Pororoca conserva los colores (04 §2.4: U_c no cambia).", nameof(shuffled));
+                }
+            }
+
+            if (Status != LevelStatus.Playing)
+            {
+                return false;
+            }
+
+            RevealAll();
+            _previous.Clear();
+            _pours.Clear();
+            Current = shuffled;
+            Status = Evaluate(shuffled);
+            return true;
         }
 
         /// <summary>

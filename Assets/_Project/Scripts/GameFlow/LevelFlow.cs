@@ -249,6 +249,7 @@ namespace AF.GameFlow
                 _undo.ResetForLevel(number);
                 ResetStuck();
                 _session = new LevelSession(BoardFor(def, _attempt.ReliefIndex), GameConfig.FutileRuleEnabled, _pourMode);
+                ShuffleLevelLoaded(number); // Pororoca (B2; LevelFlow.Shuffle.cs): tope del nivel, Lluvia o Piraña y la tarjeta del 30
                 _taps.Clear();
                 ResetPending();
                 OnLoadAlbum(); // album.fruits y af_fruit_discovered (B14; LevelFlow.Meta.cs), en el lote de la carga
@@ -574,6 +575,7 @@ namespace AF.GameFlow
             LevelDefinition def = Level;
             EndRevealSelection();
             ResetLevelCard();
+            ShuffleAttemptStarted(); // Pororoca (B2): el intento nuevo vuelve al tablero del nivel, sin olas
             _undo.Restore();
             ResetPending();
             ResetStuck();

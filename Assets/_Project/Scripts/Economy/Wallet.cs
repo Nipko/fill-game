@@ -74,6 +74,13 @@ namespace AF.Economy
         public int RescuesToday => DailyCounters.IsStale(_profile.Daily, _clock.LocalDateKey()) ? 0 : _profile.Daily.RescuesToday;
 
         /// <summary>
+        /// Pororocas usadas hoy (<c>daily.shuffles_today</c>, día local; 0 si los contadores son de un día anterior): el tope de
+        /// <c>shuffle_max_per_day</c>, que vale también para el stock (04 §2.4). Lo sube <see cref="Apply"/> al cobrar una, con
+        /// semillas (<see cref="SeedSink.Shuffle"/>) o del stock (bloque B2).
+        /// </summary>
+        public int ShufflesToday => DailyCounters.IsStale(_profile.Daily, _clock.LocalDateKey()) ? 0 : _profile.Daily.ShufflesToday;
+
+        /// <summary>
         /// Un cambio quedó sin guardar porque falló la escritura; se reintenta en la próxima mutación o con <see cref="Flush"/>.
         /// Solo ve los fallos del <c>IProfileStore</c> que recibe: con un almacén que agrupa escrituras
         /// (<c>AF.GameFlow.ProfileSaveBatch</c>, dentro de un lote) el guardado solo se anota y no falla aquí; si la escritura
@@ -156,6 +163,8 @@ namespace AF.Economy
             int canoeDelta = 0;
             bool fill = false;
             bool rescue = false;
+            bool shuffle = (transaction.Kind == TransactionKind.Buy && transaction.Sink == SeedSink.Shuffle)
+                || (transaction.Kind == TransactionKind.UseStock && transaction.Booster == BoosterKind.Shuffle); // B2: shuffles_today
             switch (transaction.Kind)
             {
                 case TransactionKind.Win:
@@ -306,6 +315,11 @@ namespace AF.Economy
             if (transaction.InfiniteCanoes > TimeSpan.Zero)
             {
                 CanoeRules.ExtendInfinite(canoeData, now, transaction.InfiniteCanoes);
+            }
+
+            if (shuffle)
+            {
+                _profile.Daily.ShufflesToday++; // 04 §2.4: 3 al día, también con el stock (B2)
             }
 
             if (rescue)
