@@ -588,7 +588,7 @@ namespace AF.Tests.PlayMode
                     {
                         SlothVictoryTests.NoSlot(!slot);
                         string name = "dc2_real_l" + level + "_" + (small ? "640" : "780") + (slot ? string.Empty : "_sinranura");
-                        yield return Capture(name, null, level, small, 1f, !small);
+                        yield return Capture(name, null, level, small, 1f, !small, !small || !slot); // 640 con ranura: DC3
                     }
                 }
             }
@@ -600,12 +600,12 @@ namespace AF.Tests.PlayMode
             foreach (bool small in new[] { false, true })
             {
                 SlothVictoryTests.NoSlot(false);
-                yield return Capture("dc2_3filas_" + (small ? "640" : "780"), SlothVictoryTests.FifteenCuiaPack(40), 40, small, 1f, !small);
+                yield return Capture("dc2_3filas_" + (small ? "640" : "780"), SlothVictoryTests.FifteenCuiaPack(40), 40, small, 1f, !small, !small);
                 SlothVictoryTests.NoSlot(true);
-                yield return Capture("dc2_3filas_" + (small ? "640" : "780") + "_sinranura", SlothVictoryTests.FifteenCuiaPack(40), 40, small, 1f, false);
+                yield return Capture("dc2_3filas_" + (small ? "640" : "780") + "_sinranura", SlothVictoryTests.FifteenCuiaPack(40), 40, small, 1f, false, true);
                 SlothVictoryTests.NoSlot(false);
-                yield return Capture("dc2_real_l40_" + (small ? "640" : "780") + "_130", null, 40, small, 1.3f, false);
-                yield return Capture("dc2_real_l60_" + (small ? "640" : "780") + "_130", null, 60, small, 1.3f, false);
+                yield return Capture("dc2_real_l40_" + (small ? "640" : "780") + "_130", null, 40, small, 1.3f, false, false);
+                yield return Capture("dc2_real_l60_" + (small ? "640" : "780") + "_130", null, 60, small, 1.3f, false, false);
             }
         }
 
@@ -639,7 +639,7 @@ namespace AF.Tests.PlayMode
             LaunchOptions.Reset();
         }
 
-        private static IEnumerator Capture(string name, string? json, int level, bool small, float scale, bool mustSpeak)
+        private static IEnumerator Capture(string name, string? json, int level, bool small, float scale, bool mustSpeak, bool mustShow)
         {
             FunnelSetup.Hooks();
             MapArtRule.ForceProvisional = true;
@@ -656,7 +656,7 @@ namespace AF.Tests.PlayMode
             }
 
             SnapshotKit.Attach(GameBootstrap.Current!);
-            SlothVictoryBandTests.AssertBand(name, mustSpeak, scale < 1.01f);
+            SlothVictoryBandTests.AssertBand(name, mustSpeak, mustShow);
             yield return SnapshotKit.Wait(0.2f);
 
             // A 360 × 640 (1080 × 1920 px, 16:9), solo la pantalla simulada: GameScreen la maqueta arriba de la captura y lo de
