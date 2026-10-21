@@ -118,10 +118,8 @@ export function loadConfig(ctx: ContextReader): AfConfig {
     domain = { name: domainName, hostedZoneId };
   }
 
+  // El verificador falso de Play solo existe en dev (plan §4); un test de stacks lo comprueba en prod.
   const fakePlayVerifier = !isProd;
-  if (isProd && fakePlayVerifier) {
-    throw new Error('El verificador falso de Play no puede existir en prod.');
-  }
 
   return {
     envName,

@@ -73,9 +73,10 @@ describe.each([
   });
 
   it(`verificador falso de Play ${envName === 'prod' ? 'ausente' : 'presente'}`, () => {
+    const withFake = ['delete-account', 'verify-purchase', 'voided-purchases-job'].map((n) => `af-${envName}-${n}`);
     for (const [, p] of resourcesOfType(json, 'AWS::Lambda::Function')) {
       const vars = ((p.Environment as { Variables?: Record<string, string> } | undefined)?.Variables) ?? {};
-      if (envName === 'prod') expect(vars).not.toHaveProperty('AF_FAKE_PLAY_VERIFIER');
+      if (envName === 'prod' || !withFake.includes(p.FunctionName as string)) expect(vars).not.toHaveProperty('AF_FAKE_PLAY_VERIFIER');
       else expect(vars.AF_FAKE_PLAY_VERIFIER).toBe('1');
       expect(vars.AF_ENV).toBe(envName);
     }

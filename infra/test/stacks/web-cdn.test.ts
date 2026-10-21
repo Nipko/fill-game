@@ -60,11 +60,11 @@ describe.each([
     expect(http?.CustomOriginConfig).toMatchObject({ OriginProtocolPolicy: 'https-only', OriginSSLProtocols: ['TLSv1.2'] });
   });
 
-  it('el borrado por web llega a la API solo con Content-Type y la IP del visitante', () => {
+  it('el borrado por web llega a la API solo con Content-Type (sin cabeceras de IP falsificables)', () => {
     const policies = resourcesOfType(json, 'AWS::CloudFront::OriginRequestPolicy');
     expect(policies).toHaveLength(1);
     const cfg = policies[0][1].OriginRequestPolicyConfig as Record<string, Record<string, unknown>>;
-    expect(cfg.HeadersConfig).toEqual({ HeaderBehavior: 'whitelist', Headers: ['Content-Type', 'CloudFront-Viewer-Address'] });
+    expect(cfg.HeadersConfig).toEqual({ HeaderBehavior: 'whitelist', Headers: ['Content-Type'] });
     expect(cfg.CookiesConfig).toEqual({ CookieBehavior: 'none' });
     expect(cfg.QueryStringsConfig).toEqual({ QueryStringBehavior: 'none' });
   });

@@ -96,6 +96,7 @@ export class ApiStack extends Stack {
     const verifyPurchase = new AfFunction(this, 'VerifyPurchase', {
       config,
       name: 'verify-purchase',
+      usesPlayVerifier: true,
       description: 'verifyPurchase (08 §10.3): verifica la compra en Play y la anota en el libro mayor.',
       environment: {
         ...tableEnv({ PURCHASES: tables.purchases, INTEGRITY: tables.integrity }),
@@ -131,6 +132,7 @@ export class ApiStack extends Stack {
     const deleteAccount = new AfFunction(this, 'DeleteAccount', {
       config,
       name: 'delete-account',
+      usesPlayVerifier: true,
       description: 'deleteAccount (08 §11): borrado por app y por web con código (Q-B13-21).',
       environment: {
         ...tableEnv({
@@ -153,6 +155,7 @@ export class ApiStack extends Stack {
     const voidedJob = new AfFunction(this, 'VoidedPurchasesJob', {
       config,
       name: 'voided-purchases-job',
+      usesPlayVerifier: true,
       description: 'voidedPurchasesJob (08 §10.1): marca voided las compras anuladas en Play.',
       timeout: Duration.minutes(5),
       environment: {
@@ -244,7 +247,7 @@ export class ApiStack extends Stack {
             'AwsSolutions-APIG4',
             op.function === 'rewarded-ssv'
               ? 'Callback servidor a servidor de MAX: no lleva token de Firebase; se autentica con la firma o la clave de MAX en la Lambda (08 §10.1; F2-6).'
-              : 'Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits, el token de 5 minutos y los límites por ruta e IP (Q-B13-21; F2-8).',
+              : 'Borrado por web (08 §11): el usuario no tiene sesión; lo protege el código aleatorio de 128 bits (no se puede adivinar), el token de 5 minutos, el límite por ruta de API Gateway y el contador por hash de código en rate_limits (Q-B13-21; F2-8).',
           );
         }
       }

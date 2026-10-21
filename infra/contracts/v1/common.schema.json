@@ -36,7 +36,7 @@
       "pattern": "^[a-z0-9_]{1,40}$"
     },
     "accountCode": {
-      "description": "Código de borrado por web (Q-B13-21): 128 bits aleatorios en Base32 de Crockford, 26 caracteres en mayúsculas sin guiones; el primero va de 0 a 7 porque 26 × 5 = 130 bits. Distinto del UID; el servidor solo guarda su hash. La web normaliza (mayúsculas, sin espacios ni guiones, I y L → 1, O → 0) antes de enviarlo.",
+      "description": "Código de borrado por web (Q-B13-21): 128 bits aleatorios en Base32 de Crockford, 26 caracteres en mayúsculas sin guiones; el primero va de 0 a 7 porque 26 × 5 = 130 bits. Distinto del UID; el servidor solo guarda su hash (y solo el del último emitido por UID). La web normaliza (mayúsculas, sin espacios ni guiones, I y L → 1, O → 0) antes de enviarlo.",
       "type": "string",
       "pattern": "^[0-7][0-9A-HJKMNP-TV-Z]{25}$"
     },

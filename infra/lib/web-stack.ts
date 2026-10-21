@@ -128,13 +128,13 @@ export class WebStack extends Stack {
       originSslProtocols: [OriginSslPolicy.TLS_V1_2],
     });
 
-    // Solo lo que necesita el borrado por web: el cuerpo JSON y la IP real del visitante para el
-    // límite por IP de F2-8 (detrás de CloudFront, sourceIp en API Gateway es la del edge). Sin Host,
-    // cookies ni query.
+    // Solo lo que necesita el borrado por web: el cuerpo JSON. Sin Host, cookies, query ni
+    // CloudFront-Viewer-Address: la API también es accesible directamente y esa cabecera se podría
+    // falsificar, así que no sirve para limitar por IP (pregunta abierta del informe de F2-2).
     const apiRequestPolicy = new OriginRequestPolicy(this, 'ApiOriginRequest', {
       originRequestPolicyName: `${config.prefix}-web-api`,
       comment: 'Borrado por web hacia la API (F1-2).',
-      headerBehavior: OriginRequestHeaderBehavior.allowList('Content-Type', 'CloudFront-Viewer-Address'),
+      headerBehavior: OriginRequestHeaderBehavior.allowList('Content-Type'),
       cookieBehavior: OriginRequestCookieBehavior.none(),
       queryStringBehavior: OriginRequestQueryStringBehavior.none(),
     });

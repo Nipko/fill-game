@@ -19,6 +19,8 @@ export interface AfFunctionProps {
   readonly description: string;
   readonly timeout?: Duration;
   readonly environment?: Record<string, string>;
+  /** Si la función verifica Play o la integridad: solo entonces recibe el verificador falso en dev. */
+  readonly usesPlayVerifier?: boolean;
 }
 
 export class AfFunction extends Construct {
@@ -56,7 +58,7 @@ export class AfFunction extends Construct {
       ...props.environment,
     };
     // Verificador falso de Play e integridad (plan §4): solo en dev. Un test de stacks lo comprueba.
-    if (config.fakePlayVerifier) environment.AF_FAKE_PLAY_VERIFIER = '1';
+    if (config.fakePlayVerifier && props.usesPlayVerifier) environment.AF_FAKE_PLAY_VERIFIER = '1';
 
     this.fn = new NodejsFunction(this, 'Function', {
       functionName,

@@ -1,0 +1,6 @@
+# Salidas locales de infra/ (D-035). node_modules/ también lo ignora la raíz.
+node_modules/
+cdk.out/
+.cdk.staging/
+coverage/
+*.tsbuildinfo

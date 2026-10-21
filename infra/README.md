@@ -101,3 +101,5 @@ Borra los archivos locales al terminar. Mientras las Lambdas sean esqueletos (F2
 ## Prod
 
 Igual que dev con `-c env=prod`, el perfil `af-prod` y la cuenta de prod. En prod las tablas, los buckets, los secretos y los logs se **retienen** al borrar el stack, y `Data` y `Api` tienen protección contra la terminación. El dominio (`-c domain=… -c hostedZoneId=…`) y la web pública solo **tras el dictamen de marca** (D-034, Q-AWS-9; plan F5). El verificador falso de Play no existe en prod (un test lo comprueba).
+
+Las referencias entre stacks son débiles (`Fn::GetStackOutput`, el valor por defecto de esta versión de CDK): CloudFormation no impide borrar `Data` o `Api` aunque otros stacks los usen. En prod lo frenan la retención y la protección contra la terminación; aun así, borra en orden inverso (`Ops`, `Cdn`, `Web`, `Api`, `Data`, `Global`).

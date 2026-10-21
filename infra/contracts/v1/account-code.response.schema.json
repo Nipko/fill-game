@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://contracts.invalid/af/v1/account-code.response.schema.json",
-  "title": "GET /v1/account/code: respuesta 200",
-  "description": "Código de borrado por web del UID (Q-B13-21). Se muestra en Ajustes en lugar del UID.",
+  "title": "POST /v1/account/code: respuesta 200",
+  "description": "Código nuevo de borrado por web del UID (Q-B13-21), que se muestra en Ajustes en lugar del UID. Invalida el anterior: el servidor solo guarda el hash del último [P].",
   "type": "object",
   "additionalProperties": false,
   "required": [
