@@ -98,6 +98,21 @@ namespace AF.Tests.PlayMode
             NoL10SequenceUnlessSet();
             NoContentEndMapUnlessSet();
             NoIdleHintUnlessSet();
+            NoShuffleUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga la Pororoca (bloque B2) si el test no la fijó (<see cref="GameScreen.ShuffleOverride"/> = null): los tests que no
+        /// tratan de ella juegan desde el 30 con la bandeja de antes (sin la ranura Barajar, sus avisos ni la tarjeta del 30), y
+        /// sus capturas como antes. Los que la prueban (<c>ShufflePlayModeTests</c>) la encienden y la vuelven a null en su
+        /// TearDown.
+        /// </summary>
+        public static void NoShuffleUnlessSet()
+        {
+            if (GameScreen.ShuffleOverride == null)
+            {
+                GameScreen.ShuffleOverride = false;
+            }
         }
 
         /// <summary>

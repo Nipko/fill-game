@@ -89,6 +89,7 @@ namespace AF.GameFlow
             }
 
             _attempt.Restore(saved.Level, saved.FailsLevel, relief, null, false, history.ExtraCuiaGifted, history.RevealGifted, history.HintGifted);
+            RestoreShuffle(saved.Level, history, null); // Pororoca (B2): el tope del nivel y la tarjeta del 30
             return true;
         }
 
@@ -137,14 +138,9 @@ namespace AF.GameFlow
             _attempt.Restore(
                 number, saved.FailsLevel, relief, history.Added, history.UndoGiftUsed, history.ExtraCuiaGifted, history.RevealGifted, history.HintGifted);
             var session = new LevelSession(BoardFor(def, relief), GameConfig.FutileRuleEnabled, _pourMode);
-            for (int i = 0; i < history.Sources.Count; i++)
+            if (!ReplaySaved(session, history, saved.Seed)) // los vertidos y, en su sitio, las Pororocas (B2; LevelFlow.Shuffle.cs)
             {
-                int source = history.Sources[i];
-                int target = history.Targets[i];
-                if (source >= session.Current.Count || target >= session.Current.Count || !session.TryPour(source, target, out _))
-                {
-                    return false;
-                }
+                return false;
             }
 
             // 02 R8 y §11 T6: las capas reveladas (R de h2) se restauran tras rehacer los vertidos; las que el historial ya
@@ -172,6 +168,7 @@ namespace AF.GameFlow
             _undo.RestoreFreeLeft(saved.UndoFree);
             ResetStuck();
             _session = session;
+            RestoreShuffle(number, history, session); // Pororoca (B2): tope, tarjeta y el prefijo de V
             _taps.Clear();
             ResetPending();
             _phaseMs = 0;
@@ -298,14 +295,14 @@ namespace AF.GameFlow
                 LevelStateSnapshot.WriteRevealed(session.Initial, session.Current, s.RevealedCuias);
                 LevelStateSnapshot.WriteHistory(
                     _historyBuilder, phase, _attempt.Added, _attempt.UndoGiftUsed, _attempt.ExtraCuiaGifted, session, _balsaShown, _attempt.RevealGifted,
-                    _attempt.HintGifted);
+                    _attempt.HintGifted, ShuffleHistoryPrefix, _shufflesUsed, _shuffleCardShown);
             }
             else
             {
                 s.RevealedCuias.Clear();
                 LevelStateSnapshot.WriteHistory(
                     _historyBuilder, phase, Array.Empty<AddedCuiaKind>(), false, _attempt.ExtraCuiaGifted, null, revealGifted: _attempt.RevealGifted,
-                    hintGifted: _attempt.HintGifted);
+                    hintGifted: _attempt.HintGifted, shufflesUsed: _shufflesUsed, shuffleCardShown: _shuffleCardShown);
             }
 
             s.History = _historyBuilder.ToString();

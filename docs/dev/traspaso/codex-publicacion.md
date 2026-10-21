@@ -17,6 +17,9 @@ Este documento es todo lo que necesitas para empezar. Si algo no está aquí ni 
 ## 2. Qué haces tú (Codex) y qué no
 
 ### 2.1 Tu trabajo
+
+> **Nota del integrador (2026-10-20): ya hay borradores del equipo Spark.** Antes de que el dueño te pasara B13, el Spark lo hizo en `spark/t5-b13` (revisado y aprobado por su code-reviewer) y ya está integrado en `integracion-fase1-fase2`. Son: `docs/store-listing/` (`README.md` con las preguntas Q-B13-1..23 y sus recomendadas, `es-419/ficha.md`, `en/ficha.md`, `pt-BR/ficha.md`, `data-safety.md`, `iarc.md`, `privacidad.md`, `eliminar-cuenta.md`, `app-ads.txt`, `assets-tienda.md`, `creditos.md` y `strings-creditos.csv`), `LICENSES.md` en la raíz y `docs/qa/regresion-release.md` (60 casos). **Tu trabajo en los puntos 2, 3, 4, 6, 7, 9 y 10 es revisarlos, completarlos y moverlos a las rutas de `docs/publicacion/` de abajo (con `git mv`, para conservar la historia) donde difieran, sin rehacerlos desde cero.** `LICENSES.md` y `docs/qa/regresion-release.md` ya están en su sitio. Conserva las preguntas abiertas del README del Spark y su numeración (no las vuelvas a preguntar con otro número). Lo que falta del todo: la guía de Play Console (1), los términos de uso (4), la web (5) y los productos de compra (8).
+
 Todo es **documentación y borradores** para que el dueño los revise y los use en Play Console y en la web:
 
 1. **Guía paso a paso de Play Console** (`docs/publicacion/play-console-guia.md`): los 23 pasos de 08 §13.1, con qué se hace en cada pantalla, qué datos se meten, **quién lo hace** (el dueño o el agente) y qué bloquea cada uno (sección 3). Incluye el registro de la cuenta de desarrollador.

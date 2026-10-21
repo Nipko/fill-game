@@ -36,7 +36,7 @@ La raíz **es** el proyecto Unity; Unity solo importa `Assets/` y `Packages/`.
 - `.claude/`: `agents/` (7 subagentes), `rules/` (reglas por ruta), `skills/` (`unity-cli`, `unity-pipeline`), `settings.json` (permisos aprobados por el dueño el 2026-10-06; el 2026-10-09 pasó todas las reglas «ask» a «allow» para trabajar sin avisos: solo quedan las «deny». Las reglas duras de este archivo siguen valiendo aunque nada pida confirmación).
 - **Pendiente (no crear a mano):**
   - `.github/workflows/`: s30 y s32;
-  - `functions/`: Cloud Functions, más adelante.
+  - `infra/`: backend en AWS (D-035; CDK v2 en TypeScript, las 5 funciones con DynamoDB, la web y el CDN), según `docs/dev/plan-backend-aws.md`. Los agentes solo validan sin credenciales (`npm ci`, lint, typecheck, tests, `cdk synth`); despliega el dueño. Firebase se queda con Auth anónimo, Analytics, Crashlytics y Remote Config.
 - Estructura de `Assets/_Project/`: GDD 08 §3, con `Scripts/Core` y `Scripts/Solver` sustituidos por el paquete.
 
 ## Comandos de verificación (obligatorios antes de dar una tarea por terminada)
@@ -57,8 +57,8 @@ python tools/river-map/geometry.py --check            # cuando exista
 python -m unittest discover -s tools/river-map -p "test_*.py"
 python docs/research/mapa-del-rio/generar_mapa.py --check
 pwsh -NoProfile -File scripts/unity-compile.ps1       # ¿compila Unity? errores: solo las 30 primeras líneas "error CS"
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 3.367 hoy en integracion-fase1-fase2 (3.364 + 3 omitidos); dotnet test: 981 (975 + 6 omitidos)
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.655 (1.425 + 230 explícitos: capturas y los 16 KnownIssue de FX16a); antes de cada PR que toque Unity
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 3.538 hoy en integra/spark-t5b (3.535 + 3 omitidos; con B6, B3 y B2 del Spark); dotnet test: 1.002 (996 + 6 omitidos)
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.703 (1.466 + 237 explícitos: capturas y los 16 KnownIssue de FX16a); antes de cada PR que toque Unity
                                                       # tarda 30-40 min: el límite por defecto en PlayMode es -TimeoutSec 3600 (a 900 s no da veredicto)
 ```
 - Las pruebas de `tools/` van como fixtures (`tools/level-generator/specs/tests/`, `tools/level-qa/fixtures/`) y como un modo `--self-test` en la propia herramienta; `tools/river-map/` suma sus `test_*.py` (unittest). No hay proyectos de tests de `tools/` en `dotnet/AmazonFill.slnx`.

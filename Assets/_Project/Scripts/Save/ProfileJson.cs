@@ -176,6 +176,18 @@ namespace AF.Save
             settings.Set("language", JsonNode.FromString(p.Settings.Language));
             settings.Set("sloth_messages", JsonNode.FromBool(p.Settings.SlothMessages));
             settings.Set("idle_hint", JsonNode.FromBool(p.Settings.IdleHint));
+            if (!p.Settings.Push.IsDefault)
+            {
+                // B6: settings.push (08 §4.3) solo cuando deja su default, para no cambiar los perfiles que aún no lo usan.
+                PushSettingsData push = p.Settings.Push;
+                JsonNode pushNode = JsonNode.NewObject();
+                pushNode.Set("pre_prompt_shown", JsonNode.FromBool(push.PrePromptShown));
+                pushNode.Set("granted", JsonNode.FromBool(push.Granted));
+                pushNode.Set("pre_prompt_at", Timestamp(push.PrePromptAt));
+                pushNode.Set("second_prompt_shown", JsonNode.FromBool(push.SecondPromptShown));
+                settings.Set("push", pushNode);
+            }
+
             root.Set("settings", settings);
 
             JsonNode lastLine = JsonNode.NewArray();
@@ -201,6 +213,16 @@ namespace AF.Save
             stats.Set("rescues", JsonNode.FromInt(p.Stats.Rescues));
             stats.Set("rv_watched", JsonNode.FromInt(p.Stats.RvWatched));
             stats.Set("sessions", JsonNode.FromInt(p.Stats.Sessions));
+            if (p.Stats.LastSeenAt.HasValue)
+            {
+                stats.Set("last_seen_at", Timestamp(p.Stats.LastSeenAt)); // B6 [P]
+            }
+
+            if (p.Stats.LastWinAt.HasValue)
+            {
+                stats.Set("last_win_at", Timestamp(p.Stats.LastWinAt)); // B6 [P]
+            }
+
             root.Set("stats", stats);
 
             JsonNode sighted = JsonNode.NewArray();
@@ -362,6 +384,8 @@ namespace AF.Save
                 t.Rescues = ReadInt(stats, "rescues", t.Rescues);
                 t.RvWatched = ReadInt(stats, "rv_watched", t.RvWatched);
                 t.Sessions = ReadInt(stats, "sessions", t.Sessions);
+                t.LastSeenAt = TolerantTimestamp(stats, "last_seen_at"); // B6 [P]: una hora mal escrita no hace corrupto el perfil
+                t.LastWinAt = TolerantTimestamp(stats, "last_win_at");
             }
 
             JsonNode? fauna = TolerantSection(root, "fauna");
@@ -584,6 +608,14 @@ namespace AF.Save
             s.Haptics = TolerantBool(node, "haptics", s.Haptics);
             s.SlothMessages = TolerantBool(node, "sloth_messages", s.SlothMessages);
             s.IdleHint = TolerantBool(node, "idle_hint", s.IdleHint);
+            JsonNode? push = TolerantSection(node, "push");
+            if (push != null)
+            {
+                s.Push.PrePromptShown = TolerantBool(push, "pre_prompt_shown", s.Push.PrePromptShown);
+                s.Push.Granted = TolerantBool(push, "granted", s.Push.Granted);
+                s.Push.PrePromptAt = TolerantTimestamp(push, "pre_prompt_at");
+                s.Push.SecondPromptShown = TolerantBool(push, "second_prompt_shown", s.Push.SecondPromptShown);
+            }
         }
 
         private static void ReadSloth(JsonNode node, SlothData s)
@@ -847,6 +879,25 @@ namespace AF.Save
         {
             JsonNode? node = parent.Get(key);
             return node != null && node.Kind == JsonKind.String ? node.AsString() : null;
+        }
+
+        /// <summary>Hora <paramref name="key"/>, o null si falta, es null o está mal escrita (sin error; B6).</summary>
+        private static DateTime? TolerantTimestamp(JsonNode parent, string key)
+        {
+            string? text = TolerantString(parent, key);
+            if (text == null)
+            {
+                return null;
+            }
+
+            try
+            {
+                return ParseTimestamp(text);
+            }
+            catch (FormatException)
+            {
+                return null;
+            }
         }
 
         private static bool TryInt(JsonNode node, out int value)

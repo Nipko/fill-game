@@ -26,7 +26,7 @@ namespace AF.UI
         /// <summary>[Pista · Morpho] (MO2).</summary>
         Hint = 2,
 
-        /// <summary>[Barajar · Pororoca]: aún no está en el cliente (tanda siguiente); su hueco ya está en el orden.</summary>
+        /// <summary>[Barajar · Pororoca] desde el nivel 30 (bloque B2; 04 §2.4).</summary>
         Shuffle = 3,
 
         /// <summary>[Revelar · Luciérnaga]: solo en niveles con ocultas, siempre la última.</summary>
@@ -207,6 +207,7 @@ namespace AF.UI
         private readonly Slot _undo;
         private readonly Slot _extra;
         private readonly Slot _hint;
+        private readonly Slot _shuffle;
         private readonly Slot _reveal;
         private readonly Slot[] _order;
         private readonly Slot[] _activeBuf = new Slot[5];
@@ -218,6 +219,8 @@ namespace AF.UI
         private GameServices? _services;
         private Action? _onReveal;
         private Action? _onHint;
+        private Action? _onShuffle;
+        private Slot? _tipSlot;
         private int _key = int.MinValue;
         private int _revealKey = int.MinValue;
         private int _refreshRepaints;
@@ -250,9 +253,11 @@ namespace AF.UI
             _hint = new Slot("HintButton", hud, art, art.IconMorpho, art.IconMorphoDisabled, UiText.HintLabel, () => _onHint?.Invoke());
             _hint.GlyphMinTopDp = HintGlyphMinTopDp;
             _hint.SetActive(false);
+            _shuffle = new Slot("ShuffleButton", hud, art, art.IconWave, art.IconWaveDisabled, ShuffleText.Label, () => _onShuffle?.Invoke());
+            _shuffle.SetActive(false);
             _reveal = new Slot("RevealButton", hud, art, art.IconFirefly, art.IconFireflyDisabled, UiText.RevealLabel, () => _onReveal?.Invoke());
             _reveal.SetActive(false);
-            _order = new[] { _undo, _extra, _hint, _reveal }; // 07 §7.4, sin Pororoca (TraySlot.Shuffle) todavía
+            _order = new[] { _undo, _extra, _hint, _shuffle, _reveal }; // 07 §7.4: Marea, Cuia extra, Pista, Pororoca (B2) y Revelar
 
             // Globo de Pista sin hint_supported (04 §2.3 b): placa clara con texto de tinta, sobre la ranura; no captura toques.
             _tip = UiBuilder.Rect("HintTooltip", hud);
@@ -308,7 +313,8 @@ namespace AF.UI
 
         /// <summary>Ranuras que existen ahora, como máscara de bits de <see cref="TraySlot"/> (tests).</summary>
         public int ActiveMask => (_undo.Active ? 1 << (int)TraySlot.Undo : 0) | (_extra.Active ? 1 << (int)TraySlot.ExtraCuia : 0)
-            | (_hint.Active ? 1 << (int)TraySlot.Hint : 0) | (_reveal.Active ? 1 << (int)TraySlot.Reveal : 0);
+            | (_hint.Active ? 1 << (int)TraySlot.Hint : 0) | (_shuffle.Active ? 1 << (int)TraySlot.Shuffle : 0)
+            | (_reveal.Active ? 1 << (int)TraySlot.Reveal : 0);
 
         /// <summary>Botón de Marea.</summary>
         public Button UndoButton => _undo.Parts.Button;
@@ -384,6 +390,33 @@ namespace AF.UI
 
         /// <summary>La ranura de Revelar existe en el nivel (<see cref="SetRevealVisible"/>).</summary>
         public bool RevealShown => _reveal.Active;
+
+        /// <summary>Botón Barajar · Pororoca (bloque B2).</summary>
+        public Button ShuffleButton => _shuffle.Parts.Button;
+
+        /// <summary>La ranura de la Pororoca existe (desde el nivel 30).</summary>
+        public bool ShuffleShown => _shuffle.Active;
+
+        /// <summary>Insignias de la Pororoca (el «+N» del stock).</summary>
+        public string ShuffleBadgeText => _shuffle.BadgeText;
+
+        /// <summary>Precio que enseña la ranura de la Pororoca (0 sin precio).</summary>
+        public int ShufflePriceShown => _shuffle.PriceShown;
+
+        /// <summary>La ranura de la Pororoca enseña «Te faltan {n}».</summary>
+        public bool ShuffleShowsMissing => _shuffle.MissingShown;
+
+        /// <summary>Texto de «Te faltan {n}» de la Pororoca (vacío si no se ve).</summary>
+        public string ShuffleMissingText => _shuffle.MissingText;
+
+        /// <summary>Placa de «Te faltan {n}» de la Pororoca.</summary>
+        public RectTransform ShuffleMissingRect => _shuffle.MissingRect;
+
+        /// <summary>La ranura de la Pororoca se ve habilitada.</summary>
+        public bool ShuffleLooksEnabled => _shuffle.Parts.Relief.Interactable;
+
+        /// <summary>Etiqueta de la ranura de la Pororoca.</summary>
+        public TextMeshProUGUI ShuffleLabel => _shuffle.Label;
 
         /// <summary>Ranuras visibles.</summary>
         public int SlotCount => _slots;
@@ -575,6 +608,7 @@ namespace AF.UI
             _undo.MinMissingTop(ref top);
             _extra.MinMissingTop(ref top);
             _hint.MinMissingTop(ref top);
+            _shuffle.MinMissingTop(ref top);
             _reveal.MinMissingTop(ref top);
             if (_tip.gameObject.activeInHierarchy)
             {
@@ -614,13 +648,14 @@ namespace AF.UI
             if (_tip.gameObject.activeSelf)
             {
                 _tipMs -= dtMs;
-                if (_tipMs <= 0f || !_hint.Parts.Button.gameObject.activeInHierarchy)
+                if (_tipMs <= 0f || !(_tipSlot ?? _hint).Parts.Button.gameObject.activeInHierarchy)
                 {
                     HideHintTooltip();
                 }
             }
 
             _hint.TickMissingPulse(dtMs);
+            _shuffle.TickMissingPulse(dtMs);
             _reveal.TickMissingPulse(dtMs);
         }
 
@@ -654,6 +689,7 @@ namespace AF.UI
             }
 
             string text = UiText.HintUnsupported;
+            _tipSlot = _hint;
             _tipText.text = text;
             _tipMs = NoticeTiming.ReadMs(text.Length);
             _tip.gameObject.SetActive(true);
@@ -661,6 +697,41 @@ namespace AF.UI
             PlaceHintTooltip();
             return true;
         }
+
+        /// <summary>Acción del botón Barajar (la pone <c>GameScreen.Shuffle.cs</c>; bloque B2).</summary>
+        public void SetShuffleAction(Action onShuffle)
+        {
+            _onShuffle = onShuffle ?? throw new ArgumentNullException(nameof(onShuffle));
+        }
+
+        /// <summary>
+        /// El mismo globo que Pista, sobre la ranura de la Pororoca, con <paramref name="text"/> (04 §2.4 b: «Hay poca agua libre
+        /// para la ola»; bloque B2). False si la ranura no se ve.
+        /// </summary>
+        public bool ShowShuffleTooltip(string text)
+        {
+            if (!_shuffle.Active || !_shuffle.Parts.Button.gameObject.activeInHierarchy)
+            {
+                return false;
+            }
+
+            _tipSlot = _shuffle;
+            _tipText.text = text;
+            _tipMs = NoticeTiming.ReadMs(text.Length);
+            _tip.gameObject.SetActive(true);
+            _tip.SetAsLastSibling();
+            PlaceHintTooltip();
+            return true;
+        }
+
+        /// <summary>Late la burbuja «Te faltan {n}» de la Pororoca, como la de Pista (bloque B2). Sin asignaciones.</summary>
+        public bool PulseShuffleMissing(int missing, bool reduceMotion)
+        {
+            return _shuffle.PulseMissing(missing, reduceMotion);
+        }
+
+        /// <summary>Texto del globo a la vista (vacío si no se ve; tests).</summary>
+        public string TooltipText => _tip.gameObject.activeSelf ? _tipText.text : string.Empty;
 
         /// <summary>Oculta el globo de Pista.</summary>
         public void HideHintTooltip()
@@ -693,7 +764,7 @@ namespace AF.UI
             float textH = Mathf.Ceil(_tipText.GetPreferredValues(_tipText.text, textW, float.PositiveInfinity).y);
             float w = textW + (2f * TooltipPadXDp);
             float h = textH + (2f * TooltipPadYDp);
-            var slot = (RectTransform)_hint.Parts.Button.transform;
+            var slot = (RectTransform)(_tipSlot ?? _hint).Parts.Button.transform;
             float slotX = slot.anchoredPosition.x;
             float slotTop = -slot.anchoredPosition.y;
             float x = Mathf.Clamp(slotX + ((_slotW - w) * 0.5f), TrayEdgeDp, _canvasW - TrayEdgeDp - w);
@@ -704,6 +775,7 @@ namespace AF.UI
             _undo.MinMissingTop(ref bubbles);
             _extra.MinMissingTop(ref bubbles);
             _hint.MinMissingTop(ref bubbles);
+            _shuffle.MinMissingTop(ref bubbles);
             _reveal.MinMissingTop(ref bubbles);
             if (!float.IsPositiveInfinity(bubbles))
             {
@@ -875,6 +947,7 @@ namespace AF.UI
             _undo.SetVisible(visible);
             _extra.SetVisible(visible);
             _hint.SetVisible(visible);
+            _shuffle.SetVisible(visible);
             _reveal.SetVisible(visible);
         }
 
@@ -1006,6 +1079,7 @@ namespace AF.UI
             UndoStatus undo = flow.UndoStatus;
             ExtraCuiaOffer extra = flow.ExtraCuia;
             HintOffer hint = flow.Hint;
+            ShuffleOffer shuffle = flow.Shuffle;
             bool video = UndoVideo(undo);
             int seeds = Math.Max(0, (_services?.Wallet.Seeds ?? 0) - Math.Max(0, seedsPending));
             bool hintVideo = HintVideo(hint, seeds);
@@ -1013,7 +1087,7 @@ namespace AF.UI
             int key = Hash(undo.Unlimited ? 1 : 0, undo.FreeLeft, undo.Stock, video ? 1 : 0, undoEnabled ? 1 : 0, (int)extra.State, extra.Stock, extra.Missing, seeds);
 
             // Pista (MO2): estado, stock, precio y video; nunca los ms del enfriamiento, que cambian en cada fotograma.
-            key = Hash(key, (int)hint.State, hint.Stock, hint.Price, hintVideo ? 1 : 0, 0, 0, 0, 0);
+            key = Hash(key, (int)hint.State, hint.Stock, hint.Price, hintVideo ? 1 : 0, (int)shuffle.State, shuffle.Stock, shuffle.Price, 0);
             if (key == _key)
             {
                 return;
@@ -1023,11 +1097,13 @@ namespace AF.UI
             _refreshRepaints++;
             bool showExtra = extra.State != ExtraCuiaState.Hidden;
             bool showHint = hint.State != HintState.Hidden;
-            if (showExtra != _extra.Active || showHint != _hint.Active)
+            bool showShuffle = shuffle.Shown && GameScreen.ShuffleOverride != false; // sin ella en los tests que no la tratan
+            if (showExtra != _extra.Active || showHint != _hint.Active || showShuffle != _shuffle.Active)
             {
                 _extra.SetActive(showExtra);
                 _hint.SetActive(showHint);
-                if (!showHint)
+                _shuffle.SetActive(showShuffle);
+                if (!showHint || !showShuffle)
                 {
                     HideHintTooltip();
                 }
@@ -1099,7 +1175,40 @@ namespace AF.UI
                 PaintHint(hint, seeds, hintVideo);
             }
 
+            if (showShuffle)
+            {
+                PaintShuffle(shuffle, seeds);
+            }
+
             LayoutMissing();
+        }
+
+        // Pororoca · Barajar (bloque B2; 04 §2.4; 04 §1.1: el stock se gasta antes que las semillas): lista, «+N» con stock o el
+        // precio (300), en rojo con «Te faltan {n}» sin saldo; gris y sin precio si ya se usó en el nivel o hoy, fuera de PLAYING
+        // (también en el modal de bloqueo) o con poca agua, con el stock si lo hay. Con poca agua o con Lluvia o Piraña el toque
+        // llega (el globo de 04 §2.4 b), como Pista sin hint_supported.
+        private void PaintShuffle(ShuffleOffer offer, int seeds)
+        {
+            bool ready = offer.State == ShuffleState.Ready;
+            bool explain = offer.State == ShuffleState.LowWater || offer.State == ShuffleState.Unsupported;
+            UiBuilder.SetEnabled(_shuffle.Parts.Button, ready);
+            if (explain)
+            {
+                _shuffle.Parts.Button.interactable = true; // gris, pero el toque enseña el globo
+            }
+
+            if (!ready || offer.Stock > 0)
+            {
+                _shuffle.ShowBadge(null, false);
+                _shuffle.ShowStockBadge(offer.Stock);
+                _shuffle.HidePrice();
+            }
+            else
+            {
+                _shuffle.ShowBadge(null, false);
+                _shuffle.ShowStockBadge(0);
+                _shuffle.ShowPrice(offer.Price, Math.Max(0, offer.Price - seeds));
+            }
         }
 
         // Pista · Morpho (04 §2.3; 04 §1.1: el stock se gasta antes que las semillas): lista (o pensando), «+N» con stock; si no, el
