@@ -46,4 +46,21 @@ describe('loadConfig', () => {
     const c = loadConfig(ctx({ env: 'prod', domain: 'Example.com', hostedZoneId: 'Z0123456789ABCDEFGHIJ' }));
     expect(c.domain).toEqual({ name: 'example.com', hostedZoneId: 'Z0123456789ABCDEFGHIJ' });
   });
+
+  it('paquete de Play: provisional en dev, solo por contexto en prod y nunca el provisional (regla 6)', () => {
+    expect(loadConfig(ctx({ env: 'dev' })).packageName).toBe('com.amazonfill.dev');
+    expect(loadConfig(ctx({ env: 'prod' })).packageName).toBeUndefined();
+    expect(() => loadConfig(ctx({ env: 'prod', packageName: 'com.amazonfill.dev' }))).toThrow(/provisional/);
+    expect(loadConfig(ctx({ env: 'prod', packageName: 'com.estudio.juego' })).packageName).toBe('com.estudio.juego');
+    expect(() => loadConfig(ctx({ env: 'dev', packageName: 'no valido' }))).toThrow(/applicationId/);
+  });
+
+  it('ids de app de Firebase para App Check: opcionales y validados', () => {
+    expect(loadConfig(ctx({ env: 'dev' })).firebaseAppIds).toEqual([]);
+    expect(loadConfig(ctx({ env: 'dev', firebaseAppIds: '1:123:android:abcdef, 1:123:android:0123456789' })).firebaseAppIds).toEqual([
+      '1:123:android:abcdef',
+      '1:123:android:0123456789',
+    ]);
+    expect(() => loadConfig(ctx({ env: 'dev', firebaseAppIds: 'amazon-fill-dev' }))).toThrow(/firebaseAppIds/);
+  });
 });

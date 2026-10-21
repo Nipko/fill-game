@@ -89,10 +89,14 @@ export class AfFunction extends Construct {
     });
   }
 
-  /** Permite acciones concretas de DynamoDB sobre una tabla y, si se piden, sobre índices concretos. */
-  grantTable(table: ITableV2, actions: string[], indexNames: string[] = []): void {
-    const resources = [table.tableArn, ...indexNames.map((i) => `${table.tableArn}/index/${i}`)];
-    this.role.addToPolicy(new PolicyStatement({ actions, resources }));
+  /** Permite acciones concretas de DynamoDB sobre una tabla (solo la tabla, no sus índices). */
+  grantTable(table: ITableV2, actions: string[]): void {
+    this.role.addToPolicy(new PolicyStatement({ actions, resources: [table.tableArn] }));
+  }
+
+  /** Permite acciones concretas (p. ej. Query) sobre un índice concreto, no sobre la tabla. */
+  grantIndex(table: ITableV2, indexName: string, actions: string[]): void {
+    this.role.addToPolicy(new PolicyStatement({ actions, resources: [`${table.tableArn}/index/${indexName}`] }));
   }
 
   /** Lectura de un secreto (solo `GetSecretValue` de ese ARN). */

@@ -35,6 +35,16 @@ export interface AfConfig {
   readonly domain?: DomainConfig;
   /** Id del proyecto de Firebase: emisor y audiencia del JWT de Firebase Auth. */
   readonly firebaseProjectId: string;
+  /**
+   * Ids de las apps de Firebase (`1:<número>:android:<hash>`) admitidos en el token de App Check (Q-AWS-4).
+   * Opcional: sin ellos vale cualquier app del proyecto.
+   */
+  readonly firebaseAppIds: readonly string[];
+  /**
+   * Paquete de la app en Google Play (applicationId). En dev, el provisional `com.amazonfill.dev`; en prod solo por
+   * contexto (`-c packageName`) tras el dictamen de marca (regla 6 de CLAUDE.md) y nunca el provisional.
+   */
+  readonly packageName?: string;
   /** Correo para alarmas y avisos de presupuesto, solo por contexto. */
   readonly alertEmail?: string;
   /** Presupuesto mensual en USD (Q-AWS-6). */
@@ -64,6 +74,10 @@ const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const DOMAIN_RE = /^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const ZONE_RE = /^Z[A-Z0-9]{5,32}$/;
 const FIREBASE_PROJECT_RE = /^[a-z][a-z0-9-]{4,28}[a-z0-9]$/;
+const FIREBASE_APP_ID_RE = /^1:\d{1,20}:android:[0-9a-f]{6,64}$/;
+const PACKAGE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
+/** applicationId provisional de los builds de prueba (CLAUDE.md, regla 6): nunca en prod. */
+export const DEV_PACKAGE_NAME = 'com.amazonfill.dev';
 
 /** Lector mínimo del contexto de CDK (para poder probar `loadConfig` sin una App). */
 export interface ContextReader {
@@ -81,7 +95,7 @@ function str(ctx: ContextReader, key: string): string | undefined {
  * Lee la configuración del entorno desde el contexto de CDK.
  *
  * Contexto admitido: `env` (obligatorio: dev | prod), `account`, `alertEmail`, `firebaseProjectId`,
- * `domain` y `hostedZoneId` (los dos o ninguno).
+ * `firebaseAppIds` (separados por comas), `packageName`, `domain` y `hostedZoneId` (los dos o ninguno).
  */
 export function loadConfig(ctx: ContextReader): AfConfig {
   const envRaw = str(ctx, 'env');
@@ -104,6 +118,19 @@ export function loadConfig(ctx: ContextReader): AfConfig {
   const firebaseProjectId = str(ctx, 'firebaseProjectId') ?? DEFAULT_FIREBASE_PROJECT[envName];
   if (!FIREBASE_PROJECT_RE.test(firebaseProjectId)) {
     throw new Error('El contexto "firebaseProjectId" no es un id de proyecto de Firebase válido.');
+  }
+
+  const firebaseAppIds = (str(ctx, 'firebaseAppIds') ?? '').split(',').map((a) => a.trim()).filter(Boolean);
+  for (const a of firebaseAppIds) {
+    if (!FIREBASE_APP_ID_RE.test(a)) throw new Error('El contexto "firebaseAppIds" debe ser una lista de ids de app Android de Firebase.');
+  }
+
+  const packageName = str(ctx, 'packageName') ?? (isProd ? undefined : DEV_PACKAGE_NAME);
+  if (packageName !== undefined) {
+    if (!PACKAGE_RE.test(packageName)) throw new Error('El contexto "packageName" no es un applicationId válido.');
+    if (isProd && packageName === DEV_PACKAGE_NAME) {
+      throw new Error(`"${DEV_PACKAGE_NAME}" es provisional y no puede llegar a prod (CLAUDE.md, regla 6).`);
+    }
   }
 
   const domainName = str(ctx, 'domain')?.toLowerCase();
@@ -131,6 +158,8 @@ export function loadConfig(ctx: ContextReader): AfConfig {
     account,
     domain,
     firebaseProjectId,
+    firebaseAppIds,
+    packageName,
     alertEmail,
     budgetUsd: isProd ? 50 : 10,
     budgetThresholdsPct: [50, 80, 100],

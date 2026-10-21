@@ -13,7 +13,29 @@ function roleStatements(json: Record<string, unknown>, functionLogicalPrefix: st
     .flatMap(([, p]) => (p.PolicyDocument as { Statement: Statement[] }).Statement);
 }
 
-const actionsOf = (st: Statement[]): string[] => st.flatMap((s) => (Array.isArray(s.Action) ? s.Action : [s.Action])).sort();
+/** Etiqueta legible de un recurso de IAM: tabla (o tabla/índice), secreto o log group. */
+function labelOf(resource: unknown): string {
+  const text = JSON.stringify(resource);
+  const table = /PublishOutputFnGetAtt([A-Za-z]+?)[0-9A-F]{8}Arn/.exec(text);
+  if (table) return text.includes('/index/by_uid') ? `${table[1]}/by_uid` : table[1];
+  const secret = /"Ref":"(PlayServiceAccount|FirebaseAdmin|MaxSsvKey)[0-9A-F]{8}"/.exec(text);
+  if (secret) return `secret:${secret[1]}`;
+  if (/Logs[0-9A-F]{8}/.test(text)) return 'logs';
+  return text;
+}
+
+/** Acciones concedidas por recurso. */
+function grantsOf(st: Statement[]): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const s of st) {
+    const actions = Array.isArray(s.Action) ? s.Action : [s.Action];
+    for (const r of Array.isArray(s.Resource) ? s.Resource : [s.Resource]) {
+      const k = labelOf(r);
+      out[k] = [...new Set([...(out[k] ?? []), ...actions])].sort();
+    }
+  }
+  return out;
+}
 
 describe.each([
   ['dev', DEV],
@@ -108,17 +130,59 @@ describe.each([
     }
   });
 
-  it('cada función solo tiene lo suyo', () => {
-    expect(actionsOf(roleStatements(json, 'RestoreLedger'))).toEqual(
-      ['dynamodb:GetItem', 'dynamodb:Query', 'logs:CreateLogStream', 'logs:PutLogEvents'],
-    );
-    const rest = JSON.stringify(roleStatements(json, 'RestoreLedger'));
-    expect(rest).not.toMatch(/secretsmanager/);
-    expect(actionsOf(roleStatements(json, 'RewardedSsv'))).toEqual(
-      ['dynamodb:PutItem', 'dynamodb:UpdateItem', 'logs:CreateLogStream', 'logs:PutLogEvents', 'secretsmanager:GetSecretValue'],
-    );
+  it('cada función solo tiene lo suyo: acciones exactas por tabla, índice y secreto (F2-3 a F2-8)', () => {
+    const expected: Record<string, Record<string, string[]>> = {
+      VerifyPurchase: {
+        Purchases: ['dynamodb:GetItem', 'dynamodb:PutItem'],
+        Integrity: ['dynamodb:GetItem', 'dynamodb:PutItem'],
+        RateLimits: ['dynamodb:PutItem'],
+        'secret:PlayServiceAccount': ['secretsmanager:GetSecretValue'],
+      },
+      RestoreLedger: {
+        'Purchases/by_uid': ['dynamodb:Query'],
+        Rewards: ['dynamodb:BatchGetItem'],
+      },
+      RewardedSsv: {
+        Rewards: ['dynamodb:PutItem'],
+        RateLimits: ['dynamodb:UpdateItem'],
+        'secret:MaxSsvKey': ['secretsmanager:GetSecretValue'],
+      },
+      DeleteAccount: {
+        'Purchases/by_uid': ['dynamodb:Query'],
+        Purchases: ['dynamodb:UpdateItem'],
+        'Rewards/by_uid': ['dynamodb:Query'],
+        Rewards: ['dynamodb:DeleteItem'],
+        Integrity: ['dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:PutItem'],
+        'AccountCodes/by_uid': ['dynamodb:Query'],
+        AccountCodes: ['dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:PutItem'],
+        RateLimits: ['dynamodb:PutItem', 'dynamodb:UpdateItem'],
+        'secret:FirebaseAdmin': ['secretsmanager:GetSecretValue'],
+      },
+      VoidedPurchasesJob: {
+        Purchases: ['dynamodb:UpdateItem'],
+        Jobs: ['dynamodb:GetItem', 'dynamodb:PutItem'],
+        'secret:PlayServiceAccount': ['secretsmanager:GetSecretValue'],
+      },
+    };
+    for (const [fn, want] of Object.entries(expected)) {
+      const got = grantsOf(roleStatements(json, fn));
+      const logs = got.logs;
+      delete got.logs;
+      expect(logs, fn).toEqual(['logs:CreateLogStream', 'logs:PutLogEvents']);
+      expect(got, fn).toEqual(Object.fromEntries(Object.entries(want).map(([k, v]) => [k, [...v].sort()])));
+    }
     // Ninguna función puede hacer Scan, BatchWriteItem ni borrar tablas.
     expect(JSON.stringify(json)).not.toMatch(/dynamodb:(Scan|BatchWriteItem|DeleteTable|\*)/);
+  });
+
+  it(`paquete de Play: ${envName === 'prod' ? 'sin valor en prod hasta el dictamen' : 'el provisional en dev'}`, () => {
+    for (const [, p] of resourcesOfType(json, 'AWS::Lambda::Function')) {
+      const vars = ((p.Environment as { Variables?: Record<string, string> } | undefined)?.Variables) ?? {};
+      const usesPlay = ['verify-purchase', 'voided-purchases-job'].some((n) => p.FunctionName === `af-${envName}-${n}`);
+      if (envName === 'dev' && usesPlay) expect(vars.AF_PACKAGE_NAME).toBe('com.amazonfill.dev');
+      else expect(vars).not.toHaveProperty('AF_PACKAGE_NAME');
+    }
+    if (envName === 'prod') expect(JSON.stringify(json)).not.toContain('com.amazonfill.dev');
   });
 
   it('job diario a las 03:00 UTC con reintentos y DLQ cifrada', () => {
