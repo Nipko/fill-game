@@ -94,3 +94,12 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - Bootstrap en ambas regiones de dev, diff y deploy siguen pendientes. Sin recursos desplegados ni cambios en `infra/`.
 
 - Acceso SSO completado correctamente. Verificados ambos perfiles con STS: cada uno coincide con su cuenta esperada y utiliza el rol de Identity Center autorizado. No se imprimieron identificadores ni ARNs. La sesión compartida permite acceder a ambos perfiles; no se usaron claves IAM.
+
+### Bootstrap dev completado y diff revisado — 2026-10-21
+
+- El dueño confirmó crear el bootstrap exclusivamente en dev, en `sa-east-1` y `us-east-1`, tras revisar los recursos, permisos y posible coste.
+- Ejecutado bootstrap estándar de CDK mediante `af-dev` en ambas regiones. Comprobado `CDKToolkit` en estado `CREATE_COMPLETE` en las dos. Sin cuentas de confianza adicionales para despliegue ni consultas; rol de ejecución con la política administrativa estándar previamente confirmada. Sin bootstrap en prod o gestión.
+- Ejecutado `cdk diff` con `env=dev`, cuenta explícita y destinatario de avisos autorizado (el de af-owner). `--no-change-set` evitó crear un change set; ensamblado, plantillas y salida privada guardados fuera del repositorio. Salida 0 y diferencias en los seis stacks esperados. Sin deploy.
+- Observación para el integrador: la CLI instalada de CDK avisa que `diff --all` es una opción desconocida y la ignora; aun así revisó los seis stacks. No se modificó `infra/`.
+- Hallazgo previo al despliegue: la ficha de Identity Center de af-owner muestra `Dispositivos MFA (0)` y correo sin verificar, pese al MFA informado por el dueño. Hay una sesión SSO activa y ambos perfiles funcionan, pero falta resolver y comprobar el MFA propio de af-owner antes de desplegar. El MFA de root, si fue el registrado, es independiente.
+- El diff añade el presupuesto mensual de 10 USD, datos, API con funciones de esqueleto, web, CDN y alarmas. Presupuesto, suscripción SNS y pruebas de servicios siguen pendientes del deploy y de la autorización expresa del dueño.
