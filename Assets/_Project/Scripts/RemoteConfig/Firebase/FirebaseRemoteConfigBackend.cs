@@ -78,12 +78,24 @@ namespace AF.RemoteConfig.Firebase
                     return;
                 }
 
-                FetchFromFirebase(onDone);
+                try
+                {
+                    FetchFromFirebase(onDone);
+                }
+                catch (Exception)
+                {
+                    Done(null, onDone); // una excepción síncrona del SDK no deja la descarga colgada
+                }
             });
         }
 
         private void Done(IReadOnlyDictionary<string, string>? values, Action<IReadOnlyDictionary<string, string>?>? onDone)
         {
+            if (!_fetching)
+            {
+                return; // ya se respondió (onDone, una sola vez)
+            }
+
             _fetching = false;
             if (values != null)
             {
@@ -116,23 +128,13 @@ namespace AF.RemoteConfig.Firebase
 
         private void FetchFromFirebase(Action<IReadOnlyDictionary<string, string>?> onDone)
         {
-            FirebaseRemoteConfig rc;
-            try
-            {
-                rc = FirebaseRemoteConfig.DefaultInstance;
-            }
-            catch (Exception)
-            {
-                Done(null, onDone);
-                return;
-            }
-
+            FirebaseRemoteConfig rc = FirebaseRemoteConfig.DefaultInstance;
             var settings = new ConfigSettings
             {
                 MinimumFetchIntervalInMilliseconds = (ulong)RemoteConfigService.MinFetchInterval.TotalMilliseconds,
                 FetchTimeoutInMilliseconds = FirebaseRemoteConfig.DefaultTimeoutInMilliseconds,
             };
-            rc.SetConfigSettingsAsync(settings).ContinueWithOnMainThread(configured =>
+            rc.SetConfigSettingsAsync(settings).ContinueWithOnMainThread(configured => Step(onDone, () =>
             {
                 if (configured.IsFaulted || configured.IsCanceled)
                 {
@@ -146,7 +148,7 @@ namespace AF.RemoteConfig.Firebase
                     return;
                 }
 
-                rc.SetDefaultsAsync(DefaultsFor(_defaults)).ContinueWithOnMainThread(withDefaults =>
+                rc.SetDefaultsAsync(DefaultsFor(_defaults)).ContinueWithOnMainThread(withDefaults => Step(onDone, () =>
                 {
                     if (withDefaults.IsFaulted || withDefaults.IsCanceled)
                     {
@@ -156,13 +158,13 @@ namespace AF.RemoteConfig.Firebase
 
                     _defaultsSet = true;
                     FetchAndActivate(rc, onDone);
-                });
-            });
+                }));
+            }));
         }
 
         private void FetchAndActivate(FirebaseRemoteConfig rc, Action<IReadOnlyDictionary<string, string>?> onDone)
         {
-            rc.FetchAsync().ContinueWithOnMainThread(fetched =>
+            rc.FetchAsync().ContinueWithOnMainThread(fetched => Step(onDone, () =>
             {
                 if (fetched.IsFaulted || fetched.IsCanceled)
                 {
@@ -170,7 +172,7 @@ namespace AF.RemoteConfig.Firebase
                     return;
                 }
 
-                rc.ActivateAsync().ContinueWithOnMainThread(activated =>
+                rc.ActivateAsync().ContinueWithOnMainThread(activated => Step(onDone, () =>
                 {
                     if (activated.IsFaulted || activated.IsCanceled)
                     {
@@ -188,8 +190,21 @@ namespace AF.RemoteConfig.Firebase
                     }
 
                     Done(values, onDone);
-                });
-            });
+                }));
+            }));
+        }
+
+        // Cada paso de la cadena: una excepción del SDK responde null (una sola vez) y no deja la descarga colgada.
+        private void Step(Action<IReadOnlyDictionary<string, string>?> onDone, Action body)
+        {
+            try
+            {
+                body();
+            }
+            catch (Exception)
+            {
+                Done(null, onDone);
+            }
         }
 #else
         private void FetchFromFirebase(Action<IReadOnlyDictionary<string, string>?> onDone)

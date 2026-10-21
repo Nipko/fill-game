@@ -16,7 +16,7 @@ Estado: 2026-10-21. Decisión: D-039 (integración del Firebase Unity SDK 13.17.
 
 Sin Functions ni Firestore (D-035). Los `.tgz` están en `Packages/firebase/` con Git LFS (`.gitattributes`) y se referencian con `file:` en `Packages/manifest.json`; sus SHA-256 están en D-039. `Packages/packages-lock.json` lo regenera Unity.
 
-**Gradle.** EDM4U añade las bibliotecas Android al build parcheando las plantillas de Gradle de `Assets/Plugins/Android/` (`mainTemplate.gradle`, `settingsTemplate.gradle` y `gradleTemplate.properties`, copiadas sin cambios de las de 6000.3.25f1). Las bibliotecas (`firebase-analytics`, `firebase-auth`, `firebase-appcheck-playintegrity`, `firebase-crashlytics-ndk`, `firebase-config`…) las descarga Gradle de Google Maven en el build, como el resto del build de Android.
+**Gradle.** EDM4U añade las bibliotecas Android al build parcheando las plantillas de Gradle de `Assets/Plugins/Android/` (`mainTemplate.gradle`, `settingsTemplate.gradle` y `gradleTemplate.properties`, copiadas de las de 6000.3.25f1 y parcheadas por EDM4U en sus bloques «Android Resolver … Start/End»). Las bibliotecas (`firebase-analytics`, `firebase-auth`, `firebase-appcheck-playintegrity`, `firebase-crashlytics-ndk`, `firebase-config`…) las descarga Gradle de Google Maven en el build, como el resto del build de Android.
 
 ## 2. Dónde va `google-services.json` (lo coloca el dueño)
 
@@ -24,7 +24,7 @@ Regla dura 5: **ningún agente lo lee, lo crea, lo imprime ni lo commitea.**
 
 - Ruta: **`Assets/_LocalSecrets/google-services.json`** (el de la app `com.amazonfill.dev` del proyecto `fill-dev-e75a2`; D-035).
 - Lo cubren en `.gitignore` las reglas `/[Aa]ssets/_LocalSecrets/` y `/[Aa]ssets/_LocalSecrets.meta` (después de la regla que versiona los `.meta`, para que ganen), además de la regla general `google-services.json`. Compruébalo con `git check-ignore -v Assets/_LocalSecrets/google-services.json`.
-- El editor de Firebase lo convierte en cada build en `Assets/Plugins/Android/FirebaseApp.androidlib/` (recursos con las claves del proyecto), también ignorado. Crashlytics deja su id de build en `Assets/Plugins/Android/FirebaseCrashlytics.androidlib/` (ignorado). EDM4U puede crear `Assets/GeneratedLocalRepo/` (ignorado).
+- El editor de Firebase lo convierte en cada build en `Assets/Plugins/Android/FirebaseApp.androidlib/` (recursos con las claves del proyecto) y en la copia de escritorio `Assets/StreamingAssets/google-services-desktop.json`, las dos ignoradas (con sus `.meta`). Crashlytics deja su id de build en `Assets/Plugins/Android/FirebaseCrashlytics.androidlib/` (ignorado). EDM4U puede crear `Assets/GeneratedLocalRepo/` (ignorado).
 - Prod: no hay proyecto de prod todavía (D-035, «Pendiente para prod»). Un build de release con el de dev no sirve para Play.
 
 ## 3. Qué pasa sin el archivo
@@ -39,7 +39,7 @@ El build de desarrollo **compila y funciona igual que antes de F3-6**:
 ## 4. Con el archivo (build de desarrollo)
 
 - **Backend:** `HttpBackendClient` contra `BackendEndpoints.Dev` (`https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com`; D-035, añadido de F3-1 y F3-2) con el ID token de Firebase Auth anónimo (`FirebaseUser.TokenAsync`) y, en las rutas con `integrity: true`, un token de App Check de uso limitado (`GetLimitedUseAppCheckTokenAsync`). App Check va sin refresco automático.
-- **App Check (D-039, añadido del 2026-10-21):** con `DEVELOPMENT_BUILD` (`BuildDev`), el proveedor de depuración (`DebugAppCheckProviderFactory`, de `firebase-appcheck-debug`, que ya trae Firebase); en release (también el ensayo `-afRehearsal`), Play Integrity. El juego nunca escribe tokens en los logs; el secreto de depuración lo escribe el SDK de Android, y solo en los builds de desarrollo (en release no existe ese proveedor).
+- **App Check (D-039, añadido del 2026-10-21):** con `DEVELOPMENT_BUILD` (`BuildDev`), el proveedor de depuración (`DebugAppCheckProviderFactory`, de `firebase-appcheck-debug`, que ya trae Firebase); en release (también el ensayo `-afRehearsal`), Play Integrity. El juego nunca escribe tokens en los logs; el secreto de depuración lo escribe el SDK de Android, y solo en los builds de desarrollo, que son los únicos que instalan ese proveedor. La biblioteca `firebase-appcheck-debug` sí va en todos los builds (la declara Firebase en `AppCheckDependencies.xml` y EDM4U la añade a `mainTemplate.gradle`), sin usarse en release; excluirla del release es decisión pendiente del dueño.
 
 ### Registrar el token de depuración de App Check (lo hace el dueño, una vez por instalación)
 
