@@ -1,0 +1,136 @@
+diff --git a/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs b/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs
+index d7823dd3..efe1d74c 100644
+--- a/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs
++++ b/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs
+@@ -13,7 +13,7 @@ namespace AF.RemoteConfig.Binding
+     /// <summary>
+     /// Las clases de cifras del cliente leídas de Remote Config (bloque B7; nota <c>docs/dev/remote-config-analytics.md</c> §2):
+     /// cada propiedad con <c>[RemoteConfigKey]</c> de <see cref="EconomyConfig"/>, <see cref="BoosterConfig"/>,
+-    /// <see cref="AdsConfig"/>, <see cref="StoreConfig"/>, <see cref="DailyChallengeConfig"/>, <see cref="StreakConfig"/>,
++    /// <see cref="AdsConfig"/>, <see cref="StoreConfig"/>, <see cref="OffersConfig"/>, <see cref="DailyChallengeConfig"/>, <see cref="StreakConfig"/>,
+     /// <see cref="BasketConfig"/> y <see cref="ClockSecurityConfig"/> toma el valor de su clave en unos valores congelados
+     /// (<see cref="RcSnapshot"/>). Con los defaults compilados sale exactamente <c>X.Defaults</c> (lo prueba
+     /// <c>RcConfigBinderTests</c>).
+@@ -115,6 +115,17 @@ public static class RcConfigBinder
+             I<StoreConfig>("eco_piggy_cap", (c, v) => c.EcoPiggyCap = v),
+         };
+ 
++        // B5 (ofertas y Cántaro): eco_piggy_cap y eco_piggy_min_buy siguen en StoreConfig.
++        private static readonly Entry<OffersConfig>[] OffersEntries =
++        {
++            J<OffersConfig>("eco_starter_window_levels", (c, j) => c.EcoStarterWindowLevels = Ints(j)),
++            I<OffersConfig>("eco_starter_timer_h", (c, v) => c.EcoStarterTimerH = v),
++            S<OffersConfig>("eco_starter_first_show", (c, v) => c.EcoStarterFirstShow = v),
++            S<OffersConfig>("eco_noads_card_trigger", (c, v) => c.EcoNoadsCardTrigger = v),
++            I<OffersConfig>("eco_piggy_from_level", (c, v) => c.EcoPiggyFromLevel = v),
++            J<OffersConfig>("eco_piggy_fill", (c, j) => c.EcoPiggyFill = Ints(j)),
++        };
++
+         private static readonly Entry<DailyChallengeConfig>[] DailyEntries =
+         {
+             B<DailyChallengeConfig>("biz_feature_daily_challenge", (c, v) => c.BizFeatureDailyChallenge = v),
+@@ -157,6 +168,7 @@ public static class RcConfigBinder
+             { typeof(BoosterConfig), KeysOf(BoosterEntries) },
+             { typeof(AdsConfig), KeysOf(AdsEntries) },
+             { typeof(StoreConfig), KeysOf(StoreEntries) },
++            { typeof(OffersConfig), KeysOf(OffersEntries) },
+             { typeof(DailyChallengeConfig), KeysOf(DailyEntries) },
+             { typeof(StreakConfig), KeysOf(StreakEntries) },
+             { typeof(BasketConfig), KeysOf(BasketEntries) },
+@@ -180,6 +192,7 @@ public static RcConfigs Bind(RcSnapshot rc, string appVersion)
+             BoosterConfig boosters = Fill(new BoosterConfig(), BoosterEntries, rc, errors, c => c.Validate(), () => BoosterConfig.Defaults);
+             AdsConfig ads = Fill(new AdsConfig(), AdsEntries, rc, errors, c => c.Validate(), () => AdsConfig.Defaults);
+             StoreConfig store = Fill(new StoreConfig(), StoreEntries, rc, errors, c => c.Validate(), () => StoreConfig.Defaults);
++            OffersConfig offers = Fill(new OffersConfig(), OffersEntries, rc, errors, c => c.Validate(), () => OffersConfig.Defaults);
+             DailyChallengeConfig daily = Fill(new DailyChallengeConfig(), DailyEntries, rc, errors, c => c.Validate(), () => DailyChallengeConfig.Defaults);
+             StreakConfig streak = Fill(new StreakConfig(), StreakEntries, rc, errors, c => c.Validate(), () => StreakConfig.Defaults);
+             BasketConfig basket = Fill(new BasketConfig(), BasketEntries, rc, errors, c => c.Validate(), () => BasketConfig.Defaults);
+@@ -199,7 +212,7 @@ public static RcConfigs Bind(RcSnapshot rc, string appVersion)
+             {
+                 boosters.RescueMaxPerLevel = 0;
+             }
+-            return new RcConfigs(rc, gates, economy, boosters, ads, store, daily, streak, basket, clock, errors);
++            return new RcConfigs(rc, gates, economy, boosters, ads, store, daily, streak, basket, clock, errors) { Offers = offers };
+         }
+ 
+         /// <summary>Atajo: <see cref="Bind"/> con los valores vigentes de <paramref name="service"/>.</summary>
+@@ -420,6 +433,9 @@ internal RcConfigs(
+         /// <summary>Cifras de la tienda (con <c>biz_iap_enabled</c> combinado).</summary>
+         public StoreConfig Store { get; }
+ 
++        /// <summary>Cifras de las ofertas contextuales y del Cántaro (B5).</summary>
++        public OffersConfig Offers { get; internal set; } = OffersConfig.Defaults;
++
+         /// <summary>Cifras del Reto del río.</summary>
+         public DailyChallengeConfig Daily { get; }
+ 
+diff --git a/Assets/_Project/Scripts/RemoteConfig/Tests/RcConfigBinderTests.cs b/Assets/_Project/Scripts/RemoteConfig/Tests/RcConfigBinderTests.cs
+index caa91dba..b2847772 100644
+--- a/Assets/_Project/Scripts/RemoteConfig/Tests/RcConfigBinderTests.cs
++++ b/Assets/_Project/Scripts/RemoteConfig/Tests/RcConfigBinderTests.cs
+@@ -60,6 +60,7 @@ public void WithTheCompiledDefaults_EveryConfigIsItsDefaults()
+             AssertSame(BoosterConfig.Defaults, c.Boosters);
+             AssertSame(AdsConfig.Defaults, c.Ads);
+             AssertSame(StoreConfig.Defaults, c.Store);
++            AssertSame(OffersConfig.Defaults, c.Offers);
+             AssertSame(DailyChallengeConfig.Defaults, c.Daily);
+             AssertSame(StreakConfig.Defaults, c.Streak);
+             AssertSame(BasketConfig.Defaults, c.Basket);
+@@ -125,6 +126,34 @@ public void RemoteValues_ReachTheirProperties()
+             Assert.That(c.Daily.ClockSecurity.SecClockMaxDriftH, Is.EqualTo(36), "la copia del Reto, con la misma clave");
+         }
+ 
++        [Test]
++        public void TheOffers_ReadTheirKeys_AndAnOutOfRangeValueFallsBackToTheirDefaults()
++        {
++            // B5 (05 §4.1 y §5; 08 §9): la Mochila, Sin anuncios y el Cántaro.
++            RcConfigs c = Bind(
++                "eco_starter_window_levels", "[10,18]",
++                "eco_starter_timer_h", "24",
++                "eco_starter_first_show", "L13_or_session3",
++                "eco_noads_card_trigger", "2_interstitials_or_d3",
++                "eco_piggy_from_level", "25",
++                "eco_piggy_fill", "[10,20,30]");
++            Assert.That(c.Errors, Is.Empty, string.Join(" | ", c.Errors));
++            Assert.That(c.Offers.StarterWindowTo, Is.EqualTo(18));
++            Assert.That(c.Offers.EcoStarterTimerH, Is.EqualTo(24));
++            Assert.That(c.Offers.StarterFirstShow.MinLevel, Is.EqualTo(13));
++            Assert.That(c.Offers.StarterFirstShow.MinSession, Is.EqualTo(3));
++            Assert.That(c.Offers.NoAdsTrigger.Interstitials, Is.EqualTo(2));
++            Assert.That(c.Offers.NoAdsTrigger.Day, Is.EqualTo(3));
++            Assert.That(c.Offers.EcoPiggyFromLevel, Is.EqualTo(25));
++            Assert.That(c.Offers.EcoPiggyFill, Is.EqualTo(new[] { 10, 20, 30 }));
++
++            RcConfigs bad = Bind("eco_piggy_from_level", "40", "eco_starter_timer_h", "24");
++            Assert.That(bad.Offers.EcoPiggyFromLevel, Is.EqualTo(20), "08 §9: 15-30");
++            Assert.That(bad.Offers.EcoStarterTimerH, Is.EqualTo(48), "toda la clase vuelve a sus defaults");
++            Assert.That(bad.Errors.Count, Is.EqualTo(1));
++            StringAssert.StartsWith("OffersConfig:", bad.Errors[0]);
++        }
++
+         [Test]
+         public void AValueThatDoesNotRead_KeepsItsDefault_AndIsReported()
+         {
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.MarketRc.cs b/Assets/_Project/Scripts/UI/GameBootstrap.MarketRc.cs
+new file mode 100644
+index 00000000..d81da2f1
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.MarketRc.cs
+@@ -0,0 +1,17 @@
++#nullable enable
++using AF.IAP;
++
++namespace AF.UI
++{
++    /// <summary>
++    /// Enganche B5-rc (bloque B5): las cifras de las ofertas y del Cántaro (<see cref="OffersConfig"/>) salen de Remote Config, como
++    /// el resto (<c>RcConfigBinder</c>, B7). Implementa el gancho de <c>GameBootstrap.Market.cs</c>.
++    /// </summary>
++    public sealed partial class GameBootstrap
++    {
++        static partial void BoundOffersConfig(ref OffersConfig? config)
++        {
++            config = ActiveRcConfigs?.Offers;
++        }
++    }
++}

@@ -33,6 +33,9 @@ namespace AF.UI
         /// <summary>Hueco entre «Inicio» y el icono del Mercado (dp), como el del Mapa.</summary>
         public const float MarketGapDp = 12f;
 
+        /// <summary>Área táctil mínima (07 §7.8): el icono baja hasta tener 48 dp, como el del Mapa (M3.3).</summary>
+        public const float MinTouchDp = 48f;
+
         /// <summary>Tamaño del Cántaro (dp) [P].</summary>
         public const float PiggyWidthDp = 92f;
 
@@ -119,7 +122,7 @@ namespace AF.UI
             if (marketShown)
             {
                 ToCanvas(homeTab!, out float left, out float top, out float height);
-                UiBuilder.Place((RectTransform)_market.Button.transform, left - MarketGapDp - MarketWidthDp, top, MarketWidthDp, height);
+                UiBuilder.Place((RectTransform)_market.Button.transform, left - MarketGapDp - MarketWidthDp, top, MarketWidthDp, Mathf.Max(MinTouchDp, height));
             }
 
             bool piggyShown = piggy && seeds != null;
