@@ -1,0 +1,1338 @@
+diff --git a/Assets/_Project/Scripts/Save/CloudMerge.Fields.cs b/Assets/_Project/Scripts/Save/CloudMerge.Fields.cs
+new file mode 100644
+index 00000000..54841747
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/CloudMerge.Fields.cs
+@@ -0,0 +1,36 @@
++#nullable enable
++using System;
++
++namespace AF.Save
++{
++    /// <summary>
++    /// Fusión de los campos del perfil que añade el bloque B8 (parche <c>B8-profile.diff</c>; 08 §4.3 y §11), dentro del caso 7 de
++    /// <see cref="CloudMerge"/> (nunca con el caso 8, el de integridad: un blob manipulado no aporta nada):
++    /// <list type="bullet">
++    /// <item><c>applied_purchases</c>: unión (08 §11, <c>merged.applied_purchases = union(...)</c>; ver Q-B8-1 de la nota);</item>
++    /// <item><c>voided_purchases</c> [P]: unión, como <c>applied_purchases</c> (un token retirado en un teléfono no se vuelve a
++    /// retirar en el otro);</item>
++    /// <item><c>pending_rewards</c> [P]: los del ganador (cada provisional va con la cartera en la que entró: revocar uno del
++    /// perdedor restaría algo que el ganador nunca recibió);</item>
++    /// <item><c>integrity.fraud_flag</c> [P]: máximo; <c>device_first</c> y <c>hmac</c>, los del ganador (quien guarda vuelve a
++    /// firmar);</item>
++    /// <item><c>first_app_version</c> y <c>country_first</c> [P]: los del perfil creado antes (<c>created_at</c>), y si ese no los
++    /// tiene, los del otro; <c>locale</c>: el del ganador (se pone al día en cada arranque).</item>
++    /// </list>
++    /// </summary>
++    public static partial class CloudMerge
++    {
++        static partial void MergeAddedFields(Profile merged, Profile winner, Profile loser)
++        {
++            UnionSorted(merged.AppliedPurchases, loser.AppliedPurchases);
++            UnionSorted(merged.VoidedPurchases, loser.VoidedPurchases);
++            merged.Integrity.FraudFlag = Math.Max(merged.Integrity.FraudFlag, loser.Integrity.FraudFlag);
++
++            Profile older = loser.CreatedAt < winner.CreatedAt ? loser : winner;
++            Profile newer = ReferenceEquals(older, winner) ? loser : winner;
++            merged.FirstAppVersion = older.FirstAppVersion ?? newer.FirstAppVersion;
++            merged.CountryFirst = older.CountryFirst ?? newer.CountryFirst;
++            merged.Locale = winner.Locale ?? loser.Locale;
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/Save/CloudMerge.Fields.cs.meta b/Assets/_Project/Scripts/Save/CloudMerge.Fields.cs.meta
+new file mode 100644
+index 00000000..ea18faf2
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/CloudMerge.Fields.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 7625601f1c465234b8ddce4cdd371082
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/Save/CloudSync.cs b/Assets/_Project/Scripts/Save/CloudSync.cs
+new file mode 100644
+index 00000000..fc59dfae
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/CloudSync.cs
+@@ -0,0 +1,222 @@
++#nullable enable
++using System;
++using System.Text;
++using AF.Platform;
++using AF.Save.Json;
++
++namespace AF.Save
++{
++    /// <summary>Lo que dejó <see cref="CloudSync.AtStartup"/>.</summary>
++    public sealed class CloudSyncReport
++    {
++        internal CloudSyncReport(bool ran, CloudSyncResult result, CloudMergeReason? reason, Profile profile, bool replaced,
++            IntegrityStatus localIntegrity, IntegrityStatus? cloudIntegrity, CloudWriteResult? upload, int bytes, string? error)
++        {
++            Ran = ran;
++            Result = result;
++            Reason = reason;
++            Profile = profile;
++            Replaced = replaced;
++            LocalIntegrity = localIntegrity;
++            CloudIntegrity = cloudIntegrity;
++            Upload = upload;
++            Bytes = bytes;
++            Error = error;
++        }
++
++        /// <summary>Hubo sesión y se habló con la nube (si no, nada cambió y no se registra <c>af_save_sync</c>).</summary>
++        public bool Ran { get; }
++
++        /// <summary><c>af_save_sync.result</c>.</summary>
++        public CloudSyncResult Result { get; }
++
++        /// <summary>El caso de <see cref="CloudMerge"/>, o null si no se fusionó (sin sesión o error).</summary>
++        public CloudMergeReason? Reason { get; }
++
++        /// <summary>El perfil con el que seguir: el local (el mismo objeto) o, si <see cref="Replaced"/>, el fusionado.</summary>
++        public Profile Profile { get; }
++
++        /// <summary>El perfil fusionado sustituye al local: quien llama lo guarda en el dispositivo.</summary>
++        public bool Replaced { get; }
++
++        /// <summary>Firma del perfil local.</summary>
++        public IntegrityStatus LocalIntegrity { get; }
++
++        /// <summary>Firma del de la nube, o null si no había.</summary>
++        public IntegrityStatus? CloudIntegrity { get; }
++
++        /// <summary>Resultado de la subida, o null si no hizo falta subir.</summary>
++        public CloudWriteResult? Upload { get; }
++
++        /// <summary>Bytes del blob subido o leído (<c>af_save_sync.bytes</c>).</summary>
++        public int Bytes { get; }
++
++        /// <summary>Qué falló (nube caída, blob ilegible o de una versión más nueva), o null.</summary>
++        public string? Error { get; }
++    }
++
++    /// <summary>
++    /// Sincronización con la nube al arrancar (GDD 08 §11, fila «Nube Android 1.0»: «descarga al arrancar con sesión»; 08 §2.3;
++    /// bloque B8), antes de crear la cartera y los demás servicios, para que el juego empiece ya con el perfil fusionado:
++    /// <list type="number">
++    /// <item>sin sesión: nada (<see cref="CloudSyncReport.Ran"/> = false);</item>
++    /// <item>lee <c>af_main</c>; si falla, sigue el local (<c>failed</c>);</item>
++    /// <item>lee el blob como un perfil (con las migraciones de 08 §4.4); uno más nuevo que la app no se toca ni se pisa
++    /// (<c>failed</c>); uno ilegible se sustituye por el local [P];</item>
++    /// <item>comprueba las dos firmas (<see cref="ProfileIntegrity.Verify"/>) y fusiona (<see cref="CloudMerge.Resolve"/>);</item>
++    /// <item>firma el resultado y, si cambió respecto a la nube, lo sube.</item>
++    /// </list>
++    /// La vuelta a acreditar con <c>restoreLedger</c> tras fusionar (08 §11) llega con Functions; la parte local está en
++    /// <c>AF.Economy.LocalRevocation.ApplyLedger</c>. Las subidas periódicas (cada <c>save_cloud_interval_levels</c> niveles, tras
++    /// cada compra y al pasar a segundo plano) se enganchan con el SDK: <see cref="Upload"/> ya firma y sube.
++    /// </summary>
++    public static class CloudSync
++    {
++        /// <summary>Sincroniza <paramref name="local"/> con <paramref name="cloud"/> y llama a <paramref name="done"/> con el resultado.</summary>
++        /// <param name="localIntegrity">
++        /// La firma del local tal como se leyó del disco (antes de los extras de desarrollo y de cualquier cambio en memoria); null =
++        /// comprobarla ahora. Un perfil migrado al leerlo se pasa como <see cref="IntegrityStatus.Unsigned"/>.
++        /// </param>
++        public static void AtStartup(Profile local, ICloudSave cloud, IDeviceIdentity device, Action<CloudSyncReport> done, IntegrityStatus? localIntegrity = null)
++        {
++            if (local == null)
++            {
++                throw new ArgumentNullException(nameof(local));
++            }
++
++            if (cloud == null)
++            {
++                throw new ArgumentNullException(nameof(cloud));
++            }
++
++            if (device == null)
++            {
++                throw new ArgumentNullException(nameof(device));
++            }
++
++            if (done == null)
++            {
++                throw new ArgumentNullException(nameof(done));
++            }
++
++            IntegrityStatus localStatus = localIntegrity ?? ProfileIntegrity.Verify(local);
++            if (!cloud.HasSession)
++            {
++                done(new CloudSyncReport(false, CloudSyncResult.Ok, null, local, false, localStatus, null, null, 0, null));
++                return;
++            }
++
++            cloud.Load(loaded =>
++            {
++                switch (loaded.Status)
++                {
++                    case CloudLoadStatus.NoSession:
++                        done(new CloudSyncReport(false, CloudSyncResult.Ok, null, local, false, localStatus, null, null, 0, null));
++                        return;
++                    case CloudLoadStatus.Failed:
++                        done(new CloudSyncReport(true, CloudSyncResult.Failed, null, local, false, localStatus, null, null, 0, loaded.Error ?? "la nube no respondió"));
++                        return;
++                }
++
++                Profile? remote = null;
++                IntegrityStatus? remoteIntegrity = null;
++                int readBytes = loaded.Blob?.Length ?? 0;
++                if (loaded.Status == CloudLoadStatus.Loaded)
++                {
++                    BlobRead read = ReadBlob(loaded.Blob!, out remote, out bool migrated, out string? error);
++                    if (read == BlobRead.TooNew)
++                    {
++                        done(new CloudSyncReport(true, CloudSyncResult.Failed, null, local, false, localStatus, null, null, readBytes, error));
++                        return;
++                    }
++
++                    // Migrado, lo firmado ya no es lo que se lee: no se puede comprobar (revisión de B8) [P].
++                    remoteIntegrity = remote == null ? (IntegrityStatus?)null : migrated ? IntegrityStatus.Unsigned : ProfileIntegrity.Verify(remote);
++                }
++
++                CloudMergeResult merge = CloudMerge.Resolve(
++                    local, remote, ProfileIntegrity.IsCoherent(localStatus), remoteIntegrity.HasValue && ProfileIntegrity.IsCoherent(remoteIntegrity.Value));
++                Profile result = merge.LocalChanged ? merge.Merged : local;
++                if (!merge.CloudChanged)
++                {
++                    done(new CloudSyncReport(true, merge.SyncResult, merge.Reason, result, merge.LocalChanged, localStatus, remoteIntegrity, null, readBytes, null));
++                    return;
++                }
++
++                Upload(result, cloud, device, (write, bytes) =>
++                    done(new CloudSyncReport(true, merge.SyncResult, merge.Reason, result, merge.LocalChanged, localStatus, remoteIntegrity, write, bytes, null)));
++            });
++        }
++
++        /// <summary>Firma <paramref name="profile"/> y lo sube a <c>af_main</c>; <paramref name="done"/> recibe el resultado y los bytes.</summary>
++        public static void Upload(Profile profile, ICloudSave cloud, IDeviceIdentity device, Action<CloudWriteResult, int> done)
++        {
++            if (profile == null)
++            {
++                throw new ArgumentNullException(nameof(profile));
++            }
++
++            if (cloud == null)
++            {
++                throw new ArgumentNullException(nameof(cloud));
++            }
++
++            if (done == null)
++            {
++                throw new ArgumentNullException(nameof(done));
++            }
++
++            ProfileIntegrity.Sign(profile, device);
++            byte[] blob = Encoding.UTF8.GetBytes(ProfileJson.Serialize(profile));
++            cloud.Save(blob, write => done(write, blob.Length));
++        }
++
++        private enum BlobRead
++        {
++            Ok,
++            Unreadable,
++            TooNew,
++        }
++
++        // El blob como un perfil del esquema actual (migrado si es de uno anterior). Ilegible: remote = null (se pisa con el local).
++        private static BlobRead ReadBlob(byte[] blob, out Profile? profile, out bool migrated, out string? error)
++        {
++            profile = null;
++            migrated = false;
++            error = null;
++            try
++            {
++                JsonNode root = JsonText.Parse(new UTF8Encoding(false, true).GetString(blob));
++                int schema = ProfileJson.ReadSchema(root);
++                if (schema > Profile.CurrentSchema)
++                {
++                    error = "el perfil de la nube es de un esquema más nuevo (" + schema + ") que esta app";
++                    return BlobRead.TooNew;
++                }
++
++                if (schema < Profile.CurrentSchema)
++                {
++                    ProfileMigrations.Current.Migrate(root, schema);
++                    migrated = true;
++                }
++
++                profile = ProfileJson.FromNode(root);
++                return BlobRead.Ok;
++            }
++            catch (FormatException e)
++            {
++                error = e.Message;
++            }
++            catch (ArgumentException e)
++            {
++                error = e.Message; // UTF-8 mal formado (DecoderFallbackException) y valores fuera de rango
++            }
++            catch (InvalidOperationException e)
++            {
++                error = e.Message;
++            }
++
++            return BlobRead.Unreadable;
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/Save/CloudSync.cs.meta b/Assets/_Project/Scripts/Save/CloudSync.cs.meta
+new file mode 100644
+index 00000000..385e4979
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/CloudSync.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 47985aa1caf4cfb438ec5953f3861b6c
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/Save/Profile.cs b/Assets/_Project/Scripts/Save/Profile.cs
+index a26889f0..23d42adc 100644
+--- a/Assets/_Project/Scripts/Save/Profile.cs
++++ b/Assets/_Project/Scripts/Save/Profile.cs
+@@ -106,6 +106,50 @@ public sealed class Profile
+         /// </summary>
+         public StreakData? Streak { get; set; }
+ 
++        /// <summary>
++        /// <c>first_app_version</c> (08 §4.3; bloque B8): versión de la app con la que se creó el perfil (p. ej. <c>1.0.0</c>), o null
++        /// en un perfil anterior a B8 (no se inventa: queda null). La escribe una vez <see cref="ProfileIdentity.StampFirstRun"/>.
++        /// </summary>
++        public string? FirstAppVersion { get; set; }
++
++        /// <summary>
++        /// <c>locale</c> (08 §4.3; bloque B8): idioma del juego con el que se juega (<c>es-419</c>, <c>pt-BR</c>, <c>en</c>), el de la
++        /// UI resuelto en este arranque [P] (Q-B8-4); null hasta el primer arranque con B8. Lo pone al día
++        /// <see cref="ProfileIdentity.UpdateLocale"/> en cada arranque. No es un ajuste: el ajuste es <c>settings.language</c>.
++        /// </summary>
++        public string? Locale { get; set; }
++
++        /// <summary>
++        /// <c>country_first</c> (08 §4.3; bloque B8): país del primer arranque en ISO 3166-1 alfa-2 (<c>CO</c>), de la región del
++        /// teléfono (Q-T3 (a): la SIM aún no llega al cliente) [P]; null si el teléfono no da región. Se escribe una vez y nunca cambia.
++        /// </summary>
++        public string? CountryFirst { get; set; }
++
++        /// <summary>
++        /// <c>applied_purchases</c> (04 §10.1; 08 §4.3, §10.3 y §11): los <c>purchaseToken</c> ya acreditados en este perfil, en orden
++        /// ordinal y sin repetidos. La cartera no acredita dos veces el mismo token (<c>Transaction.Purchase</c> con token); en la
++        /// fusión con la nube es la unión; tras <c>restoreLedger</c> se vuelve a acreditar todo token del libro mayor que falte aquí.
++        /// Vacía, la clave no se escribe.
++        /// </summary>
++        public List<string> AppliedPurchases { get; } = new List<string>();
++
++        /// <summary>
++        /// <c>voided_purchases</c> [P] (08 §10.1, fila «Compra falsa o recibo reutilizado»: el cliente retira semillas o derechos de
++        /// lo que el libro mayor marca <c>voided</c>): los tokens ya retirados, para no retirarlos dos veces (tampoco tras una fusión,
++        /// que los une). Vacía, la clave no se escribe.
++        /// </summary>
++        public List<string> VoidedPurchases { get; } = new List<string>();
++
++        /// <summary>
++        /// <c>pending_rewards</c> [P] (08 §10.1 y §10.2: concesión provisional de un recompensado hasta que el servidor confirme su
++        /// <c>nonce</c>; sin confirmar en <c>sec_ssv_grace_h</c>, se revoca): lo concedido y aún sin confirmar. Vacía, la clave no se
++        /// escribe. En la 1.0 sin servidor nada se apunta aquí (todo sale confirmado; nota B8 §5).
++        /// </summary>
++        public List<ProvisionalRewardData> PendingRewards { get; } = new List<ProvisionalRewardData>();
++
++        /// <summary><c>integrity</c> (08 §4.3): la firma del perfil, la huella del dispositivo que lo creó y el contador de fraude.</summary>
++        public IntegrityData Integrity { get; } = new IntegrityData();
++
+         /// <summary>
+         /// Perfil de primera ejecución: <c>created_at</c> = ahora, 0 semillas (el GDD no fija otro saldo inicial),
+         /// <paramref name="initialCanoes"/> canoas, stock vacío, sin nivel en curso y el nivel 1 como siguiente
+@@ -692,6 +736,56 @@ public sealed class DailyInProgressData
+         public LevelStateData LevelState { get; set; } = new LevelStateData();
+     }
+ 
++    /// <summary>
++    /// <c>integrity</c> (08 §4.3: <c>{hmac, device_first}</c>; bloque B8). Solo datos: firmar y comprobar es de
++    /// <see cref="ProfileIntegrity"/>. Todo en su default, la clave no se escribe.
++    /// </summary>
++    public sealed class IntegrityData
++    {
++        /// <summary>
++        /// <c>hmac</c>: HMAC-SHA-256 del perfil sin este campo (<see cref="ProfileIntegrity.Sign"/>), en 64 hexadecimales; null si
++        /// nunca se firmó (un perfil anterior a B8).
++        /// </summary>
++        public string? Hmac { get; set; }
++
++        /// <summary>
++        /// <c>device_first</c>: huella del dispositivo que creó el perfil (<see cref="ProfileHmac.DeviceFingerprint"/>, nunca el id en
++        /// claro), de la que sale la clave del HMAC [P] (Q-B8-2); null hasta la primera firma. No cambia al restaurar en otro teléfono.
++        /// </summary>
++        public string? DeviceFirst { get; set; }
++
++        /// <summary>
++        /// <c>fraud_flag</c> [P] (04 §10.2; 08 §10.2: <c>fraud_flag++</c> al revocar una recompensa sin confirmar): cuántas
++        /// revocaciones lleva el perfil. Solo se mide (08 §10.1: sin castigo automático).
++        /// </summary>
++        public int FraudFlag { get; set; }
++
++        /// <summary>Todo en su default (la clave no se escribe).</summary>
++        public bool IsEmpty => Hmac == null && DeviceFirst == null && FraudFlag == 0;
++    }
++
++    /// <summary>
++    /// Elemento de <c>pending_rewards</c> [P] (08 §10.2): una recompensa por anuncio concedida en provisional, con su
++    /// <c>nonce</c>, la ubicación, cuándo se dio y lo que se dio (semillas y comodines), para poder revocarla tal cual.
++    /// </summary>
++    public sealed class ProvisionalRewardData
++    {
++        /// <summary><c>nonce</c>: el de <c>custom_data = placement|nonce</c> (08 §10.2); único.</summary>
++        public string Nonce { get; set; } = "";
++
++        /// <summary><c>placement</c>: la ubicación (<c>rv_undo_refill</c>…).</summary>
++        public string Placement { get; set; } = "";
++
++        /// <summary><c>granted_at</c>: cuándo se concedió (UTC).</summary>
++        public DateTime GrantedAt { get; set; }
++
++        /// <summary><c>seeds</c>: semillas concedidas.</summary>
++        public int Seeds { get; set; }
++
++        /// <summary><c>stock</c>: comodines concedidos, con las claves de <c>stock</c>.</summary>
++        public StockData Stock { get; } = new StockData();
++    }
++
+     /// <summary><c>stats</c> (08 §4.3).</summary>
+     public sealed class StatsData
+     {
+diff --git a/Assets/_Project/Scripts/Save/ProfileIdentity.cs b/Assets/_Project/Scripts/Save/ProfileIdentity.cs
+new file mode 100644
+index 00000000..6e2bfa8a
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/ProfileIdentity.cs
+@@ -0,0 +1,112 @@
++#nullable enable
++using System;
++
++namespace AF.Save
++{
++    /// <summary>
++    /// <c>first_app_version</c>, <c>locale</c> y <c>country_first</c> del perfil (GDD 08 §4.3; bloque B8). Pura: quien llama le da
++    /// la versión de la app (<c>Application.version</c>), el idioma del juego resuelto y la etiqueta del teléfono
++    /// (<c>IDeviceLocale.LanguageTag</c>).
++    /// <list type="bullet">
++    /// <item><see cref="StampFirstRun"/>: solo en un perfil de primera ejecución; <c>first_app_version</c> y <c>country_first</c> no
++    /// se vuelven a escribir nunca (un perfil anterior a B8 los deja en null: no se inventa una versión).</item>
++    /// <item><see cref="UpdateLocale"/>: en cada arranque, el idioma de la UI resuelto [P] (Q-B8-4).</item>
++    /// <item><see cref="CountryFromTag"/>: la región de una etiqueta BCP 47 (<c>es-CO</c> → <c>CO</c>; <c>es-419</c> y <c>es</c> →
++    /// null), en ISO 3166-1 alfa-2 (Q-T3 (a): sin SIM en el cliente, la región del teléfono) [P].</item>
++    /// </list>
++    /// </summary>
++    public static class ProfileIdentity
++    {
++        /// <summary>
++        /// Escribe <c>first_app_version</c> = <paramref name="appVersion"/>, <c>country_first</c> (de <paramref name="deviceTag"/>) y
++        /// <c>locale</c> = <paramref name="gameLocale"/> en un perfil recién creado. Lo ya escrito no se toca. Devuelve si cambió algo.
++        /// </summary>
++        public static bool StampFirstRun(Profile profile, string? appVersion, string? deviceTag, string? gameLocale)
++        {
++            if (profile == null)
++            {
++                throw new ArgumentNullException(nameof(profile));
++            }
++
++            bool changed = false;
++            string? version = Clean(appVersion);
++            if (profile.FirstAppVersion == null && version != null)
++            {
++                profile.FirstAppVersion = version;
++                changed = true;
++            }
++
++            string? country = CountryFromTag(deviceTag);
++            if (profile.CountryFirst == null && country != null)
++            {
++                profile.CountryFirst = country;
++                changed = true;
++            }
++
++            return UpdateLocale(profile, gameLocale) || changed;
++        }
++
++        /// <summary>Pone <c>locale</c> = <paramref name="gameLocale"/> (vacío o null: no cambia). Devuelve si cambió.</summary>
++        public static bool UpdateLocale(Profile profile, string? gameLocale)
++        {
++            if (profile == null)
++            {
++                throw new ArgumentNullException(nameof(profile));
++            }
++
++            string? locale = Clean(gameLocale);
++            if (locale == null || string.Equals(profile.Locale, locale, StringComparison.Ordinal))
++            {
++                return false;
++            }
++
++            profile.Locale = locale;
++            return true;
++        }
++
++        /// <summary>
++        /// Región ISO 3166-1 alfa-2 en mayúsculas de una etiqueta BCP 47 (<c>es-CO</c>, <c>pt_BR</c>, <c>zh-Hant-TW</c> → <c>CO</c>,
++        /// <c>BR</c>, <c>TW</c>), o null si no lleva región de dos letras (<c>es</c>, <c>es-419</c>, <c>""</c>).
++        /// </summary>
++        public static string? CountryFromTag(string? tag)
++        {
++            if (string.IsNullOrEmpty(tag))
++            {
++                return null;
++            }
++
++            string[] parts = tag!.Replace('_', '-').Split('-');
++            for (int i = 1; i < parts.Length; i++)
++            {
++                string part = parts[i];
++                if (part.Length == 2 && IsAsciiLetter(part[0]) && IsAsciiLetter(part[1]))
++                {
++                    return new string(new[] { Upper(part[0]), Upper(part[1]) });
++                }
++            }
++
++            return null;
++        }
++
++        private static string? Clean(string? text)
++        {
++            if (text == null)
++            {
++                return null;
++            }
++
++            string trimmed = text.Trim();
++            return trimmed.Length == 0 ? null : trimmed;
++        }
++
++        private static bool IsAsciiLetter(char c)
++        {
++            return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
++        }
++
++        private static char Upper(char c)
++        {
++            return c >= 'a' && c <= 'z' ? (char)(c - 32) : c;
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/Save/ProfileIdentity.cs.meta b/Assets/_Project/Scripts/Save/ProfileIdentity.cs.meta
+new file mode 100644
+index 00000000..8ad9919b
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/ProfileIdentity.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 85bacd95e7bdf2241a48011bb932efdd
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/Save/ProfileIntegrity.cs b/Assets/_Project/Scripts/Save/ProfileIntegrity.cs
+new file mode 100644
+index 00000000..d5558cfe
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/ProfileIntegrity.cs
+@@ -0,0 +1,116 @@
++#nullable enable
++using System;
++using AF.Platform;
++
++namespace AF.Save
++{
++    /// <summary>Lo que dice la firma de un perfil (<see cref="ProfileIntegrity.Verify"/>).</summary>
++    public enum IntegrityStatus
++    {
++        /// <summary>Cuadra: <c>integrity.hmac</c> es el HMAC del perfil con la clave de su <c>device_first</c>.</summary>
++        Valid = 0,
++
++        /// <summary>Sin firma (perfil anterior a B8, o <c>hmac</c> o <c>device_first</c> ausentes o mal formados).</summary>
++        Unsigned = 1,
++
++        /// <summary>No cuadra: el archivo se cambió fuera del juego (o lo firmó un algoritmo distinto).</summary>
++        Mismatch = 2,
++    }
++
++    /// <summary>
++    /// Firma del perfil (GDD 08 §4.3, <c>integrity</c>; 08 §10.1, fila «Edición del perfil local»: «HMAC con clave derivada del
++    /// dispositivo + <c>economy_ts</c>; en conflicto con la nube gana el blob coherente»; bloque B8). Lo firmado es el JSON del
++    /// perfil (<see cref="ProfileJson.Serialize"/>, determinista) con <c>integrity.hmac</c> = null; la clave sale de
++    /// <c>integrity.device_first</c> (<see cref="ProfileHmac"/>). Disuade la edición a mano; no es seguridad real (08 §10.1) y no
++    /// castiga: un perfil que no cuadra se sigue jugando, solo pierde los conflictos con la nube frente a uno que cuadra
++    /// (<see cref="CloudMerge"/>) y se mide (sonda <c>profile_integrity</c>; <c>payer_class = suspect</c> llega con la analítica).
++    /// </summary>
++    public static class ProfileIntegrity
++    {
++        /// <summary>El texto que se firma: el perfil sin su <c>hmac</c>. No cambia <paramref name="profile"/>.</summary>
++        public static string Payload(Profile profile)
++        {
++            if (profile == null)
++            {
++                throw new ArgumentNullException(nameof(profile));
++            }
++
++            string? hmac = profile.Integrity.Hmac;
++            profile.Integrity.Hmac = null;
++            try
++            {
++                return ProfileJson.Serialize(profile);
++            }
++            finally
++            {
++                profile.Integrity.Hmac = hmac;
++            }
++        }
++
++        /// <summary>
++        /// Firma <paramref name="profile"/>: si aún no tiene <c>device_first</c> (o no es una huella), pone la de
++        /// <paramref name="device"/>; luego escribe <c>integrity.hmac</c>. Un perfil que viene de otro teléfono conserva su
++        /// <c>device_first</c> (la huella del que lo creó) [P].
++        /// </summary>
++        public static void Sign(Profile profile, IDeviceIdentity device)
++        {
++            if (profile == null)
++            {
++                throw new ArgumentNullException(nameof(profile));
++            }
++
++            if (device == null)
++            {
++                throw new ArgumentNullException(nameof(device));
++            }
++
++            if (!ProfileHmac.IsFingerprint(profile.Integrity.DeviceFirst))
++            {
++                profile.Integrity.DeviceFirst = ProfileHmac.DeviceFingerprint(device.DeviceId);
++            }
++
++            profile.Integrity.Hmac = ProfileHmac.Sign(Payload(profile), ProfileHmac.DeriveKey(profile.Integrity.DeviceFirst!));
++        }
++
++        /// <summary>Comprueba la firma de <paramref name="profile"/> sin cambiarlo.</summary>
++        public static IntegrityStatus Verify(Profile profile)
++        {
++            if (profile == null)
++            {
++                throw new ArgumentNullException(nameof(profile));
++            }
++
++            string? hmac = profile.Integrity.Hmac;
++            string? deviceFirst = profile.Integrity.DeviceFirst;
++            if (!ProfileHmac.IsSignature(hmac) || !ProfileHmac.IsFingerprint(deviceFirst))
++            {
++                return IntegrityStatus.Unsigned;
++            }
++
++            string expected = ProfileHmac.Sign(Payload(profile), ProfileHmac.DeriveKey(deviceFirst!));
++            return ProfileHmac.Matches(expected, hmac) ? IntegrityStatus.Valid : IntegrityStatus.Mismatch;
++        }
++
++        /// <summary>
++        /// Coherente para la fusión (08 §10.1): todo salvo una firma que no cuadra (<see cref="IntegrityStatus.Mismatch"/>). Un perfil
++        /// sin firma o migrado (que se comprueba como <see cref="IntegrityStatus.Unsigned"/>: la migración cambia lo firmado) no entra
++        /// en el caso de integridad y sigue las reglas de siempre [P] (Q-B8-5).
++        /// </summary>
++        public static bool IsCoherent(IntegrityStatus status)
++        {
++            return status != IntegrityStatus.Mismatch;
++        }
++
++        /// <summary>Texto de la sonda: <c>valid</c>, <c>unsigned</c> o <c>mismatch</c>.</summary>
++        public static string ToId(IntegrityStatus status)
++        {
++            switch (status)
++            {
++                case IntegrityStatus.Valid: return "valid";
++                case IntegrityStatus.Unsigned: return "unsigned";
++                case IntegrityStatus.Mismatch: return "mismatch";
++                default: throw new ArgumentOutOfRangeException(nameof(status), status, null);
++            }
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/Save/ProfileIntegrity.cs.meta b/Assets/_Project/Scripts/Save/ProfileIntegrity.cs.meta
+new file mode 100644
+index 00000000..314d76b3
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/ProfileIntegrity.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 41251b47012d8a041894c6036fc249e2
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/Save/ProfileJson.cs b/Assets/_Project/Scripts/Save/ProfileJson.cs
+index aac65ecd..be08878e 100644
+--- a/Assets/_Project/Scripts/Save/ProfileJson.cs
++++ b/Assets/_Project/Scripts/Save/ProfileJson.cs
+@@ -210,6 +210,7 @@ internal static JsonNode ToNode(Profile p)
+                 root.Set("daily_challenge", DailyChallengeNode(p.DailyChallenge)); // E4: la clave falta hasta el primer guardado del Reto
+             }
+ 
++            WriteB8(root, p); // B8: identidad, compras, recompensas provisionales e integrity, omitidos en su default
+             return root;
+         }
+ 
+@@ -343,9 +344,153 @@ internal static Profile FromNode(JsonNode root)
+ 
+             JsonNode? dailyChallenge = Section(root, "daily_challenge");
+             p.DailyChallenge = dailyChallenge == null ? null : ReadDailyChallenge(dailyChallenge);
++            ReadB8(root, p);
+             return p;
+         }
+ 
++        // Bloque B8 (08 §4.3): first_app_version, locale y country_first (tolerantes: no son economía; un valor que no es texto
++        // toma null), applied_purchases y voided_purchases (economía: un tipo equivocado es corrupción; se leen en orden ordinal
++        // y sin repetidos), pending_rewards [P] (economía) e integrity (tolerante: una firma ilegible deja el perfil sin firma,
++        // y ProfileIntegrity.Verify lo dirá). Cada clave se omite en su default, así un perfil anterior a B8 se escribe igual.
++        private static void WriteB8(JsonNode root, Profile p)
++        {
++            if (p.FirstAppVersion != null)
++            {
++                root.Set("first_app_version", JsonNode.FromString(p.FirstAppVersion));
++            }
++
++            if (p.Locale != null)
++            {
++                root.Set("locale", JsonNode.FromString(p.Locale));
++            }
++
++            if (p.CountryFirst != null)
++            {
++                root.Set("country_first", JsonNode.FromString(p.CountryFirst));
++            }
++
++            if (p.AppliedPurchases.Count > 0)
++            {
++                root.Set("applied_purchases", StringList(SortedUnique(p.AppliedPurchases)));
++            }
++
++            if (p.VoidedPurchases.Count > 0)
++            {
++                root.Set("voided_purchases", StringList(SortedUnique(p.VoidedPurchases)));
++            }
++
++            if (p.PendingRewards.Count > 0)
++            {
++                JsonNode rewards = JsonNode.NewArray();
++                for (int i = 0; i < p.PendingRewards.Count; i++)
++                {
++                    ProvisionalRewardData r = p.PendingRewards[i];
++                    JsonNode entry = JsonNode.NewObject();
++                    entry.Set("nonce", JsonNode.FromString(r.Nonce));
++                    entry.Set("placement", JsonNode.FromString(r.Placement));
++                    entry.Set("granted_at", Timestamp(r.GrantedAt));
++                    entry.Set("seeds", JsonNode.FromInt(r.Seeds));
++                    JsonNode stock = JsonNode.NewObject();
++                    stock.Set("undo", JsonNode.FromInt(r.Stock.Undo));
++                    stock.Set("hint", JsonNode.FromInt(r.Stock.Hint));
++                    stock.Set("reveal", JsonNode.FromInt(r.Stock.Reveal));
++                    stock.Set("extra_cuia", JsonNode.FromInt(r.Stock.ExtraCuia));
++                    stock.Set("shuffle", JsonNode.FromInt(r.Stock.Shuffle));
++                    entry.Set("stock", stock);
++                    rewards.Add(entry);
++                }
++
++                root.Set("pending_rewards", rewards);
++            }
++
++            if (!p.Integrity.IsEmpty)
++            {
++                JsonNode integrity = JsonNode.NewObject();
++                integrity.Set("hmac", JsonNode.FromString(p.Integrity.Hmac));
++                integrity.Set("device_first", JsonNode.FromString(p.Integrity.DeviceFirst));
++                integrity.Set("fraud_flag", JsonNode.FromInt(p.Integrity.FraudFlag));
++                root.Set("integrity", integrity);
++            }
++        }
++
++        private static void ReadB8(JsonNode root, Profile p)
++        {
++            p.FirstAppVersion = TolerantString(root, "first_app_version");
++            p.Locale = TolerantString(root, "locale");
++            p.CountryFirst = TolerantString(root, "country_first");
++            ReadStringList(root, "applied_purchases", p.AppliedPurchases);
++            Normalize(p.AppliedPurchases);
++            ReadStringList(root, "voided_purchases", p.VoidedPurchases);
++            Normalize(p.VoidedPurchases);
++
++            p.PendingRewards.Clear();
++            JsonNode? rewards = root.Get("pending_rewards");
++            if (rewards != null && !rewards.IsNull)
++            {
++                if (rewards.Kind != JsonKind.Array)
++                {
++                    throw new FormatException("'pending_rewards' debe ser una lista JSON.");
++                }
++
++                IReadOnlyList<JsonNode> items = rewards.Items;
++                for (int i = 0; i < items.Count; i++)
++                {
++                    if (items[i].Kind != JsonKind.Object)
++                    {
++                        throw new FormatException("'pending_rewards' debe ser una lista de objetos.");
++                    }
++
++                    var r = new ProvisionalRewardData();
++                    r.Nonce = ReadString(items[i], "nonce", null) ?? throw new FormatException("'pending_rewards': falta nonce.");
++                    r.Placement = ReadString(items[i], "placement", r.Placement) ?? string.Empty;
++                    r.GrantedAt = ReadTimestamp(items[i], "granted_at") ?? throw new FormatException("'pending_rewards': falta granted_at.");
++                    r.Seeds = ReadInt(items[i], "seeds", r.Seeds);
++                    JsonNode? stock = Section(items[i], "stock");
++                    if (stock != null)
++                    {
++                        r.Stock.Undo = ReadInt(stock, "undo", 0);
++                        r.Stock.Hint = ReadInt(stock, "hint", 0);
++                        r.Stock.Reveal = ReadInt(stock, "reveal", 0);
++                        r.Stock.ExtraCuia = ReadInt(stock, "extra_cuia", 0);
++                        r.Stock.Shuffle = ReadInt(stock, "shuffle", 0);
++                    }
++
++                    p.PendingRewards.Add(r);
++                }
++            }
++
++            JsonNode? integrity = TolerantSection(root, "integrity");
++            if (integrity != null)
++            {
++                p.Integrity.Hmac = TolerantString(integrity, "hmac");
++                p.Integrity.DeviceFirst = TolerantString(integrity, "device_first");
++                p.Integrity.FraudFlag = Math.Max(0, TolerantInt(integrity, "fraud_flag", 0));
++            }
++        }
++
++        // Orden ordinal y sin repetidos (applied_purchases y voided_purchases): la ida y vuelta, y la firma, no dependen del orden.
++        private static List<string> SortedUnique(List<string> values)
++        {
++            var copy = new List<string>(values);
++            Normalize(copy);
++            return copy;
++        }
++
++        private static void Normalize(List<string> values)
++        {
++            values.Sort(StringComparer.Ordinal);
++            int w = 0;
++            for (int r = 0; r < values.Count; r++)
++            {
++                if (w == 0 || !string.Equals(values[r], values[w - 1], StringComparison.Ordinal))
++                {
++                    values[w++] = values[r];
++                }
++            }
++
++            values.RemoveRange(w, values.Count - w);
++        }
++
+         // fauna.sighted (esquema 2; DC15): una entrada que no es un objeto {species_id, level} válido se descarta; si una especie
+         // se repite, gana su nivel más bajo; el orden ordinal lo pone FaunaData.
+         private static void ReadFauna(JsonNode node, FaunaData fauna)
+diff --git a/Assets/_Project/Scripts/Save/SigningProfileStore.cs b/Assets/_Project/Scripts/Save/SigningProfileStore.cs
+new file mode 100644
+index 00000000..febfd4f8
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/SigningProfileStore.cs
+@@ -0,0 +1,100 @@
++#nullable enable
++using System;
++using AF.Platform;
++
++namespace AF.Save
++{
++    /// <summary>
++    /// Almacén que firma el perfil antes de cada escritura (bloque B8; 08 §4.3, <c>integrity.hmac</c>; <see cref="ProfileIntegrity"/>)
++    /// y comprueba la firma al leer (<see cref="LastIntegrity"/>). Envuelve el almacén de verdad sin cambiarlo: <see cref="Wrap"/>
++    /// devuelve un <see cref="IProfileByteStore"/> si el de dentro lo es (así <c>ProfileSaveBatch</c> sigue escribiendo en segundo
++    /// plano: la firma va en <see cref="IProfileByteStore.Serialize"/>, en el hilo principal, y el escritor solo ve bytes). Firmar
++    /// cambia <c>integrity</c> del perfil en memoria (el mismo objeto que guarda el juego), y nada más.
++    /// </summary>
++    public class SigningProfileStore : IProfileStore
++    {
++        private readonly IProfileStore _inner;
++        private readonly IDeviceIdentity _device;
++
++        /// <summary>Envuelve <paramref name="inner"/> con la identidad <paramref name="device"/>.</summary>
++        protected SigningProfileStore(IProfileStore inner, IDeviceIdentity device)
++        {
++            _inner = inner ?? throw new ArgumentNullException(nameof(inner));
++            _device = device ?? throw new ArgumentNullException(nameof(device));
++        }
++
++        /// <summary>El almacén de dentro.</summary>
++        public IProfileStore Inner => _inner;
++
++        /// <summary>Firmas hechas (diagnóstico y tests).</summary>
++        public int SignCount { get; private set; }
++
++        /// <summary>La firma del último perfil leído con <see cref="Load"/>, o null si no se leyó ninguno.</summary>
++        public IntegrityStatus? LastIntegrity { get; private set; }
++
++        /// <summary>
++        /// Envuelve <paramref name="inner"/>: un <see cref="IProfileByteStore"/> si <paramref name="inner"/> lo es, y si no, un
++        /// <see cref="IProfileStore"/>.
++        /// </summary>
++        public static SigningProfileStore Wrap(IProfileStore inner, IDeviceIdentity device)
++        {
++            return inner is IProfileByteStore bytes ? new SigningProfileByteStore(bytes, device) : new SigningProfileStore(inner, device);
++        }
++
++        /// <inheritdoc />
++        public ProfileLoadResult Load()
++        {
++            ProfileLoadResult result = _inner.Load();
++            LastIntegrity = result.Profile == null ? (IntegrityStatus?)null : ProfileIntegrity.Verify(result.Profile);
++            return result;
++        }
++
++        /// <inheritdoc />
++        public void Save(Profile profile)
++        {
++            Sign(profile);
++            _inner.Save(profile);
++        }
++
++        /// <inheritdoc />
++        public void Delete()
++        {
++            _inner.Delete();
++            LastIntegrity = null;
++        }
++
++        /// <summary>Firma <paramref name="profile"/> con la identidad de este almacén.</summary>
++        protected void Sign(Profile profile)
++        {
++            if (profile == null)
++            {
++                throw new ArgumentNullException(nameof(profile));
++            }
++
++            ProfileIntegrity.Sign(profile, _device);
++            SignCount++;
++        }
++
++        private sealed class SigningProfileByteStore : SigningProfileStore, IProfileByteStore
++        {
++            private readonly IProfileByteStore _bytes;
++
++            public SigningProfileByteStore(IProfileByteStore inner, IDeviceIdentity device)
++                : base(inner, device)
++            {
++                _bytes = inner;
++            }
++
++            public byte[] Serialize(Profile profile)
++            {
++                Sign(profile);
++                return _bytes.Serialize(profile);
++            }
++
++            public void WriteBytes(byte[] bytes)
++            {
++                _bytes.WriteBytes(bytes);
++            }
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/Save/SigningProfileStore.cs.meta b/Assets/_Project/Scripts/Save/SigningProfileStore.cs.meta
+new file mode 100644
+index 00000000..5fd9eb6c
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/SigningProfileStore.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: b6c71f9cd1507a3428b889854bbeabcb
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/Save/Tests/ProfileB8Tests.cs b/Assets/_Project/Scripts/Save/Tests/ProfileB8Tests.cs
+new file mode 100644
+index 00000000..c58f00f6
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/Tests/ProfileB8Tests.cs
+@@ -0,0 +1,384 @@
++#nullable enable
++using System;
++using System.IO;
++using System.Text;
++using AF.Platform;
++using NUnit.Framework;
++
++namespace AF.Save.Tests
++{
++    /// <summary>
++    /// Los campos del perfil que añade el bloque B8 (08 §4.3; parche <c>B8-profile.diff</c>): <c>first_app_version</c>,
++    /// <c>locale</c>, <c>country_first</c>, <c>applied_purchases</c>, <c>voided_purchases</c> [P], <c>pending_rewards</c> [P] e
++    /// <c>integrity</c>; la firma (<see cref="ProfileIntegrity"/>, <see cref="SigningProfileStore"/>), la identidad
++    /// (<see cref="ProfileIdentity"/>), su parte de la fusión (<c>CloudMerge.Fields.cs</c>) y la sincronización al arrancar
++    /// (<see cref="CloudSync"/>).
++    /// </summary>
++    public sealed class ProfileB8Tests
++    {
++        private static readonly DateTime T0 = new DateTime(2026, 10, 20, 12, 0, 0, DateTimeKind.Utc);
++        private static readonly IDeviceIdentity PhoneA = new ManualDeviceIdentity("phone-a");
++        private static readonly IDeviceIdentity PhoneB = new ManualDeviceIdentity("phone-b");
++
++        private static Profile Filled()
++        {
++            Profile p = SampleProfiles.Full();
++            p.FirstAppVersion = "1.0.0";
++            p.Locale = "es-419";
++            p.CountryFirst = "CO";
++            p.AppliedPurchases.Add("GPA.3390-b");
++            p.AppliedPurchases.Add("GPA.3312-a");
++            p.VoidedPurchases.Add("GPA.3312-a");
++            var reward = new ProvisionalRewardData { Nonce = "n-1", Placement = "rv_undo_refill", GrantedAt = T0.AddTicks(77), Seeds = 0 };
++            reward.Stock.Undo = 3;
++            p.PendingRewards.Add(reward);
++            p.Integrity.FraudFlag = 2;
++            return p;
++        }
++
++        [Test]
++        public void NewFields_RoundTrip_WithSortedPurchaseLists()
++        {
++            Profile p = Filled();
++            Profile back = ProfileJson.Deserialize(ProfileJson.Serialize(p));
++            Assert.That(back.FirstAppVersion, Is.EqualTo("1.0.0"));
++            Assert.That(back.Locale, Is.EqualTo("es-419"));
++            Assert.That(back.CountryFirst, Is.EqualTo("CO"));
++            Assert.That(back.AppliedPurchases, Is.EqualTo(new[] { "GPA.3312-a", "GPA.3390-b" }), "orden ordinal");
++            Assert.That(back.VoidedPurchases, Is.EqualTo(new[] { "GPA.3312-a" }));
++            Assert.That(back.PendingRewards.Count, Is.EqualTo(1));
++            Assert.That(back.PendingRewards[0].Nonce, Is.EqualTo("n-1"));
++            Assert.That(back.PendingRewards[0].Placement, Is.EqualTo("rv_undo_refill"));
++            Assert.That(back.PendingRewards[0].GrantedAt, Is.EqualTo(T0.AddTicks(77)));
++            Assert.That(back.PendingRewards[0].Stock.Undo, Is.EqualTo(3));
++            Assert.That(back.Integrity.FraudFlag, Is.EqualTo(2));
++            Assert.That(ProfileJson.Serialize(back), Is.EqualTo(ProfileJson.Serialize(p)));
++        }
++
++        [Test]
++        public void NewFields_AreOmittedInTheirDefault_SoAnOldProfileWritesTheSame()
++        {
++            string json = ProfileJson.Serialize(SampleProfiles.Full());
++            foreach (string key in new[] { "first_app_version", "locale", "country_first", "applied_purchases", "voided_purchases", "pending_rewards", "integrity" })
++            {
++                StringAssert.DoesNotContain("\"" + key + "\"", json, key);
++            }
++
++            Profile old = ProfileJson.Deserialize("{\"profile_schema\": 2}");
++            Assert.That(old.FirstAppVersion, Is.Null, "no se inventa una versión");
++            Assert.That(old.AppliedPurchases, Is.Empty);
++            Assert.That(old.Integrity.IsEmpty, Is.True);
++        }
++
++        [Test]
++        public void PurchaseLists_AreEconomy_AWrongTypeIsCorruption_ButIdentityAndIntegrityAreTolerant()
++        {
++            Assert.Throws<FormatException>(() => ProfileJson.Deserialize("{\"profile_schema\": 2, \"applied_purchases\": \"GPA.1\"}"));
++            Assert.Throws<FormatException>(() => ProfileJson.Deserialize("{\"profile_schema\": 2, \"pending_rewards\": [{\"placement\": \"x\"}]}"));
++
++            Profile p = ProfileJson.Deserialize("{\"profile_schema\": 2, \"locale\": 5, \"country_first\": null, \"integrity\": {\"hmac\": 7, \"fraud_flag\": -3}}");
++            Assert.That(p.Locale, Is.Null);
++            Assert.That(p.CountryFirst, Is.Null);
++            Assert.That(p.Integrity.Hmac, Is.Null);
++            Assert.That(p.Integrity.FraudFlag, Is.EqualTo(0));
++            Assert.That(ProfileIntegrity.Verify(p), Is.EqualTo(IntegrityStatus.Unsigned));
++        }
++
++        [Test]
++        public void Sign_ThenVerify_IsValid_AlsoAfterTheJsonRoundTrip_AndOnAnotherPhone()
++        {
++            Profile p = Filled();
++            Assert.That(ProfileIntegrity.Verify(p), Is.EqualTo(IntegrityStatus.Unsigned));
++            ProfileIntegrity.Sign(p, PhoneA);
++            Assert.That(p.Integrity.DeviceFirst, Is.EqualTo(ProfileHmac.DeviceFingerprint("phone-a")));
++            Assert.That(ProfileHmac.IsSignature(p.Integrity.Hmac), Is.True);
++            Assert.That(ProfileIntegrity.Verify(p), Is.EqualTo(IntegrityStatus.Valid));
++
++            Profile back = ProfileJson.Deserialize(ProfileJson.Serialize(p));
++            Assert.That(ProfileIntegrity.Verify(back), Is.EqualTo(IntegrityStatus.Valid), "la ida y vuelta por JSON no cambia lo firmado");
++
++            // Restaurado en otro teléfono: la clave sale de device_first, que no cambia (Q-B8-2 [P]).
++            ProfileIntegrity.Sign(back, PhoneB);
++            Assert.That(back.Integrity.DeviceFirst, Is.EqualTo(ProfileHmac.DeviceFingerprint("phone-a")));
++            Assert.That(ProfileIntegrity.Verify(back), Is.EqualTo(IntegrityStatus.Valid));
++        }
++
++        [Test]
++        public void EditingTheFileByHand_LeavesAMismatch()
++        {
++            Profile p = Filled();
++            ProfileIntegrity.Sign(p, PhoneA);
++            string json = ProfileJson.Serialize(p);
++            Assert.That(json, Does.Contain("\"seeds\": 1240"));
++            Profile edited = ProfileJson.Deserialize(json.Replace("\"seeds\": 1240", "\"seeds\": 999999"));
++            Assert.That(ProfileIntegrity.Verify(edited), Is.EqualTo(IntegrityStatus.Mismatch));
++            Assert.That(ProfileIntegrity.IsCoherent(IntegrityStatus.Mismatch), Is.False);
++            Assert.That(ProfileIntegrity.IsCoherent(IntegrityStatus.Unsigned), Is.True, "[P] Q-B8-5: sin firma (o migrado) sigue las reglas de siempre");
++            Assert.That(ProfileIntegrity.ToId(IntegrityStatus.Mismatch), Is.EqualTo("mismatch"));
++        }
++
++        [Test]
++        public void SigningStore_KeepsTheByteStore_SignsEveryWrite_AndReportsTheIntegrityOnLoad()
++        {
++            string dir = TempDirs.Create();
++            try
++            {
++                var local = new LocalProfileStore(dir);
++                SigningProfileStore store = SigningProfileStore.Wrap(local, PhoneA);
++                Assert.That(store, Is.InstanceOf<IProfileByteStore>(), "el lote sigue escribiendo en segundo plano");
++                Assert.That(store.Inner, Is.SameAs(local));
++
++                Profile p = Filled();
++                store.Save(p);
++                Assert.That(store.SignCount, Is.EqualTo(1));
++                Assert.That(ProfileIntegrity.Verify(p), Is.EqualTo(IntegrityStatus.Valid), "firma el perfil en memoria");
++                store.Load();
++                Assert.That(store.LastIntegrity, Is.EqualTo(IntegrityStatus.Valid));
++
++                p.Wallet.Seeds = 5;
++                byte[] bytes = ((IProfileByteStore)store).Serialize(p);
++                ((IProfileByteStore)store).WriteBytes(bytes);
++                Assert.That(store.SignCount, Is.EqualTo(2), "la firma va en Serialize, en el hilo principal");
++                ProfileLoadResult loaded = store.Load();
++                Assert.That(loaded.Profile!.Wallet.Seeds, Is.EqualTo(5));
++                Assert.That(store.LastIntegrity, Is.EqualTo(IntegrityStatus.Valid));
++
++                string path = Path.Combine(dir, "profile.json");
++                File.WriteAllText(path, File.ReadAllText(path).Replace("\"seeds\": 5", "\"seeds\": 50000"), new UTF8Encoding(false));
++                store.Load();
++                Assert.That(store.LastIntegrity, Is.EqualTo(IntegrityStatus.Mismatch), "editado a mano");
++
++                store.Delete();
++                Assert.That(store.LastIntegrity, Is.Null);
++                Assert.That(store.Load().Status, Is.EqualTo(ProfileLoadStatus.NotFound), "08 §11: borra profile.json y profile.bak");
++            }
++            finally
++            {
++                TempDirs.Delete(dir);
++            }
++        }
++
++        [Test]
++        public void SigningStore_OverAMemoryStore_IsAPlainStore()
++        {
++            var memory = new MemoryProfileStore();
++            SigningProfileStore store = SigningProfileStore.Wrap(memory, PhoneA);
++            Assert.That(store, Is.Not.InstanceOf<IProfileByteStore>());
++            store.Save(Filled());
++            StringAssert.Contains("\"hmac\"", memory.Json);
++        }
++
++        [TestCase("es-CO", "CO")]
++        [TestCase("pt_BR", "BR")]
++        [TestCase("zh-Hant-TW", "TW")]
++        [TestCase("es-co", "CO")]
++        [TestCase("es-419", null)]
++        [TestCase("es", null)]
++        [TestCase("", null)]
++        [TestCase(null, null)]
++        public void CountryFromTag_TakesTheTwoLetterRegion(string? tag, string? country)
++        {
++            Assert.That(ProfileIdentity.CountryFromTag(tag), Is.EqualTo(country));
++        }
++
++        [Test]
++        public void StampFirstRun_WritesOnce_AndLocaleFollowsEachBoot()
++        {
++            Profile p = Profile.CreateNew(new ManualClock(T0), 5);
++            Assert.That(ProfileIdentity.StampFirstRun(p, "1.0.0", "es-CO", "es-419"), Is.True);
++            Assert.That(p.FirstAppVersion, Is.EqualTo("1.0.0"));
++            Assert.That(p.CountryFirst, Is.EqualTo("CO"));
++            Assert.That(p.Locale, Is.EqualTo("es-419"));
++
++            Assert.That(ProfileIdentity.StampFirstRun(p, "1.2.0", "pt-BR", "es-419"), Is.False, "first_app_version y country_first no cambian");
++            Assert.That(p.FirstAppVersion, Is.EqualTo("1.0.0"));
++            Assert.That(p.CountryFirst, Is.EqualTo("CO"));
++
++            Assert.That(ProfileIdentity.UpdateLocale(p, "pt-BR"), Is.True);
++            Assert.That(p.Locale, Is.EqualTo("pt-BR"));
++            Assert.That(ProfileIdentity.UpdateLocale(p, " "), Is.False);
++            Assert.That(p.Locale, Is.EqualTo("pt-BR"));
++        }
++
++        [Test]
++        public void Merge_AppliedAndVoidedPurchases_AreUnions_FraudFlagMax_IdentityFromTheOlderProfile()
++        {
++            Profile local = Profile.CreateNew(new ManualClock(T0), 5);
++            local.Progress.MaxLevel = 70;
++            local.AppliedPurchases.Add("GPA.b");
++            local.Locale = "pt-BR";
++            local.Integrity.FraudFlag = 1;
++            var reward = new ProvisionalRewardData { Nonce = "local", GrantedAt = T0 };
++            local.PendingRewards.Add(reward);
++            Profile cloud = Profile.CreateNew(new ManualClock(T0.AddDays(-30)), 5);
++            cloud.Progress.MaxLevel = 40;
++            cloud.FirstAppVersion = "1.0.0";
++            cloud.CountryFirst = "PE";
++            cloud.AppliedPurchases.Add("GPA.a");
++            cloud.VoidedPurchases.Add("GPA.a");
++            cloud.Integrity.FraudFlag = 3;
++            cloud.PendingRewards.Add(new ProvisionalRewardData { Nonce = "cloud", GrantedAt = T0 });
++
++            Profile m = CloudMerge.Resolve(local, cloud).Merged;
++            Assert.That(m.Progress.MaxLevel, Is.EqualTo(70));
++            Assert.That(m.AppliedPurchases, Is.EqualTo(new[] { "GPA.a", "GPA.b" }), "08 §11: union(...)");
++            Assert.That(m.VoidedPurchases, Is.EqualTo(new[] { "GPA.a" }));
++            Assert.That(m.Integrity.FraudFlag, Is.EqualTo(3));
++            Assert.That(m.PendingRewards.Count, Is.EqualTo(1), "[P]: los provisionales van con su cartera");
++            Assert.That(m.PendingRewards[0].Nonce, Is.EqualTo("local"));
++            Assert.That(m.FirstAppVersion, Is.EqualTo("1.0.0"), "[P]: del perfil creado antes");
++            Assert.That(m.CountryFirst, Is.EqualTo("PE"));
++            Assert.That(m.Locale, Is.EqualTo("pt-BR"), "el del ganador");
++
++            // Con el caso de integridad no se une nada del manipulado.
++            Profile clean = CloudMerge.Resolve(local, cloud, localCoherent: true, cloudCoherent: false).Merged;
++            Assert.That(clean.AppliedPurchases, Is.EqualTo(new[] { "GPA.b" }));
++            Assert.That(clean.Integrity.FraudFlag, Is.EqualTo(1));
++        }
++
++        [Test]
++        public void CloudSync_WithoutSession_DoesNothing()
++        {
++            Profile local = Filled();
++            CloudSyncReport? report = null;
++            CloudSync.AtStartup(local, FakeCloudSave.WithoutSession(), PhoneA, r => report = r);
++            Assert.That(report!.Ran, Is.False);
++            Assert.That(report.Profile, Is.SameAs(local));
++            Assert.That(report.Replaced, Is.False);
++        }
++
++        [Test]
++        public void CloudSync_FirstTime_UploadsTheSignedLocal()
++        {
++            Profile local = Filled();
++            var cloud = new FakeCloudSave();
++            CloudSyncReport? report = null;
++            CloudSync.AtStartup(local, cloud, PhoneA, r => report = r);
++            Assert.That(report!.Ran, Is.True);
++            Assert.That(report.Result, Is.EqualTo(CloudSyncResult.Ok));
++            Assert.That(report.Reason, Is.EqualTo(CloudMergeReason.NoCloud));
++            Assert.That(report.Upload, Is.EqualTo(CloudWriteResult.Ok));
++            Assert.That(report.Bytes, Is.EqualTo(cloud.Blob!.Length));
++            Profile uploaded = ProfileJson.Deserialize(Encoding.UTF8.GetString(cloud.Blob));
++            Assert.That(ProfileIntegrity.Verify(uploaded), Is.EqualTo(IntegrityStatus.Valid));
++        }
++
++        [Test]
++        public void CloudSync_ACloudWithMoreLevels_ReplacesTheLocal()
++        {
++            Profile local = Filled(); // max_level 87
++            ProfileIntegrity.Sign(local, PhoneA);
++            Profile remote = Filled();
++            remote.Progress.MaxLevel = 120;
++            remote.Progress.NextLevel = 121;
++            remote.Wallet.Seeds = 77;
++            ProfileIntegrity.Sign(remote, PhoneB);
++            var cloud = new FakeCloudSave(Encoding.UTF8.GetBytes(ProfileJson.Serialize(remote)));
++
++            CloudSyncReport? report = null;
++            CloudSync.AtStartup(local, cloud, PhoneA, r => report = r);
++            Assert.That(report!.Result, Is.EqualTo(CloudSyncResult.ConflictCloudWon));
++            Assert.That(report.Reason, Is.EqualTo(CloudMergeReason.MaxLevel));
++            Assert.That(report.Replaced, Is.True);
++            Assert.That(report.Profile, Is.Not.SameAs(local));
++            Assert.That(report.Profile.Progress.MaxLevel, Is.EqualTo(120));
++            Assert.That(report.Profile.Wallet.Seeds, Is.EqualTo(77));
++            Assert.That(report.CloudIntegrity, Is.EqualTo(IntegrityStatus.Valid), "firmado en otro teléfono, se comprueba aquí");
++        }
++
++        [Test]
++        public void CloudSync_ATamperedCloud_LosesAgainstTheCoherentLocal()
++        {
++            Profile local = Filled();
++            ProfileIntegrity.Sign(local, PhoneA);
++            Profile remote = Filled();
++            ProfileIntegrity.Sign(remote, PhoneB);
++            string json = ProfileJson.Serialize(remote).Replace("\"max_level\": 87", "\"max_level\": 999");
++            var cloud = new FakeCloudSave(Encoding.UTF8.GetBytes(json));
++
++            CloudSyncReport? report = null;
++            CloudSync.AtStartup(local, cloud, PhoneA, r => report = r);
++            Assert.That(report!.CloudIntegrity, Is.EqualTo(IntegrityStatus.Mismatch));
++            Assert.That(report.Reason, Is.EqualTo(CloudMergeReason.Integrity));
++            Assert.That(report.Result, Is.EqualTo(CloudSyncResult.ConflictLocalWon));
++            Assert.That(report.Profile, Is.SameAs(local));
++            Assert.That(report.Upload, Is.EqualTo(CloudWriteResult.Ok), "la nube se corrige con el local");
++            Assert.That(ProfileJson.Deserialize(Encoding.UTF8.GetString(cloud.Blob!)).Progress.MaxLevel, Is.EqualTo(87));
++        }
++
++        [Test]
++        public void CloudSync_ANewerSchemaInTheCloud_IsNeitherReadNorOverwritten()
++        {
++            byte[] newer = Encoding.UTF8.GetBytes("{\"profile_schema\": 99, \"progress\": {\"max_level\": 500}}");
++            var cloud = new FakeCloudSave(newer);
++            CloudSyncReport? report = null;
++            CloudSync.AtStartup(Filled(), cloud, PhoneA, r => report = r);
++            Assert.That(report!.Result, Is.EqualTo(CloudSyncResult.Failed));
++            Assert.That(report.Error, Does.Contain("99"));
++            Assert.That(cloud.Blob, Is.EqualTo(newer), "08 §4.4: nunca se pisa uno más nuevo");
++            Assert.That(cloud.SaveCount, Is.EqualTo(0));
++        }
++
++        [Test]
++        public void CloudSync_AnUnreadableCloud_IsReplacedByTheLocal_AndAFailedLoadKeepsTheLocal()
++        {
++            var cloud = new FakeCloudSave(new byte[] { 0x7B, 0xFF, 0x00 });
++            CloudSyncReport? report = null;
++            Profile local = Filled();
++            CloudSync.AtStartup(local, cloud, PhoneA, r => report = r);
++            Assert.That(report!.Reason, Is.EqualTo(CloudMergeReason.NoCloud), "[P]: un blob ilegible se trata como sin nube");
++            Assert.That(report.Upload, Is.EqualTo(CloudWriteResult.Ok));
++
++            cloud.FailNext = true;
++            CloudSync.AtStartup(local, cloud, PhoneA, r => report = r);
++            Assert.That(report!.Result, Is.EqualTo(CloudSyncResult.Failed));
++            Assert.That(report.Profile, Is.SameAs(local));
++        }
++
++        [Test]
++        public void CloudSync_ASignedButMigratedCloud_DoesNotLoseByIntegrity()
++        {
++            // Revisión de B8: un blob firmado con un esquema anterior no cuadra tras migrarlo; no debe perder por el caso 8.
++            Profile local = Filled(); // max_level 87
++            ProfileIntegrity.Sign(local, PhoneA);
++            string v1 = "{\"profile_schema\": 1, \"economy_ts\": \"2026-10-20T12:00:00Z\", \"progress\": {\"max_level\": 200, \"next_level\": 201},"
++                + " \"integrity\": {\"hmac\": \"" + new string('a', 64) + "\", \"device_first\": \"" + ProfileHmac.DeviceFingerprint("old") + "\", \"fraud_flag\": 0}}";
++            var cloud = new FakeCloudSave(Encoding.UTF8.GetBytes(v1));
++            CloudSyncReport? report = null;
++            CloudSync.AtStartup(local, cloud, PhoneA, r => report = r);
++            Assert.That(report!.CloudIntegrity, Is.EqualTo(IntegrityStatus.Unsigned), "migrado: no se puede comprobar");
++            Assert.That(report.Reason, Is.EqualTo(CloudMergeReason.MaxLevel));
++            Assert.That(report.Profile.Progress.MaxLevel, Is.EqualTo(200));
++        }
++
++        [Test]
++        public void CloudSync_UsesTheLocalIntegrityItIsGiven()
++        {
++            // El arranque comprueba la firma antes de los extras de desarrollo y se la pasa a la sincronización.
++            Profile local = Filled();
++            ProfileIntegrity.Sign(local, PhoneA);
++            local.Wallet.Seeds = 5; // un cambio en memoria tras leerlo (af_seeds)
++            Profile remote = Filled();
++            remote.Progress.MaxLevel = 10;
++            ProfileIntegrity.Sign(remote, PhoneB);
++            var cloud = new FakeCloudSave(Encoding.UTF8.GetBytes(ProfileJson.Serialize(remote)));
++            CloudSyncReport? report = null;
++            CloudSync.AtStartup(local, cloud, PhoneA, r => report = r, IntegrityStatus.Valid);
++            Assert.That(report!.LocalIntegrity, Is.EqualTo(IntegrityStatus.Valid));
++            Assert.That(report.Reason, Is.EqualTo(CloudMergeReason.MaxLevel));
++        }
++
++        [Test]
++        public void CloudSync_MigratesAnOlderCloudSchema()
++        {
++            // Un blob del esquema 1 (sin fauna) se lee con la migración 1 → 2 (08 §4.4) y gana por nivel.
++            string v1 = "{\"profile_schema\": 1, \"economy_ts\": \"2026-10-20T12:00:00Z\", \"progress\": {\"max_level\": 200, \"next_level\": 201}}";
++            var cloud = new FakeCloudSave(Encoding.UTF8.GetBytes(v1));
++            CloudSyncReport? report = null;
++            CloudSync.AtStartup(Filled(), cloud, PhoneA, r => report = r);
++            Assert.That(report!.Reason, Is.EqualTo(CloudMergeReason.MaxLevel), "los dos sin firma: las reglas de siempre");
++            Assert.That(report.Replaced, Is.True);
++            Assert.That(report.Profile.Progress.MaxLevel, Is.EqualTo(200));
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/Save/Tests/ProfileB8Tests.cs.meta b/Assets/_Project/Scripts/Save/Tests/ProfileB8Tests.cs.meta
+new file mode 100644
+index 00000000..0bcb6311
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/Tests/ProfileB8Tests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 397d867a99f8fde4fa86334b799eb86d
+\ No newline at end of file
