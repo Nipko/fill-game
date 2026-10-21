@@ -3199,3 +3199,11 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Riesgos residuales aceptados** (detalle en `infra/README.md`, «Riesgos residuales conocidos (F2c)»): más de 15 min entre reservar y escribir; borrado de la cuenta durante una compra (queda reconocida sin conceder).
 - **`infra.yml`** sintetiza prod con un id de app de ejemplo, porque prod exige `-c firebaseAppIds` desde F2c.
 - **Sugerencia pendiente** (no afecta al dinero): en `shared/integrity.ts`, una `TransactionConflict` al guardar la caché lanza 500 después de gastar el token de App Check de un solo uso; registrarla y seguir sin guardar.
+
+### D-035, añadido del 2026-10-21: preguntas de F3-1 y F3-2 (cliente AF.Backend), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `backend/f3-1` (revisión APROBADO sobre `a7a1bca`). El dueño puede cambiarlas.
+- **`deferred_ack` (08 §10.3):** al vencer el plazo solo se hace `acknowledge` local más `deferred_ack`; **no se acredita** hasta que el servidor verifique la compra en un `restoreLedger` o en un reintento (el plazo se mide con el reloj del dispositivo, que se puede adelantar). Se corrige 08 §10.3 en F3-3.
+- **URL de la API de dev (F4-2):** se escribe en `BackendEndpoints.Dev` en un commit (la URL de `execute-api` no es secreta).
+- **`biz_backend_enabled` [P]:** se añade a 08 §9 con la integración del GDD y se conecta en F3-3 como interruptor de corte.
+- **Riesgo para F3-3:** comprobar en el dispositivo que `SHA256.Create()` sobrevive al Managed Stripping High; si no, `SHA256Managed` o una entrada de `link.xml`.
