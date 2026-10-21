@@ -16,8 +16,9 @@ namespace AF.Platform
 
         internal ConsentFlags(
             bool decided, bool blocked, AgeBand band, string? profile, bool analytics, bool adsPersonalized, bool childDirected,
-            bool purchasesAllowed, bool purchaseDoubleConfirm, bool playGamesAllowed, bool rcPersonalization)
+            bool purchasesAllowed, bool purchaseDoubleConfirm, bool playGamesAllowed, bool rcPersonalization, bool adsByUmp = false)
         {
+            AdsByUmp = adsByUmp;
             Decided = decided;
             Blocked = blocked;
             Band = band;
@@ -49,8 +50,14 @@ namespace AF.Platform
         /// <summary>La analítica puede recoger (<c>Analytics.SetEnabled(profile.consent.analytics)</c>, 08 §2.3).</summary>
         public bool AnalyticsEnabled { get; }
 
-        /// <summary>Anuncios personalizados; false = <c>npa</c>.</summary>
+        /// <summary>Anuncios personalizados según la pantalla propia; false = <c>npa</c> (salvo con <see cref="AdsByUmp"/>).</summary>
         public bool AdsPersonalized { get; }
+
+        /// <summary>
+        /// Perfil <c>ump</c> con 18+: la personalización de los anuncios la decide el mensaje de UMP (las cadenas TCF que MAX pasa a
+        /// las redes, 08 §7 #2), no la pantalla propia; el juego no fuerza <c>npa</c>.
+        /// </summary>
+        public bool AdsByUmp { get; }
 
         /// <summary><c>TagForChildDirectedTreatment</c> = true (banda &lt;13; 08 §7).</summary>
         public bool ChildDirected { get; }
@@ -148,27 +155,29 @@ namespace AF.Platform
                 default:
                 {
                     bool decided = !NeedsPrompt(record, config);
+                    bool ump = string.Equals(record.Profile, LegalProfiles.Ump, StringComparison.Ordinal);
                     return new ConsentFlags(
                         decided: decided, blocked: false, band: AgeBand.Adult, profile: record.Profile, analytics: decided && record.Analytics,
-                        adsPersonalized: decided && record.AdsPersonalized, childDirected: false, purchasesAllowed: decided,
-                        purchaseDoubleConfirm: false, playGamesAllowed: true, rcPersonalization: decided);
+                        adsPersonalized: decided && !ump && record.AdsPersonalized, childDirected: false, purchasesAllowed: decided,
+                        purchaseDoubleConfirm: false, playGamesAllowed: true, rcPersonalization: decided, adsByUmp: decided && ump);
                 }
             }
         }
 
         /// <summary>
         /// La pantalla de consentimiento propia ofrece la finalidad «Anuncios personalizados»: solo con 18+ (con 13-17 y
-        /// <c>biz_under18_no_personalization</c> no se puede activar) y fuera de UMP (en el EEE, el Reino Unido y Suiza la decide el
-        /// mensaje de UMP que muestra MAX al inicializarse, 08 §7 #2).
+        /// <c>biz_under18_no_personalization</c> no se puede activar), fuera de UMP (en el EEE, el Reino Unido y Suiza la decide el
+        /// mensaje de UMP que muestra MAX al inicializarse, 08 §7 #2) y con el país conocido: sin país (Q-T3 (a), «el tratamiento
+        /// más estricto»), <c>npa</c> sin elección [P] (Q-B12-13).
         /// </summary>
-        public static bool OffersAdsChoice(string profile, AgeBand band, ConsentConfig config)
+        public static bool OffersAdsChoice(string profile, AgeBand band, ConsentConfig config, bool countryKnown = true)
         {
             if (config == null)
             {
                 throw new ArgumentNullException(nameof(config));
             }
 
-            if (string.Equals(profile, LegalProfiles.Ump, StringComparison.Ordinal))
+            if (!countryKnown || string.Equals(profile, LegalProfiles.Ump, StringComparison.Ordinal))
             {
                 return false;
             }

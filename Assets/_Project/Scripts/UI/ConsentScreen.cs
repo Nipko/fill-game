@@ -40,6 +40,9 @@ namespace AF.UI
 
         /// <summary>Línea: con 13-17 no son personalizados.</summary>
         Teen = 2,
+
+        /// <summary>Línea: sin país conocido no son personalizados (Q-T3 (a): el tratamiento más estricto).</summary>
+        Strict = 3,
     }
 
     /// <summary>
@@ -87,11 +90,14 @@ namespace AF.UI
         private readonly TextMeshProUGUI _acceptLabel;
         private readonly Button _save;
         private readonly TextMeshProUGUI _saveLabel;
+        private readonly Button _adsOptions;
+        private readonly TextMeshProUGUI _adsOptionsLabel;
 
         private Action<AgeBand>? _onAge;
         private Action<ConsentAnswer, bool, bool>? _onAnswer;
         private Action? _onClose;
         private Action<bool>? _onConfirm;
+        private Action? _onAdsOptions;
         private bool _closable;
         private ConsentAdsLine _adsMode;
 
@@ -122,6 +128,7 @@ namespace AF.UI
             _reject = ModalKit.Cta("RejectAll", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 18f, () => Answer(ConsentAnswer.RejectAll), out _rejectLabel);
             _accept = ModalKit.Cta("AcceptAll", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 18f, () => Answer(ConsentAnswer.AcceptAll), out _acceptLabel);
             _save = ModalKit.Link("SaveChoice", _panel, string.Empty, () => Answer(ConsentAnswer.Save), out _saveLabel);
+            _adsOptions = ModalKit.Link("AdsOptions", _panel, string.Empty, () => _onAdsOptions?.Invoke(), out _adsOptionsLabel);
             _canvas.Canvas.gameObject.SetActive(false);
         }
 
@@ -184,6 +191,15 @@ namespace AF.UI
 
         public Button SaveButton => _save;
 
+        /// <summary>
+        /// Enlace «Elegir los anuncios en el aviso de Google» (perfil <c>ump</c>, desde Ajustes): vuelve a abrir el mensaje de UMP
+        /// para cambiar o retirar el consentimiento de los anuncios (05 §7: revocación en Ajustes).
+        /// </summary>
+        public Button AdsOptionsButton => _adsOptions;
+
+        /// <summary>Se ve el enlace de las opciones de UMP.</summary>
+        public bool AdsOptionsShown => _adsOptions.gameObject.activeSelf;
+
         /// <summary>«Comprar» en la doble confirmación (el botón de la derecha).</summary>
         public Button ConfirmBuyButton => _accept.Button;
 
@@ -213,13 +229,17 @@ namespace AF.UI
 
         /// <summary>
         /// Pantalla de consentimiento: <paramref name="ads"/> dice cómo sale la línea de los anuncios; lo marcado al abrir,
-        /// <paramref name="analytics"/> y <paramref name="adsPersonalized"/>; con <paramref name="onClose"/>, con la X (Ajustes).
+        /// <paramref name="analytics"/> y <paramref name="adsPersonalized"/>; con <paramref name="onClose"/>, con la X (Ajustes); con
+        /// <paramref name="onAdsOptions"/> y la línea de UMP, la línea es un enlace que vuelve a abrir el mensaje de UMP.
         /// </summary>
-        public void ShowChoices(ConsentAdsLine ads, bool analytics, bool adsPersonalized, Action<ConsentAnswer, bool, bool> onAnswer, Action? onClose = null)
+        public void ShowChoices(
+            ConsentAdsLine ads, bool analytics, bool adsPersonalized, Action<ConsentAnswer, bool, bool> onAnswer, Action? onClose = null,
+            Action? onAdsOptions = null)
         {
             Clear();
             _onAnswer = onAnswer ?? throw new ArgumentNullException(nameof(onAnswer));
             _onClose = onClose;
+            _onAdsOptions = ads == ConsentAdsLine.Ump ? onAdsOptions : null;
             _closable = onClose != null;
             _adsMode = ads;
             View = ConsentView.Choices;
@@ -229,7 +249,8 @@ namespace AF.UI
             _adsToggle.SetSelected(ads == ConsentAdsLine.Toggle && adsPersonalized);
             _analyticsToggle.Bind(ConsentText.T(ConsentText.Keys.PurposeAnalytics), () => _analyticsToggle.SetSelected(!_analyticsToggle.Selected));
             _analyticsToggle.SetSelected(analytics);
-            _adsLine.text = ads == ConsentAdsLine.Ump ? ConsentText.T(ConsentText.Keys.AdsByUmp) : ConsentText.T(ConsentText.Keys.AdsTeen);
+            _adsLine.text = ConsentText.T(AdsLineKey(ads));
+            _adsOptionsLabel.text = ConsentText.T(ConsentText.Keys.AdsUmpOptions);
             _diagnostics.text = ConsentText.T(ConsentText.Keys.Diagnostics);
             _rejectLabel.text = ConsentText.T(ConsentText.Keys.RejectAll);
             _acceptLabel.text = ConsentText.T(ConsentText.Keys.AcceptAll);
@@ -320,6 +341,11 @@ namespace AF.UI
                         Add(ids, rects, "consent_ads", _adsToggle.Button);
                     }
 
+                    if (AdsOptionsShown)
+                    {
+                        Add(ids, rects, "consent_ads_options", _adsOptions);
+                    }
+
                     Add(ids, rects, "consent_analytics", _analyticsToggle.Button);
                     Add(ids, rects, "consent_reject_all", _reject.Button);
                     Add(ids, rects, "consent_accept_all", _accept.Button);
@@ -329,6 +355,16 @@ namespace AF.UI
                     Add(ids, rects, "purchase_confirm_cancel", _reject.Button);
                     Add(ids, rects, "purchase_confirm_buy", _accept.Button);
                     break;
+            }
+        }
+
+        private static string AdsLineKey(ConsentAdsLine ads)
+        {
+            switch (ads)
+            {
+                case ConsentAdsLine.Ump: return ConsentText.Keys.AdsByUmp;
+                case ConsentAdsLine.Strict: return ConsentText.Keys.AdsStrict;
+                default: return ConsentText.Keys.AdsTeen;
             }
         }
 
@@ -343,6 +379,7 @@ namespace AF.UI
             if (View == ConsentView.Confirm)
             {
                 Action<bool>? confirm = _onConfirm;
+                _onConfirm = null;
                 Hide();
                 confirm?.Invoke(answer == ConsentAnswer.AcceptAll);
                 return;
@@ -369,6 +406,7 @@ namespace AF.UI
             if (View == ConsentView.Confirm)
             {
                 Action<bool>? confirm = _onConfirm;
+                _onConfirm = null;
                 Hide();
                 confirm?.Invoke(false);
                 return;
@@ -379,12 +417,17 @@ namespace AF.UI
             onClose?.Invoke();
         }
 
+        // Suelta los avisos de la vista anterior. Una doble confirmación que siga abierta se responde «no» (Cancelar): si otra vista
+        // la tapa, la compra no se queda colgada (IsPurchasing nunca se queda en cierto).
         private void Clear()
         {
+            Action<bool>? pending = _onConfirm;
             _onAge = null;
             _onAnswer = null;
             _onClose = null;
             _onConfirm = null;
+            _onAdsOptions = null;
+            pending?.Invoke(false);
         }
 
         private void Open()
@@ -439,8 +482,10 @@ namespace AF.UI
             }
 
             bool adsToggle = choices && _adsMode == ConsentAdsLine.Toggle;
+            bool adsLink = choices && !adsToggle && _onAdsOptions != null;
             _adsToggle.Button.gameObject.SetActive(adsToggle);
-            _adsLine.gameObject.SetActive(choices && !adsToggle);
+            _adsLine.gameObject.SetActive(choices && !adsToggle && !adsLink);
+            _adsOptions.gameObject.SetActive(adsLink);
             _analyticsToggle.Button.gameObject.SetActive(choices);
             _diagnostics.gameObject.SetActive(choices);
             if (choices)
@@ -449,6 +494,14 @@ namespace AF.UI
                 if (adsToggle)
                 {
                     _adsToggle.Place(16f, y, inner, rowH);
+                    y += rowH + 8f;
+                }
+                else if (adsLink)
+                {
+                    _adsOptionsLabel.fontSizeMax = 16f * Mathf.Max(1f, UiBuilder.TextScale);
+                    _adsOptionsLabel.fontSizeMin = UiBuilder.MinTextSp;
+                    _adsOptionsLabel.textWrappingMode = TextWrappingModes.Normal;
+                    UiBuilder.Place((RectTransform)_adsOptions.transform, 16f, y, inner, rowH);
                     y += rowH + 8f;
                 }
                 else

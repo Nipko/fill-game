@@ -28,12 +28,28 @@ namespace AF.IAP.Tests
         }
 
         [Test]
-        public void WithoutFlags_ItBuysAsBefore()
+        public void WithoutFlags_NothingCanBeBought_FailsClosed()
         {
             var fx = new StoreFixture();
             var store = new ConsentStoreService(fx.Service);
 
-            Assert.That(Buy(store).Status, Is.EqualTo(PurchaseStatus.Purchased));
+            Assert.That(store.IsAvailable, Is.False);
+            Assert.That(Buy(store).Status, Is.EqualTo(PurchaseStatus.StoreUnavailable), "sin decidir, sin compras");
+            Assert.That(fx.Presenter.Presented, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Teen_WhatCannotBeBought_IsNeverConfirmed()
+        {
+            var fx = new StoreFixture();
+            var confirm = new ImmediatePurchaseConfirmation();
+            var store = new ConsentStoreService(fx.Service) { Confirmation = confirm, Precheck = (p, r) => fx.Ledger.CheckPurchasable(p, r) };
+            store.Apply(FlagsFor(AgeBand.Teen));
+            Assert.That(Buy(store, "af_starter").IsPurchased, Is.True);
+            Assert.That(confirm.Asked, Is.EqualTo(1));
+
+            Assert.That(Buy(store, "af_starter").Status, Is.EqualTo(PurchaseStatus.AlreadyOwned));
+            Assert.That(confirm.Asked, Is.EqualTo(1), "la Mochila ya comprada no pide confirmación con precio");
             Assert.That(fx.Presenter.Presented, Is.EqualTo(1));
         }
 

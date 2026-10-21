@@ -224,6 +224,34 @@ namespace AF.Tests.EditMode
             Assert.That(ConsentPolicy.OffersAdsChoice(LegalProfiles.Default, AgeBand.Adult, c), Is.True);
             Assert.That(ConsentPolicy.OffersAdsChoice(LegalProfiles.Ump, AgeBand.Adult, c), Is.False);
             Assert.That(ConsentPolicy.OffersAdsChoice(LegalProfiles.BrLgpdEca, AgeBand.Teen, c), Is.False);
+            Assert.That(ConsentPolicy.OffersAdsChoice(LegalProfiles.Default, AgeBand.Adult, c, countryKnown: false), Is.False, "Q-T3 (a): sin país, lo más estricto");
+        }
+
+        [Test]
+        public void Ump_Adult_LeavesTheAdsToUmp()
+        {
+            ConsentFlags f = ConsentPolicy.Flags(Record(AgeBand.Adult, ads: true, profile: LegalProfiles.Ump), ConsentConfig.Defaults);
+            Assert.That(f.AdsByUmp, Is.True);
+            Assert.That(f.AdsPersonalized, Is.False, "la pantalla propia no decide los anuncios en UMP");
+            Assert.That(ConsentPolicy.Flags(Record(AgeBand.Teen, profile: LegalProfiles.Ump), ConsentConfig.Defaults).AdsByUmp, Is.False);
+            Assert.That(ConsentPolicy.Flags(Record(AgeBand.Adult), ConsentConfig.Defaults).AdsByUmp, Is.False);
+        }
+
+        [Test]
+        public void UnknownCountry_IsTheStrictestTreatment_WithoutTheAdsChoice()
+        {
+            var store = new MemoryConsentStore();
+            var flow = new ConsentFlow(ConsentConfig.Defaults, store, Clock(), ConsentConfig.Defaults.ProfileFor(null), countryKnown: false);
+            flow.StartBoot();
+            flow.ChooseAge(AgeBand.Adult);
+            Assert.That(flow.OffersAdsChoice, Is.False);
+            Assert.That(flow.CountryKnown, Is.False);
+
+            flow.Choose(ConsentAnswer.AcceptAll);
+
+            Assert.That(store.Record!.Profile, Is.EqualTo(LegalProfiles.Default));
+            Assert.That(store.Record!.AdsPersonalized, Is.False, "npa sin elección");
+            Assert.That(store.Record!.Analytics, Is.True);
         }
 
         // ---- Recorrido ----
@@ -424,6 +452,23 @@ namespace AF.Tests.EditMode
             Assert.That(store.Record!.Analytics, Is.True);
             Assert.That(flow.CanCorrectAge, Is.False, "una sola vez (08 §7)");
             Assert.Throws<InvalidOperationException>(() => flow.BeginAgeCorrection());
+        }
+
+        [Test]
+        public void TheCorrection_KeepsTheProfileAndVersionOfTheDecision_InTheRecordAndInTheReport()
+        {
+            var config = ConsentConfig.Defaults;
+            var store = new MemoryConsentStore(Record(AgeBand.Adult, profile: LegalProfiles.Co1581));
+            var reports = new List<ConsentReport>();
+            var flow = new ConsentFlow(config, store, Clock(), LegalProfiles.BrLgpdEca) { Reported = reports.Add };
+            flow.StartBoot();
+            flow.BeginAgeCorrection();
+
+            flow.ChooseAge(AgeBand.Teen);
+
+            Assert.That(store.Record!.Profile, Is.EqualTo(LegalProfiles.Co1581), "la corrección cambia solo la banda");
+            Assert.That(reports[reports.Count - 1].Profile, Is.EqualTo(LegalProfiles.Co1581), "af_consent dice lo mismo que el registro");
+            Assert.That(reports[reports.Count - 1].TextVersion, Is.EqualTo(store.Record!.TextVersion));
         }
 
         [Test]

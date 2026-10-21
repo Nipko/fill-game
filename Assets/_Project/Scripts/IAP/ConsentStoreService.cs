@@ -54,7 +54,7 @@ namespace AF.IAP
     /// <see cref="PurchaseStatus.Cancelled"/> sin descontar nada (05 §4.1). La autenticación de Google Play la pide la propia Play
     /// según los ajustes del teléfono y de Family Link: el cliente no la puede forzar [NV, a confirmar con el abogado]; con la tienda
     /// falsa, la hoja «Compra simulada» hace sus veces.</item>
-    /// <item>Con 18+, pasa tal cual.</item>
+    /// <item>Con 18+, pasa tal cual. Hasta el primer <see cref="Apply"/>, ninguna compra (falla cerrado).</item>
     /// </list>
     /// Mientras la confirmación está abierta, <see cref="IsPurchasing"/> es cierto (una sola compra a la vez). Hilo principal.
     /// </summary>
@@ -63,7 +63,7 @@ namespace AF.IAP
         private readonly IStoreService _inner;
         private bool _confirming;
 
-        /// <summary>Envuelve <paramref name="inner"/>; sin <see cref="Apply"/>, deja comprar como antes de B12.</summary>
+        /// <summary>Envuelve <paramref name="inner"/>; hasta <see cref="Apply"/> no deja comprar (falla cerrado: «sin decidir, sin compras»).</summary>
         public ConsentStoreService(IStoreService inner)
         {
             _inner = inner ?? throw new ArgumentNullException(nameof(inner));
@@ -78,8 +78,15 @@ namespace AF.IAP
         /// <summary>Los flags aplicados (null hasta <see cref="Apply"/>).</summary>
         public ConsentFlags? Flags { get; private set; }
 
-        /// <summary>Se puede comprar con los flags vigentes.</summary>
-        public bool PurchasesAllowed => Flags == null || Flags.PurchasesAllowed;
+        /// <summary>Se puede comprar con los flags vigentes (sin flags, no).</summary>
+        public bool PurchasesAllowed => Flags != null && Flags.PurchasesAllowed;
+
+        /// <summary>
+        /// Comprobación de que el producto se puede comprar antes de la segunda confirmación (la fija el arranque con
+        /// <c>StoreLedger.CheckPurchasable</c>): así nunca se confirma con precio una compra que la tienda va a rechazar (ya
+        /// comprada, Balsa antes del 31…). Null = sin comprobación previa.
+        /// </summary>
+        public Func<StoreProduct, PurchaseRequest, PurchaseStatus?>? Precheck { get; set; }
 
         /// <summary>Aplica <paramref name="flags"/> (al arrancar y al cambiar la edad en Ajustes).</summary>
         public void Apply(ConsentFlags flags)
@@ -125,9 +132,16 @@ namespace AF.IAP
                 return;
             }
 
-            if (Flags == null || !Flags.PurchaseDoubleConfirm || !_inner.IsAvailable)
+            if (!Flags!.PurchaseDoubleConfirm || !_inner.IsAvailable)
             {
                 _inner.Purchase(request, onDone); // la tienda envuelta responde ella misma si está apagada
+                return;
+            }
+
+            PurchaseStatus? blocked = Precheck?.Invoke(product, request);
+            if (blocked.HasValue)
+            {
+                onDone(new PurchaseResult(request, product, blocked.Value)); // sin confirmar lo que no se puede comprar
                 return;
             }
 

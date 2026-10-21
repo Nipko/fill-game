@@ -165,12 +165,6 @@ namespace AF.Platform
         {
             return new ConsentRecord(profile, textVersion, at, analytics, adsPersonalized, AgeBand, AgeBandCorrected);
         }
-
-        /// <summary>Otro registro con la banda <paramref name="band"/> (y la marca de corrección, si lo es).</summary>
-        public ConsentRecord WithAgeBand(AgeBand band, bool corrected, DateTime at)
-        {
-            return new ConsentRecord(Profile, TextVersion, at, Analytics, AdsPersonalized, band, AgeBandCorrected || corrected);
-        }
     }
 
     /// <summary>

@@ -129,6 +129,7 @@ namespace AF.Tests.PlayMode
 
         [TestCase(ConsentAdsLine.Ump, "consent_ads_ump")]
         [TestCase(ConsentAdsLine.Teen, "consent_ads_teen")]
+        [TestCase(ConsentAdsLine.Strict, "consent_ads_strict")]
         public void Choices_WithoutTheAdsToggle_ExplainWhy_AndNeverSendAds(ConsentAdsLine line, string key)
         {
             (ConsentAnswer, bool, bool)? answer = null;
@@ -138,6 +139,34 @@ namespace AF.Tests.PlayMode
             Assert.That(_screen.AdsLineText, Is.EqualTo(ConsentText.T(key)));
             _screen.SaveButton.onClick.Invoke();
             Assert.That(answer!.Value.Item3, Is.False, "sin interruptor no hay anuncios personalizados");
+        }
+
+        [Test]
+        public void Ump_FromSettings_TheLineReopensTheUmpMessage()
+        {
+            int options = 0;
+            _screen.ShowChoices(ConsentAdsLine.Ump, true, false, (a, an, ad) => { }, () => { }, () => options++);
+
+            Assert.That(_screen.AdsOptionsShown, Is.True);
+            Assert.That(_screen.AdsLineText, Is.Null, "el enlace sustituye a la línea");
+            _screen.AdsOptionsButton.onClick.Invoke();
+            Assert.That(options, Is.EqualTo(1));
+
+            _screen.ShowChoices(ConsentAdsLine.Ump, true, false, (a, an, ad) => { });
+            Assert.That(_screen.AdsOptionsShown, Is.False, "en el arranque, la línea: UMP sale al inicializar MAX");
+        }
+
+        [Test]
+        public void AConfirmationCoveredByAnotherView_IsAnsweredNo()
+        {
+            StoreProduct product = StoreCatalog.Default.Get("af_coins_2");
+            var answers = new List<bool>();
+            _screen.Confirm(product, product.PriceIn("USD"), answers.Add);
+
+            _screen.ShowBlocked();
+            _screen.Hide();
+
+            Assert.That(answers, Is.EqualTo(new[] { false }), "la compra nunca se queda colgada");
         }
 
         [Test]

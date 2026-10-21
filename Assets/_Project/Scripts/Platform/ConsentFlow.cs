@@ -117,14 +117,20 @@ namespace AF.Platform
         private readonly IConsentStore _store;
         private readonly IClock _clock;
         private readonly string _profile;
+        private readonly bool _countryKnown;
 
-        /// <summary>Crea el flujo para el perfil legal <paramref name="legalProfile"/> (<see cref="ConsentConfig.ProfileFor"/>).</summary>
-        public ConsentFlow(ConsentConfig config, IConsentStore store, IClock clock, string legalProfile)
+        /// <summary>
+        /// Crea el flujo para el perfil legal <paramref name="legalProfile"/> (<see cref="ConsentConfig.ProfileFor"/>);
+        /// <paramref name="countryKnown"/> = false si no se supo el país (Q-T3 (a): el tratamiento más estricto, sin elegir anuncios
+        /// personalizados).
+        /// </summary>
+        public ConsentFlow(ConsentConfig config, IConsentStore store, IClock clock, string legalProfile, bool countryKnown = true)
         {
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _store = store ?? throw new ArgumentNullException(nameof(store));
             _clock = clock ?? throw new ArgumentNullException(nameof(clock));
             _profile = LegalProfiles.IsKnown(legalProfile) ? legalProfile : LegalProfiles.Default;
+            _countryKnown = countryKnown;
             Record = store.Load();
         }
 
@@ -140,6 +146,9 @@ namespace AF.Platform
         /// <summary>El perfil legal de este dispositivo.</summary>
         public string Profile => _profile;
 
+        /// <summary>Se supo el país (si no, el tratamiento más estricto).</summary>
+        public bool CountryKnown => _countryKnown;
+
         /// <summary>La configuración vigente.</summary>
         public ConsentConfig Config => _config;
 
@@ -147,7 +156,7 @@ namespace AF.Platform
         public AgeBand Band { get; private set; }
 
         /// <summary>La pantalla de consentimiento ofrece «Anuncios personalizados» (<see cref="ConsentPolicy.OffersAdsChoice"/>).</summary>
-        public bool OffersAdsChoice => ConsentPolicy.OffersAdsChoice(_profile, Band, _config);
+        public bool OffersAdsChoice => ConsentPolicy.OffersAdsChoice(_profile, Band, _config, _countryKnown);
 
         /// <summary>Lo marcado al abrir las finalidades: en el arranque, nada (consentimiento expreso); al cambiar, lo guardado.</summary>
         public bool InitialAnalytics { get; private set; }
@@ -163,9 +172,6 @@ namespace AF.Platform
 
         /// <summary>Cada aviso para <c>af_consent</c> (lo conecta el arranque a la analítica).</summary>
         public Action<ConsentReport>? Reported { get; set; }
-
-        /// <summary>Al pasar a <see cref="ConsentStep.Done"/> o <see cref="ConsentStep.Blocked"/>, o al cerrar sin cambios.</summary>
-        public Action<ConsentStep>? Finished { get; set; }
 
         /// <summary>Arranque (08 §2.3). Devuelve el paso en el que queda.</summary>
         public ConsentStep StartBoot()
@@ -187,7 +193,7 @@ namespace AF.Platform
             Band = record?.AgeBand ?? AgeBand.Unknown;
             InitialAnalytics = false;
             InitialAdsPersonalized = false;
-            Report(ConsentReport.Shown, false, false, Band);
+            Report(ConsentReport.Shown, _profile, _config.ConsentTextVersion, false, false, Band);
             return Go(Band == AgeBand.Unknown ? ConsentStep.Age : ConsentStep.Choices);
         }
 
@@ -241,20 +247,20 @@ namespace AF.Platform
                     return Go(ConsentStep.Done); // la misma banda: no gasta la corrección
                 }
 
+                // La corrección cambia solo la banda: el perfil legal y la versión de los textos son los de la decisión guardada
+                // (el registro y af_consent dicen lo mismo).
                 Band = band;
-                ConsentRecord corrected = current.WithAgeBand(band, corrected: true, at: now);
                 if (band == AgeBand.Under13)
                 {
-                    corrected = new ConsentRecord(_profile, corrected.TextVersion, now, false, false, AgeBand.Under13, true);
-                    Save(corrected);
+                    Save(new ConsentRecord(current.Profile, current.TextVersion, now, false, false, AgeBand.Under13, true));
                     return Go(ConsentStep.Blocked);
                 }
 
                 // 13-17 sin personalización: los anuncios personalizados se apagan aunque se hubieran aceptado con 18+.
-                bool ads = corrected.AdsPersonalized && ConsentPolicy.OffersAdsChoice(_profile, band, _config);
-                corrected = corrected.WithChoices(corrected.Profile, corrected.TextVersion, now, corrected.Analytics, ads);
+                bool ads = current.AdsPersonalized && ConsentPolicy.OffersAdsChoice(current.Profile, band, _config, _countryKnown);
+                var corrected = new ConsentRecord(current.Profile, current.TextVersion, now, current.Analytics, ads, band, true);
                 Save(corrected);
-                Report(ConsentReport.Changed, corrected.Analytics, corrected.AdsPersonalized, band);
+                Report(ConsentReport.Changed, corrected.Profile, corrected.TextVersion, corrected.Analytics, corrected.AdsPersonalized, band);
                 return Go(ConsentStep.Done);
             }
 
@@ -302,16 +308,11 @@ namespace AF.Platform
             ConsentRecord record = Record != null && Record.AgeBand != AgeBand.Unknown
                 ? Record.WithChoices(_profile, _config.ConsentTextVersion, now, analytics, adsPersonalized)
                 : new ConsentRecord(_profile, _config.ConsentTextVersion, now, analytics, adsPersonalized, Band);
-            if (record.AgeBand != Band)
-            {
-                record = record.WithAgeBand(Band, corrected: false, at: now);
-            }
-
             Save(record);
             string step = Mode == ConsentFlowMode.Change
                 ? ConsentReport.Changed
                 : (analytics || adsPersonalized ? ConsentReport.Accepted : ConsentReport.Rejected);
-            Report(step, analytics, adsPersonalized, Band);
+            Report(step, record.Profile, record.TextVersion, analytics, adsPersonalized, Band);
             return Go(ConsentStep.Done);
         }
 
@@ -344,19 +345,14 @@ namespace AF.Platform
             Record = record;
         }
 
-        private void Report(string step, bool analytics, bool ads, AgeBand band)
+        private void Report(string step, string profile, int textVersion, bool analytics, bool ads, AgeBand band)
         {
-            Reported?.Invoke(new ConsentReport(step, _profile, _config.ConsentTextVersion, analytics, ads, band));
+            Reported?.Invoke(new ConsentReport(step, profile, textVersion, analytics, ads, band));
         }
 
         private ConsentStep Go(ConsentStep step)
         {
             Step = step;
-            if (step == ConsentStep.Done || step == ConsentStep.Blocked || step == ConsentStep.None)
-            {
-                Finished?.Invoke(step);
-            }
-
             return step;
         }
     }

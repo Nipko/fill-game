@@ -49,6 +49,12 @@ namespace AF.UI
             /// <summary>Línea de los anuncios con 13-17: no personalizados.</summary>
             public const string AdsTeen = "consent_ads_teen";
 
+            /// <summary>Línea de los anuncios sin país conocido: no personalizados (Q-T3 (a), el tratamiento más estricto).</summary>
+            public const string AdsStrict = "consent_ads_strict";
+
+            /// <summary>Enlace de Ajustes con el perfil <c>ump</c>: vuelve a abrir el mensaje de UMP.</summary>
+            public const string AdsUmpOptions = "consent_ads_ump_options";
+
             /// <summary>«Aceptar todo».</summary>
             public const string AcceptAll = "consent_accept_all";
 
@@ -84,7 +90,7 @@ namespace AF.UI
         public static readonly string[] AllKeys =
         {
             Keys.AgeTitle, Keys.AgeUnder13, Keys.AgeTeen, Keys.AgeAdult, Keys.Title, Keys.Body, Keys.PurposeAds, Keys.PurposeAnalytics,
-            Keys.Diagnostics, Keys.AdsByUmp, Keys.AdsTeen, Keys.AcceptAll, Keys.RejectAll, Keys.Save, Keys.Blocked, Keys.SettingsPrivacy,
+            Keys.Diagnostics, Keys.AdsByUmp, Keys.AdsTeen, Keys.AdsStrict, Keys.AdsUmpOptions, Keys.AcceptAll, Keys.RejectAll, Keys.Save, Keys.Blocked, Keys.SettingsPrivacy,
             Keys.SettingsAge, Keys.ConfirmTitle, Keys.ConfirmBody, Keys.ConfirmBuy, Keys.ConfirmCancel,
         };
 

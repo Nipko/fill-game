@@ -38,6 +38,15 @@ namespace AF.Ads
         /// <summary><c>maxAdContentRating</c>.</summary>
         public string MaxAdContentRating { get; private set; } = ConsentFlags.MaxAdContentRatingG;
 
+        /// <summary>
+        /// Perfil <c>ump</c> con 18+: la personalización la deciden las cadenas TCF del mensaje de UMP, así que no se fuerza <c>npa</c>
+        /// (<see cref="NonPersonalized"/> = false) y el adaptador real no pasa ese flag.
+        /// </summary>
+        public bool UmpDecides { get; private set; }
+
+        /// <summary>Veces que se pidieron las opciones de privacidad de UMP desde Ajustes (MAX: el formulario para un usuario ya preguntado [NV]).</summary>
+        public int PrivacyOptionsRequests { get; private set; }
+
         /// <summary>Veces que se aplicaron flags (la primera inicializa; las siguientes, desde Ajustes, los actualizan).</summary>
         public int Applies { get; private set; }
 
@@ -53,10 +62,27 @@ namespace AF.Ads
             }
 
             ChildDirected = flags.ChildDirected;
-            NonPersonalized = !flags.AdsPersonalized;
+            UmpDecides = flags.AdsByUmp;
+            NonPersonalized = !flags.AdsPersonalized && !flags.AdsByUmp;
             MaxAdContentRating = flags.MaxAdContentRating;
             Initialized = flags.Decided && !flags.Blocked;
             Applies++;
+        }
+
+        /// <summary>
+        /// Ajustes › Privacidad con el perfil <c>ump</c>: vuelve a abrir el mensaje de UMP para cambiar o retirar el consentimiento
+        /// de los anuncios (05 §7: «revocación en Ajustes»). Con el proveedor falso solo se cuenta; con MAX, su formulario de
+        /// privacidad [NV]. Devuelve si se pidió (solo con <see cref="UmpDecides"/>).
+        /// </summary>
+        public bool ShowPrivacyOptions()
+        {
+            if (!UmpDecides)
+            {
+                return false;
+            }
+
+            PrivacyOptionsRequests++;
+            return true;
         }
 
         /// <inheritdoc />

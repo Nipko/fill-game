@@ -148,7 +148,7 @@ namespace AF.UI
 
             _consentCountry = ConsentCountry.Resolve(SimCountryOverride ?? AndroidSimCountry.ForPlatform(), _deviceLocale, out _consentCountrySource);
             string profile = _consentConfig.ProfileFor(_consentCountry);
-            _consentFlow = new ConsentFlow(_consentConfig, ConsentStoreOverride ?? store, clock, profile)
+            _consentFlow = new ConsentFlow(_consentConfig, ConsentStoreOverride ?? store, clock, profile, countryKnown: _consentCountry != null)
             {
                 Reported = ReportConsent,
             };
@@ -156,6 +156,7 @@ namespace AF.UI
             if (_consentStore != null)
             {
                 _consentStore.Confirmation = _consentScreen; // Q-T4 (a): la segunda confirmación con 13-17
+                _consentStore.Precheck = (product, request) => _storeLedger?.CheckPurchasable(product, request); // nunca confirmar lo imposible
             }
         }
 
@@ -209,15 +210,23 @@ namespace AF.UI
             ApplyConsentFlags();
             if (flow.Step == ConsentStep.Blocked)
             {
-                ConsentBlocked = true;
-                _consentScreen?.ShowBlocked();
-            }
-            else
-            {
-                _consentScreen?.Hide();
+                BlockSession();
+                return;
             }
 
+            _consentScreen?.Hide();
             ProbeConsent();
+        }
+
+        // <13 (en el arranque o al corregir la edad en Ajustes): el bloqueo a la vista y la escena se recarga, como al cambiar de idioma
+        // (RebuildUi). El arranque siguiente lee la banda guardada y se para en BlockedAtBoot antes de crear el juego: sin sesión, sin
+        // audio, sin avisos locales al pasar a segundo plano (08 §7: «no se crea sesión de juego»).
+        private void BlockSession()
+        {
+            ConsentBlocked = true;
+            _consentScreen?.ShowBlocked();
+            ProbeConsent();
+            RebuildUi();
         }
 
         /// <summary>Atrás de Android con la pantalla abierta: la consume (y la cierra si se puede). False si no estaba abierta.</summary>
@@ -296,7 +305,7 @@ namespace AF.UI
                     break;
                 case ConsentStep.Choices:
                     screen.ShowChoices(AdsLineFor(flow), flow.InitialAnalytics, flow.InitialAdsPersonalized, OnConsentAnswer,
-                        fromSettings ? CloseConsentFromSettings : (System.Action?)null);
+                        fromSettings ? CloseConsentFromSettings : (System.Action?)null, fromSettings ? OpenAdsPrivacyOptions : (System.Action?)null);
                     break;
                 case ConsentStep.Blocked:
                     screen.ShowBlocked();
@@ -310,6 +319,7 @@ namespace AF.UI
             _skipNextDelta = true;
         }
 
+        // Primero la banda (13-17 es npa también en el EEE), después el país desconocido y por último UMP.
         private static ConsentAdsLine AdsLineFor(ConsentFlow flow)
         {
             if (flow.OffersAdsChoice)
@@ -317,7 +327,26 @@ namespace AF.UI
                 return ConsentAdsLine.Toggle;
             }
 
-            return string.Equals(flow.Profile, LegalProfiles.Ump, System.StringComparison.Ordinal) ? ConsentAdsLine.Ump : ConsentAdsLine.Teen;
+            if (flow.Band == AgeBand.Teen)
+            {
+                return ConsentAdsLine.Teen;
+            }
+
+            if (!flow.CountryKnown)
+            {
+                return ConsentAdsLine.Strict;
+            }
+
+            return string.Equals(flow.Profile, LegalProfiles.Ump, System.StringComparison.Ordinal) ? ConsentAdsLine.Ump : ConsentAdsLine.Strict;
+        }
+
+        // Ajustes con el perfil ump: vuelve a abrir el mensaje de UMP (MAX) para cambiar o retirar el consentimiento de los anuncios.
+        private void OpenAdsPrivacyOptions()
+        {
+            if (_consentAds != null && _consentAds.ShowPrivacyOptions())
+            {
+                _probe?.SettingsChange(SettingsScreen.PrivacyId, "ump_options", null);
+            }
         }
 
         private void OnAgeChosen(AgeBand band)
@@ -374,8 +403,8 @@ namespace AF.UI
             _skipNextDelta = true;
         }
 
-        // Tras decidir desde Ajustes: los flags nuevos, af_settings_change (key = consent) y las filas; con <13, el bloqueo encima de
-        // todo (la sesión no sigue: el velo de la pantalla recoge los toques y Atrás no la cierra).
+        // Tras decidir desde Ajustes: los flags nuevos, af_settings_change (key = consent) y las filas; con <13, el bloqueo y la escena
+        // se recarga sin sesión de juego (BlockSession).
         private void AfterSettingsChange(ConsentStep step, string? changed)
         {
             ApplyConsentFlags();
@@ -387,16 +416,12 @@ namespace AF.UI
 
             if (step == ConsentStep.Blocked)
             {
-                ConsentBlocked = true;
-                _settingsScreen?.Hide();
-                _consentScreen?.ShowBlocked();
-            }
-            else
-            {
-                _consentScreen?.Hide();
-                RefreshConsentRows();
+                BlockSession();
+                return;
             }
 
+            _consentScreen?.Hide();
+            RefreshConsentRows();
             ProbeConsent();
             _skipNextDelta = true;
         }

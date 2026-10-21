@@ -89,6 +89,30 @@ namespace AF.Ads.Tests
         }
 
         [Test]
+        public void Ump_LeavesNpaToTheUmpMessage_AndCanReopenIt()
+        {
+            var ads = new ConsentAdService(new FakeAdService(new ImmediateAdPresenter()));
+            Assert.That(ads.ShowPrivacyOptions(), Is.False, "fuera de UMP no hay mensaje que reabrir");
+            ads.Apply(ConsentPolicy.Flags(new ConsentRecord(LegalProfiles.Ump, 1, At, true, false, AgeBand.Adult), ConsentConfig.Defaults));
+
+            Assert.That(ads.Initialized, Is.True);
+            Assert.That(ads.UmpDecides, Is.True);
+            Assert.That(ads.NonPersonalized, Is.False, "las cadenas TCF de UMP deciden (08 §7 #2)");
+            Assert.That(ads.ShowPrivacyOptions(), Is.True, "revocación en Ajustes (05 §7)");
+            Assert.That(ads.PrivacyOptionsRequests, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Ump_Teen_IsStillNpa()
+        {
+            var ads = new ConsentAdService(new FakeAdService(new ImmediateAdPresenter()));
+            ads.Apply(ConsentPolicy.Flags(new ConsentRecord(LegalProfiles.Ump, 1, At, true, false, AgeBand.Teen), ConsentConfig.Defaults));
+
+            Assert.That(ads.UmpDecides, Is.False);
+            Assert.That(ads.NonPersonalized, Is.True);
+        }
+
+        [Test]
         public void ChangingFromSettings_UpdatesTheFlags()
         {
             var ads = new ConsentAdService(new FakeAdService(new ImmediateAdPresenter()));
