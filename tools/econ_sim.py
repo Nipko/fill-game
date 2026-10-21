@@ -21,6 +21,7 @@ Uso:
   python tools/econ_sim.py --scenario A        # escenario A: dirección literal, sin ajustes
   python tools/econ_sim.py --runs 400 --seed 7 --json salida.json
   python tools/econ_sim.py --rescue 600,750,900   # probar tramos de rescate 31-100,101-200,201+ (canon: 600 fijo)
+  python tools/econ_sim.py --calendar-pick seeds  # la Bitácora «1 de 3» eligiendo siempre una opción (canon|seeds|booster|mix; D-033)
 
 Todas las cifras de este archivo son parámetros de diseño [P] salvo donde el comentario cite un informe.
 """
@@ -136,16 +137,66 @@ def band_of(level: int) -> str:
 # 2. Economía (direcciones 9-14; valores no fijados por la dirección marcados [P])
 # ---------------------------------------------------------------------------
 
-# Bitácora del río: 30 casillas, 3.000 semillas/mes, zigzag con hitos 7/14/21/30 (research/04 C1 §3 [E]).
-# (semillas, ítem) por casilla; ítem ∈ {None, "undo", "hint", "cuia"}. "reveal" del día 29 se modela como hint.
-CALENDAR: List[Tuple[int, Optional[str]]] = [
-    (50, None), (0, "undo"), (50, None), (0, "hint"), (100, None), (0, "cuia"), (250, None),
-    (50, None), (50, None), (0, "undo"), (100, None), (0, "hint"), (100, None), (300, "cuia"),
-    (50, None), (100, None), (0, "undo"), (100, None), (0, "undo"), (150, None), (400, None),
-    (100, None), (0, "cuia"), (100, None), (0, "hint"), (150, None), (0, "undo"), (150, None),
-    (0, "hint"), (650, None),
+# Bitácora del río «1 de 3» (D-033, añadido del 2026-10-20, punto 2; 06 §4.2): 30 casillas, 3.000 semillas/mes en el canon,
+# zigzag con hitos 7/14/21/30 (research/04 C1 §3 [E]). Por casilla: (canon, (semillas, comodín, mezcla), fijo). Cada premio es
+# (semillas, {comodín: unidades}) con las unidades del cliente: "undo" en Mareas sueltas (un deshacer; el inventario de este
+# simulador cuenta la Marea de 3 deshacer, así que 3 Mareas = 1 unidad "undo"), "hint", "cuia" y "reveal" (el del día 29 se
+# modela como hint). Lo fijo va igual en las tres opciones: "basket" (días 7 y 21: eco_basket_seeds + el comodín de la
+# próxima Canasta de nivel, la regla del hito 6 de la Crecida; Q-B7 de B4) y "grand" (día 30: la Canasta grande, 06 §4.2,
+# regla 2). El marco de país del 30 no da semillas.
+CalendarReward = Tuple[int, Dict[str, int]]
+
+
+def _cal(seeds: int = 0, **items: int) -> CalendarReward:
+    return (seeds, items)
+
+
+_V60 = (_cal(60), _cal(undo=2), _cal(30, undo=1))
+_V100 = (_cal(100), _cal(hint=1), _cal(40, undo=2))
+CALENDAR: List[Tuple[CalendarReward, Tuple[CalendarReward, CalendarReward, CalendarReward], Optional[str]]] = [
+    (_cal(60), _V60, None),                       # 1
+    (_cal(30, undo=3), _V60, None),               # 2
+    (_cal(60), _V60, None),                       # 3
+    (_cal(hint=1), _V100, None),                  # 4
+    (_cal(100), _V100, None),                     # 5
+    (_cal(cuia=1), (_cal(100), _cal(cuia=1), _cal(40, undo=2)), None),          # 6
+    (_cal(250), (_cal(250), _cal(50, hint=2), _cal(100, undo=5)), "basket"),    # 7
+    (_cal(60), _V60, None),                       # 8
+    (_cal(60), _V60, None),                       # 9
+    (_cal(30, undo=3), _V60, None),               # 10
+    (_cal(100), _V100, None),                     # 11
+    (_cal(hint=1), _V100, None),                  # 12
+    (_cal(100), _V100, None),                     # 13
+    (_cal(300, cuia=1), (_cal(400), _cal(300, cuia=1), _cal(100, hint=2, cuia=1)), None),  # 14
+    (_cal(60), _V60, None),                       # 15
+    (_cal(100), _V100, None),                     # 16
+    (_cal(30, undo=3), _V60, None),               # 17
+    (_cal(100), _V100, None),                     # 18
+    (_cal(30, undo=3), _V60, None),               # 19
+    (_cal(100), _V100, None),                     # 20
+    (_cal(400), (_cal(400), _cal(cuia=2, hint=2), _cal(200, cuia=1, hint=1)), "basket"),  # 21
+    (_cal(100), _V100, None),                     # 22
+    (_cal(cuia=1), (_cal(100), _cal(cuia=1), _cal(40, undo=2)), None),          # 23
+    (_cal(100), _V100, None),                     # 24
+    (_cal(hint=1), _V100, None),                  # 25
+    (_cal(100), _V100, None),                     # 26
+    (_cal(30, undo=3), _V60, None),               # 27
+    (_cal(100), _V100, None),                     # 28
+    (_cal(reveal=1), (_cal(100), _cal(reveal=1), _cal(hint=1)), None),          # 29
+    (_cal(600), (_cal(600), _cal(300, cuia=2, hint=1), _cal(300, hint=3)), "grand"),  # 30
 ]
-assert sum(s for s, _ in CALENDAR) == 3000, "La Bitácora debe sumar 3.000 semillas (dirección 12)"
+CALENDAR_PICKS = ("canon", "seeds", "booster", "mix")
+assert sum(c[0][0] for c in CALENDAR) == 3000, "La Bitácora debe sumar 3.000 semillas en el canon (dirección 12; D-033)"
+assert sum(c[0][1].get("undo", 0) for c in CALENDAR) == 15, "15 Marea en el canon (D-033)"
+# Canasta grande (06 §4.2, regla 2; GDD.md §6.1 #13): 150 semillas + 1 Cuia extra + 1 Morpho + 3 Marea.
+CALENDAR_GRAND = _cal(150, cuia=1, hint=1, undo=3)
+
+
+def scale_calendar(calendar, factor: float):
+    """La Bitácora con las semillas de cada premio (no las de las Canastas) multiplicadas por factor (variantes)."""
+    def sc(r: CalendarReward) -> CalendarReward:
+        return (int(round(r[0] * factor)), dict(r[1]))
+    return [(sc(canon), tuple(sc(o) for o in opts), extra) for canon, opts, extra in calendar]
 
 # Canasta del hito 6 de la Crecida (glosario §6.3; capítulo 6 §4.4): 50 semillas + 1 comodín visible en ciclo fijo
 # [3 Marea, 1 Morpho, 1 Cuia extra, 3 Marea, 1 Morpho]; una unidad "undo" del inventario = una Marea (+3 Deshacer).
@@ -323,6 +374,7 @@ class Sim:
         self.rv_counts: Dict[str, int] = {}
         self.rescued_today = False
         self.calendar_index = 0
+        self.calendar_undo = 0                 # Mareas sueltas de la Bitácora aún sin completar una unidad "undo" (3 deshacer)
         # inventario
         self.inv = {"undo": 0, "hint": 0, "cuia": 0}
         # pagador
@@ -355,6 +407,19 @@ class Sim:
         b = band_of(self.level)
         self.phases[b].income += amount
         self.income_by_band[b] = self.income_by_band.get(b, 0.0) + amount
+
+    def claim_calendar(self, reward: CalendarReward):
+        """Cobra un premio de la Bitácora: semillas (fuente bitacora) y comodines al inventario."""
+        seeds, items = reward
+        if seeds:
+            self.add_income("bitacora", seeds)
+        for item, units in items.items():
+            if item == "undo":
+                self.calendar_undo += units
+                self.inv["undo"] += self.calendar_undo // 3
+                self.calendar_undo %= 3
+            else:
+                self.inv["hint" if item == "reveal" else item] += units
 
     def add_spend(self, sink: str, amount: float):
         self.balance -= amount
@@ -397,13 +462,19 @@ class Sim:
         self.shield_available = self.level >= self.e["streak_unlock"]
         self.streak_seeds_today = 0
         self.hits_today = set()
-        # Bitácora del río: reclamo secuencial sin reinicio (exige ≥1 nivel jugado; el perfil siempre juega)
-        seeds, item = CALENDAR[self.calendar_index % 30]
+        # Bitácora del río: reclamo secuencial sin reinicio (exige ≥1 nivel jugado; el perfil siempre juega), con la opción
+        # de --calendar-pick (canon por defecto) y lo fijo de los hitos (D-033, punto 2).
+        canon, options, extra = CALENDAR[self.calendar_index % 30]
         self.calendar_index += 1
-        if seeds:
-            self.add_income("bitacora", seeds)
-        if item:
-            self.inv[item] += 1
+        pick = self.e.get("calendar_pick", "canon")
+        self.claim_calendar(canon if pick == "canon" else options[CALENDAR_PICKS.index(pick) - 1])
+        if extra == "basket":
+            # eco_basket_seeds + el comodín de la próxima Canasta de nivel (múltiplo de 10 mayor que max_level; como mínimo el 20).
+            slot = max(2 * self.e["chest_every"], ((self.level - 1) // self.e["chest_every"] + 1) * self.e["chest_every"])
+            self.add_income("bitacora", self.e["chest_seeds"])
+            self.inv[BASKET_CYCLE[(slot // self.e["chest_every"] - 1) % len(BASKET_CYCLE)]] += 1
+        elif extra == "grand":
+            self.claim_calendar(CALENDAR_GRAND)
         # Reto del río
         if self.level >= 10 and self.rng.random() < self.p["p_daily_challenge"]:
             self.add_income("reto_del_rio", self.e["daily_challenge_seeds"])
@@ -735,7 +806,8 @@ def print_tables(aggs: Dict[str, Dict], econ: Dict):
           f"primer rescate del día −50 %; Crecida {'una vez por hito y día' if econ['streak_hits_once_per_day'] else 'repetible hasta el tope diario'}, "
           f"hito 6 = Canasta ({econ['chest_seeds']} + comodín), hito 10 = {econ['streak_hit10'] if econ['streak_hit10'] else 'Cuia extra + río crecido'}; "
           f"Canasta {econ['chest_seeds']} + comodín; Reto del río {econ['daily_challenge_seeds']}"
-          f"{' + Morpho' if econ['daily_challenge_item'] else ''}; Cosecha doble tope {econ['rv_x2_cap']}/día\n")
+          f"{' + Morpho' if econ['daily_challenge_item'] else ''}; Cosecha doble tope {econ['rv_x2_cap']}/día; "
+          f"Bitácora «1 de 3» de D-033 ({econ.get('calendar_pick', 'canon')}) con sus Canastas\n")
     print("Escenario A = dirección literal (Crecida repetible hasta 600/día con 300 en el hito 10; rescate 600 fijo). "
           "Escenario B = canon del capítulo 5 (cada hito de la Crecida se paga una vez por día; hito 10 = Cuia extra + río crecido; rescate 600 fijo). "
           "Todo lo demás es idéntico (hito 6 = Canasta 50 + comodín, Canasta 50 + comodín cada 10 niveles, Reto del río 60, "
@@ -872,6 +944,8 @@ def main():
     ap.add_argument("--x2cap", type=int, default=None, help="tope diario de Cosecha doble (A: 5; B: 3)")
     ap.add_argument("--chest", type=int, default=None, help="semillas de la Canasta desde el nivel 20 (defecto 50)")
     ap.add_argument("--daily", type=int, default=None, help="semillas del Reto del río (defecto 60)")
+    ap.add_argument("--calendar-pick", default="canon", choices=list(CALENDAR_PICKS),
+                    help="opción de la Bitácora «1 de 3» que toma el jugador cada día (D-033; defecto canon)")
     ap.add_argument("--json", type=str, default=None, help="ruta para volcar los agregados en JSON")
     ap.add_argument("--no-revenue", action="store_true")
     args = ap.parse_args()
@@ -882,6 +956,8 @@ def main():
         econ["chest_seeds"] = args.chest
     if args.daily is not None:
         econ["daily_challenge_seeds"] = args.daily
+    if args.calendar_pick != "canon":
+        econ["calendar_pick"] = args.calendar_pick
     aggs = {}
     for name, prof in PROFILES.items():
         results = []
