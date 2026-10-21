@@ -3207,3 +3207,10 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **URL de la API de dev (F4-2):** se escribe en `BackendEndpoints.Dev` en un commit (la URL de `execute-api` no es secreta).
 - **`biz_backend_enabled` [P]:** se añade a 08 §9 con la integración del GDD y se conecta en F3-3 como interruptor de corte.
 - **Riesgo para F3-3:** comprobar en el dispositivo que `SHA256.Create()` sobrevive al Managed Stripping High; si no, `SHA256Managed` o una entrada de `link.xml`.
+
+### D-035, añadido del 2026-10-21: Firebase dev en la cuenta personal del dueño
+
+- **Estado:** decisión del dueño en la sesión con Codex (registro en `docs/dev/traspaso/codex-estado.md`): crear Firebase dev desde su cuenta personal de Google, porque la cuenta empresarial no tiene permiso para crear proyectos (`resourcemanager.projects.create`) hasta que su administrador lo conceda.
+- **Identificadores públicos de dev:** proyecto `fill-dev-e75a2` (el id `amazon-fill-dev` no estaba disponible); app Android `com.amazonfill.dev` con id `1:528273757148:android:45d5cf0ddb2e3021c93519`. Auth anónimo activado; App Check con Play Integrity registrado **sin enforcement**; Analytics activado (cuenta dedicada, ubicación EE. UU.); plan Spark sin coste.
+- **AWS dev** (`AfDevApi`) ya autoriza con emisor y audiencia `fill-dev-e75a2` y admite ese id de app. Mientras `infra/lib/config.ts` siga con el default `amazon-fill-dev`, **todo despliegue de dev debe pasar** `-c firebaseProjectId=fill-dev-e75a2 -c firebaseAppIds=1:528273757148:android:45d5cf0ddb2e3021c93519`; se cambiará el default de dev en la próxima tarea de `infra/`.
+- **Pendiente para prod:** crear Firebase prod en la cuenta empresarial (con el permiso del administrador) o decidir otra cosa; prod sigue sin bootstrap ni stacks.
