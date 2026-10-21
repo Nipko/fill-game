@@ -36,3 +36,14 @@ Encargo: `docs/dev/traspaso/codex-aws.md`; guía: `infra/README.md`.
 - Presupuesto de dev, SNS, comprobaciones de Web/API/CDN y Firebase dev: pendientes, sin salidas desplegadas que registrar.
 
 Siguiente paso: el dueño completa el acceso de AWS y la instalación de CLI v2. Revisar primero lo que ya existe en Organizations e Identity Center para no duplicarlo; después configurar los perfiles SSO. Solo dev se prepara para despliegue; prod se limita a cuenta/acceso/perfil, sin bootstrap ni despliegue de stacks de prod.
+
+### AWS Organizations y preparación de SSO — 2026-10-21
+
+- El dueño completó el acceso como root y autorizó preparar el proyecto desde la consola. No se capturaron ni registraron credenciales.
+- Organizations no existía en esta cuenta: organización creada y confirmada por la consola, con la cuenta actual como gestión. No se habilitaron servicios de pago ni se desplegaron stacks.
+- Formulario de cuenta `amazonfill-dev` preparado, con el rol estándar `OrganizationAccountAccessRole`. Falta que el dueño introduzca en la consola el correo exclusivo de esa cuenta; creación aún no enviada. `amazonfill-prod` aún no creada.
+- IAM Identity Center en `sa-east-1` mostraba la opción de habilitar una instancia de organización. Se preparó región única, clave propiedad de AWS y conjuntos de permisos habilitados. Se descartó en el formulario la opción predeterminada multirregión que avisaba de cargos por una clave KMS administrada por el cliente.
+- Activación de Identity Center pendiente de confirmación concreta del dueño. No se crearon usuarios, conjuntos de permisos ni asignaciones administrativas; MFA todavía no configurado.
+- AWS CLI v2 sigue sin aparecer en las rutas habituales; configuración local de perfiles, bootstrap, diff y deploy siguen pendientes. El acceso root a la consola no sustituye el usuario SSO ni los perfiles locales.
+
+Próximos pasos: completar los correos de las cuentas directamente en la consola, confirmar las operaciones de acceso en su paso final, crear dev/prod, activar Identity Center de organización en la región preparada, configurar usuario y MFA, y asignar los conjuntos de permisos según el encargo. Cada ampliación de acceso requiere confirmación en su pantalla; cada deploy espera el sí del dueño tras el diff. Las cuentas prod y gestión no reciben stacks del juego.
