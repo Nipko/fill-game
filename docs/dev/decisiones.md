@@ -3188,3 +3188,14 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Límites [P]:** 100 recompensas SSV por UID y día, 30 verificaciones por UID y hora, 10 códigos por UID y día, 5 `delete-request` por código y hora y 10 `delete-confirm` por token y 5 minutos.
 - **Supuestos [NV]** que se confirman en F0-R o F4-2: firma S2S de MAX = hex(SHA-256(`event_id` + clave)) (usar una firma que cubra todos los parámetros si MAX la ofrece); formato del token de App Check; `products.get` sin precio (el libro mayor no guarda `price_micros` ni `currency`; desviación del plan §2 y de 08 §10.3).
 - **Endurecimiento pendiente** (tarea F2c, de la revisión): exigir `-c firebaseAppIds` en el synth de prod; lápida `voided` para anulaciones de tokens aún no verificados; hacer cumplir `af_starter` una vez por cuenta en el servidor; cerrar las carreras residuales del borrado (condición en el Put del libro mayor o segunda pasada de `eraseAccount`). Y actualizar `aws-cdk-lib` cuando una versión corrija el aviso de `brace-expansion` (cambio de versión: lo aprueba el dueño).
+
+### D-035, añadido del 2026-10-21: preguntas de F2c (endurecimiento), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `backend/f2c` (revisión final APROBADO sobre `923948d`). El dueño puede cambiarlas.
+- **`af_starter` reembolsado o con contracargo:** no se puede volver a comprar (la marca por cuenta es permanente).
+- **Errores del contrato v1:** la compra anulada y el segundo `af_starter` siguen como 400 `bad_request` con su mensaje, sin códigos nuevos.
+- **Filas de compras que escapen del borrado** (índice `by_uid` eventualmente consistente): se acepta como riesgo residual, vigilado con la métrica `EraseSecondPass` y una alarma en `ops-stack` más adelante.
+- **Reserva de `af_starter`:** 15 minutos [P].
+- **Riesgos residuales aceptados** (detalle en `infra/README.md`, «Riesgos residuales conocidos (F2c)»): más de 15 min entre reservar y escribir; borrado de la cuenta durante una compra (queda reconocida sin conceder).
+- **`infra.yml`** sintetiza prod con un id de app de ejemplo, porque prod exige `-c firebaseAppIds` desde F2c.
+- **Sugerencia pendiente** (no afecta al dinero): en `shared/integrity.ts`, una `TransactionConflict` al guardar la caché lanza 500 después de gastar el token de App Check de un solo uso; registrarla y seguir sin guardar.
