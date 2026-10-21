@@ -14,7 +14,11 @@
          <package>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION que declara androidx.core y, solo si
          el manifiesto lleva Play Billing, com.android.vending.BILLING. Cualquier otro falla (CLAUDE.md,
          regla dura 4: ningun permiso Android nuevo sin el dueno; -AllowPermission anade los aprobados).
-         INTERNET se admite pero se anota: sigue pendiente del visto bueno del dueno.
+         INTERNET lo aprobo el dueno en D-036 (2026-10-20; lo anade Unity con ForceInternetPermission en Auto).
+         android.permission.POST_NOTIFICATIONS esta aprobado en D-033 (Q-M5) junto con el paquete
+         com.unity.mobile.notifications, pero todavia NO esta en la lista blanca: entra en $BasePermissions
+         en la misma tarea que integre ese paquete (mientras tanto falla con una pista; un build de prueba
+         puede pasarlo con -AllowPermission android.permission.POST_NOTIFICATIONS).
       3. Play Billing: si el manifiesto lleva la meta-data com.google.android.play.billingclient.version
          o el permiso BILLING, la version mayor debe ser >= 8 (08 sec. 13.1 #4). Sin billing se anota
          (todavia no hay IAP); con -RequireBilling, falla.
@@ -74,7 +78,10 @@ $AndroidNs = 'http://schemas.android.com/apk/res/android'
 $ProvisionalId = 'com.amazonfill.dev'
 $BillingMetaName = 'com.google.android.play.billingclient.version'
 $BillingPermission = 'com.android.vending.BILLING'
-$InternetPermission = 'android.permission.INTERNET'
+$InternetPermission = 'android.permission.INTERNET'          # aprobado: D-036
+# Aprobado en D-033 (Q-M5) con com.unity.mobile.notifications; se anade a $BasePermissions al integrar ese paquete
+# (y solo ese: SCHEDULE_EXACT_ALARM, USE_EXACT_ALARM y RECEIVE_BOOT_COMPLETED siguen fuera de la lista blanca).
+$NotificationsPermission = 'android.permission.POST_NOTIFICATIONS'
 $BasePermissions = @($InternetPermission, 'android.permission.VIBRATE')
 
 function Stop-WithCode {
@@ -237,10 +244,11 @@ function Test-Manifest($M, [string]$Prof, [int]$Target, [int]$Min, [string[]]$Ex
     $seen = [System.Collections.Generic.HashSet[string]]::new()
     foreach ($p in $M.Permissions) {
         if (-not $seen.Add($p)) { continue }
-        if (-not $allowed.Contains($p)) { $fail.Add("permiso fuera de la lista blanca: '$p' (regla dura 4: lo aprueba el dueno)") }
-    }
-    if ($M.Permissions.Contains($InternetPermission)) {
-        $note.Add('NOTA: android.permission.INTERNET presente (lo anade Unity con ForceInternetPermission en Auto); sigue pendiente del visto bueno del dueno.')
+        if ($allowed.Contains($p)) { continue }
+        if ($p -eq $NotificationsPermission) {
+            $fail.Add("permiso fuera de la lista blanca: '$p' (aprobado en D-033 Q-M5, pero entra en la lista blanca de este script con la tarea que integra com.unity.mobile.notifications; hasta entonces, -AllowPermission $p)")
+        }
+        else { $fail.Add("permiso fuera de la lista blanca: '$p' (regla dura 4: lo aprueba el dueno)") }
     }
 
     if ($billingPresent) {
@@ -324,6 +332,8 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         @{ Name = 'xml: minSdk 24';                              Fmt = 'xml'; Text = $okXml.Replace('minSdkVersion="26"', 'minSdkVersion="24"'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: permiso CAMERA';                         Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.CAMERA'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: CAMERA con -AllowPermission';            Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.CAMERA'); Prof = 'release'; Fails = 0; Allow = @('android.permission.CAMERA') }
+        @{ Name = 'xml: POST_NOTIFICATIONS sin integrar';        Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.POST_NOTIFICATIONS'); Prof = 'release'; Fails = 1 }
+        @{ Name = 'xml: POST_NOTIFICATIONS con -AllowPermission'; Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.POST_NOTIFICATIONS'); Prof = 'release'; Fails = 0; Allow = @('android.permission.POST_NOTIFICATIONS') }
         @{ Name = 'xml: billing 7';                              Fmt = 'xml'; Text = $okXml.Replace('android:value="8.0.0"', 'android:value="7.1.1"'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: BILLING sin meta-data';                  Fmt = 'xml'; Text = $okXml.Replace('com.google.android.play.billingclient.version" android:value="8.0.0"', 'otra" android:value="8.0.0"'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: appCategory social';                     Fmt = 'xml'; Text = $okXml.Replace('android:appCategory="0"', 'android:appCategory="4"'); Prof = 'release'; Fails = 1 }
@@ -361,11 +371,15 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
             Write-Output "[FALLA] $($c.Name): $n fallos, esperados $($c.Fails): $($r.Failures -join '; ')"
         }
     }
-    # Las notas obligatorias: INTERNET se anota.
+    # INTERNET esta aprobado (D-036): ni falla ni deja nota de pendiente.
     $r = Test-Manifest (ConvertFrom-Aapt2Tree $okTree) 'dev' 36 26 @() $false $false
-    if (-not ($r.Notes | Where-Object { $_ -like '*INTERNET*pendiente*' })) { $bad++; Write-Output '[FALLA] INTERNET no queda anotado' }
-    else { Write-Output '[OK]    INTERNET queda anotado como pendiente' }
-    $total = $cases.Count + 1
+    if ($r.Failures.Count -ne 0 -or ($r.Notes | Where-Object { $_ -like '*INTERNET*' })) { $bad++; Write-Output "[FALLA] INTERNET aprobado da fallos o notas: $((@($r.Failures) + @($r.Notes)) -join '; ')" }
+    else { Write-Output '[OK]    INTERNET aprobado (D-036): sin fallos ni nota' }
+    # La pista de POST_NOTIFICATIONS remite a D-033 Q-M5 (sin aprobarlo en la lista blanca).
+    $r = Test-Manifest (ConvertFrom-ManifestXml $okXml.Replace('android.permission.VIBRATE', $NotificationsPermission)) 'release' 36 26 @() $false $false
+    if (-not ($r.Failures | Where-Object { $_ -like '*POST_NOTIFICATIONS*Q-M5*' })) { $bad++; Write-Output '[FALLA] POST_NOTIFICATIONS sin la pista de D-033 Q-M5' }
+    else { Write-Output '[OK]    POST_NOTIFICATIONS falla con la pista de D-033 Q-M5' }
+    $total = $cases.Count + 2
     if ($bad -gt 0) { Stop-WithCode 1 "AUTOTEST: $bad de $total casos fallan." }
     Write-Output "AUTOTEST OK: $total casos."
     exit 0

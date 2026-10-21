@@ -52,6 +52,284 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
   - El arte de la libreta y de la tarjeta es provisional (por código).
   - Sin capturas de B4 en `Logs/snapshots/` ni prueba en el teléfono.
 
+## 2026-10-20 · T5 · B13 · Borradores de publicación (`spark/t5-b13`): HECHA · lista para integrar (solo documentación)
+
+- **Rama:** `spark/t5-b13`, desde `origin/integracion-fase1-fase2` en `9982bdc`. Commits `76d442b`, `9180887` y `b2577df` (revisión).
+- **Qué entrega.** Todo es borrador: lo que firma el abogado o decide el dueño va como `[PENDIENTE: dueño]` o `[PENDIENTE: abogado]`, sin datos inventados.
+  - En `docs/store-listing/`:
+    - `README.md`, con el índice, las longitudes medidas en NFC, las preguntas Q-B13-1..23, los hallazgos de audio en «3 bis» y los enganches del GDD;
+    - las fichas de Play en `es-419`, `en` y `pt-BR` (Méx. con OXXO y Bra. con Pix, pendientes de Q-B13-17);
+    - `data-safety.md`, `iarc.md` (ClassInd 14 esperado), `privacidad.md` (anexos de Méx. y LGPD) y `eliminar-cuenta.md`;
+    - la plantilla `app-ads.txt`;
+    - `assets-tienda.md`, el encargo de arte para el artista;
+    - `creditos.md`, más las 16 claves `credits_*` en `strings-creditos.csv`.
+  - En la raíz, `LICENSES.md`.
+  - En `docs/qa/`, `regresion-release.md`, con 60 casos y su fuente.
+- **Longitudes en NFC** (título 30 / corta 80 / larga 4.000 / novedades 500 / texto de captura ≤ 36 [P]):
+  - es-419: 21 / 78 / 2.487 / 143 / 36;
+  - en: 26 / 74 / 2.346 / 145 / 31;
+  - pt-BR: 25 / 73 / 2.431 / 134 / 34.
+- **Verificación:**
+  - `python tools/validate_schema.py`: 103/103;
+  - `dotnet build -warnaserror` y `dotnet test`: 0 avisos y 981 (975 + 6). Los pasó el revisor en la primera ronda;
+  - `git diff --check` limpio;
+  - no toca el GDD, `Assets/` ni `tools/`.
+- **code-reviewer:**
+  - 1.ª ronda, CAMBIOS NECESARIOS:
+    - «cada color es una fruta» (son 12 frutas y 2 aguas);
+    - el 77 en lugar de 74;
+    - el límite de las capturas contradictorio;
+    - un mecanismo de borrado inventado;
+  - 2.ª ronda: **APROBADO**.
+- **Para el integrador:**
+  - pasar las filas `credits_*` a `strings.csv` cuando exista la pantalla de Créditos;
+  - corregir el glosario §1.3 (la descripción corta EN mide 74, no 77);
+  - llevar al GDD lo que decida el dueño (07 §10.2, 08 §11, 08 §13.3).
+
+### Preguntas y hallazgos para el dueño (no bloquean lo entregado)
+
+Las 23 preguntas, con sus opciones y la recomendada, están en `docs/store-listing/README.md` §3. Las que más pesan:
+
+| Id | Pregunta | Recomendada |
+|---|---|---|
+| Q-B13-1, -2, -3 | Dominio de la página de borrado, titular legal en Play y correos de contacto, privacidad y DPO | Los fijan el dueño y el abogado; ninguna forma de «Amazon» |
+| Q-B13-5 | El texto de las capturas va «en papel marfil» (07 §10.2), que choca con D-003 (sin papel) | Placa de madera clara o de vidrio del kit de UI |
+| Q-B13-9 | `com.unity.modules.unityanalytics` está en `Packages/manifest.json` | build-release comprueba en B10 que esté apagado en release |
+| Q-B13-20 | Unity IAP 5.4.x necesita Unity Authentication, que no tiene fila en 08 §13.3 | Quien integre IAP la confirma y se añade la fila |
+| Q-B13-21 | El borrado por web solo pide el ID visible: quien conozca el ID de otro puede borrar su cuenta (hueco de 08 §11) | ID largo, aleatorio y distinto del UID, con confirmación y límite de peticiones |
+| Q-B13-22 | Cómo se borra la partida de Play Games si el borrado llega por web sin el juego instalado | Decir que se borra al abrir el juego, o que el jugador puede borrar su perfil de Play Games |
+| Q-B13-23 | La captura 2, «14 frutas, 14 colores» (07 §10.2), frente a 12 frutas + 2 aguas y ≤ 12 colores por nivel en la 1.0 | «14 colores de frutas y ríos» [P] |
+| — | Audio: toda la música `mus_*`, incluido `music/menu.wav` (el del vídeo), es CC0, frente al encargo original con cesión total (07 §9.5). `amb_w01_fauna_02` lleva voces humanas y es de Río de Janeiro. El autor «Tintalú Sound Design» usa la marca | El vídeo y los creativos no usan esa música hasta que haya una pista con cesión total; decidir si se mantiene el encargo original; revisarlo con el asesor y el abogado |
+
+## 2026-10-20 · B6 · Sesiones, Regalo de regreso y notificaciones, solo la lógica (`spark/t5-b6`): HECHA · verificación completa VERDE · lista para integrar
+
+- **Rama:** `spark/t5-b6`, desde `9e5d13f`. En `c4322199` fusiona `origin/integracion-fase1-fase2` (`dbbba004`, con FX16a y FX16b). Empujada.
+- **Nota de diseño:** `docs/dev/sesiones-notificaciones.md`. Recoge las reglas, los parches, los riesgos del programador real y las preguntas B6-Q1 a B6-Q18.
+- **Commits** (del más antiguo al más reciente):
+  - `a387b0af`: lógica sin motor y tests;
+  - `c08b4c50`: fábrica de almacenes, sin sesión nueva al reconstruir la UI;
+  - `93020e1d`: la nota, el CSV y el gancho del programador real;
+  - `db587c6f`: los `.meta`;
+  - `eec488f7`: B6-profile y B6-bootstrap;
+  - `fb8fc1de`: B6-notifications-real;
+  - `50a3b0a1`: los arreglos de la revisión;
+  - `2ceb2364`: el caso pendiente;
+  - `c4322199`: la fusión;
+  - y el commit de esta entrada.
+- **En la rama** (todo archivo nuevo):
+  - `Scripts/Platform/INotificationScheduler.cs` y `FakeNotificationScheduler.cs`;
+  - en `Scripts/LiveOps/`:
+    - sesiones: `SessionRecord` y `SessionTracker`;
+    - regalo: `ComebackConfig`, `ComebackRules` y `ComebackService`;
+    - `PushConfig`;
+    - pre-prompt: `PushSettingsRecord`, `PushPrePromptRules`, `PushPermissionService` e `IPushPrePromptPresenter`, con `SimulatedPushPrePrompt`;
+    - avisos: `NotificationType`, `NotificationContext`, `NotificationPlanner` y `NotificationService`;
+    - `SessionProbeFormat`;
+  - sus tests EditMode, en `Scripts/LiveOps/Tests/`;
+  - `Scripts/UI/GameBootstrap.Sessions.cs` y `SessionRunner.cs`, que no se llaman hasta B6-bootstrap;
+  - `docs/dev/traspaso/spark-enganches/B6-strings.csv`, con 21 claves en `pendiente_asesor`.
+- **Parches** (`docs/dev/traspaso/spark-enganches/`, en LF). Los tres pasan `git -c core.autocrlf=false apply --check` tras la fusión:
+  1. **`B6-profile.diff`:**
+     - `Profile.cs` y `ProfileJson.cs`: `settings.push`, que se escribe solo fuera de su default, y `stats.last_seen_at` y `stats.last_win_at` [P], que se omiten mientras son null. Lectura tolerante y sin migración;
+     - añade `LiveOps/ProfileSessionStore.cs` y `ProfileSessionStoreTests.cs`.
+  2. **`B6-bootstrap.diff`** (después del 1):
+     - `SetUpSessions();` en `GameBootstrap.Start`, tras `SetUpStreak();`;
+     - `GameBootstrap.SessionsProfile.cs`;
+     - `"AF.LiveOps"` en `AF.Tests.EditMode.asmdef`;
+     - `GameBootstrapSessionsTests.cs`.
+  3. **`B6-notifications-real.diff`** (aparte; no se aplica en las pruebas generales). Antes, anotar la versión en D-033. Trae:
+     - el manifiesto;
+     - `AF.UI.asmdef`, con la referencia y el `versionDefines` `AF_MOBILE_NOTIFICATIONS`;
+     - `AndroidNotificationScheduler.cs`;
+     - `GameBootstrap.Notifications.cs`.
+  4. **Textos:** las filas de `B6-strings.csv`, a `strings.csv`. Sin ellas no se programa ningún aviso.
+- **Choque con B3 y B7 en `GameBootstrap.cs`.** `B3-ui.diff`, `B6-bootstrap.diff` y `B7-bootstrap.diff` añaden cada uno una línea justo después de `SetUpStreak();`. El integrador lo resuelve a mano con este orden:
+  ```
+  SetUpStreak();
+  SetUpSkip();        // B3
+  SetUpSessions();    // B6
+  ConnectTelemetry(); // B7
+  ```
+- **Riesgo con B8** (en curso). `B8-profile.diff`, en `spark-t5-b8`, toca `Profile.cs` y `ProfileJson.cs` en otros puntos:
+  - Lo probé: aplica (`--check`) encima de B6-profile en el worktree temporal. No hay choque de texto hoy, pero puede haberlo si B8 cambia.
+  - Choque de sentido:
+    - la firma o integridad del perfil y la fusión en la nube de B8 tienen que cubrir `settings.push` y `stats.last_seen_at` / `last_win_at`;
+    - propuesta para la fusión: `last_seen_at` y `last_win_at` por máximo, y `pre_prompt_shown` / `second_prompt_shown` por OR. `granted` sería el del dispositivo, no el de la nube [P].
+- **Revisión (code-reviewer):**
+  - 1.ª ronda: CAMBIOS NECESARIOS, con 2 bloqueantes, ya arreglados en `50a3b0a1`:
+    - Nuevos niveles no salía nunca con el Reto desbloqueado, y Crecida casi nunca. Ahora el orden es Regreso > avisos puntuales > avisos diarios, y un puntual que pierde su día pasa una vez al siguiente;
+    - el segundo pre-prompt salía con una racha que ya estaba en 3 o más. Ahora sale solo en la victoria que alcanza el hito 3 después del primero.
+  - Sugerencias aplicadas:
+    - un aviso sin texto no gasta el cupo del día;
+    - el Regreso no se avisa antes de `live_comeback_gift.days`;
+    - el arranque no usa el pre-prompt simulado: no gasta los pre-prompts del perfil de pruebas.
+  - 2.ª ronda: **APROBADO**.
+- **Verificación** (`-Architecture arm64 -TimeoutSec 3600`; como mucho 2 Unity a la vez):
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`50a3b0a1`) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos; 981 (975 + 6), 0 fallos; 103/103, código 0 |
+  | rama (`50a3b0a1`) | `unity-compile`; EditMode; PlayMode | 0; **3.423 (3.420 + 3), 0 fallos** (64 nuevos de B6); **1.589 (1.382 + 207), 0 fallos** |
+  | temporal con B6-profile + B6-bootstrap (`50a3b0a1`) | compile; EditMode; PlayMode | 0; **3.432 (3.429 + 3), 0 fallos**; **1.589: 1 fallo, `WorldBannerTravelTests.Travel_MeshesBuildIn8ms` (8,0004 ms frente a un tope de 8 ms, el inestable)**; relanzado con filtro, 13/13 |
+  | temporal con el real sin la línea del manifiesto | compile | 0, con los `.meta` del diff; luego revertido |
+  | rama tras la fusión (`c4322199`) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py`; compile; EditMode | 0 avisos; 981 (975 + 6); código 0; 0; **3.431 (3.428 + 3), 0 fallos**. PlayMode no se repite: la fusión solo trae cambios del escritorio (FX16a/b, BuildRelease) que no tocan el código de B6 |
+
+- **Versión para D-033:** `com.unity.mobile.notifications` **2.4.3**.
+  - El repositorio no fija ninguna (08 §7 y §15 solo nombran «Mobile Notifications»).
+  - Es la que declara el Editor 6000.3.25f1 instalado (`Editor/Data/Resources/PackageManager/Editor/manifest.json`: `version` y `minimumVersion` 2.4.3). Es un archivo local; no se navegó.
+- **Cómo comprobar `POST_NOTIFICATIONS`** tras aplicar el parche real y hacer el APK de desarrollo:
+  - `aapt2 dump permissions Builds/Android/dev.apk`, o `bundletool dump manifest` en el AAB;
+  - debe listar `android.permission.POST_NOTIFICATIONS`;
+  - y **no** `SCHEDULE_EXACT_ALARM`, `USE_EXACT_ALARM` ni `RECEIVE_BOOT_COMPLETED`.
+  - En Project Settings › Mobile Notifications: «Schedule at exact time» en `Never`, «Reschedule on Device Restart» apagado y nada que pida el permiso al arrancar.
+  - En el teléfono: que no salga ningún diálogo en el arranque en frío.
+- **Riesgos del programador real** (detalle en la nota §8):
+  - el cuerpo del `#if` no está compilado sin el paquete;
+  - faltan los iconos (arte);
+  - `af_push_sent` es aproximado;
+  - hay que pasar `ci/check-16kb.sh` y `ci/size-gate.ps1`.
+
+### Preguntas para el dueño (B6; se avanzó con la recomendada, marcada [P])
+
+| Id | Pregunta | Recomendada |
+|---|---|---|
+| B6-Q9 | Con 1 aviso al día y la prioridad literal de 06 §8.2, el Reto listo de cada día haría que Nuevos niveles no saliera nunca y que Crecida te espera casi nunca saliera | (b): Regreso > puntuales (Crecida > canoas > nuevos niveles) > diarios (Reto > Bitácora); un puntual que pierde su día pasa una vez al siguiente |
+| B6-Q1 | Con qué se miden los días sin sesión | `stats.last_seen_at` nuevo, en periodos de 24 h |
+| B6-Q2 | Qué guarda `settings.push` para el segundo pre-prompt | `pre_prompt_at` + `second_prompt_shown`; sale en la victoria que alcanza el hito 3 después del primero o desde 7 días después |
+| B6-Q3 | ¿Se avisa antes de «Avísame»? | No; `granted` solo se baja al abrir |
+| B6-Q4 | «Racha de Retos» en la 1.0 | Sí, como variante del Reto listo |
+| B6-Q5 | Días del Regreso | D7, D14, D30 y D60; los textos de D14, D30 y D60 son propuestos |
+| B6-Q6 | `source` de las semillas del regalo | `event` |
+| B6-Q7 | «Una victoria más» aunque falten más | Texto con `{left}` y plural |
+| B6-Q8 | Título y canal de Android | «TiTino» y «Avisos del río» |
+| B6-Q10 | Reparto sin abrir | 3 por semana; los diarios en días alternos |
+| B6-Q11 | Aviso en horas silenciosas | Se mueve a las 09:00 |
+| B6-Q12 | Tope diario después del día 7 | 1 al día siempre |
+| B6-Q13 | Hora del Reto listo | 09:30 |
+| B6-Q14 | Crecida con las 36 h ya pasadas | Sin aviso |
+| B6-Q15 | Anti-reloj del regalo | Con un desfase mayor que `sec_clock_max_drift_h`, sin regalo, y ese regalo se pierde. Sin red, cambiar el reloj lo repite |
+| B6-Q16 | Cuándo sale la tarjeta del pre-prompt | Tras el panel de la victoria y antes de la Mochila; el disparador se mueve ahí con la tarjeta (UI de otro bloque) |
+| B6-Q17 | Valores de `af_push_prompt` | `result` ∈ {`accepted`, `declined`, `granted`, `denied`}; `origin` ∈ {`first`, `second`, `settings`} |
+| B6-Q18 | Valores de `type` de los avisos | `daily_ready` … `comeback_d60` |
+
+- **Caso pendiente:**
+  - Si el primer pre-prompt sale en la victoria que deja la Crecida en 3, y después se gana un Reto que no mueve la racha, el segundo saldría en esa victoria.
+  - Para cerrarlo haría falta guardar la racha del primero (otro campo [P]).
+- **Falta UI** (fuera de B6): la tarjeta del pre-prompt, la fila «Avisos» de Ajustes y el aviso del Regalo de regreso (`GameBootstrap.LastComeback`).
+
+## 2026-10-20 · B3 · Salto del Boto (`spark/t5-b3`): HECHA · verificación completa · lista para integrar
+
+- **Rama:** `spark/t5-b3`, desde `origin/integracion-fase1-fase2` `9982bdc` (con B1a). Sin push (lo pidió el encargo de esta tanda).
+- **Nota de diseño:** `docs/dev/salto-del-boto.md` (reglas S1-S10, reparto, preguntas Q-S1-Q-S9, riesgos).
+- **Commits:** `d8f1fb4` (lógica, vista y tests en archivos nuevos), `62963e9` (almacén según el progreso), `e9440f7` (nota y parches),
+  `28a6876` y `bd4be8d` (revisión: el Reto sin Salto, la Cuia extra, la clave `skip`), `ad2ce8b` (.meta y B3-ui.diff regenerado),
+  y los dos del arreglo de las mascotas (Rosa se pinta al enseñarla; B3-ui.diff regenerado, `e79f624`).
+- **Archivos nuevos:** `Scripts/Boosters/SkipBooster.cs`; `Scripts/GameFlow/SkipStore.cs` y `LevelFlow.Skip.cs`; `Scripts/UI/SkipText.cs`,
+  `SkipUi.cs`, `GameBootstrap.Skip.cs`, `SkipRunner.cs` y `DevProbe.Skip.cs`; tests EditMode `SkipBoosterTests`, `SkipFlowTests`,
+  `SkipProbeTests` y `SkipDailyTests`.
+- **E34 cumplido:** `LevelFlow.Skip()` llama a `OnSkipStreak()` dentro de su `using (Saves())`, tras el cobro y **antes** de
+  `ISkipStore.SaveSkip`; el cobro, la Canasta del 10k, el salto y el `level_state` del nivel siguiente salen en **una** escritura
+  (`SkipFlowTests.SkippingA10k_PaysItsBasket_AndEverythingGoesOutInOneWrite`). El nivel saltado **cuenta para `max_level`** (sin
+  `stats.levels_won`), como pedía el aviso del revisor de B1a.
+- **Revisión (code-reviewer):** 1.ª ronda CAMBIOS NECESARIOS (sin test del Reto, sin test del aviso de la Cuia extra, clave del CTA fuera
+  del glosario, faltaba Unity con los parches); arreglado. 2.ª ronda: solo faltaba commitear el .meta y el B3-ui.diff regenerado (hecho en
+  `ad2ce8b`); «aprobado sin otra ronda de código» con PlayMode completo en verde.
+
+### Enganches para el integrador (en este orden, en LF, en `docs/dev/traspaso/spark-enganches/`)
+
+1. `B3-model.diff`: `StuckModalModel.cs` (`StuckContext.Skip`, `StuckModalView.Skip`: la rama D) y `LevelFlow.Funnel.cs`
+   (`BuildStuckContext` rellena `Skip = SkipOffer`); añade `Tests/EditMode/StuckModalSkipTests.cs` (+ .meta).
+2. `B3-ui.diff` (necesita el 1): `StuckModal.cs` (la opción con precio y «Rosa te lleva…» o «Te faltan»), `PauseMenu.cs` (botón con Rosa y
+   precio), `GameScreen.cs` (pasa `flow.SkipOffer` y `OnPauseSkip`), `GameBootstrap.cs` (`SetUpSkip();` tras `SetUpStreak();`); añade
+   `Tests/PlayMode/SkipPlayModeTests.cs` (+ .meta).
+3. `B3-strings.csv`: 6 claves (`stuck_skip`, `skip_tagline`, `skip_confirm_title`, `skip_confirm_extra_cuia`, `skip`, `skip_banner`), a
+   copiar en `strings.csv`; `pendiente_asesor`.
+- Sin parche de `Profile`/`ProfileJson` (ya guardan `since_last_skip` y `skipped_levels`) ni de `RiverMapScreen*` (ya pinta a Rosa con
+  `max_level` + `skipped_levels`).
+- Prueba: `git apply` de 1 y 2 sobre la rama, `unity-compile`, EditMode y PlayMode (`StuckModalSkipTests`, `SkipPlayModeTests`).
+- **Choque con `B7-bootstrap.diff`:** `B3-ui.diff` y `B7-bootstrap.diff` insertan una línea en el mismo punto de `GameBootstrap.cs`,
+  justo después de `SetUpStreak();`. Se resuelve a mano dejando primero `SetUpSkip();` y después `ConnectTelemetry();`.
+- **Rehecho sobre FX16a/FX16b** (`e11b424`): `B3-ui.diff` se regeneró sobre el `StuckModal.cs` nuevo; la rama D usa las medidas de la
+  disposición compacta (`FitCtaLabelCompact`, `PlaceButton`, `HeightOf`, `gap`), como la Cuia de rescate.
+
+### Verificación
+
+| Dónde | Comando | Resultado |
+|---|---|---|
+| rama | `dotnet build dotnet/AmazonFill.slnx -warnaserror` | 0 avisos, 0 errores |
+| rama | `dotnet test dotnet/AmazonFill.slnx` | 981 (975 + 6 omitidos), 0 fallos |
+| rama | `python tools/validate_schema.py` | 103/103 PASS, sin cambios en `tools/out/` |
+| rama | `unity-compile.ps1 -Architecture arm64` | OK (código 0) |
+| rama | EditMode (`-TimeoutSec 3600`) | **3.384 (3.381 + 3 omitidos), 0 fallos** |
+| rama | PlayMode (`-TimeoutSec 3600`) | 1.589 (1.380 + 207 omitidos), **2 fallos de tiempo** con otro Editor (B2) en marcha: `WorldBannerTests.Banner_TimeoutAndWaitMs_UseTheRealClock` y `WorldBannerTravelTests.Travel_MeshesBuildIn8ms` (10,63 ms > 8); relanzados con filtro: **30/30 verdes** |
+| worktree temporal con B3-model + B3-ui | `git apply` de los dos | aplican limpios |
+| ídem | `unity-compile.ps1` | OK |
+| ídem | EditMode | **3.389 (3.386 + 3 omitidos), 0 fallos** |
+| ídem | PlayMode | 1.ª pasada: 1 fallo real, `WorldBannerTests.Banner_NotOnRetryNorResume` (`MascotsBuilt`): la confirmación, el banner y la pausa pintaban a Rosa al arrancar; arreglado en `e5519fa` y `e79f624` (Rosa solo al enseñarlos). 2.ª pasada: **1.590 (1.383 + 207 omitidos), 0 fallos** |
+| rama tras el arreglo | `unity-compile.ps1` | OK |
+| retoques tras la aprobación (`cabddef`, `a82a97e`) | rama: `dotnet build`/`test`, `validate_schema`, compile, EditMode, PlayMode | 0 avisos; 981 (975 + 6); 103/103; OK; **3.384 (3.381 + 3), 0 fallos**; **1.589 (1.382 + 207), 0 fallos** |
+| ídem | worktree con B3-model + B3-ui: compile, EditMode, PlayMode | OK; **3.389 (3.386 + 3), 0 fallos**; **1.590 (1.383 + 207), 0 fallos** (`SkipPlayModeTests` en verde) |
+| tras fusionar `e11b424` (FX16a/FX16b; `c975184`, `be82d8d`) | rama: `dotnet build`/`test`, `validate_schema`, compile, EditMode, PlayMode | 0 avisos; 981 (975 + 6); 103/103; OK; **3.392 (3.389 + 3), 0 fallos**; **1.655 (1.425 + 230), 0 fallos** |
+| ídem | worktree con B3-model + B3-ui regenerado: `apply --check` en orden, compile, EditMode, PlayMode | aplican; OK; **3.397 (3.394 + 3), 0 fallos**; **1.656 (1.426 + 230), 0 fallos** (`SkipPlayModeTests` en verde) |
+
+### Decisiones [P] y preguntas para el dueño
+
+Detalle en la nota §3 (todas con la recomendada aplicada):
+- **Q-S1:** `last_skip_level` se deduce del mayor de `skipped_levels` (sin campo nuevo); `since_last_skip` se pone a 0 y no se lee. El ejemplo
+  de 08 §4.3 no casa con ninguna lectura: hay que corregir el GDD.
+- **Q-S2:** hueco N − último ≥ 10 (salto en el 40 → el 50 ya puede).
+- **Q-S3:** banner como franja con Rosa sobre el tablero mientras el intento no empezó (tarjeta, intro o sin vertidos).
+- **Q-S4:** sin nivel siguiente o sin canoas para empezarlo, el Salto no se ofrece.
+- **Q-S5:** la animación de Rosa (1,5 s) y su sonido esperan al arte y al audio.
+- **Q-S6:** `stuck_skip` partido en etiqueta + precio + `skip_tagline`.
+- **Q-S7:** se ofrece en Aguas estancadas, en la pausa y en el banner; no en ¿Seguro?, Nivel fallido ni Sin canoas.
+- **Q-S8:** textos sin canon («¿Saltar el nivel?», «Perderás la Cuia extra de este nivel»), `pendiente_asesor`.
+- **Q-S9:** `skip_min_level`: 05 dice «mínimo 31», 08 §9 da 20-31; el cliente solo exige ≥ 1 (el revisor sugiere no bajar de `rescue_min_level`).
+- Nueva (revisor): ¿se enseña al jugador la Canasta que paga el salto de un 10k? Hoy solo sale en la sonda.
+- **Q-S1, consecuencia:** `since_last_skip` ya no se usa; corregir 02 §2, 04 §6.1-§6.2 y el ejemplo de 08 §4.3, y avisar a B7
+  (`af_skip_used.since_last_skip` = nivel − último salto) y a B8 (fusión en la nube).
+- **Q-S6, consecuencia:** toca la tabla de 04 §6.5.
+- **Pendiente:** medir el primer pintado de Rosa con `MascotsMainMs` (tope de 8 ms, 08 §5.4).
+- **Retoque tras la aprobación:** el banner sin saldo se enseña en gris con «Te faltan {n} semillas» (clave existente
+  `stuck_rescue_missing`, sin texto nuevo) y no responde al toque.
+
+### Riesgos
+
+- La rama D suma ~70 dp al panel de Aguas estancadas: el caso conocido de 16:9 al 130 % empeora si coinciden B y D (sin medir).
+- `af_skip_used` solo en la sonda de desarrollo hasta B7; `SkipConfig.Defaults` hasta el lector de Remote Config.
+- Sugerencias del revisor no hechas: id del banner en la AF_LAYOUT `level` (toca `GameScreen`), «Te faltan N» en la pausa sin saldo,
+  rama D en un test de tamaños.
+
+---
+
+## 2026-10-20 · B2 · Pororoca (`spark/t5-b2`): HECHA · verificación completa VERDE · lista para integrar
+
+- **Rama:** `spark/t5-b2`, desde `origin/integracion-fase1-fase2` en `9982bdc` (con B1a). Sin empujar (el encargo de B2 dice «no hagas push»).
+- **Nota de diseño:** `docs/dev/pororoca.md` (qué va en la rama y qué en parches, el algoritmo, el flujo, la vista, las [P] P-1 a P-19 y los hallazgos para el GDD).
+- **Commits:** `eaad940` (código de la rama: `ShuffleBooster`, `IShuffleListener`, `ProceduralArt.Shuffle`, `ShuffleText`, `ShuffleConfirm`, `ShuffleIntroCard`, `ShuffleWaveFx`, `IShuffleActions` y `ShuffleBoosterTests`, con sus `.meta`) y el de la nota, los parches y esta entrada.
+- **Revisión (code-reviewer):** 1.ª ronda, CAMBIOS NECESARIOS (faltaban commit, parches y `.meta`; la contradicción 03 §9 / 04 §2.4; tres tests). Arreglado (P-16 y P-17; tests `UnknownStartingPar…`, `OpenedOrReleasedMechanics…` y `MurkyLevel_Firefly_Shuffle_Resume…`; el cobro comprobado; la placa de la tarjeta sin raycast y el bloqueador de la ola con `HitArea`). 2.ª ronda: **APROBADO**, condicionado al commit y a la verificación completa, hechos abajo.
+- **Enganches para el integrador** (en `docs/dev/traspaso/spark-enganches/`, LF; `git apply --check` OK). Se aplican **después de fusionar `spark/t5-b2`** y **en este orden**:
+  1. `B2-solver.diff`: `Packages/com.amazonfill.core/` (`AF.Solver/Shuffle/` nuevo con `Shuffler`, `ShuffleOptions` y `ShuffleResult`; `LevelSession.ApplyShuffle`; `ShufflerTests` y `LevelSessionShuffleTests`) y `dotnet/AF.Core.Tests/DotnetOnly/ShuffleAllocationTests.cs`, con los `.meta` que generó Unity.
+  2. `B2-flow.diff`: `Boosters/ShuffleWave.cs` y `GameFlow/LevelFlow.Shuffle.cs` (nuevos); ganchos de una línea en `LevelFlow.cs` (`Load` y `BeginAttempt`); `LevelFlow.Resume.cs` (rehacer con las olas, `RestoreShuffle`, `WriteHistory`); `LevelStateSnapshot.cs` (marca `*` en V, marcas `o` y `p`; h2 sin versión nueva); `Economy/Wallet.cs` (`ShufflesToday` y `daily.shuffles_today` al cobrar); `Tests/EditMode/ShuffleFlowTests.cs`.
+  3. `B2-ui.diff`: `BoosterTray.cs` ✱ (ranura Barajar entre Pista y Revelar, globo, latido, `PaintShuffle`); `GameScreen.cs` ✱ (6 ganchos `Shuffle*`); `GameScreen.Shuffle.cs` y `GameBootstrap.Shuffle.cs` (nuevos); `DailyChallengeScreen.cs` (la Pororoca en el Reto); `Tests/PlayMode/ShufflePlayModeTests.cs` (nuevo), `PlayModeHelpers.cs` (`NoShuffleUnlessSet`, P-19) y `LocTablesTests.cs` (`ShuffleText.AllKeys`).
+  4. `B2-strings.csv`: 8 filas para `strings.csv` (`shuffle`, `shuffle_confirm`, `shuffle_confirm_yes`, `shuffle_failed`, `shuffle_low_water`, `shuffle_name`, `shuffle_tagline` y `shuffle_unsupported`), solo `es-419` y `pendiente_asesor`, en orden ordinal. Sin ellas falla `LocTablesTests.EveryUiTextKey_Exists_AndEveryStringsRow_IsUsed`.
+- **Verificación:**
+
+  | Dónde | Comando | Resultado |
+  |---|---|---|
+  | rama (`eaad940`, sin parches) | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos; 981 (975 + 6); 103/103 |
+  | rama | `unity-compile -Architecture arm64`; EditMode; PlayMode (`-TimeoutSec 3600`) | OK; **3.368 (3.365 + 3), 0 fallos** (387 s); **1.589 (1.382 + 207), 0 fallos** (2.226 s) |
+  | temporal en `9982bdc` + rama + los 3 parches + las 8 filas | `dotnet build -warnaserror`; `dotnet test`; `validate_schema.py` | 0 avisos; **1.002 (996 + 6)**; 103/103 |
+  | temporal | `unity-compile`; EditMode; PlayMode | OK; **3.399 (3.396 + 3), 0 fallos** (282 s); **1.593 (1.386 + 207), 0 fallos** (1.863 s) |
+
+  `econ_sim` no se ejecutó: no se toca la economía (los precios y topes son los de 08 §9). `IntroArtTests.FruitFlight…10ms` no falló en ninguna pasada.
+- **Decisiones [P]** (con la recomendada; detalle en `pororoca.md` §5): P-1 a P-19. Las que piden al dueño: **P-4** (tope «1 por nivel» en todos los intentos y al salir y volver), **P-5** (Volver a la orilla vuelve al tablero del nivel), **P-6** (sin hoja con el stock), **P-10** (la ola en el hilo principal: medir en el teléfono el peor caso, la que falla), **P-13** (Tinaja con dosis: habilitada y medir en `level-qa`), **P-16** (03 §9 frente a 04 §2.4 en la ola que falla) y **P-18** (bandeja de 5 ranuras en 360 dp: «Shuffle», «Embaralhar», y «Desfazer» y «Revelar» en pt-BR al 130 %, no caben a 12 sp; EN y PT-BR de `shuffle` quedan vacíos).
+- **Riesgos:**
+  - P-18 es de interfaz: en en y pt-BR la ranura sale sin etiqueta hasta decidirlo.
+  - Con P-19 (`GameScreen.ShuffleOverride`, solo vista), los tests PlayMode que no tratan de la Pororoca corren sin ella; la bandeja de 5 ranuras desde el 30 la cubre `ShufflePlayModeTests`.
+  - La analítica (`af_shuffle_result`, `af_booster_used`) sale solo como sonda `AF_STATE shuffle` hasta B7.
+
+---
 
 ## 2026-10-20 · S2 = B1a · Crecida + Hoja escudo + Canasta (`spark/t5-b1a`): HECHA · verificación completa VERDE · lista para integrar
 

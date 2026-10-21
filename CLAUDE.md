@@ -36,7 +36,7 @@ La raíz **es** el proyecto Unity; Unity solo importa `Assets/` y `Packages/`.
 - `.claude/`: `agents/` (7 subagentes), `rules/` (reglas por ruta), `skills/` (`unity-cli`, `unity-pipeline`), `settings.json` (permisos aprobados por el dueño el 2026-10-06; el 2026-10-09 pasó todas las reglas «ask» a «allow» para trabajar sin avisos: solo quedan las «deny». Las reglas duras de este archivo siguen valiendo aunque nada pida confirmación).
 - **Pendiente (no crear a mano):**
   - `.github/workflows/`: s30 y s32;
-  - `functions/`: Cloud Functions, más adelante.
+  - `infra/`: backend en AWS (D-035; CDK v2 en TypeScript, las 5 funciones con DynamoDB, la web y el CDN), según `docs/dev/plan-backend-aws.md`. Los agentes solo validan sin credenciales (`npm ci`, lint, typecheck, tests, `cdk synth`); despliega el dueño. Firebase se queda con Auth anónimo, Analytics, Crashlytics y Remote Config.
 - Estructura de `Assets/_Project/`: GDD 08 §3, con `Scripts/Core` y `Scripts/Solver` sustituidos por el paquete.
 
 ## Comandos de verificación (obligatorios antes de dar una tarea por terminada)
@@ -57,8 +57,8 @@ python tools/river-map/geometry.py --check            # cuando exista
 python -m unittest discover -s tools/river-map -p "test_*.py"
 python docs/research/mapa-del-rio/generar_mapa.py --check
 pwsh -NoProfile -File scripts/unity-compile.ps1       # ¿compila Unity? errores: solo las 30 primeras líneas "error CS"
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 3.367 hoy en integracion-fase1-fase2 (3.364 + 3 omitidos); dotnet test: 981 (975 + 6 omitidos)
-pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.655 (1.425 + 230 explícitos: capturas y los 16 KnownIssue de FX16a); antes de cada PR que toque Unity
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode EditMode    # 3.538 hoy en integra/spark-t5b (3.535 + 3 omitidos; con B6, B3 y B2 del Spark); dotnet test: 1.002 (996 + 6 omitidos)
+pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.703 (1.466 + 237 explícitos: capturas y los 16 KnownIssue de FX16a); antes de cada PR que toque Unity
                                                       # tarda 30-40 min: el límite por defecto en PlayMode es -TimeoutSec 3600 (a 900 s no da veredicto)
 ```
 - Las pruebas de `tools/` van como fixtures (`tools/level-generator/specs/tests/`, `tools/level-qa/fixtures/`) y como un modo `--self-test` en la propia herramienta; `tools/river-map/` suma sus `test_*.py` (unittest). No hay proyectos de tests de `tools/` en `dotnet/AmazonFill.slnx`.
@@ -79,7 +79,7 @@ pwsh -NoProfile -File scripts/unity-test.ps1 -Mode PlayMode    # 1.655 (1.425 + 
 - s27 hecho: APK de humo probado en un Samsung SM-S938B (Android 16) por depuración inalámbrica (`adb devices` lo descubre por mDNS). Pendiente del dueño: s28 (prueba visual de 30 min en Play Mode) y decidir si los 15 min orientativos del build limpio son vinculantes.
 - **Decisiones del dueño (docs/dev/decisiones.md):** D-005 vertido por tramo como Magic Sort (`PourMode.Run`, clave `rules_pour_mode`, default `run`; `single` solo para pruebas; sustituye a D-001); D-002 al seleccionar no se resalta ningún destino; D-003 dirección visual «Selva brillante premium» (vidrio, madera y luz de juego, sin papel ni acuarela; guía `docs/art/direccion-visual-v2.md`); D-004 panel azul petróleo y tope del ancho de la cuia según el número de cuias T (64 dp con T ≤ 3, 56 con T = 4-5 y 48 con T ≥ 6; 02 §5); D-006 tablero, cuia y vertido como Magic Sort (boca sobre el eje del destino a 0,2-0,6 u, 92° − 9° × dosis que quedan, sin techo y delante de todo; cavidad de 0,80 × 4 u en cuia de 5,6 u; 3 filas de ≤ 5 desde 11 cuias (6/5/5 con 16), fijas en el nivel). No reintroduzcas ayudas implícitas: las ayudas son explícitas (comodines).
 - **Prototipo v0 jugable (2026-10-06):** niveles 1-10 del tutorial. Build de desarrollo con `unity run <repo> --architecture arm64 --timeout 5400 -- -nographics -buildTarget Android -executeMethod AF.EditorTools.BuildDev.BuildAndroidDev` → `Builds/Android/dev.apk`. En builds de desarrollo el juego escribe `AF_LAYOUT {json}` y `AF_STATE {json}` en logcat: úsalos para jugar con `adb shell input tap x y` y verificar; capturas en `Logs/device/` (ignorado). La depuración inalámbrica del teléfono de pruebas se desconecta a menudo: si `adb devices` sale vacío, pide al dueño que la reactive; no insistas.
-- **Permiso `INTERNET`:** lo añade Unity porque `ForceInternetPermission` está en Auto; hará falta para anuncios, IAP y Firebase. Está **pendiente del visto bueno del dueño**: no lo fuerces ni lo quites sin él.
+- **Permiso `INTERNET`:** **aprobado por el dueño (D-036, 2026-10-20)** para anuncios, compras, Firebase y guardado en la nube. Lo añade Unity porque `ForceInternetPermission` está en Auto; no cambies esa configuración sin una tarea que lo pida. La aprobación no cubre por sí sola SDK, paquetes ni otros permisos.
 - `com.unity.pipeline` avisa en cada build "No RuntimePipelineConfig asset found": no afecta al build de humo.
 
 ## Reglas duras

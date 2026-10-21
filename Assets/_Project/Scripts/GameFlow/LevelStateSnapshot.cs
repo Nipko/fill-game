@@ -122,6 +122,22 @@ namespace AF.GameFlow
         /// fuente de la verdad del revelado: <c>revealed_cuias</c> solo dice qué cuias, no qué capas.
         /// </summary>
         public List<SavedReveal> Revealed { get; } = new List<SavedReveal>(4);
+
+        /// <summary>
+        /// Pororocas usadas en este nivel, en todos sus intentos (04 §2.4: «1 por nivel»; marca <c>o</c>, una por Pororoca; bloque
+        /// B2): no se devuelven al salir y volver a entrar ni al reabrir la app.
+        /// </summary>
+        public int ShufflesUsed { get; internal set; }
+
+        /// <summary>Ya se enseñó la tarjeta de la Pororoca del nivel 30 (04 §4; marca <c>p</c>; bloque B2).</summary>
+        public bool ShuffleCardShown { get; internal set; }
+
+        /// <summary>
+        /// Dónde fue cada Pororoca del intento (marca <see cref="LevelStateSnapshot.ShuffleMark"/> en V): la ola k va justo antes
+        /// del vertido <c>ShuffleAt[k]</c> (= vertidos de antes de ella). Como la ola es determinista, al reanudar se vuelve a dar
+        /// ahí (02 R8; bloque B2).
+        /// </summary>
+        public List<int> ShuffleAt { get; } = new List<int>(1);
     }
 
     /// <summary>
@@ -173,6 +189,14 @@ namespace AF.GameFlow
         private const char BalsaShownMark = 'b';
         private const char RevealGiftMark = 'l';
         private const char HintGiftMark = 'm';
+        private const char ShuffleUsedMark = 'o';
+        private const char ShuffleCardMark = 'p';
+
+        /// <summary>
+        /// Marca de una Pororoca en V (bloque B2; 04 §2.4; 02 §14): entre los pares de vertidos, donde fue la ola. h2 sin ella se
+        /// sigue leyendo igual, así que no cambia la versión (como las marcas <c>l</c> y <c>m</c>).
+        /// </summary>
+        public const char ShuffleMark = '*';
         private const string HexDigits = "0123456789abcdef";
 
         /// <summary>
@@ -224,9 +248,16 @@ namespace AF.GameFlow
         /// <paramref name="hintGifted"/> (marca <c>m</c>, TU1b), en cualquier pantalla. Sin <paramref name="session"/> (se salió
         /// al inicio), V y R van vacías.
         /// </summary>
+        /// <remarks>
+        /// Pororoca (bloque B2): <paramref name="shufflesUsed"/> marcas <c>o</c> y, con <paramref name="shuffleCardShown"/>, la
+        /// marca <c>p</c>, en cualquier pantalla; <paramref name="shufflePrefix"/> son los vertidos de antes de cada ola del
+        /// intento con sus marcas <see cref="ShuffleMark"/>, que van en V delante de los de la sesión (que tras una ola solo tiene
+        /// los de después).
+        /// </remarks>
         public static void WriteHistory(
             StringBuilder sb, SavedPhase phase, IReadOnlyList<AddedCuiaKind> added, bool undoGiftUsed, bool extraCuiaGifted, LevelSession? session,
-            bool balsaShown = false, bool revealGifted = false, bool hintGifted = false)
+            bool balsaShown = false, bool revealGifted = false, bool hintGifted = false, string? shufflePrefix = null, int shufflesUsed = 0,
+            bool shuffleCardShown = false)
         {
             sb.Clear();
             sb.Append(HistoryVersion).Append(Separator).Append(PhaseCode(phase)).Append(Separator);
@@ -261,9 +292,20 @@ namespace AF.GameFlow
                 sb.Append(HintGiftMark);
             }
 
+            for (int i = 0; i < shufflesUsed; i++)
+            {
+                sb.Append(ShuffleUsedMark);
+            }
+
+            if (shuffleCardShown)
+            {
+                sb.Append(ShuffleCardMark);
+            }
+
             sb.Append(Separator);
             if (session != null)
             {
+                sb.Append(shufflePrefix);
                 for (int i = 0; i < session.AppliedPours; i++)
                 {
                     Pour pour = session.GetAppliedPour(i);
@@ -353,6 +395,14 @@ namespace AF.GameFlow
                 {
                     parsed.HintGifted = true;
                 }
+                else if (mark == ShuffleUsedMark)
+                {
+                    parsed.ShufflesUsed++; // una por Pororoca del nivel (B2)
+                }
+                else if (mark == ShuffleCardMark && !parsed.ShuffleCardShown)
+                {
+                    parsed.ShuffleCardShown = true;
+                }
                 else
                 {
                     return false; // marca desconocida o repetida
@@ -360,13 +410,23 @@ namespace AF.GameFlow
             }
 
             string moves = parts[4];
-            if (moves.Length % 2 != 0)
+            int at = 0;
+            while (at < moves.Length)
             {
-                return false;
-            }
+                if (moves[at] == ShuffleMark)
+                {
+                    parsed.ShuffleAt.Add(parsed.Sources.Count); // la ola va antes del vertido que sigue (B2)
+                    at++;
+                    continue;
+                }
 
-            for (int i = 0; i < moves.Length; i += 2)
-            {
+                if (at + 1 >= moves.Length)
+                {
+                    return false;
+                }
+
+                int i = at;
+                at += 2;
                 int source = HexDigits.IndexOf(moves[i]);
                 int target = HexDigits.IndexOf(moves[i + 1]);
                 if (source < 0 || target < 0 || source == target)
@@ -376,6 +436,11 @@ namespace AF.GameFlow
 
                 parsed.Sources.Add(source);
                 parsed.Targets.Add(target);
+            }
+
+            if (parsed.ShuffleAt.Count > parsed.ShufflesUsed)
+            {
+                return false; // una ola en V sin su marca o: no es de este formato
             }
 
             return !current || TryParseRevealed(parts[5], parsed.Revealed);

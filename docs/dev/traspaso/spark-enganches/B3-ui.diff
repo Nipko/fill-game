@@ -1,0 +1,424 @@
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+index 007f9074..6efb59dd 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.cs
+@@ -1611,6 +1611,7 @@ private IEnumerator Start()
+             _lobby.Bind(_app, _services);
+             SetUpDaily(); // Reto del río (E2; GameBootstrap.Daily.cs): pool, servicio, tarjeta del inicio y partida
+             SetUpStreak(); // Crecida, Hoja escudo y Canasta (E32; GameBootstrap.Streak.cs): el servicio, inyectado en el flujo
++            SetUpSkip(); // Salto del Boto (B3; GameBootstrap.Skip.cs): el almacén en el perfil, la confirmación y el banner
+ 
+             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
+             if (requested <= 0 && !rebuilt)
+diff --git a/Assets/_Project/Scripts/UI/GameScreen.cs b/Assets/_Project/Scripts/UI/GameScreen.cs
+index f58a073a..5eba0687 100644
+--- a/Assets/_Project/Scripts/UI/GameScreen.cs
++++ b/Assets/_Project/Scripts/UI/GameScreen.cs
+@@ -623,7 +623,7 @@ public GameScreen(Transform host, ProceduralArt art, DevProbe probe, IGameAction
+             UiBuilder.Place(pauseIcon.rectTransform, 7f, 7f, 26f, 26f);
+             _pauseButton.Relief.Bind(_pauseButton.Face, _pauseButton.Base, _pauseButton.FaceImage, art.DiscWood, pauseIcon, null, null);
+             _walletBar = new WalletBar(_topLayer, art);
+-            _pause = new PauseMenu(_root, art, OnResume, OnPauseMap, OnPauseRestart, OnPauseQuit);
++            _pause = new PauseMenu(_root, art, OnResume, OnPauseMap, OnPauseRestart, OnPauseQuit, OnPauseSkip);
+             _confirm = new QuitConfirm(_root, art, OnConfirm, OnConfirmCancel, OnConfirmUndo);
+             _banner = new Toast("RiverLowered", _root, art, 18f);
+             _toast = new Toast("Toast", _noticeLayer, art, 15f);
+@@ -1903,7 +1903,7 @@ private void OnPause()
+             }
+ 
+             flow.ClearSelection();
+-            _pause.Show(flow.CanRestart, PauseMapOffered, _canvasW, _canvasH);
++            _pause.Show(flow.CanRestart, PauseMapOffered, _canvasW, _canvasH, flow.SkipOffer);
+             EmitPauseLayout();
+         }
+ 
+@@ -1951,6 +1951,15 @@ private void OnResume()
+             _pause.Hide();
+         }
+ 
++        // Pausa › «Salto del Boto» (04 §2.6; bloque B3): la confirmación de GameBootstrap.Skip.cs, que cierra la pausa.
++        private void OnPauseSkip()
++        {
++            if (_actions is ISkipActions skip)
++            {
++                skip.PressSkip();
++            }
++        }
++
+         private void OnPauseRestart()
+         {
+             _pause.Hide();
+diff --git a/Assets/_Project/Scripts/UI/PauseMenu.cs b/Assets/_Project/Scripts/UI/PauseMenu.cs
+index cc2ca099..bb6f099b 100644
+--- a/Assets/_Project/Scripts/UI/PauseMenu.cs
++++ b/Assets/_Project/Scripts/UI/PauseMenu.cs
+@@ -1,7 +1,9 @@
+ #nullable enable
+ using System;
+ using System.Collections.Generic;
++using AF.Boosters;
+ using AF.Presentation;
++using TMPro;
+ using UnityEngine;
+ using UnityEngine.UI;
+ 
+@@ -16,6 +18,8 @@ namespace AF.UI
+     /// <para>«Mapa del río» (<c>river_map</c>, glosario §7.1; D-013, punto 7; 04 §5.2) abre el Mapa encima del nivel en pausa, con
+     /// «Volver al nivel» en lugar de «Jugar»: no es salir del nivel, así que no gasta canoa ni cuenta como fallo. Sale con el
+     /// Mapa en la escena y desde <c>max_level</c> ≥ 10, como la pestaña del inicio (D-008: oculto hasta el 10) [P].</para>
++    /// <para>«Salto del Boto» (bloque B3; 04 §2.6: «el icono de Rosa aparece también en el menú de pausa»): con Rosa y su precio,
++    /// solo si la opción se ofrece (<c>LevelFlow.SkipOffer</c>), en gris sin saldo; un toque abre la confirmación.</para>
+     /// </summary>
+     internal sealed class PauseMenu
+     {
+@@ -27,10 +31,14 @@ internal sealed class PauseMenu
+         private readonly ReliefParts _close;
+         private readonly ReliefParts _resume;
+         private readonly ReliefParts _map;
++        private readonly ReliefParts _skip;
++        private readonly TextMeshProUGUI _skipLabel;
++        private readonly Image _skipRosa;
++        private readonly PriceTag _skipPrice;
+         private readonly ReliefParts _restart;
+         private readonly ReliefParts _quit;
+ 
+-        public PauseMenu(Transform parent, ProceduralArt art, Action onResume, Action onMap, Action onRestart, Action onQuit)
++        public PauseMenu(Transform parent, ProceduralArt art, Action onResume, Action onMap, Action onRestart, Action onQuit, Action? onSkip = null)
+         {
+             _art = art;
+             _root = UiBuilder.Rect("PauseMenu", parent);
+@@ -40,6 +48,11 @@ public PauseMenu(Transform parent, ProceduralArt art, Action onResume, Action on
+             _close = ModalKit.Close("CloseButton", _panel, art, onResume);
+             _resume = ModalKit.Cta("ResumeButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, UiText.KeepPlaying, 21f, onResume, out _);
+             _map = ModalKit.Cta("MapButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.RiverMap, 18f, onMap, out _);
++            _skip = ModalKit.Cta("SkipButton", _panel, art.CtaWood, TextStyle.PillWood, SkipText.Option, 18f, onSkip ?? (() => { }), out _skipLabel);
++            _skipRosa = UiBuilder.Image("Rosa", _skip.Face, null, Color.white); // el sprite, al enseñarlo (las mascotas, solo si hacen falta)
++            _skipRosa.preserveAspect = true;
++            _skipPrice = new PriceTag("Price", _skip.Face, art);
++            _skip.Button.gameObject.SetActive(false);
+             _restart = ModalKit.Cta("RestartButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.RestartLong, 18f, onRestart, out _);
+             _quit = ModalKit.Cta("QuitButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.Quit, 18f, onQuit, out _);
+             _root.gameObject.SetActive(false);
+@@ -55,6 +68,12 @@ public PauseMenu(Transform parent, ProceduralArt art, Action onResume, Action on
+         /// <summary>«Mapa del río» (tarea M4.3): solo se ve si <see cref="Show"/> lo pidió.</summary>
+         public Button MapButton => _map.Button;
+ 
++        /// <summary>«Salto del Boto»: solo se ve si <see cref="Show"/> lo pidió.</summary>
++        public Button SkipButton => _skip.Button;
++
++        /// <summary>Sprite de Rosa del botón (null hasta que <see cref="Show"/> lo enseña; tests).</summary>
++        internal Sprite? SkipRosaSprite => _skipRosa.sprite;
++
+         public Button RestartButton => _restart.Button;
+ 
+         public Button QuitButton => _quit.Button;
+@@ -66,9 +85,9 @@ public void Hide()
+ 
+         /// <summary>
+         /// Abre el menú: «Volver a la orilla» si <paramref name="canRestart"/> y «Mapa del río» si <paramref name="canMap"/> (el
+-        /// Mapa en la escena y <c>max_level</c> ≥ 10; tarea M4.3).
++        /// Mapa en la escena y <c>max_level</c> ≥ 10; tarea M4.3) y «Salto del Boto» si <paramref name="skip"/> se ofrece (B3).
+         /// </summary>
+-        public void Show(bool canRestart, bool canMap, float canvasW, float canvasH)
++        public void Show(bool canRestart, bool canMap, float canvasW, float canvasH, SkipOffer skip = default)
+         {
+             _root.gameObject.SetActive(true);
+             float width = Mathf.Min(300f, canvasW - 48f);
+@@ -86,6 +105,25 @@ public void Show(bool canRestart, bool canMap, float canvasW, float canvasH)
+                 y += ModalKit.HeightOf(_map) + 8f;
+             }
+ 
++            bool canSkip = skip.Offered;
++            _skip.Button.gameObject.SetActive(canSkip);
++            if (canSkip)
++            {
++                if (_skipRosa.sprite == null)
++                {
++                    _skipRosa.sprite = _art.Rosa;
++                }
++
++                UiBuilder.SetEnabled(_skip.Button, skip.CanUse);
++                _skipPrice.Set(skip.Price, 0, !skip.CanUse);
++                ModalKit.FitCtaLabel(_skip, _skipLabel, inner, _skipPrice.Width + 76f, 20f - ((_skipPrice.Width + 12f) * 0.5f));
++                ModalKit.Place(_skip, 16f, y, inner);
++                float face = ModalKit.FaceHeightOf(_skip);
++                UiBuilder.Place(_skipRosa.rectTransform, 10f, (face - 28f) * 0.5f, 36f, 28f);
++                _skipPrice.PlaceAt(inner - _skipPrice.Width - 12f, (face - _skipPrice.Height) * 0.5f);
++                y += ModalKit.HeightOf(_skip) + 8f;
++            }
++
+             _restart.Button.gameObject.SetActive(canRestart);
+             if (canRestart)
+             {
+@@ -107,6 +145,13 @@ public void VisibleButtons(List<string> ids, List<RectTransform> rects)
+                 ids.Add("pause_map");
+                 rects.Add((RectTransform)_map.Button.transform);
+             }
++
++            if (_skip.Button.gameObject.activeSelf)
++            {
++                ids.Add("pause_skip");
++                rects.Add((RectTransform)_skip.Button.transform);
++            }
++
+             if (_restart.Button.gameObject.activeSelf)
+             {
+                 ids.Add("pause_restart");
+diff --git a/Assets/_Project/Scripts/UI/StuckModal.cs b/Assets/_Project/Scripts/UI/StuckModal.cs
+index 63e690c8..42b35f6a 100644
+--- a/Assets/_Project/Scripts/UI/StuckModal.cs
++++ b/Assets/_Project/Scripts/UI/StuckModal.cs
+@@ -19,6 +19,9 @@ namespace AF.UI
+     /// <item><description>regla 0: Marea primero («Deshacer · Marea» con su cupo) o su recarga, video y semillas en una fila;</description></item>
+     /// <item><description>desde el 31, «Continuar: +1 cuia» con su precio (300 con el 600 tachado el primero del día), o en
+     /// gris con «Te faltan {n} semillas» y, debajo, Puñado y Balsa en el orden de la geo;</description></item>
++    /// <item><description>rama D (bloque B3): «Salto del Boto» con su precio (300) y «Rosa te lleva río arriba, al siguiente
++    /// nivel», tras el rescate y las ofertas (04 §6.2), o en gris con «Te faltan {n} semillas»; un toque abre la confirmación
++    /// (<see cref="ISkipActions"/>, en <c>GameBootstrap.Skip.cs</c>);</description></item>
+     /// <item><description>pie: «Volver a la orilla (gratis)» como botón en 1-30 y el enlace «Rendirse» [P] desde el 31.</description></item>
+     /// </list>
+     /// Se rearma con <see cref="Show"/> cada vez que cambia el contexto (p. ej. tras comprar un Puñado: mismo precio, saldo
+@@ -141,6 +144,10 @@ internal sealed class StuckModal
+         private readonly ReliefParts _balsa;
+         private readonly TextMeshProUGUI _balsaLabel;
+         private readonly TextMeshProUGUI _balsaNote;
++        private readonly ReliefParts _skip;
++        private readonly TextMeshProUGUI _skipLabel;
++        private readonly PriceTag _skipPrice;
++        private readonly TextMeshProUGUI _skipNote;
+         private readonly ReliefParts _restart;
+         private readonly TextMeshProUGUI _restartLabel;
+         private readonly Button _giveUp;
+@@ -180,6 +187,11 @@ public StuckModal(Transform overlay, ProceduralArt art, IGameActions actions)
+             _balsaLabel.textWrappingMode = TextWrappingModes.Normal;
+             _balsaNote = ModalKit.Line("BalsaNote", _panel, UiText.StuckBalsaContent, 12f, Palette.FamilyWood.Base);
+ 
++            // Rama D (bloque B3): estilo secundario (madera), 3.ª opción (04 §6.6 wireframe D).
++            _skip = ModalKit.Cta("SkipButton", _panel, art.CtaWood, TextStyle.PillWood, SkipText.Option, 18f, () => (actions as ISkipActions)?.PressSkip(), out _skipLabel);
++            _skipPrice = new PriceTag("Price", _skip.Face, art);
++            _skipNote = ModalKit.Line("SkipNote", _panel, string.Empty, 13f, Palette.FamilyWood.Base);
++
+             _restart = ModalKit.Cta("RestartModalButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.StuckRestart, 18f, () => actions.PressRestart(), out _restartLabel);
+             _giveUp = ModalKit.Link("GiveUpButton", _panel, UiText.StuckGiveUp, () => actions.PressGiveUp(), out _);
+         }
+@@ -244,6 +256,15 @@ public StuckModal(Transform overlay, ProceduralArt art, IGameActions actions)
+         /// <summary>Balsa de rescate.</summary>
+         public Button BalsaButton => _balsa.Button;
+ 
++        /// <summary>«Salto del Boto» (rama D).</summary>
++        public Button SkipButton => _skip.Button;
++
++        /// <summary>Línea bajo «Salto del Boto» («Rosa te lleva…» o «Te faltan {n} semillas»), o null.</summary>
++        public string? SkipNoteText => _skipNote.gameObject.activeSelf ? _skipNote.text : null;
++
++        /// <summary>Precio que muestra «Salto del Boto» (0 si no se ofrece).</summary>
++        public int SkipPriceShown => _skip.Button.gameObject.activeSelf ? _skipPrice.Value : 0;
++
+         /// <summary>Pie en 1-30: «Volver a la orilla (gratis)».</summary>
+         public Button RestartButton => _restart.Button;
+ 
+@@ -278,6 +299,7 @@ public void VisibleButtons(List<string> ids, List<RectTransform> rects)
+                 rects.Add(_balsaNote.rectTransform);
+             }
+ 
++            Add(ids, rects, "skip", _skip.Button);
+             Add(ids, rects, "restart_modal", _restart.Button);
+             Add(ids, rects, "give_up", _giveUp);
+         }
+@@ -549,6 +571,37 @@ private void Lay(StuckModalView view, GameServices? services, float canvasW, boo
+                 y += compact ? 0f : 6f;
+             }
+ 
++            // Rama D: Salto del Boto, tras el rescate y las ofertas (04 §6.2), con su precio; sin saldo, en gris y «Te faltan».
++            bool skip = view.Skip.Offered;
++            _skip.Button.gameObject.SetActive(skip);
++            _skipNote.gameObject.SetActive(skip);
++            if (skip)
++            {
++                bool ready = view.Skip.CanUse;
++                UiBuilder.SetEnabled(_skip.Button, ready);
++                _skipPrice.Set(view.Skip.Price, 0, !ready);
++                // Como el rescate: la etiqueta a la izquierda del precio, con la medida de la disposición (compacta o de siempre; FX16a).
++                float inset = _skipPrice.Width + 36f;
++                float shift = -(_skipPrice.Width + 12f) * 0.5f;
++                if (compact)
++                {
++                    FitCtaLabelCompact(_skip, _skipLabel, inner, inset, shift);
++                }
++                else
++                {
++                    ModalKit.FitCtaLabel(_skip, _skipLabel, inner, inset, shift);
++                }
++
++                PlaceButton(_skip, 16f, y, inner);
++                float face = FaceOf(_skip);
++                _skipPrice.PlaceAt(inner - _skipPrice.Width - 12f, (face - _skipPrice.Height) * 0.5f);
++                y += HeightOf(_skip);
++                _skipNote.text = ready ? SkipText.Tagline : UiText.MissingSeeds(view.Skip.Missing);
++                _skipNote.color = ready ? (Color)Palette.FamilyWood.Base : (Color)Palette.UiRedWarning;
++                y += ModalKit.PlaceLine(_skipNote, 16f, y, inner, compact ? 0f : 18f) + lineAir;
++                y += gap;
++            }
++
+             // Pie: botón en 1-30 (rama C: «es la salida normal»), enlace «Rendirse» desde el 31.
+             bool restart = view.Footer == StuckFooter.RestartFree;
+             _restart.Button.gameObject.SetActive(restart);
+diff --git a/Assets/_Project/Tests/PlayMode/SkipPlayModeTests.cs b/Assets/_Project/Tests/PlayMode/SkipPlayModeTests.cs
+new file mode 100644
+index 00000000..5292d3ac
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/SkipPlayModeTests.cs
+@@ -0,0 +1,144 @@
++#nullable enable
++using System;
++using System.Collections;
++using AF.Boosters;
++using AF.Economy;
++using AF.GameFlow;
++using AF.Save;
++using AF.UI;
++using NUnit.Framework;
++using UnityEngine.TestTools;
++
++namespace AF.Tests.PlayMode
++{
++    /// <summary>
++    /// El Salto del Boto en la escena (bloque B3; 04 §2.6 y §6.6 wireframe D; nota <c>docs/dev/salto-del-boto.md</c>): en el 31
++    /// (tablero 6 del tutorial con <c>af_level_offset</c> = 25), al quinto fallo Aguas estancadas ofrece «Salto del Boto · 300»,
++    /// la pausa y el banner también; la confirmación avisa si se pierde una Cuia extra y lleva al 32 con 300 semillas menos, sin
++    /// canoa, y el Mapa pone a Rosa en el 31. Con progreso en memoria (<see cref="MemorySkipStore"/>) el salto no sube su
++    /// <c>max_level</c>: aquí no importa (el 32 no es un 10k ni elegible). Necesita <c>B3-model.diff</c> y <c>B3-ui.diff</c>.
++    /// </summary>
++    public sealed class SkipPlayModeTests
++    {
++        [SetUp]
++        public void SetUp()
++        {
++            FunnelSetup.Hooks();
++            GameBootstrap.ResetSkipOverrides();
++        }
++
++        [TearDown]
++        public void TearDown()
++        {
++            GameBootstrap.ResetSkipOverrides();
++            LaunchOptions.Reset();
++        }
++
++        [UnityTest]
++        public IEnumerator FifthFail_OffersTheSkip_InTheModalThePauseAndTheBanner_AndItLeadsTo32()
++        {
++            Profile profile = FunnelSetup.Profile(1000);
++            profile.Wallet.Canoes.InfiniteUntil = FunnelSetup.T0 + TimeSpan.FromHours(2); // «Rendirse» sin ¿Seguro?
++            var progress = new MemoryProgressStore(31, 30);
++            LaunchOptions.LevelOffsetOverride = 25;
++            LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(profile);
++            yield return PlayModeHelpers.LoadGame(31, progress);
++            GameBootstrap boot = GameBootstrap.Current!;
++            PlayModeHelpers.TakeClock(boot);
++            boot.TapAnywhere();
++            PlayModeHelpers.Step(boot, 50);
++            GameScreen view = boot.View!;
++            Assert.That(boot.SkipStore, Is.InstanceOf<MemorySkipStore>(), "el progreso de prueba es en memoria");
++
++            for (int fail = 0; fail < 5; fail++)
++            {
++                FunnelSetup.GetStuck(boot);
++                Assert.That(view.Stuck.SkipButton.gameObject.activeSelf, Is.False, "con " + fail + " fallos no hay rama D");
++                Assert.That(boot.Flow!.PressGiveUp(), Is.True);
++                Assert.That(boot.Flow.PressRetry(), Is.True);
++                boot.TickSkipBanner();
++                Assert.That(boot.SkipBannerView!.Visible, Is.EqualTo(fail == 4), "el banner, solo con el salto elegible");
++                boot.TapAnywhere();
++                PlayModeHelpers.Step(boot, 50);
++            }
++
++            // Banner: con el tablero sin vertidos; un toque abre la confirmación.
++            boot.TickSkipBanner();
++            Assert.That(boot.SkipBannerView!.Visible, Is.True);
++            Assert.That(boot.SkipBannerView.Text, Is.EqualTo(SkipText.Banner(300)));
++            Assert.That(boot.SkipBannerView.RosaSprite, Is.Not.Null, "Rosa, pintada al enseñar el banner");
++            Assert.That(boot.SkipBannerView.Interactable, Is.True);
++            Assert.That(boot.SkipBannerView.MissingText, Is.Null);
++
++            // Sin saldo: el banner sigue, en gris y con «Te faltan {n} semillas» (04 §1); el toque no abre nada.
++            while (boot.Wallet!.Seeds >= 300)
++            {
++                Assert.That(boot.Wallet.Apply(Transaction.Buy(SeedSink.ExtraCuia)).IsApplied, Is.True);
++            }
++
++            int poorSeeds = boot.Wallet.Seeds;
++            boot.TickSkipBanner();
++            Assert.That(boot.SkipBannerView.Visible, Is.True, "elegible sin saldo: en gris");
++            Assert.That(boot.SkipBannerView.Interactable, Is.False);
++            Assert.That(boot.SkipBannerView.MissingText, Is.EqualTo(UiText.MissingSeeds(300 - poorSeeds)));
++            Assert.That(boot.PressSkip(), Is.False);
++            Assert.That(boot.SkipConfirmView!.Visible, Is.False);
++            Assert.That(boot.Wallet.Apply(Transaction.Earn(SeedSource.Calendar, 1000 - poorSeeds)).IsApplied, Is.True);
++            boot.TickSkipBanner();
++            Assert.That(boot.SkipBannerView.Interactable, Is.True, "con saldo, otra vez lista");
++            Assert.That(boot.SkipBannerView.MissingText, Is.Null);
++
++            // Pausa: «Salto del Boto» con su precio; abre la confirmación y cierra la pausa; la X vuelve al juego.
++            view.PauseButton.onClick.Invoke();
++            Assert.That(view.Pause.Visible, Is.True);
++            Assert.That(view.Pause.SkipButton.gameObject.activeSelf, Is.True, "04 §2.6: Rosa también en la pausa");
++            Assert.That(view.Pause.SkipRosaSprite, Is.Not.Null, "Rosa, pintada al enseñar la pausa con el Salto");
++            view.Pause.SkipButton.onClick.Invoke();
++            Assert.That(view.Pause.Visible, Is.False);
++            Assert.That(boot.SkipConfirmView.Visible, Is.True);
++            Assert.That(boot.SkipConfirmView.RosaSprite, Is.Not.Null, "Rosa, pintada al abrir la confirmación");
++            boot.TickSkipBanner();
++            Assert.That(boot.SkipBannerView.Visible, Is.False, "con la confirmación abierta, sin banner");
++            boot.SkipConfirmView.CloseButton.onClick.Invoke();
++            Assert.That(boot.SkipConfirmView.Visible, Is.False);
++            Assert.That(boot.Flow!.LevelNumber, Is.EqualTo(31), "la X no salta");
++
++            // Rama D en Aguas estancadas.
++            FunnelSetup.GetStuck(boot);
++            Assert.That(view.Stuck.SkipButton.gameObject.activeSelf, Is.True, "rama D");
++            Assert.That(view.Stuck.SkipPriceShown, Is.EqualTo(300));
++            Assert.That(view.Stuck.SkipNoteText, Is.EqualTo(SkipText.Tagline));
++            view.Stuck.SkipButton.onClick.Invoke();
++            Assert.That(boot.SkipConfirmView.Visible, Is.True);
++            Assert.That(boot.SkipConfirmView.PriceShown, Is.EqualTo(300));
++            Assert.That(boot.SkipConfirmView.WarnsExtraCuia, Is.False, "sin Cuia extra aplicada, sin aviso");
++            boot.SkipConfirmView.CloseButton.onClick.Invoke();
++            Assert.That(view.StuckVisible, Is.True, "la X vuelve al modal");
++
++            // Con Cuia extra aplicada (Marea para salir del bloqueo, «+1 cuia»), la confirmación avisa de que se pierde (04 §2.6 c).
++            Assert.That(boot.PressUndo(), Is.True);
++            PlayModeHelpers.Step(boot, 300);
++            Assert.That(boot.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
++            Assert.That(boot.PressExtraCuia(), Is.True);
++            Assert.That(boot.Flow.SkipLosesExtraCuia, Is.True);
++            view.PauseButton.onClick.Invoke();
++            view.Pause.SkipButton.onClick.Invoke();
++            Assert.That(boot.SkipConfirmView.Visible, Is.True);
++            Assert.That(boot.SkipConfirmView.WarnsExtraCuia, Is.True, "«Perderás la Cuia extra de este nivel»");
++            int seeds = boot.Wallet!.Seeds;
++            int canoes = boot.Wallet.Canoes.Count;
++            boot.SkipConfirmView.ConfirmButton.onClick.Invoke();
++
++            Assert.That(boot.SkipConfirmView.Visible, Is.False);
++            Assert.That(boot.Flow.LevelNumber, Is.EqualTo(32), "Rosa lleva al siguiente nivel");
++            Assert.That(view.StuckVisible, Is.False);
++            Assert.That(boot.Wallet.Seeds, Is.EqualTo(seeds - 300));
++            Assert.That(boot.Wallet.Canoes.Count, Is.EqualTo(canoes), "sin canoa");
++            Assert.That(progress.IsSkipped(31), Is.True, "el Mapa pone a Rosa en la boya del 31");
++            Assert.That(progress.NextLevel, Is.EqualTo(32));
++            Assert.That(boot.Flow.Attempt.FailsLevel, Is.Zero);
++            boot.TickSkipBanner();
++            Assert.That(boot.SkipBannerView.Visible, Is.False, "en el 32 no es elegible");
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/PlayMode/SkipPlayModeTests.cs.meta b/Assets/_Project/Tests/PlayMode/SkipPlayModeTests.cs.meta
+new file mode 100644
+index 00000000..6ba770c5
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/SkipPlayModeTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 228f066f1d32fe249905e1e8d94829f5
+\ No newline at end of file

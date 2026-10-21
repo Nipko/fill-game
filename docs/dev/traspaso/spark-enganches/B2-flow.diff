@@ -1,0 +1,1022 @@
+diff --git a/Assets/_Project/Scripts/Boosters/ShuffleWave.cs b/Assets/_Project/Scripts/Boosters/ShuffleWave.cs
+new file mode 100644
+index 0000000..d544e84
+--- /dev/null
++++ b/Assets/_Project/Scripts/Boosters/ShuffleWave.cs
+@@ -0,0 +1,83 @@
++#nullable enable
++using System;
++using AF.Core.Board;
++using AF.Core.Rules;
++using AF.Solver.Shuffle;
++
++namespace AF.Boosters
++{
++    /// <summary>
++    /// La ola de la Pororoca en el cliente (bloque B2; 04 §2.4; 03 §16): envuelve el <see cref="Shuffler"/> de <c>AF.Solver</c>
++    /// con las cifras de <see cref="ShuffleConfig"/> (08 §9) y devuelve un <see cref="ShuffleOutcome"/>, como
++    /// <see cref="MorphoBooster"/> envuelve el solver. Determinista: la semilla sale de la del nivel, del tablero revelado y del
++    /// ordinal de la Pororoca en el nivel (<see cref="Shuffler.SeedFor"/>), así que rehacer la partida guardada da la misma ola.
++    /// Corre en el hilo principal [P]: la ola entera mide pocos milisegundos (<c>ShuffleAllocationTests</c>) frente a los
++    /// 1,2 s de su animación. No es seguro entre hilos.
++    /// </summary>
++    public sealed class ShuffleWave
++    {
++        private readonly Shuffler _shuffler = new Shuffler();
++
++        /// <summary>El tablero lleva Lluvia o Piraña (04 §2.4 d): la Pororoca se deshabilita en todo el nivel.</summary>
++        public static bool HasTemporalMechanic(BoardState board)
++        {
++            return Shuffler.HasTemporalMechanic(board);
++        }
++
++        /// <summary>
++        /// Lo que dice el tablero <paramref name="current"/> para el botón (04 §2.4 a, b y d): no admitida si el nivel lleva
++        /// Lluvia o Piraña (<paramref name="levelHasTemporal"/>, del tablero inicial) o si hay ocultas sin
++        /// <c>shuffle_reveals_murky</c>; poca agua con menos de 2 colores movibles. Sin asignaciones.
++        /// </summary>
++        public static ShuffleBoardBlock BlockOf(BoardState current, bool levelHasTemporal, ShuffleConfig config)
++        {
++            if (current == null)
++            {
++                throw new ArgumentNullException(nameof(current));
++            }
++
++            if (config == null)
++            {
++                throw new ArgumentNullException(nameof(config));
++            }
++
++            if (levelHasTemporal)
++            {
++                return ShuffleBoardBlock.Unsupported;
++            }
++
++            switch (Shuffler.Check(current, config.ShuffleRevealsMurky))
++            {
++                case ShuffleBlock.None:
++                    return ShuffleBoardBlock.None;
++                case ShuffleBlock.LowWater:
++                    return ShuffleBoardBlock.LowWater;
++                default:
++                    return ShuffleBoardBlock.Unsupported;
++            }
++        }
++
++        /// <summary>
++        /// Baraja <paramref name="current"/> (04 §2.4): semilla de <paramref name="levelSeed"/> y <paramref name="ordinal"/>, holgura
++        /// y presupuesto de <paramref name="config"/>, w = 2 y el modo de vertido y la regla de fútiles de la partida.
++        /// </summary>
++        public ShuffleOutcome Run(BoardState current, string levelSeed, int ordinal, ShuffleConfig config, PourMode mode, bool futileRuleEnabled)
++        {
++            if (current == null)
++            {
++                throw new ArgumentNullException(nameof(current));
++            }
++
++            if (config == null)
++            {
++                throw new ArgumentNullException(nameof(config));
++            }
++
++            var options = new ShuffleOptions(config.ShuffleParSlack, config.ShuffleBudgetNodes, ShuffleOptions.DefaultWeight, futileRuleEnabled, mode);
++            ShuffleResult result = _shuffler.Shuffle(current, Shuffler.SeedFor(levelSeed, current, ordinal), options);
++            ShuffleWaveMethod method = result.Method == ShuffleMethod.Inverse ? ShuffleWaveMethod.Inverse
++                : result.Method == ShuffleMethod.Permute ? ShuffleWaveMethod.Permute : ShuffleWaveMethod.Failed;
++            return new ShuffleOutcome(method, result.Board, result.ParBefore, result.ParAfter, result.Tries, result.Revealed);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/Boosters/ShuffleWave.cs.meta b/Assets/_Project/Scripts/Boosters/ShuffleWave.cs.meta
+new file mode 100644
+index 0000000..60a8db9
+--- /dev/null
++++ b/Assets/_Project/Scripts/Boosters/ShuffleWave.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 9204d900f7e3de94eab2d8c92a1b5bec
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/Economy/Wallet.cs b/Assets/_Project/Scripts/Economy/Wallet.cs
+index cd87459..3f5368d 100644
+--- a/Assets/_Project/Scripts/Economy/Wallet.cs
++++ b/Assets/_Project/Scripts/Economy/Wallet.cs
+@@ -73,6 +73,13 @@ public Wallet(Profile profile, IProfileStore store, IClock clock, EconomyConfig?
+         /// <summary>Cuias de rescate compradas hoy (día local; 0 si los contadores son de un día anterior).</summary>
+         public int RescuesToday => DailyCounters.IsStale(_profile.Daily, _clock.LocalDateKey()) ? 0 : _profile.Daily.RescuesToday;
+ 
++        /// <summary>
++        /// Pororocas usadas hoy (<c>daily.shuffles_today</c>, día local; 0 si los contadores son de un día anterior): el tope de
++        /// <c>shuffle_max_per_day</c>, que vale también para el stock (04 §2.4). Lo sube <see cref="Apply"/> al cobrar una, con
++        /// semillas (<see cref="SeedSink.Shuffle"/>) o del stock (bloque B2).
++        /// </summary>
++        public int ShufflesToday => DailyCounters.IsStale(_profile.Daily, _clock.LocalDateKey()) ? 0 : _profile.Daily.ShufflesToday;
++
+         /// <summary>
+         /// Un cambio quedó sin guardar porque falló la escritura; se reintenta en la próxima mutación o con <see cref="Flush"/>.
+         /// Solo ve los fallos del <c>IProfileStore</c> que recibe: con un almacén que agrupa escrituras
+@@ -156,6 +163,8 @@ public TransactionResult Apply(Transaction transaction)
+             int canoeDelta = 0;
+             bool fill = false;
+             bool rescue = false;
++            bool shuffle = (transaction.Kind == TransactionKind.Buy && transaction.Sink == SeedSink.Shuffle)
++                || (transaction.Kind == TransactionKind.UseStock && transaction.Booster == BoosterKind.Shuffle); // B2: shuffles_today
+             switch (transaction.Kind)
+             {
+                 case TransactionKind.Win:
+@@ -308,6 +317,11 @@ public TransactionResult Apply(Transaction transaction)
+                 CanoeRules.ExtendInfinite(canoeData, now, transaction.InfiniteCanoes);
+             }
+ 
++            if (shuffle)
++            {
++                _profile.Daily.ShufflesToday++; // 04 §2.4: 3 al día, también con el stock (B2)
++            }
++
+             if (rescue)
+             {
+                 _profile.Daily.RescuesToday++;
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Resume.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.Resume.cs
+index 302aadc..5708569 100644
+--- a/Assets/_Project/Scripts/GameFlow/LevelFlow.Resume.cs
++++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Resume.cs
+@@ -89,6 +89,7 @@ public bool RestoreExited(LevelStateData saved)
+             }
+ 
+             _attempt.Restore(saved.Level, saved.FailsLevel, relief, null, false, history.ExtraCuiaGifted, history.RevealGifted, history.HintGifted);
++            RestoreShuffle(saved.Level, history, null); // Pororoca (B2): el tope del nivel y la tarjeta del 30
+             return true;
+         }
+ 
+@@ -137,14 +138,9 @@ private bool ResumeSaved(LevelStateData saved)
+             _attempt.Restore(
+                 number, saved.FailsLevel, relief, history.Added, history.UndoGiftUsed, history.ExtraCuiaGifted, history.RevealGifted, history.HintGifted);
+             var session = new LevelSession(BoardFor(def, relief), GameConfig.FutileRuleEnabled, _pourMode);
+-            for (int i = 0; i < history.Sources.Count; i++)
++            if (!ReplaySaved(session, history, saved.Seed)) // los vertidos y, en su sitio, las Pororocas (B2; LevelFlow.Shuffle.cs)
+             {
+-                int source = history.Sources[i];
+-                int target = history.Targets[i];
+-                if (source >= session.Current.Count || target >= session.Current.Count || !session.TryPour(source, target, out _))
+-                {
+-                    return false;
+-                }
++                return false;
+             }
+ 
+             // 02 R8 y §11 T6: las capas reveladas (R de h2) se restauran tras rehacer los vertidos; las que el historial ya
+@@ -172,6 +168,7 @@ private bool ResumeSaved(LevelStateData saved)
+             _undo.RestoreFreeLeft(saved.UndoFree);
+             ResetStuck();
+             _session = session;
++            RestoreShuffle(number, history, session); // Pororoca (B2): tope, tarjeta y el prefijo de V
+             _taps.Clear();
+             ResetPending();
+             _phaseMs = 0;
+@@ -298,14 +295,14 @@ private void WriteState(SavedPhase phase, bool inProgress)
+                 LevelStateSnapshot.WriteRevealed(session.Initial, session.Current, s.RevealedCuias);
+                 LevelStateSnapshot.WriteHistory(
+                     _historyBuilder, phase, _attempt.Added, _attempt.UndoGiftUsed, _attempt.ExtraCuiaGifted, session, _balsaShown, _attempt.RevealGifted,
+-                    _attempt.HintGifted);
++                    _attempt.HintGifted, ShuffleHistoryPrefix, _shufflesUsed, _shuffleCardShown);
+             }
+             else
+             {
+                 s.RevealedCuias.Clear();
+                 LevelStateSnapshot.WriteHistory(
+                     _historyBuilder, phase, Array.Empty<AddedCuiaKind>(), false, _attempt.ExtraCuiaGifted, null, revealGifted: _attempt.RevealGifted,
+-                    hintGifted: _attempt.HintGifted);
++                    hintGifted: _attempt.HintGifted, shufflesUsed: _shufflesUsed, shuffleCardShown: _shuffleCardShown);
+             }
+ 
+             s.History = _historyBuilder.ToString();
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Shuffle.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.Shuffle.cs
+new file mode 100644
+index 0000000..ed69c57
+--- /dev/null
++++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Shuffle.cs
+@@ -0,0 +1,284 @@
++#nullable enable
++using System;
++using System.Text;
++using AF.Boosters;
++using AF.Core.Board;
++using AF.Core.Rules;
++using AF.Core.Session;
++using AF.Economy;
++
++namespace AF.GameFlow
++{
++    /// <summary>
++    /// Pororoca · Barajar en el flujo (bloque B2; 04 §2.4; 02 §14; 03 §16; 08 §9 <c>shuffle_*</c>): la oferta del botón
++    /// (<see cref="Shuffle"/>), la ola con <see cref="ShuffleWave"/> y su aplicación con <see cref="LevelSession.ApplyShuffle"/>,
++    /// en el orden aplicar → guardar → cobrar (nunca se cobra sin entregar, y si la ola falla no se cobra: 04 §2.4), los topes de
++    /// 1 por nivel y 3 al día (también con el stock) y la tarjeta del nivel 30. La ranura, la ola de 1,2 s y la hoja de
++    /// confirmación son de la vista (<see cref="IShuffleListener"/>, <c>GameScreen.Shuffle.cs</c>).
++    /// </summary>
++    /// <remarks>
++    /// <list type="bullet">
++    /// <item><description><b>Tope por nivel</b> [P] (<c>docs/dev/pororoca.md</c>, P-4): cuenta las Pororocas del nivel en todos sus
++    /// intentos y también si se sale al inicio y se vuelve (marca <c>o</c> de <c>level_state</c>, una por Pororoca); vuelve a 0
++    /// al cargar otro nivel. El tope del día es <c>daily.shuffles_today</c> del perfil, que anota la cartera al cobrar (también
++    /// en el Reto del río, con la misma cartera sobre el mismo perfil).</description></item>
++    /// <item><description><b>Volver a la orilla</b> [P] (P-5): vuelve al tablero del nivel (misma semilla, 04 §2.7), con lo
++    /// revelado visible; la Pororoca no persiste, como cualquier vertido, y su tope sigue gastado.</description></item>
++    /// <item><description><b>Guardado</b> (02 R8): la ola es determinista, así que <c>history</c> anota solo dónde fue (un
++    /// <c>*</c> entre los vertidos de V) y al reanudar se vuelve a dar sobre el tablero rehecho (<see cref="ReplayShuffle"/>).
++    /// Tras una Pororoca la sesión ya no tiene el historial anterior (02 §14), así que el flujo guarda los vertidos de antes de
++    /// cada ola del intento en <see cref="_shufflePrefix"/>.</description></item>
++    /// <item><description><b>Tarjeta del 30</b> (04 §4: «Tarjeta con animación»; 04 §2.4: «no se regala uso»): la primera vez
++    /// que se juega el nivel de desbloqueo en la campaña (<c>max_level</c> &lt; 30), una vez por nivel (marca <c>p</c>).</description></item>
++    /// </list>
++    /// </remarks>
++    public sealed partial class LevelFlow
++    {
++        private const string ShuffleHex = "0123456789abcdef";
++
++        private readonly StringBuilder _shufflePrefix = new StringBuilder(64);
++        private ShuffleWave? _shuffleWave;
++        private ShuffleConfig _shuffleConfig = ShuffleConfig.Defaults;
++        private int _shuffleLevel;
++        private int _shufflesUsed;
++        private bool _shuffleTemporal;
++        private bool _shuffleCardShown;
++        private bool _shuffleCardDue;
++        private ShuffleOutcome _lastShuffle;
++        private bool _hasLastShuffle;
++
++        /// <summary>Cifras de la Pororoca (por defecto, las de 08 §9). Se validan al ponerlas.</summary>
++        public ShuffleConfig ShuffleConfig
++        {
++            get => _shuffleConfig;
++            set
++            {
++                if (value == null)
++                {
++                    throw new ArgumentNullException(nameof(value));
++                }
++
++                value.Validate();
++                _shuffleConfig = value;
++            }
++        }
++
++        /// <summary>Pororocas usadas en el nivel cargado (todas sus vías e intentos).</summary>
++        public int ShufflesUsed => _shufflesUsed;
++
++        /// <summary>Pororocas usadas hoy (<c>daily.shuffles_today</c>; 0 sin cartera).</summary>
++        public int ShufflesToday => _wallet?.ShufflesToday ?? 0;
++
++        /// <summary>Estado del botón «Barajar» (04 §2.4): stock, precio, topes y si se puede usar.</summary>
++        public ShuffleOffer Shuffle => ShuffleBooster.Evaluate(
++            LevelNumber, _shufflesUsed, ShufflesToday, ShufflePlaying, ShuffleBoard, _wallet, _boosters, _shuffleConfig);
++
++        /// <summary>Última ola (con éxito o no) desde que se cargó el nivel, o null.</summary>
++        public ShuffleOutcome? LastShuffle => _hasLastShuffle ? _lastShuffle : (ShuffleOutcome?)null;
++
++        /// <summary>
++        /// Toca la tarjeta de la Pororoca (04 §4, nivel 30): el nivel de desbloqueo de la campaña, aún no superado, y sin haberla
++        /// enseñado en este nivel. La vista la enseña al habilitarse el toque y la cierra con <see cref="MarkShuffleCardShown"/>.
++        /// </summary>
++        public bool ShuffleCardDue => _shuffleCardDue && !_shuffleCardShown;
++
++        // Solo con el tablero en juego y algún vertido legal: ni en el modal de bloqueo ni con la victoria o el bloqueo pendientes
++        // (04 §2.4), ni con la Luciérnaga eligiendo cuia.
++        private bool ShufflePlaying => AcceptsBoardInput && !_revealSelecting && _session!.Status == LevelStatus.Playing;
++
++        private ShuffleBoardBlock ShuffleBoard => _session == null
++            ? ShuffleBoardBlock.None
++            : ShuffleWave.BlockOf(_session.Current, _shuffleTemporal, _shuffleConfig);
++
++        private ShuffleWave Wave => _shuffleWave ??= new ShuffleWave();
++
++        /// <summary>
++        /// Botón «Barajar» ya confirmado (la hoja de 04 §2.4 la pide la vista antes, con ≥ 200 semillas): con
++        /// <see cref="Shuffle"/> listo y pagable, quita la selección (C8), da la ola sobre el tablero de ahora y, si sale, la
++        /// aplica (revela las ocultas y vacía el historial de Marea), guarda, cobra (el stock primero) y avisa a la vista; después,
++        /// como tras un vertido, la victoria o el bloqueo. Si la ola falla, avisa y no cobra. Null si no se pudo intentar (sin
++        /// nivel, sin cartera o con la oferta no lista: la vista ya lo enseña).
++        /// </summary>
++        public ShuffleOutcome? UseShuffle()
++        {
++            LevelSession? session = _session;
++            Wallet? wallet = _wallet;
++            ShuffleOffer offer = Shuffle;
++            if (session == null || wallet == null || !offer.CanUse)
++            {
++                return null;
++            }
++
++            ShufflePayment payment = offer.Payment;
++            using (Saves())
++            {
++                ClearSelection();
++                ShuffleOutcome outcome = Wave.Run(session.Current, _seed, _shufflesUsed, _shuffleConfig, session.PourMode, session.FutileRuleEnabled);
++                _lastShuffle = outcome;
++                _hasLastShuffle = true;
++                if (!outcome.Succeeded)
++                {
++                    (_listener as IShuffleListener)?.OnShuffleFailed(outcome);
++                    return outcome;
++                }
++
++                AppendShufflePrefix(session);
++                session.ApplyShuffle(outcome.Board!); // 1. aplicar
++                _shufflesUsed++;
++                _taps.Clear();
++                PersistState(); // 2. guardar: si la app se cierra ahora, la ola ya está y no se cobró
++                if (!ShuffleBooster.Pay(wallet, payment).IsApplied) // 3. cobrar (no puede faltar: se comprobó en la oferta)
++                {
++                    System.Diagnostics.Debug.Fail("Pororoca: el cobro se rechazó tras aplicar la ola.");
++                }
++                (_listener as IShuffleListener)?.OnShuffled(outcome, payment);
++                EvaluateStatus(); // como tras un vertido (R10 g-h)
++                return outcome;
++            }
++        }
++
++        /// <summary>La vista enseñó la tarjeta de la Pororoca del 30: no vuelve en este nivel (marca <c>p</c>).</summary>
++        public void MarkShuffleCardShown()
++        {
++            if (_shuffleCardShown)
++            {
++                return;
++            }
++
++            _shuffleCardShown = true;
++            using (Saves())
++            {
++                PersistState();
++            }
++        }
++
++        // LevelFlow.Load, con la sesión nueva: otro nivel pone a 0 el tope del nivel y la tarjeta; el intento empieza sin olas.
++        private void ShuffleLevelLoaded(int number)
++        {
++            if (number != _shuffleLevel)
++            {
++                _shuffleLevel = number;
++                _shufflesUsed = 0;
++                _shuffleCardShown = false;
++            }
++
++            _shufflePrefix.Clear();
++            _hasLastShuffle = false;
++            _shuffleTemporal = ShuffleWave.HasTemporalMechanic(_session!.Initial);
++            _shuffleCardDue = !IsDaily && number == _boosters.ShuffleUnlockLevel && _progress.LoadMaxLevel() < number;
++        }
++
++        // LevelFlow.BeginAttempt (Volver a la orilla, Reintentar, rama C): el tablero vuelve al del nivel y el intento nuevo
++        // empieza sin olas (P-5); el tope del nivel no se devuelve.
++        private void ShuffleAttemptStarted()
++        {
++            _shufflePrefix.Clear();
++        }
++
++        // Los vertidos del intento hasta ahora y la marca de la ola, al final del prefijo (02 R8).
++        private void AppendShufflePrefix(LevelSession session)
++        {
++            for (int i = 0; i < session.AppliedPours; i++)
++            {
++                Pour pour = session.GetAppliedPour(i);
++                _shufflePrefix.Append(ShuffleHex[pour.Source & 0xF]).Append(ShuffleHex[pour.Target & 0xF]);
++            }
++
++            _shufflePrefix.Append(LevelStateSnapshot.ShuffleMark);
++        }
++
++        // V de history: los vertidos de antes de cada ola del intento (con sus marcas) y, detrás, los de la sesión.
++        private string? ShuffleHistoryPrefix => _shufflePrefix.Length == 0 ? null : _shufflePrefix.ToString();
++
++        // Al reanudar (LevelFlow.Resume.cs): la ola ordinal sobre el tablero rehecho, igual que la primera vez (determinista).
++        // False si ya no sale (otro presupuesto en Remote Config, otro pack…): quien reanuda carga el nivel de nuevo.
++        private bool ReplayShuffle(LevelSession session, string seed, int ordinal)
++        {
++            if (session.Status != LevelStatus.Playing)
++            {
++                return false;
++            }
++
++            ShuffleOutcome outcome = Wave.Run(session.Current, seed, ordinal, _shuffleConfig, session.PourMode, session.FutileRuleEnabled);
++            return outcome.Succeeded && session.ApplyShuffle(outcome.Board!);
++        }
++
++        // Al reanudar o al restaurar un nivel del que se salió: el tope del nivel, la tarjeta y el prefijo de V.
++        private void RestoreShuffle(int number, SavedHistory history, LevelSession? session)
++        {
++            _shuffleLevel = number;
++            _shufflesUsed = history.ShufflesUsed;
++            _shuffleCardShown = history.ShuffleCardShown;
++            _shufflePrefix.Clear();
++            _hasLastShuffle = false;
++            if (session == null)
++            {
++                return;
++            }
++
++            _shuffleTemporal = ShuffleWave.HasTemporalMechanic(session.Initial);
++            _shuffleCardDue = !IsDaily && number == _boosters.ShuffleUnlockLevel && _progress.LoadMaxLevel() < number;
++            int marks = history.ShuffleAt.Count;
++            if (marks == 0)
++            {
++                return;
++            }
++
++            int upTo = history.ShuffleAt[marks - 1];
++            int mark = 0;
++            for (int i = 0; i <= upTo; i++)
++            {
++                while (mark < marks && history.ShuffleAt[mark] == i)
++                {
++                    _shufflePrefix.Append(LevelStateSnapshot.ShuffleMark);
++                    mark++;
++                }
++
++                if (i < upTo)
++                {
++                    _shufflePrefix.Append(ShuffleHex[history.Sources[i] & 0xF]).Append(ShuffleHex[history.Targets[i] & 0xF]);
++                }
++            }
++        }
++
++        // Rehace los vertidos guardados con las olas en su sitio (02 R8): la marca k va antes del vertido ShuffleAt[k]. False si
++        // un vertido o una ola no se pueden rehacer.
++        private bool ReplaySaved(LevelSession session, SavedHistory history, string seed)
++        {
++            int marks = history.ShuffleAt.Count;
++            if (marks > history.ShufflesUsed)
++            {
++                return false;
++            }
++
++            int mark = 0;
++            for (int i = 0; i <= history.Sources.Count; i++)
++            {
++                while (mark < marks && history.ShuffleAt[mark] == i)
++                {
++                    int ordinal = history.ShufflesUsed - marks + mark;
++                    if (!ReplayShuffle(session, seed, ordinal))
++                    {
++                        return false;
++                    }
++
++                    mark++;
++                }
++
++                if (i == history.Sources.Count)
++                {
++                    break;
++                }
++
++                int source = history.Sources[i];
++                int target = history.Targets[i];
++                if (source >= session.Current.Count || target >= session.Current.Count || !session.TryPour(source, target, out _))
++                {
++                    return false;
++                }
++            }
++
++            return mark == marks;
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.Shuffle.cs.meta b/Assets/_Project/Scripts/GameFlow/LevelFlow.Shuffle.cs.meta
+new file mode 100644
+index 0000000..ec83d27
+--- /dev/null
++++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.Shuffle.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: c0918f7ffd1ce13408518cd09f4650a7
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelFlow.cs b/Assets/_Project/Scripts/GameFlow/LevelFlow.cs
+index 8e69c31..f408474 100644
+--- a/Assets/_Project/Scripts/GameFlow/LevelFlow.cs
++++ b/Assets/_Project/Scripts/GameFlow/LevelFlow.cs
+@@ -249,6 +249,7 @@ public void Load(int level)
+                 _undo.ResetForLevel(number);
+                 ResetStuck();
+                 _session = new LevelSession(BoardFor(def, _attempt.ReliefIndex), GameConfig.FutileRuleEnabled, _pourMode);
++                ShuffleLevelLoaded(number); // Pororoca (B2; LevelFlow.Shuffle.cs): tope del nivel, Lluvia o Piraña y la tarjeta del 30
+                 _taps.Clear();
+                 ResetPending();
+                 _listener.OnLevelLoaded(number);
+@@ -573,6 +574,7 @@ private void BeginAttempt()
+             LevelDefinition def = Level;
+             EndRevealSelection();
+             ResetLevelCard();
++            ShuffleAttemptStarted(); // Pororoca (B2): el intento nuevo vuelve al tablero del nivel, sin olas
+             _undo.Restore();
+             ResetPending();
+             ResetStuck();
+diff --git a/Assets/_Project/Scripts/GameFlow/LevelStateSnapshot.cs b/Assets/_Project/Scripts/GameFlow/LevelStateSnapshot.cs
+index ea7aafa..2573069 100644
+--- a/Assets/_Project/Scripts/GameFlow/LevelStateSnapshot.cs
++++ b/Assets/_Project/Scripts/GameFlow/LevelStateSnapshot.cs
+@@ -122,6 +122,22 @@ public sealed class SavedHistory
+         /// fuente de la verdad del revelado: <c>revealed_cuias</c> solo dice qué cuias, no qué capas.
+         /// </summary>
+         public List<SavedReveal> Revealed { get; } = new List<SavedReveal>(4);
++
++        /// <summary>
++        /// Pororocas usadas en este nivel, en todos sus intentos (04 §2.4: «1 por nivel»; marca <c>o</c>, una por Pororoca; bloque
++        /// B2): no se devuelven al salir y volver a entrar ni al reabrir la app.
++        /// </summary>
++        public int ShufflesUsed { get; internal set; }
++
++        /// <summary>Ya se enseñó la tarjeta de la Pororoca del nivel 30 (04 §4; marca <c>p</c>; bloque B2).</summary>
++        public bool ShuffleCardShown { get; internal set; }
++
++        /// <summary>
++        /// Dónde fue cada Pororoca del intento (marca <see cref="LevelStateSnapshot.ShuffleMark"/> en V): la ola k va justo antes
++        /// del vertido <c>ShuffleAt[k]</c> (= vertidos de antes de ella). Como la ola es determinista, al reanudar se vuelve a dar
++        /// ahí (02 R8; bloque B2).
++        /// </summary>
++        public List<int> ShuffleAt { get; } = new List<int>(1);
+     }
+ 
+     /// <summary>
+@@ -173,6 +189,14 @@ public static class LevelStateSnapshot
+         private const char BalsaShownMark = 'b';
+         private const char RevealGiftMark = 'l';
+         private const char HintGiftMark = 'm';
++        private const char ShuffleUsedMark = 'o';
++        private const char ShuffleCardMark = 'p';
++
++        /// <summary>
++        /// Marca de una Pororoca en V (bloque B2; 04 §2.4; 02 §14): entre los pares de vertidos, donde fue la ola. h2 sin ella se
++        /// sigue leyendo igual, así que no cambia la versión (como las marcas <c>l</c> y <c>m</c>).
++        /// </summary>
++        public const char ShuffleMark = '*';
+         private const string HexDigits = "0123456789abcdef";
+ 
+         /// <summary>
+@@ -224,9 +248,16 @@ public static int ReliefIndexOf(LevelDefinition level, string variant)
+         /// <paramref name="hintGifted"/> (marca <c>m</c>, TU1b), en cualquier pantalla. Sin <paramref name="session"/> (se salió
+         /// al inicio), V y R van vacías.
+         /// </summary>
++        /// <remarks>
++        /// Pororoca (bloque B2): <paramref name="shufflesUsed"/> marcas <c>o</c> y, con <paramref name="shuffleCardShown"/>, la
++        /// marca <c>p</c>, en cualquier pantalla; <paramref name="shufflePrefix"/> son los vertidos de antes de cada ola del
++        /// intento con sus marcas <see cref="ShuffleMark"/>, que van en V delante de los de la sesión (que tras una ola solo tiene
++        /// los de después).
++        /// </remarks>
+         public static void WriteHistory(
+             StringBuilder sb, SavedPhase phase, IReadOnlyList<AddedCuiaKind> added, bool undoGiftUsed, bool extraCuiaGifted, LevelSession? session,
+-            bool balsaShown = false, bool revealGifted = false, bool hintGifted = false)
++            bool balsaShown = false, bool revealGifted = false, bool hintGifted = false, string? shufflePrefix = null, int shufflesUsed = 0,
++            bool shuffleCardShown = false)
+         {
+             sb.Clear();
+             sb.Append(HistoryVersion).Append(Separator).Append(PhaseCode(phase)).Append(Separator);
+@@ -261,9 +292,20 @@ public static void WriteHistory(
+                 sb.Append(HintGiftMark);
+             }
+ 
++            for (int i = 0; i < shufflesUsed; i++)
++            {
++                sb.Append(ShuffleUsedMark);
++            }
++
++            if (shuffleCardShown)
++            {
++                sb.Append(ShuffleCardMark);
++            }
++
+             sb.Append(Separator);
+             if (session != null)
+             {
++                sb.Append(shufflePrefix);
+                 for (int i = 0; i < session.AppliedPours; i++)
+                 {
+                     Pour pour = session.GetAppliedPour(i);
+@@ -353,6 +395,14 @@ public static bool TryParseHistory(string? history, out SavedHistory parsed)
+                 {
+                     parsed.HintGifted = true;
+                 }
++                else if (mark == ShuffleUsedMark)
++                {
++                    parsed.ShufflesUsed++; // una por Pororoca del nivel (B2)
++                }
++                else if (mark == ShuffleCardMark && !parsed.ShuffleCardShown)
++                {
++                    parsed.ShuffleCardShown = true;
++                }
+                 else
+                 {
+                     return false; // marca desconocida o repetida
+@@ -360,13 +410,23 @@ public static bool TryParseHistory(string? history, out SavedHistory parsed)
+             }
+ 
+             string moves = parts[4];
+-            if (moves.Length % 2 != 0)
++            int at = 0;
++            while (at < moves.Length)
+             {
+-                return false;
+-            }
++                if (moves[at] == ShuffleMark)
++                {
++                    parsed.ShuffleAt.Add(parsed.Sources.Count); // la ola va antes del vertido que sigue (B2)
++                    at++;
++                    continue;
++                }
+ 
+-            for (int i = 0; i < moves.Length; i += 2)
+-            {
++                if (at + 1 >= moves.Length)
++                {
++                    return false;
++                }
++
++                int i = at;
++                at += 2;
+                 int source = HexDigits.IndexOf(moves[i]);
+                 int target = HexDigits.IndexOf(moves[i + 1]);
+                 if (source < 0 || target < 0 || source == target)
+@@ -378,6 +438,11 @@ public static bool TryParseHistory(string? history, out SavedHistory parsed)
+                 parsed.Targets.Add(target);
+             }
+ 
++            if (parsed.ShuffleAt.Count > parsed.ShufflesUsed)
++            {
++                return false; // una ola en V sin su marca o: no es de este formato
++            }
++
+             return !current || TryParseRevealed(parts[5], parsed.Revealed);
+         }
+ 
+diff --git a/Assets/_Project/Tests/EditMode/ShuffleFlowTests.cs b/Assets/_Project/Tests/EditMode/ShuffleFlowTests.cs
+new file mode 100644
+index 0000000..1cd2a40
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/ShuffleFlowTests.cs
+@@ -0,0 +1,360 @@
++#nullable enable
++using System.Collections.Generic;
++using AF.Boosters;
++using AF.Core.Board;
++using AF.Core.Rules;
++using AF.Core.Session;
++using AF.Economy;
++using AF.GameFlow;
++using AF.Levels;
++using AF.Platform;
++using AF.Save;
++using NUnit.Framework;
++
++namespace AF.Tests.EditMode
++{
++    /// <summary>
++    /// Pororoca · Barajar en <see cref="LevelFlow"/> (bloque B2; 04 §2.4; 02 §14; 02 R8): la ola en el nivel 30 de la campaña,
++    /// aplicar → guardar → cobrar (stock primero, 300 semillas), los topes de 1 por nivel y 3 al día (<c>daily.shuffles_today</c>),
++    /// el historial de Marea vacío, Volver a la orilla al tablero del nivel [P], la ola que falla sin cobrar, Lluvia y Piraña,
++    /// la tarjeta del 30 y el guardado con la marca de la ola, que al reanudar da el mismo tablero.
++    /// </summary>
++    public sealed class ShuffleFlowTests
++    {
++        private static LevelCatalog? _catalog;
++
++        private static LevelCatalog Catalog => _catalog ??= LevelCatalog.Create(TestPacks.Campaign);
++
++        private sealed class Fixture
++        {
++            public Fixture(int seeds = 1000, int maxLevel = 29, EconomyFixture? economy = null)
++            {
++                Economy = economy ?? new EconomyFixture(seeds);
++                Listener = new ShuffleListener();
++                Progress = new MemoryProgressStore(maxLevel + 1, maxLevel);
++                States = new MemoryLevelStateStore();
++                Flow = new LevelFlow(Catalog, Progress, Listener, GameConfig.TapSwitchSelection, PourModes.Default, Economy.Wallet)
++                {
++                    StateStore = States,
++                };
++            }
++
++            public EconomyFixture Economy { get; }
++
++            public ShuffleListener Listener { get; }
++
++            public MemoryProgressStore Progress { get; }
++
++            public MemoryLevelStateStore States { get; }
++
++            public LevelFlow Flow { get; }
++
++            public void Play(int level)
++            {
++                Flow.Load(level);
++                Flow.TapAnywhere();
++                Flow.Tick(Flow.IntroDurationMs, true);
++                Assert.That(Flow.Phase, Is.EqualTo(FlowPhase.Playing));
++            }
++
++            public void PourFirstUseful()
++            {
++                var buffer = new Pour[PourRules.MaxPours];
++                int n = PourRules.CollectUsefulMoves(Flow.Session.Current, true, buffer);
++                Assert.That(n, Is.GreaterThan(0));
++                Assert.That(Flow.TapCuia(buffer[0].Source).Kind, Is.EqualTo(TapKind.Selected));
++                Assert.That(Flow.TapCuia(buffer[0].Target).Kind, Is.EqualTo(TapKind.Poured));
++                Flow.Tick(16, true);
++            }
++        }
++
++        private sealed class ShuffleListener : ILevelFlowListener, IShuffleListener
++        {
++            public readonly List<string> Events = new List<string>();
++
++            public void OnShuffled(ShuffleOutcome outcome, ShufflePayment payment) => Events.Add("shuffled:" + outcome.MethodId + ":" + ShuffleBooster.SourceId(payment));
++
++            public void OnShuffleFailed(ShuffleOutcome outcome) => Events.Add("shuffle_failed");
++
++            public void OnLevelLoaded(int level) => Events.Add("loaded:" + level);
++
++            public void OnIntroStarted(int durationMs, bool isShort) => Events.Add("intro");
++
++            public void OnIntroFinished(bool skipped) => Events.Add("intro_end");
++
++            public void OnTap(TapResult result)
++            {
++            }
++
++            public void OnUndo(Pour undone, bool fromStuckModal) => Events.Add("undo");
++
++            public void OnRestart(bool fromStuckModal) => Events.Add("restart");
++
++            public void OnWin() => Events.Add("win");
++
++            public void OnStuck() => Events.Add("stuck");
++
++            public void OnCelebrationStarted()
++            {
++            }
++
++            public void OnVictoryScreen()
++            {
++            }
++
++            public void OnStuckModalOpened()
++            {
++            }
++
++            public void OnCuiaAdded(int index, AddedCuiaKind kind)
++            {
++            }
++
++            public void OnExtraCuiaGifted(int units)
++            {
++            }
++
++            public void OnFunnelPhase(FlowPhase phase)
++            {
++            }
++
++            public void OnFailResolved(FailOutcome outcome)
++            {
++            }
++
++            public void OnRiverLowered(string reliefType, int bannerMs)
++            {
++            }
++
++            public void OnHarvestDoubled(int totalSeeds)
++            {
++            }
++
++            public void OnAdGate()
++            {
++            }
++
++            public void OnResumed(FlowPhase phase) => Events.Add("resumed");
++        }
++
++        [Test]
++        public void Level30_ShufflesTheBoard_PaysWithSeeds_AndEmptiesTheUndoHistory_04_2_4()
++        {
++            var f = new Fixture();
++            f.Play(30);
++            f.PourFirstUseful();
++            BoardState before = f.Flow.Session.Current;
++            Assert.That(f.Flow.Shuffle.State, Is.EqualTo(ShuffleState.Ready));
++            Assert.That(f.Flow.Shuffle.NeedsConfirmation, Is.True);
++
++            ShuffleOutcome? outcome = f.Flow.UseShuffle();
++
++            Assert.That(outcome.HasValue && outcome.Value.Succeeded, Is.True);
++            Assert.That(f.Flow.Session.Current.Equals(before), Is.False);
++            Assert.That(f.Flow.Session.Current.Equals(outcome!.Value.Board), Is.True);
++            Assert.That(f.Flow.Session.CanUndo, Is.False, "02 §14: vacía el historial de Marea");
++            Assert.That(f.Economy.Wallet.Seeds, Is.EqualTo(700));
++            Assert.That(f.Economy.Wallet.ShufflesToday, Is.EqualTo(1));
++            Assert.That(f.Economy.Profile.Daily.ShufflesToday, Is.EqualTo(1));
++            Assert.That(f.Flow.ShufflesUsed, Is.EqualTo(1));
++            Assert.That(f.Flow.Shuffle.State, Is.EqualTo(ShuffleState.UsedLevel));
++            Assert.That(f.Listener.Events, Does.Contain("shuffled:" + outcome.Value.MethodId + ":seeds"));
++            Assert.That(f.Flow.Phase, Is.EqualTo(FlowPhase.Playing));
++        }
++
++        [Test]
++        public void Stock_IsSpentFirst_AndCountsForTheDay_04_2_4()
++        {
++            var f = new Fixture();
++            f.Economy.Wallet.Apply(Transaction.GrantStock(BoosterKind.Shuffle, 1));
++            f.Play(30);
++
++            Assert.That(f.Flow.Shuffle.NeedsConfirmation, Is.False);
++            Assert.That(f.Flow.UseShuffle()!.Value.Succeeded, Is.True);
++
++            Assert.That(f.Economy.Wallet.Stock.Get(BoosterKind.Shuffle), Is.EqualTo(0));
++            Assert.That(f.Economy.Wallet.Seeds, Is.EqualTo(1000));
++            Assert.That(f.Economy.Wallet.ShufflesToday, Is.EqualTo(1));
++            Assert.That(f.Listener.Events[f.Listener.Events.Count - 1], Does.EndWith(":stock"));
++        }
++
++        [Test]
++        public void ThreePerDay_AlsoAcrossLevels_04_2_4()
++        {
++            var f = new Fixture(seeds: 5000);
++            f.Economy.Profile.Daily.DateLocal = f.Economy.Clock.LocalDateKey();
++            f.Economy.Profile.Daily.ShufflesToday = 3;
++            f.Play(30);
++
++            Assert.That(f.Flow.Shuffle.State, Is.EqualTo(ShuffleState.UsedToday));
++            Assert.That(f.Flow.UseShuffle(), Is.Null);
++            Assert.That(f.Economy.Wallet.Seeds, Is.EqualTo(5000));
++        }
++
++        [Test]
++        public void BeforeLevel30_TheSlotDoesNotExist_AndDuringTheIntroItIsGrey_04_2_4()
++        {
++            var f = new Fixture(maxLevel: 28);
++            f.Play(29);
++            Assert.That(f.Flow.Shuffle.State, Is.EqualTo(ShuffleState.Hidden));
++
++            f.Flow.Load(30);
++            Assert.That(f.Flow.Shuffle.State, Is.EqualTo(ShuffleState.Disabled), "fuera de PLAYING");
++            Assert.That(f.Flow.UseShuffle(), Is.Null);
++        }
++
++        [Test]
++        public void Restart_GoesBackToTheLevelBoard_AndTheLevelCapStaysUsed_P5()
++        {
++            var f = new Fixture();
++            f.Play(30);
++            BoardState level = f.Flow.Session.Initial;
++            Assert.That(f.Flow.UseShuffle()!.Value.Succeeded, Is.True);
++
++            Assert.That(f.Flow.PressRestart(), Is.True);
++            f.Flow.Tick(f.Flow.IntroDurationMs, true);
++
++            Assert.That(f.Flow.Session.Current.Equals(level), Is.True);
++            Assert.That(f.Flow.Shuffle.State, Is.EqualTo(ShuffleState.UsedLevel));
++        }
++
++        [Test]
++        public void WhenTheWaveFails_NothingIsCharged_AndTheBoardStays_04_2_4()
++        {
++            var f = new Fixture();
++            f.Flow.ShuffleConfig = new ShuffleConfig { ShuffleBudgetNodes = 1 };
++            f.Play(30);
++            BoardState before = f.Flow.Session.Current;
++
++            ShuffleOutcome? outcome = f.Flow.UseShuffle();
++
++            Assert.That(outcome!.Value.Method, Is.EqualTo(ShuffleWaveMethod.Failed));
++            Assert.That(outcome.Value.MethodId, Is.EqualTo("failed"));
++            Assert.That(f.Flow.Session.Current, Is.SameAs(before));
++            Assert.That(f.Economy.Wallet.Seeds, Is.EqualTo(1000));
++            Assert.That(f.Economy.Wallet.ShufflesToday, Is.EqualTo(0));
++            Assert.That(f.Flow.ShufflesUsed, Is.EqualTo(0));
++            Assert.That(f.Listener.Events, Does.Contain("shuffle_failed"));
++        }
++
++        [Test]
++        public void LluviaLevel_DisablesTheWave_04_2_4_d()
++        {
++            var f = new Fixture(maxLevel: 142);
++            f.Play(143); // estreno de la Lluvia (02 §9.1)
++
++            Assert.That(ShuffleWave.HasTemporalMechanic(f.Flow.Session.Initial), Is.True);
++            Assert.That(f.Flow.Shuffle.State, Is.EqualTo(ShuffleState.Unsupported));
++            Assert.That(f.Flow.Shuffle.DeniedReason, Is.EqualTo("unsupported"));
++        }
++
++        [Test]
++        public void Card_IsDueOnTheFirstLevel30_Once_04_4()
++        {
++            var f = new Fixture();
++            f.Play(30);
++            Assert.That(f.Flow.ShuffleCardDue, Is.True);
++
++            f.Flow.MarkShuffleCardShown();
++            Assert.That(f.Flow.ShuffleCardDue, Is.False);
++            Assert.That(f.States.Load()!.History, Does.Contain("p"));
++
++            var replay = new Fixture(maxLevel: 30);
++            replay.Play(30);
++            Assert.That(replay.Flow.ShuffleCardDue, Is.False, "ya superado");
++        }
++
++        [Test]
++        public void SavedLevel_WithAShuffle_ResumesToTheSameBoard_02_R8()
++        {
++            var f = new Fixture();
++            f.Play(30);
++            f.PourFirstUseful();
++            Assert.That(f.Flow.UseShuffle()!.Value.Succeeded, Is.True);
++            f.PourFirstUseful();
++            BoardState expected = f.Flow.Session.Current;
++            LevelStateData saved = f.States.Load()!;
++            Assert.That(saved.History, Does.Contain("*"));
++            Assert.That(LevelStateSnapshot.TryParseHistory(saved.History, out SavedHistory history), Is.True);
++            Assert.That(history.ShufflesUsed, Is.EqualTo(1));
++            Assert.That(history.ShuffleAt.Count, Is.EqualTo(1));
++            Assert.That(history.ShuffleAt[0], Is.EqualTo(1));
++            Assert.That(history.Sources.Count, Is.EqualTo(2));
++
++            var again = new Fixture(economy: f.Economy);
++            Assert.That(again.Flow.Resume(saved), Is.True);
++
++            Assert.That(again.Flow.Session.Current.Equals(expected), Is.True);
++            Assert.That(again.Flow.ShufflesUsed, Is.EqualTo(1));
++            Assert.That(again.Flow.Shuffle.State, Is.EqualTo(ShuffleState.UsedLevel));
++            Assert.That(again.Flow.Session.AppliedPours, Is.EqualTo(1), "Marea solo llega a lo de después de la ola");
++
++            // Lo que se vuelve a guardar es lo mismo: los vertidos de antes de la ola, su marca y los de después.
++            again.PourFirstUseful();
++            Assert.That(again.States.Load()!.History, Does.StartWith(saved.History.Substring(0, saved.History.IndexOf('*') + 1)));
++        }
++
++        [Test]
++        public void MurkyLevel_Firefly_Shuffle_Resume_KeepsTheBoardAndTheRevealed_02_R8_T6()
++        {
++            // Nivel 100 (estreno de Aguas turbias, con la Luciérnaga regalada): Luciérnaga → vertido → Pororoca (revela el
++            // resto) → vertido; al reanudar, el mismo tablero, sin ocultas, y la sección R de h2 se restaura sin romperse.
++            var f = new Fixture(maxLevel: 99);
++            f.Play(100);
++            BoardState start = f.Flow.Session.Current;
++            int murky = -1;
++            for (int i = 0; i < start.Count && murky < 0; i++)
++            {
++                murky = start[i].HiddenMask != 0 ? i : -1;
++            }
++
++            Assert.That(murky, Is.GreaterThanOrEqualTo(0), "el 100 lleva una cuia turbia");
++            Assert.That(f.Flow.BeginRevealSelection(RevealPayment.Stock), Is.True);
++            f.Flow.TapCuia(murky);
++            Assert.That(f.Flow.Session.RevealedLayers(murky), Is.Not.EqualTo(0));
++            f.PourFirstUseful();
++            Assert.That(f.Flow.UseShuffle()!.Value.Succeeded, Is.True);
++            Assert.That(f.Flow.Session.HiddenCount, Is.EqualTo(0), "04 §2.4 a: la ola revela todo");
++            f.PourFirstUseful();
++            BoardState expected = f.Flow.Session.Current;
++            LevelStateData saved = f.States.Load()!;
++
++            var again = new Fixture(maxLevel: 99, economy: f.Economy);
++            Assert.That(again.Flow.Resume(saved), Is.True);
++
++            Assert.That(again.Flow.Session.Current.Equals(expected), Is.True);
++            Assert.That(again.Flow.Session.HiddenCount, Is.EqualTo(0));
++            Assert.That(again.Flow.Session.RevealedLayers(murky), Is.EqualTo(f.Flow.Session.RevealedLayers(murky)));
++        }
++
++        [Test]
++        public void ExitedLevel_KeepsTheLevelCap_P4()
++        {
++            var f = new Fixture();
++            f.Play(30);
++            Assert.That(f.Flow.UseShuffle()!.Value.Succeeded, Is.True);
++            f.Flow.LeaveLevel();
++            LevelStateData saved = f.States.Load()!;
++
++            var again = new Fixture(economy: f.Economy);
++            Assert.That(again.Flow.RestoreExited(saved), Is.True);
++            again.Play(30);
++
++            Assert.That(again.Flow.ShufflesUsed, Is.EqualTo(1));
++            Assert.That(again.Flow.Shuffle.State, Is.EqualTo(ShuffleState.UsedLevel));
++        }
++
++        [Test]
++        public void History_WithoutShuffleMarks_ReadsAsBefore()
++        {
++            Assert.That(LevelStateSnapshot.TryParseHistory("h2|P||c|0102|", out SavedHistory plain), Is.True);
++            Assert.That(plain.ShufflesUsed, Is.EqualTo(0));
++            Assert.That(plain.ShuffleAt.Count, Is.EqualTo(0));
++            Assert.That(LevelStateSnapshot.TryParseHistory("h2|P||oo|01*02|", out SavedHistory two), Is.True);
++            Assert.That(two.ShufflesUsed, Is.EqualTo(2));
++            Assert.That(two.ShuffleAt[0], Is.EqualTo(1));
++            Assert.That(LevelStateSnapshot.TryParseHistory("h2|P|||01*02|", out _), Is.False, "una ola sin su marca o");
++            Assert.That(LevelStateSnapshot.TryParseHistory("h2|P||o|0*102|", out _), Is.False, "la marca parte un par");
++        }
++    }
++}
+diff --git a/Assets/_Project/Tests/EditMode/ShuffleFlowTests.cs.meta b/Assets/_Project/Tests/EditMode/ShuffleFlowTests.cs.meta
+new file mode 100644
+index 0000000..bc9eff0
+--- /dev/null
++++ b/Assets/_Project/Tests/EditMode/ShuffleFlowTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 4d8f638191e84c74fafdb0c6b77a4b90
+\ No newline at end of file

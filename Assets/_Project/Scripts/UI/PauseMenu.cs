@@ -1,7 +1,9 @@
 #nullable enable
 using System;
 using System.Collections.Generic;
+using AF.Boosters;
 using AF.Presentation;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,6 +18,8 @@ namespace AF.UI
     /// <para>«Mapa del río» (<c>river_map</c>, glosario §7.1; D-013, punto 7; 04 §5.2) abre el Mapa encima del nivel en pausa, con
     /// «Volver al nivel» en lugar de «Jugar»: no es salir del nivel, así que no gasta canoa ni cuenta como fallo. Sale con el
     /// Mapa en la escena y desde <c>max_level</c> ≥ 10, como la pestaña del inicio (D-008: oculto hasta el 10) [P].</para>
+    /// <para>«Salto del Boto» (bloque B3; 04 §2.6: «el icono de Rosa aparece también en el menú de pausa»): con Rosa y su precio,
+    /// solo si la opción se ofrece (<c>LevelFlow.SkipOffer</c>), en gris sin saldo; un toque abre la confirmación.</para>
     /// </summary>
     internal sealed class PauseMenu
     {
@@ -27,10 +31,14 @@ namespace AF.UI
         private readonly ReliefParts _close;
         private readonly ReliefParts _resume;
         private readonly ReliefParts _map;
+        private readonly ReliefParts _skip;
+        private readonly TextMeshProUGUI _skipLabel;
+        private readonly Image _skipRosa;
+        private readonly PriceTag _skipPrice;
         private readonly ReliefParts _restart;
         private readonly ReliefParts _quit;
 
-        public PauseMenu(Transform parent, ProceduralArt art, Action onResume, Action onMap, Action onRestart, Action onQuit)
+        public PauseMenu(Transform parent, ProceduralArt art, Action onResume, Action onMap, Action onRestart, Action onQuit, Action? onSkip = null)
         {
             _art = art;
             _root = UiBuilder.Rect("PauseMenu", parent);
@@ -40,6 +48,11 @@ namespace AF.UI
             _close = ModalKit.Close("CloseButton", _panel, art, onResume);
             _resume = ModalKit.Cta("ResumeButton", _panel, art.CtaLeaf, TextStyle.CtaLeaf, UiText.KeepPlaying, 21f, onResume, out _);
             _map = ModalKit.Cta("MapButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.RiverMap, 18f, onMap, out _);
+            _skip = ModalKit.Cta("SkipButton", _panel, art.CtaWood, TextStyle.PillWood, SkipText.Option, 18f, onSkip ?? (() => { }), out _skipLabel);
+            _skipRosa = UiBuilder.Image("Rosa", _skip.Face, null, Color.white); // el sprite, al enseñarlo (las mascotas, solo si hacen falta)
+            _skipRosa.preserveAspect = true;
+            _skipPrice = new PriceTag("Price", _skip.Face, art);
+            _skip.Button.gameObject.SetActive(false);
             _restart = ModalKit.Cta("RestartButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.RestartLong, 18f, onRestart, out _);
             _quit = ModalKit.Cta("QuitButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.Quit, 18f, onQuit, out _);
             _root.gameObject.SetActive(false);
@@ -55,6 +68,12 @@ namespace AF.UI
         /// <summary>«Mapa del río» (tarea M4.3): solo se ve si <see cref="Show"/> lo pidió.</summary>
         public Button MapButton => _map.Button;
 
+        /// <summary>«Salto del Boto»: solo se ve si <see cref="Show"/> lo pidió.</summary>
+        public Button SkipButton => _skip.Button;
+
+        /// <summary>Sprite de Rosa del botón (null hasta que <see cref="Show"/> lo enseña; tests).</summary>
+        internal Sprite? SkipRosaSprite => _skipRosa.sprite;
+
         public Button RestartButton => _restart.Button;
 
         public Button QuitButton => _quit.Button;
@@ -66,9 +85,9 @@ namespace AF.UI
 
         /// <summary>
         /// Abre el menú: «Volver a la orilla» si <paramref name="canRestart"/> y «Mapa del río» si <paramref name="canMap"/> (el
-        /// Mapa en la escena y <c>max_level</c> ≥ 10; tarea M4.3).
+        /// Mapa en la escena y <c>max_level</c> ≥ 10; tarea M4.3) y «Salto del Boto» si <paramref name="skip"/> se ofrece (B3).
         /// </summary>
-        public void Show(bool canRestart, bool canMap, float canvasW, float canvasH)
+        public void Show(bool canRestart, bool canMap, float canvasW, float canvasH, SkipOffer skip = default)
         {
             _root.gameObject.SetActive(true);
             float width = Mathf.Min(300f, canvasW - 48f);
@@ -84,6 +103,25 @@ namespace AF.UI
             {
                 ModalKit.Place(_map, 16f, y, inner);
                 y += ModalKit.HeightOf(_map) + 8f;
+            }
+
+            bool canSkip = skip.Offered;
+            _skip.Button.gameObject.SetActive(canSkip);
+            if (canSkip)
+            {
+                if (_skipRosa.sprite == null)
+                {
+                    _skipRosa.sprite = _art.Rosa;
+                }
+
+                UiBuilder.SetEnabled(_skip.Button, skip.CanUse);
+                _skipPrice.Set(skip.Price, 0, !skip.CanUse);
+                ModalKit.FitCtaLabel(_skip, _skipLabel, inner, _skipPrice.Width + 76f, 20f - ((_skipPrice.Width + 12f) * 0.5f));
+                ModalKit.Place(_skip, 16f, y, inner);
+                float face = ModalKit.FaceHeightOf(_skip);
+                UiBuilder.Place(_skipRosa.rectTransform, 10f, (face - 28f) * 0.5f, 36f, 28f);
+                _skipPrice.PlaceAt(inner - _skipPrice.Width - 12f, (face - _skipPrice.Height) * 0.5f);
+                y += ModalKit.HeightOf(_skip) + 8f;
             }
 
             _restart.Button.gameObject.SetActive(canRestart);
@@ -107,6 +145,13 @@ namespace AF.UI
                 ids.Add("pause_map");
                 rects.Add((RectTransform)_map.Button.transform);
             }
+
+            if (_skip.Button.gameObject.activeSelf)
+            {
+                ids.Add("pause_skip");
+                rects.Add((RectTransform)_skip.Button.transform);
+            }
+
             if (_restart.Button.gameObject.activeSelf)
             {
                 ids.Add("pause_restart");

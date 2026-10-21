@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/account-delete-request.response.schema.json",
+  "title": "delete-request (web): respuesta 200",
+  "description": "Token para el segundo paso, válido expires_in_s segundos (5 minutos; plan F2-8).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "request_token",
+    "expires_in_s"
+  ],
+  "properties": {
+    "request_token": {
+      "$ref": "common.schema.json#/$defs/requestToken"
+    },
+    "expires_in_s": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 300
+    }
+  }
+}

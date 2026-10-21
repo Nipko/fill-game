@@ -623,7 +623,7 @@ namespace AF.UI
             UiBuilder.Place(pauseIcon.rectTransform, 7f, 7f, 26f, 26f);
             _pauseButton.Relief.Bind(_pauseButton.Face, _pauseButton.Base, _pauseButton.FaceImage, art.DiscWood, pauseIcon, null, null);
             _walletBar = new WalletBar(_topLayer, art);
-            _pause = new PauseMenu(_root, art, OnResume, OnPauseMap, OnPauseRestart, OnPauseQuit);
+            _pause = new PauseMenu(_root, art, OnResume, OnPauseMap, OnPauseRestart, OnPauseQuit, OnPauseSkip);
             _confirm = new QuitConfirm(_root, art, OnConfirm, OnConfirmCancel, OnConfirmUndo);
             _banner = new Toast("RiverLowered", _root, art, 18f);
             _toast = new Toast("Toast", _noticeLayer, art, 15f);
@@ -644,6 +644,7 @@ namespace AF.UI
             CardsBuild();
             RevealBuild();
             HintBuild();
+            ShuffleBuild();
             ArrivalBuild();
             StreakBuild(); // la barra de la Crecida del HUD y las barras de la victoria (GameScreen.Streak.cs; B1b)
             ApplyScreenMetrics(true);
@@ -945,6 +946,7 @@ namespace AF.UI
             CardsTick(dtMs);
             RevealTick(dtMs);
             HintTick(dtMs);
+            ShuffleTick(dtMs);
             StopTick(dtMs);
             ArrivalTick(dtMs);
             SlotTick(dtMs);
@@ -991,6 +993,7 @@ namespace AF.UI
             CardsLevelLoaded(flow);
             RevealLevelLoaded(flow);
             HintLevelLoaded(flow);
+            ShuffleLevelLoaded(flow);
             StopLevelLoaded(flow);
             ArrivalLevelLoaded(flow);
             _levelLayoutDeferred = false;
@@ -1038,6 +1041,7 @@ namespace AF.UI
             // El tablero del intento ya es el de la sesión (OnRestart avisa antes de reiniciarla: ahí aún es el viejo).
             LabelsBoardChanged(flow);
             RevealBoardChanged(flow);
+            ShuffleBoardChanged(flow);
         }
 
         /// <inheritdoc />
@@ -1114,6 +1118,7 @@ namespace AF.UI
                     _probe.State("pour", flow, result.Tapped, result.Pour);
                     LabelsBoardChanged(flow);
                     RevealBoardChanged(flow);
+                    ShuffleBoardChanged(flow);
                     break;
             }
         }
@@ -1168,6 +1173,7 @@ namespace AF.UI
             AudioBoard.Music(flow.Level, after); // AU1-AU2: la Marea puede quitar una capa
             LabelsBoardChanged(flow);
             RevealBoardChanged(flow);
+            ShuffleBoardChanged(flow);
         }
 
         /// <inheritdoc />
@@ -1254,6 +1260,7 @@ namespace AF.UI
             // que necesita SlothCanSpeak; después, el fondo de la parada y la llegada.
             VictoryFreeBand(out float bandTop, out float bandBottom);
             SlothVictoryShown(flow, bandTop, bandBottom);
+            StreakYieldToSloth(flow, ref bandTop, ref bandBottom); // en su hito, sin barras si con ellas no cabe su frase (B1b-Q10 (c))
             SlotVictoryShown(flow);
             StopVictoryShown(flow);
             ArrivalVictoryShown(flow);
@@ -1350,6 +1357,7 @@ namespace AF.UI
             StreakResumed(flow, phase); // reabierto sin intro: la barra de la Crecida ya está (B1b)
             LabelsBoardChanged(flow);
             RevealBoardChanged(flow);
+            ShuffleBoardChanged(flow);
         }
 
         /// <inheritdoc />
@@ -1393,6 +1401,7 @@ namespace AF.UI
             _probe.Funnel(kind == AddedCuiaKind.Rescue ? "rescue" : "extra_cuia", flow);
             LabelsBoardChanged(flow);
             RevealBoardChanged(flow);
+            ShuffleBoardChanged(flow);
         }
 
         /// <inheritdoc />
@@ -1916,7 +1925,7 @@ namespace AF.UI
             }
 
             flow.ClearSelection();
-            _pause.Show(flow.CanRestart, PauseMapOffered, _canvasW, _canvasH);
+            _pause.Show(flow.CanRestart, PauseMapOffered, _canvasW, _canvasH, flow.SkipOffer);
             EmitPauseLayout();
         }
 
@@ -1962,6 +1971,15 @@ namespace AF.UI
         private void OnResume()
         {
             _pause.Hide();
+        }
+
+        // Pausa › «Salto del Boto» (04 §2.6; bloque B3): la confirmación de GameBootstrap.Skip.cs, que cierra la pausa.
+        private void OnPauseSkip()
+        {
+            if (_actions is ISkipActions skip)
+            {
+                skip.PressSkip();
+            }
         }
 
         private void OnPauseRestart()
@@ -2499,6 +2517,7 @@ namespace AF.UI
             _layoutRects.Add((RectTransform)_pauseButton.Button.transform);
             CardsLayoutIds(_layoutIds, _layoutRects);
             RevealLayoutIds(_layoutIds, _layoutRects);
+            ShuffleLayoutIds(_layoutIds, _layoutRects);
             _probe.Layout("level", RequireFlow().LevelNumber, _views, _layoutIds.ToArray(), _layoutRects.ToArray());
         }
 
@@ -2746,6 +2765,7 @@ namespace AF.UI
             CardsLayout();
             RevealLayout();
             HintLayout();
+            ShuffleLayout();
         }
 
         // Panel de victoria de arriba abajo según lo que ofrece (con o sin Cosecha doble), con la cinta, los rayos y el velo
@@ -2772,6 +2792,7 @@ namespace AF.UI
             y += VictoryHarvestDp + VictoryHarvestGapDp(compact);
 
             // Las barras del panel único (D-033, punto 10): Crecida y Canasta, entre la Cosecha y la Cosecha doble (GameScreen.Streak.cs).
+            _victoryBars.Barless = _victoryBarsYield; // en el hito de TiTino que las cede, sin filas (B1b-Q10 (c))
             y += _victoryBarsDropped ? _victoryBars.Collapse() : _victoryBars.Layout(VictoryBarsSideDp, y, panelW - (2f * VictoryBarsSideDp), compact);
 
             // Tras la Cosecha doble, mientras espera a avanzar solo (D-011, punto 4), Inicio y la Cosecha doble quedan inactivos,
@@ -3490,6 +3511,24 @@ namespace AF.UI
 
         // Morpho: al final de OnLevelLoaded, tras RevealLevelLoaded.
         partial void HintLevelLoaded(LevelFlow flow);
+
+        // Pororoca · Barajar (GameScreen.Shuffle.cs; bloque B2): al final del constructor, después de HintBuild.
+        partial void ShuffleBuild();
+
+        // Pororoca: al final de LayoutHud, tras HintLayout.
+        partial void ShuffleLayout();
+
+        // Pororoca: en cada Tick, tras HintTick.
+        partial void ShuffleTick(float dtMs);
+
+        // Pororoca: al final de OnLevelLoaded, tras HintLevelLoaded.
+        partial void ShuffleLevelLoaded(LevelFlow flow);
+
+        // Pororoca: en los mismos puntos que RevealBoardChanged, justo después.
+        partial void ShuffleBoardChanged(LevelFlow flow);
+
+        // Pororoca: botones visibles para AF_LAYOUT (EmitLevelLayout, tras RevealLayoutIds).
+        partial void ShuffleLayoutIds(List<string> ids, List<RectTransform> rects);
 
         // Embudo (GameScreen.Funnel.cs): justo antes de abrir ¿Seguro? (GiveUpConfirm) o Nivel fallido (LevelFailed), para
         // colorear sus cabeceras.

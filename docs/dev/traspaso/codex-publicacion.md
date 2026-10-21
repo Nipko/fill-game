@@ -17,6 +17,9 @@ Este documento es todo lo que necesitas para empezar. Si algo no está aquí ni 
 ## 2. Qué haces tú (Codex) y qué no
 
 ### 2.1 Tu trabajo
+
+> **Nota del integrador (2026-10-20): ya hay borradores del equipo Spark.** Antes de que el dueño te pasara B13, el Spark lo hizo en `spark/t5-b13` (revisado y aprobado por su code-reviewer) y ya está integrado en `integracion-fase1-fase2`. Son: `docs/store-listing/` (`README.md` con las preguntas Q-B13-1..23 y sus recomendadas, `es-419/ficha.md`, `en/ficha.md`, `pt-BR/ficha.md`, `data-safety.md`, `iarc.md`, `privacidad.md`, `eliminar-cuenta.md`, `app-ads.txt`, `assets-tienda.md`, `creditos.md` y `strings-creditos.csv`), `LICENSES.md` en la raíz y `docs/qa/regresion-release.md` (60 casos). **Tu trabajo en los puntos 2, 3, 4, 6, 7, 9 y 10 es revisarlos, completarlos y moverlos a las rutas de `docs/publicacion/` de abajo (con `git mv`, para conservar la historia) donde difieran, sin rehacerlos desde cero.** `LICENSES.md` y `docs/qa/regresion-release.md` ya están en su sitio. Conserva las preguntas abiertas del README del Spark y su numeración (no las vuelvas a preguntar con otro número). Lo que falta del todo: la guía de Play Console (1), los términos de uso (4), la web (5) y los productos de compra (8).
+
 Todo es **documentación y borradores** para que el dueño los revise y los use en Play Console y en la web:
 
 1. **Guía paso a paso de Play Console** (`docs/publicacion/play-console-guia.md`): los 23 pasos de 08 §13.1, con qué se hace en cada pantalla, qué datos se meten, **quién lo hace** (el dueño o el agente) y qué bloquea cada uno (sección 3). Incluye el registro de la cuenta de desarrollador.
@@ -51,7 +54,7 @@ Todo es **documentación y borradores** para que el dueño los revise y los use 
 | **Dominios** `tintalu.com` (canónico [P]), `tintalu.app`, `tintalu.co`, `tintalu.com.br` | Dueño (+ abogado BR) | Pendientes de confirmar (`docs/legal/marca.md` §4.1). La web y las URL de la política dependen de ellos |
 | **Alojamiento de la web** (por ejemplo, GitHub Pages en un repositorio que cree el dueño, o el hosting del registrador) | Dueño | Sin decidir. Codex: recomienda una opción con HTTPS (`.app` lo exige) |
 | Datos legales del responsable (nombre o razón social, dirección, correo de contacto y de privacidad, DPO para la LGPD) | Dueño | Pendientes: `[[DATO DEL DUEÑO]]` |
-| Permiso Android `INTERNET` | Dueño | **Pendiente de su decisión.** Data Safety y la política deben suponer el build de la 1.0 con SDK, pero márcalo |
+| Permiso Android `INTERNET` | Dueño | **Aprobado (D-036, 2026-10-20).** |
 | Cuentas de AppLovin MAX, Firebase, Play Games, AdMob… | Dueño | Más adelante; sin ellas, `app-ads.txt` y Data Safety quedan como plantilla |
 | Firma (Play App Signing, clave de subida) | Dueño | **Nunca** la toca un agente |
 
@@ -87,7 +90,7 @@ En este orden; el GDD manda:
 | EN | Tintalú: Water Sort Puzzle |
 
 ### 5.3 Técnicos (para la guía)
-targetSdk 36, minSdk 26, páginas de 16 KB, IL2CPP ARM64, AAB ≤ 80 MB (hoy unos 52 MB), Play Billing 8 o superior, `appCategory = Game`. Permisos hoy: `INTERNET` (pendiente del dueño) y `VIBRATE`; aprobado para más adelante `POST_NOTIFICATIONS` (D-033, Q-M5: notificaciones locales).
+targetSdk 36, minSdk 26, páginas de 16 KB, IL2CPP ARM64, AAB ≤ 80 MB (hoy unos 52 MB), Play Billing 8 o superior, `appCategory = Game`. Permisos hoy: `INTERNET` (aprobado, D-036) y `VIBRATE`; aprobado para más adelante `POST_NOTIFICATIONS` (D-033, Q-M5: notificaciones locales).
 
 ### 5.4 Contenido y edad (08 §13.1 #8-#11; 05 §7; D-033 Q-T3 y Q-T4)
 - Anuncios: sí. Compras: sí. Ítems aleatorios: **no** (las Canastas tienen contenido visible y fijo). Azar simulado: no. Interacción entre usuarios: no (1.0).

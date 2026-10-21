@@ -1,0 +1,358 @@
+diff --git a/Assets/_Project/Scripts/UI/AF.UI.asmdef b/Assets/_Project/Scripts/UI/AF.UI.asmdef
+index 498fb55..86425ef 100644
+--- a/Assets/_Project/Scripts/UI/AF.UI.asmdef
++++ b/Assets/_Project/Scripts/UI/AF.UI.asmdef
+@@ -19,7 +19,8 @@
+     "AF.Audio.Unity",
+     "UnityEngine.UI",
+     "Unity.InputSystem",
+-    "Unity.TextMeshPro"
++    "Unity.TextMeshPro",
++    "Unity.Notifications.Android"
+   ],
+   "includePlatforms": [],
+   "excludePlatforms": [],
+@@ -28,6 +29,12 @@
+   "precompiledReferences": [],
+   "autoReferenced": false,
+   "defineConstraints": [],
+-  "versionDefines": [],
++  "versionDefines": [
++    {
++      "name": "com.unity.mobile.notifications",
++      "expression": "2.4.3",
++      "define": "AF_MOBILE_NOTIFICATIONS"
++    }
++  ],
+   "noEngineReferences": false
+ }
+diff --git a/Assets/_Project/Scripts/UI/AndroidNotificationScheduler.cs b/Assets/_Project/Scripts/UI/AndroidNotificationScheduler.cs
+new file mode 100644
+index 0000000..8f6a6fc
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/AndroidNotificationScheduler.cs
+@@ -0,0 +1,252 @@
++#nullable enable
++#if AF_MOBILE_NOTIFICATIONS && UNITY_ANDROID
++using System;
++using System.Collections.Generic;
++using System.Globalization;
++using System.Text;
++using AF.Platform;
++using Unity.Notifications.Android;
++using UnityEngine;
++
++namespace AF.UI
++{
++    /// <summary>
++    /// <see cref="INotificationScheduler"/> de Android sobre <c>com.unity.mobile.notifications</c> (Q-M5 de D-033; parche
++    /// <c>B6-notifications-real.diff</c>, que aplica el integrador tras anotar la versión en D-033). Solo existe con el paquete
++    /// (<c>AF_MOBILE_NOTIFICATIONS</c>, el <c>versionDefines</c> de <c>AF.UI.asmdef</c>) y en Android; en el editor no se usa (lo
++    /// decide <c>GameBootstrap.Notifications.cs</c>).
++    /// <list type="bullet">
++    /// <item>Un canal, <c>af_default</c> [P], con importancia por defecto (sonido del sistema, sin pantalla completa).</item>
++    /// <item>Alarmas inexactas (Q-M5: «alarmas inexactas»): nada de <c>SCHEDULE_EXACT_ALARM</c>; el ajuste «Schedule at exact time»
++    /// de Project Settings › Mobile Notifications se queda en <c>Never</c>.</item>
++    /// <item>El permiso <c>POST_NOTIFICATIONS</c> (Android 13+) solo se pide con <see cref="RequestPermission"/>, que el juego llama
++    /// tras «Avísame» o desde Ajustes (06 §8.1), nunca al arrancar.</item>
++    /// <item>Para <c>af_push_sent</c> (08 §8.2: «registrada en la siguiente apertura») guarda en <see cref="PlayerPrefs"/> los
++    /// programados (<c>id:tipo:hora</c>) y al abrir da por entregados los vencidos que el sistema ya no tiene como programados.</item>
++    /// </list>
++    /// </summary>
++    public sealed class AndroidNotificationScheduler : INotificationScheduler
++    {
++        /// <summary>Canal único de los avisos [P].</summary>
++        public const string ChannelId = "af_default";
++
++        private const string PrefsKey = "af_push_scheduled";
++        private const int Android13 = 33;
++
++        private readonly IClock _clock;
++        private readonly List<Entry> _scheduled = new List<Entry>();
++        private readonly List<DeliveredNotification> _delivered = new List<DeliveredNotification>();
++        private readonly int _sdk;
++        private PermissionRequest? _request;
++        private Action<PushPermission>? _pending;
++        private int? _lastIntentId;
++
++        /// <summary>Inicializa el paquete y registra el canal con su nombre y descripción ya localizados.</summary>
++        public AndroidNotificationScheduler(IClock clock, string channelName, string channelDescription)
++        {
++            _clock = clock ?? throw new ArgumentNullException(nameof(clock));
++            _sdk = SdkInt();
++            AndroidNotificationCenter.Initialize();
++            AndroidNotificationCenter.RegisterNotificationChannel(new AndroidNotificationChannel(
++                ChannelId, string.IsNullOrEmpty(channelName) ? ChannelId : channelName, channelDescription ?? string.Empty, Importance.Default));
++            Load();
++        }
++
++        /// <inheritdoc />
++        public PushPermission Permission => Map(AndroidNotificationCenter.UserPermissionToPost);
++
++        /// <inheritdoc />
++        public bool PermissionRequired => _sdk >= Android13;
++
++        /// <inheritdoc />
++        public void RequestPermission(Action<PushPermission> done)
++        {
++            if (done == null)
++            {
++                throw new ArgumentNullException(nameof(done));
++            }
++
++            PushPermission now = Permission;
++            if (!PermissionRequired || now == PushPermission.Allowed || now == PushPermission.Blocked)
++            {
++                done(now);
++                return;
++            }
++
++            _pending = done;
++            _request = new PermissionRequest(); // diálogo nativo; la respuesta llega por sondeo (Poll)
++        }
++
++        /// <summary>Cada fotograma: entrega la respuesta del diálogo nativo cuando llega.</summary>
++        public void Poll()
++        {
++            PermissionRequest? request = _request;
++            if (request == null || request.Status == PermissionStatus.RequestPending)
++            {
++                return;
++            }
++
++            _request = null;
++            Action<PushPermission>? done = _pending;
++            _pending = null;
++            done?.Invoke(Map(request.Status));
++        }
++
++        /// <inheritdoc />
++        public void Schedule(LocalNotification notification)
++        {
++            if (notification == null)
++            {
++                throw new ArgumentNullException(nameof(notification));
++            }
++
++            var n = new AndroidNotification(notification.Title, notification.Body, notification.FireAtUtc.ToLocalTime())
++            {
++                IntentData = notification.Type,
++                ShowTimestamp = false,
++            };
++            AndroidNotificationCenter.SendNotificationWithExplicitID(n, ChannelId, notification.Id);
++            _scheduled.RemoveAll(e => e.Id == notification.Id);
++            _scheduled.Add(new Entry(notification.Id, notification.Type, notification.FireAtUtc));
++            Save();
++        }
++
++        /// <inheritdoc />
++        public void CancelAll()
++        {
++            CollectDue();
++            AndroidNotificationCenter.CancelAllScheduledNotifications();
++            AndroidNotificationCenter.CancelAllDisplayedNotifications();
++            _scheduled.Clear();
++            Save();
++        }
++
++        /// <inheritdoc />
++        public IReadOnlyList<DeliveredNotification> TakeDelivered()
++        {
++            CollectDue();
++            var taken = new List<DeliveredNotification>(_delivered);
++            _delivered.Clear();
++            return taken;
++        }
++
++        /// <inheritdoc />
++        public string? TakeOpenedType()
++        {
++            // La última intención que abrió la app; la misma no se vuelve a contar en este proceso.
++            AndroidNotificationIntentData? intent = AndroidNotificationCenter.GetLastNotificationIntent();
++            if (intent == null || intent.Id == _lastIntentId)
++            {
++                return null;
++            }
++
++            _lastIntentId = intent.Id;
++            string? type = intent.Notification.IntentData;
++            return string.IsNullOrEmpty(type) ? null : type;
++        }
++
++        private void CollectDue()
++        {
++            DateTime now = _clock.UtcNow;
++            bool allowed = Permission == PushPermission.Allowed;
++            bool changed = false;
++            for (int i = _scheduled.Count - 1; i >= 0; i--)
++            {
++                Entry e = _scheduled[i];
++                if (e.FireAtUtc > now)
++                {
++                    continue;
++                }
++
++                if (allowed && AndroidNotificationCenter.CheckScheduledNotificationStatus(e.Id) != NotificationStatus.Scheduled)
++                {
++                    _delivered.Add(new DeliveredNotification(e.Id, e.Type, e.FireAtUtc));
++                }
++
++                _scheduled.RemoveAt(i);
++                changed = true;
++            }
++
++            if (changed)
++            {
++                Save();
++            }
++        }
++
++        private static PushPermission Map(PermissionStatus status)
++        {
++            switch (status)
++            {
++                case PermissionStatus.Allowed:
++                    return PushPermission.Allowed;
++                case PermissionStatus.Denied:
++                    return PushPermission.Denied;
++                case PermissionStatus.DeniedDontAskAgain:
++                case PermissionStatus.NotificationsBlockedForApp:
++                    return PushPermission.Blocked;
++                default:
++                    return PushPermission.NotRequested;
++            }
++        }
++
++        private static int SdkInt()
++        {
++            using (var version = new AndroidJavaClass("android.os.Build$VERSION"))
++            {
++                return version.GetStatic<int>("SDK_INT");
++            }
++        }
++
++        private void Load()
++        {
++            _scheduled.Clear();
++            string raw = PlayerPrefs.GetString(PrefsKey, string.Empty);
++            foreach (string item in raw.Split(';'))
++            {
++                string[] parts = item.Split(':');
++                if (parts.Length == 3
++                    && int.TryParse(parts[0], NumberStyles.Integer, CultureInfo.InvariantCulture, out int id)
++                    && long.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out long ticks)
++                    && parts[1].Length > 0 && ticks > 0)
++                {
++                    _scheduled.Add(new Entry(id, parts[1], new DateTime(ticks, DateTimeKind.Utc)));
++                }
++            }
++        }
++
++        private void Save()
++        {
++            var sb = new StringBuilder();
++            for (int i = 0; i < _scheduled.Count; i++)
++            {
++                if (i > 0)
++                {
++                    sb.Append(';');
++                }
++
++                sb.Append(_scheduled[i].Id.ToString(CultureInfo.InvariantCulture)).Append(':').Append(_scheduled[i].Type).Append(':')
++                    .Append(_scheduled[i].FireAtUtc.Ticks.ToString(CultureInfo.InvariantCulture));
++            }
++
++            PlayerPrefs.SetString(PrefsKey, sb.ToString());
++            PlayerPrefs.Save();
++        }
++
++        private readonly struct Entry
++        {
++            public Entry(int id, string type, DateTime fireAtUtc)
++            {
++                Id = id;
++                Type = type;
++                FireAtUtc = fireAtUtc;
++            }
++
++            public int Id { get; }
++
++            public string Type { get; }
++
++            public DateTime FireAtUtc { get; }
++        }
++    }
++}
++#endif
+diff --git a/Assets/_Project/Scripts/UI/AndroidNotificationScheduler.cs.meta b/Assets/_Project/Scripts/UI/AndroidNotificationScheduler.cs.meta
+new file mode 100644
+index 0000000..a211322
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/AndroidNotificationScheduler.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 5febb83dd26995845b2dcd17b22f7a40
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Notifications.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Notifications.cs
+new file mode 100644
+index 0000000..e9d238e
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Notifications.cs
+@@ -0,0 +1,36 @@
++#nullable enable
++using AF.Localization;
++using AF.Platform;
++using UnityEngine;
++
++namespace AF.UI
++{
++    /// <summary>
++    /// El programador real de los avisos (parche B6-notifications-real; Q-M5 de D-033): implementa los ganchos
++    /// <c>CreatePlatformScheduler</c> y <c>TickPlatformScheduler</c> de <c>GameBootstrap.Sessions.cs</c> con
++    /// <see cref="AndroidNotificationScheduler"/>, solo en el teléfono y con el paquete <c>com.unity.mobile.notifications</c>
++    /// (<c>AF_MOBILE_NOTIFICATIONS</c>). En el editor, y sin el paquete, sigue el <see cref="FakeNotificationScheduler"/>.
++    /// </summary>
++    public sealed partial class GameBootstrap
++    {
++        static partial void CreatePlatformScheduler(IClock clock, ref INotificationScheduler? scheduler)
++        {
++#if AF_MOBILE_NOTIFICATIONS && UNITY_ANDROID
++            if (!Application.isEditor)
++            {
++                // Nombre y descripción del canal, como los ve el jugador en los ajustes del teléfono (claves de B6-strings.csv).
++                string name = Loc.Has("push_channel_name") ? Loc.T("push_channel_name") : string.Empty;
++                string description = Loc.Has("push_channel_description") ? Loc.T("push_channel_description") : string.Empty;
++                scheduler = new AndroidNotificationScheduler(clock, name, description);
++            }
++#endif
++        }
++
++        partial void TickPlatformScheduler()
++        {
++#if AF_MOBILE_NOTIFICATIONS && UNITY_ANDROID
++            (_notificationScheduler as AndroidNotificationScheduler)?.Poll();
++#endif
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Notifications.cs.meta b/Assets/_Project/Scripts/UI/GameBootstrap.Notifications.cs.meta
+new file mode 100644
+index 0000000..6a6e6de
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Notifications.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 6868e3346706ebf468bc8343afb704bc
+\ No newline at end of file
+diff --git a/Packages/manifest.json b/Packages/manifest.json
+index a5f3b77..b037b01 100644
+--- a/Packages/manifest.json
++++ b/Packages/manifest.json
+@@ -12,6 +12,7 @@
+     "com.unity.ide.rider": "3.0.40",
+     "com.unity.ide.visualstudio": "2.0.26",
+     "com.unity.inputsystem": "1.20.0",
++    "com.unity.mobile.notifications": "2.4.3",
+     "com.unity.multiplayer.center": "1.0.1",
+     "com.unity.render-pipelines.universal": "17.3.0",
+     "com.unity.test-framework": "1.6.0",

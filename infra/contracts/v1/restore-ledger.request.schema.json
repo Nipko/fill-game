@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/restore-ledger.request.schema.json",
+  "title": "restoreLedger: petición",
+  "description": "08 §11 (Conflicto) y §10.2: pide el libro mayor del UID y confirma los nonces de recompensa pendientes (< 24 h; plan, hallazgo 5).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "pending_nonces"
+  ],
+  "properties": {
+    "pending_nonces": {
+      "type": "array",
+      "uniqueItems": true,
+      "maxItems": 200,
+      "items": {
+        "$ref": "common.schema.json#/$defs/nonce"
+      }
+    }
+  }
+}

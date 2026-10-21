@@ -1,0 +1,343 @@
+{
+  "$comment": "Contrato v1 de la API del backend de Amazon Fill (D-035, Q-AWS-12: fuente única). Lo leen el api-stack (rutas, autorización y límites) y los tests de contrato; el cliente (F3-1) deserializa sus ejemplos. Fuentes: GDD 08 §10.1-§10.3 y §11; docs/dev/plan-backend-aws.md §1, §2 y §7; Q-B13-21.",
+  "version": "v1",
+  "conventions": {
+    "baseUrl": "Por entorno y compilada en el cliente (plan §7): en dev, la URL de execute-api; en prod, https://api.<dominio>.",
+    "contentType": "application/json; charset=utf-8 en peticiones y respuestas.",
+    "authHeader": "Authorization: Bearer <ID token de Firebase Auth>, en las rutas con auth = firebase. Lo valida el autorizador JWT de API Gateway (iss https://securetoken.google.com/<proyecto>, aud <proyecto>).",
+    "integrityHeader": "X-Firebase-AppCheck: <token de App Check de uso limitado>, en las rutas con integrity = true (Q-AWS-4). Lo verifica la Lambda.",
+    "dateHeader": "Toda respuesta lleva la cabecera Date; el cliente la usa para IServerDate (08 §10.1).",
+    "errors": "Todo error devuelve error.schema.json con el código HTTP indicado en errors.",
+    "uid": "El UID sale siempre del token (sub); el cuerpo nunca lo decide. Los logs solo llevan su hash (plan §5)."
+  },
+  "operations": [
+    {
+      "operation": "verifyPurchase",
+      "function": "verify-purchase",
+      "method": "POST",
+      "path": "/v1/purchases/verify",
+      "auth": "firebase",
+      "integrity": true,
+      "throttle": "default",
+      "request": "verify-purchase.request.schema.json",
+      "response": "verify-purchase.response.schema.json",
+      "examples": {
+        "request": [
+          "verify-purchase.request.json"
+        ],
+        "response": [
+          "verify-purchase.response.ok.json",
+          "verify-purchase.response.pending.json",
+          "verify-purchase.response.duplicate.json"
+        ],
+        "invalidRequest": [
+          "verify-purchase.request.invalid-missing-token.json"
+        ]
+      },
+      "errors": {
+        "400": [
+          "bad_request"
+        ],
+        "401": [
+          "unauthorized"
+        ],
+        "403": [
+          "integrity_failed"
+        ],
+        "409": [
+          "token_belongs_to_other_user"
+        ],
+        "429": [
+          "rate_limited"
+        ],
+        "501": [
+          "not_implemented"
+        ],
+        "502": [
+          "upstream_error"
+        ]
+      },
+      "source": "08 §10.3; plan §2 (tabla purchases) y F2-4"
+    },
+    {
+      "operation": "restoreLedger",
+      "function": "restore-ledger",
+      "method": "POST",
+      "path": "/v1/ledger/restore",
+      "auth": "firebase",
+      "integrity": false,
+      "throttle": "default",
+      "request": "restore-ledger.request.schema.json",
+      "response": "restore-ledger.response.schema.json",
+      "examples": {
+        "request": [
+          "restore-ledger.request.json"
+        ],
+        "response": [
+          "restore-ledger.response.json"
+        ],
+        "invalidRequest": [
+          "restore-ledger.request.invalid-nonce.json"
+        ]
+      },
+      "errors": {
+        "400": [
+          "bad_request"
+        ],
+        "401": [
+          "unauthorized"
+        ],
+        "429": [
+          "rate_limited"
+        ],
+        "501": [
+          "not_implemented"
+        ]
+      },
+      "source": "08 §11 (fila Conflicto) y §10.2 (confirmación de nonces); plan hallazgo 5 y F2-5"
+    },
+    {
+      "operation": "rewardedSsv",
+      "function": "rewarded-ssv",
+      "method": "GET",
+      "path": "/v1/ssv",
+      "auth": "none",
+      "integrity": false,
+      "throttle": "default",
+      "requestIn": "query",
+      "request": "rewarded-ssv.request.schema.json",
+      "response": "rewarded-ssv.response.schema.json",
+      "examples": {
+        "request": [
+          "rewarded-ssv.request.json"
+        ],
+        "response": [
+          "rewarded-ssv.response.ok.json",
+          "rewarded-ssv.response.duplicate.json"
+        ],
+        "invalidRequest": [
+          "rewarded-ssv.request.invalid-custom-data.json"
+        ]
+      },
+      "errors": {
+        "400": [
+          "bad_request"
+        ],
+        "403": [
+          "bad_signature"
+        ],
+        "429": [
+          "rate_limited"
+        ],
+        "501": [
+          "not_implemented"
+        ]
+      },
+      "source": "08 §10.1 y §10.2; plan §1 (SSV) y F2-6. Llamada servidor a servidor de MAX: el formato exacto de su callback y de su firma está [NV] (F0-R); por eso el esquema admite parámetros extra. También se acepta POST con los mismos parámetros en la query (08 §10.2 dice POST)."
+    },
+    {
+      "operation": "rewardedSsvPost",
+      "function": "rewarded-ssv",
+      "method": "POST",
+      "path": "/v1/ssv",
+      "auth": "none",
+      "integrity": false,
+      "throttle": "default",
+      "requestIn": "query",
+      "request": "rewarded-ssv.request.schema.json",
+      "response": "rewarded-ssv.response.schema.json",
+      "examples": {
+        "request": [
+          "rewarded-ssv.request.json"
+        ],
+        "response": [
+          "rewarded-ssv.response.ok.json"
+        ],
+        "invalidRequest": []
+      },
+      "errors": {
+        "400": [
+          "bad_request"
+        ],
+        "403": [
+          "bad_signature"
+        ],
+        "429": [
+          "rate_limited"
+        ],
+        "501": [
+          "not_implemented"
+        ]
+      },
+      "source": "08 §10.2 (POST /v1/ssv); misma función que rewardedSsv"
+    },
+    {
+      "operation": "getAccountCode",
+      "function": "delete-account",
+      "method": "POST",
+      "path": "/v1/account/code",
+      "auth": "firebase",
+      "integrity": false,
+      "throttle": "default",
+      "request": null,
+      "response": "account-code.response.schema.json",
+      "examples": {
+        "request": [],
+        "response": [
+          "account-code.response.json"
+        ],
+        "invalidRequest": []
+      },
+      "errors": {
+        "401": [
+          "unauthorized"
+        ],
+        "429": [
+          "rate_limited"
+        ],
+        "501": [
+          "not_implemented"
+        ]
+      },
+      "source": "Q-B13-21 y plan F2-8: código aleatorio de 128 bits, distinto del UID; el servidor solo guarda su hash, así que no puede devolver un código ya emitido. Cada llamada emite un código nuevo e invalida el anterior del UID (rotación [P], pendiente de confirmar por el dueño): el cliente lo pide una vez, lo guarda en profile.account_code [P] y solo vuelve a llamar si lo perdió (reinstalación). Por eso es POST y no GET."
+    },
+    {
+      "operation": "deleteAccount",
+      "function": "delete-account",
+      "method": "POST",
+      "path": "/v1/account/delete",
+      "auth": "firebase",
+      "integrity": true,
+      "throttle": "default",
+      "request": "account-delete.request.schema.json",
+      "response": "account-delete.response.schema.json",
+      "examples": {
+        "request": [
+          "account-delete.request.json"
+        ],
+        "response": [
+          "account-delete.response.json"
+        ],
+        "invalidRequest": [
+          "account-delete.request.invalid-no-confirm.json"
+        ]
+      },
+      "errors": {
+        "400": [
+          "bad_request"
+        ],
+        "401": [
+          "unauthorized"
+        ],
+        "403": [
+          "integrity_failed"
+        ],
+        "429": [
+          "rate_limited"
+        ],
+        "501": [
+          "not_implemented"
+        ],
+        "502": [
+          "upstream_error"
+        ]
+      },
+      "source": "08 §11 (Eliminación de cuenta, vía app); plan F2-8. Idempotente."
+    },
+    {
+      "operation": "deleteRequest",
+      "function": "delete-account",
+      "method": "POST",
+      "path": "/v1/account/delete-request",
+      "auth": "none",
+      "integrity": false,
+      "throttle": "delete",
+      "request": "account-delete-request.request.schema.json",
+      "response": "account-delete-request.response.schema.json",
+      "examples": {
+        "request": [
+          "account-delete-request.request.json"
+        ],
+        "response": [
+          "account-delete-request.response.json"
+        ],
+        "invalidRequest": [
+          "account-delete-request.request.invalid-uid.json"
+        ]
+      },
+      "errors": {
+        "400": [
+          "bad_request"
+        ],
+        "404": [
+          "code_not_found"
+        ],
+        "429": [
+          "rate_limited"
+        ],
+        "501": [
+          "not_implemented"
+        ]
+      },
+      "source": "08 §11 (vía web); Q-B13-21; plan §2 (Abuso) y F2-8: primer paso del borrado por web. Límite de 2 rps en API Gateway y contador por hash de código en rate_limits. Sin límite por IP mientras no haya una IP de confianza (la cabecera de CloudFront se puede falsificar llamando a la API directamente)."
+    },
+    {
+      "operation": "deleteConfirm",
+      "function": "delete-account",
+      "method": "POST",
+      "path": "/v1/account/delete-confirm",
+      "auth": "none",
+      "integrity": false,
+      "throttle": "delete",
+      "request": "account-delete-confirm.request.schema.json",
+      "response": "account-delete.response.schema.json",
+      "examples": {
+        "request": [
+          "account-delete-confirm.request.json"
+        ],
+        "response": [
+          "account-delete.response.json"
+        ],
+        "invalidRequest": [
+          "account-delete-confirm.request.invalid-token.json"
+        ]
+      },
+      "errors": {
+        "400": [
+          "bad_request"
+        ],
+        "410": [
+          "request_expired"
+        ],
+        "429": [
+          "rate_limited"
+        ],
+        "501": [
+          "not_implemented"
+        ],
+        "502": [
+          "upstream_error"
+        ]
+      },
+      "source": "08 §11 (vía web, confirmación en dos pasos); plan F2-8: token de confirmación de 5 minutos."
+    }
+  ],
+  "jobs": [
+    {
+      "operation": "voidedPurchasesJob",
+      "function": "voided-purchases-job",
+      "trigger": "EventBridge Scheduler, cron(0 3 * * ? *) en UTC, con reintentos y cola de mensajes fallidos (DLQ) en SQS",
+      "input": "voided-purchases-job.input.schema.json",
+      "output": "voided-purchases-job.output.schema.json",
+      "examples": {
+        "input": [
+          "voided-purchases-job.input.json"
+        ],
+        "output": [
+          "voided-purchases-job.output.json"
+        ]
+      },
+      "source": "08 §10.1 (fila Compra falsa); plan §2 (Job diario) y F2-7"
+    }
+  ]
+}
