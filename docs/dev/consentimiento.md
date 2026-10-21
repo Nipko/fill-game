@@ -150,13 +150,25 @@ Se aplican en este orden, con `git -c core.autocrlf=false apply`.
    - la tabla en `RcConfigBinder.BoundKeys`;
    - `RcConfigs.Consent`;
    - la comprobación en `RcConfigBinderTests`.
-3. **`B12-flow.diff`**: `AppScreen.Consent` y `AppScreen.Blocked` en `AppFlow` (08 §2.2: `Boot → Consent → Lobby`), con `BeginConsent()` y `Block()`, y sus tests.
-4. **`B12-ui.diff`**:
-   - en `GameBootstrap.cs`: las llamadas de `GameBootstrap.Consent.cs` (envolver anuncios y tienda, `BlockedAtBoot`, `SetUpConsent`, `RunConsentAtBoot` antes de `AppFlow.Start`, Atrás y las filas de Ajustes);
+3. **`B12-ui.diff`** (necesita el 1: `ProfileConsentStore`):
+   - en `GameBootstrap.cs`, las llamadas de `GameBootstrap.Consent.cs`:
+     - envolver anuncios y tienda (`WrapConsentAds` y `WrapConsentStore`, por dentro de los adaptadores de analítica de B7: un «Cancelar» de la doble confirmación sale en `af_iap_result`);
+     - `BlockedAtBoot` tras crear el arte;
+     - `SetUpConsent` tras `ConnectTelemetry`;
+     - `StartConsentAtBoot` y `WaitConsentAtBoot` antes de `AppFlow.Start`: sin pantalla que enseñar no hay ningún `yield`;
+     - `ConsentBack` en el Atrás;
+     - `RefreshConsentRows` al abrir Ajustes;
+   - en `GameBootstrap.Telemetry.cs`, solo el comentario del consentimiento;
    - en `SettingsScreen.cs`: `BuildConsent`, `LayoutConsent` y `ConsentLayoutIds`;
-   - en `PlayModeHelpers.cs`: `GameBootstrap.ConsentEnabledOverride ??= false`, para que los tests de siempre arranquen como antes;
+   - en `PlayModeHelpers.cs`:
+     - `GameBootstrap.ConsentEnabledOverride ??= false`, para que los tests de siempre arranquen como antes;
+     - `LoadAppWithConsent`;
    - `ConsentBootTests` (PlayMode, la escena real).
-5. **`B12-loc.diff`**: las 21 claves en `strings.csv`, en su sitio por orden ordinal, y `ConsentText.AllKeys` en `LocTablesTests.UiTextKeys`.
+4. **`B12-loc.diff`**: las 21 claves en `strings.csv`, en su sitio por orden ordinal, y `ConsentText.AllKeys` en `LocTablesTests.UiTextKeys`.
+
+**Sin parche de `AppFlow`.** El estado «Consent» de 08 §2.2 (`Boot → Consent → Lobby`) es el paso de `ConsentFlow` mientras `AppFlow` sigue en `Boot`:
+- en `Boot`, `GameBootstrap.Update` no hace nada y descarta el Atrás, que es lo que pide la pantalla del arranque;
+- añadir valores a `AppScreen` habría cambiado `OnAppScreenChanged`, el inicio y el audio sin ganar nada.
 
 **Choques conocidos con B8** (`spark/t5-b8`, aún sin integrar): toca los mismos archivos.
 - `SettingsScreen.cs` en `EmitLayout`: la suma de `n`.

@@ -1,0 +1,267 @@
+diff --git a/Assets/_Project/Scripts/Save/Profile.cs b/Assets/_Project/Scripts/Save/Profile.cs
+index 7f5be3da..fba41717 100644
+--- a/Assets/_Project/Scripts/Save/Profile.cs
++++ b/Assets/_Project/Scripts/Save/Profile.cs
+@@ -46,6 +46,15 @@ public sealed class Profile
+         /// <summary><c>created_at</c>: creación del perfil (primera ejecución), UTC.</summary>
+         public DateTime CreatedAt { get; set; }
+ 
++        /// <summary>
++        /// <c>consent</c> (08 §4.3; bloque B12): <c>{profile, text_version, at, analytics, ads_personalized, age_band}</c> más
++        /// <c>age_band_corrected</c> [P], o null si nunca se decidió (entonces la clave no se escribe). Es la prueba del
++        /// consentimiento (05 §7: fecha, versión, país y decisión) y la banda de edad, que vive solo en el dispositivo (08 §7). Las
++        /// reglas las aplica <c>AF.Platform.ConsentFlow</c> por <see cref="ProfileConsentStore"/>; aquí solo se guarda. Entra sin
++        /// migración, como <c>map_seen_level</c>, porque el esquema aún no se ha publicado.
++        /// </summary>
++        public ConsentRecord? Consent { get; set; }
++
+         /// <summary>
+         /// <c>economy_ts</c>: última mutación de <c>wallet</c>, <c>stock</c> o <c>daily</c> (08 §4.3), UTC; null si
+         /// nunca ha cambiado. Desempata los conflictos de guardado a igual nivel máximo (08 §11).
+diff --git a/Assets/_Project/Scripts/Save/ProfileConsentStore.cs b/Assets/_Project/Scripts/Save/ProfileConsentStore.cs
+new file mode 100644
+index 00000000..655c716a
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/ProfileConsentStore.cs
+@@ -0,0 +1,35 @@
++#nullable enable
++using System;
++using AF.Platform;
++
++namespace AF.Save
++{
++    /// <summary>
++    /// <see cref="IConsentStore"/> sobre <c>profile.consent</c> (08 §4.3; bloque B12): lee <see cref="Profile.Consent"/> y, al guardar,
++    /// lo escribe en el acto por <paramref name="store"/> (en el juego, el almacén durable del lote: la prueba del consentimiento no
++    /// espera a otra escritura). Con el perfil en solo lectura (08 §4.4) la escritura falla en silencio y la decisión vale solo para
++    /// esta sesión: se volverá a preguntar en el siguiente arranque.
++    /// </summary>
++    public sealed class ProfileConsentStore : IConsentStore
++    {
++        private readonly Profile _profile;
++        private readonly IProfileStore _store;
++
++        /// <summary>Crea el almacén sobre <paramref name="profile"/>, que se guarda con <paramref name="store"/>.</summary>
++        public ProfileConsentStore(Profile profile, IProfileStore store)
++        {
++            _profile = profile ?? throw new ArgumentNullException(nameof(profile));
++            _store = store ?? throw new ArgumentNullException(nameof(store));
++        }
++
++        /// <inheritdoc />
++        public ConsentRecord? Load() => _profile.Consent;
++
++        /// <inheritdoc />
++        public void Save(ConsentRecord record)
++        {
++            _profile.Consent = record ?? throw new ArgumentNullException(nameof(record));
++            _store.TrySave(_profile);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/Save/ProfileConsentStore.cs.meta b/Assets/_Project/Scripts/Save/ProfileConsentStore.cs.meta
+new file mode 100644
+index 00000000..33049d17
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/ProfileConsentStore.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: f2554b9be419d9148a5d619348ff4197
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/Save/ProfileJson.cs b/Assets/_Project/Scripts/Save/ProfileJson.cs
+index 01e55502..b9b5247e 100644
+--- a/Assets/_Project/Scripts/Save/ProfileJson.cs
++++ b/Assets/_Project/Scripts/Save/ProfileJson.cs
+@@ -2,6 +2,7 @@
+ using System;
+ using System.Collections.Generic;
+ using System.Globalization;
++using AF.Platform;
+ using AF.Save.Json;
+ 
+ namespace AF.Save
+@@ -19,7 +20,9 @@ namespace AF.Save
+     /// <c>daily_challenge</c> se omiten mientras son null, y <c>daily.streak_hits</c> y <c>daily.streak_seeds</c> en su default
+     /// (vacía y 0): son economía y un tipo equivocado en ellos es corrupción. Los de B14 son cosméticos y tolerantes:
+     /// <c>entitlements.skin_equipped</c> y <c>entitlements.frames</c> se omiten en su default (null y vacía), y <c>album</c>
+-    /// (solo <c>fruits</c>), sin tintes; un valor que no vale toma el default o se descarta.
++    /// (solo <c>fruits</c>), sin tintes; un valor que no vale toma el default o se descarta. <c>consent</c> (B12) se omite mientras
++    /// es null y es tolerante: un bloque que no se entiende (sin perfil, con otro tipo) se lee como null y se vuelve a preguntar,
++    /// nunca hace corrupto el perfil.
+     /// </summary>
+     public static class ProfileJson
+     {
+@@ -85,6 +88,10 @@ internal static JsonNode ToNode(Profile p)
+             root.Set(SchemaKey, JsonNode.FromInt(Profile.CurrentSchema));
+             root.Set("created_at", Timestamp(p.CreatedAt));
+             root.Set("economy_ts", Timestamp(p.EconomyTs));
++            if (p.Consent != null)
++            {
++                root.Set("consent", ConsentNode(p.Consent)); // B12: la clave falta hasta la primera decisión
++            }
+ 
+             JsonNode canoes = JsonNode.NewObject();
+             canoes.Set("count", JsonNode.FromInt(p.Wallet.Canoes.Count));
+@@ -277,6 +284,7 @@ internal static Profile FromNode(JsonNode root)
+             var p = new Profile();
+             p.CreatedAt = ReadTimestamp(root, "created_at") ?? default(DateTime);
+             p.EconomyTs = ReadTimestamp(root, "economy_ts");
++            p.Consent = ReadConsent(root); // B12: tolerante
+ 
+             JsonNode? wallet = Section(root, "wallet");
+             if (wallet != null)
+@@ -775,6 +783,43 @@ private static JsonNode Timestamp(DateTime? value)
+             return value.HasValue ? JsonNode.FromString(FormatTimestamp(value.Value)) : JsonNode.Null;
+         }
+ 
++        // consent (B12; 08 §4.3): age_band_corrected [P] solo si es cierto.
++        private static JsonNode ConsentNode(ConsentRecord c)
++        {
++            JsonNode node = JsonNode.NewObject();
++            node.Set("profile", JsonNode.FromString(c.Profile));
++            node.Set("text_version", JsonNode.FromInt(c.TextVersion));
++            node.Set("at", Timestamp(c.At));
++            node.Set("analytics", JsonNode.FromBool(c.Analytics));
++            node.Set("ads_personalized", JsonNode.FromBool(c.AdsPersonalized));
++            node.Set("age_band", JsonNode.FromString(AgeBands.Id(c.AgeBand)));
++            if (c.AgeBandCorrected)
++            {
++                node.Set("age_band_corrected", JsonNode.FromBool(true));
++            }
++
++            return node;
++        }
++
++        // Tolerante: sin bloque, sin perfil o con otro tipo, null (se vuelve a preguntar); una banda que no se entiende queda sin
++        // declarar y una versión que no se entiende, 0 (las dos obligan a preguntar otra vez).
++        private static ConsentRecord? ReadConsent(JsonNode root)
++        {
++            JsonNode? node = TolerantSection(root, "consent");
++            string? profile = node == null ? null : TolerantString(node, "profile");
++            if (node == null || string.IsNullOrEmpty(profile))
++            {
++                return null;
++            }
++
++            int version = Math.Max(0, TolerantInt(node, "text_version", 0));
++            DateTime at = TolerantTimestamp(node, "at") ?? default(DateTime);
++            return new ConsentRecord(
++                profile!, version, DateTime.SpecifyKind(at, DateTimeKind.Utc), TolerantBool(node, "analytics", false),
++                TolerantBool(node, "ads_personalized", false), AgeBands.Parse(TolerantString(node, "age_band")),
++                TolerantBool(node, "age_band_corrected", false));
++        }
++
+         // ---------------------------------------------------------------- lectura tolerante
+ 
+         private static JsonNode? Section(JsonNode parent, string key)
+diff --git a/Assets/_Project/Scripts/Save/Tests/ProfileConsentTests.cs b/Assets/_Project/Scripts/Save/Tests/ProfileConsentTests.cs
+new file mode 100644
+index 00000000..66ff7911
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/Tests/ProfileConsentTests.cs
+@@ -0,0 +1,96 @@
++#nullable enable
++using System;
++using AF.Platform;
++using NUnit.Framework;
++
++namespace AF.Save.Tests
++{
++    /// <summary>
++    /// <c>profile.consent</c> (08 §4.3; bloque B12, parche <c>B12-profile.diff</c>): ida y vuelta con los nombres de 08 §4.3, la clave
++    /// ausente mientras no hay decisión, lectura tolerante (un bloque roto se vuelve a preguntar, nunca corrompe el perfil) y
++    /// <see cref="ProfileConsentStore"/>, que guarda en el acto.
++    /// </summary>
++    public sealed class ProfileConsentTests
++    {
++        private static readonly DateTime T0 = new DateTime(2026, 10, 21, 13, 10, 20, DateTimeKind.Utc);
++
++        private static Profile NewProfile() => Profile.CreateNew(new ManualClock(T0, TimeSpan.FromHours(-5)), 5);
++
++        [Test]
++        public void WithoutADecision_TheKeyIsAbsent()
++        {
++            Profile p = NewProfile();
++            Assert.That(p.Consent, Is.Null);
++            Assert.That(ProfileJson.Serialize(p).Contains("\"consent\""), Is.False);
++        }
++
++        [Test]
++        public void RoundTrip_WithTheNamesOf08_4_3()
++        {
++            Profile p = NewProfile();
++            p.Consent = new ConsentRecord(LegalProfiles.Co1581, 1, T0, true, false, AgeBand.Adult);
++
++            string json = ProfileJson.Serialize(p);
++            StringAssert.Contains(
++                "\"consent\":{\"profile\":\"co_1581\",\"text_version\":1,\"at\":\"2026-10-21T13:10:20Z\",\"analytics\":true,"
++                + "\"ads_personalized\":false,\"age_band\":\"18+\"}", json.Replace(" ", string.Empty).Replace("\n", string.Empty));
++            ConsentRecord back = ProfileJson.Deserialize(json).Consent!;
++            Assert.That(back.Profile, Is.EqualTo("co_1581"));
++            Assert.That(back.TextVersion, Is.EqualTo(1));
++            Assert.That(back.At, Is.EqualTo(T0));
++            Assert.That(back.Analytics, Is.True);
++            Assert.That(back.AdsPersonalized, Is.False);
++            Assert.That(back.AgeBand, Is.EqualTo(AgeBand.Adult));
++            Assert.That(back.AgeBandCorrected, Is.False);
++        }
++
++        [Test]
++        public void TheCorrection_IsWrittenOnlyWhenTrue()
++        {
++            Profile p = NewProfile();
++            p.Consent = new ConsentRecord(LegalProfiles.BrLgpdEca, 2, T0, false, false, AgeBand.Teen, ageBandCorrected: true);
++
++            ConsentRecord back = ProfileJson.Deserialize(ProfileJson.Serialize(p)).Consent!;
++            Assert.That(back.AgeBandCorrected, Is.True);
++            Assert.That(back.AgeBand, Is.EqualTo(AgeBand.Teen));
++            Assert.That(back.TextVersion, Is.EqualTo(2));
++        }
++
++        [TestCase("{\"profile_schema\": 2, \"consent\": 7}")]
++        [TestCase("{\"profile_schema\": 2, \"consent\": {\"analytics\": true}}")]
++        [TestCase("{\"profile_schema\": 2, \"consent\": {\"profile\": 3, \"age_band\": \"18+\"}}")]
++        [TestCase("{\"profile_schema\": 2, \"consent\": null}")]
++        public void ABrokenBlock_IsAskedAgain_NeverCorruption(string json)
++        {
++            Profile p = ProfileJson.Deserialize(json);
++            Assert.That(p.Consent, Is.Null);
++        }
++
++        [Test]
++        public void AnUnknownBandOrVersion_ForcesTheQuestion()
++        {
++            Profile p = ProfileJson.Deserialize(
++                "{\"profile_schema\": 2, \"consent\": {\"profile\": \"co_1581\", \"text_version\": \"x\", \"age_band\": \"12\", \"at\": 5}}");
++
++            Assert.That(p.Consent, Is.Not.Null);
++            Assert.That(p.Consent!.AgeBand, Is.EqualTo(AgeBand.Unknown));
++            Assert.That(p.Consent.TextVersion, Is.EqualTo(0));
++            Assert.That(ConsentPolicy.NeedsPrompt(p.Consent, ConsentConfig.Defaults), Is.True);
++        }
++
++        [Test]
++        public void TheStore_SavesAtOnce()
++        {
++            Profile p = NewProfile();
++            var disk = new MemoryProfileStore();
++            var store = new ProfileConsentStore(p, disk);
++            Assert.That(store.Load(), Is.Null);
++
++            store.Save(new ConsentRecord(LegalProfiles.Default, 1, T0, false, false, AgeBand.Under13));
++
++            Assert.That(disk.SaveCount, Is.EqualTo(1));
++            Assert.That(store.Load()!.AgeBand, Is.EqualTo(AgeBand.Under13));
++            Assert.That(disk.Load().Profile!.Consent!.AgeBand, Is.EqualTo(AgeBand.Under13), "en disco");
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/Save/Tests/ProfileConsentTests.cs.meta b/Assets/_Project/Scripts/Save/Tests/ProfileConsentTests.cs.meta
+new file mode 100644
+index 00000000..8728b9f9
+--- /dev/null
++++ b/Assets/_Project/Scripts/Save/Tests/ProfileConsentTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 2db8ad30bcdbe584a8778ef88537880d
+\ No newline at end of file

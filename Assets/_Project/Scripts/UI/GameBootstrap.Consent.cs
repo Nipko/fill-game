@@ -22,7 +22,7 @@ namespace AF.UI
     /// decisión, MAX sin inicializar y sin compras; con 13-17, la doble confirmación.</item>
     /// <item><see cref="SetUpConsent"/>, con Remote Config enlazado: las cifras (<see cref="ConsentConfigBinder"/>), el país
     /// (SIM → región → ninguno) y su perfil legal, el flujo y la pantalla.</item>
-    /// <item><see cref="RunConsentAtBoot"/>, tras cortar la pantalla de arranque y antes de <c>AppFlow.Start</c>: la edad y el
+    /// <item><see cref="StartConsentAtBoot"/> (y, si hay pantalla, <see cref="WaitConsentAtBoot"/>), tras cortar la pantalla de arranque y antes de <c>AppFlow.Start</c>: la edad y el
     /// consentimiento si hacen falta, y los flags a la analítica (<c>Analytics.SetEnabled</c>, «siempre ANTES de GameFlow.Go»), a
     /// los anuncios y a la tienda. Con &lt;13, <see cref="ConsentBlocked"/> y la app no arranca.</item>
     /// <item>En Ajustes (<see cref="RefreshConsentRows"/>): «Privacidad y datos» y «Corregir mi edad» (una vez).</item>
@@ -160,22 +160,50 @@ namespace AF.UI
         }
 
         /// <summary>
-        /// La edad y el consentimiento del arranque: si hace falta, enseña la pantalla y espera la decisión; después aplica los flags
-        /// (antes de <c>AppFlow.Start</c>). Con &lt;13, <see cref="ConsentBlocked"/>.
+        /// La edad y el consentimiento del arranque (antes de <c>AppFlow.Start</c>): con una decisión vigente (o con el bloqueo)
+        /// aplica los flags en el acto y devuelve false; si hace falta preguntar, enseña la pantalla y devuelve true, y quien arranca
+        /// espera con <see cref="WaitConsentAtBoot"/>. Así, sin pantalla, el arranque no gasta ningún fotograma de más. Sin el
+        /// consentimiento en marcha, false sin hacer nada.
         /// </summary>
-        private IEnumerator RunConsentAtBoot()
+        private bool StartConsentAtBoot()
         {
             ConsentFlow? flow = _consentFlow;
             if (!ConsentEnabled || flow == null)
             {
-                yield break;
+                return false;
             }
 
-            flow.StartBoot();
-            ShowConsentStep();
-            while (flow.Step == ConsentStep.Age || flow.Step == ConsentStep.Choices)
+            ConsentStep step = flow.StartBoot();
+            if (step == ConsentStep.Age || step == ConsentStep.Choices)
+            {
+                ShowConsentStep();
+                ProbeConsent();
+                return true;
+            }
+
+            FinishConsentAtBoot();
+            return false;
+        }
+
+        /// <summary>Espera la decisión de la pantalla abierta por <see cref="StartConsentAtBoot"/> y aplica los flags.</summary>
+        private IEnumerator WaitConsentAtBoot()
+        {
+            ConsentFlow? flow = _consentFlow;
+            while (flow != null && (flow.Step == ConsentStep.Age || flow.Step == ConsentStep.Choices))
             {
                 yield return null;
+            }
+
+            FinishConsentAtBoot();
+        }
+
+        // Los flags (siempre antes de AppFlow.Start) y, con <13, el bloqueo: ConsentBlocked y la app no arranca.
+        private void FinishConsentAtBoot()
+        {
+            ConsentFlow? flow = _consentFlow;
+            if (flow == null)
+            {
+                return;
             }
 
             ApplyConsentFlags();
