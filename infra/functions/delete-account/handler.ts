@@ -7,11 +7,17 @@
 // El borrado (eraseAccount) es idempotente: borra rewards del UID, quita el uid del libro mayor (la fila queda
 // anonimizada el plazo fiscal), borra integrity, el usuario de Firebase Auth y, al final, account_codes, en ese
 // orden (si algo falla, el código y el token de la web siguen sirviendo para reintentar).
-import { DeleteCommand, GetCommand, PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+// Carreras con el borrado (F2c): verifyPurchase, rewardedSsv y el código de borrado escriben en una transacción que
+// exige que el UID no esté marcado como borrado, así que nada se escribe a su nombre después de la marca. Lo que se
+// escribió justo antes de la marca puede no verse aún en los GSI by_uid (consistencia eventual): por eso la
+// limpieza (sweep) se repite tras borrar el usuario de Firebase Auth. Riesgo residual: una fila cuyo GSI tarde más
+// que esa llamada en propagarse queda con el uid (rewards caduca a los 30 días; el libro mayor no caduca).
+import { DeleteCommand, GetCommand, PutCommand, QueryCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { randomBytes } from 'node:crypto';
 import { accountCodeHash, newAccountCode, newRequestToken, sha256hex } from '../shared/crypto.ts';
-import { epochS, isConditionalCheckFailed } from '../shared/ddb.ts';
+import { ONCE_PER_ACCOUNT_SKUS, onceKey } from '../shared/catalog.ts';
+import { cancellationCodes, epochS, isConditionalCheckFailed } from '../shared/ddb.ts';
 import type { Env } from '../shared/env.ts';
 import { requireEnv } from '../shared/env.ts';
 import { HttpError, badRequest } from '../shared/errors.ts';
@@ -21,7 +27,7 @@ import { header, json, jsonBody, requireUid, withErrors } from '../shared/http.t
 import type { IntegrityVerifier } from '../shared/integrity.ts';
 import { INTEGRITY_HEADER, requireIntegrity } from '../shared/integrity.ts';
 import { log, metric, uidHash } from '../shared/log.ts';
-import { enforce, isDeleted, markDeleted } from '../shared/rateLimit.ts';
+import { enforce, isDeleted, markDeleted, notDeletedCheck } from '../shared/rateLimit.ts';
 import { lazy, realDdb, realFirebaseAdmin, realIntegrityVerifier } from '../shared/runtime.ts';
 import { parseAccountDelete, parseDeleteConfirm, parseDeleteRequest } from '../shared/validate.ts';
 
@@ -84,27 +90,36 @@ async function keysByUid(ddb: DynamoDBDocumentClient, table: string, pk: string,
   return keys;
 }
 
-/** Borra los datos del UID (idempotente; ver la cabecera). Devuelve cuántas filas tocó, para el log. */
-export async function eraseAccount(deps: DeleteAccountDeps, t: Tables, uid: string): Promise<Record<string, number>> {
-  const { ddb } = deps;
-  const nowMs = deps.now();
-  // Primero la marca de cuenta borrada: el ID token sigue valiendo hasta 1 h y no debe volver a crear nada.
-  await markDeleted(ddb, t.rateLimits, uidHash(uid), nowMs);
+interface SweepCounts {
+  rewards: number;
+  purchases_anonymized: number;
+}
 
-  const nonces = await keysByUid(ddb, t.rewards, 'nonce', uid);
-  for (const nonce of nonces) {
-    await ddb.send(
-      new DeleteCommand({
-        TableName: t.rewards,
-        Key: { nonce },
-        // Solo si sigue siendo de este UID (el índice es eventualmente consistente).
-        ConditionExpression: 'attribute_not_exists(nonce) OR #u = :u',
-        ExpressionAttributeNames: { '#u': 'uid' },
-        ExpressionAttributeValues: { ':u': uid },
-      }),
-    ).catch((e: unknown) => {
+/**
+ * Una pasada de limpieza: borra las recompensas del UID, anonimiza sus filas del libro mayor, borra su caché de
+ * integridad y sus marcas `once_per_account`. Idempotente; eraseAccount la llama dos veces.
+ */
+async function sweep(deps: DeleteAccountDeps, t: Tables, uid: string, nowMs: number): Promise<SweepCounts> {
+  const { ddb } = deps;
+  let rewards = 0;
+  for (const nonce of await keysByUid(ddb, t.rewards, 'nonce', uid)) {
+    try {
+      const out = await ddb.send(
+        new DeleteCommand({
+          TableName: t.rewards,
+          Key: { nonce },
+          // Solo si sigue siendo de este UID (el índice es eventualmente consistente).
+          ConditionExpression: 'attribute_not_exists(nonce) OR #u = :u',
+          ExpressionAttributeNames: { '#u': 'uid' },
+          ExpressionAttributeValues: { ':u': uid },
+          // Solo cuenta lo que de verdad borra (el GSI puede enseñar aún filas ya borradas).
+          ReturnValues: 'ALL_OLD',
+        }),
+      );
+      if (out.Attributes) rewards++;
+    } catch (e) {
       if (!isConditionalCheckFailed(e)) throw e;
-    });
+    }
   }
 
   let anonymized = 0;
@@ -128,16 +143,44 @@ export async function eraseAccount(deps: DeleteAccountDeps, t: Tables, uid: stri
   }
 
   await ddb.send(new DeleteCommand({ TableName: t.integrity, Key: { uid } }));
+  // Marcas «ya comprado» de los SKU once_per_account (F2c): pseudónimas, pero del UID; no se necesitan más.
+  for (const sku of ONCE_PER_ACCOUNT_SKUS) {
+    await ddb.send(new DeleteCommand({ TableName: t.rateLimits, Key: { key: onceKey(sku, uid) } }));
+  }
+  return { rewards, purchases_anonymized: anonymized };
+}
+
+/** Borra los datos del UID (idempotente; ver la cabecera). Devuelve cuántas filas tocó, para el log. */
+export async function eraseAccount(deps: DeleteAccountDeps, t: Tables, uid: string): Promise<Record<string, number>> {
+  const { ddb } = deps;
+  const nowMs = deps.now();
+  // Primero la marca de cuenta borrada: el ID token sigue valiendo hasta 1 h y no debe volver a crear nada.
+  await markDeleted(ddb, t.rateLimits, uidHash(uid), nowMs);
+
+  const first = await sweep(deps, t, uid, nowMs);
 
   // Firebase Auth antes que los códigos: si falla, el código y el token de la web siguen y se puede reintentar.
   const { existed } = await deps.firebase.deleteUser(uid);
+
+  // Segunda pasada (F2c): lo escrito justo antes de la marca que el GSI aún no mostraba en la primera.
+  const second = await sweep(deps, t, uid, nowMs);
+  if (second.rewards + second.purchases_anonymized > 0) {
+    log.warn('erase_second_pass', { uid_hash: uidHash(uid), ...second });
+    metric('EraseSecondPass', deps.env.AF_ENV ?? 'dev');
+  }
 
   // Lo último: los códigos de borrado (y los tokens de la web) del UID.
   const codes = await keysByUid(ddb, t.accountCodes, 'code_hash', uid);
   for (const code_hash of codes) {
     await ddb.send(new DeleteCommand({ TableName: t.accountCodes, Key: { code_hash } }));
   }
-  return { rewards: nonces.length, purchases_anonymized: anonymized, codes: codes.length, auth_user: existed ? 1 : 0 };
+  return {
+    rewards: first.rewards + second.rewards,
+    purchases_anonymized: first.purchases_anonymized + second.purchases_anonymized,
+    second_pass: second.rewards + second.purchases_anonymized,
+    codes: codes.length,
+    auth_user: existed ? 1 : 0,
+  };
 }
 
 async function issueCode(deps: DeleteAccountDeps, t: Tables, uid: string): Promise<string> {
@@ -149,13 +192,28 @@ async function issueCode(deps: DeleteAccountDeps, t: Tables, uid: string): Promi
   const previous = await keysByUid(deps.ddb, t.accountCodes, 'code_hash', uid);
   const code = newAccountCode(deps.random);
   const hash = accountCodeHash(code);
-  await deps.ddb.send(
-    new PutCommand({
-      TableName: t.accountCodes,
-      Item: { code_hash: hash, uid, kind: 'code', created_at: nowMs },
-      ConditionExpression: 'attribute_not_exists(code_hash)',
-    }),
-  );
+  try {
+    await deps.ddb.send(
+      new TransactWriteCommand({
+        TransactItems: [
+          {
+            Put: {
+              TableName: t.accountCodes,
+              Item: { code_hash: hash, uid, kind: 'code', created_at: nowMs },
+              ConditionExpression: 'attribute_not_exists(code_hash)',
+            },
+          },
+          // F2c: si el borrado empezó entre isDeleted y aquí, no queda un código a nombre del UID borrado.
+          notDeletedCheck(t.rateLimits, uidHash(uid), nowMs),
+        ],
+      }),
+    );
+  } catch (e) {
+    if (cancellationCodes(e)?.[1] === 'ConditionalCheckFailed') {
+      throw new HttpError(401, 'unauthorized', 'La cuenta se ha borrado.');
+    }
+    throw e;
+  }
   // Rota: el código nuevo invalida los anteriores y las confirmaciones web pendientes del UID.
   for (const old of previous) {
     if (old !== hash) await deps.ddb.send(new DeleteCommand({ TableName: t.accountCodes, Key: { code_hash: old } }));

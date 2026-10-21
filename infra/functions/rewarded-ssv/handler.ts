@@ -2,10 +2,11 @@
 // anuncio recompensado. Sin JWT: lo autentica la firma de MAX (maxSignature.ts, [NV]) con la clave de Secrets
 // Manager. Anota rewards/{nonce} = {uid, placement, network, ts} con TTL de 30 días; un nonce repetido responde
 // 200 duplicate sin escribir (idempotente: MAX reintenta si no recibe 200). El cliente confirma sus nonces
-// pendientes con restoreLedger.
-import { GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+// pendientes con restoreLedger. F2c: la fila de rewards se escribe en una transacción con la comprobación de que el
+// UID no está marcado como borrado, para que un callback que llegue durante el borrado no deje el UID en rewards.
+import { GetCommand, PutCommand, TransactWriteCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
-import { epochS, isConditionalCheckFailed } from '../shared/ddb.ts';
+import { cancellationCodes, epochS, isConditionalCheckFailed } from '../shared/ddb.ts';
 import type { Env } from '../shared/env.ts';
 import { requireEnv } from '../shared/env.ts';
 import { HttpError } from '../shared/errors.ts';
@@ -13,7 +14,7 @@ import type { HttpEvent, HttpHandler } from '../shared/http.ts';
 import { json, withErrors } from '../shared/http.ts';
 import { sha256hex } from '../shared/crypto.ts';
 import { log, uidHash } from '../shared/log.ts';
-import { enforce, isDeleted } from '../shared/rateLimit.ts';
+import { enforce, isDeleted, notDeletedCheck } from '../shared/rateLimit.ts';
 import { lazy, realDdb, realSecrets } from '../shared/runtime.ts';
 import type { SecretSource } from '../shared/secrets.ts';
 import { parseSsvQuery } from '../shared/validate.ts';
@@ -92,23 +93,38 @@ export function createHandler(getDeps: () => RewardedSsvDeps): HttpHandler {
 
     try {
       await deps.ddb.send(
-        new PutCommand({
-          TableName: requireEnv(deps.env, 'AF_TABLE_REWARDS'),
-          Item: {
-            nonce: params.nonce,
-            uid: params.uid,
-            placement: params.placement,
-            network: params.network ?? 'applovin',
-            ts: nowMs,
-            ttl: epochS(nowMs) + REWARD_TTL_S,
-          },
-          ConditionExpression: 'attribute_not_exists(nonce)',
+        new TransactWriteCommand({
+          TransactItems: [
+            {
+              Put: {
+                TableName: requireEnv(deps.env, 'AF_TABLE_REWARDS'),
+                Item: {
+                  nonce: params.nonce,
+                  uid: params.uid,
+                  placement: params.placement,
+                  network: params.network ?? 'applovin',
+                  ts: nowMs,
+                  ttl: epochS(nowMs) + REWARD_TTL_S,
+                },
+                ConditionExpression: 'attribute_not_exists(nonce)',
+              },
+            },
+            notDeletedCheck(rateLimitsTable, uidHash(params.uid), nowMs),
+          ],
         }),
       );
     } catch (e) {
-      if (!isConditionalCheckFailed(e)) throw e;
-      log.info('ssv_duplicate', fields);
-      return json(200, { status: 'duplicate' });
+      const codes = cancellationCodes(e);
+      if (codes?.[1] === 'ConditionalCheckFailed') {
+        log.info('ssv_deleted_uid', { ...fields, race: true });
+        return json(200, { status: 'duplicate' });
+      }
+      if (codes?.[0] === 'ConditionalCheckFailed') {
+        log.info('ssv_duplicate', fields);
+        return json(200, { status: 'duplicate' });
+      }
+      // TransactionConflict u otro fallo: 500 y MAX reintenta (el reintento acaba en ok o duplicate).
+      throw e;
     }
     log.info('ssv_ok', fields);
     return json(200, { status: 'ok' });

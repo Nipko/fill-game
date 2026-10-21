@@ -1,7 +1,7 @@
 import { Match } from 'aws-cdk-lib/assertions';
 import { describe, expect, it } from 'vitest';
 import { loadContractIndex, routeKey } from '../../lib/contract.ts';
-import { build, DEV, PROD, PROD_DOMAIN, resourcesOfType } from '../helpers.ts';
+import { build, DEV, PROD, PROD_DOMAIN, TEST_APP_ID, resourcesOfType } from '../helpers.ts';
 
 const contract = loadContractIndex();
 
@@ -135,7 +135,7 @@ describe.each([
       VerifyPurchase: {
         Purchases: ['dynamodb:GetItem', 'dynamodb:PutItem'],
         Integrity: ['dynamodb:GetItem', 'dynamodb:PutItem'],
-        RateLimits: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
+        RateLimits: ['dynamodb:ConditionCheckItem', 'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
         'secret:PlayServiceAccount': ['secretsmanager:GetSecretValue'],
       },
       RestoreLedger: {
@@ -144,7 +144,7 @@ describe.each([
       },
       RewardedSsv: {
         Rewards: ['dynamodb:PutItem'],
-        RateLimits: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
+        RateLimits: ['dynamodb:ConditionCheckItem', 'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
         'secret:MaxSsvKey': ['secretsmanager:GetSecretValue'],
       },
       DeleteAccount: {
@@ -155,11 +155,11 @@ describe.each([
         Integrity: ['dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:PutItem'],
         'AccountCodes/by_uid': ['dynamodb:Query'],
         AccountCodes: ['dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:PutItem'],
-        RateLimits: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
+        RateLimits: ['dynamodb:ConditionCheckItem', 'dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
         'secret:FirebaseAdmin': ['secretsmanager:GetSecretValue'],
       },
       VoidedPurchasesJob: {
-        Purchases: ['dynamodb:UpdateItem'],
+        Purchases: ['dynamodb:PutItem', 'dynamodb:UpdateItem'],
         Jobs: ['dynamodb:GetItem', 'dynamodb:PutItem'],
         'secret:PlayServiceAccount': ['secretsmanager:GetSecretValue'],
       },
@@ -183,6 +183,15 @@ describe.each([
       else expect(vars).not.toHaveProperty('AF_PACKAGE_NAME');
     }
     if (envName === 'prod') expect(JSON.stringify(json)).not.toContain('com.amazonfill.dev');
+  });
+
+  it(`App Check: ${envName === 'prod' ? 'las Lambdas con integridad solo admiten las apps de -c firebaseAppIds' : 'sin lista de apps en dev'}`, () => {
+    for (const [, p] of resourcesOfType(json, 'AWS::Lambda::Function')) {
+      const vars = ((p.Environment as { Variables?: Record<string, string> } | undefined)?.Variables) ?? {};
+      const usesIntegrity = ['verify-purchase', 'delete-account'].some((n) => p.FunctionName === `af-${envName}-${n}`);
+      if (envName === 'prod' && usesIntegrity) expect(vars.AF_APPCHECK_APP_IDS).toBe(TEST_APP_ID);
+      else expect(vars).not.toHaveProperty('AF_APPCHECK_APP_IDS');
+    }
   });
 
   it('job diario a las 03:00 UTC con reintentos y DLQ cifrada', () => {

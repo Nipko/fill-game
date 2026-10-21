@@ -37,7 +37,8 @@ export interface AfConfig {
   readonly firebaseProjectId: string;
   /**
    * Ids de las apps de Firebase (`1:<número>:android:<hash>`) admitidos en el token de App Check (Q-AWS-4).
-   * Opcional: sin ellos vale cualquier app del proyecto.
+   * Obligatorios en prod (F2c: solo las apps Android registradas emiten tokens válidos); en dev, opcionales
+   * (sin ellos vale cualquier app del proyecto).
    */
   readonly firebaseAppIds: readonly string[];
   /**
@@ -95,7 +96,7 @@ function str(ctx: ContextReader, key: string): string | undefined {
  * Lee la configuración del entorno desde el contexto de CDK.
  *
  * Contexto admitido: `env` (obligatorio: dev | prod), `account`, `alertEmail`, `firebaseProjectId`,
- * `firebaseAppIds` (separados por comas), `packageName`, `domain` y `hostedZoneId` (los dos o ninguno).
+ * `firebaseAppIds` (separados por comas; obligatorio en prod), `packageName`, `domain` y `hostedZoneId` (los dos o ninguno).
  */
 export function loadConfig(ctx: ContextReader): AfConfig {
   const envRaw = str(ctx, 'env');
@@ -123,6 +124,11 @@ export function loadConfig(ctx: ContextReader): AfConfig {
   const firebaseAppIds = (str(ctx, 'firebaseAppIds') ?? '').split(',').map((a) => a.trim()).filter(Boolean);
   for (const a of firebaseAppIds) {
     if (!FIREBASE_APP_ID_RE.test(a)) throw new Error('El contexto "firebaseAppIds" debe ser una lista de ids de app Android de Firebase.');
+  }
+  if (isProd && firebaseAppIds.length === 0) {
+    // Sin la lista, cualquier app del proyecto de Firebase (p. ej. una web o una de pruebas) emitiría tokens de
+    // App Check válidos para la API de prod.
+    throw new Error('En prod falta el contexto "firebaseAppIds": los ids de las apps Android de Firebase (`1:<número>:android:<hash>`).');
   }
 
   const packageName = str(ctx, 'packageName') ?? (isProd ? undefined : DEV_PACKAGE_NAME);

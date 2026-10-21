@@ -23,6 +23,11 @@
       "type": "integer",
       "minimum": 0
     },
+    "tombstones": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Lápidas nuevas (F2c): anulaciones de tokens que aún no estaban en el libro mayor."
+    },
     "cursor_ms": {
       "$ref": "common.schema.json#/$defs/epochMs"
     }

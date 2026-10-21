@@ -49,6 +49,10 @@ export function realFirebaseAdmin(env: Env): FirebaseAdmin {
 
 export function realIntegrityVerifier(env: Env): IntegrityVerifier {
   const appIds = (env.AF_APPCHECK_APP_IDS ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  // Como la síntesis (lib/config.ts): en prod, sin la lista de apps no se acepta ningún token (falla cerrada).
+  if (env.AF_ENV !== 'dev' && appIds.length === 0) {
+    throw new ConfigError('Falta AF_APPCHECK_APP_IDS (en prod, -c firebaseAppIds).');
+  }
   return createIntegrityVerifier({
     variant: 'app-check',
     projectId: requireEnv(env, 'AF_FIREBASE_PROJECT_ID'),

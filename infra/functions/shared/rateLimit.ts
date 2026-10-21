@@ -75,6 +75,23 @@ export async function isDeleted(ddb: DynamoDBDocumentClient, table: string, uidH
 }
 
 /**
+ * Elemento ConditionCheck de un TransactWriteItems que exige que el UID **no** esté marcado como borrado (la
+ * misma regla que `isDeleted`, pero atómica con la escritura). Cierra la carrera «comprobé que no estaba
+ * borrado → deleteAccount marca y limpia → escribo a nombre del UID borrado» (F2c).
+ */
+export function notDeletedCheck(table: string, uidHashValue: string, nowMs: number) {
+  return {
+    ConditionCheck: {
+      TableName: table,
+      Key: { key: deletedKey(uidHashValue) },
+      ConditionExpression: 'attribute_not_exists(#k) OR #t <= :now',
+      ExpressionAttributeNames: { '#k': 'key', '#t': 'ttl' },
+      ExpressionAttributeValues: { ':now': epochS(nowMs) },
+    },
+  };
+}
+
+/**
  * Marca `key` como usada hasta `expiresAtS` (PutItem condicional). Devuelve false si ya estaba marcada:
  * sirve para que un token de uso limitado no se pueda repetir (anti-replay).
  */
