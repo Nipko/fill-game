@@ -34,6 +34,8 @@ export const MAX_LOOKBACK_MS = 30 * 24 * 3600_000 - 3600_000;
 export const OVERLAP_MS = 24 * 3600_000;
 /** Tope de páginas por ejecución (1.000 anulaciones por página): si se pasa, falla y avisa la alarma. */
 export const MAX_PAGES = 50;
+/** UpdateItem en paralelo por tanda. */
+export const UPDATE_CONCURRENCY = 25;
 
 export function createHandler(getDeps: () => VoidedJobDeps): () => Promise<JobResult> {
   return async () => {
@@ -58,7 +60,7 @@ export function createHandler(getDeps: () => VoidedJobDeps): () => Promise<JobRe
       if (pages >= MAX_PAGES) throw new Error(`voidedPurchasesJob: más de ${MAX_PAGES} páginas; sin avanzar el checkpoint.`);
       const page = await deps.play.listVoided(startMs, endMs, pageToken);
       pages++;
-      for (const v of page.items) {
+      const markOne = async (v: (typeof page.items)[number]): Promise<number> => {
         try {
           await deps.ddb.send(
             new UpdateCommand({
@@ -75,11 +77,17 @@ export function createHandler(getDeps: () => VoidedJobDeps): () => Promise<JobRe
               },
             }),
           );
-          voided++;
+          return 1;
         } catch (e) {
           // No está en el libro mayor (nunca se verificó) o ya estaba anulada: nada que hacer.
           if (!isConditionalCheckFailed(e)) throw e;
+          return 0;
         }
+      };
+      // En tandas de UPDATE_CONCURRENCY para que 1.000 anulaciones por página quepan en el tiempo del job.
+      for (let i = 0; i < page.items.length; i += UPDATE_CONCURRENCY) {
+        const marked = await Promise.all(page.items.slice(i, i + UPDATE_CONCURRENCY).map(markOne));
+        voided += marked.reduce((a, b) => a + b, 0);
       }
       pageToken = page.nextPageToken;
     } while (pageToken);

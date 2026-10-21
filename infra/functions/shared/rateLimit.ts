@@ -1,6 +1,6 @@
 // Límites de peticiones y marcas de un solo uso en la tabla af-<env>-rate_limits (plan §2, Abuso; Q-AWS-10).
 // Las claves nunca llevan datos en claro: el que llama pasa un hash (UID, código o token).
-import { PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, PutCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { epochS, isConditionalCheckFailed } from './ddb.ts';
 import { rateLimited } from './errors.ts';
@@ -52,6 +52,26 @@ export async function enforce(
 ): Promise<void> {
   const r = await hit(ddb, table, key, limit, windowS, nowMs);
   if (!r.allowed) throw rateLimited(r.retryAfterS);
+}
+
+/** Clave de la marca de cuenta borrada (sin el UID en claro). */
+export const deletedKey = (uidHashValue: string): string => `deleted#${uidHashValue}`;
+/**
+ * Vida de la marca de cuenta borrada: más que la del ID token de Firebase (1 h), que el autorizador JWT sigue
+ * aceptando tras el borrado porque no consulta revocaciones.
+ */
+export const DELETED_MARK_TTL_S = 2 * 3600;
+
+/** Marca el UID como borrado (lo escribe deleteAccount al empezar el borrado). */
+export async function markDeleted(ddb: DynamoDBDocumentClient, table: string, uidHashValue: string, nowMs: number): Promise<void> {
+  await ddb.send(new PutCommand({ TableName: table, Item: { key: deletedKey(uidHashValue), ttl: epochS(nowMs) + DELETED_MARK_TTL_S } }));
+}
+
+/** ¿El UID se borró hace menos de DELETED_MARK_TTL_S? (El TTL de DynamoDB borra tarde: se mira la caducidad.) */
+export async function isDeleted(ddb: DynamoDBDocumentClient, table: string, uidHashValue: string, nowMs: number): Promise<boolean> {
+  const out = await ddb.send(new GetCommand({ TableName: table, Key: { key: deletedKey(uidHashValue) }, ConsistentRead: true }));
+  const ttl = (out.Item as { ttl?: number } | undefined)?.ttl;
+  return typeof ttl === 'number' && ttl > epochS(nowMs);
 }
 
 /**

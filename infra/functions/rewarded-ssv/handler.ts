@@ -3,7 +3,7 @@
 // Manager. Anota rewards/{nonce} = {uid, placement, network, ts} con TTL de 30 días; un nonce repetido responde
 // 200 duplicate sin escribir (idempotente: MAX reintenta si no recibe 200). El cliente confirma sus nonces
 // pendientes con restoreLedger.
-import { PutCommand } from '@aws-sdk/lib-dynamodb';
+import { GetCommand, PutCommand } from '@aws-sdk/lib-dynamodb';
 import type { DynamoDBDocumentClient } from '@aws-sdk/lib-dynamodb';
 import { epochS, isConditionalCheckFailed } from '../shared/ddb.ts';
 import type { Env } from '../shared/env.ts';
@@ -11,6 +11,7 @@ import { requireEnv } from '../shared/env.ts';
 import { HttpError } from '../shared/errors.ts';
 import type { HttpEvent, HttpHandler } from '../shared/http.ts';
 import { json, withErrors } from '../shared/http.ts';
+import { sha256hex } from '../shared/crypto.ts';
 import { log, uidHash } from '../shared/log.ts';
 import { enforce } from '../shared/rateLimit.ts';
 import { lazy, realDdb, realSecrets } from '../shared/runtime.ts';
@@ -41,9 +42,36 @@ export function createHandler(getDeps: () => RewardedSsvDeps): HttpHandler {
     }
 
     const nowMs = deps.now();
+    const rateLimitsTable = requireEnv(deps.env, 'AF_TABLE_RATE_LIMITS');
     const fields = { uid_hash: uidHash(params.uid), placement: params.placement, network: params.network };
-    // Después de la firma: un tercero sin la clave no puede gastar el cupo de un UID.
-    await enforce(deps.ddb, requireEnv(deps.env, 'AF_TABLE_RATE_LIMITS'), `ssv#${uidHash(params.uid)}`, SSV_DAILY_LIMIT, 86_400, nowMs);
+
+    // La firma [NV] solo cubre event_id: cada event_id vale para un único (uid, nonce). Un reintento de MAX con
+    // los mismos valores sigue (y acaba en duplicate); un event_id ya usado con otro uid o nonce → 403.
+    const binding = sha256hex(`${params.uid}|${params.nonce}`);
+    const eventKey = `ssv_event#${sha256hex(params.eventId ?? '')}`;
+    let firstTime = true;
+    try {
+      await deps.ddb.send(
+        new PutCommand({
+          TableName: rateLimitsTable,
+          Item: { key: eventKey, binding, ttl: epochS(nowMs) + REWARD_TTL_S },
+          ConditionExpression: 'attribute_not_exists(#k)',
+          ExpressionAttributeNames: { '#k': 'key' },
+        }),
+      );
+    } catch (e) {
+      if (!isConditionalCheckFailed(e)) throw e;
+      const prev = (await deps.ddb.send(new GetCommand({ TableName: rateLimitsTable, Key: { key: eventKey }, ConsistentRead: true })))
+        .Item as { binding?: string } | undefined;
+      if (prev?.binding !== binding) {
+        log.warn('ssv_event_reused', fields);
+        throw new HttpError(403, 'bad_signature', 'Firma ya usada.');
+      }
+      firstTime = false;
+    }
+    // Después de la firma (un tercero sin la clave no gasta el cupo de un UID) y solo la primera vez (los
+    // reintentos de MAX no gastan cupo).
+    if (firstTime) await enforce(deps.ddb, rateLimitsTable, `ssv#${uidHash(params.uid)}`, SSV_DAILY_LIMIT, 86_400, nowMs);
 
     try {
       await deps.ddb.send(

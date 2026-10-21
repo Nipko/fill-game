@@ -21,8 +21,9 @@ import type { HttpEvent, HttpHandler } from '../shared/http.ts';
 import { header, json, jsonBody, requireUid, withErrors } from '../shared/http.ts';
 import type { IntegrityVerifier } from '../shared/integrity.ts';
 import { INTEGRITY_HEADER, requireIntegrity } from '../shared/integrity.ts';
-import { log, uidHash } from '../shared/log.ts';
+import { log, metric, uidHash } from '../shared/log.ts';
 import type { PlayApi, ProductPurchase } from '../shared/playApi.ts';
+import { enforce, isDeleted } from '../shared/rateLimit.ts';
 import { lazy, realDdb, realIntegrityVerifier, realPlayApi } from '../shared/runtime.ts';
 import { parseVerifyPurchase } from '../shared/validate.ts';
 
@@ -39,6 +40,9 @@ interface LedgerItem {
   readonly uid?: string;
   readonly state?: string;
 }
+
+/** Tope de verificaciones por UID y hora [P]: protege la cuota de la Play Developer API de tokens inventados. */
+export const VERIFY_HOURLY_LIMIT = 30;
 
 const otherUser = (): HttpError =>
   new HttpError(409, 'token_belongs_to_other_user', 'La compra está anotada a nombre de otra cuenta.');
@@ -60,12 +64,18 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
     if (!product) throw badRequest('SKU fuera del catálogo de 1.0.');
 
     const purchasesTable = requireEnv(deps.env, 'AF_TABLE_PURCHASES');
+    const rateLimitsTable = requireEnv(deps.env, 'AF_TABLE_RATE_LIMITS');
+    // El ID token de una cuenta recién borrada sigue valiendo hasta 1 h: no se anota nada a su nombre.
+    if (await isDeleted(deps.ddb, rateLimitsTable, uidHash(uid), deps.now())) {
+      throw new HttpError(401, 'unauthorized', 'La cuenta se ha borrado.');
+    }
+    await enforce(deps.ddb, rateLimitsTable, `verify#${uidHash(uid)}`, VERIFY_HOURLY_LIMIT, 3600, deps.now());
     await requireIntegrity(
       {
         ddb: deps.ddb,
         verifier: deps.integrity,
         integrityTable: requireEnv(deps.env, 'AF_TABLE_INTEGRITY'),
-        rateLimitsTable: requireEnv(deps.env, 'AF_TABLE_RATE_LIMITS'),
+        rateLimitsTable,
         envName: deps.env.AF_ENV ?? 'dev',
         now: deps.now,
       },
@@ -93,6 +103,11 @@ export function createHandler(getDeps: () => VerifyPurchaseDeps): HttpHandler {
 
     const p: ProductPurchase | null = await deps.play.getProduct(req.sku, req.token);
     if (!p) throw badRequest('Google Play no reconoce esa compra.');
+    if (p.obfuscatedAccountId === undefined) {
+      // 08 §10.1 pide setObfuscatedAccountId = UID; sin él no se puede atar la compra a la cuenta [P: exigirlo].
+      log.warn('purchase_without_obfuscated_account', fields);
+      metric('PurchaseWithoutObfuscatedAccount', deps.env.AF_ENV ?? 'dev');
+    }
     if (!obfuscatedMatches(p.obfuscatedAccountId, uid)) {
       log.warn('purchase_obfuscated_mismatch', fields);
       throw otherUser();

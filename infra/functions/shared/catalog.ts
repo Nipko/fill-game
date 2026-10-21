@@ -67,6 +67,7 @@ export const CATALOG: ReadonlyMap<string, CatalogEntry> = new Map(
 
 /** Lo que concede `quantity` unidades del SKU (Play admite compras de varias unidades si se activan). */
 export function grantFor(e: CatalogEntry, quantity: number): Grant {
-  const q = Math.max(1, Math.floor(quantity));
+  // Varias unidades solo tienen sentido en los consumibles; Sin anuncios, skins y la Mochila son una.
+  const q = e.kind === 'consumable' ? Math.max(1, Math.floor(quantity)) : 1;
   return { seeds: e.grant.seeds * q, items: e.grant.items.map((i) => ({ id: i.id, count: i.count * q })) };
 }

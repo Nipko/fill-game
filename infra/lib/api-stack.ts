@@ -114,7 +114,8 @@ export class ApiStack extends Stack {
     });
     verifyPurchase.grantTable(tables.purchases, [...DDB_GET, ...DDB_PUT]);
     verifyPurchase.grantTable(tables.integrity, [...DDB_GET, ...DDB_PUT]);
-    verifyPurchase.grantTable(tables.rateLimits, DDB_PUT); // anti-replay del token de integridad
+    // Anti-replay del token de integridad, límite por UID y marca de cuenta borrada.
+    verifyPurchase.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE]);
     verifyPurchase.grantSecret(this.secrets.playServiceAccount);
 
     const restoreLedger = new AfFunction(this, 'RestoreLedger', {
@@ -136,7 +137,8 @@ export class ApiStack extends Stack {
       },
     });
     rewardedSsv.grantTable(tables.rewards, DDB_PUT);
-    rewardedSsv.grantTable(tables.rateLimits, DDB_UPDATE);
+    // Límite por UID y event_id de un solo uso.
+    rewardedSsv.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE]);
     rewardedSsv.grantSecret(this.secrets.maxSsvKey);
 
     const deleteAccount = new AfFunction(this, 'DeleteAccount', {
@@ -163,7 +165,7 @@ export class ApiStack extends Stack {
     deleteAccount.grantTable(tables.integrity, [...DDB_GET, ...DDB_PUT, ...DDB_DELETE]);
     deleteAccount.grantIndex(tables.accountCodes, BY_UID, DDB_QUERY);
     deleteAccount.grantTable(tables.accountCodes, [...DDB_GET, ...DDB_PUT, ...DDB_DELETE]);
-    deleteAccount.grantTable(tables.rateLimits, [...DDB_PUT, ...DDB_UPDATE]);
+    deleteAccount.grantTable(tables.rateLimits, [...DDB_GET, ...DDB_PUT, ...DDB_UPDATE]);
     deleteAccount.grantSecret(this.secrets.firebaseAdmin);
 
     const voidedJob = new AfFunction(this, 'VoidedPurchasesJob', {

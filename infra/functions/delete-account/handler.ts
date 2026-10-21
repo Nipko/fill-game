@@ -21,7 +21,7 @@ import { header, json, jsonBody, requireUid, withErrors } from '../shared/http.t
 import type { IntegrityVerifier } from '../shared/integrity.ts';
 import { INTEGRITY_HEADER, requireIntegrity } from '../shared/integrity.ts';
 import { log, metric, uidHash } from '../shared/log.ts';
-import { enforce } from '../shared/rateLimit.ts';
+import { enforce, isDeleted, markDeleted } from '../shared/rateLimit.ts';
 import { lazy, realDdb, realFirebaseAdmin, realIntegrityVerifier } from '../shared/runtime.ts';
 import { parseAccountDelete, parseDeleteConfirm, parseDeleteRequest } from '../shared/validate.ts';
 
@@ -88,6 +88,8 @@ async function keysByUid(ddb: DynamoDBDocumentClient, table: string, pk: string,
 export async function eraseAccount(deps: DeleteAccountDeps, t: Tables, uid: string): Promise<Record<string, number>> {
   const { ddb } = deps;
   const nowMs = deps.now();
+  // Primero la marca de cuenta borrada: el ID token sigue valiendo hasta 1 h y no debe volver a crear nada.
+  await markDeleted(ddb, t.rateLimits, uidHash(uid), nowMs);
 
   const nonces = await keysByUid(ddb, t.rewards, 'nonce', uid);
   for (const nonce of nonces) {
@@ -140,6 +142,9 @@ export async function eraseAccount(deps: DeleteAccountDeps, t: Tables, uid: stri
 
 async function issueCode(deps: DeleteAccountDeps, t: Tables, uid: string): Promise<string> {
   const nowMs = deps.now();
+  if (await isDeleted(deps.ddb, t.rateLimits, uidHash(uid), nowMs)) {
+    throw new HttpError(401, 'unauthorized', 'La cuenta se ha borrado.');
+  }
   await enforce(deps.ddb, t.rateLimits, `code#${uidHash(uid)}`, LIMITS.code.limit, LIMITS.code.windowS, nowMs);
   const previous = await keysByUid(deps.ddb, t.accountCodes, 'code_hash', uid);
   const code = newAccountCode(deps.random);

@@ -135,7 +135,7 @@ describe.each([
       VerifyPurchase: {
         Purchases: ['dynamodb:GetItem', 'dynamodb:PutItem'],
         Integrity: ['dynamodb:GetItem', 'dynamodb:PutItem'],
-        RateLimits: ['dynamodb:PutItem'],
+        RateLimits: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
         'secret:PlayServiceAccount': ['secretsmanager:GetSecretValue'],
       },
       RestoreLedger: {
@@ -144,7 +144,7 @@ describe.each([
       },
       RewardedSsv: {
         Rewards: ['dynamodb:PutItem'],
-        RateLimits: ['dynamodb:UpdateItem'],
+        RateLimits: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
         'secret:MaxSsvKey': ['secretsmanager:GetSecretValue'],
       },
       DeleteAccount: {
@@ -155,7 +155,7 @@ describe.each([
         Integrity: ['dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:PutItem'],
         'AccountCodes/by_uid': ['dynamodb:Query'],
         AccountCodes: ['dynamodb:DeleteItem', 'dynamodb:GetItem', 'dynamodb:PutItem'],
-        RateLimits: ['dynamodb:PutItem', 'dynamodb:UpdateItem'],
+        RateLimits: ['dynamodb:GetItem', 'dynamodb:PutItem', 'dynamodb:UpdateItem'],
         'secret:FirebaseAdmin': ['secretsmanager:GetSecretValue'],
       },
       VoidedPurchasesJob: {
