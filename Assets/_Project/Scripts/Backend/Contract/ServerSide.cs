@@ -216,9 +216,9 @@ namespace AF.Backend.Contract
     /// </summary>
     public sealed class VoidedPurchasesJobOutput
     {
-        public VoidedPurchasesJobOutput(bool notImplemented, long? pages = null, long? voided = null, long? cursorMs = null)
+        public VoidedPurchasesJobOutput(bool notImplemented, long? pages = null, long? voided = null, long? cursorMs = null, long? tombstones = null)
         {
-            if (pages < 0 || voided < 0 || cursorMs < 0)
+            if (pages < 0 || voided < 0 || cursorMs < 0 || tombstones < 0)
             {
                 throw new ArgumentOutOfRangeException(nameof(pages));
             }
@@ -227,6 +227,7 @@ namespace AF.Backend.Contract
             Pages = pages;
             Voided = voided;
             CursorMs = cursorMs;
+            Tombstones = tombstones;
         }
 
         /// <summary><c>not_implemented</c> (solo mientras la función es un esqueleto); si no, <c>ok</c>.</summary>
@@ -237,6 +238,9 @@ namespace AF.Backend.Contract
         public long? Voided { get; }
 
         public long? CursorMs { get; }
+
+        /// <summary>Lápidas nuevas (F2c): anulaciones de tokens que aún no estaban en el libro mayor.</summary>
+        public long? Tombstones { get; }
 
         public string ToJson()
         {
@@ -249,6 +253,11 @@ namespace AF.Backend.Contract
             if (Voided.HasValue)
             {
                 node.Set("voided", JsonNode.FromLong(Voided.Value));
+            }
+
+            if (Tombstones.HasValue)
+            {
+                node.Set("tombstones", JsonNode.FromLong(Tombstones.Value));
             }
 
             if (CursorMs.HasValue)
@@ -273,9 +282,10 @@ namespace AF.Backend.Contract
 
             long? pages = r.OptionalInteger("pages", 0, long.MaxValue);
             long? voided = r.OptionalInteger("voided", 0, long.MaxValue);
+            long? tombstones = r.OptionalInteger("tombstones", 0, long.MaxValue);
             long? cursor = r.OptionalInteger("cursor_ms", 0, long.MaxValue);
             r.End();
-            return new VoidedPurchasesJobOutput(status == "not_implemented", pages, voided, cursor);
+            return new VoidedPurchasesJobOutput(status == "not_implemented", pages, voided, cursor, tombstones);
         }
     }
 }
