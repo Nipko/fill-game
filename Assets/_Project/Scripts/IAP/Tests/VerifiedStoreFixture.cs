@@ -32,8 +32,9 @@ namespace AF.IAP.Tests
             Store = store ?? new MemoryProfileStore();
             ProfileLoadResult load = Store.Load();
             Profile = load.HasProfile ? load.Profile! : Wallet.NewProfile(Clock);
-            Wallet = new Wallet(Profile, Store, Clock);
-            Ledger = new StoreLedger(Profile, Wallet, Store, Clock);
+            Disk = new FlakyProfileStore(Store);
+            Wallet = new Wallet(Profile, Disk, Clock);
+            Ledger = new StoreLedger(Profile, Wallet, Disk, Clock);
             Billing = billing ?? new FakeBillingClient(Ledger.Catalog, "USD", null, Clock);
             StoreCatalog catalog = Ledger.Catalog;
             Backend = backend ?? new FakeBackendClient(Clock)
@@ -50,6 +51,9 @@ namespace AF.IAP.Tests
         public ManualClock Clock { get; }
 
         public MemoryProfileStore Store { get; }
+
+        /// <summary>El almacén que usan la cartera y la tienda: <see cref="FlakyProfileStore.Fail"/> hace fallar las escrituras.</summary>
+        public FlakyProfileStore Disk { get; }
 
         public Profile Profile { get; }
 
@@ -127,5 +131,32 @@ namespace AF.IAP.Tests
         }
 
         public int Stock(BoosterKind kind) => Wallet.Stock.Get(kind);
+    }
+
+    /// <summary>Almacén cuyas escrituras fallan mientras <see cref="Fail"/> (disco lleno, por ejemplo).</summary>
+    internal sealed class FlakyProfileStore : IProfileStore
+    {
+        private readonly MemoryProfileStore _inner;
+
+        public FlakyProfileStore(MemoryProfileStore inner)
+        {
+            _inner = inner;
+        }
+
+        public bool Fail { get; set; }
+
+        public ProfileLoadResult Load() => _inner.Load();
+
+        public void Save(Profile profile)
+        {
+            if (Fail)
+            {
+                throw new System.IO.IOException("disco lleno (test)");
+            }
+
+            _inner.Save(profile);
+        }
+
+        public void Delete() => _inner.Delete();
     }
 }

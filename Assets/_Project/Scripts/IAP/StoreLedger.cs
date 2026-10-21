@@ -272,6 +272,12 @@ namespace AF.IAP
 
             if (IsOwned(product))
             {
+                if (product.Kind == ProductKind.OncePerAccount)
+                {
+                    // Otra Mochila con la marca ya puesta: no se anota (no se terminará en la tienda) ni se acredita.
+                    return new VerifiedCredit(VerifiedCreditKind.OwnedOncePerAccount, null, 0);
+                }
+
                 _profile.AppliedPurchases.Add(tokenHash);
                 Save();
                 return new VerifiedCredit(VerifiedCreditKind.AlreadyOwned, null, 0);
@@ -448,6 +454,9 @@ namespace AF.IAP
 
         /// <summary>La cartera la rechazó (desbordamiento): no cambió nada.</summary>
         Rejected = 3,
+
+        /// <summary>Ya tenía la Mochila (1 por cuenta): no se anota ni se acredita; la compra no se termina en la tienda.</summary>
+        OwnedOncePerAccount = 4,
     }
 
     /// <summary>Resultado de <see cref="StoreLedger.CreditVerified"/>.</summary>
@@ -468,6 +477,6 @@ namespace AF.IAP
         public int UnknownItems { get; }
 
         /// <summary>El hash queda en <c>applied_purchases</c> (acreditada ahora o antes): se puede terminar la compra en la tienda.</summary>
-        public bool IsSettled => Kind != VerifiedCreditKind.Rejected;
+        public bool IsSettled => Kind != VerifiedCreditKind.Rejected && Kind != VerifiedCreditKind.OwnedOncePerAccount;
     }
 }

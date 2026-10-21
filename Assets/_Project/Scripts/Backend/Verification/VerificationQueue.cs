@@ -159,6 +159,27 @@ namespace AF.Backend.Verification
 
         public bool Contains(string token) => Find(token) != null;
 
+        /// <summary>
+        /// Devuelve a la cola una entrada que ya había salido (el servidor respondió, pero quien la usa no pudo acreditarla), tal cual
+        /// (intentos, semillas del cliente y <c>deferred_ack</c>), y anota el fallo con su espera. False si su token ya está.
+        /// </summary>
+        public bool Requeue(PendingVerification entry, BackendError error, DateTime nowUtc)
+        {
+            if (entry == null)
+            {
+                throw new ArgumentNullException(nameof(entry));
+            }
+
+            if (Find(entry.Request.Token) != null)
+            {
+                return false;
+            }
+
+            _entries.Add(entry);
+            RecordFailure(entry.Request.Token, error, nowUtc);
+            return true;
+        }
+
         /// <summary>La entrada de <paramref name="token"/>, o null.</summary>
         public PendingVerification? Get(string token) => Find(token);
 

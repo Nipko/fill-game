@@ -304,9 +304,13 @@ namespace AF.IAP.Tests
             Assert.That(fx.Billing.Consumed, Is.Empty);
             Assert.That(fx.Events[1], Is.EqualTo(PurchaseVerificationState.CreditFailed));
 
+            Assert.That(fx.Queued(VerifiedStoreFixture.Token(1)), Is.Not.Null, "vuelve a la cola con espera");
             fx.Backend.RewriteVerify = null;
             fx.Service.Resume();
-            Assert.That(fx.Wallet.Seeds, Is.EqualTo(1000), "vuelve en el siguiente Resume: duplicate y se acredita una vez");
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(0), "espera su turno");
+            fx.Clock.Advance(TimeSpan.FromSeconds(30));
+            fx.Service.Pump();
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(1000), "duplicate y se acredita una vez");
             fx.Service.Resume();
             Assert.That(fx.Wallet.Seeds, Is.EqualTo(1000));
         }
@@ -495,6 +499,110 @@ namespace AF.IAP.Tests
             VerifiedStoreFixture last = fx.Reopen();
             Assert.That(last.Wallet.Seeds, Is.EqualTo(1000), "el perfil guardado tiene una sola acreditación");
             Assert.That(last.Profile.AppliedPurchases, Has.Count.EqualTo(1));
+        }
+
+        // ------------------------------------------------------------------ revisión: contexto, disco y compras únicas
+
+        [Test]
+        public void Race_ResumeBeforeTheStoreAnswers_KeepsThePiggySeedsAndTheRescue()
+        {
+            var fx = new VerifiedStoreFixture();
+            fx.Billing.HoldResponses = true;
+            Assert.That(fx.TryBuy("af_piggy", piggySeeds: 2200), Is.Null);
+            fx.Service.Resume(); // la hoja de Play se cierra y la app vuelve a primer plano antes de la respuesta
+            Assert.That(fx.VerifyCalls, Is.EqualTo(0), "la compra abierta no se encola sin su contexto");
+            fx.Billing.ReleaseHeld();
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(2200), "las semillas exactas del Cántaro");
+            Assert.That(fx.VerifyCalls, Is.EqualTo(1));
+
+            var balsa = new VerifiedStoreFixture();
+            balsa.Billing.HoldResponses = true;
+            PurchaseResult? result = null;
+            balsa.Service.Purchase(new PurchaseRequest("af_rescue", PurchaseContext.Stuck, 31), r => result = r);
+            balsa.Service.Resume();
+            balsa.Billing.ReleaseHeld();
+            Assert.That(result!.Status, Is.EqualTo(PurchaseStatus.Purchased));
+            Assert.That(result.AppliesRescue, Is.True);
+            Assert.That(balsa.Wallet.RescuesToday, Is.EqualTo(1), "la Cuia de rescate se aplica al momento");
+        }
+
+        [Test]
+        public void IfTheCreditIsNotOnDisk_ThePurchaseIsNotConsumed()
+        {
+            var fx = new VerifiedStoreFixture();
+            fx.Disk.Fail = true;
+
+            Assert.That(fx.Buy("af_coins_2").IsPurchased, Is.True);
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(1000), "en memoria");
+            Assert.That(fx.Billing.IsUnfinished(VerifiedStoreFixture.Token(1)), Is.True, "sin guardar no se consume");
+            fx.Service.Resume();
+            Assert.That(fx.Billing.Consumed, Is.Empty);
+
+            fx.Disk.Fail = false;
+            fx.Service.Resume();
+            Assert.That(fx.Billing.Consumed, Is.EqualTo(new[] { VerifiedStoreFixture.Token(1) }));
+            Assert.That(fx.Saved().Wallet.Seeds, Is.EqualTo(1000));
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(1000), "no se acredita otra vez");
+        }
+
+        [Test]
+        public void IfNothingReachedTheDisk_ReopeningCreditsOnce()
+        {
+            var fx = new VerifiedStoreFixture();
+            fx.Disk.Fail = true;
+            fx.Buy("af_coins_3");
+
+            VerifiedStoreFixture again = fx.Reopen(); // la app muere: en disco no hay nada de la compra
+            Assert.That(again.Wallet.Seeds, Is.EqualTo(0));
+            again.Service.Resume();
+            Assert.That(again.Wallet.Seeds, Is.EqualTo(2800), "Play la devuelve; duplicate no aplicado: una vez");
+            Assert.That(again.Billing.Consumed, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void ACreditFailure_KeepsThePurchaseQueuedWithItsContext()
+        {
+            var fx = new VerifiedStoreFixture();
+            fx.Backend.RewriteVerify = r => r.Status == VerifyStatus.Ok ? VerifyPurchaseResponse.Ok(PurchaseTokenHash.Of("otro"), r.Grant!) : r;
+
+            Assert.That(fx.Buy("af_piggy", piggySeeds: 1800).Status, Is.EqualTo(PurchaseStatus.Failed));
+            Assert.That(fx.Queued(VerifiedStoreFixture.Token(1))!.ClientSeeds, Is.EqualTo(1800));
+            Assert.That(fx.Saved().PurchaseQueue, Does.Contain(VerifiedStoreFixture.Token(1)));
+
+            fx.Backend.RewriteVerify = null;
+            fx.Clock.Advance(TimeSpan.FromSeconds(30));
+            fx.Service.Pump();
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(1800));
+            Assert.That(fx.Billing.Consumed, Has.Count.EqualTo(1));
+        }
+
+        [Test]
+        public void AnotherStarterWhenItIsAlreadyOwned_IsNeitherCreditedNorConsumed()
+        {
+            var fx = new VerifiedStoreFixture();
+            fx.Profile.Entitlements.StarterBought = true;
+            fx.Billing.AddUnfinished("af_starter", "second.starter");
+
+            fx.Service.Resume();
+
+            Assert.That(fx.VerifyCalls, Is.EqualTo(1));
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(0));
+            Assert.That(fx.Profile.AppliedPurchases, Is.Empty);
+            Assert.That(fx.Billing.IsUnfinished("second.starter"), Is.True, "no se consume: Play aún podría reembolsarla");
+            fx.Service.Resume();
+            Assert.That(fx.VerifyCalls, Is.EqualTo(1), "no se repite en la misma sesión");
+        }
+
+        [Test]
+        public void AUniqueProductWaitingForTheServer_IsNotChargedAgain()
+        {
+            var fx = new VerifiedStoreFixture();
+            fx.Backend.FailNext(BackendError.Network("offline"));
+            Assert.That(fx.Buy("af_noads").Status, Is.EqualTo(PurchaseStatus.Pending));
+
+            Assert.That(fx.Buy("af_noads").Status, Is.EqualTo(PurchaseStatus.Pending));
+            Assert.That(fx.Billing.Requests, Has.Count.EqualTo(1), "no se abre otra compra");
+            Assert.That(fx.Buy("af_coins_2").IsPurchased, Is.True, "los consumibles sí");
         }
 
         // ------------------------------------------------------------------ interruptor y tienda

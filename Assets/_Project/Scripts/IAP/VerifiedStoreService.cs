@@ -95,6 +95,10 @@ namespace AF.IAP
         private readonly Dictionary<string, Waiting> _waiting = new Dictionary<string, Waiting>(StringComparer.Ordinal);
         private readonly HashSet<string> _rejectedThisSession = new HashSet<string>(StringComparer.Ordinal);
 
+        // SKU de la compra abierta en la tienda que aún no respondió: Resume no encola sus transacciones (las encola la respuesta,
+        // con las semillas del Cántaro y la Cuia de rescate al momento).
+        private string? _purchaseInStore;
+
         /// <param name="ledger">Registro de la tienda (perfil y cartera).</param>
         /// <param name="billing">Tienda de la plataforma (Unity IAP o <see cref="FakeBillingClient"/>).</param>
         /// <param name="backend">Cliente del backend (<see cref="HttpBackendClient"/> o <see cref="FakeBackendClient"/>).</param>
@@ -189,9 +193,18 @@ namespace AF.IAP
                 return;
             }
 
+            if (product.Kind != ProductKind.Consumable && IsQueued(product.Sku))
+            {
+                // Una Mochila, Sin anuncios o una skin ya pagada que espera al servidor: no se cobra otra (el segundo af_starter
+                // daría 400 y Play tardaría 3 días en reembolsarlo).
+                onDone(new PurchaseResult(request, product, PurchaseStatus.Pending));
+                return;
+            }
+
             string? accountId = AccountId();
             bool closed = false;
             IsPurchasing = true;
+            _purchaseInStore = product.Sku;
             _billing.Purchase(product.Sku, accountId, billing =>
             {
                 if (closed)
@@ -200,6 +213,7 @@ namespace AF.IAP
                 }
 
                 closed = true;
+                _purchaseInStore = null;
                 OnBillingResult(request, product, accountId, billing, onDone);
             });
         }
@@ -227,11 +241,21 @@ namespace AF.IAP
                     continue;
                 }
 
+                if (string.Equals(t.Sku, _purchaseInStore, StringComparison.Ordinal))
+                {
+                    continue; // la de la hoja de Play abierta: la encola su respuesta, con su contexto
+                }
+
                 if (_ledger.Profile.HasAppliedPurchase(PurchaseTokenHash.Of(t.Token)))
                 {
-                    // Acreditada en una sesión anterior que se cerró antes de consumirla: solo se termina.
-                    _billing.Finish(t.Sku, t.Token, Consumes(product));
-                    Raise(t.Sku, PurchaseVerificationState.AlreadyApplied);
+                    // Acreditada en una sesión anterior que se cerró antes de consumirla: solo se termina, y solo con el hash ya en
+                    // disco (si no, Play ya no la devolvería y se perdería).
+                    if (_ledger.Flush())
+                    {
+                        _billing.Finish(t.Sku, t.Token, Consumes(product));
+                        Raise(t.Sku, PurchaseVerificationState.AlreadyApplied);
+                    }
+
                     continue;
                 }
 
@@ -348,7 +372,8 @@ namespace AF.IAP
             string hash = PurchaseTokenHash.Of(token);
             if (product == null || !string.Equals(response.TokenHash, hash, StringComparison.Ordinal))
             {
-                // La respuesta no es de esta compra (o el SKU ya no existe): no se acredita ni se termina; vuelve en Resume.
+                // La respuesta no es de esta compra (o el SKU ya no existe): no se acredita ni se termina; vuelve a la cola.
+                Requeue(entry, "token_hash");
                 Raise(sku, PurchaseVerificationState.CreditFailed);
                 Complete(token, PurchaseStatus.Failed, null);
                 return;
@@ -362,16 +387,31 @@ namespace AF.IAP
                 response.Status == VerifyStatus.Ok ? response.Entitlements : null,
                 entry.ClientSeeds,
                 live);
+            if (credit.Kind == VerifiedCreditKind.OwnedOncePerAccount)
+            {
+                // Ya tenía la Mochila (1 por cuenta): ni se acredita ni se consume, como con el 400 (Play aún podría reembolsarla).
+                _rejectedThisSession.Add(token);
+                Raise(sku, PurchaseVerificationState.Rejected);
+                Complete(token, PurchaseStatus.AlreadyOwned, null);
+                return;
+            }
+
             if (!credit.IsSettled)
             {
-                // Sin acreditar no se termina: la compra vuelve en el siguiente Resume (duplicate) y se reintenta.
+                // Sin acreditar no se termina: vuelve a la cola, con su contexto, y se reintenta con espera.
+                Requeue(entry, "credit");
                 Raise(sku, PurchaseVerificationState.CreditFailed, null, credit.UnknownItems);
                 Complete(token, PurchaseStatus.Failed, credit.Transaction);
                 return;
             }
 
-            // Ya en applied_purchases (y guardado): ahora sí se consume o se confirma en la tienda.
-            _billing.Finish(sku, token, Consumes(product));
+            // Ya en applied_purchases: se consume o se confirma en la tienda solo si está en disco. Si el guardado falló, queda sin
+            // terminar y Resume la termina cuando se guarde (sin volver a acreditarla).
+            if (_ledger.Flush())
+            {
+                _billing.Finish(sku, token, Consumes(product));
+            }
+
             if (credit.Kind == VerifiedCreditKind.Credited)
             {
                 Raise(sku, PurchaseVerificationState.Credited, null, credit.UnknownItems);
@@ -382,6 +422,29 @@ namespace AF.IAP
                 Raise(sku, PurchaseVerificationState.AlreadyApplied);
                 Complete(token, PurchaseStatus.AlreadyOwned, null);
             }
+        }
+
+        /// <summary>Devuelve a la cola una compra verificada que no se pudo acreditar, con su contexto y una espera.</summary>
+        private void Requeue(PendingVerification entry, string reason)
+        {
+            var error = new BackendError(BackendErrorKind.InvalidResponse, 200, ApiErrorCode.Unknown, reason);
+            if (_queue.Requeue(entry, error, _clock.UtcNow))
+            {
+                _ledger.Profile.PurchaseQueue = _queue.ToJson();
+            }
+        }
+
+        private bool IsQueued(string sku)
+        {
+            for (int i = 0; i < _queue.Entries.Count; i++)
+            {
+                if (string.Equals(_queue.Entries[i].Request.Sku, sku, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void OnQueueChanged()
