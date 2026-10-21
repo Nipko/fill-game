@@ -720,7 +720,7 @@ namespace AF.UI
                 float start = ReferenceEquals(_bursting, _streak) ? StreakEndMs : BasketOpenMs;
                 float ms = now - start;
                 _burst.Root.localScale = Vector3.one * (_reduce || ms > 200f ? 1f : 1f + (0.2f * Mathf.Sin((Mathf.Max(0f, ms) / 200f) * Mathf.PI)));
-                if (ms >= FlyMs + 120f)
+                if (ms >= FlyMs)
                 {
                     EndBurst();
                 }
@@ -771,7 +771,7 @@ namespace AF.UI
                 }
 
                 bool seeds = item.Icon == RewardIcon.Seed;
-                flyer.Fly(_burst.IconSprite(i), toCanvas(_burst.IconRect(i)), seeds ? _seedTarget : _stockTarget, 120f + (i * 40f),
+                flyer.Fly(_burst.IconSprite(i), toCanvas(_burst.IconRect(i)), seeds ? _seedTarget : _stockTarget, i * FlyStaggerMs,
                     seeds ? item.Amount : 0, _reduce);
             }
         }
@@ -793,11 +793,15 @@ namespace AF.UI
             _burst.Root.gameObject.SetActive(false);
         }
 
-        // Del salto de una tira de n premios al aterrizaje del último (ms): su retraso de 120 + 40 por premio y el vuelo.
+        // Del salto de una tira de n premios al aterrizaje del último (ms): 30 ms entre premio y premio y el vuelo (la Canasta grande, de
+        // 4 premios, aterriza a los 1.590 ms, dentro de la fila 1,40-1,60 de 07 §5.4).
         private static float FlightMs(int n)
         {
-            return 120f + (40f * Mathf.Max(0, Mathf.Min(n, 5) - 1)) + FlyMs;
+            return (FlyStaggerMs * Mathf.Max(0, Mathf.Min(n, 5) - 1)) + FlyMs;
         }
+
+        /// <summary>Entre el despegue de un premio y el del siguiente (ms).</summary>
+        private const float FlyStaggerMs = 30f;
 
         private Flyer? FreeFlyer()
         {
