@@ -177,3 +177,9 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - Se mantienen las URLs públicas ya documentadas. Contexto Firebase aún amazon-fill-dev, paquete de pruebas com.amazonfill.dev y verificador falso habilitado solo en dev conforme al código aprobado. Firebase todavía no existe y no se cargaron secretos reales: faltan pruebas autenticadas, compras y callbacks reales.
 - Firebase empresarial sigue pendiente del administrador externo: hay 12 proyectos de cupo, pero falta resourcemanager.projects.create en una ubicación permitida. No se creó el proyecto en la cuenta personal ni se concedieron permisos en Google. Cuando exista Firebase, registrar app Android, activar Auth anónimo y configurar los productos pedidos; si cambia el ID, preparar otro diff y solicitar aprobación para ajustar la API.
 - Sin ediciones de infra/, sin bootstrap/deploy en prod y sin cambio de rama del checkout principal. Ensamblados y salidas privadas fuera del repositorio.
+
+### Firebase dev desde la cuenta personal por decisión del dueño — 2026-10-21
+
+- El dueño cambió expresamente la instrucción: crear al menos dev desde su cuenta personal. Retomado el formulario de Firebase en esa sesión; no se actúa en la cuenta empresarial ni se cambian sus permisos.
+- Preparado nombre amazon-fill-dev e ID sugerido disponible fill-dev-e75a2. Gemini desactivado; Analytics activado con cuenta dedicada, ubicación Estados Unidos y ajustes predeterminados. Pendiente confirmación legal de las condiciones de Analytics antes de crear el proyecto. Los IDs de formularios anteriores fueron propuestas no creadas.
+- Preparación de App Check: comprobado un APK dev existente, paquete com.amazonfill.dev y firma válida, mediante aapt2 y apksigner. Extraída únicamente la huella pública SHA-256 del certificado del APK para registrar la app de dev; no se leyó ningún keystore. Huella y parámetros locales fuera del repo; aún no se registró App Check.
