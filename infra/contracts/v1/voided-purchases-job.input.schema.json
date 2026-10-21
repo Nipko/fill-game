@@ -1,0 +1,10 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/voided-purchases-job.input.schema.json",
+  "title": "voidedPurchasesJob: entrada del Scheduler",
+  "description": "El job no recibe parámetros: lee su checkpoint (startTime) de la tabla jobs.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [],
+  "properties": {}
+}

@@ -1,0 +1,3 @@
+# app-ads.txt PROVISIONAL (infra/web/site, F1-2). Todavía no declara ningún vendedor autorizado.
+# Las líneas reales (MAX, AdMob, Unity Ads, Meta y Mintegral) las da el panel de AppLovin MAX
+# cuando exista la cuenta del dueño; el borrador está en docs/store-listing/app-ads.txt (08 §13.1 #2 y #23).

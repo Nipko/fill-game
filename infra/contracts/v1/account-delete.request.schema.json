@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/account-delete.request.schema.json",
+  "title": "deleteAccount (app): petición",
+  "description": "08 §11: la app ya pidió la confirmación en dos pasos; el cuerpo lo deja explícito.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "confirm"
+  ],
+  "properties": {
+    "confirm": {
+      "const": true
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/rewarded-ssv.response.schema.json",
+  "title": "rewardedSsv: respuesta 200",
+  "description": "Un nonce repetido devuelve 200 con duplicate (idempotente; plan F2-6) para que MAX no reintente.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "enum": [
+        "ok",
+        "duplicate"
+      ]
+    }
+  }
+}
