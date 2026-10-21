@@ -78,3 +78,10 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - Revisada la asignación para un único usuario (`af-owner`) y exactamente dos cuentas (`amazonfill-dev`, `amazonfill-prod`). El dueño confirmó expresamente conceder ese acceso administrativo; AWS mostró «Todas las asignaciones se configuraron correctamente». Cuenta de gestión excluida. Sin grupos ni acceso añadido a otras cuentas.
 - AWS CLI v2 sigue sin encontrarse en las ubicaciones habituales. Siguiente paso: el dueño configura contraseña y MFA desde el correo de AWS e instala manualmente la CLI v2 oficial. Después configurar `af-dev` y `af-prod`, comprobar que cada perfil corresponde a su entorno sin imprimir identificadores y preparar bootstrap solo en dev.
 - Bootstrap, diff, deploy, presupuesto, SNS y comprobaciones del servicio aún no ejecutados. Ningún recurso del juego desplegado en dev, prod ni gestión.
+
+### Primer acceso informado e instalación de CLI pendiente — 2026-10-21
+
+- El dueño informa haber configurado su contraseña y MFA. Aún falta comprobar el acceso SSO a dev/prod y el dispositivo registrado desde la consola, sin ver credenciales ni códigos.
+- A petición expresa del dueño, se reintentó instalar AWS CLI v2 con el MSI oficial para el usuario y validación de firma de Amazon prevista antes de ejecutarlo. La revisión automática volvió a rechazar el comando completo antes de su ejecución: «blocked by policy», sin más detalle. No se instaló la CLI ni se descargó el MSI mediante ese comando.
+- Se intentó dejar la descarga oficial en el navegador para ejecución manual del dueño; el control de descarga del navegador tampoco concedió acceso por falta de contexto de origen. No se eludieron los controles ni se usaron métodos alternativos para ejecutar software.
+- Pendiente: el dueño descarga y ejecuta manualmente el instalador oficial para el usuario desde https://awscli.amazonaws.com/AWSCLIV2-User.msi . Después comprobar la versión y configurar SSO. No hay nuevos cambios de permisos ni despliegues.
