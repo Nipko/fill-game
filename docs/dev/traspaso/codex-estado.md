@@ -56,3 +56,10 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - Cuenta dev: solicitud enviada tras confirmación; AWS la rechazó con `EMAIL_ALREADY_EXISTS`. **Dev no creada.** Formulario preparado de nuevo con el mismo nombre y rol, pendiente de un correo exclusivo no registrado que el dueño introduce directamente en la consola. No se registró ni reutilizó el correo rechazado fuera de la consola.
 - Usuario SSO: formulario preparado con nombre `af-owner` y envío de instrucciones de contraseña por correo, sin generar ni mostrar contraseñas. Falta que el dueño complete sus datos en la consola, revisar y confirmar el alta. Usuario aún no creado, sin grupos ni asignaciones de cuentas.
 - Cuenta prod, conjuntos de permisos, MFA personal, perfiles locales, bootstrap, diff y despliegue siguen pendientes. No se han concedido permisos administrativos a usuarios SSO.
+
+### Cuenta dev creada — 2026-10-21
+
+- El dueño introdujo otro correo directamente en la consola. Reintentada la misma creación autorizada de `amazonfill-dev` con `OrganizationAccountAccessRole`; comprobado el resultado en el árbol de Organizations: cuenta dev creada. El fallo de correo anterior queda únicamente como historial y no bloquea ya dev.
+- Preparado el formulario de `amazonfill-prod` con el mismo nombre de rol estándar. Falta el correo exclusivo que introducirá el dueño y confirmar su creación. No se desplegarán stacks en prod.
+- El formulario del usuario SSO `af-owner` sigue pendiente de completar por el dueño. No hay usuario SSO creado, contraseña generada ni permisos administrativos asignados a dicho usuario.
+- Siguiente intervención del dueño: completar el correo exclusivo de prod y los datos del usuario SSO en sus respectivas pestañas, sin compartirlos en el chat ni registrarlos aquí. Después revisar las altas y las asignaciones de permisos, registrar el MFA personal y configurar los perfiles locales.
