@@ -277,13 +277,7 @@ namespace AF.IAP
         public OfferKind TakeAtVictory(in VictoryOfferContext ctx)
         {
             OfferKind kind = PickAtVictory(in ctx);
-            if (kind != OfferKind.None)
-            {
-                MarkShown(kind, in ctx);
-                _budget.Spend();
-            }
-
-            return kind;
+            return TakeIf(in ctx, kind) ? kind : OfferKind.None;
         }
 
         /// <summary>

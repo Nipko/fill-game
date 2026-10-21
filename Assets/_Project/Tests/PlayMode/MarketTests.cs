@@ -247,6 +247,27 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator NoCard_WhileTheVictoryIsLeaving()
+        {
+            // Con la salida en marcha (el avance solo tras la Cosecha doble, D-011, o los 250 ms de «Siguiente», D-033, punto 9) no
+            // sale ninguna tarjeta, que gastaría el cupo para quitarse al momento; cuando la victoria sigue quieta, sí.
+            SecondSession();
+            yield return LoadLevel(12);
+            GameBootstrap boot = Boot();
+            PlayModeHelpers.TakeClock(boot);
+            VictorySetup.WinToVictoryScreen(boot);
+            Assert.That(boot.VictoryLeaving, Is.False, "la victoria, quieta");
+            GameBootstrap.VictoryLeavingOverride = true;
+            boot.TickMarket(16f);
+            boot.TickMarket(GameBootstrap.OfferCardDelayMs + 16f);
+            Assert.That(boot.OfferCardView!.Visible, Is.False);
+            Assert.That(boot.Offers!.StarterExpiresAt, Is.Null, "nada apuntado ni cupo gastado");
+            GameBootstrap.VictoryLeavingOverride = false;
+            boot.TickMarket(16f);
+            Assert.That(boot.OfferCardView.Visible, Is.True, "en cuanto la victoria se queda quieta");
+        }
+
+        [UnityTest]
         public IEnumerator NoAdsCard_OnDay2_ACancelledPurchaseCountsAsADecline()
         {
             SecondSession();

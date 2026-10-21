@@ -86,10 +86,10 @@ index eaa9dea1..2156fa8f 100644
              int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
 diff --git a/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs b/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs
 new file mode 100644
-index 00000000..f0f2a503
+index 00000000..9464218a
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs
-@@ -0,0 +1,119 @@
+@@ -0,0 +1,138 @@
 +#nullable enable
 +using System;
 +using System.Collections;
@@ -144,6 +144,25 @@ index 00000000..f0f2a503
 +            Assert.That(boot.PressAndroidBack(), Is.True);
 +            Assert.That(boot.Market!.Visible, Is.False);
 +            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby), "Atrás no sale del inicio con el Mercado abierto");
++        }
++
++        [UnityTest]
++        public IEnumerator TheMarket_IsAPaymentScreen_ForTheLobby()
++        {
++            // D-013, punto 6: con una pantalla de pago delante no sale la ventanita de casa, y el Mapa no se abre encima.
++            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(26)));
++            GameBootstrap boot = GameBootstrap.Current!;
++            boot.GetComponent<MarketRunner>().enabled = false;
++            LobbyScreen lobby = boot.Lobby!;
++            yield return null;
++            Assert.That(lobby.CommerceOpen, Is.False);
++            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
++            yield return null;
++            Assert.That(lobby.CommerceOpen, Is.True, "CommerceOpen incluye el Mercado (B5-bootstrap)");
++            Assert.That(boot.OpenRiverMap(MapOpenSource.Lobby), Is.False);
++            boot.Market!.Close();
++            yield return null;
++            Assert.That(lobby.CommerceOpen, Is.False);
 +        }
 +
 +        [UnityTest]

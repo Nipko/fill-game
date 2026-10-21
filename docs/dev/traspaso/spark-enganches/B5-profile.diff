@@ -92,10 +92,10 @@ index 00000000..1d677775
 \ No newline at end of file
 diff --git a/Assets/_Project/Scripts/IAP/Tests/ProfileOffersStoreTests.cs b/Assets/_Project/Scripts/IAP/Tests/ProfileOffersStoreTests.cs
 new file mode 100644
-index 00000000..d62df474
+index 00000000..c3bd5d58
 --- /dev/null
 +++ b/Assets/_Project/Scripts/IAP/Tests/ProfileOffersStoreTests.cs
-@@ -0,0 +1,114 @@
+@@ -0,0 +1,120 @@
 +#nullable enable
 +using System;
 +using AF.Economy;
@@ -172,6 +172,12 @@ index 00000000..d62df474
 +            Assert.That(tolerant.Offers!.NoAdsDeclines, Is.EqualTo(0));
 +            Assert.That(tolerant.Offers.StarterReminders, Is.EqualTo(new[] { 15 }));
 +            Assert.That(tolerant.Piggy!.Seeds, Is.EqualTo(100));
++
++            Profile notMoney = ProfileJson.Deserialize(json.Replace("\"full_card\": false", "\"full_card\": 1")
++                .Replace("\"last_level\": 0", "\"last_level\": \"20\""));
++            Assert.That(notMoney.Piggy!.FullCard, Is.False, "last_level y full_card no son dinero: su default, sin corrupción");
++            Assert.That(notMoney.Piggy.LastLevel, Is.EqualTo(0));
++            Assert.That(notMoney.Piggy.Seeds, Is.EqualTo(100));
 +        }
 +
 +        [Test]
@@ -220,16 +226,17 @@ index 00000000..2783022a
 +guid: c41d3b6092b6e6541ae03cdd173c1861
 \ No newline at end of file
 diff --git a/Assets/_Project/Scripts/Save/Profile.cs b/Assets/_Project/Scripts/Save/Profile.cs
-index 7f5be3da..1f0dd47f 100644
+index 7f5be3da..876a43da 100644
 --- a/Assets/_Project/Scripts/Save/Profile.cs
 +++ b/Assets/_Project/Scripts/Save/Profile.cs
-@@ -114,6 +114,20 @@ public sealed class Profile
+@@ -114,6 +114,21 @@ public sealed class Profile
          /// </summary>
          public StreakData? Streak { get; set; }
  
 +        /// <summary>
 +        /// <c>piggy</c> (08 §4.3: <c>{seeds, cap}</c>; 05 §4.1), más <c>last_level</c> y <c>full_card</c> [P] (bloque B5): el Cántaro,
-+        /// o null si nunca se guardó (entonces la clave no se escribe). Vive en el mismo perfil que <see cref="Wallet"/>; las reglas
++        /// o null si nunca se guardó (entonces la clave no se escribe; se guarda con <c>offers</c> desde el primer cambio de cualquiera
++        /// de los dos). Vive en el mismo perfil que <see cref="Wallet"/>; las reglas
 +        /// las aplica <c>AF.IAP</c> (<c>PiggyJar</c> y <c>ProfileOffersStore</c>). Entra sin migrar: aún no se ha publicado.
 +        /// </summary>
 +        public PiggyData? Piggy { get; set; }
@@ -244,7 +251,7 @@ index 7f5be3da..1f0dd47f 100644
          /// <summary>
          /// <c>applied_purchases</c> (08 §4.3 y §10.3; 04 §10.1): las compras con dinero ya acreditadas, por su <c>token_hash</c> (SHA-256
          /// del <c>purchaseToken</c> en hexadecimal en minúsculas, como el libro mayor del servidor; contrato v1). Una compra cuyo hash
-@@ -325,6 +339,44 @@ public sealed class StreakData
+@@ -325,6 +340,44 @@ public sealed class StreakData
          public bool RiverFull { get; set; }
      }
  
@@ -290,7 +297,7 @@ index 7f5be3da..1f0dd47f 100644
      public sealed class ProgressData
      {
 diff --git a/Assets/_Project/Scripts/Save/ProfileJson.cs b/Assets/_Project/Scripts/Save/ProfileJson.cs
-index 01e55502..d629f3f2 100644
+index 01e55502..5afcf3b7 100644
 --- a/Assets/_Project/Scripts/Save/ProfileJson.cs
 +++ b/Assets/_Project/Scripts/Save/ProfileJson.cs
 @@ -150,6 +150,31 @@ internal static JsonNode ToNode(Profile p)
@@ -299,7 +306,7 @@ index 01e55502..d629f3f2 100644
  
 +            if (p.Piggy != null)
 +            {
-+                // Cántaro (08 §4.3; B5): falta hasta el primer llenado.
++                // Cántaro (08 §4.3; B5): falta hasta el primer guardado del Cántaro o de las ofertas.
 +                JsonNode piggy = JsonNode.NewObject();
 +                piggy.Set("seeds", JsonNode.FromInt(p.Piggy.Seeds));
 +                piggy.Set("cap", JsonNode.FromInt(p.Piggy.Cap));
@@ -325,19 +332,20 @@ index 01e55502..d629f3f2 100644
              root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
              if (p.AppliedPurchases.Count > 0)
              {
-@@ -351,6 +376,32 @@ internal static Profile FromNode(JsonNode root)
+@@ -351,6 +376,33 @@ internal static Profile FromNode(JsonNode root)
                  p.Streak = streak;
              }
  
-+            // piggy (Cántaro; B5): son semillas que se compran, así que un tipo equivocado es corrupción, como en wallet.
++            // piggy (Cántaro; B5): seeds y cap son semillas que se compran, así que un tipo equivocado es corrupción, como en wallet;
++            // last_level y full_card [P] no son dinero: un valor que no vale toma su default.
 +            JsonNode? piggyNode = Section(root, "piggy");
 +            if (piggyNode != null)
 +            {
 +                var piggy = new PiggyData();
 +                piggy.Seeds = ReadInt(piggyNode, "seeds", piggy.Seeds);
 +                piggy.Cap = ReadInt(piggyNode, "cap", piggy.Cap);
-+                piggy.LastLevel = ReadInt(piggyNode, "last_level", piggy.LastLevel);
-+                piggy.FullCard = ReadBool(piggyNode, "full_card", piggy.FullCard);
++                piggy.LastLevel = Math.Max(0, TolerantInt(piggyNode, "last_level", piggy.LastLevel));
++                piggy.FullCard = TolerantBool(piggyNode, "full_card", piggy.FullCard);
 +                p.Piggy = piggy;
 +            }
 +
@@ -358,7 +366,7 @@ index 01e55502..d629f3f2 100644
              JsonNode? levelState = Section(root, "level_state");
              p.LevelState = levelState == null ? null : ReadLevelState(levelState);
  
-@@ -894,6 +945,26 @@ private static void TolerantStringList(JsonNode parent, string key, List<string>
+@@ -894,6 +946,26 @@ private static void TolerantStringList(JsonNode parent, string key, List<string>
              }
          }
  

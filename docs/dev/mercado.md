@@ -52,7 +52,7 @@ Los **intersticiales vistos** se cuentan por el contador del día de `AF.Ads` (`
 ### 1.5 Analítica (08 §8.2)
 - `af_shop_view {tab, from = lobby}` al abrir el Mercado [P] (`from`: Q-B5-15).
 - `af_iap_offer_shown` con `context = shop` por cada fila que se puede comprar ahora, al abrir o cambiar de pestaña; en las tarjetas con el botón activo, `starter_window`, `noads_prompt` y `piggy`, y `shop` en la de skin [P] (Q-B5-14).
-- `geo_tier` como propiedad de usuario (08 §8.1), al crear el Mercado.
+- `geo_tier` como propiedad de usuario (08 §8.1), al conectar la telemetría (`ConnectTelemetry`, B5-bootstrap).
 - `af_piggy {state ∈ unlocked, shown_full, bought; seeds_inside}`; `af_skin_unlock {skin_id, source = iap}`.
 - `af_iap_result` y `purchase` ya los emite `AnalyticsStoreService` (B7).
 - Sonda de desarrollo: `AF_STATE` `market_open`, `market_closed`, `piggy_fill`, `offer_shown`, `offer_declined` y `skin_selected`; `AF_LAYOUT` de `market`, `offer_card` y `lobby_market`.
@@ -61,9 +61,9 @@ Los **intersticiales vistos** se cuentan por el contador del día de `AF.Ads` (`
 Claves nuevas en `AF.IAP.OffersConfig`, con sus defaults y rangos: `eco_starter_window_levels` `[10,20]`, `eco_starter_timer_h` 48, `eco_starter_first_show` `"L12_or_session2"`, `eco_noads_card_trigger` `"3_interstitials_or_d2"`, `eco_piggy_from_level` 20 (15-30) y `eco_piggy_fill` `[15,30,40]`. `eco_piggy_cap`, `eco_piggy_min_buy`, `eco_noads_bonus_seeds` y `eco_seed_pack_amounts` siguen en `StoreConfig`. Lo que 05 fija sin clave va en `OfferRules`, con su cita: recordatorios 15 y 19, Sin anuncios en el Mercado desde el 22, 1 tarjeta al día, 3 rechazos y tarjeta de skin desde el 41.
 
 ## 3. Perfil (08 §4.3)
-- `piggy` = `{seeds, cap}` (canon) más `last_level` y `full_card` [P]. Es dinero: un tipo equivocado es corrupción, como `wallet`.
+- `piggy` = `{seeds, cap}` (canon) más `last_level` y `full_card` [P]. `seeds` y `cap` son dinero: un tipo equivocado es corrupción, como `wallet`; `last_level` y `full_card` toman su default.
 - `offers` [P] = `{starter_first_seen_at, starter_reminders, noads_card_date, noads_declines, interstitials_seen, skin_cards}`. No es dinero: un valor que no vale toma su default.
-- Los dos faltan hasta el primer uso y entran sin migrar (aún no se ha publicado). Se guardan por la vía síncrona del lote (`ProfileSaveBatch.Durable`), como la cartera. Comprar el Cántaro son dos escrituras seguidas: la cartera acredita (dentro de la tienda) y después el Cántaro se vacía (riesgo en §8). El llenado es otra escritura en la victoria (no la hay si ya estaba lleno).
+- Los dos faltan hasta el primer cambio de cualquiera de ellos (se guardan juntos: el primer intersticial contado ya escribe `piggy` a 0) y entran sin migrar (aún no se ha publicado). Se guardan por la vía síncrona del lote (`ProfileSaveBatch.Durable`), como la cartera. Comprar el Cántaro son dos escrituras seguidas: la cartera acredita (dentro de la tienda) y después el Cántaro se vacía (riesgo en §8). El llenado es otra escritura en la victoria (no la hay si ya estaba lleno).
 
 ## 4. Archivos
 

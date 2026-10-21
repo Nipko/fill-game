@@ -119,6 +119,7 @@ namespace AF.UI
             SkinSalesOverride = null;
             s_marketProfile = null;
             s_carriedBudget = null;
+            VictoryLeavingOverride = null;
         }
 
         /// <summary>
@@ -238,7 +239,10 @@ namespace AF.UI
             }
 
             market.Open(tab, OnMarketClosed);
-            MarketProbe("market_open", "\"tab\":\"" + MarketTabId(market.Tab) + "\"");
+            if (DevProbe.Enabled)
+            {
+                MarketProbe("market_open", "\"tab\":\"" + MarketTabId(market.Tab) + "\"");
+            }
             _analytics?.Log(AnalyticsEvent.Create("af_shop_view").Add("tab", MarketTabId(market.Tab)).Add("from", "lobby")); // 08 §8.2 [P] from
             return true;
         }
@@ -375,12 +379,15 @@ namespace AF.UI
             if (fill.HasValue)
             {
                 PiggyFill f = fill.Value;
-                MarketProbe("piggy_fill", "\"level\":" + Num(won) + ",\"added\":" + Num(f.Added) + ",\"seeds\":" + Num(f.Seeds) + ",\"full\":" + (f.BecameFull ? "true" : "false"));
+                if (DevProbe.Enabled)
+                {
+                    MarketProbe("piggy_fill", "\"level\":" + Num(won) + ",\"added\":" + Num(f.Added) + ",\"seeds\":" + Num(f.Seeds) + ",\"full\":" + (f.BecameFull ? "true" : "false"));
+                }
             }
 
-            if (_piggy != null && won + 1 == _piggy.Config.EcoPiggyFromLevel)
+            if (_piggy != null && won + 1 == _piggy.Config.EcoPiggyFromLevel && OfferReady())
             {
-                LogPiggy("unlocked", 0); // af_piggy: el Cántaro aparece con el nivel siguiente (08 §8.2)
+                LogPiggy("unlocked", 0); // af_piggy: el Cántaro aparece con el nivel siguiente (08 §8.2); sin tienda no aparece
             }
 
             OfferScheduler? offers = _offers;
@@ -493,7 +500,10 @@ namespace AF.UI
                 analytics.OfferShown(sku, context); // af_iap_offer_shown (08 §8.2): solo lo que se puede comprar
             }
 
-            MarketProbe("offer_shown", "\"kind\":\"" + OfferScheduler.IdOf(kind) + "\",\"sku\":\"" + sku + "\",\"takeover\":" + (takeover ? "true" : "false"));
+            if (DevProbe.Enabled)
+            {
+                MarketProbe("offer_shown", "\"kind\":\"" + OfferScheduler.IdOf(kind) + "\",\"sku\":\"" + sku + "\",\"takeover\":" + (takeover ? "true" : "false"));
+            }
             if (DevProbe.Enabled && _probe != null)
             {
                 var ids = new List<string>(3);
@@ -516,7 +526,10 @@ namespace AF.UI
             if (!buy)
             {
                 offers.RecordDeclined(kind);
-                MarketProbe("offer_declined", "\"kind\":\"" + OfferScheduler.IdOf(kind) + "\"");
+                if (DevProbe.Enabled)
+                {
+                    MarketProbe("offer_declined", "\"kind\":\"" + OfferScheduler.IdOf(kind) + "\"");
+                }
                 return;
             }
 
@@ -563,7 +576,10 @@ namespace AF.UI
                 _art.CuiaSkin = AF.Presentation.CuiaSkin.For(_skinService.Equipped); // las cuias del próximo nivel ya la llevan
             }
 
-            MarketProbe("skin_selected", "\"skin\":\"" + (_skinService?.Equipped ?? skinId) + "\"");
+            if (DevProbe.Enabled)
+            {
+                MarketProbe("skin_selected", "\"skin\":\"" + (_skinService?.Equipped ?? skinId) + "\"");
+            }
         }
 
         // AF_LAYOUT del Mercado al abrirlo o cambiar de pestaña (desarrollo: para jugar con adb).
@@ -606,8 +622,16 @@ namespace AF.UI
         {
             return _app != null && _app.Screen == AppScreen.Level && !HomeWindowCovered && !MarketCommerceOpen && !FruitSheetOpen
                 && (_dailyScreen == null || !_dailyScreen.IsOpen) && (_lockedNotice == null || !_lockedNotice.Visible)
-                && (_screen == null || (!_screen.AutoNextPending && !_screen.NextHoldPending));
+                && !VictoryLeaving;
         }
+
+        /// <summary>
+        /// La victoria se está yendo: el avance solo tras la Cosecha doble (D-011) o los 250 ms de «Siguiente» (D-033, punto 9).
+        /// </summary>
+        internal bool VictoryLeaving => VictoryLeavingOverride ?? (_screen != null && (_screen.AutoNextPending || _screen.NextHoldPending));
+
+        /// <summary>Para los tests: fuerza <see cref="VictoryLeaving"/> (null = el de la pantalla).</summary>
+        internal static bool? VictoryLeavingOverride { get; set; }
 
         private void SyncMarketIcons()
         {
