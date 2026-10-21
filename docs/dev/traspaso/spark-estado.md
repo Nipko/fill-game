@@ -58,6 +58,8 @@ Orden de este archivo (encargo §9, punto 5): arriba el resumen; después, una e
 | rama tras el arreglo | `unity-compile.ps1` | OK |
 | retoques tras la aprobación (`cabddef`, `a82a97e`) | rama: `dotnet build`/`test`, `validate_schema`, compile, EditMode, PlayMode | 0 avisos; 981 (975 + 6); 103/103; OK; **3.384 (3.381 + 3), 0 fallos**; **1.589 (1.382 + 207), 0 fallos** |
 | ídem | worktree con B3-model + B3-ui: compile, EditMode, PlayMode | OK; **3.389 (3.386 + 3), 0 fallos**; **1.590 (1.383 + 207), 0 fallos** (`SkipPlayModeTests` en verde) |
+| tras fusionar `e11b424` (FX16a/FX16b; `c975184`, `be82d8d`) | rama: `dotnet build`/`test`, `validate_schema`, compile, EditMode, PlayMode | 0 avisos; 981 (975 + 6); 103/103; OK; **3.392 (3.389 + 3), 0 fallos**; **1.655 (1.425 + 230), 0 fallos** |
+| ídem | worktree con B3-model + B3-ui regenerado: `apply --check` en orden, compile, EditMode, PlayMode | aplican; OK; **3.397 (3.394 + 3), 0 fallos**; **1.656 (1.426 + 230), 0 fallos** (`SkipPlayModeTests` en verde) |
 
 ### Decisiones [P] y preguntas para el dueño
 
