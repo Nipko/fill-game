@@ -180,7 +180,7 @@ namespace AF.GameFlow
             }
 
             EconomyConfig economy = _wallet?.Config ?? EconomyConfig.Defaults;
-            LevelCardInfo? card = LevelCardInfo.For(_level, _levelNumber, economy, revealGifted);
+            LevelCardInfo? card = LevelCardInfo.For(_level, _levelNumber, economy, revealGifted) ?? StreakCardFor(isShort);
             if (card == null)
             {
                 return false;

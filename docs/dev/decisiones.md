@@ -2942,6 +2942,13 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 
 ---
 
+### D-032, añadido del 2026-10-20: límites de 16:9 al integrar FX16a y FX16b
+
+- **Estado:** aplicadas con la recomendada por la regla del dueño del 2026-10-19 («si tienen recomendadas vamos con esas»), **provisionales hasta la prueba en el teléfono**: si allí molestan, el dueño elige otra opción.
+- **Aguas estancadas en 16:9 (FX16a):** se acepta como límite conocido («si no cabe, no sale», como los puntos 3 y 4 de esta decisión) que el panel compacto tape parte del tablero en el 31 rama B al 130 % (46,9 dp de 131,7 en es-419) y la tercera fila en el 640. Lo registra el explícito `StuckCompactTests.Stuck_16x9_NoCuiaCovered_KnownIssue`. Alternativas si molesta en el teléfono: (c) un modal más bajo con Puñado y Balsa plegados tras «Más opciones» (la siguiente recomendada); (b) reducir el tablero mientras el modal esté abierto, con tope de 28 dp por cuia; (d) dejar que el tablero suba sobre la cabecera del HUD.
+- **«Ver mapa» en el escalón 3 de la victoria compacta (FX16b):** no sale cuando no cabe en la fila (solo pasa en en-XA al 130 %, en las llegadas del 20 y el 80); el Mapa sigue en el inicio y en la pausa. Se anota en 06 §4.5 y 02 §6.
+- **«Siguiente» en el escalón 3 (FX16b):** con «Ver mapa» va más estrecho, con la misma altura y el mismo canto derecho [P] (se aparta de Q7-A de D-017 solo a lo ancho).
+
 ## D-033 · Tanda 5: respuestas del 2026-10-20 a las preguntas del plan (Q-N, Q-M, Q-E y Q-T)
 
 - **Fecha:** 2026-10-20. Registrada el 2026-10-20 por el integrador (escritorio).
@@ -3049,3 +3056,20 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Merge del CI aprobado por el dueño** (Q-T5): «Apruebo el merge de B10 con el ci.yml en integración y main. Yo creo los secretos UNITY_EMAIL y UNITY_PASSWORD en GitHub.» La variable de repositorio `AF_RELEASE_APPLICATION_ID` se crea solo tras el dictamen de marca (D-034); sin ella, el job de build construye un ensayo con la identidad de prueba.
 - **coverlet** (Q-T7): `coverlet.msbuild` **10.0.1**, solo en `dotnet/AF.Core.Tests` y activo con `-p:CollectCoverage=true`; cobertura medida el 2026-10-20: 92,09 % de líneas (AF.Core 93,34 %, AF.Solver 90,34 %).
 - **Stripping High** (Q-T6): AAB de ensayo de 46,13 MB con `Assets/Plugins/link.xml`. Pendientes de B10: el margen inferior de «Cancelar» en `StoreSheet` (parche en `docs/dev/traspaso/b10-storesheet-safe-area.patch`) y el retroceso predictivo, desactivado hasta probar Atrás en el teléfono con Android 16 (`docs/dev/traspaso/b10-safe-area-y-retroceso.md`).
+
+### D-033, añadido del 2026-10-20: preguntas de B14 (con la regla «si tienen recomendada, vamos con esa»)
+
+- **Estado:** aplicadas por el integrador con la regla del dueño del 2026-10-19; la (a) de cada una es lo que implementó B14 (`tanda5/b14`). El dueño puede cambiarlas.
+- **B14-Q1:** los ids de skin son el SKU del pack (`af_skin_m02`…), el mismo que anota la compra; se parchea el ejemplo de 08 §4.3.
+- **B14-Q2:** el perfil guarda `entitlements.skin_equipped` y `entitlements.frames` [P]; se anota en 08 §4.3.
+- **B14-Q3:** en el Mapa se ven los puntos de paso ya recorridos y al tocarlos dan su nombre y su dato. Falta la fila `map.stop.obidos.dato_01` en `facts.csv` (para `tools/river-map` y el asesor).
+- **B14-Q4:** la tarjeta de una parada futura enseña el contenido de su Canasta, semillas incluidas, sin precio (06 §4.5).
+- **B14-Q5:** luz de dificultad [P] (`NightLut` 0,66/0,72/0,98 en Muy difícil; `AfternoonLut` 1/0,92/0,78 en Difícil) solo en el panorama, el cielo, el héroe y el agua (ΔE ≤ 4,5), sustituyendo al velo del 15 %; el inicio no la lleva. Provisional hasta la prueba en el teléfono; se corrigen 02 §10 y 07 §7.7.
+- **B14-Q6:** al arrancar, las skins de los mundos ya cerrados se dan sin ponerse, sin aviso y sin `af_skin_unlock` (perfiles anteriores).
+- **B14-Q7:** el álbum de frutas solo lo llena la campaña.
+- **Nota para B3 (Salto del Boto):** debe llamar a `SkinService.ApplyLevelPassed`, y la marca de Canasta cobrada se deduce de `max_level ≥ 10k`, así que un `10k` saltado saldría marcado: revisarlo en B3.
+
+### D-033, añadido del 2026-10-20: preguntas de B1b
+
+- **B1b-Q10, decidida por el dueño en el chat:** «B1b-Q10: (c) sin barras de la Crecida y la Canasta en los hitos de TiTino (60, 80 y 140) cuando no cabe su frase; TiTino habla como dice D-016. La Canasta del 60 se abre y su contenido va al saldo sin barra.» D-016 (T6-A) no cambia.
+- **B1b-Q1-Q9 y Q11**, aplicadas con su recomendada (a) por la regla del dueño del 2026-10-19 (detalle en `docs/dev/crecida-canasta.md` §9): barras a media anchura antes de compactar lo demás, también en los escalones 0 y 1; se acepta que las barras lleven es-419 al 100 % en 16:9 y en-XA al 130 % en 360 × 780 al escalón 1 (matiza D-032); si ni el último escalón cabe, las barras no salen; la línea de la Hoja escudo también en 25-30 (se corrige el pseudocódigo de 04 §6.2); con la barra a 0 y el río crecido, sin línea; el hito 10 deja la barra en 10/10 en la victoria y se vacía en el HUD siguiente; el contenido de la Canasta antes de abrirla se ve en el Mapa (B14) y en la barra solo al abrirse; el aviso de la hoja sale al volver a jugar tras la intro; la tercera barra rotativa queda como hueco hasta B4; la espera de 250 ms solo con un premio pendiente.

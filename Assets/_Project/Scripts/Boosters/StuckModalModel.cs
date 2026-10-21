@@ -62,6 +62,19 @@ namespace AF.Boosters
         LostLast = 2,
     }
 
+    /// <summary>Línea de la Hoja escudo sobre el pie (04 §6.5 y §6.6, wireframes A y D; 04 §8, <c>stuck_show_shield_status</c>).</summary>
+    public enum StuckShieldLine
+    {
+        /// <summary>Sin línea: sin Crecida en este nivel, con la barra a 0 (no hay racha que romper) o con la línea apagada por RC.</summary>
+        None = 0,
+
+        /// <summary>«Hoja escudo lista: este fallo no rompe tu Crecida» (<c>stuck_shield_ready</c>).</summary>
+        Ready = 1,
+
+        /// <summary>«Sin Hoja escudo hoy: este fallo rompe tu Crecida de {n}» (<c>stuck_shield_used</c>).</summary>
+        Used = 2,
+    }
+
     /// <summary>Pie del modal (04 §6.2; D-008).</summary>
     public enum StuckFooter
     {
@@ -140,6 +153,18 @@ namespace AF.Boosters
         /// migración falló (08 §4.4) y lo comprado se perdería. Medida mínima [P] a la espera de la decisión del dueño.
         /// </summary>
         public bool PurchasesBlocked;
+
+        /// <summary>
+        /// La Crecida cuenta en este nivel (campaña, desde <c>streak_unlock_level</c> y con <c>biz_feature_win_streak</c>; la da
+        /// <c>StreakSnapshot.Active</c>; tarea B1b).
+        /// </summary>
+        public bool StreakActive;
+
+        /// <summary>Victorias de la barra de la Crecida ahora (0-9).</summary>
+        public int StreakWins;
+
+        /// <summary>La Hoja escudo de hoy sigue disponible (<c>daily.shield_available</c>).</summary>
+        public bool ShieldAvailable;
     }
 
     /// <summary>El modal Aguas estancadas ya decidido (04 §6.2 <c>buildStuckModal</c>; wireframes A-C de §6.6).</summary>
@@ -147,8 +172,10 @@ namespace AF.Boosters
     {
         internal StuckModalView(StuckCanoeLine canoeLine, StuckUndoKind undo, int undoBadge, bool undoUnlimited, bool undoVideo,
             bool undoVideoFirst, int undoRefillPrice, int undoRefillMissing, StuckRescueKind rescue, int price, int basePrice, int missing,
-            IReadOnlyList<StuckOffer> offers, StuckFooter footer, bool unsolvable)
+            IReadOnlyList<StuckOffer> offers, StuckFooter footer, bool unsolvable, StuckShieldLine shieldLine = StuckShieldLine.None, int shieldWins = 0)
         {
+            ShieldLine = shieldLine;
+            ShieldWins = shieldLine == StuckShieldLine.None ? 0 : shieldWins;
             Unsolvable = unsolvable;
             CanoeLine = canoeLine;
             Undo = undo;
@@ -213,6 +240,12 @@ namespace AF.Boosters
 
         /// <summary>Pie.</summary>
         public StuckFooter Footer { get; }
+
+        /// <summary>Línea de la Hoja escudo sobre el pie (tarea B1b; 04 §6.5).</summary>
+        public StuckShieldLine ShieldLine { get; }
+
+        /// <summary>La barra que se perdería (el {n} de <c>stuck_shield_used</c>); 0 sin línea.</summary>
+        public int ShieldWins { get; }
     }
 
     /// <summary>¿Seguro? [P] (paso 2 del embudo de D-008; 04 §6.2 <c>buildGiveUpConfirm</c>).</summary>
@@ -259,7 +292,8 @@ namespace AF.Boosters
     /// Árbol de decisión de Aguas estancadas (GDD 04 §6.2 y §6.3, con el embudo de D-008): ramas C (1-30), A (con saldo),
     /// A' (2.º bloqueo: sin rescate), B (sin saldo, Puñado y Balsa en el orden de la geo), E (sin fill: solo semillas), F (no
     /// cumple: sin rescate, con la recarga gratis de +1 [P]), G (última canoa) y H (Canoas infinitas: sin línea de canoa).
-    /// El Salto del Boto (rama D) y la línea de la Hoja escudo llegan con sus sistemas. Sin motor: solo decide qué se ve.
+    /// El Salto del Boto (rama D) llega con su sistema. La línea de la Hoja escudo (04 §6.5 y §6.6; tarea B1b) sale sobre el pie
+    /// en 1-30 y desde el 31 (<see cref="ShieldLineFor"/>). Sin motor: solo decide qué se ve.
     /// </summary>
     public static class StuckModalModel
     {
@@ -291,7 +325,8 @@ namespace AF.Boosters
             if (!atOrAfter31)
             {
                 return new StuckModalView(StuckCanoeLine.None, undo, badge, ctx.UndoUnlimited, ctx.UndoAdReady, videoFirst,
-                    ctx.UndoRefillPrice, refillMissing, StuckRescueKind.None, 0, 0, 0, new StuckOffer[0], StuckFooter.RestartFree, false);
+                    ctx.UndoRefillPrice, refillMissing, StuckRescueKind.None, 0, 0, 0, new StuckOffer[0], StuckFooter.RestartFree, false,
+                    ShieldLineFor(ctx, config), ctx.StreakWins);
             }
 
             var offers = new List<StuckOffer>(2);
@@ -312,7 +347,7 @@ namespace AF.Boosters
 
             return new StuckModalView(CanoeLine(ctx), undo, badge, ctx.UndoUnlimited, ctx.UndoAdReady, videoFirst, ctx.UndoRefillPrice,
                 refillMissing, rescue, ctx.RescuePrice, ctx.RescueBasePrice, missing, offers, StuckFooter.GiveUp,
-                ctx.RescueCheck == RescueCheck.Unsolvable && ctx.RescuesLevel < ctx.RescueMaxPerLevel);
+                ctx.RescueCheck == RescueCheck.Unsolvable && ctx.RescuesLevel < ctx.RescueMaxPerLevel, ShieldLineFor(ctx, config), ctx.StreakWins);
         }
 
         /// <summary>
@@ -332,6 +367,22 @@ namespace AF.Boosters
         public static bool GiveUpNeedsConfirm(StuckContext ctx)
         {
             return ctx.Level >= ctx.RescueMinLevel && !ctx.InfiniteCanoes && ctx.Canoes > 0;
+        }
+
+        /// <summary>
+        /// Línea de la Hoja escudo (04 §6.5 y §8; tarea B1b): con <c>stuck_show_shield_status</c> y la Crecida activa en el nivel,
+        /// «lista» si queda la hoja de hoy y «sin Hoja escudo hoy… de {n}» si no; sin línea con la barra a 0, porque entonces el
+        /// fallo duro no gasta la hoja ni rompe ninguna racha (06 §4.3: «Hoja escudo solo con Crecida ≥ 1») [P]. El río crecido con
+        /// la barra a 0 sí se apaga, pero 04 §6.5 no tiene texto para eso: pregunta abierta de B1b.
+        /// </summary>
+        public static StuckShieldLine ShieldLineFor(StuckContext ctx, BoosterConfig config)
+        {
+            if (!config.StuckShowShieldStatus || !ctx.StreakActive || ctx.StreakWins < 1)
+            {
+                return StuckShieldLine.None;
+            }
+
+            return ctx.ShieldAvailable ? StuckShieldLine.Ready : StuckShieldLine.Used;
         }
 
         private static StuckRescueKind RescueKind(StuckContext ctx, out int missing)

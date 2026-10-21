@@ -45,6 +45,9 @@ namespace AF.Tests.EditMode
         /// <summary>La de FX13: la naciente del último tramo (D-013, viñeta del 2026-10-19).</summary>
         private static readonly string[] Fx13Keys = { "map_source_name" };
 
+        // B14 (tanda 5; 06 §4.4-§4.5): la Canasta de una parada futura y el Premio del mundo.
+        private static readonly string[] B14Keys = { "map_card_basket", "map_world_prize" };
+
         private static RiverStopCatalog? s_stops;
         private LocStateSnapshot _loc;
 
@@ -73,9 +76,10 @@ namespace AF.Tests.EditMode
             var expected = new List<string>(GlossaryKeys);
             expected.AddRange(PM2Keys);
             expected.AddRange(Fx13Keys);
+            expected.AddRange(B14Keys);
             expected.Sort(StringComparer.Ordinal);
-            Assert.That(expected, Has.Count.EqualTo(22));
-            Assert.That(new HashSet<string>(expected), Has.Count.EqualTo(22), "sin repetidas");
+            Assert.That(expected, Has.Count.EqualTo(24));
+            Assert.That(new HashSet<string>(expected), Has.Count.EqualTo(24), "sin repetidas");
 
             LocTable strings = LocSetUpFixture.Catalog.Strings;
             var found = new List<string>();
@@ -88,7 +92,7 @@ namespace AF.Tests.EditMode
                 }
             }
 
-            Assert.That(found, Is.EqualTo(expected), "las 22 claves del Mapa, en orden ordinal, y ninguna map_* más");
+            Assert.That(found, Is.EqualTo(expected), "las 24 claves del Mapa, en orden ordinal, y ninguna map_* más");
 
             var typed = new List<string>();
             foreach (FieldInfo f in typeof(UiText.Keys).GetFields(BindingFlags.Public | BindingFlags.Static))
@@ -355,6 +359,11 @@ namespace AF.Tests.EditMode
             }
 
             foreach (string key in Fx13Keys)
+            {
+                yield return key;
+            }
+
+            foreach (string key in B14Keys)
             {
                 yield return key;
             }

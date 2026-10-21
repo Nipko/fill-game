@@ -116,6 +116,23 @@ namespace AF.GameFlow
             }
         }
 
+        /// <summary>
+        /// Tarjeta de la Crecida (04 §4: «Tarjeta de la Crecida al cargar el 25»; tarea B1b) para el nivel cargado, o null: solo en
+        /// la campaña, con el servicio, con <c>biz_feature_win_streak</c> encendido, en el nivel de <c>streak_unlock_level</c> y en
+        /// la entrada al nivel (no al reintentar, como las tarjetas de estreno: <see cref="LevelCardOnRetry"/> no la saca). La pide
+        /// <c>TryShowLevelCard</c> solo si el nivel no tiene tarjeta propia (etiqueta o estreno), que gana [P].
+        /// </summary>
+        private LevelCardInfo? StreakCardFor(bool isShort)
+        {
+            StreakService? streak = _streak;
+            if (isShort || streak == null || IsDaily || !streak.Config.BizFeatureWinStreak || _levelNumber != streak.Config.StreakUnlockLevel)
+            {
+                return null;
+            }
+
+            return LevelCardInfo.ForStreak(_levelNumber);
+        }
+
         // Al cargar un nivel (ResetHarvest, desde Load; parche S2): el resultado del nivel anterior ya no vale.
         private void ResetStreakResult()
         {

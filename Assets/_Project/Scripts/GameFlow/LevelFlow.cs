@@ -251,6 +251,7 @@ namespace AF.GameFlow
                 _session = new LevelSession(BoardFor(def, _attempt.ReliefIndex), GameConfig.FutileRuleEnabled, _pourMode);
                 _taps.Clear();
                 ResetPending();
+                OnLoadAlbum(); // album.fruits y af_fruit_discovered (B14; LevelFlow.Meta.cs), en el lote de la carga
                 _listener.OnLevelLoaded(number);
                 if (ExtraCuiaBooster.ShouldGift(number, _progress.LoadMaxLevel(), _attempt.ExtraCuiaGifted, _wallet, _boosters)
                     && _wallet!.Apply(Transaction.GrantStock(BoosterKind.ExtraCuia, BoosterConfig.ExtraCuiaTutorialUnits)).IsApplied)

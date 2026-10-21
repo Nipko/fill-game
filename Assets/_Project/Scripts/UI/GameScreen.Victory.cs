@@ -206,6 +206,32 @@ namespace AF.UI
         private int ChooseVictoryCompact()
         {
             float budget = VictoryPanelBudgetDp;
+            _victoryBarsDropped = false;
+            _victoryBars.ForceHalf = false;
+            int level = CompactStepFor(budget);
+            if (level > 0 && VictoryBarsPossible)
+            {
+                // Antes de compactar lo demás, la Crecida y la Canasta en una fila, a media anchura [P] (tarea B1b): así 360 × 780 no
+                // compacta (D-032, punto 2) y en 16:9 se compacta lo menos posible; desde el escalón 2 ya van así (D-033, punto 10).
+                _victoryBars.ForceHalf = true;
+                level = CompactStepFor(budget);
+            }
+
+            if (WorstPanelDp(level) > budget + 0.01f && VictoryBarsPossible)
+            {
+                // Ni el último escalón cabe con las barras de la Crecida y la Canasta: no salen («si no cabe, no sale», como «Ver
+                // mapa» en D-032 y la regla de 02 §5) [P] y el escalón se elige sin ellas (tarea B1b; pregunta abierta al dueño).
+                _victoryBarsDropped = true;
+                level = CompactStepFor(budget);
+            }
+
+            ApplyVictoryCompact(level);
+            return level;
+        }
+
+        // El escalón más bajo con el que la victoria más alta posible cabe en budget (o el último).
+        private int CompactStepFor(float budget)
+        {
             int level = 0;
             while (level < VictoryCompactMax)
             {
@@ -247,6 +273,7 @@ namespace AF.UI
         {
             float ribbon = WorstRibbonDp(level >= VictoryCompactMargins);
             float above = VictoryHarvestTopDp + (ribbon - RibbonHeightDp) + VictoryHarvestDp + VictoryHarvestGapDp(level)
+                + WorstBarsDp(level) // las barras de la Crecida y la Canasta más altas posibles (D-033, punto 10; GameScreen.Streak.cs)
                 + ModalKit.HeightOf(_double) + 2f + (_labelsBuilt ? NextChipRowFor(level) : 0f);
             float below = level >= VictoryCompactRow
                 ? Mathf.Max(NextHeightFor(CompactNextStretch()), 48f)

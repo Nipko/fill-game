@@ -1033,6 +1033,7 @@ namespace AF.UI
 
         partial void MarkersTick(float dtMs, ref bool animating)
         {
+            PlacePrizePill(); // B14: la píldora del premio, hacia el centro de la vista (RiverMapScreen.Meta.cs)
             if (!_markersReady)
             {
                 return;
@@ -1606,6 +1607,7 @@ namespace AF.UI
                 }
             }
 
+            MetaShowMarkers(max); // B14: la Canasta (cestita o ✓) y el Premio del mundo (RiverMapScreen.Meta.cs)
             PlaceCanoeGear(_space);
         }
 
@@ -2015,6 +2017,7 @@ namespace AF.UI
                 PlaceBeacon(i);
             }
 
+            MetaPlaceMarkers(); // B14: la marca de la Canasta, del lado contrario a la baliza
             _leaders.Commit();
             _leaderLines.Commit();
         }

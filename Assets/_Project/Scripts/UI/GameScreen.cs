@@ -547,7 +547,7 @@ namespace AF.UI
 
             _victoryPanel = UiBuilder.Rect("Panel", _victoryOverlay);
             _victorySurface = UiBuilder.ModalBody(_victoryPanel, art);
-            _next = UiBuilder.Relief("NextButton", _victoryPanel, art.CtaLeaf, () => _actions.PressNext());
+            _next = UiBuilder.Relief("NextButton", _victoryPanel, art.CtaLeaf, OnNextPressed); // con las barras pendientes, las completa (B1b)
             _nextGroup = _next.Face.parent.gameObject.AddComponent<CanvasGroup>();
             _nextGroup.blocksRaycasts = false;
             // Con la escala de texto, Siguiente y la Cosecha doble crecen en alto con ella, como los CTA de los modales (07 §7.8;
@@ -645,6 +645,7 @@ namespace AF.UI
             RevealBuild();
             HintBuild();
             ArrivalBuild();
+            StreakBuild(); // la barra de la Crecida del HUD y las barras de la victoria (GameScreen.Streak.cs; B1b)
             ApplyScreenMetrics(true);
         }
 
@@ -938,6 +939,7 @@ namespace AF.UI
             TickNotices(); // el siguiente aviso, si el anterior se acaba de ocultar (GameScreen.Notices.cs)
             TickHarvest(dtMs);
             TickAutoNext(dtMs);
+            StreakTick(dtMs); // las barras de la victoria y la espera de 250 ms tras Siguiente (B1b)
             RefreshHud();
             LabelsTick(dtMs);
             CardsTick(dtMs);
@@ -972,6 +974,7 @@ namespace AF.UI
             StopLabelLevelLoaded(level);
             _attemptBanner = false;
             _introDelayMs = -1f;
+            StreakLevelLoaded(level); // fuera la barra del HUD (sale en T) y las de la victoria anterior (B1b)
             BuildBoard(flow);
             _levelText.text = UiText.Level(level);
             FitLevelBadge();
@@ -1005,6 +1008,7 @@ namespace AF.UI
             _animator.AdoptBoard(_shownBoard); // la intro pinta el tablero nuevo (también tras Volver a la orilla)
             _introRetry = isShort;
             _introAnimStarted = false;
+            _streakBar.SetVisible(false); // la barra de la Crecida no está durante la intro (07 §7.4; D-030, pregunta 4 (c))
             if (_introDelayMs > 0f)
             {
                 // Variante aliviada (04 §2.7): el cartel «El río bajó» va antes del teñido; la intro arranca al terminar.
@@ -1068,6 +1072,7 @@ namespace AF.UI
             ShowRevealGiftIfReady(ready);
             MaybeShowStopLabel(ready); // el rótulo del lugar, si el nivel no trae otra tarjeta (M2.3)
             MaybeShowSlothRestart(ready); // tras Volver a la orilla en 1-30, el aviso de TiTino (TI6b)
+            StreakTouchEnabled(ready); // la barra de la Crecida sale en T y, tras un fallo cubierto, el aviso de la hoja (B1b)
             PumpNotices();
             _skipCatcher.gameObject.SetActive(false);
             _probe.State("ready", RequireFlow(), int.MinValue, null);
@@ -1223,6 +1228,7 @@ namespace AF.UI
             _ambient.SetSuspended(true);
             _victoryOverlay.gameObject.SetActive(true);
             SetVictoryLights(true);
+            StreakVictoryPlan(flow); // las barras del panel único (D-033, punto 10; GameScreen.Streak.cs): antes de colocar la victoria
 
             // 02 §6: la Cosecha (ya acreditada en el instante de la victoria) cuenta desde 0; desde el 11, Cosecha doble si hay
             // video (rv_double_harvest: reglas, tope, cooldown y fill; sin anuncio no aparece).
@@ -1239,6 +1245,7 @@ namespace AF.UI
             _victoryAnim = 0f;
             ApplyVictoryAnim(0f);
             SyncChrome();
+            StreakVictoryStarted(); // las barras empiezan a contar y saben adónde vuela su premio (B1b)
             _probe.Victory("victory", flow, _doubleShown);
             LabelsVictoryShown(flow);
 
@@ -1296,6 +1303,8 @@ namespace AF.UI
             // AD_GATE (02 §2): Siguiente, Inicio y la Cosecha doble dejan de responder; el intersticial, si toca, va encima. Si
             // Siguiente adelantó el avance tras la Cosecha doble, la espera se cancela: N + 1 se carga una sola vez (D-011).
             _autoNextMs = -1f;
+            _nextHoldMs = -1f;
+            _victoryBars.Complete(); // nada de las barras queda a medias tras Siguiente (D-033, punto 9)
             UiBuilder.SetEnabled(_next.Button, false);
             UiBuilder.SetEnabled(_home.Button, false);
             UiBuilder.SetEnabled(_double.Button, false);
@@ -1338,6 +1347,7 @@ namespace AF.UI
                 _probe.State("ready", flow, int.MinValue, null);
             }
 
+            StreakResumed(flow, phase); // reabierto sin intro: la barra de la Crecida ya está (B1b)
             LabelsBoardChanged(flow);
             RevealBoardChanged(flow);
         }
@@ -1465,6 +1475,7 @@ namespace AF.UI
             }
 
             _probe.Funnel(outcome.Kind == FailKind.Hard ? (outcome.CanoeLost ? "fail_hard_canoe" : "fail_hard") : "fail_soft", RequireFlow());
+            StreakFailResolved(RequireFlow()); // la Hoja escudo cubrió el fallo: su aviso, al volver a jugar (B1b)
         }
 
         /// <inheritdoc />
@@ -1740,6 +1751,8 @@ namespace AF.UI
             _harvestShown = -1;
             _doubleShown = false;
             _autoNextMs = -1f;
+            _nextHoldMs = -1f;
+            _victoryBars.Hide();
             _ambient.SetSuspended(false);
             SlothLeave();
         }
@@ -1764,7 +1777,7 @@ namespace AF.UI
             // pendiente baja en cada fotograma mientras la fila cuenta: si entrara en su clave, la bandeja se repintaría entera
             // en cada uno, con cadenas nuevas (08 §5.4). Allí recibe el saldo entero, que no cambia durante la cuenta, y al volver
             // a verse (SetVisible) se repinta de todos modos.
-            int pending = PendingHarvest(flow);
+            int pending = PendingHarvest(flow) + PendingBarSeeds(flow);
             _tray.Refresh(flow.Phase == FlowPhase.Celebration ? pending : 0);
             _walletBar.Refresh(_services?.Wallet, flow.CanoesLevel, pending);
             if (flow.Phase == FlowPhase.StuckModal && _stuck.Panel.gameObject.activeSelf)
@@ -1826,7 +1839,7 @@ namespace AF.UI
 
             _walletBar.SetVisible(true);
             LayoutWalletBar(pause && phase == FlowPhase.StuckModal);
-            _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesLevel, flow == null ? 0 : PendingHarvest(flow));
+            _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesLevel, flow == null ? 0 : PendingHarvest(flow) + PendingBarSeeds(flow));
         }
 
         // Saldo grande del embudo a la izquierda (tras la pausa en Aguas estancadas); píldoras de la cabecera de partida entre
@@ -2716,6 +2729,7 @@ namespace AF.UI
 
             // Bandeja ajustada al contenido (guía 3.6): 16 + n·64 + (n − 1)·8 + 16 (1 ranura en 1-7; 2 desde el 8).
             _tray.Layout(w, TrayTop);
+            _streakBar.Layout(w, BoardTop + StreakBar.BelowHeaderDp, BoardBottom - StreakBar.AboveBoardBottomDp); // 07 §7.4 (B1b)
 
             // Pausa a la izquierda de la fila superior (02 §5; 07 §7.4: 40 dp en un área de 48).
             UiBuilder.Place((RectTransform)_pauseButton.Button.transform, 8f, TopRowY, 48f, 48f);
@@ -2757,9 +2771,12 @@ namespace AF.UI
             UiBuilder.Place(_harvestValue.rectTransform, mid + 34f, 0f, mid - 50f, VictoryHarvestDp);
             y += VictoryHarvestDp + VictoryHarvestGapDp(compact);
 
+            // Las barras del panel único (D-033, punto 10): Crecida y Canasta, entre la Cosecha y la Cosecha doble (GameScreen.Streak.cs).
+            y += _victoryBarsDropped ? _victoryBars.Collapse() : _victoryBars.Layout(VictoryBarsSideDp, y, panelW - (2f * VictoryBarsSideDp), compact);
+
             // Tras la Cosecha doble, mientras espera a avanzar solo (D-011, punto 4), Inicio y la Cosecha doble quedan inactivos,
             // también al recolocar la pantalla (LayoutHud); Siguiente sigue activo y puede adelantar el avance.
-            bool autoNext = _autoNextMs >= 0f;
+            bool autoNext = _autoNextMs >= 0f || _nextHoldMs >= 0f; // también en la espera de 250 ms de Siguiente (B1b)
             _double.Button.gameObject.SetActive(_doubleShown);
             UiBuilder.SetEnabled(_double.Button, !autoNext);
             if (_doubleShown)
@@ -2871,6 +2888,7 @@ namespace AF.UI
             _layoutRects.Add((RectTransform)_next.Button.transform);
             _layoutIds.Add("home");
             _layoutRects.Add((RectTransform)_home.Button.transform);
+            StreakLayoutIds(_layoutIds, _layoutRects); // las barras de la Crecida y la Canasta (B1b)
             SlotLayoutIds(_layoutIds, _layoutRects);
             ArrivalLayoutIds(_layoutIds, _layoutRects);
             _probe.Layout("victory", RequireFlow().LevelNumber, null, _layoutIds.ToArray(), _layoutRects.ToArray());
@@ -2943,6 +2961,11 @@ namespace AF.UI
         /// </summary>
         internal bool TakeAutoNext()
         {
+            if (TakeNextHold())
+            {
+                return true; // Siguiente con las barras pendientes, tras sus 250 ms (D-033, punto 9; GameScreen.Streak.cs)
+            }
+
             if (_autoNextMs != 0f)
             {
                 return false;
@@ -2963,9 +2986,10 @@ namespace AF.UI
         // esté inactivo (LayoutVictory).
         private void OnVictoryHome()
         {
-            if (_autoNextMs < 0f)
+            if (_autoNextMs < 0f && _nextHoldMs < 0f)
             {
                 LevelFlow flow = RequireFlow();
+                _victoryBars.Complete(); // lo de las barras llega al saldo antes de salir (D-033, punto 9)
                 SlotHomePressed(flow);
                 ArrivalHomePressed(flow);
                 _actions.PressHome();

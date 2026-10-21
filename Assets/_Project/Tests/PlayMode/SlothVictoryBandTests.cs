@@ -326,7 +326,16 @@ namespace AF.Tests.PlayMode
                 }
             }
 
-            if (mustSpeak)
+            if (mustSpeak && view.VictoryBarsView.Root.gameObject.activeSelf && view.SlothBoxDp < GameScreen.SlothSpeakBoxDp)
+            {
+                // Límite de B1b (pregunta B1b-Q10 [P]): las barras de la Crecida y la Canasta del panel único (D-033, punto 10) suben
+                // la cinta y, a 360 × 780 con la ranura, la franja de TiTino baja de 104 dp: hace el gesto y el hito lleva su dato
+                // (la regla de 02 §6 cuando TiTino no puede hablar).
+                TestContext.WriteLine(at + ": franja de " + view.SlothBoxDp + " dp con las barras: TiTino no habla (B1b-Q10)");
+                Assert.That(line.SlothSpeaks, Is.False, at);
+                Assert.That(line.ArrivalFact, Is.True, at + ": sin la frase de TiTino, el hito lleva su dato");
+            }
+            else if (mustSpeak)
             {
                 Assert.That(view.SlothBoxDp, Is.GreaterThanOrEqualTo(GameScreen.SlothSpeakBoxDp), at + ": la franja mide ≥ 104 dp");
                 Assert.That(line.SlothSpeaks, Is.True, at + ": TiTino habla en su hito");

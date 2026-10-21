@@ -21,6 +21,9 @@ namespace AF.UI
 
         /// <summary>Un mirador revelado: su nombre y su dato.</summary>
         Viewpoint = 2,
+
+        /// <summary>Un punto de paso ya pasado (B14; 06 §4.5): su nombre y su dato, si tiene (StopCard.Meta.cs).</summary>
+        Passing = 3,
     }
 
     /// <summary>
@@ -40,7 +43,8 @@ namespace AF.UI
     /// río»; 06 §4.4: ahí queda a la vista la línea de fruta que el dato de llegada desplaza en el <c>10k</c>; calendario
     /// <c>frutas_del_rio_v1.json</c>) y después las que debutaron en ellos (06 §4.5; <see cref="TintDebuts"/>).</description></item>
     /// <item><description><b>Parada futura</b> (<see cref="StopCardMode.Future"/>): solo la silueta del sitio y «Nivel n»
-    /// (<c>level_n</c>, su primer nivel, en la fila de la cabecera, a la derecha del ←): ni nombre, ni datos, ni la Canasta. El
+    /// (<c>level_n</c>, su primer nivel, en la fila de la cabecera, a la derecha del ←): ni nombre ni datos; con B14, el contenido de
+    /// su Canasta y, en el cierre de un mundo con skin, «Premio del mundo · faltan N» (06 §4.5; StopCard.Meta.cs). El
     /// fondo entero va bajo un velo de madera oscura (<see cref="FutureVeilColor"/>) con el cielo y los montes desaturados
     /// (<see cref="FutureTone"/>), y el héroe en <see cref="SilhouetteColor"/> con un filo de luz de <see cref="RimLightDp"/> dp
     /// (<see cref="RimLightColor"/>) para que la silueta se lea (revisión de M4.1). Sin reflejo: el del PNG se oculta y la silueta
@@ -50,12 +54,12 @@ namespace AF.UI
     /// y su dato, si tiene texto.</description></item>
     /// </list>
     /// <para>Todo texto sale de las tablas por <see cref="Loc"/> (<see cref="UiText"/> y <see cref="Loc.Fact(string)"/>): en
-    /// release, un texto sin el visto bueno del asesor es «» y su fila no se enseña (D-018, Q10-A). <b>Sin precios, ofertas ni
-    /// semillas</b> (Q10-A): ni la Canasta ni la skin salen aquí. Textos ≥ 12 sp, contraste ≥ 4,5:1
+    /// release, un texto sin el visto bueno del asesor es «» y su fila no se enseña (D-018, Q10-A). <b>Sin precios ni ofertas</b>
+    /// (Q10-A): la Canasta y la skin solo como contenido de una parada futura, sin precio (06 §4.5; B14). Textos ≥ 12 sp, contraste ≥ 4,5:1
     /// (<see cref="ContrastPairs"/>) y controles ≥ 48 dp (07 §1.2 y §7.8). Se compone al abrirse (asigna sus cadenas y mide con
     /// TextMeshPro: nunca por fotograma).</para>
     /// </summary>
-    public sealed class StopCard
+    public sealed partial class StopCard
     {
         /// <summary>Margen de la tarjeta con los bordes del lienzo (dp).</summary>
         public const float SideDp = 16f;
@@ -304,6 +308,7 @@ namespace AF.UI
             _faunaName = UiBuilder.Label("FaunaName", _panel.transform, TextStyle.PlainBold, string.Empty, RowSp, Palette.Cream, TextAlignmentOptions.Left);
             UiBuilder.AutoSize(_faunaName, UiBuilder.MinTextSp, RowSp);
 
+            BuildMeta(); // la Canasta y el Premio del mundo de una parada futura (B14; StopCard.Meta.cs)
             _root.gameObject.SetActive(false);
         }
 
@@ -438,6 +443,11 @@ namespace AF.UI
                 {
                     yield return _fruitNames[i];
                 }
+            }
+
+            foreach (TextMeshProUGUI t in MetaTexts())
+            {
+                yield return t;
             }
         }
 
@@ -663,11 +673,12 @@ namespace AF.UI
         /// la de la parada (<see cref="StopBackdrop.LutOf(RiverStop, Season)"/>); <see cref="Season.None"/> = sin temporada.
         /// </summary>
         public void ShowStop(RiverStop stop, bool reached, string worldWater, FaunaCatalog? fauna, FactCatalog? fruits = null,
-            Season season = Season.None)
+            Season season = Season.None, AF.Economy.BasketContents basket = default, string? prize = null, CuiaSkin? prizeSkin = null)
         {
             _stop = stop ?? throw new ArgumentNullException(nameof(stop));
             _viewpoint = null;
             _mode = reached ? StopCardMode.Stop : StopCardMode.Future;
+            SetMeta(basket, prize, prizeSkin); // B14: la Canasta y el Premio del mundo, solo en una parada futura (StopCard.Meta.cs)
             _root.gameObject.SetActive(true);
             _root.SetAsLastSibling();
 
@@ -711,6 +722,7 @@ namespace AF.UI
             _viewpoint = viewpoint ?? throw new ArgumentNullException(nameof(viewpoint));
             _stop = null;
             _mode = StopCardMode.Viewpoint;
+            SetMeta(AF.Economy.BasketContents.None, null, null);
             _root.gameObject.SetActive(true);
             _root.SetAsLastSibling();
             _title.text = Loc.Fact(viewpoint.NameKey);
@@ -796,13 +808,15 @@ namespace AF.UI
             bool stop = _mode == StopCardMode.Stop;
             bool future = _mode == StopCardMode.Future;
             bool viewpoint = _mode == StopCardMode.Viewpoint;
+            bool noScene = viewpoint || _mode == StopCardMode.Passing;
             _sample.Root.gameObject.SetActive(stop);
             _badge.gameObject.SetActive(viewpoint);
             _title.gameObject.SetActive(!future && _title.text.Length > 0);
-            _sceneFrame.gameObject.SetActive(!viewpoint);
-            _sceneWindow.gameObject.SetActive(!viewpoint);
+            _sceneFrame.gameObject.SetActive(!noScene);
+            _sceneWindow.gameObject.SetActive(!noScene);
             _futureLevel.gameObject.SetActive(future);
             ApplyFact();
+            ApplyMeta();
 
             bool fauna = _species != null;
             _portraitBack.gameObject.SetActive(fauna);
@@ -1190,6 +1204,8 @@ namespace AF.UI
                 y += scene + GapDp;
             }
 
+            y = LayoutMeta(y, inner); // B14: la Canasta y el Premio del mundo de una parada futura
+
             if (_fact.gameObject.activeSelf)
             {
                 float h = Mathf.Ceil(UiBuilder.MinTextHeight(_fact, inner)) + 2f;
@@ -1245,6 +1261,8 @@ namespace AF.UI
             {
                 h += scene + GapDp;
             }
+
+            h += MetaHeight(inner);
 
             if (_fact.gameObject.activeSelf)
             {
@@ -1311,7 +1329,8 @@ namespace AF.UI
         private float TitleWidth(float canvasW)
         {
             float panelW = canvasW - (2f * SideDp);
-            float icon = _mode == StopCardMode.Viewpoint ? ProceduralArt.MapViewpointDp + 8f : _mode == StopCardMode.Future ? 0f : _sample.WidthDp + 8f;
+            float icon = _mode == StopCardMode.Viewpoint ? ProceduralArt.MapViewpointDp + 8f
+                : _mode == StopCardMode.Future || _mode == StopCardMode.Passing ? 0f : _sample.WidthDp + 8f;
             float used = PadDp - 4f + MinTouchDp + 8f + icon;
             return Mathf.Max(48f, panelW - PadDp - used);
         }

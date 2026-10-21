@@ -653,7 +653,9 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.TickExact(boot, 1000);
             Assert.That(view.SlothView.BubbleAlpha, Is.EqualTo(1f));
             view.NextButton.onClick.Invoke();
-            PlayModeHelpers.TickExact(boot, (int)SlothVictory.BubbleFadeMs + 2);
+            // B1b (D-033, punto 9): con la Canasta del 40 abriéndose, Siguiente espera 250 ms con el estado final antes de AD_GATE.
+            int hold = view.NextHoldPending ? (int)GameScreen.NextHoldMs + PlayModeHelpers.FrameMs : 0;
+            PlayModeHelpers.TickExact(boot, hold + (int)SlothVictory.BubbleFadeMs + 2);
             Assert.That(view.SlothView.BubbleAlpha, Is.EqualTo(0f), "con Siguiente, el bocadillo se va");
         }
 

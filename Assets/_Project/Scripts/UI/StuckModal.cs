@@ -141,6 +141,7 @@ namespace AF.UI
         private readonly ReliefParts _balsa;
         private readonly TextMeshProUGUI _balsaLabel;
         private readonly TextMeshProUGUI _balsaNote;
+        private readonly TextMeshProUGUI _shieldLine;
         private readonly ReliefParts _restart;
         private readonly TextMeshProUGUI _restartLabel;
         private readonly Button _giveUp;
@@ -179,6 +180,10 @@ namespace AF.UI
             _balsa = ModalKit.Cta("BalsaButton", _panel, art.CtaWood, TextStyle.PillWood, string.Empty, 14f, () => actions.PressBalsa(), out _balsaLabel);
             _balsaLabel.textWrappingMode = TextWrappingModes.Normal;
             _balsaNote = ModalKit.Line("BalsaNote", _panel, UiText.StuckBalsaContent, 12f, Palette.FamilyWood.Base);
+
+            // Línea de la Hoja escudo sobre el pie (04 §6.5 y §6.6, wireframes A y D; tarea B1b): hasta dos líneas, sin toques.
+            _shieldLine = ModalKit.Line("ShieldLine", _panel, string.Empty, 14f, Palette.FamilyWood.Base);
+            _shieldLine.gameObject.SetActive(false);
 
             _restart = ModalKit.Cta("RestartModalButton", _panel, art.CtaWood, TextStyle.PillWood, UiText.StuckRestart, 18f, () => actions.PressRestart(), out _restartLabel);
             _giveUp = ModalKit.Link("GiveUpButton", _panel, UiText.StuckGiveUp, () => actions.PressGiveUp(), out _);
@@ -252,6 +257,12 @@ namespace AF.UI
 
         /// <summary>Línea de canoa visible (texto), o null.</summary>
         public string? CanoeLineText => _canoeLine.gameObject.activeSelf ? _canoeLine.text : null;
+
+        /// <summary>Línea de la Hoja escudo visible (texto), o null (tarea B1b).</summary>
+        public string? ShieldLineText => _shieldLine.gameObject.activeSelf ? _shieldLine.text : null;
+
+        /// <summary>Línea de la Hoja escudo (tests de legibilidad; tarea B1b).</summary>
+        internal TextMeshProUGUI ShieldLine => _shieldLine;
 
         /// <summary>Texto de la nota del rescate (descuento o «Te faltan»), o null.</summary>
         public string? RescueNoteText => _rescueNote.gameObject.activeSelf ? _rescueNote.text : null;
@@ -547,6 +558,15 @@ namespace AF.UI
                 }
 
                 y += compact ? 0f : 6f;
+            }
+
+            // Línea de la Hoja escudo (04 §6.6, wireframes A y D: sobre el pie; tarea B1b), en su alto justo en la compacta (FX16a).
+            bool shield = view.ShieldLine != StuckShieldLine.None;
+            _shieldLine.gameObject.SetActive(shield);
+            if (shield)
+            {
+                _shieldLine.text = view.ShieldLine == StuckShieldLine.Ready ? UiText.StuckShieldReady : UiText.StuckShieldUsed(view.ShieldWins);
+                y += ModalKit.PlaceLine(_shieldLine, 16f, y, inner, compact ? 0f : 20f) + (compact ? CompactGapDp : 6f);
             }
 
             // Pie: botón en 1-30 (rama C: «es la salida normal»), enlace «Rendirse» desde el 31.
