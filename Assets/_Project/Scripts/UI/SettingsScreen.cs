@@ -32,6 +32,8 @@ namespace AF.UI
     /// <item><b>Pista por inactividad</b> (tarea MO3; 02 §3.4 y §12; 04 §2.3; 07 §7.8): una fila que se marca o se desmarca
     /// (<c>settings.idle_hint</c> [P], activada por defecto; apagada equivale a <c>hint_idle_delay_s</c> = 0 en el dispositivo y
     /// no afecta a Morpho), en <see cref="IdleHintSlot"/>, tras «Mensajes de TiTino».</item>
+    /// <item><b>Privacidad</b> (bloque B12; 05 §7 y 08 §7), tras «Pista por inactividad»: «Privacidad y datos» y «Corregir mi
+    /// edad» (una vez), en <see cref="ConsentSlot"/> (<c>SettingsScreen.Consent.cs</c>).</item>
     /// <item><b>Sobre la Amazonía</b> (tarea F4; D-017 Q4-A; 07 §8.2), al final: «Frutas del río» con una ficha por serie del
     /// calendario, que abre su ficha (<see cref="FruitSheet"/>), en <see cref="AboutSlot"/> (<c>SettingsScreen.About.cs</c>).</item>
     /// <item><b>Eliminar cuenta y datos</b> (bloque B8; 08 §11), al final: un enlace que abre la confirmación en dos pasos, en
@@ -185,6 +187,9 @@ namespace AF.UI
             // Pista por inactividad (MO3): una fila que se marca o se desmarca, en su hueco.
             IdleHintSlot = UiBuilder.Rect("IdleHintSlot", _content);
             _idleRow = new OptionRow(IdleHintSlot, art, "IdleHint", IdleHintId, UiText.SettingsIdleHint, () => IdleHintToggled?.Invoke(!_idleHint));
+
+            // Privacidad (B12; SettingsScreen.Consent.cs), oculta hasta que GameBootstrap la enseñe.
+            BuildConsent();
 
             // «Sobre la Amazonía» (F4), oculto hasta que haya algo que enseñar (SettingsScreen.About.cs).
             AboutSlot = HiddenSlot("AboutSlot");
@@ -574,6 +579,12 @@ namespace AF.UI
             _rowHeights.Add(rowH);
             y += rowH + RowGapDp;
 
+            // Privacidad (B12), si se ve: sus filas tras la pista por inactividad, con el hueco de sección.
+            if (PrivacyShown)
+            {
+                y = LayoutConsent(y - RowGapDp + SectionGapDp, y, inner, rowH, s) + RowGapDp;
+            }
+
             // Sobre la Amazonía (F4), si hay frutas que enseñar. El contenido acaba en la última fila.
             y -= RowGapDp;
             if (AboutShown)
@@ -684,7 +695,7 @@ namespace AF.UI
                 return;
             }
 
-            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + AboutLayoutCount + AccountLayoutCount;
+            int n = 3 + _offered.Count + _patternRows.Length + AudioRowCount + AboutLayoutCount + AccountLayoutCount + ConsentLayoutCount;
             var ids = new string[n];
             var rects = new RectTransform[n];
             ids[0] = "close";
@@ -710,6 +721,7 @@ namespace AF.UI
             AudioLayoutIds(ids, rects, k + 1); // sound, music y haptics (AU1)
             AboutLayoutIds(ids, rects, k + 1 + AudioRowCount); // fruit_<sujeto> de Sobre la Amazonía (F4)
             AccountLayoutIds(ids, rects, k + 1 + AudioRowCount + AboutLayoutCount); // delete_account (B8)
+            ConsentLayoutIds(ids, rects, k + 1 + AudioRowCount + AboutLayoutCount + AccountLayoutCount); // consent y age_band (B12)
 
             _probe.Layout("settings", 0, null, ids, rects);
         }

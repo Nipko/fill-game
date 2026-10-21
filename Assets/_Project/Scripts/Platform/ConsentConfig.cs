@@ -9,8 +9,7 @@ namespace AF.Platform
     /// <c>consent_text_version</c>, <c>consent_under13_policy</c>, <c>consent_age_signal_source</c>,
     /// <c>biz_legal_profile_by_country</c> y <c>biz_under18_no_personalization</c>. Vive en <c>AF.Platform</c>, junto a
     /// <see cref="ConsentPolicy"/>, porque la leen los anuncios, la tienda y el arranque. Las enlaza con Remote Config
-    /// <c>AF.RemoteConfig.Binding.ConsentConfigBinder</c>; el parche <c>B12-rc.diff</c> les pone <c>[RemoteConfigKey]</c> y las
-    /// mete en <c>RcConfigBinder</c> (hasta entonces, sin el atributo, para que la prueba de cobertura del binder no falle en la rama).
+    /// <c>AF.RemoteConfig.Binding.ConsentConfigBinder</c>, desde <c>RcConfigBinder</c> (<c>RcConfigs.Consent</c>).
     /// </summary>
     public sealed class ConsentConfig
     {
@@ -47,21 +46,26 @@ namespace AF.Platform
         public static ConsentConfig Defaults => new ConsentConfig();
 
         /// <summary><c>consent_text_version</c> (08): sube al cambiar los textos legales y obliga a volver a pedir el consentimiento.</summary>
+        [RemoteConfigKey("consent_text_version")]
         public int ConsentTextVersion { get; set; } = 1;
 
         /// <summary><c>consent_under13_policy</c> (05): <see cref="PolicyBlock"/> o <see cref="PolicyParentalConsent"/> (reservado).</summary>
+        [RemoteConfigKey("consent_under13_policy")]
         public string ConsentUnder13Policy { get; set; } = PolicyBlock;
 
         /// <summary><c>consent_age_signal_source</c> (05): <see cref="SourceSelfDeclared"/> o <see cref="SourceWithPlayAgeSignals"/>.</summary>
+        [RemoteConfigKey("consent_age_signal_source")]
         public string ConsentAgeSignalSource { get; set; } = SourceSelfDeclared;
 
         /// <summary>
         /// <c>biz_legal_profile_by_country</c> (01): país (ISO alfa-2, o <see cref="EeaKey"/>, <see cref="UkKey"/> y
         /// <see cref="RestKey"/>) → perfil legal (<see cref="LegalProfiles"/>).
         /// </summary>
+        [RemoteConfigKey("biz_legal_profile_by_country")]
         public IReadOnlyDictionary<string, string> BizLegalProfileByCountry { get; set; } = DefaultProfiles();
 
         /// <summary><c>biz_under18_no_personalization</c> (01): con 13-17, <c>npa</c>, contenido G, sin perfilado y doble confirmación de compras.</summary>
+        [RemoteConfigKey("biz_under18_no_personalization")]
         public bool BizUnder18NoPersonalization { get; set; } = true;
 
         /// <summary>El mapa de 08 §9: BR, CO, PE, MX propios; EEE, UK y CH por UMP; el resto, <c>default</c>.</summary>

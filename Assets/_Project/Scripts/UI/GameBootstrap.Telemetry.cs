@@ -28,8 +28,9 @@ namespace AF.UI
     /// <item><see cref="ConnectTelemetry"/>, con todo construido: el bus a la cartera y al flujo de campaña, la analítica a las
     /// pantallas y <c>biz_feature_lives</c> a la cartera.</item>
     /// </list>
-    /// Consentimiento: aún no hay pantalla ni sumidero real (Firebase), así que la recogida se queda apagada
-    /// (<see cref="AnalyticsService.CollectionEnabled"/> = false; 08 §2.3) y solo escriben los sumideros locales [P].
+    /// Consentimiento: la recogida empieza apagada (<see cref="AnalyticsService.CollectionEnabled"/> = false; 08 §2.3) y la
+    /// enciende la decisión de la pantalla de consentimiento antes de <c>AppFlow.Start</c> (B12; <c>GameBootstrap.Consent.cs</c>);
+    /// sin sumidero real (Firebase), solo escriben los locales.
     /// </summary>
     public sealed partial class GameBootstrap
     {

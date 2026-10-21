@@ -141,12 +141,8 @@ namespace AF.UI
                 return;
             }
 
-            var errors = new List<string>();
-            _consentConfig = _rc != null ? ConsentConfigBinder.Bind(_rc.Freeze(), errors) : ConsentConfig.Defaults;
-            for (int i = 0; i < errors.Count; i++)
-            {
-                Debug.LogWarning(LogPrefix + "Remote Config: " + errors[i]);
-            }
+            // Las cifras ya enlazadas con el resto (RcConfigBinder; sus errores ya salieron en SetUpTelemetry): una sola fuente.
+            _consentConfig = _rcConfigs?.Consent ?? ConsentConfig.Defaults;
 
             _consentCountry = ConsentCountry.Resolve(SimCountryOverride ?? AndroidSimCountry.ForPlatform(), _deviceLocale, out _consentCountrySource);
             string profile = _consentConfig.ProfileFor(_consentCountry);

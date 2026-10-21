@@ -8,8 +8,8 @@ namespace AF.RemoteConfig.Binding
     /// <summary>
     /// <see cref="ConsentConfig"/> leída de Remote Config (bloque B12; 08 §9), como las tablas de <see cref="RcConfigBinder"/>: sin
     /// reflexión, cada clave con su asignación; un valor que no se entiende deja el default de esa propiedad y se anota; si la clase
-    /// entera no pasa su <c>Validate()</c>, se usan sus defaults (Q-B7-7). Archivo propio de B12: el parche <c>B12-rc.diff</c> lo
-    /// conecta a <see cref="RcConfigBinder.Bind(RcSnapshot, string)"/> (<c>RcConfigs.Consent</c>) y a su prueba de cobertura.
+    /// entera no pasa su <c>Validate()</c>, se usan sus defaults (Q-B7-7). Lo llama <see cref="RcConfigBinder.Bind(RcSnapshot, string)"/>
+    /// (<c>RcConfigs.Consent</c>), que publica sus claves en <see cref="RcConfigBinder.BoundKeys"/>.
     /// </summary>
     public static class ConsentConfigBinder
     {

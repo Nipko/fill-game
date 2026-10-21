@@ -176,7 +176,9 @@ namespace AF.UI
         {
             SessionTracker? sessions = _sessions;
             NotificationService? notifications = _notifications;
-            if (sessions == null || notifications == null)
+
+            // B12: con la edad o el consentimiento pendientes, o el bloqueo de <13, ni sesión ni avisos locales (08 §7).
+            if (sessions == null || notifications == null || ConsentHoldsSession)
             {
                 return;
             }
