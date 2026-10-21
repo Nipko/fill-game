@@ -3214,3 +3214,15 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Identificadores públicos de dev:** proyecto `fill-dev-e75a2` (el id `amazon-fill-dev` no estaba disponible); app Android `com.amazonfill.dev` con id `1:528273757148:android:45d5cf0ddb2e3021c93519`. Auth anónimo activado; App Check con Play Integrity registrado **sin enforcement**; Analytics activado (cuenta dedicada, ubicación EE. UU.); plan Spark sin coste.
 - **AWS dev** (`AfDevApi`) ya autoriza con emisor y audiencia `fill-dev-e75a2` y admite ese id de app. Mientras `infra/lib/config.ts` siga con el default `amazon-fill-dev`, **todo despliegue de dev debe pasar** `-c firebaseProjectId=fill-dev-e75a2 -c firebaseAppIds=1:528273757148:android:45d5cf0ddb2e3021c93519`; se cambiará el default de dev en la próxima tarea de `infra/`.
 - **Pendiente para prod:** crear Firebase prod en la cuenta empresarial (con el permiso del administrador) o decidir otra cosa; prod sigue sin bootstrap ni stacks.
+
+### D-035, añadido del 2026-10-21: preguntas de F3-3 (compra verificada en el cliente), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `backend/f3-3` (revisión final APROBADO sobre `fd162926`). El dueño puede cambiarlas.
+- **`purchase_queue` [P]:** la cola de compras pendientes es solo local (lleva `purchaseToken` en claro); la fusión de 08 §11 conserva la del dispositivo y no viaja en la nube.
+- **Balsa acreditada tarde** (por la cola o al reabrir): la Cuia de rescate se pierde; el resto se acredita [P].
+- **Unity IAP 5.4.4 [NV]:** si no permite reconocer un consumible sin consumirlo, se vuelve a decidir el `deferred_ack` al integrar el SDK (F3-6).
+- **`biz_backend_enabled`:** ya dado de alta en 08 §9 (`bool`, `true` [P]); en el cliente es `IBackendSwitch` con default `true` hasta que B7 lo lea de Remote Config.
+- **Cántaro recuperado sin sus semillas** (cierre entre el cobro y el primer guardado): se acredita con `eco_piggy_min_buy` [P].
+- **Conectar `VerifiedStoreService` al juego** (`Resume` al arrancar y al volver a primer plano, `Pump` periódico y la UI de `Pending` y `VerifyFailed`): tarea de unity-gameplay-dev junto con F3-5.
+- **Ejemplos `GPA.…` de `applied_purchases`** en 08 §4.3 y 04 §10.1: pasan a `token_hash` en la próxima tarea de documentación.
+- **Mochila con la marca local puesta:** se acredita la que el servidor verifica; el servidor hace cumplir «una por cuenta» (F2c).
