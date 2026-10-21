@@ -742,6 +742,8 @@ namespace AF.UI
 
             /// <summary><c>stuck_balsa_499_content</c> [P]: segunda parte de <c>stuck_balsa_499</c>.</summary>
             public const string StuckBalsaContent = "stuck_balsa_499_content";
+
+            /// <summary><c>stuck_balsa_499_content_no_canoes</c> [P]: la segunda parte con las canoas apagadas (D-038).</summary>
             public const string StuckBalsaContentNoCanoes = "stuck_balsa_499_content_no_canoes";
 
             /// <summary><c>stuck_canoe_lost</c>.</summary>

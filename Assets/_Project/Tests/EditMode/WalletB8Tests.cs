@@ -195,6 +195,43 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void AfterTheMerge_TheLedgerRecreditsTheLosersPurchases_AndRevokesWhatWasVoidedOnlyThere()
+        {
+            // D-033, Q-B8-1: applied_purchases y voided_purchases [P] son los del ganador; restoreLedger hace el resto. GPA.a está
+            // acreditada en los dos y se reembolsó en el perdedor (allí ya se retiró); GPA.b solo se compró en el perdedor.
+            var device = new ManualClock(T0, TimeSpan.FromHours(-5));
+            Profile local = Wallet.NewProfile(device);
+            local.Progress.MaxLevel = 70;
+            local.Wallet.Seeds = 1200;
+            local.AppliedPurchases.Add("GPA.a");
+            Profile cloud = Wallet.NewProfile(device);
+            cloud.Progress.MaxLevel = 40;
+            cloud.AppliedPurchases.Add("GPA.a");
+            cloud.AppliedPurchases.Add("GPA.b");
+            cloud.VoidedPurchases.Add("GPA.a");
+
+            Profile merged = CloudMerge.Resolve(local, cloud).Merged;
+            Assert.That(merged.AppliedPurchases, Is.EqualTo(new[] { "GPA.a" }));
+            Assert.That(merged.VoidedPurchases, Is.Empty);
+
+            var store = new MemoryProfileStore();
+            var clock = new GuardedClock(device, FakeServerDate.Offline());
+            var wallet = new Wallet(merged, store, clock);
+            var revocation = new LocalRevocation(merged, wallet, store, clock);
+            LedgerReport report = revocation.ApplyLedger(new[]
+            {
+                new LedgerEntry("GPA.a", "af_coins_2", seeds: 1200, voided: true),
+                new LedgerEntry("GPA.b", "af_coins_1", seeds: 500),
+            });
+
+            Assert.That(report.Revoked, Is.EqualTo(1), "con la unión de voided_purchases GPA.a no se retiraría");
+            Assert.That(report.Recredited, Is.EqualTo(1), "la compra del perdedor vuelve con el libro mayor");
+            Assert.That(wallet.Seeds, Is.EqualTo(500));
+            Assert.That(merged.AppliedPurchases, Is.EqualTo(new[] { "GPA.a", "GPA.b" }));
+            Assert.That(merged.VoidedPurchases, Is.EqualTo(new[] { "GPA.a" }));
+        }
+
+        [Test]
         public void Revoke_WithAnAlreadyVoidedToken_IsRejected()
         {
             var fx = new Fixture(FakeServerDate.Offline(), seeds: 500);
