@@ -32,6 +32,7 @@ namespace AF.RemoteConfig.Tests
             { "SkipConfig", "B3 (Salto del Boto, 3 claves): ya integrada; falta su tabla en RcConfigBinder y pasarla al Salto" },
             { "ComebackConfig", "B6 (AF.LiveOps, live_comeback_gift): ya integrada; falta su tabla en RcConfigBinder y pasarla al Regalo de regreso" },
             { "PushConfig", "B6 (AF.LiveOps, 5 claves push_*): ya integrada; falta su tabla en RcConfigBinder y pasarla a los avisos" },
+            { "VerificationQueueConfig", "F3-1 (AF.Backend, sec_purchase_deferred_ack_h): ya integrada; falta su tabla en RcConfigBinder (Binding no referencia AF.Backend todavía)" },
         };
 
         private static RcSnapshot With(params string[] kv)
