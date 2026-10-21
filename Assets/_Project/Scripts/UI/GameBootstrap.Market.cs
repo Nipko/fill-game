@@ -168,6 +168,13 @@ namespace AF.UI
             config ??= OffersConfig.Defaults;
             IClock clock = LaunchOptions.ClockOverride ?? SystemClock.Instance;
             ITakeoverBudget? budget = TakeoverBudgetOverride;
+            if (budget == null && _takeovers != null)
+            {
+                // Q-B5-10 (a): un solo cupo, el de la cola de takeovers de B4 (que lleva sus propias sesiones, Q-M4); sin
+                // Bitácora (apagada o sin crear), el cupo propio de B5.
+                budget = new TakeoverQueueBudget(_takeovers);
+            }
+
             if (budget == null)
             {
                 bool rebuilt = ReferenceEquals(s_marketProfile, profile) && s_carriedBudget != null;
@@ -704,6 +711,27 @@ namespace AF.UI
             long t = (long)(Time.realtimeSinceStartupAsDouble * 1000.0);
             DevProbe.Write("AF_STATE {\"event\":\"" + evt + "\",\"t\":" + t.ToString(CultureInfo.InvariantCulture)
                 + (string.IsNullOrEmpty(fields) ? string.Empty : "," + fields) + "}");
+        }
+    }
+
+    /// <summary>
+    /// El cupo de las ofertas sobre la cola de takeovers de B4 (Q-B5-10 (a); nota <c>docs/dev/mercado.md</c> §6): una sola cuenta
+    /// de «un pop-up fuera de hitos por sesión» (<c>ui_max_takeovers_per_session</c>) para la Bitácora y las ofertas.
+    /// </summary>
+    internal sealed class TakeoverQueueBudget : ITakeoverBudget
+    {
+        private readonly TakeoverQueue _queue;
+
+        public TakeoverQueueBudget(TakeoverQueue queue)
+        {
+            _queue = queue ?? throw new ArgumentNullException(nameof(queue));
+        }
+
+        public bool QuotaLeft => _queue.QuotaLeft;
+
+        public void Spend()
+        {
+            _queue.MarkShown(TakeoverKind.Offer);
         }
     }
 }

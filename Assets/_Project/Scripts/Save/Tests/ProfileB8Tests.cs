@@ -315,6 +315,31 @@ namespace AF.Save.Tests
         }
 
         [Test]
+        public void Merge_PiggyFromTheWinner_OffersMerged_Q_B5_9()
+        {
+            Profile local = Profile.CreateNew(new ManualClock(T0), 5);
+            local.Progress.MaxLevel = 40; // gana el local
+            local.Piggy = new PiggyData { Seeds = 120, Cap = 800 };
+            local.Offers = new OffersData { StarterFirstSeenAt = T0, NoAdsCardDate = "2026-10-18", NoAdsDeclines = 1, InterstitialsSeen = 2 };
+            local.Offers.StarterReminders.Add(15);
+            Profile cloud = Profile.CreateNew(new ManualClock(T0), 5);
+            cloud.Progress.MaxLevel = 10;
+            cloud.Piggy = new PiggyData { Seeds = 700, Cap = 800 };
+            cloud.Offers = new OffersData { StarterFirstSeenAt = T0.AddDays(-3), NoAdsCardDate = "2026-10-20", NoAdsDeclines = 3, InterstitialsSeen = 1 };
+            cloud.Offers.StarterReminders.Add(19);
+            cloud.Offers.SkinCards.Add(2);
+
+            Profile m = CloudMerge.Resolve(local, cloud).Merged;
+            Assert.That(m.Piggy!.Seeds, Is.EqualTo(120), "el Cántaro va con la cartera del ganador");
+            Assert.That(m.Offers!.StarterReminders, Is.EqualTo(new[] { 15, 19 }));
+            Assert.That(m.Offers.SkinCards, Is.EqualTo(new[] { 2 }));
+            Assert.That(m.Offers.NoAdsDeclines, Is.EqualTo(3));
+            Assert.That(m.Offers.InterstitialsSeen, Is.EqualTo(2));
+            Assert.That(m.Offers.NoAdsCardDate, Is.EqualTo("2026-10-20"));
+            Assert.That(m.Offers.StarterFirstSeenAt, Is.EqualTo(T0.AddDays(-3)));
+        }
+
+        [Test]
         public void CloudSync_WithoutSession_DoesNothing()
         {
             Profile local = Filled();

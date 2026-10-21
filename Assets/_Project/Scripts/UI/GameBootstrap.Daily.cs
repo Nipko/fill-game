@@ -173,7 +173,7 @@ namespace AF.UI
             DevProbe.DailyEarn(rules.Reconcile().SeedsPaid); // R10: semillas de los cobros pendientes que se confirman al abrir
 
             GameServices? services = _ads != null && _store != null && _storeLedger != null
-                ? new GameServices(dailyWallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: ProfileLocked, deviceLocale: _deviceLocale, settings: profile.Settings)
+                ? new GameServices(dailyWallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: ProfileLocked, deviceLocale: _deviceLocale, settings: profile.Settings)
                 : null;
             var context = new DailyPlayContext(
                 store, clock, progress, dailyWallet, services, batch, profile.Settings,

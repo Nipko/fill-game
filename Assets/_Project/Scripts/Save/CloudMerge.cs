@@ -120,7 +120,9 @@ namespace AF.Save
     /// </list>
     /// Con B6 (Q-B8-11 (a) [P]): <c>stats.last_seen_at</c> y <c>last_win_at</c> por máximo; en <c>settings.push</c>, «o» en los
     /// pre-prompts, máximo en <c>pre_prompt_at</c> y <c>granted</c> del dispositivo. Con B14, <c>entitlements.frames</c> y
-    /// <c>album.fruits</c> por unión; con B4 [P], <c>calendar</c> el de más avance y <c>played_date</c> por máximo.
+    /// <c>album.fruits</c> por unión; con B4 [P], <c>calendar</c> el de más avance y <c>played_date</c> por máximo; con B5
+    /// (Q-B5-9 (a) [P]), <c>piggy</c> del ganador y <c>offers</c> con listas unidas, contadores por máximo, la primera vista de la
+    /// Mochila más antigua y la última tarjeta Sin anuncios más reciente.
     /// Lo demás (<c>settings</c>, <c>sloth</c>, <c>streak</c>, <c>daily_challenge</c>, <c>level_state</c>, <c>progress</c>
     /// salvo lo dicho) es del ganador: va con su cartera en el mismo blob y así nunca se paga dos veces lo mismo. Tras fusionar, el
     /// cliente llama a <c>restoreLedger</c> (08 §11; llega con Functions) y vuelve a acreditar los tokens que falten.
@@ -414,6 +416,37 @@ namespace AF.Save
 
                 mine.PlayedDate = played;
             }
+
+            // B5, Q-B5-9 (a) [P]: piggy es del ganador (va con su cartera, como wallet); offers une las listas, toma el máximo de
+            // los contadores y, de las fechas, la primera vista de la Mochila más antigua (empieza sus 48 h) y la última tarjeta
+            // Sin anuncios más reciente.
+            OffersData? offersOther = other.Offers;
+            if (offersOther != null)
+            {
+                OffersData o = merged.Offers ??= new OffersData();
+                UnionSorted(o.StarterReminders, offersOther.StarterReminders);
+                UnionSorted(o.SkinCards, offersOther.SkinCards);
+                o.NoAdsDeclines = Math.Max(o.NoAdsDeclines, offersOther.NoAdsDeclines);
+                o.InterstitialsSeen = Math.Max(o.InterstitialsSeen, offersOther.InterstitialsSeen);
+                o.NoAdsCardDate = MaxDate(o.NoAdsCardDate, offersOther.NoAdsCardDate);
+                o.StarterFirstSeenAt = MinTs(o.StarterFirstSeenAt, offersOther.StarterFirstSeenAt);
+            }
+        }
+
+        // La más antigua de dos fechas; null no cuenta (si solo hay una, esa).
+        private static DateTime? MinTs(DateTime? a, DateTime? b)
+        {
+            if (!a.HasValue)
+            {
+                return b;
+            }
+
+            if (!b.HasValue)
+            {
+                return a;
+            }
+
+            return a.Value.Ticks <= b.Value.Ticks ? a : b;
         }
 
         // La fecha local (yyyy-MM-dd) más reciente; null cuenta como la más antigua.

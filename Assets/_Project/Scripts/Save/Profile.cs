@@ -124,6 +124,21 @@ namespace AF.Save
         public CalendarData? Calendar { get; set; }
 
         /// <summary>
+        /// <c>piggy</c> (08 §4.3: <c>{seeds, cap}</c>; 05 §4.1), más <c>last_level</c> y <c>full_card</c> [P] (bloque B5): el Cántaro,
+        /// o null si nunca se guardó (entonces la clave no se escribe; se guarda con <c>offers</c> desde el primer cambio de cualquiera
+        /// de los dos). Vive en el mismo perfil que <see cref="Wallet"/>; las reglas
+        /// las aplica <c>AF.IAP</c> (<c>PiggyJar</c> y <c>ProfileOffersStore</c>). Entra sin migrar: aún no se ha publicado.
+        /// </summary>
+        public PiggyData? Piggy { get; set; }
+
+        /// <summary>
+        /// <c>offers</c> [P] (bloque B5; 05 §5): lo que el planificador de ofertas recuerda (la primera vista de la Mochila y sus
+        /// recordatorios, la tarjeta Sin anuncios, los intersticiales vistos y las tarjetas de skin), o null si nunca se guardó. No es
+        /// dinero: al leerlo, un valor que no vale toma su default. Entra sin migrar: aún no se ha publicado.
+        /// </summary>
+        public OffersData? Offers { get; set; }
+
+        /// <summary>
         /// <c>applied_purchases</c> (08 §4.3 y §10.3; 04 §10.1): las compras con dinero ya acreditadas, por su <c>token_hash</c> (SHA-256
         /// del <c>purchaseToken</c> en hexadecimal en minúsculas, como el libro mayor del servidor; contrato v1). Una compra cuyo hash
         /// está aquí no se vuelve a acreditar nunca (F3-3: <c>AF.IAP.VerifiedStoreService</c>). Vive en el mismo perfil que
@@ -391,6 +406,44 @@ namespace AF.Save
 
         /// <summary><c>played_date</c> [P]: último día local con un nivel terminado (<c>yyyy-MM-dd</c>), o null.</summary>
         public string? PlayedDate { get; set; }
+    }
+
+    /// <summary><c>piggy</c> (08 §4.3; bloque B5). Solo datos: el significado lo da <c>AF.IAP.PiggyJar</c>.</summary>
+    public sealed class PiggyData
+    {
+        /// <summary><c>seeds</c>: semillas acumuladas.</summary>
+        public int Seeds { get; set; }
+
+        /// <summary><c>cap</c>: el tope con que se llena (<c>eco_piggy_cap</c>).</summary>
+        public int Cap { get; set; }
+
+        /// <summary><c>last_level</c> [P]: último nivel de campaña cuya victoria lo llenó.</summary>
+        public int LastLevel { get; set; }
+
+        /// <summary><c>full_card</c> [P]: ya salió la tarjeta «¡Lleno!» de este llenado.</summary>
+        public bool FullCard { get; set; }
+    }
+
+    /// <summary><c>offers</c> [P] (bloque B5). Solo datos: el significado lo da <c>AF.IAP.OfferScheduler</c>.</summary>
+    public sealed class OffersData
+    {
+        /// <summary><c>starter_first_seen_at</c>: primera tarjeta de la Mochila de inicio (UTC), o null.</summary>
+        public DateTime? StarterFirstSeenAt { get; set; }
+
+        /// <summary><c>starter_reminders</c>: niveles de los recordatorios de la Mochila ya enseñados.</summary>
+        public List<int> StarterReminders { get; } = new List<int>();
+
+        /// <summary><c>noads_card_date</c>: día local (<c>yyyy-MM-dd</c>) de la última tarjeta Sin anuncios, o null.</summary>
+        public string? NoAdsCardDate { get; set; }
+
+        /// <summary><c>noads_declines</c>: tarjetas Sin anuncios cerradas sin comprar.</summary>
+        public int NoAdsDeclines { get; set; }
+
+        /// <summary><c>interstitials_seen</c>: intersticiales vistos (con tope en el del disparador de Sin anuncios).</summary>
+        public int InterstitialsSeen { get; set; }
+
+        /// <summary><c>skin_cards</c>: mundos cuya tarjeta de skin ya salió.</summary>
+        public List<int> SkinCards { get; } = new List<int>();
     }
 
     /// <summary><c>progress</c> (08 §4.3; 04 §10.1; <c>map_seen_level</c>, D-013, y <c>undo_tip_seen</c> [P], DC23).</summary>

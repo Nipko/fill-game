@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using AF.Platform;
 
 namespace AF.IAP
 {
@@ -11,10 +12,7 @@ namespace AF.IAP
     /// el Mercado desde el 22, una tarjeta al día y solo Mercado tras 3 rechazos, la tarjeta de skin desde el mundo 3) está en
     /// <see cref="OfferRules"/>, citando 05. El tope del Cántaro y su compra mínima siguen en <see cref="StoreConfig"/>
     /// (<c>eco_piggy_cap</c> y <c>eco_piggy_min_buy</c>, ya enlazadas por B7).
-    /// <para>
-    /// Los atributos <c>[RemoteConfigKey]</c> y el enlace en <c>RcConfigBinder</c> llegan juntos con el parche B5-rc: así la rama
-    /// sola no deja una clase de cifras sin enlazar (<c>RcConfigBinderTests</c>). Los nombres de cada propiedad son los de 08 §9.
-    /// </para>
+    /// <para>Enlazada en <c>RcConfigBinder</c> (<c>RcConfigs.Offers</c>; parche B5-rc).</para>
     /// </summary>
     public sealed class OffersConfig
     {
@@ -25,30 +23,36 @@ namespace AF.IAP
         /// <c>eco_starter_window_levels</c> (08 §9: json <c>[10,20]</c>): la Mochila de inicio se vende desde el primer nivel y
         /// desaparece al pasar el segundo (05 §4.1: «en el Mercado desde el nivel 10 … desaparece al pasar el nivel 20»).
         /// </summary>
+        [RemoteConfigKey("eco_starter_window_levels")]
         public IReadOnlyList<int> EcoStarterWindowLevels { get; set; } = new[] { 10, 20 };
 
         /// <summary><c>eco_starter_timer_h</c> (08 §9: 48): horas de la Mochila desde la primera vista (05 §4.1 y §5).</summary>
+        [RemoteConfigKey("eco_starter_timer_h")]
         public int EcoStarterTimerH { get; set; } = 48;
 
         /// <summary>
         /// <c>eco_starter_first_show</c> (08 §9: <c>"L12_or_session2"</c>): la primera tarjeta sale en la primera victoria con
         /// nivel ≥ 12 dentro de una sesión ≥ 2 (05 §4.1; 06 §2.1, regla 1). Se lee con <see cref="StarterFirstShow"/>.
         /// </summary>
+        [RemoteConfigKey("eco_starter_first_show")]
         public string EcoStarterFirstShow { get; set; } = "L12_or_session2";
 
         /// <summary>
         /// <c>eco_noads_card_trigger</c> (08 §9: <c>"3_interstitials_or_d2"</c>): la tarjeta Sin anuncios sale tras el 3.er
         /// intersticial visto o en el día 2, lo primero (05 §5). Se lee con <see cref="NoAdsTrigger"/>.
         /// </summary>
+        [RemoteConfigKey("eco_noads_card_trigger")]
         public string EcoNoadsCardTrigger { get; set; } = "3_interstitials_or_d2";
 
         /// <summary><c>eco_piggy_from_level</c> (08 §9: 20, rango 15-30): el Cántaro aparece y empieza a llenarse en este nivel (05 §4.1).</summary>
+        [RemoteConfigKey("eco_piggy_from_level")]
         public int EcoPiggyFromLevel { get; set; } = 20;
 
         /// <summary>
         /// <c>eco_piggy_fill</c> (08 §9: json <c>[15,30,40]</c>): semillas que suma al Cántaro una victoria normal, Difícil y Muy
         /// difícil (05 §4.1).
         /// </summary>
+        [RemoteConfigKey("eco_piggy_fill")]
         public IReadOnlyList<int> EcoPiggyFill { get; set; } = new[] { 15, 30, 40 };
 
         /// <summary>Primer nivel de la ventana de la Mochila (<c>eco_starter_window_levels[0]</c>).</summary>

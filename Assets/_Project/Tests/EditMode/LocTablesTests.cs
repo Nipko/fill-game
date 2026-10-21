@@ -562,6 +562,9 @@ namespace AF.Tests.EditMode
                 }
             }
 
+            // B5: el Mercado, sus tarjetas de oferta y el Cántaro (B5-loc.diff): los pinta AF.UI.MarketText.
+            keys.AddRange(MarketText.AllKeys);
+
             return keys;
         }
 

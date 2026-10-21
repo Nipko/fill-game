@@ -63,6 +63,7 @@ namespace AF.RemoteConfig.Tests
             AssertSame(BoosterConfig.Defaults, c.Boosters);
             AssertSame(AdsConfig.Defaults, c.Ads);
             AssertSame(StoreConfig.Defaults, c.Store);
+            AssertSame(OffersConfig.Defaults, c.Offers);
             AssertSame(DailyChallengeConfig.Defaults, c.Daily);
             AssertSame(StreakConfig.Defaults, c.Streak);
             AssertSame(BasketConfig.Defaults, c.Basket);
@@ -126,6 +127,34 @@ namespace AF.RemoteConfig.Tests
             Assert.That(c.Basket.EcoBasketCycle, Is.EqualTo(new[] { "hint", "undo3" }));
             Assert.That(c.ClockSecurity.SecClockMaxDriftH, Is.EqualTo(36));
             Assert.That(c.Daily.ClockSecurity.SecClockMaxDriftH, Is.EqualTo(36), "la copia del Reto, con la misma clave");
+        }
+
+        [Test]
+        public void TheOffers_ReadTheirKeys_AndAnOutOfRangeValueFallsBackToTheirDefaults()
+        {
+            // B5 (05 §4.1 y §5; 08 §9): la Mochila, Sin anuncios y el Cántaro.
+            RcConfigs c = Bind(
+                "eco_starter_window_levels", "[10,18]",
+                "eco_starter_timer_h", "24",
+                "eco_starter_first_show", "L13_or_session3",
+                "eco_noads_card_trigger", "2_interstitials_or_d3",
+                "eco_piggy_from_level", "25",
+                "eco_piggy_fill", "[10,20,30]");
+            Assert.That(c.Errors, Is.Empty, string.Join(" | ", c.Errors));
+            Assert.That(c.Offers.StarterWindowTo, Is.EqualTo(18));
+            Assert.That(c.Offers.EcoStarterTimerH, Is.EqualTo(24));
+            Assert.That(c.Offers.StarterFirstShow.MinLevel, Is.EqualTo(13));
+            Assert.That(c.Offers.StarterFirstShow.MinSession, Is.EqualTo(3));
+            Assert.That(c.Offers.NoAdsTrigger.Interstitials, Is.EqualTo(2));
+            Assert.That(c.Offers.NoAdsTrigger.Day, Is.EqualTo(3));
+            Assert.That(c.Offers.EcoPiggyFromLevel, Is.EqualTo(25));
+            Assert.That(c.Offers.EcoPiggyFill, Is.EqualTo(new[] { 10, 20, 30 }));
+
+            RcConfigs bad = Bind("eco_piggy_from_level", "40", "eco_starter_timer_h", "24");
+            Assert.That(bad.Offers.EcoPiggyFromLevel, Is.EqualTo(20), "08 §9: 15-30");
+            Assert.That(bad.Offers.EcoStarterTimerH, Is.EqualTo(48), "toda la clase vuelve a sus defaults");
+            Assert.That(bad.Errors.Count, Is.EqualTo(1));
+            StringAssert.StartsWith("OffersConfig:", bad.Errors[0]);
         }
 
         [Test]

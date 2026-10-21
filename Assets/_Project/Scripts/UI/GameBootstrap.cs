@@ -930,6 +930,13 @@ namespace AF.UI
                 return _dailyScreen.HandleBack();
             }
 
+            // Mercado y tarjeta de oferta (B5): Atrás cierra la tarjeta como «Ahora no» (también encima de la victoria) y el Mercado
+            // como su X. Con la hoja de compra delante no llega aquí (arriba).
+            if (PressMarketBack())
+            {
+                return true;
+            }
+
             if (_app.Screen == AppScreen.Level)
             {
                 return false;
@@ -1383,8 +1390,8 @@ namespace AF.UI
         private bool InLevel => _app == null || _app.Screen == AppScreen.Level;
 
         // Hay una pantalla de pago delante: la hoja «Compra simulada» o un anuncio (y lo que lo rodea; propuesta del personaje
-        // d.11). Las ofertas que vengan (Mochila de inicio, Mercado) se suman aquí. Sin asignar memoria.
-        private bool CommerceOpen => (_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible);
+        // d.11). Con B5, también el Mercado y las tarjetas de oferta (MarketCommerceOpen). Sin asignar memoria.
+        private bool CommerceOpen => (_storeSheet != null && _storeSheet.Visible) || (_adOverlay != null && _adOverlay.Visible) || MarketCommerceOpen;
 
         // La ventanita de casa del inicio no sale (LobbyScreen.SetCommerceOpen): con una pantalla de pago delante (D-013, punto 6)
         // o con el Mapa del río encima, que es opaco (revisión de M4.2). Con el Mapa, TiTino no se ve: su saludo del día (como
@@ -1575,7 +1582,7 @@ namespace AF.UI
                 WrapAds(new FakeAdService(adPresenter, LaunchOptions.ResolveAdFill())), profile, batch, capsClock, firstRun, _rcConfigs?.Ads);
             _storeLedger = new StoreLedger(profile, _wallet, batch, capsClock, _rcConfigs?.Store);
             _store = WrapStore(new FakeStoreService(_storeLedger, purchasePresenter, LaunchOptions.DefaultStoreCurrency));
-            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTier.T3, purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
+            _services = new GameServices(_wallet, _ads, _store, _storeLedger, GeoTierRule.FromLanguageTag(_deviceTag), purchasesBlocked: locked, deviceLocale: _deviceLocale, settings: profile.Settings,
                 mapProgress: progress);
 
             _screen = new GameScreen(transform, _art, _probe, this);
@@ -1642,6 +1649,7 @@ namespace AF.UI
             SetUpSkip(); // Salto del Boto (B3; GameBootstrap.Skip.cs): el almacén en el perfil, la confirmación y el banner
             SetUpLogbook(); // Bitácora del río y cola de takeovers (B4-3; GameBootstrap.Logbook.cs): tarjeta, libreta y takeover
             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
+            SetUpMarket(); // B5 (GameBootstrap.Market.cs): el Mercado, las ofertas y el Cántaro, con las sesiones de B6
             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
 
             int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;

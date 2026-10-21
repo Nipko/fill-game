@@ -161,6 +161,31 @@ namespace AF.Save
                 root.Set("calendar", calendar);
             }
 
+            if (p.Piggy != null)
+            {
+                // Cántaro (08 §4.3; B5): falta hasta el primer guardado del Cántaro o de las ofertas.
+                JsonNode piggy = JsonNode.NewObject();
+                piggy.Set("seeds", JsonNode.FromInt(p.Piggy.Seeds));
+                piggy.Set("cap", JsonNode.FromInt(p.Piggy.Cap));
+                piggy.Set("last_level", JsonNode.FromInt(p.Piggy.LastLevel));
+                piggy.Set("full_card", JsonNode.FromBool(p.Piggy.FullCard));
+                root.Set("piggy", piggy);
+            }
+
+            if (p.Offers != null)
+            {
+                // Ofertas (B5 [P]): falta hasta la primera oferta o el primer intersticial.
+                OffersData o = p.Offers;
+                JsonNode offers = JsonNode.NewObject();
+                offers.Set("starter_first_seen_at", Timestamp(o.StarterFirstSeenAt));
+                offers.Set("starter_reminders", IntList(o.StarterReminders));
+                offers.Set("noads_card_date", o.NoAdsCardDate == null ? JsonNode.Null : JsonNode.FromString(o.NoAdsCardDate));
+                offers.Set("noads_declines", JsonNode.FromInt(o.NoAdsDeclines));
+                offers.Set("interstitials_seen", JsonNode.FromInt(o.InterstitialsSeen));
+                offers.Set("skin_cards", IntList(o.SkinCards));
+                root.Set("offers", offers);
+            }
+
             root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
             if (p.AppliedPurchases.Count > 0)
             {
@@ -376,6 +401,33 @@ namespace AF.Save
                 calendar.LastClaimDate = ReadString(calendarNode, "last_claim_date", calendar.LastClaimDate);
                 calendar.PlayedDate = ReadString(calendarNode, "played_date", calendar.PlayedDate);
                 p.Calendar = calendar;
+            }
+
+            // piggy (Cántaro; B5): seeds y cap son semillas que se compran, así que un tipo equivocado es corrupción, como en wallet;
+            // last_level y full_card [P] no son dinero: un valor que no vale toma su default.
+            JsonNode? piggyNode = Section(root, "piggy");
+            if (piggyNode != null)
+            {
+                var piggy = new PiggyData();
+                piggy.Seeds = ReadInt(piggyNode, "seeds", piggy.Seeds);
+                piggy.Cap = ReadInt(piggyNode, "cap", piggy.Cap);
+                piggy.LastLevel = Math.Max(0, TolerantInt(piggyNode, "last_level", piggy.LastLevel));
+                piggy.FullCard = TolerantBool(piggyNode, "full_card", piggy.FullCard);
+                p.Piggy = piggy;
+            }
+
+            // offers (B5 [P]): no es dinero; un valor que no vale toma su default, sin corrupción.
+            JsonNode? offersNode = TolerantSection(root, "offers");
+            if (offersNode != null)
+            {
+                var offers = new OffersData();
+                offers.StarterFirstSeenAt = TolerantTimestamp(offersNode, "starter_first_seen_at");
+                TolerantIntList(offersNode, "starter_reminders", offers.StarterReminders);
+                offers.NoAdsCardDate = TolerantString(offersNode, "noads_card_date");
+                offers.NoAdsDeclines = Math.Max(0, TolerantInt(offersNode, "noads_declines", 0));
+                offers.InterstitialsSeen = Math.Max(0, TolerantInt(offersNode, "interstitials_seen", 0));
+                TolerantIntList(offersNode, "skin_cards", offers.SkinCards);
+                p.Offers = offers;
             }
 
             JsonNode? levelState = Section(root, "level_state");
@@ -1049,6 +1101,26 @@ namespace AF.Save
                     {
                         target.Add(value);
                     }
+                }
+            }
+        }
+
+        // Lista de enteros tolerante (B5): sin la clave, o si no es una lista, vacía; lo que no es un entero (o repetido), fuera.
+        private static void TolerantIntList(JsonNode parent, string key, List<int> target)
+        {
+            target.Clear();
+            JsonNode? node = parent.Get(key);
+            if (node == null || node.Kind != JsonKind.Array)
+            {
+                return;
+            }
+
+            IReadOnlyList<JsonNode> items = node.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (TryInt(items[i], out int value) && !target.Contains(value))
+                {
+                    target.Add(value);
                 }
             }
         }

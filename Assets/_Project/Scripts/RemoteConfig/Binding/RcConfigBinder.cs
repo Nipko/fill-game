@@ -13,7 +13,7 @@ namespace AF.RemoteConfig.Binding
     /// <summary>
     /// Las clases de cifras del cliente leídas de Remote Config (bloque B7; nota <c>docs/dev/remote-config-analytics.md</c> §2):
     /// cada propiedad con <c>[RemoteConfigKey]</c> de <see cref="EconomyConfig"/>, <see cref="BoosterConfig"/>,
-    /// <see cref="AdsConfig"/>, <see cref="StoreConfig"/>, <see cref="DailyChallengeConfig"/>, <see cref="StreakConfig"/>,
+    /// <see cref="AdsConfig"/>, <see cref="StoreConfig"/>, <see cref="OffersConfig"/>, <see cref="DailyChallengeConfig"/>, <see cref="StreakConfig"/>,
     /// <see cref="BasketConfig"/> y <see cref="ClockSecurityConfig"/> toma el valor de su clave en unos valores congelados
     /// (<see cref="RcSnapshot"/>). Con los defaults compilados sale exactamente <c>X.Defaults</c> (lo prueba
     /// <c>RcConfigBinderTests</c>).
@@ -115,6 +115,17 @@ namespace AF.RemoteConfig.Binding
             I<StoreConfig>("eco_piggy_cap", (c, v) => c.EcoPiggyCap = v),
         };
 
+        // B5 (ofertas y Cántaro): eco_piggy_cap y eco_piggy_min_buy siguen en StoreConfig.
+        private static readonly Entry<OffersConfig>[] OffersEntries =
+        {
+            J<OffersConfig>("eco_starter_window_levels", (c, j) => c.EcoStarterWindowLevels = Ints(j)),
+            I<OffersConfig>("eco_starter_timer_h", (c, v) => c.EcoStarterTimerH = v),
+            S<OffersConfig>("eco_starter_first_show", (c, v) => c.EcoStarterFirstShow = v),
+            S<OffersConfig>("eco_noads_card_trigger", (c, v) => c.EcoNoadsCardTrigger = v),
+            I<OffersConfig>("eco_piggy_from_level", (c, v) => c.EcoPiggyFromLevel = v),
+            J<OffersConfig>("eco_piggy_fill", (c, j) => c.EcoPiggyFill = Ints(j)),
+        };
+
         private static readonly Entry<DailyChallengeConfig>[] DailyEntries =
         {
             B<DailyChallengeConfig>("biz_feature_daily_challenge", (c, v) => c.BizFeatureDailyChallenge = v),
@@ -157,6 +168,7 @@ namespace AF.RemoteConfig.Binding
             { typeof(BoosterConfig), KeysOf(BoosterEntries) },
             { typeof(AdsConfig), KeysOf(AdsEntries) },
             { typeof(StoreConfig), KeysOf(StoreEntries) },
+            { typeof(OffersConfig), KeysOf(OffersEntries) },
             { typeof(DailyChallengeConfig), KeysOf(DailyEntries) },
             { typeof(StreakConfig), KeysOf(StreakEntries) },
             { typeof(BasketConfig), KeysOf(BasketEntries) },
@@ -180,6 +192,7 @@ namespace AF.RemoteConfig.Binding
             BoosterConfig boosters = Fill(new BoosterConfig(), BoosterEntries, rc, errors, c => c.Validate(), () => BoosterConfig.Defaults);
             AdsConfig ads = Fill(new AdsConfig(), AdsEntries, rc, errors, c => c.Validate(), () => AdsConfig.Defaults);
             StoreConfig store = Fill(new StoreConfig(), StoreEntries, rc, errors, c => c.Validate(), () => StoreConfig.Defaults);
+            OffersConfig offers = Fill(new OffersConfig(), OffersEntries, rc, errors, c => c.Validate(), () => OffersConfig.Defaults);
             DailyChallengeConfig daily = Fill(new DailyChallengeConfig(), DailyEntries, rc, errors, c => c.Validate(), () => DailyChallengeConfig.Defaults);
             StreakConfig streak = Fill(new StreakConfig(), StreakEntries, rc, errors, c => c.Validate(), () => StreakConfig.Defaults);
             BasketConfig basket = Fill(new BasketConfig(), BasketEntries, rc, errors, c => c.Validate(), () => BasketConfig.Defaults);
@@ -199,7 +212,7 @@ namespace AF.RemoteConfig.Binding
             {
                 boosters.RescueMaxPerLevel = 0;
             }
-            return new RcConfigs(rc, gates, economy, boosters, ads, store, daily, streak, basket, clock, errors);
+            return new RcConfigs(rc, gates, economy, boosters, ads, store, offers, daily, streak, basket, clock, errors);
         }
 
         /// <summary>Atajo: <see cref="Bind"/> con los valores vigentes de <paramref name="service"/>.</summary>
@@ -387,7 +400,8 @@ namespace AF.RemoteConfig.Binding
     {
         internal RcConfigs(
             RcSnapshot values, BizGates gates, EconomyConfig economy, BoosterConfig boosters, AdsConfig ads, StoreConfig store,
-            DailyChallengeConfig daily, StreakConfig streak, BasketConfig basket, ClockSecurityConfig clock, IReadOnlyList<string> errors)
+            OffersConfig offers, DailyChallengeConfig daily, StreakConfig streak, BasketConfig basket, ClockSecurityConfig clock,
+            IReadOnlyList<string> errors)
         {
             Values = values;
             Gates = gates;
@@ -395,6 +409,7 @@ namespace AF.RemoteConfig.Binding
             Boosters = boosters;
             Ads = ads;
             Store = store;
+            Offers = offers;
             Daily = daily;
             Streak = streak;
             Basket = basket;
@@ -419,6 +434,9 @@ namespace AF.RemoteConfig.Binding
 
         /// <summary>Cifras de la tienda (con <c>biz_iap_enabled</c> combinado).</summary>
         public StoreConfig Store { get; }
+
+        /// <summary>Cifras de las ofertas contextuales y del Cántaro (B5).</summary>
+        public OffersConfig Offers { get; }
 
         /// <summary>Cifras del Reto del río.</summary>
         public DailyChallengeConfig Daily { get; }

@@ -100,7 +100,7 @@ namespace AF.Analytics
             E("spend_virtual_currency", "virtual_currency_name", "item_name", "value"),
             E("af_wallet_snapshot", "seeds", "stock_json", "max_level", "days_since_install"),
             E("af_basket_open", "level", "contents_json"),
-            E("af_calendar_claim", "day", "reward_type", "reward_value", "days_missed_before"),
+            E("af_calendar_claim", "day", "reward_type", "reward_value", "days_missed_before", "choice", "cycle"), // choice y cycle: D-033 (B4)
             E("af_piggy", "state", "seeds_inside"),
             E("af_daily_challenge", "date", "result", "t_ms", "murky_bonus", "streak_days"),
             E("af_river_fact_shown", "fact_id", "dismissed_ms"),
