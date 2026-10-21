@@ -122,8 +122,12 @@ namespace AF.Platform
             return record != null && record.AgeBand == AgeBand.Under13;
         }
 
-        /// <summary>Los flags de <paramref name="record"/> con <paramref name="config"/>.</summary>
-        public static ConsentFlags Flags(ConsentRecord? record, ConsentConfig config)
+        /// <summary>
+        /// Los flags de <paramref name="record"/> con <paramref name="config"/>. Con <paramref name="currentProfile"/> (el perfil legal
+        /// del país de ahora), una decisión de otro perfil cuenta como sin decidir hasta volver a preguntar (Q-B12-15); sin país
+        /// (<paramref name="countryKnown"/> = false), los anuncios nunca son personalizados ni los decide UMP (Q-T3 (a), Q-B12-13).
+        /// </summary>
+        public static ConsentFlags Flags(ConsentRecord? record, ConsentConfig config, string? currentProfile = null, bool countryKnown = true)
         {
             if (config == null)
             {
@@ -134,6 +138,8 @@ namespace AF.Platform
             {
                 return Undecided;
             }
+
+            bool sameProfile = currentProfile == null || string.Equals(record.Profile, currentProfile, StringComparison.Ordinal);
 
             switch (record.AgeBand)
             {
@@ -146,23 +152,23 @@ namespace AF.Platform
                 {
                     // Con biz_under18_no_personalization apagado, 13-17 como 18+ (también con UMP), salvo TFCD.
                     bool strict = config.BizUnder18NoPersonalization;
-                    bool decided = !NeedsPrompt(record, config);
+                    bool decided = !NeedsPrompt(record, config) && sameProfile;
                     bool ump = string.Equals(record.Profile, LegalProfiles.Ump, StringComparison.Ordinal);
                     return new ConsentFlags(
                         decided: decided, blocked: false, band: AgeBand.Teen, profile: record.Profile, analytics: decided && record.Analytics,
-                        adsPersonalized: decided && !strict && !ump && record.AdsPersonalized, childDirected: false, purchasesAllowed: decided,
-                        purchaseDoubleConfirm: strict, playGamesAllowed: true, rcPersonalization: decided && !strict,
-                        adsByUmp: decided && !strict && ump);
+                        adsPersonalized: decided && !strict && !ump && countryKnown && record.AdsPersonalized, childDirected: false,
+                        purchasesAllowed: decided, purchaseDoubleConfirm: strict, playGamesAllowed: decided, rcPersonalization: decided && !strict,
+                        adsByUmp: decided && !strict && ump && countryKnown);
                 }
 
                 default:
                 {
-                    bool decided = !NeedsPrompt(record, config);
+                    bool decided = !NeedsPrompt(record, config) && sameProfile;
                     bool ump = string.Equals(record.Profile, LegalProfiles.Ump, StringComparison.Ordinal);
                     return new ConsentFlags(
                         decided: decided, blocked: false, band: AgeBand.Adult, profile: record.Profile, analytics: decided && record.Analytics,
-                        adsPersonalized: decided && !ump && record.AdsPersonalized, childDirected: false, purchasesAllowed: decided,
-                        purchaseDoubleConfirm: false, playGamesAllowed: true, rcPersonalization: decided, adsByUmp: decided && ump);
+                        adsPersonalized: decided && !ump && countryKnown && record.AdsPersonalized, childDirected: false, purchasesAllowed: decided,
+                        purchaseDoubleConfirm: false, playGamesAllowed: decided, rcPersonalization: decided, adsByUmp: decided && ump && countryKnown);
                 }
             }
         }

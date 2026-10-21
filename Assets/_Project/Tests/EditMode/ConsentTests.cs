@@ -129,6 +129,16 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void CountryKeys_AreReadInUppercase()
+        {
+            var errors = new List<string>();
+            ConsentConfig c = ConsentConfigBinder.Bind(Snapshot("biz_legal_profile_by_country", "{\"br\":\"br_lgpd_eca\",\"*\":\"default\"}"), errors);
+
+            Assert.That(errors, Is.Empty);
+            Assert.That(c.ProfileFor("BR"), Is.EqualTo(LegalProfiles.BrLgpdEca), "«br» de Remote Config vale para BR");
+        }
+
+        [Test]
         public void AnUnknownProfile_FallsBackToTheDefaults_AndIsReported()
         {
             var errors = new List<string>();
@@ -405,6 +415,45 @@ namespace AF.Tests.EditMode
             Assert.That(store.Record!.Profile, Is.EqualTo(LegalProfiles.BrLgpdEca));
             Assert.That(store.Record!.AgeBand, Is.EqualTo(AgeBand.Adult), "la banda se conserva");
             Assert.That(flow.Flags.AdsByUmp, Is.False, "fuera del EEE, sin UMP: npa");
+        }
+
+        [Test]
+        public void TheFlags_FollowTheProfileAndCountryOfNow()
+        {
+            ConsentRecord us = Record(AgeBand.Adult, analytics: true, ads: true, profile: LegalProfiles.Default);
+            ConsentConfig c = ConsentConfig.Defaults;
+
+            ConsentFlags known = ConsentPolicy.Flags(us, c, LegalProfiles.Default, countryKnown: true);
+            Assert.That(known.AdsPersonalized, Is.True);
+            ConsentFlags unknown = ConsentPolicy.Flags(us, c, LegalProfiles.Default, countryKnown: false);
+            Assert.That(unknown.Decided, Is.True);
+            Assert.That(unknown.AdsPersonalized, Is.False, "sin país, npa aunque se aceptara con país (Q-T3 (a))");
+            ConsentFlags other = ConsentPolicy.Flags(us, c, LegalProfiles.BrLgpdEca);
+            Assert.That(other.Decided, Is.False, "otro perfil: sin decidir hasta volver a preguntar (Q-B12-15)");
+            Assert.That(other.AdsPersonalized, Is.False);
+            Assert.That(other.PlayGamesAllowed, Is.False, "sin decidir, sin Play Games");
+        }
+
+        [Test]
+        public void TheFlow_SaysWhenUmpDecides_AlsoForTeensWithoutTheRestriction()
+        {
+            var config = ConsentConfig.Defaults;
+            config.BizUnder18NoPersonalization = false;
+            var flow = new ConsentFlow(config, new MemoryConsentStore(), Clock(), LegalProfiles.Ump);
+            flow.StartBoot();
+            flow.ChooseAge(AgeBand.Teen);
+            Assert.That(flow.AdsByUmp, Is.True);
+            Assert.That(flow.OffersAdsChoice, Is.False);
+
+            var strict = new ConsentFlow(ConsentConfig.Defaults, new MemoryConsentStore(), Clock(), LegalProfiles.Ump);
+            strict.StartBoot();
+            strict.ChooseAge(AgeBand.Teen);
+            Assert.That(strict.AdsByUmp, Is.False, "13-17 con la restricción: npa también en el EEE");
+
+            var noCountry = new ConsentFlow(ConsentConfig.Defaults, new MemoryConsentStore(), Clock(), LegalProfiles.Ump, countryKnown: false);
+            noCountry.StartBoot();
+            noCountry.ChooseAge(AgeBand.Adult);
+            Assert.That(noCountry.AdsByUmp, Is.False);
         }
 
         [Test]

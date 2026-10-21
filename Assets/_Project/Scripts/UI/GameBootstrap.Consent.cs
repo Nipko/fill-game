@@ -229,7 +229,6 @@ namespace AF.UI
             _consentScreen?.ShowBlocked();
             ProbeConsent();
             RebuildUi(); // el perfil en memoria viaja al arranque siguiente (también si no se pudo guardar: perfil en solo lectura)
-            s_rebuildReopenSettings = false; // la marca del cambio de idioma: con el bloqueo, Ajustes no se vuelve a abrir
         }
 
         /// <summary>Atrás de Android con la pantalla abierta: la consume (y la cierra si se puede). False si no estaba abierta.</summary>
@@ -322,7 +321,8 @@ namespace AF.UI
             _skipNextDelta = true;
         }
 
-        // Primero la banda (13-17 es npa también en el EEE), después el país desconocido y por último UMP.
+        // La línea dice lo mismo que los flags: el interruptor si se ofrece; UMP si lo decide UMP (ConsentFlow.AdsByUmp, también con
+        // 13-17 sin biz_under18_no_personalization); sin país, la estricta; con 13-17, la de la edad.
         private static ConsentAdsLine AdsLineFor(ConsentFlow flow)
         {
             if (flow.OffersAdsChoice)
@@ -330,9 +330,9 @@ namespace AF.UI
                 return ConsentAdsLine.Toggle;
             }
 
-            if (flow.Band == AgeBand.Teen)
+            if (flow.AdsByUmp)
             {
-                return ConsentAdsLine.Teen;
+                return ConsentAdsLine.Ump;
             }
 
             if (!flow.CountryKnown)
@@ -340,7 +340,26 @@ namespace AF.UI
                 return ConsentAdsLine.Strict;
             }
 
-            return string.Equals(flow.Profile, LegalProfiles.Ump, System.StringComparison.Ordinal) ? ConsentAdsLine.Ump : ConsentAdsLine.Strict;
+            return flow.Band == AgeBand.Teen ? ConsentAdsLine.Teen : ConsentAdsLine.Strict;
+        }
+
+        /// <summary>
+        /// La edad o el consentimiento están pendientes o el juego está bloqueado: la sesión no cuenta y no se programan avisos locales
+        /// al pasar a segundo plano (parche <c>B12-ui.diff</c> en <c>GameBootstrap.Sessions.cs</c>).
+        /// </summary>
+        internal bool ConsentHoldsSession
+        {
+            get
+            {
+                if (ConsentBlocked)
+                {
+                    return true;
+                }
+
+                ConsentFlow? flow = _consentFlow;
+                return ConsentEnabled && flow != null && flow.Mode == ConsentFlowMode.Boot
+                    && (flow.Step == ConsentStep.Age || flow.Step == ConsentStep.Choices || flow.Step == ConsentStep.Blocked);
+            }
         }
 
         // Ajustes con el perfil ump: vuelve a abrir el mensaje de UMP (MAX) para cambiar o retirar el consentimiento de los anuncios.

@@ -168,7 +168,15 @@ namespace AF.Platform
         public bool CanCorrectAge => Record != null && Record.AgeBand != AgeBand.Unknown && Record.AgeBand != AgeBand.Under13 && !Record.AgeBandCorrected;
 
         /// <summary>Los flags vigentes (<see cref="ConsentPolicy.Flags"/>).</summary>
-        public ConsentFlags Flags => ConsentPolicy.Flags(Record, _config);
+        public ConsentFlags Flags => ConsentPolicy.Flags(Record, _config, _profile, _countryKnown);
+
+        /// <summary>
+        /// Los anuncios los decide el mensaje de UMP con la banda de la pantalla abierta: perfil <c>ump</c>, país conocido y 18+ (o
+        /// 13-17 con <c>biz_under18_no_personalization</c> apagado), como <see cref="ConsentFlags.AdsByUmp"/>.
+        /// </summary>
+        public bool AdsByUmp => _countryKnown
+            && string.Equals(_profile, LegalProfiles.Ump, StringComparison.Ordinal)
+            && (Band == AgeBand.Adult || (Band == AgeBand.Teen && !_config.BizUnder18NoPersonalization));
 
         /// <summary>Cada aviso para <c>af_consent</c> (lo conecta el arranque a la analítica).</summary>
         public Action<ConsentReport>? Reported { get; set; }

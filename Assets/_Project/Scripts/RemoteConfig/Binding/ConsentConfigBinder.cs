@@ -77,7 +77,8 @@ namespace AF.RemoteConfig.Binding
                     throw new FormatException("el perfil de " + json.Members[i].Key + " debe ser un texto");
                 }
 
-                map[json.Members[i].Key] = value.Text;
+                // Los países, en mayúsculas como los lee ConsentConfig.ProfileFor («br» → BR); «*» no cambia.
+                map[json.Members[i].Key.ToUpperInvariant()] = value.Text;
             }
 
             return map;
