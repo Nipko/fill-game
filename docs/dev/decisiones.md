@@ -3261,3 +3261,12 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 **Alcance.** No aprueba otros permisos, SDK, paquetes ni versiones.
 
 **Cómo revertir.** Con una decisión nueva: quitarlo de la lista blanca y dejar de leer la red en `GameBootstrap.Telemetry.cs`.
+
+## D-038 · Con `biz_feature_lives` apagado, desde el 31 todo funciona como antes del 31
+
+- **Fecha:** 2026-10-21. Registrada el 2026-10-21 por el integrador.
+- **Estado:** decidida por el dueño en el chat, al cerrar la revisión de B7: «biz_feature_lives=false: desde el 31 todo como antes del 31: salir es gratis y no cuenta como fallo, sin ¿Seguro? ni Nivel fallido por salir y sin canoas; el rescate sigue con su propio interruptor.»
+
+**Decisión.** Con el interruptor de 08 §9 `biz_feature_lives` en `false`, en los niveles 31 y siguientes el embudo de D-008 se comporta como en 1-30: no hay canoas (ni en la barra, ni en el modal, ni en los avisos), salir del nivel es gratis, no es fallo duro, no suma a `fails_level` y no abre ¿Seguro? ni Nivel fallido; «Rendirse» hace lo mismo que en 1-30. El rescate (Cuia y Balsa de rescate) no cambia: lo gobierna su propio interruptor, `biz_feature_rescue`. Con el interruptor en su valor por defecto, nada cambia. Sustituye la regla [P] aplicada en `tanda5/b7-fixes` (`d47ac8fe`), donde salir seguía siendo fallo duro y «Rendirse» iba directo a Nivel fallido.
+
+**Cómo revertir.** Con una decisión nueva.
