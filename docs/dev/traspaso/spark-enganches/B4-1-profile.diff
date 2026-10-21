@@ -1,0 +1,422 @@
+diff --git a/Assets/_Project/Scripts/Save/Profile.cs b/Assets/_Project/Scripts/Save/Profile.cs
+--- a/Assets/_Project/Scripts/Save/Profile.cs
++++ b/Assets/_Project/Scripts/Save/Profile.cs
+@@ -114,6 +114,15 @@
+         public StreakData? Streak { get; set; }
+ 
+         /// <summary>
++        /// <c>calendar</c> (08 §4.3 con Q-M3 (a) [P]; D-033, añadido del 2026-10-20, punto 6; parche B4-1-profile): la Bitácora del
++        /// río, o null si nunca se guardó (entonces la clave no se escribe). Vive en el mismo perfil que <see cref="Wallet"/> para
++        /// que el avance de <c>next_day</c> y el cobro salgan en la misma escritura (una casilla nunca se cobra dos veces). Las reglas
++        /// las aplica <c>AF.LiveOps</c> (<c>ProfileLoginCalendarStore</c>); aquí solo se guardan. Entra sin subir el esquema, como
++        /// <see cref="Streak"/>, porque aún no se ha publicado (08 §4.3).
++        /// </summary>
++        public CalendarData? Calendar { get; set; }
++
++        /// <summary>
+         /// Perfil de primera ejecución: <c>created_at</c> = ahora, 0 semillas (el GDD no fija otro saldo inicial),
+         /// <paramref name="initialCanoes"/> canoas, stock vacío, sin nivel en curso y el nivel 1 como siguiente
+         /// (08 §2.3: la primera vez se entra directamente al nivel 1).
+@@ -266,6 +275,26 @@
+ 
+         /// <summary><c>river_full</c>: río crecido, hasta el siguiente fallo duro no escudado (08 §4.3; 05 §2.4).</summary>
+         public bool RiverFull { get; set; }
++    }
++
++    /// <summary>
++    /// <c>calendar</c> (08 §4.3 con Q-M3 (a) [P]; D-033, añadido del 2026-10-20, punto 6): la Bitácora del río,
++    /// <c>{cycle, next_day, last_claim_date}</c>, más <c>played_date</c> [P] (Q-B1 de B4). Solo datos: el significado lo da
++    /// <c>AF.LiveOps.LoginCalendarRecord</c>; los marcos de país ganados van en <see cref="EntitlementsData.Frames"/>.
++    /// </summary>
++    public sealed class CalendarData
++    {
++        /// <summary><c>cycle</c>: ciclo en curso (1 el primero).</summary>
++        public int Cycle { get; set; } = 1;
++
++        /// <summary><c>next_day</c>: la casilla que toca sellar (1-30).</summary>
++        public int NextDay { get; set; } = 1;
++
++        /// <summary><c>last_claim_date</c>: día local del último sello (<c>yyyy-MM-dd</c>), o null.</summary>
++        public string? LastClaimDate { get; set; }
++
++        /// <summary><c>played_date</c> [P]: último día local con un nivel terminado (<c>yyyy-MM-dd</c>), o null.</summary>
++        public string? PlayedDate { get; set; }
+     }
+ 
+     /// <summary><c>progress</c> (08 §4.3; 04 §10.1; <c>map_seen_level</c>, D-013, y <c>undo_tip_seen</c> [P], DC23).</summary>
+diff --git a/Assets/_Project/Scripts/Save/ProfileJson.cs b/Assets/_Project/Scripts/Save/ProfileJson.cs
+--- a/Assets/_Project/Scripts/Save/ProfileJson.cs
++++ b/Assets/_Project/Scripts/Save/ProfileJson.cs
+@@ -15,8 +15,8 @@
+     /// <c>settings</c>, <c>sloth</c> y <c>progress.map_seen_level</c> toman su default ante un valor ausente o inválido
+     /// (un ajuste nunca hace corrupto un perfil), y <c>map_seen_level</c> queda recortado a [0, <c>max_level</c>]; igual
+     /// <c>progress.undo_tip_seen</c> (DC23), que sin la clave o con otro tipo queda en «no visto». <c>fauna</c>
+-    /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta. <c>streak</c> y
+-    /// <c>daily_challenge</c> se omiten mientras son null, y <c>daily.streak_hits</c> y <c>daily.streak_seeds</c> en su default
++    /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta. <c>streak</c>,
++    /// <c>calendar</c> (B4) y <c>daily_challenge</c> se omiten mientras son null, y <c>daily.streak_hits</c> y <c>daily.streak_seeds</c> en su default
+     /// (vacía y 0): son economía y un tipo equivocado en ellos es corrupción. Los de B14 son cosméticos y tolerantes:
+     /// <c>entitlements.skin_equipped</c> y <c>entitlements.frames</c> se omiten en su default (null y vacía), y <c>album</c>
+     /// (solo <c>fruits</c>), sin tintes; un valor que no vale toma el default o se descarta.
+@@ -148,6 +148,17 @@
+                 streak.Set("wins", JsonNode.FromInt(p.Streak.Wins));
+                 streak.Set("river_full", JsonNode.FromBool(p.Streak.RiverFull));
+                 root.Set("streak", streak);
++            }
++
++            if (p.Calendar != null)
++            {
++                // Bitácora del río (Q-M3 (a) [P]; B4-1-profile): la clave falta hasta el primer guardado.
++                JsonNode calendar = JsonNode.NewObject();
++                calendar.Set("cycle", JsonNode.FromInt(p.Calendar.Cycle));
++                calendar.Set("next_day", JsonNode.FromInt(p.Calendar.NextDay));
++                calendar.Set("last_claim_date", JsonNode.FromString(p.Calendar.LastClaimDate));
++                calendar.Set("played_date", JsonNode.FromString(p.Calendar.PlayedDate));
++                root.Set("calendar", calendar);
+             }
+ 
+             root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
+@@ -320,6 +331,21 @@
+                 p.Streak = streak;
+             }
+ 
++            // calendar (Bitácora del río; Q-M3 (a) [P]; B4-1-profile): es economía (last_claim_date impide cobrar dos veces una
++            // casilla), así que un tipo equivocado es corrupción. Una clave que falta toma su default y una desconocida se ignora
++            // (el bloque de ejemplo antiguo de 08 §4.3, con month y claimed_days, se lee como un ciclo 1 en la casilla 1). Los
++            // rangos (next_day 1-30) los recorta AF.LiveOps.
++            JsonNode? calendarNode = Section(root, "calendar");
++            if (calendarNode != null)
++            {
++                var calendar = new CalendarData();
++                calendar.Cycle = ReadInt(calendarNode, "cycle", calendar.Cycle);
++                calendar.NextDay = ReadInt(calendarNode, "next_day", calendar.NextDay);
++                calendar.LastClaimDate = ReadString(calendarNode, "last_claim_date", calendar.LastClaimDate);
++                calendar.PlayedDate = ReadString(calendarNode, "played_date", calendar.PlayedDate);
++                p.Calendar = calendar;
++            }
++
+             JsonNode? levelState = Section(root, "level_state");
+             p.LevelState = levelState == null ? null : ReadLevelState(levelState);
+ 
+diff --git a/Assets/_Project/Scripts/LiveOps/ProfileLoginCalendarStore.cs b/Assets/_Project/Scripts/LiveOps/ProfileLoginCalendarStore.cs
+new file mode 100644
+--- /dev/null
++++ b/Assets/_Project/Scripts/LiveOps/ProfileLoginCalendarStore.cs
+@@ -0,0 +1,119 @@
++#nullable enable
++using System;
++using AF.Save;
++
++namespace AF.LiveOps
++{
++    /// <summary>
++    /// <see cref="ILoginCalendarStore"/> del juego (parche B4-1-profile; 06 §4.2; 08 §4.3 con Q-M3 (a) [P]; D-033, añadido del
++    /// 2026-10-20, puntos 6 y 7): la Bitácora en el bloque <c>calendar</c> del mismo <see cref="Profile"/> que la cartera, y los
++    /// marcos de país en <c>entitlements.frames</c>, guardado con el mismo <see cref="IProfileStore"/> (en el juego, la vía síncrona
++    /// del lote, <c>ProfileSaveBatch.Durable</c>, como el Reto). Así el avance de <c>next_day</c> y el cobro salen en la misma
++    /// escritura del perfil. Mismo patrón que <see cref="ProfileDailyChallengeStore"/>: <see cref="Save"/> no lanza por un fallo
++    /// de escritura; el cambio queda en el perfil en memoria (<see cref="PendingSave"/>) y sale con el siguiente guardado o con
++    /// <see cref="Flush"/>. Un marco nunca se quita del perfil (es un derecho; la fusión de 08 §11 los une).
++    /// </summary>
++    public sealed class ProfileLoginCalendarStore : ILoginCalendarStore
++    {
++        private readonly Profile _profile;
++        private readonly IProfileStore _store;
++        private LoginCalendarRecord _live;
++
++        /// <summary>Crea el almacén sobre <paramref name="profile"/>, que se guarda en <paramref name="store"/>.</summary>
++        public ProfileLoginCalendarStore(Profile profile, IProfileStore store)
++        {
++            _profile = profile ?? throw new ArgumentNullException(nameof(profile));
++            _store = store ?? throw new ArgumentNullException(nameof(store));
++            _live = FromProfile(profile);
++        }
++
++        /// <inheritdoc />
++        public bool PendingSave { get; private set; }
++
++        /// <summary>Guardados pedidos (diagnóstico).</summary>
++        public int SaveCount { get; private set; }
++
++        /// <inheritdoc />
++        public LoginCalendarRecord Load()
++        {
++            return _live;
++        }
++
++        /// <inheritdoc />
++        public void Save(LoginCalendarRecord record)
++        {
++            _live = record ?? throw new ArgumentNullException(nameof(record));
++            WriteTo(_profile, record);
++            Persist();
++        }
++
++        /// <inheritdoc />
++        public bool Flush()
++        {
++            if (PendingSave)
++            {
++                Persist();
++            }
++
++            return !PendingSave;
++        }
++
++        /// <summary>El registro de <paramref name="profile"/>: <c>calendar</c> (o uno nuevo si es null) y los marcos ganados.</summary>
++        public static LoginCalendarRecord FromProfile(Profile profile)
++        {
++            if (profile == null)
++            {
++                throw new ArgumentNullException(nameof(profile));
++            }
++
++            var record = new LoginCalendarRecord();
++            CalendarData? data = profile.Calendar;
++            if (data != null)
++            {
++                record.Cycle = data.Cycle;
++                record.NextDay = data.NextDay;
++                record.LastClaimDate = data.LastClaimDate;
++                record.PlayedDate = data.PlayedDate;
++            }
++
++            record.Frames.AddRange(profile.Entitlements.Frames);
++            record.Sanitize();
++            return record;
++        }
++
++        /// <summary>Escribe <paramref name="record"/> en <paramref name="profile"/>: <c>calendar</c> entero y los marcos nuevos.</summary>
++        public static void WriteTo(Profile profile, LoginCalendarRecord record)
++        {
++            if (profile == null)
++            {
++                throw new ArgumentNullException(nameof(profile));
++            }
++
++            if (record == null)
++            {
++                throw new ArgumentNullException(nameof(record));
++            }
++
++            profile.Calendar = new CalendarData
++            {
++                Cycle = record.Cycle,
++                NextDay = record.NextDay,
++                LastClaimDate = record.LastClaimDate,
++                PlayedDate = record.PlayedDate,
++            };
++            for (int i = 0; i < record.Frames.Count; i++)
++            {
++                if (!profile.Entitlements.Frames.Contains(record.Frames[i]))
++                {
++                    profile.Entitlements.Frames.Add(record.Frames[i]);
++                }
++            }
++        }
++
++        private void Persist()
++        {
++            SaveCount++;
++            PendingSave = !_store.TrySave(_profile);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/LiveOps/ProfileLoginCalendarStore.cs.meta b/Assets/_Project/Scripts/LiveOps/ProfileLoginCalendarStore.cs.meta
+new file mode 100644
+--- /dev/null
++++ b/Assets/_Project/Scripts/LiveOps/ProfileLoginCalendarStore.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 1800a9d11ae4131499d62f188e2433be
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/LiveOps/Tests/ProfileLoginCalendarStoreTests.cs b/Assets/_Project/Scripts/LiveOps/Tests/ProfileLoginCalendarStoreTests.cs
+new file mode 100644
+--- /dev/null
++++ b/Assets/_Project/Scripts/LiveOps/Tests/ProfileLoginCalendarStoreTests.cs
+@@ -0,0 +1,151 @@
++#nullable enable
++using System;
++using System.IO;
++using AF.Economy;
++using AF.Platform;
++using AF.Save;
++using NUnit.Framework;
++
++namespace AF.LiveOps.Tests
++{
++    /// <summary>
++    /// El bloque <c>calendar</c> del perfil (parche B4-1-profile; 08 §4.3 con Q-M3 (a) [P]; D-033, añadido del 2026-10-20, puntos
++    /// 6 y 7): ida y vuelta por el JSON del perfil, la clave que falta hasta el primer guardado, el bloque antiguo de 08 §4.3, un
++    /// tipo equivocado como corrupción, los marcos en <c>entitlements.frames</c> y el sello con su pago en la misma escritura.
++    /// </summary>
++    public sealed class ProfileLoginCalendarStoreTests
++    {
++        private static readonly TimeSpan Bogota = TimeSpan.FromHours(-5);
++
++        [Test]
++        public void TheBlock_IsOmittedUntilTheFirstSave_AndRoundTrips()
++        {
++            var clock = Clock();
++            Profile profile = Wallet.NewProfile(clock);
++            StringAssert.DoesNotContain("\"calendar\"", ProfileJson.Serialize(profile));
++
++            var disk = new MemoryProfileStore();
++            var store = new ProfileLoginCalendarStore(profile, disk);
++            LoginCalendarRecord record = store.Load();
++            Assert.That(record.Cycle, Is.EqualTo(1));
++            Assert.That(record.NextDay, Is.EqualTo(1));
++            record.NextDay = 8;
++            record.Cycle = 2;
++            record.LastClaimDate = "2026-10-19";
++            record.PlayedDate = "2026-10-20";
++            record.Frames.Add("frame_w01");
++            store.Save(record);
++            Assert.That(store.PendingSave, Is.False);
++            StringAssert.Contains("\"calendar\"", disk.Json);
++            StringAssert.Contains("\"played_date\"", disk.Json);
++
++            Profile back = ProfileJson.Deserialize(disk.Json!);
++            Assert.That(back.Calendar!.NextDay, Is.EqualTo(8));
++            Assert.That(back.Entitlements.Frames, Is.EqualTo(new[] { "frame_w01" }), "el marco, como derecho en entitlements.frames (D-033, punto 7)");
++            LoginCalendarRecord again = ProfileLoginCalendarStore.FromProfile(back);
++            Assert.That(again.Cycle, Is.EqualTo(2));
++            Assert.That(again.LastClaimDate, Is.EqualTo("2026-10-19"));
++            Assert.That(again.PlayedDate, Is.EqualTo("2026-10-20"));
++            Assert.That(again.Frames, Is.EqualTo(new[] { "frame_w01" }));
++        }
++
++        [Test]
++        public void TheOldExampleOf08_4_3_ReadsAsANewLogbook_AndAWrongTypeIsCorruption()
++        {
++            Profile profile = Wallet.NewProfile(Clock());
++            string json = ProfileJson.Serialize(profile);
++            string head = json.Substring(0, json.LastIndexOf('}'));
++            string old = head + ",\"calendar\":{\"month\":\"2026-10\",\"claimed_days\":[1,2,3],\"last_claim_date\":\"2026-10-05\"}}";
++            Profile read = ProfileJson.Deserialize(old);
++            Assert.That(read.Calendar, Is.Not.Null);
++            Assert.That(read.Calendar!.Cycle, Is.EqualTo(1));
++            Assert.That(read.Calendar.NextDay, Is.EqualTo(1));
++            Assert.That(read.Calendar.LastClaimDate, Is.EqualTo("2026-10-05"));
++
++            string bad = head + ",\"calendar\":{\"cycle\":\"uno\"}}";
++            Assert.Throws<FormatException>(() => ProfileJson.Deserialize(bad));
++            string notObject = head + ",\"calendar\":[]}";
++            Assert.Throws<FormatException>(() => ProfileJson.Deserialize(notObject));
++
++            var outOfRange = new Profile { Calendar = new CalendarData { NextDay = 99, Cycle = 0 } };
++            LoginCalendarRecord record = ProfileLoginCalendarStore.FromProfile(outOfRange);
++            Assert.That(record.NextDay, Is.EqualTo(1), "fuera de rango: lo recorta AF.LiveOps");
++            Assert.That(record.Cycle, Is.EqualTo(1));
++        }
++
++        [Test]
++        public void TheSealAndItsPayment_GoOutInTheSameWriteOfTheProfile()
++        {
++            ManualClock clock = Clock();
++            Profile profile = Wallet.NewProfile(clock);
++            var disk = new MemoryProfileStore();
++            var wallet = new Wallet(profile, disk, clock);
++            var store = new ProfileLoginCalendarStore(profile, disk);
++            var service = new LoginCalendarService(store, wallet, clock, 10);
++            service.MarkPlayed();
++            LoginCalendarClaim? claim = service.Claim(LoginCalendarChoice.Seeds, 25, LoginCalendarUnlocks.All, 1);
++            Assert.That(claim, Is.Not.Null);
++
++            Profile onDisk = ProfileJson.Deserialize(disk.Json!);
++            Assert.That(onDisk.Calendar!.NextDay, Is.EqualTo(2));
++            Assert.That(onDisk.Calendar.LastClaimDate, Is.EqualTo("2026-10-20"));
++            Assert.That(onDisk.Wallet.Seeds, Is.EqualTo(60), "el mismo perfil: el avance y el cobro, juntos");
++
++            // Al reabrir, la casilla no se vuelve a cobrar.
++            var reopened = new LoginCalendarService(new ProfileLoginCalendarStore(onDisk, disk), new Wallet(onDisk, disk, clock), clock, 10);
++            Assert.That(reopened.StateFor(25), Is.EqualTo(LoginCalendarState.Sealed));
++            Assert.That(reopened.Claim(LoginCalendarChoice.Seeds, 25, LoginCalendarUnlocks.All, 1), Is.Null);
++        }
++
++        [Test]
++        public void AFailedWrite_StaysPending_AndFlushRetries()
++        {
++            ManualClock clock = Clock();
++            Profile profile = Wallet.NewProfile(clock);
++            var disk = new FailingProfileStore { Fail = true };
++            var store = new ProfileLoginCalendarStore(profile, disk);
++            LoginCalendarRecord record = store.Load();
++            record.PlayedDate = "2026-10-20";
++            store.Save(record);
++            Assert.That(store.PendingSave, Is.True);
++            Assert.That(profile.Calendar!.PlayedDate, Is.EqualTo("2026-10-20"), "el cambio sigue en el perfil en memoria");
++            disk.Fail = false;
++            Assert.That(store.Flush(), Is.True);
++            Assert.That(store.SaveCount, Is.EqualTo(2));
++        }
++
++        private sealed class FailingProfileStore : IProfileStore
++        {
++            public bool Fail { get; set; }
++
++            public string? Json { get; private set; }
++
++            public ProfileLoadResult Load()
++            {
++                return Json == null
++                    ? new ProfileLoadResult(ProfileLoadStatus.NotFound, null)
++                    : new ProfileLoadResult(ProfileLoadStatus.Loaded, ProfileJson.Deserialize(Json));
++            }
++
++            public void Save(Profile profile)
++            {
++                if (Fail)
++                {
++                    throw new IOException("disco lleno (test)");
++                }
++
++                Json = ProfileJson.Serialize(profile);
++            }
++
++            public void Delete()
++            {
++                Json = null;
++            }
++        }
++
++        private static ManualClock Clock()
++        {
++            return new ManualClock(DateTime.SpecifyKind(new DateTime(2026, 10, 20, 10, 0, 0) - Bogota, DateTimeKind.Utc), Bogota);
++        }
++    }
++}
+diff --git a/Assets/_Project/Scripts/LiveOps/Tests/ProfileLoginCalendarStoreTests.cs.meta b/Assets/_Project/Scripts/LiveOps/Tests/ProfileLoginCalendarStoreTests.cs.meta
+new file mode 100644
+--- /dev/null
++++ b/Assets/_Project/Scripts/LiveOps/Tests/ProfileLoginCalendarStoreTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: f2063a87e49a78445a203b391b4e344a
+\ No newline at end of file
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Logbook.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Logbook.cs
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Logbook.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Logbook.cs
+@@ -80,9 +80,19 @@
+ 
+         /// <summary>
+         /// Almacén del bloque <c>calendar</c> sobre el perfil (B4-1-profile): recibe el perfil y su almacén (el lote de guardado),
+-        /// los mismos que la cartera. Null hasta aplicar el parche.
+-        /// </summary>
+-        public static Func<Profile, IProfileStore, ILoginCalendarStore>? LogbookStoreFactory { get; set; }
++        /// los mismos que la cartera. Por defecto, <see cref="CreateProfileLogbookStore"/>.
++        /// </summary>
++        public static Func<Profile, IProfileStore, ILoginCalendarStore>? LogbookStoreFactory { get; set; } = CreateProfileLogbookStore;
++
++        /// <summary>
++        /// B4-1-profile: la Bitácora en el bloque <c>calendar</c> del mismo perfil que la cartera, guardada por la vía síncrona del
++        /// lote (<see cref="ProfileSaveBatch.Durable"/>), como el Reto: el avance de una casilla está en disco antes del pago, y si
++        /// esa escritura falla, los dos salen juntos en la siguiente (<see cref="ILoginCalendarStore"/>).
++        /// </summary>
++        public static ILoginCalendarStore CreateProfileLogbookStore(Profile profile, IProfileStore store)
++        {
++            return new ProfileLoginCalendarStore(profile, store is ProfileSaveBatch batch ? batch.Durable : store);
++        }
+ 
+         /// <summary>Servicio de la Bitácora (null antes de <see cref="SetUpLogbook"/>).</summary>
+         public LoginCalendarService? Logbook => _logbook;
