@@ -1,8 +1,50 @@
 # Pendientes del dueño: lo que depende de ti para llegar a la 1.0
 
-Fecha: 2026-10-20. Lo reúne el integrador a partir de `docs/legal/marca.md`, `docs/dev/plan-tanda5.md` §3, `docs/dev/traspaso/README.md` (sección 6, paso 4), `docs/gdd/08-arquitectura-tecnica-publicacion.md` §13 y las decisiones D-033 y D-034. Ordenado por lo que más bloquea. Marca cada casilla al hacerla y anota la fecha.
+Fecha: 2026-10-20. Lo reúne el integrador a partir de `docs/legal/marca.md`, `docs/dev/plan-tanda5.md` §3, `docs/dev/traspaso/README.md` (sección 6, paso 4), `docs/gdd/08-arquitectura-tecnica-publicacion.md` §13 y las decisiones D-033 a D-036. Ordenado por lo que más bloquea. Marca cada casilla al hacerla y anota la fecha.
 
-Lo que **no** depende de ti sigue en marcha: la tanda 5, en el escritorio y en el Spark, con implementaciones falsas de los SDK. Los borradores de publicación los hará un agente Codex cuando lo actives (`docs/dev/traspaso/codex-publicacion.md`; de momento esperas a la marca).
+La tanda 5 puede avanzar con implementaciones falsas de los SDK. Según D-034, **los borradores de publicación pueden prepararse ya** (`docs/dev/traspaso/codex-publicacion.md`); crear la app en Play Console y fijar el `applicationId` definitivo esperan al dictamen de marca y al nombre del estudio. Este documento no confirma el avance de otros agentes.
+
+## Resumen para revisar juntos
+
+Última actualización: **2026-10-20**, con confirmación del dueño en el chat. «Me encargo yo» significa **a tu cargo**, no **hecho**; al cerrar tareas anotamos la fecha y el resultado, sin datos personales ni secretos.
+
+- **Hecho y comprobado en Play Console (2026-10-20):** cuenta de tipo Organización, con datos de organización **AUTOMATION AI S A S**, país **Colombia (CO)** y nombre público de desarrollador **Automation AI**. El sitio `parallext.com` y los correos de contacto y desarrollador aparecen verificados. El perfil de cobros y la cuenta bancaria se revisaron después; ver su estado más abajo.
+- **A tu cargo:** adquirir solo el dominio principal por ahora. `tintalu.com` sigue siendo el candidato del documento; falta confirmar la compra y el dominio exacto.
+- **Aplazado:** dominios adicionales y defensivos. No bloquean preparar la web del dominio principal.
+- **Entidad elegida por el dueño (2026-10-20): Colombia, AUTOMATION AI S A S.** El dueño informa que ya solicitó el D-U-N-S de Parallext LLC (EE. UU.), aún pendiente. Decide avanzar con la S.A.S. mientras tanto. No se cambia la identidad ni el país de Play. Prefiere Mercury si fuera compatible; al estar en EE. UU. y a nombre de la LLC, no se vinculará al perfil colombiano: la alternativa autorizada es la cuenta colombiana de la S.A.S., pendiente de añadir y verificar por el dueño.
+- **Perfil comercial creado (2026-10-20):** el dueño pulsó Enviar; comprobado después en la consola: panel de ingresos y configuración a nombre de AUTOMATION AI S A S, con «Agregue una forma de pago para recibir sus ingresos». Formulario preparado con web `https://parallext.com/`, soporte `support@parallext.com`, categoría Software de computadoras y descriptor `AUTO AI`. **Cuenta Bancolombia añadida y marcada Principal; estado comprobado: En revisión (2026-10-20).** El dueño indica que completó el paso documental; la verificación aún no está aprobada. No se ha inspeccionado el documento finalmente enviado. El formulario bancario exige banco en Colombia y moneda USD; pide titular, banco, SWIFT/BIC, número de cuenta y, si el banco lo requiere, intermediario estadounidense e instrucciones FFC/FBO. El dueño debe obtener las instrucciones de recepción internacional de su banco e introducir los datos directamente. Sin datos bancarios ni fiscales sensibles en el repositorio.
+- **Programa de cargos del servicio del 15% (2026-10-20):** creado y comprobado el grupo `AUTOMATION AI S A S`, con Automation AI como cuenta principal. El dueño confirma que también posee una cuenta personal de Play. El formulario distingue cuentas propiedad de la entidad legal y cuentas con características de marca similares: falta confirmar cómo corresponde declarar la personal y su identificador. No se han enviado solicitudes ni guardado respuestas a esa declaración. Por petición del dueño, se aplazan la asociación de cuentas y la inscripción al 15%. Se canceló el formulario sin guardar respuestas ni enviar solicitudes; el grupo ya creado permanece con solo la cuenta principal. Inscripción y aceptación de condiciones pendientes.
+
+| Bloque | Lo que necesitamos de ti | Lo que pueden preparar los agentes | Detalle |
+|---|---|---|---|
+| Marca e identidad | Gestionar el dictamen; confirmar nombre público del estudio; entidad y país ya decididos | Reunir antecedentes y preguntas para el abogado | §1 |
+| Presencia pública | Comprar dominio principal, reservar usuarios y aportar datos legales; alojamiento AWS ya decidido | Preparar web y textos con campos pendientes | §2 |
+| Plataforma | Cuenta empresarial y perfil comercial creados; banco en revisión; INTERNET aprobado; quedan SDK, firma y configuración de servicios | Medir el build y preparar propuestas de integración y CI | §3 |
+| Arte e idiomas | Gestionar artista, asesor cultural y revisión nativa | Consolidar encargos y material de revisión; integrar entregas | §4–§5 |
+| Pruebas | Facilitar teléfono, validar sensaciones y curación; gestionar testers y QA externa | Preparar build, guion de prueba e informes | §6 |
+| Legal y lanzamiento | Gestionar revisión legal, firma, cuentas y publicación; decidir precios | Preparar borradores, inventario de licencias y checklist | §7–§8 |
+
+### Simplificaciones propuestas para decidir
+
+Estas propuestas organizan el trabajo; **no cambian requisitos ni decisiones del GDD**.
+
+1. **Dominios:** decidido por el dueño: solo el principal por ahora; el resto queda aplazado (§2). Las redes siguen pendientes, sin bloquear los borradores.
+2. **Cuentas y SDK:** separar las aprobaciones técnicas de la creación manual de cuentas. Pedirte cada cuenta cuando la integración vaya a necesitarla, con los datos concretos que debes configurar (§3).
+3. **Tamaño del AAB:** que el equipo prepare una medición y una recomendación antes de pedirte elegir entre Addressables, PAD, fuentes o arte a 1× (§3).
+4. **Arte y revisión cultural:** agrupar los encargos en un paquete por profesional, con entregables de la 1.0 separados de los opcionales y de la 1.1 (§4–§5).
+5. **Pruebas en teléfono:** reunir visuales, audio, rendimiento y Tinaja en un guion de sesión; mantener las comprobaciones y la QA externa exigidas (§6).
+6. **Decisiones ya tomadas:** edad 13+ y compra de 13–17 siguen las decisiones vigentes; su revisión legal no implica volver a diseñarlas (§7).
+
+### Próximas respuestas que sí necesitamos de ti
+
+| Decisión | Propuesta de trabajo | Estado |
+|---|---|---|
+| Nombre del estudio y entidad publicadora | El dueño elige continuar con AUTOMATION AI S A S, Colombia. Nombre público actual: Automation AI; conservarlo o cambiarlo sigue por confirmar. El `applicationId` definitivo espera al dictamen de marca | Entidad y país decididos; nombre público por confirmar |
+| Dictamen de marca | Confirmar si ya lo estás gestionando; los antecedentes están en `docs/legal/marca.md` | Pendiente |
+| SDK de §3 | Revisar las aprobaciones de la integración prevista. El permiso `INTERNET` ya fue aprobado por separado el 2026-10-20 (D-036); no implica aprobación de SDK | SDK pendientes; permiso resuelto |
+| Arte, asesor e idiomas | Confirmar si ya tienes profesionales o contactos; los agentes pueden consolidar primero los encargos existentes | Pendiente |
+
+**Trabajo preparable sin nuevas decisiones de producto:** borradores de publicación con campos pendientes; propuesta de tamaño basada en mediciones; paquetes de revisión para artista y asesor; guion de pruebas en teléfono. Este reparto no significa que esos entregables ya estén hechos ni que se haya activado a otro agente.
 
 ---
 
@@ -21,16 +63,13 @@ Lo que **no** depende de ti sigue en marcha: la tanda 5, en el escritorio y en e
 
 | ✓ | Tarea | Detalle | Fuente |
 |---|---|---|---|
-| [ ] | Comprar `tintalu.com` | Propuesto como dominio principal (web, política, eliminación de cuenta, `app-ads.txt`, enlaces de la ficha): confírmalo | `marca.md` §4.1; 08 §13.1 #2 |
-| [ ] | Comprar `tintalu.app` | Exige HTTPS | `marca.md` §4.1 |
-| [ ] | Comprar `tintalu.co` | Colombia es el primer mercado | `marca.md` §4.1 |
-| [ ] | Comprar `tintalu.com.br` | Por medio del abogado o representante brasileño: Registro.br exige CPF o CNPJ | `marca.md` §4.1 |
-| [ ] | (Opcional) `tintalu.games`, `tintalu.net`, `tintaloo.com`, `tintalú.com` | Defensivos | `marca.md` §4.1 |
-| [ ] | Elegir el alojamiento de la web, con HTTPS | Por ejemplo GitHub Pages en un repositorio que crees tú, o el hosting del registrador. Lleva: política de privacidad (ES, PT-BR, EN), términos, página de eliminación de cuenta (`/tintalu/eliminar-cuenta`) y `app-ads.txt` | 08 §11 y §13.1 #2 |
+| [ ] | Adquirir el dominio principal — a cargo del dueño | Confirmado el 2026-10-20: solo el principal por ahora. Candidato: `tintalu.com`; compra y dominio exacto aún sin confirmar. Se usará para web, política, eliminación de cuenta, `app-ads.txt` y enlaces de la ficha | Chat del dueño, 2026-10-20; `marca.md` §4.1; 08 §13.1 #2 |
+| Aplazado | Dominios adicionales y defensivos | `tintalu.app`, `tintalu.co`, `tintalu.com.br`, `tintalu.games`, `tintalu.net`, `tintaloo.com`, `tintalú.com`. Fuera de las compras actuales por decisión del dueño del 2026-10-20 | Chat del dueño; `marca.md` §4.1 |
+| [x] | Elegir el alojamiento de la web, con HTTPS | Decidido en D-035: AWS S3 + CloudFront. Falta preparar y desplegar; el dueño despliega. Dominio público tras el dictamen; dev usa dominios de AWS (Q-AWS-9). Incluye política, términos, eliminación de cuenta y `app-ads.txt` | D-035 y Q-AWS-9; 08 §11 y §13.1 #2 |
 | [ ] | Reservar los usuarios en redes | Instagram, TikTok, YouTube, X y Facebook | `marca.md` §4.2 |
 | [ ] | Datos legales del responsable | Nombre o razón social, dirección, correo de contacto y de privacidad, encargado (DPO) y canal para la LGPD de Brasil | 08 §13.1 #2 |
 
-Coste orientativo de los cuatro dominios principales: unos 50-100 USD al año [E].
+El presupuesto anterior de cuatro dominios deja de ser el presupuesto de compra actual. El coste del principal se confirmará al adquirirlo.
 
 ---
 
@@ -38,13 +77,13 @@ Coste orientativo de los cuatro dominios principales: unos 50-100 USD al año [E
 
 | ✓ | Tarea | Detalle | Fuente | Qué desbloquea |
 |---|---|---|---|---|
-| [ ] | Cuenta de desarrollador de Google Play | Pago único, verificación de identidad y, si es de organización, D-U-N-S. Decide **personal u organización**: las cuentas personales nuevas suelen exigir una prueba cerrada con testers durante 14 días antes de producción (a verificar en la documentación oficial vigente). La app **no** se crea hasta el dictamen (D-034) | 08 §13.1; D-034 | La consola, cuando llegue el dictamen |
-| [ ] | Aprobar el permiso `INTERNET` | Hoy lo añade Unity en automático; está pendiente de tu visto bueno | `CLAUDE.md` | Anuncios, compras, Firebase, Play Games |
-| [ ] | Aprobar los SDK | AppLovin MAX con adaptadores y UMP (consentimiento), Unity IAP 5.4.4, Firebase 13.17.0 (Remote Config, Analytics, Auth, Functions, Crashlytics, App Check) y Play Games 2.3.0 | `plan-tanda5.md` §3 | Todo lo «online» real |
+| [x] | Cuenta de desarrollador de Google Play como empresa | Comprobado en Play Console el 2026-10-20: Organización; AUTOMATION AI S A S; Colombia; nombre público Automation AI. Perfil comercial creado; banco principal añadido, En revisión por Google. La app de Tintalú **no** se crea hasta el dictamen (D-034) | Play Console › Cuenta de desarrollador › Acerca de ti, 2026-10-20; 08 §13.1; D-034 | Registro de cuenta resuelto; creación de Tintalú sigue bloqueada por la marca |
+| [x] | Aprobar el permiso `INTERNET` | Aprobado expresamente por el dueño el 2026-10-20 (D-036). Unity ya lo añade automáticamente según el estado documentado; no se cambió la configuración. No aprueba SDK ni activa servicios | Chat del dueño, 2026-10-20; D-036 | Resuelve el visto bueno del permiso para los servicios de red previstos |
+| [ ] | Revisar las aprobaciones restantes de SDK del cliente | MAX con adaptadores y UMP, Unity IAP 5.4.4 y Play Games 2.3.0 según el plan; contrastar las aprobaciones existentes antes de pedirlas otra vez. D-035 fija Firebase 13.17.0 para Auth, Analytics, Crashlytics y Remote Config, con App Check para integridad (Q-AWS-4). Firebase Functions sale: las funciones propias y el libro mayor van en AWS. La arquitectura elegida no acredita que la integración esté terminada | `plan-tanda5.md` §3; D-035 y Q-AWS-4 | Integración real de los servicios |
 | [ ] | Crear las cuentas de Firebase, AppLovin MAX, AdMob y Play Games Services | Más las redes de la mediación (Unity Ads, Meta, Mintegral) para `app-ads.txt` | 08 §13.1 #2 y #16 | Integrar los SDK, `app-ads.txt`, Data Safety real |
 | [ ] | Keystore, Play App Signing y secretos del CI | La clave de subida y los secretos (`UNITY_EMAIL`, `UNITY_PASSWORD`) solo los manejas tú | 08 §13.1 #3; s31 | El workflow s32 y el build firmado |
-| [ ] | Decidir el espacio del AAB | Addressables y Play Asset Delivery, fuentes recortadas o arte a 1×; hoy el AAB pesa unos 52 MB, el tope es 80 MB y faltan los SDK y el arte final | `plan-tanda5.md` §3; README §1 «Tamaño» | Paquetes 701+, fondos remotos, Unity Localization (Q-T2) |
-| [ ] | Aprobar el merge del CI (`ci.yml`, s30) cuando esté | Lo prepara B10 (aprobado en D-033, Q-T5); el merge lo apruebas tú | D-033 | La compuerta automática en cada PR |
+| [ ] | Revisar una propuesta medida de tamaño del AAB | Primero el equipo debe actualizar el peso y el desglose, estimar SDK y arte pendientes y recomendar una opción. Referencia documental: unos 52 MB frente al tope de 80 MB; no es una medición nueva. El dueño decide sobre esa propuesta | `plan-tanda5.md` §3; README §1 «Tamaño» | Paquetes 701+, fondos remotos, Unity Localization (Q-T2) |
+| [x] | Aprobar el merge del CI (`ci.yml`, s30) | Ya aprobado por el dueño en el añadido de D-033 sobre B10. Quedan a su cargo los secretos de GitHub; la autorización no demuestra que el merge o la configuración de secretos se hayan completado | D-033, añadido «merge de B10 y versión de coverlet» | Autorización de merge resuelta |
 
 ---
 
@@ -99,7 +138,7 @@ Todo el arte de hoy es provisional, hecho por código. Los encargos ya están es
 |---|---|---|---|
 | [ ] | Revisar los textos legales | Política de privacidad, términos y página de eliminación de cuenta (los redacta Codex como borrador) | 08 §13.1 #2 y #7 |
 | [ ] | Revisar la edad y el consentimiento | Bandas `<13` (bloqueado en la 1.0), `13-17` y `18+`; consentimiento por país | 08 §13.1 #11; 05 §7 |
-| [ ] | Confirmar la compra de 13-17 | Doble confirmación en el juego + autenticación de Google Play en lugar de un PIN propio | D-033, Q-T4 |
+| [ ] | Validar implementación y revisión legal de la compra de 13-17 | El diseño ya está decidido: doble confirmación en el juego + autenticación de Google Play, sin PIN propio. Queda comprobar su implementación y revisión; no hace falta volver a aprobar el mismo diseño | D-033, Q-T4 |
 | [ ] | ECA Digital (Brasil) | Consulta al abogado brasileño (art. 8) en la compuerta de la fase 5 | 08 §13.1 #11 |
 | [ ] | Licencia de HydroRIVERS | Leer su acuerdo (en hydrosheds.org; no viene en la descarga), fijar el texto de atribución y decidir dónde va (aún no hay pantalla de créditos) | README §6 paso 4 |
 
@@ -114,9 +153,9 @@ Todo el arte de hoy es provisional, hecho por código. Los encargos ya están es
 
 ---
 
-## Orden sugerido
+## Orden sugerido (propuesta para revisar)
 
-1. **Esta semana:** abogado de marcas, nombre y país del estudio, los cuatro dominios y los usuarios de redes.
-2. **Mientras llega el dictamen:** cuenta de desarrollador de Play, artista (encargos de §4), asesor cultural, teléfono de clase A, y decidir el espacio del AAB y el permiso `INTERNET`.
-3. **Con el dictamen favorable:** activar a Codex (`codex-publicacion.md`), crear la app en Play Console, alojar la web y crear las cuentas de los SDK.
-4. **Antes de la prueba cerrada:** revisión legal, curación y QA de niveles, keystore y secretos del CI.
+1. **Primero:** priorizar el dictamen de marca y confirmar el nombre público del estudio. Entidad y país resueltos: AUTOMATION AI S A S, Colombia. La cuenta empresarial y el perfil comercial ya están creados; el banco está en revisión. El dueño adquirirá solo el dominio principal por ahora.
+2. **Mientras llega el dictamen:** preparar los borradores de publicación (D-034), preparar la web en AWS (D-035) y organizar los encargos de arte, asesoría y pruebas. Revisar las aprobaciones restantes de SDK con el equipo y pedirle una propuesta medida para el tamaño del AAB; INTERNET ya aprobado (D-036).
+3. **Con el dictamen favorable y el estudio decidido:** fijar el `applicationId` definitivo y crear la app en Play Console. Crear las cuentas de servicios según las dependencias de cada integración.
+4. **Antes de la prueba cerrada:** completar web y revisión legal, arte y revisiones de contenido, curación y QA, firma y secretos del CI. Las compras defensivas, la 1.1 y las decisiones de negocio se revisan en su fase, sin darlas por canceladas.

@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.invalid/af/v1/account-delete.response.schema.json",
+  "title": "deleteAccount y delete-confirm: respuesta 200",
+  "description": "08 §11: borra rewards, integrity y account_codes del UID, quita el uid del libro mayor (se conserva anonimizado) y borra el usuario de Firebase Auth. Idempotente: repetirlo devuelve lo mismo.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status"
+  ],
+  "properties": {
+    "status": {
+      "const": "deleted"
+    }
+  }
+}

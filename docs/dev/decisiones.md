@@ -3154,3 +3154,48 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Paquetes npm de `infra/` aprobados** (regla 4), con versión exacta fijada por el integrador tras comprobarla (al menos dos semanas de antigüedad) y anotada aquí: `aws-cdk-lib`, `aws-cdk`, `constructs`, `cdk-nag`, `typescript`, `esbuild`, `vitest`, `eslint`, `typescript-eslint`, `@aws-sdk/client-dynamodb`, `@aws-sdk/lib-dynamodb`, `@aws-sdk/client-secrets-manager`, `jose`, `ajv`, `aws-sdk-client-mock`.
 - **Límites de los agentes y `CLAUDE.md`** se amplían en consecuencia (F0-3).
 - **Versiones exactas fijadas por el integrador** (registro de npm consultado el 2026-10-20; todas con al menos dos semanas, dentro de la versión mayor vigente y con sus dependencias entre pares compatibles): `aws-cdk-lib` 2.272.0, `aws-cdk` 2.1144.0, `constructs` 10.8.1, `cdk-nag` 3.0.2, `typescript` **5.9.3** (no la 7.x: `typescript-eslint` 8.71.1 exige `<6.1.0`), `esbuild` 0.28.2, `vitest` 5.0.3, `eslint` 10.12.0, `typescript-eslint` 8.71.1, `@aws-sdk/client-dynamodb` 3.1146.0, `@aws-sdk/lib-dynamodb` 3.1146.0, `@aws-sdk/client-secrets-manager` 3.1146.0, `jose` 6.2.12, `ajv` 8.20.0, `aws-sdk-client-mock` 4.1.0, y de tipos `@types/node` 24.19.1 (como el runtime `nodejs24.x` de Lambda) y `@types/aws-lambda` 8.10.164. Se fijan sin rangos en `infra/package.json` y con `package-lock.json`. Node local del escritorio: 22.20.0 (vale para CDK y vitest; el runtime de Lambda lo confirma F0-R).
+
+## D-036 · Aprobación del permiso Android INTERNET
+
+- **Fecha:** 2026-10-20.
+- **Estado:** aprobado expresamente por el dueño en este chat: «si aprobemos», en respuesta a la propuesta de aprobar únicamente `INTERNET`.
+
+**Decisión.** Se aprueba el permiso Android `android.permission.INTERNET` para los servicios de red previstos del juego: anuncios, compras, Firebase y guardado en la nube. Sustituye el estado pendiente de este permiso en los registros anteriores; D-033 no lo había aprobado.
+
+**Alcance.** Esta aprobación no autoriza por sí sola instalar o aprobar SDK, paquetes o versiones, crear cuentas, desplegar servicios ni publicar la app. Las aprobaciones previas de otros componentes conservan su propio alcance. No se cambia `ForceInternetPermission`, el manifiesto ni la configuración de Unity en esta tarea: según el estado documentado, Unity ya añade el permiso automáticamente.
+
+**Cómo revertir.** Mediante una nueva decisión del dueño y evaluación del efecto sobre los servicios de red antes de modificar el permiso en la app.
+
+### D-035, añadido del 2026-10-21: preguntas de F1-F2a del backend (con la regla «si tienen recomendada, vamos con esa»)
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño («sigamos las recomendaciones», 2026-10-20); son lo que implementa `backend/f1-f2a` (`897a077`, `358c8ea`). El dueño puede cambiarlas.
+- **Código de borrado (Q-B13-21):** rota; cada `POST /v1/account/code` emite uno nuevo de 128 bits (Base32 de Crockford) que invalida el anterior; el servidor solo guarda su hash; tras reinstalar, el cliente pide otro [P].
+- **Límite por IP en el borrado por web:** no en la 1.0; límite por ruta (2 rps, ráfaga 5) y contador por código; WAF con límite por IP en prod si hay abuso (Q-AWS-10). Riesgo anotado: el límite global por ruta deja que un atacante sature el borrado por web.
+- **IP en los logs de acceso de la API:** se conserva 30 días (va en Data Safety); se corrige «logs sin PII» de `docs/dev/plan-backend-aws.md` §5; lo revisa el abogado.
+- **Cuenta en prod:** `-c account` opcional y documentada (la síntesis de prod sin cuenta forma parte de la verificación).
+- **Concurrencia reservada:** no en la 1.0 (las cuentas nuevas suelen tener límite de 10).
+- **HSTS de 2 años con `includeSubDomains`:** se confirma en F5-1, antes de fijar el dominio de prod.
+- **Rutas propuestas:** `/v1/purchases/verify`, `/v1/ledger/restore`, `/v1/ssv` (GET y POST hasta verificar el formato de MAX), `/v1/account/code`, `/v1/account/delete`, `/v1/account/delete-request` y `/v1/account/delete-confirm`, en `infra/contracts/v1/index.json`.
+
+### D-035, añadido del 2026-10-21: preguntas de las 5 funciones (F2-3 a F2-8), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño («sigamos las recomendaciones»); integradas en `ae8c8ea` (rama `backend/f2b`, revisión final APROBADO sobre `d7d367a`). El dueño puede cambiarlas.
+- **`af_piggy` y cifras de los packs:** el servidor devuelve semillas 0 más el ítem `piggy` (el cliente acredita lo acumulado) y los packs con los defaults de 08 §9; se aceptan los ids `rescue_cuia` e `infinite_canoes_min` [P].
+- **Consumibles:** el servidor solo hace `acknowledge`; el consumo lo hace Unity IAP en el cliente (F3-3). Se corrige 08 §10.3 («y consume si consumible»).
+- **Cuenta ofuscada:** en prod se exigirá en cuanto F3-3 llame a `setObfuscatedAccountId = UID`; hasta entonces se acepta con aviso y métrica.
+- **Token anotado a otro UID** (cuenta borrada o reinstalación sin Play Games): se mantiene el 409; los no consumibles se recuperan desde Play.
+- **Compras de prueba en prod:** se conceden y se marcan `test`.
+- **Límites [P]:** 100 recompensas SSV por UID y día, 30 verificaciones por UID y hora, 10 códigos por UID y día, 5 `delete-request` por código y hora y 10 `delete-confirm` por token y 5 minutos.
+- **Supuestos [NV]** que se confirman en F0-R o F4-2: firma S2S de MAX = hex(SHA-256(`event_id` + clave)) (usar una firma que cubra todos los parámetros si MAX la ofrece); formato del token de App Check; `products.get` sin precio (el libro mayor no guarda `price_micros` ni `currency`; desviación del plan §2 y de 08 §10.3).
+- **Endurecimiento pendiente** (tarea F2c, de la revisión): exigir `-c firebaseAppIds` en el synth de prod; lápida `voided` para anulaciones de tokens aún no verificados; hacer cumplir `af_starter` una vez por cuenta en el servidor; cerrar las carreras residuales del borrado (condición en el Put del libro mayor o segunda pasada de `eraseAccount`). Y actualizar `aws-cdk-lib` cuando una versión corrija el aviso de `brace-expansion` (cambio de versión: lo aprueba el dueño).
+
+### D-035, añadido del 2026-10-21: preguntas de F2c (endurecimiento), con la regla «si tienen recomendada, vamos con esa»
+
+- **Estado:** aplicadas con su recomendada por la regla del dueño; integradas con `backend/f2c` (revisión final APROBADO sobre `923948d`). El dueño puede cambiarlas.
+- **`af_starter` reembolsado o con contracargo:** no se puede volver a comprar (la marca por cuenta es permanente).
+- **Errores del contrato v1:** la compra anulada y el segundo `af_starter` siguen como 400 `bad_request` con su mensaje, sin códigos nuevos.
+- **Filas de compras que escapen del borrado** (índice `by_uid` eventualmente consistente): se acepta como riesgo residual, vigilado con la métrica `EraseSecondPass` y una alarma en `ops-stack` más adelante.
+- **Reserva de `af_starter`:** 15 minutos [P].
+- **Riesgos residuales aceptados** (detalle en `infra/README.md`, «Riesgos residuales conocidos (F2c)»): más de 15 min entre reservar y escribir; borrado de la cuenta durante una compra (queda reconocida sin conceder).
+- **`infra.yml`** sintetiza prod con un id de app de ejemplo, porque prod exige `-c firebaseAppIds` desde F2c.
+- **Sugerencia pendiente** (no afecta al dinero): en `shared/integrity.ts`, una `TransactionConflict` al guardar la caché lanza 500 después de gastar el token de App Check de un solo uso; registrarla y seguir sin guardar.
