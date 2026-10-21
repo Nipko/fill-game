@@ -175,17 +175,18 @@ namespace AF.Tests.PlayMode
 
                 flying = Mathf.Max(flying, bars.FlyingCount);
                 PlayModeHelpers.TickExact(boot, PlayModeHelpers.FrameMs);
+                int t = ms + PlayModeHelpers.FrameMs;
+                if (t >= (int)VictoryBars.BasketOpenMs && t < (int)(VictoryBars.BasketOpenMs + VictoryBars.FlyMs))
+                {
+                    // Mientras la Canasta se abre (con barras, la tira salta en lugar de su línea): sin barras, la tira no se ve.
+                    Assert.That(bars.Bursting, Is.EqualTo(!view.VictoryBarsYielded), at + " a los " + t + " ms: la tira, solo con barras");
+                }
             }
 
             Assert.That(flying, Is.GreaterThan(0), at + ": su contenido vuela");
             Assert.That(bars.Pending, Is.False, at);
             Assert.That(bars.PendingSeeds, Is.EqualTo(0), at);
             Assert.That(view.WalletBar.SeedsShown, Is.EqualTo(boot.Services.Wallet.Seeds), at + ": ya se ve todo lo cobrado");
-            if (view.VictoryBarsYielded)
-            {
-                Assert.That(bars.Bursting, Is.False, at + ": sin barras, la tira no se ve (solo vuela)");
-            }
-
             VictoryLine line = view.CurrentVictoryLine;
             TestContext.WriteLine(at + ": barras " + (view.VictoryBarsYielded ? "cedidas a TiTino" : view.VictoryBarsYieldTried ? "probadas sin ellas, se quedan" : "con TiTino")
                 + ", caja " + SlothVictoryTests.F(view.SlothBoxDp) + " dp, habla " + line.SlothSpeaks + ", dato de llegada " + line.ArrivalFact);
@@ -452,6 +453,14 @@ namespace AF.Tests.PlayMode
                 return;
             }
 
+            if (view.VictoryBarsYieldTried)
+            {
+                // Se probó sin barras y ni así cabía su frase: las barras vuelven enteras, con sus filas.
+                Assert.That(bars.StreakRect.gameObject.activeSelf, Is.EqualTo(bars.Plan.Streak), at + ": la Crecida, de vuelta");
+                Assert.That(bars.BasketRect.gameObject.activeSelf, Is.EqualTo(bars.Plan.Basket), at + ": la Canasta, de vuelta");
+                Assert.That(bars.Height, Is.GreaterThan(0f), at + ": las barras, de vuelta en el panel");
+            }
+
             bool barsShown = bars.Root.gameObject.activeSelf && bars.Height > 0f;
             if (barsShown && VictoryLineArbiter.IsSlothHito(level) && view.SlothVoice && view.SlothEnabled && !line.SlothSpeaks)
             {
@@ -574,6 +583,7 @@ namespace AF.Tests.PlayMode
             SlothVictoryTests.NoSlot(false);
             SnapshotKit.Release();
             MapArtRule.ForceProvisional = null;
+            GameBootstrap.ResetStreakOverrides();
             LaunchOptions.Reset();
         }
 
@@ -634,9 +644,6 @@ namespace AF.Tests.PlayMode
             Assert.That(boot.View.SlothView.BubbleShown, Is.True, "a los 1,60 s, TiTino con su frase");
             yield return SnapshotKit.Wait(0.2f);
             SnapshotKit.Save(dir, "q10_l60_780");
-            SnapshotKit.Release();
-            GameBootstrap.ResetStreakOverrides();
-            LaunchOptions.Reset();
         }
 
         private static IEnumerator Capture(string name, string? json, int level, bool small, float scale, bool mustSpeak, bool mustShow)

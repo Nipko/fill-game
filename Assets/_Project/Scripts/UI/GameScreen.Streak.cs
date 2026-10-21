@@ -171,7 +171,7 @@ namespace AF.UI
 
         /// <summary>
         /// B1b-Q10 (c), decisión del dueño (D-033, añadido del 2026-10-20): en los hitos de TiTino (<see cref="VictoryLineArbiter.IsSlothHito"/>:
-        /// 60, 80 y 140; D-016, T6-A), si con las barras de la Crecida y la Canasta su frase no cabe (<c>SlothVictoryShown</c> no le
+        /// 40, 60, 80, 140, 200…; D-016, T6-A; el dueño citó el 60, el 80 y el 140, donde a 360 × 780 no cabía), si con las barras de la Crecida y la Canasta su frase no cabe (<c>SlothVictoryShown</c> no le
         /// dio voz), la victoria se coloca otra vez sin ellas y, si así cabe, va sin barras y TiTino habla como antes de B1b; si ni
         /// así cabe (16:9 con la ranura, 130 % con el héroe), las barras se quedan, porque quitarlas no le daría la voz. Sin barras,
         /// su secuencia sigue (<see cref="VictoryBars.Barless"/>): la Canasta del 60 se abre y su contenido vuela al saldo y a la
