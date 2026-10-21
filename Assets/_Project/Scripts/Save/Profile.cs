@@ -115,6 +115,15 @@ namespace AF.Save
         public StreakData? Streak { get; set; }
 
         /// <summary>
+        /// <c>calendar</c> (08 §4.3 con Q-M3 (a) [P]; D-033, añadido del 2026-10-20, punto 6; parche B4-1-profile): la Bitácora del
+        /// río, o null si nunca se guardó (entonces la clave no se escribe). Vive en el mismo perfil que <see cref="Wallet"/> para
+        /// que el avance de <c>next_day</c> y el cobro salgan en la misma escritura (una casilla nunca se cobra dos veces). Las reglas
+        /// las aplica <c>AF.LiveOps</c> (<c>ProfileLoginCalendarStore</c>); aquí solo se guardan. Entra sin subir el esquema, como
+        /// <see cref="Streak"/>, porque aún no se ha publicado (08 §4.3).
+        /// </summary>
+        public CalendarData? Calendar { get; set; }
+
+        /// <summary>
         /// <c>applied_purchases</c> (08 §4.3 y §10.3; 04 §10.1): las compras con dinero ya acreditadas, por su <c>token_hash</c> (SHA-256
         /// del <c>purchaseToken</c> en hexadecimal en minúsculas, como el libro mayor del servidor; contrato v1). Una compra cuyo hash
         /// está aquí no se vuelve a acreditar nunca (F3-3: <c>AF.IAP.VerifiedStoreService</c>). Vive en el mismo perfil que
@@ -362,6 +371,26 @@ namespace AF.Save
 
         /// <summary><c>river_full</c>: río crecido, hasta el siguiente fallo duro no escudado (08 §4.3; 05 §2.4).</summary>
         public bool RiverFull { get; set; }
+    }
+
+    /// <summary>
+    /// <c>calendar</c> (08 §4.3 con Q-M3 (a) [P]; D-033, añadido del 2026-10-20, punto 6): la Bitácora del río,
+    /// <c>{cycle, next_day, last_claim_date}</c>, más <c>played_date</c> [P] (Q-B1 de B4). Solo datos: el significado lo da
+    /// <c>AF.LiveOps.LoginCalendarRecord</c>; los marcos de país ganados van en <see cref="EntitlementsData.Frames"/>.
+    /// </summary>
+    public sealed class CalendarData
+    {
+        /// <summary><c>cycle</c>: ciclo en curso (1 el primero).</summary>
+        public int Cycle { get; set; } = 1;
+
+        /// <summary><c>next_day</c>: la casilla que toca sellar (1-30).</summary>
+        public int NextDay { get; set; } = 1;
+
+        /// <summary><c>last_claim_date</c>: día local del último sello (<c>yyyy-MM-dd</c>), o null.</summary>
+        public string? LastClaimDate { get; set; }
+
+        /// <summary><c>played_date</c> [P]: último día local con un nivel terminado (<c>yyyy-MM-dd</c>), o null.</summary>
+        public string? PlayedDate { get; set; }
     }
 
     /// <summary><c>progress</c> (08 §4.3; 04 §10.1; <c>map_seen_level</c>, D-013, y <c>undo_tip_seen</c> [P], DC23).</summary>

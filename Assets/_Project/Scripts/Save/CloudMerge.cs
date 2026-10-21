@@ -119,7 +119,8 @@ namespace AF.Save
     /// derechos ni compras) [P].</item>
     /// </list>
     /// Con B6 (Q-B8-11 (a) [P]): <c>stats.last_seen_at</c> y <c>last_win_at</c> por máximo; en <c>settings.push</c>, «o» en los
-    /// pre-prompts, máximo en <c>pre_prompt_at</c> y <c>granted</c> del dispositivo.
+    /// pre-prompts, máximo en <c>pre_prompt_at</c> y <c>granted</c> del dispositivo. Con B14, <c>entitlements.frames</c> y
+    /// <c>album.fruits</c> por unión; con B4 [P], <c>calendar</c> el de más avance y <c>played_date</c> por máximo.
     /// Lo demás (<c>settings</c>, <c>sloth</c>, <c>streak</c>, <c>daily_challenge</c>, <c>level_state</c>, <c>progress</c>
     /// salvo lo dicho) es del ganador: va con su cartera en el mismo blob y así nunca se paga dos veces lo mismo. Tras fusionar, el
     /// cliente llama a <c>restoreLedger</c> (08 §11; llega con Functions) y vuelve a acreditar los tokens que falten.
@@ -388,6 +389,37 @@ namespace AF.Save
             push.SecondPromptShown = push.SecondPromptShown || other.Settings.Push.SecondPromptShown;
             push.PrePromptAt = MaxTs(push.PrePromptAt, other.Settings.Push.PrePromptAt);
             push.Granted = local.Settings.Push.Granted;
+
+            // B14: los marcos de país por unión, como las skins (EntitlementsData.MergeOwned), y el álbum de frutas por unión.
+            UnionSorted(merged.Entitlements.Frames, other.Entitlements.Frames);
+            merged.Album.MergeFruits(other.Album);
+
+            // B4 [P] (nota de B4 §7): calendar, el registro con más avance (cycle y luego next_day; en empate, el del ganador), y
+            // played_date por máximo. Así una casilla sellada en un teléfono no se vuelve a sellar en el otro.
+            CalendarData? mine = merged.Calendar;
+            CalendarData? theirs = other.Calendar;
+            if (theirs != null)
+            {
+                string? played = mine == null ? theirs.PlayedDate : MaxDate(mine.PlayedDate, theirs.PlayedDate);
+                if (mine == null || theirs.Cycle > mine.Cycle || (theirs.Cycle == mine.Cycle && theirs.NextDay > mine.NextDay))
+                {
+                    mine = new CalendarData
+                    {
+                        Cycle = theirs.Cycle,
+                        NextDay = theirs.NextDay,
+                        LastClaimDate = theirs.LastClaimDate,
+                    };
+                    merged.Calendar = mine;
+                }
+
+                mine.PlayedDate = played;
+            }
+        }
+
+        // La fecha local (yyyy-MM-dd) más reciente; null cuenta como la más antigua.
+        private static string? MaxDate(string? a, string? b)
+        {
+            return string.CompareOrdinal(a ?? string.Empty, b ?? string.Empty) >= 0 ? a : b;
         }
 
         /// <summary>

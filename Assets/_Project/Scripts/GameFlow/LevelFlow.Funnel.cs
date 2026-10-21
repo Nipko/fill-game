@@ -507,6 +507,7 @@ namespace AF.GameFlow
         {
             FailOutcome outcome = FailResolve.Resolve(_attempt, kind, LevelNumber, _wallet);
             OnHardFailStreak(kind); // Crecida y Hoja escudo, antes de avisar a la vista (E29, E31; LevelFlow.Streak.cs)
+            OnFailCalendar(kind); // Bitácora: el fallo duro también termina el nivel del día (B4; LevelFlow.Calendar.cs)
             PublishLevelFailed(outcome); // af_level_fail y, si es duro, level_end por el bus (B7; LevelFlow.Events.cs)
             _listener.OnFailResolved(outcome);
         }

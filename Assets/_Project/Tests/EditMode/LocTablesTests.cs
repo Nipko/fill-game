@@ -553,6 +553,15 @@ namespace AF.Tests.EditMode
                 }
             }
 
+            // B4: la Bitácora del río (tarjeta del inicio y libreta), que pinta AF.UI.LogbookText.
+            foreach (FieldInfo f in typeof(LogbookText.Keys).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (f.IsLiteral && f.FieldType == typeof(string))
+                {
+                    keys.Add((string)f.GetValue(null)!);
+                }
+            }
+
             return keys;
         }
 

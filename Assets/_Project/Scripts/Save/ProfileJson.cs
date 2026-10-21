@@ -15,8 +15,8 @@ namespace AF.Save
     /// <c>settings</c>, <c>sloth</c> y <c>progress.map_seen_level</c> toman su default ante un valor ausente o inválido
     /// (un ajuste nunca hace corrupto un perfil), y <c>map_seen_level</c> queda recortado a [0, <c>max_level</c>]; igual
     /// <c>progress.undo_tip_seen</c> (DC23), que sin la clave o con otro tipo queda en «no visto». <c>fauna</c>
-    /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta. <c>streak</c> y
-    /// <c>daily_challenge</c> se omiten mientras son null, y <c>daily.streak_hits</c> y <c>daily.streak_seeds</c> en su default
+    /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta. <c>streak</c>,
+    /// <c>calendar</c> (B4) y <c>daily_challenge</c> se omiten mientras son null, y <c>daily.streak_hits</c> y <c>daily.streak_seeds</c> en su default
     /// (vacía y 0): son economía y un tipo equivocado en ellos es corrupción. Los de B14 son cosméticos y tolerantes:
     /// <c>entitlements.skin_equipped</c> y <c>entitlements.frames</c> se omiten en su default (null y vacía), y <c>album</c>
     /// (solo <c>fruits</c>), sin tintes; un valor que no vale toma el default o se descarta.
@@ -148,6 +148,17 @@ namespace AF.Save
                 streak.Set("wins", JsonNode.FromInt(p.Streak.Wins));
                 streak.Set("river_full", JsonNode.FromBool(p.Streak.RiverFull));
                 root.Set("streak", streak);
+            }
+
+            if (p.Calendar != null)
+            {
+                // Bitácora del río (Q-M3 (a) [P]; B4-1-profile): la clave falta hasta el primer guardado.
+                JsonNode calendar = JsonNode.NewObject();
+                calendar.Set("cycle", JsonNode.FromInt(p.Calendar.Cycle));
+                calendar.Set("next_day", JsonNode.FromInt(p.Calendar.NextDay));
+                calendar.Set("last_claim_date", JsonNode.FromString(p.Calendar.LastClaimDate));
+                calendar.Set("played_date", JsonNode.FromString(p.Calendar.PlayedDate));
+                root.Set("calendar", calendar);
             }
 
             root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
@@ -350,6 +361,21 @@ namespace AF.Save
                 streak.Wins = ReadInt(streakNode, "wins", streak.Wins);
                 streak.RiverFull = ReadBool(streakNode, "river_full", streak.RiverFull);
                 p.Streak = streak;
+            }
+
+            // calendar (Bitácora del río; Q-M3 (a) [P]; B4-1-profile): es economía (last_claim_date impide cobrar dos veces una
+            // casilla), así que un tipo equivocado es corrupción. Una clave que falta toma su default y una desconocida se ignora
+            // (el bloque de ejemplo antiguo de 08 §4.3, con month y claimed_days, se lee como un ciclo 1 en la casilla 1). Los
+            // rangos (next_day 1-30) los recorta AF.LiveOps.
+            JsonNode? calendarNode = Section(root, "calendar");
+            if (calendarNode != null)
+            {
+                var calendar = new CalendarData();
+                calendar.Cycle = ReadInt(calendarNode, "cycle", calendar.Cycle);
+                calendar.NextDay = ReadInt(calendarNode, "next_day", calendar.NextDay);
+                calendar.LastClaimDate = ReadString(calendarNode, "last_claim_date", calendar.LastClaimDate);
+                calendar.PlayedDate = ReadString(calendarNode, "played_date", calendar.PlayedDate);
+                p.Calendar = calendar;
             }
 
             JsonNode? levelState = Section(root, "level_state");

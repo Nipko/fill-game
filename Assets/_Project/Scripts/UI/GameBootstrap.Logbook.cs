@@ -86,9 +86,19 @@ namespace AF.UI
 
         /// <summary>
         /// Almacén del bloque <c>calendar</c> sobre el perfil (B4-1-profile): recibe el perfil y su almacén (el lote de guardado),
-        /// los mismos que la cartera. Null hasta aplicar el parche.
+        /// los mismos que la cartera. Por defecto, <see cref="CreateProfileLogbookStore"/>.
         /// </summary>
-        public static Func<Profile, IProfileStore, ILoginCalendarStore>? LogbookStoreFactory { get; set; }
+        public static Func<Profile, IProfileStore, ILoginCalendarStore>? LogbookStoreFactory { get; set; } = CreateProfileLogbookStore;
+
+        /// <summary>
+        /// B4-1-profile: la Bitácora en el bloque <c>calendar</c> del mismo perfil que la cartera, guardada por la vía síncrona del
+        /// lote (<see cref="ProfileSaveBatch.Durable"/>), como el Reto: el avance de una casilla está en disco antes del pago, y si
+        /// esa escritura falla, los dos salen juntos en la siguiente (<see cref="ILoginCalendarStore"/>).
+        /// </summary>
+        public static ILoginCalendarStore CreateProfileLogbookStore(Profile profile, IProfileStore store)
+        {
+            return new ProfileLoginCalendarStore(profile, store is ProfileSaveBatch batch ? batch.Durable : store);
+        }
 
         /// <summary>Servicio de la Bitácora (null antes de <see cref="SetUpLogbook"/>).</summary>
         public LoginCalendarService? Logbook => _logbook;

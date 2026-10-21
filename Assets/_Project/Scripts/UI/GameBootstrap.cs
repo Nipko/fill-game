@@ -917,6 +917,12 @@ namespace AF.UI
                 return _mapScreen.CloseTopSheet() || CloseRiverMap(); // primero la tarjeta de la parada y el Muestrario (M4.1)
             }
 
+            // La libreta de la Bitácora (B4-3), sobre el inicio o la victoria: Atrás es «Cerrar» (en la secuencia del 10, «Seguir»).
+            if (PressLogbookBack())
+            {
+                return true;
+            }
+
             // Reto del río (E22): Atrás cierra su calendario como «Inicio»; con el tablero del Reto en juego no hace nada, como en un
             // nivel (02 §3; 04 §6.6). HandleBack devuelve false si no hay calendario abierto.
             if (_dailyScreen != null && _dailyScreen.IsOpen)
@@ -1344,7 +1350,7 @@ namespace AF.UI
                 // La secuencia del Mapa del 10 (06 §2.3; P-M4; M4.2): tras «Siguiente» en la victoria del 10 o, si se pulsó Inicio o
                 // se cerró la app, en la primera entrada al inicio con max_level ≥ 10 y map_seen_level < 10. Al acabarla se anota lo
                 // visto hasta el 10: no se repite.
-                if (_app.L10MapDue)
+                if (_app.L10MapDue && !OpenLogbookBeforeL10Map()) // B4-3: Victoria → libreta → Mapa → Inicio (D-033, punto 11)
                 {
                     OpenRiverMap(MapOpenSource.L10);
                 }
@@ -1634,6 +1640,7 @@ namespace AF.UI
             SetUpStreak(); // Crecida, Hoja escudo y Canasta (E32; GameBootstrap.Streak.cs): el servicio, inyectado en el flujo
             SetUpMeta(); // B14: skins por hito, álbum de frutas, la Canasta en el Mapa y «Datos del río» (GameBootstrap.Meta.cs)
             SetUpSkip(); // Salto del Boto (B3; GameBootstrap.Skip.cs): el almacén en el perfil, la confirmación y el banner
+            SetUpLogbook(); // Bitácora del río y cola de takeovers (B4-3; GameBootstrap.Logbook.cs): tarjeta, libreta y takeover
             SetUpSessions(); // B6 (GameBootstrap.Sessions.cs): stats.sessions, Regalo de regreso, settings.push y avisos locales
             ConnectTelemetry(); // el bus a la cartera y al flujo, la analítica a las pantallas (B7; GameBootstrap.Telemetry.cs)
 

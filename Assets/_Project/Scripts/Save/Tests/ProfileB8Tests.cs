@@ -290,6 +290,31 @@ namespace AF.Save.Tests
         }
 
         [Test]
+        public void Merge_CalendarFramesAndAlbum_B4_B14()
+        {
+            Profile local = Profile.CreateNew(new ManualClock(T0), 5);
+            local.Progress.MaxLevel = 40; // gana el local
+            local.Calendar = new CalendarData { Cycle = 1, NextDay = 5, LastClaimDate = "2026-10-18", PlayedDate = "2026-10-20" };
+            local.Entitlements.Frames.Add("frame_w02");
+            local.Album.AddFruit(3);
+            Profile cloud = Profile.CreateNew(new ManualClock(T0), 5);
+            cloud.Progress.MaxLevel = 10;
+            cloud.Calendar = new CalendarData { Cycle = 1, NextDay = 7, LastClaimDate = "2026-10-19", PlayedDate = "2026-10-19" };
+            cloud.Entitlements.Frames.Add("frame_w01");
+            cloud.Album.AddFruit(1);
+
+            Profile m = CloudMerge.Resolve(local, cloud).Merged;
+            Assert.That(m.Calendar!.NextDay, Is.EqualTo(7), "[P] B4: el registro con más avance");
+            Assert.That(m.Calendar.LastClaimDate, Is.EqualTo("2026-10-19"));
+            Assert.That(m.Calendar.PlayedDate, Is.EqualTo("2026-10-20"), "played_date por máximo");
+            Assert.That(m.Entitlements.Frames, Is.EqualTo(new[] { "frame_w01", "frame_w02" }));
+            Assert.That(m.Album.Fruits, Is.EquivalentTo(new[] { 1, 3 }));
+
+            cloud.Calendar = null;
+            Assert.That(CloudMerge.Resolve(local, cloud).Merged.Calendar!.NextDay, Is.EqualTo(5));
+        }
+
+        [Test]
         public void CloudSync_WithoutSession_DoesNothing()
         {
             Profile local = Filled();

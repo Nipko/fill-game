@@ -99,6 +99,21 @@ namespace AF.Tests.PlayMode
             NoContentEndMapUnlessSet();
             NoIdleHintUnlessSet();
             NoShuffleUnlessSet();
+            NoLogbookUnlessSet();
+        }
+
+        /// <summary>
+        /// Apaga la Bitácora del río (B4) si el test no la fijó (<see cref="GameBootstrap.LogbookOverride"/> = null): los tests que
+        /// no tratan de ella entran al inicio sin la libreta encima (el takeover de la sesión, D-033, punto 5) y ven el Mapa del 10
+        /// sin la libreta delante, como antes de que existiera. Los que la prueban (<c>LogbookBootstrapTests</c>,
+        /// <c>LogbookHooksTests</c>) la encienden y la vuelven a null en su TearDown.
+        /// </summary>
+        public static void NoLogbookUnlessSet()
+        {
+            if (GameBootstrap.LogbookOverride == null)
+            {
+                GameBootstrap.LogbookOverride = false;
+            }
         }
 
         /// <summary>
