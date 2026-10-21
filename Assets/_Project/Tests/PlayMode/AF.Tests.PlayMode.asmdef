@@ -15,6 +15,7 @@
     "AF.Boosters",
     "AF.Ads",
     "AF.IAP",
+    "AF.Backend",
     "AF.Localization",
     "AF.Audio",
     "AF.Audio.Unity",

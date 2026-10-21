@@ -5,7 +5,8 @@
     "AF.Platform",
     "AF.Save",
     "AF.Economy",
-    "AF.Localization"
+    "AF.Localization",
+    "AF.Backend"
   ],
   "includePlatforms": [],
   "excludePlatforms": [],

@@ -115,6 +115,62 @@ namespace AF.Save
         public StreakData? Streak { get; set; }
 
         /// <summary>
+        /// <c>applied_purchases</c> (08 §4.3 y §10.3; 04 §10.1): las compras con dinero ya acreditadas, por su <c>token_hash</c> (SHA-256
+        /// del <c>purchaseToken</c> en hexadecimal en minúsculas, como el libro mayor del servidor; contrato v1). Una compra cuyo hash
+        /// está aquí no se vuelve a acreditar nunca (F3-3: <c>AF.IAP.VerifiedStoreService</c>). Vive en el mismo perfil que
+        /// <see cref="Wallet"/> para que el apunte y lo acreditado salgan en la misma escritura. En la fusión de 08 §11 es la unión
+        /// (<see cref="MergeAppliedPurchases"/>). La clave falta mientras está vacía (entra sin migrar: aún no se ha publicado).
+        /// </summary>
+        public List<string> AppliedPurchases { get; } = new List<string>();
+
+        /// <summary>
+        /// <c>purchase_queue</c> [P] (F3-3): la cola de verificación de compras de 08 §10.3 (<c>AF.Backend.Verification.VerificationQueue</c>),
+        /// como el JSON que escribe esa cola, o null si nunca se guardó (entonces la clave falta). Lleva los <c>purchaseToken</c>: va
+        /// al perfil, nunca a los logs. AF.Save no la interpreta; si no se entiende, <c>AF.IAP</c> empieza con la cola vacía y las
+        /// compras sin terminar vuelven con Unity IAP al arrancar.
+        /// </summary>
+        public string? PurchaseQueue { get; set; }
+
+        /// <summary>¿Está <paramref name="tokenHash"/> en <see cref="AppliedPurchases"/>?</summary>
+        public bool HasAppliedPurchase(string tokenHash)
+        {
+            if (tokenHash == null)
+            {
+                throw new ArgumentNullException(nameof(tokenHash));
+            }
+
+            for (int i = 0; i < AppliedPurchases.Count; i++)
+            {
+                if (string.Equals(AppliedPurchases[i], tokenHash, StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        /// <summary>
+        /// Fusión de 08 §11 (<c>merged.applied_purchases = union(local, cloud)</c>): añade a este perfil (el ganador) las compras
+        /// acreditadas del otro que falten, en su orden.
+        /// </summary>
+        public void MergeAppliedPurchases(Profile other)
+        {
+            if (other == null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            for (int i = 0; i < other.AppliedPurchases.Count; i++)
+            {
+                if (!HasAppliedPurchase(other.AppliedPurchases[i]))
+                {
+                    AppliedPurchases.Add(other.AppliedPurchases[i]);
+                }
+            }
+        }
+
+        /// <summary>
         /// Perfil de primera ejecución: <c>created_at</c> = ahora, 0 semillas (el GDD no fija otro saldo inicial),
         /// <paramref name="initialCanoes"/> canoas, stock vacío, sin nivel en curso y el nivel 1 como siguiente
         /// (08 §2.3: la primera vez se entra directamente al nivel 1).
