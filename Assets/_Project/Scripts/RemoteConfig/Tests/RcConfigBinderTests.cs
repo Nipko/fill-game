@@ -28,8 +28,10 @@ namespace AF.RemoteConfig.Tests
         // falla: toda clase de cifras se enlaza o se declara aquí (nota §2.3).
         private static readonly Dictionary<string, string> NotBoundYet = new Dictionary<string, string>(StringComparer.Ordinal)
         {
-            { "ShuffleConfig", "B2 (AF.Boosters, 5 claves): se enlaza al fusionar B2 en la integración" },
-            { "SkipConfig", "B3 (Salto del Boto): se enlaza al fusionar B3 en la integración" },
+            { "ShuffleConfig", "B2 (AF.Boosters, 5 claves): ya integrada; falta su tabla en RcConfigBinder y pasarla a la Pororoca" },
+            { "SkipConfig", "B3 (Salto del Boto, 3 claves): ya integrada; falta su tabla en RcConfigBinder y pasarla al Salto" },
+            { "ComebackConfig", "B6 (AF.LiveOps, live_comeback_gift): ya integrada; falta su tabla en RcConfigBinder y pasarla al Regalo de regreso" },
+            { "PushConfig", "B6 (AF.LiveOps, 5 claves push_*): ya integrada; falta su tabla en RcConfigBinder y pasarla a los avisos" },
         };
 
         private static RcSnapshot With(params string[] kv)

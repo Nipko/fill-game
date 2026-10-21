@@ -83,7 +83,7 @@ cobertura compara esa tabla con los atributos. Un valor que no se entiende deja 
 `Errors`; una clase que no pasa su `Validate()` vuelve entera a `Defaults` [P] (Q-B7-7). El Reto recibe la misma
 `sec_clock_max_drift_h` en su copia (`DailyChallengeConfig.ClockSecurity`).
 
-`ShuffleConfig` (B2, `AF.Boosters`, 5 claves) y `SkipConfig` (B3) no están aquí todavía. Ya están en la integración (`803e9723`) y en esta rama, que
+`ShuffleConfig` (B2, `AF.Boosters`, 5 claves), `SkipConfig` (B3) y `ComebackConfig` y `PushConfig` (B6, `AF.LiveOps`) no están aquí todavía. Ya están en la integración (`803e9723`) y en esta rama, que
 las fusionó; falta añadir su tabla a `RcConfigBinder` (una línea por clave) y quitarlas de `NotBoundYet`. `RcConfigBinderTests` descubre por
 reflexión, en los tests, **todos** los tipos con `[RemoteConfigKey]` de todo ensamblado cargado que referencie el de
 `RemoteConfigKeyAttribute` (`AF.Platform`), más ese mismo, salvo los de pruebas (`RemoteConfigKeyScan`); una aserción exige que
