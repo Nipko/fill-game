@@ -43,13 +43,15 @@ namespace AF.IAP
     /// <summary>Un cambio en la verificación de una compra. No lleva el token ni el UID: se puede registrar.</summary>
     public sealed class PurchaseVerificationEvent
     {
-        internal PurchaseVerificationEvent(string sku, PurchaseVerificationState state, BackendError? error, int unknownGrantItems, bool isLive)
+        internal PurchaseVerificationEvent(
+            string sku, PurchaseVerificationState state, BackendError? error, int unknownGrantItems, bool isLive, int creditedPiggySeeds = 0)
         {
             Sku = sku;
             State = state;
             Error = error;
             UnknownGrantItems = unknownGrantItems;
             IsLive = isLive;
+            CreditedPiggySeeds = creditedPiggySeeds;
         }
 
         public string Sku { get; }
@@ -68,6 +70,13 @@ namespace AF.IAP
 
         /// <summary>Ítems del <c>grant</c> que este cliente no conoce y no acreditó.</summary>
         public int UnknownGrantItems { get; }
+
+        /// <summary>
+        /// Con <see cref="PurchaseVerificationState.Credited"/>: las semillas del Cántaro (<c>af_piggy</c>) que entraron en la cartera, las
+        /// de la compra (o <c>eco_piggy_min_buy</c> si no se conocían) y no las que haya ahora en el Cántaro; 0 en el resto. Con ellas
+        /// <see cref="PiggyJar.OnCreditedLater"/> resta solo lo acreditado (D-035, añadido de F3-5).
+        /// </summary>
+        public int CreditedPiggySeeds { get; }
 
         public override string ToString() => "PurchaseVerification(" + Sku + ", " + State + ")";
     }
@@ -415,7 +424,7 @@ namespace AF.IAP
 
             if (credit.Kind == VerifiedCreditKind.Credited)
             {
-                Raise(sku, PurchaseVerificationState.Credited, live, null, credit.UnknownItems);
+                Raise(sku, PurchaseVerificationState.Credited, live, null, credit.UnknownItems, credit.PiggySeeds);
                 Complete(token, PurchaseStatus.Purchased, credit.Transaction);
             }
             else
@@ -500,9 +509,10 @@ namespace AF.IAP
             waiting.OnDone(new PurchaseResult(waiting.Request, waiting.Product, status, transaction));
         }
 
-        private void Raise(string sku, PurchaseVerificationState state, bool live, BackendError? error = null, int unknownItems = 0)
+        private void Raise(
+            string sku, PurchaseVerificationState state, bool live, BackendError? error = null, int unknownItems = 0, int piggySeeds = 0)
         {
-            VerificationChanged?.Invoke(new PurchaseVerificationEvent(sku, state, error, unknownItems, live));
+            VerificationChanged?.Invoke(new PurchaseVerificationEvent(sku, state, error, unknownItems, live, piggySeeds));
         }
 
         private string? AccountId()

@@ -271,9 +271,10 @@ namespace AF.UI
                 return;
             }
 
-            // Acreditada tarde (la cola, al volver a primer plano o en el arranque): el Cántaro pendiente se vacía (Q-B5-12) y la skin
+            // Acreditada tarde (la cola, al volver a primer plano o en el arranque): al Cántaro pendiente se le resta lo acreditado,
+            // conservando lo que entró después de la compra (Q-B5-12; D-035, añadido de F3-5), y la skin
             // comprada se pone (Q-B5-13), como al comprarla; la Cuia de rescate de una Balsa tardía se pierde (D-035, añadido de F3-3).
-            _piggy?.OnCreditedLater(e.Sku);
+            _piggy?.OnCreditedLater(e.Sku, e.CreditedPiggySeeds);
             StoreProduct? product = _storeLedger?.Catalog.Find(e.Sku);
             if (product != null && product.Content.GrantsSkin && _skinService != null && _skinService.Select(e.Sku))
             {

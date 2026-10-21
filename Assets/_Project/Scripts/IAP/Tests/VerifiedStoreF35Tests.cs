@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using AF.Backend;
+using AF.Economy;
 using AF.Platform;
 using NUnit.Framework;
 
@@ -64,6 +65,51 @@ namespace AF.IAP.Tests
             fx.Service.Pump();
             Assert.That(fx.Wallet.Seeds, Is.EqualTo(1500), "acreditada una vez, con sus semillas");
             Assert.That(fx.Buy(StoreCatalog.Piggy, piggySeeds: 1200).IsPurchased, Is.True, "acreditada la primera, se puede comprar otro");
+        }
+
+        [Test]
+        public void APiggyCreditedLate_SubtractsOnlyWhatWasCredited_AndKeepsTheSeedsThatCameInAfter()
+        {
+            // D-035, añadido de F3-5 (Q-B5-12, pregunta 3): al Cántaro acreditado tarde se le resta lo acreditado, no se vacía entero.
+            var fx = new VerifiedStoreFixture();
+            var records = new InMemoryOffersStore();
+            var piggy = new PiggyJar(new OffersState(records), null, fx.Ledger.Config);
+            fx.Service.VerificationChanged += e =>
+            {
+                if (!e.IsLive && e.State == PurchaseVerificationState.Credited)
+                {
+                    piggy.OnCreditedLater(e.Sku, e.CreditedPiggySeeds); // como GameBootstrap.OnVerificationChanged
+                }
+            };
+            for (int level = 20; level < 120; level++)
+            {
+                piggy.OnCampaignVictory(level, RewardTier.Normal); // 100 victorias × 15 = 1.500
+            }
+
+            Assert.That(piggy.Seeds, Is.EqualTo(1500));
+            fx.Backend.FailNext(new BackendError(BackendErrorKind.Network));
+            PurchaseResult? result = null;
+            fx.Service.Purchase(piggy.Request(PurchaseContext.Piggy, 120), r => result = r);
+            Assert.That(result!.Status, Is.EqualTo(PurchaseStatus.Pending));
+            Assert.That(piggy.OnPurchaseResult(result), Is.False);
+            Assert.That(piggy.Seeds, Is.EqualTo(1500), "pendiente: guarda lo suyo");
+
+            // Semillas que entran entre la compra y la acreditación: 15 + 30 + 40.
+            piggy.OnCampaignVictory(120, RewardTier.Normal);
+            piggy.OnCampaignVictory(121, RewardTier.Hard);
+            piggy.OnCampaignVictory(122, RewardTier.VeryHard);
+            Assert.That(piggy.Seeds, Is.EqualTo(1585));
+
+            fx.Clock.Advance(TimeSpan.FromHours(1));
+            fx.Service.Pump();
+            Assert.That(fx.Wallet.Seeds, Is.EqualTo(1500), "se acredita lo de la compra, no lo que hay ahora");
+            Assert.That(piggy.Seeds, Is.EqualTo(85), "conserva lo que entró después de la compra");
+            Assert.That(records.Load().PiggySeeds, Is.EqualTo(85), "y lo guarda");
+
+            Assert.That(piggy.OnCreditedLater("af_coins_2", 500), Is.False, "otro SKU no lo toca");
+            Assert.That(piggy.OnCreditedLater(StoreCatalog.Piggy, 1000), Is.True);
+            Assert.That(piggy.Seeds, Is.EqualTo(0), "nunca por debajo de 0");
+            Assert.Throws<ArgumentOutOfRangeException>(() => piggy.OnCreditedLater(StoreCatalog.Piggy, -1));
         }
 
         [Test]
