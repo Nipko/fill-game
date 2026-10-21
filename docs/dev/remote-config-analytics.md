@@ -157,15 +157,17 @@ orden**:
 | 4 | `B7-appflow.diff` | `GameFlow/AppFlow.cs` | `ExitToLobby` publica el abandono si el nivel sigue sin resolver |
 | 5 | `B7-gamescreen.diff` | `UI/UiAnalytics.cs`, `UI/GameScreen.Analytics.cs` (nuevos), `GameScreen.Arrival.cs`, `GameScreen.Victory.cs`, `GameScreen.Notices.cs` | Una línea junto a cada sonda: `af_stop_arrive`, `af_river_fact_shown`, `af_fruit_discovered` |
 | 6 | `B7-rivermap.diff` | `UI/RiverMapScreen.Analytics.cs` (nuevo), `RiverMapScreen.CatchUp.cs`, `RiverMapScreen.Sequence.cs` | Idem en el Mapa |
-| 7 | `B7-bootstrap.diff` | `UI/GameBootstrap.Telemetry.cs` (nuevo), `GameBootstrap.cs`, `GameBootstrap.Daily.cs`, `GameBootstrap.Streak.cs`, `Tests/PlayMode/TelemetryBootTests.cs` (nuevo) | `SetUpTelemetry` antes de la cartera; las cifras de RC a la cartera, el flujo, los anuncios, la tienda, el Reto y la Crecida; los envoltorios de anuncios y tienda; `ConnectTelemetry` tras `SetUpStreak`; `af_map_open`/`close`; la sesión en `OnApplicationPause` |
+| 7 | `B7-bootstrap.diff` | `UI/GameBootstrap.Telemetry.cs` (nuevo), `GameBootstrap.cs`, `GameBootstrap.Daily.cs`, `GameBootstrap.Streak.cs`, `Tests/PlayMode/TelemetryBootTests.cs` (nuevo) | `SetUpTelemetry` antes de la cartera; las cifras de RC a la cartera, el flujo, los anuncios, la tienda, el Reto y la Crecida; los envoltorios de anuncios y tienda; `ConnectTelemetry` tras `SetUpMeta` (B14); `af_map_open`/`close`; la sesión en `OnApplicationPause` |
 | 8 | `B7-gdd.diff` | `docs/gdd/08-…md` §9, `docs/gdd/02-…md` §4, el JSON y su C# regenerados | D-033, Q-N1: `anim_speed_factor_late` = 1,0 en el GDD (el código ya usa 1,0) |
 
 Los `.meta` de los archivos nuevos van dentro de cada parche (los generó Unity en el worktree de prueba).
 
 **Al aplicarlos:**
 - con `git apply` dentro del repositorio, o con `git -c core.autocrlf=false apply` (los parches van en LF y el árbol, también);
-- `B7-bootstrap.diff` choca con `B3-ui.diff` en `GameBootstrap.cs`, justo después de `SetUpStreak();`. Los dos añaden ahí su
-  línea. Se resuelve a mano dejando `SetUpSkip();` y después `ConnectTelemetry();` (el bus se conecta con todo ya construido).
+- desde la fusión de `d994e586` (B14), `ConnectTelemetry();` va justo después de `SetUpMeta();`, la última llamada `SetUp*` de
+  `Start` (el parche se regeneró por eso); el bus se conecta con todo ya construido;
+- `B7-bootstrap.diff` choca con `B3-ui.diff` y `B6-bootstrap.diff` en `GameBootstrap.cs`, que añaden su línea tras `SetUpStreak();`
+  y, por tanto, en el mismo bloque. Se resuelve a mano dejando `ConnectTelemetry();` la última, tras todas las `SetUp*`.
 
 Cómo se prueban: `TelemetryHooksTests` (EditMode: la cartera publica con su fuente y sumidero; las canoas con `lives` apagado;
 inicio, victoria, fallo duro, segundo intento y abandono del flujo; la cadena del flujo a 08 §8.2 sin violaciones) y
