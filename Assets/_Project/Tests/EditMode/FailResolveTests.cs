@@ -109,6 +109,35 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void Matrix_From31_WithLivesOff_NoCanoeIsShownOrAnnounced_ButTheFunnelStays()
+        {
+            // biz_feature_lives = false (08 §9): las canoas no cuentan (Wallet.CanoesActive) y el fallo duro no cobra ninguna, así
+            // que ni la barra las enseña ni la salida, el modal o «Rendirse» anuncian una pérdida. El embudo de D-008 (salir es
+            // fallo duro y lleva a Nivel fallido) y el rescate no cambian: con las canoas apagadas, eso es pregunta del dueño.
+            var fx = new FunnelFixture(offset: 30, maxLevel: 35);
+            fx.Wallet.LivesEnabled = false;
+            fx.StartPlaying(31);
+            Assert.That(fx.Flow.CanoesLevel, Is.True, "el embudo de D-008 sigue desde el 31");
+            Assert.That(fx.Flow.CanoesActive, Is.False, "la barra de la cartera no enseña canoas");
+            Assert.That(fx.Flow.CanoeAtStake, Is.False);
+            Assert.That(fx.Flow.QuitIsHardFail, Is.True, "salir con el menú sigue siendo fallo duro (D-008)");
+            Assert.That(fx.Flow.QuitCostsCanoe, Is.False, "«Salir» no anuncia ninguna canoa");
+            Assert.That(fx.Flow.ConfirmQuit(), Is.True);
+            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed));
+            Assert.That(fx.Wallet.Canoes.Count, Is.EqualTo(5), "HardFail no cobra con las canoas apagadas");
+            Assert.That(fx.Flow.Attempt.FailsLevel, Is.EqualTo(1));
+
+            fx.StartPlaying(36);
+            fx.GetStuck();
+            StuckContext ctx = fx.Flow.BuildStuckContext(false, false, GeoTier.T3);
+            Assert.That(StuckModalModel.Build(ctx, fx.Flow.Boosters).CanoeLine, Is.EqualTo(StuckCanoeLine.None), "el modal no anuncia la canoa");
+            Assert.That(StuckModalModel.GiveUpNeedsConfirm(ctx), Is.False);
+            Assert.That(fx.Flow.PressGiveUp(), Is.True);
+            Assert.That(fx.Flow.Phase, Is.EqualTo(FlowPhase.LevelFailed), "sin canoa en juego, sin ¿Seguro? (D-008, paso 2 [P])");
+            Assert.That(fx.Wallet.Canoes.Count, Is.EqualTo(5));
+        }
+
+        [Test]
         public void Matrix_QuitIn1To30_IsFree_AndNotAFail()
         {
             var fx = new FunnelFixture();

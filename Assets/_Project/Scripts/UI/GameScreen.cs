@@ -1788,7 +1788,7 @@ namespace AF.UI
             // a verse (SetVisible) se repinta de todos modos.
             int pending = PendingHarvest(flow) + PendingBarSeeds(flow);
             _tray.Refresh(flow.Phase == FlowPhase.Celebration ? pending : 0);
-            _walletBar.Refresh(_services?.Wallet, flow.CanoesLevel, pending);
+            _walletBar.Refresh(_services?.Wallet, flow.CanoesActive, pending); // biz_feature_lives (08 §9): sin canoas, sin su contador
             if (flow.Phase == FlowPhase.StuckModal && _stuck.Panel.gameObject.activeSelf)
             {
                 // Tras comprar un Puñado o recargar Marea, el modal se rearma con el saldo nuevo y el mismo precio.
@@ -1848,7 +1848,7 @@ namespace AF.UI
 
             _walletBar.SetVisible(true);
             LayoutWalletBar(pause && phase == FlowPhase.StuckModal);
-            _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesLevel, flow == null ? 0 : PendingHarvest(flow) + PendingBarSeeds(flow));
+            _walletBar.Refresh(_services?.Wallet, flow != null && flow.CanoesActive, flow == null ? 0 : PendingHarvest(flow) + PendingBarSeeds(flow));
         }
 
         // Saldo grande del embudo a la izquierda (tras la pausa en Aguas estancadas); píldoras de la cabecera de partida entre

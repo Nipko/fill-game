@@ -1518,6 +1518,9 @@ namespace AF.UI
             _saveBatch = batch;
             SetUpTelemetry(clock); // Remote Config, bus y analítica antes de la cartera (B7; GameBootstrap.Telemetry.cs)
             _wallet = new Wallet(profile, batch.Durable, clock, _rcConfigs?.Economy);
+            // La cartera, al bus y con biz_feature_lives nada más crearse: lo que gane o gaste el arranque (el Regalo de regreso
+            // de SetUpSessions, en el arranque en frío) llega a la analítica. ConnectTelemetry la vuelve a conectar (solo asigna).
+            ConnectWallet(_wallet);
             IProgressStore progress = LaunchOptions.ProgressStoreOverride ?? new ProfileProgressStore(profile, batch);
             _progress = progress;
 
