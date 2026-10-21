@@ -1254,6 +1254,7 @@ namespace AF.UI
             // que necesita SlothCanSpeak; después, el fondo de la parada y la llegada.
             VictoryFreeBand(out float bandTop, out float bandBottom);
             SlothVictoryShown(flow, bandTop, bandBottom);
+            StreakYieldToSloth(flow, ref bandTop, ref bandBottom); // en su hito, sin barras si con ellas no cabe su frase (B1b-Q10 (c))
             SlotVictoryShown(flow);
             StopVictoryShown(flow);
             ArrivalVictoryShown(flow);
@@ -2772,6 +2773,7 @@ namespace AF.UI
             y += VictoryHarvestDp + VictoryHarvestGapDp(compact);
 
             // Las barras del panel único (D-033, punto 10): Crecida y Canasta, entre la Cosecha y la Cosecha doble (GameScreen.Streak.cs).
+            _victoryBars.Barless = _victoryBarsYield; // en el hito de TiTino que las cede, sin filas (B1b-Q10 (c))
             y += _victoryBarsDropped ? _victoryBars.Collapse() : _victoryBars.Layout(VictoryBarsSideDp, y, panelW - (2f * VictoryBarsSideDp), compact);
 
             // Tras la Cosecha doble, mientras espera a avanzar solo (D-011, punto 4), Inicio y la Cosecha doble quedan inactivos,
