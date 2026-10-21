@@ -1,6 +1,17 @@
-# Traspaso al integrador: pendientes del dueño
+# Traspaso al integrador: pendientes del dueño y AWS dev
 
-Fecha: 2026-10-20. Trabajo documental y revisión de Play Console con el dueño. No incluye integración de SDK, cambios en Unity ni despliegues.
+Actualizado: 2026-10-21. AWS dev desplegado y comprobado con autorización del dueño, desde la rama `codex/aws-dev`. Los apartados siguientes conservan el historial; sus pendientes quedan sustituidos por las verificaciones posteriores.
+
+## Estado actual de AWS dev
+
+- Organizations con gestión, dev y prod; Identity Center en `sa-east-1`; `af-owner` con MFA verificado y acceso autorizado a dev/prod mediante SSO. Perfiles locales `af-dev` y `af-prod` comprobados.
+- Bootstrap solo en dev, en `sa-east-1` y `us-east-1`. Los seis stacks dev están en `CREATE_COMPLETE`; pruebas de web, API y CDN correctas para los esqueletos actuales.
+- Presupuesto de 10 USD mensuales con avisos al 50, 80 y 100 % verificado; suscripción SNS confirmada. El presupuesto no limita el gasto.
+- Las tres URLs públicas y los resultados completos figuran en «Dev desplegado y comprobado», al final. Sin cambios en `infra/` ni cambio de rama del checkout principal. Firebase y secretos reales siguen pendientes; prod no tiene bootstrap ni stacks del juego.
+
+## Registro inicial de Play Console — 2026-10-20
+
+Trabajo documental y revisión de Play Console con el dueño. Este registro inicial no incluye integración de SDK, cambios en Unity ni despliegues.
 
 ## Confirmado en esta sesión
 
@@ -111,3 +122,23 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - Revisión del ensamblado del diff (fuera del repo): 106 recursos en seis stacks: Global 1, Data 6, Api 52, Web 15, Cdn 10 y Ops 22. Incluye seis tablas, cinco funciones de negocio de esqueleto, tres secretos de relleno, dos distribuciones CloudFront, cuatro buckets, 19 alarmas y avisos por correo. Lambda, capa y rol adicionales de Web corresponden al despliegue interno del sitio.
 - IAM del juego: roles para las funciones, Scheduler y despliegue del sitio; acciones de DynamoDB, lectura de secretos y escritura de logs por función; Scheduler invoca el job y puede enviar a su DLQ; despliegue web sincroniza los buckets de assets y sitio, incluyendo borrado de objetos. Sin permisos administrativos nuevos para usuarios en el diff del juego. CloudFront lee S3 mediante OAC; buckets privados. No se configura dominio propio.
 - Pendiente del sí explícito del dueño para `cdk deploy` de los seis stacks dev del diff revisado. El presupuesto de 10 USD es una alerta, no un límite que detenga el gasto. Tras deploy: confirmar SNS, verificar presupuesto y ejecutar comprobaciones rápidas. Prod permanece sin bootstrap ni stacks.
+
+### Despliegue dev autorizado e iniciado — 2026-10-21
+
+- El dueño confirmó expresamente desplegar los seis stacks dev después de revisar el diff, IAM, acceso por URLs de AWS, avisos y posible coste.
+- Antes de ejecutar, comprobadas la identidad SSO de dev y las seis entradas del manifiesto contra los entornos y nombres esperados. Iniciado `cdk deploy --all` con el ensamblado exacto revisado mediante `--app`, perfil af-dev y aprobación interactiva desactivada únicamente para materializar el sí recibido. Sin nueva síntesis ni cambios de código entre diff y deploy. Ensamblado, salida privada y outputs fuera del repositorio.
+- Despliegue en curso; no considerar aún disponibles los servicios. No se ejecutaron operaciones en prod.
+
+- Verificación directa de AWS Budgets tras `AfDevGlobal CREATE_COMPLETE`: presupuesto `af-dev-monthly` de 10 USD mensuales y tres notificaciones al 50 %, 80 % y 100 %. Los tres suscriptores EMAIL coinciden con el destinatario autorizado. No se guardó el correo ni el identificador de cuenta en el repo.
+
+- Comprobaciones parciales del despliegue: CDN `/catalog.json` devuelve 403; API `GET /v1/ssv` devuelve 501 y `POST /v1/purchases/verify` sin token devuelve 401, como pide el README para los esqueletos. `AfDevData`, `AfDevApi`, `AfDevCdn` y `AfDevOps` completados sin fallos observados. Suscripción SNS al destinatario autorizado localizada como `PendingConfirmation`; se pidió al dueño confirmar el correo sin compartir su enlace.
+
+### Dev desplegado y comprobado — 2026-10-21
+
+- Deploy finalizado con salida 0. Verificados directamente los seis stacks en CloudFormation: AfDevGlobal en us-east-1 y AfDevData, AfDevApi, AfDevWeb, AfDevCdn y AfDevOps en sa-east-1, todos CREATE_COMPLETE.
+- Web comprobada: página de preparación HTTP 200, app-ads.txt HTTP 200 y robots.txt HTTP 200 con Disallow de raíz. Cabecera X-Robots-Tag con noindex. Las pruebas previas de API (501 y 401) y catálogo CDN (403) pasaron durante el mismo despliegue.
+- El dueño confirmó la suscripción SNS por correo. Verificada después en AWS como confirmada y con el destinatario autorizado. Presupuesto mensual y tres avisos ya comprobados mediante AWS Budgets.
+- ApiUrl: https://4tbucfarv9.execute-api.sa-east-1.amazonaws.com
+- WebUrl: https://d15n2u2htrstr6.cloudfront.net
+- CdnUrl: https://d1a7tqws4dhu0f.cloudfront.net
+- Sin cambios de código en infra/, sin dominio propio ni recursos del juego en prod. Firebase dev y carga de secretos reales no realizados; las funciones desplegadas siguen siendo los esqueletos del encargo. El presupuesto es un aviso y no bloquea el gasto.
