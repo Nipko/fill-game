@@ -142,8 +142,8 @@ namespace AF.Save
         /// <c>applied_purchases</c> (08 §4.3 y §10.3; 04 §10.1): las compras con dinero ya acreditadas, por su <c>token_hash</c> (SHA-256
         /// del <c>purchaseToken</c> en hexadecimal en minúsculas, como el libro mayor del servidor; contrato v1). Una compra cuyo hash
         /// está aquí no se vuelve a acreditar nunca (F3-3: <c>AF.IAP.VerifiedStoreService</c>). Vive en el mismo perfil que
-        /// <see cref="Wallet"/> para que el apunte y lo acreditado salgan en la misma escritura. En la fusión de 08 §11 es la unión
-        /// (<see cref="MergeAppliedPurchases"/>; en <c>CloudMerge</c>, B8, la unión en orden ordinal). La clave falta mientras está vacía
+        /// <see cref="Wallet"/> para que el apunte y lo acreditado salgan en la misma escritura. En la fusión de 08 §11 es la lista del
+        /// ganador (D-033, Q-B8-1; <c>CloudMerge</c>): las que falten las devuelve <c>restoreLedger</c>. La clave falta mientras está vacía
         /// (entra sin migrar: aún no se ha publicado); se escribe en orden ordinal y sin repetidos, para que la firma de B8 no dependa
         /// del orden. La cartera (B8, <c>Transaction.Purchase</c> con token) apunta aquí el identificador que le pasen: con F3-3 es el
         /// <c>token_hash</c>.
@@ -175,26 +175,6 @@ namespace AF.Save
             }
 
             return false;
-        }
-
-        /// <summary>
-        /// Fusión de 08 §11 (<c>merged.applied_purchases = union(local, cloud)</c>): añade a este perfil (el ganador) las compras
-        /// acreditadas del otro que falten, en su orden.
-        /// </summary>
-        public void MergeAppliedPurchases(Profile other)
-        {
-            if (other == null)
-            {
-                throw new ArgumentNullException(nameof(other));
-            }
-
-            for (int i = 0; i < other.AppliedPurchases.Count; i++)
-            {
-                if (!HasAppliedPurchase(other.AppliedPurchases[i]))
-                {
-                    AppliedPurchases.Add(other.AppliedPurchases[i]);
-                }
-            }
         }
 
         /// <summary>

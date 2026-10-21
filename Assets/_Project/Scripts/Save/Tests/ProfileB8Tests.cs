@@ -201,7 +201,7 @@ namespace AF.Save.Tests
         }
 
         [Test]
-        public void Merge_AppliedAndVoidedPurchases_AreUnions_FraudFlagMax_IdentityFromTheOlderProfile()
+        public void Merge_AppliedAndVoidedPurchases_AreTheWinners_FraudFlagMax_IdentityFromTheOlderProfile()
         {
             Profile local = Profile.CreateNew(new ManualClock(T0), 5);
             local.Progress.MaxLevel = 70;
@@ -221,8 +221,16 @@ namespace AF.Save.Tests
 
             Profile m = CloudMerge.Resolve(local, cloud).Merged;
             Assert.That(m.Progress.MaxLevel, Is.EqualTo(70));
-            Assert.That(m.AppliedPurchases, Is.EqualTo(new[] { "GPA.a", "GPA.b" }), "08 §11: union(...)");
-            Assert.That(m.VoidedPurchases, Is.EqualTo(new[] { "GPA.a" }));
+            Assert.That(m.AppliedPurchases, Is.EqualTo(new[] { "GPA.b" }),
+                "D-033, Q-B8-1: la lista del ganador; las que falten las devuelve restoreLedger");
+            Assert.That(m.VoidedPurchases, Is.Empty, "[P]: la del ganador, como applied_purchases");
+
+            // Y al revés: si gana la nube, sus listas (no se cuela GPA.b del local).
+            cloud.Progress.MaxLevel = 90;
+            Profile c = CloudMerge.Resolve(local, cloud).Merged;
+            Assert.That(c.AppliedPurchases, Is.EqualTo(new[] { "GPA.a" }));
+            Assert.That(c.VoidedPurchases, Is.EqualTo(new[] { "GPA.a" }));
+            cloud.Progress.MaxLevel = 40;
             Assert.That(m.Integrity.FraudFlag, Is.EqualTo(3));
             Assert.That(m.PendingRewards.Count, Is.EqualTo(1), "[P]: los provisionales van con su cartera");
             Assert.That(m.PendingRewards[0].Nonce, Is.EqualTo("local"));
@@ -234,6 +242,28 @@ namespace AF.Save.Tests
             Profile clean = CloudMerge.Resolve(local, cloud, localCoherent: true, cloudCoherent: false).Merged;
             Assert.That(clean.AppliedPurchases, Is.EqualTo(new[] { "GPA.b" }));
             Assert.That(clean.Integrity.FraudFlag, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void Merge_TheWinnersPurchaseList_IsSignedTheSameWhateverItsOrder()
+        {
+            Profile local = Profile.CreateNew(new ManualClock(T0), 5);
+            local.Progress.MaxLevel = 70;
+            local.AppliedPurchases.Add("GPA.c");
+            local.AppliedPurchases.Add("GPA.a");
+            local.VoidedPurchases.Add("GPA.c");
+            local.VoidedPurchases.Add("GPA.a");
+            Profile cloud = Profile.CreateNew(new ManualClock(T0), 5);
+            cloud.Progress.MaxLevel = 40;
+            cloud.AppliedPurchases.Add("GPA.b");
+
+            Profile m = CloudMerge.Resolve(local, cloud).Merged;
+            Profile sorted = ProfileJson.Deserialize(ProfileJson.Serialize(m));
+            Assert.That(sorted.AppliedPurchases, Is.EqualTo(new[] { "GPA.a", "GPA.c" }));
+            ProfileIntegrity.Sign(m, PhoneA);
+            ProfileIntegrity.Sign(sorted, PhoneA);
+            Assert.That(m.Integrity.Hmac, Is.EqualTo(sorted.Integrity.Hmac), "la firma no depende del orden de las listas");
+            Assert.That(ProfileIntegrity.Payload(m), Is.EqualTo(ProfileIntegrity.Payload(sorted)));
         }
 
         [Test]

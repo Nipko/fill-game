@@ -112,7 +112,7 @@ namespace AF.Save
     /// no, el del día más reciente [P]; <c>entitlements</c> por «o» (<c>no_ads</c>, <c>starter_bought</c>) y unión
     /// (<c>skins</c>); la fauna por unión (como <c>album</c>); <c>map_seen_level</c> por máximo (D-013);
     /// <c>undo_tip_seen</c> por «o»; <c>skipped_levels</c> por unión (B3, Q-S1); <c>stats</c> por máximo [P]; <c>ads.last_iap</c>
-    /// por máximo [P]. Con el parche del perfil de B8, también <c>applied_purchases</c> por unión (08 §11) y lo demás de
+    /// por máximo [P]. Con el parche del perfil de B8, <c>applied_purchases</c> es la lista del ganador (D-033, Q-B8-1; 08 §11) y lo demás de
     /// <c>integrity</c> (<see cref="MergeAddedFields"/>). <c>purchase_queue</c> (F3-3) es solo local: no se compara, no sube y
     /// el fusionado lleva siempre la del dispositivo (<see cref="SharedJson"/>).</item>
     /// <item><b>Integridad</b>: si uno está manipulado (su firma no cuadra) y el otro no, gana el otro, sin unir nada del otro (un blob manipulado no aporta
@@ -125,7 +125,7 @@ namespace AF.Save
     /// Mochila más antigua y la última tarjeta Sin anuncios más reciente.
     /// Lo demás (<c>settings</c>, <c>sloth</c>, <c>streak</c>, <c>daily_challenge</c>, <c>level_state</c>, <c>progress</c>
     /// salvo lo dicho) es del ganador: va con su cartera en el mismo blob y así nunca se paga dos veces lo mismo. Tras fusionar, el
-    /// cliente llama a <c>restoreLedger</c> (08 §11; llega con Functions) y vuelve a acreditar los tokens que falten.
+    /// cliente llama a <c>restoreLedger</c> (08 §11; aún sin conectar: F3-5) y vuelve a acreditar los tokens que falten.
     /// </summary>
     public static partial class CloudMerge
     {

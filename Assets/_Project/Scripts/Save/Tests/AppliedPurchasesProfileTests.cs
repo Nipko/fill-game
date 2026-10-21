@@ -8,7 +8,7 @@ namespace AF.Save.Tests
     /// <summary>
     /// F3-3: <c>applied_purchases</c> (08 §4.3 y §11; los <c>token_hash</c> ya acreditados) y <c>purchase_queue</c> [P] (la cola de
     /// verificación de 08 §10.3) en el perfil: faltan mientras están vacías, hacen la ida y vuelta, <c>applied_purchases</c> es dinero
-    /// (un tipo equivocado es corrupción) y la cola se descarta si no es un objeto. La fusión de 08 §11 es la unión.
+    /// (un tipo equivocado es corrupción) y la cola se descarta si no es un objeto. En la fusión de 08 §11 queda la lista del ganador (D-033, Q-B8-1).
     /// </summary>
     public sealed class AppliedPurchasesProfileTests
     {
@@ -87,19 +87,14 @@ namespace AF.Save.Tests
         }
 
         [Test]
-        public void Merge_IsTheUnion()
+        public void HasAppliedPurchase_RejectsNull()
         {
-            Profile winner = NewProfile();
-            winner.AppliedPurchases.Add(HashA);
-            Profile loser = NewProfile();
-            loser.AppliedPurchases.Add(HashB);
-            loser.AppliedPurchases.Add(HashA);
+            Profile p = NewProfile();
+            p.AppliedPurchases.Add(HashA);
 
-            winner.MergeAppliedPurchases(loser);
-
-            Assert.That(winner.AppliedPurchases, Is.EqualTo(new[] { HashA, HashB }));
-            Assert.That(() => winner.MergeAppliedPurchases(null!), Throws.ArgumentNullException);
-            Assert.That(() => winner.HasAppliedPurchase(null!), Throws.ArgumentNullException);
+            Assert.That(p.HasAppliedPurchase(HashA), Is.True);
+            Assert.That(p.HasAppliedPurchase(HashB), Is.False);
+            Assert.That(() => p.HasAppliedPurchase(null!), Throws.ArgumentNullException);
         }
 
         [Test]

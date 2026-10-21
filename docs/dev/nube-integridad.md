@@ -51,7 +51,7 @@ parches, con sus tests.
    - `progress.map_seen_level` por máximo (D-013), `undo_tip_seen` por «o» (DC23) y `skipped_levels` por unión (**Q-S1 de B3**:
      `last_skip_level` se deduce de `max(skipped_levels)` y `since_last_skip` ya no se lee, así que no se fusiona);
    - `stats` por máximo [P] y `ads.last_iap` por máximo [P];
-   - con el parche: `applied_purchases` por unión (08 §11), `voided_purchases` por unión [P], `integrity.fraud_flag` por máximo [P],
+   - con el parche: `applied_purchases` del ganador (D-033, Q-B8-1; 08 §11: las que falten las devuelve `restoreLedger`), `voided_purchases` del ganador [P], `integrity.fraud_flag` por máximo [P],
      `pending_rewards` del ganador [P], `first_app_version` y `country_first` del perfil creado antes [P] y `locale` del ganador.
 8. **Integridad**: si uno de los dos está manipulado (su firma no cuadra) y el otro no, gana el coherente (08 §10.1: «en conflicto con la nube gana el blob coherente») y no se une
    nada del otro [P]: un blob manipulado no aporta derechos, compras ni contadores.
@@ -121,7 +121,7 @@ pudo eliminar» y no se borra nada más. Sonda: `AF_STATE af_account_delete` con
 
 | Id | Pregunta | Opciones | Recomendada |
 |---|---|---|---|
-| Q-B8-1 | 08 §11 fija `applied_purchases = union(...)`. Con la unión, una compra acreditada en el teléfono que **pierde** el conflicto queda «aplicada» pero su saldo se pierde con la cartera del perdedor, y `restoreLedger` ya no la vuelve a acreditar | (a) unión, como dice 08 §11 · (b) la lista del ganador, y `restoreLedger` vuelve a acreditar lo que falte (coherente con «consumibles del ganador») | **(a)** aplicada porque es canon; recomiendo cambiar a **(b)** en 08 §11 (decisión del dueño: el GDD no es ambiguo) |
+| Q-B8-1 | 08 §11 fija `applied_purchases = union(...)`. Con la unión, una compra acreditada en el teléfono que **pierde** el conflicto queda «aplicada» pero su saldo se pierde con la cartera del perdedor, y `restoreLedger` ya no la vuelve a acreditar | (a) unión, como dice 08 §11 · (b) la lista del ganador, y `restoreLedger` vuelve a acreditar lo que falte (coherente con «consumibles del ganador») | **(b)** decidida por el dueño el 2026-10-21 (D-033, Q-B8-1): aplicada en `CloudMerge` y en 08 §11; `voided_purchases` [P] la sigue (del ganador) |
 | Q-B8-2 | ¿De qué sale la clave del HMAC? «Derivada del dispositivo» no dice qué pasa con un blob de otro teléfono | (a) de `device_first` (la huella del que creó el perfil), comprobable en cualquier teléfono · (b) del teléfono actual: un blob de otro no se puede comprobar y la regla «gana el coherente» no sirve con la nube | **(a)** [P] |
 | Q-B8-3 | El id del que sale la huella | (a) `SystemInfo.deviceUniqueIdentifier` (ANDROID_ID) con sal · (b) un id aleatorio por instalación en `PlayerPrefs` (`af_install_id`; Eliminar cuenta lo borra) | **(b)** [P], cambiada tras la revisión: la misma protección (la clave sale de la huella que va en el perfil) sin identificador del dispositivo ni fila nueva de Data Safety (08 §13.3) |
 | Q-B8-4 | ¿Qué es `locale`? | (a) el idioma de la UI resuelto en cada arranque (`es-419`, como el ejemplo) · (b) la etiqueta del teléfono (`es-CO`) | **(a)** [P] |
