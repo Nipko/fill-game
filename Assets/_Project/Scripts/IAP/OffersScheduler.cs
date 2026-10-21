@@ -36,13 +36,11 @@ namespace AF.IAP
         /// <param name="wonLevel">Nivel de campaña ganado.</param>
         /// <param name="session">Número de la sesión en curso (1 = la de instalación).</param>
         /// <param name="world">Mundo del nivel ganado (glosario §8).</param>
-        /// <param name="firstLevelOfWorld">El nivel ganado es el primero de su mundo («tras la primera victoria del mundo» [P]).</param>
-        public VictoryOfferContext(int wonLevel, int session, int world, bool firstLevelOfWorld)
+        public VictoryOfferContext(int wonLevel, int session, int world)
         {
             WonLevel = wonLevel;
             Session = session;
             World = world;
-            FirstLevelOfWorld = firstLevelOfWorld;
         }
 
         /// <summary>Nivel ganado.</summary>
@@ -53,9 +51,6 @@ namespace AF.IAP
 
         /// <summary>Mundo del nivel ganado.</summary>
         public int World { get; }
-
-        /// <summary>Es el primer nivel de su mundo.</summary>
-        public bool FirstLevelOfWorld { get; }
     }
 
     /// <summary>
@@ -69,14 +64,15 @@ namespace AF.IAP
     /// <item><description><b>Prioridad</b> (<see cref="OfferKind"/>): Mochila → Sin anuncios → Cántaro lleno → skin del mundo.</description></item>
     /// <item><description><b>Mochila de inicio</b> (05 §4.1 y §5): primera tarjeta en la primera victoria con nivel ≥ 12 en una
     /// sesión ≥ 2 (<c>eco_starter_first_show</c>), que arranca las <c>eco_starter_timer_h</c> horas [P] (Q-B5-3); recordatorios en la
-    /// victoria del 15 y del 19 [P] (Q-B5-4); desaparece al ganar el 20 (<c>eco_starter_window_levels</c>), al vencer el temporizador o
-    /// al comprarla (1 por cuenta).</description></item>
+    /// primera victoria desde el 15 y desde el 19 en que quede cupo [P] (Q-B5-4; uno solo si se pasan los dos sin verlo); desaparece al
+    /// ganar el 20 (<c>eco_starter_window_levels</c>), al vencer el temporizador o al comprarla (1 por cuenta).</description></item>
     /// <item><description><b>Sin anuncios</b> (05 §5): tras el 3.er intersticial visto o en el día 2 (<c>eco_noads_card_trigger</c>), 1
     /// tarjeta al día y, tras 3 rechazos, solo en el Mercado; la tarjeta no sale antes de <c>rescue_min_level</c> (05 §10: ninguna
     /// oferta de pago antes del 31 salvo la Mochila) [P] (Q-B5-2).</description></item>
     /// <item><description><b>Cántaro lleno:</b> 1 tarjeta por llenado (05 §5).</description></item>
-    /// <item><description><b>Skin del mundo:</b> desde el mundo 3 (nivel 41), tras la primera victoria del mundo [P], 1 por mundo y
-    /// nunca si ya se tiene la skin (ganada o comprada); con <see cref="SkinSalesEnabled"/> (apagado hasta el arte, Q-B5-1).</description></item>
+    /// <item><description><b>Skin del mundo:</b> desde el mundo 3 (nivel 41), en la primera victoria del mundo en que quede cupo [P]
+    /// (05 §5: «por ejemplo tras la primera victoria del mundo»), 1 por mundo y nunca si ya se tiene la skin (ganada o comprada); con
+    /// <see cref="SkinSalesEnabled"/> (apagado hasta el arte, Q-B5-1).</description></item>
     /// </list>
     /// También dice qué enseña el Mercado (<see cref="StarterInMarket"/>, <see cref="NoAdsInMarket"/>…).
     /// </summary>
@@ -134,6 +130,12 @@ namespace AF.IAP
 
         /// <summary>Primer nivel con tarjetas de pago que no son la Mochila: <c>rescue_min_level</c> (31; 05 §10) [P].</summary>
         public int PaidCardFromLevel => _ledger.Wallet.Config.RescueMinLevel;
+
+        /// <summary>Intersticiales vistos que cuentan para <c>eco_noads_card_trigger</c> (con tope en el del disparador).</summary>
+        public int InterstitialsSeen => _state.Record.InterstitialsSeen;
+
+        /// <summary>Tarjetas Sin anuncios cerradas sin comprar.</summary>
+        public int NoAdsDeclines => _state.Record.NoAdsDeclines;
 
         /// <summary>El registro guardado falló en el último cambio.</summary>
         public bool PendingSave => _state.PendingSave;
@@ -292,9 +294,16 @@ namespace AF.IAP
                     {
                         r.StarterFirstSeenAt = _clock.UtcNow;
                     }
-                    else if (!r.StarterReminders.Contains(ctx.WonLevel))
+
+                    // La tarjeta cubre los recordatorios que ya tocaban: una primera tarjeta en el 16 no trae el del 15 detrás, y
+                    // con el 15 y el 19 pasados sin verlos sale uno solo.
+                    IReadOnlyList<int> due = OfferRules.StarterReminderLevels;
+                    for (int i = 0; i < due.Count; i++)
                     {
-                        r.StarterReminders.Add(ctx.WonLevel);
+                        if (due[i] <= ctx.WonLevel && !r.StarterReminders.Contains(due[i]))
+                        {
+                            r.StarterReminders.Add(due[i]);
+                        }
                     }
 
                     break;
@@ -403,9 +412,9 @@ namespace AF.IAP
             IReadOnlyList<int> reminders = OfferRules.StarterReminderLevels;
             for (int i = 0; i < reminders.Count; i++)
             {
-                if (reminders[i] == ctx.WonLevel)
+                if (reminders[i] <= ctx.WonLevel && !r.StarterReminders.Contains(reminders[i]))
                 {
-                    return !r.StarterReminders.Contains(ctx.WonLevel);
+                    return true; // un recordatorio pendiente (15 o 19), aunque su victoria exacta no tuviera cupo
                 }
             }
 
@@ -435,7 +444,7 @@ namespace AF.IAP
 
         private bool SkinDue(in VictoryOfferContext ctx)
         {
-            if (!SkinSalesEnabled || ctx.WonLevel < OfferRules.SkinCardFromLevel || !ctx.FirstLevelOfWorld
+            if (!SkinSalesEnabled || ctx.WonLevel < OfferRules.SkinCardFromLevel
                 || !SkinRewards.TryForWorld(ctx.World, out SkinMilestone milestone))
             {
                 return false;

@@ -81,6 +81,15 @@ index 00000000..75f9bd17
 +        }
 +    }
 +}
+diff --git a/Assets/_Project/Scripts/IAP/ProfileOffersStore.cs.meta b/Assets/_Project/Scripts/IAP/ProfileOffersStore.cs.meta
+new file mode 100644
+index 00000000..1d677775
+--- /dev/null
++++ b/Assets/_Project/Scripts/IAP/ProfileOffersStore.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 451a1ac44793cc4469aa6dbb742c8b9e
+\ No newline at end of file
 diff --git a/Assets/_Project/Scripts/IAP/Tests/ProfileOffersStoreTests.cs b/Assets/_Project/Scripts/IAP/Tests/ProfileOffersStoreTests.cs
 new file mode 100644
 index 00000000..d62df474
@@ -201,6 +210,15 @@ index 00000000..d62df474
 +        }
 +    }
 +}
+diff --git a/Assets/_Project/Scripts/IAP/Tests/ProfileOffersStoreTests.cs.meta b/Assets/_Project/Scripts/IAP/Tests/ProfileOffersStoreTests.cs.meta
+new file mode 100644
+index 00000000..2783022a
+--- /dev/null
++++ b/Assets/_Project/Scripts/IAP/Tests/ProfileOffersStoreTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: c41d3b6092b6e6541ae03cdd173c1861
+\ No newline at end of file
 diff --git a/Assets/_Project/Scripts/Save/Profile.cs b/Assets/_Project/Scripts/Save/Profile.cs
 index 7f5be3da..1f0dd47f 100644
 --- a/Assets/_Project/Scripts/Save/Profile.cs
@@ -393,3 +411,12 @@ index 00000000..2cea3bdb
 +        }
 +    }
 +}
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.MarketProfile.cs.meta b/Assets/_Project/Scripts/UI/GameBootstrap.MarketProfile.cs.meta
+new file mode 100644
+index 00000000..42d42177
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.MarketProfile.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 9fa29455417944949bd3a2e423fe9266
+\ No newline at end of file

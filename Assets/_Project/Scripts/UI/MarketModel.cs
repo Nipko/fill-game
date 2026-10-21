@@ -143,7 +143,7 @@ namespace AF.UI
                 case MarketTab.Boosters:
                     if (offers.StarterInMarket(maxLevel))
                     {
-                        rows.Add(new MarketRow(StoreCatalog.Starter, MarketAction.Buy, StarterHoursLeft(offers)));
+                        rows.Add(new MarketRow(StoreCatalog.Starter, MarketAction.Buy, offers.StarterHoursLeft));
                     }
 
                     if (offers.CanoesInMarket(maxLevel))
@@ -188,12 +188,6 @@ namespace AF.UI
 
                     break;
             }
-        }
-
-        /// <summary>Horas enteras que le quedan a la Mochila, redondeadas hacia arriba (0 si su temporizador no ha empezado).</summary>
-        public static int StarterHoursLeft(OfferScheduler offers)
-        {
-            return (offers ?? throw new ArgumentNullException(nameof(offers))).StarterHoursLeft;
         }
 
         private static MarketRow SkinRow(string id, string equipped, bool owned)

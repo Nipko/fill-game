@@ -1,6 +1,6 @@
 #nullable enable
-using System;
 using AF.Boosters;
+using AF.Localization;
 
 namespace AF.UI
 {
@@ -10,6 +10,8 @@ namespace AF.UI
     /// Corea; <b>T3</b> = América Latina salvo Chile y Uruguay. Solo cambia el orden Balsa / Puñado del modal sin saldo (05 §10: la
     /// economía no se segmenta). Lo que el GDD no fija va [P] (Q-B5-11): la lista de «Europa occidental» (<see cref="T1Regions"/>) y
     /// que Chile, Uruguay, una región ajena a las dos listas o sin región queden en T3, el valor de siempre (el enum no tiene otro).
+    /// La región se lee como la lee el idioma (<see cref="LocLocale.HasRegion"/>: tras el idioma y el script, nunca dentro de una
+    /// extensión como <c>en-u-ca-gregory</c>).
     /// </summary>
     public static class GeoTierRule
     {
@@ -23,55 +25,23 @@ namespace AF.UI
             "AD", "AT", "BE", "CH", "DE", "DK", "ES", "FI", "FR", "GB", "IE", "IS", "IT", "LI", "LU", "MC", "NL", "NO", "PT", "SE", "SM",
         };
 
-        /// <summary>La región de una etiqueta BCP 47 (<c>es-CO</c> → <c>CO</c>; <c>pt-BR</c> → <c>BR</c>), en mayúsculas ASCII, o null.</summary>
-        public static string? RegionOf(string? languageTag)
-        {
-            if (string.IsNullOrEmpty(languageTag))
-            {
-                return null;
-            }
-
-            string[] parts = languageTag!.Replace('_', '-').Split('-');
-            for (int i = 1; i < parts.Length; i++)
-            {
-                string p = parts[i];
-                if (p.Length == 2 && IsAsciiLetter(p[0]) && IsAsciiLetter(p[1]))
-                {
-                    return new string(new[] { Upper(p[0]), Upper(p[1]) });
-                }
-            }
-
-            return null;
-        }
-
-        /// <summary><c>geo_tier</c> de la etiqueta del teléfono: T1 si su región está en <see cref="T1Regions"/>; si no, T3.</summary>
+        /// <summary><c>geo_tier</c> de la etiqueta del teléfono: T1 si su región está en <see cref="T1Regions"/>; si no, T3. Sin asignaciones.</summary>
         public static GeoTier FromLanguageTag(string? languageTag)
         {
-            string? region = RegionOf(languageTag);
-            if (region == null)
+            if (languageTag == null || !LocLocale.HasAnyRegion(languageTag))
             {
                 return GeoTier.T3;
             }
 
             for (int i = 0; i < T1Regions.Length; i++)
             {
-                if (string.Equals(T1Regions[i], region, StringComparison.Ordinal))
+                if (LocLocale.HasRegion(languageTag, T1Regions[i]))
                 {
                     return GeoTier.T1;
                 }
             }
 
             return GeoTier.T3;
-        }
-
-        private static bool IsAsciiLetter(char c)
-        {
-            return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z');
-        }
-
-        private static char Upper(char c)
-        {
-            return c >= 'a' && c <= 'z' ? (char)(c - 32) : c;
         }
     }
 }

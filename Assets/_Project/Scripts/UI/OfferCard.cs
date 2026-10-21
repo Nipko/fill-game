@@ -37,6 +37,7 @@ namespace AF.UI
         private readonly TextMeshProUGUI _buyLabel;
         private readonly Button _notNow;
         private Action<bool>? _onClosed;
+        private Func<bool>? _canBuy;
 
         public OfferCard(Transform host, ProceduralArt art)
         {
@@ -82,7 +83,10 @@ namespace AF.UI
         /// Abre la tarjeta del SKU <paramref name="sku"/> con su título, icono, contenido, nota (vacía = sin nota) y precio; el botón
         /// de compra, activo solo con <paramref name="buyEnabled"/>. Si ya había una abierta, la anterior se cierra como «Ahora no».
         /// </summary>
-        public void Present(string sku, string title, Sprite icon, Color iconColor, string body, string note, string price, bool buyEnabled, Action<bool> onClosed)
+        /// <param name="canBuy">Se consulta al tocar comprar: si devuelve false (otra compra en curso), la tarjeta sigue abierta.</param>
+        public void Present(
+            string sku, string title, Sprite icon, Color iconColor, string body, string note, string price, bool buyEnabled, Action<bool> onClosed,
+            Func<bool>? canBuy = null)
         {
             if (Visible)
             {
@@ -91,6 +95,7 @@ namespace AF.UI
 
             Sku = sku;
             _onClosed = onClosed ?? throw new ArgumentNullException(nameof(onClosed));
+            _canBuy = canBuy;
             _canvas.Canvas.gameObject.SetActive(true);
             _canvas.Measure();
             _title.text = title;
@@ -112,13 +117,14 @@ namespace AF.UI
                 return;
             }
 
-            if (buy && !_buy.Relief.Interactable)
+            if (buy && (!_buy.Relief.Interactable || (_canBuy != null && !_canBuy())))
             {
-                return;
+                return; // sin compra posible ahora: la tarjeta sigue a la vista, nada se pierde
             }
 
             _canvas.Canvas.gameObject.SetActive(false);
             Sku = null;
+            _canBuy = null;
             Action<bool>? done = _onClosed;
             _onClosed = null;
             done?.Invoke(buy);

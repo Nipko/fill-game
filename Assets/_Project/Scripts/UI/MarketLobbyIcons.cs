@@ -139,16 +139,12 @@ namespace AF.UI
             ToCanvas(seeds!, out float x, out float seedsTop, out float seedsHeight);
             float y = seedsTop + seedsHeight + 6f;
             UiBuilder.Place((RectTransform)_piggy.transform, x, y, PiggyWidthDp, PiggyHeightDp);
-            if (piggySeeds != _piggySeedsShown)
+            int full = piggyFull ? 1 : 0;
+            if (piggySeeds != _piggySeedsShown || full != _piggyFullShown)
             {
                 _piggySeedsShown = piggySeeds;
-                _piggyLabel.text = Loc.Number(piggySeeds);
-            }
-
-            int full = piggyFull ? 1 : 0;
-            if (full != _piggyFullShown)
-            {
                 _piggyFullShown = full;
+                _piggyLabel.text = piggyFull ? MarketText.PiggyFull : Loc.Number(piggySeeds); // «¡Lleno!» a eco_piggy_cap (05 §4.1)
                 _piggyDot.gameObject.SetActive(piggyFull);
             }
         }

@@ -71,8 +71,11 @@ namespace AF.UI
             /// <summary>«Ahora no» [P]: cerrar una tarjeta de oferta sin comprar.</summary>
             public const string NotNow = "offer_not_now";
 
-            /// <summary>«Premio del mundo · faltan {n}» (ya en la tabla, del Mapa del río; 06 §4.5): skin aún no ganada.</summary>
-            public const string WorldPrize = "map_world_prize";
+            /// <summary>
+            /// «Premio del mundo · faltan {n}» en la pestaña Cuias [P]: skin aún no ganada (06 §4.5; el mismo texto que el Mapa, con
+            /// su propia clave porque va en una fila del Mercado junto al botón).
+            /// </summary>
+            public const string WorldPrize = "market_skin_prize";
         }
 
         /// <summary>
@@ -83,7 +86,7 @@ namespace AF.UI
         {
             Keys.Title, Keys.TabBoosters, Keys.TabCuias, Keys.TabNoAds, Keys.SeedsAmount, Keys.StarterContent,
             Keys.StarterLeft, Keys.NoAdsContent, Keys.NoAdsOwned, Keys.PiggyContent, Keys.PiggyLocked, Keys.PiggyFull, Keys.PiggyFills,
-            Keys.CanoesContent, Keys.SkinEquip, Keys.SkinEquipped, Keys.NotNow,
+            Keys.CanoesContent, Keys.SkinEquip, Keys.SkinEquipped, Keys.NotNow, Keys.WorldPrize,
         };
 
         /// <summary>«Mercado».</summary>

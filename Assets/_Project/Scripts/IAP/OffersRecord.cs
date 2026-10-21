@@ -21,7 +21,7 @@ namespace AF.IAP
         /// <summary><c>piggy.seeds</c>: semillas del Cántaro (0 … <see cref="PiggyCap"/>).</summary>
         public int PiggySeeds { get; set; }
 
-        /// <summary><c>piggy.cap</c>: el tope con que se llenó (<c>eco_piggy_cap</c> del momento; 0 si nunca se llenó).</summary>
+        /// <summary><c>piggy.cap</c>: <c>eco_piggy_cap</c> en el último guardado (0 si nunca se llenó; el tope en vigor es siempre el de la configuración).</summary>
         public int PiggyCap { get; set; }
 
         /// <summary><c>piggy.last_level</c> [P]: último nivel de campaña cuya victoria llenó el Cántaro (0 = ninguno).</summary>

@@ -66,9 +66,9 @@ namespace AF.Tests.PlayMode
             Assert.That(GameBootstrap.Current!.SetUpMarket(), Is.True);
         }
 
-        private static IEnumerator LoadLevel(int level)
+        private static IEnumerator LoadLevel(int level, ImmediatePurchasePresenter? presenter = null)
         {
-            LaunchOptions.PurchasePresenterOverride = new ImmediatePurchasePresenter();
+            LaunchOptions.PurchasePresenterOverride = presenter ?? new ImmediatePurchasePresenter();
             LaunchOptions.ProfileStoreOverride = new MemoryProfileStore(ProfileAt(level));
             yield return PlayModeHelpers.LoadGame(level, new MemoryProgressStore(level, level - 1));
             Assert.That(GameBootstrap.Current!.SetUpMarket(), Is.True);
@@ -189,6 +189,47 @@ namespace AF.Tests.PlayMode
             boot.TickMarket(GameBootstrap.OfferCardDelayMs + 100f);
             Assert.That(boot.OfferCardView!.Visible, Is.False, "06 §2.1: ninguna oferta de pago en la primera sesión");
             Assert.That(boot.LastOfferShown, Is.EqualTo(OfferKind.None));
+        }
+
+        [UnityTest]
+        public IEnumerator SeenInterstitials_CountForTheNoAdsTrigger_ThroughTheAdsLedger()
+        {
+            yield return LoadLobby(ProfileAt(26));
+            GameBootstrap boot = Boot();
+            boot.TickMarket(16f);
+            Assert.That(boot.Offers!.InterstitialsSeen, Is.EqualTo(0));
+            boot.Ads!.Ledger.RecordInterstitialShown();
+            boot.Ads.Ledger.RecordInterstitialShown();
+            boot.TickMarket(16f);
+            Assert.That(boot.Offers.InterstitialsSeen, Is.EqualTo(2), "el contador del día de AF.Ads, sin tocar sus archivos");
+            boot.Ads.Ledger.RecordInterstitialShown();
+            boot.Ads.Ledger.RecordInterstitialShown();
+            boot.TickMarket(16f);
+            Assert.That(boot.Offers.InterstitialsSeen, Is.EqualTo(3), "con tope en el del disparador (3_interstitials_or_d2)");
+        }
+
+        [UnityTest]
+        public IEnumerator NoAdsCard_OnDay2_ACancelledPurchaseCountsAsADecline()
+        {
+            SecondSession();
+            LaunchOptions.ClockOverride = new ManualClock(T0 + TimeSpan.FromDays(1)); // el perfil se creó en T0: hoy es el día 2
+            var sheet = new ImmediatePurchasePresenter(confirm: false); // la hoja de compra: «Cancelar»
+            yield return LoadLevel(31, sheet);
+            GameBootstrap boot = Boot();
+            PlayModeHelpers.TakeClock(boot);
+            VictorySetup.WinToVictoryScreen(boot);
+            boot.TickMarket(16f);
+            boot.TickMarket(GameBootstrap.OfferCardDelayMs + 16f);
+            OfferCard card = boot.OfferCardView!;
+            Assert.That(card.Visible, Is.True);
+            Assert.That(card.Sku, Is.EqualTo("af_noads"));
+
+            // Cancelar la hoja de compra también es no comprar (05 §5: un rechazo de Sin anuncios).
+            card.BuyButton.onClick.Invoke();
+            Assert.That(card.Visible, Is.False);
+            Assert.That(sheet.Presented, Is.EqualTo(1));
+            Assert.That(boot.Offers!.NoAdsDeclines, Is.EqualTo(1));
+            Assert.That(boot.Profile!.Entitlements.NoAds, Is.False);
         }
 
         [UnityTest]

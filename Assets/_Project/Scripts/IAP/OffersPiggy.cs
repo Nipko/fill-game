@@ -63,11 +63,14 @@ namespace AF.IAP
         /// <summary>Cifras de la tienda (<c>eco_piggy_cap</c> y <c>eco_piggy_min_buy</c>).</summary>
         public StoreConfig StoreConfig { get; }
 
-        /// <summary>Semillas acumuladas.</summary>
-        public int Seeds => _state.Record.PiggySeeds;
+        /// <summary>
+        /// Semillas acumuladas, como mucho <see cref="Cap"/>: si Remote Config baja <c>eco_piggy_cap</c> por debajo de lo guardado, el
+        /// Cántaro queda lleno con el tope nuevo y se puede comprar (la tienda no vende más que el tope) [P].
+        /// </summary>
+        public int Seeds => Math.Min(_state.Record.PiggySeeds, Cap);
 
-        /// <summary>Tope en vigor: el del último llenado o, si nunca se llenó, <c>eco_piggy_cap</c>.</summary>
-        public int Cap => _state.Record.PiggyCap > 0 ? _state.Record.PiggyCap : StoreConfig.EcoPiggyCap;
+        /// <summary>Tope en vigor: <c>eco_piggy_cap</c> (se anota en <c>piggy.cap</c> en cada guardado).</summary>
+        public int Cap => StoreConfig.EcoPiggyCap;
 
         /// <summary>Compra mínima (<c>eco_piggy_min_buy</c>).</summary>
         public int MinBuy => StoreConfig.EcoPiggyMinBuy;
@@ -112,12 +115,18 @@ namespace AF.IAP
             }
 
             int cap = Cap;
-            bool wasFull = r.PiggySeeds >= cap;
-            int before = r.PiggySeeds;
+            int before = Seeds;
+            bool wasFull = before >= cap;
             int after = Math.Min(cap, before + FillFor(tier));
+            r.PiggyLastLevel = level;
+            if (wasFull && r.PiggySeeds == after && r.PiggyCap == cap)
+            {
+                // Ya lleno: no suma nada y no hace falta otra escritura en la victoria (el nivel sale con la siguiente).
+                return new PiggyFill(0, after, cap, false);
+            }
+
             r.PiggySeeds = after;
             r.PiggyCap = cap;
-            r.PiggyLastLevel = level;
             _state.Persist();
             return new PiggyFill(after - before, after, cap, !wasFull && after >= cap);
         }
@@ -125,13 +134,14 @@ namespace AF.IAP
         /// <summary>La petición de compra con lo acumulado (contexto <c>piggy</c> o <c>shop</c>).</summary>
         public PurchaseRequest Request(PurchaseContext context, int level)
         {
-            return new PurchaseRequest(StoreCatalog.Piggy, context, Math.Max(0, level), Seeds);
+            return new PurchaseRequest(StoreCatalog.Piggy, context, Math.Max(0, level), Seeds); // nunca más que el tope en vigor
         }
 
         /// <summary>
-        /// Terminó una compra del Cántaro: con <see cref="PurchaseStatus.Purchased"/> o <see cref="PurchaseStatus.Pending"/> (pagado;
-        /// la verificación acreditará lo que llevaba la petición), se vacía y vuelve a llenarse desde 0 con el tope de
-        /// <c>eco_piggy_cap</c>. Con cualquier otro resultado no cambia nada. Devuelve si se vació.
+        /// Terminó una compra del Cántaro: solo con <see cref="PurchaseStatus.Purchased"/> (acreditada: <c>Wallet.Apply</c> ya sumó
+        /// lo acumulado) se vacía y vuelve a llenarse desde 0. Con <see cref="PurchaseStatus.Pending"/> (sin verificar, o el pago en
+        /// efectivo de Play aún sin pagar) no se vacía: el Cántaro guarda lo suyo hasta que la compra se acredite [P] (Q-B5-12; lo
+        /// conecta F3-5 con la tienda verificada). Con cualquier otro resultado no cambia nada. Devuelve si se vació.
         /// </summary>
         public bool OnPurchaseResult(PurchaseResult result)
         {
@@ -141,7 +151,7 @@ namespace AF.IAP
             }
 
             if (!string.Equals(result.Product.Sku, StoreCatalog.Piggy, StringComparison.Ordinal)
-                || (result.Status != PurchaseStatus.Purchased && result.Status != PurchaseStatus.Pending))
+                || result.Status != PurchaseStatus.Purchased)
             {
                 return false;
             }

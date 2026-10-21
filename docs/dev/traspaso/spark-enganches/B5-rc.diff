@@ -1,5 +1,5 @@
 diff --git a/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs b/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs
-index d7823dd3..efe1d74c 100644
+index d7823dd3..089faa74 100644
 --- a/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs
 +++ b/Assets/_Project/Scripts/RemoteConfig/Binding/RcConfigBinder.cs
 @@ -13,7 +13,7 @@ namespace AF.RemoteConfig.Binding
@@ -50,16 +50,34 @@ index d7823dd3..efe1d74c 100644
                  boosters.RescueMaxPerLevel = 0;
              }
 -            return new RcConfigs(rc, gates, economy, boosters, ads, store, daily, streak, basket, clock, errors);
-+            return new RcConfigs(rc, gates, economy, boosters, ads, store, daily, streak, basket, clock, errors) { Offers = offers };
++            return new RcConfigs(rc, gates, economy, boosters, ads, store, offers, daily, streak, basket, clock, errors);
          }
  
          /// <summary>Atajo: <see cref="Bind"/> con los valores vigentes de <paramref name="service"/>.</summary>
-@@ -420,6 +433,9 @@ internal RcConfigs(
+@@ -387,7 +400,8 @@ public sealed class RcConfigs
+     {
+         internal RcConfigs(
+             RcSnapshot values, BizGates gates, EconomyConfig economy, BoosterConfig boosters, AdsConfig ads, StoreConfig store,
+-            DailyChallengeConfig daily, StreakConfig streak, BasketConfig basket, ClockSecurityConfig clock, IReadOnlyList<string> errors)
++            OffersConfig offers, DailyChallengeConfig daily, StreakConfig streak, BasketConfig basket, ClockSecurityConfig clock,
++            IReadOnlyList<string> errors)
+         {
+             Values = values;
+             Gates = gates;
+@@ -395,6 +409,7 @@ internal RcConfigs(
+             Boosters = boosters;
+             Ads = ads;
+             Store = store;
++            Offers = offers;
+             Daily = daily;
+             Streak = streak;
+             Basket = basket;
+@@ -420,6 +435,9 @@ internal RcConfigs(
          /// <summary>Cifras de la tienda (con <c>biz_iap_enabled</c> combinado).</summary>
          public StoreConfig Store { get; }
  
 +        /// <summary>Cifras de las ofertas contextuales y del Cántaro (B5).</summary>
-+        public OffersConfig Offers { get; internal set; } = OffersConfig.Defaults;
++        public OffersConfig Offers { get; }
 +
          /// <summary>Cifras del Reto del río.</summary>
          public DailyChallengeConfig Daily { get; }
@@ -134,3 +152,12 @@ index 00000000..d81da2f1
 +        }
 +    }
 +}
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.MarketRc.cs.meta b/Assets/_Project/Scripts/UI/GameBootstrap.MarketRc.cs.meta
+new file mode 100644
+index 00000000..0051b358
+--- /dev/null
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.MarketRc.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: ec5df5a0ae74c53489f3b237cd0319e4
+\ No newline at end of file

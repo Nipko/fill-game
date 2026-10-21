@@ -165,3 +165,12 @@ index 00000000..eb61e1b3
 +        }
 +    }
 +}
+diff --git a/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs.meta b/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs.meta
+new file mode 100644
+index 00000000..73b56b87
+--- /dev/null
++++ b/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs.meta
+@@ -0,0 +1,2 @@
++fileFormatVersion: 2
++guid: 935eb0a1e0beed84cb62bedf1925498a
+\ No newline at end of file

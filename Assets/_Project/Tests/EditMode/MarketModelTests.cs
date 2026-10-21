@@ -102,7 +102,7 @@ namespace AF.Tests.EditMode
         {
             var fx = new Fx();
             Assert.That(fx.Rows(MarketTab.Boosters, 12)[0].Number, Is.EqualTo(0), "sin temporizador hasta la primera tarjeta");
-            var ctx = new VictoryOfferContext(12, 2, 2, false);
+            var ctx = new VictoryOfferContext(12, 2, 2);
             Assert.That(fx.Offers.TakeAtVictory(in ctx), Is.EqualTo(OfferKind.Starter));
             fx.Clock.Advance(TimeSpan.FromMinutes(90));
             Assert.That(fx.Rows(MarketTab.Boosters, 12)[0].Number, Is.EqualTo(47), "48 h − 1,5 h, hacia arriba");
@@ -161,23 +161,25 @@ namespace AF.Tests.EditMode
             Assert.That(MarketModel.AllTabs, Is.EqualTo(new[] { MarketTab.Seeds, MarketTab.Boosters, MarketTab.Cuias, MarketTab.NoAds }));
         }
 
-        [TestCase("es-CO", "CO", GeoTier.T3)]
-        [TestCase("pt-BR", "BR", GeoTier.T3)]
-        [TestCase("es-MX", "MX", GeoTier.T3)]
-        [TestCase("en-US", "US", GeoTier.T1)]
-        [TestCase("fr-CA", "CA", GeoTier.T1)]
-        [TestCase("ja-JP", "JP", GeoTier.T1)]
-        [TestCase("de-DE", "DE", GeoTier.T1)]
-        [TestCase("es-ES", "ES", GeoTier.T1)]
-        [TestCase("en_GB", "GB", GeoTier.T1)]
-        [TestCase("es-CL", "CL", GeoTier.T3)]
-        [TestCase("zh-Hant-TW", "TW", GeoTier.T3)]
-        [TestCase("es-419", null, GeoTier.T3)]
-        [TestCase("es", null, GeoTier.T3)]
-        [TestCase("", null, GeoTier.T3)]
-        public void GeoTier_FromThePhoneRegion(string tag, string? region, GeoTier tier)
+        [TestCase("es-CO", GeoTier.T3)]
+        [TestCase("pt-BR", GeoTier.T3)]
+        [TestCase("es-MX", GeoTier.T3)]
+        [TestCase("en-US", GeoTier.T1)]
+        [TestCase("fr-CA", GeoTier.T1)]
+        [TestCase("ja-JP", GeoTier.T1)]
+        [TestCase("de-DE", GeoTier.T1)]
+        [TestCase("es-ES", GeoTier.T1)]
+        [TestCase("en_GB", GeoTier.T1)]
+        [TestCase("en-US-u-mu-celsius", GeoTier.T1)]
+        [TestCase("es-CL", GeoTier.T3)]
+        [TestCase("zh-Hant-TW", GeoTier.T3)]
+        [TestCase("en-u-ca-gregory", GeoTier.T3)]
+        [TestCase("de-u-co-phonebk", GeoTier.T3)]
+        [TestCase("es-419", GeoTier.T3)]
+        [TestCase("es", GeoTier.T3)]
+        [TestCase("", GeoTier.T3)]
+        public void GeoTier_FromThePhoneRegion(string tag, GeoTier tier)
         {
-            Assert.That(GeoTierRule.RegionOf(tag), Is.EqualTo(region));
             Assert.That(GeoTierRule.FromLanguageTag(tag), Is.EqualTo(tier));
         }
     }

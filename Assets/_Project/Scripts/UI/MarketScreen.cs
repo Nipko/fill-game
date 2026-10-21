@@ -58,6 +58,7 @@ namespace AF.UI
         private readonly List<MarketRow> _model = new List<MarketRow>(MaxRows);
         private readonly MarketDeps _deps;
         private Action? _onClosed;
+        private bool _logShown;
 
         public MarketScreen(Transform host, ProceduralArt art, MarketDeps deps)
         {
@@ -122,6 +123,9 @@ namespace AF.UI
         /// <summary>Línea de contenido de la fila <paramref name="index"/>.</summary>
         public string RowDetailText(int index) => _rows[index].Detail.text;
 
+        /// <summary>Nota de la fila <paramref name="index"/> (el temporizador de la Mochila).</summary>
+        public string RowNoteText(int index) => _rows[index].Note.text;
+
         /// <summary>El botón de la fila <paramref name="index"/> se ve.</summary>
         public bool RowButtonShown(int index) => _rows[index].Cta.Button.gameObject.activeSelf;
 
@@ -139,6 +143,7 @@ namespace AF.UI
             _canvas.Canvas.gameObject.SetActive(true);
             _canvas.Measure();
             Tab = MarketModel.TabVisible(tab, _deps.Offers, _deps.MaxLevel()) ? tab : MarketTab.Seeds;
+            _logShown = true;
             Refresh();
         }
 
@@ -165,6 +170,7 @@ namespace AF.UI
             }
 
             Tab = tab;
+            _logShown = true;
             Refresh();
         }
 
@@ -236,6 +242,19 @@ namespace AF.UI
                 Fill(view, _model[i], storeOn);
             }
 
+            if (_logShown)
+            {
+                // af_iap_offer_shown (context = shop) de lo que se puede comprar en la pestaña, al abrirla (no tras cada compra).
+                _logShown = false;
+                for (int i = 0; i < _model.Count; i++)
+                {
+                    if (_model[i].Action == MarketAction.Buy || _model[i].Action == MarketAction.BuyLocked)
+                    {
+                        _deps.OfferShown?.Invoke(_model[i].Id);
+                    }
+                }
+            }
+
             Layout();
         }
 
@@ -264,6 +283,7 @@ namespace AF.UI
             bool skin = Tab == MarketTab.Cuias;
             view.Name.text = skin ? MarketText.SkinName(row.Id) : MarketText.ProductName(row.Id);
             view.Detail.text = Detail(row, skin);
+            view.Note.text = !skin && row.Id == StoreCatalog.Starter && row.Number > 0 ? MarketText.StarterLeft(row.Number) : string.Empty;
             Sprite? icon = IconOf(row.Id, skin);
             view.Icon.sprite = icon;
             view.Icon.color = skin ? CuiaSkin.For(row.Id).Rim : Color.white;
@@ -316,9 +336,7 @@ namespace AF.UI
                         ? MarketText.PiggyLocked(_deps.Offers.Piggy.MinBuy)
                         : (row.Number >= row.Number2 ? MarketText.PiggyFull : MarketText.PiggyContent(row.Number, row.Number2));
                 case StoreCatalog.Starter:
-                    return row.Number > 0
-                        ? MarketText.StarterLeft(row.Number)
-                        : MarketText.StarterContent(product.Content.Seeds, product.Content.Stock.Get(BoosterKind.ExtraCuia), product.Content.Stock.Get(BoosterKind.Hint));
+                    return MarketText.StarterContent(product.Content.Seeds, product.Content.Stock.Get(BoosterKind.ExtraCuia), product.Content.Stock.Get(BoosterKind.Hint));
                 case StoreCatalog.InfiniteCanoes1h:
                     return MarketText.CanoesContent(row.Number);
                 case StoreCatalog.NoAds:
@@ -413,6 +431,8 @@ namespace AF.UI
                 Detail = UiBuilder.Label("Detail", Root, TextStyle.Body, string.Empty, 13f, Palette.FamilyWood.Base, TextAlignmentOptions.Left);
                 Detail.textWrappingMode = TextWrappingModes.Normal;
                 UiBuilder.AutoSize(Detail, UiBuilder.MinTextSp, 13f);
+                Note = UiBuilder.Label("Note", Root, TextStyle.PlainBold, string.Empty, 12f, Palette.UiRedWarning, TextAlignmentOptions.Left);
+                UiBuilder.AutoSize(Note, UiBuilder.MinTextSp, 12f);
                 Cta = ModalKit.Cta("BuyButton", Root, art.CtaLeaf, TextStyle.CtaLeaf, string.Empty, 17f, onPress, out TextMeshProUGUI label);
                 CtaLabel = label;
                 Root.gameObject.SetActive(false);
@@ -426,6 +446,9 @@ namespace AF.UI
 
             public TextMeshProUGUI Detail { get; }
 
+            /// <summary>Nota de la fila (el temporizador de la Mochila); vacía en las demás.</summary>
+            public TextMeshProUGUI Note { get; }
+
             public ReliefParts Cta { get; }
 
             public TextMeshProUGUI CtaLabel { get; }
@@ -436,8 +459,10 @@ namespace AF.UI
                 UiBuilder.Place(Icon.rectTransform, 0f, (h - 36f) * 0.5f, 36f, 36f);
                 float textX = 44f;
                 float textW = w - textX - BuyWidthDp - 8f;
-                UiBuilder.Place(Name.rectTransform, textX, 4f, textW, 22f);
-                UiBuilder.Place(Detail.rectTransform, textX, 26f, textW, Mathf.Max(18f, h - 30f));
+                bool note = Note.text.Length > 0;
+                UiBuilder.Place(Name.rectTransform, textX, 2f, textW, 20f);
+                UiBuilder.Place(Detail.rectTransform, textX, 22f, textW, note ? 18f : Mathf.Max(18f, h - 26f));
+                UiBuilder.Place(Note.rectTransform, textX, 40f, textW, Mathf.Max(14f, h - 42f));
                 float ctaH = ModalKit.HeightOf(Cta);
                 ModalKit.Place(Cta, w - BuyWidthDp, Mathf.Max(0f, (h - ctaH) * 0.5f), BuyWidthDp);
             }
@@ -468,5 +493,8 @@ namespace AF.UI
 
         /// <summary>Compras bloqueadas (perfil bloqueado; 08 §4.4).</summary>
         public bool PurchasesBlocked { get; set; }
+
+        /// <summary><c>af_iap_offer_shown</c> con <c>context = shop</c> de un SKU que la pestaña enseña (08 §8.2), o null.</summary>
+        public Action<string>? OfferShown { get; set; }
     }
 }

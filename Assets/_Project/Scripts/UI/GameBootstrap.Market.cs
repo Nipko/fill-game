@@ -163,9 +163,17 @@ namespace AF.UI
             };
 
             IProgressStore progress = _progress;
+            IStoreService storeService = _store;
             var deps = new MarketDeps(_store, _offers, _skinService, () => progress.MaxLevel, () => WorldTable.WorldOf(Math.Clamp(progress.MaxLevel + 1, 1, WorldTable.LastLevel)))
             {
                 PurchasesBlocked = ProfileLocked,
+                OfferShown = sku =>
+                {
+                    if (storeService is AF.Analytics.Adapters.AnalyticsStoreService analytics)
+                    {
+                        analytics.OfferShown(sku, PurchaseContext.Shop); // af_iap_offer_shown con context = shop (08 §8.2)
+                    }
+                },
             };
             _market = new MarketScreen(transform, _art, deps);
             _market.Purchased += OnMarketPurchased;
@@ -328,7 +336,7 @@ namespace AF.UI
 
             int world = WorldTable.WorldOf(Math.Clamp(won, 1, WorldTable.LastLevel));
             int session = _sessions?.Current?.Number ?? 1;
-            _pendingOfferCtx = new VictoryOfferContext(won, session, world, WorldTable.FirstLevel(world) == won);
+            _pendingOfferCtx = new VictoryOfferContext(won, session, world);
             _pendingOffer = true;
             _pendingOfferMs = 0f;
         }
@@ -384,7 +392,7 @@ namespace AF.UI
             LastOfferShown = kind;
             _lobby?.SetCommerceOpen(true);
             card.Present(sku, MarketText.ProductName(sku), icon, iconColor, body, note, store.PriceOf(sku).ToString(), buyEnabled,
-                buy => OnOfferCardClosed(kind, sku, context, level, buy));
+                buy => OnOfferCardClosed(kind, sku, context, level, buy), () => !store.IsPurchasing && !ProfileLocked);
             if (store is AF.Analytics.Adapters.AnalyticsStoreService analytics)
             {
                 analytics.OfferShown(sku, context); // af_iap_offer_shown (08 §8.2)
@@ -410,11 +418,6 @@ namespace AF.UI
                 return;
             }
 
-            if (store.IsPurchasing || ProfileLocked)
-            {
-                return;
-            }
-
             PurchaseRequest request = kind == OfferKind.PiggyFull
                 ? offers.Piggy.Request(context, level)
                 : new PurchaseRequest(sku, context, Math.Max(0, level));
@@ -433,9 +436,9 @@ namespace AF.UI
 
         private void OnMarketPurchased(PurchaseResult result)
         {
-            if (result.Product.Content.GrantsSkin && result.IsPurchased)
+            if (result.Product.Content.GrantsSkin && result.IsPurchased && _skinService != null && _skinService.Select(result.Product.Sku))
             {
-                OnMarketSkinSelected(result.Product.Sku);
+                OnMarketSkinSelected(result.Product.Sku); // la skin comprada se pone, como la ganada (Q-M8 (a)) [P]
             }
 
             _iconsPiggySeeds = -1; // el Cántaro del inicio se repinta (el saldo del inicio lo relee LobbyScreen.Tick)

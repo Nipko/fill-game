@@ -39,9 +39,9 @@ namespace AF.IAP.Tests
 
             public OfferScheduler Offers { get; }
 
-            public OfferKind Win(int level, int world = 0, bool firstOfWorld = false)
+            public OfferKind Win(int level, int world = 0)
             {
-                var ctx = new VictoryOfferContext(level, Session, world == 0 ? 2 : world, firstOfWorld);
+                var ctx = new VictoryOfferContext(level, Session, world == 0 ? 2 : world);
                 return Offers.TakeAtVictory(in ctx);
             }
 
@@ -187,6 +187,35 @@ namespace AF.IAP.Tests
         }
 
         [Test]
+        public void Piggy_APendingPurchase_KeepsTheJar()
+        {
+            var fx = new VerifiedStoreFixture();
+            fx.Billing.Mode = FakeBillingMode.Pending; // pago en efectivo de Play (OXXO, Efecty) aún sin pagar
+            var piggy = new PiggyJar(new OffersState(new InMemoryOffersStore()));
+            PurchaseResult? result = null;
+            fx.Service.Purchase(new PurchaseRequest("af_piggy", PurchaseContext.Piggy, 40, 1500), r => result = r);
+
+            Assert.That(result!.Status, Is.EqualTo(PurchaseStatus.Pending));
+            Assert.That(piggy.OnPurchaseResult(result), Is.False, "Q-B5-12: no se vacía hasta acreditarse");
+        }
+
+        [Test]
+        public void Piggy_ALowerCapFromRemoteConfig_KeepsTheJarFullAndBuyable()
+        {
+            var fx = new Fx();
+            fx.FillPiggyTo(3000);
+            fx.Store.Ledger.Config.EcoPiggyCap = 2000;
+
+            Assert.That(fx.Piggy.Cap, Is.EqualTo(2000));
+            Assert.That(fx.Piggy.Seeds, Is.EqualTo(2000), "lo guardado, con el tope nuevo");
+            Assert.That(fx.Piggy.IsFull, Is.True);
+            PurchaseResult? result = null;
+            fx.Store.Service.Purchase(fx.Piggy.Request(PurchaseContext.Piggy, 40), r => result = r);
+            Assert.That(result!.IsPurchased, Is.True, "la tienda no vende más que el tope: se vende el tope");
+            Assert.That(fx.Store.Wallet.Seeds, Is.EqualTo(2000));
+        }
+
+        [Test]
         public void NoOfferCard_InTheFirstSession()
         {
             var fx = new Fx(session: 1);
@@ -229,6 +258,32 @@ namespace AF.IAP.Tests
             Assert.That(fx.Win(15), Is.EqualTo(OfferKind.None), "cada recordatorio, una vez");
             Assert.That(fx.Win(19), Is.EqualTo(OfferKind.Starter));
             Assert.That(fx.Records.Load().StarterReminders, Is.EqualTo(new[] { 15, 19 }));
+        }
+
+        [Test]
+        public void Starter_AReminderWithoutQuota_ComesAtTheNextWin_AndTheFirstCardCoversThePastOnes()
+        {
+            var fx = new Fx();
+            Assert.That(fx.Win(12), Is.EqualTo(OfferKind.Starter));
+            Assert.That(fx.Win(15), Is.EqualTo(OfferKind.None), "sin cupo en la sesión");
+            fx.NewSession();
+            Assert.That(fx.Win(16), Is.EqualTo(OfferKind.Starter), "el recordatorio del 15 no se pierde");
+            fx.NewSession();
+            Assert.That(fx.Win(17), Is.EqualTo(OfferKind.None));
+
+            var late = new Fx();
+            Assert.That(late.Win(16), Is.EqualTo(OfferKind.Starter), "primera tarjeta en el 16");
+            late.NewSession();
+            Assert.That(late.Win(17), Is.EqualTo(OfferKind.None), "la primera tarjeta ya cubre el recordatorio del 15");
+            Assert.That(late.Win(19), Is.EqualTo(OfferKind.Starter));
+
+            var both = new Fx();
+            both.Win(12);
+            both.NewSession();
+            Assert.That(both.Win(19), Is.EqualTo(OfferKind.Starter), "el 15 y el 19 pasados sin verlos: uno solo");
+            Assert.That(both.Records.Load().StarterReminders, Is.EqualTo(new[] { 15, 19 }));
+            both.NewSession();
+            Assert.That(both.Win(19), Is.EqualTo(OfferKind.None));
         }
 
         [Test]
@@ -349,27 +404,38 @@ namespace AF.IAP.Tests
         }
 
         [Test]
-        public void SkinCard_OffUntilTheArt_ThenFrom41_AfterTheFirstWinOfTheWorld_OncePerWorld()
+        public void SkinCard_OffUntilTheArt_ThenFrom41_OncePerWorld()
         {
             var off = new Fx();
             Assert.That(off.Offers.SkinSalesEnabled, Is.False, "Q-B5-1 (a): sin venta de skins hasta el arte final");
-            Assert.That(off.Win(41, world: 3, firstOfWorld: true), Is.EqualTo(OfferKind.None));
+            Assert.That(off.Win(41, world: 3), Is.EqualTo(OfferKind.None));
 
             var fx = new Fx();
             fx.Offers.SkinSalesEnabled = true;
-            Assert.That(fx.Win(11, world: 2, firstOfWorld: true), Is.EqualTo(OfferKind.None), "en el mundo 2, solo en el Mercado");
+            Assert.That(fx.Win(11, world: 2), Is.EqualTo(OfferKind.None), "en el mundo 2, solo en el Mercado");
             fx.NewSession();
-            Assert.That(fx.Win(42, world: 3, firstOfWorld: false), Is.EqualTo(OfferKind.None), "tras la primera victoria del mundo [P]");
-            var ctx = new VictoryOfferContext(41, fx.Session, 3, true);
+            var ctx = new VictoryOfferContext(41, fx.Session, 3);
             Assert.That(fx.Offers.TakeAtVictory(in ctx), Is.EqualTo(OfferKind.SkinWorld));
             Assert.That(OfferScheduler.SkuOf(OfferKind.SkinWorld, in ctx), Is.EqualTo("af_skin_m03"));
             fx.NewSession();
-            Assert.That(fx.Win(41, world: 3, firstOfWorld: true), Is.EqualTo(OfferKind.None), "1 por mundo");
+            Assert.That(fx.Win(42, world: 3), Is.EqualTo(OfferKind.None), "1 por mundo");
 
             var owned = new Fx();
             owned.Offers.SkinSalesEnabled = true;
             owned.Store.Profile.Entitlements.Skins.Add("af_skin_m03");
-            Assert.That(owned.Win(41, world: 3, firstOfWorld: true), Is.EqualTo(OfferKind.None), "desaparece al ganarla");
+            Assert.That(owned.Win(41, world: 3), Is.EqualTo(OfferKind.None), "desaparece al ganarla");
+        }
+
+        [Test]
+        public void SkinCard_WaitsForAVictoryWithQuota_WhenAnotherOfferTookIt()
+        {
+            var fx = new Fx();
+            fx.Offers.SkinSalesEnabled = true;
+            fx.Store.Clock.Advance(TimeSpan.FromDays(1));
+            Assert.That(fx.Win(41, world: 3), Is.EqualTo(OfferKind.NoAds), "prioridad de 05 §5");
+            Assert.That(fx.Win(42, world: 3), Is.EqualTo(OfferKind.None), "sin cupo en la sesión");
+            fx.NewSession();
+            Assert.That(fx.Win(43, world: 3), Is.EqualTo(OfferKind.SkinWorld), "no se pierde: la primera victoria del mundo con cupo");
         }
 
         [Test]
@@ -409,7 +475,7 @@ namespace AF.IAP.Tests
         public void PickAtVictory_ChangesNothing()
         {
             var fx = new Fx();
-            var ctx = new VictoryOfferContext(12, 2, 2, false);
+            var ctx = new VictoryOfferContext(12, 2, 2);
             Assert.That(fx.Offers.PickAtVictory(in ctx), Is.EqualTo(OfferKind.Starter));
             Assert.That(fx.Offers.PickAtVictory(in ctx), Is.EqualTo(OfferKind.Starter));
             Assert.That(fx.Budget.Spent, Is.EqualTo(0));
