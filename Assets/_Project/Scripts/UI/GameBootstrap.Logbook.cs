@@ -158,7 +158,7 @@ namespace AF.UI
             {
                 service = new LoginCalendarService(store, _wallet, clock, DailyChallengeConfig.Defaults.LiveUnlockLevelDaily, LogbookConfigOverride);
             }
-            catch (Exception e) when (e is InvalidOperationException || e is OverflowException || e is ArgumentException)
+            catch (Exception e) when (e is InvalidOperationException || e is OverflowException)
             {
                 // Una tabla y una tasa que no cuadran (o que desbordan) (por ejemplo, una tasa nueva de Remote Config sin su tabla): la Bitácora no
                 // existe en esta sesión, pero el arranque sigue (SetUpMeta y el resto van después).
@@ -293,9 +293,10 @@ namespace AF.UI
             {
                 _logbookDay = today;
                 DevProbe.LogbookState(LoginCalendarProbeFormat.CauseDay, LogbookState, service.Record);
-                if (screen.Visible && _progress != null)
+                if ((screen.Choosing || screen.TodayPulsing) && _progress != null)
                 {
-                    // Medianoche con la libreta abierta: la de hoy (sin las tarjetas de ayer ni su casilla pulsando).
+                    // Medianoche con la libreta abierta y una casilla por sellar: la de hoy (sin las tarjetas de ayer ni su casilla
+                    // pulsando). Con lo recibido a la vista no se rehace: el jugador ve qué le tocó.
                     int maxLevel = _progress.MaxLevel;
                     screen.Show(service.Peek(maxLevel, LogbookUnlocks(maxLevel), LogbookWorld(maxLevel)), screen.Source);
                 }
@@ -485,11 +486,13 @@ namespace AF.UI
             }
         }
 
-        // Lo que el jugador puede recibir ya (D-033, punto 3), con el nivel que va a jugar (max_level + 1 [P]).
+        // Lo que el jugador puede recibir ya (D-033, punto 3): un comodín cuyo nivel de desbloqueo ya superó (max_level ≥ nivel
+        // [P], Q-B5). Así la Bitácora nunca adelanta un comodín a su estreno ni a su regalo (Morpho en el 12, la Luciérnaga en el 100,
+        // que solo se regala sin ninguna en el stock: 04 §2.5).
         private static LoginCalendarUnlocks LogbookUnlocks(int maxLevel)
         {
             BoosterConfig boosters = BoosterConfig.Defaults;
-            return LoginCalendarUnlocks.AtLevel(maxLevel + 1, boosters.HintUnlockLevel, LogbookRevealUnlockLevel, boosters.ExtraCuiaUnlockLevel);
+            return LoginCalendarUnlocks.AtLevel(maxLevel, boosters.HintUnlockLevel, LogbookRevealUnlockLevel, boosters.ExtraCuiaUnlockLevel);
         }
 
         // El mundo donde está el jugador (06 §4.2, regla 4): el del nivel que va a jugar.

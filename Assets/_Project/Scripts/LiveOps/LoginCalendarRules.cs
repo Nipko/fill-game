@@ -35,8 +35,8 @@ namespace AF.LiveOps
         public bool ExtraCuia { get; }
 
         /// <summary>
-        /// Lo desbloqueado en el nivel <paramref name="level"/> (el siguiente de la campaña, <c>max_level</c> + 1 [P], como el nivel
-        /// efectivo del Reto, R-Q8): cada comodín, desde su nivel de desbloqueo.
+        /// Lo desbloqueado con <paramref name="level"/> (en el juego, <c>max_level</c>: el nivel de desbloqueo ya superado [P], Q-B5,
+        /// para no adelantar un comodín a su estreno ni a su regalo): cada comodín, desde su nivel de desbloqueo.
         /// </summary>
         public static LoginCalendarUnlocks AtLevel(int level, int hintUnlockLevel, int revealUnlockLevel, int extraCuiaUnlockLevel)
         {

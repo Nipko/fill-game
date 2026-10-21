@@ -98,6 +98,15 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
+        public void TheRevealUnlockOfTheLogbook_IsTheMurkyLevelOfTheClient()
+        {
+            // lvl_murky_from_level (08 §9, default 100) aún no tiene clave en el cliente: las dos copias, iguales (Q-B5 de B4).
+            StringAssert.Contains("| `lvl_murky_from_level` / `lvl_murky_max_cuias` / `lvl_murky_max_hidden_units` | int | 100 / 3 / 4 |", File.ReadAllText(Path.Combine(
+                Path.GetFullPath(Path.Combine(Application.dataPath, "..")), "docs", "gdd", "08-arquitectura-tecnica-publicacion.md")));
+            Assert.That(AF.UI.GameBootstrap.LogbookRevealUnlockLevel, Is.EqualTo(AF.UI.DevBench.MurkyFromLevel).And.EqualTo(100));
+        }
+
+        [Test]
         public void Ids_AreTheOnesOfTheProbe()
         {
             Assert.That(TakeoverQueue.IdOf(TakeoverKind.None), Is.EqualTo("none"));
