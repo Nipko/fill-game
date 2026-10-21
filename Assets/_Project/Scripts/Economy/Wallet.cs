@@ -81,8 +81,15 @@ namespace AF.Economy
         /// <summary>Stock de comodines.</summary>
         public BoosterStock Stock { get; }
 
-        /// <summary>Canoas en este instante, con la regeneración aplicada.</summary>
-        public CanoesStatus Canoes => CanoeRules.Peek(_profile.Wallet.Canoes, _clock.UtcNow, Config.CanoesMax, Config.CanoesRegen);
+        /// <summary>Canoas en este instante, con la regeneración aplicada (sin ella con el anti-reloj activo: <see cref="CanoesFrozen"/>).</summary>
+        public CanoesStatus Canoes => CanoeRules.Peek(_profile.Wallet.Canoes, _clock.UtcNow, Config.CanoesMax, Config.CanoesRegen, CanoesFrozen);
+
+        /// <summary>
+        /// Anti-reloj (04 §7.1, «Reloj»; 08 §10.1; bloque B8): el reloj de la cartera es un <see cref="IClockTrust"/>
+        /// (<c>AF.Platform.GuardedClock</c>) con el desfase del servidor por encima de <c>sec_clock_max_drift_h</c>, así que las canoas
+        /// no regeneran hasta reconectar con un reloj sano. Con cualquier otro reloj, false.
+        /// </summary>
+        public bool CanoesFrozen => _clock is IClockTrust trust && trust.DriftExceeded;
 
         /// <summary>Cuias de rescate compradas hoy (día local; 0 si los contadores son de un día anterior).</summary>
         public int RescuesToday => DailyCounters.IsStale(_profile.Daily, _clock.LocalDateKey()) ? 0 : _profile.Daily.RescuesToday;
@@ -170,7 +177,10 @@ namespace AF.Economy
 
             DateTime now = _clock.UtcNow;
             string today = _clock.LocalDateKey();
-            CanoesStatus canoes = CanoeRules.Peek(_profile.Wallet.Canoes, now, Config.CanoesMax, Config.CanoesRegen);
+            bool frozen = CanoesFrozen;
+            CanoesStatus canoes = CanoeRules.Peek(_profile.Wallet.Canoes, now, Config.CanoesMax, Config.CanoesRegen, frozen);
+            string? token = transaction.PurchaseToken;
+            bool recordsToken = false;
 
             int seedsDelta = 0;
             StockDelta stock = transaction.Stock;
@@ -196,9 +206,45 @@ namespace AF.Economy
                     break;
                 case TransactionKind.Earn:
                 case TransactionKind.Purchase:
+                    if (token != null)
+                    {
+                        // 08 §10.3: un token se acredita una sola vez (applied_purchases), también tras restoreLedger (B8).
+                        if (_profile.AppliedPurchases.Contains(token))
+                        {
+                            return Reject(transaction, RejectReason.AlreadyApplied);
+                        }
+
+                        recordsToken = true;
+                    }
+
                     seedsDelta = transaction.Seeds;
                     rescue = transaction.AppliesRescue;
                     break;
+                case TransactionKind.Revoke:
+                {
+                    // B8: lo concedido sale sin bajar de 0 (08 §10.1 y §10.2).
+                    seedsDelta = -Math.Min(transaction.Seeds, _profile.Wallet.Seeds);
+                    StockDelta take = StockDelta.None;
+                    for (int k = 0; k < BoosterKinds.Count; k++)
+                    {
+                        var kind = (BoosterKind)k;
+                        int units = Math.Min(transaction.Stock.Get(kind), BoosterKinds.Read(_profile.Stock, kind));
+                        if (units > 0)
+                        {
+                            take = take.Plus(kind, -units);
+                        }
+                    }
+
+                    // Un token ya retirado no se retira dos veces (revisión de B8).
+                    if (token != null && _profile.VoidedPurchases.Contains(token))
+                    {
+                        return Reject(transaction, RejectReason.AlreadyApplied);
+                    }
+
+                    stock = take;
+                    recordsToken = token != null;
+                    break;
+                }
                 case TransactionKind.Buy:
                     seedsDelta = -Config.SeedPrice(transaction.Sink);
                     if (transaction.Sink == SeedSink.UndoRefill)
@@ -290,15 +336,16 @@ namespace AF.Economy
             }
 
             bool grantsNoAds = transaction.GrantsNoAds && !_profile.Entitlements.NoAds;
+            bool revokesNoAds = transaction.RevokesNoAds && _profile.Entitlements.NoAds;
             bool changes = seedsDelta != 0 || !stock.IsZero || canoeDelta != 0 || fill || rescue || grantsNoAds
-                || transaction.InfiniteCanoes > TimeSpan.Zero;
+                || transaction.InfiniteCanoes > TimeSpan.Zero || recordsToken || revokesNoAds;
             if (!changes)
             {
                 return new TransactionResult(transaction, TransactionStatus.Applied, RejectReason.None, 0, Seeds, 0, false, false, false);
             }
 
             CanoesData canoeData = _profile.Wallet.Canoes;
-            CanoeRules.Regenerate(canoeData, now, Config.CanoesMax, Config.CanoesRegen);
+            CanoeRules.Regenerate(canoeData, now, Config.CanoesMax, Config.CanoesRegen, frozen);
             DailyCounters.RollOver(_profile.Daily, today);
 
             _profile.Wallet.Seeds = (int)seedsAfter;
@@ -345,6 +392,17 @@ namespace AF.Economy
             if (grantsNoAds)
             {
                 _profile.Entitlements.NoAds = true;
+            }
+
+            if (revokesNoAds)
+            {
+                _profile.Entitlements.NoAds = false;
+            }
+
+            if (recordsToken)
+            {
+                // B8: el token va en la misma escritura que lo que acredita o retira (orden ordinal, como en el JSON).
+                InsertSorted(transaction.Kind == TransactionKind.Revoke ? _profile.VoidedPurchases : _profile.AppliedPurchases, token!);
             }
 
             _profile.EconomyTs = now;
@@ -404,6 +462,15 @@ namespace AF.Economy
             }
 
             return false;
+        }
+
+        private static void InsertSorted(System.Collections.Generic.List<string> list, string value)
+        {
+            if (!list.Contains(value))
+            {
+                list.Add(value);
+                list.Sort(StringComparer.Ordinal);
+            }
         }
 
         private TransactionResult Reject(Transaction transaction, RejectReason reason, int missing = 0)

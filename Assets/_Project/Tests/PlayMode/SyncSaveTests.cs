@@ -346,7 +346,7 @@ namespace AF.Tests.PlayMode
             yield return MechanicTestKit.LoadPlaying(Level);
             GameBootstrap boot = GameBootstrap.Current!;
             ProfileSaveBatch batch = boot.SaveBatch!;
-            Assert.That(batch.Inner, Is.SameAs(_disk));
+            Assert.That(((SigningProfileStore)batch.Inner).Inner, Is.SameAs(_disk)); // B8: el lote firma (SigningProfileStore) sobre el almacén
             Assert.That(batch.Writer, Is.Not.Null, "con el perfil en disco, el escritor de segundo plano está en marcha");
         }
 

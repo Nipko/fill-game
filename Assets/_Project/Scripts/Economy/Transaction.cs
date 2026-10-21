@@ -199,6 +199,11 @@ namespace AF.Economy
 
         /// <summary>Contenido de una compra con dinero.</summary>
         Purchase = 10,
+
+        /// <summary>
+        /// Revocación local (bloque B8; 08 §10.1 y §10.2): retira semillas y stock sin bajar de 0, y quizá Sin anuncios.
+        /// </summary>
+        Revoke = 11,
     }
 
     /// <summary>
@@ -253,6 +258,17 @@ namespace AF.Economy
 
         /// <summary>SKU de la compra (05 §4.1), o null.</summary>
         public string? Sku { get; private set; }
+
+        /// <summary>
+        /// <c>purchaseToken</c> de la compra (08 §10.3: <c>applied_purchases += token</c>), o null (compras simuladas sin token):
+        /// la cartera lo apunta en <c>applied_purchases</c> en la misma escritura y rechaza un token ya apuntado
+        /// (<see cref="RejectReason.AlreadyApplied"/>). En <see cref="TransactionKind.Revoke"/>, el token que se retira (se apunta en
+        /// <c>voided_purchases</c>) [P].
+        /// </summary>
+        public string? PurchaseToken { get; private set; }
+
+        /// <summary>La revocación quita también Sin anuncios (<c>entitlements.no_ads</c>) [P].</summary>
+        public bool RevokesNoAds { get; private set; }
 
         /// <summary>
         /// Cosecha doble del río crecido (<see cref="DoubleHarvestRiver"/>): sin anuncio y sin la compuerta
@@ -409,11 +425,17 @@ namespace AF.Economy
             StockDelta stock = default,
             TimeSpan infiniteCanoes = default,
             bool appliesRescue = false,
-            bool grantsNoAds = false)
+            bool grantsNoAds = false,
+            string? purchaseToken = null)
         {
             if (string.IsNullOrEmpty(sku))
             {
                 throw new ArgumentException("Falta el SKU.", nameof(sku));
+            }
+
+            if (purchaseToken != null && purchaseToken.Length == 0)
+            {
+                throw new ArgumentException("Un token de compra no puede ser vacío (null = sin token).", nameof(purchaseToken));
             }
 
             if (seeds < 0 || stock.HasNegative || infiniteCanoes < TimeSpan.Zero)
@@ -430,6 +452,36 @@ namespace AF.Economy
                 InfiniteCanoes = infiniteCanoes,
                 AppliesRescue = appliesRescue,
                 GrantsNoAds = grantsNoAds,
+                PurchaseToken = purchaseToken,
+            };
+        }
+
+        /// <summary>
+        /// Revocación local (bloque B8): retira hasta <paramref name="seeds"/> semillas y el stock de <paramref name="stock"/> (en
+        /// positivo: lo que se concedió), sin bajar nada de 0 (08 §10.1: «se revoca (stock no baja de 0)»; compras <c>voided</c>:
+        /// «retira semillas (sin bajar de 0) o derechos»), y Sin anuncios si <paramref name="revokeNoAds"/>. Con
+        /// <paramref name="purchaseToken"/>, lo apunta en <c>voided_purchases</c> en la misma escritura [P]. Nunca se rechaza por
+        /// saldo; <see cref="TransactionResult.SeedsDelta"/> dice lo que de verdad salió.
+        /// </summary>
+        public static Transaction Revoke(int seeds = 0, StockDelta stock = default, bool revokeNoAds = false, string? purchaseToken = null)
+        {
+            if (seeds < 0 || stock.HasNegative)
+            {
+                throw new ArgumentOutOfRangeException(nameof(seeds), "Se revoca lo concedido, en positivo.");
+            }
+
+            if (purchaseToken != null && purchaseToken.Length == 0)
+            {
+                throw new ArgumentException("Un token de compra no puede ser vacío (null = sin token).", nameof(purchaseToken));
+            }
+
+            return new Transaction(TransactionKind.Revoke)
+            {
+                Source = SeedSource.Refund,
+                Seeds = seeds,
+                Stock = stock,
+                RevokesNoAds = revokeNoAds,
+                PurchaseToken = purchaseToken,
             };
         }
 
@@ -490,6 +542,12 @@ namespace AF.Economy
 
         /// <summary>El saldo o el stock se saldría del rango de un entero.</summary>
         Overflow = 7,
+
+        /// <summary>
+        /// La compra trae un <c>purchaseToken</c> que ya está en <c>applied_purchases</c>, o la revocación uno que ya está en
+        /// <c>voided_purchases</c> (08 §10.3; bloque B8).
+        /// </summary>
+        AlreadyApplied = 8,
     }
 
     /// <summary>Lo que devuelve <see cref="Wallet.Apply"/>.</summary>

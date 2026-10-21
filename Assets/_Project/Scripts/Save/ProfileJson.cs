@@ -153,7 +153,7 @@ namespace AF.Save
             root.Set("level_state", p.LevelState == null ? JsonNode.Null : LevelStateNode(p.LevelState));
             if (p.AppliedPurchases.Count > 0)
             {
-                root.Set("applied_purchases", StringList(p.AppliedPurchases)); // F3-3: falta mientras está vacía
+                root.Set("applied_purchases", StringList(SortedUnique(p.AppliedPurchases))); // F3-3: falta mientras está vacía; B8: orden ordinal
             }
 
             if (p.PurchaseQueue != null)
@@ -267,6 +267,7 @@ namespace AF.Save
                 root.Set("daily_challenge", DailyChallengeNode(p.DailyChallenge)); // E4: la clave falta hasta el primer guardado del Reto
             }
 
+            WriteB8(root, p); // B8: identidad, compras, recompensas provisionales e integrity, omitidos en su default
             return root;
         }
 
@@ -354,15 +355,10 @@ namespace AF.Save
             JsonNode? levelState = Section(root, "level_state");
             p.LevelState = levelState == null ? null : ReadLevelState(levelState);
 
-            // applied_purchases (F3-3) es dinero: un tipo equivocado es corrupción, como en wallet. Los repetidos, una vez.
+            // applied_purchases (F3-3) es dinero: un tipo equivocado es corrupción, como en wallet. Los repetidos, una vez, y en
+            // orden ordinal (B8: la firma no depende del orden).
             ReadStringList(root, "applied_purchases", p.AppliedPurchases);
-            for (int i = p.AppliedPurchases.Count - 1; i > 0; i--)
-            {
-                if (p.AppliedPurchases.IndexOf(p.AppliedPurchases[i]) < i)
-                {
-                    p.AppliedPurchases.RemoveAt(i);
-                }
-            }
+            Normalize(p.AppliedPurchases);
 
             // purchase_queue (F3-3 [P]): AF.Save no la interpreta; si no es un objeto, se descarta (las compras sin terminar
             // vuelven con Unity IAP al arrancar y nada se acredita sin el servidor).
@@ -435,6 +431,7 @@ namespace AF.Save
 
             JsonNode? dailyChallenge = Section(root, "daily_challenge");
             p.DailyChallenge = dailyChallenge == null ? null : ReadDailyChallenge(dailyChallenge);
+            ReadB8(root, p);
             return p;
         }
 
@@ -450,6 +447,142 @@ namespace AF.Save
             {
                 return JsonNode.Null;
             }
+        }
+
+        // Bloque B8 (08 §4.3): first_app_version, locale y country_first (tolerantes: no son economía; un valor que no es texto
+        // toma null), voided_purchases (economía: un tipo equivocado es corrupción; se leen en orden ordinal
+        // y sin repetidos), pending_rewards [P] (economía) e integrity (tolerante: una firma ilegible deja el perfil sin firma,
+        // y ProfileIntegrity.Verify lo dirá). Cada clave se omite en su default, así un perfil anterior a B8 se escribe igual.
+        private static void WriteB8(JsonNode root, Profile p)
+        {
+            if (p.FirstAppVersion != null)
+            {
+                root.Set("first_app_version", JsonNode.FromString(p.FirstAppVersion));
+            }
+
+            if (p.Locale != null)
+            {
+                root.Set("locale", JsonNode.FromString(p.Locale));
+            }
+
+            if (p.CountryFirst != null)
+            {
+                root.Set("country_first", JsonNode.FromString(p.CountryFirst));
+            }
+
+            if (p.VoidedPurchases.Count > 0)
+            {
+                root.Set("voided_purchases", StringList(SortedUnique(p.VoidedPurchases)));
+            }
+
+            if (p.PendingRewards.Count > 0)
+            {
+                JsonNode rewards = JsonNode.NewArray();
+                for (int i = 0; i < p.PendingRewards.Count; i++)
+                {
+                    ProvisionalRewardData r = p.PendingRewards[i];
+                    JsonNode entry = JsonNode.NewObject();
+                    entry.Set("nonce", JsonNode.FromString(r.Nonce));
+                    entry.Set("placement", JsonNode.FromString(r.Placement));
+                    entry.Set("granted_at", Timestamp(r.GrantedAt));
+                    entry.Set("seeds", JsonNode.FromInt(r.Seeds));
+                    JsonNode stock = JsonNode.NewObject();
+                    stock.Set("undo", JsonNode.FromInt(r.Stock.Undo));
+                    stock.Set("hint", JsonNode.FromInt(r.Stock.Hint));
+                    stock.Set("reveal", JsonNode.FromInt(r.Stock.Reveal));
+                    stock.Set("extra_cuia", JsonNode.FromInt(r.Stock.ExtraCuia));
+                    stock.Set("shuffle", JsonNode.FromInt(r.Stock.Shuffle));
+                    entry.Set("stock", stock);
+                    rewards.Add(entry);
+                }
+
+                root.Set("pending_rewards", rewards);
+            }
+
+            if (!p.Integrity.IsEmpty)
+            {
+                JsonNode integrity = JsonNode.NewObject();
+                integrity.Set("hmac", JsonNode.FromString(p.Integrity.Hmac));
+                integrity.Set("device_first", JsonNode.FromString(p.Integrity.DeviceFirst));
+                integrity.Set("fraud_flag", JsonNode.FromInt(p.Integrity.FraudFlag));
+                root.Set("integrity", integrity);
+            }
+        }
+
+        private static void ReadB8(JsonNode root, Profile p)
+        {
+            p.FirstAppVersion = TolerantString(root, "first_app_version");
+            p.Locale = TolerantString(root, "locale");
+            p.CountryFirst = TolerantString(root, "country_first");
+            ReadStringList(root, "voided_purchases", p.VoidedPurchases);
+            Normalize(p.VoidedPurchases);
+
+            p.PendingRewards.Clear();
+            JsonNode? rewards = root.Get("pending_rewards");
+            if (rewards != null && !rewards.IsNull)
+            {
+                if (rewards.Kind != JsonKind.Array)
+                {
+                    throw new FormatException("'pending_rewards' debe ser una lista JSON.");
+                }
+
+                IReadOnlyList<JsonNode> items = rewards.Items;
+                for (int i = 0; i < items.Count; i++)
+                {
+                    if (items[i].Kind != JsonKind.Object)
+                    {
+                        throw new FormatException("'pending_rewards' debe ser una lista de objetos.");
+                    }
+
+                    var r = new ProvisionalRewardData();
+                    r.Nonce = ReadString(items[i], "nonce", null) ?? throw new FormatException("'pending_rewards': falta nonce.");
+                    r.Placement = ReadString(items[i], "placement", r.Placement) ?? string.Empty;
+                    r.GrantedAt = ReadTimestamp(items[i], "granted_at") ?? throw new FormatException("'pending_rewards': falta granted_at.");
+                    r.Seeds = ReadInt(items[i], "seeds", r.Seeds);
+                    JsonNode? stock = Section(items[i], "stock");
+                    if (stock != null)
+                    {
+                        r.Stock.Undo = ReadInt(stock, "undo", 0);
+                        r.Stock.Hint = ReadInt(stock, "hint", 0);
+                        r.Stock.Reveal = ReadInt(stock, "reveal", 0);
+                        r.Stock.ExtraCuia = ReadInt(stock, "extra_cuia", 0);
+                        r.Stock.Shuffle = ReadInt(stock, "shuffle", 0);
+                    }
+
+                    p.PendingRewards.Add(r);
+                }
+            }
+
+            JsonNode? integrity = TolerantSection(root, "integrity");
+            if (integrity != null)
+            {
+                p.Integrity.Hmac = TolerantString(integrity, "hmac");
+                p.Integrity.DeviceFirst = TolerantString(integrity, "device_first");
+                p.Integrity.FraudFlag = Math.Max(0, TolerantInt(integrity, "fraud_flag", 0));
+            }
+        }
+
+        // Orden ordinal y sin repetidos (applied_purchases y voided_purchases): la ida y vuelta, y la firma, no dependen del orden.
+        private static List<string> SortedUnique(List<string> values)
+        {
+            var copy = new List<string>(values);
+            Normalize(copy);
+            return copy;
+        }
+
+        private static void Normalize(List<string> values)
+        {
+            values.Sort(StringComparer.Ordinal);
+            int w = 0;
+            for (int r = 0; r < values.Count; r++)
+            {
+                if (w == 0 || !string.Equals(values[r], values[w - 1], StringComparison.Ordinal))
+                {
+                    values[w++] = values[r];
+                }
+            }
+
+            values.RemoveRange(w, values.Count - w);
         }
 
         // fauna.sighted (esquema 2; DC15): una entrada que no es un objeto {species_id, level} válido se descarta; si una especie

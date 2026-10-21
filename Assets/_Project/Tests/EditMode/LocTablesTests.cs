@@ -544,6 +544,15 @@ namespace AF.Tests.EditMode
             // La Pororoca del Spark (bloque B2; B2-strings.csv): las pinta AF.UI.ShuffleText.
             keys.AddRange(ShuffleText.AllKeys);
 
+            // B8: «Eliminar cuenta y datos» (Ajustes y su diálogo de dos pasos), que pinta AF.UI.AccountText.
+            foreach (FieldInfo f in typeof(AccountText.Keys).GetFields(BindingFlags.Public | BindingFlags.Static))
+            {
+                if (f.IsLiteral && f.FieldType == typeof(string))
+                {
+                    keys.Add((string)f.GetValue(null)!);
+                }
+            }
+
             return keys;
         }
 

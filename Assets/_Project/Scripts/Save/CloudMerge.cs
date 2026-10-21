@@ -113,10 +113,13 @@ namespace AF.Save
     /// (<c>skins</c>); la fauna por unión (como <c>album</c>); <c>map_seen_level</c> por máximo (D-013);
     /// <c>undo_tip_seen</c> por «o»; <c>skipped_levels</c> por unión (B3, Q-S1); <c>stats</c> por máximo [P]; <c>ads.last_iap</c>
     /// por máximo [P]. Con el parche del perfil de B8, también <c>applied_purchases</c> por unión (08 §11) y lo demás de
-    /// <c>integrity</c> (<see cref="MergeAddedFields"/>).</item>
+    /// <c>integrity</c> (<see cref="MergeAddedFields"/>). <c>purchase_queue</c> (F3-3) es solo local: no se compara, no sube y
+    /// el fusionado lleva siempre la del dispositivo (<see cref="SharedJson"/>).</item>
     /// <item><b>Integridad</b>: si uno está manipulado (su firma no cuadra) y el otro no, gana el otro, sin unir nada del otro (un blob manipulado no aporta
     /// derechos ni compras) [P].</item>
     /// </list>
+    /// Con B6 (Q-B8-11 (a) [P]): <c>stats.last_seen_at</c> y <c>last_win_at</c> por máximo; en <c>settings.push</c>, «o» en los
+    /// pre-prompts, máximo en <c>pre_prompt_at</c> y <c>granted</c> del dispositivo.
     /// Lo demás (<c>settings</c>, <c>sloth</c>, <c>streak</c>, <c>daily_challenge</c>, <c>level_state</c>, <c>progress</c>
     /// salvo lo dicho) es del ganador: va con su cartera en el mismo blob y así nunca se paga dos veces lo mismo. Tras fusionar, el
     /// cliente llama a <c>restoreLedger</c> (08 §11; llega con Functions) y vuelve a acreditar los tokens que falten.
@@ -135,16 +138,16 @@ namespace AF.Save
                 throw new ArgumentNullException(nameof(local));
             }
 
-            string localJson = ProfileJson.Serialize(local);
+            string localJson = SharedJson(local);
             if (cloud == null)
             {
-                return new CloudMergeResult(ProfileJson.Deserialize(localJson), CloudMergeWinner.Local, CloudMergeReason.NoCloud, false, true);
+                return new CloudMergeResult(WithLocalQueue(ProfileJson.Deserialize(localJson), local), CloudMergeWinner.Local, CloudMergeReason.NoCloud, false, true);
             }
 
-            string cloudJson = ProfileJson.Serialize(cloud);
+            string cloudJson = SharedJson(cloud);
             if (string.Equals(localJson, cloudJson, StringComparison.Ordinal))
             {
-                return new CloudMergeResult(ProfileJson.Deserialize(localJson), CloudMergeWinner.Local, CloudMergeReason.Identical, false, false);
+                return new CloudMergeResult(WithLocalQueue(ProfileJson.Deserialize(localJson), local), CloudMergeWinner.Local, CloudMergeReason.Identical, false, false);
             }
 
             CloudMergeWinner winner;
@@ -181,15 +184,47 @@ namespace AF.Save
             {
                 MergeFields(merged, loser);
                 MergeAddedFields(merged, winnerProfile, loser);
+                MergeDeviceFields(merged, loser, local);
             }
 
-            string mergedJson = ProfileJson.Serialize(merged);
+            string mergedJson = ProfileJson.Serialize(merged); // sin purchase_queue: la copia sale de SharedJson
             return new CloudMergeResult(
-                merged,
+                WithLocalQueue(merged, local),
                 winner,
                 reason,
                 !string.Equals(mergedJson, localJson, StringComparison.Ordinal),
                 !string.Equals(mergedJson, cloudJson, StringComparison.Ordinal));
+        }
+
+        /// <summary>
+        /// El perfil como se comparte con la nube: sin <c>purchase_queue</c> (F3-3 [P]; D-035, añadido de F3-3: la cola de
+        /// verificación es solo del dispositivo, porque sus compras sin terminar las vuelve a dar la tienda de ese teléfono). No
+        /// cambia <paramref name="profile"/> (la quita y la devuelve).
+        /// </summary>
+        public static string SharedJson(Profile profile)
+        {
+            if (profile == null)
+            {
+                throw new ArgumentNullException(nameof(profile));
+            }
+
+            string? queue = profile.PurchaseQueue;
+            profile.PurchaseQueue = null;
+            try
+            {
+                return ProfileJson.Serialize(profile);
+            }
+            finally
+            {
+                profile.PurchaseQueue = queue;
+            }
+        }
+
+        // purchase_queue: siempre la del dispositivo, gane quien gane (D-035, añadido de F3-3).
+        private static Profile WithLocalQueue(Profile merged, Profile local)
+        {
+            merged.PurchaseQueue = local.PurchaseQueue;
+            return merged;
         }
 
         /// <summary>Texto de <c>af_save_sync.result</c> (08 §8.2).</summary>
@@ -340,6 +375,19 @@ namespace AF.Save
             merged.Stats.Sessions = Math.Max(merged.Stats.Sessions, other.Stats.Sessions);
 
             merged.Ads.LastIap = MaxTs(merged.Ads.LastIap, other.Ads.LastIap);
+        }
+
+        // Q-B8-11 (a) [P] (con B6): stats.last_seen_at y last_win_at por máximo; settings.push con «o» en los pre-prompts, la
+        // fecha del pre-prompt por máximo y granted del dispositivo (el permiso es del teléfono, no de la cuenta).
+        private static void MergeDeviceFields(Profile merged, Profile other, Profile local)
+        {
+            merged.Stats.LastSeenAt = MaxTs(merged.Stats.LastSeenAt, other.Stats.LastSeenAt);
+            merged.Stats.LastWinAt = MaxTs(merged.Stats.LastWinAt, other.Stats.LastWinAt);
+            PushSettingsData push = merged.Settings.Push;
+            push.PrePromptShown = push.PrePromptShown || other.Settings.Push.PrePromptShown;
+            push.SecondPromptShown = push.SecondPromptShown || other.Settings.Push.SecondPromptShown;
+            push.PrePromptAt = MaxTs(push.PrePromptAt, other.Settings.Push.PrePromptAt);
+            push.Granted = local.Settings.Push.Granted;
         }
 
         /// <summary>

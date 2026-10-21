@@ -249,7 +249,7 @@ namespace AF.Tests.EditMode
         }
 
         [Test]
-        public void Store_OnlyStreakChange_LeavesEconomyTs()
+        public void Store_OnlyStreakChange_MarksEconomyTs()
         {
             var clock = Clock(new DateTime(2026, 10, 19, 10, 0, 0));
             Profile p = NewProfile();
@@ -265,7 +265,7 @@ namespace AF.Tests.EditMode
 
             r.Wins = 2;
             store.Save(r);
-            Assert.That(p.EconomyTs, Is.EqualTo(afterRollOver), "streak no es wallet, stock ni daily");
+            Assert.That(p.EconomyTs, Is.EqualTo(clock.UtcNow), "B1a-Q2 (a), D-033: un cambio que solo toca streak también marca economy_ts");
             Assert.That(p.Streak!.Wins, Is.EqualTo(2));
         }
 

@@ -471,7 +471,7 @@ namespace AF.Tests.PlayMode
             PlayModeHelpers.TakeClock(boot);
             boot.TapAnywhere();
             ProfileSaveBatch batch = boot.SaveBatch!;
-            Assert.That(batch.Inner, Is.SameAs(store));
+            Assert.That(((SigningProfileStore)batch.Inner).Inner, Is.SameAs(store)); // B8: el lote firma (SigningProfileStore) sobre el almacén
             Assert.That(batch.Writer, Is.Not.Null, "con el perfil en disco, el escritor de segundo plano está en marcha");
             ProfileWriter writer = batch.Writer!;
             SolveResult solution = new AStarSolver().Solve(boot.Flow!.Session.Current, SolverOptions.ForPipeline(boot.Flow.Session.PourMode));

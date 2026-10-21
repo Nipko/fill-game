@@ -119,7 +119,10 @@ namespace AF.Save
         /// del <c>purchaseToken</c> en hexadecimal en minúsculas, como el libro mayor del servidor; contrato v1). Una compra cuyo hash
         /// está aquí no se vuelve a acreditar nunca (F3-3: <c>AF.IAP.VerifiedStoreService</c>). Vive en el mismo perfil que
         /// <see cref="Wallet"/> para que el apunte y lo acreditado salgan en la misma escritura. En la fusión de 08 §11 es la unión
-        /// (<see cref="MergeAppliedPurchases"/>). La clave falta mientras está vacía (entra sin migrar: aún no se ha publicado).
+        /// (<see cref="MergeAppliedPurchases"/>; en <c>CloudMerge</c>, B8, la unión en orden ordinal). La clave falta mientras está vacía
+        /// (entra sin migrar: aún no se ha publicado); se escribe en orden ordinal y sin repetidos, para que la firma de B8 no dependa
+        /// del orden. La cartera (B8, <c>Transaction.Purchase</c> con token) apunta aquí el identificador que le pasen: con F3-3 es el
+        /// <c>token_hash</c>.
         /// </summary>
         public List<string> AppliedPurchases { get; } = new List<string>();
 
@@ -169,6 +172,42 @@ namespace AF.Save
                 }
             }
         }
+
+        /// <summary>
+        /// <c>first_app_version</c> (08 §4.3; bloque B8): versión de la app con la que se creó el perfil (p. ej. <c>1.0.0</c>), o null
+        /// en un perfil anterior a B8 (no se inventa: queda null). La escribe una vez <see cref="ProfileIdentity.StampFirstRun"/>.
+        /// </summary>
+        public string? FirstAppVersion { get; set; }
+
+        /// <summary>
+        /// <c>locale</c> (08 §4.3; bloque B8): idioma del juego con el que se juega (<c>es-419</c>, <c>pt-BR</c>, <c>en</c>), el de la
+        /// UI resuelto en este arranque [P] (Q-B8-4); null hasta el primer arranque con B8. Lo pone al día
+        /// <see cref="ProfileIdentity.UpdateLocale"/> en cada arranque. No es un ajuste: el ajuste es <c>settings.language</c>.
+        /// </summary>
+        public string? Locale { get; set; }
+
+        /// <summary>
+        /// <c>country_first</c> (08 §4.3; bloque B8): país del primer arranque en ISO 3166-1 alfa-2 (<c>CO</c>), de la región del
+        /// teléfono (Q-T3 (a): la SIM aún no llega al cliente) [P]; null si el teléfono no da región. Se escribe una vez y nunca cambia.
+        /// </summary>
+        public string? CountryFirst { get; set; }
+
+        /// <summary>
+        /// <c>voided_purchases</c> [P] (08 §10.1, fila «Compra falsa o recibo reutilizado»: el cliente retira semillas o derechos de
+        /// lo que el libro mayor marca <c>voided</c>): los tokens ya retirados, para no retirarlos dos veces (tampoco tras una fusión,
+        /// que los une). Vacía, la clave no se escribe.
+        /// </summary>
+        public List<string> VoidedPurchases { get; } = new List<string>();
+
+        /// <summary>
+        /// <c>pending_rewards</c> [P] (08 §10.1 y §10.2: concesión provisional de un recompensado hasta que el servidor confirme su
+        /// <c>nonce</c>; sin confirmar en <c>sec_ssv_grace_h</c>, se revoca): lo concedido y aún sin confirmar. Vacía, la clave no se
+        /// escribe. En la 1.0 sin servidor nada se apunta aquí (todo sale confirmado; nota B8 §5).
+        /// </summary>
+        public List<ProvisionalRewardData> PendingRewards { get; } = new List<ProvisionalRewardData>();
+
+        /// <summary><c>integrity</c> (08 §4.3): la firma del perfil, la huella del dispositivo que lo creó y el contador de fraude.</summary>
+        public IntegrityData Integrity { get; } = new IntegrityData();
 
         /// <summary>
         /// Perfil de primera ejecución: <c>created_at</c> = ahora, 0 semillas (el GDD no fija otro saldo inicial),
@@ -896,6 +935,56 @@ namespace AF.Save
 
         /// <summary><c>level_state</c>: estado de la partida, con el formato de 04 §10.1.</summary>
         public LevelStateData LevelState { get; set; } = new LevelStateData();
+    }
+
+    /// <summary>
+    /// <c>integrity</c> (08 §4.3: <c>{hmac, device_first}</c>; bloque B8). Solo datos: firmar y comprobar es de
+    /// <see cref="ProfileIntegrity"/>. Todo en su default, la clave no se escribe.
+    /// </summary>
+    public sealed class IntegrityData
+    {
+        /// <summary>
+        /// <c>hmac</c>: HMAC-SHA-256 del perfil sin este campo (<see cref="ProfileIntegrity.Sign"/>), en 64 hexadecimales; null si
+        /// nunca se firmó (un perfil anterior a B8).
+        /// </summary>
+        public string? Hmac { get; set; }
+
+        /// <summary>
+        /// <c>device_first</c>: huella del dispositivo que creó el perfil (<see cref="ProfileHmac.DeviceFingerprint"/>, nunca el id en
+        /// claro), de la que sale la clave del HMAC [P] (Q-B8-2); null hasta la primera firma. No cambia al restaurar en otro teléfono.
+        /// </summary>
+        public string? DeviceFirst { get; set; }
+
+        /// <summary>
+        /// <c>fraud_flag</c> [P] (04 §10.2; 08 §10.2: <c>fraud_flag++</c> al revocar una recompensa sin confirmar): cuántas
+        /// revocaciones lleva el perfil. Solo se mide (08 §10.1: sin castigo automático).
+        /// </summary>
+        public int FraudFlag { get; set; }
+
+        /// <summary>Todo en su default (la clave no se escribe).</summary>
+        public bool IsEmpty => Hmac == null && DeviceFirst == null && FraudFlag == 0;
+    }
+
+    /// <summary>
+    /// Elemento de <c>pending_rewards</c> [P] (08 §10.2): una recompensa por anuncio concedida en provisional, con su
+    /// <c>nonce</c>, la ubicación, cuándo se dio y lo que se dio (semillas y comodines), para poder revocarla tal cual.
+    /// </summary>
+    public sealed class ProvisionalRewardData
+    {
+        /// <summary><c>nonce</c>: el de <c>custom_data = placement|nonce</c> (08 §10.2); único.</summary>
+        public string Nonce { get; set; } = "";
+
+        /// <summary><c>placement</c>: la ubicación (<c>rv_undo_refill</c>…).</summary>
+        public string Placement { get; set; } = "";
+
+        /// <summary><c>granted_at</c>: cuándo se concedió (UTC).</summary>
+        public DateTime GrantedAt { get; set; }
+
+        /// <summary><c>seeds</c>: semillas concedidas.</summary>
+        public int Seeds { get; set; }
+
+        /// <summary><c>stock</c>: comodines concedidos, con las claves de <c>stock</c>.</summary>
+        public StockData Stock { get; } = new StockData();
     }
 
     /// <summary><c>stats</c> (08 §4.3).</summary>

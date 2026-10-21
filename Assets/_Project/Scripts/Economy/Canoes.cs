@@ -59,30 +59,35 @@ namespace AF.Economy
     /// <item>las Canoas infinitas se suman (Magic Sort: 15 + 30 min = 45 min, ficha §4.5) y, mientras duran, un fallo
     /// duro no gasta canoa.</item>
     /// </list>
-    /// Si el reloj del dispositivo retrocede, no se regenera nada hasta alcanzar <c>next_regen_at</c>; el contraste con la
-    /// hora del servidor (<c>sec_clock_max_drift_h</c>, 04 §7.1 "Reloj") llegará con el backend.
+    /// Si el reloj del dispositivo retrocede, no se regenera nada hasta alcanzar <c>next_regen_at</c>. Con hora del servidor y un
+    /// desfase mayor que <c>sec_clock_max_drift_h</c> (04 §7.1, «Reloj»; 08 §10.1; bloque B8), las canoas no regeneran hasta
+    /// reconectar con un reloj sano: quien llama pasa <c>frozen</c> = true (<c>AF.Platform.IClockTrust.DriftExceeded</c>); el
+    /// cronómetro no avanza ni se pierde, y sin red se acepta la hora local.
     /// </summary>
     public static class CanoeRules
     {
-        /// <summary>Estado en <paramref name="now"/> sin tocar <paramref name="data"/>.</summary>
-        public static CanoesStatus Peek(CanoesData data, DateTime now, int max, TimeSpan regen)
+        /// <summary>
+        /// Estado en <paramref name="now"/> sin tocar <paramref name="data"/>. Con <paramref name="frozen"/> (anti-reloj, B8) no
+        /// suma la regeneración pendiente.
+        /// </summary>
+        public static CanoesStatus Peek(CanoesData data, DateTime now, int max, TimeSpan regen, bool frozen = false)
         {
             if (data == null)
             {
                 throw new ArgumentNullException(nameof(data));
             }
 
-            Compute(data.Count, data.NextRegenAt, now, max, regen, out int count, out DateTime? next);
+            Compute(data.Count, data.NextRegenAt, now, max, regen, frozen, out int count, out DateTime? next);
             return new CanoesStatus(count, max, next, data.InfiniteUntil, now);
         }
 
         /// <summary>
         /// Escribe en <paramref name="data"/> la regeneración acumulada hasta <paramref name="now"/> y borra unas Canoas
-        /// infinitas ya vencidas. Devuelve si cambió algo.
+        /// infinitas ya vencidas. Con <paramref name="frozen"/> (anti-reloj, B8) no regenera nada. Devuelve si cambió algo.
         /// </summary>
-        internal static bool Regenerate(CanoesData data, DateTime now, int max, TimeSpan regen)
+        internal static bool Regenerate(CanoesData data, DateTime now, int max, TimeSpan regen, bool frozen = false)
         {
-            Compute(data.Count, data.NextRegenAt, now, max, regen, out int count, out DateTime? next);
+            Compute(data.Count, data.NextRegenAt, now, max, regen, frozen, out int count, out DateTime? next);
             bool changed = count != data.Count || next != data.NextRegenAt;
             data.Count = count;
             data.NextRegenAt = next;
@@ -133,12 +138,19 @@ namespace AF.Economy
             data.InfiniteUntil = DateTime.SpecifyKind(start + duration, DateTimeKind.Utc);
         }
 
-        private static void Compute(int count, DateTime? next, DateTime now, int max, TimeSpan regen, out int newCount, out DateTime? newNext)
+        private static void Compute(int count, DateTime? next, DateTime now, int max, TimeSpan regen, bool frozen, out int newCount, out DateTime? newNext)
         {
             newCount = count;
             if (count >= max)
             {
                 newNext = null;
+                return;
+            }
+
+            if (frozen)
+            {
+                // Anti-reloj (04 §7.1, «Reloj»): sin regenerar y con el cronómetro como estaba, hasta un reloj sano.
+                newNext = next;
                 return;
             }
 

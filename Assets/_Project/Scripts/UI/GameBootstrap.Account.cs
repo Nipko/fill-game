@@ -22,8 +22,10 @@ namespace AF.UI
     /// nada vuelva a escribir el perfil), <c>PlayerPrefs</c> y, si eso salió bien, el snapshot <c>af_main</c> de la nube
     /// (<see cref="ICloudSave"/>; sin Play Games, la falsa sin sesión, que no hace nada), y vuelve al estado de primera ejecución
     /// recargando la escena sin el perfil de la sesión (el arranque siguiente no encuentra perfil: entra al nivel 1, 08 §2.3).
-    /// La parte del servidor (<c>deleteAccount</c>: <c>users/{uid}</c>, <c>rewards/*</c>, el libro mayor anonimizado y el usuario
-    /// de Auth) llega con Functions y App Check [P]; hoy no hay UID.</item>
+    /// La parte del servidor (D-035: <c>POST /v1/account/delete</c>, <c>AF.Backend.IBackendClient.DeleteAccount</c>) queda
+    /// preparada en <see cref="ServerAccountDelete"/>, sin conectar: AF.UI aún no crea el cliente del backend (F3-5). Ajustes no
+    /// enseña el UID: el identificador para borrar por la web será el código de borrado de <c>IBackendClient.GetAccountCode</c>
+    /// (Q-B13-21: aleatorio, distinto del UID y rotatorio), que llega con F3-5 [P].</item>
     /// <item>Sonda (solo en desarrollo): <c>AF_STATE af_account_delete</c> con <c>requested</c>, <c>confirmed</c>, <c>done</c>
     /// o <c>failed</c> (08 §8.2), y el <c>AF_LAYOUT delete_account</c> del diálogo.</item>
     /// </list>
@@ -52,6 +54,14 @@ namespace AF.UI
             FailAccountDeleteForTests = false;
             WipePlayerPrefsForTests = null;
         }
+
+        /// <summary>
+        /// Borrado en el servidor (D-035; F3-5): quien conecte el backend le da aquí una llamada a
+        /// <c>IBackendClient.DeleteAccount</c>, que recibe una función para avisar si salió bien. Va después del borrado local y de la
+        /// nube, y su resultado no bloquea (como la nube: sin red, el servidor lo borra en el siguiente intento o por la web). Null
+        /// (hoy): no se llama a nada.
+        /// </summary>
+        public Action<Action<bool>>? ServerAccountDelete { get; set; }
 
         /// <summary>La nube del guardado (null antes de <see cref="SetUpAccount"/>).</summary>
         public ICloudSave? CloudSave => _cloudSave;
@@ -218,6 +228,15 @@ namespace AF.UI
                     }
                 });
             }
+
+            Action<Action<bool>>? server = ServerAccountDelete;
+            server?.Invoke(ok =>
+            {
+                if (!ok)
+                {
+                    Debug.LogWarning(LogPrefix + "el servidor no confirmó el borrado de la cuenta (deleteAccount)");
+                }
+            });
 
             return true;
         }

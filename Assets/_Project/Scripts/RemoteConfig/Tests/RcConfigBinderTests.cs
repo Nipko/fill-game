@@ -33,6 +33,7 @@ namespace AF.RemoteConfig.Tests
             { "ComebackConfig", "B6 (AF.LiveOps, live_comeback_gift): ya integrada; falta su tabla en RcConfigBinder y pasarla al Regalo de regreso" },
             { "PushConfig", "B6 (AF.LiveOps, 5 claves push_*): ya integrada; falta su tabla en RcConfigBinder y pasarla a los avisos" },
             { "VerificationQueueConfig", "F3-1 (AF.Backend, sec_purchase_deferred_ack_h): ya integrada; se enlaza cuando F3-3 conecte el backend en el arranque" },
+            { "RevocationConfig", "B8 (AF.Economy, sec_ssv_grace_h): ya integrada; LocalRevocation aún no se crea en el arranque (llega con restoreLedger y el SSV del backend)" },
         };
 
         private static RcSnapshot With(params string[] kv)

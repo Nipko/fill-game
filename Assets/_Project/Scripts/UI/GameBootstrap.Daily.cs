@@ -164,7 +164,7 @@ namespace AF.UI
 
             DailyChallengeConfig config = ActiveRcConfigs?.Daily ?? DailyChallengeConfig.Defaults; // Remote Config (B7)
             IServerDate server = DailyServerOverride ?? FakeServerDate.Offline();
-            Wallet dailyWallet = LevelFlow.CreateDailyWallet(profile, batch.Durable, clock, ActiveRcConfigs?.Economy);
+            Wallet dailyWallet = LevelFlow.CreateDailyWallet(profile, batch.Durable, _capsClock ?? clock, ActiveRcConfigs?.Economy); // B8: anti-reloj de canoas y topes; las reglas, con el del dispositivo
             ConnectWallet(dailyWallet); // earn/spend del Reto por el bus y biz_feature_lives (B7; GameBootstrap.Telemetry.cs)
             var rules = new DailyChallengeRules(store, dailyWallet, clock, server, config);
             var service = new DailyChallengeService(store, rules, clock, config, pool);
