@@ -17,7 +17,9 @@ namespace AF.Save
     /// <c>progress.undo_tip_seen</c> (DC23), que sin la clave o con otro tipo queda en «no visto». <c>fauna</c>
     /// (esquema 2; DC15) también es tolerante: una entrada de <c>sighted</c> que no es válida se descarta. <c>streak</c> y
     /// <c>daily_challenge</c> se omiten mientras son null, y <c>daily.streak_hits</c> y <c>daily.streak_seeds</c> en su default
-    /// (vacía y 0): son economía y un tipo equivocado en ellos es corrupción.
+    /// (vacía y 0): son economía y un tipo equivocado en ellos es corrupción. Los de B14 son cosméticos y tolerantes:
+    /// <c>entitlements.skin_equipped</c> y <c>entitlements.frames</c> se omiten en su default (null y vacía), y <c>album</c>
+    /// (solo <c>fruits</c>), sin tintes; un valor que no vale toma el default o se descarta.
     /// </summary>
     public static class ProfileJson
     {
@@ -154,6 +156,16 @@ namespace AF.Save
             entitlements.Set("no_ads", JsonNode.FromBool(p.Entitlements.NoAds));
             entitlements.Set("starter_bought", JsonNode.FromBool(p.Entitlements.StarterBought));
             entitlements.Set("skins", StringList(p.Entitlements.Skins));
+            if (p.Entitlements.SkinEquipped != null)
+            {
+                entitlements.Set("skin_equipped", JsonNode.FromString(p.Entitlements.SkinEquipped)); // B14 [P]: falta con la base
+            }
+
+            if (p.Entitlements.Frames.Count > 0)
+            {
+                entitlements.Set("frames", StringList(p.Entitlements.Frames)); // Q-M6 [P]: falta sin marcos
+            }
+
             root.Set("entitlements", entitlements);
 
             JsonNode settings = JsonNode.NewObject();
@@ -204,6 +216,20 @@ namespace AF.Save
             JsonNode fauna = JsonNode.NewObject();
             fauna.Set("sighted", sighted);
             root.Set("fauna", fauna);
+
+            if (p.Album.Fruits.Count > 0)
+            {
+                // album.fruits (08 §4.3; B14): la clave falta hasta el primer tinte descubierto.
+                JsonNode fruits = JsonNode.NewArray();
+                for (int i = 0; i < p.Album.Fruits.Count; i++)
+                {
+                    fruits.Add(JsonNode.FromInt(p.Album.Fruits[i]));
+                }
+
+                JsonNode album = JsonNode.NewObject();
+                album.Set("fruits", fruits);
+                root.Set("album", album);
+            }
 
             if (p.DailyChallenge != null)
             {
@@ -303,6 +329,9 @@ namespace AF.Save
                 p.Entitlements.NoAds = ReadBool(entitlements, "no_ads", p.Entitlements.NoAds);
                 p.Entitlements.StarterBought = ReadBool(entitlements, "starter_bought", p.Entitlements.StarterBought);
                 ReadStringList(entitlements, "skins", p.Entitlements.Skins);
+                // skin_equipped y frames (B14 [P]) son cosméticos: un tipo equivocado vale su default, sin corrupción.
+                p.Entitlements.SkinEquipped = TolerantString(entitlements, "skin_equipped");
+                TolerantStringList(entitlements, "frames", p.Entitlements.Frames);
             }
 
             JsonNode? settings = TolerantSection(root, "settings");
@@ -339,6 +368,21 @@ namespace AF.Save
             if (fauna != null)
             {
                 ReadFauna(fauna, p.Fauna);
+            }
+
+            JsonNode? album = TolerantSection(root, "album");
+            JsonNode? albumFruits = album?.Get("fruits");
+            if (albumFruits != null && albumFruits.Kind == JsonKind.Array)
+            {
+                // album.fruits (B14): un valor que no es un tinte de 1-14 se descarta; los repetidos, una vez y en orden.
+                IReadOnlyList<JsonNode> items = albumFruits.Items;
+                for (int i = 0; i < items.Count; i++)
+                {
+                    if (TryInt(items[i], out int tint) && AlbumData.IsTint(tint))
+                    {
+                        p.Album.AddFruit(tint);
+                    }
+                }
             }
 
             JsonNode? dailyChallenge = Section(root, "daily_challenge");
@@ -753,6 +797,30 @@ namespace AF.Save
             for (int i = 0; i < items.Count; i++)
             {
                 target.Add(Wrap(key, items[i].AsString));
+            }
+        }
+
+        // Lista de textos tolerante: sin la clave, o si no es una lista, vacía; los elementos que no son texto (o repetidos), fuera.
+        private static void TolerantStringList(JsonNode parent, string key, List<string> target)
+        {
+            target.Clear();
+            JsonNode? node = parent.Get(key);
+            if (node == null || node.Kind != JsonKind.Array)
+            {
+                return;
+            }
+
+            IReadOnlyList<JsonNode> items = node.Items;
+            for (int i = 0; i < items.Count; i++)
+            {
+                if (items[i].Kind == JsonKind.String)
+                {
+                    string value = items[i].AsString();
+                    if (!target.Contains(value))
+                    {
+                        target.Add(value);
+                    }
+                }
             }
         }
 

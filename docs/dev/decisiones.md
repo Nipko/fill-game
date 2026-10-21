@@ -3056,3 +3056,15 @@ Las demás preguntas de la propuesta quedan cubiertas por el guion:
 - **Merge del CI aprobado por el dueño** (Q-T5): «Apruebo el merge de B10 con el ci.yml en integración y main. Yo creo los secretos UNITY_EMAIL y UNITY_PASSWORD en GitHub.» La variable de repositorio `AF_RELEASE_APPLICATION_ID` se crea solo tras el dictamen de marca (D-034); sin ella, el job de build construye un ensayo con la identidad de prueba.
 - **coverlet** (Q-T7): `coverlet.msbuild` **10.0.1**, solo en `dotnet/AF.Core.Tests` y activo con `-p:CollectCoverage=true`; cobertura medida el 2026-10-20: 92,09 % de líneas (AF.Core 93,34 %, AF.Solver 90,34 %).
 - **Stripping High** (Q-T6): AAB de ensayo de 46,13 MB con `Assets/Plugins/link.xml`. Pendientes de B10: el margen inferior de «Cancelar» en `StoreSheet` (parche en `docs/dev/traspaso/b10-storesheet-safe-area.patch`) y el retroceso predictivo, desactivado hasta probar Atrás en el teléfono con Android 16 (`docs/dev/traspaso/b10-safe-area-y-retroceso.md`).
+
+### D-033, añadido del 2026-10-20: preguntas de B14 (con la regla «si tienen recomendada, vamos con esa»)
+
+- **Estado:** aplicadas por el integrador con la regla del dueño del 2026-10-19; la (a) de cada una es lo que implementó B14 (`tanda5/b14`). El dueño puede cambiarlas.
+- **B14-Q1:** los ids de skin son el SKU del pack (`af_skin_m02`…), el mismo que anota la compra; se parchea el ejemplo de 08 §4.3.
+- **B14-Q2:** el perfil guarda `entitlements.skin_equipped` y `entitlements.frames` [P]; se anota en 08 §4.3.
+- **B14-Q3:** en el Mapa se ven los puntos de paso ya recorridos y al tocarlos dan su nombre y su dato. Falta la fila `map.stop.obidos.dato_01` en `facts.csv` (para `tools/river-map` y el asesor).
+- **B14-Q4:** la tarjeta de una parada futura enseña el contenido de su Canasta, semillas incluidas, sin precio (06 §4.5).
+- **B14-Q5:** luz de dificultad [P] (`NightLut` 0,66/0,72/0,98 en Muy difícil; `AfternoonLut` 1/0,92/0,78 en Difícil) solo en el panorama, el cielo, el héroe y el agua (ΔE ≤ 4,5), sustituyendo al velo del 15 %; el inicio no la lleva. Provisional hasta la prueba en el teléfono; se corrigen 02 §10 y 07 §7.7.
+- **B14-Q6:** al arrancar, las skins de los mundos ya cerrados se dan sin ponerse, sin aviso y sin `af_skin_unlock` (perfiles anteriores).
+- **B14-Q7:** el álbum de frutas solo lo llena la campaña.
+- **Nota para B3 (Salto del Boto):** debe llamar a `SkinService.ApplyLevelPassed`, y la marca de Canasta cobrada se deduce de `max_level ≥ 10k`, así que un `10k` saltado saldría marcado: revisarlo en B3.

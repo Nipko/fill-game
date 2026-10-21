@@ -21,7 +21,8 @@ namespace AF.Save
     /// de migración 1 → 2 (<see cref="ProfileMigrations"/>), y <c>progress.undo_tip_seen</c> [P] (el tooltip de Marea, una vez
     /// en la vida; D-030, pregunta 15 (b); tarea DC23), que entra en el mismo esquema 2 sin paso propio porque aún no se ha
     /// publicado. La Crecida (B1a; Q-M9 (a) [P]) añade <c>streak</c> (omitido mientras es null) y <c>daily.streak_hits</c> y
-    /// <c>daily.streak_seeds</c> (omitidos en su default), también sin migrar.
+    /// <c>daily.streak_seeds</c> (omitidos en su default), también sin migrar. B14 añade, igual, <c>entitlements.skin_equipped</c> y
+    /// <c>entitlements.frames</c> [P] (omitidos en su default) y <c>album.fruits</c> (sin tintes, sin bloque).
     /// <para>
     /// Es un contenedor de datos: las reglas (topes, precios, regeneración de canoas, reinicio diario) viven en
     /// <c>AF.Economy</c>, <c>AF.Ads</c> y <c>AF.Boosters</c>, que lo mutan y lo guardan con <see cref="IProfileStore"/>.
@@ -85,6 +86,12 @@ namespace AF.Save
         /// «¡Miquito a la vista!» ya vio el jugador. Lo necesitan el Cuaderno de campo (1.1) y el puente en el Mapa del río.
         /// </summary>
         public FaunaData Fauna { get; } = new FaunaData();
+
+        /// <summary>
+        /// <c>album</c> (08 §4.3; tarea B14): hoy, los tintes descubiertos (<see cref="AlbumData.Fruits"/>), que llenarán el
+        /// Cuaderno de campo de la 1.1. Entra en el esquema 2 sin paso propio (sin tintes no se escribe; aún no se ha publicado).
+        /// </summary>
+        public AlbumData Album { get; } = new AlbumData();
 
         /// <summary>
         /// <c>daily_challenge</c> (08 §4.3 ampliado por R-Q4, R-Q5 y R-Q16; nota del Reto §10; enganche E4): el registro del Reto
@@ -377,7 +384,10 @@ namespace AF.Save
         public bool Stuck { get; set; }
     }
 
-    /// <summary><c>entitlements</c> (08 §4.3): Sin anuncios, Mochila de inicio y skins compradas.</summary>
+    /// <summary>
+    /// <c>entitlements</c> (08 §4.3): Sin anuncios, Mochila de inicio, skins (compradas y ganadas por hito), la skin puesta y los
+    /// marcos.
+    /// </summary>
     public sealed class EntitlementsData
     {
         /// <summary><c>no_ads</c>: Sin anuncios comprado (<c>af_noads</c>, 05 §4.1).</summary>
@@ -387,11 +397,120 @@ namespace AF.Save
         public bool StarterBought { get; set; }
 
         /// <summary>
-        /// <c>skins</c>: skins de cuia del jugador. Hoy solo las compradas, con el SKU del pack (<c>af_skin_m02</c> …
-        /// <c>af_skin_m04</c>, 05 §4.1), porque el GDD aún no fija los IDs de skin de los mundos 2-4 (08 §4.3 solo nombra
-        /// la base, <c>cuia_vidrio</c>, que es gratis).
+        /// <c>skins</c>: skins de cuia del jugador, con el SKU del pack del mundo como id (<c>af_skin_m02</c> … <c>af_skin_m04</c>,
+        /// 05 §4.1), tanto las compradas como las ganadas por hito (06 §4.5; tarea B14 [P]: el GDD aún no fija otros IDs de skin
+        /// para los mundos 2-4; 08 §4.3 solo nombra la base, <c>cuia_vidrio</c>, que es gratis y no hace falta guardar).
         /// </summary>
         public List<string> Skins { get; } = new List<string>();
+
+        /// <summary>
+        /// <c>skin_equipped</c> [P] (tarea B14; D-033, Q-M8 (a): la skin ganada se pone sola y se cambia en el Mercado): la skin que
+        /// llevan las cuias, o null con la base (<c>cuia_vidrio</c>). Se omite en el archivo mientras es null (esquema 2, sin
+        /// migración: aún no se ha publicado). Quien la lee comprueba que el jugador la tiene (<c>AF.Economy.SkinService</c>).
+        /// </summary>
+        public string? SkinEquipped { get; set; }
+
+        /// <summary>
+        /// <c>frames</c> [P] (D-033, Q-M6 (a) y el diseño de la Bitácora, punto 7): los marcos de país ganados (el del día 30 de la
+        /// Bitácora), que se guardan como derecho y se enseñan en la 1.1. Vacía por defecto; vacía, la clave no se escribe.
+        /// </summary>
+        public List<string> Frames { get; } = new List<string>();
+
+        /// <summary>
+        /// Fusión de 08 §11 (<c>ResolveConflict</c>): sobre los derechos del perfil ganador, la unión de skins y marcos de los dos
+        /// (un derecho no se pierde por un conflicto) [P]; la skin puesta es la del ganador.
+        /// </summary>
+        /// <param name="other">Los derechos del otro perfil (el perdedor).</param>
+        public void MergeOwned(EntitlementsData other)
+        {
+            if (other == null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            Union(Skins, other.Skins);
+            Union(Frames, other.Frames);
+        }
+
+        private static void Union(List<string> into, List<string> from)
+        {
+            for (int i = 0; i < from.Count; i++)
+            {
+                if (!into.Contains(from[i]))
+                {
+                    into.Add(from[i]);
+                }
+            }
+        }
+    }
+
+    /// <summary>
+    /// <c>album</c> (08 §4.3; 06 §4.5-§4.6): lo que llenará el Cuaderno de campo de la 1.1 de forma retroactiva. Hoy solo
+    /// <c>fruits</c> (tarea B14): los tintes descubiertos (su número de motor, 1-14, glosario §9), en orden y sin repetir; se
+    /// apunta un tinte la primera vez que sale en un nivel de campaña (<c>af_fruit_discovered</c>, 08 §8.2). <c>fauna</c> y
+    /// <c>rivers</c> llegan con el Cuaderno (la fauna vista ya está en <see cref="FaunaData"/>). Sin tintes, el bloque no se
+    /// escribe; un valor que no vale en el archivo se descarta (esquema 2 sin migración: aún no se ha publicado).
+    /// </summary>
+    public sealed class AlbumData
+    {
+        /// <summary>Primer número de motor de un tinte (glosario §9).</summary>
+        public const int MinTint = 1;
+
+        /// <summary>Último número de motor de un tinte (glosario §9: 14; 15 es el Barro).</summary>
+        public const int MaxTint = 14;
+
+        private readonly List<int> _fruits = new List<int>();
+
+        /// <summary><c>fruits</c>: los tintes descubiertos, en orden creciente.</summary>
+        public IReadOnlyList<int> Fruits => _fruits;
+
+        /// <summary>true si <paramref name="tint"/> está en <see cref="MinTint"/>-<see cref="MaxTint"/>.</summary>
+        public static bool IsTint(int tint)
+        {
+            return tint >= MinTint && tint <= MaxTint;
+        }
+
+        /// <summary>true si el tinte <paramref name="tint"/> ya se descubrió.</summary>
+        public bool HasFruit(int tint)
+        {
+            return _fruits.BinarySearch(tint) >= 0;
+        }
+
+        /// <summary>
+        /// Apunta el tinte <paramref name="tint"/>: true la primera vez (la lista crece en su sitio), false si ya estaba.
+        /// </summary>
+        /// <exception cref="ArgumentOutOfRangeException">No es un tinte (<see cref="IsTint"/>).</exception>
+        public bool AddFruit(int tint)
+        {
+            if (!IsTint(tint))
+            {
+                throw new ArgumentOutOfRangeException(nameof(tint), tint, "Los tintes van de 1 a 14 (glosario §9).");
+            }
+
+            int i = _fruits.BinarySearch(tint);
+            if (i >= 0)
+            {
+                return false;
+            }
+
+            _fruits.Insert(~i, tint);
+            return true;
+        }
+
+        /// <summary>Fusión de 08 §11 (<c>merged.album = union(...)</c>): la unión de los tintes de los dos.</summary>
+        /// <param name="other">El álbum del otro perfil (el perdedor).</param>
+        public void MergeFruits(AlbumData other)
+        {
+            if (other == null)
+            {
+                throw new ArgumentNullException(nameof(other));
+            }
+
+            for (int i = 0; i < other._fruits.Count; i++)
+            {
+                AddFruit(other._fruits[i]);
+            }
+        }
     }
 
     /// <summary>

@@ -55,6 +55,7 @@ namespace AF.Tests.PlayMode
         public void TearDown()
         {
             GameScreen.SimulatedScreen = null;
+            GameScreen.DifficultyLightEnabled = true;
             LaunchOptions.Reset();
         }
 
@@ -101,6 +102,9 @@ namespace AF.Tests.PlayMode
         [UnityTest]
         public IEnumerator Hud_Level60_VeryHardNightVeil()
         {
+            // Con la luz de dificultad apagada, el velo del 15 % del paso 1 (02 §10); con ella (B14), la LUT de noche lo sustituye
+            // (MetaTests.VeryHardLevels_GetTheNightLut_AndHardOnes_TheAfternoonLight).
+            GameScreen.DifficultyLightEnabled = false;
             yield return HudSetup.LoadPlaying(60);
             GameScreen view = GameBootstrap.Current!.View!;
             DifficultyChip chip = view.HudDifficultyChip;
@@ -177,7 +181,8 @@ namespace AF.Tests.PlayMode
             Assert.That((inkTop - pill.yMin) / murky.Height, Is.EqualTo(MurkyChip.GlyphInkTopFraction).Within(0.01f), "la tinta empieza donde se mide");
             HudSetup.AssertMurkyBesideChip(view);
             HudSetup.AssertHudLabelsClear(view);
-            Assert.That(view.NightVeil.gameObject.activeSelf, Is.True, "el 100 es Muy difícil");
+            Assert.That(view.NightVeil.gameObject.activeSelf, Is.False, "el 100 es Muy difícil: su noche es la LUT del fondo (B14), sin el velo");
+            Assert.That(view.StopBackdrop.Light, Is.EqualTo(StopBackdrop.NightLut));
         }
 
         [UnityTest]
