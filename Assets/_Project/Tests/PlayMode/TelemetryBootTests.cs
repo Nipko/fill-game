@@ -85,6 +85,11 @@ namespace AF.Tests.PlayMode
             Assert.That(win.Find("level")!.Value.Long, Is.EqualTo(3), "común: el nivel en curso");
             Assert.That(win.Find("session_id")!.Value.Text, Is.EqualTo(GameBootstrap.Session!.Id));
             Assert.That(win.Find("app_version")!.Value.Text, Is.EqualTo(Application.version));
+            string expectedNet = Application.internetReachability == NetworkReachability.NotReachable ? "offline" : "online";
+            Assert.That(win.Find("net")?.Text, Is.EqualTo(expectedNet), "común net de 08 §8.1 (D-037)");
+            Assert.That(_sink.Last("level_start")!.Find("net")?.Text, Is.EqualTo(expectedNet), "net en todos los eventos");
+            Assert.That(_lines.Exists(l => l.StartsWith("AF_EVENT {\"event\":\"af_level_win\"", System.StringComparison.Ordinal) && l.Contains("\"net\":\"" + expectedNet + "\"")), Is.True,
+                "net en la línea AF_EVENT");
             Assert.That(boot.Analytics!.Violations, Is.Empty);
             Assert.That(boot.Analytics.CollectionEnabled, Is.False, "sin consentimiento todavía (08 §2.3)");
             Assert.That(_lines.Exists(l => l.StartsWith("AF_EVENT {\"event\":\"af_level_win\"", System.StringComparison.Ordinal)), Is.True,

@@ -10,11 +10,13 @@
       1. targetSdk == 36 y minSdk == 26 (CLAUDE.md, stack fijado; 08 sec. 12.1: la compuerta sube
          a 37 antes del 31-08-2027, parametro -TargetSdk).
       2. Permisos (uses-permission y uses-permission-sdk-23) dentro de la lista blanca:
-         android.permission.INTERNET y android.permission.VIBRATE, el permiso propio
+         android.permission.INTERNET, android.permission.VIBRATE y android.permission.ACCESS_NETWORK_STATE, el permiso propio
          <package>.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION que declara androidx.core y, solo si
          el manifiesto lleva Play Billing, com.android.vending.BILLING. Cualquier otro falla (CLAUDE.md,
          regla dura 4: ningun permiso Android nuevo sin el dueno; -AllowPermission anade los aprobados).
          INTERNET lo aprobo el dueno en D-036 (2026-10-20; lo anade Unity con ForceInternetPermission en Auto).
+         ACCESS_NETWORK_STATE lo aprobo el dueno en D-037 (2026-10-21; lo anade Unity al leer
+         Application.internetReachability para el comun net de la analitica, 08 sec. 8.1).
          android.permission.POST_NOTIFICATIONS esta aprobado en D-033 (Q-M5) junto con el paquete
          com.unity.mobile.notifications, pero todavia NO esta en la lista blanca: entra en $BasePermissions
          en la misma tarea que integre ese paquete (mientras tanto falla con una pista; un build de prueba
@@ -79,10 +81,11 @@ $ProvisionalId = 'com.amazonfill.dev'
 $BillingMetaName = 'com.google.android.play.billingclient.version'
 $BillingPermission = 'com.android.vending.BILLING'
 $InternetPermission = 'android.permission.INTERNET'          # aprobado: D-036
+$NetworkStatePermission = 'android.permission.ACCESS_NETWORK_STATE'   # aprobado: D-037 (comun net, 08 sec. 8.1)
 # Aprobado en D-033 (Q-M5) con com.unity.mobile.notifications; se anade a $BasePermissions al integrar ese paquete
 # (y solo ese: SCHEDULE_EXACT_ALARM, USE_EXACT_ALARM y RECEIVE_BOOT_COMPLETED siguen fuera de la lista blanca).
 $NotificationsPermission = 'android.permission.POST_NOTIFICATIONS'
-$BasePermissions = @($InternetPermission, 'android.permission.VIBRATE')
+$BasePermissions = @($InternetPermission, 'android.permission.VIBRATE', $NetworkStatePermission)
 
 function Stop-WithCode {
     param([int]$Code, [string]$Message)
@@ -316,6 +319,8 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         A: http://schemas.android.com/apk/res/android:glEsVersion(0x01010281)=0x00030000
       E: uses-permission (line=35)
         A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.permission.VIBRATE" (Raw: "android.permission.VIBRATE")
+      E: uses-permission (line=37)
+        A: http://schemas.android.com/apk/res/android:name(0x01010003)="android.permission.ACCESS_NETWORK_STATE" (Raw: "android.permission.ACCESS_NETWORK_STATE")
       E: uses-permission (line=41)
         A: http://schemas.android.com/apk/res/android:name(0x01010003)="com.amazonfill.dev.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION" (Raw: "x")
       E: application (line=43)
@@ -328,6 +333,9 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
 '@
     $cases = @(
         @{ Name = 'xml: release correcto';                       Fmt = 'xml'; Text = $okXml; Prof = 'release'; Fails = 0 }
+        @{ Name = 'xml: ACCESS_NETWORK_STATE aprobado (D-037)';  Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', $NetworkStatePermission); Prof = 'release'; Fails = 0 }
+        @{ Name = 'xml: ACCESS_NETWORK_STATE como sdk-23';       Fmt = 'xml'; Text = $okXml.Replace('<uses-permission android:name="android.permission.VIBRATE"/>', '<uses-permission-sdk-23 android:name="android.permission.ACCESS_NETWORK_STATE"/>'); Prof = 'release'; Fails = 0 }
+        @{ Name = 'xml: ACCESS_WIFI_STATE sigue fuera';          Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.ACCESS_WIFI_STATE'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: targetSdk 35';                           Fmt = 'xml'; Text = $okXml.Replace('targetSdkVersion="36"', 'targetSdkVersion="35"'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: minSdk 24';                              Fmt = 'xml'; Text = $okXml.Replace('minSdkVersion="26"', 'minSdkVersion="24"'); Prof = 'release'; Fails = 1 }
         @{ Name = 'xml: permiso CAMERA';                         Fmt = 'xml'; Text = $okXml.Replace('android.permission.VIBRATE', 'android.permission.CAMERA'); Prof = 'release'; Fails = 1 }
@@ -345,6 +353,7 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
         @{ Name = 'xml: sin billing con -RequireBilling';        Fmt = 'xml'; Text = ($okXml -replace '(?s)\s*<uses-permission android:name="com.android.vending.BILLING"/>', '' -replace '(?s)<meta-data android:name="com.google.android.play.billingclient.version" android:value="8.0.0"/>', ''); Prof = 'release'; Fails = 1; Billing = $true }
         @{ Name = 'xml: sin back con -RequirePredictiveBack';    Fmt = 'xml'; Text = $okXml.Replace('enableOnBackInvokedCallback="true"', 'enableOnBackInvokedCallback="false"'); Prof = 'release'; Fails = 1; Back = $true }
         @{ Name = 'aapt2: build de prueba correcto';             Fmt = 'tree'; Text = $okTree; Prof = 'dev'; Fails = 0 }
+        @{ Name = 'aapt2: sin ACCESS_NETWORK_STATE tambien vale'; Fmt = 'tree'; Text = ((($okTree -split "`n") | Where-Object { $_ -notmatch 'line=37|ACCESS_NETWORK_STATE' }) -join "`n"); Prof = 'dev'; Fails = 0 }
         @{ Name = 'aapt2: id provisional y debuggable en release'; Fmt = 'tree'; Text = $okTree; Prof = 'release'; Fails = 2 }
         @{ Name = 'aapt2: permiso RECORD_AUDIO';                 Fmt = 'tree'; Text = $okTree.Replace('"android.permission.VIBRATE"', '"android.permission.RECORD_AUDIO"'); Prof = 'dev'; Fails = 1 }
         @{ Name = 'aapt2: targetSdk 37 con -TargetSdk 36';       Fmt = 'tree'; Text = $okTree.Replace('(0x01010270)=36', '(0x01010270)=37'); Prof = 'dev'; Fails = 1 }
@@ -371,10 +380,11 @@ N: android=http://schemas.android.com/apk/res/android (line=2)
             Write-Output "[FALLA] $($c.Name): $n fallos, esperados $($c.Fails): $($r.Failures -join '; ')"
         }
     }
-    # INTERNET esta aprobado (D-036): ni falla ni deja nota de pendiente.
+    # INTERNET (D-036) y ACCESS_NETWORK_STATE (D-037) estan aprobados: ni fallan ni dejan nota de pendiente.
     $r = Test-Manifest (ConvertFrom-Aapt2Tree $okTree) 'dev' 36 26 @() $false $false
-    if ($r.Failures.Count -ne 0 -or ($r.Notes | Where-Object { $_ -like '*INTERNET*' })) { $bad++; Write-Output "[FALLA] INTERNET aprobado da fallos o notas: $((@($r.Failures) + @($r.Notes)) -join '; ')" }
-    else { Write-Output '[OK]    INTERNET aprobado (D-036): sin fallos ni nota' }
+    if ($r.Failures.Count -ne 0 -or ($r.Notes | Where-Object { $_ -like '*INTERNET*' -or $_ -like '*ACCESS_NETWORK_STATE*' })) { $bad++; Write-Output "[FALLA] INTERNET o ACCESS_NETWORK_STATE aprobados dan fallos o notas: $((@($r.Failures) + @($r.Notes)) -join '; ')" }
+    elseif (-not ((ConvertFrom-Aapt2Tree $okTree).Permissions -contains $NetworkStatePermission)) { $bad++; Write-Output '[FALLA] el caso aapt2 no lleva ACCESS_NETWORK_STATE' }
+    else { Write-Output '[OK]    INTERNET (D-036) y ACCESS_NETWORK_STATE (D-037) aprobados: sin fallos ni nota' }
     # La pista de POST_NOTIFICATIONS remite a D-033 Q-M5 (sin aprobarlo en la lista blanca).
     $r = Test-Manifest (ConvertFrom-ManifestXml $okXml.Replace('android.permission.VIBRATE', $NotificationsPermission)) 'release' 36 26 @() $false $false
     if (-not ($r.Failures | Where-Object { $_ -like '*POST_NOTIFICATIONS*Q-M5*' })) { $bad++; Write-Output '[FALLA] POST_NOTIFICATIONS sin la pista de D-033 Q-M5' }

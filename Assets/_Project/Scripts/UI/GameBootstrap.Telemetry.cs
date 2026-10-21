@@ -225,10 +225,8 @@ namespace AF.UI
                 }
 
                 p.SessionId = s_session?.Id;
-                // net: sin enviar (null) de momento. Leer Application.internetReachability hace que Unity añada el permiso
-                // ACCESS_NETWORK_STATE al manifiesto, que no está aprobado (regla dura 4; ci/check-manifest.ps1). Pregunta abierta
-                // Q-B7-25 en D-033: volver a leerlo cuando el dueño apruebe el permiso (lo traerá también el SDK de Firebase).
-                p.Net = null;
+                // net ∈ {online, offline} (08 §8.1), sin datos personales; leer la red trae ACCESS_NETWORK_STATE, aprobado en D-037.
+                p.Net = Application.internetReachability == NetworkReachability.NotReachable ? "offline" : "online";
             }
         }
     }
