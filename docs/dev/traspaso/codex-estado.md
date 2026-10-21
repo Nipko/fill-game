@@ -5,9 +5,9 @@ Actualizado: 2026-10-21. AWS dev desplegado y comprobado con autorización del d
 ## Estado actual de AWS dev
 
 - Organizations con gestión, dev y prod; Identity Center en `sa-east-1`; `af-owner` con MFA verificado y acceso autorizado a dev/prod mediante SSO. Perfiles locales `af-dev` y `af-prod` comprobados.
-- Bootstrap solo en dev, en `sa-east-1` y `us-east-1`. Los seis stacks dev están en `CREATE_COMPLETE`; pruebas de web, API y CDN correctas para los esqueletos actuales.
+- Bootstrap solo en dev, en `sa-east-1` y `us-east-1`. Funciones reales y endurecimiento F2c redesplegados con autorización: API en `UPDATE_COMPLETE` y los otros cinco stacks en `CREATE_COMPLETE`. Pruebas sin autenticar: compras devuelve 401 y SSV sin parámetros/firma devuelve 400; 19 alarmas en OK. Las verificaciones previas de web y CDN también pasaron.
 - Presupuesto de 10 USD mensuales con avisos al 50, 80 y 100 % verificado; suscripción SNS confirmada. El presupuesto no limita el gasto.
-- Las tres URLs públicas y los resultados completos figuran en «Dev desplegado y comprobado», al final. Sin cambios en `infra/` ni cambio de rama del checkout principal. Firebase y secretos reales siguen pendientes; prod no tiene bootstrap ni stacks del juego.
+- Las tres URLs públicas figuran en «Dev desplegado y comprobado»; el resultado final está en «AWS dev configurado con el Firebase real». Firebase dev creado en la cuenta personal por decisión del dueño: proyecto `fill-dev-e75a2`, Android `com.amazonfill.dev`, Auth anónimo y App Check registrado sin enforcement. AWS actualizado y verificado con el ID real del proyecto y la app; Analytics Enabled. Remote Config sin parámetros publicados y Crashlytics pendiente del SDK. Sin cambios propios en `infra/` ni cambio de rama del checkout principal. Secretos reales e integración del cliente pendientes; prod no tiene bootstrap ni stacks del juego.
 
 ## Registro inicial de Play Console — 2026-10-20
 
@@ -142,3 +142,68 @@ Próximos pasos: completar los correos de las cuentas directamente en la consola
 - WebUrl: https://d15n2u2htrstr6.cloudfront.net
 - CdnUrl: https://d1a7tqws4dhu0f.cloudfront.net
 - Sin cambios de código en infra/, sin dominio propio ni recursos del juego en prod. Firebase dev y carga de secretos reales no realizados; las funciones desplegadas siguen siendo los esqueletos del encargo. El presupuesto es un aviso y no bloquea el gasto.
+
+## Actualización con funciones reales y Firebase dev — 2026-10-21 (en curso)
+
+- A petición del dueño, pull de origin/integracion-fase1-fase2 en el worktree de codex/aws-dev: avance rápido hasta e80c3930. Checkout principal sin cambio de rama. Entraron funciones reales, CI y endurecimiento F2c del integrador; no se editó infra/.
+- npm ci completado; lint y typecheck correctos; 14 archivos de test, 219 pruebas aprobadas. Sesión SSO af-dev comprobada contra la cuenta esperada sin imprimir identificadores.
+- Diff preliminar con --no-change-set: solo AfDevApi cambia; los otros cinco stacks no tienen diferencias. Cambian código/configuración de las cinco funciones y cinco políticas IAM. Nuevas acciones: ConditionCheckItem para verifyPurchase, rewardedSsv y deleteAccount; BatchGetItem para restoreLedger; GetItem para rewardedSsv. Recursos de tablas/índices ajustados según F2c y ninguna declaración Allow de esas políticas usa Resource '*'. Sin sustitución de tablas ni cambio de presupuesto o distribución. Falta el diff final con los identificadores de Firebase realmente creados.
+- El dueño confirmó aceptar las Condiciones de Firebase en este paso. Formulario preparado con nombre amazon-fill-dev. La consola rechazó el ID canónico y el alternativo con sufijo de la empresa; el ID sugerido por Firebase, fill-dev-78702, pasó validación, pero el proyecto aún no se ha creado.
+- Selector de organización/recurso superior de Firebase vacío. Al comprobar Google Cloud apareció una verificación de identidad de la organización; se dejó abierta para que el dueño introduzca la contraseña directamente. No se accedió a contraseñas ni códigos. Creación/configuración de Firebase y deploy aún pendientes.
+- Las salidas del diff y el ensamblado se guardaron fuera del repositorio. Ningún nuevo deploy autorizado ni ejecutado; se pedirá el sí del dueño después del diff final. Secretos reales sin cargar.
+
+- El dueño informó haber completado la verificación de Google Cloud; al comprobar el resultado, la consola estaba en otra sesión de Google. Se alineó con la cuenta empresarial activa en Firebase y Google volvió a exigir verificación de identidad para esa cuenta. Pantalla dejada al dueño, sin introducir ni leer credenciales. No se creó ningún proyecto en la sesión distinta ni se autorizó un deploy.
+
+### Cuenta empresarial: cupo comprobado y bloqueo real — 2026-10-21
+
+- El dueño aclaró que la cuenta empresarial se abrió para verificarla y eligió revisar su cupo antes de crear Firebase. El formulario iniciado en la cuenta personal no se envió: ningún proyecto ni cuenta de Analytics creados y ningún acceso de propietario concedido. Esa vía no se continúa.
+- Verificada la sesión empresarial en Google Cloud. El formulario Proyecto nuevo muestra 12 proyectos restantes en la cuota. No se solicitó aumento ni se borró ningún recurso.
+- El selector Recurso superior solo ofrece Sin organización y muestra expresamente que falta resourcemanager.projects.create para crear allí. Esto explica el bloqueo de creación observado; no se atribuye ya a falta de cupo.
+- Pendiente identificar quién administra Workspace/Cloud Identity y el recurso de organización/carpeta donde se debe crear dev. La asignación de permisos, si hiciera falta, se revisará y confirmará antes de aplicarla. Sin cambios de IAM en Google Cloud, proyecto Firebase sin crear y redeploy AWS aún sin autorización.
+
+- El dueño confirma que otra persona administra Workspace/Cloud Identity. Se dejó en el chat un texto para solicitar al administrador la ubicación correcta y el rol Creador de proyectos para la cuenta empresarial, o la creación del proyecto con acceso posterior; no se envió ningún mensaje a terceros ni se modificaron permisos.
+- Revisado el ensamblado conservado del diff: solo AfDevApi tiene cambios. Se ofreció redesplegar las funciones independientemente del bloqueo de Firebase, explicando que el contexto actual sigue esperando amazon-fill-dev y que deberá ajustarse si el ID final cambia. Pendiente del sí explícito del dueño; no se ejecutó deploy.
+
+### Redespliegue dev con funciones reales autorizado — 2026-10-21
+
+- El dueño confirmó expresamente redesplegar dev con el diff que solo cambia AfDevApi, mientras el administrador resuelve el acceso para Firebase.
+- Comprobadas identidad SSO y seis entornos del manifiesto. Iniciado deploy desde el ensamblado exacto del diff aprobado, conservado fuera del repositorio. Contexto Firebase aún amazon-fill-dev; no se creó ningún proyecto Firebase ni se cargaron secretos reales.
+- Pendientes al terminar: estados de stacks, 401 sin token en compras, rechazo 4xx del SSV sin firma y alarmas. No considerar todavía terminada la actualización.
+
+### Funciones reales desplegadas en dev — 2026-10-21
+
+- Redespliegue aprobado finalizado con salida 0 desde el ensamblado exacto revisado (base de código e80c3930, funciones reales y endurecimiento F2c). AfDevApi verificado en UPDATE_COMPLETE; Global, Data, Web, Cdn y Ops siguen CREATE_COMPLETE. Solo se actualizó API; no hay cambios en tablas, presupuesto, web o CDN.
+- Pruebas HTTP posteriores: GET /v1/ssv sin parámetros/firma devuelve 400 (ya no 501); POST /v1/purchases/verify sin token devuelve 401. Consulta de CloudWatch posterior: las 19 alarmas af-dev están OK.
+- Se mantienen las URLs públicas ya documentadas. Contexto Firebase aún amazon-fill-dev, paquete de pruebas com.amazonfill.dev y verificador falso habilitado solo en dev conforme al código aprobado. Firebase todavía no existe y no se cargaron secretos reales: faltan pruebas autenticadas, compras y callbacks reales.
+- Firebase empresarial sigue pendiente del administrador externo: hay 12 proyectos de cupo, pero falta resourcemanager.projects.create en una ubicación permitida. No se creó el proyecto en la cuenta personal ni se concedieron permisos en Google. Cuando exista Firebase, registrar app Android, activar Auth anónimo y configurar los productos pedidos; si cambia el ID, preparar otro diff y solicitar aprobación para ajustar la API.
+- Sin ediciones de infra/, sin bootstrap/deploy en prod y sin cambio de rama del checkout principal. Ensamblados y salidas privadas fuera del repositorio.
+
+### Firebase dev desde la cuenta personal por decisión del dueño — 2026-10-21
+
+- El dueño cambió expresamente la instrucción: crear al menos dev desde su cuenta personal. Retomado el formulario de Firebase en esa sesión; no se actúa en la cuenta empresarial ni se cambian sus permisos.
+- Preparado nombre amazon-fill-dev e ID sugerido disponible fill-dev-e75a2. Gemini desactivado; Analytics activado con cuenta dedicada, ubicación Estados Unidos y ajustes predeterminados. Pendiente confirmación legal de las condiciones de Analytics antes de crear el proyecto. Los IDs de formularios anteriores fueron propuestas no creadas.
+- Preparación de App Check: comprobado un APK dev existente, paquete com.amazonfill.dev y firma válida, mediante aapt2 y apksigner. Extraída únicamente la huella pública SHA-256 del certificado del APK para registrar la app de dev; no se leyó ningún keystore. Huella y parámetros locales fuera del repo; aún no se registró App Check.
+
+### Firebase dev creado en la cuenta personal — 2026-10-21
+
+- Tras la confirmación expresa del dueño, aceptadas las condiciones de Google Analytics y creado Firebase dev en la cuenta personal elegida. Nombre amazon-fill-dev; ID real del proyecto: fill-dev-e75a2. El ID canónico amazon-fill-dev no estaba disponible en los formularios anteriores; no se creó ningún proyecto con los IDs propuestos previamente.
+- Plan Spark comprobado (sin coste mensual), Analytics Enabled con cuenta dedicada amazon-fill-dev, ubicación Estados Unidos y ajustes predeterminados autorizados. Gemini desactivado durante la creación. Sin cuenta de facturación de pago vinculada por esta sesión.
+- App Android registrada: paquete com.amazonfill.dev, nombre Amazon Fill dev Android; ID público de app: 1:528273757148:android:45d5cf0ddb2e3021c93519. No se descargó google-services.json ni se instalaron SDK o modificaron archivos de Unity.
+- Authentication inicializado y proveedor Anonymous comprobado como Enabled; limpieza automática de anónimos conservada desactivada por defecto. No se crearon usuarios de prueba ni se obtuvieron tokens.
+- El dueño confirmó aceptar las condiciones de Google APIs y Play Integrity. App Check registrado con Play Integrity, huella pública del certificado extraída del APK dev y TTL predeterminado de 1 hora. Confirmado Registered y Authentication Unenforced; no se activó enforcement. No hay integración con Play Console ni verificación de atestaciones reales; esa comprobación queda pendiente del cliente y de Play. No se leyó ningún keystore.
+- Remote Config revisado: estado inicial sin configuración ni parámetros publicados; se mantienen los defaults del cliente. Crashlytics revisado: app identificada, consola en Add SDK, pendiente de integración en Unity y primer evento de prueba. Analytics aún sin datos del cliente. Esta entrega configura consola y no acredita integración de SDK.
+- Diff preparado con el ID real y el ID de Android: solo AfDevApi, cinco cambios de variables de Lambda y el autorizador JWT. Código de las cinco Lambdas e IAM sin cambios; los otros cinco stacks no tienen diferencias. Ensamblado y salida fuera del repo. Pendiente del sí del dueño antes de desplegar este ajuste; la API desplegada aún espera amazon-fill-dev.
+- Sin secretos reales cargados ni accesos añadidos a la cuenta empresarial. Los identificadores de Firebase consignados aquí son públicos y están permitidos expresamente en la sección 5 del encargo; no se registra el número del proyecto por separado ni datos de cuentas AWS.
+
+### Ajuste de AWS al Firebase real autorizado — 2026-10-21
+
+- El dueño confirmó desplegar el diff de AfDevApi para usar fill-dev-e75a2 y la app Android registrada. Verificados de nuevo la identidad SSO de dev, las seis cuentas/regiones del manifiesto y los valores Firebase del ensamblado contra los parámetros públicos locales.
+- Iniciado deploy desde el ensamblado exacto aprobado, sin nueva síntesis. Solo cambia configuración del autorizador JWT y variables de las funciones; no se modifica código ni IAM. Pendientes comprobación directa de AWS, HTTP y alarmas al finalizar.
+
+### AWS dev configurado con el Firebase real — 2026-10-21
+
+- El dueño autorizó el ajuste de AfDevApi tras revisar el diff. Deploy finalizado con salida 0 desde el ensamblado exacto aprobado; AfDevApi en UPDATE_COMPLETE. El resto de stacks no tenía diferencias.
+- Comprobación directa mediante API Gateway: un único autorizador JWT, emisor https://securetoken.google.com/fill-dev-e75a2 y audiencia fill-dev-e75a2. Comprobadas las cinco configuraciones de Lambda: AF_FIREBASE_PROJECT_ID correcto y LastUpdateStatus Successful. En verifyPurchase y deleteAccount, AF_APPCHECK_APP_IDS coincide con el ID público Android ya documentado.
+- Pruebas posteriores: SSV sin parámetros/firma HTTP 400; compras sin token HTTP 401; 19 alarmas de dev en OK. URLs públicas existentes sin cambios. Código e IAM sin cambios en este ajuste.
+- Estado de entrega: AWS dev con funciones reales y contexto del Firebase personal creado; Auth anónimo habilitado, Analytics Enabled, App Check Play Integrity Registered y Authentication Unenforced, Remote Config sin parámetros publicados y Crashlytics pendiente del SDK. No se probó un flujo autenticado completo ni atestación de Play: faltan la integración del cliente y los secretos reales, que no se cargaron.
+- Sin descarga de google-services.json, sin claves nuevas de cuentas de servicio, sin cambios propios en infra/ o Unity, sin operaciones de despliegue en prod. Persisten el presupuesto y SNS verificados en el despliegue anterior. Trabajo documental en codex/aws-dev; checkout principal conservado en integracion-fase1-fase2.
