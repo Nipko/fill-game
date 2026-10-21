@@ -372,6 +372,80 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator TappingAFullJar_CountsAsItsCard_Once()
+        {
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
+            SecondSession();
+            LaunchOptions.ClockOverride = new ManualClock(T0);
+            JarWith(3000);
+            yield return LoadLobby(ProfileAt(40));
+            GameBootstrap boot = Boot();
+            boot.TickMarket(16f);
+            Assert.That(boot.PressPiggy(), Is.True);
+            Assert.That(boot.Offers!.PiggyFullCardShown, Is.True, "05 §5: «1 tarjeta al llenarse»");
+            Assert.That(boot.PressMarketBack(), Is.True);
+            Assert.That(boot.PressPiggy(), Is.True);
+            Assert.That(boot.PressMarketBack(), Is.True);
+            int shownFull = 0;
+            foreach (AnalyticsEvent e in sink.Events)
+            {
+                if (e.Name == "af_piggy" && e.Find("state")!.Value.Text == "shown_full")
+                {
+                    shownFull++;
+                }
+            }
+
+            Assert.That(shownFull, Is.EqualTo(1), "shown_full, una vez por llenado");
+            var ctx = new VictoryOfferContext(40, 2, 2);
+            Assert.That(boot.Offers.PickAtVictory(in ctx), Is.EqualTo(OfferKind.None), "ya no sale sola en una victoria");
+        }
+
+        [UnityTest]
+        public IEnumerator WithTheStoreOff_NeitherTheMarketIconNorTheJarShow()
+        {
+            JarWith(1500);
+            yield return LoadLobby(ProfileAt(26));
+            GameBootstrap boot = Boot();
+            boot.TickMarket(16f);
+            Assert.That(boot.MarketIcons!.MarketShown && boot.MarketIcons.PiggyShown, Is.True);
+            boot.Offers!.Ledger.Config.BizIapEnabled = false; // biz_iap_enabled apagado (08 §9) o mantenimiento
+            boot.TickMarket(16f);
+            Assert.That(boot.MarketIcons.MarketShown, Is.False);
+            Assert.That(boot.MarketIcons.PiggyShown, Is.False, "D-008: sin tienda no hay Cántaro que comprar");
+            Assert.That(boot.PressPiggy(), Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator TheSpentQuota_SurvivesTheLanguageRebuild()
+        {
+            SecondSession();
+            LaunchOptions.ClockOverride = new ManualClock(T0);
+            yield return LoadLevel(12);
+            GameBootstrap boot = Boot();
+            PlayModeHelpers.TakeClock(boot);
+            VictorySetup.WinToVictoryScreen(boot);
+            boot.TickMarket(16f);
+            boot.TickMarket(GameBootstrap.OfferCardDelayMs + 16f);
+            Assert.That(boot.LastOfferShown, Is.EqualTo(OfferKind.Starter), "el cupo de la sesión, gastado");
+            Assert.That(boot.PressMarketBack(), Is.True);
+            Assert.That(boot.PressHome(), Is.True);
+            Assert.That(boot.PressSettings(), Is.True);
+
+            GameBootstrap first = boot;
+            Assert.That(boot.ChooseLanguage(AF.Localization.LocLocale.Pseudo), Is.True);
+            yield return PlayModeHelpers.WaitFor(
+                () => GameBootstrap.Current != null && GameBootstrap.Current != first && GameBootstrap.Current.App != null && GameBootstrap.Current.App.Screen != AppScreen.Boot,
+                "reconstrucción de la UI en otro idioma");
+            boot = GameBootstrap.Current!;
+            Assert.That(boot.SetUpMarket(), Is.True);
+            boot.GetComponent<MarketRunner>().enabled = false;
+            Assert.That(boot.Sessions!.Current!.Value.Number, Is.EqualTo(2), "la misma sesión (B6)");
+            var ctx = new VictoryOfferContext(15, 2, 2);
+            Assert.That(boot.Offers!.PickAtVictory(in ctx), Is.EqualTo(OfferKind.None), "el recordatorio del 15 espera a otra sesión");
+        }
+
+        [UnityTest]
         public IEnumerator PiggyIcon_OpensItsCard_LockedBelow1000_AndBackClosesIt()
         {
             yield return LoadLobby(ProfileAt(26));

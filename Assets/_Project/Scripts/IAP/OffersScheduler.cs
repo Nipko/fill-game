@@ -137,14 +137,25 @@ namespace AF.IAP
         /// <summary>Tarjetas Sin anuncios cerradas sin comprar.</summary>
         public int NoAdsDeclines => _state.Record.NoAdsDeclines;
 
+        /// <summary>Ya salió (o se vio a mano) la tarjeta del Cántaro lleno de este llenado.</summary>
+        public bool PiggyFullCardShown => _state.Record.PiggyFullCardShown;
+
         /// <summary>El registro guardado falló en el último cambio.</summary>
         public bool PendingSave => _state.PendingSave;
 
-        /// <summary>Día desde la instalación en la fecha local, con D1 el de la instalación (para <c>eco_noads_card_trigger</c>).</summary>
+        /// <summary>
+        /// Día desde la instalación en la fecha local, con D1 el de la instalación (para <c>eco_noads_card_trigger</c>). Sin
+        /// <c>created_at</c> (un perfil sin la clave) es 1 [P]: el disparador queda solo con los intersticiales.
+        /// </summary>
         public int DayIndex
         {
             get
             {
+                if (_installedAtUtc == default || _installedAtUtc.Ticks < TimeSpan.FromDays(2).Ticks)
+                {
+                    return 1;
+                }
+
                 DateTime installLocal = (_installedAtUtc + _clock.LocalOffset).Date;
                 int days = (_clock.LocalDate() - installLocal).Days;
                 return days < 0 ? 1 : days + 1;

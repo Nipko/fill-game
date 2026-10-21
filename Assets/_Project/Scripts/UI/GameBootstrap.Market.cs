@@ -204,7 +204,6 @@ namespace AF.UI
             _marketIcons = new MarketLobbyIcons(transform, _art, () => OpenMarket(MarketTab.Seeds), () => PressPiggy());
             _marketPhaseSeen = _flow.Phase;
             _interstitialsTodaySeen = _ads.Ledger.InterstitialsToday;
-            _analytics?.SetUserProperty("geo_tier", GeoTierRule.IdOf(_services?.Geo ?? AF.Boosters.GeoTier.T3)); // 08 §8.1 (Q-E3 (a))
 
             MarketRunner runner = gameObject.GetComponent<MarketRunner>();
             if (runner == null)
@@ -260,12 +259,14 @@ namespace AF.UI
                 return false;
             }
 
-            if (piggy.IsFull && _offers != null)
+            // 05 §5: «1 tarjeta al llenarse». Vista a mano la primera vez de este llenado, ya no sale sola ni se vuelve a contar.
+            bool firstFull = piggy.IsFull && _offers != null && !_offers.PiggyFullCardShown;
+            if (firstFull)
             {
-                _offers.MarkShown(OfferKind.PiggyFull, default); // 05 §5: «1 tarjeta al llenarse»; vista a mano, ya no sale sola
+                _offers!.MarkShown(OfferKind.PiggyFull, default);
             }
 
-            ShowOfferCard(OfferKind.PiggyFull, StoreCatalog.Piggy, PurchaseContext.Piggy, (_progress?.MaxLevel ?? 0) + 1, false);
+            ShowOfferCard(OfferKind.PiggyFull, StoreCatalog.Piggy, PurchaseContext.Piggy, (_progress?.MaxLevel ?? 0) + 1, false, firstFull);
             return true;
         }
 
@@ -425,11 +426,12 @@ namespace AF.UI
                 return;
             }
 
-            ShowOfferCard(kind, sku, OfferScheduler.ContextOf(kind), ctx.WonLevel + 1, true);
+            ShowOfferCard(kind, sku, OfferScheduler.ContextOf(kind), ctx.WonLevel + 1, true, true);
             _offerFromVictory = onVictory;
         }
 
-        private void ShowOfferCard(OfferKind kind, string sku, PurchaseContext context, int level, bool takeover)
+        // logFull: af_piggy shown_full, una vez por llenado (la tarjeta que sale sola o el primer toque en el icono con él lleno).
+        private void ShowOfferCard(OfferKind kind, string sku, PurchaseContext context, int level, bool takeover, bool logFull)
         {
             OfferCard? card = _offerCard;
             OfferScheduler? offers = _offers;
@@ -479,7 +481,7 @@ namespace AF.UI
 
             LastOfferShown = kind;
             _offerFromVictory = false;
-            if (kind == OfferKind.PiggyFull && offers.Piggy.IsFull)
+            if (kind == OfferKind.PiggyFull && logFull && offers.Piggy.IsFull)
             {
                 LogPiggy("shown_full", offers.Piggy.Seeds);
             }
@@ -597,12 +599,14 @@ namespace AF.UI
                 && (_dailyScreen == null || !_dailyScreen.IsOpen) && (_lockedNotice == null || !_lockedNotice.Visible) && !FruitSheetOpen;
         }
 
-        // La victoria de campaña sin nada encima: ni el Mapa, ni la ficha de una fruta, ni un anuncio o la hoja de compra, ni otra
-        // tarjeta de oferta.
+        // La victoria de campaña sin nada encima (ni el Mapa, ni la ficha de una fruta, ni un anuncio o la hoja de compra, ni otra
+        // tarjeta de oferta) y sin salida en marcha: ni el avance solo tras la Cosecha doble (D-011) ni los 250 ms de «Siguiente»
+        // (D-033, punto 9). Si no, la tarjeta gastaría el cupo para quitarse al momento.
         private bool VictoryClear()
         {
             return _app != null && _app.Screen == AppScreen.Level && !HomeWindowCovered && !MarketCommerceOpen && !FruitSheetOpen
-                && (_dailyScreen == null || !_dailyScreen.IsOpen) && (_lockedNotice == null || !_lockedNotice.Visible);
+                && (_dailyScreen == null || !_dailyScreen.IsOpen) && (_lockedNotice == null || !_lockedNotice.Visible)
+                && (_screen == null || (!_screen.AutoNextPending && !_screen.NextHoldPending));
         }
 
         private void SyncMarketIcons()

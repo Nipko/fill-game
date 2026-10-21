@@ -101,7 +101,7 @@ Sin B5-bootstrap no hay Mercado en el juego (D-008: oculto mientras no exista); 
 | Q-B5-4 | Recordatorios «en el nivel 15 y 19» | (a) en la primera victoria desde el 15 y desde el 19 con cupo, uno solo si se pasan los dos; (b) solo en la victoria exacta |
 | Q-B5-5 | ¿El Reto del río llena el Cántaro? | (a) no, solo la campaña; (b) sí |
 | Q-B5-6 | Dónde sale cada tarjeta | (a) Mochila y Cántaro en la victoria a 1,5 s; Sin anuncios y skin al volver al inicio; (b) todas en la victoria |
-| Q-B5-7 | Dónde va el icono del Cántaro («en el HUD desde el nivel 20») | (a) en el inicio, bajo el saldo; (b) también en el HUD del nivel (parche de `GameScreen`) |
+| Q-B5-7 | Dónde va el icono del Cántaro («en el HUD desde el nivel 20») | (a) en el inicio, arriba a la derecha bajo Ajustes (no tapa los saldos ni la ventanita de casa); (b) también en el HUD del nivel (parche de `GameScreen`) |
 | Q-B5-8 | Los campos nuevos del perfil | (a) `piggy.last_level`, `piggy.full_card` y el bloque `offers` de §3, anotados [P] en 08 §4.3; (b) otro diseño |
 | Q-B5-9 | Fusión en la nube de `piggy` y `offers` (B8) | (a) `piggy` del perfil ganador, como `wallet`; en `offers`, unión de listas, máximo de contadores y la fecha más reciente; (b) todo del ganador. Sin aplicar: va con B8 |
 | Q-B5-10 | Cupo de takeovers con la Bitácora | (a) uno solo, el de la `TakeoverQueue` de B4 (adaptador de §6); (b) uno por sistema |

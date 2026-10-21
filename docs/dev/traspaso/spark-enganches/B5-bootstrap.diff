@@ -12,10 +12,22 @@ index a8a430fd..d31e8974 100644
              var context = new DailyPlayContext(
                  store, clock, progress, dailyWallet, services, batch, profile.Settings,
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
-index 2c89b77b..845ef7ab 100644
+index 2c89b77b..2ffa8d3b 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
 +++ b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
-@@ -214,7 +214,9 @@ public void Fill(CommonParams p)
+@@ -119,6 +119,11 @@ private void ConnectTelemetry()
+             }
+ 
+             ConnectWallet(_wallet);
++            if (_analytics != null && _services != null)
++            {
++                _analytics.SetUserProperty("geo_tier", GeoTierRule.IdOf(_services.Geo)); // 08 §8.1, propiedad de usuario (Q-E3 (a), B5)
++            }
++
+             if (_flow != null)
+             {
+                 _flow.Events = _events;
+@@ -214,7 +219,9 @@ public void Fill(CommonParams p)
                      p.Streak = _boot._streakService.Peek(app.PlayLevel, true).Wins;
                  }
  
@@ -74,10 +86,10 @@ index eaa9dea1..2156fa8f 100644
              int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
 diff --git a/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs b/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs
 new file mode 100644
-index 00000000..61383be1
+index 00000000..f0f2a503
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs
-@@ -0,0 +1,117 @@
+@@ -0,0 +1,119 @@
 +#nullable enable
 +using System;
 +using System.Collections;
@@ -176,6 +188,8 @@ index 00000000..61383be1
 +            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
 +            AF.Analytics.AnalyticsEvent view = sink.Last("af_shop_view")!;
 +            Assert.That(view.Find("geo_tier")!.Value.Text, Is.EqualTo("T1"), "08 §8.1: común geo_tier (Q-E3 (a))");
++            Assert.That(sink.Properties.TryGetValue("geo_tier", out string? property) ? property : null, Is.EqualTo("T1"),
++                "08 §8.1: también como propiedad de usuario");
 +        }
 +
 +        [UnityTest]

@@ -512,6 +512,17 @@ namespace AF.IAP.Tests
         }
 
         [Test]
+        public void DayIndex_WithoutCreatedAt_IsDay1_AndDoesNotThrow()
+        {
+            var store = new StoreFixture();
+            var state = new OffersState(new InMemoryOffersStore());
+            var offers = new OfferScheduler(state, store.Ledger, new PiggyJar(state), store.Clock, default, new SessionTakeoverBudget(() => 2));
+            Assert.That(offers.DayIndex, Is.EqualTo(1), "UTC−5: DateTime.MinValue − 5 h no se calcula");
+            var ctx = new VictoryOfferContext(31, 2, 2);
+            Assert.That(offers.PickAtVictory(in ctx), Is.EqualTo(OfferKind.None));
+        }
+
+        [Test]
         public void Contexts_AndIds_Of08_8_2()
         {
             Assert.That(OfferScheduler.ContextOf(OfferKind.Starter), Is.EqualTo(PurchaseContext.StarterWindow));
