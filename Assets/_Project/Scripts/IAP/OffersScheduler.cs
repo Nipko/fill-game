@@ -184,24 +184,19 @@ namespace AF.IAP
         }
 
         /// <summary>
-        /// La Mochila sigue a la venta con <paramref name="maxLevel"/>: no comprada, con el nivel en juego dentro de
-        /// <c>eco_starter_window_levels</c> (desde el 10; desaparece al ganar el 20) y sin el temporizador vencido.
+        /// La Mochila sigue a la venta con <paramref name="maxLevel"/>: no comprada, dentro de <c>eco_starter_window_levels</c> (desde
+        /// que se gana el 10, cuando se abre el Mercado; desaparece al ganar el 20; 05 §4.1) y sin el temporizador vencido. Es lo que
+        /// enseña el Mercado.
         /// </summary>
         public bool StarterAvailable(int maxLevel)
         {
-            if (StarterOwned || maxLevel >= Config.StarterWindowTo || maxLevel + 1 < Config.StarterWindowFrom)
+            if (StarterOwned || maxLevel >= Config.StarterWindowTo || maxLevel < Config.StarterWindowFrom)
             {
                 return false;
             }
 
             DateTime? expires = StarterExpiresAt;
             return !expires.HasValue || _clock.UtcNow < expires.Value;
-        }
-
-        /// <summary>El Mercado enseña la Mochila (05 §4.1: «en el Mercado desde el nivel 10», ventana 10-20).</summary>
-        public bool StarterInMarket(int maxLevel)
-        {
-            return StarterAvailable(maxLevel);
         }
 
         /// <summary>El Mercado enseña Sin anuncios: no comprado y desde el nivel 22 (05 §4.1).</summary>
@@ -278,6 +273,32 @@ namespace AF.IAP
             }
 
             return kind;
+        }
+
+        /// <summary>
+        /// Como <see cref="TakeAtVictory"/>, pero solo si la que toca ahora es <paramref name="expected"/> (la que se eligió en la
+        /// victoria y se enseña más tarde, en la victoria o en el inicio): si las cosas cambiaron, no apunta nada y devuelve false.
+        /// </summary>
+        public bool TakeIf(in VictoryOfferContext ctx, OfferKind expected)
+        {
+            if (expected == OfferKind.None || PickAtVictory(in ctx) != expected)
+            {
+                return false;
+            }
+
+            MarkShown(expected, in ctx);
+            _budget.Spend();
+            return true;
+        }
+
+        /// <summary>
+        /// Dónde sale la tarjeta de <paramref name="kind"/>: true, en la pantalla de victoria (la Mochila, «tarjeta en la pantalla de
+        /// victoria», contrato 11; el Cántaro lleno, «HUD de victoria»; 05 §5); false, al volver al inicio (Sin anuncios, «tras la
+        /// pantalla de victoria», y la skin, «fuera del nivel»; 05 §4.1 y §5) [P] (Q-B5-6).
+        /// </summary>
+        public static bool ShowsOnVictory(OfferKind kind)
+        {
+            return kind == OfferKind.Starter || kind == OfferKind.PiggyFull;
         }
 
         /// <summary>

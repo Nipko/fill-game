@@ -1,8 +1,8 @@
 diff --git a/Assets/_Project/Data/Loc/strings.csv b/Assets/_Project/Data/Loc/strings.csv
-index 0d608057..a41fca8b 100644
+index 0d608057..d36e2cb8 100644
 --- a/Assets/_Project/Data/Loc/strings.csv
 +++ b/Assets/_Project/Data/Loc/strings.csv
-@@ -111,6 +111,21 @@ map_view_basin,Cuenca,Basin,Bacia,"Pestaña de la vista Cuenca del Mapa del río
+@@ -111,6 +111,22 @@ map_view_basin,Cuenca,Basin,Bacia,"Pestaña de la vista Cuenca del Mapa del río
  map_view_world,Mundo,World,Mundo,"Pestaña de la vista Mundo del Mapa del río (D-013, punto 5): el tramo del mundo actual.",10,pendiente_asesor,traducido,traducido,"Glosario §10 (P-M2, D-023). [P] Solo en ES; pendiente del traductor y del asesor cultural (07 §8.2). Tarea M1.5.",
  map_world_prize,{n:plural:Premio del mundo · falta {}|Premio del mundo · faltan {}},,,"Línea del cierre de un mundo en el Mapa del río (junto a su mini cuia) y en su tarjeta: la skin del mundo como premio, sin precio (06 §4.5; D-013, punto 10). {n}: niveles que faltan para cerrar el mundo, sin separador; con 1, «falta 1». Captura (MetaSnapshotTests): Logs/snapshots/es-419/b14_02_map_markers_780_100.png.",36,pendiente_asesor,,,[P] Tarea B14; texto de 06 §4.5. Pendiente del traductor y del asesor cultural (07 §8.2).,
  map_world_question,{world} · {question},{world} · {question},{world} · {question},"Cabecera del Mapa del río con la pregunta del mundo y, al responderse, el icono ✓ (procedural: nunca en el texto). {world}: nombre del mundo (world_wNN_name); {question}: la pregunta (map.world.wNN.question de facts.csv, ≤ 50 caracteres).",80,pendiente_asesor,traducido,traducido,Glosario §10 (D-013; propuesta del Mapa §6.4). [P] Solo en ES; pendiente del traductor y del asesor cultural (07 §8.2). Tarea M1.5.,
@@ -21,10 +21,11 @@ index 0d608057..a41fca8b 100644
 +market_starter_left,{h:plural:Queda {} hora|Quedan {} horas},,,"Temporizador de la Mochila de inicio en el Mercado y en su tarjeta (05 §4.1: 48 h desde la primera vista; eco_starter_timer_h). {h}: horas enteras que quedan, redondeadas hacia arriba.",24,pendiente_asesor,,,[P] Bloque B5.,
 +market_tab_boosters,Comodines,,,Pestaña Comodines del Mercado (06 §4.7): la Mochila de inicio y las Canoas infinitas 1 h. Una de 2-4 pestañas en una fila de unos 312 dp.,12,pendiente_asesor,,,[P] Bloque B5: sin clave en el glosario §10.,
 +market_tab_cuias,Cuias,,,"Pestaña Cuias del Mercado (06 §4.7: «Cuias (skins)»): las skins, para elegir la puesta (D-033, Q-M8 (a)).",12,pendiente_asesor,,,[P] Bloque B5. Cuia es el nombre del glosario §4 (objeto de la región).,
++market_tab_seeds,Semillas,Seeds,Sementes,Pestaña Semillas del Mercado (06 §4.7; glosario §2.1 y §10): el Cántaro y los packs. Una de 2-4 pestañas en una fila de unos 312 dp.,14,aprobado_es,traducido,traducido,EN y PT-BR del glosario §2.1 y §10 (currency). Bloque B5: clave propia de la pestaña.,
  month_short_01,ene,Jan,jan,"Mes abreviado (enero) dentro de daily_date_short.",5,borrador,traducido,traducido,"[P] Tarea R9.",
  month_short_02,feb,Feb,fev,"Mes abreviado (febrero) dentro de daily_date_short.",5,borrador,traducido,traducido,"[P] Tarea R9.",
  month_short_03,mar,Mar,mar,"Mes abreviado (marzo) dentro de daily_date_short.",5,borrador,traducido,traducido,"[P] Tarea R9.",
-@@ -125,12 +140,14 @@ month_short_11,nov,Nov,nov,"Mes abreviado (noviembre) dentro de daily_date_short
+@@ -125,12 +141,14 @@ month_short_11,nov,Nov,nov,"Mes abreviado (noviembre) dentro de daily_date_short
  month_short_12,dic,Dec,dez,"Mes abreviado (diciembre) dentro de daily_date_short.",5,borrador,traducido,traducido,"[P] Tarea R9.",
  music,Música,Music,Música,"Fila de Ajustes (07 §9.3 y §9.4; tarea AU1): interruptor del ajuste settings.music, activado por defecto (audio_music_default_on); apagado, se calla el lecho del mundo. Glosario §10 (sound / music / haptics). Captura: Ajustes en Logs/snapshots/es-419/ (SettingsSnapshotTests).",16,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
  next,Siguiente,Next,Próximo,Botón principal de la pantalla de victoria (02 §6).,20,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
@@ -39,7 +40,7 @@ index 0d608057..a41fca8b 100644
  patterns_toggle,Patrones de fruta,Fruit patterns,Padrões de fruta,Cabecera de la sección Patrones de fruta de Ajustes: patrón al 20 % e icono de fruta en cada dosis (02 §12; glosario §10).,24,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
  pause,Pausa,Pause,Pausa,Título del menú de pausa.,12,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
  play,Jugar,Play,Jogar,Botón Jugar (glosario §10).,12,aprobado_es,traducido,traducido,EN y PT-BR del glosario §10.,
-@@ -185,6 +202,7 @@ settings_patterns_on,Siempre,Always,Sempre,Opción de Ajustes › Patrones de fr
+@@ -185,6 +203,7 @@ settings_patterns_on,Siempre,Always,Sempre,Opción de Ajustes › Patrones de fr
  settings_river_facts,Datos del río,,,"Subtítulo de Ajustes › «Sobre la Amazonía» sobre la lista de los datos de llegada del Mapa del río ya vistos, cada uno con su lugar y su fuente (07 §8.2: «con la fuente de cada Dato del río»). Como fact_sheet_title. Captura (MetaSnapshotTests): Logs/snapshots/es-419/b14_04_settings_river_facts_780_100.png.",24,borrador,,,[P] Tarea B14. Pendiente del traductor.,
  settings_sloth_messages,Mensajes de TiTino,Messages from TiTino,Mensagens do TiTino,"Fila de Ajustes (02 §12; D-016, punto 4): interruptor del ajuste settings.sloth_messages, activado por defecto; apagado, TiTino solo hace gestos, sin frases. TiTino no se traduce. Captura: Ajustes en Logs/snapshots/es-419/ (SettingsSnapshotTests).",24,pendiente_asesor,traducido,traducido,"[P] Clave del glosario §10 (D-016). EN y PT-BR, pendientes del traductor (glosario §10). Nombre pendiente de la búsqueda de marca y del asesor cultural.",
  shield_toast,Una hoja gigante te cubre: este fallo no rompe tu Crecida,A giant leaf covers you: this loss doesn't break your Rising River,Uma folha gigante te protege: esta derrota não quebra sua Enchente,"Aviso tras el primer fallo duro del día que cubre la Hoja escudo (04 §6.5 y §8; glosario §6.3), al volver a jugar tras la intro.",64,aprobado_es,traducido,traducido,"[P] Tarea B1b de la tanda 5 (D-033, panel único de la victoria). EN y PT-BR con los nombres del glosario §6.3 y §7.1 (Rising River / Enchente, Leaf Shield / Folha-escudo, Basket / Cesta).",

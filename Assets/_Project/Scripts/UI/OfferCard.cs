@@ -130,6 +130,18 @@ namespace AF.UI
             done?.Invoke(buy);
         }
 
+        /// <summary>
+        /// Quita la tarjeta sin respuesta (ni compra ni rechazo): la victoria que la trajo ya se fue (el avance solo tras la Cosecha
+        /// doble). Lo que apuntó la oferta al salir se queda.
+        /// </summary>
+        public void Dismiss()
+        {
+            _canvas.Canvas.gameObject.SetActive(false);
+            Sku = null;
+            _canBuy = null;
+            _onClosed = null;
+        }
+
         /// <summary>Botones visibles para <c>AF_LAYOUT</c> (sonda de desarrollo).</summary>
         public void VisibleButtons(List<string> ids, List<RectTransform> rects)
         {

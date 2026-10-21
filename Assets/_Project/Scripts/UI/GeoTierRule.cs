@@ -25,6 +25,12 @@ namespace AF.UI
             "AD", "AT", "BE", "CH", "DE", "DK", "ES", "FI", "FR", "GB", "IE", "IS", "IT", "LI", "LU", "MC", "NL", "NO", "PT", "SE", "SM",
         };
 
+        /// <summary><c>geo_tier</c> como lo escribe la analítica (08 §8.1 y §8.2): <c>T1</c> o <c>T3</c>.</summary>
+        public static string IdOf(GeoTier tier)
+        {
+            return tier == GeoTier.T1 ? "T1" : "T3";
+        }
+
         /// <summary><c>geo_tier</c> de la etiqueta del teléfono: T1 si su región está en <see cref="T1Regions"/>; si no, T3. Sin asignaciones.</summary>
         public static GeoTier FromLanguageTag(string? languageTag)
         {

@@ -11,6 +11,21 @@ index a8a430fd..d31e8974 100644
                  : null;
              var context = new DailyPlayContext(
                  store, clock, progress, dailyWallet, services, batch, profile.Settings,
+diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
+index 2c89b77b..845ef7ab 100644
+--- a/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
++++ b/Assets/_Project/Scripts/UI/GameBootstrap.Telemetry.cs
+@@ -214,7 +214,9 @@ public void Fill(CommonParams p)
+                     p.Streak = _boot._streakService.Peek(app.PlayLevel, true).Wins;
+                 }
+ 
+-                // geo_tier: null hasta Q-E3 (B5; región del dispositivo y país de la tienda); el T3 fijo de GameServices no es un dato.
++                // geo_tier (Q-E3 (a), B5): el de GameServices, de la región del teléfono; con el IAP real, el país de la tienda.
++                GameServices? services = _boot._services;
++                p.GeoTier = services != null ? GeoTierRule.IdOf(services.Geo) : null;
+                 p.NoAds = _boot._profile?.Entitlements.NoAds;
+                 p.AppVersion = Application.version;
+                 RemoteConfigService? rc = _boot._rc;
 diff --git a/Assets/_Project/Scripts/UI/GameBootstrap.cs b/Assets/_Project/Scripts/UI/GameBootstrap.cs
 index eaa9dea1..2156fa8f 100644
 --- a/Assets/_Project/Scripts/UI/GameBootstrap.cs
@@ -59,10 +74,10 @@ index eaa9dea1..2156fa8f 100644
              int requested = rebuilt ? 0 : LaunchOptions.StartLevelOverride;
 diff --git a/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs b/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs
 new file mode 100644
-index 00000000..eb61e1b3
+index 00000000..61383be1
 --- /dev/null
 +++ b/Assets/_Project/Tests/PlayMode/MarketHooksTests.cs
-@@ -0,0 +1,102 @@
+@@ -0,0 +1,117 @@
 +#nullable enable
 +using System;
 +using System.Collections;
@@ -93,6 +108,7 @@ index 00000000..eb61e1b3
 +        {
 +            GameBootstrap.ResetMarketOverrides();
 +            GameBootstrap.ResetSessionOverrides();
++            GameBootstrap.ResetTelemetryOverrides();
 +            LaunchOptions.Reset();
 +        }
 +
@@ -146,6 +162,20 @@ index 00000000..eb61e1b3
 +            LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("es-CO");
 +            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(26)));
 +            Assert.That(GameBootstrap.Current!.Services!.Geo, Is.EqualTo(GeoTier.T3));
++        }
++
++        [UnityTest]
++        public IEnumerator GeoTier_GoesToTheAnalyticsCommonParams()
++        {
++            var sink = new AF.Analytics.FakeAnalyticsSink();
++            GameBootstrap.AnalyticsSinkOverride = sink;
++            LaunchOptions.DeviceLocaleOverride = new ManualDeviceLocale("es-ES");
++            yield return PlayModeHelpers.LoadApp(new MemoryProfileStore(ProfileAt(26)));
++            GameBootstrap boot = GameBootstrap.Current!;
++            boot.GetComponent<MarketRunner>().enabled = false;
++            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
++            AF.Analytics.AnalyticsEvent view = sink.Last("af_shop_view")!;
++            Assert.That(view.Find("geo_tier")!.Value.Text, Is.EqualTo("T1"), "08 §8.1: común geo_tier (Q-E3 (a))");
 +        }
 +
 +        [UnityTest]

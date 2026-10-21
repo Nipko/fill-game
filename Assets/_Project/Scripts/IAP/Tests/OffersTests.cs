@@ -291,21 +291,21 @@ namespace AF.IAP.Tests
         {
             var fx = new Fx();
             fx.Win(12);
-            Assert.That(fx.Offers.StarterInMarket(12), Is.True);
+            Assert.That(fx.Offers.StarterAvailable(12), Is.True);
             fx.Store.Clock.Advance(TimeSpan.FromHours(48));
-            Assert.That(fx.Offers.StarterInMarket(12), Is.False, "48 h desde la primera vista");
+            Assert.That(fx.Offers.StarterAvailable(12), Is.False, "48 h desde la primera vista");
             fx.NewSession();
             Assert.That(fx.Win(15), Is.EqualTo(OfferKind.None));
 
             var window = new Fx();
-            Assert.That(window.Offers.StarterInMarket(8), Is.False, "el Mercado la tiene desde el nivel 10");
-            Assert.That(window.Offers.StarterInMarket(9), Is.True, "con el 10 en juego");
-            Assert.That(window.Offers.StarterInMarket(19), Is.True);
-            Assert.That(window.Offers.StarterInMarket(20), Is.False, "desaparece al pasar el 20");
+            Assert.That(window.Offers.StarterAvailable(9), Is.False, "el Mercado se abre al ganar el 10");
+            Assert.That(window.Offers.StarterAvailable(10), Is.True, "ventana 10-20 (eco_starter_window_levels)");
+            Assert.That(window.Offers.StarterAvailable(19), Is.True);
+            Assert.That(window.Offers.StarterAvailable(20), Is.False, "desaparece al pasar el 20");
 
             var bought = new Fx();
             Assert.That(bought.Store.Buy("af_starter").IsPurchased, Is.True);
-            Assert.That(bought.Offers.StarterInMarket(12), Is.False);
+            Assert.That(bought.Offers.StarterAvailable(12), Is.False);
             Assert.That(bought.Win(12), Is.EqualTo(OfferKind.None));
         }
 
@@ -494,6 +494,21 @@ namespace AF.IAP.Tests
             fx.Piggy.OnCampaignVictory(21, RewardTier.Normal);
             Assert.That(fx.State.PendingSave, Is.False);
             Assert.That(fx.Records.Load().PiggySeeds, Is.EqualTo(30));
+        }
+
+        [Test]
+        public void TakeIf_OnlyTakesTheExpectedOffer_AndPlacementSplitsVictoryAndLobby()
+        {
+            var fx = new Fx();
+            var ctx = new VictoryOfferContext(12, 2, 2);
+            Assert.That(fx.Offers.TakeIf(in ctx, OfferKind.NoAds), Is.False, "toca la Mochila, no Sin anuncios");
+            Assert.That(fx.Budget.Spent, Is.EqualTo(0));
+            Assert.That(fx.Offers.TakeIf(in ctx, OfferKind.Starter), Is.True);
+            Assert.That(fx.Budget.Spent, Is.EqualTo(1));
+            Assert.That(OfferScheduler.ShowsOnVictory(OfferKind.Starter), Is.True, "en la pantalla de victoria (contrato 11)");
+            Assert.That(OfferScheduler.ShowsOnVictory(OfferKind.PiggyFull), Is.True, "HUD de victoria");
+            Assert.That(OfferScheduler.ShowsOnVictory(OfferKind.NoAds), Is.False, "tras la pantalla de victoria: en el inicio [P]");
+            Assert.That(OfferScheduler.ShowsOnVictory(OfferKind.SkinWorld), Is.False, "fuera del nivel");
         }
 
         [Test]

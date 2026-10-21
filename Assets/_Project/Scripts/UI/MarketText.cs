@@ -7,8 +7,8 @@ namespace AF.UI
     /// <summary>
     /// Textos del Mercado, de las tarjetas de oferta y del Cántaro (bloque B5; 05 §4.1 y §5; 06 §4.7; glosario §10): solo claves y
     /// sus argumentos con nombre, con <see cref="Loc"/>. Las claves nuevas aún <b>no</b> están en <c>strings.csv</c>: las mete el
-    /// parche <c>docs/dev/traspaso/spark-enganches/B5-loc.diff</c> (con su registro en <c>LocTablesTests</c>). <c>shop</c> y
-    /// <c>no_ads</c> son del glosario §10 (con su EN y su PT-BR), y <c>currency</c> ya estaba en la tabla; el resto, [P] y <c>pendiente_asesor</c>. Los
+    /// parche <c>docs/dev/traspaso/spark-enganches/B5-loc.diff</c> (con su registro en <c>LocTablesTests</c>). <c>shop</c>,
+    /// <c>market_tab_seeds</c> y <c>no_ads</c> llevan el texto del glosario (§2.1 y §10, con su EN y su PT-BR); el resto, [P] y <c>pendiente_asesor</c>. Los
     /// nombres de tienda son los de siempre (<c>iap_&lt;sku&gt;_name</c>) y los de las skins, <c>skin_&lt;id&gt;_name</c>.
     /// <para><b>Clave ausente:</b> <see cref="Loc.T(string)"/> devuelve «[clave]» en desarrollo y «» en release, sin excepciones.</para>
     /// </summary>
@@ -20,8 +20,8 @@ namespace AF.UI
             /// <summary>«Mercado» (glosario §10, <c>shop</c>): título de la pantalla.</summary>
             public const string Title = "shop";
 
-            /// <summary>«Semillas» (glosario §10, <c>currency</c>): pestaña de los packs y del Cántaro.</summary>
-            public const string TabSeeds = "currency";
+            /// <summary>«Semillas» (glosario §2.1 y §10) [P]: pestaña de los packs y del Cántaro, con su propia clave.</summary>
+            public const string TabSeeds = "market_tab_seeds";
 
             /// <summary>«Comodines» [P]: pestaña de la Mochila y de las Canoas infinitas (06 §4.7).</summary>
             public const string TabBoosters = "market_tab_boosters";
@@ -80,11 +80,11 @@ namespace AF.UI
 
         /// <summary>
         /// Las claves nuevas de B5 (las de <c>B5-loc.diff</c>), para que <c>LocTablesTests</c> las cuente como usadas (como
-        /// <c>ShuffleText.AllKeys</c>). <c>currency</c> ya estaba en la tabla (<c>UiText</c>).
+        /// <c>ShuffleText.AllKeys</c>).
         /// </summary>
         public static string[] AllKeys => new[]
         {
-            Keys.Title, Keys.TabBoosters, Keys.TabCuias, Keys.TabNoAds, Keys.SeedsAmount, Keys.StarterContent,
+            Keys.Title, Keys.TabSeeds, Keys.TabBoosters, Keys.TabCuias, Keys.TabNoAds, Keys.SeedsAmount, Keys.StarterContent,
             Keys.StarterLeft, Keys.NoAdsContent, Keys.NoAdsOwned, Keys.PiggyContent, Keys.PiggyLocked, Keys.PiggyFull, Keys.PiggyFills,
             Keys.CanoesContent, Keys.SkinEquip, Keys.SkinEquipped, Keys.NotNow, Keys.WorldPrize,
         };

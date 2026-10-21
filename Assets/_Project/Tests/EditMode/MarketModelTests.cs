@@ -89,8 +89,8 @@ namespace AF.Tests.EditMode
         public void Boosters_StarterInTheWindow_Canoes1hFrom31_HiddenWhenEmpty()
         {
             var fx = new Fx();
-            Assert.That(MarketModel.TabVisible(MarketTab.Boosters, fx.Offers, 9), Is.True);
-            Assert.That(Ids(fx.Rows(MarketTab.Boosters, 9)), Is.EqualTo(new[] { "af_starter" }));
+            Assert.That(MarketModel.TabVisible(MarketTab.Boosters, fx.Offers, 10), Is.True);
+            Assert.That(Ids(fx.Rows(MarketTab.Boosters, 10)), Is.EqualTo(new[] { "af_starter" }));
             Assert.That(MarketModel.TabVisible(MarketTab.Boosters, fx.Offers, 25), Is.False, "entre el 21 y el 30 no hay nada");
             List<MarketRow> late = fx.Rows(MarketTab.Boosters, 30);
             Assert.That(Ids(late), Is.EqualTo(new[] { "af_infinite_canoes_1h" }));

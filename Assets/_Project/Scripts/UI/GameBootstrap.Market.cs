@@ -1,6 +1,8 @@
 #nullable enable
 using System;
+using System.Collections.Generic;
 using System.Globalization;
+using AF.Analytics;
 using AF.Economy;
 using AF.GameFlow;
 using AF.IAP;
@@ -56,8 +58,13 @@ namespace AF.UI
         private MarketRunner? _marketRunner;
         private FlowPhase _marketPhaseSeen;
         private VictoryOfferContext _pendingOfferCtx;
+        private OfferKind _pendingOfferKind;
         private bool _pendingOffer;
         private float _pendingOfferMs;
+        private VictoryOfferContext _lobbyOfferCtx;
+        private OfferKind _lobbyOfferKind;
+        private bool _lobbyOffer;
+        private bool _offerFromVictory;
         private int _interstitialsTodaySeen;
         private bool _iconsShown;
         private bool _iconsMarket;
@@ -178,6 +185,7 @@ namespace AF.UI
             _market = new MarketScreen(transform, _art, deps);
             _market.Purchased += OnMarketPurchased;
             _market.SkinSelected += OnMarketSkinSelected;
+            _market.Shown += OnMarketShown;
             _offerCard = new OfferCard(transform, _art);
             _marketIcons = new MarketLobbyIcons(transform, _art, () => OpenMarket(MarketTab.Seeds), () => PressPiggy());
             _marketPhaseSeen = _flow.Phase;
@@ -218,6 +226,7 @@ namespace AF.UI
             market.Open(tab, OnMarketClosed);
             _lobby?.SetCommerceOpen(HomeWindowCoveredByMarket());
             MarketProbe("market_open", "\"tab\":\"" + MarketTabId(market.Tab) + "\"");
+            _analytics?.Log(AnalyticsEvent.Create("af_shop_view").Add("tab", MarketTabId(market.Tab)).Add("from", "lobby")); // 08 §8.2 [P] from
             return true;
         }
 
@@ -235,6 +244,11 @@ namespace AF.UI
             if (piggy == null || _offerCard == null || _store == null || !LobbyClear() || !piggy.VisibleAt((_progress?.MaxLevel ?? 0) + 1))
             {
                 return false;
+            }
+
+            if (piggy.IsFull && _offers != null)
+            {
+                _offers.MarkShown(OfferKind.PiggyFull, default); // 05 §5: «1 tarjeta al llenarse»; vista a mano, ya no sale sola
             }
 
             ShowOfferCard(OfferKind.PiggyFull, StoreCatalog.Piggy, PurchaseContext.Piggy, (_progress?.MaxLevel ?? 0) + 1, false);
@@ -275,6 +289,7 @@ namespace AF.UI
             FlowPhase phase = flow.Phase;
             if (phase != _marketPhaseSeen)
             {
+                bool leftVictory = _marketPhaseSeen == FlowPhase.VictoryScreen;
                 _marketPhaseSeen = phase;
                 if (phase == FlowPhase.VictoryScreen)
                 {
@@ -283,6 +298,13 @@ namespace AF.UI
                 else
                 {
                     _pendingOffer = false; // se salió de la victoria antes de la tarjeta: esa victoria ya no la enseña
+                    if (leftVictory && _offerFromVictory && _offerCard != null && _offerCard.Visible)
+                    {
+                        // El nivel siguiente ya entró (el avance solo tras la Cosecha doble, D-011): la tarjeta no se queda encima.
+                        _offerCard.Dismiss();
+                        _offerFromVictory = false;
+                        _lobby?.SetCommerceOpen(HomeWindowCoveredByMarket());
+                    }
                 }
             }
 
@@ -293,22 +315,30 @@ namespace AF.UI
                 {
                     _pendingOffer = false;
                     VictoryOfferContext ctx = _pendingOfferCtx;
-                    OfferKind kind = offers.TakeAtVictory(in ctx);
-                    if (kind != OfferKind.None)
+                    if (OfferReady() && offers.TakeIf(in ctx, _pendingOfferKind))
                     {
-                        string? sku = OfferScheduler.SkuOf(kind, in ctx);
-                        if (sku != null)
-                        {
-                            ShowOfferCard(kind, sku, OfferScheduler.ContextOf(kind), ctx.WonLevel + 1, true);
-                        }
+                        ShowTakeover(_pendingOfferKind, in ctx, true);
                     }
+                }
+            }
+
+            if (_lobbyOffer && LobbyClear())
+            {
+                // Sin anuncios y la skin salen al volver al inicio (Q-B5-6 [P]), con la sesión de ahora (el cupo es de esta).
+                _lobbyOffer = false;
+                var ctx = new VictoryOfferContext(_lobbyOfferCtx.WonLevel, _sessions?.Current?.Number ?? 1, _lobbyOfferCtx.World);
+                if (OfferReady() && offers.TakeIf(in ctx, _lobbyOfferKind))
+                {
+                    ShowTakeover(_lobbyOfferKind, in ctx, false);
                 }
             }
 
             int interstitials = _ads?.Ledger.InterstitialsToday ?? 0;
             if (interstitials != _interstitialsTodaySeen)
             {
-                for (int i = _interstitialsTodaySeen; i < interstitials; i++)
+                // El contador es del día: si volvió a empezar (medianoche), los nuevos son los de hoy.
+                int added = interstitials > _interstitialsTodaySeen ? interstitials - _interstitialsTodaySeen : interstitials;
+                for (int i = 0; i < added; i++)
                 {
                     offers.RecordInterstitialSeen();
                 }
@@ -334,11 +364,56 @@ namespace AF.UI
                 MarketProbe("piggy_fill", "\"level\":" + Num(won) + ",\"added\":" + Num(f.Added) + ",\"seeds\":" + Num(f.Seeds) + ",\"full\":" + (f.BecameFull ? "true" : "false"));
             }
 
+            if (_piggy != null && won + 1 == _piggy.Config.EcoPiggyFromLevel)
+            {
+                LogPiggy("unlocked", 0); // af_piggy: el Cántaro aparece con el nivel siguiente (08 §8.2)
+            }
+
+            OfferScheduler? offers = _offers;
+            if (offers == null || !OfferReady())
+            {
+                return; // sin tienda (biz_iap_enabled, mantenimiento) o con el perfil bloqueado: ninguna tarjeta ni apunte
+            }
+
             int world = WorldTable.WorldOf(Math.Clamp(won, 1, WorldTable.LastLevel));
-            int session = _sessions?.Current?.Number ?? 1;
-            _pendingOfferCtx = new VictoryOfferContext(won, session, world);
-            _pendingOffer = true;
-            _pendingOfferMs = 0f;
+            var ctx = new VictoryOfferContext(won, _sessions?.Current?.Number ?? 1, world);
+            OfferKind kind = offers.PickAtVictory(in ctx);
+            if (kind == OfferKind.None)
+            {
+                return;
+            }
+
+            if (OfferScheduler.ShowsOnVictory(kind))
+            {
+                _pendingOfferCtx = ctx;
+                _pendingOfferKind = kind;
+                _pendingOffer = true;
+                _pendingOfferMs = 0f;
+                return;
+            }
+
+            _lobbyOfferCtx = ctx;
+            _lobbyOfferKind = kind;
+            _lobbyOffer = true;
+        }
+
+        // La tienda puede vender ahora: encendida y con el perfil escribible (08 §4.4).
+        private bool OfferReady()
+        {
+            return _store != null && _store.IsAvailable && !ProfileLocked;
+        }
+
+        // Una tarjeta que salió sola (takeover): la de la victoria o la del inicio.
+        private void ShowTakeover(OfferKind kind, in VictoryOfferContext ctx, bool onVictory)
+        {
+            string? sku = OfferScheduler.SkuOf(kind, in ctx);
+            if (sku == null)
+            {
+                return;
+            }
+
+            ShowOfferCard(kind, sku, OfferScheduler.ContextOf(kind), ctx.WonLevel + 1, true);
+            _offerFromVictory = onVictory;
         }
 
         private void ShowOfferCard(OfferKind kind, string sku, PurchaseContext context, int level, bool takeover)
@@ -390,7 +465,13 @@ namespace AF.UI
             }
 
             LastOfferShown = kind;
+            _offerFromVictory = false;
             _lobby?.SetCommerceOpen(true);
+            if (kind == OfferKind.PiggyFull && offers.Piggy.IsFull)
+            {
+                LogPiggy("shown_full", offers.Piggy.Seeds);
+            }
+
             card.Present(sku, MarketText.ProductName(sku), icon, iconColor, body, note, store.PriceOf(sku).ToString(), buyEnabled,
                 buy => OnOfferCardClosed(kind, sku, context, level, buy), () => !store.IsPurchasing && !ProfileLocked);
             if (store is AF.Analytics.Adapters.AnalyticsStoreService analytics)
@@ -399,10 +480,18 @@ namespace AF.UI
             }
 
             MarketProbe("offer_shown", "\"kind\":\"" + OfferScheduler.IdOf(kind) + "\",\"sku\":\"" + sku + "\",\"takeover\":" + (takeover ? "true" : "false"));
+            if (DevProbe.Enabled && _probe != null)
+            {
+                var ids = new List<string>(3);
+                var rects = new List<RectTransform>(3);
+                card.VisibleButtons(ids, rects);
+                _probe.Layout("offer_card", 0, null, ids.ToArray(), rects.ToArray()); // AF_LAYOUT para jugar con adb
+            }
         }
 
         private void OnOfferCardClosed(OfferKind kind, string sku, PurchaseContext context, int level, bool buy)
         {
+            _offerFromVictory = false;
             _lobby?.SetCommerceOpen(HomeWindowCoveredByMarket());
             OfferScheduler? offers = _offers;
             IStoreService? store = _store;
@@ -436,9 +525,18 @@ namespace AF.UI
 
         private void OnMarketPurchased(PurchaseResult result)
         {
-            if (result.Product.Content.GrantsSkin && result.IsPurchased && _skinService != null && _skinService.Select(result.Product.Sku))
+            if (result.Product.Content.GrantsSkin && result.IsPurchased)
             {
-                OnMarketSkinSelected(result.Product.Sku); // la skin comprada se pone, como la ganada (Q-M8 (a)) [P]
+                _analytics?.Log(AnalyticsEvent.Create("af_skin_unlock").Add("skin_id", result.Product.Sku).Add("source", "iap")); // 08 §8.2
+                if (_skinService != null && _skinService.Select(result.Product.Sku))
+                {
+                    OnMarketSkinSelected(result.Product.Sku); // la skin comprada se pone, como la ganada (Q-M8 (a)) [P]
+                }
+            }
+
+            if (result.Product.Content.PiggySeeds && result.IsPurchased)
+            {
+                LogPiggy("bought", result.Request.PiggySeeds);
             }
 
             _iconsPiggySeeds = -1; // el Cántaro del inicio se repinta (el saldo del inicio lo relee LobbyScreen.Tick)
@@ -452,6 +550,26 @@ namespace AF.UI
             }
 
             MarketProbe("skin_selected", "\"skin\":\"" + (_skinService?.Equipped ?? skinId) + "\"");
+        }
+
+        // AF_LAYOUT del Mercado al abrirlo o cambiar de pestaña (desarrollo: para jugar con adb).
+        private void OnMarketShown()
+        {
+            if (!DevProbe.Enabled || _probe == null || _market == null)
+            {
+                return;
+            }
+
+            var ids = new List<string>(12);
+            var rects = new List<RectTransform>(12);
+            _market.VisibleButtons(ids, rects);
+            _probe.Layout("market", 0, null, ids.ToArray(), rects.ToArray());
+        }
+
+        // af_piggy (08 §8.2): unlocked, shown_full o bought, con las semillas que guarda.
+        private void LogPiggy(string state, int seedsInside)
+        {
+            _analytics?.Log(AnalyticsEvent.Create("af_piggy").Add("state", state).Add("seeds_inside", seedsInside));
         }
 
         private void OnMarketClosed()
@@ -514,6 +632,13 @@ namespace AF.UI
             }
 
             icons.Sync(market, piggyShown, seeds, full, _lobby.HomeTabRect, _lobby.SeedsRect);
+            if (DevProbe.Enabled && _probe != null && (market || piggyShown))
+            {
+                var ids = new List<string>(2);
+                var rects = new List<RectTransform>(2);
+                icons.VisibleButtons(ids, rects);
+                _probe.Layout("lobby_market", 0, null, ids.ToArray(), rects.ToArray()); // las entradas de B5 en el inicio
+            }
         }
 
         private static string MarketTabId(MarketTab tab)

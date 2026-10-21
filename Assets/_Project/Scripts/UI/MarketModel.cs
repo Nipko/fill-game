@@ -99,7 +99,7 @@ namespace AF.UI
             switch (tab)
             {
                 case MarketTab.Boosters:
-                    return offers.StarterInMarket(maxLevel) || offers.CanoesInMarket(maxLevel);
+                    return offers.StarterAvailable(maxLevel) || offers.CanoesInMarket(maxLevel);
                 case MarketTab.NoAds:
                     return offers.NoAdsOwned || offers.NoAdsInMarket(maxLevel);
                 default:
@@ -141,7 +141,7 @@ namespace AF.UI
 
                     break;
                 case MarketTab.Boosters:
-                    if (offers.StarterInMarket(maxLevel))
+                    if (offers.StarterAvailable(maxLevel))
                     {
                         rows.Add(new MarketRow(StoreCatalog.Starter, MarketAction.Buy, offers.StarterHoursLeft));
                     }

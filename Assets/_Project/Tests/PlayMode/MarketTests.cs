@@ -1,6 +1,7 @@
 #nullable enable
 using System;
 using System.Collections;
+using AF.Analytics;
 using AF.Economy;
 using AF.GameFlow;
 using AF.IAP;
@@ -31,6 +32,7 @@ namespace AF.Tests.PlayMode
             GameBootstrap.ResetMarketOverrides();
             GameBootstrap.ResetSessionOverrides();
             GameBootstrap.ResetDailyOverrides();
+            GameBootstrap.ResetTelemetryOverrides();
             GameScreen.SimulatedScreen = null;
             LaunchOptions.Reset();
         }
@@ -115,6 +117,23 @@ namespace AF.Tests.PlayMode
             Assert.That(market.Visible, Is.True, "el Mercado sigue abierto tras comprar");
             Assert.That(boot.PressMarketBack(), Is.True, "Atrás (con B5-bootstrap, desde PressAndroidBack)");
             Assert.That(market.Visible, Is.False);
+        }
+
+        [UnityTest]
+        public IEnumerator Market_SendsShopView_AndOfferShownWithContextShop()
+        {
+            var sink = new FakeAnalyticsSink();
+            GameBootstrap.AnalyticsSinkOverride = sink;
+            yield return LoadLobby(ProfileAt(26));
+            GameBootstrap boot = Boot();
+            Assert.That(boot.OpenMarket(MarketTab.Seeds), Is.True);
+            AnalyticsEvent view = sink.Last("af_shop_view")!;
+            Assert.That(view, Is.Not.Null, "08 §8.2: af_shop_view");
+            Assert.That(view.Find("tab")!.Value.Text, Is.EqualTo("seeds"));
+            Assert.That(view.Find("from")!.Value.Text, Is.EqualTo("lobby"));
+            AnalyticsEvent shown = sink.Last("af_iap_offer_shown")!;
+            Assert.That(shown, Is.Not.Null);
+            Assert.That(shown.Find("context")!.Value.Text, Is.EqualTo("shop"));
         }
 
         [UnityTest]
@@ -209,6 +228,25 @@ namespace AF.Tests.PlayMode
         }
 
         [UnityTest]
+        public IEnumerator LeavingTheVictory_TakesTheCardAway()
+        {
+            // Tras la Cosecha doble el juego pasa solo al nivel siguiente (D-011): la tarjeta no se queda encima del nivel nuevo.
+            SecondSession();
+            yield return LoadLevel(12);
+            GameBootstrap boot = Boot();
+            PlayModeHelpers.TakeClock(boot);
+            VictorySetup.WinToVictoryScreen(boot);
+            boot.TickMarket(16f);
+            boot.TickMarket(GameBootstrap.OfferCardDelayMs + 16f);
+            Assert.That(boot.OfferCardView!.Visible, Is.True);
+            Assert.That(boot.PressNext(), Is.True);
+            boot.TickMarket(16f);
+            Assert.That(boot.Flow!.Phase, Is.Not.EqualTo(FlowPhase.VictoryScreen));
+            Assert.That(boot.OfferCardView.Visible, Is.False);
+            Assert.That(boot.Offers!.StarterExpiresAt, Is.Not.Null, "la tarjeta se vio: su temporizador sigue");
+        }
+
+        [UnityTest]
         public IEnumerator NoAdsCard_OnDay2_ACancelledPurchaseCountsAsADecline()
         {
             SecondSession();
@@ -221,8 +259,14 @@ namespace AF.Tests.PlayMode
             boot.TickMarket(16f);
             boot.TickMarket(GameBootstrap.OfferCardDelayMs + 16f);
             OfferCard card = boot.OfferCardView!;
+            Assert.That(card.Visible, Is.False, "05 §5: «tarjeta tras la pantalla de victoria»: sale en el inicio [P] (Q-B5-6)");
+
+            Assert.That(boot.PressHome(), Is.True);
+            Assert.That(boot.App!.Screen, Is.EqualTo(AppScreen.Lobby));
+            boot.TickMarket(16f);
             Assert.That(card.Visible, Is.True);
             Assert.That(card.Sku, Is.EqualTo("af_noads"));
+            Assert.That(boot.LastOfferShown, Is.EqualTo(OfferKind.NoAds));
 
             // Cancelar la hoja de compra también es no comprar (05 §5: un rechazo de Sin anuncios).
             card.BuyButton.onClick.Invoke();

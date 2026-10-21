@@ -135,6 +135,9 @@ namespace AF.UI
         /// <summary>Se puso otra skin.</summary>
         public event Action<string>? SkinSelected;
 
+        /// <summary>Se abrió o cambió de pestaña (para <c>AF_LAYOUT</c>).</summary>
+        public event Action? Shown;
+
         /// <summary>Abre el Mercado en <paramref name="tab"/> (si no tiene nada, en Semillas) y llama a <paramref name="onClosed"/> al cerrarlo.</summary>
         public void Open(MarketTab tab, Action? onClosed = null)
         {
@@ -145,6 +148,7 @@ namespace AF.UI
             Tab = MarketModel.TabVisible(tab, _deps.Offers, _deps.MaxLevel()) ? tab : MarketTab.Seeds;
             _logShown = true;
             Refresh();
+            Shown?.Invoke();
         }
 
         /// <summary>Cierra el Mercado (la X y Atrás).</summary>
@@ -172,6 +176,36 @@ namespace AF.UI
             Tab = tab;
             _logShown = true;
             Refresh();
+            Shown?.Invoke();
+        }
+
+        /// <summary>Botones visibles para <c>AF_LAYOUT</c> (sonda de desarrollo): la X, las pestañas y el botón de cada fila.</summary>
+        public void VisibleButtons(List<string> ids, List<RectTransform> rects)
+        {
+            if (!Visible)
+            {
+                return;
+            }
+
+            ids.Add("market_close");
+            rects.Add((RectTransform)_close.Button.transform);
+            for (int i = 0; i < _tabs.Length; i++)
+            {
+                if (_tabs[i].gameObject.activeSelf)
+                {
+                    ids.Add("market_tab_" + i.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                    rects.Add((RectTransform)_tabs[i].transform);
+                }
+            }
+
+            for (int i = 0; i < _model.Count && i < _rows.Length; i++)
+            {
+                if (_rows[i].Cta.Button.gameObject.activeSelf)
+                {
+                    ids.Add("market_row_" + _model[i].Id);
+                    rects.Add((RectTransform)_rows[i].Cta.Button.transform);
+                }
+            }
         }
 
         /// <summary>Lo que hace el botón de la fila <paramref name="index"/> (el toque; los tests lo llaman igual).</summary>
